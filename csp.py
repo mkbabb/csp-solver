@@ -2,6 +2,7 @@ from collections import defaultdict, deque
 from typing import *
 import pprint
 import json
+from dataclasses import dataclass
 
 V = TypeVar("V")
 D = TypeVar("D")
@@ -9,22 +10,23 @@ D = TypeVar("D")
 
 Solution = Dict[V, D]
 
-DomainMap = Dict[V, List[D]]
 
 Constraint = Callable[[Solution], bool]
-ConstraintPair = Tuple[Constraint, List[V]]
 
 
 class CSP:
     def __init__(self):
         self.variables: List[V] = []
         self.constraints: Dict[V, List[Constraint]] = defaultdict(list)
-        self.domain_map: DomainMap = {}
+        self.domain_map: Dict[V, List[D]] = {}
 
-        self.solutions: List[Solution] = []
         self.variable_stack: Deque[V] = deque()
         self.neighbors: Dict[V, Set[V]] = defaultdict(set)
-        self.pruned: Dict[V, List[Tuple[V, D]]] = defaultdict(list)
+        self.pruned_map: Dict[V, Dict[V, List[D]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
+
+        self.solutions: List[Solution] = []
 
     def add_variables(self, domain: List[D], *variables: V):
         for v in variables:
@@ -32,40 +34,34 @@ class CSP:
             self.variable_stack.append(v)
             self.domain_map[v] = list(domain)
 
-    def add_constraint(self, constraint_pair: ConstraintPair):
+    def add_constraint(self, constraint_pair: Tuple[Constraint, List[V]]):
         constraint, variables = constraint_pair
         for v in variables:
             self.constraints[v].append(constraint)
             self.neighbors[v].update(variables)
 
-
     def is_valid(self, variable: V, solution: Solution):
         constraint_list = self.constraints[variable]
         return all((constraint(solution) for constraint in constraint_list))
 
-
     def forward_check(self, variable: V, solution: Solution):
         neighbors = self.neighbors[variable]
-        pruned_list = self.pruned[variable]
+        pruned_variable = self.pruned_map[variable]
 
-        for v, d in pruned_list:
-            self.domain_map[v].append(d)
+        for v, d_list in pruned_variable.items():
+            self.domain_map[v].extend(d_list)
+            d_list.clear()
 
-        pruned_list.clear()
+        for neighbor in filter(lambda x: x not in solution, neighbors):
+            domain = self.domain_map[neighbor]
 
-        for n in filter(lambda x: x not in solution, neighbors):
-            domain = self.domain_map[n]
-            
             for d in domain:
-                tmp = solution[n]
-                solution[n] = d
-
-                if not self.is_valid(n, solution):
+                solution[neighbor] = d
+                if not self.is_valid(neighbor, solution):
                     domain.remove(d)
-                    pruned_list.append((n, d))
+                    pruned_variable[neighbor].append(d)
 
-                solution[n] = tmp
-
+            solution[neighbor] = None
 
     def backtrack(self, solution: Solution, forward_check: bool = False):
         if len(solution) == len(self.variables):
@@ -88,7 +84,6 @@ class CSP:
 
     def solve(self, forward_check: bool = False):
         self.solutions = []
-
         return self.backtrack({}, forward_check)
 
 
