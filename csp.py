@@ -1,11 +1,16 @@
-from collections import defaultdict
+from collections import defaultdict, deque
 from typing import *
+import pprint
+import copy
+import json
 
 V = TypeVar("V")
 D = TypeVar("D")
 
 
 Solution = Dict[V, D]
+
+DomainMap = Dict[V, List[D]]
 
 Constraint = Callable[[Solution], bool]
 ConstraintPair = Tuple[Constraint, List[V]]
@@ -15,53 +20,67 @@ class CSP:
     def __init__(self):
         self.variables: List[V] = []
         self.constraints: Dict[V, List[Constraint]] = defaultdict(list)
-        self.variable_map: Dict[V, List[D]] = {}
+        self.domain_map: DomainMap = {}
 
-        self.current_solution: Solution = {}
         self.solutions: List[Solution] = []
+        self.variable_stack: Deque[V] = deque()
+        self.neighbors: Dict[V, Set[V]] = defaultdict(set)
 
-        pass
-
-    def add_variable(self, domain: List[D], *variables: V):
+    def add_variables(self, domain: List[D], *variables: V):
         for v in variables:
             self.variables.append(v)
-            self.variable_map[v] = domain
+            self.variable_stack.append(v)
+            self.domain_map[v] = list(domain)
 
     def add_constraint(self, constraint_pair: ConstraintPair):
         constraint, variables = constraint_pair
         for v in variables:
             self.constraints[v].append(constraint)
+            self.neighbors[v].update(variables)
 
-    def is_valid(self, variable: V):
+    def forward_check(
+        self, variable: V, solution: Solution, domain_map: Dict[V, List[D]]
+    ):
+        solution = solution.copy()
+        neighbors = self.neighbors[variable]
+
+        for n in filter(lambda x: x not in solution, neighbors):
+            domain = domain_map[n]
+            for d in domain:
+                solution[n] = d
+                if not self.is_valid(n, solution):
+                    domain.remove(d)
+
+    def is_valid(self, variable: V, solution: Solution):
         constraint_list = self.constraints[variable]
-        return all(
-            (constraint(self.current_solution) for constraint in constraint_list)
-        )
+        return all((constraint(solution) for constraint in constraint_list))
 
-    def backtrack(self, pos=0):
-        if pos == len(self.variables) - 1:
-            self.solutions.append(self.current_solution.copy())
+    def backtrack(
+        self, solution: Solution, domain_map: DomainMap, forward_check: bool = False
+    ):
+        if len(solution) == len(self.variables):
+            self.solutions.append(solution.copy())
             return True
 
-        while pos < len(self.variables):
-            v = self.variables[pos]
+        v = self.variable_stack.pop()
 
-            if self.current_solution.get(v) is not None:
-                continue
+        for d in domain_map[v]:
+            t_solution = solution.copy()
+            t_solution[v] = d
+            t_domain_map = copy.deepcopy(domain_map)
 
-            for d in self.variable_map[v]:
-                prev_d = self.current_solution.get(v)
-                self.current_solution[v] = d
+            if self.is_valid(v, t_solution):
+                if forward_check:
+                    self.forward_check(v, t_solution, t_domain_map)
+                self.backtrack(t_solution, t_domain_map, forward_check)
 
-                if self.is_valid(v):
-                    valid = self.backtrack(pos + 1)
-                    
-                    # if (valid):
-                    #     return True
-                
-                self.current_solution[v] = prev_d
-
+        self.variable_stack.append(v)
         return False
+
+    def solve(self, forward_check: bool = False):
+        self.solutions = []
+
+        return self.backtrack({}, self.domain_map, forward_check)
 
 
 def map_coloring_constraint(p1: str, p2: str):
@@ -72,6 +91,22 @@ def map_coloring_constraint(p1: str, p2: str):
             return current_solution[p1] != current_solution[p2]
 
     return check, [p1, p2]
+
+
+def lambda_constraint(func: Callable[[Any], bool], *variables):
+    def check(current_solution: Solution):
+        current_values = [current_solution[v] for v in variables]
+        return func(*current_values)
+
+    return check, list(variables)
+
+
+def all_different_constraint(*variables):
+    def check(current_solution: Solution):
+        current_values = [current_solution[v] for v in variables]
+        return len(current_values) == len(set(current_values))
+
+    return check, list(variables)
 
 
 if __name__ == "__main__":
@@ -88,7 +123,7 @@ if __name__ == "__main__":
 
     csp = CSP()
 
-    csp.add_variable(domain, *variables)
+    csp.add_variables(domain, *variables)
 
     csp.add_constraint(
         map_coloring_constraint("Western Australia", "Northern Territory")
@@ -101,9 +136,15 @@ if __name__ == "__main__":
     csp.add_constraint(map_coloring_constraint("New South Wales", "South Australia"))
     csp.add_constraint(map_coloring_constraint("Victoria", "South Australia"))
     csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
-    csp.add_constraint(map_coloring_constraint("Victoria", "Tasmania"))
 
-    csp.backtrack()
+    csp.solve()
+    solutions1 = list(map(json.dumps, csp.solutions))
+    print(len(csp.solutions))
+    csp.solve(True)
+    solutions2 = list(map(json.dumps, csp.solutions))
+    print(len(csp.solutions))
 
-    for i in csp.solutions:
-        print(i)
+    tmp = set(solutions1).difference(set(solutions2))
+    tmp = list(map(json.loads, tmp))
+    # pprint.pprint(tmp)
+    # pprint.pprint(csp.solutions)
