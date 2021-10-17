@@ -1,8 +1,7 @@
 from collections import defaultdict, deque
 from typing import *
+
 import pprint
-import json
-from dataclasses import dataclass
 
 V = TypeVar("V")
 D = TypeVar("D")
@@ -52,18 +51,51 @@ class CSP:
             self.domain_map[v].extend(d_list)
             d_list.clear()
 
+        #TODO: optimize
         for neighbor in filter(lambda x: x not in solution, neighbors):
             domain = self.domain_map[neighbor]
 
             for d in domain:
-                solution[neighbor] = d
-                if not self.is_valid(neighbor, solution):
+                t_solution = solution.copy()
+                t_solution[neighbor] = d
+
+                if not self.is_valid(neighbor, t_solution):
                     domain.remove(d)
                     pruned_variable[neighbor].append(d)
+            
+    def AC3(self, variable: V, solution: Solution):
+        def remove_inconsistent(variable: V, neighbor: V):
+            removed = False
+           
+            for x in self.domain_map[variable]:
+                t_solution = solution.copy()
+                t_solution[variable] = x
 
-            solution[neighbor] = None
+                all_conflicts = True
+                domain = self.domain_map[neighbor]
 
-    def backtrack(self, solution: Solution, forward_check: bool = False):
+                for y in self.domain_map[neighbor]:
+                    tt_solution = t_solution.copy()
+                    tt_solution[neighbor] = y
+
+                    if self.is_valid(n, tt_solution):
+                        break
+                
+                if all_conflicts:
+                    domain.remove(x)
+                    removed = True
+            
+            return removed
+
+        agenda = deque(((v, n) for v in self.variables for n in self.neighbors[v]))
+        
+        while len(agenda) > 0:
+            variable, neighbor = agenda.pop()
+            if remove_inconsistent(variable, neighbor):
+                for n in self.neighbors[variable]:
+                    agenda.append((n, variable))
+
+    def backtrack(self, solution: Solution):
         if len(solution) == len(self.variables):
             self.solutions.append(solution.copy())
             return True
@@ -75,17 +107,25 @@ class CSP:
             t_solution[v] = d
 
             if self.is_valid(v, t_solution):
-                if forward_check:
-                    self.forward_check(v, t_solution)
-                self.backtrack(t_solution, forward_check)
+                self.pruning_function(v, t_solution)
+                self.backtrack(t_solution)
 
         self.variable_stack.append(v)
         return False
 
     def solve(self, forward_check: bool = False):
         self.solutions = []
+        self.pruning_function = self.AC3
         return self.backtrack({}, forward_check)
 
+
+def get_current_solution_values(variables: List[V], current_solution: Solution) -> Optional[List[D]]:
+    current_values = []
+    for v in variables:
+        if v in current_solution:
+            current_values.append(current_solution[v])
+
+    return current_values
 
 def map_coloring_constraint(p1: str, p2: str):
     def check(current_solution: Solution):
@@ -99,17 +139,20 @@ def map_coloring_constraint(p1: str, p2: str):
 
 def lambda_constraint(func: Callable[[Any], bool], *variables):
     def check(current_solution: Solution):
-        current_values = [current_solution[v] for v in variables]
-        return func(*current_values)
+        current_values = get_current_solution_values(variables, current_solution)
+        if (len(variables) == len(current_values)):
+            return func(*current_values)
+        else:
+            return True
 
     return check, list(variables)
 
 
 def all_different_constraint(*variables):
     def check(current_solution: Solution):
-        current_values = [current_solution[v] for v in variables]
+        current_values = get_current_solution_values(variables, current_solution)
         return len(current_values) == len(set(current_values))
-
+       
     return check, list(variables)
 
 
@@ -141,14 +184,16 @@ if __name__ == "__main__":
     csp.add_constraint(map_coloring_constraint("Victoria", "South Australia"))
     csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
 
-    csp.solve()
-    solutions1 = list(map(json.dumps, csp.solutions))
-    print(len(csp.solutions))
     csp.solve(True)
-    solutions2 = list(map(json.dumps, csp.solutions))
+    # solutions1 = list(map(json.dumps, csp.solutions))
+    # print(len(csp.solutions))
+    # csp.solve(True)
+    # solutions2 = list(map(json.dumps, csp.solutions))
+    # print(len(csp.solutions))
+
+    # tmp = set(solutions1).difference(set(solutions2))
+    # tmp = list(map(json.loads, tmp))
+    # pprint.pprint(tmp)
+    pprint.pprint(csp.solutions)
     print(len(csp.solutions))
 
-    tmp = set(solutions1).difference(set(solutions2))
-    tmp = list(map(json.loads, tmp))
-    # pprint.pprint(tmp)
-    # pprint.pprint(csp.solutions)
