@@ -3,6 +3,8 @@ from typing import *
 import copy
 import pprint
 
+from numpy.core.fromnumeric import var
+
 V = TypeVar("V")
 D = TypeVar("D")
 
@@ -17,10 +19,10 @@ class CSP:
     def __init__(self):
         self.variables: List[V] = []
         self.constraints: Dict[V, List[Constraint]] = defaultdict(list)
-        self.domain_map: Dict[V, List[D]] = {}
-        self.domain_map2: Dict[V, List[D]] = {}
+        self.domains: Dict[V, List[D]] = {}
 
         self.variable_stack: Deque[V] = deque()
+
         self.neighbors: Dict[V, Set[V]] = defaultdict(set)
         self.pruned_map: Dict[V, Dict[V, List[D]]] = defaultdict(
             lambda: defaultdict(list)
@@ -32,8 +34,7 @@ class CSP:
         for v in variables:
             self.variables.append(v)
             self.variable_stack.append(v)
-            self.domain_map[v] = list(domain)
-            self.domain_map2[v] = list(domain)
+            self.domains[v] = list(domain)
 
     def add_constraint(self, constraint_pair: Tuple[Constraint, List[V]]):
         constraint, variables = constraint_pair
@@ -42,50 +43,53 @@ class CSP:
             self.neighbors[v].update(variables)
             self.neighbors[v].remove(v)
 
-    def is_valid(self, variable: V, solution: Solution):
-        constraint_list = self.constraints[variable]
-        return all((constraint(solution) for constraint in constraint_list))
+    def get_neighbors(self, variable: V) -> Dict[V, Set[D]]:
+        return self.neighbors.get(variable, set)
 
     def test_solution(self, solution: Solution, test_vals: Solution):
         solution = solution.copy()
         solution.update(test_vals)
         return solution
 
-    def restore_pruned_variables(self, variable: V):
-        for neighbor, d_list in self.pruned_map[variable].items():
-            self.domain_map[neighbor].extend(d_list)
+    def is_valid(self, variable: V, solution: Solution):
+        constraint_list = self.constraints[variable]
+        return all((constraint(solution) for constraint in constraint_list))
+
+    def restore_pruned_domains(self, variable: V):
+        for neighbor, d_list in self.pruned_map.get(variable, {}).items():
+            self.domains[neighbor].extend(d_list)
             d_list.clear()
 
     def forward_check(self, variable: V, solution: Solution):
-        neighbors = self.neighbors[variable]
-        self.restore_pruned_variables(variable)
+        self.restore_pruned_domains(variable)
 
-        # TODO: optimize
-        for neighbor in filter(lambda x: x not in solution, neighbors):
-            for d in self.domain_map[neighbor]:
+        for neighbor in filter(
+            lambda x: x not in solution, self.get_neighbors(variable)
+        ):
+            for d in list(self.domains[neighbor]):
                 if not self.is_valid(
                     neighbor, self.test_solution(solution, {neighbor: d})
                 ):
-                    self.domain_map[neighbor].remove(d)
+                    self.domains[neighbor].remove(d)
                     self.pruned_map[variable][neighbor].append(d)
 
     def AC3(self, variable: V, solution: Solution):
         def remove_inconsistent_values(Xi: V, Xj: V):
             removed = False
 
-            for x in self.domain_map[Xi][:]:
+            for x in list(self.domains[Xi]):
                 all_inconsistent = True
 
-                for y in self.domain_map[Xj]:
+                for y in self.domains[Xj]:
                     if self.is_valid(Xj, self.test_solution(solution, {Xi: x, Xj: y})):
                         all_inconsistent = False
 
                 if all_inconsistent:
-                    self.domain_map[Xi].remove(x)
+                    self.domains[Xi].remove(x)
                     removed = True
             return removed
 
-        agenda = deque(((variable, n) for n in self.neighbors[variable]))
+        agenda = deque(((variable, n) for n in self.get_neighbors(variable)))
 
         while len(agenda) > 0:
             Xi, Xj = agenda.pop()
@@ -100,16 +104,17 @@ class CSP:
 
         v = self.variable_stack.pop()
 
-        for d in self.domain_map[v]:
+        for d in self.domains[v]:
             t_solution = self.test_solution(solution, {v: d})
 
             if self.is_valid(v, t_solution):
-                # self.pruning_function(v, t_solution)
-                valid = self.backtrack(t_solution)
+                self.pruning_function(v, t_solution)
+                self.backtrack(t_solution)
 
-            # self.domain_map[v] = self.domain_map2[v][:]
+            # self.restore_pruned_domains(v)
 
-        self.variable_stack.appendleft(v)
+        self.variable_stack.append(v)
+
         return False
 
     def solve(self):
