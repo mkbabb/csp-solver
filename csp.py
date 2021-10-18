@@ -2,12 +2,19 @@ from collections import defaultdict, deque
 from typing import *
 import copy
 import pprint
+from enum import Enum, auto
 
 V = TypeVar("V")
 D = TypeVar("D")
 
 
 Solution = Dict[V, D]
+
+
+class PruningType(Enum):
+    FORWARD_CHECKING = auto()
+    AC3 = auto()
+    NO_PRUNING = auto()
 
 
 Constraint = Callable[[Solution], bool]
@@ -64,6 +71,7 @@ class CSP:
             for x in list(self.current_domains[Xi]):
                 if not self.is_valid(Xi, self.test_solution(solution, {Xi: x})):
                     self.current_domains[Xi].remove(x)
+                    self.pruned_map[variable][Xi].add(x)
 
     def AC3(self, variable: V, solution: Solution):
         def remove_inconsistent_values(Xi: V, Xj: V) -> bool:
@@ -75,6 +83,7 @@ class CSP:
                         break
                 else:
                     self.current_domains[Xi].remove(x)
+                    self.pruned_map[variable][Xi].add(x)
                     removed = True
 
             return removed
@@ -104,20 +113,19 @@ class CSP:
 
         for d in self.current_domains[v]:
             solution[v] = d
-            domain = copy.deepcopy(self.current_domains)
 
             if self.is_valid(v, solution):
                 pruned = self.pruning_function(v, solution)
                 valid = self.backtrack(solution)
 
-            self.current_domains = domain
+            self.restore_pruned_domains(v)
             del solution[v]
 
         self.variable_stack.append(v)
 
         return False
 
-    def solve(self):
+    def solve(self, pruning_type: PruningType = PruningType.NO_PRUNING):
         self.variable_stack.clear()
         self.current_domains.clear()
 
@@ -127,7 +135,14 @@ class CSP:
             self.pruned_map[v].clear()
 
         self.solutions = []
-        self.pruning_function = self.AC3
+
+        if pruning_type == PruningType.FORWARD_CHECKING:
+            self.pruning_function = self.forward_check
+        elif pruning_type == PruningType.AC3:
+            self.pruning_function = self.AC3
+        else:
+            self.pruning_function = lambda x, y: False
+
         return self.backtrack({})
 
 
@@ -228,7 +243,7 @@ def map_coloring():
     csp.add_constraint(map_coloring_constraint("New South Wales", "South Australia"))
     csp.add_constraint(map_coloring_constraint("Victoria", "South Australia"))
     csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
-    # csp.add_constraint(map_coloring_constraint("Tasmania", "Victoria"))
+    csp.add_constraint(map_coloring_constraint("Tasmania", "Victoria"))
 
     return csp
 
