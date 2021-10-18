@@ -58,16 +58,12 @@ class CSP:
             d_list.clear()
 
     def forward_check(self, variable: V, solution: Solution):
-        self.restore_pruned_domains(variable)
-        not_in_solution = lambda x: x not in solution
+        agenda = [i for i in self.get_neighbors(variable) if i not in solution]
 
-        for neighbor in filter(not_in_solution, self.get_neighbors(variable)):
-            for d in list(self.current_domains[neighbor]):
-                if not self.is_valid(
-                    neighbor, self.test_solution(solution, {neighbor: d})
-                ):
-                    self.current_domains[neighbor].remove(d)
-                    self.pruned_map[variable][neighbor].add(d)
+        for Xi in agenda:
+            for x in list(self.current_domains[Xi]):
+                if not self.is_valid(Xi, self.test_solution(solution, {Xi: x})):
+                    self.current_domains[Xi].remove(x)
 
     def AC3(self, variable: V, solution: Solution):
         def remove_inconsistent_values(Xi: V, Xj: V) -> bool:
@@ -79,20 +75,25 @@ class CSP:
                         break
                 else:
                     self.current_domains[Xi].remove(x)
-                    # self.pruned_map[variable][Xi].add(x)
                     removed = True
 
             return removed
 
-        # self.restore_pruned_domains(variable)
-        agenda = deque(((variable, n) for n in self.get_neighbors(variable)))
-
+        agenda = deque(
+            (
+                (Xj, variable)
+                for Xj in self.get_neighbors(variable)
+                if Xj not in solution
+            )
+        )
+        
         while len(agenda) > 0:
             Xi, Xj = agenda.pop()
-
             if remove_inconsistent_values(Xi, Xj):
                 for Xk in self.get_neighbors(Xi):
-                    agenda.append((Xk, Xi))
+                    p = (Xk, Xi)
+                    if Xk != Xj and p not in agenda and Xk not in solution:
+                        agenda.append(p)
 
     def backtrack(self, solution: Solution):
         if len(solution) == len(self.variables):
@@ -102,11 +103,16 @@ class CSP:
         v = self.variable_stack.pop()
 
         for d in self.current_domains[v]:
-            t_solution = self.test_solution(solution, {v: d})
+            solution[v] = d
 
-            if self.is_valid(v, t_solution):
-                self.pruning_function(v, t_solution)
-                self.backtrack(t_solution)
+            if self.is_valid(v, solution):
+                pruned = self.pruning_function(v, solution)
+                valid = self.backtrack(solution)
+
+            for i in self.variables:
+                self.current_domains[i] = list(self.domains[i])
+
+            del solution[v]
 
         self.variable_stack.append(v)
 
@@ -122,7 +128,7 @@ class CSP:
             self.pruned_map[v].clear()
 
         self.solutions = []
-        self.pruning_function = self.AC3
+        self.pruning_function = self.forward_check
         return self.backtrack({})
 
 
