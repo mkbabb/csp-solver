@@ -17,6 +17,7 @@ class CSP:
     def __init__(self):
         self.variables: List[V] = []
         self.constraints: Dict[V, List[Constraint]] = defaultdict(list)
+        self.current_domains: Dict[V, List[D]] = {}
         self.domains: Dict[V, List[D]] = {}
 
         self.variable_stack: Deque[V] = deque()
@@ -31,7 +32,6 @@ class CSP:
     def add_variables(self, domain: List[D], *variables: V):
         for v in variables:
             self.variables.append(v)
-            self.variable_stack.append(v)
             self.domains[v] = list(domain)
 
     def add_constraint(self, constraint_pair: Tuple[Constraint, List[V]]):
@@ -54,7 +54,7 @@ class CSP:
 
     def restore_pruned_domains(self, variable: V):
         for neighbor, d_list in self.pruned_map.get(variable, {}).items():
-            self.domains[neighbor].extend(d_list)
+            self.current_domains[neighbor].extend(d_list)
             d_list.clear()
 
     def forward_check(self, variable: V, solution: Solution):
@@ -62,31 +62,34 @@ class CSP:
         not_in_solution = lambda x: x not in solution
 
         for neighbor in filter(not_in_solution, self.get_neighbors(variable)):
-            for d in list(self.domains[neighbor]):
+            for d in list(self.current_domains[neighbor]):
                 if not self.is_valid(
                     neighbor, self.test_solution(solution, {neighbor: d})
                 ):
-                    self.domains[neighbor].remove(d)
+                    self.current_domains[neighbor].remove(d)
                     self.pruned_map[variable][neighbor].add(d)
 
     def AC3(self, variable: V, solution: Solution):
         def remove_inconsistent_values(Xi: V, Xj: V) -> bool:
             removed = False
 
-            for x in list(self.domains[Xi]):
-                for y in self.domains[Xj]:
+            for x in list(self.current_domains[Xi]):
+                for y in self.current_domains[Xj]:
                     if self.is_valid(Xj, self.test_solution(solution, {Xi: x, Xj: y})):
                         break
                 else:
-                    self.domains[Xi].remove(x)
+                    self.current_domains[Xi].remove(x)
+                    # self.pruned_map[variable][Xi].add(x)
                     removed = True
 
             return removed
 
+        # self.restore_pruned_domains(variable)
         agenda = deque(((variable, n) for n in self.get_neighbors(variable)))
 
         while len(agenda) > 0:
             Xi, Xj = agenda.pop()
+
             if remove_inconsistent_values(Xi, Xj):
                 for Xk in self.get_neighbors(Xi):
                     agenda.append((Xk, Xi))
@@ -98,7 +101,7 @@ class CSP:
 
         v = self.variable_stack.pop()
 
-        for d in self.domains[v]:
+        for d in self.current_domains[v]:
             t_solution = self.test_solution(solution, {v: d})
 
             if self.is_valid(v, t_solution):
@@ -110,8 +113,16 @@ class CSP:
         return False
 
     def solve(self):
+        self.variable_stack.clear()
+        self.current_domains.clear()
+
+        for v in self.variables:
+            self.variable_stack.append(v)
+            self.current_domains[v] = list(self.domains[v])
+            self.pruned_map[v].clear()
+
         self.solutions = []
-        self.pruning_function = self.forward_check
+        self.pruning_function = self.AC3
         return self.backtrack({})
 
 
@@ -212,18 +223,23 @@ def map_coloring():
     csp.add_constraint(map_coloring_constraint("New South Wales", "South Australia"))
     csp.add_constraint(map_coloring_constraint("Victoria", "South Australia"))
     csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
+    # csp.add_constraint(map_coloring_constraint("Tasmania", "Victoria"))
 
     return csp
 
 
-if __name__ == "__main__":
-    # csp = map_coloring()
-    csp = n_queens()
-
-    csp.solve()
-
+def test_solutions(csp: CSP):
     solutions = list(map(str, csp.solutions))
+    unique_solutions = set(solutions)
 
-    print(len(solutions), len(set(solutions)))
+    pprint.pprint(csp.solutions)
 
-    # pprint.pprint(csp.solutions)
+    print(len(solutions), len(unique_solutions))
+
+
+if __name__ == "__main__":
+    csps = [map_coloring(), n_queens()]
+
+    for csp in csps:
+        csp.solve()
+        test_solutions(csp)
