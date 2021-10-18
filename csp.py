@@ -18,6 +18,7 @@ class CSP:
         self.variables: List[V] = []
         self.constraints: Dict[V, List[Constraint]] = defaultdict(list)
         self.domain_map: Dict[V, List[D]] = {}
+        self.domain_map2: Dict[V, List[D]] = {}
 
         self.variable_stack: Deque[V] = deque()
         self.neighbors: Dict[V, Set[V]] = defaultdict(set)
@@ -32,6 +33,7 @@ class CSP:
             self.variables.append(v)
             self.variable_stack.append(v)
             self.domain_map[v] = list(domain)
+            self.domain_map2[v] = list(domain)
 
     def add_constraint(self, constraint_pair: Tuple[Constraint, List[V]]):
         constraint, variables = constraint_pair
@@ -50,8 +52,8 @@ class CSP:
         return solution
 
     def restore_pruned_variables(self, variable: V):
-        for v, d_list in self.pruned_map[variable].items():
-            self.domain_map[v].extend(d_list)
+        for neighbor, d_list in self.pruned_map[variable].items():
+            self.domain_map[neighbor].extend(d_list)
             d_list.clear()
 
     def forward_check(self, variable: V, solution: Solution):
@@ -60,13 +62,11 @@ class CSP:
 
         # TODO: optimize
         for neighbor in filter(lambda x: x not in solution, neighbors):
-            domain = self.domain_map[neighbor]
-
-            for d in domain:
+            for d in self.domain_map[neighbor]:
                 if not self.is_valid(
                     neighbor, self.test_solution(solution, {neighbor: d})
                 ):
-                    domain.remove(d)
+                    self.domain_map[neighbor].remove(d)
                     self.pruned_map[variable][neighbor].append(d)
 
     def AC3(self, variable: V, solution: Solution):
@@ -104,8 +104,10 @@ class CSP:
             t_solution = self.test_solution(solution, {v: d})
 
             if self.is_valid(v, t_solution):
-                self.pruning_function(v, t_solution)
+                # self.pruning_function(v, t_solution)
                 valid = self.backtrack(t_solution)
+
+            # self.domain_map[v] = self.domain_map2[v][:]
 
         self.variable_stack.appendleft(v)
         return False
@@ -226,4 +228,4 @@ if __name__ == "__main__":
 
     print(len(solutions), len(set(solutions)))
 
-    pprint.pprint(csp.solutions)
+    # pprint.pprint(csp.solutions)
