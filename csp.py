@@ -1,6 +1,7 @@
 from collections import defaultdict, deque
 from typing import *
 import copy
+import pprint
 
 V = TypeVar("V")
 D = TypeVar("D")
@@ -17,7 +18,6 @@ class CSP:
         self.variables: List[V] = []
         self.constraints: Dict[V, List[Constraint]] = defaultdict(list)
         self.domain_map: Dict[V, List[D]] = {}
-        self.domain_map2: Dict[V, List[D]] = {}
 
         self.variable_stack: Deque[V] = deque()
         self.neighbors: Dict[V, Set[V]] = defaultdict(set)
@@ -32,7 +32,6 @@ class CSP:
             self.variables.append(v)
             self.variable_stack.append(v)
             self.domain_map[v] = list(domain)
-            self.domain_map2[v] = list(domain)
 
     def add_constraint(self, constraint_pair: Tuple[Constraint, List[V]]):
         constraint, variables = constraint_pair
@@ -46,7 +45,7 @@ class CSP:
         return all((constraint(solution) for constraint in constraint_list))
 
     def test_solution(self, solution: Solution, test_vals: Solution):
-        solution = copy.deepcopy(solution)
+        solution = solution.copy()
         solution.update(test_vals)
         return solution
 
@@ -80,7 +79,7 @@ class CSP:
                 for y in self.domain_map[Xj]:
                     if self.is_valid(Xj, self.test_solution(solution, {Xi: x, Xj: y})):
                         all_inconsistent = False
-                        
+
                 if all_inconsistent:
                     self.domain_map[Xi].remove(x)
                     removed = True
@@ -107,15 +106,13 @@ class CSP:
             if self.is_valid(v, t_solution):
                 self.pruning_function(v, t_solution)
                 valid = self.backtrack(t_solution)
-            
-            self.domain_map[v] = self.domain_map2[v][:]
 
-        self.variable_stack.append(v)
+        self.variable_stack.appendleft(v)
         return False
 
     def solve(self):
         self.solutions = []
-        self.pruning_function = self.AC3
+        self.pruning_function = self.forward_check
         return self.backtrack({})
 
 
@@ -140,6 +137,24 @@ def map_coloring_constraint(p1: str, p2: str):
     return check, [p1, p2]
 
 
+def n_queens_constraint(columns: List[int]):
+    def check(current_solution: Solution):
+        for (
+            q1c,
+            q1r,
+        ) in current_solution.items():
+            for q2c in range(q1c + 1, len(columns) + 1):
+                if q2c in current_solution:
+                    q2r = current_solution[q2c]
+                    if q1r == q2r:
+                        return False
+                    if abs(q1r - q2r) == abs(q1c - q2c):
+                        return False
+        return True
+
+    return check, list(columns)
+
+
 def lambda_constraint(func: Callable[[Any], bool], *variables):
     def check(current_solution: Solution):
         current_values = get_current_solution_values(variables, current_solution)
@@ -159,7 +174,18 @@ def all_different_constraint(*variables):
     return check, list(variables)
 
 
-if __name__ == "__main__":
+def n_queens():
+    domain = [1, 2, 3, 4, 5, 6, 7, 8]
+    variables = list(domain)
+
+    csp = CSP()
+    csp.add_variables(domain, *variables)
+    csp.add_constraint(n_queens_constraint(variables))
+
+    return csp
+
+
+def map_coloring():
     variables = [
         "Western Australia",
         "Northern Territory",
@@ -187,21 +213,17 @@ if __name__ == "__main__":
     csp.add_constraint(map_coloring_constraint("Victoria", "South Australia"))
     csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
 
-    csp.solve()
-    # solutions1 = list(map(json.dumps, csp.solutions))
-    # print(len(csp.solutions))
-    # csp.solve(True)
-    # solutions2 = list(map(json.dumps, csp.solutions))
-    # print(len(csp.solutions))
+    return csp
 
-    # tmp = set(solutions1).difference(set(solutions2))
-    # tmp = list(map(json.loads, tmp))
-    # pprint.pprint(tmp)
+
+if __name__ == "__main__":
+    # csp = map_coloring()
+    csp = n_queens()
+
+    csp.solve()
 
     solutions = list(map(str, csp.solutions))
 
     print(len(solutions), len(set(solutions)))
 
-
-    # pprint.pprint(csp.solutions)
-    # print(len(csp.solutions))
+    pprint.pprint(csp.solutions)
