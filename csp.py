@@ -86,7 +86,7 @@ class CSP:
                 if Xj not in solution
             )
         )
-        
+
         while len(agenda) > 0:
             Xi, Xj = agenda.pop()
             if remove_inconsistent_values(Xi, Xj):
@@ -104,14 +104,13 @@ class CSP:
 
         for d in self.current_domains[v]:
             solution[v] = d
+            domain = copy.deepcopy(self.current_domains)
 
             if self.is_valid(v, solution):
                 pruned = self.pruning_function(v, solution)
                 valid = self.backtrack(solution)
 
-            for i in self.variables:
-                self.current_domains[i] = list(self.domains[i])
-
+            self.current_domains = domain
             del solution[v]
 
         self.variable_stack.append(v)
@@ -128,7 +127,7 @@ class CSP:
             self.pruned_map[v].clear()
 
         self.solutions = []
-        self.pruning_function = self.forward_check
+        self.pruning_function = self.AC3
         return self.backtrack({})
 
 

@@ -52,8 +52,8 @@ def create_futoshiki_csp(filename: str) -> CSP:
         for ix, value in zip(Ls, Vs):
             csp.add_constraint(equals_constraint(grid[ix], value))
 
-        for a, b in zip(As, Bs):
-            csp.add_constraint(greater_than_constraint(grid[a], grid[b]))
+        # for a, b in zip(As, Bs):
+        #     csp.add_constraint(greater_than_constraint(grid[a], grid[b]))
 
         grid = grid.reshape((N, N))
 
