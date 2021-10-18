@@ -27,6 +27,8 @@ class CSP:
         self.current_domains: Dict[V, List[D]] = {}
         self.domains: Dict[V, List[D]] = {}
 
+        self.pruning_function = lambda x, y: False
+
         self.variable_stack: Deque[V] = deque()
 
         self.neighbors: Dict[V, Set[V]] = defaultdict(set)
@@ -115,8 +117,8 @@ class CSP:
             solution[v] = d
 
             if self.is_valid(v, solution):
-                pruned = self.pruning_function(v, solution)
-                valid = self.backtrack(solution)
+                self.pruning_function(v, solution)
+                self.backtrack(solution)
 
             self.restore_pruned_domains(v)
             del solution[v]
@@ -140,8 +142,6 @@ class CSP:
             self.pruning_function = self.forward_check
         elif pruning_type == PruningType.AC3:
             self.pruning_function = self.AC3
-        else:
-            self.pruning_function = lambda x, y: False
 
         return self.backtrack({})
 

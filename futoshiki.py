@@ -1,8 +1,5 @@
-
-import dataclasses
-import json
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import *
 
 import numpy as np
@@ -20,7 +17,6 @@ def greater_than_constraint(a, b):
 
 def equals_constraint(node, value: int):
     return lambda_constraint(lambda x: x == value, node)
-
 
 
 @dataclass(frozen=True)
@@ -43,8 +39,8 @@ def create_futoshiki_csp(filename: str) -> CSP:
         As = split_line(file.readline())
         Bs = split_line(file.readline())
 
-        grid: np.array = np.asarray( [Node((i, j)) for i in range(N) for j in range(N)])
-        
+        grid: np.array = np.asarray([Node((i, j)) for i in range(N) for j in range(N)])
+
         domain = list(range(1, N + 1))
         csp = CSP()
         csp.add_variables(domain, *grid)
@@ -52,8 +48,8 @@ def create_futoshiki_csp(filename: str) -> CSP:
         for ix, value in zip(Ls, Vs):
             csp.add_constraint(equals_constraint(grid[ix], value))
 
-        # for a, b in zip(As, Bs):
-        #     csp.add_constraint(greater_than_constraint(grid[a], grid[b]))
+        for a, b in zip(As, Bs):
+            csp.add_constraint(greater_than_constraint(grid[a], grid[b]))
 
         grid = grid.reshape((N, N))
 
@@ -65,16 +61,16 @@ def create_futoshiki_csp(filename: str) -> CSP:
 
         return csp
 
+
 def print_solutions(csp: CSP):
-    N = int(math.sqrt( len(csp.variables)))
+    N = int(math.sqrt(len(csp.variables)))
 
     for solution in csp.solutions:
         for i in range(N):
-            nodes = (csp.variables[i*N + j] for j in range(N))
+            nodes = (csp.variables[i * N + j] for j in range(N))
             row = ", ".join(map(lambda x: str(solution.get(x)), nodes))
             print(row)
         print("###############")
-
 
 
 if __name__ == "__main__":
@@ -88,5 +84,3 @@ if __name__ == "__main__":
     print(len(solutions), len(set(solutions)))
 
     print_solutions(csp)
-
-
