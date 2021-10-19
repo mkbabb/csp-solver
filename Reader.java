@@ -5,7 +5,7 @@ import java.util.Scanner;
 import java.util.function.BiFunction;
 
 public class Reader {
-    public static CSP<Integer, Futoshiki.FTuple> readFutoshikiInput(String fileName)
+    public static CSP<Futoshiki.FTuple, Integer> readFutoshikiInput(String fileName)
         throws FileNotFoundException {
         BiFunction<Integer, Integer, Boolean> lessThan = (x, y) -> x < y;
         BiFunction<Integer, Integer, Boolean> greaterThan = (x, y) -> x > y;
@@ -40,7 +40,7 @@ public class Reader {
             domain.add(i);
         }
 
-        CSP<Futoshiki.FTuple, Integer> fileCSP = new CSP();
+        CSP<Futoshiki.FTuple, Integer> fileCSP = new CSP<Futoshiki.FTuple, Integer>();
 
         for (final var ftuple : FTList) {
             fileCSP.addVariable(ftuple, domain);
