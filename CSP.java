@@ -13,6 +13,7 @@ public class CSP<V, D> {
     public List<Map<V, D>> solutions;
     public Stack<V> variableStack;
     public Map<V, Map<V, Set<D>>> prunedDomain;
+    public String algorithm;
 
     public CSP() {
         this.variables = new HashMap<V, Variable>();
@@ -173,7 +174,11 @@ public class CSP<V, D> {
             assignment.put(variableValue, x);
 
             if (variable.isValid(assignment)) {
-                this.AC3(variableValue, assignment);
+                if (this.algorithm.equals("FC")) {
+                    this.forwardCheck(variableValue, assignment);
+                } else if (this.algorithm.equals("MAC")) {
+                    this.AC3(variableValue, assignment);
+                }
                 this.backtrack(assignment);
             }
 
@@ -186,7 +191,8 @@ public class CSP<V, D> {
         return false;
     }
 
-    public void solve() {
+    public void solve(String algorithm) {
+        this.algorithm = algorithm;
         final var assignment = new HashMap<V, D>();
         final var variableValues = this.variables.keySet();
 
@@ -239,7 +245,7 @@ public class CSP<V, D> {
         csp.addConstraint(new Constraint.MapColoringConstraint("Victoria", "New South Wales"));
         // csp.addConstraint(new Constraint.MapColoringConstraint("Tasmania", "Victoria"));
 
-        csp.solve();
+        csp.solve("FC");
 
         System.out.println(csp.solutions.size());
         System.out.println("Done");
