@@ -25,12 +25,22 @@ public class CSP<V, D> {
 
         public Set<Variable> neighbors;
 
+        public Map<V, Set<D>> prunedDomain;
+
         public Variable(List<D> domain) {
             this.domain = new ArrayList<D>();
             this.domain.addAll(domain);
 
             this.constraints = new ArrayList<Constraint<V, D>>();
             this.neighbors = new HashSet<Variable>();
+
+            this.prunedDomain = new HashMap<V, Set<D>>();
+        }
+
+        public void restorePrunedDomain(V variableValue) {
+            final var values = this.prunedDomain.get(variableValue);
+            this.domain.addAll(values);
+            values.clear();
         }
 
         public boolean isValid(Map<V, D> assignment) {
@@ -64,6 +74,16 @@ public class CSP<V, D> {
         return this.variables.get(this.variableStack.pop());
     }
 
+    public boolean forwardCheck(V variableValue, Map<V, D> assignment) {
+        this.getNeighbors(variableValue).stream().filter(assignment::containsKey).forEach((Xi) -> {
+            
+            for (final var x : Xi.domain) {
+                // assignment.put(, value)
+            
+            }
+        });
+    }
+
     public boolean backtrack(Map<V, D> assignment) {
         if (assignment.size() == this.variables.size()) {
             this.solutions.add(new HashMap<>(assignment));
@@ -90,6 +110,14 @@ public class CSP<V, D> {
 
     public void solve() {
         final var assignment = new HashMap<V, D>();
+        final var variableValues = this.variables.keySet();
+
+        this.variables.values().forEach((v) -> {
+            for (final var variableValue : variableValues) {
+                v.prunedDomain.put(variableValue, new HashSet<D>());
+            }
+        });
+
         this.backtrack(assignment);
     }
 
