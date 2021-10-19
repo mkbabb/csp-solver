@@ -12,35 +12,36 @@ public class CSP<V, D> {
     public Map<V, Variable> variables;
     public List<Map<V, D>> solutions;
     public Stack<V> variableStack;
+    public Map<V, Map<V, Set<D>>> prunedDomain;
 
     public CSP() {
         this.variables = new HashMap<V, Variable>();
         this.solutions = new ArrayList<Map<V, D>>();
         this.variableStack = new Stack<V>();
+        this.prunedDomain = new HashMap<V, Map<V, Set<D>>>();
     }
 
     public class Variable {
+        public V value;
         public List<Constraint<V, D>> constraints;
         public List<D> domain;
 
-        public Set<Variable> neighbors;
+        public Set<V> neighbors;
 
         public Map<V, Set<D>> prunedDomain;
 
-        public Variable(List<D> domain) {
+        public Variable(V value, List<D> domain) {
+            this.value = value;
             this.domain = new ArrayList<D>();
             this.domain.addAll(domain);
 
             this.constraints = new ArrayList<Constraint<V, D>>();
-            this.neighbors = new HashSet<Variable>();
-
-            this.prunedDomain = new HashMap<V, Set<D>>();
+            this.neighbors = new HashSet<V>();
         }
 
-        public void restorePrunedDomain(V variableValue) {
-            final var values = this.prunedDomain.get(variableValue);
-            this.domain.addAll(values);
-            values.clear();
+        @Override
+        public String toString() {
+            return this.value.toString();
         }
 
         public boolean isValid(Map<V, D> assignment) {
@@ -48,8 +49,15 @@ public class CSP<V, D> {
         }
     }
 
+    public void restorePrunedDomain(V variableValue) {
+        this.prunedDomain.get(variableValue).forEach((Xi, S) -> {
+            this.variables.get(Xi).domain.addAll(S);
+            S.clear();
+        });
+    }
+
     public void addVariable(V variableValue, List<D> domain) {
-        final var variable = new Variable(domain);
+        final var variable = new Variable(variableValue, domain);
         this.variables.put(variableValue, variable);
         this.variableStack.push(variableValue);
     }
@@ -60,12 +68,12 @@ public class CSP<V, D> {
 
         for (final var v : variables) {
             v.constraints.add(constraint);
-            v.neighbors.addAll(variables);
-            v.neighbors.remove(v);
+            v.neighbors.addAll(constraint.variableValues);
+            v.neighbors.remove(v.value);
         }
     }
 
-    public Set<Variable> getNeighbors(V variableValue) {
+    public Set<V> getNeighbors(V variableValue) {
         final var variable = this.variables.get(variableValue);
         return variable.neighbors;
     }
@@ -74,12 +82,20 @@ public class CSP<V, D> {
         return this.variables.get(this.variableStack.pop());
     }
 
-    public boolean forwardCheck(V variableValue, Map<V, D> assignment) {
-        this.getNeighbors(variableValue).stream().filter(assignment::containsKey).forEach((Xi) -> {
-            
-            for (final var x : Xi.domain) {
-                // assignment.put(, value)
-            
+    public void forwardCheck(V variableValue, Map<V, D> assignment) {
+        this.getNeighbors(variableValue).stream().filter(x -> !assignment.containsKey(x)).forEach((Xi) -> {
+            final var variable = this.variables.get(Xi);
+            final var domain = new ArrayList<D>(variable.domain);
+
+            for (final var x : domain) {
+                assignment.put(Xi, x);
+
+                if (!variable.isValid(assignment)) {
+                    variable.domain.remove(x);
+                    this.prunedDomain.get(variableValue).get(Xi).add(x);
+                }
+
+                assignment.remove(Xi);
             }
         });
     }
@@ -92,14 +108,17 @@ public class CSP<V, D> {
 
         final var variableValue = this.variableStack.pop();
         final var variable = this.variables.get(variableValue);
+        final var domain = new ArrayList<D>(variable.domain);
 
-        for (final var x : variable.domain) {
+        for (final var x : domain) {
             assignment.put(variableValue, x);
 
             if (variable.isValid(assignment)) {
+                this.forwardCheck(variableValue, assignment);
                 this.backtrack(assignment);
             }
 
+            this.restorePrunedDomain(variableValue);
             assignment.remove(variableValue);
         }
 
@@ -112,11 +131,13 @@ public class CSP<V, D> {
         final var assignment = new HashMap<V, D>();
         final var variableValues = this.variables.keySet();
 
-        this.variables.values().forEach((v) -> {
-            for (final var variableValue : variableValues) {
-                v.prunedDomain.put(variableValue, new HashSet<D>());
+        for (final var variableValue : variableValues) {
+            final var m = new HashMap<V, Set<D>>();
+            for (final var v : variableValues) {
+                m.put(v, new HashSet<D>());
             }
-        });
+            this.prunedDomain.put(variableValue, m);
+        }
 
         this.backtrack(assignment);
     }
