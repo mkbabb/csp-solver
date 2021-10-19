@@ -114,7 +114,7 @@ public class Reader {
         // final var filename = "data/sample_input.txt";
         // final var algo = "MAC";
         final var algo = args[0];
-        final var filename = args[1]
+        final var filename = args[1];
 
     
 
