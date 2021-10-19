@@ -1,5 +1,5 @@
 public class Futoshiki {
-    public class FTuple {
+    public static class FTuple {
         private int x;
         private int y;
         
