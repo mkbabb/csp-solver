@@ -1,10 +1,11 @@
 import math
 from dataclasses import dataclass
 from typing import *
+import sys
 
 import numpy as np
 
-from csp import CSP, all_different_constraint, lambda_constraint
+from csp import CSP, PruningType, all_different_constraint, lambda_constraint
 
 
 def less_than_constraint(a, b):
@@ -75,12 +76,25 @@ def print_solutions(csp: CSP):
 
 if __name__ == "__main__":
     filename = "data/sample_input.txt"
+    algorithm = "MAC"
+
+    # algorithm = sys.argv[1]
+    # filename = sys.argv[2]
+
+    pruning_type = (
+        PruningType.FORWARD_CHECKING
+        if algorithm == "FC"
+        else PruningType.AC3
+        if algorithm == "MAC"
+        else PruningType.NO_PRUNING
+    )
+
+    
     csp = create_futoshiki_csp(filename)
 
     csp.solve()
 
-    solutions = list(map(str, csp.solutions))
-
-    print(len(solutions), len(set(solutions)))
+    # solutions = list(map(str, csp.solutions))
+    # print(len(solutions), len(set(solutions)))
 
     print_solutions(csp)
