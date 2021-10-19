@@ -1,6 +1,8 @@
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 public class Constraint<V, D> {
     public List<V> variableValues;
@@ -21,10 +23,40 @@ public class Constraint<V, D> {
 
         @Override
         public boolean isValid(Map<V, D> assignment) {
-            // final var domainValues = 
-            return false;
+            final var currentValues = new ArrayList<D>();
+            for (final var variableValue : this.variableValues) {
+                if (assignment.containsKey(variableValue)) {
+                    currentValues.add(assignment.get(variableValue))
+                }
+            }
+            final var S = new HashSet<D>(currentValues);
+            return currentValues.size() == S.size();
         }
     }
+
+    public static class FunctionConstraint<V, D> extends Constraint<V, D> {
+        BiFunction<D, D, Boolean> f;
+        public FunctionConstraint(BiFunction<D, D, Boolean> f, List<V> variableValues) {
+            super(variableValues);
+            this.f = f;
+        }
+
+        @Override
+        public boolean isValid(Map<V, D> assignment) {
+            final var currentValues = new ArrayList<D>();
+            for (final var variableValue : this.variableValues) {
+                if (assignment.containsKey(variableValue)) {
+                    currentValues.add(assignment.get(variableValue));
+                }
+            }
+            if (currentValues.size() == 2) {
+                return this.f.apply(currentValues.get(0), currentValues.get(1));
+            }
+            return true;
+        }
+    }
+
+    
 
     public static class MapColoringConstraint extends Constraint<String, String> {
         public String p1;

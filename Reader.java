@@ -2,11 +2,14 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.function.BiFunction;
 
 public class Reader {
     public static CSP<Integer, Futoshiki.FTuple> readFutoshikiInput(String fileName)
         throws FileNotFoundException {
-        
+        BiFunction<Integer, Integer, Boolean> lessThan = (x, y) -> x < y;
+        BiFunction<Integer, Integer, Boolean> greaterThan = (x, y) -> x > y;
+        BiFunction<Integer, Integer, Boolean> equalTo = (x, y) -> x == y;
 
         Scanner scan;
 
@@ -28,6 +31,7 @@ public class Reader {
         for (String s : scan.nextLine().split(" ")) {
             VList.add(Integer.parseInt(s));
         }
+        
         for (int i = 0; i < LList.size(); i++) {
         }
 
@@ -41,7 +45,12 @@ public class Reader {
         for (final var ftuple : FTList) {
             fileCSP.addVariable(ftuple, domain);
         }
-        
+
+        for (final var row : grid) {
+            for (final var i : row) {
+                new Constraint.FunctionConstraint<Integer, Integer>(lessThan);
+            }
+        }
 
         return fileCSP;
     }
