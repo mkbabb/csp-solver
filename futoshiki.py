@@ -75,11 +75,11 @@ def print_solutions(csp: CSP):
 
 
 if __name__ == "__main__":
-    filename = "data/sample_input.txt"
-    algorithm = "MAC"
+    # filename = "data/sample_input.txt"
+    # algorithm = "MAC"
 
-    # algorithm = sys.argv[1]
-    # filename = sys.argv[2]
+    algorithm = sys.argv[1]
+    filename = sys.argv[2]
 
     pruning_type = (
         PruningType.FORWARD_CHECKING
@@ -89,7 +89,6 @@ if __name__ == "__main__":
         else PruningType.NO_PRUNING
     )
 
-    
     csp = create_futoshiki_csp(filename)
 
     csp.solve()
