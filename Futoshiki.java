@@ -150,7 +150,6 @@ public class Futoshiki {
     public static void main(String[] args) throws FileNotFoundException {
         final var algo = args[0];
         final var filename = args[1];
-
         final var csp = readFutoshikiInput(filename, algo);
     }
 }
