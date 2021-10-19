@@ -84,20 +84,79 @@ public class CSP<V, D> {
 
     public void forwardCheck(V variableValue, Map<V, D> assignment) {
         this.getNeighbors(variableValue).stream().filter(x -> !assignment.containsKey(x)).forEach((Xi) -> {
-            final var variable = this.variables.get(Xi);
-            final var domain = new ArrayList<D>(variable.domain);
+            final var variableXi = this.variables.get(Xi);
+            final var domain = new ArrayList<D>(variableXi.domain);
 
             for (final var x : domain) {
                 assignment.put(Xi, x);
 
-                if (!variable.isValid(assignment)) {
-                    variable.domain.remove(x);
+                if (!variableXi.isValid(assignment)) {
+                    variableXi.domain.remove(x);
                     this.prunedDomain.get(variableValue).get(Xi).add(x);
                 }
 
                 assignment.remove(Xi);
             }
         });
+    }
+
+    public boolean removeInconsistentVariables(V Xi, V Xj, Map<V, D> assignment) {
+        var removed = false;
+        final var tx = assignment.get(Xi);
+
+        final var variableXi = this.variables.get(Xi);
+        final var variableXj = this.variables.get(Xj);
+
+        final var domain = new ArrayList<D>(variableXi.domain);
+
+        for (final var x : domain) {
+            var allInconsistent = true;
+            for (final var y : variableXj.domain) {
+                assignment.put(Xi, x);
+                assignment.put(Xj, y);
+                if (variableXj.isValid(assignment)) {
+                    allInconsistent = false;
+                    break;
+                }
+                assignment.remove(Xj);
+            }
+
+            if (allInconsistent) {
+                variableXi.domain.remove(x);
+                this.prunedDomain.get(Xi).get(Xi).add(x);
+                removed = true;
+            }
+        }
+
+        if (tx != null) {
+            assignment.put(Xi, tx);
+        }
+
+        return removed;
+    }
+
+    public void AC3(V variableValue, Map<V, D> assignment) {
+        final var agenda = new Stack<Pair<V, V>>();
+        this.getNeighbors(variableValue)
+            .stream()
+            .filter(x -> !assignment.containsKey(x))
+            .forEach(x -> new Pair<V, V>(x, variableValue));
+
+        while (agenda.size() > 0) {
+            final var p = agenda.pop();
+
+            final var Xi = p.x;
+            final var Xj = p.y;
+
+            if (this.removeInconsistentVariables(Xi, Xj, assignment)) {
+                for (final var Xk : this.getNeighbors(Xi)) {
+                    final var tp = new Pair<V, V>(Xk, Xi);
+                    if (!Xk.equals(Xi) && !agenda.contains(tp) && !assignment.containsKey(Xk)) {
+                        agenda.push(tp);
+                    }
+                }
+            }
+        }
     }
 
     public boolean backtrack(Map<V, D> assignment) {
@@ -114,7 +173,7 @@ public class CSP<V, D> {
             assignment.put(variableValue, x);
 
             if (variable.isValid(assignment)) {
-                this.forwardCheck(variableValue, assignment);
+                this.AC3(variableValue, assignment);
                 this.backtrack(assignment);
             }
 
@@ -140,31 +199,6 @@ public class CSP<V, D> {
         }
 
         this.backtrack(assignment);
-    }
-
-    public static class MapColoringConstraint extends Constraint<String, String> {
-        public String p1;
-        public String p2;
-
-        public MapColoringConstraint(String p1, String p2) {
-            super(new ArrayList<String>() {
-                {
-                    add(p1);
-                    add(p2);
-                }
-            });
-            this.p1 = p1;
-            this.p2 = p2;
-        }
-
-        @Override
-        public boolean isValid(Map<String, String> assignment) {
-            if (!(assignment.containsKey(p1) || assignment.containsKey(p2))) {
-                return true;
-            } else {
-                return assignment.get(p1) != assignment.get(p2);
-            }
-        }
     }
 
     public static void main(String[] args) {
@@ -194,19 +228,20 @@ public class CSP<V, D> {
             csp.addVariable(value, domain);
         }
 
-        csp.addConstraint(new CSP.MapColoringConstraint("Western Australia", "Northern Territory"));
-        csp.addConstraint(new CSP.MapColoringConstraint("Western Australia", "South Australia"));
-        csp.addConstraint(new CSP.MapColoringConstraint("South Australia", "Northern Territory"));
-        csp.addConstraint(new CSP.MapColoringConstraint("Queensland", "Northern Territory"));
-        csp.addConstraint(new CSP.MapColoringConstraint("Queensland", "South Australia"));
-        csp.addConstraint(new CSP.MapColoringConstraint("Queensland", "New South Wales"));
-        csp.addConstraint(new CSP.MapColoringConstraint("New South Wales", "South Australia"));
-        csp.addConstraint(new CSP.MapColoringConstraint("Victoria", "South Australia"));
-        csp.addConstraint(new CSP.MapColoringConstraint("Victoria", "New South Wales"));
-        // csp.addConstraint(new CSP.MapColoringConstraint("Tasmania", "Victoria"));
+        csp.addConstraint(new Constraint.MapColoringConstraint("Western Australia", "Northern Territory"));
+        csp.addConstraint(new Constraint.MapColoringConstraint("Western Australia", "South Australia"));
+        csp.addConstraint(new Constraint.MapColoringConstraint("South Australia", "Northern Territory"));
+        csp.addConstraint(new Constraint.MapColoringConstraint("Queensland", "Northern Territory"));
+        csp.addConstraint(new Constraint.MapColoringConstraint("Queensland", "South Australia"));
+        csp.addConstraint(new Constraint.MapColoringConstraint("Queensland", "New South Wales"));
+        csp.addConstraint(new Constraint.MapColoringConstraint("New South Wales", "South Australia"));
+        csp.addConstraint(new Constraint.MapColoringConstraint("Victoria", "South Australia"));
+        csp.addConstraint(new Constraint.MapColoringConstraint("Victoria", "New South Wales"));
+        // csp.addConstraint(new Constraint.MapColoringConstraint("Tasmania", "Victoria"));
 
         csp.solve();
 
+        System.out.println(csp.solutions.size());
         System.out.println("Done");
     }
 }
