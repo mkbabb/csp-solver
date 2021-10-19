@@ -92,9 +92,9 @@ public class Reader {
 
         fileCSP.solve(algo);
 
-        // System.out.println(fileCSP.solutions.size());
+        // System.out.println(fileCSP.assignments.size());
 
-        for (final var s : fileCSP.solutions) {
+        for (final var s : fileCSP.assignments) {
             for (int i = 0; i < n; i++) {
                 final var tmp = new ArrayList<String>();
                 for (int j = 0; j < n; j++) {
@@ -111,10 +111,10 @@ public class Reader {
     }
 
     public static void main(String[] args) throws FileNotFoundException {
-        final var filename = "data/sample_input.txt";
-        final var algo = "MAC";
-        // final var algo = args[0];
-        // final var filename = args[1]
+        // final var filename = "data/sample_input.txt";
+        // final var algo = "MAC";
+        final var algo = args[0];
+        final var filename = args[1]
 
     
 

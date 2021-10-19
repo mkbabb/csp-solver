@@ -5,21 +5,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 public class CSP<V, D> {
     public Map<V, Variable> variables;
-    public List<Map<V, D>> solutions;
-    public Stack<V> variableStack;
-    public Map<V, Map<V, Set<D>>> prunedDomain;
+    public List<Map<V, D>> assignments;
+    public Stack<V> currentVariables;
+    public Map<V, Map<V, Set<D>>> domainSet;
     public String algorithm;
 
     public CSP() {
         this.variables = new HashMap<V, Variable>();
-        this.solutions = new ArrayList<Map<V, D>>();
-        this.variableStack = new Stack<V>();
-        this.prunedDomain = new HashMap<V, Map<V, Set<D>>>();
+        this.assignments = new ArrayList<Map<V, D>>();
+        this.currentVariables = new Stack<V>();
+        this.domainSet = new HashMap<V, Map<V, Set<D>>>();
     }
 
     public class Variable {
@@ -29,7 +28,7 @@ public class CSP<V, D> {
 
         public Set<V> neighbors;
 
-        public Map<V, Set<D>> prunedDomain;
+        public Map<V, Set<D>> domainSet;
 
         public Variable(V value, List<D> domain) {
             this.value = value;
@@ -51,7 +50,7 @@ public class CSP<V, D> {
     }
 
     public void restorePrunedDomain(V variableValue) {
-        this.prunedDomain.get(variableValue).forEach((Xi, S) -> {
+        this.domainSet.get(variableValue).forEach((Xi, S) -> {
             this.variables.get(Xi).domain.addAll(S);
             S.clear();
         });
@@ -60,7 +59,7 @@ public class CSP<V, D> {
     public void addVariable(V variableValue, List<D> domain) {
         final var variable = new Variable(variableValue, domain);
         this.variables.put(variableValue, variable);
-        this.variableStack.push(variableValue);
+        this.currentVariables.push(variableValue);
     }
 
     public void addConstraint(Constraint<V, D> constraint) {
@@ -80,7 +79,7 @@ public class CSP<V, D> {
     }
 
     public Variable getNextVariable() {
-        return this.variables.get(this.variableStack.pop());
+        return this.variables.get(this.currentVariables.pop());
     }
 
     public void forwardCheck(V variableValue, Map<V, D> assignment) {
@@ -93,7 +92,7 @@ public class CSP<V, D> {
 
                 if (!variableXi.isValid(assignment)) {
                     variableXi.domain.remove(x);
-                    this.prunedDomain.get(variableValue).get(Xi).add(x);
+                    this.domainSet.get(variableValue).get(Xi).add(x);
                 }
 
                 assignment.remove(Xi);
@@ -124,7 +123,7 @@ public class CSP<V, D> {
 
             if (allInconsistent) {
                 variableXi.domain.remove(x);
-                this.prunedDomain.get(Xi).get(Xi).add(x);
+                this.domainSet.get(Xi).get(Xi).add(x);
                 removed = true;
             }
         }
@@ -162,11 +161,11 @@ public class CSP<V, D> {
 
     public boolean backtrack(Map<V, D> assignment) {
         if (assignment.size() == this.variables.size()) {
-            this.solutions.add(new HashMap<>(assignment));
+            this.assignments.add(new HashMap<>(assignment));
             return true;
         }
 
-        final var variableValue = this.variableStack.pop();
+        final var variableValue = this.currentVariables.pop();
         final var variable = this.variables.get(variableValue);
         final var domain = new ArrayList<D>(variable.domain);
 
@@ -186,7 +185,7 @@ public class CSP<V, D> {
             assignment.remove(variableValue);
         }
 
-        this.variableStack.push(variableValue);
+        this.currentVariables.push(variableValue);
 
         return false;
     }
@@ -201,53 +200,9 @@ public class CSP<V, D> {
             for (final var v : variableValues) {
                 m.put(v, new HashSet<D>());
             }
-            this.prunedDomain.put(variableValue, m);
+            this.domainSet.put(variableValue, m);
         }
 
         this.backtrack(assignment);
-    }
-
-    public static void main(String[] args) {
-        final var csp = new CSP<String, String>();
-
-        final var values = new ArrayList<String>() {
-            {
-                add("Western Australia");
-                add("Northern Territory");
-                add("South Australia");
-                add("Queensland");
-                add("New South Wales");
-                add("Victoria");
-                add("Tasmania");
-            }
-        };
-
-        final var domain = new ArrayList<String>() {
-            {
-                add("red");
-                add("green");
-                add("blue");
-            }
-        };
-
-        for (final var value : values) {
-            csp.addVariable(value, domain);
-        }
-
-        csp.addConstraint(new Constraint.MapColoringConstraint("Western Australia", "Northern Territory"));
-        csp.addConstraint(new Constraint.MapColoringConstraint("Western Australia", "South Australia"));
-        csp.addConstraint(new Constraint.MapColoringConstraint("South Australia", "Northern Territory"));
-        csp.addConstraint(new Constraint.MapColoringConstraint("Queensland", "Northern Territory"));
-        csp.addConstraint(new Constraint.MapColoringConstraint("Queensland", "South Australia"));
-        csp.addConstraint(new Constraint.MapColoringConstraint("Queensland", "New South Wales"));
-        csp.addConstraint(new Constraint.MapColoringConstraint("New South Wales", "South Australia"));
-        csp.addConstraint(new Constraint.MapColoringConstraint("Victoria", "South Australia"));
-        csp.addConstraint(new Constraint.MapColoringConstraint("Victoria", "New South Wales"));
-        // csp.addConstraint(new Constraint.MapColoringConstraint("Tasmania", "Victoria"));
-
-        csp.solve("FC");
-
-        System.out.println(csp.solutions.size());
-        System.out.println("Done");
     }
 }
