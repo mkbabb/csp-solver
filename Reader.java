@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Reader {
-    public static CSP<Integer, Futoshiki.FTuple> readFutoshikiInput(String fileName)
+    public static CSP<Futoshiki.FTuple, Integer> readFutoshikiInput(String fileName)
         throws FileNotFoundException {
         
 
@@ -36,7 +36,7 @@ public class Reader {
             domain.add(i);
         }
 
-        CSP<Futoshiki.FTuple, Integer> fileCSP = new CSP();
+        CSP<Futoshiki.FTuple, Integer> fileCSP = new CSP<Futoshiki.FTuple, Integer>();
 
         for (final var ftuple : FTList) {
             fileCSP.addVariable(ftuple, domain);
