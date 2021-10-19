@@ -17,8 +17,8 @@ public class Constraint<V, D> {
         return false;
     }
 
-    public static class AllDifferent<V, D> extends Constraint<V, D> {
-        public AllDifferent(List<V> variableValues) {
+    public static class AllNodesDifferentConstraint<V, D> extends Constraint<V, D> {
+        public AllNodesDifferentConstraint(List<V> variableValues) {
             super(variableValues);
         }
 
@@ -58,12 +58,12 @@ public class Constraint<V, D> {
         }
     }
 
-    public static class FunctionConstraint<V, D> extends Constraint<V, D> {
+    public static class ComparatorConstraint<V, D> extends Constraint<V, D> {
         public BiFunction<D, D, Boolean> f;
         public V v1;
         public V v2;
 
-        public FunctionConstraint(BiFunction<D, D, Boolean> f, V v1, V v2) {
+        public ComparatorConstraint(BiFunction<D, D, Boolean> f, V v1, V v2) {
             super(new ArrayList<V>() {
                 {
                     add(v1);
@@ -88,31 +88,6 @@ public class Constraint<V, D> {
                 return this.f.apply(currentValues.get(0), currentValues.get(1));
             }
             return true;
-        }
-    }
-
-    public static class MapColoringConstraint extends Constraint<String, String> {
-        public String p1;
-        public String p2;
-
-        public MapColoringConstraint(String p1, String p2) {
-            super(new ArrayList<String>() {
-                {
-                    add(p1);
-                    add(p2);
-                }
-            });
-            this.p1 = p1;
-            this.p2 = p2;
-        }
-
-        @Override
-        public boolean isValid(Map<String, String> assignment) {
-            if (!(assignment.containsKey(p1) || assignment.containsKey(p2))) {
-                return true;
-            } else {
-                return assignment.get(p1) != assignment.get(p2);
-            }
         }
     }
 }

@@ -47,7 +47,7 @@ public class Futoshiki {
         }
     }
 
-    public static CSP<Futoshiki.FTuple, Integer> readFutoshikiInput(String fileName, String algo)
+    public static CSPSolver<Futoshiki.FTuple, Integer> readFutoshikiInput(String fileName, String algo)
         throws FileNotFoundException {
         BiFunction<Integer, Integer, Boolean> greaterThan = (x, y) -> x > y;
 
@@ -89,7 +89,7 @@ public class Futoshiki {
             domain.add(i);
         }
 
-        CSP<Futoshiki.FTuple, Integer> fileCSP = new CSP<Futoshiki.FTuple, Integer>();
+        CSPSolver<Futoshiki.FTuple, Integer> fileCSP = new CSPSolver<Futoshiki.FTuple, Integer>();
 
         for (final var ftuple : FTList) {
             fileCSP.addVariable(ftuple, domain);
@@ -106,7 +106,7 @@ public class Futoshiki {
             final var a = AList.get(i);
             final var b = BList.get(i);
 
-            final var c = new Constraint.FunctionConstraint<Futoshiki.FTuple, Integer>(
+            final var c = new Constraint.ComparatorConstraint<Futoshiki.FTuple, Integer>(
                 greaterThan, FTList[a], FTList[b]);
 
             fileCSP.addConstraint(c);
@@ -117,7 +117,7 @@ public class Futoshiki {
             for (int j = 0; j < n; j++) {
                 row.add(FTList[i * n + j]);
             }
-            final var c = new Constraint.AllDifferent<Futoshiki.FTuple, Integer>(row);
+            final var c = new Constraint.AllNodesDifferentConstraint<Futoshiki.FTuple, Integer>(row);
             fileCSP.addConstraint(c);
         }
 
@@ -126,7 +126,7 @@ public class Futoshiki {
             for (int j = 0; j < n; j++) {
                 row.add(FTList[i + j * n]);
             }
-            final var c = new Constraint.AllDifferent<Futoshiki.FTuple, Integer>(row);
+            final var c = new Constraint.AllNodesDifferentConstraint<Futoshiki.FTuple, Integer>(row);
             fileCSP.addConstraint(c);
         }
 

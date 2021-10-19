@@ -7,14 +7,14 @@ import java.util.Set;
 import java.util.Stack;
 import java.util.stream.Collectors;
 
-public class CSP<V, D> {
+public class CSPSolver<V, D> {
     public Map<V, Variable> variables;
     public List<Map<V, D>> assignments;
     public Stack<V> currentVariables;
     public Map<V, Map<V, Set<D>>> domainSet;
     public String algorithm;
 
-    public CSP() {
+    public CSPSolver() {
         this.variables = new HashMap<V, Variable>();
         this.assignments = new ArrayList<Map<V, D>>();
         this.currentVariables = new Stack<V>();
