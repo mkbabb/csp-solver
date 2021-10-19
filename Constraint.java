@@ -2,25 +2,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class Constraint<V> {
-    public List<V> values;
+public class Constraint<V, D> {
+    public List<V> variableValues;
 
-    public Constraint(List<V> values) {
-        this.values = new ArrayList<V>();
-        this.values.addAll(values);
+    public Constraint(List<V> variableValues) {
+        this.variableValues = new ArrayList<V>();
+        this.variableValues.addAll(variableValues);
     }
 
-    public <D> boolean isValid(Map<V, D> assignment) {
+    public boolean isValid(Map<V, D> assignment) {
         return false;
     }
 
-    public class AllDifferent extends Constraint<V> {
-        public AllDifferent(List<V> variables) {
-            super(variables);
+    public static class AllDifferent<V, D> extends Constraint<V, D> {
+        public AllDifferent(List<V> variableValues) {
+            super(variableValues);
         }
 
         @Override
-        public <D> boolean isValid(Map<V, D> assignment) {
+        public boolean isValid(Map<V, D> assignment) {
             return false;
         }
     }
