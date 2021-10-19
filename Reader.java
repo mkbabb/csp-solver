@@ -2,12 +2,9 @@ import java.io.FileInputStream;
 import java.util.ArrayList;
 
 public class Reader {
-    public static CSP<Variable, ArrayList<Integer>> readFutoshikiInput(String fileName) {
-        final ArrayList<Integer> dom = new ArrayList<Integer>(9);
-        for (int i = 1; i <= dom.size(); i++) dom.set(i, i);
-
-        CSP<Variable, ArrayList<Integer>> fileCSP;
-
+    public static CSP<Integer, FTuple> readFutoshikiInput(String fileName) {        
+        CSP<Integer, FTuple> fileCSP;
+        
         return fileCSP;
     }
 }
