@@ -1,8 +1,7 @@
-from collections import defaultdict, deque
-from typing import *
-import copy
 import pprint
+from collections import defaultdict, deque
 from enum import Enum, auto
+from typing import *
 
 V = TypeVar("V")
 D = TypeVar("D")
@@ -143,7 +142,9 @@ class CSP:
         elif pruning_type == PruningType.AC3:
             self.pruning_function = self.AC3
 
-        return self.backtrack({})
+        solution = {}
+
+        return self.backtrack(solution=solution)
 
 
 def get_current_solution_values(
@@ -188,6 +189,7 @@ def n_queens_constraint(columns: List[int]):
 def lambda_constraint(func: Callable[[Any], bool], *variables):
     def check(current_solution: Solution):
         current_values = get_current_solution_values(variables, current_solution)
+
         if len(variables) == len(current_values):
             return func(*current_values)
         else:
@@ -204,9 +206,8 @@ def all_different_constraint(*variables):
     return check, list(variables)
 
 
-def n_queens():
-    N = 8
-    domain = list(range(1, N + 1))
+def n_queens(n: int = 8):
+    domain = list(range(1, n + 1))
     variables = list(domain)
 
     csp = CSP()
