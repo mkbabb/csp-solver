@@ -1,21 +1,20 @@
-import atexit
-import csv
-import json
-import os
-
-
+import sys
 from typing import *
 
+from flask import Flask, render_template, request
 
-from flask import Flask, request
-
-from api.sudoku import SudokuDifficulty, create_random_board, create_sudoku_csp
-
+from csp.sudoku import SudokuDifficulty, create_random_board, create_sudoku_csp
 
 app = Flask(__name__)
 
 
-@app.route("/getRandomBoard/size/<difficulty>")
+@app.route("/")
+def index():
+    """Displays the index page accessible at '/'"""
+    return render_template("index.html")
+
+
+@app.route("/getRandomBoard/size/<difficulty>/", endpoint="get_random_board")
 def get_random_board(size: int, difficulty: str):
     difficulty = SudokuDifficulty.get(difficulty)
 
@@ -24,7 +23,7 @@ def get_random_board(size: int, difficulty: str):
     return board
 
 
-@app.route("/solve")
+@app.route("/solve/", endpoint="solve")
 def get_random_board():
     body = request.get_json()
 

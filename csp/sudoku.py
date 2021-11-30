@@ -6,7 +6,7 @@ import math
 
 import numpy as np
 
-from csp import (
+from csp.csp import (
     CSP,
     PruningType,
     all_different_constraint,
