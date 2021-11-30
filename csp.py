@@ -278,6 +278,7 @@ def test_solutions(csp: CSP):
     pprint.pprint(csp.solutions)
 
     print(len(solutions), len(unique_solutions))
+    print(len(solutions) == len(unique_solutions))
 
 
 if __name__ == "__main__":
