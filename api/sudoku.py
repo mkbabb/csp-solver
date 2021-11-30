@@ -19,6 +19,13 @@ class SudokuDifficulty(Enum):
     MEDIUM = auto()
     HARD = auto()
 
+    @classmethod
+    def get(cls, key: str, default=None):
+        if key in cls._member_names_:
+            return cls[key]
+        else:
+            return default
+
 
 def create_sudoku_csp(N: int, values: Dict[int, int]):
     M = N ** 2
