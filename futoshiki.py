@@ -5,19 +5,13 @@ from typing import *
 
 import numpy as np
 
-from csp import CSP, PruningType, all_different_constraint, lambda_constraint
-
-
-def less_than_constraint(a, b):
-    return lambda_constraint(lambda x, y: x < y, a, b)
-
-
-def greater_than_constraint(a, b):
-    return lambda_constraint(lambda x, y: x > y, a, b)
-
-
-def equals_constraint(node, value: int):
-    return lambda_constraint(lambda x: x == value, node)
+from csp import (
+    CSP,
+    PruningType,
+    all_different_constraint,
+    equals_constraint,
+    greater_than_constraint,
+)
 
 
 @dataclass(frozen=True)
@@ -28,7 +22,7 @@ class Node:
         return str(self.pos)
 
 
-def create_futoshiki_csp(filename: str) -> CSP:
+def create_futoshiki_csp(filename: str, pruning_type: PruningType) -> CSP:
     def split_line(line: str):
         return list(map(int, line.split(" ")))
 
@@ -42,8 +36,9 @@ def create_futoshiki_csp(filename: str) -> CSP:
 
         grid: np.array = np.asarray([Node((i, j)) for i in range(N) for j in range(N)])
 
+        csp = CSP(pruning_type=pruning_type, find_all_solutions=True)
+
         domain = list(range(1, N + 1))
-        csp = CSP()
         csp.add_variables(domain, *grid)
 
         for ix, value in zip(Ls, Vs):
@@ -75,11 +70,11 @@ def print_solutions(csp: CSP):
 
 
 if __name__ == "__main__":
-    # filename = "data/sample_input.txt"
-    # algorithm = "MAC"
+    filename = "data/sample_input.txt"
+    algorithm = "MAC"
 
-    algorithm = sys.argv[1]
-    filename = sys.argv[2]
+    # algorithm = sys.argv[1]
+    # filename = sys.argv[2]
 
     pruning_type = (
         PruningType.FORWARD_CHECKING
@@ -89,7 +84,7 @@ if __name__ == "__main__":
         else PruningType.NO_PRUNING
     )
 
-    csp = create_futoshiki_csp(filename)
+    csp = create_futoshiki_csp(filename, pruning_type)
 
     csp.solve()
 

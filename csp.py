@@ -20,13 +20,25 @@ Constraint = Callable[[Solution], bool]
 
 
 class CSP:
-    def __init__(self):
+    def __init__(
+        self,
+        pruning_type: PruningType = PruningType.FORWARD_CHECKING,
+        find_all_solutions: bool = False,
+    ):
+        self.pruning_type = pruning_type
+        self.find_all_solutions = find_all_solutions
+
+        if pruning_type == PruningType.FORWARD_CHECKING:
+            self.pruning_function = self.forward_check
+        elif pruning_type == PruningType.AC3:
+            self.pruning_function = self.AC3
+        elif pruning_type == PruningType.NO_PRUNING:
+            self.pruning_function = lambda x, y: False
+
         self.variables: List[V] = []
         self.constraints: Dict[V, List[Constraint]] = defaultdict(list)
         self.current_domains: Dict[V, List[D]] = {}
         self.domains: Dict[V, List[D]] = {}
-
-        self.pruning_function = lambda x, y: False
 
         self.variable_stack: Deque[V] = deque()
 
@@ -108,7 +120,8 @@ class CSP:
     def backtrack(self, solution: Solution):
         if len(solution) == len(self.variables):
             self.solutions.append(solution.copy())
-            return True
+
+            return self.find_all_solutions
 
         v = self.variable_stack.pop()
 
@@ -117,7 +130,9 @@ class CSP:
 
             if self.is_valid(v, solution):
                 self.pruning_function(v, solution)
-                self.backtrack(solution)
+
+                if self.backtrack(solution):
+                    return True
 
             self.restore_pruned_domains(v)
             del solution[v]
@@ -126,7 +141,7 @@ class CSP:
 
         return False
 
-    def solve(self, pruning_type: PruningType = PruningType.NO_PRUNING):
+    def solve(self):
         self.variable_stack.clear()
         self.current_domains.clear()
 
@@ -136,11 +151,6 @@ class CSP:
             self.pruned_map[v].clear()
 
         self.solutions = []
-
-        if pruning_type == PruningType.FORWARD_CHECKING:
-            self.pruning_function = self.forward_check
-        elif pruning_type == PruningType.AC3:
-            self.pruning_function = self.AC3
 
         solution = {}
 
@@ -196,6 +206,18 @@ def lambda_constraint(func: Callable[[Any], bool], *variables):
             return True
 
     return check, list(variables)
+
+
+def less_than_constraint(a, b):
+    return lambda_constraint(lambda x, y: x < y, a, b)
+
+
+def greater_than_constraint(a, b):
+    return lambda_constraint(lambda x, y: x > y, a, b)
+
+
+def equals_constraint(node, value: int):
+    return lambda_constraint(lambda x: x == value, node)
 
 
 def all_different_constraint(*variables):
