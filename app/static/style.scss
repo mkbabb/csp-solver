@@ -1,219 +1,305 @@
+$btn-height: 4rem;
+$btn-width: 12rem;
+$btn-font-sz: 2rem;
+
+* {
+    box-sizing: border-box;
+    font-family: "IBM Plex Mono", monospace;
+}
+
 html,
 body {
     background-color: #fafafa;
+    height: 100%;
+    width: 100%;
+}
+
+h1 {
+    font-size: 4rem;
 }
 
 table {
-    border: 2px solid #000000;
+    display: block;
+    border: 2px solid black;
+    border-spacing: 0;
+    border-collapse: collapse;
 }
 
 td {
-    border: 1px solid #000000;
+    border: 1px solid black;
     text-align: center;
     vertical-align: middle;
-}
-
-input {
-    color: #000000;
+    margin: 0;
     padding: 0;
-    border: 0;
-    text-align: center;
-    width: 48px;
-    height: 48px;
-    font-size: 24px;
-    background-color: #ffffff;
-    outline: none;
 }
 
-input:disabled {
-    background-color: #eeeeee;
+.btn {
+    font-size: $btn-font-sz;
+    background-color: rgb(221, 221, 221);
+    border: none;
+    border-radius: 5px;
+
+    &:hover {
+        color: white;
+        background-color: black;
+
+        transition: all 0.2s ease-out;
+    }
+
+    &-primary {
+        font-size: $btn-font-sz;
+        width: $btn-width;
+        height: $btn-height;
+    }
+
+    &-secondary {
+        font-size: $btn-font-sz/1.5;
+        width: $btn-width/1.5;
+        height: $btn-height/1.5;
+    }
+}
+
+select {
+    font-size: $btn-font-sz;
+    width: $btn-width;
+}
+
+main {
+    display: grid;
+    gap: 2rem;
+
+    grid-template-areas:
+        "board controls"
+        "solve .";
+
+    justify-content: center;
+}
+
+.board {
+    grid-area: board;
+
+    input {
+        border: none;
+        color: black;
+        padding: 0;
+        border: 0;
+        text-align: center;
+        width: 48px;
+        height: 48px;
+        font-size: 24px;
+        background-color: white;
+        outline: none;
+    }
+
+    input:disabled {
+        background-color: #f3f3f3;
+        font-weight: bold;
+    }
+}
+
+.controls {
+    grid-area: controls;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    align-items: left;
+
+    h2 {
+        margin-top: 0;
+        margin-bottom: 0;
+        font-size: 2.5rem;
+    }
+}
+
+.solve {
+    grid-area: solve;
 }
 
 #cell-0,
 #cell-1,
 #cell-2 {
-    border-top: 2px solid #000000;
+    border-top: 2px solid black;
 }
 #cell-2,
 #cell-11,
 #cell-20 {
-    border-right: 2px solid #000000;
+    border-right: 2px solid black;
 }
 #cell-18,
 #cell-19,
 #cell-20 {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid black;
 }
 #cell-0,
 #cell-9,
 #cell-18 {
-    border-left: 2px solid #000000;
+    border-left: 2px solid black;
 }
 
 #cell-3,
 #cell-4,
 #cell-5 {
-    border-top: 2px solid #000000;
+    border-top: 2px solid black;
 }
 #cell-5,
 #cell-14,
 #cell-23 {
-    border-right: 2px solid #000000;
+    border-right: 2px solid black;
 }
 #cell-21,
 #cell-22,
 #cell-23 {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid black;
 }
 #cell-3,
 #cell-12,
 #cell-21 {
-    border-left: 2px solid #000000;
+    border-left: 2px solid black;
 }
 
 #cell-6,
 #cell-7,
 #cell-8 {
-    border-top: 2px solid #000000;
+    border-top: 2px solid black;
 }
 #cell-8,
 #cell-17,
 #cell-26 {
-    border-right: 2px solid #000000;
+    border-right: 2px solid black;
 }
 #cell-24,
 #cell-25,
 #cell-26 {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid black;
 }
 #cell-6,
 #cell-15,
 #cell-24 {
-    border-left: 2px solid #000000;
+    border-left: 2px solid black;
 }
 
 #cell-27,
 #cell-28,
 #cell-29 {
-    border-top: 2px solid #000000;
+    border-top: 2px solid black;
 }
 #cell-29,
 #cell-38,
 #cell-47 {
-    border-right: 2px solid #000000;
+    border-right: 2px solid black;
 }
 #cell-45,
 #cell-46,
 #cell-47 {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid black;
 }
 #cell-27,
 #cell-36,
 #cell-45 {
-    border-left: 2px solid #000000;
+    border-left: 2px solid black;
 }
 
 #cell-30,
 #cell-31,
 #cell-32 {
-    border-top: 2px solid #000000;
+    border-top: 2px solid black;
 }
 #cell-32,
 #cell-41,
 #cell-50 {
-    border-right: 2px solid #000000;
+    border-right: 2px solid black;
 }
 #cell-48,
 #cell-49,
 #cell-50 {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid black;
 }
 #cell-30,
 #cell-39,
 #cell-48 {
-    border-left: 2px solid #000000;
+    border-left: 2px solid black;
 }
 
 #cell-33,
 #cell-34,
 #cell-35 {
-    border-top: 2px solid #000000;
+    border-top: 2px solid black;
 }
 #cell-35,
 #cell-44,
 #cell-53 {
-    border-right: 2px solid #000000;
+    border-right: 2px solid black;
 }
 #cell-51,
 #cell-52,
 #cell-53 {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid black;
 }
 #cell-33,
 #cell-42,
 #cell-51 {
-    border-left: 2px solid #000000;
+    border-left: 2px solid black;
 }
 
 #cell-54,
 #cell-55,
 #cell-56 {
-    border-top: 2px solid #000000;
+    border-top: 2px solid black;
 }
 #cell-56,
 #cell-65,
 #cell-74 {
-    border-right: 2px solid #000000;
+    border-right: 2px solid black;
 }
 #cell-72,
 #cell-73,
 #cell-74 {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid black;
 }
 #cell-54,
 #cell-63,
 #cell-72 {
-    border-left: 2px solid #000000;
+    border-left: 2px solid black;
 }
 
 #cell-57,
 #cell-58,
 #cell-59 {
-    border-top: 2px solid #000000;
+    border-top: 2px solid black;
 }
 #cell-59,
 #cell-68,
 #cell-77 {
-    border-right: 2px solid #000000;
+    border-right: 2px solid black;
 }
 #cell-75,
 #cell-76,
 #cell-77 {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid black;
 }
 #cell-57,
 #cell-66,
 #cell-75 {
-    border-left: 2px solid #000000;
+    border-left: 2px solid black;
 }
 
 #cell-60,
 #cell-61,
 #cell-62 {
-    border-top: 2px solid #000000;
+    border-top: 2px solid black;
 }
 #cell-62,
 #cell-71,
 #cell-80 {
-    border-right: 2px solid #000000;
+    border-right: 2px solid black;
 }
 #cell-78,
 #cell-79,
 #cell-80 {
-    border-bottom: 2px solid #000000;
+    border-bottom: 2px solid black;
 }
 #cell-60,
 #cell-69,
 #cell-78 {
-    border-left: 2px solid #000000;
+    border-left: 2px solid black;
 }

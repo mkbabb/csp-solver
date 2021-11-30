@@ -45,7 +45,7 @@ def create_sudoku_csp(N: int, values: Dict[int, int]):
     grid = grid.astype(str)
 
     domain = list(range(1, M + 1))
-    csp = CSP(PruningType.NO_PRUNING)
+    csp = CSP(pruning_type=PruningType.FORWARD_CHECKING, find_all_solutions=False)
     csp.add_variables(domain, *grid)
 
     for pos, value in values.items():
@@ -80,11 +80,11 @@ def create_random_board(N: int, difficulty: SudokuDifficulty = SudokuDifficulty.
     remove_count = 0
 
     if difficulty == SudokuDifficulty.EASY:
-        remove_count = L // 3
-    elif difficulty == SudokuDifficulty.MEDIUM:
         remove_count = L // 4
+    elif difficulty == SudokuDifficulty.MEDIUM:
+        remove_count = L // 3
     elif difficulty == SudokuDifficulty.HARD:
-        remove_count = L // 5
+        remove_count = L // 2
 
     keys = list(board.keys())
 
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     #         print(row)
     #     print("###############")
 
-    board = create_random_board(2)
+    board = create_random_board(3)
     arr = solution_to_array(board)
 
     print(arr)

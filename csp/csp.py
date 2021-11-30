@@ -121,7 +121,7 @@ class CSP:
         if len(solution) == len(self.variables):
             self.solutions.append(solution.copy())
 
-            return self.find_all_solutions
+            return not self.find_all_solutions
 
         v = self.variable_stack.pop()
 

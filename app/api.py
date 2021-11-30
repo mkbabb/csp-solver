@@ -20,7 +20,6 @@ def index():
 
 @app.route("/getRandomBoard/<int:size>/<difficulty>")
 def get_random_board(size: int, difficulty: str):
-    print("hi")
     difficulty = SudokuDifficulty.get(difficulty)
 
     board = create_random_board(N=size, difficulty=difficulty)
