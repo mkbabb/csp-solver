@@ -27,10 +27,22 @@ class SudokuDifficulty(Enum):
             return default
 
 
+def solution_to_array(solution: dict):
+    L = len(solution)
+    M = int(math.sqrt(L))
+    grid = np.zeros((L), dtype=int)
+
+    for pos, value in solution.items():
+        grid[pos] = value
+
+    return grid.reshape((M, M))
+
+
 def create_sudoku_csp(N: int, values: Dict[int, int]):
     M = N ** 2
 
     grid = np.arange(M ** 2)
+    grid = grid.astype(str)
 
     domain = list(range(1, M + 1))
     csp = CSP(PruningType.NO_PRUNING)
@@ -58,17 +70,6 @@ def create_sudoku_csp(N: int, values: Dict[int, int]):
     return csp
 
 
-def solution_to_array(solution: dict):
-    L = len(solution)
-    M = int(math.sqrt(L))
-    grid = np.zeros((L), dtype=int)
-
-    for pos, value in solution.items():
-        grid[pos] = value
-
-    return grid.reshape((M, M))
-
-
 def create_random_board(N: int, difficulty: SudokuDifficulty = SudokuDifficulty.EASY):
     L = N ** 4
     csp = create_sudoku_csp(N, {})
@@ -76,7 +77,14 @@ def create_random_board(N: int, difficulty: SudokuDifficulty = SudokuDifficulty.
 
     board = random.choice(csp.solutions)
 
-    remove_count = L // 4
+    remove_count = 0
+
+    if difficulty == SudokuDifficulty.EASY:
+        remove_count = L // 3
+    elif difficulty == SudokuDifficulty.MEDIUM:
+        remove_count = L // 4
+    elif difficulty == SudokuDifficulty.HARD:
+        remove_count = L // 5
 
     keys = list(board.keys())
 

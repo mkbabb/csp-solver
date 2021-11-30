@@ -1,11 +1,15 @@
 import sys
 from typing import *
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 
 from csp.sudoku import SudokuDifficulty, create_random_board, create_sudoku_csp
 
 app = Flask(__name__)
+
+@app.before_request
+def before_request():
+    app.jinja_env.cache = {}
 
 
 @app.route("/")
@@ -14,17 +18,19 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/getRandomBoard/size/<difficulty>/", endpoint="get_random_board")
+@app.route("/getRandomBoard/<int:size>/<difficulty>")
 def get_random_board(size: int, difficulty: str):
+    print("hi")
     difficulty = SudokuDifficulty.get(difficulty)
 
     board = create_random_board(N=size, difficulty=difficulty)
+    print(board)
 
     return board
 
 
-@app.route("/solve/", endpoint="solve")
-def get_random_board():
+@app.route("/solve")
+def solve():
     body = request.get_json()
 
     values = body.get("values", {})
