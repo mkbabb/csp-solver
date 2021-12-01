@@ -1,7 +1,58 @@
-const SIZE = 3;
+let SIZE = 3;
 
-const getComputedVariable = function (variable) {
-    getComputedStyle(document.documentElement).getPropertyValue(variable);
+document.getElementById("board-size-select").addEventListener("change", (e) => {
+    SIZE = parseFloat(document.getElementById("board-size-select").value);
+    setComputedVariable("--size", SIZE);
+
+    const tbody = document.querySelector("#board tbody");
+    while (tbody.firstChild) {
+        tbody.removeChild(tbody.lastChild);
+    }
+
+    initBoard(SIZE);
+});
+
+const getComputedVariable = (variable, el = document.documentElement) =>
+    getComputedStyle(el).getPropertyValue(variable);
+
+const setComputedVariable = (variable, value, el = document.documentElement) =>
+    el.style.setProperty(variable, value);
+
+const initBoard = function (size) {
+    const N = Math.pow(size, 2);
+    const M = Math.pow(N, 2);
+
+    const tableBody = document.querySelector("#board tbody");
+
+    let k = 0;
+
+    const border = getComputedVariable("--border");
+
+    for (let i = 0; i < N; i++) {
+        const row = document.createElement("tr");
+
+        for (let j = 0; j < N; j++) {
+            const td = document.createElement("td");
+            const input = document.createElement("input");
+
+            if (j !== 0 && j !== N - 1 && j % size === 0) {
+                input.style.borderLeft = border;
+            }
+            if (i !== 0 && i !== N - 1 && i % size === 0) {
+                input.style.borderTop = border;
+            }
+
+            input.id = `cell-${k}`;
+            input.type = "text";
+
+            td.appendChild(input);
+            row.appendChild(td);
+
+            k += 1;
+        }
+
+        tableBody.appendChild(row);
+    }
 };
 
 const DIFFICULTY_COLORS = {
@@ -12,7 +63,6 @@ const DIFFICULTY_COLORS = {
 
 const changeDifficultyColor = function () {
     const difficulty = document.getElementById("difficulty-select").value;
-    console.log(DIFFICULTY_COLORS);
     document.getElementById("difficulty-header").style.color =
         DIFFICULTY_COLORS[difficulty];
 };
@@ -53,7 +103,6 @@ const setBoard = async function (values) {
 
     if (values === undefined) {
         const difficulty = document.getElementById("difficulty-select").value;
-
         values = await fetch(`getRandomBoard/${SIZE}/${difficulty}`)
             .then((res) => {
                 return res.json();
@@ -133,9 +182,7 @@ document.getElementById("clear-btn").addEventListener("click", (e) => {
 document.getElementById("solve-btn").addEventListener("click", (e) => solve());
 
 window.addEventListener("load", () => {
+    initBoard(SIZE);
     setBoard();
     changeDifficultyColor();
-
-    console.log(getComputedVariable("--easy"));
-    console.log("hh");
 });

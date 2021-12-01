@@ -23,6 +23,8 @@ def index():
 def get_random_board(size: int, difficulty: str):
     difficulty = SudokuDifficulty.get(difficulty)
 
+    print(f"Randomizing board of size {size}")
+
     board = create_random_board(N=size, difficulty=difficulty)
     print(board)
 
@@ -34,7 +36,7 @@ def solve():
     body = request.get_json()
 
     values = body.get("values", {})
-    size = body["size"]
+    size = int(body["size"])
 
     csp = create_sudoku_csp(N=size, values=values)
 
