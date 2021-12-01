@@ -7,6 +7,7 @@ from csp.sudoku import SudokuDifficulty, create_random_board, create_sudoku_csp
 
 app = Flask(__name__)
 
+
 @app.before_request
 def before_request():
     app.jinja_env.cache = {}
@@ -28,7 +29,7 @@ def get_random_board(size: int, difficulty: str):
     return board
 
 
-@app.route("/solve")
+@app.route("/solve/", methods=["POST"])
 def solve():
     body = request.get_json()
 
@@ -40,6 +41,7 @@ def solve():
     csp.solve()
 
     if len(csp.solutions) == 0:
-        return "invalid solution", 404
+        return "invalid solution", 400
     else:
-        return csp.solutions[0]
+        solution = csp.solutions[0]
+        return {"solved": values == solution, "values": solution}

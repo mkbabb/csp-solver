@@ -33,7 +33,7 @@ def solution_to_array(solution: dict):
     grid = np.zeros((L), dtype=int)
 
     for pos, value in solution.items():
-        grid[pos] = value
+        grid[int(pos)] = value
 
     return grid.reshape((M, M))
 
@@ -49,7 +49,8 @@ def create_sudoku_csp(N: int, values: Dict[int, int]):
     csp.add_variables(domain, *grid)
 
     for pos, value in values.items():
-        csp.add_constraint(equals_constraint(grid[pos], value))
+        if value != 0:
+            csp.add_constraint(equals_constraint(grid[int(pos)], value))
 
     grid = grid.reshape((M, M))
 
@@ -111,7 +112,15 @@ if __name__ == "__main__":
     #     print("###############")
 
     board = create_random_board(3)
+
     arr = solution_to_array(board)
+    print(arr)
+
+    csp = create_sudoku_csp(3, board)
+
+    csp.solve()
+
+    print(csp.solutions)
 
     print(arr)
     # for i in range(M):
