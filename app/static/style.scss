@@ -75,6 +75,7 @@ main {
 
 .title {
     grid-area: title;
+    margin: 0;
 }
 
 .board {
@@ -100,7 +101,7 @@ main {
         --border-count: 16;
 
         --width: calc(
-            calc(60vw - var(--border-size) * var(--border-count)) /
+            calc(35vw - var(--border-size) * var(--border-count)) /
                 calc(var(--size) * var(--size))
         );
 
@@ -111,11 +112,12 @@ main {
             );
         }
 
-        width: var(--width);
+        --final-width: var(--width);
 
-        aspect-ratio: 1 / 1;
+        width: var(--final-width);
+        height: var(--final-width);
 
-        font-size: calc(var(--width) / 2);
+        font-size: calc(var(--final-width) / 2);
         background-color: white;
         outline: none;
     }
