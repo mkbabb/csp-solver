@@ -9,7 +9,7 @@ logging.basicConfig(stream=sys.stderr)
 sys.path.insert(0, "/var/www/html/csp-solver")
 sys.path.insert(
     0,
-    "/var/www/html/csp-solver/my_venv/lib/python3.9/site-packages",
+    "/var/www/html/csp-solver/my_venv/lib/python3.8/site-packages",
 )
 
 
