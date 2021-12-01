@@ -120,7 +120,6 @@ const setBoard = async function (values) {
 
     Object.entries(values).forEach(([pos, value]) => {
         const cell = getCell(pos);
-        cell.borderColor = "black";
 
         if (value === 0) {
             cell.value = "";
