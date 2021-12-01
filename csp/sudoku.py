@@ -10,6 +10,8 @@ import numpy as np
 
 from csp.csp import CSP, PruningType, all_different_constraint, equals_constraint
 
+DIR_PATH = pathlib.Path(os.path.dirname(__file__))
+
 
 class SudokuDifficulty(Enum):
     EASY = auto()
@@ -71,11 +73,10 @@ def create_sudoku_csp(N: int, values: Dict[int, int], max_solutions: int = 1):
 def create_random_board(N: int, difficulty: SudokuDifficulty = SudokuDifficulty.EASY):
     L = N ** 4
 
-    here = pathlib.Path(os.path.dirname(__file__))
-    solution_dir = here.joinpath("data/sudoku_solutions")
+    solution_dir = DIR_PATH.joinpath("data/sudoku_solutions")
 
     if not solution_dir.exists():
-        raise FileNotFoundError(f"Dir {here} was invalid")
+        raise FileNotFoundError(f"Dir {DIR_PATH} was invalid")
 
     solutions = list(solution_dir.joinpath(f"{N}").glob("*"))
     solution_filepath: pathlib.Path = random.choice(solutions)
@@ -101,37 +102,28 @@ def create_random_board(N: int, difficulty: SudokuDifficulty = SudokuDifficulty.
 
 
 if __name__ == "__main__":
-    values = json.load(open("data/sample.json", "r"))
-    csp = create_sudoku_csp(3, values)
+    N = 3
+    M = N ** 2
+    solution_dir = DIR_PATH.joinpath("data/sudoku_solutions/").joinpath(f"{N}")
+
+    if not solution_dir.exists():
+        os.makedirs(solution_dir)
+
+    random_pos = random.randint(0, M ** 2 - 1)
+    random_value = random.randint(1, 9)
+
+    values = {random_pos: random_value}
+    csp = create_sudoku_csp(N=N, values=values, max_solutions=100)
 
     csp.solve()
 
-    for solution in csp.solutions:
+    random.shuffle(csp.solutions)
+
+    for n, solution in enumerate(csp.solutions):
+        filename = solution_dir.joinpath(f"board-{n}.json")
+
+        # with open(filename, "w") as file:
+        #     json.dump(solution, file)
+
         grid = solution_to_array(solution)
         print(grid)
-
-    # N = 3
-    # M = N ** 2
-    # solution_dir = pathlib.Path("data/sudoku_solutions/").joinpath(f"{N}")
-
-    # if not solution_dir.exists():
-    #     os.makedirs(solution_dir)
-
-    # random_pos = random.randint(0, M ** 2 - 1)
-    # random_value = random.randint(1, 9)
-
-    # values = {random_pos: random_value}
-    # csp = create_sudoku_csp(N=N, values=values, max_solutions=100)
-
-    # csp.solve()
-
-    # random.shuffle(csp.solutions)
-
-    # for n, solution in enumerate(csp.solutions):
-    #     filename = solution_dir.joinpath(f"board-{n}.json")
-
-    #     with open(filename, "w") as file:
-    #         json.dump(solution, file)
-
-    #     grid = solution_to_array(solution)
-    #     print(grid)
