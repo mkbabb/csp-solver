@@ -6,17 +6,14 @@ from typing import *
 V = TypeVar("V")
 D = TypeVar("D")
 
-
 Solution = Dict[V, D]
+Constraint = Callable[[Solution], bool]
 
 
 class PruningType(Enum):
     FORWARD_CHECKING = auto()
     AC3 = auto()
     NO_PRUNING = auto()
-
-
-Constraint = Callable[[Solution], bool]
 
 
 class CSP:
