@@ -71,7 +71,8 @@ def create_sudoku_csp(N: int, values: Dict[int, int], max_solutions: int = 1):
 def create_random_board(N: int, difficulty: SudokuDifficulty = SudokuDifficulty.EASY):
     L = N ** 4
 
-    solution_dir = pathlib.Path("data/sudoku_solutions")
+    here = pathlib.Path(os.path.dirname(__file__))
+    solution_dir = here.joinpath("data/sudoku_solutions")
 
     if not solution_dir.exists():
         raise FileNotFoundError
