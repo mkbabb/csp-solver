@@ -63,6 +63,8 @@ const initBoard = function (size) {
                 input.style.borderTop = border;
             }
 
+            input.style.borderColor = "black";
+
             input.id = `cell-${k}`;
             input.type = "text";
 
