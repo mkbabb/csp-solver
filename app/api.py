@@ -1,9 +1,8 @@
-import sys
+import json
 from typing import *
 
-from flask import Flask, render_template, request, jsonify
-
 from csp.sudoku import SudokuDifficulty, create_random_board, create_sudoku_csp
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
@@ -36,6 +35,9 @@ def solve():
     body = request.get_json()
 
     values = body.get("values", {})
+
+    json.dump(values, open("data/tmp.json", "w"))
+
     size = int(body["size"])
 
     csp = create_sudoku_csp(N=size, values=values)

@@ -36,7 +36,7 @@ def create_futoshiki_csp(filename: str, pruning_type: PruningType) -> CSP:
 
         grid: np.array = np.asarray([Node((i, j)) for i in range(N) for j in range(N)])
 
-        csp = CSP(pruning_type=pruning_type, find_all_solutions=True)
+        csp = CSP(pruning_type=pruning_type, max_solutions=99999)
 
         domain = list(range(1, N + 1))
         csp.add_variables(domain, *grid)

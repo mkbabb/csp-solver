@@ -23,10 +23,10 @@ class CSP:
     def __init__(
         self,
         pruning_type: PruningType = PruningType.FORWARD_CHECKING,
-        find_all_solutions: bool = False,
+        max_solutions: int = 1,
     ):
         self.pruning_type = pruning_type
-        self.find_all_solutions = find_all_solutions
+        self.max_solutions = max_solutions
 
         if pruning_type == PruningType.FORWARD_CHECKING:
             self.pruning_function = self.forward_check
@@ -121,7 +121,7 @@ class CSP:
         if len(solution) == len(self.variables):
             self.solutions.append(solution.copy())
 
-            return not self.find_all_solutions
+            return len(self.solutions) >= self.max_solutions
 
         v = self.variable_stack.pop()
 

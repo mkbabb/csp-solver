@@ -1,17 +1,14 @@
-from dataclasses import dataclass
-from typing import *
-from enum import Enum, auto
-import random
+import json
 import math
+import os
+import pathlib
+import random
+from enum import Enum, auto
+from typing import *
 
 import numpy as np
 
-from csp.csp import (
-    CSP,
-    PruningType,
-    all_different_constraint,
-    equals_constraint,
-)
+from csp.csp import CSP, PruningType, all_different_constraint, equals_constraint
 
 
 class SudokuDifficulty(Enum):
@@ -38,14 +35,14 @@ def solution_to_array(solution: dict):
     return grid.reshape((M, M))
 
 
-def create_sudoku_csp(N: int, values: Dict[int, int]):
+def create_sudoku_csp(N: int, values: Dict[int, int], max_solutions: int = 1):
     M = N ** 2
 
     grid = np.arange(M ** 2)
     grid = grid.astype(str)
 
     domain = list(range(1, M + 1))
-    csp = CSP(pruning_type=PruningType.FORWARD_CHECKING, find_all_solutions=False)
+    csp = CSP(pruning_type=PruningType.AC3, max_solutions=max_solutions)
     csp.add_variables(domain, *grid)
 
     for pos, value in values.items():
@@ -73,19 +70,22 @@ def create_sudoku_csp(N: int, values: Dict[int, int]):
 
 def create_random_board(N: int, difficulty: SudokuDifficulty = SudokuDifficulty.EASY):
     L = N ** 4
-    csp = create_sudoku_csp(N, {})
-    csp.solve()
 
-    board = random.choice(csp.solutions)
+    solution_dir = pathlib.Path("data/sudoku_solutions/")
+
+    solutions = list(solution_dir.joinpath(f"{N}").glob("*"))
+    solution_filepath: pathlib.Path = random.choice(solutions)
+
+    board = json.loads(solution_filepath.read_text())
 
     remove_count = 0
 
     if difficulty == SudokuDifficulty.EASY:
         remove_count = L // 4
     elif difficulty == SudokuDifficulty.MEDIUM:
-        remove_count = L // 3
+        remove_count = int(L / 1.75)
     elif difficulty == SudokuDifficulty.HARD:
-        remove_count = L // 2
+        remove_count = int(L / 1.25)
 
     keys = list(board.keys())
 
@@ -97,34 +97,37 @@ def create_random_board(N: int, difficulty: SudokuDifficulty = SudokuDifficulty.
 
 
 if __name__ == "__main__":
-    # N = 2
-    # M = N ** 2
-    # values = {}
-    # csp = create_sudoku_csp(N=N, values=values)
-
-    # csp.solve()
-
-    # for solution in csp.solutions:
-    #     for i in range(M):
-    #         nodes = (csp.variables[i * M + j] for j in range(M))
-    #         row = ", ".join(map(lambda x: str(solution.get(x)), nodes))
-    #         print(row)
-    #     print("###############")
-
-    board = create_random_board(3)
-
-    arr = solution_to_array(board)
-    print(arr)
-
-    csp = create_sudoku_csp(3, board)
+    values = json.load(open("data/sample.json", "r"))
+    csp = create_sudoku_csp(3, values)
 
     csp.solve()
 
-    print(csp.solutions)
+    for solution in csp.solutions:
+        grid = solution_to_array(solution)
+        print(grid)
 
-    print(arr)
-    # for i in range(M):
-    #         nodes = (csp.variables[i * M + j] for j in range(M))
-    #         row = ", ".join(map(lambda x: str(solution.get(x)), nodes))
-    #         print(row)
-    #     print("###############")
+    # N = 3
+    # M = N ** 2
+    # solution_dir = pathlib.Path("data/sudoku_solutions/").joinpath(f"{N}")
+
+    # if not solution_dir.exists():
+    #     os.makedirs(solution_dir)
+
+    # random_pos = random.randint(0, M ** 2 - 1)
+    # random_value = random.randint(1, 9)
+
+    # values = {random_pos: random_value}
+    # csp = create_sudoku_csp(N=N, values=values, max_solutions=100)
+
+    # csp.solve()
+
+    # random.shuffle(csp.solutions)
+
+    # for n, solution in enumerate(csp.solutions):
+    #     filename = solution_dir.joinpath(f"board-{n}.json")
+
+    #     with open(filename, "w") as file:
+    #         json.dump(solution, file)
+
+    #     grid = solution_to_array(solution)
+    #     print(grid)

@@ -1,5 +1,24 @@
 let SIZE = 3;
 
+const clearBoardSuccess = function () {
+    const board = document.getElementById("board");
+
+    board.classList.remove("solve-failure");
+    board.classList.remove("solve-success");
+};
+
+const setBoardSuccess = function (success) {
+    const board = document.getElementById("board");
+
+    clearBoardSuccess();
+
+    if (success) {
+        board.classList.add("solve-success");
+    } else {
+        board.classList.add("solve-failure");
+    }
+};
+
 document.getElementById("board-size-select").addEventListener("change", (e) => {
     SIZE = parseFloat(document.getElementById("board-size-select").value);
     setComputedVariable("--size", SIZE);
@@ -8,6 +27,8 @@ document.getElementById("board-size-select").addEventListener("change", (e) => {
     while (tbody.firstChild) {
         tbody.removeChild(tbody.lastChild);
     }
+
+    clearBoardSuccess();
 
     initBoard(SIZE);
 });
@@ -67,25 +88,6 @@ const changeDifficultyColor = function () {
         DIFFICULTY_COLORS[difficulty];
 };
 
-const clearBoardSuccess = function () {
-    const board = document.getElementById("board");
-
-    board.classList.remove("solve-failure");
-    board.classList.remove("solve-success");
-};
-
-const setBoardSuccess = function (success) {
-    const board = document.getElementById("board");
-
-    clearBoardSuccess();
-
-    if (success) {
-        board.classList.add("solve-success");
-    } else {
-        board.classList.add("solve-failure");
-    }
-};
-
 const getCell = function (pos) {
     return document.getElementById(`cell-${pos}`);
 };
@@ -101,7 +103,9 @@ const clearBoard = function () {
 const setBoard = async function (values) {
     clearBoard();
 
-    if (values === undefined) {
+    let randomize = values === undefined;
+
+    if (randomize) {
         const difficulty = document.getElementById("difficulty-select").value;
         values = await fetch(`getRandomBoard/${SIZE}/${difficulty}`)
             .then((res) => {
@@ -120,7 +124,10 @@ const setBoard = async function (values) {
             cell.value = "";
         } else {
             cell.value = value;
-            cell.disabled = true;
+
+            if (randomize) {
+                cell.disabled = true;
+            }
         }
     });
 };
