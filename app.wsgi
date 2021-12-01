@@ -4,7 +4,8 @@ import sys
 import logging
 
 logging.basicConfig(stream=sys.stderr)
-sys.path.insert(0,"/var/www/csp-solver/")
+sys.path.insert(0, "/var/www/csp-solver/")
 
 import app as application
-application.secret_key = '3d6f45a5fc12445dbac2f59c3b6c7cb1'
+
+application.secret_key = "3d6f45a5fc12445dbac2f59c3b6c7cb1"
