@@ -126,7 +126,6 @@ const setBoard = async function (values) {
             cell.value = value;
 
             if (randomize) {
-                cell.style.border = "none";
                 cell.disabled = true;
             }
         }
