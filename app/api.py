@@ -35,9 +35,6 @@ def solve():
     body = request.get_json()
 
     values = body.get("values", {})
-
-    json.dump(values, open("data/tmp.json", "w"))
-
     size = int(body["size"])
 
     csp = create_sudoku_csp(N=size, values=values)
