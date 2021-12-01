@@ -75,7 +75,7 @@ def create_random_board(N: int, difficulty: SudokuDifficulty = SudokuDifficulty.
     solution_dir = here.joinpath("data/sudoku_solutions")
 
     if not solution_dir.exists():
-        raise FileNotFoundError
+        raise FileNotFoundError(f"Dir {here} was invalid")
 
     solutions = list(solution_dir.joinpath(f"{N}").glob("*"))
     solution_filepath: pathlib.Path = random.choice(solutions)
