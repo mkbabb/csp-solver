@@ -57,10 +57,10 @@ const initBoard = function (size) {
             const input = document.createElement("input");
 
             if (j !== 0 && j !== N - 1 && j % size === 0) {
-                input.style.borderLeft = border;
+                td.style.borderLeft = border;
             }
             if (i !== 0 && i !== N - 1 && i % size === 0) {
-                input.style.borderTop = border;
+                td.style.borderTop = border;
             }
 
             input.id = `cell-${k}`;

@@ -6,7 +6,7 @@ $btn-font-sz: 2rem;
     --easy: rgb(22, 187, 68);
     --medium: #fcba03;
     --hard: #f21d1d;
-    --border-size: 2px;
+    --border-size: 3px;
     --size: 3;
     --row-length: calc(var(--size) * var(--size));
     --border: var(--border-size) solid black !important;
@@ -92,13 +92,12 @@ main {
 
     td {
         border-radius: none;
-        border: var(--border) !important;
+        border: var(--border);
+        border-width: 1px;
     }
 
     input {
-        background-clip: content-box;
-        background-size: cover;
-
+        // border-style: solid;
         border: none;
         border-color: none;
         color: black;
@@ -133,6 +132,7 @@ main {
     }
 
     input:disabled {
+        border: none;
         background-color: #f3f3f3;
         font-weight: bold;
     }
