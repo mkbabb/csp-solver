@@ -63,8 +63,6 @@ const initBoard = function (size) {
                 input.style.borderTop = border;
             }
 
-            input.style.borderColor = "black";
-
             input.id = `cell-${k}`;
             input.type = "text";
 
@@ -129,6 +127,7 @@ const setBoard = async function (values) {
 
             if (randomize) {
                 cell.disabled = true;
+                cell.borderColor = "black";
             }
         }
     });
