@@ -1,4 +1,3 @@
-import json
 from typing import *
 
 from csp.sudoku import SudokuDifficulty, create_random_board, create_sudoku_csp
@@ -14,19 +13,14 @@ def before_request():
 
 @app.route("/")
 def index():
-    """Displays the index page accessible at '/'"""
     return render_template("index.html")
 
 
 @app.route("/getRandomBoard/<int:size>/<difficulty>")
 def get_random_board(size: int, difficulty: str):
     difficulty = SudokuDifficulty.get(difficulty)
-
-    print(f"Randomizing board of size {size}")
-
     board = create_random_board(N=size, difficulty=difficulty)
-    print(board)
-
+    
     return board
 
 
@@ -39,10 +33,13 @@ def solve():
 
     csp = create_sudoku_csp(N=size, values=values)
 
-    csp.solve()
+    try:
+        csp.solve()
+    except Exception as e:
+        print(e)
 
     if len(csp.solutions) == 0:
-        return "invalid solution", 400
+        return "Invalid solution", 400
     else:
         solution = csp.solutions[0]
         return {"solved": values == solution, "values": solution}
