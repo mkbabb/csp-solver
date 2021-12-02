@@ -70,11 +70,11 @@ def print_solutions(csp: CSP):
 
 
 if __name__ == "__main__":
-    filename = "csp/data/sample_input.txt"
-    algorithm = "FC"
+    # filename = "csp/data/sample_input.txt"
+    # algorithm = "FC"
 
-    # algorithm = sys.argv[1]
-    # filename = sys.argv[2]
+    algorithm = sys.argv[1]
+    filename = sys.argv[2]
 
     pruning_type = (
         PruningType.FORWARD_CHECKING

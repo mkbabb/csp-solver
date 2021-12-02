@@ -34,13 +34,13 @@ and `max_solutions`.
 Defines the pruning strategy used within the backtracking or backjumping scheme. The
 possible values are:
 
--   FORWARD_CHECKING
+-   `FORWARD_CHECKING`
     -   Forward checking implementation.
--   AC3
+-   `AC3`
     -   MAC - maintaining arc consistency implementation, variant 3.
--   AC_FC
+-   `AC_FC`
     -   Arc consistency + forward checking implementation, low order variant of AC-1.
--   NO_PRUNING
+-   `NO_PRUNING`
     -   No pruning methodology employed.
 
 #### Brief: Backtracking vs Hill-climbing
@@ -53,9 +53,9 @@ one's using the min-conflicts hill-climbing solver, no pruning at any stage is d
 Defines the variable ordering scheme when retrieving the next variable within the
 variable stack to attempt at solving for. The possible values are:
 
--   NO_ORDERING
+-   `NO_ORDERING`
     -   Chronological ordering used.
--   FAIL_FIRST
+-   `FAIL_FIRST`
     -   Implementation of the DVO "fail-first" scheme.
 
 `max_solutions` simply defines the maximal number of solutions found before returning.
@@ -123,13 +123,26 @@ function signature, must return a boolean. If the current solution state isn't
 applicable to being called, it defaults to true.
 
 The outer function then returns check, and the list of variables constrained by this
-function. This allows for the terse constraint syntax like:
+function. This allows for terse constraint syntax like:
 
 ```python
 csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
 ```
 
 To be employed.
+
+## More Examples
+
+More examples can be found within [`csp.py`](csp/csp.py): a demo of n-queens and
+map-coloring is executed if run directly.
+
+Additionally, Futoshiki and Sudoku are implemented in pure Python.
+
+[`futoshiki.py`](csp/futoshiki.py) is a command line Python application, using a input
+data file. More information can be found here.
+
+[`sudoku.py`](csp/sudoku.py), for a coded N, generates the first 10000 solutions to an
+input blank board.
 
 ## Sudoku Webserver
 
@@ -158,3 +171,11 @@ development server is hosted within Amazon and served on the open internet.
 If one wants to serve there own variant of the application, the `app.wsgi` file must be
 modified to point to your appropriate Python 3 distribution. Additionally, a template
 Apache2 `.conf` file can be found [here](app/config/default.conf).
+
+Locally, the webserver can be run at the root directory via:
+
+    flask run
+
+or
+
+    python3 -m app

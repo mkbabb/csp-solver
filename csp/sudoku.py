@@ -132,7 +132,6 @@ if __name__ == "__main__":
     for n, solution in enumerate(csp.solutions):
         filename = solution_dir.joinpath(f"board-{n}.json")
 
-       
         with open(filename, "w") as file:
             json.dump(solution, file)
 
