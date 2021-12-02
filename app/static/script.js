@@ -144,8 +144,14 @@ const setBoard = async function (values) {
     });
 };
 
+let solvin = false;
+
 const solve = async function () {
+    if (solvin) {
+        return;
+    }
     const values = {};
+    solvin = true;
 
     for (let i = 0; i < Math.pow(SIZE, 4); i++) {
         const cell = getCell(i);
@@ -160,6 +166,8 @@ const solve = async function () {
         values: values,
         size: SIZE,
     };
+
+    console.log("solvin");
 
     const data = await fetch(`solve/`, {
         method: "POST",
@@ -182,6 +190,8 @@ const solve = async function () {
         setBoardSuccess(solved);
         setBoard(values);
     }
+
+    solvin = false;
 };
 
 document
