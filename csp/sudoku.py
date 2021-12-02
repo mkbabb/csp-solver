@@ -123,7 +123,7 @@ if __name__ == "__main__":
     random_value = random.randint(1, 9)
 
     values = {random_pos: random_value}
-    csp = create_sudoku_csp(N=N, values=values, max_solutions=10000)
+    csp = create_sudoku_csp(N=N, values=values, max_solutions=1000)
 
     csp.solve()
 
@@ -132,8 +132,9 @@ if __name__ == "__main__":
     for n, solution in enumerate(csp.solutions):
         filename = solution_dir.joinpath(f"board-{n}.json")
 
-        with open(filename, "w") as file:
-            json.dump(solution, file)
+        # with open(filename, "w") as file:
+        #     json.dump(solution, file)
 
         grid = solution_to_array(solution)
         print(grid)
+        print("")
