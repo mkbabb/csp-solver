@@ -4,9 +4,9 @@
 $screen-sz-md: 700px;
 
 :root {
-    --easy: rgb(22, 187, 68);
+    --easy: rgb(18, 156, 58);
     --medium: #fcba03;
-    --hard: #f21d1d;
+    --hard: #d41b1b;
 
     --size: 3;
     --row-length: calc(var(--size) * var(--size));
@@ -105,6 +105,11 @@ main {
 
 i {
     font-size: 3rem;
+
+    &:hover {
+        opacity: 50%;
+        transition: all 0.5s ease-out;
+    }
 }
 
 .title {
@@ -115,6 +120,15 @@ i {
 
     h1 {
         margin: 0;
+        &:hover {
+            color: var(--medium);
+            transition: all 0.5s ease-out;
+        }
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none;
     }
 }
 
@@ -145,6 +159,11 @@ i {
         font-size: 1.25rem;
         background-color: var(--board-bg-color);
         outline: none;
+    }
+
+    input:hover {
+        opacity: 50%;
+        transition: all 0.5s ease-out;
     }
 
     input:disabled {
