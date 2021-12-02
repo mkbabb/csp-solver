@@ -201,12 +201,12 @@ document
 const randomizer = throttle(() => {
     clearBoardSuccess();
     setBoard();
-}, 1000);
+}, 200);
 
 const clearer = throttle(() => {
     clearBoardSuccess();
     clearBoard();
-}, 1000);
+}, 200);
 
 const solver = throttle(solve, 1000);
 
