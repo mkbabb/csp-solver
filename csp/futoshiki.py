@@ -70,8 +70,8 @@ def print_solutions(csp: CSP):
 
 
 if __name__ == "__main__":
-    filename = "data/sample_input.txt"
-    algorithm = "MAC"
+    filename = "csp/data/sample_input.txt"
+    algorithm = "FC"
 
     # algorithm = sys.argv[1]
     # filename = sys.argv[2]

@@ -8,7 +8,13 @@ from typing import *
 
 import numpy as np
 
-from csp.csp import CSP, PruningType, all_different_constraint, equals_constraint
+from csp.csp import (
+    CSP,
+    PruningType,
+    VariableOrdering,
+    all_different_constraint,
+    equals_constraint,
+)
 
 DIR_PATH = pathlib.Path(os.path.dirname(__file__))
 
@@ -44,7 +50,11 @@ def create_sudoku_csp(N: int, values: Dict[int, int], max_solutions: int = 1):
     grid = grid.astype(str)
 
     domain = list(range(1, M + 1))
-    csp = CSP(pruning_type=PruningType.AC3, max_solutions=max_solutions)
+    csp = CSP(
+        pruning_type=PruningType.FORWARD_CHECKING,
+        variable_ordering=VariableOrdering.FAIL_FIRST,
+        max_solutions=max_solutions,
+    )
     csp.add_variables(domain, *grid)
 
     for pos, value in values.items():
@@ -102,7 +112,7 @@ def create_random_board(N: int, difficulty: SudokuDifficulty = SudokuDifficulty.
 
 
 if __name__ == "__main__":
-    N = 3
+    N = 4
     M = N ** 2
     solution_dir = DIR_PATH.joinpath("data/sudoku_solutions/").joinpath(f"{N}")
 

@@ -16,13 +16,20 @@ Constraint = Callable[[Solution], bool]
 class PruningType(Enum):
     FORWARD_CHECKING = auto()
     AC3 = auto()
+    AC_FC = auto()
     NO_PRUNING = auto()
+
+
+class VariableOrdering(Enum):
+    FAIL_FIRST = auto()
+    NO_ORDERING = auto()
 
 
 class CSP:
     def __init__(
         self,
         pruning_type: PruningType = PruningType.FORWARD_CHECKING,
+        variable_ordering: VariableOrdering = VariableOrdering.NO_ORDERING,
         max_solutions: int = 1,
     ):
         self.pruning_type = pruning_type
@@ -32,8 +39,12 @@ class CSP:
             self.pruning_function = self.forward_check
         elif pruning_type == PruningType.AC3:
             self.pruning_function = self.AC3
+        elif pruning_type == PruningType.AC_FC:
+            self.pruning_function = self.AC_FC
         elif pruning_type == PruningType.NO_PRUNING:
             self.pruning_function = lambda x, y: False
+
+        self.variable_ordering = variable_ordering
 
         self.variables: List[V] = []
         self.constraints: Dict[V, List[Constraint]] = defaultdict(list)
@@ -83,6 +94,20 @@ class CSP:
             self.current_domains[neighbor].extend(d_list)
             d_list.clear()
 
+    def revise(self, variable: V, Xi: V, Xj: V, solution: Solution):
+        removed = False
+
+        for x in self.current_domains[Xi]:
+            for y in self.current_domains[Xj]:
+                if self.is_valid(Xj, self.test_solution(solution, {Xi: x, Xj: y})):
+                    break
+            else:
+                self.current_domains[Xi].remove(x)
+                self.pruned_map[variable][Xi].add(x)
+                removed = True
+
+        return removed
+
     def forward_check(self, variable: V, solution: Solution):
         agenda = [i for i in self.get_neighbors(variable) if i not in solution]
 
@@ -92,21 +117,8 @@ class CSP:
                     self.current_domains[Xi].remove(x)
                     self.pruned_map[variable][Xi].add(x)
 
-    def AC3(self, variable: V, solution: Solution):
-        def remove_inconsistent_values(Xi: V, Xj: V) -> bool:
-            removed = False
-
-            for x in list(self.current_domains[Xi]):
-                for y in self.current_domains[Xj]:
-                    if self.is_valid(Xj, self.test_solution(solution, {Xi: x, Xj: y})):
-                        break
-                else:
-                    self.current_domains[Xi].remove(x)
-                    self.pruned_map[variable][Xi].add(x)
-                    removed = True
-
-            return removed
-
+    def AC_FC(self, variable: V, solution: Solution):
+        consistent = True
         agenda = deque(
             (
                 (Xj, variable)
@@ -114,23 +126,47 @@ class CSP:
                 if Xj not in solution
             )
         )
+        while len(agenda) > 0 and self.is_valid(variable, solution):
+            Xi, Xj = agenda.pop()
+            if self.revise(variable, Xi, Xj, solution):
+                consistent = len(self.current_domains[Xi]) > 0
+        return consistent
 
+    def AC3(self, variable: V, solution: Solution):
+        agenda = deque(
+            (
+                (Xj, variable)
+                for Xj in self.get_neighbors(variable)
+                if Xj not in solution
+            )
+        )
         while len(agenda) > 0:
             Xi, Xj = agenda.pop()
-            if remove_inconsistent_values(Xi, Xj):
+            if self.revise(variable, Xi, Xj, solution):
                 for Xk in self.get_neighbors(Xi):
                     p = (Xk, Xi)
                     if Xk != Xj and p not in agenda and Xk not in solution:
                         agenda.append(p)
 
+    def get_next_variable(self) -> V:
+        if self.variable_ordering == VariableOrdering.FAIL_FIRST:
+            current_domains = {
+                v: ds
+                for v, ds in self.current_domains.items()
+                if v in self.variable_stack
+            }
+            v, _ = min(current_domains.items(), key=lambda x: len(x[1]))
+            self.variable_stack.remove(v)
+            return v
+        elif self.variable_ordering == VariableOrdering.NO_ORDERING:
+            return self.variable_stack.pop()
+
     def backtrack(self, solution: Solution):
         if len(solution) == len(self.variables):
             self.solutions.append(solution.copy())
-
             return len(self.solutions) >= self.max_solutions
 
-        v = self.variable_stack.pop()
-
+        v = self.get_next_variable()
         for d in self.current_domains[v]:
             solution[v] = d
 
@@ -144,7 +180,6 @@ class CSP:
             del solution[v]
 
         self.variable_stack.append(v)
-
         return False
 
     def num_conflicts(self, v: V, d: D, solution: Solution):
@@ -280,18 +315,27 @@ def all_different_constraint(*variables):
     return check, list(variables)
 
 
-def n_queens(n: int = 8):
+def n_queens(
+    n: int,
+    pruning_type: PruningType,
+    variable_ordering: VariableOrdering,
+    max_solutions: int = 1000,
+):
     domain = list(range(1, n + 1))
     variables = list(domain)
 
-    csp = CSP()
+    csp = CSP(pruning_type, variable_ordering, max_solutions)
     csp.add_variables(domain, *variables)
     csp.add_constraint(n_queens_constraint(variables))
 
     return csp
 
 
-def map_coloring():
+def map_coloring(
+    pruning_type: PruningType,
+    variable_ordering: VariableOrdering,
+    max_solutions: int = 1000,
+):
     variables = [
         "Western Australia",
         "Northern Territory",
@@ -303,7 +347,7 @@ def map_coloring():
     ]
     domain = ["red", "green", "blue"]
 
-    csp = CSP(max_solutions=100)
+    csp = CSP(pruning_type, variable_ordering, max_solutions)
 
     csp.add_variables(domain, *variables)
 
@@ -334,9 +378,14 @@ def test_solutions(csp: CSP):
 
 
 if __name__ == "__main__":
-    csps = [map_coloring(), n_queens()]
+    kwargs = {
+        "pruning_type": PruningType.AC3,
+        "variable_ordering": VariableOrdering.FAIL_FIRST,
+        "max_solutions": 100,
+    }
+    csps = [map_coloring(**kwargs), n_queens(n=8, **kwargs)]
 
     for csp in csps:
-        csp.min_conflicts(100000)
-        # csp.solve()
+        csp.solve()
+        # csp.min_conflicts(100000)
         test_solutions(csp)
