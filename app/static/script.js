@@ -50,6 +50,31 @@ const getComputedVariable = (variable, el = document.documentElement) =>
 const setComputedVariable = (variable, value, el = document.documentElement) =>
     el.style.setProperty(variable, value);
 
+const moon = `<i class="fas fa-moon"></i>`;
+const sun = `<i class="fas fa-sun"></i>`;
+
+document.getElementById("color-pref").addEventListener("click", (e) => {
+    const colorPref = document.getElementById("color-pref");
+
+    if (colorPref.classList.contains("dark")) {
+        colorPref.innerHTML = sun;
+    } else {
+        colorPref.innerHTML = moon;
+    }
+
+    colorPref.classList.toggle("dark");
+
+    document.querySelector("html").classList.toggle("dark");
+
+    document.querySelectorAll("button").forEach((el) => {
+        el.classList.toggle("dark");
+    });
+
+    document.querySelectorAll("td").forEach((el) => {
+        el.style.borderColor = getComputedVariable("--color");
+    });
+});
+
 const initBoard = function (size) {
     const N = Math.pow(size, 2);
     const M = Math.pow(N, 2);
@@ -144,14 +169,15 @@ const setBoard = async function (values) {
     });
 };
 
-let solvin = false;
+let solving = false;
 
 const solve = async function () {
-    if (solvin) {
+    if (solving) {
         return;
     }
+
     const values = {};
-    solvin = true;
+    solving = true;
 
     for (let i = 0; i < Math.pow(SIZE, 4); i++) {
         const cell = getCell(i);
@@ -166,8 +192,6 @@ const solve = async function () {
         values: values,
         size: SIZE,
     };
-
-    console.log("solvin");
 
     const data = await fetch(`solve/`, {
         method: "POST",
@@ -191,7 +215,7 @@ const solve = async function () {
         setBoard(values);
     }
 
-    solvin = false;
+    solving = false;
 };
 
 document

@@ -13,6 +13,11 @@
             rel="stylesheet"
         />
 
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+        />
+
         <link rel="stylesheet" href="static/style.css" />
 
         <script
@@ -23,35 +28,46 @@
 
     <body>
         <main>
-            <h1 class="title">Sudoku</h1>
+            <div class="title">
+                <h1 class="animate__animated animate__fadeInDown">sudoku</h1>
+                <div id="color-pref" class="color-pref">
+                    <i class="fas fa-sun"></i>
+                </div>
+            </div>
 
-            <div class="board">
+            <div class="box-shadow board">
                 <table id="board">
                     <tbody></tbody>
                 </table>
             </div>
 
             <div class="controls">
-                <div class="board-size select">
-                    <h2>Board Size</h2>
-                    <select autocomplete="off" id="board-size-select">
-                        <option value="2">2</option>
-                        <option value="3" selected>3</option>
-                        <option value="4">4</option>
-                    </select>
+                <div class="selects">
+                    <div class="board-size">
+                        <h2>Board Size</h2>
+                        <select autocomplete="off" id="board-size-select">
+                            <option value="2">2</option>
+                            <option value="3" selected>3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+
+                    <div class="difficulty">
+                        <h2 id="difficulty-header">Difficulty</h2>
+                        <select autocomplete="off" id="difficulty-select">
+                            <option value="EASY" selected>Easy</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="HARD">Hard</option>
+                        </select>
+                    </div>
                 </div>
 
-                <div class="difficulty select">
-                    <h2 id="difficulty-header">Difficulty</h2>
-                    <select autocomplete="off" id="difficulty-select">
-                        <option value="EASY" selected>Easy</option>
-                        <option value="MEDIUM">Medium</option>
-                        <option value="HARD">Hard</option>
-                    </select>
+                <div class="buttons">
+                    <button id="randomize-btn" class="btn btn-secondary">
+                        Randomize
+                    </button>
+                    <button id="clear-btn" class="btn btn-secondary">Clear</button>
                 </div>
-
-                <button id="randomize-btn" class="btn btn-secondary">Randomize</button>
-                <button id="clear-btn" class="btn btn-secondary">Clear</button>
             </div>
 
             <button class="btn btn-primary solve" id="solve-btn">Solve</button>
