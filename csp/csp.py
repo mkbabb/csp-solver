@@ -2,6 +2,8 @@ import pprint
 from collections import defaultdict, deque
 from enum import Enum, auto
 from typing import *
+import numpy as np
+import random
 
 V = TypeVar("V")
 D = TypeVar("D")
@@ -35,7 +37,9 @@ class CSP:
         self.variables: List[V] = []
         self.constraints: Dict[V, List[Constraint]] = defaultdict(list)
         self.current_domains: Dict[V, List[D]] = {}
+
         self.domains: Dict[V, List[D]] = {}
+        self.cached_domains: Dict[str, List[D]] = {}
 
         self.variable_stack: Deque[V] = deque()
 
@@ -47,9 +51,13 @@ class CSP:
         self.solutions: List[Solution] = []
 
     def add_variables(self, domain: List[D], *variables: V):
+        key = str(domain)
+        t_domain = (
+            list(domain) if key not in self.cached_domains else self.cached_domains[key]
+        )
         for v in variables:
             self.variables.append(v)
-            self.domains[v] = list(domain)
+            self.domains[v] = t_domain
 
     def add_constraint(self, constraint_pair: Tuple[Constraint, List[V]]):
         constraint, variables = constraint_pair
@@ -135,6 +143,52 @@ class CSP:
             del solution[v]
 
         self.variable_stack.append(v)
+
+        return False
+
+    def num_conflicts(self, v: V, d: D, solution: Solution):
+        count = 0
+
+        t_solution = self.test_solution(solution, {v: d})
+
+        for constraint in self.constraints[v]:
+            consistent = constraint(t_solution)
+            if not consistent:
+                count += 1
+
+        return count
+
+    def conflicting_variables(self, solution: Solution):
+        return [
+            v
+            for v in self.variables
+            if v in solution and self.num_conflicts(v, solution[v], solution) > 0
+        ]
+
+    def min_conflicting_value(self, v: V, solution: Solution) -> D:
+        domains = self.domains[v]
+        conflicts = [self.num_conflicts(v, d, solution) for d in domains]
+        ix = np.argmin(conflicts)
+
+        return domains[ix]
+
+    def min_conflicts(self, iteration_count: int = 10000):
+        solution = {}
+        random.shuffle(self.variables)
+
+        for v in self.variables:
+            solution[v] = self.min_conflicting_value(v, solution)
+
+        for _ in range(iteration_count):
+            conflicted = self.conflicting_variables(solution)
+
+            if len(conflicted) == 0:
+                self.solutions.append(solution.copy())
+                return True
+
+            v = random.choice(conflicted)
+            d = self.min_conflicting_value(v, solution)
+            solution[v] = d
 
         return False
 
@@ -248,7 +302,7 @@ def map_coloring():
     ]
     domain = ["red", "green", "blue"]
 
-    csp = CSP()
+    csp = CSP(max_solutions=100)
 
     csp.add_variables(domain, *variables)
 
@@ -282,5 +336,6 @@ if __name__ == "__main__":
     csps = [map_coloring(), n_queens()]
 
     for csp in csps:
-        csp.solve()
+        csp.min_conflicts(100000)
+        # csp.solve()
         test_solutions(csp)
