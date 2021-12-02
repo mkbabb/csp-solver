@@ -1,5 +1,16 @@
 let SIZE = 3;
 
+function throttle(func, wait = 1000) {
+    let enableCall = true;
+
+    return function (...args) {
+        if (!enableCall) return;
+        enableCall = false;
+        func(...args);
+        setTimeout(() => (enableCall = true), wait);
+    };
+}
+
 const clearBoardSuccess = function () {
     const board = document.getElementById("board");
 
@@ -177,17 +188,23 @@ document
     .getElementById("difficulty-select")
     .addEventListener("change", (e) => changeDifficultyColor());
 
-document.getElementById("randomize-btn").addEventListener("click", (e) => {
+const randomizer = throttle(() => {
     clearBoardSuccess();
     setBoard();
-});
+}, 1000);
 
-document.getElementById("clear-btn").addEventListener("click", (e) => {
+const clearer = throttle(() => {
     clearBoardSuccess();
     clearBoard();
-});
+}, 1000);
 
-document.getElementById("solve-btn").addEventListener("click", (e) => solve());
+const solver = throttle(solve, 1000);
+
+document.getElementById("randomize-btn").addEventListener("click", randomizer);
+
+document.getElementById("clear-btn").addEventListener("click", clearer);
+
+document.getElementById("solve-btn").addEventListener("click", solver);
 
 window.addEventListener("load", () => {
     initBoard(SIZE);

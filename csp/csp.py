@@ -1,9 +1,10 @@
 import pprint
+import random
 from collections import defaultdict, deque
 from enum import Enum, auto
 from typing import *
+
 import numpy as np
-import random
 
 V = TypeVar("V")
 D = TypeVar("D")
