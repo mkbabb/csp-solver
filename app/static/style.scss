@@ -126,11 +126,6 @@ i {
     }
 }
 
-@function calc-cell-width($val) {
-    $ret: calc(calc(#{$val} - var(--border-offset)) / calc(var(--size) * var(--size)));
-    @return $ret;
-}
-
 .board {
     grid-area: board;
 
@@ -164,8 +159,6 @@ i {
         border: none;
         background-color: var(--board-bg-color-disabled);
         font-weight: bold;
-
-        color: var(--color) !important;
     }
 }
 
@@ -221,10 +214,6 @@ i {
         input {
             font-size: 1rem;
         }
-    }
-
-    table {
-        max-width: 100%;
     }
 
     .title {
