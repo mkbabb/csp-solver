@@ -1,4 +1,4 @@
- #!/usr/bin/python3
+#!/usr/bin/python3
 
 import sys
 import logging
@@ -9,7 +9,7 @@ logging.basicConfig(stream=sys.stderr)
 sys.path.insert(0, "/var/www/html/csp-solver")
 sys.path.insert(
     0,
-    "/var/www/html/csp-solver/my_venv/lib/python3.8/site-packages",
+    "/home/mbabb/.cache/pypoetry/virtualenvs/csp-solver-smbx6EIP-py3.10/lib/python3.10/site-packages",
 )
 
 
