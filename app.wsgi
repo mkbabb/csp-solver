@@ -3,15 +3,17 @@
 import sys
 import logging
 import os
+import pathlib
 
 logging.basicConfig(stream=sys.stderr)
 
-os.environ["DJANGO_SETTINGS_MODULE"] = "{{ project_name }}.settings"
+BASE_PATH = pathlib.Path("/var/www/html/csp-solver")
 
-sys.path.insert(0, "/var/www/html/csp-solver")
+
+sys.path.insert(0, BASE_PATH)
 sys.path.insert(
     0,
-    "/home/mbabb/.cache/pypoetry/virtualenvs/csp-solver-smbx6EIP-py3.10/lib/python3.10/site-packages",
+    BASE_PATH.join("/my_venv/lib/python3.10/site-packages"),
 )
 
 from app import app as application
