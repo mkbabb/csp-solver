@@ -9,10 +9,10 @@ logging.basicConfig(stream=sys.stderr)
 BASE_PATH = pathlib.Path("/var/www/html/csp-solver")
 
 
-sys.path.insert(0, BASE_PATH)
+sys.path.insert(0, str(BASE_PATH))
 sys.path.insert(
     0,
-    BASE_PATH.joinpath("/my_venv/lib/python3.10/site-packages"),
+    str(BASE_PATH.joinpath("my_venv/lib/python3.10/site-packages")),
 )
 
 from app import app as application
