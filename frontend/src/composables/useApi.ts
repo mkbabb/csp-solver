@@ -1,4 +1,5 @@
-const API_BASE = '/api/v1'
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '')
+const API_BASE = `${BASE}/api/v1`
 
 export interface BoardResponse {
   values: Record<string, number>
