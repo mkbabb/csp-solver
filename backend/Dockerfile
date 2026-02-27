@@ -49,12 +49,15 @@ CMD ["uv", "run", "uvicorn", "csp_solver.api.main:app", \
 ###############################################################################
 # Production
 ###############################################################################
-FROM base AS production
+FROM uv-installer AS production
 
 RUN groupadd -r app && useradd -r -g app app
 
 COPY --from=dependencies /app/.venv /app/.venv
 COPY . .
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 
