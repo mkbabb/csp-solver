@@ -2,11 +2,12 @@
   <!-- Credit to Kevin Powell at https://codepen.io/kevinpowell/pen/PomqjxO -->
   <button
     class="dark-mode-toggle-button"
-    :class="{ 'is-dark': isDark }"
+    :class="{ 'is-dark': isDark, 'has-toggled': hasToggled }"
     v-bind="$attrs"
-    @click="toggleDark()"
+    @click="handleToggle"
     :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
   >
+    <span v-if="hasToggled" class="pulse-ring" :class="{ 'is-dark': isDark }" />
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="472.39"
@@ -26,9 +27,16 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useTheme } from '@/composables/useTheme'
 
 const { isDark, toggleDark } = useTheme()
+const hasToggled = ref(false)
+
+function handleToggle() {
+  hasToggled.value = true
+  toggleDark()
+}
 </script>
 
 <style scoped>
@@ -39,10 +47,8 @@ const { isDark, toggleDark } = useTheme()
   padding: 0;
   border-radius: 50%;
   position: relative;
-  isolation: isolate;
-  background: 0;
+  background: transparent;
   transition: opacity 200ms ease, transform 200ms ease, background 200ms ease;
-  z-index: 10;
 }
 
 .dark-mode-toggle-button svg {
@@ -50,6 +56,8 @@ const { isDark, toggleDark } = useTheme()
   width: 100%;
   height: 100%;
   display: block;
+  position: relative;
+  z-index: 1;
 }
 
 .dark-mode-toggle-button:hover,
@@ -60,18 +68,18 @@ const { isDark, toggleDark } = useTheme()
   background: hsl(0 0% 50% / 0.15);
 }
 
-.dark-mode-toggle-button::before {
-  content: '';
+/* Pulse ring — rendered as a real element (not ::before) to avoid Safari z-index bug */
+.pulse-ring {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   background: var(--color-foreground);
-  z-index: -1;
-  animation: pulseToDark 650ms ease-out;
+  pointer-events: none;
+  animation: pulseToDark 650ms ease-out forwards;
 }
 
-.dark-mode-toggle-button.is-dark::before {
-  animation: pulseToLight 650ms ease-out;
+.pulse-ring.is-dark {
+  animation: pulseToLight 650ms ease-out forwards;
 }
 
 .toggle-sun {

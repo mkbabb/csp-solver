@@ -32,7 +32,7 @@ const mobileControlsOpen = ref(false)
     </svg>
 
     <!-- Sticky header -->
-    <header class="sticky top-0 z-40 mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-4 sm:py-5">
+    <header class="sticky top-0 z-40 mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-2 sm:py-5">
       <h1 class="text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
         sudoku
       </h1>
@@ -65,9 +65,49 @@ const mobileControlsOpen = ref(false)
       </div>
     </header>
 
-    <main class="main-content mx-auto flex max-w-4xl flex-col items-center justify-center px-4">
+    <main class="main-content mx-auto flex max-w-4xl flex-col items-center px-4 sm:justify-center">
       <!-- Board + Controls row -->
       <div class="app-layout">
+        <!-- Mobile controls bar (above board) -->
+        <div class="board-width sm:hidden">
+          <button
+            @click="mobileControlsOpen = !mobileControlsOpen"
+            class="flex w-full items-center justify-center rounded-lg bg-card px-4 py-2 text-sm font-medium text-foreground transition-all duration-200"
+            :class="mobileControlsOpen ? 'rounded-b-none border-b-0' : 'cartoon-shadow-sm'"
+          >
+            <ChevronDown
+              :size="16"
+              class="transition-transform duration-300"
+              :class="mobileControlsOpen ? 'rotate-180' : ''"
+            />
+          </button>
+
+          <Transition
+            enter-active-class="mobile-panel-enter"
+            leave-active-class="mobile-panel-leave"
+          >
+            <div
+              v-if="mobileControlsOpen"
+              class="overflow-hidden rounded-b-lg bg-card px-4 pb-4 cartoon-shadow-sm"
+              style="border-top: 1px solid var(--color-border)"
+            >
+              <div class="pt-3">
+                <ControlPanel
+                  :size="sudoku.size.value"
+                  :difficulty="sudoku.difficulty.value"
+                  :loading="sudoku.loading.value"
+                  :solve-state="sudoku.solveState.value"
+                  @update:size="sudoku.size.value = $event"
+                  @update:difficulty="sudoku.difficulty.value = $event"
+                  @randomize="sudoku.randomize()"
+                  @clear="sudoku.clearBoard()"
+                  @solve="sudoku.solve()"
+                />
+              </div>
+            </div>
+          </Transition>
+        </div>
+
         <!-- Board -->
         <div class="min-w-0 flex-shrink">
           <SudokuBoard
@@ -99,49 +139,6 @@ const mobileControlsOpen = ref(false)
           </div>
         </div>
       </div>
-
-      <!-- Mobile controls bar -->
-      <div class="mt-4 w-full sm:hidden">
-        <!-- Toggle bar -->
-        <button
-          @click="mobileControlsOpen = !mobileControlsOpen"
-          class="flex w-full items-center justify-between rounded-lg bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-all duration-200"
-          :class="mobileControlsOpen ? 'rounded-b-none border-b-0' : 'cartoon-shadow-sm'"
-        >
-          <span>Controls</span>
-          <ChevronDown
-            :size="16"
-            class="transition-transform duration-300"
-            :class="mobileControlsOpen ? 'rotate-180' : ''"
-          />
-        </button>
-
-        <!-- Expandable panel -->
-        <Transition
-          enter-active-class="mobile-panel-enter"
-          leave-active-class="mobile-panel-leave"
-        >
-          <div
-            v-if="mobileControlsOpen"
-            class="overflow-hidden rounded-b-lg bg-card px-4 pb-4 cartoon-shadow-sm"
-            style="border-top: 1px solid var(--color-border)"
-          >
-            <div class="pt-3">
-              <ControlPanel
-                :size="sudoku.size.value"
-                :difficulty="sudoku.difficulty.value"
-                :loading="sudoku.loading.value"
-                :solve-state="sudoku.solveState.value"
-                @update:size="sudoku.size.value = $event"
-                @update:difficulty="sudoku.difficulty.value = $event"
-                @randomize="sudoku.randomize()"
-                @clear="sudoku.clearBoard()"
-                @solve="sudoku.solve()"
-              />
-            </div>
-          </div>
-        </Transition>
-      </div>
     </main>
   </div>
 </template>
@@ -159,10 +156,20 @@ const mobileControlsOpen = ref(false)
 }
 
 @media (max-width: 640px) {
+  .main-content {
+    justify-content: flex-start;
+    padding-top: 0.5rem;
+  }
+
   .app-layout {
     flex-direction: column;
     align-items: center;
+    gap: 0.75rem;
   }
+}
+
+.board-width {
+  width: min(36rem, 85vw);
 }
 
 /* Hover card */
