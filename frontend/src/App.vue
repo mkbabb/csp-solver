@@ -126,32 +126,34 @@ function closeHoverCard() {
         </div>
 
         <!-- Mobile: action buttons below board -->
-        <div class="mobile-board-width flex items-center justify-center gap-2 sm:hidden">
-          <button
-            @click="sudoku.randomize()"
-            :disabled="sudoku.loading.value"
-            class="action-btn"
-            aria-label="Randomize board"
-          >
-            <Shuffle :size="20" />
-          </button>
-          <button
-            @click="sudoku.clearBoard()"
-            :disabled="sudoku.loading.value"
-            class="action-btn"
-            aria-label="Clear board"
-          >
-            <Eraser :size="20" />
-          </button>
-          <button
-            @click="sudoku.solve()"
-            :disabled="sudoku.loading.value"
-            class="action-btn"
-            aria-label="Solve puzzle"
-          >
-            <svg v-if="sudoku.loading.value" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-            <Sparkles v-else :size="20" class="sparkle-icon" />
-          </button>
+        <div class="mobile-board-width sm:hidden">
+          <div class="flex items-center justify-center gap-2 rounded-lg bg-card px-4 py-2 cartoon-shadow-sm">
+            <button
+              @click="sudoku.randomize()"
+              :disabled="sudoku.loading.value"
+              class="action-btn"
+              aria-label="Randomize board"
+            >
+              <Shuffle :size="20" />
+            </button>
+            <button
+              @click="sudoku.clearBoard()"
+              :disabled="sudoku.loading.value"
+              class="action-btn"
+              aria-label="Clear board"
+            >
+              <Eraser :size="20" />
+            </button>
+            <button
+              @click="sudoku.solve()"
+              :disabled="sudoku.loading.value"
+              class="action-btn"
+              aria-label="Solve puzzle"
+            >
+              <svg v-if="sudoku.loading.value" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+              <Sparkles v-else :size="20" class="sparkle-icon" />
+            </button>
+          </div>
         </div>
 
         <!-- Desktop: controls card (right side) -->
@@ -189,8 +191,10 @@ function closeHoverCard() {
 
 @media (max-width: 640px) {
   .main-content {
-    justify-content: flex-start;
-    padding-top: 0.5rem;
+    justify-content: center;
+    /* On very tall screens, cap the centering so the board stays in the upper portion */
+    min-height: min(calc(100vh - 4rem), 56rem);
+    padding-bottom: 2rem;
   }
 
   .app-layout {
