@@ -1,0 +1,189 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  body {
+    font-family: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
+    background-image: var(--paper-clean-texture);
+    background-attachment: fixed;
+  }
+}
+
+@theme {
+  --radius: 0.625rem;
+
+  /* Paper-like background tones */
+  --color-background: hsl(48 15% 98%);
+  --color-foreground: hsl(0 0% 3.9%);
+  --color-card: hsl(48 12% 99%);
+  --color-card-foreground: hsl(0 0% 3.9%);
+  --color-popover: hsl(48 10% 98.5%);
+  --color-popover-foreground: hsl(0 0% 3.9%);
+  --color-primary: hsl(0 0% 9%);
+  --color-primary-foreground: hsl(0 0% 98%);
+  --color-secondary: hsl(48 8% 96.1%);
+  --color-secondary-foreground: hsl(0 0% 9%);
+  --color-muted: hsl(48 8% 96.1%);
+  --color-muted-foreground: hsl(0 0% 45.1%);
+  --color-accent: hsl(48 8% 96.1%);
+  --color-accent-foreground: hsl(0 0% 9%);
+  --color-destructive: hsl(0 84.2% 60.2%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+  --color-border: hsl(48 5% 89.8%);
+  --color-input: hsl(48 5% 89.8%);
+  --color-ring: hsl(0 0% 3.9%);
+
+  /* Difficulty colors */
+  --color-easy: hsl(142 71% 45%);
+  --color-medium: hsl(45 93% 47%);
+  --color-hard: hsl(0 84% 60%);
+
+  /* Paper textures */
+  --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.18'/%3E%3C/svg%3E");
+}
+
+/* Dark theme */
+.dark {
+  --color-background: hsl(24 8% 6%);
+  --color-foreground: hsl(48 10% 92%);
+  --color-card: hsl(24 6% 7%);
+  --color-card-foreground: hsl(48 10% 92%);
+  --color-popover: hsl(24 7% 6.5%);
+  --color-popover-foreground: hsl(48 10% 92%);
+  --color-primary: hsl(48 10% 92%);
+  --color-primary-foreground: hsl(0 0% 9%);
+  --color-secondary: hsl(24 5% 15%);
+  --color-secondary-foreground: hsl(48 10% 92%);
+  --color-muted: hsl(24 5% 15%);
+  --color-muted-foreground: hsl(48 5% 64%);
+  --color-accent: hsl(24 5% 15%);
+  --color-accent-foreground: hsl(48 10% 92%);
+  --color-destructive: hsl(0 62.8% 30.6%);
+  --color-destructive-foreground: hsl(48 10% 92%);
+  --color-border: hsl(24 4% 16%);
+  --color-input: hsl(24 4% 16%);
+  --color-ring: hsl(48 8% 83%);
+
+  --color-easy: hsl(142 71% 35%);
+  --color-medium: hsl(45 93% 37%);
+  --color-hard: hsl(0 62% 40%);
+
+  --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.10'/%3E%3C/svg%3E");
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Cartoon shadow variants */
+  .cartoon-shadow-sm {
+    box-shadow:
+      -6px 4px 0px rgba(0, 0, 0, 0.14),
+      0 6px 0px rgba(0, 0, 0, 0.14),
+      -6px 6px 0px rgba(0, 0, 0, 0.12);
+    border: 2px solid var(--color-border);
+    transform: translateY(-2px);
+  }
+
+  .cartoon-shadow-md {
+    box-shadow:
+      -8px 5px 0px rgba(0, 0, 0, 0.14),
+      0 8px 0px rgba(0, 0, 0, 0.14),
+      -8px 8px 0px rgba(0, 0, 0, 0.12);
+    border: 2px solid var(--color-border);
+    transform: translateY(-2px);
+  }
+
+  .dark .cartoon-shadow-sm {
+    box-shadow:
+      -6px 4px 0px rgba(255, 255, 255, 0.09),
+      0 6px 0px rgba(255, 255, 255, 0.09),
+      -6px 6px 0px rgba(255, 255, 255, 0.06);
+    border: 2px solid var(--color-border);
+  }
+
+  .dark .cartoon-shadow-md {
+    box-shadow:
+      -8px 5px 0px rgba(255, 255, 255, 0.09),
+      0 8px 0px rgba(255, 255, 255, 0.09),
+      -8px 8px 0px rgba(255, 255, 255, 0.06);
+    border: 2px solid var(--color-border);
+  }
+
+  /* Solve success: green borders on board and all children */
+  .solve-success {
+    border: 3px solid var(--color-easy) !important;
+    box-shadow:
+      -8px 5px 0px color-mix(in srgb, var(--color-easy) 40%, transparent),
+      0 8px 0px color-mix(in srgb, var(--color-easy) 40%, transparent),
+      -8px 8px 0px color-mix(in srgb, var(--color-easy) 30%, transparent);
+    transform: translateY(-2px);
+  }
+
+  .solve-success * {
+    border-color: var(--color-easy) !important;
+  }
+
+  /* Solve failure: red borders + shake */
+  .solve-failure {
+    border: 3px solid var(--color-hard) !important;
+    box-shadow:
+      -8px 5px 0px color-mix(in srgb, var(--color-hard) 40%, transparent),
+      0 8px 0px color-mix(in srgb, var(--color-hard) 40%, transparent),
+      -8px 8px 0px color-mix(in srgb, var(--color-hard) 30%, transparent);
+    transform: translateY(-2px);
+    animation: shake 0.6s linear;
+  }
+
+  .solve-failure * {
+    border-color: var(--color-hard) !important;
+  }
+
+  /* Shake animation */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
+
+  /* Cell reveal animation */
+  @keyframes cell-reveal {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Fira Code utility */
+  .fira-code {
+    font-family: 'Fira Code', monospace;
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@theme inline {
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--reka-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--reka-accordion-content-height); }
+    to { height: 0; }
+  }
+}
