@@ -7,6 +7,7 @@ defineProps<{
   difficulty: Difficulty
   loading: boolean
   solveState: string
+  hideActions?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -42,7 +43,7 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
           v-for="s in sizes"
           :key="s.value"
           @click="emit('update:size', s.value)"
-          class="fira-code rounded-md px-3 py-0.5 text-center text-sm transition-all duration-150 sm:text-left"
+          class="fira-code rounded-md px-3 py-1 text-center text-base transition-all duration-150 sm:py-0.5 sm:text-left sm:text-sm"
           :class="
             size === s.value
               ? 'text-foreground font-bold'
@@ -75,7 +76,7 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
           v-for="d in difficulties"
           :key="d.value"
           @click="emit('update:difficulty', d.value)"
-          class="fira-code rounded-md px-3 py-0.5 text-center text-sm transition-all duration-150 sm:text-left"
+          class="fira-code rounded-md px-3 py-1 text-center text-base transition-all duration-150 sm:py-0.5 sm:text-left sm:text-sm"
           :class="
             difficulty === d.value
               ? `font-bold ${d.colorClass}`
@@ -87,6 +88,7 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
       </div>
     </div>
 
+    <template v-if="!hideActions">
     <hr class="my-3 w-full border-border/50" />
 
     <!-- Action buttons (icon only) -->
@@ -122,13 +124,14 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
         <span class="tooltip">Solve</span>
       </button>
     </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
 .section-heading {
-  font-size: 1rem;
-  line-height: 1.5rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -137,6 +140,8 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
 
 @media (min-width: 640px) {
   .section-heading {
+    font-size: 1rem;
+    line-height: 1.5rem;
     text-align: left;
     padding-left: 0.75rem;
   }
