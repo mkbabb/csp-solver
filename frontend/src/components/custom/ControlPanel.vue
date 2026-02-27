@@ -31,18 +31,18 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
 </script>
 
 <template>
-  <div class="flex flex-col">
+  <div class="flex flex-col items-center sm:items-stretch">
     <!-- Size selector -->
-    <div class="flex flex-col gap-1">
+    <div class="flex flex-col items-center gap-1 sm:items-stretch">
       <h2 class="section-heading text-muted-foreground">
         Size
       </h2>
-      <div class="flex flex-col">
+      <div class="flex flex-col items-center sm:items-stretch">
         <button
           v-for="s in sizes"
           :key="s.value"
           @click="emit('update:size', s.value)"
-          class="fira-code rounded-md px-3 py-0.5 text-left text-sm transition-all duration-150"
+          class="fira-code rounded-md px-3 py-0.5 text-center text-sm transition-all duration-150 sm:text-left"
           :class="
             size === s.value
               ? 'text-foreground font-bold'
@@ -54,10 +54,10 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
       </div>
     </div>
 
-    <hr class="my-3 border-border/50" />
+    <hr class="my-3 w-full border-border/50" />
 
     <!-- Difficulty selector -->
-    <div class="flex flex-col gap-1">
+    <div class="flex flex-col items-center gap-1 sm:items-stretch">
       <h2
         class="section-heading transition-colors duration-250"
         :class="
@@ -70,12 +70,12 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
       >
         Difficulty
       </h2>
-      <div class="flex flex-col">
+      <div class="flex flex-col items-center sm:items-stretch">
         <button
           v-for="d in difficulties"
           :key="d.value"
           @click="emit('update:difficulty', d.value)"
-          class="fira-code rounded-md px-3 py-0.5 text-left text-sm transition-all duration-150"
+          class="fira-code rounded-md px-3 py-0.5 text-center text-sm transition-all duration-150 sm:text-left"
           :class="
             difficulty === d.value
               ? `font-bold ${d.colorClass}`
@@ -87,10 +87,10 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
       </div>
     </div>
 
-    <hr class="my-3 border-border/50" />
+    <hr class="my-3 w-full border-border/50" />
 
     <!-- Action buttons (icon only) -->
-    <div class="flex items-center gap-1">
+    <div class="flex items-center justify-center gap-1 sm:justify-start">
       <button
         @click="emit('randomize')"
         :disabled="loading"
@@ -127,12 +127,19 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
 
 <style scoped>
 .section-heading {
-  font-size: 1rem; /* text-base */
+  font-size: 1rem;
   line-height: 1.5rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding-left: 0.75rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .section-heading {
+    text-align: left;
+    padding-left: 0.75rem;
+  }
 }
 
 .icon-btn {
