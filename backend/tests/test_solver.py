@@ -197,15 +197,14 @@ def test_ac3_with_residual_support():
 # ── CBJ ──────────────────────────────────────────────────────────────────────
 
 
-def test_cbj_backjump():
-    """Test that CBJ records conflict sets during search."""
-    # 3 vars with domain [1], all-different → unsolvable (pigeonhole)
+def test_unsolvable_pigeonhole():
+    """Test that solver correctly reports no solutions for pigeonhole."""
+    # 3 vars with domain [1], all-different → unsolvable
     csp = CSP(pruning_type=PruningType.FORWARD_CHECKING)
     csp.add_variables([1], "a", "b", "c")
     csp.add_constraint(all_different_constraint("a", "b", "c"))
     csp.solve()
     assert len(csp.solutions) == 0
-    # CBJ should have recorded conflicts
     assert csp.backtrack_count > 0
 
 

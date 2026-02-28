@@ -11,7 +11,6 @@ Optimizations applied vs original:
 - AC-2001 residual supports (O(ed²) optimal arc consistency)
 - DWO early termination in forward_check/AC3/AC_FC
 - Initial AC3 propagation for given cells
-- Conflict-directed backjumping (CBJ)
 - dom/wdeg variable ordering
 - GAC all-different (Régin 1994) propagation
 - Nogood recording with LRU eviction
@@ -90,10 +89,6 @@ class CSP:
 
         # AC-2001 residual supports: (Xi, x, Xj) → last known support y
         self.last_support: dict[tuple, Any] = {}
-
-        # Conflict-directed backjumping
-        self.conflict_set: dict[Any, set[Any]] = defaultdict(set)
-        self._child_conflicts: set[Any] = set()
 
         # dom/wdeg: constraint weights for failure counting
         self._constraint_id: int = 0
@@ -210,8 +205,6 @@ class CSP:
                     self.pruned_map[variable][Xi].add(x)
 
             if not self.current_domains[Xi]:
-                # DWO: record conflict for CBJ
-                self.conflict_set[Xi].add(variable)
                 return True
         return False
 
@@ -226,7 +219,6 @@ class CSP:
             Xi, Xj = agenda.pop()
             if self.revise(variable, Xi, Xj, solution):
                 if not self.current_domains[Xi]:
-                    self.conflict_set[Xi].add(variable)
                     return True
         return False
 
@@ -246,7 +238,6 @@ class CSP:
 
             if self.revise(variable, Xi, Xj, solution):
                 if not self.current_domains[Xi]:
-                    self.conflict_set[Xi].add(variable)
                     return True
 
                 for Xk in self.get_neighbors(Xi):
@@ -312,8 +303,6 @@ class CSP:
             return len(self.solutions) >= self.max_solutions
 
         v = self.get_next_variable()
-        self.conflict_set[v] = set()
-        use_cbj = self.max_solutions == 1
 
         for d in list(self.current_domains[v]):
             # Nogood check
@@ -337,33 +326,10 @@ class CSP:
                     if self.backtrack(solution):
                         return True
 
-                    # CBJ: backjump if child's conflict set is non-empty
-                    # and doesn't contain v (meaning v is irrelevant to the failure)
-                    if use_cbj and self._child_conflicts and v not in self._child_conflicts:
-                        self.backtrack_count += 1
-                        self.restore_pruned_domains(v)
-                        del solution[v]
-                        self.conflict_set[v].update(self._child_conflicts)
-                        break
-
-            # Record assigned neighbors in conflict set for CBJ
-            for peer in self.get_neighbors(v):
-                if peer in solution:
-                    self.conflict_set[v].add(peer)
-
             self.backtrack_count += 1
             self.restore_pruned_domains(v)
             del solution[v]
 
-        # Dead end: record nogood from conflict set
-        if self.nogood_store and self.conflict_set[v]:
-            conflict_assignments = {
-                cv: solution[cv] for cv in self.conflict_set[v] if cv in solution
-            }
-            if conflict_assignments:
-                self.nogood_store.record(conflict_assignments)
-
-        self._child_conflicts = self.conflict_set[v]
         self.variable_stack.append(v)
         return False
 
@@ -418,8 +384,6 @@ class CSP:
         self.current_domains.clear()
         self.backtrack_count = 0
         self.last_support.clear()
-        self.conflict_set.clear()
-        self._child_conflicts = set()
         self.solutions = []
         if self.nogood_store:
             self.nogood_store.clear()
