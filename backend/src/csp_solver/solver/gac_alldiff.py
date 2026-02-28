@@ -7,56 +7,59 @@ Achieves generalized arc consistency on all-different constraints by:
 4. Finding SCCs via Tarjan's algorithm
 5. Pruning values not in any maximum matching and not in the same SCC
 
-Values that cannot participate in any maximum matching are inconsistent
-and can be safely removed from domains.
+Optimized: integer-indexed nodes, list-based adjacency, iterative Tarjan.
 """
 
 from __future__ import annotations
 
-from collections import deque
 from typing import Any
 
-INF = float("inf")
+_NONE = -1
 
 
 def _hopcroft_karp(
-    u_nodes: list[Any],
-    v_nodes: set[Any],
-    adj: dict[Any, list[Any]],
-) -> tuple[dict[Any, Any], dict[Any, Any]]:
-    """Hopcroft-Karp maximum bipartite matching.
+    n_u: int,
+    n_v: int,
+    adj: list[list[int]],
+) -> tuple[list[int], list[int]]:
+    """Hopcroft-Karp maximum bipartite matching with integer nodes.
 
-    Returns (match_u, match_v) where match_u[u] = v and match_v[v] = u
-    for matched pairs. Unmatched nodes map to None.
+    u-nodes: 0..n_u-1, v-nodes: 0..n_v-1.
+    Returns (match_u, match_v) where match_u[u] = v and match_v[v] = u.
+    Unmatched nodes have value _NONE (-1).
     """
-    match_u: dict[Any, Any] = {u: None for u in u_nodes}
-    match_v: dict[Any, Any] = {v: None for v in v_nodes}
-    dist: dict[Any, float] = {}
+    match_u = [_NONE] * n_u
+    match_v = [_NONE] * n_v
+    dist = [0] * n_u
+
+    INF = n_u + n_v + 1
 
     def bfs() -> bool:
-        queue: deque[Any] = deque()
-        for u in u_nodes:
-            if match_u[u] is None:
+        queue_buf: list[int] = []
+        for u in range(n_u):
+            if match_u[u] == _NONE:
                 dist[u] = 0
-                queue.append(u)
+                queue_buf.append(u)
             else:
                 dist[u] = INF
         found = False
-        while queue:
-            u = queue.popleft()
-            for v in adj.get(u, []):
+        head = 0
+        while head < len(queue_buf):
+            u = queue_buf[head]
+            head += 1
+            for v in adj[u]:
                 mu = match_v[v]
-                if mu is None:
+                if mu == _NONE:
                     found = True
-                elif dist.get(mu, INF) == INF:
+                elif dist[mu] == INF:
                     dist[mu] = dist[u] + 1
-                    queue.append(mu)
+                    queue_buf.append(mu)
         return found
 
-    def dfs(u: Any) -> bool:
-        for v in adj.get(u, []):
+    def dfs(u: int) -> bool:
+        for v in adj[u]:
             mu = match_v[v]
-            if mu is None or (dist.get(mu, INF) == dist[u] + 1 and dfs(mu)):
+            if mu == _NONE or (dist[mu] == dist[u] + 1 and dfs(mu)):
                 match_u[u] = v
                 match_v[v] = u
                 return True
@@ -64,53 +67,73 @@ def _hopcroft_karp(
         return False
 
     while bfs():
-        for u in u_nodes:
-            if match_u[u] is None:
+        for u in range(n_u):
+            if match_u[u] == _NONE:
                 dfs(u)
 
     return match_u, match_v
 
 
-def _tarjan_scc(
-    nodes: set[Any],
-    adj: dict[Any, list[Any]],
-) -> list[set[Any]]:
-    """Tarjan's algorithm for strongly connected components."""
-    index_counter = [0]
-    stack: list[Any] = []
-    on_stack: set[Any] = set()
-    index: dict[Any, int] = {}
-    lowlink: dict[Any, int] = {}
-    sccs: list[set[Any]] = []
+def _tarjan_scc_iterative(
+    n_nodes: int,
+    adj: list[list[int]],
+) -> list[int]:
+    """Iterative Tarjan's SCC. Returns scc_id for each node (0-indexed)."""
+    index = [_NONE] * n_nodes
+    lowlink = [0] * n_nodes
+    on_stack = bytearray(n_nodes)
+    scc_id = [_NONE] * n_nodes
 
-    def strongconnect(v: Any) -> None:
-        index[v] = lowlink[v] = index_counter[0]
-        index_counter[0] += 1
-        stack.append(v)
-        on_stack.add(v)
+    stack: list[int] = []
+    call_stack: list[tuple[int, int]] = []  # (node, neighbor_index)
+    counter = 0
+    scc_counter = 0
 
-        for w in adj.get(v, []):
-            if w not in index:
-                strongconnect(w)
-                lowlink[v] = min(lowlink[v], lowlink[w])
-            elif w in on_stack:
-                lowlink[v] = min(lowlink[v], index[w])
+    for start in range(n_nodes):
+        if index[start] != _NONE:
+            continue
 
-        if lowlink[v] == index[v]:
-            scc: set[Any] = set()
-            while True:
-                w = stack.pop()
-                on_stack.discard(w)
-                scc.add(w)
-                if w == v:
-                    break
-            sccs.append(scc)
+        call_stack.append((start, 0))
+        index[start] = lowlink[start] = counter
+        counter += 1
+        stack.append(start)
+        on_stack[start] = 1
 
-    for v in nodes:
-        if v not in index:
-            strongconnect(v)
+        while call_stack:
+            v, ni = call_stack[-1]
+            neighbors = adj[v]
 
-    return sccs
+            if ni < len(neighbors):
+                call_stack[-1] = (v, ni + 1)
+                w = neighbors[ni]
+                if index[w] == _NONE:
+                    index[w] = lowlink[w] = counter
+                    counter += 1
+                    stack.append(w)
+                    on_stack[w] = 1
+                    call_stack.append((w, 0))
+                elif on_stack[w]:
+                    if index[w] < lowlink[v]:
+                        lowlink[v] = index[w]
+            else:
+                # Done with v's neighbors
+                if lowlink[v] == index[v]:
+                    # v is root of an SCC
+                    while True:
+                        w = stack.pop()
+                        on_stack[w] = 0
+                        scc_id[w] = scc_counter
+                        if w == v:
+                            break
+                    scc_counter += 1
+
+                call_stack.pop()
+                if call_stack:
+                    parent = call_stack[-1][0]
+                    if lowlink[v] < lowlink[parent]:
+                        lowlink[parent] = lowlink[v]
+
+    return scc_id
 
 
 def gac_alldiff_propagate(
@@ -130,73 +153,76 @@ def gac_alldiff_propagate(
     Returns:
         List of (variable, value) pairs to remove from domains.
     """
-    if len(unassigned) <= 1:
+    n_vars = len(unassigned)
+    if n_vars <= 1:
         return []
 
-    # Collect assigned values to exclude from consideration
+    # Skip GAC for binary case — forward checking handles it
+    if n_vars <= 2:
+        return []
+
+    # Collect assigned values to exclude
     assigned_vals = {solution[v] for v in group if v in solution}
 
-    # Build bipartite graph: variables → available values
-    adj: dict[Any, list[Any]] = {}
-    all_values: set[Any] = set()
+    # Map variables to indices 0..n_vars-1
+    # Map values to indices 0..n_vals-1
+    all_values_set: set = set()
+
+    # First pass: collect all available values
+    var_avail_raw: list[list] = []
     for var in unassigned:
         available = [v for v in current_domains[var] if v not in assigned_vals]
-        adj[var] = available
-        all_values.update(available)
+        var_avail_raw.append(available)
+        all_values_set.update(available)
 
-    if not all_values:
+    if not all_values_set:
         return []
 
-    # Find maximum matching
-    match_u, match_v = _hopcroft_karp(unassigned, all_values, adj)
+    # Build value index mapping
+    val_list = sorted(all_values_set)  # deterministic ordering
+    val_to_idx: dict = {v: i for i, v in enumerate(val_list)}
+    n_vals = len(val_list)
 
-    # Check if matching is complete (covers all unassigned vars)
-    if any(match_u[u] is None for u in unassigned):
-        # No complete matching exists — problem is infeasible,
-        # but let the constraint checker handle it
-        return []
+    # Build adjacency: u-node (var idx) → list of v-node (val idx)
+    adj: list[list[int]] = []
+    for avail in var_avail_raw:
+        adj.append([val_to_idx[v] for v in avail])
 
-    # Build directed residual graph for SCC computation
-    # Edge directions: matched edge val→var, unmatched edge var→val
-    # Use tagged nodes to distinguish var-nodes from val-nodes
-    var_tag = ("var",)
-    val_tag = ("val",)
-    tagged_var = {v: (var_tag, v) for v in unassigned}
-    tagged_val = {v: (val_tag, v) for v in all_values}
+    # Maximum matching
+    match_u, match_v = _hopcroft_karp(n_vars, n_vals, adj)
 
-    res_adj: dict[Any, list[Any]] = {}
-    all_tagged: set[Any] = set()
+    # Check completeness
+    for u in range(n_vars):
+        if match_u[u] == _NONE:
+            return []
 
-    for var in unassigned:
-        tv = tagged_var[var]
-        all_tagged.add(tv)
-        for val in adj[var]:
-            tval = tagged_val[val]
-            all_tagged.add(tval)
-            if match_u[var] == val:
+    # Build directed residual graph for SCC
+    # Nodes: 0..n_vars-1 are var-nodes, n_vars..n_vars+n_vals-1 are val-nodes
+    total_nodes = n_vars + n_vals
+    res_adj: list[list[int]] = [[] for _ in range(total_nodes)]
+
+    for u in range(n_vars):
+        for vi in adj[u]:
+            val_node = n_vars + vi
+            if match_u[u] == vi:
                 # Matched edge: val → var
-                res_adj.setdefault(tval, []).append(tv)
+                res_adj[val_node].append(u)
             else:
                 # Unmatched edge: var → val
-                res_adj.setdefault(tv, []).append(tval)
+                res_adj[u].append(val_node)
 
-    # Find SCCs in residual graph
-    sccs = _tarjan_scc(all_tagged, res_adj)
-    node_to_scc: dict[Any, int] = {}
-    for i, scc in enumerate(sccs):
-        for node in scc:
-            node_to_scc[node] = i
+    # SCC
+    scc_id = _tarjan_scc_iterative(total_nodes, res_adj)
 
-    # Pruning: remove (var, val) where val is NOT matched to var
-    # AND var and val are NOT in the same SCC
+    # Pruning
     removals: list[tuple[Any, Any]] = []
-    for var in unassigned:
-        tv = tagged_var[var]
-        for val in adj[var]:
-            if match_u[var] == val:
+    for u in range(n_vars):
+        var = unassigned[u]
+        matched_vi = match_u[u]
+        for vi in adj[u]:
+            if vi == matched_vi:
                 continue  # Keep matched edges
-            tval = tagged_val[val]
-            if node_to_scc.get(tv) != node_to_scc.get(tval):
-                removals.append((var, val))
+            if scc_id[u] != scc_id[n_vars + vi]:
+                removals.append((var, val_list[vi]))
 
     return removals

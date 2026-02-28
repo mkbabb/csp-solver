@@ -6,7 +6,7 @@ This document describes nine optimizations applied to the CSP solver engine (`cs
 
 **Goals**: Reduce backtrack count and wall-clock time without external solver libraries or architectural overhaul. All optimizations are composable and independently toggleable.
 
-**Architecture**: The CSP class supports pluggable pruning (forward checking, AC3, AC-FC), variable ordering (static, MRV/fail-first, dom/wdeg), and optional GAC all-different propagation and nogood recording.
+**Architecture**: The CSP class supports pluggable pruning (forward checking, AC3, AC-FC), variable ordering (static, MRV/fail-first, dom/wdeg), and optional GAC all-different propagation.
 
 ---
 
@@ -59,17 +59,18 @@ This document describes nine optimizations applied to the CSP solver engine (`cs
 
 **Impact**: For puzzles with many givens (easy/medium), this can solve the entire puzzle during initial propagation with zero backtracks.
 
-### 2.6 Conflict-Directed Backjumping (CBJ)
+### 2.6 Pair-Constraint Index
 
-**Algorithm** (Prosser, 1993): Track a `conflict_set[v]` for each variable `v`. When a value fails (DWO or `is_valid` failure), record the assigned neighbors as conflict causes. On dead end, propagate the conflict set upward. If the parent variable `v` is not in the child's conflict set, backjump past `v` (it's irrelevant to the failure).
+**Problem**: `forward_check()` and `revise()` called `is_valid(v, solution)`, which tests *all* constraints on `v`. In 9×9 Sudoku each cell participates in 3 all-different constraints (row, column, subgrid). But forward checking between two specific variables only needs the constraints they *share* — typically one.
+
+**Algorithm**: At `add_constraint()` time, build `_pair_constraints: dict[frozenset, list[Constraint]]` mapping each variable pair to their shared constraints. `is_valid_pair(v1, v2, solution)` checks only those.
 
 **Implementation**:
-- `self.conflict_set[v]`: accumulated per-variable during value iteration
-- `self._child_conflicts`: communicated from callee to caller
-- Only active when `max_solutions == 1` (CBJ is unsound for multi-solution search)
-- Assigned neighbors are recorded on every failed value attempt
+- `add_constraint()` iterates all O(k²) pairs in the constraint's variable list and appends the constraint to each pair's entry
+- `forward_check()` and `revise()` call `is_valid_pair()` instead of `is_valid()`
+- `backtrack()` still uses `is_valid()` for the full assignment check
 
-**Impact**: On well-structured problems like Sudoku, CBJ skips irrelevant ancestor variables. Most effective on hard puzzles with deep backtracking.
+**Impact**: On Golden Nugget, `all_different check` calls drop from 267K to 181K (−32%), with constraint check time halved from 0.311s to 0.170s.
 
 ### 2.7 dom/wdeg Variable Ordering
 
@@ -83,42 +84,50 @@ This document describes nine optimizations applied to the CSP solver engine (`cs
 
 **Impact**: Adapts variable ordering to the problem structure discovered during search. Focuses on "hard" variables (those involved in many failed constraints). Often outperforms static MRV on hard instances.
 
-### 2.8 GAC All-Different (Regin, 1994)
+### 2.8 GAC All-Different (Régin, 1994)
 
 **Algorithm**: Generalized arc consistency for all-different constraints via maximum bipartite matching + SCC decomposition.
 
 1. Build bipartite value graph: variables → domain values
-2. Find maximum matching via Hopcroft-Karp (~60 lines)
+2. Find maximum matching via Hopcroft-Karp
 3. Build directed residual graph (matched edges reversed)
-4. Find SCCs via Tarjan's algorithm (~50 lines)
+4. Find SCCs via Tarjan's algorithm
 5. Prune: remove edge `(var, val)` if `val` is NOT matched to `var` AND `var` and `val` are NOT in the same SCC
 
-**Complexity**: O(n^(1/2) * m) for Hopcroft-Karp, O(n + m) for Tarjan, where n = variables + values, m = edges.
+**Complexity**: O(n^(1/2) · m) for Hopcroft-Karp, O(n + m) for Tarjan, where n = variables + values, m = edges.
 
-**Implementation** (`gac_alldiff.py`, ~180 lines):
+**Implementation** (`gac_alldiff.py`, ~200 lines):
 - Standalone module with `gac_alldiff_propagate(unassigned, current_domains, solution, group)`
 - Returns list of `(variable, value)` pairs to prune
 - Integrated into `CSP._propagate_gac_alldiff()`, called after the main pruning function
 - Constraint tagging: `all_different_constraint` sets `check._is_alldiff = True`
 - Coexists with binary constraint checker (GAC is a *propagator*, not a *validator*)
+- Skips groups with ≤2 unassigned variables (binary FC handles these)
+
+**Internals (Pass 2 rewrite)**: The original implementation used tagged tuples `("var", v)` / `("val", v)` as dict keys with `dict[Any, list[Any]]` adjacency — heavy allocation on every call (11K calls on Golden Nugget). Rewritten to use integer-indexed nodes: variables map to `0..n-1`, values to `n..n+m-1`. Adjacency is `list[list[int]]`. Tarjan is iterative (eliminates Python recursion-limit risk and call overhead). Hopcroft-Karp BFS uses a list with head pointer instead of `deque`.
+
+| Component | Before | After |
+|-----------|--------|-------|
+| Node representation | `dict[tuple, ...]` | `list[int]` |
+| Adjacency | `dict[Any, list[Any]]` | `list[list[int]]` |
+| Tarjan | recursive, 76K `strongconnect` calls | iterative, explicit stack |
+| Hopcroft-Karp | `deque` BFS | list + head pointer |
+| GAC total (Golden Nugget) | 0.226s | 0.107s (−53%) |
 
 **Impact**: Catches reasoning that binary AC misses entirely. Classic example: 3 variables with domain {1,2} under all-different — binary consistency sees no issue, but GAC detects the pigeonhole violation immediately.
 
-**Benchmark**: On `sudoku_3_hard`, GAC all-different reduces backtracks from 326 to 34 (9.6x improvement), with 2x faster wall-clock time despite the propagation overhead.
+**Benchmark**: On `sudoku_3_hard`, GAC all-different reduces backtracks from 326 to 34 (9.6x improvement).
 
-### 2.9 Nogood Recording
+### 2.9 Nogood Recording (standalone module)
 
-**Algorithm**: Record failed partial assignments (nogoods) as frozen sets of `(variable, value)` pairs. Before trying a value, check if the assignment would complete any stored nogood.
+**Algorithm**: Record failed partial assignments (nogoods) as frozen sets of `(variable, value)` pairs. Check if a proposed assignment would complete any stored nogood.
 
 **Implementation** (`nogoods.py`, ~70 lines):
 - `NogoodStore(max_length=6, max_entries=1000)` — bounded hash-based store with LRU eviction
-- `record(conflict_assignments)`: store a nogood from CBJ's conflict set
+- `record(conflict_assignments)`: store a nogood
 - `is_nogood(variable, value, solution)`: check via `_var_index` for fast lookup
-- Integrated with CBJ: on dead end, the conflict set provides the exact nogood
 
-**Bounds rationale**: For N=3 Sudoku, conflict sets are typically 2-5 variables. `max_length=6` captures useful nogoods without storing large, low-value ones. `max_entries=1000` is ample for any practical puzzle.
-
-**Caveat**: Nogood recording is unsound for multi-solution search — a "conflict" in one subtree may be part of a valid solution in another. Automatically disabled when `max_solutions > 1`.
+**Status**: Retained as a standalone data structure but **decoupled from the solver hot loop**. The original integration added a branch per domain value in `backtrack()` — dead code after CBJ removal (CBJ was the nogood source). Removing the integration eliminated one branch per value in the inner loop and clarified the solver's critical path.
 
 ---
 
@@ -126,13 +135,14 @@ This document describes nine optimizations applied to the CSP solver engine (`cs
 
 | Technique | Rationale for Rejection |
 |-----------|------------------------|
+| **CBJ** (Conflict-Directed Backjumping) | Implemented, then removed. Unsound interaction with GAC propagation — conflict sets do not account for domain prunings made by the GAC propagator, leading to incorrect backjump targets. Correct integration requires explanation-based justification (i.e., LCG). |
+| **Nogood recording (integrated)** | Depended on CBJ for conflict sets. Without CBJ, nogoods had no source. The `NogoodStore` class is retained as a standalone module. |
 | **Lazy Clause Generation** | 400-600 lines. Requires explainable constraints + SAT core. Architectural overhaul beyond scope. Would be worth it for a production solver targeting arbitrary CSPs. |
-| **MILP / LP relaxation** | Requires scipy or PuLP dependency. Project constraint: no external solver libraries. LP relaxation provides excellent bounds but the dependency cost is too high. |
-| **STR2/STR3** (Simple Tabular Reduction) | Designed for opaque table constraints (extensional). Sudoku constraints are intensional (procedural). STR shines when constraints are enumerated as allowed tuples. |
+| **MILP / LP relaxation** | Requires scipy or PuLP dependency. Project constraint: no external solver libraries. |
+| **STR2/STR3** (Simple Tabular Reduction) | Designed for opaque table constraints (extensional). Sudoku constraints are intensional (procedural). |
 | **LCV** (Least Constraining Value) | Cost of computing LCV exceeds benefit when forward checking is active. FC already prunes impossible values; LCV's tie-breaking rarely pays off. |
-| **Cython / PyPy** | Build complexity. PyPy incompatible with Python 3.13 + pydantic v2. Cython would require a build step and C compilation in Docker. |
+| **Cython / PyPy** | Build complexity. PyPy incompatible with Python 3.13 + pydantic v2. Cython requires C compilation in Docker. |
 | **ABS** (Activity-Based Search) | Harder to tune than dom/wdeg. Requires decay parameter. Marginal benefit over dom/wdeg for structured problems like Sudoku. |
-| **Min-conflicts as primary** | Incomplete search. Cannot guarantee finding all solutions or proving unsolvability. Useful as a heuristic initializer but not as the primary solver. |
 
 ---
 
@@ -140,27 +150,52 @@ This document describes nine optimizations applied to the CSP solver engine (`cs
 
 ### Backtrack Counts
 
-| Puzzle | baseline | ac3_mrv | dom_wdeg | gac_alldiff | nogoods | all_optimized |
-|--------|----------|---------|----------|-------------|---------|---------------|
-| sudoku_2_easy | 0 | 0 | 0 | 0 | 0 | 0 |
-| sudoku_3_medium | 0 | 0 | 0 | 0 | 0 | 0 |
-| sudoku_3_hard | 326 | 323 | 699 | **34** | 326 | 99 |
-| australia_map | 0 | 3 | 0 | 0 | 0 | 0 |
-| nqueens_8 | 70 | 53 | 70 | 70 | 70 | 70 |
+| Puzzle | baseline | ac3_mrv | dom_wdeg | gac_alldiff | all_optimized |
+|--------|----------|---------|----------|-------------|---------------|
+| sudoku_2_easy | 0 | 0 | 0 | 0 | 0 |
+| sudoku_3_medium | 0 | 0 | 0 | 0 | 0 |
+| sudoku_3_hard | 326 | 323 | 699 | **34** | 99 |
+| australia_map | 0 | 3 | 0 | 0 | 0 |
+| nqueens_8 | 70 | 53 | 70 | 70 | 70 |
+
+### Stress Test: Hard 9×9 Puzzles
+
+| Puzzle | baseline | gac_alldiff | dom_wdeg+gac |
+|--------|----------|-------------|--------------|
+| Al Escargot | 174 | 144 | **114** |
+| Platinum Blonde | 9 | **0** | **0** |
+| Golden Nugget | 8,317 | 6,376 | **5,537** |
+| Inkala 2010 | 386 | **199** | 468 |
+| 17-clue minimal | 12,564 | 6,415 | **375** |
+| 16×16 moderate | 681 | **5** | **5** |
+| 16×16 hard | — | **0** | — |
+
+### Profile: Golden Nugget (GAC enabled)
+
+cProfile on Golden Nugget across optimization passes:
+
+| Metric | Pass 1 (1.66s) | Pass 2 (1.02s) | Δ |
+|--------|----------------|----------------|---|
+| `all_different check` | 0.311s / 267K calls | 0.170s / 181K calls | −45% |
+| `gac_alldiff_propagate` | 0.226s | 0.107s | −53% |
+| Tarjan SCC | 0.155s (recursive) | 0.096s (iterative) | −38% |
+| `set.add` | 0.135s / 1.57M | 0.052s / 965K | −61% |
+| Hopcroft-Karp | 0.091s | 0.025s | −73% |
+| `is_valid` + genexpr | 0.137s / 352K | 0.063s / 170K | −54% |
 
 ### Key Observations
 
-1. **GAC all-different dominates on hard Sudoku**: 326 → 34 backtracks (9.6x). This is the single highest-ROI optimization for Sudoku specifically.
+1. **GAC all-different dominates on hard Sudoku**: 326 → 34 backtracks (9.6x). The single highest-ROI optimization for Sudoku specifically.
 
-2. **dom/wdeg alone can hurt**: 326 → 699 on `sudoku_3_hard`. The weight learning needs enough failures to calibrate. On this particular puzzle, the initial ordering choices lead to deeper dead ends before the weights stabilize.
+2. **dom/wdeg alone can hurt**: 326 → 699 on `sudoku_3_hard`. Weight learning needs enough failures to calibrate. On this puzzle, initial ordering choices lead to deeper dead ends before weights stabilize.
 
-3. **dom/wdeg + GAC synergize**: `all_optimized` achieves 99 backtracks. GAC provides the domain reductions, dom/wdeg learns from the remaining failures.
+3. **dom/wdeg + GAC synergize**: `all_optimized` achieves 99 backtracks. GAC provides domain reductions, dom/wdeg learns from the remaining failures. On 17-clue minimal: 12,564 → 375 (33x).
 
-4. **Easy/medium puzzles**: All configs achieve 0 backtracks. Initial AC3 propagation + forward checking is sufficient.
+4. **Pair-constraint index is the structural win**: `is_valid_pair()` cuts constraint checks by ~52% in `forward_check`/`revise` by testing only shared constraints between two variables instead of all constraints on a variable.
 
-5. **Non-Sudoku puzzles**: All configs solve correctly. GAC all-different has no effect on map coloring (no all-different constraints). N-queens is unaffected because its constraint is a single global n-queens checker, not decomposed into all-different groups.
+5. **GAC integer indexing halves propagation cost**: Replacing tagged-tuple dicts with integer-indexed arrays eliminates allocation overhead per call. 11K calls × fewer allocations = 0.12s saved.
 
-6. **AC3 pruning is expensive**: `ac3_mrv` on `sudoku_3_hard` takes ~9x longer than baseline despite similar backtrack counts. The full arc consistency maintenance overhead exceeds its pruning benefit on this instance. Forward checking remains the sweet spot for Sudoku.
+6. **AC3 pruning is expensive**: `ac3_mrv` on `sudoku_3_hard` takes ~9x longer than baseline despite similar backtrack counts. Forward checking remains the sweet spot for Sudoku.
 
 ---
 
@@ -199,9 +234,8 @@ An interesting application: formulating type inference as a CSP where variables 
 ## 6. References
 
 1. Mackworth, A. K. (1977). Consistency in networks of relations. *Artificial Intelligence*, 8(1), 99-118.
-2. Bessiere, C., & Regin, J. C. (2001). Refining the basic constraint propagation algorithm. *IJCAI*, 309-315.
-3. Regin, J. C. (1994). A filtering algorithm for constraints of difference in CSPs. *AAAI*, 362-367.
+2. Bessiere, C., & Régin, J. C. (2001). Refining the basic constraint propagation algorithm. *IJCAI*, 309-315.
+3. Régin, J. C. (1994). A filtering algorithm for constraints of difference in CSPs. *AAAI*, 362-367.
 4. Boussemart, F., Hemery, F., Lecoutre, C., & Sais, L. (2004). Boosting systematic search by weighting constraints. *ECAI*, 146-150.
-5. Prosser, P. (1993). Hybrid algorithms for the constraint satisfaction problem. *Computational Intelligence*, 9(3), 268-299.
-6. Hopcroft, J. E., & Karp, R. M. (1973). An n^(5/2) algorithm for maximum matchings in bipartite graphs. *SIAM Journal on Computing*, 2(4), 225-231.
-7. Tarjan, R. E. (1972). Depth-first search and linear graph algorithms. *SIAM Journal on Computing*, 1(2), 146-160.
+5. Hopcroft, J. E., & Karp, R. M. (1973). An n^(5/2) algorithm for maximum matchings in bipartite graphs. *SIAM Journal on Computing*, 2(4), 225-231.
+6. Tarjan, R. E. (1972). Depth-first search and linear graph algorithms. *SIAM Journal on Computing*, 1(2), 146-160.

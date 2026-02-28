@@ -13,7 +13,7 @@ Optimizations applied vs original:
 - Initial AC3 propagation for given cells
 - dom/wdeg variable ordering
 - GAC all-different (Régin 1994) propagation
-- Nogood recording with LRU eviction
+- Pair-constraint index for targeted validation in FC/AC
 """
 
 import random
@@ -56,7 +56,6 @@ class CSP:
         variable_ordering: VariableOrdering = VariableOrdering.NO_ORDERING,
         max_solutions: int = 1,
         use_gac_alldiff: bool = False,
-        use_nogoods: bool = False,
     ):
         self.pruning_type = pruning_type
         self.max_solutions = max_solutions
@@ -76,6 +75,9 @@ class CSP:
         self.constraints: dict[Any, list[Constraint]] = defaultdict(list)
         self.current_domains: dict[Any, Any] = {}
         self.domains: dict[Any, list[Any]] = {}
+
+        # Pair-constraint index: maps frozenset({v1, v2}) → shared constraints
+        self._pair_constraints: dict[frozenset, list[Constraint]] = defaultdict(list)
 
         self.variable_stack: deque[Any] = deque()
 
@@ -99,13 +101,6 @@ class CSP:
         self.use_gac_alldiff = use_gac_alldiff
         self.alldiff_groups: list[list[Any]] = []
 
-        # Nogood recording
-        self.nogood_store: Any = None
-        if use_nogoods:
-            from csp_solver.solver.nogoods import NogoodStore
-
-            self.nogood_store = NogoodStore()
-
     def add_variables(self, domain: list[Any], *variables: Any):
         domain_copy = list(domain)
         for v in variables:
@@ -126,6 +121,11 @@ class CSP:
             self.neighbors[v].discard(v)
             self._var_constraint_ids[v].append(cid)
 
+        # Build pair-constraint index for is_valid_pair()
+        for i, v1 in enumerate(variables):
+            for v2 in variables[i + 1 :]:
+                self._pair_constraints[frozenset((v1, v2))].append(constraint)
+
         # Detect all-different constraints for GAC
         if getattr(constraint, "_is_alldiff", False):
             self.alldiff_groups.append(list(variables))
@@ -136,6 +136,14 @@ class CSP:
     def is_valid(self, variable: Any, solution: Solution) -> bool:
         return all(constraint(solution) for constraint in self.constraints[variable])
 
+    def is_valid_pair(self, v1: Any, v2: Any, solution: Solution) -> bool:
+        """Check only constraints shared between v1 and v2."""
+        key = frozenset((v1, v2))
+        pair = self._pair_constraints.get(key)
+        if pair is None:
+            return True
+        return all(c(solution) for c in pair)
+
     def restore_pruned_domains(self, variable: Any):
         for neighbor, d_set in self.pruned_map.get(variable, {}).items():
             self.current_domains[neighbor].update(d_set)
@@ -144,8 +152,17 @@ class CSP:
     def revise(self, variable: Any, Xi: Any, Xj: Any, solution: Solution) -> bool:
         """Arc revision with AC-2001 residual support caching."""
         removed = False
+        current_domains = self.current_domains
+        dom_Xi = current_domains[Xi]
+        dom_Xj = current_domains[Xj]
+        pruned_Xi = self.pruned_map[variable][Xi]
+        last_support = self.last_support
 
-        for x in list(self.current_domains[Xi]):
+        # BitsetDomain snapshots bits at iteration start (safe to mutate).
+        # Plain sets need a list copy to avoid RuntimeError.
+        iter_dom = dom_Xi if isinstance(dom_Xi, BitsetDomain) else list(dom_Xi)
+
+        for x in iter_dom:
             old_xi = solution.get(Xi)
             old_xj = solution.get(Xj)
             solution[Xi] = x
@@ -154,18 +171,18 @@ class CSP:
 
             # AC-2001: check cached support first
             cache_key = (Xi, x, Xj)
-            cached_y = self.last_support.get(cache_key)
-            if cached_y is not None and cached_y in self.current_domains[Xj]:
+            cached_y = last_support.get(cache_key)
+            if cached_y is not None and cached_y in dom_Xj:
                 solution[Xj] = cached_y
-                if self.is_valid(Xj, solution):
+                if self.is_valid_pair(Xi, Xj, solution):
                     found_support = True
 
             # Full search if cache miss
             if not found_support:
-                for y in self.current_domains[Xj]:
+                for y in dom_Xj:
                     solution[Xj] = y
-                    if self.is_valid(Xj, solution):
-                        self.last_support[cache_key] = y
+                    if self.is_valid_pair(Xi, Xj, solution):
+                        last_support[cache_key] = y
                         found_support = True
                         break
 
@@ -180,31 +197,41 @@ class CSP:
                 del solution[Xi]
 
             if not found_support:
-                self.current_domains[Xi].discard(x)
-                self.pruned_map[variable][Xi].add(x)
+                dom_Xi.discard(x)
+                pruned_Xi.add(x)
                 removed = True
 
         return removed
 
     def forward_check(self, variable: Any, solution: Solution) -> bool:
         """Returns True if a domain wipe-out (DWO) was detected."""
-        agenda = [i for i in self.get_neighbors(variable) if i not in solution]
+        current_domains = self.current_domains
+        pruned = self.pruned_map[variable]
 
-        for Xi in agenda:
-            for x in list(self.current_domains[Xi]):
+        for Xi in self.get_neighbors(variable):
+            if Xi in solution:
+                continue
+            dom_Xi = current_domains[Xi]
+            pruned_Xi = pruned[Xi]
+
+            # BitsetDomain snapshots bits at iteration start (safe to mutate).
+            # Plain sets need a list copy to avoid RuntimeError.
+            iter_dom = dom_Xi if isinstance(dom_Xi, BitsetDomain) else list(dom_Xi)
+
+            for x in iter_dom:
                 old_val = solution.get(Xi)
                 solution[Xi] = x
-                valid = self.is_valid(Xi, solution)
+                valid = self.is_valid_pair(variable, Xi, solution)
                 if old_val is not None:
                     solution[Xi] = old_val
                 else:
                     del solution[Xi]
 
                 if not valid:
-                    self.current_domains[Xi].discard(x)
-                    self.pruned_map[variable][Xi].add(x)
+                    dom_Xi.discard(x)
+                    pruned_Xi.add(x)
 
-            if not self.current_domains[Xi]:
+            if not dom_Xi:
                 return True
         return False
 
@@ -305,10 +332,6 @@ class CSP:
         v = self.get_next_variable()
 
         for d in list(self.current_domains[v]):
-            # Nogood check
-            if self.nogood_store and self.nogood_store.is_nogood(v, d, solution):
-                continue
-
             solution[v] = d
 
             if self.is_valid(v, solution):
@@ -385,8 +408,6 @@ class CSP:
         self.backtrack_count = 0
         self.last_support.clear()
         self.solutions = []
-        if self.nogood_store:
-            self.nogood_store.clear()
 
     def solve(self) -> bool:
         self._reset()

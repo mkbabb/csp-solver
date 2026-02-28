@@ -36,7 +36,6 @@ def _setup_sudoku(values: dict[str, int], N: int):
         pruning: PruningType,
         ordering: VariableOrdering,
         gac: bool,
-        nogoods: bool,
     ):
         M = N**2
         total = M**2
@@ -48,7 +47,6 @@ def _setup_sudoku(values: dict[str, int], N: int):
             pruning_type=pruning,
             variable_ordering=ordering,
             use_gac_alldiff=gac,
-            use_nogoods=nogoods,
         )
         csp.add_variables(domain, *variables)
 
@@ -164,14 +162,12 @@ def _setup_australia_map(
     pruning: PruningType,
     ordering: VariableOrdering,
     gac: bool,
-    nogoods: bool,
 ):
     """Australia map coloring: 7 regions, 3 colors."""
     csp = CSP(
         pruning_type=pruning,
         variable_ordering=ordering,
         use_gac_alldiff=gac,
-        use_nogoods=nogoods,
     )
     regions = ["WA", "NT", "SA", "Q", "NSW", "V", "T"]
     csp.add_variables(["red", "green", "blue"], *regions)
@@ -198,14 +194,12 @@ def _setup_nqueens_8(
     pruning: PruningType,
     ordering: VariableOrdering,
     gac: bool,
-    nogoods: bool,
 ):
     """8-Queens problem."""
     csp = CSP(
         pruning_type=pruning,
         variable_ordering=ordering,
         use_gac_alldiff=gac,
-        use_nogoods=nogoods,
     )
     columns = list(range(1, 9))
     rows = list(range(1, 9))
@@ -226,14 +220,12 @@ def _setup_simple_4var(
     pruning: PruningType,
     ordering: VariableOrdering,
     gac: bool,
-    nogoods: bool,
 ):
     """4 variables, domain {1,2}, two all-different constraints."""
     csp = CSP(
         pruning_type=pruning,
         variable_ordering=ordering,
         use_gac_alldiff=gac,
-        use_nogoods=nogoods,
         max_solutions=10,
     )
     csp.add_variables([1, 2], "a", "b", "c", "d")
@@ -246,7 +238,7 @@ SIMPLE_4VAR = Puzzle(
     name="simple_4var",
     setup=_setup_simple_4var,
     has_unique_solution=False,
-    min_solutions=1,  # Nogoods may prune valid solutions in multi-solution mode
+    min_solutions=1,
     is_sudoku=False,
 )
 
@@ -260,7 +252,6 @@ class SolverConfig:
     pruning: PruningType
     ordering: VariableOrdering
     gac: bool
-    nogoods: bool
 
 
 FC = PruningType.FORWARD_CHECKING
@@ -268,12 +259,11 @@ FF = VariableOrdering.FAIL_FIRST
 DW = VariableOrdering.DOM_WDEG
 
 CONFIGS = [
-    SolverConfig("baseline", FC, FF, False, False),
-    SolverConfig("ac3_mrv", PruningType.AC3, FF, False, False),
-    SolverConfig("dom_wdeg", FC, DW, False, False),
-    SolverConfig("gac_alldiff", FC, FF, True, False),
-    SolverConfig("nogoods", FC, FF, False, True),
-    SolverConfig("all_optimized", FC, DW, True, True),
+    SolverConfig("baseline", FC, FF, False),
+    SolverConfig("ac3_mrv", PruningType.AC3, FF, False),
+    SolverConfig("dom_wdeg", FC, DW, False),
+    SolverConfig("gac_alldiff", FC, FF, True),
+    SolverConfig("all_optimized", FC, DW, True),
 ]
 
 PUZZLES = [
@@ -312,9 +302,7 @@ def _solve(csp: CSP, given_values: dict | None) -> bool:
 )
 def test_solver_correctness(puzzle: Puzzle, config: SolverConfig):
     """Every config finds a valid solution for every solvable puzzle."""
-    csp, given_values = puzzle.setup(
-        config.pruning, config.ordering, config.gac, config.nogoods
-    )
+    csp, given_values = puzzle.setup(config.pruning, config.ordering, config.gac)
 
     t0 = time.perf_counter()
     _solve(csp, given_values)
@@ -350,12 +338,12 @@ def test_no_regression_vs_baseline(puzzle: Puzzle):
     optimized_cfg = CONFIGS[-1]  # all_optimized
 
     csp_base, gv_base = puzzle.setup(
-        baseline_cfg.pruning, baseline_cfg.ordering, baseline_cfg.gac, baseline_cfg.nogoods
+        baseline_cfg.pruning, baseline_cfg.ordering, baseline_cfg.gac
     )
     _solve(csp_base, gv_base)
 
     csp_opt, gv_opt = puzzle.setup(
-        optimized_cfg.pruning, optimized_cfg.ordering, optimized_cfg.gac, optimized_cfg.nogoods
+        optimized_cfg.pruning, optimized_cfg.ordering, optimized_cfg.gac
     )
     _solve(csp_opt, gv_opt)
 

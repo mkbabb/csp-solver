@@ -14,14 +14,13 @@ from csp_solver.solver.constraints import all_different_constraint, equals_const
 from csp_solver.solver.csp import CSP, PruningType, VariableOrdering
 
 
-def _make_sudoku(grid: list[int], N: int, ordering, gac, nogoods):
+def _make_sudoku(grid: list[int], N: int, ordering, gac):
     M = N * N
     total = M * M
     csp = CSP(
         pruning_type=PruningType.FORWARD_CHECKING,
         variable_ordering=ordering,
         use_gac_alldiff=gac,
-        use_nogoods=nogoods,
     )
     csp.add_variables(list(range(1, M + 1)), *range(total))
     given = {}
@@ -109,10 +108,9 @@ FF = VariableOrdering.FAIL_FIRST
 DW = VariableOrdering.DOM_WDEG
 
 CONFIGS = [
-    ("baseline",     FF, False, False),
-    ("gac_alldiff",  FF, True,  False),
-    ("dom_wdeg+gac", DW, True,  False),
-    ("all_opt",      DW, True,  True),
+    ("baseline",     FF, False),
+    ("gac_alldiff",  FF, True),
+    ("dom_wdeg+gac", DW, True),
 ]
 
 HARD_9x9 = [
@@ -131,12 +129,12 @@ _stress_results: list[dict] = []
 
 @pytest.mark.parametrize("name,grid", HARD_9x9, ids=[n for n, _ in HARD_9x9])
 @pytest.mark.parametrize(
-    "cfg_name,ordering,gac,nogoods",
+    "cfg_name,ordering,gac",
     CONFIGS,
     ids=[c[0] for c in CONFIGS],
 )
-def test_hard_9x9(name, grid, cfg_name, ordering, gac, nogoods):
-    csp, given = _make_sudoku(grid, 3, ordering, gac, nogoods)
+def test_hard_9x9(name, grid, cfg_name, ordering, gac):
+    csp, given = _make_sudoku(grid, 3, ordering, gac)
     t0 = time.perf_counter()
     csp.solve_with_initial_propagation(given)
     elapsed = (time.perf_counter() - t0) * 1000
@@ -154,12 +152,12 @@ def test_hard_9x9(name, grid, cfg_name, ordering, gac, nogoods):
 # ── 16x16 stress tests ──────────────────────────────────────────────────────
 
 @pytest.mark.parametrize(
-    "cfg_name,ordering,gac,nogoods",
+    "cfg_name,ordering,gac",
     CONFIGS,
     ids=[c[0] for c in CONFIGS],
 )
-def test_16x16_moderate(cfg_name, ordering, gac, nogoods):
-    csp, given = _make_sudoku(PUZZLE_16x16_MODERATE, 4, ordering, gac, nogoods)
+def test_16x16_moderate(cfg_name, ordering, gac):
+    csp, given = _make_sudoku(PUZZLE_16x16_MODERATE, 4, ordering, gac)
     t0 = time.perf_counter()
     csp.solve_with_initial_propagation(given)
     elapsed = (time.perf_counter() - t0) * 1000
@@ -173,7 +171,7 @@ def test_16x16_moderate(cfg_name, ordering, gac, nogoods):
 
 def test_16x16_hard_gac():
     """16x16 hard — only GAC alldiff can solve this in reasonable time."""
-    csp, given = _make_sudoku(PUZZLE_16x16_HARD, 4, FF, True, False)
+    csp, given = _make_sudoku(PUZZLE_16x16_HARD, 4, FF, True)
     t0 = time.perf_counter()
     csp.solve_with_initial_propagation(given)
     elapsed = (time.perf_counter() - t0) * 1000
@@ -189,10 +187,10 @@ def test_16x16_hard_gac():
 
 @pytest.mark.parametrize("name,grid", HARD_9x9, ids=[n for n, _ in HARD_9x9])
 def test_gac_beats_baseline(name, grid):
-    csp_b, gv_b = _make_sudoku(grid, 3, FF, False, False)
+    csp_b, gv_b = _make_sudoku(grid, 3, FF, False)
     csp_b.solve_with_initial_propagation(gv_b)
 
-    csp_g, gv_g = _make_sudoku(grid, 3, FF, True, False)
+    csp_g, gv_g = _make_sudoku(grid, 3, FF, True)
     csp_g.solve_with_initial_propagation(gv_g)
 
     assert csp_g.backtrack_count <= csp_b.backtrack_count, (
