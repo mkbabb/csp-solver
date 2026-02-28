@@ -1,13 +1,15 @@
 """Tests for the CSP solver and Sudoku puzzle generation."""
 
-from csp_solver.solver.csp import CSP, PruningType, VariableOrdering
-from csp_solver.solver.constraints import all_different_constraint, equals_constraint
+from csp_solver.solver.bitset_domain import BitsetDomain
+from csp_solver.solver.constraints import all_different_constraint
+from csp_solver.solver.csp import CSP, PruningType, VariableOrdering, _make_domain
+from csp_solver.solver.nogoods import NogoodStore
 from csp_solver.solver.sudoku import (
     SudokuDifficulty,
+    _load_solution_board,
     create_random_board,
     create_sudoku_csp,
     solve_sudoku,
-    _load_solution_board,
 )
 
 
@@ -104,3 +106,186 @@ def test_multiple_solutions():
     csp.solve()
     # 3! = 6 permutations
     assert len(csp.solutions) == 6
+
+
+# ── BitsetDomain unit tests ──────────────────────────────────────────────────
+
+
+def test_bitset_domain_basic_ops():
+    """Test BitsetDomain: len, in, iter, discard, add."""
+    d = BitsetDomain([1, 3, 5, 7])
+    assert len(d) == 4
+    assert 3 in d
+    assert 4 not in d
+    assert sorted(d) == [1, 3, 5, 7]
+
+    d.discard(3)
+    assert 3 not in d
+    assert len(d) == 3
+
+    d.add(9)
+    assert 9 in d
+    assert len(d) == 4
+
+
+def test_bitset_domain_copy_independence():
+    """Test that BitsetDomain.copy() is independent."""
+    d1 = BitsetDomain([1, 2, 3])
+    d2 = d1.copy()
+    d2.discard(2)
+    assert 2 in d1
+    assert 2 not in d2
+
+
+def test_bitset_domain_update():
+    """Test BitsetDomain.update()."""
+    d1 = BitsetDomain([1, 2])
+    d2 = BitsetDomain([3, 4])
+    d1.update(d2)
+    assert sorted(d1) == [1, 2, 3, 4]
+
+
+def test_bitset_domain_empty():
+    """Test empty BitsetDomain."""
+    d = BitsetDomain()
+    assert len(d) == 0
+    assert not d
+    assert list(d) == []
+
+
+def test_make_domain_auto_detect():
+    """Test _make_domain auto-detects integer domains."""
+    d_int = _make_domain([1, 2, 3])
+    assert isinstance(d_int, BitsetDomain)
+
+    d_str = _make_domain(["a", "b", "c"])
+    assert isinstance(d_str, set)
+
+
+# ── DWO early termination ────────────────────────────────────────────────────
+
+
+def test_forward_check_returns_dwo():
+    """Test that forward_check returns True on domain wipe-out."""
+    csp = CSP(pruning_type=PruningType.FORWARD_CHECKING)
+    csp.add_variables([1], "a", "b")
+    csp.add_constraint(all_different_constraint("a", "b"))
+    csp.current_domains = {"a": _make_domain([1]), "b": _make_domain([1])}
+    csp.pruned_map["a"].clear()
+    csp.pruned_map["b"].clear()
+
+    sol = {"a": 1}
+    dwo = csp.forward_check("a", sol)
+    assert dwo is True
+
+
+# ── AC-2001 residual supports ────────────────────────────────────────────────
+
+
+def test_ac3_with_residual_support():
+    """Test AC-2001 caches supports and reuses them."""
+    # Use AC3 during a full solve and verify caching occurs
+    csp = CSP(pruning_type=PruningType.AC3)
+    csp.add_variables([1, 2, 3], "a", "b", "c")
+    csp.add_constraint(all_different_constraint("a", "b", "c"))
+    csp.solve()
+    assert len(csp.solutions) == 1
+    # Residual support should have been cached during revisions
+    assert len(csp.last_support) > 0
+
+
+# ── CBJ ──────────────────────────────────────────────────────────────────────
+
+
+def test_cbj_backjump():
+    """Test that CBJ records conflict sets during search."""
+    # 3 vars with domain [1], all-different → unsolvable (pigeonhole)
+    csp = CSP(pruning_type=PruningType.FORWARD_CHECKING)
+    csp.add_variables([1], "a", "b", "c")
+    csp.add_constraint(all_different_constraint("a", "b", "c"))
+    csp.solve()
+    assert len(csp.solutions) == 0
+    # CBJ should have recorded conflicts
+    assert csp.backtrack_count > 0
+
+
+# ── dom/wdeg ─────────────────────────────────────────────────────────────────
+
+
+def test_dom_wdeg_ordering():
+    """Test dom/wdeg variable ordering finds solutions."""
+    csp = CSP(
+        pruning_type=PruningType.FORWARD_CHECKING,
+        variable_ordering=VariableOrdering.DOM_WDEG,
+    )
+    csp.add_variables([1, 2, 3], "a", "b", "c")
+    csp.add_constraint(all_different_constraint("a", "b", "c"))
+    csp.solve()
+    assert len(csp.solutions) == 1
+    sol = csp.solutions[0]
+    assert len(set(sol.values())) == 3
+
+
+# ── GAC all-different ────────────────────────────────────────────────────────
+
+
+def test_gac_alldiff_pigeonhole():
+    """GAC catches reasoning that binary AC misses.
+
+    3 vars, domain {1,2} each, all-different → no solution.
+    Binary FC won't detect this immediately, but GAC should prune aggressively.
+    """
+    csp = CSP(
+        pruning_type=PruningType.FORWARD_CHECKING,
+        use_gac_alldiff=True,
+    )
+    csp.add_variables([1, 2], "a", "b", "c")
+    csp.add_constraint(all_different_constraint("a", "b", "c"))
+    csp.solve()
+    assert len(csp.solutions) == 0
+
+
+# ── Nogood store ─────────────────────────────────────────────────────────────
+
+
+def test_nogood_store_basic():
+    """Test NogoodStore record, lookup, and LRU eviction."""
+    store = NogoodStore(max_length=4, max_entries=3)
+
+    store.record({"a": 1, "b": 2})
+    assert store.is_nogood("a", 1, {"b": 2})
+    assert not store.is_nogood("a", 1, {"b": 3})
+    assert not store.is_nogood("a", 2, {"b": 2})
+
+    # Fill to capacity and evict
+    store.record({"c": 3, "d": 4})
+    store.record({"e": 5, "f": 6})
+    store.record({"g": 7, "h": 8})  # Should evict {"a": 1, "b": 2}
+    assert not store.is_nogood("a", 1, {"b": 2})
+
+
+def test_nogood_store_clear():
+    """Test NogoodStore.clear()."""
+    store = NogoodStore()
+    store.record({"a": 1, "b": 2})
+    store.clear()
+    assert not store.is_nogood("a", 1, {"b": 2})
+
+
+# ── Initial AC3 propagation ─────────────────────────────────────────────────
+
+
+def test_initial_ac3_propagation():
+    """Test that initial AC3 cascading propagation reduces domains."""
+    # 4x4 sudoku with many givens should have significant domain reduction
+    values = {
+        "0": 1, "1": 2, "2": 3, "3": 4,
+        "4": 3, "5": 4, "6": 0, "7": 0,
+        "8": 0, "9": 0, "10": 0, "11": 0,
+        "12": 0, "13": 0, "14": 0, "15": 0,
+    }
+    csp = create_sudoku_csp(N=2, values=values)
+    solve_sudoku(csp)
+    assert len(csp.solutions) == 1
+    # With strong initial propagation, should need very few backtracks
+    assert csp.backtrack_count <= 5

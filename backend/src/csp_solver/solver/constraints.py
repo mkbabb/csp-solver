@@ -74,4 +74,5 @@ def all_different_constraint(*variables: Any):
                 seen.add(val)
         return True
 
+    check._is_alldiff = True  # type: ignore[attr-defined]
     return check, list(variables)

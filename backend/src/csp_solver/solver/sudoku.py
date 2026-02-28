@@ -52,8 +52,9 @@ def create_sudoku_csp(
 
     csp = CSP(
         pruning_type=PruningType.FORWARD_CHECKING,
-        variable_ordering=VariableOrdering.FAIL_FIRST,
+        variable_ordering=VariableOrdering.DOM_WDEG,
         max_solutions=max_solutions,
+        use_gac_alldiff=True,
     )
     csp.add_variables(domain, *variables)
 
