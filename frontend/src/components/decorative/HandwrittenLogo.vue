@@ -44,6 +44,7 @@ onMounted(() => {
     width: auto;
     color: var(--color-foreground);
     display: block;
+    align-self: flex-start;
     clip-path: inset(0 100% 0 0);
     transition: clip-path 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
