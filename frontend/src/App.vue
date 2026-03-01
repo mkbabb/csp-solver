@@ -48,43 +48,41 @@ function onHoverLeave() {
     <!-- Filter tuner — dev tool for real-time filter parameter editing -->
     <FilterTuner />
 
-    <!-- Top bar: @mbabb (left) | toggle (right) — viewport-wide corners -->
-    <header class="top-bar" @click.stop>
-      <div
-        class="hover-card-wrapper"
-        @click.stop="toggleHoverCard"
-        @mouseenter="onHoverEnter"
-        @mouseleave="onHoverLeave"
-      >
-        <a
-          href="https://github.com/mkbabb/csp-solver"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="font-mono text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
-          @click.stop
-        >@mbabb</a>
-        <div class="hover-card" :class="{ 'is-open': hoverCardOpen }">
-          <div class="flex items-center gap-3">
-            <img
-              src="https://avatars.githubusercontent.com/u/2848617?v=4"
-              alt="mkbabb"
-              class="h-10 w-10 rounded-full"
-            />
-            <div class="flex-1">
-              <a href="https://github.com/mkbabb" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-semibold text-foreground hover:underline">@mbabb</a>
-              <p class="mt-0.5 text-xs italic text-muted-foreground">CSP-powered Sudoku solver</p>
-            </div>
-            <CrayonHeart :size="32" />
+    <!-- Corner overlays: out of document flow, no layout influence -->
+    <div
+      class="corner-left"
+      @click.stop="toggleHoverCard"
+      @mouseenter="onHoverEnter"
+      @mouseleave="onHoverLeave"
+    >
+      <a
+        href="https://github.com/mkbabb/csp-solver"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="font-mono text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+        @click.stop
+      >@mbabb</a>
+      <div class="hover-card" :class="{ 'is-open': hoverCardOpen }">
+        <div class="flex items-center gap-3">
+          <img
+            src="https://avatars.githubusercontent.com/u/2848617?v=4"
+            alt="mkbabb"
+            class="h-10 w-10 rounded-full"
+          />
+          <div class="flex-1">
+            <a href="https://github.com/mkbabb" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-semibold text-foreground hover:underline">@mbabb</a>
+            <p class="mt-0.5 text-xs italic text-muted-foreground">CSP-powered Sudoku solver</p>
           </div>
-          <hr class="my-2 border-border/50" />
-          <a href="https://github.com/mkbabb/csp-solver" target="_blank" rel="noopener noreferrer" class="block text-sm text-foreground hover:underline">View project on GitHub</a>
+          <CrayonHeart :size="32" />
         </div>
+        <hr class="my-2 border-border/50" />
+        <a href="https://github.com/mkbabb/csp-solver" target="_blank" rel="noopener noreferrer" class="block text-sm text-foreground hover:underline">View project on GitHub</a>
       </div>
+    </div>
 
-      <div class="header-toggle">
-        <DarkModeToggle />
-      </div>
-    </header>
+    <div class="corner-right" @click.stop>
+      <DarkModeToggle />
+    </div>
 
     <main class="main-content flex min-h-0 flex-1 flex-col items-center justify-center px-4">
       <div class="board-group">
@@ -149,37 +147,31 @@ function onHoverLeave() {
 </template>
 
 <style scoped>
-/* Top bar: @mbabb + toggle pinned to viewport corners */
-.top-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0.25rem 0.75rem;
-  flex-shrink: 0;
-  overflow: visible;
+/* Corner overlays: absolutely positioned, no layout influence */
+.corner-left {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.75rem;
+  z-index: 40;
+  cursor: pointer;
 }
 
-@media (min-width: 768px) {
-  .top-bar {
-    padding: 0.5rem 1.5rem;
-  }
-}
-
-.header-toggle {
+.corner-right {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 40;
   --toggle-size: 5rem;
-  flex-shrink: 0;
-  overflow: visible;
 }
 
 @media (min-width: 640px) {
-  .header-toggle {
+  .corner-right {
     --toggle-size: 10rem;
   }
 }
 
 @media (min-width: 1024px) {
-  .header-toggle {
+  .corner-right {
     --toggle-size: 13rem;
   }
 }
