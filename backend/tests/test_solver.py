@@ -1,5 +1,7 @@
 """Tests for the CSP solver and Sudoku puzzle generation."""
 
+import time
+
 from csp_solver.solver.bitset_domain import BitsetDomain
 from csp_solver.solver.constraints import all_different_constraint
 from csp_solver.solver.csp import CSP, PruningType, VariableOrdering, _make_domain
@@ -11,6 +13,7 @@ from csp_solver.solver.sudoku import (
     create_sudoku_csp,
     solve_sudoku,
 )
+from csp_solver.solver.sudoku_transforms import SudokuTransform
 
 
 def test_simple_csp():
@@ -288,3 +291,90 @@ def test_initial_ac3_propagation():
     assert len(csp.solutions) == 1
     # With strong initial propagation, should need very few backtracks
     assert csp.backtrack_count <= 5
+
+
+# ── Symmetry transforms ──────────────────────────────────────────────────────
+
+
+def _validate_sudoku_solution(board: dict[str, int], N: int) -> bool:
+    """Check that a board satisfies all Sudoku row/col/subgrid constraints."""
+    M = N * N
+    for row in range(M):
+        vals = [board[str(row * M + col)] for col in range(M)]
+        if sorted(vals) != list(range(1, M + 1)):
+            return False
+    for col in range(M):
+        vals = [board[str(row * M + col)] for row in range(M)]
+        if sorted(vals) != list(range(1, M + 1)):
+            return False
+    for bi in range(N):
+        for bj in range(N):
+            vals = [
+                board[str((bi * N + di) * M + (bj * N + dj))]
+                for di in range(N)
+                for dj in range(N)
+            ]
+            if sorted(vals) != list(range(1, M + 1)):
+                return False
+    return True
+
+
+def test_symmetry_transform_preserves_validity():
+    """Transform a known solution, verify all row/col/subgrid constraints."""
+    for N in [2, 3]:
+        solution = _load_solution_board(N)
+        assert _validate_sudoku_solution(solution, N)
+
+        # Apply 10 random transforms, each should remain valid
+        for _ in range(10):
+            transform = SudokuTransform.random(N)
+            transformed = transform.apply(solution, N)
+            assert len(transformed) == len(solution)
+            assert _validate_sudoku_solution(transformed, N), (
+                f"Transform broke validity for N={N}"
+            )
+
+
+def test_transform_preserves_zeros():
+    """Transform a puzzle (with holes), verify zeros stay zeros."""
+    board = create_random_board(N=2, difficulty=SudokuDifficulty.EASY)
+    original_zeros = sum(1 for v in board.values() if v == 0)
+    assert original_zeros > 0
+
+    transform = SudokuTransform.random(2)
+    transformed = transform.apply(board, 2)
+    new_zeros = sum(1 for v in transformed.values() if v == 0)
+    assert new_zeros == original_zeros
+
+
+def test_transform_is_bijective():
+    """Transform should produce exactly M^2 cells with no duplicates."""
+    for N in [2, 3]:
+        M = N * N
+        total = M * M
+        solution = _load_solution_board(N)
+        transform = SudokuTransform.random(N)
+        transformed = transform.apply(solution, N)
+
+        # Should have all positions 0..total-1
+        positions = sorted(int(k) for k in transformed.keys())
+        assert positions == list(range(total))
+
+
+def test_fast_generation_under_50ms():
+    """N=2,3,4 × all difficulties: fast-path generation should be <50ms each."""
+    for N in [2, 3, 4]:
+        for diff in SudokuDifficulty:
+            # Warmup: first call loads JSON from disk
+            create_random_board(N=N, difficulty=diff)
+
+            start = time.perf_counter()
+            board = create_random_board(N=N, difficulty=diff)
+            elapsed_ms = (time.perf_counter() - start) * 1000
+
+            M = N * N
+            assert len(board) == M * M
+            assert any(v == 0 for v in board.values())
+            assert elapsed_ms < 50, (
+                f"N={N} {diff.name}: {elapsed_ms:.1f}ms > 50ms"
+            )

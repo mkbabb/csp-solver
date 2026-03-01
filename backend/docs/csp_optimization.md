@@ -210,7 +210,31 @@ The most impactful next step. LCG combines CSP propagation with SAT-style clause
 
 Estimated effort: 400-600 lines. Requires refactoring constraints to be "explainable" (each can produce a reason clause for any inference it makes).
 
-### 5.2 Additional Puzzle Demos
+### 5.2 Board Generation via Symmetry Transforms (Implemented)
+
+Board generation was the dominant latency bottleneck: a 9×9 HARD puzzle solves in ~46ms but required ~4.9s to generate — `create_random_board` calls `_has_unique_solution` (full CSP build + solve) ~65 times during hole-digging, plus `_measure_difficulty` for calibration.
+
+**Solution**: Pre-compute puzzle templates offline; at runtime, apply a random Sudoku symmetry transform. The symmetry group preserves validity:
+- Digit permutation (relabel 1↔3) — M!
+- Row permutation within bands — (N!)^N
+- Column permutation within stacks — (N!)^N
+- Band permutation — N!
+- Stack permutation — N!
+- Transpose — ×2
+
+For N=3: ~1.22 billion distinct grids per base template. With 20 templates × 3 difficulties, the output space is effectively inexhaustible.
+
+**Implementation**: `SudokuTransform` dataclass in `solver/sudoku_transforms.py`. Single O(M²) pass per `apply()`. Template loading cached via `@functools.cache` — JSON read once per `(N, difficulty)` per process. Slow hole-digging generation retained as `_create_random_board_slow()` fallback for sizes without templates.
+
+| Size | Before | After | Speedup |
+|------|--------|-------|---------|
+| 4×4 (N=2) | ~50ms | 0.008ms | ~6,000× |
+| 9×9 (N=3) | ~4,900ms | 0.025ms | ~200,000× |
+| 16×16 (N=4) | ~7,000ms | 0.075ms | ~90,000× |
+
+Pre-computed templates: `data/sudoku_puzzles/{N}/{difficulty}/template-{i}.json`. Offline generation script: `scripts/generate_templates.py`.
+
+### 5.3 Additional Puzzle Demos (Future)
 
 The solver engine is fully general. Immediate candidates:
 - **Graph coloring** (already supported via `map_coloring_constraint`)

@@ -1,5 +1,6 @@
 """Sudoku puzzle builder with uniqueness-verified generation and difficulty calibration."""
 
+import functools
 import json
 import math
 import pathlib
@@ -8,6 +9,7 @@ from enum import Enum, auto
 
 from csp_solver.solver.constraints import all_different_constraint, equals_constraint
 from csp_solver.solver.csp import CSP, PruningType, VariableOrdering
+from csp_solver.solver.sudoku_transforms import SudokuTransform
 
 DATA_DIR = pathlib.Path(__file__).parent.parent / "data"
 
@@ -151,7 +153,52 @@ def _measure_difficulty(N: int, board: dict[str, int]) -> int:
     return csp.backtrack_count
 
 
+@functools.cache
+def _load_puzzle_templates(N: int, difficulty_name: str) -> list[dict]:
+    """Load all pre-computed puzzle templates for a given size and difficulty.
+
+    Cached per-process — JSON files read at most once per (N, difficulty).
+    """
+    template_dir = DATA_DIR / "sudoku_puzzles" / str(N) / difficulty_name
+    if not template_dir.exists():
+        return []
+
+    templates = []
+    for filepath in sorted(template_dir.glob("template-*.json")):
+        data = json.loads(filepath.read_text())
+        # Normalize keys to strings, values to ints
+        data["puzzle"] = {str(k): int(v) for k, v in data["puzzle"].items()}
+        data["solution"] = {str(k): int(v) for k, v in data["solution"].items()}
+        templates.append(data)
+
+    return templates
+
+
+def _load_random_template(N: int, difficulty: SudokuDifficulty) -> dict | None:
+    """Pick a random pre-computed template, or None if none available."""
+    templates = _load_puzzle_templates(N, difficulty.name.lower())
+    if not templates:
+        return None
+    return random.choice(templates)
+
+
 def create_random_board(
+    N: int,
+    difficulty: SudokuDifficulty = SudokuDifficulty.EASY,
+) -> dict[str, int]:
+    """Generate a random Sudoku board.
+
+    Fast path: pick a pre-computed template and apply a random symmetry transform.
+    Fallback: slow hole-digging generation if no templates available.
+    """
+    template = _load_random_template(N, difficulty)
+    if template is not None:
+        transform = SudokuTransform.random(N)
+        return transform.apply(template["puzzle"], N)
+    return _create_random_board_slow(N, difficulty)
+
+
+def _create_random_board_slow(
     N: int,
     difficulty: SudokuDifficulty = SudokuDifficulty.EASY,
 ) -> dict[str, int]:
@@ -220,3 +267,62 @@ def create_random_board(
             backtracks = _measure_difficulty(N, board)
 
     return board
+
+
+def _create_random_board_with_solution(
+    N: int,
+    difficulty: SudokuDifficulty = SudokuDifficulty.EASY,
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Generate a random board AND its solution. Used by template generation.
+
+    Returns (puzzle, solution).
+    """
+    M = N**2
+    total = M**2
+
+    # Get a complete solution
+    try:
+        if N <= 3:
+            try:
+                solution = _generate_solution(N)
+            except RuntimeError:
+                solution = _load_solution_board(N)
+        else:
+            solution = _load_solution_board(N)
+    except FileNotFoundError:
+        solution = _generate_solution(N)
+
+    if difficulty == SudokuDifficulty.EASY:
+        target_remove = total // 4
+    elif difficulty == SudokuDifficulty.MEDIUM:
+        target_remove = int(total / 1.75)
+    else:
+        target_remove = int(total / 1.25)
+
+    board = dict(solution)
+    positions = list(board.keys())
+    random.shuffle(positions)
+
+    removed = 0
+    for pos in positions:
+        if removed >= target_remove:
+            break
+        old_val = board[pos]
+        board[pos] = 0
+        if _has_unique_solution(N, board):
+            removed += 1
+        else:
+            board[pos] = old_val
+
+    if difficulty in (SudokuDifficulty.EASY, SudokuDifficulty.MEDIUM):
+        backtracks = _measure_difficulty(N, board)
+        max_backtracks = 0 if difficulty == SudokuDifficulty.EASY else 50
+        empty_positions = [p for p in positions if board[p] == 0]
+        random.shuffle(empty_positions)
+        for pos in empty_positions:
+            if backtracks <= max_backtracks:
+                break
+            board[pos] = solution[pos]
+            backtracks = _measure_difficulty(N, board)
+
+    return board, solution
