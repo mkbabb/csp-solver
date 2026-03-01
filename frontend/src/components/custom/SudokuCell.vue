@@ -6,7 +6,9 @@ const props = defineProps<{
   position: number
   value: number
   isGiven: boolean
+  isOverridden: boolean
   isRevealed: boolean
+  noiseDelay: number
   boardSize: number
   subgridSize: number
   /** Pre-computed ghost rect path in 1000×1000 board viewBox coords */
@@ -22,8 +24,8 @@ const cellRef = ref<HTMLDivElement | null>(null)
 const isHovered = ref(false)
 const isFocused = ref(false)
 
-// Cell is "active" when hovered or focused and editable
-const isActive = computed(() => !props.isGiven && (isHovered.value || isFocused.value))
+// Cell is "active" when hovered or focused
+const isActive = computed(() => isHovered.value || isFocused.value)
 
 // Compute the cell's viewBox region in 1000×1000 board coords
 const cellViewBox = computed(() => {
@@ -54,7 +56,11 @@ function handleInput(event: Event) {
     return
   }
 
-  const num = parseInt(raw, 10)
+  // For single-digit boards (≤9), take only the last digit to allow one-click override.
+  // For larger boards, try the full string first, then the last 2 chars, then the last char.
+  const maxLen = props.boardSize >= 10 ? 2 : 1
+  const trimmed = raw.slice(-maxLen)
+  const num = parseInt(trimmed, 10)
   if (num >= 1 && num <= props.boardSize) {
     emit('update', props.position, num)
     target.value = String(num)
@@ -82,9 +88,10 @@ function focusInput() {
     ref="cellRef"
     class="sudoku-cell relative flex items-center justify-center"
     :class="[
-      isRevealed ? 'animate-[cell-reveal_0.3s_cubic-bezier(0.68,-0.55,0.265,1.55)]' : '',
+      isRevealed ? 'cell-reveal-animated' : '',
       isActive ? 'is-active' : '',
     ]"
+    :style="isRevealed ? { '--reveal-delay': `${noiseDelay}ms` } : undefined"
     @click="focusInput"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
@@ -95,16 +102,12 @@ function focusInput() {
       type="text"
       inputmode="numeric"
       :value="displayValue"
-      :disabled="isGiven"
-      :maxlength="boardSize >= 10 ? 2 : 1"
+      :maxlength="boardSize >= 10 ? 3 : 2"
       @input="handleInput"
       @keydown="handleKeydown"
       @focus="isFocused = true"
       @blur="isFocused = false"
-      class="absolute inset-0 h-full w-full bg-transparent text-center opacity-0 outline-none"
-      :class="[
-        isGiven ? 'cursor-default' : 'cursor-pointer',
-      ]"
+      class="absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
     />
 
     <!-- SVG handwritten glyph overlay -->
@@ -112,7 +115,9 @@ function focusInput() {
       v-if="value !== 0"
       :value="displayValue"
       :is-given="isGiven"
+      :is-overridden="isOverridden"
       :is-revealed="isRevealed"
+      :noise-delay="noiseDelay"
       :position="position"
       :board-size="boardSize"
       :is-hovered="isHovered"
@@ -120,7 +125,6 @@ function focusInput() {
 
     <!-- Ghost cell highlight — hand-drawn border on hover/focus (board-coord viewBox) -->
     <div
-      v-if="!isGiven"
       class="cell-ghost pointer-events-none absolute inset-0"
       :class="{ 'is-active': isActive }"
     >

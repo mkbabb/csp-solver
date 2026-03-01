@@ -269,7 +269,6 @@ function handleToggle() {
 .toggle-sun.is-active {
   opacity: 1;
   transform: translateX(0) rotate(0deg) scale(1);
-  pointer-events: auto;
   transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
               transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -285,7 +284,6 @@ function handleToggle() {
 .toggle-moon.is-active {
   opacity: 1;
   transform: translateX(0) rotate(0deg) scale(1);
-  pointer-events: auto;
   transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
               transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }

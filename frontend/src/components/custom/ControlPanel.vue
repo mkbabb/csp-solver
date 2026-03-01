@@ -85,7 +85,7 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
   { value: 'HARD', label: 'Hard', colorClass: 'crayon-rose' },
 ]
 
-const props = defineProps<{
+defineProps<{
   size: number
   difficulty: Difficulty
   loading: boolean
@@ -107,67 +107,82 @@ function togglePanel(panel: 'size' | 'difficulty') {
   expandedPanel.value = expandedPanel.value === panel ? null : panel
 }
 
-const currentSizeLabel = computed(() =>
-  sizes.find((s) => s.value === props.size)?.label ?? '9×9'
-)
-
-const currentDifficultyLabel = computed(() =>
-  difficulties.find((d) => d.value === props.difficulty)?.label ?? 'Easy'
-)
-
-const currentDifficultyColor = computed(() =>
-  difficulties.find((d) => d.value === props.difficulty)?.colorClass ?? 'crayon-green'
-)
 </script>
 
 <template>
   <!-- ═══ Mobile layout ═══ -->
-  <div v-if="mobile" class="control-panel-wrap mobile-control-panel">
-    <!-- Chip row -->
-    <div class="chip-row">
-      <button
-        class="chip"
-        :class="{ 'is-active': expandedPanel === 'size' }"
-        @click="togglePanel('size')"
-      >
-        <span class="chip-label">{{ currentSizeLabel }}</span>
+  <div v-if="mobile" class="control-panel-wrap mobile-control-panel mt-3">
+    <!-- Size / Difficulty headings row -->
+    <div class="control-panel-filtered mobile-heading-row">
+      <button class="mobile-heading-btn" @click="togglePanel('size')">
+        <h2
+          class="section-heading text-muted-foreground"
+          :class="{ 'is-active': expandedPanel === 'size' }"
+        >
+          Size
+        </h2>
       </button>
-      <button
-        class="chip"
-        :class="[currentDifficultyColor, { 'is-active': expandedPanel === 'difficulty' }]"
-        @click="togglePanel('difficulty')"
-      >
-        <span class="chip-label">{{ currentDifficultyLabel }}</span>
+      <button class="mobile-heading-btn" @click="togglePanel('difficulty')">
+        <h2
+          class="section-heading transition-colors duration-250"
+          :class="[
+            difficulty === 'EASY' ? 'crayon-green'
+              : difficulty === 'MEDIUM' ? 'crayon-orange'
+              : 'crayon-rose',
+            { 'is-active': expandedPanel === 'difficulty' }
+          ]"
+        >
+          Difficulty
+        </h2>
       </button>
     </div>
 
-    <!-- Expandable options panel -->
+    <!-- Expandable options panels (v-show keeps DOM for smooth close) -->
     <div
       class="options-panel"
-      :class="{ 'is-open': expandedPanel !== null }"
+      :class="{ 'is-open': expandedPanel === 'size' }"
     >
       <div class="options-panel-inner">
-        <!-- Size options -->
-        <div v-if="expandedPanel === 'size'" class="options-row">
+        <div class="options-row">
           <button
             v-for="s in sizes"
             :key="s.value"
             @click="emit('update:size', s.value); expandedPanel = null"
-            class="option-btn"
-            :class="size === s.value ? 'is-selected' : ''"
+            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150"
+            :class="
+              size === s.value
+                ? 'text-foreground font-bold selected-item'
+                : 'text-muted-foreground hover:text-foreground hover-item'
+            "
+            :style="size === s.value
+              ? { '--scribble-underline': scribbleUnderline(s.value + boilFrame * 1000, isDark ? '#ffffff' : '#1a1a1a'), '--scribble-width': `${s.label.length + 1}ch` }
+              : { '--ghost-underline': ghostUnderline(s.value + 500, isDark ? '#ffffff' : '#1a1a1a'), '--ghost-width': `${s.label.length + 1}ch` }"
           >
             {{ s.label }}
           </button>
         </div>
+      </div>
+    </div>
 
-        <!-- Difficulty options -->
-        <div v-if="expandedPanel === 'difficulty'" class="options-row">
+    <div
+      class="options-panel"
+      :class="{ 'is-open': expandedPanel === 'difficulty' }"
+    >
+      <div class="options-panel-inner">
+        <div class="options-row">
           <button
             v-for="d in difficulties"
             :key="d.value"
             @click="emit('update:difficulty', d.value); expandedPanel = null"
-            class="option-btn"
-            :class="[d.colorClass, difficulty === d.value ? 'is-selected' : '']"
+            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150"
+            :class="[
+              difficulty === d.value
+                ? `font-bold selected-item ${d.colorClass}`
+                : 'text-muted-foreground hover:text-foreground hover-item'
+            ]"
+            :style="difficulty === d.value
+              ? { '--scribble-underline': scribbleUnderline(d.value.charCodeAt(0) + boilFrame * 1000, isDark ? '#ffffff' : '#1a1a1a'), '--scribble-width': `${d.label.length + 1}ch` }
+              : { '--ghost-underline': ghostUnderline(d.value.charCodeAt(0) + 500, isDark ? '#ffffff' : '#1a1a1a'), '--ghost-width': `${d.label.length + 1}ch` }"
           >
             {{ d.label }}
           </button>
@@ -208,20 +223,20 @@ const currentDifficultyColor = computed(() =>
   </div>
 
   <!-- ═══ Desktop layout ═══ -->
-  <div v-else class="control-panel-wrap flex flex-col items-center sm:items-stretch">
+  <div v-else class="control-panel-wrap flex flex-col items-center md:items-stretch">
     <!-- Filtered region: size + difficulty selectors -->
-    <div class="control-panel-filtered flex flex-col items-center sm:items-stretch">
+    <div class="control-panel-filtered flex flex-col items-center md:items-stretch">
       <!-- Size selector -->
-      <div class="flex flex-col items-center gap-1 sm:items-stretch">
+      <div class="flex flex-col items-center gap-1 md:items-stretch">
         <h2 class="section-heading text-muted-foreground" aria-label="Size">
           Size
         </h2>
-        <div class="flex flex-col items-center sm:items-stretch">
+        <div class="flex flex-col items-center md:items-stretch">
           <button
             v-for="s in sizes"
             :key="s.value"
             @click="emit('update:size', s.value)"
-            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150 sm:py-0.5 sm:text-left sm:text-[1.25rem]"
+            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150 md:py-0.5 md:text-left md:text-[1.25rem]"
             :class="
               size === s.value
                 ? 'text-foreground font-bold selected-item'
@@ -239,7 +254,7 @@ const currentDifficultyColor = computed(() =>
       <hr class="my-3 w-full border-border/50" />
 
       <!-- Difficulty selector -->
-      <div class="flex flex-col items-center gap-1 sm:items-stretch">
+      <div class="flex flex-col items-center gap-1 md:items-stretch">
         <h2
           class="section-heading transition-colors duration-250"
           :class="
@@ -252,12 +267,12 @@ const currentDifficultyColor = computed(() =>
         >
           Difficulty
         </h2>
-        <div class="flex flex-col items-center sm:items-stretch">
+        <div class="flex flex-col items-center md:items-stretch">
           <button
             v-for="d in difficulties"
             :key="d.value"
             @click="emit('update:difficulty', d.value)"
-            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150 sm:py-0.5 sm:text-left sm:text-[1.25rem]"
+            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150 md:py-0.5 md:text-left md:text-[1.25rem]"
             :class="[
               difficulty === d.value
                 ? `font-bold selected-item ${d.colorClass}`
@@ -330,7 +345,7 @@ const currentDifficultyColor = computed(() =>
   text-align: center;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .section-heading {
     font-size: 1.5rem;
     line-height: 1.75rem;
@@ -377,7 +392,7 @@ const currentDifficultyColor = computed(() =>
   background-image: var(--ghost-underline);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .selected-item {
     background-position: left 0.75rem bottom 0px;
   }
@@ -458,32 +473,22 @@ const currentDifficultyColor = computed(() =>
   font-optical-sizing: auto;
 }
 
-.chip-row {
+.mobile-heading-row {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
+  justify-content: space-evenly;
 }
 
-.chip {
-  font-family: 'Fira Code', monospace;
-  font-size: 1rem;
-  font-weight: 600;
-  padding: 0.375rem 1rem;
-  border-radius: 9999px;
-  border: 2px solid var(--color-border);
-  background: var(--color-accent);
-  color: var(--color-foreground);
+.mobile-heading-btn {
+  background: none;
+  border: none;
   cursor: pointer;
-  transition: all 150ms;
+  padding: 0;
 }
 
-.chip.is-active {
-  border-color: var(--color-foreground);
-  background: var(--color-card);
-}
-
-.chip:active {
-  transform: scale(0.95);
+.mobile-heading-btn .section-heading.is-active {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 /* Options panel — grid-template-rows expand */
@@ -499,34 +504,19 @@ const currentDifficultyColor = computed(() =>
 
 .options-panel-inner {
   overflow: hidden;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.options-panel.is-open .options-panel-inner {
+  opacity: 1;
+  transition-delay: 100ms;
 }
 
 .options-row {
   display: flex;
-  gap: 0.5rem;
-  padding: 0.5rem 0;
-}
-
-.option-btn {
-  font-family: 'Fira Code', monospace;
-  font-size: 0.9rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.375rem;
-  border: none;
-  background: transparent;
-  color: var(--color-muted-foreground);
-  cursor: pointer;
-  transition: all 150ms;
-}
-
-.option-btn:hover {
-  color: var(--color-foreground);
-  background: var(--color-accent);
-}
-
-.option-btn.is-selected {
-  font-weight: 700;
-  color: var(--color-foreground);
-  background: var(--color-accent);
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0;
 }
 </style>

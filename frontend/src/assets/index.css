@@ -179,6 +179,13 @@
     100% { transform: scale(1); opacity: 1; }
   }
 
+  /* Cell reveal with noise-staggered delay */
+  .cell-reveal-animated {
+    animation: cell-reveal 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    animation-delay: var(--reveal-delay, 0ms);
+    animation-fill-mode: both;
+  }
+
   /* Sudoku cell focus styling */
   .sudoku-cell:focus-within {
     background: color-mix(in srgb, var(--color-accent) 50%, transparent);

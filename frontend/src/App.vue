@@ -10,6 +10,7 @@ import FilterTuner from '@/components/custom/FilterTuner.vue'
 import CrayonHeart from '@/components/decorative/CrayonHeart.vue'
 const sudoku = useSudoku()
 const hoverCardOpen = ref(false)
+let hoverCloseTimer: ReturnType<typeof setTimeout> | null = null
 
 function toggleHoverCard() {
   hoverCardOpen.value = !hoverCardOpen.value
@@ -17,6 +18,21 @@ function toggleHoverCard() {
 
 function closeHoverCard() {
   hoverCardOpen.value = false
+}
+
+function onHoverEnter() {
+  if (hoverCloseTimer) {
+    clearTimeout(hoverCloseTimer)
+    hoverCloseTimer = null
+  }
+  hoverCardOpen.value = true
+}
+
+function onHoverLeave() {
+  hoverCloseTimer = setTimeout(() => {
+    hoverCardOpen.value = false
+    hoverCloseTimer = null
+  }, 300)
 }
 </script>
 
@@ -32,43 +48,47 @@ function closeHoverCard() {
     <!-- Filter tuner — dev tool for real-time filter parameter editing -->
     <FilterTuner />
 
-    <!-- Sun/moon toggle — fixed top-right corner -->
-    <div class="sun-corner" @click.stop>
-      <DarkModeToggle />
-    </div>
-
-    <!-- @mbabb — fixed top-left corner -->
-    <div class="mbabb-corner" @click.stop>
-      <div class="hover-card-wrapper" @click.stop="toggleHoverCard">
-        <a
-          href="https://github.com/mkbabb/csp-solver"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="font-mono text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
-          @click.stop
-        >@mbabb</a>
-        <div class="hover-card" :class="{ 'is-open': hoverCardOpen }">
-          <div class="flex items-center gap-3">
-            <img
-              src="https://avatars.githubusercontent.com/u/2848617?v=4"
-              alt="mkbabb"
-              class="h-10 w-10 rounded-full"
-            />
-            <div class="flex-1">
-              <a href="https://github.com/mkbabb" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-semibold text-foreground hover:underline">@mbabb</a>
-              <p class="mt-0.5 text-xs italic text-muted-foreground">CSP-powered Sudoku solver</p>
-            </div>
-            <CrayonHeart :size="32" />
-          </div>
-          <hr class="my-2 border-border/50" />
-          <a href="https://github.com/mkbabb/csp-solver" target="_blank" rel="noopener noreferrer" class="block text-sm text-foreground hover:underline">View project on GitHub</a>
-        </div>
-      </div>
-    </div>
-
     <main class="main-content mx-auto flex min-h-0 max-w-4xl flex-1 flex-col items-center justify-center px-4">
       <div class="board-group">
-        <HandwrittenLogo />
+        <!-- Centered header: @mbabb | Logo | Dark mode toggle -->
+        <header class="app-header" @click.stop>
+          <div
+            class="hover-card-wrapper"
+            @click.stop="toggleHoverCard"
+            @mouseenter="onHoverEnter"
+            @mouseleave="onHoverLeave"
+          >
+            <a
+              href="https://github.com/mkbabb/csp-solver"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-mono text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+              @click.stop
+            >@mbabb</a>
+            <div class="hover-card" :class="{ 'is-open': hoverCardOpen }">
+              <div class="flex items-center gap-3">
+                <img
+                  src="https://avatars.githubusercontent.com/u/2848617?v=4"
+                  alt="mkbabb"
+                  class="h-10 w-10 rounded-full"
+                />
+                <div class="flex-1">
+                  <a href="https://github.com/mkbabb" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-semibold text-foreground hover:underline">@mbabb</a>
+                  <p class="mt-0.5 text-xs italic text-muted-foreground">CSP-powered Sudoku solver</p>
+                </div>
+                <CrayonHeart :size="32" />
+              </div>
+              <hr class="my-2 border-border/50" />
+              <a href="https://github.com/mkbabb/csp-solver" target="_blank" rel="noopener noreferrer" class="block text-sm text-foreground hover:underline">View project on GitHub</a>
+            </div>
+          </div>
+
+          <HandwrittenLogo />
+
+          <div class="header-toggle">
+            <DarkModeToggle />
+          </div>
+        </header>
 
         <!-- Board + Controls row -->
         <div class="app-layout">
@@ -79,6 +99,8 @@ function closeHoverCard() {
             :total-cells="sudoku.totalCells.value"
             :values="sudoku.values.value"
             :given-cells="sudoku.givenCells.value"
+            :overridden-cells="sudoku.overriddenCells.value"
+            :animating-cells="sudoku.animatingCells.value"
             :solve-state="sudoku.solveState.value"
             :solved-values="sudoku.solvedValues.value"
             :board-generation="sudoku.boardGeneration.value"
@@ -86,7 +108,7 @@ function closeHoverCard() {
           />
 
           <!-- Mobile: unified controls card below board -->
-          <div class="mobile-board-width sm:hidden">
+          <div class="mobile-board-width md:hidden">
             <div class="rounded-lg bg-card px-4 py-3 cartoon-shadow-sm">
               <ControlPanel
                 :size="sudoku.size.value"
@@ -104,7 +126,7 @@ function closeHoverCard() {
           </div>
 
           <!-- Desktop sidebar: controls card (aligned with board top) -->
-          <div class="hidden sm:flex sm:flex-col sm:items-start">
+          <div class="hidden md:flex md:flex-col md:items-start">
             <div class="controls-card cartoon-shadow-sm rounded-xl bg-card p-5">
               <ControlPanel
                 :size="sudoku.size.value"
@@ -127,18 +149,26 @@ function closeHoverCard() {
 </template>
 
 <style scoped>
-/* Sun/moon toggle pinned to top-right corner */
-.sun-corner {
-  position: fixed;
-  top: 0;
-  right: 0.25rem;
-  z-index: 50;
+/* Centered header row */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.5rem 0 0.25rem;
 }
 
-@media (max-width: 640px) {
-  .sun-corner {
-    top: 0;
-    right: 0;
+.header-toggle {
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .header-toggle {
+    width: 5rem;
+    height: 5rem;
   }
 }
 
@@ -149,11 +179,11 @@ function closeHoverCard() {
   gap: 2rem;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .app-layout {
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    gap: 1.25rem;
     width: 100%;
   }
 }
@@ -161,20 +191,13 @@ function closeHoverCard() {
 .board-group {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
 }
 
-/* @mbabb pinned to top-left corner */
-.mbabb-corner {
-  position: fixed;
-  top: 0.75rem;
-  left: 1rem;
-  z-index: 50;
-}
-
-@media (max-width: 640px) {
-  .board-group {
-    align-items: center;
+@media (max-width: 767px) {
+  .main-content {
+    justify-content: flex-start;
+    padding-top: 2.5rem;
   }
 }
 
@@ -201,7 +224,7 @@ function closeHoverCard() {
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 0.5rem;
+  margin-top: 0;
   padding: 1rem;
   background: color-mix(in srgb, var(--color-popover) 80%, transparent);
   backdrop-filter: blur(12px);
@@ -216,19 +239,21 @@ function closeHoverCard() {
   min-width: 16rem;
 }
 
-/* Desktop hover */
-.hover-card-wrapper:hover .hover-card {
-  opacity: 1;
-  pointer-events: auto;
-  transform: scale(1) translateY(0);
+/* Bridge the gap between trigger and card so hover doesn't break */
+.hover-card::before {
+  content: '';
+  position: absolute;
+  top: -1rem;
+  left: 0;
+  right: 0;
+  height: 1rem;
 }
 
-/* Mobile tap-to-toggle */
+/* Show card — covers both JS-driven hover and mobile tap */
 .hover-card.is-open {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1) translateY(0);
 }
-
 
 </style>

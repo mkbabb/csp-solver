@@ -2,7 +2,7 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import SudokuCell from './SudokuCell.vue'
 import HandDrawnGrid from './HandDrawnGrid.vue'
-import { generateGridPaths } from '@/lib/handDrawnPaths'
+import { generateGridPaths, mulberry32 } from '@/lib/handDrawnPaths'
 import type { SolveState } from '@/composables/useSudoku'
 
 const props = defineProps<{
@@ -11,6 +11,8 @@ const props = defineProps<{
   totalCells: number
   values: Record<string, number>
   givenCells: Set<string>
+  overriddenCells: Set<string>
+  animatingCells: Set<string>
   solveState: SolveState
   solvedValues: Record<string, number>
   boardGeneration: number
@@ -48,6 +50,26 @@ const boardClasses = computed(() => {
   return base
 })
 
+// Noise-order staggered delays for animating cells (Fisher-Yates + mulberry32)
+const noiseDelays = computed(() => {
+  const delays = new Map<string, number>()
+  const cells = Array.from(props.animatingCells)
+  if (cells.length === 0) return delays
+
+  // Fisher-Yates shuffle with seeded RNG
+  const rng = mulberry32(cells.length * 17 + 7)
+  const shuffled = [...cells]
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+  }
+
+  for (let i = 0; i < shuffled.length; i++) {
+    delays.set(shuffled[i], i * 40)
+  }
+  return delays
+})
+
 // Grid animation state machine
 const gridAnimState = ref<'hidden' | 'drawing' | 'drawn' | 'erasing'>('hidden')
 
@@ -78,12 +100,7 @@ watch(
 )
 
 function isRevealed(pos: number): boolean {
-  const key = String(pos)
-  return (
-    props.solveState === 'solved' &&
-    !props.givenCells.has(key) &&
-    props.solvedValues[key] !== undefined
-  )
+  return props.animatingCells.has(String(pos))
 }
 </script>
 
@@ -111,7 +128,9 @@ function isRevealed(pos: number): boolean {
         :position="pos - 1"
         :value="values[String(pos - 1)] ?? 0"
         :is-given="givenCells.has(String(pos - 1))"
+        :is-overridden="overriddenCells.has(String(pos - 1))"
         :is-revealed="isRevealed(pos - 1)"
+        :noise-delay="noiseDelays.get(String(pos - 1)) ?? 0"
         :board-size="boardSize"
         :subgrid-size="size"
         :ghost-path="cellRects[pos - 1] ?? ''"

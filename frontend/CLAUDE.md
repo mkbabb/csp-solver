@@ -14,16 +14,16 @@ frontend/
 ├── tsconfig.json                       # Strict, @/* alias, bundler resolution
 ├── components.json                     # shadcn-vue config (unused in practice)
 └── src/
-    ├── App.vue                         # Root layout: logo+board column, sidebar, sun corner
+    ├── App.vue                         # Root layout: centered header, board+sidebar, mobile controls
     ├── main.ts                         # createApp + mount
     ├── assets/
     │   └── index.css                   # Tailwind v4 imports, CSS vars (light/dark), paper texture
     ├── components/
     │   ├── custom/                     # Game components
     │   │   ├── SudokuBoard.vue         # Grid container (pane-less), animation state machine
-    │   │   ├── SudokuCell.vue          # Cell input + ghost wobbleRect hover
+    │   │   ├── SudokuCell.vue          # Cell input + ghost wobbleRect hover, one-click override
     │   │   ├── HandDrawnGrid.vue       # SVG grid lines (jagged), path-based boil (~6.7fps), ~800ms draw-in
-    │   │   ├── HandwrittenGlyph.vue    # SVG digit rendering, draw-in, wiggle on hover
+    │   │   ├── HandwrittenGlyph.vue    # SVG digit rendering, draw-in, wiggle on hover, sparkle-rainbow given cells
     │   │   ├── ControlPanel.vue        # Size/difficulty selectors, action buttons
     │   │   ├── DarkModeToggle.vue      # Sun/moon toggle, wobble-celestial filter, sparkle diamonds
     │   │   ├── FilterTuner.vue         # Live tuner for filter presets and grid boil config
@@ -60,20 +60,16 @@ frontend/
 ```
 App.vue
 ├── SvgFilters              # Mount once: global filter defs (grain, wobble, stroke)
-├── DarkModeToggle (fixed)  # Top-right corner, sun sparkles / moon stars
-├── Mobile header           # @mbabb link (mobile only)
+├── FilterTuner (fixed)     # Wrench icon, live preset/boil parameter tuning
 ├── Main
-│   ├── Board column
-│   │   ├── HandwrittenLogo # Left-aligned above board
-│   │   └── SudokuBoard     # Pane-less, grid lines extend freely
-│   │       ├── HandDrawnGrid   # Path-based boil (~6.7fps), grain-static filter
-│   │       └── SudokuCell[]    # Ghost wobbleRect on hover
-│   │           └── HandwrittenGlyph
-│   ├── Desktop sidebar
-│   │   ├── @mbabb          # Hover card with GitHub link
-│   │   └── ControlPanel    # Size/difficulty/actions
-│   └── Mobile actions      # Shuffle/Clear/Solve below board
-├── FilterTuner (fixed)    # Wrench icon, live preset/boil parameter tuning
+│   ├── Header (centered)   # @mbabb hover card | HandwrittenLogo | DarkModeToggle
+│   ├── Board + Controls row
+│   │   ├── SudokuBoard     # Pane-less, grid lines extend freely
+│   │   │   ├── HandDrawnGrid   # Path-based boil (~6.7fps), grain-static filter
+│   │   │   └── SudokuCell[]    # Ghost wobbleRect on hover, one-click override
+│   │   │       └── HandwrittenGlyph  # sparkle-rainbow (given) / user-ink (user)
+│   │   ├── Mobile controls      # Unified card below board (md:hidden)
+│   │   └── Desktop sidebar      # ControlPanel in card (hidden md:flex)
 ```
 
 ## State Management
@@ -81,9 +77,14 @@ App.vue
 No Pinia/Vuex. Single `useSudoku()` composable holds all game state:
 - `size` (2/3/4), `difficulty` (EASY/MEDIUM/HARD)
 - `values: Record<string, number>` (0 = empty)
-- `givenCells: Set<string>` (immutable clues)
+- `givenCells: Set<string>` — server-provided clues (mutable on override)
+- `originalGivenCells: Set<string>` — pristine clue positions (immutable per board)
+- `overriddenCells: Set<string>` — given cells the user has manually replaced
+- `animatingCells: Set<string>` — cells with active noise-staggered reveal animation
 - `solveState`: idle → solving → solved/failed/error
 - `boardGeneration`: counter, triggers grid redraw on change
+- `setCell()`: allows overriding given cells (moves from `givenCells` → `overriddenCells`)
+- `solve()`: fills only blank cells; consecutive solves are idempotent
 
 ## Animation System
 
@@ -92,7 +93,7 @@ All animations respect `prefers-reduced-motion`.
 | Layer | Mechanism | Timing |
 |---|---|---|
 | Grid draw-in/erase | stroke-dashoffset via keyframes.js | ~800ms staggered with jitter |
-| Cell reveal (solve) | CSS `cell-reveal` animation | 300ms cubic-bezier |
+| Cell reveal (solve/randomize) | CSS `cell-reveal` + noise-stagger | 300ms cubic-bezier, 40ms/cell shuffle via mulberry32 |
 | Glyph draw-in | stroke-dashoffset | 350ms easeOutCubic |
 | Glyph wiggle (hover) | SVG path `d` attribute morphing | 800ms alternate loop |
 | Line boil | Path d-attribute cycling (4 frames) | 150ms/frame (~6.7fps) |
@@ -105,7 +106,8 @@ All animations respect `prefers-reduced-motion`.
 - **Aesthetic**: Hand-drawn crayon, Yoshi's Story palette
 - **Grid lines**: Jagged linear segments (not smooth curves), angular kinks
 - **Board**: Pane-less — no shadow, border, or padding; grid extends freely
-- **Ghost hover**: Hand-drawn wobbleRect
+- **Given cells**: `sparkle-rainbow` gradient stroke + auto-wiggle; reverts to `user-ink` on override
+- **Ghost hover**: Hand-drawn wobbleRect on all cells (given included)
 - **Light**: Cream paper background, dark ink, sun with sparkle diamonds
 - **Dark**: Warm brown background, muted accents, moon with twinkling stars
 - **Rendering**: Rough.js (vine, fruits, doodles, logo), custom wobbleLine (grid), pre-drawn SVG paths (glyphs)

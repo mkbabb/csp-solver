@@ -170,7 +170,11 @@ pre-computed path variants cycled at ~6.7fps for organic perturbation), Rough.js
 and decoratives, custom SVG glyphs, animated stroke-dasharray draw-ins (~800ms with
 seeded jitter), pane-less board, sun/moon toggle with wobble filters and sparkle
 decorations, and a FilterTuner for live parameter tuning of the hereinbefore visual
-effects. It's served via Docker Compose + Nginx.
+effects. Given cells are rendered with a `sparkle-rainbow` gradient stroke and
+auto-wiggle animation; overriding a given cell reverts it to `user-ink` in a single
+keystroke. Noise-staggered reveal animations—Fisher-Yates shuffle with seeded PRNG,
+40ms per cell—accompany both randomize and solve. The solver fills only blank cells;
+consecutive solves are idempotent. It's served via Docker Compose + Nginx.
 
 The sudoku application has but two routes, one for generating a random board, and one
 for solving an input board:

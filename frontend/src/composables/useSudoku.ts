@@ -15,6 +15,9 @@ export function useSudoku() {
   // values[position] = number (0 = empty)
   const values = ref<Record<string, number>>({})
   const givenCells = ref<Set<string>>(new Set())
+  const originalGivenCells = ref<Set<string>>(new Set())
+  const overriddenCells = ref<Set<string>>(new Set())
+  const animatingCells = ref<Set<string>>(new Set())
   const solveState = ref<SolveState>('idle')
   const solvedValues = ref<Record<string, number>>({})
   const loading = ref(false)
@@ -24,6 +27,9 @@ export function useSudoku() {
   function initBoard() {
     values.value = {}
     givenCells.value = new Set()
+    originalGivenCells.value = new Set()
+    overriddenCells.value = new Set()
+    animatingCells.value = new Set()
     solveState.value = 'idle'
     solvedValues.value = {}
     errorMessage.value = ''
@@ -41,12 +47,18 @@ export function useSudoku() {
       values.value[String(i)] = 0
     }
     givenCells.value = new Set()
+    originalGivenCells.value = new Set()
+    overriddenCells.value = new Set()
+    animatingCells.value = new Set()
     boardGeneration.value++
   }
 
   function setCell(pos: number, value: number) {
     const key = String(pos)
-    if (givenCells.value.has(key)) return
+    if (originalGivenCells.value.has(key)) {
+      givenCells.value.delete(key)
+      overriddenCells.value.add(key)
+    }
     values.value[key] = value
     if (solveState.value !== 'idle') {
       solveState.value = 'idle'
@@ -64,6 +76,8 @@ export function useSudoku() {
       const board = await api.getRandomBoard(size.value, difficulty.value)
       values.value = {}
       givenCells.value = new Set()
+      originalGivenCells.value = new Set()
+      overriddenCells.value = new Set()
 
       for (const [pos, val] of Object.entries(board.values)) {
         values.value[pos] = val
@@ -71,6 +85,9 @@ export function useSudoku() {
           givenCells.value.add(pos)
         }
       }
+
+      originalGivenCells.value = new Set(givenCells.value)
+      animatingCells.value = new Set(givenCells.value)
     } catch (e) {
       errorMessage.value = e instanceof Error ? e.message : 'Failed to get board'
     } finally {
@@ -85,13 +102,20 @@ export function useSudoku() {
 
     try {
       const result = await api.solveBoard(values.value, size.value)
-      solvedValues.value = result.values
-      solveState.value = 'solved'
+      const newlySolved: Record<string, number> = {}
+      const cellsToAnimate = new Set<string>()
 
-      // Update board with solution
       for (const [pos, val] of Object.entries(result.values)) {
-        values.value[pos] = val
+        if (values.value[pos] === 0) {
+          values.value[pos] = val
+          newlySolved[pos] = val
+          cellsToAnimate.add(pos)
+        }
       }
+
+      solvedValues.value = newlySolved
+      solveState.value = 'solved'
+      animatingCells.value = cellsToAnimate
     } catch (e) {
       solveState.value = 'failed'
       errorMessage.value = e instanceof Error ? e.message : 'Solve failed'
@@ -115,6 +139,9 @@ export function useSudoku() {
     totalCells,
     values,
     givenCells,
+    originalGivenCells,
+    overriddenCells,
+    animatingCells,
     solveState,
     solvedValues,
     loading,

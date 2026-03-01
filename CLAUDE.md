@@ -49,7 +49,7 @@ Browser ←→ Nginx (:80) ←→ Frontend (Vue 3, :3000)
 ```
 
 - **Backend**: Generalized CSP solver with backtracking, forward checking, AC3, AC-FC pruning. MRV variable ordering. Applied to Sudoku and Futoshiki.
-- **Frontend**: Hand-drawn aesthetic (Rough.js, jagged SVG grid lines, custom glyphs, stroke-dasharray animations). Grid lines use path-based boil—pre-computed path variants cycled at ~6.7fps—for organic perturbation. Pane-less board with ~800ms jittered draw-in. Sun-wobble filter + sparkle diamonds (light), moon + twinkling stars (dark). Logo left-aligned above board, @mbabb above controls sidebar. `FilterTuner` component for live-tuning filter and boil parameters. No router, no state library—pure Vue 3 Composition API.
+- **Frontend**: Hand-drawn aesthetic (Rough.js, jagged SVG grid lines, custom glyphs, stroke-dasharray animations). Grid lines use path-based boil—pre-computed path variants cycled at ~6.7fps—for organic perturbation. Pane-less board with ~800ms jittered draw-in. Centered header (@mbabb | logo | dark-mode toggle). Given cells render with `sparkle-rainbow` gradient stroke + auto-wiggle, reverting to `user-ink` on one-click override. Noise-staggered reveal animations (Fisher-Yates shuffle, 40ms/cell). Solve fills only blank cells; consecutive solves idempotent. Sun-wobble filter + sparkle diamonds (light), moon + twinkling stars (dark). `FilterTuner` for live-tuning filter and boil parameters. No router, no state library—pure Vue 3 Composition API.
 - **API**: `GET /api/v1/board/random/{size}/{difficulty}`, `POST /api/v1/board/solve`, `GET /api/v1/health`
 
 ## Dev Quickstart
