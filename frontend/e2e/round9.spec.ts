@@ -3,7 +3,8 @@ import { test, expect, type Page } from '@playwright/test';
 // ── Helpers ─────────────────────────────────────────────────────────
 
 async function loadApp(page: Page) {
-  await page.goto('/');
+  // Use './' so Playwright resolves relative to baseURL (works with subpath deployments).
+  await page.goto('./');
   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
 }
 
