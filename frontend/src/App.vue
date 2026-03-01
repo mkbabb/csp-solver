@@ -48,10 +48,8 @@ function onHoverLeave() {
     <!-- Filter tuner — dev tool for real-time filter parameter editing -->
     <FilterTuner />
 
-    <main class="main-content mx-auto flex min-h-0 max-w-4xl flex-1 flex-col items-center justify-center px-4">
-      <div class="board-group">
-        <!-- Centered header: @mbabb | Logo | Dark mode toggle -->
-        <header class="app-header" @click.stop>
+    <!-- Full-width ribbon: @mbabb (left) | logo (center) | toggle (right) -->
+    <header class="app-header" @click.stop>
           <div
             class="hover-card-wrapper"
             @click.stop="toggleHoverCard"
@@ -88,8 +86,10 @@ function onHoverLeave() {
           <div class="header-toggle">
             <DarkModeToggle />
           </div>
-        </header>
+    </header>
 
+    <main class="main-content flex min-h-0 flex-1 flex-col items-center justify-center px-4">
+      <div class="board-group">
         <!-- Board + Controls row -->
         <div class="app-layout">
           <!-- Board -->
@@ -149,14 +149,14 @@ function onHoverLeave() {
 </template>
 
 <style scoped>
-/* Centered header row */
+/* Full-width ribbon: items pinned left/center/right */
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 1rem;
+  justify-content: space-between;
   width: 100%;
-  padding: 0.5rem 0 0.25rem;
+  padding: 0.5rem 1rem;
+  flex-shrink: 0;
 }
 
 .header-toggle {
@@ -166,6 +166,9 @@ function onHoverLeave() {
 }
 
 @media (min-width: 768px) {
+  .app-header {
+    padding: 0.75rem 1.5rem;
+  }
   .header-toggle {
     width: 5rem;
     height: 5rem;
@@ -197,7 +200,7 @@ function onHoverLeave() {
 @media (max-width: 767px) {
   .main-content {
     justify-content: flex-start;
-    padding-top: 2.5rem;
+    padding-top: 0.5rem;
   }
 }
 
