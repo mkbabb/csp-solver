@@ -48,48 +48,47 @@ function onHoverLeave() {
     <!-- Filter tuner — dev tool for real-time filter parameter editing -->
     <FilterTuner />
 
-    <!-- Full-width ribbon: @mbabb (left) | logo (center) | toggle (right) -->
-    <header class="app-header" @click.stop>
-          <div
-            class="hover-card-wrapper"
-            @click.stop="toggleHoverCard"
-            @mouseenter="onHoverEnter"
-            @mouseleave="onHoverLeave"
-          >
-            <a
-              href="https://github.com/mkbabb/csp-solver"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="font-mono text-xs md:text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
-              @click.stop
-            >@mbabb</a>
-            <div class="hover-card" :class="{ 'is-open': hoverCardOpen }">
-              <div class="flex items-center gap-3">
-                <img
-                  src="https://avatars.githubusercontent.com/u/2848617?v=4"
-                  alt="mkbabb"
-                  class="h-10 w-10 rounded-full"
-                />
-                <div class="flex-1">
-                  <a href="https://github.com/mkbabb" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-semibold text-foreground hover:underline">@mbabb</a>
-                  <p class="mt-0.5 text-xs italic text-muted-foreground">CSP-powered Sudoku solver</p>
-                </div>
-                <CrayonHeart :size="32" />
-              </div>
-              <hr class="my-2 border-border/50" />
-              <a href="https://github.com/mkbabb/csp-solver" target="_blank" rel="noopener noreferrer" class="block text-sm text-foreground hover:underline">View project on GitHub</a>
-            </div>
-          </div>
-
-          <HandwrittenLogo />
-
-          <div class="header-toggle">
-            <DarkModeToggle />
-          </div>
-    </header>
-
     <main class="main-content flex min-h-0 flex-1 flex-col items-center justify-center px-4">
       <div class="board-group">
+        <!-- Header ribbon: @mbabb (left) | logo (center) | toggle (right) -->
+        <header class="app-header" @click.stop>
+              <div
+                class="hover-card-wrapper"
+                @click.stop="toggleHoverCard"
+                @mouseenter="onHoverEnter"
+                @mouseleave="onHoverLeave"
+              >
+                <a
+                  href="https://github.com/mkbabb/csp-solver"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="font-mono text-xs md:text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+                  @click.stop
+                >@mbabb</a>
+                <div class="hover-card" :class="{ 'is-open': hoverCardOpen }">
+                  <div class="flex items-center gap-3">
+                    <img
+                      src="https://avatars.githubusercontent.com/u/2848617?v=4"
+                      alt="mkbabb"
+                      class="h-10 w-10 rounded-full"
+                    />
+                    <div class="flex-1">
+                      <a href="https://github.com/mkbabb" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-semibold text-foreground hover:underline">@mbabb</a>
+                      <p class="mt-0.5 text-xs italic text-muted-foreground">CSP-powered Sudoku solver</p>
+                    </div>
+                    <CrayonHeart :size="32" />
+                  </div>
+                  <hr class="my-2 border-border/50" />
+                  <a href="https://github.com/mkbabb/csp-solver" target="_blank" rel="noopener noreferrer" class="block text-sm text-foreground hover:underline">View project on GitHub</a>
+                </div>
+              </div>
+
+              <HandwrittenLogo />
+
+              <div class="header-toggle">
+                <DarkModeToggle />
+              </div>
+        </header>
         <!-- Board + Controls row -->
         <div class="app-layout">
           <!-- Board -->
@@ -149,7 +148,7 @@ function onHoverLeave() {
 </template>
 
 <style scoped>
-/* Full-width ribbon: items pinned left/center/right */
+/* Header ribbon: pinned left/center/right, aligned with board content */
 .app-header {
   display: flex;
   align-items: center;
@@ -162,7 +161,8 @@ function onHoverLeave() {
 
 @media (min-width: 768px) {
   .app-header {
-    padding: 0.5rem 1.5rem;
+    padding: 0 0;
+    margin-bottom: 0.25rem;
   }
 }
 
@@ -197,7 +197,13 @@ function onHoverLeave() {
 .board-group {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
+}
+
+@media (max-width: 767px) {
+  .board-group {
+    align-items: center;
+  }
 }
 
 @media (max-width: 767px) {

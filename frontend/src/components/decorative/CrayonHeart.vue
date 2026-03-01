@@ -70,7 +70,7 @@ withDefaults(
     display: inline-block;
 }
 
-:global(.dark) .crayon-heart {
+.crayon-heart:is(.dark *) {
     opacity: 0.75;
     filter: saturate(0.85);
 }
