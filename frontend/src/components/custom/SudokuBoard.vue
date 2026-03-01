@@ -65,7 +65,7 @@ const noiseDelays = computed(() => {
   }
 
   for (let i = 0; i < shuffled.length; i++) {
-    delays.set(shuffled[i], i * 40)
+    delays.set(shuffled[i], i * 15)
   }
   return delays
 })
@@ -129,6 +129,7 @@ function isRevealed(pos: number): boolean {
         :value="values[String(pos - 1)] ?? 0"
         :is-given="givenCells.has(String(pos - 1))"
         :is-overridden="overriddenCells.has(String(pos - 1))"
+        :is-solved="String(pos - 1) in solvedValues"
         :is-revealed="isRevealed(pos - 1)"
         :noise-delay="noiseDelays.get(String(pos - 1)) ?? 0"
         :board-size="boardSize"

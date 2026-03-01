@@ -93,30 +93,51 @@ test('consecutive solve: values remain unchanged on second solve', async ({ page
   expect(valuesAfterSecondSolve).toEqual(valuesAfterFirstSolve);
 });
 
-// ── Test 4: Given Cell Override — Sparkle-Rainbow → User-Ink ────────
+// ── Test 4: Given Cells Use Foreground Ink, Solved Cells Use Sparkle-Rainbow ──
 
-test('given cell override: sparkle-rainbow stroke reverts to user-ink on override', async ({ page }) => {
+test('given cells use foreground ink, solved cells use sparkle-rainbow', async ({ page }) => {
   await loadApp(page);
   await page.waitForTimeout(1500);
 
   await randomizeBoard(page);
 
-  // Given cells should have sparkle-rainbow stroke
+  // Given cells should use foreground color (not sparkle-rainbow, not user-ink)
+  const givenStrokes = await page.evaluate(() => {
+    const paths = document.querySelectorAll('.sudoku-cell .glyph-svg path');
+    return Array.from(paths).map((p) => p.getAttribute('stroke'));
+  });
+  // All given cells should have foreground stroke (var(--color-foreground))
+  expect(givenStrokes.length).toBeGreaterThan(0);
+  expect(givenStrokes.every((s) => s?.includes('foreground'))).toBe(true);
+
+  // Solve to introduce solver cells
+  await solveBoard(page);
+
+  // Solver-introduced cells should have sparkle-rainbow stroke
   const sparkleCount = await page.locator('.sudoku-cell .glyph-svg path[stroke="url(#sparkle-rainbow)"]').count();
   expect(sparkleCount).toBeGreaterThan(0);
+});
 
-  // Override the first given cell by programmatically setting a new value
+// ── Test 4b: Given Cell Override → User-Ink ─────────────────────────
+
+test('given cell override: foreground stroke reverts to user-ink on override', async ({ page }) => {
+  await loadApp(page);
+  await page.waitForTimeout(1500);
+
+  await randomizeBoard(page);
+
+  // Find first given cell (foreground stroke)
   const givenCellIdx = await page.evaluate(() => {
     const cells = document.querySelectorAll('.sudoku-cell');
     for (let i = 0; i < cells.length; i++) {
       const path = cells[i].querySelector('.glyph-svg path');
-      if (path?.getAttribute('stroke') === 'url(#sparkle-rainbow)') return i;
+      if (path?.getAttribute('stroke')?.includes('foreground')) return i;
     }
     return -1;
   });
   expect(givenCellIdx).toBeGreaterThanOrEqual(0);
 
-  // Use native value setter + input event to reliably override the cell
+  // Override the cell
   await page.evaluate((idx) => {
     const input = document.querySelectorAll('.sudoku-cell input')[idx] as HTMLInputElement;
     const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
@@ -125,13 +146,54 @@ test('given cell override: sparkle-rainbow stroke reverts to user-ink on overrid
   }, givenCellIdx);
   await page.waitForTimeout(500);
 
-  // That cell's glyph should now use user-ink (not sparkle-rainbow)
+  // That cell's glyph should now use user-ink
   const overriddenStroke = await page.locator('.sudoku-cell').nth(givenCellIdx).locator('.glyph-svg path').getAttribute('stroke');
-  expect(overriddenStroke).not.toBe('url(#sparkle-rainbow)');
   expect(overriddenStroke).toMatch(/user-ink/);
 });
 
-// ── Test 5: Noise Animation — Multiple Unique Reveal Delays ────────
+// ── Test 5b: Solve Failure — Conflicting Values → Failure State ─────
+
+test('solve failure: conflicting user values produce solve-failure state', async ({ page }) => {
+  await loadApp(page);
+  await page.waitForTimeout(1500);
+
+  await randomizeBoard(page);
+
+  // Override two cells in the same row with the same value to create a conflict
+  // Find first row: cells 0..8 for a 9x9 board. Find two empty cells in that row.
+  const emptyCells = await page.evaluate(() => {
+    const inputs = document.querySelectorAll('.sudoku-cell input');
+    const empty: number[] = [];
+    // Check first row (cells 0-8)
+    for (let i = 0; i < 9; i++) {
+      if ((inputs[i] as HTMLInputElement).value === '') empty.push(i);
+    }
+    return empty;
+  });
+
+  if (emptyCells.length >= 2) {
+    // Set both empty cells to the same value to guarantee a conflict
+    for (const idx of emptyCells.slice(0, 2)) {
+      await page.evaluate((i) => {
+        const input = document.querySelectorAll('.sudoku-cell input')[i] as HTMLInputElement;
+        const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+        nativeSetter.call(input, '1');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }, idx);
+    }
+    await page.waitForTimeout(300);
+
+    // Solve — should fail because of the duplicate
+    await solveBoard(page);
+
+    // Board should have solve-failure class (not solve-success)
+    const board = page.locator('.board-wrapper');
+    await expect(board).toHaveClass(/solve-failure/);
+    await expect(board).not.toHaveClass(/solve-success/);
+  }
+});
+
+// ── Test 6: Noise Animation — Multiple Unique Reveal Delays ────────
 
 test('noise animation: randomize produces multiple unique reveal delays', async ({ page }) => {
   await loadApp(page);

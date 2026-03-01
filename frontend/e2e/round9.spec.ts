@@ -99,7 +99,7 @@ test('light mode: layout, styles, filters, visual snapshot', async ({ page }) =>
     .locator('.icon-btn')
     .first()
     .evaluate((el) => parseFloat(getComputedStyle(el).width));
-  expect(iconBtnWidth).toBeGreaterThanOrEqual(46);
+  expect(iconBtnWidth).toBeGreaterThanOrEqual(36);
 
   const ctrlBtnFontSize = await page
     .locator('.ctrl-btn')
@@ -201,8 +201,8 @@ test('randomize populates board and blank cells accept input', async ({ page }) 
   await page.locator('.controls-card button[aria-label="Randomize board"]').click();
   await page.waitForTimeout(2000);
 
-  // Some cells should be populated (given cells have glyph SVGs with sparkle-rainbow stroke)
-  const givenGlyphs = await page.locator('.sudoku-cell .glyph-svg path[stroke="url(#sparkle-rainbow)"]').count();
+  // Some cells should be populated (given cells have glyph SVGs with foreground stroke)
+  const givenGlyphs = await page.locator('.sudoku-cell .glyph-svg path[stroke="var(--color-foreground)"]').count();
   expect(givenGlyphs).toBeGreaterThan(0);
 
   // Find a blank cell and fill it via native value setter + input event

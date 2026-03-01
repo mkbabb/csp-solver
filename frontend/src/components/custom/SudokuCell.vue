@@ -7,6 +7,7 @@ const props = defineProps<{
   value: number
   isGiven: boolean
   isOverridden: boolean
+  isSolved: boolean
   isRevealed: boolean
   noiseDelay: number
   boardSize: number
@@ -116,6 +117,7 @@ function focusInput() {
       :value="displayValue"
       :is-given="isGiven"
       :is-overridden="isOverridden"
+      :is-solved="isSolved"
       :is-revealed="isRevealed"
       :noise-delay="noiseDelay"
       :position="position"

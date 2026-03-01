@@ -9,6 +9,7 @@ const props = defineProps<{
     value: string;
     isGiven: boolean;
     isOverridden: boolean;
+    isSolved: boolean;
     isRevealed: boolean;
     noiseDelay: number;
     position: number;
@@ -26,15 +27,17 @@ const glyph = computed(() => {
     return getVariant(props.value, props.position);
 });
 
-// Given non-overridden cells get sparkle-rainbow; everything else gets user-ink
+// Given non-overridden cells are original clues; solver-introduced cells get sparkle-rainbow
 const isGivenOriginal = computed(() => props.isGiven && !props.isOverridden);
 
 const strokeColor = computed(() => {
-    return isGivenOriginal.value ? 'url(#sparkle-rainbow)' : 'var(--color-user-ink, #2563eb)';
+    if (props.isSolved) return 'url(#sparkle-rainbow)';
+    if (isGivenOriginal.value) return 'var(--color-foreground)';
+    return 'var(--color-user-ink, #2563eb)';
 });
 
 const strokeWidth = computed(() => {
-    return props.isGiven ? 5 : 4.5;
+    return props.isGiven || props.isSolved ? 5 : 4.5;
 });
 
 function cleanupAnimations() {
@@ -52,10 +55,12 @@ function startAutoWiggle() {
     if (!pathRef.value || !props.value) return;
     const variants = getAllVariants(props.value);
     if (variants.length >= 2) {
+        // Per-cell duration jitter (±400ms around 2500ms) prevents sync
+        const jitter = ((props.position * 7 + 13) % 800) - 400;
         wiggleAnim = createGlyphWiggle(
             pathRef.value,
             variants.map((v) => v.d),
-            { duration: 800 },
+            { duration: 2500 + jitter },
         );
         if (wiggleAnim) {
             wiggleAnim.play();
@@ -76,31 +81,41 @@ function setupDrawIn() {
         });
         if (drawInAnim) {
             drawInAnim.play();
-            // After draw-in, start auto-wiggle for given non-overridden cells
-            if (isGivenOriginal.value) {
+            // After draw-in, start auto-wiggle for solver-introduced cells
+            if (props.isSolved) {
                 const totalDelay = (props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay) + DRAW_IN_PRESETS.glyph.duration;
                 setTimeout(() => {
-                    if (isGivenOriginal.value) startAutoWiggle();
+                    if (props.isSolved) startAutoWiggle();
                 }, totalDelay);
             }
         }
-    } else {
-        // Show immediately for given cells and user-entered cells
+    } else if (!props.isRevealed && props.value) {
+        // Quick draw-in for user-typed cells; instant show for given/solved already present
+        if (!props.isGiven && !props.isSolved) {
+            drawInAnim = createGlyphDrawIn(pathRef.value, glyph.value.length, {
+                duration: 150,
+                delay: 0,
+            });
+            if (drawInAnim) {
+                drawInAnim.play();
+                return;
+            }
+        }
         pathRef.value.style.strokeDasharray = 'none';
         pathRef.value.style.strokeDashoffset = '0';
-        // Auto-wiggle for given non-overridden (non-revealed, already present)
-        if (isGivenOriginal.value) {
+        // Auto-wiggle for solver-introduced cells that are already present
+        if (props.isSolved) {
             startAutoWiggle();
         }
     }
 }
 
-// Wiggle on hover — skip for given non-overridden (they auto-wiggle)
+// Wiggle on hover — skip for solved cells (they auto-wiggle)
 watch(
     () => props.isHovered,
     (hovered) => {
         if (!pathRef.value || !props.value) return;
-        if (isGivenOriginal.value) return; // skip — auto-wiggle handles these
+        if (props.isSolved) return; // skip — auto-wiggle handles these
 
         if (hovered) {
             const variants = getAllVariants(props.value);

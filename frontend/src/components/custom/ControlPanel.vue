@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { Shuffle, Eraser, Sparkles } from 'lucide-vue-next'
 import type { Difficulty } from '@/composables/useSudoku'
-import { mulberry32 } from '@/lib/handDrawnPaths'
+import { ghostUnderline, scribbleUnderline } from '@/lib/scribbleUnderline'
 import { useTheme } from '@/composables/useTheme'
 import { useLineBoil } from '@/composables/useLineBoil'
 
@@ -12,66 +12,6 @@ const { currentFrame: boilFrame } = useLineBoil(6, 500)
 
 // Reactive filter URL for control panel — avoids :global(.dark) CSS scoping bug
 const panelFilter = computed(() => isDark.value ? 'url(#stroke-dark)' : 'url(#stroke-light)')
-
-/** Generate a lighter ghost underline for hover state (thinner, more transparent) */
-function ghostUnderline(seed: number, color: string): string {
-    const rng = mulberry32(seed * 7 + 31);
-    const w = 100, h = 12;
-    const startX = 4 + rng() * 4;
-    const endX = w - 4 - rng() * 4;
-    const baseY = h * 0.5;
-
-    let d = `M${startX.toFixed(1)},${(baseY + (rng() - 0.5) * 2).toFixed(1)}`;
-    const segs = 3 + Math.floor(rng() * 2);
-    for (let i = 1; i <= segs; i++) {
-        const x = startX + ((endX - startX) * i) / segs;
-        const y = baseY + (rng() - 0.5) * 3;
-        const cpx = startX + ((endX - startX) * (i - 0.5)) / segs + (rng() - 0.5) * 6;
-        const cpy = baseY + (rng() - 0.5) * 4;
-        d += ` Q${cpx.toFixed(1)},${cpy.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
-    }
-
-    const sw = 1.2 + rng() * 0.8;
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}'><path d='${d}' fill='none' stroke='${color}' stroke-width='${sw.toFixed(1)}' stroke-linecap='round' stroke-linejoin='round' opacity='0.4'/></svg>`;
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-}
-
-function scribbleUnderline(seed: number, color: string): string {
-    const rng = mulberry32(seed * 13 + 47);
-    const w = 100, h = 12;
-    // Start slightly inward for centering
-    const startX = 2 + rng() * 3;
-    const endX = w - 2 - rng() * 3;
-    const baseY = h * 0.5;
-
-    // First pass — main wobbly stroke
-    let d = `M${startX.toFixed(1)},${(baseY + (rng() - 0.5) * 3).toFixed(1)}`;
-    const segs = 4 + Math.floor(rng() * 3);
-    for (let i = 1; i <= segs; i++) {
-        const x = startX + ((endX - startX) * i) / segs;
-        const y = baseY + (rng() - 0.5) * 5;
-        const cpx = startX + ((endX - startX) * (i - 0.5)) / segs + (rng() - 0.5) * 8;
-        const cpy = baseY + (rng() - 0.5) * 6;
-        d += ` Q${cpx.toFixed(1)},${cpy.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
-    }
-
-    // Second pass — slightly offset retrace for pencil "double-stroke" effect
-    const offset = 1.5 + rng() * 1.5;
-    d += ` M${(endX - rng() * 4).toFixed(1)},${(baseY + offset + (rng() - 0.5) * 2).toFixed(1)}`;
-    const segs2 = 3 + Math.floor(rng() * 2);
-    for (let i = 1; i <= segs2; i++) {
-        const x = endX - ((endX - startX) * i) / segs2;
-        const y = baseY + offset + (rng() - 0.5) * 4;
-        const cpx = endX - ((endX - startX) * (i - 0.5)) / segs2 + (rng() - 0.5) * 10;
-        const cpy = baseY + offset + (rng() - 0.5) * 5;
-        d += ` Q${cpx.toFixed(1)},${cpy.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
-    }
-
-    // Varying stroke width simulated via multiple thin strokes in the SVG
-    const sw = 1.8 + rng() * 1.2;
-    const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${w} ${h}'><path d='${d}' fill='none' stroke='${color}' stroke-width='${sw.toFixed(1)}' stroke-linecap='round' stroke-linejoin='round' opacity='0.85'/></svg>`;
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-}
 
 const sizes = [
   { value: 2, label: '4×4' },
@@ -148,7 +88,7 @@ function togglePanel(panel: 'size' | 'difficulty') {
             v-for="s in sizes"
             :key="s.value"
             @click="emit('update:size', s.value); expandedPanel = null"
-            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150"
+            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
             :class="
               size === s.value
                 ? 'text-foreground font-bold selected-item'
@@ -174,7 +114,7 @@ function togglePanel(panel: 'size' | 'difficulty') {
             v-for="d in difficulties"
             :key="d.value"
             @click="emit('update:difficulty', d.value); expandedPanel = null"
-            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150"
+            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
             :class="[
               difficulty === d.value
                 ? `font-bold selected-item ${d.colorClass}`
@@ -337,8 +277,8 @@ function togglePanel(panel: 'size' | 'difficulty') {
 }
 
 .section-heading {
-  font-size: 1.625rem;
-  line-height: 2rem;
+  font-size: 1.125rem;
+  line-height: 1.5rem;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -402,8 +342,8 @@ function togglePanel(panel: 'size' | 'difficulty') {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 0.5rem;
   color: var(--color-muted-foreground);
   background: transparent;
