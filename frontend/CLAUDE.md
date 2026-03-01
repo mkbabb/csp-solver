@@ -1,0 +1,145 @@
+# Frontend — Sudoku UI
+
+Vue 3 + TypeScript + Tailwind v4 single-page application. Hand-drawn crayon aesthetic (Rough.js, custom SVG glyphs, stroke-dasharray animations). No router, no state library.
+
+## File Tree
+
+```
+frontend/
+├── Dockerfile                          # Multi-stage: dev (Vite HMR) / prod (nginx SPA)
+├── index.html                          # Entry HTML, Google Fonts (Fraunces, Fira Code, Patrick Hand)
+├── package.json                        # Vue 3, roughjs, keyframes.js, lucide, vueuse, reka-ui
+├── vite.config.ts                      # Port 3000, /api proxy → :8000, ES2020, vue-vendor chunk
+├── tailwind.config.ts                  # Dark mode (selector), custom fonts/colors/animations
+├── tsconfig.json                       # Strict, @/* alias, bundler resolution
+├── components.json                     # shadcn-vue config (unused in practice)
+└── src/
+    ├── App.vue                         # Root layout: logo+board column, sidebar, sun corner
+    ├── main.ts                         # createApp + mount
+    ├── assets/
+    │   └── index.css                   # Tailwind v4 imports, CSS vars (light/dark), paper texture
+    ├── components/
+    │   ├── custom/                     # Game components
+    │   │   ├── SudokuBoard.vue         # Grid container (pane-less), animation state machine
+    │   │   ├── SudokuCell.vue          # Cell input + ghost wobbleRect hover
+    │   │   ├── HandDrawnGrid.vue       # SVG grid lines (jagged), path-based boil (~6.7fps), ~800ms draw-in
+    │   │   ├── HandwrittenGlyph.vue    # SVG digit rendering, draw-in, wiggle on hover
+    │   │   ├── ControlPanel.vue        # Size/difficulty selectors, action buttons
+    │   │   ├── DarkModeToggle.vue      # Sun/moon toggle, wobble-celestial filter, sparkle diamonds
+    │   │   ├── FilterTuner.vue         # Live tuner for filter presets and grid boil config
+    │   │   └── PencilCursor.vue        # Animated pencil overlay (mounted, not actively used)
+    │   └── decorative/                 # Atmospheric components
+    │       ├── SvgFilters.vue          # Global SVG defs: grain-static, wobble-*, stroke-* filters
+    │       ├── VineBorder.vue          # Animated vine with rough.js fruits (Yoshi's Story style)
+    │       ├── HandwrittenLogo.vue     # "sudoku" text with wobble-logo filter
+    │       ├── SpiralSun.vue           # Rotating sun (50s spin, 6s pulse)
+    │       ├── CrayonHeart.vue         # Heart with scribble fill animation
+    │       └── DoodleAccents.vue       # Margin doodles: daisies, notes, stars, spirals
+    ├── composables/
+    │   ├── useSudoku.ts                # Core game state: size, difficulty, values, givenCells, solveState
+    │   ├── useApi.ts                   # GET /board/random, POST /board/solve
+    │   ├── useTheme.ts                 # Dark mode via @vueuse/core useDark
+    │   ├── useDrawIn.ts                # SVG stroke-dashoffset animation (keyframes.js)
+    │   ├── useGlyphAnimation.ts        # Solve sequence: staggered cell draw-in + pencil tracking
+    │   ├── useLineBoil.ts              # Frame index cycling for path-based boil and wobble effects
+    │   └── useScribbleFill.ts          # Infinite traveling-dash snake animation
+    └── lib/
+        ├── utils.ts                    # cn() — clsx + tailwind-merge
+        ├── handDrawnPaths.ts           # mulberry32, wobbleLine, wobbleRect, generateGridPaths, generateGridBoilFrames
+        ├── pencilConfig.ts             # Centralized stroke, filter preset, boil, and draw-in config
+        ├── scribbleFill.ts             # Scan-line hachure fill for arbitrary closed SVG paths
+        ├── animation/
+        │   └── glyphAnimations.ts      # createGlyphDrawIn, createGlyphWiggle
+        └── glyphs/
+            ├── glyphPaths.ts           # Pre-drawn SVG paths: digits 0-9 (2-3 variants), letters A-G
+            └── glyphRegistry.ts        # Deterministic variant selection via spatial hash
+```
+
+## Architecture
+
+```
+App.vue
+├── SvgFilters              # Mount once: global filter defs (grain, wobble, stroke)
+├── DarkModeToggle (fixed)  # Top-right corner, sun sparkles / moon stars
+├── Mobile header           # @mbabb link (mobile only)
+├── Main
+│   ├── Board column
+│   │   ├── HandwrittenLogo # Left-aligned above board
+│   │   └── SudokuBoard     # Pane-less, grid lines extend freely
+│   │       ├── HandDrawnGrid   # Path-based boil (~6.7fps), grain-static filter
+│   │       └── SudokuCell[]    # Ghost wobbleRect on hover
+│   │           └── HandwrittenGlyph
+│   ├── Desktop sidebar
+│   │   ├── @mbabb          # Hover card with GitHub link
+│   │   └── ControlPanel    # Size/difficulty/actions
+│   └── Mobile actions      # Shuffle/Clear/Solve below board
+├── FilterTuner (fixed)    # Wrench icon, live preset/boil parameter tuning
+```
+
+## State Management
+
+No Pinia/Vuex. Single `useSudoku()` composable holds all game state:
+- `size` (2/3/4), `difficulty` (EASY/MEDIUM/HARD)
+- `values: Record<string, number>` (0 = empty)
+- `givenCells: Set<string>` (immutable clues)
+- `solveState`: idle → solving → solved/failed/error
+- `boardGeneration`: counter, triggers grid redraw on change
+
+## Animation System
+
+All animations respect `prefers-reduced-motion`.
+
+| Layer | Mechanism | Timing |
+|---|---|---|
+| Grid draw-in/erase | stroke-dashoffset via keyframes.js | ~800ms staggered with jitter |
+| Cell reveal (solve) | CSS `cell-reveal` animation | 300ms cubic-bezier |
+| Glyph draw-in | stroke-dashoffset | 350ms easeOutCubic |
+| Glyph wiggle (hover) | SVG path `d` attribute morphing | 800ms alternate loop |
+| Line boil | Path d-attribute cycling (4 frames) | 150ms/frame (~6.7fps) |
+| Sun sparkle boil | Diamond polygon wobble (light mode) | 125ms/frame (~8fps) |
+| Star boil | Star polygon wobble (dark mode) | 125ms/frame (~8fps) |
+| Vine growth | stroke-dasharray + scale transforms | 2500ms + staggered fruits |
+
+## Visual Style
+
+- **Aesthetic**: Hand-drawn crayon, Yoshi's Story palette
+- **Grid lines**: Jagged linear segments (not smooth curves), angular kinks
+- **Board**: Pane-less — no shadow, border, or padding; grid extends freely
+- **Ghost hover**: Hand-drawn wobbleRect
+- **Light**: Cream paper background, dark ink, sun with sparkle diamonds
+- **Dark**: Warm brown background, muted accents, moon with twinkling stars
+- **Rendering**: Rough.js (vine, fruits, doodles, logo), custom wobbleLine (grid), pre-drawn SVG paths (glyphs)
+- **Fonts**: Fraunces (display), Fira Code (mono), Patrick Hand (handwritten)
+- **Solve feedback**: Grid lines recolor (green success, red failure + shake)
+- **FilterTuner**: Wrench icon (fixed position)—live parameter tuning for all filter presets and boil config
+
+## pencilConfig.ts
+
+Centralized reactive config in `lib/pencilConfig.ts`. Mutations propagate live to all consumers.
+
+- **PENCIL** — stroke width/roughness per element tier (gridFrame, gridSubgrid, gridCell, logoText, vine, fruitOutline)
+- **YOSHI_COLORS** — canonical palette: outlineBlack, heart, apple, banana, grapes, flower, leaf, vine
+- **FILTER_PRESETS** — reactive `Record<string, FilterPreset>`, 6 presets (see below). `resetPreset(id)` / `resetAllPresets()` restore frozen defaults.
+- **BOIL_CONFIG** — reactive `BoilConfig`: `frameCount` (4), `intervalMs` (150), `frameBoil` (1.2), `subgridBoil` (0.8), `cellBoil` (0.5). `resetBoilConfig()` restores defaults.
+- **DRAW_IN_PRESETS** — frozen timing presets per element: duration, stagger, jitter, baseDelay, timing function
+
+### Filter IDs
+
+| ID | Type | Usage |
+|---|---|---|
+| `grain-static` | Static grain | Grid lines, glyphs, icon buttons |
+| `wobble-logo` | Animated wobble | Logo text |
+| `wobble-celestial` | Animated wobble | Sun/moon, icon hover |
+| `wobble-heart` | Animated wobble | Heart, control hover |
+| `stroke-light` | Multipass stroke | Control panel (light mode) |
+| `stroke-dark` | Multipass stroke | Control panel (dark mode) |
+
+## Commands
+
+```bash
+npm install         # Install deps
+npm run dev         # Vite dev server (:3000)
+npm run build       # vue-tsc + vite build
+npm run preview     # Preview production build
+npm run lint        # Prettier format
+```

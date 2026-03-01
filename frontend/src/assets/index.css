@@ -39,6 +39,18 @@
   --color-medium: hsl(45 93% 47%);
   --color-hard: hsl(0 84% 60%);
 
+  /* Handwritten glyph colors */
+  --color-user-ink: #2563eb;
+
+  /* Crayon palette */
+  --color-crayon-green: #2DC653;
+  --color-crayon-orange: #F4A236;
+  --color-crayon-rose: #E8315B;
+  --color-crayon-blue: #4A90D9;
+
+  /* Grid line colors */
+  --grid-line-color: hsl(0 0% 15%);
+
   /* Paper textures */
   --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.18'/%3E%3C/svg%3E");
 }
@@ -69,7 +81,16 @@
   --color-medium: hsl(45 93% 37%);
   --color-hard: hsl(0 62% 40%);
 
-  --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.10'/%3E%3C/svg%3E");
+  --color-user-ink: #60a5fa;
+
+  --color-crayon-green: #3DD968;
+  --color-crayon-orange: #F5B35C;
+  --color-crayon-rose: #FF5C7C;
+  --color-crayon-blue: #6AABEB;
+
+  --grid-line-color: hsl(48 10% 80%);
+
+  --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
 }
 
 @layer base {
@@ -85,65 +106,63 @@
   /* Cartoon shadow variants */
   .cartoon-shadow-sm {
     box-shadow:
-      -6px 4px 0px rgba(0, 0, 0, 0.14),
+      6px 4px 0px rgba(0, 0, 0, 0.14),
       0 6px 0px rgba(0, 0, 0, 0.14),
-      -6px 6px 0px rgba(0, 0, 0, 0.12);
+      6px 6px 0px rgba(0, 0, 0, 0.12);
     border: 2px solid var(--color-border);
     transform: translateY(-2px);
   }
 
   .cartoon-shadow-md {
     box-shadow:
-      -8px 5px 0px rgba(0, 0, 0, 0.14),
+      8px 5px 0px rgba(0, 0, 0, 0.14),
       0 8px 0px rgba(0, 0, 0, 0.14),
-      -8px 8px 0px rgba(0, 0, 0, 0.12);
+      8px 8px 0px rgba(0, 0, 0, 0.12);
     border: 2px solid var(--color-border);
     transform: translateY(-2px);
   }
 
   .dark .cartoon-shadow-sm {
     box-shadow:
-      -6px 4px 0px rgba(255, 255, 255, 0.09),
+      6px 4px 0px rgba(255, 255, 255, 0.09),
       0 6px 0px rgba(255, 255, 255, 0.09),
-      -6px 6px 0px rgba(255, 255, 255, 0.06);
+      6px 6px 0px rgba(255, 255, 255, 0.06);
     border: 2px solid var(--color-border);
   }
 
   .dark .cartoon-shadow-md {
     box-shadow:
-      -8px 5px 0px rgba(255, 255, 255, 0.09),
+      8px 5px 0px rgba(255, 255, 255, 0.09),
       0 8px 0px rgba(255, 255, 255, 0.09),
-      -8px 8px 0px rgba(255, 255, 255, 0.06);
+      8px 8px 0px rgba(255, 255, 255, 0.06);
     border: 2px solid var(--color-border);
   }
 
-  /* Solve success: green borders on board and all children */
+  /* Solve success: grid lines turn green + green-tinted shadow */
+  .solve-success .grid-line {
+    stroke: var(--color-easy) !important;
+    transition: stroke 500ms;
+  }
+
   .solve-success {
-    border: 3px solid var(--color-easy) !important;
     box-shadow:
-      -8px 5px 0px color-mix(in srgb, var(--color-easy) 40%, transparent),
-      0 8px 0px color-mix(in srgb, var(--color-easy) 40%, transparent),
-      -8px 8px 0px color-mix(in srgb, var(--color-easy) 30%, transparent);
-    transform: translateY(-2px);
+      8px 5px 0px rgba(45, 198, 83, 0.25),
+      0 8px 0px rgba(45, 198, 83, 0.2),
+      8px 8px 0px rgba(45, 198, 83, 0.15) !important;
+    transition: box-shadow 500ms;
   }
 
-  .solve-success * {
-    border-color: var(--color-easy) !important;
-  }
-
-  /* Solve failure: red borders + shake */
+  /* Solve failure: grid lines turn red + shake + red-tinted shadow */
   .solve-failure {
-    border: 3px solid var(--color-hard) !important;
-    box-shadow:
-      -8px 5px 0px color-mix(in srgb, var(--color-hard) 40%, transparent),
-      0 8px 0px color-mix(in srgb, var(--color-hard) 40%, transparent),
-      -8px 8px 0px color-mix(in srgb, var(--color-hard) 30%, transparent);
-    transform: translateY(-2px);
     animation: shake 0.6s linear;
+    box-shadow:
+      8px 5px 0px rgba(232, 49, 91, 0.25),
+      0 8px 0px rgba(232, 49, 91, 0.2),
+      8px 8px 0px rgba(232, 49, 91, 0.15) !important;
   }
 
-  .solve-failure * {
-    border-color: var(--color-hard) !important;
+  .solve-failure .grid-line {
+    stroke: var(--color-hard) !important;
   }
 
   /* Shake animation */
@@ -160,17 +179,32 @@
     100% { transform: scale(1); opacity: 1; }
   }
 
+  /* Sudoku cell focus styling */
+  .sudoku-cell:focus-within {
+    background: color-mix(in srgb, var(--color-accent) 50%, transparent);
+    outline: 1px solid color-mix(in srgb, var(--color-ring) 30%, transparent);
+    outline-offset: -1px;
+    border-radius: 2px;
+  }
+
   /* Fira Code utility */
   .fira-code {
     font-family: 'Fira Code', monospace;
   }
 
-  /* Reduced motion */
+  /* Handwritten font utility */
+  .handwritten {
+    font-family: 'Patrick Hand', cursive;
+    letter-spacing: 0.02em;
+  }
+
+  /* Reduced motion: kill looping animations but allow brief transitions
+     so that components can provide their own graceful reduced-motion fallback
+     (e.g. DarkModeToggle keeps a 200ms opacity fade). */
   @media (prefers-reduced-motion: reduce) {
     * {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
     }
   }
 }

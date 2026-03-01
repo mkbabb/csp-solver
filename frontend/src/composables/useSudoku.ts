@@ -19,6 +19,7 @@ export function useSudoku() {
   const solvedValues = ref<Record<string, number>>({})
   const loading = ref(false)
   const errorMessage = ref('')
+  const boardGeneration = ref(0)
 
   function initBoard() {
     values.value = {}
@@ -29,6 +30,7 @@ export function useSudoku() {
     for (let i = 0; i < totalCells.value; i++) {
       values.value[String(i)] = 0
     }
+    boardGeneration.value++
   }
 
   function clearBoard() {
@@ -39,6 +41,7 @@ export function useSudoku() {
       values.value[String(i)] = 0
     }
     givenCells.value = new Set()
+    boardGeneration.value++
   }
 
   function setCell(pos: number, value: number) {
@@ -116,6 +119,7 @@ export function useSudoku() {
     solvedValues,
     loading,
     errorMessage,
+    boardGeneration,
     initBoard,
     clearBoard,
     setCell,

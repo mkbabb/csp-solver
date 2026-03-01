@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import HandwrittenGlyph from './HandwrittenGlyph.vue'
 
 const props = defineProps<{
   position: number
@@ -8,6 +9,8 @@ const props = defineProps<{
   isRevealed: boolean
   boardSize: number
   subgridSize: number
+  /** Pre-computed ghost rect path in 1000×1000 board viewBox coords */
+  ghostPath: string
 }>()
 
 const emit = defineEmits<{
@@ -15,23 +18,25 @@ const emit = defineEmits<{
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
+const cellRef = ref<HTMLDivElement | null>(null)
+const isHovered = ref(false)
+const isFocused = ref(false)
 
-const row = computed(() => Math.floor(props.position / props.boardSize))
-const col = computed(() => props.position % props.boardSize)
+// Cell is "active" when hovered or focused and editable
+const isActive = computed(() => !props.isGiven && (isHovered.value || isFocused.value))
 
-const borderClasses = computed(() => {
-  const classes: string[] = []
-  const N = props.subgridSize
-
-  // Thicker borders at subgrid boundaries
-  if (row.value % N === 0 && row.value !== 0) classes.push('border-t-2 border-t-foreground/30')
-  if (col.value % N === 0 && col.value !== 0) classes.push('border-l-2 border-l-foreground/30')
-
-  // Right/bottom edge
-  if (col.value === props.boardSize - 1) classes.push('border-r border-r-border')
-  if (row.value === props.boardSize - 1) classes.push('border-b border-b-border')
-
-  return classes.join(' ')
+// Compute the cell's viewBox region in 1000×1000 board coords
+const cellViewBox = computed(() => {
+  const cellSize = 1000 / props.boardSize
+  const col = props.position % props.boardSize
+  const row = Math.floor(props.position / props.boardSize)
+  // Pad outward by half a cell to allow the ghost stroke to render without clipping
+  const pad = cellSize * 0.15
+  const x = col * cellSize - pad
+  const y = row * cellSize - pad
+  const w = cellSize + pad * 2
+  const h = cellSize + pad * 2
+  return `${x} ${y} ${w} ${h}`
 })
 
 const displayValue = computed(() => {
@@ -66,16 +71,25 @@ function handleKeydown(event: KeyboardEvent) {
     event.preventDefault()
   }
 }
+
+function focusInput() {
+  inputRef.value?.focus()
+}
 </script>
 
 <template>
   <div
-    class="relative flex items-center justify-center border border-border/50"
+    ref="cellRef"
+    class="sudoku-cell relative flex items-center justify-center"
     :class="[
-      borderClasses,
       isRevealed ? 'animate-[cell-reveal_0.3s_cubic-bezier(0.68,-0.55,0.265,1.55)]' : '',
+      isActive ? 'is-active' : '',
     ]"
+    @click="focusInput"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
   >
+    <!-- Hidden input for keyboard interaction -->
     <input
       ref="inputRef"
       type="text"
@@ -85,13 +99,72 @@ function handleKeydown(event: KeyboardEvent) {
       :maxlength="boardSize >= 10 ? 2 : 1"
       @input="handleInput"
       @keydown="handleKeydown"
-      class="fira-code h-full w-full bg-transparent text-center outline-none transition-colors duration-150"
+      @focus="isFocused = true"
+      @blur="isFocused = false"
+      class="absolute inset-0 h-full w-full bg-transparent text-center opacity-0 outline-none"
       :class="[
-        isGiven
-          ? 'font-bold text-foreground cursor-default'
-          : 'text-blue-600 dark:text-blue-400 hover:bg-accent/50 focus:bg-accent focus:ring-1 focus:ring-ring/30',
-        boardSize <= 9 ? 'text-lg sm:text-xl' : 'text-xs sm:text-sm',
+        isGiven ? 'cursor-default' : 'cursor-pointer',
       ]"
     />
+
+    <!-- SVG handwritten glyph overlay -->
+    <HandwrittenGlyph
+      v-if="value !== 0"
+      :value="displayValue"
+      :is-given="isGiven"
+      :is-revealed="isRevealed"
+      :position="position"
+      :board-size="boardSize"
+      :is-hovered="isHovered"
+    />
+
+    <!-- Ghost cell highlight — hand-drawn border on hover/focus (board-coord viewBox) -->
+    <div
+      v-if="!isGiven"
+      class="cell-ghost pointer-events-none absolute inset-0"
+      :class="{ 'is-active': isActive }"
+    >
+      <svg
+        class="absolute inset-0 h-full w-full overflow-visible"
+        :viewBox="cellViewBox"
+        preserveAspectRatio="xMidYMid meet"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          :d="ghostPath"
+          class="cell-ghost-path"
+        />
+      </svg>
+    </div>
   </div>
 </template>
+
+<style scoped>
+/* Ghost wrapper — instant show/hide for cursor-tracking responsiveness */
+.cell-ghost {
+  opacity: 0;
+}
+
+.cell-ghost.is-active {
+  opacity: 1;
+}
+
+/* Ghost path styling — hand-drawn pencil border + tinted fill */
+.cell-ghost-path {
+  fill: var(--color-foreground);
+  fill-opacity: 0.06;
+  stroke: var(--color-foreground);
+  stroke-width: 6;
+  stroke-opacity: 0.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Ensure ghost overflow is not clipped */
+.sudoku-cell {
+  overflow: visible;
+}
+.sudoku-cell.is-active {
+  z-index: 10;
+}
+</style>
