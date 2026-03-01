@@ -8,10 +8,7 @@ import SvgFilters from '@/components/decorative/SvgFilters.vue'
 import HandwrittenLogo from '@/components/decorative/HandwrittenLogo.vue'
 import FilterTuner from '@/components/custom/FilterTuner.vue'
 import CrayonHeart from '@/components/decorative/CrayonHeart.vue'
-import { ChevronDown, Shuffle, Eraser, Sparkles } from 'lucide-vue-next'
-
 const sudoku = useSudoku()
-const mobileControlsOpen = ref(false)
 const hoverCardOpen = ref(false)
 
 function toggleHoverCard() {
@@ -75,38 +72,6 @@ function closeHoverCard() {
 
         <!-- Board + Controls row -->
         <div class="app-layout">
-          <!-- Mobile: settings dropdown above board -->
-          <div class="mobile-board-width sm:hidden">
-            <button
-              @click="mobileControlsOpen = !mobileControlsOpen"
-              class="mobile-toggle-bar flex w-full items-center justify-end rounded-lg bg-card px-4 py-2 text-sm font-medium text-foreground"
-              :class="mobileControlsOpen ? 'is-open rounded-b-none' : 'cartoon-shadow-sm'"
-            >
-              <ChevronDown
-                :size="18"
-                class="transition-transform duration-300 ease-out"
-                :class="mobileControlsOpen ? 'rotate-180' : ''"
-              />
-            </button>
-
-            <div
-              class="mobile-panel"
-              :class="{ 'is-open': mobileControlsOpen }"
-            >
-              <div class="mobile-panel-inner rounded-b-lg bg-card px-5 pb-4 pt-3 cartoon-shadow-sm">
-                <ControlPanel
-                  :size="sudoku.size.value"
-                  :difficulty="sudoku.difficulty.value"
-                  :loading="sudoku.loading.value"
-                  :solve-state="sudoku.solveState.value"
-                  :hide-actions="true"
-                  @update:size="sudoku.size.value = $event"
-                  @update:difficulty="sudoku.difficulty.value = $event"
-                />
-              </div>
-            </div>
-          </div>
-
           <!-- Board -->
           <SudokuBoard
             :size="sudoku.size.value"
@@ -120,34 +85,21 @@ function closeHoverCard() {
             @update-cell="(pos: number, val: number) => sudoku.setCell(pos, val)"
           />
 
-          <!-- Mobile: action buttons below board -->
+          <!-- Mobile: unified controls card below board -->
           <div class="mobile-board-width sm:hidden">
-            <div class="flex items-center justify-center gap-2 rounded-lg bg-card px-4 py-2 cartoon-shadow-sm">
-              <button
-                @click="sudoku.randomize()"
-                :disabled="sudoku.loading.value"
-                class="action-btn"
-                aria-label="Randomize board"
-              >
-                <Shuffle :size="28" />
-              </button>
-              <button
-                @click="sudoku.clearBoard()"
-                :disabled="sudoku.loading.value"
-                class="action-btn"
-                aria-label="Clear board"
-              >
-                <Eraser :size="28" />
-              </button>
-              <button
-                @click="sudoku.solve()"
-                :disabled="sudoku.loading.value"
-                class="action-btn"
-                aria-label="Solve puzzle"
-              >
-                <svg v-if="sudoku.loading.value" class="h-7 w-7 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                <Sparkles v-else :size="28" class="sparkle-icon" />
-              </button>
+            <div class="rounded-lg bg-card px-4 py-3 cartoon-shadow-sm">
+              <ControlPanel
+                :size="sudoku.size.value"
+                :difficulty="sudoku.difficulty.value"
+                :loading="sudoku.loading.value"
+                :solve-state="sudoku.solveState.value"
+                mobile
+                @update:size="sudoku.size.value = $event"
+                @update:difficulty="sudoku.difficulty.value = $event"
+                @randomize="sudoku.randomize()"
+                @clear="sudoku.clearBoard()"
+                @solve="sudoku.solve()"
+              />
             </div>
           </div>
 
@@ -278,67 +230,5 @@ function closeHoverCard() {
   transform: scale(1) translateY(0);
 }
 
-/* Mobile toggle bar */
-.mobile-toggle-bar {
-  transition: border-radius 200ms ease, box-shadow 200ms ease;
-}
-
-.mobile-toggle-bar.is-open {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-/* Mobile panel — smooth CSS transition (no keyframes) */
-.mobile-panel {
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition: grid-template-rows 300ms cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 250ms ease;
-}
-
-.mobile-panel.is-open {
-  grid-template-rows: 1fr;
-  opacity: 1;
-}
-
-.mobile-panel-inner {
-  overflow: hidden;
-}
-
-/* Action buttons below board (mobile) */
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 0.75rem;
-  color: var(--color-muted-foreground);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition: all 150ms;
-}
-
-.action-btn:hover {
-  color: var(--color-foreground);
-  background: var(--color-accent);
-}
-
-.action-btn:active {
-  transform: scale(0.93);
-}
-
-.action-btn:disabled {
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-/* Sparkle icon - pastel rainbow filled */
-.sparkle-icon :deep(*) {
-  stroke: url(#sparkle-rainbow) !important;
-  fill: url(#sparkle-rainbow) !important;
-}
 
 </style>

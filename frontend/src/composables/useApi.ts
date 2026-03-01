@@ -1,4 +1,4 @@
-const API_BASE = '/api/v1'
+const API_BASE = new URL('api/v1', document.baseURI).pathname
 
 export interface BoardResponse {
   values: Record<string, number>

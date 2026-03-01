@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Shuffle, Eraser, Sparkles } from 'lucide-vue-next'
 import type { Difficulty } from '@/composables/useSudoku'
 import { mulberry32 } from '@/lib/handDrawnPaths'
@@ -73,22 +73,6 @@ function scribbleUnderline(seed: number, color: string): string {
     return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
-defineProps<{
-  size: number
-  difficulty: Difficulty
-  loading: boolean
-  solveState: string
-  hideActions?: boolean
-}>()
-
-const emit = defineEmits<{
-  (e: 'update:size', value: number): void
-  (e: 'update:difficulty', value: Difficulty): void
-  (e: 'randomize'): void
-  (e: 'clear'): void
-  (e: 'solve'): void
-}>()
-
 const sizes = [
   { value: 2, label: '4×4' },
   { value: 3, label: '9×9' },
@@ -100,10 +84,131 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
   { value: 'MEDIUM', label: 'Medium', colorClass: 'crayon-orange' },
   { value: 'HARD', label: 'Hard', colorClass: 'crayon-rose' },
 ]
+
+const props = defineProps<{
+  size: number
+  difficulty: Difficulty
+  loading: boolean
+  solveState: string
+  mobile?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:size', value: number): void
+  (e: 'update:difficulty', value: Difficulty): void
+  (e: 'randomize'): void
+  (e: 'clear'): void
+  (e: 'solve'): void
+}>()
+
+const expandedPanel = ref<'size' | 'difficulty' | null>(null)
+
+function togglePanel(panel: 'size' | 'difficulty') {
+  expandedPanel.value = expandedPanel.value === panel ? null : panel
+}
+
+const currentSizeLabel = computed(() =>
+  sizes.find((s) => s.value === props.size)?.label ?? '9×9'
+)
+
+const currentDifficultyLabel = computed(() =>
+  difficulties.find((d) => d.value === props.difficulty)?.label ?? 'Easy'
+)
+
+const currentDifficultyColor = computed(() =>
+  difficulties.find((d) => d.value === props.difficulty)?.colorClass ?? 'crayon-green'
+)
 </script>
 
 <template>
-  <div class="control-panel-wrap flex flex-col items-center sm:items-stretch">
+  <!-- ═══ Mobile layout ═══ -->
+  <div v-if="mobile" class="control-panel-wrap mobile-control-panel">
+    <!-- Chip row -->
+    <div class="chip-row">
+      <button
+        class="chip"
+        :class="{ 'is-active': expandedPanel === 'size' }"
+        @click="togglePanel('size')"
+      >
+        <span class="chip-label">{{ currentSizeLabel }}</span>
+      </button>
+      <button
+        class="chip"
+        :class="[currentDifficultyColor, { 'is-active': expandedPanel === 'difficulty' }]"
+        @click="togglePanel('difficulty')"
+      >
+        <span class="chip-label">{{ currentDifficultyLabel }}</span>
+      </button>
+    </div>
+
+    <!-- Expandable options panel -->
+    <div
+      class="options-panel"
+      :class="{ 'is-open': expandedPanel !== null }"
+    >
+      <div class="options-panel-inner">
+        <!-- Size options -->
+        <div v-if="expandedPanel === 'size'" class="options-row">
+          <button
+            v-for="s in sizes"
+            :key="s.value"
+            @click="emit('update:size', s.value); expandedPanel = null"
+            class="option-btn"
+            :class="size === s.value ? 'is-selected' : ''"
+          >
+            {{ s.label }}
+          </button>
+        </div>
+
+        <!-- Difficulty options -->
+        <div v-if="expandedPanel === 'difficulty'" class="options-row">
+          <button
+            v-for="d in difficulties"
+            :key="d.value"
+            @click="emit('update:difficulty', d.value); expandedPanel = null"
+            class="option-btn"
+            :class="[d.colorClass, difficulty === d.value ? 'is-selected' : '']"
+          >
+            {{ d.label }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-2 w-full border-border/50" />
+
+    <!-- Action buttons -->
+    <div class="flex items-center justify-evenly">
+      <button
+        @click="emit('randomize')"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Randomize board"
+      >
+        <Shuffle :size="28" />
+      </button>
+      <button
+        @click="emit('clear')"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Clear board"
+      >
+        <Eraser :size="28" />
+      </button>
+      <button
+        @click="emit('solve')"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Solve puzzle"
+      >
+        <svg v-if="loading" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+        <Sparkles v-else :size="28" class="sparkle-icon" />
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ Desktop layout ═══ -->
+  <div v-else class="control-panel-wrap flex flex-col items-center sm:items-stretch">
     <!-- Filtered region: size + difficulty selectors -->
     <div class="control-panel-filtered flex flex-col items-center sm:items-stretch">
       <!-- Size selector -->
@@ -168,7 +273,6 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
       </div>
     </div>
 
-    <template v-if="!hideActions">
     <hr class="my-3 w-full border-border/50" />
 
     <!-- Action buttons — outside filtered region so tooltips are legible -->
@@ -204,7 +308,6 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
         <span class="tooltip">Solve</span>
       </button>
     </div>
-    </template>
   </div>
 </template>
 
@@ -346,5 +449,84 @@ const difficulties: { value: Difficulty; label: string; colorClass: string }[] =
 
 .icon-btn:hover .sparkle-icon {
   filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+}
+
+/* ═══ Mobile layout ═══ */
+
+.mobile-control-panel {
+  font-family: 'Fraunces', serif;
+  font-optical-sizing: auto;
+}
+
+.chip-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.chip {
+  font-family: 'Fira Code', monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.375rem 1rem;
+  border-radius: 9999px;
+  border: 2px solid var(--color-border);
+  background: var(--color-accent);
+  color: var(--color-foreground);
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.chip.is-active {
+  border-color: var(--color-foreground);
+  background: var(--color-card);
+}
+
+.chip:active {
+  transform: scale(0.95);
+}
+
+/* Options panel — grid-template-rows expand */
+.options-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.options-panel.is-open {
+  grid-template-rows: 1fr;
+}
+
+.options-panel-inner {
+  overflow: hidden;
+}
+
+.options-row {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.option-btn {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
+  border: none;
+  background: transparent;
+  color: var(--color-muted-foreground);
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.option-btn:hover {
+  color: var(--color-foreground);
+  background: var(--color-accent);
+}
+
+.option-btn.is-selected {
+  font-weight: 700;
+  color: var(--color-foreground);
+  background: var(--color-accent);
 }
 </style>
