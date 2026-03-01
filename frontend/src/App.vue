@@ -60,7 +60,7 @@ function onHoverLeave() {
               href="https://github.com/mkbabb/csp-solver"
               target="_blank"
               rel="noopener noreferrer"
-              class="font-mono text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+              class="font-mono text-xs md:text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
               @click.stop
             >@mbabb</a>
             <div class="hover-card" :class="{ 'is-open': hoverCardOpen }">
@@ -155,23 +155,26 @@ function onHoverLeave() {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0.5rem 1rem;
+  padding: 0.25rem 0.75rem;
   flex-shrink: 0;
-}
-
-.header-toggle {
-  width: 3.5rem;
-  height: 3.5rem;
-  flex-shrink: 0;
+  overflow: visible;
 }
 
 @media (min-width: 768px) {
   .app-header {
-    padding: 0.75rem 1.5rem;
+    padding: 0.5rem 1.5rem;
   }
+}
+
+.header-toggle {
+  --toggle-size: 2.5rem;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+@media (min-width: 768px) {
   .header-toggle {
-    width: 5rem;
-    height: 5rem;
+    --toggle-size: 5rem;
   }
 }
 
@@ -199,8 +202,7 @@ function onHoverLeave() {
 
 @media (max-width: 767px) {
   .main-content {
-    justify-content: flex-start;
-    padding-top: 0.5rem;
+    justify-content: center;
   }
 }
 
@@ -230,8 +232,8 @@ function onHoverLeave() {
   margin-top: 0;
   padding: 1rem;
   background: color-mix(in srgb, var(--color-popover) 80%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border: 2px solid color-mix(in srgb, var(--color-border) 30%, transparent);
   border-radius: 1rem;
   opacity: 0;
@@ -257,6 +259,8 @@ function onHoverLeave() {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1) translateY(0);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 </style>
