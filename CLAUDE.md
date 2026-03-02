@@ -12,7 +12,7 @@ Fullstack CSP solver: Python 3.13 backend (FastAPI) + Vue 3 frontend (TypeScript
 │   ├── pyproject.toml          # uv/hatchling config, ruff, mypy, pytest
 │   ├── uv.lock
 │   ├── src/csp_solver/
-│   │   ├── solver/             # Core CSP engine + puzzle implementations
+│   │   ├── solver/             # CSP engine (csp, pruning, local_search) + puzzles (sudoku, sudoku_gen, futoshiki)
 │   │   ├── api/                # FastAPI routes, Pydantic models
 │   │   └── data/               # Pre-computed solution boards (JSON)
 │   └── tests/                  # pytest + pytest-asyncio
@@ -28,8 +28,8 @@ Fullstack CSP solver: Python 3.13 backend (FastAPI) + Vue 3 frontend (TypeScript
 │       ├── main.ts             # Entry point
 │       ├── assets/index.css    # Tailwind v4, CSS vars, paper texture
 │       ├── components/         # custom/ (game) + decorative/ (visual)
-│       ├── composables/        # State, API, animation, theme
-│       └── lib/                # SVG generation, glyphs, scribble fill
+│       ├── composables/        # State, API, theme, line boil
+│       └── lib/                # PRNG, path generation, grid paths, glyphs, scribble fill, vine/doodle/celestial shapes
 ├── nginx/
 │   └── sudoku.conf             # Reverse proxy config (production)
 ├── .github/workflows/
@@ -49,7 +49,7 @@ Browser ←→ Nginx (:80) ←→ Frontend (Vue 3, :3000)
 ```
 
 - **Backend**: Generalized CSP solver with backtracking, forward checking, AC3, AC-FC pruning. MRV variable ordering. Applied to Sudoku and Futoshiki.
-- **Frontend**: Hand-drawn aesthetic (Rough.js, jagged SVG grid lines, custom glyphs, stroke-dasharray animations). Grid lines use path-based boil—pre-computed path variants cycled at ~6.7fps—for organic perturbation. Pane-less board with ~800ms jittered draw-in. Centered header (@mbabb | logo | dark-mode toggle). Given cells render with `sparkle-rainbow` gradient stroke + auto-wiggle, reverting to `user-ink` on one-click override. Noise-staggered reveal animations (Fisher-Yates shuffle, 40ms/cell). Solve fills only blank cells; consecutive solves idempotent. Sun-wobble filter + sparkle diamonds (light), moon + twinkling stars (dark). `FilterTuner` for live-tuning filter and boil parameters. No router, no state library—pure Vue 3 Composition API.
+- **Frontend**: Hand-drawn aesthetic (Rough.js, jagged SVG grid lines, custom glyphs, stroke-dasharray animations). Grid lines use path-based boil—pre-computed path variants cycled at ~6.7fps—for organic perturbation. Pane-less board with ~800ms jittered draw-in. Centered header (@mbabb | logo | dark-mode toggle). Given cells render with `sparkle-rainbow` gradient stroke + auto-wiggle, reverting to `user-ink` on one-click override. Noise-staggered reveal animations (Fisher-Yates shuffle, 40ms/cell). Solve fills only blank cells; consecutive solves idempotent. Action buttons have custom icons with click animations: DiceIcon (tumble roll + pip pop), Eraser (horizontal scrub), SolveIcon (check draw-in + star sparkle). Sun-wobble filter + sparkle diamonds (light), moon + twinkling stars (dark). `FilterTuner` for live-tuning filter and boil parameters. No router, no state library—pure Vue 3 Composition API.
 - **API**: `GET /api/v1/board/random/{size}/{difficulty}`, `POST /api/v1/board/solve`, `GET /api/v1/health`
 
 ## Dev Quickstart

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Shuffle, Eraser } from 'lucide-vue-next'
+import { Eraser } from 'lucide-vue-next'
 import SolveIcon from './SolveIcon.vue'
+import DiceIcon from './DiceIcon.vue'
 import type { Difficulty } from '@/composables/useSudoku'
 import { ghostUnderline, scribbleUnderline } from '@/lib/scribbleUnderline'
 import { useTheme } from '@/composables/useTheme'
@@ -44,9 +45,23 @@ const emit = defineEmits<{
 
 const expandedPanel = ref<'size' | 'difficulty' | null>(null)
 const solveAnimating = ref(false)
+const randomizeAnimating = ref(false)
+const clearAnimating = ref(false)
 
 function togglePanel(panel: 'size' | 'difficulty') {
   expandedPanel.value = expandedPanel.value === panel ? null : panel
+}
+
+function onRandomize() {
+  randomizeAnimating.value = true
+  emit('randomize')
+  setTimeout(() => { randomizeAnimating.value = false }, 500)
+}
+
+function onClear() {
+  clearAnimating.value = true
+  emit('clear')
+  setTimeout(() => { clearAnimating.value = false }, 400)
 }
 
 function onSolve() {
@@ -143,20 +158,22 @@ function onSolve() {
     <!-- Action buttons -->
     <div class="flex items-center justify-evenly">
       <button
-        @click="emit('randomize')"
+        @click="onRandomize()"
         :disabled="loading"
         class="icon-btn"
         aria-label="Randomize board"
       >
-        <Shuffle :size="28" />
+        <DiceIcon :size="28" :playing="randomizeAnimating" />
       </button>
       <button
-        @click="emit('clear')"
+        @click="onClear()"
         :disabled="loading"
         class="icon-btn"
         aria-label="Clear board"
       >
-        <Eraser :size="28" />
+        <span :class="{ 'eraser-scrub': clearAnimating }">
+          <Eraser :size="28" />
+        </span>
       </button>
       <button
         @click="onSolve()"
@@ -241,22 +258,24 @@ function onSolve() {
     <!-- Action buttons — outside filtered region so tooltips are legible -->
     <div class="flex items-center justify-evenly">
       <button
-        @click="emit('randomize')"
+        @click="onRandomize()"
         :disabled="loading"
         class="icon-btn group relative"
         aria-label="Randomize board"
       >
-        <Shuffle :size="28" />
+        <DiceIcon :size="28" :playing="randomizeAnimating" />
         <span class="tooltip">Randomize</span>
       </button>
 
       <button
-        @click="emit('clear')"
+        @click="onClear()"
         :disabled="loading"
         class="icon-btn group relative"
         aria-label="Clear board"
       >
-        <Eraser :size="28" />
+        <span :class="{ 'eraser-scrub': clearAnimating }">
+          <Eraser :size="28" />
+        </span>
         <span class="tooltip">Clear</span>
       </button>
 
@@ -466,5 +485,21 @@ function onSolve() {
   justify-content: center;
   gap: 0.25rem;
   padding: 0.25rem 0;
+}
+
+/* Eraser scrub animation */
+.eraser-scrub {
+  display: inline-flex;
+  animation: eraserScrub 400ms ease;
+}
+
+@keyframes eraserScrub {
+  0%   { transform: translateX(0) rotate(0deg); }
+  15%  { transform: translateX(-4px) rotate(-8deg); }
+  30%  { transform: translateX(4px) rotate(6deg); }
+  45%  { transform: translateX(-3px) rotate(-5deg); }
+  60%  { transform: translateX(3px) rotate(4deg); }
+  80%  { transform: translateX(-1px) rotate(-1deg); }
+  100% { transform: translateX(0) rotate(0deg); }
 }
 </style>

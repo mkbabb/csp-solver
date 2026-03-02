@@ -174,7 +174,9 @@ effects. Given cells are rendered with a `sparkle-rainbow` gradient stroke and
 auto-wiggle animation; overriding a given cell reverts it to `user-ink` in a single
 keystroke. Noise-staggered reveal animations—Fisher-Yates shuffle with seeded PRNG,
 40ms per cell—accompany both randomize and solve. The solver fills only blank cells;
-consecutive solves are idempotent. It's served via Docker Compose + Nginx.
+consecutive solves are idempotent. Action buttons bear custom icons with click
+animations: a tumbling dice pair (randomize), a scrubbing eraser (clear), and a
+check-with-sparkle draw-in (solve). It's served via Docker Compose + Nginx.
 
 The sudoku application has but two routes, one for generating a random board, and one
 for solving an input board:

@@ -24,7 +24,9 @@ frontend/
     │   │   ├── SudokuCell.vue          # Cell input + ghost wobbleRect hover, one-click override
     │   │   ├── HandDrawnGrid.vue       # SVG grid lines (jagged), path-based boil (~6.7fps), ~800ms draw-in
     │   │   ├── HandwrittenGlyph.vue    # SVG digit rendering, draw-in, wiggle on hover, sparkle-rainbow given cells
-    │   │   ├── ControlPanel.vue        # Size/difficulty selectors, action buttons
+    │   │   ├── ControlPanel.vue        # Size/difficulty selectors, action buttons (dice roll, eraser scrub, solve check)
+    │   │   ├── DiceIcon.vue            # Custom SVG dice pair + tumble roll / pip-pop click animation
+    │   │   ├── SolveIcon.vue           # Custom SVG checkmark + sparkle star click animation
     │   │   ├── DarkModeToggle.vue      # Sun/moon toggle, wobble-celestial filter, sparkle diamonds
     │   │   ├── FilterTuner.vue         # Live tuner for filter presets and grid boil config
     │   │   └── PencilCursor.vue        # Animated pencil overlay (mounted, not actively used)
@@ -39,15 +41,20 @@ frontend/
     │   ├── useSudoku.ts                # Core game state: size, difficulty, values, givenCells, solveState
     │   ├── useApi.ts                   # GET /board/random, POST /board/solve
     │   ├── useTheme.ts                 # Dark mode via @vueuse/core useDark
-    │   ├── useDrawIn.ts                # SVG stroke-dashoffset animation (keyframes.js)
-    │   ├── useGlyphAnimation.ts        # Solve sequence: staggered cell draw-in + pencil tracking
-    │   ├── useLineBoil.ts              # Frame index cycling for path-based boil and wobble effects
-    │   └── useScribbleFill.ts          # Infinite traveling-dash snake animation
+    │   └── useLineBoil.ts              # Frame index cycling for path-based boil and wobble effects
     └── lib/
         ├── utils.ts                    # cn() — clsx + tailwind-merge
-        ├── handDrawnPaths.ts           # mulberry32, wobbleLine, wobbleRect, generateGridPaths, generateGridBoilFrames
+        ├── prng.ts                     # mulberry32 seeded PRNG (shared across all path generation)
+        ├── pathGeneration.ts           # Generic hand-drawn path primitives: wobbleLine, wobbleRect, catmullRomToBezier
+        ├── gridPaths.ts                # Sudoku grid-specific: generateGridPaths, generateGridBoilFrames
+        ├── handDrawnPaths.ts           # Re-export barrel for prng + pathGeneration + gridPaths
         ├── pencilConfig.ts             # Centralized stroke, filter preset, boil, and draw-in config
         ├── scribbleFill.ts             # Scan-line hachure fill for arbitrary closed SVG paths
+        ├── scribbleUnderline.ts        # Scribble/ghost underline SVG data URIs for control panel
+        ├── celestialGeometry.ts        # Sun ray, sparkle diamond, star polygon geometry
+        ├── vineShapes.ts               # Fruit/leaf/heart drawing functions (rough.js)
+        ├── vineGenerator.ts            # Vine orchestration: main strand, helix, thorns, tendrils, fruit placement
+        ├── doodleShapes.ts             # Margin doodle shape generators: daisy, star, spiral, etc.
         ├── animation/
         │   └── glyphAnimations.ts      # createGlyphDrawIn, createGlyphWiggle
         └── glyphs/
@@ -100,6 +107,9 @@ All animations respect `prefers-reduced-motion`.
 | Sun sparkle boil | Diamond polygon wobble (light mode) | 125ms/frame (~8fps) |
 | Star boil | Star polygon wobble (dark mode) | 125ms/frame (~8fps) |
 | Vine growth | stroke-dasharray + scale transforms | 2500ms + staggered fruits |
+| Dice roll (randomize) | CSS rotate + scale keyframes, staggered pip pop | 500ms elastic overshoot |
+| Eraser scrub (clear) | CSS translateX + rotate oscillation | 400ms ease |
+| Solve check draw-in | stroke-dashoffset + sparkle scale | 500ms cubic-bezier |
 
 ## Visual Style
 
@@ -112,6 +122,8 @@ All animations respect `prefers-reduced-motion`.
 - **Dark**: Warm brown background, muted accents, moon with twinkling stars
 - **Rendering**: Rough.js (vine, fruits, doodles, logo), custom wobbleLine (grid), pre-drawn SVG paths (glyphs)
 - **Fonts**: Fraunces (display), Fira Code (mono), Patrick Hand (handwritten)
+- **Action buttons**: Custom icons with click animations—DiceIcon (tumble roll + pip pop), Eraser (horizontal scrub), SolveIcon (check draw-in + star sparkle). Each uses a `playing` ref with timed reset (400–500ms).
+- **Grid frame**: Outer frame rect uses a smaller `framePad` (8) than the internal grid-line `pad` (26)—pushes the frame outward so thick stroke doesn't occlude edge-cell glyphs.
 - **Solve feedback**: Grid lines recolor (green success, red failure + shake)
 - **FilterTuner**: Wrench icon (fixed position)—live parameter tuning for all filter presets and boil config
 

@@ -36,7 +36,7 @@ const boardWidth = computed(() => {
   return 'min(44rem, 90vw)'
 })
 
-// Wrapper padding matches SVG pad (26/1000 viewBox) so cells align with grid lines
+// Wrapper padding matches SVG grid-line pad (26/1000 viewBox) so cells align with grid lines
 const SVG_PAD_FRAC = 26 / 1000
 const boardPadding = computed(() => {
   const remWidth = props.boardSize <= 4 ? 22 : props.boardSize <= 9 ? 36 : 44

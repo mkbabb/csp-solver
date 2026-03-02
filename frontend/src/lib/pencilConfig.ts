@@ -110,7 +110,7 @@ const DEFAULT_PRESETS: Record<string, FilterPreset> = {
     id: 'wobble-logo',
     margin: 10,
     wobble: { baseFrequency: 0.02, numOctaves: 2, scale: 3,
-      offsets: [0.01, -0.02, 0.02, -0.01], animScale: 0.15, intervalMs: 300 },
+      offsets: [0.01, -0.02, 0.02, -0.01], animScale: 0.15, intervalMs: 450 },
   },
   'wobble-celestial': {
     id: 'wobble-celestial',
