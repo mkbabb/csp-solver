@@ -9,16 +9,22 @@ backend/
 ├── Dockerfile                          # Multi-stage: dev (uvicorn --reload) / prod (4 workers)
 ├── pyproject.toml                      # Deps, ruff, mypy, pytest config
 ├── uv.lock
+├── scripts/
+│   └── generate_templates.py           # Offline puzzle template generation
+├── docs/
+│   └── csp_optimization.md             # Optimization notes and benchmarks
 ├── src/csp_solver/
 │   ├── __init__.py
 │   ├── solver/
 │   │   ├── __init__.py
-│   │   ├── csp.py                      # CSP class: variable/constraint state, backtrack, solve
-│   │   ├── pruning.py                  # Pruning algorithms: forward_check, AC3, AC_FC, revise
+│   │   ├── csp.py                      # CSP class: backtrack, solve, FC/AC3/AC-FC, revise, dom/wdeg
+│   │   ├── bitset_domain.py            # Bitmask-backed domain: O(1) copy, POPCNT len, bit-trick iter
+│   │   ├── gac_alldiff.py              # GAC all-different (Régin 1994): Hopcroft-Karp + Tarjan SCC
+│   │   ├── nogoods.py                  # Bounded nogood store with LRU eviction
 │   │   ├── local_search.py             # Min-conflicts local search: num_conflicts, min_conflicts
 │   │   ├── constraints.py              # Constraint HOFs: all_different, less_than, lambda_constraint, etc.
-│   │   ├── sudoku.py                   # Sudoku CSP creation + solving interface
-│   │   ├── sudoku_gen.py               # Board generation: solution creation, hole-digging, difficulty calibration
+│   │   ├── sudoku.py                   # Sudoku CSP creation, solving, board generation, template fast-path
+│   │   ├── sudoku_transforms.py        # Symmetry transforms: digit/row/col/band/stack perm, transpose
 │   │   └── futoshiki.py                # Futoshiki CSP creation, file parser
 │   ├── api/
 │   │   ├── __init__.py
@@ -33,66 +39,90 @@ backend/
 │   └── data/
 │       ├── __init__.py
 │       ├── sample_input.txt            # Futoshiki sample (N=5)
-│       └── sudoku_solutions/           # Pre-computed JSON boards
-│           ├── 2/                      # 20 boards (4×4)
-│           ├── 3/                      # 100 boards (9×9)
-│           ├── 4/                      # 20 boards (16×16)
-│           └── 5/                      # 2 boards (25×25)
+│       ├── sudoku_solutions/           # Pre-computed complete boards (JSON)
+│       │   ├── 2/                      # 20 boards (4×4)
+│       │   ├── 3/                      # 100 boards (9×9)
+│       │   ├── 4/                      # 20 boards (16×16)
+│       │   └── 5/                      # 2 boards (25×25)
+│       └── sudoku_puzzles/             # Pre-computed puzzle templates (JSON)
+│           ├── 2/{easy,medium,hard}/   # 10 templates each
+│           ├── 3/{easy,medium,hard}/   # 20/12/20 templates
+│           └── 4/{easy,medium,hard}/   # 10/10/5 templates
 └── tests/
     ├── __init__.py
-    ├── test_solver.py                  # 7 tests: CSP basics, 4×4/9×9 solve, board gen, backtrack counter
-    └── test_api.py                     # 5 async tests: health, random board, solve, validation
+    ├── test_solver.py                  # 24 tests: CSP basics, BitsetDomain, DWO, AC-2001, dom/wdeg, GAC, nogoods, transforms, generation
+    ├── test_api.py                     # 5 async tests: health, random board, solve, validation
+    ├── test_benchmarks.py              # Parametrized correctness + regression across solver configs
+    └── test_stress.py                  # Hard 9×9 puzzles (Al Escargot, Platinum Blonde, etc.) + 16×16
 ```
 
 ## CSP Engine
 
-Split across three modules:
+### `solver/csp.py` — Problem representation + search + pruning
 
-### `solver/csp.py` — Problem representation + backtracking search
-- `CSP` class: variable/constraint registration, domain state, `backtrack()`, `solve()`, `solve_with_initial_propagation()`, `get_next_variable()`
-- `PruningType` enum, `VariableOrdering` enum
+The CSP class unifies problem state and all pruning methods:
 
-### `solver/pruning.py` — Arc consistency + forward checking
-- `forward_check(csp, variable, solution)` — Domain reduction for assigned variable's neighbors
-- `AC3(csp, variable, solution)` — Arc consistency with DWO detection, O(1) agenda set
-- `AC_FC(csp, variable, solution)` — Hybrid: AC3 + forward checking
-- `revise(csp, variable, Xi, Xj, solution)` — Arc revision (shared by AC3/AC_FC)
+- **Core**: `add_variables()`, `add_constraint()`, `backtrack()`, `solve()`, `solve_with_initial_propagation()`
+- **Pruning** (inline methods): `forward_check()`, `AC3()`, `AC_FC()`, `revise()` — all with DWO early termination
+- **AC-2001**: Residual support caching in `revise()` — O(ed²) optimal arc consistency
+- **Pair-constraint index**: `is_valid_pair()` checks only shared constraints between two variables
+- **dom/wdeg**: `_wdeg()`, `_increment_weights_on_dwo()` — failure-driven constraint weighting
+- **GAC all-different**: `_propagate_gac_alldiff()` — delegates to Régin's algorithm via `gac_alldiff.py`
+- **Initial propagation**: `solve_with_initial_propagation()` — one-hop + full AC3 cascade for given cells
+
+### `solver/bitset_domain.py` — Bitmask domain container
+
+Duck-typed set replacement for integer domains. O(1) copy via int assignment, POPCNT-based `len()`, bit-trick iteration. Auto-selected by `_make_domain()` when all values are non-negative integers.
+
+### `solver/gac_alldiff.py` — GAC all-different (Régin 1994)
+
+Hopcroft-Karp maximum bipartite matching → directed residual graph → Tarjan SCC → prune values not in any maximum matching and not in the same SCC. Integer-indexed nodes, list-based adjacency, iterative Tarjan.
+
+### `solver/nogoods.py` — Bounded nogood store
+
+Hash-based conflict tuple store with LRU eviction. Records partial assignments known to be dead ends; checks if a new assignment would complete any stored nogood.
 
 ### `solver/local_search.py` — Min-conflicts hill-climbing
-- `min_conflicts(csp, iteration_count)` — Randomly initialize, iteratively fix conflicts
-- `num_conflicts()`, `conflicting_variables()`, `min_conflicting_value()`
+
+`min_conflicts(csp, iteration_count)` — randomly initialize, iteratively fix conflicts.
 
 ### Variable Ordering
+
 | Strategy | Behavior |
 |---|---|
 | `FAIL_FIRST` | MRV heuristic — smallest domain first |
+| `DOM_WDEG` | domain size / weighted degree — failure-driven |
 | `NO_ORDERING` | Sequential |
 
 ### Optimizations
+
+- BitsetDomain: O(1) copy, POPCNT len, bit-trick iteration for integer domains
+- AC-2001 residual supports: cached support values avoid redundant arc checks
+- Pair-constraint index: O(1) lookup of shared constraints between variable pairs
+- dom/wdeg ordering: constraint weights increment on DWO for adaptive variable selection
+- GAC all-different: global constraint propagation catches inferences binary AC misses
 - Integer variable keys (faster hashing than strings)
 - Temporary assign/restore pattern (avoids dict.copy)
-- Set-based domains for O(1) removal
+- Initial AC3 cascade for given cells (singleton propagation chains)
 - Backtrack counter for difficulty measurement
 
-## Sudoku
+## Sudoku (`solver/sudoku.py`)
 
-Split across two modules:
+Unified module: CSP creation, solving, and board generation.
 
-### `solver/sudoku.py` — CSP creation + solving interface
-- `create_sudoku_csp(N, values, max_solutions)` — Build CSP with row/col/subgrid constraints
+- `create_sudoku_csp(N, values, max_solutions)` — Build CSP with row/col/subgrid constraints, dom/wdeg + GAC all-different
 - `solve_sudoku(csp)` — Solve with initial propagation when given values exist
-- `solution_to_array()`, `SudokuDifficulty` enum
-
-### `solver/sudoku_gen.py` — Board generation lifecycle
-- `create_random_board(N, difficulty)` — Random solution → hole-digging → uniqueness check → difficulty calibration
-- `_generate_solution()`, `_load_solution_board()`, `_has_unique_solution()`, `_measure_difficulty()`
+- `create_random_board(N, difficulty)` — Fast path: template + symmetry transform; slow path: hole-digging + difficulty calibration
+- `_load_puzzle_templates()` — Cached template loading from `data/sudoku_puzzles/{N}/{difficulty}/`
+- `SudokuTransform.random(N).apply(board, N)` — Digit/row/col/band/stack permutation + transpose (~1.22B grids per template for N=3)
 - **Difficulty**: EASY (0 backtracks), MEDIUM (<50), HARD (>100)
-- **Pre-computed solutions**: `data/sudoku_solutions/{N}/` for N≥4; generated dynamically for N≤3
+- **Pre-computed solutions**: `data/sudoku_solutions/{N}/` for complete boards
+- **Pre-computed templates**: `data/sudoku_puzzles/{N}/{difficulty}/` for puzzle+solution pairs
 
 ## Constraints (`solver/constraints.py`)
 
 All constraints are HOFs returning `(checker_fn, variables_list)`:
-- `all_different_constraint(*vars)` — Early-exit set check
+- `all_different_constraint(*vars)` — Early-exit set check; tagged `_is_alldiff` for GAC detection
 - `less_than_constraint(a, b)` / `greater_than_constraint(a, b)`
 - `equals_constraint(node, value)`
 - `lambda_constraint(func, *vars)` — Generic wrapper
@@ -111,7 +141,7 @@ All constraints are HOFs returning `(checker_fn, variables_list)`:
 ```bash
 uv sync                                        # Install deps
 uv run uvicorn csp_solver.api.main:app --reload # Dev server
-uv run pytest                                   # Run tests
+uv run pytest                                   # Run tests (88 tests)
 uv run ruff check .                             # Lint
 uv run mypy .                                   # Type check
 ```

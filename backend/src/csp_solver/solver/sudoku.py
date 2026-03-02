@@ -1,10 +1,17 @@
-"""Sudoku CSP creation and solving interface."""
+"""Sudoku CSP creation, solving interface, and board generation."""
 
+import functools
+import json
 import math
+import pathlib
+import random
 from enum import Enum, auto
 
 from csp_solver.solver.constraints import all_different_constraint, equals_constraint
 from csp_solver.solver.csp import CSP, PruningType, VariableOrdering
+from csp_solver.solver.sudoku_transforms import SudokuTransform
+
+DATA_DIR = pathlib.Path(__file__).parent.parent / "data"
 
 
 class SudokuDifficulty(Enum):
@@ -46,8 +53,9 @@ def create_sudoku_csp(
 
     csp = CSP(
         pruning_type=PruningType.FORWARD_CHECKING,
-        variable_ordering=VariableOrdering.FAIL_FIRST,
+        variable_ordering=VariableOrdering.DOM_WDEG,
         max_solutions=max_solutions,
+        use_gac_alldiff=True,
     )
     csp.add_variables(domain, *variables)
 
@@ -90,3 +98,230 @@ def solve_sudoku(csp: CSP) -> bool:
     if given:
         return csp.solve_with_initial_propagation(given)
     return csp.solve()
+
+
+def _load_solution_board(N: int) -> dict[str, int]:
+    """Load a random pre-computed solution board for size N."""
+    solution_dir = DATA_DIR / "sudoku_solutions" / str(N)
+    if not solution_dir.exists():
+        raise FileNotFoundError(f"No solution directory for N={N}: {solution_dir}")
+
+    solutions = list(solution_dir.glob("*.json"))
+    if not solutions:
+        raise FileNotFoundError(f"No solution files in {solution_dir}")
+
+    filepath = random.choice(solutions)
+    board = json.loads(filepath.read_text())
+
+    # Normalize: ensure all values are integers (fixes N=3 string issue)
+    return {str(k): int(v) for k, v in board.items()}
+
+
+def _generate_solution(N: int) -> dict[str, int]:
+    """Generate a complete Sudoku solution on-the-fly.
+
+    Seeds the first row with a random permutation, then solves.
+    """
+    M = N**2
+    first_row = list(range(1, M + 1))
+    random.shuffle(first_row)
+
+    values = {str(i): first_row[i] for i in range(M)}
+    csp = create_sudoku_csp(N=N, values=values, max_solutions=1)
+    solve_sudoku(csp)
+
+    if csp.solutions:
+        return {str(k): int(v) for k, v in csp.solutions[0].items()}
+
+    raise RuntimeError(f"Failed to generate solution for N={N}")
+
+
+def _has_unique_solution(N: int, board: dict[str, int]) -> bool:
+    """Check if a board has exactly one solution."""
+    values = {k: v for k, v in board.items() if v != 0}
+    csp = create_sudoku_csp(N=N, values=values, max_solutions=2)
+    solve_sudoku(csp)
+    return len(csp.solutions) == 1
+
+
+def _measure_difficulty(N: int, board: dict[str, int]) -> int:
+    """Measure puzzle difficulty by counting backtracks needed to solve."""
+    values = {k: v for k, v in board.items() if v != 0}
+    csp = create_sudoku_csp(N=N, values=values, max_solutions=1)
+    solve_sudoku(csp)
+    return csp.backtrack_count
+
+
+@functools.cache
+def _load_puzzle_templates(N: int, difficulty_name: str) -> list[dict]:
+    """Load all pre-computed puzzle templates for a given size and difficulty.
+
+    Cached per-process — JSON files read at most once per (N, difficulty).
+    """
+    template_dir = DATA_DIR / "sudoku_puzzles" / str(N) / difficulty_name
+    if not template_dir.exists():
+        return []
+
+    templates = []
+    for filepath in sorted(template_dir.glob("template-*.json")):
+        data = json.loads(filepath.read_text())
+        # Normalize keys to strings, values to ints
+        data["puzzle"] = {str(k): int(v) for k, v in data["puzzle"].items()}
+        data["solution"] = {str(k): int(v) for k, v in data["solution"].items()}
+        templates.append(data)
+
+    return templates
+
+
+def _load_random_template(N: int, difficulty: SudokuDifficulty) -> dict | None:
+    """Pick a random pre-computed template, or None if none available."""
+    templates = _load_puzzle_templates(N, difficulty.name.lower())
+    if not templates:
+        return None
+    return random.choice(templates)
+
+
+def create_random_board(
+    N: int,
+    difficulty: SudokuDifficulty = SudokuDifficulty.EASY,
+) -> dict[str, int]:
+    """Generate a random Sudoku board.
+
+    Fast path: pick a pre-computed template and apply a random symmetry transform.
+    Fallback: slow hole-digging generation if no templates available.
+    """
+    template = _load_random_template(N, difficulty)
+    if template is not None:
+        transform = SudokuTransform.random(N)
+        return transform.apply(template["puzzle"], N)
+    return _create_random_board_slow(N, difficulty)
+
+
+def _create_random_board_slow(
+    N: int,
+    difficulty: SudokuDifficulty = SudokuDifficulty.EASY,
+) -> dict[str, int]:
+    """Generate a random Sudoku board with uniqueness-verified hole digging.
+
+    For N<=3, dynamically generates solutions. For N>=4, uses pre-computed boards.
+    Difficulty is calibrated by backtrack count:
+    - EASY: 0 backtracks (solvable by naked singles / forward checking alone)
+    - MEDIUM: < 50 backtracks
+    - HARD: > 100 backtracks
+    """
+    M = N**2
+    total = M**2
+
+    # Get a complete solution
+    try:
+        if N <= 3:
+            try:
+                solution = _generate_solution(N)
+            except RuntimeError:
+                solution = _load_solution_board(N)
+        else:
+            solution = _load_solution_board(N)
+    except FileNotFoundError:
+        solution = _generate_solution(N)
+
+    # Target removal counts based on difficulty
+    if difficulty == SudokuDifficulty.EASY:
+        target_remove = total // 4
+    elif difficulty == SudokuDifficulty.MEDIUM:
+        target_remove = int(total / 1.75)
+    else:
+        target_remove = int(total / 1.25)
+
+    # Dig holes with uniqueness verification
+    board = dict(solution)
+    positions = list(board.keys())
+    random.shuffle(positions)
+
+    removed = 0
+    for pos in positions:
+        if removed >= target_remove:
+            break
+
+        old_val = board[pos]
+        board[pos] = 0
+
+        if _has_unique_solution(N, board):
+            removed += 1
+        else:
+            board[pos] = old_val
+
+    # For EASY/MEDIUM, verify difficulty matches expectations
+    # If the puzzle is too hard for its category, restore some cells
+    if difficulty in (SudokuDifficulty.EASY, SudokuDifficulty.MEDIUM):
+        backtracks = _measure_difficulty(N, board)
+        max_backtracks = 0 if difficulty == SudokuDifficulty.EASY else 50
+
+        # If too hard, restore cells until difficulty target met
+        empty_positions = [p for p in positions if board[p] == 0]
+        random.shuffle(empty_positions)
+        for pos in empty_positions:
+            if backtracks <= max_backtracks:
+                break
+            board[pos] = solution[pos]
+            backtracks = _measure_difficulty(N, board)
+
+    return board
+
+
+def _create_random_board_with_solution(
+    N: int,
+    difficulty: SudokuDifficulty = SudokuDifficulty.EASY,
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Generate a random board AND its solution. Used by template generation.
+
+    Returns (puzzle, solution).
+    """
+    M = N**2
+    total = M**2
+
+    # Get a complete solution
+    try:
+        if N <= 3:
+            try:
+                solution = _generate_solution(N)
+            except RuntimeError:
+                solution = _load_solution_board(N)
+        else:
+            solution = _load_solution_board(N)
+    except FileNotFoundError:
+        solution = _generate_solution(N)
+
+    if difficulty == SudokuDifficulty.EASY:
+        target_remove = total // 4
+    elif difficulty == SudokuDifficulty.MEDIUM:
+        target_remove = int(total / 1.75)
+    else:
+        target_remove = int(total / 1.25)
+
+    board = dict(solution)
+    positions = list(board.keys())
+    random.shuffle(positions)
+
+    removed = 0
+    for pos in positions:
+        if removed >= target_remove:
+            break
+        old_val = board[pos]
+        board[pos] = 0
+        if _has_unique_solution(N, board):
+            removed += 1
+        else:
+            board[pos] = old_val
+
+    if difficulty in (SudokuDifficulty.EASY, SudokuDifficulty.MEDIUM):
+        backtracks = _measure_difficulty(N, board)
+        max_backtracks = 0 if difficulty == SudokuDifficulty.EASY else 50
+        empty_positions = [p for p in positions if board[p] == 0]
+        random.shuffle(empty_positions)
+        for pos in empty_positions:
+            if backtracks <= max_backtracks:
+                break
+            board[pos] = solution[pos]
+            backtracks = _measure_difficulty(N, board)
+
+    return board, solution

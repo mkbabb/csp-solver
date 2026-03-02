@@ -196,6 +196,21 @@ Boards of size 3 are the most common, thus we optimize for enjoyment with these 
 a selection of 100 hand-curated starting "seed" boards are used to generate all boards
 of size 3 shown. Pre-computed solution banks exist for sizes 2 through 5.
 
+#### Board Generation
+
+Board generation proceeds via one of two strategies. The fast path, employed whenever
+pre-computed puzzle templates exist, selects a random template and applies a random
+Sudoku symmetry transform—digit permutation, row/column permutation within bands and
+stacks, band/stack permutation, and transposition. For N=3, this symmetry group yields
+~1.22 billion distinct grids per base template, rendering the output space effectively
+inexhaustible. Generation by the aforesaid method completes in microseconds.
+
+Where no templates are available, the system falls back to the classical slow path:
+generate a complete solution, dig holes with uniqueness verification, and calibrate
+difficulty by backtrack count. Pre-computed templates reside in
+`backend/src/csp_solver/data/sudoku_puzzles/{N}/{difficulty}/`; the offline generation
+script at `backend/scripts/generate_templates.py` produces them.
+
 Difficulty is calibrated by the solver's backtrack count:
 - **Easy**: 0 backtracks (solvable by constraint propagation alone)
 - **Medium**: < 50 backtracks
@@ -207,7 +222,7 @@ Difficulty is calibrated by the solver's backtrack count:
 .
 ├── backend/                    # FastAPI + CSP solver (Python 3.13, uv)
 │   ├── src/csp_solver/
-│   │   ├── solver/             # csp, pruning, local_search, constraints, sudoku, sudoku_gen, futoshiki
+│   │   ├── solver/             # csp, constraints, sudoku, bitset_domain, gac_alldiff, nogoods, sudoku_transforms, local_search, futoshiki
 │   │   ├── api/                # FastAPI app, routes, Pydantic models
 │   │   └── data/               # Pre-computed solution boards (JSON)
 │   └── tests/                  # pytest + pytest-asyncio

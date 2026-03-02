@@ -12,10 +12,10 @@ from csp_solver.api.models.board import (
 )
 from csp_solver.solver.sudoku import (
     SudokuDifficulty,
+    create_random_board,
     create_sudoku_csp,
     solve_sudoku,
 )
-from csp_solver.solver.sudoku_gen import create_random_board
 
 router = APIRouter(prefix="/board")
 
