@@ -120,7 +120,7 @@ export function useSudoku() {
         }
       }
 
-      solvedValues.value = newlySolved
+      solvedValues.value = { ...solvedValues.value, ...newlySolved }
       // Backend returns solved=false when user-entered values conflict with the solution
       solveState.value = result.solved ? 'solved' : 'failed'
       animatingCells.value = cellsToAnimate
