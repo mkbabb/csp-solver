@@ -31,9 +31,9 @@ const cellRects = computed(() =>
 )
 
 const boardWidth = computed(() => {
-  if (props.boardSize <= 4) return 'min(22rem, 80vw)'
-  if (props.boardSize <= 9) return 'min(36rem, 85vw)'
-  return 'min(44rem, 90vw)'
+  if (props.boardSize <= 4) return 'min(22rem, var(--board-vw, 85vw))'
+  if (props.boardSize <= 9) return 'min(36rem, var(--board-vw, 85vw))'
+  return 'min(44rem, var(--board-vw, 90vw))'
 })
 
 // Wrapper padding matches SVG grid-line pad (26/1000 viewBox) so cells align with grid lines

@@ -84,7 +84,7 @@ function onHoverLeave() {
       <DarkModeToggle />
     </div>
 
-    <main class="main-content flex min-h-0 flex-1 flex-col items-center justify-center px-4">
+    <main class="main-content flex min-h-0 flex-1 flex-col items-center justify-center px-1 md:px-4">
       <div class="board-group">
         <!-- Logo: left-aligned with board -->
         <HandwrittenLogo />
@@ -107,7 +107,7 @@ function onHoverLeave() {
 
           <!-- Mobile: unified controls card below board -->
           <div class="mobile-board-width md:hidden">
-            <div class="rounded-lg bg-card px-4 py-3 cartoon-shadow-sm">
+            <div class="rounded-lg bg-card px-2 py-1.5 cartoon-shadow-sm">
               <ControlPanel
                 :size="sudoku.size.value"
                 :difficulty="sudoku.difficulty.value"
@@ -206,6 +206,7 @@ function onHoverLeave() {
 @media (max-width: 767px) {
   .main-content {
     justify-content: center;
+    --board-vw: 96vw;
   }
 }
 
@@ -219,7 +220,7 @@ function onHoverLeave() {
 }
 
 .mobile-board-width {
-  width: min(36rem, 85vw);
+  width: min(36rem, 96vw);
 }
 
 /* Hover card */
