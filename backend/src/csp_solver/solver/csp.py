@@ -10,11 +10,13 @@ Optimizations applied vs original:
 - Backtrack counter for difficulty measurement
 """
 
-import random
 from collections import defaultdict, deque
 from collections.abc import Callable
 from enum import Enum, auto
 from typing import Any
+
+from csp_solver.solver.local_search import min_conflicts as _min_conflicts
+from csp_solver.solver.pruning import AC3, AC_FC, forward_check
 
 type Solution = dict[Any, Any]
 type Constraint = Callable[[Solution], bool]
@@ -43,11 +45,11 @@ class CSP:
         self.max_solutions = max_solutions
 
         if pruning_type == PruningType.FORWARD_CHECKING:
-            self.pruning_function = self.forward_check
+            self.pruning_function = lambda v, s: forward_check(self, v, s)
         elif pruning_type == PruningType.AC3:
-            self.pruning_function = self.AC3
+            self.pruning_function = lambda v, s: AC3(self, v, s)
         elif pruning_type == PruningType.AC_FC:
-            self.pruning_function = self.AC_FC
+            self.pruning_function = lambda v, s: AC_FC(self, v, s)
         elif pruning_type == PruningType.NO_PRUNING:
             self.pruning_function = lambda x, y: False
 
@@ -93,101 +95,8 @@ class CSP:
             self.current_domains[neighbor].extend(d_list)
             d_list.clear()
 
-    def revise(self, variable: Any, Xi: Any, Xj: Any, solution: Solution) -> bool:
-        """Arc revision with fix: iterate over copy to avoid mutation-during-iteration."""
-        removed = False
-
-        for x in list(self.current_domains[Xi]):
-            # Temporary assign/restore instead of dict.copy()
-            old_xi = solution.get(Xi)
-            old_xj = solution.get(Xj)
-            solution[Xi] = x
-
-            found_support = False
-            for y in self.current_domains[Xj]:
-                solution[Xj] = y
-                if self.is_valid(Xj, solution):
-                    found_support = True
-                    break
-
-            # Restore
-            if old_xj is not None:
-                solution[Xj] = old_xj
-            elif Xj in solution:
-                del solution[Xj]
-            if old_xi is not None:
-                solution[Xi] = old_xi
-            elif Xi in solution:
-                del solution[Xi]
-
-            if not found_support:
-                self.current_domains[Xi].remove(x)
-                self.pruned_map[variable][Xi].add(x)
-                removed = True
-
-        return removed
-
-    def forward_check(self, variable: Any, solution: Solution):
-        agenda = [i for i in self.get_neighbors(variable) if i not in solution]
-
-        for Xi in agenda:
-            for x in list(self.current_domains[Xi]):
-                # Temporary assign/restore instead of dict.copy()
-                old_val = solution.get(Xi)
-                solution[Xi] = x
-                valid = self.is_valid(Xi, solution)
-                if old_val is not None:
-                    solution[Xi] = old_val
-                else:
-                    del solution[Xi]
-
-                if not valid:
-                    self.current_domains[Xi].remove(x)
-                    self.pruned_map[variable][Xi].add(x)
-
-    def AC_FC(self, variable: Any, solution: Solution) -> bool:
-        consistent = True
-        agenda = deque(
-            (Xj, variable)
-            for Xj in self.get_neighbors(variable)
-            if Xj not in solution
-        )
-        while len(agenda) > 0 and self.is_valid(variable, solution):
-            Xi, Xj = agenda.pop()
-            if self.revise(variable, Xi, Xj, solution):
-                consistent = len(self.current_domains[Xi]) > 0
-                if not consistent:
-                    break
-        return consistent
-
-    def AC3(self, variable: Any, solution: Solution):
-        """AC3 with DWO detection and O(1) agenda membership via companion set."""
-        agenda = deque(
-            (Xj, variable)
-            for Xj in self.get_neighbors(variable)
-            if Xj not in solution
-        )
-        agenda_set = set(agenda)
-
-        while len(agenda) > 0:
-            arc = agenda.pop()
-            agenda_set.discard(arc)
-            Xi, Xj = arc
-
-            if self.revise(variable, Xi, Xj, solution):
-                # DWO detection: if domain is empty, propagation failed
-                if len(self.current_domains[Xi]) == 0:
-                    return
-
-                for Xk in self.get_neighbors(Xi):
-                    p = (Xk, Xi)
-                    if Xk != Xj and p not in agenda_set and Xk not in solution:
-                        agenda.append(p)
-                        agenda_set.add(p)
-
     def get_next_variable(self) -> Any:
         if self.variable_ordering == VariableOrdering.FAIL_FIRST:
-            # Find variable in stack with smallest domain
             best = min(self.variable_stack, key=lambda v: len(self.current_domains[v]))
             self.variable_stack.remove(best)
             return best
@@ -216,50 +125,8 @@ class CSP:
         self.variable_stack.append(v)
         return False
 
-    def num_conflicts(self, v: Any, d: Any, solution: Solution) -> int:
-        count = 0
-        old_val = solution.get(v)
-        solution[v] = d
-        for constraint in self.constraints[v]:
-            if not constraint(solution):
-                count += 1
-        if old_val is not None:
-            solution[v] = old_val
-        elif v in solution:
-            del solution[v]
-        return count
-
-    def conflicting_variables(self, solution: Solution) -> list[Any]:
-        return [
-            v
-            for v in self.variables
-            if v in solution and self.num_conflicts(v, solution[v], solution) > 0
-        ]
-
-    def min_conflicting_value(self, v: Any, solution: Solution) -> Any:
-        """Find domain value with minimum conflicts using pure Python min()."""
-        domains = self.domains[v]
-        return min(domains, key=lambda d: self.num_conflicts(v, d, solution))
-
     def min_conflicts(self, iteration_count: int = 10000) -> bool:
-        solution: Solution = {}
-        random.shuffle(self.variables)
-
-        for v in self.variables:
-            solution[v] = self.min_conflicting_value(v, solution)
-
-        for _ in range(iteration_count):
-            conflicted = self.conflicting_variables(solution)
-
-            if len(conflicted) == 0:
-                self.solutions.append(solution.copy())
-                return True
-
-            v = random.choice(conflicted)
-            d = self.min_conflicting_value(v, solution)
-            solution[v] = d
-
-        return False
+        return _min_conflicts(self, iteration_count)
 
     def solve(self) -> bool:
         self.variable_stack.clear()
@@ -289,14 +156,12 @@ class CSP:
             self.current_domains[v] = list(self.domains[v])
             self.pruned_map[v].clear()
 
-        # Initial propagation: for each given value, restrict peer domains
         for var, val in given_values.items():
             self.current_domains[var] = [val]
             for neighbor in self.get_neighbors(var):
                 if neighbor not in given_values and val in self.current_domains[neighbor]:
                     self.current_domains[neighbor].remove(val)
 
-        # Only add unassigned variables to the stack
         for v in self.variables:
             if v not in given_values:
                 self.variable_stack.append(v)

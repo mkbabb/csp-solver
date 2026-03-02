@@ -75,17 +75,7 @@ const config: Config = {
           '50%': { transform: 'scale(1.03)' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
-        'cell-reveal': {
-          '0%': { transform: 'scale(0)', opacity: '0' },
-          '60%': { transform: 'scale(1.1)' },
-          '100%': { transform: 'scale(1)', opacity: '1' },
-        },
-        shake: {
-          '0%, 100%': { transform: 'translateX(0)' },
-          '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-4px)' },
-          '20%, 40%, 60%, 80%': { transform: 'translateX(4px)' },
-        },
-        'success-pulse': {
+'success-pulse': {
           '0%': { boxShadow: '0 0 0 0 rgba(34, 197, 94, 0.4)' },
           '70%': { boxShadow: '0 0 0 10px rgba(34, 197, 94, 0)' },
           '100%': { boxShadow: '0 0 0 0 rgba(34, 197, 94, 0)' },
@@ -102,9 +92,7 @@ const config: Config = {
       animation: {
         'scale-in': 'scale-in 0.2s ease-out',
         'bounce-in': 'bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-        'cell-reveal': 'cell-reveal 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
-        shake: 'shake 0.5s ease-in-out',
-        'success-pulse': 'success-pulse 1s ease-in-out 3',
+'success-pulse': 'success-pulse 1s ease-in-out 3',
         'fade-in': 'fade-in 0.2s ease-out',
         'slide-up': 'slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
       },
@@ -120,10 +108,6 @@ const config: Config = {
         '250': '250ms',
         '350': '350ms',
         '500': '500ms',
-      },
-      boxShadow: {
-        card: '0 4px 12px rgba(0, 0, 0, 0.08)',
-        'card-hover': '0 8px 24px rgba(0, 0, 0, 0.12)',
       },
     },
   },

@@ -207,7 +207,7 @@ Difficulty is calibrated by the solver's backtrack count:
 .
 ├── backend/                    # FastAPI + CSP solver (Python 3.13, uv)
 │   ├── src/csp_solver/
-│   │   ├── solver/             # csp.py, constraints.py, sudoku.py, futoshiki.py
+│   │   ├── solver/             # csp, pruning, local_search, constraints, sudoku, sudoku_gen, futoshiki
 │   │   ├── api/                # FastAPI app, routes, Pydantic models
 │   │   └── data/               # Pre-computed solution boards (JSON)
 │   └── tests/                  # pytest + pytest-asyncio

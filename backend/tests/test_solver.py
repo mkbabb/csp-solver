@@ -4,11 +4,10 @@ from csp_solver.solver.csp import CSP, PruningType, VariableOrdering
 from csp_solver.solver.constraints import all_different_constraint, equals_constraint
 from csp_solver.solver.sudoku import (
     SudokuDifficulty,
-    create_random_board,
     create_sudoku_csp,
     solve_sudoku,
-    _load_solution_board,
 )
+from csp_solver.solver.sudoku_gen import create_random_board, _load_solution_board
 
 
 def test_simple_csp():

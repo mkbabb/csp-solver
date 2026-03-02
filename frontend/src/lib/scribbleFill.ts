@@ -18,7 +18,8 @@
  * This works generically with any closed path: hearts, stars, circles, letters, etc.
  */
 
-import { wobbleLine, mulberry32 } from '@/lib/handDrawnPaths';
+import { mulberry32 } from '@/lib/prng';
+import { wobbleLine } from '@/lib/pathGeneration';
 
 export interface ScribbleFillOptions {
     /** Hachure angle in degrees (default: 45) */

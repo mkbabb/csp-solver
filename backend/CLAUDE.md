@@ -13,9 +13,12 @@ backend/
 │   ├── __init__.py
 │   ├── solver/
 │   │   ├── __init__.py
-│   │   ├── csp.py                      # Core CSP engine: backtracking, FC, AC3, AC-FC, min-conflicts
+│   │   ├── csp.py                      # CSP class: variable/constraint state, backtrack, solve
+│   │   ├── pruning.py                  # Pruning algorithms: forward_check, AC3, AC_FC, revise
+│   │   ├── local_search.py             # Min-conflicts local search: num_conflicts, min_conflicts
 │   │   ├── constraints.py              # Constraint HOFs: all_different, less_than, lambda_constraint, etc.
-│   │   ├── sudoku.py                   # Sudoku CSP creation, board generation, difficulty calibration
+│   │   ├── sudoku.py                   # Sudoku CSP creation + solving interface
+│   │   ├── sudoku_gen.py               # Board generation: solution creation, hole-digging, difficulty calibration
 │   │   └── futoshiki.py                # Futoshiki CSP creation, file parser
 │   ├── api/
 │   │   ├── __init__.py
@@ -41,15 +44,23 @@ backend/
     └── test_api.py                     # 5 async tests: health, random board, solve, validation
 ```
 
-## CSP Engine (`solver/csp.py`)
+## CSP Engine
 
-### Pruning Strategies
-| Strategy | Behavior |
-|---|---|
-| `FORWARD_CHECKING` | Removes inconsistent values from neighbors on assignment |
-| `AC3` | Full arc consistency via queue-based propagation |
-| `AC_FC` | Hybrid: AC3 + forward checking |
-| `NO_PRUNING` | Plain backtracking |
+Split across three modules:
+
+### `solver/csp.py` — Problem representation + backtracking search
+- `CSP` class: variable/constraint registration, domain state, `backtrack()`, `solve()`, `solve_with_initial_propagation()`, `get_next_variable()`
+- `PruningType` enum, `VariableOrdering` enum
+
+### `solver/pruning.py` — Arc consistency + forward checking
+- `forward_check(csp, variable, solution)` — Domain reduction for assigned variable's neighbors
+- `AC3(csp, variable, solution)` — Arc consistency with DWO detection, O(1) agenda set
+- `AC_FC(csp, variable, solution)` — Hybrid: AC3 + forward checking
+- `revise(csp, variable, Xi, Xj, solution)` — Arc revision (shared by AC3/AC_FC)
+
+### `solver/local_search.py` — Min-conflicts hill-climbing
+- `min_conflicts(csp, iteration_count)` — Randomly initialize, iteratively fix conflicts
+- `num_conflicts()`, `conflicting_variables()`, `min_conflicting_value()`
 
 ### Variable Ordering
 | Strategy | Behavior |
@@ -57,26 +68,26 @@ backend/
 | `FAIL_FIRST` | MRV heuristic — smallest domain first |
 | `NO_ORDERING` | Sequential |
 
-### Key Methods
-- `backtrack()` — Main search with configurable pruning
-- `forward_check()` — Domain reduction for assigned variable's neighbors
-- `AC3()` — Arc consistency with agenda set for O(1) membership
-- `min_conflicts()` — Hill-climbing local search alternative
-- `solve_with_initial_propagation()` — Pre-removes clue values from peer domains (20-40% speedup)
-
 ### Optimizations
 - Integer variable keys (faster hashing than strings)
 - Temporary assign/restore pattern (avoids dict.copy)
 - Set-based domains for O(1) removal
 - Backtrack counter for difficulty measurement
 
-## Sudoku (`solver/sudoku.py`)
+## Sudoku
 
-Board generation: random solution → hole-digging → uniqueness check → difficulty calibration.
+Split across two modules:
 
+### `solver/sudoku.py` — CSP creation + solving interface
+- `create_sudoku_csp(N, values, max_solutions)` — Build CSP with row/col/subgrid constraints
+- `solve_sudoku(csp)` — Solve with initial propagation when given values exist
+- `solution_to_array()`, `SudokuDifficulty` enum
+
+### `solver/sudoku_gen.py` — Board generation lifecycle
+- `create_random_board(N, difficulty)` — Random solution → hole-digging → uniqueness check → difficulty calibration
+- `_generate_solution()`, `_load_solution_board()`, `_has_unique_solution()`, `_measure_difficulty()`
 - **Difficulty**: EASY (0 backtracks), MEDIUM (<50), HARD (>100)
-- **Pre-computed solutions**: Loaded from `data/sudoku_solutions/{N}/` for N≥4; generated dynamically for N≤3
-- **Uniqueness**: Enforced by finding up to 2 solutions per puzzle
+- **Pre-computed solutions**: `data/sudoku_solutions/{N}/` for N≥4; generated dynamically for N≤3
 
 ## Constraints (`solver/constraints.py`)
 
