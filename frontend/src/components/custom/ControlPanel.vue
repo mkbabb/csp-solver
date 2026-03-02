@@ -110,7 +110,7 @@ function onSolve() {
           <button
             v-for="s in sizes"
             :key="s.value"
-            @click="emit('update:size', s.value); expandedPanel = null"
+            @click="emit('update:size', s.value)"
             class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
             :class="
               size === s.value
@@ -136,7 +136,7 @@ function onSolve() {
           <button
             v-for="d in difficulties"
             :key="d.value"
-            @click="emit('update:difficulty', d.value); expandedPanel = null"
+            @click="emit('update:difficulty', d.value)"
             class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
             :class="[
               difficulty === d.value
