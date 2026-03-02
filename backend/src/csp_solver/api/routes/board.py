@@ -12,12 +12,38 @@ from csp_solver.api.models.board import (
 )
 from csp_solver.solver.sudoku import (
     SudokuDifficulty,
-    create_random_board,
     create_sudoku_csp,
     solve_sudoku,
 )
+from csp_solver.solver.sudoku_gen import create_random_board
 
 router = APIRouter(prefix="/board")
+
+
+def _has_conflicts(given: dict[str, int], board_size: int) -> bool:
+    """Check if given values violate any Sudoku row/col/subgrid constraint."""
+    import math
+
+    N = int(math.isqrt(board_size))
+
+    # Group values by row, column, and subgrid
+    rows: dict[int, list[int]] = {}
+    cols: dict[int, list[int]] = {}
+    boxes: dict[tuple[int, int], list[int]] = {}
+
+    for pos_str, val in given.items():
+        pos = int(pos_str)
+        r, c = divmod(pos, board_size)
+        box = (r // N, c // N)
+
+        rows.setdefault(r, []).append(val)
+        cols.setdefault(c, []).append(val)
+        boxes.setdefault(box, []).append(val)
+
+    for group in (*rows.values(), *cols.values(), *boxes.values()):
+        if len(group) != len(set(group)):
+            return True
+    return False
 
 SOLVER_TIMEOUT = 30  # seconds
 
@@ -62,6 +88,11 @@ async def solve_board(request: SolveRequest) -> SolveResponse:
             )
 
     def _solve() -> tuple[bool, dict[str, int]]:
+        # Pre-validate given values for row/col/subgrid conflicts
+        given = {k: v for k, v in request.values.items() if v != 0}
+        if _has_conflicts(given, M):
+            return False, dict(request.values)
+
         csp = create_sudoku_csp(N=request.size, values=request.values)
         try:
             solve_sudoku(csp)
@@ -72,8 +103,6 @@ async def solve_board(request: SolveRequest) -> SolveResponse:
             return False, {}
 
         solution = {str(k): int(v) for k, v in csp.solutions[0].items()}
-        # Check if the provided values match the solution (i.e., was already solved)
-        given = {k: v for k, v in request.values.items() if v != 0}
         already_solved = all(solution.get(k) == v for k, v in given.items())
         return already_solved, solution
 

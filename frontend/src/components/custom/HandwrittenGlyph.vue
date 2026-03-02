@@ -90,7 +90,13 @@ function setupDrawIn() {
             }
         }
     } else if (!props.isRevealed && props.value) {
-        // Quick draw-in for user-typed cells; instant show for given/solved already present
+        // Overridden cells (given or solved that user replaced): instant show, no animation
+        if (props.isOverridden) {
+            pathRef.value.style.strokeDasharray = 'none';
+            pathRef.value.style.strokeDashoffset = '0';
+            return;
+        }
+        // Quick draw-in for user-typed cells on blank cells
         if (!props.isGiven && !props.isSolved) {
             drawInAnim = createGlyphDrawIn(pathRef.value, glyph.value.length, {
                 duration: 150,

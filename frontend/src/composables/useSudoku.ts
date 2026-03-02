@@ -59,10 +59,17 @@ export function useSudoku() {
       givenCells.value.delete(key)
       overriddenCells.value.add(key)
     }
+    // If overriding a solver-introduced cell, remove only THIS cell from solvedValues
+    // (other solved cells keep their sparkle-rainbow styling)
+    if (key in solvedValues.value) {
+      const { [key]: _, ...rest } = solvedValues.value
+      solvedValues.value = rest
+      overriddenCells.value.add(key)
+    }
     values.value[key] = value
+    // Revert solve state so the board no longer shows success/failure
     if (solveState.value !== 'idle') {
       solveState.value = 'idle'
-      solvedValues.value = {}
     }
   }
 
