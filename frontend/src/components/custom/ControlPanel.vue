@@ -43,9 +43,16 @@ const emit = defineEmits<{
 }>()
 
 const expandedPanel = ref<'size' | 'difficulty' | null>(null)
+const solveAnimating = ref(false)
 
 function togglePanel(panel: 'size' | 'difficulty') {
   expandedPanel.value = expandedPanel.value === panel ? null : panel
+}
+
+function onSolve() {
+  solveAnimating.value = true
+  emit('solve')
+  setTimeout(() => { solveAnimating.value = false }, 500)
 }
 
 </script>
@@ -152,13 +159,13 @@ function togglePanel(panel: 'size' | 'difficulty') {
         <Eraser :size="28" />
       </button>
       <button
-        @click="emit('solve')"
+        @click="onSolve()"
         :disabled="loading"
         class="icon-btn"
         aria-label="Solve puzzle"
       >
-        <svg v-if="loading" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-        <SolveIcon v-else :size="28" class="sparkle-icon" />
+        <svg v-if="loading && !solveAnimating" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+        <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
       </button>
     </div>
   </div>
@@ -254,13 +261,13 @@ function togglePanel(panel: 'size' | 'difficulty') {
       </button>
 
       <button
-        @click="emit('solve')"
+        @click="onSolve()"
         :disabled="loading"
         class="icon-btn group relative"
         aria-label="Solve puzzle"
       >
-        <svg v-if="loading" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-        <SolveIcon v-else :size="28" class="sparkle-icon" />
+        <svg v-if="loading && !solveAnimating" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+        <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
         <span class="tooltip">Solve</span>
       </button>
     </div>
