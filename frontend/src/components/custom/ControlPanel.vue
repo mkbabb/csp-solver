@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Shuffle, Eraser, Lightbulb } from 'lucide-vue-next'
+import { Shuffle, Eraser } from 'lucide-vue-next'
+import SolveIcon from './SolveIcon.vue'
 import type { Difficulty } from '@/composables/useSudoku'
 import { ghostUnderline, scribbleUnderline } from '@/lib/scribbleUnderline'
 import { useTheme } from '@/composables/useTheme'
@@ -157,7 +158,7 @@ function togglePanel(panel: 'size' | 'difficulty') {
         aria-label="Solve puzzle"
       >
         <svg v-if="loading" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-        <Lightbulb v-else :size="28" class="sparkle-icon" />
+        <SolveIcon v-else :size="28" class="sparkle-icon" />
       </button>
     </div>
   </div>
@@ -259,7 +260,7 @@ function togglePanel(panel: 'size' | 'difficulty') {
         aria-label="Solve puzzle"
       >
         <svg v-if="loading" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-        <Lightbulb v-else :size="28" class="sparkle-icon" />
+        <SolveIcon v-else :size="28" class="sparkle-icon" />
         <span class="tooltip">Solve</span>
       </button>
     </div>
