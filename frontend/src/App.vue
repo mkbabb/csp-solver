@@ -6,7 +6,7 @@ import ControlPanel from '@/components/custom/ControlPanel.vue'
 import DarkModeToggle from '@/components/custom/DarkModeToggle.vue'
 import SvgFilters from '@/components/decorative/SvgFilters.vue'
 import HandwrittenLogo from '@/components/decorative/HandwrittenLogo.vue'
-import FilterTuner from '@/components/custom/FilterTuner.vue'
+// import FilterTuner from '@/components/custom/FilterTuner.vue'
 import CrayonHeart from '@/components/decorative/CrayonHeart.vue'
 const sudoku = useSudoku()
 const hoverCardOpen = ref(false)
@@ -45,8 +45,8 @@ function onHoverLeave() {
     <!-- Shared SVG filter definitions -->
     <SvgFilters />
 
-    <!-- Filter tuner — dev tool for real-time filter parameter editing -->
-    <FilterTuner />
+    <!-- Filter tuner — dev tool, disabled for production -->
+    <!-- <FilterTuner /> -->
 
     <!-- Corner overlays: out of document flow, no layout influence -->
     <div

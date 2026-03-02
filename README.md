@@ -1,9 +1,11 @@
 # csp-solver
 
+See the demo at [https://go.ncsu.edu/sudoku](https://go.ncsu.edu/sudoku).
+
 A generalized CSP (constraint-satisfaction-problem) solver, written in Python 3.13.
 Includes an application of the aforesaid: a fullstack webapp implementation of
 hyper-generalized sudoku — the backend powered by FastAPI, the frontend by Vue 3 +
-TypeScript, the whole thing containerized via Docker Compose and proxied through Nginx.
+TypeScript, extant in a Docker Compose container and proxied through Nginx.
 
 ## Quickstart
 
@@ -215,23 +217,3 @@ Difficulty is calibrated by the solver's backtrack count:
 - **Easy**: 0 backtracks (solvable by constraint propagation alone)
 - **Medium**: < 50 backtracks
 - **Hard**: > 100 backtracks
-
-## Project Structure
-
-```
-.
-├── backend/                    # FastAPI + CSP solver (Python 3.13, uv)
-│   ├── src/csp_solver/
-│   │   ├── solver/             # csp, constraints, sudoku, bitset_domain, gac_alldiff, nogoods, sudoku_transforms, local_search, futoshiki
-│   │   ├── api/                # FastAPI app, routes, Pydantic models
-│   │   └── data/               # Pre-computed solution boards (JSON)
-│   └── tests/                  # pytest + pytest-asyncio
-├── frontend/                   # Vue 3 + TypeScript + Tailwind v4
-│   └── src/
-│       ├── components/         # custom/ (game) + decorative/ (visual)
-│       ├── composables/        # State, API, animation, theme
-│       └── lib/                # SVG generation, glyphs, scribble fill
-├── nginx/                      # Reverse proxy config
-├── docker-compose.yml          # Dev environment
-└── docker-compose.prod.yml     # Production environment
-```
