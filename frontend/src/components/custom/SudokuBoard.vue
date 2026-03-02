@@ -36,12 +36,10 @@ const boardWidth = computed(() => {
   return 'min(44rem, var(--board-vw, 90vw))'
 })
 
-// Wrapper padding matches SVG grid-line pad (26/1000 viewBox) so cells align with grid lines
+// Wrapper padding matches SVG grid-line pad (26/1000 viewBox) so cells align with grid lines.
+// Uses percentage (relative to board width) so it scales correctly at any viewport size.
 const SVG_PAD_FRAC = 26 / 1000
-const boardPadding = computed(() => {
-  const remWidth = props.boardSize <= 4 ? 22 : props.boardSize <= 9 ? 36 : 44
-  return `${(SVG_PAD_FRAC * remWidth).toFixed(2)}rem`
-})
+const boardPadding = `${(SVG_PAD_FRAC * 100).toFixed(2)}%`
 
 const boardClasses = computed(() => {
   const base = 'transition-all duration-500'
