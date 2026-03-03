@@ -1,38 +1,40 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <defs>
-    <filter id="pencil" x="-15%" y="-15%" width="130%" height="130%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="4" seed="7" result="grain"/>
-      <feDisplacementMap in="SourceGraphic" in2="grain" scale="2.0" xChannelSelector="R" yChannelSelector="G" result="displaced"/>
-      <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="2" seed="42" result="boil"/>
-      <feDisplacementMap in="displaced" in2="boil" scale="1.4" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
-  </defs>
   <rect width="32" height="32" rx="6" ry="6" fill="#faf8f5"/>
-  <!-- Stylized calligraphic S: thick→thin→thick stroke variation via two overlapping paths -->
-  <g filter="url(#pencil)">
-    <!-- Main S spine — bold, expressive curves with overshoot -->
+  <!-- Hand-drawn S: wobble baked into the path, no filters needed -->
+  <g>
+    <!-- Main S spine — thick crayon stroke with organic wobble -->
     <path
-      d="M 21.5 7.2 C 19.8 5.2 15 4.5 11.8 6.5 C 8.8 8.5 8.5 12 11 14.2 C 13.2 16 17 16.5 19.5 17.5 C 23 19 23.5 22 21.5 24.5 C 19.2 27.2 14 28.2 10.5 26"
+      d="M 21.2 7.5 C 20.1 6.1 17.2 4.8 14.5 5.2 C 11.6 5.7 9.2 7.4 9 10 C 8.8 12.2 10.4 13.8 12.5 15 C 14.2 15.9 16.8 16.4 18.8 17.3 C 21.2 18.4 22.8 20.2 22.2 23 C 21.5 25.8 18.5 27.8 15.2 27.5 C 12.4 27.3 10.2 26 9.5 24.2"
       fill="none"
-      stroke="#0a0a0a"
-      stroke-width="3.8"
+      stroke="#1a1a1a"
+      stroke-width="3.6"
       stroke-linecap="round"
       stroke-linejoin="round"
     />
+    <!-- Second pass: slightly offset for crayon double-stroke feel -->
+    <path
+      d="M 21 7.8 C 19.8 6.3 17 5.1 14.3 5.5 C 11.8 5.9 9.5 7.7 9.3 10.2 C 9.1 12.4 10.6 13.6 12.3 14.7 C 14.4 16 17.1 16.6 19 17.6 C 21.4 18.8 22.5 20.5 21.9 23.2 C 21.3 25.6 18.7 27.5 15.5 27.3 C 12.8 27.1 10.5 25.8 9.8 24"
+      fill="none"
+      stroke="#1a1a1a"
+      stroke-width="1.2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.4"
+    />
     <!-- Top serif flick -->
     <path
-      d="M 21.5 7.2 C 22.5 7.8 23 9 22.2 9.5"
+      d="M 21.2 7.5 C 22.4 8.2 23.1 9.3 22.3 9.8"
       fill="none"
-      stroke="#0a0a0a"
-      stroke-width="2.4"
+      stroke="#1a1a1a"
+      stroke-width="2.6"
       stroke-linecap="round"
     />
     <!-- Bottom serif flick -->
     <path
-      d="M 10.5 26 C 9.2 25 8.8 23.5 9.5 22.8"
+      d="M 9.5 24.2 C 8.6 23.2 8.4 21.8 9.2 21.2"
       fill="none"
-      stroke="#0a0a0a"
-      stroke-width="2.4"
+      stroke="#1a1a1a"
+      stroke-width="2.6"
       stroke-linecap="round"
     />
   </g>
