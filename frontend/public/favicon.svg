@@ -1,21 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <defs>
-    <filter id="pencil" x="-10%" y="-10%" width="120%" height="120%">
-      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" seed="7" result="grain"/>
-      <feDisplacementMap in="SourceGraphic" in2="grain" scale="1.8" xChannelSelector="R" yChannelSelector="G" result="displaced"/>
-      <feTurbulence type="turbulence" baseFrequency="0.06" numOctaves="2" seed="42" result="boil"/>
-      <feDisplacementMap in="displaced" in2="boil" scale="1.2" xChannelSelector="R" yChannelSelector="G"/>
+    <filter id="pencil" x="-15%" y="-15%" width="130%" height="130%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="4" seed="7" result="grain"/>
+      <feDisplacementMap in="SourceGraphic" in2="grain" scale="2.0" xChannelSelector="R" yChannelSelector="G" result="displaced"/>
+      <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="2" seed="42" result="boil"/>
+      <feDisplacementMap in="displaced" in2="boil" scale="1.4" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
   </defs>
   <rect width="32" height="32" rx="6" ry="6" fill="#faf8f5"/>
-  <!-- Hand-drawn S: open stroke path with pencil displacement -->
-  <path
-    d="M 20.5 8.5 C 18.5 6.5 13.5 5.8 11 8 C 8.2 10.5 9.5 13.5 12 15 C 14.5 16.5 19.5 17 21 19.5 C 22.8 22.5 21 26 17 27 C 13.5 27.8 10 26.5 9 24.5"
-    fill="none"
-    stroke="#0a0a0a"
-    stroke-width="3.2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    filter="url(#pencil)"
-  />
+  <!-- Stylized calligraphic S: thick→thin→thick stroke variation via two overlapping paths -->
+  <g filter="url(#pencil)">
+    <!-- Main S spine — bold, expressive curves with overshoot -->
+    <path
+      d="M 21.5 7.2 C 19.8 5.2 15 4.5 11.8 6.5 C 8.8 8.5 8.5 12 11 14.2 C 13.2 16 17 16.5 19.5 17.5 C 23 19 23.5 22 21.5 24.5 C 19.2 27.2 14 28.2 10.5 26"
+      fill="none"
+      stroke="#0a0a0a"
+      stroke-width="3.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <!-- Top serif flick -->
+    <path
+      d="M 21.5 7.2 C 22.5 7.8 23 9 22.2 9.5"
+      fill="none"
+      stroke="#0a0a0a"
+      stroke-width="2.4"
+      stroke-linecap="round"
+    />
+    <!-- Bottom serif flick -->
+    <path
+      d="M 10.5 26 C 9.2 25 8.8 23.5 9.5 22.8"
+      fill="none"
+      stroke="#0a0a0a"
+      stroke-width="2.4"
+      stroke-linecap="round"
+    />
+  </g>
 </svg>
