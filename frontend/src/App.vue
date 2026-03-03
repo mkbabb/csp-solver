@@ -205,7 +205,8 @@ function onHoverLeave() {
 
 @media (max-width: 767px) {
   .main-content {
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: 2.25rem;
     --board-vw: 96vw;
   }
 }
