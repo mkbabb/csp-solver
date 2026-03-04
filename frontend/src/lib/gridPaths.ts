@@ -34,9 +34,9 @@ export function generateGridPaths(
 ): GridPaths {
     const cellSize = viewBoxSize / boardSize;
     const pad = 26;
-    // Frame rect: tighter top/bottom (expand outward), sides come in slightly
+    // Frame rect: top/bottom flush with card edge, sides pulled in slightly
     const frameXPad = 12;
-    const frameYPad = 4;
+    const frameYPad = 0;
 
     const frame = wobbleRect(frameXPad, frameYPad, viewBoxSize - frameXPad * 2, viewBoxSize - frameYPad * 2, {
         roughness: 0.5,
@@ -173,9 +173,9 @@ export function generateGridBoilFrames(
 ): BoilFrames {
     const cellSize = viewBoxSize / boardSize;
     const pad = 26;
-    // Frame rect: tighter top/bottom (expand outward), sides come in slightly
+    // Frame rect: top/bottom flush with card edge, sides pulled in slightly
     const frameXPad = 12;
-    const frameYPad = 4;
+    const frameYPad = 0;
 
     function lineBoilFrames(
         x1: number, y1: number, x2: number, y2: number,
