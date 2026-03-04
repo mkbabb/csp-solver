@@ -32,19 +32,10 @@ const cellRects = computed(() =>
 )
 
 const boardSizeClasses = computed(() => {
-  if (props.boardSize <= 4) return 'w-[min(26rem,96vw)] md:w-[min(26rem,85vw)] md:max-w-[calc(100dvh-10rem)]'
-  if (props.boardSize <= 9) return 'w-[min(42rem,96vw)] md:w-[min(42rem,85vw)] md:max-w-[calc(100dvh-10rem)]'
-  return 'w-[min(52rem,96vw)] md:w-[min(52rem,90vw)] md:max-w-[calc(100dvh-10rem)]'
+  if (props.boardSize <= 4) return 'w-[min(26rem,calc(100vw-1.5rem))] md:w-[min(26rem,85vw)] md:max-w-[calc(100dvh-10rem)]'
+  if (props.boardSize <= 9) return 'w-[min(42rem,calc(100vw-1.5rem))] md:w-[min(42rem,85vw)] md:max-w-[calc(100dvh-10rem)]'
+  return 'w-[min(52rem,calc(100vw-1.5rem))] md:w-[min(52rem,90vw)] md:max-w-[calc(100dvh-10rem)]'
 })
-
-// Wrapper padding matches SVG grid-line pad (26/1000 viewBox) so cells align with grid lines.
-// Uses percentage (relative to board width) so it scales correctly at any viewport size.
-// Vertical padding is slightly larger to keep top/bottom row glyphs inside the frame.
-const SVG_PAD_FRAC = 26 / 1000
-const SVG_VPAD_FRAC = 30 / 1000
-const boardPaddingH = `${(SVG_PAD_FRAC * 100).toFixed(2)}%`
-const boardPaddingV = `${(SVG_VPAD_FRAC * 100).toFixed(2)}%`
-const boardPadding = `${boardPaddingV} ${boardPaddingH}`
 
 const boardClasses = computed(() => {
   const base = 'transition-all duration-500'
@@ -111,7 +102,6 @@ function isRevealed(pos: number): boolean {
   <div
     class="board-wrapper cartoon-shadow-md aspect-square rounded-xl bg-card"
     :class="[boardClasses, boardSizeClasses]"
-    :style="{ padding: boardPadding }"
   >
     <!-- Hand-drawn SVG grid overlay -->
     <HandDrawnGrid
@@ -123,7 +113,7 @@ function isRevealed(pos: number): boolean {
 
     <!-- Interactive cell grid -->
     <div
-      class="board-cells grid h-full w-full"
+      class="board-cells grid"
       :style="{
         gridTemplateColumns,
         gridTemplateRows: gridTemplateColumns,
@@ -156,7 +146,8 @@ function isRevealed(pos: number): boolean {
 }
 
 .board-cells {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 2;
 }
 </style>

@@ -188,6 +188,11 @@ function onHoverLeave() {
 }
 
 @media (max-width: 767px) {
+  .corner-right {
+    top: 0.5rem;
+    right: 0.75rem;
+  }
+
   .app-layout {
     flex-direction: column;
     align-items: center;
@@ -211,6 +216,7 @@ function onHoverLeave() {
 @media (max-width: 767px) {
   .main-content {
     justify-content: flex-start;
+    padding-top: 1.5rem;
   }
 }
 
@@ -226,7 +232,7 @@ function onHoverLeave() {
 }
 
 .mobile-board-width {
-  width: min(42rem, 96vw);
+  width: min(42rem, calc(100vw - 1.5rem));
 }
 
 /* Hover card */
