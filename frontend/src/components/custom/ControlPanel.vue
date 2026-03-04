@@ -331,6 +331,10 @@ function onSolve() {
   font-family: 'Fira Code', monospace;
 }
 
+.section-heading:hover {
+  filter: url(#wobble-heart);
+}
+
 .ctrl-btn:hover {
   filter: url(#wobble-heart);
 }

@@ -8,6 +8,7 @@ import SvgFilters from '@/components/decorative/SvgFilters.vue'
 import HandwrittenLogo from '@/components/decorative/HandwrittenLogo.vue'
 // import FilterTuner from '@/components/custom/FilterTuner.vue'
 import CrayonHeart from '@/components/decorative/CrayonHeart.vue'
+import HandDrawnOutline from '@/components/custom/HandDrawnOutline.vue'
 const sudoku = useSudoku()
 const hoverCardOpen = ref(false)
 let hoverCloseTimer: ReturnType<typeof setTimeout> | null = null
@@ -107,37 +108,41 @@ function onHoverLeave() {
 
           <!-- Mobile: unified controls card below board -->
           <div class="mobile-board-width md:hidden">
-            <div class="rounded-lg bg-card px-2 py-1.5 cartoon-shadow-sm">
-              <ControlPanel
-                :size="sudoku.size.value"
-                :difficulty="sudoku.difficulty.value"
-                :loading="sudoku.loading.value"
-                :solve-state="sudoku.solveState.value"
-                mobile
-                @update:size="sudoku.size.value = $event"
-                @update:difficulty="sudoku.difficulty.value = $event"
-                @randomize="sudoku.randomize()"
-                @clear="sudoku.clearBoard()"
-                @solve="sudoku.solve()"
-              />
-            </div>
+            <HandDrawnOutline>
+              <div class="rounded-lg bg-card px-2 py-1.5">
+                <ControlPanel
+                  :size="sudoku.size.value"
+                  :difficulty="sudoku.difficulty.value"
+                  :loading="sudoku.loading.value"
+                  :solve-state="sudoku.solveState.value"
+                  mobile
+                  @update:size="sudoku.size.value = $event"
+                  @update:difficulty="sudoku.difficulty.value = $event"
+                  @randomize="sudoku.randomize()"
+                  @clear="sudoku.clearBoard()"
+                  @solve="sudoku.solve()"
+                />
+              </div>
+            </HandDrawnOutline>
           </div>
 
           <!-- Desktop sidebar: controls card (aligned with board top) -->
           <div class="hidden md:flex md:flex-col md:items-start">
-            <div class="controls-card cartoon-shadow-sm rounded-xl bg-card p-5">
-              <ControlPanel
-                :size="sudoku.size.value"
-                :difficulty="sudoku.difficulty.value"
-                :loading="sudoku.loading.value"
-                :solve-state="sudoku.solveState.value"
-                @update:size="sudoku.size.value = $event"
-                @update:difficulty="sudoku.difficulty.value = $event"
-                @randomize="sudoku.randomize()"
-                @clear="sudoku.clearBoard()"
-                @solve="sudoku.solve()"
-              />
-            </div>
+            <HandDrawnOutline>
+              <div class="controls-card rounded-xl bg-card p-5">
+                <ControlPanel
+                  :size="sudoku.size.value"
+                  :difficulty="sudoku.difficulty.value"
+                  :loading="sudoku.loading.value"
+                  :solve-state="sudoku.solveState.value"
+                  @update:size="sudoku.size.value = $event"
+                  @update:difficulty="sudoku.difficulty.value = $event"
+                  @randomize="sudoku.randomize()"
+                  @clear="sudoku.clearBoard()"
+                  @solve="sudoku.solve()"
+                />
+              </div>
+            </HandDrawnOutline>
           </div>
         </div>
       </div>
@@ -221,7 +226,7 @@ function onHoverLeave() {
 }
 
 .mobile-board-width {
-  width: min(36rem, 96vw);
+  width: min(42rem, 96vw);
 }
 
 /* Hover card */

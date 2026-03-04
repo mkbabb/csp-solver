@@ -1,5 +1,12 @@
 import { computed, ref, watch } from 'vue'
 import { useApi } from './useApi'
+import {
+  resolveInitialState,
+  syncToUrl,
+  persistBoard,
+  clearPersistedBoard,
+  type PersistedBoard,
+} from './useUrlState'
 
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD'
 export type SolveState = 'idle' | 'solving' | 'solved' | 'failed' | 'error'
@@ -7,8 +14,10 @@ export type SolveState = 'idle' | 'solving' | 'solved' | 'failed' | 'error'
 export function useSudoku() {
   const api = useApi()
 
-  const size = ref(3)
-  const difficulty = ref<Difficulty>('EASY')
+  const initial = resolveInitialState()
+
+  const size = ref(initial.size)
+  const difficulty = ref<Difficulty>(initial.difficulty)
   const boardSize = computed(() => size.value ** 2)
   const totalCells = computed(() => boardSize.value ** 2)
 
@@ -51,6 +60,7 @@ export function useSudoku() {
     overriddenCells.value = new Set()
     animatingCells.value = new Set()
     boardGeneration.value++
+    clearPersistedBoard()
   }
 
   function setCell(pos: number, value: number) {
@@ -132,13 +142,72 @@ export function useSudoku() {
     }
   }
 
-  // Re-init when size changes
-  watch(size, () => {
+  // ── Restore from persisted state (no animation) ──────────────────
+  function restoreBoard(persisted: PersistedBoard) {
+    values.value = { ...persisted.values }
+    givenCells.value = new Set(persisted.givenCells)
+    originalGivenCells.value = new Set(persisted.originalGivenCells)
+    overriddenCells.value = new Set(persisted.overriddenCells)
+    solvedValues.value = { ...persisted.solvedValues }
+    boardGeneration.value = persisted.boardGeneration
+    animatingCells.value = new Set() // no re-animation on restore
+    solveState.value = 'idle'
+    errorMessage.value = ''
+  }
+
+  // ── Persistence helper ───────────────────────────────────────────
+  function saveBoardState() {
+    persistBoard({
+      size: size.value,
+      difficulty: difficulty.value,
+      values: values.value,
+      givenCells: Array.from(givenCells.value),
+      originalGivenCells: Array.from(originalGivenCells.value),
+      overriddenCells: Array.from(overriddenCells.value),
+      solvedValues: solvedValues.value,
+      boardGeneration: boardGeneration.value,
+    })
+  }
+
+  // ── Initialization ───────────────────────────────────────────────
+  syncToUrl(size.value, difficulty.value)
+
+  const canRestore =
+    (initial.source === 'url+storage' || initial.source === 'storage-only') &&
+    initial.persisted != null &&
+    Object.values(initial.persisted.values).some((v) => v !== 0)
+
+  if (canRestore) {
+    restoreBoard(initial.persisted!)
+  } else {
+    // No meaningful persisted state — init empty board then auto-fetch
+    if (initial.persisted) clearPersistedBoard()
     initBoard()
+    randomize() // fire-and-forget
+  }
+
+  // ── Watchers ─────────────────────────────────────────────────────
+
+  // Sync URL when size or difficulty changes
+  watch([size, difficulty], () => {
+    syncToUrl(size.value, difficulty.value)
   })
 
-  // Init on creation
-  initBoard()
+  // Re-init when size changes — old board dimensions invalid
+  watch(size, () => {
+    clearPersistedBoard()
+    initBoard()
+    randomize()
+  })
+
+  // Persist board state on meaningful changes
+  watch(
+    [values, givenCells, originalGivenCells, overriddenCells, solvedValues, boardGeneration],
+    () => {
+      saveBoardState()
+    },
+    { deep: true },
+  )
 
   return {
     size,

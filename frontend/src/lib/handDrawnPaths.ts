@@ -24,4 +24,5 @@ export {
     type BoilFrames,
     generateGridPaths,
     generateGridBoilFrames,
+    generateRectBoilFrames,
 } from '@/lib/gridPaths';

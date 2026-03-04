@@ -160,7 +160,7 @@ function focusInput() {
   fill: var(--color-foreground);
   fill-opacity: 0.06;
   stroke: var(--color-foreground);
-  stroke-width: 6;
+  stroke-width: 5;
   stroke-opacity: 0.65;
   stroke-linecap: round;
   stroke-linejoin: round;

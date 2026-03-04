@@ -34,10 +34,11 @@ export function generateGridPaths(
 ): GridPaths {
     const cellSize = viewBoxSize / boardSize;
     const pad = 26;
-    // Frame rect sits further out than grid lines so thick stroke doesn't occlude edge cells
-    const framePad = 8;
+    // Frame rect: tighter top/bottom (expand outward), sides come in slightly
+    const frameXPad = 12;
+    const frameYPad = 4;
 
-    const frame = wobbleRect(framePad, framePad, viewBoxSize - framePad * 2, viewBoxSize - framePad * 2, {
+    const frame = wobbleRect(frameXPad, frameYPad, viewBoxSize - frameXPad * 2, viewBoxSize - frameYPad * 2, {
         roughness: 0.5,
         segments: 6,
         seed,
@@ -115,6 +116,47 @@ export interface BoilFrames {
 }
 
 /**
+ * Generate boil frame variants for a standalone rectangle.
+ * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations.
+ */
+export function generateRectBoilFrames(
+    x: number, y: number, w: number, h: number,
+    opts: WobbleOptions, boilAmount: number, frameCount: number,
+): string[] {
+    const s = opts.seed ?? 42;
+    const sides = [
+        { x1: x, y1: y, x2: x + w, y2: y, seed: s },
+        { x1: x + w, y1: y, x2: x + w, y2: y + h, seed: s + 1 },
+        { x1: x + w, y1: y + h, x2: x, y2: y + h, seed: s + 2 },
+        { x1: x, y1: y + h, x2: x, y2: y, seed: s + 3 },
+    ];
+
+    const sideBasePoints = sides.map(side =>
+        wobbleLinePoints(side.x1, side.y1, side.x2, side.y2, { ...opts, seed: side.seed })
+    );
+
+    const frames: string[] = [];
+    for (let f = 0; f < frameCount; f++) {
+        const sidePoints = f === 0
+            ? sideBasePoints
+            : sideBasePoints.map((pts, i) =>
+                perturbPoints(
+                    pts, sides[i].x1, sides[i].y1, sides[i].x2, sides[i].y2,
+                    boilAmount, sides[i].seed + f * 997,
+                )
+            );
+
+        let d = pointsToLinear(sidePoints[0]);
+        for (let si = 1; si < 4; si++) {
+            d += ' ' + pointsToLinear(sidePoints[si]).replace(/^M[^ ]+/, '');
+        }
+        d += ' Z';
+        frames.push(d);
+    }
+    return frames;
+}
+
+/**
  * Generate all boil frame variants for a Sudoku grid.
  * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations
  * of the base points — simulating an artist retracing the same line.
@@ -131,8 +173,9 @@ export function generateGridBoilFrames(
 ): BoilFrames {
     const cellSize = viewBoxSize / boardSize;
     const pad = 26;
-    // Frame rect sits further out than grid lines so thick stroke doesn't occlude edge cells
-    const framePad = 8;
+    // Frame rect: tighter top/bottom (expand outward), sides come in slightly
+    const frameXPad = 12;
+    const frameYPad = 4;
 
     function lineBoilFrames(
         x1: number, y1: number, x2: number, y2: number,
@@ -150,46 +193,9 @@ export function generateGridBoilFrames(
         return frames;
     }
 
-    function rectBoilFrames(
-        x: number, y: number, w: number, h: number,
-        opts: WobbleOptions, boilAmount: number,
-    ): string[] {
-        const s = opts.seed ?? 42;
-        const sides = [
-            { x1: x, y1: y, x2: x + w, y2: y, seed: s },
-            { x1: x + w, y1: y, x2: x + w, y2: y + h, seed: s + 1 },
-            { x1: x + w, y1: y + h, x2: x, y2: y + h, seed: s + 2 },
-            { x1: x, y1: y + h, x2: x, y2: y, seed: s + 3 },
-        ];
-
-        const sideBasePoints = sides.map(side =>
-            wobbleLinePoints(side.x1, side.y1, side.x2, side.y2, { ...opts, seed: side.seed })
-        );
-
-        const frames: string[] = [];
-        for (let f = 0; f < frameCount; f++) {
-            const sidePoints = f === 0
-                ? sideBasePoints
-                : sideBasePoints.map((pts, i) =>
-                    perturbPoints(
-                        pts, sides[i].x1, sides[i].y1, sides[i].x2, sides[i].y2,
-                        boilAmount, sides[i].seed + f * 997,
-                    )
-                );
-
-            let d = pointsToLinear(sidePoints[0]);
-            for (let si = 1; si < 4; si++) {
-                d += ' ' + pointsToLinear(sidePoints[si]).replace(/^M[^ ]+/, '');
-            }
-            d += ' Z';
-            frames.push(d);
-        }
-        return frames;
-    }
-
-    const frame = rectBoilFrames(framePad, framePad, viewBoxSize - framePad * 2, viewBoxSize - framePad * 2, {
+    const frame = generateRectBoilFrames(frameXPad, frameYPad, viewBoxSize - frameXPad * 2, viewBoxSize - frameYPad * 2, {
         roughness: 0.5, segments: 6, seed: baseSeed, jagged: true,
-    }, frameBoil);
+    }, frameBoil, frameCount);
 
     const subgridLines: string[][] = [];
     const cellLines: string[][] = [];

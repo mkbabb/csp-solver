@@ -31,15 +31,19 @@ const cellRects = computed(() =>
 )
 
 const boardWidth = computed(() => {
-  if (props.boardSize <= 4) return 'min(22rem, var(--board-vw, 85vw))'
-  if (props.boardSize <= 9) return 'min(36rem, var(--board-vw, 85vw))'
-  return 'min(44rem, var(--board-vw, 90vw))'
+  if (props.boardSize <= 4) return 'min(26rem, var(--board-vw, 85vw))'
+  if (props.boardSize <= 9) return 'min(42rem, var(--board-vw, 85vw))'
+  return 'min(52rem, var(--board-vw, 90vw))'
 })
 
 // Wrapper padding matches SVG grid-line pad (26/1000 viewBox) so cells align with grid lines.
 // Uses percentage (relative to board width) so it scales correctly at any viewport size.
+// Vertical padding is slightly larger to keep top/bottom row glyphs inside the frame.
 const SVG_PAD_FRAC = 26 / 1000
-const boardPadding = `${(SVG_PAD_FRAC * 100).toFixed(2)}%`
+const SVG_VPAD_FRAC = 30 / 1000
+const boardPaddingH = `${(SVG_PAD_FRAC * 100).toFixed(2)}%`
+const boardPaddingV = `${(SVG_VPAD_FRAC * 100).toFixed(2)}%`
+const boardPadding = `${boardPaddingV} ${boardPaddingH}`
 
 const boardClasses = computed(() => {
   const base = 'transition-all duration-500'
