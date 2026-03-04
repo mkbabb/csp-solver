@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useResizeObserver } from '@vueuse/core'
-import { generateRectBoilFrames } from '@/lib/handDrawnPaths'
-import { useLineBoil } from '@/composables/useLineBoil'
+import { useLineBoil } from '@mkbabb/pencil-boil'
+import { generateRectBoilFrames } from '@/lib/gridPaths'
 import { BOIL_CONFIG } from '@/lib/pencilConfig'
 
 const VIEWBOX = 1000
@@ -20,7 +20,10 @@ useResizeObserver(containerRef, (entries) => {
   }
 })
 
-const { currentFrame } = useLineBoil(BOIL_CONFIG.frameCount, BOIL_CONFIG.intervalMs)
+const { currentFrame } = useLineBoil(
+  () => BOIL_CONFIG.frameCount,
+  () => BOIL_CONFIG.intervalMs,
+)
 
 const frames = computed(() => {
   if (width.value === 0 || height.value === 0) return []

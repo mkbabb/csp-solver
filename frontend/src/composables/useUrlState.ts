@@ -3,7 +3,6 @@ import type { Difficulty } from './useSudoku'
 const STORAGE_KEY = 'sudoku-board-state'
 const VALID_SIZES = [2, 3, 4]
 const VALID_DIFFICULTIES: Difficulty[] = ['EASY', 'MEDIUM', 'HARD']
-const SIZE_WEIGHTS = [2, 3, 3, 3, 4] // weighted toward 3
 
 export type InitSource = 'fresh' | 'url-only' | 'storage-only' | 'url+storage'
 
@@ -59,10 +58,6 @@ function loadPersistedBoard(): PersistedBoard | null {
   }
 }
 
-function randomSize(): number {
-  return SIZE_WEIGHTS[Math.floor(Math.random() * SIZE_WEIGHTS.length)]
-}
-
 function randomDifficulty(): Difficulty {
   return VALID_DIFFICULTIES[Math.floor(Math.random() * VALID_DIFFICULTIES.length)]
 }
@@ -102,7 +97,7 @@ export function resolveInitialState(): InitialState {
   }
 
   return {
-    size: randomSize(),
+    size: 3,
     difficulty: randomDifficulty(),
     source: 'fresh',
     persisted: null,

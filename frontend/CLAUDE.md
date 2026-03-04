@@ -2,13 +2,15 @@
 
 Vue 3 + TypeScript + Tailwind v4 single-page application. Hand-drawn crayon aesthetic (Rough.js, custom SVG glyphs, stroke-dasharray animations). No router, no state library.
 
+Shared animation primitives come from [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil); Sudoku grid generation remains local in `src/lib/gridPaths.ts`.
+
 ## File Tree
 
 ```
 frontend/
 ├── Dockerfile                          # Multi-stage: dev (Vite HMR) / prod (nginx SPA)
 ├── index.html                          # Entry HTML, Google Fonts (Fraunces, Fira Code, Patrick Hand)
-├── package.json                        # Vue 3, roughjs, keyframes.js, lucide, vueuse, reka-ui
+├── package.json                        # Vue 3, roughjs, keyframes.js, @mkbabb/pencil-boil, lucide, vueuse, reka-ui
 ├── vite.config.ts                      # Port 3000, /api proxy → :8000, ES2020, vue-vendor chunk
 ├── tailwind.config.ts                  # Dark mode (selector), custom fonts/colors/animations
 ├── tsconfig.json                       # Strict, @/* alias, bundler resolution
@@ -40,18 +42,13 @@ frontend/
     ├── composables/
     │   ├── useSudoku.ts                # Core game state: size, difficulty, values, givenCells, solveState
     │   ├── useApi.ts                   # GET /board/random, POST /board/solve
-    │   ├── useTheme.ts                 # Dark mode via @vueuse/core useDark
-    │   └── useLineBoil.ts              # Frame index cycling for path-based boil and wobble effects
+    │   └── useTheme.ts                 # Dark mode via @vueuse/core useDark
     └── lib/
         ├── utils.ts                    # cn() — clsx + tailwind-merge
-        ├── prng.ts                     # mulberry32 seeded PRNG (shared across all path generation)
-        ├── pathGeneration.ts           # Generic hand-drawn path primitives: wobbleLine, wobbleRect, catmullRomToBezier
         ├── gridPaths.ts                # Sudoku grid-specific: generateGridPaths, generateGridBoilFrames
-        ├── handDrawnPaths.ts           # Re-export barrel for prng + pathGeneration + gridPaths
         ├── pencilConfig.ts             # Centralized stroke, filter preset, boil, and draw-in config
         ├── scribbleFill.ts             # Scan-line hachure fill for arbitrary closed SVG paths
         ├── scribbleUnderline.ts        # Scribble/ghost underline SVG data URIs for control panel
-        ├── celestialGeometry.ts        # Sun ray, sparkle diamond, star polygon geometry
         ├── vineShapes.ts               # Fruit/leaf/heart drawing functions (rough.js)
         ├── vineGenerator.ts            # Vine orchestration: main strand, helix, thorns, tendrils, fruit placement
         ├── doodleShapes.ts             # Margin doodle shape generators: daisy, star, spiral, etc.

@@ -2,6 +2,10 @@
 
 Hand-drawn crayon aesthetic built on SVG filters, stroke-dashoffset animations, and Rough.js rendering. Every visual effect flows from a centralized config in `lib/pencilConfig.ts`.
 
+Generic boil primitives (`mulberry32`, wobble path generation, celestial wobble helpers, and `useLineBoil`) are imported from [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil). Sudoku-specific grid generation remains local in `lib/gridPaths.ts`.
+
+Library-level animation docs: [`pencil-boil/README.md`](https://github.com/mkbabb/pencil-boil#animation-notes).
+
 ## Pencil Effect Pipeline
 
 All pencil effects are SVG `<filter>` chains applied via CSS `filter: url(#id)`. Three primitive types compose every effect:
@@ -81,7 +85,7 @@ Pre-drawn SVG paths in `lib/glyphs/glyphPaths.ts`: digits 0–9 (2–3 handwritt
 ## Decorative Layer
 
 - **Rough.js**: Vine border (stroke + fruits), logo letters, doodle accents. Each generates multiple SVG elements with configurable `roughness`, `strokeWidth`, `bowing`.
-- **Custom `wobbleLine`**: Grid lines use `handDrawnPaths.ts` — jagged linear segments with angular kinks (not smooth curves). Controlled by `PENCIL.gridFrame/gridSubgrid/gridCell`.
+- **Custom `wobbleLine`**: Grid lines use local `gridPaths.ts` + `@mkbabb/pencil-boil` primitives — jagged linear segments with angular kinks (not smooth curves). Controlled by `PENCIL.gridFrame/gridSubgrid/gridCell`.
 - **Sun rays**: Procedurally generated irregular polygons with seeded PRNG. Per-ray outer radius (85–100), inner radius (45–58), angular jitter (±7°), position wobble (±3px). Regenerated per boil frame.
 
 ## Performance

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { generateGridBoilFrames, mulberry32 } from '@/lib/handDrawnPaths';
-import { useLineBoil } from '@/composables/useLineBoil';
 import { Animation } from '@mkbabb/keyframes.js';
+import { mulberry32, useLineBoil } from '@mkbabb/pencil-boil';
+import { generateGridBoilFrames } from '@/lib/gridPaths';
 import { DRAW_IN_PRESETS, BOIL_CONFIG } from '@/lib/pencilConfig';
 
 const props = defineProps<{
@@ -33,7 +33,10 @@ const boilFrames = computed(() =>
 );
 
 // Path-based boil: cycle frame index at ~6.7fps
-const { currentFrame: boilFrame } = useLineBoil(BOIL_CONFIG.frameCount, BOIL_CONFIG.intervalMs);
+const { currentFrame: boilFrame } = useLineBoil(
+    () => BOIL_CONFIG.frameCount,
+    () => BOIL_CONFIG.intervalMs,
+);
 
 // Freeze on frame 0 during draw-in (strokeDashoffset needs stable paths)
 const activeFrame = computed(() => pathsVisible.value ? boilFrame.value : 0);

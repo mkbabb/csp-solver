@@ -6,7 +6,7 @@ import DiceIcon from './DiceIcon.vue'
 import type { Difficulty } from '@/composables/useSudoku'
 import { ghostUnderline, scribbleUnderline } from '@/lib/scribbleUnderline'
 import { useTheme } from '@/composables/useTheme'
-import { useLineBoil } from '@/composables/useLineBoil'
+import { useLineBoil } from '@mkbabb/pencil-boil'
 
 const { isDark } = useTheme()
 // Boil the scribble underline at ~8fps for wobble effect

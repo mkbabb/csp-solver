@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import { mulberry32 } from '@mkbabb/pencil-boil';
 import { CSSKeyframesAnimation } from '@mkbabb/keyframes.js';
 import rough from 'roughjs';
-import { mulberry32 } from '@/lib/handDrawnPaths';
 import { type Doodle, palette, drawDoodleShape } from '@/lib/doodleShapes';
 
 const svgRef = ref<SVGSVGElement | null>(null);

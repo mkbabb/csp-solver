@@ -9,7 +9,7 @@ import {
     wobbleRect,
     pointsToLinear,
     perturbPoints,
-} from '@/lib/pathGeneration';
+} from '@mkbabb/pencil-boil';
 
 export interface GridPaths {
     frame: string;
@@ -17,6 +17,31 @@ export interface GridPaths {
     cellLines: string[];
     /** Per-cell wobbleRect path in viewBox coords, keyed by position (row*boardSize+col) */
     cellRects: Record<number, string>;
+}
+
+export interface BoilFrames {
+    /** frame[frameIdx] — closed rect path for the outer frame */
+    frame: string[];
+    /** subgridLines[lineIdx][frameIdx] */
+    subgridLines: string[][];
+    /** cellLines[lineIdx][frameIdx] */
+    cellLines: string[][];
+}
+
+const GRID_BOIL_CACHE = new Map<string, BoilFrames>();
+const GRID_BOIL_CACHE_MAX = 24;
+
+function setGridBoilCache(key: string, value: BoilFrames) {
+    if (GRID_BOIL_CACHE.has(key)) GRID_BOIL_CACHE.delete(key);
+    GRID_BOIL_CACHE.set(key, value);
+    if (GRID_BOIL_CACHE.size > GRID_BOIL_CACHE_MAX) {
+        const oldest = GRID_BOIL_CACHE.keys().next().value;
+        if (oldest) GRID_BOIL_CACHE.delete(oldest);
+    }
+}
+
+function norm(n: number): string {
+    return Number.isInteger(n) ? String(n) : n.toFixed(4);
 }
 
 /**
@@ -106,15 +131,6 @@ export function generateGridPaths(
 
 // ── Boil frame generation ─────────────────────────────────────────
 
-export interface BoilFrames {
-    /** frame[frameIdx] — closed rect path for the outer frame */
-    frame: string[];
-    /** subgridLines[lineIdx][frameIdx] */
-    subgridLines: string[][];
-    /** cellLines[lineIdx][frameIdx] */
-    cellLines: string[][];
-}
-
 /**
  * Generate boil frame variants for a standalone rectangle.
  * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations.
@@ -123,6 +139,7 @@ export function generateRectBoilFrames(
     x: number, y: number, w: number, h: number,
     opts: WobbleOptions, boilAmount: number, frameCount: number,
 ): string[] {
+    const safeFrameCount = Math.max(2, Math.floor(frameCount));
     const s = opts.seed ?? 42;
     const sides = [
         { x1: x, y1: y, x2: x + w, y2: y, seed: s },
@@ -136,7 +153,7 @@ export function generateRectBoilFrames(
     );
 
     const frames: string[] = [];
-    for (let f = 0; f < frameCount; f++) {
+    for (let f = 0; f < safeFrameCount; f++) {
         const sidePoints = f === 0
             ? sideBasePoints
             : sideBasePoints.map((pts, i) =>
@@ -171,6 +188,20 @@ export function generateGridBoilFrames(
     subgridBoil: number = 1.5,
     cellBoil: number = 1.0,
 ): BoilFrames {
+    const safeFrameCount = Math.max(2, Math.floor(frameCount));
+    const cacheKey = [
+        boardSize,
+        subgridSize,
+        norm(viewBoxSize),
+        baseSeed,
+        safeFrameCount,
+        norm(frameBoil),
+        norm(subgridBoil),
+        norm(cellBoil),
+    ].join('|');
+    const cached = GRID_BOIL_CACHE.get(cacheKey);
+    if (cached) return cached;
+
     const cellSize = viewBoxSize / boardSize;
     const pad = 26;
     // Frame rect: top/bottom flush with card edge, sides pulled in slightly
@@ -183,7 +214,7 @@ export function generateGridBoilFrames(
     ): string[] {
         const basePoints = wobbleLinePoints(x1, y1, x2, y2, opts);
         const frames: string[] = [pointsToLinear(basePoints)];
-        for (let f = 1; f < frameCount; f++) {
+        for (let f = 1; f < safeFrameCount; f++) {
             const perturbed = perturbPoints(
                 basePoints, x1, y1, x2, y2,
                 boilAmount, (opts.seed ?? 42) + f * 997,
@@ -195,7 +226,7 @@ export function generateGridBoilFrames(
 
     const frame = generateRectBoilFrames(frameXPad, frameYPad, viewBoxSize - frameXPad * 2, viewBoxSize - frameYPad * 2, {
         roughness: 0.5, segments: 6, seed: baseSeed, jagged: true,
-    }, frameBoil, frameCount);
+    }, frameBoil, safeFrameCount);
 
     const subgridLines: string[][] = [];
     const cellLines: string[][] = [];
@@ -237,5 +268,7 @@ export function generateGridBoilFrames(
         else cellLines.push(frames);
     }
 
-    return { frame, subgridLines, cellLines };
+    const result = { frame, subgridLines, cellLines };
+    setGridBoilCache(cacheKey, result);
+    return result;
 }

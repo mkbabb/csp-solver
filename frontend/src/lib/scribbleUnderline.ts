@@ -1,4 +1,4 @@
-import { mulberry32 } from '@/lib/prng';
+import { mulberry32 } from '@mkbabb/pencil-boil';
 
 /** Generate a lighter ghost underline for hover state (thinner, more transparent). Returns data URI string. */
 export function ghostUnderline(seed: number, color: string): string {

@@ -2,7 +2,8 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import SudokuCell from './SudokuCell.vue'
 import HandDrawnGrid from './HandDrawnGrid.vue'
-import { generateGridPaths, mulberry32 } from '@/lib/handDrawnPaths'
+import { mulberry32 } from '@mkbabb/pencil-boil'
+import { generateGridPaths } from '@/lib/gridPaths'
 import type { SolveState } from '@/composables/useSudoku'
 
 const props = defineProps<{

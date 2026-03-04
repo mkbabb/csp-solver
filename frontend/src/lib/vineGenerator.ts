@@ -1,6 +1,5 @@
 import rough from 'roughjs';
-import { mulberry32 } from '@/lib/prng';
-import { catmullRomToBezier } from '@/lib/pathGeneration';
+import { mulberry32, catmullRomToBezier } from '@mkbabb/pencil-boil';
 import {
     type FruitPlacement,
     computeFruitPlacements,

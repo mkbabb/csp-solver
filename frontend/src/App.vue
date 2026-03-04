@@ -165,7 +165,7 @@ function onHoverLeave() {
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 40;
+  z-index: 35;
   --toggle-size: 5rem;
 }
 
@@ -218,6 +218,8 @@ function onHoverLeave() {
 
 /* Controls card hover — subtle shadow lift only */
 .controls-card {
+  position: relative;
+  z-index: 45;
   transition: box-shadow 300ms;
 }
 

@@ -1,5 +1,5 @@
 import type { RoughSVG } from 'roughjs/bin/svg';
-import { mulberry32 } from '@/lib/prng';
+import { mulberry32 } from '@mkbabb/pencil-boil';
 
 // Yoshi's Story pastel palette
 export const palette = [

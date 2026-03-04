@@ -92,9 +92,8 @@
 
 <script setup lang="ts">
 import { watch, computed } from 'vue'
+import { generateSunRays, useLineBoil, wobbleDiamond, wobbleStarPolygon } from '@mkbabb/pencil-boil'
 import { useTheme } from '@/composables/useTheme'
-import { useLineBoil } from '@/composables/useLineBoil'
-import { wobbleDiamond, wobbleStarPolygon, generateSunRays } from '@/lib/celestialGeometry'
 
 const { isDark, toggleDark } = useTheme()
 

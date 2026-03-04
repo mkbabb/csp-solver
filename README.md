@@ -178,7 +178,11 @@ keystroke. Noise-staggered reveal animations—Fisher-Yates shuffle with seeded 
 40ms per cell—accompany both randomize and solve. The solver fills only blank cells;
 consecutive solves are idempotent. Action buttons bear custom icons with click
 animations: a tumbling dice pair (randomize), a scrubbing eraser (clear), and a
-check-with-sparkle draw-in (solve). It's served via Docker Compose + Nginx.
+check-with-sparkle draw-in (solve). Core boil and hand-drawn path primitives are
+imported from [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil). It's
+served via Docker Compose + Nginx.
+Animation internals for the shared library are documented in
+[`pencil-boil/README.md`](https://github.com/mkbabb/pencil-boil#animation-notes).
 
 The sudoku application has but two routes, one for generating a random board, and one
 for solving an input board:
