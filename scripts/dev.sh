@@ -29,7 +29,7 @@ if [[ "${1:-}" == "--full" ]]; then
   echo "Backend  → http://localhost:$BACKEND_PORT"
   echo "Frontend → http://localhost:$FRONTEND_PORT  (proxying /api → :$BACKEND_PORT)"
   (cd backend && uv run uvicorn csp_solver.api.main:app --reload --port "$BACKEND_PORT") &
-  (cd frontend && VITE_API_PORT=$BACKEND_PORT npx vite --port "$FRONTEND_PORT" --strictPort) &
+  (cd frontend && VITE_API_URL="http://localhost:$BACKEND_PORT" VITE_API_PORT="$BACKEND_PORT" npx vite --port "$FRONTEND_PORT" --strictPort) &
 else
   echo "Frontend → http://localhost:$FRONTEND_PORT"
   (cd frontend && npx vite --port "$FRONTEND_PORT" --strictPort) &
