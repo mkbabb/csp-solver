@@ -31,10 +31,10 @@ const cellRects = computed(() =>
   generateGridPaths(props.boardSize, props.size, VIEWBOX_SIZE, 42).cellRects
 )
 
-const boardWidth = computed(() => {
-  if (props.boardSize <= 4) return 'min(26rem, var(--board-vw, 85vw))'
-  if (props.boardSize <= 9) return 'min(42rem, var(--board-vw, 85vw))'
-  return 'min(52rem, var(--board-vw, 90vw))'
+const boardSizeClasses = computed(() => {
+  if (props.boardSize <= 4) return 'w-[min(26rem,96vw)] md:w-[min(26rem,85vw)] md:max-w-[calc(100dvh-10rem)]'
+  if (props.boardSize <= 9) return 'w-[min(42rem,96vw)] md:w-[min(42rem,85vw)] md:max-w-[calc(100dvh-10rem)]'
+  return 'w-[min(52rem,96vw)] md:w-[min(52rem,90vw)] md:max-w-[calc(100dvh-10rem)]'
 })
 
 // Wrapper padding matches SVG grid-line pad (26/1000 viewBox) so cells align with grid lines.
@@ -108,7 +108,11 @@ function isRevealed(pos: number): boolean {
 </script>
 
 <template>
-  <div class="board-wrapper cartoon-shadow-md rounded-xl bg-card" :class="boardClasses" :style="{ width: boardWidth, aspectRatio: '1', padding: boardPadding }">
+  <div
+    class="board-wrapper cartoon-shadow-md aspect-square rounded-xl bg-card"
+    :class="[boardClasses, boardSizeClasses]"
+    :style="{ padding: boardPadding }"
+  >
     <!-- Hand-drawn SVG grid overlay -->
     <HandDrawnGrid
       :board-size="boardSize"

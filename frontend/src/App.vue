@@ -39,7 +39,7 @@ function onHoverLeave() {
 
 <template>
   <div
-    class="flex h-screen flex-col bg-background text-foreground"
+    class="flex h-screen flex-col bg-background py-3 text-foreground"
     :style="{ backgroundImage: 'var(--paper-clean-texture)', backgroundAttachment: 'fixed', backgroundSize: '60px 60px' }"
     @click="closeHoverCard"
   >
@@ -165,7 +165,7 @@ function onHoverLeave() {
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 35;
+  z-index: 60;
   --toggle-size: 5rem;
 }
 
@@ -211,8 +211,6 @@ function onHoverLeave() {
 @media (max-width: 767px) {
   .main-content {
     justify-content: flex-start;
-    padding-top: 2.25rem;
-    --board-vw: 96vw;
   }
 }
 
