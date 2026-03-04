@@ -1,4 +1,4 @@
-# Frontend — Sudoku UI
+# Frontend: Sudoku UI
 
 Vue 3 + TypeScript + Tailwind v4 single-page application. Hand-drawn crayon aesthetic (Rough.js, custom SVG glyphs, stroke-dasharray animations). No router, no state library.
 
@@ -44,7 +44,7 @@ frontend/
     │   ├── useApi.ts                   # GET /board/random, POST /board/solve
     │   └── useTheme.ts                 # Dark mode via @vueuse/core useDark
     └── lib/
-        ├── utils.ts                    # cn() — clsx + tailwind-merge
+        ├── utils.ts                    # cn(): clsx + tailwind-merge
         ├── gridPaths.ts                # Sudoku grid-specific: generateGridPaths, generateGridBoilFrames
         ├── pencilConfig.ts             # Centralized stroke, filter preset, boil, and draw-in config
         ├── scribbleFill.ts             # Scan-line hachure fill for arbitrary closed SVG paths
@@ -81,10 +81,10 @@ App.vue
 No Pinia/Vuex. Single `useSudoku()` composable holds all game state:
 - `size` (2/3/4), `difficulty` (EASY/MEDIUM/HARD)
 - `values: Record<string, number>` (0 = empty)
-- `givenCells: Set<string>` — server-provided clues (mutable on override)
-- `originalGivenCells: Set<string>` — pristine clue positions (immutable per board)
-- `overriddenCells: Set<string>` — given cells the user has manually replaced
-- `animatingCells: Set<string>` — cells with active noise-staggered reveal animation
+- `givenCells: Set<string>`: server-provided clues (mutable on override)
+- `originalGivenCells: Set<string>`: pristine clue positions (immutable per board)
+- `overriddenCells: Set<string>`: given cells the user has manually replaced
+- `animatingCells: Set<string>`: cells with active noise-staggered reveal animation
 - `solveState`: idle → solving → solved/failed/error
 - `boardGeneration`: counter, triggers grid redraw on change
 - `setCell()`: allows overriding given cells (moves from `givenCells` → `overriddenCells`)
@@ -112,27 +112,27 @@ All animations respect `prefers-reduced-motion`.
 
 - **Aesthetic**: Hand-drawn crayon, Yoshi's Story palette
 - **Grid lines**: Jagged linear segments (not smooth curves), angular kinks
-- **Board**: Pane-less — no shadow, border, or padding; grid extends freely
+- **Board**: Pane-less, no shadow, border, or padding; grid extends freely
 - **Given cells**: `sparkle-rainbow` gradient stroke + auto-wiggle; reverts to `user-ink` on override
 - **Ghost hover**: Hand-drawn wobbleRect on all cells (given included)
 - **Light**: Cream paper background, dark ink, sun with sparkle diamonds
 - **Dark**: Warm brown background, muted accents, moon with twinkling stars
 - **Rendering**: Rough.js (vine, fruits, doodles, logo), custom wobbleLine (grid), pre-drawn SVG paths (glyphs)
 - **Fonts**: Fraunces (display), Fira Code (mono), Patrick Hand (handwritten)
-- **Action buttons**: Custom icons with click animations—DiceIcon (tumble roll + pip pop), Eraser (horizontal scrub), SolveIcon (check draw-in + star sparkle). Each uses a `playing` ref with timed reset (400–500ms).
-- **Grid frame**: Outer frame rect uses a smaller `framePad` (8) than the internal grid-line `pad` (26)—pushes the frame outward so thick stroke doesn't occlude edge-cell glyphs.
+- **Action buttons**: Custom icons with click animations via `DiceIcon` (tumble roll + pip pop), Eraser (horizontal scrub), and `SolveIcon` (check draw-in + star sparkle). Each uses a `playing` ref with timed reset (400-500ms).
+- **Grid frame**: Outer frame rect uses a smaller `framePad` (8) than the internal grid-line `pad` (26), pushing the frame outward so thick stroke does not occlude edge-cell glyphs.
 - **Solve feedback**: Grid lines recolor (green success, red failure + shake)
-- **FilterTuner**: Wrench icon (fixed position)—live parameter tuning for all filter presets and boil config
+- **FilterTuner**: Wrench icon in a fixed position with live parameter tuning for all filter presets and boil config
 
 ## pencilConfig.ts
 
 Centralized reactive config in `lib/pencilConfig.ts`. Mutations propagate live to all consumers.
 
-- **PENCIL** — stroke width/roughness per element tier (gridFrame, gridSubgrid, gridCell, logoText, vine, fruitOutline)
-- **YOSHI_COLORS** — canonical palette: outlineBlack, heart, apple, banana, grapes, flower, leaf, vine
-- **FILTER_PRESETS** — reactive `Record<string, FilterPreset>`, 6 presets (see below). `resetPreset(id)` / `resetAllPresets()` restore frozen defaults.
-- **BOIL_CONFIG** — reactive `BoilConfig`: `frameCount` (4), `intervalMs` (150), `frameBoil` (1.2), `subgridBoil` (0.8), `cellBoil` (0.5). `resetBoilConfig()` restores defaults.
-- **DRAW_IN_PRESETS** — frozen timing presets per element: duration, stagger, jitter, baseDelay, timing function
+- **PENCIL**: stroke width/roughness per element tier (gridFrame, gridSubgrid, gridCell, logoText, vine, fruitOutline)
+- **YOSHI_COLORS**: canonical palette (outlineBlack, heart, apple, banana, grapes, flower, leaf, vine)
+- **FILTER_PRESETS**: reactive `Record<string, FilterPreset>` with 6 presets. `resetPreset(id)` / `resetAllPresets()` restore frozen defaults.
+- **BOIL_CONFIG**: reactive `BoilConfig` with `frameCount` (4), `intervalMs` (150), `frameBoil` (1.2), `subgridBoil` (0.8), `cellBoil` (0.5). `resetBoilConfig()` restores defaults.
+- **DRAW_IN_PRESETS**: frozen timing presets per element (duration, stagger, jitter, baseDelay, timing function)
 
 ### Filter IDs
 

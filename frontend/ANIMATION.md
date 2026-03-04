@@ -1,10 +1,15 @@
-# Animation & Pencil Effect System
+# Animation and Pencil Effect System
 
-Hand-drawn crayon aesthetic built on SVG filters, stroke-dashoffset animations, and Rough.js rendering. Every visual effect flows from a centralized config in `lib/pencilConfig.ts`.
+This rendering stack uses SVG filters, stroke-dashoffset animations, and Rough.js. All
+major animation parameters are centralized in `lib/pencilConfig.ts`.
 
-Generic boil primitives (`mulberry32`, wobble path generation, celestial wobble helpers, and `useLineBoil`) are imported from [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil). Sudoku-specific grid generation remains local in `lib/gridPaths.ts`.
+Generic boil primitives (`mulberry32`, wobble path generation, celestial wobble
+helpers, and `useLineBoil`) are imported from
+[`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil). Sudoku-specific grid
+generation remains local in `lib/gridPaths.ts`.
 
-Library-level animation docs: [`pencil-boil/README.md`](https://github.com/mkbabb/pencil-boil#animation-notes).
+Library-level animation docs:
+[`pencil-boil/README.md`](https://github.com/mkbabb/pencil-boil#animation-model).
 
 ## Pencil Effect Pipeline
 
@@ -12,9 +17,9 @@ All pencil effects are SVG `<filter>` chains applied via CSS `filter: url(#id)`.
 
 | Primitive | SVG Elements | Purpose |
 |---|---|---|
-| **Grain** | `feTurbulence(fractalNoise)` → `feDisplacementMap` | Static noise displacement — pencil texture |
-| **Wobble** | `feTurbulence(turbulence)` + `<animate seed>` → `feDisplacementMap` | Animated jitter — hand-drawn boil |
-| **MultiPass** | N × `feTurbulence` → N × `feDisplacementMap` → chained `feBlend` | Overlapping displaced strokes — heavy pencil |
+| **Grain** | `feTurbulence(fractalNoise)` → `feDisplacementMap` | Static noise displacement; pencil texture |
+| **Wobble** | `feTurbulence(turbulence)` + `<animate seed>` → `feDisplacementMap` | Animated jitter; hand-drawn boil |
+| **MultiPass** | N × `feTurbulence` → N × `feDisplacementMap` → chained `feBlend` | Overlapping displaced strokes; heavy pencil |
 
 Combinations: grain-only (`pencil-grain`), wobble-only (`boil-wobble`, `sun-wobble`), grain+wobble (`pencil-boil`, `pencil-boil-fast`), multiPass (`pencil-stroke`, `pencil-stroke-light`), texture (`crayon-texture`).
 
@@ -31,7 +36,7 @@ All filters defined in `FILTER_PRESETS` (pencilConfig.ts), rendered programmatic
 | `pencil-boil-fast` | grain+wobble | 0.05/0.025 | 4/2 | 2.2/2.5 | 0.6s | Icon hover |
 | `pencil-stroke` | multiPass×3 | 0.04 | 4 | 3.0–4.0 | no | Controls (light) |
 | `pencil-stroke-light` | multiPass×3 | 0.04 | 4 | 3.0–4.0 | no | Controls (dark) |
-| `crayon-texture` | texture | 0.65 | 5 | — | no | Rough fill surfaces |
+| `crayon-texture` | texture | 0.65 | 5 | n/a | no | Rough fill surfaces |
 
 Additional non-preset filters: `storybook-texture` (moon/star organic displacement), `sparkle-rainbow` (gradient).
 
@@ -70,7 +75,9 @@ Frame-dependent `computed()` bindings regenerate SVG polygon points each tick us
 
 ## Glyph Rendering
 
-Pre-drawn SVG paths in `lib/glyphs/glyphPaths.ts`: digits 0–9 (2–3 handwritten variants each), letters A–G. Variant selection via spatial hash (`glyphRegistry.ts`) — deterministic per board position.
+Pre-drawn SVG paths in `lib/glyphs/glyphPaths.ts`: digits 0–9 (2–3 handwritten
+variants each), letters A–G. Variant selection via spatial hash (`glyphRegistry.ts`) is
+deterministic per board position.
 
 | Phase | Mechanism | Timing |
 |---|---|---|
@@ -85,15 +92,19 @@ Pre-drawn SVG paths in `lib/glyphs/glyphPaths.ts`: digits 0–9 (2–3 handwritt
 ## Decorative Layer
 
 - **Rough.js**: Vine border (stroke + fruits), logo letters, doodle accents. Each generates multiple SVG elements with configurable `roughness`, `strokeWidth`, `bowing`.
-- **Custom `wobbleLine`**: Grid lines use local `gridPaths.ts` + `@mkbabb/pencil-boil` primitives — jagged linear segments with angular kinks (not smooth curves). Controlled by `PENCIL.gridFrame/gridSubgrid/gridCell`.
+- **Custom `wobbleLine`**: Grid lines use local `gridPaths.ts` +
+  `@mkbabb/pencil-boil` primitives with jagged linear segments and angular kinks.
+  Controlled by `PENCIL.gridFrame/gridSubgrid/gridCell`.
 - **Sun rays**: Procedurally generated irregular polygons with seeded PRNG. Per-ray outer radius (85–100), inner radius (45–58), angular jitter (±7°), position wobble (±3px). Regenerated per boil frame.
 
 ## Performance
 
 - **Conditional filter application**: Sun icon gets `sun-wobble` only in light mode; moon gets `boil-wobble` only in dark mode. Prevents invisible filter computation.
 - **Animation pausing**: `.toggle-icon:not(.is-active) * { animation-play-state: paused }` halts CSS animations on hidden icons.
-- **Board-size gating**: `pencil-boil` filter only applied when `boardSize <= 16` — prevents GPU thrash on large grids.
-- **Boil lifecycle**: `useLineBoil` start/stop tied to theme — dark mode pauses sun sparkle boil, light mode pauses star boil.
+- **Board-size gating**: `pencil-boil` filter applies only when `boardSize <= 16` to
+  prevent unnecessary GPU load on large grids.
+- **Boil lifecycle**: `useLineBoil` start/stop is tied to theme; dark mode pauses sun
+  sparkle boil, light mode pauses star boil.
 - **Reduced motion**: All animations check `prefers-reduced-motion: reduce`. CSS global rule forces `animation-duration: 0.01ms`. JS animations show final state immediately.
 
 ## Color Palette

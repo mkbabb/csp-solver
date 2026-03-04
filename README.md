@@ -2,10 +2,9 @@
 
 See the demo at [https://go.ncsu.edu/sudoku](https://go.ncsu.edu/sudoku).
 
-A generalized CSP (constraint-satisfaction-problem) solver, written in Python 3.13.
-Includes an application of the aforesaid: a fullstack webapp implementation of
-hyper-generalized sudoku — the backend powered by FastAPI, the frontend by Vue 3 +
-TypeScript, extant in a Docker Compose container and proxied through Nginx.
+Generalized CSP (constraint satisfaction problem) solver in Python 3.13.
+The repository also includes a full-stack Sudoku web app: FastAPI backend, Vue 3 +
+TypeScript frontend, Docker Compose orchestration, and Nginx reverse proxy.
 
 ## Quickstart
 
@@ -59,7 +58,7 @@ are:
 -   `FORWARD_CHECKING`
     -   Forward checking implementation.
 -   `AC3`
-    -   MAC — maintaining arc consistency implementation, variant 3.
+    -   Maintaining arc consistency (MAC), variant 3.
 -   `AC_FC`
     -   Arc consistency + forward checking implementation, low order variant of AC-1.
 -   `NO_PRUNING`
@@ -120,12 +119,11 @@ csp.add_constraint(map_coloring_constraint("Victoria", "South Australia"))
 csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
 ```
 
-Adding variables and the domains thereof is rather straightforward, but adding
-constraints can be a little daunting. A constraint is defined as a high order function
-that returns a tuple of: a checker function, used to verify if a solution is consistent,
-and a list of variables associated with this constraint.
+Adding variables and domains is straightforward. Constraints use one extra convention: a
+constraint factory returns a tuple of a checker function and the variables associated
+with that checker.
 
-A good demonstration of this can be seen by way of the generalized lambda constraint:
+Example:
 
 ```python
 def lambda_constraint(func: Callable[[Any], bool], *variables):
@@ -140,52 +138,43 @@ def lambda_constraint(func: Callable[[Any], bool], *variables):
     return check, list(variables)
 ```
 
-The inner function, `check`, simply consumes the current solution state, which, by its
-function signature, must return a boolean. If the current solution state isn't
-applicable to being called, it defaults to true.
+The inner function, `check`, consumes the current solution and returns a boolean. If the
+constraint is not yet fully assigned, it returns `True` so search can continue.
 
-The outer function then returns check, and the list of variables constrained by this
-function. This allows for terse constraint syntax like:
+The outer function returns `check` and the constrained variable list. This yields terse
+call sites such as:
 
 ```python
 csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
 ```
 
-To be employed.
-
 ## Additional Implementations
 
 Additionally, Futoshiki and Sudoku are implemented atop the CSP engine:
 
--   [`futoshiki.py`](backend/src/csp_solver/solver/futoshiki.py) — command-line solver,
+-   [`futoshiki.py`](backend/src/csp_solver/solver/futoshiki.py): command-line solver,
     reads puzzle from input file (grid values + inequality constraints).
--   [`sudoku.py`](backend/src/csp_solver/solver/sudoku.py) — board generation with
+-   [`sudoku.py`](backend/src/csp_solver/solver/sudoku.py): board generation with
     difficulty calibration, uniqueness enforcement, and pre-computed solution banks.
 
 ## Sudoku Webserver
 
-As an application of the aforesaid CSP API, we created a generalized sudoku solver. To
-better visualize the problem and solution space, we created a fullstack web application:
-the backend is written in Python using FastAPI; the frontend is written in Vue 3 +
-TypeScript with a hand-drawn crayon aesthetic—path-based line boil on the grid (4
-pre-computed path variants cycled at ~6.7fps for organic perturbation), Rough.js logo
-and decoratives, custom SVG glyphs, animated stroke-dasharray draw-ins (~800ms with
-seeded jitter), pane-less board, sun/moon toggle with wobble filters and sparkle
-decorations, and a FilterTuner for live parameter tuning of the hereinbefore visual
-effects. Given cells are rendered with a `sparkle-rainbow` gradient stroke and
-auto-wiggle animation; overriding a given cell reverts it to `user-ink` in a single
-keystroke. Noise-staggered reveal animations—Fisher-Yates shuffle with seeded PRNG,
-40ms per cell—accompany both randomize and solve. The solver fills only blank cells;
-consecutive solves are idempotent. Action buttons bear custom icons with click
-animations: a tumbling dice pair (randomize), a scrubbing eraser (clear), and a
-check-with-sparkle draw-in (solve). Core boil and hand-drawn path primitives are
-imported from [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil). It's
-served via Docker Compose + Nginx.
-Animation internals for the shared library are documented in
-[`pencil-boil/README.md`](https://github.com/mkbabb/pencil-boil#animation-notes).
+Alongside the generic CSP API, this repository ships a Sudoku web application.
+The backend is FastAPI; the frontend is Vue 3 + TypeScript with a hand-drawn SVG
+rendering stack.
 
-The sudoku application has but two routes, one for generating a random board, and one
-for solving an input board:
+The UI layer includes path-based line boil on the grid (4 pre-computed variants cycled
+at ~6.7 fps), custom SVG glyphs, Rough.js decorative elements, stroke-dashoffset
+draw-ins (~800 ms with seeded jitter), theme-aware celestial wobble effects, and a live
+filter/boil tuner.
+
+Core boil and path primitives come from
+[`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil). Sudoku-specific grid
+path generation remains local in `frontend/src/lib/gridPaths.ts`.
+Library animation internals are documented in
+[`pencil-boil/README.md`](https://github.com/mkbabb/pencil-boil#animation-model).
+
+The Sudoku API exposes three routes:
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -193,29 +182,25 @@ for solving an input board:
 | POST | `/api/v1/board/solve` | Solve input board |
 | GET | `/api/v1/health` | Health check |
 
-Due to the generality of our utilized CSP solver, the sudoku board can easily scale to
-be of arbitrary size. For the sake of browser performance and computational complexity,
-the UI is bound to boards of subgrid size: 2, 3, and 4 (yielding 4×4, 9×9, and 16×16
-grids respectively).
+The CSP solver supports arbitrary subgrid sizes. For browser and compute budget, the UI
+currently exposes subgrid sizes 2, 3, and 4 (4×4, 9×9, and 16×16).
 
-Boards of size 3 are the most common, thus we optimize for enjoyment with these boards:
-a selection of 100 hand-curated starting "seed" boards are used to generate all boards
-of size 3 shown. Pre-computed solution banks exist for sizes 2 through 5.
+Size 3 is the default path. A set of 100 curated seed boards is used to generate size-3
+boards. Pre-computed solution banks exist for sizes 2 through 5.
 
 #### Board Generation
 
-Board generation proceeds via one of two strategies. The fast path, employed whenever
-pre-computed puzzle templates exist, selects a random template and applies a random
-Sudoku symmetry transform—digit permutation, row/column permutation within bands and
-stacks, band/stack permutation, and transposition. For N=3, this symmetry group yields
-~1.22 billion distinct grids per base template, rendering the output space effectively
-inexhaustible. Generation by the aforesaid method completes in microseconds.
+Board generation uses two strategies. The fast path, used when pre-computed templates
+exist, selects a random template and applies a random Sudoku symmetry transform: digit
+permutation, row/column permutation within bands and stacks, band/stack permutation,
+and transposition. For N=3, this symmetry group yields ~1.22 billion distinct grids per
+base template. Generation on this path completes in microseconds.
 
-Where no templates are available, the system falls back to the classical slow path:
-generate a complete solution, dig holes with uniqueness verification, and calibrate
-difficulty by backtrack count. Pre-computed templates reside in
-`backend/src/csp_solver/data/sudoku_puzzles/{N}/{difficulty}/`; the offline generation
-script at `backend/scripts/generate_templates.py` produces them.
+When templates are unavailable, the system falls back to the classical path: generate a
+complete solution, remove cells with uniqueness verification, and calibrate difficulty
+by backtrack count. Templates reside in
+`backend/src/csp_solver/data/sudoku_puzzles/{N}/{difficulty}/`. The offline generation
+script is `backend/scripts/generate_templates.py`.
 
 Difficulty is calibrated by the solver's backtrack count:
 - **Easy**: 0 backtracks (solvable by constraint propagation alone)
