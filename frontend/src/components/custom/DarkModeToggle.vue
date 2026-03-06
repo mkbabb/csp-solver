@@ -92,19 +92,20 @@
 
 <script setup lang="ts">
 import { watch, computed } from 'vue'
-import { generateSunRays, useLineBoil, wobbleDiamond, wobbleStarPolygon } from '@mkbabb/pencil-boil'
+import { generateSunRays, wobbleDiamond, wobbleStarPolygon } from '@mkbabb/pencil-boil'
+import { useSharedBoil } from '@/composables/useSharedBoil'
 import { useTheme } from '@/composables/useTheme'
 
 const { isDark, toggleDark } = useTheme()
 
 // Star path boil at ~8fps — only active in dark mode
-const { currentFrame: starFrame, start: startStarBoil, stop: stopStarBoil } = useLineBoil(4)
+const { currentFrame: starFrame, start: startStarBoil, stop: stopStarBoil } = useSharedBoil(4)
 
 // Sun sparkle boil at ~8fps — only active in light mode
-const { currentFrame: sunSparkleFrame, start: startSunBoil, stop: stopSunBoil } = useLineBoil(4)
+const { currentFrame: sunSparkleFrame, start: startSunBoil, stop: stopSunBoil } = useSharedBoil(4)
 
 // Sun ray boil at ~2.5fps — slow stop-motion for ray shape cycling
-const { currentFrame: sunRayFrame, start: startRayBoil, stop: stopRayBoil } = useLineBoil(6, 800)
+const { currentFrame: sunRayFrame, start: startRayBoil, stop: stopRayBoil } = useSharedBoil(6, 800)
 
 // Pause star boil when not in dark mode, sun sparkle boil when dark (saves perf)
 watch(isDark, (dark) => {

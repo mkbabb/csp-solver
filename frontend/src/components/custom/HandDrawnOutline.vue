@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useResizeObserver } from '@vueuse/core'
-import { useLineBoil } from '@mkbabb/pencil-boil'
+import { useSharedBoil } from '@/composables/useSharedBoil'
 import { generateRectBoilFrames } from '@/lib/gridPaths'
 import { BOIL_CONFIG } from '@/lib/pencilConfig'
 
@@ -26,7 +26,7 @@ useResizeObserver(containerRef, (entries) => {
   }
 })
 
-const { currentFrame } = useLineBoil(
+const { currentFrame } = useSharedBoil(
   () => BOIL_CONFIG.frameCount,
   () => BOIL_CONFIG.intervalMs,
 )
