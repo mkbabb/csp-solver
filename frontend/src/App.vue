@@ -260,15 +260,9 @@ function onHoverLeave() {
   }
 }
 
-/* Controls card hover — subtle shadow lift only */
 .controls-card {
   position: relative;
   z-index: 45;
-  transition: box-shadow 300ms;
-}
-
-.controls-card:hover {
-  box-shadow: 4px 6px 0px var(--color-foreground);
 }
 
 .mobile-board-width {
