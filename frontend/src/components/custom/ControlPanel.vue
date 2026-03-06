@@ -6,13 +6,13 @@ import DiceIcon from './DiceIcon.vue'
 import type { Difficulty } from '@/composables/useSudoku'
 import { ghostUnderline, scribbleUnderline } from '@/lib/scribbleUnderline'
 import { useTheme } from '@/composables/useTheme'
-import { useSharedBoil } from '@/composables/useSharedBoil'
+import { useLineBoil } from '@mkbabb/pencil-boil'
 import { generateLineBoilFrames } from '@/lib/gridPaths'
 import { BOIL_CONFIG } from '@/lib/pencilConfig'
 
 const { isDark } = useTheme()
 // Boil the scribble underline at ~8fps for wobble effect
-const { currentFrame: boilFrame } = useSharedBoil(6, 500)
+const { currentFrame: boilFrame } = useLineBoil(6, 500)
 
 // Boil divider line frames
 const dividerFrames = computed(() =>
@@ -22,7 +22,7 @@ const dividerFrames = computed(() =>
     BOIL_CONFIG.frameBoil, BOIL_CONFIG.frameCount,
   )
 )
-const { currentFrame: dividerFrame } = useSharedBoil(
+const { currentFrame: dividerFrame } = useLineBoil(
   () => BOIL_CONFIG.frameCount,
   () => BOIL_CONFIG.intervalMs,
 )

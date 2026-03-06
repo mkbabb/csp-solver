@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { Animation } from '@mkbabb/keyframes.js';
 import { mulberry32 } from '@mkbabb/pencil-boil';
-import { useSharedBoil } from '@/composables/useSharedBoil';
+import { useLineBoil } from '@mkbabb/pencil-boil';
 import { generateGridBoilFrames } from '@/lib/gridPaths';
 import { DRAW_IN_PRESETS, BOIL_CONFIG } from '@/lib/pencilConfig';
 
@@ -34,7 +34,7 @@ const boilFrames = computed(() =>
 );
 
 // Path-based boil: cycle frame index at ~6.7fps
-const { currentFrame: boilFrame } = useSharedBoil(
+const { currentFrame: boilFrame } = useLineBoil(
     () => BOIL_CONFIG.frameCount,
     () => BOIL_CONFIG.intervalMs,
 );
