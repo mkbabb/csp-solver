@@ -12,7 +12,7 @@ import { BOIL_CONFIG } from '@/lib/pencilConfig'
 
 const { isDark } = useTheme()
 // Boil the scribble underline at ~8fps for wobble effect
-const { currentFrame: boilFrame } = useLineBoil(6, 500)
+const { currentFrame: boilFrame } = useLineBoil(4, 800)
 
 // Boil divider line frames
 const dividerFrames = computed(() =>

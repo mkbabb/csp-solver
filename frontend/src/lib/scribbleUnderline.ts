@@ -54,25 +54,25 @@ function _scribbleUnderline(seed: number, color: string): string {
     const baseY = h * 0.5;
 
     // First pass -- main wobbly stroke
-    let d = `M${startX.toFixed(1)},${(baseY + (rng() - 0.5) * 3).toFixed(1)}`;
+    let d = `M${startX.toFixed(1)},${(baseY + (rng() - 0.5) * 2).toFixed(1)}`;
     const segs = 4 + Math.floor(rng() * 3);
     for (let i = 1; i <= segs; i++) {
         const x = startX + ((endX - startX) * i) / segs;
-        const y = baseY + (rng() - 0.5) * 5;
-        const cpx = startX + ((endX - startX) * (i - 0.5)) / segs + (rng() - 0.5) * 8;
-        const cpy = baseY + (rng() - 0.5) * 6;
+        const y = baseY + (rng() - 0.5) * 3;
+        const cpx = startX + ((endX - startX) * (i - 0.5)) / segs + (rng() - 0.5) * 5;
+        const cpy = baseY + (rng() - 0.5) * 4;
         d += ` Q${cpx.toFixed(1)},${cpy.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
     }
 
     // Second pass -- slightly offset retrace for pencil "double-stroke" effect
-    const offset = 1.5 + rng() * 1.5;
-    d += ` M${(endX - rng() * 4).toFixed(1)},${(baseY + offset + (rng() - 0.5) * 2).toFixed(1)}`;
+    const offset = 1.5 + rng() * 1;
+    d += ` M${(endX - rng() * 3).toFixed(1)},${(baseY + offset + (rng() - 0.5) * 1.5).toFixed(1)}`;
     const segs2 = 3 + Math.floor(rng() * 2);
     for (let i = 1; i <= segs2; i++) {
         const x = endX - ((endX - startX) * i) / segs2;
-        const y = baseY + offset + (rng() - 0.5) * 4;
-        const cpx = endX - ((endX - startX) * (i - 0.5)) / segs2 + (rng() - 0.5) * 10;
-        const cpy = baseY + offset + (rng() - 0.5) * 5;
+        const y = baseY + offset + (rng() - 0.5) * 2.5;
+        const cpx = endX - ((endX - startX) * (i - 0.5)) / segs2 + (rng() - 0.5) * 6;
+        const cpy = baseY + offset + (rng() - 0.5) * 3;
         d += ` Q${cpx.toFixed(1)},${cpy.toFixed(1)} ${x.toFixed(1)},${y.toFixed(1)}`;
     }
 
