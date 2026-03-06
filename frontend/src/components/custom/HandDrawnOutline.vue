@@ -5,6 +5,12 @@ import { useLineBoil } from '@mkbabb/pencil-boil'
 import { generateRectBoilFrames } from '@/lib/gridPaths'
 import { BOIL_CONFIG } from '@/lib/pencilConfig'
 
+const props = withDefaults(defineProps<{
+  strokeWidth?: number
+}>(), {
+  strokeWidth: 6,
+})
+
 const VIEWBOX = 1000
 const PAD = 8
 
@@ -60,7 +66,7 @@ const currentPath = computed(() => frames.value[currentFrame.value] ?? '')
         :d="currentPath"
         fill="none"
         stroke="currentColor"
-        stroke-width="6"
+        :stroke-width="props.strokeWidth"
         stroke-opacity="0.95"
         stroke-linejoin="round"
         stroke-linecap="round"
@@ -74,14 +80,16 @@ const currentPath = computed(() => frames.value[currentFrame.value] ?? '')
 <style scoped>
 .outline-container {
   position: relative;
+  overflow: visible;
 }
 
 .outline-svg {
   position: absolute;
-  inset: -4px;
-  width: calc(100% + 8px);
-  height: calc(100% + 8px);
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
   pointer-events: none;
   z-index: 1;
+  overflow: visible;
 }
 </style>
