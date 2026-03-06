@@ -11,8 +11,27 @@ import { generateLineBoilFrames } from '@/lib/gridPaths'
 import { BOIL_CONFIG } from '@/lib/pencilConfig'
 
 const { isDark } = useTheme()
-// Boil the scribble underline at ~8fps for wobble effect
-const { currentFrame: boilFrame } = useLineBoil(4, 800)
+
+// Underline boil: brief burst on selection change, then settle
+const boilFrame = ref(0)
+let boilTimer: ReturnType<typeof setTimeout> | null = null
+
+function triggerBoil() {
+  if (boilTimer) clearTimeout(boilTimer)
+  let frame = 1
+  boilFrame.value = frame
+  const tick = () => {
+    frame++
+    if (frame >= 5) {
+      boilFrame.value = 0
+      boilTimer = null
+      return
+    }
+    boilFrame.value = frame
+    boilTimer = setTimeout(tick, 120)
+  }
+  boilTimer = setTimeout(tick, 120)
+}
 
 // Boil divider line frames
 const dividerFrames = computed(() =>
@@ -114,7 +133,7 @@ function onSolve() {
         <button
           v-for="s in sizes"
           :key="s.value"
-          @click="emit('update:size', s.value)"
+          @click="emit('update:size', s.value); triggerBoil()"
           class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
           :class="
             size === s.value
@@ -133,7 +152,7 @@ function onSolve() {
         <button
           v-for="d in difficulties"
           :key="d.value"
-          @click="emit('update:difficulty', d.value)"
+          @click="emit('update:difficulty', d.value); triggerBoil()"
           class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
           :class="[
             difficulty === d.value
@@ -210,7 +229,7 @@ function onSolve() {
           <button
             v-for="s in sizes"
             :key="s.value"
-            @click="emit('update:size', s.value)"
+            @click="emit('update:size', s.value); triggerBoil()"
             class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150 md:py-0.5 md:text-left md:text-[1.25rem]"
             :class="
               size === s.value
@@ -246,7 +265,7 @@ function onSolve() {
           <button
             v-for="d in difficulties"
             :key="d.value"
-            @click="emit('update:difficulty', d.value)"
+            @click="emit('update:difficulty', d.value); triggerBoil()"
             class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150 md:py-0.5 md:text-left md:text-[1.25rem]"
             :class="[
               difficulty === d.value
