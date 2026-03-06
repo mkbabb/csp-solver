@@ -169,6 +169,7 @@ function focusInput() {
 /* Ensure ghost overflow is not clipped */
 .sudoku-cell {
   overflow: visible;
+  contain: layout style;
 }
 .sudoku-cell.is-active {
   z-index: 10;
