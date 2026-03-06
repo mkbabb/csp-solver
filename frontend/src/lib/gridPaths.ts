@@ -174,6 +174,27 @@ export function generateRectBoilFrames(
 }
 
 /**
+ * Generate boil frame variants for a standalone line segment.
+ * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations.
+ */
+export function generateLineBoilFrames(
+    x1: number, y1: number, x2: number, y2: number,
+    opts: WobbleOptions, boilAmount: number, frameCount: number,
+): string[] {
+    const safeFrameCount = Math.max(2, Math.floor(frameCount));
+    const basePoints = wobbleLinePoints(x1, y1, x2, y2, opts);
+    const frames: string[] = [pointsToLinear(basePoints)];
+    for (let f = 1; f < safeFrameCount; f++) {
+        const perturbed = perturbPoints(
+            basePoints, x1, y1, x2, y2,
+            boilAmount, (opts.seed ?? 42) + f * 997,
+        );
+        frames.push(pointsToLinear(perturbed));
+    }
+    return frames;
+}
+
+/**
  * Generate all boil frame variants for a Sudoku grid.
  * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations
  * of the base points — simulating an artist retracing the same line.
