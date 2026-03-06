@@ -1,7 +1,25 @@
 import { mulberry32 } from '@mkbabb/pencil-boil';
 
+const cache = new Map<string, string>();
+const CACHE_MAX = 256;
+
+function cached(key: string, generate: () => string): string {
+    const hit = cache.get(key);
+    if (hit) return hit;
+    const result = generate();
+    cache.set(key, result);
+    if (cache.size > CACHE_MAX) {
+        cache.delete(cache.keys().next().value!);
+    }
+    return result;
+}
+
 /** Generate a lighter ghost underline for hover state (thinner, more transparent). Returns data URI string. */
 export function ghostUnderline(seed: number, color: string): string {
+    return cached(`g:${seed}:${color}`, () => _ghostUnderline(seed, color));
+}
+
+function _ghostUnderline(seed: number, color: string): string {
     const rng = mulberry32(seed * 7 + 31);
     const w = 100, h = 12;
     const startX = 2 + rng() * 2;
@@ -25,6 +43,10 @@ export function ghostUnderline(seed: number, color: string): string {
 
 /** Generate a hand-drawn scribble underline (double-stroke pencil effect). Returns data URI string. */
 export function scribbleUnderline(seed: number, color: string): string {
+    return cached(`s:${seed}:${color}`, () => _scribbleUnderline(seed, color));
+}
+
+function _scribbleUnderline(seed: number, color: string): string {
     const rng = mulberry32(seed * 13 + 47);
     const w = 100, h = 12;
     const startX = 2 + rng() * 1;
