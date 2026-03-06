@@ -4,8 +4,8 @@ import { mulberry32 } from '@mkbabb/pencil-boil';
 export function ghostUnderline(seed: number, color: string): string {
     const rng = mulberry32(seed * 7 + 31);
     const w = 100, h = 12;
-    const startX = 4 + rng() * 4;
-    const endX = w - 4 - rng() * 4;
+    const startX = 2 + rng() * 2;
+    const endX = w - 2 - rng() * 2;
     const baseY = h * 0.5;
 
     let d = `M${startX.toFixed(1)},${(baseY + (rng() - 0.5) * 2).toFixed(1)}`;
@@ -27,9 +27,8 @@ export function ghostUnderline(seed: number, color: string): string {
 export function scribbleUnderline(seed: number, color: string): string {
     const rng = mulberry32(seed * 13 + 47);
     const w = 100, h = 12;
-    // Start slightly inward for centering
-    const startX = 2 + rng() * 3;
-    const endX = w - 2 - rng() * 3;
+    const startX = 2 + rng() * 1;
+    const endX = w - 2 - rng() * 1;
     const baseY = h * 0.5;
 
     // First pass -- main wobbly stroke
