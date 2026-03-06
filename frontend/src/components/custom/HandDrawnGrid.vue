@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { Animation } from '@mkbabb/keyframes.js';
-import { mulberry32, useLineBoil } from '@mkbabb/pencil-boil';
+import { mulberry32 } from '@mkbabb/pencil-boil';
+import { useSharedBoil } from '@/composables/useSharedBoil';
 import { generateGridBoilFrames } from '@/lib/gridPaths';
 import { DRAW_IN_PRESETS, BOIL_CONFIG } from '@/lib/pencilConfig';
 
@@ -33,7 +34,7 @@ const boilFrames = computed(() =>
 );
 
 // Path-based boil: cycle frame index at ~6.7fps
-const { currentFrame: boilFrame } = useLineBoil(
+const { currentFrame: boilFrame } = useSharedBoil(
     () => BOIL_CONFIG.frameCount,
     () => BOIL_CONFIG.intervalMs,
 );
@@ -60,12 +61,16 @@ function getPathElements(): SVGPathElement[] {
     return Array.from(svgRef.value.querySelectorAll('path.grid-line'));
 }
 
-function setupPathLengths(pathEls: SVGPathElement[]) {
+/** Compute and cache path lengths, set initial dash state */
+function setupPathLengths(pathEls: SVGPathElement[]): Map<SVGPathElement, number> {
+    const lengths = new Map<SVGPathElement, number>();
     pathEls.forEach((el) => {
         const len = el.getTotalLength();
+        lengths.set(el, len);
         el.style.strokeDasharray = String(len);
         el.style.strokeDashoffset = String(len);
     });
+    return lengths;
 }
 
 async function animateDrawIn() {
@@ -82,7 +87,7 @@ async function animateDrawIn() {
         return;
     }
 
-    setupPathLengths(pathEls);
+    const lengths = setupPathLengths(pathEls);
     // pathsVisible stays false during draw-in so boil frame is frozen at 0
     // (path d-attribute changes would break strokeDashoffset animation)
 
@@ -101,7 +106,7 @@ async function animateDrawIn() {
 
     for (const { paths: groupPaths, preset } of groups) {
         groupPaths.forEach((el, i) => {
-            const len = el.getTotalLength();
+            const len = lengths.get(el)!;
             const jitter = Math.round((jitterRng() - 0.5) * preset.jitter * 2);
             const anim = new Animation<{ offset: number }>({
                 duration: preset.duration,
@@ -135,10 +140,12 @@ async function animateErase() {
     const pathEls = getPathElements();
     if (pathEls.length === 0) return;
 
+    // Batch-read all lengths before writing any styles (avoid layout thrash)
+    const lengths = pathEls.map(el => el.getTotalLength());
+
     if (reducedMotion) {
-        pathEls.forEach((el) => {
-            const len = el.getTotalLength();
-            el.style.strokeDashoffset = String(len);
+        pathEls.forEach((el, i) => {
+            el.style.strokeDashoffset = String(lengths[i]);
         });
         pathsVisible.value = false;
         emit('animationComplete', 'hidden');
@@ -148,7 +155,7 @@ async function animateErase() {
     const promises: Promise<void>[] = [];
 
     pathEls.forEach((el, i) => {
-        const len = el.getTotalLength();
+        const len = lengths[i];
         el.style.strokeDashoffset = '0';
         el.style.strokeDasharray = String(len);
 
