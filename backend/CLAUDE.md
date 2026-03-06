@@ -60,7 +60,7 @@ backend/
 
 ### `solver/csp.py` — Problem representation + search + pruning
 
-The CSP class unifies problem state and all pruning methods:
+The CSP class encapsulates problem state and all pruning methods:
 
 - **Core**: `add_variables()`, `add_constraint()`, `backtrack()`, `solve()`, `solve_with_initial_propagation()`
 - **Pruning** (inline methods): `forward_check()`, `AC3()`, `AC_FC()`, `revise()` — all with DWO early termination
@@ -108,7 +108,7 @@ Hash-based conflict tuple store with LRU eviction. Records partial assignments k
 
 ## Sudoku (`solver/sudoku.py`)
 
-Unified module: CSP creation, solving, and board generation.
+Handles CSP creation, solving, and board generation.
 
 - `create_sudoku_csp(N, values, max_solutions)` — Build CSP with row/col/subgrid constraints, dom/wdeg + GAC all-different
 - `solve_sudoku(csp)` — Solve with initial propagation when given values exist

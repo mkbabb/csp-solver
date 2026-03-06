@@ -99,7 +99,7 @@ All animations respect `prefers-reduced-motion`.
 | Grid draw-in/erase | stroke-dashoffset via keyframes.js | ~800ms staggered with jitter |
 | Cell reveal (solve/randomize) | CSS `cell-reveal` + noise-stagger | 300ms cubic-bezier, 40ms/cell shuffle via mulberry32 |
 | Glyph draw-in | stroke-dashoffset | 350ms easeOutCubic |
-| Glyph wiggle (hover) | SVG path `d` attribute morphing | 800ms alternate loop |
+| Glyph wiggle (hover) | SVG path `d` attribute morphing | 600ms alternate loop |
 | Line boil | Path d-attribute cycling (4 frames) | 150ms/frame (~6.7fps) |
 | Sun sparkle boil | Diamond polygon wobble (light mode) | 125ms/frame (~8fps) |
 | Star boil | Star polygon wobble (dark mode) | 125ms/frame (~8fps) |

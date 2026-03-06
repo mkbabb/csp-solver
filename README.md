@@ -18,7 +18,7 @@ Backend on `:8000`, frontend on `:3000`.
 
 ### Manual
 
-This project requires several dependencies. The backend uses
+The backend uses
 [`uv`](https://docs.astral.sh/uv/) for package management; the frontend uses `npm`.
 
 #### Backend
@@ -52,35 +52,32 @@ options: `pruning_type`, `variable_ordering`, and `max_solutions`.
 
 ### `pruning_type`
 
-Defines the pruning strategy used within the backtracking scheme. The possible values
-are:
+Pruning strategy for backtracking search:
 
 -   `FORWARD_CHECKING`
-    -   Forward checking implementation.
+    -   Forward checking.
 -   `AC3`
     -   Maintaining arc consistency (MAC), variant 3.
 -   `AC_FC`
-    -   Arc consistency + forward checking implementation, low order variant of AC-1.
+    -   AC + forward checking hybrid; low-order variant of AC-1.
 -   `NO_PRUNING`
-    -   No pruning methodology employed.
+    -   No pruning.
 
 #### Brief: Backtracking vs Hill-climbing
 
-The above pruning methodologies are only applicable given a backtracking solver: if
+These pruning strategies are only applicable given a backtracking solver: if
 one's using the min-conflicts hill-climbing solver, no pruning at any stage is done.
 
 ### `variable_ordering`
 
-Defines the variable ordering scheme when retrieving the next variable within the
-variable stack to attempt at solving for. The possible values are:
+Variable selection heuristic during search:
 
 -   `NO_ORDERING`
     -   Chronological ordering used.
 -   `FAIL_FIRST`
     -   Implementation of the DVO "fail-first" scheme (MRV heuristic).
 
-`max_solutions` simply defines the maximal number of solutions found before returning.
-Defaults to 1.
+`max_solutions` caps the number of solutions returned. Defaults to 1.
 
 ### Using the API
 
@@ -119,7 +116,7 @@ csp.add_constraint(map_coloring_constraint("Victoria", "South Australia"))
 csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
 ```
 
-Adding variables and domains is straightforward. Constraints use one extra convention: a
+Constraints use one extra convention: a
 constraint factory returns a tuple of a checker function and the variables associated
 with that checker.
 
@@ -150,7 +147,7 @@ csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
 
 ## Additional Implementations
 
-Additionally, Futoshiki and Sudoku are implemented atop the CSP engine:
+Futoshiki and Sudoku are implemented atop the CSP engine:
 
 -   [`futoshiki.py`](backend/src/csp_solver/solver/futoshiki.py): command-line solver,
     reads puzzle from input file (grid values + inequality constraints).
@@ -159,14 +156,15 @@ Additionally, Futoshiki and Sudoku are implemented atop the CSP engine:
 
 ## Sudoku Webserver
 
-Alongside the generic CSP API, this repository ships a Sudoku web application.
 The backend is FastAPI; the frontend is Vue 3 + TypeScript with a hand-drawn SVG
-rendering stack.
+rendering stack. UI features:
 
-The UI layer includes path-based line boil on the grid (4 pre-computed variants cycled
-at ~6.7 fps), custom SVG glyphs, Rough.js decorative elements, stroke-dashoffset
-draw-ins (~800 ms with seeded jitter), theme-aware celestial wobble effects, and a live
-filter/boil tuner.
+- Path-based line boil on the grid (4 pre-computed variants cycled at ~6.7fps)
+- Custom SVG glyphs with draw-in and hover wiggle
+- Rough.js decorative elements (vine border, doodle accents)
+- Stroke-dashoffset draw-ins (~800ms with seeded jitter)
+- Theme-aware celestial wobble effects
+- Live filter/boil tuner
 
 Core boil and path primitives come from
 [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil). Sudoku-specific grid
@@ -182,10 +180,10 @@ The Sudoku API exposes three routes:
 | POST | `/api/v1/board/solve` | Solve input board |
 | GET | `/api/v1/health` | Health check |
 
-The CSP solver supports arbitrary subgrid sizes. For browser and compute budget, the UI
+The CSP solver supports arbitrary subgrid sizes. Due to rendering and compute constraints, the UI
 currently exposes subgrid sizes 2, 3, and 4 (4×4, 9×9, and 16×16).
 
-Size 3 is the default path. A set of 100 curated seed boards is used to generate size-3
+Size 3 is the default path. A set of 100 seed boards is used to generate size-3
 boards. Pre-computed solution banks exist for sizes 2 through 5.
 
 #### Board Generation
@@ -194,9 +192,9 @@ Board generation uses two strategies. The fast path, used when pre-computed temp
 exist, selects a random template and applies a random Sudoku symmetry transform: digit
 permutation, row/column permutation within bands and stacks, band/stack permutation,
 and transposition. For N=3, this symmetry group yields ~1.22 billion distinct grids per
-base template. Generation on this path completes in microseconds.
+base template. Generation on this path is O(1)—no search required.
 
-When templates are unavailable, the system falls back to the classical path: generate a
+When templates are unavailable, the solver falls back to generate-and-reduce: generate a
 complete solution, remove cells with uniqueness verification, and calibrate difficulty
 by backtrack count. Templates reside in
 `backend/src/csp_solver/data/sudoku_puzzles/{N}/{difficulty}/`. The offline generation

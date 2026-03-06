@@ -13,15 +13,15 @@ Library-level animation docs:
 
 ## Pencil Effect Pipeline
 
-All pencil effects are SVG `<filter>` chains applied via CSS `filter: url(#id)`. Three primitive types compose every effect:
+All pencil effects are SVG `<filter>` chains applied via CSS `filter: url(#id)`. Three primitive types underlie the preset filters:
 
 | Primitive | SVG Elements | Purpose |
 |---|---|---|
 | **Grain** | `feTurbulence(fractalNoise)` → `feDisplacementMap` | Static noise displacement; pencil texture |
-| **Wobble** | `feTurbulence(turbulence)` + `<animate seed>` → `feDisplacementMap` | Animated jitter; hand-drawn boil |
+| **Wobble** | `feTurbulence(turbulence)` + JS `setAttribute` → `feDisplacementMap` | Animated jitter; hand-drawn boil |
 | **MultiPass** | N × `feTurbulence` → N × `feDisplacementMap` → chained `feBlend` | Overlapping displaced strokes; heavy pencil |
 
-Combinations: grain-only (`pencil-grain`), wobble-only (`boil-wobble`, `sun-wobble`), grain+wobble (`pencil-boil`, `pencil-boil-fast`), multiPass (`pencil-stroke`, `pencil-stroke-light`), texture (`crayon-texture`).
+Combinations: grain-only (`grain-static`), wobble-only (`wobble-logo`, `wobble-celestial`, `wobble-heart`), multiPass (`stroke-light`, `stroke-dark`).
 
 ## SVG Filter Catalog
 
@@ -29,18 +29,16 @@ All filters defined in `FILTER_PRESETS` (pencilConfig.ts), rendered programmatic
 
 | ID | Type | baseFreq | Octaves | Scale | Animated | Used On |
 |---|---|---|---|---|---|---|
-| `boil-wobble` | wobble | 0.02 | 3 | 2 | 1.5s seed cycle | Moon icon |
-| `sun-wobble` | wobble | 0.015 | 3 | 4 | 1.2s seed cycle | Sun icon |
-| `pencil-grain` | grain | 0.04 | 3 | 2.5 | no | Glyphs, icon buttons |
-| `pencil-boil` | grain+wobble | 0.04/0.02 | 4/3 | 2.5/2.2 | 1.8s | Grid wrapper |
-| `pencil-boil-fast` | grain+wobble | 0.05/0.025 | 4/2 | 2.2/2.5 | 0.6s | Icon hover |
-| `pencil-stroke` | multiPass×3 | 0.04 | 4 | 3.0–4.0 | no | Controls (light) |
-| `pencil-stroke-light` | multiPass×3 | 0.04 | 4 | 3.0–4.0 | no | Controls (dark) |
-| `crayon-texture` | texture | 0.65 | 5 | n/a | no | Rough fill surfaces |
+| `grain-static` | grain | 0.04 | 3 | 3.5 | no | Grid lines, glyphs, icon buttons |
+| `wobble-logo` | wobble | 0.02 | 2 | 3 | 450ms JS cycle | Logo text |
+| `wobble-celestial` | wobble | 0.02 | 2 | 5 | 160ms JS cycle | Sun/moon, icon hover |
+| `wobble-heart` | wobble | 0.02 | 2 | 5 | 170ms JS cycle | Heart, control hover |
+| `stroke-light` | multiPass×3 | 0.04 | 4 | 4.0–5.0 | no | Control panel (light) |
+| `stroke-dark` | multiPass×3 | 0.04 | 4 | 4.0–5.0 | no | Control panel (dark) |
 
 Additional non-preset filters: `storybook-texture` (moon/star organic displacement), `sparkle-rainbow` (gradient).
 
-To tweak: change values in `FILTER_PRESETS` → `SvgFilters.vue` re-renders automatically.
+To tweak: mutate `FILTER_PRESETS` (reactive)—`SvgFilters.vue` re-renders automatically.
 
 ## Draw-In Animations
 
@@ -57,13 +55,13 @@ Timing presets in `DRAW_IN_PRESETS`:
 | `solveCell` | 500ms | 120ms | 0 | 0 | Solve sequence cells |
 | `logo` | 1800ms | 280ms | 0 | 0 | Logo letter strokes |
 
-Jitter uses seeded PRNG (`mulberry32`) for deterministic irregularity. During draw-in, `pencil-boil` filter is withheld (displacement distorts dash pattern); applied after completion.
+Jitter uses seeded PRNG (`mulberry32`) for deterministic irregularity. During draw-in, `grain-static` filter is withheld (displacement distorts dash pattern); applied after completion.
 
 ## Boil System
 
-Two mechanisms create hand-drawn "alive" quality:
+Two mechanisms produce hand-drawn motion:
 
-1. **SVG filter seed cycling**: `feTurbulence <animate attributeName="seed">` cycles through seed values (e.g., `0;1;2;3;4;3;2;1;0`) at the preset's duration. Renders different noise per frame.
+1. **SVG filter baseFrequency cycling**: JS-driven `setInterval` + `setAttribute('baseFrequency', ...)` oscillates `feTurbulence` baseFrequency through preset offsets. No SMIL `<animate>`—avoids framework re-render issues.
 
 2. **`useLineBoil` composable**: JS-side frame counter at ~8fps (125ms intervals). Returns reactive `currentFrame` ref. Used for:
    - Star polygon vertex wobble (dark mode)
@@ -83,11 +81,11 @@ deterministic per board position.
 |---|---|---|
 | Draw-in | stroke-dashoffset (keyframes.js) | 350ms easeOutCubic |
 | Wiggle on hover | SVG path `d` attribute morph between variants | 600ms alternate loop |
-| Static filter | `pencil-grain` on `<path>` | Always |
+| Static filter | `grain-static` on `<path>` | Always |
 
 ## Scribble Fill
 
-`useScribbleFill` composable + `scribbleFill.ts` library. Generates scan-line hachure fill for closed SVG paths. Animated as traveling-dash snake via `stroke-dasharray` + `stroke-dashoffset` cycling.
+`generateScribbleFill` (in `scribbleFill.ts`). Generates scan-line hachure fill for closed SVG paths. Animated via cycling `stroke-dasharray` + `stroke-dashoffset`.
 
 ## Decorative Layer
 
@@ -99,10 +97,9 @@ deterministic per board position.
 
 ## Performance
 
-- **Conditional filter application**: Sun icon gets `sun-wobble` only in light mode; moon gets `boil-wobble` only in dark mode. Prevents invisible filter computation.
+- **Conditional filter application**: Sun and moon both use `wobble-celestial`, conditionally applied via `:filter` per active theme. Prevents invisible filter computation.
 - **Animation pausing**: `.toggle-icon:not(.is-active) * { animation-play-state: paused }` halts CSS animations on hidden icons.
-- **Board-size gating**: `pencil-boil` filter applies only when `boardSize <= 16` to
-  prevent unnecessary GPU load on large grids.
+- **Board-size gating**: `boardSize >= 16` reduces cell ghost-rect segment count (4→2) to limit path complexity on large grids.
 - **Boil lifecycle**: `useLineBoil` start/stop is tied to theme; dark mode pauses sun
   sparkle boil, light mode pauses star boil.
 - **Reduced motion**: All animations check `prefers-reduced-motion: reduce`. CSS global rule forces `animation-duration: 0.01ms`. JS animations show final state immediately.
