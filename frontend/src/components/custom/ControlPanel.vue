@@ -7,10 +7,26 @@ import type { Difficulty } from '@/composables/useSudoku'
 import { ghostUnderline, scribbleUnderline } from '@/lib/scribbleUnderline'
 import { useTheme } from '@/composables/useTheme'
 import { useLineBoil } from '@mkbabb/pencil-boil'
+import { generateLineBoilFrames } from '@/lib/gridPaths'
+import { BOIL_CONFIG } from '@/lib/pencilConfig'
 
 const { isDark } = useTheme()
 // Boil the scribble underline at ~8fps for wobble effect
 const { currentFrame: boilFrame } = useLineBoil(6, 500)
+
+// Boil divider line frames
+const dividerFrames = computed(() =>
+  generateLineBoilFrames(
+    20, 8, 980, 8,
+    { roughness: 0.2, segments: 3, seed: 314, jagged: true },
+    BOIL_CONFIG.frameBoil, BOIL_CONFIG.frameCount,
+  )
+)
+const { currentFrame: dividerFrame } = useLineBoil(
+  () => BOIL_CONFIG.frameCount,
+  () => BOIL_CONFIG.intervalMs,
+)
+const dividerPath = computed(() => dividerFrames.value[dividerFrame.value] ?? '')
 
 // Reactive filter URL for control panel — avoids :global(.dark) CSS scoping bug
 const panelFilter = computed(() => isDark.value ? 'url(#stroke-dark)' : 'url(#stroke-light)')
@@ -43,14 +59,11 @@ const emit = defineEmits<{
   (e: 'solve'): void
 }>()
 
-const expandedPanel = ref<'size' | 'difficulty' | null>(null)
+const expandedPanel = ref<'size' | 'difficulty'>('size')
+
 const solveAnimating = ref(false)
 const randomizeAnimating = ref(false)
 const clearAnimating = ref(false)
-
-function togglePanel(panel: 'size' | 'difficulty') {
-  expandedPanel.value = expandedPanel.value === panel ? null : panel
-}
 
 function onRandomize() {
   randomizeAnimating.value = true
@@ -75,85 +88,82 @@ function onSolve() {
 <template>
   <!-- ═══ Mobile layout ═══ -->
   <div v-if="mobile" class="control-panel-wrap mobile-control-panel mt-3">
-    <!-- Size / Difficulty headings row -->
-    <div class="control-panel-filtered mobile-heading-row">
-      <button class="mobile-heading-btn" @click="togglePanel('size')">
-        <h2
-          class="section-heading text-muted-foreground"
-          :class="{ 'is-active': expandedPanel === 'size' }"
-        >
-          Size
-        </h2>
-      </button>
-      <button class="mobile-heading-btn" @click="togglePanel('difficulty')">
-        <h2
-          class="section-heading transition-colors duration-250"
-          :class="[
-            difficulty === 'EASY' ? 'crayon-green'
-              : difficulty === 'MEDIUM' ? 'crayon-orange'
-              : 'crayon-rose',
-            { 'is-active': expandedPanel === 'difficulty' }
-          ]"
-        >
-          Difficulty
-        </h2>
-      </button>
-    </div>
-
-    <!-- Expandable options panels (v-show keeps DOM for smooth close) -->
-    <div
-      class="options-panel"
-      :class="{ 'is-open': expandedPanel === 'size' }"
-    >
-      <div class="options-panel-inner">
-        <div class="options-row">
-          <button
-            v-for="s in sizes"
-            :key="s.value"
-            @click="emit('update:size', s.value)"
-            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
-            :class="
-              size === s.value
-                ? 'text-foreground font-bold selected-item'
-                : 'text-muted-foreground hover:text-foreground hover-item'
-            "
-            :style="size === s.value
-              ? { '--scribble-underline': scribbleUnderline(s.value + boilFrame * 1000, isDark ? '#ffffff' : '#1a1a1a'), '--scribble-width': `${s.label.length + 1}ch` }
-              : { '--ghost-underline': ghostUnderline(s.value + 500, isDark ? '#ffffff' : '#1a1a1a'), '--ghost-width': `${s.label.length + 1}ch` }"
-          >
-            {{ s.label }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div
-      class="options-panel"
-      :class="{ 'is-open': expandedPanel === 'difficulty' }"
-    >
-      <div class="options-panel-inner">
-        <div class="options-row">
-          <button
-            v-for="d in difficulties"
-            :key="d.value"
-            @click="emit('update:difficulty', d.value)"
-            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
+    <!-- Size / Difficulty toggle headings + options -->
+    <div class="control-panel-filtered">
+      <div class="mobile-heading-row">
+        <button class="mobile-heading-btn" @click="expandedPanel = 'size'">
+          <h2
+            class="section-heading text-muted-foreground"
+            :class="{ 'is-active': expandedPanel === 'size' }"
+          >Size</h2>
+        </button>
+        <button class="mobile-heading-btn" @click="expandedPanel = 'difficulty'">
+          <h2
+            class="section-heading transition-colors duration-250"
             :class="[
-              difficulty === d.value
-                ? `font-bold selected-item ${d.colorClass}`
-                : 'text-muted-foreground hover:text-foreground hover-item'
+              difficulty === 'EASY' ? 'crayon-green'
+                : difficulty === 'MEDIUM' ? 'crayon-orange'
+                : 'crayon-rose',
+              { 'is-active': expandedPanel === 'difficulty' }
             ]"
-            :style="difficulty === d.value
-              ? { '--scribble-underline': scribbleUnderline(d.value.charCodeAt(0) + boilFrame * 1000, isDark ? '#ffffff' : '#1a1a1a'), '--scribble-width': `${d.label.length + 1}ch` }
-              : { '--ghost-underline': ghostUnderline(d.value.charCodeAt(0) + 500, isDark ? '#ffffff' : '#1a1a1a'), '--ghost-width': `${d.label.length + 1}ch` }"
-          >
-            {{ d.label }}
-          </button>
-        </div>
+          >Difficulty</h2>
+        </button>
+      </div>
+
+      <div v-show="expandedPanel === 'size'" class="options-row">
+        <button
+          v-for="s in sizes"
+          :key="s.value"
+          @click="emit('update:size', s.value)"
+          class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
+          :class="
+            size === s.value
+              ? 'text-foreground font-bold selected-item'
+              : 'text-muted-foreground hover:text-foreground hover-item'
+          "
+          :style="size === s.value
+            ? { '--scribble-underline': scribbleUnderline(s.value + boilFrame * 1000, isDark ? '#ffffff' : '#1a1a1a'), '--scribble-width': `${s.label.length + 1}ch` }
+            : { '--ghost-underline': ghostUnderline(s.value + 500, isDark ? '#ffffff' : '#1a1a1a'), '--ghost-width': `${s.label.length + 1}ch` }"
+        >
+          {{ s.label }}
+        </button>
+      </div>
+
+      <div v-show="expandedPanel === 'difficulty'" class="options-row">
+        <button
+          v-for="d in difficulties"
+          :key="d.value"
+          @click="emit('update:difficulty', d.value)"
+          class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
+          :class="[
+            difficulty === d.value
+              ? `font-bold selected-item ${d.colorClass}`
+              : 'text-muted-foreground hover:text-foreground hover-item'
+          ]"
+          :style="difficulty === d.value
+            ? { '--scribble-underline': scribbleUnderline(d.value.charCodeAt(0) + boilFrame * 1000, isDark ? '#ffffff' : '#1a1a1a'), '--scribble-width': `${d.label.length + 1}ch` }
+            : { '--ghost-underline': ghostUnderline(d.value.charCodeAt(0) + 500, isDark ? '#ffffff' : '#1a1a1a'), '--ghost-width': `${d.label.length + 1}ch` }"
+        >
+          {{ d.label }}
+        </button>
       </div>
     </div>
 
-    <hr class="my-2 w-full border-border/50" />
+    <!-- Boil divider -->
+    <div class="boil-divider-wrap">
+      <svg viewBox="0 0 1000 16" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          :d="dividerPath"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-opacity="0.7"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+          filter="url(#grain-static)"
+        />
+      </svg>
+    </div>
 
     <!-- Action buttons -->
     <div class="flex items-center justify-evenly">
@@ -253,7 +263,21 @@ function onSolve() {
       </div>
     </div>
 
-    <hr class="my-3 w-full border-border/50" />
+    <!-- Boil divider -->
+    <div class="boil-divider-wrap my-2">
+      <svg viewBox="0 0 1000 16" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          :d="dividerPath"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-opacity="0.7"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+          filter="url(#grain-static)"
+        />
+      </svg>
+    </div>
 
     <!-- Action buttons — outside filtered region so tooltips are legible -->
     <div class="flex items-center justify-evenly">
@@ -339,35 +363,32 @@ function onSolve() {
   filter: url(#wobble-heart);
 }
 
+/* Shared underline positioning — content-box origin so left 0 = text edge */
+.selected-item,
+.hover-item {
+  text-decoration: none;
+  background-repeat: no-repeat;
+  background-origin: content-box;
+  background-position: left bottom;
+  padding-bottom: 6px;
+}
+
 /* Crayon-style underline for selected items */
 .selected-item {
-  text-decoration: none;
   background-image: var(--scribble-underline);
-  background-repeat: no-repeat;
-  background-position: center bottom 0px;
   background-size: var(--scribble-width, 4ch) 8px;
-  padding-bottom: 6px;
 }
 
 /* Ghost underline on hover for non-selected items */
 .hover-item {
-  text-decoration: none;
   background-image: none;
-  background-repeat: no-repeat;
-  background-position: left 0.75rem bottom 0px;
   background-size: var(--ghost-width, 4ch) 8px;
-  padding-bottom: 6px;
 }
 
 .hover-item:hover {
   background-image: var(--ghost-underline);
 }
 
-@media (min-width: 768px) {
-  .selected-item {
-    background-position: left 0.75rem bottom 0px;
-  }
-}
 
 .icon-btn {
   display: inline-flex;
@@ -437,6 +458,20 @@ function onSolve() {
   filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
 }
 
+/* Boil divider — SVG is position:absolute so its viewBox intrinsic width (1000px)
+   doesn't inflate the flex column's cross-axis sizing */
+.boil-divider-wrap {
+  position: relative;
+  height: 14px;
+}
+
+.boil-divider-wrap svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 /* ═══ Mobile layout ═══ */
 
 .mobile-control-panel {
@@ -460,28 +495,6 @@ function onSolve() {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
-}
-
-/* Options panel — grid-template-rows expand */
-.options-panel {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 250ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.options-panel.is-open {
-  grid-template-rows: 1fr;
-}
-
-.options-panel-inner {
-  overflow: hidden;
-  opacity: 0;
-  transition: opacity 200ms ease;
-}
-
-.options-panel.is-open .options-panel-inner {
-  opacity: 1;
-  transition-delay: 100ms;
 }
 
 .options-row {
