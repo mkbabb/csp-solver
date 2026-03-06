@@ -33,7 +33,7 @@ function onHoverLeave() {
   hoverCloseTimer = setTimeout(() => {
     hoverCardOpen.value = false
     hoverCloseTimer = null
-  }, 300)
+  }, 150)
 }
 </script>
 
@@ -49,9 +49,9 @@ function onHoverLeave() {
     <!-- Filter tuner — dev tool, disabled for production -->
     <!-- <FilterTuner /> -->
 
-    <!-- Corner overlays: out of document flow, no layout influence -->
+    <!-- Desktop: fixed corner overlay -->
     <div
-      class="corner-left"
+      class="corner-left hidden md:block"
       @click.stop="toggleHoverCard"
       @mouseenter="onHoverEnter"
       @mouseleave="onHoverLeave"
@@ -61,7 +61,7 @@ function onHoverLeave() {
         target="_blank"
         rel="noopener noreferrer"
         class="font-mono text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
-        @click.stop
+        @click.stop.prevent="toggleHoverCard"
       >@mbabb</a>
       <div class="hover-card" :class="{ 'is-open': hoverCardOpen }">
         <div class="flex items-center gap-3">
@@ -87,6 +87,35 @@ function onHoverLeave() {
 
     <main class="main-content flex min-h-0 flex-1 flex-col items-center justify-center px-1 md:px-4">
       <div class="board-group">
+        <!-- Mobile: @mbabb in-flow, left-aligned with logo -->
+        <div
+          class="mobile-attribution md:hidden"
+          @click.stop="toggleHoverCard"
+        >
+          <a
+            href="https://github.com/mkbabb/csp-solver"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="font-mono text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+            @click.stop.prevent="toggleHoverCard"
+          >@mbabb</a>
+          <div class="hover-card" :class="{ 'is-open': hoverCardOpen }">
+            <div class="flex items-center gap-3">
+              <img
+                src="https://avatars.githubusercontent.com/u/2848617?v=4"
+                alt="mkbabb"
+                class="h-10 w-10 rounded-full"
+              />
+              <div class="flex-1">
+                <a href="https://github.com/mkbabb" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-semibold text-foreground hover:underline">@mbabb</a>
+                <p class="mt-0.5 text-xs italic text-muted-foreground">CSP-powered Sudoku solver</p>
+              </div>
+              <CrayonHeart :size="32" />
+            </div>
+            <hr class="my-2 border-border/50" />
+            <a href="https://github.com/mkbabb/csp-solver" target="_blank" rel="noopener noreferrer" class="block text-sm text-foreground hover:underline">View project on GitHub</a>
+          </div>
+        </div>
         <!-- Logo: left-aligned with board -->
         <HandwrittenLogo />
         <!-- Board + Controls row -->
@@ -108,7 +137,7 @@ function onHoverLeave() {
 
           <!-- Mobile: unified controls card below board -->
           <div class="mobile-board-width md:hidden">
-            <HandDrawnOutline>
+            <HandDrawnOutline :stroke-width="3">
               <div class="rounded-lg bg-card px-2 py-1.5">
                 <ControlPanel
                   :size="sudoku.size.value"
@@ -128,7 +157,7 @@ function onHoverLeave() {
 
           <!-- Desktop sidebar: controls card (aligned with board top) -->
           <div class="hidden md:flex md:flex-col md:items-start">
-            <HandDrawnOutline>
+            <HandDrawnOutline :stroke-width="3">
               <div class="controls-card rounded-xl bg-card p-5">
                 <ControlPanel
                   :size="sudoku.size.value"
@@ -161,6 +190,15 @@ function onHoverLeave() {
   cursor: pointer;
 }
 
+/* Mobile: @mbabb in document flow, left-aligned with logo */
+.mobile-attribution {
+  position: relative;
+  align-self: flex-start;
+  cursor: pointer;
+  z-index: 40;
+  margin-bottom: 0.125rem;
+}
+
 .corner-right {
   position: fixed;
   top: 0;
@@ -169,9 +207,9 @@ function onHoverLeave() {
   --toggle-size: 5rem;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .corner-right {
-    --toggle-size: 10rem;
+    --toggle-size: 8rem;
   }
 }
 
@@ -205,6 +243,7 @@ function onHoverLeave() {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  overflow: visible;
 }
 
 @media (max-width: 767px) {
@@ -215,8 +254,9 @@ function onHoverLeave() {
 
 @media (max-width: 767px) {
   .main-content {
-    justify-content: flex-start;
+    justify-content: center;
     padding-top: 1.5rem;
+    padding-bottom: 1rem;
   }
 }
 
@@ -255,7 +295,7 @@ function onHoverLeave() {
   opacity: 0;
   pointer-events: none;
   transform: scale(0.9) translateY(8px);
-  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 50;
   min-width: 16rem;
 }
