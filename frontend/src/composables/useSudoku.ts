@@ -200,12 +200,18 @@ export function useSudoku() {
     randomize()
   })
 
-  // Persist board state on meaningful changes
+  // Persist board state on meaningful changes (debounced to avoid localStorage thrash)
+  let saveTimer: ReturnType<typeof setTimeout> | null = null
+  function queueSave() {
+    if (saveTimer) clearTimeout(saveTimer)
+    saveTimer = setTimeout(() => {
+      saveBoardState()
+      saveTimer = null
+    }, 300)
+  }
   watch(
     [values, givenCells, originalGivenCells, overriddenCells, solvedValues, boardGeneration],
-    () => {
-      saveBoardState()
-    },
+    queueSave,
     { deep: true },
   )
 
