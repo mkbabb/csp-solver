@@ -162,6 +162,11 @@ function handleToggle() {
   outline: none;
 }
 
+.sun-moon-toggle:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
 /* Both icons layered on top of each other */
 .toggle-icon {
   position: absolute;
