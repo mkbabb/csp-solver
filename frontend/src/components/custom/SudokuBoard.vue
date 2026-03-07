@@ -5,6 +5,7 @@ import HandDrawnGrid from './HandDrawnGrid.vue'
 import { mulberry32 } from '@mkbabb/pencil-boil'
 import { generateGridPaths } from '@/lib/gridPaths'
 import type { SolveState } from '@/composables/useSudoku'
+import type { AnimationState } from '@/lib/types'
 
 const props = defineProps<{
   size: number
@@ -65,7 +66,7 @@ const noiseDelays = computed(() => {
 })
 
 // Grid animation state machine
-const gridAnimState = ref<'hidden' | 'drawing' | 'drawn' | 'erasing'>('hidden')
+const gridAnimState = ref<AnimationState>('hidden')
 
 function onGridAnimComplete(state: 'drawn' | 'hidden') {
   if (state === 'drawn') {
