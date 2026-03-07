@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { Animation } from '@mkbabb/keyframes.js';
-import { mulberry32 } from '@mkbabb/pencil-boil';
+import { computed, onMounted, onUnmounted, watch, nextTick, ref } from 'vue';
 import { useLineBoil } from '@mkbabb/pencil-boil';
 import { generateGridBoilFrames } from '@/lib/gridPaths';
-import { DRAW_IN_PRESETS, BOIL_CONFIG } from '@/lib/pencilConfig';
+import { BOIL_CONFIG } from '@/lib/pencilConfig';
+import { usePathAnimation } from '@/composables/usePathAnimation';
+import type { AnimationState } from '@/lib/types';
 
 const props = defineProps<{
     boardSize: number;
     subgridSize: number;
-    animState: 'hidden' | 'drawing' | 'drawn' | 'erasing';
+    animState: AnimationState;
 }>();
 
 const emit = defineEmits<{
@@ -17,11 +17,7 @@ const emit = defineEmits<{
 }>();
 
 const svgRef = ref<SVGSVGElement | null>(null);
-const pathsVisible = ref(false);
-
-const reducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const { pathsVisible, animateDrawIn, animateErase, showInstant, cleanup } = usePathAnimation(svgRef);
 
 const VIEWBOX_SIZE = 1000;
 
@@ -53,172 +49,37 @@ const currentPaths = computed(() => {
     };
 });
 
-// Collect all path elements after render
-let drawAnimations: Animation<any>[] = [];
-
-function getPathElements(): SVGPathElement[] {
-    if (!svgRef.value) return [];
-    return Array.from(svgRef.value.querySelectorAll('path.grid-line'));
-}
-
-/** Compute and cache path lengths, set initial dash state */
-function setupPathLengths(pathEls: SVGPathElement[]): Map<SVGPathElement, number> {
-    const lengths = new Map<SVGPathElement, number>();
-    pathEls.forEach((el) => {
-        const len = el.getTotalLength();
-        lengths.set(el, len);
-        el.style.strokeDasharray = String(len);
-        el.style.strokeDashoffset = String(len);
-    });
-    return lengths;
-}
-
-async function animateDrawIn() {
-    cleanupAnimations();
-    const pathEls = getPathElements();
-    if (pathEls.length === 0) return;
-
-    if (reducedMotion) {
-        pathEls.forEach((el) => {
-            el.style.strokeDashoffset = '0';
-        });
-        pathsVisible.value = true;
+async function doDrawIn() {
+    await nextTick();
+    requestAnimationFrame(async () => {
+        await animateDrawIn();
         emit('animationComplete', 'drawn');
-        return;
-    }
-
-    const lengths = setupPathLengths(pathEls);
-    // pathsVisible stays false during draw-in so boil frame is frozen at 0
-    // (path d-attribute changes would break strokeDashoffset animation)
-
-    const framePaths = pathEls.filter((el) => el.classList.contains('frame-line'));
-    const subgridPaths = pathEls.filter((el) => el.classList.contains('subgrid-line'));
-    const cellPaths = pathEls.filter((el) => el.classList.contains('cell-line'));
-
-    const promises: Promise<void>[] = [];
-    const jitterRng = mulberry32(77);
-
-    const groups = [
-        { paths: framePaths,   preset: DRAW_IN_PRESETS.gridFrame },
-        { paths: subgridPaths, preset: DRAW_IN_PRESETS.gridSubgrid },
-        { paths: cellPaths,    preset: DRAW_IN_PRESETS.gridCell },
-    ];
-
-    for (const { paths: groupPaths, preset } of groups) {
-        groupPaths.forEach((el, i) => {
-            const len = lengths.get(el)!;
-            const jitter = Math.round((jitterRng() - 0.5) * preset.jitter * 2);
-            const anim = new Animation<{ offset: number }>({
-                duration: preset.duration,
-                delay: Math.max(0, preset.baseDelay + i * preset.stagger + jitter),
-                fillMode: 'forwards',
-                timingFunction: preset.timing,
-                useWAAPI: false,
-            });
-            anim.addFrame('0%', { offset: len }, (vars) => {
-                el.style.strokeDashoffset = String(vars.offset);
-            });
-            anim.addFrame('100%', { offset: 0 });
-            anim.parse();
-            drawAnimations.push(anim);
-            promises.push(anim.play());
-        });
-    }
-
-    await Promise.all(promises);
-    // Clear dasharray so boil frame cycling renders cleanly
-    pathEls.forEach((el) => {
-        el.style.strokeDasharray = 'none';
-        el.style.strokeDashoffset = '0';
     });
-    pathsVisible.value = true;
-    emit('animationComplete', 'drawn');
 }
 
-async function animateErase() {
-    cleanupAnimations();
-    const pathEls = getPathElements();
-    if (pathEls.length === 0) return;
-
-    // Batch-read all lengths before writing any styles (avoid layout thrash)
-    const lengths = pathEls.map(el => el.getTotalLength());
-
-    if (reducedMotion) {
-        pathEls.forEach((el, i) => {
-            el.style.strokeDashoffset = String(lengths[i]);
-        });
-        pathsVisible.value = false;
-        emit('animationComplete', 'hidden');
-        return;
-    }
-
-    const promises: Promise<void>[] = [];
-
-    pathEls.forEach((el, i) => {
-        const len = lengths[i];
-        el.style.strokeDashoffset = '0';
-        el.style.strokeDasharray = String(len);
-
-        const anim = new Animation<{ offset: number }>({
-            duration: 150,
-            delay: i * 4,
-            fillMode: 'forwards',
-            timingFunction: 'easeInCubic',
-            useWAAPI: false,
-        });
-        anim.addFrame('0%', { offset: 0 }, (vars) => {
-            el.style.strokeDashoffset = String(vars.offset);
-        });
-        anim.addFrame('100%', { offset: len });
-        anim.parse();
-        drawAnimations.push(anim);
-        promises.push(anim.play());
-    });
-
-    await Promise.all(promises);
-    pathsVisible.value = false;
+async function doErase() {
+    await animateErase();
     emit('animationComplete', 'hidden');
-}
-
-function cleanupAnimations() {
-    drawAnimations.forEach((a) => {
-        try {
-            a.stop();
-        } catch {
-            // ignore
-        }
-    });
-    drawAnimations = [];
 }
 
 watch(
     () => props.animState,
-    async (state) => {
-        if (state === 'drawing') {
-            await nextTick();
-            requestAnimationFrame(() => animateDrawIn());
-        } else if (state === 'erasing') {
-            animateErase();
-        }
+    (state) => {
+        if (state === 'drawing') doDrawIn();
+        else if (state === 'erasing') doErase();
     },
 );
 
-onMounted(async () => {
+onMounted(() => {
     if (props.animState === 'drawing') {
-        await nextTick();
-        requestAnimationFrame(() => animateDrawIn());
+        doDrawIn();
     } else if (props.animState === 'drawn') {
-        const pathEls = getPathElements();
-        pathEls.forEach((el) => {
-            el.style.strokeDashoffset = '0';
-            el.style.strokeDasharray = 'none';
-        });
-        pathsVisible.value = true;
+        showInstant();
     }
 });
 
 onUnmounted(() => {
-    cleanupAnimations();
+    cleanup();
 });
 </script>
 
