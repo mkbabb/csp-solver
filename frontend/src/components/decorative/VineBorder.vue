@@ -3,12 +3,11 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { Animation } from '@mkbabb/keyframes.js';
 import type { FruitPlacement } from '@/lib/vineShapes';
 import { generateVine } from '@/lib/vineGenerator';
+import { useReducedMotion } from '@/composables/useReducedMotion';
 
 const svgRef = ref<SVGSVGElement | null>(null);
 
-const reducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reducedMotion = useReducedMotion();
 
 let animations: Animation<any>[] = [];
 
@@ -90,7 +89,7 @@ function cleanup() {
 
 onMounted(() => {
     if (!svgRef.value) return;
-    generateVine(svgRef.value, reducedMotion, animateGrowth);
+    generateVine(svgRef.value, reducedMotion.value, animateGrowth);
 });
 
 onUnmounted(() => {

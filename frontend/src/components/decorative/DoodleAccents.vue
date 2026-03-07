@@ -7,9 +7,9 @@ import { type Doodle, palette, drawDoodleShape } from '@/lib/doodleShapes';
 
 const svgRef = ref<SVGSVGElement | null>(null);
 
-const reducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+import { useReducedMotion } from '@/composables/useReducedMotion';
+
+const reducedMotion = useReducedMotion();
 
 let bobAnimations: CSSKeyframesAnimation<any>[] = [];
 
@@ -57,7 +57,7 @@ function generateDoodles() {
         g.appendChild(groupEl);
 
         // Subtle bobbing animation
-        if (!reducedMotion && i % 2 === 0) {
+        if (!reducedMotion.value && i % 2 === 0) {
             const bobAnim = new CSSKeyframesAnimation(
                 {
                     duration: 3500 + i * 400,

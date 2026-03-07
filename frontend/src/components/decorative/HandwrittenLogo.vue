@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useReducedMotion } from '@/composables/useReducedMotion';
 
 const logoFilter = 'url(#wobble-logo)';
 
-const reducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reducedMotion = useReducedMotion();
 
-const isDrawn = ref(reducedMotion);
+const isDrawn = ref(reducedMotion.value);
 
 onMounted(() => {
-    if (!reducedMotion) {
+    if (!reducedMotion.value) {
         // Trigger on next frame so the initial clip-path state renders first
         requestAnimationFrame(() => {
             requestAnimationFrame(() => { isDrawn.value = true; });
