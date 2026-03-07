@@ -43,7 +43,7 @@ defineExpose({ close })
         <CrayonHeart :size="32" />
       </div>
       <hr class="my-2 border-border/50" />
-      <a href="https://github.com/mkbabb/csp-solver" target="_blank" rel="noopener noreferrer" class="block text-sm text-foreground hover:underline">View project on GitHub 🎊</a>
+      <a href="https://github.com/mkbabb/csp-solver" target="_blank" rel="noopener noreferrer" class="block text-sm text-foreground hover:underline">View project on GitHub 🎉</a>
     </div>
   </div>
 </template>
