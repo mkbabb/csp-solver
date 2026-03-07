@@ -66,5 +66,5 @@ export function toDisplayChar(value: number, boardSize: number): string {
     if (boardSize <= 9) return String(value);
     // 16x16: 1-9 as digits, 10-16 as A-G
     if (value <= 9) return String(value);
-    return String.fromCharCode(55 + value); // 10 -> 'A', 11 -> 'B', etc.
+    return String.fromCharCode('A'.charCodeAt(0) + (value - 10)); // 10 -> 'A', 11 -> 'B', etc.
 }
