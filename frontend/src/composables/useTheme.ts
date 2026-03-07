@@ -1,6 +1,6 @@
-import { useDark, useToggle } from '@vueuse/core'
+import { useDark, useToggle, createGlobalState } from '@vueuse/core'
 
-export function useTheme() {
+export const useTheme = createGlobalState(() => {
   const isDark = useDark({
     selector: 'html',
     attribute: 'class',
@@ -12,4 +12,4 @@ export function useTheme() {
   const toggleDark = useToggle(isDark)
 
   return { isDark, toggleDark }
-}
+})
