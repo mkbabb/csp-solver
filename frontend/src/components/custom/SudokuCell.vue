@@ -88,10 +88,7 @@ function focusInput() {
   <div
     ref="cellRef"
     class="sudoku-cell relative flex items-center justify-center"
-    :class="[
-      isRevealed ? 'cell-reveal-animated' : '',
-      isActive ? 'is-active' : '',
-    ]"
+    :class="{ 'cell-reveal-animated': isRevealed, 'is-active': isActive }"
     :style="isRevealed ? { '--reveal-delay': `${noiseDelay}ms` } : undefined"
     @click="focusInput"
     @mouseenter="isHovered = true"
@@ -121,7 +118,6 @@ function focusInput() {
       :is-revealed="isRevealed"
       :noise-delay="noiseDelay"
       :position="position"
-      :board-size="boardSize"
       :is-hovered="isHovered"
     />
 
