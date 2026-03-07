@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { getVariant, getAllVariants } from '@/lib/glyphs/glyphRegistry';
 import { createGlyphDrawIn, createGlyphWiggle } from '@/lib/animation/glyphAnimations';
-import { DRAW_IN_PRESETS } from '@/lib/pencilConfig';
+import { mulberry32 } from '@mkbabb/pencil-boil';
+import { DRAW_IN_PRESETS, GLYPH_ANIM } from '@/lib/pencilConfig';
 import type { Animation } from '@mkbabb/keyframes.js';
 
 const props = defineProps<{
@@ -13,7 +14,6 @@ const props = defineProps<{
     isRevealed: boolean;
     noiseDelay: number;
     position: number;
-    boardSize: number;
     isHovered: boolean;
 }>();
 
@@ -40,6 +40,9 @@ const strokeWidth = computed(() => {
     return props.isGiven || props.isSolved ? 5 : 4.5;
 });
 
+// Reactive display path — animations mutate this instead of the DOM directly
+const displayPath = computed(() => glyph.value?.d ?? '');
+
 function cleanupAnimations() {
     if (drawInAnim) {
         try { drawInAnim.stop(); } catch { /* ignore */ }
@@ -55,12 +58,19 @@ function startAutoWiggle() {
     if (!pathRef.value || !props.value) return;
     const variants = getAllVariants(props.value);
     if (variants.length >= 2) {
-        // Per-cell duration jitter (±400ms around 2500ms) prevents sync
-        const jitter = ((props.position * 7 + 13) % 800) - 400;
+        // Seeded PRNG per cell for spatially-uncorrelated noise
+        const rng = mulberry32(props.position * 2654435761 + props.value.charCodeAt(0));
+        // Duration jitter: ±400ms around base duration
+        const durationJitter = Math.round((rng() - 0.5) * 800);
+        // Phase delay: 0–full-cycle offset so adjacent cells never sync
+        const phaseDelay = Math.round(rng() * GLYPH_ANIM.autoWiggleDuration);
         wiggleAnim = createGlyphWiggle(
             pathRef.value,
             variants.map((v) => v.d),
-            { duration: 2500 + jitter },
+            {
+                duration: GLYPH_ANIM.autoWiggleDuration + durationJitter,
+                delay: phaseDelay,
+            },
         );
         if (wiggleAnim) {
             wiggleAnim.play();
@@ -129,7 +139,7 @@ watch(
                 wiggleAnim = createGlyphWiggle(
                     pathRef.value,
                     variants.map((v) => v.d),
-                    { duration: 600 },
+                    { duration: GLYPH_ANIM.hoverWiggleDuration },
                 );
                 if (wiggleAnim) {
                     wiggleAnim.play();
@@ -140,10 +150,7 @@ watch(
                 try { wiggleAnim.stop(); } catch { /* ignore */ }
                 wiggleAnim = null;
             }
-            // Reset to original variant
-            if (glyph.value && pathRef.value) {
-                pathRef.value.setAttribute('d', glyph.value.d);
-            }
+            // Vue reactivity restores the correct d via :d="displayPath" on next tick
         }
     },
 );
@@ -157,9 +164,7 @@ watch(
                 try { wiggleAnim.stop(); } catch { /* ignore */ }
                 wiggleAnim = null;
             }
-            if (glyph.value && pathRef.value) {
-                pathRef.value.setAttribute('d', glyph.value.d);
-            }
+            // Vue reactivity restores the correct d via :d="displayPath" on next tick
         }
     },
 );
@@ -191,7 +196,7 @@ onUnmounted(() => {
     >
         <path
             ref="pathRef"
-            :d="glyph.d"
+            :d="displayPath"
             fill="none"
             :stroke="strokeColor"
             :stroke-width="strokeWidth"
