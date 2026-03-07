@@ -5,10 +5,9 @@
  */
 
 import { Animation } from '@mkbabb/keyframes.js';
+import { useReducedMotion } from '@/composables/useReducedMotion';
 
-const reducedMotion =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const reducedMotion = useReducedMotion();
 
 /**
  * Create a draw-in animation for a glyph path (stroke-dashoffset from length to 0).
@@ -21,7 +20,7 @@ export function createGlyphDrawIn(
         delay?: number;
     } = {},
 ): Animation<any> | null {
-    if (reducedMotion) {
+    if (reducedMotion.value) {
         pathEl.style.strokeDashoffset = '0';
         return null;
     }
@@ -59,12 +58,14 @@ export function createGlyphWiggle(
     variantPaths: string[],
     options: {
         duration?: number;
+        delay?: number;
     } = {},
 ): Animation<any> | null {
-    if (reducedMotion || variantPaths.length < 2) return null;
+    if (reducedMotion.value || variantPaths.length < 2) return null;
 
     const anim = new Animation<{ frame: number }>({
         duration: options.duration ?? 800,
+        delay: options.delay ?? 0,
         iterationCount: Infinity,
         direction: 'alternate',
         timingFunction: 'easeInOutCubic',
