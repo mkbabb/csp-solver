@@ -81,6 +81,7 @@ export function useSudoku() {
     if (solveState.value !== 'idle') {
       solveState.value = 'idle'
     }
+    queueSave()
   }
 
   async function randomize() {
@@ -105,6 +106,7 @@ export function useSudoku() {
 
       originalGivenCells.value = new Set(givenCells.value)
       animatingCells.value = new Set(givenCells.value)
+      queueSave()
     } catch (e) {
       errorMessage.value = e instanceof Error ? e.message : 'Failed to get board'
     } finally {
@@ -134,6 +136,7 @@ export function useSudoku() {
       // Backend returns solved=false when user-entered values conflict with the solution
       solveState.value = result.solved ? 'solved' : 'failed'
       animatingCells.value = cellsToAnimate
+      queueSave()
     } catch (e) {
       solveState.value = 'failed'
       errorMessage.value = e instanceof Error ? e.message : 'Solve failed'
@@ -200,7 +203,7 @@ export function useSudoku() {
     randomize()
   })
 
-  // Persist board state on meaningful changes (debounced to avoid localStorage thrash)
+  // Debounced persistence — called explicitly at mutation points
   let saveTimer: ReturnType<typeof setTimeout> | null = null
   function queueSave() {
     if (saveTimer) clearTimeout(saveTimer)
@@ -209,11 +212,6 @@ export function useSudoku() {
       saveTimer = null
     }, 300)
   }
-  watch(
-    [values, givenCells, originalGivenCells, overriddenCells, solvedValues, boardGeneration],
-    queueSave,
-    { deep: true },
-  )
 
   return {
     size,
