@@ -76,9 +76,9 @@ const config: Config = {
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
 'success-pulse': {
-          '0%': { boxShadow: '0 0 0 0 rgba(34, 197, 94, 0.4)' },
-          '70%': { boxShadow: '0 0 0 10px rgba(34, 197, 94, 0)' },
-          '100%': { boxShadow: '0 0 0 0 rgba(34, 197, 94, 0)' },
+          '0%': { boxShadow: '0 0 0 0 color-mix(in srgb, var(--color-easy) 40%, transparent)' },
+          '70%': { boxShadow: '0 0 0 10px color-mix(in srgb, var(--color-easy) 0%, transparent)' },
+          '100%': { boxShadow: '0 0 0 0 color-mix(in srgb, var(--color-easy) 0%, transparent)' },
         },
         'fade-in': {
           from: { opacity: '0' },
