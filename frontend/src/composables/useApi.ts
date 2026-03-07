@@ -1,3 +1,5 @@
+import type { Difficulty } from './useSudoku'
+
 const API_BASE = new URL('api/v1', document.baseURI).pathname
 
 export interface BoardResponse {
@@ -13,7 +15,7 @@ export interface SolveResponse {
 export function useApi() {
   async function getRandomBoard(
     size: number,
-    difficulty: string,
+    difficulty: Difficulty,
   ): Promise<BoardResponse> {
     const res = await fetch(`${API_BASE}/board/random/${size}/${difficulty}`)
     if (!res.ok) {
