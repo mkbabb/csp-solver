@@ -84,8 +84,8 @@ const DEFAULT_BOIL_CONFIG: BoilConfig = {
   frameCount: 4,
   intervalMs: 150,   // ~6.7fps — "shooting on fours"
   frameBoil: 1.2,    // frame lines perturbation (viewBox units)
-  subgridBoil: 0.8,  // subgrid lines
-  cellBoil: 0.5,     // cell lines
+  subgridBoil: 0.6,  // subgrid lines
+  cellBoil: 0.3,     // cell lines — subtle so glyphs feel stable
 };
 
 /** Reactive boil config — mutations here update the grid boil live */
@@ -104,7 +104,7 @@ const DEFAULT_PRESETS: Record<string, FilterPreset> = {
   'grain-static': {
     id: 'grain-static',
     margin: 5,
-    grain: { baseFrequency: 0.04, numOctaves: 3, scale: 3.5, seed: 2 },
+    grain: { baseFrequency: 0.04, numOctaves: 3, scale: 2.5, seed: 2 },
   },
   'wobble-logo': {
     id: 'wobble-logo',
@@ -171,4 +171,11 @@ export const DRAW_IN_PRESETS = {
   glyph:       { duration: 350, stagger: 0,   jitter: 0,  baseDelay: 0,   timing: 'easeOutCubic' },
   solveCell:   { duration: 500, stagger: 120, jitter: 0,  baseDelay: 0,   timing: 'easeOutCubic' },
   logo:        { duration: 1800, stagger: 280, jitter: 0,  baseDelay: 0,   timing: 'easeOutCubic' },
+} as const;
+
+// ── Glyph animation timing ───────────────────────────────────────
+
+export const GLYPH_ANIM = {
+  autoWiggleDuration: 2500,
+  hoverWiggleDuration: 600,
 } as const;
