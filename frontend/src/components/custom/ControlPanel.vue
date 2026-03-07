@@ -3,10 +3,11 @@ import { computed, ref } from 'vue'
 import { Eraser } from 'lucide-vue-next'
 import SolveIcon from './SolveIcon.vue'
 import DiceIcon from './DiceIcon.vue'
+import OptionSelector from './OptionSelector.vue'
 import type { Difficulty } from '@/composables/useSudoku'
-import { ghostUnderline, scribbleUnderline } from '@/lib/scribbleUnderline'
 import { useTheme } from '@/composables/useTheme'
 import { useLineBoil } from '@mkbabb/pencil-boil'
+import { useButtonAnimation } from '@/composables/useButtonAnimation'
 import { generateLineBoilFrames } from '@/lib/gridPaths'
 import { BOIL_CONFIG } from '@/lib/pencilConfig'
 
@@ -50,13 +51,13 @@ const dividerPath = computed(() => dividerFrames.value[dividerFrame.value] ?? ''
 // Reactive filter URL for control panel — avoids :global(.dark) CSS scoping bug
 const panelFilter = computed(() => isDark.value ? 'url(#stroke-dark)' : 'url(#stroke-light)')
 
-const sizes = [
+const sizeOptions = [
   { value: 2, label: '4×4' },
   { value: 3, label: '9×9' },
   { value: 4, label: '16×16' },
 ]
 
-const difficulties: { value: Difficulty; label: string; colorClass: string }[] = [
+const difficultyOptions: { value: Difficulty; label: string; colorClass: string }[] = [
   { value: 'EASY', label: 'Easy', colorClass: 'crayon-green' },
   { value: 'MEDIUM', label: 'Medium', colorClass: 'crayon-orange' },
   { value: 'HARD', label: 'Hard', colorClass: 'crayon-rose' },
@@ -80,43 +81,48 @@ const emit = defineEmits<{
 
 const expandedPanel = ref<'size' | 'difficulty'>('size')
 
-const solveAnimating = ref(false)
-const randomizeAnimating = ref(false)
-const clearAnimating = ref(false)
+const { animating: solveAnimating, trigger: triggerSolve } = useButtonAnimation(500)
+const { animating: randomizeAnimating, trigger: triggerRandomize } = useButtonAnimation(500)
+const { animating: clearAnimating, trigger: triggerClear } = useButtonAnimation(400)
 
 function onRandomize() {
-  randomizeAnimating.value = true
+  triggerRandomize()
   emit('randomize')
-  setTimeout(() => { randomizeAnimating.value = false }, 500)
 }
 
 function onClear() {
-  clearAnimating.value = true
+  triggerClear()
   emit('clear')
-  setTimeout(() => { clearAnimating.value = false }, 400)
 }
 
 function onSolve() {
-  solveAnimating.value = true
+  triggerSolve()
   emit('solve')
-  setTimeout(() => { solveAnimating.value = false }, 500)
 }
 
+function onSizeChange(val: string | number) {
+  emit('update:size', val as number)
+  triggerBoil()
+}
+
+function onDifficultyChange(val: string | number) {
+  emit('update:difficulty', val as Difficulty)
+  triggerBoil()
+}
 </script>
 
 <template>
-  <!-- ═══ Mobile layout ═══ -->
+  <!-- Mobile layout -->
   <div v-if="mobile" class="control-panel-wrap mobile-control-panel mt-3">
-    <!-- Size / Difficulty toggle headings + options -->
     <div class="control-panel-filtered">
       <div class="mobile-heading-row">
-        <button class="mobile-heading-btn" @click="expandedPanel = 'size'">
+        <button class="mobile-heading-btn" :aria-expanded="expandedPanel === 'size'" @click="expandedPanel = 'size'">
           <h2
             class="section-heading text-muted-foreground"
             :class="{ 'is-active': expandedPanel === 'size' }"
           >Size</h2>
         </button>
-        <button class="mobile-heading-btn" @click="expandedPanel = 'difficulty'">
+        <button class="mobile-heading-btn" :aria-expanded="expandedPanel === 'difficulty'" @click="expandedPanel = 'difficulty'">
           <h2
             class="section-heading transition-colors duration-250"
             :class="[
@@ -129,43 +135,23 @@ function onSolve() {
         </button>
       </div>
 
-      <div v-show="expandedPanel === 'size'" class="options-row">
-        <button
-          v-for="s in sizes"
-          :key="s.value"
-          @click="emit('update:size', s.value); triggerBoil()"
-          class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
-          :class="
-            size === s.value
-              ? 'text-foreground font-bold selected-item'
-              : 'text-muted-foreground hover:text-foreground hover-item'
-          "
-          :style="size === s.value
-            ? { '--scribble-underline': scribbleUnderline(s.value + boilFrame * 1000, isDark ? '#ffffff' : '#1a1a1a'), '--scribble-width': `${s.label.length + 1}ch` }
-            : { '--ghost-underline': ghostUnderline(s.value + 500, isDark ? '#ffffff' : '#1a1a1a'), '--ghost-width': `${s.label.length + 1}ch` }"
-        >
-          {{ s.label }}
-        </button>
-      </div>
+      <OptionSelector
+        v-show="expandedPanel === 'size'"
+        :options="sizeOptions"
+        :selected="size"
+        :boil-frame="boilFrame"
+        mobile
+        @change="onSizeChange"
+      />
 
-      <div v-show="expandedPanel === 'difficulty'" class="options-row">
-        <button
-          v-for="d in difficulties"
-          :key="d.value"
-          @click="emit('update:difficulty', d.value); triggerBoil()"
-          class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1rem] md:text-[1.375rem] transition-all duration-150"
-          :class="[
-            difficulty === d.value
-              ? `font-bold selected-item ${d.colorClass}`
-              : 'text-muted-foreground hover:text-foreground hover-item'
-          ]"
-          :style="difficulty === d.value
-            ? { '--scribble-underline': scribbleUnderline(d.value.charCodeAt(0) + boilFrame * 1000, isDark ? '#ffffff' : '#1a1a1a'), '--scribble-width': `${d.label.length + 1}ch` }
-            : { '--ghost-underline': ghostUnderline(d.value.charCodeAt(0) + 500, isDark ? '#ffffff' : '#1a1a1a'), '--ghost-width': `${d.label.length + 1}ch` }"
-        >
-          {{ d.label }}
-        </button>
-      </div>
+      <OptionSelector
+        v-show="expandedPanel === 'difficulty'"
+        :options="difficultyOptions"
+        :selected="difficulty"
+        :boil-frame="boilFrame"
+        mobile
+        @change="onDifficultyChange"
+      />
     </div>
 
     <!-- Boil divider -->
@@ -216,33 +202,20 @@ function onSolve() {
     </div>
   </div>
 
-  <!-- ═══ Desktop layout ═══ -->
+  <!-- Desktop layout -->
   <div v-else class="control-panel-wrap flex flex-col items-center md:items-stretch">
-    <!-- Filtered region: size + difficulty selectors -->
     <div class="control-panel-filtered flex flex-col items-center md:items-stretch">
       <!-- Size selector -->
       <div class="flex flex-col items-center gap-1 md:items-stretch">
         <h2 class="section-heading text-muted-foreground" aria-label="Size">
           Size
         </h2>
-        <div class="flex flex-col items-center md:items-stretch">
-          <button
-            v-for="s in sizes"
-            :key="s.value"
-            @click="emit('update:size', s.value); triggerBoil()"
-            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150 md:py-0.5 md:text-left md:text-[1.25rem]"
-            :class="
-              size === s.value
-                ? 'text-foreground font-bold selected-item'
-                : 'text-muted-foreground hover:text-foreground hover-item'
-            "
-            :style="size === s.value
-              ? { '--scribble-underline': scribbleUnderline(s.value + boilFrame * 1000, isDark ? '#ffffff' : '#1a1a1a'), '--scribble-width': `${s.label.length + 1}ch` }
-              : { '--ghost-underline': ghostUnderline(s.value + 500, isDark ? '#ffffff' : '#1a1a1a'), '--ghost-width': `${s.label.length + 1}ch` }"
-          >
-            {{ s.label }}
-          </button>
-        </div>
+        <OptionSelector
+          :options="sizeOptions"
+          :selected="size"
+          :boil-frame="boilFrame"
+          @change="onSizeChange"
+        />
       </div>
 
       <hr class="my-3 w-full border-border/50" />
@@ -261,24 +234,12 @@ function onSolve() {
         >
           Difficulty
         </h2>
-        <div class="flex flex-col items-center md:items-stretch">
-          <button
-            v-for="d in difficulties"
-            :key="d.value"
-            @click="emit('update:difficulty', d.value); triggerBoil()"
-            class="ctrl-btn rounded-md px-3 py-1.5 text-center text-[1.375rem] transition-all duration-150 md:py-0.5 md:text-left md:text-[1.25rem]"
-            :class="[
-              difficulty === d.value
-                ? `font-bold selected-item ${d.colorClass}`
-                : 'text-muted-foreground hover:text-foreground hover-item'
-            ]"
-            :style="difficulty === d.value
-              ? { '--scribble-underline': scribbleUnderline(d.value.charCodeAt(0) + boilFrame * 1000, isDark ? '#ffffff' : '#1a1a1a'), '--scribble-width': `${d.label.length + 1}ch` }
-              : { '--ghost-underline': ghostUnderline(d.value.charCodeAt(0) + 500, isDark ? '#ffffff' : '#1a1a1a'), '--ghost-width': `${d.label.length + 1}ch` }"
-          >
-            {{ d.label }}
-          </button>
-        </div>
+        <OptionSelector
+          :options="difficultyOptions"
+          :selected="difficulty"
+          :boil-frame="boilFrame"
+          @change="onDifficultyChange"
+        />
       </div>
     </div>
 
@@ -298,7 +259,7 @@ function onSolve() {
       </svg>
     </div>
 
-    <!-- Action buttons — outside filtered region so tooltips are legible -->
+    <!-- Action buttons -->
     <div class="flex items-center justify-evenly">
       <button
         @click="onRandomize()"
@@ -370,44 +331,9 @@ function onSolve() {
 .crayon-rose { color: var(--color-crayon-rose); }
 .crayon-blue { color: var(--color-crayon-blue); }
 
-.ctrl-btn {
-  font-family: 'Fira Code', monospace;
-}
-
 .section-heading:hover {
   filter: url(#wobble-heart);
 }
-
-.ctrl-btn:hover {
-  filter: url(#wobble-heart);
-}
-
-/* Shared underline positioning — content-box origin so left 0 = text edge */
-.selected-item,
-.hover-item {
-  text-decoration: none;
-  background-repeat: no-repeat;
-  background-origin: content-box;
-  background-position: left bottom;
-  padding-bottom: 6px;
-}
-
-/* Crayon-style underline for selected items */
-.selected-item {
-  background-image: var(--scribble-underline);
-  background-size: var(--scribble-width, 4ch) 8px;
-}
-
-/* Ghost underline on hover for non-selected items */
-.hover-item {
-  background-image: none;
-  background-size: var(--ghost-width, 4ch) 8px;
-}
-
-.hover-item:hover {
-  background-image: var(--ghost-underline);
-}
-
 
 .icon-btn {
   display: inline-flex;
@@ -477,8 +403,6 @@ function onSolve() {
   filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
 }
 
-/* Boil divider — SVG is position:absolute so its viewBox intrinsic width (1000px)
-   doesn't inflate the flex column's cross-axis sizing */
 .boil-divider-wrap {
   position: relative;
   height: 14px;
@@ -491,8 +415,7 @@ function onSolve() {
   height: 100%;
 }
 
-/* ═══ Mobile layout ═══ */
-
+/* Mobile layout */
 .mobile-control-panel {
   font-family: 'Fraunces', serif;
   font-optical-sizing: auto;
@@ -514,13 +437,6 @@ function onSolve() {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
-}
-
-.options-row {
-  display: flex;
-  justify-content: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0;
 }
 
 /* Eraser scrub animation */
