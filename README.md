@@ -2,7 +2,7 @@
 
 See the demo at [https://go.ncsu.edu/sudoku](https://go.ncsu.edu/sudoku).
 
-Generalized CSP (constraint satisfaction problem) solver in Python 3.13.
+Generalized CSP (constraint satisfaction problem) solver in Python 3.13+.
 The repository also includes a full-stack Sudoku web app: FastAPI backend, Vue 3 +
 TypeScript frontend, Docker Compose orchestration, and Nginx reverse proxy.
 
@@ -138,8 +138,7 @@ def lambda_constraint(func: Callable[[Any], bool], *variables):
 The inner function, `check`, consumes the current solution and returns a boolean. If the
 constraint is not yet fully assigned, it returns `True` so search can continue.
 
-The outer function returns `check` and the constrained variable list. This yields terse
-call sites such as:
+The outer function returns `check` and the constrained variable list:
 
 ```python
 csp.add_constraint(map_coloring_constraint("Victoria", "New South Wales"))
@@ -192,7 +191,7 @@ Board generation uses two strategies. The fast path, used when pre-computed temp
 exist, selects a random template and applies a random Sudoku symmetry transform: digit
 permutation, row/column permutation within bands and stacks, band/stack permutation,
 and transposition. For N=3, this symmetry group yields ~1.22 billion distinct grids per
-base template. Generation on this path is O(1)—no search required.
+base template. Generation on this path is O(M²) per transform application—no search required.
 
 When templates are unavailable, the solver falls back to generate-and-reduce: generate a
 complete solution, remove cells with uniqueness verification, and calibrate difficulty

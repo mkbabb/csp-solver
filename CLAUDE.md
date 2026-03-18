@@ -1,15 +1,15 @@
 # CSP Solver — Project Guide
 
-Fullstack CSP solver: Python 3.13 backend (FastAPI) + Vue 3 frontend (TypeScript, Tailwind v4). Primary application: generalized Sudoku (2×2 through 5×5 subgrids). Deployed via Docker Compose + Nginx.
+Fullstack CSP solver: Python 3.13+ backend (FastAPI) + Vue 3 frontend (TypeScript, Tailwind v4). Primary application: generalized Sudoku (2×2 through 5×5 subgrids). Deployed via Docker Compose + Nginx.
 
 ## File Tree
 
 ```
 .
-├── backend/                    # FastAPI + CSP solver (Python 3.13, uv)
+├── backend/                    # FastAPI + CSP solver (Python 3.13+, uv)
 │   ├── CLAUDE.md
 │   ├── Dockerfile              # Multi-stage: dev (reload) / prod (4 workers)
-│   ├── pyproject.toml          # uv/hatchling config, ruff, mypy, pytest
+│   ├── pyproject.toml          # uv/hatchling config, ruff, mypy, pytest (Python 3.13+)
 │   ├── uv.lock
 │   ├── src/csp_solver/
 │   │   ├── solver/             # CSP engine (csp, bitset_domain, gac_alldiff, nogoods, local_search) + puzzles (sudoku, sudoku_transforms, futoshiki)

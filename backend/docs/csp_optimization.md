@@ -199,18 +199,9 @@ cProfile on Golden Nugget across optimization passes:
 
 ---
 
-## 5. Future Directions
+## 5. Additional Implemented Optimizations
 
-### 5.1 Lazy Clause Generation (LCG)
-
-The most impactful next step. LCG combines CSP propagation with SAT-style clause learning:
-- Each propagator explains its inferences as clauses
-- Failed subtrees produce learned clauses (conflict-driven clause learning)
-- Eliminates re-exploration of equivalent subtrees across the entire search
-
-Estimated effort: 400-600 lines. Requires refactoring constraints to be "explainable" (each can produce a reason clause for any inference it makes).
-
-### 5.2 Board Generation via Symmetry Transforms (Implemented)
+### 5.1 Board Generation via Symmetry Transforms
 
 Board generation was the dominant latency bottleneck: a 9×9 HARD puzzle solves in ~46ms but required ~4.9s to generate — `create_random_board` calls `_has_unique_solution` (full CSP build + solve) ~65 times during hole-digging, plus `_measure_difficulty` for calibration.
 
@@ -234,28 +225,37 @@ For N=3: ~1.22 billion distinct grids per base template. With 20 templates × 3 
 
 Pre-computed templates: `data/sudoku_puzzles/{N}/{difficulty}/template-{i}.json`. Offline generation script: `scripts/generate_templates.py`.
 
-### 5.3 Additional Puzzle Demos (Future)
+---
+
+## 6. Future Directions
+
+### 6.1 Lazy Clause Generation (LCG)
+
+The most impactful next step. LCG combines CSP propagation with SAT-style clause learning:
+- Each propagator explains its inferences as clauses
+- Failed subtrees produce learned clauses (conflict-driven clause learning)
+- Eliminates re-exploration of equivalent subtrees across the entire search
+
+Estimated effort: 400-600 lines. Requires refactoring constraints to be "explainable" (each can produce a reason clause for any inference it makes).
+
+### 6.2 Additional Puzzle Demos
 
 The solver engine is fully general. Immediate candidates:
 - **Graph coloring** (already supported via `map_coloring_constraint`)
 - **Cryptarithmetic** (SEND + MORE = MONEY)
 - **Nonograms** (picture logic puzzles)
-- **Futoshiki** (already partially implemented in the codebase)
+- **Futoshiki** (fully implemented in the codebase)
 
-### 5.3 Parallel Search
+### 6.3 Parallel Search
 
 Python's GIL limits true parallelism, but:
 - `multiprocessing` can run independent subproblems
 - Portfolio approach: run multiple solver configs in parallel, take first solution
 - Work-stealing across subtrees
 
-### 5.4 Type Inference as CSP
-
-An interesting application: formulating type inference as a CSP where variables are type slots and constraints are type compatibility rules. The all-different constraint maps naturally to union type exclusion.
-
 ---
 
-## 6. References
+## 7. References
 
 1. Mackworth, A. K. (1977). Consistency in networks of relations. *Artificial Intelligence*, 8(1), 99-118.
 2. Bessiere, C., & Régin, J. C. (2001). Refining the basic constraint propagation algorithm. *IJCAI*, 309-315.

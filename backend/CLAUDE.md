@@ -1,6 +1,6 @@
 # Backend — CSP Solver API
 
-FastAPI REST API wrapping a generalized CSP solver. Python 3.13, uv package manager, hatchling build.
+FastAPI REST API wrapping a generalized CSP solver. Python 3.13+, uv package manager, hatchling build.
 
 ## File Tree
 
