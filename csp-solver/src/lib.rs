@@ -41,6 +41,17 @@ pub enum Pruning {
     AcFc,
 }
 
+/// Propagation strategy for `propagate_with()`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PropagationStrategy {
+    /// Auto-select: AC-3 if finalize() was called, sweep otherwise.
+    Auto,
+    /// AC-3 worklist with adjacency graph. Requires finalize().
+    Ac3,
+    /// Fixed-point sweep over all constraints. No adjacency needed.
+    Sweep,
+}
+
 /// Solve configuration, isomorphic to Python's CSP constructor arguments.
 #[derive(Debug, Clone)]
 pub struct SolveConfig {
@@ -150,33 +161,46 @@ impl<D: Domain> Csp<D> {
         }
     }
 
-    /// Propagate constraints to a fixed point.
-    ///
-    /// Automatically selects the optimal strategy:
-    /// - If `finalize()` was called: AC-3 worklist with adjacency graph
-    /// - Otherwise: lightweight sweep (small) or inline worklist (large)
+    /// Propagate constraints to a fixed point (auto-select strategy).
     pub fn propagate(&mut self) -> Result<(), Unsatisfiable>
     where
         D::Value: PartialEq,
     {
-        if let Some(adjacency) = self.adjacency.as_ref() {
-            // AC-3 with full adjacency graph (search path).
-            solver::ac3::ac3_full(
-                &mut self.variables,
-                &self.constraints,
-                adjacency,
-                &mut self.stats,
-                0,
-            )
-            .map_err(|()| Unsatisfiable)
-        } else {
-            // No adjacency: fixed-point sweep (lattice / monotonic path).
-            solver::monotonic::propagate_monotonic(
-                &mut self.variables,
-                &self.constraints,
-                &mut self.stats,
-            )
-            .map_err(|()| Unsatisfiable)
+        self.propagate_with(PropagationStrategy::Auto)
+    }
+
+    /// Propagate constraints with an explicit strategy.
+    pub fn propagate_with(&mut self, strategy: PropagationStrategy) -> Result<(), Unsatisfiable>
+    where
+        D::Value: PartialEq,
+    {
+        match strategy {
+            PropagationStrategy::Auto => {
+                if self.adjacency.is_some() {
+                    self.propagate_with(PropagationStrategy::Ac3)
+                } else {
+                    self.propagate_with(PropagationStrategy::Sweep)
+                }
+            }
+            PropagationStrategy::Ac3 => {
+                let adjacency = self.adjacency.as_ref().ok_or(Unsatisfiable)?.clone();
+                solver::ac3::ac3_full(
+                    &mut self.variables,
+                    &self.constraints,
+                    &adjacency,
+                    &mut self.stats,
+                    0,
+                )
+                .map_err(|()| Unsatisfiable)
+            }
+            PropagationStrategy::Sweep => {
+                solver::monotonic::propagate_monotonic(
+                    &mut self.variables,
+                    &self.constraints,
+                    &mut self.stats,
+                )
+                .map_err(|()| Unsatisfiable)
+            }
         }
     }
 
