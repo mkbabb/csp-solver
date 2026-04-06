@@ -6,7 +6,9 @@ use crate::domain::Domain;
 use crate::variable::Variable;
 use crate::SolveStats;
 
-/// Forward checking using assign-check-unassign — zero allocations per value test.
+/// Forward checking using assign-check-unassign.
+///
+/// Reuses a value buffer across neighbors to avoid per-neighbor heap allocation.
 pub fn forward_check<D: Domain>(
     var: VarId,
     variables: &mut [Variable<D>],
@@ -19,14 +21,18 @@ pub fn forward_check<D: Domain>(
 where
     D::Value: PartialEq,
 {
+    let mut val_buf: Vec<D::Value> = Vec::new();
+
     for &neighbor in adjacency.neighbors_of_var(var) {
         if assignment[neighbor as usize].is_some() {
             continue;
         }
 
-        let vals = variables[neighbor as usize].domain.values();
+        // Reuse buffer: clear + extend avoids reallocation after first neighbor.
+        val_buf.clear();
+        val_buf.extend(variables[neighbor as usize].domain.iter());
 
-        for val in &vals {
+        for val in &val_buf {
             assignment[neighbor as usize] = Some(val.clone());
 
             let mut valid = true;
