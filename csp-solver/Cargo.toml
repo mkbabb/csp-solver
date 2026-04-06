@@ -14,7 +14,9 @@ pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [lib]
-crate-type = ["lib", "cdylib"]
+# cdylib only needed for PyO3 (maturin). Normal builds produce rlib only.
+# maturin adds cdylib automatically via pyproject.toml.
+crate-type = ["lib"]
 
 [[bench]]
 name = "sudoku"
