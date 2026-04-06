@@ -9,8 +9,8 @@ import time
 
 import pytest
 
-sudoku_rs = pytest.importorskip("sudoku_rs")
-from sudoku_rs import SudokuDifficulty, create_random_board, create_sudoku_csp, solve_sudoku
+pytest.importorskip("csp_solver_rs")
+from csp_solver_rs import SudokuDifficulty, create_random_board, create_sudoku_csp, solve_sudoku
 
 
 def is_valid_solution(solution: dict[str, int], n: int) -> bool:

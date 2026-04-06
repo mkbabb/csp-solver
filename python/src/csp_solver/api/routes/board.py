@@ -10,7 +10,7 @@ from csp_solver.api.models.board import (
     SolveRequest,
     SolveResponse,
 )
-from sudoku_rs import (
+from csp_solver_rs import (
     SudokuDifficulty,
     create_random_board,
     create_sudoku_csp,
