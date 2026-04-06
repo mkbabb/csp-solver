@@ -1,6 +1,6 @@
 //! FiniteDomain<T> — a generic finite domain backed by Vec<T>.
 
-use crate::domain::Domain;
+use super::traits::Domain;
 
 /// A generic finite domain holding arbitrary values.
 ///

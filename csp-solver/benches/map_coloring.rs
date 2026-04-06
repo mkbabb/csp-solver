@@ -1,6 +1,6 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use csp_solver::constraint::{NotEqual, VarId};
-use csp_solver::domains::bitset::BitsetDomain;
+use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::ordering::Ordering;
 use csp_solver::{Csp, Pruning, SolveConfig};
 

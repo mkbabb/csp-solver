@@ -1,7 +1,7 @@
 //! LatticeDomain — wrapper for monotonic CSP (types, FIRST/FOLLOW sets).
 
-use crate::domain::{Domain, LatticeDomain};
-use crate::domains::bitset::BitsetDomain;
+use super::bitset::BitsetDomain;
+use super::traits::{Domain, LatticeDomain};
 
 /// A lattice domain backed by a `BitsetDomain`.
 ///

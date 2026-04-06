@@ -1,6 +1,6 @@
 //! BitsetDomain — O(1) domain for non-negative integers, isomorphic to Python's BitsetDomain.
 
-use crate::domain::Domain;
+use super::traits::Domain;
 
 /// A domain backed by a 128-bit bitmask.
 ///

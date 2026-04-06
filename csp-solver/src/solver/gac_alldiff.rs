@@ -372,7 +372,7 @@ pub fn propagate_gac_alldiff<D: Domain>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domains::bitset::BitsetDomain;
+    use crate::domain::bitset::BitsetDomain;
 
     /// Helper: build a GAC test scenario and return the revision result + pruned domains.
     fn run_gac(

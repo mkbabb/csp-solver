@@ -182,7 +182,7 @@ where
 mod tests {
     use super::*;
     use crate::constraint::NotEqual;
-    use crate::domains::finite::FiniteDomain;
+    use crate::domain::finite::FiniteDomain;
 
     #[test]
     fn simple_two_vars() {

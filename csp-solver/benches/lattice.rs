@@ -1,8 +1,8 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use csp_solver::constraint::{LambdaConstraint, VarId};
 use csp_solver::domain::LatticeDomain;
-use csp_solver::domains::bitset::BitsetDomain;
-use csp_solver::domains::lattice::BitsetLatticeDomain;
+use csp_solver::domain::bitset::BitsetDomain;
+use csp_solver::domain::lattice::BitsetLatticeDomain;
 use csp_solver::Csp;
 
 // ---------------------------------------------------------------------------

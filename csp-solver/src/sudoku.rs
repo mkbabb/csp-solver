@@ -3,7 +3,7 @@
 //! Works for any n: 2 (4x4), 3 (9x9), 4 (16x16), etc.
 
 use crate::constraint::VarId;
-use crate::domains::bitset::BitsetDomain;
+use crate::domain::bitset::BitsetDomain;
 use crate::ordering::Ordering;
 use crate::{Csp, Pruning, SolveConfig};
 

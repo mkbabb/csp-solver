@@ -11,7 +11,6 @@
 pub mod adjacency;
 pub mod constraint;
 pub mod domain;
-pub mod domains;
 pub mod ordering;
 #[cfg(feature = "py")]
 pub mod py;
@@ -348,9 +347,9 @@ impl std::error::Error for Unsatisfiable {}
 mod tests {
     use super::*;
     use crate::constraint::{AllDifferent, LambdaConstraint, NotEqual};
-    use crate::domains::bitset::BitsetDomain;
-    use crate::domains::finite::FiniteDomain;
-    use crate::domains::lattice::BitsetLatticeDomain;
+    use crate::domain::bitset::BitsetDomain;
+    use crate::domain::finite::FiniteDomain;
+    use crate::domain::lattice::BitsetLatticeDomain;
     use crate::domain::LatticeDomain;
 
     // -----------------------------------------------------------------------

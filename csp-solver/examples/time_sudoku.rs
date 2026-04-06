@@ -1,5 +1,5 @@
 use csp_solver::constraint::VarId;
-use csp_solver::domains::bitset::BitsetDomain;
+use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::ordering::Ordering;
 use csp_solver::*;
 
