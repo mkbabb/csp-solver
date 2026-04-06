@@ -1,5 +1,5 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use csp_solver::constraint::{NotEqual, VarId};
+use csp_solver::constraint::VarId;
 use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::ordering::Ordering;
 use csp_solver::{Csp, Pruning, SolveConfig};
@@ -26,7 +26,7 @@ fn build_australia() -> Csp<BitsetDomain> {
         (4, 5), // NSW-V
     ];
     for &(a, b) in edges {
-        csp.add_constraint(NotEqual::new(a, b));
+        csp.add_not_equal(a, b);
     }
     csp.finalize();
     csp
@@ -48,7 +48,7 @@ fn build_random_graph(n: u32, num_colors: u32, seed: u64, edge_probability_pct: 
             rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
             let roll = ((rng >> 33) as u32) % 100;
             if roll < edge_probability_pct {
-                csp.add_constraint(NotEqual::new(i as VarId, j as VarId));
+                csp.add_not_equal(i as VarId, j as VarId);
             }
         }
     }

@@ -1,5 +1,5 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use csp_solver::constraint::{AllDifferent, LambdaConstraint};
+use csp_solver::constraint::LambdaConstraint;
 use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::ordering::Ordering;
 use csp_solver::{Csp, Pruning, SolveConfig};
@@ -16,7 +16,7 @@ fn build_queens(n: u32) -> Csp<BitsetDomain> {
     let vars = csp.add_variables(&domain, n as usize);
 
     // All queens in different rows.
-    csp.add_constraint(AllDifferent::new(vars.clone()));
+    csp.add_all_different(vars.clone());
 
     // Diagonal constraints: for each pair (i, j), |row_i - row_j| != |i - j|.
     for i in 0..n {

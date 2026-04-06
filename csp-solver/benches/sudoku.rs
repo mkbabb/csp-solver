@@ -1,5 +1,5 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use csp_solver::constraint::{AllDifferent, VarId};
+use csp_solver::constraint::VarId;
 use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::ordering::Ordering;
 use csp_solver::{Csp, Pruning, SolveConfig};
@@ -55,12 +55,12 @@ fn build_sudoku_9x9(grid: &[u32; 81]) -> (Csp<BitsetDomain>, Vec<(VarId, u32)>) 
     // Row constraints
     for r in 0..9 {
         let row_vars: Vec<VarId> = (0..9).map(|c| (r * 9 + c) as VarId).collect();
-        csp.add_constraint(AllDifferent::new(row_vars));
+        csp.add_all_different(row_vars);
     }
     // Column constraints
     for c in 0..9 {
         let col_vars: Vec<VarId> = (0..9).map(|r| (r * 9 + c) as VarId).collect();
-        csp.add_constraint(AllDifferent::new(col_vars));
+        csp.add_all_different(col_vars);
     }
     // 3x3 box constraints
     for bi in 0..3u32 {
@@ -68,7 +68,7 @@ fn build_sudoku_9x9(grid: &[u32; 81]) -> (Csp<BitsetDomain>, Vec<(VarId, u32)>) 
             let box_vars: Vec<VarId> = (0..3)
                 .flat_map(|di| (0..3).map(move |dj| (bi * 3 + di) * 9 + (bj * 3 + dj)))
                 .collect();
-            csp.add_constraint(AllDifferent::new(box_vars));
+            csp.add_all_different(box_vars);
         }
     }
 
@@ -206,12 +206,12 @@ fn build_sudoku_16x16(grid: &[u32; 256]) -> (Csp<BitsetDomain>, Vec<(VarId, u32)
     // Row constraints
     for r in 0..16 {
         let row_vars: Vec<VarId> = (0..16).map(|c| (r * 16 + c) as VarId).collect();
-        csp.add_constraint(AllDifferent::new(row_vars));
+        csp.add_all_different(row_vars);
     }
     // Column constraints
     for c in 0..16 {
         let col_vars: Vec<VarId> = (0..16).map(|r| (r * 16 + c) as VarId).collect();
-        csp.add_constraint(AllDifferent::new(col_vars));
+        csp.add_all_different(col_vars);
     }
     // 4x4 box constraints
     for bi in 0..4u32 {
@@ -219,7 +219,7 @@ fn build_sudoku_16x16(grid: &[u32; 256]) -> (Csp<BitsetDomain>, Vec<(VarId, u32)
             let box_vars: Vec<VarId> = (0..4)
                 .flat_map(|di| (0..4).map(move |dj| (bi * 4 + di) * 16 + (bj * 4 + dj)))
                 .collect();
-            csp.add_constraint(AllDifferent::new(box_vars));
+            csp.add_all_different(box_vars);
         }
     }
 
