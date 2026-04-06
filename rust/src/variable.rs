@@ -37,7 +37,6 @@ impl<D: Domain> Variable<D> {
 
     /// Restore all values pruned at the given `depth`.
     pub fn restore(&mut self, depth: usize) {
-        // Walk backward and pop all entries matching this depth.
         while let Some(&(d, _)) = self.pruned.last() {
             if d == depth {
                 let (_, val) = self.pruned.pop().unwrap();

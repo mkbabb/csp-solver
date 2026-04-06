@@ -1,7 +1,7 @@
-//! Conflict-directed backjumping.
+//! Conflict-directed backjumping with bitset conflict tracking.
 
 use crate::adjacency::Adjacency;
-use crate::constraint::{Constraint, VarId};
+use crate::constraint::{ConstraintEnum, VarId};
 use crate::domain::Domain;
 use crate::ordering::{self, Ordering};
 use crate::solver::ac3;
@@ -11,47 +11,36 @@ use crate::{Pruning, SolveStats};
 
 use super::backtrack::Solution;
 
-/// Run backjumping search.
-///
-/// Returns up to `max_solutions` solutions.
+/// Run backjumping search. Returns up to `max_solutions` solutions.
 pub fn backjump_search<D: Domain>(
     variables: &mut [Variable<D>],
-    constraints: &[Box<dyn Constraint<D>>],
+    constraints: &[ConstraintEnum<D>],
     adjacency: &Adjacency,
     config: &BackjumpConfig,
     stats: &mut SolveStats,
-) -> Vec<Solution<D>> {
+) -> Vec<Solution<D>>
+where
+    D::Value: PartialEq,
+{
     let num_vars = variables.len();
     let mut assignment: Vec<Option<D::Value>> = vec![None; num_vars];
     let mut stack: Vec<VarId> = (0..num_vars as u32).collect();
     let mut solutions = Vec::new();
-
-    // Track assignment order for depth mapping
     let mut assigned_order: Vec<VarId> = Vec::new();
+    let mut conflict_membership = vec![false; num_vars];
 
     backjump_recurse(
-        variables,
-        constraints,
-        adjacency,
-        config,
-        stats,
-        &mut assignment,
-        &mut stack,
-        &mut solutions,
-        &mut assigned_order,
-        0,
+        variables, constraints, adjacency, config, stats,
+        &mut assignment, &mut stack, &mut solutions,
+        &mut assigned_order, &mut conflict_membership, 0,
     );
 
     solutions
 }
 
-/// Result of a recursive backjump call.
 enum BackjumpResult {
-    /// Continue normal search at this level.
     Continue,
-    /// Found enough solutions -- done.
     Done,
-    /// Backjump to the variable at the given depth.
     JumpTo(usize),
 }
 
@@ -66,7 +55,7 @@ pub struct BackjumpConfig {
 
 fn backjump_recurse<D: Domain>(
     variables: &mut [Variable<D>],
-    constraints: &[Box<dyn Constraint<D>>],
+    constraints: &[ConstraintEnum<D>],
     adjacency: &Adjacency,
     config: &BackjumpConfig,
     stats: &mut SolveStats,
@@ -74,9 +63,12 @@ fn backjump_recurse<D: Domain>(
     stack: &mut Vec<VarId>,
     solutions: &mut Vec<Solution<D>>,
     assigned_order: &mut Vec<VarId>,
+    conflict_membership: &mut [bool],
     depth: usize,
-) -> BackjumpResult {
-    // Base case: all variables assigned
+) -> BackjumpResult
+where
+    D::Value: PartialEq,
+{
     if stack.is_empty() {
         let sol: Solution<D> = assignment
             .iter()
@@ -91,21 +83,17 @@ fn backjump_recurse<D: Domain>(
 
     stats.nodes_explored += 1;
 
-    // Select next variable
     let idx = ordering::select_variable(
-        stack,
-        variables,
-        config.ordering,
-        &config.constraint_weights,
-        &config.var_constraint_ids,
+        stack, variables, config.ordering,
+        &config.constraint_weights, &config.var_constraint_ids,
     )
     .unwrap();
 
     let var = stack.swap_remove(idx);
     assigned_order.push(var);
 
-    // Conflict set: tracks which previously-assigned variables caused failures
-    let mut conflict_set: Vec<VarId> = Vec::new();
+    // Bitset-backed conflict set
+    let mut conflict_vars: Vec<VarId> = Vec::new();
 
     let values = variables[var as usize].domain.values();
     let mut exhausted = true;
@@ -113,87 +101,64 @@ fn backjump_recurse<D: Domain>(
     for val in values {
         assignment[var as usize] = Some(val.clone());
 
-        // Check constraints and identify conflicting variables
         let mut valid = true;
         for &ci in adjacency.constraints_for(var) {
+            let ci = ci as usize;
             let scope = constraints[ci].scope();
-            let all_assigned = scope
-                .iter()
-                .all(|&v| assignment[v as usize].is_some());
-            if !all_assigned {
-                continue;
-            }
-            if !constraints[ci].check(assignment) {
-                valid = false;
-                // Add the other assigned variables in this constraint to the conflict set
-                for &v in scope {
-                    if v != var && assignment[v as usize].is_some() && !conflict_set.contains(&v) {
-                        conflict_set.push(v);
+            if scope.iter().all(|&v| assignment[v as usize].is_some()) {
+                if !constraints[ci].check(assignment) {
+                    valid = false;
+                    for &v in scope {
+                        if v != var
+                            && assignment[v as usize].is_some()
+                            && !conflict_membership[v as usize]
+                        {
+                            conflict_membership[v as usize] = true;
+                            conflict_vars.push(v);
+                        }
                     }
+                    break;
                 }
-                break;
             }
         }
 
         if valid {
-            // Pruning
             let dwo = match config.pruning {
                 Pruning::None => false,
                 Pruning::ForwardChecking => propagate::forward_check(
-                    var,
-                    variables,
-                    constraints,
-                    adjacency,
-                    assignment,
-                    stats,
-                    depth,
+                    var, variables, constraints, adjacency,
+                    assignment.as_mut_slice(), stats, depth,
                 ),
                 Pruning::Ac3 => ac3::ac3_from_variable(
-                    var,
-                    variables,
-                    constraints,
-                    adjacency,
-                    assignment,
-                    stats,
-                    depth,
+                    var, variables, constraints, adjacency,
+                    assignment, stats, depth,
                 ),
                 Pruning::AcFc => propagate::ac_fc(
-                    var,
-                    variables,
-                    constraints,
-                    adjacency,
-                    assignment,
-                    stats,
-                    depth,
+                    var, variables, constraints, adjacency,
+                    assignment.as_mut_slice(), stats, depth,
                 ),
             };
 
             if dwo {
-                // DWO: add neighbors involved in wipe-out to conflict set
                 for &neighbor in adjacency.neighbors_of_var(var) {
-                    if assignment[neighbor as usize].is_some() && !conflict_set.contains(&neighbor) {
-                        conflict_set.push(neighbor);
+                    if assignment[neighbor as usize].is_some()
+                        && !conflict_membership[neighbor as usize]
+                    {
+                        conflict_membership[neighbor as usize] = true;
+                        conflict_vars.push(neighbor);
                     }
                 }
             } else {
                 match backjump_recurse(
-                    variables,
-                    constraints,
-                    adjacency,
-                    config,
-                    stats,
-                    assignment,
-                    stack,
-                    solutions,
-                    assigned_order,
-                    depth + 1,
+                    variables, constraints, adjacency, config, stats,
+                    assignment, stack, solutions, assigned_order,
+                    conflict_membership, depth + 1,
                 ) {
                     BackjumpResult::Done => return BackjumpResult::Done,
                     BackjumpResult::Continue => {
                         exhausted = false;
                     }
                     BackjumpResult::JumpTo(target_depth) => {
-                        // Undo current assignment
                         stats.backtracks += 1;
                         assignment[var as usize] = None;
                         for v in variables.iter_mut() {
@@ -203,17 +168,17 @@ fn backjump_recurse<D: Domain>(
                         stack.push(var);
 
                         if target_depth < depth {
-                            // Jump past this level
+                            for &cv in &conflict_vars {
+                                conflict_membership[cv as usize] = false;
+                            }
                             return BackjumpResult::JumpTo(target_depth);
                         }
-                        // target_depth == depth: continue trying values at this level
                         continue;
                     }
                 }
             }
         }
 
-        // Undo
         stats.backtracks += 1;
         assignment[var as usize] = None;
         for v in variables.iter_mut() {
@@ -224,23 +189,28 @@ fn backjump_recurse<D: Domain>(
     assigned_order.pop();
     stack.push(var);
 
-    if exhausted && !conflict_set.is_empty() {
-        // Find the most recent variable in the conflict set and jump to it
-        let jump_target = conflict_set
-            .iter()
-            .filter_map(|&cv| {
-                assigned_order
-                    .iter()
-                    .position(|&av| av == cv)
-            })
-            .max();
-
-        if let Some(target_depth) = jump_target {
-            if target_depth < depth {
-                return BackjumpResult::JumpTo(target_depth);
+    let result = if exhausted && !conflict_vars.is_empty() {
+        // Single-pass scan for most recent conflict variable
+        let mut max_depth = 0;
+        let mut found = false;
+        for (pos, &av) in assigned_order.iter().enumerate() {
+            if conflict_membership[av as usize] && pos >= max_depth {
+                max_depth = pos;
+                found = true;
             }
         }
+        if found && max_depth < depth {
+            BackjumpResult::JumpTo(max_depth)
+        } else {
+            BackjumpResult::Continue
+        }
+    } else {
+        BackjumpResult::Continue
+    };
+
+    for &cv in &conflict_vars {
+        conflict_membership[cv as usize] = false;
     }
 
-    BackjumpResult::Continue
+    result
 }

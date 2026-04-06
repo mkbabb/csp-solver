@@ -14,10 +14,11 @@ pub mod domain;
 pub mod domains;
 pub mod ordering;
 pub mod solver;
+pub mod sudoku;
 pub mod variable;
 
 use adjacency::Adjacency;
-use constraint::{Constraint, VarId};
+use constraint::{AllDifferent, Constraint, ConstraintEnum, NotEqual, VarId};
 use domain::Domain;
 use ordering::Ordering;
 use solver::backjump::{self, BackjumpConfig};
@@ -72,7 +73,7 @@ pub struct SolveStats {
 /// constraints, call `finalize()` to build the adjacency graph, then `solve()`.
 pub struct Csp<D: Domain> {
     pub variables: Vec<Variable<D>>,
-    constraints: Vec<Box<dyn Constraint<D>>>,
+    constraints: Vec<ConstraintEnum<D>>,
     adjacency: Option<Adjacency>,
     stats: SolveStats,
     /// Per-constraint weights for dom/wdeg ordering.
@@ -108,18 +109,35 @@ impl<D: Domain> Csp<D> {
             .collect()
     }
 
-    /// Add a constraint.
+    /// Add a custom constraint (wrapped in the `Custom` enum variant).
     pub fn add_constraint(&mut self, c: impl Constraint<D> + 'static) {
-        self.constraints.push(Box::new(c));
+        self.constraints.push(ConstraintEnum::Custom(Box::new(c)));
+    }
+
+    /// Add a pre-typed constraint enum directly (avoids boxing for built-in types).
+    pub fn add_constraint_enum(&mut self, c: ConstraintEnum<D>) {
+        self.constraints.push(c);
+    }
+
+    /// Add a not-equal constraint (devirtualized fast path).
+    pub fn add_not_equal(&mut self, x: VarId, y: VarId) {
+        self.constraints.push(ConstraintEnum::NotEqual(NotEqual::new(x, y)));
+    }
+
+    /// Add an all-different constraint (devirtualized fast path).
+    pub fn add_all_different(&mut self, vars: Vec<VarId>) {
+        self.constraints.push(ConstraintEnum::AllDifferent(AllDifferent::new(vars)));
     }
 
     /// Build the adjacency graph. Must be called after all variables and
     /// constraints have been added, before calling `solve()`.
-    pub fn finalize(&mut self) {
+    pub fn finalize(&mut self)
+    where
+        D::Value: PartialEq,
+    {
         let num_vars = self.variables.len();
         self.adjacency = Some(Adjacency::build(num_vars, &self.constraints));
 
-        // Build per-variable constraint ID lists and initialize weights
         self.constraint_weights = vec![1.0; self.constraints.len()];
         self.var_constraint_ids = vec![Vec::new(); num_vars];
         for (ci, c) in self.constraints.iter().enumerate() {
@@ -132,7 +150,10 @@ impl<D: Domain> Csp<D> {
     /// AC-3 propagation only — no search. Useful for lattice domains.
     ///
     /// Returns `Err(Unsatisfiable)` if a domain wipe-out is detected.
-    pub fn propagate(&mut self) -> Result<(), Unsatisfiable> {
+    pub fn propagate(&mut self) -> Result<(), Unsatisfiable>
+    where
+        D::Value: PartialEq,
+    {
         let adjacency = self
             .adjacency
             .as_ref()
@@ -148,10 +169,29 @@ impl<D: Domain> Csp<D> {
         .map_err(|()| Unsatisfiable)
     }
 
+    /// Monotonic propagation — no adjacency graph, no undo log.
+    ///
+    /// Ideal for lattice domains (FIRST/FOLLOW sets, type inference) where
+    /// domains only grow and no backtracking is needed. Skips `finalize()`.
+    pub fn propagate_monotonic(&mut self) -> Result<(), Unsatisfiable>
+    where
+        D::Value: PartialEq,
+    {
+        solver::monotonic::propagate_monotonic(
+            &mut self.variables,
+            &self.constraints,
+            &mut self.stats,
+        )
+        .map_err(|()| Unsatisfiable)
+    }
+
     /// Run backtracking (or backjumping) search with the given configuration.
     ///
     /// Returns up to `config.max_solutions` solutions.
-    pub fn solve(&mut self, config: &SolveConfig) -> Vec<Solution<D>> {
+    pub fn solve(&mut self, config: &SolveConfig) -> Vec<Solution<D>>
+    where
+        D::Value: PartialEq,
+    {
         let adjacency = self
             .adjacency
             .as_ref()
@@ -206,7 +246,10 @@ impl<D: Domain> Csp<D> {
         &mut self,
         config: &SolveConfig,
         given: &[(VarId, D::Value)],
-    ) -> Vec<Solution<D>> {
+    ) -> Vec<Solution<D>>
+    where
+        D::Value: PartialEq,
+    {
         let adjacency = self
             .adjacency
             .as_ref()

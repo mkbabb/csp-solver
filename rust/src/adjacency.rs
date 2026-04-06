@@ -1,91 +1,105 @@
-//! Pre-built constraint dependency graph for O(1) neighbor lookup.
+//! Pre-built constraint dependency graph with flat arena storage.
 
-use crate::constraint::{Constraint, VarId};
+use crate::constraint::{ConstraintEnum, VarId};
 use crate::domain::Domain;
 
-/// Adjacency structure: maps variables to constraints and constraints to neighbor constraints.
+#[derive(Debug, Clone)]
+struct ArenaIndex {
+    entries: Vec<(u32, u32)>,
+}
+
+impl ArenaIndex {
+    fn new(count: usize) -> Self {
+        Self { entries: vec![(0, 0); count] }
+    }
+
+    fn get<'a>(&self, idx: usize, pool: &'a [u32]) -> &'a [u32] {
+        let (offset, len) = self.entries[idx];
+        &pool[offset as usize..(offset + len) as usize]
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Adjacency {
-    /// For each variable, the indices of constraints involving it.
-    pub var_constraints: Vec<Vec<usize>>,
-    /// For each constraint, the indices of other constraints that share at least one variable.
-    pub constraint_neighbors: Vec<Vec<usize>>,
-    /// For each variable, the set of neighbor variables (variables sharing a constraint).
-    pub var_neighbors: Vec<Vec<VarId>>,
+    pool: Vec<u32>,
+    var_constraints: ArenaIndex,
+    constraint_neighbors: ArenaIndex,
+    var_neighbors: ArenaIndex,
 }
 
 impl Adjacency {
-    /// Build the adjacency graph from a set of constraints.
-    ///
-    /// `num_vars`: total number of variables in the CSP.
-    /// `constraints`: the constraint list.
-    pub fn build<D: Domain>(
-        num_vars: usize,
-        constraints: &[Box<dyn Constraint<D>>],
-    ) -> Self {
+    pub fn build<D: Domain>(num_vars: usize, constraints: &[ConstraintEnum<D>]) -> Self
+    where
+        D::Value: PartialEq,
+    {
         let num_constraints = constraints.len();
 
-        // Build var_constraints: for each variable, which constraints mention it.
-        let mut var_constraints = vec![Vec::new(); num_vars];
+        let mut vc_lists: Vec<Vec<u32>> = vec![Vec::new(); num_vars];
         for (ci, c) in constraints.iter().enumerate() {
             for &v in c.scope() {
-                var_constraints[v as usize].push(ci);
+                vc_lists[v as usize].push(ci as u32);
             }
         }
 
-        // Build constraint_neighbors: two constraints are neighbors if they share a variable.
-        let mut constraint_neighbors = vec![Vec::new(); num_constraints];
-        for vc in &var_constraints {
+        let mut cn_lists: Vec<Vec<u32>> = vec![Vec::new(); num_constraints];
+        for vc in &vc_lists {
             for &ci in vc {
                 for &cj in vc {
-                    if ci != cj {
-                        constraint_neighbors[ci].push(cj);
-                    }
+                    if ci != cj { cn_lists[ci as usize].push(cj); }
                 }
             }
         }
-        // Deduplicate
-        for neighbors in &mut constraint_neighbors {
-            neighbors.sort_unstable();
-            neighbors.dedup();
-        }
+        for neighbors in &mut cn_lists { neighbors.sort_unstable(); neighbors.dedup(); }
 
-        // Build var_neighbors: variables that share at least one constraint.
-        let mut var_neighbors: Vec<Vec<VarId>> = vec![Vec::new(); num_vars];
+        let mut vn_lists: Vec<Vec<u32>> = vec![Vec::new(); num_vars];
         for c in constraints {
             let scope = c.scope();
             for &vi in scope {
                 for &vj in scope {
-                    if vi != vj {
-                        var_neighbors[vi as usize].push(vj);
-                    }
+                    if vi != vj { vn_lists[vi as usize].push(vj); }
                 }
             }
         }
-        for neighbors in &mut var_neighbors {
-            neighbors.sort_unstable();
-            neighbors.dedup();
+        for neighbors in &mut vn_lists { neighbors.sort_unstable(); neighbors.dedup(); }
+
+        let total_len: usize = vc_lists.iter().map(|v| v.len()).sum::<usize>()
+            + cn_lists.iter().map(|v| v.len()).sum::<usize>()
+            + vn_lists.iter().map(|v| v.len()).sum::<usize>();
+        let mut pool = Vec::with_capacity(total_len);
+
+        let mut var_constraints = ArenaIndex::new(num_vars);
+        for (i, list) in vc_lists.iter().enumerate() {
+            let offset = pool.len() as u32;
+            pool.extend_from_slice(list);
+            var_constraints.entries[i] = (offset, list.len() as u32);
         }
 
-        Self {
-            var_constraints,
-            constraint_neighbors,
-            var_neighbors,
+        let mut constraint_neighbors = ArenaIndex::new(num_constraints);
+        for (i, list) in cn_lists.iter().enumerate() {
+            let offset = pool.len() as u32;
+            pool.extend_from_slice(list);
+            constraint_neighbors.entries[i] = (offset, list.len() as u32);
         }
+
+        let mut var_neighbors = ArenaIndex::new(num_vars);
+        for (i, list) in vn_lists.iter().enumerate() {
+            let offset = pool.len() as u32;
+            pool.extend_from_slice(list);
+            var_neighbors.entries[i] = (offset, list.len() as u32);
+        }
+
+        Self { pool, var_constraints, constraint_neighbors, var_neighbors }
     }
 
-    /// Get all constraint indices involving a given variable.
-    pub fn constraints_for(&self, var: VarId) -> &[usize] {
-        &self.var_constraints[var as usize]
+    pub fn constraints_for(&self, var: VarId) -> &[u32] {
+        self.var_constraints.get(var as usize, &self.pool)
     }
 
-    /// Get all neighbor constraint indices for a given constraint.
-    pub fn neighbors_of_constraint(&self, ci: usize) -> &[usize] {
-        &self.constraint_neighbors[ci]
+    pub fn neighbors_of_constraint(&self, ci: usize) -> &[u32] {
+        self.constraint_neighbors.get(ci, &self.pool)
     }
 
-    /// Get all neighbor variables for a given variable.
-    pub fn neighbors_of_var(&self, var: VarId) -> &[VarId] {
-        &self.var_neighbors[var as usize]
+    pub fn neighbors_of_var(&self, var: VarId) -> &[u32] {
+        self.var_neighbors.get(var as usize, &self.pool)
     }
 }
