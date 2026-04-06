@@ -83,12 +83,13 @@ impl SudokuCSP {
 // ---------------------------------------------------------------------------
 
 #[pyfunction]
-#[pyo3(signature = (n, values, max_solutions=1))]
+#[pyo3(signature = (N, values, max_solutions=1))]
 fn create_sudoku_csp(
-    n: u32,
+    #[allow(non_snake_case)] N: u32,
     values: HashMap<String, i32>,
     max_solutions: usize,
 ) -> PyResult<SudokuCSP> {
+    let n = N;
     let m = n * n;
     let total = (m * m) as usize;
 
@@ -153,12 +154,12 @@ fn solve_sudoku(csp: &mut SudokuCSP) -> PyResult<bool> {
 // ---------------------------------------------------------------------------
 
 #[pyfunction]
-#[pyo3(signature = (n, difficulty=SudokuDifficulty::EASY))]
+#[pyo3(signature = (N, difficulty=SudokuDifficulty::EASY))]
 fn create_random_board(
-    n: u32,
+    #[allow(non_snake_case)] N: u32,
     difficulty: SudokuDifficulty,
 ) -> PyResult<HashMap<String, i32>> {
-    let board = sudoku::generate_board(n, difficulty.into());
+    let board = sudoku::generate_board(N, difficulty.into());
     Ok(board
         .into_iter()
         .enumerate()
