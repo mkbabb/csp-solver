@@ -103,3 +103,13 @@ fn test_mixed_singleton_and_multi() {
     let (rev, _doms) = run_gac(&[vec![1], vec![1, 2, 3], vec![1, 2, 3], vec![1, 2, 3]]);
     assert_eq!(rev, Revision::Unsatisfiable);
 }
+
+/// Compile-time regression guard: propagate_gac_alldiff must NOT require
+/// ValueIndex or any bound beyond Domain. If someone re-adds the bound,
+/// this test fails to compile (FiniteDomain<String> has no ValueIndex impl).
+#[test]
+fn gac_compiles_without_value_index() {
+    use csp_solver::domain::finite::FiniteDomain;
+    let _: fn(&[VarId], &mut [Variable<FiniteDomain<String>>], usize) -> Revision =
+        propagate_gac_alldiff::<FiniteDomain<String>>;
+}
