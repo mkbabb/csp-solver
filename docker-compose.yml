@@ -1,7 +1,8 @@
 services:
   backend:
     build:
-      context: ./python
+      context: .
+      dockerfile: python/Dockerfile
       target: development
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
