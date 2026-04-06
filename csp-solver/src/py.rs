@@ -1,133 +1,181 @@
-//! PyO3 bindings for the CSP solver's Sudoku module.
+//! PyO3 bindings — isomorphic to the Python CSP solver's Sudoku API.
 //!
-//! Gated behind `#[cfg(feature = "py")]`. Build with maturin:
-//! ```sh
-//! PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin develop --release
-//! ```
+//! Drop-in replacement: `from sudoku_rs import SudokuDifficulty, create_sudoku_csp, solve_sudoku, create_random_board`
+//!
+//! Build: `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin develop --release --features py`
+
+use std::collections::HashMap;
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::PyType;
 
 use crate::ordering::Ordering;
 use crate::sudoku::{self, Difficulty};
 use crate::{Pruning, SolveConfig};
 
-/// Solve a Sudoku puzzle.
-///
-/// Args:
-///     board: Flat list of M*M integers (0 = empty).
-///     size: Sub-grid size N (3 for 9x9, 4 for 16x16, etc.)
-///     config: Solver config string, or None for defaults.
-///
-/// Returns:
-///     (solved, solution, backtracks, propagations)
-#[pyfunction]
-#[pyo3(signature = (board, size, config=None))]
-fn solve_sudoku(
-    board: Vec<u32>,
-    size: u32,
-    config: Option<&str>,
-) -> PyResult<(bool, Vec<u32>, u64, u64)> {
-    let solve_config = parse_config(config)?;
-    let (mut csp, given) = sudoku::create_sudoku_csp(&board, size);
-    let solutions = csp.solve_with_given(&solve_config, &given);
-    let stats = csp.stats();
-    match solutions.into_iter().next() {
-        Some(solution) => Ok((true, solution, stats.backtracks, stats.propagations)),
-        None => Ok((false, board, stats.backtracks, stats.propagations)),
-    }
+// ---------------------------------------------------------------------------
+// SudokuDifficulty — mirrors Python's SudokuDifficulty enum
+// ---------------------------------------------------------------------------
+
+#[pyclass]
+#[derive(Clone)]
+pub enum SudokuDifficulty {
+    EASY,
+    MEDIUM,
+    HARD,
 }
 
-/// Generate a random Sudoku board.
-#[pyfunction]
-fn generate_board(size: u32, difficulty: &str) -> PyResult<Vec<u32>> {
-    let diff = match difficulty.to_lowercase().as_str() {
-        "easy" => Difficulty::Easy,
-        "medium" => Difficulty::Medium,
-        "hard" => Difficulty::Hard,
-        _ => return Err(PyValueError::new_err(format!("Invalid difficulty: {difficulty}"))),
-    };
-    Ok(sudoku::generate_board(size, diff))
-}
-
-/// Measure puzzle difficulty (backtrack count with FC + FailFirst).
-#[pyfunction]
-fn measure_difficulty(board: Vec<u32>, size: u32) -> PyResult<u32> {
-    Ok(sudoku::measure_difficulty(&board, size))
-}
-
-/// Apply a random symmetry transform preserving Sudoku constraints.
-#[pyfunction]
-fn apply_random_transform(board: Vec<u32>, size: u32) -> PyResult<Vec<u32>> {
-    Ok(sudoku::apply_random_transform(&board, size))
-}
-
-fn parse_config(config: Option<&str>) -> PyResult<SolveConfig> {
-    match config {
-        None => Ok(SolveConfig {
-            pruning: Pruning::Ac3,
-            ordering: Ordering::DomWdeg,
-            max_solutions: 1,
-            backjumping: false,
-        }),
-        Some(s) => {
-            let mut cfg = SolveConfig::default();
-            for pair in s.split(',') {
-                let parts: Vec<&str> = pair.split('=').collect();
-                if parts.len() != 2 {
-                    continue;
-                }
-                match parts[0].trim() {
-                    "pruning" => {
-                        cfg.pruning = match parts[1].trim() {
-                            "none" => Pruning::None,
-                            "fc" => Pruning::ForwardChecking,
-                            "ac3" => Pruning::Ac3,
-                            "acfc" => Pruning::AcFc,
-                            _ => {
-                                return Err(PyValueError::new_err(format!(
-                                    "Invalid pruning: {}",
-                                    parts[1]
-                                )));
-                            }
-                        };
-                    }
-                    "ordering" => {
-                        cfg.ordering = match parts[1].trim() {
-                            "chronological" => Ordering::Chronological,
-                            "failfirst" => Ordering::FailFirst,
-                            "domwdeg" => Ordering::DomWdeg,
-                            _ => {
-                                return Err(PyValueError::new_err(format!(
-                                    "Invalid ordering: {}",
-                                    parts[1]
-                                )));
-                            }
-                        };
-                    }
-                    "max_solutions" => {
-                        cfg.max_solutions = parts[1]
-                            .trim()
-                            .parse()
-                            .map_err(|_| PyValueError::new_err("max_solutions must be integer"))?;
-                    }
-                    "backjumping" => {
-                        cfg.backjumping = parts[1].trim() == "true";
-                    }
-                    _ => {}
-                }
-            }
-            Ok(cfg)
+#[pymethods]
+impl SudokuDifficulty {
+    #[classmethod]
+    #[pyo3(signature = (key, default=None))]
+    fn get(_cls: &Bound<'_, PyType>, key: &str, default: Option<SudokuDifficulty>) -> Option<SudokuDifficulty> {
+        match key {
+            "EASY" => Some(SudokuDifficulty::EASY),
+            "MEDIUM" => Some(SudokuDifficulty::MEDIUM),
+            "HARD" => Some(SudokuDifficulty::HARD),
+            _ => default,
         }
     }
 }
 
-/// Python module: sudoku_rs
+impl From<SudokuDifficulty> for Difficulty {
+    fn from(d: SudokuDifficulty) -> Self {
+        match d {
+            SudokuDifficulty::EASY => Difficulty::Easy,
+            SudokuDifficulty::MEDIUM => Difficulty::Medium,
+            SudokuDifficulty::HARD => Difficulty::Hard,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SudokuCSP — opaque handle mirroring Python's CSP object
+// ---------------------------------------------------------------------------
+
+/// Holds the puzzle state and solutions. The actual Rust CSP is built and
+/// solved transiently — only the board, config, and results cross the boundary.
+#[pyclass]
+#[derive(Clone)]
+pub struct SudokuCSP {
+    board: Vec<u32>,
+    n: u32,
+    max_solutions: usize,
+    #[pyo3(get)]
+    solutions: Vec<HashMap<String, i32>>,
+    #[pyo3(get)]
+    backtrack_count: u64,
+    /// Given values stored for solve_with_initial_propagation parity.
+    _given_values: HashMap<String, i32>,
+}
+
+#[pymethods]
+impl SudokuCSP {
+    #[getter]
+    fn backtracks(&self) -> u64 {
+        self.backtrack_count
+    }
+}
+
+// ---------------------------------------------------------------------------
+// create_sudoku_csp(N, values, max_solutions) → SudokuCSP
+// ---------------------------------------------------------------------------
+
+#[pyfunction]
+#[pyo3(signature = (n, values, max_solutions=1))]
+fn create_sudoku_csp(
+    n: u32,
+    values: HashMap<String, i32>,
+    max_solutions: usize,
+) -> PyResult<SudokuCSP> {
+    let m = n * n;
+    let total = (m * m) as usize;
+
+    let mut board = vec![0u32; total];
+    let mut given = HashMap::new();
+    for (pos_str, val) in &values {
+        let pos: usize = pos_str
+            .parse()
+            .map_err(|_| PyValueError::new_err(format!("Invalid position: {pos_str}")))?;
+        if pos >= total {
+            return Err(PyValueError::new_err(format!("Position {pos} out of range")));
+        }
+        if *val > 0 {
+            board[pos] = *val as u32;
+            given.insert(pos_str.clone(), *val);
+        }
+    }
+
+    Ok(SudokuCSP {
+        board,
+        n,
+        max_solutions,
+        solutions: Vec::new(),
+        backtrack_count: 0,
+        _given_values: given,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// solve_sudoku(csp) → bool
+// ---------------------------------------------------------------------------
+
+#[pyfunction]
+fn solve_sudoku(csp: &mut SudokuCSP) -> PyResult<bool> {
+    let config = SolveConfig {
+        pruning: Pruning::Ac3,
+        ordering: Ordering::DomWdeg,
+        max_solutions: csp.max_solutions,
+        backjumping: false,
+    };
+
+    let (mut rust_csp, given) = sudoku::create_sudoku_csp(&csp.board, csp.n);
+    let solutions = rust_csp.solve_with_given(&config, &given);
+    let stats = rust_csp.stats();
+    csp.backtrack_count = stats.backtracks;
+
+    csp.solutions = solutions
+        .into_iter()
+        .map(|sol| {
+            sol.into_iter()
+                .enumerate()
+                .map(|(i, v)| (i.to_string(), v as i32))
+                .collect()
+        })
+        .collect();
+
+    Ok(!csp.solutions.is_empty())
+}
+
+// ---------------------------------------------------------------------------
+// create_random_board(N, difficulty) → dict[str, int]
+// ---------------------------------------------------------------------------
+
+#[pyfunction]
+#[pyo3(signature = (n, difficulty=SudokuDifficulty::EASY))]
+fn create_random_board(
+    n: u32,
+    difficulty: SudokuDifficulty,
+) -> PyResult<HashMap<String, i32>> {
+    let board = sudoku::generate_board(n, difficulty.into());
+    Ok(board
+        .into_iter()
+        .enumerate()
+        .map(|(i, v)| (i.to_string(), v as i32))
+        .collect())
+}
+
+// ---------------------------------------------------------------------------
+// Module
+// ---------------------------------------------------------------------------
+
 #[pymodule]
 pub fn sudoku_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<SudokuDifficulty>()?;
+    m.add_class::<SudokuCSP>()?;
+    m.add_function(wrap_pyfunction!(create_sudoku_csp, m)?)?;
     m.add_function(wrap_pyfunction!(solve_sudoku, m)?)?;
-    m.add_function(wrap_pyfunction!(generate_board, m)?)?;
-    m.add_function(wrap_pyfunction!(measure_difficulty, m)?)?;
-    m.add_function(wrap_pyfunction!(apply_random_transform, m)?)?;
+    m.add_function(wrap_pyfunction!(create_random_board, m)?)?;
     Ok(())
 }
