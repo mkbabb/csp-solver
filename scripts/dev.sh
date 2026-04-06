@@ -1,80 +1,71 @@
 #!/usr/bin/env bash
-# Start frontend and ensure API proxy points at a healthy backend.
-# Usage:
-#   ./scripts/dev.sh                 # auto: reuse healthy backend, or start one locally
-#   ./scripts/dev.sh --full          # always start a local backend
-#   ./scripts/dev.sh --frontend-only # never start backend
-
+# Start csp-solver dev environment. Cleans up on exit/kill.
 set -euo pipefail
-cd "$(dirname "$0")/.."
 
-# Find the closest available port starting from $1
-find_port() {
-  local port=$1
-  while lsof -iTCP:"$port" -sTCP:LISTEN &>/dev/null; do
-    ((port++))
-  done
-  echo "$port"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+# ── Load .env if present ──────────────────────────────────
+[[ -f "$ROOT/.env" ]] && set -o allexport && source "$ROOT/.env" && set +o allexport
+
+# ── Config ────────────────────────────────────────────────
+PROJECT_NAME="csp-solver"
+BACKEND_PORT_DEFAULT=9120
+FRONTEND_PORT_DEFAULT=9121
+
+# ── Find a free port starting from $1 ────────────────────
+find_free_port() {
+    local p=${1:-8000}
+    for _ in $(seq 1 20); do
+        lsof -iTCP:"$p" -sTCP:LISTEN -P -n >/dev/null 2>&1 || { echo "$p"; return 0; }
+        ((p++))
+    done
+    echo "ERROR: no free port from $1" >&2; return 1
 }
 
-is_backend_healthy() {
-  local base_url=$1
-  curl -fsS --max-time 2 "${base_url%/}/api/v1/health" >/dev/null 2>&1
+# ── Kill process tree ─────────────────────────────────────
+kill_tree() {
+    local pid=$1
+    for child in $(pgrep -P "$pid" 2>/dev/null); do kill_tree "$child"; done
+    kill "$pid" 2>/dev/null || true
 }
 
-MODE="${1:-auto}"
-FRONTEND_PORT=$(find_port 3000)
-DEFAULT_API_URL="${VITE_API_URL:-http://localhost:8000}"
-START_BACKEND=0
-BACKEND_PORT=""
-BACKEND_URL="$DEFAULT_API_URL"
+# ── Pick ports ────────────────────────────────────────────
+BACKEND_PORT=$(find_free_port "${BACKEND_PORT:-$BACKEND_PORT_DEFAULT}")
+FRONTEND_PORT=$(find_free_port "${FRONTEND_PORT:-$FRONTEND_PORT_DEFAULT}")
 
+export BACKEND_PORT FRONTEND_PORT
+
+# ── Teardown ──────────────────────────────────────────────
+PIDS=()
 cleanup() {
-  trap - EXIT INT TERM
-  echo ""
-  echo "Shutting down…"
-  kill 0 2>/dev/null
-  wait 2>/dev/null
+    echo ""; echo "Shutting down..."
+    for p in "${PIDS[@]}"; do kill_tree "$p"; done
+    wait 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
-case "$MODE" in
-  --full)
-    START_BACKEND=1
-    BACKEND_PORT=$(find_port 8000)
-    BACKEND_URL="http://localhost:$BACKEND_PORT"
-    ;;
-  --frontend-only)
-    if ! is_backend_healthy "$BACKEND_URL"; then
-      echo "Warning: backend health check failed at $BACKEND_URL"
-      echo "         API requests from frontend will fail until backend is running."
-    fi
-    ;;
-  auto|"")
-    if is_backend_healthy "$BACKEND_URL"; then
-      echo "Using existing backend → $BACKEND_URL"
-    else
-      START_BACKEND=1
-      BACKEND_PORT=$(find_port 8000)
-      BACKEND_URL="http://localhost:$BACKEND_PORT"
-      echo "No healthy backend at $DEFAULT_API_URL; starting local backend at $BACKEND_URL"
-    fi
-    ;;
-  *)
-    echo "Unknown option: $MODE"
-    echo "Usage: ./scripts/dev.sh [--full|--frontend-only]"
-    exit 1
-    ;;
-esac
+# ── Start backend ─────────────────────────────────────────
+CORS_ORIGINS="http://localhost:$FRONTEND_PORT,http://localhost:5173" \
+    uv run uvicorn csp_solver.api.main:app \
+    --host 0.0.0.0 --port "$BACKEND_PORT" \
+    --reload --reload-dir backend/src &
+PIDS+=($!)
 
-if [[ "$START_BACKEND" -eq 1 ]]; then
-  echo "Backend  → http://localhost:$BACKEND_PORT"
-  echo "Frontend → http://localhost:$FRONTEND_PORT  (proxying /api → :$BACKEND_PORT)"
-  (cd backend && uv run uvicorn csp_solver.api.main:app --reload --port "$BACKEND_PORT") &
-  (cd frontend && VITE_API_URL="$BACKEND_URL" VITE_API_PORT="$BACKEND_PORT" npx vite --port "$FRONTEND_PORT" --strictPort) &
-else
-  echo "Frontend → http://localhost:$FRONTEND_PORT  (proxying /api → $BACKEND_URL)"
-  (cd frontend && VITE_API_URL="$BACKEND_URL" npx vite --port "$FRONTEND_PORT" --strictPort) &
-fi
+# ── Start frontend ────────────────────────────────────────
+VITE_API_URL="http://localhost:$BACKEND_PORT" \
+    npx --prefix frontend vite frontend --port "$FRONTEND_PORT" &
+PIDS+=($!)
+
+cat <<EOF
+
+──────────────────────────────────────
+  CSP Solver Dev Environment
+──────────────────────────────────────
+  Backend  → http://localhost:$BACKEND_PORT
+  Frontend → http://localhost:$FRONTEND_PORT
+──────────────────────────────────────
+
+EOF
 
 wait

@@ -21,10 +21,10 @@ Backend on `:8000`, frontend on `:3000`.
 The backend uses
 [`uv`](https://docs.astral.sh/uv/) for package management; the frontend uses `npm`.
 
-#### Backend
+#### Python
 
 ```bash
-cd backend
+cd python
 uv sync
 uv run uvicorn csp_solver.api.main:app --reload --port 8000
 ```
