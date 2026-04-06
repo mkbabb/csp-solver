@@ -13,6 +13,8 @@ pub mod constraint;
 pub mod domain;
 pub mod domains;
 pub mod ordering;
+#[cfg(feature = "py")]
+pub mod py;
 pub mod solver;
 pub mod sudoku;
 pub mod variable;

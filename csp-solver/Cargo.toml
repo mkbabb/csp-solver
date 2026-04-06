@@ -3,10 +3,18 @@ name = "csp-solver"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = []
+py = ["dep:pyo3"]
+
 [dependencies]
+pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
+
+[lib]
+crate-type = ["lib", "cdylib"]
 
 [[bench]]
 name = "sudoku"
