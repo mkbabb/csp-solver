@@ -101,6 +101,10 @@ impl Domain for BitsetDomain {
         self.iter().collect()
     }
 
+    fn iter(&self) -> impl Iterator<Item = u32> + '_ {
+        BitsetIter { bits: self.bits }
+    }
+
     fn singleton_value(&self) -> Option<u32> {
         if self.bits.count_ones() == 1 {
             Some(self.bits.trailing_zeros())

@@ -115,16 +115,8 @@ where
     for val in values {
         assignment[var as usize] = Some(val.clone());
 
-        // Restrict domain to assigned value so AC-3 revise() sees a singleton.
-        // restore(depth) undoes these prunes on backtrack.
-        {
-            let dom_vals = variables[var as usize].domain.values();
-            for dv in &dom_vals {
-                if *dv != val {
-                    variables[var as usize].prune(dv, depth);
-                }
-            }
-        }
+        // Restrict domain to singleton {val} so AC-3 revise() sees it.
+        variables[var as usize].restrict_to(&val, depth);
 
         let mut valid = true;
         for &ci in adjacency.constraints_for(var) {

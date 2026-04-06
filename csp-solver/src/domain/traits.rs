@@ -42,6 +42,13 @@ pub trait Domain: Clone + PartialEq + Debug {
 
     /// Collect all current values.
     fn values(&self) -> Vec<Self::Value>;
+
+    /// Iterate over values without allocating.
+    ///
+    /// Default collects to Vec; BitsetDomain overrides with zero-alloc BitsetIter.
+    fn iter(&self) -> impl Iterator<Item = Self::Value> + '_ {
+        self.values().into_iter()
+    }
 }
 
 /// Extension trait for monotonic lattice domains (e.g. FIRST/FOLLOW sets).
