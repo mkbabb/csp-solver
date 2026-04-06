@@ -332,7 +332,7 @@ fn create_random_board(
 // ═══════════════════════════════════════════════════════════════════════════
 
 #[pymodule]
-pub fn csp_solver_rs(m: &Bound<'_, PyModule>) -> PyResult<()> {
+pub fn csp_solver(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Core
     m.add_class::<Pruning>()?;
     m.add_class::<Ordering>()?;

@@ -9,13 +9,13 @@ from dataclasses import dataclass
 
 import pytest
 
-from csp_solver.solver.constraints import (
+from csp_solver_py.solver.constraints import (
     all_different_constraint,
     equals_constraint,
     map_coloring_constraint,
     n_queens_constraint,
 )
-from csp_solver.solver.csp import CSP, PruningType, VariableOrdering
+from csp_solver_py.solver.csp import CSP, PruningType, VariableOrdering
 
 # ── Test Puzzles ─────────────────────────────────────────────────────────────
 

@@ -2,18 +2,18 @@
 
 import time
 
-from csp_solver.solver.bitset_domain import BitsetDomain
-from csp_solver.solver.constraints import all_different_constraint
-from csp_solver.solver.csp import CSP, PruningType, VariableOrdering, _make_domain
-from csp_solver.solver.nogoods import NogoodStore
-from csp_solver.solver.sudoku import (
+from csp_solver_py.solver.bitset_domain import BitsetDomain
+from csp_solver_py.solver.constraints import all_different_constraint
+from csp_solver_py.solver.csp import CSP, PruningType, VariableOrdering, _make_domain
+from csp_solver_py.solver.nogoods import NogoodStore
+from csp_solver_py.solver.sudoku import (
     SudokuDifficulty,
     _load_solution_board,
     create_random_board,
     create_sudoku_csp,
     solve_sudoku,
 )
-from csp_solver.solver.sudoku_transforms import SudokuTransform
+from csp_solver_py.solver.sudoku_transforms import SudokuTransform
 
 
 # ── LatticeDomain unit tests ────────────────────────────────────────────────
@@ -21,7 +21,7 @@ from csp_solver.solver.sudoku_transforms import SudokuTransform
 
 def test_lattice_domain_set():
     """Set lattice: join is union."""
-    from csp_solver.solver.lattice_domain import set_lattice
+    from csp_solver_py.solver.lattice_domain import set_lattice
 
     d = set_lattice()
     assert d.value == frozenset()
@@ -34,7 +34,7 @@ def test_lattice_domain_set():
 
 def test_lattice_domain_bool():
     """Boolean lattice: join is OR."""
-    from csp_solver.solver.lattice_domain import bool_lattice
+    from csp_solver_py.solver.lattice_domain import bool_lattice
 
     d = bool_lattice()
     assert d.value is False
@@ -46,7 +46,7 @@ def test_lattice_domain_bool():
 
 def test_lattice_domain_protocol():
     """LatticeDomain satisfies container protocol: len, iter, in, repr."""
-    from csp_solver.solver.lattice_domain import LatticeDomain
+    from csp_solver_py.solver.lattice_domain import LatticeDomain
 
     d = LatticeDomain(0, lambda a, b: a + b)
     assert len(d) == 1

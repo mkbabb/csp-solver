@@ -7,9 +7,9 @@ import pathlib
 import random
 from enum import Enum, auto
 
-from csp_solver.solver.constraints import all_different_constraint, equals_constraint
-from csp_solver.solver.csp import CSP, PruningType, VariableOrdering
-from csp_solver.solver.sudoku_transforms import SudokuTransform
+from csp_solver_py.solver.constraints import all_different_constraint, equals_constraint
+from csp_solver_py.solver.csp import CSP, PruningType, VariableOrdering
+from csp_solver_py.solver.sudoku_transforms import SudokuTransform
 
 DATA_DIR = pathlib.Path(__file__).parent.parent / "data"
 

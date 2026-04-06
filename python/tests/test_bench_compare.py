@@ -8,11 +8,11 @@ import time
 
 import pytest
 
-from csp_solver.solver.constraints import all_different_constraint
-from csp_solver.solver.csp import CSP, PruningType, VariableOrdering
-from csp_solver.solver.sudoku import SudokuDifficulty, create_sudoku_csp, solve_sudoku
+from csp_solver_py.solver.constraints import all_different_constraint
+from csp_solver_py.solver.csp import CSP, PruningType, VariableOrdering
+from csp_solver_py.solver.sudoku import SudokuDifficulty, create_sudoku_csp, solve_sudoku
 
-csp_solver_rs = pytest.importorskip("csp_solver_rs")
+csp_solver = pytest.importorskip("csp_solver")
 
 HARD_PUZZLES = {
     "Al Escargot": "100007090030020008009600500005300900010080002600004000300000010040000007007000300",
@@ -36,9 +36,9 @@ def solve_python(puzzle_str: str) -> tuple[float, int]:
 def solve_rust(puzzle_str: str) -> tuple[float, int]:
     """Solve with Rust CSP solver via PyO3. Returns (time_ms, backtracks)."""
     values = {str(i): int(c) for i, c in enumerate(puzzle_str) if c != "0"}
-    csp = csp_solver_rs.create_sudoku_csp(N=3, values=values)
+    csp = csp_solver.create_sudoku_csp(N=3, values=values)
     start = time.perf_counter()
-    csp_solver_rs.solve_sudoku(csp)
+    csp_solver.solve_sudoku(csp)
     elapsed = (time.perf_counter() - start) * 1000
     return elapsed, csp.backtrack_count
 

@@ -3,7 +3,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from csp_solver.api.main import app
+from csp_solver_py.api.main import app
 
 
 @pytest.fixture

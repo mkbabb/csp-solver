@@ -6,7 +6,7 @@ import random
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from csp_solver.solver.csp import CSP
+    from csp_solver_py.solver.csp import CSP
 
 type Solution = dict[Any, Any]
 

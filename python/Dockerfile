@@ -43,7 +43,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "csp_solver.api.main:app", \
+CMD ["uv", "run", "uvicorn", "csp_solver_py.api.main:app", \
      "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 ###############################################################################
@@ -65,7 +65,7 @@ USER app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "csp_solver.api.main:app", \
+CMD ["uvicorn", "csp_solver_py.api.main:app", \
      "--host", "0.0.0.0", "--port", "8000", \
      "--workers", "4", "--proxy-headers", \
      "--forwarded-allow-ips", "*"]

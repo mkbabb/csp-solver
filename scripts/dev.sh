@@ -47,7 +47,7 @@ trap cleanup EXIT INT TERM
 
 # ── Start backend ─────────────────────────────────────────
 CORS_ORIGINS="http://localhost:$FRONTEND_PORT,http://localhost:5173" \
-    uv run uvicorn csp_solver.api.main:app \
+    uv run uvicorn csp_solver_py.api.main:app \
     --host 0.0.0.0 --port "$BACKEND_PORT" \
     --reload --reload-dir backend/src &
 PIDS+=($!)

@@ -3,12 +3,12 @@
 import math
 from dataclasses import dataclass
 
-from csp_solver.solver.constraints import (
+from csp_solver_py.solver.constraints import (
     all_different_constraint,
     equals_constraint,
     greater_than_constraint,
 )
-from csp_solver.solver.csp import CSP, PruningType
+from csp_solver_py.solver.csp import CSP, PruningType
 
 
 @dataclass(frozen=True)

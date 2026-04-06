@@ -21,8 +21,8 @@ from collections.abc import Callable
 from enum import Enum, auto
 from typing import Any
 
-from csp_solver.solver.bitset_domain import BitsetDomain
-from csp_solver.solver.local_search import min_conflicts as _min_conflicts
+from csp_solver_py.solver.bitset_domain import BitsetDomain
+from csp_solver_py.solver.local_search import min_conflicts as _min_conflicts
 
 type Solution = dict[Any, Any]
 type Constraint = Callable[[Solution], bool]
@@ -313,7 +313,7 @@ class CSP:
         """Run GAC all-different propagation. Returns True if DWO detected."""
         if not self.use_gac_alldiff or not self.alldiff_groups:
             return False
-        from csp_solver.solver.gac_alldiff import gac_alldiff_propagate
+        from csp_solver_py.solver.gac_alldiff import gac_alldiff_propagate
 
         for group in self.alldiff_groups:
             # Only propagate groups containing the assigned variable

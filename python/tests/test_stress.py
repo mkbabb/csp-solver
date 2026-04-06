@@ -10,8 +10,8 @@ import time
 
 import pytest
 
-from csp_solver.solver.constraints import all_different_constraint, equals_constraint
-from csp_solver.solver.csp import CSP, PruningType, VariableOrdering
+from csp_solver_py.solver.constraints import all_different_constraint, equals_constraint
+from csp_solver_py.solver.csp import CSP, PruningType, VariableOrdering
 
 
 def _make_sudoku(grid: list[int], N: int, ordering, gac):

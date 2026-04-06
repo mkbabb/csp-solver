@@ -4,13 +4,13 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException
 
-from csp_solver.api.models.board import (
+from csp_solver_py.api.models.board import (
     BoardResponse,
     Difficulty,
     SolveRequest,
     SolveResponse,
 )
-from csp_solver_rs import (
+from csp_solver import (
     SudokuDifficulty,
     create_random_board,
     create_sudoku_csp,
