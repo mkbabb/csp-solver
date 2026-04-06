@@ -101,6 +101,11 @@ class CSP:
         self.use_gac_alldiff = use_gac_alldiff
         self.alldiff_groups: list[list[Any]] = []
 
+        # Constraint adjacency index: constraint_idx → neighbor constraint indices
+        # Built lazily in _build_adjacency(); O(C²) build, O(1) lookup.
+        self._all_constraints: list[tuple[Constraint, list[Any]]] = []
+        self._constraint_adjacency: dict[int, list[int]] = {}
+
     def add_variables(self, domain: list[Any], *variables: Any):
         domain_copy = list(domain)
         for v in variables:
@@ -125,6 +130,9 @@ class CSP:
         for i, v1 in enumerate(variables):
             for v2 in variables[i + 1 :]:
                 self._pair_constraints[frozenset((v1, v2))].append(constraint)
+
+        # Track constraint for adjacency index
+        self._all_constraints.append((constraint, list(variables)))
 
         # Detect all-different constraints for GAC
         if getattr(constraint, "_is_alldiff", False):
@@ -359,6 +367,24 @@ class CSP:
     def min_conflicts(self, iteration_count: int = 10000) -> bool:
         return _min_conflicts(self, iteration_count)
 
+    def _build_adjacency(self) -> None:
+        """Pre-build constraint dependency graph for O(1) neighbor lookup.
+
+        For each constraint, finds all other constraints that share at least
+        one variable. O(C²) to build but O(1) per lookup during solving.
+        """
+        constraint_vars: list[set[Any]] = []
+        for _check, vars in self._all_constraints:
+            constraint_vars.append(set(vars))
+
+        self._constraint_adjacency = {}
+        for i, vars_i in enumerate(constraint_vars):
+            neighbors = []
+            for j, vars_j in enumerate(constraint_vars):
+                if i != j and vars_i & vars_j:  # shared variables
+                    neighbors.append(j)
+            self._constraint_adjacency[i] = neighbors
+
     def _reset(self) -> None:
         """Reset solver state for a new solve."""
         self.variable_stack.clear()
@@ -369,6 +395,7 @@ class CSP:
 
     def solve(self) -> bool:
         self._reset()
+        self._build_adjacency()
 
         for v in self.variables:
             self.variable_stack.append(v)
@@ -386,6 +413,7 @@ class CSP:
         (singleton propagation chains).
         """
         self._reset()
+        self._build_adjacency()
 
         for v in self.variables:
             self.current_domains[v] = _make_domain(self.domains[v])

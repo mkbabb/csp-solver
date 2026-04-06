@@ -16,6 +16,56 @@ from csp_solver.solver.sudoku import (
 from csp_solver.solver.sudoku_transforms import SudokuTransform
 
 
+# ── LatticeDomain unit tests ────────────────────────────────────────────────
+
+
+def test_lattice_domain_set():
+    """Set lattice: join is union."""
+    from csp_solver.solver.lattice_domain import set_lattice
+
+    d = set_lattice()
+    assert d.value == frozenset()
+    assert d.join(frozenset({1, 2}))  # changed
+    assert d.value == frozenset({1, 2})
+    assert d.join(frozenset({2, 3}))  # changed (union)
+    assert d.value == frozenset({1, 2, 3})
+    assert not d.join(frozenset({1}))  # no change (subset)
+
+
+def test_lattice_domain_bool():
+    """Boolean lattice: join is OR."""
+    from csp_solver.solver.lattice_domain import bool_lattice
+
+    d = bool_lattice()
+    assert d.value is False
+    assert d.join(True)  # changed
+    assert d.value is True
+    assert not d.join(False)  # no change
+    assert not d.join(True)  # no change (already True)
+
+
+def test_lattice_domain_protocol():
+    """LatticeDomain satisfies container protocol: len, iter, in, repr."""
+    from csp_solver.solver.lattice_domain import LatticeDomain
+
+    d = LatticeDomain(0, lambda a, b: a + b)
+    assert len(d) == 1
+    assert d.size() == 1
+    assert d.is_singleton()
+    assert 0 in d
+    assert 1 not in d
+    assert list(d) == [0]
+    assert repr(d) == "LatticeDomain(0)"
+
+    d.join(5)
+    assert d.value == 5
+    assert 5 in d
+    assert list(d) == [5]
+
+
+# ── CSP solver tests ───────────────────────────────────────────────────────
+
+
 def test_simple_csp():
     """Test a trivial CSP with 2 variables."""
     csp = CSP(pruning_type=PruningType.FORWARD_CHECKING)
