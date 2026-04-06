@@ -150,42 +150,34 @@ impl<D: Domain> Csp<D> {
         }
     }
 
-    /// AC-3 propagation only — no search. Useful for lattice domains.
+    /// Propagate constraints to a fixed point.
     ///
-    /// Returns `Err(Unsatisfiable)` if a domain wipe-out is detected.
+    /// Automatically selects the optimal strategy:
+    /// - If `finalize()` was called: AC-3 worklist with adjacency graph
+    /// - Otherwise: lightweight sweep (small) or inline worklist (large)
     pub fn propagate(&mut self) -> Result<(), Unsatisfiable>
     where
         D::Value: PartialEq,
     {
-        let adjacency = self
-            .adjacency
-            .as_ref()
-            .expect("call finalize() before propagate()");
-
-        solver::ac3::ac3_full(
-            &mut self.variables,
-            &self.constraints,
-            adjacency,
-            &mut self.stats,
-            0,
-        )
-        .map_err(|()| Unsatisfiable)
-    }
-
-    /// Monotonic propagation — no adjacency graph, no undo log.
-    ///
-    /// Ideal for lattice domains (FIRST/FOLLOW sets, type inference) where
-    /// domains only grow and no backtracking is needed. Skips `finalize()`.
-    pub fn propagate_monotonic(&mut self) -> Result<(), Unsatisfiable>
-    where
-        D::Value: PartialEq,
-    {
-        solver::monotonic::propagate_monotonic(
-            &mut self.variables,
-            &self.constraints,
-            &mut self.stats,
-        )
-        .map_err(|()| Unsatisfiable)
+        if let Some(adjacency) = self.adjacency.as_ref() {
+            // AC-3 with full adjacency graph (search path).
+            solver::ac3::ac3_full(
+                &mut self.variables,
+                &self.constraints,
+                adjacency,
+                &mut self.stats,
+                0,
+            )
+            .map_err(|()| Unsatisfiable)
+        } else {
+            // No adjacency: fixed-point sweep (lattice / monotonic path).
+            solver::monotonic::propagate_monotonic(
+                &mut self.variables,
+                &self.constraints,
+                &mut self.stats,
+            )
+            .map_err(|()| Unsatisfiable)
+        }
     }
 
     /// Run backtracking (or backjumping) search with the given configuration.
