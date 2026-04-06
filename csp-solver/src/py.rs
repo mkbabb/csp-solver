@@ -318,12 +318,35 @@ fn solve_sudoku(csp: &mut SudokuCSP) -> PyResult<bool> {
 }
 
 #[pyfunction]
-#[pyo3(signature = (N, difficulty=SudokuDifficulty::EASY))]
+#[pyo3(signature = (N, difficulty=SudokuDifficulty::EASY, templates=None))]
 fn create_random_board(
     #[allow(non_snake_case)] N: u32,
     difficulty: SudokuDifficulty,
+    templates: Option<Vec<HashMap<String, i32>>>,
 ) -> PyResult<HashMap<String, i32>> {
-    let board = sudoku::generate_board(N, difficulty.into());
+    let board = if let Some(ref tmpls) = templates {
+        // Fast path: convert template dicts to flat boards, use template-based generation.
+        let m = (N * N) as usize;
+        let total = m * m;
+        let flat_templates: Vec<Vec<u32>> = tmpls
+            .iter()
+            .map(|t| {
+                let mut flat = vec![0u32; total];
+                for (k, v) in t {
+                    if let Ok(pos) = k.parse::<usize>() {
+                        if pos < total {
+                            flat[pos] = *v as u32;
+                        }
+                    }
+                }
+                flat
+            })
+            .collect();
+        sudoku::generate_board_with_templates(N, difficulty.into(), &flat_templates)
+    } else {
+        // Slow path: hole-digging from scratch.
+        sudoku::generate_board(N, difficulty.into())
+    };
     Ok(board.into_iter().enumerate().map(|(i, v)| (i.to_string(), v as i32)).collect())
 }
 

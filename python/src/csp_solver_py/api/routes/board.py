@@ -1,6 +1,9 @@
 """Board routes: random board generation and puzzle solving."""
 
 import asyncio
+import functools
+import json
+import pathlib
 
 from fastapi import APIRouter, HTTPException
 
@@ -16,6 +19,23 @@ from csp_solver import (
     create_sudoku_csp,
     solve_sudoku,
 )
+
+# ── Template loading (cached per-process) ────────────────────────────────────
+
+DATA_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "data"
+
+
+@functools.cache
+def _load_templates(n: int, difficulty_name: str) -> list[dict[str, int]]:
+    """Load pre-computed puzzle templates from disk. Cached per (n, difficulty)."""
+    template_dir = DATA_DIR / "sudoku_puzzles" / str(n) / difficulty_name
+    if not template_dir.exists():
+        return []
+    templates = []
+    for filepath in sorted(template_dir.glob("template-*.json")):
+        data = json.loads(filepath.read_text())
+        templates.append({str(k): int(v) for k, v in data["puzzle"].items()})
+    return templates
 
 router = APIRouter(prefix="/board")
 
@@ -58,7 +78,13 @@ async def get_random_board(size: int, difficulty: Difficulty) -> BoardResponse:
         raise HTTPException(status_code=400, detail=f"Invalid difficulty: {difficulty}")
 
     try:
-        board = await asyncio.to_thread(create_random_board, N=size, difficulty=sudoku_difficulty)
+        templates = _load_templates(size, difficulty.value.lower())
+        board = await asyncio.to_thread(
+            create_random_board,
+            N=size,
+            difficulty=sudoku_difficulty,
+            templates=templates or None,
+        )
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
