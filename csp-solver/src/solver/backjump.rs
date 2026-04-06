@@ -95,7 +95,7 @@ where
     // Bitset-backed conflict set
     let mut conflict_vars: Vec<VarId> = Vec::new();
 
-    let values = variables[var as usize].domain.values();
+    let values: Vec<_> = variables[var as usize].domain.iter().collect();
     let mut exhausted = true;
 
     for val in values {

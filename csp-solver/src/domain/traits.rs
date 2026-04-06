@@ -4,7 +4,9 @@ use std::fmt::Debug;
 
 /// A domain of possible values for a CSP variable.
 ///
-/// Implementations must support efficient membership testing, removal, and iteration.
+/// The iteration primitive is `iter()`, not `values()`. Implementations should
+/// provide zero-allocation iterators where possible (e.g. `BitsetDomain` iterates
+/// bits from a `u128` without heap allocation).
 pub trait Domain: Clone + PartialEq + Debug {
     /// The type of individual values in this domain.
     type Value: Clone + PartialEq + Debug;
@@ -22,10 +24,10 @@ pub trait Domain: Clone + PartialEq + Debug {
         self.size() == 1
     }
 
-    /// If the domain is a singleton, return a reference to its sole value.
+    /// If the domain is a singleton, return its sole value.
     fn singleton_value(&self) -> Option<Self::Value> {
         if self.is_singleton() {
-            self.values().into_iter().next()
+            self.iter().next()
         } else {
             None
         }
@@ -40,13 +42,18 @@ pub trait Domain: Clone + PartialEq + Debug {
     /// Add a value back into the domain.
     fn add(&mut self, val: &Self::Value);
 
-    /// Collect all current values.
+    /// Collect all current values into a Vec.
     fn values(&self) -> Vec<Self::Value>;
 
-    /// Iterate over values without allocating.
+    /// Iterate over current values without allocating.
     ///
-    /// Default collects to Vec; BitsetDomain overrides with zero-alloc BitsetIter.
-    fn iter(&self) -> impl Iterator<Item = Self::Value> + '_ {
+    /// Default delegates to `values().into_iter()`. Override for zero-alloc
+    /// iteration (e.g. `BitsetDomain` yields bits from a `u128` copy).
+    ///
+    /// The returned iterator is owned — it does NOT borrow `&self`, so the
+    /// domain can be mutated while iteration is in progress (the iterator
+    /// holds a snapshot).
+    fn iter(&self) -> impl Iterator<Item = Self::Value> {
         self.values().into_iter()
     }
 }
@@ -54,7 +61,7 @@ pub trait Domain: Clone + PartialEq + Debug {
 /// Extension trait for monotonic lattice domains (e.g. FIRST/FOLLOW sets).
 ///
 /// A lattice domain contains a single "current value" that grows monotonically
-/// via `join`. Because the value is always a singleton, no search is needed --
+/// via `join`. Because the value is always a singleton, no search is needed —
 /// propagation alone reaches the fixed point.
 pub trait LatticeDomain: Domain {
     /// The bottom element of the lattice.

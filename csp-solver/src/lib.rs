@@ -269,7 +269,7 @@ impl<D: Domain> Csp<D> {
         // Apply given values: restrict domain to singleton
         for (var, val) in given {
             let v = &mut self.variables[*var as usize];
-            let vals = v.domain.values();
+            let vals: Vec<_> = v.domain.iter().collect();
             for dv in &vals {
                 if dv != val {
                     v.domain.remove(dv);

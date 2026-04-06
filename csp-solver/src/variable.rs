@@ -65,7 +65,7 @@ impl<D: Domain> Variable<D> {
         // Snapshot current values, then prune non-matching.
         // For BitsetDomain (u128), values() is just bit iteration — cheap.
         // The undo log records each removal for restore(depth).
-        let vals = self.domain.values();
+        let vals: Vec<_> = self.domain.iter().collect();
         for v in &vals {
             if v != val {
                 self.domain.remove(v);

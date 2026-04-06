@@ -110,7 +110,7 @@ where
     .unwrap();
 
     let var = stack.swap_remove(idx);
-    let values = variables[var as usize].domain.values();
+    let values: Vec<_> = variables[var as usize].domain.iter().collect();
 
     for val in values {
         assignment[var as usize] = Some(val.clone());

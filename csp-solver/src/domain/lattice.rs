@@ -59,6 +59,10 @@ impl Domain for BitsetLatticeDomain {
     fn values(&self) -> Vec<BitsetDomain> {
         vec![self.value.clone()]
     }
+
+    fn iter(&self) -> impl Iterator<Item = BitsetDomain> {
+        std::iter::once(self.value.clone())
+    }
 }
 
 impl LatticeDomain for BitsetLatticeDomain {

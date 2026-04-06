@@ -101,7 +101,7 @@ impl Domain for BitsetDomain {
         self.iter().collect()
     }
 
-    fn iter(&self) -> impl Iterator<Item = u32> + '_ {
+    fn iter(&self) -> impl Iterator<Item = u32> {
         BitsetIter { bits: self.bits }
     }
 
