@@ -1,7 +1,8 @@
 services:
   backend:
     build:
-      context: ./python
+      context: .
+      dockerfile: python/Dockerfile
       target: production
     environment:
       - CORS_ORIGINS=${CORS_ORIGINS:-https://mbabb.fi.ncsu.edu}
@@ -55,3 +56,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+networks:
+  app-network:
+    driver: bridge

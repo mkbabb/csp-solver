@@ -21,11 +21,11 @@ jobs:
           python-version: '3.13'
 
       - name: Install backend dependencies
-        working-directory: backend
+        working-directory: python
         run: uv sync --frozen --extra dev
 
       - name: Run backend tests
-        working-directory: backend
+        working-directory: python
         run: uv run pytest
 
       # Frontend build
