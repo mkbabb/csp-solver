@@ -1,270 +1,172 @@
-# csp-solver
+# `csp-solver`
 
-Generalized constraint satisfaction problem solver in Rust, compiled to a native
-Python module via PyO3. Ships with a full-stack Sudoku + Futoshiki web app.
+Generalized constraint satisfaction problem solver in Rust, compiled to a native Python module via PyO3. Includes a demo, fully-featured, Sudoku application.
+
+Used by the [bbnf-lang](https://github.com/mkbabb/bbnf-lang) grammar compiler for type inference, FIRST/FOLLOW set computation, and dispatch table generation across lattice domains.
 
 **Demo**: [sudoku.babb.dev](https://sudoku.babb.dev)
 
-## Features
-
-- **Rust CSP kernel** with PyO3 bindings—drop-in replacement for the Python solver
-- **BitsetDomain**: u128 bitmask, O(1) membership/removal/iteration via popcount
-- **GAC AllDifferent**: Regin's algorithm (Hopcroft-Karp matching + Tarjan SCC pruning)
-- **Conflict-directed backjumping** with bounded nogood learning (LRU eviction)
-- **Min-conflicts local search** for large-neighborhood problems
-- **Lattice domains** with monotonic fixed-point propagation (no search required)
-- **ConstraintEnum**: devirtualized dispatch for NotEqual/AllDifferent—zero vtable overhead
-- **Sudoku generation**: sub-millisecond via pre-computed templates + random symmetry transforms
-
-
-## Performance
-
-Solve times on 9x9 Sudoku (FC + FailFirst, single solution). Rust vs. pure Python
-on the same machine:
-
-| Puzzle         | Rust     | Python   | Speedup |
-|----------------|----------|----------|---------|
-| Al Escargot    | 0.36 ms  | 11.5 ms  | 32x     |
-| Golden Nugget  | 6.2 ms   | 347 ms   | 56x     |
-| Inkala         | 0.52 ms  | 29.6 ms  | 57x     |
-
-Generation (9x9, template fast path): < 1 ms per board. The symmetry group for
-N=3 templates yields ~1.22 billion distinct grids per base template—digit
-permutation, row/column permutation within bands/stacks, band/stack permutation,
-and transposition.
-
-## Architecture
-
-```
-Browser  <-->  Nginx (:80)  <-->  Frontend (Vue 3, :3000)
-                             <-->  Backend  (FastAPI, :8000)
-                                     └── csp_solver (native Rust module via PyO3)
-```
-
-The Rust crate is the solver. Python wraps it with FastAPI routes and
-pre-computed puzzle template management. The frontend renders everything
-as hand-drawn SVG—Rough.js decorative elements, path-based line boil on
-the grid, custom glyphs with draw-in animations, and a crayon aesthetic
-throughout.
-
-## CSP Solver API
-
-The core type is `Csp<D: Domain>`, generic over any domain implementation.
+## Usage
 
 ```rust
-use csp_solver::{Csp, SolveConfig, Pruning};
+use csp_solver::{Csp, SolveConfig, Pruning, PropagationStrategy};
 use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::ordering::Ordering;
 
 let mut csp = Csp::new();
+let domain = BitsetDomain::new(1..=4);
+let vars: Vec<_> = (0..4).map(|_| csp.add_variable(domain.clone())).collect();
 
-// Variables with domains {1, 2, 3}
-let vars = csp.add_variables(&BitsetDomain::new(1..=3), 3);
-
-// Pairwise not-equal (map coloring, etc.)
-csp.add_not_equal(vars[0], vars[1]);
-csp.add_not_equal(vars[1], vars[2]);
-
-// N-ary all-different (GAC-propagated)
 csp.add_all_different(vars.clone());
+csp.add_greater_than(vars[0], vars[1]);
 
 csp.finalize();
-
-let config = SolveConfig {
+let solutions = csp.solve(&SolveConfig {
     pruning: Pruning::Ac3,
     ordering: Ordering::FailFirst,
     max_solutions: 1,
     backjumping: false,
-};
-
-let solutions = csp.solve(&config);
+});
 ```
 
-### Pruning
+```python
+from csp_solver import Csp, SolveConfig, Pruning, Ordering
 
-| Variant           | Description                                   |
-|-------------------|-----------------------------------------------|
-| `None`            | Pure backtracking, no pruning                 |
-| `ForwardChecking` | Prune neighbors of the assigned variable      |
-| `Ac3`             | Maintaining Arc Consistency after each assign  |
-| `AcFc`            | AC + forward checking hybrid                  |
+csp = Csp()
+v0 = csp.add_variable([1, 2, 3, 4])
+v1 = csp.add_variable([1, 2, 3, 4])
+csp.add_not_equal(v0, v1)
+csp.finalize()
+solutions = csp.solve(SolveConfig(pruning=Pruning.AC3, ordering=Ordering.FAIL_FIRST))
+```
 
-### Variable Ordering
+Built with `maturin develop --release --features py`.
 
-| Variant        | Description                                       |
-|----------------|---------------------------------------------------|
-| `Chronological`| Variables in stack order                           |
-| `FailFirst`    | MRV—smallest domain first                         |
-| `DomWdeg`      | Smallest domain/weighted-degree ratio              |
+## Architecture
 
-### Propagation Strategy
+`Csp<D: Domain>` is generic over a domain type. The `Domain` trait requires `iter()` as its primary iteration primitive, alongside `remove()`, `add()`, `contains()`, and `singleton_value()`. `BitsetDomain` implements these via a `u128` bitmask—membership, removal, and iteration are all O(1) bitops (`popcount`, `trailing_zeros`, bit-clear).
 
-| Variant | Description                                              |
-|---------|----------------------------------------------------------|
-| `Auto`  | AC-3 if `finalize()` was called, sweep otherwise         |
-| `Ac3`   | AC-3 worklist with adjacency graph                       |
-| `Sweep` | Fixed-point sweep over all constraints (lattice domains) |
+Constraints are stored as `ConstraintEnum<D>`, a devirtualized enum with variants for `NotEqual`, `AllDifferent`, `Lambda` (closure-based), and `Custom` (boxed trait object). The first two inline their `revise()` and `check()` directly—no vtable dispatch on the hot path.
 
-Also: `add_equals`, `add_less_than`, `add_greater_than`, and arbitrary
-closures via `add_constraint(impl Constraint<D>)`.
+The adjacency graph maps variables to constraints and constraints to neighbors via a flat `Vec<u32>` arena with `(offset, len)` indexing. One allocation, sequential reads.
 
-The PyO3 module (`from csp_solver import Csp, Pruning, Ordering, SolveConfig`)
-mirrors the Rust API. Built with `maturin develop --release --features py`.
+`propagate()` auto-selects strategy: AC-3 worklist if `finalize()` was called, fixed-point sweep otherwise. `propagate_with(strategy)` allows explicit selection.
+
+| Strategy | Trigger | Use case |
+|----------|---------|----------|
+| `Auto` | Default | Picks AC-3 or sweep based on adjacency presence |
+| `Ac3` | `finalize()` called | Search (Sudoku, queens, coloring) |
+| `Sweep` | No adjacency | Lattice domains (type inference, FIRST/FOLLOW) |
+
+## Algorithms
+
+### AC-3
+
+Arc consistency via a bitset worklist (`Vec<u64>`). When a constraint's `revise()` prunes a domain, only its neighbor constraints are re-enqueued—the bitset gives O(1) insert and O(words) scan for the next constraint to process.
+
+`NotEqual::revise()` checks singleton domains: if one side is fixed to value `v`, prune `v` from the other. `AllDifferent` propagates assigned values to all peers. The default `revise()` (for closures and custom constraints) does pairwise support checking with a reusable assignment buffer.
+
+### GAC AllDifferent
+
+Régin's (1994) algorithm for generalized arc consistency on n-ary all-different constraints:
+
+1. **Maximum matching** — Hopcroft-Karp on the variable-value bipartite graph, O(E√V). If the matching doesn't cover all variables, the constraint is unsatisfiable.
+2. **Residual graph** — matched edges reversed (val→var), unmatched forward (var→val). Free values get BFS-reachability edges back to all candidate variables.
+3. **SCC decomposition** — iterative Tarjan. A (var, val) pair can be pruned if the edge isn't in the matching, var and val are in different SCCs, and the value isn't reachable from a free vertex.
+
+### Backjumping
+
+Conflict-directed backjumping with a bitset conflict set. When a dead end is reached, the conflict set records which previously-assigned variables caused the failure. The search jumps directly to the most recent conflicting variable rather than backtracking chronologically.
+
+## Optimizations
+
+- **ConstraintEnum dispatch** — the enum match on `NotEqual`/`AllDifferent` compiles to a direct branch. `scope()`, `check()`, and `revise()` are `#[inline]`.
+- **Arena adjacency** — all neighbor lists live in a single `Vec<u32>` pool. Each variable/constraint has an `(offset, len)` pair into the pool.
+- **BitsetIter** — `BitsetDomain::iter()` copies the `u128` and yields values via `trailing_zeros`. Zero allocation, no borrow—the domain can be mutated while iterating.
+- **Worklist bitset** — AC-3 uses `Vec<u64>` words. O(1) insert, O(words) pop. No `VecDeque`.
+- **Assign-check-unassign** — forward checking tests each value by writing into the mutable assignment slice, checking constraints, then unwriting. No per-value allocation.
 
 ## Puzzles
 
 ### Sudoku
 
-Supports arbitrary subgrid sizes. The solver handles 4x4 (N=2), 9x9 (N=3),
-16x16 (N=4), and 25x25 (N=5). The web UI exposes N=2, 3, and 4.
+M² variables with domain 1..M, AllDifferent constraints on each row, column, and N×N subgrid. Handles N=2 (4×4) through N=5 (25×25). The web app exposes N=2, 3, 4.
 
-Board generation uses two paths:
-1. **Fast path** — random template + symmetry transform. O(M^2) per transform, no search.
-2. **Slow path** — generate a complete solution, dig holes with uniqueness verification, calibrate difficulty by backtrack count.
+Generation has two paths. The fast path picks a random pre-computed template and applies a random symmetry transform—sub-millisecond. The symmetry group for N=3 comprises digit permutation (9!), row permutation within bands (3!³), column permutation within stacks (3!³), band permutation (3!), stack permutation (3!), and transposition (×2). Product: ~1.22 billion distinct grids per template.
 
-Difficulty calibration (FC + FailFirst backtrack count):
-- **Easy**: 0 backtracks (propagation alone)
-- **Medium**: < 50 backtracks
-- **Hard**: > 100 backtracks
+The slow path generates a complete solution (seed first row, solve), digs holes one at a time with uniqueness verification, and calibrates difficulty by backtrack count: easy (0), medium (<50), hard (>100).
 
 ### Futoshiki
 
-Latin-square puzzle with inequality constraints between adjacent cells.
-Modeled as AllDifferent per row/column plus LessThan constraints from the
-inequality annotations.
-
-## Project Structure
-
-```
-CSC411_HW2_ProgrammingQuestion/
-├── Cargo.toml                  # workspace root
-├── csp-solver/                 # Rust crate
-│   ├── Cargo.toml
-│   ├── pyproject.toml          # maturin config
-│   ├── src/
-│   │   ├── lib.rs              # Csp<D>, SolveConfig, Pruning, PropagationStrategy
-│   │   ├── py.rs               # PyO3 bindings (#[cfg(feature = "py")])
-│   │   ├── constraint/         # Constraint trait, NotEqual, AllDifferent, Lambda, ConstraintEnum
-│   │   ├── domain/             # Domain trait, BitsetDomain, FiniteDomain, LatticeDomain
-│   │   ├── solver/             # ac3, backtrack, backjump, propagate, monotonic, gac_alldiff, local_search, nogoods
-│   │   ├── puzzles/            # sudoku/ (csp, generate, transform, rng), futoshiki/
-│   │   ├── adjacency.rs        # constraint-variable adjacency graph
-│   │   ├── ordering.rs         # Chronological, FailFirst, DomWdeg
-│   │   └── variable.rs         # Variable<D> with domain + undo log
-│   ├── benches/                # criterion: sudoku, queens, map_coloring, lattice
-│   ├── tests/                  # 83 tests: solver, sudoku, lattice, gac, futoshiki, local_search, nogoods
-│   └── examples/               # profile_csp, profile_sudoku, time_sudoku
-├── web/api/                     # FastAPI backend
-│   ├── Dockerfile              # multi-stage: Rust nightly → maturin → wheel → slim runtime
-│   ├── pyproject.toml          # uv/hatchling, ruff, mypy, pytest
-│   ├── src/app/
-│   │   ├── api/                # FastAPI routes + Pydantic models
-│   │   ├── solver/             # Python CSP implementation (isomorphic to Rust)
-│   │   └── data/               # pre-computed puzzle templates + solution banks
-│   └── tests/                  # 107 tests: solver, api, benchmarks, stress, rust backend
-├── web/frontend/                   # Vue 3 + TypeScript + Tailwind
-│   └── src/
-│       ├── components/         # game + decorative components
-│       ├── composables/        # state, API, theme, line boil
-│       └── lib/                # PRNG, grid paths, glyphs, scribble fill, shapes
-├── nginx/                      # reverse proxy config
-│   └── sudoku.conf
-├── scripts/                    # deploy.sh, dev.sh
-├── docker-compose.yml          # dev: backend + frontend
-└── docker-compose.prod.yml     # prod: backend + frontend + nginx
-```
-
-## Development
-
-### Tests
-
-```bash
-# Rust (83 tests)
-cd csp-solver && cargo test
-
-# Python (107 tests)
-cd python && uv run pytest
-```
-
-### Benchmarks
-
-```bash
-cd csp-solver && cargo bench
-```
-
-Criterion benchmarks cover Sudoku (9x9 hard puzzles), N-Queens, map coloring,
-and lattice propagation.
-
-### Profiling
-
-```bash
-cd csp-solver && cargo build --release --example profile_sudoku
-samply record ./target/release/examples/profile_sudoku
-```
-
-### Building the Native Module
-
-```bash
-cd csp-solver
-PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin develop --release --features py
-```
-
-This installs `csp_solver` into the active Python environment. The backend
-auto-detects the native module and falls back to pure Python if it's absent.
+N×N Latin square with inequality constraints between adjacent cells. `add_all_different` per row and column, `add_equals` for fixed cells, `add_greater_than` for the inequality annotations. Rust-only (no web UI).
 
 ## BBNF Integration
 
-The csp-solver crate is used as a dependency in the
-[bbnf-lang](https://github.com/mkbabb/bbnf-lang) grammar compiler, where
-constraint propagation replaces hand-rolled fixed-point loops for several
-analysis passes. Each pass defines a lattice domain and expresses inter-rule
-dependencies as constraints, then calls `propagate()` to reach the fixed point.
+The [bbnf-lang](https://github.com/mkbabb/bbnf-lang) grammar compiler uses `csp-solver` for six IR analysis passes. Each constructs a `Csp` with a lattice domain—values only grow via `join()`, no backtracking. None call `finalize()`, so `propagate()` auto-selects the sweep strategy.
 
-| Pass               | Domain            | What it computes                           |
-|--------------------|-------------------|--------------------------------------------|
-| Type inference     | `TypeDomain`      | Projected types for each grammar rule      |
-| FIRST sets         | `CharSetDomain`   | Leading character sets (u128 bitmask)      |
-| FOLLOW sets        | `CharSetDomain`   | Trailing character sets                    |
-| Span eligibility   | `BoolDomain`      | Whether a rule can use span-only codegen   |
-| Dispatch tables    | `DispatchDomain`  | Constant-time alternation selection by byte|
-| Regex algebra      | `RewriteDomain`   | Regex pattern simplification/fusion        |
+| Pass | Domain | Lattice direction | Variables |
+|------|--------|--------------------|-----------|
+| Type inference | `TypeDomain` | `None → Some(ty)` | 2 per IR node |
+| FIRST sets | `CharSetDomain` (128-bit) | ∅ → union | 1 per rule |
+| FOLLOW sets | `CharSetDomain` | ∅ → union | 1 per rule |
+| Span eligibility | `BoolDomain` | top-down refinement | 1 per rule |
+| Dispatch tables | `DispatchDomain` | Unknown → Dispatchable/NonDispatchable | 1 per Alt |
+| Regex algebra | `RewriteDomain` | Pending → CanRewrite/CannotRewrite | 1 per Alt |
 
-All six use `LatticeDomain` + monotonic propagation (`PropagationStrategy::Sweep`).
-Domains only grow via `join`; no backtracking search is needed. The solver
-converges in 2--4 iterations for typical grammars.
+For CSS L4 (265 rules, 15 files, deep `@import` chain), the full compile pipeline runs in 113ms. The CSP passes are <0.1% of that—the compile bottleneck is literal prefix factoring, mitigated by FxHash (which cut the total from 211ms).
 
-## Web API
+## Performance
 
-| Method | Path                                   | Purpose              |
-|--------|----------------------------------------|----------------------|
-| GET    | `/api/v1/board/random/{size}/{difficulty}` | Generate random board |
-| POST   | `/api/v1/board/solve`                  | Solve input board    |
-| GET    | `/api/v1/health`                       | Health check         |
+Solve times on hard 9×9 Sudoku (AC3 + DomWdeg, single solution):
+
+| Puzzle | Rust | Python | Speedup |
+|--------|------|--------|---------|
+| Al Escargot | 0.36 ms | 11.5 ms | 32× |
+| Golden Nugget | 6.2 ms | 347 ms | 56× |
+| Inkala 2010 | 0.52 ms | 29.6 ms | 57× |
+
+BBNF compile pipeline:
+
+| Grammar | Lines | Time |
+|---------|-------|------|
+| JSON | 30 | 0.70 ms |
+| EBNF | 51 | 1.10 ms |
+| Google Sheets | 115 | 1.80 ms |
+| CSS L4 | 973 (15 files) | 113 ms |
+
+## Development
+
+```bash
+cargo test                              # 83 Rust tests
+cargo bench                             # criterion: sudoku, queens, map_coloring, lattice
+maturin develop --release --features py # build PyO3 wheel
+
+docker compose up                       # dev: api + frontend
+```
+
+```
+csp-solver/
+├── src/
+│   ├── lib.rs              # Csp<D>, SolveConfig, PropagationStrategy
+│   ├── py.rs               # PyO3 bindings (#[cfg(feature = "py")])
+│   ├── constraint/         # Constraint trait, ConstraintEnum, NotEqual, AllDifferent, Lambda
+│   ├── domain/             # Domain trait, BitsetDomain, FiniteDomain, BitsetLatticeDomain
+│   ├── solver/             # ac3, backtrack, backjump, propagate, monotonic, gac_alldiff, local_search, nogoods
+│   └── puzzles/            # sudoku/, futoshiki/
+├── benches/                # criterion
+├── tests/                  # 83 integration tests
+└── examples/               # profiling targets
+web/
+├── api/                    # FastAPI backend (Python package: app)
+├── frontend/               # Vue 3 + TypeScript + Tailwind, custom pencil-boil aesthetic
+└── nginx/                  # reverse proxy (production)
+```
 
 ## Sources
 
-- Regin, J.-C. (1994). "A filtering algorithm for constraints of difference in CSPs."
-  *Proceedings of the 12th National Conference on Artificial Intelligence (AAAI-94)*, 362--367.
-  The AllDifferent GAC propagator: bipartite matching (Hopcroft-Karp) + SCC decomposition
-  (Tarjan) to prune values not participating in any maximum matching.
-
-- Mackworth, A. K. (1977). "Consistency in networks of relations."
-  *Artificial Intelligence*, 8(1), 99--118. Arc consistency (AC-3) and the
-  constraint network formalism.
-
-- Hopcroft, J. E. & Karp, R. M. (1973). "An n^(5/2) algorithm for maximum
-  matchings in bipartite graphs." *SIAM Journal on Computing*, 2(4), 225--231.
-
-- Tarjan, R. E. (1972). "Depth-first search and linear graph algorithms."
-  *SIAM Journal on Computing*, 1(2), 146--160. The SCC algorithm used in
-  Regin's AllDifferent filter.
-
-- Boussemart, F., Hemery, F., Lecoutre, C., & Sais, L. (2004). "Boosting
-  systematic search by weighting constraints." *Proceedings of the 16th European
-  Conference on Artificial Intelligence (ECAI-04)*, 146--150. The dom/wdeg
-  variable ordering heuristic.
-
-- Minton, S., Johnston, M. D., Philips, A. B., & Laird, P. (1992). "Minimizing
-  conflicts: a heuristic repair method for constraint satisfaction and scheduling
-  problems." *Artificial Intelligence*, 58(1--3), 161--205. Min-conflicts local
-  search.
+- Régin, J.-C. (1994). "A filtering algorithm for constraints of difference in CSPs." *AAAI-94*, 362–367.
+- Mackworth, A. K. (1977). "Consistency in networks of relations." *Artificial Intelligence*, 8(1), 99–118.
+- Hopcroft, J. E. & Karp, R. M. (1973). "An n^(5/2) algorithm for maximum matchings in bipartite graphs." *SIAM J. Comput.*, 2(4), 225–231.
+- Tarjan, R. E. (1972). "Depth-first search and linear graph algorithms." *SIAM J. Comput.*, 1(2), 146–160.
+- Boussemart, F. et al. (2004). "Boosting systematic search by weighting constraints." *ECAI-04*, 146–150.
+- Minton, S. et al. (1992). "Minimizing conflicts." *Artificial Intelligence*, 58(1–3), 161–205.
