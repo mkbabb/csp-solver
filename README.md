@@ -16,35 +16,6 @@ Python module via PyO3. Ships with a full-stack Sudoku + Futoshiki web app.
 - **ConstraintEnum**: devirtualized dispatch for NotEqual/AllDifferent—zero vtable overhead
 - **Sudoku generation**: sub-millisecond via pre-computed templates + random symmetry transforms
 
-## Quickstart
-
-```bash
-docker compose up
-```
-
-Backend on `:8000`, frontend on `:3000`.
-
-### Manual
-
-```bash
-# Backend (Python + native Rust module)
-cd python && uv sync
-cd ../csp-solver && maturin develop --release --features py
-cd ../python && uv run uvicorn csp_solver_py.api.main:app --reload --port 8000
-
-# Frontend
-cd frontend && npm install && npm run dev
-```
-
-### Production
-
-```bash
-docker compose -f docker-compose.prod.yml up
-```
-
-Nginx reverse proxy on `:80`. The Docker build is multi-stage: Rust nightly
-toolchain compiles the csp-solver crate, maturin packages it as a wheel, and the
-final image installs the wheel into a slim Python 3.13 environment.
 
 ## Performance
 
@@ -183,15 +154,15 @@ CSC411_HW2_ProgrammingQuestion/
 │   ├── benches/                # criterion: sudoku, queens, map_coloring, lattice
 │   ├── tests/                  # 83 tests: solver, sudoku, lattice, gac, futoshiki, local_search, nogoods
 │   └── examples/               # profile_csp, profile_sudoku, time_sudoku
-├── python/                     # FastAPI backend
+├── web/api/                     # FastAPI backend
 │   ├── Dockerfile              # multi-stage: Rust nightly → maturin → wheel → slim runtime
 │   ├── pyproject.toml          # uv/hatchling, ruff, mypy, pytest
-│   ├── src/csp_solver_py/
+│   ├── src/app/
 │   │   ├── api/                # FastAPI routes + Pydantic models
 │   │   ├── solver/             # Python CSP implementation (isomorphic to Rust)
 │   │   └── data/               # pre-computed puzzle templates + solution banks
 │   └── tests/                  # 107 tests: solver, api, benchmarks, stress, rust backend
-├── frontend/                   # Vue 3 + TypeScript + Tailwind
+├── web/frontend/                   # Vue 3 + TypeScript + Tailwind
 │   └── src/
 │       ├── components/         # game + decorative components
 │       ├── composables/        # state, API, theme, line boil

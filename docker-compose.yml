@@ -2,13 +2,13 @@ services:
   backend:
     build:
       context: .
-      dockerfile: python/Dockerfile
+      dockerfile: web/api/Dockerfile
       target: development
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     volumes:
-      - ./python/src:/app/src
-      - ./python/pyproject.toml:/app/pyproject.toml
+      - ./web/api/src:/app/src
+      - ./web/api/pyproject.toml:/app/pyproject.toml
     environment:
       - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
     networks:
@@ -16,15 +16,15 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./web/frontend
       target: development
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
     volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/index.html:/app/index.html
-      - ./frontend/vite.config.ts:/app/vite.config.ts
-      - ./frontend/tailwind.config.ts:/app/tailwind.config.ts
+      - ./web/frontend/src:/app/src
+      - ./web/frontend/index.html:/app/index.html
+      - ./web/frontend/vite.config.ts:/app/vite.config.ts
+      - ./web/frontend/tailwind.config.ts:/app/tailwind.config.ts
     environment:
       - VITE_API_URL=http://backend:8000
     depends_on:
