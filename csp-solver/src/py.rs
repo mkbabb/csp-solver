@@ -160,6 +160,21 @@ impl Csp {
         self.inner.add_all_different(vars);
     }
 
+    /// Fix a variable to a specific value.
+    fn add_equals(&mut self, var: u32, value: u32) {
+        self.inner.add_equals(var, value);
+    }
+
+    /// Constrain x < y.
+    fn add_less_than(&mut self, x: u32, y: u32) {
+        self.inner.add_less_than(x, y);
+    }
+
+    /// Constrain x > y.
+    fn add_greater_than(&mut self, x: u32, y: u32) {
+        self.inner.add_greater_than(x, y);
+    }
+
     /// Build the adjacency graph. Required before solve(), optional before propagate().
     fn finalize(&mut self) {
         self.inner.finalize();
