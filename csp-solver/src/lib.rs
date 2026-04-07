@@ -143,6 +143,51 @@ impl<D: Domain> Csp<D> {
         self.constraints.push(ConstraintEnum::AllDifferent(AllDifferent::new(vars)));
     }
 
+    /// Fix a variable to a specific value.
+    pub fn add_equals(&mut self, var: VarId, value: D::Value)
+    where
+        D: 'static,
+    {
+        self.add_constraint(constraint::LambdaConstraint::new(
+            vec![var],
+            move |assignment| match &assignment[var as usize] {
+                Some(v) => *v == value,
+                None => true,
+            },
+            format!("equals({var})"),
+        ));
+    }
+
+    /// Constrain x < y (for Ord-comparable values).
+    pub fn add_less_than(&mut self, x: VarId, y: VarId)
+    where
+        D: 'static, D::Value: PartialOrd,
+    {
+        self.add_constraint(constraint::LambdaConstraint::new(
+            vec![x, y],
+            move |assignment| match (&assignment[x as usize], &assignment[y as usize]) {
+                (Some(a), Some(b)) => a < b,
+                _ => true,
+            },
+            format!("less_than({x},{y})"),
+        ));
+    }
+
+    /// Constrain x > y (for Ord-comparable values).
+    pub fn add_greater_than(&mut self, x: VarId, y: VarId)
+    where
+        D: 'static, D::Value: PartialOrd,
+    {
+        self.add_constraint(constraint::LambdaConstraint::new(
+            vec![x, y],
+            move |assignment| match (&assignment[x as usize], &assignment[y as usize]) {
+                (Some(a), Some(b)) => a > b,
+                _ => true,
+            },
+            format!("greater_than({x},{y})"),
+        ));
+    }
+
     /// Build the adjacency graph. Must be called after all variables and
     /// constraints have been added, before calling `solve()`.
     pub fn finalize(&mut self)
