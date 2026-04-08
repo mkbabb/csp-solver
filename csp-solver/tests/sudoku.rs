@@ -113,6 +113,7 @@ fn test_solve_4x4() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let sol = solve_sudoku(&board, 2, &config);
@@ -148,6 +149,7 @@ fn test_solve_9x9() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let sol = solve_sudoku(&board, 3, &config);
@@ -204,6 +206,7 @@ fn test_generate_4x4() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let sol = solve_sudoku(&board, 2, &config);

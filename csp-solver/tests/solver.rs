@@ -33,6 +33,7 @@ fn test_australia_map_coloring() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -72,6 +73,7 @@ fn test_australia_all_pruning() {
             ordering: Ordering::Chronological,
             max_solutions: 1,
             backjumping: false,
+            ..Default::default()
         };
 
         let solutions = csp.solve(&config);
@@ -127,6 +129,7 @@ fn test_4_queens() {
         ordering: Ordering::FailFirst,
         max_solutions: 100,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -204,6 +207,7 @@ fn test_4x4_sudoku() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve_with_given(&config, &given);
@@ -270,6 +274,7 @@ fn test_finite_domain_strings() {
         ordering: Ordering::Chronological,
         max_solutions: 100,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -306,6 +311,7 @@ fn test_backjumping() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: true,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -340,6 +346,7 @@ fn test_dom_wdeg_ordering() {
         ordering: Ordering::DomWdeg,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -387,6 +394,7 @@ fn test_8_queens() {
         ordering: Ordering::FailFirst,
         max_solutions: 92,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -411,6 +419,7 @@ fn test_unsatisfiable() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -470,6 +479,7 @@ fn test_stats() {
         ordering: Ordering::Chronological,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let _solutions = csp.solve(&config);
@@ -494,6 +504,7 @@ fn test_multiple_solutions() {
         ordering: Ordering::Chronological,
         max_solutions: 100,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -519,6 +530,7 @@ fn test_simple_2var_csp() {
         ordering: Ordering::Chronological,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -578,6 +590,7 @@ fn test_forward_check_dwo() {
         ordering: Ordering::Chronological,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -600,6 +613,7 @@ fn test_unsolvable_pigeonhole_backtracks() {
         ordering: Ordering::Chronological,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -623,6 +637,7 @@ fn test_all_permutations_3var() {
         ordering: Ordering::Chronological,
         max_solutions: 100,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -645,6 +660,7 @@ fn test_ac3_full_solve() {
         ordering: Ordering::Chronological,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -696,6 +712,7 @@ fn test_initial_ac3_propagation() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve_with_given(&config, &given);
@@ -827,6 +844,7 @@ fn test_simple_4var() {
         ordering: Ordering::FailFirst,
         max_solutions: 100,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -866,6 +884,7 @@ fn test_cross_config_correctness_map_coloring() {
                 ordering: *ordering,
                 max_solutions: 1,
                 backjumping: false,
+                ..Default::default()
             };
 
             let solutions = csp.solve(&config);
@@ -902,6 +921,7 @@ fn test_cross_config_8queens() {
             ordering: Ordering::FailFirst,
             max_solutions: 1,
             backjumping: false,
+            ..Default::default()
         };
 
         let solutions = csp.solve(&config);
@@ -925,6 +945,7 @@ fn test_max_solutions_limit() {
         ordering: Ordering::FailFirst,
         max_solutions: 5,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -947,6 +968,7 @@ fn test_ac_fc_hybrid_solve() {
         ordering: Ordering::FailFirst,
         max_solutions: 100,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -975,6 +997,7 @@ fn test_ac_fc_map_coloring() {
         ordering: Ordering::DomWdeg,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -998,6 +1021,7 @@ fn test_domain_wipeout_all_pruning() {
             ordering: Ordering::Chronological,
             max_solutions: 1,
             backjumping: false,
+            ..Default::default()
         };
 
         let solutions = csp.solve(&config);
@@ -1037,6 +1061,7 @@ fn test_single_variable() {
         ordering: Ordering::Chronological,
         max_solutions: 10,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -1059,6 +1084,7 @@ fn test_no_constraints() {
         ordering: Ordering::Chronological,
         max_solutions: 100,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -1082,6 +1108,7 @@ fn test_backjumping_unsatisfiable() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: true,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -1113,6 +1140,7 @@ fn test_backjumping_fewer_backtracks() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
     let _sol = csp_chrono.solve(&config_chrono);
     let bt_chrono = csp_chrono.stats().backtracks;
@@ -1123,6 +1151,7 @@ fn test_backjumping_fewer_backtracks() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: true,
+        ..Default::default()
     };
     let _sol = csp_bj.solve(&config_bj);
     let bt_bj = csp_bj.stats().backtracks;
@@ -1196,6 +1225,7 @@ fn test_stats_propagations() {
         ordering: Ordering::Chronological,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let _solutions = csp.solve(&config);
@@ -1220,6 +1250,7 @@ fn test_solve_resets_state() {
         ordering: Ordering::Chronological,
         max_solutions: 100,
         backjumping: false,
+        ..Default::default()
     };
 
     // Solve twice - should get same results
@@ -1292,6 +1323,7 @@ fn test_9x9_sudoku_medium() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve_with_given(&config, &given);
@@ -1311,6 +1343,7 @@ fn test_hard_sudoku_al_escargot() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
     let solutions = csp.solve_with_given(&config, &given);
     assert!(!solutions.is_empty(), "Should solve Al Escargot");
@@ -1326,6 +1359,7 @@ fn test_hard_sudoku_inkala_2010() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
     let solutions = csp.solve_with_given(&config, &given);
     assert!(!solutions.is_empty(), "Should solve Inkala 2010");
@@ -1341,6 +1375,7 @@ fn test_hard_sudoku_golden_nugget() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
     let solutions = csp.solve_with_given(&config, &given);
     assert!(!solutions.is_empty(), "Should solve Golden Nugget");
@@ -1356,6 +1391,7 @@ fn test_hard_sudoku_platinum_blonde() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
     let solutions = csp.solve_with_given(&config, &given);
     assert!(!solutions.is_empty(), "Should solve Platinum Blonde");
@@ -1371,6 +1407,7 @@ fn test_hard_sudoku_minimal_17() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
     let solutions = csp.solve_with_given(&config, &given);
     assert!(!solutions.is_empty(), "Should solve 17-clue minimal");
@@ -1398,6 +1435,7 @@ fn test_hard_sudoku_all_configs() {
             ordering: *ordering,
             max_solutions: 1,
             backjumping: *backjumping,
+            ..Default::default()
         };
 
         let solutions = csp.solve_with_given(&config, &given);
@@ -1434,6 +1472,7 @@ fn test_fail_first_fewer_backtracks_sudoku() {
         ordering: Ordering::Chronological,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
     let _sol = csp_chrono.solve_with_given(&config_chrono, &given_chrono);
     let bt_chrono = csp_chrono.stats().backtracks;
@@ -1444,6 +1483,7 @@ fn test_fail_first_fewer_backtracks_sudoku() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
     let _sol = csp_ff.solve_with_given(&config_ff, &given_ff);
     let bt_ff = csp_ff.stats().backtracks;
@@ -1492,6 +1532,7 @@ fn test_5_queens() {
         ordering: Ordering::FailFirst,
         max_solutions: 100,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -1510,6 +1551,7 @@ fn test_6_queens() {
         ordering: Ordering::FailFirst,
         max_solutions: 100,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);

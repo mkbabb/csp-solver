@@ -23,6 +23,7 @@ pub fn measure_difficulty(board: &[u32], n: u32) -> u32 {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
     csp.solve_with_given(&config, &given);
     csp.stats().backtracks as u32
@@ -74,6 +75,7 @@ fn generate_board_slow(n: u32, difficulty: Difficulty) -> Vec<u32> {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solution = solve_sudoku(&seed_board, n, &config)
@@ -96,6 +98,7 @@ fn generate_board_slow(n: u32, difficulty: Difficulty) -> Vec<u32> {
         ordering: Ordering::FailFirst,
         max_solutions: 2,
         backjumping: false,
+        ..Default::default()
     };
 
     for &idx in &indices {

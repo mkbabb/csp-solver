@@ -59,6 +59,7 @@ fn bench_queens_first_solution(c: &mut Criterion) {
                     ordering: Ordering::FailFirst,
                     max_solutions: 1,
                     backjumping: false,
+                    ..Default::default()
                 };
                 let solutions = csp.solve(&config);
                 assert!(!solutions.is_empty());
@@ -82,6 +83,7 @@ fn bench_queens_all_solutions(c: &mut Criterion) {
                 ordering: Ordering::FailFirst,
                 max_solutions: usize::MAX,
                 backjumping: false,
+                ..Default::default()
             };
             let solutions = csp.solve(&config);
             assert_eq!(solutions.len(), 92);
@@ -99,6 +101,7 @@ fn bench_queens_all_solutions(c: &mut Criterion) {
                 ordering: Ordering::FailFirst,
                 max_solutions: usize::MAX,
                 backjumping: false,
+                ..Default::default()
             };
             let solutions = csp.solve(&config);
             assert_eq!(solutions.len(), 14200);
@@ -130,6 +133,7 @@ fn bench_queens_configs(c: &mut Criterion) {
                     ordering,
                     max_solutions: usize::MAX,
                     backjumping: false,
+                    ..Default::default()
                 };
                 let solutions = csp.solve(&config);
                 assert_eq!(solutions.len(), 92);

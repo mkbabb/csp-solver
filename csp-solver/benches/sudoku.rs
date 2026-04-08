@@ -129,18 +129,21 @@ const CONFIGS: &[ConfigSpec] = &[
         pruning: Pruning::ForwardChecking,
         ordering: Ordering::Chronological,
         backjumping: false,
+        ..Default::default()
     },
     ConfigSpec {
         name: "ac3_failfirst",
         pruning: Pruning::Ac3,
         ordering: Ordering::FailFirst,
         backjumping: false,
+        ..Default::default()
     },
     ConfigSpec {
         name: "ac3_domwdeg",
         pruning: Pruning::Ac3,
         ordering: Ordering::DomWdeg,
         backjumping: false,
+        ..Default::default()
     },
 ];
 
@@ -248,6 +251,7 @@ fn bench_sudoku_16x16(c: &mut Criterion) {
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
                 backjumping: false,
+                ..Default::default()
             };
             let solutions = csp.solve_with_given(&config, &given);
             solutions
@@ -262,6 +266,7 @@ fn bench_sudoku_16x16(c: &mut Criterion) {
                 ordering: Ordering::DomWdeg,
                 max_solutions: 1,
                 backjumping: false,
+                ..Default::default()
             };
             let solutions = csp.solve_with_given(&config, &given);
             solutions

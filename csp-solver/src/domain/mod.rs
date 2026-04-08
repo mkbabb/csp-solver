@@ -8,4 +8,4 @@ pub mod traits;
 pub use bitset::BitsetDomain;
 pub use finite::FiniteDomain;
 pub use lattice::BitsetLatticeDomain;
-pub use traits::{Domain, LatticeDomain};
+pub use traits::{CostDomain, Domain, LatticeDomain};

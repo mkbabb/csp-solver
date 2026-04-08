@@ -7,4 +7,5 @@ pub mod gac_alldiff;
 pub mod local_search;
 pub mod monotonic;
 pub mod nogoods;
+pub mod optimize;
 pub mod propagate;

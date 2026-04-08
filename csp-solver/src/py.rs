@@ -114,6 +114,7 @@ impl From<&SolveConfig> for RustSolveConfig {
             ordering: c.ordering.into(),
             max_solutions: c.max_solutions,
             backjumping: c.backjumping,
+            ..Default::default()
         }
     }
 }
@@ -317,6 +318,7 @@ fn solve_sudoku(csp: &mut SudokuCSP) -> PyResult<bool> {
         ordering: RustOrdering::DomWdeg,
         max_solutions: csp.max_solutions,
         backjumping: false,
+        ..Default::default()
     };
 
     let (mut rust_csp, given) = sudoku::create_sudoku_csp(&csp.board, csp.n);

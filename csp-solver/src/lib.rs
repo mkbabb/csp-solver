@@ -21,11 +21,12 @@ pub mod variable;
 pub use puzzles::sudoku;
 
 use adjacency::Adjacency;
-use constraint::{AllDifferent, Constraint, ConstraintEnum, NotEqual, VarId};
+use constraint::{AllDifferent, Constraint, ConstraintEnum, NotEqual, SoftLambdaConstraint, VarId};
 use domain::Domain;
 use ordering::Ordering;
 use solver::backjump::{self, BackjumpConfig};
 use solver::backtrack::{self, BacktrackConfig, Solution};
+use solver::optimize;
 use variable::Variable;
 
 /// Pruning strategy for backtracking search.
@@ -52,6 +53,17 @@ pub enum PropagationStrategy {
     Sweep,
 }
 
+/// Optimization mode for the solver.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptimizationMode {
+    /// Find any feasible solution (existing behavior).
+    Feasibility,
+    /// Find the solution minimizing total cost (domain costs + soft penalties).
+    MinimizeCost,
+    /// Find the solution maximizing total cost.
+    MaximizeCost,
+}
+
 /// Solve configuration, isomorphic to Python's CSP constructor arguments.
 #[derive(Debug, Clone)]
 pub struct SolveConfig {
@@ -60,6 +72,8 @@ pub struct SolveConfig {
     pub max_solutions: usize,
     /// Whether to use conflict-directed backjumping instead of chronological backtracking.
     pub backjumping: bool,
+    /// Optimization mode. Defaults to `Feasibility` (pure constraint satisfaction).
+    pub optimization_mode: OptimizationMode,
 }
 
 impl Default for SolveConfig {
@@ -69,6 +83,7 @@ impl Default for SolveConfig {
             ordering: Ordering::Chronological,
             max_solutions: 1,
             backjumping: false,
+            optimization_mode: OptimizationMode::Feasibility,
         }
     }
 }
@@ -131,6 +146,11 @@ impl<D: Domain> Csp<D> {
     /// Add a pre-typed constraint enum directly (avoids boxing for built-in types).
     pub fn add_constraint_enum(&mut self, c: ConstraintEnum<D>) {
         self.constraints.push(c);
+    }
+
+    /// Add a soft constraint (contributes penalty cost when violated, never prunes).
+    pub fn add_soft_constraint(&mut self, c: SoftLambdaConstraint<D>) {
+        self.constraints.push(ConstraintEnum::Soft(c));
     }
 
     /// Add a not-equal constraint (devirtualized fast path).
@@ -252,6 +272,8 @@ impl<D: Domain> Csp<D> {
     /// Run backtracking (or backjumping) search with the given configuration.
     ///
     /// Returns up to `config.max_solutions` solutions.
+    /// When `optimization_mode` is `MinimizeCost` or `MaximizeCost`, uses
+    /// branch-and-bound search and returns solutions sorted by cost (best first).
     pub fn solve(&mut self, config: &SolveConfig) -> Vec<Solution<D>>
     where
         D::Value: PartialEq,
@@ -269,36 +291,60 @@ impl<D: Domain> Csp<D> {
             v.reset();
         }
 
-        if config.backjumping {
-            let bj_config = BackjumpConfig {
-                pruning: config.pruning,
-                ordering: config.ordering,
-                max_solutions: config.max_solutions,
-                constraint_weights: self.constraint_weights.clone(),
-                var_constraint_ids: self.var_constraint_ids.clone(),
-            };
-            backjump::backjump_search(
-                &mut self.variables,
-                &self.constraints,
-                &adjacency,
-                &bj_config,
-                &mut self.stats,
-            )
-        } else {
-            let bt_config = BacktrackConfig {
-                pruning: config.pruning,
-                ordering: config.ordering,
-                max_solutions: config.max_solutions,
-                constraint_weights: self.constraint_weights.clone(),
-                var_constraint_ids: self.var_constraint_ids.clone(),
-            };
-            backtrack::backtrack_search(
-                &mut self.variables,
-                &self.constraints,
-                &adjacency,
-                &bt_config,
-                &mut self.stats,
-            )
+        match config.optimization_mode {
+            OptimizationMode::Feasibility => {
+                if config.backjumping {
+                    let bj_config = BackjumpConfig {
+                        pruning: config.pruning,
+                        ordering: config.ordering,
+                        max_solutions: config.max_solutions,
+                        constraint_weights: self.constraint_weights.clone(),
+                        var_constraint_ids: self.var_constraint_ids.clone(),
+                    };
+                    backjump::backjump_search(
+                        &mut self.variables,
+                        &self.constraints,
+                        &adjacency,
+                        &bj_config,
+                        &mut self.stats,
+                    )
+                } else {
+                    let bt_config = BacktrackConfig {
+                        pruning: config.pruning,
+                        ordering: config.ordering,
+                        max_solutions: config.max_solutions,
+                        constraint_weights: self.constraint_weights.clone(),
+                        var_constraint_ids: self.var_constraint_ids.clone(),
+                    };
+                    backtrack::backtrack_search(
+                        &mut self.variables,
+                        &self.constraints,
+                        &adjacency,
+                        &bt_config,
+                        &mut self.stats,
+                    )
+                }
+            }
+            mode @ (OptimizationMode::MinimizeCost | OptimizationMode::MaximizeCost) => {
+                let opt_config = optimize::OptimizeConfig {
+                    pruning: config.pruning,
+                    ordering: config.ordering,
+                    max_solutions: config.max_solutions,
+                    constraint_weights: self.constraint_weights.clone(),
+                    var_constraint_ids: self.var_constraint_ids.clone(),
+                    maximize: mode == OptimizationMode::MaximizeCost,
+                };
+                // Use ZeroCost evaluator — domain costs are 0.
+                // For CostDomain-aware optimization, use solve_optimized().
+                optimize::branch_and_bound(
+                    &mut self.variables,
+                    &self.constraints,
+                    &adjacency,
+                    &opt_config,
+                    &mut self.stats,
+                    &optimize::ZeroCost,
+                )
+            }
         }
     }
 
@@ -375,6 +421,51 @@ impl<D: Domain> Csp<D> {
         )
     }
 
+    /// Run optimization search with a custom cost evaluator.
+    ///
+    /// This is the most flexible entry point: you supply a `DomainCostEval`
+    /// that defines how domain values are costed. Use `solve()` with
+    /// `OptimizationMode::MinimizeCost` if you only need soft constraint
+    /// penalties (zero domain cost), or `solve_optimized()` if your domain
+    /// implements `CostDomain`.
+    pub fn solve_with_cost_eval(
+        &mut self,
+        config: &SolveConfig,
+        cost_eval: &dyn optimize::DomainCostEval<D>,
+    ) -> Vec<Solution<D>>
+    where
+        D::Value: PartialEq,
+    {
+        let adjacency = self
+            .adjacency
+            .as_ref()
+            .expect("call finalize() before solve_with_cost_eval()")
+            .clone();
+
+        self.stats = SolveStats::default();
+        for v in &mut self.variables {
+            v.reset();
+        }
+
+        let mode = config.optimization_mode;
+        let opt_config = optimize::OptimizeConfig {
+            pruning: config.pruning,
+            ordering: config.ordering,
+            max_solutions: config.max_solutions,
+            constraint_weights: self.constraint_weights.clone(),
+            var_constraint_ids: self.var_constraint_ids.clone(),
+            maximize: mode == OptimizationMode::MaximizeCost,
+        };
+        optimize::branch_and_bound(
+            &mut self.variables,
+            &self.constraints,
+            &adjacency,
+            &opt_config,
+            &mut self.stats,
+            cost_eval,
+        )
+    }
+
     /// Get solver statistics from the last run.
     pub fn stats(&self) -> &SolveStats {
         &self.stats
@@ -389,6 +480,18 @@ impl<D: Domain> Csp<D> {
 impl<D: Domain> Default for Csp<D> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<D: domain::CostDomain> Csp<D> {
+    /// Run optimization search using the domain's `CostDomain` implementation
+    /// for value costing. This is the ergonomic entry point when your domain
+    /// type implements `CostDomain`.
+    pub fn solve_optimized(&mut self, config: &SolveConfig) -> Vec<Solution<D>>
+    where
+        D::Value: PartialEq,
+    {
+        self.solve_with_cost_eval(config, &optimize::CostDomainEval)
     }
 }
 

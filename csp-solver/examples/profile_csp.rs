@@ -105,12 +105,14 @@ fn main() {
         ordering: Ordering::DomWdeg,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
     let ac3_ff = SolveConfig {
         pruning: Pruning::Ac3,
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     // ── Sudoku (3 hard puzzles × 1000 iterations) ───────────────────────

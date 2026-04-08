@@ -80,6 +80,7 @@ fn bench_australia(c: &mut Criterion) {
                     ordering,
                     max_solutions: 1,
                     backjumping: false,
+                    ..Default::default()
                 };
                 let solutions = csp.solve(&config);
                 assert!(!solutions.is_empty());
@@ -96,6 +97,7 @@ fn bench_australia(c: &mut Criterion) {
                     ordering,
                     max_solutions: usize::MAX,
                     backjumping: false,
+                    ..Default::default()
                 };
                 csp.solve(&config)
             });
@@ -117,6 +119,7 @@ fn bench_random_graph(c: &mut Criterion) {
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
                 backjumping: false,
+                ..Default::default()
             };
             let solutions = csp.solve(&config);
             assert!(!solutions.is_empty());
@@ -132,6 +135,7 @@ fn bench_random_graph(c: &mut Criterion) {
                 ordering: Ordering::DomWdeg,
                 max_solutions: 1,
                 backjumping: false,
+                ..Default::default()
             };
             let solutions = csp.solve(&config);
             assert!(!solutions.is_empty());
@@ -148,6 +152,7 @@ fn bench_random_graph(c: &mut Criterion) {
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
                 backjumping: false,
+                ..Default::default()
             };
             csp.solve(&config)
         });
@@ -162,6 +167,7 @@ fn bench_random_graph(c: &mut Criterion) {
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
                 backjumping: false,
+                ..Default::default()
             };
             csp.solve(&config)
         });
@@ -175,6 +181,7 @@ fn bench_random_graph(c: &mut Criterion) {
                 ordering: Ordering::DomWdeg,
                 max_solutions: 1,
                 backjumping: false,
+                ..Default::default()
             };
             csp.solve(&config)
         });
@@ -189,6 +196,7 @@ fn bench_random_graph(c: &mut Criterion) {
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
                 backjumping: false,
+                ..Default::default()
             };
             csp.solve(&config)
         });

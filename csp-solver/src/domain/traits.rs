@@ -58,6 +58,26 @@ pub trait Domain: Clone + PartialEq + Debug {
     }
 }
 
+/// A domain whose values carry associated costs for optimization.
+///
+/// Extends `Domain` with cost information, enabling branch-and-bound search
+/// to prune infeasible branches and order values by preference.
+pub trait CostDomain: Domain {
+    /// Cost of assigning this value. Lower is better.
+    fn cost(&self, val: &Self::Value) -> f64;
+
+    /// Lower bound on the minimum cost achievable from this domain.
+    ///
+    /// Default implementation scans all values; override for O(1) if your
+    /// domain tracks the minimum incrementally.
+    fn min_cost(&self) -> f64 {
+        self.values()
+            .into_iter()
+            .map(|v| self.cost(&v))
+            .fold(f64::INFINITY, f64::min)
+    }
+}
+
 /// Extension trait for monotonic lattice domains (e.g. FIRST/FOLLOW sets).
 ///
 /// A lattice domain contains a single "current value" that grows monotonically

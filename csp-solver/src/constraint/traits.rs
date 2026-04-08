@@ -88,3 +88,13 @@ pub trait Constraint<D: Domain>: Debug {
         if changed { Revision::Changed } else { Revision::Unchanged }
     }
 }
+
+/// A constraint with a penalty for violation.
+///
+/// Hard constraints prune domains; soft constraints contribute cost to the
+/// objective when violated. During optimization, the solver accumulates
+/// penalties from violated soft constraints alongside domain costs.
+pub trait SoftConstraint<D: Domain>: Constraint<D> {
+    /// Penalty added to the objective when this constraint is violated.
+    fn penalty(&self) -> f64;
+}

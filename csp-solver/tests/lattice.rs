@@ -295,6 +295,7 @@ fn test_type_inference_span_compression() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -351,6 +352,7 @@ fn test_type_inference_seq_mixed_no_compression() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -406,6 +408,7 @@ fn test_type_inference_alt_join_same() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -457,6 +460,7 @@ fn test_type_inference_alt_join_different() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -499,6 +503,7 @@ fn test_type_inference_map_override() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -576,6 +581,7 @@ fn test_type_inference_recursive_cycle() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -791,6 +797,7 @@ fn test_type_inference_vec_wrapping() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
@@ -876,6 +883,7 @@ fn test_type_inference_complex_pipeline() {
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         backjumping: false,
+        ..Default::default()
     };
 
     let solutions = csp.solve(&config);
