@@ -51,6 +51,9 @@ pub struct BackjumpConfig {
     pub max_solutions: usize,
     pub constraint_weights: Vec<f64>,
     pub var_constraint_ids: Vec<Vec<usize>>,
+    /// Maximum number of search nodes before aborting early.
+    /// See [`crate::SolveConfig::node_budget`].
+    pub node_budget: Option<u64>,
 }
 
 fn backjump_recurse<D: Domain>(
@@ -79,6 +82,14 @@ where
             return BackjumpResult::Done;
         }
         return BackjumpResult::Continue;
+    }
+
+    // Budget guard — see `backtrack.rs::backtrack_recurse` for details.
+    if let Some(budget) = config.node_budget {
+        if stats.nodes_explored >= budget {
+            stats.budget_exceeded = true;
+            return BackjumpResult::Done;
+        }
     }
 
     stats.nodes_explored += 1;

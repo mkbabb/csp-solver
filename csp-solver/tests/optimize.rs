@@ -483,3 +483,94 @@ fn test_default_config_is_feasibility() {
     let config = SolveConfig::default();
     assert_eq!(config.optimization_mode, OptimizationMode::Feasibility);
 }
+
+/// Regression: the default config carries the Tranche Y freezing-guard
+/// node budget so that pathological searches cannot hang a caller.
+#[test]
+fn test_default_config_has_node_budget() {
+    let config = SolveConfig::default();
+    assert_eq!(config.node_budget, Some(1_000_000));
+}
+
+/// A large N-variable CSP with an artificially tiny budget must abort
+/// cleanly, flag `budget_exceeded`, and return whatever it has found so
+/// far (may be empty). The caller is expected to branch on the flag
+/// and fall back to a trivial per-variable pick.
+#[test]
+fn test_node_budget_aborts_long_search() {
+    let mut csp = Csp::new();
+    // 30 variables × 5 values — the search tree is 5^30 ≈ 9.3e20.
+    // We set a 100-node budget so the abort fires within milliseconds.
+    let domain = CostFiniteDomain::new(vec![
+        (1, 10.0),
+        (2, 5.0),
+        (3, 20.0),
+        (4, 1.0),
+        (5, 15.0),
+    ]);
+    let vars: Vec<_> = (0..30).map(|_| csp.add_variable(domain.clone())).collect();
+    // A soft constraint per pair to force the search to enumerate
+    // (the branch-and-bound would otherwise pick the lowest-cost
+    // value per variable independently).
+    for w in vars.windows(2) {
+        let (x, y) = (w[0], w[1]);
+        csp.add_soft_constraint(SoftLambdaConstraint::new(
+            vec![x, y],
+            move |a: &[Option<i32>]| match (&a[x as usize], &a[y as usize]) {
+                (Some(va), Some(vb)) => va != vb,
+                _ => true,
+            },
+            1.0,
+            "penalize_equal",
+        ));
+    }
+    csp.finalize();
+
+    let config = SolveConfig {
+        pruning: Pruning::ForwardChecking,
+        ordering: Ordering::Chronological,
+        max_solutions: 1,
+        optimization_mode: OptimizationMode::MinimizeCost,
+        node_budget: Some(100),
+        ..Default::default()
+    };
+
+    // Must terminate promptly rather than hang.
+    let _solutions = csp.solve_optimized(&config);
+    let stats = csp.stats();
+    assert!(
+        stats.budget_exceeded,
+        "budget guard did not fire (nodes_explored={})",
+        stats.nodes_explored
+    );
+    assert!(
+        stats.nodes_explored <= 101,
+        "explored {} nodes with a 100-node budget",
+        stats.nodes_explored
+    );
+}
+
+/// A tiny CSP within budget must finish normally and leave
+/// `budget_exceeded` false.
+#[test]
+fn test_node_budget_does_not_fire_for_small_search() {
+    let mut csp = Csp::new();
+    let domain = CostFiniteDomain::new(vec![(1, 10.0), (2, 5.0), (3, 20.0)]);
+    let _x = csp.add_variable(domain);
+    csp.finalize();
+
+    let config = SolveConfig {
+        pruning: Pruning::None,
+        ordering: Ordering::Chronological,
+        max_solutions: 1,
+        optimization_mode: OptimizationMode::MinimizeCost,
+        node_budget: Some(1_000),
+        ..Default::default()
+    };
+
+    let solutions = csp.solve_optimized(&config);
+    let stats = csp.stats();
+    assert!(!stats.budget_exceeded);
+    assert_eq!(solutions.len(), 1);
+    assert_eq!(solutions[0], vec![2]);
+}

@@ -74,6 +74,17 @@ pub struct SolveConfig {
     pub backjumping: bool,
     /// Optimization mode. Defaults to `Feasibility` (pure constraint satisfaction).
     pub optimization_mode: OptimizationMode,
+    /// Maximum number of search nodes (backtrack / branch-and-bound
+    /// recursions) before the solver aborts early and returns whatever
+    /// solutions it has found so far. `None` disables the budget.
+    ///
+    /// Defaults to `Some(1_000_000)` so an unbounded pathological
+    /// search cannot hang a caller. When the budget is hit,
+    /// [`SolveStats::budget_exceeded`] is set to `true` on the
+    /// returning `Csp::stats()`. Callers that care about optimality
+    /// should branch on this flag and either accept the best-so-far
+    /// solution or fall back to a trivial per-variable pick.
+    pub node_budget: Option<u64>,
 }
 
 impl Default for SolveConfig {
@@ -84,6 +95,7 @@ impl Default for SolveConfig {
             max_solutions: 1,
             backjumping: false,
             optimization_mode: OptimizationMode::Feasibility,
+            node_budget: Some(1_000_000),
         }
     }
 }
@@ -94,6 +106,11 @@ pub struct SolveStats {
     pub backtracks: u64,
     pub nodes_explored: u64,
     pub propagations: u64,
+    /// Set to `true` when the last search hit its
+    /// [`SolveConfig::node_budget`] and aborted early.
+    /// Solutions returned alongside this flag are best-so-far, not
+    /// necessarily optimal.
+    pub budget_exceeded: bool,
 }
 
 /// The main CSP solver struct.
@@ -300,6 +317,7 @@ impl<D: Domain> Csp<D> {
                         max_solutions: config.max_solutions,
                         constraint_weights: self.constraint_weights.clone(),
                         var_constraint_ids: self.var_constraint_ids.clone(),
+                        node_budget: config.node_budget,
                     };
                     backjump::backjump_search(
                         &mut self.variables,
@@ -315,6 +333,7 @@ impl<D: Domain> Csp<D> {
                         max_solutions: config.max_solutions,
                         constraint_weights: self.constraint_weights.clone(),
                         var_constraint_ids: self.var_constraint_ids.clone(),
+                        node_budget: config.node_budget,
                     };
                     backtrack::backtrack_search(
                         &mut self.variables,
@@ -333,6 +352,7 @@ impl<D: Domain> Csp<D> {
                     constraint_weights: self.constraint_weights.clone(),
                     var_constraint_ids: self.var_constraint_ids.clone(),
                     maximize: mode == OptimizationMode::MaximizeCost,
+                    node_budget: config.node_budget,
                 };
                 // Use ZeroCost evaluator — domain costs are 0.
                 // For CostDomain-aware optimization, use solve_optimized().
@@ -409,6 +429,7 @@ impl<D: Domain> Csp<D> {
             max_solutions: config.max_solutions,
             constraint_weights: self.constraint_weights.clone(),
             var_constraint_ids: self.var_constraint_ids.clone(),
+            node_budget: config.node_budget,
         };
 
         backtrack::backtrack_search_with_given(
@@ -455,6 +476,7 @@ impl<D: Domain> Csp<D> {
             constraint_weights: self.constraint_weights.clone(),
             var_constraint_ids: self.var_constraint_ids.clone(),
             maximize: mode == OptimizationMode::MaximizeCost,
+            node_budget: config.node_budget,
         };
         optimize::branch_and_bound(
             &mut self.variables,

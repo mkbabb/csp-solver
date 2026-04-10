@@ -76,6 +76,9 @@ pub struct BacktrackConfig {
     pub max_solutions: usize,
     pub constraint_weights: Vec<f64>,
     pub var_constraint_ids: Vec<Vec<usize>>,
+    /// Maximum number of search nodes before aborting early.
+    /// See [`crate::SolveConfig::node_budget`].
+    pub node_budget: Option<u64>,
 }
 
 fn backtrack_recurse<D: Domain>(
@@ -99,6 +102,18 @@ where
             .collect();
         solutions.push(sol);
         return solutions.len() >= config.max_solutions;
+    }
+
+    // Budget guard: abort early if the search has exceeded its node
+    // budget. Return the `done` signal so the recursion unwinds
+    // cleanly, preserving whatever solutions have been found so far.
+    // Checked before `nodes_explored += 1` so the post-budget node is
+    // never counted and the flag is set exactly once per search.
+    if let Some(budget) = config.node_budget {
+        if stats.nodes_explored >= budget {
+            stats.budget_exceeded = true;
+            return true;
+        }
     }
 
     stats.nodes_explored += 1;

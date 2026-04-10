@@ -96,14 +96,24 @@ pub struct SolveConfig {
     pub max_solutions: usize,
     #[pyo3(get, set)]
     pub backjumping: bool,
+    /// Maximum number of search nodes before aborting early.
+    /// `None` disables the budget. Defaults to 1_000_000.
+    #[pyo3(get, set)]
+    pub node_budget: Option<u64>,
 }
 
 #[pymethods]
 impl SolveConfig {
     #[new]
-    #[pyo3(signature = (pruning=Pruning::FORWARD_CHECKING, ordering=Ordering::CHRONOLOGICAL, max_solutions=1, backjumping=false))]
-    fn new(pruning: Pruning, ordering: Ordering, max_solutions: usize, backjumping: bool) -> Self {
-        Self { pruning, ordering, max_solutions, backjumping }
+    #[pyo3(signature = (pruning=Pruning::FORWARD_CHECKING, ordering=Ordering::CHRONOLOGICAL, max_solutions=1, backjumping=false, node_budget=Some(1_000_000)))]
+    fn new(
+        pruning: Pruning,
+        ordering: Ordering,
+        max_solutions: usize,
+        backjumping: bool,
+        node_budget: Option<u64>,
+    ) -> Self {
+        Self { pruning, ordering, max_solutions, backjumping, node_budget }
     }
 }
 
@@ -114,6 +124,7 @@ impl From<&SolveConfig> for RustSolveConfig {
             ordering: c.ordering.into(),
             max_solutions: c.max_solutions,
             backjumping: c.backjumping,
+            node_budget: c.node_budget,
             ..Default::default()
         }
     }
@@ -128,6 +139,10 @@ pub struct SolveStats {
     pub nodes_explored: u64,
     #[pyo3(get)]
     pub propagations: u64,
+    /// `True` when the last search hit its `node_budget` and returned
+    /// best-so-far rather than optimal results.
+    #[pyo3(get)]
+    pub budget_exceeded: bool,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

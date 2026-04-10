@@ -23,6 +23,9 @@ pub struct OptimizeConfig {
     pub var_constraint_ids: Vec<Vec<usize>>,
     /// If true, maximize cost instead of minimize.
     pub maximize: bool,
+    /// Maximum number of search nodes before aborting early.
+    /// See [`crate::SolveConfig::node_budget`].
+    pub node_budget: Option<u64>,
 }
 
 /// Cost evaluator for domains. Passed into the optimizer so that the same
@@ -232,6 +235,20 @@ where
 
         // For optimization, keep searching for better solutions.
         return false;
+    }
+
+    // Budget guard: abort early if the search has exceeded its node
+    // budget. Return `true` so the recursion unwinds cleanly; whatever
+    // scored solutions have been found so far remain in `scored` and
+    // are surfaced at the end of `branch_and_bound`. `budget_exceeded`
+    // is set so callers can distinguish best-so-far from optimal.
+    // Checked before `nodes_explored += 1` so the post-budget node is
+    // never counted and the flag is set exactly once per search.
+    if let Some(budget) = config.node_budget {
+        if stats.nodes_explored >= budget {
+            stats.budget_exceeded = true;
+            return true;
+        }
     }
 
     stats.nodes_explored += 1;
