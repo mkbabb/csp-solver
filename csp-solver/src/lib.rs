@@ -9,6 +9,7 @@
 //! - Lattice domains for monotonic fixed-point propagation
 
 pub mod adjacency;
+pub mod builder;
 pub mod constraint;
 pub mod domain;
 pub mod ordering;
@@ -18,6 +19,9 @@ pub mod puzzles;
 pub mod solver;
 pub mod variable;
 
+pub use builder::assignment::{
+    AssignmentBuilder, AssignmentError, AssignmentSolution, SENTINEL, assignment,
+};
 pub use puzzles::sudoku;
 
 use adjacency::Adjacency;
