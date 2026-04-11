@@ -12,13 +12,17 @@
 //!   low-level `Csp`, `SolveConfig`, `SolveStats`, and the
 //!   `Pruning` / `Ordering` / `PropagationStrategy` /
 //!   `OptimizationMode` enums.
-//! - **(future)** `assignment` — convenience `solveAssignmentCop` for
-//!   bipartite assignment COPs. Lands in commit C5.
+//! - **`assignment`** — convenience `solveAssignmentCop` for bipartite
+//!   assignment COPs. Thin adapter over the upstream Rust
+//!   [`AssignmentBuilder`](csp_solver::AssignmentBuilder); see
+//!   `assignment.rs` for the wire shapes.
 
 use wasm_bindgen::prelude::*;
 
+mod assignment;
 mod isomorphic;
 
+pub use assignment::{AssignmentRequest, AssignmentResponse, assignment_sentinel, solve_assignment_cop};
 pub use isomorphic::*;
 
 /// Initialize the WASM module.
