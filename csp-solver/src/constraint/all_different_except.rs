@@ -64,23 +64,35 @@ impl<V: Clone + PartialEq + std::fmt::Debug> AllDifferentExcept<V> {
         true
     }
 
-    /// Singleton removal, skipping singletons whose value is the sentinel.
+    /// Prune non-sentinel values from peer domains.
     ///
-    /// A variable pinned to the sentinel does not forbid peers from
-    /// choosing the sentinel themselves — that is the whole point of the
-    /// construct — so its value must *not* be pruned from the rest of the
-    /// scope. Non-sentinel singletons behave exactly like
-    /// [`AllDifferent`](super::all_different::AllDifferent).
+    /// For small scopes (< 4 variables), uses fast singleton removal:
+    /// a variable pinned to the sentinel does not forbid peers from
+    /// choosing the sentinel themselves, while non-sentinel singletons
+    /// behave exactly like [`AllDifferent`](super::all_different::AllDifferent).
     ///
-    /// This is plain singleton propagation, not Régin's GAC. Callers that
-    /// need generalized arc consistency over the non-sentinel subset at
-    /// large `N` should layer it on top externally; a parallel to
-    /// `solver::gac_alldiff::propagate_gac_alldiff` for this constraint is
-    /// out of scope here.
+    /// For larger scopes (≥ 4), delegates to Régin's GAC algorithm
+    /// ([`propagate_gac_alldiff_except`](crate::solver::gac_alldiff_except::propagate_gac_alldiff_except)),
+    /// which achieves generalized arc consistency by building a bipartite
+    /// matching graph over non-sentinel values and pruning values that
+    /// cannot participate in any maximum matching.
     pub(crate) fn revise_impl<D>(&self, vars: &mut [Variable<D>], depth: usize) -> Revision
     where
         D: Domain<Value = V>,
     {
+        // For larger scopes, GAC provides strictly stronger pruning than
+        // singleton removal — it detects Hall sets and matching failures
+        // that pairwise checks miss.
+        if self.scope.len() >= 4 {
+            return crate::solver::gac_alldiff_except::propagate_gac_alldiff_except(
+                &self.scope,
+                &self.sentinel,
+                vars,
+                depth,
+            );
+        }
+
+        // Small scope: singleton removal is fast and sufficient.
         let mut changed = false;
         let singletons: Vec<(VarId, D::Value)> = self
             .scope

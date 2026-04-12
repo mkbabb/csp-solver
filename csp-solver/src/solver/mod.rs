@@ -4,6 +4,7 @@ pub mod ac3;
 pub mod backjump;
 pub mod backtrack;
 pub mod gac_alldiff;
+pub mod gac_alldiff_except;
 pub mod local_search;
 pub mod monotonic;
 pub mod nogoods;
