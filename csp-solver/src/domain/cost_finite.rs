@@ -36,6 +36,8 @@
 //! assert_eq!(domain.min_cost(), 1.1);
 //! ```
 
+use std::cell::Cell;
+
 use super::finite::FiniteDomain;
 use super::traits::{CostDomain, Domain};
 
@@ -49,10 +51,11 @@ use super::traits::{CostDomain, Domain};
 ///
 /// All `Domain` methods delegate to the wrapped `FiniteDomain<i32>`.
 /// `CostDomain::cost` looks the value up in the sorted cost table;
-/// `CostDomain::min_cost` uses the default trait impl, which iterates
-/// the current (post-pruning) domain — exactly the lower bound the
-/// branch-and-bound solver needs.
-#[derive(Debug, Clone, PartialEq)]
+/// `CostDomain::min_cost` uses a `Cell`-cached minimum that is
+/// lazily recomputed after any `remove`/`add` mutation — amortized
+/// O(1) for the repeated lower-bound queries the branch-and-bound
+/// solver issues at every search node.
+#[derive(Debug, Clone)]
 pub struct CostFiniteDomain {
     /// Active values, pruned by the solver during search.
     inner: FiniteDomain<i32>,
@@ -61,6 +64,16 @@ pub struct CostFiniteDomain {
     /// `inner` may remain here harmlessly because `cost()` is only
     /// ever queried for live values.
     costs: Vec<(i32, f64)>,
+    /// Lazily cached minimum cost over the live domain. `None` means
+    /// "dirty — recompute on next `min_cost()` call". Invalidated by
+    /// `remove`/`add`; populated by `min_cost`.
+    min_cost_cache: Cell<Option<f64>>,
+}
+
+impl PartialEq for CostFiniteDomain {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner && self.costs == other.costs
+    }
 }
 
 impl CostFiniteDomain {
@@ -89,6 +102,7 @@ impl CostFiniteDomain {
         Self {
             inner: FiniteDomain::new(sorted_values),
             costs: pairs,
+            min_cost_cache: Cell::new(None),
         }
     }
 }
@@ -105,11 +119,16 @@ impl Domain for CostFiniteDomain {
     }
 
     fn remove(&mut self, val: &i32) -> bool {
-        self.inner.remove(val)
+        let changed = self.inner.remove(val);
+        if changed {
+            self.min_cost_cache.set(None);
+        }
+        changed
     }
 
     fn add(&mut self, val: &i32) {
         self.inner.add(val);
+        self.min_cost_cache.set(None);
     }
 
     fn values(&self) -> Vec<i32> {
@@ -134,5 +153,24 @@ impl CostDomain for CostFiniteDomain {
             Ok(idx) => self.costs[idx].1,
             Err(_) => f64::INFINITY,
         }
+    }
+
+    /// Amortized O(1) minimum cost over the live domain.
+    ///
+    /// The result is lazily cached in a `Cell` and invalidated by
+    /// `remove`/`add`. The branch-and-bound solver calls `min_cost()`
+    /// once per unassigned variable per search node, so caching
+    /// eliminates the dominant O(domain) scan at large domain sizes.
+    fn min_cost(&self) -> f64 {
+        if let Some(cached) = self.min_cost_cache.get() {
+            return cached;
+        }
+        let min = self
+            .inner
+            .iter()
+            .map(|v| self.cost(&v))
+            .fold(f64::INFINITY, f64::min);
+        self.min_cost_cache.set(Some(min));
+        min
     }
 }

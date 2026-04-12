@@ -128,6 +128,20 @@ fn solve_optimized_end_to_end() {
     assert_eq!(total, 3.0);
 }
 
+/// The internal `min_cost` cache must be correctly invalidated by
+/// `remove` and `add` — stale cache reads would silently corrupt the
+/// branch-and-bound lower bound.
+#[test]
+fn min_cost_cache_invalidation() {
+    let mut d = CostFiniteDomain::new(vec![10, 20, 30], vec![3.0, 1.0, 2.0]);
+    assert_eq!(d.min_cost(), 1.0); // computed, cached
+    assert_eq!(d.min_cost(), 1.0); // cache hit
+    d.remove(&20); // invalidates cache
+    assert_eq!(d.min_cost(), 2.0); // recomputed, cached
+    d.add(&20); // re-add, invalidates cache
+    assert_eq!(d.min_cost(), 1.0); // recomputed with 20 back in domain
+}
+
 /// Helper mirroring the cost table used in `solve_optimized_end_to_end`.
 fn domain_cost(val: &i32) -> f64 {
     match val {
