@@ -1,0 +1,27 @@
+[package]
+name = "csp-solver-wasm-morph"
+version = "0.1.0"
+edition = "2024"
+description = "WebAssembly bindings for morph-core alignment pipeline"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+morph-core = { path = "../morph-core" }
+wasm-bindgen = "0.2"
+serde-wasm-bindgen = "0.6"
+serde = { version = "1", features = ["derive"] }
+console_error_panic_hook = "0.1"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+# wasm-pack honors this section when invoked from this directory and
+# applies it to its bundled wasm-opt pass on the cdylib output. The
+# parent crate's release profile is therefore not perturbed by the
+# size-tuning we want for the .wasm artifact.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-bulk-memory"]
