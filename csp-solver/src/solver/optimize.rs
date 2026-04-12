@@ -3,6 +3,41 @@
 //! Extends backtracking with cost tracking: at each search node, computes a
 //! lower bound on the total cost of any completion. Prunes when the bound
 //! exceeds the incumbent solution's cost.
+//!
+//! # Deferred extensions (Phase 2 design decisions)
+//!
+//! **`TieredCostEval` / lazy cost evaluation** — deferred because the
+//! [`CostFiniteDomain::min_cost`] incremental `Cell` cache (landed in
+//! Phase 2A) covers the immediate bottleneck: `optimistic_bound` was
+//! calling `min_cost()` O(domain) per node, and the cache amortizes that
+//! to O(1). A tiered evaluator (cheap proxy lower bound + expensive actual
+//! cost with memoization) only pays its API cost when a second consumer
+//! with a genuinely non-trivial cost function appears. The existing
+//! [`DomainCostEval`] trait is the extension point — implement a new
+//! evaluator type, no solver-core changes needed.
+//!
+//! **`solve_with_warm_start`** — deferred because no consumer currently
+//! demands incremental re-solving (accepting a previous solution as the
+//! initial incumbent for tighter B&B pruning from node zero). The
+//! implementation is ~20 LOC: add a `warm_start: Option<&Solution>` field
+//! to [`OptimizeConfig`] and seed `best_cost` / `best_solution` before
+//! the first `bb_recurse` call. Land it when the first incremental
+//! consumer (e.g., a playground animation scrubber) appears.
+//!
+//! **Unified `Constraint` trait** — the current `ConstraintEnum` dispatch
+//! and separate `SoftConstraint` trait are adequate for the constraint
+//! vocabulary in use. Collapsing them into a single trait with a default
+//! `penalty() -> f64::INFINITY` method is a readability improvement, not a
+//! performance one (the enum dispatch is already inlined by the compiler).
+//! Land when the constraint vocabulary grows enough to justify the
+//! refactor.
+//!
+//! **`tracing` instrumentation** — adding `#[instrument]` spans on
+//! `branch_and_bound`, `propagate`, `ac3_from_variable` would enable
+//! production diagnostics (measure propagation time, identify bottleneck
+//! constraints). Deferred as polish — the `SolveStats` struct already
+//! tracks `nodes_explored`, `backtracks`, `propagations`, and
+//! `budget_exceeded`, which covers the coarse-grained profiling needs.
 
 use crate::constraint::{ConstraintEnum, VarId};
 use crate::domain::Domain;
