@@ -51,16 +51,16 @@ fn test_sentinel_never_pruned() {
     let rev = propagate_gac_alldiff_except(&scope, &sentinel, &mut vars, 0);
 
     // Sentinel must still be present in vars 1, 2, 3.
-    for i in 1..4 {
+    for (i, var) in vars.iter().enumerate().skip(1) {
         assert!(
-            vars[i].domain.contains(&sentinel),
+            var.domain.contains(&sentinel),
             "sentinel must remain in var {i}'s domain"
         );
     }
     // Value 1 should be pruned from vars 1-3 (assigned to var 0).
-    for i in 1..4 {
+    for (i, var) in vars.iter().enumerate().skip(1) {
         assert!(
-            !vars[i].domain.contains(&1),
+            !var.domain.contains(&1),
             "value 1 should be pruned from var {i}"
         );
     }
@@ -164,11 +164,11 @@ fn test_five_var_hand_built() {
     assert_eq!(rev, Revision::Changed);
 
     // Vars 1-4: 0 pruned, {1, 2, 99} remain.
-    for i in 1..5 {
-        assert!(!vars[i].domain.contains(&0), "val 0 should be pruned from var {i}");
-        assert!(vars[i].domain.contains(&1));
-        assert!(vars[i].domain.contains(&2));
-        assert!(vars[i].domain.contains(&sentinel));
+    for (i, var) in vars.iter().enumerate().skip(1) {
+        assert!(!var.domain.contains(&0), "val 0 should be pruned from var {i}");
+        assert!(var.domain.contains(&1));
+        assert!(var.domain.contains(&2));
+        assert!(var.domain.contains(&sentinel));
     }
 
     // Now pin var 1 to 1 and re-propagate.
@@ -177,11 +177,11 @@ fn test_five_var_hand_built() {
     assert_eq!(rev2, Revision::Changed);
 
     // Vars 2-4: 0 and 1 pruned, {2, 99} remain.
-    for i in 2..5 {
-        assert!(!vars[i].domain.contains(&0), "val 0 should be pruned from var {i}");
-        assert!(!vars[i].domain.contains(&1), "val 1 should be pruned from var {i}");
-        assert!(vars[i].domain.contains(&2));
-        assert!(vars[i].domain.contains(&sentinel));
+    for (i, var) in vars.iter().enumerate().skip(2) {
+        assert!(!var.domain.contains(&0), "val 0 should be pruned from var {i}");
+        assert!(!var.domain.contains(&1), "val 1 should be pruned from var {i}");
+        assert!(var.domain.contains(&2));
+        assert!(var.domain.contains(&sentinel));
     }
 }
 
@@ -240,6 +240,7 @@ fn test_end_to_end_csp() {
 #[test]
 fn gac_except_compiles_without_value_index() {
     use csp_solver::domain::finite::FiniteDomain;
-    let _: fn(&[VarId], &String, &mut [Variable<FiniteDomain<String>>], usize) -> Revision =
-        propagate_gac_alldiff_except::<FiniteDomain<String>>;
+    type GacExceptFn =
+        fn(&[VarId], &String, &mut [Variable<FiniteDomain<String>>], usize) -> Revision;
+    let _: GacExceptFn = propagate_gac_alldiff_except::<FiniteDomain<String>>;
 }
