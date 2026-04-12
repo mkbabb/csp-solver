@@ -277,7 +277,6 @@ impl<D: Domain> Csp<D> {
                     &mut self.stats,
                     0,
                 )
-                .map_err(|()| Unsatisfiable)
             }
             PropagationStrategy::Sweep => {
                 solver::monotonic::propagate_monotonic(
@@ -285,7 +284,6 @@ impl<D: Domain> Csp<D> {
                     &self.constraints,
                     &mut self.stats,
                 )
-                .map_err(|()| Unsatisfiable)
             }
         }
     }
