@@ -2,7 +2,7 @@ use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use csp_solver::constraint::VarId;
 use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::ordering::Ordering;
-use csp_solver::{Csp, Pruning, SolveConfig};
+use csp_solver::{Csp, OptimizationMode, Pruning, SolveConfig};
 
 // ---------------------------------------------------------------------------
 // Puzzle data (verified unique-solution hard 9x9 puzzles)
@@ -129,21 +129,18 @@ const CONFIGS: &[ConfigSpec] = &[
         pruning: Pruning::ForwardChecking,
         ordering: Ordering::Chronological,
         backjumping: false,
-        ..Default::default()
     },
     ConfigSpec {
         name: "ac3_failfirst",
         pruning: Pruning::Ac3,
         ordering: Ordering::FailFirst,
         backjumping: false,
-        ..Default::default()
     },
     ConfigSpec {
         name: "ac3_domwdeg",
         pruning: Pruning::Ac3,
         ordering: Ordering::DomWdeg,
         backjumping: false,
-        ..Default::default()
     },
 ];
 
@@ -161,6 +158,8 @@ fn bench_sudoku_9x9(c: &mut Criterion) {
                         ordering: cfg.ordering,
                         max_solutions: 1,
                         backjumping: cfg.backjumping,
+                        optimization_mode: OptimizationMode::Feasibility,
+                        node_budget: Some(10_000_000),
                     };
                     let solutions = csp.solve_with_given(&config, &given);
                     assert!(!solutions.is_empty());
