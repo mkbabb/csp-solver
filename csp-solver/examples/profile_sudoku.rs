@@ -6,6 +6,7 @@ use csp_solver::ordering::Ordering;
 use csp_solver::*;
 use std::time::{Duration, Instant};
 
+#[allow(dead_code)]
 struct PhaseTimings {
     construct: Duration,
     finalize: Duration,

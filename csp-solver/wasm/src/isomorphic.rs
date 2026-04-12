@@ -609,10 +609,10 @@ pub fn create_random_board(
             .map(|t| {
                 let mut flat = vec![0u32; total];
                 for (k, v) in t {
-                    if let Ok(pos) = k.parse::<usize>() {
-                        if pos < total {
-                            flat[pos] = *v as u32;
-                        }
+                    if let Ok(pos) = k.parse::<usize>()
+                        && pos < total
+                    {
+                        flat[pos] = *v as u32;
                     }
                 }
                 flat

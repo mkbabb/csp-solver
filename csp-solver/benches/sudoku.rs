@@ -252,8 +252,7 @@ fn bench_sudoku_16x16(c: &mut Criterion) {
                 backjumping: false,
                 ..Default::default()
             };
-            let solutions = csp.solve_with_given(&config, &given);
-            solutions
+            csp.solve_with_given(&config, &given)
         });
     });
 
@@ -267,8 +266,7 @@ fn bench_sudoku_16x16(c: &mut Criterion) {
                 backjumping: false,
                 ..Default::default()
             };
-            let solutions = csp.solve_with_given(&config, &given);
-            solutions
+            csp.solve_with_given(&config, &given)
         });
     });
 

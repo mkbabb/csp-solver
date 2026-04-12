@@ -60,7 +60,7 @@ fn solve_queens(n: u32, config: &SolveConfig) -> usize {
     // Diagonal constraints
     for i in 0..n {
         for j in (i + 1)..n {
-            let diff = (j - i) as u32;
+            let diff = j - i;
             csp.add_constraint(LambdaConstraint::new(
                 vec![i, j],
                 move |assignment| {
@@ -171,7 +171,7 @@ fn main() {
     for i in 0..50u32 {
         for j in (i + 1)..50 {
             rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1);
-            if rng % 5 == 0 {
+            if rng.is_multiple_of(5) {
                 edges_50.push((i, j));
             }
         }

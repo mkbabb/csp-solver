@@ -155,7 +155,7 @@ pub fn solve_assignment_cop(req: JsValue) -> Result<JsValue, JsError> {
             req.cols
         )));
     }
-    if req.hint_pairs.len() % 2 != 0 {
+    if !req.hint_pairs.len().is_multiple_of(2) {
         return Err(JsError::new(&format!(
             "hintPairs.length ({}) must be even — pairs are flat [srcRow, tgtCol, ...]",
             req.hint_pairs.len()
