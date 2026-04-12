@@ -26,6 +26,33 @@ use wasm_bindgen_test::*;
 // only takes `run_in_browser`, so the absence of an explicit
 // configuration line is the way to opt into the Node runner.
 
+/// Every 5! = 120 permutation of `[0, 1, 2, 3, 4]`. Generated
+/// programmatically in a const context for the 5x5 brute-force test.
+fn perms_5() -> Vec<[usize; 5]> {
+    let mut out = Vec::with_capacity(120);
+    let mut p = [0usize, 1, 2, 3, 4];
+    // Heap's algorithm (iterative).
+    let mut c = [0usize; 5];
+    out.push(p);
+    let mut i = 0;
+    while i < 5 {
+        if c[i] < i {
+            if i % 2 == 0 {
+                p.swap(0, i);
+            } else {
+                p.swap(c[i], i);
+            }
+            out.push(p);
+            c[i] += 1;
+            i = 0;
+        } else {
+            c[i] = 0;
+            i += 1;
+        }
+    }
+    out
+}
+
 /// Every 4! = 24 permutation of `[0, 1, 2, 3]`. Hard-coded so the
 /// test has zero runtime dependencies and is trivially auditable.
 const PERMS_4: [[usize; 4]; 24] = [
@@ -249,4 +276,183 @@ fn role_groups_partition_assignment() {
         "role-grouped optimum should be 54.0, got {}",
         resp.cost
     );
+}
+
+// ---------------------------------------------------------------------------
+// 5×5 exhaustive brute-force parity
+// ---------------------------------------------------------------------------
+
+#[wasm_bindgen_test]
+fn brute_force_parity_5x5() {
+    let perms = perms_5();
+    assert_eq!(perms.len(), 120, "5! permutations expected");
+
+    let mut state: u64 = 0xCAFE_BABE;
+
+    for trial in 0..10 {
+        let cost: Vec<f64> = (0..25).map(|_| lcg_next(&mut state)).collect();
+
+        // Brute-force minimum over every full assignment.
+        let bf_min: f64 = perms
+            .iter()
+            .map(|p| (0..5).map(|i| cost[i * 5 + p[i]]).sum::<f64>())
+            .fold(f64::INFINITY, f64::min);
+
+        let req = AssignmentRequest {
+            cost_matrix: cost.clone(),
+            rows: 5,
+            cols: 5,
+            row_roles: vec![],
+            col_roles: vec![],
+            hint_pairs: vec![],
+            unmatch_penalty: 1.0e9,
+            node_budget_ms: None,
+        };
+
+        let req_js = serde_wasm_bindgen::to_value(&req).expect("serializes");
+        let resp_js = solve_assignment_cop(req_js).expect("solves");
+        let resp: AssignmentResponse =
+            serde_wasm_bindgen::from_value(resp_js).expect("deserializes");
+
+        assert_eq!(resp.assign.len(), 5, "trial {}: assign length", trial);
+
+        // Verify all-different assignment.
+        let mut seen = [false; 5];
+        for &col in &resp.assign {
+            let c = col as usize;
+            assert!(c < 5, "trial {}: col {} out of range", trial, col);
+            assert!(!seen[c], "trial {}: col {} assigned twice", trial, col);
+            seen[c] = true;
+        }
+
+        assert!(
+            (resp.cost - bf_min).abs() < 1e-9,
+            "trial {}: COP cost {} differs from brute-force {} (delta {})",
+            trial,
+            resp.cost,
+            bf_min,
+            (resp.cost - bf_min).abs(),
+        );
+        assert!(
+            !resp.budget_exceeded,
+            "trial {}: budget exceeded on 5x5",
+            trial,
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 5×3 asymmetric: more rows than columns forces unmatching
+// ---------------------------------------------------------------------------
+
+/// Brute-force minimum for an asymmetric N×M assignment where N > M.
+/// Each row picks a column (0..M) or SENTINEL. No two rows share a
+/// non-SENTINEL column. The search space is (M+1)^N filtered for
+/// validity.
+fn bruteforce_asymmetric(cost: &[f64], rows: usize, cols: usize, penalty: f64) -> f64 {
+    let mut best = f64::INFINITY;
+    let mut assign = vec![None::<usize>; rows];
+    bf_asym_recurse(cost, rows, cols, penalty, 0, &mut assign, 0.0, &mut best);
+    best
+}
+
+fn bf_asym_recurse(
+    cost: &[f64],
+    rows: usize,
+    cols: usize,
+    penalty: f64,
+    row: usize,
+    assign: &mut Vec<Option<usize>>,
+    running: f64,
+    best: &mut f64,
+) {
+    if row == rows {
+        if running < *best {
+            *best = running;
+        }
+        return;
+    }
+    if running >= *best {
+        return;
+    }
+    // Option: unmatch.
+    assign[row] = None;
+    bf_asym_recurse(cost, rows, cols, penalty, row + 1, assign, running + penalty, best);
+    // Option: assign to each free column.
+    for c in 0..cols {
+        if (0..row).any(|r| assign[r] == Some(c)) {
+            continue;
+        }
+        assign[row] = Some(c);
+        bf_asym_recurse(
+            cost,
+            rows,
+            cols,
+            penalty,
+            row + 1,
+            assign,
+            running + cost[row * cols + c],
+            best,
+        );
+    }
+    assign[row] = None;
+}
+
+#[wasm_bindgen_test]
+fn brute_force_parity_5x3_asymmetric() {
+    let mut state: u64 = 0xFACE_FEED;
+
+    for trial in 0..10 {
+        let cost: Vec<f64> = (0..15).map(|_| lcg_next(&mut state)).collect();
+        let penalty = 50.0; // moderate — some rows will unmatch
+
+        let bf_min = bruteforce_asymmetric(&cost, 5, 3, penalty);
+
+        let req = AssignmentRequest {
+            cost_matrix: cost.clone(),
+            rows: 5,
+            cols: 3,
+            row_roles: vec![],
+            col_roles: vec![],
+            hint_pairs: vec![],
+            unmatch_penalty: penalty,
+            node_budget_ms: None,
+        };
+
+        let req_js = serde_wasm_bindgen::to_value(&req).expect("serializes");
+        let resp_js = solve_assignment_cop(req_js).expect("solves");
+        let resp: AssignmentResponse =
+            serde_wasm_bindgen::from_value(resp_js).expect("deserializes");
+
+        assert_eq!(resp.assign.len(), 5, "trial {}: assign length", trial);
+
+        // At most 3 rows matched (only 3 columns).
+        let matched: usize = resp.assign.iter().filter(|&&c| c >= 0).count();
+        assert!(
+            matched <= 3,
+            "trial {}: {} rows matched but only 3 cols available",
+            trial,
+            matched,
+        );
+
+        // No duplicate non-SENTINEL columns.
+        let mut seen = [false; 3];
+        for &col in &resp.assign {
+            if col >= 0 {
+                let c = col as usize;
+                assert!(c < 3, "trial {}: col {} out of range", trial, col);
+                assert!(!seen[c], "trial {}: col {} assigned twice", trial, col);
+                seen[c] = true;
+            }
+        }
+
+        assert!(
+            (resp.cost - bf_min).abs() < 1e-9,
+            "trial {}: COP cost {} differs from brute-force {} (delta {})",
+            trial,
+            resp.cost,
+            bf_min,
+            (resp.cost - bf_min).abs(),
+        );
+    }
 }
