@@ -12,6 +12,7 @@ pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
+hungarian = "1"
 
 [lib]
 # cdylib only needed for PyO3 (maturin). Normal builds produce rlib only.
@@ -32,4 +33,12 @@ harness = false
 
 [[bench]]
 name = "lattice"
+harness = false
+
+[[bench]]
+name = "assignment"
+harness = false
+
+[[bench]]
+name = "cost_finite_domain"
 harness = false
