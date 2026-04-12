@@ -271,15 +271,15 @@ pub fn propagate_gac_alldiff<D: Domain>(
     // Build bipartite adjacency: u-node (var idx) -> list of v-node (val idx).
     let adj: Vec<Vec<u32>> = var_avail_raw
         .iter()
-        .map(|avail| avail.iter().map(|v| val_to_idx(v)).collect())
+        .map(|avail| avail.iter().map(&val_to_idx).collect())
         .collect();
 
     // Maximum matching.
     let (match_u, match_v) = hopcroft_karp(n_vars, n_vals, &adj);
 
     // Check that the matching covers all unassigned variables.
-    for u in 0..n_vars {
-        if match_u[u] == NONE {
+    for &mu in &match_u[..n_vars] {
+        if mu == NONE {
             return Revision::Unsatisfiable;
         }
     }
@@ -310,8 +310,8 @@ pub fn propagate_gac_alldiff<D: Domain>(
     let mut reachable = vec![false; total_nodes];
     {
         let mut bfs_queue: Vec<u32> = Vec::new();
-        for vi in 0..n_vals {
-            if match_v[vi] == NONE {
+        for (vi, &mv) in match_v.iter().enumerate().take(n_vals) {
+            if mv == NONE {
                 let node = (n_vars + vi) as u32;
                 reachable[node as usize] = true;
                 bfs_queue.push(node);

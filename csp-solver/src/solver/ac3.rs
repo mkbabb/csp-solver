@@ -15,14 +15,14 @@ struct BitsetWorklist {
 
 impl BitsetWorklist {
     fn new(capacity: usize) -> Self {
-        let num_words = (capacity + 63) / 64;
+        let num_words = capacity.div_ceil(64);
         Self {
             words: vec![0; num_words],
         }
     }
 
     fn new_full(capacity: usize) -> Self {
-        let num_words = (capacity + 63) / 64;
+        let num_words = capacity.div_ceil(64);
         let mut words = vec![u64::MAX; num_words];
         let remainder = capacity % 64;
         if remainder != 0 && !words.is_empty() {

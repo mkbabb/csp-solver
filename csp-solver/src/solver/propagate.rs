@@ -39,11 +39,11 @@ where
             for &ci in adjacency.constraints_for(neighbor) {
                 let ci = ci as usize;
                 let scope = constraints[ci].scope();
-                if scope.iter().all(|&v| assignment[v as usize].is_some()) {
-                    if !constraints[ci].check(assignment) {
-                        valid = false;
-                        break;
-                    }
+                if scope.iter().all(|&v| assignment[v as usize].is_some())
+                    && !constraints[ci].check(assignment)
+                {
+                    valid = false;
+                    break;
                 }
             }
 

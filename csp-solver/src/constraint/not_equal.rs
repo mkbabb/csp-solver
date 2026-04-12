@@ -32,15 +32,15 @@ impl NotEqual {
         let xj = self.scope[1] as usize;
         let mut changed = false;
 
-        if let Some(v) = vars[xi].domain.singleton_value() {
-            if vars[xj].prune(&v, depth) {
-                changed = true;
-            }
+        if let Some(v) = vars[xi].domain.singleton_value()
+            && vars[xj].prune(&v, depth)
+        {
+            changed = true;
         }
-        if let Some(v) = vars[xj].domain.singleton_value() {
-            if vars[xi].prune(&v, depth) {
-                changed = true;
-            }
+        if let Some(v) = vars[xj].domain.singleton_value()
+            && vars[xi].prune(&v, depth)
+        {
+            changed = true;
         }
 
         if vars[xi].domain.is_empty() || vars[xj].domain.is_empty() {

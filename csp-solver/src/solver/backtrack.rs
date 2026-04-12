@@ -109,11 +109,11 @@ where
     // cleanly, preserving whatever solutions have been found so far.
     // Checked before `nodes_explored += 1` so the post-budget node is
     // never counted and the flag is set exactly once per search.
-    if let Some(budget) = config.node_budget {
-        if stats.nodes_explored >= budget {
-            stats.budget_exceeded = true;
-            return true;
-        }
+    if let Some(budget) = config.node_budget
+        && stats.nodes_explored >= budget
+    {
+        stats.budget_exceeded = true;
+        return true;
     }
 
     stats.nodes_explored += 1;
@@ -137,11 +137,11 @@ where
         for &ci in adjacency.constraints_for(var) {
             let ci = ci as usize;
             let scope = constraints[ci].scope();
-            if scope.iter().all(|&v| assignment[v as usize].is_some()) {
-                if !constraints[ci].check(assignment) {
-                    valid = false;
-                    break;
-                }
+            if scope.iter().all(|&v| assignment[v as usize].is_some())
+                && !constraints[ci].check(assignment)
+            {
+                valid = false;
+                break;
             }
         }
 
@@ -162,13 +162,13 @@ where
                 ),
             };
 
-            if !dwo {
-                if backtrack_recurse(
+            if !dwo
+                && backtrack_recurse(
                     variables, constraints, adjacency, config, stats,
                     assignment, stack, solutions, depth + 1,
-                ) {
-                    return true;
-                }
+                )
+            {
+                return true;
             }
         }
 

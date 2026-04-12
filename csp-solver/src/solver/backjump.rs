@@ -85,11 +85,11 @@ where
     }
 
     // Budget guard — see `backtrack.rs::backtrack_recurse` for details.
-    if let Some(budget) = config.node_budget {
-        if stats.nodes_explored >= budget {
-            stats.budget_exceeded = true;
-            return BackjumpResult::Done;
-        }
+    if let Some(budget) = config.node_budget
+        && stats.nodes_explored >= budget
+    {
+        stats.budget_exceeded = true;
+        return BackjumpResult::Done;
     }
 
     stats.nodes_explored += 1;
@@ -119,20 +119,20 @@ where
         for &ci in adjacency.constraints_for(var) {
             let ci = ci as usize;
             let scope = constraints[ci].scope();
-            if scope.iter().all(|&v| assignment[v as usize].is_some()) {
-                if !constraints[ci].check(assignment) {
-                    valid = false;
-                    for &v in scope {
-                        if v != var
-                            && assignment[v as usize].is_some()
-                            && !conflict_membership[v as usize]
-                        {
-                            conflict_membership[v as usize] = true;
-                            conflict_vars.push(v);
-                        }
+            if scope.iter().all(|&v| assignment[v as usize].is_some())
+                && !constraints[ci].check(assignment)
+            {
+                valid = false;
+                for &v in scope {
+                    if v != var
+                        && assignment[v as usize].is_some()
+                        && !conflict_membership[v as usize]
+                    {
+                        conflict_membership[v as usize] = true;
+                        conflict_vars.push(v);
                     }
-                    break;
                 }
+                break;
             }
         }
 
