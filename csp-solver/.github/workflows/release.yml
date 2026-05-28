@@ -1,0 +1,83 @@
+# release — dual-registry publish for the csp-solver suite on a v*.*.* tag
+# (G.W5 Sub-wave C; CSC411-fold).
+#
+# TWO publish flows over TWO registries, dependency-ordered. changesets is
+# JS-only and does NOT manage the Rust crates — the crates.io side uses a
+# manual cargo-publish-on-tag flow (this workflow); the npm side (the
+# wasm-pack pkgs) could later adopt changesets but ships here on the same tag.
+#
+# FLOW 1 — crates.io (Rust crates; auth: CARGO_REGISTRY_TOKEN):
+#   csp-solver publishes FIRST (the engine; morph-core depends on it via the
+#   registry pin `csp-solver = { version = "0.1.0", path = ".." }`).
+#   morph-core publishes SECOND — crates.io's pre-publish dep-resolution gate
+#   blocks until csp-solver is live, so the job sleeps to let the index settle.
+#
+# FLOW 2 — npm (wasm-pack pkgs under @mkbabb/*; auth: NPM_TOKEN):
+#   @mkbabb/csp-solver-wasm + @mkbabb/morph have no shared upstream on the npm
+#   side, so they publish in parallel within the wasm job. The `--scope mkbabb`
+#   wasm-pack flag binds the @mkbabb/* npm scope at emit time; the emitted
+#   pkg/package.json carries the scoped name (csp-solver-wasm → @mkbabb/
+#   csp-solver-wasm; morph → @mkbabb/morph — the crate-rename at wasm-morph/
+#   Cargo.toml drives the morph.* emitted filenames).
+#
+# NOTE: this directory is not yet wired to its own GitHub remote
+# (mkbabb/csp-solver). The workflow ships as an on-disk artifact; git-init +
+# remote + the CARGO_REGISTRY_TOKEN / NPM_TOKEN secrets are a user-domain
+# follow-up.
+name: release
+
+on:
+    push:
+        tags:
+            - "v*.*.*"
+
+jobs:
+    # ─── FLOW 1: crates.io ──────────────────────────────────────────────
+    crates-io:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust nightly toolchain
+              uses: dtolnay/rust-toolchain@nightly
+            - name: test (gate before publish)
+              run: cargo test --workspace
+            - name: publish csp-solver (engine; publishes first)
+              run: cargo publish -p csp-solver
+              env:
+                  CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+            - name: wait for crates.io index to settle
+              run: sleep 60
+            - name: publish morph-core (depends on csp-solver)
+              run: cargo publish -p morph-core
+              env:
+                  CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+    # ─── FLOW 2: npm (wasm-pack pkgs) ───────────────────────────────────
+    npm:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust nightly toolchain
+              uses: dtolnay/rust-toolchain@nightly
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  registry-url: "https://registry.npmjs.org"
+            - name: Install wasm-pack
+              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            - name: wasm-pack build (csp-solver-wasm → @mkbabb/csp-solver-wasm)
+              run: wasm-pack build wasm --release --scope mkbabb
+            - name: publish @mkbabb/csp-solver-wasm
+              run: npm publish --access public
+              working-directory: wasm/pkg
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+            - name: wasm-pack build (morph → @mkbabb/morph)
+              run: wasm-pack build wasm-morph --release --scope mkbabb
+            - name: publish @mkbabb/morph
+              run: npm publish --access public
+              working-directory: wasm-morph/pkg
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

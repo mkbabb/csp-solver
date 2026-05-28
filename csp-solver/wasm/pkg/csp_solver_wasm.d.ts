@@ -366,9 +366,9 @@ export interface InitOutput {
     readonly solvestats_budgetExceeded: (a: number) => number;
     readonly solvestats_nodesExplored: (a: number) => bigint;
     readonly solvestats_propagations: (a: number) => bigint;
+    readonly init: () => void;
     readonly assignmentSentinel: () => number;
     readonly solveAssignmentCop: (a: any) => [number, number, number];
-    readonly init: () => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

@@ -1,0 +1,68 @@
+# ci — PR + push gate matrix for the csp-solver Cargo workspace (G.W5 Sub-wave C).
+#
+# This is the Rust + wasm member of the @mkbabb/* perimeter. The implicit
+# workspace is rooted at this Cargo.toml with four members: csp-solver (the
+# CSP engine), morph-core (alignment primitives), wasm (csp-solver-wasm), and
+# wasm-morph (morph). Edition 2024 + nightly toolchain (per CLAUDE.md).
+#
+# Gates:
+#   1. fmt        — cargo fmt --check (style gate)
+#   2. clippy     — cargo clippy over the workspace, warnings denied
+#   3. build      — cargo build over the workspace
+#   4. test       — cargo test over the workspace (83 tests in csp-solver +
+#                   the morph-core suite)
+#   5. wasm build — wasm-pack build for both wasm crates; this exercises the
+#                   exact emit path the release workflow publishes (the
+#                   pkg/ npm artifacts).
+#
+# NOTE: this directory is not yet wired to its own GitHub remote
+# (mkbabb/csp-solver). The workflow files ship as on-disk artifacts; the
+# git-init + remote + secrets setup is a user-domain follow-up.
+name: ci
+
+on:
+    pull_request:
+        branches: [main, master]
+    push:
+        branches: [main, master]
+
+jobs:
+    rust:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust nightly toolchain
+              uses: dtolnay/rust-toolchain@nightly
+              with:
+                  components: rustfmt, clippy
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: fmt
+              run: cargo fmt --all --check
+            - name: clippy
+              run: cargo clippy --workspace --all-targets -- -D warnings
+            - name: build
+              run: cargo build --workspace
+            - name: test
+              run: cargo test --workspace
+
+    wasm:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust nightly toolchain
+              uses: dtolnay/rust-toolchain@nightly
+            - name: Install wasm-pack
+              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            - name: wasm-pack build (csp-solver-wasm)
+              run: wasm-pack build wasm --scope mkbabb
+            - name: wasm-pack build (morph)
+              run: wasm-pack build wasm-morph --scope mkbabb
