@@ -8,6 +8,8 @@ export default defineConfig({
   base: process.env.VITE_BASE_URL || '/',
   resolve: {
     alias: {
+      '@pencil': path.resolve(__dirname, './src/pencil'),
+      '@games': path.resolve(__dirname, './src/games'),
       '@': path.resolve(__dirname, './src'),
     },
   },

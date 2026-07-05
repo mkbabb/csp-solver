@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useSudoku } from '@/composables/useSudoku'
-import SudokuBoard from '@/components/custom/SudokuBoard.vue'
-import ControlPanel from '@/components/custom/ControlPanel.vue'
-import DarkModeToggle from '@/components/custom/DarkModeToggle.vue'
-import SvgFilters from '@/components/decorative/SvgFilters.vue'
-import HandwrittenLogo from '@/components/decorative/HandwrittenLogo.vue'
-// import FilterTuner from '@/components/custom/FilterTuner.vue'
-import AttributionCard from '@/components/custom/AttributionCard.vue'
-import HandDrawnOutline from '@/components/custom/HandDrawnOutline.vue'
+import { ref, defineAsyncComponent } from 'vue'
+import { useSudoku } from '@games/sudoku/composables/useSudoku'
+import SudokuBoard from '@games/sudoku/SudokuBoard/SudokuBoard.vue'
+import ControlPanel from '@games/sudoku/ControlPanel/ControlPanel.vue'
+import DarkModeToggle from '@pencil/celestial/DarkModeToggle.vue'
+import SvgFilters from '@pencil/chrome/SvgFilters.vue'
+import HandwrittenLogo from '@pencil/chrome/HandwrittenLogo.vue'
+import AttributionCard from '@pencil/chrome/AttributionCard/AttributionCard.vue'
+import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'
+
+// Dev-only tuning tool — explicit env gate, not a commented-out import. import.meta.env.DEV
+// is statically inlined at build time, so the dynamic import()'s chunk is dead-code-eliminated
+// from production builds rather than merely being unreferenced source.
+const FilterTuner = import.meta.env.DEV
+  ? defineAsyncComponent(() => import('@pencil/dev/FilterTuner.vue'))
+  : null
+
 const sudoku = useSudoku()
 
 const desktopAttribution = ref<InstanceType<typeof AttributionCard> | null>(null)
@@ -28,8 +35,8 @@ function closeAll() {
     <!-- Shared SVG filter definitions -->
     <SvgFilters />
 
-    <!-- Filter tuner — dev tool, disabled for production -->
-    <!-- <FilterTuner /> -->
+    <!-- Filter tuner — dev tool, env-gated (import.meta.env.DEV), absent from prod builds -->
+    <component :is="FilterTuner" v-if="FilterTuner" />
 
     <!-- Desktop: fixed corner overlay -->
     <AttributionCard ref="desktopAttribution" />
