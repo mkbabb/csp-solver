@@ -1,17 +1,43 @@
 #!/usr/bin/env bash
-# Start csp-solver dev environment. Cleans up on exit/kill.
+# Start the csp-solver dev environment. Cleans up on exit/kill.
+#
+# Two modes:
+#   native (default) — uv (backend) + npm (frontend) directly on the host.
+#   --docker         — `docker compose up` (web/api + web/frontend containers).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 # ── Load .env if present ──────────────────────────────────
+# shellcheck source=/dev/null
 [[ -f "$ROOT/.env" ]] && set -o allexport && source "$ROOT/.env" && set +o allexport
 
 # ── Config ────────────────────────────────────────────────
 PROJECT_NAME="csp-solver"
 BACKEND_PORT_DEFAULT=9120
 FRONTEND_PORT_DEFAULT=9121
+
+MODE="native"
+if [[ "${1:-}" == "--docker" ]]; then
+    MODE="docker"
+    shift
+fi
+
+# ── Docker mode: delegate to compose, nothing else to do ─
+if [[ "$MODE" == "docker" ]]; then
+    exec docker compose -p "$PROJECT_NAME" up "$@"
+fi
+
+# ── Native mode: verify the web/ layout is actually present ─
+[[ -d "$ROOT/web/api/src" ]] || {
+    echo "ERROR: $ROOT/web/api/src not found — expected the web/api backend package." >&2
+    exit 1
+}
+[[ -d "$ROOT/web/frontend" ]] || {
+    echo "ERROR: $ROOT/web/frontend not found — expected the Vue frontend." >&2
+    exit 1
+}
 
 # ── Find a free port starting from $1 ────────────────────
 find_free_port() {
@@ -45,22 +71,22 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# ── Start backend ─────────────────────────────────────────
+# ── Start backend (web/api: uv-managed venv + Rust csp_solver wheel) ─
 CORS_ORIGINS="http://localhost:$FRONTEND_PORT,http://localhost:5173" \
-    uv run uvicorn app.api.main:app \
+    uv run --directory web/api uvicorn app.api.main:app \
     --host 0.0.0.0 --port "$BACKEND_PORT" \
-    --reload --reload-dir web/api/src &
+    --reload --reload-dir src &
 PIDS+=($!)
 
-# ── Start frontend ────────────────────────────────────────
+# ── Start frontend (web/frontend: npm + Vite) ────────────
 VITE_API_URL="http://localhost:$BACKEND_PORT" \
-    npx --prefix frontend vite frontend --port "$FRONTEND_PORT" &
+    npm --prefix web/frontend run dev -- --port "$FRONTEND_PORT" &
 PIDS+=($!)
 
 cat <<EOF
 
 ──────────────────────────────────────
-  CSP Solver Dev Environment
+  $PROJECT_NAME Dev Environment
 ──────────────────────────────────────
   Backend  → http://localhost:$BACKEND_PORT
   Frontend → http://localhost:$FRONTEND_PORT

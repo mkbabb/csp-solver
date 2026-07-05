@@ -1,3 +1,24 @@
 [workspace]
 members = ["csp-solver", "csp-solver/wasm", "csp-solver/morph-core", "csp-solver/wasm-morph"]
 resolver = "2"
+
+# ── wasm size-release profile (Pass-2 D9) ────────────────────────────────────
+# Workspace-root ONLY. Cargo reads `[profile.*]` solely from the workspace root;
+# member-level profile sections are ignored with a warning — so this lives here,
+# never in the wasm crates. The wasm cdylib builds select it explicitly
+# (`cargo build --profile wasm-release` / `wasm-pack --profile wasm-release`);
+# it never perturbs the default `release` profile the native PyO3 wheel uses.
+#
+# `opt-level="z"` is the dominant, measured size lever (−26.1% alone; D9). It is
+# deliberately the ONLY size lever here:
+#   - NO lto=fat / codegen-units=1 / strip — the T15 refutation stands (they net
+#     ≈0% and regress the native build), and `strip=true` additionally DELETES
+#     the wasm `target_features` section, hard-breaking the `-Oz` wasm-opt pass
+#     (the D9 strip↔wasm-opt hazard, reproduced on the real crates twice).
+# `panic="abort"` is size-only for the cdylib (wasm is abort-only regardless) and
+# does NOT touch the native wheel, which keeps `panic=unwind` so Rust panics
+# surface as a catchable `pyo3_runtime.PanicException` (the panic-contract lane).
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"
+panic = "abort"

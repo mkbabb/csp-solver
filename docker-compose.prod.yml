@@ -5,7 +5,10 @@ services:
       dockerfile: web/api/Dockerfile
       target: production
     environment:
-      - CORS_ORIGINS=${CORS_ORIGINS:-https://mbabb.fi.ncsu.edu}
+      # Ratified topology (W5-deploy-a): sudoku.babb.dev is the live frontend
+      # origin. The legacy NCSU host (mbabb.fi.ncsu.edu) is dead; do not
+      # reintroduce it as a fallback.
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://sudoku.babb.dev}
     restart: unless-stopped
     deploy:
       resources:
@@ -22,8 +25,14 @@ services:
       context: ./web/frontend
       target: production
       args:
+        # VITE_API_URL: same-origin by default (unset). The small always-on
+        # API origin's hostname is an open owner action (OD-5, W5-deploy-a)
+        # — set explicitly via env once that box is chosen; do not guess it
+        # here.
         VITE_API_URL: ${VITE_API_URL:-}
-        VITE_BASE_URL: ${VITE_BASE_URL:-/csp-solver/}
+        # sudoku.babb.dev serves from the apex, not a sub-path — /csp-solver/
+        # was the legacy NCSU mount point.
+        VITE_BASE_URL: ${VITE_BASE_URL:-/}
     restart: unless-stopped
     deploy:
       resources:

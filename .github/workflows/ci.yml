@@ -1,0 +1,286 @@
+# ci — PR + push gate matrix for the CSC411_HW2 monorepo (W0 build restoration).
+#
+# Authored for the LIVE workspace root = REPO ROOT (repo-root Cargo.toml is the
+# Cargo workspace with members csp-solver, csp-solver/wasm, csp-solver/morph-core,
+# csp-solver/wasm-morph). Edition 2024 + nightly toolchain (per CLAUDE.md). This
+# re-applies the queens-smoke lane from the composed seed (kernel-soundness-closure
+# §6) and adds the full campaign-amended gate set from the W0 lane table
+# (docs/tranches/2026-07-grand-uplift/waves/W0-build-restoration.md).
+#
+# NOTE on workspace-root adaptation: the seed workflow was written for csp-solver/
+# as the Cargo root, so its cargo commands ran there. Here the workspace root is the
+# REPO ROOT — cargo runs at repo root, and the queens bench needs `-p csp-solver`
+# because the benches live in the csp-solver package.
+#
+# Lane → job map (W0 lane table; provenance cited per step):
+#   1. fmt + clippy       -> lint       (clippy -D warnings; strict, no continue-on-error)
+#   2. build + test       -> rust       (cargo build/test --workspace — NEVER per-crate)
+#   3. queens-bench smoke -> rust       (the only lane that runs the assert_eq!(92/14200))
+#   4. py compile         -> py-compile (cargo check --features py under Python <=3.13)
+#   5. py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in web/api)
+#   6. wasm               -> wasm       (wasm-pack test --node + clippy --target wasm32)
+#   7. twiggy budgets     -> twiggy     (full module fail>240 KB / warn>215 KB)
+#   8. frontend           -> frontend   (npm ci --dry-run; npm ci; vue-tsc --noEmit)
+#
+# Build posture (STANDING, per the T15 refutation — synthesis-pass3.md §1 #14):
+# default release profile retained. NO lto=fat, NO codegen-units=1, NO strip
+# anywhere in CI — the 10-25% claim was load-average-50 contention noise; on a
+# quiet host lto=fat+cu=1+strip alone is +16-17% slower and the package nets ~=0%.
+# The wheel lane builds in the default (dev) profile: the measured +36-40% cold
+# penalty applies ONLY if release profiles are adopted (they aren't).
+name: ci
+
+on:
+    pull_request:
+        branches: [main, master]
+    push:
+        branches: [main, master]
+
+jobs:
+    # ---------------------------------------------------------------- Lane 1
+    # fmt + clippy. Kept in a job of its own so a red clippy does NOT mask the
+    # build/test/queens signal (those lanes should be green at HEAD; clippy is
+    # RED until W1 fixes the 3 composition residuals — gac/mod.rs:192,
+    # search.rs:246 collapsible-if, tests/assignment_proptest.rs:42 too-many-args;
+    # kernel-soundness-closure.md §7 amendment 3). Strict, no continue-on-error.
+    lint:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust nightly toolchain
+              uses: dtolnay/rust-toolchain@nightly
+              with:
+                  components: rustfmt, clippy
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-lint-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: fmt
+              run: cargo fmt --all --check
+            - name: clippy (-D warnings, workspace, all targets)
+              run: cargo clippy --workspace --all-targets -- -D warnings
+
+    # ---------------------------------------------------------------- Lanes 2 + 3
+    # build + test + queens-bench smoke. --workspace only, NEVER per-crate: the
+    # wasm SolveConfig E0063 break was invisible to per-crate tests
+    # (synthesis-pass3.md §1 T5 amendment 4).
+    rust:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust nightly toolchain
+              uses: dtolnay/rust-toolchain@nightly
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-rust-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: build (workspace)
+              run: cargo build --workspace
+            - name: test (workspace)
+              run: cargo test --workspace
+            - name: queens-bench smoke (ground-truth solution-count asserts)
+              # criterion --test mode runs each bench closure once, executing the
+              # embedded assert_eq!(solutions.len(), 92 / 14200) checks that
+              # `cargo test` structurally cannot see. The ONLY CI lane that sees
+              # those assertions — guards the AC-3/MAC enumerate-continuation
+              # soundness regression (kernel-soundness-closure.md §6). `-p csp-solver`
+              # because the benches live in the csp-solver package.
+              run: cargo bench -p csp-solver --bench queens -- --test
+
+    # ---------------------------------------------------------------- Lane 4
+    # py compile — the historical break class (Pass-1 N1). `cargo check --features py`
+    # under Python <=3.13: PyO3 0.24's ceiling is 3.13 (host 3.14 fails —
+    # kernel-soundness-closure.md §7.6). RED until W1 fixes the src/py.rs E0063.
+    py-compile:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v4
+            - name: Pin Python 3.13 (PyO3 0.24 ceiling)
+              id: setup-python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: '3.13'
+            - name: Install Rust nightly toolchain
+              uses: dtolnay/rust-toolchain@nightly
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-pycompile-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: cargo check --features py
+              # Point PyO3's build script at the pinned 3.13 interpreter explicitly
+              # (fail-explicit: don't let it discover a stray host Python > the ceiling).
+              env:
+                  PYO3_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+              run: cargo check -p csp-solver --features py
+
+    # ---------------------------------------------------------------- Lane 5
+    # py runtime — the runtime gate for typed exceptions and GIL probes;
+    # compile-check alone is insufficient (kernel-soundness-closure.md §7.6). Builds
+    # the csp_solver wheel with maturin (config lives in csp-solver/pyproject.toml —
+    # module csp_solver, features ["py"]; NOT web/api/pyproject.toml, which is the
+    # hatchling `app` package), installs it into the web/api uv venv, runs pytest
+    # (carries the panic-contract tests: unwind -> PanicException catchable; forced
+    # abort -> SIGABRT negative control — authored under web/api/tests by W0's
+    # test-author lane). Default (dev) profile: no --release, per the T15 build posture.
+    # RED until W1 fixes the src/py.rs E0063 (maturin compiles the py surface).
+    py-runtime:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v4
+            - name: Pin Python 3.13 (PyO3 0.24 ceiling)
+              id: setup-python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: '3.13'
+            - name: Install Rust nightly toolchain
+              uses: dtolnay/rust-toolchain@nightly
+            - name: Install uv
+              uses: astral-sh/setup-uv@v4
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-pyruntime-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: Build csp_solver wheel (maturin; default profile, no --release)
+              # --interpreter + PYO3_PYTHON both pin the pinned 3.13 ABI explicitly.
+              env:
+                  PYO3_PYTHON: ${{ steps.setup-python.outputs.python-path }}
+              run: |
+                  uvx --from 'maturin>=1.0,<2.0' maturin build \
+                    --manifest-path csp-solver/Cargo.toml \
+                    --interpreter '${{ steps.setup-python.outputs.python-path }}' \
+                    --out target/wheels
+            - name: Sync backend venv (web/api, dev extras)
+              working-directory: web/api
+              run: uv sync --extra dev
+            - name: Install csp_solver wheel into backend venv
+              working-directory: web/api
+              run: uv pip install ../../target/wheels/*.whl
+            - name: pytest (web/api, against the installed wheel)
+              # --no-sync so `uv run` does not re-resolve the venv and evict the
+              # manually-installed csp_solver wheel (it isn't a web/api dependency).
+              working-directory: web/api
+              run: uv run --no-sync pytest
+
+    # ---------------------------------------------------------------- Lane 6
+    # wasm — wasm-pack test --node scoped to csp-solver/wasm ONLY (wasm-morph has
+    # no #[wasm_bindgen_test] until W11 — morph-excision-spec.md R6 / W0 residual
+    # risks), plus clippy --target wasm32-unknown-unknown for BOTH wasm crates.
+    wasm:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust nightly toolchain (+ wasm32 target, clippy)
+              uses: dtolnay/rust-toolchain@nightly
+              with:
+                  targets: wasm32-unknown-unknown
+                  components: clippy
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: Install wasm-pack (>=0.14 floor — D9 three-file atomicity)
+              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            - name: wasm-pack test --node (csp-solver/wasm only)
+              run: wasm-pack test --node csp-solver/wasm
+            - name: clippy --target wasm32 (csp-solver-wasm)
+              run: cargo clippy -p csp-solver-wasm --target wasm32-unknown-unknown -- -D warnings
+            - name: clippy --target wasm32 (morph)
+              run: cargo clippy -p morph --target wasm32-unknown-unknown -- -D warnings
+
+    # ---------------------------------------------------------------- Lane 7
+    # twiggy budgets — measured artifact bands (Pass-2 prototype 6). Full module
+    # FAIL >240 KB / WARN >215 KB on the raw .wasm (decimal KB, matching prototype
+    # 6's "92,897 B raw ~= 93 KB" convention). The separate ~93 KB lean-sudoku
+    # budget is RESERVED, not enforced here: no lean build target exists yet
+    # (csp-solver/wasm has no [features]/full-mirror flag; serde deps are not
+    # optional; there is no --no-default-features lean sudoku.rs). It lands with the
+    # deploy-C lean artifact (synthesis-pass2.md §3.4) — add its gate then, do NOT
+    # silently skip a broken lean build now.
+    twiggy:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust nightly toolchain (+ wasm32 target)
+              uses: dtolnay/rust-toolchain@nightly
+              with:
+                  targets: wasm32-unknown-unknown
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-twiggy-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: Install wasm-pack (>=0.14 floor)
+              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            - name: Install twiggy (binary cache)
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: twiggy
+            - name: wasm-pack build (full module)
+              run: wasm-pack build csp-solver/wasm --scope mkbabb
+            - name: twiggy top + raw-size budget (fail >240 KB / warn >215 KB)
+              run: |
+                  set -euo pipefail
+                  WASM=csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+                  test -f "$WASM" || { echo "::error::$WASM not produced by wasm-pack build"; exit 1; }
+                  twiggy top -n 25 "$WASM" || true
+                  RAW=$(wc -c < "$WASM")
+                  echo "full module raw size: ${RAW} B"
+                  if [ "$RAW" -gt 240000 ]; then
+                    echo "::error::wasm full module ${RAW} B exceeds the 240 KB fail budget"
+                    exit 1
+                  elif [ "$RAW" -gt 215000 ]; then
+                    echo "::warning::wasm full module ${RAW} B exceeds the 215 KB warn threshold"
+                  fi
+
+    # ---------------------------------------------------------------- Lane 8
+    # frontend — npm ci --dry-run (EUSAGE was P0, Pass-2 prototype 8) then npm ci +
+    # vue-tsc --noEmit. RED until W7/W8 heal the keyframes.js 5.x drift.
+    frontend:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '22'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            - name: npm ci --dry-run (lockfile integrity gate)
+              working-directory: web/frontend
+              run: npm ci --dry-run
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            - name: vue-tsc --noEmit
+              working-directory: web/frontend
+              run: npx vue-tsc --noEmit
