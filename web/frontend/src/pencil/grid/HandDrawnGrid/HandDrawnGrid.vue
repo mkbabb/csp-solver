@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch, nextTick, ref } from 'vue';
-import { useLineBoil } from '@mkbabb/pencil-boil';
+import { useBoilFrame } from '@pencil/composables/boilScheduler';
 import { generateGridBoilFrames } from '../gridPaths';
 import { BOIL_CONFIG } from '@pencil/config/pencilConfig';
 import { usePathAnimation } from './usePathAnimation';
@@ -29,8 +29,8 @@ const boilFrames = computed(() =>
     )
 );
 
-// Path-based boil: cycle frame index at ~6.7fps
-const { currentFrame: boilFrame } = useLineBoil(
+// Path-based boil: cycle frame index at ~6.7fps, on the unified rAF scheduler
+const { currentFrame: boilFrame } = useBoilFrame(
     () => BOIL_CONFIG.frameCount,
     () => BOIL_CONFIG.intervalMs,
 );

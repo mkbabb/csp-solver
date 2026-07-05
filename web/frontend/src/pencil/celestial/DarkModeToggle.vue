@@ -92,22 +92,30 @@
 
 <script setup lang="ts">
 import { watch, computed } from 'vue'
-import { generateSunRays, useLineBoil, wobbleDiamond, wobbleStarPolygon } from '@mkbabb/pencil-boil'
+import { generateSunRays, wobbleDiamond, wobbleStarPolygon } from '@mkbabb/pencil-boil'
+import { useBoilFrame, usePrefersReducedMotion } from '@pencil/composables/boilScheduler'
 import { useTheme } from '@/composables/useTheme'
 
 const { isDark, toggleDark } = useTheme()
+const reducedMotion = usePrefersReducedMotion()
+
+// All three ride the unified rAF scheduler; the watch below start/stop-gates them by mode.
 
 // Star path boil at ~8fps — only active in dark mode
-const { currentFrame: starFrame, start: startStarBoil, stop: stopStarBoil } = useLineBoil(4)
+const { currentFrame: starFrame, start: startStarBoil, stop: stopStarBoil } = useBoilFrame(4)
 
 // Sun sparkle boil at ~8fps — only active in light mode
-const { currentFrame: sunSparkleFrame, start: startSunBoil, stop: stopSunBoil } = useLineBoil(4)
+const { currentFrame: sunSparkleFrame, start: startSunBoil, stop: stopSunBoil } = useBoilFrame(4)
 
 // Sun ray boil at ~2.5fps — slow stop-motion for ray shape cycling
-const { currentFrame: sunRayFrame, start: startRayBoil, stop: stopRayBoil } = useLineBoil(6, 800)
+const { currentFrame: sunRayFrame, start: startRayBoil, stop: stopRayBoil } = useBoilFrame(6, 800)
 
-// Pause star boil when not in dark mode, sun sparkle boil when dark (saves perf)
-watch(isDark, (dark) => {
+// Pause star boil when not in dark mode, sun sparkle boil when dark (saves perf).
+// `reducedMotion` is a dep so this re-asserts the correct mode state after a PRM
+// round-trip — otherwise useBoilFrame's own watchEffect (which restarts every boil when
+// PRM disengages) would resurrect the mode-inactive one. start() self-guards on PRM, so
+// the start* calls are no-ops while reduced motion is engaged.
+watch([isDark, reducedMotion], ([dark]) => {
     if (dark) { startStarBoil(); stopSunBoil(); stopRayBoil(); }
     else { stopStarBoil(); startSunBoil(); startRayBoil(); }
 }, { immediate: true })

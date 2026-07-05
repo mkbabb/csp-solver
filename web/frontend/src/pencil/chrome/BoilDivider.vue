@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useLineBoil } from '@mkbabb/pencil-boil'
+import { useBoilFrame } from '@pencil/composables/boilScheduler'
 import { generateLineBoilFrames } from '@pencil/grid/gridPaths'
 import { BOIL_CONFIG } from '@pencil/config/pencilConfig'
 
@@ -10,10 +10,10 @@ import { BOIL_CONFIG } from '@pencil/config/pencilConfig'
  * variants) — pure pencil chrome with zero sudoku semantics, now a single pencil-local
  * component consumed twice instead.
  *
- * W7 (topology) extracts it on `@mkbabb/pencil-boil`'s `useLineBoil` — the same primitive
- * `ControlPanel.vue` inlined. Its migration onto the unified rAF scheduler (so it stops
- * being an independent rAF chain) is W8's — see W8 §Unified scheduler ("Migrate
- * BoilDivider.vue — the move-created 4th rAF chain").
+ * W7 (topology) extracted it on `@mkbabb/pencil-boil`'s `useLineBoil`; W8 migrates it
+ * onto the unified rAF scheduler (`useBoilFrame`) so the two mounted instances stop
+ * being an independent rAF chain — this is the move-created 4th chain the W8 §Unified
+ * scheduler spec calls out.
  */
 const dividerFrames = computed(() =>
   generateLineBoilFrames(
@@ -22,7 +22,7 @@ const dividerFrames = computed(() =>
     BOIL_CONFIG.frameBoil, BOIL_CONFIG.frameCount,
   )
 )
-const { currentFrame: dividerFrame } = useLineBoil(
+const { currentFrame: dividerFrame } = useBoilFrame(
   () => BOIL_CONFIG.frameCount,
   () => BOIL_CONFIG.intervalMs,
 )

@@ -1,12 +1,12 @@
 import { ref } from 'vue'
 import { KeyframesAnimation } from '@mkbabb/keyframes.js/engine'
 import { mulberry32 } from '@mkbabb/pencil-boil'
-import { useReducedMotion } from '@pencil/composables/useReducedMotion'
+import { usePrefersReducedMotion } from '@pencil/composables/boilScheduler'
 import { DRAW_IN_PRESETS } from '@pencil/config/pencilConfig'
 
 export function usePathAnimation(svgRef: import('vue').Ref<SVGSVGElement | null>) {
   const pathsVisible = ref(false)
-  const reducedMotion = useReducedMotion()
+  const reducedMotion = usePrefersReducedMotion()
   let drawAnimations: KeyframesAnimation<any>[] = []
 
   function getPathElements(): SVGPathElement[] {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { FILTER_PRESETS, type FilterPreset } from '@pencil/config/pencilConfig';
+import { useFilterParamBoil, type BoilHandle } from '@pencil/composables/boilScheduler';
 
 const presets = computed(() => Object.values(FILTER_PRESETS));
 
@@ -10,57 +11,55 @@ function filterRegion(p: FilterPreset) {
 }
 
 // ── JS-driven boil animation (Camillo Visini method) ──
-// Oscillates feTurbulence baseFrequency via setInterval + setAttribute.
-// No SMIL <animate> — avoids framework re-render issues entirely.
-
-const reducedMotion =
-  typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Oscillates feTurbulence baseFrequency via the unified rAF scheduler + setAttribute.
+// No SMIL <animate> — avoids framework re-render issues entirely. Was 3 independent
+// setIntervals (one per wobble preset); now 3 subscribers on the ONE shared rAF chain
+// (W8 unified scheduler) — PRM-reactive and visibility-paused for free via
+// useFilterParamBoil's central gates, replacing the one-shot `matchMedia(...).matches`
+// read this file used to do at setup time (which never re-checked PRM after mount).
 
 const svgRef = ref<SVGSVGElement | null>(null);
-const intervals: ReturnType<typeof setInterval>[] = [];
+const turbEls = new Map<string, SVGFETurbulenceElement>();
 
-function startBoilAnimations() {
-  if (reducedMotion || !svgRef.value) return;
-
-  for (const p of Object.values(FILTER_PRESETS)) {
-    if (!p.wobble) continue;
-
-    const turbEl = svgRef.value.querySelector(
-      `#${CSS.escape(p.id)} feTurbulence`
-    ) as SVGFETurbulenceElement | null;
-    if (!turbEl) continue;
-
-    // Clone the offsets array so we can rotate it independently per filter
-    const offsets = [...p.wobble.offsets];
+// Handles are constructed synchronously here (useFilterParamBoil calls onUnmounted()
+// internally, which requires the synchronous setup context) — but the DOM query + the
+// element registration is deferred to onMounted, since the <filter> elements are
+// v-for-rendered and must exist before querySelector can find them. Until an element is
+// registered, the tick body no-ops (the subscriber is enrolled but harmless).
+const boilHandles: { id: string; handle: BoilHandle }[] = Object.values(FILTER_PRESETS)
+  .filter((p) => p.wobble)
+  .map((p) => {
+    const offsets = [...p.wobble!.offsets];
     let idx = 0;
-
-    const interval = setInterval(() => {
-      // Read current config (reactive — tuner changes picked up automatically)
-      const w = p.wobble!;
-      const offset = offsets[idx % offsets.length];
-      const freq = Math.round((w.baseFrequency + offset * w.animScale) * 10000) / 10000;
-      turbEl.setAttribute('baseFrequency', String(freq));
-      idx++;
-    }, p.wobble.intervalMs);
-
-    intervals.push(interval);
-  }
-}
-
-function stopBoilAnimations() {
-  intervals.forEach(clearInterval);
-  intervals.length = 0;
-}
+    const handle = useFilterParamBoil(
+      (steps) => {
+        const turbEl = turbEls.get(p.id);
+        if (!turbEl) return;
+        idx += steps;
+        const w = p.wobble!;
+        const offset = offsets[idx % offsets.length];
+        const freq = Math.round((w.baseFrequency + offset * w.animScale) * 10000) / 10000;
+        turbEl.setAttribute('baseFrequency', String(freq));
+      },
+      () => p.wobble!.intervalMs,
+    );
+    return { id: p.id, handle };
+  });
 
 onMounted(() => {
   // Short delay so filter DOM is fully mounted before querying
-  requestAnimationFrame(() => startBoilAnimations());
+  requestAnimationFrame(() => {
+    if (!svgRef.value) return;
+    for (const { id } of boilHandles) {
+      const el = svgRef.value.querySelector(`#${CSS.escape(id)} feTurbulence`) as SVGFETurbulenceElement | null;
+      if (el) turbEls.set(id, el);
+    }
+    boilHandles.forEach(({ handle }) => handle.start());
+  });
 });
 
-onUnmounted(() => {
-  stopBoilAnimations();
-});
+// No onUnmounted needed — each useFilterParamBoil() handle owns its own teardown
+// (registered internally via onUnmounted at construction time).
 </script>
 
 <template>

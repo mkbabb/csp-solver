@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useReducedMotion } from '@pencil/composables/useReducedMotion';
+import { usePrefersReducedMotion } from '@pencil/composables/boilScheduler';
 
 const logoFilter = 'url(#wobble-logo)';
 
-const reducedMotion = useReducedMotion();
+const reducedMotion = usePrefersReducedMotion();
 
 const isDrawn = ref(reducedMotion.value);
 

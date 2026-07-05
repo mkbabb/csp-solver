@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { getVariant, getAllVariants } from './glyphRegistry';
-import { createGlyphDrawIn, createGlyphWiggle } from './glyphAnimations';
+import { createGlyphDrawIn, createGlyphWiggle, type GlyphWiggleHandle } from './glyphAnimations';
 import { mulberry32 } from '@mkbabb/pencil-boil';
 import { DRAW_IN_PRESETS, GLYPH_ANIM } from '@pencil/config/pencilConfig';
 import type { KeyframesAnimation } from '@mkbabb/keyframes.js/engine';
@@ -20,7 +20,7 @@ const props = defineProps<{
 const pathRef = ref<SVGPathElement | null>(null);
 
 let drawInAnim: KeyframesAnimation<any> | null = null;
-let wiggleAnim: KeyframesAnimation<any> | null = null;
+let wiggleAnim: GlyphWiggleHandle | null = null;
 
 const glyph = computed(() => {
     if (!props.value) return null;
