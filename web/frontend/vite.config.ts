@@ -40,6 +40,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vue-vendor': ['vue'],
+          'animation-vendor': ['@mkbabb/keyframes.js/engine', '@mkbabb/pencil-boil'],
         },
       },
     },
