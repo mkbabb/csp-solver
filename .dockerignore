@@ -1,0 +1,51 @@
+# This file governs the repo-root build context ("." — see docker-compose.yml's
+# `backend.build.context: .`). The frontend build (context: ./web/frontend) does
+# NOT read this file; it needs its own web/frontend/.dockerignore (not yet authored;
+# out of this file's scope — see hygiene-author report).
+#
+# web/api/Dockerfile COPYs only `csp-solver/` and `web/api/` out of this context —
+# everything else here exists purely to keep the build-context tarball small.
+
+# VCS / harness infra
+.git/
+.claude/
+.github/
+
+# Rust build artifacts (workspace target — the Docker builder does a fresh
+# `maturin build` over the copied csp-solver/ tree; the host target/ is never
+# referenced and is multi-GB)
+target/
+csp-solver/target/
+
+# Frontend (not touched by the backend build; large + irrelevant to it)
+web/frontend/node_modules/
+web/frontend/dist/
+web/frontend/test-results/
+web/frontend/e2e/
+
+# Python artifacts
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.venv/
+my_venv/
+**/*.egg-info/
+.mypy_cache/
+
+# Docs, scratch, evidence (not needed by any Docker build)
+docs/
+
+# Editor / OS
+.vscode/
+.idea/
+.metadata/
+.DS_Store
+
+# Env files (never bake secrets into an image; compose passes these at runtime)
+.env
+.env.local
+
+# Misc caches
+.playwright-mcp/
+.vite/
+*.tsbuildinfo

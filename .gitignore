@@ -7,8 +7,8 @@ my_venv/
 *.egg-info/
 
 # Node
-frontend/node_modules/
-frontend/dist/
+web/frontend/node_modules/
+web/frontend/dist/
 
 # IDE
 .vscode/
@@ -28,22 +28,23 @@ frontend/dist/
 # Docker
 .docker/
 
-# uv
+# Playwright (browser cache + test artifacts)
 .playwright-mcp/
+web/frontend/test-results/
 
-# Temp screenshots
+# Temp screenshots (docs/tranches/.gitignore negates this for tranche evidence — keep both intact)
 *.png
 *.jpeg
 *.jpg
-
-# Playwright test artifacts
-frontend/test-results/
 
 # Vite cache
 .vite/
 
 # TS build info
 *.tsbuildinfo
+
 # Rust
 target/
-Cargo.lock
+
+# Harness session infra (worktree checkouts, thousands of ephemeral files)
+.claude/
