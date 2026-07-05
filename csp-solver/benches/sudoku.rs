@@ -160,6 +160,7 @@ fn bench_sudoku_9x9(c: &mut Criterion) {
                         backjumping: cfg.backjumping,
                         optimization_mode: OptimizationMode::Feasibility,
                         node_budget: Some(10_000_000),
+                        ..Default::default()
                     };
                     let solutions = csp.solve_with_given(&config, &given);
                     assert!(!solutions.is_empty());

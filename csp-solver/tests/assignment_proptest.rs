@@ -12,6 +12,17 @@ use proptest::prelude::*;
 // Brute-force oracle
 // ---------------------------------------------------------------------------
 
+/// Read-only problem parameters shared across the brute-force recursion.
+/// Bundled into one struct so the recursive helper stays within clippy's
+/// argument-count bound (the varying state — `row`, `assign`, `running_cost`,
+/// `best` — remains explicit).
+struct Problem<'a> {
+    costs: &'a [f64],
+    rows: usize,
+    cols: usize,
+    unmatch_penalty: f64,
+}
+
 /// Enumerate all valid assignments for an `rows x cols` problem and return
 /// the minimum total cost. Each row picks a column or UNMATCHED (SENTINEL).
 /// No two rows may share the same non-SENTINEL column.
@@ -19,32 +30,26 @@ use proptest::prelude::*;
 /// For rows R and cols C the search space is (C+1)^R candidates, filtered
 /// for validity. At R,C <= 5 this is at most 6^5 = 7776 candidates.
 fn bruteforce_min_assignment(costs: &[f64], rows: usize, cols: usize, unmatch_penalty: f64) -> f64 {
-    let mut best = f64::INFINITY;
-    let mut assign: Vec<Option<usize>> = vec![None; rows];
-    bruteforce_recurse(
+    let problem = Problem {
         costs,
         rows,
         cols,
         unmatch_penalty,
-        0,
-        &mut assign,
-        0.0,
-        &mut best,
-    );
+    };
+    let mut best = f64::INFINITY;
+    let mut assign: Vec<Option<usize>> = vec![None; rows];
+    bruteforce_recurse(&problem, 0, &mut assign, 0.0, &mut best);
     best
 }
 
 fn bruteforce_recurse(
-    costs: &[f64],
-    rows: usize,
-    cols: usize,
-    unmatch_penalty: f64,
+    p: &Problem,
     row: usize,
     assign: &mut Vec<Option<usize>>,
     running_cost: f64,
     best: &mut f64,
 ) {
-    if row == rows {
+    if row == p.rows {
         if running_cost < *best {
             *best = running_cost;
         }
@@ -58,32 +63,20 @@ fn bruteforce_recurse(
 
     // Option: unmatched (SENTINEL).
     assign[row] = None;
-    bruteforce_recurse(
-        costs,
-        rows,
-        cols,
-        unmatch_penalty,
-        row + 1,
-        assign,
-        running_cost + unmatch_penalty,
-        best,
-    );
+    bruteforce_recurse(p, row + 1, assign, running_cost + p.unmatch_penalty, best);
 
     // Option: assign to each column not already taken.
-    for c in 0..cols {
+    for c in 0..p.cols {
         let taken = (0..row).any(|r| assign[r] == Some(c));
         if taken {
             continue;
         }
         assign[row] = Some(c);
         bruteforce_recurse(
-            costs,
-            rows,
-            cols,
-            unmatch_penalty,
+            p,
             row + 1,
             assign,
-            running_cost + costs[row * cols + c],
+            running_cost + p.costs[row * p.cols + c],
             best,
         );
     }

@@ -45,7 +45,7 @@ impl<V: Clone + PartialEq + std::fmt::Debug> CardinalityConstraint<V> {
 
 impl<D: Domain> Constraint<D> for CardinalityConstraint<D::Value>
 where
-    D::Value: PartialEq,
+    D::Value: PartialEq + Send + Sync,
 {
     fn scope(&self) -> &[VarId] {
         &self.scope

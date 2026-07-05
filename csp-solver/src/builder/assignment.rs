@@ -416,7 +416,7 @@ impl AssignmentBuilder {
         let config = SolveConfig {
             optimization_mode: OptimizationMode::MinimizeCost,
             max_solutions: 1,
-            pruning: Pruning::AcFc,
+            pruning: Pruning::Ac3,
             node_budget: self.node_budget.or(Some(DEFAULT_NODE_BUDGET)),
             ..SolveConfig::default()
         };

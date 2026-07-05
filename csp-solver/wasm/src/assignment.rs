@@ -184,7 +184,7 @@ pub fn solve_assignment_cop(req: JsValue) -> Result<JsValue, JsError> {
     if !col_roles.is_empty() {
         b = b.col_group(move |k| col_roles[k]);
     }
-    for chunk in req.hint_pairs.chunks_exact(2) {
+    for chunk in req.hint_pairs.as_chunks::<2>().0 {
         b = b.pin(chunk[0] as usize, chunk[1]);
     }
 

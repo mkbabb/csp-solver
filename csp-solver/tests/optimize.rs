@@ -66,7 +66,7 @@ impl Domain for CostFiniteDomain {
         self.active.clone()
     }
 
-    fn iter(&self) -> impl Iterator<Item = i32> {
+    fn iter(&self) -> impl Iterator<Item = i32> + use<> {
         self.active.clone().into_iter()
     }
 }

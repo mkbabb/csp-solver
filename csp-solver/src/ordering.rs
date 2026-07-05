@@ -13,6 +13,10 @@ pub enum Ordering {
     FailFirst,
     /// dom/wdeg: pick the variable with the smallest domain/weighted-degree ratio.
     DomWdeg,
+    /// CHS (Conflict-History Search): same `dom / Σ weights` scan as `DomWdeg`,
+    /// but the weights are updated dynamically by an exponential recency-weighted
+    /// average on each conflict (see [`crate::solver::heuristic`]).
+    Chs,
 }
 
 /// Select the next unassigned variable from the stack according to the ordering heuristic.
@@ -45,7 +49,10 @@ pub fn select_variable<D: Domain>(
             Some(best_idx)
         }
 
-        Ordering::DomWdeg => {
+        // CHS and DomWdeg share the `dom / Σ weights` branching rule; they
+        // differ only in *how* `constraint_weights` evolves (static 1.0 for
+        // DomWdeg, ERWA-updated for CHS — see `solver::heuristic`).
+        Ordering::DomWdeg | Ordering::Chs => {
             let mut best_idx = 0;
             let mut best_score = f64::MAX;
             for (i, &var) in stack.iter().enumerate() {

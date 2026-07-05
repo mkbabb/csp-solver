@@ -268,6 +268,11 @@ impl From<&SolveConfig> for RustSolveConfig {
             backjumping: c.backjumping,
             optimization_mode: c.optimization_mode.into(),
             node_budget: c.node_budget,
+            // Neither cancellation nor Luby restarts are exposed through the
+            // wasm ABI (no cross-thread timeout in a single-threaded worker;
+            // restarts stay opt-in and off for the deterministic sudoku wire).
+            restarts: false,
+            cancel: None,
         }
     }
 }
@@ -321,8 +326,9 @@ impl SolveStats {
 ///
 /// Holds an internal `csp_solver::Csp<BitsetDomain>` and exposes the
 /// same surface as `py.rs::Csp`. The bitset specialization matches the
-/// Python binding's choice — `BitsetDomain` covers every value in
-/// `0..u32::MAX`, which is the natural domain for the integer-CSP
+/// Python binding's choice — `BitsetDomain` is `u128`-backed and covers
+/// values in `0..128` (out-of-range values panic; see the R7 release-mode
+/// guard in `csp-solver/src/domain/bitset.rs`), spanning the integer-CSP
 /// puzzles the solver was originally written for.
 #[wasm_bindgen]
 pub struct Csp {

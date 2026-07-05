@@ -36,6 +36,8 @@ use super::traits::{Constraint, Revision, VarId};
 pub struct AllDifferentExcept<V: Clone + PartialEq + std::fmt::Debug> {
     pub(crate) scope: Vec<VarId>,
     pub(crate) sentinel: V,
+    /// Stable per-constraint id keying the GAC matching warm-start cache.
+    gac_id: u32,
 }
 
 impl<V: Clone + PartialEq + std::fmt::Debug> AllDifferentExcept<V> {
@@ -45,6 +47,7 @@ impl<V: Clone + PartialEq + std::fmt::Debug> AllDifferentExcept<V> {
         Self {
             scope: vars,
             sentinel,
+            gac_id: crate::solver::gac::next_gac_id(),
         }
     }
 
@@ -82,16 +85,19 @@ impl<V: Clone + PartialEq + std::fmt::Debug> AllDifferentExcept<V> {
     pub(crate) fn revise_impl<D>(&self, vars: &mut [Variable<D>], depth: usize) -> Revision
     where
         D: Domain<Value = V>,
+        V: 'static,
     {
         // For larger scopes, GAC provides strictly stronger pruning than
         // singleton removal — it detects Hall sets and matching failures
-        // that pairwise checks miss.
+        // that pairwise checks miss. The matching is warm-started across calls
+        // via the constraint's cache id.
         if self.scope.len() >= 4 {
-            return crate::solver::gac_alldiff_except::propagate_gac_alldiff_except(
+            return crate::solver::gac::propagate_gac_core(
                 &self.scope,
-                &self.sentinel,
+                Some(&self.sentinel),
                 vars,
                 depth,
+                Some(self.gac_id),
             );
         }
 
@@ -134,7 +140,7 @@ impl<V: Clone + PartialEq + std::fmt::Debug> AllDifferentExcept<V> {
 impl<D> Constraint<D> for AllDifferentExcept<D::Value>
 where
     D: Domain,
-    D::Value: PartialEq,
+    D::Value: PartialEq + 'static + Send + Sync,
 {
     fn scope(&self) -> &[VarId] {
         &self.scope

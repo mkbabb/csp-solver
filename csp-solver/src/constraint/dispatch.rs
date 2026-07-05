@@ -61,18 +61,6 @@ where
         }
     }
 
-    #[inline]
-    pub fn revise(&self, vars: &mut [Variable<D>], depth: usize) -> Revision {
-        match self {
-            Self::NotEqual(c) => c.revise_impl(vars, depth),
-            Self::AllDifferent(c) => c.revise_impl(vars, depth),
-            Self::AllDifferentExcept(c) => c.revise_impl(vars, depth),
-            Self::Lambda(c) => <LambdaConstraint<D> as Constraint<D>>::revise(c, vars, depth),
-            Self::Soft(_) => Revision::Unchanged, // soft constraints don't prune
-            Self::Custom(c) => c.revise(vars, depth),
-        }
-    }
-
     /// For soft constraints, compute the penalty if the underlying predicate
     /// is violated. Returns 0.0 for hard constraints or satisfied soft constraints.
     #[inline]
@@ -86,6 +74,23 @@ where
                 }
             }
             _ => 0.0,
+        }
+    }
+}
+
+impl<D: Domain> ConstraintEnum<D>
+where
+    D::Value: PartialEq + 'static,
+{
+    #[inline]
+    pub fn revise(&self, vars: &mut [Variable<D>], depth: usize) -> Revision {
+        match self {
+            Self::NotEqual(c) => c.revise_impl(vars, depth),
+            Self::AllDifferent(c) => c.revise_impl(vars, depth),
+            Self::AllDifferentExcept(c) => c.revise_impl(vars, depth),
+            Self::Lambda(c) => <LambdaConstraint<D> as Constraint<D>>::revise(c, vars, depth),
+            Self::Soft(_) => Revision::Unchanged, // soft constraints don't prune
+            Self::Custom(c) => c.revise(vars, depth),
         }
     }
 }

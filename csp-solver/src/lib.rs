@@ -9,9 +9,12 @@
 //! - Lattice domains for monotonic fixed-point propagation
 
 pub mod adjacency;
+pub(crate) mod bitscan;
 pub mod builder;
+pub mod cancel;
 pub mod constraint;
 pub mod domain;
+pub mod error;
 pub mod ordering;
 pub mod puzzles;
 #[cfg(feature = "py")]
@@ -22,15 +25,17 @@ pub mod variable;
 pub use builder::assignment::{
     AssignmentBuilder, AssignmentError, AssignmentSolution, SENTINEL, assignment,
 };
+pub use cancel::CancelToken;
+pub use error::CspError;
 pub use puzzles::sudoku;
 
 use adjacency::Adjacency;
 use constraint::{AllDifferent, Constraint, ConstraintEnum, NotEqual, SoftLambdaConstraint, VarId};
 use domain::Domain;
 use ordering::Ordering;
-use solver::backjump::{self, BackjumpConfig};
-use solver::backtrack::{self, BacktrackConfig, Solution};
+use solver::Solution;
 use solver::optimize;
+use solver::search::{self, SearchParams};
 use variable::Variable;
 
 /// Pruning strategy for backtracking search.
@@ -76,6 +81,12 @@ pub struct SolveConfig {
     pub max_solutions: usize,
     /// Whether to use conflict-directed backjumping instead of chronological backtracking.
     pub backjumping: bool,
+    /// Enable Luby restarts with phase saving and (if `Ordering::Chs`) dynamic
+    /// conflict-history weighting. Opt-in; production sudoku stays `Ac3 + Mrv`.
+    /// The restart *driver* is not yet wired onto the unified kernel (see the
+    /// pass-3 composition report — chs backtrack.rs re-authoring is deferred);
+    /// today this flag is accepted but inert.
+    pub restarts: bool,
     /// Optimization mode. Defaults to `Feasibility` (pure constraint satisfaction).
     pub optimization_mode: OptimizationMode,
     /// Maximum number of search nodes (backtrack / branch-and-bound
@@ -89,6 +100,13 @@ pub struct SolveConfig {
     /// should branch on this flag and either accept the best-so-far
     /// solution or fall back to a trivial per-variable pick.
     pub node_budget: Option<u64>,
+    /// Cooperative cancellation flag, checked at the same cadence as
+    /// `node_budget`. `None` (the default) means the search cannot be
+    /// cancelled externally. Set this to a [`CancelToken`] clone and keep
+    /// another clone on the calling side to request an early stop — e.g.
+    /// from Python, released via `Python::allow_threads`, when an
+    /// `asyncio.wait_for` timeout elapses. See [`SolveStats::cancelled`].
+    pub cancel: Option<CancelToken>,
 }
 
 impl Default for SolveConfig {
@@ -98,8 +116,10 @@ impl Default for SolveConfig {
             ordering: Ordering::Chronological,
             max_solutions: 1,
             backjumping: false,
+            restarts: false,
             optimization_mode: OptimizationMode::Feasibility,
             node_budget: Some(1_000_000),
+            cancel: None,
         }
     }
 }
@@ -115,6 +135,11 @@ pub struct SolveStats {
     /// Solutions returned alongside this flag are best-so-far, not
     /// necessarily optimal.
     pub budget_exceeded: bool,
+    /// Set to `true` when the last search was stopped early via
+    /// [`SolveConfig::cancel`] rather than hitting `node_budget`.
+    /// Distinct from `budget_exceeded`: this is an externally requested
+    /// stop, not a self-imposed cap.
+    pub cancelled: bool,
 }
 
 /// The main CSP solver struct.
@@ -190,6 +215,7 @@ impl<D: Domain> Csp<D> {
     pub fn add_equals(&mut self, var: VarId, value: D::Value)
     where
         D: 'static,
+        D::Value: Send + Sync,
     {
         self.add_constraint(constraint::LambdaConstraint::new(
             vec![var],
@@ -205,7 +231,7 @@ impl<D: Domain> Csp<D> {
     pub fn add_less_than(&mut self, x: VarId, y: VarId)
     where
         D: 'static,
-        D::Value: PartialOrd,
+        D::Value: PartialOrd + Send + Sync,
     {
         self.add_constraint(constraint::LambdaConstraint::new(
             vec![x, y],
@@ -221,7 +247,7 @@ impl<D: Domain> Csp<D> {
     pub fn add_greater_than(&mut self, x: VarId, y: VarId)
     where
         D: 'static,
-        D::Value: PartialOrd,
+        D::Value: PartialOrd + Send + Sync,
     {
         self.add_constraint(constraint::LambdaConstraint::new(
             vec![x, y],
@@ -237,7 +263,7 @@ impl<D: Domain> Csp<D> {
     /// constraints have been added, before calling `solve()`.
     pub fn finalize(&mut self)
     where
-        D::Value: PartialEq,
+        D::Value: PartialEq + 'static,
     {
         let num_vars = self.variables.len();
         self.adjacency = Some(Adjacency::build(num_vars, &self.constraints));
@@ -254,7 +280,7 @@ impl<D: Domain> Csp<D> {
     /// Propagate constraints to a fixed point (auto-select strategy).
     pub fn propagate(&mut self) -> Result<(), Unsatisfiable>
     where
-        D::Value: PartialEq,
+        D::Value: PartialEq + 'static,
     {
         self.propagate_with(PropagationStrategy::Auto)
     }
@@ -262,7 +288,7 @@ impl<D: Domain> Csp<D> {
     /// Propagate constraints with an explicit strategy.
     pub fn propagate_with(&mut self, strategy: PropagationStrategy) -> Result<(), Unsatisfiable>
     where
-        D::Value: PartialEq,
+        D::Value: PartialEq + 'static,
     {
         match strategy {
             PropagationStrategy::Auto => {
@@ -273,13 +299,17 @@ impl<D: Domain> Csp<D> {
                 }
             }
             PropagationStrategy::Ac3 => {
-                let adjacency = self.adjacency.as_ref().ok_or(Unsatisfiable)?.clone();
+                // Disjoint field borrows — no adjacency clone (kernel S5).
+                let adjacency = self.adjacency.as_ref().ok_or(Unsatisfiable)?;
+                // Caller-owned reusable AC-3 worklist scratch (zero-alloc P2-2).
+                let mut worklist = solver::ac3::BitsetWorklist::new(self.constraints.len());
                 solver::ac3::ac3_full(
                     &mut self.variables,
                     &self.constraints,
-                    &adjacency,
+                    adjacency,
                     &mut self.stats,
-                    0,
+                    &mut worklist,
+                    search::PERMANENT_DEPTH,
                 )
             }
             PropagationStrategy::Sweep => solver::monotonic::propagate_monotonic(
@@ -297,75 +327,69 @@ impl<D: Domain> Csp<D> {
     /// branch-and-bound search and returns solutions sorted by cost (best first).
     pub fn solve(&mut self, config: &SolveConfig) -> Vec<Solution<D>>
     where
-        D::Value: PartialEq,
+        D::Value: PartialEq + 'static,
     {
-        let adjacency = self
-            .adjacency
-            .as_ref()
-            .expect("call finalize() before solve()")
-            .clone();
+        assert!(self.adjacency.is_some(), "call finalize() before solve()");
 
         self.stats = SolveStats::default();
 
-        // Reset all variables to their original domains
+        // Reset all variables to their original domains.
         for v in &mut self.variables {
             v.reset();
         }
 
+        // Root propagation, symmetric with `solve_with_given`'s initial AC-3.
+        // Only the MAC (`Ac3`) strategy establishes global arc-consistency, so
+        // it is the one whose contract calls for propagating the root before
+        // search; the weaker forward-checking strategies prune relative to an
+        // assignment and do no root work (`forward_check` on an empty
+        // assignment is a no-op). Runs at `PERMANENT_DEPTH` so search's
+        // depth-keyed undo never reverts it.
+        if config.pruning == Pruning::Ac3 {
+            let adjacency = self.adjacency.as_ref().unwrap();
+            let mut worklist = solver::ac3::BitsetWorklist::new(self.constraints.len());
+            let _ = solver::ac3::ac3_full(
+                &mut self.variables,
+                &self.constraints,
+                adjacency,
+                &mut self.stats,
+                &mut worklist,
+                search::PERMANENT_DEPTH,
+            );
+        }
+
+        let params = SearchParams {
+            pruning: config.pruning,
+            ordering: config.ordering,
+            max_solutions: config.max_solutions,
+            node_budget: config.node_budget,
+            cancel: config.cancel.clone(),
+        };
+        let adjacency = self.adjacency.as_ref().unwrap();
+
         match config.optimization_mode {
-            OptimizationMode::Feasibility => {
-                if config.backjumping {
-                    let bj_config = BackjumpConfig {
-                        pruning: config.pruning,
-                        ordering: config.ordering,
-                        max_solutions: config.max_solutions,
-                        constraint_weights: self.constraint_weights.clone(),
-                        var_constraint_ids: self.var_constraint_ids.clone(),
-                        node_budget: config.node_budget,
-                    };
-                    backjump::backjump_search(
-                        &mut self.variables,
-                        &self.constraints,
-                        &adjacency,
-                        &bj_config,
-                        &mut self.stats,
-                    )
-                } else {
-                    let bt_config = BacktrackConfig {
-                        pruning: config.pruning,
-                        ordering: config.ordering,
-                        max_solutions: config.max_solutions,
-                        constraint_weights: self.constraint_weights.clone(),
-                        var_constraint_ids: self.var_constraint_ids.clone(),
-                        node_budget: config.node_budget,
-                    };
-                    backtrack::backtrack_search(
-                        &mut self.variables,
-                        &self.constraints,
-                        &adjacency,
-                        &bt_config,
-                        &mut self.stats,
-                    )
-                }
-            }
+            OptimizationMode::Feasibility => search::feasibility_search(
+                &mut self.variables,
+                &self.constraints,
+                adjacency,
+                &mut self.constraint_weights,
+                &self.var_constraint_ids,
+                &params,
+                &mut self.stats,
+                None,
+            ),
             mode @ (OptimizationMode::MinimizeCost | OptimizationMode::MaximizeCost) => {
-                let opt_config = optimize::OptimizeConfig {
-                    pruning: config.pruning,
-                    ordering: config.ordering,
-                    max_solutions: config.max_solutions,
-                    constraint_weights: self.constraint_weights.clone(),
-                    var_constraint_ids: self.var_constraint_ids.clone(),
-                    maximize: mode == OptimizationMode::MaximizeCost,
-                    node_budget: config.node_budget,
-                };
-                // Use ZeroCost evaluator — domain costs are 0.
-                // For CostDomain-aware optimization, use solve_optimized().
-                optimize::branch_and_bound(
+                // ZeroCost evaluator — domain costs are 0. For CostDomain-aware
+                // optimization, use `solve_optimized()`.
+                search::branch_and_bound(
                     &mut self.variables,
                     &self.constraints,
-                    &adjacency,
-                    &opt_config,
+                    adjacency,
+                    &mut self.constraint_weights,
+                    &self.var_constraint_ids,
+                    &params,
                     &mut self.stats,
+                    mode == OptimizationMode::MaximizeCost,
                     &optimize::ZeroCost,
                 )
             }
@@ -382,67 +406,78 @@ impl<D: Domain> Csp<D> {
         given: &[(VarId, D::Value)],
     ) -> Vec<Solution<D>>
     where
-        D::Value: PartialEq,
+        D::Value: PartialEq + 'static,
     {
-        let adjacency = self
-            .adjacency
-            .as_ref()
-            .expect("call finalize() before solve_with_given()")
-            .clone();
+        assert!(
+            self.adjacency.is_some(),
+            "call finalize() before solve_with_given()"
+        );
 
         self.stats = SolveStats::default();
 
-        // Reset all variables to their original domains
+        // Reset all variables to their original domains.
         for v in &mut self.variables {
             v.reset();
         }
 
-        // Apply given values: restrict domain to singleton
+        // Apply given values: restrict domain to singleton. Uses
+        // `Domain::restrict_to` directly (not `Variable::restrict_to`) —
+        // these reductions are permanent, not undo-logged (zero-alloc: O(1)
+        // bitmask restrict for `BitsetDomain`, not a collect-then-remove loop).
         for (var, val) in given {
-            let v = &mut self.variables[*var as usize];
-            let vals: Vec<_> = v.domain.iter().collect();
-            for dv in &vals {
-                if dv != val {
-                    v.domain.remove(dv);
+            let _ = self.variables[*var as usize].domain.restrict_to(val);
+        }
+
+        // One-hop propagation: remove each given value from its non-given
+        // neighbors. Also permanent (direct `remove`).
+        {
+            let adjacency = self.adjacency.as_ref().unwrap();
+            for (var, val) in given {
+                for &neighbor in adjacency.neighbors_of_var(*var) {
+                    let is_given = given.iter().any(|(gv, _)| *gv == neighbor);
+                    if !is_given {
+                        self.variables[neighbor as usize].domain.remove(val);
+                    }
                 }
             }
         }
 
-        // One-hop propagation: for each given variable, remove its value from neighbors
-        for (var, val) in given {
-            for &neighbor in adjacency.neighbors_of_var(*var) {
-                let is_given = given.iter().any(|(gv, _)| *gv == neighbor);
-                if !is_given {
-                    self.variables[neighbor as usize].domain.remove(val);
-                }
-            }
+        // Initial AC-3 propagation from the given cells, at `PERMANENT_DEPTH`.
+        // The kernel searches from a strictly deeper frame, so its depth-keyed
+        // undo can never revert these reductions — closing the depth-0 seam
+        // where the first failed root candidate un-pruned this AC-3 via
+        // `restore(0)`. Worklist is caller-owned reusable scratch (zero-alloc).
+        {
+            let adjacency = self.adjacency.as_ref().unwrap();
+            let mut worklist = solver::ac3::BitsetWorklist::new(self.constraints.len());
+            let _ = solver::ac3::ac3_full(
+                &mut self.variables,
+                &self.constraints,
+                adjacency,
+                &mut self.stats,
+                &mut worklist,
+                search::PERMANENT_DEPTH,
+            );
         }
 
-        // Initial AC-3 propagation from given cells
-        let _ = solver::ac3::ac3_full(
-            &mut self.variables,
-            &self.constraints,
-            &adjacency,
-            &mut self.stats,
-            0, // depth 0 = permanent reductions (no undo needed)
-        );
-
-        let bt_config = BacktrackConfig {
+        let params = SearchParams {
             pruning: config.pruning,
             ordering: config.ordering,
             max_solutions: config.max_solutions,
-            constraint_weights: self.constraint_weights.clone(),
-            var_constraint_ids: self.var_constraint_ids.clone(),
             node_budget: config.node_budget,
+            cancel: config.cancel.clone(),
         };
+        let adjacency = self.adjacency.as_ref().unwrap();
 
-        backtrack::backtrack_search_with_given(
+        search::feasibility_search(
             &mut self.variables,
             &self.constraints,
-            &adjacency,
-            &bt_config,
+            adjacency,
+            &mut self.constraint_weights,
+            &self.var_constraint_ids,
+            &params,
             &mut self.stats,
-            given,
+            Some(given),
         )
     }
 
@@ -459,35 +494,35 @@ impl<D: Domain> Csp<D> {
         cost_eval: &dyn optimize::DomainCostEval<D>,
     ) -> Vec<Solution<D>>
     where
-        D::Value: PartialEq,
+        D::Value: PartialEq + 'static,
     {
-        let adjacency = self
-            .adjacency
-            .as_ref()
-            .expect("call finalize() before solve_with_cost_eval()")
-            .clone();
+        assert!(
+            self.adjacency.is_some(),
+            "call finalize() before solve_with_cost_eval()"
+        );
 
         self.stats = SolveStats::default();
         for v in &mut self.variables {
             v.reset();
         }
 
-        let mode = config.optimization_mode;
-        let opt_config = optimize::OptimizeConfig {
+        let params = SearchParams {
             pruning: config.pruning,
             ordering: config.ordering,
             max_solutions: config.max_solutions,
-            constraint_weights: self.constraint_weights.clone(),
-            var_constraint_ids: self.var_constraint_ids.clone(),
-            maximize: mode == OptimizationMode::MaximizeCost,
             node_budget: config.node_budget,
+            cancel: config.cancel.clone(),
         };
-        optimize::branch_and_bound(
+        let adjacency = self.adjacency.as_ref().unwrap();
+        search::branch_and_bound(
             &mut self.variables,
             &self.constraints,
-            &adjacency,
-            &opt_config,
+            adjacency,
+            &mut self.constraint_weights,
+            &self.var_constraint_ids,
+            &params,
             &mut self.stats,
+            config.optimization_mode == OptimizationMode::MaximizeCost,
             cost_eval,
         )
     }
@@ -515,7 +550,7 @@ impl<D: domain::CostDomain> Csp<D> {
     /// type implements `CostDomain`.
     pub fn solve_optimized(&mut self, config: &SolveConfig) -> Vec<Solution<D>>
     where
-        D::Value: PartialEq,
+        D::Value: PartialEq + 'static,
     {
         self.solve_with_cost_eval(config, &optimize::CostDomainEval)
     }

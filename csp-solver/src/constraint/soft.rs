@@ -29,7 +29,7 @@ impl<D: Domain> std::fmt::Debug for SoftLambdaConstraint<D> {
 impl<D: Domain> SoftLambdaConstraint<D> {
     pub fn new(
         scope: Vec<VarId>,
-        checker: impl Fn(&[Option<D::Value>]) -> bool + 'static,
+        checker: impl Fn(&[Option<D::Value>]) -> bool + Send + Sync + 'static,
         penalty: f64,
         label: impl Into<String>,
     ) -> Self {
