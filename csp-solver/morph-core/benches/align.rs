@@ -165,5 +165,10 @@ fn bench_align_asymmetric(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_align_tier1, bench_align_tier2, bench_align_asymmetric);
+criterion_group!(
+    benches,
+    bench_align_tier1,
+    bench_align_tier2,
+    bench_align_asymmetric
+);
 criterion_main!(benches);

@@ -64,9 +64,7 @@ impl<V: Clone + PartialEq + std::fmt::Debug> ImplicationConstraint<V> {
         let mut changed = false;
         let consequent_values: Vec<V> = vars[ci].domain.iter().collect();
         for v in &consequent_values {
-            if !self.allowed.contains(v)
-                && vars[ci].prune(v, depth)
-            {
+            if !self.allowed.contains(v) && vars[ci].prune(v, depth) {
                 changed = true;
             }
         }

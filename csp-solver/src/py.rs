@@ -19,7 +19,10 @@ use crate::constraint::VarId;
 use crate::domain::bitset::BitsetDomain;
 use crate::ordering::Ordering as RustOrdering;
 use crate::sudoku::{self, Difficulty};
-use crate::{Csp as RustCsp, Pruning as RustPruning, PropagationStrategy as RustPropagation, SolveConfig as RustSolveConfig};
+use crate::{
+    Csp as RustCsp, PropagationStrategy as RustPropagation, Pruning as RustPruning,
+    SolveConfig as RustSolveConfig,
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Core enums
@@ -113,7 +116,13 @@ impl SolveConfig {
         backjumping: bool,
         node_budget: Option<u64>,
     ) -> Self {
-        Self { pruning, ordering, max_solutions, backjumping, node_budget }
+        Self {
+            pruning,
+            ordering,
+            max_solutions,
+            backjumping,
+            node_budget,
+        }
     }
 }
 
@@ -158,7 +167,9 @@ pub struct Csp {
 impl Csp {
     #[new]
     fn new() -> Self {
-        Self { inner: RustCsp::new() }
+        Self {
+            inner: RustCsp::new(),
+        }
     }
 
     /// Add a variable with the given domain values. Returns its VarId.
@@ -198,7 +209,10 @@ impl Csp {
 
     /// Propagate constraints (auto-select strategy).
     fn propagate(&mut self) -> PyResult<bool> {
-        self.inner.propagate().map(|()| true).map_err(|_| PyRuntimeError::new_err("Unsatisfiable"))
+        self.inner
+            .propagate()
+            .map(|()| true)
+            .map_err(|_| PyRuntimeError::new_err("Unsatisfiable"))
     }
 
     /// Propagate with an explicit strategy.
@@ -215,18 +229,32 @@ impl Csp {
         self.inner
             .solve(&rust_config)
             .into_iter()
-            .map(|sol| sol.into_iter().enumerate().map(|(i, v)| (i as u32, v)).collect())
+            .map(|sol| {
+                sol.into_iter()
+                    .enumerate()
+                    .map(|(i, v)| (i as u32, v))
+                    .collect()
+            })
             .collect()
     }
 
     /// Solve with pre-assigned values.
-    fn solve_with_given(&mut self, config: &SolveConfig, given: HashMap<u32, u32>) -> Vec<HashMap<u32, u32>> {
+    fn solve_with_given(
+        &mut self,
+        config: &SolveConfig,
+        given: HashMap<u32, u32>,
+    ) -> Vec<HashMap<u32, u32>> {
         let rust_config: RustSolveConfig = config.into();
         let given_vec: Vec<(VarId, u32)> = given.into_iter().collect();
         self.inner
             .solve_with_given(&rust_config, &given_vec)
             .into_iter()
-            .map(|sol| sol.into_iter().enumerate().map(|(i, v)| (i as u32, v)).collect())
+            .map(|sol| {
+                sol.into_iter()
+                    .enumerate()
+                    .map(|(i, v)| (i as u32, v))
+                    .collect()
+            })
             .collect()
     }
 
@@ -258,7 +286,11 @@ pub enum SudokuDifficulty {
 impl SudokuDifficulty {
     #[classmethod]
     #[pyo3(signature = (key, default=None))]
-    fn get(_cls: &Bound<'_, PyType>, key: &str, default: Option<SudokuDifficulty>) -> Option<SudokuDifficulty> {
+    fn get(
+        _cls: &Bound<'_, PyType>,
+        key: &str,
+        default: Option<SudokuDifficulty>,
+    ) -> Option<SudokuDifficulty> {
         match key {
             "EASY" => Some(SudokuDifficulty::EASY),
             "MEDIUM" => Some(SudokuDifficulty::MEDIUM),
@@ -294,7 +326,9 @@ pub struct SudokuCSP {
 #[pymethods]
 impl SudokuCSP {
     #[getter]
-    fn backtracks(&self) -> u64 { self.backtrack_count }
+    fn backtracks(&self) -> u64 {
+        self.backtrack_count
+    }
 }
 
 #[pyfunction]
@@ -315,7 +349,9 @@ fn create_sudoku_csp(
             .parse()
             .map_err(|_| PyValueError::new_err(format!("Invalid position: {pos_str}")))?;
         if pos >= total {
-            return Err(PyValueError::new_err(format!("Position {pos} out of range")));
+            return Err(PyValueError::new_err(format!(
+                "Position {pos} out of range"
+            )));
         }
         if *val > 0 {
             board[pos] = *val as u32;
@@ -323,7 +359,14 @@ fn create_sudoku_csp(
         }
     }
 
-    Ok(SudokuCSP { board, n, max_solutions, solutions: Vec::new(), backtrack_count: 0, _given_values: given })
+    Ok(SudokuCSP {
+        board,
+        n,
+        max_solutions,
+        solutions: Vec::new(),
+        backtrack_count: 0,
+        _given_values: given,
+    })
 }
 
 #[pyfunction]
@@ -343,7 +386,12 @@ fn solve_sudoku(csp: &mut SudokuCSP) -> PyResult<bool> {
 
     csp.solutions = solutions
         .into_iter()
-        .map(|sol| sol.into_iter().enumerate().map(|(i, v)| (i.to_string(), v as i32)).collect())
+        .map(|sol| {
+            sol.into_iter()
+                .enumerate()
+                .map(|(i, v)| (i.to_string(), v as i32))
+                .collect()
+        })
         .collect();
 
     Ok(!csp.solutions.is_empty())
@@ -379,7 +427,11 @@ fn create_random_board(
         // Slow path: hole-digging from scratch.
         sudoku::generate_board(N, difficulty.into())
     };
-    Ok(board.into_iter().enumerate().map(|(i, v)| (i.to_string(), v as i32)).collect())
+    Ok(board
+        .into_iter()
+        .enumerate()
+        .map(|(i, v)| (i.to_string(), v as i32))
+        .collect())
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

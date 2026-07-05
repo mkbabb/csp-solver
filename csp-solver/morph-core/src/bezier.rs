@@ -162,13 +162,7 @@ pub fn sample_at_arc_length(samples: &[PolylineSample], t: f64) -> PolylineSampl
 /// degenerate.
 ///
 /// Ported from `bezier.ts::fitCubicHandles`.
-pub fn fit_cubic_handles(
-    p0: Vec2,
-    p3: Vec2,
-    t0: Vec2,
-    t3: Vec2,
-    samples: &[Vec2],
-) -> (Vec2, Vec2) {
+pub fn fit_cubic_handles(p0: Vec2, p3: Vec2, t0: Vec2, t3: Vec2, samples: &[Vec2]) -> (Vec2, Vec2) {
     let chord = ((p3[0] - p0[0]).powi(2) + (p3[1] - p0[1]).powi(2)).sqrt();
     let n = samples.len();
 
@@ -199,8 +193,7 @@ pub fn fit_cubic_handles(
         );
     }
     // Also account for p0 -> first sample prelude.
-    let prelude =
-        ((samples[0][0] - p0[0]).powi(2) + (samples[0][1] - p0[1]).powi(2)).sqrt();
+    let prelude = ((samples[0][0] - p0[0]).powi(2) + (samples[0][1] - p0[1]).powi(2)).sqrt();
     for p in &mut params {
         *p = (*p + prelude) / (total + prelude);
     }
@@ -239,10 +232,7 @@ pub fn fit_cubic_handles(
     let (mut alpha, mut beta) = if det.abs() < 1e-12 {
         (chord / 3.0, chord / 3.0)
     } else {
-        (
-            (x0 * c11 - x1 * c01) / det,
-            (x1 * c00 - x0 * c01) / det,
-        )
+        ((x0 * c11 - x1 * c01) / det, (x1 * c00 - x0 * c01) / det)
     };
 
     // Clamp to non-negative — negative magnitudes produce cusps.
@@ -250,10 +240,7 @@ pub fn fit_cubic_handles(
     alpha = alpha.clamp(0.0, max_mag);
     beta = beta.clamp(0.0, max_mag);
 
-    (
-        [t0[0] * alpha, t0[1] * alpha],
-        [t3[0] * beta, t3[1] * beta],
-    )
+    ([t0[0] * alpha, t0[1] * alpha], [t3[0] * beta, t3[1] * beta])
 }
 
 /// Extract polyline point positions strictly between two cumulative

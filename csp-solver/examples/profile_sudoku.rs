@@ -113,21 +113,36 @@ fn main() {
     ];
 
     let configs: &[(&str, SolveConfig)] = &[
-        ("AC3+DomWdeg", SolveConfig {
-            pruning: Pruning::Ac3, ordering: Ordering::DomWdeg,
-            max_solutions: 1, backjumping: false,
-            ..Default::default()
-        }),
-        ("AC3+FailFirst", SolveConfig {
-            pruning: Pruning::Ac3, ordering: Ordering::FailFirst,
-            max_solutions: 1, backjumping: false,
-            ..Default::default()
-        }),
-        ("FC+FailFirst", SolveConfig {
-            pruning: Pruning::ForwardChecking, ordering: Ordering::FailFirst,
-            max_solutions: 1, backjumping: false,
-            ..Default::default()
-        }),
+        (
+            "AC3+DomWdeg",
+            SolveConfig {
+                pruning: Pruning::Ac3,
+                ordering: Ordering::DomWdeg,
+                max_solutions: 1,
+                backjumping: false,
+                ..Default::default()
+            },
+        ),
+        (
+            "AC3+FailFirst",
+            SolveConfig {
+                pruning: Pruning::Ac3,
+                ordering: Ordering::FailFirst,
+                max_solutions: 1,
+                backjumping: false,
+                ..Default::default()
+            },
+        ),
+        (
+            "FC+FailFirst",
+            SolveConfig {
+                pruning: Pruning::ForwardChecking,
+                ordering: Ordering::FailFirst,
+                max_solutions: 1,
+                backjumping: false,
+                ..Default::default()
+            },
+        ),
     ];
 
     // Warm up
@@ -139,16 +154,22 @@ fn main() {
 
     // Measure (average of N runs)
     let n = 100;
-    println!("{:20} {:16} | {:>8} {:>8} {:>8} | {:>6} {:>6} | {:>8}",
-        "puzzle", "config", "constr", "finalize", "solve", "bt", "prop", "total");
+    println!(
+        "{:20} {:16} | {:>8} {:>8} {:>8} | {:>6} {:>6} | {:>8}",
+        "puzzle", "config", "constr", "finalize", "solve", "bt", "prop", "total"
+    );
     println!("{}", "-".repeat(105));
 
     for (pname, grid) in puzzles {
         for (cname, cfg) in configs {
             let mut totals = PhaseTimings {
-                construct: Duration::ZERO, finalize: Duration::ZERO,
-                initial_prop: Duration::ZERO, search: Duration::ZERO,
-                total: Duration::ZERO, backtracks: 0, propagations: 0,
+                construct: Duration::ZERO,
+                finalize: Duration::ZERO,
+                initial_prop: Duration::ZERO,
+                search: Duration::ZERO,
+                total: Duration::ZERO,
+                backtracks: 0,
+                propagations: 0,
             };
             for _ in 0..n {
                 let t = solve_timed(grid, cfg);
@@ -160,11 +181,17 @@ fn main() {
                 totals.propagations += t.propagations;
             }
             let d = |dur: Duration| -> f64 { dur.as_secs_f64() / n as f64 * 1000.0 };
-            println!("{:20} {:16} | {:7.3}ms {:7.3}ms {:7.3}ms | {:>6} {:>6} | {:7.3}ms",
-                pname, cname,
-                d(totals.construct), d(totals.finalize), d(totals.search),
-                totals.backtracks / n as u64, totals.propagations / n as u64,
-                d(totals.total));
+            println!(
+                "{:20} {:16} | {:7.3}ms {:7.3}ms {:7.3}ms | {:>6} {:>6} | {:7.3}ms",
+                pname,
+                cname,
+                d(totals.construct),
+                d(totals.finalize),
+                d(totals.search),
+                totals.backtracks / n as u64,
+                totals.propagations / n as u64,
+                d(totals.total)
+            );
         }
     }
 }

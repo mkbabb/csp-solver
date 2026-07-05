@@ -5,17 +5,14 @@
 
 use csp_solver::constraint::traits::{Revision, VarId};
 use csp_solver::constraint::{AllDifferentExcept, ConstraintEnum};
-use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::domain::Domain;
+use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::solver::gac_alldiff_except::propagate_gac_alldiff_except;
 use csp_solver::variable::Variable;
 use csp_solver::{Csp, Pruning, SolveConfig};
 
 /// Helper: run GAC except propagation and return revision + resulting domains.
-fn run_gac_except(
-    domains: &[Vec<u32>],
-    sentinel: u32,
-) -> (Revision, Vec<Vec<u32>>) {
+fn run_gac_except(domains: &[Vec<u32>], sentinel: u32) -> (Revision, Vec<Vec<u32>>) {
     let scope: Vec<VarId> = (0..domains.len() as u32).collect();
     let mut variables: Vec<Variable<BitsetDomain>> = domains
         .iter()
@@ -23,10 +20,7 @@ fn run_gac_except(
         .collect();
 
     let rev = propagate_gac_alldiff_except(&scope, &sentinel, &mut variables, 0);
-    let result_domains: Vec<Vec<u32>> = variables
-        .iter()
-        .map(|v| v.domain.values())
-        .collect();
+    let result_domains: Vec<Vec<u32>> = variables.iter().map(|v| v.domain.values()).collect();
 
     (rev, result_domains)
 }
@@ -42,7 +36,7 @@ fn test_sentinel_never_pruned() {
     let sentinel = 99u32;
     let scope: Vec<VarId> = (0..4).collect();
     let mut vars: Vec<Variable<BitsetDomain>> = vec![
-        Variable::new(BitsetDomain::new([1])),            // assigned to 1
+        Variable::new(BitsetDomain::new([1])), // assigned to 1
         Variable::new(BitsetDomain::new([0, 1, 2, 99])),
         Variable::new(BitsetDomain::new([0, 1, 2, 99])),
         Variable::new(BitsetDomain::new([0, 1, 2, 99])),
@@ -80,8 +74,8 @@ fn test_non_sentinel_cascades() {
     let sentinel = 99u32;
     let scope: Vec<VarId> = (0..4).collect();
     let mut vars: Vec<Variable<BitsetDomain>> = vec![
-        Variable::new(BitsetDomain::new([0])),            // assigned to 0
-        Variable::new(BitsetDomain::new([1])),            // assigned to 1
+        Variable::new(BitsetDomain::new([0])), // assigned to 0
+        Variable::new(BitsetDomain::new([1])), // assigned to 1
         Variable::new(BitsetDomain::new([0, 1, 2, 99])),
         Variable::new(BitsetDomain::new([0, 1, 2, 99])),
     ];
@@ -102,10 +96,7 @@ fn test_non_sentinel_cascades() {
 fn test_sentinel_only_scope_unchanged() {
     // 3 vars, all with domain {SENTINEL=5} only.
     // Nothing to prune — all committed to sentinel.
-    let (rev, doms) = run_gac_except(
-        &[vec![5], vec![5], vec![5]],
-        5,
-    );
+    let (rev, doms) = run_gac_except(&[vec![5], vec![5], vec![5]], 5);
     assert_eq!(rev, Revision::Unchanged);
     assert_eq!(doms, vec![vec![5], vec![5], vec![5]]);
 }
@@ -119,10 +110,7 @@ fn test_unsatisfiable_detection() {
     // 4 unassigned vars, domains {0, 1} each. Sentinel = 99 (not in any domain).
     // 4 vars need distinct non-sentinel values from a pool of only 2 values,
     // and none have sentinel as escape. Matching covers only 2 of 4 -> UNSAT.
-    let (rev, _) = run_gac_except(
-        &[vec![0, 1], vec![0, 1], vec![0, 1], vec![0, 1]],
-        99,
-    );
+    let (rev, _) = run_gac_except(&[vec![0, 1], vec![0, 1], vec![0, 1], vec![0, 1]], 99);
     assert_eq!(rev, Revision::Unsatisfiable);
 }
 
@@ -133,10 +121,7 @@ fn test_unsatisfiable_singletons_clash() {
     // GAC sees 1 unassigned var with available {1} (after excluding assigned 0).
     // But the underlying clash is between the two singletons themselves —
     // check_impl catches that. GAC correctly prunes 0 from the unassigned var.
-    let (rev, doms) = run_gac_except(
-        &[vec![0], vec![0], vec![0, 1]],
-        99,
-    );
+    let (rev, doms) = run_gac_except(&[vec![0], vec![0], vec![0, 1]], 99);
     // GAC prunes 0 from var 2, leaving {1}. The singleton clash is a separate concern.
     assert_eq!(rev, Revision::Changed);
     assert_eq!(doms[2], vec![1]);
@@ -153,7 +138,7 @@ fn test_five_var_hand_built() {
     let sentinel = 99u32;
     let scope: Vec<VarId> = (0..5).collect();
     let mut vars: Vec<Variable<BitsetDomain>> = vec![
-        Variable::new(BitsetDomain::new([0])),             // pinned to 0
+        Variable::new(BitsetDomain::new([0])), // pinned to 0
         Variable::new(BitsetDomain::new([0, 1, 2, 99])),
         Variable::new(BitsetDomain::new([0, 1, 2, 99])),
         Variable::new(BitsetDomain::new([0, 1, 2, 99])),
@@ -165,7 +150,10 @@ fn test_five_var_hand_built() {
 
     // Vars 1-4: 0 pruned, {1, 2, 99} remain.
     for (i, var) in vars.iter().enumerate().skip(1) {
-        assert!(!var.domain.contains(&0), "val 0 should be pruned from var {i}");
+        assert!(
+            !var.domain.contains(&0),
+            "val 0 should be pruned from var {i}"
+        );
         assert!(var.domain.contains(&1));
         assert!(var.domain.contains(&2));
         assert!(var.domain.contains(&sentinel));
@@ -178,8 +166,14 @@ fn test_five_var_hand_built() {
 
     // Vars 2-4: 0 and 1 pruned, {2, 99} remain.
     for (i, var) in vars.iter().enumerate().skip(2) {
-        assert!(!var.domain.contains(&0), "val 0 should be pruned from var {i}");
-        assert!(!var.domain.contains(&1), "val 1 should be pruned from var {i}");
+        assert!(
+            !var.domain.contains(&0),
+            "val 0 should be pruned from var {i}"
+        );
+        assert!(
+            !var.domain.contains(&1),
+            "val 1 should be pruned from var {i}"
+        );
         assert!(var.domain.contains(&2));
         assert!(var.domain.contains(&sentinel));
     }
@@ -195,9 +189,10 @@ fn test_end_to_end_csp() {
     // Multiple vars can take sentinel 0; non-zero assignments must be distinct.
     let mut csp: Csp<BitsetDomain> = Csp::new();
     let vars = csp.add_variables(&BitsetDomain::range(5), 5);
-    csp.add_constraint_enum(ConstraintEnum::AllDifferentExcept(
-        AllDifferentExcept::new(vars.clone(), 0),
-    ));
+    csp.add_constraint_enum(ConstraintEnum::AllDifferentExcept(AllDifferentExcept::new(
+        vars.clone(),
+        0,
+    )));
     csp.finalize();
 
     let config = SolveConfig {
@@ -224,13 +219,13 @@ fn test_end_to_end_csp() {
 
     // Verify that at least one solution has multiple vars taking sentinel 0.
     let has_multi_sentinel = solutions.iter().any(|sol| {
-        let zero_count = vars
-            .iter()
-            .filter(|&&v| sol[v as usize] == 0)
-            .count();
+        let zero_count = vars.iter().filter(|&&v| sol[v as usize] == 0).count();
         zero_count >= 2
     });
-    assert!(has_multi_sentinel, "at least one solution should have multiple vars taking sentinel 0");
+    assert!(
+        has_multi_sentinel,
+        "at least one solution should have multiple vars taking sentinel 0"
+    );
 }
 
 // ---------------------------------------------------------------------------

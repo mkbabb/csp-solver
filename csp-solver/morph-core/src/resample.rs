@@ -86,8 +86,7 @@ pub fn resample_contour(segments: &[Segment], n: usize) -> Vec<Segment> {
         let t_b = negated(normalized_tangent(b.tangent));
 
         let interior = slice_between(&samples, a.cumulative, b.cumulative, total);
-        let (handle_out, handle_in) =
-            fit_cubic_handles(a.point, b.point, t_a, t_b, &interior);
+        let (handle_out, handle_in) = fit_cubic_handles(a.point, b.point, t_a, t_b, &interior);
 
         result[i].handle_out = handle_out;
         result[(i + 1) % n].handle_in = handle_in;

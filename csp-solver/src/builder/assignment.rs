@@ -141,13 +141,22 @@ impl std::fmt::Display for AssignmentError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::DimensionsNotSet => {
-                write!(f, "AssignmentBuilder: .rows() and .cols() must both be set to a non-zero value before .solve()")
+                write!(
+                    f,
+                    "AssignmentBuilder: .rows() and .cols() must both be set to a non-zero value before .solve()"
+                )
             }
             Self::CostNotSet => {
-                write!(f, "AssignmentBuilder: .cost() must be called before .solve()")
+                write!(
+                    f,
+                    "AssignmentBuilder: .cost() must be called before .solve()"
+                )
             }
             Self::GroupLengthMismatch => {
-                write!(f, "AssignmentBuilder: row_groups / col_groups length does not match the declared dimensions")
+                write!(
+                    f,
+                    "AssignmentBuilder: row_groups / col_groups length does not match the declared dimensions"
+                )
             }
             Self::InvalidPin { row, col } => {
                 write!(
@@ -156,7 +165,10 @@ impl std::fmt::Display for AssignmentError {
                 )
             }
             Self::Infeasible => {
-                write!(f, "AssignmentBuilder: CSP is infeasible under the supplied constraints")
+                write!(
+                    f,
+                    "AssignmentBuilder: CSP is infeasible under the supplied constraints"
+                )
             }
         }
     }
@@ -393,9 +405,9 @@ impl AssignmentBuilder {
             // A single-row group still benefits from the constraint
             // for symmetry — it's a no-op at search time but keeps
             // the adjacency structure uniform across groups.
-            csp.add_constraint_enum(ConstraintEnum::AllDifferentExcept(
-                AllDifferentExcept::new(scope, SENTINEL),
-            ));
+            csp.add_constraint_enum(ConstraintEnum::AllDifferentExcept(AllDifferentExcept::new(
+                scope, SENTINEL,
+            )));
         }
 
         // 6. Finalize and run branch-and-bound.

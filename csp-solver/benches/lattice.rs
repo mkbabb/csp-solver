@@ -1,9 +1,9 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
+use csp_solver::Csp;
 use csp_solver::constraint::{LambdaConstraint, VarId};
 use csp_solver::domain::LatticeDomain;
 use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::domain::lattice::BitsetLatticeDomain;
-use csp_solver::Csp;
 
 // ---------------------------------------------------------------------------
 // Acyclic chain: N variables, each grounded to a different initial set,
@@ -199,14 +199,17 @@ fn bench_first_set_tree(c: &mut Criterion) {
     // depth=4 -> 31 nodes, depth=5 -> 63, depth=6 -> 127
     for &depth in &[4usize, 5, 6] {
         let num_nodes = (1usize << (depth + 1)) - 1;
-        group.bench_function(BenchmarkId::new("depth", format!("{depth}_({num_nodes}n)")), |b| {
-            b.iter(|| {
-                let mut csp = build_first_set_tree(depth);
-                let result = csp.propagate();
-                assert!(result.is_ok());
-                result
-            });
-        });
+        group.bench_function(
+            BenchmarkId::new("depth", format!("{depth}_({num_nodes}n)")),
+            |b| {
+                b.iter(|| {
+                    let mut csp = build_first_set_tree(depth);
+                    let result = csp.propagate();
+                    assert!(result.is_ok());
+                    result
+                });
+            },
+        );
     }
 
     group.finish();

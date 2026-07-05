@@ -141,10 +141,7 @@ fn convert_form_def(wire: &WireFormDef) -> Result<FormDef, JsError> {
         let role = parse_role(&ws.role)?;
         let segments: Vec<Segment> = ws.segments.iter().map(wire_segment_to_domain).collect();
         let bb = bbox(&segments);
-        let id = ws
-            .id
-            .clone()
-            .unwrap_or_else(|| format!("{}-{i}", ws.role));
+        let id = ws.id.clone().unwrap_or_else(|| format!("{}-{i}", ws.role));
         subpaths.push(Subpath {
             id,
             segments,

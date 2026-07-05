@@ -27,19 +27,13 @@ fn straight_seg(id: u32, point: Vec2) -> Segment {
 
 /// Strategy: generate N random 2D points with coords in [-100, 100].
 fn points_strategy(min_n: usize, max_n: usize) -> impl Strategy<Value = Vec<Vec2>> {
-    proptest::collection::vec(
-        prop::array::uniform2(-100.0..100.0_f64),
-        min_n..=max_n,
-    )
+    proptest::collection::vec(prop::array::uniform2(-100.0..100.0_f64), min_n..=max_n)
 }
 
 /// Strategy: generate a closed convex polygon with N vertices (CCW in
 /// math-Y). We generate N angles in [0, 2pi], sort them, and place
 /// points on a circle of radius R.
-fn convex_polygon_strategy(
-    min_n: usize,
-    max_n: usize,
-) -> impl Strategy<Value = Vec<Segment>> {
+fn convex_polygon_strategy(min_n: usize, max_n: usize) -> impl Strategy<Value = Vec<Segment>> {
     (min_n..=max_n, 1.0..50.0_f64).prop_flat_map(|(n, radius)| {
         proptest::collection::vec(0.0..1.0_f64, n).prop_map(move |mut fracs| {
             fracs.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -58,16 +52,14 @@ fn convex_polygon_strategy(
 /// Strategy: generate a simple closed polygon (straight-line segments)
 /// with N vertices at random positions.
 fn polygon_strategy(min_n: usize, max_n: usize) -> impl Strategy<Value = Vec<Segment>> {
-    proptest::collection::vec(
-        prop::array::uniform2(-50.0..50.0_f64),
-        min_n..=max_n,
+    proptest::collection::vec(prop::array::uniform2(-50.0..50.0_f64), min_n..=max_n).prop_map(
+        |pts| {
+            pts.iter()
+                .enumerate()
+                .map(|(i, &p)| straight_seg(i as u32, p))
+                .collect()
+        },
     )
-    .prop_map(|pts| {
-        pts.iter()
-            .enumerate()
-            .map(|(i, &p)| straight_seg(i as u32, p))
-            .collect()
-    })
 }
 
 // ---------------------------------------------------------------------------

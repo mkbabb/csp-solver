@@ -120,12 +120,10 @@ fn brute_force_parity_4x4() {
             node_budget_ms: None,
         };
 
-        let req_js = serde_wasm_bindgen::to_value(&req)
-            .expect("AssignmentRequest serializes");
-        let resp_js = solve_assignment_cop(req_js)
-            .expect("solveAssignmentCop returns Ok");
-        let resp: AssignmentResponse = serde_wasm_bindgen::from_value(resp_js)
-            .expect("AssignmentResponse deserializes");
+        let req_js = serde_wasm_bindgen::to_value(&req).expect("AssignmentRequest serializes");
+        let resp_js = solve_assignment_cop(req_js).expect("solveAssignmentCop returns Ok");
+        let resp: AssignmentResponse =
+            serde_wasm_bindgen::from_value(resp_js).expect("AssignmentResponse deserializes");
 
         // Sanity-check the structure of the result before we trust
         // its cost.
@@ -377,7 +375,16 @@ fn bf_asym_recurse(
     }
     // Option: unmatch.
     assign[row] = None;
-    bf_asym_recurse(cost, rows, cols, penalty, row + 1, assign, running + penalty, best);
+    bf_asym_recurse(
+        cost,
+        rows,
+        cols,
+        penalty,
+        row + 1,
+        assign,
+        running + penalty,
+        best,
+    );
     // Option: assign to each free column.
     for c in 0..cols {
         if (0..row).any(|r| assign[r] == Some(c)) {

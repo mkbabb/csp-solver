@@ -22,7 +22,9 @@ use wasm_bindgen::prelude::*;
 mod assignment;
 mod isomorphic;
 
-pub use assignment::{AssignmentRequest, AssignmentResponse, assignment_sentinel, solve_assignment_cop};
+pub use assignment::{
+    AssignmentRequest, AssignmentResponse, assignment_sentinel, solve_assignment_cop,
+};
 pub use isomorphic::*;
 
 /// Initialize the WASM module.

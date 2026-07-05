@@ -18,12 +18,7 @@ use proptest::prelude::*;
 ///
 /// For rows R and cols C the search space is (C+1)^R candidates, filtered
 /// for validity. At R,C <= 5 this is at most 6^5 = 7776 candidates.
-fn bruteforce_min_assignment(
-    costs: &[f64],
-    rows: usize,
-    cols: usize,
-    unmatch_penalty: f64,
-) -> f64 {
+fn bruteforce_min_assignment(costs: &[f64], rows: usize, cols: usize, unmatch_penalty: f64) -> f64 {
     let mut best = f64::INFINITY;
     let mut assign: Vec<Option<usize>> = vec![None; rows];
     bruteforce_recurse(

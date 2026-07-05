@@ -100,7 +100,10 @@ where
     for &ci in adjacency.constraints_for(var) {
         let ci = ci as usize;
         let scope = constraints[ci].scope();
-        if scope.iter().any(|&v| v != var && assignment[v as usize].is_none()) {
+        if scope
+            .iter()
+            .any(|&v| v != var && assignment[v as usize].is_none())
+        {
             worklist.insert(ci);
         }
     }

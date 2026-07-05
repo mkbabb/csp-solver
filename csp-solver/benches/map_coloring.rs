@@ -36,7 +36,12 @@ fn build_australia() -> Csp<BitsetDomain> {
 // Deterministic random graph generator (LCG-based)
 // ---------------------------------------------------------------------------
 
-fn build_random_graph(n: u32, num_colors: u32, seed: u64, edge_probability_pct: u32) -> Csp<BitsetDomain> {
+fn build_random_graph(
+    n: u32,
+    num_colors: u32,
+    seed: u64,
+    edge_probability_pct: u32,
+) -> Csp<BitsetDomain> {
     let mut csp = Csp::new();
     let domain = BitsetDomain::new(0..num_colors);
     let _vars = csp.add_variables(&domain, n as usize);
@@ -45,7 +50,9 @@ fn build_random_graph(n: u32, num_colors: u32, seed: u64, edge_probability_pct: 
     let mut rng = seed;
     for i in 0..n {
         for j in (i + 1)..n {
-            rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            rng = rng
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             let roll = ((rng >> 33) as u32) % 100;
             if roll < edge_probability_pct {
                 csp.add_not_equal(i as VarId, j as VarId);
@@ -65,7 +72,11 @@ fn bench_australia(c: &mut Criterion) {
     let mut group = c.benchmark_group("map_color_australia");
 
     let configs: &[(&str, Pruning, Ordering)] = &[
-        ("fc_failfirst", Pruning::ForwardChecking, Ordering::FailFirst),
+        (
+            "fc_failfirst",
+            Pruning::ForwardChecking,
+            Ordering::FailFirst,
+        ),
         ("ac3_failfirst", Pruning::Ac3, Ordering::FailFirst),
         ("ac3_domwdeg", Pruning::Ac3, Ordering::DomWdeg),
     ];

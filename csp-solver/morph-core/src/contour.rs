@@ -93,11 +93,7 @@ pub fn bbox_iou(a: &BBox, b: &BBox) -> f64 {
     }
     let inter = (ix2 - ix1) * (iy2 - iy1);
     let union = bbox_area(a) + bbox_area(b) - inter;
-    if union > 0.0 {
-        inter / union
-    } else {
-        0.0
-    }
+    if union > 0.0 { inter / union } else { 0.0 }
 }
 
 /// Signed-area-weighted centroid of a dense contour sampling.

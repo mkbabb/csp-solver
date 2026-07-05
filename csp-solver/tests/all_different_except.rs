@@ -1,8 +1,6 @@
 //! Integration tests for `AllDifferentExcept<V>`.
 
-use csp_solver::constraint::{
-    AllDifferentExcept, Constraint, ConstraintEnum, Revision, VarId,
-};
+use csp_solver::constraint::{AllDifferentExcept, Constraint, ConstraintEnum, Revision, VarId};
 use csp_solver::domain::BitsetDomain;
 use csp_solver::domain::Domain;
 use csp_solver::variable::Variable;
@@ -17,10 +15,7 @@ fn check_allows_multiple_sentinels() {
     // third on a distinct non-sentinel. No conflict.
     let c = AllDifferentExcept::<u32>::new(vec![0, 1, 2], 0);
     let assignment: Vec<Option<u32>> = vec![Some(0), Some(0), Some(7)];
-    assert!(<AllDifferentExcept<u32> as Constraint<BitsetDomain>>::check(
-        &c,
-        &assignment
-    ));
+    assert!(<AllDifferentExcept<u32> as Constraint<BitsetDomain>>::check(&c, &assignment));
 }
 
 // -----------------------------------------------------------------------
@@ -30,10 +25,7 @@ fn check_allows_multiple_sentinels() {
 fn check_rejects_duplicate_non_sentinel() {
     let c = AllDifferentExcept::<u32>::new(vec![0, 1, 2], 0);
     let assignment: Vec<Option<u32>> = vec![Some(3), Some(3), Some(0)];
-    assert!(!<AllDifferentExcept<u32> as Constraint<BitsetDomain>>::check(
-        &c,
-        &assignment
-    ));
+    assert!(!<AllDifferentExcept<u32> as Constraint<BitsetDomain>>::check(&c, &assignment));
 }
 
 // -----------------------------------------------------------------------
@@ -43,10 +35,7 @@ fn check_rejects_duplicate_non_sentinel() {
 fn check_mixed_sentinel_and_distinct() {
     let c = AllDifferentExcept::<u32>::new(vec![0, 1, 2, 3], 0);
     let assignment: Vec<Option<u32>> = vec![Some(0), Some(1), Some(2), Some(0)];
-    assert!(<AllDifferentExcept<u32> as Constraint<BitsetDomain>>::check(
-        &c,
-        &assignment
-    ));
+    assert!(<AllDifferentExcept<u32> as Constraint<BitsetDomain>>::check(&c, &assignment));
 }
 
 // -----------------------------------------------------------------------
@@ -66,17 +55,25 @@ fn revise_prunes_non_sentinel_singleton() {
     ];
     let c = AllDifferentExcept::<u32>::new(vec![0, 1, 2], 0);
 
-    let rev = <AllDifferentExcept<u32> as Constraint<BitsetDomain>>::revise(
-        &c, &mut vars, 0,
+    let rev = <AllDifferentExcept<u32> as Constraint<BitsetDomain>>::revise(&c, &mut vars, 0);
+    assert_eq!(
+        rev,
+        Revision::Changed,
+        "non-sentinel singleton should prune peers"
     );
-    assert_eq!(rev, Revision::Changed, "non-sentinel singleton should prune peers");
 
     // vars[1] and vars[2] should no longer contain 2, but must still
     // contain 0 (the sentinel).
     assert!(!vars[1].domain.contains(&2));
     assert!(!vars[2].domain.contains(&2));
-    assert!(vars[1].domain.contains(&0), "sentinel 0 must remain in vars[1]");
-    assert!(vars[2].domain.contains(&0), "sentinel 0 must remain in vars[2]");
+    assert!(
+        vars[1].domain.contains(&0),
+        "sentinel 0 must remain in vars[1]"
+    );
+    assert!(
+        vars[2].domain.contains(&0),
+        "sentinel 0 must remain in vars[2]"
+    );
 }
 
 // -----------------------------------------------------------------------
@@ -94,9 +91,7 @@ fn revise_skips_sentinel_singleton() {
     ];
     let c = AllDifferentExcept::<u32>::new(vec![0, 1, 2], 0);
 
-    let rev = <AllDifferentExcept<u32> as Constraint<BitsetDomain>>::revise(
-        &c, &mut vars, 0,
-    );
+    let rev = <AllDifferentExcept<u32> as Constraint<BitsetDomain>>::revise(&c, &mut vars, 0);
     assert_eq!(
         rev,
         Revision::Unchanged,
@@ -121,9 +116,10 @@ fn solve_end_to_end_permits_sentinel_repeats() {
     // With sentinel = 0 allowed to repeat, solutions exist.
     let mut csp: Csp<BitsetDomain> = Csp::new();
     let vars: Vec<VarId> = csp.add_variables(&BitsetDomain::range(3), 4);
-    csp.add_constraint_enum(ConstraintEnum::AllDifferentExcept(
-        AllDifferentExcept::new(vars.clone(), 0),
-    ));
+    csp.add_constraint_enum(ConstraintEnum::AllDifferentExcept(AllDifferentExcept::new(
+        vars.clone(),
+        0,
+    )));
     csp.finalize();
 
     let config = SolveConfig {

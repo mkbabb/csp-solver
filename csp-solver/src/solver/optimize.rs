@@ -39,15 +39,15 @@
 //! tracks `nodes_explored`, `backtracks`, `propagations`, and
 //! `budget_exceeded`, which covers the coarse-grained profiling needs.
 
+use crate::Pruning;
 use crate::constraint::{ConstraintEnum, VarId};
 use crate::domain::Domain;
 use crate::ordering::{self, Ordering};
+use crate::solver::SearchContext;
 use crate::solver::ac3;
 use crate::solver::backtrack::Solution;
 use crate::solver::propagate;
-use crate::solver::SearchContext;
 use crate::variable::Variable;
-use crate::Pruning;
 
 /// Configuration for branch-and-bound optimization.
 pub struct OptimizeConfig {
@@ -144,7 +144,12 @@ where
     let num_vars = variables.len();
     let mut assignment: Vec<Option<D::Value>> = vec![None; num_vars];
     let mut stack: Vec<VarId> = (0..num_vars as u32).collect();
-    let mut ctx = SearchContext { variables, constraints, adjacency, stats };
+    let mut ctx = SearchContext {
+        variables,
+        constraints,
+        adjacency,
+        stats,
+    };
     let mut bb = BranchBoundState {
         scored: Vec::new(),
         best_cost: f64::INFINITY,
@@ -162,9 +167,17 @@ where
 
     // Sort by cost: best first (lowest for minimize, highest for maximize).
     if config.maximize {
-        bb.scored.sort_by(|a, b| b.cost.partial_cmp(&a.cost).unwrap_or(std::cmp::Ordering::Equal));
+        bb.scored.sort_by(|a, b| {
+            b.cost
+                .partial_cmp(&a.cost)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     } else {
-        bb.scored.sort_by(|a, b| a.cost.partial_cmp(&b.cost).unwrap_or(std::cmp::Ordering::Equal));
+        bb.scored.sort_by(|a, b| {
+            a.cost
+                .partial_cmp(&b.cost)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
     }
 
     // Keep only the best `max_solutions`.
@@ -269,7 +282,10 @@ where
             .iter()
             .map(|v| v.as_ref().unwrap().clone())
             .collect();
-        bb.scored.push(ScoredSolution { solution: sol, cost });
+        bb.scored.push(ScoredSolution {
+            solution: sol,
+            cost,
+        });
 
         // For optimization, keep searching for better solutions.
         return false;
@@ -293,7 +309,11 @@ where
 
     // Bound check: prune if the optimistic bound can't beat the incumbent.
     let ob = optimistic_bound(
-        assignment, ctx.variables, ctx.constraints, cost_eval, config.maximize,
+        assignment,
+        ctx.variables,
+        ctx.constraints,
+        cost_eval,
+        config.maximize,
     );
     let effective_ob = if config.maximize { -ob } else { ob };
     if effective_ob >= bb.best_cost {
@@ -359,7 +379,13 @@ where
                     depth,
                 ),
                 Pruning::Ac3 => ac3::ac3_from_variable(
-                    var, ctx.variables, ctx.constraints, ctx.adjacency, assignment, ctx.stats, depth,
+                    var,
+                    ctx.variables,
+                    ctx.constraints,
+                    ctx.adjacency,
+                    assignment,
+                    ctx.stats,
+                    depth,
                 ),
                 Pruning::AcFc => propagate::ac_fc(
                     var,
@@ -372,17 +398,7 @@ where
                 ),
             };
 
-            if !dwo
-                && bb_recurse(
-                    ctx,
-                    config,
-                    cost_eval,
-                    assignment,
-                    stack,
-                    bb,
-                    depth + 1,
-                )
-            {
+            if !dwo && bb_recurse(ctx, config, cost_eval, assignment, stack, bb, depth + 1) {
                 return true;
             }
         }

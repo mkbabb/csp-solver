@@ -42,7 +42,10 @@ impl<V: Clone + PartialEq + std::fmt::Debug> AllDifferentExcept<V> {
     /// Create a new all-different-except constraint over `vars`, treating
     /// `sentinel` as the escape value that may be reused without conflict.
     pub fn new(vars: Vec<VarId>, sentinel: V) -> Self {
-        Self { scope: vars, sentinel }
+        Self {
+            scope: vars,
+            sentinel,
+        }
     }
 
     pub(crate) fn check_impl(&self, assignment: &[Option<V>]) -> bool {
@@ -97,19 +100,34 @@ impl<V: Clone + PartialEq + std::fmt::Debug> AllDifferentExcept<V> {
         let singletons: Vec<(VarId, D::Value)> = self
             .scope
             .iter()
-            .filter_map(|&v| vars[v as usize].domain.singleton_value().map(|val| (v, val)))
+            .filter_map(|&v| {
+                vars[v as usize]
+                    .domain
+                    .singleton_value()
+                    .map(|val| (v, val))
+            })
             .filter(|(_, val)| *val != self.sentinel)
             .collect();
 
         for (sv, sval) in &singletons {
             for &other in &self.scope {
-                if other == *sv { continue; }
-                if vars[other as usize].prune(sval, depth) { changed = true; }
-                if vars[other as usize].domain.is_empty() { return Revision::Unsatisfiable; }
+                if other == *sv {
+                    continue;
+                }
+                if vars[other as usize].prune(sval, depth) {
+                    changed = true;
+                }
+                if vars[other as usize].domain.is_empty() {
+                    return Revision::Unsatisfiable;
+                }
             }
         }
 
-        if changed { Revision::Changed } else { Revision::Unchanged }
+        if changed {
+            Revision::Changed
+        } else {
+            Revision::Unchanged
+        }
     }
 }
 
@@ -118,8 +136,12 @@ where
     D: Domain,
     D::Value: PartialEq,
 {
-    fn scope(&self) -> &[VarId] { &self.scope }
-    fn check(&self, assignment: &[Option<D::Value>]) -> bool { self.check_impl(assignment) }
+    fn scope(&self) -> &[VarId] {
+        &self.scope
+    }
+    fn check(&self, assignment: &[Option<D::Value>]) -> bool {
+        self.check_impl(assignment)
+    }
     fn revise(&self, vars: &mut [Variable<D>], depth: usize) -> Revision {
         self.revise_impl(vars, depth)
     }

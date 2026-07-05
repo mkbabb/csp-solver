@@ -117,8 +117,16 @@ fn bench_queens_configs(c: &mut Criterion) {
 
     // Compare solver configurations on 8-queens (all solutions).
     let configs: &[(&str, Pruning, Ordering)] = &[
-        ("fc_chrono", Pruning::ForwardChecking, Ordering::Chronological),
-        ("fc_failfirst", Pruning::ForwardChecking, Ordering::FailFirst),
+        (
+            "fc_chrono",
+            Pruning::ForwardChecking,
+            Ordering::Chronological,
+        ),
+        (
+            "fc_failfirst",
+            Pruning::ForwardChecking,
+            Ordering::FailFirst,
+        ),
         ("ac3_failfirst", Pruning::Ac3, Ordering::FailFirst),
         ("ac3_domwdeg", Pruning::Ac3, Ordering::DomWdeg),
         ("acfc_failfirst", Pruning::AcFc, Ordering::FailFirst),

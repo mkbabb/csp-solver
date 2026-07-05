@@ -75,21 +75,36 @@ fn main() {
     ];
 
     let configs = [
-        ("AC3+FailFirst", SolveConfig {
-            pruning: Pruning::Ac3, ordering: Ordering::FailFirst,
-            max_solutions: 1, backjumping: false,
-            ..Default::default()
-        }),
-        ("AC3+DomWdeg", SolveConfig {
-            pruning: Pruning::Ac3, ordering: Ordering::DomWdeg,
-            max_solutions: 1, backjumping: false,
-            ..Default::default()
-        }),
-        ("FC+FailFirst", SolveConfig {
-            pruning: Pruning::ForwardChecking, ordering: Ordering::FailFirst,
-            max_solutions: 1, backjumping: false,
-            ..Default::default()
-        }),
+        (
+            "AC3+FailFirst",
+            SolveConfig {
+                pruning: Pruning::Ac3,
+                ordering: Ordering::FailFirst,
+                max_solutions: 1,
+                backjumping: false,
+                ..Default::default()
+            },
+        ),
+        (
+            "AC3+DomWdeg",
+            SolveConfig {
+                pruning: Pruning::Ac3,
+                ordering: Ordering::DomWdeg,
+                max_solutions: 1,
+                backjumping: false,
+                ..Default::default()
+            },
+        ),
+        (
+            "FC+FailFirst",
+            SolveConfig {
+                pruning: Pruning::ForwardChecking,
+                ordering: Ordering::FailFirst,
+                max_solutions: 1,
+                backjumping: false,
+                ..Default::default()
+            },
+        ),
     ];
 
     println!(

@@ -334,7 +334,9 @@ impl Csp {
     /// Construct an empty CSP.
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self { inner: RustCsp::new() }
+        Self {
+            inner: RustCsp::new(),
+        }
     }
 
     /// Add a variable with the given domain values. Returns its `VarId`.
@@ -413,7 +415,12 @@ impl Csp {
             .inner
             .solve(&rust_config)
             .into_iter()
-            .map(|sol| sol.into_iter().enumerate().map(|(i, v)| (i as u32, v)).collect())
+            .map(|sol| {
+                sol.into_iter()
+                    .enumerate()
+                    .map(|(i, v)| (i as u32, v))
+                    .collect()
+            })
             .collect();
         serde_wasm_bindgen::to_value(&solutions).map_err(|e| JsError::new(&e.to_string()))
     }
@@ -436,7 +443,12 @@ impl Csp {
             .inner
             .solve_with_given(&rust_config, &given_vec)
             .into_iter()
-            .map(|sol| sol.into_iter().enumerate().map(|(i, v)| (i as u32, v)).collect())
+            .map(|sol| {
+                sol.into_iter()
+                    .enumerate()
+                    .map(|(i, v)| (i as u32, v))
+                    .collect()
+            })
             .collect();
         serde_wasm_bindgen::to_value(&solutions).map_err(|e| JsError::new(&e.to_string()))
     }
@@ -600,8 +612,8 @@ pub fn create_random_board(
     let difficulty = difficulty.unwrap_or(SudokuDifficulty::EASY);
 
     let board = if !templates.is_undefined() && !templates.is_null() {
-        let tmpls: Vec<HashMap<String, i32>> = serde_wasm_bindgen::from_value(templates)
-            .map_err(|e| JsError::new(&e.to_string()))?;
+        let tmpls: Vec<HashMap<String, i32>> =
+            serde_wasm_bindgen::from_value(templates).map_err(|e| JsError::new(&e.to_string()))?;
         let m = (n * n) as usize;
         let total = m * m;
         let flat_templates: Vec<Vec<u32>> = tmpls

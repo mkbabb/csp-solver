@@ -77,8 +77,7 @@ pub fn align_forms(
 
     // Tier 1 — signature fast path. Skipped when hard subpathPairs
     // hints are present.
-    let has_subpath_hints = hints
-        .is_some_and(|h| !h.subpath_pairs.is_empty());
+    let has_subpath_hints = hints.is_some_and(|h| !h.subpath_pairs.is_empty());
 
     if !has_subpath_hints && signatures_match(source, target) {
         return emit_canonical_pairs(source, target, hints);
@@ -139,8 +138,7 @@ fn signatures_match(source: &FormDef, target: &FormDef) -> bool {
             if src[i].role != Role::Outer {
                 continue;
             }
-            if compare_signatures(&src[i].signature, &tgt[i].signature)
-                != std::cmp::Ordering::Equal
+            if compare_signatures(&src[i].signature, &tgt[i].signature) != std::cmp::Ordering::Equal
             {
                 return false;
             }
@@ -151,8 +149,7 @@ fn signatures_match(source: &FormDef, target: &FormDef) -> bool {
             if src[i].role != Role::Counter {
                 continue;
             }
-            if compare_signatures(&src[i].signature, &tgt[i].signature)
-                != std::cmp::Ordering::Equal
+            if compare_signatures(&src[i].signature, &tgt[i].signature) != std::cmp::Ordering::Equal
             {
                 return false;
             }
@@ -239,9 +236,8 @@ fn align_forms_csp(
                     Some(i),
                     Some(k),
                 );
-                scratch.cost_matrix[base] =
-                    pair_cost(&source.subpaths[i], &target.subpaths[k])
-                        + ALIGN_RESIDUAL_WEIGHT * r.residual;
+                scratch.cost_matrix[base] = pair_cost(&source.subpaths[i], &target.subpaths[k])
+                    + ALIGN_RESIDUAL_WEIGHT * r.residual;
                 scratch.residual_cache[base] = Some(r);
             } else {
                 scratch.cost_matrix[base] = CROSS_ROLE_COST;
@@ -310,9 +306,7 @@ fn align_forms_csp(
         unmatched_target_set[k_usize] = false;
     }
 
-    let unmatched_target: Vec<usize> = (0..n_tgt)
-        .filter(|&k| unmatched_target_set[k])
-        .collect();
+    let unmatched_target: Vec<usize> = (0..n_tgt).filter(|&k| unmatched_target_set[k]).collect();
 
     PairwiseAlignment {
         source_form_id: source.id.clone(),
@@ -418,8 +412,7 @@ pub fn align_pair_internal(
                     weights[h.source_index] = 10.0; // bias factor
                 }
             }
-            let offset =
-                weighted_rotation_offset(&tgt_resampled, &src_resampled, &weights);
+            let offset = weighted_rotation_offset(&tgt_resampled, &src_resampled, &weights);
             if offset != 0 {
                 tgt_resampled = rotate_contour(&tgt_resampled, offset);
                 shift = (shift + offset) % n;
@@ -436,17 +429,10 @@ pub fn align_pair_internal(
     }
 
     // Undo centroid/scale normalization.
-    let src_final = translate_and_scale(
-        &src_resampled,
-        [-src_centroid[0], -src_centroid[1]],
-        1.0,
-    );
+    let src_final = translate_and_scale(&src_resampled, [-src_centroid[0], -src_centroid[1]], 1.0);
     let mut tgt_final = translate_and_scale(
         &tgt_resampled,
-        [
-            -tgt_centroid[0] / area_ratio,
-            -tgt_centroid[1] / area_ratio,
-        ],
+        [-tgt_centroid[0] / area_ratio, -tgt_centroid[1] / area_ratio],
         area_ratio,
     );
 

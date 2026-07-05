@@ -63,14 +63,12 @@ fn solve_queens(n: u32, config: &SolveConfig) -> usize {
             let diff = j - i;
             csp.add_constraint(LambdaConstraint::new(
                 vec![i, j],
-                move |assignment| {
-                    match (&assignment[i as usize], &assignment[j as usize]) {
-                        (Some(a), Some(b)) => {
-                            let da = (*a as i32 - *b as i32).unsigned_abs();
-                            da != diff
-                        }
-                        _ => true,
+                move |assignment| match (&assignment[i as usize], &assignment[j as usize]) {
+                    (Some(a), Some(b)) => {
+                        let da = (*a as i32 - *b as i32).unsigned_abs();
+                        da != diff
                     }
+                    _ => true,
                 },
                 format!("diag_{i}_{j}"),
             ));
@@ -84,7 +82,12 @@ fn solve_queens(n: u32, config: &SolveConfig) -> usize {
 
 // ── Map Coloring ────────────────────────────────────────────────────────────
 
-fn solve_map_coloring(n_nodes: usize, edges: &[(u32, u32)], n_colors: u32, config: &SolveConfig) -> usize {
+fn solve_map_coloring(
+    n_nodes: usize,
+    edges: &[(u32, u32)],
+    n_colors: u32,
+    config: &SolveConfig,
+) -> usize {
     let mut csp = Csp::new();
     let domain = BitsetDomain::new(0..n_colors);
     for _ in 0..n_nodes {
@@ -142,7 +145,11 @@ fn main() {
             std::hint::black_box(solve_sudoku(grid, &ac3_dw));
         }
     }
-    eprintln!("  {:.1}s ({:.2} ms/puzzle)", t.elapsed().as_secs_f64(), t.elapsed().as_secs_f64() / 3.0);
+    eprintln!(
+        "  {:.1}s ({:.2} ms/puzzle)",
+        t.elapsed().as_secs_f64(),
+        t.elapsed().as_secs_f64() / 3.0
+    );
 
     // ── N-Queens (8-queens all solutions × 200 iterations) ──────────────
     eprintln!("=== 8-Queens all solutions (200 iterations) ===");
@@ -151,11 +158,23 @@ fn main() {
         let n = std::hint::black_box(solve_queens(8, &ac3_ff));
         debug_assert_eq!(n, 92);
     }
-    eprintln!("  {:.1}s ({:.2} ms/solve)", t.elapsed().as_secs_f64(), t.elapsed().as_secs_f64() / 200.0 * 1000.0);
+    eprintln!(
+        "  {:.1}s ({:.2} ms/solve)",
+        t.elapsed().as_secs_f64(),
+        t.elapsed().as_secs_f64() / 200.0 * 1000.0
+    );
 
     // ── Map Coloring (Australia × 5000 + random 50-node × 200) ──────────
     let australia_edges: Vec<(u32, u32)> = vec![
-        (0, 1), (0, 2), (1, 2), (1, 3), (2, 3), (2, 4), (2, 5), (3, 4), (4, 5),
+        (0, 1),
+        (0, 2),
+        (1, 2),
+        (1, 3),
+        (2, 3),
+        (2, 4),
+        (2, 5),
+        (3, 4),
+        (4, 5),
     ];
     eprintln!("=== Australia 3-coloring all solutions (5000 iterations) ===");
     let t = std::time::Instant::now();
@@ -163,7 +182,11 @@ fn main() {
         let n = std::hint::black_box(solve_map_coloring(7, &australia_edges, 3, &ac3_ff));
         debug_assert_eq!(n, 18);
     }
-    eprintln!("  {:.1}s ({:.2} ms/solve)", t.elapsed().as_secs_f64(), t.elapsed().as_secs_f64() / 5000.0 * 1000.0);
+    eprintln!(
+        "  {:.1}s ({:.2} ms/solve)",
+        t.elapsed().as_secs_f64(),
+        t.elapsed().as_secs_f64() / 5000.0 * 1000.0
+    );
 
     // Random 50-node graph
     let mut edges_50 = Vec::new();
@@ -176,10 +199,17 @@ fn main() {
             }
         }
     }
-    eprintln!("=== 50-node 4-coloring first solution (200 iterations, {} edges) ===", edges_50.len());
+    eprintln!(
+        "=== 50-node 4-coloring first solution (200 iterations, {} edges) ===",
+        edges_50.len()
+    );
     let t = std::time::Instant::now();
     for _ in 0..200 {
         std::hint::black_box(solve_map_coloring(50, &edges_50, 4, &ac3_ff));
     }
-    eprintln!("  {:.1}s ({:.2} ms/solve)", t.elapsed().as_secs_f64(), t.elapsed().as_secs_f64() / 200.0 * 1000.0);
+    eprintln!(
+        "  {:.1}s ({:.2} ms/solve)",
+        t.elapsed().as_secs_f64(),
+        t.elapsed().as_secs_f64() / 200.0 * 1000.0
+    );
 }

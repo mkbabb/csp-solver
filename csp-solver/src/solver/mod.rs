@@ -11,11 +11,11 @@ pub mod nogoods;
 pub mod optimize;
 pub mod propagate;
 
+use crate::SolveStats;
 use crate::adjacency::Adjacency;
 use crate::constraint::ConstraintEnum;
 use crate::domain::Domain;
 use crate::variable::Variable;
-use crate::SolveStats;
 
 /// Shared search context passed to all recursive search strategies.
 /// Carries the problem definition (variables, constraints, adjacency) and the

@@ -1,13 +1,13 @@
 //! Conflict-directed backjumping with bitset conflict tracking.
 
+use crate::Pruning;
 use crate::constraint::VarId;
 use crate::domain::Domain;
 use crate::ordering::{self, Ordering};
+use crate::solver::SearchContext;
 use crate::solver::ac3;
 use crate::solver::propagate;
-use crate::solver::SearchContext;
 use crate::variable::Variable;
-use crate::Pruning;
 
 use super::backtrack::Solution;
 
@@ -26,16 +26,25 @@ where
     let mut assignment: Vec<Option<D::Value>> = vec![None; num_vars];
     let mut stack: Vec<VarId> = (0..num_vars as u32).collect();
     let mut solutions = Vec::new();
-    let mut ctx = SearchContext { variables, constraints, adjacency, stats };
+    let mut ctx = SearchContext {
+        variables,
+        constraints,
+        adjacency,
+        stats,
+    };
     let mut conflict = ConflictState {
         assigned_order: Vec::new(),
         membership: vec![false; num_vars],
     };
 
     backjump_recurse(
-        &mut ctx, config,
-        &mut assignment, &mut stack, &mut solutions,
-        &mut conflict, 0,
+        &mut ctx,
+        config,
+        &mut assignment,
+        &mut stack,
+        &mut solutions,
+        &mut conflict,
+        0,
     );
 
     solutions
@@ -103,8 +112,11 @@ where
     ctx.stats.nodes_explored += 1;
 
     let idx = ordering::select_variable(
-        stack, ctx.variables, config.ordering,
-        &config.constraint_weights, &config.var_constraint_ids,
+        stack,
+        ctx.variables,
+        config.ordering,
+        &config.constraint_weights,
+        &config.var_constraint_ids,
     )
     .unwrap();
 
@@ -148,16 +160,31 @@ where
             let dwo = match config.pruning {
                 Pruning::None => false,
                 Pruning::ForwardChecking => propagate::forward_check(
-                    var, ctx.variables, ctx.constraints, ctx.adjacency,
-                    assignment.as_mut_slice(), ctx.stats, depth,
+                    var,
+                    ctx.variables,
+                    ctx.constraints,
+                    ctx.adjacency,
+                    assignment.as_mut_slice(),
+                    ctx.stats,
+                    depth,
                 ),
                 Pruning::Ac3 => ac3::ac3_from_variable(
-                    var, ctx.variables, ctx.constraints, ctx.adjacency,
-                    assignment, ctx.stats, depth,
+                    var,
+                    ctx.variables,
+                    ctx.constraints,
+                    ctx.adjacency,
+                    assignment,
+                    ctx.stats,
+                    depth,
                 ),
                 Pruning::AcFc => propagate::ac_fc(
-                    var, ctx.variables, ctx.constraints, ctx.adjacency,
-                    assignment.as_mut_slice(), ctx.stats, depth,
+                    var,
+                    ctx.variables,
+                    ctx.constraints,
+                    ctx.adjacency,
+                    assignment.as_mut_slice(),
+                    ctx.stats,
+                    depth,
                 ),
             };
 
@@ -172,9 +199,13 @@ where
                 }
             } else {
                 match backjump_recurse(
-                    ctx, config,
-                    assignment, stack, solutions,
-                    conflict, depth + 1,
+                    ctx,
+                    config,
+                    assignment,
+                    stack,
+                    solutions,
+                    conflict,
+                    depth + 1,
                 ) {
                     BackjumpResult::Done => return BackjumpResult::Done,
                     BackjumpResult::Continue => {

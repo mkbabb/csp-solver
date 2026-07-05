@@ -9,13 +9,7 @@ use morph_core::types::{
 // -- Helpers -----------------------------------------------------------------
 
 /// Create a simple 4-segment square-like subpath.
-fn make_square_subpath(
-    id: &str,
-    role: Role,
-    offset_x: f64,
-    offset_y: f64,
-    size: f64,
-) -> Subpath {
+fn make_square_subpath(id: &str, role: Role, offset_x: f64, offset_y: f64, size: f64) -> Subpath {
     let segs = vec![
         Segment {
             id: 0,
@@ -177,8 +171,15 @@ fn test_align_asymmetric_forms_unmatched() {
     // At least one source must be unmatched (3 sources, 2 targets).
     let total_matched = result.pairs.len();
     let total_unmatched = result.unmatched_source.len();
-    assert_eq!(total_matched + total_unmatched, 3, "all 3 sources accounted for");
-    assert!(!result.unmatched_source.is_empty(), "asymmetric forms must have unmatched source");
+    assert_eq!(
+        total_matched + total_unmatched,
+        3,
+        "all 3 sources accounted for"
+    );
+    assert!(
+        !result.unmatched_source.is_empty(),
+        "asymmetric forms must have unmatched source"
+    );
 }
 
 #[test]

@@ -41,10 +41,7 @@ fn with_pin_overrides_cost() {
         .solve()
         .expect("pin must not make a 3x3 problem infeasible");
 
-    assert_eq!(
-        sol.assign[0], 2,
-        "row 0 must respect the hard pin to col 2"
-    );
+    assert_eq!(sol.assign[0], 2, "row 0 must respect the hard pin to col 2");
 
     // Every column should be visited exactly once (no row falls back
     // to SENTINEL because the unmatch penalty dominates any reroute).
