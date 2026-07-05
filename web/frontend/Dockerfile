@@ -8,6 +8,9 @@ WORKDIR /app
 # Dependencies
 ###############################################################################
 FROM base AS dependencies
+# node:22-slim bundles npm 10.x, which resolves this lockfile differently than
+# the npm >=11 that generated it (EUSAGE: missing peers). Pin the client major.
+RUN npm install -g npm@^11
 COPY package.json package-lock.json* ./
 RUN npm ci
 
