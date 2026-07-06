@@ -1,32 +1,35 @@
+# Base stack — prod-safe minimal. Dev-only mounts/ports/HMR live in
+# docker-compose.override.yml (auto-loaded by a bare `docker compose up`,
+# never loaded when -f files are given explicitly). Prod:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 services:
   backend:
     build:
       context: .
       dockerfile: web/api/Dockerfile
-      target: development
-    ports:
-      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
-    volumes:
-      - ./web/api/src:/app/src
-      - ./web/api/pyproject.toml:/app/pyproject.toml
+      target: production
     environment:
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+      # Ratified topology (W5-deploy-a): sudoku.babb.dev is the live frontend
+      # origin. The legacy NCSU host is dead; do not reintroduce it.
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://sudoku.babb.dev}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/api/v1/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - app-network
 
   frontend:
     build:
       context: ./web/frontend
-      target: development
-    ports:
-      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
-    volumes:
-      - ./web/frontend/src:/app/src
-      - ./web/frontend/index.html:/app/index.html
-      - ./web/frontend/vite.config.ts:/app/vite.config.ts
-      - ./web/frontend/tailwind.config.ts:/app/tailwind.config.ts
-    environment:
-      - VITE_API_URL=http://backend:8000
+      target: production
+      args:
+        # Same-origin by default. The API origin's public hostname is an
+        # owner action (OD-4/OD-5 DNS naming) — set via env, never guessed.
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_BASE_URL: ${VITE_BASE_URL:-/}
     depends_on:
       - backend
     networks:

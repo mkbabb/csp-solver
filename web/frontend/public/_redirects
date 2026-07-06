@@ -1,0 +1,27 @@
+# Cloudflare Pages / Netlify `_redirects` file format.
+# Wave 2026-07-grand-uplift / W5 (deploy Option A).
+#
+# NOTE on /api/*: this file intentionally does NOT declare an `/api/*`
+# rewrite/proxy rule to an external API origin. Cloudflare Pages' 200-status
+# rewrites only ever serve local static assets from this project — unlike
+# Netlify, CF Pages does NOT proxy a 200-rewrite through to an external
+# origin. A rule like `/api/*  https://some-api-host/:splat  200` here would
+# silently no-op (or 404) on Cloudflare Pages, not actually proxy.
+#
+# The FastAPI reference API this app talks to (relative `/api/v1/...` fetches
+# in src/games/sudoku/composables/useApi.ts, resolved same-origin via
+# `document.baseURI`) is wired one of two ways, both owner-side and outside
+# this repo's static config:
+#   1. Build-time: `VITE_API_URL` set to the API origin so the built bundle
+#      calls it directly (cross-origin from the browser's perspective; the
+#      `_headers` CSP's `connect-src` would then need that origin added).
+#   2. Edge-time: a Cloudflare Worker route in front of this Pages project
+#      that proxies `/api/*` to the API origin, keeping calls same-origin
+#      from the browser (no CSP change needed).
+# The API origin's hostname is unknown as of this wave (OD-5, owner action,
+# AWS App Runner box being stood up) — do not fabricate or hardcode it here.
+#
+# SPA fallback: everything else resolves client-side (no router yet, but the
+# app is a single entry point regardless — this just guards against a direct
+# hit on any path other than `/` 404ing instead of loading the app shell).
+/*    /index.html    200

@@ -1,0 +1,72 @@
+# M5b security headers — Cloudflare Pages `_headers` file format
+# https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Wave 2026-07-grand-uplift / W5 (deploy Option A). Confirmed absent at both
+# nginx layers per Pass-1 M5b; this is the CF Pages-side half of that fix
+# (the reverse-proxy nginx layer at web/nginx/sudoku.conf gets the same set).
+#
+# CSP is built clause-by-clause from what the shipped `dist/` output actually
+# requests — nothing broader. Verified empirically: a `vite build` + a
+# Playwright-driven load of `dist/` served under this exact policy (favicon,
+# fonts, hand-drawn SVG data: URIs, the AttributionCard avatar image, and 21
+# interactive UI controls exercised — board generate/solve/difficulty/size),
+# instrumented for `securitypolicyviolation` events — zero violations.
+#
+#   default-src 'self'            deny-by-default baseline
+#   script-src  'self'             app bundle is same-origin only
+#               'wasm-unsafe-eval' forward-provisioned for W6's wasm solver
+#                                  path (concurrent lane): Firefox/Safari
+#                                  require this keyword to instantiate
+#                                  WebAssembly even from same-origin bytes;
+#                                  Chrome doesn't gate on it today but the
+#                                  keyword is inert there, so it's safe to
+#                                  land ahead of W6 landing the worker
+#   style-src   'self'
+#               'unsafe-inline'    Vue :style bindings + the pencil-boil
+#                                  animation system set inline style
+#                                  attributes at runtime (no nonce plumbing
+#                                  exists for this yet)
+#               fonts.googleapis.com  the Fraunces/Fira Code/Patrick Hand
+#                                     stylesheet linked in index.html
+#   font-src    'self'
+#               fonts.gstatic.com  the woff2 files the Google Fonts
+#                                  stylesheet above actually resolves to
+#   img-src     'self'
+#               data:              hand-drawn pencil-stroke SVGs are
+#                                  generated at runtime as
+#                                  data:image/svg+xml background-image URLs
+#               avatars.githubusercontent.com  AttributionCard's author
+#                                              avatar (src/pencil/chrome/
+#                                              AttributionCard/AttributionCard.vue)
+#   connect-src 'self'             every API call is a same-origin relative
+#                                  fetch (`new URL('api/v1', document.baseURI)`
+#                                  in useApi.ts) — there is no cross-origin
+#                                  fetch in the bundle to whitelist. Routing
+#                                  those same-origin paths to the real API
+#                                  origin, once OD-5 exists, happens at the
+#                                  edge (CF Worker route), not in this
+#                                  bundle — see _redirects for the caveat
+#   worker-src  'self' blob:      forward-provisioned for W6's solver Worker
+#                                  (not yet landed; harmless no-op until it is)
+#   object-src  'none'             no <object>/<embed> use anywhere
+#   base-uri    'self'             blocks <base> tag injection
+#   form-action 'self'             no forms post off-origin
+#   frame-ancestors 'none'         belt-and-suspenders with X-Frame-Options
+#
+# Other headers:
+#   Strict-Transport-Security — force HTTPS for 2y, cover subdomains; the
+#     `preload` token only marks eligibility, it does not itself submit the
+#     domain to the HSTS preload list (that's a separate, manual, owner action)
+#   X-Frame-Options: DENY — no legitimate embed/iframe use case; blocks
+#     clickjacking
+#   X-Content-Type-Options: nosniff — stops MIME-sniffing so a served asset
+#     can't be reinterpreted as a different content-type
+#   Referrer-Policy — send only the origin cross-site, full URL same-site;
+#     avoids leaking path/query to third parties
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
