@@ -1,7 +1,9 @@
-# games/futoshiki — planned skeleton (W10 fills)
+# games/futoshiki
 
-Reserved by W7's topology (fe-colocation-manifest §1.3): W10 lands
-`types.ts`, `FutoshikiBoard/` (with `FutoshikiCell/` and sibling
-`FutoshikiCaret/`), `ControlPanel/`, and `composables/` here with zero
-further renaming. Games never import each other; the ESLint boundary
-(sudoku↛futoshiki, futoshiki↛sudoku) is already enforced.
+The second game (W10, owner-committed): 4x4-7x7 Latin squares with printed
+inequality carets. Same shape as `games/sudoku` — own Worker solve path
+(`solver.worker.ts` + `useSolver`), own API fallback (`useApi`,
+`board_size` on the wire, never `size`), own control panel; no
+`Difficulty` (v1 ships one high-density tier). Carets are `aria-hidden`
+decoration — the constraint folds into both adjacent cells' labels.
+Never imports `games/sudoku/**` (ESLint-enforced).

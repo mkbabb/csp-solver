@@ -4,9 +4,9 @@
 
 `Box<dyn Constraint<D>>` imposes a vtable indirection on every `revise()` call. AC-3 invokes `revise()` thousands of times per solve -- for a hard 9x9 Sudoku, tens of thousands. The indirect call defeats branch prediction and prevents inlining.
 
-`ConstraintEnum<D>` replaces the trait object with a four-variant enum: `NotEqual`, `AllDifferent`, `Lambda`, `Custom`. The first two are the overwhelmingly common cases. `scope()`, `check()`, and `revise()` are all `#[inline]` match arms on the enum -- the compiler emits a direct branch to the concrete implementation. `Custom` retains a `Box<dyn Constraint<D>>` for extensibility but rarely appears on the hot path.
+`ConstraintEnum<D>` replaces the trait object with an enum: `NotEqual`, `AllDifferent`, `AllDifferentExcept`, `Soft`, `Custom`. The first two are the overwhelmingly common cases. `scope()`, `check()`, and `revise()` are all `#[inline]` match arms on the enum -- the compiler emits a direct branch to the concrete implementation. `Custom` retains a `Box<dyn Constraint<D>>` for extensibility but rarely appears on the hot path. (The former `Lambda` variant was excised -- it had zero construction sites.)
 
-The payoff is visible in profiling: `ConstraintEnum::revise` accounts for 33% of total self-time, which is the _productive_ work of domain pruning rather than dispatch overhead.
+Under profiling, constraint revision dominates self-time -- the _productive_ work of domain pruning rather than dispatch overhead. The dispatch cost the enum removes is the vtable indirection, not the revision work itself.
 
 ## Arena Adjacency
 
@@ -55,26 +55,17 @@ A reusable `Vec<D::Value>` buffer (`val_buf`) collects each neighbor's domain va
 
 `restore(depth)` pops entries from the tail while they match the given depth, re-adding each value to the domain. The undo log is LIFO-ordered by construction (deeper depths are pushed later), so restoration is a simple tail-pop loop.
 
-## FxHash
+## FxHash (bbnf-lang compile path)
 
-Profiling the bbnf-lang compile pipeline with samply showed 40% of CSS L4 compile time (211ms total) sitting in SipHash operations -- `HashMap<String, u32>` lookups in the literal prefix factoring pass. SipHash is cryptographically robust but overkill for compiler-internal hash maps where DoS resistance doesn't matter.
+Profiling the bbnf-lang compile pipeline with samply showed SipHash operations dominating -- `HashMap<String, u32>` lookups in the literal prefix factoring pass. SipHash is cryptographically robust but overkill for compiler-internal hash maps, where the keys are program text and DoS resistance doesn't matter.
 
-Replacing with `FxHashMap` from `rustc-hash` (already a transitive dependency) cut compile time to 113ms -- a 46% reduction. Applied to `prefix.rs` (literal trie construction), `lr.rs` (LR table building), and `string_interner.rs` (string deduplication). FxHash uses a multiply-and-rotate scheme that's 2-5x faster than SipHash for small keys.
+Replacing them with `FxHashMap` from `rustc-hash` (a multiply-and-rotate scheme, faster than SipHash for small keys) cut the compile time materially. Applied to `prefix.rs` (literal trie construction), `lr.rs` (LR table building), and `string_interner.rs` (string deduplication). The concrete before/after timings are a bbnf-lang property, measured and tracked in that repository, not reproducible here.
 
 ## Profiling Methodology
 
-All performance numbers come from samply + Firefox Profiler. Build with `CARGO_PROFILE_RELEASE_DEBUG=true` for symbol resolution, record with `samply record --no-open ./target/release/example`, open the generated URL. The interactive flame graph and inverted call tree provide self-time breakdowns.
+Performance breakdowns come from samply + Firefox Profiler. Build with `CARGO_PROFILE_RELEASE_DEBUG=true` for symbol resolution, record with `samply record --no-open ./target/release/examples/profile_sudoku`, and open the generated URL for the interactive flame graph and inverted call tree.
 
-The inverted call tree from Sudoku profiling (3 hard puzzles x 1000 iterations + 8-Queens + map coloring) shows:
-
-| Function | Self-time |
-|----------|-----------|
-| `ConstraintEnum::revise` | 33% |
-| `Iterator::next` (domain iteration) | 13% |
-| `ac3_from_variable` | 6% |
-| `BitsetWorklist::pop` | 6% |
-
-The solver spends its time doing useful work -- domain pruning and iteration -- not fighting infrastructure. There's no low-hanging fruit left in the dispatch or data structure layer. Further speedups would require algorithmic changes (stronger propagation to reduce search nodes) rather than micro-optimization.
+The profiling targets (`examples/profile_sudoku.rs`, `examples/profile_csp.rs`) run hard 9×9 puzzles plus 8-Queens and map coloring. The inverted call tree consistently shows the solver's self-time concentrated in the productive layer -- constraint revision and domain iteration -- rather than the dispatch or data-structure scaffolding. Self-time percentages depend on host and workload; run the target to obtain current figures rather than quoting a stale snapshot. Further speedups would require algorithmic changes (stronger propagation to reduce search nodes) rather than micro-optimization.
 
 ## Domain Restriction
 

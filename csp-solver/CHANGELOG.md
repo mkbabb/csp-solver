@@ -27,7 +27,7 @@ dependency (`csp-solver = "0.2"`).
     Chronological); behavior-visible for default-config consumers.
   - New: unified search kernel (`solver/search.rs`), GAC-in-AllDifferent
     default-ON (Régin, warm-started incremental matching; corpus aggregate
-    ~13–16×, nodes 41,737→5,878), restart/nogood substrate (driver deferred),
+    13.36×, nodes 41,807→5,948), restart/nogood substrate (driver deferred),
     typed `CspError` + `py/` module with 4 typed exceptions, `cancel` +
     `node_budget` + `optimization_mode` on `SolveConfig`, zero-alloc hot path,
     release-guarded `BitsetDomain` 0..128 invariant, Futoshiki generation +

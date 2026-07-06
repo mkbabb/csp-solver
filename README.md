@@ -1,166 +1,116 @@
-# `csp-solver`
+# A Constraint-Satisfaction Solver, with Two Diversions Appended
 
-Generalized constraint satisfaction problem solver in Rust, compiled to a native Python module via PyO3. Includes a demo, fully-featured, Sudoku application.
+Herein is set forth a solver of constraint-satisfaction problems, wrought in Rust and furnished with such bindings as permit its employ from Python (by way of PyO3) and from the browser (by way of WebAssembly). Upon this one engine are erected two diversions—Sudoku and Futoshiki—each a mere pleasing application of the selfsame general apparatus.
 
-Used by the [bbnf-lang](https://github.com/mkbabb/bbnf-lang) grammar compiler for type inference, FIRST/FOLLOW set computation, and dispatch table generation across lattice domains.
+Let it be understood at the outset: there subsists no solver written in Python. The Rust crate `csp_solver` is the sole engine. The web service does not itself compute; it does but delegate—to the native module where the server presides, or, in the ordinary case, to the aforesaid WebAssembly module borne within a Worker in the visitor's own browser, whither the labour of solving is, by design, removed.
 
-**Demo**: [sudoku.babb.dev](https://sudoku.babb.dev)
+**Demonstration**: [sudoku.babb.dev](https://sudoku.babb.dev)
 
-## Usage
+## Of the Parts and Their Disposition
 
-```rust
-use csp_solver::{Csp, SolveConfig, Pruning, PropagationStrategy};
-use csp_solver::domain::bitset::BitsetDomain;
-use csp_solver::ordering::Ordering;
+The repository is a Cargo workspace whose members are two: the engine crate `csp-solver`, and its WebAssembly sibling `csp-solver/wasm`. Adjacent to these stands the web tier—a FastAPI service (`web/api/`, whose Python package is named `app`) and a Vue 3 frontispiece (`web/frontend/`, in TypeScript, adorned by Tailwind).
 
-let mut csp = Csp::new();
-let domain = BitsetDomain::new(1..=4);
-let vars: Vec<_> = (0..4).map(|_| csp.add_variable(domain.clone())).collect();
+Of that which was formerly herein but is now departed: the crates `morph-core` and `wasm-morph` have been excised to a repository of their own, namely [github.com/mkbabb/morph](https://github.com/mkbabb/morph); the state antecedent to their removal is preserved under the tag `pre-morph-excision`. The general `AssignmentBuilder` surface upon which morph was raised abideth here still, and morph doth now consume `csp-solver` as any ordinary dependant would, by the registry. The particulars are recorded in `csp-solver/CHANGELOG.md`.
 
-csp.add_all_different(vars.clone());
-csp.add_greater_than(vars[0], vars[1]);
+## Of the Engine
 
-csp.finalize();
-let solutions = csp.solve(&SolveConfig {
-    pruning: Pruning::Ac3,
-    ordering: Ordering::FailFirst,
-    max_solutions: 1,
-    backjumping: false,
-});
-```
+- **`ConstraintEnum`**, a devirtualised enumeration (NotEqual, AllDifferent, Custom), whereof the two common variants inline their revision and their checking, that no vtable trouble the hot path.
+- **`BitsetDomain`**, a domain borne upon a `u128`, iterated without allocation by `BitsetIter`, and warded in release by an invariant confining its values to 0..128.
+- **Arc consistency (AC-3)** by a bitset worklist; and, for the lattice domains, a monotonic sweep.
+- **Generalised arc consistency upon all-different** (after Régin, 1994), computed by Hopcroft-Karp matching and an iterative Tarjan decomposition into strongly-connected components. This is henceforth enabled by default, gated only where the count of live participants attaineth three (`GAC_MIN_PARTICIPANTS`).
+- **A unified kernel of backtracking search** (`solver/search.rs`). The conflict-directed backjumping of former days was retired together with the kernel's unification, and the field `SolveConfig::backjumping` is no more.
+- **Pruning** after one of four manners: None, ForwardChecking, Ac3 (that is, MAC), or AcFc.
+- **Ordering** of variables by one of three: Chronological; FailFirst, which is the minimum-remaining-values rule; and Mrv, which weigheth domain-size against a sum of constraint-weights. Be it noted that those weights lie frozen at unity, wherefore the last is a static heuristic; the elder appellation `DomWdeg` was, upon measurement, adjudged a misnomer.
+- The defaults of `SolveConfig` are `Ac3` with `FailFirst`, a single solution sought, and a node budget of one million.
+- A typed `CspError` bearing a stable code; a substrate for restart and nogood (though its driver is deferred); and, upon `SolveConfig`, the appurtenances `cancel`, `node_budget`, and `optimization_mode`.
 
-```python
-from csp_solver import Csp, SolveConfig, Pruning, Ordering
+### Wherein a Former Account Is Corrected
 
-csp = Csp()
-v0 = csp.add_variable([1, 2, 3, 4])
-v1 = csp.add_variable([1, 2, 3, 4])
-csp.add_not_equal(v0, v1)
-csp.finalize()
-solutions = csp.solve(SolveConfig(pruning=Pruning.AC3, ordering=Ordering.FAIL_FIRST))
-```
+It was hereinbefore asserted that generalised arc consistency ran upon Sudoku; yet in truth it ran only at the strength of forward checking, the n-ary propagator being gated shut. It now runneth at its proper strength, and by default. Moreover the causal account rendered in the first audit hath been inverted: that quickening of the assignment builder once laid to the charge of GAC's incrementalisation proved, upon profiling, to owe nothing to GAC—which was invoked not once—but everything to the builder's rewiring from `Pruning::AcFc` to `Ac3`. The whole of the lever is that one swap of strategy (a matter of some two thousand six hundred and seventy fold); the incrementalisation contributeth but a secondary betterment of one-and-a-fifth to one-and-three-fifths (see `docs/`, and the campaign's `evidence/synthesis-pass2.md`, §D1).
 
-Built with `maturin develop --release --features py`.
+### Of the Bindings for Python
 
-## Architecture
+Under the feature `py`, in `csp-solver/src/py/`, is compiled the module `csp_solver`, exposing `Csp`, `SolveConfig`, `SolveStats`, the enumerations of pruning and ordering, the constructors for Sudoku and Futoshiki, and four typed exceptions that mirror `CspError::code()` faithfully. It is builded by `maturin`.
 
-`Csp<D: Domain>` is generic over a domain type. The `Domain` trait requires `iter()` as its primary iteration primitive, alongside `remove()`, `add()`, `contains()`, and `singleton_value()`. `BitsetDomain` implements these via a `u128` bitmask—membership, removal, and iteration are all O(1) bitops (`popcount`, `trailing_zeros`, bit-clear).
+### Of the Concord with bbnf-lang
 
-Constraints are stored as `ConstraintEnum<D>`, a devirtualized enum with variants for `NotEqual`, `AllDifferent`, `Lambda` (closure-based), and `Custom` (boxed trait object). The first two inline their `revise()` and `check()` directly—no vtable dispatch on the hot path.
+This repository is the fount and source of truth for the solver. The grammar-compiler `bbnf-lang` doth not patch it in by configuration—that account is dead—but vendoreth a byte-identical copy, pinned at a revision, and keepeth it honest by a two-fold gate (`scripts/sync-csp-solver-vendor.sh`, resident in that other repository). The first part, `--check`, is a gate of provenance, diffing the vendored source against `git show <pin>:csp-solver/src` and failing upon any drift of a single byte. The second, `--verify`, enforceth compilation: it buildeth the root crates and the skinny `passes` crate and the vendored crate under both its configurations, `default` and `py` alike, and setteth tripwires upon the trait surface and upon any addition of a field to `SolveConfig` or `SolveStats`. The hook before pushing runneth both. By these passes bbnf performeth six analyses over lattice domains—the inference of types, the FIRST and FOLLOW sets, the eligibility of spans, the tables of dispatch, and the algebra of regexes—each by `propagate()` without `finalize()`, whereupon the sweep is chosen of itself.
 
-The adjacency graph maps variables to constraints and constraints to neighbors via a flat `Vec<u32>` arena with `(offset, len)` indexing. One allocation, sequential reads.
+## Of the Two Diversions
 
-`propagate()` auto-selects strategy: AC-3 worklist if `finalize()` was called, fixed-point sweep otherwise. `propagate_with(strategy)` allows explicit selection.
+| Diversion | Formulation | Magnitudes | Whereon exposed |
+|---|---|---|---|
+| Sudoku | M² variables, domains 1..M, an all-different upon each row, column, and subgrid | N from 2 to 5 (the web tier: 2, 3, 4, and N=5 at easy) | Rust, Python, wasm, service, frontend |
+| Futoshiki | An N×N Latin square, with inequalities set between adjacent cells | N from 4 to 7, in this first version | Rust, Python, wasm, service, frontend |
 
-| Strategy | Trigger | Use case |
-|----------|---------|----------|
-| `Auto` | Default | Picks AC-3 or sweep based on adjacency presence |
-| `Ac3` | `finalize()` called | Search (Sudoku, queens, coloring) |
-| `Sweep` | No adjacency | Lattice domains (type inference, FIRST/FOLLOW) |
+Each is furnished with generation and with validation. The uniqueness-proof of Futoshiki (which seeketh two solutions under `Ac3`) is sound by virtue of the kernel's correction to the AC-3 trail.
 
-## Algorithms
+## Of the Frontispiece
 
-### AC-3
+Vue 3 in the Composition manner, without router and without library of state. The directory `src/pencil/` holdeth the shared hand-drawn habit—the grid, the glyphs, the celestial chrome, the filters, the scheduler—and `src/games/{sudoku,futoshiki}/` the two surfaces of play. Solving is, by default, conducted in a Worker over `@mkbabb/csp-solver-wasm`; the path by the service is but a fallback. The motion is scheduled by `@mkbabb/pencil-boil` (`^0.6.0`), and all of it deferreth to `prefers-reduced-motion`. The grid is an ARIA grid, navigable by the keys, with an affordance to hold and peek.
 
-Arc consistency via a bitset worklist (`Vec<u64>`). When a constraint's `revise()` prunes a domain, only its neighbor constraints are re-enqueued—the bitset gives O(1) insert and O(words) scan for the next constraint to process.
+## Of the Service
 
-`NotEqual::revise()` checks singleton domains: if one side is fixed to value `v`, prune `v` from the other. `AllDifferent` propagates assigned values to all peers. The default `revise()` (for closures and custom constraints) does pairwise support checking with a reusable assignment buffer.
+A FastAPI, its package `app`, disposed as thin router unto service unto `csp_solver`; with dependency-injection by `Depends`, one envelope of error for every failure, a limiter of rate, thread-pools apportioned, and a `CancelToken` bound to a wall-clock timeout. The routes cap the solutions sought at one. The taxonomy of error is of seven codes—`UNSATISFIABLE`, `BUDGET_EXCEEDED`, `INVALID_INPUT`, `TIMEOUT`, `NOT_FOUND`, `RATE_LIMITED`, `INTERNAL`—whereof the four begotten of the solver mirror `CspError::code()`.
 
-### GAC AllDifferent
+### Upon the Meaning of `max_solutions`
 
-Régin's (1994) algorithm for generalized arc consistency on n-ary all-different constraints:
+Where `max_solutions` be one, under `Ac3`, the search returneth the first solution it attaineth. Upon an instance bearing many solutions this first is valid but not determinate—it dependeth upon the trajectory, and another pruning or ordering may return another member of the set, no less correct. Let it therefore be taken for a probe of satisfiability, or (at two) for a proof of uniqueness, and never for a warrant of any particular solution (the campaign's `evidence/kernel-soundness-closure.md`, §7.2).
 
-1. **Maximum matching** — Hopcroft-Karp on the variable-value bipartite graph, O(E√V). If the matching doesn't cover all variables, the constraint is unsatisfiable.
-2. **Residual graph** — matched edges reversed (val→var), unmatched forward (var→val). Free values get BFS-reachability edges back to all candidate variables.
-3. **SCC decomposition** — iterative Tarjan. A (var, val) pair can be pruned if the edge isn't in the matching, var and val are in different SCCs, and the value isn't reachable from a free vertex.
-
-### Backjumping
-
-Conflict-directed backjumping with a bitset conflict set. When a dead end is reached, the conflict set records which previously-assigned variables caused the failure. The search jumps directly to the most recent conflicting variable rather than backtracking chronologically.
-
-## Optimizations
-
-- **ConstraintEnum dispatch** — the enum match on `NotEqual`/`AllDifferent` compiles to a direct branch. `scope()`, `check()`, and `revise()` are `#[inline]`.
-- **Arena adjacency** — all neighbor lists live in a single `Vec<u32>` pool. Each variable/constraint has an `(offset, len)` pair into the pool.
-- **BitsetIter** — `BitsetDomain::iter()` copies the `u128` and yields values via `trailing_zeros`. Zero allocation, no borrow—the domain can be mutated while iterating.
-- **Worklist bitset** — AC-3 uses `Vec<u64>` words. O(1) insert, O(words) pop. No `VecDeque`.
-- **Assign-check-unassign** — forward checking tests each value by writing into the mutable assignment slice, checking constraints, then unwriting. No per-value allocation.
-
-## Puzzles
-
-### Sudoku
-
-M² variables with domain 1..M, AllDifferent constraints on each row, column, and N×N subgrid. Handles N=2 (4×4) through N=5 (25×25). The web app exposes N=2, 3, 4.
-
-Generation has two paths. The fast path picks a random pre-computed template and applies a random symmetry transform—sub-millisecond. The symmetry group for N=3 comprises digit permutation (9!), row permutation within bands (3!³), column permutation within stacks (3!³), band permutation (3!), stack permutation (3!), and transposition (×2). Product: ~1.22 billion distinct grids per template.
-
-The slow path generates a complete solution (seed first row, solve), digs holes one at a time with uniqueness verification, and calibrates difficulty by backtrack count: easy (0), medium (<50), hard (>100).
-
-### Futoshiki
-
-N×N Latin square with inequality constraints between adjacent cells. `add_all_different` per row and column, `add_equals` for fixed cells, `add_greater_than` for the inequality annotations. Rust-only (no web UI).
-
-## BBNF Integration
-
-The [bbnf-lang](https://github.com/mkbabb/bbnf-lang) grammar compiler uses `csp-solver` for six IR analysis passes. Each constructs a `Csp` with a lattice domain—values only grow via `join()`, no backtracking. None call `finalize()`, so `propagate()` auto-selects the sweep strategy.
-
-| Pass | Domain | Lattice direction | Variables |
-|------|--------|--------------------|-----------|
-| Type inference | `TypeDomain` | `None → Some(ty)` | 2 per IR node |
-| FIRST sets | `CharSetDomain` (128-bit) | ∅ → union | 1 per rule |
-| FOLLOW sets | `CharSetDomain` | ∅ → union | 1 per rule |
-| Span eligibility | `BoolDomain` | top-down refinement | 1 per rule |
-| Dispatch tables | `DispatchDomain` | Unknown → Dispatchable/NonDispatchable | 1 per Alt |
-| Regex algebra | `RewriteDomain` | Pending → CanRewrite/CannotRewrite | 1 per Alt |
-
-For CSS L4 (265 rules, 15 files, deep `@import` chain), the full compile pipeline runs in 113ms. The CSP passes are <0.1% of that—the compile bottleneck is literal prefix factoring, mitigated by FxHash (which cut the total from 211ms).
-
-## Performance
-
-Solve times on hard 9×9 Sudoku (AC3 + DomWdeg, single solution):
-
-| Puzzle | Rust | Python | Speedup |
-|--------|------|--------|---------|
-| Al Escargot | 0.36 ms | 11.5 ms | 32× |
-| Golden Nugget | 6.2 ms | 347 ms | 56× |
-| Inkala 2010 | 0.52 ms | 29.6 ms | 57× |
-
-BBNF compile pipeline:
-
-| Grammar | Lines | Time |
-|---------|-------|------|
-| JSON | 30 | 0.70 ms |
-| EBNF | 51 | 1.10 ms |
-| Google Sheets | 115 | 1.80 ms |
-| CSS L4 | 973 (15 files) | 113 ms |
-
-## Development
+## Of Setting the Works in Motion
 
 ```bash
-cargo test                              # 83 Rust tests
-cargo bench                             # criterion: sudoku, queens, map_coloring, lattice
-maturin develop --release --features py # build PyO3 wheel
+# By Docker, for development (the override is loaded of itself: bind-mounts, HMR, dev ports)
+docker compose up
 
-docker compose up                       # dev: api + frontend
+# By Docker, for production (the -f files named explicitly; the override is never seen)
+docker compose -f docker-compose.yml -f docker-compose.prod.yml build && \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# The engine alone
+cd csp-solver && cargo test --workspace && cargo bench
+
+# The service alone (the wheel of csp_solver being installed apart, by maturin)
+cd web/api && uv sync && uv run uvicorn app.main:app --reload --port 8000
+
+# The frontispiece alone
+cd web/frontend && npm install && npm run dev
 ```
 
+## Of the Proving
+
+```bash
+# Rust — 150 passed, 0 failed, 6 ignored, across 17 binaries
+#   (measured at d9781e29, Apple M5 Max, 2026-07-06)
+cargo test --workspace
+
+# Python — the web/api suite: 108 passed, 2 skipped, against the installed wheel
+cd web/api && uv run pytest
+
+# The measured benchmarks (criterion) — sudoku, queens, map_coloring, lattice
+cargo bench
 ```
-csp-solver/
-├── src/
-│   ├── lib.rs              # Csp<D>, SolveConfig, PropagationStrategy
-│   ├── py.rs               # PyO3 bindings (#[cfg(feature = "py")])
-│   ├── constraint/         # Constraint trait, ConstraintEnum, NotEqual, AllDifferent, Lambda
-│   ├── domain/             # Domain trait, BitsetDomain, FiniteDomain, BitsetLatticeDomain
-│   ├── solver/             # ac3, backtrack, backjump, propagate, monotonic, gac_alldiff, local_search, nogoods
-│   └── puzzles/            # sudoku/, futoshiki/
-├── benches/                # criterion
-├── tests/                  # 83 integration tests
-└── examples/               # profiling targets
-web/
-├── api/                    # FastAPI backend (Python package: app)
-├── frontend/               # Vue 3 + TypeScript + Tailwind, custom pencil-boil aesthetic
-└── nginx/                  # reverse proxy (production)
-```
+
+## Of the Deployment
+
+The ratified disposition is **A and C together**. By A, the frontispiece is a static deploy upon Cloudflare Pages (sudoku.babb.dev), whence `_redirects` conveyeth `/api/*` unto a small ever-waking API origin (the owner's box) that runneth the hardened FastAPI reference and serveth N=5-Easy and whatsoever exceedeth the in-browser ceiling; `_headers` beareth the CSP, HSTS, and X-Frame-Options. By C, the SPA solveth and generateth within a Worker, and so retireth the whole class of GIL-and-DoS hazard for the served magnitudes—and this is the default. There remaineth one action to the owner (OD-4): to strike the dangling CNAME `api.csp-solver.babb.dev`, which hath the shape of a subdomain seizure. The committed `docker-compose` topology (backend, frontend, nginx) is the hardened reference stack, and not that which runneth the live static site.
+
+## Of the Continuous Integration
+
+The workflow `.github/workflows/ci.yml` at the root marshalleth eight lanes: lint (fmt and clippy, warnings denied); rust (build and test of the workspace, with the queens-bench assertion of ground truth); py-compile (a check under the feature `py`, upon Python of 3.13 or less, for the ceiling of PyO3 0.24); py-runtime (the maturin wheel, a uv venv, then pytest); wasm (a test by node and clippy upon the wasm32 target); twiggy (the budgets of size); and frontend (`npm ci` and `vue-tsc`). The wasm builds elect the `wasm-release` profile. The budgets: the full module faileth above 240 KB and warneth above 215 KB; the lean Sudoku artifact faileth above 93 KB, and measureth, as deployed, 87,853 bytes raw (measured at d9781e29, Apple M5 Max, 2026-07-06).
+
+## Of the Artifacts Published
+
+| Artifact | Registry | Version |
+|---|---|---|
+| `csp-solver` | crates.io | 0.2.0 |
+| `@mkbabb/csp-solver-wasm` | npm | 0.2.0 |
+| `@mkbabb/morph` | npm (now from mkbabb/morph) | 0.2.0 |
+| `@mkbabb/pencil-boil` | npm (a dependant of the frontend) | 0.6.0 |
+
+## Of the Performance
+
+The reproducible and stamped figures are set down in `docs/benchmarks.md`. In sum: generalised arc consistency, being now default-ON, yieldeth an aggregate of 13.36-fold over a bank of 113 boards, at a cost honestly disclosed—three of five named hard 9×9 boards run from 1.3 to 2.5 times slower with it engaged. No headline of cross-tongue speedup is claimed, nor any band of profile percentages; the elder figures of 7-to-57-fold and of 10-to-25 percent were found irreproducible and are hereby retired.
 
 ## Sources
 
@@ -169,4 +119,3 @@ web/
 - Hopcroft, J. E. & Karp, R. M. (1973). "An n^(5/2) algorithm for maximum matchings in bipartite graphs." *SIAM J. Comput.*, 2(4), 225–231.
 - Tarjan, R. E. (1972). "Depth-first search and linear graph algorithms." *SIAM J. Comput.*, 1(2), 146–160.
 - Boussemart, F. et al. (2004). "Boosting systematic search by weighting constraints." *ECAI-04*, 146–150.
-- Minton, S. et al. (1992). "Minimizing conflicts." *Artificial Intelligence*, 58(1–3), 161–205.

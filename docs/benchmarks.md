@@ -1,78 +1,50 @@
 # Benchmarks
 
-## Sudoku Solve Times
+## Posture
 
-Hard 9x9 puzzles, single solution. Rust uses AC3 + DomWdeg (its strongest configuration). Python uses FC + FailFirst + GAC (its strongest configuration). Each solver's best -- they don't share the same optimal config because the overhead profile differs.
+This document reports only what is reproducible and stamped. Two classes of pre-tranche number were retired as non-reproducible:
 
-| Puzzle | Rust | Python | Speedup |
-|--------|------|--------|---------|
-| Al Escargot | 0.36 ms | 11.5 ms | 32x |
-| Platinum Blonde | 2.57 ms | 30.6 ms | 12x |
-| Golden Nugget | 6.2 ms | 347 ms | 56x |
-| Inkala 2010 | 0.52 ms | 29.6 ms | 57x |
-| 17-clue minimal | 4.6 ms | 28.1 ms | 6x |
+- **The 7–57× "Rust vs Python" headline.** It was not apples-to-apples (each solver measured under a different config), and there is no longer a Python solver to compare against -- `csp_solver` (Rust) is the sole engine. The specific claim of Platinum Blonde at 2.57 ms (against 0.44 ms measured) was among the non-reproducible entries.
+- **The "10–25% optimization headroom" profile band.** Refuted at load: it was load-average-50 contention noise. On a quiet host, `lto=fat + codegen-units=1 + strip` alone is +16–17% slower and the package nets ≈0% (`evidence/synthesis-pass3.md` §1 #14). CI therefore keeps the default release profile with none of those levers.
 
-The speedup variance (6x to 57x) reflects how much each puzzle relies on propagation vs. search. Golden Nugget requires deep search with many backtracks -- Rust's inlined constraint dispatch and bitset operations compound across thousands of `revise()` calls. The 17-clue puzzle, by contrast, is propagation-heavy with minimal search, so the per-operation advantage doesn't compound as dramatically.
+Numbers below trace either to a named campaign artifact under `docs/tranches/2026-07-grand-uplift/evidence/`, or to a command run here and quoted with its stamp. Stamp shape for locally-run commands: `measured at d9781e29, Apple M5 Max, 2026-07-06`.
 
-Al Escargot and Inkala 2010 both solve in under a millisecond. These are famous "hardest Sudoku" puzzles, but strong AC-3 propagation with DomWdeg ordering finds solutions with minimal backtracking.
+## GAC default-ON: the corpus result and its cost
 
-## Generation Times
+GAC-in-AllDifferent is default-ON, gated at live-participant count ≥ `GAC_MIN_PARTICIPANTS` (3). The decision rests on a 113-board A/B corpus -- 5 named hard 9×9, all 107 template-bank puzzles (N=2..4), and one N=5 -- solved under the exact production config (`Ac3 + Mrv`), GAC off vs on (`evidence/synthesis-pass3.md` row 2; `waves/W2-gac-search.md`):
 
-Template-based fast path vs. hole-digging slow path. Templates apply a random symmetry transform; hole-digging generates a solution then removes cells with uniqueness verification.
+| Measure | Value | Source |
+|---|---|---|
+| Corpus aggregate speedup (ON) | **13.36×** (14.2–14.6× across reruns) | `synthesis-pass3.md` row 2 |
+| Search nodes, off → on | 41,807 → 5,948 | ibid. |
+| Best single-board win | N=4, up to ~112× | ibid. |
 
-| Size | Template | Hole-digging |
-|------|----------|-------------|
-| 4x4 | 0.01 ms | 0.04 ms |
-| 9x9 | 0.09 ms | 1.3 ms |
-| 16x16 | 0.16 ms | 36.5 ms |
+**The minority cost, disclosed:** 3 of the 5 named hard 9×9 boards are reproducibly slower with GAC on -- Al Escargot 0.50×, Golden Nugget 0.79×, Inkala 2010 0.40× (i.e. 1.3–2.5× slower). The aggregate win is dominated by the N=4 boards; the hard-9×9 minority pays GAC's per-propagation constant. The default stands because the corpus aggregate and the 16×16 failure-to-success result outweigh it, and every N-keyed gate tested was ≤ blanket-ON.
 
-Template generation is O(M^2) -- just permute cells and digits. The cost is dominated by the permutation application, not the random number generation. Hole-digging's cost grows superlinearly because each removed cell requires a uniqueness solve, and the solve cost itself increases with board size.
+**The gate threshold:** `GAC_MIN_PARTICIPANTS` swept 2–6 stays within ~7%; at 9 it is 1.79× worse. 3 is retained.
 
-For the web app, templates are pre-computed for each supported size and difficulty level. The API endpoint returns a puzzle in <1ms regardless of difficulty.
+## The criterion tradeoff on hard 9×9
 
-## BBNF Compile Pipeline
+Isolated criterion, same host, byte-identical solve counts: `sudoku_9x9/al_escargot/ac3_failfirst` runs ≈370 µs baseline → ≈677 µs composed -- **≈1.8× slower** -- attributable to GAC per-propagation overhead (`evidence/kernel-behavior-preservation.md` §criterion; `synthesis-pass3.md` row 1). This is the same constant cost the corpus minority pays, measured in isolation. It is a disclosed, accepted tradeoff for the aggregate win, not a regression to fix.
 
-Full grammar-to-code compilation. Includes parsing, IR lowering, all 18 optimization passes (including the 6 CSP-based passes), and Rust codegen.
+## Kernel soundness parity
 
-| Grammar | Lines | Time |
-|---------|-------|------|
-| JSON | 30 | 0.70 ms |
-| EBNF | 51 | 1.10 ms |
-| CSS monolithic | 69 | 2.00 ms |
-| Google Sheets | 115 | 1.80 ms |
-| BBNF | 80 (+imports) | 3.79 ms |
-| CSS L4 | 973 (15 files) | 113 ms |
+The unified search kernel is verified sound, not merely fast. Evidence from `evidence/kernel-soundness-closure.md`:
 
-CSS L4 is the outlier. 973 lines across 15 files with deep `@import` chains and hundreds of alternation branches. The compile time is dominated by literal prefix factoring (trie construction over string literals) and regex-with-lookahead factoring. The 6 CSP passes contribute <0.1% of the total.
+- **Solution-set invariance.** The enumerate-all solution *set* is identical across all 12 Pruning × Ordering combinations at `budget=false`: queens8 = 92, queens12 = 14,200, futoshiki_loose = 288, futoshiki_constr = 16 (§2, §6). Standing guard: `tests/solution_set_invariance.rs`.
+- **False-UNSAT closed.** The 113-board GAC corpus goes 0/113 false-UNSAT post-fix; the revert control reproduces 26/113, proving the harness exercises the buggy path (§4).
+- **`time_sudoku` byte-identical counts** vs the `91bb8b0` baseline (§5): Al Escargot `Ac3+FailFirst` 62 backtracks / 962 propagations, Platinum 3 / 293, Inkala 105 / 1,539; `ForwardChecking` rows 207/789, 0/242, 501/1765.
 
-The jump from Google Sheets (1.8ms, 115 lines) to CSS L4 (113ms, 973 lines) isn't linear in grammar size. CSS L4's complexity comes from its extreme alternation widths -- some rules have 50+ branches of string literals that need prefix factoring, dispatch table computation, and regex algebra optimization.
+Local test suite, run here:
 
-## Profiling: Sudoku
+```
+cargo test --workspace  →  150 passed, 0 failed, 6 ignored (17 binaries)
+# measured at d9781e29, Apple M5 Max, 2026-07-06
+```
 
-samply + Firefox Profiler. Workload: 3 hard 9x9 puzzles x 1000 iterations each, plus 8-Queens and Australia map coloring. Built with `CARGO_PROFILE_RELEASE_DEBUG=true`.
+## Wasm artifact sizes
 
-Inverted call tree, self-time:
-
-| Function | Self-time |
-|----------|-----------|
-| `ConstraintEnum::revise` | 33% |
-| `Iterator::next` (domain iteration) | 13% |
-| `ac3_from_variable` | 6% |
-| `BitsetWorklist::pop` | 6% |
-
-The solver spends a third of its time in constraint revision -- the actual productive work of pruning domains. Domain iteration (13%) is `BitsetIter::next`, which is already a single `trailing_zeros` + bit-clear per value. The worklist and AC-3 scaffolding are 12% combined. No obvious bottleneck remains in the infrastructure layer.
-
-## Profiling: BBNF Compile
-
-samply on the CSS L4 compile pipeline. The pre-FxHash profile showed 40% of self-time in `SipHash` operations from `HashMap<String, u32>` lookups in the literal prefix factoring pass. These hash maps are compiler-internal -- no adversarial input, no DoS risk.
-
-Switching to `FxHashMap` (multiply-and-rotate, ~3x faster than SipHash for small keys) cut total compile time from 211ms to 113ms. The remaining time is split across prefix trie construction, regex-syntax HIR analysis, and codegen token emission. The CSP passes don't register on the profile.
-
-## Methodology
-
-All Rust benchmarks use criterion with default sample size and warm-up. Each iteration constructs a fresh `Csp`, adds variables and constraints, calls `finalize()`, and solves -- cold benchmarks only, no warm/cached runs that reuse a pre-constructed solver. This measures end-to-end throughput including CSP setup, which is the realistic usage pattern. Reusing a pre-constructed solver would measure combinator cache throughput, not parse/solve throughput.
-
-Python benchmarks use `time.perf_counter()` around the equivalent `Csp` construction and solve sequence, averaged over 100 iterations per puzzle.
+Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean Sudoku+Futoshiki artifact measures **87,853 B raw** (`web/frontend/dist/assets/csp_solver_wasm_bg-*.wasm`, measured at d9781e29, Apple M5 Max, 2026-07-06; also recorded in `csp-solver/wasm/CHANGELOG.md`). CI enforces size budgets in the `twiggy` lane: full module fail >240 KB / warn >215 KB; separate lean-Sudoku budget fail >93 KB. The CI lane records 201,053 B full / 72,429 B lean at the W6 gate (`.github/workflows/ci.yml`) -- the lean figure predates the Futoshiki surface the deployed artifact now carries.
 
 ## Reproducing
 
@@ -80,13 +52,21 @@ Python benchmarks use `time.perf_counter()` around the equivalent `Csp` construc
 # Criterion benchmarks (Sudoku, Queens, map coloring, lattice)
 cargo bench
 
-# Wall-clock Sudoku timing
+# Queens-bench ground-truth asserts (92 / 14200) — the only harness that encodes
+# solution-count ground truth; cargo test cannot see bench asserts
+cargo bench -p csp-solver --bench queens -- --test
+
+# Wall-clock Sudoku timing + backtrack/propagation counts
 cargo run --release --example time_sudoku
 
-# Profile with samply
+# GAC A/B corpus (off vs on, production config)
+cargo run --release --example gac_ab_corpus
+
+# Profiling target (build with debug symbols, record with samply)
 CARGO_PROFILE_RELEASE_DEBUG=true cargo build --release --example profile_sudoku
 samply record --no-open ./target/release/examples/profile_sudoku
-# Open the printed URL in Firefox/Chrome for the interactive flame graph
 ```
 
-The `profile_csp.rs` example runs a mixed workload (Sudoku + Queens + map coloring) for aggregate profiling. The `profile_sudoku.rs` example focuses on Sudoku with 1000 iterations of each hard puzzle for stable sampling.
+## Methodology
+
+Criterion runs use the default sample size and warm-up. Each iteration constructs a fresh `Csp`, adds variables and constraints, calls `finalize()`, and solves -- cold benchmarks only, measuring end-to-end throughput including CSP setup. The A/B corpus and `time_sudoku` report deterministic node/backtrack/propagation counts (host-independent) alongside wall time (host-dependent); the counts are the load-bearing figures for soundness, the wall times for the disclosed GAC tradeoff.

@@ -54,6 +54,14 @@ pub enum OptimizationMode {
 pub struct SolveConfig {
     pub pruning: Pruning,
     pub ordering: Ordering,
+    /// Cap on solutions returned. `1` is a satisfiability probe.
+    ///
+    /// On a problem with more than one solution, *which* first solution comes
+    /// back under `Pruning::Ac3` is trajectory-dependent — different
+    /// pruning/ordering combinations may return different valid members of the
+    /// solution set. Each is a genuine member (see `kernel-soundness-closure.md`
+    /// §7.2), but callers must not depend on the specific choice. Only
+    /// enumerate-all (`usize::MAX`) has a defined, pruning-invariant set.
     pub max_solutions: usize,
     /// Enable Luby restarts with phase saving and (if `Ordering::Chs`) dynamic
     /// conflict-history weighting. Opt-in; production sudoku stays `Ac3 + Mrv`.

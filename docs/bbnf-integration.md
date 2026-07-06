@@ -1,8 +1,17 @@
 # BBNF Integration
 
+## Mechanism: source of truth + vendored copy + sync gate
+
+This repository is the source of truth for the solver; `csp-solver` publishes to crates.io. The `bbnf-lang` grammar compiler does **not** patch the crate in by `.cargo/config.toml` -- that account is dead. It vendors a **byte-identical copy** of `csp-solver/src`, pinned at a revision, and keeps it honest with a two-part sync gate (`scripts/sync-csp-solver-vendor.sh`, resident in bbnf-lang; this repo is never pushed to from that gate):
+
+- **`--check`** -- a text-diff provenance gate. It diffs the vendored `src/` against `git show <pin>:csp-solver/src` and fails on any byte drift. It proves *"the copy matches the pin,"* nothing more.
+- **`--verify`** -- an enforced-compile gate. It builds the root crates `{bbnf, bbnf-ir, egraph}`, the separate skinny workspace's `passes` crate, and the vendored crate under **both** cfg branches (`default` and `py`) -- catching the class of break where code compiling under one config fails under the other. It also runs structural tripwires: a trait-surface allow-list and a `SolveConfig`/`SolveStats` field-set comparison against the pinned rev. The pre-push hook runs both gates.
+
+The two gates are complementary: `--check` catches a hand-edited vendor copy; `--verify` catches a pin bump whose new solver code no longer compiles its consumers (a byte-perfect `--check` says nothing about buildability). The `SolveConfig::default()` change to `Ac3 + FailFirst` and the `Ordering` rename shipped through this window (`evidence/constraint-trait-bound-spike.md` §8).
+
 ## Overview
 
-The bbnf-lang grammar compiler uses csp-solver for six IR analysis passes. All six share a common pattern: lattice domains where values only grow via `join()`, never shrink. No backtracking, no search. The CSPs construct variables and constraints, then call `propagate()` without calling `finalize()`. The auto-selection logic detects the absence of an adjacency graph and routes to `propagate_monotonic` -- a fixed-point sweep over all constraints until convergence.
+Within bbnf, csp-solver drives six IR analysis passes. All six share a common pattern: lattice domains where values only grow via `join()`, never shrink. No backtracking, no search. The CSPs construct variables and constraints, then call `propagate()` without calling `finalize()`. The auto-selection logic detects the absence of an adjacency graph and routes to `propagate_monotonic` -- a fixed-point sweep over all constraints until convergence.
 
 This is a fundamentally different usage pattern from Sudoku or N-Queens. There's no search tree, no variable ordering heuristic, no undo log. The solver acts as a dataflow fixpoint engine -- closer to a worklist algorithm in a compiler than a combinatorial search. The domain types are defined in bbnf-lang, not in csp-solver. They implement the `Domain` trait (and sometimes `LatticeDomain`) with monotonic semantics.
 
@@ -16,7 +25,7 @@ Each IR node gets one or two type variables. The domain is `Option<TypeDesc>` wh
 - Optionals wrap in Option.
 - Map expressions take the return type of the mapping function.
 
-For CSS L4 (265 rules across 15 files), this generates ~2000 variables and ~5000 constraints. Convergence in 2-3 sweep iterations. The lattice has finite height -- type descriptors can only grow from `None` to a concrete type, and joins between concrete types produce a fixed result.
+For a large real-world grammar (CSS Level 4), type inference is the widest of the six passes. The lattice has finite height -- type descriptors can only grow from `None` to a concrete type, and joins between concrete types produce a fixed result -- so the sweep converges in a handful of iterations.
 
 ## FIRST Sets (CharSetDomain)
 
@@ -26,7 +35,7 @@ Each rule gets a variable whose domain is a `CharSet128` -- a 128-bit ASCII bits
 - Sequences: FIRST(A B) = FIRST(A), unless A is nullable, in which case FIRST(A B) = FIRST(A) | FIRST(B).
 - Repetitions: FIRST(A*) = FIRST(A) (plus the empty case, handled by nullable analysis).
 
-Mutually recursive rules require multiple sweep iterations. The lattice is the powerset of ASCII characters ordered by subset inclusion -- finite height of 128, so convergence is guaranteed. In practice, 2-4 iterations suffice for any grammar.
+Mutually recursive rules require multiple sweep iterations. The lattice is the powerset of ASCII characters ordered by subset inclusion -- finite height of 128, so convergence is guaranteed in a small number of iterations for any grammar.
 
 ## FOLLOW Sets
 
@@ -81,6 +90,8 @@ Each pass constructs its own `Csp` instance from scratch. There's no shared stat
 
 ## Performance
 
-For CSS L4 (265 rules, 15 files, deep `@import` chain), all six CSP passes combined account for less than 0.1% of the 113ms total compile time. The type inference pass is the largest, with ~2000 variables and ~5000 constraints, but converges in 2-3 sweep iterations. The FIRST/FOLLOW passes are smaller -- one variable per rule, ~265 variables each.
+Across bbnf's grammar corpus the six CSP passes are a negligible fraction of total compile time. Type inference is the widest (one or two variables per IR node); the FIRST/FOLLOW passes are one variable per rule. The compile bottleneck is elsewhere -- literal prefix factoring (trie construction over string literals) and regex-with-lookahead factoring -- not constraint propagation.
 
-The bottleneck is literal prefix factoring (trie construction over thousands of string literals) and regex-with-lookahead factoring, not constraint propagation. The sweep strategy's simplicity -- just iterate all constraints until quiescent -- is well-matched to the small, dense constraint graphs these passes produce. Building an adjacency graph and maintaining a worklist would add overhead for no benefit when the constraint count is in the hundreds, not the thousands.
+The sweep strategy's simplicity -- iterate all constraints until quiescent -- is well-matched to the small, dense constraint graphs these passes produce. Building an adjacency graph and maintaining a worklist would add overhead for no benefit at this constraint count.
+
+Concrete compile timings are a property of the bbnf-lang repository and its fixtures, not of this crate; they are measured and tracked there, and are deliberately not restated here where they cannot be reproduced.

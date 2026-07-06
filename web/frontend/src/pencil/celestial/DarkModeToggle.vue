@@ -226,7 +226,7 @@ function handleToggle() {
   animation-play-state: paused !important;
 }
 
-/* Continuous ray spin (50s full rotation) */
+/* Continuous ray spin (240s full rotation) */
 .sun-rays {
   transform-origin: 100px 100px;
   animation: spin-rays 240s linear infinite;

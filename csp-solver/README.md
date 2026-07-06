@@ -1,32 +1,34 @@
 # csp-solver
 
-Generic constraint satisfaction problem solver in Rust, with WebAssembly bindings.
-Chronological backtracking + conflict-directed backjumping, AC-3 and AC-FC constraint
-propagation, GAC all-different (Regin 1994), min-conflicts local search, over bitset /
-finite / lattice domains.
+Generic constraint satisfaction problem solver in Rust, with WebAssembly
+bindings. Unified backtracking search, AC-3 and AC-FC constraint propagation,
+GAC all-different (Régin 1994, default-ON), branch-and-bound for cost
+optimization, over bitset / finite / cost-finite / lattice domains.
 
-The workspace ships four publishable artifacts across two registries:
+The workspace ships two publishable artifacts across two registries:
 
 | Artifact | Registry | Role |
 | --- | --- | --- |
 | `csp-solver` | crates.io | the CSP solver crate |
-| `morph-core` | crates.io | form alignment + landmark matching, built on `csp-solver` |
 | `@mkbabb/csp-solver-wasm` | npm | wasm-pack bindings for `csp-solver` |
-| `@mkbabb/morph` | npm | wasm-pack bindings for `morph-core` |
+
+`morph-core` (crates.io) and `@mkbabb/morph` (npm) once shipped from here; they
+were excised to [github.com/mkbabb/morph](https://github.com/mkbabb/morph). The
+pre-deletion state is tagged `pre-morph-excision`; the general-purpose
+`AssignmentBuilder` surface morph was built on stays here, and morph now consumes
+`csp-solver` as an ordinary crates.io dependency. See `CHANGELOG.md`.
 
 ## Install
 
 ```toml
 # Rust — Cargo.toml
 [dependencies]
-csp-solver = "0.1.0"
-morph-core = "0.1.0"
+csp-solver = "0.2"
 ```
 
 ```bash
 # JavaScript / TypeScript
 npm install @mkbabb/csp-solver-wasm
-npm install @mkbabb/morph
 ```
 
 ## Usage
@@ -35,23 +37,24 @@ npm install @mkbabb/morph
 use csp_solver::{Csp, SolveConfig};
 
 let mut csp = Csp::new();
-// declare variables + domains, push constraints, then solve:
-let solution = csp.solve(&SolveConfig::default());
+// declare variables + domains, push constraints, finalize, then solve:
+csp.finalize();
+let solutions = csp.solve(&SolveConfig::default());
 ```
 
-The wasm packages mirror the Rust surface for JS consumers — `@mkbabb/csp-solver-wasm`
-exposes the solver problem-builder, and `@mkbabb/morph` exposes the alignment pipeline.
-The emitted JS entry points are `csp_solver_wasm.js` and `morph.js` respectively.
+`@mkbabb/csp-solver-wasm` exposes the same core to JS consumers — the lean
+default build ships the Sudoku and Futoshiki solve surfaces plus the assignment
+COP entry point; the `full-mirror` feature adds the generic `Csp` builder. The
+emitted JS entry point is `csp_solver_wasm.js`. See [`wasm/README.md`](./wasm/README.md).
 
 ## Structure
 
 ```
-src/                  Csp<D>, domains, constraints, solver strategies (lib.rs entry)
-morph-core/           form alignment + landmark matching crate (depends on csp-solver)
-wasm/                 wasm-pack bindings for csp-solver → @mkbabb/csp-solver-wasm
-wasm-morph/           wasm-pack bindings for morph-core → @mkbabb/morph
-benches/              criterion benchmarks (sudoku, queens, map_coloring, …)
-examples/, tests/     native checks
+src/                  Csp<D>, domains, constraints, solver kernel (lib.rs entry)
+wasm/                 wasm-pack bindings → @mkbabb/csp-solver-wasm
+data/                 embedded sudoku template bank (include_dir!)
+benches/              criterion benchmarks (sudoku, queens, map_coloring, assignment, …)
+examples/, tests/     native checks + the template-generator pipeline
 ```
 
 See `CLAUDE.md` for the full module map.

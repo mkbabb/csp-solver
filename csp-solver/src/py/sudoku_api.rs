@@ -1,4 +1,5 @@
-//! Sudoku convenience API (isomorphic to Python's `csp_solver.solver.sudoku`).
+//! Sudoku convenience API — `SudokuCSP`, `create_sudoku_csp`, `solve_sudoku`,
+//! `create_random_board`, exported on the `csp_solver` PyO3 module.
 
 use std::collections::HashMap;
 
