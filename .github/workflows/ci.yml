@@ -300,12 +300,33 @@ jobs:
 
     # ---------------------------------------------------------------- Lane 8
     # frontend — npm ci --dry-run (EUSAGE was P0, Pass-2 prototype 8) then npm ci +
-    # vue-tsc --noEmit. RED until W7/W8 heal the keyframes.js 5.x drift.
+    # vue-tsc --noEmit. @mkbabb/csp-solver-wasm is a monorepo file: link to the
+    # gitignored csp-solver/wasm/pkg build output (the LEAN artifact — consuming
+    # the published full-featured registry package would regress the 93 KB band),
+    # so this lane builds it first.
     frontend:
         runs-on: ubuntu-latest
-        timeout-minutes: 15
+        timeout-minutes: 20
         steps:
             - uses: actions/checkout@v4
+            - name: Install Rust nightly toolchain (wasm32)
+              uses: dtolnay/rust-toolchain@nightly
+              with:
+                  targets: wasm32-unknown-unknown
+            - name: Install wasm-pack (>=0.14 floor)
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: wasm-pack
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-frontend-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: Build the lean wasm artifact the file: link resolves to
+              run: wasm-pack build csp-solver/wasm --scope mkbabb --target web --profile wasm-release --no-default-features
             - name: Set up Node (LTS) with npm cache
               uses: actions/setup-node@v4
               with:
