@@ -7,7 +7,7 @@ use crate::{Pruning, SolveConfig};
 
 use super::csp::{create_sudoku_csp, solve_sudoku};
 use super::rng::SimpleRng;
-use super::transform::apply_random_transform;
+use super::transform::{SudokuTransform, apply_random_transform};
 
 /// The crate-owned puzzle-template bank, embedded into the compiled artifact at
 /// *build* time via `include_dir!`.
@@ -72,7 +72,10 @@ fn parse_puzzle_field(json: &str, total: usize) -> Vec<u32> {
         .find("\"puzzle\"")
         .expect("template missing \"puzzle\" key");
     let obj_start = json[key..].find('{').expect("puzzle object missing '{'") + key;
-    let obj_end = json[obj_start..].find('}').expect("puzzle object missing '}'") + obj_start;
+    let obj_end = json[obj_start..]
+        .find('}')
+        .expect("puzzle object missing '}'")
+        + obj_start;
     let body = &json[obj_start + 1..obj_end];
 
     let mut board = vec![0u32; total];
@@ -203,10 +206,54 @@ pub fn generate_board(n: u32, difficulty: Difficulty) -> Vec<u32> {
     generate_board_slow(n, difficulty)
 }
 
+/// Seeded, platform-independent counterpart of [`generate_board`].
+///
+/// Threads an explicit `seed` instead of reading `SimpleRng::from_time()`
+/// (→ `std::time::SystemTime::now()`), which **panics** on
+/// `wasm32-unknown-unknown` (no wall clock). Same `seed` + `n` +
+/// `difficulty` ⇒ the same board on native and wasm — the invariant the
+/// client-solve wasm surface (`csp-solver/wasm/src/sudoku.rs`) and its
+/// cross-target parity harness rely on. Additive: `generate_board` still
+/// seeds from the wall clock on native.
+pub fn generate_board_seeded(n: u32, difficulty: Difficulty, seed: u64) -> Vec<u32> {
+    generate_board_slow_with_rng(n, difficulty, &mut SimpleRng::new(seed))
+}
+
+/// Seeded, platform-independent counterpart of
+/// [`generate_board_with_templates`]. When `templates` is non-empty it
+/// picks one and applies a seeded random symmetry transform — the fast
+/// path, threading the seed through `SudokuTransform::random_with_rng`
+/// rather than reaching the `from_time()` seam inside
+/// [`apply_random_transform`] (which panics on wasm32). An empty
+/// `templates` falls back to seeded hole-digging.
+///
+/// Unlike [`generate_board_with_templates`], this does not run the R13
+/// debug difficulty-consistency assertion: it serves the browser
+/// client-solve path, where the frontend supplies templates it already
+/// partitioned by `{N}/{difficulty}`, and a debug-build `measure_difficulty`
+/// full search on every generated board would be a per-call cliff the
+/// wasm/native parity harness would pay repeatedly.
+pub fn generate_board_with_templates_seeded(
+    n: u32,
+    difficulty: Difficulty,
+    templates: &[Vec<u32>],
+    seed: u64,
+) -> Vec<u32> {
+    let mut rng = SimpleRng::new(seed);
+    if templates.is_empty() {
+        return generate_board_slow_with_rng(n, difficulty, &mut rng);
+    }
+    let idx = rng.next_usize(templates.len());
+    SudokuTransform::random_with_rng(n, &mut rng).apply(&templates[idx], n)
+}
+
 fn generate_board_slow(n: u32, difficulty: Difficulty) -> Vec<u32> {
+    generate_board_slow_with_rng(n, difficulty, &mut SimpleRng::from_time())
+}
+
+fn generate_board_slow_with_rng(n: u32, difficulty: Difficulty, rng: &mut SimpleRng) -> Vec<u32> {
     let m = n * n;
     let total = (m * m) as usize;
-    let mut rng = SimpleRng::from_time();
 
     // Step 1: Generate a complete valid solution.
     let mut seed_board = vec![0u32; total];
@@ -291,7 +338,10 @@ mod tests {
     /// "wrong directory" scenario R13 guards against. Uses an easy board so the
     /// measurement is fast and the 0-backtracks result is stable.
     #[test]
-    #[cfg_attr(not(debug_assertions), ignore = "R13 guard is a debug_assert; compiled out in release")]
+    #[cfg_attr(
+        not(debug_assertions),
+        ignore = "R13 guard is a debug_assert; compiled out in release"
+    )]
     #[should_panic(expected = "does not match its claimed difficulty")]
     fn generate_with_templates_mismatched_difficulty_panics_in_debug() {
         let easy = generate_board(3, Difficulty::Easy);

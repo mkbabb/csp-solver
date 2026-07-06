@@ -256,8 +256,12 @@ jobs:
               uses: taiki-e/install-action@v2
               with:
                   tool: twiggy
+            # --profile wasm-release is REQUIRED: plain release yields
+            # 270,179 B (over the 240 KB fail budget); wasm-release
+            # (workspace-root profile, opt-level=z, panic=abort) yields
+            # 201,053 B full / 72,429 B lean (W6 gate record).
             - name: wasm-pack build (full module)
-              run: wasm-pack build csp-solver/wasm --scope mkbabb
+              run: wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release
             - name: twiggy top + raw-size budget (fail >240 KB / warn >215 KB)
               run: |
                   set -euo pipefail
@@ -271,6 +275,20 @@ jobs:
                     exit 1
                   elif [ "$RAW" -gt 215000 ]; then
                     echo "::warning::wasm full module ${RAW} B exceeds the 215 KB warn threshold"
+                  fi
+            # Lean deploy artifact (W6): sudoku-only surface, full-mirror
+            # compiled out — the module the frontend Worker actually ships.
+            - name: wasm-pack build (lean sudoku artifact)
+              run: wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release --no-default-features
+            - name: lean raw-size budget (fail >93 KB)
+              run: |
+                  set -euo pipefail
+                  WASM=csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+                  RAW=$(wc -c < "$WASM")
+                  echo "lean artifact raw size: ${RAW} B (measured 72,429 B; fail >93,000)"
+                  if [ "$RAW" -gt 93000 ]; then
+                    echo "::error::lean wasm artifact ${RAW} B exceeds the 93 KB band"
+                    exit 1
                   fi
 
     # ---------------------------------------------------------------- Lane 8

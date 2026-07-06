@@ -1,31 +1,37 @@
 //! WebAssembly bindings for csp-solver.
 //!
 //! Exposes the csp-solver public API to JavaScript via wasm-bindgen.
-//! Mirrors the Python binding in `csp-solver/src/py.rs` — same surface,
-//! different binding mechanism. The two bindings are deliberately
-//! isomorphic so a Python user reading `py.rs` and a TypeScript user
-//! reading `csp_solver_wasm.d.ts` see the same shape.
 //!
 //! ## Layers
 //!
-//! - **`isomorphic`** — line-for-line mirror of `src/py.rs`. The
-//!   low-level `Csp`, `SolveConfig`, `SolveStats`, and the
-//!   `Pruning` / `Ordering` / `PropagationStrategy` /
-//!   `OptimizationMode` enums.
-//! - **`assignment`** — convenience `solveAssignmentCop` for bipartite
-//!   assignment COPs. Thin adapter over the upstream Rust
-//!   [`AssignmentBuilder`](csp_solver::AssignmentBuilder); see
-//!   `assignment.rs` for the wire shapes.
+//! - **`sudoku`** (always compiled) — the purpose-built browser
+//!   client-solve surface: `solveSudoku` / `generateSudoku` over flat
+//!   `Uint32Array` boards (no string-keyed maps). This is the layer the
+//!   frontend deploy fork ships; `--no-default-features` builds it alone.
+//! - **`isomorphic`** (feature `full-mirror`) — the generic `Csp`,
+//!   `SolveConfig`, `SolveStats`, and `Pruning` / `Ordering` /
+//!   `PropagationStrategy` / `OptimizationMode` mirror of `src/py.rs`.
+//!   Kept for PyO3-parity reference; excluded from the lean deploy build.
+//! - **`assignment`** (feature `assignment`) — convenience
+//!   `solveAssignmentCop` for bipartite assignment COPs (bbnf-buddy's live
+//!   consumer). Thin adapter over the upstream Rust
+//!   [`AssignmentBuilder`](csp_solver::AssignmentBuilder).
 
 use wasm_bindgen::prelude::*;
 
+#[cfg(feature = "assignment")]
 mod assignment;
+#[cfg(feature = "full-mirror")]
 mod isomorphic;
+mod sudoku;
 
+#[cfg(feature = "assignment")]
 pub use assignment::{
     AssignmentRequest, AssignmentResponse, assignment_sentinel, solve_assignment_cop,
 };
+#[cfg(feature = "full-mirror")]
 pub use isomorphic::*;
+pub use sudoku::*;
 
 /// Initialize the WASM module.
 ///

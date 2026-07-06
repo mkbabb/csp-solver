@@ -1,5 +1,13 @@
 import { computed, ref, watch } from 'vue'
-import { useApi } from './useApi'
+// Option C (W6): the DEFAULT solve/generate path is the in-browser wasm
+// Worker, not the FastAPI backend. `useSolver` is a drop-in for `useApi`
+// (identical `BoardResponse`/`SolveResponse` shapes) with zero `/api/v1/*`
+// dependency — no fetch, no `/config` client-timeout handshake — so it
+// degrades gracefully when the API origin is absent (wave §Residual). The
+// off-main-thread Worker structurally retires the GIL/DoS class for the
+// served sizes. `useApi.ts` remains in the tree as the Option-A path but
+// is no longer on this composable's solve path.
+import { useSolver } from './useSolver'
 import {
   resolveInitialState,
   syncToUrl,
@@ -9,8 +17,26 @@ import {
 } from './useUrlState'
 import type { Difficulty, SolveState } from '../types'
 
+/**
+ * Size-scaled node budget for the client solve — the user-facing cap on
+ * search effort, keyed to sub-grid size. The worker's wasm default is
+ * 1,000,000 nodes; larger boards legitimately explore more, so the cap
+ * scales up with `n`: generous enough that every served template solves,
+ * finite enough to structurally retire the unbounded-search DoS class the
+ * Option-A server timeout used to guard. Exhausting it surfaces a typed
+ * `BUDGET_EXCEEDED` error (distinct from provable UNSAT) — see `solve()`.
+ */
+const NODE_BUDGET_BY_SIZE: Record<number, number> = {
+  2: 200_000,
+  3: 2_000_000,
+  4: 50_000_000,
+}
+function nodeBudgetForSize(n: number): number {
+  return NODE_BUDGET_BY_SIZE[n] ?? 1_000_000
+}
+
 export function useSudoku() {
-  const api = useApi()
+  const api = useSolver()
 
   const initial = resolveInitialState()
 
@@ -118,7 +144,7 @@ export function useSudoku() {
     errorMessage.value = ''
 
     try {
-      const result = await api.solveBoard(values.value, size.value)
+      const result = await api.solveBoard(values.value, size.value, nodeBudgetForSize(size.value))
       const newlySolved: Record<string, number> = {}
       const cellsToAnimate = new Set<string>()
 
@@ -131,12 +157,20 @@ export function useSudoku() {
       }
 
       solvedValues.value = { ...solvedValues.value, ...newlySolved }
-      // Backend returns solved=false when user-entered values conflict with the solution
+      // solved=false means the solver *proved* no completion exists for the
+      // user-entered cells (provable UNSAT) — distinct from the budget case below.
       solveState.value = result.solved ? 'solved' : 'failed'
       animatingCells.value = cellsToAnimate
       queueSave()
     } catch (e) {
-      solveState.value = 'failed'
+      // A `BUDGET_EXCEEDED` `SolverError` (the search gave up at its node
+      // budget with zero solutions) is a categorically different outcome
+      // from provable UNSAT: it lands on the distinct `'error'` state, not
+      // `'failed'`, so the two are never conflated on the wire or in the UI.
+      solveState.value =
+        e instanceof Error && 'code' in e && (e as { code?: unknown }).code === 'BUDGET_EXCEEDED'
+          ? 'error'
+          : 'failed'
       errorMessage.value = e instanceof Error ? e.message : 'Solve failed'
     } finally {
       loading.value = false

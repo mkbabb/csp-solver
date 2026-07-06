@@ -23,13 +23,11 @@
 
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use csp_solver::constraint::VarId;
 use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::ordering::Ordering as RustOrdering;
-use csp_solver::sudoku::{self, Difficulty};
 use csp_solver::{
     Csp as RustCsp, PropagationStrategy as RustPropagation, Pruning as RustPruning,
     SolveConfig as RustSolveConfig,
@@ -83,8 +81,8 @@ pub enum Ordering {
     CHRONOLOGICAL = 0,
     /// Pick the variable with the smallest current domain.
     FAIL_FIRST = 1,
-    /// Pick the variable with the largest weighted constraint degree.
-    DOM_WDEG = 2,
+    /// MRV: pick the variable minimizing `domain-size / Σ constraint-weights`.
+    MRV = 2,
 }
 
 impl From<Ordering> for RustOrdering {
@@ -92,7 +90,7 @@ impl From<Ordering> for RustOrdering {
         match o {
             Ordering::CHRONOLOGICAL => RustOrdering::Chronological,
             Ordering::FAIL_FIRST => RustOrdering::FailFirst,
-            Ordering::DOM_WDEG => RustOrdering::Mrv,
+            Ordering::MRV => RustOrdering::Mrv,
         }
     }
 }
@@ -165,7 +163,6 @@ pub struct SolveConfig {
     pruning: Pruning,
     ordering: Ordering,
     max_solutions: usize,
-    backjumping: bool,
     optimization_mode: OptimizationMode,
     node_budget: Option<u64>,
 }
@@ -176,14 +173,12 @@ impl SolveConfig {
     ///
     /// Defaults match `csp_solver::SolveConfig::default()`:
     /// `FORWARD_CHECKING` pruning, `CHRONOLOGICAL` ordering, one
-    /// solution, no backjumping, feasibility mode, and a 1_000_000-
-    /// node budget.
+    /// solution, feasibility mode, and a 1_000_000-node budget.
     #[wasm_bindgen(constructor)]
     pub fn new(
         pruning: Option<Pruning>,
         ordering: Option<Ordering>,
         max_solutions: Option<usize>,
-        backjumping: Option<bool>,
         optimization_mode: Option<OptimizationMode>,
         node_budget: Option<u64>,
     ) -> Self {
@@ -191,7 +186,6 @@ impl SolveConfig {
             pruning: pruning.unwrap_or(Pruning::FORWARD_CHECKING),
             ordering: ordering.unwrap_or(Ordering::CHRONOLOGICAL),
             max_solutions: max_solutions.unwrap_or(1),
-            backjumping: backjumping.unwrap_or(false),
             optimization_mode: optimization_mode.unwrap_or(OptimizationMode::FEASIBILITY),
             node_budget: Some(node_budget.unwrap_or(1_000_000)),
         }
@@ -225,16 +219,6 @@ impl SolveConfig {
     #[wasm_bindgen(setter, js_name = maxSolutions)]
     pub fn set_max_solutions(&mut self, value: usize) {
         self.max_solutions = value;
-    }
-
-    /// Enable conflict-directed backjumping.
-    #[wasm_bindgen(getter)]
-    pub fn backjumping(&self) -> bool {
-        self.backjumping
-    }
-    #[wasm_bindgen(setter)]
-    pub fn set_backjumping(&mut self, value: bool) {
-        self.backjumping = value;
     }
 
     /// Optimization mode (feasibility / minimize / maximize).
@@ -475,174 +459,4 @@ impl Default for Csp {
     fn default() -> Self {
         Self::new()
     }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Sudoku convenience API (mirrors py.rs::SudokuCSP / create_sudoku_csp /
-// solve_sudoku / create_random_board)
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// Sudoku puzzle difficulty.
-///
-/// Mirrors `py.rs::SudokuDifficulty`.
-#[wasm_bindgen]
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum SudokuDifficulty {
-    EASY = 0,
-    MEDIUM = 1,
-    HARD = 2,
-}
-
-impl From<SudokuDifficulty> for Difficulty {
-    fn from(d: SudokuDifficulty) -> Self {
-        match d {
-            SudokuDifficulty::EASY => Difficulty::Easy,
-            SudokuDifficulty::MEDIUM => Difficulty::Medium,
-            SudokuDifficulty::HARD => Difficulty::Hard,
-        }
-    }
-}
-
-/// Wire format for `create_sudoku_csp` / `solve_sudoku` round-trips.
-///
-/// Mirrors `py.rs::SudokuCSP`'s field set. The wasm binding stores
-/// these as a serde-friendly struct so the entire object can move
-/// across the ABI in a single `JsValue` exchange.
-#[derive(Clone, Serialize, Deserialize)]
-pub struct SudokuCspWire {
-    /// Flat row-major board, length `(n * n)^2`. Zero entries are blanks.
-    pub board: Vec<u32>,
-    /// Block side length: standard Sudoku is `n = 3` (`9 × 9` grid).
-    pub n: u32,
-    /// Maximum number of solutions to enumerate.
-    #[serde(rename = "maxSolutions")]
-    pub max_solutions: usize,
-    /// Solutions found by the most recent `solve_sudoku` call.
-    /// Each solution is a position-keyed map.
-    pub solutions: Vec<HashMap<String, i32>>,
-    /// Number of backtracks the last solve required.
-    #[serde(rename = "backtrackCount")]
-    pub backtrack_count: u64,
-}
-
-/// Construct a Sudoku CSP wire object from a position-keyed value map.
-///
-/// Mirrors `py.rs::create_sudoku_csp`. Positions are stringified
-/// row-major indices into the `n^2 × n^2` grid.
-#[wasm_bindgen(js_name = createSudokuCsp)]
-pub fn create_sudoku_csp(
-    n: u32,
-    values: JsValue,
-    max_solutions: Option<usize>,
-) -> Result<JsValue, JsError> {
-    let values_map: HashMap<String, i32> =
-        serde_wasm_bindgen::from_value(values).map_err(|e| JsError::new(&e.to_string()))?;
-
-    let m = n * n;
-    let total = (m * m) as usize;
-
-    let mut board = vec![0u32; total];
-    for (pos_str, val) in &values_map {
-        let pos: usize = pos_str
-            .parse()
-            .map_err(|_| JsError::new(&format!("Invalid position: {pos_str}")))?;
-        if pos >= total {
-            return Err(JsError::new(&format!("Position {pos} out of range")));
-        }
-        if *val > 0 {
-            board[pos] = *val as u32;
-        }
-    }
-
-    let wire = SudokuCspWire {
-        board,
-        n,
-        max_solutions: max_solutions.unwrap_or(1),
-        solutions: Vec::new(),
-        backtrack_count: 0,
-    };
-    serde_wasm_bindgen::to_value(&wire).map_err(|e| JsError::new(&e.to_string()))
-}
-
-/// Solve a Sudoku CSP previously built by `createSudokuCsp`.
-///
-/// Mirrors `py.rs::solve_sudoku`. Returns the updated wire object
-/// (with `solutions` and `backtrackCount` populated). Note that
-/// because wasm-bindgen passes structs by value rather than by `&mut`
-/// reference across the ABI, this returns a fresh wire object instead
-/// of mutating in place.
-#[wasm_bindgen(js_name = solveSudoku)]
-pub fn solve_sudoku(csp: JsValue) -> Result<JsValue, JsError> {
-    let mut wire: SudokuCspWire =
-        serde_wasm_bindgen::from_value(csp).map_err(|e| JsError::new(&e.to_string()))?;
-
-    let config = RustSolveConfig {
-        pruning: RustPruning::Ac3,
-        ordering: RustOrdering::Mrv,
-        max_solutions: wire.max_solutions,
-        ..Default::default()
-    };
-
-    let (mut rust_csp, given) = sudoku::create_sudoku_csp(&wire.board, wire.n);
-    let solutions = rust_csp.solve_with_given(&config, &given);
-    let stats = rust_csp.stats();
-    wire.backtrack_count = stats.backtracks;
-
-    wire.solutions = solutions
-        .into_iter()
-        .map(|sol| {
-            sol.into_iter()
-                .enumerate()
-                .map(|(i, v)| (i.to_string(), v as i32))
-                .collect()
-        })
-        .collect();
-
-    serde_wasm_bindgen::to_value(&wire).map_err(|e| JsError::new(&e.to_string()))
-}
-
-/// Generate a random Sudoku board for the given difficulty.
-///
-/// Mirrors `py.rs::create_random_board`. The optional `templates`
-/// argument is a `JsValue` array of position-keyed value maps; when
-/// provided, the generator picks a template at random and digs holes
-/// from it.
-#[wasm_bindgen(js_name = createRandomBoard)]
-pub fn create_random_board(
-    n: u32,
-    difficulty: Option<SudokuDifficulty>,
-    templates: JsValue,
-) -> Result<JsValue, JsError> {
-    let difficulty = difficulty.unwrap_or(SudokuDifficulty::EASY);
-
-    let board = if !templates.is_undefined() && !templates.is_null() {
-        let tmpls: Vec<HashMap<String, i32>> =
-            serde_wasm_bindgen::from_value(templates).map_err(|e| JsError::new(&e.to_string()))?;
-        let m = (n * n) as usize;
-        let total = m * m;
-        let flat_templates: Vec<Vec<u32>> = tmpls
-            .iter()
-            .map(|t| {
-                let mut flat = vec![0u32; total];
-                for (k, v) in t {
-                    if let Ok(pos) = k.parse::<usize>()
-                        && pos < total
-                    {
-                        flat[pos] = *v as u32;
-                    }
-                }
-                flat
-            })
-            .collect();
-        sudoku::generate_board_with_templates(n, difficulty.into(), &flat_templates)
-    } else {
-        sudoku::generate_board(n, difficulty.into())
-    };
-
-    let result: HashMap<String, i32> = board
-        .into_iter()
-        .enumerate()
-        .map(|(i, v)| (i.to_string(), v as i32))
-        .collect();
-    serde_wasm_bindgen::to_value(&result).map_err(|e| JsError::new(&e.to_string()))
 }
