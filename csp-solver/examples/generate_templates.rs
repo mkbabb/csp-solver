@@ -81,9 +81,13 @@ fn main() {
         std::process::exit(2);
     }
 
-    let n: u32 = args[1].parse().expect("N must be an integer (2, 3, 4, or 5)");
+    let n: u32 = args[1]
+        .parse()
+        .expect("N must be an integer (2, 3, 4, or 5)");
     let (difficulty, diff_name) = parse_difficulty(&args[2]);
-    let count: usize = args[3].parse().expect("count must be a non-negative integer");
+    let count: usize = args[3]
+        .parse()
+        .expect("count must be a non-negative integer");
     let out_root = args
         .get(4)
         .map(PathBuf::from)

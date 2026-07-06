@@ -311,4 +311,54 @@ export const glyphPaths: Record<string, GlyphVariants> = {
             length: 110,
         },
     ],
+
+    /* ───────── Futoshiki inequality carets ─────────
+     * `>` and `<` are the horizontal inequality marks — a caret sits on the shared edge
+     * between two orthogonally-adjacent cells, its open mouth facing the LARGER value.
+     * `>` = greater on the left; `<` = greater on the right. FutoshikiCaret rotates the
+     * `>` glyph ±90° for vertical neighbours (→ ∨ / ∧), so only these two horizontal
+     * marks are authored here.
+     *
+     * DESIGN (F7): these are DISTINCT hand-drawn strokes, NOT one glyph mirrored — the
+     * two share no path data. `>` vertices sit near x≈28-31 with a rounder, heavier bow;
+     * `<` vertices near x≈10-12 with a sharper, tighter descent — so a `<`/`>` pair on the
+     * same board reads as two separately-drawn crayon marks, not a `scaleX(-1)` reflection
+     * (which reads mechanically wrong at crayon weight). Structure across all variants:
+     * M C C (two bowed arms meeting at the vertex) — same command count so the hover
+     * wiggle (createGlyphWiggle) swaps cleanly between variants. */
+    '>': [
+        {
+            // balanced right-caret
+            d: 'M14,14 C19,19 25,24 29,28 C25,33 19,38 14,42',
+            length: 46,
+        },
+        {
+            // wider, vertex further right, longer top arm
+            d: 'M12,12 C18,17 25,23 31,28 C25,34 18,39 13,44',
+            length: 50,
+        },
+        {
+            // tighter, vertex higher, slight tilt
+            d: 'M15,15 C20,19 25,23 28,27 C24,32 18,38 13,43',
+            length: 44,
+        },
+    ],
+
+    '<': [
+        {
+            // balanced left-caret — sharper descent than `>`, not its mirror
+            d: 'M28,13 C23,18 16,24 12,28 C16,33 22,38 27,43',
+            length: 46,
+        },
+        {
+            // wider, vertex pulled left, tighter arms
+            d: 'M29,12 C24,18 15,23 10,28 C16,34 23,39 27,44',
+            length: 50,
+        },
+        {
+            // compact, vertex higher, slight tilt
+            d: 'M27,15 C22,19 15,24 12,28 C17,32 23,37 28,42',
+            length: 44,
+        },
+    ],
 };

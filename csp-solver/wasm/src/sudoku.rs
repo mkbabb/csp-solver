@@ -30,8 +30,9 @@ use csp_solver::{Pruning, SolveConfig};
 /// discriminant. Self-contained here (not reusing `isomorphic::errors`)
 /// because that module — and its `serde`/`full-mirror` dependents — is
 /// compiled out of the lean, `--no-default-features` deploy-fork build
-/// this module is the sole occupant of.
-fn coded_error(code: &str, message: &str) -> JsValue {
+/// this module is the sole occupant of. `pub(crate)` so the sibling
+/// always-on `futoshiki` wire stamps its coded errors identically.
+pub(crate) fn coded_error(code: &str, message: &str) -> JsValue {
     let err = js_sys::Error::new(message);
     let _ = js_sys::Reflect::set(&err, &JsValue::from_str("code"), &JsValue::from_str(code));
     err.into()

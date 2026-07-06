@@ -1,8 +1,7 @@
-"""Futoshiki game package — skeleton only, W10-gated.
+"""Futoshiki game package: router (HTTP) + service (orchestration) + models.
 
-Intentionally empty of router/service/models: Futoshiki's API surface
-(mirroring `games/sudoku/{router,service,models}.py`) lands in W10 once the
-Rust `puzzles/futoshiki/generate.rs` uniqueness-checking generator is built.
-The package exists now so W10 adds one directory's worth of files without
-touching `games/sudoku/` — the whole point of the per-game colocation seam.
+Landed in W10, mirroring `games/sudoku/{router,service,models}.py`'s shape
+exactly, on top of the Rust `puzzles/futoshiki/generate.rs`
+uniqueness-checking generator. `main.py`'s "Sudoku & Futoshiki" advertisement
+is now true.
 """

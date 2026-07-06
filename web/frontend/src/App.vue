@@ -8,10 +8,39 @@ import SvgFilters from '@pencil/chrome/SvgFilters.vue'
 import HandwrittenLogo from '@pencil/chrome/HandwrittenLogo.vue'
 import AttributionCard from '@pencil/chrome/AttributionCard/AttributionCard.vue'
 import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'
+import OptionSelector from '@pencil/chrome/OptionSelector/OptionSelector.vue'
 // Async + mounted-on-first-peek: keeps the laminate's ~227 LOC out of the main
 // chunk (the W9 bundle gate) — same discipline as FilterTuner. The chunk loads
 // on the first K/hold, imperceptible locally.
 const AnswerKeyLaminate = defineAsyncComponent(() => import('@pencil/sheet/AnswerKeyLaminate.vue'))
+
+// OD-8 in-app game selector. Futoshiki's whole scene (board + controls + its own
+// useFutoshiki + Worker) is async + `v-if`-gated below, so it only downloads and spins
+// up when Futoshiki is selected — the default Sudoku load is byte-unchanged.
+const FutoshikiGame = defineAsyncComponent(() => import('@games/futoshiki/FutoshikiGame.vue'))
+
+type GameId = 'sudoku' | 'futoshiki'
+const gameOptions = [
+  { value: 'sudoku', label: 'sudoku' },
+  { value: 'futoshiki', label: 'futoshiki' },
+]
+function parseGame(): GameId {
+  return new URLSearchParams(window.location.search).get('game') === 'futoshiki'
+    ? 'futoshiki'
+    : 'sudoku'
+}
+const game = ref<GameId>(parseGame())
+function setGame(val: string | number) {
+  const next: GameId = val === 'futoshiki' ? 'futoshiki' : 'sudoku'
+  if (next === game.value) return
+  game.value = next
+  const url = new URL(window.location.href)
+  url.searchParams.set('game', next)
+  history.replaceState(null, '', url.toString())
+  // Switching away from Sudoku ends any in-flight Sudoku peek so its laminate doesn't
+  // linger under the (unmounted) Sudoku scene.
+  if (next !== 'sudoku') endPeek()
+}
 
 // Dev-only tuning tool — explicit env gate, not a commented-out import. import.meta.env.DEV
 // is statically inlined at build time, so the dynamic import()'s chunk is dead-code-eliminated
@@ -39,6 +68,7 @@ const peekTouched = ref(false) // first peek mounts the async laminate; stays tr
 const peekSolutionValues = ref<Record<string, number>>({})
 
 async function startPeek() {
+  if (game.value !== 'sudoku') return // Futoshiki owns its own peek (FutoshikiGame.vue)
   if (peekActive.value) return
   // Guard: no peek mid-solve (design-union §4.2).
   if (sudoku.solveState.value === 'solving') return
@@ -59,6 +89,7 @@ function endPeek() {
 
 // Keyboard: K toggles the peek, Esc closes it (both unconditional).
 function onKeydown(e: KeyboardEvent) {
+  if (game.value !== 'sudoku') return // Futoshiki's K/Esc is handled in FutoshikiGame.vue
   if (e.key === 'Escape') {
     endPeek()
     return
@@ -98,10 +129,22 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <div class="board-group">
         <!-- Mobile: @mbabb in-flow, left-aligned with logo -->
         <AttributionCard ref="mobileAttribution" mobile />
-        <!-- Logo: left-aligned with board -->
-        <HandwrittenLogo />
-        <!-- Board + Controls row -->
-        <div class="app-layout">
+        <!-- Masthead: the pencil wordmark is a fixed "sudoku" glyph (pencil-owned, not
+             game-aware), so it shows only over Sudoku; the selector's bolded label carries
+             Futoshiki's identity. -->
+        <div class="masthead">
+          <HandwrittenLogo v-if="game === 'sudoku'" />
+          <OptionSelector
+            class="game-selector"
+            mobile
+            :options="gameOptions"
+            :selected="game"
+            :boil-frame="0"
+            @change="setGame"
+          />
+        </div>
+        <!-- Board + Controls row (Sudoku) -->
+        <div v-if="game === 'sudoku'" class="app-layout">
           <!-- Board + the held answer-key laminate (a sibling over the board, never
                inside the grid's filtered group — kill-gate rule 6). The host tightly
                wraps the board box so the laminate's inset:0 aligns to .board-cells. -->
@@ -175,6 +218,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             </HandDrawnOutline>
           </div>
         </div>
+
+        <!-- Board + Controls (Futoshiki) — its own self-contained scene, lazy-mounted so
+             useFutoshiki + its Worker only start when the game is actually selected. -->
+        <FutoshikiGame v-if="game === 'futoshiki'" />
       </div>
 
     </main>
@@ -236,6 +283,25 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   flex-direction: column;
   align-items: stretch;
   overflow: visible;
+}
+
+/* Masthead: wordmark (Sudoku only) stacked over the OD-8 game selector. */
+.masthead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+
+.game-selector {
+  font-family: 'Fraunces', serif;
+  filter: url(#grain-static);
+}
+
+@media (max-width: 767px) {
+  .masthead {
+    align-items: center;
+  }
 }
 
 @media (max-width: 767px) {

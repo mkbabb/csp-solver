@@ -8,6 +8,11 @@
 //!   client-solve surface: `solveSudoku` / `generateSudoku` over flat
 //!   `Uint32Array` boards (no string-keyed maps). This is the layer the
 //!   frontend deploy fork ships; `--no-default-features` builds it alone.
+//! - **`futoshiki`** (always compiled) — the sibling purpose-built
+//!   Futoshiki surface: `solveFutoshiki` / `generateFutoshiki` over a flat
+//!   `Uint32Array` board plus a flat inequality-pair buffer. Futoshiki is a
+//!   shipped product surface, so it rides the lean `--no-default-features`
+//!   build alongside `sudoku`.
 //! - **`isomorphic`** (feature `full-mirror`) — the generic `Csp`,
 //!   `SolveConfig`, `SolveStats`, and `Pruning` / `Ordering` /
 //!   `PropagationStrategy` / `OptimizationMode` mirror of `src/py.rs`.
@@ -21,6 +26,7 @@ use wasm_bindgen::prelude::*;
 
 #[cfg(feature = "assignment")]
 mod assignment;
+mod futoshiki;
 #[cfg(feature = "full-mirror")]
 mod isomorphic;
 mod sudoku;
@@ -29,6 +35,7 @@ mod sudoku;
 pub use assignment::{
     AssignmentRequest, AssignmentResponse, assignment_sentinel, solve_assignment_cop,
 };
+pub use futoshiki::*;
 #[cfg(feature = "full-mirror")]
 pub use isomorphic::*;
 pub use sudoku::*;

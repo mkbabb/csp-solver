@@ -21,6 +21,7 @@ from app.core.errors import register_error_handlers
 from app.core.executors import Executors
 from app.core.limiter import limiter
 from app.core.settings import get_settings
+from app.games.futoshiki.router import router as futoshiki_router
 from app.games.sudoku.router import router as sudoku_router
 from app.routes.config import router as config_router
 from app.routes.health import router as health_router
@@ -46,7 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="Sudoku API",
-    description="Sudoku (and, W10, Futoshiki) puzzle solver API over the Rust csp_solver engine",
+    description="Sudoku & Futoshiki puzzle solver API over the Rust csp_solver engine",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -69,4 +70,5 @@ app.add_middleware(
 # Routes — all under /api/v1
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(sudoku_router, prefix="/api/v1")
+app.include_router(futoshiki_router, prefix="/api/v1")
 app.include_router(config_router, prefix="/api/v1")
