@@ -9,8 +9,21 @@ repository = "https://github.com/mkbabb/csp-solver"
 [features]
 default = []
 py = ["dep:pyo3"]
+# Gates `examples/alloc_count.rs`'s counting `#[global_allocator]`. Off by
+# default so the example compiles under plain builds/`--all-targets` without
+# claiming the process-wide global allocator slot — a future mimalloc
+# `#[global_allocator]` (composed elsewhere, e.g. behind its own feature) would
+# otherwise hard-conflict ("cannot define multiple global allocators") the
+# moment both are in the same build graph. `--features alloc-count` restores
+# the counting allocator for the alloc-count measurement harness.
+alloc-count = []
 
 [dependencies]
+# Compile-time embed of the crate-owned puzzle-template bank
+# (`data/sudoku_puzzles/`) into the built artifact — see
+# `puzzles/sudoku/generate.rs`. Pure-Rust, no C deps; wasm-compatible (the macro
+# reads files on the host at build time, ships them as `&'static [u8]`).
+include_dir = "0.7.4"
 pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
 
 [dev-dependencies]

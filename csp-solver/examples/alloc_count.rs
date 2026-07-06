@@ -4,39 +4,54 @@
 //! and Ac3+Mrv) reporting `alloc` call counts and solve outputs for a
 //! before/after allocation-count comparison. Never touches the tracked repo
 //! — throwaway prototype-evidence harness (Pass-2 zero-alloc-hot-path beat).
+//!
+//! Feature-gated behind `alloc-count` (off by default): this example claims
+//! the process-wide `#[global_allocator]` slot, which would hard-conflict
+//! ("cannot define multiple global allocators") with any future mimalloc
+//! `#[global_allocator]` once both are reachable from the same build graph
+//! (e.g. `cargo check --all-targets --features mimalloc`). Run the harness
+//! with `cargo run --release --example alloc_count --features alloc-count`.
 
-use std::alloc::{GlobalAlloc, Layout, System};
-use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
+// The entire harness — including the counting `#[global_allocator]` — lives
+// in this module and is compiled only under `--features alloc-count`. A
+// crate-level `#![cfg(...)]` can't be used here: cfg'ing out the whole file
+// still leaves the example binary needing a `fn main`, so instead the harness
+// is scoped to a module and `main()` itself is the cfg switch point (see
+// bottom of file).
+#[cfg(feature = "alloc-count")]
+mod harness {
+    use std::alloc::{GlobalAlloc, Layout, System};
+    use std::sync::atomic::{AtomicU64, Ordering as AtomicOrdering};
 
-struct CountingAlloc;
-static ALLOC_CALLS: AtomicU64 = AtomicU64::new(0);
+    struct CountingAlloc;
+    static ALLOC_CALLS: AtomicU64 = AtomicU64::new(0);
 
-unsafe impl GlobalAlloc for CountingAlloc {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        ALLOC_CALLS.fetch_add(1, AtomicOrdering::Relaxed);
-        unsafe { System.alloc(layout) }
+    unsafe impl GlobalAlloc for CountingAlloc {
+        unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+            ALLOC_CALLS.fetch_add(1, AtomicOrdering::Relaxed);
+            unsafe { System.alloc(layout) }
+        }
+        unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+            unsafe { System.dealloc(ptr, layout) }
+        }
     }
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        unsafe { System.dealloc(ptr, layout) }
+
+    #[global_allocator]
+    static GLOBAL: CountingAlloc = CountingAlloc;
+
+    fn reset() -> u64 {
+        ALLOC_CALLS.swap(0, AtomicOrdering::Relaxed)
     }
-}
+    fn count() -> u64 {
+        ALLOC_CALLS.load(AtomicOrdering::Relaxed)
+    }
 
-#[global_allocator]
-static GLOBAL: CountingAlloc = CountingAlloc;
+    use csp_solver::constraint::{LambdaConstraint, VarId};
+    use csp_solver::domain::bitset::BitsetDomain;
+    use csp_solver::ordering::Ordering;
+    use csp_solver::{Csp, Pruning, SolveConfig};
 
-fn reset() -> u64 {
-    ALLOC_CALLS.swap(0, AtomicOrdering::Relaxed)
-}
-fn count() -> u64 {
-    ALLOC_CALLS.load(AtomicOrdering::Relaxed)
-}
-
-use csp_solver::constraint::{LambdaConstraint, VarId};
-use csp_solver::domain::bitset::BitsetDomain;
-use csp_solver::ordering::Ordering;
-use csp_solver::{Csp, Pruning, SolveConfig};
-
-fn build_queens(n: u32) -> Csp<BitsetDomain> {
+    fn build_queens(n: u32) -> Csp<BitsetDomain> {
     let mut csp = Csp::new();
     let domain = BitsetDomain::range(n);
     let vars = csp.add_variables(&domain, n as usize);
@@ -113,7 +128,7 @@ fn build_sudoku_16x16(grid: &[u32; 256]) -> (Csp<BitsetDomain>, Vec<(VarId, u32)
     (csp, given)
 }
 
-fn main() {
+pub(crate) fn run() {
     // (1) 8-queens, all 92 solutions, Pruning::None + Chronological — the
     // exact rust-domain.md P1 repro (worst case: maximizes node count).
     {
@@ -217,4 +232,20 @@ fn main() {
             println!("  solution checksum (sum of 256 cells): {sum}");
         }
     }
+}
+} // mod harness
+
+#[cfg(feature = "alloc-count")]
+fn main() {
+    harness::run();
+}
+
+#[cfg(not(feature = "alloc-count"))]
+fn main() {
+    eprintln!(
+        "alloc_count: skipped — this example's counting #[global_allocator] is feature-gated \
+         off by default (it would otherwise conflict with any future mimalloc \
+         #[global_allocator]). Run with: cargo run --release --example alloc_count \
+         --features alloc-count"
+    );
 }

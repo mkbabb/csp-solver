@@ -73,7 +73,7 @@ trap cleanup EXIT INT TERM
 
 # ── Start backend (web/api: uv-managed venv + Rust csp_solver wheel) ─
 CORS_ORIGINS="http://localhost:$FRONTEND_PORT,http://localhost:5173" \
-    uv run --directory web/api uvicorn app.api.main:app \
+    uv run --directory web/api uvicorn app.main:app \
     --host 0.0.0.0 --port "$BACKEND_PORT" \
     --reload --reload-dir src &
 PIDS+=($!)

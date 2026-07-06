@@ -262,14 +262,16 @@ pub fn create_random_board(
     difficulty: SudokuDifficulty,
     templates: Option<Vec<HashMap<String, i32>>>,
 ) -> PyResult<HashMap<String, i32>> {
-    // Releases the GIL for the whole generation call — both the templated
-    // fast path and the hole-digging slow path (`generate_board`), the
-    // latter of which has no timeout wrapper at all on the Python side
-    // (see pass-1 fastapi-service F1a) and is the more direct DoS surface
-    // of the two sudoku entry points.
-    let board = py.allow_threads(|| {
+    // Releases the GIL for the whole generation call — both the embedded
+    // fast path and the hole-digging slow path it falls back to, the latter
+    // of which has no timeout wrapper at all on the Python side (see pass-1
+    // fastapi-service F1a) and is the more direct DoS surface of the two
+    // sudoku entry points.
+    let board = py.allow_threads(|| -> Result<Vec<u32>, CspError> {
         if let Some(ref tmpls) = templates {
-            // Fast path: convert template dicts to flat boards, use template-based generation.
+            // Explicit-template path (retained for callers that still marshal
+            // their own templates, e.g. the wasm wire). The Python service no
+            // longer takes this branch — puzzle data is Rust-owned now.
             let m = (N * N) as usize;
             let total = m * m;
             let flat_templates: Vec<Vec<u32>> = tmpls
@@ -286,15 +288,49 @@ pub fn create_random_board(
                     flat
                 })
                 .collect();
-            sudoku::generate_board_with_templates(N, difficulty.into(), &flat_templates)
+            Ok(sudoku::generate_board_with_templates(
+                N,
+                difficulty.into(),
+                &flat_templates,
+            ))
         } else {
-            // Slow path: hole-digging from scratch.
-            sudoku::generate_board(N, difficulty.into())
+            // Rust-owned fast path: the crate serves its own compile-time
+            // embedded template bank (`include_dir!` in `puzzles/sudoku/
+            // generate.rs`). When no bank is embedded for this size/difficulty
+            // (e.g. the locked N=5 Medium/Hard policy), reject explicitly rather
+            // than fall through to unbounded hole-digging — the service also
+            // gates this up front via `template_count`, so this is defense in
+            // depth against a direct caller.
+            let diff: Difficulty = difficulty.into();
+            let templates = sudoku::embedded_templates(N, diff);
+            if templates.is_empty() {
+                return Err(CspError::invalid_input(format!(
+                    "no embedded template bank for N={N} {diff:?} — not pregenerated \
+                     (locked N=5 policy)"
+                )));
+            }
+            Ok(sudoku::generate_board_with_templates(N, diff, &templates))
         }
-    });
+    })?;
     Ok(board
         .into_iter()
         .enumerate()
         .map(|(i, v)| (i.to_string(), v as i32))
         .collect())
+}
+
+/// Number of pregenerated templates embedded for `(N, difficulty)`.
+///
+/// The Python service calls this to enforce the locked N=5 policy: a request for
+/// a size/difficulty with zero embedded templates (N=5 Medium/Hard) is rejected
+/// with a `NOT_FOUND` up front, rather than falling through to unbounded
+/// hole-digging generation. Counts from the embedded directory listing without
+/// parsing any template file.
+#[pyfunction]
+#[pyo3(signature = (N, difficulty=SudokuDifficulty::EASY))]
+pub fn template_count(
+    #[allow(non_snake_case)] N: u32,
+    difficulty: SudokuDifficulty,
+) -> usize {
+    sudoku::embedded_template_count(N, difficulty.into())
 }

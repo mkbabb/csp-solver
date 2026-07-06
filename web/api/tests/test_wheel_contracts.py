@@ -87,7 +87,6 @@ def test_heartbeat_duty_cycle_during_solve():
         pruning=csp_solver.Pruning.NONE,
         ordering=csp_solver.Ordering.CHRONOLOGICAL,
         max_solutions=1,
-        backjumping=False,
         node_budget=5_000_000,
     )
     solve_stop = threading.Event()
@@ -137,7 +136,6 @@ def test_timeout_via_cancel_token_bounds_wall_time():
         pruning=csp_solver.Pruning.NONE,
         ordering=csp_solver.Ordering.CHRONOLOGICAL,
         max_solutions=1,
-        backjumping=False,
         node_budget=200_000_000,  # safety net far above what ~1s of search reaches
         cancel=token,
     )
@@ -180,7 +178,6 @@ def test_cancel_token_aborts_long_solve_promptly():
         pruning=csp_solver.Pruning.NONE,
         ordering=csp_solver.Ordering.CHRONOLOGICAL,
         max_solutions=1,
-        backjumping=False,
         node_budget=200_000_000,
         cancel=token,
     )

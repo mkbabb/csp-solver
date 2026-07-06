@@ -41,7 +41,7 @@ pub use enums::{Ordering, PropagationStrategy, Pruning};
 pub use errors::{BudgetExceededError, CspTimeoutError, InvalidInputError, UnsatisfiableError};
 pub use sudoku_api::{
     SudokuCSP, SudokuDifficulty, create_random_board, create_sudoku_csp, solve_sudoku,
-    solve_sudoku_board,
+    solve_sudoku_board, template_count,
 };
 
 #[pymodule]
@@ -61,6 +61,7 @@ pub fn csp_solver(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(solve_sudoku, m)?)?;
     m.add_function(wrap_pyfunction!(solve_sudoku_board, m)?)?;
     m.add_function(wrap_pyfunction!(create_random_board, m)?)?;
+    m.add_function(wrap_pyfunction!(template_count, m)?)?;
     // Typed exceptions — `from csp_solver import UnsatisfiableError, ...`
     m.add(
         "UnsatisfiableError",

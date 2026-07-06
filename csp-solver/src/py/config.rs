@@ -49,6 +49,28 @@ impl CancelToken {
 // SolveConfig + SolveStats
 // ═══════════════════════════════════════════════════════════════════════════
 
+/// The subset of the Rust-core [`RustSolveConfig`] surfaced to Python.
+///
+/// **R15 — `optimization_mode` and `restarts` are deliberately kept off the py
+/// wire** (recorded alongside GF-7's restarts/CHS off-the-wire decision):
+///
+/// - `restarts` is accepted-but-inert in the Rust core today (its Luby driver is
+///   not wired onto the unified kernel — see the core `SolveConfig` doc-comment),
+///   so exposing it would advertise a knob that does nothing.
+/// - `optimization_mode` only changes behavior for **cost-aware** search
+///   (`solve_optimized()` on a `CostDomain`, or `solve()` over a domain carrying
+///   real domain-costs / soft-constraint penalties). The py [`Csp`] wraps
+///   `Csp<BitsetDomain>` and its builder surface adds only
+///   not-equal / all-different / equals / less-than / greater-than constraints —
+///   **no cost or soft constraints**. Under that surface `MinimizeCost` /
+///   `MaximizeCost` run branch-and-bound with a `ZeroCost` evaluator (every
+///   solution costs 0), collapsing to `Feasibility` in result while doing
+///   strictly more work. Surfacing it would put an inert-or-pessimizing knob on
+///   the wire — the same reasoning that keeps `restarts` off it.
+///
+/// Both stay at their Rust-core defaults (`restarts: false`,
+/// `optimization_mode: Feasibility`) via the `..Default::default()` below.
+/// Revisit if/when the py wire ever exposes cost/soft constraints.
 #[pyclass]
 #[derive(Clone)]
 pub struct SolveConfig {
