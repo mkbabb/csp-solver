@@ -38,7 +38,7 @@
 #               avatars.githubusercontent.com  AttributionCard's author
 #                                              avatar (src/pencil/chrome/
 #                                              AttributionCard/AttributionCard.vue)
-#   connect-src 'self'             every API call is a same-origin relative
+#   connect-src 'self' https://api.sudoku.babb.dev             every API call is a same-origin relative
 #                                  fetch (`new URL('api/v1', document.baseURI)`
 #                                  in useApi.ts) — there is no cross-origin
 #                                  fetch in the bundle to whitelist. Routing
@@ -65,7 +65,7 @@
 #     avoids leaking path/query to third parties
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.sudoku.babb.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
