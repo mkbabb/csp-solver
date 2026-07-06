@@ -184,7 +184,9 @@ jobs:
                     --out target/wheels
             - name: Sync backend venv (web/api, dev extras)
               working-directory: web/api
-              run: uv sync --extra dev
+              # W4 moved dev deps to PEP 735 [dependency-groups]; uv installs the
+              # `dev` group by default — plain sync is the correct invocation.
+              run: uv sync
             - name: Install csp_solver wheel into backend venv
               working-directory: web/api
               run: uv pip install ../../target/wheels/*.whl
@@ -216,8 +218,12 @@ jobs:
                       ~/.cargo/git
                       target
                   key: cargo-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            # The legacy installer script serves <0.14, which forwards --profile to
+            # cargo alongside its implicit --release and dies — pin via taiki-e.
             - name: Install wasm-pack (>=0.14 floor — D9 three-file atomicity)
-              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: wasm-pack
             - name: wasm-pack test --node (csp-solver/wasm only)
               run: wasm-pack test --node csp-solver/wasm
             - name: clippy --target wasm32 (csp-solver-wasm)
@@ -249,8 +255,10 @@ jobs:
                       ~/.cargo/git
                       target
                   key: cargo-twiggy-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-            - name: Install wasm-pack (>=0.14 floor)
-              run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            - name: Install wasm-pack (>=0.14 floor — see the wasm job note)
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: wasm-pack
             - name: Install twiggy (binary cache)
               uses: taiki-e/install-action@v2
               with:
@@ -304,6 +312,10 @@ jobs:
                   node-version: '22'
                   cache: npm
                   cache-dependency-path: web/frontend/package-lock.json
+            # Node 22 ships npm 10.x, which resolves this lockfile differently —
+            # the same skew fixed in web/frontend/Dockerfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
             - name: npm ci --dry-run (lockfile integrity gate)
               working-directory: web/frontend
               run: npm ci --dry-run
