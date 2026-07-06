@@ -1,5 +1,8 @@
 //! Unified monomorphized search kernel.
 //!
+//! Tests: `tests/solver.rs` (general solve correctness),
+//! `tests/solution_set_invariance.rs` (solution-set property test).
+//!
 //! One tree-search skeleton — [`search`] — parameterized by a zero-sized
 //! [`SearchPolicy`]. The policy decides the four things that actually differ
 //! between the crate's search modes:

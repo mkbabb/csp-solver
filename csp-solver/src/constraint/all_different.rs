@@ -1,4 +1,7 @@
 //! N-ary all-different constraint.
+//!
+//! Tests: `tests/gac.rs` (oracle path), `tests/solver.rs` (live path via
+//! `Csp::add_all_different`).
 
 use crate::domain::Domain;
 use crate::variable::Variable;

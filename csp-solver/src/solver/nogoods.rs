@@ -1,4 +1,6 @@
 //! Bounded nogood learning store with LRU eviction.
+//!
+//! Tests: `tests/nogoods.rs`.
 
 use std::collections::VecDeque;
 

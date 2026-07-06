@@ -1,4 +1,6 @@
 //! Generic closure-based soft constraint.
+//!
+//! Tests: `tests/optimize.rs`.
 
 use crate::domain::Domain;
 

@@ -1,4 +1,6 @@
 //! Binary not-equal constraint: `x != y`.
+//!
+//! Tests: `tests/local_search.rs`, `tests/solver.rs`.
 
 use crate::domain::Domain;
 use crate::variable::Variable;

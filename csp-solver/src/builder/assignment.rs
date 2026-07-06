@@ -1,5 +1,7 @@
 //! Bipartite assignment COP builder.
 //!
+//! Tests: `tests/assignment_builder.rs`, `tests/assignment_proptest.rs`.
+//!
 //! Fluent API for the common pattern of "assign N source rows to M
 //! target columns with per-cell costs, role-based AllDifferent groups,
 //! and optional hard pin constraints." Internally constructs a

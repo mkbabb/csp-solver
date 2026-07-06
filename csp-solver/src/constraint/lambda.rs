@@ -1,4 +1,6 @@
 //! Generic closure-based constraint.
+//!
+//! Tests: `tests/optimize.rs`.
 
 use crate::domain::Domain;
 

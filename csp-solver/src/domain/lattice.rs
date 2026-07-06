@@ -1,4 +1,6 @@
 //! LatticeDomain — wrapper for monotonic CSP (types, FIRST/FOLLOW sets).
+//!
+//! Tests: `tests/lattice.rs`.
 
 use super::bitset::BitsetDomain;
 use super::traits::{Domain, LatticeDomain};

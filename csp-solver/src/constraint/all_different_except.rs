@@ -1,5 +1,7 @@
 //! N-ary all-different constraint with a sentinel escape value.
 //!
+//! Tests: `tests/all_different_except.rs`, `tests/gac_alldiff_except.rs`.
+//!
 //! Parallel to [`AllDifferent`](super::all_different::AllDifferent) but permits
 //! arbitrarily many variables to share a single *sentinel* value — useful for
 //! modelling partial bipartite assignment, where a dedicated "unmatched" token

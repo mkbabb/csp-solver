@@ -1,6 +1,8 @@
 //! Cardinality constraint: at-least / at-most / exactly N variables
 //! take a particular value.
 //!
+//! Tests: `tests/optimize.rs`.
+//!
 //! `Cardinality { vars, value, lo, hi }` enforces that the number of
 //! variables in `vars` taking exactly `value` lies in `[lo, hi]`.
 //! Used by recognizer-tier CSPs to enforce hoisting thresholds:
