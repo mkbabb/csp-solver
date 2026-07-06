@@ -3,10 +3,7 @@
 
 pub mod ac3;
 pub mod gac;
-pub mod gac_alldiff;
-pub mod gac_alldiff_except;
 pub mod heuristic;
-pub mod local_search;
 pub mod monotonic;
 pub mod nogoods;
 pub mod optimize;

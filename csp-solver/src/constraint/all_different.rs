@@ -1,7 +1,7 @@
 //! N-ary all-different constraint.
 //!
-//! Tests: `tests/gac.rs` (oracle path), `tests/solver.rs` (live path via
-//! `Csp::add_all_different`).
+//! Tests: `tests/solver.rs` (live path via `Csp::add_all_different`);
+//! `tests/sudoku.rs`, `tests/futoshiki.rs` exercise the GAC core end-to-end.
 
 use crate::domain::Domain;
 use crate::variable::Variable;

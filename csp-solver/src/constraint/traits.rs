@@ -84,6 +84,11 @@ pub trait Constraint<D: Domain>: Debug + ThreadSafe {
 /// (`Domain::iter`'s `+ use<Self>` bound), no heap `Vec`. A free function
 /// (not a trait method) so it doesn't grow `Constraint`'s public surface —
 /// it's purely `revise`'s own dispatch target.
+///
+/// `changed` folds in [`Variable::prune`]'s bool: a pruned value that was
+/// already absent (or that the domain refuses to remove) does not count as
+/// a revision. See `revise_binary_default` for why this honesty is
+/// load-bearing rather than cosmetic.
 fn revise_unary_default<D: Domain, C: Constraint<D> + ?Sized>(
     c: &C,
     vars: &mut [Variable<D>],
@@ -96,8 +101,7 @@ fn revise_unary_default<D: Domain, C: Constraint<D> + ?Sized>(
     for vi in vars[xi].domain.iter() {
         assignment[xi] = Some(vi.clone());
         if !c.check(&assignment) {
-            vars[xi].prune(&vi, depth);
-            changed = true;
+            changed |= vars[xi].prune(&vi, depth);
         }
     }
 
@@ -130,6 +134,23 @@ fn revise_unary_default<D: Domain, C: Constraint<D> + ?Sized>(
 /// critical: pass 1 may have narrowed `xi`), which a live
 /// `vars[xi].domain.iter()` gives for free — no explicit re-collection
 /// needed.
+///
+/// # Reporting `Changed` honestly (the lattice-hang repair)
+///
+/// `changed` folds in [`Variable::prune`]'s bool return rather than being
+/// set unconditionally in the unsupported branch. On a finite domain this
+/// is behavior-neutral — the enumerate loop only ever prunes a value the
+/// domain currently holds, so `prune` always removes it and returns
+/// `true`. On a **lattice** domain it is the difference between converging
+/// and hanging: `BitsetLatticeDomain::remove` is a no-op (lattice values
+/// only grow via `join`, never shrink), so every `prune` returns `false`
+/// and this arc-consistency revise legitimately changes nothing. The old
+/// unconditional `changed = true` reported `Revision::Changed` while
+/// pruning nothing — a lie that made AC-3 (and the monotonic sweep)
+/// re-enqueue the same arcs forever on a disjoint-seed lattice chain (W1
+/// bench-attribution F1). Honoring the bool lets the worklist drain.
+/// A check-based constraint cannot *grow* a lattice domain regardless;
+/// genuine lattice propagators supply their own join-based `revise`.
 fn revise_binary_default<D: Domain, C: Constraint<D> + ?Sized>(
     c: &C,
     vars: &mut [Variable<D>],
@@ -153,8 +174,7 @@ fn revise_binary_default<D: Domain, C: Constraint<D> + ?Sized>(
             }
         }
         if !supported {
-            vars[xi].prune(&vi, depth);
-            changed = true;
+            changed |= vars[xi].prune(&vi, depth);
         }
     }
     assignment[xi] = None;
@@ -175,8 +195,7 @@ fn revise_binary_default<D: Domain, C: Constraint<D> + ?Sized>(
             }
         }
         if !supported {
-            vars[xj].prune(&vj, depth);
-            changed = true;
+            changed |= vars[xj].prune(&vj, depth);
         }
     }
 

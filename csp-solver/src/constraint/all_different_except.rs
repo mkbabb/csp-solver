@@ -1,6 +1,6 @@
 //! N-ary all-different constraint with a sentinel escape value.
 //!
-//! Tests: `tests/all_different_except.rs`, `tests/gac_alldiff_except.rs`.
+//! Tests: `tests/all_different_except.rs`.
 //!
 //! Parallel to [`AllDifferent`](super::all_different::AllDifferent) but permits
 //! arbitrarily many variables to share a single *sentinel* value — useful for
@@ -80,10 +80,10 @@ impl<V: Clone + PartialEq + std::fmt::Debug> AllDifferentExcept<V> {
     /// behave exactly like [`AllDifferent`](super::all_different::AllDifferent).
     ///
     /// For larger scopes (≥ 4), delegates to Régin's GAC algorithm
-    /// ([`propagate_gac_alldiff_except`](crate::solver::gac_alldiff_except::propagate_gac_alldiff_except)),
-    /// which achieves generalized arc consistency by building a bipartite
-    /// matching graph over non-sentinel values and pruning values that
-    /// cannot participate in any maximum matching.
+    /// ([`propagate_gac_core`](crate::solver::gac::propagate_gac_core) with
+    /// the sentinel supplied), which achieves generalized arc consistency by
+    /// building a bipartite matching graph over non-sentinel values and
+    /// pruning values that cannot participate in any maximum matching.
     pub(crate) fn revise_impl<D>(&self, vars: &mut [Variable<D>], depth: usize) -> Revision
     where
         D: Domain<Value = V>,

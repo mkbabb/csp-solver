@@ -188,7 +188,11 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let do_n5 = args.iter().any(|a| a == "--n5");
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let data_dir = manifest_dir.parent().unwrap().join("web/api/src/app/data");
+    // Puzzle data is now crate-owned at `csp-solver/data/` (moved out of the
+    // Python package). Note: the `sudoku_solutions/` bank was excised, so the
+    // `--n5` path (`n5_board`) now degrades to its existing "not found, skipping"
+    // branch unless a board is regenerated there.
+    let data_dir = manifest_dir.join("data");
 
     let mut corpus = hard_corpus();
     corpus.extend(template_corpus(&data_dir));

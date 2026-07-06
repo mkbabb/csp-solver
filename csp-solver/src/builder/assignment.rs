@@ -9,7 +9,7 @@
 //! [`AllDifferentExcept`] per row-group, and `-1` as the unmatched
 //! sentinel; the underlying branch-and-bound search is invoked through
 //! [`Csp::solve_optimized`] with [`OptimizationMode::MinimizeCost`] and
-//! [`Pruning::AcFc`].
+//! [`Pruning::Ac3`].
 //!
 //! `AssignmentBuilder` is intended for `n ≤ ~100` rows / cols. The
 //! branch-and-bound search degrades super-linearly past that point;
@@ -137,6 +137,16 @@ pub enum AssignmentError {
     /// surfaces when pins or group constraints are mutually
     /// incompatible.
     Infeasible,
+    /// The branch-and-bound search hit its
+    /// [`AssignmentBuilder::node_budget`] before scoring a single
+    /// complete assignment, so there is no best-so-far solution to
+    /// return. Distinct from [`Infeasible`](Self::Infeasible): the
+    /// problem may well be satisfiable — the search simply ran out of
+    /// budget. Retry with a larger (or `None`) `node_budget`. When the
+    /// budget is hit *after* at least one complete assignment was
+    /// scored, `.solve()` instead returns `Ok` with
+    /// [`SolveStats::budget_exceeded`] set on the best-so-far solution.
+    BudgetExceeded,
 }
 
 impl std::fmt::Display for AssignmentError {
@@ -170,6 +180,12 @@ impl std::fmt::Display for AssignmentError {
                 write!(
                     f,
                     "AssignmentBuilder: CSP is infeasible under the supplied constraints"
+                )
+            }
+            Self::BudgetExceeded => {
+                write!(
+                    f,
+                    "AssignmentBuilder: node budget exhausted before any complete assignment was scored; increase node_budget (or pass None) or reduce the problem size"
                 )
             }
         }
@@ -428,6 +444,13 @@ impl AssignmentBuilder {
 
         let solution = match solutions.into_iter().next() {
             Some(s) => s,
+            // No complete assignment came back. Two distinct causes share
+            // this branch and must not be conflated: a genuinely infeasible
+            // constraint set, versus a search that aborted on its node
+            // budget before reaching any leaf. `budget_exceeded` is the
+            // discriminator (a partial best-so-far would have returned via
+            // the `Some` arm above with the flag set on its stats).
+            None if stats.budget_exceeded => return Err(AssignmentError::BudgetExceeded),
             None => return Err(AssignmentError::Infeasible),
         };
 

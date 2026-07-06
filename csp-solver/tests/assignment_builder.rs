@@ -163,41 +163,30 @@ fn brute_force_match_4x4() {
 }
 
 // ---------------------------------------------------------------------------
-// 6. Node-budget exhaustion: a 6×6 worst-case matrix forced to abort
+// 6. Node-budget exhaustion before any leaf is a typed, unambiguous error.
 // ---------------------------------------------------------------------------
 #[test]
-fn node_budget_exceeded() {
-    // Uniform-cost 6×6 forces the solver to explore many equivalent
-    // branches before bound-pruning kicks in. With a 5-node budget
-    // the search aborts almost immediately. The contract is that the
-    // builder either:
-    //   (a) returns Ok(sol) with stats.budget_exceeded == true and a
-    //       best-so-far assignment, or
-    //   (b) returns Err(Infeasible) if the budget aborted before any
-    //       complete assignment was scored.
-    // Both are valid; we accept either and merely assert the contract.
+fn node_budget_exhausted_returns_budget_exceeded() {
+    // Scoring even one complete assignment on a 6×6 requires descending
+    // six search frames (the budget is checked once per frame, before the
+    // node is counted), so a one-node budget aborts at the second frame —
+    // long before any leaf. With no best-so-far solution to hand back,
+    // `.solve()` must surface the dedicated `BudgetExceeded` variant: not
+    // `Infeasible` (the problem is trivially satisfiable via the SENTINEL
+    // escape) and not a silent `Ok`. This pins the R8 disambiguation that
+    // replaced the earlier both-outcomes-blessed contract.
     let result = assignment()
         .rows(6)
         .cols(6)
         .cost(|_, _| 1.0)
         .unmatch_penalty(2.0)
-        .node_budget(Some(5))
+        .node_budget(Some(1))
         .solve();
 
-    match result {
-        Ok(sol) => {
-            assert!(
-                sol.stats.budget_exceeded,
-                "tiny budget must trip budget_exceeded if a solution is returned"
-            );
-            assert_eq!(sol.assign.len(), 6, "assign length must equal n_rows");
-        }
-        Err(AssignmentError::Infeasible) => {
-            // Acceptable — the budget aborted before any complete
-            // assignment was scored. Nothing else to assert.
-        }
-        Err(other) => panic!("unexpected error from budget-exhausted solve: {other}"),
-    }
+    assert!(
+        matches!(result, Err(AssignmentError::BudgetExceeded)),
+        "a one-node budget on a 6x6 must return BudgetExceeded, got {result:?}"
+    );
 }
 
 // ---------------------------------------------------------------------------
