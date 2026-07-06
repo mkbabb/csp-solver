@@ -6,6 +6,9 @@ use pyo3::prelude::*;
 use crate::ordering::Ordering as RustOrdering;
 use crate::{PropagationStrategy as RustPropagation, Pruning as RustPruning};
 
+// PyO3 exports these variant names verbatim to Python; they intentionally keep
+// the SCREAMING_CASE the Python API expects rather than Rust's CamelCase.
+#[allow(non_camel_case_types)]
 #[pyclass(eq, eq_int)]
 #[derive(Clone, Copy, PartialEq)]
 pub enum Pruning {
@@ -26,12 +29,15 @@ impl From<Pruning> for RustPruning {
     }
 }
 
+// PyO3 exports these variant names verbatim to Python; they intentionally keep
+// the SCREAMING_CASE the Python API expects rather than Rust's CamelCase.
+#[allow(non_camel_case_types)]
 #[pyclass(eq, eq_int)]
 #[derive(Clone, Copy, PartialEq)]
 pub enum Ordering {
     CHRONOLOGICAL = 0,
     FAIL_FIRST = 1,
-    DOM_WDEG = 2,
+    MRV = 2,
 }
 
 impl From<Ordering> for RustOrdering {
@@ -39,11 +45,14 @@ impl From<Ordering> for RustOrdering {
         match o {
             Ordering::CHRONOLOGICAL => RustOrdering::Chronological,
             Ordering::FAIL_FIRST => RustOrdering::FailFirst,
-            Ordering::DOM_WDEG => RustOrdering::DomWdeg,
+            Ordering::MRV => RustOrdering::Mrv,
         }
     }
 }
 
+// PyO3 exports these variant names verbatim to Python; they intentionally keep
+// the SCREAMING_CASE the Python API expects rather than Rust's CamelCase.
+#[allow(non_camel_case_types)]
 #[pyclass(eq, eq_int)]
 #[derive(Clone, Copy, PartialEq)]
 pub enum PropagationStrategy {

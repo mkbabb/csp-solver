@@ -120,7 +120,6 @@ struct ConfigSpec {
     name: &'static str,
     pruning: Pruning,
     ordering: Ordering,
-    backjumping: bool,
 }
 
 const CONFIGS: &[ConfigSpec] = &[
@@ -128,19 +127,16 @@ const CONFIGS: &[ConfigSpec] = &[
         name: "fc_chrono",
         pruning: Pruning::ForwardChecking,
         ordering: Ordering::Chronological,
-        backjumping: false,
     },
     ConfigSpec {
         name: "ac3_failfirst",
         pruning: Pruning::Ac3,
         ordering: Ordering::FailFirst,
-        backjumping: false,
     },
     ConfigSpec {
-        name: "ac3_domwdeg",
+        name: "ac3_mrv",
         pruning: Pruning::Ac3,
-        ordering: Ordering::DomWdeg,
-        backjumping: false,
+        ordering: Ordering::Mrv,
     },
 ];
 
@@ -157,7 +153,6 @@ fn bench_sudoku_9x9(c: &mut Criterion) {
                         pruning: cfg.pruning,
                         ordering: cfg.ordering,
                         max_solutions: 1,
-                        backjumping: cfg.backjumping,
                         optimization_mode: OptimizationMode::Feasibility,
                         node_budget: Some(10_000_000),
                         ..Default::default()
@@ -248,21 +243,19 @@ fn bench_sudoku_16x16(c: &mut Criterion) {
                 pruning: Pruning::Ac3,
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             };
             csp.solve_with_given(&config, &given)
         });
     });
 
-    group.bench_function("ac3_domwdeg", |b| {
+    group.bench_function("ac3_mrv", |b| {
         b.iter(|| {
             let (mut csp, given) = build_sudoku_16x16(&SUDOKU_16X16);
             let config = SolveConfig {
                 pruning: Pruning::Ac3,
-                ordering: Ordering::DomWdeg,
+                ordering: Ordering::Mrv,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             };
             csp.solve_with_given(&config, &given)

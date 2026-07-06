@@ -1,7 +1,7 @@
 //! Allocation-call counter: wraps `System` with a counting `GlobalAlloc` and
 //! runs a fixed corpus (8-queens all-solutions worst case, queens_all under
 //! Ac3+FailFirst, and the criterion 16x16 sudoku fixture under Ac3+FailFirst
-//! and Ac3+DomWdeg) reporting `alloc` call counts and solve outputs for a
+//! and Ac3+Mrv) reporting `alloc` call counts and solve outputs for a
 //! before/after allocation-count comparison. Never touches the tracked repo
 //! — throwaway prototype-evidence harness (Pass-2 zero-alloc-hot-path beat).
 
@@ -123,7 +123,6 @@ fn main() {
             pruning: Pruning::None,
             ordering: Ordering::Chronological,
             max_solutions: 10_000,
-            backjumping: false,
             ..Default::default()
         };
         let solutions = csp.solve(&config);
@@ -144,7 +143,6 @@ fn main() {
             pruning: Pruning::Ac3,
             ordering: Ordering::FailFirst,
             max_solutions: 10_000,
-            backjumping: false,
             ..Default::default()
         };
         let solutions = csp.solve(&config);
@@ -163,7 +161,6 @@ fn main() {
             pruning: Pruning::Ac3,
             ordering: Ordering::FailFirst,
             max_solutions: 10_000,
-            backjumping: false,
             ..Default::default()
         };
         let solutions = csp.solve(&config);
@@ -183,7 +180,6 @@ fn main() {
             pruning: Pruning::Ac3,
             ordering: Ordering::FailFirst,
             max_solutions: 1,
-            backjumping: false,
             ..Default::default()
         };
         let solutions = csp.solve_with_given(&config, &given);
@@ -199,22 +195,21 @@ fn main() {
         }
     }
 
-    // (5) 16x16 sudoku, Ac3+DomWdeg.
+    // (5) 16x16 sudoku, Ac3+Mrv.
     {
         let _ = reset();
         let (mut csp, given) = build_sudoku_16x16(&SUDOKU_16X16);
         let config = SolveConfig {
             pruning: Pruning::Ac3,
-            ordering: Ordering::DomWdeg,
+            ordering: Ordering::Mrv,
             max_solutions: 1,
-            backjumping: false,
             ..Default::default()
         };
         let solutions = csp.solve_with_given(&config, &given);
         let calls = count();
         let bt = csp.stats().backtracks;
         println!(
-            "16x16 sudoku/Ac3+DomWdeg/first-solution:   {calls:>12} alloc calls | {} solutions | {bt} backtracks",
+            "16x16 sudoku/Ac3+Mrv/first-solution:   {calls:>12} alloc calls | {} solutions | {bt} backtracks",
             solutions.len()
         );
         if let Some(sol) = solutions.first() {

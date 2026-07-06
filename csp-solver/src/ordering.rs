@@ -11,9 +11,12 @@ pub enum Ordering {
     Chronological,
     /// Fail-first (MRV): pick the variable with the smallest domain.
     FailFirst,
-    /// dom/wdeg: pick the variable with the smallest domain/weighted-degree ratio.
-    DomWdeg,
-    /// CHS (Conflict-History Search): same `dom / Σ weights` scan as `DomWdeg`,
+    /// Mrv: pick the variable minimizing `domain-size / Σ constraint-weights`.
+    /// The weights are frozen at 1.0 (no dom/wdeg bumping is wired to the
+    /// kernel), so this is a static heuristic; `Chs` shares the same scan with
+    /// dynamically evolving weights.
+    Mrv,
+    /// CHS (Conflict-History Search): same `dom / Σ weights` scan as `Mrv`,
     /// but the weights are updated dynamically by an exponential recency-weighted
     /// average on each conflict (see [`crate::solver::heuristic`]).
     Chs,
@@ -49,10 +52,10 @@ pub fn select_variable<D: Domain>(
             Some(best_idx)
         }
 
-        // CHS and DomWdeg share the `dom / Σ weights` branching rule; they
+        // CHS and Mrv share the `dom / Σ weights` branching rule; they
         // differ only in *how* `constraint_weights` evolves (static 1.0 for
-        // DomWdeg, ERWA-updated for CHS — see `solver::heuristic`).
-        Ordering::DomWdeg | Ordering::Chs => {
+        // Mrv, ERWA-updated for CHS — see `solver::heuristic`).
+        Ordering::Mrv | Ordering::Chs => {
             let mut best_idx = 0;
             let mut best_score = f64::MAX;
             for (i, &var) in stack.iter().enumerate() {

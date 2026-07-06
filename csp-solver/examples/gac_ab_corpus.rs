@@ -4,7 +4,7 @@
 //! the composed tree, stripped to the load-bearing check for kernel closure:
 //! does the composed tree return a false "no solution" (solved=false with
 //! budget_exceeded=false) on any of the 113 known-solvable boards, under the
-//! EXACT production config (Pruning::Ac3, Ordering::DomWdeg, backjumping=false)
+//! EXACT production config (Pruning::Ac3, Ordering::Mrv)
 //! — with GAC in AllDifferent both OFF and ON? Pre-fix: 23/113 off + 2/113 on
 //! = 25. Expected post-fix: 0/113 either way.
 //!
@@ -172,8 +172,7 @@ fn run_once(board: &Board, gac_on: bool) -> RunResult {
     // EXACT production config from py/sudoku_api.rs::solve_sudoku.
     let config = RustSolveConfig {
         pruning: RustPruning::Ac3,
-        ordering: RustOrdering::DomWdeg,
-        backjumping: false,
+        ordering: RustOrdering::Mrv,
         ..Default::default()
     };
     let (mut csp, given) = sudoku::create_sudoku_csp(&board.flat, board.n);
@@ -202,7 +201,7 @@ fn main() {
     }
 
     println!(
-        "# GAC A/B false-UNSAT corpus — {} boards (production config: Ac3 + DomWdeg)",
+        "# GAC A/B false-UNSAT corpus — {} boards (production config: Ac3 + Mrv)",
         corpus.len()
     );
     let mut off_unsat = Vec::new();

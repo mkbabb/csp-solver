@@ -105,16 +105,14 @@ fn solve_map_coloring(
 fn main() {
     let ac3_dw = SolveConfig {
         pruning: Pruning::Ac3,
-        ordering: Ordering::DomWdeg,
+        ordering: Ordering::Mrv,
         max_solutions: 1,
-        backjumping: false,
         ..Default::default()
     };
     let ac3_ff = SolveConfig {
         pruning: Pruning::Ac3,
         ordering: Ordering::FailFirst,
         max_solutions: 1,
-        backjumping: false,
         ..Default::default()
     };
 

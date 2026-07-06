@@ -58,8 +58,6 @@ pub struct SolveConfig {
     pub ordering: Ordering,
     #[pyo3(get, set)]
     pub max_solutions: usize,
-    #[pyo3(get, set)]
-    pub backjumping: bool,
     /// Maximum number of search nodes before aborting early.
     /// `None` disables the budget. Defaults to 1_000_000.
     #[pyo3(get, set)]
@@ -73,12 +71,11 @@ pub struct SolveConfig {
 #[pymethods]
 impl SolveConfig {
     #[new]
-    #[pyo3(signature = (pruning=Pruning::FORWARD_CHECKING, ordering=Ordering::CHRONOLOGICAL, max_solutions=1, backjumping=false, node_budget=Some(1_000_000), cancel=None))]
+    #[pyo3(signature = (pruning=Pruning::FORWARD_CHECKING, ordering=Ordering::CHRONOLOGICAL, max_solutions=1, node_budget=Some(1_000_000), cancel=None))]
     fn new(
         pruning: Pruning,
         ordering: Ordering,
         max_solutions: usize,
-        backjumping: bool,
         node_budget: Option<u64>,
         cancel: Option<CancelToken>,
     ) -> Self {
@@ -86,7 +83,6 @@ impl SolveConfig {
             pruning,
             ordering,
             max_solutions,
-            backjumping,
             node_budget,
             cancel,
         }
@@ -99,7 +95,6 @@ impl From<&SolveConfig> for RustSolveConfig {
             pruning: c.pruning.into(),
             ordering: c.ordering.into(),
             max_solutions: c.max_solutions,
-            backjumping: c.backjumping,
             node_budget: c.node_budget,
             cancel: c.cancel.as_ref().map(|t| t.inner.clone()),
             ..Default::default()

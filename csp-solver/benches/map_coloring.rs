@@ -78,7 +78,7 @@ fn bench_australia(c: &mut Criterion) {
             Ordering::FailFirst,
         ),
         ("ac3_failfirst", Pruning::Ac3, Ordering::FailFirst),
-        ("ac3_domwdeg", Pruning::Ac3, Ordering::DomWdeg),
+        ("ac3_mrv", Pruning::Ac3, Ordering::Mrv),
     ];
 
     for &(name, pruning, ordering) in configs {
@@ -90,7 +90,6 @@ fn bench_australia(c: &mut Criterion) {
                     pruning,
                     ordering,
                     max_solutions: 1,
-                    backjumping: false,
                     ..Default::default()
                 };
                 let solutions = csp.solve(&config);
@@ -107,7 +106,6 @@ fn bench_australia(c: &mut Criterion) {
                     pruning,
                     ordering,
                     max_solutions: usize::MAX,
-                    backjumping: false,
                     ..Default::default()
                 };
                 csp.solve(&config)
@@ -129,7 +127,6 @@ fn bench_random_graph(c: &mut Criterion) {
                 pruning: Pruning::Ac3,
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             };
             let solutions = csp.solve(&config);
@@ -138,14 +135,13 @@ fn bench_random_graph(c: &mut Criterion) {
         });
     });
 
-    group.bench_function(BenchmarkId::new("n20_c4", "ac3_domwdeg"), |b| {
+    group.bench_function(BenchmarkId::new("n20_c4", "ac3_mrv"), |b| {
         b.iter(|| {
             let mut csp = build_random_graph(20, 4, 0xDEAD_BEEF, 30);
             let config = SolveConfig {
                 pruning: Pruning::Ac3,
-                ordering: Ordering::DomWdeg,
+                ordering: Ordering::Mrv,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             };
             let solutions = csp.solve(&config);
@@ -162,7 +158,6 @@ fn bench_random_graph(c: &mut Criterion) {
                 pruning: Pruning::Ac3,
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             };
             csp.solve(&config)
@@ -177,21 +172,19 @@ fn bench_random_graph(c: &mut Criterion) {
                 pruning: Pruning::Ac3,
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             };
             csp.solve(&config)
         });
     });
 
-    group.bench_function(BenchmarkId::new("n50_c4", "ac3_domwdeg"), |b| {
+    group.bench_function(BenchmarkId::new("n50_c4", "ac3_mrv"), |b| {
         b.iter(|| {
             let mut csp = build_random_graph(50, 4, 0x1234_5678, 15);
             let config = SolveConfig {
                 pruning: Pruning::Ac3,
-                ordering: Ordering::DomWdeg,
+                ordering: Ordering::Mrv,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             };
             csp.solve(&config)
@@ -206,7 +199,6 @@ fn bench_random_graph(c: &mut Criterion) {
                 pruning: Pruning::Ac3,
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             };
             csp.solve(&config)

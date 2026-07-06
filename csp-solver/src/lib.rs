@@ -5,7 +5,6 @@
 //! - AC-3 (Maintaining Arc Consistency) propagation
 //! - Forward checking
 //! - AC-FC hybrid
-//! - Conflict-directed backjumping
 //! - Lattice domains for monotonic fixed-point propagation
 
 pub mod adjacency;
@@ -79,8 +78,6 @@ pub struct SolveConfig {
     pub pruning: Pruning,
     pub ordering: Ordering,
     pub max_solutions: usize,
-    /// Whether to use conflict-directed backjumping instead of chronological backtracking.
-    pub backjumping: bool,
     /// Enable Luby restarts with phase saving and (if `Ordering::Chs`) dynamic
     /// conflict-history weighting. Opt-in; production sudoku stays `Ac3 + Mrv`.
     /// The restart *driver* is not yet wired onto the unified kernel (see the
@@ -115,7 +112,6 @@ impl Default for SolveConfig {
             pruning: Pruning::ForwardChecking,
             ordering: Ordering::Chronological,
             max_solutions: 1,
-            backjumping: false,
             restarts: false,
             optimization_mode: OptimizationMode::Feasibility,
             node_budget: Some(1_000_000),
@@ -151,7 +147,7 @@ pub struct Csp<D: Domain> {
     constraints: Vec<ConstraintEnum<D>>,
     adjacency: Option<Adjacency>,
     stats: SolveStats,
-    /// Per-constraint weights for dom/wdeg ordering.
+    /// Per-constraint weights for the Mrv / Chs weighted-degree scan.
     constraint_weights: Vec<f64>,
     /// For each variable, the indices of constraints involving it.
     var_constraint_ids: Vec<Vec<usize>>,
@@ -320,7 +316,7 @@ impl<D: Domain> Csp<D> {
         }
     }
 
-    /// Run backtracking (or backjumping) search with the given configuration.
+    /// Run backtracking search with the given configuration.
     ///
     /// Returns up to `config.max_solutions` solutions.
     /// When `optimization_mode` is `MinimizeCost` or `MaximizeCost`, uses

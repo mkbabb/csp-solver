@@ -10,7 +10,7 @@
 //! `Revision::Unsatisfiable` arm returned without trailing the constraint scope,
 //! leaking partial prunes into sibling branches and silently dropping solutions on
 //! mixed global+binary problems under `Pruning::Ac3`. Pre-fix this test fails:
-//! queens8 Ac3 enumerate returns 45 (Chronological) or 5 (FailFirst/DomWdeg) not 92;
+//! queens8 Ac3 enumerate returns 45 (Chronological) or 5 (FailFirst/Mrv) not 92;
 //! futoshiki-loose Ac3-Chronological returns 1 not 288. Post-fix all combos agree.
 //!
 //! `cargo test --workspace` (which never runs benches) is otherwise blind to this —
@@ -29,11 +29,7 @@ const PRUNINGS: [Pruning; 4] = [
     Pruning::Ac3,
     Pruning::AcFc,
 ];
-const ORDERINGS: [Ordering; 3] = [
-    Ordering::Chronological,
-    Ordering::FailFirst,
-    Ordering::DomWdeg,
-];
+const ORDERINGS: [Ordering; 3] = [Ordering::Chronological, Ordering::FailFirst, Ordering::Mrv];
 
 fn enumerate_cfg(p: Pruning, o: Ordering) -> SolveConfig {
     SolveConfig {

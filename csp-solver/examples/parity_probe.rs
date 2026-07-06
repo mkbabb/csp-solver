@@ -46,18 +46,13 @@ const PRUNINGS: [Pruning; 4] = [
     Pruning::Ac3,
     Pruning::AcFc,
 ];
-const ORDERINGS: [Ordering; 3] = [
-    Ordering::Chronological,
-    Ordering::FailFirst,
-    Ordering::DomWdeg,
-];
+const ORDERINGS: [Ordering; 3] = [Ordering::Chronological, Ordering::FailFirst, Ordering::Mrv];
 
 fn cfg(p: Pruning, o: Ordering, maxsol: usize) -> SolveConfig {
     SolveConfig {
         pruning: p,
         ordering: o,
         max_solutions: maxsol,
-        backjumping: false,
         node_budget: Some(1_000_000),
         ..Default::default()
     }

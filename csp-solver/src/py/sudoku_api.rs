@@ -142,9 +142,8 @@ pub fn solve_sudoku(
 ) -> PyResult<bool> {
     let config = RustSolveConfig {
         pruning: RustPruning::Ac3,
-        ordering: RustOrdering::DomWdeg,
+        ordering: RustOrdering::Mrv,
         max_solutions: csp.max_solutions,
-        backjumping: false,
         cancel: cancel.as_ref().map(|t| t.inner.clone()),
         ..Default::default()
     };
@@ -221,9 +220,8 @@ pub fn solve_sudoku_board(
 
     let config = RustSolveConfig {
         pruning: RustPruning::Ac3,
-        ordering: RustOrdering::DomWdeg,
+        ordering: RustOrdering::Mrv,
         max_solutions,
-        backjumping: false,
         cancel: cancel.as_ref().map(|t| t.inner.clone()),
         ..Default::default()
     };

@@ -58,7 +58,6 @@ fn bench_queens_first_solution(c: &mut Criterion) {
                     pruning: Pruning::Ac3,
                     ordering: Ordering::FailFirst,
                     max_solutions: 1,
-                    backjumping: false,
                     ..Default::default()
                 };
                 let solutions = csp.solve(&config);
@@ -82,7 +81,6 @@ fn bench_queens_all_solutions(c: &mut Criterion) {
                 pruning: Pruning::Ac3,
                 ordering: Ordering::FailFirst,
                 max_solutions: usize::MAX,
-                backjumping: false,
                 ..Default::default()
             };
             let solutions = csp.solve(&config);
@@ -100,7 +98,6 @@ fn bench_queens_all_solutions(c: &mut Criterion) {
                 pruning: Pruning::Ac3,
                 ordering: Ordering::FailFirst,
                 max_solutions: usize::MAX,
-                backjumping: false,
                 ..Default::default()
             };
             let solutions = csp.solve(&config);
@@ -128,7 +125,7 @@ fn bench_queens_configs(c: &mut Criterion) {
             Ordering::FailFirst,
         ),
         ("ac3_failfirst", Pruning::Ac3, Ordering::FailFirst),
-        ("ac3_domwdeg", Pruning::Ac3, Ordering::DomWdeg),
+        ("ac3_mrv", Pruning::Ac3, Ordering::Mrv),
         ("acfc_failfirst", Pruning::AcFc, Ordering::FailFirst),
     ];
 
@@ -140,7 +137,6 @@ fn bench_queens_configs(c: &mut Criterion) {
                     pruning,
                     ordering,
                     max_solutions: usize::MAX,
-                    backjumping: false,
                     ..Default::default()
                 };
                 let solutions = csp.solve(&config);

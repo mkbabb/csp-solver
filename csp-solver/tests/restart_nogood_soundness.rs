@@ -11,7 +11,7 @@
 //!      gate (GF-4).
 //!   2. The INERTNESS WITNESSES (`witness_*`) mechanically pin the *current*
 //!      state: on the composed base `restarts:true` is a no-op and
-//!      `Ordering::Chs` is bit-identical to `Ordering::DomWdeg` (see
+//!      `Ordering::Chs` is bit-identical to `Ordering::Mrv` (see
 //!      pass-3 `rust-composition.md` §3 step-3: the chs `backtrack.rs` restart
 //!      DRIVER is not landed; only the substrate is). They pass green today.
 //!      When the driver lands they MUST be inverted to `assert_ne!` (their doc
@@ -102,7 +102,6 @@ fn enum_config(ordering: Ordering, restarts: bool) -> SolveConfig {
         pruning: Pruning::ForwardChecking,
         ordering,
         max_solutions: usize::MAX,
-        backjumping: false,
         restarts,
         ..Default::default()
     }
@@ -121,7 +120,7 @@ fn enumerate_all_queens_matches_bruteforce_restarts_on_and_off() {
     for n in 4u32..=7 {
         let oracle = queens_oracle(n);
 
-        for ordering in [Ordering::FailFirst, Ordering::DomWdeg, Ordering::Chs] {
+        for ordering in [Ordering::FailFirst, Ordering::Mrv, Ordering::Chs] {
             for restarts in [false, true] {
                 let mut csp = queens_csp(n);
                 let sols = csp.solve(&enum_config(ordering, restarts));
@@ -214,7 +213,7 @@ fn random_notequal_csp_restarts_and_chs_preserve_solution_set() {
 
         let oracle = notequal_oracle(k, dom, &edges);
 
-        for ordering in [Ordering::FailFirst, Ordering::DomWdeg, Ordering::Chs] {
+        for ordering in [Ordering::FailFirst, Ordering::Mrv, Ordering::Chs] {
             for restarts in [false, true] {
                 let mut csp = notequal_csp(k, dom, &edges);
                 let sols = csp.solve(&enum_config(ordering, restarts));
@@ -397,12 +396,11 @@ fn nogood_store_no_half_state_across_eviction_stream() {
 
 #[test]
 fn phase_memory_determinism_repeated_solves() {
-    for ordering in [Ordering::DomWdeg, Ordering::Chs] {
+    for ordering in [Ordering::Mrv, Ordering::Chs] {
         let cfg = SolveConfig {
             pruning: Pruning::Ac3,
             ordering,
             max_solutions: 50,
-            backjumping: false,
             restarts: true,
             ..Default::default()
         };
@@ -447,7 +445,6 @@ fn restart_no_givens_solve_path_finds_valid_solution() {
         pruning: Pruning::Ac3,
         ordering: Ordering::Chs,
         max_solutions: 1,
-        backjumping: false,
         restarts: true,
         ..Default::default()
     };
@@ -547,7 +544,6 @@ fn chs_ordering_solves_sudoku_corpus() {
         pruning: Pruning::Ac3,
         ordering: Ordering::Chs,
         max_solutions: 1,
-        backjumping: false,
         restarts: true,
         ..Default::default()
     };
@@ -555,7 +551,6 @@ fn chs_ordering_solves_sudoku_corpus() {
         pruning: Pruning::Ac3,
         ordering: Ordering::FailFirst,
         max_solutions: 1,
-        backjumping: false,
         restarts: false,
         ..Default::default()
     };
@@ -616,7 +611,6 @@ fn chs_ordering_solves_queens_and_coloring() {
         pruning: Pruning::Ac3,
         ordering: Ordering::Chs,
         max_solutions: 1,
-        backjumping: false,
         restarts: true,
         ..Default::default()
     };
@@ -657,9 +651,8 @@ fn witness_restarts_true_is_a_noop_today() {
     // DIVERGE. Invert to assert_ne! (and pick an instance where restarts help).
     let base = SolveConfig {
         pruning: Pruning::Ac3,
-        ordering: Ordering::DomWdeg,
+        ordering: Ordering::Mrv,
         max_solutions: usize::MAX,
-        backjumping: false,
         restarts: false,
         ..Default::default()
     };
@@ -679,8 +672,8 @@ fn witness_restarts_true_is_a_noop_today() {
 }
 
 #[test]
-fn witness_chs_is_bit_identical_to_domwdeg_today() {
-    // CHS and DomWdeg share the `dom/Σw` scan; CHS only differs once weights are
+fn witness_chs_is_bit_identical_to_mrv_today() {
+    // CHS and Mrv share the `dom/Σw` scan; CHS only differs once weights are
     // bumped on conflict, which requires the (unlanded) driver. So today they
     // explore the identical tree.
     //
@@ -690,7 +683,6 @@ fn witness_chs_is_bit_identical_to_domwdeg_today() {
         pruning: Pruning::Ac3,
         ordering,
         max_solutions: usize::MAX,
-        backjumping: false,
         restarts: false,
         ..Default::default()
     };
@@ -699,9 +691,9 @@ fn witness_chs_is_bit_identical_to_domwdeg_today() {
         let mut a = queens_csp(n);
         let mut b = queens_csp(n);
         assert_eq!(
-            counts(&mut a, &mk(Ordering::DomWdeg)),
+            counts(&mut a, &mk(Ordering::Mrv)),
             counts(&mut b, &mk(Ordering::Chs)),
-            "n={n}: Ordering::Chs diverged from DomWdeg — CHS weight bumping \
+            "n={n}: Ordering::Chs diverged from Mrv — CHS weight bumping \
              appears to be WIRED. Invert this witness."
         );
     }

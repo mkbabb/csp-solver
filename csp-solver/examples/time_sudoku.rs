@@ -81,17 +81,15 @@ fn main() {
                 pruning: Pruning::Ac3,
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             },
         ),
         (
-            "AC3+DomWdeg",
+            "AC3+Mrv",
             SolveConfig {
                 pruning: Pruning::Ac3,
-                ordering: Ordering::DomWdeg,
+                ordering: Ordering::Mrv,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             },
         ),
@@ -101,7 +99,6 @@ fn main() {
                 pruning: Pruning::ForwardChecking,
                 ordering: Ordering::FailFirst,
                 max_solutions: 1,
-                backjumping: false,
                 ..Default::default()
             },
         ),

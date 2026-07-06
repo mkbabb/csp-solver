@@ -1,7 +1,7 @@
 //! Conflict-history weighting (CHS / ERWA) for dynamic variable ordering.
 //!
-//! Replaces the frozen `constraint_weights ≡ 1.0` (which degenerated
-//! `Ordering::DomWdeg` to plain MRV) with an *exponential recency-weighted
+//! Replaces the frozen `constraint_weights ≡ 1.0` (which is why `Ordering::Mrv`
+//! reduces to plain min-remaining-value) with an *exponential recency-weighted
 //! average* per constraint, following Habet & Terrioux's Conflict-History
 //! Search (CHS, J. Heuristics 2021).
 //!
@@ -38,7 +38,7 @@ const ALPHA_MIN: f64 = 0.06;
 /// Dynamic conflict-history state threaded through backtracking search.
 #[derive(Debug, Clone)]
 pub struct ConflictHistory {
-    /// `q[c]` — CHS score per constraint. Read by `Ordering::{Chs,DomWdeg}`.
+    /// `q[c]` — CHS score per constraint. Read by `Ordering::{Chs,Mrv}`.
     weights: Vec<f64>,
     /// `last_conflict[c]` — global conflict count at `c`'s previous failure.
     last_conflict: Vec<u64>,
@@ -47,14 +47,14 @@ pub struct ConflictHistory {
     /// Current ERWA step size.
     alpha: f64,
     /// When `false`, `bump` is a no-op and weights stay at `INITIAL_Q`
-    /// (preserves legacy `DomWdeg`-as-MRV behaviour for non-CHS orderings).
+    /// (keeps the frozen-weight `Mrv` scan for non-CHS orderings).
     enabled: bool,
 }
 
 impl ConflictHistory {
     /// Create history for `num_constraints`. `enabled` gates the ERWA update;
     /// when disabled the weights are the frozen `1.0` vector the pre-CHS code
-    /// used, so `Ordering::DomWdeg` stays bit-for-bit MRV.
+    /// used, so `Ordering::Mrv` stays bit-for-bit the frozen-weight scan.
     pub fn new(num_constraints: usize, enabled: bool) -> Self {
         Self {
             weights: vec![INITIAL_Q; num_constraints],

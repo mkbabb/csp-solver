@@ -92,7 +92,7 @@ impl From<Ordering> for RustOrdering {
         match o {
             Ordering::CHRONOLOGICAL => RustOrdering::Chronological,
             Ordering::FAIL_FIRST => RustOrdering::FailFirst,
-            Ordering::DOM_WDEG => RustOrdering::DomWdeg,
+            Ordering::DOM_WDEG => RustOrdering::Mrv,
         }
     }
 }
@@ -265,7 +265,6 @@ impl From<&SolveConfig> for RustSolveConfig {
             pruning: c.pruning.into(),
             ordering: c.ordering.into(),
             max_solutions: c.max_solutions,
-            backjumping: c.backjumping,
             optimization_mode: c.optimization_mode.into(),
             node_budget: c.node_budget,
             // Neither cancellation nor Luby restarts are exposed through the
@@ -579,9 +578,8 @@ pub fn solve_sudoku(csp: JsValue) -> Result<JsValue, JsError> {
 
     let config = RustSolveConfig {
         pruning: RustPruning::Ac3,
-        ordering: RustOrdering::DomWdeg,
+        ordering: RustOrdering::Mrv,
         max_solutions: wire.max_solutions,
-        backjumping: false,
         ..Default::default()
     };
 
