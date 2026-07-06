@@ -42,15 +42,40 @@
  */
 
 import { onUnmounted, ref, toValue, watchEffect, type MaybeRefOrGetter, type Ref } from 'vue';
+import type { Easing } from './easings';
+import { linear } from './easings';
 
-// ── generic subscriber shape — advance(steps), not a specific frame ref ──
+// ── subscriber kinds (one chain, two dispatch shapes) ──
+//
+// `frame` — advance a discrete frame index every N ms (path-boil, filter-param ticking,
+//   glyph wiggle). Perpetual until stopped; anchored to a `lastTick` wall-clock.
+// `sequence` — ease a continuous 0→1 progress over a fixed wall-clock duration, then
+//   self-unsubscribe (glyph/grid draw-in, the celebration flourish, the gold-star garnish
+//   draw-on). This is the celebration timeline's kind (design-refinement.md §1.3 handoff).
+//
+// Both ride the SAME module-level `subscribers` Set and the SAME single rAF chain — however
+// many draw-ins and flourishes crest at once, there is exactly one outstanding rAF.
 
-interface Subscriber {
+interface FrameSubscriber {
+  kind: 'frame';
   advance: (steps: number) => void;
   getInterval: () => number;
   lastTick: number;
   active: boolean;
 }
+
+interface SequenceSubscriber {
+  kind: 'sequence';
+  /** performance-clock ms of the tween's t=0 (may sit in the future to express a delay). */
+  startTime: number;
+  durationMs: number;
+  easing: Easing;
+  onProgress: (eased: number, raw: number) => void;
+  onComplete: () => void;
+  active: boolean;
+}
+
+type Subscriber = FrameSubscriber | SequenceSubscriber;
 
 const subscribers = new Set<Subscriber>();
 let rafId: number | null = null;
@@ -76,17 +101,42 @@ function stopChain() {
 }
 
 function schedulerTick(timestamp: number) {
+  // Sequence subscribers self-remove on completion; collect them and fire onComplete AFTER
+  // the iteration so a chained flourish/murmur enrolled in a callback can't re-enter this
+  // same loop (it ticks on the next frame instead).
+  let completed: SequenceSubscriber[] | null = null;
   for (const sub of subscribers) {
     if (!sub.active) continue;
-    const interval = sub.getInterval();
-    if (sub.lastTick === 0) sub.lastTick = timestamp;
-    const elapsed = timestamp - sub.lastTick;
-    if (elapsed >= interval) {
-      const steps = Math.floor(elapsed / interval);
-      sub.lastTick += steps * interval;
-      sub.advance(steps);
+    if (sub.kind === 'frame') {
+      const interval = sub.getInterval();
+      if (sub.lastTick === 0) sub.lastTick = timestamp;
+      const elapsed = timestamp - sub.lastTick;
+      if (elapsed >= interval) {
+        const steps = Math.floor(elapsed / interval);
+        sub.lastTick += steps * interval;
+        sub.advance(steps);
+      }
+    } else {
+      const raw = (timestamp - sub.startTime) / sub.durationMs;
+      if (raw < 0) continue; // still inside the delay window — nothing drawn yet
+      if (raw >= 1) {
+        sub.onProgress(1, 1);
+        sub.active = false;
+        (completed ??= []).push(sub);
+      } else {
+        sub.onProgress(sub.easing(raw), raw);
+      }
     }
   }
+  if (completed) {
+    for (const sub of completed) {
+      subscribers.delete(sub);
+      sub.onComplete();
+    }
+  }
+  // A finished sequence may have been the last active subscriber — shut the chain down so a
+  // solved-and-settled board returns to the ambient floor rather than spinning empty.
+  maybeStopScheduler();
   // Continue the one chain only while running — a tick that fires after a cancel (PRM
   // engage / tab hidden raced the browser's frame commit) must not resurrect it.
   rafId = schedulerRunning ? requestAnimationFrame(schedulerTick) : null;
@@ -113,7 +163,12 @@ if (typeof document !== 'undefined') {
     if (document.hidden) {
       stopChain(); // 0 ticks; schedulerRunning is left intact for resume
     } else if (schedulerRunning) {
-      for (const sub of subscribers) sub.lastTick = 0;
+      // Frame subscribers reset their wall-clock anchor so an elapsed-time jump can't
+      // fast-forward every frame index at once. Sequence subscribers are one-shots with no
+      // `lastTick`: on resume their `startTime` is stale by the hidden interval, so a tween
+      // that would have finished while hidden simply completes on the first resumed tick —
+      // the correct end state for a draw-in/flourish, no snap-back.
+      for (const sub of subscribers) if (sub.kind === 'frame') sub.lastTick = 0;
       startChain(); // idempotent — resume can never double the chain
     }
   });
@@ -158,8 +213,8 @@ export interface BoilHandle {
 function createSubscription(
   advance: (steps: number) => void,
   getInterval: () => number,
-): { sub: Subscriber; handle: BoilHandle } {
-  const sub: Subscriber = { advance, getInterval, lastTick: 0, active: false };
+): { sub: FrameSubscriber; handle: BoilHandle } {
+  const sub: FrameSubscriber = { kind: 'frame', advance, getInterval, lastTick: 0, active: false };
   function start() {
     if (prmRef.value || sub.active) return;
     sub.active = true;
@@ -255,6 +310,55 @@ export function createBoilTicker(
   return handle;
 }
 
+// ── createSequenceSubscription — one-shot eased 0→1 tween on the shared chain ──
+//
+// The celebration's subscriber kind (design-refinement.md §1.3): a wall-clock tween that
+// drives a continuous progress (stroke-dashoffset draw-in, a finite wiggle traversal, a
+// specular sweep), then removes itself. Unlike the frame primitives it is NOT reactive and
+// owns no watchEffect — callers create it imperatively (after mount, on a solve event) and
+// hold start()/stop(), exactly as the keyframes.js one-shot it replaces did. A completed
+// tween self-unsubscribes inside the tick, so N concurrent draw-ins/flourishes still crest
+// on exactly one rAF chain and the subscriber count falls back to the ambient floor after.
+
+export interface SequenceHandle {
+  start: () => void;
+  stop: () => void;
+}
+
+export function createSequenceSubscription(opts: {
+  durationMs: number;
+  /** onset delay in ms — the tween stays idle (nothing drawn) until it elapses. */
+  delayMs?: number;
+  easing?: Easing;
+  onProgress: (eased: number, raw: number) => void;
+  onComplete?: () => void;
+}): SequenceHandle {
+  const sub: SequenceSubscriber = {
+    kind: 'sequence',
+    startTime: 0,
+    durationMs: Math.max(1, opts.durationMs),
+    easing: opts.easing ?? linear,
+    onProgress: opts.onProgress,
+    onComplete: opts.onComplete ?? (() => {}),
+    active: false,
+  };
+  function start() {
+    if (prmRef.value || sub.active) return;
+    sub.active = true;
+    // rAF timestamps share performance.now()'s time origin, so the tick can compare against
+    // a start captured here (±one frame of skew, immaterial to a 350ms draw-in).
+    sub.startTime = performance.now() + (opts.delayMs ?? 0);
+    subscribers.add(sub);
+    ensureScheduler();
+  }
+  function stop() {
+    sub.active = false;
+    subscribers.delete(sub);
+    maybeStopScheduler();
+  }
+  return { start, stop };
+}
+
 // ── dev-only instrumentation hook (0 bytes in prod — see rafInstrumentation.ts) ──
 //
 // Reports the live chain/subscriber floor to the W8 verification probe.
@@ -262,12 +366,26 @@ export function createBoilTicker(
 // state truthfully reads 0 (no rAF outstanding) even while subscribers are retained.
 
 export function schedulerDebugInfo() {
-  return { chains: rafId !== null ? 1 : 0, subscribers: subscribers.size };
+  let frame = 0;
+  let sequence = 0;
+  for (const sub of subscribers) {
+    if (sub.kind === 'frame') frame++;
+    else sequence++;
+  }
+  return {
+    chains: rafId !== null ? 1 : 0,
+    subscribers: subscribers.size,
+    kinds: { frame, sequence },
+  };
 }
 
 declare global {
   interface Window {
-    __boilSchedulerDebug?: () => { chains: number; subscribers: number };
+    __boilSchedulerDebug?: () => {
+      chains: number;
+      subscribers: number;
+      kinds: { frame: number; sequence: number };
+    };
   }
 }
 if (import.meta.env.DEV && typeof window !== 'undefined') {

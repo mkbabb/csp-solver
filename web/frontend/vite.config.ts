@@ -40,7 +40,10 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vue-vendor': ['vue'],
-          'animation-vendor': ['@mkbabb/keyframes.js/engine', '@mkbabb/pencil-boil'],
+          // keyframes.js dropped from the app runtime by W8's 4th workstream (grid + glyph
+          // draw-in migrated off `KeyframesAnimation` onto the unified scheduler's `sequence`
+          // subscriber kind), so it no longer enters any chunk — only pencil-boil remains here.
+          'animation-vendor': ['@mkbabb/pencil-boil'],
         },
       },
     },

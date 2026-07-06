@@ -2,8 +2,11 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import SudokuCell from './SudokuCell/SudokuCell.vue'
 import HandDrawnGrid from '@pencil/grid/HandDrawnGrid/HandDrawnGrid.vue'
+import CelebrationStar from '@pencil/chrome/CelebrationStar.vue'
 import { mulberry32 } from '@mkbabb/pencil-boil'
 import { generateGridPaths } from '@pencil/grid/gridPaths'
+import { revealStaggerMs } from '@pencil/config/pencilConfig'
+import { setMurmurSeed, notifyUserEdit, resetMurmur } from '@pencil/composables/celebration'
 import type { SolveState } from '@games/sudoku/types'
 import type { AnimationState } from '@pencil/types'
 
@@ -45,11 +48,17 @@ const boardClasses = computed(() => {
   return base
 })
 
-// Noise-order staggered delays for animating cells (Fisher-Yates + mulberry32)
+// Beat 1 — the reveal wave. Noise-order stagger (Fisher-Yates + mulberry32), but
+// board-normalized (design §1.3): stagger = clamp(round(1200 / blankCount), 4, 24) so the
+// reveal window is ~1.2s at every board size instead of the old fixed 15ms/cell (which ran
+// ~0.75s on a 9×9 but ~3s on a full 16×16 — outstaying its welcome exactly when the board is
+// most impressive).
 const noiseDelays = computed(() => {
   const delays = new Map<string, number>()
   const cells = Array.from(props.animatingCells)
   if (cells.length === 0) return delays
+
+  const stagger = revealStaggerMs(cells.length)
 
   // Fisher-Yates shuffle with seeded RNG
   const rng = mulberry32(cells.length * 17 + 7)
@@ -60,10 +69,38 @@ const noiseDelays = computed(() => {
   }
 
   for (let i = 0; i < shuffled.length; i++) {
-    delays.set(shuffled[i], i * 15)
+    delays.set(shuffled[i], i * stagger)
   }
   return delays
 })
+
+// Celebration trigger (design §1.3: the trigger lives on the board; the skin owns the beats).
+// A solve success with newly-filled cells crests the gold-star garnish; an idempotent re-solve
+// (zero new cells) skips the fanfare — the grid recolor carries it.
+const celebrating = ref(false)
+watch(
+  () => props.solveState,
+  (state, prev) => {
+    if (state === 'solved' && prev !== 'solved' && props.animatingCells.size > 0) {
+      setMurmurSeed(props.boardGeneration * 31 + 1)
+      celebrating.value = true
+    } else if (state !== 'solved') {
+      celebrating.value = false
+    }
+  },
+)
+watch(
+  () => props.boardGeneration,
+  () => {
+    celebrating.value = false
+    resetMurmur()
+  },
+)
+
+function onCellUpdate(pos: number, value: number) {
+  notifyUserEdit() // the page is being written on — hold the murmur this window (§1.3)
+  emit('updateCell', pos, value)
+}
 
 // Grid animation state machine
 const gridAnimState = ref<AnimationState>('hidden')
@@ -133,9 +170,12 @@ function isRevealed(pos: number): boolean {
         :board-size="boardSize"
         :subgrid-size="size"
         :ghost-path="cellRects[pos - 1] ?? ''"
-        @update="(p, v) => emit('updateCell', p, v)"
+        @update="onCellUpdate"
       />
     </div>
+
+    <!-- Gold-star garnish + union foil-gleam tail — beat-2 crest accent (§4.3) -->
+    <CelebrationStar :active="celebrating" />
   </div>
 </template>
 

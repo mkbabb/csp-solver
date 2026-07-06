@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { getVariant, getAllVariants } from './glyphRegistry';
-import { createGlyphDrawIn, createGlyphWiggle, type GlyphWiggleHandle } from './glyphAnimations';
-import { mulberry32 } from '@mkbabb/pencil-boil';
-import { DRAW_IN_PRESETS, GLYPH_ANIM } from '@pencil/config/pencilConfig';
-import type { KeyframesAnimation } from '@mkbabb/keyframes.js/engine';
+import {
+    createGlyphDrawIn,
+    createGlyphFlourish,
+    createGlyphWiggle,
+    type GlyphAnimHandle,
+} from './glyphAnimations';
+import { registerMurmurCell, unregisterMurmurCell } from '@pencil/composables/celebration';
+import { CELEBRATION, DRAW_IN_PRESETS, GLYPH_ANIM, wavefrontStepMs } from '@pencil/config/pencilConfig';
 
 const props = defineProps<{
     value: string;
@@ -14,13 +18,22 @@ const props = defineProps<{
     isRevealed: boolean;
     noiseDelay: number;
     position: number;
+    boardSize: number;
     isHovered: boolean;
 }>();
 
+// Stable TEMPLATE ref (never an inline `:ref="(el) => ..."` closure). This is the W8 task-4
+// discipline: the draw-in's dasharray reset (§ createGlyphDrawIn) is written imperatively to
+// `pathRef.value.style`, NOT bound reactively — so it survives every re-render (a re-bound
+// inline function ref would fire unbind→rebind on each poll/tick and silently re-arm the
+// pre-draw dash values, reverting a completed reset). A stable string ref only fires on real
+// mount/unmount, and the imperative style writes are never clobbered by Vue's patch.
 const pathRef = ref<SVGPathElement | null>(null);
 
-let drawInAnim: KeyframesAnimation<any> | null = null;
-let wiggleAnim: GlyphWiggleHandle | null = null;
+let drawInAnim: GlyphAnimHandle | null = null;
+let celebrationAnim: GlyphAnimHandle | null = null; // beat-2 flourish OR beat-3 murmur cycle
+let hoverAnim: GlyphAnimHandle | null = null;
+let murmurRegistered = false;
 
 const glyph = computed(() => {
     if (!props.value) return null;
@@ -40,131 +53,174 @@ const strokeWidth = computed(() => {
     return props.isGiven || props.isSolved ? 5 : 4.5;
 });
 
-// Reactive display path — animations mutate this instead of the DOM directly
+// Reactive display path — Vue restores this via :d on re-render; animations setAttribute over it
 const displayPath = computed(() => glyph.value?.d ?? '');
+
+function cellRowCol() {
+    const n = Math.max(1, props.boardSize);
+    return { row: Math.floor(props.position / n), col: props.position % n };
+}
+
+function registerForMurmur() {
+    if (murmurRegistered) return;
+    murmurRegistered = true;
+    registerMurmurCell(props.position, { wiggleOnce: murmurWiggleOnce });
+}
+
+function unregisterFromMurmur() {
+    if (!murmurRegistered) return;
+    murmurRegistered = false;
+    unregisterMurmurCell(props.position);
+}
 
 function cleanupAnimations() {
     if (drawInAnim) {
         try { drawInAnim.stop(); } catch { /* ignore */ }
         drawInAnim = null;
     }
-    if (wiggleAnim) {
-        try { wiggleAnim.stop(); } catch { /* ignore */ }
-        wiggleAnim = null;
+    if (celebrationAnim) {
+        try { celebrationAnim.stop(); } catch { /* ignore */ }
+        celebrationAnim = null;
     }
+    if (hoverAnim) {
+        try { hoverAnim.stop(); } catch { /* ignore */ }
+        hoverAnim = null;
+    }
+    unregisterFromMurmur();
 }
 
-function startAutoWiggle() {
-    if (!pathRef.value || !props.value) return;
+// Beat 2 — the diagonal flourish wave. Onset is computed once from (row, col) so the front
+// sweeps the board independently of each cell's own beat-1 draw-in stagger. Finite (two
+// cycles), then the cell settles on its base variant and joins the beat-3 murmur pool.
+function scheduleFlourish() {
+    if (!pathRef.value || !glyph.value) return;
     const variants = getAllVariants(props.value);
-    if (variants.length >= 2) {
-        // Seeded PRNG per cell for spatially-uncorrelated noise
-        const rng = mulberry32(props.position * 2654435761 + props.value.charCodeAt(0));
-        // Duration jitter: ±400ms around base duration
-        const durationJitter = Math.round((rng() - 0.5) * 800);
-        // Phase delay: 0–full-cycle offset so adjacent cells never sync
-        const phaseDelay = Math.round(rng() * GLYPH_ANIM.autoWiggleDuration);
-        wiggleAnim = createGlyphWiggle(
-            pathRef.value,
-            variants.map((v) => v.d),
-            {
-                duration: GLYPH_ANIM.autoWiggleDuration + durationJitter,
-                delay: phaseDelay,
-            },
-        );
-        if (wiggleAnim) {
-            wiggleAnim.play();
-        }
+    if (variants.length < 2) {
+        registerForMurmur();
+        return;
     }
+    const { row, col } = cellRowCol();
+    const delayMs = CELEBRATION.beat2StartMs + (row + col) * wavefrontStepMs(props.boardSize);
+    celebrationAnim = createGlyphFlourish(
+        pathRef.value,
+        variants.map((v) => v.d),
+        glyph.value.d,
+        {
+            cycles: CELEBRATION.flourishCycles,
+            cycleDurationMs: CELEBRATION.wiggleCycleMs,
+            delayMs,
+            onDone: () => {
+                celebrationAnim = null;
+                registerForMurmur();
+            },
+        },
+    );
+    if (celebrationAnim) celebrationAnim.play();
+    else registerForMurmur(); // PRM: no flourish; murmur also no-ops under PRM
 }
 
-function setupDrawIn() {
+// Beat 3 — a single wiggle cycle, driven by the shared murmur pool (design §1.3). One cell
+// per 2.5s window; a lone transient sequence subscriber that self-removes.
+function murmurWiggleOnce() {
+    if (!pathRef.value || !glyph.value || !props.isSolved) return;
+    const variants = getAllVariants(props.value);
+    if (variants.length < 2) return;
+    if (celebrationAnim) {
+        try { celebrationAnim.stop(); } catch { /* ignore */ }
+        celebrationAnim = null;
+    }
+    celebrationAnim = createGlyphFlourish(
+        pathRef.value,
+        variants.map((v) => v.d),
+        glyph.value.d,
+        {
+            cycles: 1,
+            cycleDurationMs: GLYPH_ANIM.hoverWiggleDuration,
+            onDone: () => { celebrationAnim = null; },
+        },
+    );
+    celebrationAnim?.play();
+}
+
+function setupReveal() {
     if (!pathRef.value || !glyph.value) return;
 
     cleanupAnimations();
+    const el = pathRef.value;
 
     if (props.isRevealed) {
-        // Animate draw-in for revealed cells (solved or randomized) with noise delay
-        drawInAnim = createGlyphDrawIn(pathRef.value, glyph.value.length, {
+        // Beat 1 — the reveal wave: draw-in on the board-normalized noise stagger (delay
+        // supplied by the board). One-shot sequence subscriber, not a keyframes.js loop.
+        drawInAnim = createGlyphDrawIn(el, glyph.value.length, {
             duration: DRAW_IN_PRESETS.glyph.duration,
             delay: props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay,
         });
+        drawInAnim?.play();
+
+        // Beat 2 — only the solver's rainbow ink celebrates; given/user cells stay dignified.
+        if (props.isSolved) scheduleFlourish();
+        return;
+    }
+
+    if (!props.value) return;
+
+    // Overridden cells (given/solved the user replaced): instant show, no animation.
+    if (props.isOverridden) {
+        el.style.strokeDasharray = 'none';
+        el.style.strokeDashoffset = '0';
+        return;
+    }
+
+    // Quick draw-in for user-typed cells on blank cells.
+    if (!props.isGiven && !props.isSolved) {
+        drawInAnim = createGlyphDrawIn(el, glyph.value.length, { duration: 150, delay: 0 });
         if (drawInAnim) {
             drawInAnim.play();
-            // After draw-in, start auto-wiggle for solver-introduced cells
-            if (props.isSolved) {
-                const totalDelay = (props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay) + DRAW_IN_PRESETS.glyph.duration;
-                setTimeout(() => {
-                    if (props.isSolved) startAutoWiggle();
-                }, totalDelay);
-            }
-        }
-    } else if (!props.isRevealed && props.value) {
-        // Overridden cells (given or solved that user replaced): instant show, no animation
-        if (props.isOverridden) {
-            pathRef.value.style.strokeDasharray = 'none';
-            pathRef.value.style.strokeDashoffset = '0';
             return;
         }
-        // Quick draw-in for user-typed cells on blank cells
-        if (!props.isGiven && !props.isSolved) {
-            drawInAnim = createGlyphDrawIn(pathRef.value, glyph.value.length, {
-                duration: 150,
-                delay: 0,
-            });
-            if (drawInAnim) {
-                drawInAnim.play();
-                return;
-            }
-        }
-        pathRef.value.style.strokeDasharray = 'none';
-        pathRef.value.style.strokeDashoffset = '0';
-        // Auto-wiggle for solver-introduced cells that are already present
-        if (props.isSolved) {
-            startAutoWiggle();
-        }
     }
+
+    el.style.strokeDasharray = 'none';
+    el.style.strokeDashoffset = '0';
+    // A settled solved board (e.g. restored from storage, not re-animated) still murmurs.
+    if (props.isSolved) registerForMurmur();
 }
 
-// Wiggle on hover — skip for solved cells (they auto-wiggle)
+// Wiggle on hover — skip for solved cells (they celebrate/murmur instead).
 watch(
     () => props.isHovered,
     (hovered) => {
         if (!pathRef.value || !props.value) return;
-        if (props.isSolved) return; // skip — auto-wiggle handles these
+        if (props.isSolved) return;
 
         if (hovered) {
             const variants = getAllVariants(props.value);
             if (variants.length >= 2) {
-                wiggleAnim = createGlyphWiggle(
+                hoverAnim = createGlyphWiggle(
                     pathRef.value,
                     variants.map((v) => v.d),
                     { duration: GLYPH_ANIM.hoverWiggleDuration },
                 );
-                if (wiggleAnim) {
-                    wiggleAnim.play();
-                }
+                hoverAnim?.play();
             }
-        } else {
-            if (wiggleAnim) {
-                try { wiggleAnim.stop(); } catch { /* ignore */ }
-                wiggleAnim = null;
-            }
+        } else if (hoverAnim) {
+            try { hoverAnim.stop(); } catch { /* ignore */ }
+            hoverAnim = null;
             // Vue reactivity restores the correct d via :d="displayPath" on next tick
         }
     },
 );
 
-// Watch override: stop auto-wiggle, revert to user-ink
+// Watch override: stop celebration, drop out of the murmur pool, revert to user-ink.
 watch(
     () => props.isOverridden,
     (overridden) => {
         if (overridden) {
-            if (wiggleAnim) {
-                try { wiggleAnim.stop(); } catch { /* ignore */ }
-                wiggleAnim = null;
+            if (celebrationAnim) {
+                try { celebrationAnim.stop(); } catch { /* ignore */ }
+                celebrationAnim = null;
             }
-            // Vue reactivity restores the correct d via :d="displayPath" on next tick
+            unregisterFromMurmur();
         }
     },
 );
@@ -173,12 +229,12 @@ watch(
     () => props.value,
     () => {
         // Re-setup when value changes
-        requestAnimationFrame(() => setupDrawIn());
+        requestAnimationFrame(() => setupReveal());
     },
 );
 
 onMounted(() => {
-    setupDrawIn();
+    setupReveal();
 });
 
 onUnmounted(() => {

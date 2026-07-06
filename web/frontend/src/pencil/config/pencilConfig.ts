@@ -179,3 +179,49 @@ export const GLYPH_ANIM = {
   autoWiggleDuration: 2500,
   hoverWiggleDuration: 600,
 } as const;
+
+// ── Solve celebration — "the gold-star moment" (design-refinement.md §1.3) ──
+//
+// A celebration is a moment, not a state: three beats, one timeline, finite, ≤3.2s crest.
+// Every duration below rides the scheduler's `sequence` subscriber kind (or a setTimeout
+// window, for the murmur) — never a per-cell keyframes.js RAFPlayback.
+//
+// Budget (worst case): beat-1 reveal window ≈1.2s → 150ms breath → beat-2 onset ≈1.35s;
+// the diagonal front crosses in ≈0.5s (last onset ≈1.85s); each flourish is 2×600ms → the
+// last cell crests ≈3.05s, inside the 3.2s cap.
+export const CELEBRATION = {
+  /** Beat 1: total board-normalized reveal window; per-cell stagger = window / blankCount. */
+  revealWindowMs: 1200,
+  revealStaggerMin: 4,
+  revealStaggerMax: 24,
+  /** Beat 2: onset after beat 1 + the 150ms breath. */
+  beat2StartMs: 1350,
+  /** Beat 2: diagonal wavefront crosses any board in ~this long; per-cell onset += (row+col)·(cross/(2N−2)). */
+  wavefrontCrossMs: 500,
+  /** Beat 2: each solved cell plays exactly this many wiggle cycles as it passes. */
+  flourishCycles: 2,
+  /** Wiggle cycle length (= hoverWiggleDuration) — the variant-swap cadence. */
+  wiggleCycleMs: 600,
+  /** Beat 3: classroom murmur — one solved cell wakes for a single wiggle per this window. */
+  murmurWindowMs: 2500,
+  /** Gold-star garnish: draw-on duration and onset (~beat-2 crest, draws by ~3.0s). */
+  starDrawInMs: 350,
+  starCrestMs: 2650,
+  /** Union foil-gleam tail: a single specular sweep over the garnish (OD-1 default: ships). */
+  gleamMs: 400,
+} as const;
+
+/** Beat-1 stagger, board-normalized so the reveal window is ~constant across sizes. */
+export function revealStaggerMs(blankCount: number): number {
+  if (blankCount <= 1) return CELEBRATION.revealStaggerMin;
+  return Math.min(
+    CELEBRATION.revealStaggerMax,
+    Math.max(CELEBRATION.revealStaggerMin, Math.round(CELEBRATION.revealWindowMs / blankCount)),
+  );
+}
+
+/** Beat-2 wavefront step per (row+col) diagonal, so the front crosses in ~wavefrontCrossMs. */
+export function wavefrontStepMs(boardSize: number): number {
+  const diag = Math.max(1, 2 * boardSize - 2);
+  return Math.round(CELEBRATION.wavefrontCrossMs / diag);
+}

@@ -1,129 +1,169 @@
 /**
- * Glyph animation utilities.
- * - Draw-in (stroke-dashoffset) — one-shot, keyframes.js `KeyframesAnimation`.
- * - Wiggle (subtle path morph between variants, perpetual while active) — the unified
- *   boil scheduler (W8), not keyframes.js. A solved board calls createGlyphWiggle()
- *   once per solver-introduced cell (up to boardSize²); each used to allocate its own
- *   keyframes.js `KeyframesAnimation` → its own independent `RAFPlayback` → its own rAF
- *   chain. Wiggle is fundamentally the same "advance a discrete frame index every N ms"
- *   shape as SvgFilters' preset ticking and the path-boil frame cycling, so it now rides
- *   the SAME single shared rAF chain via `createBoilTicker`, instead of keyframes.js's
- *   continuous-progress engine repurposed to snap a discrete index.
+ * Glyph animation utilities — every one rides the unified boil scheduler (W8), zero
+ * keyframes.js `RAFPlayback` loops.
+ *
+ * - Draw-in (stroke-dashoffset, one-shot) — a `sequence` subscriber. Was a keyframes.js
+ *   `KeyframesAnimation`, i.e. one independent native rAF loop per drawing cell (up to
+ *   boardSize² during a reveal). Now one shared chain (W8 4th workstream).
+ * - Flourish (finite variant-morph, the celebration's beat-2 wave + beat-3 murmur cycle) —
+ *   a `sequence` subscriber that traverses variants for a fixed cycle count, then settles on
+ *   the base variant. Finite by construction, so the subscriber floor returns to ambient.
+ * - Hover wiggle (perpetual while hovered) — the `createBoilTicker` frame primitive, as
+ *   before. Non-solved cells only; solved cells celebrate/murmur instead.
  */
 
-import { KeyframesAnimation } from '@mkbabb/keyframes.js/engine';
-import { createBoilTicker, usePrefersReducedMotion } from '@pencil/composables/boilScheduler';
+import {
+  createBoilTicker,
+  createSequenceSubscription,
+  usePrefersReducedMotion,
+} from '@pencil/composables/boilScheduler';
+import { easeOutCubic, linear } from '@pencil/composables/easings';
 
-// One PRM source for both draw-in (keyframes.js, one-shot) and wiggle (the unified
-// scheduler, perpetual) — usePrefersReducedMotion() is the same live matchMedia ref the
-// scheduler's central PRM gate reads, so wiggle's reduced-motion behavior is never a step
-// behind draw-in's, and a mid-session PRM flip also centrally hard-stops active wiggle
-// tickers (see boilScheduler.ts). Retires this file's prior useReducedMotion() import.
+// One PRM source for draw-in, flourish and wiggle — usePrefersReducedMotion() is the same
+// live matchMedia ref the scheduler's central PRM gate reads, so reduced-motion behavior is
+// never a step behind, and a mid-session PRM flip centrally hard-stops any in-flight tween.
 const reducedMotion = usePrefersReducedMotion();
 
+/** The `.play()`/`.stop()` subset every glyph animation exposes to HandwrittenGlyph.vue. */
+export interface GlyphAnimHandle {
+  play(): void;
+  stop(): void;
+}
+
 /**
- * Create a draw-in animation for a glyph path (stroke-dashoffset from length to 0).
+ * Draw-in for a glyph path (stroke-dashoffset from length → 0), one-shot on the shared chain.
+ *
+ * On completion it clears the dash pattern outright (`strokeDasharray: 'none'`). This is the
+ * W8 fix for the still-live dasharray-reset defect: glyphPaths.ts lengths are *approximate*,
+ * so leaving `strokeDasharray = length` at rest (keyframes.js's `fillMode: 'forwards'` end
+ * state) left a permanent dash-gap on drawn glyphs — visible the instant a glyph freezes at
+ * the end of the celebration (beat 3). Clearing the array makes the settled stroke solid
+ * regardless of length accuracy.
  */
 export function createGlyphDrawIn(
-    pathEl: SVGPathElement,
-    pathLength: number,
-    options: {
-        duration?: number;
-        delay?: number;
-    } = {},
-): KeyframesAnimation<any> | null {
-    if (reducedMotion.value) {
-        pathEl.style.strokeDashoffset = '0';
-        return null;
-    }
+  pathEl: SVGPathElement,
+  pathLength: number,
+  options: {
+    duration?: number;
+    delay?: number;
+    onComplete?: () => void;
+  } = {},
+): GlyphAnimHandle | null {
+  if (reducedMotion.value) {
+    pathEl.style.strokeDasharray = 'none';
+    pathEl.style.strokeDashoffset = '0';
+    options.onComplete?.();
+    return null;
+  }
 
-    pathEl.style.strokeDasharray = String(pathLength);
-    pathEl.style.strokeDashoffset = String(pathLength);
+  pathEl.style.strokeDasharray = String(pathLength);
+  pathEl.style.strokeDashoffset = String(pathLength);
 
-    const anim = new KeyframesAnimation<{ offset: number }>({
-        duration: options.duration ?? 350,
-        delay: options.delay ?? 0,
-        fillMode: 'forwards',
-        timingFunction: 'easeOutCubic',
-        useWAAPI: false,
-    });
+  const seq = createSequenceSubscription({
+    durationMs: options.duration ?? 350,
+    delayMs: options.delay ?? 0,
+    easing: easeOutCubic,
+    onProgress: (eased) => {
+      pathEl.style.strokeDashoffset = String(pathLength * (1 - eased));
+    },
+    onComplete: () => {
+      pathEl.style.strokeDasharray = 'none';
+      pathEl.style.strokeDashoffset = '0';
+      options.onComplete?.();
+    },
+  });
 
-    anim.addFrame(
-        '0%',
-        { offset: pathLength },
-        (vars) => {
-            pathEl.style.strokeDashoffset = String(vars.offset);
-        },
-    );
-    anim.addFrame('100%', { offset: 0 });
-    anim.parse();
-
-    return anim;
+  return { play: () => seq.start(), stop: () => seq.stop() };
 }
 
 /**
- * A `wiggleAnim`-shaped handle — the exact `.play()`/`.stop()` subset of keyframes.js's
- * `KeyframesAnimation` that `HandwrittenGlyph.vue` actually calls. Intentionally not a
- * keyframes.js animation at all (see module doc): it's a `createBoilTicker` subscriber on
- * the one shared rAF chain.
- */
-export interface GlyphWiggleHandle {
-    play(): void;
-    stop(): void;
-}
-
-/**
- * Create a subtle wiggle animation that morphs between glyph variant paths.
+ * Finite variant-morph flourish — the celebration's beat-2 wave and beat-3 murmur cycle.
  *
- * Was a keyframes.js `KeyframesAnimation` with a continuous `frame` progress value,
- * `Math.round()`-snapped to a discrete variant index on every rAF tick of ITS OWN
- * independent `RAFPlayback`. Now a `createBoilTicker` subscriber on the one shared rAF
- * chain: `duration`/`frameCount` become an equivalent per-step interval, and the ping-pong
- * (0..frameCount-1..0) semantics of the replaced `direction: 'alternate',
- * iterationCount: Infinity` config are preserved exactly by `createBoilTicker`.
+ * Traverses `variantPaths` as a ping-pong (0 → n−1 → 0) `cycles` times over
+ * `cycles × cycleDurationMs`, then settles the element back on `baseD` (a clean freeze — no
+ * frozen mid-morph, no dash-gap). One-shot: it self-removes from the scheduler on completion,
+ * so N cells doing the wave crest on one chain and the floor recovers after.
+ */
+export function createGlyphFlourish(
+  pathEl: SVGPathElement,
+  variantPaths: string[],
+  baseD: string,
+  options: {
+    cycles?: number;
+    cycleDurationMs?: number;
+    delayMs?: number;
+    onDone?: () => void;
+  } = {},
+): GlyphAnimHandle | null {
+  if (reducedMotion.value || variantPaths.length < 2) return null;
+
+  const cycles = options.cycles ?? 2;
+  const cycleDurationMs = options.cycleDurationMs ?? 600;
+  const n = variantPaths.length;
+
+  const seq = createSequenceSubscription({
+    durationMs: cycles * cycleDurationMs,
+    delayMs: options.delayMs ?? 0,
+    easing: linear,
+    onProgress: (_eased, raw) => {
+      const phase = (raw * cycles) % 1; // 0→1 within the current cycle
+      const tri = phase < 0.5 ? phase * 2 : (1 - phase) * 2; // ping-pong 0→1→0
+      const idx = Math.min(n - 1, Math.round(tri * (n - 1)));
+      pathEl.setAttribute('d', variantPaths[idx]);
+    },
+    onComplete: () => {
+      pathEl.setAttribute('d', baseD);
+      options.onDone?.();
+    },
+  });
+
+  return { play: () => seq.start(), stop: () => seq.stop() };
+}
+
+/**
+ * Hover wiggle — perpetual variant morph while active, on the shared chain via
+ * `createBoilTicker` (frame kind). Ping-pongs 0..n−1..0, matching the original
+ * `direction: 'alternate', iterationCount: Infinity` config.
  */
 export function createGlyphWiggle(
-    pathEl: SVGPathElement,
-    variantPaths: string[],
-    options: {
-        duration?: number;
-        delay?: number;
-    } = {},
-): GlyphWiggleHandle | null {
-    if (reducedMotion.value || variantPaths.length < 2) return null;
+  pathEl: SVGPathElement,
+  variantPaths: string[],
+  options: {
+    duration?: number;
+    delay?: number;
+  } = {},
+): GlyphAnimHandle | null {
+  if (reducedMotion.value || variantPaths.length < 2) return null;
 
-    const frameCount = variantPaths.length;
-    const duration = options.duration ?? 800;
-    const delay = options.delay ?? 0;
-    // One forward pass (0 → frameCount-1) takes `duration` ms, matching the replaced
-    // config's per-cycle timing.
-    const intervalMs = Math.max(1, Math.round(duration / Math.max(1, frameCount - 1)));
+  const frameCount = variantPaths.length;
+  const duration = options.duration ?? 800;
+  const delay = options.delay ?? 0;
+  const intervalMs = Math.max(1, Math.round(duration / Math.max(1, frameCount - 1)));
 
-    let ticker: ReturnType<typeof createBoilTicker> | null = null;
-    let delayTimer: ReturnType<typeof setTimeout> | null = null;
+  let ticker: ReturnType<typeof createBoilTicker> | null = null;
+  let delayTimer: ReturnType<typeof setTimeout> | null = null;
 
-    function play() {
-        delayTimer = setTimeout(() => {
-            delayTimer = null;
-            // Re-check: PRM may have engaged during the delay window.
-            if (reducedMotion.value) return;
-            ticker = createBoilTicker(frameCount, intervalMs, (frame) => {
-                pathEl.setAttribute('d', variantPaths[frame]);
-            });
-            ticker.start();
-        }, delay);
+  function play() {
+    delayTimer = setTimeout(() => {
+      delayTimer = null;
+      if (reducedMotion.value) return; // PRM may have engaged during the delay window
+      ticker = createBoilTicker(frameCount, intervalMs, (frame) => {
+        pathEl.setAttribute('d', variantPaths[frame]);
+      });
+      ticker.start();
+    }, delay);
+  }
+
+  function stop() {
+    if (delayTimer) {
+      clearTimeout(delayTimer);
+      delayTimer = null;
     }
-
-    function stop() {
-        if (delayTimer) {
-            clearTimeout(delayTimer);
-            delayTimer = null;
-        }
-        if (ticker) {
-            ticker.stop();
-            ticker = null;
-        }
+    if (ticker) {
+      ticker.stop();
+      ticker = null;
     }
+  }
 
-    return { play, stop };
+  return { play, stop };
 }

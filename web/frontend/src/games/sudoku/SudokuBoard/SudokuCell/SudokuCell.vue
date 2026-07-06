@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import HandwrittenGlyph from '@pencil/glyph/HandwrittenGlyph.vue'
+import { toDisplayChar } from '@pencil/glyph/glyphRegistry'
 
 const props = defineProps<{
   position: number
@@ -42,10 +43,16 @@ const cellViewBox = computed(() => {
   return `${x} ${y} ${w} ${h}`
 })
 
+// Hidden input keeps the raw numeric string; the glyph overlay renders the display CHARACTER
+// (hex A–G for 16×16 via toDisplayChar). Wiring this is what lets values 10–16 render a glyph
+// at all — String(10) has no key in glyphPaths, so those cells rendered blank AND registered
+// no wiggle/murmur subscriber before this (the 10–16 glyph *variants* themselves ride W9).
 const displayValue = computed(() => {
   if (props.value === 0) return ''
   return String(props.value)
 })
+
+const glyphChar = computed(() => toDisplayChar(props.value, props.boardSize))
 
 function handleInput(event: Event) {
   const target = event.target as HTMLInputElement
@@ -111,13 +118,14 @@ function focusInput() {
     <!-- SVG handwritten glyph overlay -->
     <HandwrittenGlyph
       v-if="value !== 0"
-      :value="displayValue"
+      :value="glyphChar"
       :is-given="isGiven"
       :is-overridden="isOverridden"
       :is-solved="isSolved"
       :is-revealed="isRevealed"
       :noise-delay="noiseDelay"
       :position="position"
+      :board-size="boardSize"
       :is-hovered="isHovered"
     />
 
