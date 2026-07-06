@@ -26,8 +26,14 @@
 # default release profile retained. NO lto=fat, NO codegen-units=1, NO strip
 # anywhere in CI — the 10-25% claim was load-average-50 contention noise; on a
 # quiet host lto=fat+cu=1+strip alone is +16-17% slower and the package nets ~=0%.
-# The wheel lane builds in the default (dev) profile: the measured +36-40% cold
-# penalty applies ONLY if release profiles are adopted (they aren't).
+# The wheel lane (py-runtime) builds `maturin build --release` — the DEFAULT
+# release profile, no extra tuning (T15 rejects lto=fat/cu=1/strip, not
+# `--release` itself). A dev-profile wheel cannot clear the suite's <50ms
+# solve-time assertions (test_bench_compare.py — ~102-112ms observed on a
+# dev-profile Golden Nugget solve, W1 gate-py finding F2). Honest cost: the
+# measured +36-40% cold cargo-build wall-time penalty (synthesis-pass3.md's
+# release-profile cold-build note) now DOES apply to this lane's build step —
+# accepted so the perf-threshold tests are meaningful instead of vacuous.
 name: ci
 
 on:
@@ -136,7 +142,12 @@ jobs:
     # hatchling `app` package), installs it into the web/api uv venv, runs pytest
     # (carries the panic-contract tests: unwind -> PanicException catchable; forced
     # abort -> SIGABRT negative control — authored under web/api/tests by W0's
-    # test-author lane). Default (dev) profile: no --release, per the T15 build posture.
+    # test-author lane). `--release` (default release profile, no lto=fat/cu=1/
+    # strip tuning — T15 only rejects that tuning, not `--release` itself; W1
+    # py-closure gate finding F2: a dev-profile wheel fails the suite's <50ms
+    # solve-time assertions, ~102-112ms observed on Golden Nugget). Accept the
+    # measured +36-40% cold cargo-build wall-time penalty for this lane in
+    # exchange for perf assertions that mean something.
     # RED until W1 fixes the src/py.rs E0063 (maturin compiles the py surface).
     py-runtime:
         runs-on: ubuntu-latest
@@ -160,12 +171,13 @@ jobs:
                       ~/.cargo/git
                       target
                   key: cargo-pyruntime-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-            - name: Build csp_solver wheel (maturin; default profile, no --release)
+            - name: Build csp_solver wheel (maturin --release; default release profile, no extra tuning)
               # --interpreter + PYO3_PYTHON both pin the pinned 3.13 ABI explicitly.
               env:
                   PYO3_PYTHON: ${{ steps.setup-python.outputs.python-path }}
               run: |
                   uvx --from 'maturin>=1.0,<2.0' maturin build \
+                    --release \
                     --manifest-path csp-solver/Cargo.toml \
                     --interpreter '${{ steps.setup-python.outputs.python-path }}' \
                     --out target/wheels

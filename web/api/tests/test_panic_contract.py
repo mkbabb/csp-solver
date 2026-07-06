@@ -59,16 +59,19 @@ def test_rust_unwind_panic_is_catchable_panic_exception(csp_solver_mod):
     Csp = csp_solver_mod.Csp
     SolveConfig = csp_solver_mod.SolveConfig
 
-    # pyo3 registers `pyo3_runtime.PanicException` at extension-module init, so
-    # it is importable once csp_solver has loaded.
-    import pyo3_runtime
-
-    panic_exc = pyo3_runtime.PanicException
-
-    # The Rust panic must arrive typed and catchable.
+    # pyo3 0.24.2 does NOT register `pyo3_runtime` as an importable
+    # `sys.modules` entry (`import pyo3_runtime` raises `ModuleNotFoundError`
+    # even after a panic has fired) — `PanicException.__module__` is the
+    # string "pyo3_runtime", but that string names no importable module on
+    # this pyo3 version. Obtain the class from the caught instance instead:
+    # the contract under test ("catchable, typed, BaseException-not-Exception")
+    # is fully exercised either way — only the *acquisition* mechanism changes.
     csp = Csp()  # no finalize() — violates solve()'s precondition
-    with pytest.raises(panic_exc):
+    with pytest.raises(BaseException) as excinfo:
         csp.solve(SolveConfig())
+    panic_exc = type(excinfo.value)
+    assert panic_exc.__module__ == "pyo3_runtime"
+    assert panic_exc.__name__ == "PanicException"
 
     # It is a BaseException but NOT an Exception: a bare `except Exception:`
     # must not be able to swallow a Rust panic (the "both directions" contract).
