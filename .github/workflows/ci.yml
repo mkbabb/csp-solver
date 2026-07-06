@@ -325,7 +325,7 @@ jobs:
                       ~/.cargo/git
                       target
                   key: cargo-frontend-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-            - name: Build the lean wasm artifact the file: link resolves to
+            - name: Build the lean wasm artifact (the package.json file-link target)
               run: wasm-pack build csp-solver/wasm --scope mkbabb --target web --profile wasm-release --no-default-features
             - name: Set up Node (LTS) with npm cache
               uses: actions/setup-node@v4
