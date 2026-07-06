@@ -1,5 +1,8 @@
 [workspace]
-members = ["csp-solver", "csp-solver/wasm", "csp-solver/morph-core", "csp-solver/wasm-morph"]
+# morph-core + wasm-morph were excised to github.com/mkbabb/morph (W11/W12); the
+# pre-deletion state is tagged `pre-morph-excision`. csp-solver/wasm (the other
+# wasm crate, csp-solver-wasm) has no morph dependency and stays.
+members = ["csp-solver", "csp-solver/wasm"]
 resolver = "2"
 
 # ── wasm size-release profile (Pass-2 D9) ────────────────────────────────────

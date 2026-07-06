@@ -1,11 +1,18 @@
 # Changelog
 
-This workspace ships four publishable artifacts across two registries:
+This workspace ships two publishable artifacts across two registries:
 
 - `csp-solver` — the CSP solver crate (crates.io)
-- `morph-core` — the form-alignment crate, built on `csp-solver` (crates.io)
 - `@mkbabb/csp-solver-wasm` — wasm-pack bindings for `csp-solver` (npm)
-- `@mkbabb/morph` — wasm-pack bindings for `morph-core` (npm)
+
+**Excised (W11/W12):** `morph-core` (crates.io) and `@mkbabb/morph` (npm) moved
+to [`github.com/mkbabb/morph`](https://github.com/mkbabb/morph) at commit
+`4568dc7e` (tag `pre-morph-excision`). Their `0.1.0` entries below stay as
+historical record — they really did ship from this repo — but everything past
+`morph-core 0.1.0` / `@mkbabb/morph 0.1.1` lives in that repo's changelog. The
+general-purpose `csp_solver::assignment()` / `AssignmentBuilder` surface morph
+was built on stays here; `morph` now consumes it as an ordinary crates.io
+dependency (`csp-solver = "0.2"`).
 
 ## 0.2.0 — 2026-07-06 (grand-uplift tranche, W1–W12)
 
@@ -55,9 +62,10 @@ release-engineering wave (G.W5 sub-wave A, CSC411-fold pass).
   domains. Cargo.toml carries the crates.io-mandatory `description` + `license = "MIT"`
   + `repository` fields.
 - **`morph-core@0.1.0`** — form alignment + landmark matching primitives, built on
-  `csp-solver`. Depends on `csp-solver` via a registry version pin alongside the
+  `csp-solver`. Depended on `csp-solver` via a registry version pin alongside the
   workspace-internal path (`csp-solver = { version = "0.1.0", path = ".." }`); the
-  path resolves local builds, the version resolves the crates.io edge.
+  path resolved local builds, the version resolved the crates.io edge. _Excised to
+  [`mkbabb/morph`](https://github.com/mkbabb/morph); `0.2.0` onward ships from there._
 
 ### npm (@mkbabb scope)
 
@@ -66,3 +74,5 @@ release-engineering wave (G.W5 sub-wave A, CSC411-fold pass).
 - **`@mkbabb/morph@0.1.0`** — wasm-pack-emitted bindings for `morph-core`. The
   underlying Rust crate is named `morph`; the emitted JS surface is
   `morph.{js,d.ts,_bg.wasm}`. Consumed by bbnf-buddy through the npm registry.
+  _Excised to [`mkbabb/morph`](https://github.com/mkbabb/morph); `0.2.0` onward
+  ships from there. (`0.1.1` — the next patch — was the last release from this repo.)_

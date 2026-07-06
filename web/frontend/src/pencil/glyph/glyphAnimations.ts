@@ -16,7 +16,7 @@ import {
   createBoilTicker,
   createSequenceSubscription,
   usePrefersReducedMotion,
-} from '@pencil/composables/boilScheduler';
+} from '@mkbabb/pencil-boil';
 import { easeOutCubic, linear } from '@pencil/composables/easings';
 
 // One PRM source for draw-in, flourish and wiggle — usePrefersReducedMotion() is the same

@@ -1,8 +1,9 @@
 # ci — PR + push gate matrix for the CSC411_HW2 monorepo (W0 build restoration).
 #
 # Authored for the LIVE workspace root = REPO ROOT (repo-root Cargo.toml is the
-# Cargo workspace with members csp-solver, csp-solver/wasm, csp-solver/morph-core,
-# csp-solver/wasm-morph). Edition 2024 + nightly toolchain (per CLAUDE.md). This
+# Cargo workspace with members csp-solver + csp-solver/wasm — morph-core and
+# wasm-morph excised to github.com/mkbabb/morph at the W12 window (see the
+# pre-morph-excision tag). Edition 2024 + nightly toolchain (per CLAUDE.md). This
 # re-applies the queens-smoke lane from the composed seed (kernel-soundness-closure
 # §6) and adds the full campaign-amended gate set from the W0 lane table
 # (docs/tranches/2026-07-grand-uplift/waves/W0-build-restoration.md).
@@ -194,8 +195,8 @@ jobs:
               run: uv run --no-sync pytest
 
     # ---------------------------------------------------------------- Lane 6
-    # wasm — wasm-pack test --node scoped to csp-solver/wasm ONLY (wasm-morph has
-    # no #[wasm_bindgen_test] until W11 — morph-excision-spec.md R6 / W0 residual
+    # wasm — wasm-pack test --node on csp-solver/wasm (morph excised to its own
+    # repo at W12; its wasm tests travel with it — morph-excision-spec.md
     # risks), plus clippy --target wasm32-unknown-unknown for BOTH wasm crates.
     wasm:
         runs-on: ubuntu-latest
@@ -221,8 +222,6 @@ jobs:
               run: wasm-pack test --node csp-solver/wasm
             - name: clippy --target wasm32 (csp-solver-wasm)
               run: cargo clippy -p csp-solver-wasm --target wasm32-unknown-unknown -- -D warnings
-            - name: clippy --target wasm32 (morph)
-              run: cargo clippy -p morph --target wasm32-unknown-unknown -- -D warnings
 
     # ---------------------------------------------------------------- Lane 7
     # twiggy budgets — measured artifact bands (Pass-2 prototype 6). Full module

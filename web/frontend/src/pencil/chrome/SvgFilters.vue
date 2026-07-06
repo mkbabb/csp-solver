@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { FILTER_PRESETS, type FilterPreset } from '@pencil/config/pencilConfig';
-import { useFilterParamBoil, type BoilHandle } from '@pencil/composables/boilScheduler';
+import { useFilterParamBoil, type BoilHandle } from '@mkbabb/pencil-boil';
 
 const presets = computed(() => Object.values(FILTER_PRESETS));
 

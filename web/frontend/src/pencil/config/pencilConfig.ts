@@ -12,7 +12,7 @@ import { reactive } from 'vue';
 //   Band A — stop-motion ambient (125–170 ms/tick, 6–8 fps). Any always-on hand-drawn
 //     jitter lives here: grid boil 150, divider boil 150, star/sun-sparkle boil 125,
 //     celestial wobble 160, heart wobble 170, selection burst 120. Once the unified
-//     scheduler owns the clock (it does — boilScheduler.ts), values QUANTIZE to the 25 ms
+//     scheduler owns the clock (it does — @mkbabb/pencil-boil), values QUANTIZE to the 25 ms
 //     grid {125, 150, 175} so co-prime intervals stop producing near-coincident double-paints.
 //   Band B — lazy ambient (550–800 ms/tick). Large or peripheral elements only, where 6–8 fps
 //     would pull the eye: logo wobble 550, sun-ray boil/shape 800, sun breathe 6 s.

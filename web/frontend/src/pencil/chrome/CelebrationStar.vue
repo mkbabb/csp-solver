@@ -16,7 +16,7 @@ import {
   createSequenceSubscription,
   usePrefersReducedMotion,
   type SequenceHandle,
-} from '@pencil/composables/boilScheduler'
+} from '@mkbabb/pencil-boil'
 import { easeOutCubic } from '@pencil/composables/easings'
 import { CELEBRATION } from '@pencil/config/pencilConfig'
 

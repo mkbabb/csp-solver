@@ -4,7 +4,7 @@ import {
   createSequenceSubscription,
   usePrefersReducedMotion,
   type SequenceHandle,
-} from '@pencil/composables/boilScheduler'
+} from '@mkbabb/pencil-boil'
 import { resolveEasing } from '@pencil/composables/easings'
 import { DRAW_IN_PRESETS } from '@pencil/config/pencilConfig'
 

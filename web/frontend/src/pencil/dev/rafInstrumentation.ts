@@ -5,8 +5,10 @@
  * anything about who scheduled them (keyframes.js's per-`KeyframesAnimation`
  * `RAFPlayback`, pencil-boil's `useLineBoil` singleton, the unified boil
  * scheduler). It is the library-agnostic cross-check behind W8's chains=1 gate:
- * `boilScheduler.schedulerDebugInfo()` self-reports the scheduler's own chain,
- * this counts every native chain regardless of origin.
+ * `@mkbabb/pencil-boil`'s `schedulerDebugInfo()` — re-exposed here as
+ * `window.__schedulerDebug` (the library ships the function but registers no
+ * window global) — self-reports the scheduler's own chain + subscriber floor,
+ * while this counts every native chain regardless of origin.
  *
  * Method: wrap the native `requestAnimationFrame`/`cancelAnimationFrame` and track
  * the set of currently-outstanding (requested-but-not-yet-fired) handles. A
@@ -21,10 +23,13 @@
  * never counts itself.
  */
 
+import { schedulerDebugInfo } from '@mkbabb/pencil-boil';
+
 declare global {
   interface Window {
     __rafChainCount?: () => number;
     __rafChainSample?: () => number[];
+    __schedulerDebug?: typeof schedulerDebugInfo;
   }
 }
 
@@ -54,6 +59,11 @@ if (typeof window !== 'undefined' && !window.__rafChainCount) {
   }) as typeof window.cancelAnimationFrame;
 
   window.__rafChainCount = () => pending.size;
+
+  // Re-expose the library scheduler's self-report (chain + subscriber floor + kinds).
+  // The old app-local scheduler registered this window global itself; the library ships
+  // `schedulerDebugInfo` as a plain export but no global, so the dev probe wires it here.
+  window.__schedulerDebug = schedulerDebugInfo;
 
   // Rolling sample buffer — lets a probe capture the max over a window (e.g. across
   // a solve's staggered draw-in) instead of a single instant that might race a

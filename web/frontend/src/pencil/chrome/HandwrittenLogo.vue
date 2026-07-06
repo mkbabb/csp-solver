@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { usePrefersReducedMotion } from '@pencil/composables/boilScheduler';
+import { usePrefersReducedMotion } from '@mkbabb/pencil-boil';
 
 const logoFilter = 'url(#wobble-logo)';
 

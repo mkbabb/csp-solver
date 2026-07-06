@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useResizeObserver } from '@vueuse/core'
-import { useBoilFrame } from '@pencil/composables/boilScheduler'
+import { useBoilFrame } from '@mkbabb/pencil-boil'
 import { generateRectBoilFrames } from './gridPaths'
 import { BOIL_CONFIG } from '@pencil/config/pencilConfig'
 

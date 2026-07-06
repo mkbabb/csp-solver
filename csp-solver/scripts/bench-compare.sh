@@ -34,14 +34,10 @@ git worktree add "$HEAD_WT" "$HEAD_REF" 2>/dev/null
 echo "--- Running baseline ($BASE_REF) ---"
 cd "$BASE_WT"
 cargo bench -p csp-solver --bench assignment -- --save-baseline base 2>&1 | tail -5
-cargo bench -p morph-core --bench align -- --save-baseline base 2>&1 | tail -5 || true
-cargo bench -p morph-core --bench primitives -- --save-baseline base 2>&1 | tail -5 || true
 
 # Run head benchmarks with comparison
 echo "--- Running head ($HEAD_REF) ---"
 cd "$HEAD_WT"
 cargo bench -p csp-solver --bench assignment -- --baseline base 2>&1 | tail -20
-cargo bench -p morph-core --bench align -- --baseline base 2>&1 | tail -20 || true
-cargo bench -p morph-core --bench primitives -- --baseline base 2>&1 | tail -20 || true
 
 echo "=== Comparison complete. HTML reports in target/criterion/ ==="

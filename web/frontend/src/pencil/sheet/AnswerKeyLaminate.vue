@@ -20,7 +20,7 @@
  */
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { getVariant, toDisplayChar } from '@pencil/glyph/glyphRegistry'
-import { acquireHold, releaseHold } from '@pencil/composables/boilHoldGate'
+import { acquireHold, releaseHold } from '@mkbabb/pencil-boil'
 
 const props = defineProps<{
   active: boolean
@@ -81,6 +81,9 @@ watch(
       }, LIFT_MS)
     }
   },
+  // immediate: the async component can mount with active already true on the
+  // very first peek — without this the initial lay-down (and acquireHold) is missed.
+  { immediate: true },
 )
 
 onUnmounted(() => {

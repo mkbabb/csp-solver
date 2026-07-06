@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch, nextTick, ref } from 'vue';
-import { useBoilFrame } from '@pencil/composables/boilScheduler';
-import { heldFrameCount } from '@pencil/composables/boilHoldGate';
+import { useBoilFrame, heldFrameCount } from '@mkbabb/pencil-boil';
 import { generateGridBoilFrames } from '../gridPaths';
 import { BOIL_CONFIG } from '@pencil/config/pencilConfig';
 import { usePathAnimation } from './usePathAnimation';

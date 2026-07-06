@@ -92,8 +92,13 @@
 
 <script setup lang="ts">
 import { watch, computed } from 'vue'
-import { generateSunRays, wobbleDiamond, wobbleStarPolygon } from '@mkbabb/pencil-boil'
-import { useBoilFrame, usePrefersReducedMotion } from '@pencil/composables/boilScheduler'
+import {
+  generateSunRays,
+  wobbleDiamond,
+  wobbleStarPolygon,
+  useBoilFrame,
+  usePrefersReducedMotion,
+} from '@mkbabb/pencil-boil'
 import { useTheme } from '@/composables/useTheme'
 
 const { isDark, toggleDark } = useTheme()
