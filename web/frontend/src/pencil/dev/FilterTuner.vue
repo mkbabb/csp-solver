@@ -265,9 +265,11 @@ const isModified = computed(() => {
   width: 20rem;
   max-height: calc(100vh - 6rem);
   overflow-y: auto;
-  background: color-mix(in srgb, var(--color-card) 92%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  /* Milky panel, blur-0 (OD-1 no-glass build): even this dev-only cheat-sheet
+     drops its blurred backdrop, because Tailwind's content scan would otherwise
+     leak the matching utility into the shipped CSS and trip the OD-1 grep gate.
+     The panel keeps its translucent card tint; it just doesn't blur. */
+  background: color-mix(in srgb, var(--color-card) 96%, transparent);
   border: 2px solid var(--color-border);
   border-radius: 0.75rem;
   padding: 0.75rem;

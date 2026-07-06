@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onBeforeUnmount } from 'vue'
 import { Eraser } from 'lucide-vue-next'
 import SolveIcon from '@pencil/chrome/SolveIcon.vue'
 import DiceIcon from '@pencil/chrome/DiceIcon.vue'
 import OptionSelector from '@pencil/chrome/OptionSelector/OptionSelector.vue'
 import BoilDivider from '@pencil/chrome/BoilDivider.vue'
+import SheetWashiLabel from '@pencil/sheet/SheetWashiLabel.vue'
+import ScribbleLoader from '@pencil/chrome/ScribbleLoader.vue'
 import type { Difficulty } from '@games/sudoku/types'
 import { useTheme } from '@/composables/useTheme'
 import { useButtonAnimation } from '@pencil/composables/useButtonAnimation'
@@ -50,7 +52,43 @@ const emit = defineEmits<{
   (e: 'randomize'): void
   (e: 'clear'): void
   (e: 'solve'): void
+  (e: 'peek-start'): void
+  (e: 'peek-end'): void
 }>()
+
+// ── Hold-to-peek gesture on the BoilDivider (the hold surface, fe-composition
+// §7b — the union diff held Solve, stale post-extraction). Press-and-hold ≥350ms
+// → the answer-key laminate; a shorter press does nothing (the divider has no
+// click action, so no click-suppression bookkeeping is needed). App.vue owns the
+// peek state; this only reports the gesture. Keyboard peek rides App.vue's K/Esc.
+const PEEK_HOLD_MS = 350
+let peekTimer: ReturnType<typeof setTimeout> | null = null
+const isPeeking = ref(false)
+
+function onDividerHoldStart() {
+  if (peekTimer) clearTimeout(peekTimer)
+  peekTimer = setTimeout(() => {
+    peekTimer = null
+    isPeeking.value = true
+    emit('peek-start')
+  }, PEEK_HOLD_MS)
+}
+
+function onDividerHoldEnd() {
+  if (peekTimer) {
+    clearTimeout(peekTimer)
+    peekTimer = null
+  }
+  if (isPeeking.value) {
+    isPeeking.value = false
+    emit('peek-end')
+  }
+}
+
+onBeforeUnmount(() => {
+  if (peekTimer) clearTimeout(peekTimer)
+  if (isPeeking.value) emit('peek-end')
+})
 
 const expandedPanel = ref<'size' | 'difficulty'>('size')
 
@@ -127,7 +165,17 @@ function onDifficultyChange(val: string | number) {
       />
     </div>
 
-    <BoilDivider />
+    <!-- Hold the boiling divider to peek at the answer key (the hold surface). -->
+    <div
+      class="peek-hold-surface"
+      title="Hold to peek at the answer key"
+      @pointerdown="onDividerHoldStart()"
+      @pointerup="onDividerHoldEnd()"
+      @pointerleave="onDividerHoldEnd()"
+      @pointercancel="onDividerHoldEnd()"
+    >
+      <BoilDivider />
+    </div>
 
     <!-- Action buttons -->
     <div class="flex items-center justify-evenly">
@@ -155,7 +203,7 @@ function onDifficultyChange(val: string | number) {
         class="icon-btn"
         aria-label="Solve puzzle"
       >
-        <svg v-if="loading && !solveAnimating" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+        <ScribbleLoader v-if="loading && !solveAnimating" :size="22" class="text-muted-foreground" />
         <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
       </button>
     </div>
@@ -202,7 +250,17 @@ function onDifficultyChange(val: string | number) {
       </div>
     </div>
 
-    <BoilDivider class="my-2" />
+    <!-- Hold the boiling divider to peek at the answer key (the hold surface). -->
+    <div
+      class="peek-hold-surface my-2"
+      title="Hold to peek at the answer key"
+      @pointerdown="onDividerHoldStart()"
+      @pointerup="onDividerHoldEnd()"
+      @pointerleave="onDividerHoldEnd()"
+      @pointercancel="onDividerHoldEnd()"
+    >
+      <BoilDivider />
+    </div>
 
     <!-- Action buttons -->
     <div class="flex items-center justify-evenly">
@@ -213,7 +271,7 @@ function onDifficultyChange(val: string | number) {
         aria-label="Randomize board"
       >
         <DiceIcon :size="28" :playing="randomizeAnimating" />
-        <span class="tooltip">Randomize</span>
+        <SheetWashiLabel text="Randomize" :seed="11" />
       </button>
 
       <button
@@ -225,7 +283,7 @@ function onDifficultyChange(val: string | number) {
         <span :class="{ 'eraser-scrub': clearAnimating }">
           <Eraser :size="28" />
         </span>
-        <span class="tooltip">Clear</span>
+        <SheetWashiLabel text="Clear" :seed="23" />
       </button>
 
       <button
@@ -234,9 +292,9 @@ function onDifficultyChange(val: string | number) {
         class="icon-btn group relative"
         aria-label="Solve puzzle"
       >
-        <svg v-if="loading && !solveAnimating" class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" /><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+        <ScribbleLoader v-if="loading && !solveAnimating" :size="22" class="text-muted-foreground" />
         <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
-        <span class="tooltip">Solve</span>
+        <SheetWashiLabel text="Solve" :seed="37" />
       </button>
     </div>
   </div>
@@ -310,27 +368,18 @@ function onDifficultyChange(val: string | number) {
   pointer-events: none;
 }
 
-.tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 0.375rem;
-  padding: 0.25rem 0.5rem;
-  font-family: 'Patrick Hand', cursive;
-  font-size: 0.85rem;
-  font-weight: 600;
-  white-space: nowrap;
-  color: var(--color-primary-foreground);
-  background: var(--color-primary);
-  border-radius: 0.375rem;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 150ms;
+/* Hold surface for the answer-key peek — hosts the BoilDivider, giving the
+   press-and-hold a comfortable target and disabling text-select / touch-scroll
+   so the browser doesn't swallow the gesture. The button tooltips are now washi
+   labels (SheetWashiLabel), which carry their own hover + :focus-visible reveal. */
+.peek-hold-surface {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
-.group:hover .tooltip {
-  opacity: 1;
+.peek-hold-surface:active {
+  cursor: grabbing;
 }
 
 /* Sparkle icon - pastel rainbow filled */

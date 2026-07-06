@@ -15,6 +15,7 @@ import {
   clearPersistedBoard,
   type PersistedBoard,
 } from './useUrlState'
+import { classifyError } from '../lib/apiError'
 import type { Difficulty, SolveState } from '../types'
 
 /**
@@ -55,6 +56,9 @@ export function useSudoku() {
   const solvedValues = ref<Record<string, number>>({})
   const loading = ref(false)
   const errorMessage = ref('')
+  // The typed error code (ApiErrorCode | SolverErrorCode) behind the paper note,
+  // consumed by SudokuBoard for the §5.2 copy split. Kept coherent with errorMessage.
+  const errorCode = ref('')
   const boardGeneration = ref(0)
 
   function initBoard() {
@@ -66,6 +70,7 @@ export function useSudoku() {
     solveState.value = 'idle'
     solvedValues.value = {}
     errorMessage.value = ''
+    errorCode.value = ''
     for (let i = 0; i < totalCells.value; i++) {
       values.value[String(i)] = 0
     }
@@ -76,6 +81,7 @@ export function useSudoku() {
     solveState.value = 'idle'
     solvedValues.value = {}
     errorMessage.value = ''
+    errorCode.value = ''
     for (let i = 0; i < totalCells.value; i++) {
       values.value[String(i)] = 0
     }
@@ -111,6 +117,7 @@ export function useSudoku() {
   async function randomize() {
     loading.value = true
     errorMessage.value = ''
+    errorCode.value = ''
     solveState.value = 'idle'
     solvedValues.value = {}
 
@@ -132,6 +139,10 @@ export function useSudoku() {
       animatingCells.value = new Set(givenCells.value)
       queueSave()
     } catch (e) {
+      // A generate failure was fully silent before — route it through the shared
+      // fiction classifier and surface it (paper note for machinery faults).
+      solveState.value = classifyError(e).kind === 'teacher-red' ? 'failed' : 'error'
+      errorCode.value = e instanceof Error && 'code' in e ? String((e as { code?: unknown }).code ?? '') : ''
       errorMessage.value = e instanceof Error ? e.message : 'Failed to get board'
     } finally {
       loading.value = false
@@ -142,6 +153,7 @@ export function useSudoku() {
     loading.value = true
     solveState.value = 'solving'
     errorMessage.value = ''
+    errorCode.value = ''
 
     try {
       const result = await api.solveBoard(values.value, size.value, nodeBudgetForSize(size.value))
@@ -163,18 +175,36 @@ export function useSudoku() {
       animatingCells.value = cellsToAnimate
       queueSave()
     } catch (e) {
-      // A `BUDGET_EXCEEDED` `SolverError` (the search gave up at its node
-      // budget with zero solutions) is a categorically different outcome
-      // from provable UNSAT: it lands on the distinct `'error'` state, not
-      // `'failed'`, so the two are never conflated on the wire or in the UI.
-      solveState.value =
-        e instanceof Error && 'code' in e && (e as { code?: unknown }).code === 'BUDGET_EXCEEDED'
-          ? 'error'
-          : 'failed'
+      // Route by the shared fiction classifier (games/sudoku/lib/apiError): provable
+      // UNSAT / INVALID_INPUT → the teacher's red pencil ('failed'); everything else
+      // — BUDGET_EXCEEDED, TIMEOUT, WORKER_FAILURE, a bare network TypeError — → the
+      // paper note ('error'). Fixes the Pass-1 F5 corner where WORKER_FAILURE wrongly
+      // read as a wrong answer; the two are never conflated on the wire or in the UI.
+      solveState.value = classifyError(e).kind === 'teacher-red' ? 'failed' : 'error'
+      errorCode.value = e instanceof Error && 'code' in e ? String((e as { code?: unknown }).code ?? '') : ''
       errorMessage.value = e instanceof Error ? e.message : 'Solve failed'
     } finally {
       loading.value = false
     }
+  }
+
+  // ── Answer-key peek: solve the PRISTINE givens, cache per generation ──
+  // Feeds the read-only laminate overlay; NEVER mutates `values`. The W6 Worker
+  // solve path makes this API-free (no /board/solve round-trip), and boards derive
+  // from solution banks so the pristine givens are always satisfiable.
+  const peekCache = ref<{ gen: number; values: Record<string, number> } | null>(null)
+  async function peekSolution(): Promise<Record<string, number>> {
+    if (peekCache.value && peekCache.value.gen === boardGeneration.value) {
+      return peekCache.value.values
+    }
+    const givensOnly: Record<string, number> = {}
+    for (let i = 0; i < totalCells.value; i++) {
+      const key = String(i)
+      givensOnly[key] = originalGivenCells.value.has(key) ? (values.value[key] ?? 0) : 0
+    }
+    const result = await api.solveBoard(givensOnly, size.value, nodeBudgetForSize(size.value))
+    peekCache.value = { gen: boardGeneration.value, values: { ...result.values } }
+    return peekCache.value.values
   }
 
   // ── Restore from persisted state (no animation) ──────────────────
@@ -188,6 +218,7 @@ export function useSudoku() {
     animatingCells.value = new Set() // no re-animation on restore
     solveState.value = 'idle'
     errorMessage.value = ''
+    errorCode.value = ''
   }
 
   // ── Persistence helper ───────────────────────────────────────────
@@ -259,11 +290,13 @@ export function useSudoku() {
     solvedValues,
     loading,
     errorMessage,
+    errorCode,
     boardGeneration,
     initBoard,
     clearBoard,
     setCell,
     randomize,
     solve,
+    peekSolution,
   }
 }

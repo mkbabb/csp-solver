@@ -34,19 +34,51 @@
   --color-input: hsl(48 5% 89.8%);
   --color-ring: hsl(0 0% 3.9%);
 
-  /* Difficulty colors */
-  --color-easy: hsl(142 71% 45%);
-  --color-medium: hsl(45 93% 47%);
-  --color-hard: hsl(0 84% 60%);
+  /* Difficulty colors ≙ the crayon ramp (design-refinement.md §3.3.1). One green, one orange,
+     one rose — the parallel near-duplicate set is retired. Dark variants ride the crayon
+     redefinition in `.dark` automatically (a var() resolves per subtree at use time), so there
+     is no separate dark difficulty block: the solve-feedback green/red now glow in dark like
+     every other crayon instead of the old muted-dark treatment. */
+  --color-easy: var(--color-crayon-green);
+  --color-medium: var(--color-crayon-orange);
+  --color-hard: var(--color-crayon-rose);
 
   /* Handwritten glyph colors */
   --color-user-ink: #2563eb;
 
-  /* Crayon palette */
+  /* Crayon palette — the wax. MEASURED dark-mode saturation rule (design-refinement.md §3.2):
+     dark variants PRESERVE hue (±3°), RAISE lightness +7…+13 (OKLCH L +0.06…0.10), and let
+     saturation RISE as needed to hold perceived chroma on the dark ground. Crayons don't
+     desaturate at night — the paper darkens and the wax glows. This is the OPPOSITE of the
+     generic "muted dark mode" default; never give a crayon (or a token aliased to one) the
+     desaturating treatment. See the `.dark` redefinitions below for the applied values. */
   --color-crayon-green: #2DC653;
   --color-crayon-orange: #F4A236;
   --color-crayon-rose: #E8315B;
   --color-crayon-blue: #4A90D9;
+
+  /* Semantic state tokens — every one an in-world alias into the crayon system, zero new hexes
+     (design-refinement.md §3.4). Each resolves per-theme through the var it references. */
+  --color-teacher-red: var(--color-crayon-rose);   /* teacher's red pencil: failure, conflicts, aria-invalid */
+  --color-gold-star: var(--color-crayon-green);     /* gold-star sticker: solve success, celebration accents */
+  --color-focus-sketch: #3A7BC4; /* keyboard focus ring — crayon-blue darkened one step:
+     the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
+     lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
+     blends to 3.60:1. Dark mode keeps crayon-blue (5.3:1, comfortable). */
+  --color-pencil-graphite: var(--grid-line-color);  /* the pencil: grid, ghost ring, hover sketch */
+
+  /* §SHEET — the stationery ladder (union adopt-partial: washi tooltip + held
+     answer-key laminate; vellum ControlPanel + lifted attribution styling CUT).
+     Glossary (U7): grain = stroke displacement filter · tooth/fiber = static
+     surface raster · boil = frame-cycled geometry. Every shipped sheet is blur-0
+     (OD-1 no-glass build); the laminate is the held answer key — clear plastic,
+     not glass. Values: design-union §7.3. Each token names its physical object. */
+  --sheet-washi-neutral: color-mix(in srgb, var(--color-foreground) 6%, hsl(0 0% 100% / 0.82)); /* tinted paper tape */
+  --sheet-ink-edge-laminate: color-mix(in srgb, var(--color-foreground) 10%, transparent);       /* pencil-drawn sheet edge */
+  --sheet-laminate-milk: linear-gradient(165deg, hsl(0 0% 100% / 0.22), hsl(0 0% 100% / 0.10) 38%, hsl(0 0% 100% / 0.16)); /* the clear sheet's body */
+  --sheet-rim: inset 0 0.5px 0 0 hsl(0 0% 100% / 0.30);                                           /* gloss catch-light along the top edge */
+  --sheet-laminate-cast: 4px 6px 0 color-mix(in srgb, var(--color-foreground) 8%, transparent),
+                         0 6px 20px color-mix(in srgb, var(--color-foreground) 14%, transparent); /* the held sheet's cast + lift shadow */
 
   /* Grid line colors */
   --grid-line-color: hsl(0 0% 15%);
@@ -77,18 +109,23 @@
   --color-input: hsl(24 4% 16%);
   --color-ring: hsl(48 8% 83%);
 
-  --color-easy: hsl(142 71% 35%);
-  --color-medium: hsl(45 93% 37%);
-  --color-hard: hsl(0 62% 40%);
-
+  /* No dark difficulty overrides: --color-easy/medium/hard alias the crayon vars, which are
+     redefined just below — the merge (design-refinement.md §3.3.1) collapses the two ramps. */
   --color-user-ink: #60a5fa;
 
+  /* Crayon palette (dark) — hue-locked, lightness raised, chroma held per the §3.2 rule above. */
   --color-crayon-green: #3DD968;
   --color-crayon-orange: #F5B35C;
   --color-crayon-rose: #FF5C7C;
   --color-crayon-blue: #6AABEB;
 
   --grid-line-color: hsl(48 10% 80%);
+
+  /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
+     recedes; the catch-light rises — the one place gloss reads MORE at night. */
+  --sheet-washi-neutral: color-mix(in srgb, var(--color-foreground) 6%, hsl(0 0% 100% / 0.14));
+  --sheet-laminate-milk: linear-gradient(165deg, hsl(0 0% 100% / 0.12), hsl(0 0% 100% / 0.06) 38%, hsl(0 0% 100% / 0.10));
+  --sheet-rim: inset 0 0.5px 0 0 hsl(0 0% 100% / 0.38);
 
   --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
 }
@@ -138,31 +175,65 @@
     border: 2px solid var(--color-border);
   }
 
-  /* Solve success: grid lines turn green + green-tinted shadow */
+  /* Laminate — the teacher's laminated answer key, briefly held over the page
+     (design-union §3 row 9). The app's flagship translucent object. OD-1 no-glass
+     build: the laminate never blurs its backdrop — the board shows through the milk
+     dimmed but not blurred (in-family with glass-ui's own blur-0 plate). The
+     --sheet-rim catch-light rides as a box-shadow inset (OD-1 dark-rim recovery, §7.3). */
+  .sheet-laminate {
+    position: relative;
+    background: var(--sheet-laminate-milk);
+    border: 1px solid var(--sheet-ink-edge-laminate);
+    box-shadow: var(--sheet-rim), var(--sheet-laminate-cast);
+  }
+
+  /* prefers-reduced-transparency: the laminate goes fully opaque (construction
+     paper — the fallback IS pure pencil). Nothing shows through, so the component
+     prints the COMPLETE solution (givens too) — the W9 blocking PRT fix. There is
+     no glass filter to null out (the no-glass build never authored one). */
+  @media (prefers-reduced-transparency: reduce) {
+    .sheet-laminate {
+      background: var(--color-card);
+      box-shadow: var(--sheet-laminate-cast);
+    }
+  }
+
+  /* prefers-contrast: more — opaque + the drawn ink edge pressed to 30%. */
+  @media (prefers-contrast: more) {
+    .sheet-laminate {
+      background: var(--color-card);
+      border-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
+    }
+  }
+
+  /* Solve success — the gold-star moment. Grid lines + shadow both reference the single
+     --color-gold-star token via color-mix (design-refinement.md §3.3.1/§3.4), so the shadow
+     tracks the crayon in both themes — the old hardcoded light-green rgba never shifted dark. */
   .solve-success .grid-line {
-    stroke: var(--color-easy) !important;
+    stroke: var(--color-gold-star) !important;
     transition: stroke 500ms;
   }
 
   .solve-success {
     box-shadow:
-      8px 5px 0px rgba(45, 198, 83, 0.25),
-      0 8px 0px rgba(45, 198, 83, 0.2),
-      8px 8px 0px rgba(45, 198, 83, 0.15) !important;
+      8px 5px 0px color-mix(in srgb, var(--color-gold-star) 25%, transparent),
+      0 8px 0px color-mix(in srgb, var(--color-gold-star) 20%, transparent),
+      8px 8px 0px color-mix(in srgb, var(--color-gold-star) 15%, transparent) !important;
     transition: box-shadow 500ms;
   }
 
-  /* Solve failure: grid lines turn red + shake + red-tinted shadow */
+  /* Solve failure — the teacher's red pencil. Grid lines + shadow both the single
+     --color-teacher-red token via color-mix (design-refinement.md §3.3.1/§3.4). */
   .solve-failure {
     animation: shake 0.6s linear;
     box-shadow:
-      8px 5px 0px rgba(232, 49, 91, 0.25),
-      0 8px 0px rgba(232, 49, 91, 0.2),
-      8px 8px 0px rgba(232, 49, 91, 0.15) !important;
+      8px 5px 0px color-mix(in srgb, var(--color-teacher-red) 25%, transparent),
+      0 8px 0px color-mix(in srgb, var(--color-teacher-red) 20%, transparent),
+      8px 8px 0px color-mix(in srgb, var(--color-teacher-red) 15%, transparent) !important;
   }
 
   .solve-failure .grid-line {
-    stroke: var(--color-hard) !important;
+    stroke: var(--color-teacher-red) !important;
   }
 
   /* Shake animation */

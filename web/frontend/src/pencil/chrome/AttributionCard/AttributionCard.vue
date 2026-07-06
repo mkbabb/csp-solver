@@ -14,21 +14,17 @@ defineExpose({ close })
 <template>
   <div
     :class="mobile ? 'mobile-attribution md:hidden' : 'corner-left hidden md:block'"
-    role="button"
-    tabindex="0"
-    aria-label="Show attribution card"
-    @click.stop="toggle"
-    @keydown.enter="toggle"
     @mouseenter="onHoverEnter"
     @mouseleave="onHoverLeave"
   >
-    <a
-      href="https://github.com/mkbabb/csp-solver"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="font-mono text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
-      @click.stop.prevent="toggle"
-    >@mbabb</a>
+    <button
+      type="button"
+      class="attribution-trigger font-mono text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground"
+      :aria-expanded="isOpen"
+      aria-label="Show attribution card"
+      @click.stop="toggle"
+      @keydown.enter.stop="toggle"
+    >@mbabb</button>
     <div class="hover-card" :class="{ 'is-open': isOpen }">
       <div class="flex items-center gap-3">
         <img
@@ -65,6 +61,18 @@ defineExpose({ close })
   margin-bottom: 0.125rem;
 }
 
+/* Real <button> semantics (the a11y fix): reset it back to the inline text trigger. */
+.attribution-trigger {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* The app's accidental proto-vellum: 80% popover, blur-0 (OD-1 / design-union UD2 —
+   the prior blur(12px) on open was drift from the pure-pencil intent; removed so the
+   no-glass build ships zero blurred-backdrop surfaces). */
 .hover-card {
   position: absolute;
   top: 100%;
@@ -72,8 +80,6 @@ defineExpose({ close })
   margin-top: 0;
   padding: 1rem;
   background: color-mix(in srgb, var(--color-popover) 80%, transparent);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border: 2px solid color-mix(in srgb, var(--color-border) 30%, transparent);
   border-radius: 1rem;
   opacity: 0;
@@ -97,7 +103,5 @@ defineExpose({ close })
   opacity: 1;
   pointer-events: auto;
   transform: scale(1) translateY(0);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 </style>

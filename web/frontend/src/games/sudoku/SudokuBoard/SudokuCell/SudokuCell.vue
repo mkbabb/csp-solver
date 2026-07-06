@@ -15,10 +15,18 @@ const props = defineProps<{
   subgridSize: number
   /** Pre-computed ghost rect path in 1000×1000 board viewBox coords */
   ghostPath: string
+  /** 1-based grid coordinates (ARIA grid + aria-label derivation, §4.1) */
+  rowIndex: number
+  colIndex: number
+  /** Roving tabindex (§4.1): 0 for the one focused cell, -1 for every other. */
+  tabIndex: number
+  /** This cell participates in a duplicate the teacher circled (§1.4/§4.2). */
+  isInvalid: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'update', position: number, value: number): void
+  (e: 'cellFocus', position: number): void
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -54,6 +62,30 @@ const displayValue = computed(() => {
 
 const glyphChar = computed(() => toDisplayChar(props.value, props.boardSize))
 
+// cellKind (fe-components-audit §12) drives the accessible name (§4.1). Order matters:
+// solver's answers and overrides can also be "given" positions, so test the richer
+// states first.
+const cellKind = computed<'empty' | 'given' | 'user' | 'solved'>(() => {
+  if (props.value === 0) return 'empty'
+  if (props.isSolved) return 'solved'
+  if (props.isGiven && !props.isOverridden) return 'given'
+  return 'user'
+})
+
+const ariaLabel = computed(() => {
+  const loc = `Row ${props.rowIndex}, column ${props.colIndex}`
+  switch (cellKind.value) {
+    case 'given':
+      return `${loc}, given clue ${glyphChar.value}`
+    case 'user':
+      return `${loc}, your entry ${glyphChar.value}`
+    case 'solved':
+      return `${loc}, solver's answer ${glyphChar.value}`
+    default:
+      return `${loc}, empty`
+  }
+})
+
 function handleInput(event: Event) {
   const target = event.target as HTMLInputElement
   const raw = target.value.replace(/\D/g, '')
@@ -84,18 +116,31 @@ function handleKeydown(event: KeyboardEvent) {
     target.value = ''
     event.preventDefault()
   }
+  // Arrow / Home / End navigation deliberately falls through to the board's roving-tabindex
+  // controller (bubbles to `.board-cells`); handling it there keeps one keyboard model.
 }
 
 function focusInput() {
   inputRef.value?.focus()
 }
+
+function onFocus() {
+  isFocused.value = true
+  emit('cellFocus', props.position)
+}
+
+// The board's roving controller focuses cells programmatically after an arrow key (§4.1).
+defineExpose({ focus: focusInput })
 </script>
 
 <template>
   <div
     ref="cellRef"
     class="sudoku-cell relative flex items-center justify-center"
-    :class="{ 'cell-reveal-animated': isRevealed, 'is-active': isActive }"
+    role="gridcell"
+    :aria-rowindex="rowIndex"
+    :aria-colindex="colIndex"
+    :class="{ 'cell-reveal-animated': isRevealed, 'is-active': isActive, 'is-invalid': isInvalid }"
     :style="isRevealed ? { '--reveal-delay': `${noiseDelay}ms` } : undefined"
     @click="focusInput"
     @mouseenter="isHovered = true"
@@ -108,9 +153,12 @@ function focusInput() {
       inputmode="numeric"
       :value="displayValue"
       :maxlength="boardSize >= 10 ? 3 : 2"
+      :tabindex="tabIndex"
+      :aria-label="ariaLabel"
+      :aria-invalid="isInvalid || undefined"
       @input="handleInput"
       @keydown="handleKeydown"
-      @focus="isFocused = true"
+      @focus="onFocus"
       @blur="isFocused = false"
       class="absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
     />
@@ -129,7 +177,9 @@ function focusInput() {
       :is-hovered="isHovered"
     />
 
-    <!-- Ghost cell highlight — hand-drawn border on hover/focus (board-coord viewBox) -->
+    <!-- Ghost cell highlight — the three-tier pencil-sketch focus/hover/invalid ring (§4.2).
+         Hover = graphite (instant); :focus-visible = crayon-blue sketched-on; conflict = the
+         teacher's red circle (doubles as the aria-invalid indicator). -->
     <div
       class="cell-ghost pointer-events-none absolute inset-0"
       :class="{ 'is-active': isActive }"
@@ -142,6 +192,7 @@ function focusInput() {
       >
         <path
           :d="ghostPath"
+          pathLength="1"
           class="cell-ghost-path"
         />
       </svg>
@@ -159,15 +210,77 @@ function focusInput() {
   opacity: 1;
 }
 
-/* Ghost path styling — hand-drawn pencil border + tinted fill */
+/* Conflict mark persists whether or not the cell is hovered/focused (§1.4). */
+.sudoku-cell.is-invalid .cell-ghost {
+  opacity: 1;
+}
+
+/* Tier 1 — hover / base: graphite pencil border + faint tinted fill (§4.2). */
 .cell-ghost-path {
-  fill: var(--color-foreground);
+  fill: var(--color-pencil-graphite, var(--grid-line-color));
   fill-opacity: 0.06;
-  stroke: var(--color-foreground);
+  stroke: var(--color-pencil-graphite, var(--grid-line-color));
   stroke-width: 5;
   stroke-opacity: 0.65;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* Tier 2 — keyboard focus: crayon-blue, heavier, sketched on over 180ms. Driven by real
+   :focus-visible so a mouse click keeps the instant graphite tier and only keyboard focus
+   gets the drawn-on ring. */
+.sudoku-cell:has(input:focus-visible) .cell-ghost-path {
+  fill: var(--color-focus-sketch, var(--color-crayon-blue));
+  fill-opacity: 0.08;
+  stroke: var(--color-focus-sketch, var(--color-crayon-blue));
+  stroke-width: 7;
+  stroke-opacity: 0.9;
+  stroke-dasharray: 1;
+  animation: ghost-draw-on 180ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+}
+
+@keyframes ghost-draw-on {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Tier 3 — aria-invalid conflict: the teacher's red pencil. Placed after the focus rule so
+   a focused-and-conflicting cell reads red (it's marked wrong), not blue. */
+.sudoku-cell.is-invalid .cell-ghost-path {
+  fill: none;
+  stroke: var(--color-teacher-red, var(--color-crayon-rose));
+  stroke-width: 6;
+  stroke-opacity: 0.85;
+}
+
+/* Neutralize the generic global focus-within ring (index.css:190-195) — the SVG ghost is
+   the focus affordance now. Scoped selector ([data-v-*]) outweighs the global one. The
+   input keeps Tailwind's `outline-none` (a transparent 2px outline) so forced-colors /
+   Windows High Contrast still paints its own visible ring where SVG strokes are ignored. */
+.sudoku-cell:focus-within {
+  background: transparent;
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sudoku-cell:has(input:focus-visible) .cell-ghost-path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* prefers-contrast: press the pencil harder (§4.4). */
+@media (prefers-contrast: more) {
+  .cell-ghost-path {
+    stroke-opacity: 0.9;
+  }
+  .sudoku-cell.is-invalid .cell-ghost-path {
+    stroke-opacity: 1;
+  }
 }
 
 /* Ensure ghost overflow is not clipped */

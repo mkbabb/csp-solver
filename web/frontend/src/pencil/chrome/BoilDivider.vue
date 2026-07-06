@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useBoilFrame } from '@pencil/composables/boilScheduler'
+import { heldFrameCount } from '@pencil/composables/boilHoldGate'
 import { generateLineBoilFrames } from '@pencil/grid/gridPaths'
 import { BOIL_CONFIG } from '@pencil/config/pencilConfig'
 
@@ -22,8 +23,9 @@ const dividerFrames = computed(() =>
     BOIL_CONFIG.frameBoil, BOIL_CONFIG.frameCount,
   )
 )
+// Freeze-in-place while the answer-key laminate holds the page (W9 §2).
 const { currentFrame: dividerFrame } = useBoilFrame(
-  () => BOIL_CONFIG.frameCount,
+  heldFrameCount(() => BOIL_CONFIG.frameCount),
   () => BOIL_CONFIG.intervalMs,
 )
 const dividerPath = computed(() => dividerFrames.value[dividerFrame.value] ?? '')

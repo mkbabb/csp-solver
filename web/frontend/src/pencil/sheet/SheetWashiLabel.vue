@@ -1,0 +1,85 @@
+<script setup lang="ts">
+/**
+ * Washi label — a scrap of tinted paper tape holding a name over the button.
+ * Physical object: translucent paper tape (design-union §1.1 / §3 row 4).
+ * Replaces the solid dark tooltip pill (the most generic-app pixel in the
+ * panel). Neutral washi, Patrick Hand, seeded torn-tape ends (clip-path),
+ * seeded ±1.5° rotation. Blur-0, static, one paint per show. Shows on hover
+ * AND :focus-visible — closing the pure-pencil keyboard-tooltip gap
+ * (design-refinement §4.4).
+ */
+import { computed } from 'vue'
+import { mulberry32 } from '@mkbabb/pencil-boil'
+
+const props = defineProps<{
+  text: string
+  /** stable per-button seed so a given label's tear + tilt never re-roll */
+  seed: number
+}>()
+
+// Seeded geometry: torn ends on the left/right edges + a small tilt.
+const geom = computed(() => {
+  const rng = mulberry32(props.seed * 2654435761 + props.text.charCodeAt(0))
+  // Six-point clip-path: jagged left edge (2 pts) + jagged right edge (2 pts),
+  // top/bottom kept flat-ish. Percentages within the label box.
+  const j = () => (rng() - 0.5) * 6 // ±3% jitter
+  const lx = 3
+  const rx = 97
+  const clip = [
+    `${lx + j()}% 0%`,
+    `${rx + j()}% ${8 + j()}%`,
+    `100% 50%`,
+    `${rx + j()}% ${92 + j()}%`,
+    `${lx + j()}% 100%`,
+    `0% 50%`,
+  ].join(', ')
+  const tilt = (rng() - 0.5) * 3 // ±1.5°
+  return { clip: `polygon(${clip})`, tilt: `${tilt.toFixed(2)}deg` }
+})
+</script>
+
+<template>
+  <span
+    class="washi-label"
+    :style="{ clipPath: geom.clip, '--washi-tilt': geom.tilt }"
+    role="tooltip"
+    >{{ text }}</span
+  >
+</template>
+
+<style scoped>
+.washi-label {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) rotate(var(--washi-tilt));
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0.7rem;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: var(--color-foreground);
+  /* neutral washi — tinted translucent paper tape (design-union §7.3) */
+  background: var(--sheet-washi-neutral);
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+  z-index: 50;
+}
+
+/* Shown on button hover (parent .group) or keyboard focus. */
+.group:hover .washi-label,
+.group:focus-visible .washi-label {
+  opacity: 1;
+}
+
+/* prefers-reduced-transparency: the tape becomes an opaque card (blur-0 already). */
+@media (prefers-reduced-transparency: reduce) {
+  .washi-label {
+    background: var(--color-card);
+  }
+}
+</style>

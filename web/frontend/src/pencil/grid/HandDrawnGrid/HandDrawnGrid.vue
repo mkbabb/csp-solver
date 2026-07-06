@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch, nextTick, ref } from 'vue';
 import { useBoilFrame } from '@pencil/composables/boilScheduler';
+import { heldFrameCount } from '@pencil/composables/boilHoldGate';
 import { generateGridBoilFrames } from '../gridPaths';
 import { BOIL_CONFIG } from '@pencil/config/pencilConfig';
 import { usePathAnimation } from './usePathAnimation';
@@ -30,8 +31,10 @@ const boilFrames = computed(() =>
 );
 
 // Path-based boil: cycle frame index at ~6.7fps, on the unified rAF scheduler
+// heldFrameCount: collapses to 1 while the answer-key laminate holds the page —
+// the scheduler's frameCount<=1 stop path freezes the boil in place (W9 §2).
 const { currentFrame: boilFrame } = useBoilFrame(
-    () => BOIL_CONFIG.frameCount,
+    heldFrameCount(() => BOIL_CONFIG.frameCount),
     () => BOIL_CONFIG.intervalMs,
 );
 
