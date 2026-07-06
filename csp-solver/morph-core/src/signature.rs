@@ -14,7 +14,6 @@
 //! source and target forms have pointwise-equal signatures, the trivial
 //! `i <-> i` zip is provably correct and the CSP solver is skipped.
 
-use crate::contour::centroid;
 use crate::types::{Role, Signature, Subpath, Vec2};
 
 /// Minimum absolute signed area before `area_bucket` degrades to the
@@ -46,7 +45,7 @@ pub fn form_centroid(subpaths: &[Subpath]) -> Vec2 {
         if w <= 0.0 {
             continue;
         }
-        let c = centroid(&sp.segments);
+        let c = sp.centroid;
         cx += c[0] * w;
         cy += c[1] * w;
         total_weight += w;
@@ -69,7 +68,7 @@ pub fn canonical_signature(sub: &Subpath, form_centroid: Vec2) -> Signature {
     let raw_bucket = (abs_area + AREA_EPSILON).log2().floor() as i64;
     let area_bucket = clamp_int8(raw_bucket);
 
-    let sub_centroid = centroid(&sub.segments);
+    let sub_centroid = sub.centroid;
     let dx = sub_centroid[0] - form_centroid[0];
     let dy = sub_centroid[1] - form_centroid[1];
     let centroid_quadrant = octant_of(dx, dy);

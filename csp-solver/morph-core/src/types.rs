@@ -99,6 +99,12 @@ pub struct Subpath {
     pub signed_area: f64,
     /// Axis-aligned bounding box over anchor points.
     pub bbox: BBox,
+    /// Signed-area-weighted centroid of the densified contour, precomputed
+    /// once at construction (symmetric with `bbox`/`signed_area`). The
+    /// alignment cost matrix and the per-pair pipeline read this instead
+    /// of re-densifying the contour on every `pair_cost`/`align_pair`
+    /// call — it collapses the former ~4n² densify passes to O(n).
+    pub centroid: Vec2,
     /// Outer silhouette vs counter hole.
     pub role: Role,
     /// Canonical identity signature.
@@ -148,25 +154,6 @@ pub struct PairwiseAlignment {
     pub unmatched_source: Vec<usize>,
     /// Subpath indices of target that had no source match — grow on morph.
     pub unmatched_target: Vec<usize>,
-}
-
-/// Result of running steps 4-8 of the alignment pipeline for a single
-/// `(source, target)` subpath pair. Cached during cost-matrix
-/// construction so that winning pairs skip re-computation.
-///
-/// Ported from `bbnf-buddy/src/forms/align.ts::AlignInternalResult`.
-#[derive(Debug, Clone)]
-pub struct AlignInternalResult {
-    /// Sum of squared point distances in the normalized frame.
-    pub residual: f64,
-    /// Source segments in the original source frame (post-resample).
-    pub src_final: Vec<Segment>,
-    /// Target segments in the original target frame (post-Procrustes).
-    pub tgt_final: Vec<Segment>,
-    /// Rotational shift selected by step 6.
-    pub shift: usize,
-    /// Closed-form 2D Procrustes parameters from step 7.
-    pub procrustes: ProcrustesResult,
 }
 
 /// Result of a 2D Procrustes alignment.

@@ -8,11 +8,12 @@
 //! Thread-local scratch arena persists across calls, avoiding
 //! re-allocation on the hot path.
 
-use morph_core::contour::bbox;
+use morph_core::contour::{bbox, centroid};
 use morph_core::scratch::AlignScratch;
 use morph_core::signature::{canonical_signature, form_centroid};
 use morph_core::types::{
-    CorrespondenceHints, FormDef, PairwiseAlignment, Role, Segment, Subpath, SubpathHintPair,
+    CorrespondenceHints, FormDef, PairwiseAlignment, PointHintPair, Role, Segment, Subpath,
+    SubpathHintPair,
 };
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -78,6 +79,12 @@ pub struct WireSegment {
 pub struct WireHints {
     #[serde(default)]
     pub subpath_pairs: Vec<WireSubpathPair>,
+    /// Manual anchor-correspondence hints, forwarded to morph-core's
+    /// Step 8 weighted-rotation pass. Previously dropped at this boundary
+    /// (the editor's "mark corresponding anchors" affordance was a dead
+    /// feature); now threaded through.
+    #[serde(default)]
+    pub point_pairs: Vec<WirePointPair>,
     #[serde(default)]
     pub procrustes: bool,
 }
@@ -87,6 +94,15 @@ pub struct WireHints {
 pub struct WireSubpathPair {
     pub source: usize,
     pub target: usize,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WirePointPair {
+    pub source_subpath: usize,
+    pub target_subpath: usize,
+    pub source_index: usize,
+    pub target_index: usize,
 }
 
 // ---------------------------------------------------------------------------
@@ -141,12 +157,16 @@ fn convert_form_def(wire: &WireFormDef) -> Result<FormDef, JsError> {
         let role = parse_role(&ws.role)?;
         let segments: Vec<Segment> = ws.segments.iter().map(wire_segment_to_domain).collect();
         let bb = bbox(&segments);
+        // Stamp the contour centroid once — the alignment cost matrix and
+        // per-pair pipeline read this precomputed field, not a re-densify.
+        let ctr = centroid(&segments);
         let id = ws.id.clone().unwrap_or_else(|| format!("{}-{i}", ws.role));
         subpaths.push(Subpath {
             id,
             segments,
             signed_area: ws.signed_area,
             bbox: bb,
+            centroid: ctr,
             role,
             // Signature is computed below once all subpaths are built.
             signature: morph_core::types::Signature {
@@ -181,7 +201,16 @@ fn convert_hints(wire: &WireHints) -> CorrespondenceHints {
                 target: p.target,
             })
             .collect(),
-        point_pairs: Vec::new(),
+        point_pairs: wire
+            .point_pairs
+            .iter()
+            .map(|p| PointHintPair {
+                source_subpath: p.source_subpath,
+                target_subpath: p.target_subpath,
+                source_index: p.source_index,
+                target_index: p.target_index,
+            })
+            .collect(),
         procrustes: wire.procrustes,
     }
 }

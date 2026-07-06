@@ -52,12 +52,29 @@ pub fn cubic_tangent(p0: Vec2, p1: Vec2, p2: Vec2, p3: Vec2, t: f64) -> Vec2 {
 /// for segment boundaries is preserved exactly: for `i == 0` we start
 /// at `j = 0`; for all subsequent segments we start at `j = 1`.
 pub fn densify_contour(segments: &[Segment], samples_per_segment: usize) -> Vec<PolylineSample> {
+    let mut out = Vec::new();
+    densify_contour_into(segments, samples_per_segment, &mut out);
+    out
+}
+
+/// Arena variant of [`densify_contour`] — writes into a caller-owned
+/// buffer, retaining its capacity across calls. `out` is cleared first.
+///
+/// This is the allocation-free path used by the per-pair pipeline; the
+/// owning `Vec` lives in [`PairScratch::poly`](crate::scratch::PairScratch).
+pub fn densify_contour_into(
+    segments: &[Segment],
+    samples_per_segment: usize,
+    out: &mut Vec<PolylineSample>,
+) {
+    out.clear();
     let n = segments.len();
     if n == 0 || samples_per_segment == 0 {
-        return Vec::new();
+        return;
     }
 
-    let mut samples = Vec::with_capacity(n * samples_per_segment);
+    let samples = out;
+    samples.reserve(n * samples_per_segment);
     let mut cumulative = 0.0_f64;
     let mut prev: Option<Vec2> = None;
 
@@ -91,8 +108,6 @@ pub fn densify_contour(segments: &[Segment], samples_per_segment: usize) -> Vec<
             prev = Some(point);
         }
     }
-
-    samples
 }
 
 /// Binary-search a dense polyline for the sample at fractional arc
@@ -256,8 +271,22 @@ pub fn slice_between(
     total: f64,
 ) -> Vec<Vec2> {
     let mut out = Vec::new();
+    slice_between_into(samples, start_len, end_len, total, &mut out);
+    out
+}
+
+/// Arena variant of [`slice_between`] — writes into a caller-owned
+/// buffer (cleared first), retaining capacity across calls.
+pub fn slice_between_into(
+    samples: &[PolylineSample],
+    start_len: f64,
+    end_len: f64,
+    total: f64,
+    out: &mut Vec<Vec2>,
+) {
+    out.clear();
     if total <= 0.0 {
-        return out;
+        return;
     }
 
     let wrapped = end_len < start_len;
@@ -271,5 +300,4 @@ pub fn slice_between(
             out.push(s.point);
         }
     }
-    out
 }

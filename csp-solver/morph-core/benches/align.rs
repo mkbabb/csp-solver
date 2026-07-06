@@ -2,6 +2,7 @@
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use morph_core::align::align_forms;
+use morph_core::contour::centroid;
 use morph_core::scratch::AlignScratch;
 use morph_core::types::{
     BBox, CorrespondenceHints, FormDef, Role, Segment, Signature, Subpath, SubpathHintPair,
@@ -44,6 +45,7 @@ fn make_square_subpath(id: &str, role: Role, offset_x: f64, offset_y: f64, size:
     };
     let signed_area = sign * size * size;
 
+    let ctr = centroid(&segs);
     Subpath {
         id: id.to_string(),
         segments: segs,
@@ -54,6 +56,7 @@ fn make_square_subpath(id: &str, role: Role, offset_x: f64, offset_y: f64, size:
             max_x: offset_x + size,
             max_y: offset_y + size,
         },
+        centroid: ctr,
         role,
         signature: Signature {
             role,

@@ -36,7 +36,7 @@ pub mod types;
 
 pub use align::align_forms;
 pub use types::{
-    AlignInternalResult, BBox, CorrespondenceHints, FormDef, PairwiseAlignment, PointHintPair,
-    PolylineSample, ProcrustesResult, Role, Segment, Signature, Subpath, SubpathHintPair,
-    SubpathPair, Vec2, ViewBox,
+    BBox, CorrespondenceHints, FormDef, PairwiseAlignment, PointHintPair, PolylineSample,
+    ProcrustesResult, Role, Segment, Signature, Subpath, SubpathHintPair, SubpathPair, Vec2,
+    ViewBox,
 };

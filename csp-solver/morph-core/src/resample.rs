@@ -4,7 +4,10 @@
 //! closed contour with N segments into one with M segments, with
 //! handles that reproduce the original shape faithfully.
 
-use crate::bezier::{densify_contour, fit_cubic_handles, sample_at_arc_length, slice_between};
+use crate::bezier::{
+    densify_contour, densify_contour_into, fit_cubic_handles, sample_at_arc_length, slice_between,
+    slice_between_into,
+};
 use crate::types::{PolylineSample, Segment, Vec2};
 
 /// Default samples per segment for arc-length densification.
@@ -93,6 +96,72 @@ pub fn resample_contour(segments: &[Segment], n: usize) -> Vec<Segment> {
     }
 
     result
+}
+
+/// Arena variant of [`resample_contour`] — writes `n` resampled segments
+/// into `out`, drawing every intermediate buffer (dense polyline, chosen
+/// anchors, interior slices) from caller-owned scratch so the resample
+/// path allocates nothing beyond `out`'s own growth. The buffers are
+/// passed individually (not as an aggregate `&mut PairScratch`) so the
+/// caller can hold a disjoint immutable borrow of its input contour.
+///
+/// Semantics are identical to [`resample_contour`], including the fresh
+/// segment ids and the `n == segments.len()` copy short-circuit.
+#[allow(clippy::too_many_arguments)]
+pub fn resample_contour_into(
+    segments: &[Segment],
+    n: usize,
+    poly: &mut Vec<PolylineSample>,
+    taken: &mut Vec<PolylineSample>,
+    interior: &mut Vec<Vec2>,
+    out: &mut Vec<Segment>,
+) {
+    out.clear();
+    if n == 0 || segments.is_empty() {
+        return;
+    }
+
+    if segments.len() == n {
+        out.extend(segments.iter().map(|s| Segment {
+            id: new_segment_id(),
+            point: s.point,
+            handle_in: s.handle_in,
+            handle_out: s.handle_out,
+        }));
+        return;
+    }
+
+    densify_contour_into(segments, DEFAULT_SAMPLES_PER_SEGMENT, poly);
+    if poly.is_empty() {
+        return;
+    }
+    let total = poly.last().unwrap().cumulative;
+    if total <= 1e-9 {
+        return;
+    }
+
+    taken.clear();
+    taken.extend((0..n).map(|i| sample_at_arc_length(poly, i as f64 / n as f64)));
+
+    out.extend(taken.iter().map(|s| Segment {
+        id: new_segment_id(),
+        point: s.point,
+        handle_in: [0.0, 0.0],
+        handle_out: [0.0, 0.0],
+    }));
+
+    for i in 0..n {
+        let a = taken[i];
+        let b = taken[(i + 1) % n];
+        let t_a = normalized_tangent(a.tangent);
+        let t_b = negated(normalized_tangent(b.tangent));
+
+        slice_between_into(poly, a.cumulative, b.cumulative, total, interior);
+        let (handle_out, handle_in) = fit_cubic_handles(a.point, b.point, t_a, t_b, interior);
+
+        out[i].handle_out = handle_out;
+        out[(i + 1) % n].handle_in = handle_in;
+    }
 }
 
 /// Cyclically rotate a closed contour by `offset` segments.
