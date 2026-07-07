@@ -302,7 +302,7 @@ function onDifficultyChange(val: string | number) {
 
 <style scoped>
 .control-panel-wrap {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-display);
   font-optical-sizing: auto;
 }
 
@@ -310,23 +310,9 @@ function onDifficultyChange(val: string | number) {
   filter: v-bind(panelFilter);
 }
 
-.section-heading {
-  font-size: 1.125rem;
-  line-height: 1.5rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  text-align: center;
-}
-
-@media (min-width: 768px) {
-  .section-heading {
-    font-size: 1.5rem;
-    line-height: 1.75rem;
-    text-align: left;
-    padding-left: 0.75rem;
-  }
-}
+/* .section-heading type register lives in assets/typography.css (@layer
+   components) — the √φ subheading→heading eyebrow, shared with futoshiki (D4).
+   Only the component-local hover flourish stays scoped here. */
 
 /* Crayon color utilities */
 .crayon-green { color: var(--color-crayon-green); }
@@ -399,7 +385,7 @@ function onDifficultyChange(val: string | number) {
 
 /* Mobile layout */
 .mobile-control-panel {
-  font-family: 'Fraunces', serif;
+  font-family: var(--font-display);
   font-optical-sizing: auto;
 }
 

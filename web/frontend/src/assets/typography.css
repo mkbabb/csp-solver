@@ -1,0 +1,269 @@
+/* ─────────────────────────────────────────────────────────────────────────
+ * typography.css — the √φ (1.272) type ladder + semantic registers.
+ *
+ * VENDORED from @mkbabb/glass-ui@4.2.0:
+ *   · size rungs      ← src/styles/typography/scale.css   (:root --type-*)
+ *   · leading/tracking← src/styles/tokens/scheme-motion.css §0
+ *   · semantic classes← src/styles/typography/semantic.css + utilities.css
+ *
+ * WHY vendored, not imported: glass-ui's package `exports` allowlist has no
+ * `styles/typography` subpath, and pulling the whole `./styles` bundle would
+ * drag the Plus Jakarta text register + the 13-stop jewel palette + glass-fx
+ * into a crayon-and-graphite world (soul-gate hazard). The √φ scale rungs carry
+ * NO font-family by construction — they are pure size mathematics — so the port
+ * is: copy the numbers, re-point the three `--font-*` family vars at the pencil
+ * faces (done in assets/index.css @theme). The soul keeps its voice (Fraunces
+ * display · Patrick Hand hand · Fira Code mono); the ladder brings its geometry.
+ *
+ * This file is inside the frontend's Tailwind v4 source graph (imported by
+ * index.css right after `@import 'tailwindcss'`), so the `@utility` directives
+ * register natively and emit only when a template references them (0 bytes
+ * unused).
+ * ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── size rungs (17) — face-agnostic; NO font-family here ──────────────── */
+  /* fixed sub-control micro (NOT fluid) */
+  --type-admin-label: 0.625rem; /* 10px */
+  --type-micro: 0.6875rem; /* 11px */
+  /* body/control register — a GENTLE viewport slope (min = the prior fixed rem,
+     byte-identical at mobile); the vw fluid term lives HERE exactly once */
+  --type-caption: clamp(0.75rem, 0.71rem + 0.21vw, 1rem); /* 12→16px */
+  --type-small: clamp(0.875rem, 0.8rem + 0.25vw, 1.25rem); /* 14→20px workhorse */
+  --type-body: clamp(1rem, 0.92rem + 0.27vw, 1.375rem); /* 16→22px body cascade */
+  --type-prose: clamp(1.125rem, 1.04rem + 0.28vw, 1.5rem); /* 18→24px long-form */
+  /* φ-identity rungs — fixed rem (a heading is an identity, not a control) */
+  --type-subheading: 1.272rem; /* 20.4px — √φ */
+  --type-heading: 1.618rem; /* 25.9px — φ */
+  --type-title: 2.058rem; /* 32.9px — φ^(3/2) */
+  /* display ladder — an aggressive vw slope */
+  --type-display-1: clamp(1.618rem, 1.2rem + 1.6vw, 2.618rem); /* φ² */
+  --type-display-2: clamp(2.058rem, 1.5rem + 2.2vw, 3.33rem); /* φ^(5/2) */
+  --type-display-3: clamp(2.618rem, 2rem + 3vw, 4.236rem); /* φ³ */
+  --type-display-4: clamp(3.33rem, 2.5rem + 4vw, 5.382rem); /* φ^(7/2) */
+  --type-display-5: clamp(4.236rem, 3.5rem + 6vw, 6.854rem); /* φ⁴ */
+  --type-display-mega: clamp(5.382rem, 4rem + 9vw, 11.089rem); /* φ^(9/2) */
+  --type-display-hero: clamp(6.854rem, 4.5rem + 12vw, 17.942rem); /* φ⁵ */
+  --type-display-audacious: clamp(8.728rem, 5rem + 16vw, 22rem); /* φ^(11/2) */
+
+  /* ── leading (7) ──────────────────────────────────────────────────────── */
+  --type-leading-micro: 1.2;
+  --type-leading-caption: 1.3;
+  --type-leading-small: 1.4;
+  --type-leading-body: 1.5;
+  --type-leading-prose: 1.618;
+  --type-leading-heading: 1.2;
+  --type-leading-display: 1.05;
+
+  /* ── tracking (7) ─────────────────────────────────────────────────────── */
+  --type-tracking-tight: -0.025em;
+  --type-tracking-display: -0.015em;
+  --type-tracking-snug: -0.01em;
+  --type-tracking-normal: 0;
+  --type-tracking-wide: 0.025em;
+  --type-tracking-wider: 0.05em;
+  --type-tracking-caps: 0.1em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * SEMANTIC REGISTERS — Tailwind v4 @utility. Each references a `--type-*` rung
+ * (the ladder) + a `var(--font-*)` family (the pencil face bound in index.css).
+ * That indirection IS the port: swap the family vars, keep the numbers.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── DISPLAY — the wordmark/poster register (--font-display ← Fraunces) ───── */
+@utility text-display-audacious {
+  font-family: var(--font-display);
+  font-size: var(--type-display-audacious);
+  line-height: var(--type-leading-display);
+  letter-spacing: var(--type-tracking-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  text-wrap: balance;
+}
+@utility text-display-hero {
+  font-family: var(--font-display);
+  font-size: var(--type-display-hero);
+  line-height: var(--type-leading-display);
+  letter-spacing: var(--type-tracking-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  text-wrap: balance;
+}
+@utility text-display-mega {
+  font-family: var(--font-display);
+  font-size: var(--type-display-mega);
+  line-height: var(--type-leading-display);
+  letter-spacing: var(--type-tracking-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  text-wrap: balance;
+}
+@utility text-display-5 {
+  font-family: var(--font-display);
+  font-size: var(--type-display-5);
+  line-height: var(--type-leading-display);
+  letter-spacing: var(--type-tracking-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  text-wrap: balance;
+}
+@utility text-display-4 {
+  font-family: var(--font-display);
+  font-size: var(--type-display-4);
+  line-height: var(--type-leading-display);
+  letter-spacing: var(--type-tracking-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  text-wrap: balance;
+}
+@utility text-display-3 {
+  font-family: var(--font-display);
+  font-size: var(--type-display-3);
+  line-height: var(--type-leading-display);
+  letter-spacing: var(--type-tracking-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  text-wrap: balance;
+}
+@utility text-display-2 {
+  font-family: var(--font-display);
+  font-size: var(--type-display-2);
+  line-height: var(--type-leading-display);
+  letter-spacing: var(--type-tracking-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  text-wrap: balance;
+}
+@utility text-display {
+  font-family: var(--font-display);
+  font-size: var(--type-display-1);
+  line-height: var(--type-leading-display);
+  letter-spacing: var(--type-tracking-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+/* ── HEADINGS / BODY — the text register (--font-text ← Fraunces) ─────────── */
+@utility text-title {
+  font-family: var(--font-text);
+  font-size: var(--type-title);
+  line-height: var(--type-leading-heading);
+  letter-spacing: var(--type-tracking-tight);
+  font-weight: 700;
+  text-wrap: balance;
+}
+@utility text-heading {
+  font-family: var(--font-text);
+  font-size: var(--type-heading);
+  line-height: var(--type-leading-heading);
+  font-weight: 700;
+  text-wrap: balance;
+}
+@utility text-subheading {
+  font-family: var(--font-text);
+  font-size: var(--type-subheading);
+  line-height: var(--type-leading-body);
+  font-weight: 600;
+  text-wrap: balance;
+}
+@utility text-prose {
+  font-family: var(--font-text);
+  font-size: var(--type-prose);
+  line-height: var(--type-leading-prose);
+  font-weight: 400;
+  text-wrap: pretty;
+}
+@utility text-body {
+  font-family: var(--font-text);
+  font-size: var(--type-body);
+  line-height: var(--type-leading-body);
+  font-weight: 400;
+  text-wrap: pretty;
+}
+@utility text-small {
+  font-family: var(--font-text);
+  font-size: var(--type-small);
+  line-height: var(--type-leading-small);
+  font-weight: 400;
+}
+@utility text-caption {
+  font-family: var(--font-text);
+  font-size: var(--type-caption);
+  line-height: var(--type-leading-caption);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* ── MICRO / MONO — the annotation + admin registers (--font-mono ← Fira Code) */
+@utility text-micro {
+  font-size: var(--type-micro);
+  line-height: 1.25;
+}
+@utility text-admin-label {
+  font-family: var(--font-mono);
+  font-size: var(--type-admin-label);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: var(--type-tracking-caps);
+  font-weight: 500;
+}
+/* THE eyebrow: mono · caption · uppercase · caps-tracking. Ink left UNBAKED so
+   a consumer pairs any tone (text-foreground / text-muted-foreground / accent). */
+@utility text-mono-caption {
+  font-family: var(--font-mono);
+  font-size: var(--type-caption);
+  letter-spacing: var(--type-tracking-caps);
+  text-transform: uppercase;
+}
+@utility text-mono-small {
+  font-family: var(--font-mono);
+  font-size: var(--type-small);
+  line-height: var(--type-leading-small);
+}
+@utility text-mono-prose {
+  font-family: var(--font-mono);
+  font-size: var(--type-prose);
+  line-height: var(--type-leading-prose);
+  letter-spacing: 0.02em;
+}
+@utility text-mono-micro {
+  font-family: var(--font-mono);
+  font-size: var(--type-micro);
+  line-height: 1.25;
+  letter-spacing: 0.025em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * PENCIL-LOCAL REGISTERS (not glass-ui-vendored) — pencil registers that
+ * consume the vendored ladder. They live here in the pencil/theme layer so the
+ * two games may share them without importing each other (the ESLint boundary
+ * forbids sudoku↔futoshiki, but games→pencil is allowed).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+@layer components {
+  /* The control-panel section eyebrow — shared by sudoku + futoshiki (D4: the
+     two panels previously duplicated this rule byte-for-byte). Uppercase Fraunces
+     on the √φ ladder: subheading rung on the narrow arm, heading rung ≥md. The
+     weight 800 is a deliberate pencil override (heavier than glass-ui's heading
+     700 — the wax pressed hard). Color stays with the consuming template
+     (text-muted-foreground / the crayon-* tone), never baked here. */
+  .section-heading {
+    font-family: var(--font-display);
+    font-size: var(--type-subheading);
+    line-height: var(--type-leading-heading);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--type-tracking-caps);
+    text-align: center;
+  }
+
+  @media (min-width: 768px) {
+    .section-heading {
+      font-size: var(--type-heading);
+      line-height: var(--type-leading-heading);
+      text-align: left;
+      padding-left: 0.75rem;
+    }
+  }
+}

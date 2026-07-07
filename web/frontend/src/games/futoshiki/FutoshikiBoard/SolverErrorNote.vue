@@ -47,18 +47,18 @@ const emit = defineEmits<{
 }
 
 .error-note-text {
-  font-family: 'Patrick Hand', cursive;
+  font-family: var(--font-hand);
   letter-spacing: 0.02em;
-  font-size: 1rem;
-  line-height: 1.25;
+  font-size: var(--type-body);
+  line-height: var(--type-leading-caption);
   margin: 0;
   color: var(--color-teacher-red, var(--color-crayon-rose));
 }
 
 .error-note-retry {
   flex: none;
-  font-family: 'Patrick Hand', cursive;
-  font-size: 0.95rem;
+  font-family: var(--font-hand);
+  font-size: var(--type-small);
   font-weight: 600;
   color: var(--color-foreground);
   background: transparent;

@@ -45,10 +45,14 @@ defineExpose({ close })
 </template>
 
 <style scoped>
+/* Flush to the viewport corner (mirrors .corner-right's top:0/right:0 in App.vue) —
+   the inset from the edge now comes from .attribution-trigger's own padding, not a
+   gap on this wrapper, so the visible glyph lands in ~the same spot as before while
+   the button's hit target grows to fill the whole corner instead of floating in it. */
 .corner-left {
   position: fixed;
-  top: 0.5rem;
-  left: 0.75rem;
+  top: 0;
+  left: 0;
   z-index: 40;
   cursor: pointer;
 }
@@ -61,13 +65,23 @@ defineExpose({ close })
   margin-bottom: 0.125rem;
 }
 
-/* Real <button> semantics (the a11y fix): reset it back to the inline text trigger. */
+/* Real <button> semantics (the a11y fix): reset it back to the inline text trigger.
+   font-family used to be `inherit`, which Vue's scoped [data-v-xxx] attribute selector
+   (specificity 0,2,0) defeated the template's `font-mono` utility (0,1,0) with — the
+   button silently inherited body{}'s Fraunces serif instead of rendering mono. Naming
+   the token directly here (with the Fira Code chain as its fallback, since no consumer
+   in src/ defines --font-mono yet) both breaks that specificity trap and keeps the
+   correct face live today, ready to pick up the real token the moment it's defined.
+   Padding: 0 → √φ-ladder rungs (0.618rem block / 0.786rem inline, r = 1.272) — enough
+   room for a real ~44px-ish tap target; paired with .corner-left's flush 0/0 above,
+   the visible "@mbabb" lands almost exactly where it did before, just no longer glued
+   to the literal pixel corner. */
 .attribution-trigger {
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 0.618rem 0.786rem;
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--font-mono, 'Fira Code', monospace);
 }
 
 /* The app's accidental proto-vellum: 80% popover, blur-0 (OD-1 / design-union UD2 —

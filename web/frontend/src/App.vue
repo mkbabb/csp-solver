@@ -5,10 +5,9 @@ import SudokuBoard from '@games/sudoku/SudokuBoard/SudokuBoard.vue'
 import ControlPanel from '@games/sudoku/ControlPanel/ControlPanel.vue'
 import DarkModeToggle from '@pencil/celestial/DarkModeToggle.vue'
 import SvgFilters from '@pencil/chrome/SvgFilters.vue'
-import HandwrittenLogo from '@pencil/chrome/HandwrittenLogo.vue'
+import HandwrittenLogo from '@pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue'
 import AttributionCard from '@pencil/chrome/AttributionCard/AttributionCard.vue'
 import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'
-import OptionSelector from '@pencil/chrome/OptionSelector/OptionSelector.vue'
 // Async + mounted-on-first-peek: keeps the laminate's ~227 LOC out of the main
 // chunk (the W9 bundle gate) — same discipline as FilterTuner. The chunk loads
 // on the first K/hold, imperceptible locally.
@@ -53,10 +52,12 @@ const sudoku = useSudoku()
 
 const desktopAttribution = ref<InstanceType<typeof AttributionCard> | null>(null)
 const mobileAttribution = ref<InstanceType<typeof AttributionCard> | null>(null)
+const logoMenu = ref<InstanceType<typeof HandwrittenLogo> | null>(null)
 
 function closeAll() {
   desktopAttribution.value?.close()
   mobileAttribution.value?.close()
+  logoMenu.value?.close()
 }
 
 // ── Answer-key peek — hold-to-peek at the teacher's laminated key ────
@@ -129,18 +130,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       <div class="board-group">
         <!-- Mobile: @mbabb in-flow, left-aligned with logo -->
         <AttributionCard ref="mobileAttribution" mobile />
-        <!-- Masthead: the pencil wordmark is a fixed "sudoku" glyph (pencil-owned, not
-             game-aware), so it shows only over Sudoku; the selector's bolded label carries
-             Futoshiki's identity. -->
+        <!-- Masthead: the pencil wordmark renders the CURRENT game's name and IS the game
+             picker — a real <button> opening a hand-drawn paper-note listbox of both games.
+             Selection swaps the game via the existing ?game= mechanism (setGame). Pencil
+             never imports games: the id + options are props; the choice comes back via @select. -->
         <div class="masthead">
-          <HandwrittenLogo v-if="game === 'sudoku'" />
-          <OptionSelector
-            class="game-selector"
-            mobile
+          <HandwrittenLogo
+            ref="logoMenu"
+            :game="game"
             :options="gameOptions"
-            :selected="game"
-            :boil-frame="0"
-            @change="setGame"
+            @select="setGame"
           />
         </div>
         <!-- Board + Controls row (Sudoku) -->
@@ -285,17 +284,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   overflow: visible;
 }
 
-/* Masthead: wordmark (Sudoku only) stacked over the OD-8 game selector. */
+/* Masthead: the wordmark-as-game-picker (renders the current game, opens the picker menu). */
 .masthead {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.1rem;
-}
-
-.game-selector {
-  font-family: 'Fraunces', serif;
-  filter: url(#grain-static);
 }
 
 @media (max-width: 767px) {

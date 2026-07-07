@@ -1,10 +1,11 @@
 @import 'tailwindcss';
+@import './typography.css';
 
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
   body {
-    font-family: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
+    font-family: var(--font-text);
     background-image: var(--paper-clean-texture);
     background-attachment: fixed;
   }
@@ -12,6 +13,21 @@
 
 @theme {
   --radius: 0.625rem;
+
+  /* Type register bindings — the pencil faces bound into the vendored √φ ladder
+     (./typography.css). This @theme block IS the rebrand override point: the
+     scale rungs carry no family, so re-pointing these four vars once re-flavors
+     every semantic register while the geometry inherits unchanged. The soul
+     keeps its voice — Fraunces display · Patrick Hand hand · Fira Code mono —
+     and Plus Jakarta never ships. Defining --font-mono/--font-serif here also
+     retires the D5 gap: Tailwind's `font-mono` now resolves to Fira Code (not
+     the ui-monospace system default), so the mono surface is finally the soul's
+     mono, not the platform's. One consolidated Fraunces fallback chain (D6). */
+  --font-text: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
+  --font-display: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
+  --font-serif: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
+  --font-mono: 'Fira Code', monospace;
+  --font-hand: 'Patrick Hand', cursive;
 
   /* Paper-like background tones */
   --color-background: hsl(48 15% 98%);
@@ -265,14 +281,15 @@
     border-radius: 2px;
   }
 
-  /* Fira Code utility */
+  /* Fira Code utility — the mono register token (--font-mono ← Fira Code). */
   .fira-code {
-    font-family: 'Fira Code', monospace;
+    font-family: var(--font-mono);
   }
 
-  /* Handwritten font utility */
+  /* Handwritten font utility — the annotation register (--font-hand ← Patrick
+     Hand); 0.02em ≈ --type-tracking-wide, kept bespoke for the hand voice. */
   .handwritten {
-    font-family: 'Patrick Hand', cursive;
+    font-family: var(--font-hand);
     letter-spacing: 0.02em;
   }
 

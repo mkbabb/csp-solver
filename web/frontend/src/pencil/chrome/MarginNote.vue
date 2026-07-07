@@ -30,10 +30,10 @@ withDefaults(
 
 <style scoped>
 .margin-note {
-  font-family: 'Patrick Hand', cursive;
+  font-family: var(--font-hand);
   letter-spacing: 0.02em;
-  font-size: 1.05rem;
-  line-height: 1.3;
+  font-size: var(--type-body);
+  line-height: var(--type-leading-caption);
   min-height: 1.3em; /* reserve the line so the layout doesn't jump when text arrives */
   margin: 0;
   pointer-events: none;

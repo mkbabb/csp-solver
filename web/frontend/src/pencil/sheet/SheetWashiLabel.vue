@@ -55,10 +55,10 @@ const geom = computed(() => {
   transform: translateX(-50%) rotate(var(--washi-tilt));
   margin-bottom: 0.5rem;
   padding: 0.25rem 0.7rem;
-  font-family: 'Patrick Hand', cursive;
-  font-size: 0.9rem;
+  font-family: var(--font-hand);
+  font-size: var(--type-small);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: var(--type-tracking-normal);
   white-space: nowrap;
   color: var(--color-foreground);
   /* neutral washi — tinted translucent paper tape (design-union §7.3) */

@@ -273,8 +273,8 @@ const isModified = computed(() => {
   border: 2px solid var(--color-border);
   border-radius: 0.75rem;
   padding: 0.75rem;
-  font-family: 'Fira Code', monospace;
-  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: var(--type-micro);
   color: var(--color-foreground);
   box-shadow: 3px 4px 0px var(--color-foreground);
 }
@@ -288,7 +288,7 @@ const isModified = computed(() => {
 
 .tuner-title {
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: var(--type-caption);
 }
 
 .tuner-close {
@@ -329,15 +329,15 @@ const isModified = computed(() => {
 .tuner-usage {
   margin-top: 0.2rem;
   color: var(--color-muted-foreground);
-  font-size: 0.65rem;
+  font-size: var(--type-admin-label);
   font-style: italic;
 }
 
 .tuner-divider {
   font-weight: 700;
-  font-size: 0.65rem;
+  font-size: var(--type-admin-label);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--type-tracking-wider);
   color: var(--color-muted-foreground);
   border-top: 1px solid var(--color-border);
   padding-top: 0.4rem;
