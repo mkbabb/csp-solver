@@ -26,8 +26,8 @@
  */
 import type { Difficulty } from '../types'
 import { TEMPLATE_BANK } from '../data/templates'
-import { SolverError, isSerializedSolverError, type SolverErrorCode } from '../lib/solverError'
-import type { SolverRequest, SolverResponse } from '../protocol'
+import { SolverError, isSerializedSolverError, type SolverErrorCode } from './solverError'
+import type { SolverRequest, SolverResponse } from './protocol'
 
 export interface BoardResponse {
   values: Record<string, number>
@@ -62,7 +62,7 @@ const pending = new Map<number, { resolve: (r: SolverResponse) => void; reject: 
 
 function ensureWorker(): Worker {
   if (worker) return worker
-  worker = new Worker(new URL('../solver.worker.ts', import.meta.url), { type: 'module' })
+  worker = new Worker(new URL('./solver.worker.ts', import.meta.url), { type: 'module' })
   worker.addEventListener('message', (event: MessageEvent<SolverResponse>) => {
     const res = event.data
     const p = pending.get(res.id)

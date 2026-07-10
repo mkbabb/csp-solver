@@ -1,7 +1,7 @@
 /**
  * Web Worker host for the client-side wasm Futoshiki solver + generator.
  *
- * The Futoshiki sibling of `games/sudoku/solver.worker.ts` (games never import each
+ * The Futoshiki sibling of `games/sudoku/solver/solver.worker.ts` (games never import each
  * other — this is an owned port, not a shared module). Runs entirely off the main
  * thread so a hard solve never janks the ~6.7fps grid boil, and carries ZERO fetch /
  * `/api/v1/*` dependency — this in-browser Worker is the only shipped solve path.
@@ -21,7 +21,7 @@ import init, {
 // asset pipeline and hand the resolved URL to `init` (correct in dev + build).
 import wasmUrl from '@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url'
 import type { SolverRequest, SolverResponse } from './protocol'
-import type { SolverErrorCode } from './lib/solverError'
+import type { SolverErrorCode } from './solverError'
 
 let ready: Promise<unknown> | null = null
 function ensureInit(): Promise<unknown> {

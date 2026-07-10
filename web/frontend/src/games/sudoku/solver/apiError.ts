@@ -15,7 +15,7 @@
  * worker collapsed into solveState='failed' and told the user their correct answer
  * was wrong.
  *
- * The Worker codes are `games/sudoku/lib/solverError.ts::SolverErrorCode`; they
+ * The Worker codes are `games/sudoku/solver/solverError.ts::SolverErrorCode`; they
  * funnel through `classifyError` / `classifyCode` so the in-browser Worker solve
  * path renders the two fictions consistently.
  */

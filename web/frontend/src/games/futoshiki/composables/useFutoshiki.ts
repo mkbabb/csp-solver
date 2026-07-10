@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 // shipped solve surface, with zero `/api/v1/*` dependency and no server to depend
 // on. The off-main-thread Worker structurally retires the GIL/DoS class for the
 // served sizes.
-import { useSolver } from './useSolver'
+import { useSolver } from '../solver/useSolver'
 import {
   resolveInitialState,
   syncToUrl,
@@ -14,7 +14,7 @@ import {
   dropBoardParam,
   type PersistedBoard,
 } from './useUrlState'
-import { classifyError } from '../lib/apiError'
+import { classifyError } from '../solver/apiError'
 import type { Inequality, SolveState, SolveStats } from '../types'
 
 /**

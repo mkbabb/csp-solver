@@ -36,7 +36,7 @@ import init, {
 // (emitted, hashed asset).
 import wasmUrl from '@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url'
 import type { SolverRequest, SolverResponse } from './protocol'
-import type { SolverErrorCode } from './lib/solverError'
+import type { SolverErrorCode } from './solverError'
 
 let ready: Promise<unknown> | null = null
 function ensureInit(): Promise<unknown> {

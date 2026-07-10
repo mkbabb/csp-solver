@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 // only shipped solve surface. Zero `/api/v1/*` dependency — no fetch, no
 // `/config` handshake, no server to depend on. The off-main-thread Worker
 // structurally retires the GIL/DoS class for the served sizes.
-import { useSolver } from './useSolver'
+import { useSolver } from '../solver/useSolver'
 import {
   resolveInitialState,
   syncToUrl,
@@ -14,7 +14,7 @@ import {
   dropBoardParam,
   type PersistedBoard,
 } from './useUrlState'
-import { classifyError } from '../lib/apiError'
+import { classifyError } from '../solver/apiError'
 import type { Difficulty, SolveState, SolveStats } from '../types'
 
 /**
@@ -234,7 +234,7 @@ export function useSudoku() {
       animatingCells.value = cellsToAnimate
       queueSave()
     } catch (e) {
-      // Route by the shared fiction classifier (games/sudoku/lib/apiError): provable
+      // Route by the shared fiction classifier (games/sudoku/solver/apiError): provable
       // UNSAT / INVALID_INPUT → the teacher's red pencil ('failed'); everything else
       // — BUDGET_EXCEEDED, TIMEOUT, WORKER_FAILURE, a bare network TypeError — → the
       // paper note ('error'). Fixes the Pass-1 F5 corner where WORKER_FAILURE wrongly

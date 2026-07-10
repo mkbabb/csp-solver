@@ -2,7 +2,7 @@
  * Frontend rendering of the client Worker's SolverError, for Futoshiki — one
  * classifier deciding which of the two failure FICTIONS a given failure wears.
  *
- * Owned copy of games/sudoku/lib/apiError.ts (games never import each other): the
+ * Owned copy of games/sudoku/solver/apiError.ts (games never import each other): the
  * fiction split is the SAME shared contract, but the boundary forbids reaching
  * across, so each game owns its renderer.
  *

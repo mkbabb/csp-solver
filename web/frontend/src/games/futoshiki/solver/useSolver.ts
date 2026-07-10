@@ -1,7 +1,7 @@
 /**
  * Client-side wasm solve/generate path for Futoshiki — the only shipped solve
  * surface. The Futoshiki sibling of
- * `games/sudoku/composables/useSolver.ts`: same off-main-thread Worker discipline,
+ * `games/sudoku/solver/useSolver.ts`: same off-main-thread Worker discipline,
  * same `BoardResponse`/`SolveResponse` shapes consumed by `useFutoshiki.ts`.
  *
  * Zero `/api/v1/*` dependency of any kind — no fetch, no `/config` handshake, no
@@ -14,8 +14,8 @@
  * the W12 registry swap flips only `package.json`, no source change.
  */
 import type { Inequality } from '../types'
-import { SolverError, isSerializedSolverError, type SolverErrorCode } from '../lib/solverError'
-import type { SolverRequest, SolverResponse } from '../protocol'
+import { SolverError, isSerializedSolverError, type SolverErrorCode } from './solverError'
+import type { SolverRequest, SolverResponse } from './protocol'
 
 export interface BoardResponse {
   values: Record<string, number>
@@ -44,7 +44,7 @@ const pending = new Map<number, { resolve: (r: SolverResponse) => void; reject: 
 
 function ensureWorker(): Worker {
   if (worker) return worker
-  worker = new Worker(new URL('../solver.worker.ts', import.meta.url), { type: 'module' })
+  worker = new Worker(new URL('./solver.worker.ts', import.meta.url), { type: 'module' })
   worker.addEventListener('message', (event: MessageEvent<SolverResponse>) => {
     const res = event.data
     const p = pending.get(res.id)

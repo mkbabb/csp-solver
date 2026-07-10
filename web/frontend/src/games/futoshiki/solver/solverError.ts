@@ -1,7 +1,7 @@
 /**
  * Typed error surfaced across the Futoshiki solver Worker boundary.
  *
- * Structurally identical to games/sudoku/lib/solverError.ts (the two games never
+ * Structurally identical to games/sudoku/solver/solverError.ts (the two games never
  * import each other — the boundary is enforced — so this is an owned copy, not a
  * shared import). The wasm module throws a real `js_sys::Error` with a `.code`
  * string stamped on it (`csp-solver/wasm/src/{sudoku,futoshiki}.rs::coded_error`);

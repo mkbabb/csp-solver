@@ -1,28 +1,35 @@
-import type { SerializedSolverError } from './lib/solverError'
+import type { SerializedSolverError } from './solverError'
 
-/** Requests the main thread can post to `solver.worker.ts`. */
+/**
+ * Requests the main thread can post to `solver.worker.ts` (Futoshiki).
+ *
+ * `boardSize`, never bare `size` (F5) — Sudoku's `size` is the subgrid side; here it
+ * is the board side directly. `inequalities` crosses as a SEPARATE flat `Uint32Array`
+ * of `[a0,b0,a1,b1,…]` pairs (each `a > b`), matching the wasm `solveFutoshiki` wire —
+ * kept out of the board buffer so both marshal as tier-2 bulk-`memcpy` typed arrays.
+ */
 export type SolverRequest =
   | {
       id: number
       kind: 'solve'
       board: Uint32Array
-      n: number
+      boardSize: number
+      inequalities: Uint32Array
       maxSolutions?: number
       nodeBudget?: number
     }
   | {
       id: number
       kind: 'generate'
-      n: number
-      difficulty: number // SudokuDifficulty ordinal (0/1/2)
+      boardSize: number
       seed: number
-      templates: Uint32Array
     }
   | {
       id: number
       kind: 'propagate'
       board: Uint32Array
-      n: number
+      boardSize: number
+      inequalities: Uint32Array
     }
 
 /** Responses the worker posts back, correlated by `id`. */
@@ -33,7 +40,7 @@ export type SolverResponse =
       kind: 'solve'
       solved: boolean
       solutionCount: number
-      n: number
+      boardSize: number
       solutions: Uint32Array
       backtracks: string // bigint -> string, structured-clone-safe & JSON-safe
       budgetExceeded: boolean
@@ -45,12 +52,14 @@ export type SolverResponse =
       ok: true
       kind: 'generate'
       board: Uint32Array
+      inequalities: Uint32Array
+      boardSize: number
     }
   | {
       id: number
       ok: true
       kind: 'propagate'
-      n: number
+      boardSize: number
       /** One u32 per cell; bit v set ⇔ value v (1-based) survives AC-3/GAC propagation. */
       masks: Uint32Array
     }
