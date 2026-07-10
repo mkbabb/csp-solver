@@ -51,6 +51,15 @@ all = { level = "deny", priority = -1 }
 [profile.release]
 strip = true
 
+# ── bench profile ────────────────────────────────────────────────────────────
+# bench inherits release; iai-callgrind's --toggle-collect matches by SYMBOL
+# NAME, so a stripped bench binary measures Instructions: 0 (the toggle never
+# fires and instrumentation stays off — observed live on the first iai lane
+# run). Un-strip benches only; the wheel's `.so` strip win is untouched.
+[profile.bench]
+strip = false
+debug = true
+
 # ── wasm size-release profile (Pass-2 D9) ────────────────────────────────────
 # Workspace-root ONLY. Cargo reads `[profile.*]` solely from the workspace root;
 # member-level profile sections are ignored with a warning — so this lives here,
