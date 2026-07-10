@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import HandwrittenGlyph from '@pencil/glyph/HandwrittenGlyph.vue'
-import { toDisplayChar } from '@pencil/glyph/glyphRegistry'
+import { getVariant, toDisplayChar } from '@pencil/glyph/glyphRegistry'
 
 const props = defineProps<{
   position: number
@@ -26,6 +26,10 @@ const props = defineProps<{
    *  to the accessible name so a screen reader hears the relation while arrowing the grid; the
    *  caret glyphs themselves are aria-hidden. */
   constraintLabel: string
+  /** Engine-domains pencil marks (W6 beat 9): surviving candidate values from
+   *  the solver's own propagation, present only while the peek gesture is held.
+   *  Rendered only while the cell is empty. Twin of SudokuCell's (D16). */
+  marks?: number[]
 }>()
 
 const emit = defineEmits<{
@@ -127,6 +131,25 @@ function onFocus() {
   emit('cellFocus', props.position)
 }
 
+// ── Engine-domains pencil marks (W6 beat 9) ──────────────────────────
+// The mini-grid keeps the classic pencil-mark convention: value v always sits
+// at slot v (row-major), so a candidate's *position* encodes its value. With
+// no subgrid to borrow (Futoshiki is a plain Latin square, boardSize 4..7),
+// the grid is the tightest ceil(√boardSize) rectangle — 2×2 for 4, 3 columns
+// for 5..7. Each mark reuses the hand-drawn glyph paths (variant picked per
+// cell+value so neighboring marks don't stamp identically), faint graphite.
+const showMarks = computed(
+  () => props.value === 0 && (props.marks?.length ?? 0) > 0,
+)
+function markPath(v: number): string {
+  return getVariant(toDisplayChar(v, props.boardSize), props.position * 31 + v)?.d ?? ''
+}
+const markCols = computed(() => Math.ceil(Math.sqrt(props.boardSize)))
+const marksGridStyle = computed(() => ({
+  gridTemplateColumns: `repeat(${markCols.value}, minmax(0, 1fr))`,
+  gridTemplateRows: `repeat(${Math.ceil(props.boardSize / markCols.value)}, minmax(0, 1fr))`,
+}))
+
 defineExpose({ focus: focusInput })
 </script>
 
@@ -158,6 +181,37 @@ defineExpose({ focus: focusInput })
       @blur="isFocused = false"
       class="absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
     />
+
+    <!-- Engine-domains pencil marks (W6 beat 9): the solver's propagated
+         candidate domains rendered as tiny graphite marks while the peek
+         gesture is held. Decorative (aria-hidden) — the peek laminate's own
+         status announcement carries the gesture for AT; the candidate fold
+         into the accessible name stays booked with the tranche-III row. -->
+    <div
+      v-if="showMarks"
+      class="pencil-marks pointer-events-none absolute grid"
+      :style="marksGridStyle"
+      aria-hidden="true"
+    >
+      <div v-for="v in boardSize" :key="v" class="mark-slot">
+        <svg
+          v-if="marks!.includes(v)"
+          class="mark-glyph"
+          viewBox="0 0 40 56"
+          preserveAspectRatio="xMidYMid meet"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            :d="markPath(v)"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="4.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+    </div>
 
     <!-- SVG handwritten glyph overlay -->
     <HandwrittenGlyph
@@ -195,6 +249,53 @@ defineExpose({ focus: focusInput })
 </template>
 
 <style scoped>
+/* ── Engine-domains pencil marks (W6 beat 9) ─────────────────────────
+   Faint graphite, deliberately lighter than any inked glyph — these are
+   the solver thinking in the margins, not an answer. The soft fade-in
+   keeps marks from popping as the peek lays down (opacity-only, Band C
+   one-shot; from-only keyframe so the settled opacity is the cascade
+   value — the contrast arm below still wins). Static under PRM: no
+   boil, no fade, the marks are simply there while the peek is held.
+   Twin of SudokuCell's (D16). */
+.pencil-marks {
+  inset: 12%;
+  color: var(--color-pencil-graphite, var(--grid-line-color));
+  opacity: 0.5;
+  animation: marks-fade-in 250ms ease-out both;
+}
+
+.mark-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8%;
+}
+
+.mark-glyph {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+@keyframes marks-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pencil-marks {
+    animation: none;
+  }
+}
+
+/* prefers-contrast: press the pencil a little harder, same as the ghost. */
+@media (prefers-contrast: more) {
+  .pencil-marks {
+    opacity: 0.75;
+  }
+}
+
 /* Ghost wrapper — instant show/hide for cursor-tracking responsiveness */
 .cell-ghost {
   opacity: 0;

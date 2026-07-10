@@ -11,7 +11,7 @@
  * structured-cloneable everywhere; `SolverError` is reconstructed with
  * the original `.code` on the main-thread side of the boundary.
  */
-export type SolverErrorCode = 'INVALID_INPUT' | 'BUDGET_EXCEEDED' | 'WORKER_FAILURE'
+export type SolverErrorCode = 'INVALID_INPUT' | 'BUDGET_EXCEEDED' | 'UNSAT' | 'WORKER_FAILURE'
 
 export class SolverError extends Error {
   readonly code: SolverErrorCode

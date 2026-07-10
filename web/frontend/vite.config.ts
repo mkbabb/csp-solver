@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import autoprefixer from 'autoprefixer'
 import path from 'path'
 import { defineConfig, type Plugin } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
 /**
  * `sudoku-templates` — the build rule that DERIVES
@@ -117,7 +118,65 @@ export default defineConfig({
       plugins: [autoprefixer()],
     },
   },
-  plugins: [vue(), tailwindcss(), sudokuTemplates()],
+  plugins: [
+    vue(),
+    tailwindcss(),
+    sudokuTemplates(),
+    // T2-W6 PWA-minimal (Q4's written SW strategy). generateSW precache ONLY —
+    // no runtime sync, no update toasts. `autoUpdate` = silent skipWaiting +
+    // clientsClaim; `injectRegister: 'script'` emits an external `/registerSW.js`
+    // (never an inline <script>) so the CSP `script-src 'self'` — no
+    // 'unsafe-inline' — admits the registration.
+    VitePWA({
+      registerType: 'autoUpdate',
+      strategies: 'generateSW',
+      injectRegister: 'script',
+      workbox: {
+        // MANDATORY widening (Q4): the plugin default `{js,wasm,css,html}`
+        // precaches the hashed wasm but SILENTLY DROPS the P5 self-hosted woff2
+        // faces and `favicon.svg` — an offline reload would render in system
+        // fonts, negating the fonts-before-PWA sequencing. `svg` also catches
+        // the favicon. `png` is deliberately OMITTED (the manifest icons ride
+        // in via `includeManifestIcons`, and the glob stays Q4-verbatim).
+        globPatterns: ['**/*.{js,css,html,wasm,woff2,svg}'],
+        // Plugin defaults, pinned for the record: hashed `/assets/*` URLs are
+        // the version, so they precache as `revision:null` (no `__WB_REVISION__`
+        // cache-bust query — byte-identical to the W5 immutable-cached URL).
+        dontCacheBustURLsMatching: /^assets\//,
+        // Evict superseded wasm/font hashes from Cache Storage on activate.
+        cleanupOutdatedCaches: true,
+        navigateFallback: 'index.html',
+        // NO `runtimeCaching` route on `/assets/*` — precache IS the strategy
+        // for hashed assets; a second CacheFirst route would double-store the
+        // wasm and fight precache. NO `maximumFileSizeToCacheInBytes` bump
+        // (the lean wasm ~87 KB ≪ the 2 MiB default ceiling).
+      },
+      manifest: {
+        name: 'Sudoku — CSP Solver',
+        short_name: 'Sudoku',
+        description: 'Hand-drawn Sudoku & Futoshiki, solved in your browser.',
+        // Q7: pin `start_url` so icon launches always take the clean
+        // fresh/storage precedence — never replay a captured `?board=`.
+        start_url: '/',
+        display: 'standalone',
+        // Pencil palette: cream paper (`hsl(48 15% 98%)` ≈ #faf8f5, the favicon
+        // background rect) for both the splash background and the toolbar tint.
+        background_color: '#faf8f5',
+        theme_color: '#faf8f5',
+        icons: [
+          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+          {
+            src: 'pwa-maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
+        ],
+      },
+    }),
+  ],
   // W6 Option C: `solver.worker.ts` is an ES-module Worker (`{ type: 'module' }`)
   // that top-level-imports the wasm glue — the production Worker bundle must be
   // ESM, not the default IIFE.

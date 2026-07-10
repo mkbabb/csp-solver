@@ -11,7 +11,7 @@ import { revealStaggerMs } from '@pencil/config/pencilConfig'
 import { setMurmurSeed, notifyUserEdit, resetMurmur } from '@pencil/composables/celebration'
 import { findConflicts } from '@games/sudoku/lib/conflicts'
 import { classifyCode, PAPER_NOTE_COPY } from '@games/sudoku/lib/apiError'
-import type { Difficulty, SolveState } from '@games/sudoku/types'
+import type { Difficulty, SolveState, SolveStats } from '@games/sudoku/types'
 import type { AnimationState } from '@pencil/types'
 
 const props = defineProps<{
@@ -31,11 +31,22 @@ const props = defineProps<{
   /** Optional typed error code (SolverErrorCode) for the paper-note copy.
    *  Absent → the default 'error' cause (BUDGET_EXCEEDED) copy. Wired by the union lane. */
   errorCode?: string
+  /** Stats from the last completed solve — the W6 margin stat-line (pencil hand,
+   *  understated). Null whenever the grade is idle; the composable owns the lifecycle. */
+  solveStats?: SolveStats | null
+  /** Engine-domains pencil marks (W6 beat 9): per-position surviving candidates
+   *  from the solver's own propagation. Populated only while the peek gesture is
+   *  held (opt-in — never ambient); only positions where propagation actually
+   *  pruned something are present. */
+  pencilMarks?: Record<string, number[]>
 }>()
 
 const emit = defineEmits<{
   (e: 'updateCell', position: number, value: number): void
   (e: 'retry'): void
+  (e: 'undo'): void
+  (e: 'redo'): void
+  (e: 'hint', position: number): void
 }>()
 
 const gridTemplateColumns = computed(() => `repeat(${props.boardSize}, minmax(0, 1fr))`)
@@ -178,6 +189,24 @@ function onBoardKeydown(e: KeyboardEvent) {
     case 'End':
       focusCell(e.ctrlKey ? n * n - 1 : row * n + (n - 1))
       break
+    // ── Bounded undo/redo (W6) — a sibling case, disjoint e.key from the K-peek
+    // ('k'/'Escape') and Backspace/Delete layers. Gate on ctrlKey OR metaKey (Cmd on
+    // macOS — the original native-undo phantom was reproduced via Cmd+Z); a plain 'z'
+    // falls through unhandled so it's never swallowed. Shift → redo.
+    case 'z':
+    case 'Z':
+      if (e.ctrlKey || e.metaKey) {
+        if (e.shiftKey) emit('redo')
+        else emit('undo')
+      } else handled = false
+      break
+    // ── Hint tier (W6) — 'H' fills the focused cell from the peek cache (solver-ink).
+    // Bare key only; a modified H (Ctrl/Cmd+H → browser history/hide) falls through.
+    case 'h':
+    case 'H':
+      if (e.ctrlKey || e.metaKey) handled = false
+      else emit('hint', focusedPos.value)
+      break
     default:
       handled = false
   }
@@ -213,8 +242,13 @@ watch(
       slowSolveTimer = setTimeout(() => {
         if (props.solveState === 'solving') setMargin('still sharpening the pencil…', 'graphite')
       }, 2500)
+    } else if (state === 'idle' && marginTone.value !== 'graphite') {
+      // Stale-note clear (W6, verify-14's widening): once the grade reverts, the red
+      // "check row N" AND the gold "solved it!" go stale by the same path — clear any
+      // non-graphite tone. Graphite board-load copy is not a grade; it stays.
+      setMargin('', 'graphite')
     }
-    // 'idle' / 'error' — marginalia stays quiet; a network/server fault is the note card's
+    // 'error' — marginalia stays quiet; a network/server fault is the note card's
     // domain (role=alert), never the page commenting on the puzzle (§4.3).
   },
 )
@@ -257,6 +291,22 @@ const errorNote = computed(() => {
   }
   // The default 'error' cause on the Worker (W6) path is BUDGET_EXCEEDED — the head-scratcher.
   return { text: PAPER_NOTE_COPY.budget, retryable: true }
+})
+
+// ── The stat-line (W6) — a small graphite annotation under the voice ─────────
+// "128 backtracks — 42ms": search effort in the pencil hand, understated. The
+// gold/red note stays the voice; this is the pencil's own tally in the margin.
+const statLine = computed(() => {
+  const s = props.solveStats
+  if (!s) return ''
+  const word = s.backtracks === 1 ? 'backtrack' : 'backtracks'
+  const time =
+    s.elapsedMs == null
+      ? ''
+      : s.elapsedMs < 1000
+        ? ` — ${Math.max(1, Math.round(s.elapsedMs))}ms`
+        : ` — ${(s.elapsedMs / 1000).toFixed(1)}s`
+  return `${s.backtracks} ${word}${time}`
 })
 
 // Grid animation state machine
@@ -348,6 +398,7 @@ function isRevealed(pos: number): boolean {
         :col-index="((pos - 1) % boardSize) + 1"
         :tab-index="pos - 1 === focusedPos ? 0 : -1"
         :ghost-path="cellRects[pos - 1] ?? ''"
+        :marks="pencilMarks?.[String(pos - 1)]"
         @update="onCellUpdate"
         @cell-focus="onCellFocus"
       />
@@ -363,6 +414,9 @@ function isRevealed(pos: number): boolean {
          in flow when stacked, overlay in the row regime. -->
     <div class="board-margin">
       <MarginNote :text="marginText" :tone="marginTone" />
+      <!-- The stat-line (W6): plain text, deliberately OUTSIDE the live region — the
+           voice announces the grade; the tally is there for whoever leans in. -->
+      <p v-if="statLine" :key="statLine" class="stat-line">{{ statLine }}</p>
       <SolverErrorNote
         v-if="showErrorNote"
         :text="errorNote.text"
@@ -412,6 +466,37 @@ function isRevealed(pos: number): boolean {
     inset-inline: 0.25rem;
     margin-inline: 0;
     z-index: 50;
+  }
+}
+
+/* The stat-line (W6) — the pencil's tally under the voice: hand register, one
+   size down, graphite at reduced pressure. Writes in with the note's own 250ms
+   clip wipe (Band C one-shot); instant under PRM. */
+.stat-line {
+  margin: -0.2rem 0 0;
+  font-family: var(--font-hand);
+  letter-spacing: 0.02em;
+  font-size: var(--type-small);
+  line-height: var(--type-leading-caption);
+  color: var(--color-pencil-graphite, var(--grid-line-color));
+  opacity: 0.7;
+  user-select: none;
+  animation: stat-write-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes stat-write-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-line {
+    animation: none;
+    clip-path: none;
   }
 }
 </style>

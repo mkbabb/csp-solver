@@ -9,7 +9,7 @@
  * `{code, message}` object before crossing `postMessage`, since structured-clone
  * of `Error` own-properties (`.code`) is not uniform across engines.
  */
-export type SolverErrorCode = 'INVALID_INPUT' | 'BUDGET_EXCEEDED' | 'WORKER_FAILURE'
+export type SolverErrorCode = 'INVALID_INPUT' | 'BUDGET_EXCEEDED' | 'UNSAT' | 'WORKER_FAILURE'
 
 export class SolverError extends Error {
   readonly code: SolverErrorCode

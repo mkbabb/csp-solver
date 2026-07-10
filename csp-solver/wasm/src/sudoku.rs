@@ -1,8 +1,9 @@
-//! Flat-index Sudoku wire for client-side solve + generate.
+//! Flat-index Sudoku wire for client-side solve + generate + propagate.
 //!
 //! This is the purpose-built browser surface: the frontend needs exactly
-//! two operations — solve a board and generate a puzzle — and nothing
-//! that crosses the wasm boundary here is a string-keyed map.
+//! three operations — solve a board, generate a puzzle, and propagate a
+//! board's candidate domains (the engine-domains pencil marks) — and
+//! nothing that crosses the wasm boundary here is a string-keyed map.
 //!
 //! Boards are flat, row-major `Uint32Array`s of length `(n*n)^2`, `0` for a
 //! blank cell. wasm-bindgen marshals `Vec<u32>` params / returns as
@@ -20,6 +21,7 @@
 
 use wasm_bindgen::prelude::*;
 
+use csp_solver::domain::Domain;
 use csp_solver::ordering::Ordering;
 use csp_solver::sudoku::{self, Difficulty};
 use csp_solver::{Pruning, SolveConfig};
@@ -192,6 +194,69 @@ pub fn solve_sudoku(
         backtracks,
         budget_exceeded,
     })
+}
+
+/// Constraint-propagate a flat, row-major Sudoku board (`0` = blank)
+/// WITHOUT searching, and return each cell's surviving candidate set as a
+/// bitmask — the engine-domains pencil-marks surface (W6 beat 9, landed
+/// from the P4 spike). The frontend surfaces these ONLY behind the
+/// hold-to-peek gesture: at full GAC strength most served boards collapse
+/// to all-singleton domains, so ambient marks would be a disclosure, not
+/// a hint.
+///
+/// The returned buffer has one `u32` per cell (crosses as a `Uint32Array`,
+/// same bulk-copy fast path as the boards); bit `v` is set iff value `v`
+/// (1-based) survives propagation in that cell's domain. A given cell comes
+/// back as the singleton mask `1 << value`. Values run 1..=n², so the
+/// widest surface (n = 5, 25 values) still fits a `u32` with room.
+///
+/// This runs exactly the root propagation `solve_with_given` opens with —
+/// pin the givens as permanent singleton restrictions, then AC-3 to a
+/// fixpoint (`create_sudoku_csp` finalizes, so `propagate()` auto-selects
+/// AC-3) — and never enters the search kernel: zero backtracks, no
+/// node budget needed.
+///
+/// A board whose filled cells are *contradictory* (propagation wipes some
+/// domain empty) throws a typed error (`instanceof Error`, `.code ===
+/// "UNSAT"`) rather than returning a half-propagated buffer.
+#[wasm_bindgen(js_name = propagateSudoku)]
+pub fn propagate_sudoku(board: Vec<u32>, n: u32) -> Result<Vec<u32>, JsValue> {
+    let m = (n * n) as usize;
+    let total = m * m;
+    if board.len() != total {
+        return Err(coded_error(
+            "INVALID_INPUT",
+            &format!(
+                "board length {} does not match (n*n)^2 = {total} for n = {n}",
+                board.len()
+            ),
+        ));
+    }
+
+    let (mut csp, given) = sudoku::create_sudoku_csp(&board, n);
+
+    // Pin the givens: permanent singleton restriction, the same
+    // `Domain::restrict_to` move `solve_with_given` opens with (O(1)
+    // bitmask restrict for `BitsetDomain`; the returned removed-values
+    // iterator is deliberately dropped — the mutation is eager).
+    for (var, val) in &given {
+        let _ = csp.variables[*var as usize].domain.restrict_to(val);
+    }
+
+    if csp.propagate().is_err() {
+        return Err(coded_error(
+            "UNSAT",
+            "the filled cells contradict each other — some cell has no surviving candidate",
+        ));
+    }
+
+    let masks = csp
+        .variables
+        .iter()
+        .map(|v| v.domain.iter().fold(0u32, |acc, val| acc | (1u32 << val)))
+        .collect();
+
+    Ok(masks)
 }
 
 /// Generate a flat, row-major Sudoku puzzle for `n` and `difficulty`.

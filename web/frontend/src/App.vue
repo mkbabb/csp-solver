@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
+import { ref, watch, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
 import { useSudoku } from '@games/sudoku/composables/useSudoku'
 import SudokuBoard from '@games/sudoku/SudokuBoard/SudokuBoard.vue'
 import ControlPanel from '@games/sudoku/ControlPanel/ControlPanel.vue'
@@ -35,10 +35,24 @@ function setGame(val: string | number) {
   game.value = next
   const url = new URL(window.location.href)
   url.searchParams.set('game', next)
+  // Accretion fix (W6): each game's URL params co-exist by design, but a `?board=` blob
+  // (up to ~256 chars) riding into the other game's URL defeats the clean-URL rationale
+  // that made the permalink share-on-demand. Strip BOTH games' board/size params on
+  // switch — the incoming game re-adds only its own via its composable's syncToUrl.
+  for (const key of ['board', 'size', 'difficulty', 'board_size']) url.searchParams.delete(key)
   history.replaceState(null, '', url.toString())
   // Switching away from Sudoku ends any in-flight Sudoku peek so its laminate doesn't
   // linger under the (unmounted) Sudoku scene.
   if (next !== 'sudoku') endPeek()
+}
+
+// Share act (W6): encode the current Sudoku board into `?board=`, write it to the
+// address bar (URL wins over storage on reload), and copy the full link. The clipboard
+// write may reject without a user-gesture/permission — the param write already happened,
+// so the shared link is live in the address bar regardless.
+function onShare() {
+  const url = sudoku.shareBoard()
+  navigator.clipboard?.writeText(url).catch(() => {})
 }
 
 // Dev-only tuning tool — explicit env gate, not a commented-out import. import.meta.env.DEV
@@ -88,6 +102,13 @@ function endPeek() {
   peekActive.value = false
 }
 
+// Engine-domains pencil marks (W6 beat 9): the marks ride the SAME `peekActive`
+// the laminate rides — no new handler, so K-peek/Esc isolation carries over
+// untouched. Every path that ends the peek (release, Esc, K, the startPeek
+// failure catch, a game switch via setGame → endPeek) funnels through
+// `peekActive`, so the marks can never outlive the gesture.
+watch(peekActive, (a) => sudoku.setMarksActive(a))
+
 // Keyboard: K toggles the peek, Esc closes it (both unconditional).
 function onKeydown(e: KeyboardEvent) {
   if (game.value !== 'sudoku') return // Futoshiki's K/Esc is handled in FutoshikiGame.vue
@@ -97,7 +118,10 @@ function onKeydown(e: KeyboardEvent) {
   }
   if (e.key === 'k' || e.key === 'K') {
     const t = e.target as HTMLElement | null
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+    // W6: the guard blocks exactly the roving-tabindex resting state (a board
+    // cell input) — nothing else. The old tag-based block also swallowed K from
+    // any input-shaped element outside the board.
+    if (t?.closest('.board-cells')) return
     e.preventDefault()
     if (peekActive.value) endPeek()
     else startPeek()
@@ -161,8 +185,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
               :board-generation="sudoku.boardGeneration.value"
               :difficulty="sudoku.difficulty.value"
               :error-code="sudoku.errorCode.value"
+              :solve-stats="sudoku.solveStats.value"
+              :pencil-marks="sudoku.pencilMarks.value"
               @update-cell="(pos: number, val: number) => sudoku.setCell(pos, val)"
               @retry="sudoku.solve()"
+              @undo="sudoku.undo()"
+              @redo="sudoku.redo()"
+              @hint="(pos: number) => sudoku.hintCell(pos)"
             />
             <AnswerKeyLaminate
               v-if="peekTouched"
@@ -189,6 +218,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
                   @randomize="sudoku.randomize()"
                   @clear="sudoku.clearBoard()"
                   @solve="sudoku.solve()"
+                  @share="onShare()"
                   @peek-start="startPeek()"
                   @peek-end="endPeek()"
                 />
@@ -211,6 +241,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
                   @randomize="sudoku.randomize()"
                   @clear="sudoku.clearBoard()"
                   @solve="sudoku.solve()"
+                  @share="onShare()"
                   @peek-start="startPeek()"
                   @peek-end="endPeek()"
                 />

@@ -15,6 +15,15 @@
 /** Solve lifecycle — identical to Sudoku's, minus nothing (the state machine is shared). */
 export type SolveState = 'idle' | 'solving' | 'solved' | 'failed' | 'error'
 
+/** Search stats from the last completed solve — feeds the W6 margin stat-line.
+ * The payload was already on the wire (worker `backtracks`/`solutionCount`);
+ * `elapsedMs` is the worker-measured wall clock of the wasm call. */
+export interface SolveStats {
+  backtracks: number
+  solutionCount: number
+  elapsedMs?: number
+}
+
 /**
  * A single inequality clue: `[greater, lesser]` cell positions (0-based, row-major),
  * meaning `cell[greater] > cell[lesser]`. Always orthogonally adjacent (the wire

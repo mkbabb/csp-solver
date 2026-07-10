@@ -25,6 +25,7 @@
  */
 import init, {
   generateSudoku,
+  propagateSudoku,
   solveSudoku,
   type SudokuDifficulty,
 } from '@mkbabb/csp-solver-wasm'
@@ -57,7 +58,7 @@ function ensureInit(): Promise<unknown> {
 function describeError(e: unknown): { code: SolverErrorCode; message: string } {
   if (e && typeof e === 'object' && 'code' in e && typeof (e as { code: unknown }).code === 'string') {
     const code = (e as { code: string }).code
-    if (code === 'INVALID_INPUT' || code === 'BUDGET_EXCEEDED') {
+    if (code === 'INVALID_INPUT' || code === 'BUDGET_EXCEEDED' || code === 'UNSAT') {
       return { code, message: e instanceof Error ? e.message : String(e) }
     }
   }
@@ -70,7 +71,9 @@ self.addEventListener('message', async (event: MessageEvent<SolverRequest>) => {
     await ensureInit()
 
     if (req.kind === 'solve') {
+      const t0 = performance.now()
       const result = solveSudoku(req.board, req.n, req.maxSolutions, req.nodeBudget)
+      const elapsedMs = performance.now() - t0
       const solutions = result.solutions // Uint32Array, copy out of wasm memory
       const response: SolverResponse = {
         id: req.id,
@@ -82,9 +85,26 @@ self.addEventListener('message', async (event: MessageEvent<SolverRequest>) => {
         solutions,
         backtracks: result.backtracks.toString(),
         budgetExceeded: result.budgetExceeded,
+        elapsedMs,
       }
       result.free()
       ;(self as unknown as Worker).postMessage(response, [solutions.buffer])
+      return
+    }
+
+    if (req.kind === 'propagate') {
+      // Propagate-only op (W6 beat 9 — engine-domains pencil marks): AC-3/GAC
+      // to a fixpoint, zero search. Synchronous and sub-solve cheap, but it
+      // rides the same worker so the main thread never blocks on wasm.
+      const masks = propagateSudoku(req.board, req.n)
+      const response: SolverResponse = {
+        id: req.id,
+        ok: true,
+        kind: 'propagate',
+        n: req.n,
+        masks,
+      }
+      ;(self as unknown as Worker).postMessage(response, [masks.buffer])
       return
     }
 

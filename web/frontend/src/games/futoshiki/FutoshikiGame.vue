@@ -9,7 +9,7 @@
  * agnostic by design — G5). The gesture logic lives here (the game layer); only the
  * rendered laminate is pencil.
  */
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useFutoshiki } from './composables/useFutoshiki'
 import FutoshikiBoard from './FutoshikiBoard/FutoshikiBoard.vue'
 import ControlPanel from './ControlPanel/ControlPanel.vue'
@@ -46,6 +46,22 @@ function endPeek() {
   peekActive.value = false
 }
 
+// Engine-domains pencil marks (W6 beat 9): the marks ride the SAME `peekActive`
+// the laminate rides — no new handler, so K-peek/Esc isolation carries over
+// untouched. Every path that ends the peek (release, Esc, K, the startPeek
+// failure catch, unmount on game switch) funnels through `peekActive`, so the
+// marks can never outlive the gesture. Twin of App.vue's Sudoku wiring (D16).
+watch(peekActive, (a) => futoshiki.setMarksActive(a))
+
+// Share act (W6): encode the current Futoshiki board (values + inequalities) into
+// `?board=`, write it to the address bar (URL wins over storage on reload), and copy the
+// link. The clipboard write may reject without a gesture/permission — the param write
+// already happened, so the shared link is live in the address bar regardless.
+function onShare() {
+  const url = futoshiki.shareBoard()
+  navigator.clipboard?.writeText(url).catch(() => {})
+}
+
 // Keyboard: K toggles the peek, Esc closes it (parity with Sudoku).
 function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') {
@@ -54,7 +70,9 @@ function onKeydown(e: KeyboardEvent) {
   }
   if (e.key === 'k' || e.key === 'K') {
     const t = e.target as HTMLElement | null
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+    // W6: the guard blocks exactly the roving-tabindex resting state (a board
+    // cell input) — nothing else (parity with App.vue's Sudoku handler).
+    if (t?.closest('.board-cells')) return
     e.preventDefault()
     if (peekActive.value) endPeek()
     else startPeek()
@@ -81,8 +99,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         :board-generation="futoshiki.boardGeneration.value"
         :inequalities="futoshiki.inequalities.value"
         :error-code="futoshiki.errorCode.value"
+        :solve-stats="futoshiki.solveStats.value"
+        :pencil-marks="futoshiki.pencilMarks.value"
         @update-cell="(pos: number, val: number) => futoshiki.setCell(pos, val)"
         @retry="futoshiki.solve()"
+        @undo="futoshiki.undo()"
+        @redo="futoshiki.redo()"
+        @hint="(pos: number) => futoshiki.hintCell(pos)"
       />
       <AnswerKeyLaminate
         v-if="peekTouched"
@@ -107,6 +130,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             @randomize="futoshiki.randomize()"
             @clear="futoshiki.clearBoard()"
             @solve="futoshiki.solve()"
+            @share="onShare()"
             @peek-start="startPeek()"
             @peek-end="endPeek()"
           />
@@ -127,6 +151,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             @randomize="futoshiki.randomize()"
             @clear="futoshiki.clearBoard()"
             @solve="futoshiki.solve()"
+            @share="onShare()"
             @peek-start="startPeek()"
             @peek-end="endPeek()"
           />

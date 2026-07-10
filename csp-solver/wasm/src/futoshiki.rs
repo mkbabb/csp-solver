@@ -1,10 +1,11 @@
-//! Flat-index Futoshiki wire for client-side solve + generate.
+//! Flat-index Futoshiki wire for client-side solve + generate + propagate.
 //!
 //! The purpose-built browser surface (option (b) per the wave spec — a
 //! second purpose-built module, not a second axis of variation on the
-//! generic `Csp` mirror): the frontend needs exactly two operations —
-//! solve a board and generate a puzzle — and nothing crossing the wasm
-//! boundary is a string-keyed map.
+//! generic `Csp` mirror): the frontend needs exactly three operations —
+//! solve a board, generate a puzzle, and propagate a board's candidate
+//! domains (the engine-domains pencil marks, mirroring the Sudoku wire) —
+//! and nothing crossing the wasm boundary is a string-keyed map.
 //!
 //! Boards are flat, row-major `Uint32Array`s of length `board_size²`, `0`
 //! for a blank cell. Inequalities cross as a *separate* flat
@@ -260,6 +261,51 @@ pub fn solve_futoshiki(
         backtracks,
         budget_exceeded,
     })
+}
+
+/// Constraint-propagate a flat, row-major Futoshiki board (`0` = blank)
+/// with its flat inequality-pair buffer WITHOUT searching, and return each
+/// cell's surviving candidate set as a bitmask — the engine-domains
+/// pencil-marks surface, the Futoshiki twin of `propagateSudoku` (D16).
+/// Surfaced by the frontend ONLY behind the hold-to-peek gesture, never
+/// ambient.
+///
+/// One `u32` per cell (crosses as a `Uint32Array`); bit `v` is set iff
+/// value `v` (1-based) survives propagation. Values run 1..=board_size
+/// (≤ 7 in the v1 band), so the mask fits a `u32` with room. Fixed cells
+/// are baked into the CSP as `add_equals` constraints (see
+/// [`create_futoshiki_csp`](build_futoshiki_csp)), so the root AC-3
+/// fixpoint — the same one `solve_futoshiki` opens with — pins them to
+/// singleton masks with no explicit given-pinning step.
+///
+/// A board whose filled cells are *contradictory* (propagation wipes some
+/// domain empty) throws a typed error (`instanceof Error`, `.code ===
+/// "UNSAT"`) rather than returning a half-propagated buffer; a malformed
+/// board/inequality wire rejects with `INVALID_INPUT` exactly as the
+/// solve/generate ops do.
+#[wasm_bindgen(js_name = propagateFutoshiki)]
+pub fn propagate_futoshiki(
+    board: Vec<u32>,
+    board_size: u32,
+    inequalities: Vec<u32>,
+) -> Result<Vec<u32>, JsValue> {
+    let puzzle = validated_puzzle(&board, board_size, &inequalities)?;
+
+    let mut csp = build_futoshiki_csp(&puzzle);
+    if csp.propagate().is_err() {
+        return Err(coded_error(
+            "UNSAT",
+            "the filled cells contradict each other — some cell has no surviving candidate",
+        ));
+    }
+
+    let masks = csp
+        .variables
+        .iter()
+        .map(|v| v.domain.iter().fold(0u32, |acc, val| acc | (1u32 << val)))
+        .collect();
+
+    Ok(masks)
 }
 
 /// Generate a flat, row-major Futoshiki puzzle for `board_size` at the

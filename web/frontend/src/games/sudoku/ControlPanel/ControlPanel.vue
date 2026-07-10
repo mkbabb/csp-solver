@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onBeforeUnmount } from 'vue'
-import { Eraser } from '@lucide/vue'
+import { Eraser, Share2 } from '@lucide/vue'
 import SolveIcon from '@pencil/chrome/SolveIcon.vue'
 import DiceIcon from '@pencil/chrome/DiceIcon.vue'
 import OptionSelector from '@pencil/chrome/OptionSelector/OptionSelector.vue'
@@ -52,6 +52,7 @@ const emit = defineEmits<{
   (e: 'randomize'): void
   (e: 'clear'): void
   (e: 'solve'): void
+  (e: 'share'): void
   (e: 'peek-start'): void
   (e: 'peek-end'): void
 }>()
@@ -88,7 +89,25 @@ function onDividerHoldEnd() {
 onBeforeUnmount(() => {
   if (peekTimer) clearTimeout(peekTimer)
   if (isPeeking.value) emit('peek-end')
+  if (shareConfirmTimer) clearTimeout(shareConfirmTimer)
 })
+
+// ── Share-on-demand permalink (W6): copy a `?board=` link, confirm in the washi ──
+// The parent owns the encode + address-bar write + clipboard copy (@share); this only
+// flips the washi label to a transient "copied!" so the confirmation wears the same
+// tape grammar as every other button tooltip.
+const { animating: shareAnimating, trigger: triggerShare } = useButtonAnimation(500)
+const shareConfirm = ref(false)
+let shareConfirmTimer: ReturnType<typeof setTimeout> | null = null
+function onShare() {
+  triggerShare()
+  emit('share')
+  shareConfirm.value = true
+  if (shareConfirmTimer) clearTimeout(shareConfirmTimer)
+  shareConfirmTimer = setTimeout(() => {
+    shareConfirm.value = false
+  }, 1600)
+}
 
 const expandedPanel = ref<'size' | 'difficulty'>('size')
 
@@ -206,6 +225,15 @@ function onDifficultyChange(val: string | number) {
         <ScribbleLoader v-if="loading && !solveAnimating" :size="22" class="text-muted-foreground" />
         <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
       </button>
+      <button
+        @click="onShare()"
+        :disabled="loading"
+        class="icon-btn"
+        :aria-label="shareConfirm ? 'Link copied' : 'Share board link'"
+        :title="shareConfirm ? 'Link copied' : 'Share board link'"
+      >
+        <Share2 :size="26" :class="{ 'share-pop': shareAnimating }" />
+      </button>
     </div>
   </div>
 
@@ -250,16 +278,18 @@ function onDifficultyChange(val: string | number) {
       </div>
     </div>
 
-    <!-- Hold the boiling divider to peek at the answer key (the hold surface). -->
+    <!-- Hold the boiling divider to peek at the answer key (the hold surface).
+         L14: a washi label makes the hidden affordance discoverable — same tape
+         grammar as the buttons; the native title yields to it (no double tooltip). -->
     <div
-      class="peek-hold-surface my-2"
-      title="Hold to peek at the answer key"
+      class="peek-hold-surface group relative my-2"
       @pointerdown="onDividerHoldStart()"
       @pointerup="onDividerHoldEnd()"
       @pointerleave="onDividerHoldEnd()"
       @pointercancel="onDividerHoldEnd()"
     >
       <BoilDivider />
+      <SheetWashiLabel text="hold to peek" :seed="53" />
     </div>
 
     <!-- Action buttons -->
@@ -295,6 +325,16 @@ function onDifficultyChange(val: string | number) {
         <ScribbleLoader v-if="loading && !solveAnimating" :size="22" class="text-muted-foreground" />
         <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
         <SheetWashiLabel text="Solve" :seed="37" />
+      </button>
+
+      <button
+        @click="onShare()"
+        :disabled="loading"
+        class="icon-btn group relative"
+        aria-label="Share board link"
+      >
+        <Share2 :size="26" :class="{ 'share-pop': shareAnimating }" />
+        <SheetWashiLabel :text="shareConfirm ? 'copied!' : 'share link'" :seed="71" />
       </button>
     </div>
   </div>
@@ -412,6 +452,19 @@ function onDifficultyChange(val: string | number) {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
+}
+
+/* Share pop — a small tape-press flourish on the share act (Band C one-shot). */
+.share-pop {
+  display: inline-flex;
+  animation: sharePop 500ms ease;
+}
+
+@keyframes sharePop {
+  0% { transform: scale(1) rotate(0deg); }
+  30% { transform: scale(1.18) rotate(-6deg); }
+  55% { transform: scale(0.96) rotate(4deg); }
+  100% { transform: scale(1) rotate(0deg); }
 }
 
 /* Eraser scrub animation */

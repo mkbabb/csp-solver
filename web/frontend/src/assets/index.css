@@ -21,10 +21,17 @@
  *   firacode-subset.woff2    3,624 B  — full realistic app coverage: every
  *                                       OptionSelector size/difficulty label
  *                                       (both games) + the "@mbabb" byline.
- *   patrickhand-subset.woff2 3,840 B  — full realistic app coverage: every
+ *   patrickhand-subset.woff2 4,312 B  — full realistic app coverage: every
  *                                       MarginNote status string, SolverErrorNote
  *                                       paper-note variant, SheetWashiLabel
  *                                       tooltip, + the wordmark dropdown list.
+ *                                       Re-derived at W6: +b (the backtracks
+ *                                       stat-line), +× (already live in "a fresh
+ *                                       9×9"), and the range now TRUTHS i/r —
+ *                                       the P5 range wrongly excluded both while
+ *                                       the file carried them, so "solved it!"
+ *                                       et al. rendered those two glyphs in the
+ *                                       cursive fallback.
  *
  * Total self-hosted: 17,236 B for all three faces, same-origin, immutable-
  * cached under /assets/* (public/_headers), precached by the W6 SW glob.
@@ -54,7 +61,7 @@
   font-weight: 400;
   font-display: swap;
   src: url('./fonts/patrickhand-subset.woff2') format('woff2');
-  unicode-range: U+0020-0021, U+0027, U+002D, U+002E, U+0030-0039, U+003F, U+0043, U+0052, U+0053, U+0061-0068, U+006B-0071, U+0073-007A, U+2014, U+2026;
+  unicode-range: U+0020-0021, U+0027, U+002D-002E, U+0030-0039, U+003F, U+0043, U+0052, U+0053, U+0061-0069, U+006B-0077, U+0079-007A, U+00D7, U+2014, U+2026;
 }
 
 @layer base {
@@ -390,5 +397,58 @@
 
   .logo-menu-item {
     align-content: center;
+  }
+}
+
+/* ── W6 print — the printed page is the hand-drawn board, nothing else ────────
+ * Chrome hides (controls, wordmark picker, attribution, celestial toggle,
+ * celebration, margin voice, laminate); every stroke goes true black over bare
+ * paper; the solve washes + cartoon shadows strip. Ghost rects + carets alias
+ * --grid-line-color, so one redefinition inks the whole board; the glyph rule
+ * overrides the SVG presentation attribute (user-ink blue, sparkle-rainbow
+ * givens). The stroke/shadow overrides sit in @layer base ON PURPOSE: the
+ * solve-success/failure recolors are !important in @layer utilities, and for
+ * important declarations layer precedence inverts — the EARLIER layer wins.
+ * The var redefinitions stay unlayered + last so they beat the unlayered .dark
+ * block by source order. */
+@media print {
+  .corner-right,
+  .corner-left,
+  .mobile-attribution,
+  .masthead,
+  .controls-card,
+  .mobile-board-width,
+  .celebration-star,
+  .board-margin,
+  .answer-key-laminate {
+    display: none !important;
+  }
+
+  @layer base {
+    body,
+    .bg-background,
+    .board-wrapper {
+      background: #fff !important;
+    }
+
+    .board-wrapper {
+      box-shadow: none !important;
+      animation: none !important;
+    }
+
+    .grid-line {
+      stroke: #000 !important;
+    }
+
+    .glyph-svg path {
+      stroke: #000 !important;
+      filter: none !important;
+    }
+  }
+
+  :root,
+  .dark {
+    --grid-line-color: hsl(0 0% 0%);
+    --color-user-ink: #000;
   }
 }

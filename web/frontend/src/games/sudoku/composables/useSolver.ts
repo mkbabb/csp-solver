@@ -41,6 +41,12 @@ export interface SolveResponse {
    * solution-consistent completion of the given cells — see `useSolver`'s
    * `solveBoard` doc for how this composes with `SolverError`. */
   budgetExceeded?: boolean
+  /** Search backtracks — already on the wire (worker `backtracks`, a bigint
+   * carried as string); parsed here for the W6 stat-line. */
+  backtracks: number
+  solutionCount: number
+  /** Wall-clock ms of the wasm call, measured inside the worker. */
+  elapsedMs?: number
 }
 
 const DIFFICULTY_ORDINAL: Record<Difficulty, number> = { EASY: 0, MEDIUM: 1, HARD: 2 }
@@ -162,10 +168,33 @@ export function useSolver() {
         // completion.
         values: res.solved ? toRecord(res.solutions.subarray(0, size ** 4)) : values,
         budgetExceeded: res.budgetExceeded,
+        backtracks: Number(res.backtracks),
+        solutionCount: res.solutionCount,
+        elapsedMs: res.elapsedMs,
       }
     }
     throw new SolverError('WORKER_FAILURE', 'malformed solve response')
   }
 
-  return { getRandomBoard, solveBoard }
+  /**
+   * Propagate-only (W6 beat 9 — engine-domains pencil marks): run the
+   * solver's own root AC-3/GAC over the current board and return each
+   * cell's surviving candidate bitmask — bit v set ⇔ value v (1-based)
+   * remains. No search, no node budget; a contradictory board rejects
+   * with a typed `UNSAT` `SolverError` (the caller treats that as "no
+   * marks to show", never as broken machinery).
+   */
+  async function propagateBoard(
+    values: Record<string, number>,
+    size: number,
+  ): Promise<Uint32Array> {
+    const board = toFlat(size, values)
+    const id = nextId++
+    const res = await call({ id, kind: 'propagate', board, n: size }, [board.buffer])
+    throwIfError(res)
+    if (res.ok && res.kind === 'propagate') return res.masks
+    throw new SolverError('WORKER_FAILURE', 'malformed propagate response')
+  }
+
+  return { getRandomBoard, solveBoard, propagateBoard }
 }

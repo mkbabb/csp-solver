@@ -30,6 +30,12 @@ export interface SolveResponse {
   /** `true` when the search gave up at its node budget without a solution-consistent
    * completion — distinct from provable UNSAT (`solved: false`). */
   budgetExceeded?: boolean
+  /** Search backtracks — already on the wire (worker `backtracks`, a bigint
+   * carried as string); parsed here for the W6 stat-line. */
+  backtracks: number
+  solutionCount: number
+  /** Wall-clock ms of the wasm call, measured inside the worker. */
+  elapsedMs?: number
 }
 
 let worker: Worker | null = null
@@ -137,10 +143,38 @@ export function useSolver() {
         solved: res.solved,
         values: res.solved ? toRecord(res.solutions.subarray(0, cells)) : values,
         budgetExceeded: res.budgetExceeded,
+        backtracks: Number(res.backtracks),
+        solutionCount: res.solutionCount,
+        elapsedMs: res.elapsedMs,
       }
     }
     throw new SolverError('WORKER_FAILURE', 'malformed solve response')
   }
 
-  return { getRandomBoard, solveBoard }
+  /**
+   * Propagate-only (W6 beat 9 — engine-domains pencil marks, twin of the
+   * Sudoku composable's): run the solver's own root AC-3/GAC over the current
+   * board + inequality furniture and return each cell's surviving candidate
+   * bitmask — bit v set ⇔ value v (1-based) remains. No search, no node
+   * budget; a contradictory board rejects with a typed `UNSAT` `SolverError`
+   * (the caller treats that as "no marks to show", never as broken machinery).
+   */
+  async function propagateBoard(
+    values: Record<string, number>,
+    boardSize: number,
+    inequalities: Inequality[],
+  ): Promise<Uint32Array> {
+    const board = toFlatBoard(boardSize, values)
+    const flatIneqs = toFlatInequalities(inequalities)
+    const id = nextId++
+    const res = await call(
+      { id, kind: 'propagate', board, boardSize, inequalities: flatIneqs },
+      [board.buffer, flatIneqs.buffer],
+    )
+    throwIfError(res)
+    if (res.ok && res.kind === 'propagate') return res.masks
+    throw new SolverError('WORKER_FAILURE', 'malformed propagate response')
+  }
+
+  return { getRandomBoard, solveBoard, propagateBoard }
 }

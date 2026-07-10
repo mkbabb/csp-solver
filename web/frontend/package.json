@@ -10,13 +10,14 @@
     "lint": "prettier --write src/",
     "lint:eslint": "eslint .",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:pwa": "npm run build && node e2e/pwa-offline-smoke.mjs"
   },
   "dependencies": {
+    "@lucide/vue": "^1.24.0",
     "@mkbabb/csp-solver-wasm": "file:../../csp-solver/wasm/pkg",
     "@mkbabb/pencil-boil": "^0.7.0",
     "@tailwindcss/vite": "^4.3.2",
-    "@lucide/vue": "^1.24.0",
     "@vueuse/core": "^14.3.0",
     "tailwindcss": "^4.3.2",
     "vue": "^3.5.39"
@@ -35,6 +36,7 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.63.0",
     "vite": "^8.1.4",
+    "vite-plugin-pwa": "^1.3.0",
     "vue-eslint-parser": "^10.4.1",
     "vue-tsc": "^3.3.7"
   }

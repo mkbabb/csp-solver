@@ -4,7 +4,10 @@ const STORAGE_KEY = 'sudoku-board-state'
 const VALID_SIZES = [2, 3, 4]
 const VALID_DIFFICULTIES: Difficulty[] = ['EASY', 'MEDIUM', 'HARD']
 
-export type InitSource = 'fresh' | 'url-only' | 'storage-only' | 'url+storage'
+// 'url-board' — a shared `?board=` permalink was decoded into a full board and wins
+// over storage (URL wins on load). Distinct from 'url-only' (bare size/difficulty) so
+// the composable knows to RESTORE the synthesized board rather than auto-randomize.
+export type InitSource = 'fresh' | 'url-only' | 'storage-only' | 'url+storage' | 'url-board'
 
 export interface PersistedBoard {
   size: number
@@ -62,10 +65,97 @@ function randomDifficulty(): Difficulty {
   return VALID_DIFFICULTIES[Math.floor(Math.random() * VALID_DIFFICULTIES.length)]
 }
 
+// ── Share-on-demand permalink codec (`?board=`) ─────────────────────────
+// base64url of `${size}.${cells}` where `cells` is one base-36 char per cell
+// value (0 = empty), length = size**4. Self-describing (carries its own size) so
+// a board-only link — no `?size=` — still loads, and a mismatch fails closed.
+
+function toBase64Url(s: string): string {
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function fromBase64Url(s: string): string {
+  const rem = s.length % 4
+  const padded = rem ? s + '='.repeat(4 - rem) : s
+  return atob(padded.replace(/-/g, '+').replace(/_/g, '/'))
+}
+
+export function encodeBoard(
+  size: number,
+  values: Record<string, number>,
+  totalCells: number,
+): string {
+  let cells = ''
+  for (let i = 0; i < totalCells; i++) cells += (values[String(i)] ?? 0).toString(36)
+  return toBase64Url(`${size}.${cells}`)
+}
+
+// Synthesize a PersistedBoard from a decoded `?board=` — the only board-shaped
+// object ever built from URL content (localStorage is the only other source).
+// Non-zero cells become the givens (share = "solve this configuration"). Returns
+// null — FAILING CLOSED — on any malformed/out-of-range/size-mismatched blob so a
+// corrupt link degrades to the size/difficulty-only path, never a corrupt board.
+function decodeBoardParam(
+  urlSize: number | null,
+  urlDifficulty: Difficulty | null,
+): PersistedBoard | null {
+  const raw = new URLSearchParams(window.location.search).get('board')
+  if (!raw) return null
+  let payload: string
+  try {
+    payload = fromBase64Url(raw)
+  } catch {
+    return null
+  }
+  const dot = payload.indexOf('.')
+  if (dot < 1) return null
+  const size = parseInt(payload.slice(0, dot), 10)
+  if (!VALID_SIZES.includes(size)) return null
+  // (c) a `?size=` that disagrees with the board's own size fails closed.
+  if (urlSize !== null && urlSize !== size) return null
+  const cells = payload.slice(dot + 1)
+  const totalCells = size ** 4
+  // (c) a length mismatch (wrong cell count for the declared size) fails closed.
+  if (cells.length !== totalCells) return null
+  const maxVal = size ** 2
+  const values: Record<string, number> = {}
+  const givenCells: string[] = []
+  for (let i = 0; i < totalCells; i++) {
+    const v = parseInt(cells[i]!, 36)
+    if (!Number.isInteger(v) || v < 0 || v > maxVal) return null
+    values[String(i)] = v
+    if (v !== 0) givenCells.push(String(i))
+  }
+  return {
+    size,
+    difficulty: urlDifficulty ?? 'EASY',
+    values,
+    givenCells,
+    originalGivenCells: givenCells,
+    overriddenCells: [],
+    solvedValues: {},
+    boardGeneration: 1,
+  }
+}
+
 export function resolveInitialState(): InitialState {
   const url = parseUrlParams()
+  // (b) a shared board decoded into a PersistedBoard-shaped object (or null, failed closed).
+  const boardState = decodeBoardParam(url.size, url.difficulty)
   const persisted = loadPersistedBoard()
-  const hasUrl = url.size !== null || url.difficulty !== null
+  // (a) hasUrl ORs in a VALID board so a board-only link isn't silently dropped
+  // (an invalid board already decoded to null → falls through to size/difficulty).
+  const hasUrl = url.size !== null || url.difficulty !== null || boardState !== null
+
+  // URL wins over storage: a valid shared board takes precedence over any saved game.
+  if (boardState) {
+    return {
+      size: boardState.size,
+      difficulty: boardState.difficulty,
+      source: 'url-board',
+      persisted: boardState,
+    }
+  }
 
   if (hasUrl && persisted) {
     const urlSize = url.size ?? persisted.size
@@ -108,6 +198,28 @@ export function syncToUrl(size: number, difficulty: Difficulty) {
   const url = new URL(window.location.href)
   url.searchParams.set('size', String(size))
   url.searchParams.set('difficulty', difficulty)
+  history.replaceState(null, '', url.toString())
+}
+
+// Write `?board=` on an explicit share act only (never ambient — that would defeat
+// the clean size/difficulty surface). Separate from syncToUrl, which by design only
+// ever `.set()`s its own keys and never deletes.
+export function writeBoardToUrl(encoded: string) {
+  const url = new URL(window.location.href)
+  url.searchParams.set('board', encoded)
+  history.replaceState(null, '', url.toString())
+}
+
+// Drop `?board=` on Randomize/Clear — the shared configuration is stale the moment a
+// new board is dealt. A dedicated `.delete()` helper: syncToUrl never deletes keys.
+// Only the ACTIVE game manages `?board=`: on a Futoshiki deep-link, App.vue still
+// instantiates useSudoku in the background and its fire-and-forget init randomize would
+// otherwise nuke Futoshiki's shared board before FutoshikiGame even mounts.
+export function dropBoardParam() {
+  const url = new URL(window.location.href)
+  if (url.searchParams.get('game') === 'futoshiki') return
+  if (!url.searchParams.has('board')) return
+  url.searchParams.delete('board')
   history.replaceState(null, '', url.toString())
 }
 

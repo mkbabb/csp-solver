@@ -24,6 +24,13 @@ export type SolverRequest =
       boardSize: number
       seed: number
     }
+  | {
+      id: number
+      kind: 'propagate'
+      board: Uint32Array
+      boardSize: number
+      inequalities: Uint32Array
+    }
 
 /** Responses the worker posts back, correlated by `id`. */
 export type SolverResponse =
@@ -37,6 +44,8 @@ export type SolverResponse =
       solutions: Uint32Array
       backtracks: string // bigint -> string, structured-clone-safe & JSON-safe
       budgetExceeded: boolean
+      /** Wall-clock ms of the wasm solve call, measured inside the worker (W6 stat-line). */
+      elapsedMs: number
     }
   | {
       id: number
@@ -45,5 +54,13 @@ export type SolverResponse =
       board: Uint32Array
       inequalities: Uint32Array
       boardSize: number
+    }
+  | {
+      id: number
+      ok: true
+      kind: 'propagate'
+      boardSize: number
+      /** One u32 per cell; bit v set ⇔ value v (1-based) survives AC-3/GAC propagation. */
+      masks: Uint32Array
     }
   | ({ id: number; ok: false } & SerializedSolverError)
