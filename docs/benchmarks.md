@@ -49,12 +49,31 @@ Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deploye
 ## Reproducing
 
 ```bash
-# Criterion benchmarks (Sudoku, Queens, map coloring, lattice)
+# Criterion benchmarks (Sudoku, Queens, map coloring, lattice, assignment,
+# cost_finite_domain). The lattice bench runs each workload under BOTH propagation
+# paths: the default groups (adjacency built → AC-3) and the `*_sweep` groups
+# (no finalize() → monotonic sweep, bbnf's actual path).
 cargo bench
+
+# Criterion --save-baseline discipline (MANDATORY for any before/after claim):
+# criterion's default compares each run against its OWN previous run, so a solo
+# `cargo bench` reports self-referential deltas — the phantom "−17%" self-baseline
+# pathology. Always name a saved baseline and compare against it, same box:
+cargo bench -- --save-baseline before      # on the base commit
+#   …apply the change…
+cargo bench -- --baseline before           # compare vs the NAMED baseline
+# Never quote a criterion delta that wasn't taken against a named --baseline on the
+# same host in the same session.
 
 # Queens-bench ground-truth asserts (92 / 14200) — the only harness that encodes
 # solution-count ground truth; cargo test cannot see bench asserts
 cargo bench -p csp-solver --bench queens -- --test
+
+# Deterministic instruction-count baseline (Linux/CI only — Valgrind can't run on
+# arm64-macOS). The `iai` CI lane (.github/workflows/ci.yml) runs this under
+# callgrind; instruction counts are a pure function of the compiled binary, so the
+# delta is exactly 0 on an unchanged binary (P6: 1,585,722 across 3 runners).
+cargo bench -p csp-solver --bench iai_queens   # needs valgrind + iai-callgrind-runner
 
 # Wall-clock Sudoku timing + backtrack/propagation counts
 cargo run --release --example time_sudoku

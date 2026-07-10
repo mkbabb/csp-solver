@@ -18,7 +18,7 @@ use csp_solver::domain::lattice::BitsetLatticeDomain;
 // After propagation, v_{N-1} should contain the union of all seeds.
 // ---------------------------------------------------------------------------
 
-fn build_acyclic_chain(n: usize) -> Csp<BitsetLatticeDomain> {
+fn build_acyclic_chain(n: usize, finalize: bool) -> Csp<BitsetLatticeDomain> {
     let mut csp = Csp::new();
 
     // Each variable starts with a single-bit seed: variable i gets bit i.
@@ -49,7 +49,12 @@ fn build_acyclic_chain(n: usize) -> Csp<BitsetLatticeDomain> {
         ));
     }
 
-    csp.finalize();
+    // finalize() builds the adjacency graph, which routes propagate() to AC-3.
+    // Dropping it leaves propagate() on the monotonic sweep — bbnf's actual path
+    // (it never calls finalize() over its lattice-domain IR passes).
+    if finalize {
+        csp.finalize();
+    }
     csp
 }
 
@@ -66,7 +71,7 @@ fn build_acyclic_chain(n: usize) -> Csp<BitsetLatticeDomain> {
 // should contain the union of all seeds (the complete set).
 // ---------------------------------------------------------------------------
 
-fn build_cyclic_ring(n: usize) -> Csp<BitsetLatticeDomain> {
+fn build_cyclic_ring(n: usize, finalize: bool) -> Csp<BitsetLatticeDomain> {
     let mut csp = Csp::new();
 
     let vars: Vec<VarId> = (0..n)
@@ -91,7 +96,12 @@ fn build_cyclic_ring(n: usize) -> Csp<BitsetLatticeDomain> {
         ));
     }
 
-    csp.finalize();
+    // finalize() builds the adjacency graph, which routes propagate() to AC-3.
+    // Dropping it leaves propagate() on the monotonic sweep — bbnf's actual path
+    // (it never calls finalize() over its lattice-domain IR passes).
+    if finalize {
+        csp.finalize();
+    }
     csp
 }
 
@@ -105,7 +115,7 @@ fn build_cyclic_ring(n: usize) -> Csp<BitsetLatticeDomain> {
 // Total variables: 2^(depth+1) - 1
 // ---------------------------------------------------------------------------
 
-fn build_first_set_tree(depth: usize) -> Csp<BitsetLatticeDomain> {
+fn build_first_set_tree(depth: usize, finalize: bool) -> Csp<BitsetLatticeDomain> {
     let mut csp = Csp::new();
     let num_nodes = (1usize << (depth + 1)) - 1;
 
@@ -151,7 +161,12 @@ fn build_first_set_tree(depth: usize) -> Csp<BitsetLatticeDomain> {
         ));
     }
 
-    csp.finalize();
+    // finalize() builds the adjacency graph, which routes propagate() to AC-3.
+    // Dropping it leaves propagate() on the monotonic sweep — bbnf's actual path
+    // (it never calls finalize() over its lattice-domain IR passes).
+    if finalize {
+        csp.finalize();
+    }
     csp
 }
 
@@ -159,60 +174,70 @@ fn build_first_set_tree(depth: usize) -> Csp<BitsetLatticeDomain> {
 // Benchmarks
 // ---------------------------------------------------------------------------
 
+// Each builder is run under BOTH propagation paths:
+//   finalize == true  → adjacency built → propagate() dispatches to AC-3.
+//   finalize == false → no adjacency    → propagate() dispatches to the monotonic
+//                                          sweep, which is bbnf's real path over
+//                                          its lattice-domain IR passes (it never
+//                                          calls finalize()). The `_sweep` groups
+//                                          are the sweep-path variants added at
+//                                          T2-W3 so the sweep kernel is benched,
+//                                          not just AC-3.
+
 fn bench_acyclic_chain(c: &mut Criterion) {
-    let mut group = c.benchmark_group("lattice_acyclic_chain");
-
-    for &n in &[20usize, 50, 100] {
-        group.bench_function(BenchmarkId::from_parameter(n), |b| {
-            b.iter(|| {
-                let mut csp = build_acyclic_chain(n);
-                let result = csp.propagate();
-                assert!(result.is_ok());
-                result
-            });
-        });
-    }
-
-    group.finish();
-}
-
-fn bench_cyclic_ring(c: &mut Criterion) {
-    let mut group = c.benchmark_group("lattice_cyclic_ring");
-
-    for &n in &[20usize, 50, 100, 128] {
-        group.bench_function(BenchmarkId::from_parameter(n), |b| {
-            b.iter(|| {
-                let mut csp = build_cyclic_ring(n);
-                let result = csp.propagate();
-                assert!(result.is_ok());
-                result
-            });
-        });
-    }
-
-    group.finish();
-}
-
-fn bench_first_set_tree(c: &mut Criterion) {
-    let mut group = c.benchmark_group("lattice_first_set_tree");
-
-    // depth=4 -> 31 nodes, depth=5 -> 63, depth=6 -> 127
-    for &depth in &[4usize, 5, 6] {
-        let num_nodes = (1usize << (depth + 1)) - 1;
-        group.bench_function(
-            BenchmarkId::new("depth", format!("{depth}_({num_nodes}n)")),
-            |b| {
+    for (suffix, finalize) in [("", true), ("_sweep", false)] {
+        let mut group = c.benchmark_group(format!("lattice_acyclic_chain{suffix}"));
+        for &n in &[20usize, 50, 100] {
+            group.bench_function(BenchmarkId::from_parameter(n), |b| {
                 b.iter(|| {
-                    let mut csp = build_first_set_tree(depth);
+                    let mut csp = build_acyclic_chain(n, finalize);
                     let result = csp.propagate();
                     assert!(result.is_ok());
                     result
                 });
-            },
-        );
+            });
+        }
+        group.finish();
     }
+}
 
-    group.finish();
+fn bench_cyclic_ring(c: &mut Criterion) {
+    for (suffix, finalize) in [("", true), ("_sweep", false)] {
+        let mut group = c.benchmark_group(format!("lattice_cyclic_ring{suffix}"));
+        for &n in &[20usize, 50, 100, 128] {
+            group.bench_function(BenchmarkId::from_parameter(n), |b| {
+                b.iter(|| {
+                    let mut csp = build_cyclic_ring(n, finalize);
+                    let result = csp.propagate();
+                    assert!(result.is_ok());
+                    result
+                });
+            });
+        }
+        group.finish();
+    }
+}
+
+fn bench_first_set_tree(c: &mut Criterion) {
+    for (suffix, finalize) in [("", true), ("_sweep", false)] {
+        let mut group = c.benchmark_group(format!("lattice_first_set_tree{suffix}"));
+        // depth=4 -> 31 nodes, depth=5 -> 63, depth=6 -> 127
+        for &depth in &[4usize, 5, 6] {
+            let num_nodes = (1usize << (depth + 1)) - 1;
+            group.bench_function(
+                BenchmarkId::new("depth", format!("{depth}_({num_nodes}n)")),
+                |b| {
+                    b.iter(|| {
+                        let mut csp = build_first_set_tree(depth, finalize);
+                        let result = csp.propagate();
+                        assert!(result.is_ok());
+                        result
+                    });
+                },
+            );
+        }
+        group.finish();
+    }
 }
 
 criterion_group!(

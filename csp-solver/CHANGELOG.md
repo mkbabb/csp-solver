@@ -14,6 +14,35 @@ general-purpose `csp_solver::assignment()` / `AssignmentBuilder` surface morph
 was built on stays here; `morph` now consumes it as an ordinary crates.io
 dependency (`csp-solver = "0.2"`).
 
+## 0.3.0 — 2026-07-10 (tranche-2, W3 — substrate excision)
+
+### crates.io
+
+- **`csp-solver@0.3.0`** — dead-substrate excision. Breaking (pre-1.0 minor-bump
+  class — a `0.2.1` would stay inside the `^0.2` (`>=0.2.0,<0.3.0`) compat range
+  and let the crates.io `morph` consumer (`csp-solver = "0.2"`) silently pick up
+  the removals; the `0.3.0` minor bump keeps that contract honest):
+  - Removed the deferred-driver substrate: `solver/restart.rs` (Luby),
+    `solver/heuristic.rs` (conflict-history weighting), `solver/nogoods.rs`
+    (`NogoodStore`) and their `solver/mod.rs` `pub mod` lines. The restart /
+    nogood / CHS driver was never wired onto the unified kernel; the modules
+    were inert public API.
+  - `Ordering::Chs` deleted (its only distinction from `Mrv` was the dynamic
+    conflict-history weighting that lived in the now-removed `heuristic.rs`;
+    weights are frozen at 1.0, so `Chs ≡ Mrv` in behavior).
+  - `SolveConfig::restarts` field deleted (accepted-but-inert flag; breaks
+    exhaustive struct literals — spread `..Default::default()`).
+  - The `SoftConstraint` island removed: the `SoftConstraint` trait,
+    `SoftLambdaConstraint` (`constraint/soft.rs`), `ConstraintEnum::Soft`, and
+    `Csp::add_soft_constraint`. Branch-and-bound now scores domain costs only.
+    `OptimizationMode` / `CostDomain` / `DomainCostEval` are **kept** — bbnf's
+    live `MinimizeCost` path draws cost from `CostDomain::cost` via
+    `DomainCostEval`, not from soft penalties.
+  - `Variable::clear_log` / `Variable::reset_to` deleted (dead restart-driver
+    helpers with no remaining caller).
+  - Tests: `tests/optimize.rs` trimmed to the `CostDomain` cases;
+    `tests/nogoods.rs` and `tests/restart_nogood_soundness.rs` deleted.
+
 ## 0.2.0 — 2026-07-06 (grand-uplift tranche, W1–W12)
 
 ### crates.io

@@ -22,7 +22,7 @@
 #   4. py compile         -> py-compile (cargo check --features py under Python 3.13 — pyo3 0.29-tested floor, not a hard ceiling)
 #   5. py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in web/api)
 #   6. wasm               -> wasm       (wasm-pack test --node + clippy --target wasm32)
-#   7. twiggy budgets     -> twiggy     (full module fail>240 KB / warn>215 KB)
+#   7. twiggy budgets     -> twiggy     (full module fail>240 KB / warn>230 KB)
 #   8. frontend           -> frontend   (npm ci --dry-run; npm ci; vue-tsc --noEmit)
 #
 # Build posture (STANDING, per the T15 refutation — synthesis-pass3.md §1 #14):
@@ -237,7 +237,7 @@ jobs:
 
     # ---------------------------------------------------------------- Lane 7
     # twiggy budgets — measured artifact bands (Pass-2 prototype 6). Full module
-    # FAIL >240 KB / WARN >215 KB on the raw .wasm (decimal KB, matching prototype
+    # FAIL >240 KB / WARN >230 KB on the raw .wasm (decimal KB, matching prototype
     # 6's "92,897 B raw ~= 93 KB" convention). The separate ~93 KB lean-sudoku
     # budget is RESERVED, not enforced here: no lean build target exists yet
     # (csp-solver/wasm has no [features]/full-mirror flag; serde deps are not
@@ -272,13 +272,17 @@ jobs:
             # --profile wasm-release is REQUIRED: plain release yields
             # 270,179 B (over the 240 KB fail budget); wasm-release
             # (workspace-root profile, opt-level=z, panic=abort) yields
+            # 220,554 B full / 87,763 B lean (T2-W3 re-measure: the assignment
+            # Hungarian dispatch consumes the hungarian crate, whose transitive
+            # ndarray grows the DEFAULT-feature full module +10,242 B; the
+            # deployed lean artifact excludes assignment entirely). Prior:
             # 210,312 B full / 87,475 B lean (T2-W1 re-measure on stable +
             # wasm-bindgen 0.2.126, dtolnay/rust-toolchain@stable, this tree;
             # supersedes the W6 gate record of 211,639 B full / 87,853 B lean —
             # both bands hold with headroom, no rationale change needed).
             - name: wasm-pack build (full module)
               run: wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release
-            - name: twiggy top + raw-size budget (fail >240 KB / warn >215 KB)
+            - name: twiggy top + raw-size budget (fail >240 KB / warn >230 KB)
               run: |
                   set -euo pipefail
                   WASM=csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
@@ -289,8 +293,8 @@ jobs:
                   if [ "$RAW" -gt 240000 ]; then
                     echo "::error::wasm full module ${RAW} B exceeds the 240 KB fail budget"
                     exit 1
-                  elif [ "$RAW" -gt 215000 ]; then
-                    echo "::warning::wasm full module ${RAW} B exceeds the 215 KB warn threshold"
+                  elif [ "$RAW" -gt 230000 ]; then
+                    echo "::warning::wasm full module ${RAW} B exceeds the 230 KB warn threshold"
                   fi
             # Lean deploy artifact (W6): sudoku-only surface, full-mirror
             # compiled out — the module the frontend Worker actually ships.
@@ -301,7 +305,7 @@ jobs:
                   set -euo pipefail
                   WASM=csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
                   RAW=$(wc -c < "$WASM")
-                  echo "lean artifact raw size: ${RAW} B (measured 87,475 B; fail >93,000)"
+                  echo "lean artifact raw size: ${RAW} B (measured 87,763 B; fail >93,000)"
                   if [ "$RAW" -gt 93000 ]; then
                     echo "::error::lean wasm artifact ${RAW} B exceeds the 93 KB band"
                     exit 1
@@ -427,3 +431,112 @@ jobs:
                   name: playwright-report
                   path: web/frontend/playwright-report
                   retention-days: 7
+
+    # ---------------------------------------------------------------- Lane 10
+    # iai — deterministic instruction-count baseline for the solver hot path
+    # (P6 ADOPT, Tranche-II Pass-2). arm64-macOS can't run Valgrind, so callgrind
+    # counts are Linux/CI-only; `benches/iai_queens.rs` measures one fully-
+    # deterministic 8-queens first-solution solve (AC-3 + FailFirst) under
+    # callgrind. Instruction counts are a pure function of the compiled binary, so
+    # the run-to-run delta is exactly 0 on an unchanged binary — P6 proved
+    # 1,585,722 instructions across 3 ephemeral runners at 0.000000% delta.
+    #
+    # Budget: Valgrind is apt-installed (~15 s) and iai-callgrind-runner is
+    # cargo-install-cached in ~/.cargo/bin. Cache-cold the runner build dominates
+    # (~2 min total); cache-warm the whole lane is ~40 s.
+    #
+    # CARGO_TERM_COLOR + IAI_CALLGRIND_COLOR are pinned to `never` for the WHOLE
+    # job so no ANSI escape (the grey `\e[90m`) smuggles a bare "90" into the
+    # numeric gate ahead of the real Instructions count (the P6 run-1/2 parser
+    # bug). The gate ALSO ANSI-strips + anchors the digit-run to the
+    # `Instructions:` label — belt and suspenders.
+    iai:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        env:
+            RUST_BACKTRACE: 1
+            IAI_BENCH: iai_queens
+            IAI_CALLGRIND_COLOR: never
+            CARGO_TERM_COLOR: never
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust stable toolchain
+              uses: dtolnay/rust-toolchain@stable
+            - name: "Install Valgrind (callgrind)"
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y valgrind
+                  valgrind --version
+            - name: Cache cargo registry + target (+ ~/.cargo/bin for the runner)
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      ~/.cargo/bin
+                      target
+                  key: cargo-iai-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: "Install iai-callgrind-runner (must match the 0.16.1 dev-dep)"
+              run: |
+                  if ! command -v iai-callgrind-runner >/dev/null 2>&1; then
+                    cargo install iai-callgrind-runner --version 0.16.1 --locked
+                  fi
+                  iai-callgrind-runner --version || true
+            - name: "Run 1 — establish the callgrind baseline"
+              run: |
+                  set -o pipefail
+                  cargo bench -p csp-solver --bench "$IAI_BENCH" 2>&1 | tee run1.log
+            - name: "Run 2 — re-measure the identical binary"
+              run: |
+                  set -o pipefail
+                  cargo bench -p csp-solver --bench "$IAI_BENCH" 2>&1 | tee run2.log
+            - name: "GATE — parse counts + assert <1% run-to-run delta"
+              run: |
+                  set -euo pipefail
+                  extract() {
+                    # Strip any ANSI escapes FIRST (belt-and-suspenders vs the
+                    # IAI_CALLGRIND_COLOR=never env), then take the first integer
+                    # after the "Instructions:" label — never a colour-code digit.
+                    sed -E $'s/\x1b\\[[0-9;]*[mK]//g' "$1" \
+                      | grep -E 'Instructions:' | head -1 \
+                      | sed -E 's/.*Instructions:[^0-9]*([0-9][0-9,]*).*/\1/' \
+                      | tr -d ','
+                  }
+                  I1="$(extract run1.log || true)"
+                  I2="$(extract run2.log || true)"
+                  echo "run1 instructions: '${I1}'"
+                  echo "run2 instructions: '${I2}'"
+                  if [ -z "${I1}" ] || [ -z "${I2}" ]; then
+                    echo "::error::could not parse an Instructions count from a run log — the lane did not produce callgrind output"
+                    echo "----- run1.log tail -----"; tail -40 run1.log || true
+                    echo "----- run2.log tail -----"; tail -40 run2.log || true
+                    exit 1
+                  fi
+                  DELTA_PCT="$(awk -v a="$I1" -v b="$I2" 'BEGIN{ if(a==0){print "inf"} else {d=(b-a)/a*100; if(d<0)d=-d; printf "%.6f", d} }')"
+                  echo "delta: ${DELTA_PCT}%"
+                  {
+                    echo "## iai — P6 instruction-count gate";
+                    echo "";
+                    echo "| metric | value |";
+                    echo "|---|---|";
+                    echo "| run1 instructions | ${I1} |";
+                    echo "| run2 instructions | ${I2} |";
+                    echo "| run-to-run delta | ${DELTA_PCT}% |";
+                    echo "| gate (<1%) | $([ "$(awk -v d="$DELTA_PCT" 'BEGIN{print (d<1)?1:0}')" = 1 ] && echo PASS || echo FAIL) |";
+                  } >> "$GITHUB_STEP_SUMMARY"
+                  PASS="$(awk -v d="$DELTA_PCT" 'BEGIN{print (d<1)?1:0}')"
+                  if [ "$PASS" != "1" ]; then
+                    echo "::error::instruction-count delta ${DELTA_PCT}% >= 1% — not deterministic"
+                    exit 1
+                  fi
+                  echo "GATE PASS — deterministic instruction counts (${DELTA_PCT}% delta)"
+            - name: "Upload logs + callgrind out-files"
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: iai-evidence
+                  path: |
+                      run1.log
+                      run2.log
+                      target/iai/**
+                  if-no-files-found: warn

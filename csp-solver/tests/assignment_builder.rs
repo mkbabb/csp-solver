@@ -170,18 +170,20 @@ fn node_budget_exhausted_returns_budget_exceeded() {
     // Scoring even one complete assignment on a 6×6 requires descending
     // six search frames (the budget is checked once per frame, before the
     // node is counted), so a one-node budget aborts at the second frame —
-    // long before any leaf. With no best-so-far solution to hand back,
-    // `.solve()` must surface the dedicated `BudgetExceeded` variant: not
+    // long before any leaf. With no best-so-far solution to hand back, the
+    // B&B path must surface the dedicated `BudgetExceeded` variant: not
     // `Infeasible` (the problem is trivially satisfiable via the SENTINEL
     // escape) and not a silent `Ok`. This pins the R8 disambiguation that
-    // replaced the earlier both-outcomes-blessed contract.
+    // replaced the earlier both-outcomes-blessed contract. Forced via
+    // `solve_branch_and_bound` — this instance is group-free/pin-free, so
+    // plain `.solve()` would dispatch to the budget-free LAP path.
     let result = assignment()
         .rows(6)
         .cols(6)
         .cost(|_, _| 1.0)
         .unmatch_penalty(2.0)
         .node_budget(Some(1))
-        .solve();
+        .solve_branch_and_bound();
 
     assert!(
         matches!(result, Err(AssignmentError::BudgetExceeded)),

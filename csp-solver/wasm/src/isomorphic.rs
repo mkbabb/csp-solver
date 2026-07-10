@@ -251,10 +251,8 @@ impl From<&SolveConfig> for RustSolveConfig {
             max_solutions: c.max_solutions,
             optimization_mode: c.optimization_mode.into(),
             node_budget: c.node_budget,
-            // Neither cancellation nor Luby restarts are exposed through the
-            // wasm ABI (no cross-thread timeout in a single-threaded worker;
-            // restarts stay opt-in and off for the deterministic sudoku wire).
-            restarts: false,
+            // Cancellation is not exposed through the wasm ABI (no cross-thread
+            // timeout in a single-threaded worker).
             cancel: None,
         }
     }

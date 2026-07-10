@@ -1,6 +1,6 @@
 [package]
 name = "csp-solver"
-version = "0.2.0"
+version = "0.3.0"
 edition.workspace = true
 rust-version.workspace = true
 description = "Generic constraint satisfaction problem solver with backtracking, AC-3 constraint propagation, and ordering heuristics."
@@ -31,11 +31,22 @@ include_dir = { workspace = true }
 # Version + `extension-module` live in `[workspace.dependencies]`; this member is
 # pyo3's sole consumer and adds only its `optional` gate (the `py` feature).
 pyo3 = { workspace = true, optional = true }
+# Kuhn-Munkres LAP. The closed-form optimal path `AssignmentBuilder` dispatches
+# to for group-free / pin-free instances (`builder/assignment.rs`) instead of the
+# exponential B&B, which is proven-optimal only to n≈15–18. Integer-cost API,
+# pure Rust, no C deps.
+hungarian = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
-hungarian = { workspace = true }
 proptest = { workspace = true }
+# iai-callgrind instruction-count baselines (`benches/iai_queens.rs`). Linux/CI
+# only — Valgrind can't run on arm64-macOS, so `cargo bench --bench iai_queens`
+# no-ops off CI. Pinned in lockstep with the `iai-callgrind-runner` the iai lane
+# `cargo install`s in `.github/workflows/ci.yml`; bump both together. Left inline
+# (not workspace-hoisted) since csp-solver is its sole consumer. See P6 (Tranche-II
+# Pass-2) — deterministic across 3 ephemeral runners, 0.000000% delta.
+iai-callgrind = "0.16.1"
 
 [lib]
 # cdylib only needed for PyO3 (maturin). Normal builds produce rlib only.
@@ -64,4 +75,11 @@ harness = false
 
 [[bench]]
 name = "cost_finite_domain"
+harness = false
+
+# iai-callgrind instruction-count bench (harness = false; driven by the
+# iai-callgrind-runner binary, not libtest). Runs only under Linux/CI with
+# Valgrind — the iai lane in `.github/workflows/ci.yml`.
+[[bench]]
+name = "iai_queens"
 harness = false
