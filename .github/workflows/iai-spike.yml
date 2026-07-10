@@ -29,6 +29,11 @@ jobs:
             # Fixed-count callgrind == deterministic instruction counts; no warm-up
             # noise. One bench, one measured function.
             IAI_BENCH: iai_queens
+            # Kill ANSI colour in iai-callgrind's terminal output — it defaults to
+            # colour ON even off a TTY, and the grey escape `\e[90m` otherwise
+            # smuggles a bare "90" into the numeric gate ahead of the real count.
+            IAI_CALLGRIND_COLOR: never
+            CARGO_TERM_COLOR: never
         steps:
             - uses: actions/checkout@v4
 
@@ -72,9 +77,13 @@ jobs:
               run: |
                   set -euo pipefail
                   extract() {
-                    # First "Instructions:" line; first integer (strip thousands separators).
-                    grep -E 'Instructions:' "$1" | head -1 \
-                      | grep -oE '[0-9][0-9,]*' | head -1 | tr -d ','
+                    # Strip any ANSI escapes FIRST (belt-and-suspenders vs the
+                    # IAI_CALLGRIND_COLOR=never env), then take the first integer that
+                    # follows the "Instructions:" label — never a colour-code digit.
+                    sed -E $'s/\x1b\\[[0-9;]*[mK]//g' "$1" \
+                      | grep -E 'Instructions:' | head -1 \
+                      | sed -E 's/.*Instructions:[^0-9]*([0-9][0-9,]*).*/\1/' \
+                      | tr -d ','
                   }
                   I1="$(extract run1.log || true)"
                   I2="$(extract run2.log || true)"
