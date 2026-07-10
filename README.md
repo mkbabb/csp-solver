@@ -8,7 +8,7 @@ Let it be understood at the outset: there subsists no solver written in Python. 
 
 ## Of the Parts and Their Disposition
 
-The repository is a Cargo workspace whose members are two: the engine crate `csp-solver`, and its WebAssembly sibling `csp-solver/wasm`. Adjacent to these stands the web tier—a FastAPI service (`web/api/`, whose Python package is named `app`) and a Vue 3 frontispiece (`web/frontend/`, in TypeScript, adorned by Tailwind).
+The repository is a Cargo workspace whose members are two: the engine crate `csp-solver`, and its WebAssembly sibling `csp-solver/wasm`. Adjacent stands the web tier—a Vue 3 frontispiece (`web/frontend/`, in TypeScript, adorned by Tailwind), which solveth within the browser and requireth no service.
 
 Of that which was formerly herein but is now departed: the crates `morph-core` and `wasm-morph` have been excised to a repository of their own, namely [github.com/mkbabb/morph](https://github.com/mkbabb/morph); the state antecedent to their removal is preserved under the tag `pre-morph-excision`. The general `AssignmentBuilder` surface upon which morph was raised abideth here still, and morph doth now consume `csp-solver` as any ordinary dependant would, by the registry. The particulars are recorded in `csp-solver/CHANGELOG.md`.
 
@@ -47,33 +47,22 @@ Each is furnished with generation and with validation. The uniqueness-proof of F
 
 ## Of the Frontispiece
 
-Vue 3 in the Composition manner, without router and without library of state. The directory `src/pencil/` holdeth the shared hand-drawn habit—the grid, the glyphs, the celestial chrome, the filters, the scheduler—and `src/games/{sudoku,futoshiki}/` the two surfaces of play. Solving is, by default, conducted in a Worker over `@mkbabb/csp-solver-wasm`; the path by the service is but a fallback. The motion is scheduled by `@mkbabb/pencil-boil` (`^0.6.0`), and all of it deferreth to `prefers-reduced-motion`. The grid is an ARIA grid, navigable by the keys, with an affordance to hold and peek.
+Vue 3 in the Composition manner, without router and without library of state. The directory `src/pencil/` holdeth the shared hand-drawn habit—the grid, the glyphs, the celestial chrome, the filters, the scheduler—and `src/games/{sudoku,futoshiki}/` the two surfaces of play. Solving is conducted in a Worker over `@mkbabb/csp-solver-wasm`, and there is no service. The motion is scheduled by `@mkbabb/pencil-boil` (`^0.6.0`), and all of it deferreth to `prefers-reduced-motion`. The grid is an ARIA grid, navigable by the keys, with an affordance to hold and peek.
 
-## Of the Service
-
-A FastAPI, its package `app`, disposed as thin router unto service unto `csp_solver`; with dependency-injection by `Depends`, one envelope of error for every failure, a limiter of rate, thread-pools apportioned, and a `CancelToken` bound to a wall-clock timeout. The routes cap the solutions sought at one. The taxonomy of error is of seven codes—`UNSATISFIABLE`, `BUDGET_EXCEEDED`, `INVALID_INPUT`, `TIMEOUT`, `NOT_FOUND`, `RATE_LIMITED`, `INTERNAL`—whereof the four begotten of the solver mirror `CspError::code()`.
-
-### Upon the Meaning of `max_solutions`
+## Upon the Meaning of `max_solutions`
 
 Where `max_solutions` be one, under `Ac3`, the search returneth the first solution it attaineth. Upon an instance bearing many solutions this first is valid but not determinate—it dependeth upon the trajectory, and another pruning or ordering may return another member of the set, no less correct. Let it therefore be taken for a probe of satisfiability, or (at two) for a proof of uniqueness, and never for a warrant of any particular solution (the campaign's `evidence/kernel-soundness-closure.md`, §7.2).
 
 ## Of Setting the Works in Motion
 
 ```bash
-# By Docker, for development (the override is loaded of itself: bind-mounts, HMR, dev ports)
-docker compose up
-
-# By Docker, for production (the -f files named explicitly; the override is never seen)
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-
 # The engine alone
 cd csp-solver && cargo test --workspace && cargo bench
 
-# The service alone (the wheel of csp_solver being installed apart, by maturin)
-cd web/api && uv sync && uv run uvicorn app.main:app --reload --port 8000
+# The wheel-contract proving (the wheel of csp_solver being installed apart, by maturin)
+cd csp-solver/tests-py && uv sync && uv pip install ../../target/wheels/*.whl && uv run --no-sync pytest
 
-# The frontispiece alone
+# The frontispiece alone (it solveth within the browser; scripts/dev.sh is a thin launcher)
 cd web/frontend && npm install && npm run dev
 ```
 
@@ -84,8 +73,8 @@ cd web/frontend && npm install && npm run dev
 #   (measured at d9781e29, Apple M5 Max, 2026-07-06)
 cargo test --workspace
 
-# Python — the web/api suite: 108 passed, 2 skipped, against the installed wheel
-cd web/api && uv run pytest
+# Python — the csp-solver/tests-py wheel-contract suite, against the installed wheel
+cd csp-solver/tests-py && uv run --no-sync pytest
 
 # The measured benchmarks (criterion) — sudoku, queens, map_coloring, lattice
 cargo bench
@@ -93,7 +82,7 @@ cargo bench
 
 ## Of the Deployment
 
-The ratified disposition is **A and C together**. By A, the frontispiece is a static deploy upon Cloudflare Pages (sudoku.babb.dev), whence `_redirects` conveyeth `/api/*` unto a small ever-waking API origin (the owner's box) that runneth the hardened FastAPI reference and serveth N=5-Easy and whatsoever exceedeth the in-browser ceiling; `_headers` beareth the CSP, HSTS, and X-Frame-Options. By C, the SPA solveth and generateth within a Worker, and so retireth the whole class of GIL-and-DoS hazard for the served magnitudes—and this is the default. There remaineth one action to the owner (OD-4): to strike the dangling CNAME `api.csp-solver.babb.dev`, which hath the shape of a subdomain seizure. The committed `docker-compose` topology (backend, frontend, nginx) is the hardened reference stack, and not that which runneth the live static site.
+The frontispiece is a static deploy upon Cloudflare Pages (sudoku.babb.dev); it solveth and generateth wholly within a Worker over `@mkbabb/csp-solver-wasm`, and so retireth the whole class of GIL-and-DoS hazard for the served magnitudes. `_headers` beareth the CSP, HSTS, and X-Frame-Options; `_redirects` beareth the SPA fallback. There remaineth one action to the owner (OD-4): to strike the dangling CNAME `api.csp-solver.babb.dev`, which hath the shape of a subdomain seizure. The Docker and FastAPI reference stack was retired in the T2-W2 abrogation.
 
 ## Of the Continuous Integration
 

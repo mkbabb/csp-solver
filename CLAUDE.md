@@ -1,8 +1,8 @@
 # CSP Solver — Project Guide
 
-Fullstack constraint-satisfaction solver. A Rust engine (`csp-solver/`, with a wasm sibling crate), a FastAPI service (`web/api/`), and a Vue 3 frontend (`web/frontend/`). Two games ride the same engine: Sudoku and Futoshiki.
+Constraint-satisfaction solver. A Rust engine (`csp-solver/`, with a wasm sibling crate) and a Vue 3 frontend (`web/frontend/`). Two games ride the same engine: Sudoku and Futoshiki.
 
-The Rust `csp_solver` crate is the sole solver. There's no Python solver — the API's routes delegate to `csp_solver` (native module via PyO3) or, in the browser, to `@mkbabb/csp-solver-wasm` (wasm via a Worker). The frontend defaults to the in-browser wasm path.
+The Rust `csp_solver` crate is the sole solver. The frontend solves in the browser via `@mkbabb/csp-solver-wasm` (wasm in a Worker) — the only shipped solve path. `csp_solver`'s PyO3 bindings still build as a wheel (consumed by bbnf-lang and the wheel-contract tests), but there is no HTTP service in this repo.
 
 ## Directory Structure
 
@@ -20,19 +20,15 @@ The Rust `csp_solver` crate is the sole solver. There's no Python solver — the
 │   │   └── error.rs               typed CspError (+ narrow #[cfg(test)] block)
 │   ├── data/sudoku_puzzles/       embedded template bank (include_dir!)
 │   ├── tests/                     integration tests (13 files)
+│   ├── tests-py/                  wheel-contract pytest suite (bench/backend/panic/wheel)
 │   ├── benches/                   criterion — sudoku, queens, map_coloring, lattice
 │   ├── examples/                  profiling + timing targets (time_sudoku, profile_sudoku, …)
 │   └── wasm/                      csp-solver-wasm crate → npm @mkbabb/csp-solver-wasm
 ├── web/
-│   ├── api/                       FastAPI service (Python package: app)
-│   ├── frontend/                  Vue 3 + TypeScript + Tailwind v4
-│   └── nginx/                     reverse proxy (prod overlay only)
+│   └── frontend/                  Vue 3 + TypeScript + Tailwind v4 (in-browser wasm solve)
 ├── docs/                          algorithms, sudoku, benchmarks, bbnf-integration, optimizations
-├── scripts/                       dev.sh, deploy.sh
-├── Cargo.toml                     workspace members = ["csp-solver", "csp-solver/wasm"]
-├── docker-compose.yml             base stack (prod-safe minimal)
-├── docker-compose.override.yml    dev overlay — auto-loaded by a bare `docker compose up`
-└── docker-compose.prod.yml        prod overlay (+ nginx, restart, limits, logging)
+├── scripts/                       dev.sh (frontend launcher)
+└── Cargo.toml                     workspace members = ["csp-solver", "csp-solver/wasm"]
 ```
 
 `morph-core` and `wasm-morph` were excised to [github.com/mkbabb/morph](https://github.com/mkbabb/morph); the pre-deletion state is tagged `pre-morph-excision`. The general-purpose `AssignmentBuilder` surface morph was built on stays here; morph now consumes `csp-solver` as an ordinary crates.io dependency. See `csp-solver/CHANGELOG.md`.
@@ -40,10 +36,9 @@ The Rust `csp_solver` crate is the sole solver. There's no Python solver — the
 ## Architecture
 
 ```
-Browser ──┬─ in-browser solve (default): @mkbabb/csp-solver-wasm in a Worker
-          └─ API origin (fallback / oversize): FastAPI ── csp_solver (PyO3)
+Browser ── in-browser solve: @mkbabb/csp-solver-wasm in a Worker ── csp_solver (Rust)
 
-Static SPA (CF Pages, sudoku.babb.dev) ── _redirects /api/* → API origin
+Static SPA (CF Pages, sudoku.babb.dev) ── _redirects: SPA fallback only
 ```
 
 ### CSP engine (Rust)
@@ -79,40 +74,29 @@ bbnf uses six IR passes over lattice domains (type inference, FIRST/FOLLOW, span
 
 | Game | Formulation | Sizes | Surfaces |
 |---|---|---|---|
-| Sudoku | M² vars, domain 1..M, AllDifferent per row/col/subgrid | N=2..5 (web: N=2,3,4 + N=5-easy) | Rust, PyO3, wasm, API, frontend |
-| Futoshiki | N×N Latin square + inequality constraints between adjacent cells | N=4..7 (v1) | Rust, PyO3, wasm, API, frontend |
+| Sudoku | M² vars, domain 1..M, AllDifferent per row/col/subgrid | N=2..5 (web: N=2,3,4 + N=5-easy) | Rust, PyO3, wasm, frontend |
+| Futoshiki | N×N Latin square + inequality constraints between adjacent cells | N=4..7 (v1) | Rust, PyO3, wasm, frontend |
 
 Both ship generation and validation. Futoshiki's uniqueness check (`max_solutions = 2` under Ac3) is sound after the kernel's AC-3 trail-push fix.
 
 ## Frontend
 
-Vue 3 Composition API, no router, no state library. `src/pencil/` is the shared hand-drawn aesthetic (grid, glyphs, celestial chrome, filters, scheduler); `src/games/{sudoku,futoshiki}/` are the two game surfaces. Solving runs in a Web Worker over `@mkbabb/csp-solver-wasm` by default — the API path is a fallback. Animation is scheduled by `@mkbabb/pencil-boil` (`^0.6.0`); all motion respects `prefers-reduced-motion`. The grid is an ARIA grid with keyboard navigation and a hold-to-peek affordance.
+Vue 3 Composition API, no router, no state library. `src/pencil/` is the shared hand-drawn aesthetic (grid, glyphs, celestial chrome, filters, scheduler); `src/games/{sudoku,futoshiki}/` are the two game surfaces. Solving runs in a Web Worker over `@mkbabb/csp-solver-wasm` — there is no backend path. Animation is scheduled by `@mkbabb/pencil-boil` (`^0.6.0`); all motion respects `prefers-reduced-motion`. The grid is an ARIA grid with keyboard navigation and a hold-to-peek affordance.
 
-## API
-
-FastAPI, package `app`, thin router → service → `csp_solver`. DI via `Depends` (settings, executors, services), one JSON error envelope, a slowapi rate limiter, split thread pools, and a `CancelToken` wired to a wall-clock timeout. Routes cap `max_solutions = 1`. Error taxonomy — seven codes `{UNSATISFIABLE, BUDGET_EXCEEDED, INVALID_INPUT, TIMEOUT, NOT_FOUND, RATE_LIMITED, INTERNAL}`; the four solver-originated codes mirror `CspError::code()`. See `web/api/CLAUDE.md`.
-
-### `max_solutions` semantics
+## `max_solutions` semantics
 
 `max_solutions = 1` under `Ac3` returns the **first** solution the search reaches, which on a multi-solution instance is valid-but-different and trajectory-dependent — different pruning/ordering may return a different (still-correct) member of the solution set. Treat it as a satisfiability probe or a uniqueness cap (`= 2`), never as a guarantee of a specific solution (`evidence/kernel-soundness-closure.md` §7.2).
 
 ## Development
 
 ```bash
-# Docker — dev (override auto-loaded: bind mounts, HMR, dev ports)
-docker compose up
-
-# Docker — prod (explicit -f files; override is never loaded)
-docker compose -f docker-compose.yml -f docker-compose.prod.yml build && \
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-
 # Rust engine
 cd csp-solver && cargo test --workspace && cargo bench
 
-# API (needs the csp_solver wheel installed out-of-band via maturin)
-cd web/api && uv sync && uv run uvicorn app.main:app --reload --port 8000
+# Wheel-contract pytest suite (needs the csp_solver wheel built out-of-band via maturin)
+cd csp-solver/tests-py && uv sync && uv pip install ../../target/wheels/*.whl && uv run --no-sync pytest
 
-# Frontend
+# Frontend (in-browser wasm solve; scripts/dev.sh is a thin frontend launcher)
 cd web/frontend && npm install && npm run dev
 ```
 
@@ -123,8 +107,8 @@ cd web/frontend && npm install && npm run dev
 #   measured at d9781e29, Apple M5 Max, 2026-07-06
 cargo test --workspace
 
-# Python — web/api pytest: 108 passed, 2 skipped (against the installed wheel)
-cd web/api && uv run pytest
+# Python — csp-solver/tests-py wheel-contract suite (against the installed wheel)
+cd csp-solver/tests-py && uv run --no-sync pytest
 
 # Criterion — sudoku, queens, map_coloring, lattice
 cargo bench
@@ -135,13 +119,11 @@ cargo bench -p csp-solver --bench queens -- --test
 
 ## Deployment
 
-Ratified topology: **A + C concomitant**.
+Topology: **in-browser wasm, static SPA.** The SPA is a Cloudflare Pages static deploy (sudoku.babb.dev); it solves and generates in a Worker over `@mkbabb/csp-solver-wasm`, structurally retiring the GIL/DoS class for served sizes. `_headers` carries CSP/HSTS/X-Frame-Options; `_redirects` carries the SPA fallback only.
 
-- **A — static + API origin.** The SPA is a Cloudflare Pages static deploy (sudoku.babb.dev). `_redirects` routes `/api/*` to a small always-on API origin (the owner's box) running the hardened FastAPI reference; `_headers` carries CSP/HSTS/X-Frame-Options. The origin serves N=5-Easy and anything past the in-browser ceiling.
-- **C — in-browser wasm.** The SPA solves and generates in a Worker over `@mkbabb/csp-solver-wasm`, structurally retiring the GIL/DoS class for served sizes. This is the default path.
 - **Pending owner action (OD-4):** delete the dangling `api.csp-solver.babb.dev` CNAME (a subdomain-takeover shape).
 
-The committed `docker-compose` topology (backend + frontend + nginx) is the hardened reference stack, not what runs the live static site.
+The Docker/FastAPI reference stack was retired in the T2-W2 abrogation.
 
 ## CI
 
@@ -163,8 +145,7 @@ See `docs/benchmarks.md` for the reproducible, stamped numbers. Headline: GAC de
 ## Key conventions
 
 - **Rust**: nightly toolchain, edition 2024. `cargo test --workspace` never per-crate. Any `SolveConfig`/`SolveStats` field change sweeps exhaustive literals or uses `..Default::default()`.
-- **Python**: ruff (line-length 100, E/F/I/UP), mypy strict on `src/app`, pytest-asyncio (auto). Package `app`, entrypoint `app.main:app`. `from csp_solver import ...` (the Rust native module).
+- **Python**: the only Python surface is `csp-solver/tests-py` — wheel-contract tests (`pytest.importorskip("csp_solver")` + stdlib, pytest + pytest-timeout, per-test 120s ceiling). `from csp_solver import ...` (the Rust native module).
 - **TypeScript**: strict mode, `@/*` + `@puzzles/*` aliases, Prettier + tailwind plugin.
-- **Docker**: multi-stage — Rust nightly → maturin → wheel. Build context is the project root (needs `csp-solver/`).
 - **Difficulty**: `EASY / MEDIUM / HARD`; N=5 is easy-only (medium/hard rejected `NOT_FOUND`). Casing parity is guarded by a contract test (`csp-solver/tests/difficulty_parity.rs`).
 - **Puzzle data**: template bank owned by the Rust crate (`csp-solver/data/sudoku_puzzles/`), embedded via `include_dir!`; the frontend derives SPA templates from that single source, never a hand-copied fork.

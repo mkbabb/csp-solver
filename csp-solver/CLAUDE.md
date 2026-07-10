@@ -146,22 +146,20 @@ live in `docs/benchmarks.md`; the disclosure traces to the W2 GAC corpus
 
 `Difficulty` has one canonical native enum — PascalCase Rust
 (`Easy`/`Medium`/`Hard`) in `src/puzzles/sudoku/generate.rs`. The wire format is
-SCREAMING_SNAKE (`EASY`/`MEDIUM`/`HARD`): every cross-language mirror (PyO3,
-Pydantic, the frontend TS union) spells it that way verbatim. The one idiomatic
-exception is `wasm/src/sudoku.rs::SudokuDifficulty`, which uses PascalCase Rust
-identifiers.
+SCREAMING_SNAKE (`EASY`/`MEDIUM`/`HARD`): every cross-language mirror (PyO3, the
+frontend TS union) spells it that way verbatim. The one idiomatic exception is
+`wasm/src/sudoku.rs::SudokuDifficulty`, which uses PascalCase Rust identifiers.
 
 `tests/difficulty_parity.rs` guards both facts. Each sibling definition is paired
 with an explicit `Casing` (`Verbatim` or `PascalCase`), and
 `no_unscanned_difficulty_definitions_exist` walks `SCAN_ROOTS` (`src`,
-`wasm/src`, `../web/api/src`, `../web/frontend/src`), greps for any
-Difficulty-shaped declaration, and asserts the discovered set is *exactly* the
-`SIBLING_DEFINITIONS` allowlist — a new mirror fails the test until it's
-registered. **Extension rule:** when a new surface adds a `Difficulty` mirror
-(e.g. a Futoshiki-specific frontend package in a fresh root), add its path +
-`Casing` to `SIBLING_DEFINITIONS` and, if it lives outside the four roots, add
-that root to `SCAN_ROOTS`. A third casing is a one-line addition to
-`Casing::expected`.
+`wasm/src`, `../web/frontend/src`), greps for any Difficulty-shaped declaration,
+and asserts the discovered set is *exactly* the `SIBLING_DEFINITIONS` allowlist —
+a new mirror fails the test until it's registered. **Extension rule:** when a new
+surface adds a `Difficulty` mirror (e.g. a Futoshiki-specific frontend package in
+a fresh root), add its path + `Casing` to `SIBLING_DEFINITIONS` and, if it lives
+outside the three roots, add that root to `SCAN_ROOTS`. A third casing is a
+one-line addition to `Casing::expected`.
 
 ## BBNF Usage
 

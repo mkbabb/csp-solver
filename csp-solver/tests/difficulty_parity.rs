@@ -18,7 +18,7 @@
 //!    one-line addition to [`Casing::expected`], not a rewrite.
 //!
 //! 2. **Scanned-file-list guard** (fixes "miss it"): [`no_unscanned_difficulty_definitions_exist`]
-//!    walks the same four root directories every live Difficulty mirror
+//!    walks the same three root directories every live Difficulty mirror
 //!    has ever lived in and greps for a Difficulty-shaped definition
 //!    (`enum ...Difficulty` / `class ...Difficulty` / `type ...Difficulty =`),
 //!    then asserts the discovered file set is *exactly* [`SIBLING_DEFINITIONS`]'s
@@ -38,12 +38,15 @@
 //! The prototype's `SIBLING_DEFINITIONS` paths and its `strum`-derived
 //! canonical variant list were authored against the pre-restructure tree.
 //! Landed here retargeted to the current topology — `py.rs` → `py/sudoku_api.rs`
-//! (W1 py-module split), `api/models/board.py` → `games/sudoku/models.py`
-//! (W4 games colocation), `composables/useSudoku.ts` → `games/sudoku/types.ts`
+//! (W1 py-module split), `composables/useSudoku.ts` → `games/sudoku/types.ts`
 //! (W7 frontend topology) — and de-`strum`'d: the canonical wire names are
 //! inlined behind a compile-time `match` on the enum, so no `strum`
 //! dependency is added to the (W3-owned) `Cargo.toml`. The guard behavior
 //! is identical.
+//!
+//! The T2-W2 abrogation retired the FastAPI service, so the Pydantic
+//! `models.py` mirror and its scan root are gone — the mirror set is now
+//! three: PyO3, wasm, frontend TS.
 //!
 //! ## Scope boundary (read before adding a fifth casing or a new root)
 //!
@@ -141,11 +144,6 @@ const SIBLING_DEFINITIONS: &[(&str, &str, Casing)] = &[
         Casing::PascalCase,
     ),
     (
-        "games/sudoku/models.py::Difficulty (Pydantic)",
-        "../web/api/src/app/games/sudoku/models.py",
-        Casing::Verbatim,
-    ),
-    (
         "games/sudoku/types.ts Difficulty (frontend TS)",
         "../web/frontend/src/games/sudoku/types.ts",
         Casing::Verbatim,
@@ -160,7 +158,7 @@ const CANONICAL_FILE: &str = "src/puzzles/sudoku/generate.rs";
 /// Root directories every live Difficulty mirror has ever lived in.
 /// Relative to `csp-solver/`. Extend this when a new surface is added to
 /// the composed tree (e.g. a Futoshiki-specific frontend package).
-const SCAN_ROOTS: &[&str] = &["src", "wasm/src", "../web/api/src", "../web/frontend/src"];
+const SCAN_ROOTS: &[&str] = &["src", "wasm/src", "../web/frontend/src"];
 
 /// Directory names never worth descending into: build output, dependency
 /// trees, VCS metadata. Generated artifacts under these are compiled

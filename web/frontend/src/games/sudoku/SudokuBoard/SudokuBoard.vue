@@ -28,7 +28,7 @@ const props = defineProps<{
   /** Optional — enriches the grid a11y label + marginalia ("a fresh 9×9, medium").
    *  Wired by the union lane (see fictions-a11y report §insertion-specs). */
   difficulty?: Difficulty
-  /** Optional typed error code (ApiErrorCode / SolverErrorCode) for the paper-note copy.
+  /** Optional typed error code (SolverErrorCode) for the paper-note copy.
    *  Absent → the default 'error' cause (BUDGET_EXCEEDED) copy. Wired by the union lane. */
   errorCode?: string
 }>()

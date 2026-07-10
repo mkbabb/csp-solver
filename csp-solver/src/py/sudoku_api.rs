@@ -66,10 +66,9 @@ pub struct SudokuCSP {
     backtrack_count: u64,
     /// `True` when the last `solve_sudoku`/`solve_sudoku_board` call hit its
     /// node budget and returned best-so-far rather than a verified result
-    /// (see `web/api` F12 in the pass-1 audit: previously this was only
-    /// reachable via the generic `Csp`/`SolveStats`, not this convenience
-    /// type, so `board.py` had no way to distinguish "no solution" from
-    /// "search gave up").
+    /// (previously this was only reachable via the generic `Csp`/`SolveStats`,
+    /// not this convenience type, so a caller had no way to distinguish "no
+    /// solution" from "search gave up").
     #[pyo3(get)]
     budget_exceeded: bool,
     /// `True` when the last call was stopped early via a `CancelToken`.
@@ -157,9 +156,9 @@ pub fn solve_sudoku(
 
     let board = &csp.board;
     let n = csp.n;
-    // Releases the GIL for the entire construction + search: the FastAPI
-    // event loop (and any heartbeat/health-check coroutine on it) keeps
-    // running while this executes on its `asyncio.to_thread` worker.
+    // Releases the GIL for the entire construction + search: a Python
+    // caller's event loop (and any coroutine on it) keeps running while this
+    // executes on a worker thread.
     let (solutions, stats) = py.detach(|| {
         let (mut rust_csp, given) = sudoku::create_sudoku_csp(board, n);
         let solutions = rust_csp.solve_with_given(&config, &given);
@@ -191,12 +190,11 @@ pub fn solve_sudoku(
 /// into one PyO3 entry point, board-construction and search both inside one
 /// `py.detach` block.
 ///
-/// The two-call shape (`create_sudoku_csp` then `solve_sudoku`) that
-/// `web/api/.../board.py` uses today costs two separate FFI boundary
-/// crossings and two separate places a `CancelToken` would need wiring for
-/// what is conceptually a single "solve this board" operation. This is the
-/// same computation with one boundary crossing and one place to pass the
-/// cancellation handle.
+/// The two-call shape (`create_sudoku_csp` then `solve_sudoku`) costs two
+/// separate FFI boundary crossings and two separate places a `CancelToken`
+/// would need wiring for what is conceptually a single "solve this board"
+/// operation. This is the same computation with one boundary crossing and one
+/// place to pass the cancellation handle.
 #[pyfunction]
 #[pyo3(signature = (N, values, max_solutions=1, cancel=None))]
 pub fn solve_sudoku_board(

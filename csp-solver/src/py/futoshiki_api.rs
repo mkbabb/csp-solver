@@ -120,8 +120,9 @@ pub fn create_futoshiki_csp(
 ///
 /// Mirrors `solve_sudoku`: the shipped `Ac3` + `Mrv` production config (the F1
 /// override — the library default cannot even solve an empty N≥6 board), GIL
-/// released for the whole construction + search so the FastAPI event loop keeps
-/// running on its `asyncio.to_thread` worker, and the same budget-exceeded
+/// released for the whole construction + search so a Python caller's event
+/// loop keeps running while this executes on a worker thread, and the same
+/// budget-exceeded
 /// contract — raises `BudgetExceededError` when the budget was hit with zero
 /// solutions found, returns `Ok(false)` only for the provably-unsatisfiable
 /// case, and exposes `budget_exceeded` for callers that prefer to branch on

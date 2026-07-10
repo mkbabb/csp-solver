@@ -1,9 +1,8 @@
 # M5b security headers — Cloudflare Pages `_headers` file format
 # https://developers.cloudflare.com/pages/configuration/headers/
 #
-# Wave 2026-07-grand-uplift / W5 (deploy Option A). Confirmed absent at both
-# nginx layers per Pass-1 M5b; this is the CF Pages-side half of that fix
-# (the reverse-proxy nginx layer at web/nginx/sudoku.conf gets the same set).
+# Confirmed absent per Pass-1 M5b; this is the CF Pages-side security-header set
+# for the static SPA deploy.
 #
 # CSP is built clause-by-clause from what the shipped `dist/` output actually
 # requests — nothing broader. Verified empirically: a `vite build` + a
@@ -51,16 +50,10 @@
 #                                  Not inlined as a data: URI: a 6 KB base64 blob
 #                                  in the bundle costs more than one cache-hit
 #                                  fetch and would still need `data:` here anyway
-#   connect-src 'self' https://api.sudoku.babb.dev             every API call is a same-origin relative
-#                                  fetch (`new URL('api/v1', document.baseURI)`
-#                                  in useApi.ts) — there is no cross-origin
-#                                  fetch in the bundle to whitelist. Routing
-#                                  those same-origin paths to the real API
-#                                  origin, once OD-5 exists, happens at the
-#                                  edge (CF Worker route), not in this
-#                                  bundle — see _redirects for the caveat
-#   worker-src  'self' blob:      forward-provisioned for W6's solver Worker
-#                                  (not yet landed; harmless no-op until it is)
+#   connect-src 'self'             the frontend solves in-browser (wasm Worker);
+#                                  there is no cross-origin fetch in the bundle
+#                                  to whitelist
+#   worker-src  'self' blob:      the wasm solver Worker
 #   object-src  'none'             no <object>/<embed> use anywhere
 #   base-uri    'self'             blocks <base> tag injection
 #   form-action 'self'             no forms post off-origin
@@ -78,7 +71,7 @@
 #     avoids leaking path/query to third parties
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.sudoku.babb.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

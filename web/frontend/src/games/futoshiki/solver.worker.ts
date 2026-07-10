@@ -4,8 +4,7 @@
  * The Futoshiki sibling of `games/sudoku/solver.worker.ts` (games never import each
  * other — this is an owned port, not a shared module). Runs entirely off the main
  * thread so a hard solve never janks the ~6.7fps grid boil, and carries ZERO fetch /
- * `/api/v1/*` dependency — the default deploy path is this in-browser Worker; the
- * FastAPI backend (`composables/useApi.ts`) is the fallback surface.
+ * `/api/v1/*` dependency — this in-browser Worker is the only shipped solve path.
  *
  * The wasm module is imported by package name (`@mkbabb/csp-solver-wasm`, a `file:`
  * link to the local `csp-solver/wasm/pkg`); the same binary already serves the Sudoku

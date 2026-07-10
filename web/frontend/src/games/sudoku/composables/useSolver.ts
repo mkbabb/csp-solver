@@ -1,18 +1,11 @@
 /**
- * Client-side wasm replacement for `useApi.ts` — Option C (zero-backend
- * deploy). Same `BoardResponse`/`SolveResponse` shapes as `useApi.ts` so
- * `useSudoku.ts` needs zero changes beyond swapping the import
- * (client-wasm-solve.md §6.1's "useApi replacement shape", now built
- * rather than sketched).
+ * Client-side wasm solve/generate path — the only shipped solve surface
+ * (zero-backend deploy). Produces the `BoardResponse`/`SolveResponse`
+ * shapes `useSudoku.ts` consumes directly.
  *
  * Zero `/api/v1/*` dependency of any kind — no `fetch`, no `/config`
- * endpoint (unlike `useApi.ts`'s sibling prototype, which fetches
- * `GET /api/v1/config` for a shared `AbortSignal.timeout`; that mechanism
- * is inherently server-relative and does not apply here — Option C has no
- * server to ask, and the worker's own promise rejection is the only
- * "timeout" signal this composable needs). This is the wave §Residual
- * "degrade gracefully when the API origin is absent" guarantee, met
- * structurally: there is no origin to be absent. Template boards are
+ * endpoint. There is no server to ask; the worker's own promise rejection
+ * is the only "timeout" signal this composable needs. Template boards are
  * resolved from the bundled `../data/templates.ts` asset (generated at
  * build time by the `sudokuTemplates` Vite plugin from the canonical
  * `csp-solver/data/sudoku_puzzles/` bank — single source of truth, never
@@ -166,8 +159,7 @@ export function useSolver() {
       return {
         solved: res.solved,
         // `solved=false` iff the given cells conflict with every
-        // completion — same semantics the FastAPI backend returns
-        // (useApi.ts's sibling contract).
+        // completion.
         values: res.solved ? toRecord(res.solutions.subarray(0, size ** 4)) : values,
         budgetExceeded: res.budgetExceeded,
       }

@@ -1,12 +1,11 @@
 /**
- * Client-side wasm solve/generate path for Futoshiki — the DEFAULT surface (the
- * FastAPI `useApi.ts` is the fallback). The Futoshiki sibling of
+ * Client-side wasm solve/generate path for Futoshiki — the only shipped solve
+ * surface. The Futoshiki sibling of
  * `games/sudoku/composables/useSolver.ts`: same off-main-thread Worker discipline,
- * same `BoardResponse`/`SolveResponse` shapes so `useFutoshiki.ts` swaps between this
- * and `useApi.ts` by import alone.
+ * same `BoardResponse`/`SolveResponse` shapes consumed by `useFutoshiki.ts`.
  *
- * Zero `/api/v1/*` dependency of any kind — no fetch, no `/config` handshake — so it
- * degrades gracefully when the API origin is absent. Unlike Sudoku there is no
+ * Zero `/api/v1/*` dependency of any kind — no fetch, no `/config` handshake, no
+ * server to depend on. Unlike Sudoku there is no
  * template bank: generation is a fresh wasm `generateFutoshiki` call each time (seeded
  * from `Date.now()`), returning the given grid AND the printed inequality furniture.
  *

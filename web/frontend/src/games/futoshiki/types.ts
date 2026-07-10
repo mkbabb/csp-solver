@@ -1,7 +1,7 @@
 /**
  * Neutral domain-type module for Futoshiki — has zero dependents inside
  * games/futoshiki/ (only dependencies), mirroring games/sudoku/types.ts's role:
- * it exists so `useFutoshiki`, `useApi`, `useSolver`, and `useUrlState` share one
+ * it exists so `useFutoshiki`, `useSolver`, and `useUrlState` share one
  * vocabulary without importing types from one another.
  *
  * Two deliberate divergences from Sudoku's shape (F3/F5, futoshiki-wave-spec §2.4):

@@ -1,0 +1,33 @@
+# Wheel-contract tests for the csp_solver PyO3 wheel — rehomed from the excised
+# FastAPI test suite. Self-contained: each test is `pytest.importorskip("csp_solver")`
+# + stdlib only, so this harness owns no application code and builds nothing.
+#
+# The csp_solver wheel is built + installed out-of-band via maturin (Python 3.13 —
+# the pyo3 0.29 cp313 wheel ABI; NOT a declared dependency here). Run:
+#   uv sync
+#   uv pip install ../../target/wheels/*.whl
+#   uv run --no-sync pytest
+[project]
+name = "csp-solver-tests-py"
+version = "0.0.0"
+description = "Wheel-contract tests for the csp_solver PyO3 wheel."
+# Pin to the cp313 wheel ABI: the wheel is version-specific (pyo3 0.29,
+# extension-module, no abi3), so the venv interpreter must be 3.13.
+requires-python = ">=3.13,<3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-timeout>=2.3.0",
+]
+
+# This harness is a bag of tests, not an installable package — don't try to build it.
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+# Per-test wall-clock ceiling: the cancel/timeout/heartbeat wheel contracts
+# run ~0.6-1.5 s each; a genuinely hung solve must fail loud rather than wedge CI.
+timeout = 120

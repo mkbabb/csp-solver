@@ -1,12 +1,8 @@
 import { computed, ref, watch } from 'vue'
-// Option C (W6): the DEFAULT solve/generate path is the in-browser wasm
-// Worker, not the FastAPI backend. `useSolver` is a drop-in for `useApi`
-// (identical `BoardResponse`/`SolveResponse` shapes) with zero `/api/v1/*`
-// dependency — no fetch, no `/config` client-timeout handshake — so it
-// degrades gracefully when the API origin is absent (wave §Residual). The
-// off-main-thread Worker structurally retires the GIL/DoS class for the
-// served sizes. `useApi.ts` remains in the tree as the Option-A path but
-// is no longer on this composable's solve path.
+// The solve/generate path is the in-browser wasm Worker (`useSolver`), the
+// only shipped solve surface. Zero `/api/v1/*` dependency — no fetch, no
+// `/config` handshake, no server to depend on. The off-main-thread Worker
+// structurally retires the GIL/DoS class for the served sizes.
 import { useSolver } from './useSolver'
 import {
   resolveInitialState,
@@ -23,8 +19,9 @@ import type { Difficulty, SolveState } from '../types'
  * search effort, keyed to sub-grid size. The worker's wasm default is
  * 1,000,000 nodes; larger boards legitimately explore more, so the cap
  * scales up with `n`: generous enough that every served template solves,
- * finite enough to structurally retire the unbounded-search DoS class the
- * Option-A server timeout used to guard. Exhausting it surfaces a typed
+ * finite enough to structurally retire the unbounded-search DoS class
+ * outright — there is no server timeout to lean on, and none is needed.
+ * Exhausting it surfaces a typed
  * `BUDGET_EXCEEDED` error (distinct from provable UNSAT) — see `solve()`.
  */
 const NODE_BUDGET_BY_SIZE: Record<number, number> = {
@@ -56,7 +53,7 @@ export function useSudoku() {
   const solvedValues = ref<Record<string, number>>({})
   const loading = ref(false)
   const errorMessage = ref('')
-  // The typed error code (ApiErrorCode | SolverErrorCode) behind the paper note,
+  // The typed error code (SolverErrorCode) behind the paper note,
   // consumed by SudokuBoard for the §5.2 copy split. Kept coherent with errorMessage.
   const errorCode = ref('')
   const boardGeneration = ref(0)

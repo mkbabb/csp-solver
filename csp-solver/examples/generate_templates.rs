@@ -1,9 +1,9 @@
 //! Puzzle-template generator — the one-command pipeline that regenerates the
 //! crate-owned template bank at `csp-solver/data/sudoku_puzzles/`.
 //!
-//! Replaces the dead `web/api/scripts/generate_templates.py` (which imported
-//! `csp_solver.solver.sudoku`, a Python module deleted at `08c339b`, and wrote
-//! to a stale `src/csp_solver/data` path — doubly broken, cannot execute).
+//! Replaces a dead Python generator (which imported `csp_solver.solver.sudoku`,
+//! a module deleted at `08c339b`, and wrote to a stale `src/csp_solver/data`
+//! path — doubly broken, cannot execute).
 //!
 //! Calls the *existing* Rust generation logic directly
 //! (`csp_solver::sudoku::{generate_board, solve_sudoku, measure_difficulty}`) —

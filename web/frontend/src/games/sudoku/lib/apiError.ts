@@ -1,95 +1,25 @@
 /**
- * Frontend rendering of the W4 typed error taxonomy AND the client Worker's
- * SolverError — one classifier that decides which of the two failure FICTIONS a
- * given failure wears (design-refinement.md §1.4 + §5.2, D3).
+ * Frontend rendering of the client Worker's SolverError — one classifier that
+ * decides which of the two failure FICTIONS a given failure wears
+ * (design-refinement.md §1.4 + §5.2, D3).
  *
  *   - teacher-red-pencil — the puzzle was graded and the answer is wrong. The
  *     teacher only grades actual work: a provable UNSAT, or a board whose own
  *     given/entered cells already conflict (INVALID_INPUT). Rendered ON the board
  *     (grid recolor + shake + conflict marks + marginalia), never as a note card.
- *   - paper-note — the machinery broke, not the answer. Budget/timeout, rate-limit,
- *     a dead worker, an unreachable origin, a 5xx. Rendered as a hand-drawn note
- *     pinned below the board (role="alert"), never on the grid.
+ *   - paper-note — the machinery broke, not the answer. Budget exhaustion, a dead
+ *     worker. Rendered as a hand-drawn note pinned below the board (role="alert"),
+ *     never on the grid.
  *
- * This split KILLS the silent-error architecture (Pass-1 F5): before it, a network
- * hiccup collapsed into solveState='failed' and told the user their correct answer
+ * This split KILLS the silent-error architecture (Pass-1 F5): before it, a broken
+ * worker collapsed into solveState='failed' and told the user their correct answer
  * was wrong.
  *
- * The envelope shape and the seven `code`s are verbatim the backend's
- * `web/api/src/app/core/errors.py::ApiErrorCode` / `envelope()`; the three Worker
- * codes are `games/sudoku/lib/solverError.ts::SolverErrorCode`. Both taxonomies
- * funnel through `classifyError` / `classifyCode` so the two solve paths (Option-A
- * FastAPI, Option-C in-browser Worker) render the same two fictions.
+ * The Worker codes are `games/sudoku/lib/solverError.ts::SolverErrorCode`; they
+ * funnel through `classifyError` / `classifyCode` so the in-browser Worker solve
+ * path renders the two fictions consistently.
  */
 import { SolverError } from './solverError'
-
-/** The seven codes the backend envelope can carry (core/errors.py::ApiErrorCode). */
-export type ApiErrorCode =
-  | 'UNSATISFIABLE'
-  | 'BUDGET_EXCEEDED'
-  | 'INVALID_INPUT'
-  | 'TIMEOUT'
-  | 'NOT_FOUND'
-  | 'RATE_LIMITED'
-  | 'INTERNAL'
-
-/** The exact body `core/errors.py::envelope()` emits on every non-2xx response. */
-export interface ApiErrorEnvelope {
-  error: { code: string; message: string; retryable: boolean }
-}
-
-/**
- * A typed failure crossing the `/api/v1/*` boundary. `instanceof Error`,
- * `.code`-bearing — the drop-in replacement for `useApi.ts`'s old
- * `throw new Error("Solve failed: ...")`, which erased the code and left every
- * failure indistinguishable to the caller.
- */
-export class ApiError extends Error {
-  readonly code: string
-  readonly retryable: boolean
-  readonly status: number | null
-
-  constructor(code: string, message: string, retryable: boolean, status: number | null = null) {
-    super(message)
-    this.name = 'ApiError'
-    this.code = code
-    this.retryable = retryable
-    this.status = status
-  }
-}
-
-export function isApiErrorEnvelope(v: unknown): v is ApiErrorEnvelope {
-  if (typeof v !== 'object' || v === null || !('error' in v)) return false
-  const e = (v as { error: unknown }).error
-  return (
-    typeof e === 'object' &&
-    e !== null &&
-    typeof (e as { code: unknown }).code === 'string' &&
-    typeof (e as { message: unknown }).message === 'string'
-  )
-}
-
-/**
- * Parse a non-OK `fetch` Response into a typed `ApiError`. Bodies that aren't the
- * shared envelope (a reverse-proxy 502 HTML page, an empty 500) synthesize an
- * `INTERNAL` carrying the raw text — this never throws, so a caller's `catch`
- * always receives a code-bearing `ApiError`.
- */
-export async function apiErrorFromResponse(res: Response): Promise<ApiError> {
-  let body: unknown = null
-  let text = ''
-  try {
-    text = await res.text()
-    body = text ? JSON.parse(text) : null
-  } catch {
-    /* non-JSON body — fall through to the synthesized INTERNAL below */
-  }
-  if (isApiErrorEnvelope(body)) {
-    const { code, message, retryable } = body.error
-    return new ApiError(code, message, retryable, res.status)
-  }
-  return new ApiError('INTERNAL', text || `HTTP ${res.status}`, res.status >= 500, res.status)
-}
 
 // ── the fiction split ────────────────────────────────────────────────────────
 
@@ -140,15 +70,12 @@ export function classifyCode(code: string | undefined, retryable = true): Fictio
 }
 
 /**
- * Classify any thrown value — an `ApiError` (Option-A), a `SolverError`
- * (Option-C Worker), a `TypeError` from a failed `fetch` (no envelope at all,
- * i.e. the origin is unreachable), or anything else — into its fiction.
+ * Classify any thrown value — a `SolverError` (Option-C Worker), a `TypeError`
+ * (an unexpected runtime fault with no envelope), or anything else — into its
+ * fiction.
  */
 export function classifyError(e: unknown): Fiction {
-  if (e instanceof ApiError) return classifyCode(e.code, e.retryable)
   if (e instanceof SolverError) return classifyCode(e.code, e.code === 'BUDGET_EXCEEDED')
-  // A rejected `fetch` (DNS failure, offline, CORS) throws a bare TypeError with no
-  // envelope — the origin never answered. That is the network paper-note.
   if (e instanceof TypeError) {
     return { kind: 'paper-note', variant: 'network', message: PAPER_NOTE_COPY.network, retryable: true }
   }

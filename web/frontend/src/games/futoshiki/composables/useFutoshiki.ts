@@ -1,8 +1,8 @@
 import { computed, ref, watch } from 'vue'
-// The DEFAULT solve/generate path is the in-browser wasm Worker (`useSolver`), not the
-// FastAPI backend — a drop-in for `useApi` (identical shapes) with zero `/api/v1/*`
-// dependency, so it degrades gracefully when the API origin is absent. The off-main-
-// thread Worker structurally retires the GIL/DoS class for the served sizes.
+// The solve/generate path is the in-browser wasm Worker (`useSolver`), the only
+// shipped solve surface, with zero `/api/v1/*` dependency and no server to depend
+// on. The off-main-thread Worker structurally retires the GIL/DoS class for the
+// served sizes.
 import { useSolver } from './useSolver'
 import {
   resolveInitialState,

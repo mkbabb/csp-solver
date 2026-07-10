@@ -20,7 +20,7 @@
 #   2. build + test       -> rust       (cargo build/test --workspace — NEVER per-crate)
 #   3. queens-bench smoke -> rust       (the only lane that runs the assert_eq!(92/14200))
 #   4. py compile         -> py-compile (cargo check --features py under Python 3.13 — pyo3 0.29-tested floor, not a hard ceiling)
-#   5. py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in web/api)
+#   5. py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in csp-solver/tests-py)
 #   6. wasm               -> wasm       (wasm-pack test --node + clippy --target wasm32)
 #   7. twiggy budgets     -> twiggy     (full module fail>240 KB / warn>230 KB)
 #   8. frontend           -> frontend   (npm ci --dry-run; npm ci; vue-tsc --noEmit)
@@ -145,11 +145,11 @@ jobs:
     # py runtime — the runtime gate for typed exceptions and GIL probes;
     # compile-check alone is insufficient (kernel-soundness-closure.md §7.6). Builds
     # the csp_solver wheel with maturin (config lives in csp-solver/pyproject.toml —
-    # module csp_solver, features ["py"]; NOT web/api/pyproject.toml, which is the
-    # hatchling `app` package), installs it into the web/api uv venv, runs pytest
-    # (carries the panic-contract tests: unwind -> PanicException catchable; forced
-    # abort -> SIGABRT negative control — authored under web/api/tests by W0's
-    # test-author lane). `--release` (default release profile, no lto=fat/cu=1/
+    # module csp_solver, features ["py"]), installs it into the csp-solver/tests-py
+    # uv venv, runs pytest (carries the wheel-contract + panic-contract tests: unwind
+    # -> PanicException catchable; forced abort -> SIGABRT negative control — self-
+    # contained under csp-solver/tests-py, pytest.importorskip("csp_solver") + stdlib
+    # only). `--release` (default release profile, no lto=fat/cu=1/
     # strip tuning — T15 only rejects that tuning, not `--release` itself; W1
     # py-closure gate finding F2: a dev-profile wheel fails the suite's <50ms
     # solve-time assertions, ~102-112ms observed on Golden Nugget). Accept the
@@ -188,18 +188,18 @@ jobs:
                     --manifest-path csp-solver/Cargo.toml \
                     --interpreter '${{ steps.setup-python.outputs.python-path }}' \
                     --out target/wheels
-            - name: Sync backend venv (web/api, dev extras)
-              working-directory: web/api
-              # W4 moved dev deps to PEP 735 [dependency-groups]; uv installs the
-              # `dev` group by default — plain sync is the correct invocation.
+            - name: Sync test-harness venv (csp-solver/tests-py, dev extras)
+              working-directory: csp-solver/tests-py
+              # PEP 735 [dependency-groups]; uv installs the `dev` group by default —
+              # plain sync is the correct invocation.
               run: uv sync
-            - name: Install csp_solver wheel into backend venv
-              working-directory: web/api
+            - name: Install csp_solver wheel into the test-harness venv
+              working-directory: csp-solver/tests-py
               run: uv pip install ../../target/wheels/*.whl
-            - name: pytest (web/api, against the installed wheel)
+            - name: pytest (csp-solver/tests-py, against the installed wheel)
               # --no-sync so `uv run` does not re-resolve the venv and evict the
-              # manually-installed csp_solver wheel (it isn't a web/api dependency).
-              working-directory: web/api
+              # manually-installed csp_solver wheel (it isn't a declared dependency).
+              working-directory: csp-solver/tests-py
               run: uv run --no-sync pytest
 
     # ---------------------------------------------------------------- Lane 6
@@ -346,8 +346,8 @@ jobs:
                   node-version: '24'
                   cache: npm
                   cache-dependency-path: web/frontend/package-lock.json
-            # Node 24 ships npm 11.x already, but pin explicitly (Dockerfile parity) —
-            # the same skew fixed in web/frontend/Dockerfile.
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
             - name: Pin npm >=11
               run: npm install -g npm@^11
             - name: npm ci --dry-run (lockfile integrity gate)
@@ -399,8 +399,8 @@ jobs:
                   node-version: '24'
                   cache: npm
                   cache-dependency-path: web/frontend/package-lock.json
-            # Node 24 ships npm 11.x already, but pin explicitly (Dockerfile parity) —
-            # the same skew fixed in web/frontend/Dockerfile.
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
             - name: Pin npm >=11
               run: npm install -g npm@^11
             - name: npm ci
