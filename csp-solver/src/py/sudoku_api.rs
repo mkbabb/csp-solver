@@ -302,16 +302,16 @@ pub fn create_random_board(
             // Rust-owned fast path: the crate serves its own compile-time
             // embedded template bank (`include_dir!` in `puzzles/sudoku/
             // generate.rs`). When no bank is embedded for this size/difficulty
-            // (e.g. the locked N=5 policy), reject explicitly rather
-            // than fall through to unbounded hole-digging — the service also
-            // gates this up front via `template_count`, so this is defense in
-            // depth against a direct caller.
+            // (the T2-W4 conservative split keeps N=3-hard + N=4 only), reject
+            // explicitly rather than fall through to unbounded hole-digging —
+            // excised tiers are served by live wasm generation in the browser,
+            // not by this binding.
             let diff: Difficulty = difficulty.into();
             let templates = sudoku::embedded_templates(N, diff);
             if templates.is_empty() {
                 return Err(CspError::invalid_input(format!(
-                    "no embedded template bank for N={N} {diff:?} — not pregenerated \
-                     (locked N=5 policy)"
+                    "no embedded template bank for N={N} {diff:?} — tier not \
+                     pregenerated (excised tiers live-generate in the browser)"
                 )));
             }
             Ok(sudoku::generate_board_with_templates(N, diff, &templates))
@@ -326,11 +326,11 @@ pub fn create_random_board(
 
 /// Number of pregenerated templates embedded for `(N, difficulty)`.
 ///
-/// The Python service calls this to enforce the locked N=5 policy: a request for
-/// a size/difficulty with zero embedded templates (N=5) is rejected
-/// with a `NOT_FOUND` up front, rather than falling through to unbounded
-/// hole-digging generation. Counts from the embedded directory listing without
-/// parsing any template file.
+/// Lets a caller probe the bank before `create_random_board`: a
+/// size/difficulty with zero embedded templates (everything outside the
+/// T2-W4 conservative split of N=3-hard + N=4) is rejected up front rather
+/// than falling through to unbounded hole-digging generation. Counts from
+/// the embedded directory listing without parsing any template file.
 #[pyfunction]
 #[pyo3(signature = (N, difficulty=SudokuDifficulty::EASY))]
 pub fn template_count(#[allow(non_snake_case)] N: u32, difficulty: SudokuDifficulty) -> usize {

@@ -58,10 +58,17 @@ def is_valid_solution(solution: dict[str, int], n: int) -> bool:
 # ── Board generation + solving ───────────────────────────────────────────────
 
 
-@pytest.mark.parametrize("n", [2, 3])
-def test_generate_and_solve(n: int):
-    """Generate a board and verify it's solvable with a valid solution."""
-    board = create_random_board(n, SudokuDifficulty.EASY)
+@pytest.mark.parametrize(
+    ("n", "difficulty"),
+    [(3, SudokuDifficulty.HARD), (4, SudokuDifficulty.HARD)],
+)
+def test_generate_and_solve(n: int, difficulty: SudokuDifficulty):
+    """Generate a board from a surviving bank tier and verify solvability.
+
+    The T2-W4 conservative split keeps only N=3-hard + N=4 in the embedded
+    bank; excised tiers live-generate in the browser, not via this binding.
+    """
+    board = create_random_board(n, difficulty)
     assert isinstance(board, dict)
     assert len(board) == (n**2) ** 2
 
@@ -70,6 +77,18 @@ def test_generate_and_solve(n: int):
     assert solved, f"Generated {n**2}x{n**2} board should be solvable"
     assert len(csp.solutions) == 1
     assert is_valid_solution(csp.solutions[0], n)
+
+
+@pytest.mark.parametrize(
+    ("n", "difficulty"),
+    [(2, SudokuDifficulty.EASY), (3, SudokuDifficulty.EASY), (5, SudokuDifficulty.EASY)],
+)
+def test_excised_tiers_reject(n: int, difficulty: SudokuDifficulty):
+    """Bankless tiers reject with the typed error instead of hole-digging."""
+    import csp_solver
+
+    with pytest.raises(csp_solver.InvalidInputError, match="not pregenerated"):
+        create_random_board(n, difficulty)
 
 
 def test_generate_16x16():
