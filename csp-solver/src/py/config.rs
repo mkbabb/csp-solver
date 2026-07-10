@@ -15,10 +15,15 @@ use crate::{CancelToken as RustCancelToken, SolveConfig as RustSolveConfig};
 /// Construct one, pass it into `SolveConfig(cancel=token)`, keep the same
 /// `token` on the Python side, and call `token.cancel()` from *any* thread —
 /// including the asyncio event-loop thread — to stop a search that's
-/// currently running on a `Python::allow_threads`-released worker thread.
+/// currently running on a `Python::detach`-released worker thread.
 /// Checked at the same cadence as `node_budget` inside the search loop, so
 /// cancellation typically takes effect within a handful of search nodes.
-#[pyclass]
+///
+/// `from_py_object`: a `CancelToken` is passed *into* Python-facing APIs by value
+/// (the `cancel=` argument of `solve_sudoku`/`solve_futoshiki` and the settable
+/// `SolveConfig.cancel` field), so it opts into pyo3 0.29's now-explicit
+/// `FromPyObject` derive.
+#[pyclass(from_py_object)]
 #[derive(Clone, Default)]
 pub struct CancelToken {
     pub(super) inner: RustCancelToken,
@@ -71,7 +76,11 @@ impl CancelToken {
 /// Both stay at their Rust-core defaults (`restarts: false`,
 /// `optimization_mode: Feasibility`) via the `..Default::default()` below.
 /// Revisit if/when the py wire ever exposes cost/soft constraints.
-#[pyclass]
+///
+/// `skip_from_py_object`: only ever crosses the FFI boundary as `&SolveConfig`
+/// (the `From<&SolveConfig>` conversion), never extracted from Python by value,
+/// so it declines pyo3 0.29's `FromPyObject` derive.
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
 pub struct SolveConfig {
     #[pyo3(get, set)]
@@ -124,7 +133,9 @@ impl From<&SolveConfig> for RustSolveConfig {
     }
 }
 
-#[pyclass]
+/// `skip_from_py_object`: purely a returned/getter type — never extracted from
+/// Python by value — so it declines pyo3 0.29's `FromPyObject` derive.
+#[pyclass(skip_from_py_object)]
 #[derive(Clone)]
 pub struct SolveStats {
     #[pyo3(get)]

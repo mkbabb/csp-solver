@@ -147,12 +147,21 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vue-vendor': ['vue'],
-          // keyframes.js dropped from the app runtime by W8's 4th workstream (grid + glyph
-          // draw-in migrated off `KeyframesAnimation` onto the unified scheduler's `sequence`
-          // subscriber kind), so it no longer enters any chunk — only pencil-boil remains here.
-          'animation-vendor': ['@mkbabb/pencil-boil'],
+        // Rolldown (Vite 8's default bundler) rejects the classic object-literal
+        // `manualChunks` form outright (`TypeError: manualChunks is not a function`) —
+        // the function form is its only supported shape. Match both `vue/` and `@vue/`
+        // because modern Vue (3.4+) ships `vue` as a thin re-export shell over separately
+        // resolvable `@vue/*` modules. keyframes.js was dropped from the app runtime by
+        // W8's 4th workstream (grid + glyph draw-in migrated off `KeyframesAnimation` onto
+        // the unified scheduler's `sequence` subscriber), so it no longer enters any chunk —
+        // only pencil-boil remains as the animation vendor.
+        manualChunks(id) {
+          if (id.includes('/node_modules/vue/') || id.includes('/node_modules/@vue/')) {
+            return 'vue-vendor'
+          }
+          if (id.includes('/node_modules/@mkbabb/pencil-boil/')) {
+            return 'animation-vendor'
+          }
         },
       },
     },

@@ -6,7 +6,7 @@
  * board-size selector, the hold-to-peek BoilDivider, and the three action buttons.
  */
 import { computed, ref, onBeforeUnmount } from 'vue'
-import { Eraser } from 'lucide-vue-next'
+import { Eraser } from '@lucide/vue'
 import SolveIcon from '@pencil/chrome/SolveIcon.vue'
 import DiceIcon from '@pencil/chrome/DiceIcon.vue'
 import OptionSelector from '@pencil/chrome/OptionSelector/OptionSelector.vue'

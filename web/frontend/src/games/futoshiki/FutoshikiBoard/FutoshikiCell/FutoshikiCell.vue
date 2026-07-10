@@ -34,7 +34,6 @@ const emit = defineEmits<{
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
-const cellRef = ref<HTMLDivElement | null>(null)
 const isHovered = ref(false)
 const isFocused = ref(false)
 
@@ -133,7 +132,6 @@ defineExpose({ focus: focusInput })
 
 <template>
   <div
-    ref="cellRef"
     class="futoshiki-cell relative flex items-center justify-center"
     role="gridcell"
     :aria-rowindex="rowIndex"

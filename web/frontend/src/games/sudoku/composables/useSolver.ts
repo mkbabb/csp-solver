@@ -90,7 +90,7 @@ function call(req: SolverRequest, transfer: ArrayBuffer[]): Promise<SolverRespon
   })
 }
 
-function toFlat(size: number, values: Record<string, number>): Uint32Array {
+function toFlat(size: number, values: Record<string, number>): Uint32Array<ArrayBuffer> {
   const m = size * size
   const buf = new Uint32Array(m * m)
   for (const [k, v] of Object.entries(values)) buf[Number(k)] = v

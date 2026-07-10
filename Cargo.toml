@@ -5,6 +5,52 @@
 members = ["csp-solver", "csp-solver/wasm"]
 resolver = "2"
 
+# ── shared package metadata (currency: single source for edition + MSRV) ─────
+# Members inherit via `edition.workspace = true` / `rust-version.workspace = true`.
+# Edition 2024 is stable since 1.85; the MSRV bisected to exactly 1.88.
+[workspace.package]
+edition = "2024"
+rust-version = "1.88"
+
+# ── centralized dependency versions (currency: no per-member drift) ──────────
+# Members reference these with `<dep> = { workspace = true }`, adding only their
+# own `optional`/`features` locally.
+[workspace.dependencies]
+csp-solver = { path = "csp-solver" }
+include_dir = "0.7.4"
+# pyo3's single consumer is csp-solver (feature = "py"); hoisted here anyway so
+# the version lives with every other dep — no per-member drift. The member adds
+# `optional`/`features` locally.
+pyo3 = { version = "0.29", features = ["extension-module"] }
+criterion = { version = "0.8.2", features = ["html_reports"] }
+hungarian = "1"
+proptest = "1"
+wasm-bindgen = "0.2.126"
+serde-wasm-bindgen = "0.6"
+serde = { version = "1", features = ["derive"] }
+console_error_panic_hook = "0.1"
+js-sys = "0.3"
+wasm-bindgen-test = "0.3"
+
+# ── workspace lint posture (currency: encode the CI `-D warnings` bar) ───────
+# CI runs `cargo clippy --workspace --all-targets -- -D warnings`; these tables
+# make that posture the default for every build. The code already satisfies both
+# tiers on stable (verify-05/verify-32). `priority = -1` lets a future targeted
+# `allow` override the group without reshuffling.
+[workspace.lints.rust]
+warnings = "deny"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+
+# ── native release profile ───────────────────────────────────────────────────
+# `strip = true` drops symbols from the native cdylib the PyO3 wheel ships
+# (measured −21.6% on the `.so`). This is the profile the maturin wheel builds
+# under; it is NOT the wasm path — `wasm-release` inherits this profile and must
+# override `strip` back off (see the D9 strip↔wasm-opt hazard note below).
+[profile.release]
+strip = true
+
 # ── wasm size-release profile (Pass-2 D9) ────────────────────────────────────
 # Workspace-root ONLY. Cargo reads `[profile.*]` solely from the workspace root;
 # member-level profile sections are ignored with a warning — so this lives here,
@@ -18,6 +64,8 @@ resolver = "2"
 #     ≈0% and regress the native build), and `strip=true` additionally DELETES
 #     the wasm `target_features` section, hard-breaking the `-Oz` wasm-opt pass
 #     (the D9 strip↔wasm-opt hazard, reproduced on the real crates twice).
+#     `inherits = "release"` would otherwise pull in the native profile's
+#     `strip = true`, so it is explicitly forced back off below.
 # `panic="abort"` is size-only for the cdylib (wasm is abort-only regardless) and
 # does NOT touch the native wheel, which keeps `panic=unwind` so Rust panics
 # surface as a catchable `pyo3_runtime.PanicException` (the panic-contract lane).
@@ -25,3 +73,4 @@ resolver = "2"
 inherits = "release"
 opt-level = "z"
 panic = "abort"
+strip = false

@@ -1,28 +1,32 @@
 [package]
 name = "csp-solver-wasm"
 version = "0.2.0"
-edition = "2024"
+edition.workspace = true
+rust-version.workspace = true
 description = "WebAssembly bindings for csp-solver — isomorphic mirror of the Python binding."
 license = "MIT"
 publish = false
+
+[lints]
+workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-csp-solver = { path = ".." }
-wasm-bindgen = "0.2"
-serde-wasm-bindgen = { version = "0.6", optional = true }
-serde = { version = "1", features = ["derive"], optional = true }
-console_error_panic_hook = "0.1"
+csp-solver = { workspace = true }
+wasm-bindgen = { workspace = true }
+serde-wasm-bindgen = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+console_error_panic_hook = { workspace = true }
 # Always-on: `sudoku.rs`'s typed BUDGET_EXCEEDED/INVALID_INPUT errors need
 # js_sys::{Error, Reflect} to stamp a `.code` string onto a real JS `Error`
 # (wasm-bindgen's own `JsError` only carries a `.message`). Tiny surface,
 # already implied transitively by wasm-bindgen itself.
-js-sys = "0.3"
+js-sys = { workspace = true }
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3"
+wasm-bindgen-test = { workspace = true }
 
 [features]
 # `sudoku` (the flat-index client-solve surface) is always compiled — it is

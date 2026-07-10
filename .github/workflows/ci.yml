@@ -3,7 +3,9 @@
 # Authored for the LIVE workspace root = REPO ROOT (repo-root Cargo.toml is the
 # Cargo workspace with members csp-solver + csp-solver/wasm — morph-core and
 # wasm-morph excised to github.com/mkbabb/morph at the W12 window (see the
-# pre-morph-excision tag). Edition 2024 + nightly toolchain (per CLAUDE.md). This
+# pre-morph-excision tag). Edition 2024 + stable toolchain (T2-W1: the nightly pin
+# was vestigial — rust-toolchain.toml at repo root pins channel=stable, MSRV 1.88,
+# and every lane below installs `dtolnay/rust-toolchain@stable` accordingly). This
 # re-applies the queens-smoke lane from the composed seed (kernel-soundness-closure
 # §6) and adds the full campaign-amended gate set from the W0 lane table
 # (docs/tranches/2026-07-grand-uplift/waves/W0-build-restoration.md).
@@ -17,7 +19,7 @@
 #   1. fmt + clippy       -> lint       (clippy -D warnings; strict, no continue-on-error)
 #   2. build + test       -> rust       (cargo build/test --workspace — NEVER per-crate)
 #   3. queens-bench smoke -> rust       (the only lane that runs the assert_eq!(92/14200))
-#   4. py compile         -> py-compile (cargo check --features py under Python <=3.13)
+#   4. py compile         -> py-compile (cargo check --features py under Python 3.13 — pyo3 0.29-tested floor, not a hard ceiling)
 #   5. py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in web/api)
 #   6. wasm               -> wasm       (wasm-pack test --node + clippy --target wasm32)
 #   7. twiggy budgets     -> twiggy     (full module fail>240 KB / warn>215 KB)
@@ -55,8 +57,8 @@ jobs:
         timeout-minutes: 15
         steps:
             - uses: actions/checkout@v4
-            - name: Install Rust nightly toolchain
-              uses: dtolnay/rust-toolchain@nightly
+            - name: Install Rust stable toolchain
+              uses: dtolnay/rust-toolchain@stable
               with:
                   components: rustfmt, clippy
             - name: Cache cargo registry + target
@@ -81,8 +83,8 @@ jobs:
         timeout-minutes: 25
         steps:
             - uses: actions/checkout@v4
-            - name: Install Rust nightly toolchain
-              uses: dtolnay/rust-toolchain@nightly
+            - name: Install Rust stable toolchain
+              uses: dtolnay/rust-toolchain@stable
             - name: Cache cargo registry + target
               uses: actions/cache@v4
               with:
@@ -106,20 +108,23 @@ jobs:
 
     # ---------------------------------------------------------------- Lane 4
     # py compile — the historical break class (Pass-1 N1). `cargo check --features py`
-    # under Python <=3.13: PyO3 0.24's ceiling is 3.13 (host 3.14 fails —
-    # kernel-soundness-closure.md §7.6). RED until W1 fixes the src/py.rs E0063.
+    # under Python 3.13: T2-W1's pyo3 0.24 -> 0.29 bump lifted the 0.24-era 3.13
+    # ceiling (0.29 is tested through 3.14.0 final upstream) — 3.13 below is now a
+    # tested-floor pin, not a hard cap (kernel-soundness-closure.md §7.6 is
+    # superseded by the pyo3 0.29 migration note). RED until W1 fixes the
+    # src/py.rs E0063.
     py-compile:
         runs-on: ubuntu-latest
         timeout-minutes: 20
         steps:
             - uses: actions/checkout@v4
-            - name: Pin Python 3.13 (PyO3 0.24 ceiling)
+            - name: Pin Python 3.13 (pyo3 0.29-tested floor)
               id: setup-python
               uses: actions/setup-python@v5
               with:
                   python-version: '3.13'
-            - name: Install Rust nightly toolchain
-              uses: dtolnay/rust-toolchain@nightly
+            - name: Install Rust stable toolchain
+              uses: dtolnay/rust-toolchain@stable
             - name: Cache cargo registry + target
               uses: actions/cache@v4
               with:
@@ -130,7 +135,8 @@ jobs:
                   key: cargo-pycompile-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
             - name: cargo check --features py
               # Point PyO3's build script at the pinned 3.13 interpreter explicitly
-              # (fail-explicit: don't let it discover a stray host Python > the ceiling).
+              # (fail-explicit: pin the tested floor rather than letting a stray host
+              # Python get discovered — pyo3 0.29 itself now supports up to 3.14).
               env:
                   PYO3_PYTHON: ${{ steps.setup-python.outputs.python-path }}
               run: cargo check -p csp-solver --features py
@@ -155,13 +161,13 @@ jobs:
         timeout-minutes: 30
         steps:
             - uses: actions/checkout@v4
-            - name: Pin Python 3.13 (PyO3 0.24 ceiling)
+            - name: Pin Python 3.13 (pyo3 0.29-tested floor)
               id: setup-python
               uses: actions/setup-python@v5
               with:
                   python-version: '3.13'
-            - name: Install Rust nightly toolchain
-              uses: dtolnay/rust-toolchain@nightly
+            - name: Install Rust stable toolchain
+              uses: dtolnay/rust-toolchain@stable
             - name: Install uv
               uses: astral-sh/setup-uv@v4
             - name: Cache cargo registry + target
@@ -205,8 +211,8 @@ jobs:
         timeout-minutes: 25
         steps:
             - uses: actions/checkout@v4
-            - name: Install Rust nightly toolchain (+ wasm32 target, clippy)
-              uses: dtolnay/rust-toolchain@nightly
+            - name: Install Rust stable toolchain (+ wasm32 target, clippy)
+              uses: dtolnay/rust-toolchain@stable
               with:
                   targets: wasm32-unknown-unknown
                   components: clippy
@@ -243,8 +249,8 @@ jobs:
         timeout-minutes: 25
         steps:
             - uses: actions/checkout@v4
-            - name: Install Rust nightly toolchain (+ wasm32 target)
-              uses: dtolnay/rust-toolchain@nightly
+            - name: Install Rust stable toolchain (+ wasm32 target)
+              uses: dtolnay/rust-toolchain@stable
               with:
                   targets: wasm32-unknown-unknown
             - name: Cache cargo registry + target
@@ -266,7 +272,10 @@ jobs:
             # --profile wasm-release is REQUIRED: plain release yields
             # 270,179 B (over the 240 KB fail budget); wasm-release
             # (workspace-root profile, opt-level=z, panic=abort) yields
-            # 211,639 B full / 87,853 B lean (W6 gate record).
+            # 210,312 B full / 87,475 B lean (T2-W1 re-measure on stable +
+            # wasm-bindgen 0.2.126, dtolnay/rust-toolchain@stable, this tree;
+            # supersedes the W6 gate record of 211,639 B full / 87,853 B lean —
+            # both bands hold with headroom, no rationale change needed).
             - name: wasm-pack build (full module)
               run: wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release
             - name: twiggy top + raw-size budget (fail >240 KB / warn >215 KB)
@@ -292,7 +301,7 @@ jobs:
                   set -euo pipefail
                   WASM=csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
                   RAW=$(wc -c < "$WASM")
-                  echo "lean artifact raw size: ${RAW} B (measured 87,853 B; fail >93,000)"
+                  echo "lean artifact raw size: ${RAW} B (measured 87,475 B; fail >93,000)"
                   if [ "$RAW" -gt 93000 ]; then
                     echo "::error::lean wasm artifact ${RAW} B exceeds the 93 KB band"
                     exit 1
@@ -309,8 +318,8 @@ jobs:
         timeout-minutes: 20
         steps:
             - uses: actions/checkout@v4
-            - name: Install Rust nightly toolchain (wasm32)
-              uses: dtolnay/rust-toolchain@nightly
+            - name: Install Rust stable toolchain (wasm32)
+              uses: dtolnay/rust-toolchain@stable
               with:
                   targets: wasm32-unknown-unknown
             - name: Install wasm-pack (>=0.14 floor)
@@ -330,10 +339,10 @@ jobs:
             - name: Set up Node (LTS) with npm cache
               uses: actions/setup-node@v4
               with:
-                  node-version: '22'
+                  node-version: '24'
                   cache: npm
                   cache-dependency-path: web/frontend/package-lock.json
-            # Node 22 ships npm 10.x, which resolves this lockfile differently —
+            # Node 24 ships npm 11.x already, but pin explicitly (Dockerfile parity) —
             # the same skew fixed in web/frontend/Dockerfile.
             - name: Pin npm >=11
               run: npm install -g npm@^11
@@ -349,7 +358,7 @@ jobs:
 
     # ---------------------------------------------------------------- Lane 9
     # e2e — Playwright over the Vue SPA (ratification R6). Mirrors the frontend
-    # lane's setup EXACTLY: it pins npm >=11 (Node 22's npm 10 mis-resolves the
+    # lane's setup EXACTLY: it pins npm >=11 (older Node's npm 10 mis-resolves the
     # lockfile) and builds the LEAN wasm artifact BEFORE `npm ci` because the
     # @mkbabb/csp-solver-wasm file: link points at the gitignored
     # csp-solver/wasm/pkg build output (deliberately NOT the registry package —
@@ -362,8 +371,8 @@ jobs:
         timeout-minutes: 25
         steps:
             - uses: actions/checkout@v4
-            - name: Install Rust nightly toolchain (wasm32)
-              uses: dtolnay/rust-toolchain@nightly
+            - name: Install Rust stable toolchain (wasm32)
+              uses: dtolnay/rust-toolchain@stable
               with:
                   targets: wasm32-unknown-unknown
             - name: Install wasm-pack (>=0.14 floor)
@@ -383,10 +392,10 @@ jobs:
             - name: Set up Node (LTS) with npm cache
               uses: actions/setup-node@v4
               with:
-                  node-version: '22'
+                  node-version: '24'
                   cache: npm
                   cache-dependency-path: web/frontend/package-lock.json
-            # Node 22 ships npm 10.x, which resolves this lockfile differently —
+            # Node 24 ships npm 11.x already, but pin explicitly (Dockerfile parity) —
             # the same skew fixed in web/frontend/Dockerfile.
             - name: Pin npm >=11
               run: npm install -g npm@^11

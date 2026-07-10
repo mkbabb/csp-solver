@@ -1,0 +1,10 @@
+# Pinned toolchain for the csp-solver workspace.
+#
+# STABLE, not nightly: the nightly pin was vestigial — the workspace, the wasm
+# crates, and `clippy -D warnings` all build clean on stable (MSRV bisected to
+# 1.88; see docs/tranches/2026-07-tranche-2/evidence). Edition 2024 is stable as
+# of 1.85, so nothing here needs the nightly channel.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]

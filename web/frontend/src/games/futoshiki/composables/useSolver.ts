@@ -65,13 +65,13 @@ function call(req: SolverRequest, transfer: ArrayBuffer[]): Promise<SolverRespon
   })
 }
 
-function toFlatBoard(boardSize: number, values: Record<string, number>): Uint32Array {
+function toFlatBoard(boardSize: number, values: Record<string, number>): Uint32Array<ArrayBuffer> {
   const buf = new Uint32Array(boardSize * boardSize)
   for (const [k, v] of Object.entries(values)) buf[Number(k)] = v
   return buf
 }
 
-function toFlatInequalities(inequalities: Inequality[]): Uint32Array {
+function toFlatInequalities(inequalities: Inequality[]): Uint32Array<ArrayBuffer> {
   const buf = new Uint32Array(inequalities.length * 2)
   inequalities.forEach(([a, b], i) => {
     buf[i * 2] = a

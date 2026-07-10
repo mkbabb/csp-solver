@@ -1,10 +1,14 @@
 [package]
 name = "csp-solver"
 version = "0.2.0"
-edition = "2024"
+edition.workspace = true
+rust-version.workspace = true
 description = "Generic constraint satisfaction problem solver with backtracking, AC-3 constraint propagation, and ordering heuristics."
 license = "MIT"
 repository = "https://github.com/mkbabb/csp-solver"
+
+[lints]
+workspace = true
 
 [features]
 default = []
@@ -23,13 +27,15 @@ alloc-count = []
 # (`data/sudoku_puzzles/`) into the built artifact — see
 # `puzzles/sudoku/generate.rs`. Pure-Rust, no C deps; wasm-compatible (the macro
 # reads files on the host at build time, ships them as `&'static [u8]`).
-include_dir = "0.7.4"
-pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
+include_dir = { workspace = true }
+# Version + `extension-module` live in `[workspace.dependencies]`; this member is
+# pyo3's sole consumer and adds only its `optional` gate (the `py` feature).
+pyo3 = { workspace = true, optional = true }
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["html_reports"] }
-hungarian = "1"
-proptest = "1"
+criterion = { workspace = true }
+hungarian = { workspace = true }
+proptest = { workspace = true }
 
 [lib]
 # cdylib only needed for PyO3 (maturin). Normal builds produce rlib only.

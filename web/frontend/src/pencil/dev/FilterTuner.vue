@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Wrench, X, Copy, RotateCcw } from 'lucide-vue-next'
+import { Wrench, X, Copy, RotateCcw } from '@lucide/vue'
 import {
   FILTER_PRESETS,
   DEFAULT_PRESETS,

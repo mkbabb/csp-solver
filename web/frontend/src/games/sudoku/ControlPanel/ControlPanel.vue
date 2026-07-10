@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onBeforeUnmount } from 'vue'
-import { Eraser } from 'lucide-vue-next'
+import { Eraser } from '@lucide/vue'
 import SolveIcon from '@pencil/chrome/SolveIcon.vue'
 import DiceIcon from '@pencil/chrome/DiceIcon.vue'
 import OptionSelector from '@pencil/chrome/OptionSelector/OptionSelector.vue'

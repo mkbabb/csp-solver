@@ -9,7 +9,7 @@
 //! from csp_solver import SudokuDifficulty, create_sudoku_csp, solve_sudoku, create_random_board
 //! ```
 //!
-//! Build: `PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 maturin develop --release --features py`
+//! Build: `maturin develop --release --features py`
 //!
 //! Split into submodules (each well under the 500-line budget) rather than
 //! one monolithic file:

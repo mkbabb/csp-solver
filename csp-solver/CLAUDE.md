@@ -178,8 +178,7 @@ implements `Domain`, some `LatticeDomain`.
 ```bash
 cargo test --workspace                  # 150 passed, 0 failed, 6 ignored
 cargo bench                             # criterion: sudoku, queens, map_coloring, lattice, assignment, cost_finite_domain
-PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1 \
-  maturin develop --release --features py   # build the PyO3 wheel (Python ≤3.13)
+maturin develop --release --features py   # build the PyO3 wheel (Python ≤3.13)
 ```
 
 `cargo test --workspace` measured at d9781e29, Apple M5 Max, 2026-07-06.
