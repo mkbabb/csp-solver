@@ -67,4 +67,48 @@ perf band **~10–330×** (not 19–380×) · live-API warm **~16–24 ms**, col
 - Lane 24's "still live / materialized" verdicts: quote-only-with-reverification (grade C).
 - Wall-clock ms are regimes and ratios, never SLAs (30-repro rule); any beat hard-gating on an absolute ms re-measures locally at execution time.
 - The verify-then-apply authoring rule for lanes 26–33 is RELAXED wherever the verifier confirmed the number — which is nearly everywhere (7 of 8 supplements graded A, most numbers byte-exact).
-- W-GATE appends the final section here; until it commits the GAC probe, the 13.36×-class ratios are inherited-trust and are cited only with that flag.
+- W-GATE appends the final section here; the GAC probe is now **committed** (`gac_timing_probe`, `ede25188`) and the aggregate is first-party (§5, "GAC aggregate — first-party close"). The 13.36×-class inherited-trust flag is **discharged**: quote the first-party 12.6–12.7× / 50-board number, not the retired 112-board scratch figure.
+
+## 5. Execution corrections (W-GATE close)
+
+Every number **execution itself** re-corrected — where a landed wave moved a value the authoring-time ledger (§1–3) had fixed. These are not refutations of the plan; they are the plan meeting the compiler, the byte counter, and the font subsetter. Stamped at final HEAD `c14995eb` (Apple M5 Max, 2026-07-10) unless a wave commit is named.
+
+**Test-suite counts.**
+
+- **Suite 150 → 151.** The Pass-1/Pass-2 baseline was `150/0/6`; the surviving suite at final HEAD is **`151/0/6`** (20 test binaries) — the net of this campaign's test add/deletes (substrate-excision deletions `nogoods.rs`/`restart_nogood_soundness.rs` minus the additions `verify_bank_uniqueness`, `gac_kernel_beats`, `all_different_except`, `solution_set_invariance`). `0 failed` was always the gate; the total is now 151. Every surviving doc quotes 151/0/6.
+- **tests-py 24/2 → 27/2 (contract truing, `54aa94a5`).** The rehomed wheel-contract suite at `csp-solver/tests-py/` was authored expecting `24 passed / 2 skipped`; the W4 fixup **trued the contract to the conservative bank split** — the wheel-contract assertions that enumerate the shipped bank (tier presence, N-range refusal, sparse-parse round-trip) grew to match the reshaped 45-board / N∈{3,4} reality, landing at **`27 passed / 2 skipped`**. The blacklist entry "107 Python tests" (§3) stands; the live number is 27/2, not the pre-tranche 108/2.
+
+**Wasm sizes — the two chains.**
+
+- **Lean Sudoku artifact: 87,853 → 87,475 → 87,763 → 90,602 B.** Four measured points, one per force:
+  - `87,853` — the tranche-1 baseline (`d9781e29`; the §2-corrected lean-z figure).
+  - `87,475` — **W1 (`5f9980c8`)**, the stable-pin + `wasm-bindgen` bump: the newer bindgen emitted marginally tighter glue.
+  - `87,763` — **W3 (`ed07ba6b`)**, the L26 kernel beats + Q9 battery re-added compiled context (the singletons-pool beat and the GAC-safe variants carry code); this is the figure the W4/W5 gates and the W5 re-gate all re-measured against the lean web-target build.
+  - `90,602` — **W6 (`b36b7b9f`)**, the affordance/pencil-marks op surface (opt-in full-GAC marks +1,779 B plus the hint/undo/share wasm-visible surface). This is the deployed final; `benchmarks.md` is stamped to it and the lean twiggy budget (fail >93 KB) holds with ~2.4 KB headroom.
+- **Full module: 210,312 → 220,554 B (hungarian/ndarray).** The authoring-time full-module figure was `210,312 B`; the T2-W3 re-measure landed **`220,554 B`** — the delta is the assignment surface's transitive **`ndarray`** pull plus the GAC Hungarian/Régin matching code compiled into the default-features build (which the lean `--no-default-features` build omits). This is the figure stamped into `.github/workflows/ci.yml` and `benchmarks.md`.
+- **twiggy WARN band 215 → 230 KB (truing).** The full-module warn threshold was authored at 215 KB — below the trued `220,554 B` full build, so it would have warned on every green build. W-era truing moved it to **warn >230 KB / fail >240 KB**; both hold with headroom. The separate lean budget (fail >93 KB) is unchanged.
+
+**Corpus count: 113 → 112 → 50 (W0 derive, W4 reshape).**
+
+- `113` — tranche-1's static hardcoded `"0/113"` verdict string in `gac_ab_corpus.rs`.
+- `112` — **W0 (`7c245bed`)** replaced the hardcoded string with a **`corpus.len()`-derived** count; against HEAD's then-dense bank the derived number was **112** (the §3 blacklist against `0/113` dates from here — "corpus is 112").
+- `50` — **W4 (`22514bae`)** reshaped the bank (N=5 kill + conservative tier excision to N=3-hard + N=4); the same `corpus.len()` derivation now yields **50** boards (5 named hard 9×9 + 45 surviving templates), verdict **`0/50` PASS** in both GAC states. The corrected-reality corpus is `0/50`; the historical `112` survives ONLY as the A/B-decision-corpus prose in `benchmarks.md`, flagged inherited-trust.
+- **CHANGELOG `0/113` — dated-release exemption (W0 adjudication).** The W0 literal-grep gate bans `0/113` outside `docs/tranches/`. `csp-solver/CHANGELOG.md:67` ("false-UNSAT `26/113→0/113`", the AC-3 `Unsatisfiable` trail-push fix) is **EXEMPT**: it is a dated, released changelog entry describing the soundness fix *at the corpus size that then existed*, not a live claim about the shipped bank. W0 adjudicated changelog history immutable — a dated release note is a record, not a reproducible assertion — so the grep carve-out for `csp-solver/CHANGELOG.md` is sanctioned, not a stale-echo violation.
+
+**Fonts — the Patrick Hand defect and the total.**
+
+- **P5 Patrick Hand subset defect → 4,312 B rebuild.** P5 (and the W5 Lane-T1 rebuild) shipped `patrickhand-subset.woff2` at **3,840 B**, cmap 44 — but the P5-authored `unicode-range` and text-file **omitted glyphs actually rendered by the affordance surface** (the `b` and `×` among them — the "×xN"/hint-copy path the W6 affordances introduced). W6 re-subset Patrick Hand against the true rendered-char set and corrected the `unicode-range`; the rebuilt face measures **4,312 B** on disk (`web/frontend/src/assets/fonts/patrickhand-subset.woff2`, +472 B). The P5 "byte-exact 3,840" row is superseded for this face.
+- **Fonts total 17,228 → 17,708 B.** P5's subset total was `17,228 B` (Fira 3,624 + Patrick 3,840 + Fraunces 9,764). With the Patrick Hand correction (3,840 → 4,312) and the Fraunces timestamp-noise settle (9,764 → 9,772), the shipped total is **`17,708 B`** (3,624 + 4,312 + 9,772). Quote 17,708, not 17,228.
+- **`assetsInlineLimit` inversion.** The P5 `vite.config.ts` guard was authored as `assetsInlineLimit: (f) => !f.endsWith('.woff2')` — which returns **`true` (force-inline)** for *every non-woff2 asset*, base64-inlining assets that should stay hashed files, and the intent (never inline woff2) only incidentally right. The landed form inverts it correctly: `(filePath) => (filePath.endsWith('.woff2') ? false : undefined)` — **`false` (never inline)** for woff2, **`undefined` (Vite default)** for everything else. The predicate's return-value semantics, not its condition, were the bug.
+
+**Hardening — the H8 raster interaction.**
+
+- **H8-centering ↔ cartoon-shadow raster.** H8 was selected as centering-only (`align-items: center` at ≥md). In execution the centering **interacted with the cartoon-shadow's `translateY(-2px)`**: the S3 layout probe measured board-center − card-center = **−2 px at 1440** — the shadow-offset, not a layout bug, but a real interaction the authoring spec didn't predict (it assumed pixel-flush centering). Recorded as within-spec (the −2 px is the shadow idiom, accepted), not a defect — but the "centering is flush" implication is corrected.
+
+**GAC aggregate — first-party close (13.36× → 12.6–12.7×).**
+
+The tranche's last inherited-trust number is discharged. Lane P1 authored the **committed** `csp-solver/examples/gac_timing_probe.rs` (keeper, sibling of `gac_ab_corpus`) and ran it twice at `ede25188` (`evidence/execution/T2-WGATE-gac-probe.md`, both runs quoted). The 13.36× / 112-board figure — carried from a since-deleted scratch harness — is **retired**; the first-party number is measured on the corrected-reality 50-board post-W4 corpus.
+
+- **Aggregate 13.36× → 12.6–12.7× (12.58× / 12.73×, two consistency-checked runs).** Same class, not materially different — the GAC default-ON decision now rests on a committed, reproducible probe. Deterministic node spine: 40,513 → 4,678 (8.66× search reduction), byte-identical across runs. `benchmarks.md`'s GAC table is re-stamped to this; the retired figure survives as one historical sentence.
+- **Minority cost DEEPER than disclosed: 1.3–2.5× → 1.8–3.3× slower.** The retired prose put the three slow named boards at "1.3–2.5× slower" (Al Escargot 0.50×, Golden Nugget 0.79×, Inkala 2010 0.40×). First-party measured: **Al Escargot 0.40–0.42×, Golden Nugget 0.56×, Inkala 2010 0.30–0.33×** — 1.8–3.3× slower, Inkala worst. Direction unchanged (3 of 5 named boards slower ON; aggregate win N=4-dominated), magnitude corrected upward. `benchmarks.md`'s minority-cost row quotes the measured ratios.
+- **Node-count row corrected: 41,807 → 5,948 becomes 40,513 → 4,678.** The retired scratch-harness node totals were on the 112-board corpus; the first-party 50-board corpus yields the deterministic 40,513 → 4,678, host-independent and reproduced byte-exact across both runs.

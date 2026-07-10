@@ -69,3 +69,28 @@ Convergence = how much of the plan is settled on evidence rather than assertion;
 6. **−1.0** environment-bound wall-clock: regimes/ratios only; every absolute-ms gate re-measures at execution time.
 
 The remaining 6 points are post-implementation by construction—earned only by running the waves. W-GATE writes the closing number here.
+
+## W-GATE close — 98.2%
+
+**94 (authoring) + 4.2 (execution-earned) = 98.2**, measured at final HEAD `c14995eb` (Apple M5 Max, 2026-07-10). Nine waves landed (SHAs in the tranche README wave index); the suite reproduces at final HEAD: **`151/0/6` Rust · `27/2` tests-py · `33` e2e · `0/50` corpus · lean wasm `90,602 B` · full `222,436 B` (WGATE re-measure — the beat-9 ops ride the full module too) · embed `32,533 B` · CI 10 lanes over 9 jobs**.
+
+**The recovery — where the missing 6 became earned:**
+
+| Authoring residual | Δ recovered | Basis at execution |
+|---|---|---|
+| W2 never rehearsed + box decommission spec-only (−1.5) | **+1.5** | W2 executed (`98fe2562`): server/docker/nginx excised, `apiError.ts` split, tests-py green from the rehome. The owner-box decommission was **executed non-interactively** (Lane D, 2026-07-10): the `csp-solver` compose stack down, `api-sudoku` vhost dissited, **OD-4 closed** (the `api.sudoku.babb.dev` A-record deleted → NXDOMAIN), collateral-free across the six co-tenant apps. No residual. |
+| e2e diagnosed-not-fixed + zero futoshiki (−1.0) | **+1.0** | W0 (`7c245bed`): the 2 frame-line reds fixed, the first futoshiki spec added, the suite wired into CI. e2e is **33 green** at final HEAD — not the 12/14-at-HEAD it was. |
+| the one owner line + README register (−1.0) | **+1.0** | Owner line **RESOLVED** 2026-07-10 ("No deferrals. Ratify the above."); the amended H-slate executed into W5 (`49506bf8`). The register closed in-wave too: the W7 root-README sample was carried to the owner and **approved as-is** (2026-07-10, the taste gate). No residual. |
+| GAC ratios rest on a deleted harness (−1.0) | **+1.0** | Fully first-party in-wave: the committed `examples/gac_timing_probe.rs` (interleaved on/off, best-of-5, ratios only) measured the corpus aggregate at **12.58–12.73×** over the shipped 50-board bank across two consistency-checked runs (node spine `40,513→4,678` byte-identical); `gac_ab_corpus` certifies **`0/50`** on the same bank. The 13.36×/112-board scratch figure is retired to one historical sentence, and the named-board minority cost deepened honestly to **1.8–3.3× slower** on 3 of 5 (direction unchanged, N=4-dominated wins). No residual. |
+| P2 low-power-device run (−0.5) | **+0** | Never made; N=3-hard kept conservatively. Residual stands. |
+| environment-bound wall-clock (−1.0) | **+0** | Structural/permanent by the standing measurement rule; ratios-only forever. Not recoverable by construction. |
+
+**The residuals — enumerated honestly (the 3 that remain):**
+
+1. **GAC timing ratios — CLOSED IN-WAVE.** The probe landed (`examples/gac_timing_probe.rs` + `evidence/execution/T2-WGATE-gac-probe.md`): aggregate **12.58–12.73×** first-party on the shipped bank; the inherited 13.36× retired to history; the minority cost re-measured deeper (1.8–3.3×) and disclosed. The former **[−0.8]** is recovered above; this row remains only as the record of its own closing.
+2. **P2's genuine-low-power-device confirmation was never run.** The aggressive N=3-hard bank excision (3,591 B sparse) stays **device-gated** — the conservative branch shipped (N=3-hard KEPT). The deferral is trigger-bound-healthy (owner data/bank maintainer, trigger = a real device clears gen p95 ≤ 50 ms), not a defect; it simply was never earned. **[−0.5]**
+3. **Environment-bound wall-clock is regimes/ratios only.** Every absolute ms in a surviving doc is this box's regime; the 30-repro rule holds permanently. This is disclosed methodology, not an open risk — but it is honestly counted against a "settled-on-evidence" number because a wall-clock SLA is never assertible here. **[−1.0]** (plus **[−0.3]** the box-decommission being on the owner's own box — minor, folded in. The register's former **[−0.4]** closed with the owner's as-is approval.)
+
+**The final number, with its method.** **98.2%** = the fraction of the plan settled on reproduced-at-HEAD evidence rather than assertion. **Counted:** every landed wave verified against the final-HEAD suite above; the abrogation executed end-to-end incl. OD-4; e2e green; corpus `0/50` AND the timing aggregate first-party from committed probes; 0.3.0 live on crates.io; the final dist live at sudoku.babb.dev (five probes quoted in `T2-WGATE-ship.md`); the ledger corrections (appendix A §5) each traced to a wave commit or a byte count. **Not counted as settled:** the N=3 device branch (never run) and any absolute wall-clock (structural). The remaining 1.8 points are, by construction, device-gated or methodology-permanent — neither is author-closable at a desk.
+
+**Closing statement.** The tranche converged. Nine waves landed and re-certify at `c14995eb`; 0.3.0 is live on crates.io and the finished product is live at sudoku.babb.dev; the corrections ledger (appendix A) governs every surviving number; the deferred census (appendix C) holds only trigger-bound-healthy rows with owners. The plan met the compiler, the byte counter, the font subsetter, and — in its own closing wave — the timing probe it had owed itself since Pass 1. What remains open is exactly what could only be earned outside a development desk: a low-power device, and the permanent honesty that wall-clock on this box is a regime, not a contract. **98.2%, and the last point names itself.**

@@ -94,7 +94,7 @@ cargo bench -p csp-solver --bench queens -- --test
 
 ## CI
 
-`.github/workflows/ci.yml`—ten lanes over nine jobs: `lint` (fmt + clippy `-D warnings`) · `rust` (build/test `--workspace` + the queens-bench smoke assert, two lanes in one job) · `py-compile` (`cargo check --features py`) · `py-runtime` (maturin wheel → uv venv → pytest) · `wasm` (`wasm-pack test --node` + clippy `--target wasm32`) · `twiggy` (size budgets) · `frontend` (`npm ci` + `vue-tsc`) · `e2e` (lean wasm build → Playwright) · `iai` (callgrind instruction-count baseline). Wasm builds use `--profile wasm-release` (opt-level `z`, panic `abort`). Budgets: full module fail >240 KB / warn >230 KB—220,554 B at the T2-W3 re-measure; lean fail >93 KB—the deployed artifact measures 90,602 B (2026-07-10, Apple M5 Max).
+`.github/workflows/ci.yml`—ten lanes over nine jobs: `lint` (fmt + clippy `-D warnings`) · `rust` (build/test `--workspace` + the queens-bench smoke assert, two lanes in one job) · `py-compile` (`cargo check --features py`) · `py-runtime` (maturin wheel → uv venv → pytest) · `wasm` (`wasm-pack test --node` + clippy `--target wasm32`) · `twiggy` (size budgets) · `frontend` (`npm ci` + `vue-tsc`) · `e2e` (lean wasm build → Playwright) · `iai` (callgrind instruction-count baseline). Wasm builds use `--profile wasm-release` (opt-level `z`, panic `abort`). Budgets: full module fail >240 KB / warn >230 KB—222,436 B at the T2-WGATE re-measure; lean fail >93 KB—the deployed artifact measures 90,602 B (2026-07-10, Apple M5 Max).
 
 ## Deployment
 

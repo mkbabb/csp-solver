@@ -11,17 +11,17 @@ Numbers below trace either to a named campaign artifact under `docs/tranches/202
 
 ## GAC default-ON: the corpus result and its cost
 
-GAC-in-AllDifferent is default-ON, gated at live-participant count ≥ `GAC_MIN_PARTICIPANTS` (3). The decision rests on the historical A/B corpus result below: a **13.36× aggregate** measured on the pre-reshape **112-board** corpus -- 5 named hard 9×9 and all 107 then-template-bank puzzles (N=2..4) -- solved under the exact production config (`Ac3 + Mrv`), GAC off vs on (`evidence/synthesis-pass3.md` row 2; `waves/W2-gac-search.md`). **Inherited-trust flag:** those ratios rest on a deleted scratch harness, not the committed `gac_ab_corpus` example -- cite only with this flag and the historical-corpus caveat until a first-party timing probe lands (it rides the W-GATE recertification; `docs/tranches/2026-07-tranche-2/appendices/A-corrections-ledger.md` §4).
+GAC-in-AllDifferent is default-ON, gated at live-participant count ≥ `GAC_MIN_PARTICIPANTS` (3). The decision rests on the A/B corpus result below: a **12.6–12.7× aggregate** (12.58× / 12.73× across two consistency-checked runs) measured first-party on the **50-board** post-W4 corpus -- 5 named hard 9×9 + the shipped template bank (N=3-hard 20 + N=4 25) -- solved under the exact production config (`Ac3 + Mrv`), GAC off vs on, by the committed `gac_timing_probe` example (`measured at ede25188, Apple M5 Max, 2026-07-10`; `docs/tranches/2026-07-tranche-2/evidence/execution/T2-WGATE-gac-probe.md`). Ratios are off/on wall time (interleaved, best-of-5); node counts are deterministic. _Historical note:_ a pre-reshape **13.36×** figure on a 112-board corpus (N=2..4 dense) was carried on inherited trust from a since-deleted scratch harness; it is retired -- the first-party 50-board number above supersedes it and is in the same class.
 
-Post-W4 bank reshape, the committed `gac_ab_corpus` example runs the **50-board** post-W4 bank -- N=3-hard + N=4 (45 templates) plus the 5 named hard 9×9 -- and reports **false-UNSAT counts only, not timing or search nodes**: 0/50 in both GAC states (§ Kernel soundness parity below). It's a soundness gate, not the source of the aggregate/node rows, which stay pinned to the historical 112-board corpus under the flag above.
+The sibling `gac_ab_corpus` example runs the same 50-board bank and reports **false-UNSAT counts only** (0/50 in both GAC states, § Kernel soundness parity below) -- a soundness gate, not the source of the timing rows above.
 
 | Measure | Value | Source |
 |---|---|---|
-| Corpus aggregate speedup (ON) | **13.36×** (14.2–14.6× across reruns) | `synthesis-pass3.md` row 2 |
-| Search nodes, off → on | 41,807 → 5,948 | ibid. |
-| Best single-board win | N=4, up to ~112× | ibid. |
+| Corpus aggregate speedup (ON) | **12.6–12.7×** (12.58× / 12.73×, two runs) | `gac_timing_probe` @ `ede25188` |
+| Search nodes, off → on | 40,513 → 4,678 (8.66× fewer) | ibid. (deterministic) |
+| Best bucket win | N=4 medium/hard, ≈25.7–26.8× | ibid. |
 
-**The minority cost, disclosed:** 3 of the 5 named hard 9×9 boards are reproducibly slower with GAC on -- Al Escargot 0.50×, Golden Nugget 0.79×, Inkala 2010 0.40× (i.e. 1.3–2.5× slower). The aggregate win is dominated by the N=4 boards; the hard-9×9 minority pays GAC's per-propagation constant. The default stands because the corpus aggregate and the 16×16 failure-to-success result outweigh it, and every N-keyed gate tested was ≤ blanket-ON.
+**The minority cost, disclosed (deeper than the retired figure implied):** 3 of the 5 named hard 9×9 boards are reproducibly slower with GAC on -- **Al Escargot 0.40–0.42×, Golden Nugget 0.56×, Inkala 2010 0.30–0.33×** (i.e. 1.8–3.3× slower, first-party). The retired scratch-harness prose put this at 1.3–2.5×; the committed probe measures a deeper slowdown, Inkala worst. The aggregate win is dominated by the N=4 boards; the hard-9×9 minority pays GAC's per-propagation constant. The default stands because the corpus aggregate and the 16×16 failure-to-success result outweigh it, and every N-keyed gate tested was ≤ blanket-ON.
 
 **The gate threshold:** `GAC_MIN_PARTICIPANTS` swept 2–6 stays within ~7%; at 9 it is 1.79× worse. 3 is retained.
 
@@ -46,7 +46,7 @@ cargo test --workspace  →  151 passed, 0 failed, 6 ignored (20 test binaries)
 
 ## Wasm artifact sizes
 
-Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean Sudoku artifact -- the `--no-default-features` build the frontend Worker ships -- measures **90,602 B raw** (`wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm`, measured at c14995eb, Apple M5 Max, 2026-07-10). The full module measures **220,554 B** (the T2-W3 re-measure stamped in `.github/workflows/ci.yml`; the assignment surface's transitive `ndarray` accounts for the delta over the lean build, which compiles assignment out). CI enforces size budgets in the `twiggy` lane: full module fail >240 KB / warn >230 KB; separate lean budget fail >93 KB -- both hold with headroom.
+Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean Sudoku artifact -- the `--no-default-features` build the frontend Worker ships -- measures **90,602 B raw** (`wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm`, measured at c14995eb, Apple M5 Max, 2026-07-10). The full module measures **222,436 B** (T2-WGATE re-measure at `c14995eb`, 2026-07-10 -- the W6 beat-9 propagate ops ride the full module too, +1,882 B over the T2-W3 stamp; the assignment surface's transitive `ndarray` accounts for the bulk of the delta over the lean build, which compiles assignment out). CI enforces size budgets in the `twiggy` lane: full module fail >240 KB / warn >230 KB; separate lean budget fail >93 KB -- both hold with headroom.
 
 ## Reproducing
 

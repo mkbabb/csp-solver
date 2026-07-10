@@ -272,7 +272,8 @@ jobs:
             # --profile wasm-release is REQUIRED: plain release yields
             # 270,179 B (over the 240 KB fail budget); wasm-release
             # (workspace-root profile, opt-level=z, panic=abort) yields
-            # 220,554 B full / 90,602 B lean. Full is the T2-W3 re-measure: the
+            # 222,436 B full / 90,602 B lean. Full is the T2-WGATE re-measure (the
+            # W6 beat-9 propagate ops ride the full module too, +1,882 B): the
             # assignment Hungarian dispatch consumes the hungarian crate, whose
             # transitive ndarray grows the DEFAULT-feature full module +10,242 B;
             # the deployed lean artifact excludes assignment entirely. Lean 90,602 B

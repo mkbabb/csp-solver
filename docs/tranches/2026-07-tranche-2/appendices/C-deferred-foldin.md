@@ -105,7 +105,7 @@ Every row carries both an **owner** (who re-opens it) and a **trigger** (what fi
 | Memoized/idle-chunked transition path regen (the @4× CPU half: `generateGridBoilFrames` + 256 `wobbleRect` + mounts) | pencil/FE maintainer | the ~100–150 ms-class @4× worst frame becomes user-felt | verify-P3-P4 A2 |
 | N=3-hard bank aggressive excision (3,591 B sparse) | data/bank maintainer | a genuine low-power device clears gen p95 ≤ 50 ms | verify-P1-P2 |
 | `generate_templates.rs` N=5 arg-range refusal | engine maintainer | next touch of the file | Q2 §E |
-| C1/C2 `index.css` `@layer` extractions | FE maintainer | a cascade-layer proof or a visual-diff pass lifts the hold (targeted **W8**) | C1/C2 |
+| C1/C2 `index.css` `@layer` extractions | FE maintainer | a cascade-layer proof or a visual-diff pass lifts the hold — **HELD at W8** (`c14995eb`): both rules live in `@layer utilities`; an SFC `<style>` extraction changes their cascade layer and the wave's automated gates (build/tsc/eslint/e2e) can't confirm the layer-merge is behavior-identical, so per the edict's zero-behavior-change bar both were held, not risked. The deferral stays open on the visual-diff trigger | C1/C2, `T2-W8-manifest.md` §3 |
 | Vendored-test prune completeness (bbnf `--update --delete` semantics) | bbnf maintainer (out-of-repo) | next re-vendor after W3's | Q6 §3.5 |
 
 **Landed this tranche, no longer deferred** (recorded here so the census stays honest):
@@ -117,3 +117,11 @@ Every row carries both an **owner** (who re-opens it) and a **trigger** (what fi
 ## Chronic roll-up after this fold
 
 Closing the fold empties the chronic list to trigger-bound healthy deferrals only: L25-07 (failed-gate park), L25-12, L25-13, L25-14, L25-19, L25-20, L25-22, L25-36, L25-39, the out-of-repo set—plus the two permanent excisions (L25-10 split, L25-23 N=5-M/H). Every other chronic item **lands or closes inside this tranche**: L25-01 (foreclosed), L25-11 (W3), L25-15 (W3), L25-18 (W1), L25-32 (re-based), L25-40 (W3), L25-45 (W0), L25-46 (out-of-repo), L25-50 (W0), L25-54 (W7). W-GATE re-checks this roll-up at close.
+
+## W-GATE close — roll-up re-check (`c14995eb`)
+
+**Re-checked at final HEAD; the roll-up holds.** Every §G row (the tranche's own new deferrals) carries both an owner and a fired-or-standing trigger — no orphans:
+
+- **W7-fold additions landed and are trigger-bound-healthy.** The three deferrals opened by the late waves all resolved to healthy shapes: **C1/C2** → **HELD at W8** (owner FE maintainer, trigger = visual-diff pass; the hold is the correct zero-behavior-change disposition, not an orphan); **`generate_templates.rs` N=5 arg-range refusal** → still **DEFER** (owner engine maintainer, trigger = next touch of the file; the file stays N-general and the N=5 rejection is policy-enforced at generation, verified by the W4 N=5-grep classification); **N=3-hard aggressive excision** → **DEFER** (owner data/bank maintainer, trigger = a genuine low-power device clears gen p95 ≤ 50 ms — the run was never made, so N=3-hard was conservatively KEPT in the shipped 45-board bank).
+- **The "landed, no longer deferred" census stays honest.** Engine-domains pencil marks **LANDED → W6** (`b36b7b9f`) as booked — opt-in full-GAC behind the peek/hint grammar; the census row is confirmed, not a lingering deferral.
+- **No chronic item regressed.** The foreclosed/closed set (L25-01, -11, -15, -18, -32, -40, -45, -50, -54) all landed at their named waves (SHAs in the tranche README wave index); the surviving chronic set is exactly the trigger-bound-healthy list above, unchanged. **Zero orphaned rows; every deferral has owner + trigger.**

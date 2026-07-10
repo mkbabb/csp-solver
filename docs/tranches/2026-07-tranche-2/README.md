@@ -41,23 +41,23 @@ Repo baseline: `8913023e` (feat(pencil): the wordmark becomes the game selector)
 
 Dependency notation: `←` requires. Full specs in [`waves/`](waves/). Prototype gates are all CLEARED (Pass-2 + Pass-3)—no wave is prototype-blocked anymore; the one conditional left is W4's device-gated aggressive branch.
 
-| Wave | Scope (one line) | Depends | Effort | Headline gate |
-|---|---|---|---|---|
-| [T2-W0](waves/T2-W0-gates-hygiene.md) | e2e at HEAD fixed + futoshiki spec + CI wiring; stale-literal refresh; `.env` untrack | — | S | e2e full green in CI; `gac_ab_corpus` prints derived 0/112 |
-| [T2-W1](waves/T2-W1-toolchain-deps.md) | Stable pin + MSRV 1.88; PyO3 0.29 + dist-info rename; Node 24, Vite 7→8 (P7 cleared), TS 6.0.3 | ← W0 | M | 150/0/6 · 108/2 · clean build under vue-tsc + clippy `-D warnings` |
-| [T2-W2](waves/T2-W2-abrogation.md) | R1 executed: server/docker/nginx excision, `apiError.ts` split, tests-py rehome, doc-reference sweep | ← W0, W1 | L | zero `web/api` hits (source, config, prose); py-runtime green from `tests-py/` |
-| [T2-W3](waves/T2-W3-kernel-tests.md) | Inline-test migration; substrate excision @0.3.0 + bbnf sync; bench hygiene + iai-CI; L26 kernel beats pinned safe | ← W1 | L | Q9 invariant battery P1–P6 green; node counts frozen; 0/112 both modes |
-| [T2-W4](waves/T2-W4-data-reshape.md) | N=5 kill; sparse embed (P1); conservative bank excision—keep N=3-hard | ← W2 | M | sweep green · `gac_ab_corpus` + Vite-plugin parse green on the reshaped bank |
-| [T2-W5](waves/T2-W5-fe-perf-hardening.md) | Transport headers + font self-host (P5); grain-hoist (P3); mobile; the Q8-final hardening slate; pencil-boil 0.7.0 | ← W1, W3ᵇ | L | −60%-class size-switch raster; SSIM soul-gate; focused-conflict ring computes red/10 |
-| [T2-W6](waves/T2-W6-affordances.md) | R3's bound order 1–8 with the Q7 interlock fixes + the Q4 SW strategy | ← W5 | L | per-affordance e2e + the shared keyboard spec; offline reload serves fonts+wasm from Cache Storage |
-| [T2-W7](waves/T2-W7-docs-record.md) | Fold-not-delete per the Q10-amended plan; MIT; the record (reversals, ledgers, corrections) | ← all prior | M | zero CLAUDE.md tracked; zero stale-echo entries; zero retired-N=5 claims carried |
-| [T2-W-GATE](waves/T2-WGATE-recertification.md) | Re-certification: 30-repro template re-run, committed GAC probe, ledger close | ← all | S | every headline number reproduced at final HEAD from committed harnesses |
+| Wave | Scope (one line) | Depends | Effort | Headline gate | Landed |
+|---|---|---|---|---|---|
+| [T2-W0](waves/T2-W0-gates-hygiene.md) | e2e at HEAD fixed + futoshiki spec + CI wiring; stale-literal refresh; `.env` untrack | — | S | e2e full green in CI; `gac_ab_corpus` prints derived 0/112 | `7c245bed` |
+| [T2-W1](waves/T2-W1-toolchain-deps.md) | Stable pin + MSRV 1.88; PyO3 0.29 + dist-info rename; Node 24, Vite 7→8 (P7 cleared), TS 6.0.3 | ← W0 | M | 150/0/6 · 108/2 · clean build under vue-tsc + clippy `-D warnings` | `5f9980c8` |
+| [T2-W2](waves/T2-W2-abrogation.md) | R1 executed: server/docker/nginx excision, `apiError.ts` split, tests-py rehome, doc-reference sweep | ← W0, W1 | L | zero `web/api` hits (source, config, prose); py-runtime green from `tests-py/` | `98fe2562` |
+| [T2-W3](waves/T2-W3-kernel-tests.md) | Inline-test migration; substrate excision @0.3.0 + bbnf sync; bench hygiene + iai-CI; L26 kernel beats pinned safe | ← W1 | L | Q9 invariant battery P1–P6 green; node counts frozen; 0/112 both modes | `ed07ba6b` + `260bfe0f` (fixup) |
+| [T2-W4](waves/T2-W4-data-reshape.md) | N=5 kill; sparse embed (P1); conservative bank excision—keep N=3-hard | ← W2 | M | sweep green · `gac_ab_corpus` + Vite-plugin parse green on the reshaped bank | `22514bae` + `54aa94a5` (fixup) |
+| [T2-W5](waves/T2-W5-fe-perf-hardening.md) | Transport headers + font self-host (P5); grain-hoist (P3); mobile; the Q8-final hardening slate; pencil-boil 0.7.0 | ← W1, W3ᵇ | L | −60%-class size-switch raster; SSIM soul-gate; focused-conflict ring computes red/10 | `49506bf8` |
+| [T2-W6](waves/T2-W6-affordances.md) | R3's bound order 1–8 with the Q7 interlock fixes + the Q4 SW strategy | ← W5 | L | per-affordance e2e + the shared keyboard spec; offline reload serves fonts+wasm from Cache Storage | `b36b7b9f` |
+| [T2-W7](waves/T2-W7-docs-record.md) | Fold-not-delete per the Q10-amended plan; MIT; the record (reversals, ledgers, corrections) | ← all prior | M | zero CLAUDE.md tracked; zero stale-echo entries; zero retired-N=5 claims carried | `ede25188` |
+| [T2-W-GATE](waves/T2-WGATE-recertification.md) | Re-certification: 30-repro template re-run, committed GAC probe, ledger close | ← all | S | every headline number reproduced at final HEAD from committed harnesses | this wave (orchestrator commits) |
 
 ᵇ W5's only W3 coupling is sequencing hygiene (kernel beats don't touch the FE); W5 may start after W1 if W3 is in flight.
 
 **DAG:** `W0 → W1 → {W2, W3} · W2 → W4 · W1 → W5 → W6 · {W0..W6} → W7 → W-GATE`.
 
-| **T2-W8** | Grand recursive colocation (FE+BE) | ← W2, W5, W6 — moves only final files | [`waves/T2-W8-colocation.md`](waves/T2-W8-colocation.md) |
+| **T2-W8** | Grand recursive colocation (FE+BE) | ← W2, W5, W6 — moves only final files | [`waves/T2-W8-colocation.md`](waves/T2-W8-colocation.md) | Landed `c14995eb` |
 
 **Dropped from wave candidacy** (settled REJECT/DEFER/RETIRED): granian, wire reshape (dead with R1), reka/glass-ui component adoption, manual pencil marks, solve timer, simd128, opt-level 3, opt-level s (deferred w/ felt-latency trigger), divan, the L29 SOTA list wholesale, repo split (VOID), H2-placement, H6-burst, H7, H10.
 
