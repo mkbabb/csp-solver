@@ -302,7 +302,7 @@ pub fn create_random_board(
             // Rust-owned fast path: the crate serves its own compile-time
             // embedded template bank (`include_dir!` in `puzzles/sudoku/
             // generate.rs`). When no bank is embedded for this size/difficulty
-            // (e.g. the locked N=5 Medium/Hard policy), reject explicitly rather
+            // (e.g. the locked N=5 policy), reject explicitly rather
             // than fall through to unbounded hole-digging — the service also
             // gates this up front via `template_count`, so this is defense in
             // depth against a direct caller.
@@ -327,7 +327,7 @@ pub fn create_random_board(
 /// Number of pregenerated templates embedded for `(N, difficulty)`.
 ///
 /// The Python service calls this to enforce the locked N=5 policy: a request for
-/// a size/difficulty with zero embedded templates (N=5 Medium/Hard) is rejected
+/// a size/difficulty with zero embedded templates (N=5) is rejected
 /// with a `NOT_FOUND` up front, rather than falling through to unbounded
 /// hole-digging generation. Counts from the embedded directory listing without
 /// parsing any template file.

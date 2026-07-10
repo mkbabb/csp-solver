@@ -25,10 +25,18 @@
 //!   1. cargo run --release --example generate_templates -- <N> <difficulty> <count>
 //!   2. rebuild the wheel (`maturin develop --release --features py`) to re-embed.
 //!
-//! Output schema (compatible with the historical Python template files, and
-//! whitespace-tolerantly re-parsed by `generate.rs::parse_puzzle_field`):
-//!   {"solution": {"<pos>": <digit>, ...}, "puzzle": {"<pos>": <digit>, ...}, "backtracks": <u32>}
-//!   (puzzle carries only non-zero/given cells; solution carries every cell.)
+//! Output schema (sparse, puzzle-only, compact — re-parsed by
+//! `generate.rs::parse_puzzle_field`, which reads only the `puzzle` object):
+//!   {"puzzle":{"<pos>":<digit>,...}}
+//!   (puzzle carries only the non-zero/given cells; no whitespace.)
+//!
+//! The full solution and the `measure_difficulty` backtrack count are still
+//! computed each iteration — the re-solve *is* the uniqueness/solvability
+//! verification, and both are logged to stderr — but neither is serialized:
+//! `parse_puzzle_field` never read them, so they were pure embed dead-weight
+//! (~128 KiB across the bank). Dropping them plus sparsifying the puzzle and
+//! stripping pretty-print whitespace takes the embed from 298,006 B to
+//! 81,963 B (−72.5%).
 //!
 //! Each template logs its generation / verify-solve / difficulty-measurement
 //! timing to stderr, so a single run doubles as an ad-hoc timing harness.
@@ -60,15 +68,6 @@ fn sparse_json(board: &[u32]) -> String {
         .iter()
         .enumerate()
         .filter(|&(_, &v)| v != 0)
-        .map(|(i, v)| format!("\"{i}\":{v}"))
-        .collect();
-    format!("{{{}}}", entries.join(","))
-}
-
-fn dense_json(board: &[u32]) -> String {
-    let entries: Vec<String> = board
-        .iter()
-        .enumerate()
         .map(|(i, v)| format!("\"{i}\":{v}"))
         .collect();
     format!("{{{}}}", entries.join(","))
@@ -145,23 +144,22 @@ fn main() {
         };
         let measure_elapsed = measure_start.elapsed();
 
-        let json = format!(
-            "{{\"solution\":{},\"puzzle\":{},\"backtracks\":{}}}",
-            dense_json(&solution),
-            sparse_json(&puzzle),
-            backtracks
-        );
+        // Sparse, puzzle-only, compact: the solution and backtracks are computed
+        // (the re-solve above is the solvability/uniqueness gate) and logged
+        // below, but never serialized — `parse_puzzle_field` reads only `puzzle`.
+        let json = format!("{{\"puzzle\":{}}}", sparse_json(&puzzle));
         let path = out_dir.join(format!("template-{i}.json"));
         fs::write(&path, json).expect("failed to write template JSON");
         written += 1;
 
         eprintln!(
             "  [{}/{count}] gen={:>9.1}ms verify_solve={:>7.1}ms measure_difficulty={:>9.1}ms \
-             backtracks={backtracks:>8} -> {}",
+             backtracks={backtracks:>8} solution_cells={} -> {}",
             i + 1,
             gen_elapsed.as_secs_f64() * 1000.0,
             solve_elapsed.as_secs_f64() * 1000.0,
             measure_elapsed.as_secs_f64() * 1000.0,
+            solution.len(),
             path.display()
         );
     }

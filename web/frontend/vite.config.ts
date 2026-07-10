@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
@@ -27,7 +27,14 @@ import { defineConfig, type Plugin } from 'vite'
 function sudokuTemplates(): Plugin {
   const SRC_REL = '../../csp-solver/data/sudoku_puzzles'
   const OUT_REL = 'src/games/sudoku/data/templates.ts'
-  const SIZES = [2, 3, 4]
+  // W4 (tranche-2) reshaped the bank: N=2 (all tiers), N=3-easy, N=3-medium, and
+  // the whole N=5 subtree were excised — the fast-path bank now ships only the
+  // tiers whose native generate breaches the in-browser budget (N=3-hard, N=4-*).
+  // Excised (size,difficulty) pairs have no on-disk directory; the frontend
+  // live-generates them via wasm (`TEMPLATE_BANK[size]?.[…] ?? []`). SIZES lists
+  // the sizes with *any* surviving bank; the per-difficulty `existsSync` guard
+  // below tolerates the missing tiers within a surviving size (N=3 keeps only hard).
+  const SIZES = [3, 4]
   const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
 
   function render(srcDir: string): string {
@@ -39,6 +46,12 @@ function sudokuTemplates(): Plugin {
       const total = (n * n) ** 2
       for (const d of DIFFICULTIES) {
         const dir = join(srcDir, String(n), d)
+        // Excised tier (git-rm'd by W4) → no directory → empty bank entry →
+        // the frontend falls back to wasm live-gen. Never let a missing dir throw.
+        if (!existsSync(dir)) {
+          bank[n][d] = []
+          continue
+        }
         const files = readdirSync(dir)
           .filter((f: string) => f.startsWith('template-') && f.endsWith('.json'))
           .sort()

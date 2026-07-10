@@ -1,6 +1,6 @@
 # Sudoku Solver and Generator
 
-Handles sub-grid sizes N=2 through N=5 (4x4 through 25x25 boards). The web app exposes N=2, 3, 4 for all difficulties and N=5 at easy only. Generation supports both a template-based fast path (sub-millisecond) and a hole-digging slow path with difficulty calibration.
+Handles sub-grid sizes N=2 through N=4 (4×4 through 16×16 boards). The web app exposes N=2, 3, 4 for all difficulties. Generation supports both a template-based fast path (sub-millisecond) and a hole-digging slow path with difficulty calibration.
 
 ## CSP Formulation
 
