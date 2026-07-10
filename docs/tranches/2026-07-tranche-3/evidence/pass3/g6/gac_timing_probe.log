@@ -1,0 +1,28 @@
+    Blocking waiting for file lock on build directory
+    Finished `release` profile [optimized] target(s) in 24.54s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running `target/release/examples/gac_timing_probe`
+# GAC A/B timing probe — 50 boards (production config: Ac3 + Mrv), best-of-5 interleaved (on,off,…), ratios only
+# ratio = off/on wall time; >1 means GAC ON is faster.
+
+## Per-bucket aggregate (Σoff / Σon)
+| bucket | boards | wall ratio (off/on) | nodes off→on |
+|---|---|---|---|
+| hard-9x9 (named) | 5 | 1.02× | 3367 → 702 |
+| N3/hard | 20 | 3.17× | 4483 → 1154 |
+| N4/easy | 10 | 1.00× | 640 → 640 |
+| N4/medium | 10 | 27.41× | 24768 → 1428 |
+| N4/hard | 5 | 27.58× | 7255 → 754 |
+
+## Corpus aggregate
+wall ratio (Σoff/Σon): 10.51×   |   nodes off→on: 40513 → 4678 (8.66× fewer)
+
+## Named hard 9×9 (individual ratios, minority-cost direction)
+| board | wall ratio (off/on) | direction | nodes off→on |
+|---|---|---|---|
+| Al Escargot | 0.46× | ON SLOWER (2.19× slower) | 105 → 72 |
+| Platinum Blonde | 2.10× | ON faster (2.10×) | 489 → 83 |
+| Golden Nugget | 0.60× | ON SLOWER (1.66× slower) | 1258 → 369 |
+| Inkala 2010 | 0.30× | ON SLOWER (3.36× slower) | 134 → 114 |
+| 17-clue minimal | 18.39× | ON faster (18.39×) | 1381 → 64 |

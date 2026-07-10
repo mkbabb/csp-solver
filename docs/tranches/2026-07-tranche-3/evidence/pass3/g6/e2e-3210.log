@@ -1,0 +1,37 @@
+
+Running 33 tests using 4 workers
+
+[1/33] e2e/affordances.spec.ts:113:1 › stale-note: teacher-red and gold-star notes clear on the next edit
+[2/33] e2e/affordances.spec.ts:64:1 › print: chrome hidden, black strokes, washes stripped (CSS-only)
+[3/33] e2e/affordances.spec.ts:178:1 › undo: Ctrl+Z reverts, Ctrl+Shift+Z redoes, Meta+Z works, plain z is not swallowed
+[4/33] e2e/affordances.spec.ts:156:1 › stat-line: solve writes "N backtracks — Xms"; the next edit clears it
+[5/33] e2e/affordances.spec.ts:208:1 › permalink: share writes ?board= and a reload reproduces the exact board
+[6/33] e2e/affordances.spec.ts:244:1 › hint: H fills the focused blank cell in solver ink
+[7/33] e2e/affordances.spec.ts:259:1 › marks-gesture: no marks pre-peek, K shows them, Esc clears them
+[8/33] e2e/affordances.spec.ts:278:1 › composed keyboard: K-peek exemption + roving tabindex (Ctrl+Home/End) + undo in one session
+[9/33] e2e/affordances.spec.ts:345:1 › composed keyboard (futoshiki twin): K-peek exemption + roving + undo in one session
+[10/33] e2e/futoshiki.spec.ts:39:1 › wordmark listbox switches to futoshiki: default board renders with inequality carets
+[11/33] e2e/futoshiki.spec.ts:63:1 › size switching: 4×4/5×5/6×6/7×7 each change the board cell count
+[12/33] e2e/futoshiki.spec.ts:85:1 › blank cell accepts input via pointer + on-screen affordance
+[13/33] e2e/futoshiki.spec.ts:119:1 › solve: a fresh generated board solves to solve-success
+[14/33] e2e/permalink.spec.ts:45:1 › board-only ?board= URL loads the encoded board (sudoku)
+[15/33] e2e/permalink.spec.ts:59:1 › mismatched ?board=/?size= falls closed to the size path (sudoku)
+[16/33] e2e/permalink.spec.ts:71:1 › game switch leaves no foreign board/size params in the URL
+[17/33] e2e/permalink.spec.ts:91:1 › randomize drops ?board= from the URL (sudoku)
+[18/33] e2e/permalink.spec.ts:104:1 › the share affordance writes ?board= on the explicit act (sudoku)
+[19/33] e2e/permalink.spec.ts:116:1 › board-only ?board= loads a futoshiki board with its inequalities, randomize drops it
+[20/33] e2e/round9.spec.ts:66:1 › filter registry: all 6 FILTER_PRESETS + sparkle-rainbow exist
+[21/33] e2e/round9.spec.ts:89:1 › light mode: layout, styles, filters, visual snapshot
+[22/33] e2e/round9.spec.ts:177:1 › dark mode: filter swap, control panel filter, visual snapshot
+[23/33] e2e/round9.spec.ts:201:1 › grid draw-in completes and path-based boil activates
+[24/33] e2e/round9.spec.ts:237:1 › randomize populates board and blank cells accept input
+[25/33] e2e/round9.spec.ts:274:1 › graceful degradation: UI renders without backend API
+[26/33] e2e/round9.spec.ts:290:1 › size switching: 4x4, 9x9, 16x16 all render grid lines
+[27/33] e2e/sudoku-interaction.spec.ts:24:1 › valid solution: randomize → solve → success state + all cells filled
+[28/33] e2e/sudoku-interaction.spec.ts:43:1 › invalid solution: solve → edit cell → state reverts to idle
+[29/33] e2e/sudoku-interaction.spec.ts:67:1 › consecutive solve: values remain unchanged on second solve
+[30/33] e2e/sudoku-interaction.spec.ts:98:1 › given cells use foreground ink, solved cells use sparkle-rainbow
+[31/33] e2e/sudoku-interaction.spec.ts:123:1 › given cell override: foreground stroke reverts to user-ink on override
+[32/33] e2e/sudoku-interaction.spec.ts:156:1 › solve failure: conflicting user values produce solve-failure state
+[33/33] e2e/sudoku-interaction.spec.ts:198:1 › noise animation: randomize produces multiple unique reveal delays
+  33 passed (24.3s)

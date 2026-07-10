@@ -1,0 +1,282 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.27s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running unittests src/lib.rs (target/debug/deps/csp_solver-37da081c9f3bad42)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/all_different_except.rs (target/debug/deps/all_different_except-c128f4028d530e02)
+
+running 6 tests
+test check_allows_multiple_sentinels ... ok
+test check_mixed_sentinel_and_distinct ... ok
+test check_rejects_duplicate_non_sentinel ... ok
+test revise_skips_sentinel_singleton ... ok
+test revise_prunes_non_sentinel_singleton ... ok
+test solve_end_to_end_permits_sentinel_repeats ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/assignment_builder.rs (target/debug/deps/assignment_builder-f3db19dfd7bbe40e)
+
+running 8 tests
+test dimensions_not_set_returns_err ... ok
+test cost_not_set_returns_err ... ok
+test unmatch_when_penalty_low ... ok
+test simple_3x3_diagonal ... ok
+test role_groups_separate_assignments ... ok
+test with_pin_overrides_cost ... ok
+test node_budget_exhausted_returns_budget_exceeded ... ok
+test brute_force_match_4x4 ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/assignment_proptest.rs (target/debug/deps/assignment_proptest-c2ce06ddb9b7f504)
+
+running 6 tests
+test prop_single_row ... ok
+test prop_rectangular_matches_bruteforce ... ok
+test prop_unmatched_penalty_monotone ... ok
+test prop_pins_respected ... ok
+test prop_square_matches_bruteforce ... ok
+test prop_roles_partition ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/cost_finite.rs (target/debug/deps/cost_finite-80cffc9b0d56b9c5)
+
+running 7 tests
+test cost_lookup_with_negative_sentinel ... ok
+test cost_lookup_present ... ok
+test cost_lookup_unsorted_input ... ok
+test min_cost_cache_invalidation ... ok
+test min_cost_after_remove ... ok
+test domain_delegation ... ok
+test solve_optimized_end_to_end ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/difficulty_parity.rs (target/debug/deps/difficulty_parity-f1a596531c7bc8bb)
+
+running 2 tests
+test difficulty_variants_agree_across_all_known_definitions ... ok
+test no_unscanned_difficulty_definitions_exist ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/error.rs (target/debug/deps/error-cc6ff4753c3d6201)
+
+running 5 tests
+test code_timeout ... ok
+test code_budget_exceeded ... ok
+test code_invalid_input ... ok
+test code_unsatisfiable ... ok
+test unsatisfiable_marker_converts ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/futoshiki.rs (target/debug/deps/futoshiki-9f599d87cb04ba1c)
+
+running 11 tests
+test from_parts_rejects_bad_fixed_cell ... ok
+test from_parts_rejects_out_of_range_inequality_index ... ok
+test from_parts_rejects_nonadjacent_pair ... ok
+test from_parts_accepts_valid_adjacent_pairs ... ok
+test from_parts_rejects_diagonal_pair ... ok
+test solve_3x3_trivial ... ok
+test solve_4x4_futoshiki ... ok
+test tuned_generation_respects_keep_density ... ok
+test empty_board_solves_within_budget_up_to_n7 ... ok
+test generated_puzzles_are_unique_and_valid ... ok
+test measure_difficulty_is_bounded_at_shipped_density ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/gac_kernel_beats.rs (target/debug/deps/gac_kernel_beats-716f0c65242ace03)
+
+running 13 tests
+test p4a_two_singletons_same_value_unsat ... ok
+test p4d_all_different_except_small_scope_twin ... ok
+test p4b_snapshot_not_fuse_live ... ok
+test p4c_live_below_threshold_singleton_only ... ok
+test p1_warm_cold_parity_multi_call_universe_shrink ... ok
+test p1_warm_cold_pruning_parity_single_call ... ok
+test p2_cross_universe_scratch_reset ... ok
+test p3_generic_finite_domain_string_monomorphizes_and_solves ... ok
+test p5_n20_lap_proven_optimal ... ok
+test p5_queens8_enumerate_92 ... ok
+test p6_sudoku_solves_under_pool ... ok
+test p6_futoshiki_solves_under_pool ... ok
+test p5_bnb_node_counts_frozen ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 37.57s
+
+     Running tests/lattice.rs (target/debug/deps/lattice-008dadb7f2724cc7)
+
+running 16 tests
+test test_first_set_nullable_prefix ... ok
+test test_first_set_propagation_cyclic ... ok
+test test_lattice_domain_protocol ... ok
+test test_simple_type_lattice_domain_convergence ... ok
+test test_first_set_propagation ... ok
+test test_lattice_domain_set_join ... ok
+test test_type_join_properties ... ok
+test test_lattice_propagation ... ok
+test test_type_inference_span_compression ... ok
+test test_type_inference_alt_join_different ... ok
+test test_type_inference_recursive_cycle ... ok
+test test_type_inference_vec_wrapping ... ok
+test test_type_inference_map_override ... ok
+test test_type_inference_alt_join_same ... ok
+test test_type_inference_complex_pipeline ... ok
+test test_type_inference_seq_mixed_no_compression ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/optimize.rs (target/debug/deps/optimize-fe368f433bed1b65)
+
+running 13 tests
+test test_default_config_is_feasibility ... ok
+test test_default_config_has_node_budget ... ok
+test test_feasibility_ignores_cost ... ok
+test test_single_var_maximize ... ok
+test test_two_vars_not_equal_minimize ... ok
+test test_node_budget_does_not_fire_for_small_search ... ok
+test test_multiple_solutions_sorted ... ok
+test test_solve_with_cost_eval_custom ... ok
+test test_single_var_minimize ... ok
+test test_three_vars_maximize ... ok
+test test_branch_and_bound_pruning ... ok
+test test_three_vars_minimize_with_constraints ... ok
+test test_node_budget_aborts_long_search ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/solution_set_invariance.rs (target/debug/deps/solution_set_invariance-d2c6f589d8e6f63b)
+
+running 4 tests
+test queens6_solution_set_invariant_across_pruning_and_ordering ... ok
+test futoshiki_constr_solution_set_invariant_across_pruning_and_ordering ... ok
+test queens8_solution_set_invariant_across_pruning_and_ordering ... ok
+test futoshiki_loose_solution_set_invariant_across_pruning_and_ordering ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.12s
+
+     Running tests/solver.rs (target/debug/deps/solver-bf73949b60b68c6d)
+
+running 48 tests
+test test_bitset_domain_range ... ok
+test test_bitset_domain_intersection_difference ... ok
+test test_bitset_domain_empty ... ok
+test test_bitset_domain_iterator ... ok
+test test_bitset_domain_union ... ok
+test test_bitset_domain_clone_independence ... ok
+test test_bitset_domain_operations ... ok
+test test_ac3_full_solve ... ok
+test test_all_permutations_3var ... ok
+test test_ac_fc_hybrid_solve ... ok
+test test_4_queens ... ok
+test test_finite_domain_operations ... ok
+test test_4x4_sudoku ... ok
+test test_forward_check_dwo ... ok
+test test_hard_sudoku_al_escargot ... ignored, requires GAC alldiff — too slow with binary FC
+test test_hard_sudoku_all_configs ... ignored, requires GAC alldiff — too slow with binary FC
+test test_ac_fc_map_coloring ... ok
+test test_domain_wipeout_all_pruning ... ok
+test test_hard_sudoku_golden_nugget ... ignored, requires GAC alldiff — too slow with binary FC
+test test_australia_map_coloring ... ok
+test test_hard_sudoku_inkala_2010 ... ignored, requires GAC alldiff — too slow with binary FC
+test test_hard_sudoku_minimal_17 ... ignored, requires GAC alldiff — too slow with binary FC
+test test_hard_sudoku_platinum_blonde ... ignored, requires GAC alldiff — too slow with binary FC
+test test_finite_domain_strings ... ok
+test test_forward_checking_backtracks_deterministic ... ok
+test test_australia_all_pruning ... ok
+test test_map_coloring_fc_failfirst ... ok
+test test_mrv_ordering ... ok
+test test_multiple_solutions ... ok
+test test_no_constraints ... ok
+test test_simple_2var_csp ... ok
+test test_initial_ac3_propagation ... ok
+test test_5_queens ... ok
+test test_simple_4var ... ok
+test test_single_variable ... ok
+test test_cross_config_correctness_map_coloring ... ok
+test test_solve_resets_state ... ok
+test test_stats ... ok
+test test_stats_propagations ... ok
+test test_unsatisfiable ... ok
+test test_unsatisfiable_alldifferent ... ok
+test test_unsolvable_pigeonhole_backtracks ... ok
+test test_9x9_sudoku_medium ... ok
+test test_6_queens ... ok
+test test_fail_first_fewer_backtracks_sudoku ... ok
+test test_cross_config_8queens ... ok
+test test_max_solutions_limit ... ok
+test test_8_queens ... ok
+
+test result: ok. 42 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/sudoku.rs (target/debug/deps/sudoku-97fb711ee7e19a77)
+
+running 7 tests
+test test_identity_transform ... ok
+test test_transform_preserves_validity ... ok
+test test_create_csp_returns_correct_given ... ok
+test test_measure_difficulty ... ok
+test test_solve_4x4 ... ok
+test test_generate_4x4 ... ok
+test test_solve_9x9 ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/sudoku_generate.rs (target/debug/deps/sudoku_generate-8a88944394c923c8)
+
+running 7 tests
+test embedded_templates_absent_bank_is_empty ... ok
+test embedded_template_count_absent_bank_is_zero ... ok
+test embedded_easy_templates_parse_to_full_board ... ok
+test embedded_template_count_matches_parsed_length ... ok
+test embedded_templates_hard_bank_is_nonempty ... ok
+test generate_with_templates_matching_difficulty_does_not_panic ... ok
+test generate_with_templates_mismatched_difficulty_panics_in_debug - should panic ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/lib.rs (target/debug/deps/csp_solver_wasm-c1ab77ba58103a0d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/dualization.rs (target/debug/deps/dualization-a33d1a187b25ccb1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/futoshiki_parity.rs (target/debug/deps/futoshiki_parity-5af89c18e5da3303)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests csp_solver
+
+running 4 tests
+test csp-solver/src/constraint/all_different_except.rs - constraint::all_different_except (line 11) - compile ... ok
+test csp-solver/src/builder/assignment.rs - builder::assignment::assignment (line 211) ... ok
+test csp-solver/src/domain/cost_finite.rs - domain::cost_finite (line 19) ... ok
+test csp-solver/src/builder/assignment.rs - builder::assignment (line 32) ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 0.73s; merged doctests compilation took 0.52s
+   Doc-tests csp_solver_wasm
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+RUST_EXIT=

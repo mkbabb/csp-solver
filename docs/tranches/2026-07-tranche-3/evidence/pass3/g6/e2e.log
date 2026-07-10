@@ -1,0 +1,856 @@
+
+Running 33 tests using 9 workers
+
+[1/33] e2e/affordances.spec.ts:208:1 › permalink: share writes ?board= and a reload reproduces the exact board
+[2/33] e2e/affordances.spec.ts:113:1 › stale-note: teacher-red and gold-star notes clear on the next edit
+[3/33] e2e/affordances.spec.ts:156:1 › stat-line: solve writes "N backtracks — Xms"; the next edit clears it
+[4/33] e2e/affordances.spec.ts:178:1 › undo: Ctrl+Z reverts, Ctrl+Shift+Z redoes, Meta+Z works, plain z is not swallowed
+[5/33] e2e/affordances.spec.ts:278:1 › composed keyboard: K-peek exemption + roving tabindex (Ctrl+Home/End) + undo in one session
+[6/33] e2e/affordances.spec.ts:345:1 › composed keyboard (futoshiki twin): K-peek exemption + roving + undo in one session
+[7/33] e2e/affordances.spec.ts:244:1 › hint: H fills the focused blank cell in solver ink
+[8/33] e2e/affordances.spec.ts:259:1 › marks-gesture: no marks pre-peek, K shows them, Esc clears them
+[9/33] e2e/affordances.spec.ts:64:1 › print: chrome hidden, black strokes, washes stripped (CSS-only)
+  1) e2e/affordances.spec.ts:208:1 › permalink: share writes ?board= and a reload reproduces the exact board 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      14 | async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
+      15 |   await page.goto('./' + query);
+    > 16 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      17 |   // Wait for the auto-dealt board (givens render glyphs).
+      18 |   await expect
+      19 |     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+        at loadSudoku (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:16:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:211:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/affordances-permalink-shar-df927--reproduces-the-exact-board/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/affordances-permalink-shar-df927--reproduces-the-exact-board/error-context.md
+
+
+  2) e2e/affordances.spec.ts:64:1 › print: chrome hidden, black strokes, washes stripped (CSS-only) 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      14 | async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
+      15 |   await page.goto('./' + query);
+    > 16 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      17 |   // Wait for the auto-dealt board (givens render glyphs).
+      18 |   await expect
+      19 |     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+        at loadSudoku (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:16:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:65:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/affordances-print-chrome-h-ec9dc-s-washes-stripped-CSS-only-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/affordances-print-chrome-h-ec9dc-s-washes-stripped-CSS-only-/error-context.md
+
+
+  3) e2e/affordances.spec.ts:156:1 › stat-line: solve writes "N backtracks — Xms"; the next edit clears it 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      14 | async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
+      15 |   await page.goto('./' + query);
+    > 16 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      17 |   // Wait for the auto-dealt board (givens render glyphs).
+      18 |   await expect
+      19 |     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+        at loadSudoku (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:16:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:157:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/affordances-stat-line-solv-3005d-Xms-the-next-edit-clears-it/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/affordances-stat-line-solv-3005d-Xms-the-next-edit-clears-it/error-context.md
+
+
+  4) e2e/affordances.spec.ts:278:1 › composed keyboard: K-peek exemption + roving tabindex (Ctrl+Home/End) + undo in one session 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      14 | async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
+      15 |   await page.goto('./' + query);
+    > 16 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      17 |   // Wait for the auto-dealt board (givens render glyphs).
+      18 |   await expect
+      19 |     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+        at loadSudoku (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:16:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:281:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/affordances-composed-keybo-6722a-ome-End-undo-in-one-session/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/affordances-composed-keybo-6722a-ome-End-undo-in-one-session/error-context.md
+
+
+  5) e2e/affordances.spec.ts:178:1 › undo: Ctrl+Z reverts, Ctrl+Shift+Z redoes, Meta+Z works, plain z is not swallowed 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      14 | async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
+      15 |   await page.goto('./' + query);
+    > 16 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      17 |   // Wait for the auto-dealt board (givens render glyphs).
+      18 |   await expect
+      19 |     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+        at loadSudoku (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:16:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:181:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/affordances-undo-Ctrl-Z-re-4f343-ks-plain-z-is-not-swallowed/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/affordances-undo-Ctrl-Z-re-4f343-ks-plain-z-is-not-swallowed/error-context.md
+
+
+  6) e2e/affordances.spec.ts:259:1 › marks-gesture: no marks pre-peek, K shows them, Esc clears them 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      14 | async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
+      15 |   await page.goto('./' + query);
+    > 16 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      17 |   // Wait for the auto-dealt board (givens render glyphs).
+      18 |   await expect
+      19 |     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+        at loadSudoku (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:16:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:260:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/affordances-marks-gesture--e17e9--shows-them-Esc-clears-them/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/affordances-marks-gesture--e17e9--shows-them-Esc-clears-them/error-context.md
+
+
+  7) e2e/affordances.spec.ts:113:1 › stale-note: teacher-red and gold-star notes clear on the next edit 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      14 | async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
+      15 |   await page.goto('./' + query);
+    > 16 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      17 |   // Wait for the auto-dealt board (givens render glyphs).
+      18 |   await expect
+      19 |     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+        at loadSudoku (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:16:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:114:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/affordances-stale-note-tea-d4717-otes-clear-on-the-next-edit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/affordances-stale-note-tea-d4717-otes-clear-on-the-next-edit/error-context.md
+
+
+  8) e2e/affordances.spec.ts:244:1 › hint: H fills the focused blank cell in solver ink ────────────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      14 | async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
+      15 |   await page.goto('./' + query);
+    > 16 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      17 |   // Wait for the auto-dealt board (givens render glyphs).
+      18 |   await expect
+      19 |     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+        at loadSudoku (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:16:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:245:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/affordances-hint-H-fills-t-63c70-ed-blank-cell-in-solver-ink/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/affordances-hint-H-fills-t-63c70-ed-blank-cell-in-solver-ink/error-context.md
+
+
+[10/33] e2e/futoshiki.spec.ts:39:1 › wordmark listbox switches to futoshiki: default board renders with inequality carets
+[11/33] e2e/futoshiki.spec.ts:63:1 › size switching: 4×4/5×5/6×6/7×7 each change the board cell count
+[12/33] e2e/futoshiki.spec.ts:119:1 › solve: a fresh generated board solves to solve-success
+[13/33] e2e/futoshiki.spec.ts:85:1 › blank cell accepts input via pointer + on-screen affordance
+[14/33] e2e/permalink.spec.ts:59:1 › mismatched ?board=/?size= falls closed to the size path (sudoku)
+[15/33] e2e/permalink.spec.ts:45:1 › board-only ?board= URL loads the encoded board (sudoku)
+[16/33] e2e/permalink.spec.ts:71:1 › game switch leaves no foreign board/size params in the URL
+[17/33] e2e/permalink.spec.ts:91:1 › randomize drops ?board= from the URL (sudoku)
+  9) e2e/affordances.spec.ts:345:1 › composed keyboard (futoshiki twin): K-peek exemption + roving + undo in one session 
+
+    TimeoutError: page.waitForSelector: Timeout 20000ms exceeded.
+    Call log:
+      - waiting for locator('.futoshiki-cell') to be visible
+
+
+      347 | }) => {
+      348 |   await page.goto('./?game=futoshiki');
+    > 349 |   await page.waitForSelector('.futoshiki-cell', { timeout: 20000 });
+          |              ^
+      350 |   await expect
+      351 |     .poll(() => page.locator('.futoshiki-cell .glyph-svg').count(), { timeout: 20000 })
+      352 |     .toBeGreaterThan(0);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:349:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/affordances-composed-keybo-c8ea5--roving-undo-in-one-session/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/affordances-composed-keybo-c8ea5--roving-undo-in-one-session/error-context.md
+
+
+[18/33] e2e/permalink.spec.ts:104:1 › the share affordance writes ?board= on the explicit act (sudoku)
+  10) e2e/futoshiki.spec.ts:39:1 › wordmark listbox switches to futoshiki: default board renders with inequality carets 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      16 |   // './' so Playwright resolves relative to baseURL (subpath-deploy safe).
+      17 |   await page.goto('./');
+    > 18 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      19 | }
+      20 |
+      21 | // Switch from the default Sudoku scene to Futoshiki via the wordmark-as-game-picker
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/futoshiki.spec.ts:18:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/futoshiki.spec.ts:42:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/futoshiki-wordmark-listbox-ef9af-ders-with-inequality-carets/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/futoshiki-wordmark-listbox-ef9af-ders-with-inequality-carets/error-context.md
+
+
+  11) e2e/futoshiki.spec.ts:85:1 › blank cell accepts input via pointer + on-screen affordance ─────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      16 |   // './' so Playwright resolves relative to baseURL (subpath-deploy safe).
+      17 |   await page.goto('./');
+    > 18 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      19 | }
+      20 |
+      21 | // Switch from the default Sudoku scene to Futoshiki via the wordmark-as-game-picker
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/futoshiki.spec.ts:18:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/futoshiki.spec.ts:86:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/futoshiki-blank-cell-accep-783dc-ointer-on-screen-affordance/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/futoshiki-blank-cell-accep-783dc-ointer-on-screen-affordance/error-context.md
+
+
+  12) e2e/futoshiki.spec.ts:119:1 › solve: a fresh generated board solves to solve-success ─────────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      16 |   // './' so Playwright resolves relative to baseURL (subpath-deploy safe).
+      17 |   await page.goto('./');
+    > 18 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      19 | }
+      20 |
+      21 | // Switch from the default Sudoku scene to Futoshiki via the wordmark-as-game-picker
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/futoshiki.spec.ts:18:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/futoshiki.spec.ts:120:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/futoshiki-solve-a-fresh-ge-f9284-ard-solves-to-solve-success/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/futoshiki-solve-a-fresh-ge-f9284-ard-solves-to-solve-success/error-context.md
+
+
+  13) e2e/permalink.spec.ts:71:1 › game switch leaves no foreign board/size params in the URL ──────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('.sudoku-cell') to be visible
+
+
+      72 |   const enc = encodeSudoku(3, { 0: 5 }, 81);
+      73 |   await page.goto('./?board=' + enc);
+    > 74 |   await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
+         |              ^
+      75 |
+      76 |   // Switch to Futoshiki via the wordmark-as-game-picker.
+      77 |   await page.locator('button.logo-trigger').click();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/permalink.spec.ts:74:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/permalink-game-switch-leav-294fe-oard-size-params-in-the-URL/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/permalink-game-switch-leav-294fe-oard-size-params-in-the-URL/error-context.md
+
+
+  14) e2e/permalink.spec.ts:45:1 › board-only ?board= URL loads the encoded board (sudoku) ─────────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      47 |   const enc = encodeSudoku(3, { 0: 5 }, 81);
+      48 |   await page.goto('./?board=' + enc);
+    > 49 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      50 |
+      51 |   // The full 9×9 renders from the URL alone — no ?size= needed.
+      52 |   await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(81);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/permalink.spec.ts:49:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/permalink-board-only-board-e8d62-s-the-encoded-board-sudoku-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/permalink-board-only-board-e8d62-s-the-encoded-board-sudoku-/error-context.md
+
+
+  15) e2e/permalink.spec.ts:91:1 › randomize drops ?board= from the URL (sudoku) ───────────────────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('.sudoku-cell') to be visible
+
+
+      92 |   const enc = encodeSudoku(3, { 0: 5 }, 81);
+      93 |   await page.goto('./?board=' + enc);
+    > 94 |   await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
+         |              ^
+      95 |   expect(boardParam(page)).toBe(true);
+      96 |
+      97 |   await page.locator('.controls-card button[aria-label="Randomize board"]').click();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/permalink.spec.ts:94:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/permalink-randomize-drops-board-from-the-URL-sudoku-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/permalink-randomize-drops-board-from-the-URL-sudoku-/error-context.md
+
+
+  16) e2e/permalink.spec.ts:59:1 › mismatched ?board=/?size= falls closed to the size path (sudoku) 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      61 |   const enc = encodeSudoku(2, { 0: 3 }, 16);
+      62 |   await page.goto('./?size=3&board=' + enc);
+    > 63 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      64 |
+      65 |   // Fails closed: renders the 81-cell ?size=3 board, NEVER the 16-cell shared blob.
+      66 |   await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(81);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/permalink.spec.ts:63:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/permalink-mismatched-board-78819-ed-to-the-size-path-sudoku-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/permalink-mismatched-board-78819-ed-to-the-size-path-sudoku-/error-context.md
+
+
+  17) e2e/futoshiki.spec.ts:63:1 › size switching: 4×4/5×5/6×6/7×7 each change the board cell count 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+      16 |   // './' so Playwright resolves relative to baseURL (subpath-deploy safe).
+      17 |   await page.goto('./');
+    > 18 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      19 | }
+      20 |
+      21 | // Switch from the default Sudoku scene to Futoshiki via the wordmark-as-game-picker
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/futoshiki.spec.ts:18:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/futoshiki.spec.ts:64:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/futoshiki-size-switching-4-59597-change-the-board-cell-count/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/futoshiki-size-switching-4-59597-change-the-board-cell-count/error-context.md
+
+
+[19/33] e2e/permalink.spec.ts:116:1 › board-only ?board= loads a futoshiki board with its inequalities, randomize drops it
+[20/33] e2e/round9.spec.ts:66:1 › filter registry: all 6 FILTER_PRESETS + sparkle-rainbow exist
+[21/33] e2e/round9.spec.ts:201:1 › grid draw-in completes and path-based boil activates
+[22/33] e2e/round9.spec.ts:177:1 › dark mode: filter swap, control panel filter, visual snapshot
+[23/33] e2e/round9.spec.ts:237:1 › randomize populates board and blank cells accept input
+[24/33] e2e/round9.spec.ts:290:1 › size switching: 4x4, 9x9, 16x16 all render grid lines
+[25/33] e2e/round9.spec.ts:274:1 › graceful degradation: UI renders without backend API
+[26/33] e2e/round9.spec.ts:89:1 › light mode: layout, styles, filters, visual snapshot
+  18) e2e/permalink.spec.ts:104:1 › the share affordance writes ?board= on the explicit act (sudoku) 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('.sudoku-cell') to be visible
+
+
+      104 | test('the share affordance writes ?board= on the explicit act (sudoku)', async ({ page }) => {
+      105 |   await page.goto('./');
+    > 106 |   await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
+          |              ^
+      107 |   await page.waitForTimeout(1500); // let the auto-randomized board settle
+      108 |   expect(boardParam(page)).toBe(false);
+      109 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/permalink.spec.ts:106:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/permalink-the-share-afford-fb8db-on-the-explicit-act-sudoku-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/permalink-the-share-afford-fb8db-on-the-explicit-act-sudoku-/error-context.md
+
+
+[27/33] e2e/sudoku-interaction.spec.ts:24:1 › valid solution: randomize → solve → success state + all cells filled
+  19) e2e/round9.spec.ts:66:1 › filter registry: all 6 FILTER_PRESETS + sparkle-rainbow exist ──────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       6 |   // Use './' so Playwright resolves relative to baseURL (works with subpath deployments).
+       7 |   await page.goto('./');
+    >  8 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       9 | }
+      10 |
+      11 | async function setDarkMode(page: Page, dark: boolean) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:8:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:69:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/round9-filter-registry-all-12719-ESETS-sparkle-rainbow-exist/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/round9-filter-registry-all-12719-ESETS-sparkle-rainbow-exist/error-context.md
+
+
+  20) e2e/round9.spec.ts:177:1 › dark mode: filter swap, control panel filter, visual snapshot ─────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       6 |   // Use './' so Playwright resolves relative to baseURL (works with subpath deployments).
+       7 |   await page.goto('./');
+    >  8 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       9 | }
+      10 |
+      11 | async function setDarkMode(page: Page, dark: boolean) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:8:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:178:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/round9-dark-mode-filter-sw-cd322-anel-filter-visual-snapshot/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/round9-dark-mode-filter-sw-cd322-anel-filter-visual-snapshot/error-context.md
+
+
+  21) e2e/round9.spec.ts:237:1 › randomize populates board and blank cells accept input ────────────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       6 |   // Use './' so Playwright resolves relative to baseURL (works with subpath deployments).
+       7 |   await page.goto('./');
+    >  8 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       9 | }
+      10 |
+      11 | async function setDarkMode(page: Page, dark: boolean) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:8:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:238:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/round9-randomize-populates-6b39d-nd-blank-cells-accept-input/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/round9-randomize-populates-6b39d-nd-blank-cells-accept-input/error-context.md
+
+
+  22) e2e/round9.spec.ts:290:1 › size switching: 4x4, 9x9, 16x16 all render grid lines ─────────────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       6 |   // Use './' so Playwright resolves relative to baseURL (works with subpath deployments).
+       7 |   await page.goto('./');
+    >  8 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       9 | }
+      10 |
+      11 | async function setDarkMode(page: Page, dark: boolean) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:8:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:291:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/round9-size-switching-4x4-9x9-16x16-all-render-grid-lines/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/round9-size-switching-4x4-9x9-16x16-all-render-grid-lines/error-context.md
+
+
+  23) e2e/round9.spec.ts:201:1 › grid draw-in completes and path-based boil activates ──────────────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       6 |   // Use './' so Playwright resolves relative to baseURL (works with subpath deployments).
+       7 |   await page.goto('./');
+    >  8 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       9 | }
+      10 |
+      11 | async function setDarkMode(page: Page, dark: boolean) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:8:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:202:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/round9-grid-draw-in-completes-and-path-based-boil-activates/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/round9-grid-draw-in-completes-and-path-based-boil-activates/error-context.md
+
+
+  24) e2e/round9.spec.ts:89:1 › light mode: layout, styles, filters, visual snapshot ───────────────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       6 |   // Use './' so Playwright resolves relative to baseURL (works with subpath deployments).
+       7 |   await page.goto('./');
+    >  8 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       9 | }
+      10 |
+      11 | async function setDarkMode(page: Page, dark: boolean) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:8:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:90:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/round9-light-mode-layout-styles-filters-visual-snapshot/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/round9-light-mode-layout-styles-filters-visual-snapshot/error-context.md
+
+
+  25) e2e/permalink.spec.ts:116:1 › board-only ?board= loads a futoshiki board with its inequalities, randomize drops it 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('.futoshiki-cell') to be visible
+
+
+      120 |   const enc = encodeFutoshiki(5, { 0: 3 }, 25, [[1, 2]]);
+      121 |   await page.goto('./?game=futoshiki&board=' + enc);
+    > 122 |   await page.waitForSelector('.futoshiki-cell', { timeout: 15000 });
+          |              ^
+      123 |
+      124 |   await expect.poll(() => page.locator('.futoshiki-cell').count(), { timeout: 15000 }).toBe(25);
+      125 |   // The shared inequality furniture survives the round-trip — a caret renders.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/permalink.spec.ts:122:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/permalink-board-only-board-6207b-ualities-randomize-drops-it/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/permalink-board-only-board-6207b-ualities-randomize-drops-it/error-context.md
+
+
+  26) e2e/round9.spec.ts:274:1 › graceful degradation: UI renders without backend API ──────────────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       6 |   // Use './' so Playwright resolves relative to baseURL (works with subpath deployments).
+       7 |   await page.goto('./');
+    >  8 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       9 | }
+      10 |
+      11 | async function setDarkMode(page: Page, dark: boolean) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:8:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/round9.spec.ts:278:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/round9-graceful-degradation-UI-renders-without-backend-API/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/round9-graceful-degradation-UI-renders-without-backend-API/error-context.md
+
+
+[28/33] e2e/sudoku-interaction.spec.ts:156:1 › solve failure: conflicting user values produce solve-failure state
+[29/33] e2e/sudoku-interaction.spec.ts:98:1 › given cells use foreground ink, solved cells use sparkle-rainbow
+[30/33] e2e/sudoku-interaction.spec.ts:198:1 › noise animation: randomize produces multiple unique reveal delays
+[31/33] e2e/sudoku-interaction.spec.ts:43:1 › invalid solution: solve → edit cell → state reverts to idle
+[32/33] e2e/sudoku-interaction.spec.ts:123:1 › given cell override: foreground stroke reverts to user-ink on override
+[33/33] e2e/sudoku-interaction.spec.ts:67:1 › consecutive solve: values remain unchanged on second solve
+  27) e2e/sudoku-interaction.spec.ts:24:1 › valid solution: randomize → solve → success state + all cells filled 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       5 | async function loadApp(page: Page) {
+       6 |   await page.goto('./');
+    >  7 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       8 | }
+       9 |
+      10 | async function randomizeBoard(page: Page) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:7:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:25:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sudoku-interaction-valid-s-5cf84-cess-state-all-cells-filled/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sudoku-interaction-valid-s-5cf84-cess-state-all-cells-filled/error-context.md
+
+
+  28) e2e/sudoku-interaction.spec.ts:67:1 › consecutive solve: values remain unchanged on second solve 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       5 | async function loadApp(page: Page) {
+       6 |   await page.goto('./');
+    >  7 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       8 | }
+       9 |
+      10 | async function randomizeBoard(page: Page) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:7:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:68:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sudoku-interaction-consecu-5c70c-n-unchanged-on-second-solve/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sudoku-interaction-consecu-5c70c-n-unchanged-on-second-solve/error-context.md
+
+
+  29) e2e/sudoku-interaction.spec.ts:198:1 › noise animation: randomize produces multiple unique reveal delays 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       5 | async function loadApp(page: Page) {
+       6 |   await page.goto('./');
+    >  7 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       8 | }
+       9 |
+      10 | async function randomizeBoard(page: Page) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:7:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:199:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sudoku-interaction-noise-a-bfdf4-ltiple-unique-reveal-delays/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sudoku-interaction-noise-a-bfdf4-ltiple-unique-reveal-delays/error-context.md
+
+
+  30) e2e/sudoku-interaction.spec.ts:156:1 › solve failure: conflicting user values produce solve-failure state 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       5 | async function loadApp(page: Page) {
+       6 |   await page.goto('./');
+    >  7 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       8 | }
+       9 |
+      10 | async function randomizeBoard(page: Page) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:7:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:157:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sudoku-interaction-solve-f-8e281-produce-solve-failure-state/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sudoku-interaction-solve-f-8e281-produce-solve-failure-state/error-context.md
+
+
+  31) e2e/sudoku-interaction.spec.ts:98:1 › given cells use foreground ink, solved cells use sparkle-rainbow 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       5 | async function loadApp(page: Page) {
+       6 |   await page.goto('./');
+    >  7 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       8 | }
+       9 |
+      10 | async function randomizeBoard(page: Page) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:7:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:99:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sudoku-interaction-given-c-00d59-d-cells-use-sparkle-rainbow/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sudoku-interaction-given-c-00d59-d-cells-use-sparkle-rainbow/error-context.md
+
+
+  32) e2e/sudoku-interaction.spec.ts:43:1 › invalid solution: solve → edit cell → state reverts to idle 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       5 | async function loadApp(page: Page) {
+       6 |   await page.goto('./');
+    >  7 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       8 | }
+       9 |
+      10 | async function randomizeBoard(page: Page) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:7:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:44:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sudoku-interaction-invalid-d6572-ell-→-state-reverts-to-idle/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sudoku-interaction-invalid-d6572-ell-→-state-reverts-to-idle/error-context.md
+
+
+  33) e2e/sudoku-interaction.spec.ts:123:1 › given cell override: foreground stroke reverts to user-ink on override 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+
+
+       5 | async function loadApp(page: Page) {
+       6 |   await page.goto('./');
+    >  7 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+       8 | }
+       9 |
+      10 | async function randomizeBoard(page: Page) {
+        at loadApp (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:7:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/sudoku-interaction.spec.ts:124:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sudoku-interaction-given-c-8da17-rts-to-user-ink-on-override/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sudoku-interaction-given-c-8da17-rts-to-user-ink-on-override/error-context.md
+
+
+  33 failed
+    e2e/affordances.spec.ts:64:1 › print: chrome hidden, black strokes, washes stripped (CSS-only) ─
+    e2e/affordances.spec.ts:113:1 › stale-note: teacher-red and gold-star notes clear on the next edit 
+    e2e/affordances.spec.ts:156:1 › stat-line: solve writes "N backtracks — Xms"; the next edit clears it 
+    e2e/affordances.spec.ts:178:1 › undo: Ctrl+Z reverts, Ctrl+Shift+Z redoes, Meta+Z works, plain z is not swallowed 
+    e2e/affordances.spec.ts:208:1 › permalink: share writes ?board= and a reload reproduces the exact board 
+    e2e/affordances.spec.ts:244:1 › hint: H fills the focused blank cell in solver ink ─────────────
+    e2e/affordances.spec.ts:259:1 › marks-gesture: no marks pre-peek, K shows them, Esc clears them 
+    e2e/affordances.spec.ts:278:1 › composed keyboard: K-peek exemption + roving tabindex (Ctrl+Home/End) + undo in one session 
+    e2e/affordances.spec.ts:345:1 › composed keyboard (futoshiki twin): K-peek exemption + roving + undo in one session 
+    e2e/futoshiki.spec.ts:39:1 › wordmark listbox switches to futoshiki: default board renders with inequality carets 
+    e2e/futoshiki.spec.ts:63:1 › size switching: 4×4/5×5/6×6/7×7 each change the board cell count ──
+    e2e/futoshiki.spec.ts:85:1 › blank cell accepts input via pointer + on-screen affordance ───────
+    e2e/futoshiki.spec.ts:119:1 › solve: a fresh generated board solves to solve-success ───────────
+    e2e/permalink.spec.ts:45:1 › board-only ?board= URL loads the encoded board (sudoku) ───────────
+    e2e/permalink.spec.ts:59:1 › mismatched ?board=/?size= falls closed to the size path (sudoku) ──
+    e2e/permalink.spec.ts:71:1 › game switch leaves no foreign board/size params in the URL ────────
+    e2e/permalink.spec.ts:91:1 › randomize drops ?board= from the URL (sudoku) ─────────────────────
+    e2e/permalink.spec.ts:104:1 › the share affordance writes ?board= on the explicit act (sudoku) ─
+    e2e/permalink.spec.ts:116:1 › board-only ?board= loads a futoshiki board with its inequalities, randomize drops it 
+    e2e/round9.spec.ts:66:1 › filter registry: all 6 FILTER_PRESETS + sparkle-rainbow exist ────────
+    e2e/round9.spec.ts:89:1 › light mode: layout, styles, filters, visual snapshot ─────────────────
+    e2e/round9.spec.ts:177:1 › dark mode: filter swap, control panel filter, visual snapshot ───────
+    e2e/round9.spec.ts:201:1 › grid draw-in completes and path-based boil activates ────────────────
+    e2e/round9.spec.ts:237:1 › randomize populates board and blank cells accept input ──────────────
+    e2e/round9.spec.ts:274:1 › graceful degradation: UI renders without backend API ────────────────
+    e2e/round9.spec.ts:290:1 › size switching: 4x4, 9x9, 16x16 all render grid lines ───────────────
+    e2e/sudoku-interaction.spec.ts:24:1 › valid solution: randomize → solve → success state + all cells filled 
+    e2e/sudoku-interaction.spec.ts:43:1 › invalid solution: solve → edit cell → state reverts to idle 
+    e2e/sudoku-interaction.spec.ts:67:1 › consecutive solve: values remain unchanged on second solve 
+    e2e/sudoku-interaction.spec.ts:98:1 › given cells use foreground ink, solved cells use sparkle-rainbow 
+    e2e/sudoku-interaction.spec.ts:123:1 › given cell override: foreground stroke reverts to user-ink on override 
+    e2e/sudoku-interaction.spec.ts:156:1 › solve failure: conflicting user values produce solve-failure state 
+    e2e/sudoku-interaction.spec.ts:198:1 › noise animation: randomize produces multiple unique reveal delays 
+E2E_EXIT=
