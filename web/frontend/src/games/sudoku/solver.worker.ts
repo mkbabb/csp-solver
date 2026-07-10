@@ -1,12 +1,14 @@
 /**
  * Web Worker host for the client-side wasm Sudoku solver.
  *
- * Runs entirely off the main thread: `solveSudoku` is synchronous and
- * blocks whatever thread calls it (148-659ms on the 16x16-hard tail,
- * per pass-2's `client-wasm-solve.md` §5 latency table) — this file is
- * *why* that block never reaches the DOM-owning main thread, so the
- * ~6.7fps grid boil (rAF on the main thread) keeps ticking through a
- * hard solve instead of janking.
+ * Runs entirely off the main thread: `solveSudoku`/`generateSudoku` are
+ * synchronous and block whatever thread calls them — this file is *why*
+ * that block never reaches the DOM-owning main thread, so the ~6.7fps
+ * grid boil (rAF on the main thread) keeps ticking through a hard solve
+ * or generate instead of janking. Per pass-2's client-side generation
+ * probe (`docs/tranches/2026-07-tranche-2/evidence/pass2/P2.md`, "THE
+ * GATE"), all six generation tiers (N2/N3 × easy/medium/hard) clear
+ * p95 ≤ 24ms, comfortably under the 50ms felt-latency budget.
  *
  * Zero fetch, zero `/api/v1/*` dependency of any kind — see
  * `useSolver.ts`'s header comment for the same guarantee at the

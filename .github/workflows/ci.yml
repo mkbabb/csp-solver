@@ -266,7 +266,7 @@ jobs:
             # --profile wasm-release is REQUIRED: plain release yields
             # 270,179 B (over the 240 KB fail budget); wasm-release
             # (workspace-root profile, opt-level=z, panic=abort) yields
-            # 201,053 B full / 72,429 B lean (W6 gate record).
+            # 211,639 B full / 87,853 B lean (W6 gate record).
             - name: wasm-pack build (full module)
               run: wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release
             - name: twiggy top + raw-size budget (fail >240 KB / warn >215 KB)
@@ -292,7 +292,7 @@ jobs:
                   set -euo pipefail
                   WASM=csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
                   RAW=$(wc -c < "$WASM")
-                  echo "lean artifact raw size: ${RAW} B (measured 72,429 B; fail >93,000)"
+                  echo "lean artifact raw size: ${RAW} B (measured 87,853 B; fail >93,000)"
                   if [ "$RAW" -gt 93000 ]; then
                     echo "::error::lean wasm artifact ${RAW} B exceeds the 93 KB band"
                     exit 1
@@ -346,3 +346,75 @@ jobs:
             - name: vue-tsc --noEmit
               working-directory: web/frontend
               run: npx vue-tsc --noEmit
+
+    # ---------------------------------------------------------------- Lane 9
+    # e2e — Playwright over the Vue SPA (ratification R6). Mirrors the frontend
+    # lane's setup EXACTLY: it pins npm >=11 (Node 22's npm 10 mis-resolves the
+    # lockfile) and builds the LEAN wasm artifact BEFORE `npm ci` because the
+    # @mkbabb/csp-solver-wasm file: link points at the gitignored
+    # csp-solver/wasm/pkg build output (deliberately NOT the registry package —
+    # consuming that would regress the 93 KB band). playwright.config.ts's
+    # webServer block spins `npm run dev` on :3000 for the run. The chromium
+    # browser bundle is cached (keyed on the resolved Playwright version from the
+    # lockfile) to keep CI-minutes cost down; the HTML report uploads on failure.
+    e2e:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust nightly toolchain (wasm32)
+              uses: dtolnay/rust-toolchain@nightly
+              with:
+                  targets: wasm32-unknown-unknown
+            - name: Install wasm-pack (>=0.14 floor)
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: wasm-pack
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-e2e-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: Build the lean wasm artifact (the package.json file-link target)
+              run: wasm-pack build csp-solver/wasm --scope mkbabb --target web --profile wasm-release --no-default-features
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '22'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            # Node 22 ships npm 10.x, which resolves this lockfile differently —
+            # the same skew fixed in web/frontend/Dockerfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            # Key the browser cache on the resolved Playwright version so a bump
+            # invalidates it (the on-disk bundle layout is version-specific).
+            - name: Resolve Playwright version (from the lockfile)
+              id: pw-version
+              working-directory: web/frontend
+              run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+            - name: Cache Playwright browser bundle
+              id: pw-cache
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
+            - name: "Install Playwright chromium (+ deps)"
+              working-directory: web/frontend
+              run: npx playwright install --with-deps chromium
+            - name: "Run the Playwright e2e suite"
+              working-directory: web/frontend
+              run: npx playwright test
+            - name: Upload Playwright HTML report (failure only)
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: playwright-report
+                  path: web/frontend/playwright-report
+                  retention-days: 7

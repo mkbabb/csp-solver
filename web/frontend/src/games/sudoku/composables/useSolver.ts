@@ -19,8 +19,8 @@
  * hand-copied), never fetched.
  *
  * The actual wasm module only ever runs inside `solver.worker.ts` — see
- * that file's header for why (keeps the 148-659ms 16x16-hard tail off
- * the main thread so the boil never janks) and for how it's imported
+ * that file's header for why (keeps solve/generate off the main thread
+ * so the boil never janks) and for how it's imported
  * (`@mkbabb/csp-solver-wasm`, a `file:` link to the local pkg for now).
  *
  * ── Registry-package swap (W12, after the wasm-surgeon + LEAD land) ──

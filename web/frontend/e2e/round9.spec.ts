@@ -22,6 +22,45 @@ async function setDarkMode(page: Page, dark: boolean) {
   }
 }
 
+/**
+ * Steady-state grid DOM shape — the grain hoist (design-union prototype 9).
+ *
+ * Once draw-in completes ('drawn'), HandDrawnGrid unmounts its transition
+ * layer and mounts BOIL_CONFIG.frameCount sibling `g.boil-frame-layer`
+ * groups, each a full pre-baked boil variant (1 frame-line + subgrid/cell
+ * lines) with grain-static rasterized once per layer. The boil then ticks by
+ * toggling which sibling is `.is-active` (opacity 0→1, compositor-only —
+ * measured −72.9% RasterTask vs re-rasterizing the filtered group per tick).
+ *
+ * So mounted-variant multiplicity (frameCount copies of every grid path) IS
+ * the designed steady state; the invariant to assert is per-layer shape +
+ * exactly one visible variant, never a global element count.
+ */
+async function steadyGridCounts(page: Page) {
+  // `.is-active` only exists on the steady-state layers — waiting for it also
+  // proves the transition layer has handed off (draw-in completed).
+  await page.waitForSelector('g.boil-frame-layer.is-active', { timeout: 10000 });
+  return page.evaluate(() => {
+    const layers = Array.from(document.querySelectorAll('g.boil-frame-layer'));
+    const visible = layers.filter(
+      (l) => parseFloat(getComputedStyle(l).opacity) > 0,
+    );
+    const active = visible[0] ?? null;
+    return {
+      layerCount: layers.length,
+      visibleLayerCount: visible.length,
+      frameLinesPerLayer: layers.map(
+        (l) => l.querySelectorAll('path.frame-line').length,
+      ),
+      activeFrameLines: active ? active.querySelectorAll('path.frame-line').length : 0,
+      activeSubgridLines: active
+        ? active.querySelectorAll('path.subgrid-line').length
+        : 0,
+      activeCellLines: active ? active.querySelectorAll('path.cell-line').length : 0,
+    };
+  });
+}
+
 // ── Test 1: SVG Filter Registry Completeness ────────────────────────
 
 test('filter registry: all 6 FILTER_PRESETS + sparkle-rainbow exist', async ({
@@ -179,13 +218,15 @@ test('grid draw-in completes and path-based boil activates', async ({ page }) =>
   });
   expect(allComplete).toBe(true);
 
-  // Grid lines should exist in three tiers: frame, subgrid, cell
-  const frameLines = await page.locator('path.frame-line').count();
-  const subgridLines = await page.locator('path.subgrid-line').count();
-  const cellLines = await page.locator('path.cell-line').count();
-  expect(frameLines).toBe(1);        // one closed frame rect
-  expect(subgridLines).toBeGreaterThan(0);
-  expect(cellLines).toBeGreaterThan(0);
+  // Steady-state grid: frameCount pre-baked boil layers, each with the three
+  // tiers (frame, subgrid, cell), exactly one visible at a time. A global
+  // `path.frame-line` count is frameCount (4), by design — see steadyGridCounts.
+  const grid = await steadyGridCounts(page);
+  expect(grid.layerCount).toBeGreaterThanOrEqual(2); // boil needs ≥2 variants
+  expect(grid.frameLinesPerLayer.every((n) => n === 1)).toBe(true); // one closed frame rect per variant
+  expect(grid.visibleLayerCount).toBe(1); // exactly one variant visible
+  expect(grid.activeSubgridLines).toBeGreaterThan(0);
+  expect(grid.activeCellLines).toBeGreaterThan(0);
 
   // Logo text renders after draw-in
   await expect(page.locator('svg.handwritten-logo text.logo-text')).toHaveText('sudoku');
@@ -250,29 +291,33 @@ test('size switching: 4x4, 9x9, 16x16 all render grid lines', async ({ page }) =
   await loadApp(page);
   await page.waitForTimeout(1500);
 
+  // All counts below are per visible boil variant (steadyGridCounts) — global
+  // counts would be frameCount× larger by design (grain hoist, see helper doc).
+
   // Switch to 4x4 (use desktop sidebar buttons)
   await page.locator('.controls-card button:has-text("4×4")').click();
   await page.waitForTimeout(2000);
-  let cellLines4 = await page.locator('path.cell-line').count();
-  // 4x4 with subgridSize=2: vertical non-subgrid lines = 1 (col 2 is subgrid), horizontal = 1 → 2
-  expect(cellLines4).toBeGreaterThanOrEqual(2);
-  let frameLines4 = await page.locator('path.frame-line').count();
-  expect(frameLines4).toBe(1);
+  const grid4 = await steadyGridCounts(page);
+  // 4x4 with subgridSize=2: vertical non-subgrid lines at cols 1,3 + same horizontal → 4
+  expect(grid4.activeCellLines).toBeGreaterThanOrEqual(2);
+  expect(grid4.activeFrameLines).toBe(1); // one closed frame rect in the visible variant
+  expect(grid4.visibleLayerCount).toBe(1);
 
   // Switch to 16x16
   await page.locator('.controls-card button:has-text("16×16")').click();
   await page.waitForTimeout(2500);
-  let cellLines16 = await page.locator('path.cell-line').count();
-  expect(cellLines16).toBeGreaterThan(10); // 16x16 has many cell lines
-  let subgridLines16 = await page.locator('path.subgrid-line').count();
-  expect(subgridLines16).toBeGreaterThan(0);
+  const grid16 = await steadyGridCounts(page);
+  expect(grid16.activeCellLines).toBeGreaterThan(10); // 16x16 has many cell lines
+  expect(grid16.activeSubgridLines).toBeGreaterThan(0);
 
   // Switch back to 9x9
   await page.locator('.controls-card button:has-text("9×9")').click();
   await page.waitForTimeout(2000);
-  let cellLines9 = await page.locator('path.cell-line').count();
+  const grid9 = await steadyGridCounts(page);
   // 9x9: 6 vertical cell lines + 6 horizontal = 12
-  expect(cellLines9).toBe(12);
+  expect(grid9.activeCellLines).toBe(12);
+  expect(grid9.activeFrameLines).toBe(1);
+  expect(grid9.visibleLayerCount).toBe(1);
 
   // Screenshot final state
   await page.screenshot({ path: 'e2e/screenshots/round11-9x9.png', fullPage: false });
