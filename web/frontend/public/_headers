@@ -26,18 +26,31 @@
 #                                  animation system set inline style
 #                                  attributes at runtime (no nonce plumbing
 #                                  exists for this yet)
-#               fonts.googleapis.com  the Fraunces/Fira Code/Patrick Hand
-#                                     stylesheet linked in index.html
-#   font-src    'self'
-#               fonts.gstatic.com  the woff2 files the Google Fonts
-#                                  stylesheet above actually resolves to
+#   font-src    'self'             P5 (Tranche II): Fraunces/Fira Code/Patrick
+#                                  Hand are self-hosted woff2 subsets under
+#                                  src/assets/fonts/ (@font-face in index.css),
+#                                  bundled same-origin under /assets/. The
+#                                  fonts.googleapis.com (style-src) and
+#                                  fonts.gstatic.com (font-src) allowances are
+#                                  gone — the Google Fonts <link> in index.html
+#                                  is deleted
 #   img-src     'self'
 #               data:              hand-drawn pencil-stroke SVGs are
 #                                  generated at runtime as
 #                                  data:image/svg+xml background-image URLs
-#               avatars.githubusercontent.com  AttributionCard's author
-#                                              avatar (src/pencil/chrome/
-#                                              AttributionCard/AttributionCard.vue)
+#               avatars.githubusercontent.com  AttributionCard's author avatar
+#                                  (src/pencil/chrome/AttributionCard/
+#                                  AttributionCard.vue). CSP-vs-beacon
+#                                  resolution: the single decorative <img> stays
+#                                  a remote fetch (this one allowance is what
+#                                  keeps it out of default-src deny) but is
+#                                  hardened at the element — `?s=64` (104 KB →
+#                                  6 KB), `loading="lazy"` (no eager third-party
+#                                  hit on first paint) and `referrer-policy:
+#                                  no-referrer` (no path/query leaked to GitHub).
+#                                  Not inlined as a data: URI: a 6 KB base64 blob
+#                                  in the bundle costs more than one cache-hit
+#                                  fetch and would still need `data:` here anyway
 #   connect-src 'self' https://api.sudoku.babb.dev             every API call is a same-origin relative
 #                                  fetch (`new URL('api/v1', document.baseURI)`
 #                                  in useApi.ts) — there is no cross-origin
@@ -65,8 +78,27 @@
 #     avoids leaking path/query to third parties
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.sudoku.babb.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.sudoku.babb.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+
+# Transport (Tranche II / W5, Q4-amended). ADD — the file carried no
+# Cache-Control before; the live `wasm max-age=0` was a Cloudflare-Pages
+# default filling the vacuum. Scoped to /assets/* ONLY: every file Vite emits
+# there (js, css, wasm, and the P5 woff2 subsets) is content-hashed, so a
+# one-year immutable is safe — a new build means a new filename, never a stale
+# hit. Deliberately NOT applied to /index.html or /sw.js (both live at root and
+# must keep revalidating so the SW-update + first-paint-shell paths work).
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# The more-specific /assets/*.wasm merges over /assets/* above. Pinning
+# Content-Type: application/wasm keeps `WebAssembly.instantiateStreaming` on the
+# happy path AND — because the W6 service worker stores the Response *with its
+# headers* — guarantees the offline, cache-served wasm still carries the right
+# MIME for init(). MANDATORY, not optional (Q4).
+/assets/*.wasm
+  Content-Type: application/wasm
+  Cache-Control: public, max-age=31536000, immutable

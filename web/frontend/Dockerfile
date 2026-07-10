@@ -44,8 +44,10 @@ server {
     root /usr/share/nginx/html;
     index index.html;
     # M5b security headers — mirrors web/nginx/sudoku.conf + public/_headers;
-    # keep the three in lockstep.
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.sudoku.babb.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    # keep the three in lockstep. P5 (Tranche II): fonts.googleapis.com /
+    # fonts.gstatic.com dropped — Fraunces/Fira Code/Patrick Hand are self-hosted
+    # woff2 subsets (@font-face in src/assets/index.css), same-origin.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.sudoku.babb.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
     add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
     add_header X-Frame-Options "DENY" always;
     add_header X-Content-Type-Options "nosniff" always;

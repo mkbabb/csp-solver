@@ -106,11 +106,11 @@ test('light mode: layout, styles, filters, visual snapshot', async ({ page }) =>
   const borderWidth = await board.evaluate((el) => getComputedStyle(el).borderWidth);
   expect(borderWidth).toBe('2px');
 
-  // app-layout aligns items to flex-start
+  // app-layout aligns items to center at >=md (H8-centering-only, T2-W5)
   const alignItems = await page
     .locator('.app-layout')
     .evaluate((el) => getComputedStyle(el).alignItems);
-  expect(alignItems).toBe('flex-start');
+  expect(alignItems).toBe('center');
 
   // Crayon CSS vars exist on :root
   const crayonVars = await page.evaluate(() => {

@@ -130,9 +130,14 @@ onUnmounted(() => {
     >
         <!-- Transition layer: draw-in/erase only. Ticks `d` via strokeDashoffset
              (usePathAnimation) and the boil scheduler; unmounted entirely once
-             steady state is reached so it stops paying the grain-static re-raster
-             cost forever (see §"Steady-state boil layer" in the script). -->
-        <g v-if="showTransitionLayer" :filter="pathsVisible ? 'url(#grain-static)' : undefined">
+             steady state is reached (see §"Steady-state boil layer" in the script).
+             Grain-hoist, transition extension (L28 F1): this layer NEVER carries
+             grain-static — it exists only while geometry is animating, where the
+             filter re-rasterizes the full board every frame for texture that isn't
+             legible mid-motion (the draw-in already ran unfiltered: pathsVisible is
+             false until it completes; the erase was the last filtered animator).
+             The settled look is owned entirely by the pre-baked steady siblings. -->
+        <g v-if="showTransitionLayer">
             <!-- Frame -->
             <path
                 :d="currentPaths.frame"

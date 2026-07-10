@@ -2,10 +2,10 @@ import { ref } from 'vue'
 import { mulberry32 } from '@mkbabb/pencil-boil'
 import {
   createSequenceSubscription,
+  resolveEasing,
   usePrefersReducedMotion,
   type SequenceHandle,
 } from '@mkbabb/pencil-boil'
-import { resolveEasing } from '@pencil/composables/easings'
 import { DRAW_IN_PRESETS } from '@pencil/config/pencilConfig'
 
 // Grid draw-in/erase — stroke-dashoffset tweens on the unified scheduler (W8 4th workstream).

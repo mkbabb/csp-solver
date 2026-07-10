@@ -174,8 +174,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             />
           </div>
 
-          <!-- Mobile: unified controls card below board -->
-          <div class="mobile-board-width md:hidden">
+          <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
+          <div class="mobile-board-width lg:hidden">
             <HandDrawnOutline :stroke-width="3">
               <div class="rounded-lg bg-card px-2 py-1.5">
                 <ControlPanel
@@ -196,8 +196,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
             </HandDrawnOutline>
           </div>
 
-          <!-- Desktop sidebar: controls card (aligned with board top) -->
-          <div class="hidden md:flex md:flex-col md:items-start">
+          <!-- Row-regime sidebar (≥lg — R3: iPad portrait clips at md): controls card,
+               vertically centered against the board (H8-centering-only). -->
+          <div class="hidden lg:flex lg:flex-col lg:items-start">
             <HandDrawnOutline :stroke-width="3">
               <div class="controls-card rounded-xl bg-card p-5">
                 <ControlPanel
@@ -236,21 +237,20 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   --toggle-size: 5rem;
 }
 
-@media (min-width: 768px) {
-  .corner-right {
-    --toggle-size: 8rem;
-  }
-}
-
+/* The 8rem md rung died with the md row regime (R3): at 768–1023 the layout now
+   stacks, and a 128px fixed sun grazed the board's top-right frame. Stacked keeps
+   the 5rem mobile sun; the row regime (≥lg) keeps its 13rem corner celestial. */
 @media (min-width: 1024px) {
   .corner-right {
     --toggle-size: 13rem;
   }
 }
 
+/* H8-centering-only: in the row regime the controls card centers vertically against
+   the board (was flex-start); stacked, the same value centers the column cross-axis. */
 .app-layout {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 2rem;
 }
 
@@ -263,17 +263,34 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   display: flex;
 }
 
-@media (max-width: 767px) {
-  .corner-right {
-    top: -0.25rem;
-    right: 0.25rem;
-  }
-
+/* Stacked regime — <lg after R3 (iPad portrait clips in the row layout: board 85vw +
+   2rem gap + the controls card overflow 768px by double digits). */
+@media (max-width: 1023px) {
   .app-layout {
     flex-direction: column;
     align-items: center;
     gap: 1.25rem;
     width: 100%;
+  }
+}
+
+@media (max-width: 767px) {
+  .corner-right {
+    top: -0.25rem;
+    right: 0.25rem;
+  }
+}
+
+/* R3 — the 42×32px logo-button↔toggle contention at 375: the centered wordmark's
+   caret end ran under the fixed 5rem toggle. One rung down on the toggle + a small
+   masthead clearance separates the two hit targets completely. */
+@media (max-width: 480px) {
+  .corner-right {
+    --toggle-size: 4rem;
+  }
+
+  .masthead {
+    margin-top: 0.75rem;
   }
 }
 
@@ -292,19 +309,19 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   gap: 0.1rem;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .masthead {
     align-items: center;
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .board-group {
     align-items: center;
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .main-content {
     justify-content: flex-start;
     padding-top: 0.25rem;

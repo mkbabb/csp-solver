@@ -2,7 +2,7 @@
 
 Vue 3 + TypeScript + Tailwind v4 single-page application. Hand-drawn pencil-and-paper aesthetic (custom SVG glyphs, path-based grid boil, stroke-dasharray draw-ins). No router, no state library. Two games — Sudoku (default) and Futoshiki (async-loaded second scene, `?game=futoshiki`) — sharing one pencil aesthetic layer.
 
-Shared animation primitives come from [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil) `^0.6.0`: the unified rAF scheduler, `usePrefersReducedMotion()`, `useBoilFrame`/`useFilterParamBoil`, the `sequence` subscriber kind, and the celestial mascot proofs. Board-solving runs in-browser via `@mkbabb/csp-solver-wasm` (currently a `file:` link to `../../csp-solver/wasm/pkg`, pending the registry-package swap) inside a per-game Worker — there is no required backend; `web/api` remains an optional Option-A path.
+Shared animation primitives come from [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil) `^0.7.0`: the unified rAF scheduler, `usePrefersReducedMotion()`, `useBoilFrame`/`useFilterParamBoil`, the `sequence` subscriber kind, `createStrokeDrawIn`, the `useBoilCache`/`boilLineFrames`/`boilRectFrames` prebake surface, the four house easing curves (`easeOutCubic`/`resolveEasing` — the app-local copy excised), and the celestial mascot proofs. Board-solving runs in-browser via `@mkbabb/csp-solver-wasm` (currently a `file:` link to `../../csp-solver/wasm/pkg`, pending the registry-package swap) inside a per-game Worker — there is no required backend; `web/api` remains an optional Option-A path.
 
 ## File Tree
 
@@ -47,7 +47,7 @@ frontend/
     │   │   └── SheetWashiLabel.vue     # Washi-tape label decoration
     │   ├── composables/
     │   │   ├── celebration.ts          # Beat-3 classroom murmur (setTimeout chain, not a scheduler subscriber)
-    │   │   ├── easings.ts              # resolveEasing — the four house curves
+    │   │   │                           # (easings.ts excised — the four house curves + resolveEasing now come from @mkbabb/pencil-boil)
     │   │   └── useButtonAnimation.ts   # `playing` ref + timed reset for icon-button click animations
     │   ├── config/
     │   │   └── pencilConfig.ts         # Centralized MOTION bands, stroke, palette, filter/boil/draw-in/celebration config

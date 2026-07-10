@@ -216,6 +216,11 @@ function onBoardSizeChange(val: string | number) {
 
 .control-panel-filtered {
   filter: v-bind(panelFilter);
+  /* R3 (W5 repair): own compositing layer — same defect as the sudoku panel
+     (see its rule): H8's centered .app-layout moves this filtered card on any
+     board-height change, and unlayered that move re-runs the 3-pass stroke
+     filter raster. Layerized, a move is a compositor offset. */
+  will-change: transform;
 }
 
 /* .section-heading type register lives in assets/typography.css (@layer

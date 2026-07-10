@@ -94,8 +94,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       />
     </div>
 
-    <!-- Mobile: unified controls card below board -->
-    <div class="mobile-board-width md:hidden">
+    <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
+    <div class="mobile-board-width lg:hidden">
       <HandDrawnOutline :stroke-width="3">
         <div class="rounded-lg bg-card px-2 py-1.5">
           <ControlPanel
@@ -114,8 +114,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       </HandDrawnOutline>
     </div>
 
-    <!-- Desktop sidebar: controls card (aligned with board top) -->
-    <div class="hidden md:flex md:flex-col md:items-start">
+    <!-- Row-regime sidebar (≥lg — R3): controls card, vertically centered against the
+         board (H8-centering-only). -->
+    <div class="hidden lg:flex lg:flex-col lg:items-start">
       <HandDrawnOutline :stroke-width="3">
         <div class="controls-card rounded-xl bg-card p-5">
           <ControlPanel
@@ -136,9 +137,10 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </template>
 
 <style scoped>
+/* H8-centering-only: row regime centers the controls card against the board. */
 .app-layout {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 2rem;
 }
 
@@ -158,7 +160,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   width: min(42rem, calc(100vw - 1.5rem));
 }
 
-@media (max-width: 767px) {
+/* Stacked regime — <lg after R3 (iPad portrait clips in the row layout). */
+@media (max-width: 1023px) {
   .app-layout {
     flex-direction: column;
     align-items: center;

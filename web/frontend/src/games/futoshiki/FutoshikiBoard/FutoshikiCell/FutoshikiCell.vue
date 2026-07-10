@@ -240,12 +240,29 @@ defineExpose({ focus: focusInput })
   }
 }
 
-/* Tier 3 — aria-invalid conflict: the teacher's red pencil. */
+/* Tier 3 — aria-invalid conflict: the teacher's red pencil. Tier collisions are resolved
+   by specificity, never source order — this (0,3,0) rule loses every shared property to
+   tier-2's (0,3,1); the focused-and-conflicting case is owned by the tier-2×3 compound
+   rule below. */
 .futoshiki-cell.is-invalid .cell-ghost-path {
-  fill: none;
+  fill: var(--color-teacher-red, var(--color-crayon-rose));
+  fill-opacity: 0.1;
   stroke: var(--color-teacher-red, var(--color-crayon-rose));
-  stroke-width: 6;
-  stroke-opacity: 0.85;
+  stroke-width: 9;
+  stroke-opacity: 1;
+}
+
+/* Tier 2×3 — focused AND conflicting: the teacher's red pencil, pressed harder.
+   (0,4,1) beats tier-2's (0,3,1); every tier-2 paint property is re-asserted —
+   partial overrides leak blue through the higher-specificity focus rule.
+   ghost-draw-on is deliberately NOT suppressed: it re-sketches in red as the
+   focus cue (the ghost is this cell's only focus affordance; PRM block governs). */
+.futoshiki-cell.is-invalid:has(input:focus-visible) .cell-ghost-path {
+  fill: var(--color-teacher-red, var(--color-crayon-rose));
+  fill-opacity: 0.16;
+  stroke: var(--color-teacher-red, var(--color-crayon-rose));
+  stroke-width: 10;
+  stroke-opacity: 1;
 }
 
 /* Neutralize the generic global focus-within ring — the SVG ghost is the focus affordance. */

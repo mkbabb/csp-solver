@@ -43,7 +43,7 @@ function inkColor(): string {
     return isDark.value ? '#ffffff' : '#1a1a1a'
 }
 
-// ── Clip-path wipe reveal — once on mount, and REPLAYED on every game swap ──
+// ── Clip-path wipe reveal — a mount-time beat, played ONCE (see the game watch) ──
 const isDrawn = ref(reducedMotion.value)
 function playReveal() {
     if (reducedMotion.value) {
@@ -59,13 +59,13 @@ function playReveal() {
 }
 
 // ── Variable-width viewBox ──
-// 'sudoku' keeps its authored 220-unit box byte-for-byte (safe-regression posture); any other
-// label (e.g. 'futoshiki', 9 chars) would overflow the fixed box and clip, so we widen it. An
-// estimate seeds the first paint (never clips), then getBBox tightens to the real glyph run.
+// EVERY label is measured — no per-label special case (H3: the old vbWidth=220 carve-out
+// for 'sudoku' left a 41.9 px trailing gap to the caret where measured labels get ~14.4).
+// A generous estimate seeds the first paint (never clips), then getBBox tightens the box
+// to the real glyph run + a uniform 4-unit trail, so the caret sits at one gap for all.
 const textRef = ref<SVGTextElement | null>(null)
 function estimateWidth(text: string): number {
-    if (text === 'sudoku') return 220
-    return Math.max(220, Math.ceil(text.length * 34) + 12)
+    return Math.max(120, Math.ceil(text.length * 34) + 12)
 }
 const vbWidth = ref(estimateWidth(label.value))
 async function measure() {
@@ -75,7 +75,7 @@ async function measure() {
     try {
         const box = el.getBBox()
         const fit = Math.ceil(box.x + box.width + 4)
-        vbWidth.value = label.value === 'sudoku' ? 220 : Math.max(120, fit)
+        vbWidth.value = Math.max(120, fit)
     } catch {
         // getBBox can throw if the element isn't laid out yet — keep the estimate.
     }
@@ -89,12 +89,14 @@ onMounted(() => {
     if (fonts?.ready) fonts.ready.then(() => measure())
 })
 
+// I2: a game swap RE-MEASURES the box for the new label — it never re-reveals. The 1.2 s
+// clip-path wipe is a mount-time beat; replaying it on every swap reads as a page reload,
+// not a label change (the menu-close motion already carries the swap).
 watch(
     () => props.game,
     () => {
         vbWidth.value = estimateWidth(label.value)
         measure()
-        playReveal()
     },
 )
 </script>
@@ -148,7 +150,7 @@ watch(
             <HandDrawnOutline :stroke-width="3">
                 <ul
                     id="logo-game-listbox"
-                    class="logo-menu-card cartoon-shadow-sm bg-card"
+                    class="logo-menu-card cartoon-shadow-md bg-popover"
                     role="listbox"
                     aria-label="Choose a puzzle"
                 >
@@ -181,6 +183,15 @@ watch(
     align-self: flex-start;
     display: inline-block;
     --caret-size: 1.5rem;
+    /* One golden rung up (×√φ, 1.272) from the shipped 3.5/4.5/5.5rem ladder — the
+       single source for the wordmark's rendered size (L25-49: no scattered height
+       literals; each breakpoint re-pins this var). */
+    --logo-height: 4.452rem;
+    /* Caret optical center (H3): the wordmark is lowercase on a 60-unit box with its
+       baseline at y=48, so the x-height band — the ink mass the eye centers on —
+       sits ~4.5 units BELOW the box's geometric middle. Flex centers the box; this
+       nudge (4.5/60 of the rendered height) re-centers the caret on the ink. */
+    --caret-nudge: calc(var(--logo-height) * 0.075);
 }
 
 /* Reset the trigger back to bare inline content — the wordmark IS the affordance (mirrors
@@ -206,8 +217,7 @@ watch(
 }
 
 .handwritten-logo {
-    /* One golden rung up (×√φ, 1.272) from the shipped 3.5/4.5/5.5rem ladder. */
-    height: 4.452rem;
+    height: var(--logo-height);
     width: auto;
     color: var(--color-foreground);
     display: block;
@@ -220,8 +230,14 @@ watch(
 }
 
 .logo-text {
-    font-family: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
+    /* The display register token (--font-display ← Fraunces + the serif fallbacks) —
+       H4 ladder-bind; resolves byte-identically to the old inline stack. */
+    font-family: var(--font-display);
     font-weight: 900;
+    /* 52px here is viewBox GEOMETRY, not a type rung: user units inside the 60-unit
+       box (baseline y=48). The rendered size rides --logo-height's golden ladder; a
+       rem/clamp rung would couple glyph metrics to root font-size / viewport width
+       and clip the fixed box. Deliberately off-token. */
     font-size: 52px;
     font-optical-sizing: auto;
     fill: currentColor;
@@ -236,12 +252,12 @@ watch(
     width: var(--caret-size);
     height: var(--caret-size);
     color: var(--color-foreground);
-    transform: rotate(90deg);
+    transform: translateY(var(--caret-nudge)) rotate(90deg);
     transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .logo-caret.is-open {
-    transform: rotate(-90deg);
+    transform: translateY(var(--caret-nudge)) rotate(-90deg);
 }
 
 .logo-menu-pop {
@@ -252,6 +268,9 @@ watch(
     z-index: 50;
 }
 
+/* H2-elevation-only: the floating paper note reads as a lifted sheet — popover bg
+   (one tone off the card) + the md cartoon shadow, via the template classes. The
+   placement half stays dead (the menu is ~99px; it never fights the fold). */
 .logo-menu-card {
     list-style: none;
     margin: 0;
@@ -264,9 +283,18 @@ watch(
     animation: logo-menu-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* H2 dark hairline: the token border (16% L) vanishes against the 6.5% L popover
+   ground — mix a quarter foreground in so the floating edge still draws itself. */
+.dark .logo-menu-card {
+    border-color: color-mix(in srgb, var(--color-foreground) 25%, var(--color-border));
+}
+
 .logo-menu-item {
-    font-family: 'Patrick Hand', cursive;
-    font-size: 1.4rem;
+    /* The hand register token (--font-hand ← Patrick Hand) + a true √φ ladder rung —
+       H4 ladder-bind: 1.4rem was bespoke; --type-subheading (1.272rem) is the
+       nearest rung. The ≥640px arm steps one rung to --type-heading (φ). */
+    font-family: var(--font-hand);
+    font-size: var(--type-subheading);
     line-height: 1.15;
     letter-spacing: 0.02em;
     color: var(--color-muted-foreground);
@@ -311,21 +339,17 @@ watch(
 @media (min-width: 640px) {
     .logo-menu {
         --caret-size: 1.9rem;
-    }
-    .handwritten-logo {
-        height: 5.724rem;
+        --logo-height: 5.724rem;
     }
     .logo-menu-item {
-        font-size: 1.55rem;
+        font-size: var(--type-heading);
     }
 }
 
 @media (min-width: 1024px) {
     .logo-menu {
         --caret-size: 2.3rem;
-    }
-    .handwritten-logo {
-        height: 6.996rem;
+        --logo-height: 6.996rem;
     }
 }
 

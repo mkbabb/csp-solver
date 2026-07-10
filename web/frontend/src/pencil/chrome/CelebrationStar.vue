@@ -14,10 +14,10 @@
 import { nextTick, ref, watch, onUnmounted } from 'vue'
 import {
   createSequenceSubscription,
+  easeOutCubic,
   usePrefersReducedMotion,
   type SequenceHandle,
 } from '@mkbabb/pencil-boil'
-import { easeOutCubic } from '@pencil/composables/easings'
 import { CELEBRATION } from '@pencil/config/pencilConfig'
 
 const props = defineProps<{ active: boolean }>()
@@ -120,12 +120,15 @@ onUnmounted(reset)
 </template>
 
 <style scoped>
+/* H6-shrunk: enlarged in place, 2.5 → 3.25rem — same top-left anchor (the old
+   bottom: -2.75rem put the top edge 0.25rem below the board; kept exactly), the
+   star just grows down-right. No reposition, no burst. */
 .celebration-star {
   position: absolute;
   left: 0.25rem;
-  bottom: -2.75rem;
-  width: 2.5rem;
-  height: 2.5rem;
+  top: calc(100% + 0.25rem);
+  width: 3.25rem;
+  height: 3.25rem;
   pointer-events: none;
   z-index: 3;
 }

@@ -3,6 +3,60 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── P5 (Tranche II) — self-hosted subset faces ────────────────────────────
+ * Replaces the Google Fonts CDN `<link>` (index.html) + its `fonts.googleapis.com`/
+ * `fonts.gstatic.com` CSP clauses (see public/_headers). Each woff2 is
+ * `pyftsubset`-built from the upstream google/fonts variable-font source,
+ * trimmed to the EXACT glyphs the app renders (derived from the source
+ * templates/copy, not guessed — see the P5 report for the derivation):
+ *
+ *   fraunces-subset.woff2    9,772 B  — WORDMARK + HEADINGS ONLY (opsz+wght
+ *                                       variable, SOFT/WONK pinned like the
+ *                                       CDN's own served instance). unicode-range
+ *                                       gates it to exactly that repertoire so
+ *                                       any OTHER text asking for 'Fraunces'
+ *                                       (none live today) falls through to the
+ *                                       Georgia stack instead of mixing glyphs
+ *                                       mid-word. NOT a general body-copy subset.
+ *   firacode-subset.woff2    3,624 B  — full realistic app coverage: every
+ *                                       OptionSelector size/difficulty label
+ *                                       (both games) + the "@mbabb" byline.
+ *   patrickhand-subset.woff2 3,840 B  — full realistic app coverage: every
+ *                                       MarginNote status string, SolverErrorNote
+ *                                       paper-note variant, SheetWashiLabel
+ *                                       tooltip, + the wordmark dropdown list.
+ *
+ * Total self-hosted: 17,236 B for all three faces, same-origin, immutable-
+ * cached under /assets/* (public/_headers), precached by the W6 SW glob.
+ */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  font-stretch: 100%;
+  src: url('./fonts/fraunces-subset.woff2') format('woff2');
+  unicode-range: U+0020, U+0042, U+0044, U+0053, U+0061, U+0063-0064, U+0065-0066, U+0068, U+0069, U+006B, U+006C, U+006F, U+0072-0074, U+0075, U+0079, U+007A;
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('./fonts/firacode-subset.woff2') format('woff2');
+  unicode-range: U+0020, U+0031, U+0034-0037, U+0039, U+0040, U+0045, U+0048, U+004D, U+0061-0062, U+0064-0065, U+0069, U+006D, U+0072, U+0073, U+0075, U+0079, U+00D7;
+}
+
+@font-face {
+  font-family: 'Patrick Hand';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/patrickhand-subset.woff2') format('woff2');
+  unicode-range: U+0020-0021, U+0027, U+002D, U+002E, U+0030-0039, U+003F, U+0043, U+0052, U+0053, U+0061-0068, U+006B-0071, U+0073-007A, U+2014, U+2026;
+}
+
 @layer base {
   body {
     font-family: var(--font-text);
@@ -22,10 +76,21 @@
      and Plus Jakarta never ships. Defining --font-mono/--font-serif here also
      retires the D5 gap: Tailwind's `font-mono` now resolves to Fira Code (not
      the ui-monospace system default), so the mono surface is finally the soul's
-     mono, not the platform's. One consolidated Fraunces fallback chain (D6). */
-  --font-text: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
+     mono, not the platform's.
+     P5 (Tranche II): --font-mono/--font-hand resolve against the self-hosted
+     subsets above (comprehensive — every live consumer's glyphs are covered).
+     --font-text/--font-serif deliberately DROP 'Fraunces': the self-hosted
+     Fraunces subset only covers the wordmark + .section-heading repertoire, and
+     these two are the BODY/prose registers (text-body/text-prose/text-title/etc.,
+     all zero-consumer utilities today — so this changes no rendered pixel; the one
+     live body-inherited use, AttributionCard's caption + GitHub link, gets the
+     honest Georgia fallback instead of a mid-word glyph mismatch now that the CDN
+     link is gone). --font-display keeps 'Fraunces' — its only consumers
+     (text-display*, .section-heading, the wordmark's own hardcoded family string)
+     are exactly what the subset covers. */
+  --font-text: Georgia, Cambria, 'Times New Roman', serif;
   --font-display: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
-  --font-serif: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
+  --font-serif: Georgia, Cambria, 'Times New Roman', serif;
   --font-mono: 'Fira Code', monospace;
   --font-hand: 'Patrick Hand', cursive;
 
@@ -238,8 +303,11 @@
     transition: box-shadow 500ms;
   }
 
-  /* Solve failure — the teacher's red pencil. Grid lines + shadow both the single
-     --color-teacher-red token via color-mix (design-refinement.md §3.3.1/§3.4). */
+  /* Solve failure — the teacher's red pencil. Shadow carries the full
+     --color-teacher-red token; grid lines take a 30% red wash over the line color
+     so the full-red conflict rings still read one tier hotter (Q8 H1;
+     design-refinement.md §3.3.1/§3.4). !important is defensive — the grid strokes
+     via a presentation attribute, which any CSS rule already beats. */
   .solve-failure {
     animation: shake 0.6s linear;
     box-shadow:
@@ -249,7 +317,7 @@
   }
 
   .solve-failure .grid-line {
-    stroke: var(--color-teacher-red) !important;
+    stroke: color-mix(in srgb, var(--color-teacher-red) 30%, var(--grid-line-color)) !important;
   }
 
   /* Shake animation */
@@ -301,5 +369,26 @@
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
     }
+  }
+}
+
+/* ── R3 (Tranche II W5) — 44px tap-target floor, coarse pointers only ─────────
+ * The L15 audit's sub-44 controls, floored where a finger is the instrument;
+ * fine pointers keep the compact pencil layout. Shared here (not per-component)
+ * so the logo-menu items ride it without touching that file's scoped rules.
+ * Board cells are exempt (16×16 at mobile width is a sub-44 arithmetic
+ * impossibility — D12). min-height only: every listed control centers its own
+ * content; the scribble/ghost underlines keep tracking the content box. */
+@media (pointer: coarse) {
+  .logo-menu-item,
+  .ctrl-btn,
+  .mobile-heading-btn,
+  .attribution-trigger,
+  .error-note-retry {
+    min-height: 2.75rem;
+  }
+
+  .logo-menu-item {
+    align-content: center;
   }
 }

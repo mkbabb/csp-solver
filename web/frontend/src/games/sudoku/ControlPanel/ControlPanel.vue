@@ -308,6 +308,13 @@ function onDifficultyChange(val: string | number) {
 
 .control-panel-filtered {
   filter: v-bind(panelFilter);
+  /* R3 (W5 repair): own compositing layer. Unlayered, this 3-pass stroke filter
+     re-rasterizes whenever the panel repaints OR MOVES — and H8's centered
+     .app-layout moves it on every board-height change (a size switch re-centers
+     the card), which carried ~+125 ms of size-switch raster past the p3 class.
+     Layerized, a move is a compositor offset and boil-tick invalidations stop
+     sharing tiles with the filter (measured −57% switch raster vs unlayered). */
+  will-change: transform;
 }
 
 /* .section-heading type register lives in assets/typography.css (@layer

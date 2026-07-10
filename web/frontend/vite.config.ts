@@ -145,6 +145,13 @@ export default defineConfig({
   build: {
     target: 'es2020',
     minify: 'esbuild',
+    // P5 (Tranche II): never base64-inline the self-hosted font subsets. The default
+    // 4KB assetsInlineLimit would otherwise fold firacode-subset.woff2 (3,624 B) and
+    // patrickhand-subset.woff2 (3,840 B) into the CSS as base64 — ~33% bigger on the
+    // wire AND no longer independently cacheable (they'd get re-fetched on every
+    // CSS-touching deploy instead of sitting behind their own immutable, content-
+    // hashed /assets/*.woff2 URL — the W5 cache-header beat this self-host feeds).
+    assetsInlineLimit: (filePath) => (filePath.endsWith('.woff2') ? false : undefined),
     rollupOptions: {
       output: {
         // Rolldown (Vite 8's default bundler) rejects the classic object-literal

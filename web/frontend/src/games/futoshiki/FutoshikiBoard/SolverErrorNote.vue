@@ -6,6 +6,7 @@
  * the teacher's red pencil ON the board; a network/server fault is this hand-drawn note
  * card, `role="alert"` (a machine broke, not a comment on the puzzle).
  */
+import { nextTick, onMounted, ref } from 'vue'
 import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'
 
 defineProps<{
@@ -16,10 +17,20 @@ defineProps<{
 const emit = defineEmits<{
   (e: 'retry'): void
 }>()
+
+// H5(b′): on show, bring the note to the reader — the card can mount below the fold
+// (E1). scrollIntoView moves no focus and re-fires nothing (role=alert announced on
+// insertion); the card itself stays a persistent alert, dismissed only by state change.
+const rootRef = ref<HTMLElement | null>(null)
+onMounted(async () => {
+  await nextTick()
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  rootRef.value?.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
+})
 </script>
 
 <template>
-  <div class="error-note" role="alert">
+  <div ref="rootRef" class="error-note" role="alert">
     <HandDrawnOutline :stroke-width="3">
       <div class="error-note-card cartoon-shadow-sm bg-card">
         <p class="error-note-text">{{ text }}</p>

@@ -15,9 +15,10 @@
 import {
   createBoilTicker,
   createSequenceSubscription,
+  easeOutCubic,
+  linear,
   usePrefersReducedMotion,
 } from '@mkbabb/pencil-boil';
-import { easeOutCubic, linear } from '@pencil/composables/easings';
 
 // One PRM source for draw-in, flourish and wiggle — usePrefersReducedMotion() is the same
 // live matchMedia ref the scheduler's central PRM gate reads, so reduced-motion behavior is

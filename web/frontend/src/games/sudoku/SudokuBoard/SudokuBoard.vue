@@ -46,10 +46,13 @@ const cellRects = computed(() =>
   generateGridPaths(props.boardSize, props.size, VIEWBOX_SIZE, 42).cellRects
 )
 
+// R3: the viewport-share/dvh caps ride the row regime, which now starts at lg: —
+// iPad-portrait (768) stacks, so the stacked width formula governs there (the md:
+// 85vw board under-filled the 42rem mobile controls card by ~19px at 768).
 const boardSizeClasses = computed(() => {
-  if (props.boardSize <= 4) return 'w-[min(26rem,calc(100vw-1.5rem))] md:w-[min(26rem,85vw)] md:max-w-[calc(100dvh-10rem)]'
-  if (props.boardSize <= 9) return 'w-[min(42rem,calc(100vw-1.5rem))] md:w-[min(42rem,85vw)] md:max-w-[calc(100dvh-10rem)]'
-  return 'w-[min(52rem,calc(100vw-1.5rem))] md:w-[min(52rem,90vw)] md:max-w-[calc(100dvh-10rem)]'
+  if (props.boardSize <= 4) return 'w-[min(26rem,calc(100vw-1.5rem))] lg:w-[min(26rem,85vw)] lg:max-w-[calc(100dvh-10rem)]'
+  if (props.boardSize <= 9) return 'w-[min(42rem,calc(100vw-1.5rem))] lg:w-[min(42rem,85vw)] lg:max-w-[calc(100dvh-10rem)]'
+  return 'w-[min(52rem,calc(100vw-1.5rem))] lg:w-[min(52rem,90vw)] lg:max-w-[calc(100dvh-10rem)]'
 })
 
 const boardClasses = computed(() => {
@@ -296,10 +299,16 @@ function isRevealed(pos: number): boolean {
 </script>
 
 <template>
-  <div
-    class="board-wrapper cartoon-shadow-md aspect-square rounded-xl bg-card"
-    :class="[boardClasses, boardSizeClasses]"
-  >
+  <!-- H9 (in-flow-on-mobile): the shell carries the width; the square board and the
+       margin strip are siblings inside it. Stacked (<lg) the strip is in flow, so a
+       showing error card pushes the controls panel down instead of overlaying it at
+       z-50; in the row regime (≥lg) it reverts to the overlay strip (true margin-
+       writing, no layout shift). -->
+  <div class="board-shell" :class="boardSizeClasses">
+    <div
+      class="board-wrapper cartoon-shadow-md aspect-square w-full rounded-xl bg-card"
+      :class="boardClasses"
+    >
     <!-- Hand-drawn SVG grid overlay -->
     <HandDrawnGrid
       :board-size="boardSize"
@@ -346,10 +355,12 @@ function isRevealed(pos: number): boolean {
 
     <!-- Gold-star garnish + union foil-gleam tail — beat-2 crest accent (§4.3) -->
     <CelebrationStar :active="celebrating" />
+    </div>
 
     <!-- Below-board margin: the status voice + the paper note (§4.3, §5.2). Two distinct
          live regions — marginalia (role=status, polite; the page on the puzzle) and the
-         error card (role=alert; broken machinery). -->
+         error card (role=alert; broken machinery). A sibling of the board square (H9):
+         in flow when stacked, overlay in the row regime. -->
     <div class="board-margin">
       <MarginNote :text="marginText" :tone="marginTone" />
       <SolverErrorNote
@@ -363,6 +374,10 @@ function isRevealed(pos: number): boolean {
 </template>
 
 <style scoped>
+.board-shell {
+  position: relative;
+}
+
 .board-wrapper {
   position: relative;
   overflow: visible;
@@ -375,17 +390,28 @@ function isRevealed(pos: number): boolean {
   z-index: 2;
 }
 
-/* The status/alert strip sits just below the board. pointer-events pass through to whatever
-   is beneath (the marginalia never blocks); the error card re-enables them on itself. */
+/* The status/alert strip just below the board. pointer-events pass through to whatever
+   is beneath (the marginalia never blocks); the error card re-enables them on itself.
+   Stacked (<lg): in flow — its real height (note + error card) pushes the controls
+   panel down (H9 in-flow variant; carries H5's mobile case). */
 .board-margin {
-  position: absolute;
-  top: 100%;
-  inset-inline: 0.25rem;
   margin-top: 0.4rem;
-  z-index: 50;
+  margin-inline: 0.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   pointer-events: none;
+}
+
+/* Row regime (≥lg): overlay strip anchored to the square — true margin-writing,
+   no layout shift when a note arrives. */
+@media (min-width: 1024px) {
+  .board-margin {
+    position: absolute;
+    top: 100%;
+    inset-inline: 0.25rem;
+    margin-inline: 0;
+    z-index: 50;
+  }
 }
 </style>

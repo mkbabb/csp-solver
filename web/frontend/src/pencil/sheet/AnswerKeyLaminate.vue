@@ -167,7 +167,14 @@ const keyCells = computed<KeyCell[]>(() => {
 <style scoped>
 .answer-key-laminate {
   position: absolute;
-  inset: 0;
+  /* Anchored to the board SQUARE, not the host box: with H9 the board's margin strip
+     is in flow on mobile, so the host grows below the square — inset:0 would stretch
+     the laminate past the cells. width + aspect-ratio pins it to the square in both
+     regimes (the host's width IS the board width). */
+  top: 0;
+  left: 0;
+  width: 100%;
+  aspect-ratio: 1 / 1;
   z-index: 3; /* above the cells layer, a sibling over the board — never inside its <g> */
   border-radius: 0.75rem; /* match board-wrapper rounded-xl */
   pointer-events: none;

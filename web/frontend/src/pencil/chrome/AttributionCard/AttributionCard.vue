@@ -27,10 +27,21 @@ defineExpose({ close })
     >@mbabb</button>
     <div class="hover-card" :class="{ 'is-open': isOpen }">
       <div class="flex items-center gap-3">
+        <!-- CSP-vs-beacon (Tranche II / W5): `?s=64` serves a 64px avatar
+             (104 KB → ~6 KB) for the 40px (h-10) render; `loading="lazy"` +
+             `decoding="async"` keep the third-party hit off first paint (the
+             card is closed until interaction); `referrerpolicy="no-referrer"`
+             leaks no path/query to GitHub. The single img-src allowance for
+             avatars.githubusercontent.com in public/_headers is retained. -->
         <img
-          src="https://avatars.githubusercontent.com/u/2848617?v=4"
+          src="https://avatars.githubusercontent.com/u/2848617?v=4&s=64"
           alt="mkbabb"
           class="h-10 w-10 rounded-full"
+          width="40"
+          height="40"
+          loading="lazy"
+          decoding="async"
+          referrerpolicy="no-referrer"
         />
         <div class="flex-1">
           <a href="https://github.com/mkbabb" target="_blank" rel="noopener noreferrer" class="font-mono text-sm font-semibold text-foreground hover:underline">@mbabb</a>
