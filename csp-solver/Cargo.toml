@@ -30,6 +30,9 @@ pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
 criterion = { version = "0.5", features = ["html_reports"] }
 hungarian = "1"
 proptest = "1"
+# P6 spike — callgrind instruction-count baselines (Linux/CI only; no Valgrind on
+# arm64-macOS). Pinned to the runner installed in .github/workflows/iai-spike.yml.
+iai-callgrind = "0.16.1"
 
 [lib]
 # cdylib only needed for PyO3 (maturin). Normal builds produce rlib only.
@@ -58,4 +61,10 @@ harness = false
 
 [[bench]]
 name = "cost_finite_domain"
+harness = false
+
+# P6 spike — iai-callgrind instruction-count bench (harness = false; driven by the
+# iai-callgrind-runner binary, not libtest). Runs only under Linux/CI with Valgrind.
+[[bench]]
+name = "iai_queens"
 harness = false

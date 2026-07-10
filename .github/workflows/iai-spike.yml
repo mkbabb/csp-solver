@@ -1,0 +1,117 @@
+# iai-spike — P6 prototype (Tranche-II Pass-2).
+#
+# QUESTION: Can a CI lane give deterministic instruction-count baselines for the
+# csp-solver benches? arm64-macOS can't run Valgrind, so callgrind counts are only
+# obtainable in Linux CI — this lane is the only way to know.
+#
+# GATE: green lane + instruction counts stable across 2 runs (<1% delta).
+#
+# Self-contained: Valgrind (apt) + iai-callgrind-runner (cargo install, pinned to
+# the `iai-callgrind = 0.16.1` dev-dep). No external service, no token. (The
+# codspeed-criterion-compat comparison arm needs the CodSpeed GitHub App + a
+# CODSPEED_TOKEN secret installed on the repo — out of scope for a self-contained
+# spike; noted in the P6 report, not wired here.)
+#
+# Scoped to the spike branch only — never runs on master/PRs.
+name: iai-spike
+
+on:
+    push:
+        branches: [spike/iai-callgrind]
+    workflow_dispatch:
+
+jobs:
+    iai:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        env:
+            RUST_BACKTRACE: 1
+            # Fixed-count callgrind == deterministic instruction counts; no warm-up
+            # noise. One bench, one measured function.
+            IAI_BENCH: iai_queens
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Install Rust nightly toolchain
+              uses: dtolnay/rust-toolchain@nightly
+
+            - name: Install Valgrind (callgrind)
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y valgrind
+                  valgrind --version
+
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      ~/.cargo/bin
+                      target
+                  key: cargo-iai-spike-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+
+            - name: Install iai-callgrind-runner (must match the 0.16.1 dev-dep)
+              run: |
+                  if ! command -v iai-callgrind-runner >/dev/null 2>&1; then
+                    cargo install iai-callgrind-runner --version 0.16.1 --locked
+                  fi
+                  iai-callgrind-runner --version || true
+
+            - name: Run 1 — establish the callgrind baseline
+              run: |
+                  set -o pipefail
+                  cargo bench -p csp-solver --bench "$IAI_BENCH" 2>&1 | tee run1.log
+
+            - name: Run 2 — re-measure the identical binary
+              run: |
+                  set -o pipefail
+                  cargo bench -p csp-solver --bench "$IAI_BENCH" 2>&1 | tee run2.log
+
+            - name: GATE — parse counts + assert <1% run-to-run delta
+              run: |
+                  set -euo pipefail
+                  extract() {
+                    # First "Instructions:" line; first integer (strip thousands separators).
+                    grep -E 'Instructions:' "$1" | head -1 \
+                      | grep -oE '[0-9][0-9,]*' | head -1 | tr -d ','
+                  }
+                  I1="$(extract run1.log || true)"
+                  I2="$(extract run2.log || true)"
+                  echo "run1 instructions: '${I1}'"
+                  echo "run2 instructions: '${I2}'"
+                  if [ -z "${I1}" ] || [ -z "${I2}" ]; then
+                    echo "::error::could not parse an Instructions count from a run log — the lane did not produce callgrind output"
+                    echo "----- run1.log tail -----"; tail -40 run1.log || true
+                    echo "----- run2.log tail -----"; tail -40 run2.log || true
+                    exit 1
+                  fi
+                  DELTA_PCT="$(awk -v a="$I1" -v b="$I2" 'BEGIN{ if(a==0){print "inf"} else {d=(b-a)/a*100; if(d<0)d=-d; printf "%.6f", d} }')"
+                  echo "delta: ${DELTA_PCT}%"
+                  {
+                    echo "## iai-spike — P6 gate";
+                    echo "";
+                    echo "| metric | value |";
+                    echo "|---|---|";
+                    echo "| run1 instructions | ${I1} |";
+                    echo "| run2 instructions | ${I2} |";
+                    echo "| run-to-run delta | ${DELTA_PCT}% |";
+                    echo "| gate (<1%) | $([ "$(awk -v d="$DELTA_PCT" 'BEGIN{print (d<1)?1:0}')" = 1 ] && echo PASS || echo FAIL) |";
+                  } >> "$GITHUB_STEP_SUMMARY"
+                  PASS="$(awk -v d="$DELTA_PCT" 'BEGIN{print (d<1)?1:0}')"
+                  if [ "$PASS" != "1" ]; then
+                    echo "::error::instruction-count delta ${DELTA_PCT}% >= 1% — not deterministic"
+                    exit 1
+                  fi
+                  echo "GATE PASS — deterministic instruction counts (${DELTA_PCT}% delta)"
+
+            - name: Upload logs + callgrind out-files
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: iai-spike-evidence
+                  path: |
+                      run1.log
+                      run2.log
+                      target/iai/**
+                  if-no-files-found: warn
