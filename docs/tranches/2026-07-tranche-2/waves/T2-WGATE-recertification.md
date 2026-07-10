@@ -2,7 +2,7 @@
 
 **Closes the tranche: every headline number reproduced at final HEAD from COMMITTED harnesses, the ledger closed, the convergence statement written.** This is where the last inherited-trust numbers either become first-party or get struck.
 
-**Dependencies**: ← all. **Effort**: S.
+**Dependencies**: ← T2-W8 (colocation lands before re-certification) + ← all. **Effort**: S.
 
 ---
 

@@ -41,3 +41,17 @@
 
 - The Vite-8 chunk shape drifts (`animation-vendor` 66.03 kB vs `vue-vendor` 8.08 kB residual under the function-form `manualChunks`)—zero import-graph/behavior impact per the e2e reproduction, but re-check the chunk split if W5's transfer measurements look off.
 - PyO3 0.29 wheel byte-consistency was proven on this host class; the CI runner re-proves it at the W1 gate (108/2 is the arbiter, not local bytes).
+
+## Owner sharpening (2026-07-10): exhaustive SOTA currency — "no 2021 cargos"
+
+Every manifest, both stacks, brought fully current and GATED:
+- **Rust**: every `Cargo.toml` carries `edition = "2024"` + the workspace tables
+  ([workspace.dependencies] hoisted, [workspace.lints] with the adopted tiers,
+  `rust-version = "1.88"`); `cargo outdated --exit-code 1` clean or each hold
+  justified in-file (pyo3 ceiling class); `cargo update` lockfile fresh.
+- **Frontend**: `npm outdated` clean or justified; Vite 8 (P7 ADOPT), Node 24,
+  the keyframes.js excision (R8) verified by the T11-style grep.
+- **Python**: the surviving `csp-solver/pyproject.toml` + tests-py deps current
+  under uv; PyO3 0.29 + abi3 posture per the wave body.
+**Gate**: the three outdated-checks green-or-justified, committed as a
+currency ledger in the wave record.

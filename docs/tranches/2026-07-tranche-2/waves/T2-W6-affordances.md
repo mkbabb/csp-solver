@@ -45,3 +45,18 @@ Plus the L14 bonus: a washi discoverability label on the hold-to-peek surface (t
 - The permalink resolver branching is the wave's only genuinely new state logic—budget it as such (Q7's deviation note to estimators).
 - PWA install-while-deep-linked means later icon launches go to `start_url`, not the link—expected platform behavior, out of scope per "nothing past precache"; documented so nobody re-litigates it.
 - `vite-plugin-pwa` under Vite 8: the plugin's peer range spanned ^8 at verification (D26/verify-32); if the W1 Vite-8 beat and this wave land far apart, re-check the pin.
+
+## Beat 9 — engine-domains pencil marks (owner fold-in 2026-07-10; was tranche-III)
+
+The P4 spike (+265/−6, zero new deps, 6/6 harness, pencil-soul rendering —
+[`../evidence/pass2/P4.md`](../evidence/pass2/P4.md)) lands as product: the
+**opt-in full-GAC bundle** — the propagate-only worker op as built (+1,779 B
+lean-budget impact, re-measure at landing), surfaced behind the peek/hint
+grammar (never ambient: the spoiler finding — 109/116 bank boards collapse to
+a verbatim answer key under full-GAC — makes ambient a disclosure, not a hint).
+Graphite candidate marks in the pencil hand render the propagated domains for
+empty cells while the gesture is held. Sequenced LAST (after the hint tier —
+the R3 order extends by one). **Gates**: P4's 6/6 harness re-run green at
+landing; lean artifact stays under the 93 KB band with the op; the marks
+render in the hand (design-authority screenshot check); PRM/opt-in semantics
+honored; K-peek/Esc isolation unaffected.
