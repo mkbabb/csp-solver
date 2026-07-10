@@ -1,0 +1,552 @@
+diff --git a/web/frontend/index.html b/web/frontend/index.html
+index 802e0c30..114ef8e9 100644
+--- a/web/frontend/index.html
++++ b/web/frontend/index.html
+@@ -5,12 +5,9 @@
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     <title>Sudoku - CSP Solver</title>
+     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+-    <link rel="preconnect" href="https://fonts.googleapis.com" />
+-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+-    <link
+-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=Fira+Code:wght@300..700&family=Patrick+Hand&display=swap"
+-      rel="stylesheet"
+-    />
++    <!-- P5 (Tranche II Pass-2): fonts are self-hosted subsets, wired via @font-face
++         in src/assets/index.css — the Google Fonts CDN link is gone, so is the
++         fonts.googleapis.com/fonts.gstatic.com CSP allowance (see public/_headers). -->
+   </head>
+   <body>
+     <div id="app"></div>
+diff --git a/web/frontend/public/_headers b/web/frontend/public/_headers
+index d085fe42..badc20db 100644
+--- a/web/frontend/public/_headers
++++ b/web/frontend/public/_headers
+@@ -26,11 +26,13 @@
+ #                                  animation system set inline style
+ #                                  attributes at runtime (no nonce plumbing
+ #                                  exists for this yet)
+-#               fonts.googleapis.com  the Fraunces/Fira Code/Patrick Hand
+-#                                     stylesheet linked in index.html
+-#   font-src    'self'
+-#               fonts.gstatic.com  the woff2 files the Google Fonts
+-#                                  stylesheet above actually resolves to
++#   font-src    'self'             P5 (2026-07-09): Fraunces/Fira Code/Patrick
++#                                  Hand are self-hosted subsets under
++#                                  src/assets/fonts/ (@font-face in index.css),
++#                                  bundled same-origin — fonts.googleapis.com /
++#                                  fonts.gstatic.com are gone from both this
++#                                  clause and style-src above (the Google Fonts
++#                                  <link> in index.html is deleted)
+ #   img-src     'self'
+ #               data:              hand-drawn pencil-stroke SVGs are
+ #                                  generated at runtime as
+@@ -65,7 +67,7 @@
+ #     avoids leaking path/query to third parties
+ 
+ /*
+-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.sudoku.babb.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
++  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.sudoku.babb.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+   X-Frame-Options: DENY
+   X-Content-Type-Options: nosniff
+diff --git a/web/frontend/src/assets/fonts/firacode-subset.woff2 b/web/frontend/src/assets/fonts/firacode-subset.woff2
+new file mode 100644
+index 0000000000000000000000000000000000000000..33345b0449dff149ee5d449ea5b24d7fdcc61036
+GIT binary patch
+literal 3624
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/web/frontend/src/assets/fonts/fraunces-subset.woff2 b/web/frontend/src/assets/fonts/fraunces-subset.woff2
+new file mode 100644
+index 0000000000000000000000000000000000000000..0acbde19cfcfdf0c69aec247c045062ab6efb49c
+GIT binary patch
+literal 9764
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/web/frontend/src/assets/fonts/patrickhand-subset.woff2 b/web/frontend/src/assets/fonts/patrickhand-subset.woff2
+new file mode 100644
+index 0000000000000000000000000000000000000000..bfed7eb95b1726d4c641ba44a6edc5829002da2e
+GIT binary patch
+literal 3840
+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
+Cz(Gg=
+
+literal 0
+HcmV?d00001
+
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 6f0f65d7..563d83e4 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -3,6 +3,74 @@
+ 
+ @custom-variant dark (&:is(.dark *));
+ 
++/* ── P5 PROTOTYPE — self-hosted subset faces (Tranche II Pass-2) ────────────
++ * Replaces the Google Fonts CDN `<link>` (index.html) + its `fonts.googleapis.com`/
++ * `fonts.gstatic.com` CSP clauses. Each woff2 is `pyftsubset`-built from the
++ * upstream google/fonts variable-font source, trimmed to the EXACT glyphs the
++ * app renders (derived from the source templates/copy, not guessed — see the
++ * P5 report for the derivation + byte table):
++ *
++ *   fraunces-subset.woff2    9,764 B  — WORDMARK + HEADINGS ONLY (opsz+wght
++ *                                       variable, SOFT/WONK pinned like the
++ *                                       CDN's own served instance). Covers the
++ *                                       game-name wordmark ("sudoku",
++ *                                       "futoshiki") + the .section-heading
++ *                                       labels ("Size", "Difficulty", "Board
++ *                                       Size"). unicode-range gates it to
++ *                                       exactly that repertoire so any OTHER
++ *                                       text asking for 'Fraunces' (there are
++ *                                       none live today — text-body/
++ *                                       text-prose/text-title/etc. are unused
++ *                                       utilities) safely falls through to the
++ *                                       Georgia stack instead of mixing
++ *                                       glyphs mid-word. NOT a general body-
++ *                                       copy subset — that's a wider follow-on
++ *                                       if --font-text ever gets a real
++ *                                       consumer.
++ *   firacode-subset.woff2    3,624 B  — full realistic app coverage: every
++ *                                       OptionSelector option label (size +
++ *                                       difficulty, both games) + the
++ *                                       AttributionCard "@mbabb" byline.
++ *   patrickhand-subset.woff2 3,840 B  — full realistic app coverage: every
++ *                                       MarginNote status string, every
++ *                                       SolverErrorNote paper-note variant
++ *                                       (both games), every SheetWashiLabel
++ *                                       tooltip, + the wordmark dropdown list.
++ *
++ * Total self-hosted: 17,228 B for all three faces vs. the ~124.5–204 KB the
++ * CDN serves today for the same three families' latin-only chunks (regime
++ * depends on whether the italic Fraunces chunk — used by AttributionCard's
++ * body-inherited caption — is counted; that chunk is OUT of this subset's
++ * scope, see --font-text below).
++ */
++@font-face {
++  font-family: 'Fraunces';
++  font-style: normal;
++  font-weight: 100 900;
++  font-display: swap;
++  font-stretch: 100%;
++  src: url('./fonts/fraunces-subset.woff2') format('woff2');
++  unicode-range: U+0020, U+0042, U+0044, U+0053, U+0061, U+0063-0064, U+0065-0066, U+0068, U+0069, U+006B, U+006C, U+006F, U+0072-0074, U+0075, U+0079, U+007A;
++}
++
++@font-face {
++  font-family: 'Fira Code';
++  font-style: normal;
++  font-weight: 300 700;
++  font-display: swap;
++  src: url('./fonts/firacode-subset.woff2') format('woff2');
++  unicode-range: U+0020, U+0031, U+0034-0037, U+0039, U+0040, U+0045, U+0048, U+004D, U+0061-0062, U+0064-0065, U+0069, U+006D, U+0072, U+0073, U+0075, U+0079, U+00D7;
++}
++
++@font-face {
++  font-family: 'Patrick Hand';
++  font-style: normal;
++  font-weight: 400;
++  font-display: swap;
++  src: url('./fonts/patrickhand-subset.woff2') format('woff2');
++  unicode-range: U+0020-0021, U+0027, U+002D, U+002E, U+0030-0039, U+003F, U+0043, U+0052, U+0053, U+0061-0068, U+006B-0071, U+0073-007A, U+2014, U+2026;
++}
++
+ @layer base {
+   body {
+     font-family: var(--font-text);
+@@ -22,10 +90,22 @@
+      and Plus Jakarta never ships. Defining --font-mono/--font-serif here also
+      retires the D5 gap: Tailwind's `font-mono` now resolves to Fira Code (not
+      the ui-monospace system default), so the mono surface is finally the soul's
+-     mono, not the platform's. One consolidated Fraunces fallback chain (D6). */
+-  --font-text: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
++     mono, not the platform's.
++     P5 (2026-07-09): --font-mono/--font-hand now resolve against the
++     self-hosted subsets above (comprehensive — every live consumer's glyphs
++     are covered). --font-text/--font-serif deliberately DROP 'Fraunces' here:
++     the self-hosted Fraunces subset only covers the wordmark + .section-heading
++     repertoire (the P5 gate's stated scope), and --font-text/--font-serif are
++     the BODY/prose registers (bound by text-body/text-prose/text-title/etc. —
++     all zero-consumer utilities today, so this changes no rendered pixel; the
++     one live body-inherited use, AttributionCard's caption + GitHub link, gets
++     the honest Georgia fallback instead of a mid-word glyph mismatch once the
++     Google Fonts CDN is dropped). --font-display keeps 'Fraunces' — its only
++     consumers (text-display*, .section-heading, the wordmark's own hardcoded
++     family string) are exactly what the subset covers. */
++  --font-text: Georgia, Cambria, 'Times New Roman', serif;
+   --font-display: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
+-  --font-serif: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
++  --font-serif: Georgia, Cambria, 'Times New Roman', serif;
+   --font-mono: 'Fira Code', monospace;
+   --font-hand: 'Patrick Hand', cursive;
+ 
+diff --git a/web/frontend/vite.config.ts b/web/frontend/vite.config.ts
+index 69f412bb..253ca848 100644
+--- a/web/frontend/vite.config.ts
++++ b/web/frontend/vite.config.ts
+@@ -145,6 +145,14 @@ export default defineConfig({
+   build: {
+     target: 'es2020',
+     minify: 'esbuild',
++    // P5 (Tranche II Pass-2): never base64-inline the self-hosted font subsets. The
++    // default 4KB assetsInlineLimit would otherwise fold firacode-subset.woff2
++    // (3,624 B) and patrickhand-subset.woff2 (3,840 B) into index.css as base64 —
++    // ~33% bigger on the wire than the raw binary AND no longer independently
++    // cacheable (they'd get re-fetched on every CSS-touching deploy instead of
++    // sitting behind their own immutable, content-hashed URL — the W5 cache-header
++    // beat this self-host exists to feed).
++    assetsInlineLimit: (filePath) => !filePath.endsWith('.woff2'),
+     rollupOptions: {
+       output: {
+         manualChunks: {
+diff --git a/web/nginx/sudoku.conf b/web/nginx/sudoku.conf
+index afb0cadf..f78cde02 100644
+--- a/web/nginx/sudoku.conf
++++ b/web/nginx/sudoku.conf
+@@ -29,7 +29,10 @@ server {
+     # web/frontend/public/_headers for the directive-by-directive
+     # rationale — this CSP mirrors that one for consistency across both
+     # served paths.
+-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.sudoku.babb.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
++    # P5 (2026-07-09): fonts.googleapis.com/fonts.gstatic.com dropped — Fraunces/
++    # Fira Code/Patrick Hand are self-hosted subsets under src/assets/fonts/
++    # (@font-face in index.css), same-origin.
++    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self' https://api.sudoku.babb.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+     # Force HTTPS for 2y, cover subdomains. `preload` only marks eligibility
+     # — actual submission to the HSTS preload list is a separate owner action.
+     add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;

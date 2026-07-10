@@ -1,0 +1,74 @@
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+index 01f0cce6..9d59f0b8 100644
+--- a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+@@ -30,6 +30,12 @@ const props = defineProps<{
+ // mount/unmount, and the imperative style writes are never clobbered by Vue's patch.
+ const pathRef = ref<SVGPathElement | null>(null);
+ 
++// Grain-hoist, transition extension (L28 F1): grain-static is suppressed while the
++// reveal draw-in tweens dashoffset on this (otherwise-filtered) path, then restored
++// on completion. Reactive so Vue re-patches only the `filter` attribute — the
++// imperative dash styles above are never touched by the patch (W8 task-4 discipline).
++const grainOn = ref(true);
++
+ let drawInAnim: GlyphAnimHandle | null = null;
+ let celebrationAnim: GlyphAnimHandle | null = null; // beat-2 flourish OR beat-3 murmur cycle
+ let hoverAnim: GlyphAnimHandle | null = null;
+@@ -78,6 +84,8 @@ function cleanupAnimations() {
+         try { drawInAnim.stop(); } catch { /* ignore */ }
+         drawInAnim = null;
+     }
++    // A stopped draw-in never fires onComplete — don't leave the tooth off.
++    grainOn.value = true;
+     if (celebrationAnim) {
+         try { celebrationAnim.stop(); } catch { /* ignore */ }
+         celebrationAnim = null;
+@@ -151,9 +159,16 @@ function setupReveal() {
+     if (props.isRevealed) {
+         // Beat 1 — the reveal wave: draw-in on the board-normalized noise stagger (delay
+         // supplied by the board). One-shot sequence subscriber, not a keyframes.js loop.
++        // Grain-hoist, transition extension (L28 F1): drop grain-static while the
++        // dashoffset tween runs — every style write on the filtered path forces a
++        // per-glyph filter re-raster per frame, and a board-wide reveal (size switch,
++        // randomize, solve beat-1) runs dozens of them concurrently. The tooth lands
++        // with the settled stroke on completion (one filtered raster per glyph total).
++        grainOn.value = false;
+         drawInAnim = createGlyphDrawIn(el, glyph.value.length, {
+             duration: DRAW_IN_PRESETS.glyph.duration,
+             delay: props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay,
++            onComplete: () => { grainOn.value = true; },
+         });
+         drawInAnim?.play();
+ 
+@@ -258,7 +273,7 @@ onUnmounted(() => {
+             :stroke-width="strokeWidth"
+             stroke-linecap="round"
+             stroke-linejoin="round"
+-            filter="url(#grain-static)"
++            :filter="grainOn ? 'url(#grain-static)' : undefined"
+         />
+     </svg>
+ </template>
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index a8daca37..6ead2fd4 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -130,9 +130,14 @@ onUnmounted(() => {
+     >
+         <!-- Transition layer: draw-in/erase only. Ticks `d` via strokeDashoffset
+              (usePathAnimation) and the boil scheduler; unmounted entirely once
+-             steady state is reached so it stops paying the grain-static re-raster
+-             cost forever (see §"Steady-state boil layer" in the script). -->
+-        <g v-if="showTransitionLayer" :filter="pathsVisible ? 'url(#grain-static)' : undefined">
++             steady state is reached (see §"Steady-state boil layer" in the script).
++             Grain-hoist, transition extension (L28 F1): this layer NEVER carries
++             grain-static — it exists only while geometry is animating, where the
++             filter re-rasterizes the full board every frame for texture that isn't
++             legible mid-motion (the draw-in already ran unfiltered: pathsVisible is
++             false until it completes; the erase was the last filtered animator).
++             The settled look is owned entirely by the pre-baked steady siblings. -->
++        <g v-if="showTransitionLayer">
+             <!-- Frame -->
+             <path
+                 :d="currentPaths.frame"

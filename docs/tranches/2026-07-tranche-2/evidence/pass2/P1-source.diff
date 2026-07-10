@@ -1,0 +1,233 @@
+diff --git a/csp-solver/examples/generate_templates.rs b/csp-solver/examples/generate_templates.rs
+index 69cc3199..1f4f2479 100644
+--- a/csp-solver/examples/generate_templates.rs
++++ b/csp-solver/examples/generate_templates.rs
+@@ -25,10 +25,18 @@
+ //!   1. cargo run --release --example generate_templates -- <N> <difficulty> <count>
+ //!   2. rebuild the wheel (`maturin develop --release --features py`) to re-embed.
+ //!
+-//! Output schema (compatible with the historical Python template files, and
+-//! whitespace-tolerantly re-parsed by `generate.rs::parse_puzzle_field`):
+-//!   {"solution": {"<pos>": <digit>, ...}, "puzzle": {"<pos>": <digit>, ...}, "backtracks": <u32>}
+-//!   (puzzle carries only non-zero/given cells; solution carries every cell.)
++//! Output schema (sparse, puzzle-only, compact — re-parsed by
++//! `generate.rs::parse_puzzle_field`, which reads only the `puzzle` object):
++//!   {"puzzle":{"<pos>":<digit>,...}}
++//!   (puzzle carries only the non-zero/given cells; no whitespace.)
++//!
++//! The full solution and the `measure_difficulty` backtrack count are still
++//! computed each iteration — the re-solve *is* the uniqueness/solvability
++//! verification, and both are logged to stderr — but neither is serialized:
++//! `parse_puzzle_field` never read them, so they were pure embed dead-weight
++//! (~128 KiB across the bank). Dropping them plus sparsifying the puzzle and
++//! stripping pretty-print whitespace takes the embed from 298,006 B to
++//! 81,963 B (−72.5%).
+ //!
+ //! Each template logs its generation / verify-solve / difficulty-measurement
+ //! timing to stderr, so a single run doubles as an ad-hoc timing harness.
+@@ -65,15 +73,6 @@ fn sparse_json(board: &[u32]) -> String {
+     format!("{{{}}}", entries.join(","))
+ }
+ 
+-fn dense_json(board: &[u32]) -> String {
+-    let entries: Vec<String> = board
+-        .iter()
+-        .enumerate()
+-        .map(|(i, v)| format!("\"{i}\":{v}"))
+-        .collect();
+-    format!("{{{}}}", entries.join(","))
+-}
+-
+ fn main() {
+     let args: Vec<String> = env::args().collect();
+     if args.len() < 4 {
+@@ -145,23 +144,22 @@ fn main() {
+         };
+         let measure_elapsed = measure_start.elapsed();
+ 
+-        let json = format!(
+-            "{{\"solution\":{},\"puzzle\":{},\"backtracks\":{}}}",
+-            dense_json(&solution),
+-            sparse_json(&puzzle),
+-            backtracks
+-        );
++        // Sparse, puzzle-only, compact: the solution and backtracks are computed
++        // (the re-solve above is the solvability/uniqueness gate) and logged
++        // below, but never serialized — `parse_puzzle_field` reads only `puzzle`.
++        let json = format!("{{\"puzzle\":{}}}", sparse_json(&puzzle));
+         let path = out_dir.join(format!("template-{i}.json"));
+         fs::write(&path, json).expect("failed to write template JSON");
+         written += 1;
+ 
+         eprintln!(
+             "  [{}/{count}] gen={:>9.1}ms verify_solve={:>7.1}ms measure_difficulty={:>9.1}ms \
+-             backtracks={backtracks:>8} -> {}",
++             backtracks={backtracks:>8} solution_cells={} -> {}",
+             i + 1,
+             gen_elapsed.as_secs_f64() * 1000.0,
+             solve_elapsed.as_secs_f64() * 1000.0,
+             measure_elapsed.as_secs_f64() * 1000.0,
++            solution.len(),
+             path.display()
+         );
+     }
+diff --git a/csp-solver/examples/verify_bank_uniqueness.rs b/csp-solver/examples/verify_bank_uniqueness.rs
+new file mode 100644
+index 00000000..1dca3bba
+--- /dev/null
++++ b/csp-solver/examples/verify_bank_uniqueness.rs
+@@ -0,0 +1,124 @@
++//! P1 uniqueness/correctness sweep — the verify-11 harness, Rust-native.
++//!
++//! Drives the *embedded* bank (`embedded_templates` → `parse_puzzle_field`) so
++//! it exercises the compile-time `include_dir!` embed of the reshaped
++//! sparse+puzzle-only files directly — the exact path the wheel/cdylib ships.
++//! For every embedded board it re-solves with `max_solutions = 2` and asserts
++//! exactly one solution (uniqueness + solvability). A non-unique, unsat, or
++//! budget-truncated board is a hard failure. Exit code is nonzero on any defect.
++
++use std::time::Instant;
++
++use csp_solver::ordering::Ordering;
++use csp_solver::sudoku::{
++    Difficulty, create_sudoku_csp, embedded_template_count, embedded_templates,
++};
++use csp_solver::{Pruning, SolveConfig};
++
++fn main() {
++    let sizes = [2u32, 3, 4, 5];
++    let diffs = [
++        (Difficulty::Easy, "easy"),
++        (Difficulty::Medium, "medium"),
++        (Difficulty::Hard, "hard"),
++    ];
++
++    let mut total = 0usize;
++    let mut unique = 0usize;
++    let mut non_unique = 0usize;
++    let mut unsat = 0usize;
++    let mut truncated = 0usize;
++    let mut global_max_bt = 0u64;
++
++    let start = Instant::now();
++    for n in sizes {
++        for (diff, dname) in diffs {
++            let boards = embedded_templates(n, diff);
++            let count = embedded_template_count(n, diff);
++            assert_eq!(
++                boards.len(),
++                count,
++                "parsed count != directory count for N={n} {dname}"
++            );
++            if boards.is_empty() {
++                continue;
++            }
++            let m = (n * n) as usize;
++            let mut bucket_bt = 0u64;
++            let mut bucket_ok = 0usize;
++            for (bi, board) in boards.iter().enumerate() {
++                assert_eq!(
++                    board.len(),
++                    m * m,
++                    "N={n} {dname} template-{bi}: parsed {} cells, expected {}",
++                    board.len(),
++                    m * m
++                );
++                let (mut csp, given) = create_sudoku_csp(board, n);
++                let config = SolveConfig {
++                    pruning: Pruning::Ac3,
++                    ordering: Ordering::Mrv,
++                    max_solutions: 2,
++                    node_budget: Some(50_000_000),
++                    ..Default::default()
++                };
++                let solutions = csp.solve_with_given(&config, &given);
++                bucket_bt = bucket_bt.max(csp.stats().backtracks);
++                global_max_bt = global_max_bt.max(csp.stats().backtracks);
++                total += 1;
++                match solutions.len() {
++                    0 => {
++                        unsat += 1;
++                        eprintln!("  DEFECT N={n} {dname} template-{bi}: UNSAT (0 solutions)");
++                    }
++                    1 => {
++                        unique += 1;
++                        bucket_ok += 1;
++                    }
++                    k => {
++                        non_unique += 1;
++                        eprintln!(
++                            "  DEFECT N={n} {dname} template-{bi}: NON-UNIQUE ({k} solutions)"
++                        );
++                    }
++                }
++                if csp.stats().budget_exceeded {
++                    truncated += 1;
++                    eprintln!(
++                        "  WARN N={n} {dname} template-{bi}: budget_exceeded — uniqueness unsafe"
++                    );
++                }
++            }
++            println!(
++                "  N={n} {dname:<6} {:2} boards  unique={}/{}  max_bt={}",
++                boards.len(),
++                bucket_ok,
++                boards.len(),
++                bucket_bt
++            );
++        }
++    }
++
++    let elapsed = start.elapsed();
++    println!("\n=== SWEEP SUMMARY ===");
++    println!("total boards  : {total}");
++    println!("unique        : {unique}");
++    println!("non_unique    : {non_unique}");
++    println!("unsat         : {unsat}");
++    println!("budget_trunc  : {truncated}");
++    println!("max_backtracks: {global_max_bt}");
++    println!("elapsed       : {:.3}s", elapsed.as_secs_f64());
++
++    let ok = non_unique == 0 && unsat == 0 && truncated == 0 && unique == total && total > 0;
++    println!(
++        "VERDICT: {}",
++        if ok {
++            "PASS — all boards unique & solvable"
++        } else {
++            "FAIL"
++        }
++    );
++    if !ok {
++        std::process::exit(1);
++    }
++}
+diff --git a/csp-solver/src/puzzles/sudoku/generate.rs b/csp-solver/src/puzzles/sudoku/generate.rs
+index aa57c2dd..d3ac5aa3 100644
+--- a/csp-solver/src/puzzles/sudoku/generate.rs
++++ b/csp-solver/src/puzzles/sudoku/generate.rs
+@@ -59,14 +59,18 @@ pub fn measure_difficulty(board: &[u32], n: u32) -> u32 {
+ 
+ // ─── Embedded template access ───────────────────────────────────────────────
+ 
+-/// Minimal, dependency-free parser for the fixed template schema
+-/// `{"solution": {...}, "puzzle": {...}, "backtracks": N}`. Extracts the flat
+-/// `puzzle` object (the given cells) as a dense `Vec<u32>`.
++/// Minimal, dependency-free parser for the sparse, puzzle-only template schema
++/// `{"puzzle":{"<pos>":<digit>,...}}`. Extracts the flat `puzzle` object (the
++/// given cells) as a dense `Vec<u32>`, zero-filling every cell the sparse map
++/// omits.
+ ///
+-/// Whitespace-tolerant, so it reads both the committed pretty-printed files
+-/// (`"0": 1`) and the generator's compact output (`"0":1`). No `serde`
+-/// dependency — the schema is a flat `{"<int>": <int>}` map with no nesting,
+-/// arrays, string values, or escaping.
++/// Locates only the `puzzle` object, so it is unaffected by whatever else a
++/// template file might carry — it read the same field back when files also
++/// shipped the now-dropped `solution`/`backtracks` fields, and reads the leaner
++/// puzzle-only file identically. Whitespace-tolerant (`"0": 1` and `"0":1` both
++/// parse) and sparse-tolerant (omitted cells stay `0`). No `serde` dependency —
++/// the object is a flat `{"<int>":<int>}` map with no nesting, arrays, string
++/// values, or escaping.
+ fn parse_puzzle_field(json: &str, total: usize) -> Vec<u32> {
+     let key = json
+         .find("\"puzzle\"")

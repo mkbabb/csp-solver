@@ -1,0 +1,372 @@
+diff --git a/.github/workflows/iai-spike.yml b/.github/workflows/iai-spike.yml
+new file mode 100644
+index 00000000..31897bf8
+--- /dev/null
++++ b/.github/workflows/iai-spike.yml
+@@ -0,0 +1,126 @@
++# iai-spike — P6 prototype (Tranche-II Pass-2).
++#
++# QUESTION: Can a CI lane give deterministic instruction-count baselines for the
++# csp-solver benches? arm64-macOS can't run Valgrind, so callgrind counts are only
++# obtainable in Linux CI — this lane is the only way to know.
++#
++# GATE: green lane + instruction counts stable across 2 runs (<1% delta).
++#
++# Self-contained: Valgrind (apt) + iai-callgrind-runner (cargo install, pinned to
++# the `iai-callgrind = 0.16.1` dev-dep). No external service, no token. (The
++# codspeed-criterion-compat comparison arm needs the CodSpeed GitHub App + a
++# CODSPEED_TOKEN secret installed on the repo — out of scope for a self-contained
++# spike; noted in the P6 report, not wired here.)
++#
++# Scoped to the spike branch only — never runs on master/PRs.
++name: iai-spike
++
++on:
++    push:
++        branches: [spike/iai-callgrind]
++    workflow_dispatch:
++
++jobs:
++    iai:
++        runs-on: ubuntu-latest
++        timeout-minutes: 30
++        env:
++            RUST_BACKTRACE: 1
++            # Fixed-count callgrind == deterministic instruction counts; no warm-up
++            # noise. One bench, one measured function.
++            IAI_BENCH: iai_queens
++            # Kill ANSI colour in iai-callgrind's terminal output — it defaults to
++            # colour ON even off a TTY, and the grey escape `\e[90m` otherwise
++            # smuggles a bare "90" into the numeric gate ahead of the real count.
++            IAI_CALLGRIND_COLOR: never
++            CARGO_TERM_COLOR: never
++        steps:
++            - uses: actions/checkout@v4
++
++            - name: Install Rust nightly toolchain
++              uses: dtolnay/rust-toolchain@nightly
++
++            - name: Install Valgrind (callgrind)
++              run: |
++                  sudo apt-get update
++                  sudo apt-get install -y valgrind
++                  valgrind --version
++
++            - name: Cache cargo registry + target
++              uses: actions/cache@v4
++              with:
++                  path: |
++                      ~/.cargo/registry
++                      ~/.cargo/git
++                      ~/.cargo/bin
++                      target
++                  key: cargo-iai-spike-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
++
++            - name: Install iai-callgrind-runner (must match the 0.16.1 dev-dep)
++              run: |
++                  if ! command -v iai-callgrind-runner >/dev/null 2>&1; then
++                    cargo install iai-callgrind-runner --version 0.16.1 --locked
++                  fi
++                  iai-callgrind-runner --version || true
++
++            - name: Run 1 — establish the callgrind baseline
++              run: |
++                  set -o pipefail
++                  cargo bench -p csp-solver --bench "$IAI_BENCH" 2>&1 | tee run1.log
++
++            - name: Run 2 — re-measure the identical binary
++              run: |
++                  set -o pipefail
++                  cargo bench -p csp-solver --bench "$IAI_BENCH" 2>&1 | tee run2.log
++
++            - name: GATE — parse counts + assert <1% run-to-run delta
++              run: |
++                  set -euo pipefail
++                  extract() {
++                    # Strip any ANSI escapes FIRST (belt-and-suspenders vs the
++                    # IAI_CALLGRIND_COLOR=never env), then take the first integer that
++                    # follows the "Instructions:" label — never a colour-code digit.
++                    sed -E $'s/\x1b\\[[0-9;]*[mK]//g' "$1" \
++                      | grep -E 'Instructions:' | head -1 \
++                      | sed -E 's/.*Instructions:[^0-9]*([0-9][0-9,]*).*/\1/' \
++                      | tr -d ','
++                  }
++                  I1="$(extract run1.log || true)"
++                  I2="$(extract run2.log || true)"
++                  echo "run1 instructions: '${I1}'"
++                  echo "run2 instructions: '${I2}'"
++                  if [ -z "${I1}" ] || [ -z "${I2}" ]; then
++                    echo "::error::could not parse an Instructions count from a run log — the lane did not produce callgrind output"
++                    echo "----- run1.log tail -----"; tail -40 run1.log || true
++                    echo "----- run2.log tail -----"; tail -40 run2.log || true
++                    exit 1
++                  fi
++                  DELTA_PCT="$(awk -v a="$I1" -v b="$I2" 'BEGIN{ if(a==0){print "inf"} else {d=(b-a)/a*100; if(d<0)d=-d; printf "%.6f", d} }')"
++                  echo "delta: ${DELTA_PCT}%"
++                  {
++                    echo "## iai-spike — P6 gate";
++                    echo "";
++                    echo "| metric | value |";
++                    echo "|---|---|";
++                    echo "| run1 instructions | ${I1} |";
++                    echo "| run2 instructions | ${I2} |";
++                    echo "| run-to-run delta | ${DELTA_PCT}% |";
++                    echo "| gate (<1%) | $([ "$(awk -v d="$DELTA_PCT" 'BEGIN{print (d<1)?1:0}')" = 1 ] && echo PASS || echo FAIL) |";
++                  } >> "$GITHUB_STEP_SUMMARY"
++                  PASS="$(awk -v d="$DELTA_PCT" 'BEGIN{print (d<1)?1:0}')"
++                  if [ "$PASS" != "1" ]; then
++                    echo "::error::instruction-count delta ${DELTA_PCT}% >= 1% — not deterministic"
++                    exit 1
++                  fi
++                  echo "GATE PASS — deterministic instruction counts (${DELTA_PCT}% delta)"
++
++            - name: Upload logs + callgrind out-files
++              if: always()
++              uses: actions/upload-artifact@v4
++              with:
++                  name: iai-spike-evidence
++                  path: |
++                      run1.log
++                      run2.log
++                      target/iai/**
++                  if-no-files-found: warn
+diff --git a/Cargo.lock b/Cargo.lock
+index abe33ef0..97edf390 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -46,6 +46,15 @@ version = "1.5.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
+ 
++[[package]]
++name = "bincode"
++version = "1.3.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
++dependencies = [
++ "serde",
++]
++
+ [[package]]
+ name = "bit-set"
+ version = "0.8.0"
+@@ -230,6 +239,7 @@ version = "0.2.0"
+ dependencies = [
+  "criterion",
+  "hungarian",
++ "iai-callgrind",
+  "include_dir",
+  "proptest",
+  "pyo3",
+@@ -248,6 +258,27 @@ dependencies = [
+  "wasm-bindgen-test",
+ ]
+ 
++[[package]]
++name = "derive_more"
++version = "2.1.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d751e9e49156b02b44f9c1815bcb94b984cdcc4396ecc32521c739452808b134"
++dependencies = [
++ "derive_more-impl",
++]
++
++[[package]]
++name = "derive_more-impl"
++version = "2.1.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "799a97264921d8623a957f6c3b9011f3b5492f557bbb7a5a19b7fa6d06ba8dcb"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "rustc_version",
++ "syn",
++]
++
+ [[package]]
+ name = "either"
+ version = "1.15.0"
+@@ -398,6 +429,42 @@ dependencies = [
+  "num-traits",
+ ]
+ 
++[[package]]
++name = "iai-callgrind"
++version = "0.16.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "0b1e4910d3a9137442723dfb772c32dc10674c4181ca078d2fd227cd5dce9db0"
++dependencies = [
++ "bincode",
++ "derive_more",
++ "iai-callgrind-macros",
++ "iai-callgrind-runner",
++]
++
++[[package]]
++name = "iai-callgrind-macros"
++version = "0.6.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "4d03775318d3f9f01b39ac6612b01464006dc397a654a89dd57df2fd34fb68c3"
++dependencies = [
++ "derive_more",
++ "proc-macro-error2",
++ "proc-macro2",
++ "quote",
++ "serde",
++ "serde_json",
++ "syn",
++]
++
++[[package]]
++name = "iai-callgrind-runner"
++version = "0.16.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b74c9743c00c3bca4aaffc69c87cae56837796cd362438daf354a3f785788c68"
++dependencies = [
++ "serde",
++]
++
+ [[package]]
+ name = "id-arena"
+ version = "2.3.0"
+@@ -668,6 +735,28 @@ dependencies = [
+  "syn",
+ ]
+ 
++[[package]]
++name = "proc-macro-error-attr2"
++version = "2.0.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "96de42df36bb9bba5542fe9f1a054b8cc87e172759a1868aa05c1f3acc89dfc5"
++dependencies = [
++ "proc-macro2",
++ "quote",
++]
++
++[[package]]
++name = "proc-macro-error2"
++version = "2.0.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "11ec05c52be0a07b08061f7dd003e7d7092e0472bc731b4af7bb1ef876109802"
++dependencies = [
++ "proc-macro-error-attr2",
++ "proc-macro2",
++ "quote",
++ "syn",
++]
++
+ [[package]]
+ name = "proc-macro2"
+ version = "1.0.106"
+@@ -879,6 +968,15 @@ version = "0.8.10"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
+ 
++[[package]]
++name = "rustc_version"
++version = "0.4.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
++dependencies = [
++ "semver",
++]
++
+ [[package]]
+ name = "rustix"
+ version = "1.1.4"
+diff --git a/csp-solver/Cargo.toml b/csp-solver/Cargo.toml
+index 992010d3..8a9a90d6 100644
+--- a/csp-solver/Cargo.toml
++++ b/csp-solver/Cargo.toml
+@@ -30,6 +30,9 @@ pyo3 = { version = "0.24", features = ["extension-module"], optional = true }
+ criterion = { version = "0.5", features = ["html_reports"] }
+ hungarian = "1"
+ proptest = "1"
++# P6 spike — callgrind instruction-count baselines (Linux/CI only; no Valgrind on
++# arm64-macOS). Pinned to the runner installed in .github/workflows/iai-spike.yml.
++iai-callgrind = "0.16.1"
+ 
+ [lib]
+ # cdylib only needed for PyO3 (maturin). Normal builds produce rlib only.
+@@ -59,3 +62,9 @@ harness = false
+ [[bench]]
+ name = "cost_finite_domain"
+ harness = false
++
++# P6 spike — iai-callgrind instruction-count bench (harness = false; driven by the
++# iai-callgrind-runner binary, not libtest). Runs only under Linux/CI with Valgrind.
++[[bench]]
++name = "iai_queens"
++harness = false
+diff --git a/csp-solver/benches/iai_queens.rs b/csp-solver/benches/iai_queens.rs
+new file mode 100644
+index 00000000..8c673422
+--- /dev/null
++++ b/csp-solver/benches/iai_queens.rs
+@@ -0,0 +1,66 @@
++// P6 spike — iai-callgrind instruction-count baseline (ONE bench).
++//
++// arm64-macOS cannot run Valgrind, so callgrind instruction counts can only be
++// derived in CI on Linux. This bench measures a single, fully-deterministic CSP
++// solve (8-queens, first solution, AC-3 + FailFirst) under callgrind. Instruction
++// counts are a function of the compiled binary alone — identical binary => identical
++// count => 0% run-to-run delta, which is exactly the determinism the spike proves.
++//
++// harness = false; the iai-callgrind `main!` macro forwards to the
++// `iai-callgrind-runner` binary (installed in CI via `cargo install`).
++
++use std::hint::black_box;
++
++use csp_solver::constraint::LambdaConstraint;
++use csp_solver::domain::bitset::BitsetDomain;
++use csp_solver::ordering::Ordering;
++use csp_solver::{Csp, Pruning, SolveConfig};
++
++use iai_callgrind::{library_benchmark, library_benchmark_group, main};
++
++fn build_queens(n: u32) -> Csp<BitsetDomain> {
++    let mut csp = Csp::new();
++    let domain = BitsetDomain::range(n);
++    let vars = csp.add_variables(&domain, n as usize);
++    csp.add_all_different(vars.clone());
++    for i in 0..n {
++        for j in (i + 1)..n {
++            let vi = vars[i as usize];
++            let vj = vars[j as usize];
++            let diff = j - i;
++            csp.add_constraint(LambdaConstraint::new(
++                vec![vi, vj],
++                move |assignment: &[Option<u32>]| {
++                    match (&assignment[vi as usize], &assignment[vj as usize]) {
++                        (Some(ri), Some(rj)) => ri.abs_diff(*rj) != diff,
++                        _ => true,
++                    }
++                },
++                format!("diag({i},{j})"),
++            ));
++        }
++    }
++    csp.finalize();
++    csp
++}
++
++fn solve_queens_first(n: u32) -> usize {
++    let mut csp = build_queens(n);
++    let config = SolveConfig {
++        pruning: Pruning::Ac3,
++        ordering: Ordering::FailFirst,
++        max_solutions: 1,
++        ..Default::default()
++    };
++    let solutions = csp.solve(&config);
++    assert!(!solutions.is_empty());
++    solutions.len()
++}
++
++#[library_benchmark]
++fn queens_first_8() -> usize {
++    black_box(solve_queens_first(black_box(8)))
++}
++
++library_benchmark_group!(name = queens; benchmarks = queens_first_8);
++main!(library_benchmark_groups = queens);

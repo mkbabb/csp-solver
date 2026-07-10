@@ -1,0 +1,17 @@
+diff --git a/web/frontend/vite.config.ts b/web/frontend/vite.config.ts
+index 69f412bb..5b0a1874 100644
+--- a/web/frontend/vite.config.ts
++++ b/web/frontend/vite.config.ts
+@@ -27,7 +27,11 @@ import { defineConfig, type Plugin } from 'vite'
+ function sudokuTemplates(): Plugin {
+   const SRC_REL = '../../csp-solver/data/sudoku_puzzles'
+   const OUT_REL = 'src/games/sudoku/data/templates.ts'
+-  const SIZES = [2, 3, 4]
++  // T2-W4 (P2-gated): N=2/N=3 banks excised — those sizes route to bank-less
++  // wasm hole-dig live-gen (useSolver.ts:119 `?? []` -> empty templates ->
++  // generateSudoku hole-dig fallback). Only N=4 keeps a bundled bank (its
++  // hard-tier native generate wall is >1s; the bank is load-bearing there).
++  const SIZES = [4]
+   const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
+ 
+   function render(srcDir: string): string {

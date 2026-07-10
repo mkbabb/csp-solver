@@ -1,0 +1,450 @@
+diff --git a/csp-solver/wasm/src/sudoku.rs b/csp-solver/wasm/src/sudoku.rs
+index f86a5584..9e374532 100644
+--- a/csp-solver/wasm/src/sudoku.rs
++++ b/csp-solver/wasm/src/sudoku.rs
+@@ -1,8 +1,9 @@
+ //! Flat-index Sudoku wire for client-side solve + generate.
+ //!
+ //! This is the purpose-built browser surface: the frontend needs exactly
+-//! two operations — solve a board and generate a puzzle — and nothing
+-//! that crosses the wasm boundary here is a string-keyed map.
++//! three operations — solve a board, generate a puzzle, and propagate a
++//! board's candidate domains (pencil marks) — and nothing that crosses
++//! the wasm boundary here is a string-keyed map.
+ //!
+ //! Boards are flat, row-major `Uint32Array`s of length `(n*n)^2`, `0` for a
+ //! blank cell. wasm-bindgen marshals `Vec<u32>` params / returns as
+@@ -20,6 +21,7 @@
+ 
+ use wasm_bindgen::prelude::*;
+ 
++use csp_solver::domain::Domain;
+ use csp_solver::ordering::Ordering;
+ use csp_solver::sudoku::{self, Difficulty};
+ use csp_solver::{Pruning, SolveConfig};
+@@ -194,6 +196,65 @@ pub fn solve_sudoku(
+     })
+ }
+ 
++/// Constraint-propagate a flat, row-major Sudoku board (`0` = blank)
++/// WITHOUT searching, and return each cell's surviving candidate set as a
++/// bitmask — the engine-domains pencil-marks surface (P4 spike).
++///
++/// The returned buffer has one `u32` per cell (crosses as a `Uint32Array`,
++/// same bulk-copy fast path as the boards); bit `v` is set iff value `v`
++/// (1-based) survives propagation in that cell's domain. A given cell comes
++/// back as the singleton mask `1 << value`. Values run 1..=n², so the
++/// widest surface (n = 5, 25 values) still fits a `u32` with room.
++///
++/// This runs exactly the root propagation `solve_with_given` opens with —
++/// pin the givens as permanent singleton restrictions, then AC-3 to a
++/// fixpoint (`create_sudoku_csp` finalizes, so `propagate()` auto-selects
++/// AC-3) — and never enters the search kernel: zero backtracks, no
++/// node budget needed.
++///
++/// A board whose filled cells are *contradictory* (propagation wipes some
++/// domain empty) throws a typed error (`instanceof Error`, `.code ===
++/// "UNSAT"`) rather than returning a half-propagated buffer.
++#[wasm_bindgen(js_name = propagateSudoku)]
++pub fn propagate_sudoku(board: Vec<u32>, n: u32) -> Result<Vec<u32>, JsValue> {
++    let m = (n * n) as usize;
++    let total = m * m;
++    if board.len() != total {
++        return Err(coded_error(
++            "INVALID_INPUT",
++            &format!(
++                "board length {} does not match (n*n)^2 = {total} for n = {n}",
++                board.len()
++            ),
++        ));
++    }
++
++    let (mut csp, given) = sudoku::create_sudoku_csp(&board, n);
++
++    // Pin the givens: permanent singleton restriction, the same
++    // `Domain::restrict_to` move `solve_with_given` opens with (O(1)
++    // bitmask restrict for `BitsetDomain`; the returned removed-values
++    // iterator is deliberately dropped — the mutation is eager).
++    for (var, val) in &given {
++        let _ = csp.variables[*var as usize].domain.restrict_to(val);
++    }
++
++    if csp.propagate().is_err() {
++        return Err(coded_error(
++            "UNSAT",
++            "the filled cells contradict each other — some cell has no surviving candidate",
++        ));
++    }
++
++    let masks = csp
++        .variables
++        .iter()
++        .map(|v| v.domain.iter().fold(0u32, |acc, val| acc | (1u32 << val)))
++        .collect();
++
++    Ok(masks)
++}
++
+ /// Generate a flat, row-major Sudoku puzzle for `n` and `difficulty`.
+ ///
+ /// `seed` supplies the RNG entropy — pass `Date.now()` or a
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 142745d7..286a09d0 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -161,6 +161,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+               :board-generation="sudoku.boardGeneration.value"
+               :difficulty="sudoku.difficulty.value"
+               :error-code="sudoku.errorCode.value"
++              :pencil-marks="sudoku.pencilMarks.value"
+               @update-cell="(pos: number, val: number) => sudoku.setCell(pos, val)"
+               @retry="sudoku.solve()"
+             />
+diff --git a/web/frontend/src/games/sudoku/SudokuBoard/SudokuBoard.vue b/web/frontend/src/games/sudoku/SudokuBoard/SudokuBoard.vue
+index d9f2b45b..5a80dfaa 100644
+--- a/web/frontend/src/games/sudoku/SudokuBoard/SudokuBoard.vue
++++ b/web/frontend/src/games/sudoku/SudokuBoard/SudokuBoard.vue
+@@ -31,6 +31,10 @@ const props = defineProps<{
+   /** Optional typed error code (ApiErrorCode / SolverErrorCode) for the paper-note copy.
+    *  Absent → the default 'error' cause (BUDGET_EXCEEDED) copy. Wired by the union lane. */
+   errorCode?: string
++  /** Engine-domains pencil marks (P4 spike): per-position surviving candidates
++   *  from the solver's own AC-3 propagation. Only positions where propagation
++   *  actually pruned something are present. */
++  pencilMarks?: Record<string, number[]>
+ }>()
+ 
+ const emit = defineEmits<{
+@@ -339,6 +343,7 @@ function isRevealed(pos: number): boolean {
+         :col-index="((pos - 1) % boardSize) + 1"
+         :tab-index="pos - 1 === focusedPos ? 0 : -1"
+         :ghost-path="cellRects[pos - 1] ?? ''"
++        :marks="pencilMarks?.[String(pos - 1)]"
+         @update="onCellUpdate"
+         @cell-focus="onCellFocus"
+       />
+diff --git a/web/frontend/src/games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue b/web/frontend/src/games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
+index e721a6c7..da3c8145 100644
+--- a/web/frontend/src/games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
++++ b/web/frontend/src/games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
+@@ -1,7 +1,7 @@
+ <script setup lang="ts">
+ import { computed, ref } from 'vue'
+ import HandwrittenGlyph from '@pencil/glyph/HandwrittenGlyph.vue'
+-import { toDisplayChar } from '@pencil/glyph/glyphRegistry'
++import { getVariant, toDisplayChar } from '@pencil/glyph/glyphRegistry'
+ 
+ const props = defineProps<{
+   position: number
+@@ -22,6 +22,9 @@ const props = defineProps<{
+   tabIndex: number
+   /** This cell participates in a duplicate the teacher circled (§1.4/§4.2). */
+   isInvalid: boolean
++  /** Engine-domains pencil marks (P4 spike): surviving candidate values from
++   *  the solver's AC-3 propagation. Rendered only while the cell is empty. */
++  marks?: number[]
+ }>()
+ 
+ const emit = defineEmits<{
+@@ -129,6 +132,23 @@ function onFocus() {
+   emit('cellFocus', props.position)
+ }
+ 
++// ── Engine-domains pencil marks (P4 spike) ───────────────────────────
++// The n×n mini-grid uses the classic pencil-mark convention: value v always
++// sits at slot v (row-major), so a candidate's *position* encodes its value
++// even at mark sizes too small to read comfortably. Each mark reuses the
++// hand-drawn glyph paths (variant picked per cell+value so neighboring
++// marks don't stamp identically), stroked in faint graphite.
++const showMarks = computed(
++  () => props.value === 0 && (props.marks?.length ?? 0) > 0,
++)
++function markPath(v: number): string {
++  return getVariant(toDisplayChar(v, props.boardSize), props.position * 31 + v)?.d ?? ''
++}
++const marksGridStyle = computed(() => ({
++  gridTemplateColumns: `repeat(${props.subgridSize}, minmax(0, 1fr))`,
++  gridTemplateRows: `repeat(${props.subgridSize}, minmax(0, 1fr))`,
++}))
++
+ // The board's roving controller focuses cells programmatically after an arrow key (§4.1).
+ defineExpose({ focus: focusInput })
+ </script>
+@@ -163,6 +183,36 @@ defineExpose({ focus: focusInput })
+       class="absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
+     />
+ 
++    <!-- Engine-domains pencil marks (P4 spike): the solver's propagated
++         candidate domains rendered as tiny graphite marks. Decorative for
++         the spike (aria-hidden); a shippable pass would fold the candidate
++         list into the cell's accessible name. -->
++    <div
++      v-if="showMarks"
++      class="pencil-marks pointer-events-none absolute grid"
++      :style="marksGridStyle"
++      aria-hidden="true"
++    >
++      <div v-for="v in boardSize" :key="v" class="mark-slot">
++        <svg
++          v-if="marks!.includes(v)"
++          class="mark-glyph"
++          viewBox="0 0 40 56"
++          preserveAspectRatio="xMidYMid meet"
++          xmlns="http://www.w3.org/2000/svg"
++        >
++          <path
++            :d="markPath(v)"
++            fill="none"
++            stroke="currentColor"
++            stroke-width="4.5"
++            stroke-linecap="round"
++            stroke-linejoin="round"
++          />
++        </svg>
++      </div>
++    </div>
++
+     <!-- SVG handwritten glyph overlay -->
+     <HandwrittenGlyph
+       v-if="value !== 0"
+@@ -201,6 +251,47 @@ defineExpose({ focus: focusInput })
+ </template>
+ 
+ <style scoped>
++/* ── Engine-domains pencil marks (P4 spike) ──────────────────────────
++   Faint graphite, deliberately lighter than any inked glyph — these are
++   the solver thinking in the margins, not an answer. The soft fade-in
++   keeps marks from popping as domains narrow (opacity-only, so it reads
++   fine under prefers-reduced-motion too). */
++.pencil-marks {
++  inset: 12%;
++  color: var(--color-pencil-graphite, var(--grid-line-color));
++  opacity: 0.5;
++  animation: marks-fade-in 250ms ease-out both;
++}
++
++.mark-slot {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  padding: 8%;
++}
++
++.mark-glyph {
++  width: 100%;
++  height: 100%;
++  overflow: visible;
++}
++
++@keyframes marks-fade-in {
++  from {
++    opacity: 0;
++  }
++  to {
++    opacity: 0.5;
++  }
++}
++
++/* prefers-contrast: press the pencil a little harder, same as the ghost. */
++@media (prefers-contrast: more) {
++  .pencil-marks {
++    opacity: 0.75;
++  }
++}
++
+ /* Ghost wrapper — instant show/hide for cursor-tracking responsiveness */
+ .cell-ghost {
+   opacity: 0;
+diff --git a/web/frontend/src/games/sudoku/composables/useSolver.ts b/web/frontend/src/games/sudoku/composables/useSolver.ts
+index 4514c48b..7ce46570 100644
+--- a/web/frontend/src/games/sudoku/composables/useSolver.ts
++++ b/web/frontend/src/games/sudoku/composables/useSolver.ts
+@@ -175,5 +175,25 @@ export function useSolver() {
+     throw new SolverError('WORKER_FAILURE', 'malformed solve response')
+   }
+ 
+-  return { getRandomBoard, solveBoard }
++  /**
++   * Propagate-only (P4 engine-domains pencil marks): run the solver's own
++   * root AC-3 over the current board and return each cell's surviving
++   * candidate bitmask — bit v set ⇔ value v (1-based) remains. No search,
++   * no node budget; a contradictory board rejects with a typed `UNSAT`
++   * `SolverError` (the caller treats that as "no marks to show", never as
++   * broken machinery).
++   */
++  async function propagateBoard(
++    values: Record<string, number>,
++    size: number,
++  ): Promise<Uint32Array> {
++    const board = toFlat(size, values)
++    const id = nextId++
++    const res = await call({ id, kind: 'propagate', board, n: size }, [board.buffer])
++    throwIfError(res)
++    if (res.ok && res.kind === 'propagate') return res.masks
++    throw new SolverError('WORKER_FAILURE', 'malformed propagate response')
++  }
++
++  return { getRandomBoard, solveBoard, propagateBoard }
+ }
+diff --git a/web/frontend/src/games/sudoku/composables/useSudoku.ts b/web/frontend/src/games/sudoku/composables/useSudoku.ts
+index fd342ed5..abfda9a1 100644
+--- a/web/frontend/src/games/sudoku/composables/useSudoku.ts
++++ b/web/frontend/src/games/sudoku/composables/useSudoku.ts
+@@ -207,6 +207,50 @@ export function useSudoku() {
+     return peekCache.value.values
+   }
+ 
++  // ── Engine-domains pencil marks (P4 spike) ───────────────────────
++  // The marks ARE the solver's propagated domains: every board mutation
++  // debounce-schedules a propagate-only worker round-trip (AC-3, zero
++  // search) and the surviving candidate bitmasks feed the tiny graphite
++  // marks in empty cells. UNSAT (user typed a contradiction) or any
++  // worker fault simply clears the marks — pencil marks are a courtesy,
++  // never an error surface.
++  const pencilMasks = ref<Uint32Array | null>(null)
++  let marksTimer: ReturnType<typeof setTimeout> | null = null
++  let marksSeq = 0
++  function refreshMarks() {
++    if (marksTimer) clearTimeout(marksTimer)
++    marksTimer = setTimeout(async () => {
++      marksTimer = null
++      const seq = ++marksSeq
++      try {
++        const masks = await api.propagateBoard(values.value, size.value)
++        if (seq === marksSeq) pencilMasks.value = masks
++      } catch {
++        if (seq === marksSeq) pencilMasks.value = null
++      }
++    }, 150)
++  }
++
++  const pencilMarks = computed<Record<string, number[]>>(() => {
++    const masks = pencilMasks.value
++    const bs = boardSize.value
++    // Stale-shape guard: a size switch mid-flight leaves masks from the
++    // previous geometry; render nothing until the next round-trip lands.
++    if (!masks || masks.length !== totalCells.value) return {}
++    const out: Record<string, number[]> = {}
++    for (let i = 0; i < masks.length; i++) {
++      if ((values.value[String(i)] ?? 0) !== 0) continue
++      const cand: number[] = []
++      for (let v = 1; v <= bs; v++) {
++        if (masks[i] & (1 << v)) cand.push(v)
++      }
++      // Only show marks where propagation has actually bitten — a cell
++      // with its full domain intact carries no information, just noise.
++      if (cand.length > 0 && cand.length < bs) out[String(i)] = cand
++    }
++    return out
++  })
++
+   // ── Restore from persisted state (no animation) ──────────────────
+   function restoreBoard(persisted: PersistedBoard) {
+     values.value = { ...persisted.values }
+@@ -266,6 +310,11 @@ export function useSudoku() {
+     randomize()
+   })
+ 
++  // Engine-domains pencil marks: refresh on any cell mutation or board
++  // swap. `values` is mutated in place at `setCell`, so the deep watch is
++  // load-bearing; `boardGeneration` covers clear/randomize/size swaps.
++  watch([values, boardGeneration], refreshMarks, { deep: true, immediate: true })
++
+   // Debounced persistence — called explicitly at mutation points
+   let saveTimer: ReturnType<typeof setTimeout> | null = null
+   function queueSave() {
+@@ -292,6 +341,7 @@ export function useSudoku() {
+     errorMessage,
+     errorCode,
+     boardGeneration,
++    pencilMarks,
+     initBoard,
+     clearBoard,
+     setCell,
+diff --git a/web/frontend/src/games/sudoku/lib/solverError.ts b/web/frontend/src/games/sudoku/lib/solverError.ts
+index 2ba9b6cc..e36a4101 100644
+--- a/web/frontend/src/games/sudoku/lib/solverError.ts
++++ b/web/frontend/src/games/sudoku/lib/solverError.ts
+@@ -11,7 +11,7 @@
+  * structured-cloneable everywhere; `SolverError` is reconstructed with
+  * the original `.code` on the main-thread side of the boundary.
+  */
+-export type SolverErrorCode = 'INVALID_INPUT' | 'BUDGET_EXCEEDED' | 'WORKER_FAILURE'
++export type SolverErrorCode = 'INVALID_INPUT' | 'BUDGET_EXCEEDED' | 'UNSAT' | 'WORKER_FAILURE'
+ 
+ export class SolverError extends Error {
+   readonly code: SolverErrorCode
+diff --git a/web/frontend/src/games/sudoku/protocol.ts b/web/frontend/src/games/sudoku/protocol.ts
+index 9868cef3..d84cb882 100644
+--- a/web/frontend/src/games/sudoku/protocol.ts
++++ b/web/frontend/src/games/sudoku/protocol.ts
+@@ -18,6 +18,12 @@ export type SolverRequest =
+       seed: number
+       templates: Uint32Array
+     }
++  | {
++      id: number
++      kind: 'propagate'
++      board: Uint32Array
++      n: number
++    }
+ 
+ /** Responses the worker posts back, correlated by `id`. */
+ export type SolverResponse =
+@@ -38,4 +44,12 @@ export type SolverResponse =
+       kind: 'generate'
+       board: Uint32Array
+     }
++  | {
++      id: number
++      ok: true
++      kind: 'propagate'
++      n: number
++      /** One u32 per cell; bit v set ⇔ value v (1-based) survives AC-3 propagation. */
++      masks: Uint32Array
++    }
+   | ({ id: number; ok: false } & SerializedSolverError)
+diff --git a/web/frontend/src/games/sudoku/solver.worker.ts b/web/frontend/src/games/sudoku/solver.worker.ts
+index e36a9d54..bff6beed 100644
+--- a/web/frontend/src/games/sudoku/solver.worker.ts
++++ b/web/frontend/src/games/sudoku/solver.worker.ts
+@@ -23,6 +23,7 @@
+  */
+ import init, {
+   generateSudoku,
++  propagateSudoku,
+   solveSudoku,
+   type SudokuDifficulty,
+ } from '@mkbabb/csp-solver-wasm'
+@@ -55,7 +56,7 @@ function ensureInit(): Promise<unknown> {
+ function describeError(e: unknown): { code: SolverErrorCode; message: string } {
+   if (e && typeof e === 'object' && 'code' in e && typeof (e as { code: unknown }).code === 'string') {
+     const code = (e as { code: string }).code
+-    if (code === 'INVALID_INPUT' || code === 'BUDGET_EXCEEDED') {
++    if (code === 'INVALID_INPUT' || code === 'BUDGET_EXCEEDED' || code === 'UNSAT') {
+       return { code, message: e instanceof Error ? e.message : String(e) }
+     }
+   }
+@@ -86,6 +87,22 @@ self.addEventListener('message', async (event: MessageEvent<SolverRequest>) => {
+       return
+     }
+ 
++    if (req.kind === 'propagate') {
++      // Propagate-only op (P4 engine-domains pencil marks): AC-3 to a
++      // fixpoint, zero search. Synchronous and sub-solve cheap, but it
++      // rides the same worker so the main thread never blocks on wasm.
++      const masks = propagateSudoku(req.board, req.n)
++      const response: SolverResponse = {
++        id: req.id,
++        ok: true,
++        kind: 'propagate',
++        n: req.n,
++        masks,
++      }
++      ;(self as unknown as Worker).postMessage(response, [masks.buffer])
++      return
++    }
++
+     // kind === 'generate' — the wire carries the difficulty as its numeric
+     // ordinal (structured-clone-safe); re-narrow to the wasm enum here.
+     const board = generateSudoku(

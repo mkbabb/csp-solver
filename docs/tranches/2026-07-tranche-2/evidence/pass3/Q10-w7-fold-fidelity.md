@@ -1,0 +1,69 @@
+# Q10 — W7 fold fidelity
+
+Pass-3 critique, read-only against repo HEAD `8913023e` (verified: `git rev-parse HEAD` = `8913023e43a0d1d2e3adf5177df87123a88c701c`, same commit lane-20's Jul-7 audit and the synthesis both cite — no drift window to worry about, but every claim below was independently re-derived from the live tree, not taken on lane-20's or the synthesis's say-so).
+
+**Question:** sample-audit the fold plan — does any live fact in the four CLAUDE.mds lack a named destination README section? Is the W2-adjusted plan (web/api CLAUDE.md dies with the package) sound? Read the lane-20 disposition table and diff it against the actual files at HEAD.
+
+## Answer
+
+**Part (c) — lane-20 disposition table vs HEAD: zero drift, fully confirmed.** Every line count in lane-20's inventory table matches `wc -l` on the live file exactly (170/121/24/218/69/66/78/21/109/45/85/92/72/74/97/118/109/265/190/126/9 — all 21 rows). Three of lane-20's specific factual claims were independently re-verified against source, not re-quoted: `web/frontend/CLAUDE.md:154`'s "grain-static scale 2.5 / wobble-logo intervalMs 550" matches `pencilConfig.ts:188,193` byte-for-byte; `web/frontend/ANIMATION.md:32-33`'s "scale 3.5 / 450ms" is confirmed stale against that same source; `web/api/docs/csp_optimization.md` still describes `csp.py`/`bitset_domain.py`, and `find . -name csp.py -o -name bitset_domain.py` (repo-wide, worktrees excluded) returns nothing live. Lane-20's table is sound and needs no correction.
+
+**Part (a)/(b) — the fold plan itself has a real gap, but it is not "an orphaned fact."** No live fact anywhere in the four CLAUDE.mds is left with *zero* eventual home — everything either dies correctly with an excised package or lands in a file that W7 names. The actual defect is narrower and sharper: **W7's per-file bullets under-specify the edit surface relative to what "docs describe the post-excision tree" (the wave's own stated dependency rationale) requires, and W2's own completion gate is unsatisfiable while that under-specification stands.** Four concrete findings, ranked by severity:
+
+### Finding 1 (highest severity) — W2's "zero web/api grep hits" gate cannot pass at W2's own close, because the doc corrections it requires are deferred to W7
+
+W2's gate list (synthesis-pass1.md:73) reads: *"zero `web/api` grep hits outside `docs/tranches/` archives."* Fresh grep at HEAD, scoped exactly the way that gate implies (excluding `web/api/` itself, `docs/tranches/`, `node_modules`, `target`):
+
+```
+CLAUDE.md          — 5 hits (line 3 intro, 26-29 dir-tree, 93 API section, 113/126-127 dev+test cmds, ...)
+README.md          — 4 hits (line 11 intro, 74, 87-88 dev+test cmds)
+csp-solver/CLAUDE.md — 1 hit (line 157, SCAN_ROOTS prose)
+web/frontend/CLAUDE.md — 2 hits (line 5 intro "web/api remains an optional Option-A path", line 106 "useApi.ts ... web/api's /api/v1/*")
+web/frontend/src/games/futoshiki/README.md — 1 hit (line 5, "own API fallback (useApi ...)")
+```
+
+None of these five files is scheduled for editing until **T2-W7**, whose own header states `deps: all prior` — i.e., it runs *after* W2, W3, W4, W5, and W6. W2's bullet list (lines 66-74) contains an `EXCISE`, a `SPLIT`, a `REHOME`, and a `Companion edits` clause — none of which touches `CLAUDE.md`/`README.md` files. So as authored, **W2 closes with its own stated gate failing**, for a full multi-wave window, on five files it never named. This is not hypothetical: `git grep` above shows the hits exist today, on HEAD, in exactly the files the wave plan leaves untouched until three-to-five waves later. `csp-solver/tests/difficulty_parity.rs`'s `SCAN_ROOTS` entry is explicitly listed as a W2 companion edit (`:145,163`) — but `csp-solver/CLAUDE.md:157`'s *prose description* of that same `SCAN_ROOTS` array is not, so the code and its own doc-comment diverge for the whole window.
+
+Two independent fixes, either is sufficient — the synthesis should pick one, not leave it implicit:
+- **(a)** Add a W2 companion-edit bullet: a short doc-reference sweep — strip or one-line-forward-point the `web/api` mentions in the five files above (not a register rewrite, not the full fold — just enough that the string `web/api` stops appearing outside dead code paths). W7 still does the real fold/register-rewrite on top.
+- **(b)** Rescope W2's gate explicitly to code/config (`git grep -n web/api -- '*.rs' '*.ts' '*.py' '*.toml' '*.yml'`, excluding `*.md`), and add one line acknowledging the five prose files carry known-stale `web/api` references until W7 lands — an explicit, tracked residual instead of a silently-failing gate.
+
+### Finding 2 — `games/futoshiki/README.md` is a live KEEP-verdict doc that no wave names for correction, and it will go stale the same way Finding-1/Finding-3 already did
+
+Lane-20 verdicted this file **KEEP** ("Model for the target state") with no action. But its line 5 — *"own API fallback (`useApi`, `board_size` on the wire, never `size`)"* — describes exactly the `useApi.ts` file W2 deletes ("delete ... `useApi.ts` in both games"). Neither W2's companion-edit list nor W7's `NEW: games/sudoku/README.md mirroring futoshiki's` bullet mentions correcting the *existing* futoshiki doc. Left as authored, the wave that is explicitly billed as fixing living-docs-rot (W7, whose own rationale cites Finding-1's isomorphism-doubles-drift failure mode) reproduces that exact failure mode in a file it never looked at. Fix: add one clause to W7 (or the Finding-2 companion-edit clause of W2) — "strip the now-dead `useApi` fallback line from `games/futoshiki/README.md`" — and make sure the new `games/sudoku/README.md` is authored post-split so it doesn't copy the same dead pattern.
+
+### Finding 3 — the fold destinations named for `csp-solver/CLAUDE.md` and `web/frontend/CLAUDE.md` are real files but under-granular relative to the content's actual shape
+
+`csp-solver/CLAUDE.md` (218 L) spans at least five structurally distinct categories: module map, Public API (`Csp<D>` construction/solving methods + `SolveConfig`/`Pruning`/`Ordering` + `max_solutions` semantics + GAC posture numbers), difficulty-casing policy, BBNF vendoring mechanics, and Build/Test/Bench commands. The wave names exactly two destination sections — `## Structure`/`## Conventions` (synthesis-pass1.md:118, quoting lane-20:76 verbatim) — and `csp-solver/README.md` at HEAD doesn't even have a `## Conventions` heading yet (checked: `Install / Usage / Structure / Contributing / License` only). The perimeter precept (`docs/precepts/canonical-readme-shape.md:61,73`) explicitly permits arbitrary additional sections below the canonical five, so this is executable, not blocked — but the wave-spec's two named headers undershoot the content's real shape by three-to-four sections, and a literal reading risks either an ungainly two-section cram or undocumented executor judgment the spec never authorized.
+
+`web/frontend/CLAUDE.md`'s ~80-line "Animation System" block (motion-cadence-band table, unified-scheduler subscriber counts, the 3-beat celebration timeline, the grain-hoist −72.9% RasterTask number, the hold-to-peek a11y contract, a 12-row layer/mechanism/timing table) is comparably deep, comparably measurement-heavy content to `docs/algorithms.md`/`docs/sudoku.md` — both of which lane-20 explicitly **KEEPS separate** from any README with the reasoning *"genuine deep-dive content a lean README shouldn't carry."* W7 folds the frontend equivalent wholesale into `web/frontend/README.md` (one bullet, "correcting the Finding-3 drift in the fold") without applying that same lean-vs-deep-dive test — an inconsistency in the plan's own stated criterion between the backend docs and the frontend docs. Worth at minimum a one-line owner call: hive the Animation System content to a new `docs/animation.md` peer to `algorithms.md`/`sudoku.md` (consistent with the futoshiki/README.md 9-line "lean" model W7 is explicitly using as its target shape elsewhere), or accept the frontend README as the one deliberately-deep exception and say so.
+
+### Finding 4 — the upstream precepts flag under-corrects
+
+W7 books "upstream flag to precepts: canonical-readme-shape's csc411 row says 4 artifacts, repo has 2" (lane-20 Finding 5's fix). But `canonical-readme-shape.md:83`'s csc411 divergence entry makes a second, larger claim the fold plan itself abandons: *"**One** README at the HW2_ProgrammingQuestion root covers the four publishable artifacts."* W7's own proposal is "one README **per directory that currently has a CLAUDE.md**" — root, `csp-solver/`, `web/frontend/` (new), plus a new `games/sudoku/README.md` alongside the existing `games/futoshiki/README.md` — i.e., a multi-README-per-repo shape, not the precept's single-root-README model. The upstream flag as authored fixes the artifact count but not the structural claim; both should go upstream together or the next precept sync re-imports a already-superseded model.
+
+## Verdict on the two named sub-questions
+
+- **"Does any live fact in the four CLAUDE.mds lack a named destination README section?"** — No fact is left with literally zero destination. But the destinations named are under-specified in two of four files (Finding 3), and one adjacent live-KEEP doc outside the four CLAUDE.mds is entirely unnamed for a correction it will need (Finding 2). Treat "no orphaned facts" as technically true but not the same as "sound as authored."
+- **"Is the W2-adjusted plan (web/api CLAUDE.md dies with the package in W2, no fold target needed) sound?"** — Yes, *for that one file in isolation*: every fact in `web/api/CLAUDE.md` was checked line-by-line and is either purely internal to the FastAPI service (file tree, Docker stages, endpoint table, commands — correctly dies) or already duplicated in a surviving doc (the 4-of-7 `CspError`-mirroring codes → `csp-solver/error.rs` + `apiError.ts`'s own header comments; the Futoshiki single-tier/no-`Difficulty` policy → already stated verbatim in `games/futoshiki/README.md:7` **and** four separate Rust/TS source doc-comments, independently confirmed by grep; `max_solutions=1` semantics → already duplicated in both `csp-solver/CLAUDE.md` and root `CLAUDE.md`). No orphan risk at the file level. **But the adjustment's implicit corollary — that every *other* file's `web/api` references can safely wait for W7 — is not sound**, per Finding 1: it directly collides with W2's own completion gate.
+
+Adjacent, not this lane's call but worth flagging: `apiError.ts` in both games (kept alive by D2's SPLIT) carries doc-comments that name `web/api/src/app/core/errors.py` as their contract source and describe "the two solve paths (Option-A FastAPI, Option-C in-browser Worker)" — post-split only Option-C exists, and neither W2's SPLIT bullet nor W7's docs wave names rewriting these `.ts` comments. This is source-comment hygiene, outside W7's stated remit (CLAUDE.md/README.md only), but it's the same failure mode one layer down — belongs in whichever lane covers Q1/W2 manifest completeness, flagged here only because I hit it while tracing web/api's dependents.
+
+## Exact wave-spec amendment
+
+Amend `synthesis-pass1.md` §2:
+
+**T2-W2**, add a fifth bullet after "Companion edits" (line 70):
+
+> - **Doc-reference sweep** (new, closes the W2/W7 gate-ordering gap): strip or one-line-forward-point every `web/api` grep hit in files this wave does *not* delete — root `CLAUDE.md` (intro, dir-tree, `## API`, dev/test commands), root `README.md` (mirrors CLAUDE.md's), `csp-solver/CLAUDE.md:157` (SCAN_ROOTS prose, keep in lockstep with the `difficulty_parity.rs:145,163` code edit already booked this wave), `web/frontend/CLAUDE.md:5,106` (Option-A framing), `web/frontend/src/games/futoshiki/README.md:5` (dead `useApi` fallback line). This is *not* the register rewrite or the section fold — that's still W7's job — it is the minimum edit so W2's own gate below is actually true at W2's close.
+
+And correct the W2 gate (line 73) from *"zero `web/api` grep hits outside `docs/tranches/` archives"* to make the doc-sweep's scope explicit: *"zero `web/api` grep hits outside `docs/tranches/` archives, across source, config, **and prose docs alike** (the doc-reference sweep above covers the five prose files that would otherwise fail this gate for the W2→W7 window)."*
+
+**T2-W7**, expand line 118-120's bullets:
+
+> - `csp-solver/CLAUDE.md` → fold into `csp-solver/README.md`, adding whatever of `## Public API`, `## BBNF Integration`, `## Build & Test` the content needs beyond the two sections named at Pass-1 (`## Structure`/`## Conventions` alone under-fits the material — see Pass-3 Q10 Finding 3); `## Conventions` does not exist yet on the live README and needs authoring, not just filling.
+> - `web/frontend/CLAUDE.md` → new `web/frontend/README.md`, correcting **both** the Finding-3 drift **and** the dead Option-A/`useApi` framing (line 5, line 106) not already swept in W2. Owner call needed: fold the ~80-line Animation System block into this README wholesale, or hive it to a new `docs/animation.md` peer to `docs/algorithms.md`/`docs/sudoku.md` under the same "lean README shouldn't carry deep-dive content" test lane-20 already applied to those two files.
+> - Add: `games/futoshiki/README.md` — strip the dead "own API fallback (`useApi`...)" line (Pass-3 Q10 Finding 2); author `games/sudoku/README.md` after this edit lands so the new file doesn't copy the same dead pattern.
+> - Upstream flag to precepts, broadened: `canonical-readme-shape.md`'s csc411 divergence entry is stale on both the artifact count (4→2, lane-20 Finding 5) **and** the structural claim ("one README" → this wave's actual "one README per directory" shape) — flag both in the same upstream note.
+
+No change needed to the P-numbered prototype list or the convergence percentage — this is a wave-spec completeness/ordering fix, not a new unknown.
