@@ -7,11 +7,13 @@ This document reports only what is reproducible and stamped. Two classes of pre-
 - **The 7–57× "Rust vs Python" headline.** It was not apples-to-apples (each solver measured under a different config), and there is no longer a Python solver to compare against -- `csp_solver` (Rust) is the sole engine. The specific claim of Platinum Blonde at 2.57 ms (against 0.44 ms measured) was among the non-reproducible entries.
 - **The "10–25% optimization headroom" profile band.** Refuted at load: it was load-average-50 contention noise. On a quiet host, `lto=fat + codegen-units=1 + strip` alone is +16–17% slower and the package nets ≈0% (`evidence/synthesis-pass3.md` §1 #14). CI therefore keeps the default release profile with none of those levers.
 
-Numbers below trace either to a named campaign artifact under `docs/tranches/2026-07-grand-uplift/evidence/`, or to a command run here and quoted with its stamp. Stamp shape for locally-run commands: `measured at d9781e29, Apple M5 Max, 2026-07-06`.
+Numbers below trace either to a named campaign artifact under `docs/tranches/2026-07-grand-uplift/evidence/`, or to a command run here and quoted with its stamp. Stamp shape for locally-run commands: `measured at c14995eb, Apple M5 Max, 2026-07-10`.
 
 ## GAC default-ON: the corpus result and its cost
 
-GAC-in-AllDifferent is default-ON, gated at live-participant count ≥ `GAC_MIN_PARTICIPANTS` (3). The decision rests on a 112-board A/B corpus -- 5 named hard 9×9 and all 107 template-bank puzzles (N=2..4) -- solved under the exact production config (`Ac3 + Mrv`), GAC off vs on (`evidence/synthesis-pass3.md` row 2; `waves/W2-gac-search.md`). **Inherited-trust flag:** the ratios below rest on a deleted scratch harness, not the committed `gac_ab_corpus` example (which reports node-level false-UNSAT counts, not timing); cite only with this flag until a timing probe is committed (`docs/tranches/2026-07-tranche-2/appendices/A-corrections-ledger.md` §4).
+GAC-in-AllDifferent is default-ON, gated at live-participant count ≥ `GAC_MIN_PARTICIPANTS` (3). The decision rests on the historical A/B corpus result below: a **13.36× aggregate** measured on the pre-reshape **112-board** corpus -- 5 named hard 9×9 and all 107 then-template-bank puzzles (N=2..4) -- solved under the exact production config (`Ac3 + Mrv`), GAC off vs on (`evidence/synthesis-pass3.md` row 2; `waves/W2-gac-search.md`). **Inherited-trust flag:** those ratios rest on a deleted scratch harness, not the committed `gac_ab_corpus` example -- cite only with this flag and the historical-corpus caveat until a first-party timing probe lands (it rides the W-GATE recertification; `docs/tranches/2026-07-tranche-2/appendices/A-corrections-ledger.md` §4).
+
+Post-W4 bank reshape, the committed `gac_ab_corpus` example runs the **50-board** post-W4 bank -- N=3-hard + N=4 (45 templates) plus the 5 named hard 9×9 -- and reports **false-UNSAT counts only, not timing or search nodes**: 0/50 in both GAC states (§ Kernel soundness parity below). It's a soundness gate, not the source of the aggregate/node rows, which stay pinned to the historical 112-board corpus under the flag above.
 
 | Measure | Value | Source |
 |---|---|---|
@@ -32,19 +34,19 @@ Isolated criterion, same host, byte-identical solve counts: `sudoku_9x9/al_escar
 The unified search kernel is verified sound, not merely fast. Evidence from `evidence/kernel-soundness-closure.md`:
 
 - **Solution-set invariance.** The enumerate-all solution *set* is identical across all 12 Pruning × Ordering combinations at `budget=false`: queens8 = 92, queens12 = 14,200, futoshiki_loose = 288, futoshiki_constr = 16 (§2, §6). Standing guard: `tests/solution_set_invariance.rs`.
-- **False-UNSAT closed.** The 112-board GAC corpus goes 0/112 false-UNSAT post-fix (`cargo run --release --example gac_ab_corpus`, re-derived locally); the revert control reproduces 26/113 against tranche-1's then-113-board corpus, proving the harness exercises the buggy path (§4).
+- **False-UNSAT closed.** The GAC corpus goes 0/50 false-UNSAT post-fix (`cargo run --release --example gac_ab_corpus`, re-derived locally at c14995eb — 50 boards post-W4 bank shrink); the revert control reproduces 26/113 against tranche-1's then-113-board corpus, proving the harness exercises the buggy path (§4).
 - **`time_sudoku` byte-identical counts** vs the `91bb8b0` baseline (§5): Al Escargot `Ac3+FailFirst` 62 backtracks / 962 propagations, Platinum 3 / 293, Inkala 105 / 1,539; `ForwardChecking` rows 207/789, 0/242, 501/1765.
 
 Local test suite, run here:
 
 ```
-cargo test --workspace  →  150 passed, 0 failed, 6 ignored (17 binaries)
-# measured at d9781e29, Apple M5 Max, 2026-07-06
+cargo test --workspace  →  151 passed, 0 failed, 6 ignored (20 test binaries)
+# measured at c14995eb, Apple M5 Max, 2026-07-10
 ```
 
 ## Wasm artifact sizes
 
-Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean Sudoku+Futoshiki artifact measures **87,853 B raw** (`web/frontend/dist/assets/csp_solver_wasm_bg-*.wasm`, measured at d9781e29, Apple M5 Max, 2026-07-06; also recorded in `csp-solver/wasm/CHANGELOG.md`). CI enforces size budgets in the `twiggy` lane: full module fail >240 KB / warn >215 KB; separate lean-Sudoku budget fail >93 KB. The CI lane records 211,639 B full / 87,853 B lean at the W6 gate (`.github/workflows/ci.yml`).
+Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean Sudoku artifact -- the `--no-default-features` build the frontend Worker ships -- measures **90,602 B raw** (`wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm`, measured at c14995eb, Apple M5 Max, 2026-07-10). The full module measures **220,554 B** (the T2-W3 re-measure stamped in `.github/workflows/ci.yml`; the assignment surface's transitive `ndarray` accounts for the delta over the lean build, which compiles assignment out). CI enforces size budgets in the `twiggy` lane: full module fail >240 KB / warn >230 KB; separate lean budget fail >93 KB -- both hold with headroom.
 
 ## Reproducing
 
@@ -89,28 +91,28 @@ CARGO_PROFILE_RELEASE_DEBUG=true cargo build --release --example profile_sudoku
 samply record --no-open ./target/release/examples/profile_sudoku
 ```
 
-Actual output, this repro pass (`measured at ccb4a00b, Apple M5 Max, 2026-07-10`):
+Actual output, this repro pass (`measured at c14995eb, Apple M5 Max, 2026-07-10`; corpus is 50 boards post-W4 bank shrink — N=3-hard + N=4 sparse + 5 named hard 9×9):
 
 ```
 $ cargo run --release --example gac_ab_corpus
-# GAC A/B false-UNSAT corpus — 112 boards (production config: Ac3 + Mrv)
-false-UNSAT (GAC off): 0/112
-false-UNSAT (GAC on):  0/112
+# GAC A/B false-UNSAT corpus — 50 boards (production config: Ac3 + Mrv)
+false-UNSAT (GAC off): 0/50
+false-UNSAT (GAC on):  0/50
 TOTAL false-UNSAT across both GAC states: 0
-VERDICT: 0/112 — PASS
+VERDICT: 0/50 — PASS
 
 $ cargo run --release --example time_sudoku
 puzzle/config                  | found | backtracks | propagations | time
 --------------------------------------------------------------------------------
-Al Escargot/AC3+FailFirst      | true  |       62 bt |      962 prop | 0.87 ms
-Al Escargot/AC3+Mrv            | true  |       62 bt |      962 prop | 0.99 ms
-Al Escargot/FC+FailFirst       | true  |      207 bt |      789 prop | 0.93 ms
+Al Escargot/AC3+FailFirst      | true  |       62 bt |      962 prop | 0.86 ms
+Al Escargot/AC3+Mrv            | true  |       62 bt |      962 prop | 0.86 ms
+Al Escargot/FC+FailFirst       | true  |      207 bt |      789 prop | 0.87 ms
 Platinum/AC3+FailFirst         | true  |        3 bt |      293 prop | 0.52 ms
-Platinum/AC3+Mrv               | true  |        3 bt |      293 prop | 0.50 ms
-Platinum/FC+FailFirst          | true  |        0 bt |      242 prop | 1.13 ms
-Inkala 2010/AC3+FailFirst      | true  |      105 bt |     1539 prop | 0.99 ms
-Inkala 2010/AC3+Mrv            | true  |      105 bt |     1539 prop | 1.62 ms
-Inkala 2010/FC+FailFirst       | true  |      501 bt |     1765 prop | 1.83 ms
+Platinum/AC3+Mrv               | true  |        3 bt |      293 prop | 0.51 ms
+Platinum/FC+FailFirst          | true  |        0 bt |      242 prop | 0.44 ms
+Inkala 2010/AC3+FailFirst      | true  |      105 bt |     1539 prop | 0.88 ms
+Inkala 2010/AC3+Mrv            | true  |      105 bt |     1539 prop | 0.83 ms
+Inkala 2010/FC+FailFirst       | true  |      501 bt |     1765 prop | 1.42 ms
 ```
 
 The backtrack/propagation counts are host-independent and match the kernel-soundness-parity §5 baseline verbatim. Wall times are host-dependent, quoted only as regimes (30-repro rule) — re-measure locally rather than gate on the absolute ms.

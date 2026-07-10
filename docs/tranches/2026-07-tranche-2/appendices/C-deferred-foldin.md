@@ -89,22 +89,30 @@ The complete deferred/booked/parked corpus (L25-01…L25-58, lane 25 of Pass-1),
 |---|---|---|
 | **L25-59** | `test_budget_exceeded_error_end_to_end` permanent skip (**verify-25 edit 4** — the skip narrates an out-of-band fuzz campaign, body `pass`) | **RECORDED** — rides the W2 rehome intact; un-skip only if a real end-to-end budget fuzz gets built |
 
-## G. New deferrals opened by this tranche (each with trigger)
+## G. New deferrals opened by this tranche (each with owner + trigger)
 
-| Item | Trigger | Source |
+Every row carries both an **owner** (who re-opens it) and a **trigger** (what fires it). Owners are functional (single human owner, role-framed).
+
+| Item | Owner | Trigger | Source |
+|---|---|---|---|
+| wasm `opt-level=s` (+17% solve, +2.1 KB, in-budget) | wasm/build maintainer | hard-16×16 latency felt on low-power mobile; **re-derive the s cell before pulling** (bracketed-plausible, not rebuilt) | D21 |
+| H7, H10 hardening items | FE hardening lead | next FE hardening pass | verify-33/Q8 |
+| §8b bitset-parallel GAC | engine maintainer | prototype-gated; user-imperceptible even at full ceiling (~0.3 ms on ~1 ms) | D23 |
+| TypeScript 7.x | FE toolchain maintainer | Vue language-tools unblock | D26 |
+| Mobile digit pad | FE/product | mobile usage evidence | L15 chain |
+| `apiError`/`solverError` twins unification | FE maintainer | divergence pressure (genuinely-owned copies today, 68–92% divergent) | D16 |
+| CSR adjacency · Vec-indexed warm cache · mimalloc · GAC on/off policy (the D20 set) | engine maintainer | real-workload A/B / profile shift | D20 |
+| Memoized/idle-chunked transition path regen (the @4× CPU half: `generateGridBoilFrames` + 256 `wobbleRect` + mounts) | pencil/FE maintainer | the ~100–150 ms-class @4× worst frame becomes user-felt | verify-P3-P4 A2 |
+| N=3-hard bank aggressive excision (3,591 B sparse) | data/bank maintainer | a genuine low-power device clears gen p95 ≤ 50 ms | verify-P1-P2 |
+| `generate_templates.rs` N=5 arg-range refusal | engine maintainer | next touch of the file | Q2 §E |
+| C1/C2 `index.css` `@layer` extractions | FE maintainer | a cascade-layer proof or a visual-diff pass lifts the hold (targeted **W8**) | C1/C2 |
+| Vendored-test prune completeness (bbnf `--update --delete` semantics) | bbnf maintainer (out-of-repo) | next re-vendor after W3's | Q6 §3.5 |
+
+**Landed this tranche, no longer deferred** (recorded here so the census stays honest):
+
+| Item | Disposition | Source |
 |---|---|---|
-| wasm `opt-level=s` (+17% solve, +2.1 KB, in-budget) | hard-16×16 latency felt on low-power mobile; **re-derive the s cell before pulling** (bracketed-plausible, not rebuilt) | D21 |
-| H7, H10 hardening items | next FE hardening pass | verify-33/Q8 |
-| Engine-domains pencil marks | **BOOKED tranche III** — the coupled tier×surface decision + bundles (README §4) | P4 + verify-P3-P4 A4 |
-| §8b bitset-parallel GAC | prototype-gated; user-imperceptible even at full ceiling (~0.3 ms on ~1 ms) | D23 |
-| TypeScript 7.x | Vue language-tools unblock | D26 |
-| Mobile digit pad | mobile usage evidence | L15 chain |
-| `apiError`/`solverError` twins unification | divergence pressure (genuinely-owned copies today, 68–92% divergent) | D16 |
-| CSR adjacency · Vec-indexed warm cache · mimalloc · GAC on/off policy | real-workload A/B / profile shift | D20 |
-| Memoized/idle-chunked transition path regen (the @4× CPU half: `generateGridBoilFrames` + 256 `wobbleRect` + mounts) | the ~100–150 ms-class @4× worst frame becomes user-felt | verify-P3-P4 A2 |
-| N=3-hard bank aggressive excision (3,591 B) | a genuine low-power device clears gen p95 ≤ 50 ms | verify-P1-P2 |
-| `generate_templates.rs` N=5 arg refusal | next touch of the file | Q2 §E |
-| Vendored-test prune completeness (bbnf `--update --delete` semantics) | next re-vendor after W3's | Q6 §3.5 |
+| ~~Engine-domains pencil marks~~ | **LANDED → W6** — owner override 2026-07-10 folded the tier×surface bundle into this tranche (opt-in full-GAC behind the peek/hint grammar; +1,779 B); was tranche-III booked. No longer a deferral | P4 + verify-P3-P4 A4 (README §4) |
 
 ## Chronic roll-up after this fold
 

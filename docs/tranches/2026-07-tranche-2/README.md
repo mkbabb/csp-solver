@@ -91,3 +91,18 @@ Reversals of record (W7 writes them): R4-inline-tests (revoked), D2-CLAUDE.md (r
 **[`appendices/`](appendices/)**: [A — corrections ledger](appendices/A-corrections-ledger.md) (the law: refuted/corrected/blacklisted + Pass-3 additions) · [B — prompt recap](appendices/B-prompt-recap.md) (the L22 matrix, both campaigns → waves) · [C — deferred fold-in](appendices/C-deferred-foldin.md) (the 58+1-item ledger, every row homed) · [D — convergence record](appendices/D-convergence-record.md).
 
 **Session-scoped, NOT copied (FAIL-EXPLICIT):** the full 73-report Pass-1 corpus (`pass1/01..33`, `pass1-critique/verify-01..33` + meta-lanes) lives at `/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tranche2/`—a session scratchpad that will not survive cleanup. Its load-bearing conclusions are folded into `synthesis-pass1.md`, the readiness gate, and appendix A; any citation below to a `verify-NN`/`L-NN` lane resolves through those durable copies first, the scratchpad second while it lives.
+
+---
+
+## 6. Reversals of record
+
+W7 writes them. Each overturns a prior standing order or booking—predecessor tranche-1 or an earlier plan within this one. They bind going forward.
+
+| # | Reversal | What it overturns | Now |
+|---|---|---|---|
+| **R4-tests** | Inline tests **REVOKED** | Tranche-1 W13's two-discipline posture (some tests inline, some in `tests/`) | `tests/` directory **only**—no inline `#[cfg(test)]` modules land this campaign; the substrate excision at 0.3.0 rides the same migration |
+| **D2-CLAUDE.md** | **rewrite → removal** | The earlier plan that *rewrote* the CLAUDE.mds in place | R2 fold-not-delete: live content folds into lean per-package READMEs, the CLAUDE.mds are removed (zero tracked at W7 close) |
+| **N9-repo-split** | **VOID** + the **T2-1 de-booking** | Tranche-1 N9's csp-solver repo split (chronic L25-10, deferred ×2) and the T2-1 booking that carried it | The demo **stays in this repo**; the split is void, the booking de-booked. morph already lives out-of-repo (`mkbabb/morph`, `pre-morph-excision` tag)—that excision stands and is unaffected |
+| **R9-never-push** | never-push-origin **RETIRED** (csp-solver) | The standing order forbidding pushes to the csp-solver origin | Retired—0.2.0 is published from here to crates.io (workspace is at 0.3.0; the 0.3.0 publish rides W-GATE). **bbnf-lang's own never-push order STANDS**, unretired, unrelated |
+
+The full dispositions live in [appendix C](appendices/C-deferred-foldin.md) (L25-01 R4-foreclosure, L25-10 split-void, R9 fold) and §2's binding-constraints paragraph.

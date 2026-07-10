@@ -272,10 +272,12 @@ jobs:
             # --profile wasm-release is REQUIRED: plain release yields
             # 270,179 B (over the 240 KB fail budget); wasm-release
             # (workspace-root profile, opt-level=z, panic=abort) yields
-            # 220,554 B full / 87,763 B lean (T2-W3 re-measure: the assignment
-            # Hungarian dispatch consumes the hungarian crate, whose transitive
-            # ndarray grows the DEFAULT-feature full module +10,242 B; the
-            # deployed lean artifact excludes assignment entirely). Prior:
+            # 220,554 B full / 90,602 B lean. Full is the T2-W3 re-measure: the
+            # assignment Hungarian dispatch consumes the hungarian crate, whose
+            # transitive ndarray grows the DEFAULT-feature full module +10,242 B;
+            # the deployed lean artifact excludes assignment entirely. Lean 90,602 B
+            # is the T2-W7 re-measure — +2,839 B over T2-W3's 87,763 B, from the W6
+            # beat-9 ops. Prior:
             # 210,312 B full / 87,475 B lean (T2-W1 re-measure on stable +
             # wasm-bindgen 0.2.126, dtolnay/rust-toolchain@stable, this tree;
             # supersedes the W6 gate record of 211,639 B full / 87,853 B lean —
@@ -305,7 +307,7 @@ jobs:
                   set -euo pipefail
                   WASM=csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
                   RAW=$(wc -c < "$WASM")
-                  echo "lean artifact raw size: ${RAW} B (measured 87,763 B; fail >93,000)"
+                  echo "lean artifact raw size: ${RAW} B (measured 90,602 B; fail >93,000)"
                   if [ "$RAW" -gt 93000 ]; then
                     echo "::error::lean wasm artifact ${RAW} B exceeds the 93 KB band"
                     exit 1

@@ -21,7 +21,7 @@ For easy puzzles, these three stages alone solve the board with zero backtracks.
 
 The fast path for puzzle generation uses pre-computed templates. Each template contains a puzzle (with holes) and its unique solution. `generate_board_with_templates()` picks a random template and applies a random symmetry transform -- sub-millisecond for any board size.
 
-Templates live in `csp-solver/data/sudoku_puzzles/{N}/{difficulty}/`, owned by the Rust crate and embedded at build time via `include_dir!`. The API and the frontend derive from this single source -- never a hand-copied fork.
+Templates live in `csp-solver/data/sudoku_puzzles/{N}/{difficulty}/`, owned by the Rust crate and embedded at build time via `include_dir!`. The PyO3/wasm bindings and the frontend derive from this single source -- never a hand-copied fork.
 
 ## Symmetry Group
 
