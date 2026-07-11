@@ -186,6 +186,11 @@ jobs:
               env:
                   PYO3_PYTHON: ${{ steps.setup-python.outputs.python-path }}
               run: |
+                  # The cargo cache restores target/wheels/ with prior-version
+                  # wheels; the install step's unqualified *.whl glob must match
+                  # exactly one — clean before building (T3-W2 CI fix: 0.2.0 +
+                  # 0.3.0 coexisting broke uv with conflicting URLs).
+                  rm -rf target/wheels
                   uvx --from 'maturin>=1.0,<2.0' maturin build \
                     --release \
                     --manifest-path csp-solver/Cargo.toml \
