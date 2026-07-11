@@ -9,6 +9,12 @@
 //! the then-113-board tranche-1 corpus): 23/113 off + 2/113 on = 25. Post-fix:
 //! 0/50 either way.
 //!
+//! T3-W6 (ROW-3d) promoted this to a CI smoke lane and added the **node-count
+//! spine assert**: the deterministic search-node totals over the 50-board corpus
+//! (GAC off→on: 40,513 → 4,678) are the invariant oracle — GAC's pruning strength
+//! is fixed, so if either total moves, a GAC edit changed search semantics. The
+//! process exits non-zero on ANY false-UNSAT OR a moved spine.
+//!
 //! Corpus: 5 named hard 9x9 + the N=3-hard + N=4 template banks (50 post-W4). The
 //! `--n5` flag is a no-op — `n5_board` reads `sudoku_solutions/5/`, a
 //! directory that is already absent from `data/`.
@@ -168,6 +174,7 @@ fn n5_board(data_dir: &Path) -> Option<Board> {
 struct RunResult {
     solved: bool,
     budget_exceeded: bool,
+    nodes: u64,
 }
 
 fn run_once(board: &Board, gac_on: bool) -> RunResult {
@@ -184,8 +191,18 @@ fn run_once(board: &Board, gac_on: bool) -> RunResult {
     RunResult {
         solved: !solutions.is_empty(),
         budget_exceeded: stats.budget_exceeded,
+        nodes: stats.nodes_explored,
     }
 }
+
+// The deterministic node-count spine over the 50-board default corpus (no --n5):
+// the invariant oracle T3-W6 asserts. Search-node counts are a pure function of
+// the algorithm on fixed data — identical across runs, machines, and load
+// (docs/benchmarks.md:21; G6 reproduced 40,513→4,678 exactly under load-avg ~3.8
+// where the WALL ratio swung 10.5–13.8×). GAC's pruning strength is invariant, so
+// if either total moves, a GAC edit changed semantics — a RED, not noise.
+const SPINE_OFF_NODES: u64 = 40_513;
+const SPINE_ON_NODES: u64 = 4_678;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -213,9 +230,13 @@ fn main() {
     );
     let mut off_unsat = Vec::new();
     let mut on_unsat = Vec::new();
+    let mut off_nodes: u64 = 0;
+    let mut on_nodes: u64 = 0;
     for board in &corpus {
         let off = run_once(board, false);
         let on = run_once(board, true);
+        off_nodes += off.nodes;
+        on_nodes += on.nodes;
         // A "false UNSAT" = returned zero solutions WITHOUT hitting the node
         // budget, on a board with a known recorded solution.
         if !off.solved && !off.budget_exceeded {
@@ -239,13 +260,41 @@ fn main() {
     }
     let total = off_unsat.len() + on_unsat.len();
     println!("TOTAL false-UNSAT across both GAC states: {total}");
+
+    // Node-count spine — the invariant oracle (asserted only on the default
+    // 50-board corpus; --n5 would append a board and shift the totals, but its
+    // data bank is absent so the default run is what CI exercises).
+    let spine_ok = if do_n5 {
+        println!(
+            "node-count spine: SKIPPED (--n5 changes the corpus) — off={off_nodes} on={on_nodes}"
+        );
+        true
+    } else {
+        let ok = off_nodes == SPINE_OFF_NODES && on_nodes == SPINE_ON_NODES;
+        println!(
+            "node-count spine (GAC off→on): {off_nodes} → {on_nodes} \
+             (expected {SPINE_OFF_NODES} → {SPINE_ON_NODES}) — {}",
+            if ok { "HOLD" } else { "MOVED" }
+        );
+        if !ok {
+            eprintln!(
+                "::error:: node-count spine MOVED: off {off_nodes} (want {SPINE_OFF_NODES}), \
+                 on {on_nodes} (want {SPINE_ON_NODES}) — a GAC edit changed search semantics"
+            );
+        }
+        ok
+    };
+
+    let pass = total == 0 && spine_ok;
     println!(
         "VERDICT: {}",
-        if total == 0 {
-            format!("0/{} — PASS", corpus.len())
+        if pass {
+            format!("0/{} false-UNSAT + spine HOLD — PASS", corpus.len())
+        } else if total != 0 {
+            "REGRESSION PRESENT (false-UNSAT)".to_string()
         } else {
-            "REGRESSION PRESENT".to_string()
+            "REGRESSION PRESENT (node-count spine moved)".to_string()
         }
     );
-    std::process::exit(if total == 0 { 0 } else { 1 });
+    std::process::exit(if pass { 0 } else { 1 });
 }

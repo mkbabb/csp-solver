@@ -2,6 +2,7 @@ use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use csp_solver::constraint::VarId;
 use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::ordering::Ordering;
+use csp_solver::sudoku::{Difficulty, create_sudoku_csp, embedded_templates};
 use csp_solver::{Csp, OptimizationMode, Pruning, SolveConfig};
 
 // ---------------------------------------------------------------------------
@@ -265,5 +266,56 @@ fn bench_sudoku_16x16(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_sudoku_9x9, bench_sudoku_16x16);
+// ---------------------------------------------------------------------------
+// N4 (16x16) template banks — the GAC-winning bucket (T3-W6 ROW-3c)
+// ---------------------------------------------------------------------------
+
+// The named-hard 9×9 above are the disclosed minority cost (GAC ON slower); the
+// single hardcoded 16×16 is one adversarial board. Neither captures the bucket
+// where GAC pays: the N4 medium/hard template banks, measured at 27.13× / 28.54×
+// (A18 per-bucket, GAC off/on). Bench one representative board from each tier —
+// drawn from the embedded bank, solved under the production config (Ac3 + Mrv,
+// GAC default-ON) — so the majority-case win is a first-class criterion figure,
+// not a hand-run probe. NODE COUNTS are the oracle: the `gac_ab_corpus` smoke lane
+// asserts these boards' node totals hold (they are inside the 40,513→4,678 spine);
+// this bench tracks the wall cost that win buys.
+fn bench_sudoku_n4_templates(c: &mut Criterion) {
+    let mut group = c.benchmark_group("sudoku_n4_templates");
+    group.sample_size(20);
+
+    for difficulty in [Difficulty::Medium, Difficulty::Hard] {
+        let board = embedded_templates(4, difficulty)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| panic!("N4/{difficulty:?} template bank must be embedded"));
+        let tier = match difficulty {
+            Difficulty::Easy => "easy",
+            Difficulty::Medium => "medium",
+            Difficulty::Hard => "hard",
+        };
+        group.bench_function(BenchmarkId::new(tier, "ac3_mrv"), |b| {
+            b.iter(|| {
+                let (mut csp, given) = create_sudoku_csp(&board, 4);
+                let config = SolveConfig {
+                    pruning: Pruning::Ac3,
+                    ordering: Ordering::Mrv,
+                    max_solutions: 1,
+                    ..Default::default()
+                };
+                let solutions = csp.solve_with_given(&config, &given);
+                assert!(!solutions.is_empty());
+                solutions
+            });
+        });
+    }
+
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    bench_sudoku_9x9,
+    bench_sudoku_16x16,
+    bench_sudoku_n4_templates
+);
 criterion_main!(benches);

@@ -19,7 +19,9 @@
 # jobs (the rust job carries lanes 2 + 3):
 #   1.  fmt + clippy       -> lint       (clippy -D warnings; strict, no continue-on-error)
 #   2.  build + test       -> rust       (cargo build/test --workspace — NEVER per-crate)
-#   3.  queens-bench smoke -> rust       (the only lane that runs the assert_eq!(92/14200))
+#   3.  bench + corpus smoke-> rust      (queens assert_eq!(92/14200); gac_ab --test;
+#                                         gac_ab_corpus 0/50 false-UNSAT + 40,513→4,678
+#                                         node-count spine — T3-W6 ROW-3a/3d)
 #   4.  py compile         -> py-compile (cargo check --features py under Python 3.13 — pyo3 0.29-tested floor, not a hard ceiling)
 #   5.  py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in csp-solver/tests-py)
 #   6.  wasm               -> wasm       (wasm-pack test --node + clippy --target wasm32)
@@ -108,6 +110,24 @@ jobs:
               # soundness regression (kernel-soundness-closure.md §6). `-p csp-solver`
               # because the benches live in the csp-solver package.
               run: cargo bench -p csp-solver --bench queens -- --test
+            - name: gac-ab bench smoke (GAC on/off closures run once)
+              # The T3-W6 ROW-3a per-call-cost A/B bench, exercised in criterion
+              # --test mode: runs each GAC on/off closure once and fires its
+              # `assert!(!solutions.is_empty())` so a build that stops solving under
+              # either GAC state fails here, not silently at measurement time.
+              run: cargo bench -p csp-solver --bench gac_ab -- --test
+            - name: GAC corpus node-count smoke (0/50 false-UNSAT + 40,513→4,678 spine)
+              # T3-W6 ROW-3d: promotes examples/gac_ab_corpus from a hand-run probe
+              # to a CI gate. Release build (the corpus is heavy — the hard 9×9 boards
+              # dominate; a dev build would thrash the timeout). Two asserts, both
+              # exit-non-zero: (a) zero false-UNSAT across GAC off AND on over the 50
+              # known-solvable boards under the exact production config (Ac3+Mrv), and
+              # (b) the deterministic search-node spine — GAC off→on totalling
+              # 40,513→4,678 — holds. Node counts are a pure function of the algorithm
+              # (invariant across machine + load, unlike the wall ratio, G6), so this
+              # is the soundness+cost oracle guarding every future GAC edit. `-p
+              # csp-solver` because the example lives in that package.
+              run: cargo run -p csp-solver --release --example gac_ab_corpus
 
     # ---------------------------------------------------------------- Lane 4
     # py compile — the historical break class (Pass-1 N1). `cargo check --features py`

@@ -49,6 +49,18 @@ crate-type = ["lib"]
 name = "sudoku"
 harness = false
 
+# GAC-in-AllDifferent on/off A/B — the CI-visible per-call-cost guard (T3-W6
+# ROW-3a). Runs under `--test` in the queens-smoke style; measured on a quiet box.
+[[bench]]
+name = "gac_ab"
+harness = false
+
+# Futoshiki generate + solve — the game's first criterion perf guard (T3-W6
+# ROW-3b / A24 G13 bench-half).
+[[bench]]
+name = "futoshiki"
+harness = false
+
 [[bench]]
 name = "queens"
 harness = false
