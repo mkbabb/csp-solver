@@ -3,13 +3,13 @@
 //! Ported from wf_34cf008e-c2c-5's gac_ab_corpus (gac-default-on critique) onto
 //! the composed tree, stripped to the load-bearing check for kernel closure:
 //! does the composed tree return a false "no solution" (solved=false with
-//! budget_exceeded=false) on any known-solvable board in the corpus (112
-//! boards at HEAD), under the EXACT production config (Pruning::Ac3,
+//! budget_exceeded=false) on any known-solvable board in the corpus (50
+//! boards post-W4 bank shrink), under the EXACT production config (Pruning::Ac3,
 //! Ordering::Mrv) — with GAC in AllDifferent both OFF and ON? Pre-fix (against
-//! the then-113-board corpus): 23/113 off + 2/113 on = 25. Expected post-fix:
-//! 0 either way.
+//! the then-113-board tranche-1 corpus): 23/113 off + 2/113 on = 25. Post-fix:
+//! 0/50 either way.
 //!
-//! Corpus: 5 named hard 9x9 + all N=2/3/4 template banks (112 at HEAD). The
+//! Corpus: 5 named hard 9x9 + the N=3-hard + N=4 template banks (50 post-W4). The
 //! `--n5` flag is a no-op — `n5_board` reads `sudoku_solutions/5/`, a
 //! directory that is already absent from `data/`.
 //! Run: cargo run --release --example gac_ab_corpus -- --n5

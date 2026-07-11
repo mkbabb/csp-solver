@@ -15,15 +15,18 @@
 # REPO ROOT — cargo runs at repo root, and the queens bench needs `-p csp-solver`
 # because the benches live in the csp-solver package.
 #
-# Lane → job map (W0 lane table; provenance cited per step):
-#   1. fmt + clippy       -> lint       (clippy -D warnings; strict, no continue-on-error)
-#   2. build + test       -> rust       (cargo build/test --workspace — NEVER per-crate)
-#   3. queens-bench smoke -> rust       (the only lane that runs the assert_eq!(92/14200))
-#   4. py compile         -> py-compile (cargo check --features py under Python 3.13 — pyo3 0.29-tested floor, not a hard ceiling)
-#   5. py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in csp-solver/tests-py)
-#   6. wasm               -> wasm       (wasm-pack test --node + clippy --target wasm32)
-#   7. twiggy budgets     -> twiggy     (full module fail>240 KB / warn>230 KB)
-#   8. frontend           -> frontend   (npm ci --dry-run; npm ci; vue-tsc --noEmit)
+# Lane → job map (W0 lane table; provenance cited per step) — ten lanes over nine
+# jobs (the rust job carries lanes 2 + 3):
+#   1.  fmt + clippy       -> lint       (clippy -D warnings; strict, no continue-on-error)
+#   2.  build + test       -> rust       (cargo build/test --workspace — NEVER per-crate)
+#   3.  queens-bench smoke -> rust       (the only lane that runs the assert_eq!(92/14200))
+#   4.  py compile         -> py-compile (cargo check --features py under Python 3.13 — pyo3 0.29-tested floor, not a hard ceiling)
+#   5.  py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in csp-solver/tests-py)
+#   6.  wasm               -> wasm       (wasm-pack test --node + clippy --target wasm32)
+#   7.  twiggy budgets     -> twiggy     (full module fail>240 KB / warn>230 KB)
+#   8.  frontend           -> frontend   (npm ci --dry-run; npm ci; vue-tsc --noEmit)
+#   9.  e2e                -> e2e        (lean wasm build -> Playwright over the Vue SPA)
+#   10. iai                -> iai        (callgrind deterministic instruction-count baseline)
 #
 # Build posture (STANDING, per the T15 refutation — synthesis-pass3.md §1 #14):
 # default release profile retained. NO lto=fat, NO codegen-units=1, NO strip

@@ -62,6 +62,8 @@ perf band **~10–330×** (not 19–380×) · live-API warm **~16–24 ms**, col
 
 "83 integration tests" · "107 Python tests" · `search.rs` 507 · "19–380×" · "~33 KB on the wire" · "0.4975 vs 0.6 ms" · the pre-`dc5bd4c4` CLAUDE.md snapshot · "futoshiki G1 0.67 ms" (does not exist in the repo — verify-30) · "0/113" (corpus is 112).
 
+`13.36×` · `112-board` · `1.3–2.5×` — **added at T3-W2** (A11 recommendation (a)). The WGATE first-party probe retired the GAC scratch-harness figures *after* this net was authored, which is exactly how the grep hole opened; the perimeter READMEs (`README.md`, `csp-solver/README.md`) carried them as a live headline until T3-W2 retrued them to the first-party `12.6–12.7× / 50-board / 1.8–3.3×`. Three sanctioned survivals, each explanatory not live: (1) `docs/benchmarks.md`'s one flagged historical sentence (§ "GAC default-ON") — the retired figure named to say it's retired; (2) `csp-solver/CHANGELOG.md`'s dated `0.2.0` release note (`13.36×`, `26/113→0/113`) — CHANGELOG-immutable, exempt exactly as the `0/113` carve-out (§4); (3) `csp-solver/examples/gac_timing_probe.rs`'s doc-comment, the committed fix-source naming the "13.36×-class" figure it supersedes.
+
 ## 4. Standing quote rules
 
 - Lane 24's "still live / materialized" verdicts: quote-only-with-reverification (grade C).

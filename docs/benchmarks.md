@@ -40,7 +40,7 @@ The unified search kernel is verified sound, not merely fast. Evidence from `evi
 Local test suite, run here:
 
 ```
-cargo test --workspace  →  151 passed, 0 failed, 6 ignored (20 test binaries)
+cargo test --workspace  →  151 passed, 0 failed, 6 ignored (18 test binaries)
 # measured at c14995eb, Apple M5 Max, 2026-07-10
 ```
 

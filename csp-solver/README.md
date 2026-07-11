@@ -21,15 +21,15 @@ pre-deletion state is tagged `pre-morph-excision`; the general-purpose
 `AssignmentBuilder` surface morph was built on stays here, and morph now consumes
 `csp-solver` as an ordinary crates.io dependency. See `CHANGELOG.md`.
 
-The workspace source is at `0.3.0`; crates.io still carries `0.2.0` — publication
-rides the release gate. Edition 2024, stable toolchain (MSRV 1.88).
+The workspace source and crates.io are both at `0.3.0` — published. Edition 2024,
+stable toolchain (MSRV 1.88).
 
 ## Install
 
 ```toml
 # Rust — Cargo.toml
 [dependencies]
-csp-solver = "0.2"
+csp-solver = "0.3"
 ```
 
 ```bash
@@ -99,7 +99,7 @@ enumerate-all (`max_solutions = usize::MAX`) has a defined, pruning-invariant se
 GAC all-different (Régin 1994) is default-ON for any `AllDifferent` with at least
 `GAC_MIN_PARTICIPANTS = 3` live participants (`solver/gac/mod.rs`); a
 `GAC_IN_ALLDIFF_ENABLED` atomic toggles it. It's a net win on the sudoku corpus
-but not uniformly — 3 of 5 named hard 9×9 boards run 1.3–2.5× slower with it on.
+but not uniformly — 3 of 5 named hard 9×9 boards run 1.8–3.3× slower with it on.
 Stamped tables live in [`../docs/benchmarks.md`](../docs/benchmarks.md).
 
 ### Difficulty casing
@@ -194,7 +194,7 @@ each implement `Domain`, some `LatticeDomain`. See
 ## Build & Test
 
 ```bash
-cargo test --workspace                     # 151 passed, 0 failed, 6 ignored (measured at c14995eb, Apple M5 Max, 2026-07-10)
+cargo test --workspace                     # 151 passed, 0 failed, 6 ignored — 18 test binaries (measured at 3b75eca2, Apple M5 Max, 2026-07-10)
 cargo bench                                # criterion — see below
 maturin develop --release --features py    # build the PyO3 wheel (Python ≤3.13)
 ```
@@ -207,7 +207,7 @@ cargo run --release --example generate_templates -- <N> <difficulty> <count>
 ```
 
 **Tests** live in `tests/` (blackbox integration, one file per concern) and
-`tests-py/` (the installed-wheel pytest suite: 27 passed, 2 skipped). There are
+`tests-py/` (the installed-wheel pytest suite: 27 passed, 2 skipped — 27/0 post-W4). There are
 **no** inline `#[cfg(test)]` modules — the whitebox exception is revoked; every
 check is blackbox against the public surface.
 

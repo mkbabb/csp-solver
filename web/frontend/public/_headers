@@ -87,11 +87,14 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# The more-specific /assets/*.wasm merges over /assets/* above. Pinning
-# Content-Type: application/wasm keeps `WebAssembly.instantiateStreaming` on the
-# happy path AND — because the W6 service worker stores the Response *with its
-# headers* — guarantees the offline, cache-served wasm still carries the right
-# MIME for init(). MANDATORY, not optional (Q4).
+# Cloudflare Pages APPENDS matching-rule headers — it does not replace — so the
+# more-specific /assets/*.wasm stanza must NOT restate Cache-Control: doing so
+# doubled it on the live edge (`public, max-age=31536000, immutable, public,
+# max-age=31536000, immutable`; G8-H2). The /assets/* immutable rule above
+# already covers .wasm caching. This stanza pins only Content-Type: application/
+# wasm, which keeps `WebAssembly.instantiateStreaming` on the happy path AND —
+# because the W6 service worker stores the Response *with its headers* —
+# guarantees the offline, cache-served wasm still carries the right MIME for
+# init(). MANDATORY, not optional (Q4). Doubled-directive fix added at T3-W2.
 /assets/*.wasm
   Content-Type: application/wasm
-  Cache-Control: public, max-age=31536000, immutable

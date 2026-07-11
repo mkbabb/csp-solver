@@ -60,6 +60,12 @@ Vue 3 Composition API—no router, no state library. `src/pencil/` carries the h
 
 ## Development
 
+| Tool | Version | Used for |
+|---|---|---|
+| cargo | stable, MSRV 1.88 (`rust-toolchain.toml`) | the engine + wasm crate |
+| uv | Python 3.13 (host 3.14 is PyO3-incompatible) | the wheel-contract suite |
+| npm | ≥ 11 (npm 10 mis-resolves the lockfile) | frontend + e2e |
+
 ```bash
 # Rust engine — the Cargo workspace root is the repo root
 cargo test --workspace && cargo bench
@@ -73,13 +79,13 @@ cd web/frontend && npm install && npm run dev
 
 ## Testing
 
-All counts measured 2026-07-10, Apple M5 Max, this tree.
+All counts measured at the G6 baseline `3b75eca2` (code byte-identical at the W0 base `0c044ef6`), Apple M5 Max, 2026-07-10.
 
 ```bash
-# Rust — 151 passed, 0 failed, 6 ignored (20 test binaries)
+# Rust — 151 passed, 0 failed, 6 ignored (18 test binaries)
 cargo test --workspace
 
-# Python wheel-contract — 27 passed, 2 skipped
+# Python wheel-contract — 27 passed, 2 skipped (27/0 post-W4—the two skips retire with the Timeout reserve)
 cd csp-solver/tests-py && uv run --no-sync pytest
 
 # e2e — 33 Playwright tests in 5 files
@@ -104,13 +110,13 @@ A Cloudflare Pages static deploy. Solving and generation never leave the visitor
 
 | Artifact | Registry | Version |
 |---|---|---|
-| `csp-solver` | crates.io | 0.2.0 published; 0.3.0 staged in-tree—publication rides the W-GATE recertification |
+| `csp-solver` | crates.io | 0.3.0—published |
 | `@mkbabb/csp-solver-wasm` | npm | 0.2.0—the SPA consumes the file:-linked lean build, not the registry package |
 | `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.7.0 |
 
 ## Performance
 
-`docs/benchmarks.md` carries the reproducible, stamped numbers. Headline: GAC default-ON gives a 13.36× aggregate over the 112-board A/B corpus, with a disclosed minority cost—3 of 5 named hard 9×9 boards run 1.3–2.5× slower ON. Inherited-trust flag: those ratios rest on a deleted scratch harness; the committed `gac_ab_corpus` example counts false-UNSATs (0/50 on the post-W4 bank), and a first-party timing probe rides the W-GATE recertification. No cross-language speedup headline and no profile-percentage band are claimed—the pre-tranche figures were non-reproducible and are retired.
+`docs/benchmarks.md` carries the reproducible, stamped numbers. Headline: GAC default-ON gives a 12.6–12.7× aggregate over the 50-board post-W4 A/B corpus, with a disclosed minority cost—3 of 5 named hard 9×9 boards run 1.8–3.3× slower ON. The timing figures are first-party, from the committed `gac_timing_probe` example (`ede25188`), not an inherited scratch harness; the sibling `gac_ab_corpus` is the soundness gate (0/50 false-UNSAT in both GAC states). No cross-language speedup headline and no profile-percentage band are claimed—the pre-tranche figures were non-reproducible and are retired.
 
 ## Key conventions
 
@@ -127,6 +133,10 @@ A Cloudflare Pages static deploy. Solving and generation never leave the visitor
 - Hopcroft, J. E. & Karp, R. M. (1973). "An n^(5/2) algorithm for maximum matchings in bipartite graphs." *SIAM J. Comput.*, 2(4), 225–231.
 - Tarjan, R. E. (1972). "Depth-first search and linear graph algorithms." *SIAM J. Comput.*, 1(2), 146–160.
 - Boussemart, F. et al. (2004). "Boosting systematic search by weighting constraints." *ECAI-04*, 146–150.
+
+## Contributing
+
+Branch, test, PR—the full flow, plus the release posture, is in [`CONTRIBUTING.md`](./CONTRIBUTING.md). Build and test recipes single-home in [`csp-solver/README.md`](csp-solver/README.md).
 
 ## License
 

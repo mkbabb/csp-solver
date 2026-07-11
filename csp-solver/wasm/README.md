@@ -107,3 +107,7 @@ csp-solver/wasm/
 ├── tests/             # dualization, futoshiki_parity (wasm-bindgen-test)
 └── pkg/               # wasm-pack output, committed alongside source
 ```
+
+## License
+
+[MIT](./LICENSE) © 2026 Mike Babb.
