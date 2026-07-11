@@ -6,16 +6,21 @@
  * the peek gesture lives in the shared `useAnswerKeyPeek` composable, only the rendered laminate
  * is pencil.
  */
-import { computed, defineAsyncComponent, onMounted, ref } from "vue";
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from "vue";
 import { useSudoku } from "./composables/useSudoku";
 import { prewarm } from "./solver/useSolver";
 import SudokuBoard from "./SudokuBoard/SudokuBoard.vue";
 import ControlPanel from "./ControlPanel/ControlPanel.vue";
 import DigitPad from "@games/shared/DigitPad.vue";
+import DrawerTab from "@games/shared/DrawerTab.vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
 import { useStackedLayout } from "@games/shared/useStackedLayout";
+import {
+    registerDrawerScene,
+    useControlsDrawer,
+} from "@games/shared/useControlsDrawer";
 // Async + mounted-on-first-peek: keeps the laminate's ~227 LOC out of the main chunk (the W9
 // bundle gate) — same discipline as FilterTuner. The chunk loads on the first K/hold,
 // imperceptible locally. (Futoshiki imports it statically since its whole scene already rides a
@@ -72,6 +77,26 @@ const isStacked = useStackedLayout();
 const padActive = computed(() => isCoarse.value && isStacked.value);
 const boardRef = ref<InstanceType<typeof SudokuBoard> | null>(null);
 const cellFocused = ref(false);
+
+// ── The drawer (T3-W12 §6) ───────────────────────────────────────────
+// The row-regime rail becomes the pencil case: the tab (inside .board-peek-host, so
+// it rides the board's glide) toggles; the shared composable owns state, persistence,
+// the ~480ms FLIP glide, and focus. Esc closes from within (the rail's keydown).
+const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer();
+const peekHost = ref<HTMLElement | null>(null);
+const railEl = ref<HTMLElement | null>(null);
+const panelEl = ref<HTMLElement | null>(null);
+const drawerTab = ref<InstanceType<typeof DrawerTab> | null>(null);
+let unregisterDrawer: (() => void) | null = null;
+onMounted(() => {
+    unregisterDrawer = registerDrawerScene(() => ({
+        host: peekHost.value,
+        rail: railEl.value,
+        panel: panelEl.value,
+        tab: (drawerTab.value?.el as HTMLElement | undefined) ?? null,
+    }));
+});
+onUnmounted(() => unregisterDrawer?.());
 </script>
 
 <template>
@@ -79,7 +104,7 @@ const cellFocused = ref(false);
         <!-- Board + the held answer-key laminate (a sibling over the board, never inside the
          grid's filtered group — kill-gate rule 6). The host tightly wraps the board box so
          the laminate's inset:0 aligns to .board-cells. -->
-        <div class="board-peek-host">
+        <div ref="peekHost" class="board-peek-host">
             <SudokuBoard
                 ref="boardRef"
                 :leaving="props.leaving"
@@ -114,6 +139,10 @@ const cellFocused = ref(false);
                 :subgrid-size="sudoku.size.value"
                 :original-given-cells="sudoku.originalGivenCells.value"
             />
+            <!-- The pull-tab (T3-W12 §6): the tucked case's tongue at the board's right
+                 edge — inside the peek host so it rides the glide, outside the board
+                 wrapper's containment (§2 P2). ≥1024 only (its own display gate). -->
+            <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
         </div>
 
         <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
@@ -149,11 +178,20 @@ const cellFocused = ref(false);
             </HandDrawnOutline>
         </div>
 
-        <!-- Row-regime sidebar (≥lg — R3: iPad portrait clips at md): controls card, vertically
-         centered against the board (H8-centering-only). -->
-        <div class="scene-controls hidden lg:flex lg:flex-col lg:items-start">
+        <!-- Row-regime sidebar (≥lg — R3: iPad portrait clips at md): controls card,
+         vertically centered against the board (H8-centering-only). T3-W12 §6: the rail
+         IS the drawer — closed it parks under the board (scene.css), inert +
+         visibility:hidden at rest (no invisible tab stops, W11 UI-6); Esc from within
+         closes and returns focus to the tab. -->
+        <div
+            id="controls-drawer"
+            ref="railEl"
+            class="scene-controls hidden lg:flex lg:flex-col lg:items-start"
+            :inert="drawerInert"
+            @keydown.escape.stop="closeDrawer"
+        >
             <HandDrawnOutline :stroke-width="3">
-                <div class="controls-card rounded-xl bg-card p-5">
+                <div ref="panelEl" class="controls-card rounded-xl bg-card p-5">
                     <ControlPanel
                         :size="sudoku.size.value"
                         :difficulty="sudoku.difficulty.value"

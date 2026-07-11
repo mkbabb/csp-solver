@@ -1,0 +1,35 @@
+{
+  "instrument": "probe-perf-trace.mjs — CDP Tracing (devtools.timeline), 10s settled traces, chromium headless 1440x806, against the live :3001 dev server; one instrument for every run",
+  "protocol": "A-B-A stash-interleave: current tree (A1) -> `git stash push -u -- web/frontend/src web/frontend/e2e docs/animation.md` -> HEAD 53398825 baseline (B) -> `git stash pop` -> current tree (A2); serving fingerprinted before each run (grain-outline count 3/0/3)",
+  "runs": {
+    "current-A1": {
+      "when": "2026-07-11T16:04:17.776Z",
+      "unsolved": { "paints_s": 48, "recalc_s": 8, "layout_s": 8, "commits_s": 118.6, "maxPaintGapMs": 133, "gaps50ms": 79 },
+      "solved": { "paints_s": 61.8, "recalc_s": 10.6, "layout_s": 10.6, "commits_s": 117.8, "maxPaintGapMs": 134, "gaps50ms": 84 },
+      "solvedScrollHeight": 806, "innerHeight": 806
+    },
+    "baseline-HEAD": {
+      "when": "2026-07-11T16:05:30.625Z",
+      "unsolved": { "paints_s": 287, "recalc_s": 133.9, "layout_s": 133.9, "commits_s": 133.9, "maxPaintGapMs": 19, "gaps50ms": 0 },
+      "solved": { "paints_s": 285.9, "recalc_s": 120, "layout_s": 120, "commits_s": 119.8, "maxPaintGapMs": 27, "gaps50ms": 0 },
+      "solvedScrollHeight": 844, "innerHeight": 806
+    },
+    "current-A2": {
+      "when": "2026-07-11T16:06:48.064Z",
+      "unsolved": { "paints_s": 47.8, "recalc_s": 8, "layout_s": 8, "commits_s": 134.4, "maxPaintGapMs": 130, "gaps50ms": 79 },
+      "solved": { "paints_s": 60.5, "recalc_s": 9.9, "layout_s": 9.9, "commits_s": 134.1, "maxPaintGapMs": 129, "gaps50ms": 82 },
+      "solvedScrollHeight": 806, "innerHeight": 806
+    }
+  },
+  "verdict": {
+    "paints_ratio_unsolved": "48/287 = 16.7% of interleaved baseline (bar: <= 33.3%)",
+    "paints_ratio_solved": "61.8/285.9 = 21.6% of interleaved baseline (bar: <= 33.3%)",
+    "twinkle_recalc": "8-10.6/s vs 120-133.9/s baseline — per-frame recalc regime gone",
+    "idle_frames": "79-84 paint gaps >= 50ms per 10s (max 129-134ms) vs ZERO at baseline — the page idles",
+    "occlusion": "solved scrollHeight 806 == innerHeight (baseline 844 > 806 — the owner's fold overflow reproduced at B, eliminated at A)"
+  },
+  "residual": {
+    "viewport_width_damage_unions": "16/s viewport-WIDTH (1440x816) damage-union paints remain at steady state vs 258-280/s full-viewport at baseline (~94% elimination). Elimination probe (probe-elim-trace.mjs): hiding .controls-card drops it 16->8/s and total paints 48->32/s — the controls-card HandDrawnOutline's beat-synced boil unions its damage across the root layer with a co-tick painter on the far flank; the remaining 8/s is a same-mechanism union, not a full-viewport raster. The '~0 full-viewport' target reads as viewport-damage elimination per the wave's risk clause; strict-zero is NOT met and is recorded here.",
+    "note": "the 16777215x16777215 clip signatures in raw traces are unclipped-paint sentinels (0xFFFFFF), not viewport rasters; they were excluded from the wide-clip count"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "instrument": "probe-elim-trace.mjs — 5s CDP traces, style-injected display:none per condition, settled unsolved page at :3001",
+  "round1": {
+    "control": { "paints_s": 48, "wide1440_s": 16 },
+    "no-toggle": { "paints_s": 40, "wide1440_s": 16 },
+    "no-dividers": { "paints_s": 48, "wide1440_s": 16 },
+    "no-board-cells": { "paints_s": 48, "wide1440_s": 16 },
+    "no-logo": { "paints_s": 48, "wide1440_s": 16 }
+  },
+  "round2": {
+    "control": { "paints_s": 47.6, "wide1440_s": 16 },
+    "no-tab": { "paints_s": 40, "wide1440_s": 16 },
+    "no-header": { "paints_s": 47.8, "wide1440_s": 23.8 },
+    "no-controls": { "paints_s": 32, "wide1440_s": 8 },
+    "no-margin": { "paints_s": 47.6, "wide1440_s": 16 }
+  },
+  "findings": [
+    "hiding .board-cells no longer moves the paint rate AT ALL (48 -> 48) — at the a1 baseline it HALVED paints; P1+P2 fully absorbed the glyph-boil regime, the dominant painter is eliminated",
+    "the toggle contributes 8 paints/s (48 -> 40), its celestial fenced small — down from ~25/s at a1",
+    "the controls card contributes 16 paints/s and half the viewport-width damage unions (16 -> 8/s); its HandDrawnOutline boil is beat-synced, so its damage unions with a co-tick painter across the root layer",
+    "the remaining 8/s wide unions are the same union mechanism, not full-viewport rasters"
+  ]
+}

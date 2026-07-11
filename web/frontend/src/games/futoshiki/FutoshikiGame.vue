@@ -9,16 +9,21 @@
  * composable (the laminate is board-shape-agnostic by design — G5), only the rendered laminate
  * is pencil.
  */
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useFutoshiki } from "./composables/useFutoshiki";
 import { prewarm } from "./solver/useSolver";
 import FutoshikiBoard from "./FutoshikiBoard/FutoshikiBoard.vue";
 import ControlPanel from "./ControlPanel/ControlPanel.vue";
 import DigitPad from "@games/shared/DigitPad.vue";
+import DrawerTab from "@games/shared/DrawerTab.vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
 import { useStackedLayout } from "@games/shared/useStackedLayout";
+import {
+    registerDrawerScene,
+    useControlsDrawer,
+} from "@games/shared/useControlsDrawer";
 // Statically imported (not async): this whole FutoshikiGame scene is already a lazy chunk, so
 // the laminate rides that chunk, never the main bundle. (Sudoku is eager, so it keeps the
 // laminate async — either way `{immediate:true}` lays it down on mount, P2-L5 §R6(a).)
@@ -66,12 +71,29 @@ const isStacked = useStackedLayout();
 const padActive = computed(() => isCoarse.value && isStacked.value);
 const boardRef = ref<InstanceType<typeof FutoshikiBoard> | null>(null);
 const cellFocused = ref(false);
+
+// ── The drawer (T3-W12 §6) — twin of SudokuGame's wiring (D16) ───────
+const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer();
+const peekHost = ref<HTMLElement | null>(null);
+const railEl = ref<HTMLElement | null>(null);
+const panelEl = ref<HTMLElement | null>(null);
+const drawerTab = ref<InstanceType<typeof DrawerTab> | null>(null);
+let unregisterDrawer: (() => void) | null = null;
+onMounted(() => {
+    unregisterDrawer = registerDrawerScene(() => ({
+        host: peekHost.value,
+        rail: railEl.value,
+        panel: panelEl.value,
+        tab: (drawerTab.value?.el as HTMLElement | undefined) ?? null,
+    }));
+});
+onUnmounted(() => unregisterDrawer?.());
 </script>
 
 <template>
     <div class="app-layout" :class="{ 'scene-leaving': props.leaving }">
         <!-- Board + the held answer-key laminate (a sibling over the board) -->
-        <div class="board-peek-host">
+        <div ref="peekHost" class="board-peek-host">
             <FutoshikiBoard
                 ref="boardRef"
                 :leaving="props.leaving"
@@ -105,6 +127,9 @@ const cellFocused = ref(false);
                 :subgrid-size="futoshiki.boardSize.value"
                 :original-given-cells="futoshiki.originalGivenCells.value"
             />
+            <!-- The pull-tab (T3-W12 §6) — twin of SudokuGame's: inside the peek host
+                 (rides the glide), outside the board wrapper's containment (§2 P2). -->
+            <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
         </div>
 
         <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
@@ -138,10 +163,17 @@ const cellFocused = ref(false);
         </div>
 
         <!-- Row-regime sidebar (≥lg — R3): controls card, vertically centered against the
-         board (H8-centering-only). -->
-        <div class="scene-controls hidden lg:flex lg:flex-col lg:items-start">
+         board (H8-centering-only). T3-W12 §6: the rail IS the drawer — twin of
+         SudokuGame's (parked/inert/hidden closed; Esc closes from within). -->
+        <div
+            id="controls-drawer"
+            ref="railEl"
+            class="scene-controls hidden lg:flex lg:flex-col lg:items-start"
+            :inert="drawerInert"
+            @keydown.escape.stop="closeDrawer"
+        >
             <HandDrawnOutline :stroke-width="3">
-                <div class="controls-card rounded-xl bg-card p-5">
+                <div ref="panelEl" class="controls-card rounded-xl bg-card p-5">
                     <ControlPanel
                         :board-size="futoshiki.boardSize.value"
                         :loading="futoshiki.loading.value"

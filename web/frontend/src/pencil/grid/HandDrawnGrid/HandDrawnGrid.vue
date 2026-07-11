@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch, nextTick, ref } from 'vue';
-import { useBoilFrame, heldFrameCount } from '@mkbabb/pencil-boil';
-import { generateGridBoilFrames } from '../gridPaths';
-import { BOIL_CONFIG } from '@pencil/config/pencilConfig';
-import { usePathAnimation } from './usePathAnimation';
-import type { AnimationState } from '@pencil/types';
+import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
+import { heldFrameCount } from "@mkbabb/pencil-boil";
+import { generateGridBoilFrames } from "../gridPaths";
+import { BOIL_CONFIG, beatsFor } from "@pencil/config/pencilConfig";
+import { useBeatFrame } from "@pencil/composables/boilBeat";
+import { usePathAnimation } from "./usePathAnimation";
+import type { AnimationState } from "@pencil/types";
 
 const props = defineProps<{
     boardSize: number;
@@ -13,32 +14,41 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-    (e: 'animationComplete', state: 'drawn' | 'hidden'): void;
+    (e: "animationComplete", state: "drawn" | "hidden"): void;
 }>();
 
 const svgRef = ref<SVGSVGElement | null>(null);
-const { pathsVisible, animateDrawIn, animateErase, showInstant, cleanup } = usePathAnimation(svgRef);
+const { pathsVisible, animateDrawIn, animateErase, showInstant, cleanup } =
+    usePathAnimation(svgRef);
 
 const VIEWBOX_SIZE = 1000;
 
 // Generate boil frame variants whenever board size changes
 const boilFrames = computed(() =>
     generateGridBoilFrames(
-        props.boardSize, props.subgridSize, VIEWBOX_SIZE, 42,
-        BOIL_CONFIG.frameCount, BOIL_CONFIG.frameBoil, BOIL_CONFIG.subgridBoil, BOIL_CONFIG.cellBoil,
-    )
+        props.boardSize,
+        props.subgridSize,
+        VIEWBOX_SIZE,
+        42,
+        BOIL_CONFIG.frameCount,
+        BOIL_CONFIG.frameBoil,
+        BOIL_CONFIG.subgridBoil,
+        BOIL_CONFIG.cellBoil,
+    ),
 );
 
-// Path-based boil: cycle frame index at ~6.7fps, on the unified rAF scheduler
+// Path-based boil on the SHARED beat (T3-W12 §2 P1): the frame index advances on the
+// one app-wide beat window instead of a privately-anchored subscriber, so the grid's
+// swap lands in the same dirty frame as every other boil.
 // heldFrameCount: collapses to 1 while the answer-key laminate holds the page —
-// the scheduler's frameCount<=1 stop path freezes the boil in place (W9 §2).
-const { currentFrame: boilFrame } = useBoilFrame(
+// useBeatFrame's total<=1 path freezes the boil in place (W9 §2, contract kept).
+const boilFrame = useBeatFrame(
     heldFrameCount(() => BOIL_CONFIG.frameCount),
-    () => BOIL_CONFIG.intervalMs,
+    () => beatsFor(BOIL_CONFIG.intervalMs),
 );
 
 // Freeze on frame 0 during draw-in (strokeDashoffset needs stable paths)
-const activeFrame = computed(() => pathsVisible.value ? boilFrame.value : 0);
+const activeFrame = computed(() => (pathsVisible.value ? boilFrame.value : 0));
 
 // Current frame's path data (transition layer — draw-in/erase only, see template)
 const currentPaths = computed(() => {
@@ -46,8 +56,8 @@ const currentPaths = computed(() => {
     const bf = boilFrames.value;
     return {
         frame: bf.frame[f],
-        subgridLines: bf.subgridLines.map(line => line[f]),
-        cellLines: bf.cellLines.map(line => line[f]),
+        subgridLines: bf.subgridLines.map((line) => line[f]),
+        cellLines: bf.cellLines.map((line) => line[f]),
     };
 });
 
@@ -69,23 +79,23 @@ function pathsForFrame(f: number) {
     const bf = boilFrames.value;
     return {
         frame: bf.frame[f],
-        subgridLines: bf.subgridLines.map(line => line[f]),
-        cellLines: bf.cellLines.map(line => line[f]),
+        subgridLines: bf.subgridLines.map((line) => line[f]),
+        cellLines: bf.cellLines.map((line) => line[f]),
     };
 }
 
 const steadyFrames = computed(() =>
-    Array.from({ length: BOIL_CONFIG.frameCount }, (_, f) => pathsForFrame(f))
+    Array.from({ length: BOIL_CONFIG.frameCount }, (_, f) => pathsForFrame(f)),
 );
 
-const showTransitionLayer = computed(() => props.animState !== 'drawn');
-const showSteadyLayers = computed(() => props.animState === 'drawn');
+const showTransitionLayer = computed(() => props.animState !== "drawn");
+const showSteadyLayers = computed(() => props.animState === "drawn");
 
 async function doDrawIn() {
     await nextTick();
     requestAnimationFrame(async () => {
         await animateDrawIn();
-        emit('animationComplete', 'drawn');
+        emit("animationComplete", "drawn");
     });
 }
 
@@ -96,21 +106,21 @@ async function doErase() {
     // would find the wrong (or no) elements mid-swap.
     await nextTick();
     await animateErase();
-    emit('animationComplete', 'hidden');
+    emit("animationComplete", "hidden");
 }
 
 watch(
     () => props.animState,
     (state) => {
-        if (state === 'drawing') doDrawIn();
-        else if (state === 'erasing') doErase();
+        if (state === "drawing") doDrawIn();
+        else if (state === "erasing") doErase();
     },
 );
 
 onMounted(() => {
-    if (props.animState === 'drawing') {
+    if (props.animState === "drawing") {
         doDrawIn();
-    } else if (props.animState === 'drawn') {
+    } else if (props.animState === "drawn") {
         showInstant();
     }
 });
@@ -138,7 +148,12 @@ onUnmounted(() => {
              false until it completes; the erase was the last filtered animator).
              The settled look is owned entirely by the pre-baked steady siblings. -->
         <g v-if="showTransitionLayer">
-            <!-- Frame -->
+            <!-- Frame. The frame-line is the grid's only CLOSED path, and its four
+                 independently-seeded sides never share a corner point — at the M/Z
+                 vertex the endpoint mismatch (≈1.2px) extrudes a mitered barb under
+                 the SVG default linejoin (the owner's board-artifact.png, T3-W12 §5).
+                 Round join collapses it to a soft hand-drawn nub. Open subgrid/cell
+                 lines need nothing. -->
             <path
                 :d="currentPaths.frame"
                 class="grid-line frame-line"
@@ -147,6 +162,7 @@ onUnmounted(() => {
                 stroke-width="12"
                 stroke-opacity="0.95"
                 stroke-linecap="round"
+                stroke-linejoin="round"
             />
 
             <!-- Subgrid lines -->
@@ -197,6 +213,7 @@ onUnmounted(() => {
                     stroke-width="12"
                     stroke-opacity="0.95"
                     stroke-linecap="round"
+                    stroke-linejoin="round"
                 />
                 <path
                     v-for="(d, i) in paths.subgridLines"

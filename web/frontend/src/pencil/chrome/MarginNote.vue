@@ -30,8 +30,13 @@ withDefaults(
     tone?: 'graphite' | 'teacher-red' | 'gold-star'
     /** Preformatted tally line below the voice, outside the live region. */
     meta?: string
+    /** T3-W12 §1 R1 — visually quiet: the margin vignette carries the verdict's
+     *  paint, so the strip renders NOTHING below the board (no fold overflow) while
+     *  the live region keeps its DOM home and still announces (sr-only clip, never
+     *  visibility/display — those would drop it from the a11y tree mid-announce). */
+    quiet?: boolean
   }>(),
-  { tone: 'graphite' },
+  { tone: 'graphite', quiet: false },
 )
 
 // The celebration sticker's wonky 5-pointer (CelebrationStar.vue STAR_D) at half
@@ -41,7 +46,7 @@ const NOTE_STAR_D =
 </script>
 
 <template>
-  <div class="margin-note-block">
+  <div class="margin-note-block" :class="{ 'is-quiet': quiet }">
     <p class="margin-note" :class="tone" role="status" aria-live="polite" aria-atomic="true">
       <span v-if="text" :key="text" class="margin-note-ink">
         <!-- The inline star: gold verdicts only, decorative (the text carries the grade). -->
@@ -73,6 +78,19 @@ const NOTE_STAR_D =
 <style scoped>
 .margin-note-block {
   pointer-events: none;
+}
+
+/* Quiet (T3-W12 §1 R1): the classic clip pattern — zero visual footprint, zero
+   contributed height (the gold path renders nothing below the board and the fitted
+   h-screen page stays unscrolled), while the role=status region stays in the a11y
+   tree and keeps announcing the grade. */
+.margin-note-block.is-quiet {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .margin-note {

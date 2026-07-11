@@ -1,0 +1,20 @@
+{
+  "lane": "T3-W12 D1 — completion re-formulation (R1) + settled-page perf rows",
+  "rig": "Playwright chromium headless, 1440x806 CSS / DPR 2, dev server :3001 (like-for-like with the a1 method); 11s settled windows, devtools.timeline Paint counts",
+  "note": "baseline captured on the SAME tree/server immediately before D1's edits (other W12 lanes' work included in both sides) — the interleave isolates D1's rows without stashing sibling lanes' uncommitted work; a1's recorded 112 paints/s was the owner's 120Hz display, mid-wave tree",
+  "traces": {
+    "baseline_solved":   { "paints_s": 281.6, "fullvp_s": 128.8, "layout_tree_s": 116.7, "scrollHeight": 844 },
+    "baseline_unsolved": { "paints_s": 281.6, "fullvp_s": 137.1, "layout_tree_s": 131.3, "scrollHeight": 816 },
+    "final_solved":      { "paints_s": 53.7,  "fullvp_s": 24.1,  "layout_tree_s": 10.8,  "scrollHeight": 806 },
+    "final_unsolved":    { "paints_s": 40.0,  "fullvp_s": 16.0,  "layout_tree_s": 8.0,   "scrollHeight": 816 }
+  },
+  "gates": {
+    "paints_third_of_baseline": "53.7/281.6 = 19% solved, 40/281.6 = 14% unsolved — PASS (<= 33%)",
+    "fold": "solved scrollHeight 806 <= 806 viewport — the owner's completion-area occlusion CLEARED (was 844)",
+    "idle_frames": "UpdateLayoutTree 116.7/s -> 10.8/s solved; the pipeline idles between 8Hz beats",
+    "fullvp_residual": "128.8/s -> 24.1/s; the remainder is infinite-clip filter-raster accounting landing at beat rate (controls-card outline ~8/s, toggle ~8/s, ~8/s base) — promotion probes (elim3) showed the record is attribution, not screen-wide raster; recorded for the wave gate",
+    "prm": "reducedMotion=reduce: star instantly drawn (dasharray none), heart present, boil frame frozen over 700ms, scrollHeight 806",
+    "vignette_rungs": "1440: star 7rem bbox 119.5px, strip 1x1 sr-only; 1280: star 6.5rem, vignette left edge 0.57px on-page; 1100: corner-press docked top-RIGHT straddling the frame; 900 stacked: in flow centered, star 4.5rem",
+    "e2e": "affordances 9/9, sudoku-interaction+futoshiki+digit-pad+permalink 20/20, visual-regression+throttled-void 8/8 — chromium, PLAYWRIGHT_BASE_URL=:3001"
+  }
+}

@@ -1,0 +1,44 @@
+# T3-W12 GATE — owner-audit addendum, certified
+
+Gate lane (Fable, frontend-design loaded), 2026-07-11. Tree: HEAD `53398825` (W11) + the W12 working set (uncommitted, per the no-commit rule). Live instance: the owner's dev server at `:3001`, fingerprint-verified serving the working tree before every probe (`grain-outline` count 3). Probes and raw outputs live beside this file.
+
+## The owner-shot ledger — five reproductions, side-by-side
+
+| # | Owner shot (`evidence/owner-audit-2/`) | Gate reproduction | Verdict |
+|---|---|---|---|
+| 1 | `completion-area.png` — star/heart caption cluster clipped at the fold, page scrolls | `shots/gate-completion-solved-1440x806.png` — the margin vignette: star at grading-sticker scale in the teacher's margin, voice + ONE caption rung ("0 backtracks — 1ms"), nothing below the board; `shots/gate-heart-corner.png` — the heart crowns the corner above the frame | **CLEARED** |
+| 2 | `boil-hairline.png` — eroded hairline stroke, long-wavelength waver | `shots/gate-controls-card-1440.png` + `-375.png` — stroke body restored (grain-outline 0.13/0.75, outset 4, square overshoot corners), registration hugging at both hosts; matches `addendum/a2-shots/live-controls-card-fixspec.png` in stroke character | **CLEARED** |
+| 3 | `sun-spiral.png` — `#DF9A1E` coil muddied into the disc | `shots/gate-sun-settled.png` — the yellow-on-orange pop restored; live palette probe: `hasF0B030: true`, `pencilConfig.ts:52` `spiral: "#F0B030"`; S1 geometry (recut coil, sw 9) untouched; `rays`/`sparkle` untouched | **CLEARED — #F0B030 confirmed** |
+| 4 | `board-artifact.png` — mitered barb extruding from the TL corner | `shots/gate-tl-zoom.png` — soft round nub; `stroke-linejoin="round"` on both frame paths (`HandDrawnGrid.vue:165`, `:216`); 11 closed paths carry it live | **CLEARED** |
+| 5 | the "completely ruined" toggle verdict | filmstrip: `d3-shots/to-dark-beat-60ms` (theme already dark, crescent rising BEHIND the still-whirling sun — the double exposure alive), `-350ms` (incoming dominant, outgoing a whirling speck), `-600ms` (overshoot settle, first stars), `-865ms` (pop complete, plush land); reverse direction symmetric (`to-light-beat-*`) | **CLEARED — design-authority verdict below** |
+
+**The toggle verdict (design authority).** The re-cut is the BEFORE whirl by construction — `transform 800ms cubic-bezier(0.34,1.56,0.64,1)` with the simultaneous crossfade, verbatim — and the Yoshi energy is folded in exactly where the wave licensed it: the 120ms anticipation squash overlapping the whirl's first beat, the star pop landing inside the spring's overshoot, and the 950ms `plush-land` tail (identity to 84% = 798ms, then scaleX 1.05/scaleY 0.95 → 1). The stage is never empty (max co-opacity **0.93** at t=278ms), the theme flips at click (dark at t=60ms in the filmstrip; `tenFlip` truthful), and the gesture ends like a plush toy set down. Against Set-and-Rise's serialized ceremony, this is the storybook page-turn the owner asked for. It clears the "ruined" verdict.
+
+## The gate table
+
+| Gate | Bar | Quoted output | Verdict |
+|---|---|---|---|
+| owner shots | all FIVE reproductions side-by-side | ledger above; spiral reads `#F0B030` (S2 reverted, S1 kept) | **PASS** |
+| completion | ruled rung; paints/s ≤ ⅓ baseline (stash-interleaved); no occlusion at the audit viewport | star **119.5px** AABB (7rem + −4° tilt) in the ≥1280 vignette; **2 text rungs** ("solved it!" + "0 backtracks — 1ms"); heart crowning the corner (`gate-heart-corner.png`); solved `scrollHeight 806 == innerHeight 806` (interleaved baseline: **844 > 806** — the owner's overflow reproduced at B, eliminated at A); corner-press docks top-right (`d1-shots/corner-1100-v2.png`); celebration survives drawer toggling (`closedStar: true, reopenStar: true`) and remounts (state-derived `celebrating`) | **PASS** |
+| settled perf | ≤ ⅓ interleaved baseline; idle frames; `transition-all` gone; twinkle recalc gone | A-B-A one-instrument interleave (`perf-interleave.json`): unsolved **48 vs 287 = 16.7%**, solved **61.8 vs 285.9 = 21.6%** (bar ≤33.3%); idle gaps ≥50ms: **79–84**/10s vs **0** at baseline; recalc **8–10.6/s vs 120–133.9/s**; `transition-[box-shadow]` (`SudokuBoard.vue:175`); A2 replicates A1 (47.8/60.5). Residual, disclosed: **16/s viewport-WIDTH damage unions** remain vs 258–280/s full-viewport at baseline (~94% elimination; controls-card outline beat-union, `elim-probe-results.json`) — strict "~0 full-viewport" not met, outcome bar (viewport-damage elimination) met | **PASS** (residual quoted) |
+| outline | registration hugs at every host incl. 375 AND the stroke reads before-present, simultaneously | `gate-controls-card-1440.png`/`-375.png`: stroke body + 4px air + square overshoots at BOTH; px-native probe `dW/dH = -8/-8` (= 2×outset 4) at 1440 and 375; `grain-outline` 0.13/0.75/seed 2/margin 5 (`pencilConfig.ts:200`), `outlineBoilPx 0.45`, radius 0 default; `grain-static` values byte-identical (0.04/2.5) | **PASS** |
+| toggle | ~950ms traced; 10-flip + PRM probes quoted; docs/animation.md row | crest traced: whirl 800ms + `plush-land` 950ms keyframe (tail 798→950ms); beats: co-opacity **0.93** @278ms, outgoing 0 by ~904ms, flip at click; 10-flip (mixed 80/400/1100ms dwell): parity correct, `themeTurningStuck: false`, `isTurningStuck: false`, parked icon `visibility: hidden`; PRM: `transition: opacity 0.2s`, `flippedWithin60ms: true`; `animation.md:26` Band-D reads "**theme page-turn ~950 ms**" | **PASS** |
+| drawer | choreography traced (no filtered size tween); a11y probe; persistence; ≥1024 regime + mobile no-op; DEFAULT-OPEN | glide trace: **2 distinct layout widths across 62 sampled frames** [672, 736] — transform-only tween, ONE layout step at settle; board grows **+64px** (≥24) and centers (closed cx 720 = page axis, offset 0); tab 48×92 ≥44px, `aria-expanded`, focus to first control on open, Esc returns to tab, closed rail `inert` + `visibility: hidden`; persistence via `localStorage` ("0" after close, restored on reload — e2e-verified); fresh storage → **DEFAULT-OPEN** (`cardVisible: true, railInert: false`); <1024 defined no-op (tab `display: none`, stacked flow — e2e-verified); PRM same-frame swap (`grewImmediately: true`, board 646→662 within 80ms) | **PASS** |
+| e2e | FULL suite green; drawer-updated specs cited | **43/43 passed (20.5s)** against `PLAYWRIGHT_BASE_URL=http://localhost:3001` (fingerprint-verified) — the W11 37-class + the 6-test `drawer.spec.ts`; **zero existing specs required updating**: default-OPEN preserves the two-column reading posture and `.controls-card` scoping resolves through the rail (`e2e-full-suite.txt`) | **PASS** |
+| PRM | every new motion instant under reduced-motion, driven | driven live: toggle (immediate flip, 200ms opacity crossfade), drawer (same-frame layout swap), solved vignette (present 514ms after click, **0 running animations >250ms**, no crest wait), boil beat (library PRM gate force-clears the driver, code-traced `boilBeat.ts`); `d1-shots/solved-1440-prm.png` | **PASS** |
+
+## git status, classified
+
+No commits, no pushes. The A-B-A stash cycle (`git stash push -u -- web/frontend/src web/frontend/e2e docs/animation.md` → pop) restored the tree byte-identically (29 status lines before and after; served fingerprint 3→0→3).
+
+| Class | Paths |
+|---|---|
+| W12 implementation (modified, 20) | `docs/animation.md` (band row); `web/frontend/src/App.vue`; games: `SudokuBoard.vue`, `SudokuGame.vue`, `FutoshikiBoard.vue`, `FutoshikiGame.vue`, `games/shared/scene.css`; pencil: `DarkModeToggle.vue` (re-cut), `pencilConfig.ts` (grain-outline + spiral revert + beat band), `HandDrawnGrid.vue` (linejoin), `HandDrawnOutline.vue` (own preset/outset/radius), `gridPaths.ts`, `glyphAnimations.ts`, `SvgFilters.vue`, `BoilDivider.vue`, `CelebrationStar.vue`, `CelebrationHeart.vue`, `MarginNote.vue`, `HandwrittenLogo.vue`, `chrome/index.ts` |
+| W12 new surfaces (untracked, 5) | `games/shared/DrawerTab.vue`, `games/shared/useControlsDrawer.ts`, `pencil/chrome/CompletionVignette.vue`, `pencil/composables/boilBeat.ts`, `e2e/drawer.spec.ts` |
+| Evidence (untracked, 4 dirs) | `evidence/T3-W12-gate/`, `evidence/addendum/{d1,d3,d4}-shots/` |
+
+## Residuals for the record
+
+1. **16/s viewport-width damage unions** at steady state (~94% below baseline's full-viewport rate) — the controls-card outline's beat-synced boil unions damage across the root layer; a fence on the rail (its own `contain: paint` layer, tab excluded) would take it to ~8/s. Filed, not blocking: the binding ⅓ bar clears at 16.7–21.6%.
+2. The heart's DOM probe measures 0×0 (SVG measurement quirk); the visual evidence (`gate-heart-corner.png`) is the certification.
+3. `plushLandStartMs: 74` in the first probe pass is the delta after the 800ms whirl mark, not an absolute — superseded by the code trace (tail at 798–950ms).

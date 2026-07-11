@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useBoilFrame, heldFrameCount } from '@mkbabb/pencil-boil'
+import { heldFrameCount } from '@mkbabb/pencil-boil'
 import { generateLineBoilFrames } from '@pencil/grid/gridPaths'
-import { BOIL_CONFIG } from '@pencil/config/pencilConfig'
+import { BOIL_CONFIG, beatsFor } from '@pencil/config/pencilConfig'
+import { useBeatFrame } from '@pencil/composables/boilBeat'
 
 /**
  * Self-contained hand-drawn "boiling" divider line. Extracted from `ControlPanel.vue`,
@@ -22,10 +23,12 @@ const dividerFrames = computed(() =>
     BOIL_CONFIG.frameBoil, BOIL_CONFIG.frameCount,
   )
 )
-// Freeze-in-place while the answer-key laminate holds the page (W9 §2).
-const { currentFrame: dividerFrame } = useBoilFrame(
+// Freeze-in-place while the answer-key laminate holds the page (W9 §2). On the
+// shared beat (T3-W12 §2 P1) so both mounted instances swap in the same dirty frame
+// as the rest of the page's boils.
+const dividerFrame = useBeatFrame(
   heldFrameCount(() => BOIL_CONFIG.frameCount),
-  () => BOIL_CONFIG.intervalMs,
+  () => beatsFor(BOIL_CONFIG.intervalMs),
 )
 const dividerPath = computed(() => dividerFrames.value[dividerFrame.value] ?? '')
 </script>

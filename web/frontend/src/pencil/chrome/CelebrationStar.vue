@@ -53,7 +53,7 @@ function reset() {
   visible.value = false
 }
 
-async function play() {
+async function play(settled = false) {
   reset()
   visible.value = true
   // The <path> mounts on Vue's next flush; a same-tick ref read is null on
@@ -62,10 +62,13 @@ async function play() {
   const el = starPathRef.value
   if (!el) return
 
-  if (reducedMotion.value) {
+  // Settled activation (T3-W12 §1 P5): `active` was already true when this component
+  // mounted — a remount while solved (state-derived `celebrating`), not a fresh crest.
+  // The sticker is simply THERE, fully drawn: no crest-delayed redraw, no second gleam.
+  if (settled || reducedMotion.value) {
     el.style.strokeDasharray = 'none'
     el.style.strokeDashoffset = '0'
-    return // no gleam under PRM
+    return // no gleam under PRM / on a settled remount
   }
 
   const len = el.getTotalLength()
@@ -93,12 +96,16 @@ async function play() {
   drawSeq.start()
 }
 
+// `immediate` + the `prev === undefined` probe: a component that MOUNTS with
+// active=true (remount while solved) settles instantly; a live false→true flip
+// keeps the full crest choreography. The composition survives remounts (§1 P5).
 watch(
   () => props.active,
-  (a) => {
-    if (a) play()
+  (a, prev) => {
+    if (a) play(prev === undefined)
     else reset()
   },
+  { immediate: true },
 )
 
 onUnmounted(reset)

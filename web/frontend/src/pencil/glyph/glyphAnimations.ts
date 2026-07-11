@@ -102,6 +102,13 @@ export function createGlyphFlourish(
   const cycleDurationMs = options.cycleDurationMs ?? 600;
   const n = variantPaths.length;
 
+  // Write-dedup (T3-W12 §2, the P1 discipline applied to sequences): the tween's
+  // progress ticks every frame, but the variant INDEX only changes a handful of times
+  // per cycle — re-writing an identical `d` still counts as an attribute mutation and
+  // re-rasters the glyph's grain filter every frame for the whole window (the settled
+  // solved page's murmur was a ~30 paints/s tax at the gate). Write only on a real
+  // swap; the motion is byte-identical.
+  let lastIdx = -1;
   const seq = createSequenceSubscription({
     durationMs: cycles * cycleDurationMs,
     delayMs: options.delayMs ?? 0,
@@ -110,6 +117,8 @@ export function createGlyphFlourish(
       const phase = (raw * cycles) % 1; // 0→1 within the current cycle
       const tri = phase < 0.5 ? phase * 2 : (1 - phase) * 2; // ping-pong 0→1→0
       const idx = Math.min(n - 1, Math.round(tri * (n - 1)));
+      if (idx === lastIdx) return;
+      lastIdx = idx;
       pathEl.setAttribute('d', variantPaths[idx]);
     },
     onComplete: () => {

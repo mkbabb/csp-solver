@@ -108,15 +108,17 @@ function reset() {
   visible.value = false
 }
 
-async function play() {
+async function play(settled = false) {
   reset()
   visible.value = true
   await nextTick()
   const el = hostRef.value
   if (!el) return
 
-  if (reducedMotion.value) {
-    // PRM: the reward is simply there — static at scale 1, no bounce, no blink.
+  if (settled || reducedMotion.value) {
+    // PRM, or a settled activation (T3-W12 §1 P5 — mounted with `active` already
+    // true, i.e. a remount while solved): the reward is simply there — static at
+    // scale 1, no bounce, no blink; it still murmurs with the classroom.
     el.style.transform = 'scale(1)'
     registerMurmurHeart({ wiggleOnce }) // wiggleOnce PRM-gates itself
     return
@@ -139,12 +141,15 @@ async function play() {
   bounceSeq.start()
 }
 
+// `immediate` + the `prev === undefined` probe: mounted-with-active (a remount while
+// solved) settles instantly; a live false→true flip keeps the crest bounce (§1 P5).
 watch(
   () => props.active,
-  (a) => {
-    if (a) play()
+  (a, prev) => {
+    if (a) play(prev === undefined)
     else reset()
   },
+  { immediate: true },
 )
 
 onUnmounted(reset)
@@ -164,14 +169,15 @@ onUnmounted(reset)
 
 <style scoped>
 /* Straddles the board's bottom-right corner — the sticker register, diagonal
-   opposite of the margin voice (which writes below-board left). Sized so the
-   settled heart reads ~2.75rem at crest. */
+   opposite of the margin voice. T3-W12 §1 R1: risen to 3.5rem at bottom -0.4rem —
+   CROWNING the corner instead of grazing the fold (the a1 forensics had its old
+   -1.1rem overhang ending 7px shy of the viewport edge at 1440×806). */
 .celebration-heart {
   position: absolute;
   right: -0.9rem;
-  bottom: -1.1rem;
-  width: 2.75rem;
-  height: 2.75rem;
+  bottom: -0.4rem;
+  width: 3.5rem;
+  height: 3.5rem;
   pointer-events: none;
   z-index: 3;
   transform: scale(0); /* pre-crest; play() takes over imperatively */

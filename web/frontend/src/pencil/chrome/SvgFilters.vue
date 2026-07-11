@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { FILTER_PRESETS, type FilterPreset } from '@pencil/config/pencilConfig';
-import { useFilterParamBoil, type BoilHandle } from '@mkbabb/pencil-boil';
+import { computed, onMounted, ref, watch } from 'vue';
+import { FILTER_PRESETS, beatsFor, type FilterPreset } from '@pencil/config/pencilConfig';
+import { useBoilBeat } from '@pencil/composables/boilBeat';
 
 const presets = computed(() => Object.values(FILTER_PRESETS));
 
@@ -11,55 +11,47 @@ function filterRegion(p: FilterPreset) {
 }
 
 // ── JS-driven boil animation (Camillo Visini method) ──
-// Oscillates feTurbulence baseFrequency via the unified rAF scheduler + setAttribute.
-// No SMIL <animate> — avoids framework re-render issues entirely. Was 3 independent
-// setIntervals (one per wobble preset); now 3 subscribers on the ONE shared rAF chain
-// (W8 unified scheduler) — PRM-reactive and visibility-paused for free via
-// useFilterParamBoil's central gates, replacing the one-shot `matchMedia(...).matches`
-// read this file used to do at setup time (which never re-checked PRM after mount).
+// Oscillates feTurbulence baseFrequency + setAttribute. No SMIL <animate> — avoids
+// framework re-render issues entirely. Was 3 independent useFilterParamBoil
+// subscribers, each phase-anchored to its own first tick; now ALL wobble presets step
+// on the ONE shared boil beat (T3-W12 §2 P1), each on its own whole-beat band
+// (`beatsFor(intervalMs)`: celestial/heart → every beat, logo → every 4th), so a
+// wobble param write always lands in the same dirty frame as the path boils. PRM and
+// tab visibility gate the beat itself centrally; a preset's intervalMs stays live-
+// tunable (FilterTuner) — the band re-derives per tick.
 
 const svgRef = ref<SVGSVGElement | null>(null);
 const turbEls = new Map<string, SVGFETurbulenceElement>();
+const offsetIdx = new Map<string, number>();
 
-// Handles are constructed synchronously here (useFilterParamBoil calls onUnmounted()
-// internally, which requires the synchronous setup context) — but the DOM query + the
-// element registration is deferred to onMounted, since the <filter> elements are
-// v-for-rendered and must exist before querySelector can find them. Until an element is
-// registered, the tick body no-ops (the subscriber is enrolled but harmless).
-const boilHandles: { id: string; handle: BoilHandle }[] = Object.values(FILTER_PRESETS)
-  .filter((p) => p.wobble)
-  .map((p) => {
-    const offsets = [...p.wobble!.offsets];
-    let idx = 0;
-    const handle = useFilterParamBoil(
-      (steps) => {
-        const turbEl = turbEls.get(p.id);
-        if (!turbEl) return;
-        idx += steps;
-        const w = p.wobble!;
-        const offset = offsets[idx % offsets.length];
-        const freq = Math.round((w.baseFrequency + offset * w.animScale) * 10000) / 10000;
-        turbEl.setAttribute('baseFrequency', String(freq));
-      },
-      () => p.wobble!.intervalMs,
-    );
-    return { id: p.id, handle };
-  });
-
-onMounted(() => {
-  // Short delay so filter DOM is fully mounted before querying
-  requestAnimationFrame(() => {
-    if (!svgRef.value) return;
-    for (const { id } of boilHandles) {
-      const el = svgRef.value.querySelector(`#${CSS.escape(id)} feTurbulence`) as SVGFETurbulenceElement | null;
-      if (el) turbEls.set(id, el);
-    }
-    boilHandles.forEach(({ handle }) => handle.start());
-  });
+const beat = useBoilBeat();
+watch(beat, (b) => {
+  for (const p of Object.values(FILTER_PRESETS)) {
+    const w = p.wobble;
+    if (!w) continue;
+    if (b % beatsFor(w.intervalMs) !== 0) continue;
+    const turbEl = turbEls.get(p.id);
+    if (!turbEl) continue; // filter DOM not registered yet — harmless no-op
+    const idx = (offsetIdx.get(p.id) ?? 0) + 1;
+    offsetIdx.set(p.id, idx);
+    const offset = w.offsets[idx % w.offsets.length];
+    const freq = Math.round((w.baseFrequency + offset * w.animScale) * 10000) / 10000;
+    turbEl.setAttribute('baseFrequency', String(freq));
+  }
 });
 
-// No onUnmounted needed — each useFilterParamBoil() handle owns its own teardown
-// (registered internally via onUnmounted at construction time).
+onMounted(() => {
+  // Short delay so filter DOM is fully mounted before querying. Registration only —
+  // the beat watcher above starts writing the moment an element lands in the map.
+  requestAnimationFrame(() => {
+    if (!svgRef.value) return;
+    for (const p of Object.values(FILTER_PRESETS)) {
+      if (!p.wobble) continue;
+      const el = svgRef.value.querySelector(`#${CSS.escape(p.id)} feTurbulence`) as SVGFETurbulenceElement | null;
+      if (el) turbEls.set(p.id, el);
+    }
+  });
+});
 </script>
 
 <template>

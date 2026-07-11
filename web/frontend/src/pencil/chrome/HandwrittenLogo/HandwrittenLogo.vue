@@ -231,7 +231,11 @@ watch(
 }
 
 .handwritten-logo {
-    height: var(--logo-height);
+    /* --logo-scale (default 1) is the drawer's grow hook (T3-W12 §6): the closed
+       regime pins 1.05 from App.vue and the wordmark takes it as a LAYOUT size at
+       the settle's one layout step — never a filtered-element size tween (the glide
+       itself covers the move with a transform on the masthead h1). */
+    height: calc(var(--logo-height) * var(--logo-scale, 1));
     width: auto;
     color: var(--color-foreground);
     display: block;

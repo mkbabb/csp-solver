@@ -23,13 +23,16 @@ hold-to-peek laminate additionally respect `prefers-reduced-transparency` /
 | A — stop-motion ambient | 125–170 ms/tick (6–8fps) | always-on hand-drawn jitter | grid boil 150, divider boil 150, star/sun-sparkle boil 125, celestial wobble 160, heart wobble 170, selection burst 120 |
 | B — lazy ambient | 550–800 ms/tick | large/peripheral only | logo wobble 550, sun-ray boil 800, sun breathe 6s |
 | C — responsive one-shots | 120–600 ms, user-triggered, finite | hover wiggle 600, button anims 400–500, tooltip fade 150, cell reveal 300 |
-| D — choreographed sequences | 150 ms–3.2 s, finite + completion-emitting | grid draw-in ~800ms, erase ~150ms+4ms·i, logo clip 1.2s, theme page-turn 800ms, celebration ≤3.2s |
+| D — choreographed sequences | 150 ms–3.2 s, finite + completion-emitting | grid draw-in ~800ms, erase ~150ms+4ms·i, logo clip 1.2s, theme page-turn ~950 ms, controls-drawer glide ~480 ms, celebration ≤3.2s |
 
 A dead band (175–550 ms) is reserved: no *ambient* loop may tick there (~3fps
 reads as jank); Band C one-shots are exempt. Four house easing curves only:
 `easeOutCubic` (draw-on), `easeInCubic` (erase), a back-out `pop` curve (cell
 reveal), and a spring-back curve (physical flourishes — theme toggle, dice
-tumble).
+tumble, the controls-drawer's board/masthead glide; the drawer case itself
+slides on easeOutCubic). The drawer glide (T3-W12 §6) is transform-only —
+inverted FLIP with the one real layout step at `transitionend`, so the filtered
+board's size is never tweened.
 
 ## Unified scheduler
 
