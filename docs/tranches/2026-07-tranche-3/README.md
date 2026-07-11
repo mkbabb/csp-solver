@@ -76,6 +76,8 @@ Corpus-lean defaults, applied and executing in-wave; each carries an owner-veto 
 | 2 | **UI-13 — KEEP grade-after-Solve + say-it hint** (A23's own lean: the pedagogy is "defensible and on-soul"; the margin voice hints "mark it and I'll grade"); the failed-state maroon beat is protected | immediate conflict marking | **W11 gate** |
 | 3 | **mod.rs → self-named-file flip — post-tranche one-commit follow-up** with `clippy.self_named_module_files` (pass-2 §5.5's own recommendation); not tranche work | fold into W4 | **WGATE note** |
 
+**Ratification round 2 (owner, 2026-07-10, pre-execution — "ratify the questions with your idiomatic and design-congruent defaults"):** all three defaults above RATIFIED AT DEFAULT — the veto windows close; the gate reviews become confirmations, not decisions. Two open dispositions ratified with them: **the W11 digit pad = BUILD** (minimal: digits + erase, coarse pointers only, ControlPanel grammar — the row is chronic-ledger-folded and the OS keyboard is off-soul over the board; a scope-out would read as a third deferral), and **the three owner-side reminders transfer to execution** (worktree purge + verified-dead `java` branch delete and the CF Pages redeploy ride WGATE; the pencil-boil `v0.7.0` tag at `106a5a2` is cut and pushed by the executor — pencil-boil is not under the never-push order). Implementation AUTHORIZED; execution discipline inherits tranche-2's (workflow-per-wave, 3-wide batches, gates verbatim, commit-per-wave + CI green, Fable design lanes + frontend-design plugin, recovery cron armed).
+
 ---
 
 ## 5. Owner reminders (actions, not questions — none gate authoring)
