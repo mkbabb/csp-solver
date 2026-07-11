@@ -1,9 +1,10 @@
 //! Property-based tests for [`csp_solver::AssignmentBuilder`] via proptest.
 //!
-//! Six properties validate the solver against brute-force enumeration,
-//! role-group partitioning, pin constraints, unmatch-penalty monotonicity,
-//! and the single-row degenerate case. Each property runs 256 cases with
-//! a deterministic seed for reproducibility.
+//! Seven properties validate the solver against brute-force enumeration: the
+//! LAP-path valid-matching + optimality guard (the hand-rolled Kuhn-Munkres),
+//! square and rectangular optimality, role-group partitioning, pin constraints,
+//! unmatch-penalty monotonicity, and the single-row degenerate case. Each
+//! property runs 256 cases with a deterministic seed for reproducibility.
 
 use csp_solver::{SENTINEL, assignment};
 use proptest::prelude::*;
@@ -137,6 +138,58 @@ proptest! {
             sol.cost,
             bf,
             delta,
+        );
+    }
+
+    /// LAP dispatch path (group-free / pin-free → [`solve_lap`], the hand-rolled
+    /// Kuhn-Munkres): the returned assignment must be a **valid matching** — no
+    /// two rows share a non-SENTINEL column — **and** cost-optimal against
+    /// brute-force. This is the direct guard on the KM swap and the wave's named
+    /// failure mode: an optimality-only check could be fooled by a broken impl
+    /// that double-books a column into a sub-brute-force "cost", so distinctness
+    /// is asserted explicitly here. Spans both rectangular orientations
+    /// (rows<cols and rows>cols, the transpose branch) since N and M range [1,5]
+    /// independently.
+    #[test]
+    fn prop_lap_valid_and_optimal(
+        (rows, cols, costs) in cost_matrix_strategy(5, 5)
+    ) {
+        let penalty = 1e9;
+
+        let sol = assignment()
+            .rows(rows)
+            .cols(cols)
+            .cost(|i, k| costs[i * cols + k])
+            .unmatch_penalty(penalty)
+            .solve()
+            .expect("group-free/pin-free LAP instance must be solvable");
+
+        // (a) Valid matching: every non-SENTINEL column appears at most once.
+        let mut seen = std::collections::HashSet::new();
+        for (row, &col) in sol.assign.iter().enumerate() {
+            if col != SENTINEL {
+                prop_assert!(
+                    seen.insert(col),
+                    "column {} double-booked (also assigned to row {}) in a {}x{} LAP",
+                    col,
+                    row,
+                    rows,
+                    cols,
+                );
+            }
+        }
+
+        // (b) Optimality: cost equals the brute-force minimum.
+        let bf = bruteforce_min_assignment(&costs, rows, cols, penalty);
+        let delta = (sol.cost - bf).abs();
+        prop_assert!(
+            delta < 1e-9,
+            "LAP cost {} differs from brute-force {} by {} ({}x{})",
+            sol.cost,
+            bf,
+            delta,
+            rows,
+            cols,
         );
     }
 

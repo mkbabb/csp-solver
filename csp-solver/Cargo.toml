@@ -13,6 +13,11 @@ workspace = true
 [features]
 default = []
 py = ["dep:pyo3"]
+# abi3-py310: build a single forward-compatible wheel (cp310-abi3) against the
+# stable CPython ABI, collapsing the per-version wheel matrix. Opt-in — a plain
+# `--features py` build stays version-specific. Enables the limited-API surface
+# only; the crate uses no version-specific pyo3 API (tranche-III R5 spike).
+abi3 = ["py", "pyo3/abi3-py310"]
 
 [dependencies]
 # Compile-time embed of the crate-owned puzzle-template bank
@@ -23,11 +28,6 @@ include_dir = { workspace = true }
 # Version + `extension-module` live in `[workspace.dependencies]`; this member is
 # pyo3's sole consumer and adds only its `optional` gate (the `py` feature).
 pyo3 = { workspace = true, optional = true }
-# Kuhn-Munkres LAP. The closed-form optimal path `AssignmentBuilder` dispatches
-# to for group-free / pin-free instances (`builder/assignment.rs`) instead of the
-# exponential B&B, which is proven-optimal only to n≈15–18. Integer-cost API,
-# pure Rust, no C deps.
-hungarian = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

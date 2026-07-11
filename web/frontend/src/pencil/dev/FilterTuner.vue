@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Wrench, X, Copy, RotateCcw } from '@lucide/vue'
 import {
   FILTER_PRESETS,
   DEFAULT_PRESETS,
@@ -59,7 +58,8 @@ const isModified = computed(() => {
     aria-label="Toggle filter tuner"
     style="filter: url(#wobble-heart)"
   >
-    <Wrench :size="20" />
+    <!-- DEV-only chrome: plain text glyphs, no icon dep (T3-W5 lucide retirement) -->
+    <span class="tuner-fx" aria-hidden="true">fx</span>
   </button>
 
   <!-- Panel -->
@@ -69,7 +69,7 @@ const isModified = computed(() => {
         <!-- Header -->
         <div class="tuner-header">
           <span class="tuner-title">Filter Tuner</span>
-          <button class="tuner-close" @click="open = false" aria-label="Close"><X :size="16" /></button>
+          <button class="tuner-close" @click="open = false" aria-label="Close">&times;</button>
         </div>
 
         <!-- Preset selector -->
@@ -214,15 +214,12 @@ const isModified = computed(() => {
         <!-- Actions -->
         <div class="tuner-actions">
           <button class="tuner-btn" @click="copyJson">
-            <Copy :size="14" />
             <span>{{ copyFeedback ? 'Copied!' : 'Copy JSON' }}</span>
           </button>
           <button class="tuner-btn" :disabled="!isModified" @click="handleReset">
-            <RotateCcw :size="14" />
             <span>Reset</span>
           </button>
           <button class="tuner-btn tuner-btn-dim" @click="handleResetAll">
-            <RotateCcw :size="14" />
             <span>Reset All</span>
           </button>
         </div>
@@ -255,6 +252,14 @@ const isModified = computed(() => {
 .tuner-toggle.is-open {
   color: var(--color-foreground);
   transform: scale(1.1);
+}
+
+.tuner-fx {
+  font-family: var(--font-mono);
+  font-size: var(--type-caption);
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: -0.02em;
 }
 
 .tuner-panel {
@@ -296,8 +301,10 @@ const isModified = computed(() => {
   border: none;
   cursor: pointer;
   color: var(--color-muted-foreground);
-  padding: 2px;
+  padding: 2px 6px;
   border-radius: 4px;
+  font-size: 1rem;
+  line-height: 1;
 }
 .tuner-close:hover {
   color: var(--color-foreground);

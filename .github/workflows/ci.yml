@@ -24,7 +24,7 @@
 #   5.  py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in csp-solver/tests-py)
 #   6.  wasm               -> wasm       (wasm-pack test --node + clippy --target wasm32)
 #   7.  twiggy budgets     -> twiggy     (full module fail>240 KB / warn>230 KB)
-#   8.  frontend           -> frontend   (npm ci --dry-run; npm ci; vue-tsc --noEmit)
+#   8.  frontend           -> frontend   (npm ci --dry-run; npm ci; vue-tsc --noEmit; knip)
 #   9.  e2e                -> e2e        (lean wasm build -> Playwright over the Vue SPA)
 #   10. iai                -> iai        (callgrind deterministic instruction-count baseline)
 #
@@ -181,6 +181,18 @@ jobs:
                       ~/.cargo/git
                       target
                   key: cargo-pyruntime-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: Stub auto-detection tripwire (module-name == stub stem)
+              # maturin ships the stub + py.typed ONLY when the root
+              # `<module-name>.pyi` stem equals `[tool.maturin] module-name`. A
+              # rename of either silently drops both from the wheel with NO build
+              # error — an untyped wheel ships green. Assert the invariant before
+              # the build so the drop fails loud here (P2-L4 §5).
+              run: |
+                  mod=$(sed -nE 's/^module-name = "([^"]+)".*/\1/p' csp-solver/pyproject.toml)
+                  test -f "csp-solver/${mod}.pyi" || {
+                    echo "::error::stub csp-solver/${mod}.pyi missing — maturin would ship an untyped wheel"; exit 1;
+                  }
+                  echo "stub-stem OK: module-name='${mod}' == csp-solver/${mod}.pyi"
             - name: Build csp_solver wheel (maturin --release; default release profile, no extra tuning)
               # --interpreter + PYO3_PYTHON both pin the pinned 3.13 ABI explicitly.
               env:
@@ -209,6 +221,14 @@ jobs:
               # manually-installed csp_solver wheel (it isn't a declared dependency).
               working-directory: csp-solver/tests-py
               run: uv run --no-sync pytest
+            - name: stubtest (csp_solver stub vs installed wheel, flag-free)
+              # Flag-free (NOT --ignore-missing-stub) so surface GROWTH — a new
+              # runtime class/function/exception the stub lacks — also fails loud;
+              # the one-line stubtest_allowlist.txt suppresses ONLY maturin's
+              # private `csp_solver.csp_solver` submodule. Expect: "Success: no
+              # issues found in 2 modules". mypy>=1.11 rides the tests-py dev group.
+              working-directory: csp-solver/tests-py
+              run: uv run --no-sync python -m mypy.stubtest csp_solver --allowlist stubtest_allowlist.txt
 
     # ---------------------------------------------------------------- Lane 6
     # wasm — wasm-pack test --node on csp-solver/wasm (morph excised to its own
@@ -368,6 +388,14 @@ jobs:
             - name: vue-tsc --noEmit
               working-directory: web/frontend
               run: npx vue-tsc --noEmit
+            # knip — the standing dead-file / dead-dependency gate (T3-W5, A19/A20).
+            # Enforces `files`/`dependencies` at error (the dep-hygiene surface this
+            # gate owns); dead `exports`/`types` report at `warn` (see knip.json rules)
+            # — the pencil/games export-thinning is a source-lane follow-up, but the
+            # census prints every run so nothing goes unreported.
+            - name: knip (dead-file / dead-dependency gate)
+              working-directory: web/frontend
+              run: npx knip
 
     # ---------------------------------------------------------------- Lane 9
     # e2e — Playwright over the Vue SPA (ratification R6). Mirrors the frontend

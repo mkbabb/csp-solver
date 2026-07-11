@@ -2,7 +2,6 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
-import autoprefixer from 'autoprefixer'
 import path from 'path'
 import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -104,6 +103,73 @@ function sudokuTemplates(): Plugin {
   }
 }
 
+/**
+ * `head-hints` — build-time cold-start preloading (T3-W8 §cold-start, A17 P1/P5).
+ *
+ * Reads the emitted content-hashed asset names off the rollup bundle and injects,
+ * into the `<head>` of the built `index.html`:
+ *   - `<link rel="modulepreload">` for BOTH `solver.worker` chunks — the wasm
+ *     Worker boots lazily on its first message (`useSolver.ts` `ensureWorker`),
+ *     so preloading the chunk shaves the first solve/generate's serial chain.
+ *   - `<link rel="preload" as="fetch" crossorigin>` for the `csp_solver_wasm`
+ *     binary — keeps wasm-bindgen's `instantiateStreaming` on the streaming
+ *     happy-path instead of a cold fetch on first message.
+ *   - `<link rel="preload" as="font" crossorigin>` for the three subset woff2 —
+ *     the hand-drawn wordmark is the aesthetic centerpiece and today the faces
+ *     are late-discovered via `@font-face` only (index.css), a FOUT the preload
+ *     erases.
+ *
+ * Build-only (`apply: 'build'`): the dev graph is unbundled and has no hashed
+ * names to read. `crossorigin` on the font/wasm preloads matches the credentials
+ * mode of the actual (anonymous) fetches so the browser reuses the preloaded
+ * response rather than discarding it and re-requesting. The payoff is a `dist/`
+ * measurement, never a dev one (the wave's explicit trap).
+ */
+function headHints(): Plugin {
+  const base = process.env.VITE_BASE_URL || '/'
+  const href = (key: string) => (base.endsWith('/') ? base : base + '/') + key
+  return {
+    name: 'head-hints',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const bundle = ctx.bundle
+        if (!bundle) return html
+        const files = Object.keys(bundle)
+        const tags: import('vite').HtmlTagDescriptor[] = []
+        // Both games' `solver.worker` chunks (sudoku + futoshiki are owned ports,
+        // so two distinct hashed chunks).
+        for (const f of files) {
+          if (/solver\.worker[.-][^/]*\.js$/.test(f)) {
+            tags.push({ tag: 'link', attrs: { rel: 'modulepreload', href: href(f) }, injectTo: 'head' })
+          }
+        }
+        // The shared wasm binary (one module, both workers).
+        const wasm = files.find((f) => /csp_solver_wasm[^/]*\.wasm$/.test(f))
+        if (wasm) {
+          tags.push({
+            tag: 'link',
+            attrs: { rel: 'preload', as: 'fetch', type: 'application/wasm', crossorigin: true, href: href(wasm) },
+            injectTo: 'head',
+          })
+        }
+        // The three subset woff2 faces (fraunces / patrickhand / firacode).
+        for (const f of files) {
+          if (/-subset[^/]*\.woff2$/.test(f)) {
+            tags.push({
+              tag: 'link',
+              attrs: { rel: 'preload', as: 'font', type: 'font/woff2', crossorigin: true, href: href(f) },
+              injectTo: 'head',
+            })
+          }
+        }
+        return { html, tags }
+      },
+    },
+  }
+}
+
 export default defineConfig({
   base: process.env.VITE_BASE_URL || '/',
   resolve: {
@@ -113,15 +179,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  css: {
-    postcss: {
-      plugins: [autoprefixer()],
-    },
-  },
   plugins: [
     vue(),
     tailwindcss(),
     sudokuTemplates(),
+    headHints(),
     // T2-W6 PWA-minimal (Q4's written SW strategy). generateSW precache ONLY —
     // no runtime sync, no update toasts. `autoUpdate` = silent skipWaiting +
     // clientsClaim; `injectRegister: 'script'` emits an external `/registerSW.js`
@@ -230,21 +292,32 @@ export default defineConfig({
     assetsInlineLimit: (filePath) => (filePath.endsWith('.woff2') ? false : undefined),
     rollupOptions: {
       output: {
-        // Rolldown (Vite 8's default bundler) rejects the classic object-literal
-        // `manualChunks` form outright (`TypeError: manualChunks is not a function`) —
-        // the function form is its only supported shape. Match both `vue/` and `@vue/`
-        // because modern Vue (3.4+) ships `vue` as a thin re-export shell over separately
-        // resolvable `@vue/*` modules. keyframes.js was dropped from the app runtime by
-        // W8's 4th workstream (grid + glyph draw-in migrated off `KeyframesAnimation` onto
-        // the unified scheduler's `sequence` subscriber), so it no longer enters any chunk —
-        // only pencil-boil remains as the animation vendor.
-        manualChunks(id) {
-          if (id.includes('/node_modules/vue/') || id.includes('/node_modules/@vue/')) {
-            return 'vue-vendor'
-          }
-          if (id.includes('/node_modules/@mkbabb/pencil-boil/')) {
-            return 'animation-vendor'
-          }
+        // Rolldown (Vite 8's default bundler) treats function-form `manualChunks`
+        // as a HINT, not a strict assignment: it fused Vue's runtime into
+        // `animation-vendor` (the `beforeCreate` option-merge string landed there)
+        // and left `vue-vendor` an 8.5 KB husk that itself re-imported ~20 symbols
+        // back from `animation-vendor` — a 3-hop `index → vue-vendor → animation-vendor`
+        // graph that defeated the cache-isolation intent (every pencil-boil bump
+        // re-downloaded Vue). `advancedChunks.groups` is Rolldown's strict grouping
+        // API — a module whose id matches a group's `test` is ASSIGNED to that group
+        // regardless of who imports it, so Vue's runtime is forced into its own
+        // cache-stable chunk. First matching group wins; `vue` precedes the animation
+        // group. Match both `vue/` and `@vue/` because modern Vue (3.4+) ships `vue`
+        // as a thin re-export shell over separately resolvable `@vue/*` modules.
+        // keyframes.js was dropped from the app runtime (grid + glyph draw-in migrated
+        // onto the unified scheduler's `sequence` subscriber), so pencil-boil is the
+        // sole surviving animation vendor.
+        advancedChunks: {
+          groups: [
+            {
+              name: 'vue-vendor',
+              test: /[\\/]node_modules[\\/](@vue[\\/]|vue[\\/])/,
+            },
+            {
+              name: 'animation-vendor',
+              test: /[\\/]node_modules[\\/]@mkbabb[\\/]pencil-boil[\\/]/,
+            },
+          ],
         },
       },
     },

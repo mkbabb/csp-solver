@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/pencil/chrome/index.ts", "src/pencil/grid/index.ts"],
+  "project": ["src/**/*.{ts,vue,css}"],
+  "ignore": ["src/games/shared/scene.css"],
+  "ignoreDependencies": ["prettier-plugin-tailwindcss"],
+  "playwright": {
+    "config": ["playwright.config.ts"],
+    "entry": ["e2e/**/*.spec.ts"]
+  },
+  "rules": {
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "error",
+    "optionalPeerDependencies": "error",
+    "unlisted": "error",
+    "binaries": "error",
+    "unresolved": "error",
+    "duplicates": "error",
+    "exports": "warn",
+    "nsExports": "warn",
+    "types": "warn",
+    "nsTypes": "warn",
+    "enumMembers": "warn"
+  }
+}

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onBeforeUnmount } from 'vue'
-import { Eraser, Share2 } from '@lucide/vue'
-import { SolveIcon, DiceIcon, OptionSelector } from '@pencil/chrome'
+import { SolveIcon, DiceIcon, EraserIcon, ShareIcon, OptionSelector } from '@pencil/chrome'
 import BoilDivider from '@pencil/chrome/BoilDivider.vue'
 import SheetWashiLabel from '@pencil/sheet/SheetWashiLabel.vue'
 import ScribbleLoader from '@pencil/chrome/ScribbleLoader.vue'
@@ -211,7 +210,7 @@ function onDifficultyChange(val: string | number) {
         aria-label="Clear board"
       >
         <span :class="{ 'eraser-scrub': clearAnimating }">
-          <Eraser :size="28" />
+          <EraserIcon :size="28" />
         </span>
       </button>
       <button
@@ -230,7 +229,7 @@ function onDifficultyChange(val: string | number) {
         :aria-label="shareConfirm ? 'Link copied' : 'Share board link'"
         :title="shareConfirm ? 'Link copied' : 'Share board link'"
       >
-        <Share2 :size="26" :class="{ 'share-pop': shareAnimating }" />
+        <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
       </button>
     </div>
   </div>
@@ -309,7 +308,7 @@ function onDifficultyChange(val: string | number) {
         aria-label="Clear board"
       >
         <span :class="{ 'eraser-scrub': clearAnimating }">
-          <Eraser :size="28" />
+          <EraserIcon :size="28" />
         </span>
         <SheetWashiLabel text="Clear" :seed="23" />
       </button>
@@ -331,7 +330,7 @@ function onDifficultyChange(val: string | number) {
         class="icon-btn group relative"
         aria-label="Share board link"
       >
-        <Share2 :size="26" :class="{ 'share-pop': shareAnimating }" />
+        <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
         <SheetWashiLabel :text="shareConfirm ? 'copied!' : 'share link'" :seed="71" />
       </button>
     </div>

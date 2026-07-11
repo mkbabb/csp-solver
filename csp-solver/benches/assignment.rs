@@ -17,13 +17,6 @@ fn lcg_cost_matrix(rows: usize, cols: usize, seed: u64) -> Vec<f64> {
         .collect()
 }
 
-/// Quantize f64 costs to i64 for the `hungarian` crate (integer-only API).
-/// Scale factor of 1000 preserves three decimal digits — more than enough
-/// for the LCG generator's effective precision.
-fn quantize_for_hungarian(costs: &[f64]) -> Vec<i64> {
-    costs.iter().map(|&c| (c * 1000.0) as i64).collect()
-}
-
 // ---------------------------------------------------------------------------
 // Benchmark groups
 // ---------------------------------------------------------------------------
@@ -47,18 +40,6 @@ fn bench_square_dense(c: &mut Criterion) {
                         .solve()
                         .expect("solvable")
                 },
-                BatchSize::PerIteration,
-            );
-        });
-
-        // Hungarian reference floor
-        group.bench_function(BenchmarkId::new("hungarian", &label), |b| {
-            b.iter_batched(
-                || {
-                    let fmatrix = lcg_cost_matrix(n, n, 0xDEAD_BEEF);
-                    quantize_for_hungarian(&fmatrix)
-                },
-                |imatrix| hungarian::minimize(&imatrix, n, n),
                 BatchSize::PerIteration,
             );
         });
@@ -91,8 +72,6 @@ fn bench_square_roled(c: &mut Criterion) {
                 BatchSize::PerIteration,
             );
         });
-
-        // No hungarian comparison — it has no group-constraint support.
     }
 
     group.finish();
@@ -116,17 +95,6 @@ fn bench_rectangular(c: &mut Criterion) {
                         .solve()
                         .expect("solvable")
                 },
-                BatchSize::PerIteration,
-            );
-        });
-
-        group.bench_function(BenchmarkId::new("hungarian", &label), |b| {
-            b.iter_batched(
-                || {
-                    let fmatrix = lcg_cost_matrix(rows, cols, 0x1234_5678);
-                    quantize_for_hungarian(&fmatrix)
-                },
-                |imatrix| hungarian::minimize(&imatrix, rows, cols),
                 BatchSize::PerIteration,
             );
         });
@@ -160,8 +128,6 @@ fn bench_pinned(c: &mut Criterion) {
             BatchSize::PerIteration,
         );
     });
-
-    // No hungarian comparison — it has no pin-constraint support.
 
     group.finish();
 }

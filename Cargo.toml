@@ -22,8 +22,12 @@ include_dir = "0.7.4"
 # the version lives with every other dep — no per-member drift. The member adds
 # `optional`/`features` locally.
 pyo3 = { version = "0.29", features = ["extension-module"] }
-criterion = { version = "0.8.2", features = ["html_reports"] }
-hungarian = "1"
+# criterion 0.8.2 gates HTML rendering behind an EMPTY `html_reports` feature —
+# the plotters/rayon/regex/cast mass rides in via criterion's `default` set, not
+# html_reports. CI only smoke-runs `queens -- --test` (never renders HTML), so
+# `default-features = false` + `cargo_bench_support` sheds that dev-only subtree
+# (A20 intent; the audit's html_reports mechanism predates 0.8.2's empty feature).
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 proptest = "1"
 wasm-bindgen = "0.2.126"
 serde-wasm-bindgen = "0.6"

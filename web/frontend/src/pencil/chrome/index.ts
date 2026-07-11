@@ -1,5 +1,5 @@
 /**
- * `@pencil/chrome` subdir barrel — the chrome subsystem's public surface (15 exports).
+ * `@pencil/chrome` subdir barrel — the chrome subsystem's public surface (17 exports).
  *
  * Subdir barrel, NOT a root `pencil/index.ts` (K41): a root barrel is bundle-risky —
  * it would fold the lazy `AnswerKeyLaminate`/`FutoshikiGame` boundaries into a shared
@@ -13,6 +13,8 @@ export { useHoverCard } from './AttributionCard/useHoverCard'
 export { default as BoilDivider } from './BoilDivider.vue'
 export { default as CelebrationStar } from './CelebrationStar.vue'
 export { default as DiceIcon } from './icons/DiceIcon.vue'
+export { default as EraserIcon } from './icons/EraserIcon.vue'
+export { default as ShareIcon } from './icons/ShareIcon.vue'
 export { default as SolveIcon } from './icons/SolveIcon.vue'
 export { default as HandwrittenLogo } from './HandwrittenLogo/HandwrittenLogo.vue'
 export { useGameMenu, type GameMenuOption } from './HandwrittenLogo/useGameMenu'

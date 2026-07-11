@@ -1,0 +1,14 @@
+# mypy.stubtest allowlist for the csp_solver wheel — tranche-III (P2-L4).
+#
+# maturin's pure-Rust layout nests the compiled extension as the private
+# submodule `csp_solver.csp_solver` and re-exports its public surface via the
+# auto-generated `csp_solver/__init__.py` (`from .csp_solver import *`). That
+# submodule is an implementation detail — it is absent from the module `__all__`
+# and never imported by name. It carries no `.pyi`, so stubtest reports it as a
+# missing-stub module. This single entry suppresses ONLY that private submodule.
+#
+# It is deliberately NOT `--ignore-missing-stub`: the public surface is still
+# checked flag-free against `__init__.pyi`, so a NEW public class/function/
+# exception, a changed `__all__`, a removed method, or a renamed parameter all
+# fail the gate loud (proven by injected-drift in the P2-L4 report).
+csp_solver\.csp_solver
