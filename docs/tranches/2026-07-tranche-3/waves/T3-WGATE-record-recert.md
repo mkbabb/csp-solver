@@ -2,7 +2,7 @@
 
 **The closing wave: re-sweep the docs, re-stamp the counts at the gate SHA, file the one backlog item, record the defer-closed and clean-bill dispositions, delete the recovery cron, and carry the owner-side reminders that outlive the tranche.** Nothing new is designed or built here — WGATE is the ledger that makes the tranche auditable: every retruthed number traces to a wave artifact, every deferred item has a recorded disposition, and the three owner reminders are actions carried, not questions left open.
 
-**Dependencies**: ← all waves. **Effort**: S.
+**Dependencies**: ← all waves, **incl. T3-W12 (addendum, README §3a) — the recert waits on it**. **Effort**: S.
 
 ---
 

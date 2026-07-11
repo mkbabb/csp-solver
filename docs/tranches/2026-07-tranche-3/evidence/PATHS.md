@@ -77,3 +77,22 @@ Note: `target/criterion/*/pre-t3/` (the actual criterion baseline dirs G6/W0/W6 
 | **Total** | **110** | **1.9 M** |
 
 Well inside the ~5 MB ceiling this document's own policy sets. No LFS needed.
+
+## Addendum 2026-07-11 — the owner live audit (T3-W12)
+
+Copied at W12 authoring; scratchpad root `…/scratchpad/tranche3/`.
+
+### owner-audit-2 — the five owner shots (the audit of record)
+
+`owner-audit-2/{completion-area,boil-hairline,sun-spiral,board-artifact,controls-drawer-context}.png` → same names under `evidence/owner-audit-2/` (368 K).
+
+### addendum — the loop reports + load-bearing exhibits
+
+`addendum/{a1-completion-perf,a2-boil-outline,a3-toggle-recut,a4-artifact,crit-design,crit-forensics}.md` → same names under `evidence/addendum/`. Exhibits carried: `a1-solved-1440.png` + `a1-completion-live.png` (the fold-clip + fragmentation exhibits), `tl-zoom.png`/`tl-crop.png` (the miter barb), and `a2-shots/` pruned to the card crops + TL zooms + `snap.txt` (the bad/before/fix/fixspec quadruple — the near-pixel-match proof T3-W12 §3 gates against). **Excluded with rationale (G2 policy):** the six a1 trace JSONs (11–58 MB each, ~190 MB total — the elimination-ladder numbers are folded into `a1-completion-perf.md` §(c); the gate re-traces live rather than re-reading these), `a1-completion-scrolled.png` (near-duplicate of `-live`), the five full-viewport `a2-shots/live-viewport-*.png` (the card crops carry the claim), `addendum/shots/desktop-1440.png` (superseded context shot). a5 (drawer) and a6 (attribution) were never produced — no files to carry; their gaps are recorded in both critiques and in T3-W12 §Provenance.
+
+| Subdir | Files | Size |
+|---|---|---|
+| `owner-audit-2/` | 5 | 368 K |
+| `addendum/` (incl. `a2-shots/`) | 10 + 9 | 1.6 M |
+
+Running total ~3.9 M — still inside the ~5 MB ceiling.
