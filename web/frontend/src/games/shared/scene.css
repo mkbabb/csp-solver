@@ -1,0 +1,45 @@
+/*
+ * Shared game-scene layout — the board+controls row both scenes (SudokuGame, FutoshikiGame)
+ * duplicated. Consumed via `<style scoped src="@/games/shared/scene.css">` in each scene, so
+ * every rule is re-scoped to the importing component's data-v hash.
+ *
+ * CLASS-NAME CONTRACT — each scene's template MUST carry these classes on the matching nodes
+ * or the layout silently breaks (there is no build-time link between this file and the templates):
+ *   .app-layout        the outer board+controls flex row (column when stacked)
+ *   .board-peek-host   the positioning context wrapping the board + answer-key laminate
+ *   .controls-card     the row-regime (≥lg) controls card
+ *   .mobile-board-width the stacked (<lg) controls card's board-matched width
+ */
+
+/* H8-centering-only: row regime centers the controls card against the board. */
+.app-layout {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+/* Positioning context for the answer-key laminate — shrink-wraps the board box so the
+   absolutely-positioned laminate's inset:0 tracks the board exactly. */
+.board-peek-host {
+  position: relative;
+  display: flex;
+}
+
+.controls-card {
+  position: relative;
+  z-index: 45;
+}
+
+.mobile-board-width {
+  width: min(42rem, calc(100vw - 1.5rem));
+}
+
+/* Stacked regime — <lg after R3 (iPad portrait clips in the row layout). */
+@media (max-width: 1023px) {
+  .app-layout {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    width: 100%;
+  }
+}

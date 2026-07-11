@@ -5,53 +5,27 @@
  * (and its Worker) only spin up when Futoshiki is actually selected; switching away unmounts
  * it and stops its keyboard listener, leaving Sudoku's own peek path untouched.
  *
- * The peek/laminate wiring mirrors App.vue's Sudoku block (the laminate is board-shape-
- * agnostic by design — G5). The gesture logic lives here (the game layer); only the
- * rendered laminate is pencil.
+ * Structural mirror of SudokuGame.vue; the peek gesture lives in the shared `useAnswerKeyPeek`
+ * composable (the laminate is board-shape-agnostic by design — G5), only the rendered laminate
+ * is pencil.
  */
-import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useFutoshiki } from './composables/useFutoshiki'
 import FutoshikiBoard from './FutoshikiBoard/FutoshikiBoard.vue'
 import ControlPanel from './ControlPanel/ControlPanel.vue'
 import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'
-// Statically imported (not async) so it mounts synchronously within the peek's nextTick,
-// letting `active` transition false→true AFTER mount — AnswerKeyLaminate's watch(active)
-// isn't immediate, so it must observe the change to lay the laminate down. This whole
-// FutoshikiGame scene is already a lazy chunk, so the laminate rides that chunk, never the
-// main bundle.
+import { useAnswerKeyPeek } from '@games/shared/useAnswerKeyPeek'
+// Statically imported (not async): this whole FutoshikiGame scene is already a lazy chunk, so
+// the laminate rides that chunk, never the main bundle. (Sudoku is eager, so it keeps the
+// laminate async — either way `{immediate:true}` lays it down on mount, P2-L5 §R6(a).)
 import AnswerKeyLaminate from '@pencil/sheet/AnswerKeyLaminate.vue'
 
 const futoshiki = useFutoshiki()
 
-// ── Answer-key peek — hold-to-peek at the teacher's laminated key ────
-const peekActive = ref(false)
-const peekTouched = ref(false)
-const peekSolutionValues = ref<Record<string, number>>({})
-
-async function startPeek() {
-  if (peekActive.value) return
-  if (futoshiki.solveState.value === 'solving') return
-  peekTouched.value = true // mount the laminate (active still false)
-  await nextTick() // …so the next assignment is an observed false→true transition
-  peekActive.value = true
-  try {
-    peekSolutionValues.value = await futoshiki.peekSolution()
-  } catch {
-    peekActive.value = false
-  }
-}
-
-function endPeek() {
-  if (!peekActive.value) return
-  peekActive.value = false
-}
-
-// Engine-domains pencil marks (W6 beat 9): the marks ride the SAME `peekActive`
-// the laminate rides — no new handler, so K-peek/Esc isolation carries over
-// untouched. Every path that ends the peek (release, Esc, K, the startPeek
-// failure catch, unmount on game switch) funnels through `peekActive`, so the
-// marks can never outlive the gesture. Twin of App.vue's Sudoku wiring (D16).
-watch(peekActive, (a) => futoshiki.setMarksActive(a))
+const { peekActive, peekTouched, peekSolutionValues, startPeek, endPeek } = useAnswerKeyPeek({
+  solveState: futoshiki.solveState,
+  peekSolution: futoshiki.peekSolution,
+  setMarksActive: futoshiki.setMarksActive,
+})
 
 // Share act (W6): encode the current Futoshiki board (values + inequalities) into
 // `?board=`, write it to the address bar (URL wins over storage on reload), and copy the
@@ -61,26 +35,6 @@ function onShare() {
   const url = futoshiki.shareBoard()
   navigator.clipboard?.writeText(url).catch(() => {})
 }
-
-// Keyboard: K toggles the peek, Esc closes it (parity with Sudoku).
-function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') {
-    endPeek()
-    return
-  }
-  if (e.key === 'k' || e.key === 'K') {
-    const t = e.target as HTMLElement | null
-    // W6: the guard blocks exactly the roving-tabindex resting state (a board
-    // cell input) — nothing else (parity with App.vue's Sudoku handler).
-    if (t?.closest('.board-cells')) return
-    e.preventDefault()
-    if (peekActive.value) endPeek()
-    else startPeek()
-  }
-}
-
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
@@ -161,37 +115,4 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   </div>
 </template>
 
-<style scoped>
-/* H8-centering-only: row regime centers the controls card against the board. */
-.app-layout {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-}
-
-/* Positioning context for the answer-key laminate — shrink-wraps the board box so the
-   absolutely-positioned laminate's inset:0 tracks the board exactly. */
-.board-peek-host {
-  position: relative;
-  display: flex;
-}
-
-.controls-card {
-  position: relative;
-  z-index: 45;
-}
-
-.mobile-board-width {
-  width: min(42rem, calc(100vw - 1.5rem));
-}
-
-/* Stacked regime — <lg after R3 (iPad portrait clips in the row layout). */
-@media (max-width: 1023px) {
-  .app-layout {
-    flex-direction: column;
-    align-items: center;
-    gap: 1.25rem;
-    width: 100%;
-  }
-}
-</style>
+<style scoped src="@/games/shared/scene.css"></style>

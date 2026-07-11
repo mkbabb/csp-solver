@@ -23,14 +23,11 @@ import { SolverError } from './solverError'
 
 // ── the fiction split ────────────────────────────────────────────────────────
 
-export type PaperNoteVariant =
-  | 'budget'
-  | 'timeout'
-  | 'rate-limited'
-  | 'network'
-  | 'server'
-  | 'not-found'
-  | 'unknown'
+// Only the three variants the in-browser Worker can actually produce survive: the
+// server taxonomy (timeout/rate-limited/not-found/server) is unreachable on the
+// Worker path (SolverErrorCode = INVALID_INPUT | BUDGET_EXCEEDED | UNSAT |
+// WORKER_FAILURE), so those rows were pruned as dead (K1b).
+export type PaperNoteVariant = 'budget' | 'network' | 'unknown'
 
 export type Fiction =
   | { kind: 'teacher-red' }
@@ -42,23 +39,15 @@ export type Fiction =
  */
 export const PAPER_NOTE_COPY: Record<PaperNoteVariant, string> = {
   budget: "this one's a real head-scratcher — the solver gave up.",
-  timeout: "this one's a real head-scratcher — the solver gave up at 30 seconds.",
-  'rate-limited': 'easy there — too many tries. give it a moment.',
   network: "couldn't reach the solver.",
-  server: 'the solver tripped on its own pencil. try again?',
-  'not-found': "couldn't find that puzzle.",
   unknown: 'something went sideways. try again?',
 }
 
 /** Codes graded as wrong work — the teacher's red pencil, on the board (never a card). */
-const TEACHER_RED_CODES = new Set(['UNSATISFIABLE', 'INVALID_INPUT'])
+const TEACHER_RED_CODES = new Set(['UNSAT', 'INVALID_INPUT'])
 
 const PAPER_NOTE_VARIANT: Record<string, PaperNoteVariant> = {
   BUDGET_EXCEEDED: 'budget',
-  TIMEOUT: 'timeout',
-  RATE_LIMITED: 'rate-limited',
-  NOT_FOUND: 'not-found',
-  INTERNAL: 'server',
   WORKER_FAILURE: 'network', // a dead Worker is the Option-C analogue of an unreachable origin
 }
 

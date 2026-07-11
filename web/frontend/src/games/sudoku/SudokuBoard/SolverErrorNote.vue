@@ -8,7 +8,7 @@
  *
  * The card is honest and plain — the storybook dressing is the *paper* (HandDrawnOutline
  * + cartoon shadow + Patrick Hand), not purple copy. Copy + retryability are derived
- * upstream from the typed error taxonomy (`apiError.ts`) and handed in.
+ * upstream from the typed error taxonomy (`classifyError.ts`) and handed in.
  */
 import { nextTick, onMounted, ref } from 'vue'
 import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'

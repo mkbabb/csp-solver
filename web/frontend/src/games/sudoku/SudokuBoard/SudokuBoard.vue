@@ -2,7 +2,7 @@
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import SudokuCell from './SudokuCell/SudokuCell.vue'
 import SolverErrorNote from './SolverErrorNote.vue'
-import HandDrawnGrid from '@pencil/grid/HandDrawnGrid/HandDrawnGrid.vue'
+import { HandDrawnGrid } from '@pencil/grid'
 import CelebrationStar from '@pencil/chrome/CelebrationStar.vue'
 import MarginNote from '@pencil/chrome/MarginNote.vue'
 import { mulberry32 } from '@mkbabb/pencil-boil'
@@ -10,7 +10,8 @@ import { generateGridPaths } from '@pencil/grid/gridPaths'
 import { revealStaggerMs } from '@pencil/config/pencilConfig'
 import { setMurmurSeed, notifyUserEdit, resetMurmur } from '@pencil/composables/celebration'
 import { findConflicts } from './conflicts'
-import { classifyCode, PAPER_NOTE_COPY } from '@games/sudoku/solver/apiError'
+import { classifyCode, PAPER_NOTE_COPY } from '@games/sudoku/solver/classifyError'
+import { BOARD_CELLS_CLASS } from '@games/shared/constants'
 import type { Difficulty, SolveState, SolveStats } from '@games/sudoku/types'
 import type { AnimationState } from '@pencil/types'
 
@@ -369,7 +370,8 @@ function isRevealed(pos: number): boolean {
 
     <!-- Interactive cell grid -->
     <div
-      class="board-cells grid"
+      class="grid"
+      :class="BOARD_CELLS_CLASS"
       role="grid"
       :aria-label="gridLabel"
       :aria-rowcount="boardSize"

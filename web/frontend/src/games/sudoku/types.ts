@@ -8,13 +8,7 @@
  * (useSudoku → useUrlState → useSudoku).
  */
 export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD'
-export type SolveState = 'idle' | 'solving' | 'solved' | 'failed' | 'error'
 
-/** Search stats from the last completed solve — feeds the W6 margin stat-line.
- * The payload was already on the wire (worker `backtracks`/`solutionCount`);
- * `elapsedMs` is the worker-measured wall clock of the wasm call. */
-export interface SolveStats {
-  backtracks: number
-  solutionCount: number
-  elapsedMs?: number
-}
+// SolveState/SolveStats are the shared game vocabulary — re-exported here so every
+// existing `@games/sudoku/types` consumer is untouched (ballot Q3, one home).
+export type { SolveState, SolveStats } from '../shared/types'

@@ -7,14 +7,12 @@
  */
 import { computed, ref, onBeforeUnmount } from 'vue'
 import { Eraser, Share2 } from '@lucide/vue'
-import SolveIcon from '@pencil/chrome/SolveIcon.vue'
-import DiceIcon from '@pencil/chrome/DiceIcon.vue'
-import OptionSelector from '@pencil/chrome/OptionSelector/OptionSelector.vue'
+import { SolveIcon, DiceIcon, OptionSelector } from '@pencil/chrome'
 import BoilDivider from '@pencil/chrome/BoilDivider.vue'
 import SheetWashiLabel from '@pencil/sheet/SheetWashiLabel.vue'
 import ScribbleLoader from '@pencil/chrome/ScribbleLoader.vue'
 import { useTheme } from '@/composables/useTheme'
-import { useButtonAnimation } from '@pencil/composables/useButtonAnimation'
+import { useButtonAnimation } from '@games/shared/useButtonAnimation'
 import { boardSizeOptions } from './constants'
 
 const { isDark } = useTheme()

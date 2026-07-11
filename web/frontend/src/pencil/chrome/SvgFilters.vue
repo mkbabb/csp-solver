@@ -160,11 +160,6 @@ onMounted(() => {
         <stop offset="100%" stop-color="#fde68a" />
       </linearGradient>
 
-      <!-- Storybook texture: fractal noise displacement for organic moon/star rendering -->
-      <filter id="storybook-texture" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-        <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" result="noise" />
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.5" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
     </defs>
   </svg>
 </template>

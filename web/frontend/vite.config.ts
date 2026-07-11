@@ -203,6 +203,16 @@ export default defineConfig({
     fs: {
       allow: [path.resolve(__dirname), path.resolve(__dirname, '../../csp-solver/wasm/pkg')],
     },
+    // HMR websocket, pinned to :3000 so the client reconnects on a stable port.
+    // CAVEAT (R-11b/K46): this pin is a *literal* — it does NOT track a `--port`
+    // override of `server.port`. Run `vite --port 3210` and the app moves to :3210
+    // while this HMR socket stays on :3000, where it answers a plain GET with
+    // `426 Upgrade Required` (it's a websocket, not the SPA). Anything that probes
+    // :3000 expecting the app (Playwright `baseURL` + `reuseExistingServer`) then
+    // latches onto the HMR socket and every navigation 426s. It desyncs from
+    // `--port` by construction; if you override the port, override this too (or
+    // drop this block to let HMR ride `server.port`). The e2e global-setup asserts
+    // the target actually serves the SPA so this mislatch fails fast, not silently.
     hmr: {
       host: 'localhost',
       port: 3000,

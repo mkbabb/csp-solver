@@ -1,3 +1,4 @@
+import { toBase64Url, fromBase64Url } from '@/lib/base64url'
 import type { Difficulty } from '../types'
 
 const STORAGE_KEY = 'sudoku-board-state'
@@ -68,17 +69,8 @@ function randomDifficulty(): Difficulty {
 // ── Share-on-demand permalink codec (`?board=`) ─────────────────────────
 // base64url of `${size}.${cells}` where `cells` is one base-36 char per cell
 // value (0 = empty), length = size**4. Self-describing (carries its own size) so
-// a board-only link — no `?size=` — still loads, and a mismatch fails closed.
-
-function toBase64Url(s: string): string {
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
-
-function fromBase64Url(s: string): string {
-  const rem = s.length % 4
-  const padded = rem ? s + '='.repeat(4 - rem) : s
-  return atob(padded.replace(/-/g, '+').replace(/_/g, '/'))
-}
+// a board-only link — no `?size=` — still loads, and a mismatch fails closed. The
+// base64url codec is hoisted to `@/lib/base64url` (shared with Futoshiki's).
 
 export function encodeBoard(
   size: number,

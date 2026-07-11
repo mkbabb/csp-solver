@@ -8,6 +8,7 @@
  *   - `PersistedBoard` carries `inequalities` — permanent board furniture — which does
  *     NOT participate in given/overridden bookkeeping.
  */
+import { toBase64Url, fromBase64Url } from '@/lib/base64url'
 import { VALID_BOARD_SIZES, type Inequality } from '../types'
 
 const STORAGE_KEY = 'futoshiki-board-state'
@@ -68,17 +69,8 @@ function loadPersistedBoard(): PersistedBoard | null {
 // furniture as `greater-lesser` position pairs joined by ',' (empty when none).
 // Self-describing (carries its own size) so a board-only link still loads and a
 // mismatch fails closed. Inequalities are carried — a Futoshiki share without its
-// constraints is not the same puzzle.
-
-function toBase64Url(s: string): string {
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-}
-
-function fromBase64Url(s: string): string {
-  const rem = s.length % 4
-  const padded = rem ? s + '='.repeat(4 - rem) : s
-  return atob(padded.replace(/-/g, '+').replace(/_/g, '/'))
-}
+// constraints is not the same puzzle. The base64url codec is hoisted to
+// `@/lib/base64url` (shared with Sudoku's).
 
 export function encodeBoard(
   boardSize: number,

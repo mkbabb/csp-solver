@@ -9,6 +9,7 @@ import {
     wobbleRect,
     pointsToLinear,
     perturbPoints,
+    useBoilCache,
 } from '@mkbabb/pencil-boil';
 
 export interface GridPaths {
@@ -26,22 +27,6 @@ export interface BoilFrames {
     subgridLines: string[][];
     /** cellLines[lineIdx][frameIdx] */
     cellLines: string[][];
-}
-
-const GRID_BOIL_CACHE = new Map<string, BoilFrames>();
-const GRID_BOIL_CACHE_MAX = 24;
-
-function setGridBoilCache(key: string, value: BoilFrames) {
-    if (GRID_BOIL_CACHE.has(key)) GRID_BOIL_CACHE.delete(key);
-    GRID_BOIL_CACHE.set(key, value);
-    if (GRID_BOIL_CACHE.size > GRID_BOIL_CACHE_MAX) {
-        const oldest = GRID_BOIL_CACHE.keys().next().value;
-        if (oldest) GRID_BOIL_CACHE.delete(oldest);
-    }
-}
-
-function norm(n: number): string {
-    return Number.isInteger(n) ? String(n) : n.toFixed(4);
 }
 
 /**
@@ -210,19 +195,12 @@ export function generateGridBoilFrames(
     cellBoil: number = 1.0,
 ): BoilFrames {
     const safeFrameCount = Math.max(2, Math.floor(frameCount));
-    const cacheKey = [
-        boardSize,
-        subgridSize,
-        norm(viewBoxSize),
-        baseSeed,
-        safeFrameCount,
-        norm(frameBoil),
-        norm(subgridBoil),
-        norm(cellBoil),
-    ].join('|');
-    const cached = GRID_BOIL_CACHE.get(cacheKey);
-    if (cached) return cached;
-
+    // Memoized through the shared boil LRU (pencil-boil useBoilCache, cap 24):
+    // normKey quantizes non-integers to 4 decimals — the exact key discipline the
+    // hand-rolled GRID_BOIL_CACHE encoded, now re-pointed onto the library (L25-19).
+    return useBoilCache<BoilFrames>(
+        [boardSize, subgridSize, viewBoxSize, baseSeed, safeFrameCount, frameBoil, subgridBoil, cellBoil],
+        () => {
     const cellSize = viewBoxSize / boardSize;
     const pad = 26;
     // Frame rect: top/bottom flush with card edge, sides pulled in slightly
@@ -289,7 +267,7 @@ export function generateGridBoilFrames(
         else cellLines.push(frames);
     }
 
-    const result = { frame, subgridLines, cellLines };
-    setGridBoilCache(cacheKey, result);
-    return result;
+    return { frame, subgridLines, cellLines };
+        },
+    );
 }

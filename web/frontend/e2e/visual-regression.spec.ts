@@ -1,5 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// Visual-regression register — the SVG-filter/theme/grid-boil feature snapshots for
+// the default (Sudoku) scene. Renamed off the old dev-round file+artifact names at
+// T3-W7; the artifacts now carry feature names (screenshots/{light,dark,9x9}.png),
+// not dev-round ordinals.
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 async function loadApp(page: Page) {
@@ -169,7 +174,7 @@ test('light mode: layout, styles, filters, visual snapshot', async ({ page }) =>
   expect(transition).toBeTruthy();
 
   // Screenshot
-  await page.screenshot({ path: 'e2e/screenshots/round11-light.png', fullPage: false });
+  await page.screenshot({ path: 'e2e/screenshots/light.png', fullPage: false });
 });
 
 // ── Test 3: Dark Mode — Filter Swap + Visual ────────────────────────
@@ -193,7 +198,7 @@ test('dark mode: filter swap, control panel filter, visual snapshot', async ({ p
   expect(cpFilter).toMatch(/stroke-dark/);
 
   // Screenshot
-  await page.screenshot({ path: 'e2e/screenshots/round11-dark.png', fullPage: false });
+  await page.screenshot({ path: 'e2e/screenshots/dark.png', fullPage: false });
 });
 
 // ── Test 4: Grid Draw-In + Path-Based Boil ──────────────────────────
@@ -320,5 +325,5 @@ test('size switching: 4x4, 9x9, 16x16 all render grid lines', async ({ page }) =
   expect(grid9.visibleLayerCount).toBe(1);
 
   // Screenshot final state
-  await page.screenshot({ path: 'e2e/screenshots/round11-9x9.png', fullPage: false });
+  await page.screenshot({ path: 'e2e/screenshots/9x9.png', fullPage: false });
 });

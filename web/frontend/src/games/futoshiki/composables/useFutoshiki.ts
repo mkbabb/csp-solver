@@ -14,7 +14,9 @@ import {
   dropBoardParam,
   type PersistedBoard,
 } from './useUrlState'
-import { classifyError } from '../solver/apiError'
+import { classifyError } from '../solver/classifyError'
+import { useUndoHistory } from '../../shared/useUndoHistory'
+import { usePencilMarks } from '../../shared/usePencilMarks'
 import type { Inequality, SolveState, SolveStats } from '../types'
 
 /**
@@ -60,36 +62,11 @@ export function useFutoshiki() {
   const errorCode = ref('')
   const boardGeneration = ref(0)
 
-  // ── Bounded undo/redo (W6) — a capped {pos,prev,next}[] linear history ─────────
-  // Twin of useSudoku's (D16). Only user edits (setCell) are recorded — solve/randomize/
-  // clear/hint are not; the stack is reset whenever the board itself is replaced.
-  const UNDO_CAP = 128
-  const undoStack = ref<{ pos: number; prev: number; next: number }[]>([])
-  const undoIndex = ref(0)
-  function clearUndo() {
-    undoStack.value = []
-    undoIndex.value = 0
-  }
-  function recordEdit(pos: number, prev: number, next: number) {
-    if (prev === next) return
-    // Drop the redo tail — a fresh edit forks the timeline.
-    if (undoIndex.value < undoStack.value.length) undoStack.value.splice(undoIndex.value)
-    undoStack.value.push({ pos, prev, next })
-    if (undoStack.value.length > UNDO_CAP) undoStack.value.shift()
-    undoIndex.value = undoStack.value.length
-  }
-  function undo() {
-    if (undoIndex.value === 0) return
-    undoIndex.value--
-    const e = undoStack.value[undoIndex.value]
-    applyCellValue(e.pos, e.prev)
-  }
-  function redo() {
-    if (undoIndex.value >= undoStack.value.length) return
-    const e = undoStack.value[undoIndex.value]
-    undoIndex.value++
-    applyCellValue(e.pos, e.next)
-  }
+  // Bounded undo/redo (W6) — the shared {pos,prev,next}[] history machine (D16 twin).
+  // The arrow wrapper keeps the call hoisting-safe: `applyCellValue` is declared below.
+  const { clearUndo, recordEdit, undo, redo } = useUndoHistory((pos, value) =>
+    applyCellValue(pos, value),
+  )
 
   function initBoard() {
     values.value = {}
@@ -286,71 +263,15 @@ export function useFutoshiki() {
     queueSave()
   }
 
-  // ── Engine-domains pencil marks (W6 beat 9 — P4 landed as product; D16 twin) ──
-  // The marks ARE the solver's propagated domains (root AC-3 + GAC, zero search),
-  // but they are OPT-IN, never ambient: at full GAC strength most served boards
-  // collapse to all-singleton domains (the P4 spoiler finding), so always-on
-  // marks would be a disclosure, not a hint. They ride the existing peek gesture
-  // — FutoshikiGame.vue mirrors `peekActive` into `setMarksActive`, no new
-  // handler — visible only while the hold-to-peek is held; release clears them.
-  // UNSAT or any worker fault simply clears the marks: a courtesy, never an
-  // error surface.
-  const marksActive = ref(false)
-  const pencilMasks = ref<Uint32Array | null>(null)
-  let marksTimer: ReturnType<typeof setTimeout> | null = null
-  let marksSeq = 0
-  function refreshMarks(delayMs = 150) {
-    if (marksTimer) clearTimeout(marksTimer)
-    marksTimer = setTimeout(async () => {
-      marksTimer = null
-      const seq = ++marksSeq
-      try {
-        const masks = await api.propagateBoard(
-          values.value,
-          boardSize.value,
-          inequalities.value,
-        )
-        // Last-write-wins seq guard + the gesture may have released mid-flight.
-        if (seq === marksSeq && marksActive.value) pencilMasks.value = masks
-      } catch {
-        if (seq === marksSeq) pencilMasks.value = null
-      }
-    }, delayMs)
-  }
-  function setMarksActive(on: boolean) {
-    if (marksActive.value === on) return
-    marksActive.value = on
-    if (on) {
-      refreshMarks(0) // the gesture is held NOW — no debounce on the first paint
-    } else {
-      if (marksTimer) {
-        clearTimeout(marksTimer)
-        marksTimer = null
-      }
-      marksSeq++ // void any in-flight round-trip
-      pencilMasks.value = null
-    }
-  }
-
-  const pencilMarks = computed<Record<string, number[]>>(() => {
-    const masks = pencilMasks.value
-    const bs = boardSize.value
-    // Stale-shape guard: a size switch mid-flight leaves masks from the
-    // previous geometry; render nothing until the next round-trip lands.
-    if (!masks || masks.length !== totalCells.value) return {}
-    const out: Record<string, number[]> = {}
-    for (let i = 0; i < masks.length; i++) {
-      if ((values.value[String(i)] ?? 0) !== 0) continue
-      const cand: number[] = []
-      for (let v = 1; v <= bs; v++) {
-        if (masks[i] & (1 << v)) cand.push(v)
-      }
-      // Only show marks where propagation has actually bitten — a cell
-      // with its full domain intact carries no information, just noise.
-      if (cand.length > 0 && cand.length < bs) out[String(i)] = cand
-    }
-    return out
-  })
+  // Engine-domains pencil marks (W6 beat 9 — the shared marks machine; D16 twin).
+  // FutoshikiGame mirrors `peekActive` into `setMarksActive`; the propagate thunk
+  // closes over the live solver + board state (values, boardSize, inequalities).
+  const { marksActive, refreshMarks, setMarksActive, pencilMarks } = usePencilMarks(
+    () => api.propagateBoard(values.value, boardSize.value, inequalities.value),
+    values,
+    boardSize,
+    totalCells,
+  )
 
   // ── Restore from persisted state (no animation) ──────────────────
   function restoreBoard(persisted: PersistedBoard) {

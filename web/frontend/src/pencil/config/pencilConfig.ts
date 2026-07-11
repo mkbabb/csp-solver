@@ -1,63 +1,6 @@
 /** Centralized pencil stroke, color palette, filter, and draw-in config */
 import { reactive } from 'vue';
 
-// ── MOTION language — cadence bands + house easings (design-refinement.md §1.1) ──
-//
-// The motion vocabulary is not free-form: every animated cadence in the skin belongs to one
-// of four bands, and every easing curve to one of four house curves. This section is the
-// LAW those live values are audited against — new motion picks a band + a house curve, and
-// nothing lands off-model. Ranges are inclusive ms-per-tick (ambient) or total-duration
-// (one-shots / sequences).
-//
-//   Band A — stop-motion ambient (125–170 ms/tick, 6–8 fps). Any always-on hand-drawn
-//     jitter lives here: grid boil 150, divider boil 150, star/sun-sparkle boil 125,
-//     celestial wobble 160, heart wobble 170, selection burst 120. Once the unified
-//     scheduler owns the clock (it does — @mkbabb/pencil-boil), values QUANTIZE to the 25 ms
-//     grid {125, 150, 175} so co-prime intervals stop producing near-coincident double-paints.
-//   Band B — lazy ambient (550–800 ms/tick). Large or peripheral elements only, where 6–8 fps
-//     would pull the eye: logo wobble 550, sun-ray boil/shape 800, sun breathe 6 s.
-//   Band C — responsive one-shots (120–600 ms, user-triggered, finite): hover wiggle 600,
-//     button anims 400–500, tooltip fade 150, cell reveal 300. Ghost focus rect stays instant.
-//   Band D — choreographed sequences (150 ms–3.2 s composed timelines): grid draw-in ~800 ms,
-//     erase ~150 ms + 4 ms·i, logo clip 1.2 s, theme page-turn 800 ms, celebration ≤3.2 s
-//     (see CELEBRATION). Always finite, always emitting completion, always PRM-substitutable.
-//
-// DEAD BAND (intentional, 175–550 ms): nothing AMBIENT may tick here — a ~3 fps loop reads as
-//   jank, not stop-motion. The boil/wobble family respects it; responsive one-shots (Band C)
-//   are exempt (they are user-triggered and finite, not always-on).
-//
-// SMALL-AREA FILTER RULE: no `wobble-*` filter (feTurbulence + feDisplacementMap, re-rasterized
-//   each tick) ever targets an element larger than the logo. Logo is the ceiling; sun/moon
-//   toggle, heart, and icon-hover are all at or below it. The board-scale `grain-static` on the
-//   grid is exempt from this rule and governed instead by the GRAIN hoist (see grain-static).
-//
-// EASING house style — four curves, each with a fixed role; no new bezier without a ledger
-//   entry here. `easeOutCubic`/`easeInCubic` resolve through easings.ts (resolveEasing); the two
-//   spring/pop curves are CSS bezier strings for stylesheet consumers.
-export const MOTION = {
-  bands: {
-    A: { rangeMs: [125, 170], quantizeGridMs: [125, 150, 175], note: 'stop-motion ambient jitter' },
-    B: { rangeMs: [550, 800], note: 'lazy ambient — large/peripheral only' },
-    C: { rangeMs: [120, 600], note: 'responsive one-shots, user-triggered, finite' },
-    D: { rangeMs: [150, 3200], note: 'choreographed sequences, finite + completion-emitting' },
-  },
-  /** Ambient ticks are forbidden in this inclusive range (Band C one-shots exempt). */
-  deadBandMs: [175, 550],
-  /** `wobble-*` displacement filters may not exceed this element in on-screen area. */
-  smallAreaFilterCeiling: 'wobble-logo',
-  /** The four sanctioned curves. `resolvesVia` names how a consumer references it. */
-  easings: {
-    /** Anything drawing ONTO the page: grid/glyph draw-in, focus-ring sketch. */
-    drawOn: { name: 'easeOutCubic', resolvesVia: 'easings.ts', role: 'draw onto the page' },
-    /** Anything LEAVING the page: erase. */
-    erase: { name: 'easeInCubic', resolvesVia: 'easings.ts', role: 'leave the page' },
-    /** POP arrivals: cell reveal. */
-    pop: { name: 'back-out', css: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)', role: 'pop arrival' },
-    /** PHYSICAL flourishes: theme page-turn, dice tumble, sparkle grow. */
-    spring: { name: 'spring-back', css: 'cubic-bezier(0.34, 1.56, 0.64, 1)', role: 'physical flourish' },
-  },
-} as const;
-
 // ── Stroke rendering ──────────────────────────────────────────────
 
 export const PENCIL = {
@@ -82,10 +25,7 @@ export const YOSHI_COLORS = {
   vine: { main: '#16a34a', secondary: '#22c55e' },
   // Mascot palette — the 8 sun/moon hexes formerly welded into DarkModeToggle.vue's template
   // (design-refinement.md §3.3.4). Consolidated here as the single source; roles map 1:1 to
-  // the toggle's fills/strokes. Prerequisite for the M4 `useCelestialSun()` lift into
-  // pencil-boil — the mascot can't ship to the shared lib with its palette in one consumer's
-  // template. NOTE: the DarkModeToggle template rewire to consume these is a component change,
-  // owned by the celestial lane; this lane lands the config authority only.
+  // the toggle's fills/strokes.
   celestial: {
     sun: { body: '#E88845', outline: '#D16A32', core: '#F09855', rays: '#F0B030', sparkle: '#FDE68A' },
     moon: { body: '#FFF4AA', outline: '#E5C74D', star: '#FFFFFF' },
