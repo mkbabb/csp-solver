@@ -10,7 +10,11 @@ import { test, expect, devices, type Page } from '@playwright/test';
 // asserts PATH IDENTITY: a pad digit on a given produces exactly the keyboard's
 // override transition (given → your entry), never a divergent rule of its own.
 
-test.use({ ...devices['iPhone SE'] }); // 375×667 — the audit's mobile viewport
+// 375×667 — the audit's mobile viewport. The iPhone SE descriptor defaults to
+// webkit, which CI does not install (chromium-only lane); pin chromium and keep
+// the descriptor's touch/viewport traits — matchMedia('(pointer: coarse)') is
+// driven by hasTouch/isMobile, not the engine.
+test.use({ ...devices['iPhone SE'], browserName: 'chromium', defaultBrowserType: 'chromium' });
 
 /** The dev-only FilterTuner toggle (env-gated OUT of prod builds) floats over the
  *  mobile panel at 375 and intercepts taps on the pad's lower row — dev chrome, not
