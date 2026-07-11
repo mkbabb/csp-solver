@@ -46,11 +46,14 @@ const glyph = computed(() => {
     return getVariant(props.value, props.position);
 });
 
-// Given non-overridden cells are original clues; solver-introduced cells get sparkle-rainbow
+// Given non-overridden cells are original clues; solver-introduced cells write in
+// solver-ink — the theme-resolved rainbow (UI-10, T3-W9: the pastel wax washed to
+// ~1.2–1.8:1 on the cream papers; #solver-ink deepens per theme via CSS tokens while
+// chrome's sparkle icon keeps the untouched #sparkle-rainbow).
 const isGivenOriginal = computed(() => props.isGiven && !props.isOverridden);
 
 const strokeColor = computed(() => {
-    if (props.isSolved) return 'url(#sparkle-rainbow)';
+    if (props.isSolved) return 'url(#solver-ink)';
     if (isGivenOriginal.value) return 'var(--color-foreground)';
     return 'var(--color-user-ink, #2563eb)';
 });

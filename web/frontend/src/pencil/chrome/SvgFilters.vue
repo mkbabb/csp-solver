@@ -151,13 +151,27 @@ onMounted(() => {
 
       </template>
 
-      <!-- Non-preset filters: pastel rainbow gradient -->
+      <!-- Non-preset filters: pastel rainbow gradient (CHROME register — the sparkle
+           icon). Board content rides #solver-ink below; this one never deepens. -->
       <linearGradient id="sparkle-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stop-color="#f9a8d4" />
         <stop offset="25%" stop-color="#c4b5fd" />
         <stop offset="50%" stop-color="#93c5fd" />
         <stop offset="75%" stop-color="#6ee7b7" />
         <stop offset="100%" stop-color="#fde68a" />
+      </linearGradient>
+
+      <!-- Solver-ink (UI-10, T3-W9): the solver's answers, BOARD CONTENT ONLY (F8 §3.2 —
+           never chrome, never a metadata tone). Same five hues as the sparkle rainbow,
+           theme-resolved through the --color-solver-ink-* tokens (index.css): light mode
+           deepens to ink pressure (≥4.72:1 on the cream papers, measured), dark keeps
+           the pastel wax (10.1–15.0:1). -->
+      <linearGradient id="solver-ink" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color: var(--color-solver-ink-1)" />
+        <stop offset="25%" style="stop-color: var(--color-solver-ink-2)" />
+        <stop offset="50%" style="stop-color: var(--color-solver-ink-3)" />
+        <stop offset="75%" style="stop-color: var(--color-solver-ink-4)" />
+        <stop offset="100%" style="stop-color: var(--color-solver-ink-5)" />
       </linearGradient>
 
     </defs>

@@ -93,9 +93,12 @@ test('consecutive solve: values remain unchanged on second solve', async ({ page
   expect(valuesAfterSecondSolve).toEqual(valuesAfterFirstSolve);
 });
 
-// ── Test 4: Given Cells Use Foreground Ink, Solved Cells Use Sparkle-Rainbow ──
+// ── Test 4: Given Cells Use Foreground Ink, Solved Cells Use Solver-Ink ──
+// T3-W9 UI-10: solver digits moved from the chrome #sparkle-rainbow to the
+// theme-resolved #solver-ink gradient (light deepens to AA ink pressure, dark
+// keeps the pastels). The sparkle icon alone still rides #sparkle-rainbow.
 
-test('given cells use foreground ink, solved cells use sparkle-rainbow', async ({ page }) => {
+test('given cells use foreground ink, solved cells use solver-ink', async ({ page }) => {
   await loadApp(page);
   await page.waitForTimeout(1500);
 
@@ -113,9 +116,9 @@ test('given cells use foreground ink, solved cells use sparkle-rainbow', async (
   // Solve to introduce solver cells
   await solveBoard(page);
 
-  // Solver-introduced cells should have sparkle-rainbow stroke
-  const sparkleCount = await page.locator('.sudoku-cell .glyph-svg path[stroke="url(#sparkle-rainbow)"]').count();
-  expect(sparkleCount).toBeGreaterThan(0);
+  // Solver-introduced cells should have the solver-ink stroke (UI-10, T3-W9)
+  const solverInkCount = await page.locator('.sudoku-cell .glyph-svg path[stroke="url(#solver-ink)"]').count();
+  expect(solverInkCount).toBeGreaterThan(0);
 });
 
 // ── Test 4b: Given Cell Override → User-Ink ─────────────────────────

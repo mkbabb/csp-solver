@@ -144,11 +144,36 @@
   --color-crayon-orange: #F4A236;
   --color-crayon-rose: #E8315B;
   --color-crayon-blue: #4A90D9;
+  --color-crayon-gold: #C99A2E;  /* the fifth crayon (T3-W9, F8 §2) — warm ochre wax. Gold is
+     earned light: it lives in the sky and comes to the page only when the work is done. Wax
+     tier: strokes, washes, fills, the sticker — never light-mode body text (2.47:1). */
+
+  /* Ink tiers — verdict TEXT only (T3-W9). Every crayon fails AA as light-mode text (green
+     2.16:1, gold wax 2.47:1, rose 4.01:1 on the live papers), so the verdict line writes with
+     a darkened ink of the same hue; washes/strokes/fills keep the wax. Measured on
+     --color-background hsl(48 15% 98%): gold-ink #8C691D 4.85:1, red-ink #D02A52 4.87:1
+     (4.97:1 / 4.99:1 on --color-card) — both AA. Dark mode collapses ink into wax below. */
+  --color-gold-ink: #8C691D;
+  --color-red-ink: #D02A52;  /* teacher-red #E8315B hue-locked (346°), darkened to AA */
+
+  /* Solver-ink rainbow — BOARD CONTENT ONLY (UI-10, T3-W9; F8 §3.2: never chrome, never a
+     metadata tone). The solver's answers write in a five-hue rainbow gradient
+     (#solver-ink, SvgFilters.vue); the old pastel wax washed to 1.22–1.81:1 on the cream
+     papers, so light mode deepens each stop hue-locked to ink pressure — measured
+     5.40/5.60/6.21/5.39/5.29:1 on --color-card (≥4.72:1 on --color-background), all AA
+     even at body size. Dark mode keeps the pastels (10.1–15.0:1 — crisp already; the
+     chrome sparkle icon stays on the untouched #sparkle-rainbow). */
+  --color-solver-ink-1: #c2286e;
+  --color-solver-ink-2: #7c3aed;
+  --color-solver-ink-3: #2059c8;
+  --color-solver-ink-4: #047857;
+  --color-solver-ink-5: #92600a;
 
   /* Semantic state tokens — every one an in-world alias into the crayon system, zero new hexes
      (design-refinement.md §3.4). Each resolves per-theme through the var it references. */
   --color-teacher-red: var(--color-crayon-rose);   /* teacher's red pencil: failure, conflicts, aria-invalid */
-  --color-gold-star: var(--color-crayon-green);     /* gold-star sticker: solve success, celebration accents */
+  --color-gold-star: var(--color-crayon-gold);      /* gold-star sticker: solve success, celebration accents —
+     trued to the fifth crayon (T3-W9; the old alias onto green was the lie the audit found) */
   --color-focus-sketch: #3A7BC4; /* keyboard focus ring — crayon-blue darkened one step:
      the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
      lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
@@ -206,6 +231,20 @@
   --color-crayon-orange: #F5B35C;
   --color-crayon-rose: #FF5C7C;
   --color-crayon-blue: #6AABEB;
+  --color-crayon-gold: #E5C74D;  /* the moon's own outline gold — 11.48:1 on dark paper */
+
+  /* Dark ink collapses into wax — the glowing crayon is already AA at night
+     (gold 11.48:1 on --color-background, rose 6.44:1; both hold on --color-card). */
+  --color-gold-ink: var(--color-crayon-gold);
+  --color-red-ink: var(--color-crayon-rose);
+
+  /* Solver-ink keeps its pastel wax at night (UI-10): 10.1–15.0:1 on the dark papers —
+     the paper darkens and the wax glows; only light mode needed the ink tier. */
+  --color-solver-ink-1: #f9a8d4;
+  --color-solver-ink-2: #c4b5fd;
+  --color-solver-ink-3: #93c5fd;
+  --color-solver-ink-4: #6ee7b7;
+  --color-solver-ink-5: #fde68a;
 
   --grid-line-color: hsl(48 10% 80%);
 
@@ -308,6 +347,18 @@
       0 8px 0px color-mix(in srgb, var(--color-gold-star) 20%, transparent),
       8px 8px 0px color-mix(in srgb, var(--color-gold-star) 15%, transparent) !important;
     transition: box-shadow 500ms;
+  }
+
+  /* PRM: the gold lands instantly — the 500ms stroke/shadow sweeps are motion-adjacent
+     cross-fades (T3-W9, F2-C / F3 §3.6). Same-specificity, later source order wins. */
+  @media (prefers-reduced-motion: reduce) {
+    .solve-success .grid-line {
+      transition: none;
+    }
+
+    .solve-success {
+      transition: none;
+    }
   }
 
   /* Solve failure — the teacher's red pencil. Shadow carries the full

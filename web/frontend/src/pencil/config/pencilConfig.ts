@@ -16,7 +16,18 @@ export const PENCIL = {
 
 export const YOSHI_COLORS = {
   outlineBlack: '#1a1a1a',
-  heart: { fill: '#FF4D6D', shadow: '#C9184A', highlight: '#fff', blush: '#FFB3C6' },
+  // T3-W9 (F7 §3.0): `stitch` is color-mix(in srgb, #1a1a1a 35%, #FF4D6D) baked to a
+  // constant — SVG presentation attrs can't color-mix; `stem` is the vine green
+  // (= vine.main below), the Heart Fruit's earned tell. CrayonHeart.vue imports these
+  // instead of duplicating literals (the F7 hex-truthing).
+  heart: {
+    fill: '#FF4D6D',
+    shadow: '#C9184A',
+    highlight: '#fff',
+    blush: '#FFB3C6',
+    stitch: '#8f3a50',
+    stem: '#16a34a',
+  },
   apple: { fill: '#ef4444', shadow: '#b91c1c' },
   banana: { fill: '#fbbf24', shadow: '#d97706' },
   grapes: { fill: '#8b5cf6', shadow: '#6d28d9' },
@@ -233,6 +244,13 @@ export const CELEBRATION = {
   starCrestMs: 2650,
   /** Union foil-gleam tail: a single specular sweep over the garnish (OD-1 default: ships). */
   gleamMs: 400,
+  /** The felt heart (T3-W9, F7 §3.2) — the Heart Fruit crests board bottom-right.
+   *  Bounce onset = the star's crest (one shared moment), 550ms of reciprocal-axis
+   *  squash on the HOST WRAPPER (never the filtered <g>), settling ≈3.2s — at the cap.
+   *  The blink is post-crest ambient: one setTimeout, once, ~1.8s after settle. */
+  heartCrestMs: 2650,
+  heartBounceMs: 550,
+  heartBlinkDelayMs: 1800,
 } as const;
 
 /** Beat-1 stagger, board-normalized so the reveal window is ~constant across sizes. */

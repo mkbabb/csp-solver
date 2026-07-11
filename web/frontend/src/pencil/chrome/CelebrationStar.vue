@@ -120,17 +120,16 @@ onUnmounted(reset)
 </template>
 
 <style scoped>
-/* H6-shrunk: enlarged in place, 2.5 → 3.25rem — same top-left anchor (the old
-   bottom: -2.75rem put the top edge 0.25rem below the board; kept exactly), the
-   star just grows down-right. No reposition, no burst. */
+/* T3-W9 §2: the star is a foil sticker pressed into the completion block's slot —
+   in flow beside the verdict (the slot owns the 3.25rem square), no overlay anchor,
+   no z-index. Collision with the margin text impossible by construction. `relative`
+   with zero offsets is the in-flow ("static") placement the hoist asks for, kept
+   positioned only so the gleam's `inset: 0` keeps anchoring to the star itself. */
 .celebration-star {
-  position: absolute;
-  left: 0.25rem;
-  top: calc(100% + 0.25rem);
-  width: 3.25rem;
-  height: 3.25rem;
+  position: relative;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  z-index: 3;
 }
 
 .star-svg {

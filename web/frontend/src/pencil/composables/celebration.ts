@@ -23,6 +23,10 @@ interface MurmurCell {
 }
 
 const murmurCells = new Map<number, MurmurCell>();
+/** The felt heart's murmur seat (T3-W9, F2 §C / F7 §3.2): when a celebration heart is
+ *  mounted, 1-in-8 seeded windows wiggle IT instead of a cell. At most one heart exists
+ *  per app (both games share the mount), so a single slot suffices. */
+let murmurHeart: MurmurCell | null = null;
 let murmurTimer: ReturnType<typeof setTimeout> | null = null;
 let windowIndex = 0;
 let seed = 1;
@@ -47,6 +51,17 @@ export function registerMurmurCell(position: number, cell: MurmurCell): void {
 export function unregisterMurmurCell(position: number): void {
   murmurCells.delete(position);
   if (murmurCells.size === 0) stopMurmurLoop();
+}
+
+/** The celebration heart joins the classroom (T3-W9). It never drives the loop —
+ *  the murmur only runs while solved cells are registered, which is always true
+ *  whenever a celebration heart is mounted. */
+export function registerMurmurHeart(heart: MurmurCell): void {
+  murmurHeart = heart;
+}
+
+export function unregisterMurmurHeart(): void {
+  murmurHeart = null;
 }
 
 /** Test/settle hook — drop all registrations and halt the loop (board clear/regeneration). */
@@ -80,8 +95,16 @@ function tickWindow(): void {
   if (murmurCells.size === 0) return;
   // The page is being written on — hold the murmur this window.
   if (performance.now() - lastUserEditAt < CELEBRATION.murmurWindowMs) return;
-  const cells = [...murmurCells.values()];
   const rng = mulberry32(seed * 31 + windowIndex);
+  // T3-W9 (F2 §C / F7 §3.2): 1-in-8 seeded windows the felt heart murmurs instead of a
+  // cell. The gate draw is consumed unconditionally so cell picks stay deterministic
+  // per (seed, windowIndex) whether or not a heart is mounted.
+  const heartTurn = Math.floor(rng() * 8) === 0;
+  if (heartTurn && murmurHeart) {
+    murmurHeart.wiggleOnce();
+    return;
+  }
+  const cells = [...murmurCells.values()];
   const pick = cells[Math.floor(rng() * cells.length)];
   pick?.wiggleOnce();
 }

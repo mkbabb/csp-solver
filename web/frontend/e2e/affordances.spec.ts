@@ -151,15 +151,20 @@ test('stale-note: teacher-red and gold-star notes clear on the next edit', async
   await expect(note).not.toContainText('solved it!', { timeout: 5000 });
 });
 
-// ── 3. Stat-line — backtracks + elapsed in the margin after a solve ──
+// ── 3. The tally — backtracks + elapsed under the voice after a solve ──
+// T3-W9 §2: the W6 `.stat-line` twins were deleted; the tally now arrives as
+// MarginNote's `meta` line (`.margin-note-meta`, outside the live region) inside
+// the completion block. Same lifecycle, new DOM truth.
 
-test('stat-line: solve writes "N backtracks — Xms"; the next edit clears it', async ({ page }) => {
+test('tally: solve writes "N backtracks — Xms" in the note meta; the next edit clears it', async ({
+  page,
+}) => {
   await loadSudoku(page, '?size=3&difficulty=MEDIUM');
 
-  await expect(page.locator('.stat-line')).toHaveCount(0); // idle → no tally
+  await expect(page.locator('.margin-note-meta')).toHaveCount(0); // idle → no tally
   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
 
-  const stat = page.locator('.stat-line');
+  const stat = page.locator('.margin-note-meta');
   await expect(stat).toBeVisible({ timeout: 20000 });
   await expect(stat).toHaveText(/^\d+ backtracks?( — (\d+ms|\d+\.\d+s))?$/);
 
@@ -170,7 +175,7 @@ test('stat-line: solve writes "N backtracks — Xms"; the next edit clears it', 
     return 0; // solved board: overwrite cell 0 instead
   });
   await setCellValue(page, blank, '1');
-  await expect(page.locator('.stat-line')).toHaveCount(0, { timeout: 5000 });
+  await expect(page.locator('.margin-note-meta')).toHaveCount(0, { timeout: 5000 });
 });
 
 // ── 4. Undo — bounded, Ctrl AND Meta gated, plain z never swallowed ──

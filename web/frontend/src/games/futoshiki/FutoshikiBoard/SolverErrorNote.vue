@@ -63,7 +63,8 @@ onMounted(async () => {
   font-size: var(--type-body);
   line-height: var(--type-leading-caption);
   margin: 0;
-  color: var(--color-teacher-red, var(--color-crayon-rose));
+  /* Ink tier, not wax (T3-W9): body-size text earns the AA-darkened red. */
+  color: var(--color-red-ink, var(--color-crayon-rose));
 }
 
 .error-note-retry {

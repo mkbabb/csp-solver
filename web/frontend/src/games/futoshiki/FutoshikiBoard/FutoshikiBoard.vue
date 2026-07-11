@@ -16,6 +16,7 @@ import FutoshikiCaret from './FutoshikiCaret/FutoshikiCaret.vue'
 import SolverErrorNote from './SolverErrorNote.vue'
 import { HandDrawnGrid } from '@pencil/grid'
 import CelebrationStar from '@pencil/chrome/CelebrationStar.vue'
+import CelebrationHeart from '@pencil/chrome/CelebrationHeart.vue'
 import MarginNote from '@pencil/chrome/MarginNote.vue'
 import { mulberry32 } from '@mkbabb/pencil-boil'
 import { generateCellRects } from '@pencil/grid/gridPaths'
@@ -24,6 +25,7 @@ import { setMurmurSeed, notifyUserEdit, resetMurmur } from '@pencil/composables/
 import { findConflicts } from './conflicts'
 import { classifyCode, PAPER_NOTE_COPY } from '@games/futoshiki/solver/classifyError'
 import { BOARD_CELLS_CLASS } from '@games/shared/constants'
+import { formatSolveTally } from '@games/shared/solveTally'
 import type { Inequality, SolveState, SolveStats } from '@games/futoshiki/types'
 import type { AnimationState } from '@pencil/types'
 
@@ -41,8 +43,9 @@ const props = defineProps<{
   inequalities: Inequality[]
   /** Optional typed error code for the paper-note copy. Absent → default BUDGET_EXCEEDED copy. */
   errorCode?: string
-  /** Stats from the last completed solve — the W6 margin stat-line (pencil hand,
-   *  understated). Null whenever the grade is idle; the composable owns the lifecycle. */
+  /** Stats from the last completed solve — the margin tally (MarginNote meta, pencil
+   *  hand, understated). Null whenever the grade is idle; the composable owns the
+   *  lifecycle. */
   solveStats?: SolveStats | null
   /** Engine-domains pencil marks (W6 beat 9): per-position surviving candidates
    *  from the solver's own propagation. Populated only while the peek gesture is
@@ -349,21 +352,9 @@ const errorNote = computed(() => {
   return { text: PAPER_NOTE_COPY.budget, retryable: true }
 })
 
-// ── The stat-line (W6) — a small graphite annotation under the voice ─────────
-// "128 backtracks — 42ms": search effort in the pencil hand, understated. The
-// gold/red note stays the voice; this is the pencil's own tally in the margin.
-const statLine = computed(() => {
-  const s = props.solveStats
-  if (!s) return ''
-  const word = s.backtracks === 1 ? 'backtrack' : 'backtracks'
-  const time =
-    s.elapsedMs == null
-      ? ''
-      : s.elapsedMs < 1000
-        ? ` — ${Math.max(1, Math.round(s.elapsedMs))}ms`
-        : ` — ${(s.elapsedMs / 1000).toFixed(1)}s`
-  return `${s.backtracks} ${word}${time}`
-})
+// ── The tally (T3-W9 §2) — preformatted upstream, rendered by MarginNote's meta line ──
+// The W6 derivation twins were deleted from both boards; formatSolveTally is the one home.
+const tally = computed(() => formatSolveTally(props.solveStats))
 
 // Grid animation state machine
 const gridAnimState = ref<AnimationState>('hidden')
@@ -475,17 +466,31 @@ function isRevealed(pos: number): boolean {
       />
     </div>
 
-    <!-- Gold-star garnish -->
-    <CelebrationStar :active="celebrating" />
+    <!-- The felt heart (T3-W9, F2-C/F7 §3.2) — the Heart Fruit crests the board's
+         bottom-right corner at the star's moment, diagonal opposite of the margin
+         voice. Anchored to the square itself (the sticker register). -->
+    <CelebrationHeart :active="celebrating" />
     </div>
 
     <!-- Below-board margin: status voice + paper note — a sibling of the board square
          (H9): in flow when stacked, overlay in the row regime. -->
     <div class="board-margin">
-      <MarginNote :text="marginText" :tone="marginTone" />
-      <!-- The stat-line (W6): plain text, deliberately OUTSIDE the live region — the
-           voice announces the grade; the tally is there for whoever leans in. -->
-      <p v-if="statLine" :key="statLine" class="stat-line">{{ statLine }}</p>
+      <!-- The completion block (T3-W9 §2): one grid composition — the foil sticker slot
+           beside the text column (voice over meta). Twin of SudokuBoard's. -->
+      <div class="completion-note">
+        <!-- v-show (NOT v-if): the star must stay mounted so its `active` watch sees the
+             false→true flip — a v-if slot would mount it with active already true and the
+             draw-on would never fire. display:none = no box, so the absent state is
+             layout-identical to a slotless margin. -->
+        <div
+          v-show="celebrating && marginTone === 'gold-star'"
+          class="sticker-slot"
+          aria-hidden="true"
+        >
+          <CelebrationStar :active="celebrating" />
+        </div>
+        <MarginNote :text="marginText" :tone="marginTone" :meta="tally" />
+      </div>
       <SolverErrorNote
         v-if="showErrorNote"
         :text="errorNote.text"
@@ -545,34 +550,18 @@ function isRevealed(pos: number): boolean {
   }
 }
 
-/* The stat-line (W6) — the pencil's tally under the voice: hand register, one
-   size down, graphite at reduced pressure. Writes in with the note's own 250ms
-   clip wipe (Band C one-shot); instant under PRM. Twin of SudokuBoard's (D16). */
-.stat-line {
-  margin: -0.2rem 0 0;
-  font-family: var(--font-hand);
-  letter-spacing: 0.02em;
-  font-size: var(--type-small);
-  line-height: var(--type-leading-caption);
-  color: var(--color-pencil-graphite, var(--grid-line-color));
-  opacity: 0.7;
-  user-select: none;
-  animation: stat-write-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+/* The completion block (T3-W9 §2) — [sticker slot] beside [voice over meta], one
+   composition in both layout regimes; the tally's tone/type/PRM rules live in
+   MarginNote — the one home. Twin of SudokuBoard's. */
+.completion-note {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.5rem;
+  align-items: start;
 }
 
-@keyframes stat-write-in {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stat-line {
-    animation: none;
-    clip-path: none;
-  }
+.sticker-slot {
+  width: 3.25rem;
+  height: 3.25rem;
 }
 </style>
