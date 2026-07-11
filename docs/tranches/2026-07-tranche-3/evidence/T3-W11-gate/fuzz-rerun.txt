@@ -1,0 +1,43 @@
+
+=== SUDOKU decoder ===
+  empty                                  -> null (fail-closed)
+  garbage base64 @@@                     -> null (fail-closed)
+  non-b64 chars !!!                      -> null (fail-closed)
+  valid size2 board                      -> OBJECT size=2 givens=16
+  size mismatch (urlSize=3)              -> null (fail-closed)
+  size 99 (invalid)                      -> null (fail-closed)
+  size 5 (out of web range)              -> null (fail-closed)
+  no dot separator                       -> null (fail-closed)
+  dot at pos 0                           -> null (fail-closed)
+  cells too short                        -> null (fail-closed)
+  cells too long                         -> null (fail-closed)
+  value out of range (z=35)              -> null (fail-closed)
+  non-b36 cell char (dot)                -> null (fail-closed)
+  __proto__ in size field                -> null (fail-closed)
+  negative size -2                       -> null (fail-closed)
+  hex size 0x2                           -> null (fail-closed)
+  leading-zero size 02                   -> OBJECT size=2 givens=16
+  oversized 200KB blob                   -> null (fail-closed)
+  whitespace in size                     -> null (fail-closed)
+  space cells payload                    -> null (fail-closed)
+
+=== FUTOSHIKI decoder ===
+  empty                                  -> null (fail-closed)
+  garbage                                -> null (fail-closed)
+  valid size4 board                      -> OBJECT size=4 givens=16 ineqs=2
+  wrong part count (2 parts)             -> null (fail-closed)
+  wrong part count (4 parts)             -> null (fail-closed)
+  ineq index out of range                -> null (fail-closed)
+  ineq malformed (single)                -> null (fail-closed)
+  ineq empty member (-5)                 -> null (fail-closed)
+  ineq negative                          -> null (fail-closed)
+  100k inequalities (DoS?)               -> null (fail-closed)
+  non-adjacent ineq 0-15                 -> null (fail-closed)
+  dup inequalities                       -> null (fail-closed)
+  __proto__ ineq                         -> null (fail-closed)
+  value>boardSize                        -> null (fail-closed)
+  full 24-pair board (==cap)             -> OBJECT size=4 givens=16 ineqs=24
+  over-cap 25 pairs (>2n(n-1))           -> null (fail-closed)
+  oversized raw >4KB (pre-atob)          -> null (fail-closed)
+
+global proto polluted after all runs: false

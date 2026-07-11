@@ -1,0 +1,51 @@
+
+=== FINE 1440×900 (hover grammar + UI-6/8/11/13) ===
+title (sudoku URL load)            = sudoku — CSP Solver
+h1 count / text                    = {"count":1,"text":["sudoku"]}
+peek washi opacity rest→hover      = 0 → 1
+UI-9 washi∩Hard boxes              = {"chipBox":{"x":1025.2618408203125,"y":603.1312255859375,"width":93.476318359375,"height":33.081298828125},"hardBox":{"x":951.5,"y":566.671875,"width":241,"height":38},"intersects":true}
+icon washi opacities at rest       = ["Randomize board: 0","Clear board: 0","Solve puzzle: 0"]
+.icon-sublabel visible count (fine) = 0
+digit-pad DOM count (fine)         = 0
+UI-6 Tab walk:
+   1. BUTTON.attribution-trigger "@mbabb"  inCard=false  card(op/vis)=0.968303/visible
+   2. A.font-mono "@mbabb"  inCard=true  card(op/vis)=1/visible
+   3. A.block "View project on GitHub �"  inCard=true  card(op/vis)=1/visible
+   4. BUTTON.sun-moon-toggle  inCard=false  card(op/vis)=1/visible
+   5. BUTTON.logo-trigger "sudoku"  inCard=false  card(op/vis)=0.226507/visible
+   6. INPUT.absolute  inCard=false  card(op/vis)=0/hidden
+   7. BUTTON.ctrl-btn "4×4"  inCard=false  card(op/vis)=0/hidden
+   8. BUTTON.ctrl-btn "9×9"  inCard=false  card(op/vis)=0/hidden
+   9. BUTTON.ctrl-btn "16×16"  inCard=false  card(op/vis)=0/hidden
+   10. BUTTON.ctrl-btn "Easy"  inCard=false  card(op/vis)=0/hidden
+focus inside a CLOSED card?        = none
+closed card opacity/visibility     = {"opacity":"0","visibility":"hidden","pointerEvents":"none"}
+same-row empty cell pair           = [0,2]
+margin after 1st duplicate         = ["mark it and I'll grade"]
+aria-invalid count (pre-Solve)     = 0
+hint fire count after dup #1       = 1
+hint fire count after dup #2       = 1
+board class after Solve            = board-wrapper cartoon-shadow-md aspect-square w-full rounded-xl bg-card transition-all duration-500 solve-failure
+aria-invalid count (post-Solve)    = 6
+margin after failed Solve          = ["not quite — check row 1"]
+title (futoshiki URL load)         = futoshiki — CSP Solver
+h1 count (futoshiki)               = 1
+UI-11 live region (desktop futo)   = ["a fresh 5×5"]
+title (in-app switch → sudoku)     = sudoku — CSP Solver
+
+=== COARSE iPhone SE 375 (UI-4/5 + digit pad + tap targets) ===
+matchMedia(pointer: coarse)        = true
+peek washi visible at rest         = true
+peek washi text                    = hold to peek
+peek washi computed opacity        = 1
+peek hold-surface box (≥44?)       = {"x":20,"y":589.40625,"width":280,"height":46}
+icon sublabels (coarse)            = [{"t":"Randomize","vis":"visible","op":"1"},{"t":"Clear","vis":"visible","op":"1"},{"t":"Solve","vis":"visible","op":"1"},{"t":"Share","vis":"visible","op":"1"}]
+digit-pad present (coarse+stacked) = 1
+pad key count / min w×h            = {"keys":10,"minW":52.2,"minH":48,"all":[[52.2,48],[52.2,48],[52.2,48],[52.2,48],[52.2,48],[52.2,48],[52.2,48],[52.2,48],[52.2,48],[52.2,48]]}
+action button boxes (coarse)       = [{"label":"Randomize board","w":65,"h":52},{"label":"Clear board","w":44,"h":52},{"label":"Solve puzzle","w":44,"h":52},{"label":"Share board link","w":44,"h":50}]
+
+=== PRM (reduce) — digit pad animation census ===
+animations inside .digit-pad       = []
+page-wide animation durations (RM) = [0.01]
+
+probe-w11 complete.

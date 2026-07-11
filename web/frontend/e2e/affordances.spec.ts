@@ -280,7 +280,7 @@ test('marks-gesture: no marks pre-peek, K shows them, Esc clears them', async ({
 //        one page session. Cross-handler regressions pass the isolated specs
 //        above and fail only here. ──────────────────────────────────────
 
-test('composed keyboard: K-peek exemption + roving tabindex (Ctrl+Home/End) + undo in one session', async ({
+test('composed keyboard: K-peek from cell focus + roving tabindex (Ctrl+Home/End) + undo in one session', async ({
   page,
 }) => {
   await loadSudoku(page);
@@ -301,12 +301,17 @@ test('composed keyboard: K-peek exemption + roving tabindex (Ctrl+Home/End) + un
   await page.keyboard.press('Control+End');
   expect(await focusedCellIndex(page)).toBe(80);
 
-  // — K-peek input-exemption: K typed while a board cell holds focus must NOT
-  //   toggle the peek (the roving resting state is exactly what the guard blocks) —
+  // — K-peek from a focused board cell (UI-7a): the roving resting state is the normal
+  //   place a keyboard player sits, so K MUST toggle the peek there (it can't collide with
+  //   digit entry — a cell input reverts non-digits and the handler preventDefaults K).
+  //   Release it so the from-outside check below starts from a clean, un-peeked board —
   await page.keyboard.press('k');
-  await page.waitForTimeout(700);
-  await expect(page.locator('.answer-key-laminate.is-shown')).toHaveCount(0);
-  await expect(page.locator('.board-cells .pencil-marks')).toHaveCount(0);
+  await expect(page.locator('.answer-key-laminate.is-shown')).toHaveCount(1, { timeout: 20000 });
+  await expect
+    .poll(() => page.locator('.board-cells .pencil-marks').count(), { timeout: 15000 })
+    .toBeGreaterThan(0);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.answer-key-laminate.is-shown')).toHaveCount(0, { timeout: 5000 });
 
   // — K-peek from outside the board (pristine deal, so marks render — an
   //   arbitrary user digit could be UNSAT one round deeper, which clears the
@@ -338,16 +343,17 @@ test('composed keyboard: K-peek exemption + roving tabindex (Ctrl+Home/End) + un
   await page.keyboard.press('Control+End');
   expect(await focusedCellIndex(page)).toBe(80);
 
-  // — The exemption still holds at the end of the session —
+  // — K still toggles the peek from cell focus at the end of the session (cross-handler net) —
   await page.keyboard.press('k');
-  await page.waitForTimeout(700);
-  await expect(page.locator('.answer-key-laminate.is-shown')).toHaveCount(0);
+  await expect(page.locator('.answer-key-laminate.is-shown')).toHaveCount(1, { timeout: 20000 });
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.answer-key-laminate.is-shown')).toHaveCount(0, { timeout: 5000 });
 });
 
 // ── 9. The futoshiki composed twin (D16 — both games carry the same
 //        three-layer keyboard model) ─────────────────────────────────
 
-test('composed keyboard (futoshiki twin): K-peek exemption + roving + undo in one session', async ({
+test('composed keyboard (futoshiki twin): K-peek from cell focus + roving + undo in one session', async ({
   page,
 }) => {
   await page.goto('./?game=futoshiki');
@@ -368,10 +374,11 @@ test('composed keyboard (futoshiki twin): K-peek exemption + roving + undo in on
   await page.keyboard.press('Control+End');
   expect(await focusedCellIndex(page)).toBe(n * n - 1);
 
-  // K-peek exemption while a cell holds focus.
+  // K-peek from a focused board cell (UI-7a) — toggles the peek; release for the next step.
   await page.keyboard.press('k');
-  await page.waitForTimeout(700);
-  await expect(page.locator('.answer-key-laminate.is-shown')).toHaveCount(0);
+  await expect(page.locator('.answer-key-laminate.is-shown')).toHaveCount(1, { timeout: 20000 });
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.answer-key-laminate.is-shown')).toHaveCount(0, { timeout: 5000 });
 
   // Peek from outside the board (pristine deal — see the sudoku twin note):
   // laminate + marks; Esc releases.

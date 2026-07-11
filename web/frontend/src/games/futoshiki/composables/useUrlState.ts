@@ -8,59 +8,67 @@
  *   - `PersistedBoard` carries `inequalities` — permanent board furniture — which does
  *     NOT participate in given/overridden bookkeeping.
  */
-import { toBase64Url, fromBase64Url } from '@/lib/base64url'
-import { VALID_BOARD_SIZES, type Inequality } from '../types'
+import { toBase64Url, fromBase64Url } from "@/lib/base64url";
+import { VALID_BOARD_SIZES, type Inequality } from "../types";
 
-const STORAGE_KEY = 'futoshiki-board-state'
-const DEFAULT_BOARD_SIZE = 5
-const VALID_SIZES: readonly number[] = VALID_BOARD_SIZES
+const STORAGE_KEY = "futoshiki-board-state";
+const DEFAULT_BOARD_SIZE = 5;
+const VALID_SIZES: readonly number[] = VALID_BOARD_SIZES;
+
+// Reflected-DoS bound: a legit `?board=` is < 1 KB (size 7 with the full 84-pair
+// inequality furniture base64-encodes to ~750 chars); a crafted 100k-pair blob is
+// ~600 KB. Reject anything past this before `atob` even runs — the raw-length cap is
+// the primary DoS bound; adjacency + count + dedup below are the correctness/doc-truth
+// closes (G8-P2). Shared magnitude with Sudoku's guard.
+const MAX_BOARD_PARAM_LEN = 4096;
 
 // 'url-board' — a shared `?board=` permalink decoded into a full board (values +
 // inequality furniture) and wins over storage. Distinct from 'url-only' so the
 // composable RESTORES the synthesized board rather than auto-randomizing.
-export type InitSource = 'fresh' | 'url-only' | 'storage-only' | 'url+storage' | 'url-board'
+export type InitSource =
+    "fresh" | "url-only" | "storage-only" | "url+storage" | "url-board";
 
 export interface PersistedBoard {
-  boardSize: number
-  values: Record<string, number>
-  givenCells: string[]
-  originalGivenCells: string[]
-  overriddenCells: string[]
-  inequalities: Inequality[]
-  solvedValues: Record<string, number>
-  boardGeneration: number
+    boardSize: number;
+    values: Record<string, number>;
+    givenCells: string[];
+    originalGivenCells: string[];
+    overriddenCells: string[];
+    inequalities: Inequality[];
+    solvedValues: Record<string, number>;
+    boardGeneration: number;
 }
 
 export interface InitialState {
-  boardSize: number
-  source: InitSource
-  persisted: PersistedBoard | null
+    boardSize: number;
+    source: InitSource;
+    persisted: PersistedBoard | null;
 }
 
 function parseUrlParams(): { boardSize: number | null } {
-  const params = new URLSearchParams(window.location.search)
-  const raw = params.get('board_size')
-  const n = raw ? parseInt(raw, 10) : null
-  return { boardSize: n !== null && VALID_SIZES.includes(n) ? n : null }
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("board_size");
+    const n = raw ? parseInt(raw, 10) : null;
+    return { boardSize: n !== null && VALID_SIZES.includes(n) ? n : null };
 }
 
 function loadPersistedBoard(): PersistedBoard | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return null
-    const data = JSON.parse(raw) as PersistedBoard
-    if (
-      !VALID_SIZES.includes(data.boardSize) ||
-      typeof data.values !== 'object' ||
-      !Array.isArray(data.givenCells) ||
-      !Array.isArray(data.inequalities)
-    ) {
-      return null
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw) as PersistedBoard;
+        if (
+            !VALID_SIZES.includes(data.boardSize) ||
+            typeof data.values !== "object" ||
+            !Array.isArray(data.givenCells) ||
+            !Array.isArray(data.inequalities)
+        ) {
+            return null;
+        }
+        return data;
+    } catch {
+        return null;
     }
-    return data
-  } catch {
-    return null
-  }
 }
 
 // ── Share-on-demand permalink codec (`?board=`) ─────────────────────────
@@ -73,15 +81,15 @@ function loadPersistedBoard(): PersistedBoard | null {
 // `@/lib/base64url` (shared with Sudoku's).
 
 export function encodeBoard(
-  boardSize: number,
-  values: Record<string, number>,
-  totalCells: number,
-  inequalities: Inequality[],
+    boardSize: number,
+    values: Record<string, number>,
+    totalCells: number,
+    inequalities: Inequality[],
 ): string {
-  let cells = ''
-  for (let i = 0; i < totalCells; i++) cells += (values[String(i)] ?? 0).toString(36)
-  const ineqs = inequalities.map(([a, b]) => `${a}-${b}`).join(',')
-  return toBase64Url(`${boardSize}.${cells}.${ineqs}`)
+    let cells = "";
+    for (let i = 0; i < totalCells; i++) cells += (values[String(i)] ?? 0).toString(36);
+    const ineqs = inequalities.map(([a, b]) => `${a}-${b}`).join(",");
+    return toBase64Url(`${boardSize}.${cells}.${ineqs}`);
 }
 
 // Synthesize a PersistedBoard from a decoded `?board=` — the only board-shaped object
@@ -89,109 +97,135 @@ export function encodeBoard(
 // FAILING CLOSED — on any malformed/out-of-range/size-mismatched blob so a corrupt
 // link degrades to the size-only path, never a corrupt board.
 function decodeBoardParam(urlSize: number | null): PersistedBoard | null {
-  const raw = new URLSearchParams(window.location.search).get('board')
-  if (!raw) return null
-  let payload: string
-  try {
-    payload = fromBase64Url(raw)
-  } catch {
-    return null
-  }
-  const parts = payload.split('.')
-  if (parts.length !== 3) return null
-  const [sizeStr, cells, ineqStr] = parts
-  const boardSize = parseInt(sizeStr, 10)
-  if (!VALID_SIZES.includes(boardSize)) return null
-  // A `?board_size=` that disagrees with the board's own size fails closed.
-  if (urlSize !== null && urlSize !== boardSize) return null
-  const totalCells = boardSize ** 2
-  // A length mismatch (wrong cell count for the declared size) fails closed.
-  if (cells.length !== totalCells) return null
-  const values: Record<string, number> = {}
-  const givenCells: string[] = []
-  for (let i = 0; i < totalCells; i++) {
-    const v = parseInt(cells[i]!, 36)
-    if (!Number.isInteger(v) || v < 0 || v > boardSize) return null
-    values[String(i)] = v
-    if (v !== 0) givenCells.push(String(i))
-  }
-  const inequalities: Inequality[] = []
-  if (ineqStr.length > 0) {
-    for (const pair of ineqStr.split(',')) {
-      const ab = pair.split('-')
-      if (ab.length !== 2) return null
-      const a = parseInt(ab[0], 10)
-      const b = parseInt(ab[1], 10)
-      if (
-        !Number.isInteger(a) ||
-        !Number.isInteger(b) ||
-        a < 0 ||
-        a >= totalCells ||
-        b < 0 ||
-        b >= totalCells
-      ) {
-        return null
-      }
-      inequalities.push([a, b])
+    const raw = new URLSearchParams(window.location.search).get("board");
+    if (!raw) return null;
+    // Fail closed on an oversized param BEFORE decoding — the DoS bound.
+    if (raw.length > MAX_BOARD_PARAM_LEN) return null;
+    let payload: string;
+    try {
+        payload = fromBase64Url(raw);
+    } catch {
+        return null;
     }
-  }
-  return {
-    boardSize,
-    values,
-    givenCells,
-    originalGivenCells: givenCells,
-    overriddenCells: [],
-    inequalities,
-    solvedValues: {},
-    boardGeneration: 1,
-  }
+    const parts = payload.split(".");
+    if (parts.length !== 3) return null;
+    const [sizeStr, cells, ineqStr] = parts;
+    // Strict canonical size — reject leading whitespace / sign / hex `parseInt` leniency
+    // (`" 4"`, `"-4"`, `"0x4"` all fail closed here; G8-P3).
+    if (!/^\d+$/.test(sizeStr)) return null;
+    const boardSize = parseInt(sizeStr, 10);
+    if (!VALID_SIZES.includes(boardSize)) return null;
+    // A `?board_size=` that disagrees with the board's own size fails closed.
+    if (urlSize !== null && urlSize !== boardSize) return null;
+    const totalCells = boardSize ** 2;
+    // A length mismatch (wrong cell count for the declared size) fails closed.
+    if (cells.length !== totalCells) return null;
+    const values: Record<string, number> = {};
+    const givenCells: string[] = [];
+    for (let i = 0; i < totalCells; i++) {
+        const v = parseInt(cells[i]!, 36);
+        if (!Number.isInteger(v) || v < 0 || v > boardSize) return null;
+        values[String(i)] = v;
+        if (v !== 0) givenCells.push(String(i));
+    }
+    const inequalities: Inequality[] = [];
+    if (ineqStr.length > 0) {
+        // The wire boundary the doc-invariant (types.ts) promises. Each pair must be
+        // orthogonally adjacent — horizontal neighbors (|Δ|=1, same row) or vertical
+        // (|Δ|=n) — the total is bounded at the maximum adjacent-pair count 2·n·(n−1),
+        // and exact duplicates fail closed. Without this a crafted `?board=` renders one
+        // floating `<FutoshikiCaret>` per pair (100k → main-thread freeze), and
+        // non-adjacent pairs draw carets on edges that don't exist.
+        const maxPairs = 2 * boardSize * (boardSize - 1);
+        const seen = new Set<string>();
+        for (const pair of ineqStr.split(",")) {
+            const ab = pair.split("-");
+            if (ab.length !== 2) return null;
+            const a = parseInt(ab[0], 10);
+            const b = parseInt(ab[1], 10);
+            if (
+                !Number.isInteger(a) ||
+                !Number.isInteger(b) ||
+                a < 0 ||
+                a >= totalCells ||
+                b < 0 ||
+                b >= totalCells
+            ) {
+                return null;
+            }
+            const adjacent =
+                (Math.abs(a - b) === 1 &&
+                    Math.floor(a / boardSize) === Math.floor(b / boardSize)) ||
+                Math.abs(a - b) === boardSize;
+            if (!adjacent) return null;
+            const key = `${a}-${b}`;
+            if (seen.has(key)) return null;
+            seen.add(key);
+            if (seen.size > maxPairs) return null;
+            inequalities.push([a, b]);
+        }
+    }
+    return {
+        boardSize,
+        values,
+        givenCells,
+        originalGivenCells: givenCells,
+        overriddenCells: [],
+        inequalities,
+        solvedValues: {},
+        boardGeneration: 1,
+    };
 }
 
 export function resolveInitialState(): InitialState {
-  const url = parseUrlParams()
-  // A shared board decoded into a PersistedBoard-shaped object (or null, failed closed).
-  const boardState = decodeBoardParam(url.boardSize)
-  const persisted = loadPersistedBoard()
-  // hasUrl ORs in a VALID board so a board-only link isn't silently dropped.
-  const hasUrl = url.boardSize !== null || boardState !== null
+    const url = parseUrlParams();
+    // A shared board decoded into a PersistedBoard-shaped object (or null, failed closed).
+    const boardState = decodeBoardParam(url.boardSize);
+    const persisted = loadPersistedBoard();
+    // hasUrl ORs in a VALID board so a board-only link isn't silently dropped.
+    const hasUrl = url.boardSize !== null || boardState !== null;
 
-  // URL wins over storage: a valid shared board takes precedence over any saved game.
-  if (boardState) {
-    return { boardSize: boardState.boardSize, source: 'url-board', persisted: boardState }
-  }
-
-  if (hasUrl && persisted) {
-    if (url.boardSize === persisted.boardSize) {
-      return { boardSize: url.boardSize!, source: 'url+storage', persisted }
+    // URL wins over storage: a valid shared board takes precedence over any saved game.
+    if (boardState) {
+        return {
+            boardSize: boardState.boardSize,
+            source: "url-board",
+            persisted: boardState,
+        };
     }
-    // URL disagrees with storage — URL wins.
-    clearPersistedBoard()
-    return { boardSize: url.boardSize!, source: 'url-only', persisted: null }
-  }
 
-  if (hasUrl) {
-    return { boardSize: url.boardSize!, source: 'url-only', persisted: null }
-  }
+    if (hasUrl && persisted) {
+        if (url.boardSize === persisted.boardSize) {
+            return { boardSize: url.boardSize!, source: "url+storage", persisted };
+        }
+        // URL disagrees with storage — URL wins.
+        clearPersistedBoard();
+        return { boardSize: url.boardSize!, source: "url-only", persisted: null };
+    }
 
-  if (persisted) {
-    return { boardSize: persisted.boardSize, source: 'storage-only', persisted }
-  }
+    if (hasUrl) {
+        return { boardSize: url.boardSize!, source: "url-only", persisted: null };
+    }
 
-  return { boardSize: DEFAULT_BOARD_SIZE, source: 'fresh', persisted: null }
+    if (persisted) {
+        return { boardSize: persisted.boardSize, source: "storage-only", persisted };
+    }
+
+    return { boardSize: DEFAULT_BOARD_SIZE, source: "fresh", persisted: null };
 }
 
 export function syncToUrl(boardSize: number) {
-  const url = new URL(window.location.href)
-  url.searchParams.set('board_size', String(boardSize))
-  history.replaceState(null, '', url.toString())
+    const url = new URL(window.location.href);
+    url.searchParams.set("board_size", String(boardSize));
+    history.replaceState(null, "", url.toString());
 }
 
 // Write `?board=` on an explicit share act only (never ambient). Separate from
 // syncToUrl, which by design only ever `.set()`s `board_size` and never deletes.
 export function writeBoardToUrl(encoded: string) {
-  const url = new URL(window.location.href)
-  url.searchParams.set('board', encoded)
-  history.replaceState(null, '', url.toString())
+    const url = new URL(window.location.href);
+    url.searchParams.set("board", encoded);
+    history.replaceState(null, "", url.toString());
 }
 
 // Drop `?board=` on Randomize/Clear — the shared configuration is stale once a new
@@ -199,21 +233,21 @@ export function writeBoardToUrl(encoded: string) {
 // to the active game (`?game=futoshiki`) for symmetry with Sudoku's helper — Futoshiki's
 // composable only mounts when active, so this is belt-and-suspenders, not load-bearing.
 export function dropBoardParam() {
-  const url = new URL(window.location.href)
-  if (url.searchParams.get('game') !== 'futoshiki') return
-  if (!url.searchParams.has('board')) return
-  url.searchParams.delete('board')
-  history.replaceState(null, '', url.toString())
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("game") !== "futoshiki") return;
+    if (!url.searchParams.has("board")) return;
+    url.searchParams.delete("board");
+    history.replaceState(null, "", url.toString());
 }
 
 export function persistBoard(state: PersistedBoard) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } catch {
-    // Storage full or blocked — silently fail.
-  }
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+        // Storage full or blocked — silently fail.
+    }
 }
 
 export function clearPersistedBoard() {
-  localStorage.removeItem(STORAGE_KEY)
+    localStorage.removeItem(STORAGE_KEY);
 }
