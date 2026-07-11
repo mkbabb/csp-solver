@@ -15,7 +15,9 @@
 # REPO ROOT — cargo runs at repo root, and the queens bench needs `-p csp-solver`
 # because the benches live in the csp-solver package.
 #
-# Lane → job map (W0 lane table; provenance cited per step) — ten lanes over nine
+# Lane → job map (W0 lane table; provenance cited per step; T3 grew the rust,
+# py-runtime, and frontend jobs with the gac-ab/corpus-spine smokes, stubtest +
+# tripwire, and knip respectively) — the lane set rides nine
 # jobs (the rust job carries lanes 2 + 3):
 #   1.  fmt + clippy       -> lint       (clippy -D warnings; strict, no continue-on-error)
 #   2.  build + test       -> rust       (cargo build/test --workspace — NEVER per-crate)

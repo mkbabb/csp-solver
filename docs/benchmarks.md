@@ -40,13 +40,15 @@ The unified search kernel is verified sound, not merely fast. Evidence from `evi
 Local test suite, run here:
 
 ```
-cargo test --workspace  →  151 passed, 0 failed, 6 ignored (18 test binaries)
-# measured at c14995eb, Apple M5 Max, 2026-07-10
+cargo test --workspace  →  171 passed, 0 failed, 6 ignored (21 test binaries)
+# measured at b4d7aedf (T3-W12 gate), Apple M5 Max, 2026-07-11
+# — grew from 151/0/6 across 18 by the tranche-III adds: gac_alldiff_oracle,
+#   futoshiki_engine_probe, and the ImplicationConstraint tests
 ```
 
 ## Wasm artifact sizes
 
-Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean Sudoku artifact -- the `--no-default-features` build the frontend Worker ships -- measures **90,602 B raw** (`wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm`, measured at c14995eb, Apple M5 Max, 2026-07-10). The full module measures **222,436 B** (T2-WGATE re-measure at `c14995eb`, 2026-07-10 -- the W6 beat-9 propagate ops ride the full module too, +1,882 B over the T2-W3 stamp; the assignment surface's transitive `ndarray` accounts for the bulk of the delta over the lean build, which compiles assignment out). CI enforces size budgets in the `twiggy` lane: full module fail >240 KB / warn >230 KB; separate lean budget fail >93 KB -- both hold with headroom.
+Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean Sudoku artifact -- the `--no-default-features` build the frontend Worker ships -- measures **86,746 B raw** (`wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm`, measured at b4d7aedf, Apple M5 Max, 2026-07-11 -- the T3-W6 engine-perf trim from the 90,602 B tranche-II close; `pkg/` source byte-identical to the shipped `dist/` asset). The full module measures **222,436 B** (T2-WGATE re-measure at `c14995eb`, 2026-07-10 -- not re-measured this tranche -- the W6 beat-9 propagate ops ride the full module too, +1,882 B over the T2-W3 stamp; the assignment surface's transitive `ndarray` accounts for the bulk of the delta over the lean build, which compiles assignment out). CI enforces size budgets in the `twiggy` lane: full module fail >240 KB / warn >230 KB; separate lean budget fail >93 KB -- both hold with headroom.
 
 ## Reproducing
 

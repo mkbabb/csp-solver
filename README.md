@@ -79,16 +79,16 @@ cd web/frontend && npm install && npm run dev
 
 ## Testing
 
-All counts measured at the G6 baseline `3b75eca2` (code byte-identical at the W0 base `0c044ef6`), Apple M5 Max, 2026-07-10.
+All counts measured at the tranche-III gate SHA `b4d7aedf` (T3-W12, the tranche close), Apple M5 Max, 2026-07-11.
 
 ```bash
-# Rust — 151 passed, 0 failed, 6 ignored (18 test binaries)
+# Rust — 171 passed, 0 failed, 6 ignored (21 test binaries)
 cargo test --workspace
 
-# Python wheel-contract — 27 passed, 2 skipped (27/0 post-W4—the two skips retire with the Timeout reserve)
+# Python wheel-contract — 27 passed, 0 skipped (the two Timeout-gated skips deleted at W4)
 cd csp-solver/tests-py && uv run --no-sync pytest
 
-# e2e — 33 Playwright tests in 5 files
+# e2e — 43 Playwright tests in 8 files
 cd web/frontend && npx playwright test
 
 # GAC A/B false-UNSAT corpus — 0/50 off, 0/50 on
@@ -100,7 +100,7 @@ cargo bench -p csp-solver --bench queens -- --test
 
 ## CI
 
-`.github/workflows/ci.yml`—ten lanes over nine jobs: `lint` (fmt + clippy `-D warnings`) · `rust` (build/test `--workspace` + the queens-bench smoke assert, two lanes in one job) · `py-compile` (`cargo check --features py`) · `py-runtime` (maturin wheel → uv venv → pytest) · `wasm` (`wasm-pack test --node` + clippy `--target wasm32`) · `twiggy` (size budgets) · `frontend` (`npm ci` + `vue-tsc`) · `e2e` (lean wasm build → Playwright) · `iai` (callgrind instruction-count baseline). Wasm builds use `--profile wasm-release` (opt-level `z`, panic `abort`). Budgets: full module fail >240 KB / warn >230 KB—222,436 B at the T2-WGATE re-measure; lean fail >93 KB—the deployed artifact measures 90,602 B (2026-07-10, Apple M5 Max).
+`.github/workflows/ci.yml`—nine jobs carrying the full lane set: `lint` (fmt + clippy `-D warnings`) · `rust` (build/test `--workspace` + the queens-bench, gac-ab, and corpus node-count smokes — the 40,513→4,678 spine asserts in CI) · `py-compile` (`cargo check --features py`) · `py-runtime` (maturin wheel → uv venv → pytest + flag-free stubtest + the stub-stem tripwire) · `wasm` (`wasm-pack test --node` + clippy `--target wasm32`) · `twiggy` (size budgets) · `frontend` (`npm ci` + `vue-tsc` + knip, the standing dead-export gate) · `e2e` (lean wasm build → Playwright) · `iai` (callgrind instruction-count baseline). Wasm builds use `--profile wasm-release` (opt-level `z`, panic `abort`). Budgets: full module fail >240 KB / warn >230 KB—222,436 B at the T2-WGATE re-measure; lean fail >93 KB—the deployed artifact measures 86,746 B (gate `b4d7aedf`, 2026-07-11, Apple M5 Max; the T3-W6 engine-perf trim from 90,602 B, `pkg/` source == `dist/`).
 
 ## Deployment
 

@@ -46,7 +46,7 @@ Every row from both prior syntheses, dispositioned once, from the grand reconcil
 | CSR adjacency + Vec-indexed warm cache + `assigned_ns` bitset (A18 ROW-1/7) | A§2.3 | **ADOPT** — quiet-box discipline + node-count oracle per R-12 | W6 |
 | GAC A/B bench + futoshiki bench + `gac_ab_corpus` 0/50 + node-count CI smoke (ROW-3); gac_alldiff differential oracle (L25-20); futoshiki correctness probe (G13); lean-band erosion stamp (ROW-6) | A§2.3/§2.6 | **ADOPT** | W6 |
 | GAC on/off gate re-litigation (ROW-2) | A§2.3 | **REJECT (fresh evidence; default-ON stands)** | KISS ledger |
-| mimalloc (ROW-4/L25-13) / PGO (L25-14) / opt-level=s (ROW-5) | A§2.3/§2.6 | **CLOSED (defer-closed, recorded)** | WGATE record |
+| mimalloc (ROW-4/L25-13) / PGO (L25-14) / opt-level=s (ROW-5) | A§2.3/§2.6 | **CLOSED (defer-closed, recorded)** | WGATE record (§11.4) |
 | A17 P1 worker/wasm prewarm + preload injection; P5 font preload | A§2.3, G7 (premise structurally confirmed live) | **ADOPT** — payoff sized against built `dist/` in-wave | W8 |
 | A17 P2+P3 `generateCellRects` extraction + LRU cache (+ the memoized-regen straddle, same fix) | A§2.3/§2.6, **G7 MEASURED** (99–103 ms @4×, the only >100 ms gesture) | **ADOPT (measured target; gate = worst frame drops below the P2 band, `probe-felt.mjs` is the instrument)** | W8 |
 | **NEW: marks/peek 16×16 mount burst** (~2.7k nodes, 87–91 ms @4×) | **G7 (new row)** | **ADOPT** — same idle-chunk/cache class, adjacent to P2/P3 | W8 |
@@ -113,7 +113,7 @@ Every row from both prior syntheses, dispositioned once, from the grand reconcil
 | Row | Disposition | Home |
 |---|---|---|
 | G8-P2 futoshiki inequality hardening (adjacency + `2·n·(n-1)` cap + dedup + optional raw-length cap) + `types.ts:29-30` doc-truth fix | **ADOPT (LOW, the one finding)** | W11 |
-| G8-H1/P1/W1 clean bill (CSP complete, decoders fail-closed 33/33, worker N/A) + H3/H4/P3 INFO notes | **DONE (record the clean bill)** | WGATE record |
+| G8-H1/P1/W1 clean bill (CSP complete, decoders fail-closed 33/33, worker N/A) + H3/H4/P3 INFO notes | **DONE (clean bill recorded, §11.1)** | WGATE record |
 | `fuzz.mjs` re-run incl. new bounded cases | **ADOPT (gate)** | W11 gate |
 
 ## 8. Doc truth, record, CI (A§2.7 + G6 stamps)
@@ -157,3 +157,50 @@ The S10-agg set verbatim: py dir splits · `csp_solver.sudoku` namespacing + mix
 - hand-maintained kill lists where knip is the gate
 - `#[pyclass(module=…)]` repr churn + runtime PRT sample (RES-8)
 - mod.rs flip **as tranche work** (post-tranche follow-up per §5.5)
+
+---
+
+## 11. WGATE execution records
+
+The permanent recorded dispositions the recert carries out of the tranche. None re-opens without its named criterion; each is a *record*, not an action left pending.
+
+### 11.1 The G8 security clean bill (recorded)
+
+The security surface was probed (G8, pass-3) and **passed** — one LOW finding (G8-P2, futoshiki decoder hardening) homed and landed in W11; everything else clears. The clean bill, recorded so the probe is auditable:
+
+| Item | Disposition | Basis |
+|---|---|---|
+| **G8-H1** — CSP surface completeness | **CLEAN** — complete + correctly scoped for the wasm-only topology (no server, no HTTP, no puzzle ever leaves the browser) | pass-3 G8 §H1 |
+| **G8-P1** — decoder robustness | **CLEAN** — decoders fail-closed **33/33** on the `fuzz.mjs` corpus (100k-pairs / non-adjacent / dup cases), re-run at the W11 gate | pass-3 G8 §P1; W11 `fuzz-rerun.txt` |
+| **G8-W1** — worker message validation | **N/A by construction** — a dedicated Worker with no cross-context message surface; there is nothing to validate (K44 killed the A24 work-item premise) | pass-3 G8 §W1, K44 |
+
+**INFO notes** (observed, non-findings — recorded, no action):
+
+- **G8-H3** — blanket `access-control-allow-origin: *` is the Cloudflare-edge default; benign for a static SPA that serves no credentialed cross-origin resource.
+- **G8-H4** — no `Permissions-Policy` / COOP / COEP headers; optional defense-in-depth, **not required** — single-thread wasm uses no `SharedArrayBuffer`, so cross-origin isolation buys nothing here.
+- **G8-P3** — parser leniency (accepts some non-canonical input); non-canonical, **no security impact** (the solver validates independently).
+
+### 11.2 The prettier lint divergence (execution record + recommendation)
+
+An execution-surfaced footgun, recorded here so it isn't re-discovered cold. **The repo has no in-tree Prettier config.** `npm run lint` runs `prettier --write` with no repo-local `.prettierrc`, so it resolves the machine's **global `~/.prettierrc.json`** — meaning the format `lint` enforces depends on *whose machine runs it*. The prettier incident recurred **twice** during execution (two waves' lint steps reformatted against the global config, producing churn the author didn't intend). `lint` and `lint:eslint` therefore **diverge**: `lint:eslint` is config-pinned and reproducible; `lint` (prettier) shadows off the global.
+
+**Recommendation** (owner-side, post-tranche): pin an in-repo `.prettierrc` (or `prettier` key in `package.json`) so the format bar is repo-defined, **or** re-point the `lint` script to `lint:eslint` and drop the unconfigured `prettier --write` from the lint bar. Either closes the global-shadow. Recorded, not actioned — a one-line owner call outside this tranche's scope.
+
+### 11.3 The execution-lessons ledger
+
+The traps the execution hit, recorded so the next campaign inherits them, not re-learns them:
+
+| Lesson | What bit | The rule now |
+|---|---|---|
+| **fmt-in-gates** | `cargo fmt --all --check` was *not* on the merge bar at tranche open; W4 and W5 both landed import-sort/format drift that a later fixup (`1d55c6dc`, `5c736f4c`) had to sweep — the wave gate ran clippy but not `fmt --check` | `cargo fmt --all --check` **joined the merge bar mid-tranche**; every wave gate now runs it alongside clippy `-D warnings` |
+| **cp314 maturin trap** | host Python 3.14 is PyO3-incompatible; a bare `maturin build` picks the host interpreter and fails | `maturin build -i <tests-py venv python>` — pin the cp313 interpreter explicitly (G6; CI py-runtime + W3 gate text) |
+| **K46 — `:3000` is not the app** | `:3000` is Vite's HMR socket (answers a plain GET with `426`); Playwright's `baseURL` + `reuseExistingServer` latches onto it when the app runs elsewhere (observed 0/33, then 33/33 at `:3210`) | lane briefs name the app port explicitly (or "check `lsof`"); `hmr.port` desyncs from `--port` by construction |
+| **zsh no-word-split** | zsh does not word-split unquoted variables like bash; count/glob one-liners that assume splitting silently mis-parse | quote and array-split explicitly; verify one-liners under the actual shell |
+| **prettier global-shadow** | see §11.2 — the unconfigured `prettier --write` shadows off `~/.prettierrc.json` | pin an in-repo config or re-point `lint` (owner-side) |
+
+### 11.4 Confirmed-recorded dispositions (pointers)
+
+- **defer-closed** — mimalloc / PGO / opt-level=s: CLOSED (defer-closed, recorded) with re-entry criteria — §3 (this appendix) + §10 KISS ledger + [appendix C §3](C-deferred-disposition.md). Not deferrals; re-entry is against the recorded evidence.
+- **GAC on/off gate re-litigation (ROW-2)** — REJECT; default-ON stands on fresh evidence — §3 + §10.
+- **mod.rs → self-named-file flip** — post-tranche one-commit follow-up (`clippy.self_named_module_files`), per pass-2 §5.5; the owner-veto window (fold into W4) closed unexercised at ratification round 2 — §10 + [tranche README §4](../README.md#4-non-blocking-defaults-register).
+- **Counts re-stamped at the gate SHA `b4d7aedf`** — rust **171/0/6 across 21 harnesses** (the G6 151/0/6-across-18 baseline plus `gac_alldiff_oracle` + `futoshiki_engine_probe` + the `ImplicationConstraint` tests), tests-py **27/0**, e2e **43 in 8 files**, lean wasm **86,746 B source==dist** (the W6 trim from 90,602 B). The G6 figure set (§8, K45) stays the *authoring-base* anchor; these are the *gate* stamp. See [appendix D](D-convergence-record.md#execution-record).

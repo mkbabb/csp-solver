@@ -193,7 +193,7 @@ each implement `Domain`, some `LatticeDomain`. See
 ## Build & Test
 
 ```bash
-cargo test --workspace                     # 151 passed, 0 failed, 6 ignored — 18 test binaries (measured at 3b75eca2, Apple M5 Max, 2026-07-10)
+cargo test --workspace                     # 171 passed, 0 failed, 6 ignored — 21 test binaries (measured at b4d7aedf, Apple M5 Max, 2026-07-11)
 cargo bench                                # criterion — see below
 maturin develop --release --features py    # build the PyO3 wheel (Python ≤3.13)
 RUSTDOCFLAGS='-A rustdoc::private_intra_doc_links' cargo doc --document-private-items  # internal-doc build (public `cargo doc` is pre-broken; the linked items are internal modules)
@@ -207,7 +207,7 @@ cargo run --release --example generate_templates -- <N> <difficulty> <count>
 ```
 
 **Tests** live in `tests/` (blackbox integration, one file per concern) and
-`tests-py/` (the installed-wheel pytest suite: 27 passed, 2 skipped — 27/0 post-W4). There are
+`tests-py/` (the installed-wheel pytest suite: 27 passed, 0 skipped — the two Timeout-gated skips deleted at W4). There are
 **no** inline `#[cfg(test)]` modules — the whitebox exception is revoked; every
 check is blackbox against the public surface.
 

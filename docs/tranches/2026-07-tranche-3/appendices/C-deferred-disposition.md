@@ -116,6 +116,22 @@ The only rows the fold-all mandate does **not** capture, each justified:
 - **3 defer-closed** (§3, mimalloc/PGO/opt-s) with reasons + re-entry criteria.
 - **index.css DROP, HELD-again** (§4) — proof banked, same-trigger reopen.
 - **4 EXCLUDE clusters** (§5), each justified.
+- **1 backlog item filed** (§7, `propagate_stratified` wire-in) — a scoped feature row with the WGATE-corrected memo as spec, owner + trigger named.
 - **~30 no-op rows** already homed by tranche-2 (A13 §0) — not re-opened.
 
-**Zero deferrals minted.** Every row lands, closes, or excludes with a justification; nothing re-books to a fourth tranche.
+**Zero deferrals minted.** Every row lands, closes, excludes, or files-as-scoped-backlog with a justification; nothing re-books to a fourth tranche.
+
+## 7. Backlog filed at WGATE — `propagate_stratified` wire-in
+
+One item leaves this tranche as a **scoped backlog row**, not a deferral: the removed symbol's re-implementation as a live driver. `propagate_stratified` (`solver/monotonic.rs`, zero callers) was **removed in W3** on ballot Q2 — surface honesty under `-D warnings` — but the routine itself is finished, correct SCC-stratified propagation (acyclic constraints in one topological pass, iterative fixed-point only on cyclic SCCs). Deleting dead code is not deleting the *idea*; the idea is filed with a spec.
+
+| Field | Value |
+|---|---|
+| **Item** | Wire `propagate_stratified` (or a re-derived equivalent) into dispatch under `PropagationStrategy::Sweep` for lattice domains |
+| **Spec** | [`pass2/P2-L3.md` §(d)](../evidence/pass2/P2-L3.md) — the owner-gates memo, WGATE-corrected (12+2+1, RES-5). §(d) states the three sub-tasks below verbatim |
+| **Scope (3 parts)** | (i) an SCC precompute feeding `scc_order`/`scc_ids`/`cyclic_sccs` — the `solver/adjacency.rs` graph substrate (relocated this tranche) already holds the material; (ii) a correctness proof that topological single-pass converges for the acyclic strata; (iii) a benchmark showing it beats the flat `propagate_monotonic` sweep |
+| **Owner** | repo owner (Mike Babb) — a **feature wave**, not a hygiene edit; bundling it into an encapsulation tranche was explicitly rejected (memo §(d) recommendation) |
+| **Trigger** | a real lattice-propagation workload that profiles the flat sweep as a bottleneck — bbnf-lang's six monotonic IR passes are the named candidate consumer (memo §(d) "wire-in" evidence) |
+| **Recovery** | the removed code is recoverable byte-for-byte from git (W3 removal commit `d78fef8e`); this row + the memo are the design record so re-derivation is from a spec, not from cold |
+
+The item is homed here (appendix C is the durable disposition ledger); it does **not** re-book to a fourth tranche — it fires only on the named trigger, against the recorded spec.

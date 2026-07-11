@@ -96,3 +96,16 @@ Copied at W12 authoring; scratchpad root `…/scratchpad/tranche3/`.
 | `addendum/` (incl. `a2-shots/`) | 10 + 9 | 1.6 M |
 
 Running total ~3.9 M — still inside the ~5 MB ceiling.
+
+## WGATE G2 close — 2026-07-11, gate `b4d7aedf`
+
+The ~3.9 MB above is the **authoring corpus** (the loop reports + the addendum). During execution the twelve waves each banked a **gate-proof set** — the live before/after PNGs + probe outputs each wave's recert cites. Measured at the gate:
+
+| Class | Size | Files | Disposition |
+|---|---|---|---|
+| Authoring corpus (loop + addendum, above) | ~3.9 M | ~120 | kept — the spine + load-bearing exhibits |
+| Gate proofs `T3-W8-gate` … `T3-W12-gate`, `w9-proofs/`, `t3-w9-g3/` | ~9 M | ~90 | **kept — load-bearing recert exhibits** (each is a wave's gate proof, e.g. `T3-W12-gate/shots/gate-completion-solved-1440x806.png`, the six-verdict re-probe) |
+| `addendum/d1..d4-shots/`, `disposition-shots/` | ~7 M | ~55 | kept — the W12 owner-verdict before/after sets (drawer glide, completion vignette, toggle beats) |
+| **Total** | **~20 M** | **274** | — |
+
+**The G2 verdict: within policy.** 20 MB / 274 files sits **under** the A24-G2 lesson figure (tranche-II was 47 MB / 287 files / 115 PNGs — 0.43× the bytes here) and **no single file exceeds 600 KB** (no stray multi-MB artifact crept in). The oversized class the policy most fears — the addendum's six a1 trace JSONs, ~190 MB — **stayed excluded** (folded into `a1-completion-perf.md` §(c); the gate re-traces live). The growth from the ~3.9 MB authoring figure to 20 MB is entirely the **executed-wave gate proofs**, which are load-bearing by construction: each is the visual evidence a wave's gate row cites by name. Pruning them would delete the recert's own proof. **No mass prune at WGATE** — the dir is already at the shape the policy wants (trace JSONs out, screenshots load-bearing, nothing oversized). *(The untracked `T3-WGATE-shots/` + `T3-WGATE-ship.md` are the recert-drive lane's live output, outside this accounting.)*
