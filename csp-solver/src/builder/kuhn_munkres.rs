@@ -156,7 +156,15 @@ mod tests {
             for j in 0..cols {
                 if !used[j] {
                     used[j] = true;
-                    rec(cost, rows, cols, row + 1, used, acc + cost[row * cols + j], best);
+                    rec(
+                        cost,
+                        rows,
+                        cols,
+                        row + 1,
+                        used,
+                        acc + cost[row * cols + j],
+                        best,
+                    );
                     used[j] = false;
                 }
             }
@@ -224,7 +232,15 @@ mod tests {
                 .wrapping_add(1442695040888963407);
             ((state >> 40) % 50) as i64
         };
-        for &(r, c) in &[(1usize, 1usize), (2, 2), (3, 3), (4, 4), (2, 4), (4, 2), (3, 5)] {
+        for &(r, c) in &[
+            (1usize, 1usize),
+            (2, 2),
+            (3, 3),
+            (4, 4),
+            (2, 4),
+            (4, 2),
+            (3, 5),
+        ] {
             let cost: Vec<i64> = (0..r * c).map(|_| next()).collect();
             let assign = minimize(&cost, r, c);
             let rc = r.min(c);
