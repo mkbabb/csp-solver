@@ -22,6 +22,7 @@ use wasm_bindgen::prelude::*;
 
 #[cfg(feature = "assignment")]
 mod assignment;
+mod errors;
 mod futoshiki;
 mod sudoku;
 

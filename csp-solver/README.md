@@ -196,6 +196,7 @@ each implement `Domain`, some `LatticeDomain`. See
 cargo test --workspace                     # 151 passed, 0 failed, 6 ignored — 18 test binaries (measured at 3b75eca2, Apple M5 Max, 2026-07-10)
 cargo bench                                # criterion — see below
 maturin develop --release --features py    # build the PyO3 wheel (Python ≤3.13)
+RUSTDOCFLAGS='-A rustdoc::private_intra_doc_links' cargo doc --document-private-items  # internal-doc build (public `cargo doc` is pre-broken; the linked items are internal modules)
 ```
 
 Regenerate the embedded sudoku template bank, then rebuild the wheel to re-embed

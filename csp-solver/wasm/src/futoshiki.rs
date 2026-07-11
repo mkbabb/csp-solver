@@ -15,9 +15,10 @@
 //! reflection and no `i.to_string()` position-key allocation.
 //!
 //! This module compiles in the lean, `--no-default-features` deploy build
-//! (Futoshiki *is* a shipped product surface) alongside `sudoku`; it
-//! reuses that sibling's `coded_error` helper so both wires stamp a
-//! machine-checkable `.code` onto a genuine JS `Error`.
+//! (Futoshiki *is* a shipped product surface) alongside `sudoku`; both
+//! wires draw `coded_error` and the flat-buffer marshalling helpers from
+//! the shared [`crate::errors`] module, so each stamps a machine-checkable
+//! `.code` onto a genuine JS `Error` without depending on its sibling.
 //!
 //! Generation takes an explicit `seed` from JS. The native generator seeds
 //! its RNG from `SystemTime::now()`, which **panics** on
@@ -34,7 +35,7 @@ use csp_solver::puzzles::futoshiki::{
 };
 use csp_solver::{Pruning, SolveConfig};
 
-use crate::sudoku::coded_error;
+use crate::errors::{coded_error, domain_masks, flatten_solutions};
 
 /// v1 Futoshiki board-size band. The frontend selector offers exactly
 /// these; a request outside the band is `INVALID_INPUT`, never a silent
@@ -210,7 +211,6 @@ pub fn solve_futoshiki(
     max_solutions: Option<usize>,
     node_budget: Option<u32>,
 ) -> Result<FutoshikiSolveResult, JsValue> {
-    let total = (board_size * board_size) as usize;
     let puzzle = validated_puzzle(&board, board_size, &inequalities)?;
 
     let config = SolveConfig {
@@ -248,16 +248,11 @@ pub fn solve_futoshiki(
         ));
     }
 
-    let mut flat = Vec::with_capacity(solution_count * total);
-    for sol in &solutions {
-        flat.extend_from_slice(sol);
-    }
-
     Ok(FutoshikiSolveResult {
         solved: solution_count > 0,
         solution_count,
         board_size,
-        solutions: flat,
+        solutions: flatten_solutions(&solutions),
         backtracks,
         budget_exceeded,
     })
@@ -299,13 +294,7 @@ pub fn propagate_futoshiki(
         ));
     }
 
-    let masks = csp
-        .variables
-        .iter()
-        .map(|v| v.domain.iter().fold(0u32, |acc, val| acc | (1u32 << val)))
-        .collect();
-
-    Ok(masks)
+    Ok(domain_masks(&csp.variables))
 }
 
 /// Generate a flat, row-major Futoshiki puzzle for `board_size` at the

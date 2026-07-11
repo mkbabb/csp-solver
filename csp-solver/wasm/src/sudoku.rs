@@ -26,19 +26,7 @@ use csp_solver::ordering::Ordering;
 use csp_solver::sudoku::{self, Difficulty};
 use csp_solver::{Pruning, SolveConfig};
 
-/// Stamp a stable `.code` string onto a genuine `js_sys::Error` (not a
-/// plain object) so `instanceof Error` and `.message` both behave as JS
-/// callers expect, while still giving them a machine-checkable
-/// discriminant. Self-contained here (no shared serde-carrying error
-/// module) so it rides the lean, `--no-default-features` deploy-fork build
-/// this module ships in without dragging the serde graph into the compile.
-/// `pub(crate)` so the sibling always-on `futoshiki` wire stamps its coded
-/// errors identically.
-pub(crate) fn coded_error(code: &str, message: &str) -> JsValue {
-    let err = js_sys::Error::new(message);
-    let _ = js_sys::Reflect::set(&err, &JsValue::from_str("code"), &JsValue::from_str(code));
-    err.into()
-}
+use crate::errors::{coded_error, domain_masks, flatten_solutions};
 
 /// Sudoku puzzle difficulty. Flat re-declaration so this module stands
 /// alone in the lean, `--no-default-features` deploy build.
@@ -181,16 +169,11 @@ pub fn solve_sudoku(
         ));
     }
 
-    let mut flat = Vec::with_capacity(solution_count * total);
-    for sol in &solutions {
-        flat.extend_from_slice(sol);
-    }
-
     Ok(SudokuSolveResult {
         solved: solution_count > 0,
         solution_count,
         n,
-        solutions: flat,
+        solutions: flatten_solutions(&solutions),
         backtracks,
         budget_exceeded,
     })
@@ -250,13 +233,7 @@ pub fn propagate_sudoku(board: Vec<u32>, n: u32) -> Result<Vec<u32>, JsValue> {
         ));
     }
 
-    let masks = csp
-        .variables
-        .iter()
-        .map(|v| v.domain.iter().fold(0u32, |acc, val| acc | (1u32 << val)))
-        .collect();
-
-    Ok(masks)
+    Ok(domain_masks(&csp.variables))
 }
 
 /// Generate a flat, row-major Sudoku puzzle for `n` and `difficulty`.
