@@ -3,8 +3,8 @@
  * Futoshiki board — a ~90% structural copy of SudokuBoard.vue (games never import each
  * other, so it's an owned port, not a shared component). Same CSS-grid-of-inputs over an
  * absolute-SVG structure; the divergences are:
- *   - It hands `generateGridPaths(boardSize, boardSize, …)` — subgridSize === boardSize —
- *     so the grid degrades to a subgrid-free Latin grid (verified zero-cost reuse).
+ *   - It hands `generateCellRects(boardSize, boardSize, …)` — subgridSize === boardSize —
+ *     for the ghost paths; a subgrid-free Latin grid (verified zero-cost reuse).
  *   - A CARET layer (sibling of the cells) draws the inequality furniture from
  *     `inequalities`; the carets fold into both adjacent cells' aria-labels (F6).
  *   - Conflict detection is Latin-square (row/col) + inequality violation, no boxes.
@@ -18,7 +18,7 @@ import { HandDrawnGrid } from '@pencil/grid'
 import CelebrationStar from '@pencil/chrome/CelebrationStar.vue'
 import MarginNote from '@pencil/chrome/MarginNote.vue'
 import { mulberry32 } from '@mkbabb/pencil-boil'
-import { generateGridPaths } from '@pencil/grid/gridPaths'
+import { generateCellRects } from '@pencil/grid/gridPaths'
 import { revealStaggerMs } from '@pencil/config/pencilConfig'
 import { setMurmurSeed, notifyUserEdit, resetMurmur } from '@pencil/composables/celebration'
 import { findConflicts } from './conflicts'
@@ -61,11 +61,12 @@ const emit = defineEmits<{
 
 const gridTemplateColumns = computed(() => `repeat(${props.boardSize}, minmax(0, 1fr))`)
 
-// Pre-computed ghost rect paths in board viewBox coordinates (1000×1000). subgridSize ===
-// boardSize → generateGridPaths emits a subgrid-free Latin grid (no box lines).
+// Pre-computed ghost rect paths in board viewBox coordinates (1000×1000). The ghost geometry
+// is subgrid-independent, so passing boardSize as the subgrid arg only keys the cache; the
+// frame/box-line pass generateGridPaths ran and threw away is gone (T3-W8, LRU-backed).
 const VIEWBOX_SIZE = 1000
 const cellRects = computed(() =>
-  generateGridPaths(props.boardSize, props.boardSize, VIEWBOX_SIZE, 42).cellRects,
+  generateCellRects(props.boardSize, props.boardSize, VIEWBOX_SIZE, 42),
 )
 
 // R3: the viewport-share/dvh caps ride the row regime, which now starts at lg: —

@@ -31,6 +31,13 @@ export type SolverRequest =
       boardSize: number
       inequalities: Uint32Array
     }
+  | {
+      // Cold-start prewarm (T3-W8 §cold-start): a no-op that forces the worker
+      // to run `ensureInit()` — instantiate the wasm — ahead of the first real
+      // solve/generate. Carries no payload; the worker inits and pongs back.
+      id: number
+      kind: 'ping'
+    }
 
 /** Responses the worker posts back, correlated by `id`. */
 export type SolverResponse =
@@ -62,5 +69,11 @@ export type SolverResponse =
       boardSize: number
       /** One u32 per cell; bit v set ⇔ value v (1-based) survives AC-3/GAC propagation. */
       masks: Uint32Array
+    }
+  | {
+      // Prewarm pong — the wasm is instantiated and the worker is hot.
+      id: number
+      ok: true
+      kind: 'ping'
     }
   | ({ id: number; ok: false } & SerializedSolverError)

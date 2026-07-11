@@ -6,8 +6,9 @@
  * the peek gesture lives in the shared `useAnswerKeyPeek` composable, only the rendered laminate
  * is pencil.
  */
-import { defineAsyncComponent } from 'vue'
+import { defineAsyncComponent, onMounted } from 'vue'
 import { useSudoku } from './composables/useSudoku'
+import { prewarm } from './solver/useSolver'
 import SudokuBoard from './SudokuBoard/SudokuBoard.vue'
 import ControlPanel from './ControlPanel/ControlPanel.vue'
 import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'
@@ -20,6 +21,16 @@ import { useAnswerKeyPeek } from '@games/shared/useAnswerKeyPeek'
 const AnswerKeyLaminate = defineAsyncComponent(() => import('@pencil/sheet/AnswerKeyLaminate.vue'))
 
 const sudoku = useSudoku()
+
+// Cold-start prewarm (T3-W8 §cold-start): the eager Sudoku scene mounts at app
+// mount, so warm the solver Worker + wasm on the first idle tick — ahead of the
+// user's first solve/generate. `requestIdleCallback` keeps it off the critical
+// mount path; `setTimeout` is the fallback where it's unavailable. Idempotent.
+onMounted(() => {
+  const warm = () => prewarm()
+  if ('requestIdleCallback' in window) requestIdleCallback(warm)
+  else setTimeout(warm, 1)
+})
 
 const { peekActive, peekTouched, peekSolutionValues, startPeek, endPeek } = useAnswerKeyPeek({
   solveState: sudoku.solveState,

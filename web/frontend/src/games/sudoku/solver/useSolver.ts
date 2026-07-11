@@ -82,6 +82,36 @@ function ensureWorker(): Worker {
   return worker
 }
 
+let warmed = false
+
+/**
+ * Cold-start prewarm (T3-W8 §cold-start, A17 P1). Spin the Worker up and post a
+ * no-op `ping` so it runs `ensureInit()` — fetch + compile + instantiate the
+ * wasm — while the main thread is idle, ahead of the first real solve/generate.
+ * The gain only exists against the built `dist/` (dev fetch is instant); call it
+ * from `requestIdleCallback` on the eager Sudoku scene's mount (app mount).
+ *
+ * Idempotent: the `warmed` guard and the module-singleton `worker` make repeated
+ * calls a no-op, so there is no double-init even if mount fires more than once.
+ * The ping response carries no pending `id`, so the standard message handler
+ * ignores it; a one-shot listener here logs the warm confirmation for the smoke.
+ */
+export function prewarm(): void {
+  if (warmed) return
+  warmed = true
+  const w = ensureWorker()
+  const id = nextId++
+  const onPong = (event: MessageEvent<SolverResponse>) => {
+    if ('kind' in event.data && event.data.kind === 'ping') {
+      w.removeEventListener('message', onPong)
+      console.debug('[sudoku-solver] prewarm: worker hot (wasm instantiated)')
+    }
+  }
+  w.addEventListener('message', onPong)
+  w.postMessage({ id, kind: 'ping' } satisfies SolverRequest)
+  console.debug('[sudoku-solver] prewarm: warm ping sent')
+}
+
 function call(req: SolverRequest, transfer: ArrayBuffer[]): Promise<SolverResponse> {
   return new Promise((resolve, reject) => {
     pending.set(req.id, { resolve, reject })

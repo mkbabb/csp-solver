@@ -6,7 +6,7 @@ import { HandDrawnGrid } from '@pencil/grid'
 import CelebrationStar from '@pencil/chrome/CelebrationStar.vue'
 import MarginNote from '@pencil/chrome/MarginNote.vue'
 import { mulberry32 } from '@mkbabb/pencil-boil'
-import { generateGridPaths } from '@pencil/grid/gridPaths'
+import { generateCellRects } from '@pencil/grid/gridPaths'
 import { revealStaggerMs } from '@pencil/config/pencilConfig'
 import { setMurmurSeed, notifyUserEdit, resetMurmur } from '@pencil/composables/celebration'
 import { findConflicts } from './conflicts'
@@ -52,11 +52,75 @@ const emit = defineEmits<{
 
 const gridTemplateColumns = computed(() => `repeat(${props.boardSize}, minmax(0, 1fr))`)
 
-// Pre-computed ghost rect paths in board viewBox coordinates (1000×1000)
+// Pre-computed ghost rect paths in board viewBox coordinates (1000×1000).
+// generateCellRects emits ONLY the ghost half (the frame/line pass is dead weight for
+// this consumer) and is LRU-backed (T3-W8) — a 9→16→9 round-trip is a cache hit, not a
+// 256-rect regen on the switch's synchronous main-thread burst.
 const VIEWBOX_SIZE = 1000
 const cellRects = computed(() =>
-  generateGridPaths(props.boardSize, props.size, VIEWBOX_SIZE, 42).cellRects
+  generateCellRects(props.boardSize, props.size, VIEWBOX_SIZE, 42)
 )
+
+// ── Marks idle-chunk gate (T3-W8, G7 R-7) ────────────────────────────
+// Holding K populates pencilMarks for every empty cell in one shot. At 16×16 that's ~2,700
+// mark nodes mounting synchronously — a felt hitch. We release marks row-by-row on idle
+// (requestIdleCallback, rAF fallback) so the peek reads as a fast top-down ripple — in the
+// pencil grammar — instead of one blank hold. Small boards (9×9 free already) and reduced-
+// motion both render instantly: no ripple, no regression. `marksFor` gates each cell's marks
+// on its row having been released; clearing (K up) resets the gate immediately.
+const MARKS_CHUNK_MIN_BOARD = 10 // boards below this render marks all at once
+const prefersReducedMotion =
+  typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(prefers-reduced-motion: reduce)')
+    : null
+const revealedMarkRows = ref(0)
+let marksIdleHandle: number | null = null
+
+const scheduleIdle: (cb: () => void) => number =
+  typeof window !== 'undefined' && 'requestIdleCallback' in window
+    ? (cb) => (window as unknown as { requestIdleCallback: (c: () => void) => number }).requestIdleCallback(cb)
+    : (cb) => requestAnimationFrame(() => cb())
+const cancelIdle = (h: number) => {
+  if (typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+    ;(window as unknown as { cancelIdleCallback: (h: number) => void }).cancelIdleCallback(h)
+  } else {
+    cancelAnimationFrame(h)
+  }
+}
+function stopMarksReveal() {
+  if (marksIdleHandle !== null) {
+    cancelIdle(marksIdleHandle)
+    marksIdleHandle = null
+  }
+}
+
+const hasMarks = computed(
+  () => !!props.pencilMarks && Object.keys(props.pencilMarks).length > 0,
+)
+watch(hasMarks, (has) => {
+  stopMarksReveal()
+  if (!has) {
+    revealedMarkRows.value = 0 // K released — clear the gate at once
+    return
+  }
+  // Small board or reduced-motion: everything at once, no ripple.
+  if (props.boardSize < MARKS_CHUNK_MIN_BOARD || prefersReducedMotion?.matches) {
+    revealedMarkRows.value = props.boardSize
+    return
+  }
+  revealedMarkRows.value = 0
+  const step = () => {
+    revealedMarkRows.value = Math.min(revealedMarkRows.value + 1, props.boardSize)
+    marksIdleHandle = revealedMarkRows.value < props.boardSize ? scheduleIdle(step) : null
+  }
+  marksIdleHandle = scheduleIdle(step)
+})
+
+function marksFor(pos: number): number[] | undefined {
+  const m = props.pencilMarks?.[String(pos)]
+  if (!m) return undefined
+  return Math.floor(pos / props.boardSize) < revealedMarkRows.value ? m : undefined
+}
 
 // R3: the viewport-share/dvh caps ride the row regime, which now starts at lg: —
 // iPad-portrait (768) stacks, so the stacked width formula governs there (the md:
@@ -329,6 +393,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (slowSolveTimer) clearTimeout(slowSolveTimer)
+  stopMarksReveal()
 })
 
 // On board generation change (size change, randomize, clear), erase and redraw
@@ -400,7 +465,7 @@ function isRevealed(pos: number): boolean {
         :col-index="((pos - 1) % boardSize) + 1"
         :tab-index="pos - 1 === focusedPos ? 0 : -1"
         :ghost-path="cellRects[pos - 1] ?? ''"
-        :marks="pencilMarks?.[String(pos - 1)]"
+        :marks="marksFor(pos - 1)"
         @update="onCellUpdate"
         @cell-focus="onCellFocus"
       />

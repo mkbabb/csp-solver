@@ -49,6 +49,15 @@ self.addEventListener('message', async (event: MessageEvent<SolverRequest>) => {
   try {
     await ensureInit()
 
+    if (req.kind === 'ping') {
+      // Cold-start prewarm (T3-W8 §cold-start): `ensureInit()` above already
+      // instantiated the wasm; pong back so the main thread can log that the
+      // worker is hot before the first real solve/generate.
+      const response: SolverResponse = { id: req.id, ok: true, kind: 'ping' }
+      ;(self as unknown as Worker).postMessage(response)
+      return
+    }
+
     if (req.kind === 'solve') {
       const t0 = performance.now()
       const result = solveFutoshiki(

@@ -94,24 +94,58 @@ export function generateGridPaths(
         }
     }
 
-    // Per-cell ghost rects
-    const cellSegments = boardSize >= 16 ? 2 : 4;
-    const cellRects: Record<number, string> = {};
-    for (let r = 0; r < boardSize; r++) {
-        for (let c = 0; c < boardSize; c++) {
-            const pos = r * boardSize + c;
-            const x = c * cellSize;
-            const y = r * cellSize;
-            cellRects[pos] = wobbleRect(x, y, cellSize, cellSize, {
-                roughness: 0.4,
-                segments: cellSegments,
-                seed: seed + 500 + pos * 7,
-                jagged: true,
-            });
-        }
-    }
+    // Per-cell ghost rects — the ghost path is the only half both boards consume;
+    // it's extracted + cached separately (generateCellRects) so the ghost-only
+    // consumers never pay the frame/line work above.
+    const cellRects = generateCellRects(boardSize, subgridSize, viewBoxSize, seed);
 
     return { frame, subgridLines, cellLines, cellRects };
+}
+
+/**
+ * Generate ONLY the per-cell ghost rects for a grid — the half both boards' `cellRects`
+ * computed actually consumes. Split out of {@link generateGridPaths} (T3-W8) so the ghost
+ * path stops dragging the full frame + every subgrid/cell `wobbleLine` behind it: at a 9→16
+ * switch that redundant frame/line pass was regenerated and immediately discarded.
+ *
+ * Memoized through the shared boil LRU (`useBoilCache`, cap 24), keyed on every param and
+ * namespaced `cellRects|…` so it never collides with the boil-frame tuples. A size switch
+ * invalidates the Vue `computed` but the LRU survives it — a return to a prior size is a hit.
+ *
+ * @param boardSize - e.g. 9 for 9x9
+ * @param subgridSize - carried in the cache key for parity with the grid callers (the ghost
+ *   geometry itself is subgrid-independent — cells are uniform); part of "keyed on every param".
+ * @param viewBoxSize - SVG coordinate space size (e.g. 1000)
+ * @param seed - for deterministic randomness
+ */
+export function generateCellRects(
+    boardSize: number,
+    subgridSize: number,
+    viewBoxSize: number,
+    seed: number = 42,
+): Record<number, string> {
+    return useBoilCache<Record<number, string>>(
+        ['cellRects', boardSize, subgridSize, viewBoxSize, seed],
+        () => {
+            const cellSize = viewBoxSize / boardSize;
+            const cellSegments = boardSize >= 16 ? 2 : 4;
+            const cellRects: Record<number, string> = {};
+            for (let r = 0; r < boardSize; r++) {
+                for (let c = 0; c < boardSize; c++) {
+                    const pos = r * boardSize + c;
+                    const x = c * cellSize;
+                    const y = r * cellSize;
+                    cellRects[pos] = wobbleRect(x, y, cellSize, cellSize, {
+                        roughness: 0.4,
+                        segments: cellSegments,
+                        seed: seed + 500 + pos * 7,
+                        jagged: true,
+                    });
+                }
+            }
+            return cellRects;
+        },
+    );
 }
 
 // ── Boil frame generation ─────────────────────────────────────────

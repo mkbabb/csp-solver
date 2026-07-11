@@ -11,6 +11,7 @@ export { usePathAnimation } from './HandDrawnGrid/usePathAnimation'
 export { default as HandDrawnOutline } from './HandDrawnOutline.vue'
 export {
   generateGridPaths,
+  generateCellRects,
   generateRectBoilFrames,
   generateLineBoilFrames,
   generateGridBoilFrames,

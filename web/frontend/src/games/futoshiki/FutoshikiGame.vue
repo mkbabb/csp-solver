@@ -9,7 +9,9 @@
  * composable (the laminate is board-shape-agnostic by design — G5), only the rendered laminate
  * is pencil.
  */
+import { onMounted } from 'vue'
 import { useFutoshiki } from './composables/useFutoshiki'
+import { prewarm } from './solver/useSolver'
 import FutoshikiBoard from './FutoshikiBoard/FutoshikiBoard.vue'
 import ControlPanel from './ControlPanel/ControlPanel.vue'
 import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'
@@ -20,6 +22,16 @@ import { useAnswerKeyPeek } from '@games/shared/useAnswerKeyPeek'
 import AnswerKeyLaminate from '@pencil/sheet/AnswerKeyLaminate.vue'
 
 const futoshiki = useFutoshiki()
+
+// Cold-start prewarm (T3-W8 §cold-start): this scene is async + v-if-gated, so it
+// warms its own solver Worker + wasm on the first idle tick after its own mount —
+// not at app mount (Sudoku owns that). `requestIdleCallback` keeps it off the
+// critical mount path; `setTimeout` is the fallback. Idempotent.
+onMounted(() => {
+  const warm = () => prewarm()
+  if ('requestIdleCallback' in window) requestIdleCallback(warm)
+  else setTimeout(warm, 1)
+})
 
 const { peekActive, peekTouched, peekSolutionValues, startPeek, endPeek } = useAnswerKeyPeek({
   solveState: futoshiki.solveState,
