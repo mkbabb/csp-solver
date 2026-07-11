@@ -302,6 +302,19 @@
     border: 2px solid var(--color-border);
   }
 
+  /* One-edge ownership (T3-W10 F1): a host wrapped in HandDrawnOutline gets its drawn
+     edge FROM the wobble frame — the utility's crisp 2px border would double it. The
+     hard shadow stays: it lies beneath the lifted sheet, outside the drawn edge.
+     The -2px lift is dropped too (R5 truthing, the "drop for animated hosts" arm): the
+     frame registers to the card's LAYOUT box, so a transform slides the card out from
+     under its own drawn edge — measured as a 2px vertical skew. Declared == rendered:
+     the variant declares no lift, and none renders. */
+  .cartoon-shadow-sm.edge-outlined,
+  .cartoon-shadow-md.edge-outlined {
+    border: none;
+    transform: none;
+  }
+
   /* Laminate — the teacher's laminated answer key, briefly held over the page
      (design-union §3 row 9). The app's flagship translucent object. OD-1 no-glass
      build: the laminate never blurs its backdrop — the board shows through the milk
@@ -358,6 +371,21 @@
 
     .solve-success {
       transition: none;
+    }
+  }
+
+  /* T3-W10 dusk ease (disposition keep, re-anchored AT click): when the theme turns,
+     the world dims rather than snaps — body + the paper sheets take a one-shot
+     ~350ms color ease. Scoped to html.theme-turning (DarkModeToggle puts the class
+     on at click, flip included, and holds it ~400ms — never a deferral) and
+     no-preference-gated: under PRM the page colors snap. Conforms to the 500ms
+     stroke/box-shadow solve-success precedent above. */
+  @media (prefers-reduced-motion: no-preference) {
+    html.theme-turning body,
+    html.theme-turning .bg-card {
+      transition:
+        background-color 350ms ease,
+        color 350ms ease;
     }
   }
 

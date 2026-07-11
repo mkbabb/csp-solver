@@ -34,12 +34,22 @@ export const YOSHI_COLORS = {
   flower: { petals: '#ffffff', center: '#fb923c' },
   leaf: { fill: '#22c55e', vein: '#16a34a' },
   vine: { main: '#16a34a', secondary: '#22c55e' },
-  // Mascot palette — the 8 sun/moon hexes formerly welded into DarkModeToggle.vue's template
-  // (design-refinement.md §3.3.4). Consolidated here as the single source; roles map 1:1 to
-  // the toggle's fills/strokes.
+  // Mascot palette — the sun/moon hexes formerly welded into DarkModeToggle.vue's template
+  // (design-refinement.md §3.3.4). Single source; roles map 1:1 to the toggle's
+  // fills/strokes, now actually consumed there (T3-W10 rewire). CelebrationStar's gold
+  // (sparkle fill + rays stroke) draws from the same family. T3-W10 F4 slight pass:
+  // `spiral` stays the rays gold (S2's deepening REVERTED per the 2026-07-11 owner
+  // audit — measured, it lowered contrast vs the disc, 1.175→1.063; the yellow-on-
+  // orange hue pop is the carrier); `sparkleStroke` deepens off the same gold (S3 —
+  // sub-pixel at 5rem before); `moon.star` retempers white → butter (M3 — the star
+  // field is one temperature).
   celestial: {
-    sun: { body: '#E88845', outline: '#D16A32', core: '#F09855', rays: '#F0B030', sparkle: '#FDE68A' },
-    moon: { body: '#FFF4AA', outline: '#E5C74D', star: '#FFFFFF' },
+    sun: {
+      body: '#E88845', outline: '#D16A32', core: '#F09855',
+      rays: '#F0B030', spiral: '#F0B030',
+      sparkle: '#FDE68A', sparkleStroke: '#D99A10',
+    },
+    moon: { body: '#FFF4AA', outline: '#E5C74D', star: '#FFF4AA' },
   },
 } as const;
 

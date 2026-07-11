@@ -4,6 +4,7 @@
 
 import {
     type WobbleOptions,
+    mulberry32,
     wobbleLine,
     wobbleLinePoints,
     wobbleRect,
@@ -151,21 +152,67 @@ export function generateCellRects(
 // ── Boil frame generation ─────────────────────────────────────────
 
 /**
+ * Jittered arc-sampled corner polyline — the radius-aware wobble rect's corner join
+ * (T3-W10 F1). Radial jitter amplitude rides `roughness · r · 0.06`, in-family with
+ * pencil-boil's `ellipsePoints`; a fresh seed per boil frame makes the corner shiver
+ * like the sides do.
+ */
+function arcBoilPoints(
+    cx: number, cy: number, r: number,
+    a0: number, a1: number,
+    roughness: number, seed: number,
+): [number, number][] {
+    const steps = Math.max(2, Math.round((Math.abs(a1 - a0) * r) / 6));
+    const rng = mulberry32(Math.floor(seed));
+    const amp = roughness * r * 0.06;
+    const points: [number, number][] = [];
+    for (let i = 0; i <= steps; i++) {
+        const a = a0 + ((a1 - a0) * i) / steps;
+        const j = (rng() - 0.5) * 2 * amp;
+        points.push([cx + Math.cos(a) * (r + j), cy + Math.sin(a) * (r + j)]);
+    }
+    return points;
+}
+
+/**
  * Generate boil frame variants for a standalone rectangle.
  * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations.
+ *
+ * `radius` (T3-W10 F1) rounds the corners the way a hand would: the four sides are
+ * shortened by `r` at each end and joined with jittered arc-sampled polylines — still
+ * jagged, never a geometric arc. `radius = 0` reproduces the square frame exactly.
  */
 export function generateRectBoilFrames(
     x: number, y: number, w: number, h: number,
     opts: WobbleOptions, boilAmount: number, frameCount: number,
+    radius: number = 0,
 ): string[] {
     const safeFrameCount = Math.max(2, Math.floor(frameCount));
     const s = opts.seed ?? 42;
-    const sides = [
-        { x1: x, y1: y, x2: x + w, y2: y, seed: s },
-        { x1: x + w, y1: y, x2: x + w, y2: y + h, seed: s + 1 },
-        { x1: x + w, y1: y + h, x2: x, y2: y + h, seed: s + 2 },
-        { x1: x, y1: y + h, x2: x, y2: y, seed: s + 3 },
+    const r = Math.max(0, Math.min(radius, w / 2, h / 2));
+    const sides = r === 0
+        ? [
+            { x1: x, y1: y, x2: x + w, y2: y, seed: s },
+            { x1: x + w, y1: y, x2: x + w, y2: y + h, seed: s + 1 },
+            { x1: x + w, y1: y + h, x2: x, y2: y + h, seed: s + 2 },
+            { x1: x, y1: y + h, x2: x, y2: y, seed: s + 3 },
+        ]
+        : [
+            { x1: x + r, y1: y, x2: x + w - r, y2: y, seed: s },
+            { x1: x + w, y1: y + r, x2: x + w, y2: y + h - r, seed: s + 1 },
+            { x1: x + w - r, y1: y + h, x2: x + r, y2: y + h, seed: s + 2 },
+            { x1: x, y1: y + h - r, x2: x, y2: y + r, seed: s + 3 },
+        ];
+
+    // Quarter-arc corner joins, one after each side (SVG y-down): TR, BR, BL, TL.
+    const HALF_PI = Math.PI / 2;
+    const corners = [
+        { cx: x + w - r, cy: y + r, a0: -HALF_PI, a1: 0 },
+        { cx: x + w - r, cy: y + h - r, a0: 0, a1: HALF_PI },
+        { cx: x + r, cy: y + h - r, a0: HALF_PI, a1: Math.PI },
+        { cx: x + r, cy: y + r, a0: Math.PI, a1: Math.PI + HALF_PI },
     ];
+    const roughness = opts.roughness ?? 1;
 
     const sideBasePoints = sides.map(side =>
         wobbleLinePoints(side.x1, side.y1, side.x2, side.y2, { ...opts, seed: side.seed })
@@ -182,12 +229,23 @@ export function generateRectBoilFrames(
                 )
             );
 
-        let d = pointsToLinear(sidePoints[0]);
-        for (let si = 1; si < 4; si++) {
-            d += ' ' + pointsToLinear(sidePoints[si]).replace(/^M[^ ]+/, '');
+        if (r === 0) {
+            let d = pointsToLinear(sidePoints[0]);
+            for (let si = 1; si < 4; si++) {
+                d += ' ' + pointsToLinear(sidePoints[si]).replace(/^M[^ ]+/, '');
+            }
+            d += ' Z';
+            frames.push(d);
+            continue;
         }
-        d += ' Z';
-        frames.push(d);
+
+        const ring: [number, number][] = [];
+        for (let si = 0; si < 4; si++) {
+            ring.push(...sidePoints[si]);
+            const c = corners[si];
+            ring.push(...arcBoilPoints(c.cx, c.cy, r, c.a0, c.a1, roughness, s + 10 + si + f * 997));
+        }
+        frames.push(pointsToLinear(ring) + ' Z');
     }
     return frames;
 }

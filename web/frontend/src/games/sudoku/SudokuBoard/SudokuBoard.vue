@@ -43,6 +43,10 @@ const props = defineProps<{
    *  held (opt-in — never ambient); only positions where propagation actually
    *  pruned something are present. */
   pencilMarks?: Record<string, number[]>
+  /** F6 page-turn (T3-W10): true while this scene is switch-away's outgoing exercise.
+   *  Routes the grid through the EXISTING erase beat and fades glyphs + marginalia;
+   *  on the erase's completion the board emits `erased` (the seam) instead of redrawing. */
+  leaving?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -51,6 +55,7 @@ const emit = defineEmits<{
   (e: 'undo'): void
   (e: 'redo'): void
   (e: 'hint', position: number): void
+  (e: 'erased'): void
 }>()
 
 const gridTemplateColumns = computed(() => `repeat(${props.boardSize}, minmax(0, 1fr))`)
@@ -372,10 +377,30 @@ function onGridAnimComplete(state: 'drawn' | 'hidden') {
   if (state === 'drawn') {
     gridAnimState.value = 'drawn'
   } else if (state === 'hidden') {
-    // After erase, redraw
-    gridAnimState.value = 'drawing'
+    if (props.leaving) {
+      // F6 beat 2 — the seam: the page is erased; App flips the v-if on this tick.
+      emit('erased')
+    } else {
+      // After erase, redraw (the boardGeneration cycle)
+      gridAnimState.value = 'drawing'
+    }
   }
 }
+
+// F6 beat 1 (T3-W10) — switch-away routes the switch through the EXISTING animateErase
+// (easeInCubic, the "leave the page" curve — ~250ms on a 9×9's line count) via the same
+// state machine the boardGeneration cycle already drives. If a mid-erase re-select cancels
+// the page-turn (`leaving` drops while we sit erased), the exercise redraws itself.
+watch(
+  () => props.leaving,
+  (isLeaving) => {
+    if (isLeaving) {
+      gridAnimState.value = 'erasing'
+    } else if (gridAnimState.value === 'hidden') {
+      gridAnimState.value = 'drawing'
+    }
+  },
+)
 
 onMounted(() => {
   gridAnimState.value = 'drawing'
@@ -411,7 +436,7 @@ function isRevealed(pos: number): boolean {
        showing error card pushes the controls panel down instead of overlaying it at
        z-50; in the row regime (≥lg) it reverts to the overlay strip (true margin-
        writing, no layout shift). -->
-  <div class="board-shell" :class="boardSizeClasses">
+  <div class="board-shell" :class="[boardSizeClasses, { 'board-leaving': leaving }]">
     <div
       class="board-wrapper cartoon-shadow-md aspect-square w-full rounded-xl bg-card"
       :class="boardClasses"
@@ -516,6 +541,18 @@ function isRevealed(pos: number): boolean {
   position: absolute;
   inset: 0;
   z-index: 2;
+}
+
+/* F6 beat 1 (T3-W10) — glyphs + marginalia leave with the grid: opacity-only, 200ms,
+   easeInCubic (the erase family — things LEAVING the page, design §1.2 canon). The
+   orchestrator never raises `leaving` under PRM (same-frame cut), and the media gate
+   keeps even a stray class-flip instant there. */
+@media (prefers-reduced-motion: no-preference) {
+  .board-leaving .board-cells,
+  .board-leaving .board-margin {
+    opacity: 0;
+    transition: opacity 200ms cubic-bezier(0.32, 0, 0.67, 0);
+  }
 }
 
 /* The status/alert strip just below the board. pointer-events pass through to whatever

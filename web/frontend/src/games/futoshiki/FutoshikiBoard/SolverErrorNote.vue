@@ -32,7 +32,7 @@ onMounted(async () => {
 <template>
   <div ref="rootRef" class="error-note" role="alert">
     <HandDrawnOutline :stroke-width="3">
-      <div class="error-note-card cartoon-shadow-sm bg-card">
+      <div class="error-note-card cartoon-shadow-sm edge-outlined bg-card">
         <p class="error-note-text">{{ text }}</p>
         <button v-if="retryable" type="button" class="error-note-retry" @click="emit('retry')">
           try again

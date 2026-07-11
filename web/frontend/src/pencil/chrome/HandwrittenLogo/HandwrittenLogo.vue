@@ -19,6 +19,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'select', value: string): void
+    /** Fires the moment the picker opens (click OR keyboard) — App warms the other
+     *  scene's lazy chunk on this signal (F6-D3), so by selection time it's cached. */
+    (e: 'open'): void
 }>()
 
 const { isDark } = useTheme()
@@ -35,6 +38,11 @@ const { isOpen, highlighted, toggle, close, selectIndex, onKeydown } = useGameMe
 )
 const hovered = ref(false)
 defineExpose({ close })
+
+// F6-D3: announce every open (a watch, not the click handler, so keyboard opens count too).
+watch(isOpen, (open) => {
+    if (open) emit('open')
+})
 
 function seedFor(value: string): number {
     return value.charCodeAt(0)
@@ -146,11 +154,16 @@ watch(
             </span>
         </button>
 
+        <!-- F6-D1 (T3-W10): the close now carries a REAL leave — 140ms ease-out reverse of
+             logo-menu-in — making I2's "the menu-close motion already carries the swap"
+             comment true instead of aspirational. Enter is untouched (the card's own
+             logo-menu-in plays on mount as before). -->
+        <Transition name="logo-menu">
         <div v-if="isOpen" class="logo-menu-pop">
             <HandDrawnOutline :stroke-width="3">
                 <ul
                     id="logo-game-listbox"
-                    class="logo-menu-card cartoon-shadow-md bg-popover"
+                    class="logo-menu-card cartoon-shadow-md edge-outlined bg-popover"
                     role="listbox"
                     aria-label="Choose a puzzle"
                 >
@@ -174,6 +187,7 @@ watch(
                 </ul>
             </HandDrawnOutline>
         </div>
+        </Transition>
     </div>
 </template>
 
@@ -283,11 +297,8 @@ watch(
     animation: logo-menu-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* H2 dark hairline: the token border (16% L) vanishes against the 6.5% L popover
-   ground — mix a quarter foreground in so the floating edge still draws itself. */
-.dark .logo-menu-card {
-    border-color: color-mix(in srgb, var(--color-foreground) 25%, var(--color-border));
-}
+/* H2's dark hairline is gone with the border (T3-W10 F1 one-edge ownership): the
+   wobble frame draws the floating edge now, in both themes. */
 
 .logo-menu-item {
     /* The hand register token (--font-hand ← Patrick Hand) + a true √φ ladder rung —
@@ -325,6 +336,11 @@ watch(
     background-size: var(--scribble-width, 4ch) 8px;
 }
 
+/* R5 transform truthing (T3-W10 F1): cartoon-shadow-md's -2px lift was silently dead
+   here (this animation fills forward at translateY(0)) — and folding it in measured as
+   a 2px frame/card skew, since the wobble frame registers to the layout box transforms
+   don't move. `edge-outlined` drops the lift instead (index.css); the keyframes stay at
+   the shipped pose. Declared == rendered, under animation and PRM alike. */
 @keyframes logo-menu-in {
     from {
         transform: translateY(-6px);
@@ -333,6 +349,26 @@ watch(
     to {
         transform: translateY(0);
         opacity: 1;
+    }
+}
+
+/* F6-D1 — the leave beat (page-turn beat 0): 140ms ease-out reverse of logo-menu-in
+   (fade + 6px lift-up), Band C's tooltip-fade rung. Declared on the Transition ROOT
+   (Vue watches this element's animation to time the DOM removal); pointer-events cut
+   so a closing menu never intercepts the click that closed it. */
+.logo-menu-leave-active {
+    animation: logo-menu-out 140ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    pointer-events: none;
+}
+
+@keyframes logo-menu-out {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-6px);
+        opacity: 0;
     }
 }
 
@@ -362,6 +398,10 @@ watch(
         transition: none;
     }
     .logo-menu-card {
+        animation: none;
+    }
+    /* No leave animation → Vue removes the node on the next tick (instant close). */
+    .logo-menu-leave-active {
         animation: none;
     }
 }

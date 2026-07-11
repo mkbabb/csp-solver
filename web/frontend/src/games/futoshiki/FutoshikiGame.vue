@@ -21,6 +21,12 @@ import { useAnswerKeyPeek } from '@games/shared/useAnswerKeyPeek'
 // laminate async — either way `{immediate:true}` lays it down on mount, P2-L5 §R6(a).)
 import AnswerKeyLaminate from '@pencil/sheet/AnswerKeyLaminate.vue'
 
+// F6 page-turn (T3-W10): `leaving` routes the switch-away through the board's erase beat
+// while the scene chrome fades (scene.css `.scene-leaving`); `erased` reports the seam back
+// to App. Structural twin of SudokuGame's wiring (D16).
+const props = defineProps<{ leaving?: boolean }>()
+const emit = defineEmits<{ (e: 'erased'): void }>()
+
 const futoshiki = useFutoshiki()
 
 // Cold-start prewarm (T3-W8 §cold-start): this scene is async + v-if-gated, so it
@@ -50,10 +56,11 @@ function onShare() {
 </script>
 
 <template>
-  <div class="app-layout">
+  <div class="app-layout" :class="{ 'scene-leaving': props.leaving }">
     <!-- Board + the held answer-key laminate (a sibling over the board) -->
     <div class="board-peek-host">
       <FutoshikiBoard
+        :leaving="props.leaving"
         :board-size="futoshiki.boardSize.value"
         :total-cells="futoshiki.totalCells.value"
         :values="futoshiki.values.value"
@@ -72,6 +79,7 @@ function onShare() {
         @undo="futoshiki.undo()"
         @redo="futoshiki.redo()"
         @hint="(pos: number) => futoshiki.hintCell(pos)"
+        @erased="emit('erased')"
       />
       <AnswerKeyLaminate
         v-if="peekTouched"
@@ -106,7 +114,7 @@ function onShare() {
 
     <!-- Row-regime sidebar (≥lg — R3): controls card, vertically centered against the
          board (H8-centering-only). -->
-    <div class="hidden lg:flex lg:flex-col lg:items-start">
+    <div class="scene-controls hidden lg:flex lg:flex-col lg:items-start">
       <HandDrawnOutline :stroke-width="3">
         <div class="controls-card rounded-xl bg-card p-5">
           <ControlPanel

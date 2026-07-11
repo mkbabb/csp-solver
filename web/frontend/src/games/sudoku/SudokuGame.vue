@@ -20,6 +20,12 @@ import { useAnswerKeyPeek } from '@games/shared/useAnswerKeyPeek'
 // watch lays it down on the async mount regardless — P2-L5 §R6(a).)
 const AnswerKeyLaminate = defineAsyncComponent(() => import('@pencil/sheet/AnswerKeyLaminate.vue'))
 
+// F6 page-turn (T3-W10): `leaving` routes the switch-away through the board's erase beat
+// (the grid's EXISTING animateErase, merely unrouted before) while the scene chrome fades
+// (scene.css `.scene-leaving`); `erased` reports the seam back to App, which flips the v-if.
+const props = defineProps<{ leaving?: boolean }>()
+const emit = defineEmits<{ (e: 'erased'): void }>()
+
 const sudoku = useSudoku()
 
 // Cold-start prewarm (T3-W8 §cold-start): the eager Sudoku scene mounts at app
@@ -49,12 +55,13 @@ function onShare() {
 </script>
 
 <template>
-  <div class="app-layout">
+  <div class="app-layout" :class="{ 'scene-leaving': props.leaving }">
     <!-- Board + the held answer-key laminate (a sibling over the board, never inside the
          grid's filtered group — kill-gate rule 6). The host tightly wraps the board box so
          the laminate's inset:0 aligns to .board-cells. -->
     <div class="board-peek-host">
       <SudokuBoard
+        :leaving="props.leaving"
         :size="sudoku.size.value"
         :board-size="sudoku.boardSize.value"
         :total-cells="sudoku.totalCells.value"
@@ -74,6 +81,7 @@ function onShare() {
         @undo="sudoku.undo()"
         @redo="sudoku.redo()"
         @hint="(pos: number) => sudoku.hintCell(pos)"
+        @erased="emit('erased')"
       />
       <AnswerKeyLaminate
         v-if="peekTouched"
@@ -110,7 +118,7 @@ function onShare() {
 
     <!-- Row-regime sidebar (≥lg — R3: iPad portrait clips at md): controls card, vertically
          centered against the board (H8-centering-only). -->
-    <div class="hidden lg:flex lg:flex-col lg:items-start">
+    <div class="scene-controls hidden lg:flex lg:flex-col lg:items-start">
       <HandDrawnOutline :stroke-width="3">
         <div class="controls-card rounded-xl bg-card p-5">
           <ControlPanel

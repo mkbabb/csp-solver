@@ -9,6 +9,8 @@
  *   .board-peek-host   the positioning context wrapping the board + answer-key laminate
  *   .controls-card     the row-regime (≥lg) controls card
  *   .mobile-board-width the stacked (<lg) controls card's board-matched width
+ *   .scene-controls    the row-regime controls rail (the F6 fade target wrapping the card)
+ *   .scene-leaving     ON .app-layout while the F6 page-turn's beat 1 runs (chrome fades out)
  */
 
 /* H8-centering-only: row regime centers the controls card against the board. */
@@ -41,5 +43,35 @@
     align-items: center;
     gap: 1.25rem;
     width: 100%;
+  }
+}
+
+/* ── F6 page-turn: the controls chrome follows the grid (T3-W10) ──────────────
+   Beat 3: fade IN on scene mount — 250ms easeOutCubic, +150ms after the draw-in's
+   onset (the grid leads, chrome follows). `backwards` fill, NOT `both`: a finished
+   fill-forward animation would pin opacity:1 and silently defeat the beat-1 fade.
+   Beat 1: fade OUT with the erase — 200ms easeInCubic (things leave the page),
+   `animation: none` so the mount fade-in can never fight the leave.
+   PRM: the whole block gates to no-preference — mount and switch are both instant. */
+@media (prefers-reduced-motion: no-preference) {
+  .mobile-board-width,
+  .scene-controls {
+    animation: controls-fade-in 250ms cubic-bezier(0.33, 1, 0.68, 1) 150ms backwards;
+  }
+
+  .app-layout.scene-leaving .mobile-board-width,
+  .app-layout.scene-leaving .scene-controls {
+    opacity: 0;
+    transition: opacity 200ms cubic-bezier(0.32, 0, 0.67, 0);
+    animation: none;
+  }
+}
+
+@keyframes controls-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }

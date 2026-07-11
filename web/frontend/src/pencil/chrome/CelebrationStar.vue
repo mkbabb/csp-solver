@@ -18,7 +18,11 @@ import {
   usePrefersReducedMotion,
   type SequenceHandle,
 } from '@mkbabb/pencil-boil'
-import { CELEBRATION } from '@pencil/config/pencilConfig'
+import { CELEBRATION, YOSHI_COLORS } from '@pencil/config/pencilConfig'
+
+// T3-W10 celestial rewire (F8 §2.2): the star's gold is the celestial family's —
+// sparkle fill + rays stroke from YOSHI_COLORS, not duplicated hexes. Values unchanged.
+const GOLD = YOSHI_COLORS.celestial.sun
 
 const props = defineProps<{ active: boolean }>()
 
@@ -106,9 +110,9 @@ onUnmounted(reset)
       <path
         ref="starPathRef"
         :d="STAR_D"
-        fill="#FDE68A"
+        :fill="GOLD.sparkle"
         fill-opacity="0.9"
-        stroke="#F0B030"
+        :stroke="GOLD.rays"
         stroke-width="2.4"
         stroke-linecap="round"
         stroke-linejoin="round"
