@@ -93,7 +93,11 @@ fn revise_noop_when_antecedent_not_singleton_trigger() {
     let c = Impl::new(0, 1, 5, vec![2, 3]);
 
     let rev = <Impl as Constraint<BitsetDomain>>::revise(&c, &mut vars, 0);
-    assert_eq!(rev, Revision::Unchanged, "untriggered revise must be a no-op");
+    assert_eq!(
+        rev,
+        Revision::Unchanged,
+        "untriggered revise must be a no-op"
+    );
     for v in 0u32..6 {
         assert!(vars[1].domain.contains(&v), "consequent lost {v} on no-op");
     }
