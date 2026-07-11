@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 — 2026-07-10 (tranche-3 — dead-surface excision)
+
+- **BREAKING — `isomorphic` / `full-mirror` excised.** The `full-mirror` feature
+  and its `isomorphic` module are removed; the published `.d.ts` drops `Csp`,
+  `SolveConfig`, `SolveStats`, `OptimizationMode`, `Ordering`,
+  `PropagationStrategy`, `Pruning` — the 7 generic py-mirror exports the
+  published `0.2.0` tarball shipped. The surface is now the purpose-built
+  `sudoku` + `futoshiki` + `assignment` layers only.
+- `default = ["assignment"]` (was `["full-mirror", "assignment"]`); serde stays
+  via `assignment`, so `Cargo.lock` is unchanged. The lean
+  `--no-default-features` deploy artifact is byte-identical pre/post (it never
+  compiled the isomorphic surface). No in-repo consumer is affected.
+- Version stamped `0.2.0 → 0.4.0`: the minor bump encodes the breaking removal
+  across the 0.x slot and realigns the package to the core crate's `0.4.0`
+  surface (it had lagged the core through 0.3.0).
+
 ## 0.2.0 — 2026-07-06 (grand-uplift tranche)
 
 - **Split surface, four layers** (`src/lib.rs`): `sudoku` + `futoshiki` always

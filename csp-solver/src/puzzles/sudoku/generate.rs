@@ -126,11 +126,10 @@ pub fn embedded_templates(n: u32, difficulty: Difficulty) -> Vec<Vec<u32>> {
 /// Number of templates embedded for `(n, difficulty)`, counted from the
 /// directory listing without parsing any file.
 ///
-/// Zero means that size/difficulty is not shipped (e.g. N=5,
-/// rejected at the API per the locked N=5 policy). The PyO3 `template_count`
-/// wraps this so the Python service can reject such a request up front — with a
-/// `NOT_FOUND` — instead of falling through to unbounded hole-digging (the old
-/// N=5 DoS surface).
+/// Zero means that size/difficulty is not shipped (e.g. N=5, rejected per the
+/// locked N=5 policy): a size/difficulty with no embedded bank is refused up
+/// front rather than falling through to unbounded hole-digging (the old N=5
+/// DoS surface).
 pub fn embedded_template_count(n: u32, difficulty: Difficulty) -> usize {
     let path = format!("{n}/{}", difficulty.dir_name());
     SUDOKU_PUZZLES.get_dir(&path).map_or(0, |dir| {

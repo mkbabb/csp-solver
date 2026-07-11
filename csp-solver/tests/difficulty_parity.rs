@@ -37,8 +37,8 @@
 //!
 //! The prototype's `SIBLING_DEFINITIONS` paths and its `strum`-derived
 //! canonical variant list were authored against the pre-restructure tree.
-//! Landed here retargeted to the current topology — `py.rs` → `py/sudoku_api.rs`
-//! (W1 py-module split), `composables/useSudoku.ts` → `games/sudoku/types.ts`
+//! Landed here retargeted to the current topology — `py.rs` → `py/sudoku.rs`
+//! (W1 py-module split, T3-W3 rename), `composables/useSudoku.ts` → `games/sudoku/types.ts`
 //! (W7 frontend topology) — and de-`strum`'d: the canonical wire names are
 //! inlined behind a compile-time `match` on the enum, so no `strum`
 //! dependency is added to the (W3-owned) `Cargo.toml`. The guard behavior
@@ -134,8 +134,8 @@ impl Casing {
 /// checked against, not a sibling of itself.
 const SIBLING_DEFINITIONS: &[(&str, &str, Casing)] = &[
     (
-        "py/sudoku_api.rs::SudokuDifficulty (PyO3)",
-        "src/py/sudoku_api.rs",
+        "py/sudoku.rs::SudokuDifficulty (PyO3)",
+        "src/py/sudoku.rs",
         Casing::Verbatim,
     ),
     (

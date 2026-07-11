@@ -246,12 +246,9 @@ jobs:
     # ---------------------------------------------------------------- Lane 7
     # twiggy budgets — measured artifact bands (Pass-2 prototype 6). Full module
     # FAIL >240 KB / WARN >230 KB on the raw .wasm (decimal KB, matching prototype
-    # 6's "92,897 B raw ~= 93 KB" convention). The separate ~93 KB lean-sudoku
-    # budget is RESERVED, not enforced here: no lean build target exists yet
-    # (csp-solver/wasm has no [features]/full-mirror flag; serde deps are not
-    # optional; there is no --no-default-features lean sudoku.rs). It lands with the
-    # deploy-C lean artifact (synthesis-pass2.md §3.4) — add its gate then, do NOT
-    # silently skip a broken lean build now.
+    # 6's "92,897 B raw ~= 93 KB" convention). The ~93 KB lean-sudoku budget is
+    # enforced below on the --no-default-features build (sudoku + futoshiki only,
+    # the assignment feature and its serde graph compiled out).
     twiggy:
         runs-on: ubuntu-latest
         timeout-minutes: 25
@@ -307,8 +304,9 @@ jobs:
                   elif [ "$RAW" -gt 230000 ]; then
                     echo "::warning::wasm full module ${RAW} B exceeds the 230 KB warn threshold"
                   fi
-            # Lean deploy artifact (W6): sudoku-only surface, full-mirror
-            # compiled out — the module the frontend Worker actually ships.
+            # Lean deploy artifact (W6): sudoku + futoshiki surface, the
+            # assignment feature compiled out — the module the frontend Worker
+            # actually ships.
             - name: wasm-pack build (lean sudoku artifact)
               run: wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release --no-default-features
             - name: lean raw-size budget (fail >93 KB)

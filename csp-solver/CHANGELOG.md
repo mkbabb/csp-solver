@@ -14,6 +14,22 @@ general-purpose `csp_solver::assignment()` / `AssignmentBuilder` surface morph
 was built on stays here; `morph` now consumes it as an ordinary crates.io
 dependency (`csp-solver = "0.2"`).
 
+## 0.4.0 — 2026-07-10 (tranche-3, W3 — dead-surface excision)
+
+### npm
+
+- **`@mkbabb/csp-solver-wasm@0.2.0 → 0.4.0`** — **BREAKING**. The `full-mirror`
+  feature and its `isomorphic` module are excised; the published `.d.ts` drops
+  `Csp`, `SolveConfig`, `SolveStats`, `OptimizationMode`, `Ordering`,
+  `PropagationStrategy`, `Pruning` (the generic py-mirror surface — 7 exports).
+  The shipped surface is now the purpose-built `sudoku` + `futoshiki` +
+  `assignment` layers only. No in-repo consumer is affected — the frontend
+  Worker imports `solveSudoku` / `solveFutoshiki` / `generate*` /
+  `solveAssignmentCop` only, never the isomorphic classes; the lean deploy build
+  never compiled the isomorphic surface, and its bytes are byte-identical
+  pre/post. The `0.4.0` minor bump both encodes the breaking removal across the
+  0.x minor slot and aligns the package to the core crate's `0.4.0` surface.
+
 ## 0.3.0 — 2026-07-10 (tranche-2, W3 — substrate excision)
 
 ### crates.io

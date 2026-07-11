@@ -13,10 +13,6 @@
 //!   `Uint32Array` board plus a flat inequality-pair buffer. Futoshiki is a
 //!   shipped product surface, so it rides the lean `--no-default-features`
 //!   build alongside `sudoku`.
-//! - **`isomorphic`** (feature `full-mirror`) — the generic `Csp`,
-//!   `SolveConfig`, `SolveStats`, and `Pruning` / `Ordering` /
-//!   `PropagationStrategy` / `OptimizationMode` mirror of `src/py.rs`.
-//!   Kept for PyO3-parity reference; excluded from the lean deploy build.
 //! - **`assignment`** (feature `assignment`) — convenience
 //!   `solveAssignmentCop` for bipartite assignment COPs (bbnf-buddy's live
 //!   consumer). Thin adapter over the upstream Rust
@@ -27,8 +23,6 @@ use wasm_bindgen::prelude::*;
 #[cfg(feature = "assignment")]
 mod assignment;
 mod futoshiki;
-#[cfg(feature = "full-mirror")]
-mod isomorphic;
 mod sudoku;
 
 #[cfg(feature = "assignment")]
@@ -36,8 +30,6 @@ pub use assignment::{
     AssignmentRequest, AssignmentResponse, assignment_sentinel, solve_assignment_cop,
 };
 pub use futoshiki::*;
-#[cfg(feature = "full-mirror")]
-pub use isomorphic::*;
 pub use sudoku::*;
 
 /// Initialize the WASM module.

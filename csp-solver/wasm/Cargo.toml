@@ -1,9 +1,9 @@
 [package]
 name = "csp-solver-wasm"
-version = "0.2.0"
+version = "0.4.0"
 edition.workspace = true
 rust-version.workspace = true
-description = "WebAssembly bindings for csp-solver — isomorphic mirror of the Python binding."
+description = "WebAssembly bindings for csp-solver — the sudoku, futoshiki, and assignment solve surfaces."
 license = "MIT"
 publish = false
 
@@ -29,14 +29,12 @@ js-sys = { workspace = true }
 wasm-bindgen-test = { workspace = true }
 
 [features]
-# `sudoku` (the flat-index client-solve surface) is always compiled — it is
-# the deploy-fork artifact and carries no serde dependency.
-# `full-mirror` = the generic Csp/SolveConfig/SolveStats mirror of py.rs.
+# `sudoku` + `futoshiki` (the flat-index client-solve surfaces) are always
+# compiled — they are the deploy-fork artifact and carry no serde dependency.
 # `assignment`  = the bipartite-assignment convenience binding (bbnf-buddy).
-# The lean browser deploy build uses `--no-default-features`: sudoku only,
-# with the whole serde-wasm-bindgen graph out of the compile.
-default = ["full-mirror", "assignment"]
-full-mirror = ["dep:serde-wasm-bindgen", "dep:serde"]
+# The lean browser deploy build uses `--no-default-features`: sudoku +
+# futoshiki only, with the whole serde-wasm-bindgen graph out of the compile.
+default = ["assignment"]
 assignment = ["dep:serde-wasm-bindgen", "dep:serde"]
 
 # wasm-pack applies these flags as its bundled wasm-opt size pass on the cdylib

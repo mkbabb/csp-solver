@@ -9,8 +9,8 @@
 //! blank cell. wasm-bindgen marshals `Vec<u32>` params / returns as
 //! `Uint32Array` via a single bulk `memcpy` into / out of linear memory —
 //! the tier-2 fast path — so there is no per-cell `Reflect` reflection and
-//! no `i.to_string()` position-key allocation (the cost the string-keyed
-//! `isomorphic.rs` Sudoku wire paid on every cell).
+//! no `i.to_string()` position-key allocation (the cost a string-keyed
+//! position-map wire would pay on every cell).
 //!
 //! Generation takes an explicit `seed` from JS. The native generator seeds
 //! its RNG from `SystemTime::now()`, which **panics** on
@@ -29,11 +29,11 @@ use csp_solver::{Pruning, SolveConfig};
 /// Stamp a stable `.code` string onto a genuine `js_sys::Error` (not a
 /// plain object) so `instanceof Error` and `.message` both behave as JS
 /// callers expect, while still giving them a machine-checkable
-/// discriminant. Self-contained here (not reusing `isomorphic::errors`)
-/// because that module — and its `serde`/`full-mirror` dependents — is
-/// compiled out of the lean, `--no-default-features` deploy-fork build
-/// this module is the sole occupant of. `pub(crate)` so the sibling
-/// always-on `futoshiki` wire stamps its coded errors identically.
+/// discriminant. Self-contained here (no shared serde-carrying error
+/// module) so it rides the lean, `--no-default-features` deploy-fork build
+/// this module ships in without dragging the serde graph into the compile.
+/// `pub(crate)` so the sibling always-on `futoshiki` wire stamps its coded
+/// errors identically.
 pub(crate) fn coded_error(code: &str, message: &str) -> JsValue {
     let err = js_sys::Error::new(message);
     let _ = js_sys::Reflect::set(&err, &JsValue::from_str("code"), &JsValue::from_str(code));
@@ -41,7 +41,7 @@ pub(crate) fn coded_error(code: &str, message: &str) -> JsValue {
 }
 
 /// Sudoku puzzle difficulty. Flat re-declaration so this module stands
-/// alone when the `isomorphic` mirror is compiled out.
+/// alone in the lean, `--no-default-features` deploy build.
 #[wasm_bindgen]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum SudokuDifficulty {

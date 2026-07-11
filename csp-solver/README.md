@@ -48,9 +48,8 @@ csp.finalize();
 let solutions = csp.solve(&SolveConfig::default());
 ```
 
-`@mkbabb/csp-solver-wasm` exposes the same core to JS — the lean default build
-ships the Sudoku and Futoshiki solve surfaces plus the assignment COP entry
-point; the `full-mirror` feature adds the generic `Csp` builder. The emitted JS
+`@mkbabb/csp-solver-wasm` exposes the same core to JS — it ships the Sudoku and
+Futoshiki solve surfaces plus the assignment COP entry point. The emitted JS
 entry point is `csp_solver_wasm.js`. See [`wasm/README.md`](./wasm/README.md).
 
 ## Public API
