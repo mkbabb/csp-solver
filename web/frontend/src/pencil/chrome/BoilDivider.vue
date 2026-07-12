@@ -15,6 +15,18 @@ import { useBeatFrame } from '@pencil/composables/boilBeat'
  * onto the unified rAF scheduler (`useBoilFrame`) so the two mounted instances stop
  * being an independent rAF chain — this is the move-created 4th chain the W8 §Unified
  * scheduler spec calls out.
+ *
+ * T3-W13 §1-P2: the per-beat `d`-swap under the live filter was one of the six
+ * per-beat painters (b1's inventory, node 1002). The geometric bake FAILED this
+ * surface's soul gate — the divider is 100% stroke, so a differently-realized noise
+ * field can't correlate window-wise (measured SSIM 0.809 @DPR2 settled vs the
+ * live-filter reference; gate 0.983) — so the surface takes the wave's banked
+ * per-surface fallback: a grain-hoist stack (P3 mechanics, the grid's steady-state
+ * template verbatim). Each pose is a STATIC sibling `<g>` carrying grain-static
+ * (params never written per beat — the SvgFilters watcher only writes wobble
+ * presets), so each rasters ONCE; the beat only flips opacity. Steady-state raster:
+ * zero, look byte-faithful (same filter, same field). Measured memory price
+ * recorded in the W13 l4 lane report: 4 poses × ~531×31 device px × 4B ≈ 0.26 MB.
  */
 const dividerFrames = computed(() =>
   generateLineBoilFrames(
@@ -30,22 +42,31 @@ const dividerFrame = useBeatFrame(
   heldFrameCount(() => BOIL_CONFIG.frameCount),
   () => beatsFor(BOIL_CONFIG.intervalMs),
 )
-const dividerPath = computed(() => dividerFrames.value[dividerFrame.value] ?? '')
 </script>
 
 <template>
   <div class="boil-divider-wrap">
+    <!-- T3-W13 §1-P2 fallback — grain-hoist stack (the grid's steady-state template
+         VERBATIM, filter kept): static geometry per sibling, grain-static rasters
+         once each, the beat only flips opacity. -->
     <svg viewBox="0 0 1000 16" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        :d="dividerPath"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="3"
-        stroke-opacity="0.7"
-        stroke-linejoin="round"
-        stroke-linecap="round"
+      <g
+        v-for="(d, f) in dividerFrames"
+        :key="f"
+        class="boil-pose"
+        :class="{ 'is-active': dividerFrame === f }"
         filter="url(#grain-static)"
-      />
+      >
+        <path
+          :d="d"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-opacity="0.7"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
+      </g>
     </svg>
   </div>
 </template>
@@ -61,5 +82,16 @@ const dividerPath = computed(() => dividerFrames.value[dividerFrame.value] ?? ''
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+/* The grid hoist's sibling discipline (HandDrawnGrid.vue): each pose promoted so
+   the beat's opacity toggle is a compositor-only blend, never a repaint. */
+.boil-pose {
+  opacity: 0;
+  will-change: opacity;
+}
+
+.boil-pose.is-active {
+  opacity: 1;
 }
 </style>

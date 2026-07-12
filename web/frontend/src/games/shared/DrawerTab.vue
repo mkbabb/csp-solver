@@ -71,12 +71,12 @@ defineExpose({
     }
 }
 
-/* During the glide the host scales; the tongue counter-scales on the same spring so
-   its 48px never pops at the settle's layout step (product ≈ 1 throughout). */
-html.drawer-gesturing .drawer-tab {
-    transform: translateY(-50%) scale(calc(1 / var(--drawer-glide-scale, 1)));
-    transition: transform 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
+/* During the glide the host scales; the tongue counter-scales as the composable's
+   fourth WAAPI mover (same glass curve, same clock — W13 §3-S3′), so its 48px never
+   pops at the onset's layout step (product ≈ 1 throughout). No CSS transition here:
+   the old spring-transition rule died with the audit-4 ruling — it computed identity
+   (nothing writes --drawer-glide-scale since the WAAPI recut) yet still started a
+   live spring-eased transition on every gesture, a second curve on the one clock. */
 
 .drawer-tab :deep(.outline-container) {
     width: 100%;
@@ -116,13 +116,6 @@ html.drawer-gesturing .drawer-tab {
 .drawer-tab:focus-visible {
     outline: 2px dashed currentColor;
     outline-offset: 3px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    html.drawer-gesturing .drawer-tab {
-        transition: none;
-        transform: translateY(-50%);
-    }
 }
 
 @media print {

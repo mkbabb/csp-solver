@@ -597,6 +597,7 @@ function isRevealed(pos: number): boolean {
           :ghost-path="cellRects[pos - 1] ?? ''"
           :marks="marksFor(pos - 1)"
           :suppress-virtual-keyboard="padActive"
+          :flourish="celebrating"
           @update="onCellUpdate"
           @cell-focus="onCellFocus"
         />

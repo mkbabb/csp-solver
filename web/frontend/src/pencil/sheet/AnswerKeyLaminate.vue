@@ -128,6 +128,29 @@ const keyCells = computed<KeyCell[]>(() => {
   }
   return out
 })
+
+// T3-W13 c3 (the gate's PRT trip): stroke-dashoffset is main-thread paint, so the
+// stagger must cap how many strokes are mid-flight at once — the 16×16 opaque key
+// (256 paths, all seven 40ms buckets) dropped 29 frames in its write window. The
+// bucket width therefore derives from the key's own path count: mean concurrency
+// ≈ N·dur/((buckets−1)·W + dur) ≤ KEY_CONCURRENCY_BUDGET, floored at the shipped
+// 40ms so the common 9×9 key (N ≤ 81 either arm) keeps its 80–320ms window
+// byte-identical. N=256 → 130ms buckets (window 80–860, last stroke done ~1040ms;
+// ≤ two buckets ≈ 2N/7 strokes ever concurrent) — the write stretches, the
+// noise ordering and the 180ms per-glyph red-pen stroke keep.
+const KEY_DRAW_MS = 180
+const KEY_DELAY_LEAD_MS = 80 // lets the 280ms lay-down land first
+const KEY_STAGGER_BUCKETS = 7
+const KEY_CONCURRENCY_BUDGET = 48
+const keyBucketMs = computed(() =>
+  Math.max(
+    40,
+    Math.ceil(
+      (KEY_DRAW_MS * (keyCells.value.length - KEY_CONCURRENCY_BUDGET)) /
+        ((KEY_STAGGER_BUCKETS - 1) * KEY_CONCURRENCY_BUDGET),
+    ),
+  ),
+)
 </script>
 
 <template>
@@ -148,9 +171,23 @@ const keyCells = computed<KeyCell[]>(() => {
         height: cell.sizePct + '%',
       }"
     >
+      <!-- T3-W13 §4.3 — the teacher's red pen writes through the milk: per-glyph
+           pencil-draw-on (pathLength="1", the global primitive), 180ms — a red pen
+           is quicker than graphite — to the milk-dimmed 0.9. The delay is CSS-only
+           noise: 80ms lets the 280ms lay-down land first, then 7 buckets echo
+           beat-1's Fisher-Yates scatter without a JS timeline. Bucket width is
+           size-derived (keyBucketMs — the c3 PRT stagger-widen): 9×9 keeps the
+           40ms/80–320ms window, the 256-path opaque key widens to 130ms. -->
       <svg class="key-glyph" viewBox="0 0 40 56" xmlns="http://www.w3.org/2000/svg">
         <path
           :d="cell.d"
+          pathLength="1"
+          class="pencil-draw-on"
+          :style="{
+            '--draw-dur': `${KEY_DRAW_MS}ms`,
+            '--draw-opacity': '0.9',
+            '--draw-delay': `${KEY_DELAY_LEAD_MS + ((cell.pos * 31) % KEY_STAGGER_BUCKETS) * keyBucketMs}ms`,
+          }"
           fill="none"
           stroke="var(--color-teacher-red)"
           stroke-width="5"
@@ -205,15 +242,8 @@ const keyCells = computed<KeyCell[]>(() => {
   margin: auto;
   width: 65%;
   height: 65%;
-  opacity: 0;
-  /* pre-printed: flat 150ms fade, no draw-in, no stagger */
-  animation: keyFade 150ms linear forwards;
-}
-
-@keyframes keyFade {
-  to {
-    opacity: 0.9;
-  }
+  /* T3-W13 §4.3: the old keyFade ("pre-printed" flat 150ms fade) is deleted — the
+     write-in lives on the path itself via the global .pencil-draw-on primitive. */
 }
 
 .sr-only {
@@ -234,9 +264,7 @@ const keyCells = computed<KeyCell[]>(() => {
     transform: none;
     transition: opacity 150ms linear;
   }
-  .key-glyph {
-    animation: none;
-    opacity: 0.9;
-  }
+  /* Key glyphs: PRM-instant at 0.9 is inherited from the primitive itself
+     (.pencil-draw-on's reduce arm lands opacity at --draw-opacity) — no scoped rule. */
 }
 </style>

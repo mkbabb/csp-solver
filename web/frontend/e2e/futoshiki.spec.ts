@@ -47,7 +47,10 @@ test('wordmark listbox switches to futoshiki: default board renders with inequal
   await switchToFutoshiki(page);
 
   // The wordmark now reads 'futoshiki' and the Sudoku scene is gone.
-  await expect(page.locator('svg.handwritten-logo text.logo-text')).toHaveText('futoshiki');
+  // (first pose of the T3-W13 §1-P3 stack — every pose renders the label)
+  await expect(
+    page.locator('svg.handwritten-logo text.logo-text').first(),
+  ).toHaveText('futoshiki');
   await expect(page.locator('.sudoku-cell')).toHaveCount(0);
 
   // Default board is 5×5 (25 cells) with inequality carets present in the DOM.

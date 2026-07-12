@@ -30,6 +30,9 @@ const props = defineProps<{
      *  (`inputmode="none"`) so focusing a cell doesn't eclipse half the board with
      *  a keyboard the pad replaces. Hardware keyboards are unaffected. */
     suppressVirtualKeyboard?: boolean;
+    /** T3-W13 §4.1 — the board's `celebrating`, forwarded to the glyph's flourish
+     *  gate: solve reveals keep beat-2, a hint stops at the written glyph. */
+    flourish?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -202,6 +205,12 @@ defineExpose({ focus: focusInput });
             aria-hidden="true"
         >
             <div v-for="v in boardSize" :key="v" class="mark-slot">
+                <!-- T3-W13 §4.2 — each mark WRITES inside the kept container fade:
+                 pathLength="1" + the global pencil-draw-on primitive, staggered by
+                 candidate ORDER (compact: a 3-candidate cell spans 0–40ms), so the
+                 pencil enumerates ascending candidates left-to-right through the
+                 mini-grid — thinking written, not stamped. The container owns the
+                 graphite tone (--draw-opacity stays 1). -->
                 <svg
                     v-if="marks!.includes(v)"
                     class="mark-glyph"
@@ -211,6 +220,12 @@ defineExpose({ focus: focusInput });
                 >
                     <path
                         :d="markPath(v)"
+                        pathLength="1"
+                        class="pencil-draw-on"
+                        :style="{
+                            '--draw-dur': '160ms',
+                            '--draw-delay': `${marks!.indexOf(v) * 20}ms`,
+                        }"
                         fill="none"
                         stroke="currentColor"
                         stroke-width="4.5"
@@ -233,6 +248,7 @@ defineExpose({ focus: focusInput });
             :position="position"
             :board-size="boardSize"
             :is-hovered="isHovered"
+            :flourish="flourish"
         />
 
         <!-- Ghost cell highlight — the three-tier pencil-sketch focus/hover/invalid ring (§4.2).

@@ -132,8 +132,8 @@ const logoMenu = ref<InstanceType<typeof HandwrittenLogo> | null>(null)
 // ── The drawer's masthead half (T3-W12 §6) ────────────────────────────
 // Closed, board + wordmark take the page's true axis and grow: the layout half is
 // CSS (html.drawer-closed below — centering + --logo-scale 1.05); the glide half
-// rides the masthead h1 (one translate+scale on the spring, anchored on the
-// wordmark's rect). The scene composable measures via this registration.
+// rides the masthead h1 (one translate+scale on the house glass curve, anchored
+// on the wordmark's rect). The scene composable measures via this registration.
 const mastheadEl = ref<HTMLElement | null>(null)
 registerDrawerMasthead(() => ({
   block: mastheadEl.value,
@@ -304,10 +304,11 @@ function closeAll() {
     align-self: center;
   }
 
-  /* The glide: the masthead rides the board's spring for the gesture's duration
-     (transform + origin set inline by useControlsDrawer; cleared at settle). */
+  /* The glide: the masthead rides the board's glass curve as a WAAPI mover
+     (keyframes + transform-origin driven by useControlsDrawer; the ONE ledgered
+     curve, MOTION.curves.drawerGlide — W13 §3-S3′; origin cleared at settle). The
+     class arms NO transition — it only promotes for the gesture's duration. */
   html.drawer-gesturing .masthead {
-    transition: transform 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
     will-change: transform;
   }
 }

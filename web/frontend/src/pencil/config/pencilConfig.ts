@@ -120,8 +120,24 @@ export const MOTION = {
     bands: {
         /** Grid/outline/divider path boil (BOIL_CONFIG.intervalMs quantizes here). */
         boil: 1,
-        /** The sun's slow ray-shape cycling (was 800ms free-running; 6 beats = 750ms). */
-        sunRays: 6,
+        // sunRays (6 beats) RETIRED at the W13 c1 soul-gate close: the sun rest
+        // stack is a whole-icon 4-pose stack on the beat — one noise field per
+        // instant (the ray/disc sub-stack split held two fields at 3 of 4 beats
+        // and failed the 0.983 line at every misaligned phase). Dead config dies.
+    },
+    /** House easing ledger — curves recorded as named decisions, one row per ruling. */
+    curves: {
+        /** The drawer system's ONE curve — all four movers (sheet, case, masthead,
+         *  tab counter-scale), one clock, zero stagger. T3-W13 §3-S3′, the mid-wave
+         *  owner ruling (audit 4, 2026-07-11): the spring (0.34, 1.56, 0.64, 1) dies
+         *  for the drawer — replaced by the glass family (swift attack, long fluid
+         *  settle, ZERO overshoot; the iOS-sheet class). Auditioned by eye at :3001
+         *  against the shipped spring and two glass variants (swifter 0.26/0.75/
+         *  0.04/1, softer 0.4/0.72/0.12/1 — the soft attack left the case readable
+         *  in open air mid-glide); the reference class won verbatim, at 520ms
+         *  (Band D). Scope fence: this ruling is the drawer's — no other surface
+         *  re-eases under it. */
+        drawerGlide: "cubic-bezier(0.32, 0.72, 0, 1)",
     },
 } as const;
 
@@ -184,6 +200,14 @@ const DEFAULT_PRESETS: Record<string, FilterPreset> = {
     //   • design-refinement §2.2's geometric bake (resample @8 units, ±1.25 amplitude, wavelength 25,
     //     seed 2, filter dropped) remains the BOOKED escape hatch for the failing corners if a future
     //     re-derivation (full 36-condition matrix, same-build noise-floor control) tightens the floor.
+    //   • T3-W13 §1-P2 EXECUTES that bake for HandDrawnOutline: gridPaths.ts §Grain bake folds the
+    //     grain into the pose geometry — params derived from these GrainConfigs (wavelength =
+    //     1/baseFrequency, resample @ wavelength/3, peak amplitude scale/2, per-frame seeds) — and
+    //     the outline drops `filter=` for frameCount static siblings + opacity swap (soul gate:
+    //     SSIM 0.996/0.993 tab, 0.993 stroke band panel, @DPR2 settled). BoilDivider FAILED the
+    //     gate (0.809 — 100% stroke; realizations can't correlate) and took the banked fallback:
+    //     grain-hoist stack, filter kept, rasters once per pose. The grid hoist above is UNTOUCHED;
+    //     grain-static's values stay byte-identical (the crit-forensics HOLD carried).
     "grain-static": {
         id: "grain-static",
         margin: 5,
@@ -285,6 +309,32 @@ export function resetAllPresets() {
 }
 
 export { DEFAULT_PRESETS };
+
+// ── Frozen wobble pose variants (T3-W13 §1-P3) ───────────────────
+//
+// The per-beat feTurbulence write is retired: a wobble boil is N poses, and pose
+// i's params are exactly what the retired SvgFilters watcher wrote on its beat —
+// baseFrequency + offsets[i]·animScale, same seed. SvgFilters renders one STATIC
+// filter per pose (id `${presetId}-p${i}`); consumers stack N filtered siblings
+// (`will-change: opacity`) and flip visibility on the shared beat, so each pose
+// rasters ONCE and the steady state re-rasters nothing (the grain-hoist mechanics,
+// generalized). Derived reactively from FILTER_PRESETS — FilterTuner stays live.
+
+/** The frozen pose frequencies of a wobble preset (rounding matches the retired
+ *  watcher's write, so each pose renders byte-identically to its live-beat frame). */
+export function wobblePoseFrequencies(preset: FilterPreset): number[] {
+    const w = preset.wobble;
+    if (!w) return [];
+    return w.offsets.map(
+        (o) => Math.round((w.baseFrequency + o * w.animScale) * 10000) / 10000,
+    );
+}
+
+/** Filter id of pose `i` of a wobble preset — the shared def shape every pose
+ *  stack consumes (HandwrittenLogo, DarkModeToggle). */
+export function wobblePoseId(presetId: string, pose: number): string {
+    return `${presetId}-p${pose}`;
+}
 
 // ── Draw-in timing presets ────────────────────────────────────────
 

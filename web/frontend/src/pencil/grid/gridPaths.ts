@@ -12,6 +12,7 @@ import {
     perturbPoints,
     useBoilCache,
 } from "@mkbabb/pencil-boil";
+import type { GrainConfig } from "../config/pencilConfig";
 
 export interface GridPaths {
     frame: string;
@@ -155,6 +156,105 @@ export function generateCellRects(
     );
 }
 
+// ── Grain bake (T3-W13 §1-P2) ─────────────────────────────────────
+//
+// The booked geometric bake (pencilConfig.ts, grain-static disposition) EXECUTED for
+// the stroke-only boil surfaces: grain is folded INTO the pose geometry so the paths
+// drop `filter=` entirely — steady-state raster zero. Mechanics mirror the live grain
+// filter faithfully: the grain branch of SvgFilters.vue declares NO channel selectors
+// on its feDisplacementMap, so both axes ride the turbulence ALPHA channel — one
+// scalar field pushes x and y together, diagonally, by (A−0.5)·scale. The bake
+// reproduces that: 1D fractal value noise over arc length at the grain wavelength
+// (1/baseFrequency), `numOctaves` octaves (frequency ×2 / amplitude ×0.5 per octave),
+// peak amplitude scale/2, added to BOTH coordinates of every vertex after the
+// polyline is subdivided to wavelength/3 steps — grain-static: 25/3 ≈ 8, the booked
+// "resample @8 units, ±1.25 amplitude, wavelength 25". Per-frame seeds keep the
+// grain shimmering pose-to-pose the way the moving geometry sampled the static
+// field. All params derive from the surface's own GrainConfig — one source, still
+// FilterTuner-live (a preset mutation re-bakes through the consumers' computeds).
+
+/** Deterministic lattice value in [0,1) for (seed, octave, lattice index). */
+function grainLattice(seed: number, octave: number, i: number): number {
+    return mulberry32(
+        ((seed | 0) ^ Math.imul(octave + 1, 0x85ebca6b) ^ Math.imul(i | 0, 0x27d4eb2f)) | 0,
+    )();
+}
+
+/** Fractal value noise over arc length `t`, in [-1, 1] — the feTurbulence stand-in. */
+function grainNoise(t: number, grain: GrainConfig, seed: number): number {
+    const octaves = Math.max(1, Math.floor(grain.numOctaves));
+    let sum = 0;
+    let norm = 0;
+    let amp = 1;
+    let freq = grain.baseFrequency;
+    for (let o = 0; o < octaves; o++) {
+        const x = t * freq;
+        const i = Math.floor(x);
+        const f = x - i;
+        const a = grainLattice(seed, o, i);
+        const b = grainLattice(seed, o, i + 1);
+        const s = f * f * (3 - 2 * f); // smoothstep
+        sum += amp * (a + (b - a) * s);
+        norm += amp;
+        amp *= 0.5;
+        freq *= 2;
+    }
+    return (sum / norm) * 2 - 1;
+}
+
+/** Subdivide a polyline to ≤ maxStep spacing, KEEPING every original vertex —
+ *  the resample inserts, never drops, so the wobble skeleton survives intact. */
+function subdividePolyline(
+    points: [number, number][],
+    maxStep: number,
+): [number, number][] {
+    if (points.length < 2) return points.map((p) => [p[0], p[1]]);
+    const out: [number, number][] = [[points[0][0], points[0][1]]];
+    for (let i = 1; i < points.length; i++) {
+        const [ax, ay] = points[i - 1];
+        const [bx, by] = points[i];
+        const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / maxStep));
+        for (let k = 1; k <= n; k++) {
+            out.push([ax + ((bx - ax) * k) / n, ay + ((by - ay) * k) / n]);
+        }
+    }
+    return out;
+}
+
+/** 2-decimal rounding for baked vertices only (0.01 user units ≪ the grain
+ *  amplitude) — the dense resampled polylines stay byte-lean in the DOM. */
+const round2 = (v: number) => Math.round(v * 100) / 100;
+
+/** Fold grain displacement into a polyline: resample @ wavelength/3, then displace
+ *  every vertex diagonally (both axes, one scalar field — the filter's default
+ *  alpha-channel selectors) by fractal noise at the grain wavelength. */
+function bakeGrainPoints(
+    points: [number, number][],
+    grain: GrainConfig,
+    seed: number,
+): [number, number][] {
+    const wavelength = 1 / grain.baseFrequency;
+    const pts = subdividePolyline(points, wavelength / 3);
+    const amp = grain.scale / 2;
+    const out: [number, number][] = [];
+    let t = 0;
+    for (let i = 0; i < pts.length; i++) {
+        if (i > 0) {
+            t += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+        }
+        const d = grainNoise(t, grain, seed) * amp;
+        out.push([round2(pts[i][0] + d), round2(pts[i][1] + d)]);
+    }
+    return out;
+}
+
+/** Per-frame grain seed: the preset's seed, decorrelated per surface (path seed)
+ *  and per pose — "per-frame seeds", the wave's directed approximation of moving
+ *  geometry sampling the static turbulence field. */
+function grainFrameSeed(grain: GrainConfig, pathSeed: number, f: number): number {
+    return (grain.seed | 0) + Math.imul(pathSeed | 0, 101) + f * 7919;
+}
+
 // ── Boil frame generation ─────────────────────────────────────────
 
 /**
@@ -192,6 +292,10 @@ function arcBoilPoints(
  * `radius` (T3-W10 F1) rounds the corners the way a hand would: the four sides are
  * shortened by `r` at each end and joined with jittered arc-sampled polylines — still
  * jagged, never a geometric arc. `radius = 0` reproduces the square frame exactly.
+ *
+ * `grain` (T3-W13 §1-P2) bakes the grain displacement INTO each pose (see the
+ * §Grain bake block above) so the consumer renders the frames as static filterless
+ * siblings. Omitted, output is byte-identical to the pre-W13 generator.
  */
 export function generateRectBoilFrames(
     x: number,
@@ -202,6 +306,7 @@ export function generateRectBoilFrames(
     boilAmount: number,
     frameCount: number,
     radius: number = 0,
+    grain?: GrainConfig,
 ): string[] {
     const safeFrameCount = Math.max(2, Math.floor(frameCount));
     const s = opts.seed ?? 42;
@@ -256,6 +361,17 @@ export function generateRectBoilFrames(
                   );
 
         if (r === 0) {
+            if (grain) {
+                // Same ring the un-grained serialization renders: sides 1..3 drop
+                // their first point (the `.replace(/^M[^ ]+/, "")` below elides it).
+                const ring: [number, number][] = [...sidePoints[0]];
+                for (let si = 1; si < 4; si++) ring.push(...sidePoints[si].slice(1));
+                frames.push(
+                    pointsToLinear(bakeGrainPoints(ring, grain, grainFrameSeed(grain, s, f))) +
+                        " Z",
+                );
+                continue;
+            }
             let d = pointsToLinear(sidePoints[0]);
             for (let si = 1; si < 4; si++) {
                 d += " " + pointsToLinear(sidePoints[si]).replace(/^M[^ ]+/, "");
@@ -290,7 +406,11 @@ export function generateRectBoilFrames(
             }
             ring.push(...arc);
         }
-        frames.push(pointsToLinear(ring) + " Z");
+        frames.push(
+            pointsToLinear(
+                grain ? bakeGrainPoints(ring, grain, grainFrameSeed(grain, s, f)) : ring,
+            ) + " Z",
+        );
     }
     return frames;
 }
@@ -298,6 +418,10 @@ export function generateRectBoilFrames(
 /**
  * Generate boil frame variants for a standalone line segment.
  * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations.
+ *
+ * `grain` (T3-W13 §1-P2): bakes the grain displacement INTO each pose (all frames,
+ * base included — the live filter grained frame 0 too). Omitted, output is
+ * byte-identical to the pre-W13 generator.
  */
 export function generateLineBoilFrames(
     x1: number,
@@ -307,21 +431,19 @@ export function generateLineBoilFrames(
     opts: WobbleOptions,
     boilAmount: number,
     frameCount: number,
+    grain?: GrainConfig,
 ): string[] {
     const safeFrameCount = Math.max(2, Math.floor(frameCount));
+    const pathSeed = opts.seed ?? 42;
     const basePoints = wobbleLinePoints(x1, y1, x2, y2, opts);
-    const frames: string[] = [pointsToLinear(basePoints)];
-    for (let f = 1; f < safeFrameCount; f++) {
-        const perturbed = perturbPoints(
-            basePoints,
-            x1,
-            y1,
-            x2,
-            y2,
-            boilAmount,
-            (opts.seed ?? 42) + f * 997,
-        );
-        frames.push(pointsToLinear(perturbed));
+    const frames: string[] = [];
+    for (let f = 0; f < safeFrameCount; f++) {
+        let pts =
+            f === 0
+                ? basePoints
+                : perturbPoints(basePoints, x1, y1, x2, y2, boilAmount, pathSeed + f * 997);
+        if (grain) pts = bakeGrainPoints(pts, grain, grainFrameSeed(grain, pathSeed, f));
+        frames.push(pointsToLinear(pts));
     }
     return frames;
 }

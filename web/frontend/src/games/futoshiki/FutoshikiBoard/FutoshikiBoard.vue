@@ -534,6 +534,7 @@ function isRevealed(pos: number): boolean {
           :constraint-label="constraintLabels.get(pos - 1) ?? ''"
           :marks="pencilMarks?.[String(pos - 1)]"
           :suppress-virtual-keyboard="padActive"
+          :flourish="celebrating"
           @update="onCellUpdate"
           @cell-focus="onCellFocus"
         />

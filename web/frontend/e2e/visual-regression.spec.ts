@@ -86,6 +86,14 @@ test('filter registry: all 6 FILTER_PRESETS + sparkle-rainbow exist', async ({
     await expect(page.locator(`filter#${id}`)).toHaveCount(1);
   }
 
+  // T3-W13 §1-P3: every wobble preset also registers 4 frozen pose variants —
+  // the static filters the pose stacks (logo, toggle) consume.
+  for (const id of ['wobble-logo', 'wobble-celestial', 'wobble-heart']) {
+    for (let i = 0; i < 4; i++) {
+      await expect(page.locator(`filter#${id}-p${i}`)).toHaveCount(1);
+    }
+  }
+
   await expect(page.locator('linearGradient#sparkle-rainbow')).toHaveCount(1);
 });
 
@@ -151,12 +159,17 @@ test('light mode: layout, styles, filters, visual snapshot', async ({ page }) =>
     .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
   expect(ctrlBtnFontSize).toBeGreaterThanOrEqual(19);
 
-  // Logo renders with Fraunces font
+  // Logo renders with Fraunces font. T3-W13 §1-P3: the wordmark is a 4-pose
+  // stack (frozen filter variants, beat flips opacity) — every pose renders the
+  // label; exactly one pose layer is active at a time (the grid-layer grammar).
   const logoText = page.locator('svg.handwritten-logo text.logo-text');
-  await expect(logoText).toHaveCount(1);
-  await expect(logoText).toHaveText('sudoku');
-  const logoFontFamily = await logoText.evaluate((el) => getComputedStyle(el).fontFamily);
+  await expect(logoText).toHaveCount(4);
+  await expect(logoText.first()).toHaveText('sudoku');
+  const logoFontFamily = await logoText
+    .first()
+    .evaluate((el) => getComputedStyle(el).fontFamily);
   expect(logoFontFamily).toMatch(/Fraunces/i);
+  await expect(page.locator('svg.handwritten-logo g.logo-pose.is-active')).toHaveCount(1);
 
   // Irregular sun rays — 20 coordinate pairs (10 rays x outer+inner)
   const outerRayPoints = await page
@@ -233,8 +246,10 @@ test('grid draw-in completes and path-based boil activates', async ({ page }) =>
   expect(grid.activeSubgridLines).toBeGreaterThan(0);
   expect(grid.activeCellLines).toBeGreaterThan(0);
 
-  // Logo text renders after draw-in
-  await expect(page.locator('svg.handwritten-logo text.logo-text')).toHaveText('sudoku');
+  // Logo text renders after draw-in (first pose of the T3-W13 stack)
+  await expect(
+    page.locator('svg.handwritten-logo text.logo-text').first(),
+  ).toHaveText('sudoku');
 });
 
 // ── Test 5: Board Interaction — Randomize + Cell Input ──────────────
@@ -326,4 +341,59 @@ test('size switching: 4x4, 9x9, 16x16 all render grid lines', async ({ page }) =
 
   // Screenshot final state
   await page.screenshot({ path: 'e2e/screenshots/9x9.png', fullPage: false });
+});
+
+// ── Test 8: The Bloom's warp rest pose (T3-W13 §2) ──────────────────
+
+test('toggle warp rest pose: wrung into the page, no carousel travel', async ({
+  page,
+}) => {
+  await loadApp(page);
+
+  // The parked live instance's warp rests wrung into the page — scale 0.06,
+  // rotate +12deg — and carries NO translateX: the -270° whirl and the
+  // translateX(-50%) slide are dead (owner finding 5). Light mode parks the moon.
+  const m = await page
+    .locator('svg.toggle-moon:not(.is-active) .warp')
+    .evaluate((el) => getComputedStyle(el).transform);
+  expect(m).toMatch(/^matrix\(/);
+  const [a, b, , , e] = m
+    .slice('matrix('.length, -1)
+    .split(',')
+    .map((v) => parseFloat(v));
+  const scale = Math.hypot(a, b);
+  expect(scale).toBeGreaterThan(0.05); // wrung-scrap scale ≈ 0.06
+  expect(scale).toBeLessThan(0.07);
+  const rotateDeg = (Math.atan2(b, a) * 180) / Math.PI;
+  expect(rotateDeg).toBeGreaterThan(8); // +12deg press twist
+  expect(rotateDeg).toBeLessThan(16);
+  expect(Math.abs(e)).toBeLessThan(2); // no slide (the old -50% ≈ -104px)
+
+  // The rest stage belongs to the frozen P3 stack: live instances parked,
+  // exactly one pose visible per active sub-stack.
+  const rest = await page.evaluate(() => {
+    const vis = (sel: string) =>
+      Array.from(document.querySelectorAll(sel)).map(
+        (el) => getComputedStyle(el).visibility,
+      );
+    const activePoses = Array.from(
+      document.querySelectorAll('.toggle-rest.is-active .rest-pose'),
+    ).filter((el) => parseFloat(getComputedStyle(el).opacity) > 0);
+    return {
+      liveVisibility: vis('.toggle-icon'),
+      sunStackActive: document
+        .querySelector('.rest-sun')
+        ?.classList.contains('is-active'),
+      visiblePoseFilters: activePoses.map((el) => el.getAttribute('filter')),
+    };
+  });
+  expect(rest.liveVisibility).toEqual(['hidden', 'hidden']);
+  expect(rest.sunStackActive).toBe(true);
+  // sun = whole-icon 4-pose stack (the moon's proven shape) — exactly one pose
+  // visible, one noise field per instant (c1: the ray/disc sub-stack split died
+  // at the soul gate).
+  expect(rest.visiblePoseFilters).toHaveLength(1);
+  for (const f of rest.visiblePoseFilters) {
+    expect(f).toMatch(/wobble-celestial-p\d/);
+  }
 });

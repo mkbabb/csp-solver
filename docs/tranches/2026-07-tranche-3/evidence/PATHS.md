@@ -109,3 +109,26 @@ The ~3.9 MB above is the **authoring corpus** (the loop reports + the addendum).
 | **Total** | **~20 M** | **274** | — |
 
 **The G2 verdict: within policy.** 20 MB / 274 files sits **under** the A24-G2 lesson figure (tranche-II was 47 MB / 287 files / 115 PNGs — 0.43× the bytes here) and **no single file exceeds 600 KB** (no stray multi-MB artifact crept in). The oversized class the policy most fears — the addendum's six a1 trace JSONs, ~190 MB — **stayed excluded** (folded into `a1-completion-perf.md` §(c); the gate re-traces live). The growth from the ~3.9 MB authoring figure to 20 MB is entirely the **executed-wave gate proofs**, which are load-bearing by construction: each is the visual evidence a wave's gate row cites by name. Pruning them would delete the recert's own proof. **No mass prune at WGATE** — the dir is already at the shape the policy wants (trace JSONs out, screenshots load-bearing, nothing oversized). *(The untracked `T3-WGATE-shots/` + `T3-WGATE-ship.md` are the recert-drive lane's live output, outside this accounting.)*
+
+## w13 — the owner-audit-3 loop (T3-W13), copied 2026-07-11
+
+Scratchpad `…/scratchpad/tranche3/w13/` → `evidence/w13/`. **18 files, 1.2 MB**: the 7 loop reports (`b1-boil-first-principles`, `b2-lowres-forensics`, `b3-storybook-toggle`, `b4-drawer-smoothing`, `b5-peek-hint-drawins`, `crit-perf`, `crit-design` — same names) + the load-bearing exhibits: `probe.mjs`/`probe2.mjs` (b2's rerunnable layer-dump + edge-threshold harnesses — the toggle gate's crisp-frame recipe), the b2 A/B injection set (`static-promoted-1_6` vs `static-unpromoted-1_6` — the causation pair; `static-promoted-0_5`; the four `edge-*-1_0`/`1_1` threshold crops), `b1-idle.png` (the settled-idle posture), `b4-close-midglide.png` (the 8×-slowed phantom-teleport frame).
+
+Pruned, per the A24-G2 policy (the same class the addendum's ~190 MB exclusion set):
+
+| Scratchpad path | Size | Why pruned |
+|---|---|---|
+| `b1-idle-trace.json`, `b1-clean-baseline.json`, `b1-light.json`, `b1-test-{b..h}.json` | ~137 M | the b1 elimination-ladder DevTools traces — every load-bearing number is histogrammed into `b1-boil-first-principles.md` (and independently re-derived to the event count in `crit-perf.md`); the W13 gate re-traces live with the same recipe |
+| `drawer-toggle.json` | ~106 M | the b4 double-toggle perf trace — the Layout/RunTask/rAF numbers are carried in `b4-drawer-smoothing.md`'s tables; the gate's acceptance criteria re-derive them |
+| `live-*`/`layers-rest.json` (13 files) | ~450 K | b2's live whirl-burst frames + layer dump — superseded by the static A/B pair (the decisive evidence, kept); b2 itself rules the layer dump non-load-bearing |
+
+## w13-impl — the W13 implementation + gates + correction pass, copied 2026-07-12
+
+Scratchpad `…/scratchpad/tranche3/w13-impl/` → `evidence/w13-impl/`. **278 files, 7.4 MB** by one rule: everything ≤300 KB copied verbatim — the 14 lane/gate/correction reports (l1–l6, g1–g3, c1–c3, rg1–rg2, same names), every rerunnable probe (`*.mjs` — the gate recipes the record cites: c2's drawer samplers, c3's PRT arms, rg2's PRM readout, l5's ssim/trace/whois harnesses), the summary JSONs each gate row anchors to (`drawer-gate-results`, `c3-prt-results`, `rg1-*.summary`, …), and the sub-300K DPR2 exhibit crops (the b2-recipe crest/edge crops, l5's before/after pose crops, c2's emergence/midglide frames).
+
+Pruned, per the A24-G2 policy — **111 files, ~425 MB**, the same two classes as every prior loop:
+
+| Scratchpad class | Size | Why pruned |
+|---|---|---|
+| DevTools trace JSONs (`before-0.7.0`/`after-0.8.*`, `c1-raster-*`, `c1-wrap`, `drawer-trace`, the rg1 idle set, …) | ~420 M | every load-bearing number is histogrammed into the owning report AND re-derived first-party by a gate lane (g1/g2, then rg1); the recipes ship, the gates re-trace live |
+| DPR2 full-viewport screenshots >300 K (settle±N pairs, midglide frames, peek wavefronts, PRM pairs) | ~5 M | the byte-identical/AE=0 verdicts they prove are recorded in the reports with their compare commands; the crops that carry the visual argument stayed under the size line and are copied |

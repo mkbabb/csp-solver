@@ -20,6 +20,11 @@ const props = defineProps<{
     position: number;
     boardSize: number;
     isHovered: boolean;
+    /** T3-W13 §4.1 — the flourish gate: the board's `celebrating` derivation, threaded
+     *  down board → cell → glyph. Beat-2's flourish crests only on a celebrating solve;
+     *  a hint rides the same reveal path but is a reveal, not a gold star. Optional so
+     *  chrome consumers (logo, futoshiki carets — never solved) are untouched. */
+    flourish?: boolean;
 }>();
 
 // Stable TEMPLATE ref (never an inline `:ref="(el) => ..."` closure). This is the W8 task-4
@@ -175,8 +180,14 @@ function setupReveal() {
         });
         drawInAnim?.play();
 
-        // Beat 2 — only the solver's rainbow ink celebrates; given/user cells stay dignified.
-        if (props.isSolved) scheduleFlourish();
+        // Beat 2 — only the solver's rainbow ink celebrates, and only when the BOARD is
+        // celebrating (T3-W13 §4.1 flourish gate): a hint's one-cell reveal writes itself
+        // in and stops at the written glyph. The gated else still joins the murmur pool —
+        // hinted ink IS solver ink, and it murmurs like any other.
+        if (props.isSolved) {
+            if (props.flourish) scheduleFlourish();
+            else registerForMurmur();
+        }
         return;
     }
 

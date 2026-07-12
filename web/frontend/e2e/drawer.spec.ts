@@ -44,8 +44,10 @@ test('drawer: default open — tab present (≥44px), aria wired, controls visib
   await expect(page.locator('#controls-drawer .controls-card')).toBeVisible();
 });
 
-// ── 2. Close — transform-only glide, ONE layout step at settle, board grows ≥24px
-//        and centers on the page axis; state persists across reload ──
+// ── 2. Close — transform-only glide, ONE layout step at ONSET (classic FLIP,
+//        W13 §3-S2), the case tucks HORIZONTALLY under the sheet on the ONE
+//        ledgered glass curve (§3-S5 + S3′, the audit-4 owner ruling), board
+//        grows ≥24px and centers on the page axis; state persists across reload ──
 
 test('drawer: close glides transform-only, board grows ≥24px + centers, persists', async ({
   page,
@@ -53,23 +55,55 @@ test('drawer: close glides transform-only, board grows ≥24px + centers, persis
   await loadSudoku(page);
   const before = await boardBox(page);
 
-  // rAF sampler through the glide: the filtered board's LAYOUT width must never
-  // mutate mid-gesture (the §6 binding perf constraint — no size tween on a
-  // filtered element); exactly one layout step lands at settle.
+  // rAF sampler through the glide: classic FLIP — the filtered board's LAYOUT
+  // width flips ONCE at onset (it rasters at its final size from frame one; the
+  // §6 binding perf constraint — no size tween on a filtered element — keeps) and
+  // never mutates again; the settle frame clears animations only, zero layout.
+  // Per-frame painted rects + mid-glide mover easings feed the S5/S3′ contract.
+  type Sample = {
+    t: number;
+    layoutW: number;
+    gesturing: boolean;
+    railL: number;
+    railT: number;
+    boardT: number;
+    easings: string[];
+  };
   const samples = await page.evaluate(
     () =>
-      new Promise<{ t: number; layoutW: number; gesturing: boolean }[]>((res) => {
+      new Promise<Sample[]>((res) => {
         const board = document.querySelector<HTMLElement>('.board-wrapper')!;
-        const out: { t: number; layoutW: number; gesturing: boolean }[] = [];
+        const rail = document.querySelector<HTMLElement>('#controls-drawer')!;
+        const grab = (t: number): Sample => {
+          const rr = rail.getBoundingClientRect();
+          const br = board.getBoundingClientRect();
+          return {
+            t,
+            layoutW: board.offsetWidth,
+            gesturing: document.documentElement.classList.contains('drawer-gesturing'),
+            railL: rr.left,
+            railT: rr.top,
+            boardT: br.top,
+            easings: document
+              .getAnimations()
+              .filter((a) => {
+                const target =
+                  a.effect instanceof KeyframeEffect ? a.effect.target : null;
+                return (
+                  target instanceof HTMLElement &&
+                  (target.matches('.board-peek-host, #controls-drawer, .drawer-tab') ||
+                    target.matches('.masthead'))
+                );
+              })
+              .map((a) => (a.effect as KeyframeEffect).getTiming().easing as string),
+          };
+        };
+        const out: Sample[] = [grab(-1)]; // pre-click
         const t0 = performance.now();
         document.querySelector<HTMLElement>('.drawer-tab')!.click();
         function tick() {
           const t = performance.now() - t0;
-          out.push({
-            t,
-            layoutW: board.offsetWidth,
-            gesturing: document.documentElement.classList.contains('drawer-gesturing'),
-          });
+          out.push(grab(t));
           if (t < 900) requestAnimationFrame(tick);
           else res(out);
         }
@@ -77,15 +111,38 @@ test('drawer: close glides transform-only, board grows ≥24px + centers, persis
       }),
   );
 
-  // Transform-only mid-gesture: zero layout mutations while the glide runs.
+  // The ONE layout step landed at onset: the first post-click frame already holds
+  // the closed (grown) width…
   const openW = samples[0].layoutW;
-  expect(samples.filter((s) => s.gesturing && s.layoutW !== openW)).toHaveLength(0);
-  // ONE layout step overall: exactly two distinct layout widths, open → closed.
-  const widths = [...new Set(samples.map((s) => s.layoutW))];
-  expect(widths).toHaveLength(2);
-  // …landing at settle (after the ~480ms glide), never before.
-  const stepAt = samples.find((s) => s.layoutW !== openW)!.t;
-  expect(stepAt).toBeGreaterThanOrEqual(400);
+  const closedW = samples[1].layoutW;
+  expect(closedW).toBeGreaterThan(openW);
+  // …and NO further layout mutation occurs — mid-glide or at settle.
+  expect(samples.slice(1).filter((s) => s.layoutW !== closedW)).toHaveLength(0);
+  // Exactly two distinct layout widths across the whole gesture: open → closed.
+  expect([...new Set(samples.map((s) => s.layoutW))]).toHaveLength(2);
+
+  // S5 — the pull-out geometry (audit-4 ruling): the case travels HORIZONTALLY
+  // in under the sheet — leftward, monotone, zero overshoot past the tuck — and
+  // no frame paints it above the board's top or in the masthead zone.
+  const glide = samples.slice(1);
+  const settled = glide[glide.length - 1];
+  for (let i = 1; i < glide.length; i++) {
+    expect(glide[i].railL).toBeLessThanOrEqual(glide[i - 1].railL + 0.5); // monotone in
+    expect(glide[i].railL).toBeGreaterThanOrEqual(settled.railL - 0.5); // zero overshoot
+    expect(glide[i].railT).toBeGreaterThan(glide[i].boardT); // never above the sheet
+  }
+  // Horizontal vector: the case's total vertical drift across the glide is the
+  // sheet's own center drift (~3px at 1440×900), never a travel of its own.
+  expect(Math.abs(settled.railT - samples[0].railT)).toBeLessThanOrEqual(6);
+
+  // S3′ — every mid-glide mover rides the ONE recorded glass curve (the house
+  // ledger row, MOTION.curves.drawerGlide); the dead spring appears nowhere.
+  const midSamples = glide.filter((s) => s.gesturing && s.t < 400);
+  const midEasings = midSamples.flatMap((s) => s.easings);
+  expect(midEasings.length).toBeGreaterThan(0);
+  // …and all four movers (sheet, case, tab, masthead) fly together — one clock.
+  expect(Math.max(...midSamples.map((s) => s.easings.length))).toBe(4);
+  for (const e of midEasings) expect(e).toBe('cubic-bezier(0.32, 0.72, 0, 1)');
 
   // The verdict geometry: the board grew ≥24px and took the page's true axis.
   const after = await boardBox(page);

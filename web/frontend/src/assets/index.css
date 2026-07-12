@@ -453,6 +453,47 @@
   }
 }
 
+/* ── T3-W13 §4.0 — the pencil draw-on primitive ───────────────────────────────
+ * One GLOBAL keyframe + utility class (scoped SFC keyframes hash per-component —
+ * keyFade-41bb021b, marks-fade-in-d0f8c37b — so a shared draw-on must live here,
+ * beside the pencil tokens). The consuming <path> carries pathLength="1": the
+ * browser normalizes dash coordinates to the declared length, so dasharray 1 /
+ * dashoffset 1→0 is EXACT for any geometry — the W8 approximate-length defect
+ * class is sidestepped with zero JS (no reset, no 'none' clearing, no resting
+ * dash-gap). The 8% opacity ramp hides the round-linecap start dot that would
+ * otherwise protrude before the stroke moves; the bezier is easeOutCubic, the
+ * draw-in family curve. Consumers parameterize inline via --draw-dur /
+ * --draw-delay / --draw-opacity. Unlayered on purpose: it must not lose a
+ * competing declaration to unlayered scoped SFC styles.
+ * PRM: instant in the primitive itself — every consumer inherits it. */
+.pencil-draw-on {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: pencil-draw-on var(--draw-dur, 160ms) cubic-bezier(0.33, 1, 0.68, 1)
+    var(--draw-delay, 0ms) both;
+}
+
+@keyframes pencil-draw-on {
+  from {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  8% {
+    opacity: var(--draw-opacity, 1);
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: var(--draw-opacity, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pencil-draw-on {
+    animation: none;
+    opacity: var(--draw-opacity, 1);
+  }
+}
+
 /* ── R3 (Tranche II W5) — 44px tap-target floor, coarse pointers only ─────────
  * The L15 audit's sub-44 controls, floored where a finger is the instrument;
  * fine pointers keep the compact pencil layout. Shared here (not per-component)

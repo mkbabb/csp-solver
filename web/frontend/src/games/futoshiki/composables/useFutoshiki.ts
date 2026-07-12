@@ -256,6 +256,10 @@ export function useFutoshiki() {
     values.value[key] = val
     solvedValues.value = { ...solvedValues.value, [key]: val } // solver-ink tone
     overriddenCells.value.delete(key)
+    // T3-W13 §4.1 — the hint IS a one-cell solve reveal (twin of useSudoku's, D16):
+    // joining animatingCells routes the glyph through the existing reveal path — one
+    // grammar, zero new timing constants; the flourish gate stays closed (no gold star).
+    animatingCells.value = new Set([key])
     if (solveState.value !== 'idle') {
       solveState.value = 'idle'
       solveStats.value = null

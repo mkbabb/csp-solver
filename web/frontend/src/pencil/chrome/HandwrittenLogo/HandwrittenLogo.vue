@@ -2,6 +2,14 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { usePrefersReducedMotion } from '@mkbabb/pencil-boil'
 import { useTheme } from '@/composables/useTheme'
+import {
+    FILTER_PRESETS,
+    MOTION,
+    beatsFor,
+    wobblePoseFrequencies,
+    wobblePoseId,
+} from '@pencil/config/pencilConfig'
+import { useBeatFrame } from '@pencil/composables/boilBeat'
 import HandwrittenGlyph from '@pencil/glyph/HandwrittenGlyph.vue'
 import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'
 import { ghostUnderline, scribbleUnderline } from '@pencil/chrome/OptionSelector/scribbleUnderline'
@@ -26,7 +34,25 @@ const emit = defineEmits<{
 
 const { isDark } = useTheme()
 const reducedMotion = usePrefersReducedMotion()
-const logoFilter = 'url(#wobble-logo)'
+
+// ── The wordmark boil, pose-stacked (T3-W13 §1-P3) ──
+// The label used to ride ONE live #wobble-logo whose baseFrequency was re-written
+// every 4th beat — a full DPR2 filter re-raster on a ~734×238 region, riding the
+// root scrolling layer's damage (b1's painter inventory). The boil is stop-motion
+// over a finite pose set, so the poses render as N static siblings, each filtered
+// by a FROZEN variant (#wobble-logo-p{i}, SvgFilters), and the beat flips opacity —
+// compositor-only, zero steady-state raster (the grid hoist's discipline). Cadence
+// is unchanged: `beatsFor(intervalMs)` = every 4th beat, exactly the band the
+// retired SvgFilters watcher stepped on. PRM freezes the shared beat centrally, so
+// the stack rests on pose 0.
+const logoPreset = FILTER_PRESETS['wobble-logo']
+const logoPoseIds = computed(() =>
+    wobblePoseFrequencies(logoPreset).map((_, i) => wobblePoseId(logoPreset.id, i)),
+)
+const logoPose = useBeatFrame(
+    () => logoPoseIds.value.length,
+    () => beatsFor(logoPreset.wobble?.intervalMs ?? MOTION.beatMs * 4),
+)
 
 const label = computed(() => props.options.find((o) => o.value === props.game)?.label ?? props.game)
 
@@ -72,6 +98,11 @@ function playReveal() {
 // A generous estimate seeds the first paint (never clips), then getBBox tightens the box
 // to the real glyph run + a uniform 4-unit trail, so the caret sits at one gap for all.
 const textRef = ref<SVGTextElement | null>(null)
+// Function ref for pose 0's <text> — every pose renders identical glyph geometry,
+// so measuring one suffices (getBBox works at opacity 0; only display:none throws).
+function setTextRef(el: unknown) {
+    textRef.value = (el as SVGTextElement | null) ?? null
+}
 function estimateWidth(text: string): number {
     return Math.max(120, Math.ceil(text.length * 34) + 12)
 }
@@ -130,14 +161,23 @@ watch(
                 xmlns="http://www.w3.org/2000/svg"
                 aria-hidden="true"
             >
-                <text
-                    ref="textRef"
-                    class="logo-text"
-                    x="4"
-                    y="48"
-                    text-anchor="start"
-                    :filter="logoFilter"
-                >{{ label }}</text>
+                <!-- T3-W13 §1-P3: the pose stack. Geometry + filter are STATIC per
+                     sibling; only `is-active` (opacity) flips on the beat. -->
+                <g
+                    v-for="(pid, f) in logoPoseIds"
+                    :key="pid"
+                    class="logo-pose"
+                    :class="{ 'is-active': logoPose === f }"
+                    :filter="`url(#${pid})`"
+                >
+                    <text
+                        :ref="f === 0 ? setTextRef : undefined"
+                        class="logo-text"
+                        x="4"
+                        y="48"
+                        text-anchor="start"
+                    >{{ label }}</text>
+                </g>
             </svg>
             <span class="logo-caret" :class="{ 'is-open': isOpen }" aria-hidden="true">
                 <HandwrittenGlyph
@@ -245,6 +285,18 @@ watch(
 
 .handwritten-logo.is-drawn {
     clip-path: inset(0 0% 0 0);
+}
+
+/* T3-W13 §1-P3 — pose-stack siblings: each is its own composited layer so the
+   beat's opacity flip is compositor-only, never a repaint (the grid's
+   boil-frame-layer discipline, HandDrawnGrid.vue). */
+.logo-pose {
+    opacity: 0;
+    will-change: opacity;
+}
+
+.logo-pose.is-active {
+    opacity: 1;
 }
 
 .logo-text {

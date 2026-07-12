@@ -14,7 +14,7 @@
  *
  * THE DRAWER (T3-W12 §6, ≥1024 only) adds two GLOBAL html classes, driven by
  * useControlsDrawer.ts: `html.drawer-closed` (the settled tucked layout — the rail
- * parks out of flow under the board, hidden) and `html.drawer-gesturing` (the ~480ms
+ * parks out of flow under the board, hidden) and `html.drawer-gesturing` (the ~520ms
  * transform-only glide window — Band D, user-triggered one-shot). The scenes also
  * mount a DrawerTab inside .board-peek-host.
  */
@@ -28,7 +28,12 @@
 
 /* ── The drawer regime (T3-W12 §6, ≥1024 only) ────────────────────────
    z-order: page < the case (rail) < the pull-tab < the board sheet — the board's
-   opaque paper covers the case's travel; the tongue pokes out from under the edge. */
+   opaque paper covers the case's travel; the tongue pokes out from under the edge.
+   The geometry is the audit-2 fiction, made binding by the audit-4 owner ruling
+   (T3-W13 §3-S5): the case rests tucked BEHIND the board's right edge, z-under
+   the sheet, and pulls out HORIZONTALLY from under it as the board shifts left —
+   reciprocal motions, one clock. No frame paints the case above the board's top
+   or in the masthead zone. */
 @media (min-width: 1024px) {
   .app-layout {
     position: relative; /* the parked rail's containing block */
@@ -46,26 +51,36 @@
 
   /* Closed (settled): the case parks under the sheet — out of flow so board +
      masthead take the page's true axis; hidden so no invisible surface remains
-     (the rail is ALSO `inert` at closed-idle — wired in the scene templates). */
+     (the rail is ALSO `inert` at closed-idle — wired in the scene templates).
+     The tuck is STRUCTURAL (§3-S5): closed, the app-layout shrink-wraps the
+     sheet, so `right: 3rem` pins the case's right edge 3rem inside the board's
+     right edge — behind the paper, where the glide's horizontal vector begins
+     and ends; `top: 50%` centers it on the sheet's own axis, so the case's only
+     vertical drift is the sheet's. The parked pose rides the `translate:`
+     CHANNEL, never `transform` — no mover animates translate, so no animation
+     or transition can ever capture it as a start base (the F1 phantom's raw
+     material, removed — W13 §3-S1 defense-in-depth beneath the WAAPI movers'
+     explicit keyframes). */
   html.drawer-closed .scene-controls {
     position: absolute;
     top: 50%;
     right: 3rem;
-    transform: translateY(-50%);
+    translate: 0 -50%;
     visibility: hidden;
   }
 
-  /* The glide (Band D, ~480ms, transform-only): board + masthead ride the spring —
-     the toggle's physical flourish; the case slides on easeOutCubic. `will-change`
-     promotes the layers for the gesture's duration only (cleared with the class at
-     settle). Ordered AFTER the closed rule so the case is visible while it travels. */
+  /* The glide (Band D, ~520ms, transform-only): the movers are WAAPI animations
+     driven by useControlsDrawer — explicit [from, to] keyframes, ONE glass curve
+     (MOTION.curves.drawerGlide — §3-S3′: zero overshoot, monotone), one clock,
+     all four movers (W13 §3-S3). This class arms NO transitions; it only
+     promotes the layers for the gesture's duration (cleared with the class at
+     settle) and keeps the traveling case visible while its parked rule holds.
+     Ordered AFTER the closed rule so the case is visible while it travels. */
   html.drawer-gesturing .board-peek-host {
-    transition: transform 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
     will-change: transform;
   }
 
   html.drawer-gesturing .scene-controls {
-    transition: transform 480ms cubic-bezier(0.33, 1, 0.68, 1);
     will-change: transform;
     visibility: visible;
   }

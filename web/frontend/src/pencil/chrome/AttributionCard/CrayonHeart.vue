@@ -83,7 +83,10 @@ const blushRx = computed(() => (isCelebration.value ? HEART_BLUSH.rxHappy : HEAR
 
 /** Filter ladder (F7 §3.4): wobble-heart everywhere except tiny — none below
  *  ~20px, grain-static at 20–32px (objectBoundingBox displacement is
- *  proportionally violent on small elements). */
+ *  proportionally violent on small elements).
+ *  T3-W13 §1-P4-i: #wobble-heart is FROZEN at its rest pose (the per-beat write
+ *  is retired) — the crinkle is material, rastered once per appearance; the
+ *  heart's life stays on CelebrationHeart's transforms, correctly ephemeral. */
 const filterUrl = computed(() => {
   if (isTiny.value) return props.size < 20 ? undefined : 'url(#grain-static)';
   return 'url(#wobble-heart)';

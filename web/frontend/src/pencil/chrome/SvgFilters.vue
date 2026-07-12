@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
-import { FILTER_PRESETS, beatsFor, type FilterPreset } from '@pencil/config/pencilConfig';
-import { useBoilBeat } from '@pencil/composables/boilBeat';
+import { computed } from 'vue';
+import {
+  FILTER_PRESETS,
+  wobblePoseFrequencies,
+  wobblePoseId,
+  type FilterPreset,
+} from '@pencil/config/pencilConfig';
 
 const presets = computed(() => Object.values(FILTER_PRESETS));
 
@@ -10,53 +14,23 @@ function filterRegion(p: FilterPreset) {
   return { x: `-${m}%`, y: `-${m}%`, width: `${100 + 2 * m}%`, height: `${100 + 2 * m}%` };
 }
 
-// ── JS-driven boil animation (Camillo Visini method) ──
-// Oscillates feTurbulence baseFrequency + setAttribute. No SMIL <animate> — avoids
-// framework re-render issues entirely. Was 3 independent useFilterParamBoil
-// subscribers, each phase-anchored to its own first tick; now ALL wobble presets step
-// on the ONE shared boil beat (T3-W12 §2 P1), each on its own whole-beat band
-// (`beatsFor(intervalMs)`: celestial/heart → every beat, logo → every 4th), so a
-// wobble param write always lands in the same dirty frame as the path boils. PRM and
-// tab visibility gate the beat itself centrally; a preset's intervalMs stays live-
-// tunable (FilterTuner) — the band re-derives per tick.
-
-const svgRef = ref<SVGSVGElement | null>(null);
-const turbEls = new Map<string, SVGFETurbulenceElement>();
-const offsetIdx = new Map<string, number>();
-
-const beat = useBoilBeat();
-watch(beat, (b) => {
-  for (const p of Object.values(FILTER_PRESETS)) {
-    const w = p.wobble;
-    if (!w) continue;
-    if (b % beatsFor(w.intervalMs) !== 0) continue;
-    const turbEl = turbEls.get(p.id);
-    if (!turbEl) continue; // filter DOM not registered yet — harmless no-op
-    const idx = (offsetIdx.get(p.id) ?? 0) + 1;
-    offsetIdx.set(p.id, idx);
-    const offset = w.offsets[idx % w.offsets.length];
-    const freq = Math.round((w.baseFrequency + offset * w.animScale) * 10000) / 10000;
-    turbEl.setAttribute('baseFrequency', String(freq));
-  }
-});
-
-onMounted(() => {
-  // Short delay so filter DOM is fully mounted before querying. Registration only —
-  // the beat watcher above starts writing the moment an element lands in the map.
-  requestAnimationFrame(() => {
-    if (!svgRef.value) return;
-    for (const p of Object.values(FILTER_PRESETS)) {
-      if (!p.wobble) continue;
-      const el = svgRef.value.querySelector(`#${CSS.escape(p.id)} feTurbulence`) as SVGFETurbulenceElement | null;
-      if (el) turbEls.set(p.id, el);
-    }
-  });
-});
+// ── Frozen pose variants (T3-W13 §1-P3/P4) ──
+// The Visini-method per-beat baseFrequency write is RETIRED: an SVG reference
+// filter is part of its clients' PAINT, so every write re-rastered every client
+// at DPR2 and damaged the root scrolling layer full-viewport, 8×/s (b1's painter
+// inventory). A wobble boil is N poses; each wobble preset now declares one
+// STATIC filter per pose (`${id}-p${i}`, params identical to what the watcher
+// wrote on beat i — wobblePoseFrequencies), and the pose stacks (HandwrittenLogo,
+// DarkModeToggle) flip sibling visibility on the beat: each pose rasters ONCE.
+// The base `#wobble-*` defs stay, frozen at their rest params, for the transient
+// and hover clients (P4-ii freeze-at-one-pose: icon-btn / section-heading /
+// ctrl-btn hover, crayon + celebration hearts) — a static filter rasters once per
+// appearance and never re-enrolls a per-beat painter. Params stay live-tunable:
+// pose frequencies derive reactively from FILTER_PRESETS (FilterTuner).
 </script>
 
 <template>
   <svg
-    ref="svgRef"
     width="0"
     height="0"
     style="position: absolute; pointer-events: none"
@@ -81,7 +55,8 @@ onMounted(() => {
           <feDisplacementMap in="SourceGraphic" in2="grain" :scale="p.grain.scale" />
         </filter>
 
-        <!-- Wobble (boil): single feTurbulence + feDisplacementMap, animated via JS -->
+        <!-- Wobble: single feTurbulence + feDisplacementMap, STATIC at the rest
+             params — the freeze-at-one-pose surface (hover chrome, hearts). -->
         <filter
           v-else-if="p.wobble && !p.multiPass && !p.texture"
           :id="p.id"
@@ -140,6 +115,36 @@ onMounted(() => {
             </template>
           </template>
         </filter>
+
+        <!-- Frozen pose variants (T3-W13 §1-P3): one static filter per beat pose,
+             structurally identical to the base wobble def — only baseFrequency
+             differs, pinned to what the retired watcher wrote on that beat. -->
+        <template v-if="p.wobble && !p.multiPass && !p.texture">
+          <filter
+            v-for="(freq, i) in wobblePoseFrequencies(p)"
+            :id="wobblePoseId(p.id, i)"
+            :key="wobblePoseId(p.id, i)"
+            filterUnits="objectBoundingBox"
+            v-bind="filterRegion(p)"
+            overflow="visible"
+            color-interpolation-filters="sRGB"
+          >
+            <feTurbulence
+              type="turbulence"
+              :baseFrequency="freq"
+              :numOctaves="p.wobble.numOctaves"
+              result="turbulence"
+              stitchTiles="noStitch"
+            />
+            <feDisplacementMap
+              in="SourceGraphic"
+              in2="turbulence"
+              :scale="p.wobble.scale"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </template>
 
       </template>
 

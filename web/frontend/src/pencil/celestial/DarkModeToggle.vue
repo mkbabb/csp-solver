@@ -6,11 +6,16 @@
         @animationend="onGestureEnd"
         :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
     >
-        <!-- Sun icon (light mode) — always rendered, hidden at rest via CSS.
-         wobble-celestial is bound UNCONDITIONALLY on both icons (T3-W10 keep): the
-         outgoing body keeps its wobble all the way through the whirl-out. At rest the
-         inactive icon is visibility:hidden, so the second live filter region costs
-         nothing. -->
+        <!-- ── LIVE gesture instances (T3-W13 §2 THE BLOOM) ──
+         One filtered svg per body; a g.warp wraps the full content INSIDE the filter,
+         so the big scale ride changes the filter's INPUT — a fresh vector render every
+         frame, crisp at scale 0.06 and at the ~1.09 crest alike. wobble-celestial stays
+         bound UNCONDITIONALLY on both (T3-W10 keep); the live pair is visible ONLY
+         during the gesture (`.is-turning`) — at rest the icons ride the frozen P3
+         stacks below, and the live filter regions cost nothing (§1-P3 interlock, the
+         HandwrittenGlyph L28-F1 discipline generalized). Every reactive binding here
+         is GESTURE-SCOPED (`live*` computeds, g1 F-1): at rest the parked pair takes
+         zero writes — a hidden filter-bound subtree still invalidates on mutation. -->
         <svg
             class="toggle-icon toggle-sun"
             :class="{ 'is-active': !isDark }"
@@ -18,27 +23,26 @@
             viewBox="0 0 200 200"
             filter="url(#wobble-celestial)"
         >
-            <g class="sun-breathe" :style="sunBreatheStyle">
-                <!-- Rays: spin independently, irregular per ray.
-             S5 (upstream note, NOT a repo change): generateSunRays' second-pass inset
-             widens outerR-5 → outerR-8 in pencil-boil's next patch version. -->
-                <g class="sun-rays" :style="sunRaysStyle">
+            <g class="warp">
+                <!-- Rays: irregular per pose; the 240s spin is QUANTIZED to the beat
+                 (g1 F-2) — one shared angle table with the rest stack. -->
+                <g class="sun-rays" :style="liveRaysStyle">
                     <polygon
-                        :points="sunRayPoints.outerPoly"
+                        :points="liveRayPoints.outerPoly"
                         :fill="SUN.body"
                         :stroke="SUN.body"
                         stroke-width="4"
                         stroke-linejoin="round"
                     />
                     <polygon
-                        :points="sunRayPoints.innerPoly"
+                        :points="liveRayPoints.innerPoly"
                         fill="none"
                         :stroke="SUN.outline"
                         stroke-width="5"
                         stroke-linejoin="round"
                     />
                 </g>
-                <!-- Disc: stationary relative to breathe group. W1: disc outline 5→6. -->
+                <!-- Disc: stationary. W1: disc outline 5→6. -->
                 <g class="sun-disc">
                     <circle
                         cx="100"
@@ -49,10 +53,10 @@
                         stroke-width="6"
                     />
                     <!-- Golden spiral — Yoshi's Story style. S1: terminal curls (not bars) and the
-               outer coil ends short of the disc edge, sw 10→9. Color is the rays gold
-               (S2 reverted by the 2026-07-11 owner audit — the hue pop carries it). -->
+                   outer coil ends short of the disc edge, sw 10→9. Color is the rays gold
+                   (S2 reverted by the 2026-07-11 owner audit — the hue pop carries it). -->
                     <path
-                        d="M100,102 C105,93 116,96 117,107 C121,122 105,130 90,124 C72,115 68,92 80,76 C96,56 126,56 132,78"
+                        :d="SUN_SPIRAL_D"
                         fill="none"
                         :stroke="SUN.spiral"
                         stroke-width="9"
@@ -60,10 +64,10 @@
                     />
                 </g>
                 <!-- Sparkle diamonds around sun. S3: stroke 1.5→3, deepened — legible at 5rem.
-             Twinkle poses ride the boil beat (P3) — inline transform, no CSS animation. -->
-                <g class="sun-sparkle twinkle-star" :style="sunTwinklePoses[0]">
+                 Twinkle poses ride the boil beat (P3) — inline transform, no CSS animation. -->
+                <g class="sun-sparkle twinkle-star" :style="liveSunTwinkles[0]">
                     <polygon
-                        :points="sunSparklePoints[0]"
+                        :points="liveSparklePoints[0]"
                         :fill="SUN.sparkle"
                         :stroke="SUN.sparkleStroke"
                         stroke-width="3"
@@ -72,10 +76,10 @@
                 </g>
                 <g
                     class="sun-sparkle twinkle-star twinkle-star-2"
-                    :style="sunTwinklePoses[1]"
+                    :style="liveSunTwinkles[1]"
                 >
                     <polygon
-                        :points="sunSparklePoints[1]"
+                        :points="liveSparklePoints[1]"
                         :fill="SUN.sparkle"
                         :stroke="SUN.sparkleStroke"
                         stroke-width="3"
@@ -84,10 +88,10 @@
                 </g>
                 <g
                     class="sun-sparkle twinkle-star twinkle-star-3"
-                    :style="sunTwinklePoses[2]"
+                    :style="liveSunTwinkles[2]"
                 >
                     <polygon
-                        :points="sunSparklePoints[2]"
+                        :points="liveSparklePoints[2]"
                         :fill="SUN.sparkle"
                         :stroke="SUN.sparkleStroke"
                         stroke-width="3"
@@ -112,7 +116,7 @@
             </g>
         </svg>
 
-        <!-- Moon icon (dark mode) — always rendered, hidden at rest via CSS -->
+        <!-- Moon icon (dark mode) — live instance, warp-wrapped -->
         <svg
             class="toggle-icon toggle-moon"
             :class="{ 'is-active': isDark }"
@@ -120,12 +124,12 @@
             viewBox="0 0 200 200"
             filter="url(#wobble-celestial)"
         >
-            <g>
+            <g class="warp">
                 <!-- Crescent moon path. W1: outline 6→7. M1: the lower horn tapers to a point
              (extend the outer terminus, pull the return's first control inward).
              M2: the closing control eases 65,40→66,42 to soften the upper cusp. -->
                 <path
-                    d="M85,30 C40,40 15,90 35,140 C55,185 118,192 160,143 C122,162 70,145 60,95 C55,65 66,42 85,30 Z"
+                    :d="MOON_BODY_D"
                     :fill="MOON.body"
                     :stroke="MOON.outline"
                     stroke-width="7"
@@ -133,7 +137,7 @@
                 />
                 <!-- Inner stroke detail. M2: moved down + thinned so it no longer crowds the tip. -->
                 <path
-                    d="M72,52 C52,68 47,105 55,133"
+                    :d="MOON_DETAIL_D"
                     fill="none"
                     :stroke="MOON.outline"
                     stroke-width="3.5"
@@ -141,27 +145,27 @@
                 />
 
                 <!-- 5-point polygon stars with wobble. Twinkle poses ride the boil beat (P3). -->
-                <g class="twinkle-star" :style="starPoses[0]">
+                <g class="twinkle-star" :style="liveStarTwinkles[0]">
                     <polygon
-                        :points="starPolygonPoints[0]"
+                        :points="liveStarPoints[0]"
                         :fill="MOON.body"
                         :stroke="MOON.body"
                         stroke-width="2"
                         stroke-linejoin="round"
                     />
                 </g>
-                <g class="twinkle-star twinkle-star-2" :style="starPoses[1]">
+                <g class="twinkle-star twinkle-star-2" :style="liveStarTwinkles[1]">
                     <polygon
-                        :points="starPolygonPoints[1]"
+                        :points="liveStarPoints[1]"
                         :fill="MOON.body"
                         :stroke="MOON.body"
                         stroke-width="2"
                         stroke-linejoin="round"
                     />
                 </g>
-                <g class="twinkle-star twinkle-star-3" :style="starPoses[2]">
+                <g class="twinkle-star twinkle-star-3" :style="liveStarTwinkles[2]">
                     <polygon
-                        :points="starPolygonPoints[2]"
+                        :points="liveStarPoints[2]"
                         :fill="MOON.body"
                         :stroke="MOON.body"
                         stroke-width="2"
@@ -175,6 +179,127 @@
                 <circle class="dot-star" cx="155" cy="75" r="1.5" :fill="MOON.star" />
             </g>
         </svg>
+
+        <!-- ── REST stacks (T3-W13 §1-P3, re-cut at the W13 gate) ──
+         The grain-hoist generalized: sibling copies per pose, wobble filter FROZEN at
+         pose-i params (rasters once), the beat flips opacity on composited layers —
+         zero live filter at idle. The sun is CUT TO THE MOON'S PROVEN SHAPE (g1 F-2,
+         moon SSIM 1.0000): a WHOLE-ICON 4-pose stack — rays, disc, spiral, sparkles,
+         twinkles all in one svg per pose, ONE noise field per instant, exactly the
+         retired live regime's single realization (the earlier ray/disc sub-stack
+         split held two fields at 3 of 4 beats, and no single-field live reference
+         exists for that state — the c1 soul-gate forensics). No post-filter
+         transform wrappers — a compositor rotate or scale of a cached pose raster
+         resamples it, and the soul gate fails on the blur (sun 0.9145 vs the 0.983
+         line). The 240s ray spin is QUANTIZED to the beat at its true rate and
+         baked pre-filter into each pose (RAY_ANGLES — vector-crisp, one raster per
+         pose); the 6s breathe is retired (script note). The ray comb re-jitters on
+         the beat with everything else — the page speaks one pose-stack grammar
+         (grid, logo, outlines, moon: 4 poses on the beat). -->
+        <div class="toggle-rest rest-sun" :class="{ 'is-active': !isDark }" aria-hidden="true">
+            <svg
+                v-for="(sparkles, i) in SPARKLE_POSES"
+                :key="`sun-${i}`"
+                class="rest-pose"
+                :class="{ 'is-pose-active': i === sunFrame }"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 200 200"
+                :filter="`url(#${poseFilterId(i)})`"
+            >
+                <g :transform="`rotate(${RAY_ANGLES[i]} 100 100)`">
+                    <polygon
+                        :points="RAY_POSES[i].outerPoly"
+                        :fill="SUN.body"
+                        :stroke="SUN.body"
+                        stroke-width="4"
+                        stroke-linejoin="round"
+                    />
+                    <polygon
+                        :points="RAY_POSES[i].innerPoly"
+                        fill="none"
+                        :stroke="SUN.outline"
+                        stroke-width="5"
+                        stroke-linejoin="round"
+                    />
+                </g>
+                <circle
+                    cx="100"
+                    cy="100"
+                    r="48"
+                    :fill="SUN.core"
+                    :stroke="SUN.outline"
+                    stroke-width="6"
+                />
+                <path
+                    :d="SUN_SPIRAL_D"
+                    fill="none"
+                    :stroke="SUN.spiral"
+                    stroke-width="9"
+                    stroke-linecap="round"
+                />
+                <g
+                    v-for="(pts, s) in sparkles"
+                    :key="s"
+                    class="rest-twinkle"
+                    :style="TWINKLE_BY_FRAME[i][s]"
+                >
+                    <polygon
+                        :points="pts"
+                        :fill="SUN.sparkle"
+                        :stroke="SUN.sparkleStroke"
+                        stroke-width="3"
+                        stroke-linejoin="round"
+                    />
+                </g>
+                <circle cx="30" cy="45" r="2" :fill="SUN.sparkle" />
+                <circle cx="55" cy="170" r="2.5" :fill="SUN.sparkle" />
+            </svg>
+        </div>
+
+        <div class="toggle-rest rest-moon" :class="{ 'is-active': isDark }" aria-hidden="true">
+            <svg
+                v-for="(stars, i) in STAR_POSES_D"
+                :key="`moon-${i}`"
+                class="rest-pose"
+                :class="{ 'is-pose-active': i === starFrame }"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 200 200"
+                :filter="`url(#${poseFilterId(i)})`"
+            >
+                <path
+                    :d="MOON_BODY_D"
+                    :fill="MOON.body"
+                    :stroke="MOON.outline"
+                    stroke-width="7"
+                    stroke-linejoin="round"
+                />
+                <path
+                    :d="MOON_DETAIL_D"
+                    fill="none"
+                    :stroke="MOON.outline"
+                    stroke-width="3.5"
+                    stroke-linecap="round"
+                />
+                <g
+                    v-for="(pts, s) in stars"
+                    :key="s"
+                    class="rest-twinkle"
+                    :style="TWINKLE_BY_FRAME[i][s]"
+                >
+                    <polygon
+                        :points="pts"
+                        :fill="MOON.body"
+                        :stroke="MOON.body"
+                        stroke-width="2"
+                        stroke-linejoin="round"
+                    />
+                </g>
+                <circle class="dot-star" cx="120" cy="30" r="2" :fill="MOON.star" />
+                <circle class="dot-star" cx="185" cy="35" r="2.5" :fill="MOON.star" />
+                <circle class="dot-star" cx="155" cy="75" r="1.5" :fill="MOON.star" />
+            </svg>
+        </div>
+
     </button>
 </template>
 
@@ -187,96 +312,91 @@ import {
     usePrefersReducedMotion,
 } from "@mkbabb/pencil-boil";
 import { useTheme } from "@/composables/useTheme";
-import { YOSHI_COLORS, MOTION } from "@pencil/config/pencilConfig";
+import { YOSHI_COLORS, MOTION, wobblePoseId } from "@pencil/config/pencilConfig";
 import { useBoilBeat } from "@pencil/composables/boilBeat";
 
 const SUN = YOSHI_COLORS.celestial.sun;
 const MOON = YOSHI_COLORS.celestial.moon;
 
+// Shared geometry (live instance + rest stacks render the same ink)
+const SUN_SPIRAL_D =
+    "M100,102 C105,93 116,96 117,107 C121,122 105,130 90,124 C72,115 68,92 80,76 C96,56 126,56 132,78";
+const MOON_BODY_D =
+    "M85,30 C40,40 15,90 35,140 C55,185 118,192 160,143 C122,162 70,145 60,95 C55,65 66,42 85,30 Z";
+const MOON_DETAIL_D = "M72,52 C52,68 47,105 55,133";
+
 const { isDark, toggleDark } = useTheme();
 const reducedMotion = usePrefersReducedMotion();
 
 // ── Celestial boils on the SHARED beat (T3-W12 §2 P1) ──
-// Was three private useBoilFrame subscribers (each phase-anchored to its own first
-// tick) start/stop-gated by mode; now all three frame indexes derive from the one
-// app-wide beat, so the toggle's polygon swaps land in the same dirty frame as the
-// grid/outline/divider boils. Mode gating is the advance-guard below (only the LIVE
-// body's frames tick — the parked icon stays frozen, same perf posture as before);
-// PRM freezes the beat itself centrally, so no per-consumer re-assert dance remains.
+// All frame indexes derive from the one app-wide beat. At rest the indexes flip
+// OPACITY on the frozen rest-stack poses (T3-W13 §1-P3) — compositor-only; the live
+// instances read the same indexes through GESTURE-SCOPED bindings (g1 F-1, below)
+// so a gesture picks up mid-cycle without the parked pair ever taking a write.
+// Mode gating is the advance-guard below (only the LIVE body's frames tick — the
+// parked icon stays frozen); PRM freezes the beat itself centrally.
 const beat = useBoilBeat();
-const starFrame = ref(0); // dark: star path boil, every beat (~8fps)
-const sunSparkleFrame = ref(0); // light: sparkle boil, every beat (~8fps)
-const sunRayFrame = ref(0); // light: slow ray-shape cycling (MOTION.bands.sunRays)
-const rayAngle = ref(0); // light: the 240s ray spin, stepped per beat
-const breatheBeat = ref(0); // light: the 6s breathe, stepped per beat
-watch(beat, (b) => {
+const starFrame = ref(0); // dark: whole-moon pose stack, every beat (~8fps)
+const sunFrame = ref(0); // light: whole-sun pose stack, every beat (~8fps)
+watch(beat, () => {
     if (isDark.value) {
         starFrame.value = (starFrame.value + 1) % 4;
     } else {
-        sunSparkleFrame.value = (sunSparkleFrame.value + 1) % 4;
-        if (b % MOTION.bands.sunRays === 0)
-            sunRayFrame.value = (sunRayFrame.value + 1) % 6;
-        rayAngle.value = (rayAngle.value + RAY_DEG_PER_BEAT) % 360;
-        breatheBeat.value++;
+        sunFrame.value = (sunFrame.value + 1) % 4;
     }
 });
 
-// ── Breathe + ray spin, STEPPED ON THE BEAT (T3-W12 §2 — the settled page idles) ──
-// The BEFORE `gentle-pulse`/`spin-rays` CSS animations interpolated transform
-// CONTINUOUSLY on children of the wobble-filtered sun — a filter re-raster in every
-// frame, measured at this wave's gate as the settled page's single largest painter
-// (~230 of ~270 paints/s, nearly all full-viewport). Same 6s breathe period, same
-// amplitude (0.97→1.03, smoothstep ≈ the ease-in-out it replaces), same 240s ray
-// revolution — advanced once per beat: steps well under a pixel at 13rem, and
-// stop-motion is in-family besides (the page shoots on fours). PRM freezes the beat
-// centrally → both hold still, as their old PRM animation:none rules insisted.
-const RAY_DEG_PER_BEAT = 360 / ((240 * 1000) / MOTION.beatMs); // 240s full turn
-const BREATHE_HALF_BEATS = (6 * 1000) / MOTION.beatMs; // 6s each way (alternate)
-const sunBreatheStyle = computed(() => {
-    const t = breatheBeat.value % (BREATHE_HALF_BEATS * 2);
-    const tri =
-        t < BREATHE_HALF_BEATS ? t / BREATHE_HALF_BEATS : 2 - t / BREATHE_HALF_BEATS;
-    const eased = tri * tri * (3 - 2 * tri); // smoothstep ≈ ease-in-out
-    return { transform: `scale(${(0.97 + 0.06 * eased).toFixed(4)})` };
-});
-const sunRaysStyle = computed(() => ({
-    transform: `rotate(${rayAngle.value.toFixed(3)}deg)`,
-}));
+// ── The ray spin, QUANTIZED TO THE POSE FLIPS (W13 gate g1 F-2) ──
+// The 240s revolution keeps its rate, advanced once per beat (0.1875°/125ms) —
+// the angle is a pure function of the pose index, so it bakes pre-filter into each
+// rest pose as static vector geometry: crisp at every angle, one raster per pose,
+// zero recurring paint. The 4-pose wrap (−0.5625°) lands on the same flip that
+// re-jitters the whole ray comb — at this rate the spin is a micro-dither by
+// design (it was a 240s ambient to begin with). One angle table serves the live
+// sun and the rest stack alike.
+//
+// The 6s ±3% breathe is RETIRED with the wrappers: post-filter scale resamples the
+// cached pose rasters (the soul gate fails on the blur), pre-filter scale would
+// re-raster the filter per step (§1's zero-recurring-paint line), and quantized
+// into the 4-pose cycle it becomes 8fps scale flicker, not a breath. Its only
+// other home was the ~1s gesture window, where its excursion was ≤0.6% —
+// imperceptible. Dead config dies.
+const RAY_DEG_PER_BEAT = 360 / ((240 * 1000) / MOTION.beatMs); // 0.1875°
+const RAY_ANGLES = Array.from({ length: 4 }, (_, i) =>
+    (i * RAY_DEG_PER_BEAT).toFixed(4),
+);
 
-const sunRayPoints = computed(() => {
-    return generateSunRays(sunRayFrame.value * 100 + 42);
-});
+// ── The pose sets, baked ONCE (T3-W13 §1-P3) ──
+// A finite pose set has a finite render set: the exact frames the live computeds used
+// to regenerate per beat, materialized as static geometry. The live instance reads the
+// same arrays (one source of truth); the stacks render every pose as a sibling.
+const RAY_POSES = Array.from({ length: 4 }, (_, f) => generateSunRays(f * 100 + 42));
+const SPARKLE_POSES = Array.from({ length: 4 }, (_, f) => [
+    wobbleDiamond(35, 40, 6, 10, f * 100 + 10),
+    wobbleDiamond(170, 45, 5, 8, f * 100 + 20),
+    wobbleDiamond(55, 170, 5, 9, f * 100 + 30),
+]);
+const STAR_POSES_D = Array.from({ length: 4 }, (_, f) => [
+    wobbleStarPolygon(160, 20, 12, 5, f * 100 + 1),
+    wobbleStarPolygon(135, 50, 10, 4, f * 100 + 2),
+    wobbleStarPolygon(175, 65, 9, 3.5, f * 100 + 3),
+]);
 
-const starPolygonPoints = computed(() => {
-    const frame = starFrame.value;
-    return [
-        wobbleStarPolygon(160, 20, 12, 5, frame * 100 + 1),
-        wobbleStarPolygon(135, 50, 10, 4, frame * 100 + 2),
-        wobbleStarPolygon(175, 65, 9, 3.5, frame * 100 + 3),
-    ];
-});
+// ── Frozen pose filters (§1-P3, folded at the W13 gate) ──
+// Every rest pose consumes the SHARED static defs SvgFilters renders per wobble
+// preset (`wobble-celestial-p0..3`, exactly the retired watcher's beat params —
+// the same set the logo stack consumes). Pose i pairs geometry i with field p_i,
+// whole-icon, for both bodies: geometry and noise realization advance TOGETHER on
+// the beat, exactly as the retired live regime's per-beat baseFrequency writes did
+// — so the soul-gate A/B's single-field base-def injection is exact at every
+// instant (the local seed-11/18 ray extras and the ray/disc field split were both
+// divergences from the live single realization, deleted).
+const poseFilterId = (i: number) => wobblePoseId("wobble-celestial", i);
 
-const sunSparklePoints = computed(() => {
-    const frame = sunSparkleFrame.value;
-    return [
-        wobbleDiamond(35, 40, 6, 10, frame * 100 + 10),
-        wobbleDiamond(170, 45, 5, 8, frame * 100 + 20),
-        wobbleDiamond(55, 170, 5, 9, frame * 100 + 30),
-    ];
-});
-
-// ── P3 (T3-W12 §2): the twinkles STEP ON THE BOIL BEAT, not on a CSS animation ──
-// The `star-twinkle` keyframes ran perpetually on SVG children — main-thread by
-// construction (SVG transform never composites), so the browser recalculated style
-// every frame for a pose that only changes a few times a second; the a1 trace measured
-// the recalc floor 120/s → 38/s with them paused, `steps()` timing notwithstanding.
-// Same jagged poses, now written only when the mode's boil frame advances (~8Hz) —
-// zero running animations at rest, recalc only on the beat. The per-star index offset
-// keeps the field desynced (no two stars share a pose); `transform-origin: center` +
-// the default view-box transform-box are unchanged, so the geometry (the swing around
-// the viewBox center) is the BEFORE geometry. Composes with the star-pop `scale`
-// transition (a separate property). Under PRM the beat is frozen — a static wonky
-// pose, in family with hand-drawn stars.
+// ── Twinkle poses, stepped on the beat (T3-W12 §2 P3) ──
+// Period-4 with the frame index, per-star offset keeps the field desynced. The stacks
+// bake TWINKLE_BY_FRAME[pose][star]; the live instance reads the same table through
+// the current frame index — identical sequences.
 const TWINKLE_POSES = [
     "scale(0.85) rotate(0deg)",
     "scale(1.1) rotate(8deg)",
@@ -287,9 +407,8 @@ const TWINKLE_POSES = [
 function twinklePose(frame: number, i: number): { transform: string } {
     return { transform: TWINKLE_POSES[(frame + i * 2) % TWINKLE_POSES.length] };
 }
-const starPoses = computed(() => [0, 1, 2].map((i) => twinklePose(starFrame.value, i)));
-const sunTwinklePoses = computed(() =>
-    [0, 1, 2].map((i) => twinklePose(sunSparkleFrame.value, i)),
+const TWINKLE_BY_FRAME = Array.from({ length: 4 }, (_, f) =>
+    [0, 1, 2].map((i) => twinklePose(f, i)),
 );
 
 // Dusk ease (T3-W10 keep, re-anchored): html.theme-turning goes on AT click, the theme
@@ -297,16 +416,48 @@ const sunTwinklePoses = computed(() =>
 // (index.css). One timeout, no clock machinery. Under PRM the flip stands alone and
 // page colors snap (the index.css rule is no-preference-gated besides).
 //
-// `turning` (T3-W12 re-cut): the ~950ms gesture window. It gates the two Yoshi accents
-// (the button squash, the plush-land tail) so neither plays at mount; the whirl itself
-// is pure .is-active transitions and needs no gate. Cleared on the plush-land
-// animationend (the crest), with a timeout backstop. A re-click mid-flight leaves
-// `turning` up and just extends the backstop — the whirl transitions retarget for
-// free, and a FRESH plush-land instance starts when the other icon gains .is-active,
-// so the tail always lands ~800ms after the LAST click. No phase machine.
+// `turning` (T3-W13 §2 re-cut): the ~1010ms Bloom window. It gates the two Yoshi
+// accents (the button squash, the plush-flex tail) AND the §1-P3 interlock — while it
+// is up the live warped instances hold the stage and the frozen rest stacks yield;
+// at settle the stacks take back over (one filtered raster, the L28-F1 discipline).
+// The Bloom itself is pure .is-active transitions and needs no gate. Cleared on the
+// plush-land animationend (the crest), with a timeout backstop. A re-click mid-flight
+// leaves `turning` up and just extends the backstop — the warp transitions retarget
+// for free, and a FRESH plush-land instance starts when the other icon gains
+// .is-active, so the tail always lands ~950ms after the LAST click. No phase machine.
 const turning = ref(false);
 let turnTimer: ReturnType<typeof setTimeout> | undefined;
 let gestureTimer: ReturnType<typeof setTimeout> | undefined;
+
+// ── Live bindings, GESTURE-SCOPED (W13 gate g1 F-1) ──
+// The parked live pair must be INERT: a per-beat write into a filter-bound svg
+// invalidates the filter even at visibility:hidden — g1 traced 8/s unbounded
+// filtered-svg paints plus 8/s full-viewport root damage to exactly these
+// bindings, dev AND prod. Each binding rides a computed that reads the shared
+// pose state only while the gesture window is up (`turning`) or under PRM —
+// where the beat itself is parked, so tracking costs nothing and the soul-gate
+// A/B's injection method still reads a pose-aligned live instance. At rest the
+// computed returns its held snapshot: the frame refs go untracked, the value is
+// reference-stable, and the patch writes nothing — the P3 stacks carry the idle
+// boil. `turning` arms in the same flush as `.is-turning`, so the bindings are
+// current before the first visible warp frame.
+function gestureBound<T>(source: () => T) {
+    let held: T | undefined;
+    return computed<T>(() => {
+        if (held === undefined || turning.value || reducedMotion.value) {
+            held = source();
+        }
+        return held;
+    });
+}
+const liveRayPoints = gestureBound(() => RAY_POSES[sunFrame.value]);
+const liveRaysStyle = gestureBound(() => ({
+    transform: `rotate(${RAY_ANGLES[sunFrame.value]}deg)`,
+}));
+const liveSparklePoints = gestureBound(() => SPARKLE_POSES[sunFrame.value]);
+const liveSunTwinkles = gestureBound(() => TWINKLE_BY_FRAME[sunFrame.value]);
+const liveStarPoints = gestureBound(() => STAR_POSES_D[starFrame.value]);
+const liveStarTwinkles = gestureBound(() => TWINKLE_BY_FRAME[starFrame.value]);
 
 function handleToggle() {
     toggleDark();
@@ -320,7 +471,7 @@ function handleToggle() {
     clearTimeout(gestureTimer);
     gestureTimer = setTimeout(() => {
         turning.value = false;
-    }, 1000);
+    }, 1100);
 }
 
 // Bubbled from the incoming icon. Canceled animations (a mid-flight re-click swaps
@@ -354,6 +505,8 @@ onUnmounted(() => {
     flex-shrink: 0;
 }
 
+/* Hover rides the CSS layer at exactly the ±8% contract bound (§2 rule 2) — at rest
+   it stretches the frozen stack's cached textures 8%, sub-perceptual at 208px. */
 .sun-moon-toggle:hover {
     outline: none;
     transform: scale(1.08);
@@ -368,10 +521,14 @@ onUnmounted(() => {
     outline-offset: 2px;
 }
 
-/* Both icons layered on top of each other. The parked icon is visibility:hidden at
-   rest (T3-W10 keep) so its live wobble filter region costs nothing; the flip to
-   hidden is delayed 900ms on the way out — the outgoing body stays on stage for its
-   full whirl (opacity lands at 800ms + 100ms delay). */
+/* ── THE BLOOM (T3-W13 §2) — live instances, gesture only ─────────────────
+   The -270° whirl and the translateX(-50%) slide are DEAD: a pop-up piece doesn't
+   travel, it rises out of the page and sinks back into it. Both live icons are
+   parked visibility:hidden at rest (the P3 stacks hold the stage) and take it only
+   under `.is-turning` — which covers the whole ~1010ms window, superseding the old
+   900ms park delay (≥340ms wring-down coverage re-derived, T3-W10 economics kept:
+   a hidden live filter region costs nothing). overflow: visible gives the ~1.09
+   crest headroom — warped content near the viewBox edge must not clip. */
 .toggle-icon {
     position: absolute;
     inset: 0;
@@ -379,58 +536,58 @@ onUnmounted(() => {
     height: 100%;
     display: block;
     pointer-events: none;
-}
-
-/* Sun: shrinks + counterclockwise rotates + slides left (dramatic page-turn) */
-.toggle-sun {
+    overflow: visible;
     opacity: 0;
     visibility: hidden;
-    transform: translateX(-50%) rotate(-270deg) scale(0.1);
-    transition:
-        opacity 800ms cubic-bezier(0.4, 0, 0.2, 1) 100ms,
-        transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1),
-        visibility 0s linear 900ms;
+    /* outgoing icon: fade only in the last wring beat (240-340ms) — the body is
+       nearly a point before it fades; no mid-air ghost */
+    transition: opacity 100ms cubic-bezier(0.4, 0, 0.2, 1) 240ms;
 }
 
-.toggle-sun.is-active {
+.toggle-icon.is-active {
     opacity: 1;
+    /* incoming icon: 60-360ms rise with the bloom's first beats */
+    transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1) 60ms;
+}
+
+.sun-moon-toggle.is-turning .toggle-icon {
     visibility: visible;
-    transform: translateX(0) rotate(0deg) scale(1);
-    transition:
-        opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
-        transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1),
-        visibility 0s;
 }
 
-/* Moon: grows + counterclockwise rotates + slides in from left (dramatic page-turn) */
-.toggle-moon {
-    opacity: 0;
-    visibility: hidden;
-    transform: translateX(-50%) rotate(-270deg) scale(0.1);
-    transition:
-        opacity 800ms cubic-bezier(0.4, 0, 0.2, 1) 100ms,
-        transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1),
-        visibility 0s linear 900ms;
+/* The warp (§2 crispness contract rule 1): every excursion beyond ±8% of identity
+   rides this in-viewBox group — transform INSIDE the filter input, so each frame is
+   a fresh vector render at device resolution. Rest pose: a wrung scrap pressed into
+   the page. Wring-down 0-340ms; the twist target is gesture-scoped below. */
+.toggle-icon .warp {
+    transform-box: view-box;
+    transform-origin: 100px 100px;
+    transform: scale(0.06) rotate(12deg) translateY(6px);
+    transition: transform 340ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
 }
 
-.toggle-moon.is-active {
-    opacity: 1;
-    visibility: visible;
-    transform: translateX(0) rotate(0deg) scale(1);
-    transition:
-        opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
-        transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1),
-        visibility 0s;
+/* Wring-down twist: shrinks AND sinks, twisting as paper does (-15deg — owner-taste
+   checkpoint 1: drop to -8deg, then 0, if it reads as whirl residue). Split from the
+   settled park pose so the bloom always LAUNCHES from +12deg (the beat table) while
+   the wring lands at -15deg — the pose re-arms while the icon is hidden at settle. */
+.sun-moon-toggle.is-turning .toggle-icon:not(.is-active) .warp {
+    transform: scale(0.06) rotate(-15deg) translateY(6px);
 }
 
-/* ─── The Yoshi beats (T3-W12 re-cut) ─────────────────────────────────────
-   Three accents folded ONTO the before-shaped 800ms whirl-crossfade above. The
-   whirl itself stays pure transitions (BEFORE verbatim), so a re-click
-   mid-flight retargets for free; the accents ride the composited `scale`
-   property, which multiplies with `transform` instead of fighting it. */
+/* The bloom: 60-860ms on the signature back-out spring — crests ~1.09 around t≈560,
+   vector-crisp by construction (the warp is the filter's input). */
+.toggle-icon.is-active .warp {
+    transform: none;
+    transition: transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1) 60ms;
+}
 
-/* SQUASH (0–120ms) — button-level anticipation, OVERLAPPING the whirl's first
-   beat (both fire at click). The spring release overshoots ~1 by a hair. */
+/* ─── The Yoshi beats (T3-W13 §2 re-cut) ─────────────────────────────────
+   Accents folded ONTO the Bloom. The gesture stays pure transitions, so a re-click
+   mid-flight retargets for free; the accents ride the CSS-layer `scale` property
+   (±8% contract rule 2), which multiplies with the in-SVG warp instead of
+   fighting it. */
+
+/* SQUASH (0-120ms) — button-level anticipation, kept verbatim from the shipped
+   gesture: the press before the pop-up rises. */
 .sun-moon-toggle.is-turning {
     animation: toggle-squash 120ms both;
 }
@@ -449,21 +606,25 @@ onUnmounted(() => {
     }
 }
 
-/* PLUSH LAND (~800–950ms) — one squash-bounce tail as the 800ms spring
-   resolves: the moon lands like a plush toy. Identity for the first 84%
-   (= 800ms of 950ms) so the whirl transition runs beneath it untouched. */
+/* PLUSH FLEX (860-1010ms) — the shipped plush-land grown a second half-bounce:
+   1.04,0.96 → 0.98,1.02 → 1,1 as the spring resolves. Identity for the first 85%
+   (= 860ms of 1010ms) so the bloom transition runs beneath it untouched. */
 .is-turning .toggle-icon.is-active {
-    animation: plush-land 950ms both;
+    animation: plush-land 1010ms both;
 }
 
 @keyframes plush-land {
     0%,
-    84% {
+    85% {
         scale: 1 1;
         animation-timing-function: ease-in;
     }
     90% {
-        scale: 1.05 0.95;
+        scale: 1.04 0.96;
+        animation-timing-function: ease-out;
+    }
+    95% {
+        scale: 0.98 1.02;
         animation-timing-function: ease-out;
     }
     100% {
@@ -471,12 +632,10 @@ onUnmounted(() => {
     }
 }
 
-/* STAR POP (~500/580/660ms) — stars and sparkles hold their breath for the
-   whirl's first ~500ms, then pop staggered onto the body's overshoot: a 150ms
-   back-out fling from the body's heart out to the perch (transform-origin is
-   the viewBox center, so scale 0.2→1 carries them outward). Pure
-   transition-delay off .is-active — no clock. On whirl-out they tuck in fast,
-   undelayed. */
+/* STAR POP (~560/640/720ms) — stars and sparkles hold their breath through the
+   bloom's rise, then pop staggered ONTO the overshoot crest (t≈560): a 150ms
+   back-out fling from the body's heart out to the perch. Pure transition-delay
+   off .is-active — no clock. On wring-out they tuck in fast, undelayed. */
 .toggle-icon .twinkle-star,
 .toggle-icon .dot-star {
     scale: 0.2;
@@ -491,15 +650,15 @@ onUnmounted(() => {
     scale: 1;
     opacity: 1;
     transition:
-        scale 150ms cubic-bezier(0.68, -0.55, 0.265, 1.55) 500ms,
-        opacity 120ms ease-out 500ms;
+        scale 150ms cubic-bezier(0.68, -0.55, 0.265, 1.55) 560ms,
+        opacity 120ms ease-out 560ms;
 }
 
 .toggle-icon.is-active .twinkle-star-2 {
-    transition-delay: 580ms;
+    transition-delay: 640ms;
 }
 .toggle-icon.is-active .twinkle-star-3 {
-    transition-delay: 660ms;
+    transition-delay: 720ms;
 }
 
 /* Pause all animations on inactive icon to save GPU */
@@ -508,63 +667,88 @@ onUnmounted(() => {
     animation-play-state: paused !important;
 }
 
-/* Ray spin (240s full rotation) + gentle pulse (6s) — both STEPPED ON THE BEAT
-   (T3-W12 §2): the transforms arrive inline from the script; the old continuous
-   CSS animations re-rastered the wobble-filtered sun every frame. Only the origins
-   live here. */
+/* Ray spin origin for the LIVE sun — the quantized rotate arrives inline from the
+   script (RAY_ANGLES, gesture-scoped). */
 .sun-rays {
     transform-origin: 100px 100px;
 }
 
-.sun-breathe {
-    transform-origin: 100px 100px;
+/* ── REST stacks (T3-W13 §1-P3) ──────────────────────────────────────────
+   The active icon's stack holds the stage at rest; the parked icon's stack is
+   visibility:hidden (zero raster, the T3-W10 economics). During the gesture BOTH
+   stacks yield to the live instances. Pose flips are opacity swaps on composited
+   layers (will-change: opacity) — no filter executes at idle, and NOTHING
+   transforms a cached pose raster (the g1 F-2 discipline: every pose composites
+   at identity, all motion is baked vector geometry behind the frozen filters). */
+.toggle-rest {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    visibility: hidden;
 }
 
-/* Reduced motion — the PRM variant exactly as T3-W10 built it: theme flips
-   immediately at click, a single 200ms opacity crossfade, no transforms, stars
-   appear WITH the moon. Both icons stay visibility:visible so the crossfade has two
-   participants; every boil and filter-param loop is already parked by the library's
-   PRM gate. */
+.toggle-rest.is-active {
+    visibility: visible;
+}
+
+.sun-moon-toggle.is-turning .toggle-rest {
+    visibility: hidden;
+}
+
+.rest-pose {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0;
+    will-change: opacity;
+}
+
+.rest-pose.is-pose-active {
+    opacity: 1;
+}
+
+/* Stack twinkles: baked pose transforms, same origin semantics as the live field. */
+.rest-twinkle {
+    transform-origin: center;
+}
+
+/* Reduced motion — the T3-W10 PRM contract carried onto the P3 stacks: theme flips
+   immediately at click, a single 200ms opacity crossfade, no transforms, stars baked
+   in WITH the moon. Both stacks stay visibility:visible so the crossfade has two
+   participants; the live gesture instances never take the stage (handleToggle
+   early-returns before `turning`) — parked and warp-nulled as a belt below. */
 @media (prefers-reduced-motion: reduce) {
     .toggle-icon {
-        visibility: visible;
-        opacity: 0;
-        transition: opacity 200ms ease;
-        transform: none !important;
+        visibility: hidden;
+        transition: none;
         animation: none;
     }
 
-    .toggle-icon.is-active {
-        opacity: 1;
+    .toggle-icon .warp {
         transform: none !important;
+    }
+
+    .toggle-rest {
+        visibility: visible;
+        opacity: 0;
+        transition: opacity 200ms ease;
+    }
+
+    .toggle-rest.is-active {
+        opacity: 1;
     }
 
     .sun-moon-toggle.is-turning {
         animation: none;
     }
-
-    /* (.sun-rays/.sun-breathe need no PRM rule anymore: their spin/pulse step on
-     the boil beat, which PRM freezes centrally — same stillness, one gate.) */
-
-    /* Stars appear WITH the moon — no suppression, no delayed pop; they ride the
-     icon's 200ms crossfade. Matches the pop rules' specificity, wins on order.
-     (The twinkle itself needs no PRM rule anymore: its poses ride the boil beat,
-     which PRM freezes centrally — P3.) */
-    .toggle-icon .twinkle-star,
-    .toggle-icon .dot-star,
-    .toggle-icon.is-active .twinkle-star,
-    .toggle-icon.is-active .dot-star {
-        scale: none;
-        opacity: 1;
-        transition: none;
-    }
 }
 
-/* Star twinkling — jagged scale/rotate poses, stepped on the boil beat (T3-W12 §2 P3).
-   The former `star-twinkle` CSS animation (even at steps(5, end)) kept a per-frame
-   style-recalc alive on every star; the poses now arrive as inline transforms from the
-   script, written only when the mode's boil frame advances. Origin semantics are the
-   BEFORE geometry: view-box transform-box, center = the viewBox center. */
+/* Star twinkling (live field) — jagged scale/rotate poses, stepped on the boil beat
+   (T3-W12 §2 P3); the poses arrive as inline transforms from the shared table.
+   Origin semantics are the BEFORE geometry: view-box transform-box, center = the
+   viewBox center. */
 .twinkle-star {
     transform-origin: center;
 }

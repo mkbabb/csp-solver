@@ -50,13 +50,13 @@ const isModified = computed(() => {
 </script>
 
 <template>
-  <!-- Toggle button -->
+  <!-- Toggle button. Unfiltered by ruling (T3-W13 §1-P4-iii): its always-on
+       wobble-heart re-rastered every beat and corrupted every dev trace. -->
   <button
     class="tuner-toggle"
     :class="{ 'is-open': open }"
     @click="open = !open"
     aria-label="Toggle filter tuner"
-    style="filter: url(#wobble-heart)"
   >
     <!-- DEV-only chrome: plain text glyphs, no icon dep (T3-W5 lucide retirement) -->
     <span class="tuner-fx" aria-hidden="true">fx</span>

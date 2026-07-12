@@ -499,6 +499,9 @@ function onDifficultyChange(val: string | number) {
     color: var(--color-crayon-blue);
 }
 
+/* Hover flourishes, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter
+   write is retired (SvgFilters), so these static wobbles raster once per hover —
+   a resting pointer never re-enrolls a live painter (the b1 node-1006 finding). */
 .section-heading:hover {
     filter: url(#wobble-heart);
 }

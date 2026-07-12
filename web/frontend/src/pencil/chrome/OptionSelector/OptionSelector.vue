@@ -51,6 +51,9 @@ function scribbleSeed(val: string | number): number {
   font-family: 'Fira Code', monospace;
 }
 
+/* Hover flourish, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter write
+   is retired (SvgFilters), so this static wobble rasters once per hover — a
+   resting pointer never re-enrolls a live painter (the b1 node-1006 finding). */
 .ctrl-btn:hover {
   filter: url(#wobble-heart);
 }
