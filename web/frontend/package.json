@@ -13,7 +13,8 @@
     "lint:knip": "knip",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:pwa": "npm run build && node e2e/pwa-offline-smoke.mjs"
+    "test:pwa": "npm run build && node e2e/pwa-offline-smoke.mjs",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name=sudoku --branch=master --commit-dirty=true"
   },
   "dependencies": {
     "@mkbabb/csp-solver-wasm": "file:../../csp-solver/wasm/pkg",
@@ -39,6 +40,7 @@
     "vite": "^8.1.4",
     "vite-plugin-pwa": "^1.3.0",
     "vue-eslint-parser": "^10.4.1",
-    "vue-tsc": "^3.3.7"
+    "vue-tsc": "^3.3.7",
+    "wrangler": "^4.110.0"
   }
 }
