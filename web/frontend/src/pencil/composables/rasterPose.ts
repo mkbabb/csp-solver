@@ -18,14 +18,14 @@
  * absent — the consumer keeps the live-filter fallback until it exists (no flash).
  */
 export function readFilterDefs(id: string): string {
-    if (typeof document === "undefined") return "";
-    const el = document.getElementById(id);
-    if (!el) return "";
-    try {
-        return new XMLSerializer().serializeToString(el);
-    } catch {
-        return "";
-    }
+  if (typeof document === "undefined") return "";
+  const el = document.getElementById(id);
+  if (!el) return "";
+  try {
+    return new XMLSerializer().serializeToString(el);
+  } catch {
+    return "";
+  }
 }
 
 /**
@@ -34,10 +34,14 @@ export function readFilterDefs(id: string): string {
  * the property is empty or off-DOM. The returned value must itself be a literal (no
  * `var()` / `currentColor`) for the pose SVG to pass the self-contained guard.
  */
-export function resolveCssValue(el: Element | null, prop: string, fallback: string): string {
-    if (typeof window === "undefined" || !el) return fallback;
-    const v = getComputedStyle(el).getPropertyValue(prop).trim();
-    return v || fallback;
+export function resolveCssValue(
+  el: Element | null,
+  prop: string,
+  fallback: string,
+): string {
+  if (typeof window === "undefined" || !el) return fallback;
+  const v = getComputedStyle(el).getPropertyValue(prop).trim();
+  return v || fallback;
 }
 
 /**
@@ -47,16 +51,16 @@ export function resolveCssValue(el: Element | null, prop: string, fallback: stri
  * for a null stack (the bake is still in flight; the consumer shows the fallback).
  */
 export function bitmapsToUrls(bitmaps: ImageBitmap[] | null): string[] {
-    if (!bitmaps || typeof document === "undefined") return [];
-    const urls: string[] = [];
-    for (const bm of bitmaps) {
-        const canvas = document.createElement("canvas");
-        canvas.width = bm.width;
-        canvas.height = bm.height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return urls;
-        ctx.drawImage(bm, 0, 0);
-        urls.push(canvas.toDataURL("image/png"));
-    }
-    return urls;
+  if (!bitmaps || typeof document === "undefined") return [];
+  const urls: string[] = [];
+  for (const bm of bitmaps) {
+    const canvas = document.createElement("canvas");
+    canvas.width = bm.width;
+    canvas.height = bm.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return urls;
+    ctx.drawImage(bm, 0, 0);
+    urls.push(canvas.toDataURL("image/png"));
+  }
+  return urls;
 }

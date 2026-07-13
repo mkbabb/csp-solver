@@ -15,8 +15,8 @@
  * `sequence` subscriber that self-removes.
  */
 
-import { mulberry32 } from '@mkbabb/pencil-boil';
-import { CELEBRATION } from '@pencil/config/pencilConfig';
+import { mulberry32 } from "@mkbabb/pencil-boil";
+import { CELEBRATION } from "@pencil/config/pencilConfig";
 
 interface MurmurCell {
   wiggleOnce: () => void;

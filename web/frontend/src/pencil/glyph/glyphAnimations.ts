@@ -18,7 +18,7 @@ import {
   easeOutCubic,
   linear,
   usePrefersReducedMotion,
-} from '@mkbabb/pencil-boil';
+} from "@mkbabb/pencil-boil";
 
 // One PRM source for draw-in, flourish and wiggle — usePrefersReducedMotion() is the same
 // live matchMedia ref the scheduler's central PRM gate reads, so reduced-motion behavior is
@@ -51,8 +51,8 @@ export function createGlyphDrawIn(
   } = {},
 ): GlyphAnimHandle | null {
   if (reducedMotion.value) {
-    pathEl.style.strokeDasharray = 'none';
-    pathEl.style.strokeDashoffset = '0';
+    pathEl.style.strokeDasharray = "none";
+    pathEl.style.strokeDashoffset = "0";
     options.onComplete?.();
     return null;
   }
@@ -68,8 +68,8 @@ export function createGlyphDrawIn(
       pathEl.style.strokeDashoffset = String(pathLength * (1 - eased));
     },
     onComplete: () => {
-      pathEl.style.strokeDasharray = 'none';
-      pathEl.style.strokeDashoffset = '0';
+      pathEl.style.strokeDasharray = "none";
+      pathEl.style.strokeDashoffset = "0";
       options.onComplete?.();
     },
   });
@@ -119,10 +119,10 @@ export function createGlyphFlourish(
       const idx = Math.min(n - 1, Math.round(tri * (n - 1)));
       if (idx === lastIdx) return;
       lastIdx = idx;
-      pathEl.setAttribute('d', variantPaths[idx]);
+      pathEl.setAttribute("d", variantPaths[idx]);
     },
     onComplete: () => {
-      pathEl.setAttribute('d', baseD);
+      pathEl.setAttribute("d", baseD);
       options.onDone?.();
     },
   });
@@ -158,7 +158,7 @@ export function createGlyphWiggle(
       delayTimer = null;
       if (reducedMotion.value) return; // PRM may have engaged during the delay window
       ticker = createBoilTicker(frameCount, intervalMs, (frame) => {
-        pathEl.setAttribute('d', variantPaths[frame]);
+        pathEl.setAttribute("d", variantPaths[frame]);
       });
       ticker.start();
     }, delay);

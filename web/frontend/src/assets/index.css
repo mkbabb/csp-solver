@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import './typography.css';
+@import "tailwindcss";
+@import "./typography.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -37,31 +37,37 @@
  * cached under /assets/* (public/_headers), precached by the W6 SW glob.
  */
 @font-face {
-  font-family: 'Fraunces';
+  font-family: "Fraunces";
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
   font-stretch: 100%;
-  src: url('./fonts/fraunces-subset.woff2') format('woff2');
-  unicode-range: U+0020, U+0042, U+0044, U+0053, U+0061, U+0063-0064, U+0065-0066, U+0068, U+0069, U+006B, U+006C, U+006F, U+0072-0074, U+0075, U+0079, U+007A;
+  src: url("./fonts/fraunces-subset.woff2") format("woff2");
+  unicode-range:
+    U+0020, U+0042, U+0044, U+0053, U+0061, U+0063-0064, U+0065-0066, U+0068, U+0069,
+    U+006B, U+006C, U+006F, U+0072-0074, U+0075, U+0079, U+007A;
 }
 
 @font-face {
-  font-family: 'Fira Code';
+  font-family: "Fira Code";
   font-style: normal;
   font-weight: 300 700;
   font-display: swap;
-  src: url('./fonts/firacode-subset.woff2') format('woff2');
-  unicode-range: U+0020, U+0031, U+0034-0037, U+0039, U+0040, U+0045, U+0048, U+004D, U+0061-0062, U+0064-0065, U+0069, U+006D, U+0072, U+0073, U+0075, U+0079, U+00D7;
+  src: url("./fonts/firacode-subset.woff2") format("woff2");
+  unicode-range:
+    U+0020, U+0031, U+0034-0037, U+0039, U+0040, U+0045, U+0048, U+004D, U+0061-0062,
+    U+0064-0065, U+0069, U+006D, U+0072, U+0073, U+0075, U+0079, U+00D7;
 }
 
 @font-face {
-  font-family: 'Patrick Hand';
+  font-family: "Patrick Hand";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('./fonts/patrickhand-subset.woff2') format('woff2');
-  unicode-range: U+0020-0021, U+0027, U+002D-002E, U+0030-0039, U+003F, U+0043, U+0052, U+0053, U+0061-0069, U+006B-0077, U+0079-007A, U+00D7, U+2014, U+2026;
+  src: url("./fonts/patrickhand-subset.woff2") format("woff2");
+  unicode-range:
+    U+0020-0021, U+0027, U+002D-002E, U+0030-0039, U+003F, U+0043, U+0052, U+0053,
+    U+0061-0069, U+006B-0077, U+0079-007A, U+00D7, U+2014, U+2026;
 }
 
 @layer base {
@@ -95,11 +101,11 @@
      link is gone). --font-display keeps 'Fraunces' — its only consumers
      (text-display*, .section-heading, the wordmark's own hardcoded family string)
      are exactly what the subset covers. */
-  --font-text: Georgia, Cambria, 'Times New Roman', serif;
-  --font-display: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
-  --font-serif: Georgia, Cambria, 'Times New Roman', serif;
-  --font-mono: 'Fira Code', monospace;
-  --font-hand: 'Patrick Hand', cursive;
+  --font-text: Georgia, Cambria, "Times New Roman", serif;
+  --font-display: "Fraunces", Georgia, Cambria, "Times New Roman", serif;
+  --font-serif: Georgia, Cambria, "Times New Roman", serif;
+  --font-mono: "Fira Code", monospace;
+  --font-hand: "Patrick Hand", cursive;
 
   /* Paper-like background tones */
   --color-background: hsl(48 15% 98%);
@@ -140,11 +146,11 @@
      desaturate at night — the paper darkens and the wax glows. This is the OPPOSITE of the
      generic "muted dark mode" default; never give a crayon (or a token aliased to one) the
      desaturating treatment. See the `.dark` redefinitions below for the applied values. */
-  --color-crayon-green: #2DC653;
-  --color-crayon-orange: #F4A236;
-  --color-crayon-rose: #E8315B;
-  --color-crayon-blue: #4A90D9;
-  --color-crayon-gold: #C99A2E;  /* the fifth crayon (T3-W9, F8 §2) — warm ochre wax. Gold is
+  --color-crayon-green: #2dc653;
+  --color-crayon-orange: #f4a236;
+  --color-crayon-rose: #e8315b;
+  --color-crayon-blue: #4a90d9;
+  --color-crayon-gold: #c99a2e; /* the fifth crayon (T3-W9, F8 §2) — warm ochre wax. Gold is
      earned light: it lives in the sky and comes to the page only when the work is done. Wax
      tier: strokes, washes, fills, the sticker — never light-mode body text (2.47:1). */
 
@@ -153,8 +159,8 @@
      a darkened ink of the same hue; washes/strokes/fills keep the wax. Measured on
      --color-background hsl(48 15% 98%): gold-ink #8C691D 4.85:1, red-ink #D02A52 4.87:1
      (4.97:1 / 4.99:1 on --color-card) — both AA. Dark mode collapses ink into wax below. */
-  --color-gold-ink: #8C691D;
-  --color-red-ink: #D02A52;  /* teacher-red #E8315B hue-locked (346°), darkened to AA */
+  --color-gold-ink: #8c691d;
+  --color-red-ink: #d02a52; /* teacher-red #E8315B hue-locked (346°), darkened to AA */
 
   /* Solver-ink rainbow — BOARD CONTENT ONLY (UI-10, T3-W9; F8 §3.2: never chrome, never a
      metadata tone). The solver's answers write in a five-hue rainbow gradient
@@ -171,14 +177,20 @@
 
   /* Semantic state tokens — every one an in-world alias into the crayon system, zero new hexes
      (design-refinement.md §3.4). Each resolves per-theme through the var it references. */
-  --color-teacher-red: var(--color-crayon-rose);   /* teacher's red pencil: failure, conflicts, aria-invalid */
-  --color-gold-star: var(--color-crayon-gold);      /* gold-star sticker: solve success, celebration accents —
+  --color-teacher-red: var(
+    --color-crayon-rose
+  ); /* teacher's red pencil: failure, conflicts, aria-invalid */
+  --color-gold-star: var(
+    --color-crayon-gold
+  ); /* gold-star sticker: solve success, celebration accents —
      trued to the fifth crayon (T3-W9; the old alias onto green was the lie the audit found) */
-  --color-focus-sketch: #3A7BC4; /* keyboard focus ring — crayon-blue darkened one step:
+  --color-focus-sketch: #3a7bc4; /* keyboard focus ring — crayon-blue darkened one step:
      the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
      lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
      blends to 3.60:1. Dark mode keeps crayon-blue (5.3:1, comfortable). */
-  --color-pencil-graphite: var(--grid-line-color);  /* the pencil: grid, ghost ring, hover sketch */
+  --color-pencil-graphite: var(
+    --grid-line-color
+  ); /* the pencil: grid, ghost ring, hover sketch */
 
   /* §SHEET — the stationery ladder (union adopt-partial: washi tooltip + held
      answer-key laminate; vellum ControlPanel + lifted attribution styling CUT).
@@ -186,12 +198,26 @@
      surface raster · boil = frame-cycled geometry. Every shipped sheet is blur-0
      (OD-1 no-glass build); the laminate is the held answer key — clear plastic,
      not glass. Values: design-union §7.3. Each token names its physical object. */
-  --sheet-washi-neutral: color-mix(in srgb, var(--color-foreground) 6%, hsl(0 0% 100% / 0.82)); /* tinted paper tape */
-  --sheet-ink-edge-laminate: color-mix(in srgb, var(--color-foreground) 10%, transparent);       /* pencil-drawn sheet edge */
-  --sheet-laminate-milk: linear-gradient(165deg, hsl(0 0% 100% / 0.22), hsl(0 0% 100% / 0.10) 38%, hsl(0 0% 100% / 0.16)); /* the clear sheet's body */
-  --sheet-rim: inset 0 0.5px 0 0 hsl(0 0% 100% / 0.30);                                           /* gloss catch-light along the top edge */
-  --sheet-laminate-cast: 4px 6px 0 color-mix(in srgb, var(--color-foreground) 8%, transparent),
-                         0 6px 20px color-mix(in srgb, var(--color-foreground) 14%, transparent); /* the held sheet's cast + lift shadow */
+  --sheet-washi-neutral: color-mix(
+    in srgb,
+    var(--color-foreground) 6%,
+    hsl(0 0% 100% / 0.82)
+  ); /* tinted paper tape */
+  --sheet-ink-edge-laminate: color-mix(
+    in srgb,
+    var(--color-foreground) 10%,
+    transparent
+  ); /* pencil-drawn sheet edge */
+  --sheet-laminate-milk: linear-gradient(
+    165deg,
+    hsl(0 0% 100% / 0.22),
+    hsl(0 0% 100% / 0.1) 38%,
+    hsl(0 0% 100% / 0.16)
+  ); /* the clear sheet's body */
+  --sheet-rim: inset 0 0.5px 0 0 hsl(0 0% 100% / 0.3); /* gloss catch-light along the top edge */
+  --sheet-laminate-cast:
+    4px 6px 0 color-mix(in srgb, var(--color-foreground) 8%, transparent),
+    0 6px 20px color-mix(in srgb, var(--color-foreground) 14%, transparent); /* the held sheet's cast + lift shadow */
 
   /* Grid line colors */
   --grid-line-color: hsl(0 0% 15%);
@@ -227,11 +253,11 @@
   --color-user-ink: #60a5fa;
 
   /* Crayon palette (dark) — hue-locked, lightness raised, chroma held per the §3.2 rule above. */
-  --color-crayon-green: #3DD968;
-  --color-crayon-orange: #F5B35C;
-  --color-crayon-rose: #FF5C7C;
-  --color-crayon-blue: #6AABEB;
-  --color-crayon-gold: #E5C74D;  /* the moon's own outline gold — 11.48:1 on dark paper */
+  --color-crayon-green: #3dd968;
+  --color-crayon-orange: #f5b35c;
+  --color-crayon-rose: #ff5c7c;
+  --color-crayon-blue: #6aabeb;
+  --color-crayon-gold: #e5c74d; /* the moon's own outline gold — 11.48:1 on dark paper */
 
   /* Dark ink collapses into wax — the glowing crayon is already AA at night
      (gold 11.48:1 on --color-background, rose 6.44:1; both hold on --color-card). */
@@ -250,8 +276,17 @@
 
   /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
      recedes; the catch-light rises — the one place gloss reads MORE at night. */
-  --sheet-washi-neutral: color-mix(in srgb, var(--color-foreground) 6%, hsl(0 0% 100% / 0.14));
-  --sheet-laminate-milk: linear-gradient(165deg, hsl(0 0% 100% / 0.12), hsl(0 0% 100% / 0.06) 38%, hsl(0 0% 100% / 0.10));
+  --sheet-washi-neutral: color-mix(
+    in srgb,
+    var(--color-foreground) 6%,
+    hsl(0 0% 100% / 0.14)
+  );
+  --sheet-laminate-milk: linear-gradient(
+    165deg,
+    hsl(0 0% 100% / 0.12),
+    hsl(0 0% 100% / 0.06) 38%,
+    hsl(0 0% 100% / 0.1)
+  );
   --sheet-rim: inset 0 0.5px 0 0 hsl(0 0% 100% / 0.38);
 
   --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
@@ -403,21 +438,47 @@
   }
 
   .solve-failure .grid-line {
-    stroke: color-mix(in srgb, var(--color-teacher-red) 30%, var(--grid-line-color)) !important;
+    stroke: color-mix(
+      in srgb,
+      var(--color-teacher-red) 30%,
+      var(--grid-line-color)
+    ) !important;
   }
 
   /* Shake animation */
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-    20%, 40%, 60%, 80% { transform: translateX(4px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-4px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(4px);
+    }
   }
 
   /* Cell reveal animation */
   @keyframes cell-reveal {
-    0% { transform: scale(0); opacity: 0; }
-    60% { transform: scale(1.1); }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+      transform: scale(0);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
 
   /* Cell reveal with noise-staggered delay */

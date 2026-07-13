@@ -18,9 +18,9 @@
  * - Subscriber floor: the driver runs only while a consumer is enrolled
  *   (ref-counted), so an empty page returns to the zero-subscriber ambient floor.
  */
-import { onUnmounted, ref, watch, type Ref } from 'vue';
-import { createBoilTicker, usePrefersReducedMotion } from '@mkbabb/pencil-boil';
-import { MOTION } from '@pencil/config/pencilConfig';
+import { onUnmounted, ref, watch, type Ref } from "vue";
+import { createBoilTicker, usePrefersReducedMotion } from "@mkbabb/pencil-boil";
+import { MOTION } from "@pencil/config/pencilConfig";
 
 const beat = ref(0);
 let consumers = 0;

@@ -18,116 +18,120 @@
  * where the givens were. When opaque we therefore render the COMPLETE solution —
  * every cell, givens included — a standalone printed key.
  */
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
-import { getVariant, toDisplayChar } from '@pencil/glyph/glyphRegistry'
-import { acquireHold, releaseHold } from '@mkbabb/pencil-boil'
+import { computed, ref, watch, onMounted, onUnmounted } from "vue";
+import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
+import { acquireHold, releaseHold } from "@mkbabb/pencil-boil";
 
 const props = defineProps<{
-  active: boolean
-  solution: Record<string, number>
-  boardSize: number
-  subgridSize: number
+  active: boolean;
+  solution: Record<string, number>;
+  boardSize: number;
+  subgridSize: number;
   /** pristine given positions — these already sit on the page, no key needed
    *  UNLESS the laminate is opaque (PRT), when the whole key must be printed. */
-  originalGivenCells: Set<string>
-}>()
+  originalGivenCells: Set<string>;
+}>();
 
-const LIFT_MS = 200
+const LIFT_MS = 200;
 
 // prefers-reduced-transparency OR prefers-contrast: more — index.css flips the
 // sheet to opaque construction paper under BOTH arms, so the ref must track
 // both or the opaque sheet renders holes (the PRT defect, resurfaced under the
 // contrast arm). When opaque we render the COMPLETE key — the blocking fix.
 const opaqueQueries =
-  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+  typeof window !== "undefined" && typeof window.matchMedia === "function"
     ? [
-        window.matchMedia('(prefers-reduced-transparency: reduce)'),
-        window.matchMedia('(prefers-contrast: more)'),
+        window.matchMedia("(prefers-reduced-transparency: reduce)"),
+        window.matchMedia("(prefers-contrast: more)"),
       ]
-    : []
-const opaque = ref(opaqueQueries.some((q) => q.matches))
+    : [];
+const opaque = ref(opaqueQueries.some((q) => q.matches));
 function onOpaqueChange() {
-  opaque.value = opaqueQueries.some((q) => q.matches)
+  opaque.value = opaqueQueries.some((q) => q.matches);
 }
-onMounted(() => opaqueQueries.forEach((q) => q.addEventListener('change', onOpaqueChange)))
-onUnmounted(() => opaqueQueries.forEach((q) => q.removeEventListener('change', onOpaqueChange)))
+onMounted(() =>
+  opaqueQueries.forEach((q) => q.addEventListener("change", onOpaqueChange)),
+);
+onUnmounted(() =>
+  opaqueQueries.forEach((q) => q.removeEventListener("change", onOpaqueChange)),
+);
 
-const render = ref(false) // in the DOM (mounted through the lift-out window)
-const shown = ref(false) // opacity/scale target (drives the lay/lift transition)
-const announce = ref('')
-let unmountTimer: ReturnType<typeof setTimeout> | null = null
+const render = ref(false); // in the DOM (mounted through the lift-out window)
+const shown = ref(false); // opacity/scale target (drives the lay/lift transition)
+const announce = ref("");
+let unmountTimer: ReturnType<typeof setTimeout> | null = null;
 
 watch(
   () => props.active,
   (a) => {
     if (a) {
       if (unmountTimer) {
-        clearTimeout(unmountTimer)
-        unmountTimer = null
+        clearTimeout(unmountTimer);
+        unmountTimer = null;
       }
-      acquireHold('answer-key') // freeze the page IN PLACE
-      render.value = true
-      announce.value = 'peeking at the answer key'
+      acquireHold("answer-key"); // freeze the page IN PLACE
+      render.value = true;
+      announce.value = "peeking at the answer key";
       requestAnimationFrame(() => {
-        shown.value = true // trigger lay-down flourish
-      })
+        shown.value = true; // trigger lay-down flourish
+      });
     } else {
-      shown.value = false // trigger lift-away
-      announce.value = ''
+      shown.value = false; // trigger lift-away
+      announce.value = "";
       unmountTimer = setTimeout(() => {
-        render.value = false
-        releaseHold('answer-key') // boil resumes mid-cadence
-        unmountTimer = null
-      }, LIFT_MS)
+        render.value = false;
+        releaseHold("answer-key"); // boil resumes mid-cadence
+        unmountTimer = null;
+      }, LIFT_MS);
     }
   },
   // immediate: the async component can mount with active already true on the
   // very first peek — without this the initial lay-down (and acquireHold) is missed.
   { immediate: true },
-)
+);
 
 onUnmounted(() => {
-  if (unmountTimer) clearTimeout(unmountTimer)
-  releaseHold('answer-key')
-})
+  if (unmountTimer) clearTimeout(unmountTimer);
+  releaseHold("answer-key");
+});
 
 // Board-shape-agnostic cellRects: a per-cell rectangle (fractional % of the
 // board box) derived purely from boardSize — no hardcoded size, no reliance on
 // CSS-grid auto-placement — so the printed key aligns to the uniform .board-cells
 // grid at every board size (4×4 … 25×25) and survives any future non-square layout.
 interface KeyCell {
-  pos: number
-  d: string
-  leftPct: number
-  topPct: number
-  sizePct: number
+  pos: number;
+  d: string;
+  leftPct: number;
+  topPct: number;
+  sizePct: number;
 }
 const keyCells = computed<KeyCell[]>(() => {
-  const out: KeyCell[] = []
-  const n = props.boardSize
-  const total = n * n
-  const sizePct = 100 / n
+  const out: KeyCell[] = [];
+  const n = props.boardSize;
+  const total = n * n;
+  const sizePct = 100 / n;
   for (let pos = 0; pos < total; pos++) {
-    const key = String(pos)
-    const isGiven = props.originalGivenCells.has(key)
+    const key = String(pos);
+    const isGiven = props.originalGivenCells.has(key);
     // Translucent laminate: givens already show through the milk — key the blanks
     // only. Opaque (PRT) laminate: nothing shows through — print EVERY cell.
-    if (isGiven && !opaque.value) continue
-    const val = props.solution[key]
-    if (!val) continue
-    const char = toDisplayChar(val, n)
-    const glyph = getVariant(char, pos)
-    if (!glyph) continue
+    if (isGiven && !opaque.value) continue;
+    const val = props.solution[key];
+    if (!val) continue;
+    const char = toDisplayChar(val, n);
+    const glyph = getVariant(char, pos);
+    if (!glyph) continue;
     out.push({
       pos,
       d: glyph.d,
       leftPct: (pos % n) * sizePct,
       topPct: Math.floor(pos / n) * sizePct,
       sizePct,
-    })
+    });
   }
-  return out
-})
+  return out;
+});
 
 // T3-W13 c3 (the gate's PRT trip): stroke-dashoffset is main-thread paint, so the
 // stagger must cap how many strokes are mid-flight at once — the 16×16 opaque key
@@ -138,10 +142,10 @@ const keyCells = computed<KeyCell[]>(() => {
 // byte-identical. N=256 → 130ms buckets (window 80–860, last stroke done ~1040ms;
 // ≤ two buckets ≈ 2N/7 strokes ever concurrent) — the write stretches, the
 // noise ordering and the 180ms per-glyph red-pen stroke keep.
-const KEY_DRAW_MS = 180
-const KEY_DELAY_LEAD_MS = 80 // lets the 280ms lay-down land first
-const KEY_STAGGER_BUCKETS = 7
-const KEY_CONCURRENCY_BUDGET = 48
+const KEY_DRAW_MS = 180;
+const KEY_DELAY_LEAD_MS = 80; // lets the 280ms lay-down land first
+const KEY_STAGGER_BUCKETS = 7;
+const KEY_CONCURRENCY_BUDGET = 48;
 const keyBucketMs = computed(() =>
   Math.max(
     40,
@@ -150,7 +154,7 @@ const keyBucketMs = computed(() =>
         ((KEY_STAGGER_BUCKETS - 1) * KEY_CONCURRENCY_BUDGET),
     ),
   ),
-)
+);
 </script>
 
 <template>

@@ -23,7 +23,7 @@
  * never counts itself.
  */
 
-import { schedulerDebugInfo } from '@mkbabb/pencil-boil';
+import { schedulerDebugInfo } from "@mkbabb/pencil-boil";
 
 declare global {
   interface Window {
@@ -33,7 +33,7 @@ declare global {
   }
 }
 
-if (typeof window !== 'undefined' && !window.__rafChainCount) {
+if (typeof window !== "undefined" && !window.__rafChainCount) {
   const pending = new Set<number>();
   const nativeRAF = window.requestAnimationFrame.bind(window);
   const nativeCAF = window.cancelAnimationFrame.bind(window);

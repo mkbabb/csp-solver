@@ -3,11 +3,11 @@
 // the ambient `btoa`/`atob`; identical byte-for-byte to the defs it replaced in each
 // game's useUrlState.
 export function toBase64Url(s: string): string {
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 export function fromBase64Url(s: string): string {
-  const rem = s.length % 4
-  const padded = rem ? s + '='.repeat(4 - rem) : s
-  return atob(padded.replace(/-/g, '+').replace(/_/g, '/'))
+  const rem = s.length % 4;
+  const padded = rem ? s + "=".repeat(4 - rem) : s;
+  return atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
 }

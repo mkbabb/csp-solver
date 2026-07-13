@@ -12,122 +12,122 @@ import { computed } from "vue";
 import { mulberry32 } from "@mkbabb/pencil-boil";
 
 const props = defineProps<{
-    text: string;
-    /** stable per-button seed so a given label's tear + tilt never re-roll */
-    seed: number;
-    /** 'above' (default) floats the chip over the parent's top edge; 'center' pins it
-     *  to the parent's OWN box — the peek chip sits ON the divider's line (UI-9), never
-     *  drifting up into the option text above it. */
-    anchor?: "above" | "center";
-    /** Persistent on coarse pointers (UI-4/UI-5): hover doesn't exist for touch, so the
-     *  tape stays laid down there; fine pointers keep the hover/focus reveal untouched. */
-    persistent?: boolean;
-    /** A longer note (T4-W3 share-fail): let the tape wrap to a couple of lines within a
-     *  capped width instead of a single nowrap strip that would overrun the viewport edge
-     *  from a sidebar button. Off by default — every existing one-word label is untouched. */
-    wide?: boolean;
+  text: string;
+  /** stable per-button seed so a given label's tear + tilt never re-roll */
+  seed: number;
+  /** 'above' (default) floats the chip over the parent's top edge; 'center' pins it
+   *  to the parent's OWN box — the peek chip sits ON the divider's line (UI-9), never
+   *  drifting up into the option text above it. */
+  anchor?: "above" | "center";
+  /** Persistent on coarse pointers (UI-4/UI-5): hover doesn't exist for touch, so the
+   *  tape stays laid down there; fine pointers keep the hover/focus reveal untouched. */
+  persistent?: boolean;
+  /** A longer note (T4-W3 share-fail): let the tape wrap to a couple of lines within a
+   *  capped width instead of a single nowrap strip that would overrun the viewport edge
+   *  from a sidebar button. Off by default — every existing one-word label is untouched. */
+  wide?: boolean;
 }>();
 
 // Seeded geometry: torn ends on the left/right edges + a small tilt.
 const geom = computed(() => {
-    const rng = mulberry32(props.seed * 2654435761 + props.text.charCodeAt(0));
-    // Six-point clip-path: jagged left edge (2 pts) + jagged right edge (2 pts),
-    // top/bottom kept flat-ish. Percentages within the label box.
-    const j = () => (rng() - 0.5) * 6; // ±3% jitter
-    const lx = 3;
-    const rx = 97;
-    const clip = [
-        `${lx + j()}% 0%`,
-        `${rx + j()}% ${8 + j()}%`,
-        `100% 50%`,
-        `${rx + j()}% ${92 + j()}%`,
-        `${lx + j()}% 100%`,
-        `0% 50%`,
-    ].join(", ");
-    const tilt = (rng() - 0.5) * 3; // ±1.5°
-    return { clip: `polygon(${clip})`, tilt: `${tilt.toFixed(2)}deg` };
+  const rng = mulberry32(props.seed * 2654435761 + props.text.charCodeAt(0));
+  // Six-point clip-path: jagged left edge (2 pts) + jagged right edge (2 pts),
+  // top/bottom kept flat-ish. Percentages within the label box.
+  const j = () => (rng() - 0.5) * 6; // ±3% jitter
+  const lx = 3;
+  const rx = 97;
+  const clip = [
+    `${lx + j()}% 0%`,
+    `${rx + j()}% ${8 + j()}%`,
+    `100% 50%`,
+    `${rx + j()}% ${92 + j()}%`,
+    `${lx + j()}% 100%`,
+    `0% 50%`,
+  ].join(", ");
+  const tilt = (rng() - 0.5) * 3; // ±1.5°
+  return { clip: `polygon(${clip})`, tilt: `${tilt.toFixed(2)}deg` };
 });
 </script>
 
 <template>
-    <span
-        class="washi-label"
-        :class="{
-            'washi-center': anchor === 'center',
-            'washi-persistent': persistent,
-            'washi-wide': wide,
-        }"
-        :style="{ clipPath: geom.clip, '--washi-tilt': geom.tilt }"
-        role="tooltip"
-        >{{ text }}</span
-    >
+  <span
+    class="washi-label"
+    :class="{
+      'washi-center': anchor === 'center',
+      'washi-persistent': persistent,
+      'washi-wide': wide,
+    }"
+    :style="{ clipPath: geom.clip, '--washi-tilt': geom.tilt }"
+    role="tooltip"
+    >{{ text }}</span
+  >
 </template>
 
 <style scoped>
 .washi-label {
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%) rotate(var(--washi-tilt));
-    margin-bottom: 0.5rem;
-    padding: 0.25rem 0.7rem;
-    font-family: var(--font-hand);
-    font-size: var(--type-small);
-    font-weight: 600;
-    letter-spacing: var(--type-tracking-normal);
-    white-space: nowrap;
-    color: var(--color-foreground);
-    /* neutral washi — tinted translucent paper tape (design-union §7.3) */
-    background: var(--sheet-washi-neutral);
-    border: none;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 150ms;
-    z-index: 50;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) rotate(var(--washi-tilt));
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0.7rem;
+  font-family: var(--font-hand);
+  font-size: var(--type-small);
+  font-weight: 600;
+  letter-spacing: var(--type-tracking-normal);
+  white-space: nowrap;
+  color: var(--color-foreground);
+  /* neutral washi — tinted translucent paper tape (design-union §7.3) */
+  background: var(--sheet-washi-neutral);
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+  z-index: 50;
 }
 
 /* Shown on button hover (parent .group) or keyboard focus. */
 .group:hover .washi-label,
 .group:focus-visible .washi-label {
-    opacity: 1;
+  opacity: 1;
 }
 
 /* anchor="center": the chip pins to the parent's own box — tape ON the ruled line
    (the peek divider), not a floater over whatever sits above it (UI-9). */
 .washi-center {
-    bottom: auto;
-    top: 50%;
-    left: 50%;
-    margin-bottom: 0;
-    transform: translate(-50%, -50%) rotate(var(--washi-tilt));
+  bottom: auto;
+  top: 50%;
+  left: 50%;
+  margin-bottom: 0;
+  transform: translate(-50%, -50%) rotate(var(--washi-tilt));
 }
 
 /* A longer note (T4-W3 share-fail): the tape wraps within a capped width and centers its
    lines, so "couldn't copy — link is in the address bar" sits as a small paper note over the
    button instead of a nowrap strip running off a sidebar edge. */
 .washi-wide {
-    white-space: normal;
-    /* max-content lets the tape grow to its text, capped at max-width so it wraps to ~2 lines
+  white-space: normal;
+  /* max-content lets the tape grow to its text, capped at max-width so it wraps to ~2 lines
        — without it, an absolutely-positioned label shrink-wraps against its 44px button box
        and breaks after ~1 word. */
-    width: max-content;
-    max-width: 15rem;
-    text-align: center;
-    line-height: 1.3;
+  width: max-content;
+  max-width: 15rem;
+  text-align: center;
+  line-height: 1.3;
 }
 
 /* UI-4: on coarse pointers a persistent chip is the affordance — there is no hover
    to reveal it. Fine pointers never match, so the hover grammar above is untouched. */
 @media (pointer: coarse) {
-    .washi-persistent {
-        opacity: 1;
-    }
+  .washi-persistent {
+    opacity: 1;
+  }
 }
 
 /* prefers-reduced-transparency: the tape becomes an opaque card (blur-0 already). */
 @media (prefers-reduced-transparency: reduce) {
-    .washi-label {
-        background: var(--color-card);
-    }
+  .washi-label {
+    background: var(--color-card);
+  }
 }
 </style>

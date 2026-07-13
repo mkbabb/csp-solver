@@ -1,1 +1,1 @@
-export type AnimationState = 'hidden' | 'drawing' | 'drawn' | 'erasing'
+export type AnimationState = "hidden" | "drawing" | "drawn" | "erasing";
