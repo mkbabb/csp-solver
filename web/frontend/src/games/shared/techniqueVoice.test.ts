@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { formatHintNote, formatGradeSignature } from "./techniqueVoice";
+import {
+  formatHintNote,
+  formatGradeSignature,
+  formatTechniqueName,
+  describeTally,
+  TALLY_TOTAL,
+} from "./techniqueVoice";
 
 // The technique layer's marginalia voice (T4-W7, lane E3) — the named-hint copy and the honest
 // grade signature. Pure string formatting over the engine's own vocabulary; the display char is
@@ -59,5 +65,68 @@ describe("formatGradeSignature — the honest difficulty signature", () => {
 
   it("no signature (empty string) for a graded board that needed no step — falls back to the request voice", () => {
     expect(formatGradeSignature(null, true)).toBe("");
+  });
+});
+
+describe("formatTechniqueName — the expand/hover proper name", () => {
+  it("names every rung, X-wing capitalised", () => {
+    expect(formatTechniqueName("naked-single")).toBe("naked single");
+    expect(formatTechniqueName("hidden-single")).toBe("hidden single");
+    expect(formatTechniqueName("naked-pair")).toBe("naked pair");
+    expect(formatTechniqueName("pointing")).toBe("pointing");
+    expect(formatTechniqueName("inequality-chain")).toBe("inequality chain");
+    expect(formatTechniqueName("x-wing")).toBe("X-wing");
+  });
+});
+
+describe("describeTally — the honesty spine, in one derivation", () => {
+  it("gates the whole display on graded: an ungraded board inks NOTHING (no fabricated tier)", () => {
+    const d = describeTally(false, "x-wing", true);
+    expect(d.graded).toBe(false);
+    expect(d.filled).toBe(0);
+    expect(d.total).toBe(TALLY_TOTAL);
+    expect(d.name).toBe("");
+    expect(d.expand).toBe("not yet graded");
+    // Even with a technique argument present, ungraded refuses to render it.
+    expect(d.ariaLabel).not.toMatch(/x-wing/i);
+  });
+
+  it("singles-only board: 1 inked stroke, 'hardest step: hidden single'", () => {
+    const d = describeTally(true, "hidden-single", true);
+    expect(d.filled).toBe(1);
+    expect(d.name).toBe("hidden single");
+    expect(d.expand).toBe("hardest step: hidden single");
+    expect(d.ariaLabel).toBe("difficulty — singles only (1 of 5)");
+  });
+
+  it("pairs/pointing board: 2 inked strokes", () => {
+    expect(describeTally(true, "naked-pair", true).filled).toBe(2);
+    expect(describeTally(true, "pointing", true).filled).toBe(2);
+    expect(describeTally(true, "inequality-forcing", true).filled).toBe(2);
+  });
+
+  it("X-wing board: 3 inked strokes, 'hardest step: X-wing'", () => {
+    const d = describeTally(true, "x-wing", true);
+    expect(d.filled).toBe(3);
+    expect(d.expand).toBe("hardest step: X-wing");
+    expect(d.ariaLabel).toBe("difficulty — needs an X-wing (3 of 5)");
+  });
+
+  it("inequality-chain (futoshiki tier 3) also inks 3", () => {
+    expect(describeTally(true, "inequality-chain", true).filled).toBe(3);
+  });
+
+  it("a board the ladder could not finish inks the top stroke and names the honest ceiling — never a fabricated tier 4", () => {
+    const d = describeTally(true, "hidden-single", false);
+    expect(d.filled).toBe(TALLY_TOTAL);
+    expect(d.name).toBe("beyond these techniques");
+    expect(d.expand).toBe("beyond these techniques");
+  });
+
+  it("a graded board that needed no step inks nothing but stays graded (no fake tier)", () => {
+    const d = describeTally(true, null, true);
+    expect(d.graded).toBe(true);
+    expect(d.filled).toBe(0);
+    expect(d.expand).toBe("no step needed");
   });
 });

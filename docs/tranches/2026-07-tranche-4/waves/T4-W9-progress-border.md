@@ -112,3 +112,21 @@ Component checks:
 - **Zero-steady-state-raster is the load-bearing perf invariant** — if the trace reintroduces a per-beat `SourceGraphic` invalidation (e.g. a live `filter=` slips in instead of baked grain), gate A-1b reddens. The design is filterless baked geometry precisely to avoid this; verify with the rAF instrumentation, don't assume.
 - **The tally must never outrun the grader** — if W7 grades a board a tier the engine can't actually name (a defensive gap), B-1b reddens by design. No tally without a retrievable named step; ungraded boards show the dashed placeholder.
 - **This is a Fable design wave** — every visual claim carries a golden capture + before/after DELTA banked in evidence; the contrast integers are computed, not asserted.
+
+## Execution record (2026-07-13)
+
+Workflow `wf_fd08436b-8c9`, 3 lanes (P1 progress border, Fable+DesignSync ∥ P2 displayed quality/tally → adversarial VERIFY vs built dist :4189, born-RED re-confirmed at base `7e03c5dc` by grep). Verify verdict: **PASS on every W9-owned gate.** Two failures attributed NOT-W9 with independent proof (OUT-1 the W8 card overflow — clean-HEAD worktree passes futoshiki 4/4; OUT-2 the `logo-light` golden, blank-captured off the same overflow) — both cleared by the W8 seal fix (`scene.css` board-derived cap) with NO golden re-baseline; final merged battery e2e 61/61, goldens 4/4.
+
+| Gate | Born-RED | Close |
+|---|---|---|
+| A-1a border shows fill | no `progress-trace`/`--color-progress` anywhere at base | half-filled 9×9 → `strokeDashoffset` 500 at `pathLength=1000`; `role=progressbar`, aria "board 50% filled"; init 0% → offset 1000 |
+| A-1b zero steady raster | — | trace `filter: none`; over 5 s idle the 4 pose `d`-strings byte-identical, offset constant — the beat is a compositor opacity-swap of 4 grain-baked poses (samples distinct=4), no filter re-raster, no geometry recompute; a fill mutates only the `strokeDashoffset` computed |
+| A-1c twin is free | — | futoshiki 5×5 half-filled → offset 500, identical violet, same `HandDrawnGrid`; the twin's whole diff = the `fillProgress` computed + `:progress` wiring, zero new render code |
+| A-1d PRM + hand-off | — | PRM: tween withheld (transition-duration 0 s), offset snaps correct-static, beat frozen; gold hand-off: at `.solve-success` the trace bows out (opacity 0) — the gold owns the frame |
+| ink contrast | — | violet `--color-progress-ink` (#8b5cf6 light / #7c3aed dark, hues 258°/262°): 8/8 WCAG figures ≥3:1 vs grid-line + card, both themes, opaque and @0.95; non-blue vs `--color-focus-sketch` 212° — a focused board never shows two blues |
+| B-1a difficulty named | no `DifficultyTally`/`describeTally` at base | dealt boards grade live to a named tier (1 inked + 4 ghost; expand names "hardest step: naked single"); `TECHNIQUE_TIER` ladder singles→1 · pairs/pointing/box-line/inequality-forcing→2 · X-wing/inequality-chain→3; X-wing→3 unit-proven (the generators never deal one) |
+| B-1b every tally named | — | every graded tally carries its exact `hardestTechnique` (expand + aria); a stalled ladder inks 5 and names the honest ceiling "beyond these techniques (5 of 5)" — never a fabricated tier |
+| honesty spine | — | FILL is `role=progressbar` "board N% filled" — never "correct"; ungraded → `is-ungraded` dashed placeholder, "difficulty not yet measured"; REQUEST≠MEASUREMENT shown both directions (requested Hard, measured naked single AND measured beyond); three labelled signals: FILL · DIFFICULTY · CORRECTNESS |
+| battery (π) | — | vue-tsc 0 · unit 244/244 (incl. `describeTally` specs) · eslint 0 · knip 0 · prettier clean · build 0 · goldens: `grid-corner-light` (the W9 board frame) green with zero re-mint |
+
+Seal reconciliations: the violet ink ratification books to B5 (the graphite no-new-token fallback stays available). Tier-3 boards are never dealt by the generators — a REQUEST≠MEASUREMENT reality, unit-proven, not a defect; re-examine if W13's banks change. P2 ran on Opus (fanout policy) — noted to B5 alongside the ink ballot.

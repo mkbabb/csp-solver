@@ -2,8 +2,8 @@
 import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
 import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
 import { useElementSize } from "@vueuse/core";
-import { generateGridBoilFrames } from "../gridPaths";
-import { BOIL_CONFIG, beatsFor } from "@pencil/config/pencilConfig";
+import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
+import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
 import {
   readFilterDefs,
@@ -19,6 +19,11 @@ const props = defineProps<{
   boardSize: number;
   subgridSize: number;
   animState: AnimationState;
+  /** T4-W9 board FILL fraction in [0,1] (default 0). The GAME owns the number — a
+   *  `computed` over its own values/givens, re-evaluated on a fill/clear, NEVER on the
+   *  beat — and this frame owns the render. Both boards pass the identical prop, so the
+   *  twin is automatic: there is no second implementation to keep in sync. */
+  progress?: number;
 }>();
 
 const emit = defineEmits<{
@@ -57,6 +62,35 @@ const boilFrame = useBeatFrame(
 
 // Freeze on frame 0 during draw-in (strokeDashoffset needs stable paths)
 const activeFrame = computed(() => (pathsVisible.value ? boilFrame.value : 0));
+
+// ── T4-W9 progress trace: the violet second-pencil FILL gauge ──
+//
+// A grain-BAKED filterless sibling of the frame — generateFrameTraceFrames emits the SAME
+// ring geometry as generateGridBoilFrames' frame with the grain folded IN (the
+// HandDrawnOutline grammar, NOT the grid's live-filter grammar), so the violet retraces the
+// graphite frame in registration. frameCount static poses, opacity-swapped on the SAME
+// boilFrame beat as the grid: steady-state raster zero (no live `filter=` to invalidate).
+const progress = computed(() => Math.max(0, Math.min(1, props.progress ?? 0)));
+const progressPercent = computed(() => Math.round(progress.value * 100));
+
+// pathLength=1000 (on each path, template) normalises arc length across all 4 poses AND
+// every board size; the dash draws arc-length 0 → progress·perimeter clockwise from the
+// top-left. A fill event mutates exactly this one custom value — a cheap paint, never the
+// beat, never a filter re-raster.
+const traceDashOffset = computed(() => 1000 * (1 - progress.value));
+
+// Grain-static baked in (the grid's own tooth, in the 1000-unit viewBox regime the trace
+// lives in — the T3-W13 grain-in-geometry discipline reused verbatim). Reactive on
+// BOIL_CONFIG + the preset, so FilterTuner mutations re-bake live.
+const traceFrames = computed(() =>
+  generateFrameTraceFrames(
+    VIEWBOX_SIZE,
+    42,
+    BOIL_CONFIG.frameCount,
+    BOIL_CONFIG.frameBoil,
+    FILTER_PRESETS["grain-static"]?.grain,
+  ),
+);
 
 // Current frame's path data (transition layer — draw-in/erase only, see template)
 const currentPaths = computed(() => {
@@ -243,6 +277,19 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- FILL-gauge a11y mirror (T4-W9 ROW 3): the trace counts cells WRITTEN — wrong ones
+       included — because the app grades correctness only on Solve. So this reads how FULL,
+       never how RIGHT: role=progressbar, aria-valuetext "board N% filled" (never "correct").
+       A visually-hidden multi-root sibling of the decorative svg. -->
+  <div
+    class="progress-trace-a11y"
+    role="progressbar"
+    aria-label="board fill"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    :aria-valuenow="progressPercent"
+    :aria-valuetext="`board ${progressPercent}% filled`"
+  ></div>
   <svg
     ref="svgRef"
     class="hand-drawn-grid"
@@ -380,6 +427,33 @@ onUnmounted(() => {
         />
       </g>
     </template>
+
+    <!-- Progress trace (T4-W9): the violet second-pencil FILL gauge. Its own filterless
+             grain-baked sibling layer (never gated on animState — the fill is orthogonal to
+             draw-in/erase), opacity-swapped on the SAME boilFrame beat as the frame it hugs
+             and painted LAST so it sits over the graphite. The dash draws it to the current
+             fill-front; .solve-success hides `.progress-trace` (index.css) so gold owns the
+             win. Zero steady-state raster: filterless static geometry, compositor-only swap. -->
+    <g
+      v-for="(d, f) in traceFrames"
+      :key="'trace-' + f"
+      class="progress-pose"
+      :class="{ 'is-active': boilFrame === f }"
+    >
+      <path
+        :d="d"
+        class="progress-trace"
+        fill="none"
+        stroke="var(--color-progress-ink)"
+        stroke-width="8"
+        stroke-opacity="0.95"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        pathLength="1000"
+        stroke-dasharray="1000 1000"
+        :style="{ strokeDashoffset: traceDashOffset }"
+      />
+    </g>
   </svg>
 </template>
 
@@ -433,5 +507,43 @@ onUnmounted(() => {
   .boil-frame-bitmap {
     display: none;
   }
+}
+
+/* T4-W9 progress trace — the same compositor-only opacity-swap discipline as the boil
+   layers (filterless baked geometry; no raster ever recurs on the beat). */
+.progress-pose {
+  opacity: 0;
+  will-change: opacity;
+}
+
+.progress-pose.is-active {
+  opacity: 1;
+}
+
+/* The fill-front advances on FILL events only (progress is a computed over the game's
+   values, never the beat). No-preference-gated: under PRM there is NO transition — the
+   offset snaps to its correct static value and the beat is already frozen (boilBeat.ts),
+   so the layer freezes on pose 0 with the right offset (PRM-safe by construction). The
+   opacity term is the .solve-success bow-out (index.css asserts the end state); it lives
+   here, unlayered, so a CSS-layer `transition` can't win over it. */
+@media (prefers-reduced-motion: no-preference) {
+  .progress-trace {
+    transition:
+      stroke-dashoffset 240ms ease,
+      opacity 500ms ease;
+  }
+}
+
+/* FILL-gauge a11y mirror — visually hidden, still announced (the sr-only clip). */
+.progress-trace-a11y {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

@@ -328,6 +328,47 @@ export function generateRectBoilFrames(
   return frames;
 }
 
+// ── Board frame rect insets (shared: the grid frame + the W9 progress trace) ──
+//
+// The frame ring's rect is inset `FRAME_X_PAD` on the sides, `FRAME_Y_PAD` top/bottom
+// (top/bottom flush with the card edge, sides pulled in slightly). Module-level so
+// generateGridBoilFrames and the T4-W9 generateFrameTraceFrames (both below, same file)
+// build off ONE source and the violet trace provably hugs the frame (A-1c) — never a
+// re-declared magic number that could drift out of registration.
+const FRAME_X_PAD = 12;
+const FRAME_Y_PAD = 0;
+
+/**
+ * The board frame ring as `frameCount` grain-BAKED closed poses — the T4-W9 progress
+ * trace's geometry. Same rect / seed / roughness / boil as `generateGridBoilFrames`'
+ * frame (so the violet trace retraces the graphite frame in registration), but the
+ * grain is folded INTO the pose geometry (gridPaths §Grain bake) — the HandDrawnOutline
+ * grammar, NOT the grid's live-filter grammar. The consumer renders these as filterless
+ * static siblings, opacity-swapped on the shared boil beat: steady-state raster zero.
+ *
+ * pathLength normalisation, dash draw, and the fill-front tween live at the consumer
+ * (HandDrawnGrid) — this function owns only the ring geometry.
+ */
+export function generateFrameTraceFrames(
+  viewBoxSize: number,
+  baseSeed: number,
+  frameCount: number,
+  frameBoil: number,
+  grain?: GrainConfig,
+): string[] {
+  return generateRectBoilFrames(
+    FRAME_X_PAD,
+    FRAME_Y_PAD,
+    viewBoxSize - FRAME_X_PAD * 2,
+    viewBoxSize - FRAME_Y_PAD * 2,
+    { roughness: 0.5, segments: 6, seed: baseSeed, jagged: true },
+    frameBoil,
+    frameCount,
+    0,
+    grain,
+  );
+}
+
 /**
  * Generate boil frame variants for a standalone line segment.
  * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations.
@@ -405,9 +446,10 @@ export function generateGridBoilFrames(
     () => {
       const cellSize = viewBoxSize / boardSize;
       const pad = 26;
-      // Frame rect: top/bottom flush with card edge, sides pulled in slightly
-      const frameXPad = 12;
-      const frameYPad = 0;
+      // Frame rect: top/bottom flush with card edge, sides pulled in slightly.
+      // Shared with the W9 progress trace via the exported constants (registration).
+      const frameXPad = FRAME_X_PAD;
+      const frameYPad = FRAME_Y_PAD;
 
       // FAM-5 reunify (T4-W1): the grid's subgrid/cell lines rode a hand-rolled
       // copy of the library boil-frame loop at the drifted `+ f*997` stride. It now

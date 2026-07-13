@@ -192,6 +192,19 @@
     --grid-line-color
   ); /* the pencil: grid, ghost ring, hover sketch */
 
+  /* Progress-ink — the SIXTH crayon (T4-W9 ROW 2): a violet coloured pencil that retraces
+     the board frame arc-length-proportional to fill. NON-blue by construction (hue 258°,
+     46° off --color-focus-sketch's 212° — the two never read as one when a focused board
+     shows both). Distinct from every reserved crayon: green/orange/rose (difficulty), gold
+     (success), rose (failure), blue (focus). Two-tier, but the direction INVERTS the crayon
+     "glow brighter at night" doctrine on purpose: the trace sits over the FRAME LINE, which
+     flips value between themes (dark graphite in light, light warm-grey in dark), so the ink
+     goes LIGHTER over the dark frame (light theme) and DEEPER over the light frame (dark).
+     Contrast ledger (WCAG 1.4.11 non-text ≥3:1, opaque / at stroke-opacity 0.95, merged HEAD
+     over the live tokens): light #8B5CF6 vs --grid-line-color 3.57/3.35, vs --color-card
+     4.16/3.85. */
+  --color-progress-ink: #8b5cf6;
+
   /* §SHEET — the stationery ladder (union adopt-partial: washi tooltip + held
      answer-key laminate; vellum ControlPanel + lifted attribution styling CUT).
      Glossary (U7): grain = stroke displacement filter · tooth/fiber = static
@@ -273,6 +286,12 @@
   --color-solver-ink-5: #fde68a;
 
   --grid-line-color: hsl(48 10% 80%);
+
+  /* Progress-ink (dark) — the sixth crayon DEEPENS at night, the inversion the light-tier
+     comment names: the dark frame line is a LIGHT warm-grey, so a deeper violet is what
+     reads over it. Contrast ledger (opaque / at 0.95): dark #7C3AED vs --grid-line-color
+     3.65/3.48, vs --color-card 3.28/3.07 — all ≥3:1, both backgrounds, both themes. */
+  --color-progress-ink: #7c3aed;
 
   /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
      recedes; the catch-light rises — the one place gloss reads MORE at night. */
@@ -415,6 +434,15 @@ html {
   .solve-success .grid-line {
     stroke: var(--color-gold-star) !important;
     transition: stroke 500ms;
+  }
+
+  /* Completion hand-off (T4-W9 ROW 1): at the win the frame floods gold and progress is
+     already 100% — redundant with it. The violet trace bows out so the gold reward owns
+     the frame alone; the trace led the eye to the gold, it never competes with it. The
+     500ms bow-out lives in HandDrawnGrid's (unlayered) scoped style so this layered
+     rule's `transition` isn't the one that wins — here we only assert the end state. */
+  .solve-success .progress-trace {
+    opacity: 0;
   }
 
   .solve-success {
