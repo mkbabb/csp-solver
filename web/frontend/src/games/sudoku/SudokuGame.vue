@@ -6,17 +6,14 @@
  * the peek gesture lives in the shared `useAnswerKeyPeek` composable, only the rendered laminate
  * is pencil.
  */
-import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from "vue";
+import { defineAsyncComponent, onMounted, onUnmounted, ref } from "vue";
 import { useSudoku } from "./composables/useSudoku";
 import { prewarm } from "./solver/useSolver";
 import SudokuBoard from "./SudokuBoard/SudokuBoard.vue";
 import ControlPanel from "./ControlPanel/ControlPanel.vue";
-import DigitPad from "@games/shared/DigitPad.vue";
 import DrawerTab from "@games/shared/DrawerTab.vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
-import { useCoarsePointer } from "@games/shared/useCoarsePointer";
-import { useStackedLayout } from "@games/shared/useStackedLayout";
 import {
   registerDrawerScene,
   useControlsDrawer,
@@ -37,6 +34,11 @@ const props = defineProps<{ leaving?: boolean }>();
 const emit = defineEmits<{ (e: "erased"): void }>();
 
 const sudoku = useSudoku();
+
+// T4-WM §2 — the board ref lets the ControlPanel's Hint button reach the board's focused
+// cell (the panel is the board's sibling, so it can't read focusedPos directly). undo/redo
+// need no ref — they route straight to the composable.
+const sudokuBoard = ref<InstanceType<typeof SudokuBoard> | null>(null);
 
 // Cold-start prewarm (T3-W8 §cold-start): the eager Sudoku scene mounts at app
 // mount, so warm the solver Worker + wasm on the first idle tick — ahead of the
@@ -65,19 +67,20 @@ function onShare(): Promise<void> {
   return sudoku.shareBoard();
 }
 
-// ── DigitPad (T3-W11 U-A, ratified BUILD) ────────────────────────────
-// Live exactly when the pad is the entry surface: coarse primary pointer (phones,
-// tablets) AND the stacked regime (<lg — the mobile panel card is the pad's home; the
-// row-regime sidebar keeps the OS keyboard instead, its 211px column can't hold 44px
-// keys without overflow). `padActive` also flips the cells to inputmode="none", so
-// focusing a cell no longer summons the OS keyboard the pad replaces. Entry rides the
-// board's exposed `enterValue` → the SAME onCellUpdate path as typing (override rules,
-// murmur hold, undo recording inherited); `cellFocused` is the pad's enablement.
-const isCoarse = useCoarsePointer();
-const isStacked = useStackedLayout();
-const padActive = computed(() => isCoarse.value && isStacked.value);
-const boardRef = ref<InstanceType<typeof SudokuBoard> | null>(null);
-const cellFocused = ref(false);
+// T4-WM §3 (lane E) — a long-press on a board cell opens the candidate glimpse: the same
+// engine-domains pencil marks the answer-key peek rides, but marks-ONLY (no laminate), so the
+// solver's surviving candidates show in place while held. Guarded exactly like startPeek — the
+// answer-key peek owns the one marks surface while it's up, and the solve worker owns the board
+// mid-solve (the marks ride a worker propagate) — so in both cases the long-press marks stand
+// down. The end never strips marks out from under a held answer-key peek.
+function onCandidatePeekStart() {
+  if (peekActive.value || sudoku.solveState.value === "solving") return;
+  sudoku.setMarksActive(true);
+}
+function onCandidatePeekEnd() {
+  if (peekActive.value) return;
+  sudoku.setMarksActive(false);
+}
 
 // ── The drawer (T3-W12 §6) ───────────────────────────────────────────
 // The row-regime rail becomes the pencil case: the tab (inside .board-peek-host, so
@@ -107,7 +110,7 @@ onUnmounted(() => unregisterDrawer?.());
          the laminate's inset:0 aligns to .board-cells. -->
     <div ref="peekHost" class="board-peek-host">
       <SudokuBoard
-        ref="boardRef"
+        ref="sudokuBoard"
         :leaving="props.leaving"
         :size="sudoku.size.value"
         :board-size="sudoku.boardSize.value"
@@ -124,13 +127,13 @@ onUnmounted(() => unregisterDrawer?.());
         :error-code="sudoku.errorCode.value"
         :solve-stats="sudoku.solveStats.value"
         :pencil-marks="sudoku.pencilMarks.value"
-        :pad-active="padActive"
-        @cell-focus-change="cellFocused = $event"
         @update-cell="(pos: number, val: number) => sudoku.setCell(pos, val)"
         @retry="sudoku.solve()"
         @undo="sudoku.undo()"
         @redo="sudoku.redo()"
         @hint="(pos: number) => sudoku.hintCell(pos)"
+        @candidate-peek-start="onCandidatePeekStart"
+        @candidate-peek-end="onCandidatePeekEnd"
         @erased="emit('erased')"
       />
       <AnswerKeyLaminate
@@ -162,19 +165,12 @@ onUnmounted(() => unregisterDrawer?.());
             @randomize="sudoku.randomize()"
             @clear="sudoku.clearBoard()"
             @solve="sudoku.solve()"
+            @undo="sudoku.undo()"
+            @redo="sudoku.redo()"
+            @hint="sudokuBoard?.hintFocusedCell()"
             :share="onShare"
             @peek-start="startPeek()"
             @peek-end="endPeek()"
-          />
-          <!-- The touch entry tray (T3-W11 U-A): always present in this card on coarse
-               pointers — the pencil tray already on the desk, never a focus-summoned
-               pop-in. Keys write through the board's own input path. -->
-          <DigitPad
-            v-if="padActive"
-            :board-size="sudoku.boardSize.value"
-            :enabled="cellFocused"
-            @digit="boardRef?.enterValue($event)"
-            @erase="boardRef?.enterValue(0)"
           />
         </div>
       </HandDrawnOutline>
@@ -204,6 +200,9 @@ onUnmounted(() => unregisterDrawer?.());
             @randomize="sudoku.randomize()"
             @clear="sudoku.clearBoard()"
             @solve="sudoku.solve()"
+            @undo="sudoku.undo()"
+            @redo="sudoku.redo()"
+            @hint="sudokuBoard?.hintFocusedCell()"
             :share="onShare"
             @peek-start="startPeek()"
             @peek-end="endPeek()"

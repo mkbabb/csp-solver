@@ -4,6 +4,9 @@ import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
 import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
 import EraserIcon from "@pencil/chrome/icons/EraserIcon.vue";
 import ShareIcon from "@pencil/chrome/icons/ShareIcon.vue";
+import UndoIcon from "@pencil/chrome/icons/UndoIcon.vue";
+import RedoIcon from "@pencil/chrome/icons/RedoIcon.vue";
+import HintIcon from "@pencil/chrome/icons/HintIcon.vue";
 import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
 import KeyboardLegend from "@pencil/chrome/KeyboardLegend.vue";
 import BoilDivider from "@pencil/chrome/BoilDivider.vue";
@@ -73,6 +76,14 @@ const emit = defineEmits<{
   (e: "solve"): void;
   (e: "peek-start"): void;
   (e: "peek-end"): void;
+  // T4-WM §2 — the touch surface for the play tools the desktop reaches by key (H, ⌘Z,
+  // ⇧⌘Z) but coarse pointers had no way to. undo/redo carry no argument (the game routes
+  // them to the composable's undo/redo); hint likewise routes through the board's own
+  // focused-cell method (the panel is the board's sibling and holds no focus state), so it
+  // rides the identical emit path as the board's H key — one hint grammar, two triggers.
+  (e: "undo"): void;
+  (e: "redo"): void;
+  (e: "hint"): void;
 }>();
 
 // ── Hold-to-peek gesture on the BoilDivider (the hold surface, fe-composition
@@ -201,6 +212,18 @@ function onClear() {
 function onSolve() {
   triggerSolve();
   emit("solve");
+}
+
+// T4-WM §2 — the play tools. Plain relays: the :active press-scale gives the tap its
+// feedback (no bespoke animation needed), and the game owns the actual undo/redo/hint act.
+function onUndo() {
+  emit("undo");
+}
+function onRedo() {
+  emit("redo");
+}
+function onHint() {
+  emit("hint");
 }
 
 function onSizeChange(val: string | number) {
@@ -345,6 +368,41 @@ function onDifficultyChange(val: string | number) {
         <span class="icon-sublabel" aria-hidden="true">{{ shareSublabel }}</span>
       </button>
     </div>
+
+    <!-- Play tools (T4-WM §2) — the coarse touch surface for undo / redo / hint, the
+         acts a fine pointer reaches by ⌘Z / ⇧⌘Z / H. Coarse-only (CSS gate): the desktop
+         keeps its keys + legend, so this row is display:none on a fine pointer and never
+         disturbs that presentation. Same .icon-btn grammar as the action row above (44px
+         floor + written sublabel on coarse). -->
+    <div class="play-controls">
+      <button
+        @click="onUndo()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Undo last move"
+      >
+        <UndoIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Undo</span>
+      </button>
+      <button
+        @click="onRedo()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Redo move"
+      >
+        <RedoIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Redo</span>
+      </button>
+      <button
+        @click="onHint()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Reveal a hint in the selected cell"
+      >
+        <HintIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Hint</span>
+      </button>
+    </div>
   </div>
 
   <!-- Desktop layout -->
@@ -467,6 +525,39 @@ function onDifficultyChange(val: string | number) {
       </button>
     </div>
 
+    <!-- Play tools (T4-WM §2) — coarse-only, so a fine desktop shows the legend below
+         (a keyboard is implied) and a coarse iPad in this row-regime gets the tappable
+         undo / redo / hint instead. The two are mutually exclusive by pointer media. -->
+    <div class="play-controls">
+      <button
+        @click="onUndo()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Undo last move"
+      >
+        <UndoIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Undo</span>
+      </button>
+      <button
+        @click="onRedo()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Redo move"
+      >
+        <RedoIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Redo</span>
+      </button>
+      <button
+        @click="onHint()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Reveal a hint in the selected cell"
+      >
+        <HintIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Hint</span>
+      </button>
+    </div>
+
     <!-- UI-7b: the keyboard legend (fine-pointer only — a keyboard is implied there). -->
     <KeyboardLegend />
   </div>
@@ -509,9 +600,13 @@ function onDifficultyChange(val: string | number) {
 
 /* Hover flourishes, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter
    write is retired (SvgFilters), so these static wobbles raster once per hover —
-   a resting pointer never re-enrolls a live painter (the b1 node-1006 finding). */
-.section-heading:hover {
-  filter: url(#wobble-heart);
+   a resting pointer never re-enrolls a live painter (the b1 node-1006 finding).
+   T4-WM §2: fenced behind (hover: hover) — on touch the wobble filter stuck to the
+   last-tapped heading (r2 §4 sticky-hover leak); a coarse pointer sees none of it. */
+@media (hover: hover) {
+  .section-heading:hover {
+    filter: url(#wobble-heart);
+  }
 }
 
 .icon-btn {
@@ -529,10 +624,14 @@ function onDifficultyChange(val: string | number) {
   filter: url(#grain-static);
 }
 
-.icon-btn:hover {
-  color: var(--color-foreground);
-  background: var(--color-accent);
-  filter: url(#wobble-celestial);
+/* T4-WM §2: the icon-btn hover paint (bg + celestial wobble) stuck after a tap on touch
+   (r2 §4) — fenced to hover-capable pointers. Coarse gets its sublabel + :active scale. */
+@media (hover: hover) {
+  .icon-btn:hover {
+    color: var(--color-foreground);
+    background: var(--color-accent);
+    filter: url(#wobble-celestial);
+  }
 }
 
 .icon-btn:active {
@@ -611,8 +710,29 @@ function onDifficultyChange(val: string | number) {
   transition: all 200ms;
 }
 
-.icon-btn:hover .sparkle-icon {
-  filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+@media (hover: hover) {
+  .icon-btn:hover .sparkle-icon {
+    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+  }
+}
+
+/* Play tools row (T4-WM §2) — undo / redo / hint. A COARSE affordance: hidden on a fine
+   pointer (the desktop keeps its keyboard shortcuts + legend, presentation unchanged),
+   shown as a tappable row on coarse — whether that lands in the mobile card (<lg) or the
+   iPad row-regime card (≥lg). The buttons are plain .icon-btn, so the existing coarse
+   block below gives them the 44px floor + written sublabels; this only governs the row. */
+.play-controls {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .play-controls {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 0.35rem;
+  }
 }
 
 /* Mobile layout */

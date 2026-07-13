@@ -1,8 +1,16 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover (T4-WM lane C): opts the page into the notch/Dynamic-Island
+         region so `env(safe-area-inset-*)` returns real insets — the fixed top-right
+         celestial toggle pads clear of the notch (App.vue .corner-right). No
+         `maximum-scale`/`user-scalable`: pinch-zoom stays intact (WCAG 1.4.4); the iOS
+         focus-zoom is defeated structurally by the cells' 16px input font instead. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <title>Sudoku - CSP Solver</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- P5 (Tranche II): fonts are self-hosted woff2 subsets, wired via @font-face
@@ -12,7 +20,10 @@
          active game rides in the URL (?game=), so the copy names neither. og:image is
          a committed static card (public/og-card.png, landed by the design lane). -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Hand-drawn logic puzzles, solved in your browser" />
+    <meta
+      property="og:title"
+      content="Hand-drawn logic puzzles, solved in your browser"
+    />
     <meta
       property="og:description"
       content="Play and share hand-drawn constraint puzzles — a pencil-and-paper aesthetic, an in-browser CSP solver, and a permalink to every board."
@@ -20,7 +31,10 @@
     <meta property="og:url" content="https://sudoku.babb.dev/" />
     <meta property="og:image" content="https://sudoku.babb.dev/og-card.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Hand-drawn logic puzzles, solved in your browser" />
+    <meta
+      name="twitter:title"
+      content="Hand-drawn logic puzzles, solved in your browser"
+    />
     <meta
       name="twitter:description"
       content="Play and share hand-drawn constraint puzzles — a pencil-and-paper aesthetic, an in-browser CSP solver, and a permalink to every board."

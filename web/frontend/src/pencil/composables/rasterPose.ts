@@ -45,22 +45,67 @@ export function resolveCssValue(
 }
 
 /**
- * Convert a resolved `ImageBitmap` stack into `data:` URLs, one per pose, drawn ONCE. The
- * urls feed static SVG `<image>` siblings whose only per-beat change is an opacity flip —
- * the N-layer variant (no per-beat `drawImage`, so no residual tile raster). Returns `[]`
- * for a null stack (the bake is still in flight; the consumer shows the fallback).
+ * Convert a resolved `ImageBitmap` stack into object URLs, one per pose, encoded ONCE. The
+ * urls feed static SVG `<image>` / `<img>` siblings whose only per-beat change is an opacity
+ * flip — the N-layer variant (no per-beat `drawImage`, so no residual tile raster).
+ *
+ * Two residency wins over the retired synchronous `toDataURL` path (T4-WM ranks 2/4):
+ *   • the encode runs through `OffscreenCanvas.convertToBlob` — async, off the main thread's
+ *     synchronous PNG-encode burst (12 poses × up to 251 ms @4× at DPR3 is what it cost), and
+ *   • the URL is a `createObjectURL` handle (a pointer), not a retained ~1.3 MB base64 string.
+ *
+ * The source `ImageBitmap` is the REDUNDANT copy once its decode-backing URL exists (the
+ * `<image>` decode is the single resident raster the compositor draws), so each is `close()`d
+ * here — its off-heap decoded pixels are freed and the decode+bitmap double residency dies.
+ * `useRasterStack` (0.9.2) captures fresh per bake and never memoizes the bitmap, so a closed
+ * bitmap can never be re-handed to a warm re-bake. Returns `[]` for a null/empty stack (the
+ * bake is still in flight; the consumer holds the fallback).
  */
-export function bitmapsToUrls(bitmaps: ImageBitmap[] | null): string[] {
-  if (!bitmaps || typeof document === "undefined") return [];
+export async function bitmapsToUrls(bitmaps: ImageBitmap[] | null): Promise<string[]> {
+  if (!bitmaps || bitmaps.length === 0 || typeof document === "undefined") return [];
   const urls: string[] = [];
   for (const bm of bitmaps) {
-    const canvas = document.createElement("canvas");
-    canvas.width = bm.width;
-    canvas.height = bm.height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return urls;
-    ctx.drawImage(bm, 0, 0);
-    urls.push(canvas.toDataURL("image/png"));
+    urls.push(URL.createObjectURL(await encodeBitmap(bm)));
+    bm.close(); // the URL/decode is the durable artifact; the bitmap is redundant
   }
   return urls;
+}
+
+/**
+ * Revoke object URLs minted by {@link bitmapsToUrls} — the backing decode is released when a
+ * re-bake replaces the stack or the surface unmounts. Revoking after an `<image>` has loaded
+ * is safe (the element retains the decoded resource); it only stops the handle from leaking.
+ */
+export function revokeUrls(urls: string[] | null | undefined): void {
+  if (!urls) return;
+  for (const u of urls) URL.revokeObjectURL(u);
+}
+
+/**
+ * Encode one `ImageBitmap` to a PNG `Blob` asynchronously. `OffscreenCanvas.convertToBlob` is
+ * the off-main-thread path; a plain `<canvas>.toBlob` is the fallback where OffscreenCanvas is
+ * absent (both async — neither is the retired synchronous `toDataURL`).
+ */
+async function encodeBitmap(bm: ImageBitmap): Promise<Blob> {
+  if (typeof OffscreenCanvas !== "undefined") {
+    const oc = new OffscreenCanvas(bm.width, bm.height);
+    const ctx = oc.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(bm, 0, 0);
+      return oc.convertToBlob({ type: "image/png" });
+    }
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = bm.width;
+  canvas.height = bm.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("bitmapsToUrls: 2D canvas context unavailable");
+  ctx.drawImage(bm, 0, 0);
+  return await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) =>
+        blob ? resolve(blob) : reject(new Error("bitmapsToUrls: toBlob null")),
+      "image/png",
+    );
+  });
 }

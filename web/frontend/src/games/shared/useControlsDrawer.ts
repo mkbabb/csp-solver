@@ -89,7 +89,7 @@ function persist(open: boolean) {
 const drawerOpen = ref(readStored());
 const drawerPhase = ref<DrawerPhase>("idle");
 
-// Module-level MediaQueryList refs — the useStackedLayout/useCoarsePointer pattern.
+// Module-level MediaQueryList refs — the useCoarsePointer pattern (one shared listener).
 function mediaRef(query: string, initial: boolean): Ref<boolean> {
   const r = ref(initial);
   if (hasDom && typeof window.matchMedia === "function") {

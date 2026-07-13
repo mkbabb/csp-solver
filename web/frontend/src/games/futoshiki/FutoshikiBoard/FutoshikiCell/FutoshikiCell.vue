@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
 import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
+import { useLongPress } from "@games/shared/useLongPress";
 
 const props = defineProps<{
   position: number;
@@ -30,10 +31,6 @@ const props = defineProps<{
    *  the solver's own propagation, present only while the peek gesture is held.
    *  Rendered only while the cell is empty. Twin of SudokuCell's (D16). */
   marks?: number[];
-  /** DigitPad live (T3-W11 U-A): the OS virtual keyboard yields to the pad
-   *  (`inputmode="none"`) so focusing a cell doesn't eclipse half the board with
-   *  a keyboard the pad replaces. Hardware keyboards are unaffected. */
-  suppressVirtualKeyboard?: boolean;
   /** T3-W13 §4.1 — the board's `celebrating`, forwarded to the glyph's flourish
    *  gate: solve reveals keep beat-2, a hint stops at the written glyph. */
   flourish?: boolean;
@@ -42,6 +39,10 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "update", position: number, value: number): void;
   (e: "cellFocus", position: number): void;
+  /** Long-press peek (T4-WM §3) — twin of SudokuCell's: a hold on this EMPTY cell opens the
+   *  candidate glimpse; the board forwards these up to the game's marks activation. */
+  (e: "candidatePeekStart"): void;
+  (e: "candidatePeekEnd"): void;
 }>();
 
 const inputRef = ref<HTMLInputElement | null>(null);
@@ -138,6 +139,34 @@ function onFocus() {
   emit("cellFocus", props.position);
 }
 
+// ── Long-press peek (T4-WM §3, lane E) — twin of SudokuCell's ─────────
+// A press-and-hold on an EMPTY cell opens its candidate glimpse (engine-domains pencil marks,
+// marks-only), mirroring the shipped hold-to-peek grammar; the gesture funnels up (cell → board →
+// game) to the shared marks activation, and release/cancel/leave dismisses it. Pointer Events only
+// (contextmenu never fires on iOS); `useLongPress` fires the honest `vibrateOnce` on recognition.
+// Read-only. A recognized hold sets `suppressClick` so the tap that ends it can't focus/raise the
+// keyboard; a plain tap still focuses. The flag resets at the next pointerdown.
+let suppressClick = false;
+const longPress = useLongPress({
+  onLongPress: () => {
+    suppressClick = true;
+    emit("candidatePeekStart");
+  },
+  onRelease: () => emit("candidatePeekEnd"),
+});
+function onCellPointerDown(e: PointerEvent) {
+  suppressClick = false;
+  if (props.value !== 0) return; // only an empty cell has a candidate glimpse to show
+  longPress.onPointerDown(e);
+}
+function onCellClick() {
+  if (suppressClick) {
+    suppressClick = false;
+    return;
+  }
+  focusInput();
+}
+
 // ── Engine-domains pencil marks (W6 beat 9) ──────────────────────────
 // The mini-grid keeps the classic pencil-mark convention: value v always sits
 // at slot v (row-major), so a candidate's *position* encodes its value. With
@@ -172,15 +201,30 @@ defineExpose({ focus: focusInput });
       'is-invalid': isInvalid,
     }"
     :style="isRevealed ? { '--reveal-delay': `${noiseDelay}ms` } : undefined"
-    @click="focusInput"
+    @click="onCellClick"
+    @pointerdown="onCellPointerDown"
+    @pointermove="longPress.onPointerMove"
+    @pointerup="longPress.onPointerUp"
+    @pointercancel="longPress.onPointerCancel"
+    @pointerleave="longPress.onPointerCancel"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <!-- Hidden input for keyboard interaction -->
+    <!-- Native bounded entry (T4-WM §1) — twin of SudokuCell's (D16): the opacity-0 input is
+         the sole entry surface on every pointer. `inputmode=numeric` raises the iOS digit pad;
+         `type=text` lets `maxlength` bound the cell; the autocorrect/autocapitalize/spellcheck
+         trio + `enterkeyhint` are the iOS congruence set. The @input/@keydown write path is
+         byte-identical to the keyboard's. Futoshiki is single-digit (4..7), maxlength 2 = the
+         digit width + 1 in-place-override char handleInput slices down. -->
     <input
       ref="inputRef"
       type="text"
-      :inputmode="suppressVirtualKeyboard ? 'none' : 'numeric'"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+      enterkeyhint="done"
       :value="displayValue"
       maxlength="2"
       :tabindex="tabIndex"
@@ -190,7 +234,7 @@ defineExpose({ focus: focusInput });
       @keydown="handleKeydown"
       @focus="onFocus"
       @blur="isFocused = false"
-      class="absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
+      class="cell-native-input absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
     />
 
     <!-- Engine-domains pencil marks (W6 beat 9): the solver's propagated
@@ -388,6 +432,17 @@ defineExpose({ focus: focusInput });
 .futoshiki-cell:focus-within {
   background: transparent;
   outline: none;
+}
+
+/* iOS zoom de-risk (T4-WM §1) — twin of SudokuCell's: 16px is the structural floor that keeps
+   mobile Safari from zooming the focused input. The input is opacity-0, so it costs nothing
+   visually and never trades away pinch-zoom (`maximum-scale`, WCAG 1.4.4). */
+.cell-native-input {
+  font-size: 16px;
+  /* T4-WM §2 — twin of SudokuCell's: kill the iOS gray tap-flash on the opacity-0 entry
+     input so the pencil ghost stays the sole focus voice on tap. Scoped to this lane's entry
+     surface, additive to lane C's global sweep; the :focus-visible ring stays lane A's. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

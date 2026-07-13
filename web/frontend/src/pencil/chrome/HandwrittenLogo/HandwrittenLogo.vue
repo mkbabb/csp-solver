@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import {
   usePrefersReducedMotion,
   serializePoseSvg,
@@ -19,6 +19,7 @@ import {
   readFilterDefs,
   resolveCssValue,
   bitmapsToUrls,
+  revokeUrls,
 } from "@pencil/composables/rasterPose";
 import frauncesInline from "@/assets/fonts/fraunces-subset.woff2?inline";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
@@ -199,17 +200,36 @@ const logoRaster = useRasterStack(() => ({
   },
 }));
 
+// ImageBitmap → object URL once per bake; async encode + close the redundant bitmaps
+// (T4-WM rank 2/4). The urls are RETAINED while `bitmaps` is null (a re-bake in flight) so
+// the wordmark swaps atomically — the old label/ink holds until the new poses convert, then
+// one assignment. A monotonic token drops a superseded conversion; the previous urls revoke.
 const logoUrls = ref<string[]>([]);
+let logoUrlToken = 0;
 watch(
   () => logoRaster.bitmaps.value,
-  (b) => {
-    logoUrls.value = bitmapsToUrls(b);
+  async (b) => {
+    if (!b) return; // re-bake in flight — hold the live urls (atomic swap)
+    const token = ++logoUrlToken;
+    const next = await bitmapsToUrls(b);
+    if (token !== logoUrlToken) {
+      revokeUrls(next);
+      return;
+    }
+    const prev = logoUrls.value;
+    logoUrls.value = next;
+    revokeUrls(prev);
   },
   { immediate: true },
 );
 const logoBaked = computed(
   () => logoUrls.value.length > 0 && logoUrls.value.length === logoPoseIds.value.length,
 );
+
+onUnmounted(() => {
+  logoUrlToken++;
+  revokeUrls(logoUrls.value);
+});
 </script>
 
 <template>
@@ -262,12 +282,14 @@ const logoBaked = computed(
           />
         </template>
         <!-- Fallback while baking: the live #wobble-logo-p{i} pose stack
-                     (T3-W13 §1-P3). One raster per appearance — no startup flash. -->
+                     (T3-W13 §1-P3). T4-WM rank 1: PINNED to pose 0 — `is-active` never
+                     follows the beat while unbaked, so the live filter rasters ONCE, not
+                     per beat. One raster per appearance — no startup flash. -->
         <g
           v-for="(pid, f) in logoBaked ? [] : logoPoseIds"
           :key="pid"
           class="logo-pose"
-          :class="{ 'is-active': logoPose === f }"
+          :class="{ 'is-active': f === 0 }"
           :filter="`url(#${pid})`"
         >
           <text class="logo-text" x="4" y="48" text-anchor="start">{{ label }}</text>

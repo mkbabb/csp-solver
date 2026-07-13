@@ -37,8 +37,9 @@ const props = defineProps<{
   solveState: SolveState;
   solvedValues: Record<string, number>;
   boardGeneration: number;
-  /** Optional — enriches the grid a11y label + marginalia ("a fresh 9×9, medium").
-   *  Wired by the union lane (see fictions-a11y report §insertion-specs). */
+  /** Optional — enriches the grid a11y label + marginalia ("a fresh 9×9 — you asked for
+   *  medium"; B-0 request voice, never a measured grade). Wired by the union lane (see
+   *  fictions-a11y report §insertion-specs). */
   difficulty?: Difficulty;
   /** Optional typed error code (SolverErrorCode) for the paper-note copy.
    *  Absent → the default 'error' cause (BUDGET_EXCEEDED) copy. Wired by the union lane. */
@@ -56,9 +57,6 @@ const props = defineProps<{
    *  Routes the grid through the EXISTING erase beat and fades glyphs + marginalia;
    *  on the erase's completion the board emits `erased` (the seam) instead of redrawing. */
   leaving?: boolean;
-  /** DigitPad live (T3-W11 U-A): threads virtual-keyboard suppression to the cells —
-   *  true exactly when the pad is the entry surface (coarse pointer + stacked regime). */
-  padActive?: boolean;
   /** T4-W3 share-truth: a `?board=` was PRESENT but failed to decode — the composable already
    *  fell back to a fresh deal. Folds a one-line "this shared link couldn't be read" clause into
    *  the FIRST fresh-board announce so the corrupt link doesn't degrade silently. One-shot. */
@@ -72,9 +70,10 @@ const emit = defineEmits<{
   (e: "redo"): void;
   (e: "hint", position: number): void;
   (e: "erased"): void;
-  /** DigitPad enablement (T3-W11 U-A): true while any cell input holds DOM focus.
-   *  The pad's keys prevent focus-steal on mousedown, so a pad tap never flips this. */
-  (e: "cellFocusChange", focused: boolean): void;
+  /** Long-press peek (T4-WM §3): forwarded from a cell's hold to the game's marks activation —
+   *  the candidate glimpse is marks-only (no answer laminate). Release ends it. */
+  (e: "candidatePeekStart"): void;
+  (e: "candidatePeekEnd"): void;
 }>();
 
 const gridTemplateColumns = computed(
@@ -285,25 +284,16 @@ function onCellFocus(pos: number) {
   focusedPos.value = pos;
 }
 
-// ── DigitPad wiring (T3-W11 U-A) ─────────────────────────────────────
-// The pad is the touch twin of the keyboard: `enterValue` writes THROUGH the same
-// onCellUpdate the cell input uses, so override rules, murmur hold, and undo recording
-// are inherited wholesale — never reimplemented. focusin/focusout on the cells grid
-// report "a cell holds focus" (the pad's enablement); a focus move BETWEEN cells fires
-// focusout with relatedTarget still inside the grid, so it never flickers false.
-const cellsEl = ref<HTMLElement | null>(null);
-function onCellsFocusIn() {
-  emit("cellFocusChange", true);
+// T4-WM §2 — the hint act, factored so the ControlPanel's Hint button and the board's H key
+// share ONE path: both reveal the currently focused cell. On coarse the last tap sets
+// focusedPos, and it survives the button tap (only a board reset clears it, L442), so tapping
+// Hint reveals the cell you last touched. Exposed because the panel is the board's SIBLING,
+// not its child — the game calls this on the panel's @hint (W7 later re-voices the content).
+function hintFocusedCell() {
+  emit("hint", focusedPos.value);
 }
-function onCellsFocusOut(e: FocusEvent) {
-  if (!(e.relatedTarget instanceof Node) || !cellsEl.value?.contains(e.relatedTarget)) {
-    emit("cellFocusChange", false);
-  }
-}
-function enterValue(value: number) {
-  onCellUpdate(focusedPos.value, value);
-}
-defineExpose({ enterValue });
+defineExpose({ hintFocusedCell });
+
 function onBoardKeydown(e: KeyboardEvent) {
   const n = props.boardSize;
   const pos = focusedPos.value;
@@ -345,7 +335,7 @@ function onBoardKeydown(e: KeyboardEvent) {
     case "h":
     case "H":
       if (e.ctrlKey || e.metaKey) handled = false;
-      else emit("hint", focusedPos.value);
+      else hintFocusedCell();
       break;
     default:
       handled = false;
@@ -443,13 +433,23 @@ let pendingFreshAnnounce: string | null = null;
 // that first fresh-board announce, so the one status voice reports both the failed link AND
 // what arrived instead — never a silent degrade, never a second live region. Consumed on use.
 let linkErrorPending = props.linkError === true;
+// B-0 de-launder (T4-W6 ROW-4): the EASY/MEDIUM/HARD dropdown is a bucket REQUEST, never a
+// live grade — the board on screen carries no measurement (the bake-time backtrack proxy is
+// never shown). So the margin speaks in the request voice, "you asked for medium", not the
+// old "a fresh 9×9, medium" that stated the bucket as a measured fact. An ungraded board
+// (no difficulty prop — a restored permalink or a hand-typed board) gets no tier word at all:
+// request voice or silence, never a fabricated grade. W7's technique engine supplies the real
+// live grade to the tally slot (W9-B1); until then that slot reads "ungraded".
 function freshBoardCopy(): string {
-  const fresh = `a fresh ${props.boardSize}×${props.boardSize}${difficultyWord.value ? ", " + difficultyWord.value : ""}`;
+  const fresh = `a fresh ${props.boardSize}×${props.boardSize}`;
+  const request = difficultyWord.value
+    ? ` — you asked for ${difficultyWord.value}`
+    : "";
   if (linkErrorPending) {
     linkErrorPending = false;
-    return `this shared link couldn't be read — ${fresh}`;
+    return `this shared link couldn't be read — ${fresh}${request}`;
   }
-  return fresh;
+  return `${fresh}${request}`;
 }
 watch(
   () => props.givenCells.size,
@@ -577,7 +577,6 @@ function isRevealed(pos: number): boolean {
 
       <!-- Interactive cell grid -->
       <div
-        ref="cellsEl"
         class="grid"
         :class="BOARD_CELLS_CLASS"
         role="grid"
@@ -589,8 +588,6 @@ function isRevealed(pos: number): boolean {
           gridTemplateRows: gridTemplateColumns,
         }"
         @keydown="onBoardKeydown"
-        @focusin="onCellsFocusIn"
-        @focusout="onCellsFocusOut"
       >
         <SudokuCell
           v-for="pos in totalCells"
@@ -611,10 +608,11 @@ function isRevealed(pos: number): boolean {
           :tab-index="pos - 1 === focusedPos ? 0 : -1"
           :ghost-path="cellRects[pos - 1] ?? ''"
           :marks="marksFor(pos - 1)"
-          :suppress-virtual-keyboard="padActive"
           :flourish="celebrating"
           @update="onCellUpdate"
           @cell-focus="onCellFocus"
+          @candidate-peek-start="emit('candidatePeekStart')"
+          @candidate-peek-end="emit('candidatePeekEnd')"
         />
       </div>
 

@@ -205,12 +205,13 @@
         :src="url"
         alt=""
       />
-      <!-- Fallback while baking: the live wobble-celestial stack -->
+      <!-- Fallback while baking: the live wobble-celestial stack. T4-WM rank 1: PINNED to
+             pose 0 while unbaked — the live filter rasters ONCE, not per beat. -->
       <svg
         v-for="(sparkles, i) in sunBaked ? [] : SPARKLE_POSES"
         :key="`sun-${i}`"
         class="rest-pose"
-        :class="{ 'is-pose-active': i === sunFrame }"
+        :class="{ 'is-pose-active': i === 0 }"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 200 200"
         :filter="`url(#${poseFilterId(i)})`"
@@ -279,12 +280,13 @@
         :src="url"
         alt=""
       />
-      <!-- Fallback while baking: the live wobble-celestial stack -->
+      <!-- Fallback while baking: the live wobble-celestial stack. T4-WM rank 1: PINNED to
+             pose 0 while unbaked — the live filter rasters ONCE, not per beat. -->
       <svg
         v-for="(stars, i) in moonBaked ? [] : STAR_POSES_D"
         :key="`moon-${i}`"
         class="rest-pose"
-        :class="{ 'is-pose-active': i === starFrame }"
+        :class="{ 'is-pose-active': i === 0 }"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 200 200"
         :filter="`url(#${poseFilterId(i)})`"
@@ -345,7 +347,11 @@ import {
   FILTER_PRESETS,
 } from "@pencil/config/pencilConfig";
 import { useBoilBeat } from "@pencil/composables/boilBeat";
-import { readFilterDefs, bitmapsToUrls } from "@pencil/composables/rasterPose";
+import {
+  readFilterDefs,
+  bitmapsToUrls,
+  revokeUrls,
+} from "@pencil/composables/rasterPose";
 
 const SUN = YOSHI_COLORS.celestial.sun;
 const MOON = YOSHI_COLORS.celestial.moon;
@@ -542,19 +548,43 @@ const moonRaster = useRasterStack(() => ({
   cssSize: { width: captureSize.value, height: captureSize.value },
 }));
 
+// ImageBitmap → object URL once per bake; async encode + close the redundant bitmaps
+// (T4-WM rank 2/4). Urls are RETAINED while `bitmaps` is null (a resize re-bake in flight)
+// so the icon swaps atomically; a monotonic token drops a superseded conversion and the
+// previous urls revoke. Sun and moon are separate rasters, each with its own token.
 const sunUrls = ref<string[]>([]);
 const moonUrls = ref<string[]>([]);
+let sunUrlToken = 0;
+let moonUrlToken = 0;
 watch(
   () => sunRaster.bitmaps.value,
-  (b) => {
-    sunUrls.value = bitmapsToUrls(b);
+  async (b) => {
+    if (!b) return;
+    const token = ++sunUrlToken;
+    const next = await bitmapsToUrls(b);
+    if (token !== sunUrlToken) {
+      revokeUrls(next);
+      return;
+    }
+    const prev = sunUrls.value;
+    sunUrls.value = next;
+    revokeUrls(prev);
   },
   { immediate: true },
 );
 watch(
   () => moonRaster.bitmaps.value,
-  (b) => {
-    moonUrls.value = bitmapsToUrls(b);
+  async (b) => {
+    if (!b) return;
+    const token = ++moonUrlToken;
+    const next = await bitmapsToUrls(b);
+    if (token !== moonUrlToken) {
+      revokeUrls(next);
+      return;
+    }
+    const prev = moonUrls.value;
+    moonUrls.value = next;
+    revokeUrls(prev);
   },
   { immediate: true },
 );
@@ -638,6 +668,10 @@ onUnmounted(() => {
   clearTimeout(turnTimer);
   clearTimeout(gestureTimer);
   document.documentElement.classList.remove("theme-turning");
+  sunUrlToken++;
+  moonUrlToken++;
+  revokeUrls(sunUrls.value);
+  revokeUrls(moonUrls.value);
 });
 </script>
 

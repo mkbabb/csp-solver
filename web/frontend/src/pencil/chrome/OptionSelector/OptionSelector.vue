@@ -69,9 +69,13 @@ function scribbleSeed(val: string | number): number {
 
 /* Hover flourish, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter write
    is retired (SvgFilters), so this static wobble rasters once per hover — a
-   resting pointer never re-enrolls a live painter (the b1 node-1006 finding). */
-.ctrl-btn:hover {
-  filter: url(#wobble-heart);
+   resting pointer never re-enrolls a live painter (the b1 node-1006 finding).
+   T4-WM §2: gated to hover-capable pointers — on touch, :hover sticks after a tap
+   (the wobble filter froze on the last-tapped option; r2 §4), so it's fenced here. */
+@media (hover: hover) {
+  .ctrl-btn:hover {
+    filter: url(#wobble-heart);
+  }
 }
 
 .selected-item,
@@ -93,8 +97,12 @@ function scribbleSeed(val: string | number): number {
   background-size: var(--ghost-width, 4ch) 8px;
 }
 
-.hover-item:hover {
-  background-image: var(--ghost-underline);
+/* The ghost underline is a hover preview — gated so it neither appears nor sticks on
+   touch (T4-WM §2); the selected option's real scribble underline is unconditional. */
+@media (hover: hover) {
+  .hover-item:hover {
+    background-image: var(--ghost-underline);
+  }
 }
 
 .options-row {

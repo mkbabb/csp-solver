@@ -9,6 +9,7 @@ import {
   readFilterDefs,
   resolveCssValue,
   bitmapsToUrls,
+  revokeUrls,
 } from "@pencil/composables/rasterPose";
 import { useTheme } from "@/composables/useTheme";
 import { usePathAnimation } from "./usePathAnimation";
@@ -142,20 +143,60 @@ const gridRaster = useRasterStack(() => ({
   poseCount: BOIL_CONFIG.frameCount,
   poseSvg: gridPoseSvg,
   cssSize: { width: captureSide.value, height: captureSide.value },
+  // T4-WM rank 1/2/4: cap the GRID bake at DPR2 — WebKit-gated (seal adjudication). The cap
+  // halves grid bitmap + decode residency (19→8 MB) and cuts the cold-load window ~23% with
+  // ⅔ fewer long tasks. Licensed per-engine by the ≥0.98 SSIM floor: WebKit measured 0.9888
+  // (every iOS browser is WebKit — the E8 target); chromium measured 0.9652 (thin-line
+  // resample softness, below floor), so chromium — incl. desktop at >200% display scaling —
+  // keeps native DPR. GRID-ONLY by license: the logo is Fraunces text (sharpness-sensitive,
+  // UNtested) and the toggle is small — neither is capped without its own SSIM pass.
+  dpr: Math.min(
+    typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1,
+    typeof navigator !== "undefined" && navigator.vendor === "Apple Computer, Inc."
+      ? 2
+      : Infinity,
+  ),
 }));
 
-// ImageBitmap → data-URL once per bake; the urls back static <image> siblings (opacity
-// flips only — no per-beat drawImage). Empty while a (re-)bake is in flight, so the
-// fallback <g> stack holds the surface until the swap is ready.
+// ImageBitmap → object URL once per bake; the urls back static <image> siblings (opacity
+// flips only — no per-beat drawImage). `bitmaps` goes null while a (re-)bake is in flight,
+// but the urls are RETAINED across that null (the atomic-swap discipline, T4-WM rank 3): the
+// old theme's <image> stack keeps rendering until the new bitmaps resolve and convert, then
+// one assignment swaps — no mid-gesture drop to the live-filter fallback (the toggle Bloom
+// masks the moment). A monotonic token drops a conversion superseded by a newer bake.
 const bitmapUrls = ref<string[]>([]);
+let urlToken = 0;
 watch(
   () => gridRaster.bitmaps.value,
-  (bmps) => {
-    bitmapUrls.value = bitmapsToUrls(bmps);
+  async (bmps) => {
+    if (!bmps) return; // (re-)bake in flight — hold the live urls (atomic swap)
+    const token = ++urlToken;
+    const next = await bitmapsToUrls(bmps); // async encode + close the redundant bitmaps
+    if (token !== urlToken) {
+      revokeUrls(next); // a newer bake (or a structural reset) superseded this — drop it
+      return;
+    }
+    const prev = bitmapUrls.value;
+    bitmapUrls.value = next; // the one atomic swap
+    revokeUrls(prev); // free the previous decodes
   },
   { immediate: true },
 );
 const showBaked = computed(() => bitmapUrls.value.length === BOIL_CONFIG.frameCount);
+
+// STRUCTURAL change (board / subgrid size) is not a color re-tint — the old bitmaps carry the
+// wrong geometry, so it takes the FROZEN-pose path, not the atomic swap: drop the baked urls
+// (showBaked → false) so the live-filter fallback, pinned to pose 0, holds the new geometry
+// until the re-bake lands. Bumping the token voids any in-flight old-geometry conversion.
+watch(
+  () => `${props.boardSize}-${props.subgridSize}`,
+  () => {
+    urlToken++;
+    const prev = bitmapUrls.value;
+    bitmapUrls.value = [];
+    revokeUrls(prev);
+  },
+);
 
 const showTransitionLayer = computed(() => props.animState !== "drawn");
 const showSteadyLayers = computed(() => props.animState === "drawn");
@@ -196,6 +237,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   cleanup();
+  urlToken++; // void any in-flight conversion
+  revokeUrls(bitmapUrls.value); // release the decode-backing object URLs
 });
 </script>
 
@@ -287,12 +330,20 @@ onUnmounted(() => {
       <!-- The live grain-static stack stays mounted: it is the during-bake fallback
                  AND the print surface (@media print blackens its .grid-line strokes, which
                  a baked bitmap can't take). Once baked it is display:none on screen
-                 (baked-hidden) so no filter ever rasters at steady state. -->
+                 (baked-hidden) so no filter ever rasters at steady state.
+                 T4-WM rank 1/3: while NOT baked (cold load / structural re-bake) the fallback
+                 is PINNED to pose 0 — `is-active` never follows the beat, so WebKit rasters
+                 the feTurbulence filter ONCE (the sanctioned transient) instead of re-executing
+                 per beat at ~6 fps. Once baked, `is-active` tracks the beat but the layer is
+                 display:none anyway, so the pin is a no-op there. -->
       <g
         v-for="(paths, f) in steadyFrames"
         :key="'boil-' + f"
         class="boil-frame-layer"
-        :class="{ 'is-active': boilFrame === f, 'baked-hidden': showBaked }"
+        :class="{
+          'is-active': (showBaked ? boilFrame : 0) === f,
+          'baked-hidden': showBaked,
+        }"
         filter="url(#grain-static)"
       >
         <path

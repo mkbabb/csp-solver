@@ -9,17 +9,14 @@
  * composable (the laminate is board-shape-agnostic by design — G5), only the rendered laminate
  * is pencil.
  */
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import { useFutoshiki } from "./composables/useFutoshiki";
 import { prewarm } from "./solver/useSolver";
 import FutoshikiBoard from "./FutoshikiBoard/FutoshikiBoard.vue";
 import ControlPanel from "./ControlPanel/ControlPanel.vue";
-import DigitPad from "@games/shared/DigitPad.vue";
 import DrawerTab from "@games/shared/DrawerTab.vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
-import { useCoarsePointer } from "@games/shared/useCoarsePointer";
-import { useStackedLayout } from "@games/shared/useStackedLayout";
 import {
   registerDrawerScene,
   useControlsDrawer,
@@ -36,6 +33,10 @@ const props = defineProps<{ leaving?: boolean }>();
 const emit = defineEmits<{ (e: "erased"): void }>();
 
 const futoshiki = useFutoshiki();
+
+// T4-WM §2 — the board ref lets the ControlPanel's Hint button reach the board's focused
+// cell (twin of SudokuGame's). undo/redo route straight to the composable, no ref needed.
+const futoshikiBoard = ref<InstanceType<typeof FutoshikiBoard> | null>(null);
 
 // Cold-start prewarm (T3-W8 §cold-start): this scene is async + v-if-gated, so it
 // warms its own solver Worker + wasm on the first idle tick after its own mount —
@@ -64,14 +65,17 @@ function onShare(): Promise<void> {
   return futoshiki.shareBoard();
 }
 
-// ── DigitPad (T3-W11 U-A) — twin of SudokuGame's wiring (D16) ────────
-// Coarse pointer + stacked regime → the pad is the entry surface (cells flip to
-// inputmode="none"); entry rides the board's exposed `enterValue` (the keyboard's path).
-const isCoarse = useCoarsePointer();
-const isStacked = useStackedLayout();
-const padActive = computed(() => isCoarse.value && isStacked.value);
-const boardRef = ref<InstanceType<typeof FutoshikiBoard> | null>(null);
-const cellFocused = ref(false);
+// T4-WM §3 (lane E) — twin of SudokuGame's: a long-press on a cell opens the marks-only candidate
+// glimpse, guarded exactly like startPeek (the answer-key peek owns the marks surface when up; the
+// solve worker owns the board mid-solve). The end never strips marks from under a held peek.
+function onCandidatePeekStart() {
+  if (peekActive.value || futoshiki.solveState.value === "solving") return;
+  futoshiki.setMarksActive(true);
+}
+function onCandidatePeekEnd() {
+  if (peekActive.value) return;
+  futoshiki.setMarksActive(false);
+}
 
 // ── The drawer (T3-W12 §6) — twin of SudokuGame's wiring (D16) ───────
 const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer();
@@ -96,7 +100,7 @@ onUnmounted(() => unregisterDrawer?.());
     <!-- Board + the held answer-key laminate (a sibling over the board) -->
     <div ref="peekHost" class="board-peek-host">
       <FutoshikiBoard
-        ref="boardRef"
+        ref="futoshikiBoard"
         :leaving="props.leaving"
         :board-size="futoshiki.boardSize.value"
         :total-cells="futoshiki.totalCells.value"
@@ -112,13 +116,13 @@ onUnmounted(() => unregisterDrawer?.());
         :error-code="futoshiki.errorCode.value"
         :solve-stats="futoshiki.solveStats.value"
         :pencil-marks="futoshiki.pencilMarks.value"
-        :pad-active="padActive"
-        @cell-focus-change="cellFocused = $event"
         @update-cell="(pos: number, val: number) => futoshiki.setCell(pos, val)"
         @retry="futoshiki.solve()"
         @undo="futoshiki.undo()"
         @redo="futoshiki.redo()"
         @hint="(pos: number) => futoshiki.hintCell(pos)"
+        @candidate-peek-start="onCandidatePeekStart"
+        @candidate-peek-end="onCandidatePeekEnd"
         @erased="emit('erased')"
       />
       <AnswerKeyLaminate
@@ -140,25 +144,21 @@ onUnmounted(() => unregisterDrawer?.());
         <div class="bg-card rounded-lg px-2 py-1.5">
           <ControlPanel
             :board-size="futoshiki.boardSize.value"
+            :difficulty="futoshiki.difficulty.value"
             :loading="futoshiki.loading.value"
             :solve-state="futoshiki.solveState.value"
             mobile
             @update:board-size="futoshiki.boardSize.value = $event"
+            @update:difficulty="futoshiki.difficulty.value = $event"
             @randomize="futoshiki.randomize()"
             @clear="futoshiki.clearBoard()"
             @solve="futoshiki.solve()"
+            @undo="futoshiki.undo()"
+            @redo="futoshiki.redo()"
+            @hint="futoshikiBoard?.hintFocusedCell()"
             :share="onShare"
             @peek-start="startPeek()"
             @peek-end="endPeek()"
-          />
-          <!-- The touch entry tray (T3-W11 U-A): always present in this card on coarse
-               pointers; keys write through the board's own input path. -->
-          <DigitPad
-            v-if="padActive"
-            :board-size="futoshiki.boardSize.value"
-            :enabled="cellFocused"
-            @digit="boardRef?.enterValue($event)"
-            @erase="boardRef?.enterValue(0)"
           />
         </div>
       </HandDrawnOutline>
@@ -178,12 +178,17 @@ onUnmounted(() => unregisterDrawer?.());
         <div ref="panelEl" class="controls-card bg-card rounded-xl p-5">
           <ControlPanel
             :board-size="futoshiki.boardSize.value"
+            :difficulty="futoshiki.difficulty.value"
             :loading="futoshiki.loading.value"
             :solve-state="futoshiki.solveState.value"
             @update:board-size="futoshiki.boardSize.value = $event"
+            @update:difficulty="futoshiki.difficulty.value = $event"
             @randomize="futoshiki.randomize()"
             @clear="futoshiki.clearBoard()"
             @solve="futoshiki.solve()"
+            @undo="futoshiki.undo()"
+            @redo="futoshiki.redo()"
+            @hint="futoshikiBoard?.hintFocusedCell()"
             :share="onShare"
             @peek-start="startPeek()"
             @peek-end="endPeek()"

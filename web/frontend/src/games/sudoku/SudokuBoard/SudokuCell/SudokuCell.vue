@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
 import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
+import { useLongPress } from "@games/shared/useLongPress";
 
 const props = defineProps<{
   position: number;
@@ -26,10 +27,6 @@ const props = defineProps<{
    *  the solver's own propagation, present only while the peek gesture is held.
    *  Rendered only while the cell is empty. */
   marks?: number[];
-  /** DigitPad live (T3-W11 U-A): the OS virtual keyboard yields to the pad
-   *  (`inputmode="none"`) so focusing a cell doesn't eclipse half the board with
-   *  a keyboard the pad replaces. Hardware keyboards are unaffected. */
-  suppressVirtualKeyboard?: boolean;
   /** T3-W13 §4.1 — the board's `celebrating`, forwarded to the glyph's flourish
    *  gate: solve reveals keep beat-2, a hint stops at the written glyph. */
   flourish?: boolean;
@@ -38,6 +35,10 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "update", position: number, value: number): void;
   (e: "cellFocus", position: number): void;
+  /** Long-press peek (T4-WM §3): a hold on this EMPTY cell opens the candidate glimpse; the
+   *  board forwards these up to the game's marks activation. Release ends the peek. */
+  (e: "candidatePeekStart"): void;
+  (e: "candidatePeekEnd"): void;
 }>();
 
 const inputRef = ref<HTMLInputElement | null>(null);
@@ -139,6 +140,37 @@ function onFocus() {
   emit("cellFocus", props.position);
 }
 
+// ── Long-press peek (T4-WM §3, lane E) ───────────────────────────────
+// A press-and-hold on an EMPTY cell opens its candidate glimpse — the engine-domains pencil marks
+// the answer-key peek already rides, marks-only (no laminate) — mirroring the shipped hold-to-peek
+// grammar. The gesture funnels up (cell → board → game) to the shared marks activation; release,
+// cancel, or a drift-off leave dismisses it. Pointer Events only (contextmenu never fires on iOS,
+// r3 §4a); `useLongPress` fires the honest `vibrateOnce` on recognition (Android buzzes, iOS
+// silently no-ops). Read-only — the peek never touches `value` (the W8 seam holds long-press at
+// peek). A recognized hold sets `suppressClick` so the tap that ends it can't focus/raise the
+// keyboard; a plain tap (no peek) still focuses through the native-entry path lane A restored. The
+// flag resets at the next pointerdown so a drift-off release never swallows a later tap's focus.
+let suppressClick = false;
+const longPress = useLongPress({
+  onLongPress: () => {
+    suppressClick = true;
+    emit("candidatePeekStart");
+  },
+  onRelease: () => emit("candidatePeekEnd"),
+});
+function onCellPointerDown(e: PointerEvent) {
+  suppressClick = false;
+  if (props.value !== 0) return; // only an empty cell has a candidate glimpse to show
+  longPress.onPointerDown(e);
+}
+function onCellClick() {
+  if (suppressClick) {
+    suppressClick = false;
+    return;
+  }
+  focusInput();
+}
+
 // ── Engine-domains pencil marks (W6 beat 9) ──────────────────────────
 // The n×n mini-grid uses the classic pencil-mark convention: value v always
 // sits at slot v (row-major), so a candidate's *position* encodes its value
@@ -172,15 +204,29 @@ defineExpose({ focus: focusInput });
       'is-invalid': isInvalid,
     }"
     :style="isRevealed ? { '--reveal-delay': `${noiseDelay}ms` } : undefined"
-    @click="focusInput"
+    @click="onCellClick"
+    @pointerdown="onCellPointerDown"
+    @pointermove="longPress.onPointerMove"
+    @pointerup="longPress.onPointerUp"
+    @pointercancel="longPress.onPointerCancel"
+    @pointerleave="longPress.onPointerCancel"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
   >
-    <!-- Hidden input for keyboard interaction -->
+    <!-- Native bounded entry (T4-WM §1): the cell's own opacity-0 input is the sole entry
+         surface on every pointer. `inputmode=numeric` raises the iOS digit pad; `type=text`
+         (not number) is what lets `maxlength` bound the cell (maxlength is spec-ignored on
+         number). The autocorrect/autocapitalize/spellcheck trio + `enterkeyhint` are the iOS
+         congruence set. The write path (@input/@keydown) is byte-identical to the keyboard's. -->
     <input
       ref="inputRef"
       type="text"
-      :inputmode="suppressVirtualKeyboard ? 'none' : 'numeric'"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck="false"
+      enterkeyhint="done"
       :value="displayValue"
       :maxlength="boardSize >= 10 ? 3 : 2"
       :tabindex="tabIndex"
@@ -190,7 +236,7 @@ defineExpose({ focus: focusInput });
       @keydown="handleKeydown"
       @focus="onFocus"
       @blur="isFocused = false"
-      class="absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
+      class="cell-native-input absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
     />
 
     <!-- Engine-domains pencil marks (W6 beat 9): the solver's propagated
@@ -396,6 +442,20 @@ defineExpose({ focus: focusInput });
 .sudoku-cell:focus-within {
   background: transparent;
   outline: none;
+}
+
+/* iOS zoom de-risk (T4-WM §1): mobile Safari zooms a focused input whose computed font-size
+   is <16px. The input is opacity-0 (the SVG glyph is the visible value), so this 16px is a
+   purely structural floor — it costs nothing visually and is never traded for `maximum-scale`
+   (that breaks pinch-zoom, WCAG 1.4.4). Asserted in the mobile e2e. */
+.cell-native-input {
+  font-size: 16px;
+  /* T4-WM §2 — component-level entry look: the input is the cell's tap target (absolute
+     inset-0, opacity-0), so iOS paints its gray tap-flash on IT. Suppressed here so the
+     pencil ghost stays the sole focus voice on tap. Scoped to the entry surface this lane
+     owns; additive to lane C's global interactive sweep (identical value, no conflict). The
+     focus RING stays lane A's crayon-blue :focus-visible ghost (tap = no ring, key = ring). */
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

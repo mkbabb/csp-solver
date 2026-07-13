@@ -8,6 +8,14 @@ import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
 import HandwrittenLogo from "@pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue";
 import AttributionCard from "@pencil/chrome/AttributionCard/AttributionCard.vue";
 import { registerDrawerMasthead } from "@games/shared/useControlsDrawer";
+import { useKeyboardViewport } from "@games/shared/useKeyboardViewport";
+
+// T4-WM §1 keyboard-avoidance (lane C): one document-scoped install covers both games — it
+// keys on the shared `.board-cells` contract and no-ops for every other focus target. The OS
+// software keyboard (back with the pad abrogation) shrinks the visual viewport on iOS without
+// resizing the layout viewport, so this scrolls a focused board cell clear of the keyboard via
+// `visualViewport` (the one cross-engine path — WebKit ships no VirtualKeyboard/interactive-widget).
+useKeyboardViewport();
 
 // OD-8 in-app game selector. Futoshiki's whole scene (board + controls + its own useFutoshiki
 // + Worker) is async + `v-if`-gated below, so it only downloads and spins up when Futoshiki is
@@ -222,6 +230,12 @@ function closeAll() {
        50% outside this box — paint containment would crop the gesture mid-flight;
        a promoted layer's ink overflow clips nothing. */
   will-change: transform;
+  /* Safe-area inset (T4-WM lane C): the fixed toggle sits at the very top-right corner,
+     so under a notch/Dynamic Island (viewport-fit=cover, index.html) it must pad clear
+     of the inset. `env()` resolves to 0 on non-notched hardware and desktop, so this is
+     a no-op there and a real clearance only where the OS reserves the corner. */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 /* The 8rem md rung died with the md row regime (R3): at 768–1023 the layout now
@@ -317,6 +331,11 @@ function closeAll() {
 @media (max-width: 1023px) {
   .board-group {
     align-items: center;
+    /* Keyboard-avoidance scroll-room (T4-WM lane C): useKeyboardViewport publishes the OS
+       keyboard's occlusion height as `--keyboard-inset` on <html>; the stacked scene claims
+       that much bottom room so a below-fold focused cell has somewhere to scroll up TO,
+       clear of the keyboard. 0 at rest and on every non-stacked/desktop layout. */
+    padding-bottom: var(--keyboard-inset, 0px);
   }
 }
 

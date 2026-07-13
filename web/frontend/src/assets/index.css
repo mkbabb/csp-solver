@@ -301,6 +301,34 @@
   }
 }
 
+/* ── T4-WM (lane C) — iOS/mobile platform discipline ───────────────────────────
+ * Deliberate, single-home touch hygiene for the E8 recut — unlayered so it beats the
+ * layered utilities but never fights a scoped SFC rule (it only ADDS properties none of
+ * them set). Two of the discipline set are ALREADY delivered by Tailwind preflight on
+ * `html,:host` and are deliberately NOT re-declared here (re-declaring would be the exact
+ * "scattershot" the spec forbids — both are asserted green in mobile-platform.spec.ts):
+ * `-webkit-text-size-adjust:100%` and the INHERITED `-webkit-tap-highlight-color:transparent`.
+ * What preflight does not give, and this block adds:
+ *   · overscroll-behavior — the app is an h-screen scene with no inner scroll container, so
+ *     the page IS the board scene's scroller; `contain` stops the rubber-band / scroll-chain
+ *     / pull-to-refresh on it.
+ *   · the GAME-SURFACE suppression — `.board-cells` (the shared BOARD_CELLS_CLASS grid, both
+ *     games) is never a text-selection surface: `-webkit-touch-callout` + `user-select:none`
+ *     kill the iOS long-press callout/loupe (user-select is the load-bearing half — r3 4b) so
+ *     the wave's pointerdown long-press (lane E) inherits a clean gesture surface, and
+ *     `touch-action:manipulation` drops the double-tap-zoom delay without stealing pan/scroll
+ *     or the long-press. Scoped to the board alone — every other surface stays selectable. */
+html {
+  overscroll-behavior: contain;
+}
+
+.board-cells {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
 @layer utilities {
   /* Cartoon shadow variants */
   .cartoon-shadow-sm {

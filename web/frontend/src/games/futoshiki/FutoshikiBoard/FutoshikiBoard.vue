@@ -65,9 +65,6 @@ const props = defineProps<{
    *  Routes the grid through the EXISTING erase beat and fades glyphs + marginalia;
    *  on the erase's completion the board emits `erased` (the seam) instead of redrawing. */
   leaving?: boolean;
-  /** DigitPad live (T3-W11 U-A): threads virtual-keyboard suppression to the cells —
-   *  true exactly when the pad is the entry surface (coarse pointer + stacked regime). */
-  padActive?: boolean;
   /** T4-W3 share-truth (twin of SudokuBoard's): a `?board=` was PRESENT but failed to decode —
    *  the composable already fell back to a fresh deal. Folds a one-line "this shared link
    *  couldn't be read" clause into the FIRST fresh-board announce. One-shot. */
@@ -81,9 +78,10 @@ const emit = defineEmits<{
   (e: "redo"): void;
   (e: "hint", position: number): void;
   (e: "erased"): void;
-  /** DigitPad enablement (T3-W11 U-A): true while any cell input holds DOM focus.
-   *  The pad's keys prevent focus-steal on mousedown, so a pad tap never flips this. */
-  (e: "cellFocusChange", focused: boolean): void;
+  /** Long-press peek (T4-WM §3) — twin of SudokuBoard's: forwarded from a cell's hold to the
+   *  game's marks activation (candidate glimpse, marks-only). Release ends it. */
+  (e: "candidatePeekStart"): void;
+  (e: "candidatePeekEnd"): void;
 }>();
 
 const gridTemplateColumns = computed(
@@ -266,22 +264,14 @@ function onCellFocus(pos: number) {
   focusedPos.value = pos;
 }
 
-// ── DigitPad wiring (T3-W11 U-A) — twin of SudokuBoard's (D16) ───────
-// `enterValue` writes THROUGH the same onCellUpdate the cell input uses (override rules,
-// murmur hold, undo recording inherited); focusin/focusout report "a cell holds focus".
-const cellsEl = ref<HTMLElement | null>(null);
-function onCellsFocusIn() {
-  emit("cellFocusChange", true);
+// T4-WM §2 — the hint act, factored so the ControlPanel's Hint button and the board's H key
+// share ONE path (twin of Sudoku's, D16): both reveal the currently focused cell. On coarse
+// the last tap sets focusedPos and it survives the button tap (only a board reset clears it),
+// so tapping Hint reveals the cell you last touched. Exposed for the parent (sibling panel).
+function hintFocusedCell() {
+  emit("hint", focusedPos.value);
 }
-function onCellsFocusOut(e: FocusEvent) {
-  if (!(e.relatedTarget instanceof Node) || !cellsEl.value?.contains(e.relatedTarget)) {
-    emit("cellFocusChange", false);
-  }
-}
-function enterValue(value: number) {
-  onCellUpdate(focusedPos.value, value);
-}
-defineExpose({ enterValue });
+defineExpose({ hintFocusedCell });
 
 function onBoardKeydown(e: KeyboardEvent) {
   const n = props.boardSize;
@@ -323,7 +313,7 @@ function onBoardKeydown(e: KeyboardEvent) {
     case "h":
     case "H":
       if (e.ctrlKey || e.metaKey) handled = false;
-      else emit("hint", focusedPos.value);
+      else hintFocusedCell();
       break;
     default:
       handled = false;
@@ -514,7 +504,6 @@ function isRevealed(pos: number): boolean {
 
       <!-- Interactive cell grid -->
       <div
-        ref="cellsEl"
         class="grid"
         :class="BOARD_CELLS_CLASS"
         role="grid"
@@ -526,8 +515,6 @@ function isRevealed(pos: number): boolean {
           gridTemplateRows: gridTemplateColumns,
         }"
         @keydown="onBoardKeydown"
-        @focusin="onCellsFocusIn"
-        @focusout="onCellsFocusOut"
       >
         <FutoshikiCell
           v-for="pos in totalCells"
@@ -548,10 +535,11 @@ function isRevealed(pos: number): boolean {
           :ghost-path="cellRects[pos - 1] ?? ''"
           :constraint-label="constraintLabels.get(pos - 1) ?? ''"
           :marks="pencilMarks?.[String(pos - 1)]"
-          :suppress-virtual-keyboard="padActive"
           :flourish="celebrating"
           @update="onCellUpdate"
           @cell-focus="onCellFocus"
+          @candidate-peek-start="emit('candidatePeekStart')"
+          @candidate-peek-end="emit('candidatePeekEnd')"
         />
       </div>
 
