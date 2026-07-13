@@ -206,10 +206,16 @@ test.describe("keyboard-avoid (emulated visualViewport)", () => {
     const last = inputs.nth((await inputs.count()) - 1); // bottom-right cell
 
     // Focus it while the band is still full (no keyboard) — the composable is a no-op here, so the
-    // cell stays at its natural spot, which is below where the keyboard will land: the RED state.
+    // cell stays at its natural spot: the RED state. The band edge is derived FROM the measured
+    // cell (mid-cell, clamped to the viewport) rather than a layout-dependent constant — a fixed
+    // 360 rode the incidental page height and broke when W7's margin content lifted the board
+    // ~20px on the linux runner. Deriving it guarantees the eclipse precondition on any layout.
     await last.tap();
     const beforeBox = (await last.boundingBox())!;
-    const KEYBOARD_TOP = 360; // emulate a ~280px keyboard on the 640 viewport
+    const KEYBOARD_TOP = Math.min(
+      Math.round(beforeBox.y + beforeBox.height / 2), // band edge eclipses the cell's lower half
+      620, // never taller than the 640 viewport minus a sane band
+    );
     expect(beforeBox.y + beforeBox.height).toBeGreaterThan(KEYBOARD_TOP);
 
     // Raise the keyboard: shrink the visual viewport + fire resize. The composable must scroll the
