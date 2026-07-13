@@ -107,3 +107,25 @@ No rendered-pixel surface — W0 touches record, config, and estate only. π/DEL
 - **Dependabot dismissal + 0.4.0 publish + branch prune are owner-side** — W0 lands the decisions and the record; the GitHub/registry actions execute on the owner's next pass. The gate accepts "pending-owner" as a recorded state, as T3-W2 did for the CF Pages redeploy.
 - **B1's PNG prune is destructive to history** — LFS-migration rewrites tracked blobs; prune-to-load-bearing drops evidence. Ratify B1 before touching the tree; the tranche-IV evidence dir must not repeat the bloat regardless of which arm wins.
 - **The java reversal must be struck in prose, not from memory** — verify the three delete-order strings against the live README/appendix text (the same grep-hole discipline as T3-W2's blacklist); a reversal registered in B §5 but left live in README:135 is still a lie in the record.
+
+---
+## Execution record (2026-07-12)
+
+Executed at base `ed35b347` — workflow `wf_fbd2aeaa-90d`, five lanes in two 3-wide batches (A record-retrue · B branches-tags · C dependabot-publish · D contracts-ledger · E png-prune). Born-RED bank: `../evidence/w0/gates-born-red.md`.
+
+| Gate | Born-RED | Close |
+|---|---|---|
+| dependabot | 9 open | **0** — #50–58 dismissed with the spec comment verbatim (API note below) |
+| recap-java | 4 un-annotated delete-orders | **0 un-annotated** — 5 mentions survive, every one carrying REVERSED/SUPERSEDED/STAYS; B §5 registers the java-stays reversal |
+| recap-ledger | 0 E-rows | B §6 carries E1–E7 + E6·crons + T3-2·deploy (9 rows) |
+| crons | — | enumerated at open: zero live (`CronList` empty); E6 closed by enumeration |
+| branches | 44 merged | **0** — 44 pruned; `worktree-wf_977ec162` deleted (content verifiably in master); `worktree-wf_34cf008e` KEPT (unlanded mimalloc/profile-split/alloc_count/restart-nogood attack work — ledgered) |
+| tags | v0.3.0 absent | annotated `v0.3.0` → `3b75eca2`, pushed (crates.io 0.3.0 created 18:30:03Z; commit 18:35:53Z; `csp-solver/src` byte-identical to pre-publish HEAD); `pre-morph-excision` RESOLVED-truthful — direct parent of the excision `d9781e29`, the v0.2.0 coincidence kept |
+| bloat | 420 PNGs / 70 MB | 302 orphans pruned (55.45 MB), 115 load-bearing kept (13.2 MB), zero broken references (symmetric before/after resolver); policy in force at `docs/tranches/EVIDENCE-POLICY.md` |
+| publish | crates.io 0.3.0 | **0.4.0 published** (147 files, dry-run clean, no `--allow-dirty`) — `max_version` verified 0.4.0 |
+| deploy-doc | 2 foreign-infra files | `deploy.md` + `domains.md` rewritten to the true contract (npm-run-deploy only, the packument trap named, Pages `sudoku`/`master`, rollback recipe); `tls.md` + `blob-backend-dr.md` excised (wholesale foreign Mongo runbooks); the IP//var/www grep CLEAN |
+| declarations | 0 | `docs/precepts/declared-decisions.md` — browser matrix, en-only, no-telemetry, each stamped 2026-07-12 |
+| ledger | — | keyframes.js RETIRED · bbnf cadence DECLARED · propagate_stratified RETIRED-terminal; pointered rows name their waves (mod.rs/prettier→W4, W8-chunk/GPU-tile→W1) |
+| π/DELTA | — | N/A held: `git diff --stat -- web/frontend/src csp-solver/src` empty across the wave |
+
+Reconciliations (recorded, not silent): the recap-java component probe's literal count-to-zero conflicts with F1's annotate-don't-delete order — executed to F1; zero *un-annotated* mentions is the gate's meaning, history preserved. The dependabot REST API rejects `no_longer_relevant` (422 — a code-scanning value); `not_used` is the dismissal of record, comment verbatim. `spike/iai-callgrind` (local + origin, `ff5d9de3`) recorded for W2's iai lane. `docs/precepts` is a submodule — the contract + declaration edits commit and push there; the pointer bumps here.

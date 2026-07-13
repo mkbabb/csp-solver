@@ -106,9 +106,9 @@ Every chronic, deferred, banked, partial, and prompt-recap row gets a **terminal
 | core `0.4.0` crates.io publish | **BUILD** by ballot B2 (publish at W0) | B2 / W0 |
 | `mod.rs` → self-named-file flip | **BUILD** — rides W4 with `clippy.self_named_module_files`; the T3 owner-veto window is closed | W4 |
 | GPU tile residue | **SUPERSEDED-by-W1** — the N-layer bitmap variant zeroes the Chromium 8/s residue; verify at W1's gate | W1 (verify) |
-| `propagate_stratified` wire-in | **RETIRE** — no consumer, no evidence of need; symbol removed T3-W3. Exception checked: W13's two cage primitives do NOT require stratified propagation → retire stands | W13 (checked) → retire |
-| `keyframes.js` | **RETIRE** — house motion grammar settled: CSS vars (W10's `--ease-*`) + WAAPI (the drawer/gallery `useFlipGlide` engine); a second animation brain is the rejected covenant (`App.vue:60-67`). The T3 open question is answered by the estate | W10 → retire |
-| bbnf cadence | **DECLARE** — sync-on-solver-release, scripted (`scripts/sync-csp-solver-vendor.sh --check/--update/--verify`); NEVER push bbnf-lang origin (standing) | declare |
+| `propagate_stratified` wire-in | **RETIRED (terminal)** — no consumer, no evidence of need; symbol removed at `d78fef8e` (T3-W3), byte-recoverable. Exception checked: W13's cage primitives are the cage-sum/cage-product `revise_impl`s and don't want stratified propagation → retire stands | W13 (checked) → retired |
+| `keyframes.js` | **RETIRED** — house motion grammar settled: CSS vars (W10's `--ease-*`) + WAAPI (the drawer/gallery `useFlipGlide` engine); a second animation brain is the rejected covenant (`App.vue:61-64`). The T3 open question is answered by the estate | W10 → retired |
+| bbnf cadence | **DECLARED** — sync-on-solver-release, scripted (`bbnf-lang/scripts/sync-csp-solver-vendor.sh --check/--update/--verify`), out-of-repo standing; NEVER push bbnf-lang origin (standing) | declared |
 
 ### 4c. Prompt recap — every ask row, terminal (walking [`owner-prompts.md`](evidence/corpus/owner-prompts.md))
 

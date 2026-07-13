@@ -1,6 +1,6 @@
 # Appendix B — Prompt recap: every owner ask, three campaigns
 
-The consolidated prompts matrix — the a1/a2/a3 audit lanes unified into one ledger. Every owner directive traceable across **tranche-1** (grand-uplift), **tranche-2**, and **this session** (the tranche-III mandates + the process guardrails), each with its disposition-at-HEAD and its evidence. Sources: **a1** = `audit32/A1-prompts-recap.md` (this-session + tranche-III + cron/process), **a2** = `audit32/A2-prompt-recap-verification.md` (tranche-2 recap re-verified in-tree), **a3** = `audit32/a3-prompts-recap.md` (tranche-1 vs HEAD). Every row re-verified against the live tree at base `3b75eca2`, not trusted from any authored recap.
+The consolidated prompts matrix — the a1/a2/a3 audit lanes unified into one ledger. Every owner directive traceable across **tranche-1** (grand-uplift), **tranche-2**, and **this session** (the tranche-III mandates + the process guardrails), each with its disposition-at-HEAD and its evidence. Sources: **a1** = `audit32/A1-prompts-recap.md` (this-session + tranche-III + cron/process), **a2** = `audit32/A2-prompt-recap-verification.md` (tranche-2 recap re-verified in-tree), **a3** = `audit32/a3-prompts-recap.md` (tranche-1 vs HEAD). Every row re-verified against the live tree at base `3b75eca2`, not trusted from any authored recap. **Re-trued at T4-W0 (2026-07-12)** — this recap froze before the execution-era owner audits; §5 gained the java-stays reversal and §6 absorbed E1–E7, both reconciled post-execution against the tranche-III record (§3a/§3b) and the T4 disposition ledger (§4c).
 
 **Status vocabulary:** **ADDRESSED** (landed at HEAD) · **FOLDED→Wx** (a live tranche-III ask, homed to a wave) · **STANDING** (a persistent rule in force) · **OPEN** (specified, owner-side, not executed) · **OBSOLETED** (premise removed by a later ratification) · **SURVIVAL** (tranche-1 ask holding at HEAD, possibly carried further). No **ORPHAN** rows exist — every ask has a disposition.
 
@@ -31,7 +31,7 @@ a2 re-verified `docs/tranches/2026-07-tranche-2/appendices/B-prompt-recap.md` ag
 | T2-3 | Tests NEVER inline — `tests/` only | **ADDRESSED** | W3 `ed07ba6b`: `error.rs` + `generate.rs` whitebox → `tests/`; cfg(test)-in-src zero |
 | T2-5 | Most-modern Rust/wasm; legacy interrogated | **ADDRESSED** | W1 `5f9980c8`: stable pin, PyO3 0.29, Vite 8, TS 6, Node 24 |
 | R4 | Substrate island excised @0.3.0 | **ADDRESSED** | W3: restart/CHS/nogoods, SoftConstraint, dead variable.rs — 335 LOC trio |
-| R5 | 28GB worktree purge + `java` branch delete | **OPEN (owner-side)** | 52 worktrees live, `java` + `origin/java` both present — carried to WGATE ([README §5](../README.md#5-owner-reminders-actions-not-questions--none-gate-authoring)) |
+| R5 | 28GB worktree purge + `java` branch delete | **worktree-purge SATISFIED · `java`-delete REVERSED** | worktree half valid history: on-disk worktrees now 1, merged branch prune executed at T4-W0. `java`-delete half **REVERSED — owner ruling 2026-07-11 "The java branch STAYS"** (`java` + `origin/java` STAY; registered §5) |
 | R6 | e2e wired into CI | **ADDRESSED** | W0 `7c245bed`: new e2e lane, CI 9/9 |
 | R8/R9 | keyframes.js excised · never-push (csp-solver) RETIRED | **ADDRESSED** | W1+W5 excision; W7 records retirement — bbnf's own never-push STANDS |
 
@@ -104,7 +104,24 @@ Dispositions the owner overturned, now stable at HEAD:
 | D2 CLAUDE.md | ADDRESSED (rewritten pithy) | **SUPERSEDED** → removal+fold | `ede25188` |
 | N9 repo split | re-booked "next tranche" | **VOID** (demo stays) | `tranche-2-2026-07-06.md:13` |
 | R9 never-push (csp-solver) | STANDING order | **RETIRED** (bbnf's stands) | W7 record |
+| R5 `java`-delete (registered 2026-07-11) | OPEN owner-side action — delete `java` + `origin/java`, carried to WGATE | **REVERSED** — the branch STAYS; owner ruling verbatim: *"The java branch STAYS"* | E1 (owner audit); T4 README §4d; the worktree-purge half stands separately (§2, R5) |
 
-## 6. Completeness assertion
+## 6. The execution-era owner audits (registered at T4-W0)
 
-Every owner directive traceable across the three campaigns is homed above. Tranche-1's ask-set survives or is explicitly obsoleted by a recorded ratification (a3); tranche-2's matches its own recap's SPECIFIED column and re-verifies green at HEAD save R5 (owner-gated, still open — a2); the tranche-III mandates and the cron/process guardrails are FOLDED/STANDING/OPEN as marked (a1). **No ORPHAN rows** — every ask carries a Pass-1, audit-32, or explicit owner-gate disposition. The one open *action* is R5 (worktree purge + `java` delete), carried to WGATE as an owner reminder, not tranche work.
+This recap froze at base `3b75eca2` (last authored `23e89339`, 2026-07-10) — **before** the tranche-III execution-era owner audits, which lived in the T3 README §3a/§3b prose and the T4 disposition ledger (§4c) alone. Absorbed here in the recap's row grammar, each with its terminal disposition; E1's java-stays half is the reversal registered §5.
+
+| Audit | Date | Verbatim / tight quote | Disposition (where it landed) |
+|---|---|---|---|
+| **E1** | 2026-07-10 · java ruling 2026-07-11 | *"Spawn the dev server for me to audit. The java branche stays."* | STANDING — dev server at :3001 live; **java STAYS** recorded at W0 (the reversal, §5), correcting this frozen recap |
+| **E2** | 2026-07-11 (audit 2) | completion *"still preposterous—too small, occludes the bottom … performance is god awful on this page"*; boil hairline/outline; toggle *"completely ruined … as yoshi's story … BEFORE"*; sun-spiral contrast; TL artifact; + the drawer feature | SATISFIED — T3-W12 (`b4d7aedf`) |
+| **E3** | 2026-07-11 (audit 3, shipped tree) | idle perf *"awful"*; drawer *"not right AT ALL"*; peek/hint *"proper pencil draw-in"*; boil *"why … so non-performant? … from first principles"*; toggle low-res → *"warp … like a storybook-popup"* | SATISFIED — T3-W13 (`bbeb2b87`) |
+| **E4** | 2026-07-11 (audit 4, mid-W13) | *"the controls should slide from out and under the board, not from the top right. The bouncy-and easing curves … smoother and more congruent with glass-ui."* | SATISFIED — T3-W13: S5 (pull-out from under the board) + S3′ (the one glass curve) |
+| **E5** | execution-era (2026-07-10→12) | *"ALL workflows."* (re-deploy scope clarification) | SATISFIED — execution-scope clarification, honored |
+| **E6** | 2026-07-12 | *"We must fix this OOM issue. What … remains for the next tranche, potentially? Kill all crons, too."* | OOM **root-caused + closed** — npx-packument trap → deploy via `npm run deploy` (wrangler 4.110.0 pinned, `65425697`); carried as a WGATE trap. "What remains" = **this tranche**. Crons → the row below |
+| **E6 · crons** | 2026-07-12 | *"Kill all crons, too."* | enumerated at T4-W0 open (2026-07-12): zero live jobs (`CronList` empty); prior authoring-cron kill = WGATE `CronDelete efaae137`; the ask is closed by enumeration |
+| **E7** | 2026-07-12 (audit 5) | *"The performance in safari is god awful and nearly entirely unusable. What pencil boil facilities might we change—without a compromise in quality and design in any way. Profile."* | → **W1** — the tranche origin (FAM-3 + the Safari core, `evidence/safari/`) |
+| **T3-2 · deploy-workflows** | 2026-07-10 | *"deploy workflows to specify"* (the T3-2 sub-ask) | subsumed by the `npm run deploy` pipeline (wrangler 4.110.0 pinned, `65425697`); contract doc trued at `docs/precepts/infra/deploy.md` (T4-W0) |
+
+## 7. Completeness assertion
+
+Every owner directive traceable across the three campaigns is homed above. Tranche-1's ask-set survives or is explicitly obsoleted by a recorded ratification (a3); tranche-2's matches its own recap's SPECIFIED column and re-verifies green at HEAD save R5's worktree half (owner-gated — a2); the tranche-III mandates and the cron/process guardrails are FOLDED/STANDING/OPEN as marked (a1); the execution-era owner audits E1–E7 are homed §6. **No ORPHAN rows** — every ask carries a Pass-1, audit-32, execution-audit, or explicit owner-gate disposition. R5's one open *action* resolves at T4-W0: the worktree-purge half is valid history (on-disk worktrees now 1, the merged branch prune executed at T4-W0); the `java`-delete half is **REVERSED — owner ruling 2026-07-11 "The java branch STAYS"** (registered §5), so nothing rides to WGATE but the pruned-worktree record.
