@@ -83,6 +83,8 @@ Five ballots put to the owner via `AskUserQuestion`, recommendation first, each 
 | **B4 — new-game set** | **Thermo + Killer + KenKen** | Two n-ary `revise_impl`s (cage-sum + cage-product) serve Killer + KenKen; Thermo needs zero new constraints and ships first as W11's contract proof. Crosswords are NO on two verified walls (n-ary blindness + the u128 domain ceiling) | a subset | W13 |
 | **B5 — owner-taste sheaf** | **adjudicate on captures** — celebration rainbow ink; the T3-banked items (sun ray-comb per-beat cadence, wring twist −15°, Bloom crest 1.092, divider hoist 0.9752 exception) | These are taste, not correctness — engineering carries the captures, the owner rules. Each rides its own wave's gate review with a before/after pair | per-item accept/veto on the capture | B5 → each item's wave |
 
+**RATIFIED — 2026-07-12, owner ballot.** B1 **prune + policy cap** · B2 **publish 0.4.0 at W0** · B3 **retire all three** · B4 **all three games** — every recommendation adopted as put. B5 rides the wave gates as specified. The ballots bind their owning waves; implementation awaits the owner's start order.
+
 ---
 
 ## 4. The disposition ledger — closes 100%
