@@ -49,6 +49,11 @@ export interface SolveResponse {
   /** Search backtracks — already on the wire (worker `backtracks`, a bigint
    * carried as string); parsed here for the W6 stat-line. */
   backtracks: number;
+  /** Search-tree nodes visited + domain-propagation steps — the telemetry
+   * twins of `backtracks` (T4-W7 free-win getters), each a worker bigint-string
+   * parsed here for the stat-line. */
+  nodesExplored: number;
+  propagations: number;
   solutionCount: number;
   /** Wall-clock ms of the wasm call, measured inside the worker. */
   elapsedMs?: number;
@@ -152,6 +157,8 @@ export function useSolver() {
         values: res.solved ? toRecord(res.solutions.subarray(0, size ** 4)) : values,
         budgetExceeded: res.budgetExceeded,
         backtracks: Number(res.backtracks),
+        nodesExplored: Number(res.nodesExplored),
+        propagations: Number(res.propagations),
         solutionCount: res.solutionCount,
         elapsedMs: res.elapsedMs,
       };

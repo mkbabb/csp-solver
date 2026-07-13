@@ -53,6 +53,11 @@ export type SolverResponse =
       boardSize: number;
       solutions: Uint32Array;
       backtracks: string; // bigint -> string, structured-clone-safe & JSON-safe
+      /** Search-tree nodes visited + domain-propagation steps — machine-effort
+       * telemetry twins of `backtracks` (T4-W7 free-win getters), each a wasm
+       * bigint carried as a string for structured-clone/JSON safety. */
+      nodesExplored: string;
+      propagations: string;
       budgetExceeded: boolean;
       /** Wall-clock ms of the wasm solve call, measured inside the worker (W6 stat-line). */
       elapsedMs: number;

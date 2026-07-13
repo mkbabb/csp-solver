@@ -290,19 +290,31 @@ test('permalink: share writes ?board= and a reload reproduces the exact board', 
   expect(new URL(page.url()).searchParams.has('board')).toBe(true);
 });
 
-// ── 6. Hint — H fills the focused cell from the peek cache, solver-ink ──
+// ── 6. Hint (T4-W7) — two presses: name the technique, THEN ink the digit ──
+// The answer-reveal-with-no-name is retired. First H names the cheapest human deduction in
+// the margin and lights its becauseCells in the peek-laminate tone; only the SECOND H inks
+// the digit through the existing reveal draw-in (born-RED: one press revealed, no name).
 
-test('hint: H fills the focused blank cell in solver ink', async ({ page }) => {
+test('hint: first H names the technique + highlights, second H inks the digit', async ({ page }) => {
   await loadSudoku(page);
   const blank = await firstBlank(page, '.sudoku-cell');
 
   await cellInput(page, blank).click();
-  await page.keyboard.press('h');
 
-  // The peek solve is async on first use — poll for the reveal.
-  await expect.poll(() => cellInput(page, blank).inputValue(), { timeout: 20000 }).not.toBe('');
-  // Solver-ink: the revealed cell renders a glyph like any solver answer.
-  await expect(page.locator('.sudoku-cell').nth(blank).locator('.glyph-svg')).toHaveCount(1);
+  // First press — reasoning, not the answer: the margin NAMES the cheapest single and the
+  // becauseCells light up. No digit inks yet (the two-press semantics).
+  await page.keyboard.press('h');
+  await expect(page.locator('.margin-note')).toContainText('single');
+  await expect(page.locator('.sudoku-cell.is-because').first()).toBeVisible();
+
+  // Second press — the digit inks in through the reveal draw-in: one more solver-ink glyph.
+  const filledBefore = await page.locator('.sudoku-cell .glyph-svg').count();
+  await page.keyboard.press('h');
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 20000 })
+    .toBe(filledBefore + 1);
+  // The highlight lifts once the reasoning is spent (the transaction closed).
+  await expect(page.locator('.sudoku-cell.is-because')).toHaveCount(0);
 });
 
 // ── 7. Marks gesture — engine-domains marks ride the peek, never ambient ──

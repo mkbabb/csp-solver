@@ -71,6 +71,8 @@ self.addEventListener("message", async (event: MessageEvent<SolverRequest>) => {
           boardSize: result.boardSize,
           solutions,
           backtracks: result.backtracks.toString(),
+          nodesExplored: result.nodesExplored.toString(),
+          propagations: result.propagations.toString(),
           budgetExceeded: result.budgetExceeded,
           elapsedMs,
         };

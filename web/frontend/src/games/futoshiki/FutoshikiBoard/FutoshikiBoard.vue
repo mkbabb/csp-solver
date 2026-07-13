@@ -30,11 +30,14 @@ import { findConflicts } from "./conflicts";
 import { classifyCode, PAPER_NOTE_COPY } from "@games/shared/solver/classifyError";
 import { BOARD_CELLS_CLASS } from "@games/shared/constants";
 import { formatSolveTally } from "@games/shared/solveTally";
+import { formatHintNote } from "@games/shared/techniqueVoice";
+import { toDisplayChar } from "@pencil/glyph/glyphRegistry";
 import {
   consumeDrawerHint,
   useControlsDrawer,
   vignetteDocked,
 } from "@games/shared/useControlsDrawer";
+import type { HintResult } from "@games/shared/techniqueEngine";
 import type { Inequality, SolveState, SolveStats } from "@games/futoshiki/types";
 import type { AnimationState } from "@pencil/types";
 
@@ -69,6 +72,13 @@ const props = defineProps<{
    *  the composable already fell back to a fresh deal. Folds a one-line "this shared link
    *  couldn't be read" clause into the FIRST fresh-board announce. One-shot. */
   linkError?: boolean;
+  /** T4-W7 — the armed hint's reasoning (twin of SudokuBoard's): the board highlights
+   *  `becauseCells` in the peek-laminate tone + writes the technique name in the margin. */
+  hint?: HintResult | null;
+  /** T4-W7 — the measured difficulty signature ("singles only" / "needs an inequality chain"),
+   *  keyed to the deal-time grade. Futoshiki has no request voice, so this is the first
+   *  difficulty word its fresh-board margin carries; empty for an ungraded (restored) board. */
+  gradeSignature?: string;
 }>();
 
 const emit = defineEmits<{
@@ -329,6 +339,28 @@ function setMargin(text: string, tone: "graphite" | "teacher-red" | "gold-star")
   marginTone.value = tone;
 }
 
+// ── The named hint (T4-W7) — twin of SudokuBoard's ───────────────────
+// The becauseCells highlighted in the peek-laminate tone (FutoshikiCell's `is-because`
+// tier); the margin voice writes the technique name via the existing note wipe on arm.
+const hintBecause = computed(
+  () => new Set((props.hint?.becauseCells ?? []).map(String)),
+);
+watch(
+  () => props.hint,
+  (hint) => {
+    if (hint) {
+      setMargin(
+        formatHintNote(
+          hint.technique,
+          toDisplayChar(hint.value, props.boardSize),
+          hint.houseAxis,
+        ),
+        "graphite",
+      );
+    }
+  },
+);
+
 let slowSolveTimer: ReturnType<typeof setTimeout> | null = null;
 watch(
   () => props.solveState,
@@ -383,13 +415,17 @@ let pendingFreshAnnounce: string | null = null;
 // Say so ONCE, folded into that first fresh-board announce, so the one status voice reports
 // both the failed link AND what arrived instead. Consumed on use.
 let linkErrorPending = props.linkError === true;
+// T4-W7 — the measured difficulty signature, once graded, is the futoshiki margin's first
+// difficulty word (there is no EASY/MEDIUM/HARD request voice here). Empty for an ungraded
+// board (a restored permalink), which keeps the bare "a fresh N×N".
 function freshBoardCopy(): string {
   const fresh = `a fresh ${props.boardSize}×${props.boardSize}`;
+  const measured = props.gradeSignature ? ` — ${props.gradeSignature}` : "";
   if (linkErrorPending) {
     linkErrorPending = false;
-    return `this shared link couldn't be read — ${fresh}`;
+    return `this shared link couldn't be read — ${fresh}${measured}`;
   }
-  return fresh;
+  return `${fresh}${measured}`;
 }
 watch(
   () => props.givenCells.size,
@@ -527,6 +563,7 @@ function isRevealed(pos: number): boolean {
           :is-solved="String(pos - 1) in solvedValues"
           :is-revealed="isRevealed(pos - 1)"
           :is-invalid="conflicts.positions.has(String(pos - 1))"
+          :is-because="hintBecause.has(String(pos - 1))"
           :noise-delay="noiseDelays.get(String(pos - 1)) ?? 0"
           :board-size="boardSize"
           :row-index="Math.floor((pos - 1) / boardSize) + 1"

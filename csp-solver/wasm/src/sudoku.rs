@@ -60,6 +60,8 @@ pub struct SudokuSolveResult {
     n: u32,
     solutions: Vec<u32>,
     backtracks: u64,
+    nodes_explored: u64,
+    propagations: u64,
     budget_exceeded: bool,
 }
 
@@ -87,6 +89,22 @@ impl SudokuSolveResult {
     #[wasm_bindgen(getter)]
     pub fn backtracks(&self) -> u64 {
         self.backtracks
+    }
+
+    /// Search-tree nodes the solver visited (assignments made). Already
+    /// tallied in [`csp_solver::SolveStats`]; surfaced here alongside
+    /// `backtracks` as richer machine-effort telemetry for the stat-line.
+    #[wasm_bindgen(getter, js_name = nodesExplored)]
+    pub fn nodes_explored(&self) -> u64 {
+        self.nodes_explored
+    }
+
+    /// Domain-propagation steps the solver performed (AC-3/GAC revisions).
+    /// The propagation-side twin of `nodes_explored`, from the same
+    /// [`csp_solver::SolveStats`] the search already computes.
+    #[wasm_bindgen(getter)]
+    pub fn propagations(&self) -> u64 {
+        self.propagations
     }
 
     /// Flat solution buffer, `solution_count * (n*n)^2` cells. Crosses as a
@@ -155,6 +173,8 @@ pub fn solve_sudoku(
     let solutions = csp.solve_with_given(&config, &given);
     let stats = csp.stats();
     let backtracks = stats.backtracks;
+    let nodes_explored = stats.nodes_explored;
+    let propagations = stats.propagations;
     let budget_exceeded = stats.budget_exceeded;
 
     let solution_count = solutions.len();
@@ -175,6 +195,8 @@ pub fn solve_sudoku(
         n,
         solutions: flatten_solutions(&solutions),
         backtracks,
+        nodes_explored,
+        propagations,
         budget_exceeded,
     })
 }

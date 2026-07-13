@@ -17,6 +17,9 @@ import {
 import { classifyError } from "@games/shared/solver/classifyError";
 import { useUndoHistory } from "../../shared/useUndoHistory";
 import { usePencilMarks } from "../../shared/usePencilMarks";
+import { gradeFutoshiki, hintFutoshiki } from "../technique/futoshikiTechnique";
+import { formatGradeSignature } from "@games/shared/techniqueVoice";
+import type { HintResult, TechniqueId } from "@games/shared/techniqueEngine";
 import type { Difficulty, Inequality, SolveState, SolveStats } from "../types";
 
 /**
@@ -73,6 +76,21 @@ export function useFutoshiki() {
   const errorCode = ref("");
   const boardGeneration = ref(0);
 
+  // ── The honest grade (T4-W7) — twin of useSudoku's: the hardest technique the engine
+  // needed to solve the DEALT board IS its difficulty. Held on the game state (W9-B1 reads
+  // `hardestTechnique`; the margin signature reads `gradeSignature`). Futoshiki has no
+  // difficulty request voice, so the signature is the first difficulty word its margin gets.
+  const hardestTechnique = ref<TechniqueId | null>(null);
+  const gradeSolved = ref(false);
+  const gradeSignature = computed(() =>
+    formatGradeSignature(hardestTechnique.value, gradeSolved.value),
+  );
+
+  // ── The named hint (T4-W7) — twin of useSudoku's two-press act: the first press names the
+  // cheapest human deduction and arms the reasoning; the second inks the digit through the
+  // existing reveal draw-in. Null between transactions; any board mutation disarms it.
+  const hintReasoning = ref<HintResult | null>(null);
+
   // Bounded undo/redo (W6) — the shared {pos,prev,next}[] history machine (D16 twin).
   // The arrow wrapper keeps the call hoisting-safe: `applyCellValue` is declared below.
   const { clearUndo, recordEdit, undo, redo } = useUndoHistory((pos, value) =>
@@ -91,11 +109,20 @@ export function useFutoshiki() {
     solveStats.value = null;
     errorMessage.value = "";
     errorCode.value = "";
+    clearGrade();
     for (let i = 0; i < totalCells.value; i++) {
       values.value[String(i)] = 0;
     }
     clearUndo();
     boardGeneration.value++;
+  }
+
+  // T4-W7 — the measured grade + any armed hint belong to the DEALT board; a blank or reset
+  // board carries neither. Twin of useSudoku's.
+  function clearGrade() {
+    hardestTechnique.value = null;
+    gradeSolved.value = false;
+    hintReasoning.value = null;
   }
 
   function clearBoard() {
@@ -104,6 +131,7 @@ export function useFutoshiki() {
     solveStats.value = null;
     errorMessage.value = "";
     errorCode.value = "";
+    clearGrade();
     for (let i = 0; i < totalCells.value; i++) {
       values.value[String(i)] = 0;
     }
@@ -134,6 +162,7 @@ export function useFutoshiki() {
       overriddenCells.value.add(key);
     }
     values.value[key] = value;
+    hintReasoning.value = null; // T4-W7 — an edit disarms a stale armed hint
     if (solveState.value !== "idle") {
       solveState.value = "idle";
       solveStats.value = null; // the stat-line goes stale with the grade (W6)
@@ -171,6 +200,13 @@ export function useFutoshiki() {
       inequalities.value = board.inequalities;
       originalGivenCells.value = new Set(givenCells.value);
       animatingCells.value = new Set(givenCells.value);
+      // T4-W7 — grade the DEALT board synchronously (twin of useSudoku's): the hardest
+      // technique the ladder needed — singles, inequality-forcing, or chains — IS the honest
+      // difficulty, over self-computed candidates, never the AC-pruned masks.
+      const graded = gradeFutoshiki(values.value, boardSize.value, inequalities.value);
+      hardestTechnique.value = graded.hardestTechnique;
+      gradeSolved.value = graded.solved;
+      hintReasoning.value = null; // a fresh deal voids any armed hint
       clearUndo(); // a fresh board voids the prior board's history
       dropBoardParam(); // a freshly-dealt board voids the shared permalink
       boardGeneration.value++;
@@ -216,6 +252,8 @@ export function useFutoshiki() {
       solveState.value = result.solved ? "solved" : "failed";
       solveStats.value = {
         backtracks: result.backtracks,
+        nodesExplored: result.nodesExplored,
+        propagations: result.propagations,
         solutionCount: result.solutionCount,
         elapsedMs: result.elapsedMs,
       };
@@ -256,13 +294,47 @@ export function useFutoshiki() {
     return peekCache.value.values;
   }
 
-  // ── Hint tier (W6) — fill the focused cell from the peek cache, solver-ink ──────
-  // 'H' on the board reveals one cell in the solver's own tone (added to solvedValues,
-  // so it renders sparkle-rainbow like any solver answer). No bookkeeping, no penalties;
-  // pristine givens are immune. Not recorded on the undo stack — a hint is a reveal, not
-  // a user edit. Twin of useSudoku's (D16).
-  async function hintCell(pos: number) {
+  // Ink a revealed digit through the EXISTING reveal path (twin of useSudoku's, D16): added
+  // to solvedValues (solver-ink tone), routed through animatingCells (350ms draw-in) — one
+  // grammar, zero new timing constants; not recorded on the undo stack; no gold star.
+  function inkReveal(pos: number, val: number) {
     const key = String(pos);
+    if (val === 0 || values.value[key] === val) return;
+    values.value[key] = val;
+    solvedValues.value = { ...solvedValues.value, [key]: val };
+    overriddenCells.value.delete(key);
+    animatingCells.value = new Set([key]);
+    if (solveState.value !== "idle") {
+      solveState.value = "idle";
+      solveStats.value = null;
+    }
+    queueSave();
+  }
+
+  // ── The named hint (T4-W7) — reasoning first, digit second (twin of useSudoku's) ────
+  // First press: name the cheapest single that PLACES a digit (naked/hidden — the inequality
+  // rungs prune candidates, they don't place, so they grade but never surface as the placement
+  // hint) and arm its reasoning; the board highlights the `becauseCells` and writes the name in
+  // the margin. Second press: ink the digit. No nameable single → the answer-key reveal.
+  async function hintCell(pos: number) {
+    if (hintReasoning.value) {
+      const h = hintReasoning.value;
+      hintReasoning.value = null;
+      inkReveal(h.cell, h.value);
+      return;
+    }
+    const key = String(pos);
+    const preferred = originalGivenCells.value.has(key) ? undefined : pos;
+    const step = hintFutoshiki(
+      values.value,
+      boardSize.value,
+      inequalities.value,
+      preferred,
+    );
+    if (step) {
+      hintReasoning.value = step;
+      return;
+    }
     if (originalGivenCells.value.has(key)) return; // givens already show the answer
     let solution: Record<string, number>;
     try {
@@ -272,18 +344,12 @@ export function useFutoshiki() {
     }
     const val = solution[key] ?? 0;
     if (val === 0 || values.value[key] === val) return;
-    values.value[key] = val;
-    solvedValues.value = { ...solvedValues.value, [key]: val }; // solver-ink tone
-    overriddenCells.value.delete(key);
-    // T3-W13 §4.1 — the hint IS a one-cell solve reveal (twin of useSudoku's, D16):
-    // joining animatingCells routes the glyph through the existing reveal path — one
-    // grammar, zero new timing constants; the flourish gate stays closed (no gold star).
-    animatingCells.value = new Set([key]);
-    if (solveState.value !== "idle") {
-      solveState.value = "idle";
-      solveStats.value = null;
-    }
-    queueSave();
+    hintReasoning.value = {
+      technique: "reveal",
+      cell: pos,
+      value: val,
+      becauseCells: [pos],
+    };
   }
 
   // Engine-domains pencil marks (W6 beat 9 — the shared marks machine; D16 twin).
@@ -310,6 +376,7 @@ export function useFutoshiki() {
     solveStats.value = null;
     errorMessage.value = "";
     errorCode.value = "";
+    clearGrade(); // a restored board carries no measured grade
     clearUndo();
   }
 
@@ -418,6 +485,9 @@ export function useFutoshiki() {
     undo,
     redo,
     hintCell,
+    hintReasoning,
+    hardestTechnique,
+    gradeSignature,
     shareBoard,
     linkError,
     pencilMarks,

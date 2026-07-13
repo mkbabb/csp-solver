@@ -116,6 +116,8 @@ onUnmounted(() => unregisterDrawer?.());
         :error-code="futoshiki.errorCode.value"
         :solve-stats="futoshiki.solveStats.value"
         :pencil-marks="futoshiki.pencilMarks.value"
+        :hint="futoshiki.hintReasoning.value"
+        :grade-signature="futoshiki.gradeSignature.value"
         @update-cell="(pos: number, val: number) => futoshiki.setCell(pos, val)"
         @retry="futoshiki.solve()"
         @undo="futoshiki.undo()"

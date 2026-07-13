@@ -203,6 +203,32 @@ test("touch play tools (T4-WM §2): undo / redo / hint tappable at ≥44px, wire
   expect(bg).toBe("rgba(0, 0, 0, 0)");
 });
 
+test("hint two-press by touch (T4-W7): first tap names the technique, second inks the digit", async ({
+  page,
+}) => {
+  await loadSudoku(page);
+  const hint = page
+    .locator(".mobile-control-panel")
+    .getByRole("button", { name: "Reveal a hint in the selected cell" });
+
+  const blank = await firstBlank(page, ".sudoku-cell");
+  await cellInput(page, blank).tap();
+
+  // First tap — reasoning, not the answer: the margin NAMES the cheapest single and the
+  // becauseCells light in the peek-laminate tone. No digit inks yet.
+  await hint.tap();
+  await expect(page.locator(".margin-note")).toContainText("single");
+  await expect(page.locator(".sudoku-cell.is-because").first()).toBeVisible();
+
+  // Second tap — the digit inks in through the reveal draw-in: one more solver-ink glyph. The
+  // two-press hint rides the button; the cell-hold long-press peek gesture is untouched.
+  const filledBefore = await page.locator(".sudoku-cell .glyph-svg").count();
+  await hint.tap();
+  await expect
+    .poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: 20000 })
+    .toBe(filledBefore + 1);
+});
+
 test("attribution opens on a single tap (T4-WM §2): the coarse focusin+click double-fire no longer nets closed", async ({
   page,
 }) => {

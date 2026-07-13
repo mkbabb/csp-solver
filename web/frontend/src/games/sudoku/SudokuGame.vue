@@ -127,6 +127,8 @@ onUnmounted(() => unregisterDrawer?.());
         :error-code="sudoku.errorCode.value"
         :solve-stats="sudoku.solveStats.value"
         :pencil-marks="sudoku.pencilMarks.value"
+        :hint="sudoku.hintReasoning.value"
+        :grade-signature="sudoku.gradeSignature.value"
         @update-cell="(pos: number, val: number) => sudoku.setCell(pos, val)"
         @retry="sudoku.solve()"
         @undo="sudoku.undo()"

@@ -81,6 +81,8 @@ self.addEventListener("message", async (event: MessageEvent<SolverRequest>) => {
           n: result.n,
           solutions,
           backtracks: result.backtracks.toString(),
+          nodesExplored: result.nodesExplored.toString(),
+          propagations: result.propagations.toString(),
           budgetExceeded: result.budgetExceeded,
           elapsedMs,
         };

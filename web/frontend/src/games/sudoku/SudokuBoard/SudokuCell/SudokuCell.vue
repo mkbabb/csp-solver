@@ -23,6 +23,11 @@ const props = defineProps<{
   tabIndex: number;
   /** This cell participates in a duplicate the teacher circled (§1.4/§4.2). */
   isInvalid: boolean;
+  /** T4-W7 — this cell is part of the armed hint's reasoning (the `becauseCells`): a laminate
+   *  wash lights in the peek-laminate tone (its own layer, behind the glyph + focus ring) so the
+   *  answer key visibly points here before the digit inks. Fades in on the existing marks
+   *  cadence — no new timing constant. */
+  isBecause?: boolean;
   /** Engine-domains pencil marks (W6 beat 9): surviving candidate values from
    *  the solver's own propagation, present only while the peek gesture is held.
    *  Rendered only while the cell is empty. */
@@ -202,6 +207,7 @@ defineExpose({ focus: focusInput });
       'cell-reveal-animated': isRevealed,
       'is-active': isActive,
       'is-invalid': isInvalid,
+      'is-because': isBecause,
     }"
     :style="isRevealed ? { '--reveal-delay': `${noiseDelay}ms` } : undefined"
     @click="onCellClick"
@@ -237,6 +243,17 @@ defineExpose({ focus: focusInput });
       @focus="onFocus"
       @blur="isFocused = false"
       class="cell-native-input absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
+    />
+
+    <!-- T4-W7 hint laminate (lane E3): the becauseCells wash in the peek-laminate tone (the
+         answer key's teacher-red), a translucent square sitting BEHIND the glyph and the focus
+         ghost so both a filled house cell's digit and the keyboard-focus blue ring read over it.
+         Its own layer — no collision with the ghost's focus/invalid tiers — so the tone shows
+         even on the very cell you focused to ask. Decorative; the margin voice carries the name. -->
+    <div
+      v-if="isBecause"
+      class="cell-because pointer-events-none absolute"
+      aria-hidden="true"
     />
 
     <!-- Engine-domains pencil marks (W6 beat 9): the solver's propagated
@@ -360,6 +377,46 @@ defineExpose({ focus: focusInput });
 @media (prefers-contrast: more) {
   .pencil-marks {
     opacity: 0.75;
+  }
+}
+
+/* ── T4-W7 hint laminate — the becauseCells wash (peek-laminate tone) ─────
+   A translucent teacher-red square with a soft inset border, faded in on the EXISTING marks
+   cadence (marks-fade-in, 250ms — no new timing constant). Its own layer, behind the glyph +
+   focus ghost, so it composes with a filled cell's digit and the keyboard-focus blue ring
+   rather than colliding with the ghost's focus/invalid tiers — the tone shows even on the cell
+   you focused to ask. */
+.cell-because {
+  inset: 9%;
+  border-radius: 12%;
+  background: color-mix(
+    in srgb,
+    var(--color-teacher-red, var(--color-crayon-rose)) 15%,
+    transparent
+  );
+  box-shadow: inset 0 0 0 2px
+    color-mix(
+      in srgb,
+      var(--color-teacher-red, var(--color-crayon-rose)) 50%,
+      transparent
+    );
+  animation: marks-fade-in 250ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell-because {
+    animation: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .cell-because {
+    background: color-mix(
+      in srgb,
+      var(--color-teacher-red, var(--color-crayon-rose)) 24%,
+      transparent
+    );
+    box-shadow: inset 0 0 0 2px var(--color-teacher-red, var(--color-crayon-rose));
   }
 }
 

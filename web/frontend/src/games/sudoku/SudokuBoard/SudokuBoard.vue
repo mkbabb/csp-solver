@@ -18,11 +18,14 @@ import { findConflicts } from "./conflicts";
 import { classifyCode, PAPER_NOTE_COPY } from "@games/shared/solver/classifyError";
 import { BOARD_CELLS_CLASS } from "@games/shared/constants";
 import { formatSolveTally } from "@games/shared/solveTally";
+import { formatHintNote } from "@games/shared/techniqueVoice";
+import { toDisplayChar } from "@pencil/glyph/glyphRegistry";
 import {
   consumeDrawerHint,
   useControlsDrawer,
   vignetteDocked,
 } from "@games/shared/useControlsDrawer";
+import type { HintResult } from "@games/shared/techniqueEngine";
 import type { Difficulty, SolveState, SolveStats } from "@games/sudoku/types";
 import type { AnimationState } from "@pencil/types";
 
@@ -61,6 +64,14 @@ const props = defineProps<{
    *  fell back to a fresh deal. Folds a one-line "this shared link couldn't be read" clause into
    *  the FIRST fresh-board announce so the corrupt link doesn't degrade silently. One-shot. */
   linkError?: boolean;
+  /** T4-W7 — the armed hint's reasoning: the first press names the cheapest technique and
+   *  hands this over; the board highlights `becauseCells` in the peek-laminate tone and writes
+   *  the technique name in the margin. Null between hint transactions. */
+  hint?: HintResult | null;
+  /** T4-W7 — the measured difficulty signature ("singles only" / "needs an X-wing"), keyed to
+   *  the deal-time grade's hardest technique. Replaces W6's request bucket in the fresh-board
+   *  announce ONCE graded; empty for an ungraded board (W6's request voice stays the fallback). */
+  gradeSignature?: string;
 }>();
 
 const emit = defineEmits<{
@@ -351,6 +362,29 @@ function setMargin(text: string, tone: "graphite" | "teacher-red" | "gold-star")
   marginTone.value = tone;
 }
 
+// ── The named hint (T4-W7) — the reasoning the first press draws ──────
+// The cells the argument turns on, highlighted in the peek-laminate tone (SudokuCell's
+// `is-because` tier). The margin voice writes the technique name via the existing 250ms
+// note wipe when a hint arms — graphite, so it never masquerades as a grade.
+const hintBecause = computed(
+  () => new Set((props.hint?.becauseCells ?? []).map(String)),
+);
+watch(
+  () => props.hint,
+  (hint) => {
+    if (hint) {
+      setMargin(
+        formatHintNote(
+          hint.technique,
+          toDisplayChar(hint.value, props.boardSize),
+          hint.houseAxis,
+        ),
+        "graphite",
+      );
+    }
+  },
+);
+
 let slowSolveTimer: ReturnType<typeof setTimeout> | null = null;
 watch(
   () => props.solveState,
@@ -433,23 +467,26 @@ let pendingFreshAnnounce: string | null = null;
 // that first fresh-board announce, so the one status voice reports both the failed link AND
 // what arrived instead — never a silent degrade, never a second live region. Consumed on use.
 let linkErrorPending = props.linkError === true;
-// B-0 de-launder (T4-W6 ROW-4): the EASY/MEDIUM/HARD dropdown is a bucket REQUEST, never a
-// live grade — the board on screen carries no measurement (the bake-time backtrack proxy is
-// never shown). So the margin speaks in the request voice, "you asked for medium", not the
-// old "a fresh 9×9, medium" that stated the bucket as a measured fact. An ungraded board
-// (no difficulty prop — a restored permalink or a hand-typed board) gets no tier word at all:
-// request voice or silence, never a fabricated grade. W7's technique engine supplies the real
-// live grade to the tally slot (W9-B1); until then that slot reads "ungraded".
+// B-0 de-launder (T4-W6 ROW-4) → T4-W7 measured signature. The EASY/MEDIUM/HARD dropdown is a
+// bucket REQUEST, never a grade — so before a board is graded the margin speaks the request
+// voice, "you asked for medium". T4-W7 grades the DEALT board and, once graded, the measured
+// signature ("singles only" / "needs an X-wing") REPLACES the request word — the honest,
+// live-measured difficulty. An ungraded board (a restored permalink or a hand-typed board:
+// gradeSignature empty) keeps the request voice, or silence with no difficulty prop — never a
+// fabricated grade. The three-signal spine holds: this is DIFFICULTY, distinct from FILL and
+// CORRECTNESS.
 function freshBoardCopy(): string {
   const fresh = `a fresh ${props.boardSize}×${props.boardSize}`;
-  const request = difficultyWord.value
-    ? ` — you asked for ${difficultyWord.value}`
-    : "";
+  const measured = props.gradeSignature
+    ? ` — ${props.gradeSignature}`
+    : difficultyWord.value
+      ? ` — you asked for ${difficultyWord.value}`
+      : "";
   if (linkErrorPending) {
     linkErrorPending = false;
-    return `this shared link couldn't be read — ${fresh}${request}`;
+    return `this shared link couldn't be read — ${fresh}${measured}`;
   }
-  return `${fresh}${request}`;
+  return `${fresh}${measured}`;
 }
 watch(
   () => props.givenCells.size,
@@ -600,6 +637,7 @@ function isRevealed(pos: number): boolean {
           :is-solved="String(pos - 1) in solvedValues"
           :is-revealed="isRevealed(pos - 1)"
           :is-invalid="conflicts.positions.has(String(pos - 1))"
+          :is-because="hintBecause.has(String(pos - 1))"
           :noise-delay="noiseDelays.get(String(pos - 1)) ?? 0"
           :board-size="boardSize"
           :subgrid-size="size"

@@ -17,6 +17,9 @@ import {
 import { classifyError } from "@games/shared/solver/classifyError";
 import { useUndoHistory } from "../../shared/useUndoHistory";
 import { usePencilMarks } from "../../shared/usePencilMarks";
+import { gradeSudoku, hintSudoku } from "../technique/sudokuTechnique";
+import { formatGradeSignature } from "@games/shared/techniqueVoice";
+import type { HintResult, TechniqueId } from "@games/shared/techniqueEngine";
 import type { Difficulty, SolveState, SolveStats } from "../types";
 
 /**
@@ -72,6 +75,24 @@ export function useSudoku() {
   const errorCode = ref("");
   const boardGeneration = ref(0);
 
+  // ── The honest grade (T4-W7) — the hardest technique the engine needed to solve the DEALT
+  // board IS its difficulty (arXiv 1403.7373). Held on the game state: W9-B1 reads
+  // `hardestTechnique` for the tally; the board's margin signature reads `gradeSignature`,
+  // which replaces W6's opaque bucket ("you asked for medium") once a board is graded. Set at
+  // deal (randomize); null on clear/init/restore (an ungraded board keeps W6's request voice).
+  const hardestTechnique = ref<TechniqueId | null>(null);
+  const gradeSolved = ref(false);
+  const gradeSignature = computed(() =>
+    formatGradeSignature(hardestTechnique.value, gradeSolved.value),
+  );
+
+  // ── The named hint (T4-W7) — two presses: the first names the cheapest human deduction and
+  // arms the reasoning (becauseCells to highlight + the value to ink); the second inks the
+  // digit through the existing reveal draw-in. Null between transactions. Any board mutation
+  // disarms it (a hint the board changed under is stale). The answer-reveal-with-no-name (the
+  // W6 one-press reveal) is retired — a hint says WHY before it shows WHAT.
+  const hintReasoning = ref<HintResult | null>(null);
+
   // Bounded undo/redo (W6) — the shared {pos,prev,next}[] history machine. The arrow
   // wrapper keeps the call hoisting-safe: `applyCellValue` is declared below.
   const { clearUndo, recordEdit, undo, redo } = useUndoHistory((pos, value) =>
@@ -89,11 +110,20 @@ export function useSudoku() {
     solveStats.value = null;
     errorMessage.value = "";
     errorCode.value = "";
+    clearGrade();
     for (let i = 0; i < totalCells.value; i++) {
       values.value[String(i)] = 0;
     }
     clearUndo();
     boardGeneration.value++;
+  }
+
+  // T4-W7 — the measured grade + any armed hint are properties of the DEALT board; a blank or
+  // reset board carries neither. Cleared wherever the board is emptied or swapped.
+  function clearGrade() {
+    hardestTechnique.value = null;
+    gradeSolved.value = false;
+    hintReasoning.value = null;
   }
 
   function clearBoard() {
@@ -102,6 +132,7 @@ export function useSudoku() {
     solveStats.value = null;
     errorMessage.value = "";
     errorCode.value = "";
+    clearGrade();
     for (let i = 0; i < totalCells.value; i++) {
       values.value[String(i)] = 0;
     }
@@ -132,6 +163,7 @@ export function useSudoku() {
       overriddenCells.value.add(key);
     }
     values.value[key] = value;
+    hintReasoning.value = null; // T4-W7 — an edit disarms a stale armed hint
     // Revert solve state so the board no longer shows success/failure
     if (solveState.value !== "idle") {
       solveState.value = "idle";
@@ -170,6 +202,13 @@ export function useSudoku() {
 
       originalGivenCells.value = new Set(givenCells.value);
       animatingCells.value = new Set(givenCells.value);
+      // T4-W7 — grade the DEALT board synchronously: the hardest technique the R1–R3 ladder
+      // needed to solve it IS its honest difficulty. Pure TS over self-computed candidates
+      // (never the GAC masks); bounded, no search. Feeds the margin signature + W9-B1's tally.
+      const graded = gradeSudoku(values.value, size.value);
+      hardestTechnique.value = graded.hardestTechnique;
+      gradeSolved.value = graded.solved;
+      hintReasoning.value = null; // a fresh deal voids any armed hint
       clearUndo(); // a fresh board voids the prior board's history
       dropBoardParam(); // a freshly-dealt board voids the shared permalink
       queueSave();
@@ -217,6 +256,8 @@ export function useSudoku() {
       solveState.value = result.solved ? "solved" : "failed";
       solveStats.value = {
         backtracks: result.backtracks,
+        nodesExplored: result.nodesExplored,
+        propagations: result.propagations,
         solutionCount: result.solutionCount,
         elapsedMs: result.elapsedMs,
       };
@@ -264,13 +305,47 @@ export function useSudoku() {
     return peekCache.value.values;
   }
 
-  // ── Hint tier (W6) — fill the focused cell from the peek cache, solver-ink ──────
-  // 'H' on the board reveals one cell in the solver's own tone (added to solvedValues,
-  // so it renders sparkle-rainbow like any solver answer). No bookkeeping, no penalties;
-  // pristine givens are immune (they already show the right glyph). Not recorded on the
-  // undo stack — a hint is a reveal, not a user edit.
-  async function hintCell(pos: number) {
+  // Ink a revealed digit through the EXISTING reveal path (350ms solver-ink draw-in, grain
+  // suppressed during the tween, PRM-instant branch) — one grammar, zero new timing constants.
+  // Added to solvedValues so it renders in the solver's own tone; NOT recorded on the undo
+  // stack (a reveal is not a user edit); the flourish gate stays closed (no gold star).
+  function inkReveal(pos: number, val: number) {
     const key = String(pos);
+    if (val === 0 || values.value[key] === val) return;
+    values.value[key] = val;
+    solvedValues.value = { ...solvedValues.value, [key]: val }; // solver-ink tone
+    overriddenCells.value.delete(key);
+    animatingCells.value = new Set([key]);
+    if (solveState.value !== "idle") {
+      solveState.value = "idle";
+      solveStats.value = null;
+    }
+    queueSave();
+  }
+
+  // ── The named hint (T4-W7) — reasoning first, digit second ──────────────────────
+  // First press: name the cheapest human deduction (naked/hidden single) and arm its
+  // reasoning — the board highlights the `becauseCells` in the peek-laminate tone and writes
+  // the technique name in the margin. Second press: ink the digit through `inkReveal`. When no
+  // single is available (the board needs an elimination first), degrade honestly to the
+  // answer-key reveal of the focused cell — named `reveal`, so the two-press shape holds.
+  async function hintCell(pos: number) {
+    // Second press: ink the armed reasoning.
+    if (hintReasoning.value) {
+      const h = hintReasoning.value;
+      hintReasoning.value = null;
+      inkReveal(h.cell, h.value);
+      return;
+    }
+    // First press: the cheapest named single, preferring the focused cell when it is forced.
+    const key = String(pos);
+    const preferred = originalGivenCells.value.has(key) ? undefined : pos;
+    const step = hintSudoku(values.value, size.value, preferred);
+    if (step) {
+      hintReasoning.value = step;
+      return;
+    }
+    // Fallback — no nameable single: reveal the focused cell from the answer key, unnamed.
     if (originalGivenCells.value.has(key)) return; // givens already show the answer
     let solution: Record<string, number>;
     try {
@@ -280,20 +355,12 @@ export function useSudoku() {
     }
     const val = solution[key] ?? 0;
     if (val === 0 || values.value[key] === val) return;
-    values.value[key] = val;
-    solvedValues.value = { ...solvedValues.value, [key]: val }; // solver-ink tone
-    overriddenCells.value.delete(key);
-    // T3-W13 §4.1 — the hint IS a one-cell solve reveal: joining animatingCells routes
-    // the glyph through the existing reveal path (350ms solver-ink draw-in, grain
-    // suppressed during the tween, PRM-instant branch) — one grammar, zero new timing
-    // constants. The board's flourish gate (`celebrating` requires solveState 'solved')
-    // stays closed: a hint writes itself in, no gold star.
-    animatingCells.value = new Set([key]);
-    if (solveState.value !== "idle") {
-      solveState.value = "idle";
-      solveStats.value = null;
-    }
-    queueSave();
+    hintReasoning.value = {
+      technique: "reveal",
+      cell: pos,
+      value: val,
+      becauseCells: [pos],
+    };
   }
 
   // Engine-domains pencil marks (W6 beat 9 — the shared marks machine). SudokuGame
@@ -319,6 +386,7 @@ export function useSudoku() {
     solveStats.value = null;
     errorMessage.value = "";
     errorCode.value = "";
+    clearGrade(); // a restored board carries no measured grade (W6's request voice is the fallback)
     clearUndo();
   }
 
@@ -434,6 +502,9 @@ export function useSudoku() {
     undo,
     redo,
     hintCell,
+    hintReasoning,
+    hardestTechnique,
+    gradeSignature,
     shareBoard,
     linkError,
     pencilMarks,

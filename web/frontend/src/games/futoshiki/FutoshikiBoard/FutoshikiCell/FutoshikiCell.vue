@@ -22,6 +22,10 @@ const props = defineProps<{
   tabIndex: number;
   /** This cell participates in a Latin-square duplicate or inequality violation (§1.4/§4.2). */
   isInvalid: boolean;
+  /** T4-W7 — this cell is part of the armed hint's reasoning (twin of SudokuCell's): a laminate
+   *  wash lights in the peek-laminate tone on its own layer (behind the glyph + focus ring) so
+   *  the answer key visibly points here before the digit inks. No new timing constant. */
+  isBecause?: boolean;
   /** Folded inequality constraints touching this cell (F6) — e.g. "greater than the cell to
    *  the right and less than the cell below". Empty when the cell borders no caret. Appended
    *  to the accessible name so a screen reader hears the relation while arrowing the grid; the
@@ -199,6 +203,7 @@ defineExpose({ focus: focusInput });
       'cell-reveal-animated': isRevealed,
       'is-active': isActive,
       'is-invalid': isInvalid,
+      'is-because': isBecause,
     }"
     :style="isRevealed ? { '--reveal-delay': `${noiseDelay}ms` } : undefined"
     @click="onCellClick"
@@ -235,6 +240,15 @@ defineExpose({ focus: focusInput });
       @focus="onFocus"
       @blur="isFocused = false"
       class="cell-native-input absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
+    />
+
+    <!-- T4-W7 hint laminate (twin of SudokuCell's): the becauseCells wash in the peek-laminate
+         tone, its own layer behind the glyph + focus ghost, so the tone shows even on the focused
+         cell. Decorative; the margin voice carries the name. -->
+    <div
+      v-if="isBecause"
+      class="cell-because pointer-events-none absolute"
+      aria-hidden="true"
     />
 
     <!-- Engine-domains pencil marks (W6 beat 9): the solver's propagated
@@ -355,6 +369,43 @@ defineExpose({ focus: focusInput });
 @media (prefers-contrast: more) {
   .pencil-marks {
     opacity: 0.75;
+  }
+}
+
+/* ── T4-W7 hint laminate — the becauseCells wash (peek-laminate tone), twin of SudokuCell's ──
+   Translucent teacher-red square, faded in on the EXISTING marks cadence (no new timing
+   constant), on its own layer behind the glyph + focus ghost so it composes with both. */
+.cell-because {
+  inset: 9%;
+  border-radius: 12%;
+  background: color-mix(
+    in srgb,
+    var(--color-teacher-red, var(--color-crayon-rose)) 15%,
+    transparent
+  );
+  box-shadow: inset 0 0 0 2px
+    color-mix(
+      in srgb,
+      var(--color-teacher-red, var(--color-crayon-rose)) 50%,
+      transparent
+    );
+  animation: marks-fade-in 250ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell-because {
+    animation: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .cell-because {
+    background: color-mix(
+      in srgb,
+      var(--color-teacher-red, var(--color-crayon-rose)) 24%,
+      transparent
+    );
+    box-shadow: inset 0 0 0 2px var(--color-teacher-red, var(--color-crayon-rose));
   }
 }
 

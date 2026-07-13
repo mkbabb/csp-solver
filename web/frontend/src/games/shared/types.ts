@@ -14,6 +14,12 @@ export type SolveState = "idle" | "solving" | "solved" | "failed" | "error";
  * `elapsedMs` is the worker-measured wall clock of the wasm call. */
 export interface SolveStats {
   backtracks: number;
+  /** Search-tree nodes visited (assignments made) and domain-propagation steps
+   * (AC-3/GAC revisions) — machine-effort telemetry twins of `backtracks`, on
+   * the wire since T4-W7's free-win wasm getters. Present on the stat-line
+   * object; the margin rendering of them is W9's. */
+  nodesExplored: number;
+  propagations: number;
   solutionCount: number;
   elapsedMs?: number;
 }
