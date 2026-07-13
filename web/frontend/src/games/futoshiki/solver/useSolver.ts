@@ -12,145 +12,99 @@
  * The wasm module only ever runs inside `solver.worker.ts` (off the DOM thread); see
  * that file's header. The `@mkbabb/csp-solver-wasm` import there is the package name —
  * the W12 registry swap flips only `package.json`, no source change.
+ *
+ * The Worker singleton + pending map + bounded respawn live in the shared
+ * `@games/shared/solver/transport`; this file keeps only the Futoshiki-specific board +
+ * inequality marshalling and request/response shapes.
  */
-import type { Inequality } from '../types'
-import { SolverError, isSerializedSolverError, type SolverErrorCode } from './solverError'
-import type { SolverRequest, SolverResponse } from './protocol'
+import type { Inequality } from "../types";
+import { SolverError } from "@games/shared/solver/solverError";
+import { createSolverTransport } from "@games/shared/solver/transport";
+import type { SolverRequest, SolverResponse } from "./protocol";
 
 export interface BoardResponse {
-  values: Record<string, number>
-  boardSize: number
+  values: Record<string, number>;
+  boardSize: number;
   /** The printed `[greater, lesser]` inequality furniture for this board. */
-  inequalities: Inequality[]
+  inequalities: Inequality[];
 }
 
 export interface SolveResponse {
-  solved: boolean
-  values: Record<string, number>
+  solved: boolean;
+  values: Record<string, number>;
   /** `true` when the search gave up at its node budget without a solution-consistent
    * completion — distinct from provable UNSAT (`solved: false`). */
-  budgetExceeded?: boolean
+  budgetExceeded?: boolean;
   /** Search backtracks — already on the wire (worker `backtracks`, a bigint
    * carried as string); parsed here for the W6 stat-line. */
-  backtracks: number
-  solutionCount: number
+  backtracks: number;
+  solutionCount: number;
   /** Wall-clock ms of the wasm call, measured inside the worker. */
-  elapsedMs?: number
+  elapsedMs?: number;
 }
 
-let worker: Worker | null = null
-let nextId = 1
-const pending = new Map<number, { resolve: (r: SolverResponse) => void; reject: (e: Error) => void }>()
-
-function ensureWorker(): Worker {
-  if (worker) return worker
-  worker = new Worker(new URL('./solver.worker.ts', import.meta.url), { type: 'module' })
-  worker.addEventListener('message', (event: MessageEvent<SolverResponse>) => {
-    const res = event.data
-    const p = pending.get(res.id)
-    if (!p) return
-    pending.delete(res.id)
-    p.resolve(res)
-  })
-  worker.addEventListener('error', (event: ErrorEvent) => {
-    // A worker-level error (e.g. the wasm module failed to instantiate) has no request
-    // `id` to correlate — reject every in-flight call so nothing hangs forever.
-    for (const [id, p] of pending) {
-      p.reject(new SolverError('WORKER_FAILURE', event.message || 'solver worker crashed'))
-      pending.delete(id)
-    }
-  })
-  return worker
-}
-
-let warmed = false
+const transport = createSolverTransport<SolverRequest, SolverResponse>({
+  createWorker: () =>
+    new Worker(new URL("./solver.worker.ts", import.meta.url), { type: "module" }),
+  tag: "futoshiki-solver",
+});
 
 /**
- * Cold-start prewarm (T3-W8 §cold-start, A17 P1). Spin the Worker up and post a
- * no-op `ping` so it runs `ensureInit()` — fetch + compile + instantiate the
- * wasm — while the main thread is idle, ahead of the first real solve/generate.
- * The gain only exists against the built `dist/` (dev fetch is instant); call it
- * from `requestIdleCallback` on Futoshiki's own (async) scene mount.
- *
- * Idempotent: the `warmed` guard and the module-singleton `worker` make repeated
- * calls a no-op, so there is no double-init even if mount fires more than once.
- * The ping response carries no pending `id`, so the standard message handler
- * ignores it; a one-shot listener here logs the warm confirmation for the smoke.
+ * Cold-start prewarm (T3-W8 §cold-start, A17 P1): spin the Worker up and ping it so the
+ * wasm instantiates while the main thread is idle, ahead of the first real solve/generate.
+ * The gain only exists against the built `dist/` (dev fetch is instant); called from
+ * Futoshiki's own (async) scene mount via `requestIdleCallback`.
  */
-export function prewarm(): void {
-  if (warmed) return
-  warmed = true
-  const w = ensureWorker()
-  const id = nextId++
-  const onPong = (event: MessageEvent<SolverResponse>) => {
-    if ('kind' in event.data && event.data.kind === 'ping') {
-      w.removeEventListener('message', onPong)
-      console.debug('[futoshiki-solver] prewarm: worker hot (wasm instantiated)')
-    }
-  }
-  w.addEventListener('message', onPong)
-  w.postMessage({ id, kind: 'ping' } satisfies SolverRequest)
-  console.debug('[futoshiki-solver] prewarm: warm ping sent')
-}
+export const prewarm = transport.prewarm;
 
-function call(req: SolverRequest, transfer: ArrayBuffer[]): Promise<SolverResponse> {
-  return new Promise((resolve, reject) => {
-    pending.set(req.id, { resolve, reject })
-    ensureWorker().postMessage(req, transfer)
-  })
-}
-
-function toFlatBoard(boardSize: number, values: Record<string, number>): Uint32Array<ArrayBuffer> {
-  const buf = new Uint32Array(boardSize * boardSize)
-  for (const [k, v] of Object.entries(values)) buf[Number(k)] = v
-  return buf
+function toFlatBoard(
+  boardSize: number,
+  values: Record<string, number>,
+): Uint32Array<ArrayBuffer> {
+  const buf = new Uint32Array(boardSize * boardSize);
+  for (const [k, v] of Object.entries(values)) buf[Number(k)] = v;
+  return buf;
 }
 
 function toFlatInequalities(inequalities: Inequality[]): Uint32Array<ArrayBuffer> {
-  const buf = new Uint32Array(inequalities.length * 2)
+  const buf = new Uint32Array(inequalities.length * 2);
   inequalities.forEach(([a, b], i) => {
-    buf[i * 2] = a
-    buf[i * 2 + 1] = b
-  })
-  return buf
+    buf[i * 2] = a;
+    buf[i * 2 + 1] = b;
+  });
+  return buf;
 }
 
 function toRecord(board: Uint32Array): Record<string, number> {
-  const o: Record<string, number> = {}
+  const o: Record<string, number> = {};
   board.forEach((v, i) => {
-    o[i] = v
-  })
-  return o
+    o[i] = v;
+  });
+  return o;
 }
 
 function toPairs(flat: Uint32Array): Inequality[] {
-  const out: Inequality[] = []
-  for (let i = 0; i + 1 < flat.length; i += 2) out.push([flat[i], flat[i + 1]])
-  return out
-}
-
-function throwIfError(res: SolverResponse): void {
-  if (res.ok === false) {
-    if (isSerializedSolverError(res)) {
-      throw new SolverError(res.code as SolverErrorCode, res.message)
-    }
-    throw new SolverError('WORKER_FAILURE', 'unknown worker failure')
-  }
+  const out: Inequality[] = [];
+  for (let i = 0; i + 1 < flat.length; i += 2) out.push([flat[i], flat[i + 1]]);
+  return out;
 }
 
 export function useSolver() {
   async function getRandomBoard(boardSize: number): Promise<BoardResponse> {
-    const id = nextId++
-    const res = await call({ id, kind: 'generate', boardSize, seed: Date.now() }, [])
-    throwIfError(res)
-    if (res.ok && res.kind === 'generate') {
+    const id = transport.nextId();
+    const res = await transport.call(
+      { id, kind: "generate", boardSize, seed: Date.now() },
+      [],
+    );
+    transport.throwIfError(res);
+    if (res.ok && res.kind === "generate") {
       return {
         values: toRecord(res.board),
         boardSize: res.boardSize,
         inequalities: toPairs(res.inequalities),
-      }
+      };
     }
-    throw new SolverError('WORKER_FAILURE', 'malformed generate response')
+    throw new SolverError("WORKER_FAILURE", "malformed generate response");
   }
 
   async function solveBoard(
@@ -159,16 +113,24 @@ export function useSolver() {
     inequalities: Inequality[],
     nodeBudget?: number,
   ): Promise<SolveResponse> {
-    const board = toFlatBoard(boardSize, values)
-    const flatIneqs = toFlatInequalities(inequalities)
-    const id = nextId++
-    const res = await call(
-      { id, kind: 'solve', board, boardSize, inequalities: flatIneqs, maxSolutions: 1, nodeBudget },
+    const board = toFlatBoard(boardSize, values);
+    const flatIneqs = toFlatInequalities(inequalities);
+    const id = transport.nextId();
+    const res = await transport.call(
+      {
+        id,
+        kind: "solve",
+        board,
+        boardSize,
+        inequalities: flatIneqs,
+        maxSolutions: 1,
+        nodeBudget,
+      },
       [board.buffer, flatIneqs.buffer],
-    )
-    throwIfError(res)
-    if (res.ok && res.kind === 'solve') {
-      const cells = boardSize * boardSize
+    );
+    transport.throwIfError(res);
+    if (res.ok && res.kind === "solve") {
+      const cells = boardSize * boardSize;
       return {
         solved: res.solved,
         values: res.solved ? toRecord(res.solutions.subarray(0, cells)) : values,
@@ -176,9 +138,9 @@ export function useSolver() {
         backtracks: Number(res.backtracks),
         solutionCount: res.solutionCount,
         elapsedMs: res.elapsedMs,
-      }
+      };
     }
-    throw new SolverError('WORKER_FAILURE', 'malformed solve response')
+    throw new SolverError("WORKER_FAILURE", "malformed solve response");
   }
 
   /**
@@ -194,17 +156,17 @@ export function useSolver() {
     boardSize: number,
     inequalities: Inequality[],
   ): Promise<Uint32Array> {
-    const board = toFlatBoard(boardSize, values)
-    const flatIneqs = toFlatInequalities(inequalities)
-    const id = nextId++
-    const res = await call(
-      { id, kind: 'propagate', board, boardSize, inequalities: flatIneqs },
+    const board = toFlatBoard(boardSize, values);
+    const flatIneqs = toFlatInequalities(inequalities);
+    const id = transport.nextId();
+    const res = await transport.call(
+      { id, kind: "propagate", board, boardSize, inequalities: flatIneqs },
       [board.buffer, flatIneqs.buffer],
-    )
-    throwIfError(res)
-    if (res.ok && res.kind === 'propagate') return res.masks
-    throw new SolverError('WORKER_FAILURE', 'malformed propagate response')
+    );
+    transport.throwIfError(res);
+    if (res.ok && res.kind === "propagate") return res.masks;
+    throw new SolverError("WORKER_FAILURE", "malformed propagate response");
   }
 
-  return { getRandomBoard, solveBoard, propagateBoard }
+  return { getRandomBoard, solveBoard, propagateBoard };
 }

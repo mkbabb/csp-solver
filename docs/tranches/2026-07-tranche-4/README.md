@@ -108,6 +108,7 @@ Every chronic, deferred, banked, partial, and prompt-recap row gets a **terminal
 | GPU tile residue | **SUPERSEDED-by-W1** — the N-layer bitmap variant zeroes the Chromium 8/s residue; verify at W1's gate | W1 (verify) |
 | `propagate_stratified` wire-in | **RETIRED (terminal)** — no consumer, no evidence of need; symbol removed at `d78fef8e` (T3-W3), byte-recoverable. Exception checked: W13's cage primitives are the cage-sum/cage-product `revise_impl`s and don't want stratified propagation → retire stands | W13 (checked) → retired |
 | `keyframes.js` | **RETIRED** — house motion grammar settled: CSS vars (W10's `--ease-*`) + WAAPI (the drawer/gallery `useFlipGlide` engine); a second animation brain is the rejected covenant (`App.vue:61-64`). The T3 open question is answered by the estate | W10 → retired |
+| theme `localStorage` key un-namespaced (@vueuse `vueuse-color-scheme` vs the app's `csp-*`/`sudoku-*`) | **BANK → W10** — namespace via `useDark({ storageKey: 'csp-color-scheme' })`; touches the Vue-idiom surface (the `useTheme` composable), not the excision surface. Booked at W4 (FAM-7/r4) so it isn't dropped | W10 |
 | bbnf cadence | **DECLARED** — sync-on-solver-release, scripted (`bbnf-lang/scripts/sync-csp-solver-vendor.sh --check/--update/--verify`), out-of-repo standing; NEVER push bbnf-lang origin (standing) | declared |
 
 ### 4c. Prompt recap — every ask row, terminal (walking [`owner-prompts.md`](evidence/corpus/owner-prompts.md))

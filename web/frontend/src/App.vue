@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, defineAsyncComponent, h } from 'vue'
-import { usePrefersReducedMotion } from '@mkbabb/pencil-boil'
-import SudokuGame from '@games/sudoku/SudokuGame.vue'
-import DarkModeToggle from '@pencil/celestial/DarkModeToggle.vue'
-import SvgFilters from '@pencil/chrome/SvgFilters.vue'
-import ScribbleLoader from '@pencil/chrome/ScribbleLoader.vue'
-import { HandwrittenLogo, AttributionCard } from '@pencil/chrome'
-import { registerDrawerMasthead } from '@games/shared/useControlsDrawer'
+import { ref, defineAsyncComponent, h } from "vue";
+import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
+import SudokuGame from "@games/sudoku/SudokuGame.vue";
+import DarkModeToggle from "@pencil/celestial/DarkModeToggle.vue";
+import SvgFilters from "@pencil/chrome/SvgFilters.vue";
+import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
+import HandwrittenLogo from "@pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue";
+import AttributionCard from "@pencil/chrome/AttributionCard/AttributionCard.vue";
+import { registerDrawerMasthead } from "@games/shared/useControlsDrawer";
 
 // OD-8 in-app game selector. Futoshiki's whole scene (board + controls + its own useFutoshiki
 // + Worker) is async + `v-if`-gated below, so it only downloads and spins up when Futoshiki is
@@ -17,37 +18,37 @@ import { registerDrawerMasthead } from '@games/shared/useControlsDrawer'
 // `first-select-void-400ms.png`): blank paper ≤300ms, then the thinking-scribble — never a
 // spinner (design §5.1).
 const FutoshikiGame = defineAsyncComponent({
-  loader: () => import('@games/futoshiki/FutoshikiGame.vue'),
+  loader: () => import("@games/futoshiki/FutoshikiGame.vue"),
   loadingComponent: {
     render: () =>
-      h('div', { class: 'scene-loading' }, [h(ScribbleLoader, { size: 56 })]),
+      h("div", { class: "scene-loading" }, [h(ScribbleLoader, { size: 56 })]),
   },
   delay: 300,
-})
+});
 
 // Dev-only tuning tool — explicit env gate, not a commented-out import. import.meta.env.DEV
 // is statically inlined at build time, so the dynamic import()'s chunk is dead-code-eliminated
 // from production builds rather than merely being unreferenced source.
 const FilterTuner = import.meta.env.DEV
-  ? defineAsyncComponent(() => import('@pencil/dev/FilterTuner.vue'))
-  : null
+  ? defineAsyncComponent(() => import("@pencil/dev/FilterTuner.vue"))
+  : null;
 
-type GameId = 'sudoku' | 'futoshiki'
+type GameId = "sudoku" | "futoshiki";
 const gameOptions = [
-  { value: 'sudoku', label: 'sudoku' },
-  { value: 'futoshiki', label: 'futoshiki' },
-]
+  { value: "sudoku", label: "sudoku" },
+  { value: "futoshiki", label: "futoshiki" },
+];
 function parseGame(): GameId {
-  return new URLSearchParams(window.location.search).get('game') === 'futoshiki'
-    ? 'futoshiki'
-    : 'sudoku'
+  return new URLSearchParams(window.location.search).get("game") === "futoshiki"
+    ? "futoshiki"
+    : "sudoku";
 }
 // UI-8: the tab title names the CURRENT game — the static "Sudoku - CSP Solver" in
 // index.html lied on Futoshiki after both a deep-link (`?game=futoshiki`) and an in-app
 // switch. Set from the selected id at parse time and on every switch, so the title tracks
 // the wordmark/URL truthfully. Lowercase to match the wordmark; em dash, no spaces stripped.
 function applyTitle(g: GameId) {
-  document.title = `${g} — CSP Solver`
+  document.title = `${g} — CSP Solver`;
 }
 // ── F6 page-turn orchestrator (T3-W10) ───────────────────────────────────
 // The two games are exercises in the same graded workbook: a switch is the pencil erasing
@@ -65,39 +66,39 @@ function applyTitle(g: GameId) {
 // brain + a runtime CSS parser to run 2 fades + 2 existing sequences, re-splitting the clock
 // W8/W12 unified. Re-entry is a CAPABILITY GAP — numeric path morphing / spring physics
 // (glyphPaths.ts's dormant affordance) — never a version number.
-const game = ref<GameId>(parseGame()) // selected — truthful at click
-applyTitle(game.value) // deep-link / reload lands on the right title before first paint
-const scene = ref<GameId>(game.value) // mounted — flips at the seam
-const leaving = ref(false) // beat 1 in flight: outgoing grid erases, chrome fades
-let seamGuard: number | null = null
-const reducedMotion = usePrefersReducedMotion()
+const game = ref<GameId>(parseGame()); // selected — truthful at click
+applyTitle(game.value); // deep-link / reload lands on the right title before first paint
+const scene = ref<GameId>(game.value); // mounted — flips at the seam
+const leaving = ref(false); // beat 1 in flight: outgoing grid erases, chrome fades
+let seamGuard: number | null = null;
+const reducedMotion = usePrefersReducedMotion();
 
 function setGame(val: string | number) {
-  const next: GameId = val === 'futoshiki' ? 'futoshiki' : 'sudoku'
-  if (next === game.value) return
-  game.value = next
-  applyTitle(next) // UI-8: the title tracks the switch, same instant as the URL/wordmark
-  const url = new URL(window.location.href)
-  url.searchParams.set('game', next)
+  const next: GameId = val === "futoshiki" ? "futoshiki" : "sudoku";
+  if (next === game.value) return;
+  game.value = next;
+  applyTitle(next); // UI-8: the title tracks the switch, same instant as the URL/wordmark
+  const url = new URL(window.location.href);
+  url.searchParams.set("game", next);
   // Accretion fix (W6): each game's URL params co-exist by design, but a `?board=` blob
   // (up to ~256 chars) riding into the other game's URL defeats the clean-URL rationale
   // that made the permalink share-on-demand. Strip BOTH games' board/size params on
   // switch — the incoming game re-adds only its own via its composable's syncToUrl.
-  for (const key of ['board', 'size', 'difficulty', 'board_size'])
-    url.searchParams.delete(key)
-  history.replaceState(null, '', url.toString())
+  for (const key of ["board", "size", "difficulty", "board_size"])
+    url.searchParams.delete(key);
+  history.replaceState(null, "", url.toString());
   // Switching games unmounts the outgoing scene (v-if), which stops its keyboard listener and
   // ends any in-flight peek with it — no cross-scene teardown needed here.
   if (reducedMotion.value) {
-    scene.value = next // PRM: same-frame cut, no beat-1 hold
-    return
+    scene.value = next; // PRM: same-frame cut, no beat-1 hold
+    return;
   }
-  leaving.value = true // beat 1: the mounted scene erases; `erased` fires the seam
+  leaving.value = true; // beat 1: the mounted scene erases; `erased` fires the seam
   // Seam guard: if the outgoing "scene" can't erase — e.g. it's still the async loading
   // placeholder (no board mounted, so no `erased` will ever come) — force the seam late
   // rather than never. A page-turn that degrades to a hard cut is a blemish; a switch
   // that deadlocks (`next === game.value` guards re-selects) is a bug.
-  seamGuard = window.setTimeout(onSceneErased, 900)
+  seamGuard = window.setTimeout(onSceneErased, 900);
 }
 
 // Beat 2 — the seam. The paper (bg + grain) never changes; only ink swaps. If the user
@@ -105,51 +106,51 @@ function setGame(val: string | number) {
 // (its `leaving` watch sees false + 'hidden' → 'drawing') — a page-turn back to the same page.
 function onSceneErased() {
   if (seamGuard !== null) {
-    clearTimeout(seamGuard)
-    seamGuard = null
+    clearTimeout(seamGuard);
+    seamGuard = null;
   }
-  if (!leaving.value) return // guard + real seam can't double-fire
-  scene.value = game.value
-  leaving.value = false
+  if (!leaving.value) return; // guard + real seam can't double-fire
+  scene.value = game.value;
+  leaving.value = false;
 }
 
 // F6-D3: warm the other scene's chunk the moment the picker OPENS — by selection time it's
 // cached, killing the first-select void structurally (G10 dramatized it: 150–3000ms of pure
 // empty paper under CDP throttle). Sudoku rides the main chunk; only Futoshiki is lazy.
-let futoshikiWarm = false
+let futoshikiWarm = false;
 function preloadFutoshiki() {
-  if (futoshikiWarm) return
-  futoshikiWarm = true
-  import('@games/futoshiki/FutoshikiGame.vue').catch(() => {
-    futoshikiWarm = false // a failed warm retries on the next open
-  })
+  if (futoshikiWarm) return;
+  futoshikiWarm = true;
+  import("@games/futoshiki/FutoshikiGame.vue").catch(() => {
+    futoshikiWarm = false; // a failed warm retries on the next open
+  });
 }
 
-const desktopAttribution = ref<InstanceType<typeof AttributionCard> | null>(null)
-const mobileAttribution = ref<InstanceType<typeof AttributionCard> | null>(null)
-const logoMenu = ref<InstanceType<typeof HandwrittenLogo> | null>(null)
+const desktopAttribution = ref<InstanceType<typeof AttributionCard> | null>(null);
+const mobileAttribution = ref<InstanceType<typeof AttributionCard> | null>(null);
+const logoMenu = ref<InstanceType<typeof HandwrittenLogo> | null>(null);
 
 // ── The drawer's masthead half (T3-W12 §6) ────────────────────────────
 // Closed, board + wordmark take the page's true axis and grow: the layout half is
 // CSS (html.drawer-closed below — centering + --logo-scale 1.05); the glide half
 // rides the masthead h1 (one translate+scale on the house glass curve, anchored
 // on the wordmark's rect). The scene composable measures via this registration.
-const mastheadEl = ref<HTMLElement | null>(null)
+const mastheadEl = ref<HTMLElement | null>(null);
 registerDrawerMasthead(() => ({
   block: mastheadEl.value,
   anchor: (logoMenu.value?.$el as HTMLElement | undefined) ?? null,
-}))
+}));
 
 function closeAll() {
-  desktopAttribution.value?.close()
-  mobileAttribution.value?.close()
-  logoMenu.value?.close()
+  desktopAttribution.value?.close();
+  mobileAttribution.value?.close();
+  logoMenu.value?.close();
 }
 </script>
 
 <template>
   <div
-    class="flex h-screen flex-col bg-background py-1 md:py-3 text-foreground"
+    class="bg-background text-foreground flex h-screen flex-col py-1 md:py-3"
     @click="closeAll"
   >
     <!-- Shared SVG filter definitions -->

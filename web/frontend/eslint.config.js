@@ -12,18 +12,22 @@ import globals from 'globals'
  * forms are caught.
  */
 
-// Depth lint (R8 G10/G11): src/games/** + App.vue/main.ts must not reach 3+ levels into pencil
-// internals — route through the subdir barrels (@pencil/chrome, @pencil/grid). 1- and 2-level
-// imports (@pencil/config/pencilConfig, @pencil/chrome/BoilDivider.vue) stay open; pencil-INTERNAL
-// 3-level imports (e.g. HandwrittenLogo -> OptionSelector/scribbleUnderline) are out of scope by
-// construction — only games/App/main are lint-scoped for this pattern. Appended into each game
-// rule's own `patterns` array (P2-T5 flat-config append discipline): a second same-scope config
+// Depth lint (R8 G10/G11, settled at T4-W4): src/games/** + App.vue/main.ts must not reach 4+
+// levels into pencil internals. The subdir barrels (@pencil/chrome, @pencil/grid) were DELETED at
+// T4-W4 (the excision — one deep-import grammar, no dual path), so games/App now import pencil
+// components directly: a FOLDERED component's public file — @pencil/<subsystem>/<Component>/<Component>.vue,
+// e.g. @pencil/grid/HandDrawnGrid/HandDrawnGrid.vue or @pencil/chrome/icons/SolveIcon.vue — is the
+// deepest legit reach at depth 3, and flat components/modules (@pencil/chrome/BoilDivider.vue,
+// @pencil/config/pencilConfig) sit at depth ≤2. The one grammar: import the component's own public
+// file; depth 4+ reaches INTO a component's private subtree and stays blocked. Appended into each
+// game rule's own `patterns` array (P2-T5 flat-config append discipline): a second same-scope config
 // block would override the cross-game boundary by rule name rather than merge.
 const pencilDepthPattern = {
-  group: ['@pencil/*/*/*', '@pencil/*/*/*/**'],
+  group: ['@pencil/*/*/*/*', '@pencil/*/*/*/*/**'],
   message:
-    'do not reach 3+ levels into pencil internals (R8 G10/G11 depth rule) — ' +
-    'route through the subdir barrel (@pencil/chrome, @pencil/grid).',
+    'do not reach 4+ levels into pencil internals (R8 G10/G11 depth rule, settled T4-W4) — ' +
+    "import the pencil component/module's own public file directly (a foldered component sits at " +
+    '@pencil/<subsystem>/<Component>/<Component>.vue, depth 3).',
 }
 
 // src/pencil/** never imports src/games/** — the animation/aesthetic layer renders whatever

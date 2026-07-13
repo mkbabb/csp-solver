@@ -113,3 +113,24 @@ No rendered-pixel surface — the excision is dead-code removal, dual-path colla
 - **The worker respawn must be bounded** — nulling the singleton on every failure risks a respawn loop against a persistently-broken worker (e.g. a wasm that can't instantiate). Cap the respawns and surface `WORKER_FAILURE` after N, so the fix hardens against a transient crash without spinning on a permanent one.
 - **The solver-seam dedup is pure dedup, but the games do diverge** — `classifyError` and transport are byte-identical *today*; the single-source must keep the game-specific seams (board shape, node budget) parameterized, not collapsed, or a future game-specific error row would force the dual path back. Dedup the twin, keep the divergence points explicit.
 - **The prettier fix reformats nothing if pinned correctly, but a first `--check` run will flag the tree** — the repo is authored 2-space; the committed `.prettierrc.json` at `printWidth 88` must match the existing style or the first `--check` reds the whole tree. Pin the config to the tree's actual style (verify against `eslint.config.js`/`vite.config.ts` 2-space), not to the global shadow's 4-space — the fix is to make the config match reality, then gate it.
+
+---
+## Execution record (2026-07-13)
+
+Workflow `wf_4d1c622d-623`, 4 lanes (X1 dead-barrels-defs · X2 seam-worker-parseint · X3 modrs-prettier-residue · verify), all green.
+
+| Gate | Close |
+|---|---|
+| dead-surface | `generateGridPaths` + `GridPaths` + `TextureConfig` (both halves, incl. `FilterPreset.texture` + 4 SvgFilters guards) gone; the W2-excised 9 confirmed done; knip error-level exit 0 |
+| barrels | both `index.ts` deleted, 6 consumers rewired to deep imports (the single-quote grep undercounted — double-quote/multiline importers found); the settled one-grammar: depth-3 (a foldered component's public file) is the deepest legit reach, depth-4+ blocked — rule re-cut, no exception list; knip `entry` key dropped entirely (vite plugin auto-detects main.ts) |
+| orphan-defs | `grain-outline` + `wobble-logo` base defs gated off via `baseDef:false` (pose defs live); P4 re-closed as a STANDING TEST (emitted-base-defs ≡ consumed set, 4/4); DarkModeToggle's 7 hardcoded pose-count 4s folded to one derived `CELESTIAL_POSE_COUNT` |
+| solver-seam | `games/shared/solver/` single-sources solverError/classifyError/describeError + protocol envelope frames + `createSolverTransport`; 6 per-game twins DELETED (no shims); game divergence (n vs boardSize+inequalities, board marshalling) stays explicit; 18/18 targeted e2e through the deduped transport |
+| worker-respawn | crash → null+terminate → next call re-instantiates; N=3 consecutive cap → WORKER_FAILURE (success resets the budget); `switch(req.kind)` typed guards both workers; 6 new transport units |
+| parseInt | strict `/^\d+$/` both inequality endpoints (uniform with the size guard); trailing-garbage cases red-tested |
+| mod-rs | 10 `mod.rs` → self-named files (git renames); **the spec's lint name is INVERTED on clippy 1.97** — `self_named_module_files` *requires* mod.rs; the true lock is `mod_module_files = "deny"` (probe-proven: a planted mod.rs errors), documented in Cargo.toml — D6 closed with the corrected id |
+| filtertuner | proven, not excised: `check-prod-shake.mjs` (negative-control-proven) + CI step riding the throttle gate's build |
+| prettier | **the disease is cured**: `.prettierrc.json` pinned to the measured-dominant 2-space (60/91 files; the 4-space minority is the global-shadow's own footprint), `lint` = `--check` (the destructive `--write` shadow dies), CI-gated, tailwind plugin live + off knip ignore. RECONCILIATION: the spec's "reformats nothing if pinned correctly" premise was FALSE — the tree was never prettier-formatted; a one-time 95-file format-only normalization lands as its own commit at this seal (quotes/semis kept at the tree's own conventions — prettier defaults) |
+| residue | 5/5: wasm-morph ignore out, `.mypy_cache/` in, test_wheel docstring retrued, `.env.example` = the real contract, the 3 "RED until W1" ci.yml annotations struck; theme-key note banked to README §4b (rides W10) |
+| parity (π) | goldens 4/4 WITHOUT re-baseline (the orphan-def removal rendered nothing); full e2e 47/47 at seal; 77 units; cargo test/fmt/clippy green |
+
+Known flake (pre-existing, not W4): `toggle-crest-dark` straddles its 1.7% soul floor on this darwin box (feTurbulence raster noise; HEAD-revert proof) — books to the golden-fidelity owner; re-mint or floor loosening is a reviewed decision, not taken here.

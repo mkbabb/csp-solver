@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "lint": "prettier --write src/",
+    "lint": "prettier --check src/",
     "lint:eslint": "eslint .",
     "lint:knip": "knip",
     "test:unit": "vitest run",
@@ -19,6 +19,7 @@
     "test:golden": "playwright test --config playwright-golden.config.ts",
     "test:golden:update": "playwright test --config playwright-golden.config.ts --update-snapshots",
     "test:golden:bytes": "node scripts/check-golden-bytes.mjs",
+    "test:prod-shake": "node scripts/check-prod-shake.mjs",
     "deploy": "npm run build && wrangler pages deploy dist --project-name=sudoku --branch=master --commit-dirty=true"
   },
   "dependencies": {

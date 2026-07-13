@@ -14,30 +14,30 @@
  * PRM: a static scribble at 0.6 opacity — the doodle is there, it just isn't moving.
  * `currentColor` throughout, so it inherits its host's ink.
  */
-import { mulberry32 } from '@mkbabb/pencil-boil'
+import { mulberry32 } from "@mkbabb/pencil-boil";
 
-withDefaults(defineProps<{ size?: number }>(), { size: 22 })
+withDefaults(defineProps<{ size?: number }>(), { size: 22 });
 
 // A growing 3-loop coil with per-vertex jitter — a thinking doodle, generated once.
 function scribblePath(seed: number): string {
-  const rng = mulberry32(seed)
-  const cx = 12
-  const cy = 12
-  const loops = 3
-  const steps = 44
-  let d = ''
+  const rng = mulberry32(seed);
+  const cx = 12;
+  const cy = 12;
+  const loops = 3;
+  const steps = 44;
+  let d = "";
   for (let i = 0; i <= steps; i++) {
-    const t = i / steps
-    const angle = t * loops * Math.PI * 2
-    const r = 2.5 + t * 6.5
-    const x = cx + Math.cos(angle) * r + (rng() - 0.5) * 1.8
-    const y = cy + Math.sin(angle) * r + (rng() - 0.5) * 1.8
-    d += `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
+    const t = i / steps;
+    const angle = t * loops * Math.PI * 2;
+    const r = 2.5 + t * 6.5;
+    const x = cx + Math.cos(angle) * r + (rng() - 0.5) * 1.8;
+    const y = cy + Math.sin(angle) * r + (rng() - 0.5) * 1.8;
+    d += `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
   }
-  return d
+  return d;
 }
 
-const SCRIBBLE_D = scribblePath(7)
+const SCRIBBLE_D = scribblePath(7);
 </script>
 
 <template>

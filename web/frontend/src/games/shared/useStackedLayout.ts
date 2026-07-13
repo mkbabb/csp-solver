@@ -10,13 +10,13 @@ import { ref, type Ref } from "vue";
 const stacked = ref(true);
 
 if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
-    const mq = window.matchMedia("(max-width: 1023px)");
-    stacked.value = mq.matches;
-    mq.addEventListener?.("change", (e) => {
-        stacked.value = e.matches;
-    });
+  const mq = window.matchMedia("(max-width: 1023px)");
+  stacked.value = mq.matches;
+  mq.addEventListener?.("change", (e) => {
+    stacked.value = e.matches;
+  });
 }
 
 export function useStackedLayout(): Ref<boolean> {
-    return stacked;
+  return stacked;
 }

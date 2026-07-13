@@ -243,8 +243,7 @@ def test_invalid_input_error_end_to_end():
 def test_all_four_typed_exception_classes_exist_and_are_exceptions():
     """All four typed exception classes are exported and are proper
     `Exception` subclasses (unlike the panic-contract's `PanicException`,
-    which deliberately is NOT one — see test_panic_contract.py) — including
-    the two not exercised end-to-end below; see their skip reasons for why.
+    which deliberately is NOT one — see test_panic_contract.py).
     """
     for name in (
         "UnsatisfiableError",

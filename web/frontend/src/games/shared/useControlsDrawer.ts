@@ -69,20 +69,20 @@ const SETTLE_GUARD_MS = GLIDE_MS + 220;
 const hasDom = typeof window !== "undefined" && typeof document !== "undefined";
 
 function readStored(): boolean {
-    if (!hasDom) return true;
-    try {
-        return window.localStorage.getItem(STORAGE_KEY) !== "0";
-    } catch {
-        return true; // storage denied → default open, unpersisted
-    }
+  if (!hasDom) return true;
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) !== "0";
+  } catch {
+    return true; // storage denied → default open, unpersisted
+  }
 }
 
 function persist(open: boolean) {
-    try {
-        window.localStorage.setItem(STORAGE_KEY, open ? "1" : "0");
-    } catch {
-        /* storage denied — state lives for the session */
-    }
+  try {
+    window.localStorage.setItem(STORAGE_KEY, open ? "1" : "0");
+  } catch {
+    /* storage denied — state lives for the session */
+  }
 }
 
 /** Intent — flips at click (aria/persistence truthful immediately). */
@@ -91,15 +91,15 @@ const drawerPhase = ref<DrawerPhase>("idle");
 
 // Module-level MediaQueryList refs — the useStackedLayout/useCoarsePointer pattern.
 function mediaRef(query: string, initial: boolean): Ref<boolean> {
-    const r = ref(initial);
-    if (hasDom && typeof window.matchMedia === "function") {
-        const mq = window.matchMedia(query);
-        r.value = mq.matches;
-        mq.addEventListener?.("change", (e) => {
-            r.value = e.matches;
-        });
-    }
-    return r;
+  const r = ref(initial);
+  if (hasDom && typeof window.matchMedia === "function") {
+    const mq = window.matchMedia(query);
+    r.value = mq.matches;
+    mq.addEventListener?.("change", (e) => {
+      r.value = e.matches;
+    });
+  }
+  return r;
 }
 const rowRegime = mediaRef("(min-width: 1024px)", false);
 const wideMargin = mediaRef("(min-width: 1360px)", true);
@@ -108,7 +108,7 @@ const reducedMotion = mediaRef("(prefers-reduced-motion: reduce)", false);
 /** The ONE layout step — `html.drawer-closed` drives every closed-regime rule
  *  (scene.css rail park, App.vue masthead centering, the boards' loosened caps). */
 function applyLayout(open: boolean) {
-    document.documentElement.classList.toggle("drawer-closed", !open);
+  document.documentElement.classList.toggle("drawer-closed", !open);
 }
 
 // Pre-first-paint restore: a persisted-closed drawer must never flash open.
@@ -117,21 +117,21 @@ if (hasDom && !drawerOpen.value) applyLayout(false);
 // ── Registration — the scene owns the board/rail/tab, App owns the masthead ──
 
 interface DrawerSceneEls {
-    /** `.board-peek-host` — the transformed worksheet (board + vignette + margin + tab). */
-    host: HTMLElement | null;
-    /** `.scene-controls` — the case that slides. */
-    rail: HTMLElement | null;
-    /** `.controls-card` — focus lands on its first control at open-settle. */
-    panel: HTMLElement | null;
-    /** The pull-tab button — focus home on close. */
-    tab: HTMLElement | null;
+  /** `.board-peek-host` — the transformed worksheet (board + vignette + margin + tab). */
+  host: HTMLElement | null;
+  /** `.scene-controls` — the case that slides. */
+  rail: HTMLElement | null;
+  /** `.controls-card` — focus lands on its first control at open-settle. */
+  panel: HTMLElement | null;
+  /** The pull-tab button — focus home on close. */
+  tab: HTMLElement | null;
 }
 
 interface DrawerMastheadEls {
-    /** The `.masthead` h1 — the element the glide transform rides. */
-    block: HTMLElement | null;
-    /** The wordmark (`.logo-menu`) — the rect the glide maps first→last. */
-    anchor: HTMLElement | null;
+  /** The `.masthead` h1 — the element the glide transform rides. */
+  block: HTMLElement | null;
+  /** The wordmark (`.logo-menu`) — the rect the glide maps first→last. */
+  anchor: HTMLElement | null;
 }
 
 let getScene: (() => DrawerSceneEls) | null = null;
@@ -140,24 +140,24 @@ let getMasthead: (() => DrawerMastheadEls) | null = null;
 /** Called by each game scene on mount; the returned disposer settles any in-flight
  *  glide instantly (the F6 page-turn unmounts scenes mid-life). */
 export function registerDrawerScene(get: () => DrawerSceneEls): () => void {
-    getScene = get;
-    return () => {
-        if (getScene === get) {
-            settleNow();
-            getScene = null;
-        }
-    };
+  getScene = get;
+  return () => {
+    if (getScene === get) {
+      settleNow();
+      getScene = null;
+    }
+  };
 }
 
 export function registerDrawerMasthead(get: () => DrawerMastheadEls) {
-    getMasthead = get;
+  getMasthead = get;
 }
 
 // ── The glide engine (classic FLIP on WAAPI, T3-W13 §3 S1–S4) ────────
 
 interface Mover {
-    el: HTMLElement;
-    anim: Animation;
+  el: HTMLElement;
+  anim: Animation;
 }
 
 let movers: Mover[] = [];
@@ -175,104 +175,109 @@ const cy = (r: DOMRect) => r.top + r.height / 2;
  *  its lifetime, then releases to the underlying value (identity/rest ≡ the `to`
  *  keyframe going forward; a reversal's settle re-flips the layout in the same
  *  pre-paint microtask checkpoint, so neither direction can flash). */
-function animateMover(el: HTMLElement, from: string, to: string, transformOrigin: string) {
-    if (transformOrigin) el.style.transformOrigin = transformOrigin;
-    const anim = el.animate([{ transform: from }, { transform: to }], {
-        duration: GLIDE_MS,
-        easing: GLIDE_EASING,
-        composite: "replace",
-        fill: "none",
-    });
-    movers.push({ el, anim });
+function animateMover(
+  el: HTMLElement,
+  from: string,
+  to: string,
+  transformOrigin: string,
+) {
+  if (transformOrigin) el.style.transformOrigin = transformOrigin;
+  const anim = el.animate([{ transform: from }, { transform: to }], {
+    duration: GLIDE_MS,
+    easing: GLIDE_EASING,
+    composite: "replace",
+    fill: "none",
+  });
+  movers.push({ el, anim });
 }
 
 function glide(toOpen: boolean, scene: DrawerSceneEls) {
-    const host = scene.host!;
-    const rail = scene.rail!;
-    const tab = scene.tab;
-    const mast = getMasthead?.() ?? null;
-    const block = mast?.block ?? null;
-    const anchor = mast?.anchor ?? null;
+  const host = scene.host!;
+  const rail = scene.rail!;
+  const tab = scene.tab;
+  const mast = getMasthead?.() ?? null;
+  const block = mast?.block ?? null;
+  const anchor = mast?.anchor ?? null;
 
-    targetOpen = toOpen;
-    drawerPhase.value = toOpen ? "opening" : "closing";
+  targetOpen = toOpen;
+  drawerPhase.value = toOpen ? "opening" : "closing";
 
-    // Classic FLIP: FIRST rects read pre-flip (clean tree — no forced layout), the
-    // layout class lands ONCE at onset, LAST rects take the gesture's single forced
-    // layout, and every mover animates FROM the inverted old-pose delta TO identity.
-    // The settle then has nothing left to do but clear finished animations.
-    const firstH = host.getBoundingClientRect();
-    const firstR = rail.getBoundingClientRect();
-    const firstA = anchor?.getBoundingClientRect() ?? null;
-    // Gesture class BEFORE the flip: the parked case's visibility override and the
-    // gesture-scoped promotions arm in the same recalc the layout lands in.
-    document.documentElement.classList.add("drawer-gesturing");
-    applyLayout(toOpen); // the ONE layout step — at onset, not settle
-    const lastH = host.getBoundingClientRect();
-    const lastR = rail.getBoundingClientRect();
-    const lastB = block?.getBoundingClientRect() ?? null;
-    const lastA = anchor?.getBoundingClientRect() ?? null;
+  // Classic FLIP: FIRST rects read pre-flip (clean tree — no forced layout), the
+  // layout class lands ONCE at onset, LAST rects take the gesture's single forced
+  // layout, and every mover animates FROM the inverted old-pose delta TO identity.
+  // The settle then has nothing left to do but clear finished animations.
+  const firstH = host.getBoundingClientRect();
+  const firstR = rail.getBoundingClientRect();
+  const firstA = anchor?.getBoundingClientRect() ?? null;
+  // Gesture class BEFORE the flip: the parked case's visibility override and the
+  // gesture-scoped promotions arm in the same recalc the layout lands in.
+  document.documentElement.classList.add("drawer-gesturing");
+  applyLayout(toOpen); // the ONE layout step — at onset, not settle
+  const lastH = host.getBoundingClientRect();
+  const lastR = rail.getBoundingClientRect();
+  const lastB = block?.getBoundingClientRect() ?? null;
+  const lastA = anchor?.getBoundingClientRect() ?? null;
 
-    movers = [];
-    const gen = ++glideGen;
+  movers = [];
+  const gen = ++glideGen;
 
-    // The worksheet: board + vignette + margin + tab ride ONE translate+scale. It
-    // rasters at its FINAL size from frame one — a ≤2% soft attack on open, never
-    // a soft landing; the settle pop (F4) dies by construction.
-    const hostScale = firstH.width / lastH.width;
+  // The worksheet: board + vignette + margin + tab ride ONE translate+scale. It
+  // rasters at its FINAL size from frame one — a ≤2% soft attack on open, never
+  // a soft landing; the settle pop (F4) dies by construction.
+  const hostScale = firstH.width / lastH.width;
+  animateMover(
+    host,
+    `translate(${cx(firstH) - cx(lastH)}px, ${cy(firstH) - cy(lastH)}px) scale(${hostScale})`,
+    "translate(0px, 0px) scale(1)",
+    "50% 50%",
+  );
+  // The case: translate-only, same curve, same clock — sheet and case one solid;
+  // it pulls out from under the sheet HORIZONTALLY (§3-S5 — the rect deltas are
+  // the tuck's own geometry, and the glass curve is monotone, so no frame can
+  // carry the case above the board's top or past the tuck).
+  // Its parked rest pose rides the `translate:` CHANNEL (scene.css), which no
+  // mover ever animates; the rect deltas below already include it.
+  animateMover(
+    rail,
+    `translate(${firstR.left - lastR.left}px, ${firstR.top - lastR.top}px)`,
+    "translate(0px, 0px)",
+    "",
+  );
+  // The tab: counter-scales the host's ride so its 48px tongue reads constant
+  // (host × tab ≈ 1 across the curve — F5's kept behavior, now a WAAPI mover).
+  if (tab) {
     animateMover(
-        host,
-        `translate(${cx(firstH) - cx(lastH)}px, ${cy(firstH) - cy(lastH)}px) scale(${hostScale})`,
-        "translate(0px, 0px) scale(1)",
-        "50% 50%",
+      tab,
+      `translateY(-50%) scale(${1 / hostScale})`,
+      "translateY(-50%) scale(1)",
+      "",
     );
-    // The case: translate-only, same curve, same clock — sheet and case one solid;
-    // it pulls out from under the sheet HORIZONTALLY (§3-S5 — the rect deltas are
-    // the tuck's own geometry, and the glass curve is monotone, so no frame can
-    // carry the case above the board's top or past the tuck).
-    // Its parked rest pose rides the `translate:` CHANNEL (scene.css), which no
-    // mover ever animates; the rect deltas below already include it.
+  }
+  // The masthead: the h1 glides anchored on the wordmark's center-bottom in the
+  // TARGET layout's box (the h1 spans the full group width — its own center is
+  // not the wordmark's), so the measured wordmark rect maps first → last exactly.
+  if (block && lastB && firstA && lastA) {
     animateMover(
-        rail,
-        `translate(${firstR.left - lastR.left}px, ${firstR.top - lastR.top}px)`,
-        "translate(0px, 0px)",
-        "",
+      block,
+      `translate(${cx(firstA) - cx(lastA)}px, ${firstA.bottom - lastA.bottom}px) scale(${firstA.width / lastA.width})`,
+      "translate(0px, 0px) scale(1)",
+      `${cx(lastA) - lastB.left}px ${lastA.bottom - lastB.top}px`,
     );
-    // The tab: counter-scales the host's ride so its 48px tongue reads constant
-    // (host × tab ≈ 1 across the curve — F5's kept behavior, now a WAAPI mover).
-    if (tab) {
-        animateMover(
-            tab,
-            `translateY(-50%) scale(${1 / hostScale})`,
-            "translateY(-50%) scale(1)",
-            "",
-        );
-    }
-    // The masthead: the h1 glides anchored on the wordmark's center-bottom in the
-    // TARGET layout's box (the h1 spans the full group width — its own center is
-    // not the wordmark's), so the measured wordmark rect maps first → last exactly.
-    if (block && lastB && firstA && lastA) {
-        animateMover(
-            block,
-            `translate(${cx(firstA) - cx(lastA)}px, ${firstA.bottom - lastA.bottom}px) scale(${firstA.width / lastA.width})`,
-            "translate(0px, 0px) scale(1)",
-            `${cx(lastA) - lastB.left}px ${lastA.bottom - lastB.top}px`,
-        );
-    }
+  }
 
-    // One clock, literally (§3-S3): every mover pinned to the same startTime —
-    // zero stagger by construction, and no pending-start dead frames (a pending
-    // animation renders progress 0 until the UA assigns its start time; pinned,
-    // the FIRST painted frame already carries motion — F3's onset hesitation dies).
-    const clock = document.timeline.currentTime;
-    if (typeof clock === "number") for (const m of movers) m.anim.startTime = clock;
+  // One clock, literally (§3-S3): every mover pinned to the same startTime —
+  // zero stagger by construction, and no pending-start dead frames (a pending
+  // animation renders progress 0 until the UA assigns its start time; pinned,
+  // the FIRST painted frame already carries motion — F3's onset hesitation dies).
+  const clock = document.timeline.currentTime;
+  if (typeof clock === "number") for (const m of movers) m.anim.startTime = clock;
 
-    // Settle keys off the movers themselves; the guard timeout stays the
-    // never-never backstop (a glide that can't finish settles late, never never).
-    void Promise.allSettled(movers.map((m) => m.anim.finished)).then(() => {
-        if (gen === glideGen) settleNow();
-    });
-    settleTimer = window.setTimeout(settleNow, SETTLE_GUARD_MS);
+  // Settle keys off the movers themselves; the guard timeout stays the
+  // never-never backstop (a glide that can't finish settles late, never never).
+  void Promise.allSettled(movers.map((m) => m.anim.finished)).then(() => {
+    if (gen === glideGen) settleNow();
+  });
+  settleTimer = window.setTimeout(settleNow, SETTLE_GUARD_MS);
 }
 
 /** The settle — the true layout landed at ONSET (classic FLIP), so this frame
@@ -280,21 +285,21 @@ function glide(toOpen: boolean, scene: DrawerSceneEls) {
  *  gesture layers: no layout step, no re-raster, no snap. After a mid-glide
  *  reversal the class re-flips here — `applyLayout(targetOpen)` stays the one truth. */
 function settleNow() {
-    if (drawerPhase.value === "idle") return;
-    glideGen++; // stale finished-callbacks are void from here
-    if (settleTimer !== null) {
-        clearTimeout(settleTimer);
-        settleTimer = null;
-    }
-    for (const m of movers) {
-        m.anim.cancel();
-        m.el.style.transformOrigin = "";
-    }
-    movers = [];
-    document.documentElement.classList.remove("drawer-gesturing");
-    applyLayout(targetOpen);
-    drawerPhase.value = "idle";
-    if (targetOpen) focusPanel();
+  if (drawerPhase.value === "idle") return;
+  glideGen++; // stale finished-callbacks are void from here
+  if (settleTimer !== null) {
+    clearTimeout(settleTimer);
+    settleTimer = null;
+  }
+  for (const m of movers) {
+    m.anim.cancel();
+    m.el.style.transformOrigin = "";
+  }
+  movers = [];
+  document.documentElement.classList.remove("drawer-gesturing");
+  applyLayout(targetOpen);
+  drawerPhase.value = "idle";
+  if (targetOpen) focusPanel();
 }
 
 /** Re-click mid-glide (§3-S4): retarget by REVERSAL — each mover plays its own
@@ -302,70 +307,68 @@ function settleNow() {
  *  no transition machinery anywhere near it). The same `finished` promises resolve
  *  at the reversed settle, where `applyLayout(targetOpen)` re-flips the layout. */
 function retarget() {
-    targetOpen = !targetOpen;
-    drawerOpen.value = targetOpen;
-    persist(targetOpen);
-    drawerPhase.value = targetOpen ? "opening" : "closing";
-    for (const m of movers) m.anim.reverse();
-    if (!targetOpen) reclaimFocus();
-    if (settleTimer !== null) clearTimeout(settleTimer);
-    settleTimer = window.setTimeout(settleNow, SETTLE_GUARD_MS);
+  targetOpen = !targetOpen;
+  drawerOpen.value = targetOpen;
+  persist(targetOpen);
+  drawerPhase.value = targetOpen ? "opening" : "closing";
+  for (const m of movers) m.anim.reverse();
+  if (!targetOpen) reclaimFocus();
+  if (settleTimer !== null) clearTimeout(settleTimer);
+  settleTimer = window.setTimeout(settleNow, SETTLE_GUARD_MS);
 }
 
 // ── Focus management ─────────────────────────────────────────────────
 
 function reclaimFocus() {
-    const scene = getScene?.();
-    if (!scene?.rail) return;
-    const active = document.activeElement;
-    if (active instanceof HTMLElement && scene.rail.contains(active)) {
-        scene.tab?.focus({ preventScroll: true });
-    }
+  const scene = getScene?.();
+  if (!scene?.rail) return;
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && scene.rail.contains(active)) {
+    scene.tab?.focus({ preventScroll: true });
+  }
 }
 
 function focusPanel() {
-    const scene = getScene?.();
-    const first = scene?.panel?.querySelector<HTMLElement>(
-        'button, select, input, textarea, a[href], [tabindex]:not([tabindex="-1"])',
-    );
-    first?.focus({ preventScroll: true });
+  const scene = getScene?.();
+  const first = scene?.panel?.querySelector<HTMLElement>(
+    'button, select, input, textarea, a[href], [tabindex]:not([tabindex="-1"])',
+  );
+  first?.focus({ preventScroll: true });
 }
 
 // ── Public surface (via useControlsDrawer() — the scenes' one door) ──
 
 function toggleDrawer() {
-    if (!hasDom || !rowRegime.value) return; // §6 regime rule: defined no-op <1024
-    if (drawerPhase.value !== "idle") {
-        retarget();
-        return;
-    }
-    const next = !drawerOpen.value;
-    drawerOpen.value = next;
-    persist(next);
-    const scene = getScene?.();
-    if (!next) reclaimFocus();
-    if (reducedMotion.value || !scene?.host || !scene.rail) {
-        applyLayout(next); // PRM: same-frame swap of the two layout states
-        if (next) focusPanel();
-        return;
-    }
-    glide(next, scene);
+  if (!hasDom || !rowRegime.value) return; // §6 regime rule: defined no-op <1024
+  if (drawerPhase.value !== "idle") {
+    retarget();
+    return;
+  }
+  const next = !drawerOpen.value;
+  drawerOpen.value = next;
+  persist(next);
+  const scene = getScene?.();
+  if (!next) reclaimFocus();
+  if (reducedMotion.value || !scene?.host || !scene.rail) {
+    applyLayout(next); // PRM: same-frame swap of the two layout states
+    if (next) focusPanel();
+    return;
+  }
+  glide(next, scene);
 }
 
 /** Esc from within the drawer (scenes wire this on the rail's keydown). */
 function closeDrawer() {
-    if (drawerPhase.value === "opening") {
-        retarget();
-        return;
-    }
-    if (drawerPhase.value === "idle" && drawerOpen.value) toggleDrawer();
+  if (drawerPhase.value === "opening") {
+    retarget();
+    return;
+  }
+  if (drawerPhase.value === "idle" && drawerOpen.value) toggleDrawer();
 }
 
 /** Closed-idle the rail is inert — no invisible tab stops (W11 UI-6). During either
  *  glide it stays interactive (focus was already reclaimed on close-start). */
-const drawerInert = computed(
-    () => !drawerOpen.value && drawerPhase.value === "idle",
-);
+const drawerInert = computed(() => !drawerOpen.value && drawerPhase.value === "idle");
 
 /** §1/§6 interplay: where drawer-open compresses the left margin below the full
  *  vignette's width (<1360), the completion vignette takes the corner-press rung. */
@@ -375,16 +378,23 @@ export const vignetteDocked = computed(() => drawerOpen.value && !wideMargin.val
  *  under the board"). Boards call this on the open→closed edge; a false return means
  *  stay quiet (already spoken, or storage denied — never risk a repeating hint). */
 export function consumeDrawerHint(): boolean {
-    if (!hasDom) return false;
-    try {
-        if (window.localStorage.getItem(HINT_KEY)) return false;
-        window.localStorage.setItem(HINT_KEY, "1");
-        return true;
-    } catch {
-        return false;
-    }
+  if (!hasDom) return false;
+  try {
+    if (window.localStorage.getItem(HINT_KEY)) return false;
+    window.localStorage.setItem(HINT_KEY, "1");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function useControlsDrawer() {
-    return { drawerOpen, drawerPhase, drawerInert, vignetteDocked, toggleDrawer, closeDrawer };
+  return {
+    drawerOpen,
+    drawerPhase,
+    drawerInert,
+    vignetteDocked,
+    toggleDrawer,
+    closeDrawer,
+  };
 }

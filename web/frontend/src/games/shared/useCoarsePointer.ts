@@ -10,15 +10,15 @@ import { ref, type Ref } from "vue";
 const coarse = ref(false);
 
 if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
-    const mq = window.matchMedia("(pointer: coarse)");
-    coarse.value = mq.matches;
-    // Safari <14 lacks addEventListener on MQL; the value is then load-time static,
-    // which is correct for every real device (a pointer class doesn't hot-swap).
-    mq.addEventListener?.("change", (e) => {
-        coarse.value = e.matches;
-    });
+  const mq = window.matchMedia("(pointer: coarse)");
+  coarse.value = mq.matches;
+  // Safari <14 lacks addEventListener on MQL; the value is then load-time static,
+  // which is correct for every real device (a pointer class doesn't hot-swap).
+  mq.addEventListener?.("change", (e) => {
+    coarse.value = e.matches;
+  });
 }
 
 export function useCoarsePointer(): Ref<boolean> {
-    return coarse;
+  return coarse;
 }

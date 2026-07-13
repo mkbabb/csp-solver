@@ -12,16 +12,30 @@ defineProps<{ size?: number; playing?: boolean }>();
   >
     <!-- Check: two separate lines — no miter join to blob at the crook -->
     <line
-      x1="2" y1="13" x2="8.5" y2="20"
-      stroke="currentColor" stroke-width="2.6" stroke-linecap="round"
+      x1="2"
+      y1="13"
+      x2="8.5"
+      y2="20"
+      stroke="currentColor"
+      stroke-width="2.6"
+      stroke-linecap="round"
       :class="{ 'check-draw': playing }"
       :style="playing ? { strokeDasharray: 10, strokeDashoffset: 10 } : undefined"
     />
     <line
-      x1="8.5" y1="20" x2="22" y2="4"
-      stroke="currentColor" stroke-width="2.6" stroke-linecap="round"
+      x1="8.5"
+      y1="20"
+      x2="22"
+      y2="4"
+      stroke="currentColor"
+      stroke-width="2.6"
+      stroke-linecap="round"
       :class="{ 'check-draw': playing }"
-      :style="playing ? { strokeDasharray: 20, strokeDashoffset: 20, animationDelay: '120ms' } : undefined"
+      :style="
+        playing
+          ? { strokeDasharray: 20, strokeDashoffset: 20, animationDelay: '120ms' }
+          : undefined
+      "
     />
     <!-- 4-point sparkle with soft curved tips -->
     <path
@@ -39,8 +53,12 @@ defineProps<{ size?: number; playing?: boolean }>();
 }
 
 @keyframes drawIn {
-  from { stroke-dashoffset: var(--dashoffset, 20); }
-  to { stroke-dashoffset: 0; }
+  from {
+    stroke-dashoffset: var(--dashoffset, 20);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* Star sparkle: scale up + glow pulse */
@@ -50,9 +68,21 @@ defineProps<{ size?: number; playing?: boolean }>();
 }
 
 @keyframes sparkleGrow {
-  0% { transform: scale(0.3); opacity: 0.2; }
-  40% { transform: scale(1.6); opacity: 1; }
-  70% { transform: scale(0.9); opacity: 0.8; }
-  100% { transform: scale(1.2); opacity: 1; }
+  0% {
+    transform: scale(0.3);
+    opacity: 0.2;
+  }
+  40% {
+    transform: scale(1.6);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
 }
 </style>

@@ -24,18 +24,18 @@ import { useBeatFrame } from "@pencil/composables/boilBeat";
 // the geometric bake (gridPaths.ts §Grain bake) and the poses render as static
 // filterless siblings, opacity-swapped on the beat. Steady-state raster: zero.
 const props = withDefaults(
-    defineProps<{
-        strokeWidth?: number;
-        /** Air between the card's border box and the drawn frame, in px (per-host tunable). */
-        outset?: number;
-        /** Corner radius in px. Default 0 — square, jagged overshoot crossings (opt-in only). */
-        radius?: number;
-    }>(),
-    {
-        strokeWidth: 6,
-        outset: 4,
-        radius: 0,
-    },
+  defineProps<{
+    strokeWidth?: number;
+    /** Air between the card's border box and the drawn frame, in px (per-host tunable). */
+    outset?: number;
+    /** Corner radius in px. Default 0 — square, jagged overshoot crossings (opt-in only). */
+    radius?: number;
+  }>(),
+  {
+    strokeWidth: 6,
+    outset: 4,
+    radius: 0,
+  },
 );
 
 const containerRef = ref<HTMLElement | null>(null);
@@ -43,17 +43,17 @@ const width = ref(0);
 const height = ref(0);
 
 useResizeObserver(containerRef, (entries) => {
-    const entry = entries[0];
-    if (entry) {
-        width.value = entry.contentRect.width;
-        height.value = entry.contentRect.height;
-    }
+  const entry = entries[0];
+  if (entry) {
+    width.value = entry.contentRect.width;
+    height.value = entry.contentRect.height;
+  }
 });
 
 // On the shared beat (T3-W12 §2 P1): the outline's swap coalesces with the grid's.
 const currentFrame = useBeatFrame(
-    () => BOIL_CONFIG.frameCount,
-    () => beatsFor(BOIL_CONFIG.intervalMs),
+  () => BOIL_CONFIG.frameCount,
+  () => beatsFor(BOIL_CONFIG.intervalMs),
 );
 
 // T3-W13 §1-P2: the grain is baked INTO the pose geometry (gridPaths.ts §Grain bake,
@@ -61,88 +61,88 @@ const currentFrame = useBeatFrame(
 // mutations re-bake live) and the poses render as static filterless siblings below.
 // The live `url(#grain-outline)` re-rastered the whole filter graph every beat.
 const frames = computed(() => {
-    if (width.value === 0 || height.value === 0) return [];
-    const vbW = width.value + props.outset * 2;
-    const vbH = height.value + props.outset * 2;
-    return generateRectBoilFrames(
-        0,
-        0,
-        vbW,
-        vbH,
-        { roughness: 0.5, segments: 6, seed: 77, jagged: true },
-        BOIL_CONFIG.outlineBoilPx,
-        BOIL_CONFIG.frameCount,
-        props.radius,
-        FILTER_PRESETS["grain-outline"]?.grain,
-    );
+  if (width.value === 0 || height.value === 0) return [];
+  const vbW = width.value + props.outset * 2;
+  const vbH = height.value + props.outset * 2;
+  return generateRectBoilFrames(
+    0,
+    0,
+    vbW,
+    vbH,
+    { roughness: 0.5, segments: 6, seed: 77, jagged: true },
+    BOIL_CONFIG.outlineBoilPx,
+    BOIL_CONFIG.frameCount,
+    props.radius,
+    FILTER_PRESETS["grain-outline"]?.grain,
+  );
 });
 
 const viewBox = computed(
-    () => `0 0 ${width.value + props.outset * 2} ${height.value + props.outset * 2}`,
+  () => `0 0 ${width.value + props.outset * 2} ${height.value + props.outset * 2}`,
 );
 </script>
 
 <template>
-    <div
-        ref="containerRef"
-        class="outline-container"
-        :style="{ '--outline-outset': `${props.outset}px` }"
-    >
-        <slot />
-        <!-- T3-W13 §1-P2 — the grid's steady-state template minus the filter:
+  <div
+    ref="containerRef"
+    class="outline-container"
+    :style="{ '--outline-outset': `${props.outset}px` }"
+  >
+    <slot />
+    <!-- T3-W13 §1-P2 — the grid's steady-state template minus the filter:
              frameCount pre-baked grain-in-geometry siblings; the beat only flips
              which one is opacity:1 (compositor-only — no SourceGraphic invalidation,
              zero steady-state raster). -->
-        <svg
-            v-if="frames.length"
-            class="outline-svg"
-            :viewBox="viewBox"
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            <g
-                v-for="(d, f) in frames"
-                :key="f"
-                class="boil-pose"
-                :class="{ 'is-active': currentFrame === f }"
-            >
-                <path
-                    :d="d"
-                    fill="none"
-                    stroke="currentColor"
-                    :stroke-width="props.strokeWidth"
-                    stroke-opacity="0.95"
-                    stroke-linejoin="round"
-                    stroke-linecap="round"
-                />
-            </g>
-        </svg>
-    </div>
+    <svg
+      v-if="frames.length"
+      class="outline-svg"
+      :viewBox="viewBox"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <g
+        v-for="(d, f) in frames"
+        :key="f"
+        class="boil-pose"
+        :class="{ 'is-active': currentFrame === f }"
+      >
+        <path
+          :d="d"
+          fill="none"
+          stroke="currentColor"
+          :stroke-width="props.strokeWidth"
+          stroke-opacity="0.95"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
+      </g>
+    </svg>
+  </div>
 </template>
 
 <style scoped>
 .outline-container {
-    position: relative;
-    overflow: visible;
+  position: relative;
+  overflow: visible;
 }
 
 .outline-svg {
-    position: absolute;
-    inset: calc(var(--outline-outset, 0px) * -1);
-    width: calc(100% + var(--outline-outset, 0px) * 2);
-    height: calc(100% + var(--outline-outset, 0px) * 2);
-    pointer-events: none;
-    z-index: 1;
-    overflow: visible;
+  position: absolute;
+  inset: calc(var(--outline-outset, 0px) * -1);
+  width: calc(100% + var(--outline-outset, 0px) * 2);
+  height: calc(100% + var(--outline-outset, 0px) * 2);
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
 }
 
 /* The grid hoist's sibling discipline (HandDrawnGrid.vue): each pose promoted so
    the beat's opacity toggle is a compositor-only blend, never a repaint. */
 .boil-pose {
-    opacity: 0;
-    will-change: opacity;
+  opacity: 0;
+  will-change: opacity;
 }
 
 .boil-pose.is-active {
-    opacity: 1;
+  opacity: 1;
 }
 </style>

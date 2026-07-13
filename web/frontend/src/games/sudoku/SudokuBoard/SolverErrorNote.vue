@@ -10,27 +10,30 @@
  * + cartoon shadow + Patrick Hand), not purple copy. Copy + retryability are derived
  * upstream from the typed error taxonomy (`classifyError.ts`) and handed in.
  */
-import { nextTick, onMounted, ref } from 'vue'
-import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'
+import { nextTick, onMounted, ref } from "vue";
+import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 
 defineProps<{
-  text: string
-  retryable?: boolean
-}>()
+  text: string;
+  retryable?: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'retry'): void
-}>()
+  (e: "retry"): void;
+}>();
 
 // H5(b′): on show, bring the note to the reader — the card can mount below the fold
 // (E1). scrollIntoView moves no focus and re-fires nothing (role=alert announced on
 // insertion); the card itself stays a persistent alert, dismissed only by state change.
-const rootRef = ref<HTMLElement | null>(null)
+const rootRef = ref<HTMLElement | null>(null);
 onMounted(async () => {
-  await nextTick()
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  rootRef.value?.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
-})
+  await nextTick();
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  rootRef.value?.scrollIntoView({
+    block: "nearest",
+    behavior: reduced ? "auto" : "smooth",
+  });
+});
 </script>
 
 <template>
@@ -38,7 +41,12 @@ onMounted(async () => {
     <HandDrawnOutline :stroke-width="3">
       <div class="error-note-card cartoon-shadow-sm edge-outlined bg-card">
         <p class="error-note-text">{{ text }}</p>
-        <button v-if="retryable" type="button" class="error-note-retry" @click="emit('retry')">
+        <button
+          v-if="retryable"
+          type="button"
+          class="error-note-retry"
+          @click="emit('retry')"
+        >
           try again
         </button>
       </div>

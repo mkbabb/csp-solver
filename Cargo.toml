@@ -46,6 +46,15 @@ warnings = "deny"
 
 [workspace.lints.clippy]
 all = { level = "deny", priority = -1 }
+# Ban `mod.rs` — the module tree uses only self-named files (`foo.rs` beside
+# `foo/`). NOTE the counterintuitive lint id: in clippy 1.97 `mod_module_files`
+# is the lint that BANS mod.rs ("`mod.rs` files are not allowed → move to foo.rs"),
+# while `self_named_module_files` does the opposite (REQUIRES mod.rs) — the two
+# behaviors are inverted vs. their names (verified empirically on this toolchain).
+# A restriction lint (allow-by-default, not in `all`), named explicitly; `deny`
+# makes CI's `clippy -D warnings` red on any regrown `mod.rs`. Do NOT "correct"
+# this to `self_named_module_files` — that would force the mod.rs layout back.
+mod_module_files = "deny"
 
 # ── native release profile ───────────────────────────────────────────────────
 # `strip = true` drops symbols from the native cdylib the PyO3 wheel ships

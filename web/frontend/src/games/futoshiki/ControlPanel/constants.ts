@@ -8,8 +8,8 @@
  * `size` Sudoku's options carry (F5).
  */
 export const boardSizeOptions = [
-  { value: 4, label: '4×4' },
-  { value: 5, label: '5×5' },
-  { value: 6, label: '6×6' },
-  { value: 7, label: '7×7' },
-]
+  { value: 4, label: "4×4" },
+  { value: 5, label: "5×5" },
+  { value: 6, label: "6×6" },
+  { value: 7, label: "7×7" },
+];

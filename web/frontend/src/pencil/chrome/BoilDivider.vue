@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { heldFrameCount } from '@mkbabb/pencil-boil'
-import { generateLineBoilFrames } from '@pencil/grid/gridPaths'
-import { BOIL_CONFIG, beatsFor } from '@pencil/config/pencilConfig'
-import { useBeatFrame } from '@pencil/composables/boilBeat'
+import { computed } from "vue";
+import { heldFrameCount } from "@mkbabb/pencil-boil";
+import { generateLineBoilFrames } from "@pencil/grid/gridPaths";
+import { BOIL_CONFIG, beatsFor } from "@pencil/config/pencilConfig";
+import { useBeatFrame } from "@pencil/composables/boilBeat";
 
 /**
  * Self-contained hand-drawn "boiling" divider line. Extracted from `ControlPanel.vue`,
@@ -30,18 +30,22 @@ import { useBeatFrame } from '@pencil/composables/boilBeat'
  */
 const dividerFrames = computed(() =>
   generateLineBoilFrames(
-    20, 8, 980, 8,
+    20,
+    8,
+    980,
+    8,
     { roughness: 0.2, segments: 3, seed: 314, jagged: true },
-    BOIL_CONFIG.frameBoil, BOIL_CONFIG.frameCount,
-  )
-)
+    BOIL_CONFIG.frameBoil,
+    BOIL_CONFIG.frameCount,
+  ),
+);
 // Freeze-in-place while the answer-key laminate holds the page (W9 §2). On the
 // shared beat (T3-W12 §2 P1) so both mounted instances swap in the same dirty frame
 // as the rest of the page's boils.
 const dividerFrame = useBeatFrame(
   heldFrameCount(() => BOIL_CONFIG.frameCount),
   () => beatsFor(BOIL_CONFIG.intervalMs),
-)
+);
 </script>
 
 <template>
@@ -49,7 +53,11 @@ const dividerFrame = useBeatFrame(
     <!-- T3-W13 §1-P2 fallback — grain-hoist stack (the grid's steady-state template
          VERBATIM, filter kept): static geometry per sibling, grain-static rasters
          once each, the beat only flips opacity. -->
-    <svg viewBox="0 0 1000 16" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      viewBox="0 0 1000 16"
+      preserveAspectRatio="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <g
         v-for="(d, f) in dividerFrames"
         :key="f"

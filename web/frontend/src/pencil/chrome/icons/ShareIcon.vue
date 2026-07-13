@@ -18,11 +18,17 @@ defineProps<{ size?: number }>();
     <!-- Connectors: gently bowed, sag mismatched — one dips, one lifts -->
     <path
       d="M7.9,10.9 Q12.1,9.8 15.5,7"
-      stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      fill="none"
     />
     <path
       d="M7.9,13.7 Q11.8,14.7 15,17.3"
-      stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      fill="none"
     />
   </svg>
 </template>

@@ -7,8 +7,8 @@
  * `useUrlState.ts` imported back — a type-only import cycle
  * (useSudoku → useUrlState → useSudoku).
  */
-export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD'
+export type Difficulty = "EASY" | "MEDIUM" | "HARD";
 
 // SolveState/SolveStats are the shared game vocabulary — re-exported here so every
 // existing `@games/sudoku/types` consumer is untouched (ballot Q3, one home).
-export type { SolveState, SolveStats } from '../shared/types'
+export type { SolveState, SolveStats } from "../shared/types";

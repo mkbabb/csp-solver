@@ -71,10 +71,7 @@ on:
 jobs:
     # ---------------------------------------------------------------- Lane 1
     # fmt + clippy. Kept in a job of its own so a red clippy does NOT mask the
-    # build/test/queens signal (those lanes should be green at HEAD; clippy is
-    # RED until W1 fixes the 3 composition residuals — gac/mod.rs:192,
-    # search.rs:246 collapsible-if, tests/assignment_proptest.rs:42 too-many-args;
-    # kernel-soundness-closure.md §7 amendment 3). Strict, no continue-on-error.
+    # build/test/queens signal. Strict, no continue-on-error.
     lint:
         runs-on: ubuntu-latest
         timeout-minutes: 15
@@ -152,8 +149,7 @@ jobs:
     # under Python 3.13: T2-W1's pyo3 0.24 -> 0.29 bump lifted the 0.24-era 3.13
     # ceiling (0.29 is tested through 3.14.0 final upstream) — 3.13 below is now a
     # tested-floor pin, not a hard cap (kernel-soundness-closure.md §7.6 is
-    # superseded by the pyo3 0.29 migration note). RED until W1 fixes the
-    # src/py.rs E0063.
+    # superseded by the pyo3 0.29 migration note).
     py-compile:
         runs-on: ubuntu-latest
         timeout-minutes: 20
@@ -196,7 +192,6 @@ jobs:
     # solve-time assertions, ~102-112ms observed on Golden Nugget). Accept the
     # measured +36-40% cold cargo-build wall-time penalty for this lane in
     # exchange for perf assertions that mean something.
-    # RED until W1 fixes the src/py.rs E0063 (maturin compiles the py surface).
     py-runtime:
         runs-on: ubuntu-latest
         timeout-minutes: 30
@@ -489,6 +484,14 @@ jobs:
             - name: knip (dead-file / dead-dependency / dead-export gate)
               working-directory: web/frontend
               run: npm run lint:knip
+            # prettier — the repo-pinned format gate (T4-W4, D2). `.prettierrc.json`
+            # pins 2-space (matching eslint.config.js / vite.config.ts / tsconfig.json)
+            # with the tailwind class-sorter live; `npm run lint` is now the
+            # non-destructive `prettier --check src/`, retiring the machine-global
+            # `~/.prettierrc` shadow that rewrote the tree to 4-space on a bare run.
+            - name: prettier (repo-pinned format check)
+              working-directory: web/frontend
+              run: npm run lint
 
     # ---------------------------------------------------------------- Lane 9
     # e2e — Playwright over the Vue SPA (ratification R6). Node-only after the
@@ -557,6 +560,13 @@ jobs:
             - name: "Run the throttled-void gate (bundled preview)"
               working-directory: web/frontend
               run: npm run test:e2e:throttle
+            # T4-W4 prod-shake proof (FAM-5): the DEV-gated FilterTuner /
+            # rafInstrumentation / schedulerDebugInfo must be tree-shaken out of the
+            # shipped bundle. Reuses dist-throttle/ (the bundled production build the
+            # throttle gate just produced) — compute-cost DAG, no redundant build.
+            - name: "Prod-shake proof (dev tuner absent from the bundle)"
+              working-directory: web/frontend
+              run: npm run test:prod-shake -- dist-throttle
             - name: Upload Playwright HTML report (failure only)
               if: failure()
               uses: actions/upload-artifact@v4

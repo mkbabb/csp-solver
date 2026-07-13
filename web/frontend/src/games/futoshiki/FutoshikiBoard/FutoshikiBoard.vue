@@ -10,91 +10,93 @@
  *   - Conflict detection is Latin-square (row/col) + inequality violation, no boxes.
  *   - No `difficulty` (F3).
  */
-import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import FutoshikiCell from './FutoshikiCell/FutoshikiCell.vue'
-import FutoshikiCaret from './FutoshikiCaret/FutoshikiCaret.vue'
-import SolverErrorNote from './SolverErrorNote.vue'
-import { HandDrawnGrid } from '@pencil/grid'
-import CelebrationHeart from '@pencil/chrome/CelebrationHeart.vue'
-import CompletionVignette from '@pencil/chrome/CompletionVignette.vue'
-import MarginNote from '@pencil/chrome/MarginNote.vue'
-import { mulberry32 } from '@mkbabb/pencil-boil'
-import { generateCellRects } from '@pencil/grid/gridPaths'
-import { revealStaggerMs } from '@pencil/config/pencilConfig'
+import { computed, ref, watch, onMounted, onUnmounted, nextTick } from "vue";
+import FutoshikiCell from "./FutoshikiCell/FutoshikiCell.vue";
+import FutoshikiCaret from "./FutoshikiCaret/FutoshikiCaret.vue";
+import SolverErrorNote from "./SolverErrorNote.vue";
+import HandDrawnGrid from "@pencil/grid/HandDrawnGrid/HandDrawnGrid.vue";
+import CelebrationHeart from "@pencil/chrome/CelebrationHeart.vue";
+import CompletionVignette from "@pencil/chrome/CompletionVignette.vue";
+import MarginNote from "@pencil/chrome/MarginNote.vue";
+import { mulberry32 } from "@mkbabb/pencil-boil";
+import { generateCellRects } from "@pencil/grid/gridPaths";
+import { revealStaggerMs } from "@pencil/config/pencilConfig";
 import {
   setMurmurSeed,
   notifyUserEdit,
   resetMurmur,
-} from '@pencil/composables/celebration'
-import { findConflicts } from './conflicts'
-import { classifyCode, PAPER_NOTE_COPY } from '@games/futoshiki/solver/classifyError'
-import { BOARD_CELLS_CLASS } from '@games/shared/constants'
-import { formatSolveTally } from '@games/shared/solveTally'
+} from "@pencil/composables/celebration";
+import { findConflicts } from "./conflicts";
+import { classifyCode, PAPER_NOTE_COPY } from "@games/shared/solver/classifyError";
+import { BOARD_CELLS_CLASS } from "@games/shared/constants";
+import { formatSolveTally } from "@games/shared/solveTally";
 import {
   consumeDrawerHint,
   useControlsDrawer,
   vignetteDocked,
-} from '@games/shared/useControlsDrawer'
-import type { Inequality, SolveState, SolveStats } from '@games/futoshiki/types'
-import type { AnimationState } from '@pencil/types'
+} from "@games/shared/useControlsDrawer";
+import type { Inequality, SolveState, SolveStats } from "@games/futoshiki/types";
+import type { AnimationState } from "@pencil/types";
 
 const props = defineProps<{
-  boardSize: number
-  totalCells: number
-  values: Record<string, number>
-  givenCells: Set<string>
-  overriddenCells: Set<string>
-  animatingCells: Set<string>
-  solveState: SolveState
-  solvedValues: Record<string, number>
-  boardGeneration: number
+  boardSize: number;
+  totalCells: number;
+  values: Record<string, number>;
+  givenCells: Set<string>;
+  overriddenCells: Set<string>;
+  animatingCells: Set<string>;
+  solveState: SolveState;
+  solvedValues: Record<string, number>;
+  boardGeneration: number;
   /** Printed [greater, lesser] inequality furniture — drives the caret layer + a11y folding. */
-  inequalities: Inequality[]
+  inequalities: Inequality[];
   /** Optional typed error code for the paper-note copy. Absent → default BUDGET_EXCEEDED copy. */
-  errorCode?: string
+  errorCode?: string;
   /** Stats from the last completed solve — the margin tally (MarginNote meta, pencil
    *  hand, understated). Null whenever the grade is idle; the composable owns the
    *  lifecycle. */
-  solveStats?: SolveStats | null
+  solveStats?: SolveStats | null;
   /** Engine-domains pencil marks (W6 beat 9): per-position surviving candidates
    *  from the solver's own propagation. Populated only while the peek gesture is
    *  held (opt-in — never ambient); only positions where propagation actually
    *  pruned something are present. Twin of SudokuBoard's (D16). */
-  pencilMarks?: Record<string, number[]>
+  pencilMarks?: Record<string, number[]>;
   /** F6 page-turn (T3-W10): true while this scene is switch-away's outgoing exercise.
    *  Routes the grid through the EXISTING erase beat and fades glyphs + marginalia;
    *  on the erase's completion the board emits `erased` (the seam) instead of redrawing. */
-  leaving?: boolean
+  leaving?: boolean;
   /** DigitPad live (T3-W11 U-A): threads virtual-keyboard suppression to the cells —
    *  true exactly when the pad is the entry surface (coarse pointer + stacked regime). */
-  padActive?: boolean
+  padActive?: boolean;
   /** T4-W3 share-truth (twin of SudokuBoard's): a `?board=` was PRESENT but failed to decode —
    *  the composable already fell back to a fresh deal. Folds a one-line "this shared link
    *  couldn't be read" clause into the FIRST fresh-board announce. One-shot. */
-  linkError?: boolean
-}>()
+  linkError?: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'updateCell', position: number, value: number): void
-  (e: 'retry'): void
-  (e: 'undo'): void
-  (e: 'redo'): void
-  (e: 'hint', position: number): void
-  (e: 'erased'): void
+  (e: "updateCell", position: number, value: number): void;
+  (e: "retry"): void;
+  (e: "undo"): void;
+  (e: "redo"): void;
+  (e: "hint", position: number): void;
+  (e: "erased"): void;
   /** DigitPad enablement (T3-W11 U-A): true while any cell input holds DOM focus.
    *  The pad's keys prevent focus-steal on mousedown, so a pad tap never flips this. */
-  (e: 'cellFocusChange', focused: boolean): void
-}>()
+  (e: "cellFocusChange", focused: boolean): void;
+}>();
 
-const gridTemplateColumns = computed(() => `repeat(${props.boardSize}, minmax(0, 1fr))`)
+const gridTemplateColumns = computed(
+  () => `repeat(${props.boardSize}, minmax(0, 1fr))`,
+);
 
 // Pre-computed ghost rect paths in board viewBox coordinates (1000×1000). The ghost geometry
 // is subgrid-independent, so passing boardSize as the subgrid arg only keys the cache; the
 // frame/box-line pass generateGridPaths ran and threw away is gone (T3-W8, LRU-backed).
-const VIEWBOX_SIZE = 1000
+const VIEWBOX_SIZE = 1000;
 const cellRects = computed(() =>
   generateCellRects(props.boardSize, props.boardSize, VIEWBOX_SIZE, 42),
-)
+);
 
 // R3: the viewport-share/dvh caps ride the row regime, which now starts at lg: —
 // iPad-portrait (768) stacks, so the stacked width formula governs there.
@@ -102,60 +104,60 @@ const cellRects = computed(() =>
 // SudokuBoard's.
 const boardSizeClasses = computed(() => {
   if (props.boardSize <= 4)
-    return 'shell-sm w-[min(26rem,calc(100vw-1.5rem))] lg:w-[min(26rem,85vw)] lg:max-w-[calc(100dvh-10rem)]'
-  return 'shell-md w-[min(42rem,calc(100vw-1.5rem))] lg:w-[min(42rem,85vw)] lg:max-w-[calc(100dvh-10rem)]'
-})
+    return "shell-sm w-[min(26rem,calc(100vw-1.5rem))] lg:w-[min(26rem,85vw)] lg:max-w-[calc(100dvh-10rem)]";
+  return "shell-md w-[min(42rem,calc(100vw-1.5rem))] lg:w-[min(42rem,85vw)] lg:max-w-[calc(100dvh-10rem)]";
+});
 
 // P4 (T3-W12 §2): scoped to the gold/red shadow it exists for — twin of SudokuBoard's.
 const boardClasses = computed(() => {
-  const base = 'transition-[box-shadow] duration-500'
-  if (props.solveState === 'solved') return `${base} solve-success`
-  if (props.solveState === 'failed') return `${base} solve-failure`
-  return base
-})
+  const base = "transition-[box-shadow] duration-500";
+  if (props.solveState === "solved") return `${base} solve-success`;
+  if (props.solveState === "failed") return `${base} solve-failure`;
+  return base;
+});
 
 // ── Conflict detection — Latin-square (row/col) + inequality violations (§1.4) ──
 const conflicts = computed(() =>
-  props.solveState === 'failed'
+  props.solveState === "failed"
     ? findConflicts(props.values, props.boardSize, props.inequalities)
     : { positions: new Set<string>(), firstRow: null },
-)
+);
 
 // ── Caret layer — the inequality furniture (design-union §2.4 row 4) ─────────────
 // A caret sits on the shared edge between an adjacent pair; its open mouth faces the
 // larger value. Horizontal → `>`/`<`; vertical → the `>` glyph rotated ±90° (∨/∧).
 interface CaretDescriptor {
-  key: string
-  glyph: '>' | '<'
-  rotation: number
-  leftPct: number
-  topPct: number
-  sizePct: number
-  hash: number
+  key: string;
+  glyph: ">" | "<";
+  rotation: number;
+  leftPct: number;
+  topPct: number;
+  sizePct: number;
+  hash: number;
 }
 const caretDescriptors = computed<CaretDescriptor[]>(() => {
-  const n = props.boardSize
-  const cellPct = 100 / n
-  const out: CaretDescriptor[] = []
+  const n = props.boardSize;
+  const cellPct = 100 / n;
+  const out: CaretDescriptor[] = [];
   for (const [gt, lt] of props.inequalities) {
-    const rg = Math.floor(gt / n)
-    const cg = gt % n
-    const rl = Math.floor(lt / n)
-    const cl = lt % n
-    let glyph: '>' | '<' = '>'
-    let rotation = 0
-    let leftPct: number
-    let topPct: number
+    const rg = Math.floor(gt / n);
+    const cg = gt % n;
+    const rl = Math.floor(lt / n);
+    const cl = lt % n;
+    let glyph: ">" | "<" = ">";
+    let rotation = 0;
+    let leftPct: number;
+    let topPct: number;
     if (rg === rl) {
       // Horizontal pair — the shared edge is the column boundary between them.
-      leftPct = (Math.min(cg, cl) + 1) * cellPct
-      topPct = (rg + 0.5) * cellPct
-      glyph = cg < cl ? '>' : '<' // greater on the left → `>`
+      leftPct = (Math.min(cg, cl) + 1) * cellPct;
+      topPct = (rg + 0.5) * cellPct;
+      glyph = cg < cl ? ">" : "<"; // greater on the left → `>`
     } else {
       // Vertical pair — shared edge is the row boundary; rotate the `>` glyph.
-      topPct = (Math.min(rg, rl) + 1) * cellPct
-      leftPct = (cg + 0.5) * cellPct
-      rotation = rg < rl ? 90 : -90 // greater on top → ∨ (+90); greater on bottom → ∧ (−90)
+      topPct = (Math.min(rg, rl) + 1) * cellPct;
+      leftPct = (cg + 0.5) * cellPct;
+      rotation = rg < rl ? 90 : -90; // greater on top → ∨ (+90); greater on bottom → ∧ (−90)
     }
     out.push({
       key: `${gt}-${lt}`,
@@ -165,285 +167,285 @@ const caretDescriptors = computed<CaretDescriptor[]>(() => {
       topPct,
       sizePct: cellPct * 0.5,
       hash: gt * 131 + lt * 7 + 1,
-    })
+    });
   }
-  return out
-})
+  return out;
+});
 
 // ── Per-cell inequality clauses folded into aria-labels (F6) ─────────────────────
 const constraintLabels = computed<Map<number, string>>(() => {
-  const n = props.boardSize
+  const n = props.boardSize;
   const dir = (from: number, to: number): string => {
-    const d = to - from
-    if (d === 1) return 'to the right'
-    if (d === -1) return 'to the left'
-    if (d === n) return 'below'
-    if (d === -n) return 'above'
-    return ''
-  }
-  const clauses = new Map<number, string[]>()
+    const d = to - from;
+    if (d === 1) return "to the right";
+    if (d === -1) return "to the left";
+    if (d === n) return "below";
+    if (d === -n) return "above";
+    return "";
+  };
+  const clauses = new Map<number, string[]>();
   const add = (pos: number, clause: string) => {
-    const arr = clauses.get(pos)
-    if (arr) arr.push(clause)
-    else clauses.set(pos, [clause])
-  }
+    const arr = clauses.get(pos);
+    if (arr) arr.push(clause);
+    else clauses.set(pos, [clause]);
+  };
   for (const [gt, lt] of props.inequalities) {
-    add(gt, `greater than the cell ${dir(gt, lt)}`)
-    add(lt, `less than the cell ${dir(lt, gt)}`)
+    add(gt, `greater than the cell ${dir(gt, lt)}`);
+    add(lt, `less than the cell ${dir(lt, gt)}`);
   }
-  const out = new Map<number, string>()
-  for (const [pos, arr] of clauses) out.set(pos, arr.join(' and '))
-  return out
-})
+  const out = new Map<number, string>();
+  for (const [pos, arr] of clauses) out.set(pos, arr.join(" and "));
+  return out;
+});
 
 // Beat 1 — the reveal wave (board-normalized noise stagger).
 const noiseDelays = computed(() => {
-  const delays = new Map<string, number>()
-  const cells = Array.from(props.animatingCells)
-  if (cells.length === 0) return delays
+  const delays = new Map<string, number>();
+  const cells = Array.from(props.animatingCells);
+  if (cells.length === 0) return delays;
 
-  const stagger = revealStaggerMs(cells.length)
-  const rng = mulberry32(cells.length * 17 + 7)
-  const shuffled = [...cells]
+  const stagger = revealStaggerMs(cells.length);
+  const rng = mulberry32(cells.length * 17 + 7);
+  const shuffled = [...cells];
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   for (let i = 0; i < shuffled.length; i++) {
-    delays.set(shuffled[i], i * stagger)
+    delays.set(shuffled[i], i * stagger);
   }
-  return delays
-})
+  return delays;
+});
 
 // Celebration presence (T3-W12 §1 P5): STATE-derived so the composition survives
 // remounts while solved; only the murmur seed stays on the transition edge. Twin of
 // SudokuBoard's — see its comment for the full rationale.
 const celebrating = computed(
-  () => props.solveState === 'solved' && props.animatingCells.size > 0,
-)
+  () => props.solveState === "solved" && props.animatingCells.size > 0,
+);
 watch(
   () => props.solveState,
   (state, prev) => {
-    if (state === 'solved' && prev !== 'solved' && props.animatingCells.size > 0) {
-      setMurmurSeed(props.boardGeneration * 31 + 1)
+    if (state === "solved" && prev !== "solved" && props.animatingCells.size > 0) {
+      setMurmurSeed(props.boardGeneration * 31 + 1);
     }
   },
-)
+);
 watch(
   () => props.boardGeneration,
   () => {
-    resetMurmur()
+    resetMurmur();
   },
-)
+);
 
 function onCellUpdate(pos: number, value: number) {
-  notifyUserEdit()
-  emit('updateCell', pos, value)
+  notifyUserEdit();
+  emit("updateCell", pos, value);
 }
 
 // ── ARIA grid + roving tabindex (§4.1) ───────────────────────────────
 const gridLabel = computed(
   () => `${props.boardSize} by ${props.boardSize} futoshiki board`,
-)
+);
 
-const focusedPos = ref(0)
-const cellApi = new Map<number, { focus: () => void }>()
+const focusedPos = ref(0);
+const cellApi = new Map<number, { focus: () => void }>();
 function setCellApi(pos: number, el: unknown) {
-  if (el && typeof (el as { focus?: unknown }).focus === 'function') {
-    cellApi.set(pos, el as { focus: () => void })
+  if (el && typeof (el as { focus?: unknown }).focus === "function") {
+    cellApi.set(pos, el as { focus: () => void });
   } else {
-    cellApi.delete(pos)
+    cellApi.delete(pos);
   }
 }
 function focusCell(pos: number) {
-  const clamped = Math.max(0, Math.min(props.totalCells - 1, pos))
-  focusedPos.value = clamped
-  nextTick(() => cellApi.get(clamped)?.focus())
+  const clamped = Math.max(0, Math.min(props.totalCells - 1, pos));
+  focusedPos.value = clamped;
+  nextTick(() => cellApi.get(clamped)?.focus());
 }
 function onCellFocus(pos: number) {
-  focusedPos.value = pos
+  focusedPos.value = pos;
 }
 
 // ── DigitPad wiring (T3-W11 U-A) — twin of SudokuBoard's (D16) ───────
 // `enterValue` writes THROUGH the same onCellUpdate the cell input uses (override rules,
 // murmur hold, undo recording inherited); focusin/focusout report "a cell holds focus".
-const cellsEl = ref<HTMLElement | null>(null)
+const cellsEl = ref<HTMLElement | null>(null);
 function onCellsFocusIn() {
-  emit('cellFocusChange', true)
+  emit("cellFocusChange", true);
 }
 function onCellsFocusOut(e: FocusEvent) {
   if (!(e.relatedTarget instanceof Node) || !cellsEl.value?.contains(e.relatedTarget)) {
-    emit('cellFocusChange', false)
+    emit("cellFocusChange", false);
   }
 }
 function enterValue(value: number) {
-  onCellUpdate(focusedPos.value, value)
+  onCellUpdate(focusedPos.value, value);
 }
-defineExpose({ enterValue })
+defineExpose({ enterValue });
 
 function onBoardKeydown(e: KeyboardEvent) {
-  const n = props.boardSize
-  const pos = focusedPos.value
-  const row = Math.floor(pos / n)
-  const col = pos % n
-  let handled = true
+  const n = props.boardSize;
+  const pos = focusedPos.value;
+  const row = Math.floor(pos / n);
+  const col = pos % n;
+  let handled = true;
   switch (e.key) {
-    case 'ArrowUp':
-      focusCell(row > 0 ? pos - n : pos)
-      break
-    case 'ArrowDown':
-      focusCell(row < n - 1 ? pos + n : pos)
-      break
-    case 'ArrowLeft':
-      focusCell(col > 0 ? pos - 1 : pos)
-      break
-    case 'ArrowRight':
-      focusCell(col < n - 1 ? pos + 1 : pos)
-      break
-    case 'Home':
-      focusCell(e.ctrlKey ? 0 : row * n)
-      break
-    case 'End':
-      focusCell(e.ctrlKey ? n * n - 1 : row * n + (n - 1))
-      break
+    case "ArrowUp":
+      focusCell(row > 0 ? pos - n : pos);
+      break;
+    case "ArrowDown":
+      focusCell(row < n - 1 ? pos + n : pos);
+      break;
+    case "ArrowLeft":
+      focusCell(col > 0 ? pos - 1 : pos);
+      break;
+    case "ArrowRight":
+      focusCell(col < n - 1 ? pos + 1 : pos);
+      break;
+    case "Home":
+      focusCell(e.ctrlKey ? 0 : row * n);
+      break;
+    case "End":
+      focusCell(e.ctrlKey ? n * n - 1 : row * n + (n - 1));
+      break;
     // ── Bounded undo/redo (W6) — sibling case, disjoint e.key from the K-peek
     // ('k'/'Escape') and Backspace/Delete layers. Gate on ctrlKey OR metaKey (Cmd on
     // macOS); a plain 'z' falls through unhandled. Shift → redo. Twin of Sudoku's (D16).
-    case 'z':
-    case 'Z':
+    case "z":
+    case "Z":
       if (e.ctrlKey || e.metaKey) {
-        if (e.shiftKey) emit('redo')
-        else emit('undo')
-      } else handled = false
-      break
+        if (e.shiftKey) emit("redo");
+        else emit("undo");
+      } else handled = false;
+      break;
     // ── Hint tier (W6) — 'H' fills the focused cell from the peek cache (solver-ink).
     // Bare key only; a modified H falls through. Twin of Sudoku's (D16).
-    case 'h':
-    case 'H':
-      if (e.ctrlKey || e.metaKey) handled = false
-      else emit('hint', focusedPos.value)
-      break
+    case "h":
+    case "H":
+      if (e.ctrlKey || e.metaKey) handled = false;
+      else emit("hint", focusedPos.value);
+      break;
     default:
-      handled = false
+      handled = false;
   }
-  if (handled) e.preventDefault()
+  if (handled) e.preventDefault();
 }
 
 // ── Marginalia — the status voice (§4.3) ─────────────────────────────
-const marginText = ref('')
-const marginTone = ref<'graphite' | 'teacher-red' | 'gold-star'>('graphite')
-function setMargin(text: string, tone: 'graphite' | 'teacher-red' | 'gold-star') {
-  marginText.value = text
-  marginTone.value = tone
+const marginText = ref("");
+const marginTone = ref<"graphite" | "teacher-red" | "gold-star">("graphite");
+function setMargin(text: string, tone: "graphite" | "teacher-red" | "gold-star") {
+  marginText.value = text;
+  marginTone.value = tone;
 }
 
-let slowSolveTimer: ReturnType<typeof setTimeout> | null = null
+let slowSolveTimer: ReturnType<typeof setTimeout> | null = null;
 watch(
   () => props.solveState,
   (state) => {
     if (slowSolveTimer) {
-      clearTimeout(slowSolveTimer)
-      slowSolveTimer = null
+      clearTimeout(slowSolveTimer);
+      slowSolveTimer = null;
     }
-    if (state === 'solved') {
-      setMargin('solved it!', 'gold-star')
-    } else if (state === 'failed') {
-      const c = conflicts.value
+    if (state === "solved") {
+      setMargin("solved it!", "gold-star");
+    } else if (state === "failed") {
+      const c = conflicts.value;
       setMargin(
         c.firstRow
           ? `not quite — check row ${c.firstRow}`
-          : 'not quite — no solution from here.',
-        'teacher-red',
-      )
-    } else if (state === 'solving') {
+          : "not quite — no solution from here.",
+        "teacher-red",
+      );
+    } else if (state === "solving") {
       slowSolveTimer = setTimeout(() => {
-        if (props.solveState === 'solving')
-          setMargin('still sharpening the pencil…', 'graphite')
-      }, 2500)
-    } else if (state === 'idle' && marginTone.value !== 'graphite') {
+        if (props.solveState === "solving")
+          setMargin("still sharpening the pencil…", "graphite");
+      }, 2500);
+    } else if (state === "idle" && marginTone.value !== "graphite") {
       // Stale-note clear (W6, verify-14's widening): once the grade reverts, the red
       // "check row N" AND the gold "solved it!" go stale by the same path — clear any
       // non-graphite tone. Graphite board-load copy is not a grade; it stays.
-      setMargin('', 'graphite')
+      setMargin("", "graphite");
     }
   },
-)
+);
 
 // ── The drawer's margin voice (T3-W12 §6) — twin of SudokuBoard's: hint once,
 // ever, on the first close; graphite-only window so a grade is never talked over.
-const { drawerOpen } = useControlsDrawer()
+const { drawerOpen } = useControlsDrawer();
 watch(drawerOpen, (open, prev) => {
-  if (prev && !open && marginTone.value === 'graphite' && consumeDrawerHint()) {
-    setMargin('your pencil case is under the board', 'graphite')
+  if (prev && !open && marginTone.value === "graphite" && consumeDrawerHint()) {
+    setMargin("your pencil case is under the board", "graphite");
   }
-})
+});
 
 // Board-load announcements.
-let mounted = false
-let prevBoardSize = props.boardSize
+let mounted = false;
+let prevBoardSize = props.boardSize;
 // UI-11 race guard (twin of SudokuBoard's): the async initial randomize can land its givens
 // 0→N before onMounted; the old `!mounted` early-return then dropped the fresh-board voice
 // entirely — the desktop-futoshiki-empty the audit found. Defer a pre-mount announce and flush
 // it as a post-mount live-region mutation instead. Restore never trips it (its givens are set
 // synchronously at composable setup, before this watch registers — no 0→N transition fires).
-let pendingFreshAnnounce: string | null = null
+let pendingFreshAnnounce: string | null = null;
 // T4-W3 share-truth (twin of SudokuBoard's): a corrupt `?board=` fell back to a fresh deal.
 // Say so ONCE, folded into that first fresh-board announce, so the one status voice reports
 // both the failed link AND what arrived instead. Consumed on use.
-let linkErrorPending = props.linkError === true
+let linkErrorPending = props.linkError === true;
 function freshBoardCopy(): string {
-  const fresh = `a fresh ${props.boardSize}×${props.boardSize}`
+  const fresh = `a fresh ${props.boardSize}×${props.boardSize}`;
   if (linkErrorPending) {
-    linkErrorPending = false
-    return `this shared link couldn't be read — ${fresh}`
+    linkErrorPending = false;
+    return `this shared link couldn't be read — ${fresh}`;
   }
-  return fresh
+  return fresh;
 }
 watch(
   () => props.givenCells.size,
   (n, prev) => {
-    if (n > 0 && (prev ?? 0) === 0 && props.solveState !== 'solved') {
-      if (mounted) setMargin(freshBoardCopy(), 'graphite')
-      else pendingFreshAnnounce = freshBoardCopy() // flushed in onMounted (post-mount mutation)
+    if (n > 0 && (prev ?? 0) === 0 && props.solveState !== "solved") {
+      if (mounted) setMargin(freshBoardCopy(), "graphite");
+      else pendingFreshAnnounce = freshBoardCopy(); // flushed in onMounted (post-mount mutation)
     }
   },
-)
+);
 watch(
   () => props.boardGeneration,
   () => {
-    focusedPos.value = 0
-    const sizeChanged = props.boardSize !== prevBoardSize
-    prevBoardSize = props.boardSize
-    if (!mounted || sizeChanged) return
-    if (props.givenCells.size === 0) setMargin('a fresh page.', 'graphite')
+    focusedPos.value = 0;
+    const sizeChanged = props.boardSize !== prevBoardSize;
+    prevBoardSize = props.boardSize;
+    if (!mounted || sizeChanged) return;
+    if (props.givenCells.size === 0) setMargin("a fresh page.", "graphite");
   },
-)
+);
 
 // ── The paper note (§5.2) ────────────────────────────────────────────
-const showErrorNote = computed(() => props.solveState === 'error')
+const showErrorNote = computed(() => props.solveState === "error");
 const errorNote = computed(() => {
   if (props.errorCode) {
-    const f = classifyCode(props.errorCode)
-    if (f.kind === 'paper-note') return { text: f.message, retryable: f.retryable }
+    const f = classifyCode(props.errorCode);
+    if (f.kind === "paper-note") return { text: f.message, retryable: f.retryable };
   }
-  return { text: PAPER_NOTE_COPY.budget, retryable: true }
-})
+  return { text: PAPER_NOTE_COPY.budget, retryable: true };
+});
 
 // ── The tally (T3-W9 §2) — preformatted upstream, rendered by MarginNote's meta line ──
 // The W6 derivation twins were deleted from both boards; formatSolveTally is the one home.
-const tally = computed(() => formatSolveTally(props.solveStats))
+const tally = computed(() => formatSolveTally(props.solveStats));
 
 // Grid animation state machine
-const gridAnimState = ref<AnimationState>('hidden')
-function onGridAnimComplete(state: 'drawn' | 'hidden') {
-  if (state === 'drawn') {
-    gridAnimState.value = 'drawn'
-  } else if (state === 'hidden') {
+const gridAnimState = ref<AnimationState>("hidden");
+function onGridAnimComplete(state: "drawn" | "hidden") {
+  if (state === "drawn") {
+    gridAnimState.value = "drawn";
+  } else if (state === "hidden") {
     if (props.leaving) {
       // F6 beat 2 — the seam: the page is erased; App flips the v-if on this tick.
-      emit('erased')
+      emit("erased");
     } else {
-      gridAnimState.value = 'drawing'
+      gridAnimState.value = "drawing";
     }
   }
 }
@@ -455,41 +457,41 @@ watch(
   () => props.leaving,
   (isLeaving) => {
     if (isLeaving) {
-      gridAnimState.value = 'erasing'
-    } else if (gridAnimState.value === 'hidden') {
-      gridAnimState.value = 'drawing'
+      gridAnimState.value = "erasing";
+    } else if (gridAnimState.value === "hidden") {
+      gridAnimState.value = "drawing";
     }
   },
-)
+);
 
 onMounted(() => {
-  gridAnimState.value = 'drawing'
-  mounted = true
+  gridAnimState.value = "drawing";
+  mounted = true;
   // UI-11: flush a pre-mount fresh-board announce now that the live region is in the DOM.
-  if (pendingFreshAnnounce && props.solveState !== 'solved') {
-    setMargin(pendingFreshAnnounce, 'graphite')
-    pendingFreshAnnounce = null
+  if (pendingFreshAnnounce && props.solveState !== "solved") {
+    setMargin(pendingFreshAnnounce, "graphite");
+    pendingFreshAnnounce = null;
   }
-})
+});
 
 onUnmounted(() => {
-  if (slowSolveTimer) clearTimeout(slowSolveTimer)
-})
+  if (slowSolveTimer) clearTimeout(slowSolveTimer);
+});
 
 watch(
   () => props.boardGeneration,
   (_newVal, oldVal) => {
-    if (oldVal === undefined) return
-    if (gridAnimState.value === 'drawn') {
-      gridAnimState.value = 'erasing'
+    if (oldVal === undefined) return;
+    if (gridAnimState.value === "drawn") {
+      gridAnimState.value = "erasing";
     } else {
-      gridAnimState.value = 'drawing'
+      gridAnimState.value = "drawing";
     }
   },
-)
+);
 
 function isRevealed(pos: number): boolean {
-  return props.animatingCells.has(String(pos))
+  return props.animatingCells.has(String(pos));
 }
 </script>
 
@@ -499,7 +501,7 @@ function isRevealed(pos: number): boolean {
        in the row regime (≥lg). Twin of SudokuBoard's shape (D16). -->
   <div class="board-shell" :class="[boardSizeClasses, { 'board-leaving': leaving }]">
     <div
-      class="board-wrapper cartoon-shadow-md aspect-square w-full rounded-xl bg-card"
+      class="board-wrapper cartoon-shadow-md bg-card aspect-square w-full rounded-xl"
       :class="boardClasses"
     >
       <!-- Hand-drawn SVG grid overlay — subgridSize === boardSize → plain Latin grid -->

@@ -15,130 +15,137 @@
  *
  * PRM: mounts static at scale 1 — no bounce, no blink; the murmur wiggle no-ops.
  */
-import { nextTick, ref, watch, onUnmounted } from 'vue'
+import { nextTick, ref, watch, onUnmounted } from "vue";
 import {
   createSequenceSubscription,
   usePrefersReducedMotion,
   type SequenceHandle,
-} from '@mkbabb/pencil-boil'
-import { CELEBRATION } from '@pencil/config/pencilConfig'
-import { registerMurmurHeart, unregisterMurmurHeart } from '@pencil/composables/celebration'
-import CrayonHeart from './AttributionCard/CrayonHeart.vue'
+} from "@mkbabb/pencil-boil";
+import { CELEBRATION } from "@pencil/config/pencilConfig";
+import {
+  registerMurmurHeart,
+  unregisterMurmurHeart,
+} from "@pencil/composables/celebration";
+import CrayonHeart from "./AttributionCard/CrayonHeart.vue";
 
-const props = defineProps<{ active: boolean }>()
+const props = defineProps<{ active: boolean }>();
 
 // Stable template ref (task-4 discipline): the bounce transform is written imperatively
 // to `.style`, never bound, so a re-render can't revert a settled frame.
-const hostRef = ref<HTMLDivElement | null>(null)
-const visible = ref(false)
-const blinking = ref(false)
-const murmuring = ref(false)
-const reducedMotion = usePrefersReducedMotion()
+const hostRef = ref<HTMLDivElement | null>(null);
+const visible = ref(false);
+const blinking = ref(false);
+const murmuring = ref(false);
+const reducedMotion = usePrefersReducedMotion();
 
-let bounceSeq: SequenceHandle | null = null
-let blinkTimer: ReturnType<typeof setTimeout> | null = null
-let blinkEndTimer: ReturnType<typeof setTimeout> | null = null
-let murmurEndTimer: ReturnType<typeof setTimeout> | null = null
+let bounceSeq: SequenceHandle | null = null;
+let blinkTimer: ReturnType<typeof setTimeout> | null = null;
+let blinkEndTimer: ReturnType<typeof setTimeout> | null = null;
+let murmurEndTimer: ReturnType<typeof setTimeout> | null = null;
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
 /** The reciprocal-axis squash IS the entire Yoshi bounce (F7 §3.2):
  *  grow 0 → (1.15, 0.92) wide-and-squashed, rebound to (0.97, 1.02) tall,
  *  settle at 1 — an overall scale 0 → ~1.12 → 1 read, nothing snaps. */
 function bounceTransform(p: number): string {
-  let sx: number
-  let sy: number
+  let sx: number;
+  let sy: number;
   if (p < 0.55) {
-    const t = easeOut(p / 0.55)
-    sx = lerp(0, 1.15, t)
-    sy = lerp(0, 0.92, t)
+    const t = easeOut(p / 0.55);
+    sx = lerp(0, 1.15, t);
+    sy = lerp(0, 0.92, t);
   } else if (p < 0.8) {
-    const t = easeOut((p - 0.55) / 0.25)
-    sx = lerp(1.15, 0.97, t)
-    sy = lerp(0.92, 1.02, t)
+    const t = easeOut((p - 0.55) / 0.25);
+    sx = lerp(1.15, 0.97, t);
+    sy = lerp(0.92, 1.02, t);
   } else {
-    const t = easeOut((p - 0.8) / 0.2)
-    sx = lerp(0.97, 1, t)
-    sy = lerp(1.02, 1, t)
+    const t = easeOut((p - 0.8) / 0.2);
+    sx = lerp(0.97, 1, t);
+    sy = lerp(1.02, 1, t);
   }
-  return `scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`
+  return `scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`;
 }
 
 /** Murmur participation (F2 §C): 1-in-8 seeded windows the classroom's wiggle is
  *  the heart's. A one-shot CSS keyframe on the host wrapper — zero subscribers. */
 function wiggleOnce() {
-  if (reducedMotion.value || blinking.value) return
-  if (murmurEndTimer) clearTimeout(murmurEndTimer)
-  murmuring.value = false
+  if (reducedMotion.value || blinking.value) return;
+  if (murmurEndTimer) clearTimeout(murmurEndTimer);
+  murmuring.value = false;
   // Two-frame retrigger so the keyframe restarts on repeat windows.
   requestAnimationFrame(() => {
-    murmuring.value = true
+    murmuring.value = true;
     murmurEndTimer = setTimeout(() => {
-      murmuring.value = false
-      murmurEndTimer = null
-    }, 650)
-  })
+      murmuring.value = false;
+      murmurEndTimer = null;
+    }, 650);
+  });
 }
 
 function scheduleBlink() {
   // ONE blink, ~1.8s post-settle: eyes grouped, scaleY(0.1) held 140ms, once.
   blinkTimer = setTimeout(() => {
-    blinkTimer = null
-    blinking.value = true
+    blinkTimer = null;
+    blinking.value = true;
     blinkEndTimer = setTimeout(() => {
-      blinking.value = false
-      blinkEndTimer = null
-    }, 140)
-  }, CELEBRATION.heartBlinkDelayMs)
+      blinking.value = false;
+      blinkEndTimer = null;
+    }, 140);
+  }, CELEBRATION.heartBlinkDelayMs);
 }
 
 function reset() {
   if (bounceSeq) {
-    try { bounceSeq.stop() } catch { /* ignore */ }
-    bounceSeq = null
+    try {
+      bounceSeq.stop();
+    } catch {
+      /* ignore */
+    }
+    bounceSeq = null;
   }
   for (const t of [blinkTimer, blinkEndTimer, murmurEndTimer]) {
-    if (t) clearTimeout(t)
+    if (t) clearTimeout(t);
   }
-  blinkTimer = blinkEndTimer = murmurEndTimer = null
-  blinking.value = false
-  murmuring.value = false
-  unregisterMurmurHeart()
-  visible.value = false
+  blinkTimer = blinkEndTimer = murmurEndTimer = null;
+  blinking.value = false;
+  murmuring.value = false;
+  unregisterMurmurHeart();
+  visible.value = false;
 }
 
 async function play(settled = false) {
-  reset()
-  visible.value = true
-  await nextTick()
-  const el = hostRef.value
-  if (!el) return
+  reset();
+  visible.value = true;
+  await nextTick();
+  const el = hostRef.value;
+  if (!el) return;
 
   if (settled || reducedMotion.value) {
     // PRM, or a settled activation (T3-W12 §1 P5 — mounted with `active` already
     // true, i.e. a remount while solved): the reward is simply there — static at
     // scale 1, no bounce, no blink; it still murmurs with the classroom.
-    el.style.transform = 'scale(1)'
-    registerMurmurHeart({ wiggleOnce }) // wiggleOnce PRM-gates itself
-    return
+    el.style.transform = "scale(1)";
+    registerMurmurHeart({ wiggleOnce }); // wiggleOnce PRM-gates itself
+    return;
   }
 
-  el.style.transform = 'scale(0)'
+  el.style.transform = "scale(0)";
   bounceSeq = createSequenceSubscription({
     durationMs: CELEBRATION.heartBounceMs,
     delayMs: CELEBRATION.heartCrestMs,
     easing: (t: number) => t, // piecewise-eased inside bounceTransform
     onProgress: (p) => {
-      el.style.transform = bounceTransform(p)
+      el.style.transform = bounceTransform(p);
     },
     onComplete: () => {
-      el.style.transform = 'scale(1)'
-      scheduleBlink()
-      registerMurmurHeart({ wiggleOnce })
+      el.style.transform = "scale(1)";
+      scheduleBlink();
+      registerMurmurHeart({ wiggleOnce });
     },
-  })
-  bounceSeq.start()
+  });
+  bounceSeq.start();
 }
 
 // `immediate` + the `prev === undefined` probe: mounted-with-active (a remount while
@@ -146,13 +153,13 @@ async function play(settled = false) {
 watch(
   () => props.active,
   (a, prev) => {
-    if (a) play(prev === undefined)
-    else reset()
+    if (a) play(prev === undefined);
+    else reset();
   },
   { immediate: true },
-)
+);
 
-onUnmounted(reset)
+onUnmounted(reset);
 </script>
 
 <template>

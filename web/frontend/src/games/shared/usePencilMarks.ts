@@ -1,4 +1,4 @@
-import { computed, ref, type Ref } from 'vue'
+import { computed, ref, type Ref } from "vue";
 
 /**
  * Engine-domains pencil marks (W6 beat 9 — the P4 spike landed as product; D16 twin,
@@ -24,58 +24,58 @@ export function usePencilMarks(
   boardSize: Ref<number>,
   totalCells: Ref<number>,
 ) {
-  const marksActive = ref(false)
-  const pencilMasks = ref<Uint32Array | null>(null)
-  let marksTimer: ReturnType<typeof setTimeout> | null = null
-  let marksSeq = 0
+  const marksActive = ref(false);
+  const pencilMasks = ref<Uint32Array | null>(null);
+  let marksTimer: ReturnType<typeof setTimeout> | null = null;
+  let marksSeq = 0;
   function refreshMarks(delayMs = 150) {
-    if (marksTimer) clearTimeout(marksTimer)
+    if (marksTimer) clearTimeout(marksTimer);
     marksTimer = setTimeout(async () => {
-      marksTimer = null
-      const seq = ++marksSeq
+      marksTimer = null;
+      const seq = ++marksSeq;
       try {
-        const masks = await propagate()
+        const masks = await propagate();
         // Last-write-wins seq guard + the gesture may have released mid-flight.
-        if (seq === marksSeq && marksActive.value) pencilMasks.value = masks
+        if (seq === marksSeq && marksActive.value) pencilMasks.value = masks;
       } catch {
-        if (seq === marksSeq) pencilMasks.value = null
+        if (seq === marksSeq) pencilMasks.value = null;
       }
-    }, delayMs)
+    }, delayMs);
   }
   function setMarksActive(on: boolean) {
-    if (marksActive.value === on) return
-    marksActive.value = on
+    if (marksActive.value === on) return;
+    marksActive.value = on;
     if (on) {
-      refreshMarks(0) // the gesture is held NOW — no debounce on the first paint
+      refreshMarks(0); // the gesture is held NOW — no debounce on the first paint
     } else {
       if (marksTimer) {
-        clearTimeout(marksTimer)
-        marksTimer = null
+        clearTimeout(marksTimer);
+        marksTimer = null;
       }
-      marksSeq++ // void any in-flight round-trip
-      pencilMasks.value = null
+      marksSeq++; // void any in-flight round-trip
+      pencilMasks.value = null;
     }
   }
 
   const pencilMarks = computed<Record<string, number[]>>(() => {
-    const masks = pencilMasks.value
-    const bs = boardSize.value
+    const masks = pencilMasks.value;
+    const bs = boardSize.value;
     // Stale-shape guard: a size switch mid-flight leaves masks from the
     // previous geometry; render nothing until the next round-trip lands.
-    if (!masks || masks.length !== totalCells.value) return {}
-    const out: Record<string, number[]> = {}
+    if (!masks || masks.length !== totalCells.value) return {};
+    const out: Record<string, number[]> = {};
     for (let i = 0; i < masks.length; i++) {
-      if ((values.value[String(i)] ?? 0) !== 0) continue
-      const cand: number[] = []
+      if ((values.value[String(i)] ?? 0) !== 0) continue;
+      const cand: number[] = [];
       for (let v = 1; v <= bs; v++) {
-        if (masks[i] & (1 << v)) cand.push(v)
+        if (masks[i] & (1 << v)) cand.push(v);
       }
       // Only show marks where propagation has actually bitten — a cell
       // with its full domain intact carries no information, just noise.
-      if (cand.length > 0 && cand.length < bs) out[String(i)] = cand
+      if (cand.length > 0 && cand.length < bs) out[String(i)] = cand;
     }
-    return out
-  })
+    return out;
+  });
 
-  return { marksActive, refreshMarks, setMarksActive, pencilMarks }
+  return { marksActive, refreshMarks, setMarksActive, pencilMarks };
 }

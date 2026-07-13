@@ -18,20 +18,20 @@
  * depicts is folded into BOTH adjacent cells' `aria-label`s by FutoshikiBoard. AT reads
  * "…greater than the cell to the right" on the cell, never a bare "greater-than" glyph.
  */
-import { ref } from 'vue'
-import HandwrittenGlyph from '@pencil/glyph/HandwrittenGlyph.vue'
+import { ref } from "vue";
+import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
 
 defineProps<{
   /** The horizontal caret glyph — `>` (greater on the left) or `<` (greater on the right). */
-  glyph: '>' | '<'
+  glyph: ">" | "<";
   /** 0 for horizontal; +90 (→ ∨, greater on top) or −90 (→ ∧, greater on bottom) for vertical. */
-  rotation: number
-  boardSize: number
+  rotation: number;
+  boardSize: number;
   /** Stable per-caret hash → deterministic variant selection (adjacent carets differ). */
-  hash: number
-}>()
+  hash: number;
+}>();
 
-const hovered = ref(false)
+const hovered = ref(false);
 </script>
 
 <template>

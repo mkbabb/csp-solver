@@ -21,8 +21,8 @@ import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
 import { useStackedLayout } from "@games/shared/useStackedLayout";
 import {
-    registerDrawerScene,
-    useControlsDrawer,
+  registerDrawerScene,
+  useControlsDrawer,
 } from "@games/shared/useControlsDrawer";
 // Statically imported (not async): this whole FutoshikiGame scene is already a lazy chunk, so
 // the laminate rides that chunk, never the main bundle. (Sudoku is eager, so it keeps the
@@ -42,17 +42,17 @@ const futoshiki = useFutoshiki();
 // not at app mount (Sudoku owns that). `requestIdleCallback` keeps it off the
 // critical mount path; `setTimeout` is the fallback. Idempotent.
 onMounted(() => {
-    const warm = () => prewarm();
-    if ("requestIdleCallback" in window) requestIdleCallback(warm);
-    else setTimeout(warm, 1);
+  const warm = () => prewarm();
+  if ("requestIdleCallback" in window) requestIdleCallback(warm);
+  else setTimeout(warm, 1);
 });
 
 const { peekActive, peekTouched, peekSolutionValues, startPeek, endPeek } =
-    useAnswerKeyPeek({
-        solveState: futoshiki.solveState,
-        peekSolution: futoshiki.peekSolution,
-        setMarksActive: futoshiki.setMarksActive,
-    });
+  useAnswerKeyPeek({
+    solveState: futoshiki.solveState,
+    peekSolution: futoshiki.peekSolution,
+    setMarksActive: futoshiki.setMarksActive,
+  });
 
 // Share act (W6; T4-W3 share-truth) — twin of SudokuGame's: shareBoard() encodes the board
 // (values + inequalities) into `?board=`, writes it to the address bar (URL wins over storage
@@ -61,7 +61,7 @@ const { peekActive, peekTouched, peekSolutionValues, startPeek, endPeek } =
 // permission-policy denial, unfocused document, or an absent Clipboard API) surfaces "couldn't
 // copy — link is in the address bar" instead of an optimistic "copied!".
 function onShare(): Promise<void> {
-    return futoshiki.shareBoard();
+  return futoshiki.shareBoard();
 }
 
 // ── DigitPad (T3-W11 U-A) — twin of SudokuGame's wiring (D16) ────────
@@ -81,117 +81,117 @@ const panelEl = ref<HTMLElement | null>(null);
 const drawerTab = ref<InstanceType<typeof DrawerTab> | null>(null);
 let unregisterDrawer: (() => void) | null = null;
 onMounted(() => {
-    unregisterDrawer = registerDrawerScene(() => ({
-        host: peekHost.value,
-        rail: railEl.value,
-        panel: panelEl.value,
-        tab: (drawerTab.value?.el as HTMLElement | undefined) ?? null,
-    }));
+  unregisterDrawer = registerDrawerScene(() => ({
+    host: peekHost.value,
+    rail: railEl.value,
+    panel: panelEl.value,
+    tab: (drawerTab.value?.el as HTMLElement | undefined) ?? null,
+  }));
 });
 onUnmounted(() => unregisterDrawer?.());
 </script>
 
 <template>
-    <div class="app-layout" :class="{ 'scene-leaving': props.leaving }">
-        <!-- Board + the held answer-key laminate (a sibling over the board) -->
-        <div ref="peekHost" class="board-peek-host">
-            <FutoshikiBoard
-                ref="boardRef"
-                :leaving="props.leaving"
-                :board-size="futoshiki.boardSize.value"
-                :total-cells="futoshiki.totalCells.value"
-                :values="futoshiki.values.value"
-                :given-cells="futoshiki.givenCells.value"
-                :overridden-cells="futoshiki.overriddenCells.value"
-                :animating-cells="futoshiki.animatingCells.value"
-                :solve-state="futoshiki.solveState.value"
-                :solved-values="futoshiki.solvedValues.value"
-                :board-generation="futoshiki.boardGeneration.value"
-                :inequalities="futoshiki.inequalities.value"
-                :link-error="futoshiki.linkError.value"
-                :error-code="futoshiki.errorCode.value"
-                :solve-stats="futoshiki.solveStats.value"
-                :pencil-marks="futoshiki.pencilMarks.value"
-                :pad-active="padActive"
-                @cell-focus-change="cellFocused = $event"
-                @update-cell="(pos: number, val: number) => futoshiki.setCell(pos, val)"
-                @retry="futoshiki.solve()"
-                @undo="futoshiki.undo()"
-                @redo="futoshiki.redo()"
-                @hint="(pos: number) => futoshiki.hintCell(pos)"
-                @erased="emit('erased')"
-            />
-            <AnswerKeyLaminate
-                v-if="peekTouched"
-                :active="peekActive"
-                :solution="peekSolutionValues"
-                :board-size="futoshiki.boardSize.value"
-                :subgrid-size="futoshiki.boardSize.value"
-                :original-given-cells="futoshiki.originalGivenCells.value"
-            />
-            <!-- The pull-tab (T3-W12 §6) — twin of SudokuGame's: inside the peek host
+  <div class="app-layout" :class="{ 'scene-leaving': props.leaving }">
+    <!-- Board + the held answer-key laminate (a sibling over the board) -->
+    <div ref="peekHost" class="board-peek-host">
+      <FutoshikiBoard
+        ref="boardRef"
+        :leaving="props.leaving"
+        :board-size="futoshiki.boardSize.value"
+        :total-cells="futoshiki.totalCells.value"
+        :values="futoshiki.values.value"
+        :given-cells="futoshiki.givenCells.value"
+        :overridden-cells="futoshiki.overriddenCells.value"
+        :animating-cells="futoshiki.animatingCells.value"
+        :solve-state="futoshiki.solveState.value"
+        :solved-values="futoshiki.solvedValues.value"
+        :board-generation="futoshiki.boardGeneration.value"
+        :inequalities="futoshiki.inequalities.value"
+        :link-error="futoshiki.linkError.value"
+        :error-code="futoshiki.errorCode.value"
+        :solve-stats="futoshiki.solveStats.value"
+        :pencil-marks="futoshiki.pencilMarks.value"
+        :pad-active="padActive"
+        @cell-focus-change="cellFocused = $event"
+        @update-cell="(pos: number, val: number) => futoshiki.setCell(pos, val)"
+        @retry="futoshiki.solve()"
+        @undo="futoshiki.undo()"
+        @redo="futoshiki.redo()"
+        @hint="(pos: number) => futoshiki.hintCell(pos)"
+        @erased="emit('erased')"
+      />
+      <AnswerKeyLaminate
+        v-if="peekTouched"
+        :active="peekActive"
+        :solution="peekSolutionValues"
+        :board-size="futoshiki.boardSize.value"
+        :subgrid-size="futoshiki.boardSize.value"
+        :original-given-cells="futoshiki.originalGivenCells.value"
+      />
+      <!-- The pull-tab (T3-W12 §6) — twin of SudokuGame's: inside the peek host
                  (rides the glide), outside the board wrapper's containment (§2 P2). -->
-            <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
-        </div>
+      <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
+    </div>
 
-        <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
-        <div class="mobile-board-width lg:hidden">
-            <HandDrawnOutline :stroke-width="3">
-                <div class="rounded-lg bg-card px-2 py-1.5">
-                    <ControlPanel
-                        :board-size="futoshiki.boardSize.value"
-                        :loading="futoshiki.loading.value"
-                        :solve-state="futoshiki.solveState.value"
-                        mobile
-                        @update:board-size="futoshiki.boardSize.value = $event"
-                        @randomize="futoshiki.randomize()"
-                        @clear="futoshiki.clearBoard()"
-                        @solve="futoshiki.solve()"
-                        :share="onShare"
-                        @peek-start="startPeek()"
-                        @peek-end="endPeek()"
-                    />
-                    <!-- The touch entry tray (T3-W11 U-A): always present in this card on coarse
+    <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
+    <div class="mobile-board-width lg:hidden">
+      <HandDrawnOutline :stroke-width="3">
+        <div class="bg-card rounded-lg px-2 py-1.5">
+          <ControlPanel
+            :board-size="futoshiki.boardSize.value"
+            :loading="futoshiki.loading.value"
+            :solve-state="futoshiki.solveState.value"
+            mobile
+            @update:board-size="futoshiki.boardSize.value = $event"
+            @randomize="futoshiki.randomize()"
+            @clear="futoshiki.clearBoard()"
+            @solve="futoshiki.solve()"
+            :share="onShare"
+            @peek-start="startPeek()"
+            @peek-end="endPeek()"
+          />
+          <!-- The touch entry tray (T3-W11 U-A): always present in this card on coarse
                pointers; keys write through the board's own input path. -->
-                    <DigitPad
-                        v-if="padActive"
-                        :board-size="futoshiki.boardSize.value"
-                        :enabled="cellFocused"
-                        @digit="boardRef?.enterValue($event)"
-                        @erase="boardRef?.enterValue(0)"
-                    />
-                </div>
-            </HandDrawnOutline>
+          <DigitPad
+            v-if="padActive"
+            :board-size="futoshiki.boardSize.value"
+            :enabled="cellFocused"
+            @digit="boardRef?.enterValue($event)"
+            @erase="boardRef?.enterValue(0)"
+          />
         </div>
+      </HandDrawnOutline>
+    </div>
 
-        <!-- Row-regime sidebar (≥lg — R3): controls card, vertically centered against the
+    <!-- Row-regime sidebar (≥lg — R3): controls card, vertically centered against the
          board (H8-centering-only). T3-W12 §6: the rail IS the drawer — twin of
          SudokuGame's (parked/inert/hidden closed; Esc closes from within). -->
-        <div
-            id="controls-drawer"
-            ref="railEl"
-            class="scene-controls hidden lg:flex lg:flex-col lg:items-start"
-            :inert="drawerInert"
-            @keydown.escape.stop="closeDrawer"
-        >
-            <HandDrawnOutline :stroke-width="3">
-                <div ref="panelEl" class="controls-card rounded-xl bg-card p-5">
-                    <ControlPanel
-                        :board-size="futoshiki.boardSize.value"
-                        :loading="futoshiki.loading.value"
-                        :solve-state="futoshiki.solveState.value"
-                        @update:board-size="futoshiki.boardSize.value = $event"
-                        @randomize="futoshiki.randomize()"
-                        @clear="futoshiki.clearBoard()"
-                        @solve="futoshiki.solve()"
-                        :share="onShare"
-                        @peek-start="startPeek()"
-                        @peek-end="endPeek()"
-                    />
-                </div>
-            </HandDrawnOutline>
+    <div
+      id="controls-drawer"
+      ref="railEl"
+      class="scene-controls hidden lg:flex lg:flex-col lg:items-start"
+      :inert="drawerInert"
+      @keydown.escape.stop="closeDrawer"
+    >
+      <HandDrawnOutline :stroke-width="3">
+        <div ref="panelEl" class="controls-card bg-card rounded-xl p-5">
+          <ControlPanel
+            :board-size="futoshiki.boardSize.value"
+            :loading="futoshiki.loading.value"
+            :solve-state="futoshiki.solveState.value"
+            @update:board-size="futoshiki.boardSize.value = $event"
+            @randomize="futoshiki.randomize()"
+            @clear="futoshiki.clearBoard()"
+            @solve="futoshiki.solve()"
+            :share="onShare"
+            @peek-start="startPeek()"
+            @peek-end="endPeek()"
+          />
         </div>
+      </HandDrawnOutline>
     </div>
+  </div>
 </template>
 
 <style scoped src="@/games/shared/scene.css"></style>

@@ -1,26 +1,26 @@
 <script setup lang="ts">
-import { useTheme } from '@/composables/useTheme'
-import { ghostUnderline, scribbleUnderline } from './scribbleUnderline'
+import { useTheme } from "@/composables/useTheme";
+import { ghostUnderline, scribbleUnderline } from "./scribbleUnderline";
 
-const { isDark } = useTheme()
+const { isDark } = useTheme();
 
 defineProps<{
-  options: { value: string | number; label: string; colorClass?: string }[]
-  selected: string | number
-  boilFrame: number
-  mobile?: boolean
-}>()
+  options: { value: string | number; label: string; colorClass?: string }[];
+  selected: string | number;
+  boilFrame: number;
+  mobile?: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'change', value: string | number): void
-}>()
+  (e: "change", value: string | number): void;
+}>();
 
 function inkColor() {
-  return isDark.value ? '#ffffff' : '#1a1a1a'
+  return isDark.value ? "#ffffff" : "#1a1a1a";
 }
 
 function scribbleSeed(val: string | number): number {
-  return typeof val === 'number' ? val : val.charCodeAt(0)
+  return typeof val === "number" ? val : val.charCodeAt(0);
 }
 </script>
 
@@ -32,14 +32,30 @@ function scribbleSeed(val: string | number): number {
       @click="emit('change', opt.value)"
       class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-all duration-150"
       :class="[
-        mobile ? 'text-[1rem] md:text-[1.375rem]' : 'text-[1.375rem] md:py-0.5 md:text-left md:text-[1.25rem]',
+        mobile
+          ? 'text-[1rem] md:text-[1.375rem]'
+          : 'text-[1.375rem] md:py-0.5 md:text-left md:text-[1.25rem]',
         selected === opt.value
-          ? `font-bold selected-item ${opt.colorClass ?? 'text-foreground'}`
-          : 'text-muted-foreground hover:text-foreground hover-item'
+          ? `selected-item font-bold ${opt.colorClass ?? 'text-foreground'}`
+          : 'text-muted-foreground hover:text-foreground hover-item',
       ]"
-      :style="selected === opt.value
-        ? { '--scribble-underline': scribbleUnderline(scribbleSeed(opt.value) + boilFrame * 1000, inkColor()), '--scribble-width': `${opt.label.length + 1}ch` }
-        : { '--ghost-underline': ghostUnderline(scribbleSeed(opt.value) + 500, inkColor()), '--ghost-width': `${opt.label.length + 1}ch` }"
+      :style="
+        selected === opt.value
+          ? {
+              '--scribble-underline': scribbleUnderline(
+                scribbleSeed(opt.value) + boilFrame * 1000,
+                inkColor(),
+              ),
+              '--scribble-width': `${opt.label.length + 1}ch`,
+            }
+          : {
+              '--ghost-underline': ghostUnderline(
+                scribbleSeed(opt.value) + 500,
+                inkColor(),
+              ),
+              '--ghost-width': `${opt.label.length + 1}ch`,
+            }
+      "
     >
       {{ opt.label }}
     </button>
@@ -48,7 +64,7 @@ function scribbleSeed(val: string | number): number {
 
 <style scoped>
 .ctrl-btn {
-  font-family: 'Fira Code', monospace;
+  font-family: "Fira Code", monospace;
 }
 
 /* Hover flourish, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter write

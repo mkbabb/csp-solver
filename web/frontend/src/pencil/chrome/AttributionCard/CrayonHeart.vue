@@ -24,8 +24,8 @@
  * The #wobble-heart preset is consumed as-is and NEVER retuned here — three
  * hover easter eggs share it (F7 §1.4).
  */
-import { computed } from 'vue';
-import { PENCIL, YOSHI_COLORS } from '@pencil/config/pencilConfig';
+import { computed } from "vue";
+import { PENCIL, YOSHI_COLORS } from "@pencil/config/pencilConfig";
 import {
   HEART_BLUSH,
   HEART_EYES,
@@ -45,9 +45,9 @@ import {
   HEART_VIEWBOX,
   HEART_VIEWBOX_CELEBRATION,
   HEART_WINK_ARC,
-} from './heartPaths';
+} from "./heartPaths";
 
-type HeartVariant = 'idle' | 'celebration' | 'blush' | 'tiny';
+type HeartVariant = "idle" | "celebration" | "blush" | "tiny";
 
 const props = withDefaults(
   defineProps<{
@@ -56,14 +56,14 @@ const props = withDefaults(
   }>(),
   {
     size: 40,
-    variant: 'idle',
+    variant: "idle",
   },
 );
 
 const C = YOSHI_COLORS;
 
-const isTiny = computed(() => props.variant === 'tiny');
-const isCelebration = computed(() => props.variant === 'celebration');
+const isTiny = computed(() => props.variant === "tiny");
+const isCelebration = computed(() => props.variant === "celebration");
 
 /** Stem extends above y=0 — the celebration variant alone pays for the headroom. */
 const viewBox = computed(() =>
@@ -79,7 +79,9 @@ const outlineWidth = computed(() =>
 const smilePath = computed(() => (isTiny.value ? HEART_SMILE_TINY : HEART_SMILE));
 const smileWidth = computed(() => (isTiny.value ? HEART_TINY.smileStroke : 4));
 const eyeR = computed(() => (isTiny.value ? HEART_EYES.rTiny : HEART_EYES.r));
-const blushRx = computed(() => (isCelebration.value ? HEART_BLUSH.rxHappy : HEART_BLUSH.rx));
+const blushRx = computed(() =>
+  isCelebration.value ? HEART_BLUSH.rxHappy : HEART_BLUSH.rx,
+);
 
 /** Filter ladder (F7 §3.4): wobble-heart everywhere except tiny — none below
  *  ~20px, grain-static at 20–32px (objectBoundingBox displacement is
@@ -88,8 +90,8 @@ const blushRx = computed(() => (isCelebration.value ? HEART_BLUSH.rxHappy : HEAR
  *  is retired) — the crinkle is material, rastered once per appearance; the
  *  heart's life stays on CelebrationHeart's transforms, correctly ephemeral. */
 const filterUrl = computed(() => {
-  if (isTiny.value) return props.size < 20 ? undefined : 'url(#grain-static)';
-  return 'url(#wobble-heart)';
+  if (isTiny.value) return props.size < 20 ? undefined : "url(#grain-static)";
+  return "url(#wobble-heart)";
 });
 </script>
 
@@ -173,27 +175,102 @@ const filterUrl = computed(() => {
       <template v-if="variant === 'blush'">
         <g class="face face-a">
           <g class="eyes">
-            <circle :cx="HEART_EYES.left.cx" :cy="HEART_EYES.left.cy" :r="eyeR" :fill="C.outlineBlack" />
-            <circle :cx="HEART_EYES.right.cx" :cy="HEART_EYES.right.cy" :r="eyeR" :fill="C.outlineBlack" />
+            <circle
+              :cx="HEART_EYES.left.cx"
+              :cy="HEART_EYES.left.cy"
+              :r="eyeR"
+              :fill="C.outlineBlack"
+            />
+            <circle
+              :cx="HEART_EYES.right.cx"
+              :cy="HEART_EYES.right.cy"
+              :r="eyeR"
+              :fill="C.outlineBlack"
+            />
           </g>
-          <path :d="HEART_SMILE" fill="none" :stroke="C.outlineBlack" stroke-width="4" stroke-linecap="round" />
-          <ellipse class="blush-mark" :cx="HEART_BLUSH.left.cx" :cy="HEART_BLUSH.left.cy" :rx="HEART_BLUSH.rx" :ry="HEART_BLUSH.ry" :fill="C.heart.blush" opacity="0.8" />
-          <ellipse class="blush-mark" :cx="HEART_BLUSH.right.cx" :cy="HEART_BLUSH.right.cy" :rx="HEART_BLUSH.rx" :ry="HEART_BLUSH.ry" :fill="C.heart.blush" opacity="0.8" />
+          <path
+            :d="HEART_SMILE"
+            fill="none"
+            :stroke="C.outlineBlack"
+            stroke-width="4"
+            stroke-linecap="round"
+          />
+          <ellipse
+            class="blush-mark"
+            :cx="HEART_BLUSH.left.cx"
+            :cy="HEART_BLUSH.left.cy"
+            :rx="HEART_BLUSH.rx"
+            :ry="HEART_BLUSH.ry"
+            :fill="C.heart.blush"
+            opacity="0.8"
+          />
+          <ellipse
+            class="blush-mark"
+            :cx="HEART_BLUSH.right.cx"
+            :cy="HEART_BLUSH.right.cy"
+            :rx="HEART_BLUSH.rx"
+            :ry="HEART_BLUSH.ry"
+            :fill="C.heart.blush"
+            opacity="0.8"
+          />
         </g>
         <g class="face face-b">
-          <path :d="HEART_WINK_ARC" fill="none" :stroke="C.outlineBlack" stroke-width="4" stroke-linecap="round" />
-          <circle :cx="HEART_EYES.right.cx" :cy="HEART_EYES.right.cy" :r="eyeR" :fill="C.outlineBlack" />
-          <path :d="HEART_SMILE_DEEP" fill="none" :stroke="C.outlineBlack" stroke-width="4" stroke-linecap="round" />
-          <ellipse class="blush-mark" :cx="HEART_BLUSH.left.cx" :cy="HEART_BLUSH.left.cy" :rx="HEART_BLUSH.rxHappy" :ry="HEART_BLUSH.ry" :fill="C.heart.blush" opacity="1" />
-          <ellipse class="blush-mark" :cx="HEART_BLUSH.right.cx" :cy="HEART_BLUSH.right.cy" :rx="HEART_BLUSH.rxHappy" :ry="HEART_BLUSH.ry" :fill="C.heart.blush" opacity="1" />
+          <path
+            :d="HEART_WINK_ARC"
+            fill="none"
+            :stroke="C.outlineBlack"
+            stroke-width="4"
+            stroke-linecap="round"
+          />
+          <circle
+            :cx="HEART_EYES.right.cx"
+            :cy="HEART_EYES.right.cy"
+            :r="eyeR"
+            :fill="C.outlineBlack"
+          />
+          <path
+            :d="HEART_SMILE_DEEP"
+            fill="none"
+            :stroke="C.outlineBlack"
+            stroke-width="4"
+            stroke-linecap="round"
+          />
+          <ellipse
+            class="blush-mark"
+            :cx="HEART_BLUSH.left.cx"
+            :cy="HEART_BLUSH.left.cy"
+            :rx="HEART_BLUSH.rxHappy"
+            :ry="HEART_BLUSH.ry"
+            :fill="C.heart.blush"
+            opacity="1"
+          />
+          <ellipse
+            class="blush-mark"
+            :cx="HEART_BLUSH.right.cx"
+            :cy="HEART_BLUSH.right.cy"
+            :rx="HEART_BLUSH.rxHappy"
+            :ry="HEART_BLUSH.ry"
+            :fill="C.heart.blush"
+            opacity="1"
+          />
         </g>
       </template>
 
       <!-- The one face (idle / celebration / tiny) -->
       <template v-else>
         <g class="eyes">
-          <circle :cx="HEART_EYES.left.cx" :cy="HEART_EYES.left.cy" :r="eyeR" :fill="C.outlineBlack" />
-          <circle :cx="HEART_EYES.right.cx" :cy="HEART_EYES.right.cy" :r="eyeR" :fill="C.outlineBlack" />
+          <circle
+            :cx="HEART_EYES.left.cx"
+            :cy="HEART_EYES.left.cy"
+            :r="eyeR"
+            :fill="C.outlineBlack"
+          />
+          <circle
+            :cx="HEART_EYES.right.cx"
+            :cy="HEART_EYES.right.cy"
+            :r="eyeR"
+            :fill="C.outlineBlack"
+          />
         </g>
         <path
           :d="smilePath"
@@ -202,8 +279,24 @@ const filterUrl = computed(() => {
           :stroke-width="smileWidth"
           stroke-linecap="round"
         />
-        <ellipse class="blush-mark" :cx="HEART_BLUSH.left.cx" :cy="HEART_BLUSH.left.cy" :rx="blushRx" :ry="HEART_BLUSH.ry" :fill="C.heart.blush" opacity="0.8" />
-        <ellipse class="blush-mark" :cx="HEART_BLUSH.right.cx" :cy="HEART_BLUSH.right.cy" :rx="blushRx" :ry="HEART_BLUSH.ry" :fill="C.heart.blush" opacity="0.8" />
+        <ellipse
+          class="blush-mark"
+          :cx="HEART_BLUSH.left.cx"
+          :cy="HEART_BLUSH.left.cy"
+          :rx="blushRx"
+          :ry="HEART_BLUSH.ry"
+          :fill="C.heart.blush"
+          opacity="0.8"
+        />
+        <ellipse
+          class="blush-mark"
+          :cx="HEART_BLUSH.right.cx"
+          :cy="HEART_BLUSH.right.cy"
+          :rx="blushRx"
+          :ry="HEART_BLUSH.ry"
+          :fill="C.heart.blush"
+          opacity="0.8"
+        />
       </template>
     </g>
   </svg>

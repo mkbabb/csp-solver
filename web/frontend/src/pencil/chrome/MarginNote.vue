@@ -26,28 +26,34 @@
  */
 withDefaults(
   defineProps<{
-    text: string
-    tone?: 'graphite' | 'teacher-red' | 'gold-star'
+    text: string;
+    tone?: "graphite" | "teacher-red" | "gold-star";
     /** Preformatted tally line below the voice, outside the live region. */
-    meta?: string
+    meta?: string;
     /** T3-W12 §1 R1 — visually quiet: the margin vignette carries the verdict's
      *  paint, so the strip renders NOTHING below the board (no fold overflow) while
      *  the live region keeps its DOM home and still announces (sr-only clip, never
      *  visibility/display — those would drop it from the a11y tree mid-announce). */
-    quiet?: boolean
+    quiet?: boolean;
   }>(),
-  { tone: 'graphite', quiet: false },
-)
+  { tone: "graphite", quiet: false },
+);
 
 // The celebration sticker's wonky 5-pointer (CelebrationStar.vue STAR_D) at half
 // scale — the same star, demoted to punctuation. viewBox 0 0 24 24.
 const NOTE_STAR_D =
-  'M11.8,2.1 L14.5,8.7 L21.6,9.1 L15.7,13.3 L18,20.2 L12.1,15.9 L6,20 L8.3,13.2 L2.4,8.8 L9.6,8.9 Z'
+  "M11.8,2.1 L14.5,8.7 L21.6,9.1 L15.7,13.3 L18,20.2 L12.1,15.9 L6,20 L8.3,13.2 L2.4,8.8 L9.6,8.9 Z";
 </script>
 
 <template>
   <div class="margin-note-block" :class="{ 'is-quiet': quiet }">
-    <p class="margin-note" :class="tone" role="status" aria-live="polite" aria-atomic="true">
+    <p
+      class="margin-note"
+      :class="tone"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <span v-if="text" :key="text" class="margin-note-ink">
         <!-- The inline star: gold verdicts only, decorative (the text carries the grade). -->
         <svg
@@ -66,8 +72,8 @@ const NOTE_STAR_D =
             stroke-width="1.8"
             stroke-linecap="round"
             stroke-linejoin="round"
-          />
-        </svg>{{ text }}
+          /></svg
+        >{{ text }}
       </span>
     </p>
     <!-- The tally: plain text, deliberately OUTSIDE the live region. -->
@@ -146,7 +152,11 @@ const NOTE_STAR_D =
   letter-spacing: var(--type-tracking-wide);
   font-size: var(--type-caption);
   line-height: var(--type-leading-caption);
-  color: color-mix(in srgb, var(--color-pencil-graphite, var(--grid-line-color)) 62%, transparent);
+  color: color-mix(
+    in srgb,
+    var(--color-pencil-graphite, var(--grid-line-color)) 62%,
+    transparent
+  );
   pointer-events: auto;
   animation: note-write-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }

@@ -27,20 +27,20 @@
  * The drawer (§6) forces the corner-press rung early via `docked` when its open state
  * compresses the left margin (<~1360).
  */
-import CelebrationStar from './CelebrationStar.vue'
+import CelebrationStar from "./CelebrationStar.vue";
 
 withDefaults(
   defineProps<{
-    active: boolean
+    active: boolean;
     /** The verdict line, verbatim from the margin voice ("solved it!"). */
-    text: string
+    text: string;
     /** The one-line tally ("0 backtracks — 1ms"), preformatted upstream. */
-    meta?: string
+    meta?: string;
     /** Force the corner-press rung regardless of viewport — the drawer's hook (§6). */
-    docked?: boolean
+    docked?: boolean;
   }>(),
   { docked: false },
-)
+);
 </script>
 
 <template>

@@ -1,9 +1,9 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch } from "vue";
 // The solve/generate path is the in-browser wasm Worker (`useSolver`), the
 // only shipped solve surface. Zero `/api/v1/*` dependency — no fetch, no
 // `/config` handshake, no server to depend on. The off-main-thread Worker
 // structurally retires the GIL/DoS class for the served sizes.
-import { useSolver } from '../solver/useSolver'
+import { useSolver } from "../solver/useSolver";
 import {
   resolveInitialState,
   syncToUrl,
@@ -13,11 +13,11 @@ import {
   writeBoardToUrl,
   dropBoardParam,
   type PersistedBoard,
-} from './useUrlState'
-import { classifyError } from '../solver/classifyError'
-import { useUndoHistory } from '../../shared/useUndoHistory'
-import { usePencilMarks } from '../../shared/usePencilMarks'
-import type { Difficulty, SolveState, SolveStats } from '../types'
+} from "./useUrlState";
+import { classifyError } from "@games/shared/solver/classifyError";
+import { useUndoHistory } from "../../shared/useUndoHistory";
+import { usePencilMarks } from "../../shared/usePencilMarks";
+import type { Difficulty, SolveState, SolveStats } from "../types";
 
 /**
  * Size-scaled node budget for the client solve — the user-facing cap on
@@ -33,199 +33,209 @@ const NODE_BUDGET_BY_SIZE: Record<number, number> = {
   2: 200_000,
   3: 2_000_000,
   4: 50_000_000,
-}
+};
 function nodeBudgetForSize(n: number): number {
-  return NODE_BUDGET_BY_SIZE[n] ?? 1_000_000
+  return NODE_BUDGET_BY_SIZE[n] ?? 1_000_000;
 }
 
 export function useSudoku() {
-  const api = useSolver()
+  const api = useSolver();
 
-  const initial = resolveInitialState()
+  const initial = resolveInitialState();
 
   // T4-W3 share-truth: a `?board=` that was PRESENT but failed to decode (the discriminated
   // 'invalid' from resolveInitialState — never conflated with 'absent'). The composable falls
   // back to a fresh deal below; the board folds a one-line corrupt-link notice into that first
   // fresh-board announce so the bad link doesn't degrade silently. Fixed once at init.
-  const linkError = ref(initial.boardLink === 'invalid')
+  const linkError = ref(initial.boardLink === "invalid");
 
-  const size = ref(initial.size)
-  const difficulty = ref<Difficulty>(initial.difficulty)
-  const boardSize = computed(() => size.value ** 2)
-  const totalCells = computed(() => boardSize.value ** 2)
+  const size = ref(initial.size);
+  const difficulty = ref<Difficulty>(initial.difficulty);
+  const boardSize = computed(() => size.value ** 2);
+  const totalCells = computed(() => boardSize.value ** 2);
 
   // values[position] = number (0 = empty)
-  const values = ref<Record<string, number>>({})
-  const givenCells = ref<Set<string>>(new Set())
-  const originalGivenCells = ref<Set<string>>(new Set())
-  const overriddenCells = ref<Set<string>>(new Set())
-  const animatingCells = ref<Set<string>>(new Set())
-  const solveState = ref<SolveState>('idle')
-  const solvedValues = ref<Record<string, number>>({})
+  const values = ref<Record<string, number>>({});
+  const givenCells = ref<Set<string>>(new Set());
+  const originalGivenCells = ref<Set<string>>(new Set());
+  const overriddenCells = ref<Set<string>>(new Set());
+  const animatingCells = ref<Set<string>>(new Set());
+  const solveState = ref<SolveState>("idle");
+  const solvedValues = ref<Record<string, number>>({});
   // Stats from the last completed solve (W6 stat-line). Set only by solve() —
   // the peek path never touches it. Cleared wherever the grade reverts to idle.
-  const solveStats = ref<SolveStats | null>(null)
-  const loading = ref(false)
-  const errorMessage = ref('')
+  const solveStats = ref<SolveStats | null>(null);
+  const loading = ref(false);
+  const errorMessage = ref("");
   // The typed error code (SolverErrorCode) behind the paper note,
   // consumed by SudokuBoard for the §5.2 copy split. Kept coherent with errorMessage.
-  const errorCode = ref('')
-  const boardGeneration = ref(0)
+  const errorCode = ref("");
+  const boardGeneration = ref(0);
 
   // Bounded undo/redo (W6) — the shared {pos,prev,next}[] history machine. The arrow
   // wrapper keeps the call hoisting-safe: `applyCellValue` is declared below.
   const { clearUndo, recordEdit, undo, redo } = useUndoHistory((pos, value) =>
     applyCellValue(pos, value),
-  )
+  );
 
   function initBoard() {
-    values.value = {}
-    givenCells.value = new Set()
-    originalGivenCells.value = new Set()
-    overriddenCells.value = new Set()
-    animatingCells.value = new Set()
-    solveState.value = 'idle'
-    solvedValues.value = {}
-    solveStats.value = null
-    errorMessage.value = ''
-    errorCode.value = ''
+    values.value = {};
+    givenCells.value = new Set();
+    originalGivenCells.value = new Set();
+    overriddenCells.value = new Set();
+    animatingCells.value = new Set();
+    solveState.value = "idle";
+    solvedValues.value = {};
+    solveStats.value = null;
+    errorMessage.value = "";
+    errorCode.value = "";
     for (let i = 0; i < totalCells.value; i++) {
-      values.value[String(i)] = 0
+      values.value[String(i)] = 0;
     }
-    clearUndo()
-    boardGeneration.value++
+    clearUndo();
+    boardGeneration.value++;
   }
 
   function clearBoard() {
-    solveState.value = 'idle'
-    solvedValues.value = {}
-    solveStats.value = null
-    errorMessage.value = ''
-    errorCode.value = ''
+    solveState.value = "idle";
+    solvedValues.value = {};
+    solveStats.value = null;
+    errorMessage.value = "";
+    errorCode.value = "";
     for (let i = 0; i < totalCells.value; i++) {
-      values.value[String(i)] = 0
+      values.value[String(i)] = 0;
     }
-    givenCells.value = new Set()
-    originalGivenCells.value = new Set()
-    overriddenCells.value = new Set()
-    animatingCells.value = new Set()
-    clearUndo()
-    boardGeneration.value++
-    clearPersistedBoard()
-    dropBoardParam() // the shared configuration is stale once the board is blanked
+    givenCells.value = new Set();
+    originalGivenCells.value = new Set();
+    overriddenCells.value = new Set();
+    animatingCells.value = new Set();
+    clearUndo();
+    boardGeneration.value++;
+    clearPersistedBoard();
+    dropBoardParam(); // the shared configuration is stale once the board is blanked
   }
 
   // The cell-write primitive, shared by user edits and undo/redo replay. Given-cell
   // immunity is structural: a pristine given is never a recorded edit target (editing one
   // overrides it first), so undo/redo never writes into a live given.
   function applyCellValue(pos: number, value: number) {
-    const key = String(pos)
+    const key = String(pos);
     if (originalGivenCells.value.has(key)) {
-      givenCells.value.delete(key)
-      overriddenCells.value.add(key)
+      givenCells.value.delete(key);
+      overriddenCells.value.add(key);
     }
     // If overriding a solver-introduced cell, remove only THIS cell from solvedValues
     // (other solved cells keep their sparkle-rainbow styling)
     if (key in solvedValues.value) {
-      const { [key]: _, ...rest } = solvedValues.value
-      solvedValues.value = rest
-      overriddenCells.value.add(key)
+      const { [key]: _, ...rest } = solvedValues.value;
+      solvedValues.value = rest;
+      overriddenCells.value.add(key);
     }
-    values.value[key] = value
+    values.value[key] = value;
     // Revert solve state so the board no longer shows success/failure
-    if (solveState.value !== 'idle') {
-      solveState.value = 'idle'
-      solveStats.value = null // the stat-line goes stale with the grade (W6)
+    if (solveState.value !== "idle") {
+      solveState.value = "idle";
+      solveStats.value = null; // the stat-line goes stale with the grade (W6)
     }
-    queueSave()
+    queueSave();
   }
 
   function setCell(pos: number, value: number) {
-    const prev = values.value[String(pos)] ?? 0
-    applyCellValue(pos, value)
-    recordEdit(pos, prev, value)
+    const prev = values.value[String(pos)] ?? 0;
+    applyCellValue(pos, value);
+    recordEdit(pos, prev, value);
   }
 
   async function randomize() {
-    loading.value = true
-    errorMessage.value = ''
-    errorCode.value = ''
-    solveState.value = 'idle'
-    solvedValues.value = {}
-    solveStats.value = null
+    loading.value = true;
+    errorMessage.value = "";
+    errorCode.value = "";
+    solveState.value = "idle";
+    solvedValues.value = {};
+    solveStats.value = null;
 
     try {
-      const board = await api.getRandomBoard(size.value, difficulty.value)
-      values.value = {}
-      givenCells.value = new Set()
-      originalGivenCells.value = new Set()
-      overriddenCells.value = new Set()
+      const board = await api.getRandomBoard(size.value, difficulty.value);
+      values.value = {};
+      givenCells.value = new Set();
+      originalGivenCells.value = new Set();
+      overriddenCells.value = new Set();
 
       for (const [pos, val] of Object.entries(board.values)) {
-        values.value[pos] = val
+        values.value[pos] = val;
         if (val !== 0) {
-          givenCells.value.add(pos)
+          givenCells.value.add(pos);
         }
       }
 
-      originalGivenCells.value = new Set(givenCells.value)
-      animatingCells.value = new Set(givenCells.value)
-      clearUndo() // a fresh board voids the prior board's history
-      dropBoardParam() // a freshly-dealt board voids the shared permalink
-      queueSave()
+      originalGivenCells.value = new Set(givenCells.value);
+      animatingCells.value = new Set(givenCells.value);
+      clearUndo(); // a fresh board voids the prior board's history
+      dropBoardParam(); // a freshly-dealt board voids the shared permalink
+      queueSave();
     } catch (e) {
       // A generate failure was fully silent before — route it through the shared
       // fiction classifier and surface it (paper note for machinery faults).
-      solveState.value = classifyError(e).kind === 'teacher-red' ? 'failed' : 'error'
-      errorCode.value = e instanceof Error && 'code' in e ? String((e as { code?: unknown }).code ?? '') : ''
-      errorMessage.value = e instanceof Error ? e.message : 'Failed to get board'
+      solveState.value = classifyError(e).kind === "teacher-red" ? "failed" : "error";
+      errorCode.value =
+        e instanceof Error && "code" in e
+          ? String((e as { code?: unknown }).code ?? "")
+          : "";
+      errorMessage.value = e instanceof Error ? e.message : "Failed to get board";
     } finally {
-      loading.value = false
+      loading.value = false;
     }
   }
 
   async function solve() {
-    loading.value = true
-    solveState.value = 'solving'
-    solveStats.value = null // never show a previous solve's numbers mid-solve
-    errorMessage.value = ''
-    errorCode.value = ''
+    loading.value = true;
+    solveState.value = "solving";
+    solveStats.value = null; // never show a previous solve's numbers mid-solve
+    errorMessage.value = "";
+    errorCode.value = "";
 
     try {
-      const result = await api.solveBoard(values.value, size.value, nodeBudgetForSize(size.value))
-      const newlySolved: Record<string, number> = {}
-      const cellsToAnimate = new Set<string>()
+      const result = await api.solveBoard(
+        values.value,
+        size.value,
+        nodeBudgetForSize(size.value),
+      );
+      const newlySolved: Record<string, number> = {};
+      const cellsToAnimate = new Set<string>();
 
       for (const [pos, val] of Object.entries(result.values)) {
         if (values.value[pos] === 0) {
-          values.value[pos] = val
-          newlySolved[pos] = val
-          cellsToAnimate.add(pos)
+          values.value[pos] = val;
+          newlySolved[pos] = val;
+          cellsToAnimate.add(pos);
         }
       }
 
-      solvedValues.value = { ...solvedValues.value, ...newlySolved }
+      solvedValues.value = { ...solvedValues.value, ...newlySolved };
       // solved=false means the solver *proved* no completion exists for the
       // user-entered cells (provable UNSAT) — distinct from the budget case below.
-      solveState.value = result.solved ? 'solved' : 'failed'
+      solveState.value = result.solved ? "solved" : "failed";
       solveStats.value = {
         backtracks: result.backtracks,
         solutionCount: result.solutionCount,
         elapsedMs: result.elapsedMs,
-      }
-      animatingCells.value = cellsToAnimate
-      queueSave()
+      };
+      animatingCells.value = cellsToAnimate;
+      queueSave();
     } catch (e) {
-      // Route by the shared fiction classifier (games/sudoku/solver/classifyError): provable
+      // Route by the shared fiction classifier (games/shared/solver/classifyError): provable
       // UNSAT / INVALID_INPUT → the teacher's red pencil ('failed'); everything else
       // — BUDGET_EXCEEDED, TIMEOUT, WORKER_FAILURE, a bare network TypeError — → the
       // paper note ('error'). Fixes the Pass-1 F5 corner where WORKER_FAILURE wrongly
       // read as a wrong answer; the two are never conflated on the wire or in the UI.
-      solveState.value = classifyError(e).kind === 'teacher-red' ? 'failed' : 'error'
-      errorCode.value = e instanceof Error && 'code' in e ? String((e as { code?: unknown }).code ?? '') : ''
-      errorMessage.value = e instanceof Error ? e.message : 'Solve failed'
+      solveState.value = classifyError(e).kind === "teacher-red" ? "failed" : "error";
+      errorCode.value =
+        e instanceof Error && "code" in e
+          ? String((e as { code?: unknown }).code ?? "")
+          : "";
+      errorMessage.value = e instanceof Error ? e.message : "Solve failed";
     } finally {
-      loading.value = false
+      loading.value = false;
     }
   }
 
@@ -233,19 +243,25 @@ export function useSudoku() {
   // Feeds the read-only laminate overlay; NEVER mutates `values`. The W6 Worker
   // solve path makes this API-free (no /board/solve round-trip), and boards derive
   // from solution banks so the pristine givens are always satisfiable.
-  const peekCache = ref<{ gen: number; values: Record<string, number> } | null>(null)
+  const peekCache = ref<{ gen: number; values: Record<string, number> } | null>(null);
   async function peekSolution(): Promise<Record<string, number>> {
     if (peekCache.value && peekCache.value.gen === boardGeneration.value) {
-      return peekCache.value.values
+      return peekCache.value.values;
     }
-    const givensOnly: Record<string, number> = {}
+    const givensOnly: Record<string, number> = {};
     for (let i = 0; i < totalCells.value; i++) {
-      const key = String(i)
-      givensOnly[key] = originalGivenCells.value.has(key) ? (values.value[key] ?? 0) : 0
+      const key = String(i);
+      givensOnly[key] = originalGivenCells.value.has(key)
+        ? (values.value[key] ?? 0)
+        : 0;
     }
-    const result = await api.solveBoard(givensOnly, size.value, nodeBudgetForSize(size.value))
-    peekCache.value = { gen: boardGeneration.value, values: { ...result.values } }
-    return peekCache.value.values
+    const result = await api.solveBoard(
+      givensOnly,
+      size.value,
+      nodeBudgetForSize(size.value),
+    );
+    peekCache.value = { gen: boardGeneration.value, values: { ...result.values } };
+    return peekCache.value.values;
   }
 
   // ── Hint tier (W6) — fill the focused cell from the peek cache, solver-ink ──────
@@ -254,30 +270,30 @@ export function useSudoku() {
   // pristine givens are immune (they already show the right glyph). Not recorded on the
   // undo stack — a hint is a reveal, not a user edit.
   async function hintCell(pos: number) {
-    const key = String(pos)
-    if (originalGivenCells.value.has(key)) return // givens already show the answer
-    let solution: Record<string, number>
+    const key = String(pos);
+    if (originalGivenCells.value.has(key)) return; // givens already show the answer
+    let solution: Record<string, number>;
     try {
-      solution = await peekSolution()
+      solution = await peekSolution();
     } catch {
-      return // solve unavailable — fail quietly
+      return; // solve unavailable — fail quietly
     }
-    const val = solution[key] ?? 0
-    if (val === 0 || values.value[key] === val) return
-    values.value[key] = val
-    solvedValues.value = { ...solvedValues.value, [key]: val } // solver-ink tone
-    overriddenCells.value.delete(key)
+    const val = solution[key] ?? 0;
+    if (val === 0 || values.value[key] === val) return;
+    values.value[key] = val;
+    solvedValues.value = { ...solvedValues.value, [key]: val }; // solver-ink tone
+    overriddenCells.value.delete(key);
     // T3-W13 §4.1 — the hint IS a one-cell solve reveal: joining animatingCells routes
     // the glyph through the existing reveal path (350ms solver-ink draw-in, grain
     // suppressed during the tween, PRM-instant branch) — one grammar, zero new timing
     // constants. The board's flourish gate (`celebrating` requires solveState 'solved')
     // stays closed: a hint writes itself in, no gold star.
-    animatingCells.value = new Set([key])
-    if (solveState.value !== 'idle') {
-      solveState.value = 'idle'
-      solveStats.value = null
+    animatingCells.value = new Set([key]);
+    if (solveState.value !== "idle") {
+      solveState.value = "idle";
+      solveStats.value = null;
     }
-    queueSave()
+    queueSave();
   }
 
   // Engine-domains pencil marks (W6 beat 9 — the shared marks machine). SudokuGame
@@ -288,22 +304,22 @@ export function useSudoku() {
     values,
     boardSize,
     totalCells,
-  )
+  );
 
   // ── Restore from persisted state (no animation) ──────────────────
   function restoreBoard(persisted: PersistedBoard) {
-    values.value = { ...persisted.values }
-    givenCells.value = new Set(persisted.givenCells)
-    originalGivenCells.value = new Set(persisted.originalGivenCells)
-    overriddenCells.value = new Set(persisted.overriddenCells)
-    solvedValues.value = { ...persisted.solvedValues }
-    boardGeneration.value = persisted.boardGeneration
-    animatingCells.value = new Set() // no re-animation on restore
-    solveState.value = 'idle'
-    solveStats.value = null
-    errorMessage.value = ''
-    errorCode.value = ''
-    clearUndo()
+    values.value = { ...persisted.values };
+    givenCells.value = new Set(persisted.givenCells);
+    originalGivenCells.value = new Set(persisted.originalGivenCells);
+    overriddenCells.value = new Set(persisted.overriddenCells);
+    solvedValues.value = { ...persisted.solvedValues };
+    boardGeneration.value = persisted.boardGeneration;
+    animatingCells.value = new Set(); // no re-animation on restore
+    solveState.value = "idle";
+    solveStats.value = null;
+    errorMessage.value = "";
+    errorCode.value = "";
+    clearUndo();
   }
 
   // ── Persistence helper ───────────────────────────────────────────
@@ -317,7 +333,7 @@ export function useSudoku() {
       overriddenCells: Array.from(overriddenCells.value),
       solvedValues: solvedValues.value,
       boardGeneration: boardGeneration.value,
-    })
+    });
   }
 
   // ── Share-on-demand permalink (W6; T4-W3 share-truth) ────────────
@@ -329,45 +345,45 @@ export function useSudoku() {
   // "succeeding" (the write-side mirror of the corrupt-link signal). The ONLY writer of
   // `?board=`; nothing ambient sets it.
   function shareBoard(): Promise<void> {
-    writeBoardToUrl(encodeBoard(size.value, values.value, totalCells.value))
+    writeBoardToUrl(encodeBoard(size.value, values.value, totalCells.value));
     if (!navigator.clipboard) {
-      return Promise.reject(new Error('Clipboard API unavailable'))
+      return Promise.reject(new Error("Clipboard API unavailable"));
     }
-    return navigator.clipboard.writeText(window.location.href)
+    return navigator.clipboard.writeText(window.location.href);
   }
 
   // ── Initialization ───────────────────────────────────────────────
-  syncToUrl(size.value, difficulty.value)
+  syncToUrl(size.value, difficulty.value);
 
   const canRestore =
-    (initial.source === 'url+storage' ||
-      initial.source === 'storage-only' ||
-      initial.source === 'url-board') &&
+    (initial.source === "url+storage" ||
+      initial.source === "storage-only" ||
+      initial.source === "url-board") &&
     initial.persisted != null &&
-    Object.values(initial.persisted.values).some((v) => v !== 0)
+    Object.values(initial.persisted.values).some((v) => v !== 0);
 
   if (canRestore) {
-    restoreBoard(initial.persisted!)
+    restoreBoard(initial.persisted!);
   } else {
     // No meaningful persisted state — init empty board then auto-fetch
-    if (initial.persisted) clearPersistedBoard()
-    initBoard()
-    randomize() // fire-and-forget
+    if (initial.persisted) clearPersistedBoard();
+    initBoard();
+    randomize(); // fire-and-forget
   }
 
   // ── Watchers ─────────────────────────────────────────────────────
 
   // Sync URL when size or difficulty changes
   watch([size, difficulty], () => {
-    syncToUrl(size.value, difficulty.value)
-  })
+    syncToUrl(size.value, difficulty.value);
+  });
 
   // Re-init when size changes — old board dimensions invalid
   watch(size, () => {
-    clearPersistedBoard()
-    initBoard()
-    randomize()
-  })
+    clearPersistedBoard();
+    initBoard();
+    randomize();
+  });
 
   // Engine-domains pencil marks: while the peek gesture is held, any cell
   // mutation or board swap re-propagates (K-peek is a toggle, so the page can
@@ -377,19 +393,19 @@ export function useSudoku() {
   watch(
     [values, boardGeneration],
     () => {
-      if (marksActive.value) refreshMarks()
+      if (marksActive.value) refreshMarks();
     },
     { deep: true },
-  )
+  );
 
   // Debounced persistence — called explicitly at mutation points
-  let saveTimer: ReturnType<typeof setTimeout> | null = null
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
   function queueSave() {
-    if (saveTimer) clearTimeout(saveTimer)
+    if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      saveBoardState()
-      saveTimer = null
-    }, 300)
+      saveBoardState();
+      saveTimer = null;
+    }, 300);
   }
 
   return {
@@ -422,5 +438,5 @@ export function useSudoku() {
     linkError,
     pencilMarks,
     setMarksActive,
-  }
+  };
 }

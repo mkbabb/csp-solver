@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed } from "vue";
 import {
   FILTER_PRESETS,
   wobblePoseFrequencies,
   wobblePoseId,
   type FilterPreset,
-} from '@pencil/config/pencilConfig';
+} from "@pencil/config/pencilConfig";
 
 const presets = computed(() => Object.values(FILTER_PRESETS));
 
 function filterRegion(p: FilterPreset) {
   const m = p.margin;
-  return { x: `-${m}%`, y: `-${m}%`, width: `${100 + 2 * m}%`, height: `${100 + 2 * m}%` };
+  return {
+    x: `-${m}%`,
+    y: `-${m}%`,
+    width: `${100 + 2 * m}%`,
+    height: `${100 + 2 * m}%`,
+  };
 }
 
 // ── Frozen pose variants (T3-W13 §1-P3/P4) ──
@@ -38,9 +43,10 @@ function filterRegion(p: FilterPreset) {
   >
     <defs>
       <template v-for="p in presets" :key="p.id">
-        <!-- Grain-only: static fractalNoise displacement -->
+        <!-- Grain-only base def: static fractalNoise displacement. Suppressed for a
+             baked preset (baseDef === false → grain-outline) whose base filter is orphaned. -->
         <filter
-          v-if="p.grain && !p.wobble && !p.multiPass && !p.texture"
+          v-if="p.grain && !p.wobble && !p.multiPass && p.baseDef !== false"
           :id="p.id"
           v-bind="filterRegion(p)"
           color-interpolation-filters="sRGB"
@@ -55,10 +61,11 @@ function filterRegion(p: FilterPreset) {
           <feDisplacementMap in="SourceGraphic" in2="grain" :scale="p.grain.scale" />
         </filter>
 
-        <!-- Wobble: single feTurbulence + feDisplacementMap, STATIC at the rest
-             params — the freeze-at-one-pose surface (hover chrome, hearts). -->
+        <!-- Wobble base def: single feTurbulence + feDisplacementMap, STATIC at the rest
+             params — the freeze-at-one-pose surface (hover chrome, hearts). Suppressed for a
+             pose-stack-only preset (baseDef === false → wobble-logo) whose base is orphaned. -->
         <filter
-          v-else-if="p.wobble && !p.multiPass && !p.texture"
+          v-else-if="p.wobble && !p.multiPass && p.baseDef !== false"
           :id="p.id"
           filterUnits="objectBoundingBox"
           v-bind="filterRegion(p)"
@@ -83,7 +90,7 @@ function filterRegion(p: FilterPreset) {
 
         <!-- MultiPass: multiple displaced copies blended -->
         <filter
-          v-else-if="p.multiPass && !p.wobble && !p.texture"
+          v-else-if="p.multiPass && !p.wobble"
           :id="p.id"
           v-bind="filterRegion(p)"
           color-interpolation-filters="sRGB"
@@ -109,7 +116,12 @@ function filterRegion(p: FilterPreset) {
           />
           <!-- Chain blend: pass1+pass2 → blend12, blend12+pass3, etc. -->
           <template v-if="p.multiPass.passes.length >= 2">
-            <feBlend in="pass1" in2="pass2" :mode="p.multiPass.blendMode" result="blend12" />
+            <feBlend
+              in="pass1"
+              in2="pass2"
+              :mode="p.multiPass.blendMode"
+              result="blend12"
+            />
             <template v-if="p.multiPass.passes.length >= 3">
               <feBlend in="blend12" in2="pass3" :mode="p.multiPass.blendMode" />
             </template>
@@ -119,7 +131,7 @@ function filterRegion(p: FilterPreset) {
         <!-- Frozen pose variants (T3-W13 §1-P3): one static filter per beat pose,
              structurally identical to the base wobble def — only baseFrequency
              differs, pinned to what the retired watcher wrote on that beat. -->
-        <template v-if="p.wobble && !p.multiPass && !p.texture">
+        <template v-if="p.wobble && !p.multiPass">
           <filter
             v-for="(freq, i) in wobblePoseFrequencies(p)"
             :id="wobblePoseId(p.id, i)"
@@ -145,7 +157,6 @@ function filterRegion(p: FilterPreset) {
             />
           </filter>
         </template>
-
       </template>
 
       <!-- Non-preset filters: pastel rainbow gradient (CHROME register — the sparkle
@@ -170,7 +181,6 @@ function filterRegion(p: FilterPreset) {
         <stop offset="75%" style="stop-color: var(--color-solver-ink-4)" />
         <stop offset="100%" style="stop-color: var(--color-solver-ink-5)" />
       </linearGradient>
-
     </defs>
   </svg>
 </template>

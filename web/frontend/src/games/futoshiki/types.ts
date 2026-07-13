@@ -14,7 +14,7 @@
 
 // SolveState/SolveStats are the shared game vocabulary — re-exported here so every
 // existing `@games/futoshiki/types` consumer is untouched (ballot Q3, one home).
-export type { SolveState, SolveStats } from '../shared/types'
+export type { SolveState, SolveStats } from "../shared/types";
 
 /**
  * A single inequality clue: `[greater, lesser]` cell positions (0-based, row-major),
@@ -24,7 +24,7 @@ export type { SolveState, SolveStats } from '../shared/types'
  * Inequalities are permanent board FURNITURE, printed on the grid, never blanked — so
  * they never participate in the given/overridden/solved bookkeeping the cell values do.
  */
-export type Inequality = [greater: number, lesser: number]
+export type Inequality = [greater: number, lesser: number];
 
 /** v1 Futoshiki board-size band. The selector offers exactly these. */
-export const VALID_BOARD_SIZES = [4, 5, 6, 7] as const
+export const VALID_BOARD_SIZES = [4, 5, 6, 7] as const;
