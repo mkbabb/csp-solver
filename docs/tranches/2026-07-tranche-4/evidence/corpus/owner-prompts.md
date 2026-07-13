@@ -1,0 +1,59 @@
+# The owner-prompt corpus — every ask hitherto (compiled 2026-07-12)
+
+The prompt-recap lane verifies EVERY row below reached one of: ADDRESSED (file:line / commit / gate evidence), PARTIAL (what landed, what didn't), UNADDRESSED. Rows quoted verbatim where the record holds the verbatim; paraphrase marked (p). This corpus is compiled from the orchestrator's session record; the lane must ALSO mine docs/tranches/*/README.md (§3a/§3b quote owner verdicts verbatim), the memory ledger at /Users/mkbabb/.claude/projects/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/memory/, and git history for owner directives this compilation missed — additions to the corpus are themselves findings.
+
+## Grand tranche era (closed 2026-07-06)
+- G1 (p): 14-wave grand tranche executed; releases (csp-solver 0.2.0 crates.io, wasm/morph 0.2.0 + pencil-boil 0.6.0 npm); morph excised to mkbabb/morph.
+- G2 (p, the colocation edict 2026-07-05): recursive colocation for ALL dirs (FE+BE); pencil decoupled from the games plural; "components should be COLOCATED" — re-affirmed as "a grand edict for ALL file directories" at T3 authoring.
+
+## Tranche II (closed 2026-07-10 at 98.2%)
+- T2-1: "Begin and continue the current tranche... indefatigably... NO quick solutions, NO workarounds: idiomatic, gestalt approaches... maximal parallelism and workflow usage... authorized to publish, push, and pull... deploy anything and everything via Cloudflare, AWS's CLI... core model for orchestration, design, synthesis, but defer to Opus or Sonnet for workflow fanout."
+- T2-2: cron robustness + guardrails: "Ensure this cron does not conflict with core development, or overwhlem context. And is appropriately cleanedup upon completion."
+- T2-3 (standing resume directive, verbatim): "Continue. Re-deploy all workflows and agents thereof--no exceptions. Use batches of three agents in parallel to avoid rate limit walls. / The limit has been fully reset. Pick up where they left off with another workflow."
+
+## Tranche III authoring (2026-07-10)
+- T3-1: "Full closure requires a spawning of the project locally."
+- T3-2: better encapsulation + modularization of FE and BE api; deploy workflows to specify; update the tranche set.
+- T3-3: csp-solver/src/py/sudoku_api.rs "should likely be split into a sudoku module (or removed if this feature is deprecated, as we no longer have the python server, correct?)"
+- T3-4: csp-solver/wasm/src/isomorphic.rs — "is this needed any longer?"
+- T3-5: the python bindings — "Are these optimal and comprehensive? Structured well? Research the SOTA as of July 2026."
+- T3-6: the 5-step convergence loop (research ≤8 parallel → synthesis → prototype fleet → critique fleet w/ convergence % → agglomerating synthesis; iterate; "Whereupon 100% convergence, stop and develop out that exact tranche plan").
+- T3-7: the expanded mandate: perf/library/UI/module-structure; "DEEPLY audit with 32 agents in parallel"; NO legacy code; fold ALL deferred+chronic items; recap ALL prompts; "This is NOT an implementation phase" (until ratified).
+- T3-8 (four design findings, screenshots): (a) dropdown border misregistration; (b) the "solved it!" star "preposterous" → new completion formulation, NO modal, stars+gold, golden board; (c) dark-toggle SVGs + storybook transition; (d) game-switch choreography ("keyframes.js our lib?"); (e) heart refined toward Yoshi's Story language.
+- T3-9: "Explicate those begotten waves, and any other questions of me."
+- T3-10: "Ratify the questions with your idiomatic and design-congruent defaults. We shall then compact and thereupon begin development of this tranche."
+- T3-11 (ballot, binding): py = No PyPI + maximal prune (futoshiki_api removed); core 0.4.0 ratified as recommended; FE = three-home rule + relocate; index.css = Drop/HELD-again. W10 register sample: "Approve as-is."
+
+## Tranche III execution + owner audits (2026-07-10 → 12)
+- E1: "Spawn the dev server for me to audit as you implement." (repeated: "Spawn the dev server for me to audit. The java branche stays.")
+- E2 (audit 2, five findings + one feature, verbatim in T3 README §3a): completion area "still preposterous—too small, occludes the bottom of the page, messes up the flow" + "performance is god awful on this page"; "boiling is too hairline and the outline was changed"; toggle "completely ruined. It should act as yoshi's story and be closer to how it was BEFORE"; sun spiral contrast "awful and should be as it was before"; "strange artifact in the top left corner"; NEW FEATURE: "controls function as a drawer that slides underneath the board, with the board and logo centreing and growing bigger to accomodate this--smoothly and fully animated. The drawer should be a small drawer element on the sider of the board that pulls out from under the board and shifts it leftward." Directive: "Ecoute-moi: deploy a workflow to research, harden, and tranche write these addendums."
+- E3 (audit 3, five findings, verbatim in §3b): "Perfromance of the idle page is awful. The drawer animation is not right AT ALL and needs proper smoothing and perfecting. The peek/hint animations need proper pencil draw in animations. Why are the boil animations so non-performant? What can we improve from first pricniples? The darkmode toggle animation renders ina low-res variant on animation--this is totally wrong. Needs a great deal of refinement, to warp in and out like a storybook-popup (shrinking and growing, etc). Design and divine this from first pciniples, look to how our animation was previously."
+- E4 (audit 4, mid-W13, verbatim in the W13 wave §3): "Ecoute-moi and mark: the controls should slide from out and under the board, not from the top right. The bouncy-and easing curves should be adjusted to be smoother and more congruent with glass-ui."
+- E5: "ALL workflows." (re-deploy scope clarification)
+- E6 (2026-07-12): "Spawn the dev server for me to audit. We must fix this OOM issue. What other issues are extant, what remains for the next tranche, potentially? Kill all crons, too."
+- E7 (audit 5, verbatim): "The performance in safari is god awful and nearly entirely unusable. What pencil boil facilities might we change--without a compromise in quality and design in any way. Profile."
+
+## The tranche-IV formulation mandate (2026-07-12, THIS campaign — the governing prompt)
+- M0: "Let's plan for that [the Safari bitmap-pose-cache wave], and for a further refinement:" — NOT an implementation phase; tranche development only; no source edits; deliverable = the next tranche fully formed (plan folder, wave specs, gates, dispositions).
+- M1 (mission): DEEPLY audit the original plan + waves + all changes hitherto with 32 agents; audit landed changes + remaining plan; recapitulate original prompts/plans/precepts; verify every one addressed or carries an explicit ledger row with an owner; form the next tranche from what the audit surfaces.
+- M2 (standing edicts): NO quick solutions/workarounds — idiomatic, gestalt; "architectural transpositions in the sake of elegance, simplicity, and performance above all are both necessary and desirable." NO legacy code — clean breaks: no aliases, no migration shims, no dual paths, no masking fallbacks. Every chronically deferred + deferred item folds as a DECIDED row: build, fold, or retire with rationale; re-booking forbidden; a chronic riding 2+ closes un-decided is a DISEASE row and deciding it is a wave of its own. Recap ALL prompts; unaddressed ask → registry row with owning wave; silent drops forbidden.
+- M3 (orchestration): 32 agents as steerable budget; diverse lenses (plan-vs-landed, gate soundness — can each gate actually fail?, gestalt vs per-mechanism PASS, chronic/disposition ledgers, prompt-recap, consumer truth — import graph + registry, performance, accessibility, doc/canon drift, dead-code + dual-path census, cross-repo asks); withhold the favored success narrative from most auditors; registry of finding families by defect mechanism; redirect convergence excess; adversarial throughout vs the close-class lies (green-over-broken, vacuous-green gates, declared captures missing on disk, masked fallbacks, alias smuggling, re-booked chronics, per-mechanism green over gestalt broken); concrete deliverables (file:line, failing probe, reproduction, named defect row); decompose tranche-strength findings into wave-shaped rows; rounds until two consecutive passes surface nothing new.
+- M4 (model routing): Fable owns orchestration/synthesis/adjudication/every cognitively complex call; ALL design through Fable + the frontend design plugin (DesignSync); Opus and Sonnet take fanout + mechanical sweeps; every fanout spawn declares its model explicitly; 3-wide batches.
+- M5 (partial progress): registry-tracked; discard nothing; folding is a decision; terminal disposition per item: folded into a named wave, banked with a named re-trigger, or retired with rationale. Counting a partial as done is forbidden.
+- M6 (return contract): plan folder; wave specs with acceptance gates born RED wherever the defect is live; π and DELTA obligations for every visual claim; dispositions for every chronic/deferred/prompt-recap row. Inventory without the resolving tranche is incomplete. Genuine blocker → strongest converged core + exact gap.
+- M7 (named scope): excise any legacy or deprecated code; total re-formulation of tests (rust, js, e2e) with grand superfluity + overfit pruning; "Why do we have any notion of PWA--this is to be abrogated"; what modern rust/wasm facilities are we missing; no stale/outdated deps (rust, wasm, js); what frontend items could be more idiomatic for Vue or leverage glass-ui in a more efficient facility; "What other files like web/frontend/knip.json--is there any other contrivance or superfluity?"; ALL docs updated — NO meta language, no tranche/process/Claude references; adhere to /Users/mkbabb/Programming/sci-report/reports/style/MIKE-STYLE.md; "The extant readme is quite good, but can be refined"; extant docs entirely re-formulated to align with the new codebase.
+
+## The expansion mandate (2026-07-12, mid-campaign addendum to the T4 formulation)
+- M8 (game-scope expansion): "Would expanding the scope of the games be permissible--what other games could we provide, KISS, with this engine? Crosswords?"
+- M9 (extant-game facilities): "a research assay of the best sudoku/futoshiki websties--what affordances, facilities, might we provide that we do not currently expose or provide outright? Better hints (what are our hint heuristics?), better partial solving, perhaps an overall progress bar deftly integrated into the border of the board; better game quality with heuristics that are displayed; a game selection screen that transforms the extant board into a carousel of games to select, a la the wii shop store (designed within our idioms, and made game agnostic)"
+- M10 (distillation): "Better performance, and a distillation of code into its atomic precepts and concepts. How can we REDUCE code lines and complexity and maintain the full suite of facilities?"
+
+## Standing constraints (permanent, carry into every wave)
+- NEVER push bbnf-lang origin (vendored csp-solver syncs local-only via scripts/sync-csp-solver-vendor.sh). pencil-boil pushes ARE allowed.
+- The java branch STAYS (owner ruling 2026-07-11).
+- The repo has NO CLAUDE.md by design; READMEs are the docs.
+- Batches of three concurrent agents (rate wall).
+- ALL frontend design work on Fable + the frontend-design plugin actually invoked.
+- Owner dev server at :3001 stays alive; :3000 may be a stray HMR socket (K46).
+- Cloudflare deploys via `npm run deploy` only (the npx packument OOM); token at ~/Programming/value.js/.env; Pages project=sudoku, production branch=master (lowercase).
+- Owner-taste items banked at W13 (owner adjudicates, engineering carries captures): sun ray-comb per-beat cadence, wring twist −15°, Bloom crest 1.092, divider hoist 0.9752 exception.
