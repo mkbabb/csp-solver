@@ -57,3 +57,9 @@ The prompt-recap lane verifies EVERY row below reached one of: ADDRESSED (file:l
 - Owner dev server at :3001 stays alive; :3000 may be a stray HMR socket (K46).
 - Cloudflare deploys via `npm run deploy` only (the npx packument OOM); token at ~/Programming/value.js/.env; Pages project=sudoku, production branch=master (lowercase).
 - Owner-taste items banked at W13 (owner adjudicates, engineering carries captures): sun ray-comb per-beat cadence, wring twist −15°, Bloom crest 1.092, divider hoist 0.9752 exception.
+
+## E8 — the mobile recut (2026-07-13, mid-tranche, BINDING — research→harden→tranche-write→implement)
+
+Verbatim: "Ecoute-moi and mark me (with a proper research, harden, tranche write implement pursuant to precepts for a mid-tranche update): our mobile interface is whack. We must abrogate the custom keypad and instead allow for proper bounded input with the standard mobile text entry (congruent and styled appropriaately with focus & c for mobile/ios). The other affordances, such as hints, etc, should have proper mobile variants in a KISS-forward manner. If we can leverage a modern web api for tap/touch to hold/vibrations if possible (ios only is fine, too), we should plan to do so. Further, safari and mobile performance is still awful and must be ameliorated without compromise."
+
+Rulings: the custom keypad ABROGATED (REVERSES the T3 "W11 digit pad = BUILD" ratification) for native bounded entry, iOS-congruent; KISS mobile affordance variants; tap-hold + vibration planned per honest API truth (iOS-only acceptable); Safari/mobile perf ameliorated without compromise. Homed at → T4-WM (wave spec + evidence/wm/).
