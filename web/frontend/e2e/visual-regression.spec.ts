@@ -284,7 +284,7 @@ test('randomize populates board and blank cells accept input', async ({ page }) 
       (i) => (i as HTMLInputElement).value,
     ).join(','),
   );
-  await page.locator('.controls-card button[aria-label="Randomize board"]').click();
+  await page.locator('.controls-card button[aria-label="Deal a new board"]').click();
   await expect
     .poll(
       () =>
@@ -357,8 +357,10 @@ test('size switching: 4x4, 9x9, 16x16 all render grid lines', async ({ page }) =
   // in visual-golden.spec.ts (`grid-corner-*`). While the live-filter fallback holds the
   // surface (bake in flight) the per-tier counts are still assertable and are checked.
 
-  // Switch to 4x4 (use desktop sidebar buttons)
+  // Switch to 4x4 (use desktop sidebar buttons). T4-WU/U2 arm-not-live: the size chip STAGES
+  // the pending size; the board re-deals only when Deal commits it (no live re-deal on the chip).
   await page.locator('.controls-card button:has-text("4×4")').click();
+  await page.locator('.controls-card button[aria-label="Deal a new board"]').click();
   // Settle on the re-rendered board at the new size (16 cells) — the grid re-bakes off it.
   await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(16);
   const grid4 = await steadyGridCounts(page);
@@ -370,8 +372,9 @@ test('size switching: 4x4, 9x9, 16x16 all render grid lines', async ({ page }) =
     expect(grid4.activeFrameLines).toBe(1);
   }
 
-  // Switch to 16x16
+  // Switch to 16x16 (stage the chip, then Deal to commit — arm-not-live).
   await page.locator('.controls-card button:has-text("16×16")').click();
+  await page.locator('.controls-card button[aria-label="Deal a new board"]').click();
   await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(256);
   const grid16 = await steadyGridCounts(page);
   expect(grid16.layerCount).toBeGreaterThanOrEqual(2);
@@ -381,8 +384,9 @@ test('size switching: 4x4, 9x9, 16x16 all render grid lines', async ({ page }) =
     expect(grid16.activeSubgridLines).toBeGreaterThan(0);
   }
 
-  // Switch back to 9x9
+  // Switch back to 9x9 (stage the chip, then Deal to commit — arm-not-live).
   await page.locator('.controls-card button:has-text("9×9")').click();
+  await page.locator('.controls-card button[aria-label="Deal a new board"]').click();
   await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(81);
   const grid9 = await steadyGridCounts(page);
   expect(grid9.layerCount).toBeGreaterThanOrEqual(2);

@@ -77,6 +77,9 @@ test('size switching: 4×4/5×5/6×6/7×7 each change the board cell count', asy
   for (const { label, cells } of sizes) {
     // Desktop-sidebar selector only — a bare :has-text twin lives in the hidden mobile panel.
     await page.locator(`.controls-card button:has-text("${label}")`).click();
+    // T4-WU/U2 arm-not-live: the size chip STAGES the pending board-size; only Deal commits the
+    // new dimensions (the live re-deal `watch(boardSize)` was retired — a chip tap wipes nothing).
+    await page.locator('.controls-card button[aria-label="Deal a new board"]').click();
     await expect.poll(() => cellCount(page)).toBe(cells);
     // Carets re-render for the new size's freshly-generated board.
     await expect(page.locator('.futoshiki-caret').first()).toBeVisible({ timeout: 15000 });

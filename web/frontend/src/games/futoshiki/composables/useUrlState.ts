@@ -1,19 +1,25 @@
 /**
  * URL + localStorage persistence for Futoshiki. Own file (games never import each
  * other) with a materially different shape from Sudoku's:
- *   - The URL param is `board_size`, never bare `size` (F5). Sudoku owns `?size=` +
- *     `?difficulty=`; Futoshiki owns `?board_size=`, so both games can co-exist in one
- *     URL while `?game=` (App.vue) selects which is active.
- *   - There is no `difficulty` (F3).
+ *   - The URL param is `board_size`, never bare `size` (F5). Sudoku owns `?size=`;
+ *     Futoshiki owns `?board_size=`; `?difficulty=` is SHARED (T4-WU folded it in,
+ *     closing the W6 residue) — safe because App.vue strips board/size/difficulty/
+ *     board_size on a game switch and each game re-writes its own on mount, so both
+ *     games co-exist in one URL while `?game=` selects which is active.
  *   - `PersistedBoard` carries `inequalities` — permanent board furniture — which does
  *     NOT participate in given/overridden bookkeeping.
  */
 import { toBase64Url, fromBase64Url } from "@/lib/base64url";
-import { VALID_BOARD_SIZES, type Inequality } from "../types";
+import { VALID_BOARD_SIZES, type Difficulty, type Inequality } from "../types";
 
 const STORAGE_KEY = "futoshiki-board-state";
 const DEFAULT_BOARD_SIZE = 5;
+const DEFAULT_DIFFICULTY: Difficulty = "EASY";
 const VALID_SIZES: readonly number[] = VALID_BOARD_SIZES;
+// T4-WU/U2 — the W6 residue closed: futoshiki difficulty now threads through `?difficulty=` +
+// localStorage, the twin of sudoku's, so a staged tier survives reload instead of resetting to
+// EASY each mount (which made the "New game" surface lie for one game). Shared tier vocabulary.
+const VALID_DIFFICULTIES: readonly Difficulty[] = ["EASY", "MEDIUM", "HARD"];
 
 // Reflected-DoS bound: a legit `?board=` is < 1 KB (size 7 with the full 84-pair
 // inequality furniture base64-encodes to ~750 chars); a crafted 100k-pair blob is
@@ -29,6 +35,8 @@ type InitSource = "fresh" | "url-only" | "storage-only" | "url+storage" | "url-b
 
 export interface PersistedBoard {
   boardSize: number;
+  // T4-WU/U2 — the staged difficulty, now a first-class persisted field (twin of sudoku's).
+  difficulty: Difficulty;
   values: Record<string, number>;
   givenCells: string[];
   originalGivenCells: string[];
@@ -40,6 +48,7 @@ export interface PersistedBoard {
 
 export interface InitialState {
   boardSize: number;
+  difficulty: Difficulty;
   source: InitSource;
   persisted: PersistedBoard | null;
   // The `?board=` decode outcome, observable by the UI: "absent" (no link),
@@ -49,11 +58,20 @@ export interface InitialState {
   boardLink: "absent" | "ok" | "invalid";
 }
 
-function parseUrlParams(): { boardSize: number | null } {
+function parseUrlParams(): {
+  boardSize: number | null;
+  difficulty: Difficulty | null;
+} {
   const params = new URLSearchParams(window.location.search);
   const raw = params.get("board_size");
   const n = raw ? parseInt(raw, 10) : null;
-  return { boardSize: n !== null && VALID_SIZES.includes(n) ? n : null };
+  const rawDiff = params.get("difficulty");
+  const difficulty = rawDiff?.toUpperCase() as Difficulty | undefined;
+  return {
+    boardSize: n !== null && VALID_SIZES.includes(n) ? n : null,
+    difficulty:
+      difficulty && VALID_DIFFICULTIES.includes(difficulty) ? difficulty : null,
+  };
 }
 
 function loadPersistedBoard(): PersistedBoard | null {
@@ -69,6 +87,11 @@ function loadPersistedBoard(): PersistedBoard | null {
     ) {
       return null;
     }
+    // Tolerate a legacy board saved before difficulty was persisted (or a corrupt tier) by
+    // coercing to the default rather than discarding the whole board — the board is the
+    // valuable unit; the tier degrades gracefully to EASY.
+    if (!VALID_DIFFICULTIES.includes(data.difficulty))
+      data.difficulty = DEFAULT_DIFFICULTY;
     return data;
   } catch {
     return null;
@@ -136,7 +159,10 @@ type BoardDecode =
 // `invalid` on any malformed/out-of-range/size-mismatched/unknown-version blob so a
 // corrupt link degrades to the size-only path, never a corrupt board — but the failure
 // is now observable, not a silent fresh deal.
-function decodeBoardParam(urlSize: number | null): BoardDecode {
+function decodeBoardParam(
+  urlSize: number | null,
+  urlDifficulty: Difficulty | null,
+): BoardDecode {
   const raw = new URLSearchParams(window.location.search).get("board");
   if (!raw) return { status: "absent" };
   // Fail closed on an oversized param BEFORE decoding — the DoS bound.
@@ -217,6 +243,7 @@ function decodeBoardParam(urlSize: number | null): BoardDecode {
     status: "ok",
     board: {
       boardSize,
+      difficulty: urlDifficulty ?? DEFAULT_DIFFICULTY,
       values,
       givenCells,
       originalGivenCells: givenCells,
@@ -231,19 +258,22 @@ function decodeBoardParam(urlSize: number | null): BoardDecode {
 export function resolveInitialState(): InitialState {
   const url = parseUrlParams();
   // A shared board decoded into a PersistedBoard, or a discriminated failure.
-  const decoded = decodeBoardParam(url.boardSize);
+  const decoded = decodeBoardParam(url.boardSize, url.difficulty);
   const boardLink = decoded.status;
   const boardState = decoded.status === "ok" ? decoded.board : null;
   const persisted = loadPersistedBoard();
   // hasUrl ORs in a VALID board so a board-only link isn't silently dropped (an
   // invalid board fell closed → boardState null → falls through to the size path
-  // while boardLink carries the "invalid" corrupt-link signal for the UI).
-  const hasUrl = url.boardSize !== null || boardState !== null;
+  // while boardLink carries the "invalid" corrupt-link signal for the UI). T4-WU/U2:
+  // a bare `?difficulty=` now also arms the URL path (difficulty is a URL param, twin of sudoku).
+  const hasUrl =
+    url.boardSize !== null || url.difficulty !== null || boardState !== null;
 
   // URL wins over storage: a valid shared board takes precedence over any saved game.
   if (boardState) {
     return {
       boardSize: boardState.boardSize,
+      difficulty: boardState.difficulty,
       source: "url-board",
       persisted: boardState,
       boardLink,
@@ -251,13 +281,22 @@ export function resolveInitialState(): InitialState {
   }
 
   if (hasUrl && persisted) {
-    if (url.boardSize === persisted.boardSize) {
-      return { boardSize: url.boardSize!, source: "url+storage", persisted, boardLink };
+    const urlSize = url.boardSize ?? persisted.boardSize;
+    const urlDiff = url.difficulty ?? persisted.difficulty;
+    if (urlSize === persisted.boardSize && urlDiff === persisted.difficulty) {
+      return {
+        boardSize: urlSize,
+        difficulty: urlDiff,
+        source: "url+storage",
+        persisted,
+        boardLink,
+      };
     }
-    // URL disagrees with storage — URL wins.
+    // URL disagrees with storage (size OR difficulty) — URL wins.
     clearPersistedBoard();
     return {
-      boardSize: url.boardSize!,
+      boardSize: urlSize,
+      difficulty: urlDiff,
       source: "url-only",
       persisted: null,
       boardLink,
@@ -266,7 +305,8 @@ export function resolveInitialState(): InitialState {
 
   if (hasUrl) {
     return {
-      boardSize: url.boardSize!,
+      boardSize: url.boardSize ?? DEFAULT_BOARD_SIZE,
+      difficulty: url.difficulty ?? DEFAULT_DIFFICULTY,
       source: "url-only",
       persisted: null,
       boardLink,
@@ -276,18 +316,26 @@ export function resolveInitialState(): InitialState {
   if (persisted) {
     return {
       boardSize: persisted.boardSize,
+      difficulty: persisted.difficulty,
       source: "storage-only",
       persisted,
       boardLink,
     };
   }
 
-  return { boardSize: DEFAULT_BOARD_SIZE, source: "fresh", persisted: null, boardLink };
+  return {
+    boardSize: DEFAULT_BOARD_SIZE,
+    difficulty: DEFAULT_DIFFICULTY,
+    source: "fresh",
+    persisted: null,
+    boardLink,
+  };
 }
 
-export function syncToUrl(boardSize: number) {
+export function syncToUrl(boardSize: number, difficulty: Difficulty) {
   const url = new URL(window.location.href);
   url.searchParams.set("board_size", String(boardSize));
+  url.searchParams.set("difficulty", difficulty);
   history.replaceState(null, "", url.toString());
 }
 

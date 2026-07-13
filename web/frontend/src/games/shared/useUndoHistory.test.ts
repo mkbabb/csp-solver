@@ -1,122 +1,360 @@
 import { describe, it, expect, vi } from "vitest";
 import { useUndoHistory } from "./useUndoHistory";
 
-// FE-unit layer (T4-W2): the bounded undo/redo stack (UNDO_CAP = 128). Only the four
-// closures are exported, so the internal `{pos,prev,next}` history is exercised through
-// its observable effect — which `(pos, value)` the writer is asked to apply. Covers cap
-// overflow (shift), the fresh-fork redo-tail drop, pointer bounds, the prev===next no-op,
-// and given-cell immunity (undo/redo only ever writes a recorded position).
+// FE-unit layer (T4-WU / E9): the history spine — one tagged inverse-delta log over a
+// content-hash-deduped board pool. The dispatcher is exercised through the effect it invokes
+// (which primitive, which argument), so the collision/restore-order behaviour is observable
+// without a live composable. Covers: the value delta (W6 carried forward), hint-ink tone,
+// mark deltas (one and both slots), whole-board pointer swaps, pool dedup + refcount + FIFO
+// GC, redo-tail truncation, the 200 cap, and the refuse-while-pending race gate.
 
-function harness() {
-  const board: Record<number, number> = {};
-  const apply = vi.fn((pos: number, value: number) => {
-    board[pos] = value;
-  });
-  return { board, apply, ...useUndoHistory(apply) };
+interface Board {
+  tag: string;
+  values: Record<string, number>;
+}
+interface Marks {
+  corner: Record<string, number[]>;
+  center: Record<string, number[]>;
+}
+const emptyMarks = (): Marks => ({ corner: {}, center: {} });
+const board = (tag: string, values: Record<string, number> = {}): Board => ({
+  tag,
+  values,
+});
+
+function harness(pendingInitial = false) {
+  let paused = pendingInitial;
+  const effects = {
+    applyValue: vi.fn<(pos: number, value: number) => void>(),
+    applyHintInk: vi.fn<(pos: number, value: number) => void>(),
+    removeHintInk: vi.fn<(pos: number, prev: number) => void>(),
+    applyMark:
+      vi.fn<(slot: "corner" | "center", pos: number, list: number[]) => void>(),
+    restoreBoard: vi.fn<(b: Board, m: Marks) => void>(),
+    pending: () => paused,
+  };
+  const h = useUndoHistory<Board, Marks>(effects);
+  return {
+    effects,
+    pause: (v: boolean) => {
+      paused = v;
+    },
+    ...h,
+  };
 }
 
-/** The last `(pos, value)` the writer was asked to apply. */
-const lastCall = (apply: { mock: { calls: number[][] } }) =>
-  apply.mock.calls[apply.mock.calls.length - 1];
+const lastCall = <T extends unknown[]>(fn: { mock: { calls: T[] } }): T =>
+  fn.mock.calls[fn.mock.calls.length - 1];
 
-describe("record → undo → redo", () => {
+describe("value delta — record → undo → redo (the W6 spine, carried forward)", () => {
   it("undo restores prev, redo restores next", () => {
-    const { apply, recordEdit, undo, redo } = harness();
-    recordEdit(5, 0, 3); // user wrote 0 → 3 at cell 5
-    undo();
-    expect(lastCall(apply)).toEqual([5, 0]);
-    redo();
-    expect(lastCall(apply)).toEqual([5, 3]);
-  });
-
-  it("a no-op write (prev === next) records nothing — the immunity primitive", () => {
-    const { apply, recordEdit, undo } = harness();
-    recordEdit(5, 4, 4); // re-entering a cell's own value never enters history
-    undo();
-    expect(apply).not.toHaveBeenCalled();
-  });
-});
-
-describe("pointer bounds", () => {
-  it("undo at the start and redo at the end are no-ops", () => {
-    const { apply, recordEdit, undo, redo } = harness();
-    undo(); // empty history
-    redo();
-    expect(apply).not.toHaveBeenCalled();
-
-    recordEdit(1, 0, 2);
-    undo(); // index → 0, applies (1,0)
-    apply.mockClear();
-    undo(); // already at 0 → no-op
-    expect(apply).not.toHaveBeenCalled();
-
-    redo(); // index → 1, applies (1,2)
-    apply.mockClear();
-    redo(); // already at end → no-op
-    expect(apply).not.toHaveBeenCalled();
-  });
-});
-
-describe("fresh-fork redo-tail drop", () => {
-  it("a new edit after an undo splices off the stale redo branch", () => {
-    const { apply, recordEdit, undo, redo } = harness();
-    recordEdit(0, 0, 5);
-    recordEdit(0, 5, 7);
-    undo(); // → (0,5)
-    undo(); // → (0,0)
-    redo(); // → (0,5), index back at 1
-    recordEdit(0, 5, 9); // fork: drops {0,5,7}, pushes {0,5,9}
-
-    apply.mockClear();
-    redo(); // index === length → no-op (the old 7 branch is gone)
-    expect(apply).not.toHaveBeenCalled();
-
-    undo(); // walks the NEW branch: (0,5)
-    expect(lastCall(apply)).toEqual([0, 5]);
-    undo(); // (0,0)
-    expect(lastCall(apply)).toEqual([0, 0]);
-    // 7 was never reachable again after the fork.
-    expect(apply.mock.calls.some(([, v]) => v === 7)).toBe(false);
-  });
-});
-
-describe("cap overflow (UNDO_CAP = 128) shifts the oldest out", () => {
-  it("holds at most 128 edits; the two oldest become unreachable", () => {
-    const { apply, recordEdit, undo } = harness();
-    // 130 distinct edits on one cell → the first two (values 0→1, 1→2) shift out.
-    for (let i = 0; i < 130; i++) recordEdit(0, i, i + 1);
-
-    apply.mockClear();
-    for (let i = 0; i < 130; i++) undo();
-    // Exactly 128 undos land (the cap), the rest are no-ops at the pointer floor.
-    expect(apply).toHaveBeenCalledTimes(128);
-    // The oldest SURVIVING record is {0, prev: 2, next: 3}; its prev is 2, not 0 —
-    // proof the two overflow records were dropped, not merely hidden.
-    expect(lastCall(apply)).toEqual([0, 2]);
-  });
-});
-
-describe("given-cell immunity is structural", () => {
-  it("undo/redo only ever writes a position that was recorded", () => {
-    const { apply, recordEdit, undo, redo } = harness();
-    // Cell 0 is a "given": setCell never records it. Only cell 5 is ever an edit target.
+    const { effects, recordEdit, undo, redo } = harness();
     recordEdit(5, 0, 3);
     undo();
+    expect(lastCall(effects.applyValue)).toEqual([5, 0]);
     redo();
+    expect(lastCall(effects.applyValue)).toEqual([5, 3]);
+  });
+
+  it("a no-op write (prev === next) records nothing", () => {
+    const { effects, recordEdit, undo } = harness();
+    recordEdit(5, 4, 4);
     undo();
-    expect(apply.mock.calls.every(([pos]) => pos === 5)).toBe(true);
+    expect(effects.applyValue).not.toHaveBeenCalled();
+  });
+
+  it("undo at the start and redo at the end are no-ops", () => {
+    const { effects, recordEdit, undo, redo } = harness();
+    undo();
+    redo();
+    expect(effects.applyValue).not.toHaveBeenCalled();
+    recordEdit(1, 0, 2);
+    undo();
+    effects.applyValue.mockClear();
+    undo();
+    expect(effects.applyValue).not.toHaveBeenCalled();
+    redo();
+    effects.applyValue.mockClear();
+    redo();
+    expect(effects.applyValue).not.toHaveBeenCalled();
   });
 });
 
-describe("clearUndo", () => {
-  it("empties the stack so a subsequent undo is a no-op", () => {
-    const { apply, recordEdit, clearUndo, undo } = harness();
-    recordEdit(2, 0, 8);
-    recordEdit(2, 8, 1);
+describe("hint ink — a value entry tagged 'solved' (T4-WU: a reveal IS a user action)", () => {
+  it("undo strips the solver tone (removeHintInk), never a plain value write", () => {
+    const { effects, recordHintInk, undo, redo } = harness();
+    recordHintInk(7, 0, 4); // a hint inked digit 4 into an empty cell
+    undo();
+    expect(lastCall(effects.removeHintInk)).toEqual([7, 0]);
+    expect(effects.applyValue).not.toHaveBeenCalled();
+    redo();
+    expect(lastCall(effects.applyHintInk)).toEqual([7, 4]);
+    expect(effects.applyValue).not.toHaveBeenCalled();
+  });
+});
+
+describe("mark delta — the W8 user notes enter history (born RED: toggle bypassed it)", () => {
+  it("a single-slot toggle round-trips through applyMark", () => {
+    const { effects, recordMark, undo, redo } = harness();
+    recordMark(3, { corner: { prev: [], next: [5] } });
+    undo();
+    expect(lastCall(effects.applyMark)).toEqual(["corner", 3, []]);
+    redo();
+    expect(lastCall(effects.applyMark)).toEqual(["corner", 3, [5]]);
+  });
+
+  it("an erase (both slots) is ONE entry — one gesture, one undo restores both slots", () => {
+    const { effects, recordMark, undo, redo } = harness();
+    recordMark(3, {
+      corner: { prev: [1, 2], next: [] },
+      center: { prev: [9], next: [] },
+    });
+    undo();
+    // Both slots restored on the single undo.
+    expect(effects.applyMark).toHaveBeenCalledWith("corner", 3, [1, 2]);
+    expect(effects.applyMark).toHaveBeenCalledWith("center", 3, [9]);
+    effects.applyMark.mockClear();
+    redo();
+    expect(effects.applyMark).toHaveBeenCalledWith("corner", 3, []);
+    expect(effects.applyMark).toHaveBeenCalledWith("center", 3, []);
+  });
+});
+
+describe("batch entry — the triggered conditional (born RED: the W8 Fill sweep was off-log)", () => {
+  it("undo inverts every delta in ONE step (inverse order); redo re-applies in ONE step", () => {
+    const { effects, recordBatch, undo, redo } = harness();
+    // One Fill press forced three solver-tone cells — one gesture, one entry.
+    recordBatch([
+      { pos: 1, prev: 0, next: 5, tone: "solved" },
+      { pos: 2, prev: 0, next: 7, tone: "solved" },
+      { pos: 3, prev: 0, next: 9, tone: "solved" },
+    ]);
+    undo();
+    // Every cell stripped of solver tone in a SINGLE undo, inverse order (last placed first
+    // undone) — never a plain value write (the tone rides each delta).
+    expect(effects.removeHintInk.mock.calls).toEqual([
+      [3, 0],
+      [2, 0],
+      [1, 0],
+    ]);
+    expect(effects.applyValue).not.toHaveBeenCalled();
+    effects.applyHintInk.mockClear();
+    redo();
+    // Re-inked in the solver's tone, forward order, all in a SINGLE redo.
+    expect(effects.applyHintInk.mock.calls).toEqual([
+      [1, 5],
+      [2, 7],
+      [3, 9],
+    ]);
+    expect(effects.applyValue).not.toHaveBeenCalled();
+  });
+
+  it("a plain-tone batch round-trips through applyValue (tone is per-delta)", () => {
+    const { effects, recordBatch, undo, redo } = harness();
+    recordBatch([
+      { pos: 0, prev: 2, next: 8 },
+      { pos: 4, prev: 0, next: 3 },
+    ]);
+    undo();
+    expect(effects.applyValue.mock.calls).toEqual([
+      [4, 0],
+      [0, 2],
+    ]);
+    expect(effects.removeHintInk).not.toHaveBeenCalled();
+    effects.applyValue.mockClear();
+    redo();
+    expect(effects.applyValue.mock.calls).toEqual([
+      [0, 8],
+      [4, 3],
+    ]);
+  });
+
+  it("a zero-placement sweep (Δ0 stop) records NOTHING — no empty entry", () => {
+    const { effects, recordBatch, undo, _historyLength } = harness();
+    recordBatch([]); // the Fill forced nothing
+    expect(_historyLength()).toBe(0);
+    // an all-no-op batch (every prev===next) collapses to nothing too
+    recordBatch([{ pos: 1, prev: 4, next: 4 }]);
+    expect(_historyLength()).toBe(0);
+    undo();
+    expect(effects.applyValue).not.toHaveBeenCalled();
+    expect(effects.removeHintInk).not.toHaveBeenCalled();
+  });
+
+  it("one sweep counts as ONE entry toward the 200 cap (nine placements, one slot)", () => {
+    const { recordBatch, recordEdit, _historyLength } = harness();
+    recordBatch(
+      Array.from({ length: 9 }, (_, i) => ({
+        pos: i,
+        prev: 0,
+        next: i + 1,
+        tone: "solved" as const,
+      })),
+    );
+    expect(_historyLength()).toBe(1); // nine cells, ONE entry
+    for (let i = 0; i < 199; i++) recordEdit(0, i, i + 1); // → 200 total; the batch is entry 1
+    expect(_historyLength()).toBe(200);
+    recordEdit(0, 199, 200); // entry 201 evicts the batch FIFO — still 200, never 208
+    expect(_historyLength()).toBe(200);
+  });
+});
+
+describe("board swap — a pointer entry into the pool (born RED: deals wiped history)", () => {
+  it("undo restores prev board + prev marks; redo restores next board + next marks", () => {
+    const { effects, recordBoard, undo, redo } = harness();
+    const prevB = board("prev", { "0": 1 });
+    const nextB = board("next", { "0": 9 });
+    const prevM: Marks = { corner: { "0": [2, 3] }, center: {} };
+    const nextM = emptyMarks();
+    recordBoard(prevB, nextB, prevM, nextM, "deal");
+
+    undo();
+    expect(lastCall(effects.restoreBoard)).toEqual([prevB, prevM]);
+    redo();
+    expect(lastCall(effects.restoreBoard)).toEqual([nextB, nextM]);
+  });
+});
+
+describe("the DELTA probe — deal → edits → deal → undo restores the prior board WITH its marks", () => {
+  it("a single undo of the second deal restores board1 (+ its edits + marks); redo returns board2", () => {
+    const { effects, recordMark, recordEdit, recordBoard, undo, redo } = harness();
+    // board1 is dealt; the player edits a value and pencils a mark on it, then deals board2.
+    // The second deal's `prevBlob` is board1-with-the-edit; its `prevMarks` the pencilled note.
+    recordEdit(10, 0, 4); // an edit on board1
+    recordMark(10, { center: { prev: [], next: [4] } }); // a note on board1
+    const board1WithEdit = board("board1", { "10": 4 });
+    const board1Marks: Marks = { corner: {}, center: { "10": [4] } };
+    const board2 = board("board2", { "0": 9 });
+    recordBoard(board1WithEdit, board2, board1Marks, emptyMarks(), "deal");
+
+    // ONE undo of the deal restores board1 + its marks in a single gesture — the edits/notes
+    // below it stay in the undo portion (they annotate the restored board1).
+    undo();
+    expect(lastCall(effects.restoreBoard)).toEqual([board1WithEdit, board1Marks]);
+    // Redo returns the SAME board2, marks voided (a fresh deal carries no notes forward).
+    redo();
+    expect(lastCall(effects.restoreBoard)).toEqual([board2, emptyMarks()]);
+  });
+});
+
+describe("the content-hash pool — dedup, refcount, FIFO GC", () => {
+  it("the SAME board content occupies ONE pool slot (two distinct objects, one blob)", () => {
+    const { recordBoard, _poolSize } = harness();
+    // Identical CONTENT, different object identities → one hash → one slot.
+    const a1 = board("A", { "0": 1 });
+    const a2 = board("A", { "0": 1 });
+    recordBoard(a1, a2, emptyMarks(), emptyMarks(), "deal");
+    // one board hash + one (empty) marks hash = 2 slots
+    expect(_poolSize()).toBe(2);
+    // A second entry over the same content adds NO slots (refcount up, no new blob).
+    recordBoard(board("A", { "0": 1 }), a1, emptyMarks(), emptyMarks(), "clear");
+    expect(_poolSize()).toBe(2);
+  });
+
+  it("a shared blob survives eviction of ONE referrer; a unique blob GCs when its last ref drops", () => {
+    const { recordBoard, undo, recordEdit, _poolSize } = harness();
+    const a = board("A", { "0": 1 });
+    const b = board("B", { "0": 2 });
+    const c = board("C", { "0": 3 });
+    // Entry 1 references A(prev) + B(next). Entry 2 references B(prev) + C(next). B is shared.
+    recordBoard(a, b, emptyMarks(), emptyMarks(), "deal"); // refs: A=1,B=1,empty=2
+    recordBoard(b, c, emptyMarks(), emptyMarks(), "clear"); // refs: A=1,B=2,C=1,empty=4
+    expect(_poolSize()).toBe(4); // A, B, C, empty
+    // Fork-truncate entry 2: undo past it, then a fresh value edit drops the redo tail.
+    undo();
+    recordEdit(0, 0, 1); // releases B(2→1: survives, shared) and C(1→0: GC'd)
+    expect(_poolSize()).toBe(3); // A, B, empty remain; C is gone
+  });
+
+  it("FIFO eviction at the cap GCs the evicted board's now-unreferenced blob", () => {
+    const { recordBoard, _poolSize, _historyLength } = harness();
+    // 201 board entries, each a DISTINCT board (distinct marks empty-shared). Entry 201 evicts
+    // entry 1 (FIFO) → entry 1's unique board blob GCs; the shared empty-marks blob stays.
+    for (let i = 0; i < 201; i++) {
+      recordBoard(
+        board(`b${i}`, { "0": i }),
+        board(`n${i}`, { "0": i + 1000 }),
+        emptyMarks(),
+        emptyMarks(),
+        "deal",
+      );
+    }
+    expect(_historyLength()).toBe(200); // the cap holds
+    // 200 entries × 2 distinct board blobs = 400, + 1 shared empty-marks blob = 401.
+    expect(_poolSize()).toBe(401);
+  });
+});
+
+describe("cap = 200 (born RED: UNDO_CAP was 128) — FIFO shift of the oldest", () => {
+  it("holds at most 200 value edits; entry 201 evicts entry 1", () => {
+    const { effects, recordEdit, undo, _historyLength } = harness();
+    for (let i = 0; i < 202; i++) recordEdit(0, i, i + 1); // 202 edits → 2 shift out
+    expect(_historyLength()).toBe(200);
+    effects.applyValue.mockClear();
+    for (let i = 0; i < 202; i++) undo();
+    expect(effects.applyValue).toHaveBeenCalledTimes(200); // exactly the cap lands
+    // Oldest SURVIVING record wrote 2→3, so its prev is 2 (not 0) — the two overflow deltas
+    // were dropped, not hidden.
+    expect(lastCall(effects.applyValue)).toEqual([0, 2]);
+  });
+});
+
+describe("fresh-fork redo-tail drop (uniform across kinds)", () => {
+  it("a new edit after an undo splices off the stale redo branch", () => {
+    const { effects, recordEdit, undo, redo } = harness();
+    recordEdit(0, 0, 5);
+    recordEdit(0, 5, 7);
+    undo();
+    undo();
+    redo();
+    recordEdit(0, 5, 9); // fork: drops {0,5,7}
+    effects.applyValue.mockClear();
+    redo();
+    expect(effects.applyValue).not.toHaveBeenCalled(); // the 7 branch is gone
+    undo();
+    expect(lastCall(effects.applyValue)).toEqual([0, 5]);
+    expect(effects.applyValue.mock.calls.some(([, v]) => v === 7)).toBe(false);
+  });
+});
+
+describe("refuse-while-pending — the race gate (born RED: keyboard Z was ungated)", () => {
+  it("undo and redo no-op while a board op is in flight", () => {
+    const { effects, recordEdit, undo, redo, pause } = harness();
+    recordEdit(5, 0, 3);
+    pause(true); // a generate/solve is now pending
+    undo();
+    redo();
+    expect(effects.applyValue).not.toHaveBeenCalled(); // both refused
+    pause(false);
+    undo();
+    expect(lastCall(effects.applyValue)).toEqual([5, 0]); // works once the op resolves
+  });
+});
+
+describe("clearUndo — full reset also GCs the pool", () => {
+  it("empties the stack, the pool, and the pointer", () => {
+    const { recordBoard, clearUndo, undo, effects, _poolSize, _historyLength } =
+      harness();
+    recordBoard(board("a"), board("b"), emptyMarks(), emptyMarks(), "deal");
     clearUndo();
-    apply.mockClear();
+    expect(_historyLength()).toBe(0);
+    expect(_poolSize()).toBe(0); // the whole pool GC'd
     undo();
+    expect(effects.restoreBoard).not.toHaveBeenCalled();
+  });
+});
+
+describe("canUndo / canRedo / undoDepth — the signals a dirty gate reads", () => {
+  it("track the pointer", () => {
+    const { recordEdit, undo, canUndo, canRedo, undoDepth } = harness();
+    expect(canUndo.value).toBe(false);
+    expect(canRedo.value).toBe(false);
+    recordEdit(0, 0, 1);
+    expect(canUndo.value).toBe(true);
+    expect(undoDepth.value).toBe(1);
     undo();
-    expect(apply).not.toHaveBeenCalled();
+    expect(canUndo.value).toBe(false);
+    expect(canRedo.value).toBe(true);
+    expect(undoDepth.value).toBe(0);
   });
 });

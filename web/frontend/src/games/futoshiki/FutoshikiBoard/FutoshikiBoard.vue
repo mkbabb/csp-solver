@@ -96,6 +96,10 @@ const props = defineProps<{
    *  or an armed on-demand snapshot). ORed below with `solveState === 'failed'`: the teacher's
    *  red pencil grades actual work regardless; the mode governs only the live cadence. */
   proactiveErrorCheck?: boolean;
+  /** T4-WU race gate (twin of SudokuBoard's) — true while a board op is in flight. Gates
+   *  keyboard Cmd/Ctrl+Z on the SAME signal the coarse buttons honor, closing the last ungated
+   *  undo seam so an undo can't race a pending generate. */
+  loading?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -386,6 +390,9 @@ function onBoardKeydown(e: KeyboardEvent) {
     case "z":
     case "Z":
       if (e.ctrlKey || e.metaKey) {
+        // T4-WU refuse-while-pending: swallow but no-op while a board op is in flight (twin of
+        // SudokuBoard's). The composable also refuses at its choke point.
+        if (props.loading) break;
         if (e.shiftKey) emit("redo");
         else emit("undo");
       } else handled = false;

@@ -89,6 +89,10 @@ const props = defineProps<{
    *  snapshot). ORed below with the `solveState === 'failed'` grade: the teacher's red pencil
    *  still grades actual work regardless of this setting; the mode governs only the live cadence. */
   proactiveErrorCheck?: boolean;
+  /** T4-WU race gate — true while a board op (generate/solve) is in flight. Gates keyboard
+   *  Cmd/Ctrl+Z on the SAME signal the coarse buttons already honor (`:disabled="loading"`),
+   *  closing the last ungated undo seam so an undo can't race a pending generate. */
+  loading?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -416,6 +420,10 @@ function onBoardKeydown(e: KeyboardEvent) {
     case "z":
     case "Z":
       if (e.ctrlKey || e.metaKey) {
+        // T4-WU refuse-while-pending: swallow the key but no-op while a board op is in flight,
+        // matching the coarse buttons' `:disabled="loading"`. The composable also refuses at
+        // its choke point; this closes the seam at the keydown too.
+        if (props.loading) break;
         if (e.shiftKey) emit("redo");
         else emit("undo");
       } else handled = false;

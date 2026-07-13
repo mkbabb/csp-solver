@@ -141,3 +141,54 @@ describe("useUserMarks — a user note survives a peek toggle + an engine refres
     expect(user.centerMarks.value["3"]).toEqual([2]);
   });
 });
+
+// ── The T4-WU history-restore seam ──────────────────────────────────────────────────────────
+// The board-undo replay needs two things this store didn't expose: a slot-list write (to
+// replay a `mark` entry verbatim) and a wholesale two-slot restore (to travel the marks that
+// annotated a board). And the RESTORE-ORDER edge (E9 r2's sharpest): a board undo bumps
+// `boardGeneration`, whose void-watch would wipe the marks it just restored — so a transient
+// `restoring` flag must no-op the void-watch for exactly that restore.
+describe("useUserMarks — the T4-WU history-restore seam", () => {
+  it("setMarkSlot writes a slot's list verbatim (the `mark`-entry replay primitive)", () => {
+    const m = useUserMarks(ref(0));
+    m.setMarkSlot("corner", "3", [5, 2, 8]);
+    expect(m.cornerMarks.value["3"]).toEqual([5, 2, 8]);
+    m.setMarkSlot("corner", "3", []); // empty ⇒ erase the key
+    expect(m.cornerMarks.value["3"]).toBeUndefined();
+    m.setMarkSlot("off", "3", [1]); // 'off' is a no-op — a note is only ever a slot write
+    expect(m.cornerMarks.value["3"]).toBeUndefined();
+  });
+
+  it("setUserMarks restores both slots wholesale (the board-node marks)", () => {
+    const m = useUserMarks(ref(0));
+    m.setUserMarks({ "1": [4] }, { "2": [7, 9] });
+    expect(m.cornerMarks.value).toEqual({ "1": [4] });
+    expect(m.centerMarks.value).toEqual({ "2": [7, 9] });
+  });
+
+  it("restoring=true no-ops the void-watch on a generation bump; false voids as before", async () => {
+    const gen = ref(0);
+    const m = useUserMarks(gen);
+    m.setPencilMode("corner");
+    m.toggleUserMark(3, 5);
+    expect(m.cornerMarks.value["3"]).toEqual([5]);
+
+    // A NORMAL bump (deal / clear / resize) still voids the notes.
+    gen.value++;
+    await Promise.resolve();
+    expect(m.cornerMarks.value).toEqual({});
+
+    // Re-hydrate, then bump UNDER `restoring` → the notes SURVIVE (the board-undo restore).
+    m.setUserMarks({ "3": [5] }, {});
+    m.restoring.value = true;
+    gen.value++;
+    await Promise.resolve();
+    expect(m.cornerMarks.value["3"]).toEqual([5]); // NOT voided
+    m.restoring.value = false;
+
+    // Once the flag lowers, the void-watch is armed again.
+    gen.value++;
+    await Promise.resolve();
+    expect(m.cornerMarks.value).toEqual({});
+  });
+});

@@ -26,7 +26,7 @@ function boardSignature(page: Page): Promise<string> {
 
 async function randomizeBoard(page: Page) {
   const before = await boardSignature(page);
-  await page.locator('.controls-card button[aria-label="Randomize board"]').click();
+  await page.locator('.controls-card button[aria-label="Deal a new board"]').click();
   // Settle on the fresh deal arriving: the worker re-deals async and the value signature
   // flips once the new givens land (randomize updates in place — the grid doesn't redraw,
   // so the board signature, not a grid handoff, is the real settle condition).

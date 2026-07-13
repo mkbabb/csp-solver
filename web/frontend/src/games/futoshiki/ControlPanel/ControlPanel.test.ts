@@ -14,6 +14,7 @@ function mountPanel(overrides: Record<string, unknown> = {}) {
       boardSize: 5,
       difficulty: "EASY",
       loading: false,
+      isDirty: false,
       solveState: "idle",
       mobile: true,
       pencilMode: "off",
@@ -83,5 +84,23 @@ describe("Futoshiki ControlPanel — fill-forced button (T4-W8)", () => {
   it("disables with the board (loading) — no forced fill mid-solve", () => {
     const w = mountPanel({ loading: true });
     expect(w.get(FILL).attributes("disabled")).toBeDefined();
+  });
+});
+
+// T4-WU/U3 (twin of the sudoku panel's) — the conditional confirm (dirty-gated two-tap on Deal +
+// Clear) is COARSE-ONLY. jsdom presents a FINE pointer, so Deal and Clear commit on a SINGLE click
+// regardless of isDirty; the two-tap arm rides the coarse mobile e2e. Pins the fine path: one click.
+describe("Futoshiki ControlPanel — Deal / Clear one-click on a fine pointer (T4-WU/U3 coarse-only)", () => {
+  const DEAL = 'button[aria-label="Deal a new board"]';
+  const CLEAR = 'button[aria-label="Clear board"]';
+  it("Deal emits once on a single fine-pointer click, even when the board is dirty", async () => {
+    const w = mountPanel({ isDirty: true });
+    await w.get(DEAL).trigger("click");
+    expect(w.emitted("deal")).toHaveLength(1);
+  });
+  it("Clear emits once on a single fine-pointer click, even when the board is dirty", async () => {
+    const w = mountPanel({ isDirty: true });
+    await w.get(CLEAR).trigger("click");
+    expect(w.emitted("clear")).toHaveLength(1);
   });
 });

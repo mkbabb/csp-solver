@@ -80,10 +80,13 @@ test('game switch leaves no foreign board/size params in the URL', async ({ page
 
   const params = new URL(page.url()).searchParams;
   expect(params.get('game')).toBe('futoshiki');
-  // The sudoku ~256-char blob (and its size/difficulty) must NOT ride into futoshiki's URL.
+  // The sudoku ~256-char board blob and its `?size=` must NOT ride into futoshiki's URL.
   expect(params.has('board')).toBe(false);
   expect(params.has('size')).toBe(false);
-  expect(params.has('difficulty')).toBe(false);
+  // T4-WU/U2 — futoshiki now owns `?difficulty=` too (the W6 residue closed, crit #10). The game
+  // switch strips the outgoing sudoku tier (App.vue) and futoshiki writes its OWN default, so the
+  // KEY is present but the foreign value never rides along.
+  expect(params.get('difficulty')).toBe('EASY');
 });
 
 // ── 4. Randomize drops ?board= (sudoku) ─────────────────────────────────────
@@ -94,7 +97,7 @@ test('randomize drops ?board= from the URL (sudoku)', async ({ page }) => {
   await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
   expect(boardParam(page)).toBe(true);
 
-  await page.locator('.controls-card button[aria-label="Randomize board"]').click();
+  await page.locator('.controls-card button[aria-label="Deal a new board"]').click();
   // The freshly-dealt board voids the shared permalink.
   await expect.poll(() => boardParam(page), { timeout: 15000 }).toBe(false);
 });
@@ -132,6 +135,6 @@ test('board-only ?board= loads a futoshiki board with its inequalities, randomiz
   await expect(page.locator('.futoshiki-cell input').first()).toHaveValue('3');
   expect(boardParam(page)).toBe(true);
 
-  await page.locator('.controls-card button[aria-label="Randomize board"]').click();
+  await page.locator('.controls-card button[aria-label="Deal a new board"]').click();
   await expect.poll(() => boardParam(page), { timeout: 15000 }).toBe(false);
 });

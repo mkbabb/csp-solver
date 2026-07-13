@@ -155,6 +155,80 @@ describe("shared fail-closed branches (owned copy)", () => {
   });
 });
 
+describe("difficulty persistence (?difficulty= + localStorage round-trip — the W6 residue, T4-WU/U2)", () => {
+  it("a valid ?difficulty= resolves url-only and carries the tier (twin of sudoku's)", () => {
+    go({ board_size: "6", difficulty: "HARD" });
+    const s = resolveInitialState();
+    expect(s.source).toBe("url-only");
+    expect(s.boardSize).toBe(6);
+    expect(s.difficulty).toBe("HARD");
+  });
+
+  it("difficulty is case-insensitive on the wire (a lower-cased param upper-cases)", () => {
+    go({ board_size: "5", difficulty: "medium" });
+    expect(resolveInitialState().difficulty).toBe("MEDIUM");
+  });
+
+  it("a bare ?difficulty= (no board_size) still arms url-only at the default size", () => {
+    go({ difficulty: "HARD" });
+    const s = resolveInitialState();
+    expect(s.source).toBe("url-only");
+    expect(s.boardSize).toBe(5);
+    expect(s.difficulty).toBe("HARD");
+  });
+
+  it("an absent or invalid ?difficulty= falls to EASY (never a fabricated tier)", () => {
+    go({ board_size: "5" });
+    expect(resolveInitialState().difficulty).toBe("EASY");
+    go({ board_size: "5", difficulty: "IMPOSSIBLE" });
+    expect(resolveInitialState().difficulty).toBe("EASY");
+  });
+
+  it("difficulty round-trips through localStorage (storage-only restores the tier)", () => {
+    const stored: PersistedBoard = {
+      boardSize: 7,
+      difficulty: "MEDIUM",
+      values: { 0: 3 },
+      givenCells: ["0"],
+      originalGivenCells: ["0"],
+      overriddenCells: [],
+      inequalities: [[1, 0]],
+      solvedValues: {},
+      boardGeneration: 1,
+    };
+    persistBoard(stored);
+    const s = resolveInitialState();
+    expect(s.source).toBe("storage-only");
+    expect(s.difficulty).toBe("MEDIUM");
+  });
+
+  it("a shared ?board= adopts the URL difficulty (url-board carries the tier)", () => {
+    go({ difficulty: "HARD", board: encodeBoard(5, { 0: 1 }, 25, [[1, 0]]) });
+    const s = resolveInitialState();
+    expect(s.source).toBe("url-board");
+    expect(s.persisted?.difficulty).toBe("HARD");
+  });
+
+  it("url difficulty wins over a disagreeing stored tier (URL-wins, twin of sudoku's)", () => {
+    const stored: PersistedBoard = {
+      boardSize: 6,
+      difficulty: "EASY",
+      values: { 0: 3 },
+      givenCells: ["0"],
+      originalGivenCells: ["0"],
+      overriddenCells: [],
+      inequalities: [[1, 0]],
+      solvedValues: {},
+      boardGeneration: 1,
+    };
+    persistBoard(stored);
+    go({ board_size: "6", difficulty: "HARD" });
+    const s = resolveInitialState();
+    expect(s.source).toBe("url-only");
+    expect(s.difficulty).toBe("HARD");
+  });
+});
+
 describe("bare size param + storage", () => {
   it("valid ?board_size resolves url-only", () => {
     go({ board_size: "7" });
@@ -174,6 +248,7 @@ describe("bare size param + storage", () => {
   it("storage-only when no URL", () => {
     const stored: PersistedBoard = {
       boardSize: 6,
+      difficulty: "EASY",
       values: { 0: 3 },
       givenCells: ["0"],
       originalGivenCells: ["0"],

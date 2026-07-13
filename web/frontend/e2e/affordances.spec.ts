@@ -254,6 +254,41 @@ test('undo: Ctrl+Z reverts, Ctrl+Shift+Z redoes, Meta+Z works, plain z is not sw
   await expect(cellInput(page, blank)).toHaveValue('5');
 });
 
+// ── 4b. Fill batch (T4-WU) — one Fill sweep is ONE gesture = ONE undo ──
+// The conflict board leaves row 0 entirely blank and uniquely forced (each open cell is a naked
+// single off its filled column), so ONE Fill press inks the whole row in one sweep. Born-RED: the
+// sweep was app-ink off-log, so Ctrl+Z rewound the action UNDER the fill, never the fill itself.
+// After: one undo returns EVERY filled cell to empty in one step; redo re-fills in one step.
+
+test('fill batch: one Fill sweep undoes as ONE gesture, redo re-fills', async ({
+  page,
+}) => {
+  await loadSudoku(page, '?board=' + CONFLICT_BOARD);
+  const anchor = await firstBlank(page, '.sudoku-cell'); // cell 0 — blank on the conflict board
+
+  const filledBefore = await page.locator('.sudoku-cell .glyph-svg').count();
+  await page.locator('.controls-card button[aria-label="Fill in the forced cells"]').click();
+  // The sweep inks every forced cell (all of the blank row) in one press.
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 20000 })
+    .toBeGreaterThan(filledBefore);
+  const filledAfter = await page.locator('.sudoku-cell .glyph-svg').count();
+
+  // Focus the board (the desktop undo path is keyboard-only — the coarse Undo hides on fine
+  // pointers). ONE Ctrl+Z returns EVERY filled cell to empty — one gesture, one undo.
+  await cellInput(page, anchor).click();
+  await page.keyboard.press('Control+z');
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 20000 })
+    .toBe(filledBefore);
+
+  // Redo re-fills the whole sweep in one step.
+  await page.keyboard.press('Control+Shift+z');
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 20000 })
+    .toBe(filledAfter);
+});
+
 // ── 5. Permalink — the explicit share act round-trips the board ──────
 
 test('permalink: share writes ?board= and a reload reproduces the exact board', async ({

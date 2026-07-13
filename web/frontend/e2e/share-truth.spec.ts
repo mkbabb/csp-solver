@@ -49,7 +49,10 @@ const FAIL_INIT = () => {
   }
 };
 
-// The 5th action icon in the desktop panel is Share (Randomize · Clear · Fill · Solve · Share).
+// The 5th .icon-btn in the desktop panel is Share. T4-WU/U2 re-homed the dice to the staged
+// New-game zone as "Deal", so the .icon-btn DOM order is now Deal · Clear · Fill · Solve · Share
+// (· Undo · Redo · Hint, hidden on fine pointers): Deal replaces Randomize at index 0, so nth(4)
+// still lands on Share.
 function shareButton(page: Page) {
   return page.locator('.controls-card button.icon-btn').nth(4);
 }

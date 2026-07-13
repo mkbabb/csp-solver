@@ -66,6 +66,18 @@ export function useUserMarks(boardGeneration: Ref<number>) {
     }
   }
 
+  // Set one slot's list at a cell directly (empty ⇒ erase) — the T4-WU undo/redo replay
+  // primitive for a `mark` entry. Bypasses the toggle so a recorded prev/next list restores
+  // verbatim. Reassigns the map (never mutates in place) so the render tracks it cleanly.
+  function setMarkSlot(slot: PencilMode, key: string, list: number[]) {
+    if (slot === "off") return;
+    const mapRef = slot === "corner" ? cornerMarks : centerMarks;
+    const map = { ...mapRef.value };
+    if (list.length) map[key] = [...list];
+    else delete map[key];
+    mapRef.value = map;
+  }
+
   /**
    * The single authoring seam, symmetric with the cell's `update(pos, value)`: a digit
    * (1..boardSize, validated upstream by the cell) toggles a mark in the active slot; `value
@@ -87,8 +99,30 @@ export function useUserMarks(boardGeneration: Ref<number>) {
     centerMarks.value = {};
   }
 
-  // A fresh board voids all notes; the mode survives (a standing preference).
-  watch(boardGeneration, () => clearUserMarks());
+  // Restore both slots wholesale — the T4-WU board-undo replay, which travels the marks that
+  // annotated a board alongside the board itself. Set under `restoring` so the void-watch
+  // below no-ops on the accompanying generation bump.
+  function setUserMarks(
+    corner: Record<string, number[]>,
+    center: Record<string, number[]>,
+  ) {
+    cornerMarks.value = { ...corner };
+    centerMarks.value = { ...center };
+  }
+
+  // The restore-order flag (T4-WU, E9 r2's sharpest edge): a `board` undo restores the board
+  // AND its marks, but a board swap bumps `boardGeneration`, whose void-watch would wipe the
+  // marks just restored. The composable raises this for exactly the restore (lowered on the
+  // next tick, after the watch has flushed), so the void-watch no-ops only then. Every other
+  // generation bump — a real deal/clear/resize — still voids the notes.
+  const restoring = ref(false);
+
+  // A fresh board voids all notes; the mode survives (a standing preference). Suppressed
+  // during a history restore (the marks are being deliberately re-hydrated).
+  watch(boardGeneration, () => {
+    if (restoring.value) return;
+    clearUserMarks();
+  });
 
   return {
     pencilMode,
@@ -98,5 +132,8 @@ export function useUserMarks(boardGeneration: Ref<number>) {
     cyclePencilMode,
     toggleUserMark,
     clearUserMarks,
+    setMarkSlot,
+    setUserMarks,
+    restoring,
   };
 }

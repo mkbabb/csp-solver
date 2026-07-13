@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onBeforeUnmount } from "vue";
+import { computed, ref, onBeforeUnmount, useId } from "vue";
 import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
 import FillForcedIcon from "@pencil/chrome/icons/FillForcedIcon.vue";
 import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
@@ -55,6 +55,11 @@ const props = defineProps<{
   size: number;
   difficulty: Difficulty;
   loading: boolean;
+  // T4-WU/U3 — the board's dirty state (the composable's `isDirty` = undo-depth non-empty, one
+  // derived signal off U1's spine). Gates the coarse two-tap: a DIRTY Deal / Clear arms first, a
+  // pristine board acts instantly (no nag by construction). Coarse-only — a fine pointer keeps the
+  // one-click verb + its Cmd/Ctrl+Z backstop, per the shipped Clear precedent.
+  isDirty: boolean;
   solveState: string;
   mobile?: boolean;
   // T4-W8 ROW 1 — the active pencil-marks mode (off/corner/center), relayed to PencilModeToggle;
@@ -84,7 +89,10 @@ const difficultyValueLabel = computed(
 const emit = defineEmits<{
   (e: "update:size", value: number): void;
   (e: "update:difficulty", value: Difficulty): void;
-  (e: "randomize"): void;
+  // T4-WU/U2 — the re-homed dice, re-labeled the "Deal" commit: it lifts out of the live action
+  // row into the staged New-game zone and commits the staged size + difficulty. Same button
+  // grammar (DiceIcon `.icon-btn`), no new control; the WM input shape stays frozen.
+  (e: "deal"): void;
   (e: "clear"): void;
   (e: "solve"): void;
   // T4-W8 — the fill-forced partial solve (W7's fillAllForced): ink every naked+hidden single
@@ -142,6 +150,7 @@ onBeforeUnmount(() => {
   if (isPeeking.value) emit("peek-end");
   if (shareConfirmTimer) clearTimeout(shareConfirmTimer);
   if (clearArmTimer) clearTimeout(clearArmTimer);
+  if (dealArmTimer) clearTimeout(dealArmTimer);
 });
 
 // ── Share-on-demand permalink (W6; T4-W3 share-truth) ──────────────────
@@ -195,15 +204,42 @@ const shareWashi = computed(() =>
 
 const expandedPanel = ref<"size" | "difficulty">("size");
 
+// T4-WU/U2 — a unique id per panel instance so the staged zone's `role="group"` can be labelled by
+// its own "New game" heading (SudokuGame mounts two ControlPanels — mobile card + desktop rail — so
+// a static id would collide; `useId` keeps each accessible-name reference unambiguous).
+const newGameId = useId();
+
 const { animating: solveAnimating, trigger: triggerSolve } = useButtonAnimation(500);
 const { animating: fillAnimating, trigger: triggerFill } = useButtonAnimation(500);
-const { animating: randomizeAnimating, trigger: triggerRandomize } =
-  useButtonAnimation(500);
+const { animating: dealAnimating, trigger: triggerDeal } = useButtonAnimation(500);
 const { animating: clearAnimating, trigger: triggerClear } = useButtonAnimation(400);
 
-function onRandomize() {
-  triggerRandomize();
-  emit("randomize");
+// T4-WU/U3 — the conditional confirm, generalized from the shipped Clear two-tap to Deal and
+// dirty-gated. On a coarse pointer a DIRTY board (undo-depth non-empty) arms first — the sublabel
+// asks "sure?" in the teacher's rose, the aria-label swaps, a 2.5s lapse re-arms — and a second tap
+// within the window deals; a PRISTINE board deals instantly (no nag by construction). Fine pointers
+// keep the one-click Deal + the board's Cmd/Ctrl+Z backstop (coarse-only, per the Clear precedent —
+// a ratify-me default, no fine-pointer variant). Same grammar/timer/aria swap as onClear below; the
+// two verbs share `isCoarse` + `props.isDirty`. Deal moved OUT of the live action row (U2), so the
+// confirm is prevention and the undo spine is recovery — the owner's "conditional," belt + suspenders.
+const isCoarse = useCoarsePointer();
+const dealArmed = ref(false);
+let dealArmTimer: ReturnType<typeof setTimeout> | null = null;
+function onDeal() {
+  if (isCoarse.value && props.isDirty && !dealArmed.value) {
+    dealArmed.value = true;
+    dealArmTimer = setTimeout(() => {
+      dealArmed.value = false;
+    }, 2500);
+    return;
+  }
+  if (dealArmTimer) {
+    clearTimeout(dealArmTimer);
+    dealArmTimer = null;
+  }
+  dealArmed.value = false;
+  triggerDeal();
+  emit("deal");
 }
 
 // T4-W8 — fill-forced (W7's fillAllForced): the icon marks draw themselves in on the press
@@ -213,17 +249,18 @@ function onFillForced() {
   emit("fill-forced");
 }
 
-// UI-5 confirm beat on Clear (recorded design call): Clear wipes the board AND the undo
-// history (clearUndo in the composable) — genuinely destructive, no take-back. On coarse
-// pointers, where stray taps are routine, the act takes two taps: the first arms (the
-// sublabel asks "sure?" in the hand, rose), the second within 2.5s clears; the window
-// lapsing disarms quietly. Fine pointers keep the one-click Clear — the confirm rides
-// the same transient-label grammar as the share "copied!" flip, no dialog machinery.
-const isCoarse = useCoarsePointer();
+// UI-5 confirm beat on Clear (recorded design call): Clear wipes the board — a `board` entry now,
+// so undo restores it (U1), but still a jarring wipe. On coarse pointers, where stray taps are
+// routine, the act takes two taps: the first arms (the sublabel asks "sure?" in the hand, rose),
+// the second within 2.5s clears; the window lapsing disarms quietly. T4-WU/U3 — DIRTY-GATED: the
+// arm now requires `props.isDirty` (born-RED at base: Clear armed unconditionally, even on a blank
+// board — the same undo-depth gate that arms Deal fixes it), so a pristine board clears instantly.
+// Fine pointers keep the one-click Clear — the confirm rides the same transient-label grammar as
+// the share "copied!" flip, no dialog machinery.
 const clearArmed = ref(false);
 let clearArmTimer: ReturnType<typeof setTimeout> | null = null;
 function onClear() {
-  if (isCoarse.value && !clearArmed.value) {
+  if (isCoarse.value && props.isDirty && !clearArmed.value) {
     clearArmed.value = true;
     clearArmTimer = setTimeout(() => {
       clearArmed.value = false;
@@ -270,67 +307,112 @@ function onDifficultyChange(val: string | number) {
 <template>
   <!-- Mobile layout -->
   <div v-if="mobile" class="control-panel-wrap mobile-control-panel mt-3">
-    <div class="control-panel-filtered">
-      <div class="mobile-heading-row">
-        <button
-          class="mobile-heading-btn"
-          :aria-expanded="expandedPanel === 'size'"
-          @click="expandedPanel = 'size'"
-        >
-          <h2
-            class="section-heading text-muted-foreground"
-            :class="{ 'is-active': expandedPanel === 'size' }"
+    <!-- STAGED "New game" zone (T4-WU/U2) — size + difficulty are the provisional inputs to
+         the NEXT board; the re-homed Deal is the verb that commits them. role="group" labelled
+         by the New-game heading makes the staging legible to assistive tech (one new semantic,
+         no live region). Selectors read provisional BY PLACEMENT and wipe nothing (arm-not-live). -->
+    <div class="new-game-zone" role="group" :aria-labelledby="newGameId">
+      <div class="control-panel-filtered">
+        <h2 :id="newGameId" class="section-heading new-game-heading">New game</h2>
+        <div class="mobile-heading-row">
+          <button
+            class="mobile-heading-btn"
+            :aria-expanded="expandedPanel === 'size'"
+            @click="expandedPanel = 'size'"
           >
-            Size
-          </h2>
-          <!-- UI-12: the current value, shown only while this tab is closed. -->
-          <span v-if="expandedPanel !== 'size'" class="heading-value">{{
-            sizeValueLabel
-          }}</span>
-        </button>
-        <button
-          class="mobile-heading-btn"
-          :aria-expanded="expandedPanel === 'difficulty'"
-          @click="expandedPanel = 'difficulty'"
-        >
-          <h2
-            class="section-heading transition-colors duration-250"
-            :class="[
-              difficulty === 'EASY'
-                ? 'crayon-green'
-                : difficulty === 'MEDIUM'
-                  ? 'crayon-orange'
-                  : 'crayon-rose',
-              { 'is-active': expandedPanel === 'difficulty' },
-            ]"
+            <h2
+              class="section-heading text-muted-foreground"
+              :class="{ 'is-active': expandedPanel === 'size' }"
+            >
+              Size
+            </h2>
+            <!-- UI-12: the current value, shown only while this tab is closed. -->
+            <span v-if="expandedPanel !== 'size'" class="heading-value">{{
+              sizeValueLabel
+            }}</span>
+          </button>
+          <button
+            class="mobile-heading-btn"
+            :aria-expanded="expandedPanel === 'difficulty'"
+            @click="expandedPanel = 'difficulty'"
           >
-            Difficulty
-          </h2>
-          <span v-if="expandedPanel !== 'difficulty'" class="heading-value">{{
-            difficultyValueLabel
-          }}</span>
-        </button>
+            <h2
+              class="section-heading transition-colors duration-250"
+              :class="[
+                difficulty === 'EASY'
+                  ? 'crayon-green'
+                  : difficulty === 'MEDIUM'
+                    ? 'crayon-orange'
+                    : 'crayon-rose',
+                { 'is-active': expandedPanel === 'difficulty' },
+              ]"
+            >
+              Difficulty
+            </h2>
+            <span v-if="expandedPanel !== 'difficulty'" class="heading-value">{{
+              difficultyValueLabel
+            }}</span>
+          </button>
+        </div>
+
+        <OptionSelector
+          v-show="expandedPanel === 'size'"
+          :options="sizeOptions"
+          :selected="size"
+          :boil-frame="boilFrame"
+          mobile
+          @change="onSizeChange"
+        />
+
+        <OptionSelector
+          v-show="expandedPanel === 'difficulty'"
+          :options="difficultyOptions"
+          :selected="difficulty"
+          :boil-frame="boilFrame"
+          mobile
+          @change="onDifficultyChange"
+        />
       </div>
 
-      <OptionSelector
-        v-show="expandedPanel === 'size'"
-        :options="sizeOptions"
-        :selected="size"
-        :boil-frame="boilFrame"
-        mobile
-        @change="onSizeChange"
-      />
-
-      <OptionSelector
-        v-show="expandedPanel === 'difficulty'"
-        :options="difficultyOptions"
-        :selected="difficulty"
-        :boil-frame="boilFrame"
-        mobile
-        @change="onDifficultyChange"
-      />
+      <!-- The Deal commit — the DiceIcon re-homed from the action row (no new control, the WM
+           input shape stays frozen). Its name shows always (the primary verb of the staged zone
+           earns its label), so "next game" reads with zero copy. -->
+      <div class="deal-row">
+        <button
+          @click="onDeal()"
+          :disabled="loading"
+          class="icon-btn deal-btn"
+          :aria-label="dealArmed ? 'Tap again to deal a new board' : 'Deal a new board'"
+        >
+          <DiceIcon :size="28" :playing="dealAnimating" />
+          <span
+            class="icon-sublabel"
+            :class="{ 'is-armed': dealArmed }"
+            aria-hidden="true"
+            >{{ dealArmed ? "sure?" : "Deal" }}</span
+          >
+        </button>
+      </div>
     </div>
 
+    <!-- Zone separator = the hold-to-peek BoilDivider (existing grammar): staged zone above,
+         live zone below. Spatial prophylaxis — Deal is a full divider away from the play tools,
+         so a mid-game fat-finger never lands a board wipe. UI-4: the washi is PERSISTENT on
+         coarse pointers and pinned to the divider's own box; the surface pads to a ≥44px target
+         (CSS). Narrow fine-pointer windows keep the hover/focus reveal. -->
+    <div
+      class="peek-hold-surface group relative"
+      @pointerdown="onDividerHoldStart()"
+      @pointerup="onDividerHoldEnd()"
+      @pointerleave="onDividerHoldEnd()"
+      @pointercancel="onDividerHoldEnd()"
+    >
+      <BoilDivider />
+      <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
+    </div>
+
+    <!-- LIVE zone — acts on the CURRENT board (pencil mode, assists, undo/redo/hint, solve/
+         clear/share). -->
     <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); one
          component, both games. Arms the user-mark authoring seam on the frozen native input. -->
     <PencilModeToggle
@@ -349,33 +431,10 @@ function onDifficultyChange(val: string | number) {
       @update:candidates-pinned="emit('update:candidatesPinned', $event)"
     />
 
-    <!-- Hold the boiling divider to peek at the answer key (the hold surface).
-         UI-4: the washi is PERSISTENT on coarse pointers (title tooltips don't exist on
-         touch) and pinned to the divider's own box; the surface pads to a ≥44px target
-         there (CSS). Narrow fine-pointer windows keep the hover/focus reveal. -->
-    <div
-      class="peek-hold-surface group relative"
-      @pointerdown="onDividerHoldStart()"
-      @pointerup="onDividerHoldEnd()"
-      @pointerleave="onDividerHoldEnd()"
-      @pointercancel="onDividerHoldEnd()"
-    >
-      <BoilDivider />
-      <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
-    </div>
-
     <!-- Action buttons — UI-5: persistent sublabels in the pencil hand on coarse
-         pointers (the washi is a hover grammar; sighted touch users got no text). -->
+         pointers (the washi is a hover grammar; sighted touch users got no text). Deal
+         re-homed OUT of this row into the staged zone above (spatial prophylaxis). -->
     <div class="flex items-center justify-evenly">
-      <button
-        @click="onRandomize()"
-        :disabled="loading"
-        class="icon-btn"
-        aria-label="Randomize board"
-      >
-        <DiceIcon :size="28" :playing="randomizeAnimating" />
-        <span class="icon-sublabel" aria-hidden="true">Randomize</span>
-      </button>
       <button
         @click="onClear()"
         :disabled="loading"
@@ -464,43 +523,91 @@ function onDifficultyChange(val: string | number) {
 
   <!-- Desktop layout -->
   <div v-else class="control-panel-wrap flex flex-col items-center md:items-stretch">
-    <div class="control-panel-filtered flex flex-col items-center md:items-stretch">
-      <!-- Size selector -->
-      <div class="flex flex-col items-center gap-1 md:items-stretch">
-        <h2 class="section-heading text-muted-foreground" aria-label="Size">Size</h2>
-        <OptionSelector
-          :options="sizeOptions"
-          :selected="size"
-          :boil-frame="boilFrame"
-          @change="onSizeChange"
-        />
+    <!-- STAGED "New game" zone (T4-WU/U2) — the desktop twin of the mobile staged zone: size +
+         difficulty stage the NEXT board, Deal commits. role="group" labelled by the New-game
+         heading; the selectors read provisional by placement (arm-not-live — no live re-deal). -->
+    <div
+      class="new-game-zone flex flex-col items-center md:items-stretch"
+      role="group"
+      :aria-labelledby="newGameId"
+    >
+      <div class="control-panel-filtered flex flex-col items-center md:items-stretch">
+        <h2 :id="newGameId" class="section-heading new-game-heading">New game</h2>
+        <!-- Size selector -->
+        <div class="flex flex-col items-center gap-1 md:items-stretch">
+          <h2 class="section-heading text-muted-foreground" aria-label="Size">Size</h2>
+          <OptionSelector
+            :options="sizeOptions"
+            :selected="size"
+            :boil-frame="boilFrame"
+            @change="onSizeChange"
+          />
+        </div>
+
+        <hr class="border-border/50 my-3 w-full" />
+
+        <!-- Difficulty selector -->
+        <div class="flex flex-col items-center gap-1 md:items-stretch">
+          <h2
+            class="section-heading transition-colors duration-250"
+            :class="
+              difficulty === 'EASY'
+                ? 'crayon-green'
+                : difficulty === 'MEDIUM'
+                  ? 'crayon-orange'
+                  : 'crayon-rose'
+            "
+          >
+            Difficulty
+          </h2>
+          <OptionSelector
+            :options="difficultyOptions"
+            :selected="difficulty"
+            :boil-frame="boilFrame"
+            @change="onDifficultyChange"
+          />
+        </div>
       </div>
 
-      <hr class="border-border/50 my-3 w-full" />
-
-      <!-- Difficulty selector -->
-      <div class="flex flex-col items-center gap-1 md:items-stretch">
-        <h2
-          class="section-heading transition-colors duration-250"
-          :class="
-            difficulty === 'EASY'
-              ? 'crayon-green'
-              : difficulty === 'MEDIUM'
-                ? 'crayon-orange'
-                : 'crayon-rose'
-          "
+      <!-- The Deal commit — the DiceIcon re-homed from the action row (no new control, the WM
+           input shape stays frozen). Hover washi on fine pointers; its name shows always so
+           "next game" reads with zero copy. -->
+      <div class="deal-row">
+        <button
+          @click="onDeal()"
+          :disabled="loading"
+          class="icon-btn deal-btn group relative"
+          :aria-label="dealArmed ? 'Tap again to deal a new board' : 'Deal a new board'"
         >
-          Difficulty
-        </h2>
-        <OptionSelector
-          :options="difficultyOptions"
-          :selected="difficulty"
-          :boil-frame="boilFrame"
-          @change="onDifficultyChange"
-        />
+          <DiceIcon :size="28" :playing="dealAnimating" />
+          <span
+            class="icon-sublabel"
+            :class="{ 'is-armed': dealArmed }"
+            aria-hidden="true"
+            >{{ dealArmed ? "sure?" : "Deal" }}</span
+          >
+          <SheetWashiLabel text="Deal" :seed="11" />
+        </button>
       </div>
     </div>
 
+    <!-- Zone separator = the hold-to-peek BoilDivider (existing grammar): staged zone above,
+         live zone below. Spatial prophylaxis — Deal sits a full divider from the play tools, so
+         a mid-game fat-finger never lands a board wipe. L14: a washi labels the hidden affordance.
+         UI-9: anchored to the divider's OWN box, so the chip sits ON the ruled line. UI-4: also
+         persistent on coarse pointers (iPad row regime), with a padded ≥44px target. -->
+    <div
+      class="peek-hold-surface group relative my-2"
+      @pointerdown="onDividerHoldStart()"
+      @pointerup="onDividerHoldEnd()"
+      @pointerleave="onDividerHoldEnd()"
+      @pointercancel="onDividerHoldEnd()"
+    >
+      <BoilDivider />
+      <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
+    </div>
+
+    <!-- LIVE zone — acts on the CURRENT board. -->
     <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); the
          desktop twin of the mobile mount above. One component, both games. -->
     <PencilModeToggle
@@ -516,37 +623,10 @@ function onDifficultyChange(val: string | number) {
       @update:candidates-pinned="emit('update:candidatesPinned', $event)"
     />
 
-    <!-- Hold the boiling divider to peek at the answer key (the hold surface).
-         L14: a washi label makes the hidden affordance discoverable — same tape
-         grammar as the buttons; the native title yields to it (no double tooltip).
-         UI-9: anchored to the divider's OWN box, so the revealed chip sits ON the
-         ruled line instead of floating up into the Hard option's text. UI-4: also
-         persistent on coarse pointers (iPad row regime), with a padded ≥44px target. -->
-    <div
-      class="peek-hold-surface group relative my-2"
-      @pointerdown="onDividerHoldStart()"
-      @pointerup="onDividerHoldEnd()"
-      @pointerleave="onDividerHoldEnd()"
-      @pointercancel="onDividerHoldEnd()"
-    >
-      <BoilDivider />
-      <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
-    </div>
-
     <!-- Action buttons — hover washi for fine pointers, persistent sublabels on coarse
-         (UI-5: an iPad in the row regime reaches this layout with no hover). -->
+         (UI-5: an iPad in the row regime reaches this layout with no hover). Deal re-homed OUT
+         of this row into the staged zone above (spatial prophylaxis). -->
     <div class="flex items-center justify-evenly">
-      <button
-        @click="onRandomize()"
-        :disabled="loading"
-        class="icon-btn group relative"
-        aria-label="Randomize board"
-      >
-        <DiceIcon :size="28" :playing="randomizeAnimating" />
-        <span class="icon-sublabel" aria-hidden="true">Randomize</span>
-        <SheetWashiLabel text="Randomize" :seed="11" />
-      </button>
-
       <button
         @click="onClear()"
         :disabled="loading"
@@ -661,6 +741,47 @@ function onDifficultyChange(val: string | number) {
      Layerized, a move is a compositor offset and boil-tick invalidations stop
      sharing tiles with the filter (measured −57% switch raster vs unlayered). */
   will-change: transform;
+}
+
+/* T4-WU/U2 — the staged "New game" zone: size + difficulty selectors + the Deal commit,
+   grouped above the peek divider (the live zone sits below). Structural grouping only — the
+   zone reads "provisional" by PLACEMENT + its heading; no box grammar is invented. */
+.new-game-zone {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The group's own eyebrow — names the staging so "next game" reads with zero copy. Quiet: the
+   same √φ section-heading register, centered + muted, never louder than the selectors it captions. */
+.new-game-heading {
+  text-align: center;
+  color: var(--color-muted-foreground);
+  margin-bottom: 0.35rem;
+}
+
+/* The Deal commit sits centered under the staged selectors, a comfortable target from the peek
+   divider that partitions it off from the live play tools (the spatial prophylaxis). */
+.deal-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.6rem;
+}
+
+/* Deal is the re-homed dice, but it earns its NAME on every pointer (not only coarse): the
+   primary verb of the staged zone reads with zero copy. The column layout + padded target
+   mirrors the coarse icon-btn grammar, applied to Deal at all widths. */
+.deal-btn {
+  flex-direction: column;
+  gap: 0.15rem;
+  width: auto;
+  height: auto;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.85rem;
+}
+
+.deal-btn .icon-sublabel {
+  display: block;
 }
 
 /* .section-heading type register lives in assets/typography.css (@layer

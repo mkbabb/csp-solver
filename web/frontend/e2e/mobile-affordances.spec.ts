@@ -283,25 +283,41 @@ test("coarse affordances: persistent peek washi on a ≥44px target, icon sublab
   const box = (await peek.boundingBox())!;
   expect(box.height).toBeGreaterThanOrEqual(44);
 
-  // The four icon actions carry written names on coarse pointers.
-  for (const label of ["Randomize", "Clear", "Solve", "Share"]) {
+  // The four icon actions carry written names on coarse pointers (T4-WU/U2: the dice re-homed
+  // to "Deal" in the staged zone — still within the mobile panel, still writing its name).
+  for (const label of ["Deal", "Clear", "Solve", "Share"]) {
     await expect(
       panel.locator(".icon-sublabel", { hasText: label }).first(),
     ).toBeVisible();
   }
 
-  // Clear is destructive (board + undo history): first tap arms ("sure?" in rose), the second
-  // within the window clears. Board stays intact after the first tap; givens vanish only on the
-  // second.
+  // T4-WU/U3 — Clear is now DIRTY-GATED (born-RED at base: `onClear` armed unconditionally, even on
+  // a blank/pristine board). PRISTINE first: a freshly-loaded board has an empty undo depth (the
+  // mount deal is off-log), so ONE Clear tap wipes it instantly — no "sure?" arm, no confirm.
+  const clearBtn = panel.getByRole("button", { name: /clear board/i });
   const givenCount = await page.locator(".sudoku-cell .glyph-svg").count();
   expect(givenCount).toBeGreaterThan(0);
-  const clearBtn = panel.getByRole("button", { name: /clear board/i });
+  await clearBtn.tap();
+  await expect(panel.locator(".icon-sublabel", { hasText: "sure?" })).toHaveCount(0); // no arm pristine
+  await expect
+    .poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: 5000 })
+    .toBe(0); // cleared instantly
+
+  // Now DIRTY the board (a typed digit lifts the undo depth) and the two-tap returns: the first tap
+  // arms ("sure?" in rose + the aria swap), the board intact; a second within the window clears.
+  const blank = await firstBlank(page, ".sudoku-cell");
+  const dirtyInput = cellInput(page, blank);
+  await dirtyInput.tap();
+  await page.keyboard.type("5");
+  await expect(dirtyInput).toHaveValue("5");
+  const dirtyCount = await page.locator(".sudoku-cell .glyph-svg").count();
+  expect(dirtyCount).toBeGreaterThan(0);
   await clearBtn.tap();
   await expect(
     panel.getByRole("button", { name: "Tap again to clear board" }),
   ).toBeVisible();
   await expect(panel.locator(".icon-sublabel", { hasText: "sure?" })).toBeVisible();
-  expect(await page.locator(".sudoku-cell .glyph-svg").count()).toBe(givenCount); // armed ≠ cleared
+  expect(await page.locator(".sudoku-cell .glyph-svg").count()).toBe(dirtyCount); // armed ≠ cleared
   // Confirm inside the 2.5s window. Under parallel-run load the window can lapse between taps (the
   // tap then re-ARMS — by design); the poll re-taps until the arm+confirm pair lands inside one
   // window, which converges in ≤2 rounds.
@@ -320,4 +336,34 @@ test("coarse affordances: persistent peek washi on a ≥44px target, icon sublab
       { timeout: 15000 },
     )
     .toBe(0);
+});
+
+test("Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty board arms first", async ({
+  page,
+}) => {
+  await loadSudoku(page);
+  const panel = page.locator(".mobile-control-panel");
+  const dealBtn = panel.getByRole("button", { name: /deal a new board/i });
+
+  // PRISTINE (the mount deal is off-log → undo depth 0): Deal never arms. Its aria is the plain
+  // "Deal a new board" — no "Tap again" phrasing — and its sublabel reads "Deal", never "sure?".
+  // (born-RED at base: `onDeal` was BARE — no arm, no dirty check.)
+  await expect(dealBtn).toHaveAttribute("aria-label", "Deal a new board");
+  await expect(dealBtn.locator(".icon-sublabel")).toHaveText("Deal");
+
+  // DIRTY the board — a typed digit lifts the undo depth — and Deal ARMS on the first tap: the aria
+  // swaps and the sublabel shows "sure?" in rose, the board intact (armed ≠ dealt). The commit path
+  // (once disarmed) is the existing instant deal, covered by the deal specs + banked in the U3 probe.
+  const blank = await firstBlank(page, ".sudoku-cell");
+  const input = cellInput(page, blank);
+  await input.tap();
+  await page.keyboard.type("5");
+  await expect(input).toHaveValue("5");
+
+  await dealBtn.tap();
+  await expect(
+    panel.getByRole("button", { name: "Tap again to deal a new board" }),
+  ).toBeVisible();
+  await expect(dealBtn.locator(".icon-sublabel")).toHaveText("sure?");
+  await expect(input).toHaveValue("5"); // the first tap armed — it did NOT deal a new board
 });

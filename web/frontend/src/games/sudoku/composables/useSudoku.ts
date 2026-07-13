@@ -1,4 +1,4 @@
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 // The solve/generate path is the in-browser wasm Worker (`useSolver`), the
 // only shipped solve surface. Zero `/api/v1/*` dependency — no fetch, no
 // `/config` handshake, no server to depend on. The off-main-thread Worker
@@ -15,7 +15,7 @@ import {
   type PersistedBoard,
 } from "./useUrlState";
 import { classifyError } from "@games/shared/solver/classifyError";
-import { useUndoHistory } from "../../shared/useUndoHistory";
+import { useUndoHistory, type BatchDelta } from "../../shared/useUndoHistory";
 import { usePencilMarks } from "../../shared/usePencilMarks";
 import { useUserMarks } from "../../shared/useUserMarks";
 import { useAssists } from "../../shared/useAssists";
@@ -27,6 +27,21 @@ import {
 import { formatGradeSignature, describeTally } from "@games/shared/techniqueVoice";
 import type { HintResult, TechniqueId } from "@games/shared/techniqueEngine";
 import type { Difficulty, SolveState, SolveStats } from "../types";
+
+/** The T4-WU board pool's snapshot shapes (JSON-serialisable — the pool hashes by content).
+ *  A `BoardBlob` is the whole puzzle state a `board` entry restores; a `MarksBlob` the user
+ *  pencil-marks that annotated it. Sets are flattened to sorted arrays for a canonical hash. */
+interface BoardBlob {
+  values: Record<string, number>;
+  given: string[];
+  origGiven: string[];
+  overridden: string[];
+  solved: Record<string, number>;
+}
+interface MarksBlob {
+  corner: Record<string, number[]>;
+  center: Record<string, number[]>;
+}
 
 /**
  * Size-scaled node budget for the client solve — the user-facing cap on
@@ -59,6 +74,11 @@ export function useSudoku() {
   const linkError = ref(initial.boardLink === "invalid");
 
   const size = ref(initial.size);
+  // T4-WU/U2 — the STAGED sub-grid size, decoupled from the LIVE `size` that drives the board's
+  // dimensions (`boardSize`/`totalCells`). The New-game selector binds to this; `deal()` commits it.
+  // Arm-not-live: picking a size no longer wipes the board (the retired `watch(size)` re-deal); only
+  // Deal does. Seeded to the live size so the selector reads the current board until the player stages.
+  const pendingSize = ref(initial.size);
   const difficulty = ref<Difficulty>(initial.difficulty);
   const boardSize = computed(() => size.value ** 2);
   const totalCells = computed(() => boardSize.value ** 2);
@@ -110,11 +130,38 @@ export function useSudoku() {
   // W6 one-press reveal) is retired — a hint says WHY before it shows WHAT.
   const hintReasoning = ref<HintResult | null>(null);
 
-  // Bounded undo/redo (W6) — the shared {pos,prev,next}[] history machine. The arrow
-  // wrapper keeps the call hoisting-safe: `applyCellValue` is declared below.
-  const { clearUndo, recordEdit, undo, redo } = useUndoHistory((pos, value) =>
-    applyCellValue(pos, value),
-  );
+  // The history spine (T4-WU / E9) — one tagged log + content-hash board pool (D16 twin).
+  // The effects are arrow wrappers so the call is hoisting-safe: every primitive is declared
+  // below in this setup. `pending` refuses undo/redo while a board op is in flight — the race
+  // gate that closes the ungated keyboard-Z seam at its single choke point.
+  const {
+    clearUndo,
+    recordEdit,
+    recordHintInk,
+    recordBatch,
+    recordMark,
+    recordBoard,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    undoDepth,
+  } = useUndoHistory<BoardBlob, MarksBlob>({
+    applyValue: (pos, value) => applyCellValue(pos, value),
+    applyHintInk: (pos, value) => applyHintInk(pos, value),
+    removeHintInk: (pos, prev) => removeHintInk(pos, prev),
+    applyMark: (slot, pos, list) => setMarkSlot(slot, String(pos), list),
+    restoreBoard: (board, marks) => restoreBoardState(board, marks),
+    pending: () => loading.value,
+  });
+
+  // T4-WU/U3 — the conditional-confirm dirty gate. `isDirty` = undo-depth non-empty (E9 crit #8,
+  // spec ROW 3): ONE derived signal off U1's spine, no parallel bool to desynchronize. A pristine
+  // board reads 0 — the mount deal is off-log, a size-changing Deal + a permalink restore clear the
+  // log — so Deal + Clear act instantly there (no nag by construction); any recorded value / mark /
+  // board-swap lifts it, arming the coarse two-tap on Deal and Clear alike (the confirm surface is
+  // exactly those two verbs; Solve carries no confirm — it's intentional, and now undoable).
+  const isDirty = computed(() => undoDepth.value > 0);
 
   function initBoard() {
     values.value = {};
@@ -145,6 +192,8 @@ export function useSudoku() {
   }
 
   function clearBoard() {
+    const prevBlob = snapshotBoard(); // T4-WU — the board this clear blanks (undo restores it)
+    const prevMarks = snapshotMarks();
     solveState.value = "idle";
     solvedValues.value = {};
     solveStats.value = null;
@@ -158,10 +207,13 @@ export function useSudoku() {
     originalGivenCells.value = new Set();
     overriddenCells.value = new Set();
     animatingCells.value = new Set();
-    clearUndo();
+    // `clearUndo` DIES (T4-WU): a clear is now one undoable `board` entry — undo restores the
+    // board AND its marks; the generation bump voids the live notes (void-watch), and the pool
+    // carries `prevMarks` for the restore.
     boardGeneration.value++;
     clearPersistedBoard();
     dropBoardParam(); // the shared configuration is stale once the board is blanked
+    recordBoard(prevBlob, snapshotBoard(), prevMarks, EMPTY_MARKS, "clear");
   }
 
   // The cell-write primitive, shared by user edits and undo/redo replay. Given-cell
@@ -196,16 +248,72 @@ export function useSudoku() {
     recordEdit(pos, prev, value);
   }
 
-  async function randomize() {
+  // A fresh/blank board carries no marks — the constant `nextMarks` for a deal/clear/resize
+  // board entry (all of which void the notes going forward). Deduped to one pool slot.
+  const EMPTY_MARKS: MarksBlob = { corner: {}, center: {} };
+
+  // Snapshot the whole puzzle state into a pool blob (T4-WU). Sets flatten to sorted arrays so
+  // two identical boards hash identically (content-addressed dedup).
+  function snapshotBoard(): BoardBlob {
+    return {
+      values: { ...values.value },
+      given: Array.from(givenCells.value).sort(),
+      origGiven: Array.from(originalGivenCells.value).sort(),
+      overridden: Array.from(overriddenCells.value).sort(),
+      solved: { ...solvedValues.value },
+    };
+  }
+
+  // Redo of hint ink — write the digit in the solver's own tone (no record); the reveal
+  // draw-in path, factored so `inkReveal` and the undo-replay share it.
+  function applyHintInk(pos: number, value: number) {
+    const key = String(pos);
+    values.value[key] = value;
+    solvedValues.value = { ...solvedValues.value, [key]: value };
+    overriddenCells.value.delete(key);
+    animatingCells.value = new Set([key]);
+    if (solveState.value !== "idle") {
+      solveState.value = "idle";
+      solveStats.value = null;
+    }
+    queueSave();
+  }
+
+  // Undo of hint ink (T4-WU) — write `prev` and STRIP the `solvedValues` membership, so the
+  // reveal leaves no solver-tone residue and the flourish gate is re-armed (a board later
+  // completed with no solver ink standing can celebrate honestly).
+  function removeHintInk(pos: number, prev: number) {
+    const key = String(pos);
+    values.value[key] = prev;
+    if (key in solvedValues.value) {
+      const { [key]: _, ...rest } = solvedValues.value;
+      solvedValues.value = rest;
+    }
+    animatingCells.value = new Set();
+    if (solveState.value !== "idle") {
+      solveState.value = "idle";
+      solveStats.value = null;
+    }
+    queueSave();
+  }
+
+  async function randomize(opts?: { record?: boolean }) {
     loading.value = true;
     errorMessage.value = "";
     errorCode.value = "";
     solveState.value = "idle";
     solvedValues.value = {};
     solveStats.value = null;
+    const dispatchGen = boardGeneration.value; // T4-WU epoch — capture at dispatch
 
     try {
       const board = await api.getRandomBoard(size.value, difficulty.value);
+      // Push-after-resolve, drop-on-mismatch (T4-WU): a superseded/stale deal (a newer board
+      // op bumped the generation while this awaited) applies nothing and records nothing — no
+      // orphan entry can ever disagree with the board. Latest-wins.
+      if (boardGeneration.value !== dispatchGen) return;
+      const prevBlob = snapshotBoard(); // the board this deal replaces
+      const prevMarks = snapshotMarks();
       values.value = {};
       givenCells.value = new Set();
       originalGivenCells.value = new Set();
@@ -228,8 +336,15 @@ export function useSudoku() {
       gradeSolved.value = gradeResult.solved;
       graded.value = true; // W9-B1 — the engine ran on a dealt board; the tally is defensible
       hintReasoning.value = null; // a fresh deal voids any armed hint
-      clearUndo(); // a fresh board voids the prior board's history
       dropBoardParam(); // a freshly-dealt board voids the shared permalink
+      // T4-WU epoch parity (crit #3): sudoku randomize NOW bumps the generation (futoshiki's
+      // already did) — the void-watch voids user marks on a deal, the peek cache invalidates,
+      // and the generation becomes a valid per-op stale-drop discriminant. `clearUndo` DIES:
+      // deals APPEND a board entry, never wipe (undo restores the prior board + its marks).
+      boardGeneration.value++;
+      if (opts?.record !== false) {
+        recordBoard(prevBlob, snapshotBoard(), prevMarks, EMPTY_MARKS, "deal");
+      }
       queueSave();
     } catch (e) {
       // A generate failure was fully silent before — route it through the shared
@@ -245,12 +360,33 @@ export function useSudoku() {
     }
   }
 
+  // T4-WU/U2 — the Deal commit. The re-homed dice (lifted out of the live action row into the
+  // New-game staged zone) commits the staged size + difficulty as ONE act. A SAME-size Deal
+  // records one undoable board entry (size-undo falls out of the Deal button — U1's deferral
+  // closes here). A size-CHANGING Deal resets to the new dimensions and deals off-log: the board
+  // blob carries no size, so a cross-size undo can't restore honestly, so a size commit is a
+  // clean-reset deal — exactly what the retired `watch(size)` did, now behind the guarded button
+  // instead of a bare, unguarded chip tap (the loudest live hazard, staged away).
+  async function deal() {
+    if (pendingSize.value !== size.value) {
+      size.value = pendingSize.value;
+      clearPersistedBoard();
+      initBoard();
+      await randomize({ record: false });
+    } else {
+      await randomize();
+    }
+  }
+
   async function solve() {
     loading.value = true;
     solveState.value = "solving";
     solveStats.value = null; // never show a previous solve's numbers mid-solve
     errorMessage.value = "";
     errorCode.value = "";
+    const dispatchGen = boardGeneration.value; // T4-WU epoch — capture at dispatch
+    const prevBlob = snapshotBoard(); // the pre-solve board (undo target)
+    const prevMarks = snapshotMarks();
 
     try {
       const result = await api.solveBoard(
@@ -258,6 +394,8 @@ export function useSudoku() {
         size.value,
         nodeBudgetForSize(size.value),
       );
+      // Drop a stale solve (a board op superseded it mid-flight) — append nothing (T4-WU).
+      if (boardGeneration.value !== dispatchGen) return;
       const newlySolved: Record<string, number> = {};
       const cellsToAnimate = new Set<string>();
 
@@ -281,6 +419,14 @@ export function useSudoku() {
         elapsedMs: result.elapsedMs,
       };
       animatingCells.value = cellsToAnimate;
+      // T4-WU — a solve that FILLED cells is one undoable `board` entry (undo restores the
+      // pre-solve board, redo re-fills). Solve MUTATES in place (givens stay), so it does NOT
+      // bump the generation: the marks survive under the filled cells (prev/next marks are the
+      // same blob) and the celebration crest is untouched. A no-fill solve (UNSAT / already
+      // full) records nothing.
+      if (cellsToAnimate.size > 0) {
+        recordBoard(prevBlob, snapshotBoard(), prevMarks, snapshotMarks(), "solve");
+      }
       queueSave();
     } catch (e) {
       // Route by the shared fiction classifier (games/shared/solver/classifyError): provable
@@ -326,20 +472,16 @@ export function useSudoku() {
 
   // Ink a revealed digit through the EXISTING reveal path (350ms solver-ink draw-in, grain
   // suppressed during the tween, PRM-instant branch) — one grammar, zero new timing constants.
-  // Added to solvedValues so it renders in the solver's own tone; NOT recorded on the undo
-  // stack (a reveal is not a user edit); the flourish gate stays closed (no gold star).
+  // Added to solvedValues so it renders in the solver's own tone. T4-WU REVERSES the prior
+  // "a reveal is not a user edit" stance: hint ink NOW enters history as a `value` entry with
+  // `tone:'solved'`, so undoing a hint strips the solver-tone membership (via `removeHintInk`)
+  // and re-arms the flourish gate — owner-taste flag (B5).
   function inkReveal(pos: number, val: number) {
     const key = String(pos);
     if (val === 0 || values.value[key] === val) return;
-    values.value[key] = val;
-    solvedValues.value = { ...solvedValues.value, [key]: val }; // solver-ink tone
-    overriddenCells.value.delete(key);
-    animatingCells.value = new Set([key]);
-    if (solveState.value !== "idle") {
-      solveState.value = "idle";
-      solveStats.value = null;
-    }
-    queueSave();
+    const prev = values.value[key] ?? 0;
+    applyHintInk(pos, val);
+    recordHintInk(pos, prev, val);
   }
 
   // ── Fill-all-forced (T4-W8 — the partial-solve button; W7 owns the detector) ──────────
@@ -347,21 +489,26 @@ export function useSudoku() {
   // EXISTING reveal draw-in — `solvedValues` (solver-ink tone) + `animatingCells` (the board-
   // normalized reveal wave) — the same bulk path `solve()` uses, zero new timing constants.
   // Sourced from the W7 technique engine (self-computed candidates), NOT the wasm solver:
-  // synchronous, no worker, no loading/solve state. Not recorded on the undo stack (a forced
-  // fill is app-ink, like a reveal). A sweep that forces nothing is a no-op; a cell that only
-  // becomes forced AFTER this sweep is left for the next press (fillAllForced is one sweep by
-  // contract — the honest "fill what's forced," distinct from the whole-board solve).
+  // synchronous, no worker, no loading/solve state — so the epoch/race machinery the async
+  // recorders need does not apply (nothing awaits; the sweep is atomic over the local board).
+  // T4-WU: the sweep now enters history as ONE `{kind:'batch'}` entry — one gesture, one
+  // undo/redo — recorded AFTER it resolves (single-writer, push-after-resolve). Each placement
+  // rides the solver tone the fill applies, so undo strips the `solvedValues` membership exactly
+  // as the hint-ink path does. A sweep that forces nothing (Δ0 stop) records NOTHING.
   function fillForced() {
     const { placements } = fillForcedSudoku(values.value, size.value);
     const newlyFilled: Record<string, number> = {};
     const cellsToAnimate = new Set<string>();
+    const deltas: BatchDelta[] = [];
     for (const p of placements) {
       const key = String(p.cell);
       if (values.value[key] !== 0) continue; // ink empties only (the detector never targets a filled cell)
+      const prev = values.value[key] ?? 0;
       values.value[key] = p.value;
       newlyFilled[key] = p.value;
       overriddenCells.value.delete(key);
       cellsToAnimate.add(key);
+      deltas.push({ pos: p.cell, prev, next: p.value, tone: "solved" });
     }
     if (cellsToAnimate.size === 0) return; // nothing forced — leave the board (and its grade/hint) untouched
     solvedValues.value = { ...solvedValues.value, ...newlyFilled };
@@ -372,6 +519,7 @@ export function useSudoku() {
       solveStats.value = null;
     }
     queueSave();
+    recordBatch(deltas); // one entry = one gesture = one undo (push-after-resolve)
   }
 
   // ── The named hint (T4-W7) — reasoning first, digit second ──────────────────────
@@ -435,8 +583,69 @@ export function useSudoku() {
     centerMarks,
     setPencilMode,
     cyclePencilMode,
-    toggleUserMark,
+    toggleUserMark: rawToggleUserMark,
+    setMarkSlot,
+    setUserMarks,
+    restoring,
   } = useUserMarks(boardGeneration);
+
+  // Snapshot the user pencil marks into a pool blob (T4-WU) — the notes that annotate the
+  // current board, so a `board` entry can travel them alongside the board it restores.
+  function snapshotMarks(): MarksBlob {
+    return {
+      corner: { ...cornerMarks.value },
+      center: { ...centerMarks.value },
+    };
+  }
+
+  // The board-undo/redo replay (T4-WU) — the restore-order edge. Raise `restoring` so the
+  // marks void-watch no-ops on the generation bump this restore performs, then re-hydrate the
+  // board AND the marks that annotated it; lower the flag next tick, after the watch flushed.
+  function restoreBoardState(board: BoardBlob, marks: MarksBlob) {
+    restoring.value = true;
+    values.value = { ...board.values };
+    givenCells.value = new Set(board.given);
+    originalGivenCells.value = new Set(board.origGiven);
+    overriddenCells.value = new Set(board.overridden);
+    solvedValues.value = { ...board.solved };
+    animatingCells.value = new Set();
+    solveState.value = "idle";
+    solveStats.value = null;
+    errorMessage.value = "";
+    errorCode.value = "";
+    clearGrade(); // a restored board carries no live measured grade (W6's request voice)
+    peekCache.value = null; // the cached answer key is stale for the restored board
+    boardGeneration.value++; // board replaced — bump the epoch (void-watch suppressed here)
+    setUserMarks(marks.corner, marks.center);
+    queueSave();
+    void nextTick(() => {
+      restoring.value = false;
+    });
+  }
+
+  // The tracked user-mark author (T4-WU) — wraps the raw toggle so every note gesture enters
+  // history as ONE `mark` entry. A digit toggles the active slot; an erase (`value===0`) hits
+  // both corner + center, so both slot deltas ride the single entry (one gesture, one undo).
+  function toggleUserMark(pos: number, value: number) {
+    if (pencilMode.value === "off") return;
+    const key = String(pos);
+    if (value === 0) {
+      const prevCorner = [...(cornerMarks.value[key] ?? [])];
+      const prevCenter = [...(centerMarks.value[key] ?? [])];
+      rawToggleUserMark(pos, 0);
+      recordMark(pos, {
+        corner: prevCorner.length ? { prev: prevCorner, next: [] } : undefined,
+        center: prevCenter.length ? { prev: prevCenter, next: [] } : undefined,
+      });
+      return;
+    }
+    const slot = pencilMode.value; // 'corner' | 'center'
+    const mapRef = slot === "corner" ? cornerMarks : centerMarks;
+    const prev = [...(mapRef.value[key] ?? [])];
+    rawToggleUserMark(pos, value);
+    const next = [...(mapRef.value[key] ?? [])];
+    recordMark(pos, { [slot]: { prev, next } });
+  }
 
   // Board assists (T4-W8 ROW 2 + ROW 3 — the player's check settings; D16 twin, both games mount
   // the identical thing). ROW 2: the error-check MODE (off / on-demand / live, default on-demand)
@@ -514,7 +723,7 @@ export function useSudoku() {
     // No meaningful persisted state — init empty board then auto-fetch
     if (initial.persisted) clearPersistedBoard();
     initBoard();
-    randomize(); // fire-and-forget
+    randomize({ record: false }); // fire-and-forget mount deal — not a user gesture, off-log
   }
 
   // ── Watchers ─────────────────────────────────────────────────────
@@ -524,12 +733,10 @@ export function useSudoku() {
     syncToUrl(size.value, difficulty.value);
   });
 
-  // Re-init when size changes — old board dimensions invalid
-  watch(size, () => {
-    clearPersistedBoard();
-    initBoard();
-    randomize();
-  });
+  // T4-WU/U2 — size is now ARM-NOT-LIVE: the live re-deal `watch(size)` is RETIRED. Picking a size
+  // stages `pendingSize`; only `deal()` commits it (re-initing the dims for the new size there). The
+  // `watch([size, difficulty])` above stays URL-sync-only, so a size change writes `?size=` at the
+  // Deal commit and a difficulty change writes `?difficulty=` on selection — neither wipes the board.
 
   // Engine-domains pencil marks: while the peek gesture is held, any cell
   // mutation or board swap re-propagates (K-peek is a toggle, so the page can
@@ -556,6 +763,7 @@ export function useSudoku() {
 
   return {
     size,
+    pendingSize,
     difficulty,
     boardSize,
     totalCells,
@@ -575,11 +783,16 @@ export function useSudoku() {
     clearBoard,
     setCell,
     randomize,
+    deal,
     solve,
     fillForced,
     peekSolution,
     undo,
     redo,
+    canUndo,
+    canRedo,
+    undoDepth,
+    isDirty,
     hintCell,
     hintReasoning,
     hardestTechnique,
