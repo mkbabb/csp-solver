@@ -124,3 +124,6 @@ Every visual claim in this wave carries both (this wave *defines* the golden-cro
 - **The browser proof lane is new CI capability** — if the `proof:browser` Playwright lane can't be stood up in pencil-boil's CI in-wave, the identity gate must NOT ship manual-only (that re-creates the FAM-1 vacuous green it exists to close). The fallback is to gate it in the *frontend* e2e suite (which already runs Playwright) against the pencil-boil consumer, with a named re-trigger to move it into the library's own CI.
 - **The stride reconciliation is a soul gate on live grid geometry** — reunifying the fork changes the grid's boil pixels; if the reconciled stride drifts the grain tooth beyond the 0.98 floor or reads wrong, the escape is to keep both strides and note the divergence (the library helper stays public, the consumer keeps its stride) — but that re-opens the dual path, so the reconciliation is the preferred close and the divergence-note is the last resort.
 - **The murmur containment interacts with the solved-state celebration grammar** — `contain: paint` on the cell must not clip the gold-star flourish or the crest; the DELTA verifies the celebration renders whole while the murmur clips to the cell box.
+
+---
+**ADDENDUM (pre-exec perf audit, 2026-07-12)**: see README §7 — the rows stamped to this wave are binding scope; evidence at ../evidence/perf/.

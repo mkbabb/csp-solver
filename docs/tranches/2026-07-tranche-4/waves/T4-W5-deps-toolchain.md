@@ -94,3 +94,6 @@ No rendered-pixel surface — dependency, toolchain, and build-recipe truth only
 - **The TS 7 bump is the wave's real risk** — majors tighten inference and `vue-tsc`/`typescript-eslint` must co-validate against the TS 7 peer before landing. If a peer lags, the bump holds at the last co-valid major with a named re-trigger (the peer's TS-7 release), not a forced landing that reds the typecheck lane.
 - **The pencil-boil vue bump crosses the W1 seam** — if 0.9.0 has shipped by W5, the CVE fix is a 0.9.1 currency release + a frontend lockfile step; if not, it folds into the 0.9.0 cut. Either path is one range bump on the consumer; sequence W1 first so the raster feature and the currency bump don't collide in the release manifest.
 - **The Makefile fix changes a developer-facing recipe, not the ship** — CI already builds correctly; the risk is a developer with muscle-memory `make wasm` who overwrote `pkg/` with the fat artifact. The gate's `cmp` byte-identity is the tripwire; the fresh-clone prerequisite closes the reproducibility hole r2-cross-repo F4 named.
+
+---
+**ADDENDUM (pre-exec perf audit, 2026-07-12)**: see README §7 — the rows stamped to this wave are binding scope; evidence at ../evidence/perf/.

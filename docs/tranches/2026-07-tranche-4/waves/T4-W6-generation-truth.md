@@ -110,3 +110,6 @@ Component checks:
 - **Disposition (a) vs (b) is a corpus-quality question decided at the gate** — if regeneration can't produce a monotone 16×16 Hard within the given range, (b) (honest relabel) is the fallback, not a failure. Name the choice on the record.
 - **The 30-deals/cell probe exposes flatness/inversion, not tail risk** — the rare high-backtrack Medium hole-dig boards are not a tail study. ROW-2's gate asserts on median+max over the same 30-deal frame the defect was found in; a larger sweep is banked, not blocking.
 - **B-0 is engine-independent and ships regardless of ROW-2's disposition** — the honesty fix (request ≠ measurement, ungraded shows nothing) does not wait on a corpus decision; it lands the moment the margin copy changes.
+
+---
+**ADDENDUM (pre-exec perf audit, 2026-07-12)**: see README §7 — the rows stamped to this wave are binding scope; evidence at ../evidence/perf/.
