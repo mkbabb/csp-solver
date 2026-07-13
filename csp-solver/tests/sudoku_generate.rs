@@ -11,10 +11,12 @@
 //! bundle 1:1 into 5 independently named tests, for 7 tests total.
 //! Zero-widening — same inputs, same assertions, no new coverage.
 
+use csp_solver::ordering::Ordering;
 use csp_solver::sudoku::{
-    Difficulty, embedded_template_count, embedded_templates, generate_board,
-    generate_board_with_templates,
+    Difficulty, create_sudoku_csp, embedded_template_count, embedded_templates, generate_board,
+    generate_board_seeded, generate_board_with_templates,
 };
+use csp_solver::{Pruning, SolveConfig};
 
 /// Happy path: a template that genuinely matches its claimed difficulty must
 /// not trip the debug consistency assertion (it is silent when the contract
@@ -77,5 +79,64 @@ fn embedded_template_count_absent_bank_is_zero() {
 fn embedded_easy_templates_parse_to_full_board() {
     for board in embedded_templates(3, Difficulty::Easy) {
         assert_eq!(board.len(), 81);
+    }
+}
+
+// ─── Live-gen uniqueness (FAM-9) ─────────────────────────────────────────────
+
+/// The served Sudoku sub-grid sizes: 2 (4×4), 3 (9×9), 4 (16×16). Mirrors the
+/// frontend's `VALID_SIZES = [2, 3, 4]` (`web/frontend/src/games/sudoku/
+/// composables/useUrlState.ts`). N=5 is deliberately unshipped.
+const SERVED_SIZES: [u32; 3] = [2, 3, 4];
+
+/// FAM-9 live-gen uniqueness gate — a *dealt* Sudoku puzzle is single-solution
+/// at every served size.
+///
+/// The generator's hole-digger (`generate_board_slow`) keeps a cell removal only
+/// when the board stays single-solution (`max_solutions: 2` uniqueness probe at
+/// each dig), so what it deals must be unique. This asserts that invariant on
+/// **live-generated** boards — `generate_board_seeded` runs the real
+/// hole-digging path — as distinct from the static template sweep
+/// (`examples/verify_bank_uniqueness.rs`, an example CI never runs). Seeded for
+/// determinism; each board is re-solved independently with `max_solutions: 2`
+/// and asserted to yield exactly one solution. Cheap enough for every CI run:
+/// `Easy` digs the fewest holes (`total/4`), so the per-dig probes and the
+/// verify solve stay heavily constrained and fast.
+///
+/// Pairs with the Futoshiki analog (`tests/futoshiki.rs ::
+/// generated_puzzles_are_unique_and_valid`, N=4–7), so both game families' live
+/// generators carry a standing uniqueness gate.
+#[test]
+fn live_generated_boards_are_unique_across_served_sizes() {
+    for n in SERVED_SIZES {
+        let board = generate_board_seeded(n, Difficulty::Easy, 0x5D_00 + n as u64);
+        let total = (n * n * n * n) as usize;
+        assert_eq!(
+            board.len(),
+            total,
+            "N={n}: generated board has {} cells, expected {total}",
+            board.len()
+        );
+
+        let (mut csp, given) = create_sudoku_csp(&board, n);
+        let config = SolveConfig {
+            pruning: Pruning::Ac3,
+            ordering: Ordering::Mrv,
+            max_solutions: 2,
+            node_budget: Some(50_000_000),
+            ..Default::default()
+        };
+        let solutions = csp.solve_with_given(&config, &given);
+
+        assert!(
+            !csp.stats().budget_exceeded,
+            "N={n}: uniqueness solve exhausted its node budget — the single-solution verdict is unsafe"
+        );
+        assert_eq!(
+            solutions.len(),
+            1,
+            "N={n}: a live-generated board must have exactly one solution, got {}",
+            solutions.len()
+        );
     }
 }

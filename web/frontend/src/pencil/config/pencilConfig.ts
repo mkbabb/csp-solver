@@ -66,7 +66,7 @@ export interface GrainConfig {
     seed: number;
 }
 
-export interface WobbleConfig {
+interface WobbleConfig {
     /** Center baseFrequency for the turbulence (e.g. 0.02) */
     baseFrequency: number;
     numOctaves: number;
@@ -80,14 +80,14 @@ export interface WobbleConfig {
     intervalMs: number;
 }
 
-export interface MultiPassConfig {
+interface MultiPassConfig {
     passes: { seed: number; scale: number }[];
     baseFrequency: number;
     numOctaves: number;
     blendMode: "multiply" | "screen";
 }
 
-export interface TextureConfig {
+interface TextureConfig {
     baseFrequency: number;
     numOctaves: number;
     blendMode: string;
@@ -179,8 +179,6 @@ export const BOIL_CONFIG: BoilConfig = reactive({ ...DEFAULT_BOIL_CONFIG });
 export function resetBoilConfig() {
     Object.assign(BOIL_CONFIG, { ...DEFAULT_BOIL_CONFIG });
 }
-
-export { DEFAULT_BOIL_CONFIG };
 
 /** Frozen defaults for reset.
  *  Wobble filters use single-layer feTurbulence+feDisplacementMap (small elements only).
@@ -337,14 +335,6 @@ export function wobblePoseId(presetId: string, pose: number): string {
 }
 
 // ── Draw-in timing presets ────────────────────────────────────────
-
-export interface DrawInPreset {
-    duration: number;
-    stagger: number;
-    jitter: number;
-    baseDelay: number;
-    timing: string;
-}
 
 // Only gridFrame/gridSubgrid/gridCell/glyph have consumers (usePathAnimation.ts:90-92,
 // HandwrittenGlyph.vue:155-156). The former `solveCell` (500/120) and `logo` (1800/280)

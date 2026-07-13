@@ -392,56 +392,11 @@ fn test_mrv_ordering() {
 }
 
 // -----------------------------------------------------------------------
-// 8. 8-Queens
+// 8. 8-Queens enumerate (92) — collapsed into the canonical enumerate +
+//    set-equality in `oracle_and_invariance.rs`, which asserts 92 under all
+//    4 prunings × 3 orderings (FC/FailFirst among them). This FC/FailFirst-only
+//    re-enumeration was a strict subset; removed as overfit (T4-W2 F9).
 // -----------------------------------------------------------------------
-#[test]
-fn test_8_queens() {
-    let n = 8u32;
-    let mut csp = Csp::new();
-
-    let domain = BitsetDomain::new(0..n);
-    let vars = csp.add_variables(&domain, n as usize);
-
-    csp.add_constraint(AllDifferent::new(vars.clone()));
-
-    for i in 0..n {
-        for j in (i + 1)..n {
-            let vi = vars[i as usize];
-            let vj = vars[j as usize];
-            let diff = j - i;
-            csp.add_constraint(LambdaConstraint::new(
-                vec![vi, vj],
-                move |assignment: &[Option<u32>]| match (
-                    &assignment[vi as usize],
-                    &assignment[vj as usize],
-                ) {
-                    (Some(ri), Some(rj)) => {
-                        let row_diff = ri.abs_diff(*rj);
-                        row_diff != diff
-                    }
-                    _ => true,
-                },
-                format!("diag({i},{j})"),
-            ));
-        }
-    }
-
-    csp.finalize();
-
-    let config = SolveConfig {
-        pruning: Pruning::ForwardChecking,
-        ordering: Ordering::FailFirst,
-        max_solutions: 92,
-        ..Default::default()
-    };
-
-    let solutions = csp.solve(&config);
-    assert_eq!(
-        solutions.len(),
-        92,
-        "8-Queens should have exactly 92 solutions"
-    );
-}
 
 // -----------------------------------------------------------------------
 // 9. Unsatisfiable problem
@@ -1331,43 +1286,16 @@ fn test_solve_resets_state() {
 }
 
 // -----------------------------------------------------------------------
-// Hard Sudoku puzzle constants
+// Hard 9×9 Sudoku puzzle constants — removed with their tests (T4-W2 F5).
+// The five canonical boards (Al Escargot, Inkala 2010, Golden Nugget,
+// Platinum Blonde, 17-clue minimal) now live in `tests-py`, which owns the
+// hard-sudoku path: `test_rust_backend.py::test_hard_9x9` solves all five
+// under the PRODUCTION `create_sudoku_csp`/`solve_sudoku` (GAC-default) and
+// `test_bench_compare.py` bounds each at <50 ms — the ignored rust tests here
+// pinned non-production `Pruning::ForwardChecking` and only duplicated that
+// coverage. (The rust benches `benches/sudoku.rs` keep their own copies for
+// timing; the GAC corpus CI smoke exercises the hard boards for soundness.)
 // -----------------------------------------------------------------------
-
-#[allow(clippy::zero_prefixed_literal)]
-const AL_ESCARGOT: [u32; 81] = [
-    1, 0, 0, 0, 0, 7, 0, 9, 0, 0, 3, 0, 0, 2, 0, 0, 0, 8, 0, 0, 9, 6, 0, 0, 5, 0, 0, 0, 0, 5, 3, 0,
-    0, 9, 0, 0, 0, 1, 0, 0, 8, 0, 0, 0, 2, 6, 0, 0, 0, 0, 4, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1, 0, 0,
-    4, 0, 0, 0, 0, 0, 0, 7, 0, 0, 7, 0, 0, 0, 3, 0, 0,
-];
-
-#[allow(clippy::zero_prefixed_literal)]
-const INKALA_2010: [u32; 81] = [
-    0, 0, 5, 3, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 2, 0, 0, 7, 0, 0, 1, 0, 5, 0, 0, 4, 0, 0, 0, 0,
-    5, 3, 0, 0, 0, 1, 0, 0, 7, 0, 0, 0, 6, 0, 0, 3, 2, 0, 0, 0, 8, 0, 0, 6, 0, 5, 0, 0, 0, 0, 9, 0,
-    0, 4, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 9, 7, 0, 0,
-];
-
-#[allow(clippy::zero_prefixed_literal)]
-const GOLDEN_NUGGET: [u32; 81] = [
-    0, 0, 0, 0, 0, 0, 0, 3, 9, 0, 0, 0, 0, 0, 1, 0, 0, 5, 0, 0, 3, 0, 5, 0, 8, 0, 0, 0, 0, 8, 0, 9,
-    0, 0, 0, 6, 0, 7, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 9, 0, 8, 0, 0, 5, 0, 0,
-    2, 0, 0, 0, 0, 6, 0, 0, 4, 0, 0, 7, 0, 0, 0, 0, 0,
-];
-
-#[allow(clippy::zero_prefixed_literal)]
-const PLATINUM_BLONDE: [u32; 81] = [
-    0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 3, 5, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 7, 0, 7, 0, 0, 0, 0,
-    0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 8, 0, 4, 0, 0, 0, 2, 0, 0, 0, 0,
-    0, 0, 1, 8, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 0,
-];
-
-#[allow(clippy::zero_prefixed_literal)]
-const MINIMAL_17: [u32; 81] = [
-    0, 0, 0, 0, 0, 0, 0, 1, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5,
-    0, 4, 0, 7, 0, 0, 8, 0, 0, 0, 3, 0, 0, 0, 0, 1, 0, 9, 0, 0, 0, 0, 3, 0, 0, 4, 0, 0, 2, 0, 0, 0,
-    5, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 6, 0, 0, 0,
-];
 
 // -----------------------------------------------------------------------
 // 39. 9x9 Sudoku: medium puzzle
@@ -1396,115 +1324,11 @@ fn test_9x9_sudoku_medium() {
 }
 
 // -----------------------------------------------------------------------
-// 40-44. Hard 9x9 Sudoku stress tests
+// 40-45. Hard 9×9 Sudoku stress tests — DELETED (T4-W2 F5). Six `#[ignore]`d
+// tests pinning non-production `Pruning::ForwardChecking` on the five canonical
+// hard boards; the hard-sudoku path is owned by `tests-py` under the production
+// GAC-default config (see the constants note above). No rust coverage lost.
 // -----------------------------------------------------------------------
-#[test]
-#[ignore = "requires GAC alldiff — too slow with binary FC"]
-fn test_hard_sudoku_al_escargot() {
-    let (mut csp, given) = build_sudoku_9x9(&AL_ESCARGOT);
-    let config = SolveConfig {
-        pruning: Pruning::ForwardChecking,
-        ordering: Ordering::FailFirst,
-        max_solutions: 1,
-        ..Default::default()
-    };
-    let solutions = csp.solve_with_given(&config, &given);
-    assert!(!solutions.is_empty(), "Should solve Al Escargot");
-    validate_sudoku_solution(&solutions[0]);
-}
-
-#[test]
-#[ignore = "requires GAC alldiff — too slow with binary FC"]
-fn test_hard_sudoku_inkala_2010() {
-    let (mut csp, given) = build_sudoku_9x9(&INKALA_2010);
-    let config = SolveConfig {
-        pruning: Pruning::ForwardChecking,
-        ordering: Ordering::FailFirst,
-        max_solutions: 1,
-        ..Default::default()
-    };
-    let solutions = csp.solve_with_given(&config, &given);
-    assert!(!solutions.is_empty(), "Should solve Inkala 2010");
-    validate_sudoku_solution(&solutions[0]);
-}
-
-#[test]
-#[ignore = "requires GAC alldiff — too slow with binary FC"]
-fn test_hard_sudoku_golden_nugget() {
-    let (mut csp, given) = build_sudoku_9x9(&GOLDEN_NUGGET);
-    let config = SolveConfig {
-        pruning: Pruning::ForwardChecking,
-        ordering: Ordering::FailFirst,
-        max_solutions: 1,
-        ..Default::default()
-    };
-    let solutions = csp.solve_with_given(&config, &given);
-    assert!(!solutions.is_empty(), "Should solve Golden Nugget");
-    validate_sudoku_solution(&solutions[0]);
-}
-
-#[test]
-#[ignore = "requires GAC alldiff — too slow with binary FC"]
-fn test_hard_sudoku_platinum_blonde() {
-    let (mut csp, given) = build_sudoku_9x9(&PLATINUM_BLONDE);
-    let config = SolveConfig {
-        pruning: Pruning::ForwardChecking,
-        ordering: Ordering::FailFirst,
-        max_solutions: 1,
-        ..Default::default()
-    };
-    let solutions = csp.solve_with_given(&config, &given);
-    assert!(!solutions.is_empty(), "Should solve Platinum Blonde");
-    validate_sudoku_solution(&solutions[0]);
-}
-
-#[test]
-#[ignore = "requires GAC alldiff — too slow with binary FC"]
-fn test_hard_sudoku_minimal_17() {
-    let (mut csp, given) = build_sudoku_9x9(&MINIMAL_17);
-    let config = SolveConfig {
-        pruning: Pruning::ForwardChecking,
-        ordering: Ordering::FailFirst,
-        max_solutions: 1,
-        ..Default::default()
-    };
-    let solutions = csp.solve_with_given(&config, &given);
-    assert!(!solutions.is_empty(), "Should solve 17-clue minimal");
-    validate_sudoku_solution(&solutions[0]);
-}
-
-// -----------------------------------------------------------------------
-// 45. Hard sudoku across multiple configs
-// -----------------------------------------------------------------------
-#[test]
-#[ignore = "requires GAC alldiff — too slow with binary FC"]
-fn test_hard_sudoku_all_configs() {
-    let configs = [
-        (Pruning::ForwardChecking, Ordering::FailFirst),
-        (Pruning::ForwardChecking, Ordering::Mrv),
-        (Pruning::Ac3, Ordering::FailFirst),
-    ];
-
-    for (pruning, ordering) in &configs {
-        let (mut csp, given) = build_sudoku_9x9(&AL_ESCARGOT);
-
-        let config = SolveConfig {
-            pruning: *pruning,
-            ordering: *ordering,
-            max_solutions: 1,
-            ..Default::default()
-        };
-
-        let solutions = csp.solve_with_given(&config, &given);
-        assert!(
-            !solutions.is_empty(),
-            "Al Escargot failed with pruning={:?}, ordering={:?}",
-            pruning,
-            ordering
-        );
-        validate_sudoku_solution(&solutions[0]);
-    }
-}
 
 // -----------------------------------------------------------------------
 // 46. Regression test: FailFirst <= Chronological backtracks on Sudoku

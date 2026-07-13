@@ -5,25 +5,47 @@ import { test, expect, type Page } from '@playwright/test';
 async function loadApp(page: Page) {
   await page.goto('./');
   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+  // Initial auto-deal settled: the givens have rendered their glyphs (useSudoku init
+  // fires randomize() on mount). Replaces the fixed reveal-wave sleep every caller kept
+  // after loadApp — a board on the desk is the real precondition for every act below.
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+    .toBeGreaterThan(0);
+}
+
+/** The board's value signature — every cell input joined. It flips iff a fresh puzzle is
+ *  dealt, so it's the condition the async worker deal handshakes on (never a sleep). */
+function boardSignature(page: Page): Promise<string> {
+  return page.evaluate(() =>
+    Array.from(
+      document.querySelectorAll('.sudoku-cell input'),
+      (i) => (i as HTMLInputElement).value,
+    ).join(','),
+  );
 }
 
 async function randomizeBoard(page: Page) {
+  const before = await boardSignature(page);
   await page.locator('.controls-card button[aria-label="Randomize board"]').click();
-  // Wait for API response + animation start
-  await page.waitForTimeout(2000);
+  // Settle on the fresh deal arriving: the worker re-deals async and the value signature
+  // flips once the new givens land (randomize updates in place — the grid doesn't redraw,
+  // so the board signature, not a grid handoff, is the real settle condition).
+  await expect.poll(() => boardSignature(page), { timeout: 15000 }).not.toBe(before);
 }
 
 async function solveBoard(page: Page) {
   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
-  // Wait for API response + animation
-  await page.waitForTimeout(2000);
+  // Settle on the graded terminal state: solve-success | solve-failure lands on the board
+  // once the Worker returns (both terminal — the caller asserts the specific verdict).
+  await expect(page.locator('.board-wrapper')).toHaveClass(/solve-(success|failure)/, {
+    timeout: 20000,
+  });
 }
 
 // ── Test 1: Valid Solution ──────────────────────────────────────────
 
 test('valid solution: randomize → solve → success state + all cells filled', async ({ page }) => {
   await loadApp(page);
-  await page.waitForTimeout(1500);
 
   await randomizeBoard(page);
   await solveBoard(page);
@@ -42,7 +64,6 @@ test('valid solution: randomize → solve → success state + all cells filled',
 
 test('invalid solution: solve → edit cell → state reverts to idle', async ({ page }) => {
   await loadApp(page);
-  await page.waitForTimeout(1500);
 
   await randomizeBoard(page);
   await solveBoard(page);
@@ -56,9 +77,9 @@ test('invalid solution: solve → edit cell → state reverts to idle', async ({
   const firstCell = page.locator('.sudoku-cell input').first();
   await firstCell.click();
   await firstCell.fill('1');
-  await page.waitForTimeout(500);
 
-  // Solve state should revert (no longer solve-success)
+  // Solve state should revert (no longer solve-success). The negative class assertion
+  // auto-waits for solveState to fall back to idle on the edit — the settle, no sleep.
   await expect(board).not.toHaveClass(/solve-success/);
 });
 
@@ -66,7 +87,6 @@ test('invalid solution: solve → edit cell → state reverts to idle', async ({
 
 test('consecutive solve: values remain unchanged on second solve', async ({ page }) => {
   await loadApp(page);
-  await page.waitForTimeout(1500);
 
   await randomizeBoard(page);
   await solveBoard(page);
@@ -100,7 +120,6 @@ test('consecutive solve: values remain unchanged on second solve', async ({ page
 
 test('given cells use foreground ink, solved cells use solver-ink', async ({ page }) => {
   await loadApp(page);
-  await page.waitForTimeout(1500);
 
   await randomizeBoard(page);
 
@@ -125,7 +144,6 @@ test('given cells use foreground ink, solved cells use solver-ink', async ({ pag
 
 test('given cell override: foreground stroke reverts to user-ink on override', async ({ page }) => {
   await loadApp(page);
-  await page.waitForTimeout(1500);
 
   await randomizeBoard(page);
 
@@ -147,18 +165,26 @@ test('given cell override: foreground stroke reverts to user-ink on override', a
     nativeSetter.call(input, '2');
     input.dispatchEvent(new Event('input', { bubbles: true }));
   }, givenCellIdx);
-  await page.waitForTimeout(500);
 
-  // That cell's glyph should now use user-ink
-  const overriddenStroke = await page.locator('.sudoku-cell').nth(givenCellIdx).locator('.glyph-svg path').getAttribute('stroke');
-  expect(overriddenStroke).toMatch(/user-ink/);
+  // That cell's glyph re-inks to user-ink on the override — poll the stroke attribute
+  // until it reflects the re-render (the settle condition), never a fixed sleep.
+  await expect
+    .poll(
+      () =>
+        page
+          .locator('.sudoku-cell')
+          .nth(givenCellIdx)
+          .locator('.glyph-svg path')
+          .getAttribute('stroke'),
+      { timeout: 5000 },
+    )
+    .toMatch(/user-ink/);
 });
 
 // ── Test 5b: Solve Failure — Conflicting Values → Failure State ─────
 
 test('solve failure: conflicting user values produce solve-failure state', async ({ page }) => {
   await loadApp(page);
-  await page.waitForTimeout(1500);
 
   await randomizeBoard(page);
 
@@ -184,7 +210,13 @@ test('solve failure: conflicting user values produce solve-failure state', async
         input.dispatchEvent(new Event('input', { bubbles: true }));
       }, idx);
     }
-    await page.waitForTimeout(300);
+    // Both probe cells show their conflicting glyph before we solve — settle on the
+    // render (value 1 draws a glyph) rather than a fixed delay.
+    for (const idx of emptyCells.slice(0, 2)) {
+      await expect(
+        page.locator('.sudoku-cell').nth(idx).locator('.glyph-svg'),
+      ).toHaveCount(1, { timeout: 5000 });
+    }
 
     // Solve — should fail because of the duplicate
     await solveBoard(page);
@@ -200,7 +232,6 @@ test('solve failure: conflicting user values produce solve-failure state', async
 
 test('noise animation: randomize produces multiple unique reveal delays', async ({ page }) => {
   await loadApp(page);
-  await page.waitForTimeout(1500);
 
   await randomizeBoard(page);
 

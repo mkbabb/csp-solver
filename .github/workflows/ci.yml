@@ -17,8 +17,14 @@
 #
 # Lane → job map (W0 lane table; provenance cited per step; T3 grew the rust,
 # py-runtime, and frontend jobs with the gac-ab/corpus-spine smokes, stubtest +
-# tripwire, and knip respectively) — the lane set rides nine
-# jobs (the rust job carries lanes 2 + 3):
+# tripwire, and knip; T4-W2 added the eslint boundary lane, promoted knip to
+# error-level, and re-cut the flat fan-out into a compute-cost DAG) — the lane
+# set rides ten jobs (the rust job carries lanes 2 + 3):
+#   0.  build-lean-wasm    -> build-lean-wasm (the SHIP lean artifact built ONCE,
+#                                         uploaded as `lean-wasm-pkg`; frontend +
+#                                         e2e + twiggy(lean half) `needs:` it and
+#                                         download — kills 2 redundant lean builds
+#                                         + the Rust toolchain in frontend/e2e)
 #   1.  fmt + clippy       -> lint       (clippy -D warnings; strict, no continue-on-error)
 #   2.  build + test       -> rust       (cargo build/test --workspace — NEVER per-crate)
 #   3.  bench + corpus smoke-> rust      (queens assert_eq!(92/14200); gac_ab --test;
@@ -27,10 +33,20 @@
 #   4.  py compile         -> py-compile (cargo check --features py under Python 3.13 — pyo3 0.29-tested floor, not a hard ceiling)
 #   5.  py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in csp-solver/tests-py)
 #   6.  wasm               -> wasm       (wasm-pack test --node + clippy --target wasm32)
-#   7.  twiggy budgets     -> twiggy     (full module fail>240 KB / warn>230 KB)
-#   8.  frontend           -> frontend   (npm ci --dry-run; npm ci; vue-tsc --noEmit; knip)
-#   9.  e2e                -> e2e        (lean wasm build -> Playwright over the Vue SPA)
+#   7.  twiggy budgets     -> twiggy     (full module fail>240 KB / warn>230 KB; lean
+#                                         half downloads the shared ship artifact)
+#   8.  frontend           -> frontend   (download lean pkg; npm ci --dry-run; npm ci;
+#                                         vue-tsc --noEmit; eslint boundary rig; knip)
+#   9.  e2e                -> e2e        (download lean pkg -> Playwright over the Vue SPA)
 #   10. iai                -> iai        (callgrind deterministic instruction-count baseline)
+#
+# Compute-cost DAG (T4-W2, r4-corrected — a `needs:` saves redundant CI minutes,
+# NOT wall-time; a predecessor serializes onto each dependent's critical path, so
+# edges are added ONLY where they kill redundant compute without lengthening the
+# critical path): build-lean-wasm ← {frontend, e2e, twiggy}. lint/rust/py-*/wasm/
+# iai stay independent (they consume no wasm artifact). Future cheap independent
+# jobs — W5 cargo-audit, W1 proof:browser — slot in with no `needs:` (no lint-
+# before-build gate: it would lengthen the build-lean-wasm critical path).
 #
 # Build posture (STANDING, per the T15 refutation — synthesis-pass3.md §1 #14):
 # default release profile retained. NO lto=fat, NO codegen-units=1, NO strip
@@ -285,6 +301,49 @@ jobs:
             - name: clippy --target wasm32 (csp-solver-wasm)
               run: cargo clippy -p csp-solver-wasm --target wasm32-unknown-unknown -- -D warnings
 
+    # ---------------------------------------------------------------- Lane 0
+    # build-lean-wasm — the compute-cost DAG predecessor (T4-W2, r4). Builds the
+    # LEAN deploy artifact ONCE with the EXACT ship recipe (byte-for-byte the same
+    # command the frontend + e2e lanes each ran independently: `--target web
+    # --profile wasm-release --no-default-features` — sudoku + futoshiki surface,
+    # the assignment feature compiled out) and uploads `csp-solver/wasm/pkg` as
+    # `lean-wasm-pkg`. frontend, e2e, and twiggy's lean half `needs:` this and
+    # DOWNLOAD it instead of each rebuilding — killing 2 redundant lean builds and
+    # the Rust toolchain + wasm-pack install in the (now Node-only) frontend + e2e
+    # jobs. Framing is COMPUTE COST, not wall-time (r4): this serializes onto the
+    # frontend/e2e/twiggy critical path, but the build is cheap and the duplicated
+    # compute it removes is the win.
+    build-lean-wasm:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust stable toolchain (wasm32)
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: wasm32-unknown-unknown
+            - name: Install wasm-pack (>=0.14 floor)
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: wasm-pack
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-build-lean-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: Build the lean wasm artifact (EXACT ship recipe — the package.json file-link target)
+              run: wasm-pack build csp-solver/wasm --scope mkbabb --target web --profile wasm-release --no-default-features
+            - name: Upload the lean wasm pkg (shared by frontend + e2e + twiggy)
+              uses: actions/upload-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+                  if-no-files-found: error
+                  retention-days: 1
+
     # ---------------------------------------------------------------- Lane 7
     # twiggy budgets — measured artifact bands (Pass-2 prototype 6). Full module
     # FAIL >240 KB / WARN >230 KB on the raw .wasm (decimal KB, matching prototype
@@ -294,6 +353,7 @@ jobs:
     twiggy:
         runs-on: ubuntu-latest
         timeout-minutes: 25
+        needs: [build-lean-wasm]
         steps:
             - uses: actions/checkout@v4
             - name: Install Rust stable toolchain (+ wasm32 target)
@@ -346,15 +406,27 @@ jobs:
                   elif [ "$RAW" -gt 230000 ]; then
                     echo "::warning::wasm full module ${RAW} B exceeds the 230 KB warn threshold"
                   fi
-            # Lean deploy artifact (W6): sudoku + futoshiki surface, the
-            # assignment feature compiled out — the module the frontend Worker
-            # actually ships.
-            - name: wasm-pack build (lean sudoku artifact)
-              run: wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release --no-default-features
+            # Lean deploy artifact (W6): sudoku + futoshiki surface, the assignment
+            # feature compiled out — the module the frontend Worker actually ships.
+            # T4-W2 compute-cost DAG: DOWNLOAD the shared ship artifact (built once
+            # in build-lean-wasm) instead of rebuilding the lean half here. It lands
+            # in a distinct dir (lean-pkg/) so the full-module pkg measured above is
+            # not clobbered.
+            - name: Download the shared lean wasm pkg
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: lean-pkg
             - name: lean raw-size budget (fail >93 KB)
+              # Measures the EXACT ship artifact (`--target web` lean build, shared
+              # from build-lean-wasm) — twiggy previously rebuilt the lean half on
+              # the bundler-default target as a proxy; it now measures the bytes the
+              # frontend actually ships. Band unchanged (measured 90,602 B; the
+              # `--target web` delta is immaterial and the 93,000 B floor has headroom).
               run: |
                   set -euo pipefail
-                  WASM=csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+                  WASM=lean-pkg/csp_solver_wasm_bg.wasm
+                  test -f "$WASM" || { echo "::error::$WASM missing from the lean-wasm-pkg artifact"; exit 1; }
                   RAW=$(wc -c < "$WASM")
                   echo "lean artifact raw size: ${RAW} B (measured 90,602 B; fail >93,000)"
                   if [ "$RAW" -gt 93000 ]; then
@@ -364,33 +436,23 @@ jobs:
 
     # ---------------------------------------------------------------- Lane 8
     # frontend — npm ci --dry-run (EUSAGE was P0, Pass-2 prototype 8) then npm ci +
-    # vue-tsc --noEmit. @mkbabb/csp-solver-wasm is a monorepo file: link to the
-    # gitignored csp-solver/wasm/pkg build output (the LEAN artifact — consuming
-    # the published full-featured registry package would regress the 93 KB band),
-    # so this lane builds it first.
+    # vue-tsc --noEmit + eslint boundary rig + knip. @mkbabb/csp-solver-wasm is a
+    # monorepo file: link to the gitignored csp-solver/wasm/pkg build output (the
+    # LEAN artifact — consuming the published full-featured registry package would
+    # regress the 93 KB band). T4-W2 compute-cost DAG: instead of rebuilding that
+    # artifact, this lane `needs:` build-lean-wasm and DOWNLOADS it — so there is no
+    # Rust toolchain / wasm-pack / cargo cache here at all (the lane is Node-only).
     frontend:
         runs-on: ubuntu-latest
         timeout-minutes: 20
+        needs: [build-lean-wasm]
         steps:
             - uses: actions/checkout@v4
-            - name: Install Rust stable toolchain (wasm32)
-              uses: dtolnay/rust-toolchain@stable
+            - name: Download the lean wasm pkg (the package.json file-link target)
+              uses: actions/download-artifact@v4
               with:
-                  targets: wasm32-unknown-unknown
-            - name: Install wasm-pack (>=0.14 floor)
-              uses: taiki-e/install-action@v2
-              with:
-                  tool: wasm-pack
-            - name: Cache cargo registry + target
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ~/.cargo/git
-                      target
-                  key: cargo-frontend-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-            - name: Build the lean wasm artifact (the package.json file-link target)
-              run: wasm-pack build csp-solver/wasm --scope mkbabb --target web --profile wasm-release --no-default-features
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
             - name: Set up Node (LTS) with npm cache
               uses: actions/setup-node@v4
               with:
@@ -410,48 +472,44 @@ jobs:
             - name: vue-tsc --noEmit
               working-directory: web/frontend
               run: npx vue-tsc --noEmit
-            # knip — the standing dead-file / dead-dependency gate (T3-W5, A19/A20).
-            # Enforces `files`/`dependencies` at error (the dep-hygiene surface this
-            # gate owns); dead `exports`/`types` report at `warn` (see knip.json rules)
-            # — the pencil/games export-thinning is a source-lane follow-up, but the
-            # census prints every run so nothing goes unreported.
-            - name: knip (dead-file / dead-dependency gate)
+            # eslint — the colocation boundary rig (T4-W2, eslint.config.js):
+            # pencil↮games, sudoku↮futoshiki, and the 3-level pencil-depth rule.
+            # Wired here so a cross-boundary import reds the frontend lane (born-RED
+            # proven: a src/pencil/** -> @games/** import trips no-restricted-imports).
+            # Build output (dist*/) is ignored by the config so bundled JS never
+            # enters the lint set.
+            - name: eslint (colocation boundary rig)
               working-directory: web/frontend
-              run: npx knip
+              run: npm run lint:eslint
+            # knip — the standing dead-file / dead-dependency / dead-EXPORT gate
+            # (T3-W5 + T4-W2). files/dependencies AND exports/types now enforce at
+            # `error` (knip.json) — dead exported surface reds the lane, not just a
+            # warn census. The two pencil barrels stay on `entry` this wave; W4 drops
+            # them off `entry` as it deletes the barrels into one deep-import grammar.
+            - name: knip (dead-file / dead-dependency / dead-export gate)
+              working-directory: web/frontend
+              run: npm run lint:knip
 
     # ---------------------------------------------------------------- Lane 9
-    # e2e — Playwright over the Vue SPA (ratification R6). Mirrors the frontend
-    # lane's setup EXACTLY: it pins npm >=11 (older Node's npm 10 mis-resolves the
-    # lockfile) and builds the LEAN wasm artifact BEFORE `npm ci` because the
-    # @mkbabb/csp-solver-wasm file: link points at the gitignored
-    # csp-solver/wasm/pkg build output (deliberately NOT the registry package —
-    # consuming that would regress the 93 KB band). playwright.config.ts's
+    # e2e — Playwright over the Vue SPA (ratification R6). Node-only after the
+    # T4-W2 compute-cost DAG: it `needs:` build-lean-wasm and DOWNLOADS the lean
+    # @mkbabb/csp-solver-wasm pkg (the file: link target) rather than rebuilding it
+    # — no Rust toolchain / wasm-pack / cargo cache here. It still pins npm >=11
+    # (older Node's npm 10 mis-resolves the lockfile). playwright.config.ts's
     # webServer block spins `npm run dev` on :3000 for the run. The chromium
     # browser bundle is cached (keyed on the resolved Playwright version from the
     # lockfile) to keep CI-minutes cost down; the HTML report uploads on failure.
     e2e:
         runs-on: ubuntu-latest
         timeout-minutes: 25
+        needs: [build-lean-wasm]
         steps:
             - uses: actions/checkout@v4
-            - name: Install Rust stable toolchain (wasm32)
-              uses: dtolnay/rust-toolchain@stable
+            - name: Download the lean wasm pkg (the package.json file-link target)
+              uses: actions/download-artifact@v4
               with:
-                  targets: wasm32-unknown-unknown
-            - name: Install wasm-pack (>=0.14 floor)
-              uses: taiki-e/install-action@v2
-              with:
-                  tool: wasm-pack
-            - name: Cache cargo registry + target
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ~/.cargo/git
-                      target
-                  key: cargo-e2e-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
-            - name: Build the lean wasm artifact (the package.json file-link target)
-              run: wasm-pack build csp-solver/wasm --scope mkbabb --target web --profile wasm-release --no-default-features
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
             - name: Set up Node (LTS) with npm cache
               uses: actions/setup-node@v4
               with:
@@ -483,6 +541,22 @@ jobs:
             - name: "Run the Playwright e2e suite"
               working-directory: web/frontend
               run: npx playwright test
+            # T4-W2 golden gate — the capture/compare/review system (visual-golden.spec.ts
+            # vs committed e2e/goldens/*-linux.png crops) + the per-image byte ceiling.
+            # Runs in this job to reuse the checkout/node_modules/chromium bundle
+            # (compute-cost DAG: no redundant setup for a 4-test suite).
+            - name: "Run the visual golden gate"
+              working-directory: web/frontend
+              run: npx playwright test --config playwright-golden.config.ts
+            - name: "Golden byte ceiling"
+              working-directory: web/frontend
+              run: npm run test:golden:bytes
+            # T4-W2 throttle gate — throttled-void against a BUNDLED preview build
+            # (playwright-throttle.config.ts, port 4188); testIgnored from the default
+            # config, so it must run explicitly or the D3 gate goes dark.
+            - name: "Run the throttled-void gate (bundled preview)"
+              working-directory: web/frontend
+              run: npm run test:e2e:throttle
             - name: Upload Playwright HTML report (failure only)
               if: failure()
               uses: actions/upload-artifact@v4
@@ -492,13 +566,34 @@ jobs:
                   retention-days: 7
 
     # ---------------------------------------------------------------- Lane 10
-    # iai — deterministic instruction-count baseline for the solver hot path
-    # (P6 ADOPT, Tranche-II Pass-2). arm64-macOS can't run Valgrind, so callgrind
-    # counts are Linux/CI-only; `benches/iai_queens.rs` measures one fully-
-    # deterministic 8-queens first-solution solve (AC-3 + FailFirst) under
-    # callgrind. Instruction counts are a pure function of the compiled binary, so
-    # the run-to-run delta is exactly 0 on an unchanged binary — P6 proved
-    # 1,585,722 instructions across 3 ephemeral runners at 0.000000% delta.
+    # iai — instruction-count baseline gate for the solver hot path (P6 ADOPT,
+    # Tranche-II Pass-2; re-founded T4-W2). arm64-macOS can't run Valgrind, so
+    # callgrind counts are Linux/CI-only; `benches/iai_queens.rs` measures one
+    # fully-deterministic 8-queens first-solution solve (AC-3 + FailFirst) under
+    # callgrind. Instruction count is a pure function of the compiled binary.
+    #
+    # WHAT THIS GATES (and what it used to NOT gate): the prior lane ran the SAME
+    # bench binary twice and asserted |I2-I1|/I1 < 1% — a determinism tautology.
+    # run1 == run2 for any commit (identical binary => identical count), so the
+    # delta was identically 0 and a 2x hot-path regression sailed green: the only
+    # absolute baseline was never stored across commits, never compared. This lane
+    # now runs the bench ONCE and diffs the measured count against a golden
+    # committed at `csp-solver/benches/iai_queens.baseline`, failing outside a
+    # +/-2% band (gate logic: `csp-solver/benches/iai_gate.sh`).
+    #
+    # SEARCH-TRAJECTORY / INSTRUCTION-COUNT LOCK: legitimate improvements must
+    # re-baseline deliberately in a reviewed commit (edit iai_queens.baseline) —
+    # this gate reds on a real speedup as loudly as on a regression, exactly like
+    # the frozen search-node tripwire (gac_kernel_beats). No silent auto-update,
+    # or it drifts back into the tautology it replaced.
+    #
+    # WHY +/-2%: on a pinned binary the count is exactly deterministic (P6: 3
+    # runners, 0.000000% delta), but this lane rides `@stable`, whose rustc
+    # codegen shifts release-to-release move this small kernel's count by well
+    # under a percent; 2% clears that drift with headroom while a real
+    # algorithmic regression (a doubled hot loop is +40..100%) fails by a wide
+    # margin. Tighten the band (or pin the toolchain) when a shift proves it too
+    # loose — that too is a reviewed re-baseline.
     #
     # Budget: Valgrind is apt-installed (~15 s) and iai-callgrind-runner is
     # cargo-install-cached in ~/.cargo/bin. Cache-cold the runner build dominates
@@ -508,7 +603,8 @@ jobs:
     # job so no ANSI escape (the grey `\e[90m`) smuggles a bare "90" into the
     # numeric gate ahead of the real Instructions count (the P6 run-1/2 parser
     # bug). The gate ALSO ANSI-strips + anchors the digit-run to the
-    # `Instructions:` label — belt and suspenders.
+    # `Instructions:` label — belt and suspenders (folded from spike/iai-callgrind
+    # ff5d9de3, "harden gate parser — strip ANSI, anchor to Instructions label").
     iai:
         runs-on: ubuntu-latest
         timeout-minutes: 20
@@ -517,6 +613,7 @@ jobs:
             IAI_BENCH: iai_queens
             IAI_CALLGRIND_COLOR: never
             CARGO_TERM_COLOR: never
+            IAI_TOLERANCE_PCT: '2.0'
         steps:
             - uses: actions/checkout@v4
             - name: Install Rust stable toolchain
@@ -541,61 +638,23 @@ jobs:
                     cargo install iai-callgrind-runner --version 0.16.1 --locked
                   fi
                   iai-callgrind-runner --version || true
-            - name: "Run 1 — establish the callgrind baseline"
+            - name: "Run — measure the callgrind instruction count"
               run: |
                   set -o pipefail
-                  cargo bench -p csp-solver --bench "$IAI_BENCH" 2>&1 | tee run1.log
-            - name: "Run 2 — re-measure the identical binary"
+                  cargo bench -p csp-solver --bench "$IAI_BENCH" 2>&1 | tee run.log
+            - name: "GATE — diff measured count vs the committed golden (+/-2% band)"
               run: |
-                  set -o pipefail
-                  cargo bench -p csp-solver --bench "$IAI_BENCH" 2>&1 | tee run2.log
-            - name: "GATE — parse counts + assert <1% run-to-run delta"
-              run: |
-                  set -euo pipefail
-                  extract() {
-                    # Strip any ANSI escapes FIRST (belt-and-suspenders vs the
-                    # IAI_CALLGRIND_COLOR=never env), then take the first integer
-                    # after the "Instructions:" label — never a colour-code digit.
-                    sed -E $'s/\x1b\\[[0-9;]*[mK]//g' "$1" \
-                      | grep -E 'Instructions:' | head -1 \
-                      | sed -E 's/.*Instructions:[^0-9]*([0-9][0-9,]*).*/\1/' \
-                      | tr -d ','
-                  }
-                  I1="$(extract run1.log || true)"
-                  I2="$(extract run2.log || true)"
-                  echo "run1 instructions: '${I1}'"
-                  echo "run2 instructions: '${I2}'"
-                  if [ -z "${I1}" ] || [ -z "${I2}" ]; then
-                    echo "::error::could not parse an Instructions count from a run log — the lane did not produce callgrind output"
-                    echo "----- run1.log tail -----"; tail -40 run1.log || true
-                    echo "----- run2.log tail -----"; tail -40 run2.log || true
-                    exit 1
-                  fi
-                  DELTA_PCT="$(awk -v a="$I1" -v b="$I2" 'BEGIN{ if(a==0){print "inf"} else {d=(b-a)/a*100; if(d<0)d=-d; printf "%.6f", d} }')"
-                  echo "delta: ${DELTA_PCT}%"
-                  {
-                    echo "## iai — P6 instruction-count gate";
-                    echo "";
-                    echo "| metric | value |";
-                    echo "|---|---|";
-                    echo "| run1 instructions | ${I1} |";
-                    echo "| run2 instructions | ${I2} |";
-                    echo "| run-to-run delta | ${DELTA_PCT}% |";
-                    echo "| gate (<1%) | $([ "$(awk -v d="$DELTA_PCT" 'BEGIN{print (d<1)?1:0}')" = 1 ] && echo PASS || echo FAIL) |";
-                  } >> "$GITHUB_STEP_SUMMARY"
-                  PASS="$(awk -v d="$DELTA_PCT" 'BEGIN{print (d<1)?1:0}')"
-                  if [ "$PASS" != "1" ]; then
-                    echo "::error::instruction-count delta ${DELTA_PCT}% >= 1% — not deterministic"
-                    exit 1
-                  fi
-                  echo "GATE PASS — deterministic instruction counts (${DELTA_PCT}% delta)"
-            - name: "Upload logs + callgrind out-files"
+                  bash csp-solver/benches/iai_gate.sh \
+                    run.log \
+                    csp-solver/benches/iai_queens.baseline \
+                    "$IAI_TOLERANCE_PCT"
+            - name: "Upload log + baseline + callgrind out-files"
               if: always()
               uses: actions/upload-artifact@v4
               with:
                   name: iai-evidence
                   path: |
-                      run1.log
-                      run2.log
+                      run.log
+                      csp-solver/benches/iai_queens.baseline
                       target/iai/**
                   if-no-files-found: warn

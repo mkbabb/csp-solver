@@ -17,7 +17,13 @@ async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
   await expect
     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
     .toBeGreaterThan(0);
-  await page.waitForTimeout(800); // reveal wave settles
+  // Grid draw-in → boil steady-state handoff: `.is-active` exists only once the grid has
+  // finished drawing in (holds under prefers-reduced-motion too — the beat freezes at
+  // pose 0, still is-active), so it's the board's settle. Replaces the reveal-wave sleep.
+  await page.waitForSelector('g.boil-frame-layer.is-active', {
+    state: 'attached', // stays attached in both baked (display:none) & filtered steady forms
+    timeout: 15000,
+  });
 }
 
 const boardBox = (page: Page) =>

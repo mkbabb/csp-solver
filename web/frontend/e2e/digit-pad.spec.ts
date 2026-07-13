@@ -30,7 +30,13 @@ async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
   await expect
     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
     .toBeGreaterThan(0);
-  await page.waitForTimeout(800); // reveal wave settles
+  // Grid draw-in → boil steady-state handoff: `.is-active` exists only once the grid
+  // finished drawing in, so it's the board's settle (generalizes the suite's `.is-active`
+  // grid handoff). Replaces the fixed reveal-wave sleep.
+  await page.waitForSelector('g.boil-frame-layer.is-active', {
+    state: 'attached', // stays attached in both baked (display:none) & filtered steady forms
+    timeout: 15000,
+  });
 }
 
 /** Index of the first blank cell (no glyph). */
@@ -120,7 +126,12 @@ test('digit pad (futoshiki twin): tap cell → tap digit lands', async ({ page }
   await expect
     .poll(() => page.locator('.futoshiki-cell .glyph-svg').count(), { timeout: 15000 })
     .toBeGreaterThan(0);
-  await page.waitForTimeout(800);
+  // Grid draw-in → boil steady-state handoff (same HandDrawnGrid as sudoku): the settle,
+  // never a fixed sleep.
+  await page.waitForSelector('g.boil-frame-layer.is-active', {
+    state: 'attached', // stays attached in both baked (display:none) & filtered steady forms
+    timeout: 15000,
+  });
 
   const pad = page.locator('.digit-pad');
   await expect(pad).toBeVisible();
@@ -180,7 +191,14 @@ test('coarse affordances: persistent peek washi on a ≥44px target, icon sublab
     .poll(
       async () => {
         await clearBtn.tap();
-        await page.waitForTimeout(250);
+        // Flush one committed paint so the tap's arm/clear render lands before the count
+        // read — a render-settle tied to the next frame, not a wall-clock guess.
+        await page.evaluate(
+          () =>
+            new Promise((r) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => r(null))),
+            ),
+        );
         return page.locator('.sudoku-cell .glyph-svg').count();
       },
       { timeout: 15000 },

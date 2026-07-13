@@ -148,7 +148,10 @@ const appShellDepthRule = {
 }
 
 export default tseslint.config(
-  { ignores: ['dist/**', 'node_modules/**', 'e2e/**'] },
+  // `dist*/**` covers the deploy build (`dist/`) AND preview/throttle builds
+  // (`dist-throttle/`, the throttled-void probe's served bundle) — minified output is
+  // never source and must never enter the lint set (else the rig reds on bundled JS).
+  { ignores: ['dist*/**', 'node_modules/**', 'e2e/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   // 'essential' (correctness only), not 'recommended'/'strongly-recommended' — this repo's

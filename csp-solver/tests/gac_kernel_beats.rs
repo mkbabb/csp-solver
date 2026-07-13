@@ -11,14 +11,12 @@
 //! P1 warm==cold pruning parity (incl. multi-call universe-shrink) · P2
 //! cross-value-universe scratch reset (same-thread == fresh-thread) · P3
 //! `Csp<FiniteDomain<String>>` monomorphizes & solves (generic bound
-//! unbroken) · P4 singleton-removal snapshot equivalence · P5 node/backtrack
-//! counts frozen + queens8=92 + n=20 LAP proven-optimal · P6 sudoku+futoshiki
-//! green under the pool.
+//! unbroken) · P4 singleton-removal snapshot equivalence · P5 one frozen
+//! node-count tripwire (re-baseline lock) + n=20 LAP proven-optimal · P6
+//! sudoku+futoshiki green under the pool.
 
 use csp_solver::assignment;
-use csp_solver::constraint::{
-    AllDifferent, AllDifferentExcept, Constraint, LambdaConstraint, Revision,
-};
+use csp_solver::constraint::{AllDifferent, AllDifferentExcept, Constraint, Revision};
 use csp_solver::domain::{BitsetDomain, FiniteDomain};
 use csp_solver::solver::gac::{next_gac_id, propagate_gac_core};
 use csp_solver::variable::Variable;
@@ -311,26 +309,45 @@ fn solve_bnb(n: usize) -> csp_solver::AssignmentSolution {
 
 #[test]
 fn p5_bnb_node_counts_frozen() {
-    // The dispatch-bypass forces the CSP B&B path so the verify-26 node/
-    // backtrack counts stay a live regression tripwire. ANY delta means a beat
-    // moved propagation strength (or the singleton pool broke snapshot parity).
+    // ── SEARCH-TRAJECTORY LOCK — improvements must re-baseline deliberately ──
+    // ONE frozen node/backtrack count, deliberately exact. The dispatch-bypass
+    // forces the CSP B&B path so this is the sole tripwire that reds on ANY shift
+    // in the assignment B&B search order — a beat that moved propagation
+    // strength, or a singleton pool that broke snapshot parity. It is EXPECTED to
+    // red on a legitimate search-order IMPROVEMENT too: the new number is then
+    // re-baselined here in a reviewed commit, never auto-relaxed. Soundness
+    // itself is guarded elsewhere (solution-set invariance in
+    // `oracle_and_invariance.rs` + the corpus node-spine, `ci.yml`); this locks
+    // trajectory, nothing else does.
     let n10 = solve_bnb(10);
-    assert_eq!(n10.stats.nodes_explored, 506, "assign n=10 nodes");
-    assert_eq!(n10.stats.backtracks, 515, "assign n=10 backtracks");
+    assert_eq!(n10.stats.nodes_explored, 506, "assign n=10 nodes (frozen)");
+    assert_eq!(n10.stats.backtracks, 515, "assign n=10 backtracks (frozen)");
     assert!(!n10.stats.budget_exceeded);
 
+    // n=15 — a BAND, not a freeze. Catches a gross propagation regression at a
+    // larger size without reddening on benign search-order drift (the freeze
+    // above owns the exact-trajectory duty). Current value: 4016 nodes.
     let n15 = solve_bnb(15);
-    assert_eq!(n15.stats.nodes_explored, 4016, "assign n=15 nodes");
-    assert_eq!(n15.stats.backtracks, 4043, "assign n=15 backtracks");
-    assert!(!n15.stats.budget_exceeded);
+    assert!(
+        !n15.stats.budget_exceeded,
+        "assign n=15 completes in budget"
+    );
+    assert!(
+        (3_000..5_000).contains(&n15.stats.nodes_explored),
+        "assign n=15 nodes {} outside the sane band 3_000..5_000 — a gross regression",
+        n15.stats.nodes_explored
+    );
 
+    // n=20 — a PROPERTY, not a trajectory count: this dense instance provably
+    // blows the B&B node budget, halting at the deterministic 1_000_000 cap (a
+    // hard ceiling the search stops at, not an order-sensitive value). The LAP
+    // path beats it — see `p5_n20_lap_proven_optimal`.
     let n20 = solve_bnb(20);
+    assert!(n20.stats.budget_exceeded, "n=20 B&B budget-blows");
     assert_eq!(
         n20.stats.nodes_explored, 1_000_000,
-        "assign n=20 nodes (budget cap)"
+        "n=20 halts at the deterministic node-budget cap"
     );
-    assert_eq!(n20.stats.backtracks, 1_000_019, "assign n=20 backtracks");
-    assert!(n20.stats.budget_exceeded, "n=20 B&B budget-blows");
 }
 
 #[test]
@@ -374,34 +391,10 @@ fn p5_n20_lap_proven_optimal() {
     );
 }
 
-#[test]
-fn p5_queens8_enumerate_92() {
-    let n: u32 = 8;
-    let mut csp: Csp<BitsetDomain> = Csp::new();
-    let vars = csp.add_variables(&BitsetDomain::range(n), n as usize);
-    csp.add_all_different(vars.clone());
-    for i in 0..n {
-        for j in (i + 1)..n {
-            let vi = vars[i as usize];
-            let vj = vars[j as usize];
-            let diff = j - i;
-            csp.add_constraint(LambdaConstraint::new(
-                vec![vi, vj],
-                move |a: &[Option<u32>]| match (&a[vi as usize], &a[vj as usize]) {
-                    (Some(ri), Some(rj)) => ri.abs_diff(*rj) != diff,
-                    _ => true,
-                },
-                format!("diag({i},{j})"),
-            ));
-        }
-    }
-    csp.finalize();
-    let config = SolveConfig {
-        max_solutions: usize::MAX,
-        ..SolveConfig::default()
-    };
-    assert_eq!(csp.solve(&config).len(), 92, "8-queens has 92 solutions");
-}
+// (queens8=92 was here — collapsed into the canonical enumerate + set-equality
+// in `oracle_and_invariance.rs::queens8_solution_set_invariant_*`, which runs
+// the same build under all 4 prunings × 3 orderings. This file's beat coverage
+// is P1–P4/P6; a bare queens8 re-enumeration added nothing here.)
 
 // ---------------------------------------------------------------------------
 // P6 — sudoku + futoshiki green under the pool (no RefCell panic)

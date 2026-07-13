@@ -2,6 +2,13 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  // Two specs run under their own configs, NOT this default (dev-server) suite:
+  //  · visual-golden — committed pixel goldens are per-OS; sweeping them here would red a
+  //    linux seal run against darwin baselines (playwright-golden.config.ts).
+  //  · throttled-void — the F3 flake: the lazy Futoshiki chunk is a per-module ESM waterfall
+  //    on the dev server (~13 s recovery, compounds past budget on a loaded runner). It runs
+  //    against a bundled preview build instead (playwright-throttle.config.ts / test:e2e:throttle).
+  testIgnore: [/visual-golden\.spec\.ts$/, /throttled-void\.spec\.ts$/],
   timeout: 30000,
   expect: { timeout: 10000 },
   fullyParallel: true,

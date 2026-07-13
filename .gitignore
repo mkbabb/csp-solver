@@ -9,6 +9,8 @@ my_venv/
 # Node
 web/frontend/node_modules/
 web/frontend/dist/
+# T4-W2: isolated preview build for the throttled-void probe (playwright-throttle.config.ts)
+web/frontend/dist-throttle/
 
 # IDE
 .vscode/
@@ -31,6 +33,7 @@ web/frontend/dist/
 # Playwright (browser cache + test artifacts)
 .playwright-mcp/
 web/frontend/test-results/
+web/frontend/playwright-report/
 
 # Temp screenshots (docs/tranches/.gitignore negates this for tranche evidence — keep both intact)
 *.png
@@ -41,6 +44,11 @@ web/frontend/test-results/
 !web/frontend/public/pwa-192x192.png
 !web/frontend/public/pwa-512x512.png
 !web/frontend/public/pwa-maskable-512x512.png
+# T4-W2 visual goldens — committed small-crop regression fixtures (the π/DELTA MINT).
+# These MUST be tracked despite the global *.png ignore; they're policed for bloat by
+# web/frontend/scripts/check-golden-bytes.mjs (≤150 KB/image, EVIDENCE-POLICY).
+!web/frontend/e2e/goldens/
+!web/frontend/e2e/goldens/**/*.png
 
 # Vite cache
 .vite/

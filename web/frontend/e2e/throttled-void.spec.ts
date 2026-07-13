@@ -10,18 +10,21 @@ import { test, expect, type Page } from '@playwright/test';
 // network it is the F6 spec's case (G10 reproduced pure empty paper at 150/400/
 // 800/1500/3000 ms on the live instance under CDP 30 KB/s + 500 ms latency).
 //
-// This codifies the guard: under the same CDP throttle, a ScribbleLoader OR a
-// mounted board-shell MUST appear within N ms of first select — i.e. the void is
-// bounded and the scene recovers, never a permanent blank. It is NOT a claim of
-// instant feedback: no fast pre-chunk loader exists today (that's the F6 beat-2
-// design item); today's honest bound is the full-scene mount time.
+// This codifies the guard: under the same CDP throttle, a mounted board-shell MUST appear
+// within N ms of first select — i.e. the void is bounded and the scene recovers, never a
+// permanent blank. It is NOT a claim of instant feedback: no fast pre-chunk loader exists
+// today (that's the F6 beat-2 design item); today's honest bound is the full-scene mount
+// time. (The pre-fix code OR'd in a `.scribble-loader` that provably does not exist yet — a
+// phantom that could never satisfy the wait; the OR is dropped for the one real satisfier.)
 //
-// N is re-measured in-harness (K10/K18, wave §Residual — "green is the load-bearing
-// fact, not the integers"): under this dev server (unbundled ESM, per-module 500 ms
-// latency) recovery lands at ~13.0 s (12.87/13.07/13.22 s across three probe runs).
-// N = 25 s gives ~90% margin over the measured bound and stays under the per-test
-// timeout raised below. A regression that leaves the scene void past N — or truly
-// stuck — trips this gate.
+// F3 flake fix (T4-W2): this spec runs against a BUNDLED preview build, NOT the dev server
+// (playwright-throttle.config.ts / `npm run test:e2e:throttle`; the default config
+// testIgnores it). On the dev server the Futoshiki chunk is unbundled ESM — dozens of
+// modules each pay the 500 ms latency serially, so recovery landed at ~13 s (12.87/13.07/
+// 13.22 s), >50% of budget and compounding past it on a loaded runner. `vite build` bundles
+// Futoshiki into ONE hashed chunk, so the throttled first-select fetches a single asset and
+// recovery is bounded to a few seconds with wide margin. N = 25 s keeps that margin; a
+// regression that leaves the scene void past N — or truly stuck — still trips this gate.
 const VOID_RECOVERY_BUDGET_MS = 25000;
 
 async function loadSudokuScene(page: Page) {
@@ -35,7 +38,8 @@ async function loadSudokuScene(page: Page) {
 test('throttled first-select void recovers: loader or board-shell within budget', async ({
   page,
 }) => {
-  // Recovery is ~13 s under throttle on this dev server; give the case headroom.
+  // Recovery is a few seconds under throttle against the bundled preview build; the
+  // headroom also covers the config's build+preview startup on a cold runner.
   test.setTimeout(60000);
 
   await loadSudokuScene(page);
@@ -56,11 +60,11 @@ test('throttled first-select void recovers: loader or board-shell within budget'
   await page.locator('button.logo-trigger').click();
   await page.getByRole('option', { name: 'futoshiki' }).click();
 
-  // The gate: a loader OR a mounted board-shell appears within budget — the void
-  // is bounded, not permanent. board-shell is the reliable satisfier (it mounts
-  // with the scene); ScribbleLoader (.scribble-loader) is the F6 beat-2 target
-  // the OR admits without asserting it exists today.
-  await page.waitForSelector('.scribble-loader, .board-shell', {
+  // The gate: the Futoshiki board-shell mounts within budget — the void is bounded, not
+  // permanent. board-shell is the one real satisfier (it mounts with the scene). The old
+  // `.scribble-loader` OR-arm was a phantom (that selector doesn't exist today — the F6
+  // beat-2 loader isn't built), so it's removed: a wait can't be satisfied by a phantom.
+  await page.waitForSelector('.board-shell', {
     timeout: VOID_RECOVERY_BUDGET_MS,
   });
 

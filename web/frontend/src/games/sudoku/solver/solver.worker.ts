@@ -36,33 +36,17 @@ import init, {
 // (emitted, hashed asset).
 import wasmUrl from '@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url'
 import type { SolverRequest, SolverResponse } from './protocol'
-import type { SolverErrorCode } from './solverError'
+// `describeError` (wasm-error → structured-clone-safe `{code, message}` frame) is hoisted
+// to its own module so the mapping is unit-testable without instantiating this Worker
+// (T4-W2). A plain `{code, message}` literal — never the `Error` instance — is what crosses
+// `postMessage`, since structured-clone fidelity of non-standard own props (`.code`) is not
+// uniform across engines. See `describeError.ts`.
+import { describeError } from './describeError'
 
 let ready: Promise<unknown> | null = null
 function ensureInit(): Promise<unknown> {
   if (ready === null) ready = init({ module_or_path: wasmUrl })
   return ready
-}
-
-/** wasm throws a real `js_sys::Error` with a `.code` string reflected
- * onto it (see `csp-solver/wasm/src/sudoku.rs::coded_error`). Extract
- * `.code`/`.message` here, *inside* the worker, and post back a plain
- * object — never the `Error` instance itself. Structured-clone support
- * for `Error` (and fidelity of non-standard own properties like `.code`
- * specifically) is not uniform across browser engines/versions; a
- * plain `{code, message}` literal is unambiguously structured-cloneable
- * everywhere, so this is the actual mechanism that makes "BudgetExceeded
- * surfaces as a typed error through the worker" true rather than
- * incidental to whichever engine runs the test.
- */
-function describeError(e: unknown): { code: SolverErrorCode; message: string } {
-  if (e && typeof e === 'object' && 'code' in e && typeof (e as { code: unknown }).code === 'string') {
-    const code = (e as { code: string }).code
-    if (code === 'INVALID_INPUT' || code === 'BUDGET_EXCEEDED' || code === 'UNSAT') {
-      return { code, message: e instanceof Error ? e.message : String(e) }
-    }
-  }
-  return { code: 'WORKER_FAILURE', message: e instanceof Error ? e.message : String(e) }
 }
 
 self.addEventListener('message', async (event: MessageEvent<SolverRequest>) => {

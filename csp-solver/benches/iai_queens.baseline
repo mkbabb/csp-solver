@@ -1,0 +1,23 @@
+# iai_queens — golden instruction-count baseline for the solver hot path.
+#
+# SEARCH-TRAJECTORY / INSTRUCTION-COUNT LOCK: this number is a deliberate
+# tripwire. The iai CI lane (.github/workflows/ci.yml) runs the callgrind bench
+# ONCE and reds if the measured count drifts beyond +/-2% of the value below —
+# a regression AND a legitimate improvement alike. A real speedup is re-baselined
+# DELIBERATELY here, in a reviewed commit; never a silent auto-update, or the gate
+# rots back into the run-it-twice determinism tautology it replaced.
+#
+# Measures: benches/iai_queens.rs :: queens_first_8 — one fully-deterministic
+# 8-queens first-solution solve (Pruning::Ac3 + Ordering::FailFirst) under
+# callgrind. Instruction count is a pure function of the compiled binary, so it
+# is architecture- and toolchain-specific.
+#
+# Provenance of the value below:
+#   arch         x86_64-linux (matches the CI runner: ubuntu-latest)
+#   rustc        1.97.0 (2026-07-07), profile.bench (release + debug, strip=false)
+#   iai-callgrind 0.16.1 runner, valgrind 3.19.0, ASLR off (setarch -R)
+#   measured     2026-07-12, T4-W2; confirmed identical across two clean rebuilds
+#
+# To re-baseline: run the iai lane (or the bench under Linux+Valgrind), read the
+# `Instructions:` count, replace the number below, and commit with the reason.
+1529452

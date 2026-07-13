@@ -112,3 +112,23 @@ This wave *is* the π/DELTA machinery — it does not consume it. Its own gates 
 - **The TS 7 bump (W5) and vitest must co-exist** — the FE unit layer is added here under TS 6; W5 bumps to TS 7. Sequence so the vitest config is TS-7-clean, or the unit lane reds on the bump. The FE-unit layer's config is the seam.
 - **eslint-in-CI will surface latent boundary violations** — turning the 194-line rig into a gate may red on existing deep-import crossings the barrels masked; W4 removes the barrels and settles the one deep-import grammar, so sequence the eslint gate to expect W4's boundary, or land it first and let W4's excision clear the reds it exposes (co-develop the boundary rule with W4).
 - **Pruning coverage is a two-way risk** — deleting the 6 ignored FC tests is safe only because tests-py owns the hard-sudoku path; if W-later work moves hard sudoku back to Rust (F5's alternative), the un-ignore path is the one to take. The gates that DO bite (`r1-gate-soundness` list) are the floor the prune must not cut below.
+
+---
+## Execution record (2026-07-13)
+
+Workflow `wf_2291485c-c70`, 7 lanes, all green. Every named vacuous green now bites, each proven born-RED then re-proven green.
+
+| Gate | Born-RED | Close |
+|---|---|---|
+| iai-baseline | same-binary-twice tautology (2× regression sailed `delta=0.000000% PASS`) | committed golden `iai_queens.baseline` = 1,529,452 instr (real callgrind, provenance in-file) ±2% via `iai_gate.sh` (spike `ff5d9de3` parser hardening folded); deliberate 2× AC-3 scan regression → **+54.63% FAIL**; revert → PASS |
+| visual-golden | screenshots written, never compared | capture/compare/review live: 4 committed crops ×(darwin+linux), DPR2, PRM-frozen, baked-aware settles; deliberate theme inversion REDS all crops (0.71–0.85 vs ≤0.02 floor); byte ceiling gate PASS (96 KB total); stability ×3 green |
+| w13-soul | SSIM gates wired nowhere | logo/toggle-crest/grid-corner run as goldens every CI e2e job |
+| eslint-ci | rig never in CI | `lint:eslint` in the frontend lane; deliberate pencil→games import EXIT 1, revert EXIT 0 |
+| fe-unit | zero unit tests | vitest+jsdom: **69 tests/7 files** — codec (incl. W3 version byte accept/reject/ratchet), undo cap/fork, worker protocol + describeError extraction, DOM-contract moves |
+| overfit | 28 sleeps; 4 frozen counts; queens8 ×7; 6 wrong-config ignores | 30 sleeps → settle conditions (0 remain); ONE search-trajectory tripwire; queens8 → 1 canonical enumerate; the 6 FC ignores DELETED (tests-py owns the boards); futoshiki oracle merged → `oracle_and_invariance.rs` |
+| knip | warn-level, 9 dead items, exit 0 | error-level; 9 excised (6 folded internal, 2 deleted, TextureConfig folded); barrels STAY on `entry` — dropping them = W4's atomic barrel-death (32 reds, 23 = W4's named surface) |
+| flaky | throttled-void ~13 s/25 s budget; deal-luck runtime skip | bundled-preview throttle config (:4188): **783 ms** recovery, phantom `.scribble-loader` OR closed; deal-luck deterministic `?board=` — always asserts |
+| live-gen-unique | zero coverage | `sudoku_generate.rs::live_generated_boards_are_unique_across_served_sizes` (N∈{2,3,4}, real deal path, max_solutions=2, exactly 1) — born-RED proven; futoshiki analog pre-existed, cross-referenced |
+| ci-dag | 9 jobs, 0 `needs:`, lean wasm ×3 | `build-lean-wasm` predecessor uploads once; frontend/e2e/twiggy download (Node-only, no Rust toolchain); iai lane intact; actionlint clean; **golden + throttle gates wired into the e2e job at seal** (they'd have been dark otherwise) |
+
+Evidence: `../evidence/w2/gates.md`. Seal notes: golden settles made baked-aware post-W1 (R1) and the logo/crest goldens re-baselined under the documented review flow (R2, reviewed diffs); linux goldens re-minted in the v1.61.1 Playwright container. Handoffs to W4 banked in the lane record (barrel entry-drop atomic with barrel death; 9-item overlap done-list). Full sweep at seal: cargo test/fmt/clippy green; 69 units; 47/47 e2e; throttle 1/1; goldens 4/4 ×3.

@@ -18,8 +18,46 @@ async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
   await expect
     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
     .toBeGreaterThan(0);
-  await page.waitForTimeout(800); // reveal wave settles
+  // Grid draw-in → boil steady-state handoff: `.is-active` exists only once the grid
+  // finished drawing in, so it's the board's settle (generalizes the suite's `.is-active`
+  // grid handoff) — the reveal wave rides it. Replaces the fixed reveal-wave sleep.
+  // the g stays attached in both baked (display:none) & filtered steady forms.
+  await page.waitForSelector('g.boil-frame-layer.is-active', {
+    state: 'attached',
+    timeout: 15000,
+  });
 }
+
+// ── Deterministic conflict board (the stale-note test) ──────────────
+// A pinned `?board=` that guarantees the first blank row holds ≥2 blanks, so the stale-
+// note test never rides deal luck. Rows 1–8 are the canonical solved 9×9 seeded as
+// givens; row 0 is left entirely blank → firstBlank = cell 0, its row-mate blank = cell
+// 1. Duplicating a value across them is a guaranteed row conflict; the board (only row 0
+// open, uniquely forced) still solves trivially for the gold-star half.
+function b64url(s: string): string {
+  return Buffer.from(s, 'binary')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+// prettier-ignore
+const SOLVED_9 = [
+  5, 3, 4, 6, 7, 8, 9, 1, 2,
+  6, 7, 2, 1, 9, 5, 3, 4, 8,
+  1, 9, 8, 3, 4, 2, 5, 6, 7,
+  8, 5, 9, 7, 6, 1, 4, 2, 3,
+  4, 2, 6, 8, 5, 3, 7, 9, 1,
+  7, 1, 3, 9, 2, 4, 8, 5, 6,
+  9, 6, 1, 5, 3, 7, 2, 8, 4,
+  2, 8, 7, 4, 1, 9, 6, 3, 5,
+  3, 4, 5, 2, 8, 6, 1, 7, 9,
+];
+// encodeSudoku(3, {…}, 81): base64url of `${size}.${base36 cells}` (permalink.spec.ts),
+// row 0 zeroed (blank), rows 1–8 as their canonical digit.
+const CONFLICT_BOARD = b64url(
+  '3.' + SOLVED_9.map((v, i) => (i < 9 ? 0 : v).toString(36)).join(''),
+);
 
 /** Index of the first blank cell (no glyph). */
 async function firstBlank(page: Page, cellSel: string): Promise<number> {
@@ -65,10 +103,14 @@ test('print: chrome hidden, black strokes, washes stripped (CSS-only)', async ({
   await loadSudoku(page);
 
   await page.emulateMedia({ media: 'print' });
-  // The wrapper carries `transition-all duration-500`; a computed-style read
-  // straight after the media flip sees the mid-transition value. Real print
-  // rendering is static — let the emulated transition settle first.
-  await page.waitForTimeout(700);
+  // The wrapper carries a 500ms box-shadow transition; a computed-style read straight
+  // after the media flip catches the mid-transition value. Settle on the terminal print
+  // paint — the box-shadow reaches `none` — instead of a fixed delay.
+  await expect
+    .poll(() => page.locator('.board-wrapper').evaluate((el) => getComputedStyle(el).boxShadow), {
+      timeout: 5000,
+    })
+    .toBe('none');
   const probe = await page.evaluate(() => {
     const d = (sel: string) => {
       const el = document.querySelector(sel);
@@ -111,9 +153,12 @@ test('print: chrome hidden, black strokes, washes stripped (CSS-only)', async ({
 // ── 2. Stale-note — any non-graphite tone clears when the grade reverts ──
 
 test('stale-note: teacher-red and gold-star notes clear on the next edit', async ({ page }) => {
-  await loadSudoku(page);
+  // Pinned board (no deal luck): row 0 is entirely blank, so the first blank row always
+  // holds ≥2 blanks — firstBlank = cell 0, its row-mate blank = cell 1. The old random
+  // deal test.skip'd (asserted nothing) when it happened to give <2 blanks in that row.
+  await loadSudoku(page, '?board=' + CONFLICT_BOARD);
 
-  // Force a provable conflict in row 1 of two blank cells, then grade it.
+  // Force a provable conflict in the first blank row across two blank cells, then grade it.
   const b1 = await firstBlank(page, '.sudoku-cell');
   const b2 = await page.evaluate((from) => {
     const cells = document.querySelectorAll('.sudoku-cell');
@@ -123,7 +168,8 @@ test('stale-note: teacher-red and gold-star notes clear on the next edit', async
     }
     return -1;
   }, b1);
-  test.skip(b2 === -1, 'no two blank cells share the first blank row on this deal');
+  // The pinned board guarantees it — a hard assertion now, never a runtime skip.
+  expect(b2).toBeGreaterThanOrEqual(0);
 
   // A value that already appears in neither cell: 9 duplicated in one row is
   // UNSAT regardless of the rest of the deal only if neither cell is a given —
@@ -361,7 +407,13 @@ test('composed keyboard (futoshiki twin): K-peek from cell focus + roving + undo
   await expect
     .poll(() => page.locator('.futoshiki-cell .glyph-svg').count(), { timeout: 20000 })
     .toBeGreaterThan(0);
-  await page.waitForTimeout(800);
+  // Grid draw-in → boil steady-state handoff (same HandDrawnGrid as sudoku): the settle,
+  // never a fixed sleep.
+  // the g stays attached in both baked (display:none) & filtered steady forms.
+  await page.waitForSelector('g.boil-frame-layer.is-active', {
+    state: 'attached',
+    timeout: 20000,
+  });
 
   const n = Math.sqrt(await page.locator('.futoshiki-cell').count());
   const blank = await firstBlank(page, '.futoshiki-cell');

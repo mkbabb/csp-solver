@@ -21,27 +21,16 @@ import init, {
 // asset pipeline and hand the resolved URL to `init` (correct in dev + build).
 import wasmUrl from '@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url'
 import type { SolverRequest, SolverResponse } from './protocol'
-import type { SolverErrorCode } from './solverError'
+// `describeError` (wasm-error → structured-clone-safe `{code, message}` frame) is hoisted
+// to its own module so the mapping is unit-testable without instantiating this Worker
+// (T4-W2). Owned port of the Sudoku copy (games never import each other). See
+// `describeError.ts`.
+import { describeError } from './describeError'
 
 let ready: Promise<unknown> | null = null
 function ensureInit(): Promise<unknown> {
   if (ready === null) ready = init({ module_or_path: wasmUrl })
   return ready
-}
-
-/** wasm throws a real `js_sys::Error` with a `.code` string reflected onto it (see
- * `futoshiki.rs`, reusing `sudoku.rs::coded_error`). Extract `.code`/`.message` here,
- * INSIDE the worker, and post back a plain object — never the `Error` instance itself
- * (structured-clone of non-standard own properties like `.code` is not uniform across
- * engines). */
-function describeError(e: unknown): { code: SolverErrorCode; message: string } {
-  if (e && typeof e === 'object' && 'code' in e && typeof (e as { code: unknown }).code === 'string') {
-    const code = (e as { code: string }).code
-    if (code === 'INVALID_INPUT' || code === 'BUDGET_EXCEEDED' || code === 'UNSAT') {
-      return { code, message: e instanceof Error ? e.message : String(e) }
-    }
-  }
-  return { code: 'WORKER_FAILURE', message: e instanceof Error ? e.message : String(e) }
 }
 
 self.addEventListener('message', async (event: MessageEvent<SolverRequest>) => {

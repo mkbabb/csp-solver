@@ -1,9 +1,21 @@
 import { test, expect, type Page } from '@playwright/test';
 
-// Visual-regression register — the SVG-filter/theme/grid-boil feature snapshots for
-// the default (Sudoku) scene. Renamed off the old dev-round file+artifact names at
-// T3-W7; the artifacts now carry feature names (screenshots/{light,dark,9x9}.png),
-// not dev-round ordinals.
+// SVG-filter / theme / grid-boil DOM-contract register for the default (Sudoku) scene.
+//
+// T4-W2: the WRITE-ONLY screenshot half of this file (three `page.screenshot()` PNGs
+// that were never compared — a solid-black board passed green) is RETIRED and re-founded
+// as a real capture-compare-review golden system in visual-golden.spec.ts (Playwright
+// `toHaveScreenshot` at DPR2, settled, against committed small-crop references at the
+// ≥0.98 / 0.983-soul floors).
+//
+// The pure DOM-contract asserts that never needed a browser have MIGRATED to jsdom units
+// (T4-W2 FE-unit layer): the SVG-filter registry → src/pencil/chrome/SvgFilters.test.ts
+// (mounts SvgFilters, asserts every preset def + one frozen pose variant per declared pose
+// frequency + the sparkle-rainbow/solver-ink gradients), and the dark-mode class-toggle
+// mechanism → src/composables/useTheme.test.ts (html gains/loses `.dark`). What STAYS below
+// is TRUE integration only — asserts that need a real browser's CSS cascade (crayon vars,
+// font-family, box-shadow, computed `filter`), the live pose-stack / grid steady-state
+// machinery, and real interaction.
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -28,35 +40,40 @@ async function setDarkMode(page: Page, dark: boolean) {
 }
 
 /**
- * Steady-state grid DOM shape — the grain hoist (design-union prototype 9).
+ * Steady-state grid DOM shape — the T4-W1 bitmap pose cache.
  *
- * Once draw-in completes ('drawn'), HandDrawnGrid unmounts its transition
- * layer and mounts BOIL_CONFIG.frameCount sibling `g.boil-frame-layer`
- * groups, each a full pre-baked boil variant (1 frame-line + subgrid/cell
- * lines) with grain-static rasterized once per layer. The boil then ticks by
- * toggling which sibling is `.is-active` (opacity 0→1, compositor-only —
- * measured −72.9% RasterTask vs re-rasterizing the filtered group per tick).
+ * Once draw-in completes ('drawn'), HandDrawnGrid mounts BOIL_CONFIG.frameCount sibling
+ * boil layers and ticks by toggling which one is `.is-active` (opacity 0→1,
+ * compositor-only). W1 replaced the resident grain-static filtered groups
+ * (`g.boil-frame-layer`) with baked `image.boil-frame-bitmap` siblings — each pose is
+ * captured to a bitmap ONCE and no filter re-executes at steady state (the WebKit cure).
+ * The live-filter groups remain as the during-bake fallback, so steady state is the
+ * bitmap stack once the async bake resolves, or the filter fallback while it is in flight.
  *
- * So mounted-variant multiplicity (frameCount copies of every grid path) IS
- * the designed steady state; the invariant to assert is per-layer shape +
- * exactly one visible variant, never a global element count.
+ * The invariant to assert is the boil-stack shape (≥2 layers, exactly one visible) — a
+ * global element count is meaningless (frameCount copies by design). The per-tier
+ * geometry (frame/subgrid/cell line counts) only lives in the filter fallback; once baked
+ * the geometry is pixels, and its π/DELTA soul golden lives in visual-golden.spec.ts.
  */
 async function steadyGridCounts(page: Page) {
-  // `.is-active` only exists on the steady-state layers — waiting for it also
-  // proves the transition layer has handed off (draw-in completed).
-  await page.waitForSelector('g.boil-frame-layer.is-active', { timeout: 10000 });
+  // Either steady form has exactly one `.is-active` layer — waiting for it also proves the
+  // transition layer has handed off (draw-in completed).
+  await page.waitForSelector(
+    'image.boil-frame-bitmap.is-active, g.boil-frame-layer.is-active',
+    { timeout: 10000 },
+  );
   return page.evaluate(() => {
-    const layers = Array.from(document.querySelectorAll('g.boil-frame-layer'));
-    const visible = layers.filter(
-      (l) => parseFloat(getComputedStyle(l).opacity) > 0,
-    );
-    const active = visible[0] ?? null;
+    const baked = Array.from(document.querySelectorAll('image.boil-frame-bitmap'));
+    const filtered = Array.from(document.querySelectorAll('g.boil-frame-layer'));
+    const layers = baked.length ? baked : filtered;
+    const visible = layers.filter((l) => parseFloat(getComputedStyle(l).opacity) > 0);
+    // Per-tier path counts only exist in the live-filter fallback; once baked they are 0
+    // (the geometry is pixels — asserted by the visual-golden soul golden).
+    const active = filtered.find((l) => parseFloat(getComputedStyle(l).opacity) > 0) ?? null;
     return {
+      mode: baked.length ? 'baked' : 'filtered',
       layerCount: layers.length,
       visibleLayerCount: visible.length,
-      frameLinesPerLayer: layers.map(
-        (l) => l.querySelectorAll('path.frame-line').length,
-      ),
       activeFrameLines: active ? active.querySelectorAll('path.frame-line').length : 0,
       activeSubgridLines: active
         ? active.querySelectorAll('path.subgrid-line').length
@@ -66,40 +83,15 @@ async function steadyGridCounts(page: Page) {
   });
 }
 
-// ── Test 1: SVG Filter Registry Completeness ────────────────────────
+// (Test 1 — the SVG filter-registry completeness check — MIGRATED to the jsdom unit
+// src/pencil/chrome/SvgFilters.test.ts. It was a pure existence contract on SvgFilters'
+// rendered defs, needing no live app; the unit mounts the same component and asserts every
+// preset + pose variant + gradient. Test 6 below still proves grain-static is wired into the
+// running app. The app-integration asserts that DO need a browser continue below.)
 
-test('filter registry: all 6 FILTER_PRESETS + sparkle-rainbow exist', async ({
-  page,
-}) => {
-  await loadApp(page);
+// ── Test 2: Light Mode — Layout, Styles, Filters ───────────────────
 
-  const filterIds = [
-    'grain-static',
-    'wobble-logo',
-    'wobble-celestial',
-    'wobble-heart',
-    'stroke-light',
-    'stroke-dark',
-  ];
-
-  for (const id of filterIds) {
-    await expect(page.locator(`filter#${id}`)).toHaveCount(1);
-  }
-
-  // T3-W13 §1-P3: every wobble preset also registers 4 frozen pose variants —
-  // the static filters the pose stacks (logo, toggle) consume.
-  for (const id of ['wobble-logo', 'wobble-celestial', 'wobble-heart']) {
-    for (let i = 0; i < 4; i++) {
-      await expect(page.locator(`filter#${id}-p${i}`)).toHaveCount(1);
-    }
-  }
-
-  await expect(page.locator('linearGradient#sparkle-rainbow')).toHaveCount(1);
-});
-
-// ── Test 2: Light Mode — Layout, Styles, Filters, Visual ───────────
-
-test('light mode: layout, styles, filters, visual snapshot', async ({ page }) => {
+test('light mode: layout, styles, filters, DOM contract', async ({ page }) => {
   await loadApp(page);
   await setDarkMode(page, false);
 
@@ -159,17 +151,30 @@ test('light mode: layout, styles, filters, visual snapshot', async ({ page }) =>
     .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
   expect(ctrlBtnFontSize).toBeGreaterThanOrEqual(19);
 
-  // Logo renders with Fraunces font. T3-W13 §1-P3: the wordmark is a 4-pose
-  // stack (frozen filter variants, beat flips opacity) — every pose renders the
-  // label; exactly one pose layer is active at a time (the grid-layer grammar).
-  const logoText = page.locator('svg.handwritten-logo text.logo-text');
-  await expect(logoText).toHaveCount(4);
-  await expect(logoText.first()).toHaveText('sudoku');
-  const logoFontFamily = await logoText
-    .first()
-    .evaluate((el) => getComputedStyle(el).fontFamily);
+  // Logo renders with Fraunces font. T4-W1: the wordmark is a 4-pose stack baked to
+  // bitmaps (image.logo-pose-bmp, opacity-swapped) with the live filter stack as the
+  // during-bake fallback; the measuring text.logo-text (Fraunces, invisible) sizes the
+  // variable-width box and survives the bake. Exactly one pose layer is active at a time.
+  const logoMeasure = page.locator('svg.handwritten-logo text.logo-text.logo-measure');
+  await expect(logoMeasure).toHaveText('sudoku');
+  const logoFontFamily = await logoMeasure.evaluate((el) => getComputedStyle(el).fontFamily);
   expect(logoFontFamily).toMatch(/Fraunces/i);
-  await expect(page.locator('svg.handwritten-logo g.logo-pose.is-active')).toHaveCount(1);
+  // The pose stack is frameCount layers (baked bitmaps once ready, filtered groups while
+  // baking) with exactly one active.
+  await expect(
+    page.locator(
+      'svg.handwritten-logo image.logo-pose-bmp, svg.handwritten-logo g.logo-pose',
+    ),
+  ).toHaveCount(4);
+  await expect(
+    page.locator(
+      'svg.handwritten-logo image.logo-pose-bmp.is-active, svg.handwritten-logo g.logo-pose.is-active',
+    ),
+  ).toHaveCount(1);
+
+  // The rendered-pixel assertion for this surface lives in visual-golden.spec.ts
+  // (`logo-light`, the ≥0.983 baked-pose-stack soul golden). This test owns the DOM
+  // contract only.
 
   // Irregular sun rays — 20 coordinate pairs (10 rays x outer+inner)
   const outerRayPoints = await page
@@ -186,13 +191,12 @@ test('light mode: layout, styles, filters, visual snapshot', async ({ page }) =>
     .evaluate((el) => getComputedStyle(el).transition);
   expect(transition).toBeTruthy();
 
-  // Screenshot
-  await page.screenshot({ path: 'e2e/screenshots/light.png', fullPage: false });
+  // (Rendered-pixel capture retired to visual-golden.spec.ts — see file header.)
 });
 
-// ── Test 3: Dark Mode — Filter Swap + Visual ────────────────────────
+// ── Test 3: Dark Mode — Filter Swap ─────────────────────────────────
 
-test('dark mode: filter swap, control panel filter, visual snapshot', async ({ page }) => {
+test('dark mode: filter swap, control panel filter, DOM contract', async ({ page }) => {
   await loadApp(page);
   await setDarkMode(page, true);
 
@@ -210,8 +214,8 @@ test('dark mode: filter swap, control panel filter, visual snapshot', async ({ p
     .evaluate((el) => getComputedStyle(el).filter);
   expect(cpFilter).toMatch(/stroke-dark/);
 
-  // Screenshot
-  await page.screenshot({ path: 'e2e/screenshots/dark.png', fullPage: false });
+  // (Rendered-pixel capture retired to visual-golden.spec.ts — the `toggle-crest-dark`
+  // soul golden asserts the dark-mode crest pixels.)
 });
 
 // ── Test 4: Grid Draw-In + Path-Based Boil ──────────────────────────
@@ -219,13 +223,20 @@ test('dark mode: filter swap, control panel filter, visual snapshot', async ({ p
 test('grid draw-in completes and path-based boil activates', async ({ page }) => {
   await loadApp(page);
 
-  // Wait for draw-in animation to finish (grid lines ~800ms + stagger)
-  await page.waitForTimeout(2000);
+  // Draw-in complete = the grid handed off to its boil steady-state layers (`.is-active`
+  // exists only then — baked bitmap or the live-filter fallback). The settle, not a sleep.
+  await page.waitForSelector(
+    'image.boil-frame-bitmap.is-active, g.boil-frame-layer.is-active',
+    { timeout: 15000 },
+  );
 
-  // All grid-line paths should have strokeDasharray=none, strokeDashoffset=0
+  // Any remaining grid-line paths (the transition layer, or the live-filter fallback
+  // while the bake is in flight) should have settled: strokeDasharray=none,
+  // strokeDashoffset=0. Once the steady bitmaps are baked there are no paths — that IS
+  // the completed state (the transition layer has handed off), so 0 paths passes.
   const allComplete = await page.evaluate(() => {
     const lines = document.querySelectorAll('path.grid-line');
-    if (lines.length === 0) return false;
+    if (lines.length === 0) return true;
     return Array.from(lines).every((el) => {
       const s = (el as SVGPathElement).style;
       return (
@@ -236,15 +247,18 @@ test('grid draw-in completes and path-based boil activates', async ({ page }) =>
   });
   expect(allComplete).toBe(true);
 
-  // Steady-state grid: frameCount pre-baked boil layers, each with the three
-  // tiers (frame, subgrid, cell), exactly one visible at a time. A global
-  // `path.frame-line` count is frameCount (4), by design — see steadyGridCounts.
+  // Steady-state grid: frameCount boil layers (baked bitmaps once ready, filter fallback
+  // while baking), exactly one visible at a time. The per-tier geometry is baked into the
+  // pixels (asserted by visual-golden's grid soul golden); the filter fallback still
+  // carries the tiers when it holds the surface.
   const grid = await steadyGridCounts(page);
   expect(grid.layerCount).toBeGreaterThanOrEqual(2); // boil needs ≥2 variants
-  expect(grid.frameLinesPerLayer.every((n) => n === 1)).toBe(true); // one closed frame rect per variant
   expect(grid.visibleLayerCount).toBe(1); // exactly one variant visible
-  expect(grid.activeSubgridLines).toBeGreaterThan(0);
-  expect(grid.activeCellLines).toBeGreaterThan(0);
+  if (grid.mode === 'filtered') {
+    expect(grid.activeFrameLines).toBe(1);
+    expect(grid.activeSubgridLines).toBeGreaterThan(0);
+    expect(grid.activeCellLines).toBeGreaterThan(0);
+  }
 
   // Logo text renders after draw-in (first pose of the T3-W13 stack)
   await expect(
@@ -256,11 +270,33 @@ test('grid draw-in completes and path-based boil activates', async ({ page }) =>
 
 test('randomize populates board and blank cells accept input', async ({ page }) => {
   await loadApp(page);
-  await page.waitForTimeout(1500);
+  // Initial auto-deal settled: the grid drew in and handed off to steady state.
+  await page.waitForSelector(
+    'image.boil-frame-bitmap.is-active, g.boil-frame-layer.is-active',
+    { timeout: 15000 },
+  );
 
-  // Click randomize (desktop sidebar button)
+  // Randomize deals a fresh board (async worker); it updates the values in place (no grid
+  // redraw), so settle on the board's value signature flipping — never a fixed sleep.
+  const before = await page.evaluate(() =>
+    Array.from(
+      document.querySelectorAll('.sudoku-cell input'),
+      (i) => (i as HTMLInputElement).value,
+    ).join(','),
+  );
   await page.locator('.controls-card button[aria-label="Randomize board"]').click();
-  await page.waitForTimeout(2000);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() =>
+          Array.from(
+            document.querySelectorAll('.sudoku-cell input'),
+            (i) => (i as HTMLInputElement).value,
+          ).join(','),
+        ),
+      { timeout: 15000 },
+    )
+    .not.toBe(before);
 
   // Some cells should be populated (given cells have glyph SVGs with foreground stroke)
   const givenGlyphs = await page.locator('.sudoku-cell .glyph-svg path[stroke="var(--color-foreground)"]').count();
@@ -282,9 +318,9 @@ test('randomize populates board and blank cells accept input', async ({ page }) 
     nativeSetter.call(input, '5');
     input.dispatchEvent(new Event('input', { bubbles: true }));
   }, firstBlankIdx);
-  await page.waitForTimeout(500);
 
-  // Verify the cell now has a glyph (value was accepted)
+  // Verify the cell now has a glyph (value accepted) — toHaveCount auto-waits for the
+  // render, the settle condition, so no fixed sleep is needed.
   const targetCell = page.locator('.sudoku-cell').nth(firstBlankIdx);
   await expect(targetCell.locator('.glyph-svg')).toHaveCount(1);
 });
@@ -309,38 +345,52 @@ test('graceful degradation: UI renders without backend API', async ({ page }) =>
 
 test('size switching: 4x4, 9x9, 16x16 all render grid lines', async ({ page }) => {
   await loadApp(page);
-  await page.waitForTimeout(1500);
+  // Initial auto-deal settled: the grid drew in and handed off to steady state, so the
+  // first size switch starts from a settled surface. The settle, never a fixed sleep.
+  await page.waitForSelector(
+    'image.boil-frame-bitmap.is-active, g.boil-frame-layer.is-active',
+    { timeout: 15000 },
+  );
 
-  // All counts below are per visible boil variant (steadyGridCounts) — global
-  // counts would be frameCount× larger by design (grain hoist, see helper doc).
+  // Each size re-bakes the boil stack: ≥2 layers, exactly one visible (steadyGridCounts).
+  // The per-size line geometry is baked into the pixels — its per-size soul golden lives
+  // in visual-golden.spec.ts (`grid-corner-*`). While the live-filter fallback holds the
+  // surface (bake in flight) the per-tier counts are still assertable and are checked.
 
   // Switch to 4x4 (use desktop sidebar buttons)
   await page.locator('.controls-card button:has-text("4×4")').click();
-  await page.waitForTimeout(2000);
+  // Settle on the re-rendered board at the new size (16 cells) — the grid re-bakes off it.
+  await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(16);
   const grid4 = await steadyGridCounts(page);
-  // 4x4 with subgridSize=2: vertical non-subgrid lines at cols 1,3 + same horizontal → 4
-  expect(grid4.activeCellLines).toBeGreaterThanOrEqual(2);
-  expect(grid4.activeFrameLines).toBe(1); // one closed frame rect in the visible variant
+  expect(grid4.layerCount).toBeGreaterThanOrEqual(2);
   expect(grid4.visibleLayerCount).toBe(1);
+  if (grid4.mode === 'filtered') {
+    // 4x4 with subgridSize=2: vertical non-subgrid lines at cols 1,3 + same horizontal → 4
+    expect(grid4.activeCellLines).toBeGreaterThanOrEqual(2);
+    expect(grid4.activeFrameLines).toBe(1);
+  }
 
   // Switch to 16x16
   await page.locator('.controls-card button:has-text("16×16")').click();
-  await page.waitForTimeout(2500);
+  await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(256);
   const grid16 = await steadyGridCounts(page);
-  expect(grid16.activeCellLines).toBeGreaterThan(10); // 16x16 has many cell lines
-  expect(grid16.activeSubgridLines).toBeGreaterThan(0);
+  expect(grid16.layerCount).toBeGreaterThanOrEqual(2);
+  expect(grid16.visibleLayerCount).toBe(1);
+  if (grid16.mode === 'filtered') {
+    expect(grid16.activeCellLines).toBeGreaterThan(10); // 16x16 has many cell lines
+    expect(grid16.activeSubgridLines).toBeGreaterThan(0);
+  }
 
   // Switch back to 9x9
   await page.locator('.controls-card button:has-text("9×9")').click();
-  await page.waitForTimeout(2000);
+  await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(81);
   const grid9 = await steadyGridCounts(page);
-  // 9x9: 6 vertical cell lines + 6 horizontal = 12
-  expect(grid9.activeCellLines).toBe(12);
-  expect(grid9.activeFrameLines).toBe(1);
+  expect(grid9.layerCount).toBeGreaterThanOrEqual(2);
   expect(grid9.visibleLayerCount).toBe(1);
-
-  // Screenshot final state
-  await page.screenshot({ path: 'e2e/screenshots/9x9.png', fullPage: false });
+  if (grid9.mode === 'filtered') {
+    expect(grid9.activeCellLines).toBe(12); // 9x9: 6 vertical + 6 horizontal cell lines
+    expect(grid9.activeFrameLines).toBe(1);
+  }
 });
 
 // ── Test 8: The Bloom's warp rest pose (T3-W13 §2) ──────────────────
@@ -384,16 +434,24 @@ test('toggle warp rest pose: wrung into the page, no carousel travel', async ({
       sunStackActive: document
         .querySelector('.rest-sun')
         ?.classList.contains('is-active'),
-      visiblePoseFilters: activePoses.map((el) => el.getAttribute('filter')),
+      activePoses: activePoses.map((el) => ({
+        tag: el.tagName.toLowerCase(),
+        filter: el.getAttribute('filter'),
+        src: el.getAttribute('src'),
+      })),
     };
   });
   expect(rest.liveVisibility).toEqual(['hidden', 'hidden']);
   expect(rest.sunStackActive).toBe(true);
-  // sun = whole-icon 4-pose stack (the moon's proven shape) — exactly one pose
-  // visible, one noise field per instant (c1: the ray/disc sub-stack split died
-  // at the soul gate).
-  expect(rest.visiblePoseFilters).toHaveLength(1);
-  for (const f of rest.visiblePoseFilters) {
-    expect(f).toMatch(/wobble-celestial-p\d/);
+  // sun = whole-icon 4-pose stack (the moon's proven shape) — exactly one pose visible.
+  // T4-W1: the pose is a baked <img> bitmap once ready (filter removed — the WebKit cure)
+  // or the live wobble-celestial-p <svg> while the async bake is in flight.
+  expect(rest.activePoses).toHaveLength(1);
+  for (const p of rest.activePoses) {
+    if (p.tag === 'img') {
+      expect(p.src).toMatch(/^data:image\/png/);
+    } else {
+      expect(p.filter).toMatch(/wobble-celestial-p\d/);
+    }
   }
 });

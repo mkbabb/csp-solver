@@ -28,4 +28,3 @@ export type Inequality = [greater: number, lesser: number]
 
 /** v1 Futoshiki board-size band. The selector offers exactly these. */
 export const VALID_BOARD_SIZES = [4, 5, 6, 7] as const
-export type BoardSize = (typeof VALID_BOARD_SIZES)[number]

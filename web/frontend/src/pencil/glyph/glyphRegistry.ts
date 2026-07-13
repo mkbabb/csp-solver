@@ -32,7 +32,7 @@ function cellHash(char: string, cellPosition: number): number {
  * Pick a deterministic variant index based on character and cell position.
  * Uses spatial hashing so adjacent cells are very likely to get different variants.
  */
-export function pickVariantIndex(
+function pickVariantIndex(
     char: string,
     cellPosition: number,
     variantCount: number,

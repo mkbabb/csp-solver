@@ -104,7 +104,11 @@ test('randomize drops ?board= from the URL (sudoku)', async ({ page }) => {
 test('the share affordance writes ?board= on the explicit act (sudoku)', async ({ page }) => {
   await page.goto('./');
   await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
-  await page.waitForTimeout(1500); // let the auto-randomized board settle
+  // Let the auto-dealt board settle so Share has a real board to encode: givens rendered
+  // (the settle condition) rather than a fixed delay.
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+    .toBeGreaterThan(0);
   expect(boardParam(page)).toBe(false);
 
   await page.locator('.controls-card button[aria-label="Share board link"]').click();
