@@ -14,7 +14,46 @@ general-purpose `csp_solver::assignment()` / `AssignmentBuilder` surface morph
 was built on stays here; `morph` now consumes it as an ordinary crates.io
 dependency (`csp-solver = "0.2"`).
 
-## 0.4.0 — 2026-07-10 (tranche-3, W3 — dead-surface excision)
+## 0.5.0 — 2026-07-13 (tranche-4, W6 — generation truth: futoshiki difficulty axis)
+
+_Staged, unpublished — the team lead owns the crates.io/`file:`-link publish._
+
+### crates.io
+
+- **`csp-solver@0.4.0 → 0.5.0`** — additive public surface: futoshiki grows a
+  `Difficulty` axis it never had (GEN-2). New exports under
+  `puzzles::futoshiki`: the `Difficulty` enum (`Easy`/`Medium`/`Hard`) and
+  `generate_futoshiki_difficulty_seeded(n, difficulty, seed)`, a keep-density +
+  inequality-density ladder (Easy 0.6 / Medium 0.45 / Hard 0.3 keep; carets ≈
+  n / 1.5n / 2n) wired through the existing `generate_futoshiki_tuned_seeded`.
+  Givens fall strictly Easy→Hard (15/11/8 on a 5×5), each tier unique 30/30. The
+  single-tier `generate_futoshiki` / `generate_futoshiki_seeded` entries are
+  unchanged. Minor bump per the pre-1.0 discipline (new surface across the 0.x
+  minor slot).
+- **Solver micro-rows (W6 lane L4, output-identical)** — the §7 perf-audit rows,
+  each gated on byte-identical dealt boards and solve traces:
+  - *GENREUSE* — generation's slow hole-dig reuses one finalized CSP skeleton
+    across all hole candidates instead of rebuilding it per candidate. New
+    `puzzles::sudoku` exports `sudoku_csp_skeleton(n)` + `sudoku_given(board)`
+    (`create_sudoku_csp` composes them, signature unchanged). Allocations/deal
+    fall 7–14× (9×9-Medium 39.1k → 5.3k, 16×16-Medium 362.8k → 26.1k).
+  - *VALUES* — the search kernel's per-node domain snapshot uses `SmallVec`
+    (inline for domains ≤ 16), removing ~1 alloc/node. New dependency
+    `smallvec = "1"`; **+2,869 B** lean wasm (89,995 B, clears the 93 KB budget).
+  - *MRV* — the `Ordering::Mrv` weighted degree is precomputed once
+    (`ordering::precompute_var_wdeg`) instead of re-summed per node.
+    **BREAKING (internal API):** `ordering::select_variable` takes a `var_wdeg`
+    slice in place of `(constraint_weights, var_constraint_ids)`. Size-neutral.
+
+### npm
+
+- **`@mkbabb/csp-solver-wasm@0.4.0 → 0.5.0`** — **BREAKING**. `generateFutoshiki`
+  gains a `difficulty` argument: `generateFutoshiki(boardSize, seed)` →
+  `generateFutoshiki(boardSize, difficulty, seed)`, mirroring
+  `generateSudoku(n, difficulty, seed)`. New `FutoshikiDifficulty`
+  (`Easy`/`Medium`/`Hard`) enum export. The frontend Worker call-site is updated
+  in the same tranche (W6 lane L3). Minor bump encodes the breaking signature
+  change across the 0.x minor slot.
 
 ### npm
 

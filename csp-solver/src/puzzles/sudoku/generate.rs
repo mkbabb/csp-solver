@@ -8,7 +8,7 @@ use include_dir::{Dir, include_dir};
 use crate::ordering::Ordering;
 use crate::{Pruning, SolveConfig};
 
-use super::csp::{create_sudoku_csp, solve_sudoku};
+use super::csp::{create_sudoku_csp, sudoku_csp_skeleton, sudoku_given};
 use super::rng::SimpleRng;
 use super::transform::{SudokuTransform, apply_random_transform};
 
@@ -261,11 +261,18 @@ fn generate_board_slow_with_rng(n: u32, difficulty: Difficulty, rng: &mut Simple
     let m = n * n;
     let total = (m * m) as usize;
 
-    // Step 1: Generate a complete valid solution.
-    let mut seed_board = vec![0u32; total];
-    let mut first_row: Vec<u32> = (1..=m).collect();
-    rng.shuffle(&mut first_row);
-    seed_board[..m as usize].copy_from_slice(&first_row);
+    // The row/column/box constraint graph is identical for every board of this
+    // size — only the given cells change. Build the finalized CSP skeleton once
+    // and re-seed the givens per solve (`solve_with_given` resets domains on
+    // entry), so both the seed-solution solve below and every hole-dig candidate
+    // reuse it. This elides the per-candidate `Csp::new`/`add_all_different`/
+    // `finalize` (adjacency + var-constraint rebuild) that dominated generation
+    // allocation — ~40% of 9×9-Medium self-time was the per-candidate rebuild
+    // (P2-solver-backend GENREUSE). The dealt board is byte-identical: the dig
+    // sequence and each uniqueness verdict depend only on the solve's solution
+    // *count*, which the reuse cannot perturb (the GAC warm-start cache is
+    // thread-local and correctness-invariant regardless).
+    let mut csp = sudoku_csp_skeleton(n);
 
     let config = SolveConfig {
         pruning: Pruning::Ac3,
@@ -274,7 +281,17 @@ fn generate_board_slow_with_rng(n: u32, difficulty: Difficulty, rng: &mut Simple
         ..Default::default()
     };
 
-    let solution = solve_sudoku(&seed_board, n, &config).expect("seeded board must be solvable");
+    // Step 1: Generate a complete valid solution.
+    let mut seed_board = vec![0u32; total];
+    let mut first_row: Vec<u32> = (1..=m).collect();
+    rng.shuffle(&mut first_row);
+    seed_board[..m as usize].copy_from_slice(&first_row);
+
+    let solution = csp
+        .solve_with_given(&config, &sudoku_given(&seed_board))
+        .into_iter()
+        .next()
+        .expect("seeded board must be solvable");
 
     // Step 2: Remove cells by random hole-digging with uniqueness check.
     let target_holes = match difficulty {
@@ -303,8 +320,7 @@ fn generate_board_slow_with_rng(n: u32, difficulty: Difficulty, rng: &mut Simple
         let saved = board[idx];
         board[idx] = 0;
 
-        let (mut csp, given) = create_sudoku_csp(&board, n);
-        let solutions = csp.solve_with_given(&uniqueness_config, &given);
+        let solutions = csp.solve_with_given(&uniqueness_config, &sudoku_given(&board));
 
         if solutions.len() == 1 {
             holes += 1;

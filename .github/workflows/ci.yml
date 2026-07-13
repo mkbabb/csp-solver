@@ -30,7 +30,9 @@
 #   2.  build + test       -> rust       (cargo build/test --workspace — NEVER per-crate)
 #   3.  bench + corpus smoke-> rust      (queens assert_eq!(92/14200); gac_ab --test;
 #                                         gac_ab_corpus 0/50 false-UNSAT + 40,513→4,678
-#                                         node-count spine — T3-W6 ROW-3a/3d)
+#                                         node-count spine — T3-W6 ROW-3a/3d; +T4-W6
+#                                         generation-truth: zzz_gen_truth_probe 16×16
+#                                         monotone + verify_bank_uniqueness de-orphaned)
 #   4.  py compile         -> py-compile (cargo check --features py under Python 3.13 — pyo3 0.29-tested floor, not a hard ceiling)
 #   5.  py runtime         -> py-runtime (maturin wheel -> uv venv -> pytest in csp-solver/tests-py)
 #   6.  wasm               -> wasm       (wasm-pack test --node + clippy --target wasm32)
@@ -146,6 +148,26 @@ jobs:
               # is the soundness+cost oracle guarding every future GAC edit. `-p
               # csp-solver` because the example lives in that package.
               run: cargo run -p csp-solver --release --example gac_ab_corpus
+            - name: generation-truth probe (GEN-1 16×16 monotone; T4-W6)
+              # T4-W6 ROW-2: the generation-truth gate. Grades the embedded Sudoku
+              # bank by measure_difficulty (FC + FailFirst, the codebase's own
+              # difficulty proxy) under a node budget and asserts the tier labels
+              # order honestly — median AND max capped-backtracks and the deep-search
+              # fraction non-decreasing easy→medium→hard, givens non-increasing, and
+              # 16×16 Hard deep-searching on a majority of deals. Born RED at the wave
+              # base SHA (the 16×16 Hard bank was stale: 102-107 givens / 0 backtracks
+              # while Medium ran to millions — Hard measured easier than Medium); cured
+              # by regenerating the Hard bank (disposition (a)). Release (a search-hard
+              # 16×16 grade runs to ~1.5M backtracks; the budget bounds it).
+              run: cargo run -p csp-solver --release --example zzz_gen_truth_probe
+            - name: bank uniqueness sweep (GEN-4 verify_bank_uniqueness; T4-W6)
+              # T4-W6 ROW-5: de-orphans examples/verify_bank_uniqueness — it re-solves
+              # every embedded template with max_solutions:2 and exit-non-zero on any
+              # non-unique / unsat / budget-truncated board. Previously in NO CI lane
+              # (FAM-1 orphaned-gate, generation edition — a corrupt data/ template
+              # passed CI); now a standing gate beside the live-gen sweep in
+              # tests/sudoku_generate.rs. Release (the corpus re-solve is heavy).
+              run: cargo run -p csp-solver --release --example verify_bank_uniqueness
 
     # ---------------------------------------------------------------- Lane 4
     # py compile — the historical break class (Pass-1 N1). `cargo check --features py`

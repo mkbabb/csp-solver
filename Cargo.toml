@@ -29,6 +29,10 @@ pyo3 = { version = "0.29", features = ["extension-module"] }
 # (A20 intent; the audit's html_reports mechanism predates 0.8.2's empty feature).
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 proptest = "1"
+# Small-size-optimized Vec — inline storage for the search kernel's per-node
+# domain-values snapshot (`solver/search.rs`), heap-free for every domain that
+# fits inline (sudoku 16×16 ≤ 16 values). Pure-Rust, no C deps, wasm-compatible.
+smallvec = "1"
 wasm-bindgen = "0.2.126"
 serde-wasm-bindgen = "0.6"
 serde = { version = "1", features = ["derive"] }

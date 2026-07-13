@@ -21,10 +21,11 @@
 
 use csp_solver::ordering::Ordering;
 use csp_solver::puzzles::futoshiki::{
-    FutoshikiPuzzle, create_futoshiki_csp, generate_futoshiki_seeded,
+    Difficulty, FutoshikiPuzzle, create_futoshiki_csp, generate_futoshiki_difficulty_seeded,
+    generate_futoshiki_seeded,
 };
 use csp_solver::{Pruning, SolveConfig};
-use csp_solver_wasm::{generate_futoshiki, solve_futoshiki};
+use csp_solver_wasm::{FutoshikiDifficulty, generate_futoshiki, solve_futoshiki};
 use wasm_bindgen::JsValue;
 use wasm_bindgen_test::*;
 
@@ -136,21 +137,35 @@ fn parity_fixed_boards() {
 
 #[wasm_bindgen_test]
 fn generate_wire_matches_native_n4_to_n7() {
+    // The difficulty axis (T4-W6 GEN-2) must marshal bit-identically: the wire's
+    // `FutoshikiDifficulty` maps onto the core `Difficulty` and the same board +
+    // carets fall out on both targets.
+    let tiers = [
+        (Difficulty::Easy, FutoshikiDifficulty::Easy),
+        (Difficulty::Medium, FutoshikiDifficulty::Medium),
+        (Difficulty::Hard, FutoshikiDifficulty::Hard),
+    ];
     for n in 4..=7u32 {
-        for &seed in &[1u64, 42, 12345] {
-            let (nb, np) = generate_futoshiki_seeded(n, seed);
-            let wire = generate_futoshiki(n, seed as f64).expect("wire generate");
-            assert_eq!(wire.board(), nb, "board mismatch n={n} seed={seed}");
-            assert_eq!(
-                wire.inequalities(),
-                flat_ineq(&np),
-                "inequality mismatch n={n} seed={seed}"
-            );
-            assert_eq!(
-                wire.board_size(),
-                n,
-                "board_size mismatch n={n} seed={seed}"
-            );
+        for &(native_d, wire_d) in &tiers {
+            for &seed in &[1u64, 42, 12345] {
+                let (nb, np) = generate_futoshiki_difficulty_seeded(n, native_d, seed);
+                let wire = generate_futoshiki(n, wire_d, seed as f64).expect("wire generate");
+                assert_eq!(
+                    wire.board(),
+                    nb,
+                    "board mismatch n={n} {native_d:?} seed={seed}"
+                );
+                assert_eq!(
+                    wire.inequalities(),
+                    flat_ineq(&np),
+                    "inequality mismatch n={n} {native_d:?} seed={seed}"
+                );
+                assert_eq!(
+                    wire.board_size(),
+                    n,
+                    "board_size mismatch n={n} {native_d:?} seed={seed}"
+                );
+            }
         }
     }
 }
@@ -203,8 +218,12 @@ fn wrong_board_length_is_invalid_input() {
 
 #[wasm_bindgen_test]
 fn generate_out_of_range_board_size_is_invalid_input() {
-    let low = generate_futoshiki(3, 1.0).err().expect("expected an error");
+    let low = generate_futoshiki(3, FutoshikiDifficulty::Easy, 1.0)
+        .err()
+        .expect("expected an error");
     assert_eq!(err_code(low).as_deref(), Some("INVALID_INPUT"));
-    let high = generate_futoshiki(8, 1.0).err().expect("expected an error");
+    let high = generate_futoshiki(8, FutoshikiDifficulty::Easy, 1.0)
+        .err()
+        .expect("expected an error");
     assert_eq!(err_code(high).as_deref(), Some("INVALID_INPUT"));
 }

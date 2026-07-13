@@ -17,9 +17,12 @@
 //! 4. [`measure_difficulty`] — the Sudoku backtrack-count recipe verbatim
 //!    (`ForwardChecking` + `FailFirst`), threaded with the inequality set.
 //!
-//! v1 scope is a single high-density tier (~75% givens kept); there is no
-//! `Difficulty` parameter — fabricated tiers with no measured separation are
-//! worse than none.
+//! Difficulty is a [`Difficulty`] axis (T4-W6 GEN-2): a keep-density +
+//! inequality-density ladder over the tuned generator, givens falling and carets
+//! rising together Easy→Hard. The default (unparametrized)
+//! [`generate_futoshiki`] / [`generate_futoshiki_seeded`] entries keep the
+//! single high-density ~75% tier for callers that want one; the axis rides
+//! [`generate_futoshiki_difficulty_seeded`].
 
 use crate::domain::bitset::BitsetDomain;
 use crate::ordering::Ordering;
@@ -32,6 +35,47 @@ use super::csp::{FutoshikiPuzzle, create_futoshiki_csp};
 /// (`pass3/futoshiki-gen-probe-output.txt` §3) shows uniqueness-checked
 /// hole-digging at this density is 0–1 ms for N=5–7.
 const KEEP_DENSITY: f64 = 0.75;
+
+/// Futoshiki puzzle difficulty — a keep-density + inequality-density ladder.
+///
+/// The two knobs move in tandem: givens fall and carets rise Easy→Hard. The r2
+/// density sweep (`evidence/r2/r2-generation-truth.md`, GEN-2) shows givens
+/// carry uniqueness at high keep, so a genuinely inequality-driven low-keep deal
+/// needs givens *down* AND carets *up* together — a near-full Latin square is
+/// not a futoshiki. Mirrors `sudoku`'s [`Difficulty`](crate::sudoku::Difficulty)
+/// shape without depending on it: each puzzle module owns its own axis.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Difficulty {
+    Easy,
+    Medium,
+    Hard,
+}
+
+impl Difficulty {
+    /// Fraction of cells kept as givens — the `keep_density` rung fed to
+    /// [`generate_futoshiki_tuned_seeded`]. Easy 0.6 / Medium 0.45 / Hard 0.3
+    /// (the ladder the wave spec names); givens fall as difficulty rises.
+    fn keep_density(self) -> f64 {
+        match self {
+            Difficulty::Easy => 0.6,
+            Difficulty::Medium => 0.45,
+            Difficulty::Hard => 0.3,
+        }
+    }
+
+    /// Inequality-clue count as a function of the board side `n` (the tuned
+    /// generator clamps it to the available adjacent-pair budget). Carets rise
+    /// Easy→Hard — ≈ one / one-and-a-half / two per row — to keep the sparser
+    /// low-keep tiers both hand-solvable and unique as the givens thin out.
+    fn inequality_count(self, n: u32) -> usize {
+        let nn = n as usize;
+        match self {
+            Difficulty::Easy => nn,
+            Difficulty::Medium => nn * 3 / 2,
+            Difficulty::Hard => nn * 2,
+        }
+    }
+}
 
 /// Build the seed/uniqueness solve config: the same `Ac3` + `FailFirst` pairing
 /// Sudoku's `generate.rs` seeds and uniqueness-checks with. `Ac3` is the
@@ -239,6 +283,27 @@ pub fn generate_futoshiki_tuned_seeded(
     let count = inequality_count.min(available);
     let density = keep_density.clamp(f64::MIN_POSITIVE, 1.0);
     generate_with_rng(n, density, count, &mut SimpleRng::new(seed))
+}
+
+/// Seeded, difficulty-parametric generator — the axis W6 (GEN-2) wires through
+/// the tuned generator. Maps `difficulty` to its keep-density + inequality-count
+/// rung ([`Difficulty::keep_density`] / [`Difficulty::inequality_count`]), then
+/// defers to [`generate_futoshiki_tuned_seeded`]. Same `n` + `difficulty` +
+/// `seed` ⇒ the same puzzle on native and wasm — the invariant the client-solve
+/// wasm surface (`csp-solver/wasm/src/futoshiki.rs`) and its cross-target parity
+/// harness rely on. The seeded twin of `sudoku`'s
+/// [`generate_board_seeded`](crate::sudoku::generate_board_seeded).
+pub fn generate_futoshiki_difficulty_seeded(
+    n: u32,
+    difficulty: Difficulty,
+    seed: u64,
+) -> (Vec<u32>, Vec<(usize, usize)>) {
+    generate_futoshiki_tuned_seeded(
+        n,
+        difficulty.keep_density(),
+        difficulty.inequality_count(n),
+        seed,
+    )
 }
 
 /// Shared generation pipeline: seed → place carets → uniqueness-checked

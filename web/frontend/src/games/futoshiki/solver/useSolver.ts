@@ -17,7 +17,7 @@
  * `@games/shared/solver/transport`; this file keeps only the Futoshiki-specific board +
  * inequality marshalling and request/response shapes.
  */
-import type { Inequality } from "../types";
+import type { Difficulty, Inequality } from "../types";
 import { SolverError } from "@games/shared/solver/solverError";
 import { createSolverTransport } from "@games/shared/solver/transport";
 import type { SolverRequest, SolverResponse } from "./protocol";
@@ -42,6 +42,11 @@ export interface SolveResponse {
   /** Wall-clock ms of the wasm call, measured inside the worker. */
   elapsedMs?: number;
 }
+
+// The wasm `FutoshikiDifficulty` is numeric (Easy/Medium/Hard = 0/1/2); the wire
+// carries the ordinal (structured-clone-safe), the worker re-narrows to the enum. Twin of
+// the sudoku useSolver's `DIFFICULTY_ORDINAL`.
+const DIFFICULTY_ORDINAL: Record<Difficulty, number> = { EASY: 0, MEDIUM: 1, HARD: 2 };
 
 const transport = createSolverTransport<SolverRequest, SolverResponse>({
   createWorker: () =>
@@ -90,10 +95,19 @@ function toPairs(flat: Uint32Array): Inequality[] {
 }
 
 export function useSolver() {
-  async function getRandomBoard(boardSize: number): Promise<BoardResponse> {
+  async function getRandomBoard(
+    boardSize: number,
+    difficulty: Difficulty,
+  ): Promise<BoardResponse> {
     const id = transport.nextId();
     const res = await transport.call(
-      { id, kind: "generate", boardSize, seed: Date.now() },
+      {
+        id,
+        kind: "generate",
+        boardSize,
+        difficulty: DIFFICULTY_ORDINAL[difficulty],
+        seed: Date.now(),
+      },
       [],
     );
     transport.throwIfError(res);

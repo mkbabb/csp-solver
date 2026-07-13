@@ -36,6 +36,8 @@
 //! change here is the one search skeleton; [`Feasibility`] and [`BranchBound`]
 //! are its co-designed leaves, not separable concerns. Waiver recorded, closed.
 
+use smallvec::SmallVec;
+
 use crate::constraint::{ConstraintEnum, VarId};
 use crate::domain::Domain;
 use crate::ordering::{self, Ordering};
@@ -58,7 +60,8 @@ const SEARCH_ROOT_DEPTH: usize = 1;
 /// config structs (`BacktrackConfig` / `BackjumpConfig` / `OptimizeConfig`),
 /// which differed only in a `maximize` bool and each carried its own *cloned*
 /// copy of `constraint_weights` + `var_constraint_ids`. Those read-only vectors
-/// are now borrowed by the kernel, so they live nowhere in this struct.
+/// are passed to the entry point, which folds them into the kernel's
+/// precomputed `var_wdeg` at search entry, so they live nowhere in this struct.
 #[derive(Debug, Clone)]
 pub(crate) struct SearchParams {
     pub(crate) pruning: Pruning,
@@ -81,15 +84,18 @@ enum Step {
 }
 
 /// The single mutable spine of the search: problem references, the undo trail,
-/// and stats. `weights` / `var_cids` / `adjacency` are borrowed (no per-solve
-/// clone); `weights` is `&mut` so a later tranche can bump dom/wdeg on wipe-out
-/// without touching this signature.
+/// and stats. `constraints` / `adjacency` are borrowed (no per-solve clone).
+/// `var_wdeg` is the frozen per-variable weighted degree, precomputed once at
+/// entry by [`ordering::precompute_var_wdeg`] for [`Ordering::Mrv`] (empty for
+/// every other ordering), so the Mrv score's denominator is a single lookup
+/// rather than a per-node re-sum. The entry points still take
+/// `constraint_weights` as `&mut` so a later tranche can bump dom/wdeg on
+/// wipe-out — such a tranche must recompute `var_wdeg` from the bumped weights.
 pub(crate) struct Kernel<'a, D: Domain> {
     variables: &'a mut [Variable<D>],
     constraints: &'a [ConstraintEnum<D>],
     adjacency: &'a Adjacency,
-    weights: &'a mut [f64],
-    var_cids: &'a [Vec<usize>],
+    var_wdeg: Vec<f64>,
     stats: &'a mut SolveStats,
     trail: Trail,
     /// Reusable AC-3 worklist scratch, sized once to `constraints.len()` at
@@ -235,11 +241,17 @@ where
     }
 
     let idx =
-        ordering::select_variable(stack, k.variables, k.params.ordering, k.weights, k.var_cids)
-            .unwrap();
+        ordering::select_variable(stack, k.variables, k.params.ordering, &k.var_wdeg).unwrap();
     let var = stack.swap_remove(idx);
 
-    let mut values: Vec<_> = k.variables[var as usize].domain.iter().collect();
+    // Per-node value snapshot: taken inline (no heap) for any domain that fits
+    // the 16-slot buffer, which covers every shipped puzzle (sudoku's 16×16 is
+    // the largest at 16 values); larger domains spill to the heap exactly as the
+    // former `Vec` did. Same values in the same iteration order, so the branch
+    // trajectory is byte-identical (`order_values` derefs to the slice; the
+    // feasibility policy leaves it untouched). Removes the ~1 alloc/node the
+    // `Vec` collect cost (P2-solver-backend VALUES).
+    let mut values: SmallVec<[D::Value; 16]> = k.variables[var as usize].domain.iter().collect();
     p.order_values(k, var, &mut values);
 
     for val in values {
@@ -325,6 +337,7 @@ where
         (0..num_vars as u32).collect()
     };
 
+    let var_wdeg = ordering::precompute_var_wdeg(params.ordering, weights, var_cids);
     let mut policy = Feasibility {
         solutions: Vec::new(),
         max_solutions: params.max_solutions,
@@ -333,8 +346,7 @@ where
         variables,
         constraints,
         adjacency,
-        weights,
-        var_cids,
+        var_wdeg,
         stats,
         trail: Trail::default(),
         worklist: ac3::BitsetWorklist::new(constraints.len()),
@@ -471,6 +483,7 @@ where
     let mut assignment: Vec<Option<D::Value>> = vec![None; num_vars];
     let mut stack: Vec<VarId> = (0..num_vars as u32).collect();
 
+    let var_wdeg = ordering::precompute_var_wdeg(params.ordering, weights, var_cids);
     let mut policy = BranchBound {
         scored: Vec::new(),
         best_cost: f64::INFINITY,
@@ -481,8 +494,7 @@ where
         variables,
         constraints,
         adjacency,
-        weights,
-        var_cids,
+        var_wdeg,
         stats,
         trail: Trail::default(),
         worklist: ac3::BitsetWorklist::new(constraints.len()),

@@ -140,3 +140,145 @@ fn live_generated_boards_are_unique_across_served_sizes() {
         );
     }
 }
+
+// ─── Live-gen sweep — the fall-through tiers (FAM-9 / GEN-3 + GEN-4) ──────────
+
+/// The tiers whose embedded bank is EMPTY, so `getRandomBoard` hole-digs LIVE in
+/// the wasm worker on every deal (`r2-generation-truth.md` GEN-3): all 4×4, and
+/// 9×9 Easy + 9×9 Medium. (9×9 Hard and all three 16×16 tiers are served from the
+/// corpus fast path — `embedded_templates` non-empty — so a *deal* there is a
+/// template pick + symmetry transform, not a live dig.) This is exactly the set
+/// `TEMPLATE_BANK[size]?.[diff] ?? []` resolves empty for in the frontend, and the
+/// set whose per-deal generation cost the wave must hold to the corpus bar.
+const LIVE_DEALT_TIERS: &[(u32, Difficulty)] = &[
+    (2, Difficulty::Easy),
+    (2, Difficulty::Medium),
+    (2, Difficulty::Hard),
+    (3, Difficulty::Easy),
+    (3, Difficulty::Medium),
+];
+
+/// Several seeds per tier — the sweep breadth the uniqueness gate asks for
+/// (`r2-generation-truth.md` GEN-4: "n∈{2,3}×diff×several seeds, max_solutions:2"),
+/// distinct from `live_generated_boards_are_unique_across_served_sizes`'s single
+/// `0x5D_00+n` Easy-only probe. Fixed for determinism.
+const SWEEP_SEEDS: [u64; 5] = [1, 7, 42, 1234, 65537];
+
+/// GEN-4 + GEN-3 — the live-gen sweep. Widens the sibling
+/// `live_generated_boards_are_unique_across_served_sizes` (W2: n∈{2,3,4} Easy, one
+/// seed each) across the *fall-through* tiers × several seeds, asserting two
+/// properties on every live deal:
+///
+///   - **uniqueness (GEN-4)** — the hole-digger keeps a removal only while the
+///     board stays single-solution (`max_solutions:2` probe per dig,
+///     `generate.rs:307`), so what it deals must be unique; re-solved here
+///     independently under the production `Ac3+Mrv` config, exactly one solution;
+///   - **corpus-bar parity (GEN-3)** — the deal solves within a node budget the
+///     corpus fast-path deals clear trivially (a template + transform is unique by
+///     construction and Ac3-propagation-solvable). `budget_exceeded` on any live
+///     deal would mean the fall-through path is off the corpus bar — the latency
+///     risk r2 flagged, caught here as a node-count invariant rather than a flaky
+///     in-browser wall-time probe (the browser-latency variant belongs to the e2e
+///     lane, which owns wall-time surfaces).
+///
+/// Node counts are machine-invariant (ci.yml GAC-corpus rationale, G6), so the
+/// budget is a stable gate. 4×4 and 9×9 Easy/Medium are propagation-heavy (dense
+/// givens), so the whole sweep stays well inside the budget and cheap for every
+/// `cargo test --workspace` run.
+#[test]
+fn live_dealt_tiers_are_unique_and_within_the_corpus_bar() {
+    // The corpus bar: a fast-path deal is Ac3-propagation-solvable and its
+    // uniqueness re-solve costs ~0 backtracks. A generous ceiling that a
+    // propagation-solvable board clears with room, yet a runaway would breach.
+    const CORPUS_BAR: u64 = 5_000_000;
+    for &(n, diff) in LIVE_DEALT_TIERS {
+        let total = (n * n * n * n) as usize;
+        for seed in SWEEP_SEEDS {
+            assert_eq!(
+                embedded_template_count(n, diff),
+                0,
+                "N={n} {diff:?}: expected a live-dealt (empty-bank) tier — the fall-through \
+                 set drifted; re-derive LIVE_DEALT_TIERS from the current bank"
+            );
+
+            let board = generate_board_seeded(n, diff, seed);
+            assert_eq!(
+                board.len(),
+                total,
+                "N={n} {diff:?} seed={seed}: board has {} cells, expected {total}",
+                board.len()
+            );
+
+            let (mut csp, given) = create_sudoku_csp(&board, n);
+            let config = SolveConfig {
+                pruning: Pruning::Ac3,
+                ordering: Ordering::Mrv,
+                max_solutions: 2,
+                node_budget: Some(CORPUS_BAR),
+                ..Default::default()
+            };
+            let solutions = csp.solve_with_given(&config, &given);
+
+            assert!(
+                !csp.stats().budget_exceeded,
+                "N={n} {diff:?} seed={seed}: live deal breached the corpus bar ({CORPUS_BAR} \
+                 nodes) — the fall-through path is off the fast-path latency budget"
+            );
+            assert_eq!(
+                solutions.len(),
+                1,
+                "N={n} {diff:?} seed={seed}: a live deal must have exactly one solution, got {}",
+                solutions.len()
+            );
+        }
+    }
+}
+
+// ─── Clue-count honesty — GEN-1 disposition (b) ──────────────────────────────
+
+fn givens(board: &[u32]) -> usize {
+    board.iter().filter(|&&v| v != 0).count()
+}
+
+/// The givens a *served* deal carries for `(n, diff)`: the median of the embedded
+/// bank when that tier is banked (16×16 all tiers, 9×9 Hard), else a live deal's
+/// count (9×9 Easy/Medium, all 4×4). Mirrors exactly the path a real request
+/// takes — bank fast-path or live hole-dig — so the ladder it asserts is the one
+/// a user actually experiences.
+fn served_givens(n: u32, diff: Difficulty, seed: u64) -> usize {
+    let bank = embedded_templates(n, diff);
+    if bank.is_empty() {
+        givens(&generate_board_seeded(n, diff, seed))
+    } else {
+        let mut gs: Vec<usize> = bank.iter().map(|b| givens(b)).collect();
+        gs.sort_unstable();
+        gs[gs.len() / 2]
+    }
+}
+
+/// GEN-1 disposition (b) — clue-count honesty. `measure_difficulty` (the FC proxy)
+/// is *bimodal* at 9×9 and 16×16 — a board is either propagation-solvable (0
+/// backtracks) or runs to millions, with nothing between — so it cannot separate
+/// two propagation-solvable tiers (9×9 Easy ≡ Medium, both 0; the flatness r2
+/// GEN-1 recorded). That live search grade is W7's technique tier. What the
+/// Easy/Medium/Hard axis DOES mean honestly, at every size, is a monotone
+/// clue-count ladder — strictly fewer givens as the label rises — and this gate
+/// pins it so the label means something true before W7 lands. (The 16×16 rung of
+/// this ladder is also the disposition-(a) fix's clue side: the regenerated Hard
+/// bank at ~94 givens sits strictly below Medium's ~113.)
+#[test]
+fn clue_count_ladder_is_monotone_across_served_tiers() {
+    for n in SERVED_SIZES {
+        for seed in [1u64, 7, 42] {
+            let easy = served_givens(n, Difficulty::Easy, seed);
+            let medium = served_givens(n, Difficulty::Medium, seed);
+            let hard = served_givens(n, Difficulty::Hard, seed);
+            assert!(
+                easy > medium && medium > hard,
+                "N={n} seed={seed}: served givens must fall strictly easy>medium>hard, got \
+                 {easy}/{medium}/{hard} — the clue-count ladder (the honest difficulty signal) \
+                 is not monotone"
+            );
+        }
+    }
+}

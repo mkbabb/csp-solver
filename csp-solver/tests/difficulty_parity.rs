@@ -45,8 +45,19 @@
 //! is identical.
 //!
 //! The T2-W2 abrogation retired the FastAPI service, so the Pydantic
-//! `models.py` mirror and its scan root are gone — the mirror set is now
-//! three: PyO3, wasm, frontend TS.
+//! `models.py` mirror and its scan root are gone — the sudoku wire-mirror set
+//! is three: PyO3, wasm, frontend TS.
+//!
+//! ## Reconciliation note (T4-W6, 2026-07-13)
+//!
+//! Futoshiki grew its own `Difficulty` axis (GEN-2), spelled in the same
+//! idiomatic Rust PascalCase as the wasm sudoku enum: `puzzles::futoshiki::
+//! generate::Difficulty` (core) and `wasm/src/futoshiki.rs::FutoshikiDifficulty`
+//! (wire). They are a *parallel* axis, not additional sudoku wire-mirrors — a
+//! distinct puzzle's tiers that happen to share the canonical `EASY`/`MEDIUM`/
+//! `HARD` variant set — so the discovery guard must still see them (they are
+//! `enum …Difficulty` declarations) and they join [`SIBLING_DEFINITIONS`] as
+//! `PascalCase` siblings. The sudoku wire-mirror set proper stays three.
 //!
 //! ## Scope boundary (read before adding a fifth casing or a new root)
 //!
@@ -146,6 +157,21 @@ const SIBLING_DEFINITIONS: &[(&str, &str, Casing)] = &[
     (
         "games/sudoku/types.ts Difficulty (frontend TS)",
         "../web/frontend/src/games/sudoku/types.ts",
+        Casing::Verbatim,
+    ),
+    (
+        "puzzles/futoshiki/generate.rs::Difficulty (futoshiki core, T4-W6 — idiomatic casing)",
+        "src/puzzles/futoshiki/generate.rs",
+        Casing::PascalCase,
+    ),
+    (
+        "wasm/src/futoshiki.rs::FutoshikiDifficulty (wasm, T4-W6 — idiomatic casing)",
+        "wasm/src/futoshiki.rs",
+        Casing::PascalCase,
+    ),
+    (
+        "games/futoshiki/types.ts Difficulty (frontend TS, T4-W6)",
+        "../web/frontend/src/games/futoshiki/types.ts",
         Casing::Verbatim,
     ),
 ];

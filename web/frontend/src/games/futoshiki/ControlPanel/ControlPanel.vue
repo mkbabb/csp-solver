@@ -2,14 +2,18 @@
 /**
  * Futoshiki control panel — own file, not shared with Sudoku's (games never import each
  * other; F5 flags `size` vs `board_size` as a live footgun against any shared-panel
- * temptation). Structurally the Sudoku panel minus the difficulty section (F3): a single
- * board-size selector, the hold-to-peek BoilDivider, and the three action buttons.
+ * temptation). The twin of the Sudoku panel: a board-size selector, a difficulty selector
+ * (T4-W6 GEN-2 grew the axis — no longer size-only), the hold-to-peek BoilDivider, and the
+ * action + play-tool buttons.
  */
 import { computed, ref, onBeforeUnmount } from "vue";
 import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
 import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
 import EraserIcon from "@pencil/chrome/icons/EraserIcon.vue";
 import ShareIcon from "@pencil/chrome/icons/ShareIcon.vue";
+import UndoIcon from "@pencil/chrome/icons/UndoIcon.vue";
+import RedoIcon from "@pencil/chrome/icons/RedoIcon.vue";
+import HintIcon from "@pencil/chrome/icons/HintIcon.vue";
 import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
 import KeyboardLegend from "@pencil/chrome/KeyboardLegend.vue";
 import BoilDivider from "@pencil/chrome/BoilDivider.vue";
@@ -18,7 +22,8 @@ import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
 import { useTheme } from "@/composables/useTheme";
 import { useButtonAnimation } from "@games/shared/useButtonAnimation";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
-import { boardSizeOptions } from "./constants";
+import type { Difficulty } from "@games/futoshiki/types";
+import { boardSizeOptions, difficultyOptions } from "./constants";
 
 const { isDark } = useTheme();
 
@@ -49,6 +54,7 @@ const panelFilter = computed(() =>
 
 const props = defineProps<{
   boardSize: number;
+  difficulty: Difficulty;
   loading: boolean;
   solveState: string;
   mobile?: boolean;
@@ -59,12 +65,30 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update:boardSize", value: number): void;
+  (e: "update:difficulty", value: Difficulty): void;
   (e: "randomize"): void;
   (e: "clear"): void;
   (e: "solve"): void;
   (e: "peek-start"): void;
   (e: "peek-end"): void;
+  // T4-WM §2 — the touch surface for the play tools (twin of the sudoku panel's): undo/redo
+  // carry no argument; hint routes through the board's own focused-cell method (this panel is
+  // the board's sibling and holds no focus state), riding the same emit path as the board's H.
+  (e: "undo"): void;
+  (e: "redo"): void;
+  (e: "hint"): void;
 }>();
+
+// UI-12 (twin of the sudoku panel's): the mobile Board-Size / Difficulty tabs each show only
+// the active panel's options, so the inactive tab's current value would be invisible while the
+// other is open — surface it small + graphite beneath the inactive heading (`heading-value`).
+const expandedPanel = ref<"boardSize" | "difficulty">("boardSize");
+const boardSizeValueLabel = computed(
+  () => boardSizeOptions.find((o) => o.value === props.boardSize)?.label ?? "",
+);
+const difficultyValueLabel = computed(
+  () => difficultyOptions.find((o) => o.value === props.difficulty)?.label ?? "",
+);
 
 // ── Hold-to-peek gesture on the BoilDivider (the hold surface) ──
 const PEEK_HOLD_MS = 350;
@@ -184,8 +208,25 @@ function onSolve() {
   emit("solve");
 }
 
+// T4-WM §2 — the play tools (twin of the sudoku panel's). Plain relays; the :active
+// press-scale is the tap feedback and the game owns the undo/redo/hint act.
+function onUndo() {
+  emit("undo");
+}
+function onRedo() {
+  emit("redo");
+}
+function onHint() {
+  emit("hint");
+}
+
 function onBoardSizeChange(val: string | number) {
   emit("update:boardSize", val as number);
+  triggerBoil();
+}
+
+function onDifficultyChange(val: string | number) {
+  emit("update:difficulty", val as Difficulty);
   triggerBoil();
 }
 </script>
@@ -195,17 +236,63 @@ function onBoardSizeChange(val: string | number) {
   <div v-if="mobile" class="control-panel-wrap mobile-control-panel mt-3">
     <div class="control-panel-filtered">
       <div class="mobile-heading-row">
-        <h2 class="section-heading text-muted-foreground" aria-label="Board size">
-          Board Size
-        </h2>
+        <button
+          class="mobile-heading-btn"
+          :aria-expanded="expandedPanel === 'boardSize'"
+          @click="expandedPanel = 'boardSize'"
+        >
+          <h2
+            class="section-heading text-muted-foreground"
+            :class="{ 'is-active': expandedPanel === 'boardSize' }"
+            aria-label="Board size"
+          >
+            Board Size
+          </h2>
+          <!-- UI-12: the current value, shown only while this tab is closed. -->
+          <span v-if="expandedPanel !== 'boardSize'" class="heading-value">{{
+            boardSizeValueLabel
+          }}</span>
+        </button>
+        <button
+          class="mobile-heading-btn"
+          :aria-expanded="expandedPanel === 'difficulty'"
+          @click="expandedPanel = 'difficulty'"
+        >
+          <h2
+            class="section-heading transition-colors duration-250"
+            :class="[
+              difficulty === 'EASY'
+                ? 'crayon-green'
+                : difficulty === 'MEDIUM'
+                  ? 'crayon-orange'
+                  : 'crayon-rose',
+              { 'is-active': expandedPanel === 'difficulty' },
+            ]"
+          >
+            Difficulty
+          </h2>
+          <span v-if="expandedPanel !== 'difficulty'" class="heading-value">{{
+            difficultyValueLabel
+          }}</span>
+        </button>
       </div>
 
       <OptionSelector
+        v-show="expandedPanel === 'boardSize'"
         :options="boardSizeOptions"
         :selected="boardSize"
         :boil-frame="boilFrame"
         mobile
         @change="onBoardSizeChange"
+      />
+
+      <OptionSelector
+        v-show="expandedPanel === 'difficulty'"
+        :options="difficultyOptions"
+        :selected="difficulty"
+        :boil-frame="boilFrame"
+        mobile
+        @change="onDifficultyChange"
       />
     </div>
 
@@ -274,6 +361,39 @@ function onBoardSizeChange(val: string | number) {
         <span class="icon-sublabel" aria-hidden="true">{{ shareSublabel }}</span>
       </button>
     </div>
+
+    <!-- Play tools (T4-WM §2) — twin of the sudoku panel's coarse touch row for
+         undo / redo / hint (the acts a fine pointer reaches by ⌘Z / ⇧⌘Z / H). Coarse-only
+         (CSS gate): the desktop keeps its keys + legend, unchanged. -->
+    <div class="play-controls">
+      <button
+        @click="onUndo()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Undo last move"
+      >
+        <UndoIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Undo</span>
+      </button>
+      <button
+        @click="onRedo()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Redo move"
+      >
+        <RedoIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Redo</span>
+      </button>
+      <button
+        @click="onHint()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Reveal a hint in the selected cell"
+      >
+        <HintIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Hint</span>
+      </button>
+    </div>
   </div>
 
   <!-- Desktop layout -->
@@ -288,6 +408,30 @@ function onBoardSizeChange(val: string | number) {
           :selected="boardSize"
           :boil-frame="boilFrame"
           @change="onBoardSizeChange"
+        />
+      </div>
+
+      <hr class="border-border/50 my-3 w-full" />
+
+      <!-- Difficulty selector (T4-W6 GEN-2) — the twin of the sudoku panel's. -->
+      <div class="flex flex-col items-center gap-1 md:items-stretch">
+        <h2
+          class="section-heading transition-colors duration-250"
+          :class="
+            difficulty === 'EASY'
+              ? 'crayon-green'
+              : difficulty === 'MEDIUM'
+                ? 'crayon-orange'
+                : 'crayon-rose'
+          "
+        >
+          Difficulty
+        </h2>
+        <OptionSelector
+          :options="difficultyOptions"
+          :selected="difficulty"
+          :boil-frame="boilFrame"
+          @change="onDifficultyChange"
         />
       </div>
     </div>
@@ -372,6 +516,38 @@ function onBoardSizeChange(val: string | number) {
       </button>
     </div>
 
+    <!-- Play tools (T4-WM §2) — coarse-only twin of the sudoku panel's: a fine desktop
+         shows the legend below, a coarse iPad in this row-regime gets the tappable row. -->
+    <div class="play-controls">
+      <button
+        @click="onUndo()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Undo last move"
+      >
+        <UndoIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Undo</span>
+      </button>
+      <button
+        @click="onRedo()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Redo move"
+      >
+        <RedoIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Redo</span>
+      </button>
+      <button
+        @click="onHint()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Reveal a hint in the selected cell"
+      >
+        <HintIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Hint</span>
+      </button>
+    </div>
+
     <!-- UI-7b: the keyboard legend (fine-pointer only — a keyboard is implied there). -->
     <KeyboardLegend />
   </div>
@@ -392,15 +568,32 @@ function onBoardSizeChange(val: string | number) {
   will-change: transform;
 }
 
+/* Crayon color utilities — the difficulty heading's tier tone (twin of the sudoku panel's).
+   The heading is the panel's own element, so these scoped rules reach it; the OptionSelector
+   option's `colorClass` is a child element in another scope (parity-latent, as in sudoku). */
+.crayon-green {
+  color: var(--color-crayon-green);
+}
+.crayon-orange {
+  color: var(--color-crayon-orange);
+}
+.crayon-rose {
+  color: var(--color-crayon-rose);
+}
+
 /* .section-heading type register lives in assets/typography.css (@layer
    components) — the √φ subheading→heading eyebrow, shared with sudoku (D4).
    Only the component-local hover flourish stays scoped here. */
 
 /* Hover flourishes, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter
    write is retired (SvgFilters), so these static wobbles raster once per hover —
-   a resting pointer never re-enrolls a live painter (the b1 node-1006 finding). */
-.section-heading:hover {
-  filter: url(#wobble-heart);
+   a resting pointer never re-enrolls a live painter (the b1 node-1006 finding).
+   T4-WM §2: fenced behind (hover: hover) — on touch the wobble filter stuck to the
+   last-tapped heading (r2 §4 sticky-hover leak); a coarse pointer sees none of it. */
+@media (hover: hover) {
+  .section-heading:hover {
+    filter: url(#wobble-heart);
+  }
 }
 
 .icon-btn {
@@ -418,10 +611,14 @@ function onBoardSizeChange(val: string | number) {
   filter: url(#grain-static);
 }
 
-.icon-btn:hover {
-  color: var(--color-foreground);
-  background: var(--color-accent);
-  filter: url(#wobble-celestial);
+/* T4-WM §2: the icon-btn hover paint (bg + celestial wobble) stuck after a tap on touch
+   (r2 §4) — fenced to hover-capable pointers. Coarse gets its sublabel + :active scale. */
+@media (hover: hover) {
+  .icon-btn:hover {
+    color: var(--color-foreground);
+    background: var(--color-accent);
+    filter: url(#wobble-celestial);
+  }
 }
 
 .icon-btn:active {
@@ -494,8 +691,28 @@ function onBoardSizeChange(val: string | number) {
   transition: all 200ms;
 }
 
-.icon-btn:hover .sparkle-icon {
-  filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+@media (hover: hover) {
+  .icon-btn:hover .sparkle-icon {
+    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+  }
+}
+
+/* Play tools row (T4-WM §2) — undo / redo / hint, twin of the sudoku panel's. A COARSE
+   affordance: hidden on a fine pointer (desktop keeps its keys + legend), shown as a
+   tappable row on coarse (mobile card <lg OR iPad row-regime ≥lg). The buttons are plain
+   .icon-btn, so the coarse block above gives them the 44px floor + written sublabels. */
+.play-controls {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .play-controls {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 0.35rem;
+  }
 }
 
 .mobile-control-panel {
@@ -505,7 +722,39 @@ function onBoardSizeChange(val: string | number) {
 
 .mobile-heading-row {
   display: flex;
-  justify-content: center;
+  justify-content: space-evenly;
+}
+
+.mobile-heading-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* UI-12: the inactive tab's current value — the pencil hand at caption scale, reduced-
+   pressure graphite. Deliberately quiet: it names what's closed without competing with
+   the active tab's underline. */
+.heading-value {
+  font-family: var(--font-hand);
+  font-size: var(--type-caption);
+  line-height: 1;
+  letter-spacing: var(--type-tracking-wide);
+  color: color-mix(
+    in srgb,
+    var(--color-pencil-graphite, var(--grid-line-color)) 60%,
+    transparent
+  );
+}
+
+.mobile-heading-btn .section-heading.is-active {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 /* Share pop — a small tape-press flourish on the share act (Band C one-shot). */

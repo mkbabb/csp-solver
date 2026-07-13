@@ -15,6 +15,7 @@ import init, {
   generateFutoshiki,
   propagateFutoshiki,
   solveFutoshiki,
+  type FutoshikiDifficulty,
 } from "@mkbabb/csp-solver-wasm";
 // `--target web` fetches its `.wasm` via `new URL(..., import.meta.url)`, which Vite
 // can't resolve from a bundled/HMR'd Worker — import the binary through the `?url`
@@ -97,8 +98,13 @@ self.addEventListener("message", async (event: MessageEvent<SolverRequest>) => {
 
       case "generate": {
         // The wasm generator needs an explicit seed (no wall clock on wasm32); JS supplies
-        // the entropy (`Date.now()`).
-        const puzzle = generateFutoshiki(req.boardSize, req.seed);
+        // the entropy (`Date.now()`). The wire carries the difficulty as its numeric ordinal
+        // (structured-clone-safe); re-narrow to the wasm enum here (twin of the sudoku worker).
+        const puzzle = generateFutoshiki(
+          req.boardSize,
+          req.difficulty as FutoshikiDifficulty,
+          req.seed,
+        );
         const board = puzzle.board;
         const inequalities = puzzle.inequalities;
         const boardSize = puzzle.boardSize;

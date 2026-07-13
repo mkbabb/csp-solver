@@ -30,6 +30,7 @@ export type SolverRequest =
       id: number;
       kind: "generate";
       boardSize: number;
+      difficulty: number; // FutoshikiDifficulty ordinal (0/1/2)
       seed: number;
     }
   | {

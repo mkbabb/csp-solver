@@ -17,7 +17,7 @@ import {
 import { classifyError } from "@games/shared/solver/classifyError";
 import { useUndoHistory } from "../../shared/useUndoHistory";
 import { usePencilMarks } from "../../shared/usePencilMarks";
-import type { Inequality, SolveState, SolveStats } from "../types";
+import type { Difficulty, Inequality, SolveState, SolveStats } from "../types";
 
 /**
  * Size-scaled node budget for the client solve. v1 sizes (N=4..7) solve an empty board
@@ -47,6 +47,11 @@ export function useFutoshiki() {
   const linkError = ref(initial.boardLink === "invalid");
 
   const boardSize = ref(initial.boardSize);
+  // Difficulty axis (T4-W6 GEN-2). Runtime-only: unlike Sudoku's, it is NOT yet threaded
+  // through `?difficulty=`/localStorage — the futoshiki useUrlState stays size-only (F5) —
+  // so it resets to the default each mount, and a change is picked up by the next deal
+  // (the twin of Sudoku, where switching difficulty only re-deals on the next Randomize).
+  const difficulty = ref<Difficulty>("EASY");
   const totalCells = computed(() => boardSize.value ** 2);
 
   // values[position] = number (0 = empty)
@@ -151,7 +156,7 @@ export function useFutoshiki() {
     solveStats.value = null;
 
     try {
-      const board = await api.getRandomBoard(boardSize.value);
+      const board = await api.getRandomBoard(boardSize.value, difficulty.value);
       values.value = {};
       givenCells.value = new Set();
       originalGivenCells.value = new Set();
@@ -389,6 +394,7 @@ export function useFutoshiki() {
 
   return {
     boardSize,
+    difficulty,
     totalCells,
     values,
     givenCells,

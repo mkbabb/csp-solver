@@ -43,6 +43,29 @@ use crate::errors::{coded_error, domain_masks, flatten_solutions};
 const MIN_BOARD_SIZE: u32 = 4;
 const MAX_BOARD_SIZE: u32 = 7;
 
+/// Futoshiki puzzle difficulty. Flat re-declaration so this module stands
+/// alone in the lean, `--no-default-features` deploy build — the twin of
+/// `SudokuDifficulty`, mapping onto the core `futoshiki::Difficulty`
+/// keep-density + inequality-density ladder (givens fall and carets rise
+/// Easy→Hard).
+#[wasm_bindgen]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FutoshikiDifficulty {
+    Easy = 0,
+    Medium = 1,
+    Hard = 2,
+}
+
+impl From<FutoshikiDifficulty> for futoshiki::Difficulty {
+    fn from(d: FutoshikiDifficulty) -> Self {
+        match d {
+            FutoshikiDifficulty::Easy => futoshiki::Difficulty::Easy,
+            FutoshikiDifficulty::Medium => futoshiki::Difficulty::Medium,
+            FutoshikiDifficulty::Hard => futoshiki::Difficulty::Hard,
+        }
+    }
+}
+
 /// Result of [`solve_futoshiki`].
 ///
 /// `solutions` is a flat concatenation of `solution_count` boards, each
@@ -298,15 +321,21 @@ pub fn propagate_futoshiki(
 }
 
 /// Generate a flat, row-major Futoshiki puzzle for `board_size` at the
-/// single shipped high-density tier (no difficulty parameter — v1 scope).
+/// requested `difficulty` — a keep-density + inequality-density ladder;
+/// givens fall and carets rise Easy→Hard (T4-W6 GEN-2). Mirrors
+/// `generateSudoku(n, difficulty, seed)`.
 ///
 /// `seed` supplies the RNG entropy — pass `Date.now()` or a
-/// `crypto.getRandomValues` draw. The same `seed` + `board_size` yields the
-/// same puzzle here as the native `generate_futoshiki_seeded`, which the
-/// parity harness relies on. `board_size` outside `4..=7` throws
-/// `INVALID_INPUT`.
+/// `crypto.getRandomValues` draw. The same `board_size` + `difficulty` +
+/// `seed` yields the same puzzle here as the native
+/// `generate_futoshiki_difficulty_seeded`, which the parity harness relies
+/// on. `board_size` outside `4..=7` throws `INVALID_INPUT`.
 #[wasm_bindgen(js_name = generateFutoshiki)]
-pub fn generate_futoshiki(board_size: u32, seed: f64) -> Result<FutoshikiPuzzleData, JsValue> {
+pub fn generate_futoshiki(
+    board_size: u32,
+    difficulty: FutoshikiDifficulty,
+    seed: f64,
+) -> Result<FutoshikiPuzzleData, JsValue> {
     if !(MIN_BOARD_SIZE..=MAX_BOARD_SIZE).contains(&board_size) {
         return Err(coded_error(
             "INVALID_INPUT",
@@ -321,7 +350,8 @@ pub fn generate_futoshiki(board_size: u32, seed: f64) -> Result<FutoshikiPuzzleD
     // below 2^53. Reinterpret to a u64 seed for the LCG.
     let seed_u64 = seed as u64;
 
-    let (board, pairs) = futoshiki::generate_futoshiki_seeded(board_size, seed_u64);
+    let (board, pairs) =
+        futoshiki::generate_futoshiki_difficulty_seeded(board_size, difficulty.into(), seed_u64);
     let inequalities: Vec<u32> = pairs
         .iter()
         .flat_map(|&(a, b)| [a as u32, b as u32])
