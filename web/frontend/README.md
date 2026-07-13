@@ -15,17 +15,22 @@ hoist, filter presets — lives in [`../../docs/animation.md`](../../docs/animat
 ## Setup
 
 ```bash
-npm install              # install deps
+npm install              # install deps (the wasm file: link resolves from the lockfile)
+npm run wasm             # build @mkbabb/csp-solver-wasm into pkg/ — the file: link target (once per fresh clone)
 npm run dev              # Vite dev server (:3000)
-npm run build            # vue-tsc -b && vite build
+npm run build            # vue-tsc -b && vite build (a prebuild hook re-runs `npm run wasm`)
 npm run preview          # preview production build
 npm run lint             # prettier --write src/
 npm run lint:eslint      # ESLint (boundary rules + correctness)
 npm run test:e2e         # Playwright
 ```
 
-The wasm solver is a `file:` link to `../../csp-solver/wasm/pkg` pending the
-registry-package swap.
+The wasm solver is a `file:` link to `../../csp-solver/wasm/pkg` — a gitignored
+build artifact absent on a fresh clone. `npm run wasm` builds it via the ship
+recipe (`make -C ../../csp-solver/wasm wasm`: `wasm-pack build --scope mkbabb
+--target web --profile wasm-release --no-default-features`; needs the Rust
+toolchain + `wasm-pack`). `npm run build` runs it automatically through a
+`prebuild` hook; `npm run dev` does not, so run `npm run wasm` once after cloning.
 
 ## File Tree
 

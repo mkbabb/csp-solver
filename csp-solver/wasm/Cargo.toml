@@ -37,25 +37,27 @@ wasm-bindgen-test = { workspace = true }
 default = ["assignment"]
 assignment = ["dep:serde-wasm-bindgen", "dep:serde"]
 
-# wasm-pack applies these flags as its bundled wasm-opt size pass on the cdylib
-# output; the parent crate's release profile is not perturbed by this tuning.
+# wasm-pack applies these flags as its bundled wasm-opt size pass on the cdylib;
+# the parent crate's release profile is not perturbed. This ONE table is live.
 #
-# The wasm-opt array is DUPLICATED under `.profile.release` and `.profile.custom`
-# (Pass-2 D9, three-file atomicity): wasm-pack ≥0.14's `--profile <name>` keys the
-# wasm-opt metadata to the literal `custom` table, while a plain `--release` build
-# reads `.profile.release`. Duplicating guarantees neither invocation path silently
-# drops `--enable-nontrapping-float-to-int`. Keep the two arrays identical.
+# The name is load-bearing and counterintuitive: the ship recipe passes
+# `--profile wasm-release`, which wasm-pack (≥0.14) classifies as a *custom* build
+# profile — so its wasm-opt metadata resolves from the literal `.profile.custom`
+# key, NOT from `.profile.release` (that one is read only by a plain
+# `wasm-pack build --release`, an invocation nothing here uses). The former
+# `.profile.release` twin was the DEAD duplicate and is removed; keeping THIS
+# table is what holds the emitted cdylib byte-identical to the ship recipe
+# (verified T4-W5: dropping `.profile.custom` regresses 86,734 B → 87,496 B,
+# +762 B). Renaming/removing it is structurally impossible without changing the
+# `--profile wasm-release` recipe across CI + the Makefile, so `custom` stays.
 #
 # `--enable-nontrapping-float-to-int` is appended (free): it matches the codegen
 # feature rustc emits and averts a wasm-opt validation failure on the saturating
-# float→int conversions. NO `strip=true` in any cargo profile feeding these builds
-# (see the workspace-root `[profile.wasm-release]`): strip deletes the
-# `target_features` section and hard-breaks this `-Oz` pass — the D9 hazard.
-#
-# Floor: wasm-pack ≥ 0.14 (the `--profile` flag + the `custom` wasm-opt table).
-# Older wasm-pack has no `--profile` and would ignore `.profile.custom` entirely.
-[package.metadata.wasm-pack.profile.release]
-wasm-opt = ["-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
-
+# float→int conversions. `--enable-bulk-memory` is RETIRED: rustc 1.97 enables
+# bulk-memory in its default wasm32 target features, and dropping the wasm-opt
+# flag is byte-neutral here (86,734 B unchanged — measured T4-W5). NO `strip=true`
+# in any cargo profile feeding these builds (see the workspace-root
+# `[profile.wasm-release]`): strip deletes the `target_features` section and
+# hard-breaks this `-Oz` pass.
 [package.metadata.wasm-pack.profile.custom]
-wasm-opt = ["-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
+wasm-opt = ["-Oz", "--enable-nontrapping-float-to-int"]

@@ -1,12 +1,23 @@
 .PHONY: wasm docs clean
 
-# Build the cdylib via wasm-pack into pkg/. The --target web flag
-# emits an ES module loadable from a browser via dynamic import().
-# wasm-pack auto-generates `pkg/.gitignore` containing `*` on every
-# build, which would hide the artifact from git; we strip it so the
-# committed `pkg/` stays in sync with what the build produces.
+# Build the LEAN deploy cdylib into pkg/ — the EXACT ship recipe, byte-identical
+# to CI's build-lean-wasm lane and to what the frontend `file:` link expects.
+# Each flag is load-bearing:
+#   --scope mkbabb          package.json name `@mkbabb/csp-solver-wasm` — the
+#                           frontend dependency key; a bare build names it
+#                           `csp-solver-wasm` and the file: link can't resolve.
+#   --target web            an ES module loadable from a browser via dynamic
+#                           import() (the Worker's top-level import).
+#   --profile wasm-release  the workspace `[profile.wasm-release]` (opt-level=z);
+#                           plain --release is opt-level default = a ~2.8x larger,
+#                           over-budget artifact that silently overwrites pkg/.
+#   --no-default-features   sudoku + futoshiki only; the `assignment` feature and
+#                           its whole serde/ndarray graph stay out of the compile.
+# pkg/ is gitignored (root .gitignore) — a local build artifact, the file:-link
+# target, never committed. wasm-pack drops a stray `pkg/.gitignore` of `*` on each
+# build; strip it so the file:-linked package directory stays clean.
 wasm:
-	wasm-pack build --target web --release --out-dir pkg
+	wasm-pack build --scope mkbabb --target web --profile wasm-release --no-default-features
 	rm -f pkg/.gitignore
 
 # Render the rustdoc surface for the wasm sub-crate.

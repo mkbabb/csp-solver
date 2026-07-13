@@ -97,3 +97,23 @@ No rendered-pixel surface — dependency, toolchain, and build-recipe truth only
 
 ---
 **ADDENDUM (pre-exec perf audit, 2026-07-12)**: see README §7 — the rows stamped to this wave are binding scope; evidence at ../evidence/perf/.
+
+---
+## Execution record (2026-07-13)
+
+Workflow `wf_c091f738-f17`, 4 lanes (D1 pencil-boil-0.9.1 · D2 frontend-TS7+engines · D3 wasm-recipe+audit · verify), all green.
+
+| Gate | Born-RED | Close |
+|---|---|---|
+| postcss-cve | 1 moderate (postcss <8.5.10 via vue 3.5.29) | **0 vulnerabilities** — pencil-boil vue → 3.5.39 (postcss 8.5.18); **0.9.1 released** (`83de5eb`, tag v0.9.1, release.yml run 29227378112 success, npm live); frontend takes `^0.9.1` from the registry |
+| ts7-pencilboil | 5.9.3, two majors behind | **^7.0.2 LANDED** — check + 126 proof assertions + proof:browser 4/4 green under TS 7 |
+| ts7-frontend | ~6.0.3, tilde pins the major out | **HELD at 6.0.3, spec-sanctioned**: typescript-eslint 8.63.0 (and its canary) peer `>=4.8.4 <6.1.0` hard-blocks TS 7 (ERESOLVE reproduced); vue-tsc 3.3.7 is already TS-7-ready — the named re-trigger is a typescript-eslint release admitting ^7. The Go-port throughput claim stays UNMEASURED, not asserted |
+| engines | undefined/undefined both | `engines {node>=24, npm>=11}` + `packageManager` declared both packages (the npm-10 lockfile trap finally in-manifest) |
+| cargo-audit | no advisory gate | Lane 11 added (independent, no `needs:`); locally green — 0 vulnerabilities/121 deps (2 informational unmaintained: bincode 1.3.3, proc-macro-error2 2.0.1) |
+| make-wasm | 243,329 B fat/wrong-profile (born-RED reproduced at 268,196 B) | the EXACT ship recipe; `cmp` byte-identical to the CI control, **86,734 B sha 42e6e32c** |
+| fresh-clone | file: link dangles, prose-only guidance | `prebuild` → `npm run wasm` → `make -C csp-solver/wasm wasm` (single-sourced recipe; deliberately no `predev` — it would clobber the CI e2e lane's downloaded artifact); simulated pkg-absent clone builds green |
+| orphan-pkg / dead-profile | `_bg.js` present; a "dead" wasm-opt table | `_bg.js` gone; **SPEC INVERSION proven**: wasm-pack 0.15 reads `--profile wasm-release`'s wasm-opt flags from the literal `.profile.custom` metadata key — `.custom` is LIVE (removing it regresses +762 B), `.profile.release` was the dead twin (excised); `--enable-bulk-memory` retired **byte-neutral** (README §7 disposition confirmed); final Cargo.toml rebuilds byte-identical |
+| figures (W14 handoff) | stale 222,436/90,602 in prose | measured true: lean **86,734 B** / full **188,087 B** (12/8-byte toolchain drift vs the spec's cited values); CI budgets hold with headroom |
+| parity (π) | — | wasm byte-identical pre/post (the invariant); goldens 4/4 at seal; full battery green (cargo test/fmt/clippy/audit; vue-tsc, 77 units, eslint, knip, lint, build) |
+
+Seal reconciliations: the generated `templates.ts` can never stay prettier-formatted (the vite plugin regenerates it single-line every build — the W4 normalization's one file that wouldn't hold) → `.prettierignore` row added, `npm run lint` green regardless of build order. `packageManager: npm@11.x` is a range (Corepack wants exact) — accepted as the spec's literal; exact-pin is a one-line follow-up if Corepack enforcement is ever wanted. New standing trap ledgered: stale `tsconfig.tsbuildinfo` can phantom-error `TS2307 @mkbabb/csp-solver-wasm` after dep churn — clear with `vue-tsc -b --force`.

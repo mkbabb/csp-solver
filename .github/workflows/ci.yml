@@ -18,8 +18,9 @@
 # Lane → job map (W0 lane table; provenance cited per step; T3 grew the rust,
 # py-runtime, and frontend jobs with the gac-ab/corpus-spine smokes, stubtest +
 # tripwire, and knip; T4-W2 added the eslint boundary lane, promoted knip to
-# error-level, and re-cut the flat fan-out into a compute-cost DAG) — the lane
-# set rides ten jobs (the rust job carries lanes 2 + 3):
+# error-level, and re-cut the flat fan-out into a compute-cost DAG; T4-W5 added
+# the cargo-audit advisory tripwire) — the lane set rides eleven jobs (the rust
+# job carries lanes 2 + 3):
 #   0.  build-lean-wasm    -> build-lean-wasm (the SHIP lean artifact built ONCE,
 #                                         uploaded as `lean-wasm-pkg`; frontend +
 #                                         e2e + twiggy(lean half) `needs:` it and
@@ -39,14 +40,16 @@
 #                                         vue-tsc --noEmit; eslint boundary rig; knip)
 #   9.  e2e                -> e2e        (download lean pkg -> Playwright over the Vue SPA)
 #   10. iai                -> iai        (callgrind deterministic instruction-count baseline)
+#   11. cargo-audit        -> cargo-audit(RustSec advisory scan over Cargo.lock; independent, no needs:)
 #
 # Compute-cost DAG (T4-W2, r4-corrected — a `needs:` saves redundant CI minutes,
 # NOT wall-time; a predecessor serializes onto each dependent's critical path, so
 # edges are added ONLY where they kill redundant compute without lengthening the
 # critical path): build-lean-wasm ← {frontend, e2e, twiggy}. lint/rust/py-*/wasm/
-# iai stay independent (they consume no wasm artifact). Future cheap independent
-# jobs — W5 cargo-audit, W1 proof:browser — slot in with no `needs:` (no lint-
-# before-build gate: it would lengthen the build-lean-wasm critical path).
+# iai stay independent (they consume no wasm artifact). The cheap independent
+# jobs — W5's cargo-audit (landed, no `needs:`), W1's proof:browser (to come) —
+# slot in the same way (no lint-before-build gate: it would only lengthen the
+# build-lean-wasm critical path).
 #
 # Build posture (STANDING, per the T15 refutation — synthesis-pass3.md §1 #14):
 # default release profile retained. NO lto=fat, NO codegen-units=1, NO strip
@@ -668,3 +671,28 @@ jobs:
                       csp-solver/benches/iai_queens.baseline
                       target/iai/**
                   if-no-files-found: warn
+
+    # ---------------------------------------------------------------- Lane 11
+    # cargo-audit — supply-chain advisory tripwire (T4-W5, FAM-4/F4). Cheap and
+    # INDEPENDENT: no `needs:` (the compute-cost DAG note above — a lint-before
+    # edge would only lengthen a critical path without killing redundant compute).
+    # It reads the committed Cargo.lock and checks every crate against the RustSec
+    # advisory DB. The dep set is tiny and all-latest — 0 VULNERABILITIES today
+    # (two informational `unmaintained` warnings, bincode 1.3.3 + proc-macro-error2
+    # 2.0.1, which the default `cargo audit` does NOT fail on) — so this is a
+    # forward tripwire against a future RustSec vulnerability against any of the
+    # workspace's crates, not a fix for a live CVE. ubuntu-latest ships cargo, so no
+    # rust-toolchain install is needed — only the cargo-audit binary (taiki-e
+    # binary cache, no compile). It does NOT build the workspace, so no cargo
+    # target cache either.
+    cargo-audit:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install cargo-audit (prebuilt binary, taiki-e cache)
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: cargo-audit
+            - name: cargo audit (RustSec advisories over the committed Cargo.lock)
+              run: cargo audit
