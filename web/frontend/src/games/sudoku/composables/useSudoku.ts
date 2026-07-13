@@ -17,8 +17,14 @@ import {
 import { classifyError } from "@games/shared/solver/classifyError";
 import { useUndoHistory } from "../../shared/useUndoHistory";
 import { usePencilMarks } from "../../shared/usePencilMarks";
-import { gradeSudoku, hintSudoku } from "../technique/sudokuTechnique";
-import { formatGradeSignature } from "@games/shared/techniqueVoice";
+import { useUserMarks } from "../../shared/useUserMarks";
+import { useAssists } from "../../shared/useAssists";
+import {
+  gradeSudoku,
+  hintSudoku,
+  fillForcedSudoku,
+} from "../technique/sudokuTechnique";
+import { formatGradeSignature, describeTally } from "@games/shared/techniqueVoice";
 import type { HintResult, TechniqueId } from "@games/shared/techniqueEngine";
 import type { Difficulty, SolveState, SolveStats } from "../types";
 
@@ -82,8 +88,19 @@ export function useSudoku() {
   // deal (randomize); null on clear/init/restore (an ungraded board keeps W6's request voice).
   const hardestTechnique = ref<TechniqueId | null>(null);
   const gradeSolved = ref(false);
+  // T4-W9-B1 — the honesty gate: `graded` is true ONLY after the engine has run on a dealt,
+  // supported board. A restored permalink or a hand-typed board never trips it, so the tally
+  // shows the dashed placeholder rather than a fabricated tier (ROW 5). Distinct from
+  // `hardestTechnique === null`, which a genuinely hard board (no basic step available first)
+  // also reads — that board IS graded, just past the ladder's naming.
+  const graded = ref(false);
   const gradeSignature = computed(() =>
     formatGradeSignature(hardestTechnique.value, gradeSolved.value),
+  );
+  // The displayed-quality tally descriptor (W9-B1) — the glyph twin of the signature, fully
+  // derived here (the DifficultyTally component is a pure renderer of it).
+  const gradeTally = computed(() =>
+    describeTally(graded.value, hardestTechnique.value, gradeSolved.value),
   );
 
   // ── The named hint (T4-W7) — two presses: the first names the cheapest human deduction and
@@ -123,6 +140,7 @@ export function useSudoku() {
   function clearGrade() {
     hardestTechnique.value = null;
     gradeSolved.value = false;
+    graded.value = false; // W9-B1 — a blank/reset/restored board is ungraded (dashed placeholder)
     hintReasoning.value = null;
   }
 
@@ -205,9 +223,10 @@ export function useSudoku() {
       // T4-W7 — grade the DEALT board synchronously: the hardest technique the R1–R3 ladder
       // needed to solve it IS its honest difficulty. Pure TS over self-computed candidates
       // (never the GAC masks); bounded, no search. Feeds the margin signature + W9-B1's tally.
-      const graded = gradeSudoku(values.value, size.value);
-      hardestTechnique.value = graded.hardestTechnique;
-      gradeSolved.value = graded.solved;
+      const gradeResult = gradeSudoku(values.value, size.value);
+      hardestTechnique.value = gradeResult.hardestTechnique;
+      gradeSolved.value = gradeResult.solved;
+      graded.value = true; // W9-B1 — the engine ran on a dealt board; the tally is defensible
       hintReasoning.value = null; // a fresh deal voids any armed hint
       clearUndo(); // a fresh board voids the prior board's history
       dropBoardParam(); // a freshly-dealt board voids the shared permalink
@@ -323,6 +342,38 @@ export function useSudoku() {
     queueSave();
   }
 
+  // ── Fill-all-forced (T4-W8 — the partial-solve button; W7 owns the detector) ──────────
+  // Apply every naked+hidden single present on the board in ONE sweep, inking each through the
+  // EXISTING reveal draw-in — `solvedValues` (solver-ink tone) + `animatingCells` (the board-
+  // normalized reveal wave) — the same bulk path `solve()` uses, zero new timing constants.
+  // Sourced from the W7 technique engine (self-computed candidates), NOT the wasm solver:
+  // synchronous, no worker, no loading/solve state. Not recorded on the undo stack (a forced
+  // fill is app-ink, like a reveal). A sweep that forces nothing is a no-op; a cell that only
+  // becomes forced AFTER this sweep is left for the next press (fillAllForced is one sweep by
+  // contract — the honest "fill what's forced," distinct from the whole-board solve).
+  function fillForced() {
+    const { placements } = fillForcedSudoku(values.value, size.value);
+    const newlyFilled: Record<string, number> = {};
+    const cellsToAnimate = new Set<string>();
+    for (const p of placements) {
+      const key = String(p.cell);
+      if (values.value[key] !== 0) continue; // ink empties only (the detector never targets a filled cell)
+      values.value[key] = p.value;
+      newlyFilled[key] = p.value;
+      overriddenCells.value.delete(key);
+      cellsToAnimate.add(key);
+    }
+    if (cellsToAnimate.size === 0) return; // nothing forced — leave the board (and its grade/hint) untouched
+    solvedValues.value = { ...solvedValues.value, ...newlyFilled };
+    animatingCells.value = cellsToAnimate;
+    hintReasoning.value = null; // the board changed under any armed hint
+    if (solveState.value !== "idle") {
+      solveState.value = "idle";
+      solveStats.value = null;
+    }
+    queueSave();
+  }
+
   // ── The named hint (T4-W7) — reasoning first, digit second ──────────────────────
   // First press: name the cheapest human deduction (naked/hidden single) and arm its
   // reasoning — the board highlights the `becauseCells` in the peek-laminate tone and writes
@@ -372,6 +423,33 @@ export function useSudoku() {
     boardSize,
     totalCells,
   );
+
+  // User pencil marks (T4-W8 ROW 1 — the player's own notes). A SEPARATE store from the engine
+  // marks above: the peek marks are the solver's domains, these are the player's authored
+  // candidates. `boardGeneration` voids the notes on clear/randomize/size-swap; the mode
+  // survives. Corner vs center (Snyder) is one store, two slots (D16 twin — futoshiki mounts
+  // the identical thing).
+  const {
+    pencilMode,
+    cornerMarks,
+    centerMarks,
+    setPencilMode,
+    cyclePencilMode,
+    toggleUserMark,
+  } = useUserMarks(boardGeneration);
+
+  // Board assists (T4-W8 ROW 2 + ROW 3 — the player's check settings; D16 twin, both games mount
+  // the identical thing). ROW 2: the error-check MODE (off / on-demand / live, default on-demand)
+  // over the SAME pure `findConflicts` the board already runs — `proactiveCheck` is the display
+  // gate the board ORs with its 'failed' grade. ROW 3: `candidatesPinned` (default off) holds the
+  // engine marks on persistently — the game reconciles it against the peek in `SudokuGame`.
+  const {
+    errorCheckMode,
+    proactiveCheck,
+    setErrorCheckMode,
+    candidatesPinned,
+    setCandidatesPinned,
+  } = useAssists(values);
 
   // ── Restore from persisted state (no animation) ──────────────────
   function restoreBoard(persisted: PersistedBoard) {
@@ -498,6 +576,7 @@ export function useSudoku() {
     setCell,
     randomize,
     solve,
+    fillForced,
     peekSolution,
     undo,
     redo,
@@ -505,9 +584,21 @@ export function useSudoku() {
     hintReasoning,
     hardestTechnique,
     gradeSignature,
+    gradeTally,
     shareBoard,
     linkError,
     pencilMarks,
     setMarksActive,
+    pencilMode,
+    cornerMarks,
+    centerMarks,
+    setPencilMode,
+    cyclePencilMode,
+    toggleUserMark,
+    errorCheckMode,
+    proactiveCheck,
+    setErrorCheckMode,
+    candidatesPinned,
+    setCandidatesPinned,
   };
 }

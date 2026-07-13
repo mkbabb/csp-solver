@@ -19,6 +19,9 @@ function mountPanel(overrides: Record<string, unknown> = {}) {
       loading: false,
       solveState: "idle",
       mobile: true,
+      pencilMode: "off",
+      errorCheckMode: "on-demand",
+      candidatesPinned: false,
       share: () => Promise.resolve(),
       ...overrides,
     },
@@ -28,6 +31,7 @@ function mountPanel(overrides: Record<string, unknown> = {}) {
 const UNDO = 'button[aria-label="Undo last move"]';
 const REDO = 'button[aria-label="Redo move"]';
 const HINT = 'button[aria-label="Reveal a hint in the selected cell"]';
+const FILL = 'button[aria-label="Fill in the forced cells"]';
 
 describe("Sudoku ControlPanel — touch play tools (T4-WM §2)", () => {
   it("renders tappable undo / redo / hint buttons with written sublabels", () => {
@@ -59,5 +63,32 @@ describe("Sudoku ControlPanel — touch play tools (T4-WM §2)", () => {
     for (const sel of [UNDO, REDO, HINT]) {
       expect(w.get(sel).attributes("disabled")).toBeDefined();
     }
+  });
+});
+
+// T4-W8 — the fill-forced partial-solve button (W7's fillAllForced). The panel only reports
+// the press; the game routes it to the composable's `fillForced`, which inks the forced cells
+// through the existing reveal draw-in. Pins the control-panel affordance: a real <button> in the
+// icon-btn grammar (the ≥44px WM floor rides that class), a written sublabel, its own emit, and
+// the loading-disable so no forced fill fires mid-solve.
+const FILL_SUBLABEL = "Fill";
+
+describe("Sudoku ControlPanel — fill-forced button (T4-W8)", () => {
+  it("renders a Fill button in the icon-btn grammar with a written sublabel", () => {
+    const w = mountPanel();
+    const fill = w.get(FILL);
+    expect(fill.classes()).toContain("icon-btn");
+    expect(fill.find(".icon-sublabel").text()).toBe(FILL_SUBLABEL);
+  });
+
+  it("emits fill-forced on tap", async () => {
+    const w = mountPanel();
+    await w.get(FILL).trigger("click");
+    expect(w.emitted("fill-forced")).toHaveLength(1);
+  });
+
+  it("disables with the board (loading) — no forced fill mid-solve", () => {
+    const w = mountPanel({ loading: true });
+    expect(w.get(FILL).attributes("disabled")).toBeDefined();
   });
 });

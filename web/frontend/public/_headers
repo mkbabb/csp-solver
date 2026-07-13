@@ -6,9 +6,12 @@
 # CSP is built clause-by-clause from what the shipped `dist/` output actually
 # requests — nothing broader. Verified empirically: a `vite build` + a
 # Playwright-driven load of `dist/` served under this exact policy (favicon,
-# fonts, hand-drawn SVG data: URIs, the AttributionCard avatar image, and 21
-# interactive UI controls exercised — board generate/solve/difficulty/size),
-# instrumented for `securitypolicyviolation` events — zero violations.
+# fonts, hand-drawn SVG data: URIs, the bundled same-origin AttributionCard
+# avatar, and 21 interactive UI controls exercised — board generate/solve/
+# difficulty/size), instrumented for `securitypolicyviolation` events — zero
+# violations. Every fetch the shipped bundle makes is same-origin ('self') or a
+# data: URI: there is no third-party network dependency (T4-W8 ROW 5 localized
+# the last one, the author avatar).
 #
 #   default-src 'self'            deny-by-default baseline
 #   script-src  'self'             app bundle is same-origin only
@@ -32,23 +35,18 @@
 #                                  fonts.gstatic.com (font-src) allowances are
 #                                  gone — the Google Fonts <link> in index.html
 #                                  is deleted
-#   img-src     'self'
+#   img-src     'self'             AttributionCard's author avatar is BUNDLED
+#                                  (T4-W8 ROW 5 / FAM-14): a 64px PNG imported
+#                                  through Vite, emitted content-hashed under
+#                                  /assets/ and served same-origin, so 'self'
+#                                  covers it. This RETIRED the app's sole
+#                                  third-party network hit — the prior
+#                                  avatars.githubusercontent.com allowance is
+#                                  GONE, and there is now no non-'self', non-data:
+#                                  source anywhere in the policy
 #               data:              hand-drawn pencil-stroke SVGs are
 #                                  generated at runtime as
 #                                  data:image/svg+xml background-image URLs
-#               avatars.githubusercontent.com  AttributionCard's author avatar
-#                                  (src/pencil/chrome/AttributionCard/
-#                                  AttributionCard.vue). CSP-vs-beacon
-#                                  resolution: the single decorative <img> stays
-#                                  a remote fetch (this one allowance is what
-#                                  keeps it out of default-src deny) but is
-#                                  hardened at the element — `?s=64` (104 KB →
-#                                  6 KB), `loading="lazy"` (no eager third-party
-#                                  hit on first paint) and `referrer-policy:
-#                                  no-referrer` (no path/query leaked to GitHub).
-#                                  Not inlined as a data: URI: a 6 KB base64 blob
-#                                  in the bundle costs more than one cache-hit
-#                                  fetch and would still need `data:` here anyway
 #   connect-src 'self'             the frontend solves in-browser (wasm Worker);
 #                                  there is no cross-origin fetch in the bundle
 #                                  to whitelist
@@ -78,7 +76,7 @@
 #     avoids leaking path/query to third parties
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://avatars.githubusercontent.com; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

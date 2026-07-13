@@ -26,6 +26,25 @@
   gap: 2rem;
 }
 
+/* T4-W8 seal: the assist rows grew the card past the sheet (936px against an 800px
+   viewport — the centered .app-layout pushed the masthead negative, the wordmark
+   clean off-screen, and the case rose above the sheet, redding six e2e specs, the
+   drawer's never-above-the-sheet contract, and the logo golden in one stroke). Cap
+   the card at the SHEET'S OWN side derivation minus 2rem — min(42rem, 85vw,
+   100dvh − 10rem) twins the boards' row-regime width classes (SudokuBoard/
+   FutoshikiBoard shellClasses; the 42rem arm binds on tall viewports, so a
+   dvh-only cap can still out-grow the sheet) — and let the card's CONTENT
+   scroll. Centered by .app-layout, the rail then sits 1rem inside the sheet's
+   top edge at every viewport. Row-regime only: .controls-card lives inside the
+   hidden lg:flex rail. The T4-WU re-partition (staged/live zones) owns the
+   real-estate redesign; this is the layout-safety floor beneath it. */
+.controls-card {
+  max-height: calc(min(42rem, 85vw, 100dvh - 10rem) - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
 /* ── The drawer regime (T3-W12 §6, ≥1024 only) ────────────────────────
    z-order: page < the case (rail) < the pull-tab < the board sheet — the board's
    opaque paper covers the case's travel; the tongue pokes out from under the edge.

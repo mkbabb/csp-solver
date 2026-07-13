@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
 import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
 import { useLongPress } from "@games/shared/useLongPress";
+import type { PencilMode } from "@games/shared/useUserMarks";
 
 const props = defineProps<{
   position: number;
@@ -26,6 +27,10 @@ const props = defineProps<{
    *  wash lights in the peek-laminate tone on its own layer (behind the glyph + focus ring) so
    *  the answer key visibly points here before the digit inks. No new timing constant. */
   isBecause?: boolean;
+  /** T4-W8 ROW 4 (twin of SudokuCell's) — this cell shares the focused cell's row or column: a
+   *  faint crayon-blue wash lights on selection so the active unit reads at a glance. Pure over
+   *  the board's `focusedPos` (Latin-square, no box); its own layer behind the glyph. */
+  isPeer?: boolean;
   /** Folded inequality constraints touching this cell (F6) — e.g. "greater than the cell to
    *  the right and less than the cell below". Empty when the cell borders no caret. Appended
    *  to the accessible name so a screen reader hears the relation while arrowing the grid; the
@@ -35,6 +40,16 @@ const props = defineProps<{
    *  the solver's own propagation, present only while the peek gesture is held.
    *  Rendered only while the cell is empty. Twin of SudokuCell's (D16). */
   marks?: number[];
+  /** T4-W8 ROW 1 — the player's OWN pencil marks (twin of SudokuCell's), distinct from the
+   *  engine peek marks above in store and render (crayon-blue, cell corners). Empty cells only. */
+  cornerMarks?: number[];
+  /** T4-W8 ROW 1 — the player's own center marks (Snyder), a centred row; the second placement
+   *  slot of the one user-mark surface. Empty cells only. */
+  centerMarks?: number[];
+  /** T4-W8 ROW 1 — the active pencil mode. When 'corner'/'center', a digit keystroke on this
+   *  cell's FROZEN native input authors a mark instead of a value (the WM seam: mode toggle
+   *  only); 'off'/undefined keeps the byte-identical value write. */
+  pencilMode?: PencilMode;
   /** T3-W13 §4.1 — the board's `celebrating`, forwarded to the glyph's flourish
    *  gate: solve reveals keep beat-2, a hint stops at the written glyph. */
   flourish?: boolean;
@@ -42,6 +57,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update", position: number, value: number): void;
+  /** T4-W8 ROW 1 — author a user mark (twin of SudokuCell's): a digit toggles it in the active
+   *  slot, 0 erases the cell's notes. The board forwards to the game's user-mark store. */
+  (e: "mark", position: number, value: number): void;
   (e: "cellFocus", position: number): void;
   /** Long-press peek (T4-WM §3) — twin of SudokuCell's: a hold on this EMPTY cell opens the
    *  candidate glimpse; the board forwards these up to the game's marks activation. */
@@ -103,12 +121,21 @@ const ariaLabel = computed(() => {
   return props.constraintLabel ? `${base}, ${props.constraintLabel}` : base;
 });
 
+// T4-W8 ROW 1 — pencil mode reinterprets the FROZEN native input (the WM seam: mode toggle
+// only, never a second input surface; twin of SudokuCell's). While a slot is armed AND the cell
+// is empty, a digit authors a mark and clears the input; a filled cell has no note surface.
+const pencilArmed = computed(
+  () => props.pencilMode === "corner" || props.pencilMode === "center",
+);
+
 function handleInput(event: Event) {
   const target = event.target as HTMLInputElement;
   const raw = target.value.replace(/\D/g, "");
 
   if (raw === "") {
-    emit("update", props.position, 0);
+    // Normal mode: a cleared input erases; pencil mode leaves the value (Backspace owns the note
+    // erase), so never fall through to update(0) there.
+    if (!pencilArmed.value) emit("update", props.position, 0);
     target.value = "";
     return;
   }
@@ -117,8 +144,14 @@ function handleInput(event: Event) {
   const trimmed = raw.slice(-1);
   const num = parseInt(trimmed, 10);
   if (num >= 1 && num <= props.boardSize) {
-    emit("update", props.position, num);
-    target.value = String(num);
+    if (pencilArmed.value) {
+      // Pencil mode: the digit toggles a note on an EMPTY cell; the input never keeps it.
+      if (props.value === 0) emit("mark", props.position, num);
+      target.value = "";
+    } else {
+      emit("update", props.position, num);
+      target.value = String(num);
+    }
   } else {
     target.value = displayValue.value;
   }
@@ -127,8 +160,14 @@ function handleInput(event: Event) {
 function handleKeydown(event: KeyboardEvent) {
   const target = event.target as HTMLInputElement;
   if (event.key === "Backspace" || event.key === "Delete") {
-    emit("update", props.position, 0);
-    target.value = "";
+    // In pencil mode an empty cell's Backspace erases its notes; a filled cell still erases the
+    // value (revealing any hidden notes beneath). Normal mode is unchanged.
+    if (pencilArmed.value && props.value === 0) {
+      emit("mark", props.position, 0);
+    } else {
+      emit("update", props.position, 0);
+      target.value = "";
+    }
     event.preventDefault();
   }
   // Arrow / Home / End fall through to the board's roving-tabindex controller.
@@ -190,6 +229,32 @@ const marksGridStyle = computed(() => ({
   gridTemplateRows: `repeat(${Math.ceil(props.boardSize / markCols.value)}, minmax(0, 1fr))`,
 }));
 
+// ── User pencil marks (T4-W8 ROW 1) — the player's own notes (twin of SudokuCell's) ────
+// Distinct from the engine peek marks above in tone (crayon-blue) AND placement: CORNER marks
+// hug the cell in a 3×3 Snyder grid, CENTER marks sit in a centred row. Both reuse the hand-drawn
+// glyph paths and show only on an empty cell.
+const showCornerMarks = computed(
+  () => props.value === 0 && (props.cornerMarks?.length ?? 0) > 0,
+);
+const showCenterMarks = computed(
+  () => props.value === 0 && (props.centerMarks?.length ?? 0) > 0,
+);
+const CORNER_ORDER: [number, number][] = [
+  [1, 1],
+  [1, 3],
+  [3, 1],
+  [3, 3],
+  [1, 2],
+  [3, 2],
+  [2, 1],
+  [2, 3],
+  [2, 2],
+];
+function cornerSlot(i: number) {
+  const [row, col] = CORNER_ORDER[i % CORNER_ORDER.length];
+  return { gridRow: String(row), gridColumn: String(col) };
+}
+
 defineExpose({ focus: focusInput });
 </script>
 
@@ -242,6 +307,15 @@ defineExpose({ focus: focusInput });
       class="cell-native-input absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
     />
 
+    <!-- Peer-unit wash (T4-W8 ROW 4; twin of SudokuCell's) — a faint crayon-blue fill over every
+         cell sharing the focused cell's row / column (Latin square, no box), so the active unit
+         reads at a glance on selection. Its own layer behind the glyph + marks + ghost. -->
+    <div
+      v-if="isPeer"
+      class="cell-peer pointer-events-none absolute inset-0"
+      aria-hidden="true"
+    />
+
     <!-- T4-W7 hint laminate (twin of SudokuCell's): the becauseCells wash in the peek-laminate
          tone, its own layer behind the glyph + focus ghost, so the tone shows even on the focused
          cell. Decorative; the margin voice carries the name. -->
@@ -290,6 +364,64 @@ defineExpose({ focus: focusInput });
           />
         </svg>
       </div>
+    </div>
+
+    <!-- User pencil marks — CORNER slot (T4-W8 ROW 1; twin of SudokuCell's): the player's own
+         notes in a 3×3 Snyder grid, crayon-blue so they never read as the engine's graphite peek
+         marks. Its own layer + class (never `.pencil-marks`). Decorative. -->
+    <div
+      v-if="showCornerMarks"
+      class="user-marks user-corner-marks pointer-events-none absolute grid"
+      aria-hidden="true"
+    >
+      <span
+        v-for="(v, i) in cornerMarks"
+        :key="v"
+        class="user-mark-slot"
+        :style="cornerSlot(i)"
+      >
+        <svg
+          class="user-mark-glyph"
+          viewBox="0 0 40 56"
+          preserveAspectRatio="xMidYMid meet"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            :d="markPath(v)"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="4.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </span>
+    </div>
+
+    <!-- User pencil marks — CENTER slot (T4-W8 ROW 1): a centred, wrapping row of the chosen
+         digits, the second placement of the one user-mark surface. -->
+    <div
+      v-if="showCenterMarks"
+      class="user-marks user-center-marks pointer-events-none absolute flex flex-wrap"
+      aria-hidden="true"
+    >
+      <span v-for="v in centerMarks" :key="v" class="user-mark-slot">
+        <svg
+          class="user-mark-glyph"
+          viewBox="0 0 40 56"
+          preserveAspectRatio="xMidYMid meet"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            :d="markPath(v)"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="4.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </span>
     </div>
 
     <!-- SVG handwritten glyph overlay -->
@@ -369,6 +501,68 @@ defineExpose({ focus: focusInput });
 @media (prefers-contrast: more) {
   .pencil-marks {
     opacity: 0.75;
+  }
+}
+
+/* ── User pencil marks (T4-W8 ROW 1) — the player's own notes (twin of SudokuCell's) ──
+   Crayon-blue, the player's own hand — a DIFFERENT tone from the engine's graphite peek marks,
+   and a different placement (corners / centred row), so the solver's domains and the player's
+   notes never read as one. Their own layer; they never share the engine's store. */
+.user-marks {
+  color: var(--color-crayon-blue);
+  opacity: 0.9;
+}
+
+/* Corner (Snyder) — a 3×3 grid hugging the cell; each note small in its slot. */
+.user-corner-marks {
+  inset: 7%;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+.user-corner-marks .user-mark-slot {
+  padding: 11%;
+}
+
+/* Centre — a centred, wrapping row of the chosen digits. */
+.user-center-marks {
+  inset: 14%;
+  align-content: center;
+  justify-content: center;
+  gap: 0 4%;
+}
+.user-center-marks .user-mark-slot {
+  flex: 0 0 26%;
+  height: 46%;
+}
+
+.user-mark-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.user-mark-glyph {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+@media (prefers-contrast: more) {
+  .user-marks {
+    opacity: 1;
+  }
+}
+
+/* ── Peer-unit wash (T4-W8 ROW 4) — the selected cell's reach (twin of SudokuCell's) ──
+   A faint crayon-blue fill over the focused cell's row / column, tying the unit to the blue
+   focus ghost as one selection system (never the graphite hover or the red conflict tone).
+   Instant like the ghost — it tracks selection with no fade so arrowing the grid reads crisp. */
+.cell-peer {
+  background: color-mix(in srgb, var(--color-crayon-blue) 7%, transparent);
+}
+
+@media (prefers-contrast: more) {
+  .cell-peer {
+    background: color-mix(in srgb, var(--color-crayon-blue) 13%, transparent);
   }
 }
 

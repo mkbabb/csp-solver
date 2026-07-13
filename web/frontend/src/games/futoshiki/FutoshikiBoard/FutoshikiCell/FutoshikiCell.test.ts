@@ -152,3 +152,78 @@ describe("FutoshikiCell — long-press candidate peek (T4-WM §3)", () => {
     expect(focusSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+// User pencil marks (T4-W8 ROW 1) — twin of SudokuCell's. Pencil mode reinterprets the frozen
+// native input; a digit authors a `mark`, Backspace erases the cell's notes, Normal mode keeps
+// the value write byte-identical, and the two placement slots render in their own layers/classes
+// (never the engine's `.pencil-marks`).
+describe("FutoshikiCell — user pencil marks authoring (T4-W8 ROW 1)", () => {
+  it("Normal mode still writes a value — the WM native-entry path is untouched", async () => {
+    const w = mountCell({ boardSize: 5, pencilMode: "off" });
+    const input = w.get("input");
+    (input.element as HTMLInputElement).value = "3";
+    await input.trigger("input");
+    expect(lastUpdate(w)).toEqual([0, 3]);
+    expect(w.emitted("mark")).toBeUndefined();
+  });
+
+  it("corner mode routes a digit to `mark`, never `update`", async () => {
+    const w = mountCell({ boardSize: 5, pencilMode: "corner" });
+    const input = w.get("input");
+    (input.element as HTMLInputElement).value = "4";
+    await input.trigger("input");
+    expect(w.emitted("mark")?.[0]).toEqual([0, 4]);
+    expect(w.emitted("update")).toBeUndefined();
+    expect((input.element as HTMLInputElement).value).toBe("");
+  });
+
+  it("pencil-mode Backspace on an empty cell erases the notes via mark(pos, 0)", async () => {
+    const w = mountCell({ boardSize: 5, pencilMode: "center", value: 0 });
+    await w.get("input").trigger("keydown", { key: "Backspace" });
+    expect(w.emitted("mark")?.[0]).toEqual([0, 0]);
+    expect(w.emitted("update")).toBeUndefined();
+  });
+
+  it("pencil mode ignores a digit on a FILLED cell", async () => {
+    const w = mountCell({ boardSize: 5, pencilMode: "corner", value: 4 });
+    const input = w.get("input");
+    (input.element as HTMLInputElement).value = "43";
+    await input.trigger("input");
+    expect(w.emitted("mark")).toBeUndefined();
+    expect(w.emitted("update")).toBeUndefined();
+  });
+});
+
+describe("FutoshikiCell — user marks render distinctly from the engine marks (T4-W8 ROW 1)", () => {
+  it("corner + center notes render in their OWN layers, never the engine `.pencil-marks`", () => {
+    const w = mountCell({ value: 0, cornerMarks: [1, 4], centerMarks: [2, 5] });
+    expect(w.find(".user-corner-marks").exists()).toBe(true);
+    expect(w.find(".user-center-marks").exists()).toBe(true);
+    expect(w.find(".pencil-marks").exists()).toBe(false);
+  });
+
+  it("a filled cell hides its notes — the empty-cell gate the engine marks also use", () => {
+    const w = mountCell({ value: 4, cornerMarks: [1, 2], centerMarks: [3] });
+    expect(w.find(".user-corner-marks").exists()).toBe(false);
+    expect(w.find(".user-center-marks").exists()).toBe(false);
+  });
+});
+
+// Peer-unit wash (T4-W8 ROW 4, twin of SudokuCell's). The board derives the peer set over
+// `focusedPos` (row + column only — futoshiki is a Latin square with no box) and hands each cell
+// an `isPeer` flag; the cell lights a faint crayon-blue wash on its own `.cell-peer` layer.
+describe("FutoshikiCell — peer-unit wash (T4-W8 ROW 4)", () => {
+  it("renders the peer wash when isPeer, on its own `.cell-peer` layer", () => {
+    expect(mountCell({ isPeer: true }).find(".cell-peer").exists()).toBe(true);
+  });
+
+  it("no wash when the cell is not in the focused unit", () => {
+    expect(mountCell({ isPeer: false }).find(".cell-peer").exists()).toBe(false);
+  });
+
+  it("the wash covers the whole unit — a filled peer cell washes too, not just blanks", () => {
+    expect(mountCell({ isPeer: true, value: 4 }).find(".cell-peer").exists()).toBe(
+      true,
+    );
+  });
+});

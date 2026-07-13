@@ -9,7 +9,7 @@
  * composable (the laminate is board-shape-agnostic by design — G5), only the rendered laminate
  * is pencil.
  */
-import { onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 import { useFutoshiki } from "./composables/useFutoshiki";
 import { prewarm } from "./solver/useSolver";
 import FutoshikiBoard from "./FutoshikiBoard/FutoshikiBoard.vue";
@@ -48,12 +48,30 @@ onMounted(() => {
   else setTimeout(warm, 1);
 });
 
+// T4-W8 ROW 3 (twin of SudokuGame's) — the persistent-candidates pin is a third source that wants
+// the engine marks up. `longPressPeek` mirrors the glimpse so every marks decision is a union: a
+// peek release never extinguishes a standing pin, and toggling the pin off never strips marks out
+// from under a live peek. `setMarksActive` is idempotent, so re-asserting the union is free.
+const longPressPeek = ref(false);
+
 const { peekActive, peekTouched, peekSolutionValues, startPeek, endPeek } =
   useAnswerKeyPeek({
     solveState: futoshiki.solveState,
     peekSolution: futoshiki.peekSolution,
-    setMarksActive: futoshiki.setMarksActive,
+    // The peek reports its own edge; the union keeps marks up while the pin or a held long-press
+    // still wants them, so a peek off never kills the persistent candidates.
+    setMarksActive: (active) =>
+      futoshiki.setMarksActive(
+        active || futoshiki.candidatesPinned.value || longPressPeek.value,
+      ),
   });
+
+// ROW 3 — persistent candidates: hold the engine marks on while pinned (default off); releasing
+// the pin clears them unless a peek / long-press still wants them. No new compute — the existing
+// `[values, boardGeneration]` refresh watch keeps the pinned candidates live on every edit.
+watch(futoshiki.candidatesPinned, (pinned) =>
+  futoshiki.setMarksActive(pinned || peekActive.value || longPressPeek.value),
+);
 
 // Share act (W6; T4-W3 share-truth) — twin of SudokuGame's: shareBoard() encodes the board
 // (values + inequalities) into `?board=`, writes it to the address bar (URL wins over storage
@@ -69,12 +87,14 @@ function onShare(): Promise<void> {
 // glimpse, guarded exactly like startPeek (the answer-key peek owns the marks surface when up; the
 // solve worker owns the board mid-solve). The end never strips marks from under a held peek.
 function onCandidatePeekStart() {
-  if (peekActive.value || futoshiki.solveState.value === "solving") return;
+  if (futoshiki.solveState.value === "solving") return; // the solve worker owns the board mid-solve
+  longPressPeek.value = true;
   futoshiki.setMarksActive(true);
 }
 function onCandidatePeekEnd() {
-  if (peekActive.value) return;
-  futoshiki.setMarksActive(false);
+  longPressPeek.value = false;
+  // Keep marks up if the answer-key peek or the persistent pin still wants them.
+  futoshiki.setMarksActive(peekActive.value || futoshiki.candidatesPinned.value);
 }
 
 // ── The drawer (T3-W12 §6) — twin of SudokuGame's wiring (D16) ───────
@@ -116,9 +136,16 @@ onUnmounted(() => unregisterDrawer?.());
         :error-code="futoshiki.errorCode.value"
         :solve-stats="futoshiki.solveStats.value"
         :pencil-marks="futoshiki.pencilMarks.value"
+        :corner-marks="futoshiki.cornerMarks.value"
+        :center-marks="futoshiki.centerMarks.value"
+        :pencil-mode="futoshiki.pencilMode.value"
         :hint="futoshiki.hintReasoning.value"
         :grade-signature="futoshiki.gradeSignature.value"
+        :grade-tally="futoshiki.gradeTally.value"
+        :proactive-error-check="futoshiki.proactiveCheck.value"
         @update-cell="(pos: number, val: number) => futoshiki.setCell(pos, val)"
+        @mark="(pos: number, val: number) => futoshiki.toggleUserMark(pos, val)"
+        @cycle-pencil-mode="futoshiki.cyclePencilMode()"
         @retry="futoshiki.solve()"
         @undo="futoshiki.undo()"
         @redo="futoshiki.redo()"
@@ -149,12 +176,19 @@ onUnmounted(() => unregisterDrawer?.());
             :difficulty="futoshiki.difficulty.value"
             :loading="futoshiki.loading.value"
             :solve-state="futoshiki.solveState.value"
+            :pencil-mode="futoshiki.pencilMode.value"
+            :error-check-mode="futoshiki.errorCheckMode.value"
+            :candidates-pinned="futoshiki.candidatesPinned.value"
             mobile
             @update:board-size="futoshiki.boardSize.value = $event"
             @update:difficulty="futoshiki.difficulty.value = $event"
+            @update:pencil-mode="futoshiki.setPencilMode($event)"
+            @update:error-check-mode="futoshiki.setErrorCheckMode($event)"
+            @update:candidates-pinned="futoshiki.setCandidatesPinned($event)"
             @randomize="futoshiki.randomize()"
             @clear="futoshiki.clearBoard()"
             @solve="futoshiki.solve()"
+            @fill-forced="futoshiki.fillForced()"
             @undo="futoshiki.undo()"
             @redo="futoshiki.redo()"
             @hint="futoshikiBoard?.hintFocusedCell()"
@@ -183,11 +217,18 @@ onUnmounted(() => unregisterDrawer?.());
             :difficulty="futoshiki.difficulty.value"
             :loading="futoshiki.loading.value"
             :solve-state="futoshiki.solveState.value"
+            :pencil-mode="futoshiki.pencilMode.value"
+            :error-check-mode="futoshiki.errorCheckMode.value"
+            :candidates-pinned="futoshiki.candidatesPinned.value"
             @update:board-size="futoshiki.boardSize.value = $event"
             @update:difficulty="futoshiki.difficulty.value = $event"
+            @update:pencil-mode="futoshiki.setPencilMode($event)"
+            @update:error-check-mode="futoshiki.setErrorCheckMode($event)"
+            @update:candidates-pinned="futoshiki.setCandidatesPinned($event)"
             @randomize="futoshiki.randomize()"
             @clear="futoshiki.clearBoard()"
             @solve="futoshiki.solve()"
+            @fill-forced="futoshiki.fillForced()"
             @undo="futoshiki.undo()"
             @redo="futoshiki.redo()"
             @hint="futoshikiBoard?.hintFocusedCell()"

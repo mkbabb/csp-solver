@@ -52,6 +52,10 @@ web/frontend/playwright-report/
 !web/frontend/e2e/goldens/**/*.png
 # T4-W3 social card — the one committed public PNG (og:image, <=150 KB under B1).
 !web/frontend/public/og-card.png
+# T4-W8 author avatar — BUNDLED same-origin (AttributionCard.vue imports it; Vite emits it
+# content-hashed under /assets/) to retire the app's last third-party network hit (ROW 5 /
+# FAM-14). A real deploy asset (6 KB), must ship despite the global *.png ignore.
+!web/frontend/src/pencil/chrome/AttributionCard/avatar.png
 
 # Vite cache
 .vite/

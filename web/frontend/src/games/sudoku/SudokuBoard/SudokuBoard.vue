@@ -6,6 +6,8 @@ import HandDrawnGrid from "@pencil/grid/HandDrawnGrid/HandDrawnGrid.vue";
 import CelebrationHeart from "@pencil/chrome/CelebrationHeart.vue";
 import CompletionVignette from "@pencil/chrome/CompletionVignette.vue";
 import MarginNote from "@pencil/chrome/MarginNote.vue";
+import DifficultyTally from "@games/shared/DifficultyTally.vue";
+import type { TallyDescriptor } from "@games/shared/techniqueVoice";
 import { mulberry32 } from "@mkbabb/pencil-boil";
 import { generateCellRects } from "@pencil/grid/gridPaths";
 import { revealStaggerMs } from "@pencil/config/pencilConfig";
@@ -26,6 +28,7 @@ import {
   vignetteDocked,
 } from "@games/shared/useControlsDrawer";
 import type { HintResult } from "@games/shared/techniqueEngine";
+import type { PencilMode } from "@games/shared/useUserMarks";
 import type { Difficulty, SolveState, SolveStats } from "@games/sudoku/types";
 import type { AnimationState } from "@pencil/types";
 
@@ -56,6 +59,13 @@ const props = defineProps<{
    *  held (opt-in — never ambient); only positions where propagation actually
    *  pruned something are present. */
   pencilMarks?: Record<string, number[]>;
+  /** T4-W8 ROW 1 — the player's own pencil marks (corner + center slots), distinct in store and
+   *  render from the engine peek marks above. Forwarded per-cell; empty when a cell has none. */
+  cornerMarks?: Record<string, number[]>;
+  centerMarks?: Record<string, number[]>;
+  /** T4-W8 ROW 1 — the active pencil mode (off/corner/center), forwarded to each cell so its
+   *  frozen native input routes a digit to a mark instead of a value while a slot is armed. */
+  pencilMode?: PencilMode;
   /** F6 page-turn (T3-W10): true while this scene is switch-away's outgoing exercise.
    *  Routes the grid through the EXISTING erase beat and fades glyphs + marginalia;
    *  on the erase's completion the board emits `erased` (the seam) instead of redrawing. */
@@ -72,6 +82,13 @@ const props = defineProps<{
    *  the deal-time grade's hardest technique. Replaces W6's request bucket in the fresh-board
    *  announce ONCE graded; empty for an ungraded board (W6's request voice stays the fallback). */
   gradeSignature?: string;
+  /** T4-W9-B1 — the displayed-quality tally descriptor (the glyph twin of `gradeSignature`).
+   *  Fully derived in the composable; the board just forwards it to the DifficultyTally. */
+  gradeTally?: TallyDescriptor;
+  /** T4-W8 ROW 2 — the error-check mode's PROACTIVE display gate (live, or an armed on-demand
+   *  snapshot). ORed below with the `solveState === 'failed'` grade: the teacher's red pencil
+   *  still grades actual work regardless of this setting; the mode governs only the live cadence. */
+  proactiveErrorCheck?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -81,6 +98,11 @@ const emit = defineEmits<{
   (e: "redo"): void;
   (e: "hint", position: number): void;
   (e: "erased"): void;
+  /** T4-W8 ROW 1 — a cell authored a user mark (digit toggles, 0 erases); forwarded to the
+   *  game's user-mark store. Distinct from `updateCell` (the value write). */
+  (e: "mark", position: number, value: number): void;
+  /** T4-W8 ROW 1 — the bare-'P' keyboard toggle cycles the pencil mode (off→corner→center). */
+  (e: "cyclePencilMode"): void;
   /** Long-press peek (T4-WM §3): forwarded from a cell's hold to the game's marks activation —
    *  the candidate glimpse is marks-only (no answer laminate). Release ends it. */
   (e: "candidatePeekStart"): void;
@@ -194,15 +216,34 @@ const boardClasses = computed(() => {
   return base;
 });
 
-// ── Conflict detection — the teacher's red pencil (§1.4) ──────────────
-// Only while the solve is graded 'failed' (the teacher grades actual work); a pure
-// derivation over `values`, fed to the cells as `aria-invalid` + the red ghost mark
-// and to the marginalia as the row to check.
+// ── Conflict detection — the teacher's red pencil (§1.4) + error-check MODE (T4-W8 ROW 2) ──
+// The SAME pure `findConflicts` derivation over `values`, un-gated from the 'failed'-only gate:
+// it now feeds the cells (aria-invalid + the red ghost) + the marginalia (the row to check) at
+// the chosen cadence. `solveState === 'failed'` (the teacher grading actual work) is ORed with
+// the mode's proactive display — live is continuous, on-demand shows an armed snapshot, off shows
+// nothing proactively (the grade still grades). Event-driven (a value mutation), never the boil
+// beat, so live adds ZERO idle paints — the E7 idle-paint invariant holds by construction.
+const conflictsVisible = computed(
+  () => props.solveState === "failed" || props.proactiveErrorCheck === true,
+);
 const conflicts = computed(() =>
-  props.solveState === "failed"
+  conflictsVisible.value
     ? findConflicts(props.values, props.boardSize, props.size)
     : { positions: new Set<string>(), firstRow: null },
 );
+
+// ── T4-W9 board FILL fraction (the progress trace's number) ──────────────
+// A pure derivation over `values`/`givenCells` (re-evaluated on a fill/clear, NEVER on
+// the boil beat): filled non-given cells / fillable cells. FILL, not correctness — wrong
+// digits count (the app grades correctness only on Solve). HandDrawnGrid owns the render.
+const fillProgress = computed(() => {
+  let filled = 0;
+  for (const [pos, v] of Object.entries(props.values)) {
+    if (v !== 0 && !props.givenCells.has(pos)) filled++;
+  }
+  const fillable = Math.max(1, props.totalCells - props.givenCells.size);
+  return Math.max(0, Math.min(1, filled / fillable));
+});
 
 // Beat 1 — the reveal wave. Noise-order stagger (Fisher-Yates + mulberry32), but
 // board-normalized (design §1.3): stagger = clamp(round(1200 / blankCount), 4, 24) so the
@@ -295,6 +336,44 @@ function onCellFocus(pos: number) {
   focusedPos.value = pos;
 }
 
+// ── Peer-unit highlight on selection (T4-W8 ROW 4) ────────────────────
+// A pure derivation over `focusedPos`: the cells sharing the focused cell's row, column, or box
+// take a faint pencil wash so the active unit reads at a glance. Gated on the board actually
+// HOLDING focus (`unitFocused`) so a fresh load — focusedPos 0 with nothing selected — washes
+// nothing; focusin/focusout on the grid track it (a cell→cell arrow keeps focus WITHIN the grid,
+// tabbing to a control drops it). The focused cell itself is excluded — it carries its own ghost;
+// the wash is its neighbours' tint.
+const unitFocused = ref(false);
+function onGridFocusin() {
+  unitFocused.value = true;
+}
+function onGridFocusout(e: FocusEvent) {
+  const grid = e.currentTarget as HTMLElement;
+  const next = e.relatedTarget as Node | null;
+  if (!next || !grid.contains(next)) unitFocused.value = false;
+}
+const peerCells = computed(() => {
+  const set = new Set<string>();
+  if (!unitFocused.value) return set;
+  const n = props.boardSize;
+  const pos = focusedPos.value;
+  const row = Math.floor(pos / n);
+  const col = pos % n;
+  for (let i = 0; i < n; i++) {
+    set.add(String(row * n + i)); // row peers
+    set.add(String(i * n + col)); // column peers
+  }
+  // Box peers — the subgrid band (sudoku's structural divergence from futoshiki's Latin square).
+  const sg = props.size;
+  const br = Math.floor(row / sg) * sg;
+  const bc = Math.floor(col / sg) * sg;
+  for (let r = 0; r < sg; r++) {
+    for (let c = 0; c < sg; c++) set.add(String((br + r) * n + (bc + c)));
+  }
+  set.delete(String(pos)); // the focused cell keeps its own ghost; peers are its neighbours
+  return set;
+});
+
 // T4-WM §2 — the hint act, factored so the ControlPanel's Hint button and the board's H key
 // share ONE path: both reveal the currently focused cell. On coarse the last tap sets
 // focusedPos, and it survives the button tap (only a board reset clears it, L442), so tapping
@@ -347,6 +426,14 @@ function onBoardKeydown(e: KeyboardEvent) {
     case "H":
       if (e.ctrlKey || e.metaKey) handled = false;
       else hintFocusedCell();
+      break;
+    // ── Pencil-mode toggle (T4-W8 ROW 1) — 'P' cycles off→corner→center. Bare key only (a
+    // modified P → browser print falls through); preventDefault keeps 'p' out of the focused
+    // cell's native input. Sibling case, disjoint from the H/Z/K layers.
+    case "p":
+    case "P":
+      if (e.ctrlKey || e.metaKey) handled = false;
+      else emit("cyclePencilMode");
       break;
     default:
       handled = false;
@@ -609,6 +696,7 @@ function isRevealed(pos: number): boolean {
         :board-size="boardSize"
         :subgrid-size="size"
         :anim-state="gridAnimState"
+        :progress="fillProgress"
         @animation-complete="onGridAnimComplete"
       />
 
@@ -625,6 +713,8 @@ function isRevealed(pos: number): boolean {
           gridTemplateRows: gridTemplateColumns,
         }"
         @keydown="onBoardKeydown"
+        @focusin="onGridFocusin"
+        @focusout="onGridFocusout"
       >
         <SudokuCell
           v-for="pos in totalCells"
@@ -638,6 +728,7 @@ function isRevealed(pos: number): boolean {
           :is-revealed="isRevealed(pos - 1)"
           :is-invalid="conflicts.positions.has(String(pos - 1))"
           :is-because="hintBecause.has(String(pos - 1))"
+          :is-peer="peerCells.has(String(pos - 1))"
           :noise-delay="noiseDelays.get(String(pos - 1)) ?? 0"
           :board-size="boardSize"
           :subgrid-size="size"
@@ -646,8 +737,12 @@ function isRevealed(pos: number): boolean {
           :tab-index="pos - 1 === focusedPos ? 0 : -1"
           :ghost-path="cellRects[pos - 1] ?? ''"
           :marks="marksFor(pos - 1)"
+          :corner-marks="cornerMarks?.[String(pos - 1)]"
+          :center-marks="centerMarks?.[String(pos - 1)]"
+          :pencil-mode="pencilMode"
           :flourish="celebrating"
           @update="onCellUpdate"
+          @mark="(p: number, v: number) => emit('mark', p, v)"
           @cell-focus="onCellFocus"
           @candidate-peek-start="emit('candidatePeekStart')"
           @candidate-peek-end="emit('candidatePeekEnd')"
@@ -683,6 +778,10 @@ function isRevealed(pos: number): boolean {
          the gold path renders NOTHING below the board; graphite/teacher-red/error keep
          the strip exactly as before (transient, one line — those fit the fold gap). -->
     <div class="board-margin">
+      <!-- The DIFFICULTY signal (T4-W9-B1): the tally glyph beside its own prose voice.
+           Persistent (not tied to the voice's quiet toggle) — difficulty is a fact of the
+           dealt board, distinct from FILL (the border) and CORRECTNESS (the solve verdict). -->
+      <DifficultyTally v-if="gradeTally" :descriptor="gradeTally" />
       <MarginNote
         :text="marginText"
         :tone="marginTone"

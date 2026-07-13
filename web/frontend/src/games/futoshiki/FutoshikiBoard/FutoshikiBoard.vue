@@ -18,6 +18,8 @@ import HandDrawnGrid from "@pencil/grid/HandDrawnGrid/HandDrawnGrid.vue";
 import CelebrationHeart from "@pencil/chrome/CelebrationHeart.vue";
 import CompletionVignette from "@pencil/chrome/CompletionVignette.vue";
 import MarginNote from "@pencil/chrome/MarginNote.vue";
+import DifficultyTally from "@games/shared/DifficultyTally.vue";
+import type { TallyDescriptor } from "@games/shared/techniqueVoice";
 import { mulberry32 } from "@mkbabb/pencil-boil";
 import { generateCellRects } from "@pencil/grid/gridPaths";
 import { revealStaggerMs } from "@pencil/config/pencilConfig";
@@ -38,6 +40,7 @@ import {
   vignetteDocked,
 } from "@games/shared/useControlsDrawer";
 import type { HintResult } from "@games/shared/techniqueEngine";
+import type { PencilMode } from "@games/shared/useUserMarks";
 import type { Inequality, SolveState, SolveStats } from "@games/futoshiki/types";
 import type { AnimationState } from "@pencil/types";
 
@@ -64,6 +67,13 @@ const props = defineProps<{
    *  held (opt-in — never ambient); only positions where propagation actually
    *  pruned something are present. Twin of SudokuBoard's (D16). */
   pencilMarks?: Record<string, number[]>;
+  /** T4-W8 ROW 1 — the player's own pencil marks (corner + center slots; twin of SudokuBoard's),
+   *  distinct in store and render from the engine peek marks above. Forwarded per-cell. */
+  cornerMarks?: Record<string, number[]>;
+  centerMarks?: Record<string, number[]>;
+  /** T4-W8 ROW 1 — the active pencil mode (off/corner/center), forwarded to each cell so its
+   *  frozen native input routes a digit to a mark instead of a value while a slot is armed. */
+  pencilMode?: PencilMode;
   /** F6 page-turn (T3-W10): true while this scene is switch-away's outgoing exercise.
    *  Routes the grid through the EXISTING erase beat and fades glyphs + marginalia;
    *  on the erase's completion the board emits `erased` (the seam) instead of redrawing. */
@@ -79,6 +89,13 @@ const props = defineProps<{
    *  keyed to the deal-time grade. Futoshiki has no request voice, so this is the first
    *  difficulty word its fresh-board margin carries; empty for an ungraded (restored) board. */
   gradeSignature?: string;
+  /** T4-W9-B1 (twin of SudokuBoard's) — the displayed-quality tally descriptor. Derived in the
+   *  composable; the board forwards it to the shared DifficultyTally. */
+  gradeTally?: TallyDescriptor;
+  /** T4-W8 ROW 2 (twin of SudokuBoard's) — the error-check mode's PROACTIVE display gate (live,
+   *  or an armed on-demand snapshot). ORed below with `solveState === 'failed'`: the teacher's
+   *  red pencil grades actual work regardless; the mode governs only the live cadence. */
+  proactiveErrorCheck?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -88,6 +105,11 @@ const emit = defineEmits<{
   (e: "redo"): void;
   (e: "hint", position: number): void;
   (e: "erased"): void;
+  /** T4-W8 ROW 1 (twin of SudokuBoard's) — a cell authored a user mark (digit toggles, 0 erases);
+   *  forwarded to the game's user-mark store. Distinct from `updateCell` (the value write). */
+  (e: "mark", position: number, value: number): void;
+  /** T4-W8 ROW 1 — the bare-'P' keyboard toggle cycles the pencil mode (off→corner→center). */
+  (e: "cyclePencilMode"): void;
   /** Long-press peek (T4-WM §3) — twin of SudokuBoard's: forwarded from a cell's hold to the
    *  game's marks activation (candidate glimpse, marks-only). Release ends it. */
   (e: "candidatePeekStart"): void;
@@ -124,12 +146,33 @@ const boardClasses = computed(() => {
   return base;
 });
 
-// ── Conflict detection — Latin-square (row/col) + inequality violations (§1.4) ──
+// ── Conflict detection — Latin-square (row/col) + inequality violations (§1.4) + error-check
+// MODE (T4-W8 ROW 2, twin of SudokuBoard's) ──
+// The SAME pure `findConflicts` derivation, un-gated from the 'failed'-only gate: `solveState ===
+// 'failed'` (the grade) is ORed with the mode's proactive display (live continuous / on-demand
+// armed snapshot / off nothing). Event-driven (a value mutation), never the boil beat, so live
+// adds zero idle paints — the E7 idle-paint invariant holds by construction.
+const conflictsVisible = computed(
+  () => props.solveState === "failed" || props.proactiveErrorCheck === true,
+);
 const conflicts = computed(() =>
-  props.solveState === "failed"
+  conflictsVisible.value
     ? findConflicts(props.values, props.boardSize, props.inequalities)
     : { positions: new Set<string>(), firstRow: null },
 );
+
+// ── T4-W9 board FILL fraction (the progress trace's number) ──────────────
+// Twin of SudokuBoard's — a pure derivation over `values`/`givenCells`, re-evaluated on a
+// fill/clear (NEVER on the boil beat): filled non-given cells / fillable cells. FILL, not
+// correctness. The render is HandDrawnGrid's; this is the only new code the twin needs.
+const fillProgress = computed(() => {
+  let filled = 0;
+  for (const [pos, v] of Object.entries(props.values)) {
+    if (v !== 0 && !props.givenCells.has(pos)) filled++;
+  }
+  const fillable = Math.max(1, props.totalCells - props.givenCells.size);
+  return Math.max(0, Math.min(1, filled / fillable));
+});
 
 // ── Caret layer — the inequality furniture (design-union §2.4 row 4) ─────────────
 // A caret sits on the shared edge between an adjacent pair; its open mouth faces the
@@ -274,6 +317,35 @@ function onCellFocus(pos: number) {
   focusedPos.value = pos;
 }
 
+// ── Peer-unit highlight on selection (T4-W8 ROW 4, twin of SudokuBoard's) ──
+// A pure derivation over `focusedPos`: the cells sharing the focused cell's row or column take a
+// faint pencil wash. Futoshiki is a plain Latin square, so there is NO box band (its structural
+// divergence from sudoku). Gated on the board actually holding focus (`unitFocused`) so a fresh
+// load washes nothing; the focused cell itself is excluded (it keeps its own ghost).
+const unitFocused = ref(false);
+function onGridFocusin() {
+  unitFocused.value = true;
+}
+function onGridFocusout(e: FocusEvent) {
+  const grid = e.currentTarget as HTMLElement;
+  const next = e.relatedTarget as Node | null;
+  if (!next || !grid.contains(next)) unitFocused.value = false;
+}
+const peerCells = computed(() => {
+  const set = new Set<string>();
+  if (!unitFocused.value) return set;
+  const n = props.boardSize;
+  const pos = focusedPos.value;
+  const row = Math.floor(pos / n);
+  const col = pos % n;
+  for (let i = 0; i < n; i++) {
+    set.add(String(row * n + i)); // row peers
+    set.add(String(i * n + col)); // column peers
+  }
+  set.delete(String(pos)); // the focused cell keeps its own ghost; peers are its neighbours
+  return set;
+});
+
 // T4-WM §2 — the hint act, factored so the ControlPanel's Hint button and the board's H key
 // share ONE path (twin of Sudoku's, D16): both reveal the currently focused cell. On coarse
 // the last tap sets focusedPos and it survives the button tap (only a board reset clears it),
@@ -324,6 +396,13 @@ function onBoardKeydown(e: KeyboardEvent) {
     case "H":
       if (e.ctrlKey || e.metaKey) handled = false;
       else hintFocusedCell();
+      break;
+    // ── Pencil-mode toggle (T4-W8 ROW 1) — 'P' cycles off→corner→center. Bare key only;
+    // preventDefault keeps 'p' out of the focused cell's native input. Twin of Sudoku's.
+    case "p":
+    case "P":
+      if (e.ctrlKey || e.metaKey) handled = false;
+      else emit("cyclePencilMode");
       break;
     default:
       handled = false;
@@ -535,6 +614,7 @@ function isRevealed(pos: number): boolean {
         :board-size="boardSize"
         :subgrid-size="boardSize"
         :anim-state="gridAnimState"
+        :progress="fillProgress"
         @animation-complete="onGridAnimComplete"
       />
 
@@ -551,6 +631,8 @@ function isRevealed(pos: number): boolean {
           gridTemplateRows: gridTemplateColumns,
         }"
         @keydown="onBoardKeydown"
+        @focusin="onGridFocusin"
+        @focusout="onGridFocusout"
       >
         <FutoshikiCell
           v-for="pos in totalCells"
@@ -564,6 +646,7 @@ function isRevealed(pos: number): boolean {
           :is-revealed="isRevealed(pos - 1)"
           :is-invalid="conflicts.positions.has(String(pos - 1))"
           :is-because="hintBecause.has(String(pos - 1))"
+          :is-peer="peerCells.has(String(pos - 1))"
           :noise-delay="noiseDelays.get(String(pos - 1)) ?? 0"
           :board-size="boardSize"
           :row-index="Math.floor((pos - 1) / boardSize) + 1"
@@ -572,8 +655,12 @@ function isRevealed(pos: number): boolean {
           :ghost-path="cellRects[pos - 1] ?? ''"
           :constraint-label="constraintLabels.get(pos - 1) ?? ''"
           :marks="pencilMarks?.[String(pos - 1)]"
+          :corner-marks="cornerMarks?.[String(pos - 1)]"
+          :center-marks="centerMarks?.[String(pos - 1)]"
+          :pencil-mode="pencilMode"
           :flourish="celebrating"
           @update="onCellUpdate"
+          @mark="(p: number, v: number) => emit('mark', p, v)"
           @cell-focus="onCellFocus"
           @candidate-peek-start="emit('candidatePeekStart')"
           @candidate-peek-end="emit('candidatePeekEnd')"
@@ -620,6 +707,9 @@ function isRevealed(pos: number): boolean {
          sr-only-quiet on the gold path (the vignette carries the paint); graphite/red/
          error keep it exactly as before. Twin of SudokuBoard's. -->
     <div class="board-margin">
+      <!-- The DIFFICULTY signal (T4-W9-B1, twin of Sudoku's) — the tally glyph beside its
+           prose voice; persistent, distinct from FILL (border) and CORRECTNESS (verdict). -->
+      <DifficultyTally v-if="gradeTally" :descriptor="gradeTally" />
       <MarginNote
         :text="marginText"
         :tone="marginTone"

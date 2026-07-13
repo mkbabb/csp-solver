@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
 import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
 import { useLongPress } from "@games/shared/useLongPress";
+import type { PencilMode } from "@games/shared/useUserMarks";
 
 const props = defineProps<{
   position: number;
@@ -28,10 +29,25 @@ const props = defineProps<{
    *  answer key visibly points here before the digit inks. Fades in on the existing marks
    *  cadence — no new timing constant. */
   isBecause?: boolean;
+  /** T4-W8 ROW 4 — this cell shares a unit (row / column / box) with the focused cell: a faint
+   *  crayon-blue wash lights on selection so the active unit reads at a glance. Pure over the
+   *  board's `focusedPos`; its own layer behind the glyph, never the conflict / hint tiers. */
+  isPeer?: boolean;
   /** Engine-domains pencil marks (W6 beat 9): surviving candidate values from
    *  the solver's own propagation, present only while the peek gesture is held.
    *  Rendered only while the cell is empty. */
   marks?: number[];
+  /** T4-W8 ROW 1 — the player's OWN pencil marks, distinct from the engine peek marks above
+   *  in both store and render (crayon-blue, cell corners) and never colliding with them.
+   *  Corner slot (Snyder notation); rendered only while the cell is empty. */
+  cornerMarks?: number[];
+  /** T4-W8 ROW 1 — the player's own center marks (Snyder), a centred row in the same tone;
+   *  the second placement slot of the one user-mark surface. Empty cells only. */
+  centerMarks?: number[];
+  /** T4-W8 ROW 1 — the active pencil mode. When 'corner'/'center', a digit keystroke on this
+   *  cell's FROZEN native input authors a mark instead of a value (the WM seam: mode toggle
+   *  only, no second input surface); 'off'/undefined keeps the byte-identical value write. */
+  pencilMode?: PencilMode;
   /** T3-W13 §4.1 — the board's `celebrating`, forwarded to the glyph's flourish
    *  gate: solve reveals keep beat-2, a hint stops at the written glyph. */
   flourish?: boolean;
@@ -39,6 +55,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update", position: number, value: number): void;
+  /** T4-W8 ROW 1 — author a user mark: a digit toggles it in the active slot, 0 erases the
+   *  cell's notes (symmetric with `update`). The board forwards to the game's user-mark store. */
+  (e: "mark", position: number, value: number): void;
   (e: "cellFocus", position: number): void;
   /** Long-press peek (T4-WM §3): a hold on this EMPTY cell opens the candidate glimpse; the
    *  board forwards these up to the game's marks activation. Release ends the peek. */
@@ -102,12 +121,22 @@ const ariaLabel = computed(() => {
   }
 });
 
+// T4-W8 ROW 1 — pencil mode reinterprets the FROZEN native input (the WM seam: mode toggle
+// only, never a second input surface). While a slot is armed AND the cell is empty, a digit
+// authors a mark and the input is cleared so it never fills with a value; a filled cell has no
+// note surface (switch to Normal to overwrite it), so its keystroke is ignored.
+const pencilArmed = computed(
+  () => props.pencilMode === "corner" || props.pencilMode === "center",
+);
+
 function handleInput(event: Event) {
   const target = event.target as HTMLInputElement;
   const raw = target.value.replace(/\D/g, "");
 
   if (raw === "") {
-    emit("update", props.position, 0);
+    // A cleared input is an erase in Normal mode; in pencil mode the value stays (Backspace
+    // owns the note erase via handleKeydown), so never fall through to update(0) there.
+    if (!pencilArmed.value) emit("update", props.position, 0);
     target.value = "";
     return;
   }
@@ -118,8 +147,14 @@ function handleInput(event: Event) {
   const trimmed = raw.slice(-maxLen);
   const num = parseInt(trimmed, 10);
   if (num >= 1 && num <= props.boardSize) {
-    emit("update", props.position, num);
-    target.value = String(num);
+    if (pencilArmed.value) {
+      // Pencil mode: the digit toggles a note on an EMPTY cell; the input never keeps it.
+      if (props.value === 0) emit("mark", props.position, num);
+      target.value = "";
+    } else {
+      emit("update", props.position, num);
+      target.value = String(num);
+    }
   } else {
     target.value = displayValue.value;
   }
@@ -128,8 +163,14 @@ function handleInput(event: Event) {
 function handleKeydown(event: KeyboardEvent) {
   const target = event.target as HTMLInputElement;
   if (event.key === "Backspace" || event.key === "Delete") {
-    emit("update", props.position, 0);
-    target.value = "";
+    // In pencil mode an empty cell's Backspace erases its notes (both slots); a filled cell
+    // still erases the value (revealing any hidden notes beneath). Normal mode is unchanged.
+    if (pencilArmed.value && props.value === 0) {
+      emit("mark", props.position, 0);
+    } else {
+      emit("update", props.position, 0);
+      target.value = "";
+    }
     event.preventDefault();
   }
   // Arrow / Home / End navigation deliberately falls through to the board's roving-tabindex
@@ -193,6 +234,35 @@ const marksGridStyle = computed(() => ({
   gridTemplateRows: `repeat(${props.subgridSize}, minmax(0, 1fr))`,
 }));
 
+// ── User pencil marks (T4-W8 ROW 1) — the player's own notes ──────────
+// Distinct from the engine peek marks above in tone (crayon-blue) AND placement, so the two
+// never read as one: CORNER marks hug the cell in a 3×3 Snyder grid (order below), CENTER marks
+// sit in a centred row. Both reuse the hand-drawn glyph paths and, like the engine marks, show
+// only on an empty cell (a filled cell hides its notes; erasing the digit brings them back).
+const showCornerMarks = computed(
+  () => props.value === 0 && (props.cornerMarks?.length ?? 0) > 0,
+);
+const showCenterMarks = computed(
+  () => props.value === 0 && (props.centerMarks?.length ?? 0) > 0,
+);
+// Snyder corner order: the four corners first, then the edge midpoints, then centre — a 3×3
+// grid addressed by (row, col). Wraps for the rare cell carrying more notes than slots.
+const CORNER_ORDER: [number, number][] = [
+  [1, 1],
+  [1, 3],
+  [3, 1],
+  [3, 3],
+  [1, 2],
+  [3, 2],
+  [2, 1],
+  [2, 3],
+  [2, 2],
+];
+function cornerSlot(i: number) {
+  const [row, col] = CORNER_ORDER[i % CORNER_ORDER.length];
+  return { gridRow: String(row), gridColumn: String(col) };
+}
+
 // The board's roving controller focuses cells programmatically after an arrow key (§4.1).
 defineExpose({ focus: focusInput });
 </script>
@@ -243,6 +313,15 @@ defineExpose({ focus: focusInput });
       @focus="onFocus"
       @blur="isFocused = false"
       class="cell-native-input absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
+    />
+
+    <!-- Peer-unit wash (T4-W8 ROW 4): a faint crayon-blue fill over every cell sharing the
+         focused cell's row / column / box, so the active unit reads at a glance on selection.
+         Its own layer, behind the glyph + marks + ghost; decorative (the value carries the name). -->
+    <div
+      v-if="isPeer"
+      class="cell-peer pointer-events-none absolute inset-0"
+      aria-hidden="true"
     />
 
     <!-- T4-W7 hint laminate (lane E3): the becauseCells wash in the peek-laminate tone (the
@@ -297,6 +376,65 @@ defineExpose({ focus: focusInput });
           />
         </svg>
       </div>
+    </div>
+
+    <!-- User pencil marks — CORNER slot (T4-W8 ROW 1): the player's own notes in a 3×3 Snyder
+         grid hugging the cell, crayon-blue so they never read as the engine's graphite peek
+         marks. Its own layer + class (never `.pencil-marks`) — the two mark systems share the
+         cell but never the store or the render. Decorative (the value carries the a11y name). -->
+    <div
+      v-if="showCornerMarks"
+      class="user-marks user-corner-marks pointer-events-none absolute grid"
+      aria-hidden="true"
+    >
+      <span
+        v-for="(v, i) in cornerMarks"
+        :key="v"
+        class="user-mark-slot"
+        :style="cornerSlot(i)"
+      >
+        <svg
+          class="user-mark-glyph"
+          viewBox="0 0 40 56"
+          preserveAspectRatio="xMidYMid meet"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            :d="markPath(v)"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="4.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </span>
+    </div>
+
+    <!-- User pencil marks — CENTER slot (T4-W8 ROW 1): a centred, wrapping row of the chosen
+         digits, the second placement of the one user-mark surface. Same tone, distinct place. -->
+    <div
+      v-if="showCenterMarks"
+      class="user-marks user-center-marks pointer-events-none absolute flex flex-wrap"
+      aria-hidden="true"
+    >
+      <span v-for="v in centerMarks" :key="v" class="user-mark-slot">
+        <svg
+          class="user-mark-glyph"
+          viewBox="0 0 40 56"
+          preserveAspectRatio="xMidYMid meet"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            :d="markPath(v)"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="4.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </span>
     </div>
 
     <!-- SVG handwritten glyph overlay -->
@@ -377,6 +515,69 @@ defineExpose({ focus: focusInput });
 @media (prefers-contrast: more) {
   .pencil-marks {
     opacity: 0.75;
+  }
+}
+
+/* ── User pencil marks (T4-W8 ROW 1) — the player's own notes ─────────
+   Crayon-blue, the player's own hand — deliberately a DIFFERENT tone from the engine's
+   graphite peek marks so the solver's domains and the player's notes never read as one, and
+   a different placement (corners / centred row) besides. Their own layer; they compose over
+   the engine grid without ever sharing its store. */
+.user-marks {
+  color: var(--color-crayon-blue);
+  opacity: 0.9;
+}
+
+/* Corner (Snyder) — a 3×3 grid hugging the cell; each note small in its slot. */
+.user-corner-marks {
+  inset: 7%;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+.user-corner-marks .user-mark-slot {
+  padding: 11%;
+}
+
+/* Centre — a centred, wrapping row of the chosen digits. */
+.user-center-marks {
+  inset: 14%;
+  align-content: center;
+  justify-content: center;
+  gap: 0 4%;
+}
+.user-center-marks .user-mark-slot {
+  flex: 0 0 26%;
+  height: 46%;
+}
+
+.user-mark-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.user-mark-glyph {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+@media (prefers-contrast: more) {
+  .user-marks {
+    opacity: 1;
+  }
+}
+
+/* ── Peer-unit wash (T4-W8 ROW 4) — the selected cell's reach ─────────
+   A faint crayon-blue fill over the focused cell's row / column / box, tying the unit to the
+   blue focus ghost as one selection system (never the graphite hover or the red conflict tone).
+   Instant like the ghost — it tracks selection with no fade so arrowing the grid reads crisp. */
+.cell-peer {
+  background: color-mix(in srgb, var(--color-crayon-blue) 7%, transparent);
+}
+
+@media (prefers-contrast: more) {
+  .cell-peer {
+    background: color-mix(in srgb, var(--color-crayon-blue) 13%, transparent);
   }
 }
 

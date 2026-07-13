@@ -6,7 +6,7 @@
  * the peek gesture lives in the shared `useAnswerKeyPeek` composable, only the rendered laminate
  * is pencil.
  */
-import { defineAsyncComponent, onMounted, onUnmounted, ref } from "vue";
+import { defineAsyncComponent, onMounted, onUnmounted, ref, watch } from "vue";
 import { useSudoku } from "./composables/useSudoku";
 import { prewarm } from "./solver/useSolver";
 import SudokuBoard from "./SudokuBoard/SudokuBoard.vue";
@@ -50,12 +50,32 @@ onMounted(() => {
   else setTimeout(warm, 1);
 });
 
+// T4-W8 ROW 3 — the persistent-candidates pin adds a THIRD source that wants the engine marks up
+// (beside the answer-key peek and the long-press glimpse). `longPressPeek` mirrors the glimpse so
+// every marks decision is a union: a peek RELEASE never extinguishes a standing pin, and toggling
+// the pin off never strips marks out from under a live peek. `setMarksActive` is idempotent, so
+// re-asserting the union is free.
+const longPressPeek = ref(false);
+
 const { peekActive, peekTouched, peekSolutionValues, startPeek, endPeek } =
   useAnswerKeyPeek({
     solveState: sudoku.solveState,
     peekSolution: sudoku.peekSolution,
-    setMarksActive: sudoku.setMarksActive,
+    // The peek reports its own edge (`active`); the union keeps marks up while the pin or a
+    // held long-press still wants them, so a peek off never kills the persistent candidates.
+    setMarksActive: (active) =>
+      sudoku.setMarksActive(
+        active || sudoku.candidatesPinned.value || longPressPeek.value,
+      ),
   });
+
+// ROW 3 — persistent candidates: hold the engine marks on while pinned (default off); releasing
+// the pin clears them unless a peek / long-press still wants them. No new compute — this only
+// holds `marksActive` on, and the existing `[values, boardGeneration]` refresh watch keeps the
+// pinned candidates live as the board is written on.
+watch(sudoku.candidatesPinned, (pinned) =>
+  sudoku.setMarksActive(pinned || peekActive.value || longPressPeek.value),
+);
 
 // Share act (W6; T4-W3 share-truth): shareBoard() encodes the board into `?board=`, writes it to
 // the address bar (URL wins over storage on reload — the shared link is live in the bar
@@ -74,12 +94,14 @@ function onShare(): Promise<void> {
 // mid-solve (the marks ride a worker propagate) — so in both cases the long-press marks stand
 // down. The end never strips marks out from under a held answer-key peek.
 function onCandidatePeekStart() {
-  if (peekActive.value || sudoku.solveState.value === "solving") return;
+  if (sudoku.solveState.value === "solving") return; // the solve worker owns the board mid-solve
+  longPressPeek.value = true;
   sudoku.setMarksActive(true);
 }
 function onCandidatePeekEnd() {
-  if (peekActive.value) return;
-  sudoku.setMarksActive(false);
+  longPressPeek.value = false;
+  // Keep marks up if the answer-key peek or the persistent pin still wants them.
+  sudoku.setMarksActive(peekActive.value || sudoku.candidatesPinned.value);
 }
 
 // ── The drawer (T3-W12 §6) ───────────────────────────────────────────
@@ -127,9 +149,16 @@ onUnmounted(() => unregisterDrawer?.());
         :error-code="sudoku.errorCode.value"
         :solve-stats="sudoku.solveStats.value"
         :pencil-marks="sudoku.pencilMarks.value"
+        :corner-marks="sudoku.cornerMarks.value"
+        :center-marks="sudoku.centerMarks.value"
+        :pencil-mode="sudoku.pencilMode.value"
         :hint="sudoku.hintReasoning.value"
         :grade-signature="sudoku.gradeSignature.value"
+        :grade-tally="sudoku.gradeTally.value"
+        :proactive-error-check="sudoku.proactiveCheck.value"
         @update-cell="(pos: number, val: number) => sudoku.setCell(pos, val)"
+        @mark="(pos: number, val: number) => sudoku.toggleUserMark(pos, val)"
+        @cycle-pencil-mode="sudoku.cyclePencilMode()"
         @retry="sudoku.solve()"
         @undo="sudoku.undo()"
         @redo="sudoku.redo()"
@@ -161,12 +190,19 @@ onUnmounted(() => unregisterDrawer?.());
             :difficulty="sudoku.difficulty.value"
             :loading="sudoku.loading.value"
             :solve-state="sudoku.solveState.value"
+            :pencil-mode="sudoku.pencilMode.value"
+            :error-check-mode="sudoku.errorCheckMode.value"
+            :candidates-pinned="sudoku.candidatesPinned.value"
             mobile
             @update:size="sudoku.size.value = $event"
             @update:difficulty="sudoku.difficulty.value = $event"
+            @update:pencil-mode="sudoku.setPencilMode($event)"
+            @update:error-check-mode="sudoku.setErrorCheckMode($event)"
+            @update:candidates-pinned="sudoku.setCandidatesPinned($event)"
             @randomize="sudoku.randomize()"
             @clear="sudoku.clearBoard()"
             @solve="sudoku.solve()"
+            @fill-forced="sudoku.fillForced()"
             @undo="sudoku.undo()"
             @redo="sudoku.redo()"
             @hint="sudokuBoard?.hintFocusedCell()"
@@ -197,11 +233,18 @@ onUnmounted(() => unregisterDrawer?.());
             :difficulty="sudoku.difficulty.value"
             :loading="sudoku.loading.value"
             :solve-state="sudoku.solveState.value"
+            :pencil-mode="sudoku.pencilMode.value"
+            :error-check-mode="sudoku.errorCheckMode.value"
+            :candidates-pinned="sudoku.candidatesPinned.value"
             @update:size="sudoku.size.value = $event"
             @update:difficulty="sudoku.difficulty.value = $event"
+            @update:pencil-mode="sudoku.setPencilMode($event)"
+            @update:error-check-mode="sudoku.setErrorCheckMode($event)"
+            @update:candidates-pinned="sudoku.setCandidatesPinned($event)"
             @randomize="sudoku.randomize()"
             @clear="sudoku.clearBoard()"
             @solve="sudoku.solve()"
+            @fill-forced="sudoku.fillForced()"
             @undo="sudoku.undo()"
             @redo="sudoku.redo()"
             @hint="sudokuBoard?.hintFocusedCell()"

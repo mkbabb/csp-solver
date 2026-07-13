@@ -95,3 +95,23 @@ Component checks:
 - **The localized fetch must not regress attribution content** — bundling the third-party asset removes the network hit but must preserve the credited content and the OFL/license obligations (ties W0/W14 font-license shipping).
 - **Live error-check is a cadence change, not new logic** — `findConflicts` is already pure; the risk is only the re-eval frequency on the hot input path. Default on-demand keeps live opt-in; profile the live cadence against the E7 idle-paint invariant if it ships enabled.
 - **fill-forced belongs to W7** — do not duplicate the naked+hidden-single detector here; W8's partial-solve button calls `games/shared/techniqueEngine.ts`.
+
+## Execution record (2026-07-13)
+
+Workflow `wf_7690e767-28a`, 4 lanes (M1 editable marks ∥ M2 modes: error-check + persistent candidates + peer wash ∥ M3 parity: attribution localization + fill button + B3 rows → adversarial VERIFY vs built dist :4188). Verify verdict: **RED — one blocking regression**: all seven feature gates green individually, but the two new control rows grew the desktop card to **936 px** against an 800 px viewport (W8 +417 px: pencil-mode-toggle 149 + assist-settings 268), pushing the wordmark to y=−127 and redding 6 e2e specs + the darwin `logo-light` golden from one root cause.
+
+**Seal fix (team lead, `scene.css`)**: `max-height: calc(min(42rem, 85vw, 100dvh - 10rem) - 2rem)` + `overflow-y: auto` on `.controls-card` — the cap derives from the boards' OWN row-regime side (SudokuBoard/FutoshikiBoard shellClasses), not a dvh constant. Probe-measured why the constant failed: the 42rem arm binds on tall viewports (board 672 px at 1440×900), so a `100dvh − 12rem` cap (708 px) still out-grew the sheet and redded the drawer's never-above-the-sheet contract by 14 px. The board-derived cap seats the rail 16 px inside the sheet's top edge at every viewport. After: **e2e 61/61 · goldens 4/4** — `logo-light` self-resolved with NO re-baseline, exactly as verify predicted.
+
+| Gate | Born-RED | Close |
+|---|---|---|
+| editable marks | `useUserMarks.ts` absent; engine-domains-only, non-editable | corner/center Snyder notes authored per cell, two-slot split; user notes survive a full engine pin/unpin cycle AND the ref-identity collision gate (peek→refresh→re-peek) |
+| error-check mode | conflicts gated `solveState==='failed'` only | 3-state over the same pure `findConflicts`: default **on-demand silent** → Ask arms a snapshot → an edit disarms → live as-you-go persists; NO mistake counter anywhere in the DOM |
+| persistent candidates | engine marks peek-only | default OFF; On → 46 cells marked persistently, no gesture held; user notes coexist throughout |
+| peer highlight | no peer wash (`peerCells` absent) | pure over `focusedPos`, focus-gated: sudoku 0→20→0 (row+col+box), futoshiki 0→8→0 (2·(n−1), Latin square) |
+| attribution parity | sudoku-only card; `avatars.githubusercontent.com` = the app's sole third-party hit (FAM-14) | zero third-party hits (67 reqs all same-origin/data:); avatar BUNDLED (`avatar.png` via `.gitignore` negation, Vite-emitted content-hashed); CSP `img-src` allowance retired from `_headers`; futoshiki card present ("CSP-powered logic puzzles") |
+| fill-forced (W7 seam) | whole-board or one-cell, no middle | button drives W7's `fillAllForced` — grep proves no second detector; sweep animates (+5 reveal-animated), stops at Δ0 both games; Share recut 4th→5th action icon (`share-truth.spec.ts`) |
+| game-agnostic | — | all facilities in `games/shared/` (`useUserMarks`, `useAssists`, `PencilModeToggle.vue`, `AssistSettings.vue`); identical wiring both boards; no second implementation |
+| B3 non-goals | — | A12 dailies/A13 stats/A11 timers each carry a DECIDED-retire row + re-entry criteria (`m3-parity.md`); A15/A16/A17 preserved; nothing silently dropped |
+| battery (π) | — | vue-tsc 0 · unit 244/244 (21 files; +41 W8) · eslint 0 · knip 0 · prettier clean · build 0 (avatar emitted 6.09 kB same-origin) · e2e 61/61 vs dist · darwin goldens 4/4 · E7 idle-paint: live-on == baseline (0 layouts / 40 recalcs) · mobile smoke (iPhone 13 coarse) all facilities by touch |
+
+Seal reconciliations: `avatar.png` explicitly `git add`-ed (the negation alone doesn't stage it — a fresh clone would 404). The B3 ballot books to the owner. The T4-WU re-partition (staged/live zones) owns the panel's real-estate redesign; the cap is the layout-safety floor beneath it.

@@ -14,8 +14,9 @@ import { test, expect, type Page } from '@playwright/test';
  * Twin-symmetric: sudoku + futoshiki both.
  *
  * Selector discipline (permalink.spec.ts): the Share button's aria-label MUTATES with outcome,
- * so it's located by its stable position — the 4th action icon-btn in `.controls-card` (the
- * desktop panel; scoping to `.controls-card` dodges the hidden mobile twin).
+ * so it's located by its stable position — the 5th action icon-btn in `.controls-card` (the
+ * desktop panel; scoping to `.controls-card` dodges the hidden mobile twin). T4-W8 inserted the
+ * Fill button between Clear and Solve, so Share moved from the 4th to the 5th action icon.
  */
 
 function b64url(s: string): string {
@@ -48,9 +49,9 @@ const FAIL_INIT = () => {
   }
 };
 
-// The 4th action icon in the desktop panel is Share (Randomize · Clear · Solve · Share).
+// The 5th action icon in the desktop panel is Share (Randomize · Clear · Fill · Solve · Share).
 function shareButton(page: Page) {
-  return page.locator('.controls-card button.icon-btn').nth(3);
+  return page.locator('.controls-card button.icon-btn').nth(4);
 }
 
 // ── 1. Sudoku: success confirms off a REAL clipboard write ──────────────────

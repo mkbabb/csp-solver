@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import CrayonHeart from "./CrayonHeart.vue";
 import { useHoverCard } from "./useHoverCard";
+// T4-W8 ROW 5 (FAM-14) — the author avatar, BUNDLED. Imported so Vite emits it content-hashed
+// under /assets/ (immutable-cached per public/_headers) and serves it same-origin; the resolved
+// URL is inlined here. This retires the app's SOLE third-party network hit (see the <img> note).
+import avatarUrl from "./avatar.png";
 
 defineProps<{
   mobile?: boolean;
@@ -31,21 +35,21 @@ defineExpose({ close });
     </button>
     <div class="hover-card" :class="{ 'is-open': isOpen }">
       <div class="flex items-center gap-3">
-        <!-- CSP-vs-beacon (Tranche II / W5): `?s=64` serves a 64px avatar
-             (104 KB → ~6 KB) for the 40px (h-10) render; `loading="lazy"` +
-             `decoding="async"` keep the third-party hit off first paint (the
-             card is closed until interaction); `referrerpolicy="no-referrer"`
-             leaks no path/query to GitHub. The single img-src allowance for
-             avatars.githubusercontent.com in public/_headers is retained. -->
+        <!-- T4-W8 ROW 5 (FAM-14): the author avatar is BUNDLED — a 64px PNG (6 KB) imported
+             through Vite (above), emitted content-hashed under /assets/ and served same-origin.
+             This retires the app's SOLE third-party network hit: the
+             `avatars.githubusercontent.com` img-src allowance is GONE from the CSP, so the whole
+             app is now `img-src 'self' data:` — zero per-game outbound dependency (ties W3's
+             no-telemetry-by-design). The prior remote-fetch hardening (`?s=64`, `no-referrer`) is
+             moot self-hosted; `loading="lazy"` + `decoding="async"` still keep it off first paint. -->
         <img
-          src="https://avatars.githubusercontent.com/u/2848617?v=4&s=64"
+          :src="avatarUrl"
           alt="mkbabb"
           class="h-10 w-10 rounded-full"
           width="40"
           height="40"
           loading="lazy"
           decoding="async"
-          referrerpolicy="no-referrer"
         />
         <div class="flex-1">
           <a
@@ -55,8 +59,11 @@ defineExpose({ close });
             class="text-foreground font-mono text-sm font-semibold hover:underline"
             >@mbabb</a
           >
+          <!-- T4-W8 ROW 5 parity: game-agnostic copy. The card mounts app-level (App.vue, both
+               games), so it must name neither — a "Sudoku solver" line lied on Futoshiki. Twin of
+               index.html's game-agnostic social head. -->
           <p class="text-muted-foreground mt-0.5 text-xs italic">
-            CSP-powered Sudoku solver
+            CSP-powered logic puzzles
           </p>
         </div>
         <CrayonHeart :size="32" />

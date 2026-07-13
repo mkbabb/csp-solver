@@ -23,6 +23,10 @@
       <dd>hint</dd>
     </div>
     <div class="legend-row">
+      <dt><kbd>P</kbd></dt>
+      <dd>pencil</dd>
+    </div>
+    <div class="legend-row">
       <dt><kbd>⌘</kbd><span class="legend-sep">/</span><kbd>Ctrl</kbd><kbd>Z</kbd></dt>
       <dd>undo</dd>
     </div>

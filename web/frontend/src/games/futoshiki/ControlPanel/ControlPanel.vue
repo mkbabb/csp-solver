@@ -8,6 +8,7 @@
  */
 import { computed, ref, onBeforeUnmount } from "vue";
 import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
+import FillForcedIcon from "@pencil/chrome/icons/FillForcedIcon.vue";
 import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
 import EraserIcon from "@pencil/chrome/icons/EraserIcon.vue";
 import ShareIcon from "@pencil/chrome/icons/ShareIcon.vue";
@@ -16,6 +17,8 @@ import RedoIcon from "@pencil/chrome/icons/RedoIcon.vue";
 import HintIcon from "@pencil/chrome/icons/HintIcon.vue";
 import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
 import KeyboardLegend from "@pencil/chrome/KeyboardLegend.vue";
+import PencilModeToggle from "@games/shared/PencilModeToggle.vue";
+import AssistSettings from "@games/shared/AssistSettings.vue";
 import BoilDivider from "@pencil/chrome/BoilDivider.vue";
 import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
 import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
@@ -23,6 +26,8 @@ import { useTheme } from "@/composables/useTheme";
 import { useButtonAnimation } from "@games/shared/useButtonAnimation";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
 import type { Difficulty } from "@games/futoshiki/types";
+import type { PencilMode } from "@games/shared/useUserMarks";
+import type { ErrorCheckMode } from "@games/shared/useAssists";
 import { boardSizeOptions, difficultyOptions } from "./constants";
 
 const { isDark } = useTheme();
@@ -58,6 +63,13 @@ const props = defineProps<{
   loading: boolean;
   solveState: string;
   mobile?: boolean;
+  // T4-W8 ROW 1 (twin of the sudoku panel's) — the active pencil-marks mode, relayed to the
+  // shared PencilModeToggle; the panel just plumbs the game-agnostic chrome.
+  pencilMode: PencilMode;
+  // T4-W8 ROW 2 + ROW 3 (twin of the sudoku panel's) — the board-assist settings relayed to the
+  // shared AssistSettings: the error-check mode + the persistent-candidates pin.
+  errorCheckMode: ErrorCheckMode;
+  candidatesPinned: boolean;
   // T4-W3 share-truth (twin of the sudoku panel's): the parent's share act as a callback,
   // not an emit, so the OUTCOME travels back — it resolves iff the clipboard copy landed.
   share: () => Promise<void>;
@@ -69,6 +81,10 @@ const emit = defineEmits<{
   (e: "randomize"): void;
   (e: "clear"): void;
   (e: "solve"): void;
+  // T4-W8 (twin of the sudoku panel's) — the fill-forced partial solve (W7's fillAllForced):
+  // ink every naked+hidden single now present in one sweep. The game routes it to the
+  // composable's `fillForced`, which rides the existing reveal draw-in; the panel reports the press.
+  (e: "fill-forced"): void;
   (e: "peek-start"): void;
   (e: "peek-end"): void;
   // T4-WM §2 — the touch surface for the play tools (twin of the sudoku panel's): undo/redo
@@ -77,6 +93,11 @@ const emit = defineEmits<{
   (e: "undo"): void;
   (e: "redo"): void;
   (e: "hint"): void;
+  // T4-W8 ROW 1 — the pencil-marks mode changed (v-model seam to the game's user-mark store).
+  (e: "update:pencilMode", value: PencilMode): void;
+  // T4-W8 ROW 2 + ROW 3 — the assist settings changed (v-model seams to the game's useAssists).
+  (e: "update:errorCheckMode", value: ErrorCheckMode): void;
+  (e: "update:candidatesPinned", value: boolean): void;
 }>();
 
 // UI-12 (twin of the sudoku panel's): the mobile Board-Size / Difficulty tabs each show only
@@ -171,6 +192,7 @@ const shareWashi = computed(() =>
 );
 
 const { animating: solveAnimating, trigger: triggerSolve } = useButtonAnimation(500);
+const { animating: fillAnimating, trigger: triggerFill } = useButtonAnimation(500);
 const { animating: randomizeAnimating, trigger: triggerRandomize } =
   useButtonAnimation(500);
 const { animating: clearAnimating, trigger: triggerClear } = useButtonAnimation(400);
@@ -178,6 +200,13 @@ const { animating: clearAnimating, trigger: triggerClear } = useButtonAnimation(
 function onRandomize() {
   triggerRandomize();
   emit("randomize");
+}
+
+// T4-W8 (twin of the sudoku panel's) — fill-forced (W7's fillAllForced): the icon marks draw
+// themselves in on the press, and the game inks the forced cells through the board's reveal wave.
+function onFillForced() {
+  triggerFill();
+  emit("fill-forced");
 }
 
 // UI-5 confirm beat on Clear — twin of the sudoku panel's (recorded design call there):
@@ -296,6 +325,24 @@ function onDifficultyChange(val: string | number) {
       />
     </div>
 
+    <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); one
+         component, both games. Arms the user-mark authoring seam on the frozen native input. -->
+    <PencilModeToggle
+      :mode="pencilMode"
+      mobile
+      @update:mode="emit('update:pencilMode', $event)"
+    />
+
+    <!-- Board assists (T4-W8 ROW 2 + ROW 3) — twin of the sudoku panel's: the error-check mode +
+         persistent candidates, one shared component, both games. -->
+    <AssistSettings
+      :error-check-mode="errorCheckMode"
+      :candidates-pinned="candidatesPinned"
+      mobile
+      @update:error-check-mode="emit('update:errorCheckMode', $event)"
+      @update:candidates-pinned="emit('update:candidatesPinned', $event)"
+    />
+
     <!-- Hold the boiling divider to peek at the answer key.
          UI-4: persistent washi on coarse pointers, pinned to the divider's own box;
          the surface pads to a ≥44px target there (CSS). -->
@@ -336,6 +383,15 @@ function onDifficultyChange(val: string | number) {
           aria-hidden="true"
           >{{ clearArmed ? "sure?" : "Clear" }}</span
         >
+      </button>
+      <button
+        @click="onFillForced()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Fill in the forced cells"
+      >
+        <FillForcedIcon :size="26" :playing="fillAnimating" />
+        <span class="icon-sublabel" aria-hidden="true">Fill</span>
       </button>
       <button
         @click="onSolve()"
@@ -436,6 +492,21 @@ function onDifficultyChange(val: string | number) {
       </div>
     </div>
 
+    <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); the
+         desktop twin of the mobile mount above. One component, both games. -->
+    <PencilModeToggle
+      :mode="pencilMode"
+      @update:mode="emit('update:pencilMode', $event)"
+    />
+
+    <!-- Board assists (T4-W8 ROW 2 + ROW 3) — the desktop twin of the mobile mount above. -->
+    <AssistSettings
+      :error-check-mode="errorCheckMode"
+      :candidates-pinned="candidatesPinned"
+      @update:error-check-mode="emit('update:errorCheckMode', $event)"
+      @update:candidates-pinned="emit('update:candidatesPinned', $event)"
+    />
+
     <!-- Hold the boiling divider to peek at the answer key.
          L14: a washi label makes the hidden affordance discoverable — same tape
          grammar as the buttons; the native title yields to it (no double tooltip).
@@ -482,6 +553,17 @@ function onDifficultyChange(val: string | number) {
           >{{ clearArmed ? "sure?" : "Clear" }}</span
         >
         <SheetWashiLabel text="Clear" :seed="23" />
+      </button>
+
+      <button
+        @click="onFillForced()"
+        :disabled="loading"
+        class="icon-btn group relative"
+        aria-label="Fill in the forced cells"
+      >
+        <FillForcedIcon :size="26" :playing="fillAnimating" />
+        <span class="icon-sublabel" aria-hidden="true">Fill</span>
+        <SheetWashiLabel text="fill forced" :seed="43" />
       </button>
 
       <button
