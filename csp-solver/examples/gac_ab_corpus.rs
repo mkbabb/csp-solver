@@ -11,9 +11,10 @@
 //!
 //! T3-W6 (ROW-3d) promoted this to a CI smoke lane and added the **node-count
 //! spine assert**: the deterministic search-node totals over the 50-board corpus
-//! (GAC off→on: 40,513 → 4,678) are the invariant oracle — GAC's pruning strength
-//! is fixed, so if either total moves, a GAC edit changed search semantics. The
-//! process exits non-zero on ANY false-UNSAT OR a moved spine.
+//! (GAC off→on: 4,153,388 → 8,222) are the invariant oracle — GAC's pruning
+//! strength is fixed, so if either total moves, either a GAC edit changed search
+//! semantics or the embedded corpus itself was re-cut (a deliberate re-mint, as at
+//! T4-W6). The process exits non-zero on ANY false-UNSAT OR a moved spine.
 //!
 //! Corpus: 5 named hard 9x9 + the N=3-hard + N=4 template banks (50 post-W4). The
 //! `--n5` flag is a no-op — `n5_board` reads `sudoku_solutions/5/`, a
@@ -198,11 +199,17 @@ fn run_once(board: &Board, gac_on: bool) -> RunResult {
 // The deterministic node-count spine over the 50-board default corpus (no --n5):
 // the invariant oracle T3-W6 asserts. Search-node counts are a pure function of
 // the algorithm on fixed data — identical across runs, machines, and load
-// (docs/benchmarks.md:21; G6 reproduced 40,513→4,678 exactly under load-avg ~3.8
-// where the WALL ratio swung 10.5–13.8×). GAC's pruning strength is invariant, so
-// if either total moves, a GAC edit changed semantics — a RED, not noise.
-const SPINE_OFF_NODES: u64 = 40_513;
-const SPINE_ON_NODES: u64 = 4_678;
+// (docs/benchmarks.md:21; the T3 spine 40,513→4,678 reproduced exactly under
+// load-avg ~3.8 where the WALL ratio swung 10.5–13.8×). GAC's pruning strength on
+// fixed data is invariant, so if either total moves, a RED — either a GAC edit
+// changed semantics, or the corpus was deliberately re-cut and the spine re-mints
+// with attribution. RE-MINTED at T4-W6: the stale 16×16 Hard bank (0 backtracks
+// every board) was regenerated to genuinely search-hard boards (GEN-1, disposition
+// (a)) — the fixture moved, not GAC; new totals reproduced identically on CI
+// (run 29238452743) and darwin. The old corpus's 8.66× ratio citation retires;
+// on the honest bank GAC's prune is ~505× by nodes (W14 recasts the headline).
+const SPINE_OFF_NODES: u64 = 4_153_388;
+const SPINE_ON_NODES: u64 = 8_222;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
