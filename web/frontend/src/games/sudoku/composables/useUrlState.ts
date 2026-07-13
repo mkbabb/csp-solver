@@ -11,7 +11,7 @@ const VALID_DIFFICULTIES: Difficulty[] = ["EASY", "MEDIUM", "HARD"];
 // 'url-board' — a shared `?board=` permalink was decoded into a full board and wins
 // over storage (URL wins on load). Distinct from 'url-only' (bare size/difficulty) so
 // the composable knows to RESTORE the synthesized board rather than auto-randomize.
-export type InitSource =
+type InitSource =
     "fresh" | "url-only" | "storage-only" | "url+storage" | "url-board";
 
 export interface PersistedBoard {
@@ -30,6 +30,11 @@ export interface InitialState {
     difficulty: Difficulty;
     source: InitSource;
     persisted: PersistedBoard | null;
+    // The `?board=` decode outcome, observable by the UI: "absent" (no link),
+    // "ok" (a shared board was restored), or "invalid" (a link was present but failed
+    // to decode — the corrupt-link signal, never a silent fresh deal). Read by the
+    // design lane to surface a one-line notice.
+    boardLink: "absent" | "ok" | "invalid";
 }
 
 function parseUrlParams(): { size: number | null; difficulty: Difficulty | null } {
@@ -77,6 +82,28 @@ function randomDifficulty(): Difficulty {
 // a board-only link — no `?size=` — still loads, and a mismatch fails closed. The
 // base64url codec is hoisted to `@/lib/base64url` (shared with Futoshiki's).
 
+// ── Codec version byte (T4-W3) ──────────────────────────────────────────────
+// A single leading byte tags the encoded payload so a future breaking codec revision
+// can't silently decode an old link into a *different* board. The byte's ABSENCE is
+// version 0 — every pre-wave link (its payload opens with the size digit, char code
+// ≥ 0x30) still decodes: the graceful ratchet. This wave writes version 1, whose body
+// is structurally identical to v0 (`${size}.${cells}`), so v0 and v1 share the decode
+// below; only the tag differs. Any control-range (< 0x30) leading byte that isn't a
+// version this build understands fails closed → the corrupt-link signal.
+const CODEC_VERSION = 1;
+const VERSION_BYTE_FLOOR = 0x30; // '0' — a v0 body always opens ≥ here (the size digit)
+
+// Peel the version byte off a decoded payload: returns the numeric version and the
+// remaining body, or null when the leading byte is control-range but not a version
+// this build understands (fail closed).
+function readCodecVersion(payload: string): { version: number; body: string } | null {
+    const lead = payload.charCodeAt(0);
+    // Empty payload → NaN; a digit-led legacy body → ≥ 0x30. Either way, version 0.
+    if (Number.isNaN(lead) || lead >= VERSION_BYTE_FLOOR) return { version: 0, body: payload };
+    if (lead !== CODEC_VERSION) return null; // unknown version → reject
+    return { version: lead, body: payload.slice(1) };
+}
+
 export function encodeBoard(
     size: number,
     values: Record<string, number>,
@@ -84,70 +111,90 @@ export function encodeBoard(
 ): string {
     let cells = "";
     for (let i = 0; i < totalCells; i++) cells += (values[String(i)] ?? 0).toString(36);
-    return toBase64Url(`${size}.${cells}`);
+    // Prepend the codec version byte before base64url (T4-W3) — see readCodecVersion.
+    return toBase64Url(String.fromCharCode(CODEC_VERSION) + `${size}.${cells}`);
 }
 
-// Synthesize a PersistedBoard from a decoded `?board=` — the only board-shaped
-// object ever built from URL content (localStorage is the only other source).
-// Non-zero cells become the givens (share = "solve this configuration"). Returns
-// null — FAILING CLOSED — on any malformed/out-of-range/size-mismatched blob so a
-// corrupt link degrades to the size/difficulty-only path, never a corrupt board.
+// The decode outcome, made observable: "absent" (no `?board=`), "ok" (a board), or
+// "invalid" (a link was present but failed closed). Replaces the old `null`-for-both
+// silent degrade so the UI can tell a corrupt link from no link.
+type BoardDecode =
+    | { status: "absent" }
+    | { status: "ok"; board: PersistedBoard }
+    | { status: "invalid" };
+
+// Synthesize a PersistedBoard from a decoded `?board=` — the only board-shaped object
+// ever built from URL content (localStorage is the only other source). Non-zero cells
+// become the givens (share = "solve this configuration"). FAILS CLOSED to `invalid` on
+// any malformed/out-of-range/size-mismatched/unknown-version blob so a corrupt link
+// degrades to the size/difficulty-only path, never a corrupt board — but the failure
+// is now observable, not a silent fresh deal.
 function decodeBoardParam(
     urlSize: number | null,
     urlDifficulty: Difficulty | null,
-): PersistedBoard | null {
+): BoardDecode {
     const raw = new URLSearchParams(window.location.search).get("board");
-    if (!raw) return null;
+    if (!raw) return { status: "absent" };
     // Fail closed on an oversized param BEFORE decoding — symmetric DoS bound.
-    if (raw.length > MAX_BOARD_PARAM_LEN) return null;
+    if (raw.length > MAX_BOARD_PARAM_LEN) return { status: "invalid" };
     let payload: string;
     try {
         payload = fromBase64Url(raw);
     } catch {
-        return null;
+        return { status: "invalid" };
     }
-    const dot = payload.indexOf(".");
-    if (dot < 1) return null;
-    const sizeStr = payload.slice(0, dot);
+    // Strip the version byte (absent = v0); an unknown version fails closed.
+    const versioned = readCodecVersion(payload);
+    if (!versioned) return { status: "invalid" };
+    const body = versioned.body;
+    const dot = body.indexOf(".");
+    if (dot < 1) return { status: "invalid" };
+    const sizeStr = body.slice(0, dot);
     // Strict canonical size — reject leading whitespace / sign / hex `parseInt` leniency
     // (`" 2"`, `"-2"`, `"0x2"` fail closed here; G8-P3).
-    if (!/^\d+$/.test(sizeStr)) return null;
+    if (!/^\d+$/.test(sizeStr)) return { status: "invalid" };
     const size = parseInt(sizeStr, 10);
-    if (!VALID_SIZES.includes(size)) return null;
+    if (!VALID_SIZES.includes(size)) return { status: "invalid" };
     // (c) a `?size=` that disagrees with the board's own size fails closed.
-    if (urlSize !== null && urlSize !== size) return null;
-    const cells = payload.slice(dot + 1);
+    if (urlSize !== null && urlSize !== size) return { status: "invalid" };
+    const cells = body.slice(dot + 1);
     const totalCells = size ** 4;
     // (c) a length mismatch (wrong cell count for the declared size) fails closed.
-    if (cells.length !== totalCells) return null;
+    if (cells.length !== totalCells) return { status: "invalid" };
     const maxVal = size ** 2;
     const values: Record<string, number> = {};
     const givenCells: string[] = [];
     for (let i = 0; i < totalCells; i++) {
         const v = parseInt(cells[i]!, 36);
-        if (!Number.isInteger(v) || v < 0 || v > maxVal) return null;
+        if (!Number.isInteger(v) || v < 0 || v > maxVal) return { status: "invalid" };
         values[String(i)] = v;
         if (v !== 0) givenCells.push(String(i));
     }
     return {
-        size,
-        difficulty: urlDifficulty ?? "EASY",
-        values,
-        givenCells,
-        originalGivenCells: givenCells,
-        overriddenCells: [],
-        solvedValues: {},
-        boardGeneration: 1,
+        status: "ok",
+        board: {
+            size,
+            difficulty: urlDifficulty ?? "EASY",
+            values,
+            givenCells,
+            originalGivenCells: givenCells,
+            overriddenCells: [],
+            solvedValues: {},
+            boardGeneration: 1,
+        },
     };
 }
 
 export function resolveInitialState(): InitialState {
     const url = parseUrlParams();
-    // (b) a shared board decoded into a PersistedBoard-shaped object (or null, failed closed).
-    const boardState = decodeBoardParam(url.size, url.difficulty);
+    // (b) a shared board decoded into a PersistedBoard, or a discriminated failure.
+    const decoded = decodeBoardParam(url.size, url.difficulty);
+    const boardLink = decoded.status;
+    const boardState = decoded.status === "ok" ? decoded.board : null;
     const persisted = loadPersistedBoard();
-    // (a) hasUrl ORs in a VALID board so a board-only link isn't silently dropped
-    // (an invalid board already decoded to null → falls through to size/difficulty).
+    // (a) hasUrl ORs in a VALID board so a board-only link isn't silently dropped (an
+    // invalid board fell closed → boardState null → falls through to size/difficulty
+    // while boardLink carries the "invalid" corrupt-link signal for the UI).
     const hasUrl = url.size !== null || url.difficulty !== null || boardState !== null;
 
     // URL wins over storage: a valid shared board takes precedence over any saved game.
@@ -157,6 +204,7 @@ export function resolveInitialState(): InitialState {
             difficulty: boardState.difficulty,
             source: "url-board",
             persisted: boardState,
+            boardLink,
         };
     }
 
@@ -169,6 +217,7 @@ export function resolveInitialState(): InitialState {
                 difficulty: urlDiff,
                 source: "url+storage",
                 persisted,
+                boardLink,
             };
         }
         // URL disagrees with storage — URL wins
@@ -178,6 +227,7 @@ export function resolveInitialState(): InitialState {
             difficulty: urlDiff,
             source: "url-only",
             persisted: null,
+            boardLink,
         };
     }
 
@@ -187,6 +237,7 @@ export function resolveInitialState(): InitialState {
             difficulty: url.difficulty ?? "EASY",
             source: "url-only",
             persisted: null,
+            boardLink,
         };
     }
 
@@ -196,6 +247,7 @@ export function resolveInitialState(): InitialState {
             difficulty: persisted.difficulty,
             source: "storage-only",
             persisted,
+            boardLink,
         };
     }
 
@@ -204,6 +256,7 @@ export function resolveInitialState(): InitialState {
         difficulty: randomDifficulty(),
         source: "fresh",
         persisted: null,
+        boardLink,
     };
 }
 

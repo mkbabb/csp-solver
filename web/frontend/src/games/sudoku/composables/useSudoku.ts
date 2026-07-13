@@ -43,6 +43,12 @@ export function useSudoku() {
 
   const initial = resolveInitialState()
 
+  // T4-W3 share-truth: a `?board=` that was PRESENT but failed to decode (the discriminated
+  // 'invalid' from resolveInitialState — never conflated with 'absent'). The composable falls
+  // back to a fresh deal below; the board folds a one-line corrupt-link notice into that first
+  // fresh-board announce so the bad link doesn't degrade silently. Fixed once at init.
+  const linkError = ref(initial.boardLink === 'invalid')
+
   const size = ref(initial.size)
   const difficulty = ref<Difficulty>(initial.difficulty)
   const boardSize = computed(() => size.value ** 2)
@@ -314,13 +320,20 @@ export function useSudoku() {
     })
   }
 
-  // ── Share-on-demand permalink (W6) ───────────────────────────────
+  // ── Share-on-demand permalink (W6; T4-W3 share-truth) ────────────
   // The explicit share act: encode the current board into `?board=`, write it to the
-  // address bar (so a reload reproduces it — URL wins over storage), and hand the full
-  // href back for the caller to copy. The ONLY writer of `?board=`; nothing ambient sets it.
-  function shareBoard(): string {
+  // address bar (so a reload reproduces it — URL wins over storage), then COPY the full
+  // href. The replaceState already landed, so the shared link is live in the bar regardless
+  // of the copy's fate. Returns the clipboard promise so the caller confirms ONLY on a real
+  // resolve; an absent Clipboard API (insecure context) REJECTS rather than silently
+  // "succeeding" (the write-side mirror of the corrupt-link signal). The ONLY writer of
+  // `?board=`; nothing ambient sets it.
+  function shareBoard(): Promise<void> {
     writeBoardToUrl(encodeBoard(size.value, values.value, totalCells.value))
-    return window.location.href
+    if (!navigator.clipboard) {
+      return Promise.reject(new Error('Clipboard API unavailable'))
+    }
+    return navigator.clipboard.writeText(window.location.href)
   }
 
   // ── Initialization ───────────────────────────────────────────────
@@ -406,6 +419,7 @@ export function useSudoku() {
     redo,
     hintCell,
     shareBoard,
+    linkError,
     pencilMarks,
     setMarksActive,
   }

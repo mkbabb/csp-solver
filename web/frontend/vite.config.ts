@@ -4,7 +4,6 @@ import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import { defineConfig, type Plugin } from 'vite'
-import { VitePWA } from 'vite-plugin-pwa'
 
 /**
  * `sudoku-templates` — the build rule that DERIVES
@@ -108,19 +107,23 @@ function sudokuTemplates(): Plugin {
  *
  * Reads the emitted content-hashed asset names off the rollup bundle and injects,
  * into the `<head>` of the built `index.html`:
- *   - `<link rel="modulepreload">` for BOTH `solver.worker` chunks — the wasm
- *     Worker boots lazily on its first message (`useSolver.ts` `ensureWorker`),
- *     so preloading the chunk shaves the first solve/generate's serial chain.
- *   - `<link rel="preload" as="fetch" crossorigin>` for the `csp_solver_wasm`
- *     binary — keeps wasm-bindgen's `instantiateStreaming` on the streaming
- *     happy-path instead of a cold fetch on first message.
+ *   - `<link rel="modulepreload">` for the ACTIVE (default) game's `solver.worker`
+ *     chunk only — the wasm Worker boots lazily on its first message
+ *     (`useSolver.ts` `ensureWorker`), so preloading the chunk shaves the first
+ *     solve/generate's serial chain. The other game's worker is speculative
+ *     cold-path work (T4-W1 §preload) and is left to lazy fetch on port entry.
  *   - `<link rel="preload" as="font" crossorigin>` for the three subset woff2 —
  *     the hand-drawn wordmark is the aesthetic centerpiece and today the faces
  *     are late-discovered via `@font-face` only (index.css), a FOUT the preload
  *     erases.
  *
+ * NO wasm preload: the binary is fetched/instantiated inside the Worker, which
+ * cannot consume a document-level preload — a wasm `<link rel=preload>` only
+ * double-fetches it with a console warning (see the inline note below, T4-W1
+ * §preload).
+ *
  * Build-only (`apply: 'build'`): the dev graph is unbundled and has no hashed
- * names to read. `crossorigin` on the font/wasm preloads matches the credentials
+ * names to read. `crossorigin` on the font preloads matches the credentials
  * mode of the actual (anonymous) fetches so the browser reuses the preloaded
  * response rather than discarding it and re-requesting. The payoff is a `dist/`
  * measurement, never a dev one (the wave's explicit trap).
@@ -138,22 +141,46 @@ function headHints(): Plugin {
         if (!bundle) return html
         const files = Object.keys(bundle)
         const tags: import('vite').HtmlTagDescriptor[] = []
-        // Both games' `solver.worker` chunks (sudoku + futoshiki are owned ports,
-        // so two distinct hashed chunks).
-        for (const f of files) {
-          if (/solver\.worker[.-][^/]*\.js$/.test(f)) {
-            tags.push({ tag: 'link', attrs: { rel: 'modulepreload', href: href(f) }, injectTo: 'head' })
-          }
+        // Preload ONLY the active (default) game's `solver.worker` chunk. Both games
+        // emit a distinct hashed `solver.worker-*.js` asset (same basename — they're twin
+        // ports), but the app boots on the default game (sudoku; `?game=futoshiki`
+        // switches at runtime, App.vue) and only that worker instantiates cold.
+        // Modulepreloading the other is speculative cold-path work the browser pays for on
+        // every load (T4-W1 §preload) — the futoshiki worker is fetched lazily when (if)
+        // the port is entered.
+        //
+        // Vite 8's bundler emits these workers as ASSETS with no `originalFileName` /
+        // `facadeModuleId`, so the active worker is identified by a wasm binding only its
+        // game's source references. The count assertion fails the build if that
+        // discriminator ever drifts (both/neither match) rather than silently preloading
+        // the wrong chunk or regressing to both.
+        const ACTIVE_WORKER_MARK = 'solveSudoku' // the default game's core wasm binding
+        const workerFiles = files.filter((f) => /solver\.worker[.-][^/]*\.js$/.test(f))
+        const activeWorkers = workerFiles.filter((f) => {
+          const src = (bundle[f] as { source?: unknown }).source
+          return typeof src === 'string' && src.includes(ACTIVE_WORKER_MARK)
+        })
+        if (activeWorkers.length !== 1) {
+          throw new Error(
+            `head-hints: expected exactly one active-game (\`${ACTIVE_WORKER_MARK}\`) ` +
+              `solver.worker asset to preload, found ${activeWorkers.length} of ` +
+              `${workerFiles.length} — the worker discriminator drifted; update ACTIVE_WORKER_MARK.`,
+          )
         }
-        // The shared wasm binary (one module, both workers).
-        const wasm = files.find((f) => /csp_solver_wasm[^/]*\.wasm$/.test(f))
-        if (wasm) {
-          tags.push({
-            tag: 'link',
-            attrs: { rel: 'preload', as: 'fetch', type: 'application/wasm', crossorigin: true, href: href(wasm) },
-            injectTo: 'head',
-          })
-        }
+        tags.push({ tag: 'link', attrs: { rel: 'modulepreload', href: href(activeWorkers[0]) }, injectTo: 'head' })
+        // NO `<link rel="preload" as="fetch">` for the wasm binary. The wasm is fetched
+        // and instantiated INSIDE the solver Worker (`solver.worker.ts` → wasm-bindgen
+        // `init({module_or_path})` → `fetch` → `instantiateStreaming`), and a dedicated
+        // Worker does NOT consume the owning document's preload cache. A document-level
+        // wasm preload therefore fetches it a first time that nothing on the page ever
+        // uses, the Worker fetches it again, and the browser logs "preloaded … but not
+        // used within a few seconds" — a measured double-fetch + console warning cold
+        // (T4-W1 §preload; verified: with the preload = 2 GETs + warning, without = 1 GET,
+        // no warning, streaming instantiate intact because the .wasm is served
+        // `application/wasm`). The Worker's own fetch IS the streaming happy-path; adding a
+        // link only doubles the download. (Preloading the wasm effectively would mean
+        // fetching it on the main thread and postMessage-ing the compiled Module into the
+        // Worker — a solver-architecture change, out of this hygiene lane.)
         // The three subset woff2 faces (fraunces / patrickhand / firacode).
         for (const f of files) {
           if (/-subset[^/]*\.woff2$/.test(f)) {
@@ -184,60 +211,6 @@ export default defineConfig({
     tailwindcss(),
     sudokuTemplates(),
     headHints(),
-    // T2-W6 PWA-minimal (Q4's written SW strategy). generateSW precache ONLY —
-    // no runtime sync, no update toasts. `autoUpdate` = silent skipWaiting +
-    // clientsClaim; `injectRegister: 'script'` emits an external `/registerSW.js`
-    // (never an inline <script>) so the CSP `script-src 'self'` — no
-    // 'unsafe-inline' — admits the registration.
-    VitePWA({
-      registerType: 'autoUpdate',
-      strategies: 'generateSW',
-      injectRegister: 'script',
-      workbox: {
-        // MANDATORY widening (Q4): the plugin default `{js,wasm,css,html}`
-        // precaches the hashed wasm but SILENTLY DROPS the P5 self-hosted woff2
-        // faces and `favicon.svg` — an offline reload would render in system
-        // fonts, negating the fonts-before-PWA sequencing. `svg` also catches
-        // the favicon. `png` is deliberately OMITTED (the manifest icons ride
-        // in via `includeManifestIcons`, and the glob stays Q4-verbatim).
-        globPatterns: ['**/*.{js,css,html,wasm,woff2,svg}'],
-        // Plugin defaults, pinned for the record: hashed `/assets/*` URLs are
-        // the version, so they precache as `revision:null` (no `__WB_REVISION__`
-        // cache-bust query — byte-identical to the W5 immutable-cached URL).
-        dontCacheBustURLsMatching: /^assets\//,
-        // Evict superseded wasm/font hashes from Cache Storage on activate.
-        cleanupOutdatedCaches: true,
-        navigateFallback: 'index.html',
-        // NO `runtimeCaching` route on `/assets/*` — precache IS the strategy
-        // for hashed assets; a second CacheFirst route would double-store the
-        // wasm and fight precache. NO `maximumFileSizeToCacheInBytes` bump
-        // (the lean wasm ~87 KB ≪ the 2 MiB default ceiling).
-      },
-      manifest: {
-        name: 'Sudoku — CSP Solver',
-        short_name: 'Sudoku',
-        description: 'Hand-drawn Sudoku & Futoshiki, solved in your browser.',
-        // Q7: pin `start_url` so icon launches always take the clean
-        // fresh/storage precedence — never replay a captured `?board=`.
-        start_url: '/',
-        display: 'standalone',
-        // Pencil palette: cream paper (`hsl(48 15% 98%)` ≈ #faf8f5, the favicon
-        // background rect) for both the splash background and the toolbar tint.
-        background_color: '#faf8f5',
-        theme_color: '#faf8f5',
-        icons: [
-          { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
-          {
-            src: 'pwa-maskable-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
-        ],
-      },
-    }),
   ],
   // W6 Option C: `solver.worker.ts` is an ES-module Worker (`{ type: 'module' }`)
   // that top-level-imports the wasm glue — the production Worker bundle must be

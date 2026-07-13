@@ -25,7 +25,7 @@ const MAX_BOARD_PARAM_LEN = 4096;
 // 'url-board' — a shared `?board=` permalink decoded into a full board (values +
 // inequality furniture) and wins over storage. Distinct from 'url-only' so the
 // composable RESTORES the synthesized board rather than auto-randomizing.
-export type InitSource =
+type InitSource =
     "fresh" | "url-only" | "storage-only" | "url+storage" | "url-board";
 
 export interface PersistedBoard {
@@ -43,6 +43,11 @@ export interface InitialState {
     boardSize: number;
     source: InitSource;
     persisted: PersistedBoard | null;
+    // The `?board=` decode outcome, observable by the UI: "absent" (no link),
+    // "ok" (a shared board was restored), or "invalid" (a link was present but failed
+    // to decode — the corrupt-link signal, never a silent fresh deal). Read by the
+    // design lane to surface a one-line notice.
+    boardLink: "absent" | "ok" | "invalid";
 }
 
 function parseUrlParams(): { boardSize: number | null } {
@@ -80,6 +85,29 @@ function loadPersistedBoard(): PersistedBoard | null {
 // constraints is not the same puzzle. The base64url codec is hoisted to
 // `@/lib/base64url` (shared with Sudoku's).
 
+// ── Codec version byte (T4-W3) ──────────────────────────────────────────────
+// A single leading byte tags the encoded payload so a future breaking codec revision
+// can't silently decode an old link into a *different* board. The byte's ABSENCE is
+// version 0 — every pre-wave link (its payload opens with the size digit, char code
+// ≥ 0x30) still decodes: the graceful ratchet. This wave writes version 1, whose body
+// is structurally identical to v0 (`${boardSize}.${cells}.${ineqs}`), so v0 and v1
+// share the decode below; only the tag differs. Any control-range (< 0x30) leading
+// byte that isn't a version this build understands fails closed → the corrupt-link
+// signal.
+const CODEC_VERSION = 1;
+const VERSION_BYTE_FLOOR = 0x30; // '0' — a v0 body always opens ≥ here (the size digit)
+
+// Peel the version byte off a decoded payload: returns the numeric version and the
+// remaining body, or null when the leading byte is control-range but not a version
+// this build understands (fail closed).
+function readCodecVersion(payload: string): { version: number; body: string } | null {
+    const lead = payload.charCodeAt(0);
+    // Empty payload → NaN; a digit-led legacy body → ≥ 0x30. Either way, version 0.
+    if (Number.isNaN(lead) || lead >= VERSION_BYTE_FLOOR) return { version: 0, body: payload };
+    if (lead !== CODEC_VERSION) return null; // unknown version → reject
+    return { version: lead, body: payload.slice(1) };
+}
+
 export function encodeBoard(
     boardSize: number,
     values: Record<string, number>,
@@ -89,42 +117,55 @@ export function encodeBoard(
     let cells = "";
     for (let i = 0; i < totalCells; i++) cells += (values[String(i)] ?? 0).toString(36);
     const ineqs = inequalities.map(([a, b]) => `${a}-${b}`).join(",");
-    return toBase64Url(`${boardSize}.${cells}.${ineqs}`);
+    // Prepend the codec version byte before base64url (T4-W3) — see readCodecVersion.
+    return toBase64Url(String.fromCharCode(CODEC_VERSION) + `${boardSize}.${cells}.${ineqs}`);
 }
 
+// The decode outcome, made observable: "absent" (no `?board=`), "ok" (a board), or
+// "invalid" (a link was present but failed closed). Replaces the old `null`-for-both
+// silent degrade so the UI can tell a corrupt link from no link.
+type BoardDecode =
+    | { status: "absent" }
+    | { status: "ok"; board: PersistedBoard }
+    | { status: "invalid" };
+
 // Synthesize a PersistedBoard from a decoded `?board=` — the only board-shaped object
-// ever built from URL content. Non-zero cells become the givens. Returns null —
-// FAILING CLOSED — on any malformed/out-of-range/size-mismatched blob so a corrupt
-// link degrades to the size-only path, never a corrupt board.
-function decodeBoardParam(urlSize: number | null): PersistedBoard | null {
+// ever built from URL content. Non-zero cells become the givens. FAILS CLOSED to
+// `invalid` on any malformed/out-of-range/size-mismatched/unknown-version blob so a
+// corrupt link degrades to the size-only path, never a corrupt board — but the failure
+// is now observable, not a silent fresh deal.
+function decodeBoardParam(urlSize: number | null): BoardDecode {
     const raw = new URLSearchParams(window.location.search).get("board");
-    if (!raw) return null;
+    if (!raw) return { status: "absent" };
     // Fail closed on an oversized param BEFORE decoding — the DoS bound.
-    if (raw.length > MAX_BOARD_PARAM_LEN) return null;
+    if (raw.length > MAX_BOARD_PARAM_LEN) return { status: "invalid" };
     let payload: string;
     try {
         payload = fromBase64Url(raw);
     } catch {
-        return null;
+        return { status: "invalid" };
     }
-    const parts = payload.split(".");
-    if (parts.length !== 3) return null;
+    // Strip the version byte (absent = v0); an unknown version fails closed.
+    const versioned = readCodecVersion(payload);
+    if (!versioned) return { status: "invalid" };
+    const parts = versioned.body.split(".");
+    if (parts.length !== 3) return { status: "invalid" };
     const [sizeStr, cells, ineqStr] = parts;
     // Strict canonical size — reject leading whitespace / sign / hex `parseInt` leniency
     // (`" 4"`, `"-4"`, `"0x4"` all fail closed here; G8-P3).
-    if (!/^\d+$/.test(sizeStr)) return null;
+    if (!/^\d+$/.test(sizeStr)) return { status: "invalid" };
     const boardSize = parseInt(sizeStr, 10);
-    if (!VALID_SIZES.includes(boardSize)) return null;
+    if (!VALID_SIZES.includes(boardSize)) return { status: "invalid" };
     // A `?board_size=` that disagrees with the board's own size fails closed.
-    if (urlSize !== null && urlSize !== boardSize) return null;
+    if (urlSize !== null && urlSize !== boardSize) return { status: "invalid" };
     const totalCells = boardSize ** 2;
     // A length mismatch (wrong cell count for the declared size) fails closed.
-    if (cells.length !== totalCells) return null;
+    if (cells.length !== totalCells) return { status: "invalid" };
     const values: Record<string, number> = {};
     const givenCells: string[] = [];
     for (let i = 0; i < totalCells; i++) {
         const v = parseInt(cells[i]!, 36);
-        if (!Number.isInteger(v) || v < 0 || v > boardSize) return null;
+        if (!Number.isInteger(v) || v < 0 || v > boardSize) return { status: "invalid" };
         values[String(i)] = v;
         if (v !== 0) givenCells.push(String(i));
     }
@@ -140,7 +181,7 @@ function decodeBoardParam(urlSize: number | null): PersistedBoard | null {
         const seen = new Set<string>();
         for (const pair of ineqStr.split(",")) {
             const ab = pair.split("-");
-            if (ab.length !== 2) return null;
+            if (ab.length !== 2) return { status: "invalid" };
             const a = parseInt(ab[0], 10);
             const b = parseInt(ab[1], 10);
             if (
@@ -151,38 +192,45 @@ function decodeBoardParam(urlSize: number | null): PersistedBoard | null {
                 b < 0 ||
                 b >= totalCells
             ) {
-                return null;
+                return { status: "invalid" };
             }
             const adjacent =
                 (Math.abs(a - b) === 1 &&
                     Math.floor(a / boardSize) === Math.floor(b / boardSize)) ||
                 Math.abs(a - b) === boardSize;
-            if (!adjacent) return null;
+            if (!adjacent) return { status: "invalid" };
             const key = `${a}-${b}`;
-            if (seen.has(key)) return null;
+            if (seen.has(key)) return { status: "invalid" };
             seen.add(key);
-            if (seen.size > maxPairs) return null;
+            if (seen.size > maxPairs) return { status: "invalid" };
             inequalities.push([a, b]);
         }
     }
     return {
-        boardSize,
-        values,
-        givenCells,
-        originalGivenCells: givenCells,
-        overriddenCells: [],
-        inequalities,
-        solvedValues: {},
-        boardGeneration: 1,
+        status: "ok",
+        board: {
+            boardSize,
+            values,
+            givenCells,
+            originalGivenCells: givenCells,
+            overriddenCells: [],
+            inequalities,
+            solvedValues: {},
+            boardGeneration: 1,
+        },
     };
 }
 
 export function resolveInitialState(): InitialState {
     const url = parseUrlParams();
-    // A shared board decoded into a PersistedBoard-shaped object (or null, failed closed).
-    const boardState = decodeBoardParam(url.boardSize);
+    // A shared board decoded into a PersistedBoard, or a discriminated failure.
+    const decoded = decodeBoardParam(url.boardSize);
+    const boardLink = decoded.status;
+    const boardState = decoded.status === "ok" ? decoded.board : null;
     const persisted = loadPersistedBoard();
-    // hasUrl ORs in a VALID board so a board-only link isn't silently dropped.
+    // hasUrl ORs in a VALID board so a board-only link isn't silently dropped (an
+    // invalid board fell closed → boardState null → falls through to the size path
+    // while boardLink carries the "invalid" corrupt-link signal for the UI).
     const hasUrl = url.boardSize !== null || boardState !== null;
 
     // URL wins over storage: a valid shared board takes precedence over any saved game.
@@ -191,27 +239,28 @@ export function resolveInitialState(): InitialState {
             boardSize: boardState.boardSize,
             source: "url-board",
             persisted: boardState,
+            boardLink,
         };
     }
 
     if (hasUrl && persisted) {
         if (url.boardSize === persisted.boardSize) {
-            return { boardSize: url.boardSize!, source: "url+storage", persisted };
+            return { boardSize: url.boardSize!, source: "url+storage", persisted, boardLink };
         }
         // URL disagrees with storage — URL wins.
         clearPersistedBoard();
-        return { boardSize: url.boardSize!, source: "url-only", persisted: null };
+        return { boardSize: url.boardSize!, source: "url-only", persisted: null, boardLink };
     }
 
     if (hasUrl) {
-        return { boardSize: url.boardSize!, source: "url-only", persisted: null };
+        return { boardSize: url.boardSize!, source: "url-only", persisted: null, boardLink };
     }
 
     if (persisted) {
-        return { boardSize: persisted.boardSize, source: "storage-only", persisted };
+        return { boardSize: persisted.boardSize, source: "storage-only", persisted, boardLink };
     }
 
-    return { boardSize: DEFAULT_BOARD_SIZE, source: "fresh", persisted: null };
+    return { boardSize: DEFAULT_BOARD_SIZE, source: "fresh", persisted: null, boardLink };
 }
 
 export function syncToUrl(boardSize: number) {

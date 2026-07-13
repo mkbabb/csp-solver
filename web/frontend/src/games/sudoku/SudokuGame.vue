@@ -55,13 +55,14 @@ const { peekActive, peekTouched, peekSolutionValues, startPeek, endPeek } =
         setMarksActive: sudoku.setMarksActive,
     });
 
-// Share act (W6): encode the current Sudoku board into `?board=`, write it to the address bar
-// (URL wins over storage on reload), and copy the full link. The clipboard write may reject
-// without a user-gesture/permission — the param write already happened, so the shared link is
-// live in the address bar regardless.
-function onShare() {
-    const url = sudoku.shareBoard();
-    navigator.clipboard?.writeText(url).catch(() => {});
+// Share act (W6; T4-W3 share-truth): shareBoard() encodes the board into `?board=`, writes it to
+// the address bar (URL wins over storage on reload — the shared link is live in the bar
+// regardless), then returns the clipboard-copy promise. The control panel awaits it and confirms
+// ONLY on resolve; a reject (insecure context, permission-policy denial, unfocused document, or
+// an absent Clipboard API) surfaces "couldn't copy — link is in the address bar" instead of the
+// old optimistic "copied!" over a possibly-empty clipboard.
+function onShare(): Promise<void> {
+    return sudoku.shareBoard();
 }
 
 // ── DigitPad (T3-W11 U-A, ratified BUILD) ────────────────────────────
@@ -119,6 +120,7 @@ onUnmounted(() => unregisterDrawer?.());
                 :solved-values="sudoku.solvedValues.value"
                 :board-generation="sudoku.boardGeneration.value"
                 :difficulty="sudoku.difficulty.value"
+                :link-error="sudoku.linkError.value"
                 :error-code="sudoku.errorCode.value"
                 :solve-stats="sudoku.solveStats.value"
                 :pencil-marks="sudoku.pencilMarks.value"
@@ -160,7 +162,7 @@ onUnmounted(() => unregisterDrawer?.());
                         @randomize="sudoku.randomize()"
                         @clear="sudoku.clearBoard()"
                         @solve="sudoku.solve()"
-                        @share="onShare()"
+                        :share="onShare"
                         @peek-start="startPeek()"
                         @peek-end="endPeek()"
                     />
@@ -202,7 +204,7 @@ onUnmounted(() => unregisterDrawer?.());
                         @randomize="sudoku.randomize()"
                         @clear="sudoku.clearBoard()"
                         @solve="sudoku.solve()"
-                        @share="onShare()"
+                        :share="onShare"
                         @peek-start="startPeek()"
                         @peek-end="endPeek()"
                     />

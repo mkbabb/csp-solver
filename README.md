@@ -56,7 +56,7 @@ Both generate and validate in the Worker. Sudoku's N=2 and N=3 easy/medium board
 
 ## Frontend
 
-Vue 3 Composition API—no router, no state library. `src/pencil/` carries the hand-drawn aesthetic; `src/games/{sudoku,futoshiki}/` are the surfaces, each with its own `solver/` Worker module (boundaries ESLint-enforced). Affordances: undo, hint, pencil marks, hold-to-peek, board+seed permalinks, PWA offline. Animation runs on `@mkbabb/pencil-boil`'s scheduler and defers to `prefers-reduced-motion`; the grid is an ARIA grid with keyboard navigation. Fonts are three self-hosted woff2 subsets, 17,708 B total.
+Vue 3 Composition API—no router, no state library. `src/pencil/` carries the hand-drawn aesthetic; `src/games/{sudoku,futoshiki}/` are the surfaces, each with its own `solver/` Worker module (boundaries ESLint-enforced). Affordances: undo, hint, pencil marks, hold-to-peek, board+seed permalinks. Animation runs on `@mkbabb/pencil-boil`'s scheduler and defers to `prefers-reduced-motion`; the grid is an ARIA grid with keyboard navigation. Fonts are three self-hosted woff2 subsets, 17,708 B total.
 
 ## Development
 
@@ -104,7 +104,7 @@ cargo bench -p csp-solver --bench queens -- --test
 
 ## Deployment
 
-A Cloudflare Pages static deploy. Solving and generation never leave the visitor's browser—the server-side solve hazard class is retired structurally, not mitigated. `_headers` carries CSP/HSTS/X-Frame-Options; `_redirects` carries the SPA fallback only. The PWA installs and plays offline after first load.
+A Cloudflare Pages static deploy. Solving and generation never leave the visitor's browser—the server-side solve hazard class is retired structurally, not mitigated. `_headers` carries CSP/HSTS/X-Frame-Options; `_redirects` carries the SPA fallback only.
 
 ## Published artifacts
 

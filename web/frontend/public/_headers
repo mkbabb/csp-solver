@@ -1,8 +1,7 @@
-# M5b security headers — Cloudflare Pages `_headers` file format
+# Security headers — Cloudflare Pages `_headers` file format
 # https://developers.cloudflare.com/pages/configuration/headers/
 #
-# Confirmed absent per Pass-1 M5b; this is the CF Pages-side security-header set
-# for the static SPA deploy.
+# The CF Pages-side security-header set for the static SPA deploy.
 #
 # CSP is built clause-by-clause from what the shipped `dist/` output actually
 # requests — nothing broader. Verified empirically: a `vite build` + a
@@ -62,7 +61,15 @@
 # Other headers:
 #   Strict-Transport-Security — force HTTPS for 2y, cover subdomains; the
 #     `preload` token only marks eligibility, it does not itself submit the
-#     domain to the HSTS preload list (that's a separate, manual, owner action)
+#     domain to the HSTS preload list. OWNER-SIDE CHECK (T4-W3): whether
+#     sudoku.babb.dev is actually submitted at hstspreload.org is unverified —
+#     the token is inert until submission, so it stays; the submission is a
+#     separate manual owner action, recorded here rather than dropped unilaterally
+#   Permissions-Policy — lock every powerful browser feature off (empty allowlist
+#     = disabled for all origins incl. self). The app uses none of them; `clipboard`
+#     is deliberately NOT denied — the Share affordance writes the permalink via
+#     navigator.clipboard.writeText (SudokuGame/FutoshikiGame). Purely additive,
+#     breaks nothing (no COOP/COEP, no SharedArrayBuffer)
 #   X-Frame-Options: DENY — no legitimate embed/iframe use case; blocks
 #     clickjacking
 #   X-Content-Type-Options: nosniff — stops MIME-sniffing so a served asset
@@ -76,14 +83,15 @@
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), autoplay=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), web-share=(), xr-spatial-tracking=()
 
 # Transport (Tranche II / W5, Q4-amended). ADD — the file carried no
 # Cache-Control before; the live `wasm max-age=0` was a Cloudflare-Pages
 # default filling the vacuum. Scoped to /assets/* ONLY: every file Vite emits
 # there (js, css, wasm, and the P5 woff2 subsets) is content-hashed, so a
 # one-year immutable is safe — a new build means a new filename, never a stale
-# hit. Deliberately NOT applied to /index.html or /sw.js (both live at root and
-# must keep revalidating so the SW-update + first-paint-shell paths work).
+# hit. Deliberately NOT applied to /index.html (it lives at root and must keep
+# revalidating so first paint always reflects the latest build).
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
@@ -92,9 +100,8 @@
 # doubled it on the live edge (`public, max-age=31536000, immutable, public,
 # max-age=31536000, immutable`; G8-H2). The /assets/* immutable rule above
 # already covers .wasm caching. This stanza pins only Content-Type: application/
-# wasm, which keeps `WebAssembly.instantiateStreaming` on the happy path AND —
-# because the W6 service worker stores the Response *with its headers* —
-# guarantees the offline, cache-served wasm still carries the right MIME for
-# init(). MANDATORY, not optional (Q4). Doubled-directive fix added at T3-W2.
+# wasm, which keeps `WebAssembly.instantiateStreaming` on the happy path — a CDN
+# that mislabels the .wasm MIME makes streaming instantiation reject the bytes.
+# Doubled-directive fix added at T3-W2.
 /assets/*.wasm
   Content-Type: application/wasm

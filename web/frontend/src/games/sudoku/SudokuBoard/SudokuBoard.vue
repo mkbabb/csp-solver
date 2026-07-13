@@ -59,6 +59,10 @@ const props = defineProps<{
   /** DigitPad live (T3-W11 U-A): threads virtual-keyboard suppression to the cells —
    *  true exactly when the pad is the entry surface (coarse pointer + stacked regime). */
   padActive?: boolean
+  /** T4-W3 share-truth: a `?board=` was PRESENT but failed to decode — the composable already
+   *  fell back to a fresh deal. Folds a one-line "this shared link couldn't be read" clause into
+   *  the FIRST fresh-board announce so the corrupt link doesn't degrade silently. One-shot. */
+  linkError?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -433,8 +437,17 @@ let prevBoardSize = props.boardSize
 // as a post-mount mutation in onMounted. A restored board never trips this — restore sets the
 // givens synchronously at composable setup, before this watch registers, so no 0→N ever fires.
 let pendingFreshAnnounce: string | null = null
+// T4-W3 share-truth: a corrupt `?board=` fell back to a fresh deal. Say so ONCE, folded into
+// that first fresh-board announce, so the one status voice reports both the failed link AND
+// what arrived instead — never a silent degrade, never a second live region. Consumed on use.
+let linkErrorPending = props.linkError === true
 function freshBoardCopy(): string {
-  return `a fresh ${props.boardSize}×${props.boardSize}${difficultyWord.value ? ', ' + difficultyWord.value : ''}`
+  const fresh = `a fresh ${props.boardSize}×${props.boardSize}${difficultyWord.value ? ', ' + difficultyWord.value : ''}`
+  if (linkErrorPending) {
+    linkErrorPending = false
+    return `this shared link couldn't be read — ${fresh}`
+  }
+  return fresh
 }
 watch(
   () => props.givenCells.size,

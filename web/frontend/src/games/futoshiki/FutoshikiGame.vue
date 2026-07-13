@@ -54,13 +54,14 @@ const { peekActive, peekTouched, peekSolutionValues, startPeek, endPeek } =
         setMarksActive: futoshiki.setMarksActive,
     });
 
-// Share act (W6): encode the current Futoshiki board (values + inequalities) into
-// `?board=`, write it to the address bar (URL wins over storage on reload), and copy the
-// link. The clipboard write may reject without a gesture/permission — the param write
-// already happened, so the shared link is live in the address bar regardless.
-function onShare() {
-    const url = futoshiki.shareBoard();
-    navigator.clipboard?.writeText(url).catch(() => {});
+// Share act (W6; T4-W3 share-truth) — twin of SudokuGame's: shareBoard() encodes the board
+// (values + inequalities) into `?board=`, writes it to the address bar (URL wins over storage
+// on reload — the shared link is live in the bar regardless), then returns the clipboard-copy
+// promise. The control panel awaits it and confirms ONLY on resolve; a reject (insecure context,
+// permission-policy denial, unfocused document, or an absent Clipboard API) surfaces "couldn't
+// copy — link is in the address bar" instead of an optimistic "copied!".
+function onShare(): Promise<void> {
+    return futoshiki.shareBoard();
 }
 
 // ── DigitPad (T3-W11 U-A) — twin of SudokuGame's wiring (D16) ────────
@@ -107,6 +108,7 @@ onUnmounted(() => unregisterDrawer?.());
                 :solved-values="futoshiki.solvedValues.value"
                 :board-generation="futoshiki.boardGeneration.value"
                 :inequalities="futoshiki.inequalities.value"
+                :link-error="futoshiki.linkError.value"
                 :error-code="futoshiki.errorCode.value"
                 :solve-stats="futoshiki.solveStats.value"
                 :pencil-marks="futoshiki.pencilMarks.value"
@@ -145,7 +147,7 @@ onUnmounted(() => unregisterDrawer?.());
                         @randomize="futoshiki.randomize()"
                         @clear="futoshiki.clearBoard()"
                         @solve="futoshiki.solve()"
-                        @share="onShare()"
+                        :share="onShare"
                         @peek-start="startPeek()"
                         @peek-end="endPeek()"
                     />
@@ -182,7 +184,7 @@ onUnmounted(() => unregisterDrawer?.());
                         @randomize="futoshiki.randomize()"
                         @clear="futoshiki.clearBoard()"
                         @solve="futoshiki.solve()"
-                        @share="onShare()"
+                        :share="onShare"
                         @peek-start="startPeek()"
                         @peek-end="endPeek()"
                     />

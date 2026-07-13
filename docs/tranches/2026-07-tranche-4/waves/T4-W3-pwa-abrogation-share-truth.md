@@ -87,3 +87,21 @@ Component checks (born RED at HEAD unless marked):
 - **The corrupt-link + clipboard-fail signals must not become a modal** — the owner killed the "solved it!" modal by name; these are inline margin-voice notices (the app's established idiom), not dialogs. The design register is W9's margin-voice, referenced not re-litigated here.
 - **The version byte is a one-way ratchet** — once shipped, every future codec change must bump it; old links without the byte must still decode (the byte's absence IS version 0). Bake that into the decoder's branch so the abrogation of the byte-less format is graceful, not a break of every link shared before this wave.
 - **OG `og:image` under B1** — the card image is a committed asset that counts against the repo-size policy ballot; keep it a single small crop, regenerated only on a deliberate brand change, never per-board.
+
+---
+## Execution record (2026-07-13)
+
+Workflow `wf_79729a38-44f` (resumed once across a session-limit wall; the completion-audit found the killed design lane's work complete — verified, not redone). All 8 component gates close.
+
+| Gate | Born-RED | Close |
+|---|---|---|
+| pwa-gone | plugin+config+dep+script+smoke+icons live; sw.js/workbox emitted | the whole inventory OUT (vite-plugin-pwa + 303 workbox transitives uninstalled); fresh build emits NO sw.js/workbox/webmanifest/pwa-png; favicon.svg + immutable-cache KEPT. **Honest loss row: offline reload + A2HS go; the HTTP immutable cache stays (not double-counted)** |
+| offline-claims | 3 live claims | 0 — purged in-tree (not deferred to W14) |
+| og-meta | zero unfurl | game-agnostic OG+twitter set; `og-card.png` 1010×1010, 126.2 KB (≤150 KB B1) |
+| share-confirm | "copied!" + AT "Link copied" over an empty clipboard (`catch(()=>{})` + unconditional flip) | confirmation keyed off the clipboard promise; reject → washi **"couldn't copy — link is in the address bar"** (SheetWashiLabel `wide`, both games); aria tracks the real outcome; e2e proves success writes the real URL |
+| corrupt-link | silent degrade to a fresh deal | discriminated `boardLink: absent\|ok\|invalid` through `resolveInitialState`; invalid → one-line MarginNote "this shared link couldn't be read — {fresh}" (margin voice, never a modal); 18/18 fail-closed behaviors intact |
+| version-byte | none (same-shape revision would mis-decode silently) | v1 = 0x01 prepended; **absence = v0, every pre-wave link still decodes** (the graceful ratchet); unknown byte rejects → the corrupt-link signal; 15/15 probe + 34/34 units |
+| permissions-policy | absent | lock-everything-off stanza (clipboard deliberately NOT denied — the share affordance needs it); bites at the edge on the next `npm run deploy` (pending-Pages, recorded) |
+| headers-narration | 2 "Pass-1 M5b" lines | 0; HSTS `preload` token kept inert, owner-side hstspreload.org check recorded |
+
+Evidence: `../evidence/w3/` (gates.md + the two failure-branch DELTA crops). Targeted e2e 11/11 (share-truth 5/5, permalink 6/6 — the byteless-v0 spec encoders now double as the live legacy-ratchet proof). Shared-file rider: `vite.config.ts` lands here carrying W1's headHints preload fix.

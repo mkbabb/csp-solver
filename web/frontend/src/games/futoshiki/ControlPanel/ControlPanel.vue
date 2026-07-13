@@ -49,11 +49,14 @@ const panelFilter = computed(() =>
     isDark.value ? "url(#stroke-dark)" : "url(#stroke-light)",
 );
 
-defineProps<{
+const props = defineProps<{
     boardSize: number;
     loading: boolean;
     solveState: string;
     mobile?: boolean;
+    // T4-W3 share-truth (twin of the sudoku panel's): the parent's share act as a callback,
+    // not an emit, so the OUTCOME travels back — it resolves iff the clipboard copy landed.
+    share: () => Promise<void>;
 }>();
 
 const emit = defineEmits<{
@@ -61,7 +64,6 @@ const emit = defineEmits<{
     (e: "randomize"): void;
     (e: "clear"): void;
     (e: "solve"): void;
-    (e: "share"): void;
     (e: "peek-start"): void;
     (e: "peek-end"): void;
 }>();
@@ -98,21 +100,53 @@ onBeforeUnmount(() => {
     if (clearArmTimer) clearTimeout(clearArmTimer);
 });
 
-// ── Share-on-demand permalink (W6): copy a `?board=` link, confirm in the washi ──
-// The parent owns the encode + address-bar write + clipboard copy (@share); this only
-// flips the washi label to a transient "copied!" (same tape grammar as every tooltip).
+// ── Share-on-demand permalink (W6; T4-W3 share-truth) — twin of the sudoku panel's ──
+// `props.share()` resolves iff the clipboard copy actually landed. Confirm ("copied!") ONLY
+// on resolve; on reject (insecure context, permission-policy denial, absent Clipboard API)
+// the `?board=` link is still live in the address bar — so say exactly that. The washi,
+// sublabel, and aria-label all track the REAL outcome, never an optimistic assertion.
 const { animating: shareAnimating, trigger: triggerShare } = useButtonAnimation(500);
-const shareConfirm = ref(false);
+const shareState = ref<"idle" | "copied" | "failed">("idle");
 let shareConfirmTimer: ReturnType<typeof setTimeout> | null = null;
-function onShare() {
+async function onShare() {
     triggerShare();
-    emit("share");
-    shareConfirm.value = true;
+    let copied = true;
+    try {
+        await props.share();
+    } catch {
+        copied = false;
+    }
+    shareState.value = copied ? "copied" : "failed";
     if (shareConfirmTimer) clearTimeout(shareConfirmTimer);
-    shareConfirmTimer = setTimeout(() => {
-        shareConfirm.value = false;
-    }, 1600);
+    // The failure line runs longer — it points the reader to the address bar, more to read.
+    shareConfirmTimer = setTimeout(
+        () => {
+            shareState.value = "idle";
+        },
+        copied ? 1600 : 3600,
+    );
 }
+const shareAria = computed(() =>
+    shareState.value === "copied"
+        ? "Link copied"
+        : shareState.value === "failed"
+          ? "couldn't copy — link is in the address bar"
+          : "Share board link",
+);
+const shareSublabel = computed(() =>
+    shareState.value === "copied"
+        ? "copied!"
+        : shareState.value === "failed"
+          ? "in address bar"
+          : "Share",
+);
+const shareWashi = computed(() =>
+    shareState.value === "copied"
+        ? "copied!"
+        : shareState.value === "failed"
+          ? "couldn't copy — link is in the address bar"
+          : "share link",
+);
 
 const { animating: solveAnimating, trigger: triggerSolve } = useButtonAnimation(500);
 const { animating: randomizeAnimating, trigger: triggerRandomize } =
@@ -249,11 +283,11 @@ function onBoardSizeChange(val: string | number) {
                 @click="onShare()"
                 :disabled="loading"
                 class="icon-btn"
-                :aria-label="shareConfirm ? 'Link copied' : 'Share board link'"
+                :aria-label="shareAria"
             >
                 <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
                 <span class="icon-sublabel" aria-hidden="true">{{
-                    shareConfirm ? "copied!" : "Share"
+                    shareSublabel
                 }}</span>
             </button>
         </div>
@@ -356,15 +390,16 @@ function onBoardSizeChange(val: string | number) {
                 @click="onShare()"
                 :disabled="loading"
                 class="icon-btn group relative"
-                :aria-label="shareConfirm ? 'Link copied' : 'Share board link'"
+                :aria-label="shareAria"
             >
                 <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
                 <span class="icon-sublabel" aria-hidden="true">{{
-                    shareConfirm ? "copied!" : "Share"
+                    shareSublabel
                 }}</span>
                 <SheetWashiLabel
-                    :text="shareConfirm ? 'copied!' : 'share link'"
+                    :text="shareWashi"
                     :seed="71"
+                    :wide="shareState === 'failed'"
                 />
             </button>
         </div>

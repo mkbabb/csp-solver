@@ -22,6 +22,10 @@ const props = defineProps<{
     /** Persistent on coarse pointers (UI-4/UI-5): hover doesn't exist for touch, so the
      *  tape stays laid down there; fine pointers keep the hover/focus reveal untouched. */
     persistent?: boolean;
+    /** A longer note (T4-W3 share-fail): let the tape wrap to a couple of lines within a
+     *  capped width instead of a single nowrap strip that would overrun the viewport edge
+     *  from a sidebar button. Off by default — every existing one-word label is untouched. */
+    wide?: boolean;
 }>();
 
 // Seeded geometry: torn ends on the left/right edges + a small tilt.
@@ -48,7 +52,11 @@ const geom = computed(() => {
 <template>
     <span
         class="washi-label"
-        :class="{ 'washi-center': anchor === 'center', 'washi-persistent': persistent }"
+        :class="{
+            'washi-center': anchor === 'center',
+            'washi-persistent': persistent,
+            'washi-wide': wide,
+        }"
         :style="{ clipPath: geom.clip, '--washi-tilt': geom.tilt }"
         role="tooltip"
         >{{ text }}</span
@@ -92,6 +100,20 @@ const geom = computed(() => {
     left: 50%;
     margin-bottom: 0;
     transform: translate(-50%, -50%) rotate(var(--washi-tilt));
+}
+
+/* A longer note (T4-W3 share-fail): the tape wraps within a capped width and centers its
+   lines, so "couldn't copy — link is in the address bar" sits as a small paper note over the
+   button instead of a nowrap strip running off a sidebar edge. */
+.washi-wide {
+    white-space: normal;
+    /* max-content lets the tape grow to its text, capped at max-width so it wraps to ~2 lines
+       — without it, an absolutely-positioned label shrink-wraps against its 44px button box
+       and breaks after ~1 word. */
+    width: max-content;
+    max-width: 15rem;
+    text-align: center;
+    line-height: 1.3;
 }
 
 /* UI-4: on coarse pointers a persistent chip is the affordance — there is no hover

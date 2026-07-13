@@ -40,6 +40,12 @@ export function useFutoshiki() {
 
   const initial = resolveInitialState()
 
+  // T4-W3 share-truth (twin of useSudoku's): a `?board=` that was PRESENT but failed to decode
+  // (the discriminated 'invalid' from resolveInitialState). The composable falls back to a fresh
+  // deal below; the board folds a one-line corrupt-link notice into that first fresh-board
+  // announce so the bad link doesn't degrade silently. Fixed once at init.
+  const linkError = ref(initial.boardLink === 'invalid')
+
   const boardSize = ref(initial.boardSize)
   const totalCells = computed(() => boardSize.value ** 2)
 
@@ -307,13 +313,19 @@ export function useFutoshiki() {
     })
   }
 
-  // ── Share-on-demand permalink (W6) ───────────────────────────────
-  // The explicit share act: encode the current board (values + inequality furniture)
-  // into `?board=`, write it to the address bar (so a reload reproduces it — URL wins
-  // over storage), and hand the full href back for the caller to copy. The ONLY writer.
-  function shareBoard(): string {
+  // ── Share-on-demand permalink (W6; T4-W3 share-truth) ────────────
+  // The explicit share act: encode the current board (values + inequality furniture) into
+  // `?board=`, write it to the address bar (so a reload reproduces it — URL wins over storage),
+  // then COPY the full href. The replaceState already landed, so the shared link is live in the
+  // bar regardless of the copy's fate. Returns the clipboard promise so the caller confirms ONLY
+  // on a real resolve; an absent Clipboard API (insecure context) REJECTS rather than silently
+  // "succeeding". Twin of useSudoku's. The ONLY writer of `?board=`.
+  function shareBoard(): Promise<void> {
     writeBoardToUrl(encodeBoard(boardSize.value, values.value, totalCells.value, inequalities.value))
-    return window.location.href
+    if (!navigator.clipboard) {
+      return Promise.reject(new Error('Clipboard API unavailable'))
+    }
+    return navigator.clipboard.writeText(window.location.href)
   }
 
   // ── Initialization ───────────────────────────────────────────────
@@ -391,6 +403,7 @@ export function useFutoshiki() {
     redo,
     hintCell,
     shareBoard,
+    linkError,
     pencilMarks,
     setMarksActive,
   }

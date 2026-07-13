@@ -22,7 +22,6 @@ npm run preview          # preview production build
 npm run lint             # prettier --write src/
 npm run lint:eslint      # ESLint (boundary rules + correctness)
 npm run test:e2e         # Playwright
-npm run test:pwa         # build + offline service-worker smoke
 ```
 
 The wasm solver is a `file:` link to `../../csp-solver/wasm/pkg` pending the
@@ -32,7 +31,7 @@ registry-package swap.
 
 ```
 frontend/
-├── vite.config.ts                      # Port 3000, @pencil/@games/@ aliases, sudokuTemplates build plugin, PWA (generateSW), Worker ESM format
+├── vite.config.ts                      # Port 3000, @pencil/@games/@ aliases, sudokuTemplates + headHints build plugins, Worker ESM format
 ├── tsconfig.json                       # Strict, @pencil/*, @games/*, @/* aliases, bundler resolution
 ├── eslint.config.js                    # Boundary rules: pencil↛games, sudoku↮futoshiki (see Architecture)
 ├── package.json                        # Vue 3, @mkbabb/csp-solver-wasm, @mkbabb/pencil-boil, lucide, vueuse
