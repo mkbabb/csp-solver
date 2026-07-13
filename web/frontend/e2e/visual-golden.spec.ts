@@ -75,12 +75,12 @@ const PINNED_BOARD = encodeSudoku(3, PINNED_GIVENS, 81);
 async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) {
   if (dark) {
     // Boot straight into dark mode via the persisted color-scheme (vueuse `useDark`'s
-    // default storage key) — so the moon rest pose renders from FIRST paint with no
+    // namespaced storage key, T4-W10) — so the moon rest pose renders from FIRST paint with no
     // toggle click and no turn animation. Clicking to switch mid-test left the crest in
     // a borderline settle that flaked the ≤0.017 soul floor across runs (the exact
     // flaky-gate class this wave prunes). The rest content is deterministic either way
     // (twinkles are TWINKLE_BY_FRAME[0], frozen under PRM — no per-mount randomness).
-    await page.addInitScript(() => localStorage.setItem('vueuse-color-scheme', 'dark'));
+    await page.addInitScript(() => localStorage.setItem('sudoku-color-scheme', 'dark'));
   }
   await page.goto(pinBoard ? `./?board=${PINNED_BOARD}` : './');
   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });

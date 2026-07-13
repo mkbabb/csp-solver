@@ -126,7 +126,24 @@ export const MOTION = {
     // instant (the ray/disc sub-stack split held two fields at 3 of 4 beats
     // and failed the 0.983 line at every misaligned phase). Dead config dies.
   },
-  /** House easing ledger — curves recorded as named decisions, one row per ruling. */
+  /** House easing ledger — curves recorded as named decisions, one row per ruling.
+   *
+   *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a
+   *  coherent two-layer partition, split by consumer, not by curve:
+   *    • TS `MOTION.curves` (HERE) — for JS / `v-bind` consumers. The drawer's
+   *      `drawerGlide` is the ONE genuinely `v-bind`-consumed curve (the
+   *      useControlsDrawer mover engine reads `MOTION.curves.drawerGlide`), so it
+   *      stays a TS string; v-binding it is load-bearing, not decoration.
+   *    • CSS `--ease-*` custom properties (assets/index.css `@theme` §EASING) —
+   *      for `<style>`-layer consumers. Every component `transition:`/`animation:`
+   *      easing reads a `var(--ease-*)`; a `<style>` block cannot import this TS
+   *      object, and v-binding 40+ static curves would add reactive plumbing for
+   *      values that never change (r2-T5's decisive point).
+   *  The glass curve appears in BOTH layers: `drawerGlide` here (canonical TS
+   *  home) and `--ease-glassGlide` in @theme (byte-identical control points),
+   *  minted so the answer-key laminate's lay-down joins the one glass curve
+   *  without becoming a reactive value. Retune a curve → edit ONE side per its
+   *  layer; the two never diverge because each owns a disjoint consumer set. */
   curves: {
     /** The drawer system's ONE curve — all four movers (sheet, case, masthead,
      *  tab counter-scale), one clock, zero stagger. T3-W13 §3-S3′, the mid-wave

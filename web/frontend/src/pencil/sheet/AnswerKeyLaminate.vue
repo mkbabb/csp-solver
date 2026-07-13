@@ -223,17 +223,20 @@ const keyBucketMs = computed(() =>
   opacity: 0;
   transform: scale(1.02);
   transition:
-    opacity 200ms cubic-bezier(0.55, 0.055, 0.675, 0.19),
-    transform 200ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
+    opacity 200ms var(--ease-accelIn),
+    transform 200ms var(--ease-accelIn);
 }
 
 .answer-key-laminate.is-shown {
-  /* lay-down (arriving): the physical-flourish curve, 280ms */
+  /* lay-down (arriving): the glass glide — T4-W10 re-points the retired overshoot
+     spring (0.34, 1.56, 0.64, 1) onto the audit-4 monotone glass curve; 280ms
+     preserved, start/end pose unchanged, only the velocity profile loses the
+     overshoot (the laminate was the one surface the audit-4 ruling never reached). */
   opacity: 1;
   transform: scale(1);
   transition:
-    opacity 280ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity 280ms var(--ease-glassGlide),
+    transform 280ms var(--ease-glassGlide);
 }
 
 .key-cell {

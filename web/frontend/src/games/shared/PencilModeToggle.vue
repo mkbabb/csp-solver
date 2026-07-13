@@ -10,8 +10,11 @@
 import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
 import type { PencilMode } from "./useUserMarks";
 
-defineProps<{ mode: PencilMode; mobile?: boolean }>();
-const emit = defineEmits<{ (e: "update:mode", value: PencilMode): void }>();
+// T4-W10 idiom (§defineModel) — the `mode` two-way seam collapses to defineModel (c2-idiom.md
+// §1 #1). The write-side `as PencilMode` cast (OptionSelector emits `string | number`) moves to
+// the model assignment in onChange; SAFE — no same-value dependence.
+const mode = defineModel<PencilMode>("mode", { required: true });
+defineProps<{ mobile?: boolean }>();
 
 const MODE_OPTIONS: { value: PencilMode; label: string }[] = [
   { value: "off", label: "Normal" },
@@ -20,7 +23,7 @@ const MODE_OPTIONS: { value: PencilMode; label: string }[] = [
 ];
 
 function onChange(v: string | number) {
-  emit("update:mode", v as PencilMode);
+  mode.value = v as PencilMode;
 }
 </script>
 

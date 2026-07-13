@@ -105,7 +105,7 @@ withDefaults(
    draw-on is dashoffset on the shared chain. */
 .vignette-voice,
 .vignette-meta {
-  animation: vignette-write-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: vignette-write-in 250ms var(--ease-noteWrite) both;
 }
 
 @keyframes vignette-write-in {

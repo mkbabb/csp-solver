@@ -48,9 +48,6 @@ const props = defineProps<{
    *  cell's FROZEN native input authors a mark instead of a value (the WM seam: mode toggle
    *  only, no second input surface); 'off'/undefined keeps the byte-identical value write. */
   pencilMode?: PencilMode;
-  /** T3-W13 §4.1 — the board's `celebrating`, forwarded to the glyph's flourish
-   *  gate: solve reveals keep beat-2, a hint stops at the written glyph. */
-  flourish?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -264,7 +261,11 @@ function cornerSlot(i: number) {
 }
 
 // The board's roving controller focuses cells programmatically after an arrow key (§4.1).
-defineExpose({ focus: focusInput });
+// T4-W10 idiom (§:ref) — `position` is exposed alongside `focus` so the board's STABLE
+// `setCellApi` bound handler keys the cellApi registry off the instance (el.position) instead
+// of a per-render inline closure that captured the loop index. Position is invariant per
+// instance (`:key === :position`), so a set-time capture stays correct across reuse.
+defineExpose({ focus: focusInput, position: props.position });
 </script>
 
 <template>
@@ -449,7 +450,6 @@ defineExpose({ focus: focusInput });
       :position="position"
       :board-size="boardSize"
       :is-hovered="isHovered"
-      :flourish="flourish"
     />
 
     <!-- Ghost cell highlight — the three-tier pencil-sketch focus/hover/invalid ring (§4.2).
@@ -656,7 +656,7 @@ defineExpose({ focus: focusInput });
   stroke-width: 7;
   stroke-opacity: 0.9;
   stroke-dasharray: 1;
-  animation: ghost-draw-on 180ms cubic-bezier(0.215, 0.61, 0.355, 1) both;
+  animation: ghost-draw-on 180ms var(--ease-ghostDraw) both;
 }
 
 @keyframes ghost-draw-on {
@@ -693,10 +693,12 @@ defineExpose({ focus: focusInput });
   stroke-opacity: 1;
 }
 
-/* Neutralize the generic global focus-within ring (index.css:190-195) — the SVG ghost is
-   the focus affordance now. Scoped selector ([data-v-*]) outweighs the global one. The
-   input keeps Tailwind's `outline-none` (a transparent 2px outline) so forced-colors /
-   Windows High Contrast still paints its own visible ring where SVG strokes are ignored. */
+/* Neutralize the generic global focus-within ring (index.css) — the SVG ghost is the focus
+   affordance now. Scoped selector ([data-v-*]) outweighs the global one. NOTE (T4-W10 gate 2):
+   Tailwind v4's `outline-none` compiles to `outline-style:none` (NOT v3's transparent 2px
+   outline this comment once assumed), so it paints NOTHING under forced-colors — and
+   forced-color-adjust strips the SVG ghost to a corner fragment. The HC-restorable ring is the
+   explicit `forced-colors` block at the foot of this sheet. */
 .sudoku-cell:focus-within {
   background: transparent;
   outline: none;
@@ -730,6 +732,21 @@ defineExpose({ focus: focusInput });
   }
   .sudoku-cell.is-invalid .cell-ghost-path {
     stroke-opacity: 1;
+  }
+}
+
+/* Forced-colors / Windows High Contrast keyboard-focus ring (T4-W10 gate 2, WCAG 2.4.7).
+   Normal mode's crayon-blue ring is the SVG .cell-ghost-path, but forced-color-adjust strips
+   SVG paint to a fragment and Tailwind v4's `outline-none` on the input paints nothing — so
+   HC keyboard focus had no ring. Draw a real system-color outline the UA keeps. It rides the
+   CELL, not the input: the input is opacity-0 and an opacity-0 element renders no outline. The
+   UA forces its own color under forced-colors (`Highlight`, the system focus color — never gold;
+   crayon-blue is unrenderable here). Inset (offset -2px) so the ring hugs the packed cell
+   without overlapping neighbours. Gated on :focus-visible → keyboard only, matching normal mode. */
+@media (forced-colors: active) {
+  .sudoku-cell:has(input:focus-visible) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 }
 

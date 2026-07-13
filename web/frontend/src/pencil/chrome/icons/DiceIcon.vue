@@ -107,7 +107,7 @@ defineProps<{ size?: number; playing?: boolean }>();
 <style scoped>
 .dice-roll {
   transform-origin: center;
-  animation: diceRoll 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: diceRoll 500ms var(--ease-springPop) forwards;
 }
 
 @keyframes diceRoll {
@@ -128,7 +128,7 @@ defineProps<{ size?: number; playing?: boolean }>();
 .pip-pop {
   transform-origin: center;
   transform-box: fill-box;
-  animation: pipPop 250ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: pipPop 250ms var(--ease-springPop) forwards;
 }
 
 @keyframes pipPop {

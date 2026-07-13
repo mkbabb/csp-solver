@@ -10,7 +10,7 @@
  *   - Conflict detection is Latin-square (row/col) + inequality violation, no boxes.
  *   - No `difficulty` (F3).
  */
-import { computed, ref, watch, onMounted, onUnmounted, nextTick } from "vue";
+import { computed, ref, watch, provide, onMounted, onUnmounted, nextTick } from "vue";
 import FutoshikiCell from "./FutoshikiCell/FutoshikiCell.vue";
 import FutoshikiCaret from "./FutoshikiCaret/FutoshikiCaret.vue";
 import SolverErrorNote from "./SolverErrorNote.vue";
@@ -278,6 +278,11 @@ const noiseDelays = computed(() => {
 const celebrating = computed(
   () => props.solveState === "solved" && props.animatingCells.size > 0,
 );
+// T4-W10 idiom (§flourish) — provide the celebrating derivation to the glyph by INJECT (twin of
+// SudokuBoard's); the cell no longer declares a pass-through `flourish` prop. NOTE (c2-idiom.md
+// §3): FutoshikiCaret's glyph is a board descendant and DOES receive this, but its
+// `:is-solved="false"` keeps flourish behind the glyph's `if (props.isSolved)` gate.
+provide("flourish", celebrating);
 watch(
   () => props.solveState,
   (state, prev) => {
@@ -305,13 +310,28 @@ const gridLabel = computed(
 
 const focusedPos = ref(0);
 const cellApi = new Map<number, { focus: () => void }>();
-function setCellApi(pos: number, el: unknown) {
-  if (el && typeof (el as { focus?: unknown }).focus === "function") {
-    cellApi.set(pos, el as { focus: () => void });
-  } else {
-    cellApi.delete(pos);
+// T4-W10 idiom (§:ref) — a STABLE bound handler, not a per-render inline closure (twin of
+// SudokuBoard's). The cell exposes its own `position` (defineExpose), so the map keys off the
+// instance rather than a captured index — ref identity is stable across renders, and the
+// {0..totalCells-1} → {focus} slot map is byte-identical to the old closure's fill.
+function setCellApi(el: unknown) {
+  if (
+    el &&
+    typeof (el as { focus?: unknown }).focus === "function" &&
+    typeof (el as { position?: unknown }).position === "number"
+  ) {
+    const inst = el as { focus: () => void; position: number };
+    cellApi.set(inst.position, inst);
   }
+  // Vue calls the ref with `null` on unmount; the totalCells watch prunes stale keys ≥ N on a
+  // shrink (a null callback carries no index to delete), keeping the map = {0..N-1}.
 }
+watch(
+  () => props.totalCells,
+  (n) => {
+    for (const key of cellApi.keys()) if (key >= n) cellApi.delete(key);
+  },
+);
 function focusCell(pos: number) {
   const clamped = Math.max(0, Math.min(props.totalCells - 1, pos));
   focusedPos.value = clamped;
@@ -644,7 +664,7 @@ function isRevealed(pos: number): boolean {
         <FutoshikiCell
           v-for="pos in totalCells"
           :key="pos - 1"
-          :ref="(el) => setCellApi(pos - 1, el)"
+          :ref="setCellApi"
           :position="pos - 1"
           :value="values[String(pos - 1)] ?? 0"
           :is-given="givenCells.has(String(pos - 1))"
@@ -665,7 +685,6 @@ function isRevealed(pos: number): boolean {
           :corner-marks="cornerMarks?.[String(pos - 1)]"
           :center-marks="centerMarks?.[String(pos - 1)]"
           :pencil-mode="pencilMode"
-          :flourish="celebrating"
           @update="onCellUpdate"
           @mark="(p: number, v: number) => emit('mark', p, v)"
           @cell-focus="onCellFocus"
@@ -773,7 +792,7 @@ function isRevealed(pos: number): boolean {
   .board-leaving .board-margin,
   .board-leaving .completion-vignette {
     opacity: 0;
-    transition: opacity 200ms cubic-bezier(0.32, 0, 0.67, 0);
+    transition: opacity 200ms var(--ease-fadeOut);
   }
 }
 

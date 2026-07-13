@@ -57,7 +57,7 @@ onMounted(async () => {
 <style scoped>
 .error-note {
   pointer-events: auto; /* the strip container passes events through; the card takes them back */
-  animation: note-slide-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: note-slide-in 250ms var(--ease-noteWrite) both;
 }
 
 .error-note-card {

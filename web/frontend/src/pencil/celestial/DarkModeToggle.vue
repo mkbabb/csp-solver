@@ -725,13 +725,13 @@ onUnmounted(() => {
   visibility: hidden;
   /* outgoing icon: fade only in the last wring beat (240-340ms) — the body is
        nearly a point before it fades; no mid-air ghost */
-  transition: opacity 100ms cubic-bezier(0.4, 0, 0.2, 1) 240ms;
+  transition: opacity 100ms var(--ease-standard) 240ms;
 }
 
 .toggle-icon.is-active {
   opacity: 1;
   /* incoming icon: 60-360ms rise with the bloom's first beats */
-  transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1) 60ms;
+  transition: opacity 300ms var(--ease-standard) 60ms;
 }
 
 .sun-moon-toggle.is-turning .toggle-icon {
@@ -746,7 +746,7 @@ onUnmounted(() => {
   transform-box: view-box;
   transform-origin: 100px 100px;
   transform: scale(0.06) rotate(12deg) translateY(6px);
-  transition: transform 340ms cubic-bezier(0.55, 0.055, 0.675, 0.19);
+  transition: transform 340ms var(--ease-accelIn);
 }
 
 /* Wring-down twist: shrinks AND sinks, twisting as paper does (-15deg — owner-taste
@@ -761,7 +761,7 @@ onUnmounted(() => {
    vector-crisp by construction (the warp is the filter's input). */
 .toggle-icon.is-active .warp {
   transform: none;
-  transition: transform 800ms cubic-bezier(0.34, 1.56, 0.64, 1) 60ms;
+  transition: transform 800ms var(--ease-springPop) 60ms;
 }
 
 /* ─── The Yoshi beats (T3-W13 §2 re-cut) ─────────────────────────────────
@@ -783,7 +783,7 @@ onUnmounted(() => {
   }
   40% {
     scale: 0.94;
-    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation-timing-function: var(--ease-springPop);
   }
   100% {
     scale: 1;
@@ -834,7 +834,7 @@ onUnmounted(() => {
   scale: 1;
   opacity: 1;
   transition:
-    scale 150ms cubic-bezier(0.68, -0.55, 0.265, 1.55) 560ms,
+    scale 150ms var(--ease-anticipatePop) 560ms,
     opacity 120ms ease-out 560ms;
 }
 

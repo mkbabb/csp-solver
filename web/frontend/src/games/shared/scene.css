@@ -141,13 +141,13 @@
 @media (prefers-reduced-motion: no-preference) {
   .mobile-board-width,
   .scene-controls {
-    animation: controls-fade-in 250ms cubic-bezier(0.33, 1, 0.68, 1) 150ms backwards;
+    animation: controls-fade-in 250ms var(--ease-drawOn) 150ms backwards;
   }
 
   .app-layout.scene-leaving .mobile-board-width,
   .app-layout.scene-leaving .scene-controls {
     opacity: 0;
-    transition: opacity 200ms cubic-bezier(0.32, 0, 0.67, 0);
+    transition: opacity 200ms var(--ease-fadeOut);
     animation: none;
   }
 }

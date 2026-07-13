@@ -82,7 +82,7 @@ const SCRIBBLE_D = scribblePath(7);
 @keyframes scribble-cycle {
   0% {
     stroke-dashoffset: 1;
-    animation-timing-function: cubic-bezier(0.645, 0.045, 0.355, 1);
+    animation-timing-function: var(--ease-loaderScrub);
   }
   45% {
     stroke-dashoffset: 0;
@@ -90,7 +90,7 @@ const SCRIBBLE_D = scribblePath(7);
   }
   55% {
     stroke-dashoffset: 0;
-    animation-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+    animation-timing-function: var(--ease-accelIn);
   }
   90% {
     stroke-dashoffset: -1;

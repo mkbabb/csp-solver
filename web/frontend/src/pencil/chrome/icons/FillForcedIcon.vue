@@ -66,7 +66,7 @@ defineProps<{ size?: number; playing?: boolean }>();
 /* The forced-fill mark draws itself in — the icon echo of the board's reveal-wave draw-in
    (stroke-dashoffset → 0 on the same 350ms curve SolveIcon's check uses; one grammar). */
 .mark-draw {
-  animation: markDraw 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: markDraw 350ms var(--ease-standard) forwards;
 }
 
 @keyframes markDraw {

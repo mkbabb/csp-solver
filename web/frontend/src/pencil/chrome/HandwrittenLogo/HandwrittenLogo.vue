@@ -380,6 +380,21 @@ onUnmounted(() => {
   --caret-nudge: calc(var(--logo-height) * 0.075);
 }
 
+/* Narrow-phone floor (T4-W10 gate 3, WCAG 1.4.10). The base rung renders the longest
+   wordmark ("futoshiki") at ~301px; + the 0.4rem gap + the 1.5rem caret it totals ~332px,
+   which overruns a 320px viewport's ~312px content box — the sole horizontal-reflow overflow
+   at 320 (the board itself is 296px and fits). Step the height ladder one rung DOWN below
+   360px so the wordmark + caret clears the narrowest supported width without a horizontal
+   scrollbar. Proportional (the caret + its optical nudge ride --logo-height), so the wordmark
+   only softens a step — never letterboxed, never clipped. ≥360px (375, iPhone-13 390, desktop
+   1280) is untouched, so no capture/golden at those widths moves. */
+@media (max-width: 360px) {
+  .logo-menu {
+    --caret-size: 1.3rem;
+    --logo-height: 3.9rem;
+  }
+}
+
 /* Reset the trigger back to bare inline content — the wordmark IS the affordance (mirrors
    AttributionCard.attribution-trigger). font-family is set explicitly, NOT `inherit`, so the
    Fraunces display face is unambiguous (avoids the inherit-specificity defeat, type-audit D2). */
@@ -412,7 +427,7 @@ onUnmounted(() => {
   color: var(--color-foreground);
   display: block;
   clip-path: inset(0 100% 0 0);
-  transition: clip-path 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: clip-path 1.2s var(--ease-noteWrite);
 }
 
 .handwritten-logo.is-drawn {
@@ -473,7 +488,7 @@ onUnmounted(() => {
   height: var(--caret-size);
   color: var(--color-foreground);
   transform: translateY(var(--caret-nudge)) rotate(90deg);
-  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: transform 200ms var(--ease-noteWrite);
 }
 
 .logo-caret.is-open {
@@ -500,7 +515,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  animation: logo-menu-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: logo-menu-in 250ms var(--ease-noteWrite) both;
 }
 
 /* H2's dark hairline is gone with the border (T3-W10 F1 one-edge ownership): the
@@ -565,7 +580,7 @@ onUnmounted(() => {
    (Vue watches this element's animation to time the DOM removal); pointer-events cut
    so a closing menu never intercepts the click that closed it. */
 .logo-menu-leave-active {
-  animation: logo-menu-out 140ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: logo-menu-out 140ms var(--ease-noteWrite) both;
   pointer-events: none;
 }
 

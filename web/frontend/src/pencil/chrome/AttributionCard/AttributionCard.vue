@@ -144,8 +144,8 @@ defineExpose({ close });
   pointer-events: none;
   transform: scale(0.9) translateY(8px);
   transition:
-    opacity 150ms cubic-bezier(0.4, 0, 0.2, 1),
-    transform 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 150ms var(--ease-standard),
+    transform 150ms var(--ease-standard),
     visibility 0s linear 150ms;
   z-index: 50;
   min-width: 16rem;
@@ -166,8 +166,8 @@ defineExpose({ close });
   pointer-events: auto;
   transform: scale(1) translateY(0);
   transition:
-    opacity 150ms cubic-bezier(0.4, 0, 0.2, 1),
-    transform 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 150ms var(--ease-standard),
+    transform 150ms var(--ease-standard),
     visibility 0s linear 0s;
 }
 </style>

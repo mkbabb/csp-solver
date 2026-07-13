@@ -51,9 +51,20 @@ const panelFilter = computed(() =>
   isDark.value ? "url(#stroke-dark)" : "url(#stroke-light)",
 );
 
+// T4-W10 idiom (§defineModel) — four two-way seams collapse to defineModel (c2-idiom.md §1
+// #4,#5,#6,#8). size/difficulty are TRANSFORM-ON-WRITE: the `as` cast + `triggerBoil()` side
+// effect stay in the onChange handlers below (the boil lives OUTSIDE the model, so a same-value
+// re-tap still boils). pencilMode/candidatesPinned are PLAIN relays (their child v-model
+// collapses in the template). `errorCheckMode` STAYS a manual prop+emit (§1a #7): its same-value
+// re-emit re-arms the on-demand snapshot, which defineModel's hasChanged guard would swallow.
+const size = defineModel<number>("size", { required: true });
+const difficulty = defineModel<Difficulty>("difficulty", { required: true });
+const pencilMode = defineModel<PencilMode>("pencilMode", { required: true });
+const candidatesPinned = defineModel<boolean>("candidatesPinned", {
+  required: true,
+});
+
 const props = defineProps<{
-  size: number;
-  difficulty: Difficulty;
   loading: boolean;
   // T4-WU/U3 — the board's dirty state (the composable's `isDirty` = undo-depth non-empty, one
   // derived signal off U1's spine). Gates the coarse two-tap: a DIRTY Deal / Clear arms first, a
@@ -62,14 +73,9 @@ const props = defineProps<{
   isDirty: boolean;
   solveState: string;
   mobile?: boolean;
-  // T4-W8 ROW 1 — the active pencil-marks mode (off/corner/center), relayed to PencilModeToggle;
-  // the mode toggle is game-agnostic chrome (the shared component), the panel just plumbs it.
-  pencilMode: PencilMode;
-  // T4-W8 ROW 2 + ROW 3 — the board-assist settings relayed to AssistSettings: the error-check
-  // mode (off/on-demand/live) and the persistent-candidates pin. Game-agnostic chrome; the panel
-  // just plumbs them to the game's `useAssists` store.
+  // T4-W8 ROW 2 — the error-check mode (off/on-demand/live), relayed to AssistSettings. LEFT a
+  // manual prop+emit (§1a): the on-demand re-arm rides its same-value re-emit.
   errorCheckMode: ErrorCheckMode;
-  candidatesPinned: boolean;
   // T4-W3 share-truth: the parent's share act, handed as a callback rather than an emit so
   // the OUTCOME travels back — it resolves iff the clipboard copy actually landed. The panel
   // confirms off this promise instead of asserting success it never checked.
@@ -80,15 +86,13 @@ const props = defineProps<{
 // inactive tab's current value is invisible while the other is open. Surface it small +
 // graphite beneath the inactive heading — quiet, never louder than the active underline.
 const sizeValueLabel = computed(
-  () => sizeOptions.find((o) => o.value === props.size)?.label ?? "",
+  () => sizeOptions.find((o) => o.value === size.value)?.label ?? "",
 );
 const difficultyValueLabel = computed(
-  () => difficultyOptions.find((o) => o.value === props.difficulty)?.label ?? "",
+  () => difficultyOptions.find((o) => o.value === difficulty.value)?.label ?? "",
 );
 
 const emit = defineEmits<{
-  (e: "update:size", value: number): void;
-  (e: "update:difficulty", value: Difficulty): void;
   // T4-WU/U2 — the re-homed dice, re-labeled the "Deal" commit: it lifts out of the live action
   // row into the staged New-game zone and commits the staged size + difficulty. Same button
   // grammar (DiceIcon `.icon-btn`), no new control; the WM input shape stays frozen.
@@ -109,11 +113,9 @@ const emit = defineEmits<{
   (e: "undo"): void;
   (e: "redo"): void;
   (e: "hint"): void;
-  // T4-W8 ROW 1 — the pencil-marks mode changed (v-model seam to the game's user-mark store).
-  (e: "update:pencilMode", value: PencilMode): void;
-  // T4-W8 ROW 2 + ROW 3 — the assist settings changed (v-model seams to the game's useAssists).
+  // T4-W8 ROW 2 — the error-check mode changed (LEFT a manual v-model seam, §1a); pencilMode +
+  // candidatesPinned are now defineModel-generated (§defineModel).
   (e: "update:errorCheckMode", value: ErrorCheckMode): void;
-  (e: "update:candidatesPinned", value: boolean): void;
 }>();
 
 // ── Hold-to-peek gesture on the BoilDivider (the hold surface, fe-composition
@@ -294,12 +296,12 @@ function onHint() {
 }
 
 function onSizeChange(val: string | number) {
-  emit("update:size", val as number);
+  size.value = val as number;
   triggerBoil();
 }
 
 function onDifficultyChange(val: string | number) {
-  emit("update:difficulty", val as Difficulty);
+  difficulty.value = val as Difficulty;
   triggerBoil();
 }
 </script>
@@ -415,20 +417,15 @@ function onDifficultyChange(val: string | number) {
          clear/share). -->
     <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); one
          component, both games. Arms the user-mark authoring seam on the frozen native input. -->
-    <PencilModeToggle
-      :mode="pencilMode"
-      mobile
-      @update:mode="emit('update:pencilMode', $event)"
-    />
+    <PencilModeToggle v-model:mode="pencilMode" mobile />
 
     <!-- Board assists (T4-W8 ROW 2 + ROW 3) — the error-check mode + persistent candidates; one
          shared component, both games. Same segmented-control grammar as Marks / Size / Difficulty. -->
     <AssistSettings
       :error-check-mode="errorCheckMode"
-      :candidates-pinned="candidatesPinned"
+      v-model:candidates-pinned="candidatesPinned"
       mobile
       @update:error-check-mode="emit('update:errorCheckMode', $event)"
-      @update:candidates-pinned="emit('update:candidatesPinned', $event)"
     />
 
     <!-- Action buttons — UI-5: persistent sublabels in the pencil hand on coarse
@@ -610,17 +607,13 @@ function onDifficultyChange(val: string | number) {
     <!-- LIVE zone — acts on the CURRENT board. -->
     <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); the
          desktop twin of the mobile mount above. One component, both games. -->
-    <PencilModeToggle
-      :mode="pencilMode"
-      @update:mode="emit('update:pencilMode', $event)"
-    />
+    <PencilModeToggle v-model:mode="pencilMode" />
 
     <!-- Board assists (T4-W8 ROW 2 + ROW 3) — the desktop twin of the mobile mount above. -->
     <AssistSettings
       :error-check-mode="errorCheckMode"
-      :candidates-pinned="candidatesPinned"
+      v-model:candidates-pinned="candidatesPinned"
       @update:error-check-mode="emit('update:errorCheckMode', $event)"
-      @update:candidates-pinned="emit('update:candidatesPinned', $event)"
     />
 
     <!-- Action buttons — hover washi for fine pointers, persistent sublabels on coarse
@@ -788,15 +781,19 @@ function onDifficultyChange(val: string | number) {
    components) — the √φ subheading→heading eyebrow, shared with futoshiki (D4).
    Only the component-local hover flourish stays scoped here. */
 
-/* Crayon color utilities */
+/* Crayon color utilities. The difficulty heading writes in the difficulty crayon, but as
+   light-mode heading text the raw wax fails AA (green 2.22 / orange 2.05 / rose 4.11 on
+   --color-card) — so the three difficulty tints read the ink tier (hue-locked, darkened to
+   AA in light; the ink aliases the wax in dark, where the crayon already glows AA). Gate 1,
+   T4-W10; ink hexes + ledger in assets/index.css. crayon-blue is unaffected (no heading use). */
 .crayon-green {
-  color: var(--color-crayon-green);
+  color: var(--color-green-ink);
 }
 .crayon-orange {
-  color: var(--color-crayon-orange);
+  color: var(--color-orange-ink);
 }
 .crayon-rose {
-  color: var(--color-crayon-rose);
+  color: var(--color-red-ink);
 }
 .crayon-blue {
   color: var(--color-crayon-blue);
@@ -969,9 +966,11 @@ function onDifficultyChange(val: string | number) {
   font-size: var(--type-caption);
   line-height: 1;
   letter-spacing: var(--type-tracking-wide);
+  /* T4-W10 gate 1: 60% graphite was 4.10:1 on --color-card (< AA 4.5); 68% clears it —
+     5.23:1 light / 6.06:1 dark. Still the quiet closed-tab value, one pressure step firmer. */
   color: color-mix(
     in srgb,
-    var(--color-pencil-graphite, var(--grid-line-color)) 60%,
+    var(--color-pencil-graphite, var(--grid-line-color)) 68%,
     transparent
   );
 }

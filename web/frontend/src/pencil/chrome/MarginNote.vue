@@ -125,7 +125,7 @@ const NOTE_STAR_D =
 
 .margin-note-ink {
   display: inline-block;
-  animation: note-write-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: note-write-in 250ms var(--ease-noteWrite) both;
 }
 
 /* The inline star: sized to the hand's own em, seated on the baseline like a glyph.
@@ -158,7 +158,7 @@ const NOTE_STAR_D =
     transparent
   );
   pointer-events: auto;
-  animation: note-write-in 250ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: note-write-in 250ms var(--ease-noteWrite) both;
 }
 
 @keyframes note-write-in {

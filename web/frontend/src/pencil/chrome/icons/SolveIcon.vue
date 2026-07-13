@@ -49,7 +49,7 @@ defineProps<{ size?: number; playing?: boolean }>();
 <style scoped>
 /* Check draw-in: stroke-dashoffset → 0 */
 .check-draw {
-  animation: drawIn 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: drawIn 350ms var(--ease-standard) forwards;
 }
 
 @keyframes drawIn {
@@ -64,7 +64,7 @@ defineProps<{ size?: number; playing?: boolean }>();
 /* Star sparkle: scale up + glow pulse */
 .star-sparkle {
   transform-origin: 5px 5.5px;
-  animation: sparkleGrow 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: sparkleGrow 500ms var(--ease-springPop) forwards;
 }
 
 @keyframes sparkleGrow {

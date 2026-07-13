@@ -57,9 +57,20 @@ const panelFilter = computed(() =>
   isDark.value ? "url(#stroke-dark)" : "url(#stroke-light)",
 );
 
+// T4-W10 idiom (§defineModel) — four two-way seams collapse to defineModel (c2-idiom.md §1
+// #9,#10,#11,#13; twin of the sudoku panel's). boardSize/difficulty are TRANSFORM-ON-WRITE: the
+// `as` cast + `triggerBoil()` side effect stay in the onChange handlers below (the boil lives
+// OUTSIDE the model, so a same-value re-tap still boils). pencilMode/candidatesPinned are PLAIN
+// relays (their child v-model collapses in the template). `errorCheckMode` STAYS a manual
+// prop+emit (§1a #12): its same-value re-emit re-arms the on-demand snapshot.
+const boardSize = defineModel<number>("boardSize", { required: true });
+const difficulty = defineModel<Difficulty>("difficulty", { required: true });
+const pencilMode = defineModel<PencilMode>("pencilMode", { required: true });
+const candidatesPinned = defineModel<boolean>("candidatesPinned", {
+  required: true,
+});
+
 const props = defineProps<{
-  boardSize: number;
-  difficulty: Difficulty;
   loading: boolean;
   // T4-WU/U3 (twin of the sudoku panel's) — the board's dirty state (the composable's `isDirty` =
   // undo-depth non-empty, one derived signal off U1's spine). Gates the coarse two-tap: a DIRTY
@@ -68,21 +79,15 @@ const props = defineProps<{
   isDirty: boolean;
   solveState: string;
   mobile?: boolean;
-  // T4-W8 ROW 1 (twin of the sudoku panel's) — the active pencil-marks mode, relayed to the
-  // shared PencilModeToggle; the panel just plumbs the game-agnostic chrome.
-  pencilMode: PencilMode;
-  // T4-W8 ROW 2 + ROW 3 (twin of the sudoku panel's) — the board-assist settings relayed to the
-  // shared AssistSettings: the error-check mode + the persistent-candidates pin.
+  // T4-W8 ROW 2 (twin of the sudoku panel's) — the error-check mode relayed to AssistSettings.
+  // LEFT a manual prop+emit (§1a): the on-demand re-arm rides its same-value re-emit.
   errorCheckMode: ErrorCheckMode;
-  candidatesPinned: boolean;
   // T4-W3 share-truth (twin of the sudoku panel's): the parent's share act as a callback,
   // not an emit, so the OUTCOME travels back — it resolves iff the clipboard copy landed.
   share: () => Promise<void>;
 }>();
 
 const emit = defineEmits<{
-  (e: "update:boardSize", value: number): void;
-  (e: "update:difficulty", value: Difficulty): void;
   // T4-WU/U2 (twin of the sudoku panel's) — the re-homed dice, re-labeled the "Deal" commit:
   // it lifts out of the live action row into the staged New-game zone and commits the staged
   // board-size + difficulty. Same button grammar (DiceIcon `.icon-btn`), no new control.
@@ -101,11 +106,9 @@ const emit = defineEmits<{
   (e: "undo"): void;
   (e: "redo"): void;
   (e: "hint"): void;
-  // T4-W8 ROW 1 — the pencil-marks mode changed (v-model seam to the game's user-mark store).
-  (e: "update:pencilMode", value: PencilMode): void;
-  // T4-W8 ROW 2 + ROW 3 — the assist settings changed (v-model seams to the game's useAssists).
+  // T4-W8 ROW 2 — the error-check mode changed (LEFT a manual v-model seam, §1a); pencilMode +
+  // candidatesPinned are now defineModel-generated (§defineModel).
   (e: "update:errorCheckMode", value: ErrorCheckMode): void;
-  (e: "update:candidatesPinned", value: boolean): void;
 }>();
 
 // UI-12 (twin of the sudoku panel's): the mobile Board-Size / Difficulty tabs each show only
@@ -113,10 +116,10 @@ const emit = defineEmits<{
 // other is open — surface it small + graphite beneath the inactive heading (`heading-value`).
 const expandedPanel = ref<"boardSize" | "difficulty">("boardSize");
 const boardSizeValueLabel = computed(
-  () => boardSizeOptions.find((o) => o.value === props.boardSize)?.label ?? "",
+  () => boardSizeOptions.find((o) => o.value === boardSize.value)?.label ?? "",
 );
 const difficultyValueLabel = computed(
-  () => difficultyOptions.find((o) => o.value === props.difficulty)?.label ?? "",
+  () => difficultyOptions.find((o) => o.value === difficulty.value)?.label ?? "",
 );
 
 // ── Hold-to-peek gesture on the BoilDivider (the hold surface) ──
@@ -284,12 +287,12 @@ function onHint() {
 }
 
 function onBoardSizeChange(val: string | number) {
-  emit("update:boardSize", val as number);
+  boardSize.value = val as number;
   triggerBoil();
 }
 
 function onDifficultyChange(val: string | number) {
-  emit("update:difficulty", val as Difficulty);
+  difficulty.value = val as Difficulty;
   triggerBoil();
 }
 </script>
@@ -403,20 +406,15 @@ function onDifficultyChange(val: string | number) {
     <!-- LIVE zone — acts on the CURRENT board. -->
     <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); one
          component, both games. Arms the user-mark authoring seam on the frozen native input. -->
-    <PencilModeToggle
-      :mode="pencilMode"
-      mobile
-      @update:mode="emit('update:pencilMode', $event)"
-    />
+    <PencilModeToggle v-model:mode="pencilMode" mobile />
 
     <!-- Board assists (T4-W8 ROW 2 + ROW 3) — twin of the sudoku panel's: the error-check mode +
          persistent candidates, one shared component, both games. -->
     <AssistSettings
       :error-check-mode="errorCheckMode"
-      :candidates-pinned="candidatesPinned"
+      v-model:candidates-pinned="candidatesPinned"
       mobile
       @update:error-check-mode="emit('update:errorCheckMode', $event)"
-      @update:candidates-pinned="emit('update:candidatesPinned', $event)"
     />
 
     <!-- Action buttons — UI-5: persistent sublabels in the pencil hand on coarse pointers. Deal
@@ -594,17 +592,13 @@ function onDifficultyChange(val: string | number) {
     <!-- LIVE zone — acts on the CURRENT board. -->
     <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); the
          desktop twin of the mobile mount above. One component, both games. -->
-    <PencilModeToggle
-      :mode="pencilMode"
-      @update:mode="emit('update:pencilMode', $event)"
-    />
+    <PencilModeToggle v-model:mode="pencilMode" />
 
     <!-- Board assists (T4-W8 ROW 2 + ROW 3) — the desktop twin of the mobile mount above. -->
     <AssistSettings
       :error-check-mode="errorCheckMode"
-      :candidates-pinned="candidatesPinned"
+      v-model:candidates-pinned="candidatesPinned"
       @update:error-check-mode="emit('update:errorCheckMode', $event)"
-      @update:candidates-pinned="emit('update:candidatesPinned', $event)"
     />
 
     <!-- Action buttons — hover washi for fine pointers, persistent sublabels on coarse
@@ -762,15 +756,18 @@ function onDifficultyChange(val: string | number) {
 
 /* Crayon color utilities — the difficulty heading's tier tone (twin of the sudoku panel's).
    The heading is the panel's own element, so these scoped rules reach it; the OptionSelector
-   option's `colorClass` is a child element in another scope (parity-latent, as in sudoku). */
+   option's `colorClass` is a child element in another scope (parity-latent, as in sudoku).
+   As light-mode heading text the raw wax fails AA (green 2.22 / orange 2.05 / rose 4.11 on
+   --color-card) — so the three tints read the ink tier (hue-locked, darkened to AA in light;
+   the ink aliases the wax in dark, where the crayon already glows AA). Gate 1, T4-W10. */
 .crayon-green {
-  color: var(--color-crayon-green);
+  color: var(--color-green-ink);
 }
 .crayon-orange {
-  color: var(--color-crayon-orange);
+  color: var(--color-orange-ink);
 }
 .crayon-rose {
-  color: var(--color-crayon-rose);
+  color: var(--color-red-ink);
 }
 
 /* .section-heading type register lives in assets/typography.css (@layer
@@ -936,9 +933,11 @@ function onDifficultyChange(val: string | number) {
   font-size: var(--type-caption);
   line-height: 1;
   letter-spacing: var(--type-tracking-wide);
+  /* T4-W10 gate 1: 60% graphite was 4.10:1 on --color-card (< AA 4.5); 68% clears it —
+     5.23:1 light / 6.06:1 dark. Still the quiet closed-tab value, one pressure step firmer. */
   color: color-mix(
     in srgb,
-    var(--color-pencil-graphite, var(--grid-line-color)) 60%,
+    var(--color-pencil-graphite, var(--grid-line-color)) 68%,
     transparent
   );
 }

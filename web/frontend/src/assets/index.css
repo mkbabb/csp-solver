@@ -162,6 +162,17 @@
   --color-gold-ink: #8c691d;
   --color-red-ink: #d02a52; /* teacher-red #E8315B hue-locked (346°), darkened to AA */
 
+  /* Difficulty-heading ink tier (T4-W10, a11y gate 1). The Difficulty section-heading
+     writes in the difficulty crayon (green/orange/rose), but the raw wax collapses on the
+     cream papers as light-mode heading text — measured green 2.22:1, orange 2.05:1, rose
+     4.11:1 on --color-card, all < AA 4.5:1. Keep the difficulty semantic, swap the LIGHT ink
+     to a hue-locked darkened tier (the exact move --color-red-ink already models for rose).
+     Measured on --color-card #fdfdfc: green-ink 4.95:1, orange-ink 4.91:1 (rose reuses
+     --color-red-ink 4.98:1). Dark collapses ink into wax below (the crayon already glows AA
+     at night — green 10.11:1, orange 10.26:1, rose 6.32:1). */
+  --color-green-ink: #1d7f35; /* crayon-green #2DC653 hue-locked (135°), darkened to AA */
+  --color-orange-ink: #a26009; /* crayon-orange #F4A236 hue-locked (34°), darkened to AA */
+
   /* Solver-ink rainbow — BOARD CONTENT ONLY (UI-10, T3-W9; F8 §3.2: never chrome, never a
      metadata tone). The solver's answers write in a five-hue rainbow gradient
      (#solver-ink, SvgFilters.vue); the old pastel wax washed to 1.22–1.81:1 on the cream
@@ -237,6 +248,48 @@
 
   /* Paper textures */
   --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.18'/%3E%3C/svg%3E");
+
+  /* §EASING — the house curve ledger, one custom property per distinct curve
+     (T4-W10). This is the CSS half of the TWO-LAYER easing rule: `<style>`-layer
+     consumers read these `--ease-*` vars; JS / `v-bind` consumers read the TS
+     `MOTION.curves` in pencilConfig.ts (the drawer's `drawerGlide` is the sole
+     v-bind curve and stays there — see the two-layer note beside MOTION.curves).
+     Curves are theme-invariant (identical light / dark), so they mint HERE in the
+     base @theme, never in the `.dark` override. Values are byte-preserved from the
+     literals they replace — this wave RE-POINTS references, it never re-times
+     (durations + control points unchanged at every consumer). Role names derive
+     from what the curve does, not its control points (census c1-easing.md).
+
+       token                easing              role                              sites
+       --ease-noteWrite     easeOutQuint        write-in / reveal / grow          10
+       --ease-standard      material standard   show-hide fade / slide            9 (1 dev)
+       --ease-springPop     backOut overshoot   icon / toggle pop                 6 (1 dev)
+       --ease-accelIn       easeInCubic         accelerate-away exit              4
+       --ease-fadeOut       easeIn flat-tail    solver-dim fade-out               3
+       --ease-ghostDraw     easeOutCubic        pencil-ghost glyph draw           2
+       --ease-drawOn        easeOutCubic'       pencil stroke draw-on / controls  2
+       --ease-loaderScrub   easeInOutCubic      loader continuous scrub           1
+       --ease-anticipatePop backInOut           anticipate + overshoot reveal     2
+       --ease-glassGlide    glass glide         answer-key laminate lay-down      2
+
+     --ease-accelIn: the spec's laminate gate names this `--ease-laminateLeave`,
+     but the curve is shared across the laminate leave, ScribbleLoader, and
+     DarkModeToggle — so it mints as ONE role token, not a laminate-scoped mis-name
+     (census C4 reconciliation).
+     --ease-glassGlide: the audit-4 monotone glass curve (zero overshoot), byte-
+     identical to MOTION.curves.drawerGlide (canonical TS home). Minted here so the
+     answer-key laminate's lay-down joins the one glass curve instead of the retired
+     overshoot spring (0.34, 1.56, 0.64, 1) it rode before this wave. */
+  --ease-noteWrite: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-springPop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-accelIn: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+  --ease-fadeOut: cubic-bezier(0.32, 0, 0.67, 0);
+  --ease-ghostDraw: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-drawOn: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-loaderScrub: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --ease-anticipatePop: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-glassGlide: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 /* Dark theme */
@@ -276,6 +329,10 @@
      (gold 11.48:1 on --color-background, rose 6.44:1; both hold on --color-card). */
   --color-gold-ink: var(--color-crayon-gold);
   --color-red-ink: var(--color-crayon-rose);
+  /* Difficulty-heading ink collapses into wax at night too (gate 1) — the dark crayon
+     already clears AA as heading text (green 10.11:1, orange 10.26:1 on --color-card). */
+  --color-green-ink: var(--color-crayon-green);
+  --color-orange-ink: var(--color-crayon-orange);
 
   /* Solver-ink keeps its pastel wax at night (UI-10): 10.1–15.0:1 on the dark papers —
      the paper darkens and the wax glows; only light mode needed the ink tier. */
@@ -539,7 +596,7 @@ html {
 
   /* Cell reveal with noise-staggered delay */
   .cell-reveal-animated {
-    animation: cell-reveal 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    animation: cell-reveal 0.3s var(--ease-anticipatePop);
     animation-delay: var(--reveal-delay, 0ms);
     animation-fill-mode: both;
   }
@@ -586,7 +643,7 @@ html {
 .pencil-draw-on {
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
-  animation: pencil-draw-on var(--draw-dur, 160ms) cubic-bezier(0.33, 1, 0.68, 1)
+  animation: pencil-draw-on var(--draw-dur, 160ms) var(--ease-drawOn)
     var(--draw-delay, 0ms) both;
 }
 

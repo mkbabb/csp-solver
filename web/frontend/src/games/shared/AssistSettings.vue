@@ -14,14 +14,20 @@
 import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
 import type { ErrorCheckMode } from "./useAssists";
 
+// T4-W10 idiom (§defineModel) — `candidatesPinned` adopts defineModel (c2-idiom.md §1 #3): the
+// runtime boolean↔'on'/'off' map is preserved (the `v === 'on'` write in onCandidatesChange +
+// the `? 'on' : 'off'` template read). `errorCheckMode` STAYS a manual prop+emit (§1a #2):
+// OptionSelector emits on every click and re-tapping "Ask" re-arms the on-demand snapshot on a
+// SAME value — defineModel's hasChanged guard would swallow that re-emit, killing the re-check.
+const candidatesPinned = defineModel<boolean>("candidatesPinned", {
+  required: true,
+});
 defineProps<{
   errorCheckMode: ErrorCheckMode;
-  candidatesPinned: boolean;
   mobile?: boolean;
 }>();
 const emit = defineEmits<{
   (e: "update:errorCheckMode", value: ErrorCheckMode): void;
-  (e: "update:candidatesPinned", value: boolean): void;
 }>();
 
 const CHECK_OPTIONS: { value: ErrorCheckMode; label: string }[] = [
@@ -38,7 +44,7 @@ function onCheckChange(v: string | number) {
   emit("update:errorCheckMode", v as ErrorCheckMode);
 }
 function onCandidatesChange(v: string | number) {
-  emit("update:candidatesPinned", v === "on");
+  candidatesPinned.value = v === "on";
 }
 </script>
 

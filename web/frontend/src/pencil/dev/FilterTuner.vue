@@ -614,10 +614,10 @@ const isModified = computed(() => {
 
 /* Slide transition */
 .tuner-slide-enter-active {
-  transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 250ms var(--ease-springPop);
 }
 .tuner-slide-leave-active {
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 200ms var(--ease-standard);
 }
 .tuner-slide-enter-from,
 .tuner-slide-leave-to {

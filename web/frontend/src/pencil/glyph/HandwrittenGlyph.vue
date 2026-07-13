@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, inject, onMounted, onUnmounted, watch } from "vue";
 import { getVariant, getAllVariants } from "./glyphRegistry";
 import {
   createGlyphDrawIn,
@@ -28,12 +28,16 @@ const props = defineProps<{
   position: number;
   boardSize: number;
   isHovered: boolean;
-  /** T3-W13 §4.1 — the flourish gate: the board's `celebrating` derivation, threaded
-   *  down board → cell → glyph. Beat-2's flourish crests only on a celebrating solve;
-   *  a hint rides the same reveal path but is a reveal, not a gold star. Optional so
-   *  chrome consumers (logo, futoshiki carets — never solved) are untouched. */
-  flourish?: boolean;
 }>();
+
+// T4-W10 idiom (§flourish) — the board's `celebrating` derivation reaches beat-2 by INJECT,
+// not a board→cell→glyph prop-drill: each board `provide('flourish', celebrating)`, and the
+// intermediate cell no longer declares a pass-through prop. Default `ref(false)` for the
+// non-board-descendant renderers (logo, dark-toggle — never provided). The FutoshikiCaret's
+// glyph IS a board descendant and DOES receive the ref, but its `:is-solved="false"` keeps
+// `scheduleFlourish` behind the `if (props.isSolved)` gate below — correctness rides that
+// gate, not on flourish being absent (c2-idiom.md §3).
+const flourish = inject("flourish", ref(false));
 
 // Stable TEMPLATE ref (never an inline `:ref="(el) => ..."` closure). This is the W8 task-4
 // discipline: the draw-in's dasharray reset (§ createGlyphDrawIn) is written imperatively to
@@ -228,7 +232,7 @@ function setupReveal() {
     // in and stops at the written glyph. The gated else still joins the murmur pool —
     // hinted ink IS solver ink, and it murmurs like any other.
     if (props.isSolved) {
-      if (props.flourish) scheduleFlourish();
+      if (flourish.value) scheduleFlourish();
       else registerForMurmur();
     }
     return;
