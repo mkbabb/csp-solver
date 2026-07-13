@@ -1,5 +1,6 @@
 <template>
     <button
+        ref="toggleRef"
         class="sun-moon-toggle"
         :class="{ 'is-dark': isDark, 'is-turning': turning }"
         @click="handleToggle"
@@ -197,8 +198,18 @@
          the beat with everything else — the page speaks one pose-stack grammar
          (grid, logo, outlines, moon: 4 poses on the beat). -->
         <div class="toggle-rest rest-sun" :class="{ 'is-active': !isDark }" aria-hidden="true">
+            <!-- T4-W1 baked poses: static <img> siblings, opacity-swapped on the beat -->
+            <img
+                v-for="(url, i) in sunBaked ? sunUrls : []"
+                :key="`sun-bmp-${i}`"
+                class="rest-pose"
+                :class="{ 'is-pose-active': i === sunFrame }"
+                :src="url"
+                alt=""
+            />
+            <!-- Fallback while baking: the live wobble-celestial stack -->
             <svg
-                v-for="(sparkles, i) in SPARKLE_POSES"
+                v-for="(sparkles, i) in sunBaked ? [] : SPARKLE_POSES"
                 :key="`sun-${i}`"
                 class="rest-pose"
                 :class="{ 'is-pose-active': i === sunFrame }"
@@ -257,8 +268,18 @@
         </div>
 
         <div class="toggle-rest rest-moon" :class="{ 'is-active': isDark }" aria-hidden="true">
+            <!-- T4-W1 baked poses: static <img> siblings, opacity-swapped on the beat -->
+            <img
+                v-for="(url, i) in moonBaked ? moonUrls : []"
+                :key="`moon-bmp-${i}`"
+                class="rest-pose"
+                :class="{ 'is-pose-active': i === starFrame }"
+                :src="url"
+                alt=""
+            />
+            <!-- Fallback while baking: the live wobble-celestial stack -->
             <svg
-                v-for="(stars, i) in STAR_POSES_D"
+                v-for="(stars, i) in moonBaked ? [] : STAR_POSES_D"
                 :key="`moon-${i}`"
                 class="rest-pose"
                 :class="{ 'is-pose-active': i === starFrame }"
@@ -310,10 +331,14 @@ import {
     wobbleDiamond,
     wobbleStarPolygon,
     usePrefersReducedMotion,
+    serializePoseSvg,
+    useRasterStack,
 } from "@mkbabb/pencil-boil";
+import { useElementSize } from "@vueuse/core";
 import { useTheme } from "@/composables/useTheme";
 import { YOSHI_COLORS, MOTION, wobblePoseId } from "@pencil/config/pencilConfig";
 import { useBoilBeat } from "@pencil/composables/boilBeat";
+import { readFilterDefs, bitmapsToUrls } from "@pencil/composables/rasterPose";
 
 const SUN = YOSHI_COLORS.celestial.sun;
 const MOON = YOSHI_COLORS.celestial.moon;
@@ -410,6 +435,106 @@ function twinklePose(frame: number, i: number): { transform: string } {
 const TWINKLE_BY_FRAME = Array.from({ length: 4 }, (_, f) =>
     [0, 1, 2].map((i) => twinklePose(f, i)),
 );
+
+// ── T4-W1: the rest-pose stacks baked to bitmaps (the WebKit cure) ──
+//
+// The rest poses (§below) are resident filtered <svg> siblings opacity-swapped on the beat
+// — the grid's anti-pattern in miniature. Capture each frozen pose to an ImageBitmap once
+// (useRasterStack) and opacity-swap static <img> siblings with the filter removed. The
+// wobble-celestial turbulence is userSpaceOnUse (coordinate-anchored) and every color is a
+// literal constant (sun gold, moon blue — theme-independent, so no theme re-bake), so the
+// bake is faithful; the twinkle CSS transform-origin is replicated in an inline <style>.
+// The Bloom's live warped instances stay UNTOUCHED. The live-filter <svg> stack is the
+// during-bake fallback (renders until the bitmaps resolve — no flash).
+const CELESTIAL_VB = 200;
+const toggleRef = ref<HTMLButtonElement | null>(null);
+const { width: toggleW } = useElementSize(toggleRef);
+const captureSize = computed(() => {
+    const s = Math.round(toggleW.value);
+    return s > 0 ? s : 96;
+});
+
+function celestialDefs(i: number): string {
+    return (
+        readFilterDefs(wobblePoseId("wobble-celestial", i)) +
+        "<style>.rest-twinkle{transform-origin:center}</style>"
+    );
+}
+
+function sunPoseSvg(i: number): string {
+    const rays = RAY_POSES[i];
+    const sparkles = SPARKLE_POSES[i];
+    const tw = TWINKLE_BY_FRAME[i];
+    const pid = wobblePoseId("wobble-celestial", i);
+    let body = `<g filter="url(#${pid})">`;
+    // Pin the filtered group's bbox to the 200×200 viewport so the objectBoundingBox
+    // filter region matches the live <svg filter> (turbulence is coordinate-anchored; this
+    // only keeps a tighter content bbox from clipping the displaced edge).
+    body += `<rect x="0" y="0" width="200" height="200" fill="none"/>`;
+    body += `<g transform="rotate(${RAY_ANGLES[i]} 100 100)">`;
+    body += `<polygon points="${rays.outerPoly}" fill="${SUN.body}" stroke="${SUN.body}" stroke-width="4" stroke-linejoin="round"/>`;
+    body += `<polygon points="${rays.innerPoly}" fill="none" stroke="${SUN.outline}" stroke-width="5" stroke-linejoin="round"/>`;
+    body += `</g>`;
+    body += `<circle cx="100" cy="100" r="48" fill="${SUN.core}" stroke="${SUN.outline}" stroke-width="6"/>`;
+    body += `<path d="${SUN_SPIRAL_D}" fill="none" stroke="${SUN.spiral}" stroke-width="9" stroke-linecap="round"/>`;
+    sparkles.forEach((pts, s) => {
+        body += `<g class="rest-twinkle" style="transform:${tw[s].transform}"><polygon points="${pts}" fill="${SUN.sparkle}" stroke="${SUN.sparkleStroke}" stroke-width="3" stroke-linejoin="round"/></g>`;
+    });
+    body += `<circle cx="30" cy="45" r="2" fill="${SUN.sparkle}"/>`;
+    body += `<circle cx="55" cy="170" r="2.5" fill="${SUN.sparkle}"/>`;
+    body += "</g>";
+    return serializePoseSvg({ width: CELESTIAL_VB, height: CELESTIAL_VB, defs: celestialDefs(i), body });
+}
+
+function moonPoseSvg(i: number): string {
+    const stars = STAR_POSES_D[i];
+    const tw = TWINKLE_BY_FRAME[i];
+    const pid = wobblePoseId("wobble-celestial", i);
+    let body = `<g filter="url(#${pid})">`;
+    body += `<rect x="0" y="0" width="200" height="200" fill="none"/>`;
+    body += `<path d="${MOON_BODY_D}" fill="${MOON.body}" stroke="${MOON.outline}" stroke-width="7" stroke-linejoin="round"/>`;
+    body += `<path d="${MOON_DETAIL_D}" fill="none" stroke="${MOON.outline}" stroke-width="3.5" stroke-linecap="round"/>`;
+    stars.forEach((pts, s) => {
+        body += `<g class="rest-twinkle" style="transform:${tw[s].transform}"><polygon points="${pts}" fill="${MOON.body}" stroke="${MOON.body}" stroke-width="2" stroke-linejoin="round"/></g>`;
+    });
+    body += `<circle cx="120" cy="30" r="2" fill="${MOON.star}"/>`;
+    body += `<circle cx="185" cy="35" r="2.5" fill="${MOON.star}"/>`;
+    body += `<circle cx="155" cy="75" r="1.5" fill="${MOON.star}"/>`;
+    body += "</g>";
+    return serializePoseSvg({ width: CELESTIAL_VB, height: CELESTIAL_VB, defs: celestialDefs(i), body });
+}
+
+const sunRaster = useRasterStack(() => ({
+    cacheKey: "celestial-sun",
+    poseCount: 4,
+    poseSvg: sunPoseSvg,
+    cssSize: { width: captureSize.value, height: captureSize.value },
+}));
+const moonRaster = useRasterStack(() => ({
+    cacheKey: "celestial-moon",
+    poseCount: 4,
+    poseSvg: moonPoseSvg,
+    cssSize: { width: captureSize.value, height: captureSize.value },
+}));
+
+const sunUrls = ref<string[]>([]);
+const moonUrls = ref<string[]>([]);
+watch(
+    () => sunRaster.bitmaps.value,
+    (b) => {
+        sunUrls.value = bitmapsToUrls(b);
+    },
+    { immediate: true },
+);
+watch(
+    () => moonRaster.bitmaps.value,
+    (b) => {
+        moonUrls.value = bitmapsToUrls(b);
+    },
+    { immediate: true },
+);
+const sunBaked = computed(() => sunUrls.value.length === 4);
+const moonBaked = computed(() => moonUrls.value.length === 4);
 
 // Dusk ease (T3-W10 keep, re-anchored): html.theme-turning goes on AT click, the theme
 // flip included — body + the paper sheets ease colors ~350ms instead of snapping

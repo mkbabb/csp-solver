@@ -145,17 +145,27 @@ function murmurWiggleOnce() {
         try { celebrationAnim.stop(); } catch { /* ignore */ }
         celebrationAnim = null;
     }
-    celebrationAnim = createGlyphFlourish(
+    // Grain-hoist, murmur window (T4-W1 §murmur — full-viewport damage killed): drop
+    // grain-static for the 600ms wiggle, exactly the draw-in discipline at :175. Every
+    // `d` swap on a grain-filtered path forces a per-frame filter re-raster whose damage
+    // rect, unclipped, spanned the whole viewport (4.8 full-viewport Paints/s on every
+    // solved board); the `.glyph-svg`'s `contain: paint` now clips whatever remains to
+    // the ~40×56 cell box. The tooth lands back on the settled stroke on completion.
+    const anim = createGlyphFlourish(
         pathRef.value,
         variants.map((v) => v.d),
         glyph.value.d,
         {
             cycles: 1,
             cycleDurationMs: GLYPH_ANIM.hoverWiggleDuration,
-            onDone: () => { celebrationAnim = null; },
+            onDone: () => { celebrationAnim = null; grainOn.value = true; },
         },
     );
-    celebrationAnim?.play();
+    // PRM (or <2 variants) yields no handle — never leave the tooth off in that case.
+    if (!anim) { grainOn.value = true; return; }
+    grainOn.value = false;
+    celebrationAnim = anim;
+    anim.play();
 }
 
 function setupReveal() {
@@ -248,6 +258,9 @@ watch(
             if (celebrationAnim) {
                 try { celebrationAnim.stop(); } catch { /* ignore */ }
                 celebrationAnim = null;
+                // A stopped murmur never fires onDone (it drops grain for its window) —
+                // restore the tooth so an override mid-wiggle doesn't strand grain off.
+                grainOn.value = true;
             }
             unregisterFromMurmur();
         }
@@ -300,5 +313,12 @@ onUnmounted(() => {
     position: absolute;
     inset: 0;
     margin: auto;
+    /* Layer-isolate the glyph (T4-W1 §murmur): `contain: paint` bounds the murmur's
+       per-frame `d`-swap invalidation to this ~40×56 box instead of promoting damage
+       to the root layer (the 4.8 full-viewport Paints/s that dragged every solved
+       board). The glyph never paints outside its own viewBox, so nothing visible is
+       lost; the celebration star/heart/crest render at board level (CompletionVignette,
+       CelebrationHeart), never inside this SVG, so the containment can't clip them. */
+    contain: paint;
 }
 </style>

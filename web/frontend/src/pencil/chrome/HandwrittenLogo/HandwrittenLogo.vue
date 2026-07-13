@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { usePrefersReducedMotion } from '@mkbabb/pencil-boil'
+import { usePrefersReducedMotion, serializePoseSvg, useRasterStack } from '@mkbabb/pencil-boil'
+import { useElementSize } from '@vueuse/core'
 import { useTheme } from '@/composables/useTheme'
 import {
     FILTER_PRESETS,
@@ -10,6 +11,8 @@ import {
     wobblePoseId,
 } from '@pencil/config/pencilConfig'
 import { useBeatFrame } from '@pencil/composables/boilBeat'
+import { readFilterDefs, resolveCssValue, bitmapsToUrls } from '@pencil/composables/rasterPose'
+import frauncesInline from '@/assets/fonts/fraunces-subset.woff2?inline'
 import HandwrittenGlyph from '@pencil/glyph/HandwrittenGlyph.vue'
 import HandDrawnOutline from '@pencil/grid/HandDrawnOutline.vue'
 import { ghostUnderline, scribbleUnderline } from '@pencil/chrome/OptionSelector/scribbleUnderline'
@@ -138,6 +141,62 @@ watch(
         measure()
     },
 )
+
+// ── T4-W1: the wordmark poses baked to bitmaps (the WebKit cure) ──
+//
+// The wordmark rides a resident #wobble-logo-p{i} pose stack opacity-swapped on the beat.
+// Capture each frozen pose to an ImageBitmap once (useRasterStack) and opacity-swap static
+// <image> siblings with the filter removed. A DETACHED SVG blob cannot reach the page's
+// loaded @font-face, so the Fraunces subset is embedded (?inline) into each pose's <style>;
+// the ink color resolves to a literal at capture. Re-bake fires on the label (game swap),
+// the measured viewBox width, theme (ink), and DPR. The measuring <text> (template,
+// invisible) keeps getBBox alive once the poses are baked, so the variable-width box still
+// sizes on a swap. The live-filter stack is the during-bake fallback; useRasterStack awaits
+// document.fonts.ready before the first bake, so the page face is in before the wordmark
+// bakes.
+const logoSvgRef = ref<SVGSVGElement | null>(null)
+const { width: logoW, height: logoH } = useElementSize(logoSvgRef)
+
+const FONT_FACE = `@font-face{font-family:'FrauncesBake';font-style:normal;font-weight:100 900;src:url('${frauncesInline}') format('woff2');}`
+
+function escapeXml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function logoPoseSvg(f: number): string {
+    const pid = logoPoseIds.value[f]
+    const ink = resolveCssValue(logoSvgRef.value, 'color', '#1a1a1a')
+    const w = vbWidth.value
+    const defs =
+        readFilterDefs(pid) +
+        `<style>${FONT_FACE}text{font-family:'FrauncesBake',Georgia,serif;` +
+        `font-weight:900;font-size:52px;letter-spacing:0.02em;font-optical-sizing:auto;` +
+        `fill:${ink};}</style>`
+    const body = `<g filter="url(#${pid})"><text x="4" y="48" text-anchor="start">${escapeXml(label.value)}</text></g>`
+    return serializePoseSvg({ width: w, height: 60, viewBox: `0 0 ${w} 60`, defs, body })
+}
+
+const logoRaster = useRasterStack(() => ({
+    cacheKey: `logo-${label.value}-${isDark.value ? 'd' : 'l'}-${vbWidth.value}`,
+    poseCount: logoPoseIds.value.length,
+    poseSvg: logoPoseSvg,
+    cssSize: {
+        width: Math.round(logoW.value) || Math.round((vbWidth.value / 60) * 72),
+        height: Math.round(logoH.value) || 72,
+    },
+}))
+
+const logoUrls = ref<string[]>([])
+watch(
+    () => logoRaster.bitmaps.value,
+    (b) => {
+        logoUrls.value = bitmapsToUrls(b)
+    },
+    { immediate: true },
+)
+const logoBaked = computed(
+    () => logoUrls.value.length > 0 && logoUrls.value.length === logoPoseIds.value.length,
+)
 </script>
 
 <template>
@@ -155,28 +214,48 @@ watch(
             @pointerleave="hovered = false"
         >
             <svg
+                ref="logoSvgRef"
                 class="handwritten-logo"
                 :class="{ 'is-drawn': isDrawn }"
                 :viewBox="`0 0 ${vbWidth} 60`"
                 xmlns="http://www.w3.org/2000/svg"
                 aria-hidden="true"
             >
-                <!-- T3-W13 §1-P3: the pose stack. Geometry + filter are STATIC per
-                     sibling; only `is-active` (opacity) flips on the beat. -->
+                <!-- Measuring text: always present (unfiltered, invisible) so getBBox can
+                     size the variable-width viewBox even once the poses are baked. -->
+                <text
+                    :ref="setTextRef"
+                    class="logo-text logo-measure"
+                    x="4"
+                    y="48"
+                    text-anchor="start"
+                >{{ label }}</text>
+                <!-- T4-W1 baked poses: static <image> siblings of the captured bitmaps,
+                     opacity-swapped on the beat (no filter, no per-beat raster). -->
+                <template v-if="logoBaked">
+                    <image
+                        v-for="(url, f) in logoUrls"
+                        :key="`lg-${f}`"
+                        class="logo-pose-bmp"
+                        :class="{ 'is-active': logoPose === f }"
+                        :href="url"
+                        x="0"
+                        y="0"
+                        :width="vbWidth"
+                        height="60"
+                        preserveAspectRatio="none"
+                    />
+                </template>
+                <!-- Fallback while baking: the live #wobble-logo-p{i} pose stack
+                     (T3-W13 §1-P3). One raster per appearance — no startup flash. -->
                 <g
-                    v-for="(pid, f) in logoPoseIds"
+                    v-for="(pid, f) in logoBaked ? [] : logoPoseIds"
                     :key="pid"
                     class="logo-pose"
                     :class="{ 'is-active': logoPose === f }"
                     :filter="`url(#${pid})`"
                 >
-                    <text
-                        :ref="f === 0 ? setTextRef : undefined"
-                        class="logo-text"
-                        x="4"
-                        y="48"
-                        text-anchor="start"
-                    >{{ label }}</text>
+                    <text class="logo-text" x="4" y="48" text-anchor="start">{{ label }}</text>
                 </g>
             </svg>
             <span class="logo-caret" :class="{ 'is-open': isOpen }" aria-hidden="true">
@@ -297,6 +376,24 @@ watch(
 
 .logo-pose.is-active {
     opacity: 1;
+}
+
+/* T4-W1 baked poses: the same opacity-swap discipline on static <image> siblings (filter
+   removed) — the flip is compositor-only, no raster recurs. */
+.logo-pose-bmp {
+    opacity: 0;
+    will-change: opacity;
+}
+
+.logo-pose-bmp.is-active {
+    opacity: 1;
+}
+
+/* The measuring text is invisible — it exists only to keep getBBox alive for the
+   variable-width viewBox once the poses are baked (it never carries the filter). */
+.logo-measure {
+    opacity: 0;
+    pointer-events: none;
 }
 
 .logo-text {

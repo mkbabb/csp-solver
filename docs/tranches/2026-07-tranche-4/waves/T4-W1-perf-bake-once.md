@@ -127,3 +127,25 @@ Every visual claim in this wave carries both (this wave *defines* the golden-cro
 
 ---
 **ADDENDUM (pre-exec perf audit, 2026-07-12)**: see README §7 — the rows stamped to this wave are binding scope; evidence at ../evidence/perf/.
+
+---
+## Execution record (2026-07-13)
+
+Workflow `wf_75896b9d-43c`, 7 lanes, all green. pencil-boil 0.9.0 cut at `e792de6`, tag `v0.9.0`; **the release pipeline itself was healed in-wave** — the `NPM_TOKEN` Actions secret had NEVER existed (0.8.0/0.8.1 release runs failed ENEEDAUTH silently; both reached npm by manual owner publish); the secret was provisioned from the owner's local token, run 29220994626 re-ran to success, `npm view` reads 0.9.0. The app consumes the registry package (`^0.9.0`, symlink dissolved at seal).
+
+| Gate | Born-RED | Close |
+|---|---|---|
+| webkit-cpu | ~208% top-interval (~2 cores) | **16.4% total-page (4 pids)** at DPR2 idle — 12.7×; the forcelive A/B control reads 724% pcpu on the same build, proving the residue isn't filter re-raster |
+| webkit-fps | 9.9 isolated / 4.6 loaded | **98.1 fps, rafP95 12 ms, jank100 = 0** — measured twice (loadavg 15.2 under workflow load, 10.2 ambient-only): load-insensitive at this margin; the 60 floor passes a fortiori |
+| browser-proof | no harness existed | `proof:browser` Playwright lane in pencil-boil CI, both engines at DPR2: untainted + repeatMatch + distinct-per-pose + SSIM floor; deliberate dropped-def REDS the lane (recorded) |
+| identity-floor | WebKit capture≠live 93.6% exact | chromium SSIM 1.0000/100% exact; webkit 0.9876–0.9890, ~97.2% exact, maxΔ21 — all ≥0.98, per-engine capture, no cross-engine gate |
+| chromium-residue | 8.0 RasterTask/s | **0.08/s** (N-layer bitmap variant; single-canvas forbidden and not shipped) |
+| murmur-damage | 4.8 full-viewport Paints/s, five 1440×900 heavy grain clips | **QUALIFIED-GREEN**: the D3 disease is dead — grain drops for the wiggle window (`grainOn=false`, restore onDone) + `contain:paint` clips real work to 56×56/0.01 ms cell paints; residual ~2.7/s **0.069 ms** root-layer bookkeeping records persist (nocontain A/B identical — they're not the murmur's grain). Literal zero needs per-cell compositor promotion (81 layers) for 0.19 ms/s — REJECTED as anti-perf. Celebration renders whole (vignette/star/heart unclipped) |
+| forked-reunify | `f*997` vs `f*1013` dual path | `gridPaths` calls `boilLineFrames`, ONE stride (the library's); BoilDivider rides the same stride — sub-visual shift on a 531×31 stroke, ACCEPTED (one-stride mandate; T3's 0.9752 divider exception precedent; B5 owner captures at gate) |
+| preload | 2 wasm fetches + warning; both workers preloaded | 1 wasm fetch on the streaming happy path, no warning; only the active game's worker modulepreloaded |
+| proofs | boilHoldGate zero-proofed; alias doc lied | 126 Node assertions green (raster-serialize 10, hold 20, prebake +8, celestial +10); `useBoilFrame` alias DROPPED |
+| release-flow | fictional changesets prose | `.changeset/` deleted; honest flow documented (bump + tag push → release.yml publish); README re-trued to the 0.8.1 parked-scheduler Stage 3 |
+| w8-chunk (D7) | 2 closes, undecided | **RETIRED-WITH-MEASUREMENT**: the bake IS async off the mount burst, but the fallback grid geometry keeps cold mount at 89 ms@1× / 355 ms@4× — banked as the do-not-reopen-without-mid-device-trace rationale. D4 GPU-tile: VERIFIED superseded (0.08/s) |
+| parity | — | full e2e 47/47; grid/logo/toggle baked; every other boil surface untouched; PRM parity holds |
+
+Evidence: `../evidence/w1/` (gates.md, crops, recipes). Seal notes: goldens re-baselined post-bake under W2's review flow (logo, crest — reviewed diffs, identity-floor-covered); the golden settle is baked-aware (`image.boil-frame-bitmap.is-active`). Shared-file riders: `package.json`/`package-lock.json` land here carrying W2's vitest devDeps + W3's PWA removal; `vite.config.ts` lands with W3 carrying this wave's headHints preload fix.

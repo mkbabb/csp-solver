@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
-import { heldFrameCount } from "@mkbabb/pencil-boil";
+import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
+import { useElementSize } from "@vueuse/core";
 import { generateGridBoilFrames } from "../gridPaths";
 import { BOIL_CONFIG, beatsFor } from "@pencil/config/pencilConfig";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
+import { readFilterDefs, resolveCssValue, bitmapsToUrls } from "@pencil/composables/rasterPose";
+import { useTheme } from "@/composables/useTheme";
 import { usePathAnimation } from "./usePathAnimation";
 import type { AnimationState } from "@pencil/types";
 
@@ -87,6 +90,68 @@ function pathsForFrame(f: number) {
 const steadyFrames = computed(() =>
     Array.from({ length: BOIL_CONFIG.frameCount }, (_, f) => pathsForFrame(f)),
 );
+
+// ── T4-W1: the steady poses baked to bitmaps (the WebKit cure) ──
+//
+// The `grain-static` siblings above re-rasterize the whole filter chain on every opacity
+// flip in WebKit (~150–224 ms board-area raster per beat, ~2 cores at idle). Capture each
+// frozen pose to an ImageBitmap ONCE (useRasterStack) and opacity-swap static <image>
+// siblings — no filter re-executes at steady state in either engine, and Chromium's
+// residual ~8/s tile churn zeroes with it. The live-filter <g> stack (template §fallback)
+// renders until the bitmaps resolve, so the swap never flashes and the mount's synchronous
+// burst is never blocked (the bake is async — the old W8 mount-chunking concern folds into
+// this path). Re-bake fires on DPR (useRasterStack's matchMedia), theme flip (the cacheKey
+// token, masked by the toggle's Bloom), and container resize (useElementSize).
+const { isDark } = useTheme();
+const { width: hostW, height: hostH } = useElementSize(svgRef);
+
+// The grid renders as a centered square (preserveAspectRatio meet), so capture a SQUARE
+// bitmap at the rendered side — displaying it back at width=height=1000 can't squash it.
+// Quantized to 4px so a drag-resize doesn't thrash the bake.
+const captureSide = computed(() => {
+    const s = Math.min(hostW.value, hostH.value);
+    return s > 0 ? Math.round(s / 4) * 4 : 620;
+});
+
+function gridPoseSvg(pose: number): string {
+    const color = resolveCssValue(svgRef.value, "--grid-line-color", "#262626");
+    const defs = readFilterDefs("grain-static");
+    const paths = steadyFrames.value[pose];
+    const stroke = (d: string, w: number, op: number, join = false): string =>
+        `<path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" ` +
+        `stroke-opacity="${op}" stroke-linecap="round"` +
+        (join ? ' stroke-linejoin="round"' : "") +
+        "/>";
+    let body = '<g filter="url(#grain-static)">';
+    body += stroke(paths.frame, 12, 0.95, true);
+    for (const d of paths.subgridLines) body += stroke(d, 8, 0.9);
+    for (const d of paths.cellLines) body += stroke(d, 5, 0.7);
+    body += "</g>";
+    return serializePoseSvg({ width: VIEWBOX_SIZE, height: VIEWBOX_SIZE, defs, body });
+}
+
+const gridRaster = useRasterStack(() => ({
+    // The theme token separates light/dark bitmaps in the shared cache and re-bakes on a
+    // flip; the literal stroke color is read fresh in gridPoseSvg at capture time (the grid
+    // line color snaps with the theme class — no transition to catch mid-tween).
+    cacheKey: `grid-${props.boardSize}-${props.subgridSize}-${isDark.value ? "d" : "l"}`,
+    poseCount: BOIL_CONFIG.frameCount,
+    poseSvg: gridPoseSvg,
+    cssSize: { width: captureSide.value, height: captureSide.value },
+}));
+
+// ImageBitmap → data-URL once per bake; the urls back static <image> siblings (opacity
+// flips only — no per-beat drawImage). Empty while a (re-)bake is in flight, so the
+// fallback <g> stack holds the surface until the swap is ready.
+const bitmapUrls = ref<string[]>([]);
+watch(
+    () => gridRaster.bitmaps.value,
+    (bmps) => {
+        bitmapUrls.value = bitmapsToUrls(bmps);
+    },
+    { immediate: true },
+);
+const showBaked = computed(() => bitmapUrls.value.length === BOIL_CONFIG.frameCount);
 
 const showTransitionLayer = computed(() => props.animState !== "drawn");
 const showSteadyLayers = computed(() => props.animState === "drawn");
@@ -198,11 +263,32 @@ onUnmounted(() => {
              tick, a compositor-stage change that never invalidates a sibling's own
              SourceGraphic. Rendered only while 'drawn' (see showSteadyLayers). -->
         <template v-if="showSteadyLayers">
+            <!-- T4-W1 baked poses: static <image> siblings of the captured bitmaps,
+                 opacity-swapped on the beat. No filter, no per-beat raster — the WebKit
+                 re-raster and Chromium's tile churn both go to zero. -->
+            <template v-if="showBaked">
+                <image
+                    v-for="(url, f) in bitmapUrls"
+                    :key="'bmp-' + f"
+                    class="boil-frame-bitmap"
+                    :class="{ 'is-active': boilFrame === f }"
+                    :href="url"
+                    x="0"
+                    y="0"
+                    :width="VIEWBOX_SIZE"
+                    :height="VIEWBOX_SIZE"
+                    preserveAspectRatio="xMidYMid meet"
+                />
+            </template>
+            <!-- The live grain-static stack stays mounted: it is the during-bake fallback
+                 AND the print surface (@media print blackens its .grid-line strokes, which
+                 a baked bitmap can't take). Once baked it is display:none on screen
+                 (baked-hidden) so no filter ever rasters at steady state. -->
             <g
                 v-for="(paths, f) in steadyFrames"
                 :key="'boil-' + f"
                 class="boil-frame-layer"
-                :class="{ 'is-active': boilFrame === f }"
+                :class="{ 'is-active': boilFrame === f, 'baked-hidden': showBaked }"
                 filter="url(#grain-static)"
             >
                 <path
@@ -264,5 +350,33 @@ onUnmounted(() => {
 
 .boil-frame-layer.is-active {
     opacity: 1;
+}
+
+/* T4-W1 baked poses: the same opacity-swap discipline, but each sibling is a static
+   <image> of the captured bitmap (filter removed) — the flip is a compositor-only blend
+   and no raster ever recurs. */
+.boil-frame-bitmap {
+    opacity: 0;
+    will-change: opacity;
+}
+
+.boil-frame-bitmap.is-active {
+    opacity: 1;
+}
+
+/* Once baked, the live-filter stack stops rendering on screen (display:none → the filter
+   never rasters at steady state); the bitmaps hold the surface. */
+@media screen {
+    .boil-frame-layer.baked-hidden {
+        display: none;
+    }
+}
+
+/* Print takes the vector filter stack (its .grid-line strokes blacken under @media print)
+   and drops the baked bitmaps — a static one-shot render, no perf concern. */
+@media print {
+    .boil-frame-bitmap {
+        display: none;
+    }
 }
 </style>

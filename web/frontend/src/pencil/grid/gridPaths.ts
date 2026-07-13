@@ -10,6 +10,7 @@ import {
     wobbleRect,
     pointsToLinear,
     perturbPoints,
+    boilLineFrames,
     useBoilCache,
 } from "@mkbabb/pencil-boil";
 import type { GrainConfig } from "../config/pencilConfig";
@@ -434,6 +435,17 @@ export function generateLineBoilFrames(
     grain?: GrainConfig,
 ): string[] {
     const safeFrameCount = Math.max(2, Math.floor(frameCount));
+    // FAM-5 reunify (T4-W1): the ungrained boil-frame loop was line-identical to the
+    // library's `boilLineFrames` bar the frame-seed stride — the app hand-rolled
+    // `pathSeed + f*997`, the library (0.7.0 hoist) `seed + f*1013`. The fork drifted;
+    // adopt the library helper and its single stride. Grain baking has no library
+    // equivalent (it folds a noise field into the point IR before serialization), so the
+    // grain branch keeps its points loop — reconciled to the SAME 1013 stride so exactly
+    // one stride survives in the tree (no dual path). No caller passes `grain` today; the
+    // branch is the byte-faithful fallback the divider-class surfaces reserve.
+    if (!grain) {
+        return boilLineFrames(x1, y1, x2, y2, safeFrameCount, boilAmount, opts);
+    }
     const pathSeed = opts.seed ?? 42;
     const basePoints = wobbleLinePoints(x1, y1, x2, y2, opts);
     const frames: string[] = [];
@@ -441,8 +453,8 @@ export function generateLineBoilFrames(
         let pts =
             f === 0
                 ? basePoints
-                : perturbPoints(basePoints, x1, y1, x2, y2, boilAmount, pathSeed + f * 997);
-        if (grain) pts = bakeGrainPoints(pts, grain, grainFrameSeed(grain, pathSeed, f));
+                : perturbPoints(basePoints, x1, y1, x2, y2, boilAmount, pathSeed + f * 1013);
+        pts = bakeGrainPoints(pts, grain, grainFrameSeed(grain, pathSeed, f));
         frames.push(pointsToLinear(pts));
     }
     return frames;
@@ -485,30 +497,10 @@ export function generateGridBoilFrames(
             const frameXPad = 12;
             const frameYPad = 0;
 
-            function lineBoilFrames(
-                x1: number,
-                y1: number,
-                x2: number,
-                y2: number,
-                opts: WobbleOptions,
-                boilAmount: number,
-            ): string[] {
-                const basePoints = wobbleLinePoints(x1, y1, x2, y2, opts);
-                const frames: string[] = [pointsToLinear(basePoints)];
-                for (let f = 1; f < safeFrameCount; f++) {
-                    const perturbed = perturbPoints(
-                        basePoints,
-                        x1,
-                        y1,
-                        x2,
-                        y2,
-                        boilAmount,
-                        (opts.seed ?? 42) + f * 997,
-                    );
-                    frames.push(pointsToLinear(perturbed));
-                }
-                return frames;
-            }
+            // FAM-5 reunify (T4-W1): the grid's subgrid/cell lines rode a hand-rolled
+            // copy of the library boil-frame loop at the drifted `+ f*997` stride. It now
+            // calls `boilLineFrames` directly (single `+ f*1013` stride, no dual path) —
+            // a mandated pixel change on the grid geometry, gated by the ≥0.98 soul gate.
 
             const frame = generateRectBoilFrames(
                 frameXPad,
@@ -539,13 +531,14 @@ export function generateGridBoilFrames(
                     seed: baseSeed + seedOffset++,
                     jagged: true,
                 };
-                const frames = lineBoilFrames(
+                const frames = boilLineFrames(
                     x,
                     pad,
                     x,
                     viewBoxSize - pad,
-                    opts,
+                    safeFrameCount,
                     isSubgrid ? subgridBoil : cellBoil,
+                    opts,
                 );
                 if (isSubgrid) subgridLines.push(frames);
                 else cellLines.push(frames);
@@ -561,13 +554,14 @@ export function generateGridBoilFrames(
                     seed: baseSeed + seedOffset++,
                     jagged: true,
                 };
-                const frames = lineBoilFrames(
+                const frames = boilLineFrames(
                     pad,
                     y,
                     viewBoxSize - pad,
                     y,
-                    opts,
+                    safeFrameCount,
                     isSubgrid ? subgridBoil : cellBoil,
+                    opts,
                 );
                 if (isSubgrid) subgridLines.push(frames);
                 else cellLines.push(frames);
