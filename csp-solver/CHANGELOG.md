@@ -14,6 +14,36 @@ general-purpose `csp_solver::assignment()` / `AssignmentBuilder` surface morph
 was built on stays here; `morph` now consumes it as an ordinary crates.io
 dependency (`csp-solver = "0.2"`).
 
+## 0.6.0 — 2026-07-15
+
+_Crate published to crates.io. This is the release that carries the five-family
+surface: `0.5.0`'s tarball predates it (the puzzle-class work landed after that
+bump), so `0.6.0` is the first published version where source and registry
+agree. The Python wheel version joins at `0.6.0` (it had lagged at `0.4.0`).
+The wasm npm tarball still stays at `0.2.0`—the frontend file-links the lean
+build._
+
+### crates.io
+
+- **`csp-solver@0.5.0 → 0.6.0`**—the five-family generation surface:
+  - `puzzles::class`—the `PuzzleClass` trait (five seams: `seed_solution`,
+    `place_clues`, `solve_candidate`, `target_holes`, `assemble`) and the
+    generic `generate_by_digging<C>` dealer; every family generates through one
+    hole-digging path. `SimpleRng` is now `pub` (additive).
+  - `puzzles::{thermo,killer,kenken}`—three new native families:
+    `create_thermo_csp` (strict-increase tube chains as binary less-than),
+    `create_killer_csp` (cage sums + per-cage AllDifferent), `create_kenken_csp`
+    (boxless Latin square, `+ − × ÷` cage targets), each with its `generate_*`
+    dealer and uniqueness proven under `max_solutions = 2`.
+  - **`CageSum` / `CageProduct`**—two n-ary bounds-consistent propagators as
+    first-class `ConstraintEnum` variants (an fn-pointer value seam keeps the
+    enum domain-generic), reached through `Csp::add_cage_sum` /
+    `add_cage_product`. Real pruning, not lambda fallbacks: search-node drops of
+    −77% (Killer 9×9) and −78% (KenKen 6×6) against the lambda encoding,
+    identical solution sets, 2×2000-iteration randomized soundness oracles.
+  - Sudoku and Futoshiki are untouched; Thermo, Killer, and KenKen add no engine
+    constraints beyond the two cage propagators.
+
 ## 0.5.0 — 2026-07-13
 
 _Crate published to crates.io. The wasm bump is source-only; the npm tarball
