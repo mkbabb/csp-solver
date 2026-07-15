@@ -1,7 +1,7 @@
 """Type stubs for the csp_solver PyO3 extension module.
 
-Hand-written against the post-prune (tranche-III) surface: futoshiki bindings
-and caller-dead symbols pruned. maturin auto-detects this root `csp_solver.pyi`
+Hand-written against the current pruned surface: futoshiki bindings and
+caller-dead symbols pruned. maturin auto-detects this root `csp_solver.pyi`
 (module-name == stub stem) and ships it as `csp_solver/__init__.pyi` alongside
 an auto-added `py.typed` — no `[tool.maturin]` config, no Cargo change.
 

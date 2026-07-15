@@ -1,6 +1,24 @@
 # Changelog
 
-## 0.4.0 — 2026-07-10 (tranche-3 — dead-surface excision)
+The npm registry carries this package through `0.2.0`. The `0.4.0` and `0.5.0`
+bumps below are source-only version stamps: the frontend file-links the lean
+build (`file:../../csp-solver/wasm/pkg`), so no tarball was published for them.
+
+## 0.5.0 — 2026-07-13 (futoshiki difficulty axis)
+
+_Source-only; the npm registry stays at `0.2.0`._
+
+- **BREAKING — `generateFutoshiki` gains a `difficulty` argument.**
+  `generateFutoshiki(boardSize, seed)` → `generateFutoshiki(boardSize,
+  difficulty, seed)`, mirroring `generateSudoku(n, difficulty, seed)`. New
+  `FutoshikiDifficulty` (`Easy`/`Medium`/`Hard`) enum export; the frontend Worker
+  call-site updates alongside. Tracks `csp-solver@0.5.0`.
+- Version stamped `0.4.0 → 0.5.0`: the minor bump encodes the breaking signature
+  change across the 0.x slot and tracks the core crate's `0.5.0` surface.
+
+## 0.4.0 — 2026-07-10 (dead-surface excision)
+
+_Source-only; the npm registry stays at `0.2.0`._
 
 - **BREAKING — `isomorphic` / `full-mirror` excised.** The `full-mirror` feature
   and its `isomorphic` module are removed; the published `.d.ts` drops `Csp`,
@@ -16,7 +34,7 @@
   across the 0.x slot and realigns the package to the core crate's `0.4.0`
   surface (it had lagged the core through 0.3.0).
 
-## 0.2.0 — 2026-07-06 (grand-uplift tranche)
+## 0.2.0 — 2026-07-06 (split surface)
 
 - **Split surface, four layers** (`src/lib.rs`): `sudoku` + `futoshiki` always
   compiled (the lean deploy artifact under `--no-default-features`),
@@ -38,7 +56,8 @@
   `FailFirst`.
 - **Package identity** `@mkbabb/csp-solver-wasm`; hardened difficulty-parity
   contract tests (`wasm/src/sudoku.rs::SudokuDifficulty` idiomatic-casing case);
-  `wasm-pack ≥ 0.14` build floor, lean artifact under a ≤93 KB twiggy budget.
+  `wasm-pack ≥ 0.14` build floor, lean two-game artifact under its ≤93 KB twiggy
+  budget (the band at `0.2.0`; the five-game band is now 127,500 B).
 
 ## 0.1.0 — Initial scaffold + isomorphic Csp/SolveConfig/enums mirror
 

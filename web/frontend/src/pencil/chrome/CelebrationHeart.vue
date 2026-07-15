@@ -46,7 +46,7 @@ let murmurEndTimer: ReturnType<typeof setTimeout> | null = null;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
-/** The reciprocal-axis squash IS the entire Yoshi bounce (F7 §3.2):
+/** The reciprocal-axis squash IS the entire plush bounce (F7 §3.2):
  *  grow 0 → (1.15, 0.92) wide-and-squashed, rebound to (0.97, 1.02) tall,
  *  settle at 1 — an overall scale 0 → ~1.12 → 1 read, nothing snaps. */
 function bounceTransform(p: number): string {

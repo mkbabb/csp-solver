@@ -53,7 +53,7 @@
             :stroke="SUN.outline"
             stroke-width="6"
           />
-          <!-- Golden spiral — Yoshi's Story style. S1: terminal curls (not bars) and the
+          <!-- Golden spiral — felt-craft mascot style. S1: terminal curls (not bars) and the
                    outer coil ends short of the disc edge, sw 10→9. Color is the rays gold
                    (S2 reverted by the 2026-07-11 owner audit — the hue pop carries it). -->
           <path
@@ -596,8 +596,8 @@ const moonBaked = computed(() => moonUrls.value.length === 4);
 // (index.css). One timeout, no clock machinery. Under PRM the flip stands alone and
 // page colors snap (the index.css rule is no-preference-gated besides).
 //
-// `turning` (T3-W13 §2 re-cut): the ~1010ms Bloom window. It gates the two Yoshi
-// accents (the button squash, the plush-flex tail) AND the §1-P3 interlock — while it
+// `turning`: the ~1010ms Bloom window. It gates the two plush accents
+// (the button squash, the plush-flex tail) AND the §1-P3 interlock — while it
 // is up the live warped instances hold the stage and the frozen rest stacks yield;
 // at settle the stacks take back over (one filtered raster, the L28-F1 discipline).
 // The Bloom itself is pure .is-active transitions and needs no gate. Cleared on the
@@ -764,7 +764,7 @@ onUnmounted(() => {
   transition: transform 800ms var(--ease-springPop) 60ms;
 }
 
-/* ─── The Yoshi beats (T3-W13 §2 re-cut) ─────────────────────────────────
+/* ─── The plush accent beats ─────────────────────────────────────────────
    Accents folded ONTO the Bloom. The gesture stays pure transitions, so a re-click
    mid-flight retargets for free; the accents ride the CSS-layer `scale` property
    (±8% contract rule 2), which multiplies with the in-SVG warp instead of

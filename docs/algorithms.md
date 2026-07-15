@@ -11,7 +11,7 @@ Two entry points:
 - `ac3_full` initializes all constraint bits and drains to a fixed point. Used for initial propagation before search begins.
 - `ac3_from_variable` seeds only the constraints involving a specific variable -- the MAC (Maintaining Arc Consistency) variant used during backtracking search. The seeded version skips constraints whose scope is fully assigned, since they can't produce further domain reductions. After each `Changed` revision, it checks all scope variables for empty domains before enqueuing neighbors -- early termination on wipe-out.
 
-Both the `Changed` and `Unsatisfiable` arms push the revised constraint's whole scope onto the external `Trail` before returning, so backtracking restores every prune. (The `Unsatisfiable` arm omitting that push was the source of the false-UNSAT regression the kernel wave closed -- `evidence/kernel-soundness-closure.md` §0.)
+Both the `Changed` and `Unsatisfiable` arms push the revised constraint's whole scope onto the external `Trail` before returning, so backtracking restores every prune. (The `Unsatisfiable` arm omitting that push was the source of the false-UNSAT regression the kernel's soundness fix closed; see `evidence/kernel-soundness-closure.md` §0.)
 
 `revise()` returns a tri-state `Revision`: `Unchanged`, `Changed`, or `Unsatisfiable`. Each constraint type implements its own revision logic:
 
@@ -29,7 +29,7 @@ Generalized arc consistency for n-ary all-different constraints. Standard AC-3 w
 
 Below `GAC_MIN_PARTICIPANTS` live variables the propagator short-circuits with `Unchanged` -- singleton removal in the standard `revise()` path handles the small cases.
 
-**Phase 2 -- Residual Graph.** The residual graph has `n_vars + n_vals` nodes. Matched edges are reversed (value-node -> variable-node), unmatched edges kept forward (variable-node -> value-node). Free values -- those unmatched in the current matching -- seed a BFS that marks all reachable nodes. An unmatched edge (var, val) that lies on an alternating path from a free vertex can participate in _some_ maximum matching, so it must be preserved.
+**Phase 2 -- Residual Graph.** The residual graph has `n_vars + n_vals` nodes. Matched edges are reversed (value-node -> variable-node), unmatched edges kept forward (variable-node -> value-node). Free values (those unmatched in the current matching) seed a BFS that marks all reachable nodes. An unmatched edge (var, val) that lies on an alternating path from a free vertex can participate in _some_ maximum matching, so it must be preserved.
 
 This free-vertex reachability is critical for correctness. Without it, the algorithm would prune edges that belong to alternative maximum matchings, potentially making a satisfiable CSP appear unsatisfiable. The classic failure case: two variables with identical two-element domains. Both matchings are valid, but neither edge should be pruned.
 
@@ -44,7 +44,7 @@ The implementation avoids `Ord`/`Hash` bounds on domain values. Values are mappe
 
 ### GAC on Sudoku -- the corrected causal story
 
-Two things about GAC's history here were wrong in the pre-tranche docs, and both are corrected.
+Two things about GAC's history here were wrong in the earlier docs, and both are corrected.
 
 **It ran at forward-checking strength, not GAC strength.** The n-ary propagator was gated off; `AllDifferent::revise()` did singleton removal only. It now runs at full GAC strength, **default-ON**, above the live-participant gate. The behavioral evidence for enabling it: a 16×16 hard board that failed at a 5,000,000-node budget with GAC off solves in ~1,000 nodes with it on (`evidence/synthesis-pass2.md` prototype 2).
 

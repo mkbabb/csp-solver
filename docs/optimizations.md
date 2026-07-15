@@ -4,7 +4,7 @@
 
 `Box<dyn Constraint<D>>` imposes a vtable indirection on every `revise()` call. AC-3 invokes `revise()` thousands of times per solve -- for a hard 9x9 Sudoku, tens of thousands. The indirect call defeats branch prediction and prevents inlining.
 
-`ConstraintEnum<D>` replaces the trait object with an enum: `NotEqual`, `AllDifferent`, `AllDifferentExcept`, `Soft`, `Custom`. The first two are the overwhelmingly common cases. `scope()`, `check()`, and `revise()` are all `#[inline]` match arms on the enum -- the compiler emits a direct branch to the concrete implementation. `Custom` retains a `Box<dyn Constraint<D>>` for extensibility but rarely appears on the hot path. (The former `Lambda` variant was excised -- it had zero construction sites.)
+`ConstraintEnum<D>` replaces the trait object with an enum: `NotEqual`, `AllDifferent`, `AllDifferentExcept`, `Soft`, `Custom`. The first two are the overwhelmingly common cases. `scope()`, `check()`, and `revise()` are all `#[inline]` match arms on the enum -- the compiler emits a direct branch to the concrete implementation. `Custom` retains a `Box<dyn Constraint<D>>` for extensibility but rarely appears on the hot path. (The former `Lambda` variant was excised; it had zero construction sites.)
 
 Under profiling, constraint revision dominates self-time -- the _productive_ work of domain pruning rather than dispatch overhead. The dispatch cost the enum removes is the vtable indirection, not the revision work itself.
 
@@ -57,7 +57,7 @@ A reusable `Vec<D::Value>` buffer (`val_buf`) collects each neighbor's domain va
 
 ## FxHash (bbnf-lang compile path)
 
-Profiling the bbnf-lang compile pipeline with samply showed SipHash operations dominating -- `HashMap<String, u32>` lookups in the literal prefix factoring pass. SipHash is cryptographically robust but overkill for compiler-internal hash maps, where the keys are program text and DoS resistance doesn't matter.
+Profiling the bbnf-lang compile pipeline with samply showed SipHash operations dominating -- `HashMap<String, u32>` lookups in the literal prefix factoring pass. SipHash is cryptographically strong but overkill for compiler-internal hash maps, where the keys are program text and DoS resistance doesn't matter.
 
 Replacing them with `FxHashMap` from `rustc-hash` (a multiply-and-rotate scheme, faster than SipHash for small keys) cut the compile time materially. Applied to `prefix.rs` (literal trie construction), `lr.rs` (LR table building), and `string_interner.rs` (string deduplication). The concrete before/after timings are a bbnf-lang property, measured and tracked in that repository, not reproducible here.
 
@@ -65,7 +65,7 @@ Replacing them with `FxHashMap` from `rustc-hash` (a multiply-and-rotate scheme,
 
 Performance breakdowns come from samply + Firefox Profiler. Build with `CARGO_PROFILE_RELEASE_DEBUG=true` for symbol resolution, record with `samply record --no-open ./target/release/examples/profile_sudoku`, and open the generated URL for the interactive flame graph and inverted call tree.
 
-The profiling targets (`examples/profile_sudoku.rs`, `examples/profile_csp.rs`) run hard 9×9 puzzles plus 8-Queens and map coloring. The inverted call tree consistently shows the solver's self-time concentrated in the productive layer -- constraint revision and domain iteration -- rather than the dispatch or data-structure scaffolding. Self-time percentages depend on host and workload; run the target to obtain current figures rather than quoting a stale snapshot. Further speedups would require algorithmic changes (stronger propagation to reduce search nodes) rather than micro-optimization.
+The profiling targets (`examples/profile_sudoku.rs`, `examples/profile_csp.rs`) run hard 9×9 puzzles plus 8-Queens and map coloring. The inverted call tree consistently shows the solver's self-time concentrated in the productive layer (constraint revision and domain iteration) rather than the dispatch or data-structure scaffolding. Self-time percentages depend on host and workload; run the target to obtain current figures rather than quoting a stale snapshot. Further speedups would require algorithmic changes (stronger propagation to reduce search nodes) rather than micro-optimization.
 
 ## Domain Restriction
 

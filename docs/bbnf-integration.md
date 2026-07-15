@@ -5,7 +5,7 @@
 This repository is the source of truth for the solver; `csp-solver` publishes to crates.io. The `bbnf-lang` grammar compiler does **not** patch the crate in by `.cargo/config.toml` -- that account is dead. It vendors a **byte-identical copy** of `csp-solver/src`, pinned at a revision, and keeps it honest with a two-part sync gate (`scripts/sync-csp-solver-vendor.sh`, resident in bbnf-lang; this repo is never pushed to from that gate):
 
 - **`--check`** -- a text-diff provenance gate. It diffs the vendored `src/` against `git show <pin>:csp-solver/src` and fails on any byte drift. It proves *"the copy matches the pin,"* nothing more.
-- **`--verify`** -- an enforced-compile gate. It builds the root crates `{bbnf, bbnf-ir, egraph}`, the separate skinny workspace's `passes` crate, and the vendored crate under **both** cfg branches (`default` and `py`) -- catching the class of break where code compiling under one config fails under the other. It also runs structural tripwires: a trait-surface allow-list and a `SolveConfig`/`SolveStats` field-set comparison against the pinned rev. The pre-push hook runs both gates.
+- **`--verify`** -- an enforced-compile gate. It builds the root crates `{bbnf, bbnf-ir, egraph}`, the separate skinny workspace's `passes` crate, and the vendored crate under **both** cfg branches (`default` and `py`), catching the class of break where code compiling under one config fails under the other. It also runs structural tripwires: a trait-surface allow-list and a `SolveConfig`/`SolveStats` field-set comparison against the pinned rev. The pre-push hook runs both gates.
 
 The two gates are complementary: `--check` catches a hand-edited vendor copy; `--verify` catches a pin bump whose new solver code no longer compiles its consumers (a byte-perfect `--check` says nothing about buildability). The `SolveConfig::default()` change to `Ac3 + FailFirst` and the `Ordering` rename shipped through this window (`evidence/constraint-trait-bound-spike.md` §8).
 
@@ -13,7 +13,7 @@ The two gates are complementary: `--check` catches a hand-edited vendor copy; `-
 
 Within bbnf, csp-solver drives six IR analysis passes. All six share a common pattern: lattice domains where values only grow via `join()`, never shrink. No backtracking, no search. The CSPs construct variables and constraints, then call `propagate()` without calling `finalize()`. The auto-selection logic detects the absence of an adjacency graph and routes to `propagate_monotonic` -- a fixed-point sweep over all constraints until convergence.
 
-This is a fundamentally different usage pattern from Sudoku or N-Queens. There's no search tree, no variable ordering heuristic, no undo log. The solver acts as a dataflow fixpoint engine -- closer to a worklist algorithm in a compiler than a combinatorial search. The domain types are defined in bbnf-lang, not in csp-solver. They implement the `Domain` trait (and sometimes `LatticeDomain`) with monotonic semantics.
+This is a fundamentally different usage pattern from Sudoku or N-Queens. There's no search tree, no variable ordering heuristic, no undo log. The solver is a dataflow fixpoint engine, closer to a worklist algorithm in a compiler than a combinatorial search. The domain types are defined in bbnf-lang, not in csp-solver. They implement the `Domain` trait (and sometimes `LatticeDomain`) with monotonic semantics.
 
 ## Type Inference (TypeDomain)
 
@@ -51,7 +51,7 @@ Used by dispatch tables for nullable branch optimization -- when an alternation 
 
 Top-down refinement. Domain is `Option<bool>` where `None` means undecided, `Some(true)` means span-eligible, `Some(false)` means not. A rule is span-eligible if its body contains only literals, regexes, and references to other span-eligible rules -- no type-constructing operations (Vec, struct, enum).
 
-Span-eligible rules get zero-allocation `SpanParser` codegen: the parser returns a `Span` (byte range) instead of constructing AST nodes. This is the critical optimization for lexical-level rules like identifiers, numbers, and string literals.
+Span-eligible rules get zero-allocation `SpanParser` codegen: the parser returns a `Span` (byte range) instead of constructing AST nodes. This span-parsing path is what keeps lexical-level rules like identifiers, numbers, and string literals allocation-free.
 
 ## Dispatch Tables (DispatchDomain)
 
@@ -62,7 +62,7 @@ Tri-state: Unknown, Dispatchable, NonDispatchable. An alternation is dispatchabl
 
 Constraints check these conditions by inspecting the FIRST sets computed in the earlier pass -- the dispatch analysis depends on FIRST set results. This is why the passes run in a defined order despite all using independent CSP instances.
 
-Dispatchable alternations get O(1) byte-dispatch codegen: a 128-entry lookup table indexed by the next input byte, each entry pointing to the correct branch. Non-dispatchable alternations fall back to sequential trial-and-error. The dispatch optimization is the single biggest codegen win for grammars with wide alternations -- CSS property value parsing, for instance, where dozens of literal keywords share a rule.
+Dispatchable alternations get O(1) byte-dispatch codegen: a 128-entry lookup table indexed by the next input byte, each entry pointing to the correct branch. Non-dispatchable alternations fall back to sequential trial-and-error. The 128-entry byte-dispatch table replaces that trial-and-error with one indexed jump for grammars with wide alternations, like CSS property value parsing, where dozens of literal keywords share a rule.
 
 ## Regex Algebra (RewriteDomain)
 

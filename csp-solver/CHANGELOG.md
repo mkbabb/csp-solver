@@ -5,18 +5,20 @@ This workspace ships two publishable artifacts across two registries:
 - `csp-solver` — the CSP solver crate (crates.io)
 - `@mkbabb/csp-solver-wasm` — wasm-pack bindings for `csp-solver` (npm)
 
-**Excised (W11/W12):** `morph-core` (crates.io) and `@mkbabb/morph` (npm) moved
-to [`github.com/mkbabb/morph`](https://github.com/mkbabb/morph) at commit
+**Excised:** `morph-core` (crates.io) and `@mkbabb/morph` (npm) moved to
+[`github.com/mkbabb/morph`](https://github.com/mkbabb/morph) at commit
 `4568dc7e` (tag `pre-morph-excision`). Their `0.1.0` entries below stay as
-historical record — they really did ship from this repo — but everything past
+historical record; they really did ship from this repo, but everything past
 `morph-core 0.1.0` / `@mkbabb/morph 0.1.1` lives in that repo's changelog. The
 general-purpose `csp_solver::assignment()` / `AssignmentBuilder` surface morph
 was built on stays here; `morph` now consumes it as an ordinary crates.io
 dependency (`csp-solver = "0.2"`).
 
-## 0.5.0 — 2026-07-13 (tranche-4, W6 — generation truth: futoshiki difficulty axis)
+## 0.5.0 — 2026-07-13
 
-_Staged, unpublished — the team lead owns the crates.io/`file:`-link publish._
+_Crate published to crates.io. The wasm bump is source-only; the npm tarball
+stays at `0.2.0` (the frontend file-links the lean build, not the registry
+package)._
 
 ### crates.io
 
@@ -30,8 +32,8 @@ _Staged, unpublished — the team lead owns the crates.io/`file:`-link publish._
   single-tier `generate_futoshiki` / `generate_futoshiki_seeded` entries are
   unchanged. Minor bump per the pre-1.0 discipline (new surface across the 0.x
   minor slot).
-- **Solver micro-rows (W6 lane L4, output-identical)** — the §7 perf-audit rows,
-  each gated on byte-identical dealt boards and solve traces:
+- **Solver micro-rows (output-identical)** — the perf-audit rows, each gated on
+  byte-identical dealt boards and solve traces:
   - *GENREUSE* — generation's slow hole-dig reuses one finalized CSP skeleton
     across all hole candidates instead of rebuilding it per candidate. New
     `puzzles::sudoku` exports `sudoku_csp_skeleton(n)` + `sudoku_given(board)`
@@ -45,31 +47,50 @@ _Staged, unpublished — the team lead owns the crates.io/`file:`-link publish._
     **BREAKING (internal API):** `ordering::select_variable` takes a `var_wdeg`
     slice in place of `(constraint_weights, var_constraint_ids)`. Size-neutral.
 
-### npm
+### npm (source-only, not published)
 
 - **`@mkbabb/csp-solver-wasm@0.4.0 → 0.5.0`** — **BREAKING**. `generateFutoshiki`
   gains a `difficulty` argument: `generateFutoshiki(boardSize, seed)` →
   `generateFutoshiki(boardSize, difficulty, seed)`, mirroring
   `generateSudoku(n, difficulty, seed)`. New `FutoshikiDifficulty`
   (`Easy`/`Medium`/`Hard`) enum export. The frontend Worker call-site is updated
-  in the same tranche (W6 lane L3). Minor bump encodes the breaking signature
-  change across the 0.x minor slot.
+  alongside. Minor bump encodes the breaking signature change across the 0.x
+  minor slot. Source-only: the npm registry stayed at `0.2.0`.
 
-### npm
+## 0.4.0 — 2026-07-10
+
+_Crate published to crates.io. The wasm bump is source-only; the npm tarball
+stays at `0.2.0`._
+
+### crates.io
+
+- **`csp-solver@0.3.0 → 0.4.0`** — encapsulation pass, no solver-behavior
+  change. Breaking (pre-1.0 minor-bump class): 12 `pub` items demoted to
+  `pub(crate)` where the `private_interfaces` lint forced it (`ac3_full`,
+  `feasibility_search`, `branch_and_bound`, reached through their `&Adjacency`
+  parameters). `adjacency.rs` relocated from the crate root to `solver/`.
+  `solver/gac.rs` split its scratch substrate out to `solver/gac/scratch.rs`
+  (`pub(super)`, no logic edit). `ImplicationConstraint` gained ten in-repo
+  tests (bbnf constructs it live; now the crate proves it). The reserved Timeout
+  path stays reserved, no constructor until the cancel-driver lands. tests-py
+  held at 27 passed / 0 skipped on the `0.4.0` wheel.
+
+### npm (source-only, not published)
 
 - **`@mkbabb/csp-solver-wasm@0.2.0 → 0.4.0`** — **BREAKING**. The `full-mirror`
   feature and its `isomorphic` module are excised; the published `.d.ts` drops
   `Csp`, `SolveConfig`, `SolveStats`, `OptimizationMode`, `Ordering`,
-  `PropagationStrategy`, `Pruning` (the generic py-mirror surface — 7 exports).
+  `PropagationStrategy`, `Pruning` (the generic py-mirror surface, 7 exports).
   The shipped surface is now the purpose-built `sudoku` + `futoshiki` +
-  `assignment` layers only. No in-repo consumer is affected — the frontend
-  Worker imports `solveSudoku` / `solveFutoshiki` / `generate*` /
-  `solveAssignmentCop` only, never the isomorphic classes; the lean deploy build
-  never compiled the isomorphic surface, and its bytes are byte-identical
-  pre/post. The `0.4.0` minor bump both encodes the breaking removal across the
-  0.x minor slot and aligns the package to the core crate's `0.4.0` surface.
+  `assignment` layers only. No in-repo consumer is affected: the frontend Worker
+  imports `solveSudoku` / `solveFutoshiki` / `generate*` / `solveAssignmentCop`
+  only, never the isomorphic classes; the lean deploy build never compiled the
+  isomorphic surface, and its bytes are byte-identical pre/post. The `0.4.0`
+  minor bump encodes the breaking removal across the 0.x minor slot and aligns
+  the package to the core crate's `0.4.0` surface. Source-only: the npm registry
+  stayed at `0.2.0`.
 
-## 0.3.0 — 2026-07-10 (tranche-2, W3 — substrate excision)
+## 0.3.0 — 2026-07-10 (substrate excision)
 
 ### crates.io
 
@@ -98,7 +119,7 @@ _Staged, unpublished — the team lead owns the crates.io/`file:`-link publish._
   - Tests: `tests/optimize.rs` trimmed to the `CostDomain` cases;
     `tests/nogoods.rs` and `tests/restart_nogood_soundness.rs` deleted.
 
-## 0.2.0 — 2026-07-06 (grand-uplift tranche, W1–W12)
+## 0.2.0 — 2026-07-06 (kernel wave)
 
 ### crates.io
 
@@ -133,10 +154,9 @@ _Staged, unpublished — the team lead owns the crates.io/`file:`-link publish._
   errors (`BUDGET_EXCEEDED` vs `UNSAT` distinguishable); `MRV` on the wire;
   vestigial `backjumping` removed; hardened difficulty-parity contract tests.
 
-## 0.1.0 — 2026-05-28 (G.W5 — first publish)
+## 0.1.0 — 2026-05-28 (first publish)
 
-First registry publish of the workspace, landed as part of the muster tranche G
-release-engineering wave (G.W5 sub-wave A, CSC411-fold pass).
+First registry publish of the workspace.
 
 ### crates.io
 

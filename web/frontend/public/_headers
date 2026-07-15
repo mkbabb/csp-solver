@@ -10,40 +10,37 @@
 # avatar, and 21 interactive UI controls exercised — board generate/solve/
 # difficulty/size), instrumented for `securitypolicyviolation` events — zero
 # violations. Every fetch the shipped bundle makes is same-origin ('self') or a
-# data: URI: there is no third-party network dependency (T4-W8 ROW 5 localized
-# the last one, the author avatar).
+# data: URI: there is no third-party network dependency. The author avatar was
+# the last third-party hit and is now bundled same-origin.
 #
 #   default-src 'self'            deny-by-default baseline
 #   script-src  'self'             app bundle is same-origin only
-#               'wasm-unsafe-eval' forward-provisioned for W6's wasm solver
-#                                  path (concurrent lane): Firefox/Safari
+#               'wasm-unsafe-eval' the wasm solver Worker path: Firefox/Safari
 #                                  require this keyword to instantiate
 #                                  WebAssembly even from same-origin bytes;
-#                                  Chrome doesn't gate on it today but the
-#                                  keyword is inert there, so it's safe to
-#                                  land ahead of W6 landing the worker
+#                                  Chrome doesn't gate on it today, where the
+#                                  keyword is inert, so it's safe everywhere
 #   style-src   'self'
 #               'unsafe-inline'    Vue :style bindings + the pencil-boil
 #                                  animation system set inline style
 #                                  attributes at runtime (no nonce plumbing
 #                                  exists for this yet)
-#   font-src    'self'             P5 (Tranche II): Fraunces/Fira Code/Patrick
-#                                  Hand are self-hosted woff2 subsets under
+#   font-src    'self'             Fraunces/Fira Code/Patrick Hand are
+#                                  self-hosted woff2 subsets under
 #                                  src/assets/fonts/ (@font-face in index.css),
 #                                  bundled same-origin under /assets/. The
 #                                  fonts.googleapis.com (style-src) and
 #                                  fonts.gstatic.com (font-src) allowances are
-#                                  gone — the Google Fonts <link> in index.html
+#                                  gone; the Google Fonts <link> in index.html
 #                                  is deleted
-#   img-src     'self'             AttributionCard's author avatar is BUNDLED
-#                                  (T4-W8 ROW 5 / FAM-14): a 64px PNG imported
-#                                  through Vite, emitted content-hashed under
-#                                  /assets/ and served same-origin, so 'self'
-#                                  covers it. This RETIRED the app's sole
-#                                  third-party network hit — the prior
-#                                  avatars.githubusercontent.com allowance is
-#                                  GONE, and there is now no non-'self', non-data:
-#                                  source anywhere in the policy
+#   img-src     'self'             AttributionCard's author avatar is BUNDLED:
+#                                  a 64px PNG imported through Vite, emitted
+#                                  content-hashed under /assets/ and served
+#                                  same-origin, so 'self' covers it. This
+#                                  retired the app's sole third-party network
+#                                  hit; the prior avatars.githubusercontent.com
+#                                  allowance is GONE, and there is now no
+#                                  non-'self', non-data: source in the policy
 #               data:              hand-drawn pencil-stroke SVGs are
 #                                  generated at runtime as
 #                                  data:image/svg+xml background-image URLs
@@ -59,8 +56,8 @@
 # Other headers:
 #   Strict-Transport-Security — force HTTPS for 2y, cover subdomains; the
 #     `preload` token only marks eligibility, it does not itself submit the
-#     domain to the HSTS preload list. OWNER-SIDE CHECK (T4-W3): whether
-#     sudoku.babb.dev is actually submitted at hstspreload.org is unverified —
+#     domain to the HSTS preload list. OWNER-SIDE CHECK: whether
+#     sudoku.babb.dev is actually submitted at hstspreload.org is unverified;
 #     the token is inert until submission, so it stays; the submission is a
 #     separate manual owner action, recorded here rather than dropped unilaterally
 #   Permissions-Policy — lock every powerful browser feature off (empty allowlist
@@ -83,23 +80,22 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: accelerometer=(), autoplay=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), web-share=(), xr-spatial-tracking=()
 
-# Transport (Tranche II / W5, Q4-amended). ADD — the file carried no
-# Cache-Control before; the live `wasm max-age=0` was a Cloudflare-Pages
-# default filling the vacuum. Scoped to /assets/* ONLY: every file Vite emits
-# there (js, css, wasm, and the P5 woff2 subsets) is content-hashed, so a
-# one-year immutable is safe — a new build means a new filename, never a stale
-# hit. Deliberately NOT applied to /index.html (it lives at root and must keep
-# revalidating so first paint always reflects the latest build).
+# Transport. The file carried no Cache-Control before; the live `wasm
+# max-age=0` was a Cloudflare-Pages default filling the vacuum. Scoped to
+# /assets/* ONLY: every file Vite emits there (js, css, wasm, and the woff2
+# subsets) is content-hashed, so a one-year immutable is safe: a new build
+# means a new filename, never a stale hit. Deliberately NOT applied to
+# /index.html (it lives at root and must keep revalidating so first paint
+# always reflects the latest build).
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# Cloudflare Pages APPENDS matching-rule headers — it does not replace — so the
-# more-specific /assets/*.wasm stanza must NOT restate Cache-Control: doing so
-# doubled it on the live edge (`public, max-age=31536000, immutable, public,
-# max-age=31536000, immutable`; G8-H2). The /assets/* immutable rule above
-# already covers .wasm caching. This stanza pins only Content-Type: application/
-# wasm, which keeps `WebAssembly.instantiateStreaming` on the happy path — a CDN
-# that mislabels the .wasm MIME makes streaming instantiation reject the bytes.
-# Doubled-directive fix added at T3-W2.
+# Cloudflare Pages APPENDS matching-rule headers rather than replacing them, so
+# the more-specific /assets/*.wasm stanza must NOT restate Cache-Control: doing
+# so doubled it on the live edge (`public, max-age=31536000, immutable, public,
+# max-age=31536000, immutable`). The /assets/* immutable rule above already
+# covers .wasm caching. This stanza pins only Content-Type: application/wasm,
+# which keeps `WebAssembly.instantiateStreaming` on the happy path; a CDN that
+# mislabels the .wasm MIME makes streaming instantiation reject the bytes.
 /assets/*.wasm
   Content-Type: application/wasm

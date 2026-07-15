@@ -2,7 +2,7 @@
 /**
  * CrayonHeart — the felt heart, one mascot with a variant family (T3-W9, F7 §3).
  *
- * Yoshi's Story in OUR pencil grammar: material through stroke behavior, never
+ * Plush-felt craft in OUR pencil grammar: material through stroke behavior, never
  * texture bitmaps — felt = plush silhouette + stitch-dash inner stroke +
  * turbulence tooth; craft heft = the fruit-weight outline; life = blink/squash
  * on transforms only (owned by CelebrationHeart, never here, never the filtered <g>).

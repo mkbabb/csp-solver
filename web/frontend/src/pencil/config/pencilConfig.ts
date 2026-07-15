@@ -12,7 +12,7 @@ export const PENCIL = {
   vine: { strokeWidth: 8, roughness: 1.4 },
 } as const;
 
-// ── Yoshi's Story color palette ───────────────────────────────────
+// ── Felt-craft mascot color palette ───────────────────────────────
 
 export const YOSHI_COLORS = {
   outlineBlack: "#1a1a1a",
