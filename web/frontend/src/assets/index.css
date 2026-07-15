@@ -671,21 +671,17 @@ html {
 /* ── R3 (Tranche II W5) — 44px tap-target floor, coarse pointers only ─────────
  * The L15 audit's sub-44 controls, floored where a finger is the instrument;
  * fine pointers keep the compact pencil layout. Shared here (not per-component)
- * so the logo-menu items ride it without touching that file's scoped rules.
+ * so the listed controls ride it without touching each file's scoped rules.
  * Board cells are exempt (16×16 at mobile width is a sub-44 arithmetic
  * impossibility — D12). min-height only: every listed control centers its own
- * content; the scribble/ghost underlines keep tracking the content box. */
+ * content; the scribble/ghost underlines keep tracking the content box.
+ * (T4-W12 Wave D — the `.logo-menu-item` listbox rows retired with the dropdown.) */
 @media (pointer: coarse) {
-  .logo-menu-item,
   .ctrl-btn,
   .mobile-heading-btn,
   .attribution-trigger,
   .error-note-retry {
     min-height: 2.75rem;
-  }
-
-  .logo-menu-item {
-    align-content: center;
   }
 }
 

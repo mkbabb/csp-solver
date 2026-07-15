@@ -1,6 +1,6 @@
 import { computed, ref, type Ref } from "vue";
 
-import { MOTION } from "@pencil/config/pencilConfig";
+import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
 
 /**
  * The controls drawer (T3-W12 §6) — the pencil case tucked under the worksheet.
@@ -59,12 +59,6 @@ const HINT_KEY = "csp-drawer-hint-spoken";
  *  520ms: the glass settle wants a touch more breath than the dead spring's 480
  *  (auditioned 480/520/560 by eye at :3001 — the S3′ retune, within Band D). */
 const GLIDE_MS = 520;
-/** §3-S3′: ONE easing family — every mover (sheet, case, masthead, tab) on the house
- *  glass curve. The ledger row (MOTION.curves.drawerGlide) records the ruling. */
-const GLIDE_EASING = MOTION.curves.drawerGlide;
-/** Seam-guard discipline (App.vue's F6 pattern): a glide whose `finished` promises
- *  can't resolve (display:none mid-flight, regime resize) settles late, never never. */
-const SETTLE_GUARD_MS = GLIDE_MS + 220;
 
 const hasDom = typeof window !== "undefined" && typeof document !== "undefined";
 
@@ -154,42 +148,33 @@ export function registerDrawerMasthead(get: () => DrawerMastheadEls) {
 }
 
 // ── The glide engine (classic FLIP on WAAPI, T3-W13 §3 S1–S4) ────────
+//
+// The mover MECHANICS — the WAAPI [from,to] movers, the one clock, `composite:replace`/
+// `fill:none`, the generation token, the settle guard, `reverse()` — now live in the
+// EXTRACTED `useFlipGlide` primitive (T4-W12 §8, the M10 distillation: the drawer AND the
+// gallery's board⇄card fold ride ONE proven engine). This file keeps the drawer's DOMAIN:
+// WHICH elements move, their FLIP deltas, and the settle side-effects (`onSettle`). The
+// crit kill (the filtered board's SIZE is never tweened) rides `flipTransform` in there.
 
-interface Mover {
-  el: HTMLElement;
-  anim: Animation;
-}
-
-let movers: Mover[] = [];
-let settleTimer: number | null = null;
-/** Generation token — a stale gesture's `finished` callback must never settle a
- *  later one (guard-timer and disposer settles bump it too). */
-let glideGen = 0;
 let targetOpen = drawerOpen.value;
 
+// Only the masthead mover still builds a bespoke string by hand (its wordmark-anchored
+// origin) — the host rides `flipTransform`, so `cx` is all that survives here.
 const cx = (r: DOMRect) => r.left + r.width / 2;
-const cy = (r: DOMRect) => r.top + r.height / 2;
 
-/** One mover: explicit [from → to] keyframes on the shared glass curve. `composite:
- *  replace` + `fill: none` — the animation owns the transform channel outright for
- *  its lifetime, then releases to the underlying value (identity/rest ≡ the `to`
- *  keyframe going forward; a reversal's settle re-flips the layout in the same
- *  pre-paint microtask checkpoint, so neither direction can flash). */
-function animateMover(
-  el: HTMLElement,
-  from: string,
-  to: string,
-  transformOrigin: string,
-) {
-  if (transformOrigin) el.style.transformOrigin = transformOrigin;
-  const anim = el.animate([{ transform: from }, { transform: to }], {
-    duration: GLIDE_MS,
-    easing: GLIDE_EASING,
-    composite: "replace",
-    fill: "none",
-  });
-  movers.push({ el, anim });
-}
+/** The drawer's glide controller — 520ms on the ONE glass curve (the primitive's default
+ *  easing = `MOTION.curves.drawerGlide`), one clock, the never-never guard at 520+220.
+ *  `onSettle` is the drawer's own settle: demote the gesture layers, re-flip the layout to
+ *  the (possibly reversal-flipped) target, land idle, and focus the panel on open. */
+const glideCtl = useFlipGlide({
+  durationMs: GLIDE_MS,
+  onSettle: () => {
+    document.documentElement.classList.remove("drawer-gesturing");
+    applyLayout(targetOpen);
+    drawerPhase.value = "idle";
+    if (targetOpen) focusPanel();
+  },
+});
 
 function glide(toOpen: boolean, scene: DrawerSceneEls) {
   const host = scene.host!;
@@ -218,103 +203,71 @@ function glide(toOpen: boolean, scene: DrawerSceneEls) {
   const lastB = block?.getBoundingClientRect() ?? null;
   const lastA = anchor?.getBoundingClientRect() ?? null;
 
-  movers = [];
-  const gen = ++glideGen;
-
-  // The worksheet: board + vignette + margin + tab ride ONE translate+scale. It
-  // rasters at its FINAL size from frame one — a ≤2% soft attack on open, never
-  // a soft landing; the settle pop (F4) dies by construction.
-  const hostScale = firstH.width / lastH.width;
-  animateMover(
-    host,
-    `translate(${cx(firstH) - cx(lastH)}px, ${cy(firstH) - cy(lastH)}px) scale(${hostScale})`,
-    "translate(0px, 0px) scale(1)",
-    "50% 50%",
-  );
-  // The case: translate-only, same curve, same clock — sheet and case one solid;
-  // it pulls out from under the sheet HORIZONTALLY (§3-S5 — the rect deltas are
-  // the tuck's own geometry, and the glass curve is monotone, so no frame can
-  // carry the case above the board's top or past the tuck).
-  // Its parked rest pose rides the `translate:` CHANNEL (scene.css), which no
-  // mover ever animates; the rect deltas below already include it.
-  animateMover(
-    rail,
-    `translate(${firstR.left - lastR.left}px, ${firstR.top - lastR.top}px)`,
-    "translate(0px, 0px)",
-    "",
-  );
-  // The tab: counter-scales the host's ride so its 48px tongue reads constant
-  // (host × tab ≈ 1 across the curve — F5's kept behavior, now a WAAPI mover).
-  if (tab) {
-    animateMover(
-      tab,
-      `translateY(-50%) scale(${1 / hostScale})`,
-      "translateY(-50%) scale(1)",
-      "",
-    );
-  }
-  // The masthead: the h1 glides anchored on the wordmark's center-bottom in the
-  // TARGET layout's box (the h1 spans the full group width — its own center is
-  // not the wordmark's), so the measured wordmark rect maps first → last exactly.
-  if (block && lastB && firstA && lastA) {
-    animateMover(
-      block,
-      `translate(${cx(firstA) - cx(lastA)}px, ${firstA.bottom - lastA.bottom}px) scale(${firstA.width / lastA.width})`,
-      "translate(0px, 0px) scale(1)",
-      `${cx(lastA) - lastB.left}px ${lastA.bottom - lastB.top}px`,
-    );
-  }
-
-  // One clock, literally (§3-S3): every mover pinned to the same startTime —
-  // zero stagger by construction, and no pending-start dead frames (a pending
-  // animation renders progress 0 until the UA assigns its start time; pinned,
-  // the FIRST painted frame already carries motion — F3's onset hesitation dies).
-  const clock = document.timeline.currentTime;
-  if (typeof clock === "number") for (const m of movers) m.anim.startTime = clock;
-
-  // Settle keys off the movers themselves; the guard timeout stays the
-  // never-never backstop (a glide that can't finish settles late, never never).
-  void Promise.allSettled(movers.map((m) => m.anim.finished)).then(() => {
-    if (gen === glideGen) settleNow();
+  const specs: FlipMover[] = [];
+  // The worksheet: board + vignette + margin + tab ride ONE translate+scale. It rasters
+  // at its FINAL size from frame one (the crit kill — the filtered board's SIZE is never
+  // tweened): `flipTransform` maps its old full-size pose onto the grown box via scale
+  // only — byte-identical to the pre-extraction host string.
+  specs.push({
+    el: host,
+    from: flipTransform(firstH, lastH),
+    to: "translate(0px, 0px) scale(1)",
+    transformOrigin: "50% 50%",
   });
-  settleTimer = window.setTimeout(settleNow, SETTLE_GUARD_MS);
+  // The case: translate-only, same curve, same clock — sheet and case one solid; it
+  // pulls out from under the sheet HORIZONTALLY (§3-S5 — the rect deltas are the tuck's
+  // own geometry, and the glass curve is monotone, so no frame carries the case above
+  // the board's top or past the tuck). Its parked rest pose rides the `translate:`
+  // CHANNEL (scene.css), which no mover animates; the rect deltas already include it.
+  specs.push({
+    el: rail,
+    from: `translate(${firstR.left - lastR.left}px, ${firstR.top - lastR.top}px)`,
+    to: "translate(0px, 0px)",
+  });
+  // The tab: counter-scales the host's ride so its 48px tongue reads constant
+  // (host × tab ≈ 1 across the curve — F5's kept behavior, a WAAPI mover).
+  if (tab) {
+    const hostScale = firstH.width / lastH.width;
+    specs.push({
+      el: tab,
+      from: `translateY(-50%) scale(${1 / hostScale})`,
+      to: "translateY(-50%) scale(1)",
+    });
+  }
+  // The masthead: the h1 glides anchored on the wordmark's center-bottom in the TARGET
+  // layout's box (the h1 spans the full group width — its own center is not the
+  // wordmark's), so the measured wordmark rect maps first → last exactly.
+  if (block && lastB && firstA && lastA) {
+    specs.push({
+      el: block,
+      from: `translate(${cx(firstA) - cx(lastA)}px, ${firstA.bottom - lastA.bottom}px) scale(${firstA.width / lastA.width})`,
+      to: "translate(0px, 0px) scale(1)",
+      transformOrigin: `${cx(lastA) - lastB.left}px ${lastA.bottom - lastB.top}px`,
+    });
+  }
+
+  // The primitive pins one clock, wires `finished → settle`, and arms the guard.
+  glideCtl.run(specs);
 }
 
-/** The settle — the true layout landed at ONSET (classic FLIP), so this frame
- *  clears finished animations, drops the inline transform-origins, and demotes the
- *  gesture layers: no layout step, no re-raster, no snap. After a mid-glide
- *  reversal the class re-flips here — `applyLayout(targetOpen)` stays the one truth. */
+/** Force an in-flight glide to settle instantly — a thin, hoisted delegator so the
+ *  disposer (`registerDrawerScene`, an earlier closure) and the PRM paths keep their
+ *  call site. The primitive's `onSettle` (above) runs the drawer's real settle: the
+ *  layout re-flip to `targetOpen` (reversal-flipped or not) stays the one truth. */
 function settleNow() {
-  if (drawerPhase.value === "idle") return;
-  glideGen++; // stale finished-callbacks are void from here
-  if (settleTimer !== null) {
-    clearTimeout(settleTimer);
-    settleTimer = null;
-  }
-  for (const m of movers) {
-    m.anim.cancel();
-    m.el.style.transformOrigin = "";
-  }
-  movers = [];
-  document.documentElement.classList.remove("drawer-gesturing");
-  applyLayout(targetOpen);
-  drawerPhase.value = "idle";
-  if (targetOpen) focusPanel();
+  glideCtl.settle();
 }
 
-/** Re-click mid-glide (§3-S4): retarget by REVERSAL — each mover plays its own
- *  curve backwards from its current pose (velocity-plausible, zero new keyframes,
- *  no transition machinery anywhere near it). The same `finished` promises resolve
- *  at the reversed settle, where `applyLayout(targetOpen)` re-flips the layout. */
+/** Re-click mid-glide (§3-S4): retarget by REVERSAL via the primitive — velocity-
+ *  plausible, zero new keyframes. The primitive resets the guard; the reversed settle
+ *  re-flips `applyLayout(targetOpen)` through `onSettle`. */
 function retarget() {
   targetOpen = !targetOpen;
   drawerOpen.value = targetOpen;
   persist(targetOpen);
   drawerPhase.value = targetOpen ? "opening" : "closing";
-  for (const m of movers) m.anim.reverse();
+  glideCtl.reverse();
   if (!targetOpen) reclaimFocus();
-  if (settleTimer !== null) clearTimeout(settleTimer);
-  settleTimer = window.setTimeout(settleNow, SETTLE_GUARD_MS);
 }
 
 // ── Focus management ─────────────────────────────────────────────────

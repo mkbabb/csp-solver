@@ -17,6 +17,17 @@ import type { Component } from "vue";
 import type { ControlSection } from "@games/shared/GameControlPanel.vue";
 import { sudokuGame } from "@games/sudoku/game";
 import { futoshikiGame } from "@games/futoshiki/game";
+// The eager default game rides the main chunk (a STATIC import, resolved by its card's
+// `scene` loader) — today's Sudoku-eager / Futoshiki-lazy asymmetry, preserved (P4 #4).
+// Registry is tree-shaken out of the app build until App.vue consumes GAMES (W12 Wave B),
+// so this import lands in the main chunk only once the gallery seam is wired — never before.
+import SudokuGame from "@games/sudoku/SudokuGame.vue";
+import { sizeOptions } from "@games/sudoku/ControlPanel/constants";
+import { boardSizeOptions } from "@games/futoshiki/ControlPanel/constants";
+// KenKen's own selector band (4/5/6) — a game never depends on another's ControlPanel
+// constants for its own range sub-line. Thermo/Killer ARE Sudoku variants, so they reuse the
+// sudoku `sizeOptions` above (already imported for sudokuCard).
+import { sizeOptions as kenkenSizeOptions } from "@games/kenken/ControlPanel/constants";
 
 /** The first-solution result — one shape across both games (the W6 stat-line payload). */
 interface SolveResult {
@@ -115,3 +126,98 @@ export const gameRegistry = {
   sudoku: sudokuGame,
   futoshiki: futoshikiGame,
 } as const;
+
+/**
+ * The CARD FACE of the registration (T4-W12) — the presentation half of a game, over the
+ * SAME registry the `gameRegistry` mechanics live in. `GameCard` is NOT a parallel game
+ * declaration: `id` names the registered game (matches a `gameRegistry` key by convention +
+ * drives `?game=`, aria, keys), and everything else is what the carousel needs to DRAW and
+ * MOUNT it — the wordmark/glyph, the size sub-line (derived from the game's OWN selector
+ * constants, never a fresh mirror), the static poster loader, and the playable scene loader.
+ *
+ * THE DROP-IN CONTRACT (Wave A's born-RED gate): a third game is complete when it (1) pushes
+ * one `GameCard` to `GAMES`, (2) ships a `poster` (a static mini-board — `PosterBoard` with a
+ * canned givens snapshot), (3) ships a `scene` loader. `id` is a plain `string` — NOT
+ * `keyof typeof gameRegistry` — precisely so game #3 drops in with ZERO edits outside `GAMES`
+ * (a stricter id would force a `gameRegistry` edit too, defeating the invariant). W13's Thermo
+ * lands as a real row here; nothing else in the app changes.
+ */
+export interface GameCard {
+  /** URL token + stable id; drives `?game=`, aria, and v-for keys. */
+  id: string;
+  /** lowercase wordmark register; rendered as a live `<text>` when no `glyph`. */
+  name: string;
+  /** optional bespoke name glyph; absent → the wordmark `<text>`. */
+  glyph?: Component;
+  /** the size/difficulty sub-line, in the game's own vocabulary. */
+  range: { label: string; levels: string[] };
+  /** the static, non-interactive, boil-alive-capable poster (a read-only mini-board). */
+  poster: () => Promise<Component>;
+  /** the playable scene loader (the `defineGame` mount target). */
+  scene: () => Promise<Component>;
+  /** the default game rides the main chunk (Sudoku); others stay lazy. */
+  eager?: boolean;
+}
+
+const sudokuCard: GameCard = {
+  id: "sudoku",
+  name: "sudoku",
+  range: { label: "size", levels: sizeOptions.map((o) => o.label) },
+  poster: () => import("@games/sudoku/SudokuPoster.vue").then((m) => m.default),
+  // Eager: the scene is already in the main chunk (the static import above), so its loader
+  // resolves instantly — the byte-for-byte twin of App.vue's static `import SudokuGame`.
+  scene: () => Promise.resolve(SudokuGame),
+  eager: true,
+};
+
+const futoshikiCard: GameCard = {
+  id: "futoshiki",
+  name: "futoshiki",
+  range: { label: "size", levels: boardSizeOptions.map((o) => o.label) },
+  poster: () => import("@games/futoshiki/FutoshikiPoster.vue").then((m) => m.default),
+  // Lazy: the whole Futoshiki scene (board + controls + useFutoshiki + its Worker) stays a
+  // dynamic chunk that downloads only on select — today's chunking, unchanged.
+  scene: () => import("@games/futoshiki/FutoshikiGame.vue").then((m) => m.default),
+};
+
+// W13 ROW 1 — Thermo-Sudoku. A Sudoku variant → reuses the sudoku `sizeOptions` for its range
+// sub-line. Lazy (only sudoku is eager): the poster + scene download only on select.
+const thermoCard: GameCard = {
+  id: "thermo",
+  name: "thermo",
+  range: { label: "size", levels: sizeOptions.map((o) => o.label) },
+  poster: () => import("@games/thermo/ThermoPoster.vue").then((m) => m.default),
+  scene: () => import("@games/thermo/ThermoGame.vue").then((m) => m.default),
+};
+
+// W13 ROW 3 — Killer-Sudoku. A Sudoku variant → reuses the sudoku `sizeOptions`. Lazy.
+const killerCard: GameCard = {
+  id: "killer",
+  name: "killer",
+  range: { label: "size", levels: sizeOptions.map((o) => o.label) },
+  poster: () => import("@games/killer/KillerPoster.vue").then((m) => m.default),
+  scene: () => import("@games/killer/KillerGame.vue").then((m) => m.default),
+};
+
+// W13 ROW 4 — KenKen / Calcudoku. A Latin family with its OWN 4/5/6 band. Lazy.
+const kenkenCard: GameCard = {
+  id: "kenken",
+  name: "kenken",
+  range: { label: "size", levels: kenkenSizeOptions.map((o) => o.label) },
+  poster: () => import("@games/kenken/KenKenPoster.vue").then((m) => m.default),
+  scene: () => import("@games/kenken/KenKenGame.vue").then((m) => m.default),
+};
+
+/**
+ * The registration TABLE the carousel reads. Game #3+ drop in HERE, nowhere else (the
+ * drop-in invariant). W13 lands its Thermo/Killer/KenKen rows — every id matches the
+ * `game.ts` registration-by-convention (loose `id: string`, zero `gameRegistry` edit); every
+ * row is lazy so the poster + scene download only on select (sudoku's eager asymmetry, P4 #4).
+ */
+export const GAMES: readonly GameCard[] = [
+  sudokuCard,
+  futoshikiCard,
+  thermoCard,
+  killerCard,
+  kenkenCard,
+];

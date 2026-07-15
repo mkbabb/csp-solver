@@ -23,27 +23,19 @@ import {
 } from "@pencil/composables/rasterPose";
 import frauncesInline from "@/assets/fonts/fraunces-subset.woff2?inline";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
-import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
-import {
-  ghostUnderline,
-  scribbleUnderline,
-} from "@pencil/chrome/OptionSelector/scribbleUnderline";
-import { useGameMenu, type GameMenuOption } from "./useGameMenu";
 
 // The wordmark IS the game picker. It renders the CURRENT game's name in the display face
 // (live SVG <text>, so any label renders — no per-glyph art), and the whole thing is a real
-// <button> that opens a hand-drawn paper-note listbox of both games. Pencil never imports
-// games: the game id + option list arrive as props; selection is emitted back to App.vue,
-// which owns the `?game=` swap.
+// <button> that OPENS THE GALLERY (T4-W12 Wave D — the in-place dropdown listbox is retired;
+// one game-select surface, the carousel). Pencil never imports games: the game id arrives as
+// a prop; the open is emitted back to App.vue, which owns `enterGallery` + the board⇄card fold.
 const props = defineProps<{
   game: string;
-  options: GameMenuOption[];
 }>();
 
 const emit = defineEmits<{
-  (e: "select", value: string): void;
-  /** Fires the moment the picker opens (click OR keyboard) — App warms the other
-   *  scene's lazy chunk on this signal (F6-D3), so by selection time it's cached. */
+  /** Fires on activation (click / Enter / Space) — App folds the board into the gallery
+   *  AND warms the other scene's lazy chunk on this signal (F6-D3), so a select is cached. */
   (e: "open"): void;
 }>();
 
@@ -69,30 +61,11 @@ const logoPose = useBeatFrame(
   () => beatsFor(logoPreset.wobble?.intervalMs ?? MOTION.beatMs * 4),
 );
 
-const label = computed(
-  () => props.options.find((o) => o.value === props.game)?.label ?? props.game,
-);
+// The wordmark renders the CURRENT game's name directly (id === display name for both games).
+const label = computed(() => props.game);
 
-// ── Menu state (collapsible listbox; DOM focus stays on the trigger) ──
-const { isOpen, highlighted, toggle, close, selectIndex, onKeydown } = useGameMenu(
-  () => props.options,
-  () => props.game,
-  (v) => emit("select", v),
-);
+// The caret's hover wiggle rides HandwrittenGlyph's own glyph-wiggle (PRM-gated in the glyph).
 const hovered = ref(false);
-defineExpose({ close });
-
-// F6-D3: announce every open (a watch, not the click handler, so keyboard opens count too).
-watch(isOpen, (open) => {
-  if (open) emit("open");
-});
-
-function seedFor(value: string): number {
-  return value.charCodeAt(0);
-}
-function inkColor(): string {
-  return isDark.value ? "#ffffff" : "#1a1a1a";
-}
 
 // ── Clip-path wipe reveal — a mount-time beat, played ONCE (see the game watch) ──
 const isDrawn = ref(reducedMotion.value);
@@ -233,16 +206,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="logo-menu" @keydown="onKeydown">
+  <div class="logo-menu">
     <button
       type="button"
       class="logo-trigger"
-      aria-haspopup="listbox"
-      :aria-expanded="isOpen"
-      aria-controls="logo-game-listbox"
-      :aria-activedescendant="isOpen ? `logo-game-opt-${highlighted}` : undefined"
       :aria-label="`Puzzle: ${label}. Choose a puzzle`"
-      @click.stop="toggle"
+      @click.stop="emit('open')"
       @pointerenter="hovered = true"
       @pointerleave="hovered = false"
     >
@@ -295,7 +264,7 @@ onUnmounted(() => {
           <text class="logo-text" x="4" y="48" text-anchor="start">{{ label }}</text>
         </g>
       </svg>
-      <span class="logo-caret" :class="{ 'is-open': isOpen }" aria-hidden="true">
+      <span class="logo-caret" aria-hidden="true">
         <HandwrittenGlyph
           value=">"
           :is-given="true"
@@ -309,57 +278,6 @@ onUnmounted(() => {
         />
       </span>
     </button>
-
-    <!-- F6-D1 (T3-W10): the close now carries a REAL leave — 140ms ease-out reverse of
-             logo-menu-in — making I2's "the menu-close motion already carries the swap"
-             comment true instead of aspirational. Enter is untouched (the card's own
-             logo-menu-in plays on mount as before). -->
-    <Transition name="logo-menu">
-      <div v-if="isOpen" class="logo-menu-pop">
-        <HandDrawnOutline :stroke-width="3">
-          <ul
-            id="logo-game-listbox"
-            class="logo-menu-card cartoon-shadow-md edge-outlined bg-popover"
-            role="listbox"
-            aria-label="Choose a puzzle"
-          >
-            <li
-              v-for="(opt, i) in props.options"
-              :id="`logo-game-opt-${i}`"
-              :key="opt.value"
-              role="option"
-              :aria-selected="opt.value === props.game"
-              class="logo-menu-item"
-              :class="{
-                'is-active': opt.value === props.game,
-                'is-highlighted': i === highlighted,
-              }"
-              :style="
-                opt.value === props.game
-                  ? {
-                      '--scribble-underline': scribbleUnderline(
-                        seedFor(opt.value),
-                        inkColor(),
-                      ),
-                      '--scribble-width': `${opt.label.length + 1}ch`,
-                    }
-                  : {
-                      '--ghost-underline': ghostUnderline(
-                        seedFor(opt.value) + 500,
-                        inkColor(),
-                      ),
-                      '--ghost-width': `${opt.label.length + 1}ch`,
-                    }
-              "
-              @click.stop="selectIndex(i)"
-              @pointermove="highlighted = i"
-            >
-              {{ opt.label }}
-            </li>
-          </ul>
-        </HandDrawnOutline>
-      </div>
-    </Transition>
   </div>
 </template>
 
@@ -479,8 +397,9 @@ onUnmounted(() => {
   letter-spacing: 0.02em;
 }
 
-/* The interactive tell: the futoshiki '>' glyph rotated to a downward chevron; flips up when
-   open. Hover wiggle rides HandwrittenGlyph's own glyph-wiggle (PRM-gated inside the glyph). */
+/* The interactive tell: the futoshiki '>' glyph rotated to a downward chevron — the "there's
+   more, open it" cue (the wordmark now opens the gallery, T4-W12 Wave D). Hover wiggle rides
+   HandwrittenGlyph's own glyph-wiggle (PRM-gated inside the glyph). */
 .logo-caret {
   position: relative;
   flex: none;
@@ -491,117 +410,10 @@ onUnmounted(() => {
   transition: transform 200ms var(--ease-noteWrite);
 }
 
-.logo-caret.is-open {
-  transform: translateY(var(--caret-nudge)) rotate(-90deg);
-}
-
-.logo-menu-pop {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 0.45rem;
-  z-index: 50;
-}
-
-/* H2-elevation-only: the floating paper note reads as a lifted sheet — popover bg
-   (one tone off the card) + the md cartoon shadow, via the template classes. The
-   placement half stays dead (the menu is ~99px; it never fights the fold). */
-.logo-menu-card {
-  list-style: none;
-  margin: 0;
-  padding: 0.45rem;
-  border-radius: 0.75rem;
-  min-width: max(9rem, 100%);
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  animation: logo-menu-in 250ms var(--ease-noteWrite) both;
-}
-
-/* H2's dark hairline is gone with the border (T3-W10 F1 one-edge ownership): the
-   wobble frame draws the floating edge now, in both themes. */
-
-.logo-menu-item {
-  /* The hand register token (--font-hand ← Patrick Hand) + a true √φ ladder rung —
-       H4 ladder-bind: 1.4rem was bespoke; --type-subheading (1.272rem) is the
-       nearest rung. The ≥640px arm steps one rung to --type-heading (φ). */
-  font-family: var(--font-hand);
-  font-size: var(--type-subheading);
-  line-height: 1.15;
-  letter-spacing: 0.02em;
-  color: var(--color-muted-foreground);
-  padding: 0.15rem 0.65rem 0.5rem;
-  border-radius: 0.4rem;
-  cursor: pointer;
-  user-select: none;
-  background-repeat: no-repeat;
-  background-origin: content-box;
-  background-position: left bottom;
-  transition:
-    color 120ms,
-    background-color 120ms;
-}
-
-.logo-menu-item.is-highlighted {
-  color: var(--color-foreground);
-  background-color: color-mix(in srgb, var(--color-foreground) 7%, transparent);
-}
-
-.logo-menu-item.is-highlighted:not(.is-active) {
-  background-image: var(--ghost-underline);
-  background-size: var(--ghost-width, 4ch) 8px;
-}
-
-/* The active game carries the scribble underline (scribbleUnderline.ts, same as OptionSelector). */
-.logo-menu-item.is-active {
-  color: var(--color-foreground);
-  background-image: var(--scribble-underline);
-  background-size: var(--scribble-width, 4ch) 8px;
-}
-
-/* R5 transform truthing (T3-W10 F1): cartoon-shadow-md's -2px lift was silently dead
-   here (this animation fills forward at translateY(0)) — and folding it in measured as
-   a 2px frame/card skew, since the wobble frame registers to the layout box transforms
-   don't move. `edge-outlined` drops the lift instead (index.css); the keyframes stay at
-   the shipped pose. Declared == rendered, under animation and PRM alike. */
-@keyframes logo-menu-in {
-  from {
-    transform: translateY(-6px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* F6-D1 — the leave beat (page-turn beat 0): 140ms ease-out reverse of logo-menu-in
-   (fade + 6px lift-up), Band C's tooltip-fade rung. Declared on the Transition ROOT
-   (Vue watches this element's animation to time the DOM removal); pointer-events cut
-   so a closing menu never intercepts the click that closed it. */
-.logo-menu-leave-active {
-  animation: logo-menu-out 140ms var(--ease-noteWrite) both;
-  pointer-events: none;
-}
-
-@keyframes logo-menu-out {
-  from {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateY(-6px);
-    opacity: 0;
-  }
-}
-
 @media (min-width: 640px) {
   .logo-menu {
     --caret-size: 1.9rem;
     --logo-height: 5.724rem;
-  }
-  .logo-menu-item {
-    font-size: var(--type-heading);
   }
 }
 
@@ -619,13 +431,6 @@ onUnmounted(() => {
   }
   .logo-caret {
     transition: none;
-  }
-  .logo-menu-card {
-    animation: none;
-  }
-  /* No leave animation → Vue removes the node on the next tick (instant close). */
-  .logo-menu-leave-active {
-    animation: none;
   }
 }
 </style>

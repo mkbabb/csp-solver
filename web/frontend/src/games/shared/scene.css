@@ -150,6 +150,19 @@
     transition: opacity 200ms var(--ease-fadeOut);
     animation: none;
   }
+
+  /* T4-W12 Wave C2 §BEAT 0 — chrome leaves. The gallery entry fades the controls/drawer out on
+     this SAME 200ms scene-leaving fade WITHOUT erasing the board — the board folds into the
+     center card, it never erases (the one departure from the page-turn: no erase beat on entry).
+     App holds `html.gallery-leaving` for the beat-0 window (MOTION.chromeLeaveMs), then the fold
+     begins. Global-html + scoped-descendant, the `html.drawer-closed` pattern above. PRM: this
+     whole block is no-preference-gated, so entry stays an instant cut. */
+  html.gallery-leaving .mobile-board-width,
+  html.gallery-leaving .scene-controls {
+    opacity: 0;
+    transition: opacity 200ms var(--ease-fadeOut);
+    animation: none;
+  }
 }
 
 @keyframes controls-fade-in {

@@ -1,14 +1,30 @@
 <script setup lang="ts">
-import { ref, defineAsyncComponent, h } from "vue";
+import {
+  ref,
+  defineAsyncComponent,
+  h,
+  nextTick,
+  onMounted,
+  onBeforeUnmount,
+  type Component,
+} from "vue";
 import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
+import { MOTION } from "@pencil/config/pencilConfig";
+import { flipTransform, useFlipGlide } from "@games/shared/useFlipGlide";
 import SudokuGame from "@games/sudoku/SudokuGame.vue";
 import DarkModeToggle from "@pencil/celestial/DarkModeToggle.vue";
 import SvgFilters from "@pencil/chrome/SvgFilters.vue";
 import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
 import HandwrittenLogo from "@pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue";
 import AttributionCard from "@pencil/chrome/AttributionCard/AttributionCard.vue";
+import GameGallery from "@pencil/chrome/GameGallery/GameGallery.vue";
 import { registerDrawerMasthead } from "@games/shared/useControlsDrawer";
 import { useKeyboardViewport } from "@games/shared/useKeyboardViewport";
+import { useGameGallery } from "@games/shared/useGameGallery";
+import { useBoardDirty } from "@games/shared/useDirtyBoard";
+import { setLiveFaceTarget } from "@games/shared/useLiveFace";
+import { useCoarsePointer } from "@games/shared/useCoarsePointer";
+import { GAMES } from "@games/registry";
 
 // T4-WM §1 keyboard-avoidance (lane C): one document-scoped install covers both games — it
 // keys on the shared `.board-cells` contract and no-ops for every other focus target. The OS
@@ -17,22 +33,35 @@ import { useKeyboardViewport } from "@games/shared/useKeyboardViewport";
 // `visualViewport` (the one cross-engine path — WebKit ships no VirtualKeyboard/interactive-widget).
 useKeyboardViewport();
 
-// OD-8 in-app game selector. Futoshiki's whole scene (board + controls + its own useFutoshiki
-// + Worker) is async + `v-if`-gated below, so it only downloads and spins up when Futoshiki is
-// selected. Sudoku rides the main chunk (eager/static import) — the default game's load is
-// byte-unchanged (ratified asymmetry, P4 #4).
-// F6-D3 cold fallback: the chunk preloads on menu-OPEN (see preloadFutoshiki), so by selection
-// it's normally cached. If it's genuinely cold (throttled first select — G10's
-// `first-select-void-400ms.png`): blank paper ≤300ms, then the thinking-scribble — never a
+// OD-8 / T4-W13 — THE MOUNT FOLD: the registry-driven scene mount. A gallery select / `?game=`
+// deep-link sets `scene` to a game id; `sceneFor` resolves it to the mountable component. The
+// eager default (Sudoku) rides the main chunk (its static import above) — a byte-unchanged load
+// (ratified asymmetry, P4 #4); every other game is a LAZY `defineAsyncComponent` over the
+// registry's own `card.scene()` loader — the SAME dynamic-import chunk today's Futoshiki cut,
+// now generalized to all five so each game's composable + Worker start only when it's selected.
+// Memoized so each id keeps a STABLE component identity across re-renders/switches.
+// F6-D3 cold fallback: the lazy chunks preload on gallery OPEN (preloadScenes), so a select is
+// normally cached. A genuinely cold select (throttled — G10's `first-select-void-400ms.png`)
+// shows blank paper ≤300ms then the thinking-scribble (delay:300 + loadingComponent) — never a
 // spinner (design §5.1).
-const FutoshikiGame = defineAsyncComponent({
-  loader: () => import("@games/futoshiki/FutoshikiGame.vue"),
-  loadingComponent: {
-    render: () =>
-      h("div", { class: "scene-loading" }, [h(ScribbleLoader, { size: 56 })]),
-  },
-  delay: 300,
-});
+const sceneCache = new Map<string, Component>();
+function sceneFor(id: string): Component {
+  const cached = sceneCache.get(id);
+  if (cached) return cached;
+  const card = GAMES.find((c) => c.id === id) ?? GAMES[0];
+  const comp: Component = card.eager
+    ? SudokuGame
+    : defineAsyncComponent({
+        loader: card.scene,
+        loadingComponent: {
+          render: () =>
+            h("div", { class: "scene-loading" }, [h(ScribbleLoader, { size: 56 })]),
+        },
+        delay: 300,
+      });
+  sceneCache.set(id, comp);
+  return comp;
+}
 
 // Dev-only tuning tool — explicit env gate, not a commented-out import. import.meta.env.DEV
 // is statically inlined at build time, so the dynamic import()'s chunk is dead-code-eliminated
@@ -41,15 +70,13 @@ const FilterTuner = import.meta.env.DEV
   ? defineAsyncComponent(() => import("@pencil/dev/FilterTuner.vue"))
   : null;
 
-type GameId = "sudoku" | "futoshiki";
-const gameOptions = [
-  { value: "sudoku", label: "sudoku" },
-  { value: "futoshiki", label: "futoshiki" },
-];
+// T4-W13 — the id union WIDENS to `string` keyed on the registry (the W11 KEY precedent:
+// tiers erased at the boundary). `?game=` is validated against GAMES; an unknown id (or none)
+// lands on sudoku, the default.
+type GameId = string;
 function parseGame(): GameId {
-  return new URLSearchParams(window.location.search).get("game") === "futoshiki"
-    ? "futoshiki"
-    : "sudoku";
+  const id = new URLSearchParams(window.location.search).get("game") ?? "";
+  return GAMES.some((c) => c.id === id) ? id : "sudoku";
 }
 // UI-8: the tab title names the CURRENT game — the static "Sudoku - CSP Solver" in
 // index.html lied on Futoshiki after both a deep-link (`?game=futoshiki`) and an in-app
@@ -81,9 +108,16 @@ const leaving = ref(false); // beat 1 in flight: outgoing grid erases, chrome fa
 let seamGuard: number | null = null;
 const reducedMotion = usePrefersReducedMotion();
 
-function setGame(val: string | number) {
-  const next: GameId = val === "futoshiki" ? "futoshiki" : "sudoku";
-  if (next === game.value) return;
+// `cut` (T4-W12 Wave B): a gallery select is a same-frame cut for EVERYONE (the board⇄card
+// FLIP unfold + the hidden seam are Wave C); the wordmark dropdown keeps the animated
+// page-turn. One `setGame`, two callers — the flag routes the cut, no logic fork.
+function setGame(val: string | number, opts?: { cut?: boolean }) {
+  const raw = String(val);
+  const next: GameId = GAMES.some((c) => c.id === raw) ? raw : "sudoku";
+  if (next === game.value) {
+    if (opts?.cut) scene.value = next; // re-select the same game from the gallery: no-op cut
+    return;
+  }
   game.value = next;
   applyTitle(next); // UI-8: the title tracks the switch, same instant as the URL/wordmark
   const url = new URL(window.location.href);
@@ -97,8 +131,8 @@ function setGame(val: string | number) {
   history.replaceState(null, "", url.toString());
   // Switching games unmounts the outgoing scene (v-if), which stops its keyboard listener and
   // ends any in-flight peek with it — no cross-scene teardown needed here.
-  if (reducedMotion.value) {
-    scene.value = next; // PRM: same-frame cut, no beat-1 hold
+  if (reducedMotion.value || opts?.cut) {
+    scene.value = next; // PRM or the gallery's Wave-B static cut: same-frame swap
     return;
   }
   leaving.value = true; // beat 1: the mounted scene erases; `erased` fires the seam
@@ -122,16 +156,19 @@ function onSceneErased() {
   leaving.value = false;
 }
 
-// F6-D3: warm the other scene's chunk the moment the picker OPENS — by selection time it's
+// F6-D3: warm every LAZY scene's chunk the moment the picker OPENS — by selection time it's
 // cached, killing the first-select void structurally (G10 dramatized it: 150–3000ms of pure
-// empty paper under CDP throttle). Sudoku rides the main chunk; only Futoshiki is lazy.
-let futoshikiWarm = false;
-function preloadFutoshiki() {
-  if (futoshikiWarm) return;
-  futoshikiWarm = true;
-  import("@games/futoshiki/FutoshikiGame.vue").catch(() => {
-    futoshikiWarm = false; // a failed warm retries on the next open
-  });
+// empty paper under CDP throttle). Sudoku rides the main chunk (eager); the other four warm
+// through their OWN registry `scene()` loaders — generalizes the old Futoshiki-only warm to the
+// five-game registry. A cold select still resolves via `sceneFor`'s async loader (the warm is
+// opportunistic), so warm-once suffices.
+let scenesWarm = false;
+function preloadScenes() {
+  if (scenesWarm) return;
+  scenesWarm = true;
+  for (const card of GAMES) {
+    if (!card.eager) card.scene().catch(() => {});
+  }
 }
 
 const desktopAttribution = ref<InstanceType<typeof AttributionCard> | null>(null);
@@ -152,8 +189,184 @@ registerDrawerMasthead(() => ({
 function closeAll() {
   desktopAttribution.value?.close();
   mobileAttribution.value?.close();
-  logoMenu.value?.close();
 }
+
+// ── The game gallery (T4-W12 — the carousel; Wave C adds the board⇄card fold) ────────
+// The select screen is a spread of paper worksheets. `useGameGallery` is the module-level
+// view state machine (view/snappedIndex/enteredFrom + the `?view=gallery` URL truth); this
+// app owns the `?game=` swap + the page-turn, so the gallery stays a VIEW over the one app,
+// never a route. GameGallery is pencil-pure: it takes `GAMES` (structurally a `GalleryCard[]`)
+// + the snapped index as props and emits @snap/@select/@cancel.
+const { view, snappedIndex, openGallery, snapTo, select, cancel } = useGameGallery();
+
+// The mid-game guard's inputs (T4-W12 Wave D §4). `dirty` is the mounted board's ONE
+// undo-depth signal, forwarded through the module bridge (no parallel bool); `coarse` is the
+// primary-pointer class. Both flow into the pencil-pure gallery as PROPS — pencil imports
+// nothing from games/**, so App (the app shell) reads them here and hands them across.
+const dirty = useBoardDirty();
+const coarse = useCoarsePointer();
+
+// ── The board⇄card FOLD + THE LIVE CENTER FACE (T4-W12 Wave C/C2, §choreography) ──────────
+// Grammar B (the drawer glide), generalized: App owns the board⇄card FLIP orchestration on the
+// EXTRACTED `useFlipGlide` engine — the SAME proven primitive the drawer rides (no second
+// animation brain). The covenant discipline it inherits verbatim: ONE glass curve, one clock,
+// `composite:replace`/`fill:none`, and THE CRIT KILL — the board's LAYOUT size is never tweened;
+// only a transform-scale rides the curve (the board keeps its playing-view raster, ≤1 raster).
+//
+// Wave C2 closes the deviation: the center card's face is the LIVE board (state + marks), not a
+// poster + cut. The ONE board is REPARENTED into the center card via GameScene's Teleport
+// (`setLiveFaceTarget`); the board itself is the FLIP mover, folding from its full pose into the
+// face. Every view/URL/game transition still fires as Wave B, so a missing rect / PRM degrades
+// to the same-frame cut and no state/visibility assertion sees mid-glide pixels.
+const foldCtl = useFlipGlide({ durationMs: MOTION.boardFoldMs });
+
+// Was the current gallery opened INTERACTIVELY (wordmark / `g` fold), not a ?view=gallery boot?
+// Drives BEAT 2 "the deal" (flanks draw IN) — passed to the gallery as `:animate-entry`.
+const entryAnimated = ref(false);
+// The fold's board-pose anchor (FIRST rect), read before the chrome-leave; consumed by the
+// live-face fold once the center card's face mounts. Null after use / on deep-link (no fold).
+let pendingFoldFrom: DOMRect | null = null;
+
+/** The live board host's rect — the fold's full-pose anchor (read before the view flips). */
+function boardHostRect(): DOMRect | null {
+  return (
+    document.querySelector<HTMLElement>(".board-peek-host")?.getBoundingClientRect() ??
+    null
+  );
+}
+/** The centered card's box — the exit unfold's card-pose anchor. */
+function centerCardEl(): HTMLElement | null {
+  return document.querySelector<HTMLElement>(".game-card.is-center");
+}
+
+function onGallerySnap(index: number) {
+  snapTo(index);
+}
+
+// THE LIVE CENTER FACE (Wave C2). The gallery hands up the current-game centered card's live
+// mount (or null when it stops being live). App relocates the ONE board's subtree into it
+// (`setLiveFaceTarget` → GameScene's Teleport — one instance, marks/Worker/state survive),
+// fits it to the face box, and — on an interactive entry — runs BEAT 1, the fold.
+function onLiveFace(el: HTMLElement | null) {
+  setLiveFaceTarget(el); // teleport the board into the face, or park it home (null)
+  if (!el) return;
+  void nextTick(() => {
+    const board = document.querySelector<HTMLElement>(".board-peek-host");
+    if (!board) return;
+    // Fit: shrink the full board into the face box. The board's LAYOUT never changes (the crit
+    // kill) — `.live-face-fit` carries a COMPOSITOR scale, so the board keeps its playing-view
+    // raster and only travels. Measured at scale 1, applied, then re-read — all pre-paint.
+    const slot = el.parentElement; // .live-face-slot
+    const faceW = slot?.getBoundingClientRect().width ?? 0;
+    const boardW = board.getBoundingClientRect().width;
+    if (faceW > 0 && boardW > 0)
+      el.style.setProperty("--live-fit", String(faceW / boardW));
+    // BEAT 1 — the fold: the live board scales DOWN from its full pose into the face slot on
+    // the glass curve. `flipTransform` makes the (now face-sized) board LOOK full at its old
+    // position, then it glides to identity, settling into the face — only the transform channel
+    // tweens. Deep-link / navigation land the face with no fold (pendingFoldFrom null).
+    if (pendingFoldFrom && !reducedMotion.value) {
+      const from = pendingFoldFrom;
+      pendingFoldFrom = null;
+      const last = board.getBoundingClientRect(); // face-slot pose (post-fit)
+      foldCtl.run([
+        {
+          el: board,
+          from: flipTransform(from, last),
+          to: "translate(0px, 0px) scale(1)",
+          transformOrigin: "50% 50%",
+        },
+      ]);
+    }
+  });
+}
+
+/** Run ONE unfold mover once the view has flipped: in `nextTick` (pre-paint) read the mover's
+ *  LAST rect and hand `useFlipGlide` a `first → last` delta, so the board-pose keyframe is
+ *  on-screen from frame ONE (no rest-pose flash). A null mover → the cut stands. */
+function runFold(first: DOMRect, getMover: () => HTMLElement | null) {
+  void nextTick(() => {
+    const el = getMover();
+    if (!el) return;
+    const last = el.getBoundingClientRect();
+    foldCtl.run([
+      {
+        el,
+        from: flipTransform(first, last),
+        to: "translate(0px, 0px) scale(1)",
+        transformOrigin: "50% 50%",
+      },
+    ]);
+  });
+}
+
+// ENTRY — §BEAT 0 then §BEAT 1/2. `g` / the wordmark folds the live board into the center card.
+// Beat 0: the scene chrome fades out (`html.gallery-leaving`, MOTION.chromeLeaveMs) while the
+// board HOLDS — it never erases. Then openGallery mounts the deck; the center card's face mounts
+// live and `onLiveFace` runs the fold (beat 1); the deal fires on the deck's mount (beat 2). PRM
+// cuts every beat.
+function enterGallery() {
+  preloadScenes(); // F6-D3: warm the lazy scene chunks on OPEN, so a select is cached
+  if (reducedMotion.value) {
+    entryAnimated.value = false;
+    openGallery(game.value); // PRM: same-frame cut — no chrome-leave, no fold, no deal
+    return;
+  }
+  const first = boardHostRect(); // the board's full pose, read BEFORE beat 0
+  entryAnimated.value = true;
+  if (!first) {
+    openGallery(game.value); // no board to fold → cut (the deal still deals)
+    return;
+  }
+  pendingFoldFrom = first;
+  document.documentElement.classList.add("gallery-leaving"); // BEAT 0 — chrome leaves (200ms)
+  window.setTimeout(() => {
+    document.documentElement.classList.remove("gallery-leaving");
+    openGallery(game.value); // BEAT 1 (fold via onLiveFace) + BEAT 2 (deal via deck mount)
+  }, MOTION.chromeLeaveMs);
+}
+
+// EXIT unfold: the chosen card unfolds back to a full board. Park the live board home FIRST
+// (never orphan it as the deck unmounts — GameScene's Teleport is App-tree, ordered BEFORE the
+// gallery in <main>, so the board reparents before the deck is removed), read the small card
+// pose, apply the state synchronously (select + setGame — the game swap is THE SEAM, hidden
+// under the still-small card — or cancel), then FLIP the board UP from that pose to full.
+// `sameGame` = a pure unfold, no seam.
+function unfoldToBoard(applyState: () => void) {
+  const card = centerCardEl();
+  const first = card?.getBoundingClientRect() ?? null;
+  setLiveFaceTarget(null); // un-teleport the board home before the deck unmounts
+  applyState(); // synchronous view→playing + game swap (the seam) or cancel (Wave B path)
+  if (reducedMotion.value || !first) return; // PRM / no card → same-frame cut
+  runFold(first, () => document.querySelector<HTMLElement>(".board-peek-host"));
+}
+
+function onGallerySelect(id: string) {
+  unfoldToBoard(() => {
+    select(); // view → playing, `?view` cleared
+    setGame(id, { cut: true }); // same-frame cut to the chosen game (`?game` if changed) — the seam
+  });
+}
+function onGalleryCancel() {
+  unfoldToBoard(() => cancel()); // unfold back to the entered-from game (no swap, no seam)
+}
+
+// ENTRY (§ENTRY): keyboard `g` opens the gallery from the playing view (folding the board
+// into the center card). Pointing the wordmark at `enterGallery` + retiring the dropdown is
+// Wave D; this entry seam is additive and dropdown-agnostic, guarded so a `g` typed into a
+// board cell/field never fires it.
+function onGlobalKeydown(e: KeyboardEvent) {
+  if (e.key !== "g" && e.key !== "G") return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (view.value !== "playing") return;
+  const t = e.target as HTMLElement | null;
+  if (t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName)))
+    return;
+  e.preventDefault();
+  enterGallery();
+}
+onMounted(() => window.addEventListener("keydown", onGlobalKeydown));
+onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 </script>
 
 <template>
@@ -177,42 +390,50 @@ function closeAll() {
     <main
       class="main-content flex min-h-0 flex-1 flex-col items-center justify-center px-1 md:px-4"
     >
-      <div class="board-group">
+      <!-- The playing board stays MOUNTED under the gallery (v-show, not v-if): state is
+           preserved across an open/cancel (the one live board on the page), and the FLIP
+           fold in Wave C reads the board's own rect. -->
+      <div class="board-group" v-show="view === 'playing'">
         <!-- Mobile: @mbabb in-flow, left-aligned with logo -->
         <AttributionCard ref="mobileAttribution" mobile />
-        <!-- Masthead: the pencil wordmark renders the CURRENT game's name and IS the game
-             picker — a real <button> opening a hand-drawn paper-note listbox of both games.
-             Selection swaps the game via the existing ?game= mechanism (setGame). Pencil
-             never imports games: the id + options are props; the choice comes back via @select. -->
+        <!-- Masthead: the pencil wordmark renders the CURRENT game's name and OPENS THE
+             GALLERY (T4-W12 Wave D — the dropdown listbox is retired; one game-select
+             surface, the carousel). A real <button>; its click folds the board into the
+             center card. Pencil never imports games: the id is a prop, the open comes back
+             via @open (App owns enterGallery + the fold). -->
         <!-- UI-8: an <h1> gives the page its one heading (landmarks.h1 was []). The
              wordmark button is the accessible name of that heading — the current game —
              so the h1 stays visually identical (reset to inherit; the button carries all
              the paint). -->
         <h1 ref="mastheadEl" class="masthead">
-          <HandwrittenLogo
-            ref="logoMenu"
-            :game="game"
-            :options="gameOptions"
-            @select="setGame"
-            @open="preloadFutoshiki"
-          />
+          <HandwrittenLogo ref="logoMenu" :game="game" @open="enterGallery" />
         </h1>
 
-        <!-- Two symmetric scenes, one mounted at a time (v-if on `scene`, which flips at the
-             page-turn's seam — `game` is the selected id and drives the wordmark/URL at click).
-             Sudoku eager/static (default game, main chunk); Futoshiki async so useFutoshiki +
-             its Worker only start when selected. -->
-        <SudokuGame
-          v-if="scene === 'sudoku'"
-          :leaving="leaving"
-          @erased="onSceneErased"
-        />
-        <FutoshikiGame
-          v-if="scene === 'futoshiki'"
-          :leaving="leaving"
-          @erased="onSceneErased"
-        />
+        <!-- THE MOUNT FOLD (T4-W13): one scene mounts at a time, resolved from `scene` — the
+             MOUNTED id, which flips at the page-turn's seam (`game` is the selected id, driving
+             the wordmark/URL at click). `sceneFor` returns the eager Sudoku directly (main
+             chunk) or a lazy async component per game (its composable + Worker only start when
+             that game is selected). The registry-driven fold replaces the hardcoded two-game
+             v-if union — game #3+ mount with zero edits here. -->
+        <component :is="sceneFor(scene)" :leaving="leaving" @erased="onSceneErased" />
       </div>
+
+      <!-- The gallery mounts in the board's place when view==='gallery' (Wave B static cut;
+           the board⇄card fold is Wave C). Pencil-pure: GAMES flows in as GalleryCard[] props,
+           the choice returns via @select — no games/** import crosses into pencil. -->
+      <GameGallery
+        v-if="view === 'gallery'"
+        :cards="GAMES"
+        :snapped-index="snappedIndex"
+        :dirty="dirty"
+        :current-id="game"
+        :coarse="coarse"
+        :animate-entry="entryAnimated"
+        @snap="onGallerySnap"
+        @select="onGallerySelect"
+        @cancel="onGalleryCancel"
+        @live-face="onLiveFace"
+      />
     </main>
   </div>
 </template>

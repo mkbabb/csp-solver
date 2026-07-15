@@ -56,9 +56,14 @@ test('throttled first-select void recovers: loader or board-shell within budget'
     latency: 500, // ms
   });
 
-  // First futoshiki select via the wordmark listbox (the suite's switch idiom).
+  // First futoshiki select via the GALLERY (T4-W12 Wave D — the wordmark opens the carousel;
+  // the dropdown listbox is retired). Opening the gallery warms the futoshiki chunk
+  // (preloadFutoshiki on open), so it downloads under throttle in parallel with the nav.
   await page.locator('button.logo-trigger').click();
-  await page.getByRole('option', { name: 'futoshiki' }).click();
+  const viewport = page.locator('.gallery-viewport');
+  await viewport.waitFor({ state: 'visible', timeout: 15000 });
+  await viewport.press('ArrowRight'); // sudoku (centered) → futoshiki
+  await viewport.press('Enter'); // select the centered futoshiki card
 
   // The gate: the Futoshiki board-shell mounts within budget — the void is bounded, not
   // permanent. board-shell is the one real satisfier (it mounts with the scene). The old

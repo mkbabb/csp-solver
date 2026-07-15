@@ -126,6 +126,33 @@ export const MOTION = {
     // instant (the ray/disc sub-stack split held two fields at 3 of 4 beats
     // and failed the 0.983 line at every misaligned phase). Dead config dies.
   },
+  /** Carousel card-step glide (T4-W12) — a keyboard/button step of the gallery
+   *  track rides the ONE glass curve (`curves.drawerGlide`) as a WAAPI FLIP transform
+   *  at this duration, one clock, monotone, zero overshoot. A shorter throw than the
+   *  drawer's 520ms ceiling (a card step travels one slot, not a full sheet): 440ms,
+   *  auditioned by eye at the local preview, inside the glass band. Lands HERE, not as
+   *  a mover-local literal, per the wave covenant (no new timing constants outside
+   *  pencilConfig). PRM collapses the glide to an instant snap (no tween).
+   *
+   *  RATIFY-ME (T4-W12 ballot row 4): the card-step glide duration. 440ms auditioned at
+   *  the Wave-D preview (:4788) against 380/440/520 — 380 read clipped for a one-slot
+   *  throw, 520 (the drawer's full-sheet ceiling) dragged for the shorter travel; 440
+   *  is the settled read, monotone on the glass curve with zero overshoot (`snap-glide-
+   *  trace.json`). Inside the glass band, no new named curve. */
+  cardStepMs: 440,
+  /** Board⇄card FOLD (T4-W12 Wave C) — the gallery entry folds the live board INTO the
+   *  center card (and the exit unfolds it back) as a classic FLIP on the ONE glass curve
+   *  (`curves.drawerGlide`) via the extracted `useFlipGlide` engine. A FULL-sheet throw
+   *  (board → card-face, not one card slot), so it takes the drawer's glass ceiling 520ms
+   *  — longer than the 440ms card-step. Lands HERE, not as an App-local literal, per the
+   *  covenant (no timing constants outside pencilConfig). PRM cuts it (same-frame swap). */
+  boardFoldMs: 520,
+  /** BEAT 0 — chrome leaves (T4-W12 Wave C2 §ENTRY). The gallery entry opens by fading the
+   *  scene's controls/drawer out on the EXISTING scene-leaving beat (scene.css, 200ms) — the
+   *  board itself never erases (we fold it, not discard it). This is that band, so the fold
+   *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+   *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+  chromeLeaveMs: 200,
   /** House easing ledger — curves recorded as named decisions, one row per ruling.
    *
    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a

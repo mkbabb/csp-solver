@@ -1,9 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 
 // First-coverage smoke suite for the Futoshiki scene (previously zero e2e coverage).
-// KISS: reach the game via the wordmark listbox, prove the board renders with its
-// inequality furniture, that size switching across N=4..7 changes board dimensions,
-// that a blank cell accepts input, and that a solve reaches a terminal UI state.
+// KISS: reach the game via the gallery carousel (T4-W12 Wave D — the wordmark dropdown
+// listbox is retired; the wordmark now OPENS THE GALLERY), prove the board renders with its
+// inequality furniture, that size switching across N=4..7 changes board dimensions, that a
+// blank cell accepts input, and that a solve reaches a terminal UI state.
 //
 // Selector discipline (session-proven): scope every control query to `.controls-card`.
 // A bare aria-label selector ALSO resolves the hidden mobile panel's twin control and the
@@ -18,12 +19,17 @@ async function loadApp(page: Page) {
   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
 }
 
-// Switch from the default Sudoku scene to Futoshiki via the wordmark-as-game-picker
-// (the ARIA listbox on the handwritten logo), then wait for the async Futoshiki scene to
-// mount and its auto-randomized board to paint its inequality carets.
+// Switch from the default Sudoku scene to Futoshiki via the GALLERY (T4-W12 Wave D): the
+// wordmark opens the carousel; the futoshiki card is centered (←/→) then selected (Enter) —
+// the listbox-over-carousel contract. A pristine (auto-dealt) sudoku switches freely, so no
+// mid-game guard ribbon intervenes. Then wait for the async Futoshiki scene to mount and its
+// auto-randomized board to paint its inequality carets.
 async function switchToFutoshiki(page: Page) {
   await page.locator('button.logo-trigger').click();
-  await page.getByRole('option', { name: 'futoshiki' }).click();
+  const viewport = page.locator('.gallery-viewport');
+  await viewport.waitFor({ state: 'visible', timeout: 15000 });
+  await viewport.press('ArrowRight'); // sudoku (centered) → futoshiki
+  await viewport.press('Enter'); // select the centered futoshiki card
   // The Futoshiki scene is an async chunk that spins up its own Worker + auto-randomizes.
   await page.waitForSelector('.futoshiki-cell', { timeout: 15000 });
   // Inequality furniture appears once the randomized board resolves off-thread.
@@ -36,7 +42,7 @@ async function cellCount(page: Page): Promise<number> {
 
 // ── Test 1: Game Switch + Default Board Renders With Inequality Glyphs ──
 
-test('wordmark listbox switches to futoshiki: default board renders with inequality carets', async ({
+test('gallery switches to futoshiki: default board renders with inequality carets', async ({
   page,
 }) => {
   await loadApp(page);

@@ -19,8 +19,17 @@ import {
   registerDrawerScene,
   useControlsDrawer,
 } from "@games/shared/useControlsDrawer";
+import { useLiveFace } from "@games/shared/useLiveFace";
 
 defineProps<{ leaving?: boolean }>();
+
+// ── The live-center-face projection (T4-W12 Wave C2 §choreography, deviation 1) ────────
+// When the gallery is open on THIS game, App sets `faceTarget` to the center card's live-face
+// mount; the `.board-peek-host` below teleports into it (the ONE board, reparented — never a
+// second live scene), so the center card's face IS the live board with its marks. `null` parks
+// it home (disabled Teleport renders in place), where `v-show` hides it — the playing view and
+// every drawer/golden path see the byte-identical home DOM (a disabled Teleport is a no-op).
+const { faceTarget } = useLiveFace();
 
 // ── The drawer (T3-W12 §6) ───────────────────────────────────────────
 // The row-regime rail becomes the pencil case: the tab (inside .board-peek-host, so it
@@ -47,14 +56,25 @@ onUnmounted(() => unregisterDrawer?.());
   <div class="app-layout" :class="{ 'scene-leaving': leaving }">
     <!-- Board + the held answer-key laminate (a sibling over the board, never inside the
          grid's filtered group — kill-gate rule 6). The host tightly wraps the board box so
-         the laminate's inset:0 aligns to .board-cells. -->
-    <div ref="peekHost" class="board-peek-host">
-      <slot name="board" />
-      <!-- The pull-tab (T3-W12 §6): the tucked case's tongue at the board's right edge —
-           inside the peek host so it rides the glide, outside the board wrapper's
-           containment (§2 P2). ≥1024 only (its own display gate). -->
-      <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
-    </div>
+         the laminate's inset:0 aligns to .board-cells.
+
+         Wave C2: the whole host is a Teleport mover — when the gallery is open on this game,
+         it relocates into the center card's live face (`.in-live-face` scales it to fit); when
+         `faceTarget` is null the Teleport is DISABLED (renders here, unchanged). ONE instance
+         throughout — marks/Worker/solve state survive the reparent. -->
+    <Teleport :to="faceTarget" :disabled="!faceTarget">
+      <div
+        ref="peekHost"
+        class="board-peek-host"
+        :class="{ 'in-live-face': !!faceTarget }"
+      >
+        <slot name="board" />
+        <!-- The pull-tab (T3-W12 §6): the tucked case's tongue at the board's right edge —
+             inside the peek host so it rides the glide, outside the board wrapper's
+             containment (§2 P2). ≥1024 only (its own display gate). -->
+        <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
+      </div>
+    </Teleport>
 
     <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
     <div class="mobile-board-width lg:hidden">
@@ -87,3 +107,23 @@ onUnmounted(() => unregisterDrawer?.());
 </template>
 
 <style scoped src="@/games/shared/scene.css"></style>
+
+<style scoped>
+/* ── The live-center-face pose (T4-W12 Wave C2) ───────────────────────────
+   When teleported into the gallery card, the host renders at its natural board size inside
+   the card's `.live-face-fit` wrapper (which owns the absolute-center position + the
+   `scale(--live-fit)` that shrinks a full board into the card face — a COMPOSITOR transform,
+   so the board keeps its playing-view raster: the crit-kill "layout size is never tweened"
+   holds, the board just travels). The scoped data-v attribute rides the element through the
+   Teleport, so these rules reach it in its new parent. */
+.board-peek-host.in-live-face {
+  /* A card face is a preview — the GameCard owns click-to-select; the projected board must
+     not swallow the pointer (else selecting the centered card would miss). */
+  pointer-events: none;
+}
+
+/* No pull-tab, no drawer furniture on a card face. */
+.board-peek-host.in-live-face :deep(.drawer-tab) {
+  display: none;
+}
+</style>

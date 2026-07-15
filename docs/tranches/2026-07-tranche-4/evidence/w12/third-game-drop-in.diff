@@ -1,0 +1,51 @@
+diff --git a/web/frontend/src/games/demo/DemoPoster.vue b/web/frontend/src/games/demo/DemoPoster.vue
+new file mode 100644
+index 00000000..fd0171e8
+--- /dev/null
++++ b/web/frontend/src/games/demo/DemoPoster.vue
+@@ -0,0 +1,9 @@
++<script setup lang="ts">
++// THROWAWAY drop-in stub (T4-W12 Wave A gate) — proves a third game's poster is a data
++// row: a canned 4×4 board on the shared PosterBoard, ZERO edits outside GAMES[].
++import PosterBoard from "@games/shared/PosterBoard.vue";
++const values: Record<string, number> = { "0": 1, "5": 2, "10": 3, "15": 4, "3": 4, "6": 1 };
++</script>
++<template>
++  <PosterBoard :board-size="4" :subgrid-size="2" :values="values" />
++</template>
+diff --git a/web/frontend/src/games/demo/DemoScene.vue b/web/frontend/src/games/demo/DemoScene.vue
+new file mode 100644
+index 00000000..601035ac
+--- /dev/null
++++ b/web/frontend/src/games/demo/DemoScene.vue
+@@ -0,0 +1,7 @@
++<script setup lang="ts">
++// THROWAWAY drop-in stub scene (T4-W12 Wave A gate) — a placeholder mount target proving
++// the card's `scene` loader is game #3's, with ZERO edits outside GAMES[]. W13 lands real games.
++</script>
++<template>
++  <div class="demo-scene">demo scene</div>
++</template>
+diff --git a/web/frontend/src/games/registry.ts b/web/frontend/src/games/registry.ts
+index 0e453c7a..1bd6cc1f 100644
+--- a/web/frontend/src/games/registry.ts
++++ b/web/frontend/src/games/registry.ts
+@@ -181,4 +181,17 @@ const futoshikiCard: GameCard = {
+  * drop-in invariant). W13 appends its Thermo/Killer/KenKen rows to this array in its final
+  * lane — keep every edit here additive and mergeable.
+  */
+-export const GAMES: readonly GameCard[] = [sudokuCard, futoshikiCard];
++export const GAMES: readonly GameCard[] = [
++  sudokuCard,
++  futoshikiCard,
++  // THROWAWAY drop-in stub (T4-W12 Wave A gate): game #3 is a data row. Its id "demo" is
++  // unknown to gameRegistry — the loose `id: string` lets it register with ZERO edits
++  // outside this array. New files only: games/demo/{DemoPoster,DemoScene}.vue.
++  {
++    id: "demo",
++    name: "demo",
++    range: { label: "size", levels: ["4×4"] },
++    poster: () => import("@games/demo/DemoPoster.vue").then((m) => m.default),
++    scene: () => import("@games/demo/DemoScene.vue").then((m) => m.default),
++  },
++];

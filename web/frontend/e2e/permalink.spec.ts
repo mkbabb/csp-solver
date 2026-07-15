@@ -73,9 +73,14 @@ test('game switch leaves no foreign board/size params in the URL', async ({ page
   await page.goto('./?board=' + enc);
   await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
 
-  // Switch to Futoshiki via the wordmark-as-game-picker.
+  // Switch to Futoshiki via the GALLERY (T4-W12 Wave D — the wordmark opens the carousel).
+  // A permalink-restored board is pristine (clearUndo on restore), so the switch is free —
+  // no mid-game guard ribbon. The setGame cut still strips the outgoing board/size params.
   await page.locator('button.logo-trigger').click();
-  await page.getByRole('option', { name: 'futoshiki' }).click();
+  const viewport = page.locator('.gallery-viewport');
+  await viewport.waitFor({ state: 'visible', timeout: 15000 });
+  await viewport.press('ArrowRight'); // sudoku (centered) → futoshiki
+  await viewport.press('Enter'); // select the centered futoshiki card
   await page.waitForSelector('.futoshiki-cell', { timeout: 15000 });
 
   const params = new URL(page.url()).searchParams;

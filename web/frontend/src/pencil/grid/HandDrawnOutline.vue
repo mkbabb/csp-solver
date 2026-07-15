@@ -30,6 +30,14 @@ const props = withDefaults(
     outset?: number;
     /** Corner radius in px. Default 0 — square, jagged overshoot crossings (opt-in only). */
     radius?: number;
+    /** Externally-driven boil pose (T4-W12). When PRESENT the outline renders this frame
+     *  index and enrols NO shared beat — the PosterBoard discipline, generalized: a gallery
+     *  flank card's frame must enrol nothing (the frozen-pose-0 soul gate), and the ONE
+     *  live card's frame is driven from the gallery's single beat. ABSENT (every existing
+     *  consumer — grid, drawer tab, logo, error note) → the outline enrols the shared beat
+     *  itself, byte-identically to before. The branch is fixed at setup: a consumer either
+     *  binds `:pose` for its whole life (gallery cards) or never does (everyone else). */
+    pose?: number;
   }>(),
   {
     strokeWidth: 6,
@@ -50,11 +58,23 @@ useResizeObserver(containerRef, (entries) => {
   }
 });
 
-// On the shared beat (T3-W12 §2 P1): the outline's swap coalesces with the grid's.
-const currentFrame = useBeatFrame(
-  () => BOIL_CONFIG.frameCount,
-  () => beatsFor(BOIL_CONFIG.intervalMs),
-);
+// On the shared beat (T3-W12 §2 P1): the outline's swap coalesces with the grid's —
+// UNLESS a `:pose` is supplied (T4-W12), in which case the frame is driven externally and
+// this instance enrols nothing (the gallery owns the one beat; flanks stay frozen). The
+// enrolment decision is made ONCE here at setup: `props.pose === undefined` for every
+// pre-W12 consumer, so their code path (and their pixels) are unchanged.
+const beatFrame =
+  props.pose === undefined
+    ? useBeatFrame(
+        () => BOIL_CONFIG.frameCount,
+        () => beatsFor(BOIL_CONFIG.intervalMs),
+      )
+    : null;
+const currentFrame = computed(() => {
+  if (beatFrame) return beatFrame.value;
+  const total = Math.max(1, BOIL_CONFIG.frameCount);
+  return Math.max(0, Math.min(total - 1, Math.floor(props.pose ?? 0)));
+});
 
 // T3-W13 §1-P2: the grain is baked INTO the pose geometry (gridPaths.ts §Grain bake,
 // params derived from grain-outline's own GrainConfig — reactive, so FilterTuner

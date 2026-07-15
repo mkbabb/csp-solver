@@ -1,4 +1,4 @@
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, nextTick, onUnmounted, ref, watch } from "vue";
 // The whole board state machine both games run — the undo/history spine, the
 // epoch/race discipline, the staged deal, the dirty signal, the peek/marks
 // lifecycles, and the URL/persist choreography — lifted out of the twin
@@ -13,6 +13,7 @@ import { useUndoHistory, type BatchDelta } from "./useUndoHistory";
 import { usePencilMarks } from "./usePencilMarks";
 import { useUserMarks } from "./useUserMarks";
 import { useAssists } from "./useAssists";
+import { registerDirtySource, clearDirtySource } from "./useDirtyBoard";
 import { formatGradeSignature, describeTally } from "@games/shared/techniqueVoice";
 import type { HintResult, TechniqueId } from "@games/shared/techniqueEngine";
 import type { SolveState, SolveStats } from "@games/shared/types";
@@ -254,6 +255,14 @@ export function useGameState<
   // board reads 0 (the mount deal is off-log; a size-changing Deal + a permalink restore clear the
   // log), so Deal + Clear act instantly there; any recorded value/mark/board-swap lifts it.
   const isDirty = computed(() => undoDepth.value > 0);
+
+  // T4-W12 Wave D — the mid-game guard bridge. Forward THIS `isDirty` (the one WU signal) up
+  // to the app shell so the gallery's guard ribbon can fire on a dirty+different switch. The
+  // bridge holds a reference and reads through it — no parallel bool. Registered synchronously
+  // (live before first paint); dropped on unmount, identity-guarded so a scene swap can't null
+  // out the incoming board's source. Only one live board is ever mounted, so one slot suffices.
+  registerDirtySource(isDirty);
+  onUnmounted(() => clearDirtySource(isDirty));
 
   function initBoard() {
     values.value = {};
