@@ -39,11 +39,24 @@ const dividerFrames = computed(() =>
     BOIL_CONFIG.frameCount,
   ),
 );
+// WebKit paints SVG content unlayered — `will-change: opacity` on an inner <g> earns
+// no compositor layer there — so each beat's opacity flip re-rasters the live
+// grain-static pose through the surrounding card's filter chain: measured ~10 fps
+// steady-state on desktop Safari against the deployed edge (2026-07-15), recovering
+// to 98 fps with the divider pinned. This is the app's ONE remaining live-filtered
+// pose stack (the geometric grain bake failed this surface's SSIM soul gate — see
+// the note above), so the engine gate lives here and nowhere else: on Apple WebKit
+// the divider holds pose 0 (a static hand-drawn line, byte-faithful); Chromium and
+// Firefox keep the full boil, where the flip really is compositor-only. The ≤1
+// frameCount contract freezes in place without a new mechanism.
+const LIVE_FILTER_FROZEN =
+  typeof navigator !== "undefined" && navigator.vendor === "Apple Computer, Inc.";
+
 // Freeze-in-place while the answer-key laminate holds the page (W9 §2). On the
 // shared beat (T3-W12 §2 P1) so both mounted instances swap in the same dirty frame
 // as the rest of the page's boils.
 const dividerFrame = useBeatFrame(
-  heldFrameCount(() => BOIL_CONFIG.frameCount),
+  heldFrameCount(() => (LIVE_FILTER_FROZEN ? 1 : BOIL_CONFIG.frameCount)),
   () => beatsFor(BOIL_CONFIG.intervalMs),
 );
 </script>
