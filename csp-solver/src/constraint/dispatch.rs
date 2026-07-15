@@ -5,6 +5,7 @@ use crate::variable::Variable;
 
 use super::all_different::AllDifferent;
 use super::all_different_except::AllDifferentExcept;
+use super::cage::{CageProduct, CageSum};
 use super::not_equal::NotEqual;
 use super::traits::{Constraint, Revision, VarId};
 
@@ -16,10 +17,19 @@ use super::traits::{Constraint, Revision, VarId};
 /// the `dyn Constraint`. A devirtualized `Lambda` arm carried zero
 /// construction sites (Pass-1 R1) and was excised; W10 may re-introduce it
 /// behind profiling if the boxed dispatch shows up hot.
+///
+/// `CageSum`/`CageProduct` are the n-ary arithmetic cages (`super::cage`): their
+/// `revise_impl`s clear the default `revise`'s 3+-variable blindness wall for
+/// the sum/product shapes (Killer / KenKen). They are parameterized by
+/// `D::Value` (like `AllDifferentExcept`) and read their integer values through
+/// a stored `fn` pointer, so the enum keeps its domain-generic bound — the
+/// variants simply go unconstructed for non-integer domains.
 pub enum ConstraintEnum<D: Domain> {
     NotEqual(NotEqual),
     AllDifferent(AllDifferent),
     AllDifferentExcept(AllDifferentExcept<D::Value>),
+    CageSum(CageSum<D::Value>),
+    CageProduct(CageProduct<D::Value>),
     Custom(Box<dyn Constraint<D>>),
 }
 
@@ -29,6 +39,8 @@ impl<D: Domain> std::fmt::Debug for ConstraintEnum<D> {
             Self::NotEqual(c) => c.fmt(f),
             Self::AllDifferent(c) => c.fmt(f),
             Self::AllDifferentExcept(c) => c.fmt(f),
+            Self::CageSum(c) => c.fmt(f),
+            Self::CageProduct(c) => c.fmt(f),
             Self::Custom(c) => c.fmt(f),
         }
     }
@@ -44,6 +56,8 @@ where
             Self::NotEqual(c) => &c.scope,
             Self::AllDifferent(c) => &c.scope,
             Self::AllDifferentExcept(c) => &c.scope,
+            Self::CageSum(c) => &c.scope,
+            Self::CageProduct(c) => &c.scope,
             Self::Custom(c) => c.scope(),
         }
     }
@@ -54,6 +68,8 @@ where
             Self::NotEqual(c) => c.check_impl(assignment),
             Self::AllDifferent(c) => c.check_impl(assignment),
             Self::AllDifferentExcept(c) => c.check_impl(assignment),
+            Self::CageSum(c) => c.check_impl(assignment),
+            Self::CageProduct(c) => c.check_impl(assignment),
             Self::Custom(c) => c.check(assignment),
         }
     }
@@ -69,6 +85,8 @@ where
             Self::NotEqual(c) => c.revise_impl(vars, depth),
             Self::AllDifferent(c) => c.revise_impl(vars, depth),
             Self::AllDifferentExcept(c) => c.revise_impl(vars, depth),
+            Self::CageSum(c) => c.revise_impl(vars, depth),
+            Self::CageProduct(c) => c.revise_impl(vars, depth),
             Self::Custom(c) => c.revise(vars, depth),
         }
     }

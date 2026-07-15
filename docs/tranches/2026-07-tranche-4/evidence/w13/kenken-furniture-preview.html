@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>T4-W13 KenKen furniture — π face capture</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        display: flex;
+        gap: 28px;
+        padding: 28px;
+        background: #f6f3ec;
+      }
+      .panel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      .panel.dark {
+        color: #e8ecf2;
+      }
+      .label {
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        opacity: 0.7;
+      }
+      .board {
+        position: relative;
+        width: 380px;
+        height: 380px;
+        border-radius: 12px;
+        background: #fbf9f3;
+        box-shadow: 0 3px 14px rgba(0, 0, 0, 0.12);
+      }
+      .dark .board {
+        background: #20242c;
+        box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+      }
+      /* Boxless Latin grid — plain equal cell borders, NO sub-grid box rules (the new KenKen
+         geometry vs Killer/Sudoku). */
+      .grid {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        grid-template-rows: repeat(6, 1fr);
+        z-index: 2;
+      }
+      .cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        border: 0.5px solid rgba(120, 120, 130, 0.24);
+      }
+      .cell.user {
+        color: #6d55c8;
+        font-weight: 500;
+      }
+      .dark .cell {
+        border-color: rgba(160, 170, 190, 0.18);
+      }
+      .dark .cell.user {
+        color: #b9a6f2;
+      }
+      svg.cages {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 3;
+        overflow: visible;
+        pointer-events: none;
+      }
+      .light .cage-boundary {
+        stroke: rgba(60, 64, 72, 0.5);
+      }
+      .light .cage-target {
+        fill: rgba(52, 56, 64, 0.82);
+      }
+      .dark .cage-boundary {
+        stroke: rgba(198, 204, 214, 0.42);
+      }
+      .dark .cage-target {
+        fill: rgba(214, 220, 230, 0.84);
+      }
+      .cage-boundary {
+        fill: none;
+      }
+      .cage-target {
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel light" id="light">
+      <div class="label">KenKen · dotted cages + "12×" targets · boxless Latin · light</div>
+      <div class="board"></div>
+    </div>
+    <div class="panel dark" id="dark">
+      <div class="label">KenKen · dotted cages + "12×" targets · boxless Latin · dark</div>
+      <div class="board"></div>
+    </div>
+    <script>
+      // Real dealt board (generate_kenken_seeded(6, Medium, 42)) — classic cages-only (all
+      // blank) — plus its unique solution and its operator cages (× − + ÷, incl. a singleton
+      // given "3" at cell 32). All four operator kinds present.
+      // prettier-ignore
+      const solution = [5,3,2,4,1,6,1,2,5,3,6,4,4,6,1,2,5,3,3,4,6,1,2,5,6,1,4,5,3,2,2,5,3,6,4,1];
+      // prettier-ignore
+      const cages = [{op:"×",target:30,cells:[0,1,2]},{op:"-",target:2,cells:[5,11]},{op:"+",target:7,cells:[3,9]},{op:"-",target:2,cells:[27,28]},{op:"×",target:6,cells:[4,10]},{op:"+",target:8,cells:[17,23]},{op:"×",target:24,cells:[33,34]},{op:"+",target:3,cells:[6,7]},{op:"+",target:10,cells:[13,19]},{op:"-",target:4,cells:[24,30]},{op:"÷",target:5,cells:[8,14]},{op:"+",target:3,cells:[15,21]},{op:"-",target:3,cells:[16,22]},{op:"-",target:4,cells:[25,31]},{op:"÷",target:2,cells:[29,35]},{op:"×",target:24,cells:[20,26]},{op:"+",target:7,cells:[12,18]},{op:"+",target:3,cells:[32]}];
+
+      const N = 6;
+      const INSET = 0.09;
+
+      // Mid-solve: ~every-other cell filled from the solution (a plausible in-progress state),
+      // the rest still blank — so the cage outlines + targets read over a partial board.
+      const user = new Set();
+      for (let i = 0; i < N * N; i++) {
+        if ((i * 7 + Math.floor(i / N)) % 2 === 0) user.add(i);
+      }
+
+      // The exact KenKenCage.vue jitter (deterministic, static — pencil register).
+      function jitter(gx, gy, axis) {
+        const h = Math.sin(gx * 34.221 + gy * 71.917 + axis * 12.37) * 24634.113;
+        return (h - Math.floor(h) - 0.5) * 0.05;
+      }
+      function cagesSvg() {
+        let out = "";
+        for (const cage of cages) {
+          const inCage = new Set(cage.cells);
+          const segs = [];
+          const seg = (ax, ay, bx, by) => {
+            const a = { x: ax + jitter(ax, ay, 0), y: ay + jitter(ax, ay, 1) };
+            const b = { x: bx + jitter(bx, by, 0), y: by + jitter(bx, by, 1) };
+            segs.push(`M${a.x.toFixed(3)},${a.y.toFixed(3)} L${b.x.toFixed(3)},${b.y.toFixed(3)}`);
+          };
+          for (const c of cage.cells) {
+            const col = c % N,
+              row = Math.floor(c / N);
+            const l = col + INSET,
+              r = col + 1 - INSET,
+              t = row + INSET,
+              bt = row + 1 - INSET;
+            if (row === 0 || !inCage.has(c - N)) seg(l, t, r, t);
+            if (row === N - 1 || !inCage.has(c + N)) seg(l, bt, r, bt);
+            if (col === 0 || !inCage.has(c - 1)) seg(l, t, l, bt);
+            if (col === N - 1 || !inCage.has(c + 1)) seg(r, t, r, bt);
+          }
+          const corner = Math.min(...cage.cells);
+          const cx = (corner % N) + INSET + 0.06;
+          const cy = Math.floor(corner / N) + INSET + 0.24;
+          const label = cage.cells.length === 1 ? String(cage.target) : `${cage.target}${cage.op}`;
+          out +=
+            `<path class="cage-boundary" d="${segs.join(" ")}" stroke-linecap="round" stroke-width="0.03" stroke-dasharray="0.015 0.075"/>` +
+            `<text class="cage-target" x="${cx.toFixed(3)}" y="${cy.toFixed(3)}" font-size="0.24" text-anchor="start">${label}</text>`;
+        }
+        return `<svg class="cages" viewBox="0 0 ${N} ${N}" preserveAspectRatio="none">${out}</svg>`;
+      }
+      function gridHtml() {
+        let cells = "";
+        for (let i = 0; i < N * N; i++) {
+          const isUser = user.has(i);
+          const cls = ["cell", isUser ? "user" : ""].filter(Boolean).join(" ");
+          const val = isUser ? solution[i] : "";
+          cells += `<div class="${cls}">${val}</div>`;
+        }
+        return `<div class="grid">${cells}</div>`;
+      }
+      for (const id of ["light", "dark"]) {
+        const b = document.querySelector(`#${id} .board`);
+        b.innerHTML = gridHtml() + cagesSvg();
+      }
+    </script>
+  </body>
+</html>

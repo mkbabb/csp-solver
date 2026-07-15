@@ -149,7 +149,7 @@ Silent drops are forbidden; each row is ADDRESSED (with its home) or carries an 
 | **M0** | plan only, no source edits | SATISFIED — this is a plan folder; the sole write surface is `docs/tranches/2026-07-tranche-4/` |
 | **M1–M6** | audit / recap / return contract | SATISFIED — the audit (§1), this ledger, the born-RED π/DELTA waves |
 | **M7** | excise legacy · re-formulate tests · abrogate PWA · modern rust/wasm · idiomatic Vue+glass · knip-class superfluity · docs no-meta MIKE-STYLE · refine the readme | **W4** (legacy) · **W2** (tests) · **W3** (PWA) · **W5** (rust/wasm currency) · **W10** (Vue+glass) · **W4** (superfluity) · **W14** (docs + readme refine) |
-| **M8** | game-scope expansion; crosswords? | **W13** — Thermo/Killer/KenKen (B4); **crosswords RETIRE** on two walls (n-ary blindness + u128 ceiling) |
+| **M8** | game-scope expansion; crosswords? | **W13** — Thermo/Killer/KenKen (B4); **crosswords RETIRE** on two walls (non-CSP/NLP clue authoring + the u128 word-bank ceiling); the retire rows land at §4f |
 | **M9** | hints, partial solving, progress border, displayed quality, carousel | **W7** (hints/technique engine) · **W8** (partial solve + facilities) · **W9** (progress border + displayed quality) · **W12** (carousel) |
 | **M10** | reduce LOC, distill to atomic precepts | **W11** — `defineGame` contract, ~1,600–1,900 net LOC removed, full suite the unedited invariant |
 
@@ -166,18 +166,26 @@ Silent drops are forbidden; each row is ADDRESSED (with its home) or carries an 
 
 **RETIRE with rationale (ballot B3):** dailies/streaks/calendar · statistics/leaderboards/trophies · pressure timers. Re-entry criterion recorded: an elected timer lands off-by-default and non-punitive, never a mistake-limit.
 
-### 4f. The banked game set (W13, named re-triggers)
+### 4f. The banked game set + the DECIDED-retire games (W13, B4 / M8)
 
-Each carries the trigger that reopens it — banked, not dropped:
+The banked candidates each carry the trigger that reopens them (banked, not dropped — M5); the
+poor-fit / non-CSP candidates each carry their retire rationale on the record (silent drops
+forbidden — M2/M6). Crosswords — the owner's explicit M8 question — retire on the record, not
+silently, on two verified walls (spec ROW 5). ROW 6 (bank) + ROW 7 (retire) land here; ROW 5
+(crosswords) is the last row; ROW 8 (`propagate_stratified`) is terminal above at §4b.
 
-| Game | Re-trigger |
+| Game | Disposition — re-trigger (bank) / rationale (retire) |
 |---|---|
-| **Skyscrapers** | a visibility `revise_impl` is wanted, or check-only proves too slow past n=6 |
-| **Arrow Sudoku** | after Killer/KenKen ship — reuses `CageSum` with a variable target (a further payoff on the sum primitive) |
-| **Kakuro** | the sum primitive exists; re-triggers when the black/white skeleton + run-uniqueness generation is funded |
-| **Sandwich Sudoku** | a positional-sum `revise_impl` justified by demand |
-| **Hidato / Numbrix** | the var-per-number model-inversion friction is accepted (dark-horse) |
-| **Binairo/Takuzu · Hitori** | **RETIRE** — wrong engine (nothing is all-different; needs 2+ new primitives / non-CSP global connectivity) |
+| **Skyscrapers** | **BANK** — a visibility `revise_impl` is wanted, or check-only proves too slow past n=6 |
+| **Arrow Sudoku** | **BANK** — after Killer/KenKen ship; reuses `CageSum` with a variable target (a further payoff on the sum primitive) |
+| **Kakuro** | **BANK** — the sum primitive exists; re-triggers when the black/white skeleton + run-uniqueness generation is funded |
+| **Sandwich Sudoku** | **BANK** — a positional-sum `revise_impl` justified by demand |
+| **Hidato / Numbrix** | **BANK** — the var-per-number model-inversion friction is accepted (dark-horse) |
+| **Binairo / Takuzu** | **RETIRE** — simple rules, wrong engine: nothing is all-different; needs 2+ new primitives |
+| **Hitori** | **RETIRE** — global connectivity is not CSP-friendly; a boolean-var / shading model, not the digit shell |
+| **Nonograms / Picross** | **RETIRE (wrong tool)** — solvable by line-DP, not the CSP core; leverages none of `csp-solver` |
+| **Word search** | **RETIRE** — no solving problem at all; uses neither the engine nor the product identity |
+| **Full clued crosswords** | **RETIRE (ROW 5)** — two verified walls: a real per-length word bank overflows the u128 domain ceiling (`bitset.rs:38`), and clue authoring is non-CSP/NLP (an offline-wasm violation); the only re-trigger is a curated ≤128-word grid-fill-only variant, which strays from the digit idiom |
 
 ### 4g. Owner-taste items (B5, adjudicated on captures)
 

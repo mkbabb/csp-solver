@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>T4-W13 Thermo furniture — π face capture</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        display: flex;
+        gap: 28px;
+        padding: 28px;
+        background: #f6f3ec;
+      }
+      .panel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      .panel.dark {
+        color: #e8ecf2;
+      }
+      .label {
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        opacity: 0.7;
+      }
+      .board {
+        position: relative;
+        width: 360px;
+        height: 360px;
+        border-radius: 12px;
+        background: #fbf9f3;
+        box-shadow: 0 3px 14px rgba(0, 0, 0, 0.12);
+      }
+      .dark .board {
+        background: #20242c;
+        box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+      }
+      .grid {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        grid-template-rows: repeat(9, 1fr);
+        z-index: 2;
+      }
+      .cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        color: #3a3f47;
+        border: 0.5px solid rgba(120, 120, 130, 0.22);
+      }
+      .dark .cell {
+        color: #c9cfd9;
+        border-color: rgba(160, 170, 190, 0.18);
+      }
+      .box-r {
+        border-right: 2px solid rgba(90, 96, 110, 0.5);
+      }
+      .box-b {
+        border-bottom: 2px solid rgba(90, 96, 110, 0.5);
+      }
+      .dark .box-r {
+        border-right-color: rgba(150, 160, 180, 0.5);
+      }
+      .dark .box-b {
+        border-bottom-color: rgba(150, 160, 180, 0.5);
+      }
+      svg.tubes {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        overflow: visible;
+      }
+      .light .tube-stroke,
+      .light .bulb {
+        stroke: rgba(60, 64, 72, 0.32);
+        fill: rgba(60, 64, 72, 0.32);
+      }
+      .dark .tube-stroke,
+      .dark .bulb {
+        stroke: rgba(198, 204, 214, 0.28);
+        fill: rgba(198, 204, 214, 0.28);
+      }
+      .tube-stroke {
+        fill: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel light" id="light">
+      <div class="label">Thermo-Sudoku · bulb + tube · light</div>
+      <div class="board"></div>
+    </div>
+    <div class="panel dark" id="dark">
+      <div class="label">Thermo-Sudoku · bulb + tube · dark</div>
+      <div class="board"></div>
+    </div>
+    <script>
+      // Real dealt board (generate_thermo_seeded(3, Easy, 42)).
+      const board = [0,4,0,7,1,8,6,5,0,1,0,6,2,3,0,4,0,8,0,8,0,4,0,6,1,2,0,9,6,8,1,2,7,3,0,0,0,3,7,9,8,5,2,0,0,5,0,1,6,4,3,8,9,7,6,1,0,8,9,4,7,3,2,3,7,2,5,6,1,9,8,4,0,9,0,3,7,2,0,6,1];
+      const thermos = [[23,14],[43,44,53,52],[48,39],[50,51],[11,20],[62,61,70,69],[13,22],[37,38,29],[25,34,35]];
+      const N = 9;
+      // The exact ThermoTube jitter (deterministic, static — pencil register).
+      function jitter(cell, axis) {
+        const h = Math.sin(cell * 12.9898 + axis * 78.233) * 43758.5453;
+        return (h - Math.floor(h) - 0.5) * 0.11;
+      }
+      function tubeSvg() {
+        const paths = thermos
+          .filter((t) => t.length >= 2)
+          .map((line) => {
+            const pts = line.map((c) => ({
+              x: (c % N) + 0.5 + jitter(c, 0),
+              y: Math.floor(c / N) + 0.5 + jitter(c, 1),
+            }));
+            const d = pts
+              .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(3)},${p.y.toFixed(3)}`)
+              .join(" ");
+            const bulb = pts[0];
+            return `<path class="tube-stroke" d="${d}" stroke-linecap="round" stroke-linejoin="round" stroke-width="0.28"/><circle class="bulb" cx="${bulb.x.toFixed(3)}" cy="${bulb.y.toFixed(3)}" r="0.26"/>`;
+          })
+          .join("");
+        return `<svg class="tubes" viewBox="0 0 ${N} ${N}" preserveAspectRatio="none">${paths}</svg>`;
+      }
+      function gridHtml() {
+        let cells = "";
+        for (let i = 0; i < N * N; i++) {
+          const col = i % N,
+            row = Math.floor(i / N);
+          const cls = [
+            "cell",
+            col % 3 === 2 && col !== N - 1 ? "box-r" : "",
+            row % 3 === 2 && row !== N - 1 ? "box-b" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          cells += `<div class="${cls}">${board[i] || ""}</div>`;
+        }
+        return `<div class="grid">${cells}</div>`;
+      }
+      for (const id of ["light", "dark"]) {
+        const b = document.querySelector(`#${id} .board`);
+        b.innerHTML = tubeSvg() + gridHtml();
+      }
+    </script>
+  </body>
+</html>

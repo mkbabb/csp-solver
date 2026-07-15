@@ -60,3 +60,39 @@ pub trait PuzzleClass {
     /// Assemble the dealt puzzle from the dug `board` and its `clues`.
     fn assemble(&self, board: Vec<u32>, clues: Vec<Self::Clue>) -> Self::Puzzle;
 }
+
+/// The generic hole-digging dealer, driven entirely through [`PuzzleClass`] —
+/// the three shared beats every family generates by: seed a full solution, place
+/// clue furniture, then dig blanks while a `max_solutions: 2` re-solve keeps the
+/// board unique (a removal that admits a second solution is reverted). One
+/// seeded `rng` threads seed → clues → dig.
+///
+/// This is the shape `tests/puzzle_class.rs` proved reproduces the shipped
+/// `generate_board_seeded` / `generate_futoshiki_*_seeded` generators
+/// byte-for-byte — the RS acceptance that the trait is the true intersection.
+/// T4-W13's Thermo/Killer/KenKen deal through it, adding no new generator.
+pub fn generate_by_digging<C: PuzzleClass>(class: &C, rng: &mut SimpleRng) -> C::Puzzle {
+    let solution = class.seed_solution(rng);
+    let clues = class.place_clues(&solution, rng);
+    let target = class.target_holes(solution.len());
+
+    let mut board = solution.clone();
+    let mut indices: Vec<usize> = (0..solution.len()).collect();
+    rng.shuffle(&mut indices);
+
+    let mut holes = 0usize;
+    for &idx in &indices {
+        if holes >= target {
+            break;
+        }
+        let saved = board[idx];
+        board[idx] = 0;
+        if class.solve_candidate(&board, &clues, 2).len() == 1 {
+            holes += 1;
+        } else {
+            board[idx] = saved;
+        }
+    }
+
+    class.assemble(board, clues)
+}

@@ -13,6 +13,22 @@
 //!   `Uint32Array` board plus a flat inequality-pair buffer. Futoshiki is a
 //!   shipped product surface, so it rides the lean `--no-default-features`
 //!   build alongside `sudoku`.
+//! - **`thermo`** (always compiled) — the T4-W13 Thermo-Sudoku surface:
+//!   `solveThermo` / `generateThermo` / `propagateThermo` over a flat
+//!   `Uint32Array` board plus a length-prefixed thermometer buffer. A Sudoku
+//!   variant carrying no new engine constraint (a tube is a `less_than`
+//!   chain), so it rides the lean build alongside `sudoku`/`futoshiki`.
+//! - **`killer`** (always compiled) — the T4-W13 Killer-Sudoku surface:
+//!   `solveKiller` / `generateKiller` / `propagateKiller` over a flat
+//!   `Uint32Array` board plus a length-prefixed cage buffer (`[k, sum, cells…]`
+//!   per cage). A Sudoku variant that CONSUMES the `CageSum` n-ary primitive (no
+//!   killer-specific constraint), so it too rides the lean build.
+//! - **`kenken`** (always compiled) — the T4-W13 KenKen/Calcudoku surface:
+//!   `solveKenKen` / `generateKenKen` / `propagateKenKen` over a flat
+//!   `Uint32Array` Latin board plus a length-prefixed operator-cage buffer
+//!   (`[k, op, target, cells…]` per cage). The second cage consumer — `+`→`CageSum`,
+//!   `×`→`CageProduct`, `−`/`÷`→a free binary lambda (no KenKen-specific
+//!   constraint), so it too rides the lean build.
 //! - **`assignment`** (feature `assignment`) — convenience
 //!   `solveAssignmentCop` for bipartite assignment COPs (bbnf-buddy's live
 //!   consumer). Thin adapter over the upstream Rust
@@ -24,14 +40,20 @@ use wasm_bindgen::prelude::*;
 mod assignment;
 mod errors;
 mod futoshiki;
+mod kenken;
+mod killer;
 mod sudoku;
+mod thermo;
 
 #[cfg(feature = "assignment")]
 pub use assignment::{
     AssignmentRequest, AssignmentResponse, assignment_sentinel, solve_assignment_cop,
 };
 pub use futoshiki::*;
+pub use kenken::*;
+pub use killer::*;
 pub use sudoku::*;
+pub use thermo::*;
 
 /// Initialize the WASM module.
 ///

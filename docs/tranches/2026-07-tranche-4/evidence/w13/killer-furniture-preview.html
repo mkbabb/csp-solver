@@ -1,0 +1,208 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>T4-W13 Killer furniture — π face capture</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        display: flex;
+        gap: 28px;
+        padding: 28px;
+        background: #f6f3ec;
+      }
+      .panel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      .panel.dark {
+        color: #e8ecf2;
+      }
+      .label {
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        opacity: 0.7;
+      }
+      .board {
+        position: relative;
+        width: 380px;
+        height: 380px;
+        border-radius: 12px;
+        background: #fbf9f3;
+        box-shadow: 0 3px 14px rgba(0, 0, 0, 0.12);
+      }
+      .dark .board {
+        background: #20242c;
+        box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+      }
+      .grid {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        grid-template-rows: repeat(9, 1fr);
+        z-index: 2;
+      }
+      .cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 19px;
+        border: 0.5px solid rgba(120, 120, 130, 0.22);
+      }
+      .cell.given {
+        color: #2b3038;
+        font-weight: 600;
+      }
+      .cell.user {
+        color: #6d55c8;
+        font-weight: 500;
+      }
+      .dark .cell {
+        border-color: rgba(160, 170, 190, 0.18);
+      }
+      .dark .cell.given {
+        color: #dbe1ea;
+      }
+      .dark .cell.user {
+        color: #b9a6f2;
+      }
+      .box-r {
+        border-right: 2px solid rgba(90, 96, 110, 0.5);
+      }
+      .box-b {
+        border-bottom: 2px solid rgba(90, 96, 110, 0.5);
+      }
+      .dark .box-r {
+        border-right-color: rgba(150, 160, 180, 0.5);
+      }
+      .dark .box-b {
+        border-bottom-color: rgba(150, 160, 180, 0.5);
+      }
+      svg.cages {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 3;
+        overflow: visible;
+        pointer-events: none;
+      }
+      .light .cage-boundary {
+        stroke: rgba(60, 64, 72, 0.5);
+      }
+      .light .cage-sum {
+        fill: rgba(52, 56, 64, 0.82);
+      }
+      .dark .cage-boundary {
+        stroke: rgba(198, 204, 214, 0.42);
+      }
+      .dark .cage-sum {
+        fill: rgba(214, 220, 230, 0.84);
+      }
+      .cage-boundary {
+        fill: none;
+      }
+      .cage-sum {
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel light" id="light">
+      <div class="label">Killer-Sudoku · dotted cages + corner sums · light</div>
+      <div class="board"></div>
+    </div>
+    <div class="panel dark" id="dark">
+      <div class="label">Killer-Sudoku · dotted cages + corner sums · dark</div>
+      <div class="board"></div>
+    </div>
+    <script>
+      // Real dealt board (generate_killer_seeded(3, Easy, 42)) + its unique solution + cages.
+      // prettier-ignore
+      const board = [0,4,0,7,1,8,6,5,0,1,0,6,2,3,0,4,7,0,0,8,0,4,5,6,1,2,3,9,6,8,1,2,7,3,4,5,4,3,7,9,8,0,0,1,0,0,0,1,6,4,0,8,9,7,6,0,5,8,0,4,7,3,2,3,7,2,0,6,1,9,0,4,8,9,4,0,7,2,5,6,0];
+      // prettier-ignore
+      const solution = [2,4,3,7,1,8,6,5,9,1,5,6,2,3,9,4,7,8,7,8,9,4,5,6,1,2,3,9,6,8,1,2,7,3,4,5,4,3,7,9,8,5,2,1,6,5,2,1,6,4,3,8,9,7,6,1,5,8,9,4,7,3,2,3,7,2,5,6,1,9,8,4,8,9,4,3,7,2,5,6,1];
+      // prettier-ignore
+      const cages = [{sum:7,cells:[23,24]},{sum:10,cells:[43,52]},{sum:23,cells:[48,49,56,57]},{sum:8,cells:[41,50]},{sum:24,cells:[11,20,29,30]},{sum:18,cells:[44,53,61,62]},{sum:17,cells:[39,40]},{sum:23,cells:[13,14,15,16]},{sum:10,cells:[37,38]},{sum:5,cells:[25,26]},{sum:19,cells:[0,1,10,19]},{sum:14,cells:[45,54,63]},{sum:10,cells:[2,3]},{sum:6,cells:[12,21]},{sum:17,cells:[22,31,32,33]},{sum:9,cells:[34,35]},{sum:28,cells:[64,72,73,74]},{sum:3,cells:[46,55]},{sum:28,cells:[5,6,7,8]},{sum:5,cells:[71,80]},{sum:19,cells:[27,28,36]},{sum:15,cells:[51,60]},{sum:1,cells:[47]},{sum:5,cells:[59,68]},{sum:19,cells:[70,78,79]},{sum:7,cells:[65,66]},{sum:8,cells:[17]},{sum:22,cells:[58,67,76]},{sum:1,cells:[4]},{sum:8,cells:[9,18]},{sum:3,cells:[75]},{sum:9,cells:[69]},{sum:2,cells:[42]},{sum:2,cells:[77]}];
+
+      const N = 9;
+      const INSET = 0.09;
+
+      // Mid-solve: the givens, plus ~every-3rd blank filled from the solution (a plausible
+      // in-progress state), the rest still blank.
+      const user = new Set();
+      let seen = 0;
+      for (let i = 0; i < N * N; i++) {
+        if (board[i] === 0) {
+          if (seen % 3 === 0) user.add(i);
+          seen++;
+        }
+      }
+
+      // The exact KillerCage.vue jitter (deterministic, static — pencil register).
+      function jitter(gx, gy, axis) {
+        const h = Math.sin(gx * 34.221 + gy * 71.917 + axis * 12.37) * 24634.113;
+        return (h - Math.floor(h) - 0.5) * 0.05;
+      }
+      function cagesSvg() {
+        let out = "";
+        for (const cage of cages) {
+          const inCage = new Set(cage.cells);
+          const segs = [];
+          const seg = (ax, ay, bx, by) => {
+            const a = { x: ax + jitter(ax, ay, 0), y: ay + jitter(ax, ay, 1) };
+            const b = { x: bx + jitter(bx, by, 0), y: by + jitter(bx, by, 1) };
+            segs.push(`M${a.x.toFixed(3)},${a.y.toFixed(3)} L${b.x.toFixed(3)},${b.y.toFixed(3)}`);
+          };
+          for (const c of cage.cells) {
+            const col = c % N,
+              row = Math.floor(c / N);
+            const l = col + INSET,
+              r = col + 1 - INSET,
+              t = row + INSET,
+              bt = row + 1 - INSET;
+            if (row === 0 || !inCage.has(c - N)) seg(l, t, r, t);
+            if (row === N - 1 || !inCage.has(c + N)) seg(l, bt, r, bt);
+            if (col === 0 || !inCage.has(c - 1)) seg(l, t, l, bt);
+            if (col === N - 1 || !inCage.has(c + 1)) seg(r, t, r, bt);
+          }
+          const corner = Math.min(...cage.cells);
+          const cx = (corner % N) + INSET + 0.06;
+          const cy = Math.floor(corner / N) + INSET + 0.24;
+          out +=
+            `<path class="cage-boundary" d="${segs.join(" ")}" stroke-linecap="round" stroke-width="0.03" stroke-dasharray="0.015 0.075"/>` +
+            `<text class="cage-sum" x="${cx.toFixed(3)}" y="${cy.toFixed(3)}" font-size="0.26" text-anchor="start">${cage.sum}</text>`;
+        }
+        return `<svg class="cages" viewBox="0 0 ${N} ${N}" preserveAspectRatio="none">${out}</svg>`;
+      }
+      function gridHtml() {
+        let cells = "";
+        for (let i = 0; i < N * N; i++) {
+          const col = i % N,
+            row = Math.floor(i / N);
+          const isGiven = board[i] !== 0;
+          const isUser = user.has(i);
+          const cls = [
+            "cell",
+            isGiven ? "given" : isUser ? "user" : "",
+            col % 3 === 2 && col !== N - 1 ? "box-r" : "",
+            row % 3 === 2 && row !== N - 1 ? "box-b" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          const val = isGiven ? board[i] : isUser ? solution[i] : "";
+          cells += `<div class="${cls}">${val}</div>`;
+        }
+        return `<div class="grid">${cells}</div>`;
+      }
+      for (const id of ["light", "dark"]) {
+        const b = document.querySelector(`#${id} .board`);
+        b.innerHTML = gridHtml() + cagesSvg();
+      }
+    </script>
+  </body>
+</html>

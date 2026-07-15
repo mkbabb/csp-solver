@@ -8,8 +8,11 @@
 pub mod solve;
 
 use crate::config::{Csp, SolveStats};
-use crate::constraint::{self, AllDifferent, Constraint, ConstraintEnum, NotEqual, VarId};
+use crate::constraint::{
+    self, AllDifferent, CageProduct, CageSum, Constraint, ConstraintEnum, NotEqual, VarId,
+};
 use crate::domain::Domain;
+use crate::domain::bitset::BitsetDomain;
 use crate::solver::adjacency::Adjacency;
 use crate::variable::Variable;
 
@@ -126,5 +129,29 @@ impl<D: Domain> Csp<D> {
                 self.var_constraint_ids[v as usize].push(ci);
             }
         }
+    }
+}
+
+/// Cage-constraint builders — the n-ary arithmetic family (Killer / KenKen).
+///
+/// Homed on the concrete [`BitsetDomain`] (values are `u32`): cages are integer
+/// arithmetic over the production domain, not a general-domain notion, so they
+/// live here rather than on the generic `impl<D: Domain>` above. Both register
+/// as devirtualized [`ConstraintEnum`] variants, so `revise` dispatches to the
+/// cage's bounds-propagation `revise_impl` (clearing the n-ary-lambda wall) —
+/// not the default `revise`'s `_ => Unchanged`.
+impl Csp<BitsetDomain> {
+    /// Add an n-ary cage-sum: the cells in `scope` must sum to `target`.
+    /// Serves Killer cages and `+` KenKen cages.
+    pub fn add_cage_sum(&mut self, scope: Vec<VarId>, target: u32) {
+        self.constraints
+            .push(ConstraintEnum::CageSum(CageSum::new(scope, target)));
+    }
+
+    /// Add an n-ary cage-product: the cells in `scope` must multiply to
+    /// `target`. Serves `×` KenKen cages.
+    pub fn add_cage_product(&mut self, scope: Vec<VarId>, target: u32) {
+        self.constraints
+            .push(ConstraintEnum::CageProduct(CageProduct::new(scope, target)));
     }
 }
