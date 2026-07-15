@@ -169,7 +169,7 @@ Each carries its re-entry trigger; none is a deferral of tranche-4 work—they a
 | Banked row | Re-entry trigger |
 |---|---|
 | wasm wire-dedup | a sixth game, or any solver wire >12k |
-| crates.io 0.6.0 bump + publish (incl. the pyproject 0.5.0 parity, F-2) | the five-family surface postdates the published 0.5.0—publish when the owner elects |
+| crates.io 0.6.0 bump + publish (incl. the pyproject parity, F-2) | **EXECUTED 2026-07-15 on the owner's approval** (`cb3c7f5f`): `csp-solver 0.6.0` published to crates.io (sparse-index-verified latest), pyproject joins at `0.6.0` (F-2 closed), the five-family CHANGELOG entry landed—source and registry agree for the first time since the surface landed |
 | `YOSHI_COLORS` source-symbol rename | rename the const + its 4 imports + 3 comments together (one atomic change) |
 | full-module wasm re-measure | the ci.yml 222,436 B band comment is T2-stale (runner now 227,385 B); the CI bounds hold—refresh the comment on the next size-touching wave |
 | `?board=` permalinks for thermo/killer/kenken | the v1 localStorage / permalink extension to the three new games |
@@ -205,7 +205,7 @@ Recorded so they aren't re-discovered from zero. The T3 traps carry; the tranche
 - **Production deploy — EXECUTED 2026-07-15 on the owner's approval.** `npm run deploy` at `aa77860e` (wrangler 4.110.0, deployment `0275562b`): `sudoku.babb.dev` now serves `index-Cp_nO-EV.js` — the tranche-close build, five games live (edge-verified: the Thermo/Killer/KenKen lazy chunks 200 from production). Supersedes the WM-era `index-CsU8SN8M.js`.
 - **E8 device smoke.** The owner device smoke, now against the deployed tranche-close build.
 - **The B5 sheaf — RATIFIED 2026-07-15** (§4); every row ships its tree default as the ratified state.
-- **The crates.io 0.6.0 publish decision** (§5)—the five-family surface postdates the published 0.5.0; the owner elects when to bump and publish (carries the pyproject 0.5.0 parity).
+- **The crates.io 0.6.0 publish — EXECUTED 2026-07-15 on the owner's approval** (§5): `csp-solver 0.6.0` live on crates.io, pyproject and wasm source join at `0.6.0`, F-2 closed.
 - **The API reference box.** The FastAPI Option-A reference is the owner's EC2 box (`ssh -p 1022 mbabb@34.197.214.67`, `/var/www/csp-solver`), owner self-deploys; solving is in-browser by default (the file:-linked lean wasm in a per-game Worker). No tranche action.
 
 ---

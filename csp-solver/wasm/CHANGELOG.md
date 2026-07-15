@@ -1,8 +1,17 @@
 # Changelog
 
-The npm registry carries this package through `0.2.0`. The `0.4.0` and `0.5.0`
-bumps below are source-only version stamps: the frontend file-links the lean
-build (`file:../../csp-solver/wasm/pkg`), so no tarball was published for them.
+The npm registry carries this package through `0.2.0`. The `0.4.0` through
+`0.6.0` bumps below are source-only version stamps: the frontend file-links the
+lean build (`file:../../csp-solver/wasm/pkg`), so no tarball was published for
+them.
+
+## 0.6.0 — 2026-07-15 (five-family lockstep)
+
+_Source-only; the npm registry stays at `0.2.0`._
+
+- Version stamped `0.5.0 → 0.6.0` in lockstep with `csp-solver@0.6.0` (the
+  crates.io release carrying the five-family surface). The wire surfaces are
+  unchanged from the thermo/killer/kenken additions; no signature moved.
 
 ## 0.5.0 — 2026-07-13 (futoshiki difficulty axis)
 

@@ -21,8 +21,9 @@ pre-deletion state is tagged `pre-morph-excision`; the general-purpose
 `AssignmentBuilder` surface morph was built on stays here, and morph now consumes
 `csp-solver` as an ordinary crates.io dependency. See `CHANGELOG.md`.
 
-The workspace source is `0.5.0`. The crate publishes to crates.io, latest
-`0.5.0`. The wasm package's npm tarball is `0.2.0`: the frontend file-links the
+The workspace source is `0.6.0`. The crate publishes to crates.io, latest
+`0.6.0` (the first published version carrying the five-family surface). The
+wasm package's npm tarball is `0.2.0`: the frontend file-links the
 lean build rather than the registry package, so the npm lag is inert at runtime.
 Edition 2024, stable toolchain (MSRV 1.88).
 

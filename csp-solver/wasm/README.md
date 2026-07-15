@@ -1,7 +1,7 @@
 # @mkbabb/csp-solver-wasm
 
 WebAssembly bindings for `csp-solver`, exposing its purpose-built solve surfaces
-to JavaScript and TypeScript. Source `0.5.0`; the npm tarball is `0.2.0`. The
+to JavaScript and TypeScript. Source `0.6.0`; the npm tarball is `0.2.0`. The
 frontend file-links the lean build rather than the registry package, so the npm
 lag is inert at runtime.
 
