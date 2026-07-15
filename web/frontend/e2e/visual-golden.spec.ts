@@ -193,10 +193,17 @@ test('golden · logo wordmark (light) — W13 soul: baked logo pose stack', asyn
 // past any sane floor). Gating a non-convergent surface is the exact flaky-gate class this
 // wave prunes; the moon (low-frequency body, converges + holds 0.017 on both engines) is
 // the raster-stable representative of the shared celestial filter, so the soul gate stands.
+// The moon converges on darwin and HOLDS 0.017 there — but the linux runner has now
+// flaked this golden three times across unchanged trees (each red passed on rerun of
+// the same SHA), so its convergence is marginal, not absolute: the same sun-crest
+// clause as LOGO_FLOOR applies. 0.05 keeps the linux tripwire (theme inversion, glyph
+// loss, pose drift all move far past it); darwin keeps the soul bite.
+const CREST_FLOOR =
+  process.platform === 'linux' ? ({ maxDiffPixelRatio: 0.05 } as const) : SOUL_FLOOR;
 test('golden · toggle crest (dark, moon) — W13 soul: celestial rest pose', async ({ page }) => {
   await loadSettled(page, { dark: true });
   const clip = await center(page.locator('button.sun-moon-toggle'), 110, 110);
-  await expect(page).toHaveScreenshot('toggle-crest-dark.png', { ...SOUL_FLOOR, clip });
+  await expect(page).toHaveScreenshot('toggle-crest-dark.png', { ...CREST_FLOOR, clip });
 });
 
 // A single grid cell rendering the pinned given "5" — the hand-drawn glyph + cell grain.
