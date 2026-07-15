@@ -136,9 +136,9 @@ Each family closes at its answering wave; all fifteen are sealed. FAM-12 (record
 | **B2** core 0.4.0 | publish to crates.io at W0 | **PUBLISHED**—0.4.0 at W0 **and** 0.5.0 at WM (the five-family surface postdates it). The version-stamps-follow-registry rule held through W14 |
 | **B3** non-goals | retire dailies/streaks/leaderboards/pressure-timers | **RETIRED** with rationale (§3.4); each carries an owner-election re-entry |
 | **B4** new-game set | Thermo + Killer + KenKen | **RATIFIED and shipped at W13**; crosswords DECIDED-retire on the two verified walls (construction is CSP-solvable but clue authoring is not a CSP—a bundled corpus or an online LLM breaks the offline-wasm/KISS model); skyscrapers/arrow/kakuro/sandwich/hidato BANKED with named re-triggers (§5) |
-| **B5** owner-taste sheaf | celebration rainbow ink + the T3/W13-banked items | **CARRIED**—adjudicated on captures at each wave; the ~15-row sheaf carries to this record for owner ratification (below) |
+| **B5** owner-taste sheaf | celebration rainbow ink + the T3/W13-banked items | **RATIFIED 2026-07-15**—the owner's word ("Ratify") at the tranche close; every row below ships its tree default as the ratified state |
 
-**The B5 sheaf carried for ratification.** The tree ships the default; the owner's word overrules any row. Rows 1–10 from `HANDOFF-2026-07-13.md §3`; rows 11–15 from the W12 execution record (`T4-W12-carousel.md`); the celebration rainbow ink and the W13 owner-taste checkpoints ride the sheaf.
+**The B5 sheaf — RATIFIED 2026-07-15 as shipped.** The owner ratified the sheaf in full at the tranche close; each row's tree default below is the ratified state, re-entry only by a fresh owner word. Rows 1–10 from `HANDOFF-2026-07-13.md §3`; rows 11–15 from the W12 execution record (`T4-W12-carousel.md`); the celebration rainbow ink and the W13 owner-taste checkpoints ride the sheaf.
 
 | # | Item | Wave | Default in the tree |
 |---|---|---|---|
@@ -202,9 +202,9 @@ Recorded so they aren't re-discovered from zero. The T3 traps carry; the tranche
 
 ## 7. Owner reminders — actions carried, none blocks the close
 
-- **Production deploy.** Live `sudoku.babb.dev` serves the WM build (`index-CsU8SN8M.js`); W7 → W14 are sealed but undeployed. Deploy ONLY via `npm run deploy` (owner-authorized). Recorded as pending-deploy.
-- **E8 device smoke.** The WM seal's owner device smoke on the deployed build.
-- **The B5 sheaf ratification** (§4)—the ~15-row owner-taste sheaf; each row ships a default, the owner's word overrules.
+- **Production deploy — EXECUTED 2026-07-15 on the owner's approval.** `npm run deploy` at `aa77860e` (wrangler 4.110.0, deployment `0275562b`): `sudoku.babb.dev` now serves `index-Cp_nO-EV.js` — the tranche-close build, five games live (edge-verified: the Thermo/Killer/KenKen lazy chunks 200 from production). Supersedes the WM-era `index-CsU8SN8M.js`.
+- **E8 device smoke.** The owner device smoke, now against the deployed tranche-close build.
+- **The B5 sheaf — RATIFIED 2026-07-15** (§4); every row ships its tree default as the ratified state.
 - **The crates.io 0.6.0 publish decision** (§5)—the five-family surface postdates the published 0.5.0; the owner elects when to bump and publish (carries the pyproject 0.5.0 parity).
 - **The API reference box.** The FastAPI Option-A reference is the owner's EC2 box (`ssh -p 1022 mbabb@34.197.214.67`, `/var/www/csp-solver`), owner self-deploys; solving is in-browser by default (the file:-linked lean wasm in a per-game Worker). No tranche action.
 
