@@ -370,9 +370,10 @@ jobs:
     # ---------------------------------------------------------------- Lane 7
     # twiggy budgets — measured artifact bands (Pass-2 prototype 6). Full module
     # FAIL >240 KB / WARN >230 KB on the raw .wasm (decimal KB, matching prototype
-    # 6's "92,897 B raw ~= 93 KB" convention). The ~93 KB lean-sudoku budget is
-    # enforced below on the --no-default-features build (sudoku + futoshiki only,
-    # the assignment feature and its serde graph compiled out).
+    # 6's "92,897 B raw ~= 93 KB" convention). The five-game lean budget (127,500 B,
+    # the same ~2.6%-headroom draw over the runner-measured artifact) is enforced
+    # below on the --no-default-features build (the five puzzle families, the
+    # assignment feature and its serde graph compiled out).
     twiggy:
         runs-on: ubuntu-latest
         timeout-minutes: 25
@@ -440,20 +441,29 @@ jobs:
               with:
                   name: lean-wasm-pkg
                   path: lean-pkg
-            - name: lean raw-size budget (fail >93 KB)
+            - name: lean raw-size budget (fail >127,500 B)
               # Measures the EXACT ship artifact (`--target web` lean build, shared
               # from build-lean-wasm) — twiggy previously rebuilt the lean half on
               # the bundler-default target as a proxy; it now measures the bytes the
-              # frontend actually ships. Band unchanged (measured 90,602 B; the
-              # `--target web` delta is immaterial and the 93,000 B floor has headroom).
+              # frontend actually ships. Band re-derived for the FIVE-game wasm:
+              # the old 93,000 B ceiling was drawn for two games; each game pays a
+              # wire surface (solve/generate/propagate entry fns + result structs +
+              # wasm-bindgen glue, measured ~9.4–10.2 KB/game at the thermo/killer/
+              # kenken landings; the cage constraints themselves cost +2,608 B).
+              # Ceiling drawn by the band's original convention — ~2.6% headroom
+              # over the RUNNER-measured artifact (90,602→93,000 was the same draw):
+              # runner measures 124,091 B (darwin measures 121,855 B; the toolchain
+              # delta is the known runner-vs-darwin divergence) → fail >127,500 B.
+              # A wire-dedup refactor banks with re-trigger: a sixth game, or any
+              # single wire >12 KB.
               run: |
                   set -euo pipefail
                   WASM=lean-pkg/csp_solver_wasm_bg.wasm
                   test -f "$WASM" || { echo "::error::$WASM missing from the lean-wasm-pkg artifact"; exit 1; }
                   RAW=$(wc -c < "$WASM")
-                  echo "lean artifact raw size: ${RAW} B (measured 90,602 B; fail >93,000)"
-                  if [ "$RAW" -gt 93000 ]; then
-                    echo "::error::lean wasm artifact ${RAW} B exceeds the 93 KB band"
+                  echo "lean artifact raw size: ${RAW} B (runner-measured 124,091 B; fail >127,500)"
+                  if [ "$RAW" -gt 127500 ]; then
+                    echo "::error::lean wasm artifact ${RAW} B exceeds the 127,500 B five-game band"
                     exit 1
                   fi
 
@@ -462,7 +472,7 @@ jobs:
     # vue-tsc --noEmit + eslint boundary rig + knip. @mkbabb/csp-solver-wasm is a
     # monorepo file: link to the gitignored csp-solver/wasm/pkg build output (the
     # LEAN artifact — consuming the published full-featured registry package would
-    # regress the 93 KB band). T4-W2 compute-cost DAG: instead of rebuilding that
+    # regress the lean band). T4-W2 compute-cost DAG: instead of rebuilding that
     # artifact, this lane `needs:` build-lean-wasm and DOWNLOADS it — so there is no
     # Rust toolchain / wasm-pack / cargo cache here at all (the lane is Node-only).
     frontend:
