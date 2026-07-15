@@ -44,6 +44,16 @@
 #               data:              hand-drawn pencil-stroke SVGs are
 #                                  generated at runtime as
 #                                  data:image/svg+xml background-image URLs
+#               blob:              the pose bake (rasterPose.ts) encodes
+#                                  pre-rastered boil frames to Blobs and mounts
+#                                  them as createObjectURL <img> handles; blob:
+#                                  in img-src only admits URLs minted by this
+#                                  page's own origin context. Without it the
+#                                  live edge blocked every baked pose layer
+#                                  (found 2026-07-15 by the post-deploy
+#                                  Safari/mobile validation pass — the prior
+#                                  zero-violation verification predated the
+#                                  pose-stack machinery)
 #   connect-src 'self'             the frontend solves in-browser (wasm Worker);
 #                                  there is no cross-origin fetch in the bundle
 #                                  to whitelist
@@ -73,7 +83,7 @@
 #     avoids leaking path/query to third parties
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
