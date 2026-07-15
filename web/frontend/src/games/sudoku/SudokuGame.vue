@@ -1,23 +1,19 @@
 <script setup lang="ts">
 /**
  * Self-contained Sudoku scene — board + controls + answer-key laminate + hold/keyboard peek
- * wiring. App.vue mounts this behind `v-if="game === 'sudoku'"`, EAGER/static: the default
- * game rides the main chunk (ratified asymmetry, P4 #4). Structural mirror of FutoshikiGame.vue;
- * the peek gesture lives in the shared `useAnswerKeyPeek` composable, only the rendered laminate
- * is pencil.
+ * wiring, over the game-agnostic `@games/shared/GameScene.vue` scaffold (the `.app-layout`
+ * row, `.board-peek-host` + pull-tab, the doubled controls card, and the drawer registration
+ * live there). App.vue mounts this behind `v-if="game === 'sudoku'"`, EAGER/static: the
+ * default game rides the main chunk (ratified asymmetry, P4 #4). The peek gesture lives in the
+ * shared `useAnswerKeyPeek` composable, only the rendered laminate is pencil.
  */
-import { defineAsyncComponent, onMounted, onUnmounted, ref, watch } from "vue";
+import { defineAsyncComponent, onMounted, ref, watch } from "vue";
 import { useSudoku } from "./composables/useSudoku";
 import { prewarm } from "./solver/useSolver";
+import GameScene from "@games/shared/GameScene.vue";
 import SudokuBoard from "./SudokuBoard/SudokuBoard.vue";
 import ControlPanel from "./ControlPanel/ControlPanel.vue";
-import DrawerTab from "@games/shared/DrawerTab.vue";
-import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
-import {
-  registerDrawerScene,
-  useControlsDrawer,
-} from "@games/shared/useControlsDrawer";
 // Async + mounted-on-first-peek: keeps the laminate's ~227 LOC out of the main chunk (the W9
 // bundle gate) — same discipline as FilterTuner. The chunk loads on the first K/hold,
 // imperceptible locally. (Futoshiki imports it statically since its whole scene already rides a
@@ -103,34 +99,11 @@ function onCandidatePeekEnd() {
   // Keep marks up if the answer-key peek or the persistent pin still wants them.
   sudoku.setMarksActive(peekActive.value || sudoku.candidatesPinned.value);
 }
-
-// ── The drawer (T3-W12 §6) ───────────────────────────────────────────
-// The row-regime rail becomes the pencil case: the tab (inside .board-peek-host, so
-// it rides the board's glide) toggles; the shared composable owns state, persistence,
-// the ~480ms FLIP glide, and focus. Esc closes from within (the rail's keydown).
-const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer();
-const peekHost = ref<HTMLElement | null>(null);
-const railEl = ref<HTMLElement | null>(null);
-const panelEl = ref<HTMLElement | null>(null);
-const drawerTab = ref<InstanceType<typeof DrawerTab> | null>(null);
-let unregisterDrawer: (() => void) | null = null;
-onMounted(() => {
-  unregisterDrawer = registerDrawerScene(() => ({
-    host: peekHost.value,
-    rail: railEl.value,
-    panel: panelEl.value,
-    tab: (drawerTab.value?.el as HTMLElement | undefined) ?? null,
-  }));
-});
-onUnmounted(() => unregisterDrawer?.());
 </script>
 
 <template>
-  <div class="app-layout" :class="{ 'scene-leaving': props.leaving }">
-    <!-- Board + the held answer-key laminate (a sibling over the board, never inside the
-         grid's filtered group — kill-gate rule 6). The host tightly wraps the board box so
-         the laminate's inset:0 aligns to .board-cells. -->
-    <div ref="peekHost" class="board-peek-host">
+  <GameScene :leaving="props.leaving">
+    <template #board>
       <SudokuBoard
         ref="sudokuBoard"
         :leaving="props.leaving"
@@ -176,89 +149,35 @@ onUnmounted(() => unregisterDrawer?.());
         :subgrid-size="sudoku.size.value"
         :original-given-cells="sudoku.originalGivenCells.value"
       />
-      <!-- The pull-tab (T3-W12 §6): the tucked case's tongue at the board's right
-                 edge — inside the peek host so it rides the glide, outside the board
-                 wrapper's containment (§2 P2). ≥1024 only (its own display gate). -->
-      <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
-    </div>
+    </template>
 
-    <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
-    <div class="mobile-board-width lg:hidden">
-      <HandDrawnOutline :stroke-width="3">
-        <div class="bg-card rounded-lg px-2 py-1.5">
-          <ControlPanel
-            :size="sudoku.pendingSize.value"
-            :difficulty="sudoku.difficulty.value"
-            :loading="sudoku.loading.value"
-            :is-dirty="sudoku.isDirty.value"
-            :solve-state="sudoku.solveState.value"
-            :pencil-mode="sudoku.pencilMode.value"
-            :error-check-mode="sudoku.errorCheckMode.value"
-            :candidates-pinned="sudoku.candidatesPinned.value"
-            mobile
-            @update:size="sudoku.pendingSize.value = $event"
-            @update:difficulty="sudoku.difficulty.value = $event"
-            @update:pencil-mode="sudoku.setPencilMode($event)"
-            @update:error-check-mode="sudoku.setErrorCheckMode($event)"
-            @update:candidates-pinned="sudoku.setCandidatesPinned($event)"
-            @deal="sudoku.deal()"
-            @clear="sudoku.clearBoard()"
-            @solve="sudoku.solve()"
-            @fill-forced="sudoku.fillForced()"
-            @undo="sudoku.undo()"
-            @redo="sudoku.redo()"
-            @hint="sudokuBoard?.hintFocusedCell()"
-            :share="onShare"
-            @peek-start="startPeek()"
-            @peek-end="endPeek()"
-          />
-        </div>
-      </HandDrawnOutline>
-    </div>
-
-    <!-- Row-regime sidebar (≥lg — R3: iPad portrait clips at md): controls card,
-         vertically centered against the board (H8-centering-only). T3-W12 §6: the rail
-         IS the drawer — closed it parks under the board (scene.css), inert +
-         visibility:hidden at rest (no invisible tab stops, W11 UI-6); Esc from within
-         closes and returns focus to the tab. -->
-    <div
-      id="controls-drawer"
-      ref="railEl"
-      class="scene-controls hidden lg:flex lg:flex-col lg:items-start"
-      :inert="drawerInert"
-      @keydown.escape.stop="closeDrawer"
-    >
-      <HandDrawnOutline :stroke-width="3">
-        <div ref="panelEl" class="controls-card bg-card rounded-xl p-5">
-          <ControlPanel
-            :size="sudoku.pendingSize.value"
-            :difficulty="sudoku.difficulty.value"
-            :loading="sudoku.loading.value"
-            :is-dirty="sudoku.isDirty.value"
-            :solve-state="sudoku.solveState.value"
-            :pencil-mode="sudoku.pencilMode.value"
-            :error-check-mode="sudoku.errorCheckMode.value"
-            :candidates-pinned="sudoku.candidatesPinned.value"
-            @update:size="sudoku.pendingSize.value = $event"
-            @update:difficulty="sudoku.difficulty.value = $event"
-            @update:pencil-mode="sudoku.setPencilMode($event)"
-            @update:error-check-mode="sudoku.setErrorCheckMode($event)"
-            @update:candidates-pinned="sudoku.setCandidatesPinned($event)"
-            @deal="sudoku.deal()"
-            @clear="sudoku.clearBoard()"
-            @solve="sudoku.solve()"
-            @fill-forced="sudoku.fillForced()"
-            @undo="sudoku.undo()"
-            @redo="sudoku.redo()"
-            @hint="sudokuBoard?.hintFocusedCell()"
-            :share="onShare"
-            @peek-start="startPeek()"
-            @peek-end="endPeek()"
-          />
-        </div>
-      </HandDrawnOutline>
-    </div>
-  </div>
+    <template #controls="{ mobile }">
+      <ControlPanel
+        :size="sudoku.pendingSize.value"
+        :difficulty="sudoku.difficulty.value"
+        :loading="sudoku.loading.value"
+        :is-dirty="sudoku.isDirty.value"
+        :solve-state="sudoku.solveState.value"
+        :pencil-mode="sudoku.pencilMode.value"
+        :error-check-mode="sudoku.errorCheckMode.value"
+        :candidates-pinned="sudoku.candidatesPinned.value"
+        :mobile="mobile"
+        @update:size="sudoku.pendingSize.value = $event"
+        @update:difficulty="sudoku.difficulty.value = $event"
+        @update:pencil-mode="sudoku.setPencilMode($event)"
+        @update:error-check-mode="sudoku.setErrorCheckMode($event)"
+        @update:candidates-pinned="sudoku.setCandidatesPinned($event)"
+        @deal="sudoku.deal()"
+        @clear="sudoku.clearBoard()"
+        @solve="sudoku.solve()"
+        @fill-forced="sudoku.fillForced()"
+        @undo="sudoku.undo()"
+        @redo="sudoku.redo()"
+        @hint="sudokuBoard?.hintFocusedCell()"
+        :share="onShare"
+        @peek-start="startPeek()"
+        @peek-end="endPeek()"
+      />
+    </template>
+  </GameScene>
 </template>
-
-<style scoped src="@/games/shared/scene.css"></style>

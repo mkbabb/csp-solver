@@ -1,0 +1,307 @@
+/*
+ * Shared game-cell styling — the twin `<style scoped>` block both cells (SudokuCell,
+ * FutoshikiCell) ran byte-identical (T4-W11 Row 3; verified identical modulo the root class).
+ * Consumed via `<style scoped src="@/games/shared/gameCell.css">` in each cell, so every rule
+ * (and the `marks-fade-in` / `ghost-draw-on` keyframes) is re-scoped to the importing
+ * component's own data-v hash — the scoped specificity that wins over index.css's global
+ * `.sudoku-cell:focus-within` ring is preserved exactly, per cell.
+ *
+ * CLASS-NAME CONTRACT — each cell's template MUST carry `game-cell` on its root node (alongside
+ * its own `sudoku-cell` / `futoshiki-cell` class, which stays for useKeyboardViewport's cell
+ * selector, the unit tests, and the index.css focus rule) plus these descendant classes on the
+ * matching nodes (there is no build-time link between this file and the templates):
+ *   .game-cell             the cell root (+ .is-active / .is-invalid state classes)
+ *   .cell-native-input     the opacity-0 WM-frozen native entry surface
+ *   .cell-peer             the peer-unit wash layer
+ *   .cell-because          the hint-laminate wash layer
+ *   .pencil-marks .mark-slot .mark-glyph        engine-domains peek marks
+ *   .user-marks .user-corner-marks .user-center-marks .user-mark-slot .user-mark-glyph
+ *   .cell-ghost .cell-ghost-path                the three-tier focus/hover/invalid ring
+ */
+
+/* ── Engine-domains pencil marks (W6 beat 9) ─────────────────────────
+   Faint graphite, deliberately lighter than any inked glyph — these are
+   the solver thinking in the margins, not an answer. The soft fade-in
+   keeps marks from popping as the peek lays down (opacity-only, Band C
+   one-shot; from-only keyframe so the settled opacity is the cascade
+   value — the contrast arm below still wins). Static under PRM: no
+   boil, no fade, the marks are simply there while the peek is held. */
+.pencil-marks {
+  inset: 12%;
+  color: var(--color-pencil-graphite, var(--grid-line-color));
+  opacity: 0.5;
+  animation: marks-fade-in 250ms ease-out both;
+}
+
+.mark-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8%;
+}
+
+.mark-glyph {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+@keyframes marks-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pencil-marks {
+    animation: none;
+  }
+}
+
+/* prefers-contrast: press the pencil a little harder, same as the ghost. */
+@media (prefers-contrast: more) {
+  .pencil-marks {
+    opacity: 0.75;
+  }
+}
+
+/* ── User pencil marks (T4-W8 ROW 1) — the player's own notes ─────────
+   Crayon-blue, the player's own hand — deliberately a DIFFERENT tone from the engine's
+   graphite peek marks so the solver's domains and the player's notes never read as one, and
+   a different placement (corners / centred row) besides. Their own layer; they compose over
+   the engine grid without ever sharing its store. */
+.user-marks {
+  color: var(--color-crayon-blue);
+  opacity: 0.9;
+}
+
+/* Corner (Snyder) — a 3×3 grid hugging the cell; each note small in its slot. */
+.user-corner-marks {
+  inset: 7%;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+.user-corner-marks .user-mark-slot {
+  padding: 11%;
+}
+
+/* Centre — a centred, wrapping row of the chosen digits. */
+.user-center-marks {
+  inset: 14%;
+  align-content: center;
+  justify-content: center;
+  gap: 0 4%;
+}
+.user-center-marks .user-mark-slot {
+  flex: 0 0 26%;
+  height: 46%;
+}
+
+.user-mark-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.user-mark-glyph {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+@media (prefers-contrast: more) {
+  .user-marks {
+    opacity: 1;
+  }
+}
+
+/* ── Peer-unit wash (T4-W8 ROW 4) — the selected cell's reach ─────────
+   A faint crayon-blue fill over the focused cell's row / column / box, tying the unit to the
+   blue focus ghost as one selection system (never the graphite hover or the red conflict tone).
+   Instant like the ghost — it tracks selection with no fade so arrowing the grid reads crisp. */
+.cell-peer {
+  background: color-mix(in srgb, var(--color-crayon-blue) 7%, transparent);
+}
+
+@media (prefers-contrast: more) {
+  .cell-peer {
+    background: color-mix(in srgb, var(--color-crayon-blue) 13%, transparent);
+  }
+}
+
+/* ── T4-W7 hint laminate — the becauseCells wash (peek-laminate tone) ─────
+   A translucent teacher-red square with a soft inset border, faded in on the EXISTING marks
+   cadence (marks-fade-in, 250ms — no new timing constant). Its own layer, behind the glyph +
+   focus ghost, so it composes with a filled cell's digit and the keyboard-focus blue ring
+   rather than colliding with the ghost's focus/invalid tiers — the tone shows even on the cell
+   you focused to ask. */
+.cell-because {
+  inset: 9%;
+  border-radius: 12%;
+  background: color-mix(
+    in srgb,
+    var(--color-teacher-red, var(--color-crayon-rose)) 15%,
+    transparent
+  );
+  box-shadow: inset 0 0 0 2px
+    color-mix(
+      in srgb,
+      var(--color-teacher-red, var(--color-crayon-rose)) 50%,
+      transparent
+    );
+  animation: marks-fade-in 250ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell-because {
+    animation: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .cell-because {
+    background: color-mix(
+      in srgb,
+      var(--color-teacher-red, var(--color-crayon-rose)) 24%,
+      transparent
+    );
+    box-shadow: inset 0 0 0 2px var(--color-teacher-red, var(--color-crayon-rose));
+  }
+}
+
+/* Ghost wrapper — instant show/hide for cursor-tracking responsiveness */
+.cell-ghost {
+  opacity: 0;
+}
+
+.cell-ghost.is-active {
+  opacity: 1;
+}
+
+/* Conflict mark persists whether or not the cell is hovered/focused (§1.4). */
+.game-cell.is-invalid .cell-ghost {
+  opacity: 1;
+}
+
+/* Tier 1 — hover / base: graphite pencil border + faint tinted fill (§4.2). */
+.cell-ghost-path {
+  fill: var(--color-pencil-graphite, var(--grid-line-color));
+  fill-opacity: 0.06;
+  stroke: var(--color-pencil-graphite, var(--grid-line-color));
+  stroke-width: 5;
+  stroke-opacity: 0.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Tier 2 — keyboard focus: crayon-blue, heavier, sketched on over 180ms. Driven by real
+   :focus-visible so a mouse click keeps the instant graphite tier and only keyboard focus
+   gets the drawn-on ring. */
+.game-cell:has(input:focus-visible) .cell-ghost-path {
+  fill: var(--color-focus-sketch, var(--color-crayon-blue));
+  fill-opacity: 0.08;
+  stroke: var(--color-focus-sketch, var(--color-crayon-blue));
+  stroke-width: 7;
+  stroke-opacity: 0.9;
+  stroke-dasharray: 1;
+  animation: ghost-draw-on 180ms var(--ease-ghostDraw) both;
+}
+
+@keyframes ghost-draw-on {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Tier 3 — aria-invalid conflict: the teacher's red pencil. Tier collisions are resolved
+   by specificity, never source order — this (0,3,0) rule loses every shared property to
+   tier-2's (0,3,1); the focused-and-conflicting case is owned by the tier-2×3 compound
+   rule below. */
+.game-cell.is-invalid .cell-ghost-path {
+  fill: var(--color-teacher-red, var(--color-crayon-rose));
+  fill-opacity: 0.1;
+  stroke: var(--color-teacher-red, var(--color-crayon-rose));
+  stroke-width: 9;
+  stroke-opacity: 1;
+}
+
+/* Tier 2×3 — focused AND conflicting: the teacher's red pencil, pressed harder.
+   (0,4,1) beats tier-2's (0,3,1); every tier-2 paint property is re-asserted —
+   partial overrides leak blue through the higher-specificity focus rule.
+   ghost-draw-on is deliberately NOT suppressed: it re-sketches in red as the
+   focus cue (the ghost is this cell's only focus affordance; PRM block governs). */
+.game-cell.is-invalid:has(input:focus-visible) .cell-ghost-path {
+  fill: var(--color-teacher-red, var(--color-crayon-rose));
+  fill-opacity: 0.16;
+  stroke: var(--color-teacher-red, var(--color-crayon-rose));
+  stroke-width: 10;
+  stroke-opacity: 1;
+}
+
+/* Neutralize the generic global focus-within ring (index.css) — the SVG ghost is the focus
+   affordance now. Scoped selector ([data-v-*]) outweighs the global one. NOTE (T4-W10 gate 2):
+   Tailwind v4's `outline-none` compiles to `outline-style:none` (NOT v3's transparent 2px
+   outline this comment once assumed), so it paints NOTHING under forced-colors — and
+   forced-color-adjust strips the SVG ghost to a corner fragment. The HC-restorable ring is the
+   explicit `forced-colors` block at the foot of this sheet. */
+.game-cell:focus-within {
+  background: transparent;
+  outline: none;
+}
+
+/* iOS zoom de-risk (T4-WM §1): mobile Safari zooms a focused input whose computed font-size
+   is <16px. The input is opacity-0 (the SVG glyph is the visible value), so this 16px is a
+   purely structural floor — it costs nothing visually and is never traded for `maximum-scale`
+   (that breaks pinch-zoom, WCAG 1.4.4). Asserted in the mobile e2e. */
+.cell-native-input {
+  font-size: 16px;
+  /* T4-WM §2 — component-level entry look: the input is the cell's tap target (absolute
+     inset-0, opacity-0), so iOS paints its gray tap-flash on IT. Suppressed here so the
+     pencil ghost stays the sole focus voice on tap. Scoped to the entry surface this lane
+     owns; additive to lane C's global interactive sweep (identical value, no conflict). The
+     focus RING stays lane A's crayon-blue :focus-visible ghost (tap = no ring, key = ring). */
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-cell:has(input:focus-visible) .cell-ghost-path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* prefers-contrast: press the pencil harder (§4.4). */
+@media (prefers-contrast: more) {
+  .cell-ghost-path {
+    stroke-opacity: 0.9;
+  }
+  .game-cell.is-invalid .cell-ghost-path {
+    stroke-opacity: 1;
+  }
+}
+
+/* Forced-colors / Windows High Contrast keyboard-focus ring (T4-W10 gate 2, WCAG 2.4.7).
+   Normal mode's crayon-blue ring is the SVG .cell-ghost-path, but forced-color-adjust strips
+   SVG paint to a fragment and Tailwind v4's `outline-none` on the input paints nothing — so
+   HC keyboard focus had no ring. Draw a real system-color outline the UA keeps. It rides the
+   CELL, not the input: the input is opacity-0 and an opacity-0 element renders no outline. The
+   UA forces its own color under forced-colors (`Highlight`, the system focus color — never gold;
+   crayon-blue is unrenderable here). Inset (offset -2px) so the ring hugs the packed cell
+   without overlapping neighbours. Gated on :focus-visible → keyboard only, matching normal mode. */
+@media (forced-colors: active) {
+  .game-cell:has(input:focus-visible) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}
+
+/* Ensure ghost overflow is not clipped */
+.game-cell {
+  overflow: visible;
+  contain: layout style;
+}
+.game-cell.is-active {
+  z-index: 10;
+}

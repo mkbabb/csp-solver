@@ -1,14 +1,17 @@
 <script setup lang="ts">
 /**
  * The paper note — broken machinery pinned below the board (design-refinement.md
- * §5.2, D3). The other half of the failure split: a wrong answer is the teacher's
- * red pencil ON the board (grid recolor + shake + conflict marks); a network/server
- * fault is a hand-drawn note card, `role="alert"` (assertive — this is not a comment
- * on the puzzle, it's a machine that broke).
+ * §5.2, D3). Game-agnostic: BOTH games mount this ONE card (T4-W11 R1 verdict-note
+ * fold; formerly a byte-twin owned in each SudokuBoard/FutoshikiBoard). The other
+ * half of the failure split is the on-board conflict render (grid recolor + shake +
+ * conflict marks) — that stays per-game in the Board/Cell; a network/server fault is
+ * THIS hand-drawn note card, `role="alert"` (assertive — not a comment on the puzzle,
+ * a machine that broke).
  *
  * The card is honest and plain — the storybook dressing is the *paper* (HandDrawnOutline
  * + cartoon shadow + Patrick Hand), not purple copy. Copy + retryability are derived
- * upstream from the typed error taxonomy (`classifyError.ts`) and handed in.
+ * upstream from the typed error taxonomy (`shared/solver/classifyError.ts`, W4) and
+ * handed in — the shell renders, the game supplies the text.
  */
 import { nextTick, onMounted, ref } from "vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";

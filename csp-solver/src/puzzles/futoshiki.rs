@@ -7,6 +7,6 @@ pub mod generate;
 
 pub use csp::{FutoshikiPuzzle, create_futoshiki_csp, solve_futoshiki};
 pub use generate::{
-    Difficulty, generate_futoshiki, generate_futoshiki_difficulty_seeded,
+    Difficulty, FutoshikiClass, generate_futoshiki, generate_futoshiki_difficulty_seeded,
     generate_futoshiki_seeded, generate_futoshiki_tuned_seeded, measure_difficulty,
 };

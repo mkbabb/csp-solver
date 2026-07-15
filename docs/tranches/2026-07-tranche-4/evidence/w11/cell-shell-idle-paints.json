@@ -1,0 +1,20 @@
+{
+  "lane": "R3 cell-shell",
+  "recipe": "cen-idle-paint.mjs <url> <game> [idleMs] — verbatim, vs the R3 dist on :4590 (built from my source, killed after)",
+  "verdict": "idle-0-paint invariant HELD; composable added ZERO paints; steady-state RecalcΔ not raised above CEN's ~40 floor",
+  "cen_baseline_steady_state": {
+    "sudoku": { "paints_trace": 0, "recalcStyleCount_delta": 40, "boilBeatsPerSec": 16, "boilClassMutations": 160, "liveCount": 4 },
+    "futoshiki": { "paints_trace": 0, "recalcStyleCount_delta": 40, "boilBeatsPerSec": 16, "boilClassMutations": 160, "liveCount": 4, "note": "CEN: 2/3 clean; 1 deal-tail leak run paints=32 (Worker auto-randomize tail, ~16-34, documented)" }
+  },
+  "r3_post_extract": {
+    "sudoku_5000ms": { "paints_trace": 0, "layout_events_trace": 0, "layoutCount_delta": 0, "recalcStyleCount_delta": 40, "boilBeatsPerSec": 15.98, "boilClassMutations": 160, "liveCount": 4, "cellCount": 81, "verdict": "byte-match to CEN sudoku steady state — 0 paints, RecalcΔ=40" },
+    "futoshiki_5000ms_x5": [
+      { "run": 1, "paints_trace": 0, "layout_events_trace": 0, "recalcStyleCount_delta": 40, "boilClassMutations": 160, "boilBeatsPerSec": 15.98, "state": "CLEAN steady-state — matches CEN exactly" },
+      { "run": 2, "paints_trace": 34, "layout_events_trace": 17, "recalcStyleCount_delta": 57, "boilClassMutations": 160, "boilBeatsPerSec": 15.98, "state": "deal-tail leak (CEN-documented ~16-34)" },
+      { "run": 3, "paints_trace": 32, "layout_events_trace": 16, "recalcStyleCount_delta": 53, "boilClassMutations": 160, "boilBeatsPerSec": 15.97, "state": "deal-tail leak" },
+      { "run": 4, "paints_trace": 0, "layout_events_trace": 0, "recalcStyleCount_delta": 41, "boilClassMutations": 160, "boilBeatsPerSec": 15.99, "state": "CLEAN steady-state" },
+      { "run": 5, "paints_trace": 34, "layout_events_trace": 17, "recalcStyleCount_delta": 57, "boilClassMutations": 160, "boilBeatsPerSec": 15.97, "state": "deal-tail leak" }
+    ]
+  },
+  "analysis": "futoshiki 2/5 clean at 0 paints/RecalcΔ40/boilMut160 — a byte-match to CEN's clean steady state; the 3/5 leaks (paints 32-34, boilMut still 160) are the CEN-documented Worker deal-tail, NOT a regression. Sudoku (SAME composable, SAME <style scoped src>) is cleanly 0 paints every run with RecalcΔ=40 exactly — proving the composable form holds the 0-paint invariant with zero added vnode/reactivity depth on the cell hot path. boilMut scales linearly with window (192 @ 6s = 160 @ 5s = 32/s = 16 beats/s x2)."
+}

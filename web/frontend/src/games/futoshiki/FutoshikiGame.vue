@@ -1,26 +1,20 @@
 <script setup lang="ts">
 /**
  * Self-contained Futoshiki scene — board + controls + answer-key laminate + hold/keyboard
- * peek wiring. App.vue mounts this behind `v-if="game === 'futoshiki'"`, so `useFutoshiki`
- * (and its Worker) only spin up when Futoshiki is actually selected; switching away unmounts
- * it and stops its keyboard listener, leaving Sudoku's own peek path untouched.
- *
- * Structural mirror of SudokuGame.vue; the peek gesture lives in the shared `useAnswerKeyPeek`
- * composable (the laminate is board-shape-agnostic by design — G5), only the rendered laminate
- * is pencil.
+ * peek wiring, over the game-agnostic `@games/shared/GameScene.vue` scaffold (the `.app-layout`
+ * row, `.board-peek-host` + pull-tab, the doubled controls card, and the drawer registration
+ * live there). App.vue mounts this behind `v-if="game === 'futoshiki'"`, so `useFutoshiki` (and
+ * its Worker) only spin up when Futoshiki is actually selected; switching away unmounts it and
+ * stops its keyboard listener, leaving Sudoku's own peek path untouched. The peek gesture lives
+ * in the shared `useAnswerKeyPeek` composable, only the rendered laminate is pencil.
  */
-import { onMounted, onUnmounted, ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { useFutoshiki } from "./composables/useFutoshiki";
 import { prewarm } from "./solver/useSolver";
+import GameScene from "@games/shared/GameScene.vue";
 import FutoshikiBoard from "./FutoshikiBoard/FutoshikiBoard.vue";
 import ControlPanel from "./ControlPanel/ControlPanel.vue";
-import DrawerTab from "@games/shared/DrawerTab.vue";
-import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
-import {
-  registerDrawerScene,
-  useControlsDrawer,
-} from "@games/shared/useControlsDrawer";
 // Statically imported (not async): this whole FutoshikiGame scene is already a lazy chunk, so
 // the laminate rides that chunk, never the main bundle. (Sudoku is eager, so it keeps the
 // laminate async — either way `{immediate:true}` lays it down on mount, P2-L5 §R6(a).)
@@ -96,29 +90,11 @@ function onCandidatePeekEnd() {
   // Keep marks up if the answer-key peek or the persistent pin still wants them.
   futoshiki.setMarksActive(peekActive.value || futoshiki.candidatesPinned.value);
 }
-
-// ── The drawer (T3-W12 §6) — twin of SudokuGame's wiring (D16) ───────
-const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer();
-const peekHost = ref<HTMLElement | null>(null);
-const railEl = ref<HTMLElement | null>(null);
-const panelEl = ref<HTMLElement | null>(null);
-const drawerTab = ref<InstanceType<typeof DrawerTab> | null>(null);
-let unregisterDrawer: (() => void) | null = null;
-onMounted(() => {
-  unregisterDrawer = registerDrawerScene(() => ({
-    host: peekHost.value,
-    rail: railEl.value,
-    panel: panelEl.value,
-    tab: (drawerTab.value?.el as HTMLElement | undefined) ?? null,
-  }));
-});
-onUnmounted(() => unregisterDrawer?.());
 </script>
 
 <template>
-  <div class="app-layout" :class="{ 'scene-leaving': props.leaving }">
-    <!-- Board + the held answer-key laminate (a sibling over the board) -->
-    <div ref="peekHost" class="board-peek-host">
+  <GameScene :leaving="props.leaving">
+    <template #board>
       <FutoshikiBoard
         ref="futoshikiBoard"
         :leaving="props.leaving"
@@ -163,86 +139,35 @@ onUnmounted(() => unregisterDrawer?.());
         :subgrid-size="futoshiki.boardSize.value"
         :original-given-cells="futoshiki.originalGivenCells.value"
       />
-      <!-- The pull-tab (T3-W12 §6) — twin of SudokuGame's: inside the peek host
-                 (rides the glide), outside the board wrapper's containment (§2 P2). -->
-      <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
-    </div>
+    </template>
 
-    <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
-    <div class="mobile-board-width lg:hidden">
-      <HandDrawnOutline :stroke-width="3">
-        <div class="bg-card rounded-lg px-2 py-1.5">
-          <ControlPanel
-            :board-size="futoshiki.pendingBoardSize.value"
-            :difficulty="futoshiki.difficulty.value"
-            :loading="futoshiki.loading.value"
-            :is-dirty="futoshiki.isDirty.value"
-            :solve-state="futoshiki.solveState.value"
-            :pencil-mode="futoshiki.pencilMode.value"
-            :error-check-mode="futoshiki.errorCheckMode.value"
-            :candidates-pinned="futoshiki.candidatesPinned.value"
-            mobile
-            @update:board-size="futoshiki.pendingBoardSize.value = $event"
-            @update:difficulty="futoshiki.difficulty.value = $event"
-            @update:pencil-mode="futoshiki.setPencilMode($event)"
-            @update:error-check-mode="futoshiki.setErrorCheckMode($event)"
-            @update:candidates-pinned="futoshiki.setCandidatesPinned($event)"
-            @deal="futoshiki.deal()"
-            @clear="futoshiki.clearBoard()"
-            @solve="futoshiki.solve()"
-            @fill-forced="futoshiki.fillForced()"
-            @undo="futoshiki.undo()"
-            @redo="futoshiki.redo()"
-            @hint="futoshikiBoard?.hintFocusedCell()"
-            :share="onShare"
-            @peek-start="startPeek()"
-            @peek-end="endPeek()"
-          />
-        </div>
-      </HandDrawnOutline>
-    </div>
-
-    <!-- Row-regime sidebar (≥lg — R3): controls card, vertically centered against the
-         board (H8-centering-only). T3-W12 §6: the rail IS the drawer — twin of
-         SudokuGame's (parked/inert/hidden closed; Esc closes from within). -->
-    <div
-      id="controls-drawer"
-      ref="railEl"
-      class="scene-controls hidden lg:flex lg:flex-col lg:items-start"
-      :inert="drawerInert"
-      @keydown.escape.stop="closeDrawer"
-    >
-      <HandDrawnOutline :stroke-width="3">
-        <div ref="panelEl" class="controls-card bg-card rounded-xl p-5">
-          <ControlPanel
-            :board-size="futoshiki.pendingBoardSize.value"
-            :difficulty="futoshiki.difficulty.value"
-            :loading="futoshiki.loading.value"
-            :is-dirty="futoshiki.isDirty.value"
-            :solve-state="futoshiki.solveState.value"
-            :pencil-mode="futoshiki.pencilMode.value"
-            :error-check-mode="futoshiki.errorCheckMode.value"
-            :candidates-pinned="futoshiki.candidatesPinned.value"
-            @update:board-size="futoshiki.pendingBoardSize.value = $event"
-            @update:difficulty="futoshiki.difficulty.value = $event"
-            @update:pencil-mode="futoshiki.setPencilMode($event)"
-            @update:error-check-mode="futoshiki.setErrorCheckMode($event)"
-            @update:candidates-pinned="futoshiki.setCandidatesPinned($event)"
-            @deal="futoshiki.deal()"
-            @clear="futoshiki.clearBoard()"
-            @solve="futoshiki.solve()"
-            @fill-forced="futoshiki.fillForced()"
-            @undo="futoshiki.undo()"
-            @redo="futoshiki.redo()"
-            @hint="futoshikiBoard?.hintFocusedCell()"
-            :share="onShare"
-            @peek-start="startPeek()"
-            @peek-end="endPeek()"
-          />
-        </div>
-      </HandDrawnOutline>
-    </div>
-  </div>
+    <template #controls="{ mobile }">
+      <ControlPanel
+        :board-size="futoshiki.pendingBoardSize.value"
+        :difficulty="futoshiki.difficulty.value"
+        :loading="futoshiki.loading.value"
+        :is-dirty="futoshiki.isDirty.value"
+        :solve-state="futoshiki.solveState.value"
+        :pencil-mode="futoshiki.pencilMode.value"
+        :error-check-mode="futoshiki.errorCheckMode.value"
+        :candidates-pinned="futoshiki.candidatesPinned.value"
+        :mobile="mobile"
+        @update:board-size="futoshiki.pendingBoardSize.value = $event"
+        @update:difficulty="futoshiki.difficulty.value = $event"
+        @update:pencil-mode="futoshiki.setPencilMode($event)"
+        @update:error-check-mode="futoshiki.setErrorCheckMode($event)"
+        @update:candidates-pinned="futoshiki.setCandidatesPinned($event)"
+        @deal="futoshiki.deal()"
+        @clear="futoshiki.clearBoard()"
+        @solve="futoshiki.solve()"
+        @fill-forced="futoshiki.fillForced()"
+        @undo="futoshiki.undo()"
+        @redo="futoshiki.redo()"
+        @hint="futoshikiBoard?.hintFocusedCell()"
+        :share="onShare"
+        @peek-start="startPeek()"
+        @peek-end="endPeek()"
+      />
+    </template>
+  </GameScene>
 </template>
-
-<style scoped src="@/games/shared/scene.css"></style>

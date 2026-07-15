@@ -1,0 +1,47 @@
+
+> csp-solver-frontend@0.1.0 prebuild
+> npm run wasm
+
+
+> csp-solver-frontend@0.1.0 wasm
+> make -C ../../csp-solver/wasm wasm
+
+wasm-pack build --scope mkbabb --target web --profile wasm-release --no-default-features
+[INFO]: 🎯  Checking for the Wasm target...
+[INFO]: 🌀  Compiling to Wasm...
+    Finished `wasm-release` profile [optimized] target(s) in 0.03s
+[INFO]: found wasm-opt at "/opt/homebrew/bin/wasm-opt"
+[INFO]: Optimizing wasm binaries with `wasm-opt`...
+[INFO]: Optional field missing from Cargo.toml: 'repository'. This is not necessary, but recommended
+[INFO]: ✨   Done in 0.33s
+[INFO]: 📦   Your wasm pkg is ready to publish at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/wasm/pkg.
+rm -f pkg/.gitignore
+
+> csp-solver-frontend@0.1.0 build
+> vue-tsc -b && vite build
+
+vite v8.1.4 building client environment for production...
+
+ WARN  advancedChunks option is deprecated, please use codeSplitting instead.
+
+[2Ktransforming...✓ 190 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                  2.98 kB │ gzip:  1.19 kB
+dist/assets/firacode-subset-CbuNTc2a.woff2       3.62 kB
+dist/assets/patrickhand-subset-BqV1besB.woff2    4.31 kB
+dist/assets/avatar-biqsjs3d.png                  6.09 kB
+dist/assets/fraunces-subset-Cx5I8plf.woff2       9.77 kB
+dist/assets/solver.worker-DBiPItdu.js           11.51 kB
+dist/assets/solver.worker-BtmE4f0D.js           11.70 kB
+dist/assets/csp_solver_wasm_bg-CRMS4fph.wasm    90.24 kB │ gzip: 39.99 kB
+dist/assets/AnswerKeyLaminate-Cih0GgPx.css       0.89 kB │ gzip:  0.40 kB
+dist/assets/FutoshikiGame-38WU8Bmw.css          12.26 kB │ gzip:  2.88 kB
+dist/assets/index-CKUTf4BL.css                  67.59 kB │ gzip: 14.10 kB
+dist/assets/AnswerKeyLaminate-BOq7EvLZ.js        2.47 kB │ gzip:  1.42 kB
+dist/assets/animation-vendor-T0BUFn2r.js         9.59 kB │ gzip:  4.00 kB
+dist/assets/FutoshikiGame-D6DwKNCx.js           50.99 kB │ gzip: 16.29 kB
+dist/assets/vue-vendor-PDBeEgnp.js              76.60 kB │ gzip: 30.78 kB
+dist/assets/index-CzuI408v.js                  193.87 kB │ gzip: 69.82 kB
+
+✓ built in 369ms

@@ -37,4 +37,5 @@ pub use cancel::CancelToken;
 pub use config::{Csp, OptimizationMode, PropagationStrategy, Pruning, SolveConfig, SolveStats};
 pub use csp::solve::Unsatisfiable;
 pub use error::CspError;
+pub use puzzles::PuzzleClass;
 pub use puzzles::sudoku;

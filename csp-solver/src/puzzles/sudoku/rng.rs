@@ -1,6 +1,6 @@
 //! Simple LCG PRNG (no external dependencies).
 
-pub(crate) struct SimpleRng(u64);
+pub struct SimpleRng(u64);
 
 impl SimpleRng {
     pub fn new(seed: u64) -> Self {

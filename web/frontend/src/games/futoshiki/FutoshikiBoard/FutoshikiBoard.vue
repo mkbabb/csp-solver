@@ -1,48 +1,21 @@
 <script setup lang="ts">
 /**
- * Futoshiki board — a ~90% structural copy of SudokuBoard.vue (games never import each
- * other, so it's an owned port, not a shared component). Same CSS-grid-of-inputs over an
- * absolute-SVG structure; the divergences are:
- *   - It hands `generateCellRects(boardSize, boardSize, …)` — subgridSize === boardSize —
- *     for the ghost paths; a subgrid-free Latin grid (verified zero-cost reuse).
- *   - A CARET layer (sibling of the cells) draws the inequality furniture from
- *     `inequalities`; the carets fold into both adjacent cells' aria-labels (F6).
- *   - Conflict detection is Latin-square (row/col) + inequality violation, no boxes.
- *   - No `difficulty` (F3).
+ * FutoshikiBoard — a thin adapter over the game-agnostic `@games/shared/GameBoard.vue`
+ * shell (T4-W11 R4). It owns only what diverges from Sudoku's twin: the `FutoshikiCell`,
+ * the CARET furniture layer (the inequality glyphs + their a11y folding), the Latin-square
+ * (row/col) + inequality-violation conflict/peer adjacency, and the (request-voice-free)
+ * fresh-board margin. Everything shared lives in the shell; the prop/emit interface is
+ * unchanged, so FutoshikiGame's mount is byte-untouched.
  */
-import { computed, ref, watch, provide, onMounted, onUnmounted, nextTick } from "vue";
+import { computed, provide, ref } from "vue";
+import GameBoard from "@games/shared/GameBoard.vue";
 import FutoshikiCell from "./FutoshikiCell/FutoshikiCell.vue";
 import FutoshikiCaret from "./FutoshikiCaret/FutoshikiCaret.vue";
-import SolverErrorNote from "./SolverErrorNote.vue";
-import HandDrawnGrid from "@pencil/grid/HandDrawnGrid/HandDrawnGrid.vue";
-import CelebrationHeart from "@pencil/chrome/CelebrationHeart.vue";
-import CompletionVignette from "@pencil/chrome/CompletionVignette.vue";
-import MarginNote from "@pencil/chrome/MarginNote.vue";
-import DifficultyTally from "@games/shared/DifficultyTally.vue";
+import { findConflicts, type Conflicts } from "@games/shared/conflicts";
 import type { TallyDescriptor } from "@games/shared/techniqueVoice";
-import { mulberry32 } from "@mkbabb/pencil-boil";
-import { generateCellRects } from "@pencil/grid/gridPaths";
-import { revealStaggerMs } from "@pencil/config/pencilConfig";
-import {
-  setMurmurSeed,
-  notifyUserEdit,
-  resetMurmur,
-} from "@pencil/composables/celebration";
-import { findConflicts } from "./conflicts";
-import { classifyCode, PAPER_NOTE_COPY } from "@games/shared/solver/classifyError";
-import { BOARD_CELLS_CLASS } from "@games/shared/constants";
-import { formatSolveTally } from "@games/shared/solveTally";
-import { formatHintNote } from "@games/shared/techniqueVoice";
-import { toDisplayChar } from "@pencil/glyph/glyphRegistry";
-import {
-  consumeDrawerHint,
-  useControlsDrawer,
-  vignetteDocked,
-} from "@games/shared/useControlsDrawer";
 import type { HintResult } from "@games/shared/techniqueEngine";
 import type { PencilMode } from "@games/shared/useUserMarks";
 import type { Inequality, SolveState, SolveStats } from "@games/futoshiki/types";
-import type { AnimationState } from "@pencil/types";
 
 const props = defineProps<{
   boardSize: number;
@@ -56,49 +29,32 @@ const props = defineProps<{
   boardGeneration: number;
   /** Printed [greater, lesser] inequality furniture — drives the caret layer + a11y folding. */
   inequalities: Inequality[];
-  /** Optional typed error code for the paper-note copy. Absent → default BUDGET_EXCEEDED copy. */
+  /** Optional typed error code for the paper-note copy. */
   errorCode?: string;
-  /** Stats from the last completed solve — the margin tally (MarginNote meta, pencil
-   *  hand, understated). Null whenever the grade is idle; the composable owns the
-   *  lifecycle. */
+  /** Stats from the last completed solve — the margin tally. Null whenever idle. */
   solveStats?: SolveStats | null;
-  /** Engine-domains pencil marks (W6 beat 9): per-position surviving candidates
-   *  from the solver's own propagation. Populated only while the peek gesture is
-   *  held (opt-in — never ambient); only positions where propagation actually
-   *  pruned something are present. Twin of SudokuBoard's (D16). */
+  /** Engine-domains pencil marks (peek glimpse): per-position surviving candidates. */
   pencilMarks?: Record<string, number[]>;
-  /** T4-W8 ROW 1 — the player's own pencil marks (corner + center slots; twin of SudokuBoard's),
-   *  distinct in store and render from the engine peek marks above. Forwarded per-cell. */
+  /** T4-W8 ROW 1 — the player's own corner/center pencil marks, forwarded per-cell. */
   cornerMarks?: Record<string, number[]>;
   centerMarks?: Record<string, number[]>;
-  /** T4-W8 ROW 1 — the active pencil mode (off/corner/center), forwarded to each cell so its
-   *  frozen native input routes a digit to a mark instead of a value while a slot is armed. */
+  /** T4-W8 ROW 1 — the active pencil mode (off/corner/center), forwarded to each cell. */
   pencilMode?: PencilMode;
-  /** F6 page-turn (T3-W10): true while this scene is switch-away's outgoing exercise.
-   *  Routes the grid through the EXISTING erase beat and fades glyphs + marginalia;
-   *  on the erase's completion the board emits `erased` (the seam) instead of redrawing. */
+  /** F6 page-turn (T3-W10): true while this scene is switch-away's outgoing exercise. */
   leaving?: boolean;
-  /** T4-W3 share-truth (twin of SudokuBoard's): a `?board=` was PRESENT but failed to decode —
-   *  the composable already fell back to a fresh deal. Folds a one-line "this shared link
-   *  couldn't be read" clause into the FIRST fresh-board announce. One-shot. */
+  /** T4-W3 share-truth: a `?board=` was PRESENT but failed to decode — a one-line clause
+   *  folds into the first fresh-board announce. */
   linkError?: boolean;
-  /** T4-W7 — the armed hint's reasoning (twin of SudokuBoard's): the board highlights
-   *  `becauseCells` in the peek-laminate tone + writes the technique name in the margin. */
+  /** T4-W7 — the armed hint's reasoning: highlights `becauseCells` + names the technique. */
   hint?: HintResult | null;
-  /** T4-W7 — the measured difficulty signature ("singles only" / "needs an inequality chain"),
-   *  keyed to the deal-time grade. Futoshiki has no request voice, so this is the first
-   *  difficulty word its fresh-board margin carries; empty for an ungraded (restored) board. */
+  /** T4-W7 — the measured difficulty signature (the first difficulty word this margin carries;
+   *  Futoshiki has no request voice). */
   gradeSignature?: string;
-  /** T4-W9-B1 (twin of SudokuBoard's) — the displayed-quality tally descriptor. Derived in the
-   *  composable; the board forwards it to the shared DifficultyTally. */
+  /** T4-W9-B1 — the displayed-quality tally descriptor; forwarded to the DifficultyTally. */
   gradeTally?: TallyDescriptor;
-  /** T4-W8 ROW 2 (twin of SudokuBoard's) — the error-check mode's PROACTIVE display gate (live,
-   *  or an armed on-demand snapshot). ORed below with `solveState === 'failed'`: the teacher's
-   *  red pencil grades actual work regardless; the mode governs only the live cadence. */
+  /** T4-W8 ROW 2 — the error-check mode's PROACTIVE display gate. */
   proactiveErrorCheck?: boolean;
-  /** T4-WU race gate (twin of SudokuBoard's) — true while a board op is in flight. Gates
-   *  keyboard Cmd/Ctrl+Z on the SAME signal the coarse buttons honor, closing the last ungated
-   *  undo seam so an undo can't race a pending generate. */
+  /** T4-WU race gate — true while a board op (generate/solve) is in flight. */
   loading?: boolean;
 }>();
 
@@ -109,74 +65,65 @@ const emit = defineEmits<{
   (e: "redo"): void;
   (e: "hint", position: number): void;
   (e: "erased"): void;
-  /** T4-W8 ROW 1 (twin of SudokuBoard's) — a cell authored a user mark (digit toggles, 0 erases);
-   *  forwarded to the game's user-mark store. Distinct from `updateCell` (the value write). */
   (e: "mark", position: number, value: number): void;
-  /** T4-W8 ROW 1 — the bare-'P' keyboard toggle cycles the pencil mode (off→corner→center). */
   (e: "cyclePencilMode"): void;
-  /** Long-press peek (T4-WM §3) — twin of SudokuBoard's: forwarded from a cell's hold to the
-   *  game's marks activation (candidate glimpse, marks-only). Release ends it. */
   (e: "candidatePeekStart"): void;
   (e: "candidatePeekEnd"): void;
 }>();
 
-const gridTemplateColumns = computed(
-  () => `repeat(${props.boardSize}, minmax(0, 1fr))`,
+// T4-W10 idiom (§flourish) — provided HERE (not the shell): the slotted cells + caret resolve
+// `inject('flourish')` against this scene. NOTE (c2-idiom.md §3): FutoshikiCaret's glyph DOES
+// receive this, but its `:is-solved="false"` keeps flourish behind the glyph's isSolved gate.
+const celebrating = computed(
+  () => props.solveState === "solved" && props.animatingCells.size > 0,
+);
+provide("flourish", celebrating);
+
+// ── The grid a11y label — Futoshiki carries no difficulty word ────────────────────
+const gridLabel = computed(
+  () => `${props.boardSize} by ${props.boardSize} futoshiki board`,
 );
 
-// Pre-computed ghost rect paths in board viewBox coordinates (1000×1000). The ghost geometry
-// is subgrid-independent, so passing boardSize as the subgrid arg only keys the cache; the
-// frame/box-line pass generateGridPaths ran and threw away is gone (T3-W8, LRU-backed).
-const VIEWBOX_SIZE = 1000;
-const cellRects = computed(() =>
-  generateCellRects(props.boardSize, props.boardSize, VIEWBOX_SIZE, 42),
-);
-
-// R3: the viewport-share/dvh caps ride the row regime, which now starts at lg: —
-// iPad-portrait (768) stacks, so the stacked width formula governs there.
-// T3-W12 §6: `shell-*` keys the drawer-closed grow (scoped CSS below) — twin of
-// SudokuBoard's.
-const boardSizeClasses = computed(() => {
-  if (props.boardSize <= 4)
-    return "shell-sm w-[min(26rem,calc(100vw-1.5rem))] lg:w-[min(26rem,85vw)] lg:max-w-[calc(100dvh-10rem)]";
-  return "shell-md w-[min(42rem,calc(100vw-1.5rem))] lg:w-[min(42rem,85vw)] lg:max-w-[calc(100dvh-10rem)]";
-});
-
-// P4 (T3-W12 §2): scoped to the gold/red shadow it exists for — twin of SudokuBoard's.
-const boardClasses = computed(() => {
-  const base = "transition-[box-shadow] duration-500";
-  if (props.solveState === "solved") return `${base} solve-success`;
-  if (props.solveState === "failed") return `${base} solve-failure`;
-  return base;
-});
-
-// ── Conflict detection — Latin-square (row/col) + inequality violations (§1.4) + error-check
-// MODE (T4-W8 ROW 2, twin of SudokuBoard's) ──
-// The SAME pure `findConflicts` derivation, un-gated from the 'failed'-only gate: `solveState ===
-// 'failed'` (the grade) is ORed with the mode's proactive display (live continuous / on-demand
-// armed snapshot / off nothing). Event-driven (a value mutation), never the boil beat, so live
-// adds zero idle paints — the E7 idle-paint invariant holds by construction.
-const conflictsVisible = computed(
-  () => props.solveState === "failed" || props.proactiveErrorCheck === true,
-);
-const conflicts = computed(() =>
-  conflictsVisible.value
-    ? findConflicts(props.values, props.boardSize, props.inequalities)
-    : { positions: new Set<string>(), firstRow: null },
-);
-
-// ── T4-W9 board FILL fraction (the progress trace's number) ──────────────
-// Twin of SudokuBoard's — a pure derivation over `values`/`givenCells`, re-evaluated on a
-// fill/clear (NEVER on the boil beat): filled non-given cells / fillable cells. FILL, not
-// correctness. The render is HandDrawnGrid's; this is the only new code the twin needs.
-const fillProgress = computed(() => {
-  let filled = 0;
-  for (const [pos, v] of Object.entries(props.values)) {
-    if (v !== 0 && !props.givenCells.has(pos)) filled++;
+// ── Conflict + peer adjacency — Latin square (row/col) + inequality violations (§1.4) ──
+const conflictsFn = (values: Record<string, number>, boardSize: number): Conflicts =>
+  findConflicts(values, boardSize, {
+    extra: (v, add) => {
+      // Inequality violations: both endpoints filled but the printed `>` doesn't hold.
+      for (const [gt, lt] of props.inequalities) {
+        const a = v[String(gt)] ?? 0;
+        const b = v[String(lt)] ?? 0;
+        if (a !== 0 && b !== 0 && a <= b) {
+          add(gt);
+          add(lt);
+        }
+      }
+    },
+  });
+function peersFn(pos: number, n: number): Set<string> {
+  const set = new Set<string>();
+  const row = Math.floor(pos / n);
+  const col = pos % n;
+  for (let i = 0; i < n; i++) {
+    set.add(String(row * n + i)); // row peers
+    set.add(String(i * n + col)); // column peers
   }
-  const fillable = Math.max(1, props.totalCells - props.givenCells.size);
-  return Math.max(0, Math.min(1, filled / fillable));
-});
+  // Futoshiki is a plain Latin square — NO box band (its structural divergence from sudoku).
+  set.delete(String(pos)); // the focused cell keeps its own ghost; peers are its neighbours
+  return set;
+}
+
+// ── The fresh-board announce — measured signature only (no request voice) + the one-shot
+// corrupt-link clause. ──
+let linkErrorPending = props.linkError === true;
+function freshBoardCopy(): string {
+  const fresh = `a fresh ${props.boardSize}×${props.boardSize}`;
+  const measured = props.gradeSignature ? ` — ${props.gradeSignature}` : "";
+  if (linkErrorPending) {
+    linkErrorPending = false;
+    return `this shared link couldn't be read — ${fresh}${measured}`;
+  }
+  return `${fresh}${measured}`;
+}
 
 // ── Caret layer — the inequality furniture (design-union §2.4 row 4) ─────────────
 // A caret sits on the shared edge between an adjacent pair; its open mouth faces the
@@ -253,448 +200,83 @@ const constraintLabels = computed<Map<number, string>>(() => {
   return out;
 });
 
-// Beat 1 — the reveal wave (board-normalized noise stagger).
-const noiseDelays = computed(() => {
-  const delays = new Map<string, number>();
-  const cells = Array.from(props.animatingCells);
-  if (cells.length === 0) return delays;
-
-  const stagger = revealStaggerMs(cells.length);
-  const rng = mulberry32(cells.length * 17 + 7);
-  const shuffled = [...cells];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  for (let i = 0; i < shuffled.length; i++) {
-    delays.set(shuffled[i], i * stagger);
-  }
-  return delays;
-});
-
-// Celebration presence (T3-W12 §1 P5): STATE-derived so the composition survives
-// remounts while solved; only the murmur seed stays on the transition edge. Twin of
-// SudokuBoard's — see its comment for the full rationale.
-const celebrating = computed(
-  () => props.solveState === "solved" && props.animatingCells.size > 0,
-);
-// T4-W10 idiom (§flourish) — provide the celebrating derivation to the glyph by INJECT (twin of
-// SudokuBoard's); the cell no longer declares a pass-through `flourish` prop. NOTE (c2-idiom.md
-// §3): FutoshikiCaret's glyph is a board descendant and DOES receive this, but its
-// `:is-solved="false"` keeps flourish behind the glyph's `if (props.isSolved)` gate.
-provide("flourish", celebrating);
-watch(
-  () => props.solveState,
-  (state, prev) => {
-    if (state === "solved" && prev !== "solved" && props.animatingCells.size > 0) {
-      setMurmurSeed(props.boardGeneration * 31 + 1);
-    }
-  },
-);
-watch(
-  () => props.boardGeneration,
-  () => {
-    resetMurmur();
-  },
-);
-
-function onCellUpdate(pos: number, value: number) {
-  notifyUserEdit();
-  emit("updateCell", pos, value);
-}
-
-// ── ARIA grid + roving tabindex (§4.1) ───────────────────────────────
-const gridLabel = computed(
-  () => `${props.boardSize} by ${props.boardSize} futoshiki board`,
-);
-
-const focusedPos = ref(0);
-const cellApi = new Map<number, { focus: () => void }>();
-// T4-W10 idiom (§:ref) — a STABLE bound handler, not a per-render inline closure (twin of
-// SudokuBoard's). The cell exposes its own `position` (defineExpose), so the map keys off the
-// instance rather than a captured index — ref identity is stable across renders, and the
-// {0..totalCells-1} → {focus} slot map is byte-identical to the old closure's fill.
-function setCellApi(el: unknown) {
-  if (
-    el &&
-    typeof (el as { focus?: unknown }).focus === "function" &&
-    typeof (el as { position?: unknown }).position === "number"
-  ) {
-    const inst = el as { focus: () => void; position: number };
-    cellApi.set(inst.position, inst);
-  }
-  // Vue calls the ref with `null` on unmount; the totalCells watch prunes stale keys ≥ N on a
-  // shrink (a null callback carries no index to delete), keeping the map = {0..N-1}.
-}
-watch(
-  () => props.totalCells,
-  (n) => {
-    for (const key of cellApi.keys()) if (key >= n) cellApi.delete(key);
-  },
-);
-function focusCell(pos: number) {
-  const clamped = Math.max(0, Math.min(props.totalCells - 1, pos));
-  focusedPos.value = clamped;
-  nextTick(() => cellApi.get(clamped)?.focus());
-}
-function onCellFocus(pos: number) {
-  focusedPos.value = pos;
-}
-
-// ── Peer-unit highlight on selection (T4-W8 ROW 4, twin of SudokuBoard's) ──
-// A pure derivation over `focusedPos`: the cells sharing the focused cell's row or column take a
-// faint pencil wash. Futoshiki is a plain Latin square, so there is NO box band (its structural
-// divergence from sudoku). Gated on the board actually holding focus (`unitFocused`) so a fresh
-// load washes nothing; the focused cell itself is excluded (it keeps its own ghost).
-const unitFocused = ref(false);
-function onGridFocusin() {
-  unitFocused.value = true;
-}
-function onGridFocusout(e: FocusEvent) {
-  const grid = e.currentTarget as HTMLElement;
-  const next = e.relatedTarget as Node | null;
-  if (!next || !grid.contains(next)) unitFocused.value = false;
-}
-const peerCells = computed(() => {
-  const set = new Set<string>();
-  if (!unitFocused.value) return set;
-  const n = props.boardSize;
-  const pos = focusedPos.value;
-  const row = Math.floor(pos / n);
-  const col = pos % n;
-  for (let i = 0; i < n; i++) {
-    set.add(String(row * n + i)); // row peers
-    set.add(String(i * n + col)); // column peers
-  }
-  set.delete(String(pos)); // the focused cell keeps its own ghost; peers are its neighbours
-  return set;
-});
-
-// T4-WM §2 — the hint act, factored so the ControlPanel's Hint button and the board's H key
-// share ONE path (twin of Sudoku's, D16): both reveal the currently focused cell. On coarse
-// the last tap sets focusedPos and it survives the button tap (only a board reset clears it),
-// so tapping Hint reveals the cell you last touched. Exposed for the parent (sibling panel).
-function hintFocusedCell() {
-  emit("hint", focusedPos.value);
-}
-defineExpose({ hintFocusedCell });
-
-function onBoardKeydown(e: KeyboardEvent) {
-  const n = props.boardSize;
-  const pos = focusedPos.value;
-  const row = Math.floor(pos / n);
-  const col = pos % n;
-  let handled = true;
-  switch (e.key) {
-    case "ArrowUp":
-      focusCell(row > 0 ? pos - n : pos);
-      break;
-    case "ArrowDown":
-      focusCell(row < n - 1 ? pos + n : pos);
-      break;
-    case "ArrowLeft":
-      focusCell(col > 0 ? pos - 1 : pos);
-      break;
-    case "ArrowRight":
-      focusCell(col < n - 1 ? pos + 1 : pos);
-      break;
-    case "Home":
-      focusCell(e.ctrlKey ? 0 : row * n);
-      break;
-    case "End":
-      focusCell(e.ctrlKey ? n * n - 1 : row * n + (n - 1));
-      break;
-    // ── Bounded undo/redo (W6) — sibling case, disjoint e.key from the K-peek
-    // ('k'/'Escape') and Backspace/Delete layers. Gate on ctrlKey OR metaKey (Cmd on
-    // macOS); a plain 'z' falls through unhandled. Shift → redo. Twin of Sudoku's (D16).
-    case "z":
-    case "Z":
-      if (e.ctrlKey || e.metaKey) {
-        // T4-WU refuse-while-pending: swallow but no-op while a board op is in flight (twin of
-        // SudokuBoard's). The composable also refuses at its choke point.
-        if (props.loading) break;
-        if (e.shiftKey) emit("redo");
-        else emit("undo");
-      } else handled = false;
-      break;
-    // ── Hint tier (W6) — 'H' fills the focused cell from the peek cache (solver-ink).
-    // Bare key only; a modified H falls through. Twin of Sudoku's (D16).
-    case "h":
-    case "H":
-      if (e.ctrlKey || e.metaKey) handled = false;
-      else hintFocusedCell();
-      break;
-    // ── Pencil-mode toggle (T4-W8 ROW 1) — 'P' cycles off→corner→center. Bare key only;
-    // preventDefault keeps 'p' out of the focused cell's native input. Twin of Sudoku's.
-    case "p":
-    case "P":
-      if (e.ctrlKey || e.metaKey) handled = false;
-      else emit("cyclePencilMode");
-      break;
-    default:
-      handled = false;
-  }
-  if (handled) e.preventDefault();
-}
-
-// ── Marginalia — the status voice (§4.3) ─────────────────────────────
-const marginText = ref("");
-const marginTone = ref<"graphite" | "teacher-red" | "gold-star">("graphite");
-function setMargin(text: string, tone: "graphite" | "teacher-red" | "gold-star") {
-  marginText.value = text;
-  marginTone.value = tone;
-}
-
-// ── The named hint (T4-W7) — twin of SudokuBoard's ───────────────────
-// The becauseCells highlighted in the peek-laminate tone (FutoshikiCell's `is-because`
-// tier); the margin voice writes the technique name via the existing note wipe on arm.
-const hintBecause = computed(
-  () => new Set((props.hint?.becauseCells ?? []).map(String)),
-);
-watch(
-  () => props.hint,
-  (hint) => {
-    if (hint) {
-      setMargin(
-        formatHintNote(
-          hint.technique,
-          toDisplayChar(hint.value, props.boardSize),
-          hint.houseAxis,
-        ),
-        "graphite",
-      );
-    }
-  },
-);
-
-let slowSolveTimer: ReturnType<typeof setTimeout> | null = null;
-watch(
-  () => props.solveState,
-  (state) => {
-    if (slowSolveTimer) {
-      clearTimeout(slowSolveTimer);
-      slowSolveTimer = null;
-    }
-    if (state === "solved") {
-      setMargin("solved it!", "gold-star");
-    } else if (state === "failed") {
-      const c = conflicts.value;
-      setMargin(
-        c.firstRow
-          ? `not quite — check row ${c.firstRow}`
-          : "not quite — no solution from here.",
-        "teacher-red",
-      );
-    } else if (state === "solving") {
-      slowSolveTimer = setTimeout(() => {
-        if (props.solveState === "solving")
-          setMargin("still sharpening the pencil…", "graphite");
-      }, 2500);
-    } else if (state === "idle" && marginTone.value !== "graphite") {
-      // Stale-note clear (W6, verify-14's widening): once the grade reverts, the red
-      // "check row N" AND the gold "solved it!" go stale by the same path — clear any
-      // non-graphite tone. Graphite board-load copy is not a grade; it stays.
-      setMargin("", "graphite");
-    }
-  },
-);
-
-// ── The drawer's margin voice (T3-W12 §6) — twin of SudokuBoard's: hint once,
-// ever, on the first close; graphite-only window so a grade is never talked over.
-const { drawerOpen } = useControlsDrawer();
-watch(drawerOpen, (open, prev) => {
-  if (prev && !open && marginTone.value === "graphite" && consumeDrawerHint()) {
-    setMargin("your pencil case is under the board", "graphite");
-  }
-});
-
-// Board-load announcements.
-let mounted = false;
-let prevBoardSize = props.boardSize;
-// UI-11 race guard (twin of SudokuBoard's): the async initial randomize can land its givens
-// 0→N before onMounted; the old `!mounted` early-return then dropped the fresh-board voice
-// entirely — the desktop-futoshiki-empty the audit found. Defer a pre-mount announce and flush
-// it as a post-mount live-region mutation instead. Restore never trips it (its givens are set
-// synchronously at composable setup, before this watch registers — no 0→N transition fires).
-let pendingFreshAnnounce: string | null = null;
-// T4-W3 share-truth (twin of SudokuBoard's): a corrupt `?board=` fell back to a fresh deal.
-// Say so ONCE, folded into that first fresh-board announce, so the one status voice reports
-// both the failed link AND what arrived instead. Consumed on use.
-let linkErrorPending = props.linkError === true;
-// T4-W7 — the measured difficulty signature, once graded, is the futoshiki margin's first
-// difficulty word (there is no EASY/MEDIUM/HARD request voice here). Empty for an ungraded
-// board (a restored permalink), which keeps the bare "a fresh N×N".
-function freshBoardCopy(): string {
-  const fresh = `a fresh ${props.boardSize}×${props.boardSize}`;
-  const measured = props.gradeSignature ? ` — ${props.gradeSignature}` : "";
-  if (linkErrorPending) {
-    linkErrorPending = false;
-    return `this shared link couldn't be read — ${fresh}${measured}`;
-  }
-  return `${fresh}${measured}`;
-}
-watch(
-  () => props.givenCells.size,
-  (n, prev) => {
-    if (n > 0 && (prev ?? 0) === 0 && props.solveState !== "solved") {
-      if (mounted) setMargin(freshBoardCopy(), "graphite");
-      else pendingFreshAnnounce = freshBoardCopy(); // flushed in onMounted (post-mount mutation)
-    }
-  },
-);
-watch(
-  () => props.boardGeneration,
-  () => {
-    focusedPos.value = 0;
-    const sizeChanged = props.boardSize !== prevBoardSize;
-    prevBoardSize = props.boardSize;
-    if (!mounted || sizeChanged) return;
-    if (props.givenCells.size === 0) setMargin("a fresh page.", "graphite");
-  },
-);
-
-// ── The paper note (§5.2) ────────────────────────────────────────────
-const showErrorNote = computed(() => props.solveState === "error");
-const errorNote = computed(() => {
-  if (props.errorCode) {
-    const f = classifyCode(props.errorCode);
-    if (f.kind === "paper-note") return { text: f.message, retryable: f.retryable };
-  }
-  return { text: PAPER_NOTE_COPY.budget, retryable: true };
-});
-
-// ── The tally (T3-W9 §2) — preformatted upstream, rendered by MarginNote's meta line ──
-// The W6 derivation twins were deleted from both boards; formatSolveTally is the one home.
-const tally = computed(() => formatSolveTally(props.solveStats));
-
-// Grid animation state machine
-const gridAnimState = ref<AnimationState>("hidden");
-function onGridAnimComplete(state: "drawn" | "hidden") {
-  if (state === "drawn") {
-    gridAnimState.value = "drawn";
-  } else if (state === "hidden") {
-    if (props.leaving) {
-      // F6 beat 2 — the seam: the page is erased; App flips the v-if on this tick.
-      emit("erased");
-    } else {
-      gridAnimState.value = "drawing";
-    }
-  }
-}
-
-// F6 beat 1 (T3-W10) — switch-away routes the switch through the EXISTING animateErase
-// via the same state machine the boardGeneration cycle drives; a cancelled page-turn
-// (`leaving` drops while erased) redraws this exercise. Twin of SudokuBoard's (D16).
-watch(
-  () => props.leaving,
-  (isLeaving) => {
-    if (isLeaving) {
-      gridAnimState.value = "erasing";
-    } else if (gridAnimState.value === "hidden") {
-      gridAnimState.value = "drawing";
-    }
-  },
-);
-
-onMounted(() => {
-  gridAnimState.value = "drawing";
-  mounted = true;
-  // UI-11: flush a pre-mount fresh-board announce now that the live region is in the DOM.
-  if (pendingFreshAnnounce && props.solveState !== "solved") {
-    setMargin(pendingFreshAnnounce, "graphite");
-    pendingFreshAnnounce = null;
-  }
-});
-
-onUnmounted(() => {
-  if (slowSolveTimer) clearTimeout(slowSolveTimer);
-});
-
-watch(
-  () => props.boardGeneration,
-  (_newVal, oldVal) => {
-    if (oldVal === undefined) return;
-    if (gridAnimState.value === "drawn") {
-      gridAnimState.value = "erasing";
-    } else {
-      gridAnimState.value = "drawing";
-    }
-  },
-);
-
-function isRevealed(pos: number): boolean {
-  return props.animatingCells.has(String(pos));
-}
+// Re-expose the board's hint act (T4-WM §2) so FutoshikiGame's Hint button reaches it.
+const boardRef = ref<InstanceType<typeof GameBoard> | null>(null);
+defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
 </script>
 
 <template>
-  <!-- H9 (in-flow-on-mobile): shell carries the width; the square board and the margin
-       strip are siblings inside it — the strip is in flow when stacked (<lg), overlay
-       in the row regime (≥lg). Twin of SudokuBoard's shape (D16). -->
-  <div class="board-shell" :class="[boardSizeClasses, { 'board-leaving': leaving }]">
-    <div
-      class="board-wrapper cartoon-shadow-md bg-card aspect-square w-full rounded-xl"
-      :class="boardClasses"
-    >
-      <!-- Hand-drawn SVG grid overlay — subgridSize === boardSize → plain Latin grid -->
-      <HandDrawnGrid
+  <GameBoard
+    ref="boardRef"
+    :board-size="boardSize"
+    :total-cells="totalCells"
+    :values="values"
+    :given-cells="givenCells"
+    :animating-cells="animatingCells"
+    :solve-state="solveState"
+    :board-generation="boardGeneration"
+    :subgrid-size="boardSize"
+    :grid-label="gridLabel"
+    :conflicts-fn="conflictsFn"
+    :peers-fn="peersFn"
+    :fresh-board-copy="freshBoardCopy"
+    :pencil-marks="pencilMarks"
+    :corner-marks="cornerMarks"
+    :center-marks="centerMarks"
+    :solve-stats="solveStats"
+    :error-code="errorCode"
+    :leaving="leaving"
+    :hint="hint"
+    :grade-tally="gradeTally"
+    :proactive-error-check="proactiveErrorCheck"
+    :loading="loading"
+    @update-cell="(pos: number, val: number) => emit('updateCell', pos, val)"
+    @mark="(pos: number, val: number) => emit('mark', pos, val)"
+    @cycle-pencil-mode="emit('cyclePencilMode')"
+    @retry="emit('retry')"
+    @undo="emit('undo')"
+    @redo="emit('redo')"
+    @hint="(pos: number) => emit('hint', pos)"
+    @candidate-peek-start="emit('candidatePeekStart')"
+    @candidate-peek-end="emit('candidatePeekEnd')"
+    @erased="emit('erased')"
+  >
+    <template #cells="s">
+      <FutoshikiCell
+        v-for="pos in totalCells"
+        :key="pos - 1"
+        :ref="s.setCellApi"
+        :position="pos - 1"
+        :value="values[String(pos - 1)] ?? 0"
+        :is-given="givenCells.has(String(pos - 1))"
+        :is-overridden="overriddenCells.has(String(pos - 1))"
+        :is-solved="String(pos - 1) in solvedValues"
+        :is-revealed="s.isRevealed(pos - 1)"
+        :is-invalid="s.conflicts.positions.has(String(pos - 1))"
+        :is-because="s.hintBecause.has(String(pos - 1))"
+        :is-peer="s.peerCells.has(String(pos - 1))"
+        :noise-delay="s.noiseDelays.get(String(pos - 1)) ?? 0"
         :board-size="boardSize"
-        :subgrid-size="boardSize"
-        :anim-state="gridAnimState"
-        :progress="fillProgress"
-        @animation-complete="onGridAnimComplete"
+        :row-index="Math.floor((pos - 1) / boardSize) + 1"
+        :col-index="((pos - 1) % boardSize) + 1"
+        :tab-index="pos - 1 === s.focusedPos ? 0 : -1"
+        :ghost-path="s.cellRects[pos - 1] ?? ''"
+        :constraint-label="constraintLabels.get(pos - 1) ?? ''"
+        :marks="pencilMarks?.[String(pos - 1)]"
+        :corner-marks="cornerMarks?.[String(pos - 1)]"
+        :center-marks="centerMarks?.[String(pos - 1)]"
+        :pencil-mode="pencilMode"
+        @update="s.onCellUpdate"
+        @mark="s.onMark"
+        @cell-focus="s.onCellFocus"
+        @candidate-peek-start="s.onPeekStart"
+        @candidate-peek-end="s.onPeekEnd"
       />
+    </template>
 
-      <!-- Interactive cell grid -->
-      <div
-        class="grid"
-        :class="BOARD_CELLS_CLASS"
-        role="grid"
-        :aria-label="gridLabel"
-        :aria-rowcount="boardSize"
-        :aria-colcount="boardSize"
-        :style="{
-          gridTemplateColumns,
-          gridTemplateRows: gridTemplateColumns,
-        }"
-        @keydown="onBoardKeydown"
-        @focusin="onGridFocusin"
-        @focusout="onGridFocusout"
-      >
-        <FutoshikiCell
-          v-for="pos in totalCells"
-          :key="pos - 1"
-          :ref="setCellApi"
-          :position="pos - 1"
-          :value="values[String(pos - 1)] ?? 0"
-          :is-given="givenCells.has(String(pos - 1))"
-          :is-overridden="overriddenCells.has(String(pos - 1))"
-          :is-solved="String(pos - 1) in solvedValues"
-          :is-revealed="isRevealed(pos - 1)"
-          :is-invalid="conflicts.positions.has(String(pos - 1))"
-          :is-because="hintBecause.has(String(pos - 1))"
-          :is-peer="peerCells.has(String(pos - 1))"
-          :noise-delay="noiseDelays.get(String(pos - 1)) ?? 0"
-          :board-size="boardSize"
-          :row-index="Math.floor((pos - 1) / boardSize) + 1"
-          :col-index="((pos - 1) % boardSize) + 1"
-          :tab-index="pos - 1 === focusedPos ? 0 : -1"
-          :ghost-path="cellRects[pos - 1] ?? ''"
-          :constraint-label="constraintLabels.get(pos - 1) ?? ''"
-          :marks="pencilMarks?.[String(pos - 1)]"
-          :corner-marks="cornerMarks?.[String(pos - 1)]"
-          :center-marks="centerMarks?.[String(pos - 1)]"
-          :pencil-mode="pencilMode"
-          @update="onCellUpdate"
-          @mark="(p: number, v: number) => emit('mark', p, v)"
-          @cell-focus="onCellFocus"
-          @candidate-peek-start="emit('candidatePeekStart')"
-          @candidate-peek-end="emit('candidatePeekEnd')"
-        />
-      </div>
-
+    <template #overlay>
       <!-- Caret layer — the inequality furniture, a sibling over the cells. Individual carets
-         are aria-hidden; the constraint is folded into both adjacent cells' aria-labels. -->
+           are aria-hidden; the constraint is folded into both adjacent cells' aria-labels. -->
       <div class="caret-layer" aria-hidden="true">
         <FutoshikiCaret
           v-for="c in caretDescriptors"
@@ -711,70 +293,15 @@ function isRevealed(pos: number): boolean {
           }"
         />
       </div>
-
-      <!-- The felt heart (T3-W9, F2-C/F7 §3.2) — the Heart Fruit crests the board's
-         bottom-right corner at the star's moment, diagonal opposite of the margin
-         voice. Anchored to the square itself (the sticker register). -->
-      <CelebrationHeart :active="celebrating" />
-    </div>
-
-    <!-- The grade in the margin (T3-W12 §1 R1) — twin of SudokuBoard's: the gold
-         composition beside the work; the strip's live region below still announces.
-         `docked` = the §6 drawer hook (corner-press early when drawer-open <1360). -->
-    <CompletionVignette
-      :active="celebrating"
-      :text="marginText"
-      :meta="tally"
-      :docked="vignetteDocked"
-    />
-
-    <!-- Below-board margin: status voice + paper note — a sibling of the board square
-         (H9): in flow when stacked, overlay in the row regime. R1: the strip goes
-         sr-only-quiet on the gold path (the vignette carries the paint); graphite/red/
-         error keep it exactly as before. Twin of SudokuBoard's. -->
-    <div class="board-margin">
-      <!-- The DIFFICULTY signal (T4-W9-B1, twin of Sudoku's) — the tally glyph beside its
-           prose voice; persistent, distinct from FILL (border) and CORRECTNESS (verdict). -->
-      <DifficultyTally v-if="gradeTally" :descriptor="gradeTally" />
-      <MarginNote
-        :text="marginText"
-        :tone="marginTone"
-        :meta="tally"
-        :quiet="celebrating"
-      />
-      <SolverErrorNote
-        v-if="showErrorNote"
-        :text="errorNote.text"
-        :retryable="errorNote.retryable"
-        @retry="emit('retry')"
-      />
-    </div>
-  </div>
+    </template>
+  </GameBoard>
 </template>
 
 <style scoped>
-.board-shell {
-  position: relative;
-}
-
-.board-wrapper {
-  position: relative;
-  overflow: visible;
-  contain: layout style;
-  /* P2 (T3-W12 §2) — fence the boil damage on a promoted layer; twin of
-       SudokuBoard's (see its comment for the contain:paint counter-case). */
-  will-change: transform;
-}
-
-.board-cells {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-}
-
 /* Caret furniture layer — passes pointer events through except on the carets themselves
    (which enable their own hover boil). Sits in the cell layer so the peek laminate (z-3)
-   lays down over it. */
+   lays down over it. Scoped HERE (not the shell): the caret-layer element is rendered in
+   this scene's #overlay slot, so its data-v hash is this component's. */
 .caret-layer {
   position: absolute;
   inset: 0;
@@ -782,57 +309,13 @@ function isRevealed(pos: number): boolean {
   pointer-events: none;
 }
 
-/* F6 beat 1 (T3-W10) — glyphs + caret furniture + marginalia leave with the grid:
-   opacity-only, 200ms, easeInCubic (the erase family — things LEAVING the page).
-   The orchestrator never raises `leaving` under PRM (same-frame cut); the media
-   gate keeps even a stray class-flip instant there. Twin of SudokuBoard's. */
+/* F6 beat 1 (T3-W10) — the caret furniture leaves with the grid: opacity-only, 200ms,
+   easeInCubic (the erase family). `.board-leaving` is the shell's board-shell (an ancestor
+   by class); `.caret-layer` carries this scope's data-v. */
 @media (prefers-reduced-motion: no-preference) {
-  .board-leaving .board-cells,
-  .board-leaving .caret-layer,
-  .board-leaving .board-margin,
-  .board-leaving .completion-vignette {
+  .board-leaving .caret-layer {
     opacity: 0;
     transition: opacity 200ms var(--ease-fadeOut);
-  }
-}
-
-/* Stacked (<lg): in flow — its real height (note + error card) pushes the controls
-   panel down (H9 in-flow variant; carries H5's mobile case). */
-.board-margin {
-  margin-top: 0.4rem;
-  margin-inline: 0.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  pointer-events: none;
-}
-
-/* Row regime (≥lg): overlay strip anchored to the square — no layout shift. */
-@media (min-width: 1024px) {
-  .board-margin {
-    position: absolute;
-    top: 100%;
-    inset-inline: 0.25rem;
-    margin-inline: 0;
-    z-index: 50;
-  }
-}
-
-/* The T3-W9 completion block is retired — the gold composition lives in
-   CompletionVignette (T3-W12 §1 R1). Twin of SudokuBoard's. */
-
-/* ── The drawer-closed grow (T3-W12 §6, ≥1024 only) — twin of SudokuBoard's:
-   width allowance +1 step per rung, dvh cap 10rem → 9rem; lands in the settle's
-   ONE layout step (never a filtered-element size tween). */
-@media (min-width: 1024px) {
-  html.drawer-closed .board-shell.shell-sm {
-    width: min(28rem, 85vw);
-    max-width: calc(100dvh - 9rem);
-  }
-
-  html.drawer-closed .board-shell.shell-md {
-    width: min(46rem, 85vw);
-    max-width: calc(100dvh - 9rem);
   }
 }
 </style>

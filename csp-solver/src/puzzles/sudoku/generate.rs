@@ -6,6 +6,7 @@
 use include_dir::{Dir, include_dir};
 
 use crate::ordering::Ordering;
+use crate::puzzles::class::PuzzleClass;
 use crate::{Pruning, SolveConfig};
 
 use super::csp::{create_sudoku_csp, sudoku_csp_skeleton, sudoku_given};
@@ -330,4 +331,75 @@ fn generate_board_slow_with_rng(n: u32, difficulty: Difficulty, rng: &mut Simple
     }
 
     board
+}
+
+/// The seed/uniqueness solve config the hole-dig uses: `Ac3` + `FailFirst` at a
+/// caller-chosen `max_solutions`. Names, in one place, the pair the inline
+/// `generate_board_slow_with_rng` seed (`max_solutions: 1`) and uniqueness check
+/// (`max_solutions: 2`) both spell out — and that [`SudokuClass`] reuses to deal
+/// byte-identically.
+fn gen_config(max_solutions: usize) -> SolveConfig {
+    SolveConfig {
+        pruning: Pruning::Ac3,
+        ordering: Ordering::FailFirst,
+        max_solutions,
+        ..Default::default()
+    }
+}
+
+/// A sudoku instance to deal: sub-grid size `n` (3 ⇒ 9×9) at `difficulty`.
+///
+/// The [`PuzzleClass`] witness expressing sudoku's hole-dig generation as the
+/// generic dealer's seams. Its seed, uniqueness check, and hole target delegate
+/// to the exact functions [`generate_board_slow_with_rng`] uses, so dealing
+/// through the contract reproduces [`generate_board_seeded`] byte-for-byte
+/// (`tests/puzzle_class.rs`).
+pub struct SudokuClass {
+    /// Sub-grid size — the board is `n²×n²` (3 ⇒ 9×9).
+    pub n: u32,
+    /// Difficulty rung, mapped to a hole target by [`target_holes`](PuzzleClass::target_holes).
+    pub difficulty: Difficulty,
+}
+
+impl PuzzleClass for SudokuClass {
+    /// Sudoku carries no clue furniture beyond its givens.
+    type Clue = ();
+    type Puzzle = Vec<u32>;
+
+    fn seed_solution(&self, rng: &mut SimpleRng) -> Vec<u32> {
+        let m = self.n * self.n;
+        let total = (m * m) as usize;
+
+        let mut csp = sudoku_csp_skeleton(self.n);
+        let mut seed_board = vec![0u32; total];
+        let mut first_row: Vec<u32> = (1..=m).collect();
+        rng.shuffle(&mut first_row);
+        seed_board[..m as usize].copy_from_slice(&first_row);
+
+        csp.solve_with_given(&gen_config(1), &sudoku_given(&seed_board))
+            .into_iter()
+            .next()
+            .expect("seeded board must be solvable")
+    }
+
+    fn place_clues(&self, _solution: &[u32], _rng: &mut SimpleRng) -> Vec<()> {
+        Vec::new()
+    }
+
+    fn solve_candidate(&self, board: &[u32], _clues: &[()], max_solutions: usize) -> Vec<Vec<u32>> {
+        let mut csp = sudoku_csp_skeleton(self.n);
+        csp.solve_with_given(&gen_config(max_solutions), &sudoku_given(board))
+    }
+
+    fn target_holes(&self, board_len: usize) -> usize {
+        match self.difficulty {
+            Difficulty::Easy => board_len / 4,
+            Difficulty::Medium => (board_len as f64 / 1.75) as usize,
+            Difficulty::Hard => (board_len as f64 / 1.25) as usize,
+        }
+    }
+
+    fn assemble(&self, board: Vec<u32>, _clues: Vec<()>) -> Vec<u32> {
+        board
+    }
 }

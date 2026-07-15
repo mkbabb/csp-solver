@@ -26,6 +26,7 @@
 
 use crate::domain::bitset::BitsetDomain;
 use crate::ordering::Ordering;
+use crate::puzzles::class::PuzzleClass;
 use crate::puzzles::sudoku::rng::SimpleRng;
 use crate::{Csp, Pruning, SolveConfig};
 
@@ -319,4 +320,69 @@ fn generate_with_rng(
     let target_holes = holes_for_density(n, keep_density);
     let board = dig_holes(&square, n, &inequalities, target_holes, rng);
     (board, inequalities)
+}
+
+/// A futoshiki instance to deal: side `n` at a keep-density + inequality-count
+/// rung.
+///
+/// The [`PuzzleClass`] witness expressing futoshiki's Latin-square-plus-carets
+/// generation as the generic dealer's seams. Its seed, caret placement,
+/// uniqueness check, and hole target delegate to the exact functions
+/// [`generate_with_rng`] uses, so dealing through the contract reproduces
+/// [`generate_futoshiki_tuned_seeded`] byte-for-byte (`tests/puzzle_class.rs`).
+/// `keep_density` is expected in `(0, 1]` — [`from_difficulty`](Self::from_difficulty)
+/// always yields it so.
+pub struct FutoshikiClass {
+    /// Board side — the board is `n×n`.
+    pub n: u32,
+    /// Fraction of cells kept as givens (givens fall as difficulty rises).
+    pub keep_density: f64,
+    /// Inequality-caret count (clamped to the adjacent-pair budget on placement).
+    pub inequality_count: usize,
+}
+
+impl FutoshikiClass {
+    /// Build the instance for a `difficulty` rung — the keep-density +
+    /// inequality-count mapping [`generate_futoshiki_difficulty_seeded`] threads.
+    pub fn from_difficulty(n: u32, difficulty: Difficulty) -> Self {
+        Self {
+            n,
+            keep_density: difficulty.keep_density(),
+            inequality_count: difficulty.inequality_count(n),
+        }
+    }
+}
+
+impl PuzzleClass for FutoshikiClass {
+    /// An inequality caret `(a, b)` meaning `board[a] > board[b]`.
+    type Clue = (usize, usize);
+    type Puzzle = (Vec<u32>, Vec<(usize, usize)>);
+
+    fn seed_solution(&self, rng: &mut SimpleRng) -> Vec<u32> {
+        seed_latin_square(self.n, rng)
+    }
+
+    fn place_clues(&self, solution: &[u32], rng: &mut SimpleRng) -> Vec<(usize, usize)> {
+        let available = 2 * (self.n as usize) * (self.n as usize - 1);
+        let count = self.inequality_count.min(available);
+        place_inequalities(solution, self.n, count, rng)
+    }
+
+    fn solve_candidate(
+        &self,
+        board: &[u32],
+        clues: &[(usize, usize)],
+        max_solutions: usize,
+    ) -> Vec<Vec<u32>> {
+        let mut csp = csp_from_board(board, self.n, clues);
+        csp.solve_with_given(&gen_config(max_solutions), &[])
+    }
+
+    fn target_holes(&self, _board_len: usize) -> usize {
+        holes_for_density(self.n, self.keep_density)
+    }
+
+    fn assemble(&self, board: Vec<u32>, clues: Vec<(usize, usize)>) -> Self::Puzzle {
+        (board, clues)
+    }
 }

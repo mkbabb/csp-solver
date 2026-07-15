@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
-import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
-import { useLongPress } from "@games/shared/useLongPress";
+import { useGameCell } from "@games/shared/useGameCell";
 import type { PencilMode } from "@games/shared/useUserMarks";
 
 const props = defineProps<{
@@ -26,241 +24,63 @@ const props = defineProps<{
   isInvalid: boolean;
   /** T4-W7 — this cell is part of the armed hint's reasoning (the `becauseCells`): a laminate
    *  wash lights in the peek-laminate tone (its own layer, behind the glyph + focus ring) so the
-   *  answer key visibly points here before the digit inks. Fades in on the existing marks
-   *  cadence — no new timing constant. */
+   *  answer key visibly points here before the digit inks. */
   isBecause?: boolean;
   /** T4-W8 ROW 4 — this cell shares a unit (row / column / box) with the focused cell: a faint
-   *  crayon-blue wash lights on selection so the active unit reads at a glance. Pure over the
-   *  board's `focusedPos`; its own layer behind the glyph, never the conflict / hint tiers. */
+   *  crayon-blue wash lights on selection so the active unit reads at a glance. */
   isPeer?: boolean;
-  /** Engine-domains pencil marks (W6 beat 9): surviving candidate values from
-   *  the solver's own propagation, present only while the peek gesture is held.
-   *  Rendered only while the cell is empty. */
+  /** Engine-domains pencil marks (W6 beat 9): surviving candidate values from the solver's own
+   *  propagation, present only while the peek gesture is held. Rendered only while empty. */
   marks?: number[];
-  /** T4-W8 ROW 1 — the player's OWN pencil marks, distinct from the engine peek marks above
-   *  in both store and render (crayon-blue, cell corners) and never colliding with them.
-   *  Corner slot (Snyder notation); rendered only while the cell is empty. */
+  /** T4-W8 ROW 1 — the player's OWN corner (Snyder) pencil marks (crayon-blue). Empty cells only. */
   cornerMarks?: number[];
-  /** T4-W8 ROW 1 — the player's own center marks (Snyder), a centred row in the same tone;
-   *  the second placement slot of the one user-mark surface. Empty cells only. */
+  /** T4-W8 ROW 1 — the player's own center marks, a centred row in the same tone. Empty cells only. */
   centerMarks?: number[];
-  /** T4-W8 ROW 1 — the active pencil mode. When 'corner'/'center', a digit keystroke on this
-   *  cell's FROZEN native input authors a mark instead of a value (the WM seam: mode toggle
-   *  only, no second input surface); 'off'/undefined keeps the byte-identical value write. */
+  /** T4-W8 ROW 1 — the active pencil mode; 'corner'/'center' authors a mark on the FROZEN native
+   *  input instead of a value, 'off'/undefined keeps the byte-identical value write. */
   pencilMode?: PencilMode;
 }>();
 
 const emit = defineEmits<{
   (e: "update", position: number, value: number): void;
-  /** T4-W8 ROW 1 — author a user mark: a digit toggles it in the active slot, 0 erases the
-   *  cell's notes (symmetric with `update`). The board forwards to the game's user-mark store. */
   (e: "mark", position: number, value: number): void;
   (e: "cellFocus", position: number): void;
-  /** Long-press peek (T4-WM §3): a hold on this EMPTY cell opens the candidate glimpse; the
-   *  board forwards these up to the game's marks activation. Release ends the peek. */
   (e: "candidatePeekStart"): void;
   (e: "candidatePeekEnd"): void;
 }>();
 
-const inputRef = ref<HTMLInputElement | null>(null);
-const isHovered = ref(false);
-const isFocused = ref(false);
-
-// Cell is "active" when hovered or focused
-const isActive = computed(() => isHovered.value || isFocused.value);
-
-// Compute the cell's viewBox region in 1000×1000 board coords
-const cellViewBox = computed(() => {
-  const cellSize = 1000 / props.boardSize;
-  const col = props.position % props.boardSize;
-  const row = Math.floor(props.position / props.boardSize);
-  // Pad outward by half a cell to allow the ghost stroke to render without clipping
-  const pad = cellSize * 0.15;
-  const x = col * cellSize - pad;
-  const y = row * cellSize - pad;
-  const w = cellSize + pad * 2;
-  const h = cellSize + pad * 2;
-  return `${x} ${y} ${w} ${h}`;
+// The cell-shell (T4-W11 Row 3): all twin cell logic lives in the composable. The genuine
+// per-game furniture is passed as functions — sudoku has no accessible-name suffix, and its
+// engine-marks mini-grid borrows the subgrid (an n×n Snyder grid).
+const {
+  isHovered,
+  isFocused,
+  isActive,
+  cellViewBox,
+  displayValue,
+  glyphChar,
+  ariaLabel,
+  handleInput,
+  handleKeydown,
+  focusInput,
+  onFocus,
+  longPress,
+  onCellPointerDown,
+  onCellClick,
+  showMarks,
+  markPath,
+  marksGridStyle,
+  showCornerMarks,
+  showCenterMarks,
+  cornerSlot,
+} = useGameCell(props, emit, {
+  ariaSuffix: () => "",
+  marksGridStyle: () => ({
+    gridTemplateColumns: `repeat(${props.subgridSize}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${props.subgridSize}, minmax(0, 1fr))`,
+  }),
 });
 
-// Hidden input keeps the raw numeric string; the glyph overlay renders the display CHARACTER
-// (hex A–G for 16×16 via toDisplayChar). Wiring this is what lets values 10–16 render a glyph
-// at all — String(10) has no key in glyphPaths, so those cells rendered blank AND registered
-// no wiggle/murmur subscriber before this (the 10–16 glyph *variants* themselves ride W9).
-const displayValue = computed(() => {
-  if (props.value === 0) return "";
-  return String(props.value);
-});
-
-const glyphChar = computed(() => toDisplayChar(props.value, props.boardSize));
-
-// cellKind (fe-components-audit §12) drives the accessible name (§4.1). Order matters:
-// solver's answers and overrides can also be "given" positions, so test the richer
-// states first.
-const cellKind = computed<"empty" | "given" | "user" | "solved">(() => {
-  if (props.value === 0) return "empty";
-  if (props.isSolved) return "solved";
-  if (props.isGiven && !props.isOverridden) return "given";
-  return "user";
-});
-
-const ariaLabel = computed(() => {
-  const loc = `Row ${props.rowIndex}, column ${props.colIndex}`;
-  switch (cellKind.value) {
-    case "given":
-      return `${loc}, given clue ${glyphChar.value}`;
-    case "user":
-      return `${loc}, your entry ${glyphChar.value}`;
-    case "solved":
-      return `${loc}, solver's answer ${glyphChar.value}`;
-    default:
-      return `${loc}, empty`;
-  }
-});
-
-// T4-W8 ROW 1 — pencil mode reinterprets the FROZEN native input (the WM seam: mode toggle
-// only, never a second input surface). While a slot is armed AND the cell is empty, a digit
-// authors a mark and the input is cleared so it never fills with a value; a filled cell has no
-// note surface (switch to Normal to overwrite it), so its keystroke is ignored.
-const pencilArmed = computed(
-  () => props.pencilMode === "corner" || props.pencilMode === "center",
-);
-
-function handleInput(event: Event) {
-  const target = event.target as HTMLInputElement;
-  const raw = target.value.replace(/\D/g, "");
-
-  if (raw === "") {
-    // A cleared input is an erase in Normal mode; in pencil mode the value stays (Backspace
-    // owns the note erase via handleKeydown), so never fall through to update(0) there.
-    if (!pencilArmed.value) emit("update", props.position, 0);
-    target.value = "";
-    return;
-  }
-
-  // For single-digit boards (≤9), take only the last digit to allow one-click override.
-  // For larger boards, try the full string first, then the last 2 chars, then the last char.
-  const maxLen = props.boardSize >= 10 ? 2 : 1;
-  const trimmed = raw.slice(-maxLen);
-  const num = parseInt(trimmed, 10);
-  if (num >= 1 && num <= props.boardSize) {
-    if (pencilArmed.value) {
-      // Pencil mode: the digit toggles a note on an EMPTY cell; the input never keeps it.
-      if (props.value === 0) emit("mark", props.position, num);
-      target.value = "";
-    } else {
-      emit("update", props.position, num);
-      target.value = String(num);
-    }
-  } else {
-    target.value = displayValue.value;
-  }
-}
-
-function handleKeydown(event: KeyboardEvent) {
-  const target = event.target as HTMLInputElement;
-  if (event.key === "Backspace" || event.key === "Delete") {
-    // In pencil mode an empty cell's Backspace erases its notes (both slots); a filled cell
-    // still erases the value (revealing any hidden notes beneath). Normal mode is unchanged.
-    if (pencilArmed.value && props.value === 0) {
-      emit("mark", props.position, 0);
-    } else {
-      emit("update", props.position, 0);
-      target.value = "";
-    }
-    event.preventDefault();
-  }
-  // Arrow / Home / End navigation deliberately falls through to the board's roving-tabindex
-  // controller (bubbles to `.board-cells`); handling it there keeps one keyboard model.
-}
-
-function focusInput() {
-  inputRef.value?.focus();
-}
-
-function onFocus() {
-  isFocused.value = true;
-  emit("cellFocus", props.position);
-}
-
-// ── Long-press peek (T4-WM §3, lane E) ───────────────────────────────
-// A press-and-hold on an EMPTY cell opens its candidate glimpse — the engine-domains pencil marks
-// the answer-key peek already rides, marks-only (no laminate) — mirroring the shipped hold-to-peek
-// grammar. The gesture funnels up (cell → board → game) to the shared marks activation; release,
-// cancel, or a drift-off leave dismisses it. Pointer Events only (contextmenu never fires on iOS,
-// r3 §4a); `useLongPress` fires the honest `vibrateOnce` on recognition (Android buzzes, iOS
-// silently no-ops). Read-only — the peek never touches `value` (the W8 seam holds long-press at
-// peek). A recognized hold sets `suppressClick` so the tap that ends it can't focus/raise the
-// keyboard; a plain tap (no peek) still focuses through the native-entry path lane A restored. The
-// flag resets at the next pointerdown so a drift-off release never swallows a later tap's focus.
-let suppressClick = false;
-const longPress = useLongPress({
-  onLongPress: () => {
-    suppressClick = true;
-    emit("candidatePeekStart");
-  },
-  onRelease: () => emit("candidatePeekEnd"),
-});
-function onCellPointerDown(e: PointerEvent) {
-  suppressClick = false;
-  if (props.value !== 0) return; // only an empty cell has a candidate glimpse to show
-  longPress.onPointerDown(e);
-}
-function onCellClick() {
-  if (suppressClick) {
-    suppressClick = false;
-    return;
-  }
-  focusInput();
-}
-
-// ── Engine-domains pencil marks (W6 beat 9) ──────────────────────────
-// The n×n mini-grid uses the classic pencil-mark convention: value v always
-// sits at slot v (row-major), so a candidate's *position* encodes its value
-// even at mark sizes too small to read comfortably. Each mark reuses the
-// hand-drawn glyph paths (variant picked per cell+value so neighboring
-// marks don't stamp identically), stroked in faint graphite.
-const showMarks = computed(() => props.value === 0 && (props.marks?.length ?? 0) > 0);
-function markPath(v: number): string {
-  return (
-    getVariant(toDisplayChar(v, props.boardSize), props.position * 31 + v)?.d ?? ""
-  );
-}
-const marksGridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${props.subgridSize}, minmax(0, 1fr))`,
-  gridTemplateRows: `repeat(${props.subgridSize}, minmax(0, 1fr))`,
-}));
-
-// ── User pencil marks (T4-W8 ROW 1) — the player's own notes ──────────
-// Distinct from the engine peek marks above in tone (crayon-blue) AND placement, so the two
-// never read as one: CORNER marks hug the cell in a 3×3 Snyder grid (order below), CENTER marks
-// sit in a centred row. Both reuse the hand-drawn glyph paths and, like the engine marks, show
-// only on an empty cell (a filled cell hides its notes; erasing the digit brings them back).
-const showCornerMarks = computed(
-  () => props.value === 0 && (props.cornerMarks?.length ?? 0) > 0,
-);
-const showCenterMarks = computed(
-  () => props.value === 0 && (props.centerMarks?.length ?? 0) > 0,
-);
-// Snyder corner order: the four corners first, then the edge midpoints, then centre — a 3×3
-// grid addressed by (row, col). Wraps for the rare cell carrying more notes than slots.
-const CORNER_ORDER: [number, number][] = [
-  [1, 1],
-  [1, 3],
-  [3, 1],
-  [3, 3],
-  [1, 2],
-  [3, 2],
-  [2, 1],
-  [2, 3],
-  [2, 2],
-];
-function cornerSlot(i: number) {
-  const [row, col] = CORNER_ORDER[i % CORNER_ORDER.length];
-  return { gridRow: String(row), gridColumn: String(col) };
-}
-
-// The board's roving controller focuses cells programmatically after an arrow key (§4.1).
 // T4-W10 idiom (§:ref) — `position` is exposed alongside `focus` so the board's STABLE
 // `setCellApi` bound handler keys the cellApi registry off the instance (el.position) instead
 // of a per-render inline closure that captured the loop index. Position is invariant per
@@ -270,7 +90,7 @@ defineExpose({ focus: focusInput, position: props.position });
 
 <template>
   <div
-    class="sudoku-cell relative flex items-center justify-center"
+    class="game-cell sudoku-cell relative flex items-center justify-center"
     role="gridcell"
     :aria-rowindex="rowIndex"
     :aria-colindex="colIndex"
@@ -296,7 +116,7 @@ defineExpose({ focus: focusInput, position: props.position });
          number). The autocorrect/autocapitalize/spellcheck trio + `enterkeyhint` are the iOS
          congruence set. The write path (@input/@keydown) is byte-identical to the keyboard's. -->
     <input
-      ref="inputRef"
+      ref="cellInput"
       type="text"
       inputmode="numeric"
       pattern="[0-9]*"
@@ -471,291 +291,4 @@ defineExpose({ focus: focusInput, position: props.position });
   </div>
 </template>
 
-<style scoped>
-/* ── Engine-domains pencil marks (W6 beat 9) ─────────────────────────
-   Faint graphite, deliberately lighter than any inked glyph — these are
-   the solver thinking in the margins, not an answer. The soft fade-in
-   keeps marks from popping as the peek lays down (opacity-only, Band C
-   one-shot; from-only keyframe so the settled opacity is the cascade
-   value — the contrast arm below still wins). Static under PRM: no
-   boil, no fade, the marks are simply there while the peek is held. */
-.pencil-marks {
-  inset: 12%;
-  color: var(--color-pencil-graphite, var(--grid-line-color));
-  opacity: 0.5;
-  animation: marks-fade-in 250ms ease-out both;
-}
-
-.mark-slot {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8%;
-}
-
-.mark-glyph {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-@keyframes marks-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pencil-marks {
-    animation: none;
-  }
-}
-
-/* prefers-contrast: press the pencil a little harder, same as the ghost. */
-@media (prefers-contrast: more) {
-  .pencil-marks {
-    opacity: 0.75;
-  }
-}
-
-/* ── User pencil marks (T4-W8 ROW 1) — the player's own notes ─────────
-   Crayon-blue, the player's own hand — deliberately a DIFFERENT tone from the engine's
-   graphite peek marks so the solver's domains and the player's notes never read as one, and
-   a different placement (corners / centred row) besides. Their own layer; they compose over
-   the engine grid without ever sharing its store. */
-.user-marks {
-  color: var(--color-crayon-blue);
-  opacity: 0.9;
-}
-
-/* Corner (Snyder) — a 3×3 grid hugging the cell; each note small in its slot. */
-.user-corner-marks {
-  inset: 7%;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-}
-.user-corner-marks .user-mark-slot {
-  padding: 11%;
-}
-
-/* Centre — a centred, wrapping row of the chosen digits. */
-.user-center-marks {
-  inset: 14%;
-  align-content: center;
-  justify-content: center;
-  gap: 0 4%;
-}
-.user-center-marks .user-mark-slot {
-  flex: 0 0 26%;
-  height: 46%;
-}
-
-.user-mark-slot {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.user-mark-glyph {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-@media (prefers-contrast: more) {
-  .user-marks {
-    opacity: 1;
-  }
-}
-
-/* ── Peer-unit wash (T4-W8 ROW 4) — the selected cell's reach ─────────
-   A faint crayon-blue fill over the focused cell's row / column / box, tying the unit to the
-   blue focus ghost as one selection system (never the graphite hover or the red conflict tone).
-   Instant like the ghost — it tracks selection with no fade so arrowing the grid reads crisp. */
-.cell-peer {
-  background: color-mix(in srgb, var(--color-crayon-blue) 7%, transparent);
-}
-
-@media (prefers-contrast: more) {
-  .cell-peer {
-    background: color-mix(in srgb, var(--color-crayon-blue) 13%, transparent);
-  }
-}
-
-/* ── T4-W7 hint laminate — the becauseCells wash (peek-laminate tone) ─────
-   A translucent teacher-red square with a soft inset border, faded in on the EXISTING marks
-   cadence (marks-fade-in, 250ms — no new timing constant). Its own layer, behind the glyph +
-   focus ghost, so it composes with a filled cell's digit and the keyboard-focus blue ring
-   rather than colliding with the ghost's focus/invalid tiers — the tone shows even on the cell
-   you focused to ask. */
-.cell-because {
-  inset: 9%;
-  border-radius: 12%;
-  background: color-mix(
-    in srgb,
-    var(--color-teacher-red, var(--color-crayon-rose)) 15%,
-    transparent
-  );
-  box-shadow: inset 0 0 0 2px
-    color-mix(
-      in srgb,
-      var(--color-teacher-red, var(--color-crayon-rose)) 50%,
-      transparent
-    );
-  animation: marks-fade-in 250ms ease-out both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cell-because {
-    animation: none;
-  }
-}
-
-@media (prefers-contrast: more) {
-  .cell-because {
-    background: color-mix(
-      in srgb,
-      var(--color-teacher-red, var(--color-crayon-rose)) 24%,
-      transparent
-    );
-    box-shadow: inset 0 0 0 2px var(--color-teacher-red, var(--color-crayon-rose));
-  }
-}
-
-/* Ghost wrapper — instant show/hide for cursor-tracking responsiveness */
-.cell-ghost {
-  opacity: 0;
-}
-
-.cell-ghost.is-active {
-  opacity: 1;
-}
-
-/* Conflict mark persists whether or not the cell is hovered/focused (§1.4). */
-.sudoku-cell.is-invalid .cell-ghost {
-  opacity: 1;
-}
-
-/* Tier 1 — hover / base: graphite pencil border + faint tinted fill (§4.2). */
-.cell-ghost-path {
-  fill: var(--color-pencil-graphite, var(--grid-line-color));
-  fill-opacity: 0.06;
-  stroke: var(--color-pencil-graphite, var(--grid-line-color));
-  stroke-width: 5;
-  stroke-opacity: 0.65;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* Tier 2 — keyboard focus: crayon-blue, heavier, sketched on over 180ms. Driven by real
-   :focus-visible so a mouse click keeps the instant graphite tier and only keyboard focus
-   gets the drawn-on ring. */
-.sudoku-cell:has(input:focus-visible) .cell-ghost-path {
-  fill: var(--color-focus-sketch, var(--color-crayon-blue));
-  fill-opacity: 0.08;
-  stroke: var(--color-focus-sketch, var(--color-crayon-blue));
-  stroke-width: 7;
-  stroke-opacity: 0.9;
-  stroke-dasharray: 1;
-  animation: ghost-draw-on 180ms var(--ease-ghostDraw) both;
-}
-
-@keyframes ghost-draw-on {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-/* Tier 3 — aria-invalid conflict: the teacher's red pencil. Tier collisions are resolved
-   by specificity, never source order — this (0,3,0) rule loses every shared property to
-   tier-2's (0,3,1); the focused-and-conflicting case is owned by the tier-2×3 compound
-   rule below. */
-.sudoku-cell.is-invalid .cell-ghost-path {
-  fill: var(--color-teacher-red, var(--color-crayon-rose));
-  fill-opacity: 0.1;
-  stroke: var(--color-teacher-red, var(--color-crayon-rose));
-  stroke-width: 9;
-  stroke-opacity: 1;
-}
-
-/* Tier 2×3 — focused AND conflicting: the teacher's red pencil, pressed harder.
-   (0,4,1) beats tier-2's (0,3,1); every tier-2 paint property is re-asserted —
-   partial overrides leak blue through the higher-specificity focus rule.
-   ghost-draw-on is deliberately NOT suppressed: it re-sketches in red as the
-   focus cue (the ghost is this cell's only focus affordance; PRM block governs). */
-.sudoku-cell.is-invalid:has(input:focus-visible) .cell-ghost-path {
-  fill: var(--color-teacher-red, var(--color-crayon-rose));
-  fill-opacity: 0.16;
-  stroke: var(--color-teacher-red, var(--color-crayon-rose));
-  stroke-width: 10;
-  stroke-opacity: 1;
-}
-
-/* Neutralize the generic global focus-within ring (index.css) — the SVG ghost is the focus
-   affordance now. Scoped selector ([data-v-*]) outweighs the global one. NOTE (T4-W10 gate 2):
-   Tailwind v4's `outline-none` compiles to `outline-style:none` (NOT v3's transparent 2px
-   outline this comment once assumed), so it paints NOTHING under forced-colors — and
-   forced-color-adjust strips the SVG ghost to a corner fragment. The HC-restorable ring is the
-   explicit `forced-colors` block at the foot of this sheet. */
-.sudoku-cell:focus-within {
-  background: transparent;
-  outline: none;
-}
-
-/* iOS zoom de-risk (T4-WM §1): mobile Safari zooms a focused input whose computed font-size
-   is <16px. The input is opacity-0 (the SVG glyph is the visible value), so this 16px is a
-   purely structural floor — it costs nothing visually and is never traded for `maximum-scale`
-   (that breaks pinch-zoom, WCAG 1.4.4). Asserted in the mobile e2e. */
-.cell-native-input {
-  font-size: 16px;
-  /* T4-WM §2 — component-level entry look: the input is the cell's tap target (absolute
-     inset-0, opacity-0), so iOS paints its gray tap-flash on IT. Suppressed here so the
-     pencil ghost stays the sole focus voice on tap. Scoped to the entry surface this lane
-     owns; additive to lane C's global interactive sweep (identical value, no conflict). The
-     focus RING stays lane A's crayon-blue :focus-visible ghost (tap = no ring, key = ring). */
-  -webkit-tap-highlight-color: transparent;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sudoku-cell:has(input:focus-visible) .cell-ghost-path {
-    animation: none;
-    stroke-dashoffset: 0;
-  }
-}
-
-/* prefers-contrast: press the pencil harder (§4.4). */
-@media (prefers-contrast: more) {
-  .cell-ghost-path {
-    stroke-opacity: 0.9;
-  }
-  .sudoku-cell.is-invalid .cell-ghost-path {
-    stroke-opacity: 1;
-  }
-}
-
-/* Forced-colors / Windows High Contrast keyboard-focus ring (T4-W10 gate 2, WCAG 2.4.7).
-   Normal mode's crayon-blue ring is the SVG .cell-ghost-path, but forced-color-adjust strips
-   SVG paint to a fragment and Tailwind v4's `outline-none` on the input paints nothing — so
-   HC keyboard focus had no ring. Draw a real system-color outline the UA keeps. It rides the
-   CELL, not the input: the input is opacity-0 and an opacity-0 element renders no outline. The
-   UA forces its own color under forced-colors (`Highlight`, the system focus color — never gold;
-   crayon-blue is unrenderable here). Inset (offset -2px) so the ring hugs the packed cell
-   without overlapping neighbours. Gated on :focus-visible → keyboard only, matching normal mode. */
-@media (forced-colors: active) {
-  .sudoku-cell:has(input:focus-visible) {
-    outline: 2px solid Highlight;
-    outline-offset: -2px;
-  }
-}
-
-/* Ensure ghost overflow is not clipped */
-.sudoku-cell {
-  overflow: visible;
-  contain: layout style;
-}
-.sudoku-cell.is-active {
-  z-index: 10;
-}
-</style>
+<style scoped src="@/games/shared/gameCell.css"></style>
