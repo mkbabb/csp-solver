@@ -215,3 +215,21 @@ Recorded so they aren't re-discovered from zero. The T3 traps carry; the tranche
 The tranche is fed by a certified convergence audit. **5 rounds, 38 agents, ~170 adjudicated findings, 15 stable families.** The residual-yield stopping rule is disclosed, not laundered: **P2s ceased at round 3; P3 dust asymptotes at ~1–2 per pass, each folding into an existing family.** Rounds 4 and 5 both surfaced zero new families (r4 folded 2×P3 into FAM-7/13; r5 folded 1×P3 into FAM-13). A literal-zero pass on a living estate would launder the stopping rule, not satisfy it—so the honest record is "near-quiet at the mechanism-family grain," not a claim of zero findings. The full per-round trace: `evidence/registry/families.md`; the distilled family table: `appendix-A-family-registry.md`.
 
 The counts re-stamped in §2 corroborate the gate: the whole tree at `d70073f3` builds and passes green (run `29449438899`, 11 jobs), the meta-leak enforcement grep reads zero across every shipped product doc, `.pyi`, and both CHANGELOGs (W14), the version table matches source and registry, and the CONTRIBUTING dangle is resolved by inlining the two-line flow (no link to a staged-deleted file). The disposition ledger closes at 100%—every chronic, deferred, partial, and prompt-recap row carries a terminal disposition, each with its re-entry criterion. The tranche is auditable. It closes.
+
+---
+
+## 9. Post-close addendum — the owner's deploy/ratify/validate orders (2026-07-15)
+
+The tranche closed at `aa77860e`; the owner then ordered, in sequence: production deploy + B5 ratification (§4, §7), then "all are approved" (the 0.6.0 election) with a browser validation pass — "ensure safari and mobile performance curves are perfected." The record of that work:
+
+| Action | Outcome |
+|---|---|
+| Production deploy | executed twice this cycle; final state `981353c0`'s build live at `sudoku.babb.dev` |
+| B5 sheaf | RATIFIED (§4) |
+| crates.io 0.6.0 | PUBLISHED (§5 row EXECUTED); pyproject + wasm source ride lockstep at `cb3c7f5f`/`c49a73ca` |
+| CSP defect (found by validation) | `img-src` lacked `blob:` — production refused every `rasterPose.ts` pose-bake image (37 violations/load) since the pose-stack machinery shipped; fixed + redeployed at `39d4a506` |
+| Safari-desktop collapse (found by validation) | 9–30 fps steady-state: WebKit paints SVG unlayered, so the BoilDivider — the app's one remaining live-filtered pose stack (its geometric grain bake failed the SSIM soul gate) — re-rastered per beat flip through the card's filter chain. Fixed at `fb15253d`: Apple-vendor gate holds pose 0 via the `frameCount ≤ 1` freeze contract; Chromium/Firefox keep the boil |
+| Edge-cache poisoning (found by validation) | a mid-propagation fetch of a new hashed asset through the zone got the SPA fallback (`text/html`) cached under the path-keyed one-year immutable rule — nosniff then refused the stylesheet and the app ran unstyled at 5 fps on every engine; reproduced twice. Remediated at `981353c0`: `_redirects` 404-guards unknown `/assets/*` (404s cache minutes, heal on retry) + hashed URLs rotated to 12 chars (no zone purge scope in the deploy token). **Standing deploy discipline: after `npm run deploy`, idle ~2 minutes polling only the HTML before touching any `/assets/*` URL through the zone** |
+| Final curves (live edge, Playwright: real WebKit desktop-Safari + iPhone 13 profiles, Pixel 7 + CDP 4× CPU throttle; floors ≥50 fps unthrottled / ≥30 throttled, long-frame + input-latency caps) | **19/19**: Safari desktop 80–98 fps mean · input 11–15 ms (from 9–30 fps / 179–331 ms); iPhone 98 fps flat, zero long frames; throttled mobile 120 fps flat, input 8–12 ms; carousel transition 49–50 fps under throttle; solve proven on the Safari engine; console clean (the sole tolerated line: the zone-injected Cloudflare RUM beacon being CORRECTLY refused by our CSP — the no-telemetry declaration enforced; zone-level disable stays an owner action, token lacks RUM scope) |
+
+The Chrome-extension path was unavailable this session; Playwright (the estate's browser harness of record) ran the validation with the real WebKit engine standing in for Safari. Remaining owner rows: the E8 hardware smoke, the zone RUM/purge scopes.
