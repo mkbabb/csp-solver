@@ -5,4 +5,12 @@
 # other than `/` 404ing instead of loading the app shell). The frontend solves
 # in-browser via @mkbabb/csp-solver-wasm in a Worker; there is no API origin to
 # proxy.
+# Unknown /assets/* paths are 404s, NEVER the app shell: hashed assets that don't
+# exist must not resolve to index.html, because the /assets/* immutable Cache-Control
+# in _headers is path-keyed — a mid-deploy fetch through the zone once cached the
+# text/html fallback as a stylesheet for a year (the 2026-07-15 poisoning; nosniff
+# then refused it and the app ran unstyled at 5 fps). A 404 is cache-safe: edges
+# hold it minutes, not a year, and the next retry heals.
+/assets/*    /404.html    404
+
 /*    /index.html    200

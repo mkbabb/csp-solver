@@ -265,6 +265,20 @@ export default defineConfig({
     assetsInlineLimit: (filePath) => (filePath.endsWith('.woff2') ? false : undefined),
     rollupOptions: {
       output: {
+        // 10-char content hashes (vite defaults to 8). One-time URL rotation after the
+        // 2026-07-15 edge-cache poisoning: a mid-propagation fetch of a new hashed asset
+        // through the sudoku.babb.dev zone got the SPA fallback (text/html) and the zone
+        // cached it under the /assets/* one-year immutable rule — nosniff then refused
+        // the stylesheet on every subsequent load (5 fps app, all engines). Rotating the
+        // URLs outruns every poisoned entry at once (no zone purge scope in the deploy
+        // token); the _redirects /assets/* 404 guard prevents the class from recurring. (12-char:
+        // the first 10-char rotation was itself re-poisoned by a verification fetch
+        // racing the alias flip — the guard was not yet the OLD deployment then; after
+        // this deploy it is, and the class closes. Post-deploy verification must idle
+        // ~2 min before touching any asset URL through the zone.)
+        assetFileNames: 'assets/[name]-[hash:12][extname]',
+        chunkFileNames: 'assets/[name]-[hash:12].js',
+        entryFileNames: 'assets/[name]-[hash:12].js',
         // Rolldown (Vite 8's default bundler) treats function-form `manualChunks`
         // as a HINT, not a strict assignment: it fused Vue's runtime into
         // `animation-vendor` (the `beforeCreate` option-merge string landed there)
