@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useResizeObserver } from "@vueuse/core";
 import { generateRectBoilFrames } from "./gridPaths";
 import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
@@ -83,6 +83,27 @@ const currentFrame = computed(() => {
   return Math.max(0, Math.min(total - 1, Math.floor(props.pose ?? 0)));
 });
 
+// THE POSE PRUNE (T4-P1 pass 3) — a frozen outline mints ONE node and promotes NOTHING.
+// The sibling stack and its `will-change: opacity` exist for the SWAP: `frameCount` poses
+// resident so the beat's flip is a compositor blend rather than a repaint. An outline that
+// never flips bought nothing with them and paid for all of them — 4 permanently promoted
+// layers per mount, holding paths that cannot paint.
+//
+// Posed consumers come in two kinds, and the difference is only visible over time: a gallery
+// FLANK sits at pose 0 forever, the ONE live card is driven from the gallery's beat. So every
+// posed instance starts pruned — one node, nothing promoted — and expands on its first pose
+// CHANGE, which is the moment the swap machinery starts earning its layers. One-way latch: the
+// live card pays a single expansion; the eight flanks and the panel's wells never do. Unposed
+// consumers (grid, drawer tab, error note, scene cards) are untouched, pixel for pixel.
+const posed = props.pose !== undefined;
+const swaps = ref(false);
+if (posed)
+  watch(
+    () => props.pose,
+    () => (swaps.value = true),
+  );
+const pruned = computed(() => posed && !swaps.value);
+
 // T3-W13 §1-P2: the grain is baked INTO the pose geometry (gridPaths.ts §Grain bake,
 // params derived from grain-outline's own GrainConfig — reactive, so FilterTuner
 // mutations re-bake live) and the poses render as static filterless siblings below.
@@ -123,11 +144,13 @@ const viewBox = computed(
     <svg
       v-if="frames.length"
       class="outline-svg"
+      :class="{ 'is-pruned': pruned }"
       :viewBox="viewBox"
       xmlns="http://www.w3.org/2000/svg"
     >
       <g
         v-for="(d, f) in frames"
+        v-show="!pruned || currentFrame === f"
         :key="f"
         class="boil-pose"
         :class="{ 'is-active': currentFrame === f }"
@@ -167,6 +190,15 @@ const viewBox = computed(
 .boil-pose {
   opacity: 0;
   will-change: opacity;
+}
+
+/* THE POSE PRUNE — the pruned instance renders one pose (the other siblings are
+   `display: none`, so they generate no boxes and no layers) and promotes nothing: there is no
+   swap here to make compositor-cheap, and a promoted layer with nothing to promote is
+   residency for free — the same charge P1-W3 laid against `will-change: transform` on the
+   retired panel filter. */
+.outline-svg.is-pruned .boil-pose {
+  will-change: auto;
 }
 
 .boil-pose.is-active {
