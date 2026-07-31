@@ -58,3 +58,138 @@ the deletions it licenses.
 
 The logo goldens **move by design**—mark 4 is the owner's complaint that they're soft—so that
 re-baseline ships with before/after pairs and the mark cited, never as a silent re-mint.
+
+## Execution record — 2026-07-31
+
+Five commits, one per group, each pathspec'd and carrying its own gate. `^0.10.0` at the top
+(npm 11.12.1). Base numbers for every born-RED gate were minted BEFORE any source moved.
+
+| commit | group |
+|---|---|
+| `be54105f` | `^0.10.0` adoption (package.json + lock; the lock also trues csp-solver-wasm 0.5.0 → 0.6.0 off the `file:` link) |
+| `6b8c1ffd` | **A** — the deletions + `filterBudget.ts` + `filter-census.spec.ts` + CI wiring |
+| `d8942ced` | **B** — `disableTransition: true` |
+| `387cceea` | **C** — fill modes, progress gate, opsz pin, B2 subset, five `heldFrameCount` wraps |
+| `ac59be9d` | G3.5 soul re-mint + G3.6 sweep + the Group-A rider that was missed |
+
+**Group D was reordered into A as the wave directed** — the budget and its spec were written and
+proven RED against the base build first, then landed in the same commit as the deletions they
+license. The FILL half (`FILL_ALLOWLIST` + the two G3.2 tests) landed with Group C instead, on the
+same law read one clause finer: each census lands with the deletions IT licenses, and G3.2
+licenses the fill-mode cures.
+
+### Gates
+
+| gate | RED (base) | GREEN (adopted) |
+|---|---|---|
+| G3.1 filter census | 82 unclaimed live filters · population 96 · HTML boxes 18 · `.board-cells` 63 | **0 · 14 · 0 · 0** — equals `filterBudget.ts` exactly, at the ≤14 ceiling |
+| G3.2 fill census (rendered) | 63 retained fills supplying a computed transform | **0** |
+| G3.2 fill census (source) | 15 `forwards\|both` sites | **12 = `FILL_ALLOWLIST` exactly** (3 sites / 4 declarations cured) |
+| G3.3 hoverSweep | fps 75.85 · p95 37 · long33 22 · filter-carrying hover rules 4 · filtered targets 5 · `transition:all` targets 19 | **fps 98.20** (the 98.4 ceiling) · p95 12 · long33 0 · **1 / 0 / 0** |
+| G3.3 solveWindow | loader filter `url(#grain-static)` · **48 re-executions/s** · fps 30.6–36.1 · jank 1222–1565 ms | loader filter **`none`** · **0/s** · fps 73.6–74.3 · **jank 0** |
+| G3.4 wordmark integrity | 6/6 FAIL — all five labels' baked ink touching the RIGHT edge; `thermo` "m", `kenken` "nn" in Georgia | **6/6 pass** — all four edges clear on all five; zero fallback glyphs |
+| G3.5 soul artifacts | — | re-minted; negative control reds at 0.8059; owner row satisfied by the standing order |
+| G3.6 estate | — | vitest 307/307 · e2e 77/77 · goldens 4/4 · golden-bytes · throttled-void 1/1 · prod-shake · font-coverage · vue-tsc/eslint/knip/prettier |
+
+G3.3 medians of 3 on real Safari 26.4, pinned 9×9/Easy (`pw3base-c1..c3` → `pw3post-p1..p3`).
+Group B measured separately on `themeToggle`: **46.2 → 68.55/64.75 fps**, p95 84–97 → 21/20,
+long33 21 → 5/7, long50 10–12 → 4, jank 1030–1230 → 666/720 ms of 2500.
+
+Census population before/after: **96 → 14** (r1 §5 read 99–123 across board states; 82 of the 96
+were the glyph population, the 16 icon buttons and the 2 panel twins).
+
+Fonts: cmap **20 → 28** codepoints, 9,772 → **13,788 B**; `check-font-coverage.mjs` verifies all
+12 rendered strings as authored AND as transformed, plus `unicode-range` == cmap both ways, and
+is proven able to red.
+
+### The eight things this wave found that the inventory did not
+
+1. **`wobble-celestial` / `wobble-heart` do NOT orphan.** The inventory expected both to lose
+   their last clients. They don't: the toggle's two live sun/moon bodies consume the former and
+   CrayonHeart consumes the latter above its 20 px tiny threshold. Both are censused as live
+   budget rows (2 + 2 of the 14). What DID orphan is **`stroke-light` / `stroke-dark`**, whose
+   sole consumer was the retired panel filter — so they took `baseDef: false`, the multiPass
+   branch gained the guard, and the existing orphan census moved them in the Group-A commit.
+   Same law, different pair.
+2. **The `.progress-pose` cure was split.** r3 §4.4's `v-if="progress > 0 && !solveSuccess"`
+   would have unmounted the trace at the win, and the win is precisely when
+   `.solve-success .progress-trace` fades it over 500 ms to hand the frame to the gold. Not
+   rendered at all at `progress === 0`; **pinned to pose 0** at the win instead of unmounted. The
+   8/s trade stops either way; the bow-out survives. Costs a `solveSuccess` prop and one line at
+   GameBoard's single call site.
+3. **Group B kills the T3-W10 dusk ease.** Measured: the Bloom survives (`toggle-squash` /
+   `plush-land` are @keyframes, which `transition: none` does not touch — button scale 0.941
+   @45 ms → 1 @135 ms), but `html.theme-turning`'s ~350 ms body + paper colour tween now lands
+   inside the one-frame suppression window and page colour SNAPS (rgb(251,250,249) →
+   rgb(17,15,14), no intermediate sample). That class and its index.css rule are now inert. This
+   IS the trade the charter names ("the swap is covered by the toggle's Bloom") and it is left in
+   place, not deleted: reversal is one boolean, and the cure if the owner wants the dusk back is
+   to narrow the 46 tweening selectors rather than re-blanket them. **Owner-visible; flagged.**
+4. **Mark 4 M2's mechanism is not what the inventory says, and the pin is WebKit-only.**
+   `font-optical-sizing: auto` resolves this face's `opsz` to the axis MINIMUM (9) in WebKit, not
+   to the 52 px font-size. Measured on the base dist, futoshiki wordmark:
+   `chromium auto 245.85 / pinned 245.85 (delta 0.00)` · `webkit auto 211.39 / pinned 244.83
+   (delta 33.44)`. So the measuring `<text>` cut `vbWidth` at one metric while the detached bake
+   blob painted at another, and the bake overran its box — the clip is at the RIGHT EDGE, not
+   the "all five clip" of unspecified kind. Also: **`getBBox()` cannot see it.** On an SVG
+   `<text>` it returns the font em box, so it read an identical 64.13-unit height at every `opsz`
+   while advances moved 33 units; G3.4 scans the baked bitmap's own pixels instead.
+   Consequently "baked pixels unchanged" in the inventory is not true — advances move ~16%.
+5. **The B2 subset costs 13,788 B, not the ruling's 12,048 B.** The row's estimate covered the
+   rendered lowercase only. "Both cases of any string passing a `text-transform`" additionally
+   needs the six AUTHORED initials `B C D M N S`, which cost 1,852 B — and that is precisely
+   what keeps the cut alive through a later change of transform instead of re-breaking the way it
+   did. +4,016 B on the shipped 9,772; three faces total 21,724 B. Tooling validated against lane
+   D: re-cutting THEIR B2 repertoire from the same source yields 11,936 B against their measured
+   12,048 (0.9% — their own comparability tolerance). **Priced deviation; owner may rule it back
+   to 11,936 B with one `unicode-range` edit and one re-derive.**
+6. **NO golden was re-baselined, and none is owed to W4.** All four darwin goldens moved in BYTES
+   (md5s differ) and not one pixel moved past threshold — re-run at `maxDiffPixelRatio: 0` with
+   `threshold: 0.2`, tighter than the shipped 0.02 / 0.3, all four still pass. The reason is
+   finding 4: both mark-4 defects are WebKit's and the golden system runs Chromium, so **the
+   golden system cannot evidence the mark-4 cure by construction**. Its evidence is G2.2's
+   softRatio curve and G3.4's WebKit ink scan. Re-minting a gate that holds at zero tolerance
+   would be the silent re-baseline the discipline forbids. Before/after pairs kept in
+   `evidence/p1/goldens-before-after/` so the movement reads as inspected, not ignored. **The
+   linux pair is NOT expected-red for W4** — nothing moved to re-mint.
+7. **MISSED IN GROUP A, landed in `ac59be9d`.** `e2e/visual-regression.spec.ts:218` still asserted
+   `.control-panel-filtered` carries `url(#stroke-dark)`. It belonged in the Group-A commit with
+   the deletion that falsified it. Inverted rather than deleted: the element is still the
+   structural hook and must now read `filter: none`.
+8. **The hover gate could not be born-RED on jank, and the rig lied twice before it told the
+   truth.** On this desktop the base hover sweep already read jankMs 0 — an M5 Max absorbs 8
+   small filtered buttons — so the hover arm's RED lives in its structural counters (4 → 1
+   filter-carrying hover rules, 5 → 0 filtered targets, 19 → 0 `transition: all` targets), while
+   its fps win (75.85 → 98.20, long33 22 → 0) is real but was invisible to the declared
+   threshold. Two instrument bugs were found and fixed before any number was banked, both
+   recorded in `probe.js`: (a) the replayed hover rule lost to Vue's scoped `[data-v-hash]`
+   specificity and measured NOTHING (first pass read jankMs 0 for that reason, not a real one) —
+   fixed with a triple-class selector; (b) a per-poll whole-document `getComputedStyle` census
+   HOGGED the main thread so Vue could never unmount the loader, faking a 38-poll window out of a
+   ~12 ms one. The solve-window census now touches exactly one element. `hoverSweep` also pins
+   9×9/Easy, because `solveWindow` leaves a 16×16 behind and a 256-glyph board turns that window
+   from 68.9 fps into 19.5.
+
+### Deliberately not done
+
+- The **`.sparkle-icon` drop-shadow survives** on `.icon-btn:hover` — a built-in interpolable
+  filter on the GPU path, untouched by ruling (r3 §3.2). It is the one filter-carrying hover rule
+  the post-change rig still counts, and the budget carries it as a transient row.
+- **`SolverErrorNote`'s `note-slide-in` ends at `transform: translateY(0)`** — a matrix, not
+  `none`: the `cell-reveal` mechanism at a population of 0–1 transient notes instead of 35–81
+  cells. Allowlisted with the true reason and a named trigger (the note becoming resident, or a
+  second such site) rather than silently cured outside the inventory.
+- The banked control-panel twin `v-if` was not needed: the themeToggle floor cleared without it.
+- `BoilDivider`, PosterBoard/celebration transients, and the Apple DPR-cap asymmetry stand as the
+  wave directed.
+
+### Rig
+
+`probe.js` gained `hoverSweep` + `solveWindow` (scratchpad only, not the repo). Runs banked:
+base `pw3base-c1..c3`, post `pw3post-p1..p3`, Group B `pw3-gb1/gb2`, plus the discarded
+instrument-bug runs `pw3-base-1..3` / `pw3base-b1..b3` kept as failure-mode records. The ballot
+server gained an `a0` cell (`ballot/variant-a0.css`) and was restarted on `:4895`; `:4894` was
+never touched. The default e2e suite and the goldens ran against the built dist on a lane-local
+preview because **`:4188` is occupied by an unrelated service and `:3000` answers
+`{"service":"palette-api"}`** — `global-setup`'s K46 SPA assertion caught the latter correctly.
+Note for any future lane: **WebKit refuses port 4190** ("restricted network port").
