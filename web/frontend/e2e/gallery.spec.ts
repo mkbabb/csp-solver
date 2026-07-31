@@ -65,21 +65,29 @@ test('gallery: keyboard step moves the snap, announces it, and updates aria + pi
   await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#gallery-card-1')).not.toHaveAttribute('inert', '');
   await expect(page.locator('#gallery-card-0')).toHaveAttribute('inert', '');
-  await expect(page.locator('.gallery-live')).toHaveText('futoshiki, 2 of 5');
+  // T4-P1 F4 — the announcement now carries the band's content too: the deck's position AND
+  // the staged pair AND the board state, because a snap swaps the whole slip under the deck and
+  // one live region has to speak for both. Re-stated EXACTLY (never loosened to a regex) in the
+  // same diff that changes it; `gallery-deal.spec.ts` gates the band's half on its own.
+  await expect(page.locator('.gallery-live')).toHaveText(
+    'futoshiki, 2 of 5. 5×5 easy, new game',
+  );
   await expect(page.locator('.gallery-pip').nth(1)).toHaveClass(/is-inked/);
 
   // End jumps to the LAST card (kenken, index 4 — five games now, T4-W13). Clamp —
   // ArrowRight at the last card is a no-op (no wrap).
   await page.keyboard.press('End');
   await expect(listbox).toHaveAttribute('aria-activedescendant', 'gallery-card-4');
-  await expect(page.locator('.gallery-live')).toHaveText('kenken, 5 of 5');
+  await expect(page.locator('.gallery-live')).toHaveText('kenken, 5 of 5. 4×4 easy, new game');
   await page.keyboard.press('ArrowRight');
   await expect(listbox).toHaveAttribute('aria-activedescendant', 'gallery-card-4');
 
   // Home returns to the first card.
   await page.keyboard.press('Home');
   await expect(listbox).toHaveAttribute('aria-activedescendant', 'gallery-card-0');
-  await expect(page.locator('.gallery-live')).toHaveText('sudoku, 1 of 5');
+  await expect(page.locator('.gallery-live')).toHaveText(
+    'sudoku, 1 of 5. 9×9 easy, board dealt',
+  );
 });
 
 // ── 3. Enter selects — the gallery closes, the board swaps, ?game set, ?view cleared ──
