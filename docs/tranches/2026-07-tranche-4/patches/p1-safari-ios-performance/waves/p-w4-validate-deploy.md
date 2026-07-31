@@ -28,11 +28,30 @@ untouched.
 ## Residuals — booked with numbers, never priced into a score
 
 - **The gallery fold, ~150 ms at ~870–910 ms** (211–260 ms sim)—`useFlipGlide`'s one forced
-  layout across the board⇄card fold; survives every ablation. Trigger: any owner mark on the
-  fold (it's adjacent to design mark 2 already). A P2 patch, not a percentage.
-- **The theme swap's two ~125 ms whole-page repaints**—1180 nodes restyled twice with every
-  filter and transition gone. Trigger: themeToggle below its `gates.json` floor post-cure
-  (the banked panel-twin `v-if` is the first lever).
+  layout across the board⇄card fold; survives every ablation. Re-attributed at the MISS-CURE
+  retake: the frame is **159–176 ms in 100% of windows across seven separately built bundles**,
+  and the three named P-W3 suspects each move the cell by ≤0.8 fps against an interleaved
+  control (wraps −0.56, progress gate +0.75, B2 font +0.46), while r2's own aB2 ablation re-run
+  on the shipped dist buys +0.42—there is no live-filter or transition headroom left in this
+  cell. Trigger: any owner mark on the fold (it's adjacent to design mark 2 already). A P2
+  patch, not a percentage.
+- **The theme swap's two ~125 ms whole-page repaints**—now 1042 nodes restyled twice. The
+  banked panel-twin `v-if` **fired and is spent** (`0642e098`: −120 nodes, −5 live filters,
+  census 14 → 9, one card per regime instead of two); its paired effect on the cell is +0.17
+  gallery / −0.47 theme, i.e. below the rig's resolution, so the repaint pair is the residual and
+  the lever is not a second time. Mechanism re-named with a number: the surviving allowlist
+  filters (the Apple-frozen divider, the hearts, the toggle bodies) re-execute on the repaint—
+  killing every filter and transition in CSS buys **+3.56** on this cell and nothing on gallery.
+  Trigger: a *paired* themeToggle measurement below the `gates.json` floor—block-vs-block does
+  not qualify (see the instrument row).
+- **The desktop rig's session drift—the instrument, booked as a residual because it outweighs
+  both gates it touches.** The identical bundle on the identical port slid **galleryGlide
+  85.16 → 81.33 and themeToggle 88.88 → 82.60 over 23 minutes** (18 runs, monotone) while
+  `idle3s` held 98.39 → 97.84 and the app-free rAF ceiling held 98.4 → 98.1: the drift lands on
+  the cells with 100–170 ms frames and spares the ones sitting on the display ceiling. Gate
+  margins here are 1–3 fps and the within-block sham floor is ±1.0, so **any adjudication of
+  these two cells must interleave the bundles inside one block or quiesce the box**; the
+  ≥83/≥85 rows in `gates.json` are sound as ceilings-derived targets and were not moved.
 - **`undoBurst`'s ~55 fps floor**—no spike to blame; wants a different instrument. Trigger:
   an owner mark on input feel.
 
