@@ -23,6 +23,9 @@ import GameControlPanel from "./GameControlPanel.vue";
 // sudoku's inline list and futoshiki's `futoshikiGame.options(futoshiki)` route are out of its
 // reach by construction. They are covered instead by `games/sudoku/game.test.ts` (the eager
 // scene's hand copy ≡ the declaration, with a live-model behavioural leg).
+// T4-P1 adds 3 rows here (the zone grammar's composition contract) and a `CheckStatus.test.ts`
+// of 9; the RANKS and the tap floor those names are written at are CSS and ride
+// e2e/zone-grammar.spec.ts, because a layer that applies no stylesheet cannot witness a rank.
 
 const SECTIONS = [
   {
@@ -57,6 +60,7 @@ function mountPanel(overrides: Record<string, unknown> = {}) {
       mobile: true,
       pencilMode: "off",
       errorCheckMode: "on-demand",
+      proactiveCheck: false,
       candidatesPinned: false,
       share: () => Promise.resolve(),
       ...overrides,
@@ -137,16 +141,64 @@ describe("GameControlPanel — Deal / Clear one-click on a fine pointer (T4-WU/U
   });
 });
 
-// The wrapper deletion's own guard: the Deal button carries BOTH classes, and `.deal-btn`
-// must be declared AFTER `.icon-btn` in the component's stylesheet — they tie on
-// specificity, and the losing order pinned the button at 44px and crushed the 28px die to
-// 17.6 on every fine pointer (Lane D ship 1). Source order is the whole fix, so it is what
-// this asserts.
-describe("GameControlPanel — the .deal-btn cascade order (Lane D ship 1)", () => {
+// The wrapper deletion's own guard: the Deal button carries BOTH classes. That pair is what
+// the shipped rule `.icon-btn.deal-btn` (0,2,0) selects on — the ORDER-PROOF form Lane D
+// ruled in over a source-order move, after a bare `.deal-btn` tied `.icon-btn` at (0,1,0),
+// lost on order, and crushed the 28px die to 17.6 on every fine pointer. The rendered
+// geometry rides e2e/visual-regression "the Deal die is not crushed"; the class pair is the
+// half a jsdom layer can see, and the rule cannot match without it.
+describe("GameControlPanel — the .deal-btn cascade (Lane D ship 1)", () => {
   it("Deal wears the icon-btn base plus the deal-btn modifier", () => {
     const w = mountPanel();
     expect(w.get(DEAL).classes()).toEqual(
       expect.arrayContaining(["icon-btn", "deal-btn"]),
     );
+  });
+});
+
+// T4-P1 · the zone grammar's composition contract — the half that needs no browser. The
+// RANKS (which register each name is written at, and the 44px floor) are CSS claims and ride
+// e2e/zone-grammar.spec.ts; what this layer owns is that the card mounts three named wells,
+// that each name is the visible tape the group points at, and that the check state actually
+// reaches the status line from the prop.
+describe("GameControlPanel — the zone grammar (T4-P1)", () => {
+  it("three wells, each a group named by its own visible tape", () => {
+    const w = mountPanel();
+    const wells = w.findAll(".tray-well");
+    expect(wells).toHaveLength(3);
+    expect(w.findAll(".washi-tag").map((t) => t.text())).toEqual([
+      "new game",
+      "pencils",
+      "teacher's",
+    ]);
+    for (const well of wells) {
+      expect(well.attributes("role")).toBe("group");
+      const id = well.attributes("aria-labelledby")!;
+      const tag = well.find(`#${id}`);
+      expect(tag.exists()).toBe(true);
+      expect(tag.classes()).toContain("washi-tag");
+      // A tag is a label, not a tooltip — `role="tooltip"` would make it an illegal
+      // aria-labelledby target, which is the defect pass 1 fought from the outside.
+      expect(tag.attributes("role")).toBeUndefined();
+    }
+  });
+
+  it("six co-equal eyebrows become two, and the four that left are named one rank down", () => {
+    const w = mountPanel();
+    expect(w.findAll(".section-heading").map((h) => h.text())).toEqual([
+      "Size",
+      "Difficulty",
+    ]);
+    expect(w.findAll(".zone-row-label").map((l) => l.text())).toEqual([
+      "marks",
+      "candidates",
+    ]);
+  });
+
+  it("proactiveCheck reaches the status line — the decay the card never showed", () => {
+    expect(mountPanel().get(".check-status").text()).toContain("Ask again");
+    const marking = mountPanel({ proactiveCheck: true });
+    expect(marking.get(".check-status").text()).toContain("showing mistakes");
+    expect(marking.get(".check-status").classes()).toContain("is-marking");
   });
 });
