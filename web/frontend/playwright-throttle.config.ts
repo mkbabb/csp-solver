@@ -8,6 +8,9 @@ import { defineConfig } from "@playwright/test";
  *
  *  · throttled-void — the F3 flake, below.
  *  · wordmark-integrity — P1 G3.4, in WEBKIT (see the project note below).
+ *  · theme-bake-freshness — P1-W4 G4.5, in BOTH engines: after one theme toggle the baked
+ *    logo and grid must carry the live theme's ink. Same reasoning as the census — the bake
+ *    that ships is the one worth asserting over.
  *  · filter-census  — P1 G3.1/G3.2, the live-filter budget. It censuses what the SHIPPED bundle
  *    renders; a dev-server census would read unbundled module graph timing, and the invariant it
  *    guards ("a new filter surface reds CI even when an old one retires") is only worth anything
@@ -68,6 +71,16 @@ export default defineConfig({
       retries: 0,
       use: { browserName: "webkit" },
     },
+    // P1-W4 G4.5 — the baked surfaces must re-ink on a theme toggle. Engine-INDEPENDENT (it
+    // was measured identically in WebKit and Chromium on the deployed artifact), so unlike
+    // wordmark-integrity it runs in both. retries:0 — the assertion is a colour read off a
+    // decoded bitmap, deterministic, and a retried colour read is a colour read that lies.
+    ...(["chromium", "webkit"] as const).map((browserName) => ({
+      name: `theme-bake-${browserName}`,
+      testMatch: /theme-bake-freshness\.spec\.ts$/,
+      retries: 0,
+      use: { browserName },
+    })),
   ],
   use: {
     baseURL: externalBase || `http://localhost:${PREVIEW_PORT}`,

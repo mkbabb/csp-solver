@@ -12,11 +12,14 @@ export default defineConfig({
   //    the BUILT dist (the artifact that deploys), so it rides the same bundled-preview config.
   //  · wordmark-integrity — P1 G3.4: asserts over the BAKED pose bitmaps in WebKit; the
   //    defects it guards are WebKit's own. Same bundled-preview config.
+  //  · theme-bake-freshness — P1-W4 G4.5: also asserts over the BAKED pose bitmaps, in both
+  //    engines, so it rides the same bundled-preview config against the artifact that deploys.
   testIgnore: [
     /visual-golden\.spec\.ts$/,
     /throttled-void\.spec\.ts$/,
     /filter-census\.spec\.ts$/,
     /wordmark-integrity\.spec\.ts$/,
+    /theme-bake-freshness\.spec\.ts$/,
   ],
   timeout: 30000,
   expect: { timeout: 10000 },
