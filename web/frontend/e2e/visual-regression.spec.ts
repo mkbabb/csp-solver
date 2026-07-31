@@ -197,9 +197,11 @@ test("light mode: layout, styles, filters, DOM contract", async ({ page }) => {
   // (Rendered-pixel capture retired to visual-golden.spec.ts — see file header.)
 });
 
-// ── Test 3: Dark Mode — Filter Swap ─────────────────────────────────
+// ── Test 3: Dark Mode — the celestial swap + the panel's DOM contract ───────
 
-test("dark mode: filter swap, control panel filter, DOM contract", async ({ page }) => {
+test("dark mode: celestial swap, control panel carries no filter, DOM contract", async ({
+  page,
+}) => {
   await loadApp(page);
   await setDarkMode(page, true);
 
@@ -211,11 +213,17 @@ test("dark mode: filter swap, control panel filter, DOM contract", async ({ page
   const sunInactive = page.locator("svg.toggle-sun.is-active");
   await expect(sunInactive).toHaveCount(0);
 
-  // Control panel filter should reference stroke-dark in dark mode (desktop sidebar)
+  // P1-W3: the panel's theme-swapped `url(#stroke-dark)` / `-light` reference filter is
+  // DELETED (G2.4 ruled **C**) — a 3-pass 4-octave turbulence chain on an HTML box, WebKit's
+  // software filter path. This assertion is inverted rather than removed: the element is still
+  // the structural grouping hook, and it must now carry no paint of its own. The population of
+  // record is `src/pencil/config/filterBudget.ts`, enforced by `e2e/filter-census.spec.ts`
+  // against the built dist; this line is the cheap local guard in the theme test that used to
+  // assert the opposite.
   const cpFilter = await page
     .locator(".controls-card .control-panel-filtered")
     .evaluate((el) => getComputedStyle(el).filter);
-  expect(cpFilter).toMatch(/stroke-dark/);
+  expect(cpFilter).toBe("none");
 
   // (Rendered-pixel capture retired to visual-golden.spec.ts — the `toggle-crest-dark`
   // soul golden asserts the dark-mode crest pixels.)
