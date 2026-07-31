@@ -15,6 +15,15 @@ const emit = defineEmits<{
   (e: "change", value: string | number): void;
 }>();
 
+/* SELECTION IS ANNOUNCED (T4-P1). These are plain <button>s and the selected one was marked
+ * to sighted users alone — bold, its own crayon tone, a scribble underline — while assistive
+ * tech heard eight identical unlabelled buttons per card and no state at all. `aria-pressed`
+ * on every option is the whole cure: one attribute, no roving tabindex, no keyboard contract
+ * to invent. It is deliberately NOT `role="radio"` — that announces arrow-key navigation this
+ * control does not implement, which is the failure mode pass 1 shipped and pass 2's G11 could
+ * only assert the absence of. Every click emits (a same-value re-tap re-arms the on-demand
+ * check), so a toggle-button reading is also the honest one. */
+
 function inkColor() {
   return isDark.value ? "#ffffff" : "#1a1a1a";
 }
@@ -30,6 +39,7 @@ function scribbleSeed(val: string | number): number {
       v-for="opt in options"
       :key="opt.value"
       @click="emit('change', opt.value)"
+      :aria-pressed="selected === opt.value"
       class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150"
       :class="[
         mobile
