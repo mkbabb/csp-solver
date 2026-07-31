@@ -52,11 +52,8 @@
     margin: 0.75rem 0 0;
     justify-content: center;
     font-family: var(--font-hand);
-    color: color-mix(
-      in srgb,
-      var(--color-pencil-graphite, var(--grid-line-color)) 55%,
-      transparent
-    );
+    /* was 55% = 3.53:1 light / 4.36:1 dark — sub-AA in BOTH themes at caption size. */
+    color: var(--ink-press-quiet);
     user-select: none;
   }
 }
@@ -91,17 +88,17 @@
   font-size: var(--type-caption);
   line-height: 1.4;
   color: inherit;
-  border: 1.5px solid
-    color-mix(
-      in srgb,
-      var(--color-pencil-graphite, var(--grid-line-color)) 40%,
-      transparent
-    );
+  /* was 40% = 2.36:1 light / 2.87:1 dark — under the WCAG 1.4.11 3:1 non-text floor. */
+  border: 1.5px solid var(--ink-press-rule);
   border-radius: 0.3rem;
 }
 
+/* The ⌘/Ctrl slash. It carried `opacity: 0.7` on the inherited quiet rung — 68 × 0.7 = 47.6%
+   graphite, 2.877:1 light / 3.564 dark, sub-AA text INSIDE the component this pass says it
+   closed. `opacity` is outside the ladder's model (check-ink-pressure reads declared stops,
+   not composited alphas), so the honest cure is to stop carrying one rather than tune it: the
+   separator now reads at the quiet rung like the words around it. */
 .legend-sep {
   font-size: var(--type-caption);
-  opacity: 0.7;
 }
 </style>

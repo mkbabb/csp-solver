@@ -152,11 +152,9 @@ const NOTE_STAR_D =
   letter-spacing: var(--type-tracking-wide);
   font-size: var(--type-caption);
   line-height: var(--type-leading-caption);
-  color: color-mix(
-    in srgb,
-    var(--color-pencil-graphite, var(--grid-line-color)) 62%,
-    transparent
-  );
+  /* was 62% = 4.34:1 light — sub-AA. The W10 gate-1 sweep that fixed .heading-value and
+     .dt-label for this exact reason never reached the note. */
+  color: var(--ink-press-quiet);
   pointer-events: auto;
   animation: note-write-in 250ms var(--ease-noteWrite) both;
 }

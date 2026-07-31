@@ -224,6 +224,48 @@
     --grid-line-color
   ); /* the pencil: grid, ghost ring, hover sketch */
 
+  /* §INK PRESSURE — the graphite ramp, named. Seven surfaces were each open-coding
+     `color-mix(in srgb, var(--color-pencil-graphite, …) N%, transparent)` at six different
+     N, and the T4-W10 gate-1 sweep (which raised .heading-value 60→68 and .dt-label 62→68
+     for exactly this reason) reached only two of them — MarginNote's note, the completion
+     voice, and the whole KeyboardLegend stayed sub-AA. Three stops with live consumers, no
+     more: a table with a zero-consumer rung is unearned abstraction. These resolve through
+     --color-pencil-graphite, which already flips per theme via --grid-line-color, so ONE
+     definition serves light and dark.
+
+     Contrast on --color-card, light / dark (asserted by scripts/check-ink-pressure.mjs,
+     `npm run lint:ink`):
+       rule  55%  3.53 / 4.36  — NON-TEXT only (WCAG 1.4.11 ≥3:1): kbd borders, hairlines
+       quiet 68%  5.23 / 6.06  — the quiet caption-text rung (AA ≥4.5), the W10 gate-1 stop
+       firm  72%  5.95 / 6.66  — one pressure step firmer, for emphasis inside that register
+     Strictly increasing in both themes. Adding a stop means re-running that assertion over
+     EVERY rung, not just the new one — a fix that clears one site and inverts its neighbour
+     has only moved the defect.
+
+     WHAT THE LADDER DOES NOT GOVERN, stated so nobody reads three rungs as the register:
+     --color-muted-foreground is the estate's other quiet voice (icon sublabels, headings)
+     and it is NOT on this ramp — it crosses it between themes. 4.646 light (between rule
+     and quiet) but 7.689 dark (above firm). So the keyboard legend, raised to quiet, reads
+     LOUDER in light than the sublabels it explains and quieter in dark. Booked, not cured:
+     tokenising muted-foreground onto the ramp re-pitches every muted surface in the estate
+     and that is a design ruling, not an AA repair. check-ink-pressure prints the rank in
+     both themes on every run so the inversion cannot go quiet. */
+  --ink-press-rule: color-mix(
+    in srgb,
+    var(--color-pencil-graphite, var(--grid-line-color)) 55%,
+    transparent
+  );
+  --ink-press-quiet: color-mix(
+    in srgb,
+    var(--color-pencil-graphite, var(--grid-line-color)) 68%,
+    transparent
+  );
+  --ink-press-firm: color-mix(
+    in srgb,
+    var(--color-pencil-graphite, var(--grid-line-color)) 72%,
+    transparent
+  );
+
   /* Progress-ink — the SIXTH crayon (T4-W9 ROW 2): a violet coloured pencil that retraces
      the board frame arc-length-proportional to fill. NON-blue by construction (hue 258°,
      46° off --color-focus-sketch's 212° — the two never read as one when a focused board

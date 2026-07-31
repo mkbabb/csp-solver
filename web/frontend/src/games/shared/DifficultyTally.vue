@@ -252,13 +252,9 @@ onUnmounted(stopDraws);
   font-size: var(--type-caption);
   letter-spacing: var(--type-tracking-wide);
   text-transform: lowercase;
-  /* T4-W10 gate 1: 62% graphite was 4.32:1 on the board margin (< AA 4.5); 68% clears it —
-     5.18:1 light / 6.06:1 dark. The "difficulty" label reads one pressure step firmer. */
-  color: color-mix(
-    in srgb,
-    var(--color-pencil-graphite, var(--grid-line-color)) 68%,
-    transparent
-  );
+  /* T4-W10 gate 1: 62% graphite was 4.32:1 on the board margin (< AA 4.5). The 68% that
+     cleared it IS --ink-press-quiet; the literal is now the token. Pixel-identical. */
+  color: var(--ink-press-quiet);
 }
 
 .dt-marks {
@@ -308,11 +304,7 @@ onUnmounted(stopDraws);
   font-size: var(--type-caption);
   letter-spacing: 0.01em;
   font-style: italic;
-  color: color-mix(
-    in srgb,
-    var(--color-pencil-graphite, var(--grid-line-color)) 72%,
-    transparent
-  );
+  color: var(--ink-press-firm);
   max-width: 0;
   overflow: hidden;
   white-space: nowrap;

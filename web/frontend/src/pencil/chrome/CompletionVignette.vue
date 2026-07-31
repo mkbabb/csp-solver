@@ -93,11 +93,8 @@ withDefaults(
   font-size: var(--type-caption);
   line-height: var(--type-leading-caption);
   letter-spacing: var(--type-tracking-wide);
-  color: color-mix(
-    in srgb,
-    var(--color-pencil-graphite, var(--grid-line-color)) 62%,
-    transparent
-  );
+  /* was 62% = 4.34:1 light — sub-AA, the second site the W10 gate-1 sweep missed. */
+  color: var(--ink-press-quiet);
 }
 
 /* The voice + tally write in with the note's own 250ms clip wipe (the logo's reveal

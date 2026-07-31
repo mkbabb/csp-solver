@@ -861,9 +861,13 @@ function onHint() {
   color: var(--color-muted-foreground);
 }
 
-/* The armed Clear asks in the teacher's rose — the one moment a sublabel raises its voice. */
+/* The armed Clear asks in the teacher's rose — the one moment a sublabel raises its voice.
+   Raw --color-crayon-rose is 4.10:1 on --color-card, sub-AA in light, and this is the ONE
+   sublabel that must be read. --color-red-ink is that same hue locked at 346° and darkened
+   to 4.98:1 for exactly this case (index.css:163); dark mode aliases it straight back to the
+   wax, so the night pose is byte-identical. Same swap .crayon-rose already makes above. */
 .icon-sublabel.is-armed {
-  color: var(--color-crayon-rose);
+  color: var(--color-red-ink);
   font-weight: 600;
 }
 
@@ -958,13 +962,9 @@ function onHint() {
   font-size: var(--type-caption);
   line-height: 1;
   letter-spacing: var(--type-tracking-wide);
-  /* T4-W10 gate 1: 60% graphite was 4.10:1 on --color-card (< AA 4.5); 68% clears it —
-     5.23:1 light / 6.06:1 dark. Still the quiet closed-tab value, one pressure step firmer. */
-  color: color-mix(
-    in srgb,
-    var(--color-pencil-graphite, var(--grid-line-color)) 68%,
-    transparent
-  );
+  /* T4-W10 gate 1: 60% graphite was 4.10:1 on --color-card (< AA 4.5). The 68% that
+     cleared it IS --ink-press-quiet; the literal is now the token. Pixel-identical. */
+  color: var(--ink-press-quiet);
 }
 
 .mobile-heading-btn .section-heading.is-active {
