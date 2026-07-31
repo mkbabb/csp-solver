@@ -423,7 +423,49 @@ test("size switching: 4x4, 9x9, 16x16 all render grid lines", async ({ page }) =
   }
 });
 
-// ── Test 8: The Bloom's warp rest pose (T3-W13 §2) ──────────────────
+// ── Test 8: Deal's box — the crushed-die cascade row ────────────────
+
+test("the Deal die is not crushed: the commit verb's box fits its own content", async ({
+  page,
+}) => {
+  await loadApp(page);
+
+  // Nothing in this estate asserted Deal's geometry, which is how a 28px die rendered at
+  // 17.63 for the life of the T4 panel: `.deal-btn` was authored ABOVE `.icon-btn` and tied it
+  // at (0,1,0), so the base block's fixed 2.75rem square won on source order, the column
+  // content overflowed by 10.38px, and a text item cannot shrink below min-content — the die
+  // absorbed all of it. The cure is the `.icon-btn.deal-btn` selector (order-proof); THIS is
+  // the row that would have caught it, and would catch any future re-break however it arrives.
+  const geom = await page.evaluate(() => {
+    const btn = document.querySelector(".controls-card .deal-btn") as HTMLElement | null;
+    if (!btn) return null;
+    const die = btn.querySelector("svg") as SVGElement | null;
+    const label = btn.querySelector(".icon-sublabel") as HTMLElement | null;
+    const r = (el: Element | null) => (el ? el.getBoundingClientRect() : null);
+    const b = r(btn)!;
+    const d = r(die);
+    const l = r(label);
+    return {
+      btn: { w: b.width, h: b.height },
+      die: d ? { w: d.width, h: d.height } : null,
+      labelH: l ? l.height : 0,
+    };
+  });
+
+  expect(geom).not.toBeNull();
+  expect(geom!.die).not.toBeNull();
+
+  // The die is square — the defect's whole signature was a squashed height against an intact
+  // width. Half a pixel of tolerance for sub-pixel layout, no more.
+  expect(Math.abs(geom!.die!.h - geom!.die!.w)).toBeLessThanOrEqual(0.5);
+  expect(geom!.die!.h).toBeGreaterThanOrEqual(27);
+
+  // …and the button's box actually contains die + label rather than clipping them. This is
+  // the general form: it fails for any cause, not just the one cascade tie.
+  expect(geom!.btn.h).toBeGreaterThanOrEqual(geom!.die!.h + geom!.labelH);
+});
+
+// ── Test 9: The Bloom's warp rest pose (T3-W13 §2) ──────────────────
 
 test("toggle warp rest pose: wrung into the page, no carousel travel", async ({
   page,

@@ -750,8 +750,16 @@ function onHint() {
 
 /* Deal is the re-homed dice, but it earns its NAME on every pointer (not only coarse): the
    primary verb of the staged zone reads with zero copy. The column layout + padded target
-   mirrors the coarse icon-btn grammar, applied to Deal at all widths. */
-.deal-btn {
+   mirrors the coarse icon-btn grammar, applied to Deal at all widths.
+
+   THE SELECTOR CARRIES .icon-btn ON PURPOSE — (0,2,0), so the cascade no longer depends on
+   where this block sits. Authored as a bare `.deal-btn` it tied `.icon-btn` at (0,1,0) and
+   lost to it on source order: the base block's fixed 2.75rem height pinned the button at 44px
+   while the column content wanted 28 (die) + 2.4 (gap) + 14.38 (label) + 9.6 (padding) =
+   54.38. A text item can't shrink below min-content, so the die absorbed the whole 10.38px
+   overflow and painted 28 × 17.62 on every fine pointer for the life of the T4 panel.
+   Geometry is gated: e2e/visual-regression.spec.ts "the Deal die is not crushed". */
+.icon-btn.deal-btn {
   flex-direction: column;
   gap: 0.15rem;
   width: auto;
@@ -888,6 +896,14 @@ function onHint() {
     height: auto;
     min-width: 2.75rem;
     min-height: 2.75rem;
+    padding: 0.3rem 0.5rem;
+  }
+
+  /* Restated at (0,2,0) because `.icon-btn.deal-btn` above now outranks this block. Coarse
+     keeps the SHIPPED pose byte-identical — every icon button, Deal included, wears the same
+     0.5rem gutter on touch. Widening Deal's mobile box to the fine 0.85rem is a design call,
+     not a cascade repair, so it is not made here; it is booked in blast-radius.md §2.6. */
+  .icon-btn.deal-btn {
     padding: 0.3rem 0.5rem;
   }
 
