@@ -22,12 +22,21 @@ import { futoshikiGame } from "@games/futoshiki/game";
 // Registry is tree-shaken out of the app build until App.vue consumes GAMES (W12 Wave B),
 // so this import lands in the main chunk only once the gallery seam is wired — never before.
 import SudokuGame from "@games/sudoku/SudokuGame.vue";
-import { sizeOptions } from "@games/sudoku/ControlPanel/constants";
-import { boardSizeOptions } from "@games/futoshiki/ControlPanel/constants";
+import {
+  sizeOptions,
+  difficultyOptions as sudokuDifficultyOptions,
+} from "@games/sudoku/ControlPanel/constants";
+import {
+  boardSizeOptions,
+  difficultyOptions as futoshikiDifficultyOptions,
+} from "@games/futoshiki/ControlPanel/constants";
 // KenKen's own selector band (4/5/6) — a game never depends on another's ControlPanel
 // constants for its own range sub-line. Thermo/Killer ARE Sudoku variants, so they reuse the
 // sudoku `sizeOptions` above (already imported for sudokuCard).
-import { sizeOptions as kenkenSizeOptions } from "@games/kenken/ControlPanel/constants";
+import {
+  sizeOptions as kenkenSizeOptions,
+  difficultyOptions as kenkenDifficultyOptions,
+} from "@games/kenken/ControlPanel/constants";
 
 /** The first-solution result — one shape across both games (the W6 stat-line payload). */
 interface SolveResult {
@@ -142,6 +151,24 @@ export const gameRegistry = {
  * (a stricter id would force a `gameRegistry` edit too, defeating the invariant). W13's Thermo
  * lands as a real row here; nothing else in the app changes.
  */
+/** One staging axis as the PICKER renders it — the game's own selector constants, erased to
+ *  presentation data (T4-P1 F4). `colorClass` is deliberately absent: the crayon tints are
+ *  scoped inside `GameControlPanel.vue`, so they are inert anywhere else until the AA ledger
+ *  is re-verified against `--color-card` (a standalone ship, not this seam's). */
+interface StagingAxis {
+  label: string;
+  options: { value: number | string; label: string }[];
+  /** the value a game with no saved board is dealt at (its own composable's default). */
+  default: number | string;
+}
+
+/** The two axes every game in the estate carries. Not an `n`-axis schema: the shells have
+ *  exactly these two, and a third would be a slot the contract missed, not a config array. */
+interface CardStaging {
+  size: StagingAxis;
+  difficulty: StagingAxis;
+}
+
 export interface GameCard {
   /** URL token + stable id; drives `?game=`, aria, and v-for keys. */
   id: string;
@@ -151,6 +178,15 @@ export interface GameCard {
   glyph?: Component;
   /** the size/difficulty sub-line, in the game's own vocabulary. */
   range: { label: string; levels: string[] };
+  /** what the picker STAGES for this game — the same constants its drawer selectors render. */
+  staging: CardStaging;
+  /** the game's OWN `localStorage` board key. The staging ledger's cold-start backfill reads
+   *  the five boards through these (T4-P1 F4): the picker cannot ask five games whether they
+   *  have a board without importing five games, and the bridge may not import this file at all
+   *  (the §1 TDZ cycle), so the id⇄key map lives HERE, with every other id⇄thing map, and App
+   *  hands it across. A drop-in game that omits it simply never backfills — it publishes its
+   *  own row the first time it mounts. */
+  persistKey: string;
   /** the static, non-interactive, boil-alive-capable poster (a read-only mini-board). */
   poster: () => Promise<Component>;
   /** the playable scene loader (the `defineGame` mount target). */
@@ -159,10 +195,29 @@ export interface GameCard {
   eager?: boolean;
 }
 
+/** The three tiers, erased to presentation data. Every game carries the same three, so the
+ *  mapper is written once and each card names its own source constant. */
+const tiers = (opts: readonly { value: string; label: string }[]) =>
+  opts.map((o) => ({ value: o.value as number | string, label: o.label }));
+
+// The three Sudoku-family rows stage off sudoku's OWN selector constants (the ratified variant
+// reuse — Thermo/Killer ARE Sudoku); futoshiki and kenken carry their own bands. `default`
+// mirrors each composable's own default size, the value a never-played game deals at.
+const sudokuStaging: CardStaging = {
+  size: { label: "size", options: sizeOptions, default: 3 },
+  difficulty: {
+    label: "level",
+    options: tiers(sudokuDifficultyOptions),
+    default: "EASY",
+  },
+};
+
 const sudokuCard: GameCard = {
   id: "sudoku",
   name: "sudoku",
   range: { label: "size", levels: sizeOptions.map((o) => o.label) },
+  staging: sudokuStaging,
+  persistKey: "sudoku-board-state",
   poster: () => import("@games/sudoku/SudokuPoster.vue").then((m) => m.default),
   // Eager: the scene is already in the main chunk (the static import above), so its loader
   // resolves instantly — the byte-for-byte twin of App.vue's static `import SudokuGame`.
@@ -174,6 +229,15 @@ const futoshikiCard: GameCard = {
   id: "futoshiki",
   name: "futoshiki",
   range: { label: "size", levels: boardSizeOptions.map((o) => o.label) },
+  staging: {
+    size: { label: "size", options: boardSizeOptions, default: 5 },
+    difficulty: {
+      label: "level",
+      options: tiers(futoshikiDifficultyOptions),
+      default: "EASY",
+    },
+  },
+  persistKey: "futoshiki-board-state",
   poster: () => import("@games/futoshiki/FutoshikiPoster.vue").then((m) => m.default),
   // Lazy: the whole Futoshiki scene (board + controls + useFutoshiki + its Worker) stays a
   // dynamic chunk that downloads only on select — today's chunking, unchanged.
@@ -186,6 +250,8 @@ const thermoCard: GameCard = {
   id: "thermo",
   name: "thermo",
   range: { label: "size", levels: sizeOptions.map((o) => o.label) },
+  staging: sudokuStaging,
+  persistKey: "thermo-board-v1",
   poster: () => import("@games/thermo/ThermoPoster.vue").then((m) => m.default),
   scene: () => import("@games/thermo/ThermoGame.vue").then((m) => m.default),
 };
@@ -195,6 +261,8 @@ const killerCard: GameCard = {
   id: "killer",
   name: "killer",
   range: { label: "size", levels: sizeOptions.map((o) => o.label) },
+  staging: sudokuStaging,
+  persistKey: "killer-board-v1",
   poster: () => import("@games/killer/KillerPoster.vue").then((m) => m.default),
   scene: () => import("@games/killer/KillerGame.vue").then((m) => m.default),
 };
@@ -204,6 +272,15 @@ const kenkenCard: GameCard = {
   id: "kenken",
   name: "kenken",
   range: { label: "size", levels: kenkenSizeOptions.map((o) => o.label) },
+  staging: {
+    size: { label: "size", options: kenkenSizeOptions, default: 4 },
+    difficulty: {
+      label: "level",
+      options: tiers(kenkenDifficultyOptions),
+      default: "EASY",
+    },
+  },
+  persistKey: "kenken-board-v1",
   poster: () => import("@games/kenken/KenKenPoster.vue").then((m) => m.default),
   scene: () => import("@games/kenken/KenKenGame.vue").then((m) => m.default),
 };

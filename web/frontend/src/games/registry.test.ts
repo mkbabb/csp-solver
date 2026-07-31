@@ -162,6 +162,18 @@ describe("game card contract (T4-W12 carousel)", () => {
       id: "demo",
       name: "demo",
       range: { label: "size", levels: ["3×3"] },
+      // T4-P1 F4: a drop-in also declares what the picker stages for it — its OWN selector
+      // options, the same two axes every shell carries — and where its board lives on disk
+      // (the staging ledger's cold-start backfill reads it through this key).
+      staging: {
+        size: { label: "size", options: [{ value: 3, label: "3×3" }], default: 3 },
+        difficulty: {
+          label: "level",
+          options: [{ value: "EASY", label: "Easy" }],
+          default: "EASY",
+        },
+      },
+      persistKey: "demo-board-v1",
       poster: () => Promise.resolve(DemoPoster),
       scene: () => Promise.resolve(DemoScene),
     };

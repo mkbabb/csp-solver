@@ -14,6 +14,13 @@ import { usePencilMarks } from "./usePencilMarks";
 import { useUserMarks } from "./useUserMarks";
 import { useAssists } from "./useAssists";
 import { registerDirtySource, clearDirtySource } from "./useDirtyBoard";
+import {
+  clearStagingSource,
+  consumeHandoff,
+  mountedGameId,
+  publishStagedLedger,
+  registerStagingSource,
+} from "./useStagingBridge";
 import { formatGradeSignature, describeTally } from "@games/shared/techniqueVoice";
 import type { HintResult, TechniqueId } from "@games/shared/techniqueEngine";
 import type { SolveState, SolveStats } from "@games/shared/types";
@@ -798,9 +805,20 @@ export function useGameState<
   }
 
   // ── Initialization ───────────────────────────────────────────────
+  // THE PICKER HANDOFF (T4-P1 F4) — consumed HERE, before init, id-keyed to this mount. A
+  // staged pair seeds the ONE mount deal (`canRestore` is ANDed with `!staged`, so a saved
+  // board is never resurrected only to be dealt over) — one solver dispatch, not two.
+  const staged = consumeHandoff(mountedGameId());
+  if (staged) {
+    solverSize.value = staged.size;
+    pendingSize.value = staged.size;
+    difficulty.value = staged.difficulty as TDiff;
+  }
+
   domain.syncToUrl(solverSize.value, difficulty.value);
 
   const canRestore =
+    !staged &&
     (initial.source === "url+storage" ||
       initial.source === "storage-only" ||
       initial.source === "url-board") &&
@@ -825,6 +843,48 @@ export function useGameState<
   watch([solverSize, difficulty], () => {
     domain.syncToUrl(solverSize.value, difficulty.value);
   });
+
+  // ── THE STAGING BRIDGE (T4-P1 F4) ────────────────────────────────
+  // Wired ONCE here, so all five games inherit it. Two directions:
+  //  · UP — the picker's live truth for THIS game: the staged pair plus the two board facts
+  //    the picker's verbs and its guard read (`board` = something to resume; `userMoves` =
+  //    something a deal would destroy). The other four cards read the ledger; this row is the
+  //    only one a mounted session can keep honest.
+  //  · DOWN — a picker deal on the MOUNTED game: commit the pair, then the existing `deal()`
+  //    commit (arm-not-live is untouched; nothing new stages).
+  const stagedPair = computed(() => ({
+    size: pendingSize.value,
+    difficulty: String(difficulty.value),
+  }));
+  const stagingSource = {
+    pair: stagedPair,
+    deal: async (pair: { size: number; difficulty: string }) => {
+      pendingSize.value = pair.size;
+      difficulty.value = pair.difficulty as TDiff;
+      await deal();
+    },
+  };
+  registerStagingSource(stagingSource);
+  onUnmounted(() => clearStagingSource(stagingSource));
+  // The trigger list is the set of instants either board fact can change: a board swap
+  // (`boardGeneration` — deal/clear/restore/size commit) or a recorded edit (`undoDepth`).
+  // `values` is NOT watched deeply — the scan below is exact and cheap (one pass over ≤256
+  // cells), so a second deep watch over the whole board would buy nothing the epoch misses.
+  watch(
+    [pendingSize, difficulty, boardGeneration, undoDepth],
+    () => {
+      const cells = Object.entries(values.value).filter(([, v]) => v !== 0);
+      publishStagedLedger({
+        ...stagedPair.value,
+        board: cells.length > 0,
+        // GIVENS ARE NOT WORK. Pass 2 counted every non-zero cell, so a board dealt and never
+        // touched read "in progress" and armed the guard — the flag that decides whether a
+        // deal destroys anything has to exclude the cells the deal itself wrote.
+        userMoves: cells.some(([k]) => !givenCells.value.has(k)),
+      });
+    },
+    { immediate: true },
+  );
 
   // Engine-domains pencil marks: while the peek gesture is held, any cell mutation or board swap
   // re-propagates (K-peek is a toggle, so the page can still be written on with the marks up).
