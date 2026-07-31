@@ -30,7 +30,7 @@ function scribbleSeed(val: string | number): number {
       v-for="opt in options"
       :key="opt.value"
       @click="emit('change', opt.value)"
-      class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-all duration-150"
+      class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150"
       :class="[
         mobile
           ? 'text-[1rem] md:text-[1.375rem]'
@@ -67,16 +67,10 @@ function scribbleSeed(val: string | number): number {
   font-family: "Fira Code", monospace;
 }
 
-/* Hover flourish, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter write
-   is retired (SvgFilters), so this static wobble rasters once per hover — a
-   resting pointer never re-enrolls a live painter (the b1 node-1006 finding).
-   T4-WM §2: gated to hover-capable pointers — on touch, :hover sticks after a tap
-   (the wobble filter froze on the last-tapped option; r2 §4), so it's fenced here. */
-@media (hover: hover) {
-  .ctrl-btn:hover {
-    filter: url(#wobble-heart);
-  }
-}
+/* The `.ctrl-btn:hover` wobble is DELETED (P1-W3, r3 §3.2), and `transition-all` narrowed to
+   `transition-colors` in the template. `all` included `filter`, so a hover edge repainted a
+   reference-filtered HTML box through every frame of the colour tween. The option's real hover
+   affordance is its ink shift plus the ghost underline below — both kept. */
 
 .selected-item,
 .hover-item {

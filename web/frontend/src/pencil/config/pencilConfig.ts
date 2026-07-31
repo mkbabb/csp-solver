@@ -309,9 +309,16 @@ const DEFAULT_PRESETS: Record<string, FilterPreset> = {
       intervalMs: 170,
     },
   },
+  // `stroke-light` / `stroke-dark` (P1-W3): ORPHANED. Their sole consumer was
+  // `.control-panel-filtered`, retired on the G2.4 ballot's **C** ruling — a 3-pass 4-octave
+  // turbulence chain with three displacement maps and two blends, over a ~320×700 CSS panel,
+  // on an HTML box (WebKit's software filter path). No `url(#id)` consumer remains, so the P4
+  // rule suppresses both base defs; the params stay here, unaltered, because reversal is meant
+  // to be one CSS block plus a flag — not a re-derivation.
   "stroke-light": {
     id: "stroke-light",
     margin: 10,
+    baseDef: false,
     multiPass: {
       baseFrequency: 0.04,
       numOctaves: 4,
@@ -326,6 +333,7 @@ const DEFAULT_PRESETS: Record<string, FilterPreset> = {
   "stroke-dark": {
     id: "stroke-dark",
     margin: 10,
+    baseDef: false,
     multiPass: {
       baseFrequency: 0.04,
       numOctaves: 4,

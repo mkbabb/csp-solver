@@ -18,19 +18,30 @@ describe("SvgFilters — filter registry DOM contract", () => {
   const has = (id: string) => wrapper.find(`[id="${id}"]`).exists();
 
   // P4 rule (T4-W4): every emitted BASE filter def must have a live `url(#id)` consumer.
-  // These five are the base defs with a consumer (grep `url(#…)` across src); the pose
-  // defs (`${id}-p{n}`) are a separate, live surface excluded below.
-  const CONSUMED_BASE_DEFS = [
-    "grain-static",
-    "wobble-celestial",
-    "wobble-heart",
+  // These are the base defs with a consumer (grep `url(#…)` across src); the pose defs
+  // (`${id}-p{n}`) are a separate, live surface excluded below.
+  //
+  // P1-W3 moved `stroke-light` / `stroke-dark` OUT of this list: their sole consumer was
+  // `.control-panel-filtered`, retired on the G2.4 **C** ruling. The census below is the
+  // enforcement, and it lands in the same commit as the deletion that licensed it.
+  const CONSUMED_BASE_DEFS = ["grain-static", "wobble-celestial", "wobble-heart"];
+  // Orphaned base defs — no `url(#id)` consumer, so no base def ships.
+  //   · grain-outline (T4-W4)  — baked into the outline pose geometry (gridPaths §Grain bake).
+  //   · wobble-logo   (T4-W4)  — consumed only as its `-p{i}` pose stack (HandwrittenLogo).
+  //   · stroke-light / -dark (P1-W3) — the retired control-panel filter.
+  //
+  // RECORDED, because the P-W3 inventory predicted otherwise: `wobble-celestial` and
+  // `wobble-heart` do NOT orphan. The hover clients that died at P1-W3 (`.icon-btn:hover`,
+  // `.section-heading:hover`, `.ctrl-btn:hover`) were not their last ones — the dark-mode
+  // toggle's two live sun/moon bodies still consume `#wobble-celestial`, and CrayonHeart still
+  // consumes `#wobble-heart` above its 20 px tiny threshold. Both are censused as live rows in
+  // `pencil/config/filterBudget.ts` (2 + 2 of the budget's 14), so the two facts agree.
+  const ORPHAN_BASE_DEFS = [
+    "grain-outline",
+    "wobble-logo",
     "stroke-light",
     "stroke-dark",
   ];
-  // Orphaned base defs — retired at T4-W4: grain-outline is baked into the outline pose
-  // geometry (gridPaths §Grain bake); wobble-logo is consumed only as its `-p{i}` pose
-  // stack (HandwrittenLogo). Neither has a `url(#id)` consumer, so neither ships a base def.
-  const ORPHAN_BASE_DEFS = ["grain-outline", "wobble-logo"];
 
   it("registers a base def for every consumed preset", () => {
     for (const id of CONSUMED_BASE_DEFS) expect(has(id), id).toBe(true);

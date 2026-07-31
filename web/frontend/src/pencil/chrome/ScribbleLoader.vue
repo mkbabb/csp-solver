@@ -13,6 +13,12 @@
  *
  * PRM: a static scribble at 0.6 opacity — the doodle is there, it just isn't moving.
  * `currentColor` throughout, so it inherits its host's ink.
+ *
+ * NO grain filter (P1-W3, r3 §4.3). The cycle writes `stroke-dashoffset` every frame, so a
+ * `url(#grain-static)` here re-executed its feTurbulence + feDisplacementMap chain ONCE PER
+ * PAINTED FRAME for the whole solve — measured on real Safari 26.4 at 40–50 re-executions/s,
+ * on the one surface the user is watching while waiting. The tooth was sub-perceptual anyway:
+ * a 2.2 px stroke at 24 px against grain-static's 25-unit wavelength.
  */
 import { mulberry32 } from "@mkbabb/pencil-boil";
 
@@ -59,7 +65,6 @@ const SCRIBBLE_D = scribblePath(7);
       stroke-width="2.2"
       stroke-linecap="round"
       stroke-linejoin="round"
-      filter="url(#grain-static)"
     />
   </svg>
 </template>

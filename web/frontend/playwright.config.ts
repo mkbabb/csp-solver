@@ -8,7 +8,13 @@ export default defineConfig({
   //  · throttled-void — the F3 flake: the lazy Futoshiki chunk is a per-module ESM waterfall
   //    on the dev server (~13 s recovery, compounds past budget on a loaded runner). It runs
   //    against a bundled preview build instead (playwright-throttle.config.ts / test:e2e:throttle).
-  testIgnore: [/visual-golden\.spec\.ts$/, /throttled-void\.spec\.ts$/],
+  //  · filter-census — P1 G3.1/G3.2: the live-filter budget is an exact-match allowlist against
+  //    the BUILT dist (the artifact that deploys), so it rides the same bundled-preview config.
+  testIgnore: [
+    /visual-golden\.spec\.ts$/,
+    /throttled-void\.spec\.ts$/,
+    /filter-census\.spec\.ts$/,
+  ],
   timeout: 30000,
   expect: { timeout: 10000 },
   fullyParallel: true,

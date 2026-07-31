@@ -592,10 +592,15 @@ jobs:
             - name: "Golden byte ceiling"
               working-directory: web/frontend
               run: npm run test:golden:bytes
-            # T4-W2 throttle gate — throttled-void against a BUNDLED preview build
-            # (playwright-throttle.config.ts, port 4188); testIgnored from the default
-            # config, so it must run explicitly or the D3 gate goes dark.
-            - name: "Run the throttled-void gate (bundled preview)"
+            # BUILT-DIST gates — two projects on one bundled preview build
+            # (playwright-throttle.config.ts, port 4188), both testIgnored from the default
+            # config so they must run explicitly or they go dark:
+            #   · throttled-void — the T4-W2 D3 recovery probe.
+            #   · filter-census  — P1 G3.1/G3.2, the live-filter budget
+            #     (src/pencil/config/filterBudget.ts) enforced as an EXACT-MATCH allowlist
+            #     against the artifact that deploys, plus the forwards/both fill census.
+            #     A new filter surface reds here even when an old one retires.
+            - name: "Run the built-dist gates (throttled-void + filter census)"
               working-directory: web/frontend
               run: npm run test:e2e:throttle
             # T4-W4 prod-shake proof (FAM-5): the DEV-gated FilterTuner /

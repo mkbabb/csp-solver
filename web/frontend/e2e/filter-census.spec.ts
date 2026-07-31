@@ -1,0 +1,163 @@
+import { test, expect, type Page } from "@playwright/test";
+import {
+  FILTER_BUDGET,
+  FILTER_BUDGET_CEILING,
+  FILTER_BUDGET_TOTAL,
+  PER_CELL_SCOPE,
+} from "../src/pencil/config/filterBudget";
+
+/**
+ * P1 G3.1 / G3.2 — THE LIVE-FILTER CENSUS, against the BUILT dist.
+ *
+ * The enforcing half of `src/pencil/config/filterBudget.ts`. Two censuses:
+ *
+ *  G3.1 — every RENDERED element carrying a non-`none` computed `filter` must match exactly one
+ *         budget row, and each row's population must equal its declared count. Exact match in
+ *         both directions: a new filter surface reds even when an old one retires. Born RED on
+ *         the base build at 98 (dealt) / 118 (solved) against a budget of 14.
+ *
+ * G3.2 — the `forwards`/`both` fill census — lands in the commit that carries the fill-mode
+ * cures it licenses, appended below.
+ *
+ * THE COUNTING RULE, stated once because the number depends on it: an element counts when its
+ * OWN computed `filter` is not `none` and its OWN computed `display` is not `none`.
+ *
+ *  · Opacity-0 and visibility-hidden surfaces DO count — a pose sibling at opacity 0 rasters,
+ *    which is the entire mechanism this budget exists to bound.
+ *  · A surface that turned its own filter off structurally does NOT — HandDrawnGrid's four
+ *    live-fallback poses go `display: none` the moment the bitmaps land, and if a bake ever
+ *    fails they come back and red this gate, which is the behaviour you want.
+ *  · Ancestor display is deliberately NOT consulted, so the census is VIEWPORT-STABLE: both
+ *    always-mounted control-panel twins are counted at every width (r1 §7 — only one is ever
+ *    painted, but which one flips with the regime), so one allowlist holds for desktop and
+ *    mobile alike instead of two budgets that disagree.
+ *
+ * `Element.checkVisibility()` was tried first and is NOT usable here: it returns `true` for a
+ * `display: none` SVG `<g>` in Chromium 141, which would have quietly counted the retired grid
+ * fallback as live.
+ */
+
+const SCENE = "./?size=3&difficulty=EASY";
+
+interface CensusHit {
+  /** Index into FILTER_BUDGET, or -1 for an element no row claims. */
+  row: number;
+  /** A short DOM path, for a legible failure. */
+  path: string;
+  filter: string;
+  html: boolean;
+}
+
+async function settleBoard(page: Page) {
+  await page.goto(SCENE);
+  await page.waitForSelector(".sudoku-cell", { timeout: 20000 });
+  await expect
+    .poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: 20000 })
+    .toBeGreaterThan(0);
+  // The grid's baked pose stack must have landed before the census: while UNBAKED the four
+  // live-fallback `<g filter>` poses are rendered (pinned to pose 0), and counting them would
+  // read a cold-load transient as a budget breach. Once baked they are `display: none`.
+  await expect
+    .poll(
+      () => page.locator("svg.hand-drawn-grid g.boil-frame-layer.baked-hidden").count(),
+      {
+        timeout: 20000,
+      },
+    )
+    .toBeGreaterThan(0);
+  // SETTLED, not slept: the reveal wave is a real running animation and a running animation
+  // legitimately supplies a transform, so the fill census must not read one mid-flight.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            document.getAnimations().filter((a) => a.playState === "running").length,
+        ),
+      {
+        timeout: 20000,
+      },
+    )
+    .toBe(0);
+  // One settled beat window past the bake, so no pose swap is mid-flight either.
+  await page.waitForTimeout(600);
+}
+
+async function census(page: Page, selectors: readonly string[]): Promise<CensusHit[]> {
+  return page.evaluate((sels: readonly string[]) => {
+    const shortPath = (el: Element) => {
+      const parts: string[] = [];
+      let n: Element | null = el;
+      for (let d = 0; d < 3 && n; d++) {
+        const raw =
+          typeof n.className === "string"
+            ? n.className
+            : ((n as unknown as { className?: { baseVal?: string } }).className
+                ?.baseVal ?? "");
+        const cls = raw.trim().split(/\s+/).filter(Boolean).slice(0, 2).join(".");
+        parts.unshift(
+          cls ? `${n.tagName.toLowerCase()}.${cls}` : n.tagName.toLowerCase(),
+        );
+        n = n.parentElement;
+      }
+      return parts.join(" > ");
+    };
+    const out: CensusHit[] = [];
+    for (const el of Array.from(document.querySelectorAll("*"))) {
+      const cs = getComputedStyle(el);
+      const f = cs.filter;
+      if (!f || f === "none") continue;
+      // The counting rule (see the header): own display, never the ancestor chain.
+      if (cs.display === "none") continue;
+      out.push({
+        row: sels.findIndex((s) => el.matches(s)),
+        path: shortPath(el),
+        filter: f,
+        html: !(el instanceof SVGElement),
+      });
+    }
+    return out;
+  }, selectors) as Promise<CensusHit[]>;
+}
+
+test("G3.1 · live-filter census equals filterBudget.ts exactly (built dist)", async ({
+  page,
+}) => {
+  await settleBoard(page);
+  const hits = await census(
+    page,
+    FILTER_BUDGET.map((r) => r.selector),
+  );
+
+  // (a) nothing unclaimed — the exact-match half a ceiling cannot give.
+  const unclaimed = hits.filter((h) => h.row < 0);
+  expect(
+    unclaimed.map((h) => `${h.path}  ⟨${h.filter}⟩`),
+    "live filters no filterBudget.ts row claims",
+  ).toEqual([]);
+
+  // (b) every row's population is exact, in both directions.
+  const actual = FILTER_BUDGET.map((r, i) => ({
+    selector: r.selector,
+    count: hits.filter((h) => h.row === i).length,
+  }));
+  expect(actual).toEqual(
+    FILTER_BUDGET.map((r) => ({ selector: r.selector, count: r.count })),
+  );
+
+  // (c) the charter's own numbers: perCell 0, htmlBoxes 0, total ≤ 14.
+  const perCell = await page.evaluate(
+    (scope) =>
+      Array.from(document.querySelectorAll(`${scope} *`)).filter(
+        (el) => getComputedStyle(el).filter !== "none",
+      ).length,
+    PER_CELL_SCOPE,
+  );
+  expect(perCell, `live filters inside ${PER_CELL_SCOPE}`).toBe(0);
+  expect(
+    hits.filter((h) => h.html).map((h) => h.path),
+    "reference filters on HTML boxes (WebKit software filter path)",
+  ).toEqual([]);
+  expect(hits.length).toBe(FILTER_BUDGET_TOTAL);
+  expect(hits.length).toBeLessThanOrEqual(FILTER_BUDGET_CEILING);
+});

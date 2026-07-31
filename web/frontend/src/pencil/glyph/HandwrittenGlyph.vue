@@ -47,11 +47,21 @@ const flourish = inject("flourish", ref(false));
 // mount/unmount, and the imperative style writes are never clobbered by Vue's patch.
 const pathRef = ref<SVGPathElement | null>(null);
 
-// Grain-hoist, transition extension (L28 F1): grain-static is suppressed while the
-// reveal draw-in tweens dashoffset on this (otherwise-filtered) path, then restored
-// on completion. Reactive so Vue re-patches only the `filter` attribute — the
-// imperative dash styles above are never touched by the patch (W8 task-4 discipline).
-const grainOn = ref(true);
+// P1-W3 (r2 cause 1): the glyph's `url(#grain-static)` reference filter and the whole
+// `grainOn` hoist apparatus are GONE. WebKit caches no filter result for unlayered SVG
+// content, so a solved 9×9 held 63–81 live feTurbulence + feDisplacementMap chains over the
+// board — 8 hitches/s at idle forever, and idle 79.0 → 98.3 fps the moment they left, with
+// GPU-process raster 10.3 → 3.6 CPU-s per 30 s of sitting still. The G2.4 ballot ruled **C**
+// (unfiltered authored paths) on the owner's word: the bake (B) could not reproduce the
+// filter's per-pixel tooth at glyph scale, and SSIM ranked C CLOSER to the incumbent than B in
+// all four engine×theme cells (webkit board 0.978/0.980). No exception survives in
+// `pencil/config/filterBudget.ts`.
+//
+// Three hoist/restore pairs existed to keep the filter from re-rastering per frame during the
+// draw-in and the murmur — and r3 §4.2 found the third writer, the hover wiggle, had never
+// been hoisted at all. Deleting the filter deletes the bug and its two workarounds together.
+// `contain: paint` on `.glyph-svg` STAYS: it bounds a `d`-swap's invalidation to the ~40×56
+// cell box regardless of what paints it.
 
 let drawInAnim: GlyphAnimHandle | null = null;
 let celebrationAnim: GlyphAnimHandle | null = null; // beat-2 flourish OR beat-3 murmur cycle
@@ -108,8 +118,6 @@ function cleanupAnimations() {
     }
     drawInAnim = null;
   }
-  // A stopped draw-in never fires onComplete — don't leave the tooth off.
-  grainOn.value = true;
   if (celebrationAnim) {
     try {
       celebrationAnim.stop();
@@ -174,12 +182,9 @@ function murmurWiggleOnce() {
     }
     celebrationAnim = null;
   }
-  // Grain-hoist, murmur window (T4-W1 §murmur — full-viewport damage killed): drop
-  // grain-static for the 600ms wiggle, exactly the draw-in discipline at :175. Every
-  // `d` swap on a grain-filtered path forces a per-frame filter re-raster whose damage
-  // rect, unclipped, spanned the whole viewport (4.8 full-viewport Paints/s on every
-  // solved board); the `.glyph-svg`'s `contain: paint` now clips whatever remains to
-  // the ~40×56 cell box. The tooth lands back on the settled stroke on completion.
+  // The murmur's grain-hoist is retired with the filter (P1-W3): a `d` swap on an
+  // UNFILTERED path invalidates the ~40×56 box `contain: paint` already bounds, and nothing
+  // re-executes. One cell per 2.5 s window, a lone transient sequence subscriber.
   const anim = createGlyphFlourish(
     pathRef.value,
     variants.map((v) => v.d),
@@ -189,16 +194,11 @@ function murmurWiggleOnce() {
       cycleDurationMs: GLYPH_ANIM.hoverWiggleDuration,
       onDone: () => {
         celebrationAnim = null;
-        grainOn.value = true;
       },
     },
   );
-  // PRM (or <2 variants) yields no handle — never leave the tooth off in that case.
-  if (!anim) {
-    grainOn.value = true;
-    return;
-  }
-  grainOn.value = false;
+  // PRM (or <2 variants) yields no handle.
+  if (!anim) return;
   celebrationAnim = anim;
   anim.play();
 }
@@ -212,18 +212,9 @@ function setupReveal() {
   if (props.isRevealed) {
     // Beat 1 — the reveal wave: draw-in on the board-normalized noise stagger (delay
     // supplied by the board). One-shot sequence subscriber, not a keyframes.js loop.
-    // Grain-hoist, transition extension (L28 F1): drop grain-static while the
-    // dashoffset tween runs — every style write on the filtered path forces a
-    // per-glyph filter re-raster per frame, and a board-wide reveal (size switch,
-    // randomize, solve beat-1) runs dozens of them concurrently. The tooth lands
-    // with the settled stroke on completion (one filtered raster per glyph total).
-    grainOn.value = false;
     drawInAnim = createGlyphDrawIn(el, glyph.value.length, {
       duration: DRAW_IN_PRESETS.glyph.duration,
       delay: props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay,
-      onComplete: () => {
-        grainOn.value = true;
-      },
     });
     drawInAnim?.play();
 
@@ -303,9 +294,6 @@ watch(
           /* ignore */
         }
         celebrationAnim = null;
-        // A stopped murmur never fires onDone (it drops grain for its window) —
-        // restore the tooth so an override mid-wiggle doesn't strand grain off.
-        grainOn.value = true;
       }
       unregisterFromMurmur();
     }
@@ -345,7 +333,6 @@ onUnmounted(() => {
       :stroke-width="strokeWidth"
       stroke-linecap="round"
       stroke-linejoin="round"
-      :filter="grainOn ? 'url(#grain-static)' : undefined"
     />
   </svg>
 </template>

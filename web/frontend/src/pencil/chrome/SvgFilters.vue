@@ -88,9 +88,11 @@ function filterRegion(p: FilterPreset) {
           />
         </filter>
 
-        <!-- MultiPass: multiple displaced copies blended -->
+        <!-- MultiPass: multiple displaced copies blended. Suppressed for a preset whose base
+             def is orphaned (baseDef === false → stroke-light / stroke-dark, whose sole
+             consumer `.control-panel-filtered` retired at P1-W3). -->
         <filter
-          v-else-if="p.multiPass && !p.wobble"
+          v-else-if="p.multiPass && !p.wobble && p.baseDef !== false"
           :id="p.id"
           v-bind="filterRegion(p)"
           color-interpolation-filters="sRGB"

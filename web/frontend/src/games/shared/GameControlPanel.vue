@@ -44,11 +44,8 @@ import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
 import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
 import type { PencilMode } from "@games/shared/useUserMarks";
 import type { ErrorCheckMode } from "@games/shared/useAssists";
-import { useTheme } from "@/composables/useTheme";
 import { useButtonAnimation } from "@games/shared/useButtonAnimation";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
-
-const { isDark } = useTheme();
 
 // Underline boil: brief burst on selection change, then settle
 const boilFrame = ref(0);
@@ -70,11 +67,6 @@ function triggerBoil() {
   };
   boilTimer = setTimeout(tick, 120);
 }
-
-// Reactive filter URL for control panel — avoids :global(.dark) CSS scoping bug
-const panelFilter = computed(() =>
-  isDark.value ? "url(#stroke-dark)" : "url(#stroke-light)",
-);
 
 // T4-W10 idiom (§defineModel) — pencilMode/candidatesPinned are PLAIN relays (their child
 // v-model collapses in the template). The per-game size/difficulty models stay in the thin
@@ -716,15 +708,20 @@ function onHint() {
   font-optical-sizing: auto;
 }
 
+/* THE PANEL FILTER IS RETIRED (P1-W3, G2.4 ruled **C**). `url(#stroke-light)` / `-dark` was a
+   3× feTurbulence @ numOctaves 4 + 3× feDisplacementMap + 2× feBlend chain over a ~320×700 CSS
+   panel, on an HTML box — WebKit's SOFTWARE filter path (r2 cause 3: +12.3 fps on deal when it
+   goes). It re-executed on any repaint of the subtree, which `.section-heading:hover` caused by
+   changing its own filter INPUT, twice per hover round-trip. The panel's frame roughening never
+   came from here anyway — HandDrawnOutline bakes that grain into geometry at SSIM 0.996/0.993 —
+   so what left is a roughened edge on headings and control borders. The owner's ruling: gone.
+   `will-change: transform` left with it: it existed to give THIS filter its own layer (the W5
+   repair), and a promoted layer with nothing to promote is residency for free.
+   Reversal is one CSS block, and the ballot page persists for re-audition.
+   The class itself STAYS as the structural grouping hook the templates and
+   e2e/visual-regression.spec.ts address; it simply carries no paint of its own now. */
 .control-panel-filtered {
-  filter: v-bind(panelFilter);
-  /* R3 (W5 repair): own compositing layer. Unlayered, this 3-pass stroke filter
-     re-rasterizes whenever the panel repaints OR MOVES — and H8's centered
-     .app-layout moves it on every board-height change (a size switch re-centers
-     the card), which carried ~+125 ms of size-switch raster past the p3 class.
-     Layerized, a move is a compositor offset and boil-tick invalidations stop
-     sharing tiles with the filter (measured −57% switch raster vs unlayered). */
-  will-change: transform;
+  display: block;
 }
 
 /* T4-WU/U2 — the staged "New game" zone: the game sections + the Deal commit, grouped above
@@ -790,16 +787,11 @@ function onHint() {
   color: var(--color-crayon-blue);
 }
 
-/* Hover flourishes, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter
-   write is retired (SvgFilters), so these static wobbles raster once per hover —
-   a resting pointer never re-enrolls a live painter (the b1 node-1006 finding).
-   T4-WM §2: fenced behind (hover: hover) — on touch the wobble filter stuck to the
-   last-tapped heading (r2 §4 sticky-hover leak); a coarse pointer sees none of it. */
-@media (hover: hover) {
-  .section-heading:hover {
-    filter: url(#wobble-heart);
-  }
-}
+/* The `.section-heading:hover` wobble is DELETED (P1-W3, r3 §4.5). It was a decorative
+   flourish on a non-interactive <h2> that lived INSIDE `.control-panel-filtered`, so swapping
+   its own filter changed that panel filter's INPUT — three 4-octave turbulence passes, three
+   displacement maps and two blends re-executing over the whole panel, twice per hover
+   round-trip. The panel filter is gone now, and so is the flourish that abused it. */
 
 .icon-btn {
   display: inline-flex;
@@ -812,17 +804,26 @@ function onHint() {
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: all 150ms;
-  filter: url(#grain-static);
+  /* NARROWED from `all 150ms` (P1-W3, r3 §3.2). `all` included `filter`, and the hover swap
+     was a `url()`→`url()` pair — not interpolable, so it flipped discretely at 50% while
+     `background`/`color` tweened, and each of their ~9 frames repainted a REFERENCE-FILTERED
+     HTML box on WebKit's CPU path: nine turbulence passes per hover edge, per button, across a
+     row of 8. The filter itself is gone too (G2.4 ruled **C** for icons — every icon is
+     viewBox 24 against grain-static's 25-unit wavelength, so the chain was a uniform
+     ±1.25-unit nudge, not a tooth, and CrayonHeart already rules grain sub-perceptual below
+     20 px). Only what actually moved on hover is still allowed to tween. */
+  transition:
+    background-color 150ms,
+    color 150ms;
 }
 
-/* T4-WM §2: the icon-btn hover paint (bg + celestial wobble) stuck after a tap on touch
-   (r2 §4) — fenced to hover-capable pointers. Coarse gets its sublabel + :active scale. */
+/* T4-WM §2: the icon-btn hover paint stuck after a tap on touch (r2 §4) — fenced to
+   hover-capable pointers. Coarse gets its sublabel + :active scale. P1-W3: the celestial
+   wobble is deleted with the base filter it swapped against; the bg + ink shift is the hover. */
 @media (hover: hover) {
   .icon-btn:hover {
     color: var(--color-foreground);
     background: var(--color-accent);
-    filter: url(#wobble-celestial);
   }
 }
 
