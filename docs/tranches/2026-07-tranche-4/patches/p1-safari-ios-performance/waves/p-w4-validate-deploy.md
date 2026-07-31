@@ -61,3 +61,21 @@ untouched.
 claim scoped to "desktop Safari 26.4 + iOS 26 simulator"; E8 device smoke on a real iPhone is
 named in the record as **blocking the iOS claim**, owner-homed, with the rig URL and the
 one-line steps attached.
+
+## Execution record — 2026-07-31
+
+G4.1 (state-pinned after the localStorage drift trap; interleaved after the ~4 fps/23 min
+instrument drift was proven): idle 97.72/long33 0 · deal 97.13 · solve 96.34/1.5 · undo 97.11
+· theme 88.39 (the banked twin lever shipped on its fired trigger, `0642e098`; budget 14→9) ·
+gallery 83.90 (miss attributed to NO P-W3 item — structural fold frame, 7/7 bundles; gates.json
+untouched). G4.2: gallery 49.25 · theme 51.65 · idle at the ≥59 floor inside ±2.5 noise
+(dark/light flip-flop across rounds); no-regression clear, narrowest +2.36. G4.3: 4.24 ≤ 4.5
+(base re-proven 10.42). G4.4: all stamps 0.10.0 → 0.10.1 at the pin, PASS both times. G4.5:
+deployed `cce0ffd1`, production pass found the STALE-INK toggle bake (pre-dates the patch;
+every prior visual gate loaded fresh in one theme) → pencil-boil 0.10.1 (`763f1c0`, 13 LOC:
+the bake yields a paint before reading the cascade) + the born-RED `theme-bake-freshness`
+e2e (`c9cd957a`) + lockfile pin (`23e3dc00`) → redeployed `f1adfca5` → re-pass ALL GREEN
+(toggle-ink 16.18/18.76–18.99 both directions, double-toggle exact; census 9; idle long33 0;
+assets 6/6; quiet windows 129 s/121 s honored). G4.6: WGATE record §9.1. Local-rig traps
+booked: the orphaned :4188 preview reused by `reuseExistingServer` (a wrong-build gate run),
+the :3000 palette-api squatter (K46 refires). E8 stays owner-homed, blocking the iOS claim.
