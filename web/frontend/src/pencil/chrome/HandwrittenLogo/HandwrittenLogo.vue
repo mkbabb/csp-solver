@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import {
+  heldFrameCount,
   usePrefersReducedMotion,
   serializePoseSvg,
   useRasterStack,
@@ -56,8 +57,14 @@ const logoPreset = FILTER_PRESETS["wobble-logo"];
 const logoPoseIds = computed(() =>
   wobblePoseFrequencies(logoPreset).map((_, i) => wobblePoseId(logoPreset.id, i)),
 );
+// heldFrameCount (P1-W3): the answer-key laminate's boil hold was NEVER TOTAL — only
+// HandDrawnGrid and BoilDivider wrapped their counts, so every other beat surface kept
+// breathing under a hold that was supposed to still the page. `heldFrameCount` collapses the
+// count to 1 during a hold and `useBeatFrame`'s `total <= 1` path freezes IN PLACE (no snap to
+// pose 0); release returns the real count and the boil resumes mid-cadence. Contract repair,
+// not perf.
 const logoPose = useBeatFrame(
-  () => logoPoseIds.value.length,
+  heldFrameCount(() => logoPoseIds.value.length),
   () => beatsFor(logoPreset.wobble?.intervalMs ?? MOTION.beatMs * 4),
 );
 
@@ -157,7 +164,15 @@ function logoPoseSvg(f: number): string {
   const defs =
     readFilterDefs(pid) +
     `<style>${FONT_FACE}text{font-family:'FrauncesBake',Georgia,serif;` +
-    `font-weight:900;font-size:52px;letter-spacing:0.02em;font-optical-sizing:auto;` +
+    // `font-variation-settings:'opsz' 52` PINNED, matching `.logo-text` below (mark 4 M2).
+    // `font-optical-sizing: auto` resolves opsz to the axis MINIMUM (9) in WebKit here, not to
+    // the 52 px font-size — measured: the same label is 211.39 user units at auto/opsz 9 and
+    // 244.83 at opsz 52. The measuring <text> and this detached blob resolved it differently,
+    // so `vbWidth` was cut from one metric and the bake painted with the other; ink ran past
+    // the box and all five wordmarks were clipped at the right edge (measured on real WebKit
+    // against the base dist: ink reached the final column of every one of the five bitmaps).
+    // Pinning both sides makes the measure and the paint the same font.
+    `font-weight:900;font-size:52px;letter-spacing:0.02em;font-variation-settings:'opsz' 52;` +
     `fill:${ink};}</style>`;
   const body = `<g filter="url(#${pid})"><text x="4" y="48" text-anchor="start">${escapeXml(label.value)}</text></g>`;
   return serializePoseSvg({ width: w, height: 60, viewBox: `0 0 ${w} 60`, defs, body });
@@ -167,10 +182,11 @@ const logoRaster = useRasterStack(() => ({
   cacheKey: `logo-${label.value}-${isDark.value ? "d" : "l"}-${vbWidth.value}`,
   poseCount: logoPoseIds.value.length,
   poseSvg: logoPoseSvg,
-  cssSize: {
-    width: Math.round(logoW.value) || Math.round((vbWidth.value / 60) * 72),
-    height: Math.round(logoH.value) || 72,
-  },
+  // No fallback arithmetic: pencil-boil 0.10.0's F2 returns before the token bump at a
+  // non-positive cssSize and re-bakes when the box lands, so the invented 72 px seed — which
+  // an <svg> needs because it has no offsetWidth, so `useElementSize` seeds 0 — is the
+  // library's problem now, and it solves it by NOT baking rather than by baking wrong.
+  cssSize: { width: Math.round(logoW.value), height: Math.round(logoH.value) },
 }));
 
 // ImageBitmap → object URL once per bake; async encode + close the redundant bitmaps
@@ -392,7 +408,13 @@ onUnmounted(() => {
        rem/clamp rung would couple glyph metrics to root font-size / viewport width
        and clip the fixed box. Deliberately off-token. */
   font-size: 52px;
-  font-optical-sizing: auto;
+  /* PINNED, not `font-optical-sizing: auto` (mark 4 M2). Auto resolves this face's `opsz` to
+     the axis minimum (9) in WebKit rather than to the 52 px size — a TEXT optical size on the
+     display wordmark, thin and narrow, and 33 user units narrower per label than opsz 52. The
+     measuring <text> here and the bake's detached blob disagreed on it, which is what clipped
+     all five labels. 52 matches the font-size above by construction: the geometry and the
+     optical size are the same number, so neither can drift from the other. */
+  font-variation-settings: "opsz" 52;
   fill: currentColor;
   letter-spacing: 0.02em;
 }

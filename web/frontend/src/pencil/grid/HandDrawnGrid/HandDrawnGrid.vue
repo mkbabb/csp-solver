@@ -24,6 +24,11 @@ const props = defineProps<{
    *  beat — and this frame owns the render. Both boards pass the identical prop, so the
    *  twin is automatic: there is no second implementation to keep in sync. */
   progress?: number;
+  /** True at the win (`solveState === 'solved'`). P1-W3 / r3 §4.4: the trace is invisible then
+   *  (`.solve-success .progress-trace { opacity: 0 }`), so its pose stack must stop trading
+   *  opacity 8/s over the whole board box — but it must NOT be unmounted, or the 500 ms
+   *  bow-out that hands the frame to the gold has nothing left to fade. Pinned, not deleted. */
+  solveSuccess?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -433,12 +438,18 @@ onUnmounted(() => {
              draw-in/erase), opacity-swapped on the SAME boilFrame beat as the frame it hugs
              and painted LAST so it sits over the graphite. The dash draws it to the current
              fill-front; .solve-success hides `.progress-trace` (index.css) so gold owns the
-             win. Zero steady-state raster: filterless static geometry, compositor-only swap. -->
+             win. Zero steady-state raster: filterless static geometry, compositor-only swap.
+             P1-W3 / r3 §4.4 — the stack used to render and flip 8/s UNCONDITIONALLY. At
+             `progress === 0` the dash offset is 1000, so the path draws nothing and four
+             invisible <g>s traded opacity over the whole board box forever; now they are not
+             rendered at all. At the win the trace is opacity 0 but must still FADE, so the
+             stack is PINNED to pose 0 rather than unmounted (the logo's during-bake idiom) —
+             the trade stops and the 500 ms bow-out survives. -->
     <g
-      v-for="(d, f) in traceFrames"
+      v-for="(d, f) in progress > 0 ? traceFrames : []"
       :key="'trace-' + f"
       class="progress-pose"
-      :class="{ 'is-active': boilFrame === f }"
+      :class="{ 'is-active': (solveSuccess ? 0 : boilFrame) === f }"
     >
       <path
         :d="d"

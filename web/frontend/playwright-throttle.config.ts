@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig } from "@playwright/test";
 
 /**
  * The BUILT-DIST config (historically, and still by filename, the throttled-void config).
@@ -7,6 +7,7 @@ import { defineConfig } from '@playwright/test';
  * build + one preview here (compute-cost DAG — no second CI job, no redundant `vite build`):
  *
  *  · throttled-void — the F3 flake, below.
+ *  · wordmark-integrity — P1 G3.4, in WEBKIT (see the project note below).
  *  · filter-census  — P1 G3.1/G3.2, the live-filter budget. It censuses what the SHIPPED bundle
  *    renders; a dev-server census would read unbundled module graph timing, and the invariant it
  *    guards ("a new filter surface reds CI even when an old one retires") is only worth anything
@@ -39,29 +40,39 @@ const PREVIEW_PORT = 4188;
 const externalBase = process.env.PLAYWRIGHT_BASE_URL;
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: "./e2e",
   timeout: 90000,
   expect: { timeout: 10000 },
   fullyParallel: true,
-  globalSetup: './e2e/global-setup.ts',
+  globalSetup: "./e2e/global-setup.ts",
   projects: [
     {
-      name: 'throttled-void',
+      name: "throttled-void",
       testMatch: /throttled-void\.spec\.ts$/,
       // The real fix is the bundled preview build; this one probe keeps a single retry as the
       // sanctioned safety margin on a loaded runner (spec §"grant this one spec retries").
       retries: 1,
     },
     {
-      name: 'filter-census',
+      name: "filter-census",
       testMatch: /filter-census\.spec\.ts$/,
       retries: 0,
+    },
+    {
+      // P1 G3.4 — mark 4's two font defects are WEBKIT defects (it resolves
+      // `font-optical-sizing: auto` to the opsz axis minimum, and it pins a filtered
+      // SVG-as-image bake at its declared intrinsic), so this one asserts in WebKit or asserts
+      // nothing. Same bundled preview; the assertion is over the baked pose BITMAPS.
+      name: "wordmark-webkit",
+      testMatch: /wordmark-integrity\.spec\.ts$/,
+      retries: 0,
+      use: { browserName: "webkit" },
     },
   ],
   use: {
     baseURL: externalBase || `http://localhost:${PREVIEW_PORT}`,
     viewport: { width: 1280, height: 800 },
-    screenshot: 'only-on-failure',
+    screenshot: "only-on-failure",
   },
   webServer: externalBase
     ? undefined
@@ -74,6 +85,6 @@ export default defineConfig({
         port: PREVIEW_PORT,
         reuseExistingServer: true,
         timeout: 120000,
-        env: { VITE_BASE_URL: '/' },
+        env: { VITE_BASE_URL: "/" },
       },
 });

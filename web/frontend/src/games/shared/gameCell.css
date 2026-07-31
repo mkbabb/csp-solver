@@ -30,7 +30,9 @@
   inset: 12%;
   color: var(--color-pencil-graphite, var(--grid-line-color));
   opacity: 0.5;
-  animation: marks-fade-in 250ms ease-out both;
+  /* `backwards`, not `both` (P1-W3): `marks-fade-in` is a FROM-ONLY keyframe, so its 100%
+     value IS the cascade value and the forwards half retains an effect for nothing. */
+  animation: marks-fade-in 250ms ease-out backwards;
 }
 
 .mark-slot {
@@ -148,7 +150,8 @@
       var(--color-teacher-red, var(--color-crayon-rose)) 50%,
       transparent
     );
-  animation: marks-fade-in 250ms ease-out both;
+  /* `backwards`, not `both` — same from-only keyframe as `.pencil-marks` above. */
+  animation: marks-fade-in 250ms ease-out backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -203,7 +206,12 @@
   stroke-width: 7;
   stroke-opacity: 0.9;
   stroke-dasharray: 1;
-  animation: ghost-draw-on 180ms var(--ease-ghostDraw) both;
+  /* The end state (dashoffset 0) does NOT differ from the cascade, so per the P1-W3 rule the
+     value MOVES INTO the rule and the fill drops to `backwards`. `stroke-dashoffset` is an
+     inherited SVG property, so declaring it here is also what makes "equals the cascade" true
+     independently of any ancestor. */
+  stroke-dashoffset: 0;
+  animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
 }
 
 @keyframes ghost-draw-on {

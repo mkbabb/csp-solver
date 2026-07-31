@@ -43,6 +43,7 @@ import {
   DRAW_IN_PRESETS,
   beatsFor,
 } from "@pencil/config/pencilConfig";
+import { heldFrameCount } from "@mkbabb/pencil-boil";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
 import { TALLY_TOTAL, type TallyDescriptor } from "./techniqueVoice";
 
@@ -92,8 +93,14 @@ const poses = computed<string[][]>(() => {
 });
 
 // The shared boil beat (one driver, ref-counted — enrolls no new scheduler subscriber).
+// heldFrameCount (P1-W3): the answer-key laminate's boil hold was NEVER TOTAL — only
+// HandDrawnGrid and BoilDivider wrapped their counts, so every other beat surface kept
+// breathing under a hold that was supposed to still the page. `heldFrameCount` collapses the
+// count to 1 during a hold and `useBeatFrame`'s `total <= 1` path freezes IN PLACE (no snap to
+// pose 0); release returns the real count and the boil resumes mid-cadence. Contract repair,
+// not perf.
 const boilFrame = useBeatFrame(
-  () => BOIL_CONFIG.frameCount,
+  heldFrameCount(() => BOIL_CONFIG.frameCount),
   () => beatsFor(BOIL_CONFIG.intervalMs),
 );
 

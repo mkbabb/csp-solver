@@ -37,6 +37,7 @@ import {
   MOTION,
   beatsFor,
 } from "@pencil/config/pencilConfig";
+import { heldFrameCount } from "@mkbabb/pencil-boil";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import GameCard from "./GameCard.vue";
@@ -92,8 +93,14 @@ const guardCard = computed(() =>
 );
 
 // THE ONE beat enrolment — driven into the centered card only (see the soul-gate note).
+// heldFrameCount (P1-W3): the answer-key laminate's boil hold was NEVER TOTAL — only
+// HandDrawnGrid and BoilDivider wrapped their counts, so every other beat surface kept
+// breathing under a hold that was supposed to still the page. `heldFrameCount` collapses the
+// count to 1 during a hold and `useBeatFrame`'s `total <= 1` path freezes IN PLACE (no snap to
+// pose 0); release returns the real count and the boil resumes mid-cadence. Contract repair,
+// not perf.
 const centerPose = useBeatFrame(
-  () => BOIL_CONFIG.frameCount,
+  heldFrameCount(() => BOIL_CONFIG.frameCount),
   () => beatsFor(BOIL_CONFIG.intervalMs),
 );
 function poseFor(i: number): number {

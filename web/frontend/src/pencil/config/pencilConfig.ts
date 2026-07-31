@@ -229,28 +229,43 @@ export function resetBoilConfig() {
  *  Wobble filters use single-layer feTurbulence+feDisplacementMap (small elements only).
  *  Grid boil is path-based (see BOIL_CONFIG). */
 const DEFAULT_PRESETS: Record<string, FilterPreset> = {
-  // GRAIN ACCEPTANCE DISPOSITION (W9, Pass-3 #9 — the LEAD directs: EXTEND the envelope).
+  // GRAIN-STATIC DISPOSITION — rewritten to the SHIPPED TRUTH at P1-W3.
+  //
   // `grain-static` is the pencil's tooth: feTurbulence + feDisplacementMap chattering stroke
-  // edges. On the board grid it wraps the boil-cycling `<g>` and re-rasterizes every 150 ms
-  // tick for parameters that never change — the W8 hoist's target. Disposition:
-  //   • The hoist PASSES the literal soul gate at the settled/2× DPR floor: SSIM 0.983–0.985
-  //     (a thin but genuine pass; the 0.98 acceptance floor holds).
-  //   • 6 of 36 matrix conditions fall below 0.98 — ALL of them DPR1 + live-animating mid-phase
-  //     (never settled, never DPR≥2). The acceptance envelope is EXTENDED to cover DPR1/mid-phase
-  //     with those numbers on the record here, rather than gate-blocking on transient frames.
-  //   • The measured values are structural SSIM. Mean-channel deltas (0.12–1.06%) are a DIFFERENT
-  //     metric and are NEVER to be reported as SSIM.
-  //   • design-refinement §2.2's geometric bake (resample @8 units, ±1.25 amplitude, wavelength 25,
-  //     seed 2, filter dropped) remains the BOOKED escape hatch for the failing corners if a future
-  //     re-derivation (full 36-condition matrix, same-build noise-floor control) tightens the floor.
-  //   • T3-W13 §1-P2 EXECUTES that bake for HandDrawnOutline: gridPaths.ts §Grain bake folds the
-  //     grain into the pose geometry — params derived from these GrainConfigs (wavelength =
-  //     1/baseFrequency, resample @ wavelength/3, peak amplitude scale/2, per-frame seeds) — and
-  //     the outline drops `filter=` for frameCount static siblings + opacity swap (soul gate:
-  //     SSIM 0.996/0.993 tab, 0.993 stroke band panel, @DPR2 settled). BoilDivider FAILED the
-  //     gate (0.809 — 100% stroke; realizations can't correlate) and took the banked fallback:
-  //     grain-hoist stack, filter kept, rasters once per pose. The grid hoist above is UNTOUCHED;
-  //     grain-static's values stay byte-identical (the crit-forensics HOLD carried).
+  // edges. Its VALUES are byte-untouched and have been since W9 (the crit-forensics HOLD): the
+  // grid's 1000-unit space depends on them. What has changed, repeatedly, is WHO IS ALLOWED TO
+  // BE A LIVE CLIENT — and the answer is now counted, in one file:
+  // **`pencil/config/filterBudget.ts`**, enforced against the built dist by
+  // `e2e/filter-census.spec.ts` as an exact-match allowlist. Read that budget, not this comment,
+  // for the population. As of P1-W3 the whole estate's live-filter total is 14, against 96–118
+  // measured on the base build.
+  //
+  // How each surface got there, shortest form:
+  //   • grid — BAKED (T4-W1). `<image>` pose stack; the live `<g filter>` fallback goes
+  //     `display: none` once the bitmaps land. Soul gate: SSIM 0.983–0.985 at settled/DPR2 (a
+  //     thin but genuine pass at the 0.98 floor). 6 of 36 matrix conditions fell below 0.98, ALL
+  //     of them DPR1 + live-animating mid-phase — the envelope was EXTENDED to cover them with
+  //     the numbers on the record rather than gate-blocking on transient frames. The measured
+  //     values are structural SSIM; mean-channel deltas (0.12–1.06%) are a different metric and
+  //     are never to be reported as SSIM.
+  //   • outline, tally — GRAIN IN GEOMETRY (T3-W13 §1-P2). `gridPaths.ts §Grain bake` folds the
+  //     grain into the pose geometry, params derived from these GrainConfigs (wavelength =
+  //     1/baseFrequency, resample @ wavelength/3, peak amplitude scale/2, per-frame seeds); the
+  //     surface drops `filter=` for frameCount static siblings + an opacity swap. Soul gate:
+  //     SSIM 0.996/0.993 tab, 0.993 stroke band panel, @DPR2 settled.
+  //   • divider — FROZEN, filter kept (`fb15253d`). The bake FAILED its gate at 0.809: it is
+  //     100% stroke, and two noise realizations of a thin line cannot correlate window-wise. It
+  //     takes the banked fallback — pose 0 pinned on Apple engines, one raster per pose — and it
+  //     is the budget's SOLE beat-driven exception, with its retirement trigger written there.
+  //   • glyph, icon, control panel, loader — DELETED (P1-W3, G2.4 ruled **C / C / C** on the
+  //     owner's word). Not relocated, not baked: the bake could not reproduce the filter's
+  //     per-pixel tooth at glyph scale, and SSIM ranked unfiltered CLOSER to the incumbent than
+  //     baked in all four engine×theme cells (webkit board 0.978/0.980). Icons were a uniform
+  //     ±1.25-unit nudge at viewBox 24 against this preset's 25-unit wavelength — never a tooth.
+  //   • `stroke-light` / `stroke-dark` — ORPHANED with the control panel; `baseDef: false` below.
+  //
+  // The booked escape hatch is spent: design-refinement §2.2's geometric bake IS the outline
+  // path above, and the glyph's version was auditioned at G2.4 and declined by ruling.
   "grain-static": {
     id: "grain-static",
     margin: 5,

@@ -331,6 +331,7 @@
 import { ref, watch, computed, onUnmounted } from "vue";
 import {
   generateSunRays,
+  heldFrameCount,
   wobbleDiamond,
   wobbleStarPolygon,
   usePrefersReducedMotion,
@@ -382,11 +383,18 @@ const sunFrame = ref(0); // light: whole-sun pose stack, every beat (~8fps)
 const CELESTIAL_POSE_COUNT = wobblePoseFrequencies(
   FILTER_PRESETS["wobble-celestial"],
 ).length;
+// heldFrameCount (P1-W3): the fifth of the five unwrapped counts. The toggle drives the shared
+// beat imperatively rather than through `useBeatFrame`, so it honours the boil hold the same way
+// `useBeatFrame` does — by reading the WRAPPED count and taking the `total <= 1` freeze-in-place
+// branch. Without this the answer-key laminate stilled the board and the sun kept turning.
+const heldPoseCount = heldFrameCount(() => CELESTIAL_POSE_COUNT);
 watch(beat, () => {
+  const total = heldPoseCount();
+  if (total <= 1) return; // held — freeze in place, no snap to pose 0
   if (isDark.value) {
-    starFrame.value = (starFrame.value + 1) % CELESTIAL_POSE_COUNT;
+    starFrame.value = (starFrame.value + 1) % total;
   } else {
-    sunFrame.value = (sunFrame.value + 1) % CELESTIAL_POSE_COUNT;
+    sunFrame.value = (sunFrame.value + 1) % total;
   }
 });
 
@@ -470,10 +478,11 @@ const TWINKLE_BY_FRAME = Array.from({ length: CELESTIAL_POSE_COUNT }, (_, f) =>
 const CELESTIAL_VB = 200;
 const toggleRef = ref<HTMLButtonElement | null>(null);
 const { width: toggleW } = useElementSize(toggleRef);
-const captureSize = computed(() => {
-  const s = Math.round(toggleW.value);
-  return s > 0 ? s : 96;
-});
+// No invented fallback (P1-W3, the logo's twin): pencil-boil 0.10.0's F2 declines a bake at a
+// non-positive cssSize and re-bakes when the box lands, so a 96 px guess is no longer needed to
+// keep `useRasterStack` from capturing at zero — and a guess is exactly what poisoned the first
+// bake with bitmaps of the wrong intrinsic.
+const captureSize = computed(() => Math.round(toggleW.value));
 
 function celestialDefs(i: number): string {
   return (

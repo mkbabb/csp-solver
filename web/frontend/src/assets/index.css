@@ -7,17 +7,36 @@
  * Replaces the Google Fonts CDN `<link>` (index.html) + its `fonts.googleapis.com`/
  * `fonts.gstatic.com` CSP clauses (see public/_headers). Each woff2 is
  * `pyftsubset`-built from the upstream google/fonts variable-font source,
- * trimmed to the EXACT glyphs the app renders (derived from the source
- * templates/copy, not guessed — see the P5 report for the derivation):
+ * trimmed to the EXACT glyphs the app renders.
  *
- *   fraunces-subset.woff2    9,772 B  — WORDMARK + HEADINGS ONLY (opsz+wght
+ * DERIVATION RULE (P1-W3 — the rule is the fix; the woff2 is only its output):
+ * cut from the RENDERED text, and for any string that passes through a
+ * `text-transform`, include BOTH CASES. The P5 cut took the AUTHORED strings,
+ * so when `.section-heading` was `text-transform: uppercase` the subset carried
+ * `B D S` and no other capital: 6 of 41 heading glyphs actually painted in
+ * Fraunces (14.6%), the rest in Georgia at font-weight 800 — synthetic bold on
+ * a fallback serif, and a real component of the owner's mark-4 report.
+ * `scripts/check-font-coverage.mjs` is the standing guard; it enumerates the
+ * rendered strings and fails if the cmap misses one.
+ *
+ *   fraunces-subset.woff2   13,788 B  — WORDMARK + HEADINGS ONLY (opsz+wght
  *                                       variable, SOFT/WONK pinned like the
  *                                       CDN's own served instance). unicode-range
  *                                       gates it to exactly that repertoire so
  *                                       any OTHER text asking for 'Fraunces'
- *                                       (none live today) falls through to the
- *                                       Georgia stack instead of mixing glyphs
- *                                       mid-word. NOT a general body-copy subset.
+ *                                       falls through to the Georgia stack
+ *                                       instead of mixing glyphs mid-word.
+ *                                       NOT a general body-copy subset.
+ *                                       Re-derived at P1-W3 on the **B2** ruling:
+ *                                       headings went lowercase, so the cut is
+ *                                       the 21 rendered lowercase letters + space
+ *                                       (gaining b g m n w — `thermo`'s m and
+ *                                       `kenken`'s two n's used to paint in
+ *                                       Georgia mid-word at 96 px) PLUS the six
+ *                                       authored initials B C D M N S, which is
+ *                                       what "both cases" costs: 13,788 B against
+ *                                       the ruling's 12,048 B lowercase-only
+ *                                       estimate, +4,016 B on the shipped 9,772.
  *   firacode-subset.woff2    3,624 B  — full realistic app coverage: every
  *                                       OptionSelector size/difficulty label
  *                                       (both games) + the "@mbabb" byline.
@@ -33,7 +52,7 @@
  *                                       et al. rendered those two glyphs in the
  *                                       cursive fallback.
  *
- * Total self-hosted: 17,236 B for all three faces, same-origin, immutable-
+ * Total self-hosted: 21,724 B for all three faces, same-origin, immutable-
  * cached under /assets/* (public/_headers), precached by the W6 SW glob.
  */
 @font-face {
@@ -43,9 +62,11 @@
   font-display: swap;
   font-stretch: 100%;
   src: url("./fonts/fraunces-subset.woff2") format("woff2");
+  /* The file's actual cmap, verified glyph-for-glyph by scripts/check-font-coverage.mjs:
+     space · B C D M N S · a-i · k-o · r-u · w · y z  (28 codepoints). */
   unicode-range:
-    U+0020, U+0042, U+0044, U+0053, U+0061, U+0063-0064, U+0065-0066, U+0068, U+0069,
-    U+006B, U+006C, U+006F, U+0072-0074, U+0075, U+0079, U+007A;
+    U+0020, U+0042-0044, U+004D-004E, U+0053, U+0061-0069, U+006B-006F, U+0072-0075,
+    U+0077, U+0079-007A;
 }
 
 @font-face {
@@ -594,11 +615,21 @@ html {
     }
   }
 
-  /* Cell reveal with noise-staggered delay */
+  /* Cell reveal with noise-staggered delay.
+     `backwards`, NOT `both` (P1-W3, r3 §3.1). The forwards half was REDUNDANT — the 100%
+     keyframe is `transform: scale(1); opacity: 1` and `.game-cell` declares neither, so the
+     cascade already says `transform: none; opacity: 1`. But `scale(1)` does not COMPUTE to
+     `none`, it computes to a matrix, so the retained fill left 35–81 board cells carrying an
+     effect-sourced transform indefinitely (63 measured on a dealt 9×9). WebKit promotes
+     elements carrying accelerated animations, and 35–81 promoted cell layers at DPR3 is a
+     tile-budget event — the best mechanism source can point at for "iOS especially".
+     The backwards half is load-bearing: it holds scale(0)/opacity:0 through the
+     `--reveal-delay` window. One token, zero pixels. `animatingCells` is untouched — the
+     `celebrating` derivation reads its size, so the cure belongs in CSS, never in the store. */
   .cell-reveal-animated {
     animation: cell-reveal 0.3s var(--ease-anticipatePop);
     animation-delay: var(--reveal-delay, 0ms);
-    animation-fill-mode: both;
+    animation-fill-mode: backwards;
   }
 
   /* Sudoku cell focus styling */

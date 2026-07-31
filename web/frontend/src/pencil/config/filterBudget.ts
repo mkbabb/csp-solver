@@ -127,3 +127,115 @@ export const FILTER_BUDGET_CEILING = 14;
  * population is the surface r2 measured as the root cause — a regression there must name itself.
  */
 export const PER_CELL_SCOPE = ".board-cells";
+
+/**
+ * SECONDARY CENSUS — the `forwards`/`both` fill allowlist (the tripwire that would have caught
+ * `cell-reveal` before the owner did).
+ *
+ * `animation-fill-mode: forwards` retains the animation's EFFECT, and an effect that supplies a
+ * computed transform keeps WebKit's promotion of the element alive: `cell-reveal`'s 100% keyframe
+ * is `transform: scale(1)`, which does not compute to `none` but to a matrix, so 35–81 board
+ * cells carried an effect-sourced transform indefinitely — r3 §3.1's best "iOS especially"
+ * mechanism, at DPR3 a tile-budget event. Four sites dropped their redundant forwards half in
+ * P-W3 (`.cell-reveal-animated`, `.pencil-marks`, `.cell-because`, `.cell-ghost-path`); every
+ * site that KEEPS it is listed here with the end state that earns it.
+ *
+ * Keyed on file + animation name (never a line number — those churn), with the occurrence count.
+ */
+export interface FillAllowRow {
+  /** Path relative to `web/frontend/`. */
+  file: string;
+  /** The `animation-name` at the site. */
+  animation: string;
+  /** How many sites in that file use this animation with a forwards-ish fill. */
+  count: number;
+  /** The retained end state, and why it is not the cascade value. */
+  reason: string;
+}
+
+export const FILL_ALLOWLIST: readonly FillAllowRow[] = [
+  {
+    file: "src/assets/index.css",
+    animation: "pencil-draw-on",
+    count: 1,
+    reason:
+      "ends at opacity var(--draw-opacity, 1) — consumers set it below 1, so the fill holds",
+  },
+  {
+    file: "src/pencil/chrome/MarginNote.vue",
+    animation: "note-write-in",
+    count: 2,
+    reason:
+      "ends at clip-path inset(0 0 0 0); the cascade is `none` — the wipe must stay open",
+  },
+  {
+    file: "src/pencil/chrome/CompletionVignette.vue",
+    animation: "vignette-write-in",
+    count: 1,
+    reason: "same clip-path wipe as the margin note; the cascade is `none`",
+  },
+  {
+    file: "src/games/shared/SolverErrorNote.vue",
+    animation: "note-slide-in",
+    count: 1,
+    // BANKED RESIDUE, named honestly: this one ends at `transform: translateY(0)`, which
+    // computes to a matrix and not to `none` — the same mechanism as `cell-reveal`, at a
+    // population of 0–1 transient notes instead of 35–81 board cells. It stays because the
+    // note is v-if'd out of the default scene entirely, so nothing is retained at idle.
+    // TRIGGER: the note becoming resident (a persistent error strip), or a second such site.
+    reason:
+      "transient error note (v-if, absent at idle); ends at translateY(0) — banked residue",
+  },
+  {
+    file: "src/games/shared/SolverErrorNote.vue",
+    animation: "note-fade-in",
+    count: 1,
+    reason: "the PRM arm of the same note — opacity only, no transform; absent at idle",
+  },
+  {
+    file: "src/pencil/celestial/DarkModeToggle.vue",
+    animation: "toggle-squash",
+    count: 1,
+    reason:
+      "gesture-scoped class, dropped on completion — never resident in the default scene",
+  },
+  {
+    file: "src/pencil/celestial/DarkModeToggle.vue",
+    animation: "plush-land",
+    count: 1,
+    reason:
+      "gesture-scoped class, dropped on completion — never resident in the default scene",
+  },
+  {
+    file: "src/pencil/chrome/icons/SolveIcon.vue",
+    animation: "drawIn",
+    count: 1,
+    reason:
+      "state-gated icon draw-on; the dash end state is the icon's only inked pose",
+  },
+  {
+    file: "src/pencil/chrome/icons/SolveIcon.vue",
+    animation: "sparkleGrow",
+    count: 1,
+    reason: "state-gated icon pop; scoped to the solving class, never resident at idle",
+  },
+  {
+    file: "src/pencil/chrome/icons/FillForcedIcon.vue",
+    animation: "markDraw",
+    count: 1,
+    reason:
+      "state-gated icon draw-on; the dash end state is the icon's only inked pose",
+  },
+  {
+    file: "src/pencil/chrome/icons/DiceIcon.vue",
+    animation: "diceRoll",
+    count: 1,
+    reason: "state-gated roll, class dropped on completion — never resident at idle",
+  },
+  {
+    file: "src/pencil/chrome/icons/DiceIcon.vue",
+    animation: "pipPop",
+    count: 1,
+    reason: "state-gated pip pop, scoped to the roll class — never resident at idle",
+  },
+];

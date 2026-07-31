@@ -530,6 +530,15 @@ jobs:
             - name: prettier (repo-pinned format check)
               working-directory: web/frontend
               run: npm run lint
+            # P1-W3 font-coverage gate: the Fraunces subset's cmap against the text the app
+            # actually renders — every string as AUTHORED and as its `text-transform` produces
+            # it, plus `unicode-range` == cmap in both directions. The P5 subset was cut from
+            # authored strings while `.section-heading` was uppercase, so 6 of 41 heading glyphs
+            # painted in Fraunces and the rest in Georgia at weight 800. Static, zero-dependency,
+            # lives here rather than in e2e because it needs no browser.
+            - name: font coverage (subset cmap vs rendered text)
+              working-directory: web/frontend
+              run: npm run test:font-coverage
 
     # ---------------------------------------------------------------- Lane 9
     # e2e — Playwright over the Vue SPA (ratification R6). Node-only after the
@@ -576,9 +585,11 @@ jobs:
               with:
                   path: ~/.cache/ms-playwright
                   key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
-            - name: "Install Playwright chromium (+ deps)"
+            # webkit too: P1 G3.4 (wordmark integrity) asserts in WebKit by construction — mark
+            # 4's opsz and bake-intrinsic defects do not reproduce in Chromium.
+            - name: "Install Playwright chromium + webkit (+ deps)"
               working-directory: web/frontend
-              run: npx playwright install --with-deps chromium
+              run: npx playwright install --with-deps chromium webkit
             - name: "Run the Playwright e2e suite"
               working-directory: web/frontend
               run: npx playwright test
@@ -592,15 +603,18 @@ jobs:
             - name: "Golden byte ceiling"
               working-directory: web/frontend
               run: npm run test:golden:bytes
-            # BUILT-DIST gates — two projects on one bundled preview build
-            # (playwright-throttle.config.ts, port 4188), both testIgnored from the default
+            # BUILT-DIST gates — three projects on ONE bundled preview build
+            # (playwright-throttle.config.ts, port 4188), all testIgnored from the default
             # config so they must run explicitly or they go dark:
             #   · throttled-void — the T4-W2 D3 recovery probe.
             #   · filter-census  — P1 G3.1/G3.2, the live-filter budget
             #     (src/pencil/config/filterBudget.ts) enforced as an EXACT-MATCH allowlist
             #     against the artifact that deploys, plus the forwards/both fill census.
             #     A new filter surface reds here even when an old one retires.
-            - name: "Run the built-dist gates (throttled-void + filter census)"
+            #   · wordmark-integrity — P1 G3.4, in WEBKIT: the five wordmarks' baked ink inside
+            #     its own box, and zero Georgia-fallback glyphs. Both defects are WebKit's, so
+            #     this project pins `browserName: webkit` and the job installs that bundle too.
+            - name: "Run the built-dist gates (throttled-void + filter census + wordmark)"
               working-directory: web/frontend
               run: npm run test:e2e:throttle
             # T4-W4 prod-shake proof (FAM-5): the DEV-gated FilterTuner /

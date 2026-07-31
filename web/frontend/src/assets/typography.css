@@ -248,13 +248,23 @@
      weight 800 is a deliberate pencil override (heavier than glass-ui's heading
      700 — the wax pressed hard). Color stays with the consuming template
      (text-muted-foreground / the crayon-* tone), never baked here. */
+  /* LOWERCASE (P1-W3, the G2.4 adjunct ruling **B2**). Uppercase here was a chimera: the
+     Fraunces subset was cut from the AUTHORED strings, so it carried `B D S` and no other
+     capital, and every drawer heading painted mostly Georgia at `font-weight: 800` — synthetic
+     bold on a fallback serif. Measured before: 6 of 41 heading glyphs were actually Fraunces
+     (14.6%); `NEW GAME` and `CHECK` were 0/7 and 0/5. Lowercase renders the display face the
+     design specifies AND speaks the wordmark's own register, which is lowercase already.
+     Tracking drops from `--type-tracking-caps` (0.1em, tuned for the letter-spacing caps need
+     and far too airy under x-height forms) to `--type-tracking-wide` (0.025em) — the eyebrow
+     still reads as a caption tier, without gapping. The subset is re-cut from RENDERED text in
+     the same commit; `scripts/check-font-coverage.mjs` is the standing guard. */
   .section-heading {
     font-family: var(--font-display);
     font-size: var(--type-subheading);
     line-height: var(--type-leading-heading);
     font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: var(--type-tracking-caps);
+    text-transform: lowercase;
+    letter-spacing: var(--type-tracking-wide);
     text-align: center;
   }
 

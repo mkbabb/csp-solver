@@ -675,6 +675,7 @@ function isRevealed(pos: number): boolean {
         :subgrid-size="subgridSize"
         :anim-state="gridAnimState"
         :progress="fillProgress"
+        :solve-success="solveState === 'solved'"
         @animation-complete="onGridAnimComplete"
       />
 
