@@ -8,12 +8,15 @@
  * stops its keyboard listener, leaving Sudoku's own peek path untouched. The peek gesture lives
  * in the shared `useAnswerKeyPeek` composable, only the rendered laminate is pencil.
  */
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useFutoshiki } from "./composables/useFutoshiki";
 import { prewarm } from "./solver/useSolver";
 import GameScene from "@games/shared/GameScene.vue";
 import FutoshikiBoard from "./FutoshikiBoard/FutoshikiBoard.vue";
-import ControlPanel from "./ControlPanel/ControlPanel.vue";
+import GameControlPanel, {
+  type ControlSection,
+} from "@games/shared/GameControlPanel.vue";
+import { futoshikiGame } from "./game";
 import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
 // Statically imported (not async): this whole FutoshikiGame scene is already a lazy chunk, so
 // the laminate rides that chunk, never the main bundle. (Sudoku is eager, so it keeps the
@@ -27,6 +30,11 @@ const props = defineProps<{ leaving?: boolean }>();
 const emit = defineEmits<{ (e: "erased"): void }>();
 
 const futoshiki = useFutoshiki();
+
+// The control sections come from the game declaration itself (the R2 contract's `options`) —
+// the same route thermo/killer/kenken take. The per-game ControlPanel wrapper that used to
+// relay them was a byte-for-byte second copy of this list; it is gone.
+const sections = computed<ControlSection[]>(() => futoshikiGame.options(futoshiki));
 
 // T4-WM §2 — the board ref lets the ControlPanel's Hint button reach the board's focused
 // cell (twin of SudokuGame's). undo/redo route straight to the composable, no ref needed.
@@ -142,18 +150,14 @@ function onCandidatePeekEnd() {
     </template>
 
     <template #controls="{ mobile }">
-      <ControlPanel
-        :board-size="futoshiki.pendingBoardSize.value"
-        :difficulty="futoshiki.difficulty.value"
+      <GameControlPanel
+        :sections="sections"
         :loading="futoshiki.loading.value"
         :is-dirty="futoshiki.isDirty.value"
-        :solve-state="futoshiki.solveState.value"
         :pencil-mode="futoshiki.pencilMode.value"
         :error-check-mode="futoshiki.errorCheckMode.value"
         :candidates-pinned="futoshiki.candidatesPinned.value"
         :mobile="mobile"
-        @update:board-size="futoshiki.pendingBoardSize.value = $event"
-        @update:difficulty="futoshiki.difficulty.value = $event"
         @update:pencil-mode="futoshiki.setPencilMode($event)"
         @update:error-check-mode="futoshiki.setErrorCheckMode($event)"
         @update:candidates-pinned="futoshiki.setCandidatesPinned($event)"

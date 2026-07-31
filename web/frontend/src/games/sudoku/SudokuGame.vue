@@ -7,12 +7,16 @@
  * default game rides the main chunk (ratified asymmetry, P4 #4). The peek gesture lives in the
  * shared `useAnswerKeyPeek` composable, only the rendered laminate is pencil.
  */
-import { defineAsyncComponent, onMounted, ref, watch } from "vue";
+import { computed, defineAsyncComponent, onMounted, ref, watch } from "vue";
 import { useSudoku } from "./composables/useSudoku";
 import { prewarm } from "./solver/useSolver";
 import GameScene from "@games/shared/GameScene.vue";
 import SudokuBoard from "./SudokuBoard/SudokuBoard.vue";
-import ControlPanel from "./ControlPanel/ControlPanel.vue";
+import GameControlPanel, {
+  type ControlSection,
+} from "@games/shared/GameControlPanel.vue";
+import { sizeOptions, difficultyOptions } from "./ControlPanel/constants";
+import type { Difficulty } from "./types";
 import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
 // Async + mounted-on-first-peek: keeps the laminate's ~227 LOC out of the main chunk (the W9
 // bundle gate) — same discipline as FilterTuner. The chunk loads on the first K/hold,
@@ -30,6 +34,36 @@ const props = defineProps<{ leaving?: boolean }>();
 const emit = defineEmits<{ (e: "erased"): void }>();
 
 const sudoku = useSudoku();
+
+// The control sections, built here from the game's own selector constants. The per-game
+// ControlPanel wrapper that used to relay them is gone — this is its entire surviving body.
+// NOT read off `sudokuGame.options` (the thermo/killer/kenken route): Sudoku is the EAGER
+// game, so `registry.ts` STATICALLY imports this scene (:24) as well as `./game` (:18).
+// Importing `./game` here closes the cycle scene → game → registry → scene, and registry's
+// module body evaluates `gameRegistry = { sudoku: sudokuGame }` while that const is still in
+// its TDZ: the app dies at boot with "Cannot access 'sudokuGame' before initialization"
+// (reproduced in-browser, Lane D ship 3). Futoshiki is lazy and has no such cycle, so its
+// twin scene DOES read its declaration.
+// The cycle forces a second copy; it does not excuse an unguarded one. `game.test.ts` mounts
+// this scene and requires the list below to equal `sudokuGame.options(model)` in shape AND in
+// what each onChange moves — edit one side alone and that test reds.
+const sections = computed<ControlSection[]>(() => [
+  {
+    key: "size",
+    heading: "Size",
+    ariaLabel: "Size",
+    options: sizeOptions,
+    selected: sudoku.pendingSize.value,
+    onChange: (v) => (sudoku.pendingSize.value = v as number),
+  },
+  {
+    key: "difficulty",
+    heading: "Difficulty",
+    options: difficultyOptions,
+    selected: sudoku.difficulty.value,
+    onChange: (v) => (sudoku.difficulty.value = v as Difficulty),
+  },
+]);
 
 // T4-WM §2 — the board ref lets the ControlPanel's Hint button reach the board's focused
 // cell (the panel is the board's sibling, so it can't read focusedPos directly). undo/redo
@@ -152,18 +186,14 @@ function onCandidatePeekEnd() {
     </template>
 
     <template #controls="{ mobile }">
-      <ControlPanel
-        :size="sudoku.pendingSize.value"
-        :difficulty="sudoku.difficulty.value"
+      <GameControlPanel
+        :sections="sections"
         :loading="sudoku.loading.value"
         :is-dirty="sudoku.isDirty.value"
-        :solve-state="sudoku.solveState.value"
         :pencil-mode="sudoku.pencilMode.value"
         :error-check-mode="sudoku.errorCheckMode.value"
         :candidates-pinned="sudoku.candidatesPinned.value"
         :mobile="mobile"
-        @update:size="sudoku.pendingSize.value = $event"
-        @update:difficulty="sudoku.difficulty.value = $event"
         @update:pencil-mode="sudoku.setPencilMode($event)"
         @update:error-check-mode="sudoku.setErrorCheckMode($event)"
         @update:candidates-pinned="sudoku.setCandidatesPinned($event)"
