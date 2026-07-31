@@ -24,7 +24,13 @@ const props = defineProps<{
    *  the zone's `aria-labelledby` target — the visible tape IS the accessible name. */
   anchor?: "above" | "center" | "tag";
   /** Persistent on coarse pointers (UI-4/UI-5): hover doesn't exist for touch, so the
-   *  tape stays laid down there; fine pointers keep the hover/focus reveal untouched. */
+   *  tape stays laid down there; fine pointers keep the hover/focus reveal untouched.
+   *  Like `anchor="tag"`, a persistent tape DROPS `role="tooltip"` (T4-P1, F1 order 4): a
+   *  tooltip is a transient description summoned by hover or focus and dismissable by Esc,
+   *  and the `.washi-persistent` coarse arm below pins this one at `opacity: 1` forever.
+   *  A name that never hides is a LABEL — and the peek surface it names is a bare `<div>`
+   *  with no accessible name at all, so the honest reading is the visible one: the tape is
+   *  the text of the thing it sits on, not a popup about it. */
   persistent?: boolean;
   /** A longer note (T4-W3 share-fail): let the tape wrap to a couple of lines within a
    *  capped width instead of a single nowrap strip that would overrun the viewport edge
@@ -63,7 +69,7 @@ const geom = computed(() => {
       'washi-wide': wide,
     }"
     :style="{ clipPath: geom.clip, '--washi-tilt': geom.tilt }"
-    :role="anchor === 'tag' ? undefined : 'tooltip'"
+    :role="anchor === 'tag' || persistent ? undefined : 'tooltip'"
     >{{ text }}</span
   >
 </template>
