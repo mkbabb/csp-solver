@@ -34,7 +34,10 @@ function scribbleSeed(val: string | number): number {
 </script>
 
 <template>
-  <div :class="mobile ? 'options-row' : 'flex flex-col items-center md:items-stretch'">
+  <div
+    class="ctrl-options"
+    :class="mobile ? 'options-row' : 'flex flex-col items-center md:items-stretch'"
+  >
     <button
       v-for="opt in options"
       :key="opt.value"
@@ -109,10 +112,22 @@ function scribbleSeed(val: string | number): number {
   }
 }
 
+/* CHIP SEPARATION (T4-P1, F1 order 1) — ONE declaration, both axes.
+   Neighbouring chips are neighbouring TAP TARGETS and neighbouring WORDS, and they had
+   neither seam: the coarse row sat at 4px (`gap: 0.25rem`) and the column at **0** — two
+   44px coarse targets sharing an edge, with nothing an eye or a thumb can find between them.
+   0.45rem (7.2px) clears the ≥6px floor everywhere with the same number. The chip's own
+   `padding-bottom: 6px` is NOT separation and never was — it is the scribble underline's
+   room, inside the box; the seam has to be outside it.
+   Gated: `e2e/visual-regression.spec.ts` — "option chips keep their separation", every
+   group, both axes, with an injected zero-gap negative control. */
+.ctrl-options {
+  gap: 0.45rem;
+}
+
 .options-row {
   display: flex;
   justify-content: center;
-  gap: 0.25rem;
   padding: 0.25rem 0;
 }
 </style>

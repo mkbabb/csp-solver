@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, devices, type Page } from "@playwright/test";
 
 // SVG-filter / theme / grid-boil DOM-contract register for the default (Sudoku) scene.
 //
@@ -465,7 +465,115 @@ test("the Deal die is not crushed: the commit verb's box fits its own content", 
   expect(geom!.btn.h).toBeGreaterThanOrEqual(geom!.die!.h + geom!.labelH);
 });
 
-// ── Test 9: The Bloom's warp rest pose (T3-W13 §2) ──────────────────
+// ── Test 9: chip separation — the seam between adjacent option chips ─
+
+/** The neighbour gap between adjacent `.ctrl-btn` boxes, per group, along the group's OWN
+ *  axis (a row separates in x, a column in y). Returned per group so a failure names which
+ *  one closed. Groups of one contribute no pair and are reported as such, never as a pass. */
+const CHIP_SEPARATION = () => {
+  const panel = document.querySelector(
+    ".controls-card .control-panel-wrap, .mobile-board-width .control-panel-wrap",
+  );
+  const vis = (el: Element) => el.getClientRects().length > 0;
+  const out: { axis: string | null; n: number; gap: number | null; first: string }[] =
+    [];
+  const parents = new Set(
+    [...(panel?.querySelectorAll(".ctrl-btn") ?? [])]
+      .filter(vis)
+      .map((b) => b.parentElement!),
+  );
+  for (const p of parents) {
+    const kids = [...p.children].filter(
+      (k) => k.classList.contains("ctrl-btn") && vis(k),
+    );
+    const first = kids[0]?.textContent?.trim() ?? "";
+    if (kids.length < 2) {
+      out.push({ axis: null, n: kids.length, gap: null, first });
+      continue;
+    }
+    const r = kids.map((k) => k.getBoundingClientRect());
+    const axis =
+      Math.abs(r[1].left - r[0].left) >= Math.abs(r[1].top - r[0].top)
+        ? "row"
+        : "column";
+    let gap = Infinity;
+    for (let i = 1; i < r.length; i++) {
+      gap = Math.min(
+        gap,
+        axis === "row" ? r[i].left - r[i - 1].right : r[i].top - r[i - 1].bottom,
+      );
+    }
+    out.push({ axis, n: kids.length, gap: +gap.toFixed(2), first });
+  }
+  return out;
+};
+
+test("option chips keep their separation: ≥6px between neighbours, both axes", async ({
+  page,
+  browser,
+}) => {
+  // The floor is F1's own, and it was failing in the SHIPPED estate on both axes at once:
+  // the coarse row sat at 4px (`.options-row { gap: 0.25rem }`) and the rail column at
+  // exactly **0** — two 44px coarse targets sharing an edge, no seam for an eye or a thumb.
+  // The pass-2 diff that noticed it LOOSENED the guarding font floor in the same commit
+  // instead of adding this row; the floor below is left at its authored 19 and this row is
+  // the addition it should have been.
+  const FLOOR = 6;
+
+  const check = async (p: Page, label: string) => {
+    const groups = await p.evaluate(CHIP_SEPARATION);
+    // The card must actually have chip groups — an empty probe passes vacuously otherwise.
+    const paired = groups.filter((g) => g.gap !== null);
+    expect(
+      paired.length,
+      `${label}: no paired chip group found`,
+    ).toBeGreaterThanOrEqual(3);
+    for (const g of paired) {
+      expect(
+        g.gap!,
+        `${label}: ${g.axis} group "${g.first}" (n=${g.n})`,
+      ).toBeGreaterThanOrEqual(FLOOR);
+    }
+    return Math.min(...paired.map((g) => g.gap!));
+  };
+
+  // ── the rail column (default fine 1280 viewport) ──
+  await loadApp(page);
+  const colGap = await check(page, "rail column");
+
+  // NEGATIVE CONTROL, in the same run: collapse the seam and the probe must SEE it. A gate
+  // that cannot go red is a decoration (the GATE-1 pattern, adopted estate-wide this pass).
+  await page.addStyleTag({ content: ".ctrl-options { gap: 0 !important }" });
+  const collapsed = await page.evaluate(CHIP_SEPARATION);
+  const worst = Math.min(...collapsed.filter((g) => g.gap !== null).map((g) => g.gap!));
+  expect(
+    worst,
+    "negative control: the collapsed seam must fall under the floor",
+  ).toBeLessThan(FLOOR);
+  expect(colGap).toBeGreaterThan(worst);
+
+  // ── the coarse row (a phone: the other axis, where a thumb is the instrument) ──
+  const ctx = await browser.newContext({
+    ...devices["iPhone 13"],
+    baseURL: test.info().project.use.baseURL,
+  });
+  const phone = await ctx.newPage();
+  try {
+    await phone.goto("./");
+    await phone.waitForSelector("svg.handwritten-logo", { timeout: 15000 });
+    await phone.waitForSelector(".ctrl-btn", { timeout: 15000 });
+    // The regime witness: a number taken at `pointer: fine` on phone geometry is a different
+    // number (the pass-1 harness). Refuse it rather than bank it.
+    expect(await phone.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(
+      true,
+    );
+    await check(phone, "coarse row");
+  } finally {
+    await ctx.close();
+  }
+});
+
+// ── Test 10: The Bloom's warp rest pose (T3-W13 §2) ─────────────────
 
 test("toggle warp rest pose: wrung into the page, no carousel travel", async ({
   page,
