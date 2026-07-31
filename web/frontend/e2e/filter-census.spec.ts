@@ -34,10 +34,12 @@ import {
  *  · A surface that turned its own filter off structurally does NOT — HandDrawnGrid's four
  *    live-fallback poses go `display: none` the moment the bitmaps land, and if a bake ever
  *    fails they come back and red this gate, which is the behaviour you want.
- *  · Ancestor display is deliberately NOT consulted, so the census is VIEWPORT-STABLE: both
- *    always-mounted control-panel twins are counted at every width (r1 §7 — only one is ever
- *    painted, but which one flips with the regime), so one allowlist holds for desktop and
- *    mobile alike instead of two budgets that disagree.
+ *  · Ancestor display is deliberately NOT consulted — a hidden ancestor does not stop a
+ *    descendant filter from rastering. That used to make the census viewport-stable by
+ *    accident: both control-panel twins were always mounted, so the unpainted one's filters
+ *    counted at every width. Since the P1-W4 panel-twin `v-if` only the regime's own card is
+ *    in the DOM, and `filterBudget.ts` states the ROW-regime population — the regime this
+ *    config runs at (1280×800), and the same size population as the mobile one.
  *
  * `Element.checkVisibility()` was tried first and is NOT usable here: it returns `true` for a
  * `display: none` SVG `<g>` in Chromium 141, which would have quietly counted the retired grid

@@ -16,9 +16,14 @@
  * Counting rule (the spec states it in full): own computed `filter` ≠ none AND own computed
  * `display` ≠ none. Opacity-0 pose siblings count — they raster, which is the whole mechanism.
  * A surface that retired its own filter structurally does not (HandDrawnGrid's four
- * `.baked-hidden` live-fallback poses, once the bitmaps land). Ancestor display is deliberately
- * not consulted, so both always-mounted control-panel twins count at every width and one
- * allowlist serves the desktop and mobile regimes alike.
+ * `.baked-hidden` live-fallback poses, once the bitmaps land).
+ *
+ * REGIME (P1-W4): the counts below are the ROW regime's, ≥1024 — the width every config in this
+ * repo runs at (1280×800). The control-panel twins used to be always-mounted, so the hidden
+ * twin's filters counted at every width and one allowlist served both regimes; the panel-twin
+ * `v-if` (GameScene, off `useRowRegime`) now mounts one card, so the two rows that were doubled
+ * by that duplication are halved and named as such. Below 1024 the population is the same size —
+ * the same one card, the mobile arm of it — so nothing about the invariant weakens.
  */
 
 export interface FilterBudgetRow {
@@ -51,11 +56,12 @@ const PER_CELL: readonly FilterBudgetRow[] = [];
 const BEAT_DRIVEN: readonly FilterBudgetRow[] = [
   {
     selector: ".boil-divider-wrap g.boil-pose",
-    count: 8,
+    count: 4,
     filter: "url(#grain-static)",
-    // 4 poses × the two always-mounted control-panel twins (desktop XOR painted, both in the
-    // DOM). FROZEN on Apple at `fb15253d` — `LIVE_FILTER_FROZEN` collapses the frame count to
-    // 1, so each pose rasters ONCE and the beat never re-executes the chain.
+    // 4 poses × the ONE control-panel twin the regime mounts (was 8 — both twins were in the
+    // DOM until the P1-W4 panel-twin `v-if`; the hidden twin's four poses were exactly half
+    // this row). FROZEN on Apple at `fb15253d` — `LIVE_FILTER_FROZEN` collapses the frame count
+    // to 1, so each pose rasters ONCE and the beat never re-executes the chain.
     // TRIGGER — this row retires on either: (a) a successful bake retry of the thin-line grain
     // (the 0.809 re-derived above the 0.98 floor), or (b) a Chromium red here, which would mean
     // the freeze leaked out of the Apple gate.
@@ -95,10 +101,10 @@ const TRANSIENT: readonly FilterBudgetRow[] = [
   },
   {
     selector: "button.icon-btn svg.sparkle-icon",
-    count: 2,
+    count: 1,
     filter: "drop-shadow",
     reason:
-      "built-in interpolable drop-shadow (not a reference filter) — GPU path, benign (r3 §3.2)",
+      "the Solve button's sparkle, one per mounted panel (was 2 — the P1-W4 twin `v-if`); built-in interpolable drop-shadow, not a reference filter — GPU path, benign (r3 §3.2)",
   },
 ];
 
@@ -116,8 +122,10 @@ export const FILTER_BUDGET: readonly FilterBudgetRow[] = [
 ];
 
 /**
- * The counted total, and the ceiling the charter committed to: **≤ 14** in the default board
- * scene, against 98–118 measured on the base build (r1 §5 read 99–123 across board states).
+ * The counted total (9 after the P1-W4 twin `v-if`; 14 before it), and the ceiling the charter
+ * committed to: **≤ 14** in the default board scene, against 98–118 measured on the base build
+ * (r1 §5 read 99–123 across board states). The ceiling is the charter's number and does not
+ * follow the total down — the exact-match rows are what red a new surface.
  */
 export const FILTER_BUDGET_TOTAL = FILTER_BUDGET.reduce((n, r) => n + r.count, 0);
 export const FILTER_BUDGET_CEILING = 14;

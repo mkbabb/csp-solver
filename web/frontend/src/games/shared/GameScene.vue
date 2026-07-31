@@ -2,12 +2,12 @@
 /**
  * GameScene — the game-agnostic scene scaffold (T4-W11 R4). Both scenes (SudokuGame,
  * FutoshikiGame) shared the same board+controls layout, the drawer registration, and the
- * doubled controls card (stacked <lg + row-regime ≥lg). That scaffold — the `.app-layout`
- * row, the `.board-peek-host` (with the pull-`DrawerTab`), the two `HandDrawnOutline`
- * controls cards, the drawer's scene registration + Esc-close wiring, and the shared
- * `scene.css` (the class-name contract) — lives HERE, once. The game supplies its board +
- * answer-key laminate (`#board` slot) and its control panel (`#controls` scoped slot,
- * rendered in both cards, told which regime by `mobile`).
+ * controls card in its two regimes (stacked <lg + row-regime ≥lg). That scaffold — the
+ * `.app-layout` row, the `.board-peek-host` (with the pull-`DrawerTab`), the `HandDrawnOutline`
+ * controls card of the live regime, the drawer's scene registration + Esc-close wiring, and the
+ * shared `scene.css` (the class-name contract) — lives HERE, once. The game supplies its board +
+ * answer-key laminate (`#board` slot) and its control panel (`#controls` scoped slot, rendered
+ * in whichever card the regime mounts, told which one by `mobile`).
  *
  * The drawer GLIDE ENGINE is untouched (it lives in useControlsDrawer + scene.css); this
  * shell only plumbs the refs the engine reads (host/rail/panel/tab) and registers them.
@@ -20,6 +20,7 @@ import {
   useControlsDrawer,
 } from "@games/shared/useControlsDrawer";
 import { useLiveFace } from "@games/shared/useLiveFace";
+import { useRowRegime } from "@games/shared/useCoarsePointer";
 
 defineProps<{ leaving?: boolean }>();
 
@@ -36,6 +37,15 @@ const { faceTarget } = useLiveFace();
 // rides the board's glide) toggles; the shared composable owns state, persistence, the
 // ~480ms FLIP glide, and focus. Esc closes from within (the rail's keydown).
 const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer();
+
+// ── ONE control-panel twin, never both (P1-W4, the banked P-W3 conditional) ──────────────
+// Its trigger fired: themeToggle came in at 83.80 against the gates.json ≥85 floor, and the
+// two twins were the last always-mounted duplicate on the theme swap's recalc path — every
+// control, icon and pose in the unpainted card is still style-resolved and still rasters (the
+// filter census counted the hidden twin's 4 divider poses at every width, which is the proof).
+// The Tailwind classes below STAY: they are the synchronous regime (a v-if flushes on the next
+// tick) and they define the same 1024 boundary this ref reads, so no frame can show neither.
+const rowRegime = useRowRegime();
 const peekHost = ref<HTMLElement | null>(null);
 const railEl = ref<HTMLElement | null>(null);
 const panelEl = ref<HTMLElement | null>(null);
@@ -77,7 +87,7 @@ onUnmounted(() => unregisterDrawer?.());
     </Teleport>
 
     <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
-    <div class="mobile-board-width lg:hidden">
+    <div v-if="!rowRegime" class="mobile-board-width lg:hidden">
       <HandDrawnOutline :stroke-width="3">
         <div class="bg-card rounded-lg px-2 py-1.5">
           <slot name="controls" :mobile="true" />
@@ -91,6 +101,7 @@ onUnmounted(() => unregisterDrawer?.());
          visibility:hidden at rest (no invisible tab stops, W11 UI-6); Esc from within
          closes and returns focus to the tab. -->
     <div
+      v-if="rowRegime"
       id="controls-drawer"
       ref="railEl"
       class="scene-controls hidden lg:flex lg:flex-col lg:items-start"

@@ -1,5 +1,6 @@
-import { computed, ref, type Ref } from "vue";
+import { computed, ref } from "vue";
 
+import { mediaRef, useRowRegime } from "./useCoarsePointer";
 import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
 
 /**
@@ -83,19 +84,11 @@ function persist(open: boolean) {
 const drawerOpen = ref(readStored());
 const drawerPhase = ref<DrawerPhase>("idle");
 
-// Module-level MediaQueryList refs — the useCoarsePointer pattern (one shared listener).
-function mediaRef(query: string, initial: boolean): Ref<boolean> {
-  const r = ref(initial);
-  if (hasDom && typeof window.matchMedia === "function") {
-    const mq = window.matchMedia(query);
-    r.value = mq.matches;
-    mq.addEventListener?.("change", (e) => {
-      r.value = e.matches;
-    });
-  }
-  return r;
-}
-const rowRegime = mediaRef("(min-width: 1024px)", false);
+// Module-level MediaQueryList refs — one shared listener per query. `mediaRef` and the
+// row-regime ref itself live in useCoarsePointer.ts: GameScene mounts ONE control-panel twin
+// off that same ref (P1-W4), so the regime this file's §6 rule gates on and the regime the
+// DOM carries are the one ref, not two readings of the same width.
+const rowRegime = useRowRegime();
 const wideMargin = mediaRef("(min-width: 1360px)", true);
 const reducedMotion = mediaRef("(prefers-reduced-motion: reduce)", false);
 
