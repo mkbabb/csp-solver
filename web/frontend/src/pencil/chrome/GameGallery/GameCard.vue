@@ -57,6 +57,10 @@ const props = defineProps<{
    *  (a one-shot the gallery sequences, staggered outward from center). 1 = settled/no-deal
    *  (the center card folds in, it never deals; deep-link + PRM land at 1 with no motion). */
   dealReveal?: number;
+  /** THE CROSS-GAME TRUTH (T4-P1 F4) — supplied only for a card whose ledger row says a board
+   *  is waiting: the sub-line then reports what is there instead of the range of sizes on
+   *  offer. Absent → the range line, byte-unchanged. Every card tells you the most it can. */
+  subline?: string;
 }>();
 
 const emit = defineEmits<{
@@ -83,6 +87,7 @@ const nameViewBox = computed(() => {
 });
 
 const rangeLine = computed(() => {
+  if (props.subline) return props.subline;
   const { label, levels } = props.card.range;
   return levels.length ? `${label} · ${levels.join(" / ")}` : label;
 });

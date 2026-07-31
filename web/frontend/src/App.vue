@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ref,
+  watch,
   defineAsyncComponent,
   h,
   nextTick,
@@ -24,6 +25,13 @@ import { useGameGallery } from "@games/shared/useGameGallery";
 import { useBoardDirty } from "@games/shared/useDirtyBoard";
 import { setLiveFaceTarget } from "@games/shared/useLiveFace";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
+import {
+  backfillLedger,
+  dealStaged,
+  publishMountedGame,
+  stageHandoff,
+  useStagedLedger,
+} from "@games/shared/useStagingBridge";
 import { GAMES } from "@games/registry";
 
 // T4-WM §1 keyboard-avoidance (lane C): one document-scoped install covers both games — it
@@ -351,6 +359,60 @@ function onGalleryCancel() {
   unfoldToBoard(() => cancel()); // unfold back to the entered-from game (no swap, no seam)
 }
 
+// ── THE STAGING BRIDGE (T4-P1 F4) ──────────────────────────────────────────────────────
+// App names the MOUNTED game, because App already owns `?game=` and the page-turn seam — the
+// bridge transports, it never parses a second truth. `scene` IS the mounted id (it flips at the
+// seam, and synchronously for the gallery's cut), and `immediate` covers BOOT, deep links, and
+// the `?view=gallery` boot path — every entry the pass-1 `enterGallery`-only publish missed.
+watch(scene, (id) => publishMountedGame(id), { immediate: true });
+
+// COLD-START TRUTH (T4-P1 F4): seed the ledger from the five games' own saved boards, ONCE, at
+// boot. Without it the whole installed base opened the picker to `start` on games it had boards
+// for, and four of five cards showed a registry default dressed as saved settings. At boot and
+// not on gallery open because `?view=gallery` is a real entry — a deep link would otherwise
+// render the deck before the truth existed. Five `getItem` + `JSON.parse` of the boards already
+// on disk; missing rows only, so the mounted game's live publish always wins.
+backfillLedger(GAMES);
+
+// The cross-game ledger, id-keyed: what each game is set to, whether a board waits there, and
+// whether there is work on it. The mounted game writes its own row as it goes; the other four
+// come from the cold-start backfill below, so the picker reads ONE truth for all five cards
+// instead of dressing registry defaults as saved settings.
+const gallerySaved = useStagedLedger();
+
+// A deal is in flight — the band's verbs go inert until it lands (the double-deal guard the
+// pass-1 prototype documented on two components and never bound).
+const dealBusy = ref(false);
+
+/** THE FUSED TRANSACTION: pick a game AND its settings, deal once. Same game → the mounted
+ *  state's own `deal()` through the bridge (no remount, no second solver dispatch). Different
+ *  game → an id-keyed one-shot the incoming `useGameState` consumes BEFORE its init, so the
+ *  staged pair seeds that mount's single deal. Both paths unfold the picker exactly as a select
+ *  does — one choreography, no new durations. */
+async function onGalleryDeal(payload: {
+  id: string;
+  size: number | string;
+  difficulty: number | string;
+}) {
+  const pair = { size: Number(payload.size), difficulty: String(payload.difficulty) };
+  const sameGame = payload.id === game.value;
+  if (!sameGame) stageHandoff(payload.id, pair);
+  dealBusy.value = true;
+  unfoldToBoard(() => {
+    select();
+    setGame(payload.id, { cut: true });
+  });
+  try {
+    // The handoff path deals inside the incoming mount; only the same-game path has a live
+    // state to drive from here. A `false` return means NO game was mounted to deal into — the
+    // arm would otherwise be dropped on the floor as a silent success, so it is re-staged and
+    // the incoming mount consumes it exactly as a cross-game deal would.
+    if (sameGame && !(await dealStaged(pair))) stageHandoff(payload.id, pair);
+  } finally {
+    dealBusy.value = false;
+  }
+}
+
 // ENTRY (§ENTRY): keyboard `g` opens the gallery from the playing view (folding the board
 // into the center card). Pointing the wordmark at `enterGallery` + retiring the dropdown is
 // Wave D; this entry seam is additive and dropdown-agnostic, guarded so a `g` typed into a
@@ -429,9 +491,12 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
         :current-id="game"
         :coarse="coarse"
         :animate-entry="entryAnimated"
+        :saved="gallerySaved"
+        :busy="dealBusy"
         @snap="onGallerySnap"
         @select="onGallerySelect"
         @cancel="onGalleryCancel"
+        @deal="onGalleryDeal"
         @live-face="onLiveFace"
       />
     </main>

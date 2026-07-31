@@ -18,6 +18,35 @@ export interface GalleryCard {
   glyph?: Component;
   /** the size/difficulty sub-line, in the game's own vocabulary. */
   range: { label: string; levels: string[] };
+  /** what the staging band offers for this card — the structural twin of the registry's
+   *  `CardStaging` (the same `GalleryCard` trick: pencil declares the shape it consumes and
+   *  the richer registry row assigns straight in). */
+  staging: GalleryStaging;
   /** the static, non-interactive poster face (a read-only mini-board). */
   poster: () => Promise<Component>;
+}
+
+/** One staging axis, as presentation data. */
+interface GalleryAxis {
+  label: string;
+  options: { value: number | string; label: string }[];
+  default: number | string;
+}
+
+export interface GalleryStaging {
+  size: GalleryAxis;
+  difficulty: GalleryAxis;
+}
+
+/** THE CROSS-GAME TRUTH (T4-P1 F4): what the app knows about each card's saved board. App
+ *  hands this down id-keyed; a card with NO entry is a game that has never been played, and
+ *  the band says so ("start") rather than dressing a registry default as your saved settings. */
+export interface GallerySaved {
+  size: number | string;
+  difficulty: number | string;
+  /** a restorable board exists — the band's `resume` vs `start` verb. */
+  board: boolean;
+  /** the user has written on it — the ONLY thing a deal can destroy, and therefore the only
+   *  thing that arms the guard ribbon. Givens are not work. */
+  userMoves: boolean;
 }

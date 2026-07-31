@@ -41,8 +41,9 @@ import { heldFrameCount } from "@mkbabb/pencil-boil";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import GameCard from "./GameCard.vue";
+import StagingBand from "./StagingBand.vue";
 import { useCarouselGlide } from "./useCarouselGlide";
-import type { GalleryCard } from "./types";
+import type { GalleryCard, GallerySaved } from "./types";
 
 const props = defineProps<{
   cards: readonly GalleryCard[];
@@ -59,12 +60,27 @@ const props = defineProps<{
   /** Entry was interactive (the wordmark / `g` fold), not a `?view=gallery` deep-link boot —
    *  so BEAT 2 "the deal" (flanks draw IN) plays. Deep-link + PRM land the cards settled. */
   animateEntry?: boolean;
+  /** THE CROSS-GAME TRUTH (T4-P1 F4) — id-keyed: the settings each game was last left at,
+   *  whether a board is saved there, and whether there is work on it. App assembles it from the
+   *  staging bridge's ledger (live row for the mounted game, cold-start backfill for the rest);
+   *  a card with no entry is a game never played, and the band reads `start` instead of dressing
+   *  a registry default as the board you left. */
+  saved?: Record<string, GallerySaved>;
+  /** A deal is in flight — the band's verbs go inert (double-deal guard). App PASSES this;
+   *  the pass-1 prototype declared the same prop and never bound it. */
+  busy?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: "snap", index: number): void;
   (e: "select", id: string): void;
   (e: "cancel"): void;
+  /** THE SECOND VERB (T4-P1 F4): deal THIS game a fresh board at THESE staged settings — the
+   *  fused transaction. `select` stays exactly what it was (visit: restore what was there). */
+  (
+    e: "deal",
+    payload: { id: string; size: number | string; difficulty: number | string },
+  ): void;
   /** THE LIVE CENTER FACE (Wave C2): the current-game centered card's live-face mount element
    *  (or null when it stops being live). Relayed straight from the card; App teleports the ONE
    *  board's subtree into it. A DOM element crosses up — pencil imports nothing from games. */
@@ -83,6 +99,11 @@ const activeIndex = ref(clamp(props.snappedIndex));
 
 // The mid-game guard: the index of the card whose leave/keep ribbon is armed (null = none).
 const guardIndex = ref<number | null>(null);
+// WHICH VERB the ribbon is confirming (T4-P1 F4). ONE ribbon, two intents: `select` is Wave D's
+// switch verbatim, `deal` routes the picker's destructive verb through the SAME confirmation
+// instead of minting a second idiom. A deal on a board with work used to announce only the new
+// board and abandon the old marks silently; now the ribbon speaks first, always.
+const guardIntent = ref<"select" | "deal">("select");
 function dismissGuard() {
   guardIndex.value = null;
 }
@@ -181,7 +202,31 @@ onUnmounted(stopDeal);
 const liveText = ref("");
 function announce(i: number) {
   const card = props.cards[i];
-  if (card) liveText.value = `${card.name}, ${i + 1} of ${count.value}`;
+  if (!card) return;
+  // The band's whole content swaps with the snap, so the announcement carries it: the card's
+  // position, the staged pair, and what is waiting there. One live region for the deck AND its
+  // order slip — a second would talk over this one.
+  liveText.value = `${card.name}, ${i + 1} of ${count.value}. ${stagedLine(card)}`;
+}
+/** The staged pair + board state for a card, in words. */
+function stagedLine(card: GalleryCard): string {
+  const pair = picks[card.id];
+  const saved = props.saved?.[card.id];
+  const size = pair?.size ?? saved?.size ?? card.staging.size.default;
+  const diff = pair?.difficulty ?? saved?.difficulty ?? card.staging.difficulty.default;
+  const state = !saved?.board
+    ? "new game"
+    : saved.userMoves
+      ? "in progress"
+      : "board dealt";
+  return `${labelOf(card.staging.size.options, size)} ${labelOf(
+    card.staging.difficulty.options,
+    diff,
+  ).toLowerCase()}, ${state}`;
+}
+function announceStaged() {
+  const card = activeCard.value;
+  if (card) liveText.value = stagedLine(card);
 }
 
 // ── The glide (glass-curve FLIP for keyboard/button; native snap for touch) ──
@@ -224,17 +269,138 @@ function attemptSelect() {
   const card = props.cards[activeIndex.value];
   if (!card) return;
   if (props.dirty && props.currentId != null && card.id !== props.currentId) {
+    guardIntent.value = "select";
     guardIndex.value = activeIndex.value; // arm the ribbon on the chosen card
     return;
   }
   emit("select", card.id);
 }
-/** The ribbon's Leave — abandon the marked board, proceed with the switch. */
+
+// ── THE STAGING BAND's state (T4-P1 F4) ──
+// The picked pair per card, held HERE (the band is a renderer). Unpicked cards fall back to the
+// cross-game ledger — what that game was actually left at — and only then to the registry
+// default, so the chips are never a fiction. Seeding is READ-ONLY (a computed that mutates
+// nothing), so no render-time write, no feedback loop.
+const picks = reactive<
+  Record<string, { size: number | string; difficulty: number | string }>
+>({});
+const activeCard = computed(() => props.cards[activeIndex.value] ?? null);
+const activeSaved = computed(() =>
+  activeCard.value ? (props.saved?.[activeCard.value.id] ?? null) : null,
+);
+const activePick = computed(() => {
+  const card = activeCard.value;
+  if (!card) return null;
+  const picked = picks[card.id];
+  const saved = activeSaved.value;
+  return {
+    size: picked?.size ?? saved?.size ?? card.staging.size.default,
+    difficulty:
+      picked?.difficulty ?? saved?.difficulty ?? card.staging.difficulty.default,
+  };
+});
+
+/** THE SAFE VERB reports the state it acts on: a board is `resume`d, a game with none is
+ *  `start`ed. `start` is the branch that HONOURS the staged pair — with nothing to restore,
+ *  the only truthful "safe" act is dealing the board the chips describe. */
+const safeVerb = computed<"resume" | "start">(() =>
+  activeSaved.value?.board ? "resume" : "start",
+);
+
+/** The staged pair diverges from the saved board's. `resume` cannot restore a 4×4 easy board
+ *  the chips are asking for, so the divergence is PRINTED on the verb before the click and the
+ *  chips snap to the saved pair on it — the pass-2 defect was that neither happened and the
+ *  pair was silently dropped. */
+const savedPairLabels = computed(() => {
+  const card = activeCard.value;
+  const saved = activeSaved.value;
+  const pair = activePick.value;
+  if (!card || !saved?.board || !pair) return null;
+  if (saved.size === pair.size && saved.difficulty === pair.difficulty) return null;
+  return `${labelOf(card.staging.size.options, saved.size)} ${labelOf(
+    card.staging.difficulty.options,
+    saved.difficulty,
+  ).toLowerCase()}`;
+});
+
+function labelOf(
+  options: readonly { value: number | string; label: string }[],
+  value: number | string,
+): string {
+  return options.find((o) => o.value === value)?.label ?? String(value);
+}
+
+/** A card whose ledger row holds a board reports it on its own sub-line — the flanks carry the
+ *  truth too, so the deck answers "where did I leave off?" without a select. `in progress` is
+ *  reserved for a board with USER MOVES on it; a dealt, untouched board says so. */
+function sublineFor(card: GalleryCard): string | undefined {
+  const s = props.saved?.[card.id];
+  if (!s?.board) return undefined;
+  const state = s.userMoves ? "in progress" : "dealt";
+  return `${labelOf(card.staging.size.options, s.size)} ${labelOf(
+    card.staging.difficulty.options,
+    s.difficulty,
+  ).toLowerCase()} · ${state}`;
+}
+
+function onPick(axis: "size" | "difficulty", value: number | string) {
+  const card = activeCard.value;
+  const pair = activePick.value;
+  if (!card || !pair) return;
+  picks[card.id] = { ...pair, [axis]: value };
+  announceStaged();
+}
+
+/** THE SAFE VERB's act. `start` deals the staged pair (there is no board to lose). `resume`
+ *  restores the saved board — and SNAPS the chips onto it, so the pair the user is left
+ *  looking at is the pair they are actually getting. */
+function onSafeVerb() {
+  const card = activeCard.value;
+  if (!card || props.busy || guardIndex.value !== null) return;
+  if (safeVerb.value === "start") {
+    attemptDeal();
+    return;
+  }
+  const saved = activeSaved.value;
+  if (saved) picks[card.id] = { size: saved.size, difficulty: saved.difficulty };
+  attemptSelect();
+}
+
+/** THE DEAL VERB. Destructive only where there is work to destroy — and the work in question
+ *  belongs to the TARGET card, not to whatever board happens to be mounted. Pass 2 read
+ *  `props.dirty` (the MOUNTED board), so dealing a DIFFERENT game consulted the wrong ledger
+ *  entirely and could wipe a saved board it never asked about, one `d` keystroke deep. */
+function attemptDeal() {
+  const card = activeCard.value;
+  const pair = activePick.value;
+  if (!card || !pair || props.busy || guardIndex.value !== null) return;
+  const target = props.saved?.[card.id];
+  // The `||` arm is the no-ledger fallback: with no row for the target, the mounted board's own
+  // dirty signal still guards a deal onto itself. It can only ever ADD a confirmation.
+  const destroysWork =
+    (target?.board === true && target.userMoves) ||
+    (props.dirty && card.id === props.currentId);
+  if (destroysWork) {
+    guardIntent.value = "deal";
+    guardIndex.value = activeIndex.value;
+    return;
+  }
+  emit("deal", { id: card.id, ...pair });
+}
+
+/** The ribbon's confirm — it resolves whichever verb armed it. */
 function guardLeave() {
   const i = guardIndex.value;
+  const intent = guardIntent.value;
   guardIndex.value = null;
   const card = i != null ? props.cards[i] : null;
-  if (card) emit("select", card.id);
+  if (!card) return;
+  if (intent === "deal") {
+    const pair = activePick.value;
+    if (pair) emit("deal", { id: card.id, ...pair });
+    return;
+  }
+  emit("select", card.id);
 }
 
 function onKeydown(e: KeyboardEvent) {
@@ -282,6 +448,18 @@ function onKeydown(e: KeyboardEvent) {
     case "Escape":
       e.preventDefault();
       emit("cancel");
+      return;
+    case "d":
+    case "D":
+      // The deal verb from the keyboard, for a listbox user whose focus never leaves the
+      // viewport. It routes through `attemptDeal`, so it is guarded by the SAME ribbon a tap
+      // is — a bare `d` can never destroy a board without the confirmation. Advertised on the
+      // listbox and on the band's own button as `aria-keyshortcuts`, never as rendered ink
+      // (a printed "d" is a lie on touch). `g` (App) and `k` (the answer-key peek) are the
+      // only other single-letter globals; `d` was free.
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      e.preventDefault();
+      attemptDeal();
       return;
   }
 }
@@ -332,6 +510,7 @@ onMounted(async () => {
       aria-label="Choose a puzzle"
       aria-roledescription="carousel"
       tabindex="0"
+      aria-keyshortcuts="d"
       :aria-activedescendant="`gallery-card-${activeIndex}`"
       @keydown="onKeydown"
     >
@@ -346,6 +525,7 @@ onMounted(async () => {
             :guard="guardIndex === i"
             :live="isLive(i)"
             :deal-reveal="dealReveal[i]"
+            :subline="sublineFor(card)"
             @select="attemptSelect"
             @guard-keep="dismissGuard"
             @guard-leave="guardLeave"
@@ -366,23 +546,47 @@ onMounted(async () => {
       />
     </div>
 
+    <!-- THE STAGING BAND (T4-P1 F4) — the order slip for the ACTIVE card. A SIBLING of the
+         listbox, never a descendant of `role="option"`: the deck keeps its
+         aria-activedescendant contract and one band serves five cards, so no flank ever mounts
+         a control it will not paint. Bound to the active card; the box is reserved in CSS. -->
+    <StagingBand
+      v-if="activeCard && activePick"
+      :name="activeCard.name"
+      :staging="activeCard.staging"
+      :size="activePick.size"
+      :difficulty="activePick.difficulty"
+      :safe-verb="safeVerb"
+      :saved-pair="savedPairLabels"
+      :busy="busy || guardIndex !== null"
+      @pick="onPick"
+      @safe="onSafeVerb"
+      @deal="attemptDeal"
+    />
+
     <!-- The mid-game guard ribbon (Wave D §4) — a pencil-note that SLIDES from the chosen
          (centered) card on a dirty+different switch. An overlay outside the scroll viewport
          (whose overflow would clip it), centered on the deck. NOT a modal, NOT confirm(): a
-         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches. -->
+         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches.
+         T4-P1 F4: the SAME ribbon now also confirms the picker's deal verb — one idiom, its
+         copy keyed to the intent, `.guard-keep`/`.guard-leave` unchanged as the act hooks. -->
     <Transition name="guard-ribbon">
       <div
         v-if="guardCard"
         class="gallery-guard"
         role="alertdialog"
-        aria-label="Leave this puzzle?"
+        :aria-label="
+          guardIntent === 'deal' ? 'Deal a new board?' : 'Leave this puzzle?'
+        "
       >
         <HandDrawnOutline class="guard-note-frame" :stroke-width="3" :outset="4">
           <div class="guard-note cartoon-shadow-md edge-outlined bg-popover">
             <p class="guard-note-text">
-              leave this puzzle?<br /><span class="guard-note-sub"
-                >your marks aren't saved</span
-              >
+              {{
+                guardIntent === "deal"
+                  ? "deal over this puzzle?"
+                  : "leave this puzzle?"
+              }}<br /><span class="guard-note-sub">your marks aren't saved</span>
             </p>
             <div class="guard-note-actions">
               <button
@@ -397,7 +601,7 @@ onMounted(async () => {
                 class="guard-btn guard-leave"
                 @click.stop="guardLeave"
               >
-                leave
+                {{ guardIntent === "deal" ? "deal" : "leave" }}
               </button>
             </div>
           </div>
@@ -514,6 +718,18 @@ onMounted(async () => {
   z-index: 40;
   width: min(20rem, 82%);
   pointer-events: auto;
+}
+
+/* T4-P1 F4 — the ribbon vs. the staging slip. Below 40rem the slip stacks (two chip rows over
+   two verbs) and the deck-centred ribbon landed HALFWAY down its first row: half a control
+   showing under a note that had already disabled it. Anchored to the slip's own box instead, so
+   while the ribbon is up it stands IN the slip's place — which is what it means. Above 40rem
+   the slip is a single row and the deck anchor already clears it. */
+@media (max-width: 39.99rem) {
+  .gallery-guard {
+    top: auto;
+    bottom: 0.6rem;
+  }
 }
 
 .guard-note-frame {
