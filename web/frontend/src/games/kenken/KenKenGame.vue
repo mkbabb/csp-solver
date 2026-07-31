@@ -124,6 +124,7 @@ function onCandidatePeekEnd() {
         :is-dirty="kenken.isDirty.value"
         :mobile="mobile"
         :error-check-mode="kenken.errorCheckMode.value"
+        :proactive-check="kenken.proactiveCheck.value"
         :share="onShare"
         @update:pencil-mode="kenken.setPencilMode($event)"
         @update:candidates-pinned="kenken.setCandidatesPinned($event)"

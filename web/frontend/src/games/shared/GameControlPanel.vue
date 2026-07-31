@@ -37,11 +37,11 @@ import RedoIcon from "@pencil/chrome/icons/RedoIcon.vue";
 import HintIcon from "@pencil/chrome/icons/HintIcon.vue";
 import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
 import KeyboardLegend from "@pencil/chrome/KeyboardLegend.vue";
-import PencilModeToggle from "@games/shared/PencilModeToggle.vue";
-import AssistSettings from "@games/shared/AssistSettings.vue";
 import BoilDivider from "@pencil/chrome/BoilDivider.vue";
 import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
+import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
+import CheckStatus from "@games/shared/CheckStatus.vue";
 import type { PencilMode } from "@games/shared/useUserMarks";
 import type { ErrorCheckMode } from "@games/shared/useAssists";
 import { useButtonAnimation } from "@games/shared/useButtonAnimation";
@@ -87,9 +87,13 @@ const props = defineProps<{
   // Gates the coarse two-tap: a DIRTY Deal / Clear arms first, a pristine board acts instantly.
   isDirty: boolean;
   mobile?: boolean;
-  // T4-W8 ROW 2 — the error-check mode (off/on-demand/live), relayed to AssistSettings. LEFT a
-  // manual prop+emit (§1a): the on-demand re-arm rides its same-value re-emit.
+  // T4-W8 ROW 2 — the error-check mode (off/on-demand/live). LEFT a manual prop+emit (§1a):
+  // the on-demand re-arm rides its same-value re-emit.
   errorCheckMode: ErrorCheckMode;
+  // T4-P1 — `useAssists`' derived display gate (live, OR on-demand with the snapshot still
+  // armed). The mode alone cannot say whether the teacher is marking RIGHT NOW: `checkArmed`
+  // decays on the next board edit, and that decay is the state the panel has never shown.
+  proactiveCheck: boolean;
   // T4-W3 share-truth: the parent's share act, handed as a callback rather than an emit so
   // the OUTCOME travels back — it resolves iff the clipboard copy actually landed.
   share: () => Promise<void>;
@@ -227,10 +231,56 @@ const shareWashi = computed(() =>
       : "share link",
 );
 
-// T4-WU/U2 — a unique id per panel instance so the staged zone's `role="group"` can be labelled by
-// its own "New game" heading (each game mounts two panels — mobile card + desktop rail — so a
-// static id would collide; `useId` keeps each accessible-name reference unambiguous).
+// ── T4-P1 · THE ZONE GRAMMAR ────────────────────────────────────────────────────────
+// The card was seven near-identical stanzas under six `.section-heading` display eyebrows —
+// New game / Size / Difficulty / Marks / Check / Candidates — every one of them at the same
+// rank, three of them naming standing PREFERENCES as loudly as the verb that deals a board.
+// That flat rank is the owner's "contrived."
+//
+// SIX EYEBROWS BECOME TWO, and nothing is merely deleted: Size and Difficulty keep the eyebrow
+// register (they caption the staged inputs and they earn it), and the rest are named the way a
+// pencil case names its compartments — a strip of tape across a drawn frame, in the hand, lower
+// case, one rank down. The taxonomy is re-cut on the way, which is the design claim rather than
+// the move: candidates ARE pencil marks (the engine's, beside yours), so they file under
+// `pencils`; checking is what the teacher does. That leaves `teacher's` holding exactly one
+// idea — which is what lets it carry a status line about one thing, and why its row needs no
+// caption of its own.
+//
+// Each well is a `HandDrawnOutline :pose="0"` — 1.5px inside a card drawn at 3px, subordinate
+// by weight so three wells never read as three cards, frozen at setup so it enrols no beat (a
+// pencil case doesn't breathe; the sheet does) and, since the pose prune, mints one node and
+// promotes nothing. Its name is a `SheetWashiLabel anchor="tag"` that IS the well's accessible
+// name via `aria-labelledby`: the visible tape and the announced name are one string, so
+// nothing is duplicated and nothing can drift.
+//
+// Ids are per-instance (`useId`): a game mounts the mobile card OR the desktop rail (P1-W4's
+// twin `v-if`), but the ids must be unambiguous either way.
 const newGameId = useId();
+const pencilsId = useId();
+const teachersId = useId();
+// `pencils` holds two controls, so each row is its own `role="group"` named by that row's OWN
+// visible caption — otherwise assistive tech hears two unlabelled Off/On pairs inside one name
+// and cannot tell which is which. `teacher's` holds one, so the tape names it directly.
+const marksId = useId();
+const candidatesId = useId();
+
+// Absorbed from the two deleted shells (`PencilModeToggle.vue`, `AssistSettings.vue`): three
+// segmented rows whose whole content was an option list, a heading and a relay. The heading is
+// tape now and the relay is one line, so the shells had nothing left to be.
+const MODE_OPTIONS: { value: PencilMode; label: string }[] = [
+  { value: "off", label: "Normal" },
+  { value: "corner", label: "Corner" },
+  { value: "center", label: "Center" },
+];
+const CHECK_OPTIONS: { value: ErrorCheckMode; label: string }[] = [
+  { value: "off", label: "Off" },
+  { value: "on-demand", label: "Ask" },
+  { value: "live", label: "Live" },
+];
+const CANDIDATE_OPTIONS = [
+  { value: "off", label: "Off" },
+  { value: "on", label: "On" },
+];
 
 const { animating: solveAnimating, trigger: triggerSolve } = useButtonAnimation(500);
 const { animating: fillAnimating, trigger: triggerFill } = useButtonAnimation(500);
@@ -324,11 +374,22 @@ function onHint() {
          NEXT board; the re-homed Deal is the verb that commits them. role="group" labelled by the
          New-game heading makes the staging legible to assistive tech (one new semantic, no live
          region). Selectors read provisional BY PLACEMENT and wipe nothing (arm-not-live). -->
-    <div class="new-game-zone" role="group" :aria-labelledby="newGameId">
+    <HandDrawnOutline
+      class="tray-well new-game-zone"
+      :stroke-width="1.5"
+      :outset="4"
+      :radius="3"
+      :pose="0"
+      role="group"
+      :aria-labelledby="newGameId"
+    >
+      <SheetWashiLabel :id="newGameId" text="new game" :seed="13" anchor="tag" />
       <div class="control-panel-filtered">
-        <h2 :id="newGameId" class="section-heading new-game-heading">New game</h2>
         <!-- The mobile tab-toggle — renders ONLY at n ≥ 2 sections (each tab is a section head;
-             a single-section game shows a plain heading below instead of a dead tab). -->
+             a single-section game shows a plain heading below instead of a dead tab). It STAYS:
+             it is the card's largest single height saving on a phone, and spending it is what
+             put pass 1's coarse gate 7px underwater. Deleting a component is not the same as
+             deleting its work. -->
         <div v-if="showTabs" class="mobile-heading-row">
           <button
             v-for="section in sections"
@@ -394,7 +455,7 @@ function onHint() {
           >
         </button>
       </div>
-    </div>
+    </HandDrawnOutline>
 
     <!-- Zone separator = the hold-to-peek BoilDivider (existing grammar): staged zone above,
          live zone below. Spatial prophylaxis — Deal is a full divider away from the play tools,
@@ -412,20 +473,60 @@ function onHint() {
       <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
     </div>
 
-    <!-- LIVE zone — acts on the CURRENT board (pencil mode, assists, undo/redo/hint, solve/
-         clear/share). -->
-    <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); one
-         component, both games. Arms the user-mark authoring seam on the frozen native input. -->
-    <PencilModeToggle v-model:mode="pencilMode" mobile />
+    <!-- LIVE zone — two named compartments where three identical stanzas used to stack. -->
+    <HandDrawnOutline
+      class="tray-well"
+      :stroke-width="1.5"
+      :outset="4"
+      :radius="3"
+      :pose="0"
+      role="group"
+      :aria-labelledby="pencilsId"
+    >
+      <SheetWashiLabel :id="pencilsId" text="pencils" :seed="29" anchor="tag" />
+      <div class="zone-row" role="group" :aria-labelledby="marksId">
+        <span :id="marksId" class="zone-row-label">marks</span>
+        <OptionSelector
+          :options="MODE_OPTIONS"
+          :selected="pencilMode"
+          :boil-frame="0"
+          mobile
+          @change="pencilMode = $event as PencilMode"
+        />
+      </div>
+      <div class="zone-row" role="group" :aria-labelledby="candidatesId">
+        <span :id="candidatesId" class="zone-row-label">candidates</span>
+        <OptionSelector
+          :options="CANDIDATE_OPTIONS"
+          :selected="candidatesPinned ? 'on' : 'off'"
+          :boil-frame="0"
+          mobile
+          @change="candidatesPinned = $event === 'on'"
+        />
+      </div>
+    </HandDrawnOutline>
 
-    <!-- Board assists (T4-W8 ROW 2 + ROW 3) — the error-check mode + persistent candidates; one
-         shared component, both games. Same segmented-control grammar as Marks / Size / Difficulty. -->
-    <AssistSettings
-      :error-check-mode="errorCheckMode"
-      v-model:candidates-pinned="candidatesPinned"
-      mobile
-      @update:error-check-mode="emit('update:errorCheckMode', $event)"
-    />
+    <HandDrawnOutline
+      class="tray-well"
+      :stroke-width="1.5"
+      :outset="4"
+      :radius="3"
+      :pose="0"
+      role="group"
+      :aria-labelledby="teachersId"
+    >
+      <SheetWashiLabel :id="teachersId" text="teacher's" :seed="59" anchor="tag" />
+      <!-- One idea in the compartment, so the tape is the whole of its name — no row caption
+           to duplicate it. The status line below says whether she is marking right now. -->
+      <OptionSelector
+        :options="CHECK_OPTIONS"
+        :selected="errorCheckMode"
+        :boil-frame="0"
+        mobile
+        @change="emit('update:errorCheckMode', $event as ErrorCheckMode)"
+      />
+      <CheckStatus :marking="proactiveCheck" :mode="errorCheckMode" />
+    </HandDrawnOutline>
 
     <!-- Action buttons — UI-5: persistent sublabels in the pencil hand on coarse
          pointers (the washi is a hover grammar; sighted touch users got no text). Deal
@@ -522,16 +623,22 @@ function onHint() {
     <!-- STAGED "New game" zone (T4-WU/U2) — the desktop twin of the mobile staged zone: the game
          sections stage the NEXT board, Deal commits. role="group" labelled by the New-game
          heading; the selectors read provisional by placement (arm-not-live — no live re-deal). -->
-    <div
-      class="new-game-zone flex flex-col items-center md:items-stretch"
+    <HandDrawnOutline
+      class="tray-well new-game-zone"
+      :stroke-width="1.5"
+      :outset="4"
+      :radius="3"
+      :pose="0"
       role="group"
       :aria-labelledby="newGameId"
     >
-      <div class="control-panel-filtered flex flex-col items-center md:items-stretch">
-        <h2 :id="newGameId" class="section-heading new-game-heading">New game</h2>
-        <template v-for="(section, i) in sections" :key="section.key">
-          <hr v-if="i > 0" class="border-border/50 my-3 w-full" />
-          <div class="flex flex-col items-center gap-1 md:items-stretch">
+      <SheetWashiLabel :id="newGameId" text="new game" :seed="13" anchor="tag" />
+      <div class="control-panel-filtered">
+        <!-- The `<hr>` between the staged stanzas is a donor: the compartment's own drawn frame
+             is the separation now, and two rules inside one box was the panel arguing with
+             itself. What the rule was really buying — air — is the stanza margin below. -->
+        <template v-for="section in sections" :key="section.key">
+          <div class="staged-section flex flex-col items-center gap-1 md:items-stretch">
             <h2
               class="section-heading"
               :class="headingClass(section)"
@@ -569,7 +676,7 @@ function onHint() {
           <SheetWashiLabel text="Deal" :seed="11" />
         </button>
       </div>
-    </div>
+    </HandDrawnOutline>
 
     <!-- Zone separator = the hold-to-peek BoilDivider (existing grammar): staged zone above,
          live zone below. Spatial prophylaxis — Deal sits a full divider from the play tools, so
@@ -587,17 +694,60 @@ function onHint() {
       <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
     </div>
 
-    <!-- LIVE zone — acts on the CURRENT board. -->
-    <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); the
-         desktop twin of the mobile mount above. One component, both games. -->
-    <PencilModeToggle v-model:mode="pencilMode" />
+    <!-- LIVE zone — the rail twins of the two compartments above. The rail is a narrow column,
+         so each row's caption sits OVER its selector rather than beside it. -->
+    <HandDrawnOutline
+      class="tray-well"
+      :stroke-width="1.5"
+      :outset="4"
+      :radius="3"
+      :pose="0"
+      role="group"
+      :aria-labelledby="pencilsId"
+    >
+      <SheetWashiLabel :id="pencilsId" text="pencils" :seed="29" anchor="tag" />
+      <div class="zone-row zone-row-stacked" role="group" :aria-labelledby="marksId">
+        <span :id="marksId" class="zone-row-label">marks</span>
+        <OptionSelector
+          :options="MODE_OPTIONS"
+          :selected="pencilMode"
+          :boil-frame="0"
+          @change="pencilMode = $event as PencilMode"
+        />
+      </div>
+      <div
+        class="zone-row zone-row-stacked"
+        role="group"
+        :aria-labelledby="candidatesId"
+      >
+        <span :id="candidatesId" class="zone-row-label">candidates</span>
+        <OptionSelector
+          :options="CANDIDATE_OPTIONS"
+          :selected="candidatesPinned ? 'on' : 'off'"
+          :boil-frame="0"
+          @change="candidatesPinned = $event === 'on'"
+        />
+      </div>
+    </HandDrawnOutline>
 
-    <!-- Board assists (T4-W8 ROW 2 + ROW 3) — the desktop twin of the mobile mount above. -->
-    <AssistSettings
-      :error-check-mode="errorCheckMode"
-      v-model:candidates-pinned="candidatesPinned"
-      @update:error-check-mode="emit('update:errorCheckMode', $event)"
-    />
+    <HandDrawnOutline
+      class="tray-well"
+      :stroke-width="1.5"
+      :outset="4"
+      :radius="3"
+      :pose="0"
+      role="group"
+      :aria-labelledby="teachersId"
+    >
+      <SheetWashiLabel :id="teachersId" text="teacher's" :seed="59" anchor="tag" />
+      <OptionSelector
+        :options="CHECK_OPTIONS"
+        :selected="errorCheckMode"
+        :boil-frame="0"
+        @change="emit('update:errorCheckMode', $event as ErrorCheckMode)"
+      />
+      <CheckStatus :marking="proactiveCheck" :mode="errorCheckMode" />
+    </HandDrawnOutline>
 
     <!-- Action buttons — hover washi for fine pointers, persistent sublabels on coarse
          (UI-5: an iPad in the row regime reaches this layout with no hover). Deal re-homed OUT
@@ -724,20 +874,90 @@ function onHint() {
   display: block;
 }
 
-/* T4-WU/U2 — the staged "New game" zone: the game sections + the Deal commit, grouped above
-   the peek divider (the live zone sits below). Structural grouping only — the zone reads
-   "provisional" by PLACEMENT + its heading; no box grammar is invented. */
-.new-game-zone {
+/* ── T4-P1 · the compartment well ────────────────────────────────────────────────
+   A drawn box at 1.5px inside a card drawn at 3px: subordinate by weight, so three wells never
+   read as three cards. `:pose="0"` freezes the frame at setup — it enrols no beat and, since
+   the pose prune, promotes no layer — so the compartments are still while the sheet around
+   them boils.
+   The chrome is PRICED, not chosen: at 0.75rem of margin and 0.55rem of padding the three
+   wells cost 122px and the coarse card went UP 9px — a compartment grammar that charges more
+   than the six eyebrows it deletes is not a saving, it is a redecoration. The figures below
+   are the measured floor at which the box still reads as a box. */
+.tray-well {
+  /* padding-top clears the tape, which STRADDLES the frame: the tag's box starts at the
+     container's top edge and lifts 52% of its own height, so ~8.2px hangs inside. At 0.4rem
+     the rail's first row caption sat under the tape. */
+  padding: 0.55rem 0.5rem 0.35rem;
+  /* margin ≥ outset + that 8.2px overhang, or consecutive wells' drawn frames cross — they
+     did, at outset 7 / margin 0.35rem, and the teacher's tape landed on the pencils well's
+     bottom stroke. 8px against a 4px outset leaves 3.8px of daylight. */
+  margin-block: 0.5rem;
   display: flex;
   flex-direction: column;
+  gap: 0.1rem;
 }
 
-/* The group's own eyebrow — names the staging so "next game" reads with zero copy. Quiet: the
-   same √φ section-heading register, centered + muted, never louder than the selectors it captions. */
-.new-game-heading {
-  text-align: center;
-  color: var(--color-muted-foreground);
-  margin-bottom: 0.35rem;
+.tray-well:first-child {
+  margin-top: 0.35rem;
+}
+
+/* The tape rides ABOVE the drawn stroke it straddles (the outline svg is z-index 1). */
+.tray-well :deep(.washi-tag) {
+  z-index: 2;
+}
+
+.new-game-zone {
+  gap: 0;
+}
+
+/* The air the deleted `<hr>` was really buying, between the staged stanzas only — the
+   compartment's frame does the separating between compartments. */
+.staged-section + .staged-section {
+  margin-top: 0.6rem;
+}
+
+/* A row inside a compartment: the control's own quiet name beside it (over it, on the narrow
+   rail). Not a heading — a caption in the hand, one pressure step under the tape, which is how
+   a second control in one compartment gets named without the compartment growing a second
+   eyebrow.
+   The caption is a fixed COLUMN, not a centred inline: with the whole row centred, two rows of
+   different content width put their captions at two different x and the compartment reads
+   accidental. Right-aligned in its own column, both captions end on one edge and both control
+   groups centre on one axis — measured 3.75rem clears `candidates` at every width this branch
+   mounts at (48.8px at 390, 54px at 1023, against 60). */
+.zone-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.zone-row-label {
+  flex: 0 0 3.75rem;
+  text-align: right;
+  font-family: var(--font-hand);
+  font-size: var(--type-caption);
+  line-height: 1.1;
+  letter-spacing: var(--type-tracking-wide);
+  /* The quiet rung (Lane D ship 4's ledgered token): 68% graphite, 5.23:1 light / 6.06:1
+     dark on --color-card. Below it (60% = 4.10:1) the caption fails AA. */
+  color: var(--ink-press-quiet);
+}
+
+.zone-row :deep(.options-row) {
+  flex: 1 1 auto;
+}
+
+/* The rail is one narrow column: the caption sits over its control instead of beside it. */
+.zone-row-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.zone-row-stacked .zone-row-label {
+  flex: 0 0 auto;
+  text-align: left;
 }
 
 /* The Deal commit sits centered under the staged selectors, a comfortable target from the peek
@@ -745,7 +965,9 @@ function onHint() {
 .deal-row {
   display: flex;
   justify-content: center;
-  margin-top: 0.6rem;
+  /* 0.35rem, not 0.6: the well's own bottom padding now carries the rest of the air the
+     0.6rem was buying against a bare stack. */
+  margin-top: 0.35rem;
 }
 
 /* Deal is the re-homed dice, but it earns its NAME on every pointer (not only coarse): the

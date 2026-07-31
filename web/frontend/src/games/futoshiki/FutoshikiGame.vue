@@ -156,6 +156,7 @@ function onCandidatePeekEnd() {
         :is-dirty="futoshiki.isDirty.value"
         :pencil-mode="futoshiki.pencilMode.value"
         :error-check-mode="futoshiki.errorCheckMode.value"
+        :proactive-check="futoshiki.proactiveCheck.value"
         :candidates-pinned="futoshiki.candidatesPinned.value"
         :mobile="mobile"
         @update:pencil-mode="futoshiki.setPencilMode($event)"

@@ -416,11 +416,22 @@
   --color-progress-ink: #7c3aed;
 
   /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
-     recedes; the catch-light rises — the one place gloss reads MORE at night. */
+     recedes; the catch-light rises — the one place gloss reads MORE at night.
+
+     THE TAPE GETS ITS BODY BACK (T4-P1, the row `blast-radius.md` §2.7 held open for a dark
+     rendered shot; taken here in both engines — `shots/C-*-dark-*`). The light arm is a
+     near-OPAQUE film (α 0.82) sitting a shade under the paper: a physical object with a word
+     written on it. This arm was a 14% VEIL, so the near-white tape ink and the lifted ground
+     converged and every tape read as a highlighter STRIKE through its own word — measured
+     8.96:1 and still wrong, which is the difference between a contrast ratio and a perception.
+     Same recipe as light, α matched at 0.92, over a value that sits just ABOVE --color-card
+     (hsl(24 6% 7%)) instead of dissolving into it. Two consumers, both estate-wide
+     (SheetWashiLabel, DrawerTab); zero assertions and zero goldens read the token, so the
+     witness is the shot pair and the contrast probe in the lane rig. */
   --sheet-washi-neutral: color-mix(
     in srgb,
     var(--color-foreground) 6%,
-    hsl(0 0% 100% / 0.14)
+    hsl(24 5% 21% / 0.92)
   );
   --sheet-laminate-milk: linear-gradient(
     165deg,
@@ -757,6 +768,15 @@ html {
   .attribution-trigger,
   .error-note-retry {
     min-height: 2.75rem;
+  }
+
+  /* T4-P1 — the floor is TWO-dimensional, and the width half was missing. The candidates "On"
+     chip measured 43.2px WIDE at coarse (`px-3` + two Fira Code characters), under the 44px
+     floor in a dimension a height-only rule can never reach; every option chip now clears both.
+     Chips ONLY: the other three surfaces above are full-width or icon-sized already, so a width
+     floor there would pad without buying a target. */
+  .ctrl-btn {
+    min-width: 2.75rem;
   }
 }
 

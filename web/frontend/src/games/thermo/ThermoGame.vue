@@ -135,6 +135,7 @@ function onCandidatePeekEnd() {
         :is-dirty="thermo.isDirty.value"
         :mobile="mobile"
         :error-check-mode="thermo.errorCheckMode.value"
+        :proactive-check="thermo.proactiveCheck.value"
         :share="onShare"
         @update:pencil-mode="thermo.setPencilMode($event)"
         @update:candidates-pinned="thermo.setCandidatesPinned($event)"

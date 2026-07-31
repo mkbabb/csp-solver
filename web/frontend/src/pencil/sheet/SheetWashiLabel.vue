@@ -17,8 +17,12 @@ const props = defineProps<{
   seed: number;
   /** 'above' (default) floats the chip over the parent's top edge; 'center' pins it
    *  to the parent's OWN box — the peek chip sits ON the divider's line (UI-9), never
-   *  drifting up into the option text above it. */
-  anchor?: "above" | "center";
+   *  drifting up into the option text above it. 'tag' straddles the parent's TOP-LEFT
+   *  edge — a compartment's own name, taped across its drawn frame (T4-P1 zone grammar).
+   *  A tag is a LABEL, not a tooltip: it is always laid down (there is no hover seam to
+   *  reveal it) and it drops `role="tooltip"`, which is what makes an `id` on it legal as
+   *  the zone's `aria-labelledby` target — the visible tape IS the accessible name. */
+  anchor?: "above" | "center" | "tag";
   /** Persistent on coarse pointers (UI-4/UI-5): hover doesn't exist for touch, so the
    *  tape stays laid down there; fine pointers keep the hover/focus reveal untouched. */
   persistent?: boolean;
@@ -54,11 +58,12 @@ const geom = computed(() => {
     class="washi-label"
     :class="{
       'washi-center': anchor === 'center',
+      'washi-tag': anchor === 'tag',
       'washi-persistent': persistent,
       'washi-wide': wide,
     }"
     :style="{ clipPath: geom.clip, '--washi-tilt': geom.tilt }"
-    role="tooltip"
+    :role="anchor === 'tag' ? undefined : 'tooltip'"
     >{{ text }}</span
   >
 </template>
@@ -100,6 +105,28 @@ const geom = computed(() => {
   left: 50%;
   margin-bottom: 0;
   transform: translate(-50%, -50%) rotate(var(--washi-tilt));
+}
+
+/* anchor="tag" (T4-P1 zone grammar): the compartment's own name, taped ASTRIDE its drawn
+   top-left edge — the one asymmetry in a card of centred stanzas, and the thing that makes a
+   well read as a labelled compartment rather than a second card. Always laid down: a zone name
+   has no hover seam. Lower case in the hand, one rank under the eyebrows it replaces, and
+   lower case is also the only chimera-free path through Patrick Hand (its uppercase subset is
+   {C,R,S} — F5's shared finding, taken). */
+.washi-tag {
+  bottom: auto;
+  top: 0;
+  left: 0.85rem;
+  margin-bottom: 0;
+  padding: 0.02rem 0.4rem;
+  font-size: var(--type-caption);
+  font-weight: 500;
+  letter-spacing: var(--type-tracking-wide);
+  text-transform: lowercase;
+  opacity: 1;
+  /* Straddles the frame: half the tape's height hangs inside the box, which is what the
+     well's padding-top has to clear (GameControlPanel `.tray-well`). */
+  transform: translateY(-52%) rotate(var(--washi-tilt));
 }
 
 /* A longer note (T4-W3 share-fail): the tape wraps within a capped width and centers its

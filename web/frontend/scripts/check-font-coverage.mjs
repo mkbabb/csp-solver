@@ -40,19 +40,17 @@ const INDEX_CSS = "src/assets/index.css";
 // passes through on the way to the screen. Each string is required in both forms.
 const CORPUS = [
   // `.section-heading` — `text-transform: lowercase` (assets/typography.css). The authored
-  // strings live in each game's `defineGame` sections plus AssistSettings / PencilModeToggle.
+  // strings are the games' `defineGame` sections, and after T4-P1's zone grammar that is ALL
+  // of them: `New game` / `Marks` / `Check` / `Candidates` left this face for the pencil hand
+  // (washi tape and row captions, Patrick Hand, no transform), so the display face now paints
+  // exactly the two eyebrows that caption the staged inputs. The subset is deliberately NOT
+  // re-cut for the four departures — it stays a superset, which costs nothing the gate can see
+  // (§2 compares the declared unicode-range to the cmap, not to this corpus) and keeps a
+  // string's return from being a font bug.
   {
     where: ".section-heading",
     transform: "lowercase",
-    strings: [
-      "New game",
-      "Size",
-      "Board Size",
-      "Difficulty",
-      "Marks",
-      "Check",
-      "Candidates",
-    ],
+    strings: ["Size", "Board Size", "Difficulty"],
   },
   // The wordmark (HandwrittenLogo `.logo-text`) and the gallery card names
   // (GameCard `.card-wordmark`) — no transform, the five registered game ids.

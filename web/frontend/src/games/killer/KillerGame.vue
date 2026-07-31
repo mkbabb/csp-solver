@@ -125,6 +125,7 @@ function onCandidatePeekEnd() {
         :is-dirty="killer.isDirty.value"
         :mobile="mobile"
         :error-check-mode="killer.errorCheckMode.value"
+        :proactive-check="killer.proactiveCheck.value"
         :share="onShare"
         @update:pencil-mode="killer.setPencilMode($event)"
         @update:candidates-pinned="killer.setCandidatesPinned($event)"

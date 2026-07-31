@@ -192,6 +192,7 @@ function onCandidatePeekEnd() {
         :is-dirty="sudoku.isDirty.value"
         :pencil-mode="sudoku.pencilMode.value"
         :error-check-mode="sudoku.errorCheckMode.value"
+        :proactive-check="sudoku.proactiveCheck.value"
         :candidates-pinned="sudoku.candidatesPinned.value"
         :mobile="mobile"
         @update:pencil-mode="sudoku.setPencilMode($event)"
