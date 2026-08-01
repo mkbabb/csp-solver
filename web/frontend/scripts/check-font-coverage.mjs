@@ -42,21 +42,21 @@ const FACES = [
     family: "Fraunces",
     font: "src/assets/fonts/fraunces-subset.woff2",
     corpus: [
-  // `.section-heading` — `text-transform: lowercase` (assets/typography.css). The authored
-  // strings are the games' `defineGame` sections, and after T4-P1's zone grammar that is ALL
-  // of them: `New game` / `Marks` / `Check` / `Candidates` left this face for the pencil hand
-  // (washi tape and row captions, Patrick Hand, no transform), so the display face now paints
-  // exactly the two eyebrows that caption the staged inputs. The subset is deliberately NOT
-  // re-cut for the four departures — it stays a superset, which costs nothing the gate can see
-  // (§2 compares the declared unicode-range to the cmap, not to this corpus) and keeps a
-  // string's return from being a font bug.
-  {
-    where: ".section-heading",
-    transform: "lowercase",
-    strings: ["Size", "Board Size", "Difficulty"],
-  },
-  // The wordmark (HandwrittenLogo `.logo-text`) and the gallery card names
-  // (GameCard `.card-wordmark`) — no transform, the five registered game ids.
+      // `.section-heading` — `text-transform: lowercase` (assets/typography.css). The authored
+      // strings are the games' `defineGame` sections, and after T4-P1's zone grammar that is ALL
+      // of them: `New game` / `Marks` / `Check` / `Candidates` left this face for the pencil hand
+      // (washi tape and row captions, Patrick Hand, no transform), so the display face now paints
+      // exactly the two eyebrows that caption the staged inputs. The subset is deliberately NOT
+      // re-cut for the four departures — it stays a superset, which costs nothing the gate can see
+      // (§2 compares the declared unicode-range to the cmap, not to this corpus) and keeps a
+      // string's return from being a font bug.
+      {
+        where: ".section-heading",
+        transform: "lowercase",
+        strings: ["Size", "Board Size", "Difficulty"],
+      },
+      // The wordmark (HandwrittenLogo `.logo-text`) and the gallery card names
+      // (GameCard `.card-wordmark`) — no transform, the five registered game ids.
       {
         where: "wordmark + gallery card names",
         transform: "none",
@@ -101,7 +101,7 @@ const FACES = [
 ];
 
 // ── cmap ────────────────────────────────────────────────────────────────────────────────────
-function cmapCodepoints(buf) {
+function cmapCodepoints(buf, FONT) {
   if (buf.toString("latin1", 0, 4) !== "wOF2") throw new Error(`${FONT}: not a woff2`);
   const numTables = buf.readUInt16BE(12);
   // woff2 TableDirectoryEntry: flags(1) [tag(4) if flags&0x3f === 0x3f] origLength(UIntBase128)
@@ -269,7 +269,7 @@ const chars = (l) =>
 const banked = [];
 for (const face of FACES) {
   const buf = readFileSync(join(ROOT, face.font));
-  const cmap = cmapCodepoints(buf);
+  const cmap = cmapCodepoints(buf, face.font);
   const declared = declaredRange(css, face.family);
 
   // 1. every rendered string is fully covered, in every case it can be rendered in.

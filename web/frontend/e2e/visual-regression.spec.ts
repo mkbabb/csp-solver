@@ -437,7 +437,9 @@ test("the Deal die is not crushed: the commit verb's box fits its own content", 
   // absorbed all of it. The cure is the `.icon-btn.deal-btn` selector (order-proof); THIS is
   // the row that would have caught it, and would catch any future re-break however it arrives.
   const geom = await page.evaluate(() => {
-    const btn = document.querySelector(".controls-card .deal-btn") as HTMLElement | null;
+    const btn = document.querySelector(
+      ".controls-card .deal-btn",
+    ) as HTMLElement | null;
     if (!btn) return null;
     const die = btn.querySelector("svg") as SVGElement | null;
     const label = btn.querySelector(".icon-sublabel") as HTMLElement | null;
@@ -479,12 +481,14 @@ test("the Deal die is not crushed: the commit verb's box fits its own content", 
   // `.deal-btn` selector this row goes RED on exactly this line (44.00 for 54.38 demanded),
   // green on the fix.
   const demanded = geom!.die!.w + geom!.labelH + geom!.padY + geom!.gap;
-  expect.soft(
-    geom!.btn.h,
-    `Deal's box is ${geom!.btn.h.toFixed(2)}px for content demanding ${demanded.toFixed(2)}px ` +
-      `(die ${geom!.die!.w.toFixed(2)} square + label ${geom!.labelH.toFixed(2)} + ` +
-      `padding ${geom!.padY.toFixed(2)} + gap ${geom!.gap.toFixed(2)})`,
-  ).toBeGreaterThanOrEqual(demanded - 0.5);
+  expect
+    .soft(
+      geom!.btn.h,
+      `Deal's box is ${geom!.btn.h.toFixed(2)}px for content demanding ${demanded.toFixed(2)}px ` +
+        `(die ${geom!.die!.w.toFixed(2)} square + label ${geom!.labelH.toFixed(2)} + ` +
+        `padding ${geom!.padY.toFixed(2)} + gap ${geom!.gap.toFixed(2)})`,
+    )
+    .toBeGreaterThanOrEqual(demanded - 0.5);
 });
 
 // ── Test 9: chip separation — the seam between adjacent option chips ─

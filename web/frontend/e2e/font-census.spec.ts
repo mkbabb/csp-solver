@@ -74,7 +74,10 @@ const MIXED_FACE = () => {
     for (const r of rules) {
       const face = r as CSSFontFaceRule;
       if (!face.style || !face.style.getPropertyValue("unicode-range")) continue;
-      const fam = face.style.getPropertyValue("font-family").replace(/["']/g, "").trim();
+      const fam = face.style
+        .getPropertyValue("font-family")
+        .replace(/["']/g, "")
+        .trim();
       const set = new Set<number>();
       for (const m of face.style
         .getPropertyValue("unicode-range")
@@ -147,13 +150,17 @@ test("no string renders in two faces except the ones this estate has ledgered", 
 
   const unledgered = mixed.filter((m) => !(`${m.face}|${m.shown}` in LEDGER));
   expect(
-    unledgered.map((m) => `${m.face} · "${m.shown}" (${m.sel}) misses ${m.missing.join(" ")}`),
+    unledgered.map(
+      (m) => `${m.face} · "${m.shown}" (${m.sel}) misses ${m.missing.join(" ")}`,
+    ),
     "unledgered mixed-face strings",
   ).toEqual([]);
 
   // The status line is the instance this loop minted and cured; it is named here so a
   // regression cannot hide inside the ledger's tolerance for the pre-existing set.
-  const status = (await page.locator(".check-status span[aria-hidden]").innerText()).trim();
+  const status = (
+    await page.locator(".check-status span[aria-hidden]").innerText()
+  ).trim();
   expect(status.length).toBeGreaterThan(0);
   expect(mixed.some((m) => m.shown === status)).toBe(false);
 
@@ -171,7 +178,10 @@ test("no string renders in two faces except the ones this estate has ledgered", 
   expect(planted).toBe(true);
   const after = await page.evaluate(MIXED_FACE);
   const seen = after.mixed.find((m) => m.shown === "Xylophone");
-  expect(seen, "negative control: the planted second-face string must be seen").toBeTruthy();
+  expect(
+    seen,
+    "negative control: the planted second-face string must be seen",
+  ).toBeTruthy();
   expect(seen!.face).toBe("Patrick Hand");
   expect(seen!.missing).toContain("U+0058");
 });

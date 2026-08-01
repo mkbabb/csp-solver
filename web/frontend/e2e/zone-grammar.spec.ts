@@ -153,7 +153,9 @@ test("every zone is named by its own VISIBLE tape — the accessible name and th
     label.parentElement!.appendChild(decoy);
     return new Function(`return (${probe})()`)() as ReturnType<typeof ZONE_NAMING>;
   }, ZONE_NAMING.toString());
-  expect(broken[0].agree, "negative control: the decoupled name must be seen").toBe(false);
+  expect(broken[0].agree, "negative control: the decoupled name must be seen").toBe(
+    false,
+  );
   expect(broken[0].isTape).toBe(false);
   expect(broken[0].accessible).toBe("decoy");
   expect(broken[0].drawn).toBe("new game");
@@ -204,15 +206,16 @@ test("the staged headings are HEADINGS for assistive tech — decided one way, n
   // heading that is also hidden from the tree. The estate's answer is HEADINGS: every
   // `.section-heading` is an <h2> with a non-empty accessible name and none is `aria-hidden`.
   // The row exists so a later `aria-hidden` cannot land here silently.
-  const headings = await page.locator(".controls-card .section-heading").evaluateAll(
-    (els) =>
+  const headings = await page
+    .locator(".controls-card .section-heading")
+    .evaluateAll((els) =>
       els.map((el) => ({
         tag: el.tagName.toLowerCase(),
         hidden: el.getAttribute("aria-hidden"),
         inHidden: !!el.closest("[aria-hidden='true']"),
         name: (el.getAttribute("aria-label") ?? el.textContent ?? "").trim(),
       })),
-  );
+    );
   expect(headings.length).toBe(2);
   for (const h of headings) {
     expect(h.tag).toBe("h2");
@@ -229,11 +232,13 @@ test("the staged headings are HEADINGS for assistive tech — decided one way, n
     .evaluateAll((els) =>
       els.map((el) => ({
         cls: el.className.toString(),
-        heading: el.tagName.toLowerCase().startsWith("h") || !!el.querySelector("h1,h2,h3"),
+        heading:
+          el.tagName.toLowerCase().startsWith("h") || !!el.querySelector("h1,h2,h3"),
       })),
     );
   expect(hidden.length).toBeGreaterThan(0);
-  for (const h of hidden) expect(h, `aria-hidden ${h.cls}`).toMatchObject({ heading: false });
+  for (const h of hidden)
+    expect(h, `aria-hidden ${h.cls}`).toMatchObject({ heading: false });
 });
 
 test("selection is announced: every option chip carries aria-pressed, exactly one per group", async ({
