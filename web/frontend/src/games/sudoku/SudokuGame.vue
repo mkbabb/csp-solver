@@ -44,6 +44,13 @@ const sudoku = useSudoku();
 // its TDZ: the app dies at boot with "Cannot access 'sudokuGame' before initialization"
 // (reproduced in-browser, Lane D ship 3). Futoshiki is lazy and has no such cycle, so its
 // twin scene DOES read its declaration.
+// EXERCISED ON THE ENGINE THAT MATTERS (R3b, closed T4-P1 pass 4). Cyclic-ESM evaluation
+// order is engine-specific, so "it boots in Chromium" was never the question. The built dist
+// was served to real MobileSafari on `perf-rig-iphone16` (iOS 19, AppleWebKit/605.1.15,
+// 393×699 dpr3 coarse): 81 cells mounted, the two sections below rendered as `Size` +
+// `Difficulty`, 14 chips, one Deal dealt a different board — and ZERO page errors or
+// rejections, trapped from a hook installed in <head> ahead of the module script, so a
+// TDZ throw at evaluation time would have been caught rather than inferred.
 // The cycle forces a second copy; it does not excuse an unguarded one. `game.test.ts` mounts
 // this scene and requires the list below to equal `sudokuGame.options(model)` in shape AND in
 // what each onChange moves — edit one side alone and that test reds.

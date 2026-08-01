@@ -28,14 +28,24 @@
  * census a second time at 393×699 coarse/dpr3 and requires the same rows and the same total
  * (9 / 9, both engines, T4-P1 pass 4).
  *
- * WHAT A DIFFERENT COUNTING RULE COUNTS (the 9-vs-17 row, reconciled here once):
- * the perf-rig device probe (`perf-rig/probe.js` `census`) does NOT consult `display`, so it
- * additionally counts HandDrawnGrid's four `.baked-hidden` live-fallback poses — `9 + 4 = 13`,
- * reproduced exactly in both engines, both regimes, both themes. Those four raster nothing
- * (`display: none` on their own box) and this budget deliberately excludes them; if a bake ever
- * fails they come back `display: block` and red THIS gate, which is the behaviour you want.
- * The device probe's remaining margin over 13 is a real-Safari row measured on glass, not a
- * budget row — see the pass-4 Lane D dossier §4.
+ * THE 9-vs-17 ROW, reconciled once, here, against the device (T4-P1 pass 4 — measured on
+ * `perf-rig-iphone16`, real MobileSafari iOS 19, 393×699 dpr3, this dist):
+ *
+ *   scene    rule                                 total  what the delta is
+ *   board    own display ≠ none (this budget)       9    —
+ *   board    display NOT consulted (perf-rig)      13    +4 HandDrawnGrid `.baked-hidden`
+ *                                                        live-fallback poses
+ *   gallery  own display ≠ none                    17    +4 `g.logo-pose[.is-active]` (only
+ *                                                        the gallery mounts the wordmark's
+ *                                                        pose stack) +4 crayon-heart `g`
+ *   gallery  display NOT consulted                 21    both deltas at once
+ *
+ * So the pass-3 device figure of 17 is the GALLERY scene's population — the sim battery's
+ * `galleryGlide` scenario navigates there — and it agrees to the unit with Lane A's own
+ * gallery census in both engines. Nothing about the board budget was ever breached. The
+ * four `.baked-hidden` poses raster nothing and this budget deliberately excludes them; if a
+ * bake ever fails they come back `display: block` and red THIS gate, which is the behaviour
+ * you want. The gallery's own 17 is MEASURED, not gated here — that census is Lane A's row.
  */
 
 export interface FilterBudgetRow {
