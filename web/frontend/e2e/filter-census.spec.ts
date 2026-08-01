@@ -5,8 +5,10 @@ import { fileURLToPath } from "node:url";
 import {
   FILL_ALLOWLIST,
   FILTER_BUDGET,
+  FILTER_BUDGET_AREA_TOLERANCE,
   FILTER_BUDGET_CEILING,
   FILTER_BUDGET_TOTAL,
+  FILTER_BUDGET_UNION_AREA,
   PER_CELL_SCOPE,
 } from "../src/pencil/config/filterBudget";
 
@@ -44,6 +46,19 @@ import {
  * `Element.checkVisibility()` was tried first and is NOT usable here: it returns `true` for a
  * `display: none` SVG `<g>` in Chromium 141, which would have quietly counted the retired grid
  * fallback as live.
+ *
+ * WHAT THE COUNTING RULE COSTS, named so the two instruments can be read against each other:
+ * the perf-rig device probe censuses the same scene WITHOUT the display clause, and therefore
+ * counts HandDrawnGrid's four `.baked-hidden` fallback poses as well — 9 here, 13 there, the
+ * delta being exactly those four and nothing else (measured in both engines, both regimes,
+ * both themes; T4-P1 pass 4).
+ *
+ * THE ORDERED CENSUS IS THREE THINGS, and all three are here (pass-2 registry §4): the
+ * population count, its union RASTER AREA, and an INJECTED-NODE control that must fire. The
+ * area is the half a count cannot give — one surface growing tenfold is the same count and a
+ * tenfold bill — and the control is what stops the whole gate from passing vacuously if the
+ * census ever stops seeing the document. Both regimes run: ≥1024 in `G3.1`, and the mobile arm
+ * in `G3.3`, which is the width this campaign is about.
  */
 
 const SCENE = "./?size=3&difficulty=EASY";
@@ -129,30 +144,70 @@ async function census(page: Page, selectors: readonly string[]): Promise<CensusH
   }, selectors) as Promise<CensusHit[]>;
 }
 
-test("G3.1 · live-filter census equals filterBudget.ts exactly (built dist)", async ({
-  page,
-}) => {
-  await settleBoard(page);
-  const hits = await census(
-    page,
-    FILTER_BUDGET.map((r) => r.selector),
-  );
+/**
+ * The union raster area of the counted population, CSS px², by scanline over the same counting
+ * rule. Overlapping boxes are counted ONCE — the four divider poses stack on one another and a
+ * rasteriser pays for that region once, so a sum would price a pose stack four times over (the
+ * exact overstatement the pass-3 rig shipped).
+ */
+async function unionArea(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const rects: DOMRect[] = [];
+    for (const el of Array.from(document.querySelectorAll("*"))) {
+      const cs = getComputedStyle(el);
+      if (!cs.filter || cs.filter === "none" || cs.display === "none") continue;
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) rects.push(r);
+    }
+    const xs = new Set<number>();
+    for (const r of rects) {
+      xs.add(Math.floor(r.left));
+      xs.add(Math.ceil(r.right));
+    }
+    const cuts = [...xs].sort((a, b) => a - b);
+    let area = 0;
+    for (let i = 0; i + 1 < cuts.length; i++) {
+      const [x0, x1] = [cuts[i], cuts[i + 1]];
+      const spans = rects
+        .filter((r) => r.left < x1 && r.right > x0)
+        .map((r) => [r.top, r.bottom] as [number, number])
+        .sort((a, b) => a[0] - b[0]);
+      let covered = 0;
+      let cur: [number, number] | null = null;
+      for (const [t, b] of spans) {
+        if (!cur) cur = [t, b];
+        else if (t <= cur[1]) cur[1] = Math.max(cur[1], b);
+        else {
+          covered += cur[1] - cur[0];
+          cur = [t, b];
+        }
+      }
+      if (cur) covered += cur[1] - cur[0];
+      area += covered * (x1 - x0);
+    }
+    return Math.round(area);
+  });
+}
+
+/** The whole census, run against one settled regime. Shared by G3.1 (row) and G3.3 (coarse). */
+async function assertCensus(page: Page, regime: "row" | "coarse") {
+  const selectors = FILTER_BUDGET.map((r) => r.selector);
+  const hits = await census(page, selectors);
 
   // (a) nothing unclaimed — the exact-match half a ceiling cannot give.
-  const unclaimed = hits.filter((h) => h.row < 0);
   expect(
-    unclaimed.map((h) => `${h.path}  ⟨${h.filter}⟩`),
-    "live filters no filterBudget.ts row claims",
+    hits.filter((h) => h.row < 0).map((h) => `${h.path}  ⟨${h.filter}⟩`),
+    `[${regime}] live filters no filterBudget.ts row claims`,
   ).toEqual([]);
 
   // (b) every row's population is exact, in both directions.
-  const actual = FILTER_BUDGET.map((r, i) => ({
-    selector: r.selector,
-    count: hits.filter((h) => h.row === i).length,
-  }));
-  expect(actual).toEqual(
-    FILTER_BUDGET.map((r) => ({ selector: r.selector, count: r.count })),
-  );
+  expect(
+    FILTER_BUDGET.map((r, i) => ({
+      selector: r.selector,
+      count: hits.filter((h) => h.row === i).length,
+    })),
+    `[${regime}] per-row population`,
+  ).toEqual(FILTER_BUDGET.map((r) => ({ selector: r.selector, count: r.count })));
 
   // (c) the charter's own numbers: perCell 0, htmlBoxes 0, total ≤ 14.
   const perCell = await page.evaluate(
@@ -162,13 +217,84 @@ test("G3.1 · live-filter census equals filterBudget.ts exactly (built dist)", a
       ).length,
     PER_CELL_SCOPE,
   );
-  expect(perCell, `live filters inside ${PER_CELL_SCOPE}`).toBe(0);
+  expect(perCell, `[${regime}] live filters inside ${PER_CELL_SCOPE}`).toBe(0);
   expect(
     hits.filter((h) => h.html).map((h) => h.path),
-    "reference filters on HTML boxes (WebKit software filter path)",
+    `[${regime}] reference filters on HTML boxes (WebKit software filter path)`,
   ).toEqual([]);
-  expect(hits.length).toBe(FILTER_BUDGET_TOTAL);
+  expect(hits.length, `[${regime}] total`).toBe(FILTER_BUDGET_TOTAL);
   expect(hits.length).toBeLessThanOrEqual(FILTER_BUDGET_CEILING);
+
+  // (d) the union RASTER AREA — the half the count cannot see.
+  const area = await unionArea(page);
+  const budget = FILTER_BUDGET_UNION_AREA[regime];
+  const slack = Math.ceil(budget * FILTER_BUDGET_AREA_TOLERANCE);
+  expect(
+    Math.abs(area - budget),
+    `[${regime}] union raster area ${area} vs budget ${budget} ±${slack} CSS px²`,
+  ).toBeLessThanOrEqual(slack);
+
+  // (e) THE INJECTED-NODE CONTROL. A census that has stopped seeing the document passes every
+  // assertion above; this is the one row that reds when the instrument dies. A filtered box is
+  // inserted, the census must catch it as unclaimed AND the area must grow past the tolerance,
+  // then it is removed and the population must return. Run every time — a control that only
+  // runs when someone remembers is a control that never runs.
+  const injected = await page.evaluate(() => {
+    const n = document.createElement("div");
+    n.id = "census-injected-control";
+    n.setAttribute(
+      "style",
+      "position:fixed;left:0;top:0;width:400px;height:300px;filter:blur(2px);background:#000;opacity:0.01;pointer-events:none;z-index:-1",
+    );
+    document.body.appendChild(n);
+    return true;
+  });
+  expect(injected).toBe(true);
+  const withControl = await census(page, selectors);
+  expect(
+    withControl.filter((h) => h.row < 0).map((h) => h.path),
+    `[${regime}] the injected filtered node must be censused as unclaimed`,
+  ).toHaveLength(1);
+  expect(withControl.length, `[${regime}] control raises the total by exactly one`).toBe(
+    FILTER_BUDGET_TOTAL + 1,
+  );
+  expect(
+    await unionArea(page),
+    `[${regime}] control must grow the union past the tolerance`,
+  ).toBeGreaterThan(area + slack);
+  await page.evaluate(() =>
+    document.getElementById("census-injected-control")?.remove(),
+  );
+  expect(
+    (await census(page, selectors)).length,
+    `[${regime}] population returns once the control is removed`,
+  ).toBe(FILTER_BUDGET_TOTAL);
+}
+
+test("G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist)", async ({
+  page,
+}) => {
+  await settleBoard(page);
+  await assertCensus(page, "row");
+});
+
+// ── G3.3 — the SAME census below 1024 ────────────────────────────────────────────────────────
+// `filterBudget.ts` asserted in prose that "below 1024 the population is the same size", and
+// nothing checked it — while every gate in this repo runs at 1280×800 and the whole campaign is
+// about the phone. The claim is true (9 / 9, both engines) and it is now a gate rather than a
+// header sentence: the mobile arm of the one mounted card, at the device's own dpr.
+test.describe("G3.3 · the coarse regime", () => {
+  test.use({
+    viewport: { width: 393, height: 699 },
+    deviceScaleFactor: 3,
+    hasTouch: true,
+    isMobile: true,
+  });
+
+  test("G3.3 · live-filter census holds below 1024 (built dist)", async ({ page }) => {
+    await settleBoard(page);
+    await assertCensus(page, "coarse");
+  });
 });
 
 test("G3.2 · no retained fill supplies a computed transform (built dist)", async ({

@@ -22,8 +22,20 @@
  * repo runs at (1280×800). The control-panel twins used to be always-mounted, so the hidden
  * twin's filters counted at every width and one allowlist served both regimes; the panel-twin
  * `v-if` (GameScene, off `useRowRegime`) now mounts one card, so the two rows that were doubled
- * by that duplication are halved and named as such. Below 1024 the population is the same size —
- * the same one card, the mobile arm of it — so nothing about the invariant weakens.
+ * by that duplication are halved and named as such. **Below 1024 the population is the same
+ * size** — the same one card, the mobile arm of it. That sentence used to be a header claim
+ * nothing checked; it is now MEASURED and GATED: `filter-census.spec.ts` runs the identical
+ * census a second time at 393×699 coarse/dpr3 and requires the same rows and the same total
+ * (9 / 9, both engines, T4-P1 pass 4).
+ *
+ * WHAT A DIFFERENT COUNTING RULE COUNTS (the 9-vs-17 row, reconciled here once):
+ * the perf-rig device probe (`perf-rig/probe.js` `census`) does NOT consult `display`, so it
+ * additionally counts HandDrawnGrid's four `.baked-hidden` live-fallback poses — `9 + 4 = 13`,
+ * reproduced exactly in both engines, both regimes, both themes. Those four raster nothing
+ * (`display: none` on their own box) and this budget deliberately excludes them; if a bake ever
+ * fails they come back `display: block` and red THIS gate, which is the behaviour you want.
+ * The device probe's remaining margin over 13 is a real-Safari row measured on glass, not a
+ * budget row — see the pass-4 Lane D dossier §4.
  */
 
 export interface FilterBudgetRow {
@@ -129,6 +141,30 @@ export const FILTER_BUDGET: readonly FilterBudgetRow[] = [
  */
 export const FILTER_BUDGET_TOTAL = FILTER_BUDGET.reduce((n, r) => n + r.count, 0);
 export const FILTER_BUDGET_CEILING = 14;
+
+/**
+ * THE SECOND HALF OF THE ORDERED CENSUS — union RASTER AREA, per regime.
+ *
+ * A count alone cannot see the defect that actually costs: one surface growing. WebKit rasters a
+ * reference filter over the element's whole filter region, so nine surfaces at 45k CSS px² and
+ * nine surfaces at 450k are the same count and a tenfold bill. These are the measured unions of
+ * the counted population's boxes (scanline union, so overlapping pose stacks are counted ONCE —
+ * the four divider poses sit on top of each other and contribute one divider's worth, which is
+ * what the rasteriser does), in CSS px², at the two regimes the spec runs.
+ *
+ * Measured T4-P1 pass 4 on the built dist: identical in chromium AND webkit, identical light and
+ * dark, identical across runs — the layout is deterministic, so the tolerance is for sub-pixel
+ * rect edges only. A new filtered surface, or an existing one growing, moves this far past 2%.
+ */
+export const FILTER_BUDGET_UNION_AREA = {
+  /** ≥1024, 1280×800 dpr1 — the row regime every config in this repo runs at. */
+  row: 45315,
+  /** <1024, 393×699 dpr3 coarse — the mobile arm of the same one card. */
+  coarse: 6488,
+} as const;
+
+/** Sub-pixel tolerance on the union, both directions. Not a growth allowance. */
+export const FILTER_BUDGET_AREA_TOLERANCE = 0.02;
 
 /**
  * The board-cell subtree carries NO live filter. Kept as its own assertion because the glyph
