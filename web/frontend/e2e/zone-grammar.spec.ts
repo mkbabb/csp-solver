@@ -92,6 +92,28 @@ test("rendered-name census, rail: two eyebrows, three tapes, two captions — an
   expect(planted).toBe(names.length + 1);
 });
 
+/** The zone-naming coupling, as DATA rather than as a chain of assertions — so the same
+ *  reading can be taken again after the coupling is deliberately broken. Per well:
+ *  does its `aria-labelledby` resolve, to the visible tape, carrying no role, with the
+ *  accessible name EQUAL to the drawn one. */
+const ZONE_NAMING = () =>
+  [...document.querySelectorAll(".controls-card .tray-well")].map((well) => {
+    const id = well.getAttribute("aria-labelledby");
+    const label = id ? document.getElementById(id) : null;
+    const drawn = [...well.querySelectorAll(".washi-tag")]
+      .filter((t) => t.getBoundingClientRect().width > 0)
+      .map((t) => t.textContent!.trim());
+    return {
+      role: well.getAttribute("role"),
+      resolves: !!label,
+      isTape: !!label?.classList.contains("washi-tag"),
+      labelRole: label?.getAttribute("role") ?? null,
+      accessible: label?.textContent?.trim() ?? null,
+      drawn: drawn[0] ?? null,
+      agree: !!label && label.textContent!.trim() === (drawn[0] ?? null),
+    };
+  });
+
 test("every zone is named by its own VISIBLE tape — the accessible name and the drawn one are one string", async ({
   page,
 }) => {
@@ -99,21 +121,119 @@ test("every zone is named by its own VISIBLE tape — the accessible name and th
   const wells = page.locator(".controls-card .tray-well");
   await expect(wells).toHaveCount(3);
 
-  for (const expected of ["new game", "pencils", "teacher's"]) {
-    const well = page
-      .locator(`.controls-card .tray-well:has-text("${expected}")`)
-      .first();
-    await expect(well).toHaveAttribute("role", "group");
-    const id = await well.getAttribute("aria-labelledby");
-    expect(id).toBeTruthy();
-    const label = page.locator(`#${id}`);
-    // Resolves, is the visible tape, and is NOT a tooltip — a tooltip role is not a legal
-    // `aria-labelledby` target and was what pass 1 fought from the outside.
-    await expect(label).toBeVisible();
-    await expect(label).toHaveText(expected);
-    await expect(label).toHaveClass(/washi-tag/);
-    expect(await label.getAttribute("role")).toBeNull();
+  const named = await page.evaluate(ZONE_NAMING);
+  expect(named.map((n) => n.drawn)).toEqual(["new game", "pencils", "teacher's"]);
+  for (const n of named) {
+    // Resolves, is the visible tape, is NOT a tooltip (a tooltip role is not a legal
+    // `aria-labelledby` target and was what pass 1 fought from the outside), and the two
+    // names are ONE string.
+    expect(n).toMatchObject({
+      role: "group",
+      resolves: true,
+      isTape: true,
+      labelRole: null,
+      agree: true,
+    });
   }
+
+  // NEGATIVE CONTROL — G12 shipped without one. Drive the accessible name away from the drawn
+  // one and the same probe must report the disagreement; a coupling gate that cannot see a
+  // decoupling asserts nothing. (The tape's text node is what both readings share, so moving
+  // ONE of them is the only way to prove they were ever separately observed: the injected
+  // sibling below becomes the accessible name while the drawn tape keeps its word.)
+  const broken = await page.evaluate((probe) => {
+    const label = document.querySelector(
+      ".controls-card .tray-well .washi-tag",
+    ) as HTMLElement;
+    const id = label.id;
+    label.removeAttribute("id");
+    const decoy = document.createElement("span");
+    decoy.id = id;
+    decoy.textContent = "decoy";
+    label.parentElement!.appendChild(decoy);
+    return new Function(`return (${probe})()`)() as ReturnType<typeof ZONE_NAMING>;
+  }, ZONE_NAMING.toString());
+  expect(broken[0].agree, "negative control: the decoupled name must be seen").toBe(false);
+  expect(broken[0].isTape).toBe(false);
+  expect(broken[0].accessible).toBe("decoy");
+  expect(broken[0].drawn).toBe("new game");
+});
+
+test("the permanent tape is a LABEL, not a tooltip — and the surface it names has a name", async ({
+  page,
+}) => {
+  await loadSudoku(page);
+  // `role="tooltip"` describes a transient hover/focus popup. `.washi-persistent` pins
+  // `opacity: 1` under `(pointer: coarse)`, so on every phone and every iPad the "hold to
+  // peek" tape never hides — a tooltip with no hover, no focus and no dismissal. The role is
+  // gone; nothing in the repo would have reddened if it came back, which is this row.
+  const permanent = page.locator(
+    ".controls-card .washi-tag, .controls-card .washi-persistent",
+  );
+  const n = await permanent.count();
+  expect(n).toBe(4); // three compartment names + the peek tape
+  for (let i = 0; i < n; i++)
+    expect(
+      await permanent.nth(i).getAttribute("role"),
+      `permanent tape ${await permanent.nth(i).innerText()}`,
+    ).toBeNull();
+  // The hover washi on the icon buttons KEEPS `role="tooltip"` — it is a transient
+  // hover/focus description and the role is true of it. The distinction is the point.
+  const transient = page.locator(
+    ".controls-card .washi-label:not(.washi-tag):not(.washi-persistent)",
+  );
+  expect(await transient.count()).toBeGreaterThan(0);
+  expect(await transient.first().getAttribute("role")).toBe("tooltip");
+
+  // The surface the permanent tape names was a bare <div> with pointer handlers and NO
+  // accessible name at all — diagnosed in pass 3, cured here. It is the zone separator, and
+  // the gesture it carries has a keyboard twin (K), so the name says both.
+  const peek = page.locator(".controls-card .peek-hold-surface");
+  await expect(peek).toHaveAttribute("role", "separator");
+  const name = await peek.getAttribute("aria-label");
+  expect(name).toBeTruthy();
+  expect(name!.toLowerCase()).toContain("peek");
+  expect(name!).toMatch(/\bK\b/);
+});
+
+test("the staged headings are HEADINGS for assistive tech — decided one way, not both", async ({
+  page,
+}) => {
+  await loadSudoku(page);
+  // F1's order asked this be settled honestly: headings for AT, or a real removal — never a
+  // heading that is also hidden from the tree. The estate's answer is HEADINGS: every
+  // `.section-heading` is an <h2> with a non-empty accessible name and none is `aria-hidden`.
+  // The row exists so a later `aria-hidden` cannot land here silently.
+  const headings = await page.locator(".controls-card .section-heading").evaluateAll(
+    (els) =>
+      els.map((el) => ({
+        tag: el.tagName.toLowerCase(),
+        hidden: el.getAttribute("aria-hidden"),
+        inHidden: !!el.closest("[aria-hidden='true']"),
+        name: (el.getAttribute("aria-label") ?? el.textContent ?? "").trim(),
+      })),
+  );
+  expect(headings.length).toBe(2);
+  for (const h of headings) {
+    expect(h.tag).toBe("h2");
+    expect(h.hidden).toBeNull();
+    expect(h.inHidden).toBe(false);
+    expect(h.name.length).toBeGreaterThan(0);
+  }
+  // The `aria-hidden="true"` this card DOES carry is decorative text whose control speaks for
+  // itself — an icon sublabel, a tally's drawn parts. Stated as the property rather than as a
+  // class allowlist: no hidden subtree may contain a heading, which is the "both" the order
+  // forbade.
+  const hidden = await page
+    .locator(".controls-card [aria-hidden='true']")
+    .evaluateAll((els) =>
+      els.map((el) => ({
+        cls: el.className.toString(),
+        heading: el.tagName.toLowerCase().startsWith("h") || !!el.querySelector("h1,h2,h3"),
+      })),
+    );
+  expect(hidden.length).toBeGreaterThan(0);
+  for (const h of hidden) expect(h, `aria-hidden ${h.cls}`).toMatchObject({ heading: false });
 });
 
 test("selection is announced: every option chip carries aria-pressed, exactly one per group", async ({
@@ -128,9 +248,10 @@ test("selection is announced: every option chip carries aria-pressed, exactly on
 
   // One pressed chip per selector, and it is the one drawn as selected — the sighted marking
   // and the announced state cannot disagree.
-  const rows = page.locator(
-    ".controls-card .options-row, .controls-card .flex.flex-col",
-  );
+  // `.ctrl-options` is the group hook itself — the branch classes (`options-row`,
+  // `options-pair`, the stacked column) are layout, and a probe pinned to one of them goes
+  // blind the moment a group changes axis.
+  const rows = page.locator(".controls-card .ctrl-options");
   const perGroup = await page.evaluate(() => {
     const groups = new Map<Element, { pressed: number; selected: number }>();
     for (const b of document.querySelectorAll(".controls-card .ctrl-btn")) {
@@ -169,6 +290,31 @@ test("a frozen well mints ONE pose node and promotes nothing (the HandDrawnOutli
     expect(w.painted).toBe(1);
     expect(w.promoted).toBe(0);
   }
+
+  // NEGATIVE CONTROL. This row is the SUCCESSOR to G9 ("`useRasterStack` consumers = 3"),
+  // which is struck: a count of a symbol's import sites cannot fail for the property anyone
+  // cares about, and the property anyone cares about is this one — a frozen outline mints one
+  // node and promotes nothing. Un-prune the stack in-page and the same probe must count the
+  // siblings and the layers back.
+  const unpruned = await page.evaluate(() => {
+    const svg = document.querySelector(
+      ".controls-card .tray-well > svg.outline-svg",
+    ) as SVGElement;
+    const g = svg.querySelector("g.boil-pose") as SVGElement;
+    for (let i = 0; i < 3; i++) {
+      const clone = g.cloneNode(true) as SVGElement;
+      clone.style.willChange = "opacity";
+      svg.appendChild(clone);
+    }
+    const poses = [...svg.querySelectorAll("g.boil-pose")];
+    const painted = poses.filter((p) => getComputedStyle(p).display !== "none");
+    return {
+      painted: painted.length,
+      promoted: painted.filter((p) => getComputedStyle(p).willChange !== "auto").length,
+    };
+  });
+  expect(unpruned.painted).toBe(4);
+  expect(unpruned.promoted).toBe(3);
 });
 
 // ── The card (coarse pointer) ───────────────────────────────────────────────────
@@ -236,7 +382,7 @@ test.describe("coarse regime", () => {
     await expect(status).toHaveAttribute("role", "status");
     // Default mode is on-demand with the snapshot armed by nothing yet — the stale sentence,
     // which is precisely the state `checkArmed` decays into and no control could report.
-    await expect(status).toContainText("Ask again");
+    await expect(status).toContainText("ask again");
 
     // Live: the sentence changes AND the pressure rung with it (the class the ink ladder keys).
     // Scoped to the well — `Off` is a label in two compartments, which is exactly why each

@@ -495,6 +495,8 @@ function onHint() {
          (CSS). Narrow fine-pointer windows keep the hover/focus reveal. -->
     <div
       class="peek-hold-surface group relative"
+      role="separator"
+      aria-label="Staged controls above, play tools below — press and hold, or press K, to peek at the answer key"
       @pointerdown="onDividerHoldStart($event)"
       @pointermove="onDividerHoldMove($event)"
       @pointerup="onDividerHoldEnd()"
@@ -724,6 +726,8 @@ function onHint() {
          nothing moved inside the ≥44px hold target. -->
     <div
       class="peek-hold-surface group relative"
+      role="separator"
+      aria-label="Staged controls above, play tools below — press and hold, or press K, to peek at the answer key"
       @pointerdown="onDividerHoldStart($event)"
       @pointermove="onDividerHoldMove($event)"
       @pointerup="onDividerHoldEnd()"
