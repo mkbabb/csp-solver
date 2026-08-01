@@ -56,7 +56,7 @@ The minority cost this default carries is disclosed in `benchmarks.md`.
 
 Backtracking search lives in one function, `solver/search.rs::search`, generic over the pruning strategy. It replaced the former separate `backtrack.rs` and `backjump.rs`. Conflict-directed backjumping was excised with the unification -- the `SolveConfig::backjumping` field is gone -- so the kernel is plain chronological backtracking maintaining consistency via the chosen `Pruning` strategy and trail-based undo.
 
-Each node: pick the next variable by the ordering heuristic, iterate its domain values, assign into the mutable assignment slice, propagate, recurse or backtrack. The trail records every prune keyed to search depth; on backtrack, `Trail::undo_to(depth)` restores exactly the variables it was told were touched. Enumerate-all termination respects `max_solutions`; a `node_budget` bounds the search, surfaced as a distinct budget-exceeded outcome. A solution-set-invariance property test (`tests/solution_set_invariance.rs`) asserts the enumerate-all set is identical across every Pruning × Ordering combination -- the standing guard on kernel soundness.
+Each node: pick the next variable by the ordering heuristic, iterate its domain values, assign into the mutable assignment slice, propagate, recurse or backtrack. The trail records every prune keyed to search depth; on backtrack, `Trail::undo_to(depth)` restores exactly the variables it was told were touched. Enumerate-all termination respects `max_solutions`; a `node_budget` bounds the search, surfaced as a distinct budget-exceeded outcome. A solution-set-invariance property test (`csp-solver/tests/oracle_and_invariance.rs` §4) asserts the enumerate-all set is identical across all 12 Pruning × Ordering combinations -- 4 prunings by 3 orderings, over queens6/queens8 and two futoshiki shapes. That's the standing guard on kernel soundness.
 
 ## Forward Checking
 
@@ -70,9 +70,7 @@ AC-FC hybrid (`AcFc`) extends forward checking with singleton propagation: after
 
 - **AC-3**: Full worklist propagation with adjacency graph. Used by search-based solving (Sudoku, queens, coloring). Requires precomputed neighbor lists from `finalize()`. Suited to constraints with local scope, where changes propagate sparsely through the graph.
 - **Sweep** (`propagate_monotonic`): Fixed-point iteration over all constraints until no changes occur. Used by lattice domains (type inference, FIRST/FOLLOW sets) where domains are monotonic -- values only grow via `join()`, never shrink. No adjacency graph needed, no undo log. Each iteration touches every constraint; convergence is guaranteed by the finite lattice height.
-- **Stratified sweep** (`propagate_stratified`): SCC-ordered propagation via Tarjan SCCs. Constraints are topologically sorted by their SCC membership. Acyclic constraints (singleton SCCs with no self-loop) converge in a single pass when processed in order. Only cyclic SCCs need iterative fixed-point within their group. This avoids redundant re-evaluation of constraints that depend on values already stabilized.
-
-`propagate_with(strategy)` allows explicit selection when the auto-detection doesn't fit. Lattice CSPs that call `propagate()` without `finalize()` get sweep; search CSPs that call `finalize()` get AC-3.
+`PropagationStrategy` carries exactly these two plus `Auto`; `propagate_with(strategy)` allows explicit selection when the auto-detection doesn't fit. Lattice CSPs that call `propagate()` without `finalize()` get sweep; search CSPs that call `finalize()` get AC-3.
 
 ## Variable Ordering
 
@@ -80,6 +78,6 @@ Three heuristics, selected via `SolveConfig::ordering`:
 
 - **Chronological**: Pick variables in stack order (last element via `stack.len() - 1`). Baseline -- no intelligence, zero overhead per selection.
 - **FailFirst** (MRV): Pick the unassigned variable with the smallest remaining domain. A variable with 2 remaining values fails faster than one with 8, pruning the search tree earlier. O(n) scan over the variable stack, comparing `domain.size()` values.
-- **Mrv**: Pick the variable minimizing `domain-size / Σ constraint-weights`. The weights are **frozen at 1.0** -- no dom/wdeg bumping is wired to the kernel -- so this is a static heuristic, and `Chs` (the conflict-history variant) shares the same scan with dynamically evolving weights the day a driver lands. The name replaces the former `DomWdeg`, which measurement showed to be a misnomer: with weights frozen, `Chs ≡ DomWdeg` bit-for-bit.
+- **Mrv**: Pick the variable minimizing `domain-size / Σ constraint-weights`. The weights are **frozen at 1.0** -- no dom/wdeg bumping is wired to the kernel -- so the denominator is a static per-variable weighted degree, precomputed once by `precompute_var_wdeg` rather than re-summed at every node. The name replaces the former `DomWdeg`, a misnomer once measurement showed the weights never move. The conflict-history variant `Chs` went out at 0.3.0 with the `solver/heuristic.rs` weighting it depended on; the enum carries these three and no more.
 
 The served hard-Sudoku path runs `Ac3 + Mrv`; generation and `SolveConfig::default()` run `Ac3 + FailFirst`. Difficulty calibration deliberately runs `ForwardChecking + FailFirst`, whose backtrack count tracks human-perceived difficulty (AC-3's stronger propagation would suppress backtracks a human experiences as logical dead ends).

@@ -24,7 +24,7 @@ addressed; `:4188` verified free, used for the built-dist lane, killed; the dev 
 | `d4e8e41e`'s boot path attributed on JavaScriptCore | **PASS** — this build on iOS 19: booted, dealt, `errors: []` |
 | tally line restored or ruled | **PASS — 1 paint at seven widths**; 0 at six of them on the tree it shipped broken |
 | landscape rung priced or reverted | **PASS (priced)** — 40.22px cell, portrait parity; 44.44 at 926×428 |
-| deploy ONLY via `npm run deploy`, owner-authorized | **HELD** — nothing deployed; production untouched at `f1adfca5` |
+| deploy ONLY via `npm run deploy`, owner-authorized | **HELD** — nothing deployed; production untouched at CF deployment `f1adfca5` |
 | *(mandate)* the sealed P1 state must not regress | **PASS, one disclosure** — geometry at or under the seal everywhere; three sim gates hold; all five scenarios read 0.43–1.18 fps low against the seal's own build in-session |
 
 ## The order's cells

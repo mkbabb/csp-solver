@@ -32,7 +32,7 @@ Edition 2024, stable toolchain (MSRV 1.88).
 ```toml
 # Rust, Cargo.toml
 [dependencies]
-csp-solver = "0.5"
+csp-solver = "0.6"
 ```
 
 ```bash
@@ -213,7 +213,7 @@ each implementing `Domain`, some `LatticeDomain`. See
 ## Build & Test
 
 ```bash
-cargo test --workspace                     # 208 passed, 0 failed, 0 ignored across 28 test binaries (measured at 826f16e3, Apple M5 Max, 2026-07-15)
+cargo test --workspace                     # 208 passed, 0 failed, 0 ignored across 26 test binaries + 4 doctests (measured at e961bdb7, Apple M5 Max, 2026-08-01)
 cargo bench                                # criterion; see below
 maturin develop --release --features py    # build the PyO3 wheel (Python ≤3.13)
 RUSTDOCFLAGS='-A rustdoc::private_intra_doc_links' cargo doc --document-private-items  # internal-doc build (public `cargo doc` is pre-broken; the linked items are internal modules)
@@ -262,8 +262,7 @@ puzzle template bank is crate-owned (`data/sudoku_puzzles/`), embedded via
 ## Documentation
 
 Algorithms, sudoku formulation, benchmarks, and the bbnf integration live under
-[`../docs/`](../docs/). The README shape follows the perimeter-level
-[canonical README shape](../docs/precepts/canonical-readme-shape.md).
+[`../docs/`](../docs/).
 
 ## License
 

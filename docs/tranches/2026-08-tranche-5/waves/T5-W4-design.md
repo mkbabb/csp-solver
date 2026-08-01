@@ -16,6 +16,8 @@ Pass-5 orders F3(1)–(5) verbatim. The blocking row goes first: **F3-G1 trigger
 
 ## Cross-cutting rows
 
+**U-03 · U-04 · U-05 · U-06** (marks 1, 2, 3, and the 5+6 residue) are this wave's charter by their own ids — each folds through CH-61/CH-51/CH-58 above; named here so the ledger-diff reads them CORPUS, not orphan (W0's dry-run surfaced the gap).
+
 The adjudicator set (CH-59): the guard's two names — resolved jointly with W3.2's one-string principle; the eyebrow two-register question; the idle uniform-sign watch-row (n=5 printed). The instrument rows: CH-53's undoBurst instrument (per-frame stack sampling in the rig) and CH-54's documented noise band. MEASURE stays non-author throughout.
 
 ## The gate ladder

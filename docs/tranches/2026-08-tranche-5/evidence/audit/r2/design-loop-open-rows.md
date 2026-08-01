@@ -13,7 +13,7 @@ or OWNER, so does this file.
 | pass-4 close (loop HEAD of record) | **`52ef014a`** — "T4-P1 F3 carrier pass 4: the four banked assets and the keypad band, disposed row by row" | `pass4-registry.md:3`; `git log --oneline -1 52ef014a` |
 | built artifact of record | `index-6v9S84SRo2al.js`, md5 `dc6424524ce09d0cc9e4865c561beeac` — MEASURE's `dist-head` byte-identical to F3's `dist-F3head` | `pass4-registry.md:4-7`; `pass4/measure/RESULTS.md` |
 | base seal | `6800af04` (T4-P1 patch seal) | `pass4-registry.md:3` |
-| production | **`f1adfca5`** — untouched; nothing from passes 3 or 4 is deployed | `pass4-registry.md:3`, `:204` |
+| production | **CF deployment `f1adfca5`** — untouched; nothing from passes 3 or 4 is deployed | `pass4-registry.md:3`, `:204` |
 | audit r1 tree | `71456713d9f7361af80f09e1a456fc9787507e78` (master, clean) | `audit/r1/a11y.md:4`; `audit/r1/component-census.md:3` |
 | **relation** | `52ef014a` **is an ancestor of** `71456713`, 7 commits behind it — the r1 audits were taken on a tree that CONTAINS all pass-4 design work | `git merge-base --is-ancestor 52ef014a 71456713` → true; `git rev-list --count 52ef014a..71456713` → 7 (all seven are T4-P1 KENKEN-REACHABILITY / ENGINE-PROOF-CLAMP / CI-RED commits, no design lane) |
 
@@ -271,7 +271,7 @@ a re-ranking by this file.
 | `d4e8e41e` boot path attributed on JavaScriptCore | **PASS** | THIS build on iOS 19 MobileSafari: booted · 81 cells · dealt · errors `[]` · 2009 ms, trap ahead of the module script (`RESULTS` §6) |
 | tally line restored or ruled | **PASS** | 1 paint at seven widths both engines, 0 on the tree it shipped broken, unclipped-plant control (`RESULTS` §4) |
 | landscape rung priced or reverted | **PASS (priced)** | 40.22px = portrait parity; cost re-measured 90.58 / 89.98 overflow. The **ELECTION** goes to the team lead per F3-G2 — a governance row, not a gate failure |
-| deploy ONLY via `npm run deploy`, owner-authorized | **HELD BY DESIGN** | the execution row; nothing deployed, production untouched at `f1adfca5` |
+| deploy ONLY via `npm run deploy`, owner-authorized | **HELD BY DESIGN** | the execution row; nothing deployed, production untouched at CF deployment `f1adfca5` |
 | (standing mandate) the seal must not regress | **PASS w/ disclosure** | every geometry cell at or under the seal; three sim gates hold; uniform-sign −0.43..−1.18 fps in-session disclosed (`RESULTS` §7) |
 
 **Ruling: every measurable row PASSES; THE CUT IS RECOMMENDED** — `52ef014a`, artifact

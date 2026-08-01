@@ -1,0 +1,223 @@
+T5-W0 ROW 0.7 — DEPLOYMENT-ID HYGIENE, TREE-WIDE SWEEP
+======================================================
+Ran after the W0 fix lanes so nothing races. Scope: the three ids the row names —
+f1adfca5, a8174110, 781fc09c. Excluded from every grep: .git, node_modules, target,
+dist, playwright-report, .claude/worktrees (sibling agents' checkouts, not the tree of
+record), and this file — it quotes the ids as evidence and would otherwise feed on itself.
+
+DERIVATION — why these are deployment ids and not commits
+--------------------------------------------------------
+Resolved against this repo's own object database, not against prose:
+  git cat-file -t f1adfca5  ->  fatal: Not a valid object name f1adfca5
+  git cat-file -t a8174110  ->  fatal: Not a valid object name a8174110
+  git cat-file -t 781fc09c  ->  fatal: Not a valid object name 781fc09c
+  git cat-file -t 6800af04  ->  commit
+  git cat-file -t 52ef014a  ->  commit
+  git cat-file -t 95b2efd8  ->  commit
+  git cat-file -t 71456713  ->  commit
+  git cat-file -t c9cd957a  ->  commit
+  git cat-file -t 23e3dc00  ->  commit
+
+The three named ids resolve to nothing; the seals and trees cited beside them in the
+same records resolve to commits. That asymmetry is the whole defect: an id that reads
+as a SHA but answers to no object makes a future audit read a false gap
+(chronic-ledger.md:203, prompt-recap-matrix.md:348-350, registry.md:96 D11).
+
+THE GATE
+--------
+An occurrence is BARE when the id carries no deployment vocabulary
+(deploy|deployed|deployment|deployments|redeployed, case-insensitive) in the 60
+characters preceding it on its own line. Bare occurrences are cured by re-labeling
+in place — "CF deployment `xxxx`" — except for the enumerated exemptions below, each
+of which is a verbatim quotation, a transcript, or the statement of the defect itself.
+Green = zero bare occurrences outside the exemption list.
+
+== BEFORE — grep -rn, at the point row 0.7 opened ==
+docs/tranches/2026-08-tranche-5/evidence/design/alpha-gestalt.md:223:Sequencing law: **W1–W4 touch no design-lane surface** (`GameScene.vue`, `GameControlPanel.vue`, `GameGallery.vue` untouched); **W5 lands only after the pass-5 lane cures are in**, on a single md5-proven tree per MEASURE discipline (design-loop §5.4). Production stays `f1adfca5` throughout; deploy remains the team lead's.
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md:25:| **K5** | P1 Safari/iOS patch seal (WGATE §9.1) | 2026-07-31 | `6800af04` | `P1-W4 seal: production re-pass green on f1adfca5 — the patch clo…` |
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md:26:| **K6** | design-loop pass-4 cut + production | 2026-08-01 | deployments `a8174110` → `781fc09c`; trees `52ef014a` → `95b2efd8` → `71456713` | `git log -1 a8174110` → no such object (**deployment id, not a commit**); memory `t4-formulation…:107,109`. **Extension:** not a tranche close, but a shipped gate rows rode past |
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md:203:4. **`a8174110` / `781fc09c`** are cited in the memory ledger in commit position but resolve to no git object — they are Cloudflare **deployment** IDs. Any future audit that greps them as SHAs will read a false gap.
+docs/tranches/2026-08-tranche-5/evidence/audit/registry.md:96:**NEW ROWS**: N1 — `sudokuGame` ships 315 dead bytes in the prod chunk (undeletable by author or bundler while the cycle stands) · C5 — browserslist/support-floor undeclared · D10 — rust no-god-modules REGRESSED unrecorded (`assignment.rs` 607, `cage.rs` 558; only `search.rs` 528 has a waiver) · D11 — `f1adfca5` joins the deployment-id-in-SHA-position trap set.
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/cc-prompt-ledger.md:108:| 86 | 2026-07-31T04:46:03.845Z | "What remains? The extant website is a performance mess on both desktop and particularly safari IOS. Leverage and use an actual safari browser, mobile thereof, and with dev tools target what's killing the rendered performance. Likely this will require tweaks to root libraries, such as pencil-boil and the like. Continue the above, and drive this performance and development patch to full implementation and deployment thereof. Write a patch to the tranche with a series of wave addenda. Research, prototype, tranche write, and then execute. Ultrathink and ultracode." | ORDER | YES — T4-P1 sealed (WGATE §9.1, seal `6800af04`); root cause 63–81 glyph grain filters re-executed by WebKit per 125ms beat; production `f1adfca5`, idle 97.6+, long33 0, filter census 9 (assistant turn 2026-08-01T16:54:01.264Z). **iOS device claim still blocked on owner E8 smoke.** |
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/cc-prompt-ledger.md:110:| 88 | 2026-07-31T05:05:17.316Z | "[Screenshot …01.03.44.png] mark that our game picker interface could be refined, as could our drawer animation for controls, as could all of our mobile interfaces, as could the resolution of the sudoku logo/dark mode toggle--why are these so low res? For any and all design and iteration work, leverage this, mark, and prepare for compaction: # Design and iteration: the convergent multiagent design loop … Round zero: the portfolio … The pass: 1. RESEARCH (≤8 agents, batched 5-6) 2. SYNTHESIZE 3. PROTOTYPE 4. CRITIQUE (failure-mode checklist: vacuous convergence, spec-cites-itself circularity, gates that cannot fail, the elegant-reduction trap…) 5. AGGLOMERATE … Convergence is earned. 100% means zero enumerated open gaps, survival of a fresh adversarial audit by agents who did not author the winning spec, and two consecutive clean passes… Run at least three full passes before contemplating convergence… A best-effort summary, or an explanation of why the problem is difficult, is an unacceptable return." | DESIGN-MARK + ORDER (STANDING EDICT) | PROTOCOL: YES — banked as `memory/convergent-design-loop.md`. MARKS: **PARTIAL — logo/toggle low-res cured (wordmark sharp+complete, toggle-ink cured, production `f1adfca5`); game picker + drawer animation + ALL mobile interfaces remain OPEN — MEMORY.md: "NEXT FRONT = design loop pass 3 … earliest 100% = pass 4", task #75 open.** |
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/cc-prompt-ledger.md:164:- Every gated shell chain sets `set -o pipefail` or checks `gh run view --json conclusion` — banked after the 2026-07-31 false-green deploy of `781fc09c` (summary 2026-08-01T08:27:17.988Z, "PROCESS FAULT 1").
+docs/tranches/2026-08-tranche-5/evidence/audit/r3/completeness-critic.md:84:Meanwhile the campaign's headline is a *production* claim (MEMORY: "PRODUCTION `f1adfca5`: idle 97.6+
+docs/tranches/2026-08-tranche-5/evidence/audit/r3/completeness-critic.md:85:long33 0, census 9, wordmark sharp+complete"), and `f1adfca5` **is not a commit** —
+docs/tranches/2026-08-tranche-5/evidence/audit/r3/completeness-critic.md:86:`prompt-recap-matrix.md:348-350` records `git cat-file -t f1adfca5` → *"fatal: Not a valid object
+docs/tranches/2026-08-tranche-5/evidence/audit/r2/design-loop-open-rows.md:16:| production | **`f1adfca5`** — untouched; nothing from passes 3 or 4 is deployed | `pass4-registry.md:3`, `:204` |
+docs/tranches/2026-08-tranche-5/evidence/audit/r2/design-loop-open-rows.md:274:| deploy ONLY via `npm run deploy`, owner-authorized | **HELD BY DESIGN** | the execution row; nothing deployed, production untouched at `f1adfca5` |
+docs/tranches/2026-08-tranche-5/evidence/audit/r2/prompt-recap-matrix.md:348:- `f1adfca5` is cited in commit position throughout the P1 record (production tree). `git cat-file -t f1adfca5`
+docs/tranches/2026-08-tranche-5/evidence/audit/r2/prompt-recap-matrix.md:350:  `chronic-ledger.md:203` flags for `a8174110` / `781fc09c`.
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3-registry.md:4:production remains **`f1adfca5`** — nothing from pass 3 is deployed. MEASURE's single-tree set
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3-registry.md:231:**Production stays at `f1adfca5`. Nothing from pass 3 deploys. HOLD, in full, for pass 4.**
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4-registry.md:4:production remains **`f1adfca5`**. Evidence of record = `pass4/measure/RESULTS.md`: MEASURE's
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4-registry.md:204:| deploy ONLY via `npm run deploy`, owner-authorized | **HELD BY DESIGN** | the execution row; nothing deployed, production untouched at f1adfca5 |
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/measure-report.md:27:| deploy ONLY via `npm run deploy`, owner-authorized | **HELD** — nothing deployed; production untouched at `f1adfca5` |
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/measure/RESULTS.md:29:| **deploy ONLY via `npm run deploy`, owner-authorized** | **HELD** | nothing was deployed, no `wrangler` invocation, no `npm run deploy`; production is untouched at `f1adfca5`. This row is the owner's at cut time, not a measurement |
+docs/tranches/2026-08-tranche-5/waves/T5-W0-truth-and-record.md:17:| 0.7 | Deployment-id hygiene: `f1adfca5`/`a8174110`/`781fc09c` re-labeled "CF deployment" at every citation in tree + memory; the trap named in the traps ledger | D11 | grep gate: no bare deployment-id in commit position |
+docs/tranches/2026-07-tranche-4/WGATE-record.md:247:**Production, verified on the deployed edge (deployments `cce0ffd1` → `f1adfca5`):** idle 97.6–97.8 fps, long33 = 0 — the beat train is dead; census 9 exact from the live page; toggle-ink 16.18/18.76–18.99 both directions, double-toggle exact; wordmark sharp, complete, all-Fraunces; assets 12/12, console clean but for the zone RUM refusal; both quiet windows honored. Desktop battery (state-pinned, interleaved): idle 97.72/0 · deal 97.13 · solve 96.34/1.5 · undo 97.11 · theme 88.39 · gallery 83.90 — all gates.json rows green. Sim: gallery 49.25 · theme 51.65 · idle AT the ≥59 floor inside the ±2.5 noise (59.62 dark/58.20 light this round; no scenario regresses base, narrowest +2.36). GPU process 10.4 → 4.24 CPU-s per 30 s idle.
+docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/waves/p-w4-validate-deploy.md:77:e2e (`c9cd957a`) + lockfile pin (`23e3dc00`) → redeployed `f1adfca5` → re-pass ALL GREEN
+
+   lines: 24   occurrences: 31
+
+
+== EDITS — label-only ==
+Every change is an insertion of the words "CF deployment" (one site also gains the
+missing backticks, one trades "deploy of" for "deploy,"). No other substance moves;
+the word-diff below is the whole of it. Site and file counts re-derived from the diff,
+not asserted:
+  13 sites across 8 files
+  label insertions outside those files: 0
+
+
+--- docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/waves/p-w4-validate-deploy.md
+e2e (`c9cd957a`) + lockfile pin (`23e3dc00`) → redeployed {+as CF deployment+} `f1adfca5` → re-pass ALL GREEN
+
+--- docs/tranches/2026-08-tranche-5/evidence/audit/r1/cc-prompt-ledger.md
+| 86 | 2026-07-31T04:46:03.845Z | "What remains? The extant website is a performance mess on both desktop and particularly safari IOS. Leverage and use an actual safari browser, mobile thereof, and with dev tools target what's killing the rendered performance. Likely this will require tweaks to root libraries, such as pencil-boil and the like. Continue the above, and drive this performance and development patch to full implementation and deployment thereof. Write a patch to the tranche with a series of wave addenda. Research, prototype, tranche write, and then execute. Ultrathink and ultracode." | ORDER | YES — T4-P1 sealed (WGATE §9.1, seal `6800af04`); root cause 63–81 glyph grain filters re-executed by WebKit per 125ms beat; production {+CF deployment+} `f1adfca5`, idle 97.6+, long33 0, filter census 9 (assistant turn 2026-08-01T16:54:01.264Z). **iOS device claim still blocked on owner E8 smoke.** |
+| 88 | 2026-07-31T05:05:17.316Z | "[Screenshot …01.03.44.png] mark that our game picker interface could be refined, as could our drawer animation for controls, as could all of our mobile interfaces, as could the resolution of the sudoku logo/dark mode toggle--why are these so low res? For any and all design and iteration work, leverage this, mark, and prepare for compaction: # Design and iteration: the convergent multiagent design loop … Round zero: the portfolio … The pass: 1. RESEARCH (≤8 agents, batched 5-6) 2. SYNTHESIZE 3. PROTOTYPE 4. CRITIQUE (failure-mode checklist: vacuous convergence, spec-cites-itself circularity, gates that cannot fail, the elegant-reduction trap…) 5. AGGLOMERATE … Convergence is earned. 100% means zero enumerated open gaps, survival of a fresh adversarial audit by agents who did not author the winning spec, and two consecutive clean passes… Run at least three full passes before contemplating convergence… A best-effort summary, or an explanation of why the problem is difficult, is an unacceptable return." | DESIGN-MARK + ORDER (STANDING EDICT) | PROTOCOL: YES — banked as `memory/convergent-design-loop.md`. MARKS: **PARTIAL — logo/toggle low-res cured (wordmark sharp+complete, toggle-ink cured, production {+CF deployment+} `f1adfca5`); game picker + drawer animation + ALL mobile interfaces remain OPEN — MEMORY.md: "NEXT FRONT = design loop pass 3 … earliest 100% = pass 4", task #75 open.** |
+- Every gated shell chain sets `set -o pipefail` or checks `gh run view --json conclusion` — banked after the 2026-07-31 false-green [-deploy of-]{+deploy, CF deployment+} `781fc09c` (summary 2026-08-01T08:27:17.988Z, "PROCESS FAULT 1").
+
+--- docs/tranches/2026-08-tranche-5/evidence/audit/r2/design-loop-open-rows.md
+| production | [-**`f1adfca5`**-]{+**CF deployment `f1adfca5`**+} — untouched; nothing from passes 3 or 4 is deployed | `pass4-registry.md:3`, `:204` |
+| deploy ONLY via `npm run deploy`, owner-authorized | **HELD BY DESIGN** | the execution row; nothing deployed, production untouched at {+CF deployment+} `f1adfca5` |
+
+--- docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3-registry.md
+production remains [-**`f1adfca5`**-]{+**CF deployment `f1adfca5`**+} — nothing from pass 3 is deployed. MEASURE's single-tree set
+**Production stays at {+CF deployment+} `f1adfca5`. Nothing from pass 3 deploys. HOLD, in full, for pass 4.**
+
+--- docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4-registry.md
+production remains [-**`f1adfca5`**.-]{+**CF deployment `f1adfca5`**.+} Evidence of record = `pass4/measure/RESULTS.md`: MEASURE's
+| deploy ONLY via `npm run deploy`, owner-authorized | **HELD BY DESIGN** | the execution row; nothing deployed, production untouched at [-f1adfca5-]{+CF deployment `f1adfca5`+} |
+
+--- docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/measure-report.md
+| deploy ONLY via `npm run deploy`, owner-authorized | **HELD** — nothing deployed; production untouched at {+CF deployment+} `f1adfca5` |
+
+--- docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/measure/RESULTS.md
+| **deploy ONLY via `npm run deploy`, owner-authorized** | **HELD** | nothing was deployed, no `wrangler` invocation, no `npm run deploy`; production is untouched at {+CF deployment+} `f1adfca5`. This row is the owner's at cut time, not a measurement |
+
+--- docs/tranches/2026-08-tranche-5/evidence/design/alpha-gestalt.md
+Sequencing law: **W1–W4 touch no design-lane surface** (`GameScene.vue`, `GameControlPanel.vue`, `GameGallery.vue` untouched); **W5 lands only after the pass-5 lane cures are in**, on a single md5-proven tree per MEASURE discipline (design-loop §5.4). Production stays {+CF deployment+} `f1adfca5` throughout; deploy remains the team lead's.
+
+SEALED-RECORD NOTE: docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/waves/p-w4-validate-deploy.md:77
+is a sealed T4 record. The label correction there is the one explicitly ordered by row 0.7;
+the line's substance, its two real SHAs (c9cd957a, 23e3dc00) and its verdict, stands untouched.
+
+== AFTER — grep -rn, same invocation ==
+docs/tranches/2026-08-tranche-5/evidence/design/alpha-gestalt.md:223:Sequencing law: **W1–W4 touch no design-lane surface** (`GameScene.vue`, `GameControlPanel.vue`, `GameGallery.vue` untouched); **W5 lands only after the pass-5 lane cures are in**, on a single md5-proven tree per MEASURE discipline (design-loop §5.4). Production stays CF deployment `f1adfca5` throughout; deploy remains the team lead's.
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md:25:| **K5** | P1 Safari/iOS patch seal (WGATE §9.1) | 2026-07-31 | `6800af04` | `P1-W4 seal: production re-pass green on f1adfca5 — the patch clo…` |
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md:26:| **K6** | design-loop pass-4 cut + production | 2026-08-01 | deployments `a8174110` → `781fc09c`; trees `52ef014a` → `95b2efd8` → `71456713` | `git log -1 a8174110` → no such object (**deployment id, not a commit**); memory `t4-formulation…:107,109`. **Extension:** not a tranche close, but a shipped gate rows rode past |
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md:203:4. **`a8174110` / `781fc09c`** are cited in the memory ledger in commit position but resolve to no git object — they are Cloudflare **deployment** IDs. Any future audit that greps them as SHAs will read a false gap.
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/cc-prompt-ledger.md:108:| 86 | 2026-07-31T04:46:03.845Z | "What remains? The extant website is a performance mess on both desktop and particularly safari IOS. Leverage and use an actual safari browser, mobile thereof, and with dev tools target what's killing the rendered performance. Likely this will require tweaks to root libraries, such as pencil-boil and the like. Continue the above, and drive this performance and development patch to full implementation and deployment thereof. Write a patch to the tranche with a series of wave addenda. Research, prototype, tranche write, and then execute. Ultrathink and ultracode." | ORDER | YES — T4-P1 sealed (WGATE §9.1, seal `6800af04`); root cause 63–81 glyph grain filters re-executed by WebKit per 125ms beat; production CF deployment `f1adfca5`, idle 97.6+, long33 0, filter census 9 (assistant turn 2026-08-01T16:54:01.264Z). **iOS device claim still blocked on owner E8 smoke.** |
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/cc-prompt-ledger.md:110:| 88 | 2026-07-31T05:05:17.316Z | "[Screenshot …01.03.44.png] mark that our game picker interface could be refined, as could our drawer animation for controls, as could all of our mobile interfaces, as could the resolution of the sudoku logo/dark mode toggle--why are these so low res? For any and all design and iteration work, leverage this, mark, and prepare for compaction: # Design and iteration: the convergent multiagent design loop … Round zero: the portfolio … The pass: 1. RESEARCH (≤8 agents, batched 5-6) 2. SYNTHESIZE 3. PROTOTYPE 4. CRITIQUE (failure-mode checklist: vacuous convergence, spec-cites-itself circularity, gates that cannot fail, the elegant-reduction trap…) 5. AGGLOMERATE … Convergence is earned. 100% means zero enumerated open gaps, survival of a fresh adversarial audit by agents who did not author the winning spec, and two consecutive clean passes… Run at least three full passes before contemplating convergence… A best-effort summary, or an explanation of why the problem is difficult, is an unacceptable return." | DESIGN-MARK + ORDER (STANDING EDICT) | PROTOCOL: YES — banked as `memory/convergent-design-loop.md`. MARKS: **PARTIAL — logo/toggle low-res cured (wordmark sharp+complete, toggle-ink cured, production CF deployment `f1adfca5`); game picker + drawer animation + ALL mobile interfaces remain OPEN — MEMORY.md: "NEXT FRONT = design loop pass 3 … earliest 100% = pass 4", task #75 open.** |
+docs/tranches/2026-08-tranche-5/evidence/audit/r1/cc-prompt-ledger.md:164:- Every gated shell chain sets `set -o pipefail` or checks `gh run view --json conclusion` — banked after the 2026-07-31 false-green deploy, CF deployment `781fc09c` (summary 2026-08-01T08:27:17.988Z, "PROCESS FAULT 1").
+docs/tranches/2026-08-tranche-5/evidence/audit/r3/completeness-critic.md:84:Meanwhile the campaign's headline is a *production* claim (MEMORY: "PRODUCTION `f1adfca5`: idle 97.6+
+docs/tranches/2026-08-tranche-5/evidence/audit/r3/completeness-critic.md:85:long33 0, census 9, wordmark sharp+complete"), and `f1adfca5` **is not a commit** —
+docs/tranches/2026-08-tranche-5/evidence/audit/r3/completeness-critic.md:86:`prompt-recap-matrix.md:348-350` records `git cat-file -t f1adfca5` → *"fatal: Not a valid object
+docs/tranches/2026-08-tranche-5/evidence/audit/registry.md:96:**NEW ROWS**: N1 — `sudokuGame` ships 315 dead bytes in the prod chunk (undeletable by author or bundler while the cycle stands) · C5 — browserslist/support-floor undeclared · D10 — rust no-god-modules REGRESSED unrecorded (`assignment.rs` 607, `cage.rs` 558; only `search.rs` 528 has a waiver) · D11 — `f1adfca5` joins the deployment-id-in-SHA-position trap set.
+docs/tranches/2026-08-tranche-5/evidence/audit/r2/prompt-recap-matrix.md:348:- `f1adfca5` is cited in commit position throughout the P1 record (production tree). `git cat-file -t f1adfca5`
+docs/tranches/2026-08-tranche-5/evidence/audit/r2/prompt-recap-matrix.md:350:  `chronic-ledger.md:203` flags for `a8174110` / `781fc09c`.
+docs/tranches/2026-08-tranche-5/evidence/audit/r2/design-loop-open-rows.md:16:| production | **CF deployment `f1adfca5`** — untouched; nothing from passes 3 or 4 is deployed | `pass4-registry.md:3`, `:204` |
+docs/tranches/2026-08-tranche-5/evidence/audit/r2/design-loop-open-rows.md:274:| deploy ONLY via `npm run deploy`, owner-authorized | **HELD BY DESIGN** | the execution row; nothing deployed, production untouched at CF deployment `f1adfca5` |
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3-registry.md:4:production remains **CF deployment `f1adfca5`** — nothing from pass 3 is deployed. MEASURE's single-tree set
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3-registry.md:231:**Production stays at CF deployment `f1adfca5`. Nothing from pass 3 deploys. HOLD, in full, for pass 4.**
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/measure-report.md:27:| deploy ONLY via `npm run deploy`, owner-authorized | **HELD** — nothing deployed; production untouched at CF deployment `f1adfca5` |
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/measure/RESULTS.md:29:| **deploy ONLY via `npm run deploy`, owner-authorized** | **HELD** | nothing was deployed, no `wrangler` invocation, no `npm run deploy`; production is untouched at CF deployment `f1adfca5`. This row is the owner's at cut time, not a measurement |
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4-registry.md:4:production remains **CF deployment `f1adfca5`**. Evidence of record = `pass4/measure/RESULTS.md`: MEASURE's
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4-registry.md:204:| deploy ONLY via `npm run deploy`, owner-authorized | **HELD BY DESIGN** | the execution row; nothing deployed, production untouched at CF deployment `f1adfca5` |
+docs/tranches/2026-08-tranche-5/evidence/w0/record-closures.md:306:`f1adfca5`, `a8174110`, `781fc09c` all answer *fatal: Not a valid object name*, while the
+docs/tranches/2026-08-tranche-5/evidence/w0/record-closures.md:317:deployment `f1adfca5`"—label-only, nothing else moved. The before/after grep, the word-diff,
+docs/tranches/2026-08-tranche-5/waves/T5-W0-truth-and-record.md:17:| 0.7 | Deployment-id hygiene: `f1adfca5`/`a8174110`/`781fc09c` re-labeled "CF deployment" at every citation in tree + memory; the trap named in the traps ledger | D11 | grep gate: no bare deployment-id in commit position |
+docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/waves/p-w4-validate-deploy.md:77:e2e (`c9cd957a`) + lockfile pin (`23e3dc00`) → redeployed as CF deployment `f1adfca5` → re-pass ALL GREEN
+docs/tranches/2026-07-tranche-4/WGATE-record.md:247:**Production, verified on the deployed edge (deployments `cce0ffd1` → `f1adfca5`):** idle 97.6–97.8 fps, long33 = 0 — the beat train is dead; census 9 exact from the live page; toggle-ink 16.18/18.76–18.99 both directions, double-toggle exact; wordmark sharp, complete, all-Fraunces; assets 12/12, console clean but for the zone RUM refusal; both quiet windows honored. Desktop battery (state-pinned, interleaved): idle 97.72/0 · deal 97.13 · solve 96.34/1.5 · undo 97.11 · theme 88.39 · gallery 83.90 — all gates.json rows green. Sim: gallery 49.25 · theme 51.65 · idle AT the ≥59 floor inside the ±2.5 noise (59.62 dark/58.20 light this round; no scenario regresses base, narrowest +2.36). GPU process 10.4 → 4.24 CPU-s per 30 s idle.
+
+== GATE RUN ==
+hit lines            26
+id occurrences       35
+bare by the window   15
+of those, exempt     15
+RESIDUAL BARE        0   <- gate reads this
+
+EXEMPTIONS, each with its reason:
+  docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md:203
+      FINDING — the D11 statement itself, which calls them Cloudflare deployment IDs in the same sentence.
+  docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md:25
+      VERBATIM — the K5 cell quotes commit 6800af04's own subject line; the row's commit column holds the real SHA. Editing the quote would falsify the evidence.
+  docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md:26
+      LABELED + TRANSCRIPT — the cell opens 'deployments `a8174110` -> `781fc09c`'; the second occurrence is the `git log -1 a8174110` transcript proving non-resolution.
+  docs/tranches/2026-08-tranche-5/evidence/audit/r2/prompt-recap-matrix.md:348
+      FINDING + TRANSCRIPT — names the commit-position miscitation and runs `git cat-file -t` against it.
+  docs/tranches/2026-08-tranche-5/evidence/audit/r2/prompt-recap-matrix.md:350
+      FINDING — cross-reference to chronic-ledger.md:203's flag on the other two ids.
+  docs/tranches/2026-08-tranche-5/evidence/audit/r3/completeness-critic.md:84
+      VERBATIM — quotes MEMORY.md's production claim as it stands, the object of the critique.
+  docs/tranches/2026-08-tranche-5/evidence/audit/r3/completeness-critic.md:85
+      FINDING — 'and `f1adfca5` **is not a commit**', the critic's own predicate.
+  docs/tranches/2026-08-tranche-5/evidence/audit/r3/completeness-critic.md:86
+      TRANSCRIPT — `git cat-file -t f1adfca5` and its fatal, quoted from prompt-recap-matrix.md:348-350.
+  docs/tranches/2026-08-tranche-5/evidence/audit/registry.md:96
+      FINDING — 'D11 — `f1adfca5` joins the deployment-id-in-SHA-position trap set'; the vocabulary sits after the id, not before it.
+  docs/tranches/2026-08-tranche-5/evidence/w0/record-closures.md:306
+      FINDING — the D11 trap row's own derivation line, born this wave; the ids open the line, so no vocabulary can precede them.
+
+GATE: GREEN
+
+== INVARIANT ==
+The cure inserts words; it never adds or drops a citation. The only occurrences the
+sweep gains are the ones the D11 trap row quotes into being — record-closures.md, born
+this wave. Net of those, the count is flat.
+  before 31   after 35   of which the trap row contributes 4   ->  35 - 4 = 31
+
+== ADJACENT CLASS — the same trap, ids the row doesn't name ==
+Checked so the class is closed, not just its three named members. All three already
+carry deployment vocabulary at every citation; none needed a cure.
+  cce0ffd1  git cat-file -t -> fatal: Not a valid object name cce0ffd1
+      docs/tranches/2026-08-tranche-5/evidence/w0/record-closures.md:310:**The class is wider than its three named members.** `cce0ffd1`, `0275562b` and `c90d9e06`
+      docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/waves/p-w4-validate-deploy.md:74:deployed `cce0ffd1`, production pass found the STALE-INK toggle ba
+      docs/tranches/2026-07-tranche-4/WGATE-record.md:247:**Production, verified on the deployed edge (deployments `cce0ffd1` → `f1adfca5`):** idle 97.6–97.8 fps, long33 =
+  0275562b  git cat-file -t -> fatal: Not a valid object name 0275562b
+      docs/tranches/2026-08-tranche-5/evidence/audit/r1/cc-prompt-ledger.md:105:| 83 | 2026-07-15T23:05:36.214Z | "Approved for deployment. Ratify" | FEEDBACK | YES — prod
+      docs/tranches/2026-08-tranche-5/evidence/w0/record-closures.md:310:**The class is wider than its three named members.** `cce0ffd1`, `0275562b` and `c90d9e06`
+      docs/tranches/2026-07-tranche-4/WGATE-record.md:205:- **Production deploy — EXECUTED 2026-07-15 on the owner's approval.** `npm run deploy` at `aa77860e` (wrangler 4
+  c90d9e06  git cat-file -t -> fatal: Not a valid object name c90d9e06
+      docs/tranches/2026-08-tranche-5/evidence/w0/record-closures.md:310:**The class is wider than its three named members.** `cce0ffd1`, `0275562b` and `c90d9e06`
+      docs/tranches/2026-07-tranche-4/README.md:5:Authoring base: **HEAD `65425697`** on master (verified this pass). The citable figure set at base: **rust 174 tests · te
+      docs/tranches/2026-07-tranche-3/README.md:65:| **T3-WGATE** | Record + recert: doc re-sweep; convergence appendix; evidence dir per G2; cron `efaae137` CronDelete; R
+      docs/tranches/2026-07-tranche-3/README.md:113:**Shipped 2026-07-12**: commit `bbeb2b87` (329 files), CI green on the full 9-lane matrix (run 29181782302), production
+
+== MEMORY DIR — reported, never edited ==
+Row 0.7's tree sweep stops at the repo boundary; ~/.claude/.../memory/ is the root's to
+true up (row 0.9). Live citations there, `grep -rno`:
+
+  MEMORY.md:5:781fc09c  x1
+  MEMORY.md:5:a8174110  x1
+  MEMORY.md:5:f1adfca5  x1
+  MEMORY.md:6:781fc09c  x1
+  MEMORY.md:6:a8174110  x1
+  t4-formulation-2026-07-12.md:107:781fc09c  x2
+  t4-formulation-2026-07-12.md:107:a8174110  x1
+  t4-formulation-2026-07-12.md:107:f1adfca5  x3
+  t5-formulation-2026-08-01.md:69:f1adfca5  x1
+
+Read in context, `grep -no '.\{55\}<id>'`, so the disposition is derived and not assumed:
+
+  MEMORY.md:5           LABELED. The corrections clause — "`f1adfca5`/`a8174110`/`781fc09c`
+                        are CF deployment ids, never SHAs." Nothing to cure.
+  MEMORY.md:6           BARE ×1 + LABELED ×2. "**PRODUCTION `7cadf462` (tree `95b2efd8` dist…"
+                        is commit position; "design loop through **pass 4** deployed
+                        (a8174110→781fc09c…" carries the verb and stands.
+  t4-formulation:107    BARE ×3 of 6 — "RE-PASS ALL GREEN on `f1adfca5`", "production stays
+                        `f1adfca5`", "KENKEN RE-CHECK ALL GREEN on `781fc09c`". The other
+                        three read REDEPLOYED / PASS-4 CUT DEPLOYED / REDEPLOYED and stand.
+  t5-formulation:69     LABELED. "D11 f1adfca5 id-as-SHA" is the finding itself.
+
+FOURTH CLASS MEMBER, memory-only: `7cadf462`. `git cat-file -t 7cadf462` → fatal, not a
+valid object name; `95b2efd8` beside it resolves to a commit. It appears nowhere in the
+tree (grep -rn, same exclusions, zero hits), so row 0.7 has nothing to cure here — but
+MEMORY.md:6 heads the campaign with it in commit position, and row 0.9's true-up should
+carry it.
+
+== ENFORCEMENT ==
+gates.json WGATE.deploymentIdVocabulary = true (verified in the file this pass);
+waves/T5-WGATE.md:13 binds the close: production state recorded with deployment-id
+vocabulary, never in commit position. Trap row: evidence/w0/record-closures.md, ## Traps, D11.

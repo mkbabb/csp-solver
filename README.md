@@ -59,7 +59,7 @@ The carousel game-select is the front door. Each game registers one card (`web/f
 
 ## Frontend
 
-Vue 3 Composition API, no router, no state library. `src/pencil/` carries the hand-drawn aesthetic; `src/games/{sudoku,futoshiki,thermo,killer,kenken}/` are the surfaces, each with its own `solver/` Worker module and cross-boundary imports ESLint-enforced. Affordances: the carousel game-select, an undo spine (one shared history, cap 200), a named-technique hint, the player's own pencil marks (Snyder corner/center notation) beside the solver's peek-gated engine marks, error-check assists (off / on-demand / live, on-demand the default and never a lives counter), hold-to-peek, and board permalinks. Sudoku and Futoshiki share a board over `?board=`; Thermo, Killer, and KenKen persist to localStorage in v1. Animation runs on `@mkbabb/pencil-boil`'s scheduler and defers to `prefers-reduced-motion`; the grid is an ARIA grid with keyboard navigation. Fonts are three self-hosted woff2 subsets under the SIL Open Font License, 17,708 B total.
+Vue 3 Composition API, no router, no state library. `src/pencil/` carries the hand-drawn aesthetic; `src/games/{sudoku,futoshiki,thermo,killer,kenken}/` are the surfaces, each with its own `solver/` Worker module and cross-boundary imports ESLint-enforced. Affordances: the carousel game-select, an undo spine (one shared history, cap 200), a named-technique hint, the player's own pencil marks (Snyder corner/center notation) beside the solver's peek-gated engine marks, error-check assists (off / on-demand / live, on-demand the default and never a lives counter), hold-to-peek, and board permalinks. Sudoku and Futoshiki share a board over `?board=`; Thermo, Killer, and KenKen persist to localStorage in v1. Animation runs on `@mkbabb/pencil-boil`'s scheduler and defers to `prefers-reduced-motion`; the grid is an ARIA grid with keyboard navigation. Fonts are three self-hosted woff2 subsets under the SIL Open Font License, 21,724 B total.
 
 The hint grammar sits in one place: a technique engine (`src/games/shared/techniqueEngine.ts`) names the cheapest human-deduction step for the board and grades the board by the hardest technique that step-ladder needs. Sudoku and Futoshiki carry named-technique modules (naked single, hidden single, and up); Thermo, Killer, and KenKen surface the solver-derived hint through the same margin voice.
 
@@ -84,7 +84,7 @@ cd web/frontend && npm install && npm run dev
 
 ## Testing
 
-All counts measured at `826f16e3`, Apple M5 Max, 2026-07-15.
+All counts measured at `e961bdb7`, Apple M5 Max, 2026-08-01.
 
 ```bash
 # Rust: 208 passed, 0 failed, 0 ignored (26 test binaries + 4 doctests)
@@ -93,9 +93,12 @@ cargo test --workspace
 # Python wheel-contract: 27 passed, 0 skipped
 cd csp-solver/tests-py && uv run --no-sync pytest
 
-# e2e: 82 Playwright tests across 13 spec files (77 in the default config;
-#      4 visual-golden + 1 throttle are testIgnore'd there and run separately)
+# e2e: 206 Playwright tests across 15 spec files in the default config (Chromium 115,
+#      WebKit 91). Five further specs are held out of it and ride two configs of their
+#      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (23 in 4).
+#      20 spec files on disk, 233 tests in all.
 cd web/frontend && npx playwright test
+cd web/frontend && npx playwright test --config playwright-golden.config.ts && npm run test:e2e:throttle
 
 # GAC A/B false-UNSAT corpus: 0/50 off, 0/50 on
 cargo run --release --example gac_ab_corpus
@@ -114,9 +117,10 @@ A Cloudflare Pages static deploy. Solving and generation never leave the visitor
 
 ## Declarations
 
-- **Browser support**: Chromium and Firefox. CI runs Playwright on Chromium alone; Firefox passes by audit. Safari is known-broken pending a WebKit performance fix, so read "solves entirely in the browser" as a Chromium/Firefox claim for now.
+- **Browser support**: Chromium and WebKit, each with its own lane. `playwright.config.ts` declares the two projects and CI installs both bundles, so "solves entirely in the browser" is asserted in each engine. Two files sit out the WebKit project: `mobile-*.spec.ts` pins Chromium at file scope (the iPhone/iPad descriptors would otherwise re-run as exact duplicates), and `share-truth.spec.ts` wants a clipboard permission Playwright's WebKit doesn't grant. Gecko carries no lane; Firefox is unasserted. The bundle targets ES2020.
 - **English only**: the copy is authored inline in English, `<html lang="en">`, with no i18n or locale-negotiation layer.
 - **No telemetry**: nothing is measured and nothing is phoned home. The app's sole third-party network hit is the attribution avatar (`avatars.githubusercontent.com`, off first paint, `referrerpolicy="no-referrer"`); board state lives in the URL and stays on the device.
+- **No offline mode**: there's no service worker and no web-app manifest, so the shell and the wasm module come off the network at every cold load, and an unvisited game's chunk downloads on select. Once a game is resident, its generation and solving run wholly on-device.
 
 ## Published artifacts
 
@@ -124,7 +128,7 @@ A Cloudflare Pages static deploy. Solving and generation never leave the visitor
 |---|---|---|
 | `csp-solver` | crates.io | 0.6.0 (published; the first release carrying all five puzzle families) |
 | `@mkbabb/csp-solver-wasm` | npm | 0.2.0 on npm; source is 0.6.0. The SPA file-links the lean build, not the registry package. |
-| `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.9.2 |
+| `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.10.1 |
 
 ## Performance
 

@@ -54,8 +54,10 @@ wasm-pack build --target web --profile wasm-release --no-default-features --out-
 `pkg/` is gitignored build output, not committed; the frontend file-links it
 (`"@mkbabb/csp-solver-wasm": "file:../../csp-solver/wasm/pkg"`) as the lean
 `--target web --no-default-features` artifact, the five puzzle families. That
-lean build measures 121,855 B, under the 124,500 B re-derived ceiling (base plus
-per-game wire); the twiggy CI lane enforces the size band, failing above
+lean build measures 122,385 B on darwin (`wc -c pkg/csp_solver_wasm_bg.wasm`,
+measured at e961bdb7, 2026-08-01), under the 124,500 B re-derived ceiling (base
+plus per-game wire); the CI runner's toolchain adds a couple of KB, and the
+twiggy lane enforces the band on the runner's own figure, failing above
 127,500 B.
 
 ## Consume

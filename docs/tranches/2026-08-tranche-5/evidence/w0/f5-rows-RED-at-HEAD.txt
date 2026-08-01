@@ -1,0 +1,109 @@
+doc-truth — 10 rows, every figure re-derived at run time
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+head  e961bdb7
+node  v26.0.0 darwin/arm64
+when  2026-08-01T18:35:18.305Z
+
+RED    frontend-readme-two-games
+        derived: 5 games registered (sudoku, futoshiki, thermo, killer, kenken) · pencil-boil ^0.10.1 · lint script "prettier --check src/"
+        web/frontend/README.md:5
+          expected: no match for /two games|0\.7\.0|prettier --write/i — the app registers 5 games, depends on pencil-boil ^0.10.1, and lints with "prettier --check src/"
+          got:      stroke-dasharray draw-ins). No router, no state library. Two games — Sudoku
+        web/frontend/README.md:11
+          expected: no match for /two games|0\.7\.0|prettier --write/i — the app registers 5 games, depends on pencil-boil ^0.10.1, and lints with "prettier --check src/"
+          got:      [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil) `^0.7.0`. The full
+        web/frontend/README.md:23
+          expected: no match for /two games|0\.7\.0|prettier --write/i — the app registers 5 games, depends on pencil-boil ^0.10.1, and lints with "prettier --check src/"
+          got:      npm run lint             # prettier --write src/
+
+RED    root-readme-e2e-counts
+        derived: 206 tests in 15 files (default) · 20 .spec.ts on disk · golden 4/1 · throttle 23/4
+        README.md:96
+          expected: 206 Playwright tests (playwright test --list)
+          got:      82 — # e2e: 82 Playwright tests across 13 spec files (77 in the default config;
+        README.md:96
+          expected: 15 (--list) or 20 (on disk) spec files
+          got:      13 — # e2e: 82 Playwright tests across 13 spec files (77 in the default config;
+
+RED    chromium-alone-claim
+        derived: playwright projects: chromium + webkit · ci installs: playwright install --with-deps chromium webkit
+        README.md:117
+          expected: no single-browser CI claim — playwright.config.ts declares 2 projects (chromium, webkit) and CI installs them
+          got:      - **Browser support**: Chromium and Firefox. CI runs Playwright on Chromium alone; Firefox passes by audit. Safari is known-broken pending a WebKit performance fix, so read "solves entirely in the browser" as a Chromium/Firefox claim for now.
+
+RED    lean-wasm-4-sites
+        derived: 122,385 B ← csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+        docs/benchmarks.md
+          expected: 122,385 B (measured now at csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm)
+          got:      docs/benchmarks.md:49 cites 121,855, 124,091, 124,500, 127,500 B · docs/benchmarks.md:51 cites 222,436 B
+        csp-solver/wasm/README.md
+          expected: 122,385 B (measured now at csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm)
+          got:      csp-solver/wasm/README.md:57 cites 121,855, 124,500 B
+        csp-solver/wasm/pkg/README.md
+          expected: 122,385 B (measured now at csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm)
+          got:      csp-solver/wasm/pkg/README.md:57 cites 121,855, 124,500 B
+        .github/workflows/ci.yml
+          expected: 122,385 B (measured now at csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm)
+          got:      .github/workflows/ci.yml:373 cites 92,897, 127,500 B · .github/workflows/ci.yml:406 cites 222,436, 90,602 B · .github/workflows/ci.yml:410 cites 90,602 B · .github/workflows/ci.yml:413 cites 210,312, 87,475 B · .github/workflows/ci.yml:415 cites 211,639, 87,853 B · .github/workflows/ci.yml:444 cites 127,500 B · .github/workflows/ci.yml:455 cites 124,091, 121,855 B · .github/workflows/ci.yml:464 cites 124,091 B · .github/workflows/ci.yml:466 cites 127,500 B
+
+RED    ci-band-comment-406
+        derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >127,500 B; lean artifact 122,385 B; canon-declared stale: 222,436 B (docs/benchmarks.md:51)
+        .github/workflows/ci.yml:406
+          expected: 122,385 B lean (measured at csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm) — or drop the literal, the run line already echoes the live $RAW
+          got:      90,602 B lean, hand-copied and 31,783 B off the artifact
+        .github/workflows/ci.yml:406
+          expected: no figure the canon declares stale — docs/benchmarks.md:51 says 222,436 B is stale, "do not quote it as current"
+          got:      222,436 B quoted as what wasm-release yields
+
+RED    sudoku-md-sections
+        derived: games registered: sudoku, futoshiki, thermo, killer, kenken — each owed a section in docs/sudoku.md
+        docs/sudoku.md
+          expected: a section matching /^## Thermo/m
+          got:      headings stop at: ## Futoshiki and the wider family
+        docs/sudoku.md
+          expected: a section matching /^## Killer/m
+          got:      headings stop at: ## Futoshiki and the wider family
+        docs/sudoku.md
+          expected: a section matching /^## KenKen/m
+          got:      headings stop at: ## Futoshiki and the wider family
+
+RED    ofl-licenses-figures
+        derived: 3 woff2 subsets, 21,724 B total (firacode-subset.woff2 3,624 B, fraunces-subset.woff2 13,788 B, patrickhand-subset.woff2 4,312 B) · OFL texts: OFL-FiraCode.txt, OFL-Fraunces.txt, OFL-PatrickHand.txt · paired true
+        README.md:62
+          expected: 21,724 B total (wc -c web/frontend/src/assets/fonts/*.woff2)
+          got:      17,708 B total
+        web/frontend/src/assets/fonts/LICENSES.md:3
+          expected: 21,724 B total (wc -c web/frontend/src/assets/fonts/*.woff2)
+          got:      17,708 B total
+        web/frontend/src/assets/fonts/LICENSES.md:11
+          expected: 13,788 B for fraunces-subset.woff2
+          got:      9,772 B
+
+RED    install-pin-0.5
+        derived: csp-solver crate version 0.6.0 → Install pin "0.6" · consumer surfaces carry no outbound link into docs/precepts/
+        csp-solver/README.md:35
+          expected: csp-solver = "0.6"
+          got:      csp-solver = "0.5"
+        csp-solver/README.md:266
+          expected: no link into docs/precepts/ — a published surface stays campaign-clean
+          got:      [canonical README shape](../docs/precepts/canonical-readme-shape.md).
+
+RED    pencil-boil-0.9.2
+        derived: web/frontend/package.json dependencies["@mkbabb/pencil-boil"] = ^0.10.1
+        README.md:127
+          expected: pencil-boil ^0.10.1
+          got:      ^0.9.2 — | `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.9.2 |
+        web/frontend/README.md:11
+          expected: pencil-boil ^0.10.1
+          got:      ^0.7.0 — [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil) `^0.7.0`. The full
+
+RED    test-count-208-vs-204
+        derived: 204 native #[test] attributes (csp-solver/src + csp-solver/tests, comments elided) · 14 #[wasm_bindgen_test] in the wasm crate (cfg'd to wasm32, not host-run) · 26 test binaries (csp-solver + csp-solver/wasm lib targets + integration files)
+        csp-solver/README.md:216
+          expected: a total reconciling to 204 #[test] attributes (declare the doctest split)
+          got:      208 passed, no doctest split declared — cargo test --workspace                     # 208 passed, 0 failed, 0 ignored across 28 test binaries (measured at 826f16e3, Apple M5 Max, 2026-07-15)
+        csp-solver/README.md:216
+          expected: 26 test binaries
+          got:      28 test binaries — cargo test --workspace                     # 208 passed, 0 failed, 0 ignored across 28 test binaries (measured at 826f16e3, Apple M5 Max, 2026-07-15)
+
+10 RED / 0 GREEN — doc canon disagrees with the tree

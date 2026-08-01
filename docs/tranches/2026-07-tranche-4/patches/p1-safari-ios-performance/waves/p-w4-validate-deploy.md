@@ -74,7 +74,7 @@ untouched). G4.2: gallery 49.25 · theme 51.65 · idle at the ≥59 floor inside
 deployed `cce0ffd1`, production pass found the STALE-INK toggle bake (pre-dates the patch;
 every prior visual gate loaded fresh in one theme) → pencil-boil 0.10.1 (`763f1c0`, 13 LOC:
 the bake yields a paint before reading the cascade) + the born-RED `theme-bake-freshness`
-e2e (`c9cd957a`) + lockfile pin (`23e3dc00`) → redeployed `f1adfca5` → re-pass ALL GREEN
+e2e (`c9cd957a`) + lockfile pin (`23e3dc00`) → redeployed as CF deployment `f1adfca5` → re-pass ALL GREEN
 (toggle-ink 16.18/18.76–18.99 both directions, double-toggle exact; census 9; idle long33 0;
 assets 6/6; quiet windows 129 s/121 s honored). G4.6: WGATE record §9.1. Local-rig traps
 booked: the orphaned :4188 preview reused by `reuseExistingServer` (a wrong-build gate run),

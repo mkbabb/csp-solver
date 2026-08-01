@@ -220,7 +220,7 @@ Every row cites its census/audit line. Grouped by species.
 
 ## 5 · Landing order — six waves, gates born RED
 
-Sequencing law: **W1–W4 touch no design-lane surface** (`GameScene.vue`, `GameControlPanel.vue`, `GameGallery.vue` untouched); **W5 lands only after the pass-5 lane cures are in**, on a single md5-proven tree per MEASURE discipline (design-loop §5.4). Production stays `f1adfca5` throughout; deploy remains the team lead's.
+Sequencing law: **W1–W4 touch no design-lane surface** (`GameScene.vue`, `GameControlPanel.vue`, `GameGallery.vue` untouched); **W5 lands only after the pass-5 lane cures are in**, on a single md5-proven tree per MEASURE discipline (design-loop §5.4). Production stays CF deployment `f1adfca5` throughout; deploy remains the team lead's.
 
 **W0 · Dead matter** (no behavior change)
 Kills: 15 tokens, dead props ×3 + 15 bind sites, PENCIL/YOSHI dead keys, widened-type exports, sub-floor guards, `@/` alias fold (base64url → games/shared, useTheme → pencil/composables), re-export shells, `useButtonAnimation` inline.

@@ -1,7 +1,7 @@
 # PASS-3 REGISTRY — AGGLOMERATION · 2026-07-31
 
 Tree at close: MAIN `5873a920` (F3 stage close), clean; base seal `6800af04` (P1 patch);
-production remains **`f1adfca5`** — nothing from pass 3 is deployed. MEASURE's single-tree set
+production remains **CF deployment `f1adfca5`** — nothing from pass 3 is deployed. MEASURE's single-tree set
 (RESULTS.md, `dist-head` ≡ `index-DTLxUr3ZTp-8.js`, byte-identical to F3's `dist-F3head`) is the
 evidence of record; where a lane's banked number disagrees with it, MEASURE wins and the
 disagreement is a gap row below. Gaps are ENUMERATED, never averaged — a lane's percentage is
@@ -228,7 +228,7 @@ residue re-runs at pass-4 close under the pass-2 protocol verbatim, both centers
 
 ## 5 · DEPLOY RULING
 
-**Production stays at `f1adfca5`. Nothing from pass 3 deploys. HOLD, in full, for pass 4.**
+**Production stays at CF deployment `f1adfca5`. Nothing from pass 3 deploys. HOLD, in full, for pass 4.**
 
 The mandate is that the sealed P1 production state must not regress, and pass-3 HEAD regresses
 it on a measured surface: the 1280×800-coarse card ends **+36.8px taller than the P1 seal**

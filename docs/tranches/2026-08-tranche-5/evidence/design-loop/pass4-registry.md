@@ -1,7 +1,7 @@
 # PASS-4 REGISTRY — AGGLOMERATION · 2026-08-01
 
 Tree at close: MAIN **`52ef014a`** (F3 stage close), clean; base seal `6800af04` (P1 patch);
-production remains **`f1adfca5`**. Evidence of record = `pass4/measure/RESULTS.md`: MEASURE's
+production remains **CF deployment `f1adfca5`**. Evidence of record = `pass4/measure/RESULTS.md`: MEASURE's
 rebuilt `dist-head` (`index-6v9S84SRo2al.js`, md5 `dc6424524ce09d0cc9e4865c561beeac`) is
 byte-identical to F3's `dist-F3head`, so every lane figure and MEASURE figure sit on one artifact —
 the single-tree discipline pass 3 demanded, cured by construction. Gaps are ENUMERATED, never
@@ -201,7 +201,7 @@ evidence) against pass-5 diffs only.
 | d4e8e41e boot path attributed on JavaScriptCore | **PASS** | THIS build on iOS 19 MobileSafari: booted · 81 cells · dealt · errors [] · 2009 ms, trap ahead of the module script (RESULTS §6) |
 | tally line restored or ruled | **PASS** | 1 paint at seven widths both engines, 0 on the tree it shipped broken, unclipped-plant control (RESULTS §4) |
 | landscape rung priced or reverted | **PASS (priced)** | 40.22px = portrait parity; cost re-measured 90.58/89.98 overflow. The ELECTION itself goes to the team lead per F3-G2 — a governance row, not a gate failure |
-| deploy ONLY via `npm run deploy`, owner-authorized | **HELD BY DESIGN** | the execution row; nothing deployed, production untouched at f1adfca5 |
+| deploy ONLY via `npm run deploy`, owner-authorized | **HELD BY DESIGN** | the execution row; nothing deployed, production untouched at CF deployment `f1adfca5` |
 | (standing mandate) seal must not regress | **PASS w/ disclosure** | every geometry cell at or under the seal; three sim gates hold; uniform-sign −0.43..−1.18 fps in-session disclosed (RESULTS §7) |
 
 **Every measurable row PASSES. THE CUT IS RECOMMENDED**: `52ef014a`, whose built artifact is
