@@ -159,6 +159,26 @@ async function loadBaked(page: Page) {
   await page.waitForTimeout(1200);
 }
 
+/**
+ * `sample`, POLLED until both baked surfaces decode to real ink or the window closes.
+ *
+ * The same settle wordmark-integrity takes, for the same reason: the bake is asynchronous and
+ * two-stage (`useRasterStack` captures on `document.fonts.ready`, then again when the box
+ * re-fits under a new `cacheKey`), and the consumer holds the previous URLs across the second
+ * capture. Sampling on a wall-clock guess reads whatever that sequence has reached; this waits
+ * the settle out. First read wins whenever the stack is already settled.
+ */
+async function settledSample(page: Page, timeout = 15000): Promise<Sample> {
+  const unread = (v: string | null) => !v || v === "no-ink" || v === "load-failed";
+  const deadline = Date.now() + timeout;
+  let s = await sample(page);
+  while ((unread(s.logoInk) || unread(s.gridInk)) && Date.now() < deadline) {
+    await page.waitForTimeout(500);
+    s = await sample(page);
+  }
+  return s;
+}
+
 async function assertAgrees(s: Sample, when: string, page: Page, testInfo: TestInfo) {
   // This spec reads the SAME baked pose bitmap wordmark-integrity does, so it is exposed to
   // the same unreadable-bake red (CI run 30684983201) and gets the same rule: ship the pose
@@ -190,7 +210,7 @@ for (const start of ["light", "dark"] as const) {
       page,
     }, testInfo) => {
       await loadBaked(page);
-      const before = await sample(page);
+      const before = await settledSample(page);
       // The fresh load is the control: if this reds, the sampler is broken, not the bake.
       await assertAgrees(before, "fresh load", page, testInfo);
 
@@ -224,7 +244,7 @@ for (const start of ["light", "dark"] as const) {
         .not.toBe(before.gridHref);
       await page.waitForTimeout(400); // let the atomic url swap settle across all poses
 
-      const after = await sample(page);
+      const after = await settledSample(page);
       expect(after.theme, "the toggle did not change the theme").not.toBe(before.theme);
       await assertAgrees(after, "after ONE toggle", page, testInfo);
     });
