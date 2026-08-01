@@ -48,6 +48,15 @@ export default defineConfig({
   expect: { timeout: 10000 },
   fullyParallel: true,
   globalSetup: "./e2e/global-setup.ts",
+  // ITS OWN report folder. This config declared no reporter at all, so a red here printed
+  // `test-results/…/test-failed-1.png` paths into a directory CI does not upload, while the
+  // `playwright-report/` artifact carried the GOLDEN config's report — which is why run
+  // 30684983201's failure arrived with no screenshot and no error context to read. A separate
+  // outputFolder keeps both reports (the golden gate runs first and must not be clobbered).
+  reporter: [
+    ["list"],
+    ["html", { open: "never", outputFolder: "playwright-report-throttle" }],
+  ],
   projects: [
     {
       name: "throttled-void",
@@ -74,7 +83,23 @@ export default defineConfig({
       // nothing. Same bundled preview; the assertion is over the baked pose BITMAPS.
       name: "wordmark-webkit",
       testMatch: /wordmark-integrity\.spec\.ts$/,
-      retries: 0,
+      // ONE retry, and the reason is the CI record, not a preference. Run 30684983201 red the
+      // `killer` row alone with "no ink in the baked pose at all" — and it is NOT the linux
+      // Playwright-WebKit font hole that shape suggests: the same run, same engine, same host
+      // passed the other FOUR game rows AND the Fraunces zero-fallback probe, and this same
+      // project passed all six rows on the same runner image at 117c18ef, 646c82ad and
+      // 6800af04 (runs 30654525795 / 30660276696 / 30663743674). It never reproduced on
+      // darwin, in the suite or against 180 synthetic captures of the same recipe.
+      //
+      // So the row is not a deterministic read the way the census beside it is: it asserts
+      // over an ASYNCHRONOUS bake — a detached SVG document that loads its own copy of the
+      // inlined face and is captured on one `drawImage` — and a retry re-bakes it from a
+      // fresh page, which is the only instrument that can tell a one-shot bad capture from a
+      // real one. `throttled-void`'s sanctioned retry is the same argument on the same host.
+      // Playwright REPORTS a retried pass as flaky, so this hides nothing: a recurring empty
+      // bake still surfaces, now carrying the pose bitmap the spec attaches (bake-evidence.ts).
+      // The edge-clip invariant the row was born for is untouched, and so is darwin.
+      retries: 1,
       use: { browserName: "webkit" },
     },
     // P1-W4 G4.5 — the baked surfaces must re-ink on a theme toggle. Engine-INDEPENDENT (it

@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type TestInfo } from "@playwright/test";
+import { attachBakeEvidence } from "./bake-evidence";
 
 /**
  * P1-W4 G4.5 — THE BAKED SURFACES CARRY THE LIVE THEME'S INK, against the BUILT dist.
@@ -158,7 +159,17 @@ async function loadBaked(page: Page) {
   await page.waitForTimeout(1200);
 }
 
-function assertAgrees(s: Sample, when: string) {
+async function assertAgrees(s: Sample, when: string, page: Page, testInfo: TestInfo) {
+  // This spec reads the SAME baked pose bitmap wordmark-integrity does, so it is exposed to
+  // the same unreadable-bake red (CI run 30684983201) and gets the same rule: ship the pose
+  // that was read, so the next occurrence is attributable rather than a message.
+  if (!s.logoInk || s.logoInk === "no-ink" || s.logoInk === "load-failed")
+    await attachBakeEvidence(
+      page,
+      testInfo,
+      "svg.handwritten-logo image.logo-pose-bmp",
+      when.replace(/\W+/g, "-"),
+    );
   expect(s.logoInk, `${when}: no logo bake to read`).toBeTruthy();
   expect(s.logoInk, `${when}: the logo bake decoded to nothing`).not.toBe("no-ink");
   expect(
@@ -177,11 +188,11 @@ for (const start of ["light", "dark"] as const) {
 
     test(`${start} → ${start === "light" ? "dark" : "light"}: both baked surfaces re-ink`, async ({
       page,
-    }) => {
+    }, testInfo) => {
       await loadBaked(page);
       const before = await sample(page);
       // The fresh load is the control: if this reds, the sampler is broken, not the bake.
-      assertAgrees(before, "fresh load");
+      await assertAgrees(before, "fresh load", page, testInfo);
 
       await page.locator("button.sun-moon-toggle").click();
 
@@ -215,7 +226,7 @@ for (const start of ["light", "dark"] as const) {
 
       const after = await sample(page);
       expect(after.theme, "the toggle did not change the theme").not.toBe(before.theme);
-      assertAgrees(after, "after ONE toggle");
+      await assertAgrees(after, "after ONE toggle", page, testInfo);
     });
   });
 }

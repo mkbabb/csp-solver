@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { attachBakeEvidence } from "./bake-evidence";
 
 /**
  * P1 G3.4 — WORDMARK INTEGRITY, in WebKit, against the BUILT dist.
@@ -48,7 +49,7 @@ test.describe("G3.4 · wordmark integrity (WebKit, built dist)", () => {
   for (const game of GAMES) {
     test(`${game}: baked ink sits inside its own box on all four edges`, async ({
       page,
-    }) => {
+    }, testInfo) => {
       await loadWordmark(page, game);
       const r = await page.evaluate(async () => {
         const svg = document.querySelector("svg.handwritten-logo")!;
@@ -85,6 +86,15 @@ test.describe("G3.4 · wordmark integrity (WebKit, built dist)", () => {
         return { W, H, top, bot, left, right };
       });
       // Ink was found at all (a blank bake would otherwise pass every edge check vacuously).
+      // An empty read ships the pose it read (CI run 30684983201 reported this with nothing
+      // attached; see bake-evidence.ts) — attribution belongs to the red, not to the retry.
+      if (r.top < 0)
+        await attachBakeEvidence(
+          page,
+          testInfo,
+          "svg.handwritten-logo image.logo-pose-bmp",
+          game,
+        );
       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
       const clipped = [
         r.top === 0 && "top",

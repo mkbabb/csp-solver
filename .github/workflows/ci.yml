@@ -643,6 +643,19 @@ jobs:
                   name: playwright-report
                   path: web/frontend/playwright-report
                   retention-days: 7
+            # The built-dist gates report SEPARATELY (playwright-report-throttle/): they run
+            # last, and until run 30684983201 they wrote no HTML report at all — that red named
+            # a test-results/ screenshot this job never uploaded, and `playwright-report`
+            # carried the golden gate's report instead. Both paths ship now, so a throttle red
+            # arrives with its screenshot, its error context and its bake attachments.
+            - name: Upload the built-dist gates' report (failure only)
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: playwright-report-throttle
+                  path: web/frontend/playwright-report-throttle
+                  if-no-files-found: ignore
+                  retention-days: 7
 
     # ---------------------------------------------------------------- Lane 10
     # iai — instruction-count baseline gate for the solver hot path (P6 ADOPT,
