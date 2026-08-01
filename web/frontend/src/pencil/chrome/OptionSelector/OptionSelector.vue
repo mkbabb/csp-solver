@@ -36,7 +36,13 @@ function scribbleSeed(val: string | number): number {
 <template>
   <div
     class="ctrl-options"
-    :class="mobile ? 'options-row' : 'flex flex-col items-center md:items-stretch'"
+    :class="
+      mobile
+        ? 'options-row'
+        : options.length === 2
+          ? 'options-pair'
+          : 'flex flex-col items-center md:items-stretch'
+    "
   >
     <button
       v-for="opt in options"
@@ -129,5 +135,25 @@ function scribbleSeed(val: string | number): number {
   display: flex;
   justify-content: center;
   padding: 0.25rem 0;
+}
+
+/* A BINARY IS A PAIR, NOT A STACK (T4-P1, stage BC — the price reconciliation).
+   The rail is a 165px column and every option in it is a full-width chip on its own line. A
+   two-option group read as two more entries in a list of fourteen; it is one control with two
+   states, and the phone's row branch has always drawn it that way — the rail was the outlier.
+   Split, the pair costs ONE chip-height instead of two plus a seam (95.19 → 44.00 at
+   1280×800-coarse, 83.19 → 38.00 at the fine rail), which is where a third of B's column price
+   is repaid without touching the seam or the 44px coarse floor: each half is 78.96 × 44, wider
+   than the 60.02/48.02 the two words need and wider than the stacked chip it replaces on the
+   only axis a thumb was short of.
+   The rule is the DATA's, not the control's — `options.length === 2` — so no caller learns a
+   flag and any future binary inherits it. Estate-wide there is exactly one today (candidates
+   Off/On); every game's size and difficulty axis carries 3–4. */
+.options-pair {
+  display: flex;
+}
+
+.options-pair > .ctrl-btn {
+  flex: 1 1 0;
 }
 </style>

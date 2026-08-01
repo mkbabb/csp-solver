@@ -595,7 +595,79 @@ test("option chips keep their separation: ≥6px between neighbours, both axes",
   }
 });
 
-// ── Test 10: The Bloom's warp rest pose (T3-W13 §2) ─────────────────
+// ── Test 10: the iPad coarse card against the P1 seal ────────────────
+
+/** The rail panel's own box at the cell that owns the price. */
+const PANEL_H = () => {
+  const panel = document.querySelector(
+    ".controls-card .control-panel-wrap, .mobile-board-width .control-panel-wrap",
+  );
+  return panel ? +panel.getBoundingClientRect().height.toFixed(2) : null;
+};
+
+test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for", async ({
+  browser,
+}) => {
+  // 1280×800 at `pointer: coarse` is the one cell where the estate stacks fourteen
+  // tap-floored (44px) chips in a 165px column, so it is the cell every vertical price
+  // lands on hardest — and it is the cell the sealed P1 patch was measured at: **1098.25**.
+  // The chip seam costs 7.2px per neighbour there (nine neighbours, +64.8px), which is
+  // exactly why the seam has to be paid for somewhere instead of simply added: a cure that
+  // pushes the card past its own seal is a regression wearing a fix's name. The two payments
+  // are the binary laid out as a pair (`.options-pair`) and the divider's un-doubled margin.
+  const SEAL = 1098.25;
+
+  const ctx = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+    hasTouch: true,
+    isMobile: true,
+    baseURL: test.info().project.use.baseURL,
+  });
+  const p = await ctx.newPage();
+  try {
+    await p.goto("./");
+    await p.waitForSelector("svg.handwritten-logo", { timeout: 15000 });
+    await p.waitForSelector(".ctrl-btn", { timeout: 15000 });
+    // A number without its regime is not a number: this must be the coarse ROW regime
+    // (the rail), not a fine desktop and not the phone's in-flow card.
+    const regime = await p.evaluate(() => ({
+      coarse: matchMedia("(pointer: coarse)").matches,
+      row: matchMedia("(min-width: 1024px)").matches,
+      rail: !!document.querySelector(".controls-card .control-panel-wrap"),
+    }));
+    expect(regime, "iPad coarse row regime").toEqual({
+      coarse: true,
+      row: true,
+      rail: true,
+    });
+
+    const shipped = await p.evaluate(PANEL_H);
+    expect(
+      shipped,
+      `iPad coarse card is ${shipped}px against the P1 seal ${SEAL}px`,
+    ).toBeLessThanOrEqual(SEAL);
+
+    // NEGATIVE CONTROL, in the same run: revert both payments in-page and the same probe
+    // must break the seal. Without this the bound is arithmetic about a number nobody can
+    // move — the GATE-1 pattern, and the reason this row exists at all.
+    await p.addStyleTag({
+      content: `.ctrl-options.options-pair { flex-direction: column !important }
+                .ctrl-options.options-pair > .ctrl-btn { flex: 0 0 auto !important }
+                .peek-hold-surface { margin-block: 0.5rem !important }`,
+    });
+    await p.waitForTimeout(120);
+    const reverted = await p.evaluate(PANEL_H);
+    expect(
+      reverted,
+      "negative control: the unpaid layout must break the seal",
+    ).toBeGreaterThan(SEAL);
+    expect(reverted! - shipped!).toBeGreaterThan(30);
+  } finally {
+    await ctx.close();
+  }
+});
+
+// ── Test 11: The Bloom's warp rest pose (T3-W13 §2) ─────────────────
 
 test("toggle warp rest pose: wrung into the page, no carousel travel", async ({
   page,

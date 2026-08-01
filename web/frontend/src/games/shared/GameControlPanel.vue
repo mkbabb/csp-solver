@@ -716,9 +716,14 @@ function onHint() {
          live zone below. Spatial prophylaxis — Deal sits a full divider from the play tools, so
          a mid-game fat-finger never lands a board wipe. L14: a washi labels the hidden affordance.
          UI-9: anchored to the divider's OWN box, so the chip sits ON the ruled line. UI-4: also
-         persistent on coarse pointers (iPad row regime), with a padded ≥44px target. -->
+         persistent on coarse pointers (iPad row regime), with a padded ≥44px target.
+         NO `my-2` (T4-P1, stage BC): the wells on both sides already carry `margin-block: 0.5rem`,
+         priced at the frame-daylight floor, and the divider is not a drawn frame — its own margin
+         only doubled theirs (8+8 above and below, for a 14px rule). The mobile twin has never
+         carried it and reads correctly; the branches now agree. −16.00px at every column cell,
+         nothing moved inside the ≥44px hold target. -->
     <div
-      class="peek-hold-surface group relative my-2"
+      class="peek-hold-surface group relative"
       @pointerdown="onDividerHoldStart($event)"
       @pointermove="onDividerHoldMove($event)"
       @pointerup="onDividerHoldEnd()"
