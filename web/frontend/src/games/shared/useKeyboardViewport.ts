@@ -19,6 +19,33 @@ import { BOARD_CELLS_CLASS } from "./constants";
  * `.board-cells` contract and no-ops for every other focus target. On desktop the maths are
  * self-gating — with no software keyboard the visual viewport equals the layout viewport, so
  * the inset is 0 and every in-view cell yields a zero delta (no scroll, no jank).
+ *
+ * ── T4-P1 pass 4 · TWO CHARTER ROWS DISPOSED HERE ──────────────────────────────────────────
+ *
+ * THE 296px KEYPAD BAND — **CLOSED, GREEN.** The F3 charter carried the keypad as a measured
+ * constant (296px on a booted device, not the 336 pass 1 assumed) and pass 3 routed it to the
+ * owner because a sim's soft keypad would not rise. The keypad was never the mechanism: this
+ * composable's `--keyboard-inset` IS the band, and the stacked scene spends it as bottom
+ * scroll-room (App.vue), so the constant is drivable through the fake visual viewport at its
+ * measured size. Driven at 296 on the built dist, both engines: the page grows 292 of the 296
+ * (1132 → 1424 chromium, 1131 → 1423 webkit — the 4px shortfall is under the 8px seating
+ * margin), the commit verb seats fully visible above the band with 8.05px to spare, and the
+ * DEEPEST control seats clear too. Lane B's G4 charge — the verb 8.9px under the keypad at max
+ * scroll — was a property of a FIXED tray; this tree's panel is in flow, so the band is a
+ * scroll question and the scroll-room answers it. Gated in `mobile-platform.spec.ts`, with the
+ * control that matters: stop spending the inset and the deepest control strands under the band.
+ *
+ * THE `--vv-height` ANCHOR — **RETIRED, with its trigger named.** The charter banked
+ * `top: var(--vv-height)` + translate-up (never `bottom: 0`, never height-yield) as the iOS
+ * fixed-bottom idiom, proven necessary by Lane B's G4 control where a fixed tray was 100%
+ * occluded. It has no consumer and cannot get one: below 1024 there is NO fixed surface — the
+ * control card is in flow and `#controls-drawer` is `v-if="rowRegime"` (blast §2.5) — and the
+ * drag-sheet that would have needed it is retired on the stall lane's per-gesture bill. So this
+ * composable publishes `--keyboard-inset` alone, and one custom property is the right number of
+ * custom properties for one consumer. TRIGGER, binding on the next hand: the first
+ * position:fixed surface that mounts below 1024 must anchor on `top: var(--vv-height)` with the
+ * rest pose on `translate:` — publish the var HERE, in this same resize handler, vars before
+ * `ensureVisible`, and it inherits this file's one listener and its deterministic ordering.
  */
 
 /** The cell wrappers a board input lives inside — we scroll the whole cell, not the bare input. */

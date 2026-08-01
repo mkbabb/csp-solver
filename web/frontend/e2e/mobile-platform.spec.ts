@@ -159,6 +159,37 @@ test.describe("ios-discipline (iPhone-geometry coarse)", () => {
 // keyboard-avoid — an EMULATED visualViewport (installed before app scripts) lets us shrink the
 // visual viewport the way the OS keyboard does. The focused cell must ride clear of the band.
 // ─────────────────────────────────────────────────────────────────────────────
+/** Replace visualViewport with a controllable fake BEFORE any app script reads it. Nothing else
+ *  in the app (or pencil-boil) consumes visualViewport — grep-verified — so this is inert
+ *  elsewhere. window.__setVV(height, offsetTop) shrinks the band + dispatches the resize the
+ *  composable listens for, exactly as the OS keyboard would. */
+type VVWindow = { __setVV: (h: number, ot?: number) => void };
+async function installFakeVisualViewport(page: Page) {
+  await page.addInitScript(() => {
+    const fake = new EventTarget();
+    let h = window.innerHeight;
+    let ot = 0;
+    Object.defineProperties(fake, {
+      height: { get: () => h, configurable: true },
+      width: { get: () => window.innerWidth, configurable: true },
+      offsetTop: { get: () => ot, configurable: true },
+      offsetLeft: { get: () => 0, configurable: true },
+      pageTop: { get: () => ot, configurable: true },
+      pageLeft: { get: () => 0, configurable: true },
+      scale: { get: () => 1, configurable: true },
+    });
+    Object.defineProperty(window, "visualViewport", {
+      get: () => fake,
+      configurable: true,
+    });
+    (window as unknown as VVWindow).__setVV = (nh, no) => {
+      h = nh;
+      ot = no ?? 0;
+      fake.dispatchEvent(new Event("resize"));
+    };
+  });
+}
+
 test.describe("keyboard-avoid (emulated visualViewport)", () => {
   test.use({
     viewport: { width: 390, height: 640 },
@@ -169,36 +200,7 @@ test.describe("keyboard-avoid (emulated visualViewport)", () => {
   test("a focused below-fold cell scrolls clear of the emulated keyboard band", async ({
     page,
   }) => {
-    // Replace visualViewport with a controllable fake BEFORE any app script reads it. Nothing else
-    // in the app (or pencil-boil) consumes visualViewport — grep-verified — so this is inert
-    // elsewhere. window.__setVV(height, offsetTop) shrinks the band + dispatches the resize the
-    // composable listens for, exactly as the OS keyboard would.
-    await page.addInitScript(() => {
-      const fake = new EventTarget();
-      let h = window.innerHeight;
-      let ot = 0;
-      Object.defineProperties(fake, {
-        height: { get: () => h, configurable: true },
-        width: { get: () => window.innerWidth, configurable: true },
-        offsetTop: { get: () => ot, configurable: true },
-        offsetLeft: { get: () => 0, configurable: true },
-        pageTop: { get: () => ot, configurable: true },
-        pageLeft: { get: () => 0, configurable: true },
-        scale: { get: () => 1, configurable: true },
-      });
-      Object.defineProperty(window, "visualViewport", {
-        get: () => fake,
-        configurable: true,
-      });
-      (window as unknown as { __setVV: (h: number, ot?: number) => void }).__setVV = (
-        nh,
-        no,
-      ) => {
-        h = nh;
-        ot = no ?? 0;
-        fake.dispatchEvent(new Event("resize"));
-      };
-    });
+    await installFakeVisualViewport(page);
 
     await loadSudoku(page); // 9×9
 
@@ -236,6 +238,89 @@ test.describe("keyboard-avoid (emulated visualViewport)", () => {
         { timeout: 5000 },
       )
       .toBeLessThanOrEqual(KEYBOARD_TOP + 2); // never eclipsed
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE 296px KEYPAD BAND — the F3 charter's own measured constant (pass 2 measured 296 on a
+// booted device against the 336 pass 1 had assumed). Pass 3 routed it to the owner because the
+// SIM's soft keypad would not rise; the keypad is not the mechanism. `useKeyboardViewport`
+// publishes the occlusion height as `--keyboard-inset` and the stacked scene spends it as
+// bottom scroll-room (App.vue), so the band is drivable at its measured size through the fake
+// visual viewport, composable and all. Lane B's G4 charge — the commit verb 8.9px under the
+// keypad at max scroll — was a property of a FIXED tray; this tree's panel is in flow.
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe("the 296px keypad band (measured constant, driven through the composable)", () => {
+  test.use({ viewport: { width: 390, height: 664 }, hasTouch: true, isMobile: true });
+
+  test("every control can be seated clear of the keypad, verb and deepest chip alike", async ({
+    page,
+  }) => {
+    const BAND = 296;
+    await installFakeVisualViewport(page);
+    await loadSudoku(page);
+
+    const roomBefore = await page.evaluate(
+      () => (document.scrollingElement || document.documentElement).scrollHeight,
+    );
+
+    await page.evaluate((b) => (window as unknown as VVWindow).__setVV(664 - b), BAND);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          getComputedStyle(document.documentElement)
+            .getPropertyValue("--keyboard-inset")
+            .trim(),
+        ),
+      )
+      .toBe(`${BAND}px`);
+
+    /** Scroll a control so its whole box sits above the keypad; report the rendered pose. */
+    const seat = (sel: string, band: number) =>
+      page.evaluate(
+        ({ sel, band }) => {
+          const doc = document.scrollingElement || document.documentElement;
+          const all = [...document.querySelectorAll(sel)].filter(
+            (el) => el.getClientRects().length > 0,
+          );
+          const el = all[all.length - 1] as HTMLElement | undefined;
+          if (!el) return null;
+          const bandH = window.innerHeight - band;
+          const pageBottom = el.getBoundingClientRect().bottom + doc.scrollTop;
+          doc.scrollTop = Math.min(
+            doc.scrollHeight - window.innerHeight,
+            Math.max(0, Math.ceil(pageBottom + 8 - bandH)),
+          );
+          void document.body.offsetHeight;
+          const r = el.getBoundingClientRect();
+          const out = { top: +r.top.toFixed(2), bottom: +r.bottom.toFixed(2), bandH };
+          doc.scrollTop = 0;
+          return out;
+        },
+        { sel, band },
+      );
+
+    // The room the band asks for is the room the scene claims — measured 292 of 296, the
+    // shortfall smaller than the 8px seating margin below it.
+    const roomAfter = await page.evaluate(
+      () => (document.scrollingElement || document.documentElement).scrollHeight,
+    );
+    expect(roomAfter - roomBefore).toBeGreaterThanOrEqual(BAND - 8);
+
+    const verb = await seat(".mobile-board-width .deal-btn", BAND);
+    expect(verb!.top).toBeGreaterThanOrEqual(0);
+    expect(verb!.bottom).toBeLessThanOrEqual(verb!.bandH);
+
+    const deepest = await seat(".mobile-board-width .ctrl-btn", BAND);
+    expect(deepest!.top).toBeGreaterThanOrEqual(0);
+    expect(deepest!.bottom).toBeLessThanOrEqual(deepest!.bandH);
+
+    // CONTROL: stop spending the inset — the exact thing App.vue does with it — and the
+    // deepest control can no longer be brought out from under the keypad at any scroll.
+    await page.addStyleTag({ content: ".board-group { padding-bottom: 0 !important; }" });
+    await page.waitForTimeout(200);
+    const stranded = await seat(".mobile-board-width .ctrl-btn", BAND);
+    expect(stranded!.bottom).toBeGreaterThan(stranded!.bandH);
   });
 });
 

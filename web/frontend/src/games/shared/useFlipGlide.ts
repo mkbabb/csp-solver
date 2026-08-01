@@ -29,6 +29,24 @@ import { MOTION } from "@pencil/config/pencilConfig";
  * It owns the animation MECHANICS; the caller owns WHICH elements move, their FLIP
  * deltas, and the settle side-effects (via `onSettle`). Module-level safe (no lifecycle
  * hooks) — the drawer is a module singleton.
+ *
+ * ── T4-P1 pass 4 · TWO CHARTER ROWS DISPOSED HERE ──────────────────────────────────────────
+ *
+ * `run()`-PER-RELEASE over `reverse()` — **CONSUMED, and it was never new.** The F3 charter
+ * banked it as an asset to adopt; the mechanism it names is this engine's own contract, already
+ * shipped: `run()` supersedes any in-flight glide silently, so a fresh gesture never has to
+ * unwind the last one and the binary-flip limit of `reverse()` never engages. Reversal survives
+ * for exactly the case it is right for — a mid-glide re-click of the SAME two-state toggle,
+ * where velocity plausibility is the point. Nothing is owed here.
+ *
+ * THE CHANNEL SPLIT (rest pose on `translate:`, gesture on `transform:`) — **BANKED, NO
+ * CONSUMER, trigger named.** The charter banked it from the sheet spike: a gesture that writes
+ * `transform` over a rest pose parked on `translate` never has to read, compose or restore the
+ * rest value, so an interrupted drag cannot inherit a half-composed matrix. The estate ships no
+ * such surface — no gesture moves any element over a rest pose below 1024, and the drag-sheet
+ * that would have is retired on the stall lane's per-gesture re-bake bill. TRIGGER: the first
+ * pointer-driven mover over a parked rest pose takes the split, and takes it at the source —
+ * the rest pose is CSS `translate:`, the gesture writes `transform:` and only `transform:`.
  */
 
 /** The FLIP rect inputs — `DOMRect` (from `getBoundingClientRect`) assigns straight in. */
