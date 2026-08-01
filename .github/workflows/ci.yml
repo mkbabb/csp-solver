@@ -539,6 +539,18 @@ jobs:
             - name: font coverage (subset cmap vs rendered text)
               working-directory: web/frontend
               run: npm run test:font-coverage
+            # T4-P1 ink-pressure gate (scripts/check-ink-pressure.mjs). The graphite ramp,
+            # asserted over EVERY rung in all three scopes that re-pitch its inputs (light,
+            # dark, @media print) with every colour RESOLVED out of index.css — plus sole
+            # ownership of the ramp (nothing outside the token block may open-code it, in
+            # .vue/.css/.ts, under either spelling of the graphite var). Runs with
+            # `--self-test`, so CI also re-proves each gate able to FAIL on a known-bad input
+            # before trusting the green. Static and zero-dependency, so it lands in this lane
+            # beside font-coverage rather than in e2e. Standing team-lead row since pass 2:
+            # the script shipped at T4-P1 Lane D ship 4 and until now nothing in CI ran it.
+            - name: ink pressure (graphite ladder + ramp ownership, self-tested)
+              working-directory: web/frontend
+              run: npm run lint:ink
 
     # ---------------------------------------------------------------- Lane 9
     # e2e — Playwright over the Vue SPA (ratification R6). Node-only after the
