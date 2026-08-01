@@ -112,6 +112,22 @@ function dismissGuard() {
 const guardCard = computed(() =>
   guardIndex.value != null ? props.cards[guardIndex.value] : null,
 );
+/** WHOSE marks the ribbon is about. `select` always risks the board on screen. A `deal` can
+ *  risk TWO different boards — the target's saved work (what it writes over) and the mounted
+ *  board's live work (what it walks away from) — and pass 3 shipped one sub-line, inherited
+ *  from the select intent, for all of them. It says which now, because on the deal intent
+ *  "your marks" is frequently not the board being dealt. */
+const guardSub = computed(() => {
+  const card = guardCard.value;
+  if (!card) return "your marks aren't saved";
+  const theirs =
+    guardIntent.value === "deal" &&
+    card.id !== props.currentId &&
+    props.saved?.[card.id]?.userMoves === true;
+  const yours = props.dirty === true && props.currentId != null;
+  if (theirs && yours) return "neither board's marks are saved";
+  return theirs ? `${card.name}'s marks aren't saved` : "your marks aren't saved";
+});
 
 // THE ONE beat enrolment — driven into the centered card only (see the soul-gate note).
 // heldFrameCount (P1-W3): the answer-key laminate's boil hold was NEVER TOTAL — only
@@ -366,20 +382,26 @@ function onSafeVerb() {
   attemptSelect();
 }
 
-/** THE DEAL VERB. Destructive only where there is work to destroy — and the work in question
- *  belongs to the TARGET card, not to whatever board happens to be mounted. Pass 2 read
- *  `props.dirty` (the MOUNTED board), so dealing a DIFFERENT game consulted the wrong ledger
- *  entirely and could wipe a saved board it never asked about, one `d` keystroke deep. */
+/** THE DEAL VERB. Destructive where there is work to destroy — and a deal can destroy work in
+ *  TWO places, which is the pass-3 hole this closes. Pass 2 read `props.dirty` alone (the
+ *  MOUNTED board), so dealing a DIFFERENT game consulted the wrong ledger entirely and could
+ *  wipe a saved board it never asked about, one `d` keystroke deep. Pass 3 fixed that arm and
+ *  dropped the other one: a cross-game deal from a dirty board ABANDONED the marks on screen
+ *  with no ribbon at all — the identical loss `attemptSelect` has guarded since Wave D, on the
+ *  verb one keystroke away. Both arms, always:
+ *    · the TARGET's saved work — what the deal writes over;
+ *    · the MOUNTED board's live work — what the deal walks away from, same game or not.
+ *  The second arm subsumes the pass-3 same-id fallback (`dirty && card.id === currentId`): a
+ *  dirty mounted board is at risk from every deal the picker can issue, so the id comparison
+ *  the fallback made was the whole defect. */
 function attemptDeal() {
   const card = activeCard.value;
   const pair = activePick.value;
   if (!card || !pair || props.busy || guardIndex.value !== null) return;
   const target = props.saved?.[card.id];
-  // The `||` arm is the no-ledger fallback: with no row for the target, the mounted board's own
-  // dirty signal still guards a deal onto itself. It can only ever ADD a confirmation.
   const destroysWork =
     (target?.board === true && target.userMoves) ||
-    (props.dirty && card.id === props.currentId);
+    (props.dirty === true && props.currentId != null);
   if (destroysWork) {
     guardIntent.value = "deal";
     guardIndex.value = activeIndex.value;
@@ -586,7 +608,7 @@ onMounted(async () => {
                 guardIntent === "deal"
                   ? "deal over this puzzle?"
                   : "leave this puzzle?"
-              }}<br /><span class="guard-note-sub">your marks aren't saved</span>
+              }}<br /><span class="guard-note-sub">{{ guardSub }}</span>
             </p>
             <div class="guard-note-actions">
               <button

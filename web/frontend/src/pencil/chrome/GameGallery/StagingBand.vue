@@ -20,7 +20,9 @@
  * idiom). The chips ride `boilFrame: 0`, so their scribble underlines are a static raster, not a
  * per-beat filter write. Nothing here paints at rest, and nothing here carries a filter: the
  * shared `OptionSelector`'s hover wobble was deleted at source in P1-W3, so the band inherits a
- * chip with no `url(#…)` on any state. Gated by the RENDERED census, not by a grep.
+ * chip with no `url(#…)` on ANY state — which is the claim, so it is the gate: `filter-census`
+ * G3.5 walks the pointer over every candidate surface in this regime and in the board's, and
+ * reds if a hover mints one. A census taken at rest cannot see the rule that was deleted.
  *
  * THE TWO VERBS, distinguished STRUCTURALLY — no new ink vocabulary:
  *   · the safe verb is a WORD. `resume` when a board waits, `start` when the game is new. It
@@ -80,10 +82,23 @@ const safeLabel = computed(() =>
     ? `${props.safeVerb} ${props.name} at ${props.savedPair}`
     : `${props.safeVerb} ${props.name}`,
 );
+
+/** `aria-keyshortcuts="d"` on the deal button advertised a shortcut the band could not deliver:
+ *  the estate's only `d` handler is the listbox VIEWPORT's, and the band is its sibling, so a
+ *  `d` typed with a chip or a verb focused reached nothing. The band resolves its own now —
+ *  through the same `deal` emit, so the gallery's one `attemptDeal` still owns the guard, the
+ *  busy gate and the ribbon. Focus-scoped by construction (a keydown on the band's subtree),
+ *  which is exactly what the attribute claims. */
+function onKeydown(e: KeyboardEvent) {
+  if (e.key !== "d" && e.key !== "D") return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  e.preventDefault();
+  emit("deal");
+}
 </script>
 
 <template>
-  <div class="staging-band">
+  <div class="staging-band" @keydown="onKeydown">
     <HandDrawnOutline :pose="0" :stroke-width="3" :outset="4">
       <div class="staging-slip bg-card edge-outlined">
         <div class="staging-axes">
