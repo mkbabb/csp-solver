@@ -31,9 +31,13 @@ withDefaults(
     /** Preformatted tally line below the voice, outside the live region. */
     meta?: string;
     /** T3-W12 §1 R1 — visually quiet: the margin vignette carries the verdict's
-     *  paint, so the strip renders NOTHING below the board (no fold overflow) while
+     *  paint, so the VOICE renders nothing below the board (no fold overflow) while
      *  the live region keeps its DOM home and still announces (sr-only clip, never
-     *  visibility/display — those would drop it from the a11y tree mid-announce). */
+     *  visibility/display — those would drop it from the a11y tree mid-announce).
+     *  T4-P1 pass 4: the clip is on the voice, not the block. The tally is a separate
+     *  tenant with its own mount rule (`vignetteHasTally`) — quieting the block took it
+     *  down as collateral, and below 1280 the sticker has no room to receive it, so a
+     *  solved board printed its tally nowhere. */
     quiet?: boolean;
   }>(),
   { tone: "graphite", quiet: false },
@@ -95,13 +99,20 @@ const NOTE_STAR_D =
   flex-wrap: wrap;
   align-items: baseline;
   column-gap: 0.45rem;
+  /* The reserved line lives on the BLOCK, not the voice, so the strip is the same height
+     whether the voice is speaking here or from the sticker — the grade lands and nothing
+     below the board moves. (It was on `.margin-note`, which the gold path takes out of
+     flow; the strip then collapsed at the crest and grew back after it.) */
+  min-height: 1.3em;
 }
 
 /* Quiet (T3-W12 §1 R1): the classic clip pattern — zero visual footprint, zero
-   contributed height (the gold path renders nothing below the board and the fitted
-   h-screen page stays unscrolled), while the role=status region stays in the a11y
-   tree and keeps announcing the grade. */
-.margin-note-block.is-quiet {
+   contributed height, while the role=status region stays in the a11y tree and keeps
+   announcing the grade. T4-P1 pass 4 — it clips the VOICE. Clipping the whole block took
+   the tally with it, and below 1280 the corner sticker has no room for a tally, so a
+   solved board had nowhere left to print one. The tally's mount is decided upstream
+   (`vignetteHasTally`); this rule only stands the voice down. */
+.margin-note-block.is-quiet .margin-note {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -115,7 +126,6 @@ const NOTE_STAR_D =
   letter-spacing: 0.02em;
   font-size: var(--type-body);
   line-height: var(--type-leading-caption);
-  min-height: 1.3em; /* reserve the line so the layout doesn't jump when text arrives */
   margin: 0;
   pointer-events: none;
   user-select: none;

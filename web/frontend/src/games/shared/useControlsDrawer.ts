@@ -90,6 +90,7 @@ const drawerPhase = ref<DrawerPhase>("idle");
 // DOM carries are the one ref, not two readings of the same width.
 const rowRegime = useRowRegime();
 const wideMargin = mediaRef("(min-width: 1360px)", true);
+const marginVignette = mediaRef("(min-width: 1280px)", true);
 const reducedMotion = mediaRef("(prefers-reduced-motion: reduce)", false);
 
 /** The ONE layout step — `html.drawer-closed` drives every closed-regime rule
@@ -319,6 +320,18 @@ const drawerInert = computed(() => !drawerOpen.value && drawerPhase.value === "i
 /** §1/§6 interplay: where drawer-open compresses the left margin below the full
  *  vignette's width (<1360), the completion vignette takes the corner-press rung. */
 export const vignetteDocked = computed(() => drawerOpen.value && !wideMargin.value);
+
+/** WHERE THE SOLVE TALLY PAINTS — one ref, so it can only paint once (T4-P1 pass 4).
+ *  The teacher's-margin vignette (≥1280, undocked) has room for star + verdict + tally and
+ *  takes all three. Every other rung is the 7–8rem corner sticker, which is star + verdict
+ *  only — a tally there would lie across live digits — so the tally stays on the strip's
+ *  reserved line below the board, which is its home on every board that has not been solved.
+ *  Mark 6 emptied that strip of its PERMANENT tenant (the difficulty glyph, now the deal's
+ *  receipt); it did not delete the line, and this ref is what stops the vignette's CSS and
+ *  the strip's `quiet` from both standing down at the same widths. */
+export const vignetteHasTally = computed(
+  () => marginVignette.value && !vignetteDocked.value,
+);
 
 /** The margin voice hints once, ever, on the first real close ("your pencil case is
  *  under the board"). Boards call this on the open→closed edge; a false return means

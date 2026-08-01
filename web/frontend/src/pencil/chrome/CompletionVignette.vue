@@ -109,10 +109,13 @@ withDefaults(
 
 /* The tally: the strip's caption rung verbatim — graphite at reduced pressure,
    tone-invariant (metadata never inherits gold). A sticker is star + verdict only — the
-   tally would lie across live digits — so it is hidden at the corner-press rungs (which is
-   now every width below 1280) and returns in the full left-margin vignette. */
+   tally would lie across live digits — so at the corner-press rungs it is not RENDERED
+   here at all: `meta` arrives undefined and the strip below the board keeps it (T4-P1 pass
+   4, `vignetteHasTally`). This used to be a `display:none` in the base rule with a
+   `display:block` at 1280, which is a second copy of the same rule in a second language —
+   and while the strip was also standing down on the gold path, the two silences composed
+   and no width below 1280 printed a tally at all. */
 .vignette-meta {
-  display: none;
   margin: 0.1rem 0 0;
   font-size: var(--type-caption);
   line-height: var(--type-leading-caption);
@@ -174,10 +177,6 @@ withDefaults(
 
   .completion-vignette:not(.is-docked) .vignette-voice {
     font-size: 1.75rem;
-  }
-
-  .completion-vignette:not(.is-docked) .vignette-meta {
-    display: block;
   }
 }
 
