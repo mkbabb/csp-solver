@@ -44,7 +44,7 @@ export default defineConfig({
     // has a real origin to write `?board=` against — the codec reads both.
     environmentOptions: { jsdom: { url: 'http://localhost/' } },
     setupFiles: ['./vitest.setup.ts'],
-    include: ['src/**/*.test.ts'],
+    include: ['src/composables/useTheme.test.ts'] /* CANARY ARM 4: narrowed to one real file — the >=300 floor must red */,
     // Explicit imports from 'vitest' in every unit (globals off) — nothing added to the
     // app tsconfig's ambient types, another seam kept clean for the W5 bump.
     globals: false,
