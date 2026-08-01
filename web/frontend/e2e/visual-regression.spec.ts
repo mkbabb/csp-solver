@@ -445,24 +445,46 @@ test("the Deal die is not crushed: the commit verb's box fits its own content", 
     const b = r(btn)!;
     const d = r(die);
     const l = r(label);
+    // The box's OWN spacing, read rather than hardcoded: a padding or gap change must
+    // re-price the bound below, not quietly widen it.
+    const cs = getComputedStyle(btn);
+    const px = (v: string) => parseFloat(v) || 0;
     return {
       btn: { w: b.width, h: b.height },
       die: d ? { w: d.width, h: d.height } : null,
       labelH: l ? l.height : 0,
+      padY: px(cs.paddingTop) + px(cs.paddingBottom),
+      gap: px(cs.rowGap) || px(cs.gap),
     };
   });
 
   expect(geom).not.toBeNull();
   expect(geom!.die).not.toBeNull();
 
+  // SOFT, all three: under the defect every one of these is wrong, and a hard first assertion
+  // means the negative control only ever proves the row it stops at. Pass 3 shipped a
+  // durability bound nobody could see fail because the squareness row fired ahead of it.
+  //
   // The die is square — the defect's whole signature was a squashed height against an intact
   // width. Half a pixel of tolerance for sub-pixel layout, no more.
-  expect(Math.abs(geom!.die!.h - geom!.die!.w)).toBeLessThanOrEqual(0.5);
-  expect(geom!.die!.h).toBeGreaterThanOrEqual(27);
+  expect.soft(Math.abs(geom!.die!.h - geom!.die!.w)).toBeLessThanOrEqual(0.5);
+  expect.soft(geom!.die!.h).toBeGreaterThanOrEqual(27);
 
-  // …and the button's box actually contains die + label rather than clipping them. This is
-  // the general form: it fails for any cause, not just the one cascade tie.
-  expect(geom!.btn.h).toBeGreaterThanOrEqual(geom!.die!.h + geom!.labelH);
+  // …and the button's box is big enough for its own content. The bound is written against the
+  // die's WIDTH, which is the dimension the defect leaves intact — `btn.h ≥ die.h + labelH`
+  // (the pass-3 spelling) cannot fail under a column flex box: pin the height and the items
+  // shrink until they fit, so at the broken pose 44 ≥ 17.62 + 14.38 passed with 12px to spare.
+  // Against the die's own square footprint the same pose reads 44 < 28 + 14.38 + 9.6 + 2.4 =
+  // 54.38 and reds. GATE-1 control run at the pass-4 close: patched back to the bare
+  // `.deal-btn` selector this row goes RED on exactly this line (44.00 for 54.38 demanded),
+  // green on the fix.
+  const demanded = geom!.die!.w + geom!.labelH + geom!.padY + geom!.gap;
+  expect.soft(
+    geom!.btn.h,
+    `Deal's box is ${geom!.btn.h.toFixed(2)}px for content demanding ${demanded.toFixed(2)}px ` +
+      `(die ${geom!.die!.w.toFixed(2)} square + label ${geom!.labelH.toFixed(2)} + ` +
+      `padding ${geom!.padY.toFixed(2)} + gap ${geom!.gap.toFixed(2)})`,
+  ).toBeGreaterThanOrEqual(demanded - 0.5);
 });
 
 // ── Test 9: chip separation — the seam between adjacent option chips ─
