@@ -37,6 +37,7 @@ import {
   consumeDrawerHint,
   useControlsDrawer,
   vignetteDocked,
+  vignetteHasTally,
 } from "@games/shared/useControlsDrawer";
 import type { HintResult } from "@games/shared/techniqueEngine";
 import type { SolveState, SolveStats } from "@games/shared/types";
@@ -208,22 +209,59 @@ function marksFor(pos: number): number[] | undefined {
 // and land in the settle's ONE layout step, never a tween. (The lg rung is
 // Sudoku's 16×16-only reach; Futoshiki's 4–7 boards land on sm/md, byte-identical
 // to its former 2-rung classes.)
-// T4-P1 mark 6 — THE HEIGHT ARM LOSES ITS `lg:`. The stacked regime had a width bound and no
-// height bound at all: at 844×390 the 9×9 shell asked for `min(42rem, 100vw − 1.5rem)` = 672px
-// of board inside a 390px viewport, so the BOARD ITSELF did not fit the screen — 3.746 page-
-// viewports, the worst mobile number in the estate, and the "<lg board rung" F3's pass-1
-// critique named as required and left undesigned. The estate already owns the cure and had
-// fenced it behind one breakpoint: the same `100dvh − 10rem` the row regime uses. Unprefixed
-// it binds ONLY where the viewport is shorter than the board wants — landscape phones and
-// short windows — and is inert at every portrait cell measured (390×844: 684 vs 366; iPad
-// portrait: 1020 vs 672). A media cap is not a gesture: it bakes at load and rotate, so it
-// costs nothing against the pass-3 stall lane's per-gesture re-bake.
+// T4-P1 mark 6 — THE STACKED REGIME GETS A HEIGHT BOUND, and it is the SAME GUTTER the width
+// arm already uses. It had a width bound and none on height: at 844×390 the 9×9 shell asked for
+// `min(42rem, 100vw − 1.5rem)` = 672px of board inside a 390px viewport, so the BOARD ITSELF
+// did not fit the screen — the worst mobile number in the estate, and the "<lg board rung"
+// F3's pass-1 critique named as required and left undesigned.
+//
+// The pass-3 cure was to unprefix the ROW regime's own `100dvh − 10rem`, and it was priced by
+// nobody: that cap allows 10rem for chrome that below 1024 is not beside the board, so the
+// landscape 9×9 fell to a 230px board — a 25.11px CELL, 43% under the estate's 44px coarse
+// floor and 38% under what the same phone shows in PORTRAIT. Pass 4 measured the whole ladder
+// on a built dist, both engines identical, at 844×390 (rig `pass4/rigF3/landladder.mjs`):
+//
+//   cap             board  cell    fits   pageVh   board-top→first chip
+//   none (pre-P3)     672  74.22  false    3.667   841.27   ← the board can't be seen whole
+//   100dvh − 10rem    230  25.11   true    2.533   399.27   ← pass 3's rung
+//   100dvh − 4rem     326  35.77   true    2.779   495.27
+//   100dvh − 1.5rem   366  40.22   true    2.882   535.27   ← SHIPPED
+//   100dvh            390  42.88   true    2.944   559.27   ← the whole short edge, still <44
+//
+// So: the 44px floor is UNREACHABLE at 844×390 by any cap — a 9×9 at 44px cells is a 400px
+// board and the viewport is 390 tall. The floor is a CONTROL tap-target rule (`.ctrl-btn`
+// coarse min-height) and has never bound a board cell: this estate ships 40.22px cells at
+// 390 portrait and 32.44 at 320. And landscape CO-VISIBILITY, the thing pass 3's rung was
+// reaching for, costs a 24.08px cell (the chip needs the board under 220.73) — it was never
+// 9.27px away from anything a finger could use.
+//
+// `100dvh − 1.5rem` is the honest form because it is not a tuned number: it is the page's own
+// gutter, the constant the WIDTH arm spends. Board = the SHORT EDGE minus the gutter, capped
+// at the rung — so a rotation cannot change the cell. 844×390 lands 40.22, byte-identical to
+// the 390-wide portrait cell of the same phone; 926×428 lands 44.44 and clears the coarse
+// floor outright; 740×360 lands 36.88, its own portrait cell. Inert at every portrait cell
+// (390×844, 390×664, 320×568, 820×1180 all read identically with the cap on or off).
+//
+// WHAT IT COSTS, disclosed rather than discovered later: pass 3's 230px board fitted WHOLE
+// above the fold at 844×390 (bottom 342.58 of 390) and this one does not — bottom 478.58, an
+// overflow of 88.58px, the last two rows a scroll away at rest. The page is 2.533 → 2.882
+// viewports. That is a real loss and it is taken deliberately: the stack is a scroll at both
+// caps (neither shows board + controls together), so what the smaller board bought was the
+// board's OWN whole-visibility, at 15.11px per cell on the surface where a finger spends the
+// session. And the loss has a named cure that is not a cap: the chrome above the board at
+// 844×390 measures 114.58px, of which the MASTHEAD is 98.58 — hand back 88.58 of it and
+// portrait parity is whole above the fold too. Landscape's defect is the masthead, which is
+// what pass 3's §5 said in words; this is the same row with the pixels attached.
+// `lg:` restores the row regime's 10rem verbatim — at 1280×800 the golden board is 640 with
+// it and 672 without, so the cap at ≥1024 is a golden subject and is not touched.
+// A media cap is not a gesture: it bakes at load and rotate, so it costs nothing against the
+// pass-3 stall lane's per-gesture re-bake.
 const boardSizeClasses = computed(() => {
   if (props.boardSize <= 4)
-    return "shell-sm w-[min(26rem,calc(100vw-1.5rem))] max-w-[calc(100dvh-10rem)] lg:w-[min(26rem,85vw)]";
+    return "shell-sm w-[min(26rem,calc(100vw-1.5rem))] max-w-[calc(100dvh-1.5rem)] lg:max-w-[calc(100dvh-10rem)] lg:w-[min(26rem,85vw)]";
   if (props.boardSize <= 9)
-    return "shell-md w-[min(42rem,calc(100vw-1.5rem))] max-w-[calc(100dvh-10rem)] lg:w-[min(42rem,85vw)]";
-  return "shell-lg w-[min(52rem,calc(100vw-1.5rem))] max-w-[calc(100dvh-10rem)] lg:w-[min(52rem,90vw)]";
+    return "shell-md w-[min(42rem,calc(100vw-1.5rem))] max-w-[calc(100dvh-1.5rem)] lg:max-w-[calc(100dvh-10rem)] lg:w-[min(42rem,85vw)]";
+  return "shell-lg w-[min(52rem,calc(100vw-1.5rem))] max-w-[calc(100dvh-1.5rem)] lg:max-w-[calc(100dvh-10rem)] lg:w-[min(52rem,90vw)]";
 });
 
 // P4 (T3-W12 §2): the wrapper's transition is SCOPED to the gold/red shadow it exists
@@ -741,7 +779,7 @@ function isRevealed(pos: number): boolean {
     <CompletionVignette
       :active="celebrating"
       :text="marginText"
-      :meta="tally"
+      :meta="vignetteHasTally ? tally : undefined"
       :docked="vignetteDocked"
     />
 
@@ -759,11 +797,18 @@ function isRevealed(pos: number): boolean {
          the controls on every phone. Difficulty is a fact of the DEAL, so it files with the
          deal (`GameControlPanel` `.deal-row`) and the strip goes back to being what it is:
          the page's voice, and the note when the machinery breaks. -->
+    <!-- T4-P1 pass 4 — THE TALLY LINE HAS ONE HOME AT A TIME. `quiet` moves the VOICE to the
+         sticker, not the strip: below 1280 (and drawer-docked under 1360) the sticker is
+         7–8rem of star + verdict with no room for a tally, so the tally stays here, on the
+         line the strip already reserves. Handing the same string to both mounts would print
+         it twice at ≥1280; handing it to neither — which is what shipped at the pass-3 close
+         — printed it nowhere below 1280 on every solved board. `vignetteHasTally` is the one
+         ref both mounts read. -->
     <div class="board-margin">
       <MarginNote
         :text="marginText"
         :tone="marginTone"
-        :meta="tally"
+        :meta="celebrating && vignetteHasTally ? undefined : tally"
         :quiet="celebrating"
       />
       <SolverErrorNote
