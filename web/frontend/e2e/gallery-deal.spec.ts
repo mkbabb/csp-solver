@@ -444,7 +444,12 @@ test('deal: a same-game deal issued BEFORE the scene mounts still lands the stag
     await route.continue();
   });
 
-  await page.goto('./?view=gallery&game=futoshiki');
+  // `domcontentloaded`, not the default `load`: this test deliberately HOLDS a module request
+  // open, and on the dev server that module is a real sub-resource of the document. WebKit
+  // keeps the load event pending on it (Chromium does not), so a default `goto` here would
+  // hang until the test's own timeout — an engine artifact of the held route, not of the app.
+  // The very next line waits for the band, which is the condition this test actually needs.
+  await page.goto('./?view=gallery&game=futoshiki', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.staging-band', { timeout: 20000 });
   await expect(page.locator('.futoshiki-cell')).toHaveCount(0); // still resolving
 

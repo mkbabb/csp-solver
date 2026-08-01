@@ -56,11 +56,17 @@ export default defineConfig({
       // sanctioned safety margin on a loaded runner (spec §"grant this one spec retries").
       retries: 1,
     },
-    {
-      name: "filter-census",
+    // BOTH engines. The census is an exact-match allowlist over what the deployed artifact
+    // RENDERS, and rendering is the engine's job: production pass 4 counted 9/9 with the union
+    // area on budget to the unit in webkit as well as chromium, so the second engine costs one
+    // spec on the preview already running and gates the artifact in the browser half the
+    // owner's traffic uses. retries:0 in both — a retried census is a census that lies.
+    ...(["chromium", "webkit"] as const).map((browserName) => ({
+      name: `filter-census-${browserName}`,
       testMatch: /filter-census\.spec\.ts$/,
       retries: 0,
-    },
+      use: { browserName },
+    })),
     {
       // P1 G3.4 — mark 4's two font defects are WEBKIT defects (it resolves
       // `font-optical-sizing: auto` to the opsz axis minimum, and it pins a filtered
