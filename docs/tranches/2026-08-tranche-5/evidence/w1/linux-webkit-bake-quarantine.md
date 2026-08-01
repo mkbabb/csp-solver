@@ -174,3 +174,23 @@ the 19 that stayed live.
    raster path is being rewritten anyway.
 3. **Book the class in the chronic ledger** with both run ids, so the W4b cure has something
    to close rather than a quarantine to notice.
+
+---
+
+## SPREAD ADDENDUM (team lead, run 30720212628 on baae148b)
+
+The spread detectors fired on their first outing: thermo and kenken redded theme-bake
+fresh-load no-ink — rows green on both prior runs, same `retries: 0`. Three runs, three
+different game sets ⇒ the blank bake is NONDETERMINISTIC per run per game: a readiness
+race on the ubuntu-WebKit bake path, not a per-game defect. The "deterministic, not a
+flake" claim in the first cut is CORRECTED by this observation — it held for exactly two
+runs.
+
+Disposition: the quarantine widens from the observed-row list to the CLASS — every game's
+bake-decode read, both specs, ubuntu+webkit only. Cross-engine and cross-platform
+detection stays at full strength (all chromium arms including linux, all darwin arms);
+the single parked cell is ubuntu·webkit·bake-decode. Re-entry unchanged: the guard THROWS
+at pencil-boil ≥0.11 — and the race hypothesis strengthens the W4b cure's claim
+(rasterizePoseToBlob deletes the async ImageBitmap/PNG round-trip the race lives in).
+The W4b watch row from the perf report (linux-webkit window long33=24 vs control 1) is
+plausibly the same mechanism seen from the frame side.

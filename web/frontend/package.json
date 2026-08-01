@@ -44,7 +44,8 @@
     "test:golden:bytes": "node scripts/check-golden-bytes.mjs",
     "test:font-coverage": "node scripts/check-font-coverage.mjs",
     "test:prod-shake": "node scripts/check-prod-shake.mjs",
-    "deploy": "bash ../../scripts/deploy-gated.sh"
+    "deploy": "bash ../../scripts/deploy-gated.sh",
+    "deploy:raw": "wrangler pages deploy dist --project-name=sudoku --branch=master --commit-dirty=true"
   },
   "dependencies": {
     "@mkbabb/csp-solver-wasm": "file:../../csp-solver/wasm/pkg",

@@ -140,9 +140,11 @@ PATH="$FRONTEND/node_modules/.bin:$PATH"
 if ((DRY)); then
     echo "[deploy-gated] DRY — the deploy line was NOT executed. It would be:"
     echo "[deploy-gated]   \$ npm run build"
-    echo "[deploy-gated]   \$ wrangler pages deploy dist --project-name=sudoku --branch=master --commit-dirty=true"
+    echo "[deploy-gated]   \$ npm run deploy:raw   # wrangler pages deploy dist --project-name=sudoku --branch=master --commit-dirty=true"
     exit 0
 fi
 
 npm run build
-exec wrangler pages deploy dist --project-name=sudoku --branch=master --commit-dirty=true
+# The verbatim wrangler line lives in package.json's deploy:raw — where knip can
+# see the binary is consumed (run 30720212628's knip red) — and nowhere else.
+exec npm run deploy:raw

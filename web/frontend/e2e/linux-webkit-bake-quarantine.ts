@@ -37,26 +37,36 @@ import { fileURLToPath } from "node:url";
 export type QuarantinedSpec = "wordmark-integrity" | "theme-bake-freshness";
 
 /**
- * The rows the runner actually reds, per spec. NOTHING else is quarantined.
+ * THE CLASS, not a row list. The first cut quarantined only the observed-red rows
+ * (wordmark futoshiki/kenken/killer; theme-bake futoshiki/killer) and left the rest live as
+ * spread detectors. The detectors detected: run 30720212628 (baae148b) redded thermo and
+ * kenken on theme-bake fresh-load no-ink — rows GREEN on both prior runs. Three runs, three
+ * different game sets, all at `retries: 0`: the blank bake is NONDETERMINISTIC per run per
+ * game — a readiness race on the ubuntu-WebKit bake path, not a per-game defect. Row-by-row
+ * parking is whack-a-mole against a race, so the quarantine covers the CLASS: every game's
+ * bake-decode read, both specs, on linux+webkit ONLY.
  *
- * · wordmark-integrity :158 G3.4 edge-clip — futoshiki, kenken, killer
- *   ("baked ink must sit inside its own W×H bitmap on all four edges": the ink box read
- *   degenerate, i.e. the fused verdict's `no-ink` term)
- * · theme-bake-freshness :223 G4.5 — futoshiki, killer
- *   ("fresh load: the logo bake decoded to nothing", `logoInk === "no-ink"`)
+ * What still detects: every chromium arm (linux included), every darwin arm, and every
+ * non-bake assertion of both specs everywhere. The one cell parked wholesale is
+ * ubuntu·webkit·bake-decode, and this file is its single loud census.
  *
  * `theme-bake-freshness` runs each game twice, once per toggle direction, off ONE test
- * declaration at :223 — and the red is on the pre-toggle FRESH LOAD control, which no
- * `colorScheme` can reach. So the census is by game and both directions of a named game are
- * quarantined in the webkit arm; the chromium arm of the same game is not.
+ * declaration — and the red lands on the pre-toggle FRESH LOAD control, which no
+ * `colorScheme` can reach. So the census is by game, both directions, webkit arm only.
  */
+const ALL_GAMES = ["sudoku", "futoshiki", "thermo", "killer", "kenken"] as const;
 const QUARANTINED_ROWS: Record<QuarantinedSpec, readonly string[]> = {
-  "wordmark-integrity": ["futoshiki", "kenken", "killer"],
-  "theme-bake-freshness": ["futoshiki", "killer"],
+  "wordmark-integrity": ALL_GAMES,
+  "theme-bake-freshness": ALL_GAMES,
 };
 
-/** The named runs. Same rows, both runs, at `retries: 0` — deterministic, not a flake. */
-const RUN_IDS = "30719165442 + 30719158513 (e6b19a4c, ubuntu · webkit, retries: 0)";
+/**
+ * The named runs. retries: 0 throughout. 30719165442 + 30719158513 (e6b19a4c): futoshiki/
+ * kenken/killer wordmark + futoshiki/killer theme-bake. 30720212628 (baae148b): thermo/
+ * kenken theme-bake — prior-green rows, the spread that proved the race.
+ */
+const RUN_IDS =
+  "30719165442 + 30719158513 (e6b19a4c) + 30720212628 (baae148b, the spread) — ubuntu · webkit, retries: 0";
 
 /**
  * THE CURE OWNER, and the version the quarantine dies at.

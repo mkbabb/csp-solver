@@ -349,7 +349,13 @@ function sampleMinima(dir) {
 // ---------------------------------------------------------------- main
 
 const args = parseArgs(process.argv.slice(2));
-if (args.selfTest) selfTest();
+// --self-test is self-test ONLY: it must not fall through into the real gate,
+// which reads a summary the CI step order hasn't produced yet (run 30720212628's
+// red — the second bite of the same trap after 30719165442's --print half).
+if (args.selfTest) {
+  selfTest();
+  process.exit(0);
+}
 
 if (!existsSync(args.floor)) {
   console.error(
