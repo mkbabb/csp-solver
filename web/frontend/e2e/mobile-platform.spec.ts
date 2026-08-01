@@ -271,9 +271,12 @@ test.describe("landscape phone (~844×390, coarse)", () => {
     isMobile: true,
   });
 
-  test("no horizontal overflow; entry works (the tall board scrolls vertically)", async ({
-    page,
-  }) => {
+  // The parenthetical used to read "the tall board scrolls vertically" — true of a tree where
+  // the stacked shell had a width bound and no height bound, so 844×390 drew a 672px board
+  // into a 390px viewport. T4-P1 mark 6 gave the stacked regime the row regime's own
+  // `100dvh − 10rem` arm; the board fits now, and `e2e/board-covisibility.spec.ts` gates that
+  // directly with a control. This row keeps its own charge: the page never scrolls sideways.
+  test("no horizontal overflow; entry works", async ({ page }) => {
     await loadSudoku(page);
     await assertNoHorizontalOverflow(page);
     await assertEntryWorks(page);

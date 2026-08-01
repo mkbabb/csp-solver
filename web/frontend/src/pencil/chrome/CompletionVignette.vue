@@ -20,12 +20,15 @@
  * decoration; the voice still announces the grade). Stays MOUNTED (v-show) so the
  * star's `active` watch sees the false→true flip — the T3-W9 v-show discipline.
  *
- * Rungs (crit-corrected): ≥1280 the full left-margin vignette; 1024–1279 it docks as
- * a corner-press sticker over the board's top-RIGHT frame (the top-left dock collided
- * with the corner-barb fix AND live top-left digits — crit-design kill #2); <1024
- * (stacked) it renders in flow, centered between board and controls, star at 4.5rem.
- * The drawer (§6) forces the corner-press rung early via `docked` when its open state
- * compresses the left margin (<~1360).
+ * Rungs (crit-corrected): ≥1280 the full left-margin vignette; below that it presses the
+ * board's top-RIGHT frame as a sticker (the top-left dock collided with the corner-barb fix
+ * AND live top-left digits — crit-design kill #2), at 8rem in the row regime and 7rem stacked,
+ * where the board runs to the page gutter. The drawer (§6) forces the corner-press rung early
+ * via `docked` when its open state compresses the left margin (<~1360).
+ *
+ * T4-P1 mark 6: the stacked rung was the last in-flow one — the grade arrived as a ~150px
+ * block between the work and the controls and pushed the card down the page. It crests on
+ * the board now, like every other rung, so the celebration costs the stack nothing.
  */
 import CelebrationStar from "./CelebrationStar.vue";
 
@@ -65,30 +68,51 @@ withDefaults(
   font-family: var(--font-hand);
   text-align: center;
   z-index: 40;
-  /* <1024 (stacked): in flow, centered between board and controls. */
-  position: static;
-  width: fit-content;
-  margin: 0.5rem auto 0;
-  transform: rotate(-2deg);
+  /* T4-P1 mark 6 — the celebration crests ON the board at EVERY width. Below 1024 this was
+     in flow, centered between board and controls: ~150px of star + verdict + tally arriving
+     between the work and the tools at the exact moment the grade lands, shoving the controls
+     card down the page. That is finding 1a — "occludes the bottom of the page, messes up the
+     flow" — cured ≥1024 in T3-W12 and left standing below it. The corner-press sticker is the
+     pose the row regime already ratified; it is inset tighter here because the board runs to
+     the page's own 0.75rem gutter — flush to the board's right edge, so the star's own ink
+     overflow still lands inside the page and never mints a horizontal scroll. */
+  position: absolute;
+  /* −2.1rem is the row regime's own rise, kept rather than re-picked: measured against the
+     neighbours at 390×664 and 820×1180 it clears the fixed z-60 sun's ink by 29px and 62px
+     while seating the star across the board's top edge. Only the HORIZONTAL inset differs
+     below 1024 — the board runs to the page's 0.75rem gutter, so the sticker sits flush to
+     its right edge instead of hanging 2.1rem past it, and the star's own ink overflow still
+     lands inside the page (measured −5.76px) rather than minting a horizontal scroll. */
+  top: -2.1rem;
+  right: 0;
+  width: 7rem;
+  margin: 0;
+  transform: rotate(5deg);
 }
 
 .vignette-star {
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 4rem;
+  height: 4rem;
   margin-inline: auto;
 }
 
 .vignette-voice {
   margin: 0.1rem 0 0;
-  font-size: 1.5rem;
+  /* 1.05rem, not 1.5: the verdict is written INSIDE a sticker now, and "solved it!" at 1.5rem
+     runs ~110px across a 7rem (112px) sticker — it would set to the millimetre or wrap. The
+     row regime learned this at 8rem and dropped to 1.05; the narrower sticker inherits it. */
+  font-size: 1.05rem;
   line-height: 1.15;
   letter-spacing: 0.02em;
   color: var(--color-gold-ink, var(--color-crayon-gold));
 }
 
 /* The tally: the strip's caption rung verbatim — graphite at reduced pressure,
-   tone-invariant (metadata never inherits gold). */
+   tone-invariant (metadata never inherits gold). A sticker is star + verdict only — the
+   tally would lie across live digits — so it is hidden at the corner-press rungs (which is
+   now every width below 1280) and returns in the full left-margin vignette. */
 .vignette-meta {
+  display: none;
   margin: 0.1rem 0 0;
   font-size: var(--type-caption);
   line-height: var(--type-leading-caption);
@@ -121,28 +145,13 @@ withDefaults(
    drawer-docked pose (`is-docked`). */
 @media (min-width: 1024px) {
   .completion-vignette {
-    position: absolute;
-    top: -2.1rem;
     right: -2.1rem;
-    margin: 0;
     width: 8rem;
-    transform: rotate(5deg);
   }
 
   .vignette-star {
     width: 5rem;
     height: 5rem;
-  }
-
-  .vignette-voice {
-    font-size: 1.05rem;
-  }
-
-  /* The corner-press is a STICKER: star + verdict only. The tally would lie
-       across live digits at this rung — it stays the strip's secret (and returns
-       in the full-margin vignette below). */
-  .vignette-meta {
-    display: none;
   }
 }
 

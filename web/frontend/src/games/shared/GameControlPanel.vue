@@ -42,6 +42,8 @@ import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
 import CheckStatus from "@games/shared/CheckStatus.vue";
+import DifficultyTally from "@games/shared/DifficultyTally.vue";
+import type { TallyDescriptor } from "@games/shared/techniqueVoice";
 import type { PencilMode } from "@games/shared/useUserMarks";
 import type { ErrorCheckMode } from "@games/shared/useAssists";
 import { useButtonAnimation } from "@games/shared/useButtonAnimation";
@@ -97,6 +99,11 @@ const props = defineProps<{
   // T4-W3 share-truth: the parent's share act, handed as a callback rather than an emit so
   // the OUTCOME travels back — it resolves iff the clipboard copy actually landed.
   share: () => Promise<void>;
+  // T4-P1 mark 6 — the dealt board's measured tier. It used to hang under the board, where on
+  // a phone it was 30px of permanent in-flow height between the work and the controls; it is
+  // the DEAL'S RECEIPT, so it files with the deal. Optional: an ungraded game (the engine
+  // never ran) hands nothing and the row renders the verb alone.
+  gradeTally?: TallyDescriptor;
 }>();
 
 const emit = defineEmits<{
@@ -475,6 +482,9 @@ function onHint() {
             >{{ dealArmed ? "sure?" : "Deal" }}</span
           >
         </button>
+        <!-- The receipt (mark 6): what the LAST deal actually produced, beside the verb that
+             will replace it. The chips above are the ask; this is the answer. -->
+        <DifficultyTally v-if="gradeTally" :descriptor="gradeTally" label="dealt" />
       </div>
     </HandDrawnOutline>
 
@@ -697,6 +707,8 @@ function onHint() {
           >
           <SheetWashiLabel text="Deal" :seed="11" />
         </button>
+        <!-- The receipt (mark 6) — the rail twin. One home at every width; the sheet's own rule. -->
+        <DifficultyTally v-if="gradeTally" :descriptor="gradeTally" label="dealt" />
       </div>
     </HandDrawnOutline>
 
@@ -984,13 +996,48 @@ function onHint() {
 }
 
 /* The Deal commit sits centered under the staged selectors, a comfortable target from the peek
-   divider that partitions it off from the live play tools (the spatial prophylaxis). */
+   divider that partitions it off from the live play tools (the spatial prophylaxis).
+
+   ONE CELL, TWO ALIGNMENTS (mark 6). The receipt joined this row, and neither obvious layout
+   survived measurement. A centered flex row is not a centered verb — `justify-content: center`
+   over two items slides Deal ~43px off the well's own spine, the axis its staged chips are
+   centered on. `grid-template-columns: 1fr auto 1fr` holds the spine but is worse: under the
+   rail's shrink-to-fit MAX-CONTENT sizing the two `1fr` tracks resolve equal, so the EMPTY left
+   track mirrors the receipt's width and the row's max-content becomes verb + 2× receipt. It
+   widened the rail 276.25 → 283.14 and the centered `.app-layout` walked the board 3.45px left
+   — a sub-pixel phase change under `cell-light`, which is a committed golden. Measured, not
+   guessed: the golden went red and stayed red across runs while it reds nowhere on the base.
+
+   Both marks share ONE cell instead. Deal centers on the row's axis, the receipt pins to its
+   trailing edge, and the row's max-content is the wider of the two — so the receipt contributes
+   nothing to the rail's width and the board does not move. */
 .deal-row {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  align-items: center;
   /* 0.35rem, not 0.6: the well's own bottom padding now carries the rest of the air the
      0.6rem was buying against a bare stack. */
   margin-top: 0.35rem;
+}
+
+.deal-row > .deal-btn {
+  grid-area: 1 / 1;
+  justify-self: center;
+}
+
+.deal-row > .difficulty-tally {
+  grid-area: 1 / 1;
+  justify-self: end;
+  min-width: 0;
+}
+
+/* The receipt's progressive disclosure is retired INSIDE the ticket (mark 6). The well is a
+   `HandDrawnOutline`, and a child that changes its own box on hover changes the well's — which
+   is the pass-3 stall lane's own mechanism: a laid-out size change re-bakes that outline's
+   raster stack. The hardest technique still travels in the tally's `aria-label`, which is where
+   assistive tech reads it and where the honesty spine keeps it. In the board margin the reveal
+   had an empty margin to open into; in a compartment it has a neighbour. */
+.deal-row :deep(.dt-name) {
+  display: none;
 }
 
 /* Deal is the re-homed dice, but it earns its NAME on every pointer (not only coarse): the

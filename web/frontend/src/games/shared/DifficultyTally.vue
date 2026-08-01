@@ -47,7 +47,20 @@ import { heldFrameCount } from "@mkbabb/pencil-boil";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
 import { TALLY_TOTAL, type TallyDescriptor } from "./techniqueVoice";
 
-const props = defineProps<{ descriptor: TallyDescriptor }>();
+const props = withDefaults(
+  defineProps<{
+    descriptor: TallyDescriptor;
+    /**
+     * The word in front of the glyph. Defaults to what the glyph measures. The ticket passes
+     * `dealt` instead (T4-P1 mark 6): inside the new-game well the `Difficulty` eyebrow is two
+     * rows up, so "difficulty" there would be the same name written twice at two ranks — and
+     * the distinction the well needs is exactly the one "dealt" draws, between the tier you
+     * ASK for and the tier the board you were dealt actually reached.
+     */
+    label?: string;
+  }>(),
+  { label: "difficulty" },
+);
 
 // ── The gate-five geometry ────────────────────────────────────────────────────────────────
 // Four uprights + a binding slash, in a 76×44 viewBox. Per-stroke seeds decorrelate the boil.
@@ -186,7 +199,7 @@ onUnmounted(stopDraws);
     tabindex="0"
     :aria-label="descriptor.ariaLabel"
   >
-    <span class="dt-label" aria-hidden="true">difficulty</span>
+    <span class="dt-label" aria-hidden="true">{{ label }}</span>
     <svg
       class="dt-marks"
       :viewBox="`0 0 ${VIEWBOX.w} ${VIEWBOX.h}`"

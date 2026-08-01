@@ -82,8 +82,19 @@ const NOTE_STAR_D =
 </template>
 
 <style scoped>
+/* T4-P1 mark 6 — the tally DEMOTES to the note's own tier. It was a second stanza under the
+   voice (its own block line, pulled up 0.2rem), so a solve grew the strip by a whole caption
+   line and, below 1024 where the strip is in flow, pushed the controls down at exactly the
+   moment the reader looks away from the board. Baseline-aligned on the voice's line instead:
+   the verdict speaks, the tally trails it in the quiet ink, one line for both. It wraps on a
+   narrow strip rather than clipping — a tally is worth a second line when it needs one, but it
+   no longer takes one by default. */
 .margin-note-block {
   pointer-events: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.45rem;
 }
 
 /* Quiet (T3-W12 §1 R1): the classic clip pattern — zero visual footprint, zero
@@ -146,7 +157,7 @@ const NOTE_STAR_D =
    they may copy — so it re-enables pointer events the margin strip passes through,
    sized to its own text so the dead margin stays click-transparent. */
 .margin-note-meta {
-  margin: -0.2rem 0 0;
+  margin: 0;
   width: fit-content;
   font-family: var(--font-hand);
   letter-spacing: var(--type-tracking-wide);

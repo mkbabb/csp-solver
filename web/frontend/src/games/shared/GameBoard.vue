@@ -18,9 +18,7 @@ import HandDrawnGrid from "@pencil/grid/HandDrawnGrid/HandDrawnGrid.vue";
 import CelebrationHeart from "@pencil/chrome/CelebrationHeart.vue";
 import CompletionVignette from "@pencil/chrome/CompletionVignette.vue";
 import MarginNote from "@pencil/chrome/MarginNote.vue";
-import DifficultyTally from "@games/shared/DifficultyTally.vue";
 import SolverErrorNote from "@games/shared/SolverErrorNote.vue";
-import type { TallyDescriptor } from "@games/shared/techniqueVoice";
 import { mulberry32 } from "@mkbabb/pencil-boil";
 import { generateCellRects } from "@pencil/grid/gridPaths";
 import { revealStaggerMs } from "@pencil/config/pencilConfig";
@@ -93,8 +91,6 @@ const props = defineProps<{
   /** T4-W7 — the armed hint's reasoning: highlights `becauseCells` in the peek-laminate
    *  tone and writes the technique name in the margin. Null between hint transactions. */
   hint?: HintResult | null;
-  /** T4-W9-B1 — the displayed-quality tally descriptor; forwarded to the DifficultyTally. */
-  gradeTally?: TallyDescriptor;
   /** T4-W8 ROW 2 — the error-check mode's PROACTIVE display gate. ORed with the
    *  `solveState === 'failed'` grade below: the teacher's red pencil grades actual work
    *  regardless; the mode governs only the live cadence. */
@@ -212,12 +208,22 @@ function marksFor(pos: number): number[] | undefined {
 // and land in the settle's ONE layout step, never a tween. (The lg rung is
 // Sudoku's 16×16-only reach; Futoshiki's 4–7 boards land on sm/md, byte-identical
 // to its former 2-rung classes.)
+// T4-P1 mark 6 — THE HEIGHT ARM LOSES ITS `lg:`. The stacked regime had a width bound and no
+// height bound at all: at 844×390 the 9×9 shell asked for `min(42rem, 100vw − 1.5rem)` = 672px
+// of board inside a 390px viewport, so the BOARD ITSELF did not fit the screen — 3.746 page-
+// viewports, the worst mobile number in the estate, and the "<lg board rung" F3's pass-1
+// critique named as required and left undesigned. The estate already owns the cure and had
+// fenced it behind one breakpoint: the same `100dvh − 10rem` the row regime uses. Unprefixed
+// it binds ONLY where the viewport is shorter than the board wants — landscape phones and
+// short windows — and is inert at every portrait cell measured (390×844: 684 vs 366; iPad
+// portrait: 1020 vs 672). A media cap is not a gesture: it bakes at load and rotate, so it
+// costs nothing against the pass-3 stall lane's per-gesture re-bake.
 const boardSizeClasses = computed(() => {
   if (props.boardSize <= 4)
-    return "shell-sm w-[min(26rem,calc(100vw-1.5rem))] lg:w-[min(26rem,85vw)] lg:max-w-[calc(100dvh-10rem)]";
+    return "shell-sm w-[min(26rem,calc(100vw-1.5rem))] max-w-[calc(100dvh-10rem)] lg:w-[min(26rem,85vw)]";
   if (props.boardSize <= 9)
-    return "shell-md w-[min(42rem,calc(100vw-1.5rem))] lg:w-[min(42rem,85vw)] lg:max-w-[calc(100dvh-10rem)]";
-  return "shell-lg w-[min(52rem,calc(100vw-1.5rem))] lg:w-[min(52rem,90vw)] lg:max-w-[calc(100dvh-10rem)]";
+    return "shell-md w-[min(42rem,calc(100vw-1.5rem))] max-w-[calc(100dvh-10rem)] lg:w-[min(42rem,85vw)]";
+  return "shell-lg w-[min(52rem,calc(100vw-1.5rem))] max-w-[calc(100dvh-10rem)] lg:w-[min(52rem,90vw)]";
 });
 
 // P4 (T3-W12 §2): the wrapper's transition is SCOPED to the gold/red shadow it exists
@@ -746,11 +752,14 @@ function isRevealed(pos: number): boolean {
          the gold verdict, the strip goes visually quiet (sr-only — still announcing) so
          the gold path renders NOTHING below the board; graphite/teacher-red/error keep
          the strip exactly as before. -->
+    <!-- T4-P1 mark 6 — the DIFFICULTY tally has LEFT this strip for the ticket's deal row.
+         It was the strip's only permanent tenant: the voice reserves one line and the error
+         card is conditional, but the tally rendered on every board at every width, and below
+         1024 this strip is IN FLOW, so it was 30.4px of standing height between the work and
+         the controls on every phone. Difficulty is a fact of the DEAL, so it files with the
+         deal (`GameControlPanel` `.deal-row`) and the strip goes back to being what it is:
+         the page's voice, and the note when the machinery breaks. -->
     <div class="board-margin">
-      <!-- The DIFFICULTY signal (T4-W9-B1): the tally glyph beside its own prose voice.
-           Persistent (not tied to the voice's quiet toggle) — difficulty is a fact of the
-           dealt board, distinct from FILL (the border) and CORRECTNESS (the solve verdict). -->
-      <DifficultyTally v-if="gradeTally" :descriptor="gradeTally" />
       <MarginNote
         :text="marginText"
         :tone="marginTone"

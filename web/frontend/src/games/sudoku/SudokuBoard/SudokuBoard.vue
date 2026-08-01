@@ -12,7 +12,6 @@ import { computed, provide, ref } from "vue";
 import GameBoard from "@games/shared/GameBoard.vue";
 import SudokuCell from "./SudokuCell/SudokuCell.vue";
 import { findConflicts, type Conflicts } from "@games/shared/conflicts";
-import type { TallyDescriptor } from "@games/shared/techniqueVoice";
 import type { HintResult } from "@games/shared/techniqueEngine";
 import type { PencilMode } from "@games/shared/useUserMarks";
 import type { Difficulty, SolveState, SolveStats } from "@games/sudoku/types";
@@ -51,8 +50,6 @@ const props = defineProps<{
   hint?: HintResult | null;
   /** T4-W7 — the measured difficulty signature; replaces W6's request bucket once graded. */
   gradeSignature?: string;
-  /** T4-W9-B1 — the displayed-quality tally descriptor; forwarded to the DifficultyTally. */
-  gradeTally?: TallyDescriptor;
   /** T4-W8 ROW 2 — the error-check mode's PROACTIVE display gate. */
   proactiveErrorCheck?: boolean;
   /** T4-WU race gate — true while a board op (generate/solve) is in flight. */
@@ -172,7 +169,6 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
     :error-code="errorCode"
     :leaving="leaving"
     :hint="hint"
-    :grade-tally="gradeTally"
     :proactive-error-check="proactiveErrorCheck"
     :loading="loading"
     @update-cell="(pos: number, val: number) => emit('updateCell', pos, val)"
