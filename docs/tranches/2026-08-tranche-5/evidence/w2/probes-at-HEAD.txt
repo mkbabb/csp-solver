@@ -1,0 +1,395 @@
+T5-W2 — PROBES AT HEAD (re-derived, not copied)
+================================================================================
+HEAD            baae148b82892ec6fb3827299155a8560607c019  ("T5-W6 SEAL")
+tree            clean (git status --porcelain empty)
+design-doc tree 71456713d9f7361af80f09e1a456fc9787507e78 (both ALPHA and BETA)
+drift           5 commits: e961bdb7 T5 FORMATION · f38c5130 W0 SEAL · e6b19a4c W1 SEAL
+                · cdc47539 W1 SEAL-FIX · baae148b W6 SEAL
+source drift    web/frontend/src touched at exactly 2 files since 71456713:
+                  games/shared/useCoarsePointer.ts        (-2 lines)
+                  pencil/chrome/AttributionCard/useHoverCard.ts  (±0)
+                → the W1 supportFloor cure (S8/K31 sub-floor MQL guards) HAS LANDED.
+                  Every other design-doc measurement stands on an unmoved tree.
+derived         2026-08-01, this agent, on this host (darwin 25.4.0, node v26.0.0)
+
+Numbers below are MINE. Where they disagree with the audit's, both are printed and
+the disagreement is named. No audit figure is reproduced without re-derivation.
+
+--------------------------------------------------------------------------------
+P1 · gameRegistry — the production-consumer probe
+--------------------------------------------------------------------------------
+  $ grep -rn "gameRegistry" web/frontend/src
+
+  24 hits. Disposition:
+    registry.ts          8   (1 declaration @ :134 + 7 prose lines in comments)
+    registry.test.ts    15   (the test theater, incl. :131 not.toHaveProperty("thermo"))
+    sudoku/game.test.ts  1   (comment, the TDZ narration)
+    SudokuGame.vue       1   (comment, the TDZ apologia @ :43)
+
+  PRODUCTION CONSUMERS: 0.  Every non-comment read is a test.       CONFIRMED (I1a)
+  MAP COVERAGE: 2 of 5 games (sudoku, futoshiki).                   CONFIRMED (I1b)
+
+P1b · the definition identifiers
+  sudokuGame     declared game.ts:21 · imported registry.ts:18 · read registry.ts:135
+                 → 1 production read, into a map with 0 readers. The 315 dead bytes.
+  futoshikiGame  same shape (registry.ts:19/:136)
+  thermoGame     read by ThermoGame.vue:39   (options only)
+  killerGame     read by KillerGame.vue:34   (options only)
+  kenkenGame     read by KenKenGame.vue:35   (options only)
+  futoshikiGame  read by FutoshikiGame.vue:37 (options only)
+  sudoku         NO scene read — SudokuGame.vue:57-73 hand-inlines the sections.
+
+  PRODUCTION SLOT READS AT HEAD = 4  (options × {futoshiki,thermo,killer,kenken}).
+  model / cellFurniture / clueFurniture / solverPayloads: 0 production reads.
+                                                                    CONFIRMED (I1c/F2)
+
+--------------------------------------------------------------------------------
+P2 · the V1-STUB triple — SHA-identical tails
+--------------------------------------------------------------------------------
+  files      thermo/composables/thermoUrlState.ts    108 lines · 74 code lines
+             killer/composables/killerUrlState.ts    109 lines · 74 code lines
+             kenken/composables/kenkenUrlState.ts    109 lines · 74 code lines
+  (the two REAL codecs, for scale: sudoku/useUrlState.ts 302 · futoshiki 372)
+
+  Identity, re-derived (strip comment/blank lines, normalise the game token):
+    thermo vs killer  → 3 differing code lines, ALL of them the clue name:
+        import type { Line } from "../types";  vs  { Cage }
+        meters: Line[];                        vs  cages: Cage[];
+        meters: (p.meters as Line[]) ?? [],    vs  cages: (p.cages as Cage[]) ?? [],
+    71 of 74 code lines byte-identical. The divergence is the clue type ALONE —
+    which is precisely the parameter `shared/persistence.ts` takes.
+
+  The no-ops, verified live:
+    thermoUrlState.ts:82   export function syncToUrl(_size, _difficulty): void {}
+    thermoUrlState.ts:105  export function dropBoardParam(): void {}
+    thermoUrlState.ts:108  export function writeShareUrl(): void {}
+                                                                    CONFIRMED (dup §2.7)
+  NOTE  the audit's SHA `8fb12bd9c9f8` is a different hashing scope than mine; I did
+  not reproduce that digest and do not cite it. The IDENTITY CLAIM is what I verified,
+  by diff, and it holds.
+
+--------------------------------------------------------------------------------
+P3 · the 5× ensureInit twins
+--------------------------------------------------------------------------------
+  md5(awk '/function ensureInit/,/^}/') over the five workers:
+    sudoku     262633211412
+    futoshiki  262633211412
+    thermo     262633211412
+    killer     262633211412
+    kenken     262633211412
+  FIVE-WAY BYTE-IDENTICAL. DIVERGED × 0.                            CONFIRMED (dup §2.5)
+
+  worker file sizes (total / code-only lines):
+    sudoku 144/87 · futoshiki 144/101 · thermo 117/99 · killer 114/96 · kenken 115/97
+
+  NOTE  audit cites SHA `b6608ca40eab`; different digest scope, not reproduced. The
+  five-way identity is what I verified, and it holds.
+
+--------------------------------------------------------------------------------
+P4 · the boundary — lint:boundary at HEAD
+--------------------------------------------------------------------------------
+  $ npm run lint:boundary
+    → ✖ 23 problems (23 errors, 0 warnings)                         RED, as gates.json says
+
+  Independent cross-check by import census:
+    alias-form @games/<g>/ imports inside the five game dirs ....... 27
+      minus SELF-references (a game importing its own tree by alias) . 4
+        sudoku/ControlPanel/constants.ts:1     → @games/sudoku/types
+        sudoku/SudokuBoard/SudokuBoard.vue:17  → @games/sudoku/types
+        futoshiki/ControlPanel/constants.ts:1  → @games/futoshiki/types
+        futoshiki/FutoshikiBoard/FutoshikiBoard.vue:17 → @games/futoshiki/types
+    TRUE CROSS-GAME IMPORTS ........................................ 23  ✔ = the lint count
+
+  The design docs say "20 cross-game imports". THAT NUMBER IS WRONG and gates.json
+  already carries the correction (W1.boundary.liveViolationsNote): 20 was the ORDERED
+  PAIR count (5×4), never the import count. Re-derived here independently: 23.
+
+  The 23, by importing game (target in brackets):
+    thermo  7 [sudoku]  killer 7 [sudoku]  kenken 5 [futoshiki]  … and:
+    thermo/{game.ts ×3, ThermoBoard.vue ×2, thermoUrlState.ts, useThermo.ts, solver/useSolver.ts}
+    killer/{game.ts ×3, KillerBoard.vue ×2, killerUrlState.ts, useKiller.ts, solver/useSolver.ts}
+    kenken/{game.ts ×2, KenKenBoard.vue, ControlPanel/constants.ts, kenkenUrlState.ts,
+            useKenken.ts, solver/useSolver.ts}
+  Every one of them targets a surface both designs move to games/shared:
+    SudokuCell · FutoshikiCell · sudoku|futoshiki ControlPanel/constants · sudoku|futoshiki
+    types(Difficulty) · sudokuTechnique · futoshikiTechnique.  Nothing else.
+
+--------------------------------------------------------------------------------
+P5 · the `?url` wasm contract sites
+--------------------------------------------------------------------------------
+  $ grep -rn "?url" web/frontend/src   →  7 hits
+  Of those, 2 are prose (sudoku/solver/solver.worker.ts:34, futoshiki likewise).
+  REAL IMPORT SITES = 5, one per game worker:
+    thermo/solver/solver.worker.ts     import wasmUrl from "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url"
+    sudoku/solver/solver.worker.ts     (same)
+    kenken/solver/solver.worker.ts     (same)
+    killer/solver/solver.worker.ts     (same)
+    futoshiki/solver/solver.worker.ts  (same)
+  5 → 1 is N2's whole blast radius.                                 CONFIRMED
+
+--------------------------------------------------------------------------------
+P6 · catch{ignore} — the count, and the probe the design docs got WRONG
+--------------------------------------------------------------------------------
+  The docs' probe:
+    $ grep -rn 'catch { /\* ignore \*/' src | wc -l   →  0     ← DOES NOT WORK
+  Cause: prettier puts the comment on its own line. The live form is:
+        } catch {
+          /* ignore */
+        }
+
+  The probes that DO work, both re-derived:
+    $ grep -rn -A1 "} catch {" src | grep -c "/\* ignore \*/"          → 11
+    $ grep -rn -B2 '\.stop();' src | grep -c 'try {'                   → 11
+  CATCH-IGNORE COUNT AT HEAD = 11.                                  CONFIRMED (S2)
+
+  All 11 wrap a `.stop()`, across 6 files:
+    games/shared/DifficultyTally.vue:132                  1
+    pencil/chrome/CelebrationHeart.vue:103                1
+    pencil/chrome/CelebrationStar.vue:47                  1
+    pencil/chrome/GameGallery/GameGallery.vue:181         1
+    pencil/glyph/HandwrittenGlyph.vue:116,124,132,180,276,293   6
+    pencil/grid/HandDrawnGrid/usePathAnimation.ts:40      1
+
+  Whole-src catch census (form frequency), for the negative-control's baseline:
+    38 × "} catch {"     9 × "} catch (e) {"     1 × "} catch {}"
+    the lone "} catch {}" is pencil/dev/FilterTuner.vue:234 — a DEV-ONLY surface,
+    outside the 11, and NOT covered by the design docs' kill list. FLAG for the lint
+    rule's scope decision: does no-empty-catch cover src/pencil/dev/**? Decide, record.
+
+--------------------------------------------------------------------------------
+P7 · per-game file count 65 → 22
+--------------------------------------------------------------------------------
+  find src/games/{5 dirs} -type f, excluding *.test.ts and README.md:
+    sudoku 14 · futoshiki 14 · thermo 12 · killer 12 · kenken 13     TOTAL = 65  ✔
+  (all files, tests + READMEs included: 82; non-test incl. READMEs: 67)
+  games/shared: 52 files all / 39 non-test.
+  BETA's "65 → 22" is confirmed at its numerator.
+
+--------------------------------------------------------------------------------
+P8 · the LOC census — re-derived vs the audit's 213-row census
+--------------------------------------------------------------------------------
+  raw wc -l, non-test, README excluded:
+    games/** whole tree ................................. 16,661
+    the five game dirs .................................. 7,744
+      sudoku 1,767 · futoshiki 2,160 · thermo 1,224 · killer 1,269 · kenken 1,324
+    games/shared ........................................ 8,617
+
+  DRIFT AGAINST BETA §1: BETA measured "16,663 raw over games/** non-test". I read
+  16,661. The delta is EXACTLY 2 lines and it is EXPLAINED: the W1 supportFloor cure
+  removed 2 lines from games/shared/useCoarsePointer.ts (the S8/K31 MQL guard). No
+  other source moved. BETA's census is otherwise intact at HEAD.
+
+  DRIFT AGAINST ALPHA §2: ALPHA cites "the measured 7,387-raw estate"; I read 7,744
+  raw over the same five dirs. The gap is scope, not drift — ALPHA's figure is the
+  dup-matrix's ABSORBED-CLASS subtotal (×1.40 of 5,294 normalised), not the whole
+  five-dir tree. Do not cross-cite the two. FLAG: any −4,150 claim at seal must state
+  its denominator; 7,744 is the whole-dir figure, 7,387 the absorbed-class figure.
+
+  Twin-class LOC, live (these are the −4,150's raw material):
+    Game.vue ×5 ....... 843   (sudoku 221 · futoshiki 178 · thermo 155 · killer 145 · kenken 144)
+    Board.vue ×5 ...... 1,267 (futoshiki 317 · killer 255 · thermo 255 · kenken 222 · sudoku 218)
+    useSolver ×5 ...... 839   (futoshiki 193 · sudoku 192 · kenken 152 · killer 151 · thermo 151)
+    protocol ×5 ....... 402   (kenken 83 · futoshiki 82 · killer 81 · thermo 81 · sudoku 75)
+                              — over a 32-line shared/solver/protocol.ts they all compose off
+    solver.worker ×5 .. 634   (sudoku 144 · futoshiki 144 · thermo 117 · kenken 115 · killer 114)
+    UrlState ×5 ....... 1,000 (futoshiki 372 · sudoku 302 · killer 109 · kenken 109 · thermo 108)
+    game.ts ×5 ........ 259   (kenken 56 · killer 54 · thermo 53 · futoshiki 49 · sudoku 47)
+                     Σ = 5,244 raw across the seven named twin classes alone.
+
+--------------------------------------------------------------------------------
+P9 · dead theme tokens — MY INSTRUMENT DISAGREES WITH THE AUDIT
+--------------------------------------------------------------------------------
+  Instrument (BETA G5.2's stated rule): a custom property declared in index.css is
+  LIVE if it has ≥1 `var(--tok[,)]` reference OR ≥1 Tailwind utility reference
+  (bg-|text-|border-|ring-|fill-|stroke-|… -<bare>) anywhere in src/** (minus
+  index.css), e2e/**, index.html.
+
+  custom properties declared in index.css .......................... 59
+  referenced ONLY inside index.css (internal composition — LIVE) ...  8
+        --color-crayon-green · --color-crayon-orange · --color-gold-star
+        --paper-clean-texture · --sheet-ink-edge-laminate · --sheet-laminate-cast
+        --sheet-laminate-milk · --sheet-rim
+  UNREFERENCED ANYWHERE ............................................ 17
+        --color-accent-foreground     --color-card-foreground
+        --color-destructive           --color-destructive-foreground
+        --color-easy  --color-hard  --color-medium
+        --color-input                 --color-muted
+        --color-popover-foreground
+        --color-primary  --color-primary-foreground
+        --color-secondary  --color-secondary-foreground
+        --font-serif  --ink-press-firm  --radius
+
+  The audit/design docs say 15 (= 25 declaration lines, light + .dark twins). My 17
+  is the audit's 15 PLUS `--color-muted` and `--radius`. Both extras verified by hand:
+    --color-muted     0 var() hits, 0 utility hits.  (--color-muted-FOREGROUND is live —
+                      App.vue:588, GameControlPanel.vue:1109 — the bare token is not.)
+    --radius          0 var() hits anywhere incl. index.css itself; no rounded-* derivation.
+  Spot-verified individually with a tight probe (var() + 20 utility prefixes):
+    --color-primary 0/0 · --color-secondary 0/0 · --color-destructive 0/0 · --color-input 0/0.
+
+  DISPOSITION: do not fix the number here. `scripts/token-census.mjs` (ALPHA) /
+  `check-theme-tokens.mjs` (BETA G5.2) is itself a W2 deliverable and MUST be born RED;
+  the gate's own enumeration fixes the count when it lands — the precedent gates.json
+  set for boundary ("corrected at the W1 seal from the gate's own enumeration"). The
+  born-RED assertion is `> 0`, and the wave record stamps the enumerated figure.
+  My reading — 17 — is the number to beat, not 15.
+
+--------------------------------------------------------------------------------
+P10 · dead props
+--------------------------------------------------------------------------------
+  AnswerKeyLaminate.vue:29   subgridSize: number;   ← REQUIRED, declared, never read
+    bind sites (`:subgrid-size` / `:subgridSize`) across src ............ 19
+    (5 of them are the five scene mounts; the rest are live board/cell binds
+     of the SAME NAME on other components — the kill must be scoped to the
+     laminate's 5, not grepped globally. FLAG for 2.3's execution.)
+  GameBoard.vue:81 cornerMarks · :82 centerMarks
+    total cornerMarks|centerMarks occurrences in src .................. 109
+    (the live path is the sibling cell bind; only the GameBoard declarations
+     + their 10 board binds die. Again: scoped kill, not a global grep.)
+
+--------------------------------------------------------------------------------
+P11 · the god modules + the Rust edges (2.7)
+--------------------------------------------------------------------------------
+  csp-solver src modules over 500 lines (tests excluded):
+    src/builder/assignment.rs ......... 607   ← U-09, the unwaived god module
+    src/constraint/cage.rs ............ 558   ← size + R4 (test extraction)
+    src/solver/search.rs .............. 528   ← waived; the waiver comment re-derives here
+  under 500, for the record: gac.rs 464 · sudoku/generate.rs 405
+  test files over 500 (out of the god-module rule's scope): tests/solver.rs 1,439 ·
+    tests/lattice.rs 977 · wasm/tests/dualization.rs 465
+
+  futoshiki NON-CONFORMANCE, verified at the signatures:
+    conforming ×4     create_{sudoku,thermo,killer,kenken}_csp(…) → (Csp, given)
+                      solve_{sudoku,thermo,killer,kenken}(…, config: &SolveConfig)
+    futoshiki         create_futoshiki_csp(puzzle: &FutoshikiPuzzle) -> Csp<BitsetDomain>
+                        ← no `given` tuple                     (puzzles/futoshiki/csp.rs:132)
+                      solve_futoshiki(puzzle: &FutoshikiPuzzle) -> Vec<Vec<u32>>
+                        ← no SolveConfig, returns ALL solutions (puzzles/futoshiki/csp.rs:177)
+                                                                    CONFIRMED
+
+  from_difficulty — 4 of 5, SudokuClass is the abstainer:
+    kenken/generate.rs:239 · thermo/generate.rs:172 · futoshiki/generate.rs:347
+    · killer/generate.rs:180 · sudoku — ABSENT.   (all 5 impl PuzzleClass)
+                                                                    CONFIRMED (5/5 symmetry row)
+
+  wasm family dedup, verified:
+    board_total   duplicated ×3 — wasm/src/{kenken.rs:205, thermo.rs:179, killer.rs:189}
+                  (errors.rs is 55 lines and is the declared home)
+    n() naming    split — thermo.rs:63,:125 · killer.rs:64,:126 · sudoku.rs:84 export `n()`;
+                  kenken's board_total takes `board_size`, not `n`. The naming is not unified.
+    JsError .code coded_error() lives in wasm/src/errors.rs:22-28 (Reflect::set "code");
+                  futoshiki.rs:232 is the only `.map_err(|e| coded_error(e.code(), …))` call.
+                  FLAG: the 5/5 typed-.code claim needs a per-family read at execution.
+    CspTimeoutError  declared csp_solver.pyi:135, exported py.rs:41, raised py/errors.rs:60
+                  from CspError::Timeout — the T3 RESERVE's "unraisable" claim must be
+                  re-verified against py/errors.rs:60 before the wired-or-removed call.
+
+  wasm verb surface (#[wasm_bindgen] pub fn, unique): 31 names, of which the GAME VERBS are
+    generate_{sudoku,futoshiki,thermo,killer,kenken}   5
+    solve_{sudoku,futoshiki,thermo,killer,kenken}      5
+    propagate_{sudoku,futoshiki,thermo,killer,kenken}  5
+                                                    = 15  ✔ = gates.json wasmVerbBoundaryTests
+  the other 16 are init, solve_assignment_cop, and result-struct getters.
+
+--------------------------------------------------------------------------------
+P12 · the counts docs cite (testCountRestamped)
+--------------------------------------------------------------------------------
+  FE unit, banked at the W1 seal (evidence/w1/unit-lane-local.txt, head f38c5130):
+    332 EXECUTED (332 passed / 0 failed / 0 skipped / 0 todo) over 31 files / 133 suites
+    floor 300 (gates.json W1.unitLane.floor)
+  Static cross-check at THIS head: 31 test files · 332 `it(`/`test(` blocks.  AGREES.
+  Rust:  README.md:90 and docs/benchmarks.md:45 both cite "208 passed, 0 failed,
+         0 ignored (26 test binaries + 4 doctests)" — NOT re-derived here (a cargo test
+         run is a W2-execution cost, not a wave-open probe). The W0 doc-truth row
+         `test-count-208-vs-204` (scripts/check-doc-truth.mjs:599) is the live instrument.
+  e2e:   20 spec files · 129 `test(` blocks in web/frontend/e2e.
+  ANY doc citing 204 as an FE unit count is stale by 128. The restamp target is 332.
+
+--------------------------------------------------------------------------------
+P13 · the lib shadows (2.8) and pencil-boil's surface
+--------------------------------------------------------------------------------
+  installed  @mkbabb/pencil-boil 0.10.1   (0.11.0 does not exist — the 2.4/2.8/W4b
+             release train is born-RED by absence)
+  lib exports declared at its index.ts ............................ 44
+  distinct identifiers the app imports from it .................... 24
+    SequenceHandle WobbleOptions acquireHold boilLineFrames createBoilTicker
+    createSequenceSubscription easeOutCubic generateSunRays heldFrameCount linear
+    mulberry32 perturbPoints pointsToLinear releaseHold resolveEasing
+    schedulerDebugInfo serializePoseSvg useBoilCache usePrefersReducedMotion
+    useRasterStack wobbleDiamond wobbleLinePoints wobbleRect wobbleStarPolygon
+  UNCONSUMED EXPORTS = 44 − 24 = 20.                              CONFIRMED (E6, §2B)
+
+  The three shadows, and their lib twins — the lib twins ALREADY EXIST in 0.10.1:
+    app createGlyphDrawIn      5 refs   ←→  lib createStrokeDrawIn   (present)
+    app generateRectBoilFrames 5 refs   ←→  lib boilRectFrames       (present)
+    app arcBoilPoints          2 refs   ←→  lib ellipsePoints        (present)
+  So 2.8's deletions do NOT wait on 0.11 — only stop()/stopAll (2.4) does.
+  FLAG: this decouples 2.8 from the release train. Sequencing gain; record it.
+
+--------------------------------------------------------------------------------
+P14 · goldens on disk (the π denominator)
+--------------------------------------------------------------------------------
+  8 files = 4 SURFACES × 2 platforms:
+    cell-light-{darwin,linux}.png          ← load-bearing pair, W2 rewrites this surface
+    grid-corner-light-{darwin,linux}.png   ← load-bearing pair, W2 rewrites this surface
+    logo-light-{darwin,linux}.png          ← watch row, sun-crest clause
+    toggle-crest-dark-{darwin,linux}.png   ← NO π CLAIM RESTS HERE (0/8 · 5/11 · 5/14)
+  gates.json W2.piIdentity.goldens = 4 → it counts SURFACES. The design docs' filenames
+  ("cell-light-webkit-darwin.png") carry a `-webkit-` segment that is NOT on disk.
+  Cite the on-disk names.
+  scripts:  test:golden = playwright-golden.config.ts · test:golden:bytes =
+            scripts/check-golden-bytes.mjs
+
+--------------------------------------------------------------------------------
+P15 · the masks (2.4)
+--------------------------------------------------------------------------------
+  TEMPLATE_BANK  declared  sudoku/data/templates.ts:7 (generated, one line, ~64 KB)
+                 masked at sudoku/solver/useSolver.ts:106
+                     TEMPLATE_BANK[size]?.[DIFFICULTY_KEY[difficulty]] ?? []
+                 emitted by vite.config.ts:78; the "dropped dir == deliberate excision"
+                 hazard is vite.config.ts:33 and :50-53.       CONFIRMED (S1/J1-residual)
+  __resetStagingBridge  exported useStagingBridge.ts:254; consumers = 4, ALL in
+                 useStagingBridge.test.ts (:4,:49,:246,:253). Production consumers 0.
+                                                                CONFIRMED (S7)
+  filterBudget.ts  consumers: e2e/filter-census.spec.ts:13 is the ONLY import. Four
+                 other files name it in prose only (pencilConfig.ts:238,
+                 SvgFilters.test.ts:38, HandwrittenGlyph.vue:58,
+                 visual-regression.spec.ts:221). It is an e2e-only module living under
+                 src/pencil/config/. ALPHA defers the move (lane D owns the prose);
+                 2.3 says DECIDE AND RECORD. Data is banked; the call is the wave's.
+
+--------------------------------------------------------------------------------
+NOT RUN AT WAVE-OPEN (build-cost probes — they belong to their step, born-RED there)
+--------------------------------------------------------------------------------
+  · sudokuGame identifier occurrences in the built main chunk (BETA G1.2; the audit
+    reads 1 occurrence in 239,693 bytes). Needs `npm run build` + check-prod-shake.mjs.
+  · chunks importing csp_solver_wasm_bg.wasm in the built dist (BETA G2.1; expect 5).
+  · madge --circular — NOT INSTALLED in node_modules. The TDZ/cycle gate needs either
+    a madge dev-dep or a hand-rolled module-graph assertion. FLAG: this is a missing
+    instrument, not a passing gate. Decide at 2.1.
+  · pageVh at 390×664 (banked 1.705) — the covis rig's number, re-measured per step.
+  · cargo test --workspace (the 208 restamp).
+
+--------------------------------------------------------------------------------
+PROVENANCE — read this before trusting a re-run
+--------------------------------------------------------------------------------
+  Every figure above was measured against the COMMITTED tree at baae148b, with the
+  working tree clean, between 17:56 and 18:08 on 2026-08-01.
+
+  By 18:13 the working tree had moved under CONCURRENT SIBLING LANES (not this agent —
+  this lane made zero source edits, only these two evidence files):
+      M  csp-solver/src/builder/assignment.rs      ┐
+      M  csp-solver/src/constraint/cage.rs         │ the 2.7 rust-edges lane, mid-flight
+      M  csp-solver/src/solver/search.rs           │
+      ?? csp-solver/src/builder/assignment/        │ (the U-09 split)
+      ?? csp-solver/tests/cage_revise.rs           ┘ (the cage test-extraction)
+      M  web/frontend/package.json
+      M  web/frontend/scripts/check-coverage-floor.mjs
+      M  scripts/deploy-gated.sh
+
+  CONSEQUENCE for P11: the god-module reading (assignment.rs 607 · cage.rs 558 ·
+  search.rs 528) is the BORN-RED state, captured before the cure. It is correct as a
+  born-RED bank and will NOT reproduce on a dirty tree. Re-derive any P11 figure with
+  `git stash` or against `git show baae148b:<path>`, never against the live worktree.
+  Every OTHER probe here (P1–P10, P12–P15) touches files no sibling lane has moved.
+================================================================================
