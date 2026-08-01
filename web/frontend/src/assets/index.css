@@ -235,13 +235,16 @@
      --color-pencil-graphite, which already flips per theme via --grid-line-color, so ONE
      definition serves light and dark.
 
-     Contrast on --color-card, light / dark (asserted by scripts/check-ink-pressure.mjs,
-     `npm run lint:ink`):
-       rule  55%  3.53 / 4.36  — NON-TEXT only (WCAG 1.4.11 ≥3:1): kbd borders, hairlines
-       quiet 68%  5.23 / 6.06  — the quiet caption-text rung (AA ≥4.5), the W10 gate-1 stop
-       firm  72%  5.95 / 6.66  — one pressure step firmer, for emphasis inside that register
-     Strictly increasing in both themes. Adding a stop means re-running that assertion over
-     EVERY rung, not just the new one — a fix that clears one site and inverts its neighbour
+     Contrast light / dark / print (asserted by scripts/check-ink-pressure.mjs, `npm run
+     lint:ink`; every surface below is RESOLVED OUT OF THIS FILE by the script, so re-pitching
+     a card or an ink re-prices the ladder instead of leaving it printing stale digits):
+       rule  55%  3.53 / 4.36 / 4.76  — NON-TEXT only (WCAG 1.4.11 ≥3:1): kbd borders, hairlines
+       quiet 68%  5.23 / 6.06 / 7.86  — the quiet caption-text rung (AA ≥4.5), the W10 gate-1 stop
+       firm  72%  5.95 / 6.66 / 9.23  — one pressure step firmer, for emphasis inside that register
+     Strictly increasing in all THREE scopes. The third is @media print — the only other place
+     that re-pitches --grid-line-color (to pure black, for :root and .dark at once) over a paper
+     the same block forces white. Adding a stop means re-running that assertion over EVERY rung
+     in EVERY scope, not just the new one — a fix that clears one site and inverts its neighbour
      has only moved the defect.
 
      WHAT THE LADDER DOES NOT GOVERN, stated so nobody reads three rungs as the register:
@@ -426,8 +429,13 @@
      8.96:1 and still wrong, which is the difference between a contrast ratio and a perception.
      Same recipe as light, α matched at 0.92, over a value that sits just ABOVE --color-card
      (hsl(24 6% 7%)) instead of dissolving into it. Two consumers, both estate-wide
-     (SheetWashiLabel, DrawerTab); zero assertions and zero goldens read the token, so the
-     witness is the shot pair and the contrast probe in the lane rig. */
+     (SheetWashiLabel, DrawerTab).
+
+     GATED, no longer only witnessed (T4-P1 pass 4): `lint:ink`'s tape row asserts the WORD ON
+     THE TAPE — --color-foreground composited over this mix over --color-card — at the AA text
+     floor, in both themes. The shipped arms read 17.36 light / 9.06 dark; the veil this
+     replaced reads 1.231 dark, which is the highlighter strike the pass-2 shot recorded, now
+     a number. A ratio against the paper never saw it: that one measured 8.96 and was wrong. */
   --sheet-washi-neutral: color-mix(
     in srgb,
     var(--color-foreground) 6%,

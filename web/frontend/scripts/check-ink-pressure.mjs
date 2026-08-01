@@ -84,12 +84,6 @@ const contrast = (a, b) => {
 const press = (ink, p, surface) =>
   ink.map((c, i) => (c * p) / 100 + (surface[i] * (100 - p)) / 100);
 
-// --color-card / --grid-line-color (--color-pencil-graphite aliases the latter), both themes.
-const THEMES = {
-  light: { card: hsl(48, 12, 99), graphite: hsl(0, 0, 15) },
-  dark: { card: hsl(24, 6, 7), graphite: hsl(48, 10, 80) },
-};
-
 /** role floors: WCAG 1.4.3 text AA = 4.5 · WCAG 1.4.11 non-text = 3.0 */
 const LADDER = [
   { token: "--ink-press-rule", role: "non-text", floor: 3.0 },
@@ -170,6 +164,125 @@ const SCOPES = {
   dark: scopeOf(INDEX_CSS, "\n.dark {"),
 };
 
+/** brace-matched slice — `scopeOf`'s "first \n}" stops at the first nested rule, which is fine
+ *  for a flat token block and wrong for an at-rule that contains any. */
+function blockOf(css, opener) {
+  const start = css.indexOf(opener);
+  if (start < 0) throw new Error(`ink-pressure: ${opener} not found in index.css`);
+  let depth = 0;
+  for (let i = start + opener.length - 1; i < css.length; i++) {
+    if (css[i] === "{") depth++;
+    else if (css[i] === "}" && --depth === 0) return css.slice(start, i + 1);
+  }
+  throw new Error(`ink-pressure: ${opener} is unbalanced`);
+}
+
+/**
+ * THE THIRD SCOPE. The pass-3 audit named `prefers-contrast: more` as a third scope that
+ * re-pitches `--grid-line-color`; the tree says otherwise — that block (index.css §SHEET) sets
+ * only `.sheet-laminate`'s background and border, and touches no ramp input. The scope that
+ * DOES re-pitch the ink is `@media print`, which drives `--grid-line-color` to pure black for
+ * `:root` AND `.dark` at once and forces the paper white under it. So print is a real third
+ * theme for this ladder and it is evaluated as one: black ink on white paper, same three stops,
+ * same floors. (`--color-card` is not redefined in print, and reading it there would model the
+ * wrong surface: the print rule paints `body / .bg-background / .board-wrapper` white, and that
+ * is what a printed rung actually sits on.)
+ */
+/**
+ * The theme inputs, RESOLVED OUT OF the css HANDED IN rather than restated as a literal. The
+ * ship-4 audit's charge was fair: a hardcoded `THEMES` means re-pitching `--color-card` leaves
+ * the ladder printing yesterday's contrasts, green. Taking `css` as a parameter (rather than
+ * closing over `INDEX_CSS`) is what makes the derivation itself falsifiable — `--self-test`'s
+ * `drift` case hands in a stylesheet whose light card has moved and requires the floors to red.
+ */
+function themesOf(css) {
+  const light = scopeOf(css, "@theme {");
+  const dark = scopeOf(css, "\n.dark {");
+  const print = blockOf(css, "@media print {");
+  const ink = print.match(/--grid-line-color:\s*([^;]+);/);
+  const paper = print.match(/background:\s*(#[0-9a-fA-F]{3,6})\s*!important/);
+  if (!ink || !paper) {
+    throw new Error(
+      "ink-pressure: the @media print scope no longer states its ink or its paper — re-derive the third scope before trusting this gate",
+    );
+  }
+  const lit = (v) => {
+    const c = parseColor(v.trim());
+    if (!c) throw new Error(`ink-pressure: cannot read the print scope's ${v}`);
+    return c;
+  };
+  return {
+    light: {
+      card: colorOf(light, "--color-card"),
+      graphite: colorOf(light, "--grid-line-color"),
+    },
+    dark: {
+      card: colorOf(dark, "--color-card"),
+      graphite: colorOf(dark, "--grid-line-color"),
+    },
+    print: { card: lit(paper[1]), graphite: lit(ink[1]) },
+  };
+}
+
+const THEMES = themesOf(INDEX_CSS);
+
+/** literal sRGB out of the two spellings this stylesheet authors: #rgb/#rrggbb and hsl() */
+function parseColor(v) {
+  const short = v.match(/^#([0-9a-f]{3})$/i);
+  if (short)
+    return [...short[1]].map((c) => parseInt(c + c, 16));
+  const hex = v.match(/^#([0-9a-f]{6})$/i);
+  if (hex) return [0, 2, 4].map((i) => parseInt(hex[1].slice(i, i + 2), 16));
+  const h = v.match(/^hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)$/);
+  if (h) return hsl(+h[1], +h[2], +h[3]);
+  return null;
+}
+
+/** sRGB + alpha out of `hsl(h s% l% / a)`; alpha defaults to 1 */
+function parseColorA(v) {
+  const h = v
+    .trim()
+    .match(/^hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*(?:\/\s*([\d.]+)\s*)?\)$/);
+  if (h) return { rgb: hsl(+h[1], +h[2], +h[3]), a: h[4] === undefined ? 1 : +h[4] };
+  const c = parseColor(v.trim());
+  return c ? { rgb: c, a: 1 } : null;
+}
+
+/**
+ * `color-mix(in srgb, <c1> P%, <c2>)` — premultiplied, per CSS Color 5, so an alpha on either
+ * side is honoured. Written for §SHEET's tape, whose second colour carries the alpha that IS
+ * the design (`hsl(24 5% 21% / 0.92)`), and where a naive un-premultiplied lerp would model a
+ * different tape than the browser paints.
+ */
+function mixOf(scope, decl) {
+  // Whitespace-NORMALIZED, never flattened: `hsl(0 0% 100% / 0.82)` is space-delimited syntax
+  // and `flat()` would glue it into `hsl(00%100%/0.82)`.
+  const s = decl.replace(/\s+/g, " ").trim();
+  const m = s.match(/^color-mix\(\s*in srgb,\s*(.+?)\s+([\d.]+)%\s*,\s*(.+?)\s*\)$/);
+  if (!m) throw new Error(`ink-pressure: cannot read the color-mix in ${s}`);
+  const side = (raw) => {
+    const alias = raw.match(/^var\(\s*(--[\w-]+)\s*\)$/);
+    if (alias) return { rgb: colorOf(scope, alias[1]), a: 1 };
+    const c = parseColorA(raw);
+    if (!c) throw new Error(`ink-pressure: cannot read the colour ${raw}`);
+    return c;
+  };
+  const c1 = side(m[1]);
+  const c2 = side(m[3]);
+  const p = Number(m[2]) / 100;
+  const a = p * c1.a + (1 - p) * c2.a;
+  if (a === 0) return { rgb: [0, 0, 0], a: 0 };
+  return {
+    rgb: c1.rgb.map(
+      (v, i) => (p * c1.a * v + (1 - p) * c2.a * c2.rgb[i]) / a,
+    ),
+    a,
+  };
+}
+
+/** paint `{rgb,a}` down onto an opaque surface */
+const over = ({ rgb, a }, surface) => rgb.map((v, i) => a * v + (1 - a) * surface[i]);
+
 /** resolve a custom property to sRGB, following one-level `var()` aliases within its scope */
 function colorOf(scope, token, seen = new Set()) {
   if (seen.has(token)) throw new Error(`ink-pressure: ${token} aliases itself`);
@@ -179,10 +292,8 @@ function colorOf(scope, token, seen = new Set()) {
   const v = m[1].trim();
   const alias = v.match(/^var\(\s*(--[\w-]+)/);
   if (alias) return colorOf(scope, alias[1], seen);
-  const hex = v.match(/^#([0-9a-f]{6})$/i);
-  if (hex) return [0, 2, 4].map((i) => parseInt(hex[1].slice(i, i + 2), 16));
-  const h = v.match(/^hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)$/);
-  if (h) return hsl(+h[1], +h[2], +h[3]);
+  const c = parseColor(v);
+  if (c) return c;
   throw new Error(`ink-pressure: cannot read ${token} = ${v}`);
 }
 
@@ -193,7 +304,7 @@ function gateFloors(css) {
   const fails = [];
   for (const { token, role, floor } of LADDER) {
     const p = stopOf(css, token);
-    for (const [name, { card, graphite }] of Object.entries(THEMES)) {
+    for (const [name, { card, graphite }] of Object.entries(themesOf(css))) {
       const cr = contrast(press(graphite, p, card), card);
       if (cr < floor) {
         fails.push(
@@ -208,7 +319,7 @@ function gateFloors(css) {
 function gateMonotone(css) {
   const fails = [];
   const stops = LADDER.map(({ token }) => ({ token, p: stopOf(css, token) }));
-  for (const [name, { card, graphite }] of Object.entries(THEMES)) {
+  for (const [name, { card, graphite }] of Object.entries(themesOf(css))) {
     const r = stops.map(({ p }) => contrast(press(graphite, p, card), card));
     for (let i = 1; i < r.length; i++) {
       if (!(r[i] > r[i - 1])) {
@@ -261,6 +372,47 @@ function gateArmed(armed) {
   return fails;
 }
 
+/**
+ * THE TAPE — `--sheet-washi-neutral`, the one estate-wide surface `blast-radius.md` §2.7 booked
+ * as "zero assertions and zero goldens read this token's value: a free edit in test terms and a
+ * wide one in rendered terms". The dark arm shipped at `e982a403` and the device shot confirmed
+ * it; this is the repo-side bound that stops it drifting back.
+ *
+ * The failure it is written against is not a ratio against the paper — the broken arm measured
+ * 8.96:1 there and was still wrong. It is the WORD ON THE TAPE: `SheetWashiLabel` writes in
+ * `--color-foreground` on a `--sheet-washi-neutral` ground, and a near-white tape carrying
+ * near-white ink is the highlighter STRIKE the pass-2 dark shot recorded. So the assertion is
+ * ink-on-tape, composited over the card the tape actually lies on, at the AA text floor.
+ */
+const TAPE = {
+  token: "--sheet-washi-neutral",
+  ink: "--color-foreground",
+  surface: "--color-card",
+  floor: 4.5,
+  consumers: "SheetWashiLabel.vue:92, DrawerTab.vue",
+};
+
+function gateTape(css, tape) {
+  const fails = [];
+  const scopes = { light: scopeOf(css, "@theme {"), dark: scopeOf(css, "\n.dark {") };
+  for (const [name, scope] of Object.entries(scopes)) {
+    const decl = scope.match(new RegExp(`${tape.token}:\\s*([^;]+);`));
+    if (!decl) {
+      fails.push(`${tape.token} is not declared in the ${name} scope`);
+      continue;
+    }
+    const ground = over(mixOf(scope, decl[1]), colorOf(scope, tape.surface));
+    const cr = contrast(colorOf(scope, tape.ink), ground);
+    if (cr < tape.floor) {
+      fails.push(
+        `${tape.ink} on ${tape.token} = ${cr.toFixed(3)}:1 in ${name} — under the text floor ` +
+          `${tape.floor}; the tape reads as a strike through its own word (${tape.consumers})`,
+      );
+    }
+  }
+  return fails;
+}
+
 /* ── self-test: every gate shown able to fail ───────────────────────────── */
 
 /**
@@ -293,6 +445,14 @@ function selfTest() {
     /(--ink-press-quiet:\s*color-mix\(\s*in srgb,\s*var\(--color-pencil-graphite[^%]*?)68%/s,
     "$155%",
   );
+  // THE DRIFT CASE — the one the pass-3 audit's charge (e) demanded. The stops are untouched;
+  // only the light theme's PAPER moves, to the graphite it is supposed to contrast against.
+  // A ladder computing against a hardcoded THEMES literal stays green through this edit and
+  // prints yesterday's digits; a derived one reds on all three rungs at once.
+  const drifted = INDEX_CSS.replace(
+    /--color-card:\s*hsl\([^)]*\);/,
+    "--color-card: hsl(0 0% 15%);",
+  );
   const fixture = ownershipFixture();
   const armedBad = { ...ARMED, token: ARMED.banned, banned: ARMED.token };
   const cases = [
@@ -300,6 +460,20 @@ function selfTest() {
     ["monotone", () => gateMonotone(bad)],
     ["ownership", () => gateOwnership(sources(fixture))],
     ["armed", () => gateArmed(armedBad)],
+    ["theme-drift", () => gateFloors(drifted)],
+    // The tape's dark arm reverted to the light arm's white base — verbatim the pose the
+    // pass-2 dark shot caught and `e982a403` cured. If this passes, the tape is ungated again.
+    [
+      "tape",
+      () =>
+        gateTape(
+          INDEX_CSS.replace(
+            /(\.dark\s*\{[\s\S]*?--sheet-washi-neutral:\s*color-mix\(\s*in srgb,\s*var\(--color-foreground\)\s*6%,\s*)hsl\([^)]*\)/,
+            "$1hsl(0 0% 100% / 0.82)",
+          ),
+          TAPE,
+        ),
+    ],
   ];
   const mute = [];
   for (const [name, run] of cases) {
@@ -323,6 +497,7 @@ const fails = [
   ...gateMonotone(INDEX_CSS),
   ...gateOwnership(sources(SRC)),
   ...gateArmed(ARMED),
+  ...gateTape(INDEX_CSS, TAPE),
 ];
 const vacuous = process.argv.includes("--self-test") ? selfTest() : [];
 
@@ -335,20 +510,17 @@ if (fails.length || vacuous.length) {
   process.exit(1);
 }
 
+const ratio = (theme, p) =>
+  contrast(press(THEMES[theme].graphite, p, THEMES[theme].card), THEMES[theme].card);
+const SCOPE_NAMES = Object.keys(THEMES);
+
 const rows = LADDER.map(({ token, role, floor }) => {
   const p = stopOf(INDEX_CSS, token);
-  const l = contrast(
-    press(THEMES.light.graphite, p, THEMES.light.card),
-    THEMES.light.card,
-  );
-  const d = contrast(
-    press(THEMES.dark.graphite, p, THEMES.dark.card),
-    THEMES.dark.card,
-  );
-  return `  ${token.padEnd(18)} ${String(p).padStart(3)}%  ${l.toFixed(2)} light / ${d.toFixed(2)} dark  ≥${floor} (${role})`;
+  const cells = SCOPE_NAMES.map((s) => `${ratio(s, p).toFixed(2)} ${s}`).join(" / ");
+  return `  ${token.padEnd(18)} ${String(p).padStart(3)}%  ${cells}  ≥${floor} (${role})`;
 });
 console.log(
-  "ink-pressure ladder — every rung clears its floor, strictly increasing, both themes:",
+  `ink-pressure ladder — every rung clears its floor, strictly increasing, in all ${SCOPE_NAMES.length} scopes (${SCOPE_NAMES.join(", ")}), each resolved out of index.css:`,
 );
 console.log(rows.join("\n"));
 
@@ -360,6 +532,22 @@ const armedRow = Object.fromEntries(
 );
 console.log(
   `  ${ARMED.token.padEnd(18)}       ${armedRow.light.toFixed(2)} light / ${armedRow.dark.toFixed(2)} dark  ≥${ARMED.floor} (${ARMED.selector})`,
+);
+
+const tapeRow = Object.fromEntries(
+  Object.entries(SCOPES).map(([name, scope]) => [
+    name,
+    contrast(
+      colorOf(scope, TAPE.ink),
+      over(
+        mixOf(scope, scope.match(new RegExp(`${TAPE.token}:\\s*([^;]+);`))[1]),
+        colorOf(scope, TAPE.surface),
+      ),
+    ),
+  ]),
+);
+console.log(
+  `  ${"washi tape".padEnd(18)}       ${tapeRow.light.toFixed(2)} light / ${tapeRow.dark.toFixed(2)} dark  ≥${TAPE.floor} (${TAPE.ink} on ${TAPE.token})`,
 );
 
 /* The register the ladder does NOT govern, printed so the inversion can't go quiet. */
