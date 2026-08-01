@@ -98,6 +98,12 @@ const MIXED_FACE = () => {
     if (!text || !text.trim()) continue;
     const el = n.parentElement;
     if (!el) continue;
+    // DEV-ONLY CHROME IS NOT THE ESTATE. `FilterTuner` mounts behind `import.meta.env.DEV` and
+    // is absent from every artifact that deploys, but this spec runs on the dev server, so its
+    // `fx` badge was censused as a Fira Code string missing U+0066/U+0078 — a red at HEAD that
+    // no shipped surface can produce (3/3 on the base tree, T4-P1 pass 4 Lane A). It is an
+    // async component, which is why it raced its way past the run that landed the spec.
+    if (el.closest(".tuner-toggle, .tuner-panel")) continue;
     const box = el.getBoundingClientRect();
     // sr-only is a 1px clip: painted text has a box a reader could see.
     if (box.width < 3 || box.height < 3) continue;
