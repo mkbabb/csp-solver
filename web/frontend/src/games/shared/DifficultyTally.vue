@@ -5,8 +5,9 @@
  * A gate-five tally (four uprights + a binding slash) whose INKED strokes count the tier the
  * board's hardest human step reached — W7's five ascending tiers: singles · pairs/pointing ·
  * X-wing · swordfish/XY-wing · beyond. Not stars, not a percentage: the tiers ARE discrete,
- * so the glyph is discrete. The count is magnitude; the exact hardest technique is named on
- * hover/focus (and always in the a11y label). One game-agnostic component both boards mount.
+ * so the glyph is discrete. The count is magnitude; the exact hardest technique is named in the
+ * a11y label, at every width and with no gesture (the hover reveal it also used to carry is
+ * retired — see the note at the template's foot). One game-agnostic component both boards mount.
  *
  * ── The honesty spine (ROW 5, binding) ──────────────────────────────────────────────────
  * The whole display gates on `descriptor.graded`. An ungraded board (unsupported size,
@@ -244,7 +245,22 @@ onUnmounted(stopDraws);
         />
       </g>
     </svg>
-    <span class="dt-name" aria-hidden="true">{{ descriptor.expand }}</span>
+    <!-- T4-P1 pass 4 — THE HOVER REVEAL IS RETIRED, ESTATE-WIDE. It was a `max-width: 0 → 16ch`
+         expansion of `descriptor.expand` ("hardest step: hidden single") and it was written for
+         a tally that lived in the board's own margin, with an empty strip to open into. Mark 6
+         moved the tally into the ticket's deal row, where its only neighbour is the commit
+         verb: measured at the 1440 rail, expanded, verb→receipt clearance goes +7.53px →
+         −103.53px in BOTH engines (`pass4/rigF3/out-assets-*.json`) — the name lies across
+         Deal. The rail itself does not move (card 281 / board left 215.5, byte-identical) —
+         the shared grid cell holds — so this is occlusion, not layout. The pass-3 tree hid it
+         with `.deal-row :deep(.dt-name){display:none}` and described that as "suppressed inside
+         the ticket only"; the ticket is the tally's ONLY mount, so it was already retired
+         everywhere, silently, desktop included. Now it is retired on the record and the dead
+         markup goes with it. The exact step still names itself at every width — in the tally's
+         own `aria-label` (always, never on hover) and in the margin voice's hint line. The
+         glyph goes back to what its own comment calls it: a glanceable magnitude.
+         `TallyDescriptor.expand` KEEPS its home in techniqueVoice.ts (tested there, 5 rows) and
+         has, from here, no renderer. -->
   </div>
 </template>
 
@@ -311,37 +327,9 @@ onUnmounted(stopDraws);
   stroke-dasharray: 2.5 3.5;
 }
 
-/* Progressive disclosure: the exact hardest step is named on hover/focus (and always in the
-   aria-label). Collapsed by default so the glyph stays a glanceable magnitude. */
-.dt-name {
-  font-size: var(--type-caption);
-  letter-spacing: 0.01em;
-  font-style: italic;
-  color: var(--ink-press-firm);
-  max-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  opacity: 0;
-  transition:
-    max-width 240ms var(--ease-noteWrite),
-    opacity 200ms ease;
-}
-.difficulty-tally:hover .dt-name,
-.difficulty-tally:focus-visible .dt-name,
-.difficulty-tally:focus-within .dt-name {
-  max-width: 16ch;
-  opacity: 1;
-}
-
 .difficulty-tally:focus-visible {
   outline: 2px solid var(--color-focus-sketch, #3a7bc4);
   outline-offset: 3px;
   border-radius: 4px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dt-name {
-    transition: none;
-  }
 }
 </style>

@@ -1039,15 +1039,12 @@ function onHint() {
   min-width: 0;
 }
 
-/* The receipt's progressive disclosure is retired INSIDE the ticket (mark 6). The well is a
-   `HandDrawnOutline`, and a child that changes its own box on hover changes the well's — which
-   is the pass-3 stall lane's own mechanism: a laid-out size change re-bakes that outline's
-   raster stack. The hardest technique still travels in the tally's `aria-label`, which is where
-   assistive tech reads it and where the honesty spine keeps it. In the board margin the reveal
-   had an empty margin to open into; in a compartment it has a neighbour. */
-.deal-row :deep(.dt-name) {
-  display: none;
-}
+/* T4-P1 pass 4 — the `:deep(.dt-name){display:none}` that used to live here is GONE with the
+   markup it hid. `.deal-row` is the tally's only mount, so a rule scoped to it was never
+   "inside the ticket only": it retired the reveal estate-wide, desktop included, and said so
+   nowhere. The retirement stands and is now written where the component is (DifficultyTally),
+   with the reading that decides it — expanded, the name crosses Deal by 103.53px at the 1440
+   rail — and the row that keeps it from coming back is in `visual-regression.spec.ts`. */
 
 /* Deal is the re-homed dice, but it earns its NAME on every pointer (not only coarse): the
    primary verb of the staged zone reads with zero copy. The column layout + padded target

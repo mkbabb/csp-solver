@@ -1,4 +1,5 @@
 import { test, expect, devices, type Page } from "@playwright/test";
+import { MOTION } from "../src/pencil/config/pencilConfig";
 
 // SVG-filter / theme / grid-boil DOM-contract register for the default (Sudoku) scene.
 //
@@ -489,6 +490,89 @@ test("the Deal die is not crushed: the commit verb's box fits its own content", 
         `padding ${geom!.padY.toFixed(2)} + gap ${geom!.gap.toFixed(2)})`,
     )
     .toBeGreaterThanOrEqual(demanded - 0.5);
+});
+
+// ── Test 8a: the house glass curve is one curve ─────────────────────
+
+test("the glass curve is the same curve in both layers", async ({ page }) => {
+  await loadApp(page);
+
+  // The F3 charter's `drawerGlide ≡ vaul` row, gated (T4-P1 pass 4). One monotone glass curve
+  // carries the drawer's glide, the carousel card step, the board fold and the laminate
+  // lay-down — but it necessarily lives in two layers: `<style>`-layer consumers cannot read a
+  // TS constant, so index.css mints `--ease-glassGlide` as a byte copy of MOTION.curves
+  // .drawerGlide with a comment promising the two agree. A promise in a comment is not a gate:
+  // re-time either literal alone and every consumer of the other keeps the old curve, silently.
+  // Read off the SHIPPED cascade, compared against the TS home the JS movers actually run.
+  const shipped = await page.evaluate(() =>
+    getComputedStyle(document.documentElement)
+      .getPropertyValue("--ease-glassGlide")
+      .trim(),
+  );
+  // Engines re-serialise the value (whitespace, and `0.32` → `.32`), so compare the numbers,
+  // not the spelling — the drift this row exists for moves a control point, never a zero.
+  const norm = (s: string) =>
+    (s.match(/-?[\d.]+/g) ?? []).map((n) => String(parseFloat(n))).join(",");
+  expect(norm(shipped)).toBe(norm(MOTION.curves.drawerGlide));
+  expect(norm(shipped)).not.toBe(""); // an unresolved var must not read as agreement
+});
+
+// ── Test 8b: the receipt never crosses the verb ─────────────────────
+
+test("the deal receipt keeps off the commit verb, hover included", async ({ page }) => {
+  await loadApp(page);
+
+  // Mark 6 moved the difficulty tally out of the board's margin and into the ticket's deal
+  // row, where it shares ONE grid cell with Deal — verb centred, receipt end-aligned. The
+  // clearance between them is 7.53px at this rail. That is enough for a static receipt and
+  // not enough for a growing one, which is the whole reason the tally's hover reveal is
+  // retired (DifficultyTally): expanded to its old 16ch the name crossed Deal by 103.53px.
+  // This row is the bound — it fails for ANY child of the receipt that grows on hover,
+  // however it arrives, not just for the one that was deleted.
+  const clearance = async () =>
+    page.evaluate(() => {
+      const row = document.querySelector(".controls-card .deal-row");
+      const verb = row?.querySelector(".deal-btn");
+      const receipt = row?.querySelector(".difficulty-tally");
+      if (!verb || !receipt) return null;
+      const v = verb.getBoundingClientRect();
+      const t = receipt.getBoundingClientRect();
+      return { gap: +(t.left - v.right).toFixed(2), receiptW: +t.width.toFixed(2) };
+    });
+
+  const rest = await clearance();
+  expect(rest).not.toBeNull();
+  expect(rest!.gap).toBeGreaterThan(0);
+
+  await page.locator(".controls-card .deal-row .difficulty-tally").hover();
+  await page.waitForTimeout(320); // longer than any reveal transition the estate has owned
+  const hovered = await clearance();
+  expect(hovered!.gap).toBeGreaterThan(0);
+  // …and the receipt is the same receipt. A reveal that grows it is the defect even when the
+  // gap happens to survive on a wide rail.
+  expect(hovered!.receiptW).toBeCloseTo(rest!.receiptW, 1);
+
+  // CONTROL: put the retired reveal back — the exact markup and the exact rule — and the same
+  // probe must see the name cross the verb.
+  await page.evaluate(() => {
+    const t = document.querySelector(".controls-card .deal-row .difficulty-tally")!;
+    const s = document.createElement("span");
+    // NOT `.dt-name`: the tree this row also has to run against (the pre-retirement dist)
+    // carries a `display:none` scoped to that class, which would swallow the control and
+    // red the row for the wrong reason. The probe is about ANY growing child.
+    s.className = "dtx-reveal-probe";
+    s.textContent = "hardest step: hidden single";
+    t.appendChild(s);
+  });
+  await page.addStyleTag({
+    content:
+      ".dtx-reveal-probe { font-size: var(--type-caption); max-width: 0; overflow: hidden; white-space: nowrap; opacity: 0; } " +
+      ".difficulty-tally:hover .dtx-reveal-probe { max-width: 16ch; opacity: 1; }",
+  });
+  await page.locator(".controls-card .deal-row .difficulty-tally").hover();
+  await page.waitForTimeout(320);
+  const broken = await clearance();
+  expect(broken!.gap).toBeLessThan(0);
 });
 
 // ── Test 9: chip separation — the seam between adjacent option chips ─
