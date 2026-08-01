@@ -1,0 +1,11 @@
+## ACT 1 — assignment.rs split (U-09)
+before: 607 L, one file, zero test lines (rust-gestalt R1-1)
+after:
+     286 csp-solver/src/builder/assignment.rs
+     186 csp-solver/src/builder/assignment/branch_and_bound.rs
+      91 csp-solver/src/builder/assignment/error.rs
+      90 csp-solver/src/builder/assignment/lap.rs
+     653 total
+
+public API: unchanged — `pub use builder::assignment::{AssignmentBuilder, AssignmentError, AssignmentSolution, SENTINEL, assignment}` (lib.rs:33) resolves identically; the two solve paths are `pub(super)` inherent methods in descendant modules, so no field or fn widened.
+cargo test --workspace: 0 failures

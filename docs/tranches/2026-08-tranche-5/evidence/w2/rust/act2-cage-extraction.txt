@@ -1,0 +1,11 @@
+## ACT 2 — cage.rs test extraction (R1-2 / colocation edict)
+before: src/constraint/cage.rs 558 L (305 production + 253 inline test lines, 11 test fns)
+after:  src/constraint/cage.rs      304
+        tests/cage_revise.rs      277
+
+The extracted tests now cross ConstraintEnum::revise (pub) instead of the pub(crate) revise_impl — the shipped devirtualized arm, and zero visibility widened to reach it. 9 tests, all green.
+
+REMAINING INLINE TEST MOD (honest disposition, not in this row's charter): src/builder/kuhn_munkres.rs:135.
+  builder.rs:12 declares `mod kuhn_munkres;` PRIVATE. An integration test cannot reach `minimize` at all,
+  so extracting that block would require making the module public — widening the crate's public API to move a
+  test. The inline mod is structurally required there; cage.rs's was not (its type is re-exported).
