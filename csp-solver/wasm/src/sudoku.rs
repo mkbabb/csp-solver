@@ -26,7 +26,7 @@ use csp_solver::ordering::Ordering;
 use csp_solver::sudoku::{self, Difficulty};
 use csp_solver::{Pruning, SolveConfig};
 
-use crate::errors::{coded_error, domain_masks, flatten_solutions};
+use crate::errors::{board_total, coded_error, domain_masks, flatten_solutions};
 
 /// Sudoku puzzle difficulty. Flat re-declaration so this module stands
 /// alone in the lean, `--no-default-features` deploy build.
@@ -149,17 +149,7 @@ pub fn solve_sudoku(
     max_solutions: Option<usize>,
     node_budget: Option<u32>,
 ) -> Result<SudokuSolveResult, JsValue> {
-    let m = (n * n) as usize;
-    let total = m * m;
-    if board.len() != total {
-        return Err(coded_error(
-            "INVALID_INPUT",
-            &format!(
-                "board length {} does not match (n*n)^2 = {total} for n = {n}",
-                board.len()
-            ),
-        ));
-    }
+    board_total(&board, n * n)?;
 
     let config = SolveConfig {
         pruning: Pruning::Ac3,
@@ -226,17 +216,7 @@ pub fn solve_sudoku(
 /// "UNSAT"`) rather than returning a half-propagated buffer.
 #[wasm_bindgen(js_name = propagateSudoku)]
 pub fn propagate_sudoku(board: Vec<u32>, n: u32) -> Result<Vec<u32>, JsValue> {
-    let m = (n * n) as usize;
-    let total = m * m;
-    if board.len() != total {
-        return Err(coded_error(
-            "INVALID_INPUT",
-            &format!(
-                "board length {} does not match (n*n)^2 = {total} for n = {n}",
-                board.len()
-            ),
-        ));
-    }
+    board_total(&board, n * n)?;
 
     let (mut csp, given) = sudoku::create_sudoku_csp(&board, n);
 
@@ -265,17 +245,21 @@ pub fn propagate_sudoku(board: Vec<u32>, n: u32) -> Result<Vec<u32>, JsValue> {
 /// full puzzle templates (each `(n*n)^2` cells); when non-empty the fast
 /// path picks one and applies a random symmetry transform. An empty
 /// `templates` falls back to hole-digging generation.
+///
+/// `n = 0`, or a template buffer that is not a whole number of boards, throws a
+/// typed error (`instanceof Error`, `.code === "INVALID_INPUT"`) — the same
+/// discriminant every other verb on this wire throws.
 #[wasm_bindgen(js_name = generateSudoku)]
 pub fn generate_sudoku(
     n: u32,
     difficulty: SudokuDifficulty,
     seed: f64,
     templates: Vec<u32>,
-) -> Result<Vec<u32>, JsError> {
+) -> Result<Vec<u32>, JsValue> {
     let m = (n * n) as usize;
     let total = m * m;
     if total == 0 {
-        return Err(JsError::new("n must be >= 1"));
+        return Err(coded_error("INVALID_INPUT", "n must be >= 1"));
     }
     // JS numbers are f64; `Date.now()` and typical seeds are exact integers
     // below 2^53. Reinterpret to a u64 seed for the LCG.
@@ -285,10 +269,13 @@ pub fn generate_sudoku(
         sudoku::generate_board_seeded(n, difficulty.into(), seed_u64)
     } else {
         if !templates.len().is_multiple_of(total) {
-            return Err(JsError::new(&format!(
-                "templates length {} is not a multiple of (n*n)^2 = {total}",
-                templates.len()
-            )));
+            return Err(coded_error(
+                "INVALID_INPUT",
+                &format!(
+                    "templates length {} is not a multiple of (n*n)^2 = {total}",
+                    templates.len()
+                ),
+            ));
         }
         let tmpls: Vec<Vec<u32>> = templates.chunks(total).map(<[u32]>::to_vec).collect();
         sudoku::generate_board_with_templates_seeded(n, difficulty.into(), &tmpls, seed_u64)

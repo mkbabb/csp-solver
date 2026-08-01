@@ -29,7 +29,7 @@ use csp_solver::puzzles::killer::{self, KillerCage, create_killer_csp};
 use csp_solver::{Pruning, SolveConfig};
 
 use crate::SudokuDifficulty;
-use crate::errors::{coded_error, domain_masks, flatten_solutions};
+use crate::errors::{board_total, coded_error, domain_masks, flatten_solutions};
 
 /// Result of [`solve_killer`]. `solutions` is a flat concatenation of
 /// `solution_count` boards, each `(n*n)²` cells, row-major.
@@ -185,22 +185,6 @@ fn encode_cages(cages: &[KillerCage]) -> Vec<u32> {
     out
 }
 
-/// Validate the board length for sub-grid size `n`, returning the cell total.
-fn board_total(board: &[u32], n: u32) -> Result<usize, JsValue> {
-    let m = (n * n) as usize;
-    let total = m * m;
-    if board.len() != total {
-        return Err(coded_error(
-            "INVALID_INPUT",
-            &format!(
-                "board length {} does not match (n*n)² = {total} for n = {n}",
-                board.len()
-            ),
-        ));
-    }
-    Ok(total)
-}
-
 /// Solve a flat, row-major Killer-Sudoku board (`0` = blank) with a
 /// length-prefixed cage buffer.
 ///
@@ -218,7 +202,7 @@ pub fn solve_killer(
     max_solutions: Option<usize>,
     node_budget: Option<u32>,
 ) -> Result<KillerSolveResult, JsValue> {
-    let total = board_total(&board, n)?;
+    let total = board_total(&board, n * n)?;
     let cage_vec = decode_cages(&cages, total)?;
 
     let config = SolveConfig {
@@ -273,7 +257,7 @@ pub fn solve_killer(
 /// contradict throws a typed `UNSAT` error.
 #[wasm_bindgen(js_name = propagateKiller)]
 pub fn propagate_killer(board: Vec<u32>, n: u32, cages: Vec<u32>) -> Result<Vec<u32>, JsValue> {
-    let total = board_total(&board, n)?;
+    let total = board_total(&board, n * n)?;
     let cage_vec = decode_cages(&cages, total)?;
 
     let (mut csp, given) = create_killer_csp(&board, n, &cage_vec);
@@ -302,15 +286,19 @@ pub fn propagate_killer(board: Vec<u32>, n: u32, cages: Vec<u32>) -> Result<Vec<
 /// `crypto.getRandomValues` draw. Returns the dense given grid plus the
 /// length-prefixed cage buffer; the same `n` + `difficulty` + `seed` yields the
 /// same puzzle here as native `generate_killer_seeded`.
+///
+/// `n = 0` throws a typed error (`instanceof Error`, `.code ===
+/// "INVALID_INPUT"`) — the same discriminant every other verb on this wire
+/// throws.
 #[wasm_bindgen(js_name = generateKiller)]
 pub fn generate_killer(
     n: u32,
     difficulty: SudokuDifficulty,
     seed: f64,
-) -> Result<KillerPuzzleData, JsError> {
+) -> Result<KillerPuzzleData, JsValue> {
     let m = (n * n) as usize;
     if m * m == 0 {
-        return Err(JsError::new("n must be >= 1"));
+        return Err(coded_error("INVALID_INPUT", "n must be >= 1"));
     }
     // JS numbers are f64; `Date.now()` and typical seeds are exact integers
     // below 2^53. Reinterpret to a u64 seed for the LCG.

@@ -29,7 +29,7 @@ use csp_solver::puzzles::kenken::{self, CageOp, KenKenCage, create_kenken_csp};
 use csp_solver::{Pruning, SolveConfig};
 
 use crate::FutoshikiDifficulty;
-use crate::errors::{coded_error, domain_masks, flatten_solutions};
+use crate::errors::{board_total, coded_error, domain_masks, flatten_solutions};
 
 /// Result of [`solve_kenken`]. `solutions` is a flat concatenation of
 /// `solution_count` boards, each `board_size²` cells, row-major.
@@ -199,21 +199,6 @@ fn encode_cages(cages: &[KenKenCage]) -> Vec<u32> {
         out.extend(cage.cells.iter().map(|&c| c as u32));
     }
     out
-}
-
-/// Validate the board length for board side `board_size`, returning the cell total.
-fn board_total(board: &[u32], board_size: u32) -> Result<usize, JsValue> {
-    let total = (board_size * board_size) as usize;
-    if board.len() != total {
-        return Err(coded_error(
-            "INVALID_INPUT",
-            &format!(
-                "board length {} does not match board_size² = {total} for board_size = {board_size}",
-                board.len()
-            ),
-        ));
-    }
-    Ok(total)
 }
 
 /// Solve a flat, row-major KenKen board (`0` = blank) with a length-prefixed cage

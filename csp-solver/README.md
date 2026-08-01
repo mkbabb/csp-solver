@@ -213,7 +213,7 @@ each implementing `Domain`, some `LatticeDomain`. See
 ## Build & Test
 
 ```bash
-cargo test --workspace                     # 208 passed, 0 failed, 0 ignored across 26 test binaries + 4 doctests (measured at e961bdb7, Apple M5 Max, 2026-08-01)
+cargo test --workspace                     # 212 passed, 0 failed, 0 ignored across 28 test binaries + 4 doctests (measured at a3ada202, Apple M5 Max, 2026-08-01)
 cargo bench                                # criterion; see below
 maturin develop --release --features py    # build the PyO3 wheel (Python ≤3.13)
 RUSTDOCFLAGS='-A rustdoc::private_intra_doc_links' cargo doc --document-private-items  # internal-doc build (public `cargo doc` is pre-broken; the linked items are internal modules)

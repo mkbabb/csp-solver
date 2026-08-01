@@ -87,7 +87,7 @@ cd web/frontend && npm install && npm run dev
 All counts measured at `e961bdb7`, Apple M5 Max, 2026-08-01 — except the e2e census, re-derived on the T5-W1 tree, where rows 1.6 and 1.10 widened the suite (WebKit 91 → 110 in the default config, the built-dist gates 23 → 39).
 
 ```bash
-# Rust: 208 passed, 0 failed, 0 ignored (26 test binaries + 4 doctests)
+# Rust: 212 passed, 0 failed, 0 ignored (28 test binaries + 4 doctests)
 cargo test --workspace
 
 # Python wheel-contract: 27 passed, 0 skipped
@@ -132,7 +132,7 @@ A Cloudflare Pages static deploy. Solving and generation never leave the visitor
 
 ## Performance
 
-`docs/benchmarks.md` carries the reproducible, stamped numbers. GAC default-ON gives a 12.6–12.7× aggregate over the 50-board A/B corpus, with a disclosed minority cost: 3 of the 5 named hard 9×9 boards run 1.8–3.3× slower ON. The timing figures are first-party, from the committed `gac_timing_probe` example (`ede25188`); the sibling `gac_ab_corpus` is the soundness gate (0/50 false-UNSAT in both GAC states).
+`docs/benchmarks.md` carries the reproducible, stamped numbers. GAC default-ON gives a 64.8–65.7× aggregate over the 47 boards of the 50-board A/B corpus both states can finish — the other three are boards GAC-off cannot solve at all inside its node budget — with a disclosed minority cost: 3 of the 5 named hard 9×9 boards run 1.6–2.9× slower ON. The timing figures are first-party, from the committed `gac_timing_probe` example (`a3ada202`); the sibling `gac_ab_corpus` is the soundness gate (0/50 false-UNSAT in both GAC states).
 
 ## Key conventions
 

@@ -59,7 +59,7 @@ fn sudoku_dealt_via_trait_matches_shipped_seeded_generator() {
             SudokuDifficulty::Hard,
         ] {
             for &seed in &[1u64, 7, 42, 12345] {
-                let via = deal_via_trait(&SudokuClass { n, difficulty }, seed);
+                let via = deal_via_trait(&SudokuClass::from_difficulty(n, difficulty), seed);
                 let shipped = generate_board_seeded(n, difficulty, seed);
                 assert_eq!(
                     via, shipped,
@@ -122,10 +122,7 @@ fn seed_and_clue_seams_have_the_expected_shape() {
     // Structural sanity on the two seams the families genuinely diverge on: the
     // seed is a full 0-free grid; sudoku places no clue furniture, futoshiki does.
     let mut rng = SimpleRng::new(7);
-    let sudoku = SudokuClass {
-        n: 3,
-        difficulty: SudokuDifficulty::Easy,
-    };
+    let sudoku = SudokuClass::from_difficulty(3, SudokuDifficulty::Easy);
     let solution = sudoku.seed_solution(&mut rng);
     assert_eq!(solution.len(), 81);
     assert!(solution.iter().all(|&v| (1..=9).contains(&v)));

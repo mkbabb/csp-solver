@@ -28,7 +28,7 @@ use csp_solver::puzzles::thermo::{self, Thermometer, create_thermo_csp};
 use csp_solver::{Pruning, SolveConfig};
 
 use crate::SudokuDifficulty;
-use crate::errors::{coded_error, domain_masks, flatten_solutions};
+use crate::errors::{board_total, coded_error, domain_masks, flatten_solutions};
 
 /// Result of [`solve_thermo`]. `solutions` is a flat concatenation of
 /// `solution_count` boards, each `(n*n)²` cells, row-major.
@@ -175,22 +175,6 @@ fn encode_thermometers(thermos: &[Thermometer]) -> Vec<u32> {
     out
 }
 
-/// Validate the board length for sub-grid size `n`, returning the cell total.
-fn board_total(board: &[u32], n: u32) -> Result<usize, JsValue> {
-    let m = (n * n) as usize;
-    let total = m * m;
-    if board.len() != total {
-        return Err(coded_error(
-            "INVALID_INPUT",
-            &format!(
-                "board length {} does not match (n*n)² = {total} for n = {n}",
-                board.len()
-            ),
-        ));
-    }
-    Ok(total)
-}
-
 /// Solve a flat, row-major Thermo-Sudoku board (`0` = blank) with a
 /// length-prefixed thermometer buffer.
 ///
@@ -208,7 +192,7 @@ pub fn solve_thermo(
     max_solutions: Option<usize>,
     node_budget: Option<u32>,
 ) -> Result<ThermoSolveResult, JsValue> {
-    let total = board_total(&board, n)?;
+    let total = board_total(&board, n * n)?;
     let thermos = decode_thermometers(&thermometers, total)?;
 
     let config = SolveConfig {
@@ -267,7 +251,7 @@ pub fn propagate_thermo(
     n: u32,
     thermometers: Vec<u32>,
 ) -> Result<Vec<u32>, JsValue> {
-    let total = board_total(&board, n)?;
+    let total = board_total(&board, n * n)?;
     let thermos = decode_thermometers(&thermometers, total)?;
 
     let (mut csp, given) = create_thermo_csp(&board, n, &thermos);
@@ -296,15 +280,19 @@ pub fn propagate_thermo(
 /// `crypto.getRandomValues` draw. Returns the dense given grid plus the
 /// length-prefixed thermometer buffer; the same `n` + `difficulty` + `seed`
 /// yields the same puzzle here as native `generate_thermo_seeded`.
+///
+/// `n = 0` throws a typed error (`instanceof Error`, `.code ===
+/// "INVALID_INPUT"`) — the same discriminant every other verb on this wire
+/// throws.
 #[wasm_bindgen(js_name = generateThermo)]
 pub fn generate_thermo(
     n: u32,
     difficulty: SudokuDifficulty,
     seed: f64,
-) -> Result<ThermoPuzzleData, JsError> {
+) -> Result<ThermoPuzzleData, JsValue> {
     let m = (n * n) as usize;
     if m * m == 0 {
-        return Err(JsError::new("n must be >= 1"));
+        return Err(coded_error("INVALID_INPUT", "n must be >= 1"));
     }
     // JS numbers are f64; `Date.now()` and typical seeds are exact integers
     // below 2^53. Reinterpret to a u64 seed for the LCG.

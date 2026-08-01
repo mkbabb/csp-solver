@@ -20,8 +20,8 @@ use crate::{CancelToken as RustCancelToken, SolveConfig as RustSolveConfig};
 /// cancellation typically takes effect within a handful of search nodes.
 ///
 /// `from_py_object`: a `CancelToken` is passed *into* Python-facing APIs by value
-/// (the `cancel=` argument of `solve_sudoku`/`solve_futoshiki` and the settable
-/// `SolveConfig.cancel` field), so it opts into pyo3 0.29's now-explicit
+/// (the `cancel=` argument of `solve_sudoku` — the PyO3 surface is sudoku-only
+/// — and the settable `SolveConfig.cancel` field), so it opts into pyo3 0.29's now-explicit
 /// `FromPyObject` derive.
 #[pyclass(from_py_object)]
 #[derive(Clone, Default)]

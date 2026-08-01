@@ -1,0 +1,18 @@
+# GATE — lean wasm build + byte size (T5-W2 LANE R exit)
+
+$ make -C csp-solver/wasm wasm   # the exact ship recipe (--no-default-features --profile wasm-release)
+$ wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+  121137 wasm/pkg/csp_solver_wasm_bg.wasm
+
+| | bytes | band |
+|---|---:|---|
+| HEAD (a3ada202, darwin) | 122,385 | fail >127,500 (runner) |
+| this lane (darwin) | 121,137 | fail >127,500 (runner) |
+| delta | **−1,248 B** | 6,363 B of headroom on darwin |
+
+NOT LOUD: the lane's changes make the artifact SMALLER, not larger.
+Where the bytes went: `board_total` collapsed from three monomorphized copies (+2 inlined
+checks) to one `errors.rs` fn, and futoshiki's givens stopped being a wall of `add_equals`
+LambdaConstraints — they ride the same `sudoku_given` path the other four use.
+The runner builds ~+1,712 B over darwin (known toolchain divergence), so the runner figure
+should land near 122,849 B — still 4,651 B inside the band. CI measures its own.

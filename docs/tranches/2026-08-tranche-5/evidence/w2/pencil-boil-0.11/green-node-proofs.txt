@@ -1,0 +1,263 @@
+
+> @mkbabb/pencil-boil@0.10.1 test
+> npm run check && npm run proof
+
+
+> @mkbabb/pencil-boil@0.10.1 check
+> tsc --noEmit
+
+
+> @mkbabb/pencil-boil@0.10.1 proof
+> node --import ./proofs/loader.mjs proofs/boil-guard.proof.ts && node --import ./proofs/loader.mjs proofs/frames.proof.ts && node --import ./proofs/loader.mjs proofs/cache.proof.ts && node --import ./proofs/loader.mjs proofs/prebake.proof.ts && node --import ./proofs/loader.mjs proofs/celestial.proof.ts && node --import ./proofs/loader.mjs proofs/raster-serialize.proof.ts && node --import ./proofs/loader.mjs proofs/raster-capture.proof.ts && node --import ./proofs/loader.mjs proofs/raster-blob.proof.ts && node --import ./proofs/loader.mjs proofs/vue-raster-stack.proof.ts && node --import ./proofs/loader.mjs proofs/raster-theme-flip.proof.ts && node --import ./proofs/loader.mjs proofs/hold.proof.ts && node --import ./proofs/loader.mjs proofs/stop-contract.proof.ts
+
+  ok   (a) frameCount=1 mounts => neither timer nor rAF ever armed
+  ok   (a) frameCount=1 => scheduler not armed after pumps
+  ok   (b) frameCount=3 mounts => scheduler armed (parked on the beat timer)
+  ok   (b) frameCount=3 => a wake is pending
+  ok   (b) frameCount=3 => scheduler re-arms across ticks
+  ok   (b) unmount => pending beat wake cancelled (disarmed)
+  ok   (b) unmount => scheduler stops re-arming (zero subscribers => disarmed)
+  ok   (c) PRM=reduce + frameCount=3 => never armed (independent gate)
+  ok   (c) PRM=reduce => scheduler not armed
+  ok   (c) usePrefersReducedMotion() reflects the live state
+  ok   (d) starts at frameCount=1 => not armed during draw phase
+  ok   (d) frameCount 1->3 => enrols & arms after the draw
+  ok   (d) frameCount 3->1 => withdraws (pending wake cancelled)
+  ok   (d) frameCount 3->1 => scheduler disarms (no other subscribers)
+  ok   (e) frameCount=3 arms before PRM engages
+  ok   (e) PRM engage mid-session => pending wake cancelled
+  ok   (e) PRM engage mid-session => active subscriber torn down (not just gated)
+  ok   (e) PRM engage => subscribers force-cleared
+  ok   (f) sequence.start() arms the continuous rAF chain (not the beat park)
+  ok   (f) one sequence subscriber enrolled
+  ok   (f) sequence completes with eased progress === 1
+  ok   (f) sequence fires onComplete
+  ok   (f) completed sequence self-unsubscribes => chain disarms
+  ok   (f) no subscribers remain after completion
+  ok   (g) enrol parks on the beat timer — NO rAF armed at rest
+  ok   (g) exactly one beat wake pending
+  ok   (g) debug reads parked, chains=0 (asleep)
+  ok   (g) the wake lands exactly ONE rAF
+  ok   (g) no timer pending while the landing rAF is in flight
+  ok   (g) the tick consumes its rAF — the chain does not respin on vsync
+  ok   (g) the tick re-parks on the next beat boundary
+  ok   (g) exactly one rAF per beat across cycles (no extra frames)
+  ok   (g) steady state is timer-parked after every cycle
+  ok   (g) a live sequence supersedes the park — continuous chain
+  ok   (g) the chain stays continuous while the sequence runs
+  ok   (g) sequence completion falls back to beat parking
+  ok   (g) withdrawal disarms both wake shapes
+
+boil-guard.proof: 37 assertions passed
+  ok   (c) a cache hit does not re-run the generator
+  ok   (c) a touched entry survives LRU eviction
+  ok   (c) the untouched oldest entry was evicted
+  ok   (a) a repeated key returns the same cached array (generator runs once)
+  ok   (a) the cached value is the first generation, not the second
+  ok   (b) float parts within 4 decimals share a key
+  ok   (b) float parts differing at 4 decimals key distinctly
+
+frames.proof: 7 assertions passed
+  ok   (a) a repeated key returns the first computed scalar
+  ok   (a) a cache hit does not re-run compute
+  ok   (b) a frame array is cached in the SAME entry a scalar would occupy
+  ok   (b) the entry was computed once — one Map, one cap
+  ok   (c) a miss past cap runs compute once
+  ok   (c) a touched entry survives eviction
+  ok   (c) the untouched oldest entry was evicted
+  ok   (e) evicting a disposer-less entry runs no disposer, though the evicting call carries one
+  ok   (e) a disposer-less eviction stays silent
+  ok   (d) onEvict fires exactly once on LRU eviction
+  ok   (d) onEvict receives the EVICTED value, not the evictor
+  ok   (d) an evicted key's disposer does not re-fire on recompute
+
+cache.proof: 12 assertions passed
+  ok   (a) boilLineFrames emits exactly frameCount strings
+  ok   (a) boilRectFrames emits exactly frameCount strings
+  ok   (b) boilLineFrames is deterministic for a fixed seed
+  ok   (b) boilRectFrames is deterministic for a fixed seed
+  ok   (c) a boiled line shivers frame 0 → frame 1 under a non-zero amount
+  ok   (c) a zero boil amount holds every frame identical to the base
+  ok   (d) every boilLineFrames path holds only finite coordinates
+  ok   (d) every boilRectFrames path holds only finite coordinates
+  ok   (e) every rect frame is a closed path
+  ok   (f) < 2 points serialize to the empty string
+  ok   (f) a single point serializes to the empty string
+  ok   (f) exactly two points serialize as a straight M…L segment (no cubic)
+  ok   (f) three+ points serialize as cubic bezier segments
+  ok   (f) catmullRomToBezier is deterministic (pure)
+  ok   (f) every serialized coordinate is finite
+  ok   (g) "easeInCubic" resolves to easeInCubic
+  ok   (g) "easeInOutCubic" resolves to easeInOutCubic
+  ok   (g) "linear" resolves to linear
+  ok   (g) "easeOutCubic" resolves to easeOutCubic
+  ok   (g) an unknown name defaults to easeOutCubic
+
+prebake.proof: 20 assertions passed
+  ok   (diamond) emits exactly 4 vertices
+  ok   (diamond) every coordinate is finite
+  ok   (diamond) deterministic for a fixed seed
+  ok   (diamond) distinct seeds diverge
+  ok   (star) emits exactly 10 vertices
+  ok   (star) every coordinate is finite
+  ok   (star) deterministic for a fixed seed
+  ok   (star) distinct seeds diverge
+  ok   (rays) outerPoly has 20 points (10 rays × 2)
+  ok   (rays) innerPoly has 20 points (10 rays × 2)
+  ok   (rays) every coordinate is finite
+  ok   (rays) deterministic for a fixed seed
+  ok   (rays) distinct seeds diverge
+  ok   (ellipse) emits segments + 1 points (i = 0..seg inclusive)
+  ok   (ellipse) yields [x, y] number pairs, not a string
+  ok   (ellipse) every coordinate is finite
+  ok   (ellipse) deterministic for a fixed seed
+  ok   (ellipse) distinct seeds diverge
+  ok   (ellipse) segments clamps to a floor of 12 (=> 13 points)
+  ok   (perturbClosed) preserves the point count
+  ok   (perturbClosed) every perturbed coordinate is finite
+  ok   (perturbClosed) deterministic for a fixed seed
+  ok   (perturbClosed) a non-zero amount moves the ring
+  ok   (perturbClosed) a zero amount holds every point
+  ok   (perturbClosed) a ring of < 3 points passes through unchanged
+
+celestial.proof: 25 assertions passed
+  ok   (a) serializePoseSvg inlines the <defs> into the document
+  ok   (a) no defs given => no <defs> wrapper emitted
+  ok   (b) root <svg> carries width/height and a defaulted viewBox
+  ok   (b) the document closes with </svg>
+  ok   (b) an explicit viewBox overrides the default
+  ok   (c) a fixed pose serializes byte-identically (deterministic)
+  ok   (d) four poses serialize to four distinct strings
+  ok   (e) a resolved-literal pose SVG is self-contained
+  ok   (e) a currentColor leak is NOT self-contained (dropped def)
+  ok   (e) a var() leak is NOT self-contained (dropped def)
+
+raster-serialize.proof: 10 assertions passed
+  ok   (a) one capture => one blob document
+  ok   (a) blob root width = round(cssSize.width × dpr) = 600
+  ok   (a) blob root height = round(cssSize.height × dpr) = 240
+  ok   (c) the viewBox is untouched — user space preserved, only render resolution moves
+  ok   (d) the stamped intrinsic equals the canvas the capture draws into (600×240)
+  ok   (e) everything after the root tag (inlined <defs> included) is byte-identical
+  ok   (e) the svg namespace survives the stamp
+  ok   (b) round(33.3 × 3) = 100 stamped (no fractional intrinsic)
+  ok   (b) round(17.7 × 3) = 53 stamped
+  ok   (b) the stamp and the canvas agree on the rounded device box (100×53)
+  ok   (a) the default dpr (2) stamps 240×120 for a 120×60 css box
+  ok   (f) a viewBox-less root throws a named rasterizePoseToBlob error
+  ok   (f) the error names the missing viewBox
+  ok   (f) nothing was baked — the throw precedes blob creation
+  ok   (g) a currentColor leak rejects on the cascade guard, not the viewBox guard
+  ok   (g) a leaked pose bakes nothing
+
+raster-capture.proof: 16 assertions passed
+  ok   (a) ONE canvas per capture — no intermediate surface
+  ok   (a) exactly one encode
+  ok   (a) the encode reads the CAPTURE canvas box (600x240 = round(cssSize x dpr))
+  ok   (a) the encoded surface IS the surface the pose was drawn into
+  ok   (b) ZERO createImageBitmap copies on the blob path
+  ok   (c) capture intrinsic stamped: width = 600 device px
+  ok   (c) capture intrinsic stamped: height = 240 device px
+  ok   (c) the viewBox is untouched — user space preserved, only render resolution moves
+  ok   (c) everything after the root tag is byte-identical to the serialized pose
+  ok   (d) PNG by default
+  ok   (d) the returned blob carries the encoded mime
+  ok   (d) an explicit mime is honoured
+  ok   (e) a currentColor leak rejects on the cascade guard
+  ok   (e) the leaking pose was never captured and never encoded
+  ok   (e) a viewBox-less root rejects on the intrinsic guard
+  ok   (e) the un-stampable pose was never captured and never encoded
+  ok   (f) a null encode rejects with a NAMED error
+  ok   (f) the failed encode produced no artifact
+
+raster-blob.proof: 18 assertions passed
+(node:95418) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:95419) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ok   (a) a 0×0 cssSize captures NOTHING (zero blob documents)
+  ok   (a) urls stays null — the consumer keeps the live-filter fallback
+  ok   (a) ready is false at a zero box
+  ok   (b) a zero HEIGHT captures nothing either
+  ok   (b) urls still null after the half-box watch fire
+  ok   (c) the landed box bakes EXACTLY ONCE — poseCount captures in total, no pre-layout bake
+  ok   (c) every pose resolved to a URL
+  ok   (c) ready flips true on the landed bake
+  ok   (c) every capture ran at cssSize × dpr = 640×120 (no 1×1 stand-in among them)
+  ok   (c) every encode read the device-px capture surface (640×120)
+  ok   (c) ZERO ImageBitmap copies — the bake encodes the capture canvas itself
+  ok   (e) every live pose URL was minted here and is still valid
+  ok   (d) collapsing back to a zero box captures nothing further
+  ok   (d) the SAME urls array survives — nothing nulled it, no stand-in bake superseded it
+  ok   (d) the surviving pose URLs were not revoked — the rendered images stay decodable
+  ok   (e) a re-bake mints a fresh URL set
+  ok   (e) the superseded set is revoked once its successor lands
+  ok   (e) the LIVE set is never revoked out from under the surface
+  ok   (e) every minted handle is revoked by teardown — no object URL outlives the surface
+
+vue-raster-stack.proof: 19 assertions passed
+(node:95420) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ok   (a) the fresh bake captured poseCount poses
+  ok   (a) every fresh pose serialized the LIGHT cascade ink
+  ok   (a) ready on the fresh bake
+  ok   (c) the flip cost EXACTLY poseCount captures — no pre-flip round thrown away
+  ok   (b) every re-baked pose serialized the POST-FLIP cascade ink (born RED at 0.10.0)
+  ok   (b) no pose carried the ink of the theme just left
+  ok   (b) the re-bake resolved — the surface is not stranded on the fallback
+  ok   (d) a double flip resolves to the FINAL cascade, not to the one it passed through
+  ok   (d) the superseded bake left the baked URLs resolved, not null
+
+raster-theme-flip.proof: 9 assertions passed
+  ok   (a) no hold at rest
+  ok   (a) heldFrameCount passes the base value through when unheld
+  ok   (a) acquireHold engages isBoilHeld
+  ok   (a) heldFrameCount collapses to 1 while held
+  ok   (a) a repeated reason deduped — one release clears it
+  ok   (a) heldFrameCount returns to the base value on release
+  ok   (a) still held while another reason is outstanding
+  ok   (a) released only after the LAST reason clears
+  ok   (b) holds cleared before the freeze test
+  ok   (b) frameCount=4 mounts => scheduler armed (parked on the beat timer)
+  ok   (b) one boil subscriber enrolled
+  ok   (b) acquire => count->1 withdraws the subscriber, scheduler disarms
+  ok   (b) the pending beat wake is cancelled on hold
+  ok   (b) no boil subscriber remains while held
+  ok   (b) FREEZE IN PLACE — currentFrame unchanged (no snap to 0)
+  ok   (b) a held mark does not advance across beats
+  ok   (c) release => count->4 re-enrols the subscriber (re-armed)
+  ok   (c) the boil subscriber is back on the chain
+  ok   (c) resumes mid-cadence — currentFrame not reset by the hold
+  ok   (c) teardown disarms the scheduler
+
+hold.proof: 20 assertions passed
+  ok   (a) frame handle stopped before start returns
+  ok   (a) sequence handle stopped before start returns
+  ok   (a) the frame subscriber enrolled
+  ok   (a) frame handle stopped MID-FLIGHT returns
+  ok   (a) mid-flight stop withdrew the subscriber
+  ok   (a) sequence handle stopped MID-TWEEN returns
+  ok   (a) mid-tween stop withdrew the subscriber
+  ok   (a) frame handle stopped FROM INSIDE ITS OWN TICK returns
+  ok   (a) sequence handle stopped FROM INSIDE onProgress returns
+(node:95422) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ok   (a) the tween completed and self-unsubscribed
+  ok   (a) sequence handle stopped AFTER COMPLETION returns
+  ok   (a) DOUBLE stop returns (idempotent withdrawal)
+  ok   (a) PRM engage cleared every subscriber
+  ok   (a) stop AFTER a central PRM clear returns
+  ok   (a) the inert PRM createStrokeDrawIn handle stops without throwing
+  ok   (a) stop AFTER the owning scope tore down returns
+  ok   (b) HOSTILE HOST: mid-flight frame stop returns
+  ok   (b) the hostile arm ran against a live subscriber
+  ok   (c) NEGATIVE CONTROL: the hostile-host withdrawal still LANDED (subscriber left the set)
+  ok   (b) HOSTILE HOST: a second mid-flight stop returns
+  ok   (c) NEGATIVE CONTROL: the stopped mark never advances again under the hostile host
+  ok   (b) HOSTILE HOST: mid-tween sequence stop returns
+  ok   (c) NEGATIVE CONTROL: the hostile-host tween withdrawal LANDED
+  ok   (b) the composable enrolled its subscriber
+  ok   (b) HOSTILE HOST: composable teardown stop() returns
+  ok   (c) NEGATIVE CONTROL: the teardown withdrawal LANDED under the hostile host
+
+stop-contract.proof: 26 assertions passed

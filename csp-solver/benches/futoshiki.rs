@@ -22,7 +22,7 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use csp_solver::ordering::Ordering;
 use csp_solver::puzzles::futoshiki::{
-    FutoshikiPuzzle, create_futoshiki_csp, generate_futoshiki_seeded,
+    create_futoshiki_csp, generate_futoshiki_seeded, validate_futoshiki,
 };
 use csp_solver::{Pruning, SolveConfig};
 
@@ -31,17 +31,12 @@ fn seed_for(n: u32) -> u64 {
     0xF0_75_00 + n as u64
 }
 
-/// Build a production `FutoshikiPuzzle` from a seeded generated board.
-fn generate_puzzle(n: u32) -> FutoshikiPuzzle {
+/// A seeded generated puzzle: `(board, inequalities)`, wire-validated.
+fn generate_puzzle(n: u32) -> (Vec<u32>, Vec<(usize, usize)>) {
     let (board, inequalities) = generate_futoshiki_seeded(n, seed_for(n));
-    let fixed: Vec<(usize, u32)> = board
-        .iter()
-        .enumerate()
-        .filter(|&(_, &v)| v != 0)
-        .map(|(i, &v)| (i, v))
-        .collect();
-    FutoshikiPuzzle::from_parts(n, fixed, inequalities)
-        .expect("seeded generator must emit a valid puzzle")
+    validate_futoshiki(&board, n, &inequalities)
+        .expect("seeded generator must emit a valid puzzle");
+    (board, inequalities)
 }
 
 fn bench_generate(c: &mut Criterion) {
@@ -59,17 +54,17 @@ fn bench_solve(c: &mut Criterion) {
     let mut group = c.benchmark_group("futoshiki_solve");
     group.sample_size(20);
     for &n in &[5u32, 7] {
-        let puzzle = generate_puzzle(n);
+        let (board, inequalities) = generate_puzzle(n);
         group.bench_function(BenchmarkId::from_parameter(n), |b| {
             b.iter(|| {
-                let mut csp = create_futoshiki_csp(&puzzle);
+                let (mut csp, given) = create_futoshiki_csp(&board, n, &inequalities);
                 let config = SolveConfig {
                     pruning: Pruning::Ac3,
                     ordering: Ordering::Mrv,
                     max_solutions: 1,
                     ..Default::default()
                 };
-                let solutions = csp.solve(&config);
+                let solutions = csp.solve_with_given(&config, &given);
                 assert!(!solutions.is_empty(), "N={n}: generated board must solve");
                 solutions
             });

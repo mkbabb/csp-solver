@@ -1,0 +1,115 @@
+# RELEASE TRANSCRIPT — @mkbabb/pencil-boil 0.11.0 (token-free; npm auth is ambient via ~/.npmrc)
+# derived 2026-08-01T22:22:05Z
+
+$ npm whoami
+mkbabb
+
+$ git log --oneline -3
+4e9bbc1 release: 0.11.0 — the artifact is the blob (rasterizePoseToBlob; stop() no-throw; 44→41 exports)
+763f1c0 fix(raster): 0.10.1 — the bake yields a paint before it reads the cascade
+08f4f5e release: 0.10.0 — the capture-intrinsic truth-fix (stamped intrinsic; zero-box bake guard)
+
+$ git show --stat --oneline HEAD | tail -25
+4e9bbc1 release: 0.11.0 — the artifact is the blob (rasterizePoseToBlob; stop() no-throw; 44→41 exports)
+ CHANGELOG.md                         |  74 ++++++++
+ README.md                            |   6 +-
+ package-lock.json                    |   4 +-
+ package.json                         |   4 +-
+ proofs/browser/blob-identity.spec.ts |  75 ++++++++
+ proofs/browser/fixture.js            | 156 +++++++++++++++-
+ proofs/browser/identity.spec.ts      |   2 +-
+ proofs/browser/server.mjs            |   2 +-
+ proofs/cache.proof.ts                |  25 ++-
+ proofs/capture-env.ts                |  73 ++++++--
+ proofs/frames.proof.ts               |  28 +--
+ proofs/raster-blob.proof.ts          | 183 +++++++++++++++++++
+ proofs/raster-capture.proof.ts       |  23 ++-
+ proofs/raster-serialize.proof.ts     |   4 +-
+ proofs/raster-theme-flip.proof.ts    |   8 +-
+ proofs/stop-contract.proof.ts        | 345 +++++++++++++++++++++++++++++++++++
+ proofs/vue-raster-stack.proof.ts     |  77 ++++++--
+ src/frames.ts                        |  36 +---
+ src/index.ts                         |   6 +-
+ src/raster.ts                        | 114 ++++++++----
+ src/vue.ts                           | 171 +++++++++--------
+ 21 files changed, 1182 insertions(+), 234 deletions(-)
+
+$ git tag --sort=-creatordate | head -6
+v0.10.0
+v0.10.1
+v0.11.0
+v0.9.2
+v0.9.1
+v0.9.0
+
+$ git ls-remote --tags origin | tail -6
+106a5a26184f8a0b1d42a992880588662955b8b7	refs/tags/v0.7.0
+8123f4729decf86cfe10f197067428af608e668a	refs/tags/v0.8.0
+da51edbfb9bc288fab9920096e4534824b704b1b	refs/tags/v0.8.1
+e792de6ea8ef0a723e8accfa21d02b91527e47df	refs/tags/v0.9.0
+83de5eb5b32239309eab0908ea78d36d7cec88ac	refs/tags/v0.9.1
+3f72d17fe946a79857a1238c56babb84f5ba4dd1	refs/tags/v0.9.2
+
+$ git ls-remote origin master
+4e9bbc15e85e43a3a72bd3d66e13c0eba8f68460	refs/heads/master
+
+$ npm view @mkbabb/pencil-boil version
+0.11.0
+
+$ npm view @mkbabb/pencil-boil@0.11.0 dist.shasum dist.tarball
+dist.shasum = 'fd40671555eab161786f0ff79aac65a374746d20'
+dist.tarball = 'https://registry.npmjs.org/@mkbabb/pencil-boil/-/pencil-boil-0.11.0.tgz'
+
+$ npm view @mkbabb/pencil-boil versions --json
+[
+  "0.1.1",
+  "0.2.0",
+  "0.3.0",
+  "0.4.0",
+  "0.4.1",
+  "0.5.0",
+  "0.5.1",
+  "0.6.0",
+  "0.7.0",
+  "0.8.0",
+  "0.8.1",
+  "0.9.0",
+  "0.9.1",
+  "0.9.2",
+  "0.10.0",
+  "0.10.1",
+  "0.11.0"
+]
+
+## FINAL STATE — re-read 2026-08-01T22:26:12Z
+
+$ git log --oneline -2
+f8ab8b7 ci(release): ask the registry before publishing — a tag may land after the version does
+4e9bbc1 release: 0.11.0 — the artifact is the blob (rasterizePoseToBlob; stop() no-throw; 44→41 exports)
+
+$ git ls-remote --tags origin | grep v0.1
+6b72050734eb3e5fd71731c8cb335eba3c74e6d2	refs/tags/v0.10.0
+08f4f5e499606258422a0dfc404dd1d8e8418ddb	refs/tags/v0.10.0^{}
+d26f8d7f8a0f0ef3e38a1582cefb2af4939dfb8f	refs/tags/v0.10.1
+763f1c03122dc1af090b4d1b4aa16a17d95a568e	refs/tags/v0.10.1^{}
+859a06c346958b1545e39eb468b570f5216d63a0	refs/tags/v0.11.0
+f8ab8b70ea0113e648ea24ab14b831619f4ac320	refs/tags/v0.11.0^{}
+
+$ gh run list --limit 6
+completed	success	ci(release): ask the registry before publishing — a tag may land afte…	release	v0.11.0	push	30721208768	19s	2026-08-01T22:25:01Z
+completed	failure	release: 0.11.0 — the artifact is the blob (rasterizePoseToBlob; stop…	release	v0.11.0	push	30721197283	19s	2026-08-01T22:24:42Z
+completed	success	ci(release): ask the registry before publishing — a tag may land afte…	ci	master	push	30721193947	1m11s	2026-08-01T22:24:37Z
+completed	failure	release: 0.10.0 — the capture-intrinsic truth-fix (stamped intrinsic;…	release	v0.10.0	push	30721088292	9s	2026-08-01T22:21:39Z
+completed	failure	fix(raster): 0.10.1 — the bake yields a paint before it reads the cas…	release	v0.10.1	push	30721088277	18s	2026-08-01T22:21:39Z
+completed	failure	release: 0.11.0 — the artifact is the blob (rasterizePoseToBlob; stop…	release	v0.11.0	push	30721088247	13s	2026-08-01T22:21:39Z
+
+# The three release-workflow failures are one defect, now cured: publishing happened from
+# the workstation and the tag landed after, so the tag-triggered job hit a 403 'cannot
+# publish over the previously published versions' — same for the two retro-tags on the
+# already-published 0.10.x train. f8ab8b7 makes the job ask the registry first and skip;
+# v0.11.0 was re-pointed at that commit (the published tarball is unaffected — workflows
+# are not in package.json 'files') and the release run is green.
+
+$ npm view @mkbabb/pencil-boil@0.11.0 version dist.shasum
+version = '0.11.0'
+dist.shasum = 'fd40671555eab161786f0ff79aac65a374746d20'

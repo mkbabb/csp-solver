@@ -1,12 +1,15 @@
 //! Shared wire helpers for the lean, `--no-default-features` deploy build.
 //!
-//! Both purpose-built game surfaces — [`crate::sudoku`] and
-//! [`crate::futoshiki`] — stamp a machine-checkable `.code` onto a genuine
-//! JS `Error` and pack their flat `Uint32Array` result buffers the same
-//! way. Those moves live here, in one place both wires depend on, so
-//! neither game module back-depends on the other (previously `futoshiki`
-//! reached into `sudoku` for `coded_error` — a sibling-to-sibling coupling
-//! with no ordering rationale). Tranche-2 logged the gap; this is its close.
+//! All five purpose-built game surfaces — [`crate::sudoku`],
+//! [`crate::futoshiki`], [`crate::thermo`], [`crate::killer`] and
+//! [`crate::kenken`] — stamp a machine-checkable `.code` onto a genuine JS
+//! `Error`, validate their board length, and pack their flat `Uint32Array`
+//! result buffers the same way. Those moves live here, in one place every wire
+//! depends on, so no game module back-depends on a sibling (previously
+//! `futoshiki` reached into `sudoku` for `coded_error` — a sibling-to-sibling
+//! coupling with no ordering rationale). Tranche-2 logged the gap and closed
+//! the `coded_error` half; T5-W2 brought `board_total` home from its three
+//! hand-copied twins.
 //!
 //! Deliberately self-contained: no `csp_solver::error::CspError`, no serde.
 //! Dragging the serde-carrying error graph into the compile would defeat
@@ -27,6 +30,25 @@ pub(crate) fn coded_error(code: &str, message: &str) -> JsValue {
     let err = js_sys::Error::new(message);
     let _ = js_sys::Reflect::set(&err, &JsValue::from_str("code"), &JsValue::from_str(code));
     err.into()
+}
+
+/// Validate a flat board against the side length it claims, returning the cell
+/// total. `side` is the *board* side — the Latin wires (`futoshiki`, `kenken`)
+/// pass their `board_size` straight through, the boxed wires (`sudoku`,
+/// `thermo`, `killer`) pass `n * n`, since a sub-grid `n` means an `n²×n²`
+/// board. One message vocabulary for all five.
+pub(crate) fn board_total(board: &[u32], side: u32) -> Result<usize, JsValue> {
+    let total = (side * side) as usize;
+    if board.len() != total {
+        return Err(coded_error(
+            "INVALID_INPUT",
+            &format!(
+                "board length {} does not match side² = {total} for a {side}×{side} board",
+                board.len()
+            ),
+        ));
+    }
+    Ok(total)
 }
 
 /// Concatenate a slice of solution boards into one flat, row-major buffer

@@ -42,7 +42,7 @@ use std::sync::{Mutex, MutexGuard};
 use csp_solver::constraint::{AllDifferent, LambdaConstraint};
 use csp_solver::domain::bitset::BitsetDomain;
 use csp_solver::ordering::Ordering;
-use csp_solver::puzzles::futoshiki::{FutoshikiPuzzle, create_futoshiki_csp};
+use csp_solver::puzzles::futoshiki::{create_futoshiki_csp, parse_futoshiki, validate_futoshiki};
 use csp_solver::solver::gac::GAC_IN_ALLDIFF_ENABLED;
 use csp_solver::{Csp, Pruning, SolveConfig};
 
@@ -242,33 +242,34 @@ const INEQUALITIES: [(usize, usize); 6] = [
     (6, 7),  // 4 > 3  (row 1)
 ];
 
-fn givens() -> Vec<(usize, u32)> {
+/// The board with the [`FREE`] cells blanked — the dense given grid.
+fn board() -> Vec<u32> {
     (0..NN)
-        .filter(|i| !FREE.contains(i))
-        .map(|i| (i, SOLUTION[i]))
+        .map(|i| if FREE.contains(&i) { 0 } else { SOLUTION[i] })
         .collect()
 }
 
-fn puzzle() -> FutoshikiPuzzle {
-    FutoshikiPuzzle::from_parts(N, givens(), INEQUALITIES.to_vec())
-        .expect("hand-built board must pass from_parts validation")
-}
-
 fn solve_all(pruning: Pruning, ordering: Ordering) -> BTreeSet<Vec<u32>> {
-    let mut csp = create_futoshiki_csp(&puzzle());
+    let board = board();
+    validate_futoshiki(&board, N, &INEQUALITIES)
+        .expect("hand-built board must pass wire validation");
+    let (mut csp, given) = create_futoshiki_csp(&board, N, &INEQUALITIES);
     let config = SolveConfig {
         pruning,
         ordering,
         max_solutions: usize::MAX,
         ..Default::default()
     };
-    csp.solve(&config).into_iter().collect()
+    csp.solve_with_given(&config, &given).into_iter().collect()
 }
 
 /// Reference oracle: every full grid consistent with the givens, a Latin square,
 /// and every inequality — computed by exhaustive filtering, no solver.
 fn brute_force() -> BTreeSet<Vec<u32>> {
-    let fixed = givens();
+    let fixed: Vec<(usize, u32)> = (0..NN)
+        .filter(|i| !FREE.contains(i))
+        .map(|i| (i, SOLUTION[i]))
+        .collect();
     let mut out = BTreeSet::new();
     // 4⁴ candidate fills of the four free cells.
     for combo in 0..4u32.pow(FREE.len() as u32) {
@@ -369,7 +370,16 @@ fn build_nqueens(n: u32) -> Csp<BitsetDomain> {
 }
 
 fn build_futoshiki(input: &str) -> Csp<BitsetDomain> {
-    create_futoshiki_csp(&FutoshikiPuzzle::parse(input))
+    let (n, board, inequalities) = parse_futoshiki(input);
+    let (mut csp, given) = create_futoshiki_csp(&board, n, &inequalities);
+    // `assert_set_invariant` drives the plain `solve` path, which has no given
+    // seam — so the givens are pinned as equality constraints here. Same
+    // puzzle, expressed in the vocabulary this harness enumerates over.
+    for (var, val) in given {
+        csp.add_equals(var, val);
+    }
+    csp.finalize();
+    csp
 }
 
 /// Canonical order-insensitive representation of a solution set: sorted list of

@@ -21,8 +21,8 @@
 
 use csp_solver::ordering::Ordering;
 use csp_solver::puzzles::futoshiki::{
-    Difficulty, FutoshikiPuzzle, create_futoshiki_csp, generate_futoshiki_difficulty_seeded,
-    generate_futoshiki_seeded,
+    Difficulty, generate_futoshiki_difficulty_seeded, generate_futoshiki_seeded,
+    solve_futoshiki as native_solve_futoshiki, validate_futoshiki,
 };
 use csp_solver::{Pruning, SolveConfig};
 use csp_solver_wasm::{FutoshikiDifficulty, generate_futoshiki, solve_futoshiki};
@@ -33,15 +33,6 @@ use wasm_bindgen_test::*;
 // --node`; the absence of a `wasm_bindgen_test_configure!(run_in_browser)`
 // line is how you opt into it.
 
-fn fixed_cells(board: &[u32]) -> Vec<(usize, u32)> {
-    board
-        .iter()
-        .enumerate()
-        .filter(|&(_, &v)| v != 0)
-        .map(|(i, &v)| (i, v))
-        .collect()
-}
-
 fn flat_ineq(pairs: &[(usize, usize)]) -> Vec<u32> {
     pairs
         .iter()
@@ -49,27 +40,26 @@ fn flat_ineq(pairs: &[(usize, usize)]) -> Vec<u32> {
         .collect()
 }
 
-/// The native path the PyO3 server solve takes: `Ac3` + `Mrv`,
-/// `max_solutions = 1`, via `solve_with_given(&[])` — byte-for-byte the
-/// config *and* entry point the wasm wire uses, so their first solutions
-/// must agree even for under-constrained boards.
-fn native_first(puzzle: &FutoshikiPuzzle) -> Option<Vec<u32>> {
-    let mut csp = create_futoshiki_csp(puzzle);
+/// The native shipped path: `Ac3` + `Mrv`, `max_solutions = 1`, through the
+/// crate's own `solve_futoshiki` — byte-for-byte the config *and* entry point
+/// the wasm wire uses, so their first solutions must agree even for
+/// under-constrained boards.
+fn native_first(board: &[u32], n: u32, pairs: &[(usize, usize)]) -> Option<Vec<u32>> {
     let config = SolveConfig {
         pruning: Pruning::Ac3,
         ordering: Ordering::Mrv,
         max_solutions: 1,
         ..Default::default()
     };
-    csp.solve_with_given(&config, &[]).into_iter().next()
+    native_solve_futoshiki(board, n, pairs, &config)
 }
 
 /// Assert the wasm wire's first solution matches the native path's — or
 /// that both agree the board is unsatisfiable.
 fn assert_parity(board: &[u32], n: u32, pairs: &[(usize, usize)], label: &str) {
-    let puzzle = FutoshikiPuzzle::from_parts(n, fixed_cells(board), pairs.to_vec())
-        .unwrap_or_else(|e| panic!("{label}: from_parts rejected a valid board: {e}"));
-    let native = native_first(&puzzle);
+    validate_futoshiki(board, n, pairs)
+        .unwrap_or_else(|e| panic!("{label}: validation rejected a valid board: {e}"));
+    let native = native_first(board, n, pairs);
 
     let result = solve_futoshiki(board.to_vec(), n, flat_ineq(pairs), Some(1), None)
         .unwrap_or_else(|_| panic!("{label}: wire solve threw on a valid board"));

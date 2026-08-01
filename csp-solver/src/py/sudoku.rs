@@ -164,8 +164,14 @@ pub fn solve_sudoku(
         })
         .collect();
 
-    if csp.solutions.is_empty() && csp.budget_exceeded {
-        return Err(CspError::BudgetExceeded.into());
+    // No solution and no proof is an abort, and the two aborts are different
+    // exceptions: a caller's `cancel()` raises `CspTimeoutError`, the node cap
+    // raises `BudgetExceededError`. A completed search that found nothing is
+    // `False` — the board is provably unsolvable, which is an answer.
+    if csp.solutions.is_empty()
+        && let Some(err) = CspError::aborted(&stats)
+    {
+        return Err(err.into());
     }
 
     Ok(!csp.solutions.is_empty())

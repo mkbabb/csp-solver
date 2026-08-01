@@ -11,19 +11,22 @@ Numbers below trace either to an evidence file quoted with its stamp, or to a co
 
 ## GAC default-ON: the corpus result and its cost
 
-GAC-in-AllDifferent is default-ON, gated at live-participant count ≥ `GAC_MIN_PARTICIPANTS` (3). The decision rests on the A/B corpus result below: a **12.6–12.7× aggregate** (12.58× / 12.73× across two consistency-checked runs), measured first-party on the **50-board** corpus (5 named hard 9×9 plus the shipped template bank, N=3-hard 20 + N=4 25), solved under the exact production config (`Ac3 + Mrv`), GAC off vs on, by the committed `gac_timing_probe` example (`measured at ede25188, Apple M5 Max, 2026-07-10`). Ratios are off/on wall time (interleaved, best-of-5); node counts are deterministic. _Historical note:_ a pre-reshape **13.36×** figure on a 112-board corpus (N=2..4 dense) was carried on inherited trust from a since-deleted scratch harness; it is retired, and the first-party 50-board number above supersedes it in the same class.
+GAC-in-AllDifferent is default-ON, gated at live-participant count ≥ `GAC_MIN_PARTICIPANTS` (3). The decision rests on the A/B corpus result below: a **64.8–65.7× aggregate** (64.81× / 65.73× across two consistency-checked runs) over the **47 boards both states can finish**, measured first-party on the 50-board corpus (5 named hard 9×9 plus the shipped template bank, N=3-hard 20 + N=4 25), solved under the exact production config (`Ac3 + Mrv`), GAC off vs on, by the committed `gac_timing_probe` example (`measured at a3ada202, Apple M5 Max, 2026-08-01`). Ratios are off/on wall time (interleaved, best-of-5); node counts are deterministic. _Historical note:_ a pre-reshape **13.36×** figure on a 112-board corpus (N=2..4 dense) was carried on inherited trust from a since-deleted scratch harness, and a **12.6–12.7×** figure was measured at `ede25188` against the pre-re-cut N=4 bank. Both are retired; the number above is the first re-derivation since the fixture moved (see the stamp note below).
+
+**Three boards are excluded, and the exclusion is the strongest row in the table.** `template::N4/hard/template-{1,2,3}` are *budget-dead with GAC off*: the search burns its full 1,000,000-node budget and returns nothing, where GAC-on solves them in 203 / 644 / 281 nodes. A ratio between a completed solve and an abort is not a speedup, so those three are scored in their own section and left out of every aggregate — reporting them as a ratio would be both the weaker claim and the false one. Until T5-W2 the probe asserted both states solve and therefore aborted on the first of them, producing no figures at all.
 
 The sibling `gac_ab_corpus` example runs the same 50-board bank and reports two things: false-UNSAT counts (0/50 in both GAC states, § Kernel soundness parity below) and the deterministic node-count spine. It's the soundness-and-cost oracle CI asserts on, and the source of the node row below; the wall-time rows are the timing probe's alone.
 
 | Measure | Value | Source |
 |---|---|---|
-| Corpus aggregate speedup (ON) | **12.6–12.7×** (12.58× / 12.73×, two runs) | `gac_timing_probe` @ `ede25188` |
+| Corpus aggregate speedup (ON) | **64.8–65.7×** (64.81× / 65.73×, two runs, 47 of 50 boards scored) | `gac_timing_probe` @ `a3ada202` |
+| Boards GAC-off cannot finish | **3 of 50** (N=4 hard: 1M nodes spent, no solution; GAC-on: 203/644/281 nodes) | `gac_timing_probe` @ `a3ada202` |
 | Search nodes, off → on | **4,153,388 → 8,222** (505× fewer) | `gac_ab_corpus` @ `e961bdb7` (deterministic) |
-| Best bucket win | N=4 medium/hard, ≈25.7–26.8× | `gac_timing_probe` @ `ede25188` |
+| Best bucket win | N=4 hard ≈73–74× (2 scored boards), N=4 medium ≈27.5–27.9× (10 boards) | `gac_timing_probe` @ `a3ada202` |
 
-**The two stamps aren't the same 50 boards.** The N=4 hard templates were re-cut at `d4faa412` (2026-07-13) and the spine re-minted against the new fixture at `602c8de9`: 40,513 → 4,678 was the old bank's, 4,153,388 → 8,222 is this one, and the jump is the fixture moving rather than GAC. The wall-time rows keep their earlier `ede25188` stamp and don't re-run as they stand; on today's bank `gac_timing_probe` aborts at `template::N4/hard/template-1`, which GAC-off can't solve inside the production budget (`e961bdb7`, 2026-08-01). Soundness is untouched by that: `gac_ab_corpus` scores a false UNSAT only when the budget wasn't exhausted, and it reads 0/50 in both states.
+**The aggregate moved because the fixture moved, not because GAC did.** The N=4 hard templates were re-cut at `d4faa412` (2026-07-13) and the spine re-minted against the new fixture at `602c8de9`: 40,513 → 4,678 was the old bank's, 4,153,388 → 8,222 is this one. The re-cut boards are the ones GAC-off now cannot finish, which is why the wall-time aggregate jumped from 12.6× to 64.8× on the same code — a harder N=4 tier, not a faster propagator. Soundness is untouched: `gac_ab_corpus` scores a false UNSAT only when the budget wasn't exhausted, and it reads 0/50 in both states.
 
-**The minority cost, disclosed:** 3 of the 5 named hard 9×9 boards are reproducibly slower with GAC on. **Al Escargot 0.40–0.42×, Golden Nugget 0.56×, Inkala 2010 0.30–0.33×** (i.e. 1.8–3.3× slower, first-party). The retired scratch-harness prose put this at 1.3–2.5×; the committed probe measures a deeper slowdown, Inkala worst. The aggregate win is dominated by the N=4 boards, and the hard-9×9 minority pays GAC's per-propagation constant. The default stands because the corpus aggregate and the 16×16 failure-to-success result outweigh it, and every N-keyed gate tested was ≤ blanket-ON.
+**The minority cost, disclosed:** 3 of the 5 named hard 9×9 boards are reproducibly slower with GAC on. **Al Escargot 0.46×, Golden Nugget 0.61×, Inkala 2010 0.35×** (i.e. 1.6–2.9× slower, first-party, re-derived with the aggregate above). The retired scratch-harness prose put this at 1.3–2.5×; the committed probe measures a deeper slowdown, Inkala worst. The aggregate win is dominated by the N=4 boards, and the hard-9×9 minority pays GAC's per-propagation constant. The default stands because the corpus aggregate and the 16×16 failure-to-success result outweigh it, and every N-keyed gate tested was ≤ blanket-ON.
 
 **The gate threshold:** `GAC_MIN_PARTICIPANTS` swept 2–6 stays within ~7%; at 9 it is 1.79× worse. 3 is retained.
 
@@ -42,13 +45,13 @@ The unified search kernel is verified sound. Evidence from `evidence/kernel-soun
 Local test suite, run here:
 
 ```
-cargo test --workspace  →  208 passed, 0 failed, 0 ignored (26 test binaries + 4 doctests)
-# measured at 826f16e3, Apple M5 Max, 2026-07-15
+cargo test --workspace  →  212 passed, 0 failed, 0 ignored (28 test binaries + 4 doctests)
+# measured at a3ada202, Apple M5 Max, 2026-08-01
 ```
 
 ## Wasm artifact sizes
 
-Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean artifact is the `--no-default-features` build the frontend Worker ships, and it now carries all five games. It measures **122,385 B raw** on darwin (`wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm`, measured at e961bdb7, Apple M5 Max, 2026-08-01), `pkg/` byte-identical to the shipped `dist/` asset — same sha256 `cdabecfb…` on both. The CI runner last measured **124,097 B** at e6b19a4c (run 30719165442), +1,712 B over the darwin build (the known runner-vs-darwin toolchain divergence); the `twiggy` lane echoes its own live figure every run. This sits inside the five-game band. The analytic re-derivation puts the ceiling at **124,500 B** (base plus per-game wire), and the `twiggy` CI lane fails the lean build above **127,500 B**. The old 93 KB budget was the two-game ceiling and no longer applies.
+Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean artifact is the `--no-default-features` build the frontend Worker ships, and it now carries all five games. It measures **121,137 B raw** on darwin (`wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm`, measured at a3ada202, Apple M5 Max, 2026-08-01), `pkg/` byte-identical to the shipped `dist/` asset — same sha256 `cdabecfb…` on both. The CI runner last measured **124,097 B** at e6b19a4c (run 30719165442), +1,712 B over the darwin build (the known runner-vs-darwin toolchain divergence); the `twiggy` lane echoes its own live figure every run. This sits inside the five-game band. The analytic re-derivation puts the ceiling at **124,500 B** (base plus per-game wire), and the `twiggy` CI lane fails the lean build above **127,500 B**. The old 93 KB budget was the two-game ceiling and no longer applies.
 
 The full module (default features, all five families plus the assignment surface, whose transitive `ndarray` dominates the delta over the lean build) was not re-measured this pass. The last recorded **222,436 B** predates the three new families and is stale; do not quote it as current. The `twiggy` lane still bounds it: full module fail >240 KB / warn >230 KB. To refresh the figure:
 

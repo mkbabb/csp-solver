@@ -14,7 +14,12 @@
 //! Usage:
 //!   cargo run --release --example generate_templates -- <N> <difficulty> <count> [out_dir]
 //!
-//!   N          sub-grid size (2, 3, 4, 5 -> 4x4, 9x9, 16x16, 25x25)
+//!   N          sub-grid size (2, 3, 4 -> 4x4, 9x9, 16x16). N=5 (25x25) is
+//!              REFUSED: the locked N=5 policy (`generate.rs`
+//!              `embedded_template_count`) rejects that tier at the API, so a
+//!              bank generated for it could never be read back. T3 §1 booked
+//!              this arg-range refusal as a FOLD-DO on the file's next touch
+//!              (chronic CH-29); this is that touch.
 //!   difficulty easy | medium | hard
 //!   count      number of templates to generate
 //!   out_dir    output root (default: csp-solver/data/sudoku_puzzles); writes to
@@ -80,9 +85,20 @@ fn main() {
         std::process::exit(2);
     }
 
-    let n: u32 = args[1]
-        .parse()
-        .expect("N must be an integer (2, 3, 4, or 5)");
+    let n: u32 = args[1].parse().expect("N must be an integer (2, 3, or 4)");
+    // The locked N=5 policy (CH-29, T3 §1): N=5 is rejected at the library API
+    // — `embedded_template_count` refuses a tier with no embedded bank rather
+    // than falling through to unbounded hole-digging (the old N=5 DoS surface).
+    // Generating a bank this crate will never load is a silent no-op, so the
+    // range is refused here, loudly, at the argument.
+    if !(2..=4).contains(&n) {
+        eprintln!(
+            "generate_templates: N={n} is out of range — the shipped tiers are N=2,3,4. \
+             N=5 (25x25) is refused by the locked N=5 policy: the library rejects that \
+             tier at the API, so a bank generated for it could never be read back."
+        );
+        std::process::exit(2);
+    }
     let (difficulty, diff_name) = parse_difficulty(&args[2]);
     let count: usize = args[3]
         .parse()

@@ -24,13 +24,12 @@
 //! single high-density ~75% tier for callers that want one; the axis rides
 //! [`generate_futoshiki_difficulty_seeded`].
 
-use crate::domain::bitset::BitsetDomain;
 use crate::ordering::Ordering;
 use crate::puzzles::class::PuzzleClass;
 use crate::puzzles::sudoku::rng::SimpleRng;
-use crate::{Csp, Pruning, SolveConfig};
+use crate::{Pruning, SolveConfig};
 
-use super::csp::{FutoshikiPuzzle, create_futoshiki_csp};
+use super::csp::create_futoshiki_csp;
 
 /// The single shipped tier keeps ~75% of cells as givens. The probe
 /// (`pass3/futoshiki-gen-probe-output.txt` §3) shows uniqueness-checked
@@ -90,23 +89,6 @@ fn gen_config(max_solutions: usize) -> SolveConfig {
     }
 }
 
-/// Build a finalized Futoshiki CSP from a dense board (`0` = empty) plus the
-/// inequality set.
-fn csp_from_board(board: &[u32], n: u32, inequalities: &[(usize, usize)]) -> Csp<BitsetDomain> {
-    let fixed_cells: Vec<(usize, u32)> = board
-        .iter()
-        .enumerate()
-        .filter(|&(_, &v)| v != 0)
-        .map(|(i, &v)| (i, v))
-        .collect();
-    let puzzle = FutoshikiPuzzle {
-        n,
-        fixed_cells,
-        inequalities: inequalities.to_vec(),
-    };
-    create_futoshiki_csp(&puzzle)
-}
-
 /// Seed a complete Latin square by fixing a shuffled first row and solving the
 /// rest — reusing the solver rather than constructing a square by hand (mirrors
 /// Sudoku's seed step). Returns the dense `n²` solution.
@@ -119,8 +101,8 @@ fn seed_latin_square(n: u32, rng: &mut SimpleRng) -> Vec<u32> {
     let mut board = vec![0u32; total];
     board[..n as usize].copy_from_slice(&first_row);
 
-    let mut csp = csp_from_board(&board, n, &[]);
-    csp.solve_with_given(&gen_config(1), &[])
+    let (mut csp, given) = create_futoshiki_csp(&board, n, &[]);
+    csp.solve_with_given(&gen_config(1), &given)
         .into_iter()
         .next()
         .expect("an empty Futoshiki board with a fixed first row is always solvable")
@@ -197,8 +179,8 @@ fn dig_holes(
         let saved = board[idx];
         board[idx] = 0;
 
-        let mut csp = csp_from_board(&board, n, inequalities);
-        let solutions = csp.solve_with_given(&uniqueness_config, &[]);
+        let (mut csp, given) = create_futoshiki_csp(&board, n, inequalities);
+        let solutions = csp.solve_with_given(&uniqueness_config, &given);
 
         if solutions.len() == 1 {
             holes += 1;
@@ -232,14 +214,14 @@ fn holes_for_density(n: u32, keep_density: f64) -> usize {
 /// inequality set. Higher counts mean a puzzle a non-arc-consistent solver finds
 /// harder; v1 records but does not band these (no tiers ship).
 pub fn measure_difficulty(board: &[u32], n: u32, inequalities: &[(usize, usize)]) -> u32 {
-    let mut csp = csp_from_board(board, n, inequalities);
+    let (mut csp, given) = create_futoshiki_csp(board, n, inequalities);
     let config = SolveConfig {
         pruning: Pruning::ForwardChecking,
         ordering: Ordering::FailFirst,
         max_solutions: 1,
         ..Default::default()
     };
-    csp.solve(&config);
+    csp.solve_with_given(&config, &given);
     csp.stats().backtracks as u32
 }
 
@@ -374,8 +356,8 @@ impl PuzzleClass for FutoshikiClass {
         clues: &[(usize, usize)],
         max_solutions: usize,
     ) -> Vec<Vec<u32>> {
-        let mut csp = csp_from_board(board, self.n, clues);
-        csp.solve_with_given(&gen_config(max_solutions), &[])
+        let (mut csp, given) = create_futoshiki_csp(board, self.n, clues);
+        csp.solve_with_given(&gen_config(max_solutions), &given)
     }
 
     fn target_holes(&self, _board_len: usize) -> usize {

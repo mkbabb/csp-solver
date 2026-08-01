@@ -1,0 +1,37 @@
+# BORN-RED — re-derived against the pre-cure src (git stash of src/ only), 2026-08-01T22:17:22Z
+# pencil-boil HEAD 763f1c0 (0.10.1), src/ at HEAD, proofs/ at their 0.11 shape
+
+  ok   (a) frame handle stopped before start returns
+  ok   (a) sequence handle stopped before start returns
+  ok   (a) the frame subscriber enrolled
+  ok   (a) frame handle stopped MID-FLIGHT returns
+  ok   (a) mid-flight stop withdrew the subscriber
+  ok   (a) sequence handle stopped MID-TWEEN returns
+  ok   (a) mid-tween stop withdrew the subscriber
+  ok   (a) frame handle stopped FROM INSIDE ITS OWN TICK returns
+  ok   (a) sequence handle stopped FROM INSIDE onProgress returns
+(node:92844) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ok   (a) the tween completed and self-unsubscribed
+  ok   (a) sequence handle stopped AFTER COMPLETION returns
+  ok   (a) DOUBLE stop returns (idempotent withdrawal)
+  ok   (a) PRM engage cleared every subscriber
+  ok   (a) stop AFTER a central PRM clear returns
+  ok   (a) the inert PRM createStrokeDrawIn handle stops without throwing
+  ok   (a) stop AFTER the owning scope tore down returns
+  FAIL (b) HOSTILE HOST: mid-flight frame stop returns — THREW: host: clearTimeout is patched and throws
+  ok   (b) the hostile arm ran against a live subscriber
+  ok   (c) NEGATIVE CONTROL: the hostile-host withdrawal still LANDED (subscriber left the set)
+  FAIL (b) HOSTILE HOST: a second mid-flight stop returns — THREW: host: clearTimeout is patched and throws
+  ok   (c) NEGATIVE CONTROL: the stopped mark never advances again under the hostile host
+  FAIL (b) HOSTILE HOST: mid-tween sequence stop returns — THREW: host: cancelAnimationFrame is patched and throws
+  ok   (c) NEGATIVE CONTROL: the hostile-host tween withdrawal LANDED
+  ok   (b) the composable enrolled its subscriber
+  FAIL (b) HOSTILE HOST: composable teardown stop() returns — THREW: host: cancelAnimationFrame is patched and throws
+  ok   (c) NEGATIVE CONTROL: the teardown withdrawal LANDED under the hostile host
+
+stop-contract.proof: 4 FAILURE(S), 22 passed
+  - (b) HOSTILE HOST: mid-flight frame stop returns — THREW: host: clearTimeout is patched and throws
+  - (b) HOSTILE HOST: a second mid-flight stop returns — THREW: host: clearTimeout is patched and throws
+  - (b) HOSTILE HOST: mid-tween sequence stop returns — THREW: host: cancelAnimationFrame is patched and throws
+  - (b) HOSTILE HOST: composable teardown stop() returns — THREW: host: cancelAnimationFrame is patched and throws

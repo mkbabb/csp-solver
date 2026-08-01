@@ -420,16 +420,19 @@ fn p6_sudoku_solves_under_pool() {
 
 #[test]
 fn p6_futoshiki_solves_under_pool() {
-    use csp_solver::puzzles::futoshiki::{FutoshikiPuzzle, solve_futoshiki};
+    use csp_solver::Pruning;
+    use csp_solver::ordering::Ordering;
+    use csp_solver::puzzles::futoshiki::solve_futoshiki;
 
     // A 5×5 Latin square (no inequalities) drives row/col AllDifferents with
     // live=5 ⇒ GAC + the pool, under the public solve path.
-    let puzzle = FutoshikiPuzzle {
-        n: 5,
-        fixed_cells: vec![],
-        inequalities: vec![],
+    let config = SolveConfig {
+        pruning: Pruning::Ac3,
+        ordering: Ordering::Mrv,
+        max_solutions: 1,
+        ..Default::default()
     };
-    let solutions = solve_futoshiki(&puzzle);
-    assert!(!solutions.is_empty(), "5×5 Latin square is satisfiable");
-    assert_eq!(solutions[0].len(), 25);
+    let solution =
+        solve_futoshiki(&[0u32; 25], 5, &[], &config).expect("5×5 Latin square is satisfiable");
+    assert_eq!(solution.len(), 25);
 }

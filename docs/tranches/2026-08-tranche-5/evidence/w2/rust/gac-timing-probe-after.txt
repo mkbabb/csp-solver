@@ -1,0 +1,37 @@
+    Finished `release` profile [optimized] target(s) in 0.04s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running `/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/target/release/examples/gac_timing_probe`
+# GAC A/B timing probe — 50 boards (production config: Ac3 + Mrv), best-of-5 interleaved (on,off,…), ratios only
+# ratio = off/on wall time; >1 means GAC ON is faster.
+
+## Corpus: 50 boards, 47 scored, 3 excluded (budget-dead in one state)
+
+## Budget-dead — EXCLUDED from every ratio below
+| board | GAC-off | GAC-on | nodes off | nodes on |
+|---|---|---|---|---|
+| template::N4/hard/template-1 | **budget-dead** | solved | 1000000 | 203 |
+| template::N4/hard/template-2 | **budget-dead** | solved | 1000000 | 644 |
+| template::N4/hard/template-3 | **budget-dead** | solved | 1000000 | 281 |
+
+## Per-bucket aggregate (Σoff / Σon)
+| bucket | boards | wall ratio (off/on) | nodes off→on |
+|---|---|---|---|
+| hard-9x9 (named) | 5 | 1.00× | 3367 → 702 |
+| N3/hard | 20 | 3.32× | 4483 → 1154 |
+| N4/easy | 10 | 1.01× | 640 → 640 |
+| N4/medium | 10 | 27.89× | 24768 → 1428 |
+| N4/hard | 2 | 73.12× | 1120130 → 3170 |
+
+## Corpus aggregate
+wall ratio (Σoff/Σon): 64.81×   |   nodes off→on: 1153388 → 7094 (162.59× fewer)
+
+## Named hard 9×9 (individual ratios, minority-cost direction)
+| board | wall ratio (off/on) | direction | nodes off→on |
+|---|---|---|---|
+| Al Escargot | 0.46× | ON SLOWER (2.16× slower) | 105 → 72 |
+| Platinum Blonde | 2.04× | ON faster (2.04×) | 489 → 83 |
+| Golden Nugget | 0.61× | ON SLOWER (1.65× slower) | 1258 → 369 |
+| Inkala 2010 | 0.35× | ON SLOWER (2.87× slower) | 134 → 114 |
+| 17-clue minimal | 16.26× | ON faster (16.26×) | 1381 → 64 |
+cargo run --release --example gac_timing_probe  258.48s user 1.36s system 99% cpu 4:21.45 total

@@ -1,0 +1,25 @@
+# GATE — god-module census (T5-W2 LANE R exit)
+
+$ find csp-solver/src csp-solver/wasm/src -name '*.rs' -exec wc -l {} + | sort -rn | head -12
+   11054 total
+     534 csp-solver/src/solver/search.rs
+     464 csp-solver/src/solver/gac.rs
+     415 csp-solver/src/puzzles/sudoku/generate.rs
+     377 csp-solver/wasm/src/futoshiki.rs
+     370 csp-solver/src/puzzles/futoshiki/generate.rs
+     332 csp-solver/wasm/src/kenken.rs
+     314 csp-solver/wasm/src/killer.rs
+     308 csp-solver/wasm/src/thermo.rs
+     304 csp-solver/src/puzzles/kenken/generate.rs
+     304 csp-solver/src/constraint/cage.rs
+     300 csp-solver/src/csp/solve.rs
+
+## Files over the 500-line budget, and their waiver
+
+| file | L | waiver |
+|---|---:|---|
+| csp-solver/src/solver/search.rs |      534 | YES — `search.rs:27-43`, re-derived at T5-W2: the count is current, the argument (a `BranchBound` split widens `SearchPolicy`/`search`/`Step` to `pub(super)`) re-inspected and still standing |
+
+**Unwaived modules over 500 L: 0** (gates.W2.rustEdges.godModulesOver500Unwaived).
+
+At HEAD there were three: `assignment.rs` 607 (unwaived — split, act 1), `cage.rs` 558 (unwaived — 253 L of it inline tests, extracted, act 2), `search.rs` 528 (waived, number stale by 24 — re-derived, act 3).

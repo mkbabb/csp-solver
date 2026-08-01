@@ -53,14 +53,18 @@ pub enum CspError {
         /// What was wrong, safe to surface to an API client verbatim.
         detail: String,
     },
-    /// A wall-clock deadline elapsed before the search produced a result.
-    /// Distinct from `BudgetExceeded` (a node-count budget, checked at the
-    /// same cadence but triggered by *count* not *time*). Forward-declared
-    /// for the wall-clock `time_budget` deferred item (synthesis-pass1 §3.1
-    /// N11) — the cooperative cancellation flag a caller's own deadline
-    /// should set through the `CancelToken`, so the abort reaches the search
-    /// itself rather than only whatever coroutine or thread is awaiting it.
-    // reserved: no constructor until cancel-driver
+    /// The search stopped because a caller cancelled it — an *external* stop,
+    /// typically a wall-clock deadline the caller enforces through
+    /// [`CancelToken`](crate::CancelToken). Distinct from `BudgetExceeded` (a
+    /// self-imposed node-count cap, checked at the same cadence but triggered
+    /// by *count* not *time*) and from `Unsatisfiable` (a proof).
+    ///
+    /// T3's RESERVE (ballot Q2/R-3) kept this variant constructor-less "until
+    /// cancel-driver". The driver landed —
+    /// [`SolveConfig::cancel`](crate::SolveConfig::cancel) +
+    /// [`SolveStats::cancelled`](crate::SolveStats::cancelled), checked in the
+    /// search kernel's guard — so the reserved variant is wired at its declared
+    /// wire point: [`CspError::aborted`].
     Timeout,
 }
 
@@ -93,6 +97,30 @@ impl CspError {
             Self::BudgetExceeded => "BUDGET_EXCEEDED",
             Self::InvalidInput { .. } => "INVALID_INPUT",
             Self::Timeout => "TIMEOUT",
+        }
+    }
+
+    /// The typed abort for a search that ended with **no solution and no
+    /// proof** — discriminated by the run's own stats:
+    ///
+    /// * [`SolveStats::cancelled`](crate::SolveStats::cancelled) ⇒ [`Timeout`](Self::Timeout)
+    ///   — the caller stopped it. Cancellation wins when both flags are set: a
+    ///   caller's own act outranks the library's cap.
+    /// * [`SolveStats::budget_exceeded`](crate::SolveStats::budget_exceeded) ⇒
+    ///   [`BudgetExceeded`](Self::BudgetExceeded) — the node cap fired.
+    /// * neither ⇒ `None`. The search ran to completion, so an empty result is
+    ///   a *proof* of unsatisfiability, and whether that is an error is the
+    ///   surface's call (the PyO3 sudoku path returns `False`, not a raise).
+    ///
+    /// One place maps outcome → error, so no boundary re-derives the
+    /// discrimination and none of them can conflate the three.
+    pub fn aborted(stats: &crate::SolveStats) -> Option<Self> {
+        if stats.cancelled {
+            Some(Self::Timeout)
+        } else if stats.budget_exceeded {
+            Some(Self::BudgetExceeded)
+        } else {
+            None
         }
     }
 

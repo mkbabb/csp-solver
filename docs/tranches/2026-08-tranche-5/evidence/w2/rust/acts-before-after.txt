@@ -1,0 +1,39 @@
+# ACT-BY-ACT before/after (T5-W2 LANE R)
+
+## act 1 — assignment.rs split
+before: 607 L one file, 0 test lines
+     284 csp-solver/src/builder/assignment.rs
+     186 csp-solver/src/builder/assignment/branch_and_bound.rs
+      90 csp-solver/src/builder/assignment/error.rs
+      90 csp-solver/src/builder/assignment/lap.rs
+     650 total
+
+## act 2 — cage.rs extraction
+before: 558 L (305 production + 253 inline test), 9 test fns
+     304 csp-solver/src/constraint/cage.rs
+     280 csp-solver/tests/cage_revise.rs
+     584 total
+inline test mods left in src/: 1 (kuhn_munkres.rs — private module, structurally required)
+
+## act 3 — search.rs waiver
+before: cited 504, file was 528
+     534 csp-solver/src/solver/search.rs
+
+## act 4 — futoshiki conforms
+35:pub fn parse_futoshiki(input: &str) -> (u32, Vec<u32>, Vec<(usize, usize)>) {
+74:pub fn validate_futoshiki(
+126:pub fn create_futoshiki_csp(
+176:pub fn solve_futoshiki(
+FutoshikiPuzzle (the deleted struct) references left: 0 — the 5 grep hits are 1 historical
+  mention in the module doc + 4 uses of `FutoshikiPuzzleData`, the wasm generate-result struct
+  (the twin of ThermoPuzzleData/KillerPuzzleData/KenKenPuzzleData), a different type
+
+## act 7 — wasm dedup
+board_total definitions: 1 (was 3 + 2 inlined checks)
+board_total call sites: 10
+JsError in the five family wires: 0
+'reserved: no constructor' comments: 0
+
+## act 9 — iai
+baseline diff lines: 0 (0 = untouched)
+baseline value: 1529452

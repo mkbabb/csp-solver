@@ -361,6 +361,16 @@ pub struct SudokuClass {
     pub difficulty: Difficulty,
 }
 
+impl SudokuClass {
+    /// Build the instance for a `difficulty` rung. Sudoku's ladder is a hole
+    /// target, not a density pair, so the rung rides through untouched — the
+    /// constructor exists so all five [`PuzzleClass`] witnesses are reachable
+    /// the same way (futoshiki, thermo, killer and kenken each have one).
+    pub fn from_difficulty(n: u32, difficulty: Difficulty) -> Self {
+        Self { n, difficulty }
+    }
+}
+
 impl PuzzleClass for SudokuClass {
     /// Sudoku carries no clue furniture beyond its givens.
     type Clue = ();

@@ -14,7 +14,7 @@
 
 use csp_solver::ordering::Ordering;
 use csp_solver::puzzles::futoshiki::{
-    Difficulty, FutoshikiPuzzle, create_futoshiki_csp, generate_futoshiki_difficulty_seeded,
+    Difficulty, create_futoshiki_csp, generate_futoshiki_difficulty_seeded, validate_futoshiki,
 };
 use csp_solver::{Pruning, SolveConfig};
 
@@ -29,27 +29,17 @@ fn given_count(board: &[u32]) -> usize {
     board.iter().filter(|&&v| v != 0).count()
 }
 
-/// Dense board (`0` = blank) → `(index, value)` given-cell list.
-fn givens(board: &[u32]) -> Vec<(usize, u32)> {
-    board
-        .iter()
-        .enumerate()
-        .filter(|&(_, &v)| v != 0)
-        .map(|(i, &v)| (i, v))
-        .collect()
-}
-
 /// Solve with a uniqueness-probing config (`Ac3` + `FailFirst`, up to 2
 /// solutions) — enough to distinguish "unique" from "ambiguous".
-fn solve_up_to_two(puzzle: &FutoshikiPuzzle) -> Vec<Vec<u32>> {
-    let mut csp = create_futoshiki_csp(puzzle);
+fn solve_up_to_two(board: &[u32], inequalities: &[(usize, usize)]) -> Vec<Vec<u32>> {
+    let (mut csp, given) = create_futoshiki_csp(board, N, inequalities);
     let config = SolveConfig {
         pruning: Pruning::Ac3,
         ordering: Ordering::FailFirst,
         max_solutions: 2,
         ..Default::default()
     };
-    csp.solve(&config)
+    csp.solve_with_given(&config, &given)
 }
 
 /// Same `(n, difficulty, seed)` ⇒ byte-identical board + inequality set. This
@@ -100,12 +90,11 @@ fn each_tier_is_unique_30_of_30() {
                 "{d:?} seed={seed}: board size"
             );
 
-            let puzzle = FutoshikiPuzzle::from_parts(N, givens(&board), inequalities)
-                .unwrap_or_else(|e| {
-                    panic!("{d:?} seed={seed}: from_parts rejected a generated board: {e}")
-                });
+            validate_futoshiki(&board, N, &inequalities).unwrap_or_else(|e| {
+                panic!("{d:?} seed={seed}: validation rejected a generated board: {e}")
+            });
 
-            let solutions = solve_up_to_two(&puzzle);
+            let solutions = solve_up_to_two(&board, &inequalities);
             assert_eq!(
                 solutions.len(),
                 1,

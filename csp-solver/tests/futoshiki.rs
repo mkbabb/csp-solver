@@ -3,8 +3,8 @@
 use csp_solver::CspError;
 use csp_solver::ordering::Ordering;
 use csp_solver::puzzles::futoshiki::{
-    FutoshikiPuzzle, create_futoshiki_csp, generate_futoshiki_seeded,
-    generate_futoshiki_tuned_seeded, measure_difficulty, solve_futoshiki,
+    create_futoshiki_csp, generate_futoshiki_seeded, generate_futoshiki_tuned_seeded,
+    measure_difficulty, parse_futoshiki, solve_futoshiki, validate_futoshiki,
 };
 use csp_solver::{Pruning, SolveConfig};
 
@@ -29,27 +29,27 @@ fn assert_latin_square(sol: &[u32], n: u32) {
     }
 }
 
-/// Dense board (`0` = blank) → `(index, value)` given-cell list.
-fn givens(board: &[u32]) -> Vec<(usize, u32)> {
-    board
-        .iter()
-        .enumerate()
-        .filter(|&(_, &v)| v != 0)
-        .map(|(i, &v)| (i, v))
-        .collect()
-}
-
 /// Solve with a uniqueness-probing config (`Ac3` + `FailFirst`, up to 2
 /// solutions) — enough to distinguish "unique" from "ambiguous".
-fn solve_up_to_two(puzzle: &FutoshikiPuzzle) -> Vec<Vec<u32>> {
-    let mut csp = create_futoshiki_csp(puzzle);
+fn solve_up_to_two(board: &[u32], n: u32, inequalities: &[(usize, usize)]) -> Vec<Vec<u32>> {
+    let (mut csp, given) = create_futoshiki_csp(board, n, inequalities);
     let config = SolveConfig {
         pruning: Pruning::Ac3,
         ordering: Ordering::FailFirst,
         max_solutions: 2,
         ..Default::default()
     };
-    csp.solve(&config)
+    csp.solve_with_given(&config, &given)
+}
+
+/// The shipped solve policy (the F1 override), at a caller-chosen solution cap.
+fn production_config(max_solutions: usize) -> SolveConfig {
+    SolveConfig {
+        pruning: Pruning::Ac3,
+        ordering: Ordering::Mrv,
+        max_solutions,
+        ..Default::default()
+    }
 }
 
 // ─── Solving (existing behavior, preserved across the F1 override) ───────────
@@ -60,13 +60,17 @@ fn solve_4x4_futoshiki() {
     // Fixed: cell 0 = 1, cell 5 = 3
     // Inequality: cell 1 > cell 2 (row 0: col 1 > col 2)
     let input = "4\n0 5\n1 3\n1\n2\n";
-    let puzzle = FutoshikiPuzzle::parse(input);
+    let (n, board, inequalities) = parse_futoshiki(input);
 
-    assert_eq!(puzzle.n, 4);
-    assert_eq!(puzzle.fixed_cells, vec![(0, 1), (5, 3)]);
-    assert_eq!(puzzle.inequalities, vec![(1, 2)]);
+    assert_eq!(n, 4);
+    assert_eq!(board[0], 1);
+    assert_eq!(board[5], 3);
+    assert_eq!(inequalities, vec![(1, 2)]);
 
-    let solutions = solve_futoshiki(&puzzle);
+    // Every solution, not just the first: the enumerate-all set is the
+    // trajectory-invariant one.
+    let (mut csp, given) = create_futoshiki_csp(&board, n, &inequalities);
+    let solutions = csp.solve_with_given(&production_config(usize::MAX), &given);
     assert!(
         !solutions.is_empty(),
         "puzzle should have at least one solution"
@@ -84,6 +88,11 @@ fn solve_4x4_futoshiki() {
         );
         assert_latin_square(sol, 4);
     }
+
+    // The conforming first-solution seam agrees with the set.
+    let first = solve_futoshiki(&board, n, &inequalities, &production_config(1))
+        .expect("puzzle should have at least one solution");
+    assert!(solutions.contains(&first));
 }
 
 #[test]
@@ -91,8 +100,9 @@ fn solve_3x3_trivial() {
     // 3×3, no fixed cells, no inequalities — 12 Latin squares. The Ac3+Mrv
     // override must still enumerate all of them exhaustively.
     let input = "3\n\n\n\n\n";
-    let puzzle = FutoshikiPuzzle::parse(input);
-    let solutions = solve_futoshiki(&puzzle);
+    let (n, board, inequalities) = parse_futoshiki(input);
+    let (mut csp, given) = create_futoshiki_csp(&board, n, &inequalities);
+    let solutions = csp.solve_with_given(&production_config(usize::MAX), &given);
     assert_eq!(
         solutions.len(),
         12,
@@ -109,15 +119,10 @@ fn solve_3x3_trivial() {
 #[test]
 fn empty_board_solves_within_budget_up_to_n7() {
     for n in 4u32..=7 {
-        let puzzle = FutoshikiPuzzle::from_parts(n, vec![], vec![]).unwrap();
-        let mut csp = create_futoshiki_csp(&puzzle);
-        let config = SolveConfig {
-            pruning: Pruning::Ac3,
-            ordering: Ordering::Mrv,
-            max_solutions: 1,
-            ..Default::default()
-        };
-        let solutions = csp.solve(&config);
+        let board = vec![0u32; (n * n) as usize];
+        validate_futoshiki(&board, n, &[]).unwrap();
+        let (mut csp, given) = create_futoshiki_csp(&board, n, &[]);
+        let solutions = csp.solve_with_given(&production_config(1), &given);
 
         assert_eq!(
             solutions.len(),
@@ -137,61 +142,58 @@ fn empty_board_solves_within_budget_up_to_n7() {
     }
 }
 
-// ─── Validation: FutoshikiPuzzle::from_parts (G3, Rust boundary) ─────────────
+// ─── Validation: validate_futoshiki (G3, Rust boundary) ──────────────────────
 
 #[test]
-fn from_parts_accepts_valid_adjacent_pairs() {
+fn validate_accepts_valid_adjacent_pairs() {
     // 4×4: cell 5 (row 1, col 1) and cell 6 (row 1, col 2) share an edge;
     // cell 5 and cell 9 (row 2, col 1) share an edge (vertical).
-    let puzzle = FutoshikiPuzzle::from_parts(4, vec![(0, 1)], vec![(5, 6), (5, 9)])
+    let mut board = vec![0u32; 16];
+    board[0] = 1;
+    validate_futoshiki(&board, 4, &[(5, 6), (5, 9)])
         .expect("adjacent pairs within range must be accepted");
-    assert_eq!(puzzle.n, 4);
-    assert_eq!(puzzle.inequalities, vec![(5, 6), (5, 9)]);
 }
 
 #[test]
-fn from_parts_rejects_nonadjacent_pair() {
+fn validate_rejects_nonadjacent_pair() {
     // Cells 0 (0,0) and 15 (3,3) are opposite corners — Manhattan distance 6.
-    let err = FutoshikiPuzzle::from_parts(4, vec![], vec![(0, 15)])
+    let err = validate_futoshiki(&[0u32; 16], 4, &[(0, 15)])
         .expect_err("a non-adjacent pair must be rejected");
     assert_eq!(err.code(), "INVALID_INPUT");
     assert!(matches!(err, CspError::InvalidInput { .. }));
 }
 
 #[test]
-fn from_parts_rejects_diagonal_pair() {
+fn validate_rejects_diagonal_pair() {
     // Cells 0 (0,0) and 5 (1,1) are diagonal — Manhattan distance 2, not 1.
-    let err = FutoshikiPuzzle::from_parts(4, vec![], vec![(0, 5)])
+    let err = validate_futoshiki(&[0u32; 16], 4, &[(0, 5)])
         .expect_err("a diagonal pair must be rejected");
     assert_eq!(err.code(), "INVALID_INPUT");
 }
 
 #[test]
-fn from_parts_rejects_out_of_range_inequality_index() {
-    let err = FutoshikiPuzzle::from_parts(4, vec![], vec![(0, 16)])
+fn validate_rejects_out_of_range_inequality_index() {
+    let err = validate_futoshiki(&[0u32; 16], 4, &[(0, 16)])
         .expect_err("an index >= n² must be rejected");
     assert_eq!(err.code(), "INVALID_INPUT");
 }
 
 #[test]
-fn from_parts_rejects_bad_fixed_cell() {
+fn validate_rejects_bad_board() {
     // Value out of range (5 on a 4×4 board).
-    let err = FutoshikiPuzzle::from_parts(4, vec![(0, 5)], vec![])
-        .expect_err("value > n must be rejected");
+    let mut board = vec![0u32; 16];
+    board[0] = 5;
+    let err = validate_futoshiki(&board, 4, &[]).expect_err("value > n must be rejected");
     assert_eq!(err.code(), "INVALID_INPUT");
-    // Index out of range.
-    let err = FutoshikiPuzzle::from_parts(4, vec![(16, 1)], vec![])
-        .expect_err("a fixed-cell index >= n² must be rejected");
-    assert_eq!(err.code(), "INVALID_INPUT");
-    // Zero value (0 is the blank sentinel, never a legal given).
-    let err =
-        FutoshikiPuzzle::from_parts(4, vec![(0, 0)], vec![]).expect_err("value 0 must be rejected");
+    // Board length that does not match n².
+    let err = validate_futoshiki(&[0u32; 17], 4, &[])
+        .expect_err("a board that is not n² cells must be rejected");
     assert_eq!(err.code(), "INVALID_INPUT");
 }
 
 // ─── Generation ──────────────────────────────────────────────────────────────
 
-/// Every generated puzzle (N=4–7, shipped range) must: pass `from_parts`
+/// Every generated puzzle (N=4–7, shipped range) must: pass `validate_futoshiki`
 /// validation (adjacency-valid carets, in-range givens), have exactly one
 /// solution, and that solution must honor every inequality.
 #[test]
@@ -201,8 +203,8 @@ fn generated_puzzles_are_unique_and_valid() {
         assert_eq!(board.len(), (n * n) as usize);
 
         // Generation output must round-trip through the wire validator.
-        let puzzle = FutoshikiPuzzle::from_parts(n, givens(&board), inequalities.clone())
-            .unwrap_or_else(|e| panic!("N={n}: generated puzzle failed from_parts: {e}"));
+        validate_futoshiki(&board, n, &inequalities)
+            .unwrap_or_else(|e| panic!("N={n}: generated puzzle failed validation: {e}"));
 
         // Inequalities must be renderable carets and correctly oriented.
         for &(a, b) in &inequalities {
@@ -215,7 +217,7 @@ fn generated_puzzles_are_unique_and_valid() {
             );
         }
 
-        let solutions = solve_up_to_two(&puzzle);
+        let solutions = solve_up_to_two(&board, n, &inequalities);
         assert_eq!(
             solutions.len(),
             1,

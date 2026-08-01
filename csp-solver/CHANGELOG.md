@@ -14,6 +14,45 @@ general-purpose `csp_solver::assignment()` / `AssignmentBuilder` surface morph
 was built on stays here; `morph` now consumes it as an ordinary crates.io
 dependency (`csp-solver = "0.2"`).
 
+## Unreleased
+
+_Source-only; nothing republished. The crate's public API changes here, so the
+next publish is a **minor** bump at minimum._
+
+### crates.io — `csp-solver`
+
+- **BREAKING — `puzzles::futoshiki` conforms to the five-family shape.**
+  `create_futoshiki_csp(board, n, inequalities) -> (Csp, given)` and
+  `solve_futoshiki(board, n, inequalities, &SolveConfig) -> Option<Vec<u32>>`
+  now match sudoku/thermo/killer/kenken exactly. The sparse `FutoshikiPuzzle`
+  struct is **removed**: its validation is `validate_futoshiki(board, n,
+  inequalities) -> Result<(), CspError>` and its CSC411 text reader is
+  `parse_futoshiki(input) -> (n, board, inequalities)`. No compatibility
+  shim—futoshiki was the one family whose givens rode `add_equals` constraints
+  instead of the given seam, and keeping both encodings was the divergence.
+- **`CspError::aborted(&SolveStats) -> Option<CspError>`**—the one place an
+  empty solve becomes a typed error: `cancelled` ⇒ `Timeout`,
+  `budget_exceeded` ⇒ `BudgetExceeded`, neither ⇒ `None` (a completed search
+  that found nothing is a proof, not an abort). This wires `CspError::Timeout`,
+  reserved since `0.4.0` "until the cancel-driver lands"—the driver
+  (`SolveConfig::cancel` + `SolveStats::cancelled`) is live, so PyO3's
+  `CspTimeoutError` is raisable for the first time, and a cancelled
+  `solve_sudoku` no longer returns `False` as though the board were unsolvable.
+- **`SudokuClass::from_difficulty(n, difficulty)`**—the fifth and last
+  `PuzzleClass` witness to get the constructor its siblings had.
+- `builder::assignment` is a directory module (`error` / `lap` /
+  `branch_and_bound`); the re-exported surface is unchanged.
+
+### npm — `@mkbabb/csp-solver-wasm`
+
+- All five `generate*` verbs now throw a typed error carrying
+  `.code === "INVALID_INPUT"`. `generateSudoku`, `generateThermo` and
+  `generateKiller` previously threw a bare `Error` with no discriminant.
+- `board_total` lives in `errors.rs`, the module that declares itself the home
+  for exactly this; three hand-copied twins and two inlined checks are gone.
+- 15 boundary tests, one per exported verb (`wasm/tests/verb_boundary.rs`):
+  marshalling, native parity, and the typed-error contract.
+
 ## 0.6.0 — 2026-07-15
 
 _Crate published to crates.io. This is the release that carries the five-family

@@ -4,8 +4,15 @@
 // derived in CI on Linux. This bench measures a single, fully-deterministic CSP
 // solve (8-queens, first solution, AC-3 + FailFirst) under callgrind. Instruction
 // counts are a function of the compiled binary alone — identical binary => identical
-// count => 0% run-to-run delta, which is exactly the determinism P6 proved
-// (1,585,722 instructions across 3 ephemeral runners, 0.000000% delta).
+// count => 0% run-to-run delta (P6 measured 0.000000% across 3 ephemeral runners).
+//
+// THE COUNT IS NOT WRITTEN HERE. The enforced figure lives in exactly one place,
+// `csp-solver/benches/iai_queens.baseline`, which `benches/iai_gate.sh` grades
+// the measured run against inside a +/-2% band (the workflow's iai lane invokes
+// the two by path). A number copied into this comment is a number no gate reads:
+// the one that used to sit here outlived its own baseline by two tranches and
+// was wrong by 56,270 instructions when it was finally re-derived. Read the
+// baseline file; do not restate it.
 //
 // harness = false; the iai-callgrind `main!` macro forwards to the
 // `iai-callgrind-runner` binary (installed in CI via `cargo install`). Locally on

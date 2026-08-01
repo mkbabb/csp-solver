@@ -1,0 +1,66 @@
+# BORN-RED — browser pixel-identity lane against the pre-cure src, 2026-08-01T22:17:26Z
+
+
+Running 2 tests using 1 worker
+
+[WebServer] (node:92885) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › proofs/browser/blob-identity.spec.ts:50:1 › rasterizePoseToBlob is pixel-identical to the retired bitmap round trip (DPR2) (1.0m)
+  ✘  2 [webkit] › proofs/browser/blob-identity.spec.ts:50:1 › rasterizePoseToBlob is pixel-identical to the retired bitmap round trip (DPR2) (1.0m)
+
+
+  1) [chromium] › proofs/browser/blob-identity.spec.ts:50:1 › rasterizePoseToBlob is pixel-identical to the retired bitmap round trip (DPR2) 
+
+    Test timeout of 60000ms exceeded while running "beforeEach" hook.
+
+      43 | }
+      44 |
+    > 45 | test.beforeEach(async ({ page }) => {
+         |      ^
+      46 |   await page.goto('/fixture.html');
+      47 |   await page.waitForFunction(() => Boolean(window.__proof));
+      48 | });
+        at /Users/mkbabb/Programming/pencil-boil/proofs/browser/blob-identity.spec.ts:45:6
+
+    Error: page.waitForFunction: Test timeout of 60000ms exceeded.
+
+      45 | test.beforeEach(async ({ page }) => {
+      46 |   await page.goto('/fixture.html');
+    > 47 |   await page.waitForFunction(() => Boolean(window.__proof));
+         |              ^
+      48 | });
+      49 |
+      50 | test('rasterizePoseToBlob is pixel-identical to the retired bitmap round trip (DPR2)', async ({
+        at /Users/mkbabb/Programming/pencil-boil/proofs/browser/blob-identity.spec.ts:47:14
+
+    Error Context: test-results/blob-identity-rasterizePos-208fe-red-bitmap-round-trip-DPR2--chromium/error-context.md
+
+  2) [webkit] › proofs/browser/blob-identity.spec.ts:50:1 › rasterizePoseToBlob is pixel-identical to the retired bitmap round trip (DPR2) 
+
+    Test timeout of 60000ms exceeded while running "beforeEach" hook.
+
+      43 | }
+      44 |
+    > 45 | test.beforeEach(async ({ page }) => {
+         |      ^
+      46 |   await page.goto('/fixture.html');
+      47 |   await page.waitForFunction(() => Boolean(window.__proof));
+      48 | });
+        at /Users/mkbabb/Programming/pencil-boil/proofs/browser/blob-identity.spec.ts:45:6
+
+    Error: page.waitForFunction: Test timeout of 60000ms exceeded.
+
+      45 | test.beforeEach(async ({ page }) => {
+      46 |   await page.goto('/fixture.html');
+    > 47 |   await page.waitForFunction(() => Boolean(window.__proof));
+         |              ^
+      48 | });
+      49 |
+      50 | test('rasterizePoseToBlob is pixel-identical to the retired bitmap round trip (DPR2)', async ({
+        at /Users/mkbabb/Programming/pencil-boil/proofs/browser/blob-identity.spec.ts:47:14
+
+    Error Context: test-results/blob-identity-rasterizePos-208fe-red-bitmap-round-trip-DPR2--webkit/error-context.md
+
+  2 failed
+    [chromium] › proofs/browser/blob-identity.spec.ts:50:1 › rasterizePoseToBlob is pixel-identical to the retired bitmap round trip (DPR2) 
+    [webkit] › proofs/browser/blob-identity.spec.ts:50:1 › rasterizePoseToBlob is pixel-identical to the retired bitmap round trip (DPR2) 

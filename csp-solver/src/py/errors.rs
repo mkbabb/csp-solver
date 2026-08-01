@@ -39,13 +39,13 @@ create_exception!(
     PyException,
     "A caller-supplied argument was structurally invalid."
 );
-// reserved: no constructor until cancel-driver
 create_exception!(
     csp_solver,
     CspTimeoutError,
     PyException,
-    "The search exceeded its wall-clock deadline. Distinct from BudgetExceededError \
-     (node-count budget) — reserved for the cooperative wall-clock cancellation path."
+    "The search was cancelled through its CancelToken before producing a result — \
+     the cooperative wall-clock path. Distinct from BudgetExceededError (the \
+     library's own node-count cap)."
 );
 
 impl CspError {

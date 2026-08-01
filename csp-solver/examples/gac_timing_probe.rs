@@ -19,6 +19,18 @@
 //! shape. Named-board ratios are reported individually with their direction, so
 //! the disclosed minority cost (some hard 9×9 slower ON) is first-party.
 //!
+//! **Budget-dead boards are scored, not asserted away.** A ratio between a
+//! completed solve and a search that hit its node budget is not a speedup —
+//! it's a comparison of two different events. Any board a state cannot finish
+//! inside the production budget is therefore excluded from every aggregate and
+//! reported by name in its own section: GAC-off failing to finish at all is the
+//! strongest row in the table, and burying it in a ratio would be the weaker
+//! claim as well as the false one. A board neither state can finish *and* that
+//! neither reports as budget-dead is a real defect and still aborts the run.
+//! (T5-W2: the probe previously asserted `off.solved && on.solved` and aborted
+//! on `template::N4/hard/template-1`, which GAC-off cannot clear inside the
+//! production budget — so it produced nothing at all.)
+//!
 //! Corpus: 5 named hard 9×9 + the post-W4 template bank (N=3-hard + N=4). Run:
 //!   cargo run --release --example gac_timing_probe
 
@@ -177,6 +189,10 @@ struct Timing {
     wall_ns: u128,
     nodes: u64,
     solved: bool,
+    /// The search stopped on [`SolveConfig::node_budget`] rather than
+    /// exhausting the space — the run is an abort, and its wall time is the
+    /// budget's, not the board's.
+    budget_exceeded: bool,
 }
 
 /// One solve under the given GAC state, timing the SOLVE only (CSP
@@ -198,6 +214,7 @@ fn solve_timed(board: &Board, gac_on: bool) -> Timing {
         wall_ns,
         nodes: stats.nodes_explored,
         solved: !solutions.is_empty(),
+        budget_exceeded: stats.budget_exceeded,
     }
 }
 
@@ -259,15 +276,36 @@ fn main() {
     // Named-board rows, in corpus order.
     let mut named: Vec<(String, f64, u64, u64)> = Vec::new();
 
+    // Boards excluded from every aggregate because a state ran out of budget:
+    // (name, off budget-dead, on budget-dead, off nodes, on nodes).
+    let mut budget_dead: Vec<(String, bool, bool, u64, u64)> = Vec::new();
+
     for board in &corpus {
         let (off, on) = measure(board);
+        // An unsolved state is either an abort (budget) or a defect (the
+        // corpus is all solvable boards). Only the second aborts the run.
         assert!(
-            off.solved && on.solved,
-            "{} unsolved under production config (off={}, on={})",
-            board.name,
-            off.solved,
-            on.solved
+            off.solved || off.budget_exceeded,
+            "{}: GAC-off found no solution and did NOT hit its budget — the board \
+             is in the corpus as solvable, so this is a soundness defect",
+            board.name
         );
+        assert!(
+            on.solved || on.budget_exceeded,
+            "{}: GAC-on found no solution and did NOT hit its budget — the board \
+             is in the corpus as solvable, so this is a soundness defect",
+            board.name
+        );
+        if !off.solved || !on.solved {
+            budget_dead.push((
+                board.name.clone(),
+                !off.solved,
+                !on.solved,
+                off.nodes,
+                on.nodes,
+            ));
+            continue;
+        }
         tot_off_ns += off.wall_ns;
         tot_on_ns += on.wall_ns;
         tot_off_nodes += off.nodes;
@@ -289,6 +327,37 @@ fn main() {
             let short = board.name.strip_prefix("hard-9x9::").unwrap().to_string();
             named.push((short, ratio(off.wall_ns, on.wall_ns), off.nodes, on.nodes));
         }
+    }
+
+    println!(
+        "## Corpus: {} boards, {} scored, {} excluded (budget-dead in one state)",
+        corpus.len(),
+        corpus.len() - budget_dead.len(),
+        budget_dead.len()
+    );
+
+    if budget_dead.is_empty() {
+        println!("\nNo board was budget-dead in either state.\n");
+    } else {
+        println!("\n## Budget-dead — EXCLUDED from every ratio below");
+        println!("| board | GAC-off | GAC-on | nodes off | nodes on |");
+        println!("|---|---|---|---|---|");
+        for (name, off_dead, on_dead, off_nd, on_nd) in &budget_dead {
+            println!(
+                "| {name} | {} | {} | {off_nd} | {on_nd} |",
+                if *off_dead {
+                    "**budget-dead**"
+                } else {
+                    "solved"
+                },
+                if *on_dead {
+                    "**budget-dead**"
+                } else {
+                    "solved"
+                },
+            );
+        }
+        println!();
     }
 
     println!("## Per-bucket aggregate (Σoff / Σon)");

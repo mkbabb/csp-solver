@@ -29,13 +29,12 @@
 
 use wasm_bindgen::prelude::*;
 
+use csp_solver::domain::Domain;
 use csp_solver::ordering::Ordering;
-use csp_solver::puzzles::futoshiki::{
-    self, FutoshikiPuzzle, create_futoshiki_csp as build_futoshiki_csp,
-};
+use csp_solver::puzzles::futoshiki::{self, create_futoshiki_csp, validate_futoshiki};
 use csp_solver::{Pruning, SolveConfig};
 
-use crate::errors::{coded_error, domain_masks, flatten_solutions};
+use crate::errors::{board_total, coded_error, domain_masks, flatten_solutions};
 
 /// v1 Futoshiki board-size band. The frontend selector offers exactly
 /// these; a request outside the band is `INVALID_INPUT`, never a silent
@@ -181,63 +180,49 @@ impl FutoshikiPuzzleData {
     }
 }
 
-/// Validate the wire parts into a [`FutoshikiPuzzle`], rejecting a
-/// non-adjacent / out-of-range inequality pair with a coded
-/// `INVALID_INPUT` error (G3 wasm boundary) rather than solving it
-/// silently — a caret has no shared edge to render a non-adjacent pair on.
-/// Reuses the single Rust adjacency check ([`FutoshikiPuzzle::from_parts`])
-/// so the wasm boundary and the PyO3/HTTP boundary reject the exact same
-/// inputs.
-fn validated_puzzle(
+/// Decode the flat `[a0, b0, …]` inequality-pair buffer and validate the whole
+/// puzzle — the Futoshiki twin of `decode_cages` / `decode_thermometers`.
+///
+/// A non-adjacent or out-of-range pair rejects with a coded `INVALID_INPUT`
+/// error (G3 wasm boundary) rather than being solved silently: a caret has no
+/// shared edge to render a non-adjacent pair on. The check itself is the single
+/// Rust one ([`validate_futoshiki`]), so the wasm boundary and the PyO3/HTTP
+/// boundary reject the exact same inputs.
+fn decode_inequalities(
     board: &[u32],
     board_size: u32,
-    inequalities: &[u32],
-) -> Result<FutoshikiPuzzle, JsValue> {
-    let total = (board_size * board_size) as usize;
-    if board.len() != total {
-        return Err(coded_error(
-            "INVALID_INPUT",
-            &format!(
-                "board length {} does not match board_size² = {total} for board_size = {board_size}",
-                board.len()
-            ),
-        ));
-    }
-    if !inequalities.len().is_multiple_of(2) {
+    flat: &[u32],
+) -> Result<Vec<(usize, usize)>, JsValue> {
+    if !flat.len().is_multiple_of(2) {
         return Err(coded_error(
             "INVALID_INPUT",
             &format!(
                 "inequalities length {} is odd — expected a flat array of [a, b] pairs",
-                inequalities.len()
+                flat.len()
             ),
         ));
     }
-
-    let fixed_cells: Vec<(usize, u32)> = board
-        .iter()
-        .enumerate()
-        .filter(|&(_, &v)| v != 0)
-        .map(|(i, &v)| (i, v))
-        .collect();
     // The odd-length guard above means the remainder is empty; `as_chunks`
     // gives the complete `[a, b]` pairs with no per-element bounds checks.
-    let pairs: Vec<(usize, usize)> = inequalities
+    let pairs: Vec<(usize, usize)> = flat
         .as_chunks::<2>()
         .0
         .iter()
         .map(|&[a, b]| (a as usize, b as usize))
         .collect();
 
-    FutoshikiPuzzle::from_parts(board_size, fixed_cells, pairs)
-        .map_err(|e| coded_error(e.code(), &e.to_string()))
+    validate_futoshiki(board, board_size, &pairs)
+        .map_err(|e| coded_error(e.code(), &e.to_string()))?;
+
+    Ok(pairs)
 }
 
 /// Solve a flat, row-major Futoshiki board (`0` = blank) with a flat
 /// inequality-pair buffer.
 ///
-/// Uses the same AC-3 + MRV config the shipped native `solve_futoshiki` and
-/// PyO3 `solve_futoshiki` paths use — the F1 production override, not the
-/// pathological library default that cannot solve an empty N≥6 board.
+/// Uses the same AC-3 + MRV config the shipped native `solve_futoshiki` path
+/// uses — the F1 production override, not the pathological library default that
+/// cannot solve an empty N≥6 board.
 ///
 /// `node_budget` mirrors [`SolveConfig::node_budget`] — pass `None`/`0`
 /// (JS `undefined`) for the library default (1,000,000 nodes). When the
@@ -253,7 +238,8 @@ pub fn solve_futoshiki(
     max_solutions: Option<usize>,
     node_budget: Option<u32>,
 ) -> Result<FutoshikiSolveResult, JsValue> {
-    let puzzle = validated_puzzle(&board, board_size, &inequalities)?;
+    board_total(&board, board_size)?;
+    let pairs = decode_inequalities(&board, board_size, &inequalities)?;
 
     let config = SolveConfig {
         pruning: Pruning::Ac3,
@@ -263,17 +249,13 @@ pub fn solve_futoshiki(
         ..Default::default()
     };
 
-    let mut csp = build_futoshiki_csp(&puzzle);
-    // `solve_with_given` (feasibility-only) with an empty given — NOT `solve`.
-    // The fixed cells are already baked as `add_equals` constraints, so an
-    // empty given is behaviorally identical: both AC-3 the root then run
-    // `feasibility_search` over every variable (`Some(&[])` yields the same
-    // initial stack as `None`). Critically, `solve` also monomorphizes the
-    // branch-and-bound *optimization* arm (`ScoredSolution` sorts, `BranchBound`,
-    // `optimistic_bound`) — ~20 KB Futoshiki never runs but would drag into the
-    // lean wasm artifact and blow the size band. The sudoku wire takes this same
-    // feasibility-only path for the same reason.
-    let solutions = csp.solve_with_given(&config, &[]);
+    let (mut csp, given) = create_futoshiki_csp(&board, board_size, &pairs);
+    // `solve_with_given` (feasibility-only) — NOT `solve`, which also
+    // monomorphizes the branch-and-bound *optimization* arm (`ScoredSolution`
+    // sorts, `BranchBound`, `optimistic_bound`): ~20 KB Futoshiki never runs but
+    // would drag into the lean wasm artifact and blow the size band. Every
+    // sibling wire takes this same feasibility-only path for the same reason.
+    let solutions = csp.solve_with_given(&config, &given);
     let stats = csp.stats();
     let backtracks = stats.backtracks;
     let nodes_explored = stats.nodes_explored;
@@ -314,10 +296,8 @@ pub fn solve_futoshiki(
 /// One `u32` per cell (crosses as a `Uint32Array`); bit `v` is set iff
 /// value `v` (1-based) survives propagation. Values run 1..=board_size
 /// (≤ 7 in the v1 band), so the mask fits a `u32` with room. Fixed cells
-/// are baked into the CSP as `add_equals` constraints (see
-/// [`create_futoshiki_csp`](build_futoshiki_csp)), so the root AC-3
-/// fixpoint — the same one `solve_futoshiki` opens with — pins them to
-/// singleton masks with no explicit given-pinning step.
+/// are pinned from the board's given set (see [`create_futoshiki_csp`]) before
+/// the root AC-3 fixpoint — the same one `solve_futoshiki` opens with.
 ///
 /// A board whose filled cells are *contradictory* (propagation wipes some
 /// domain empty) throws a typed error (`instanceof Error`, `.code ===
@@ -330,9 +310,18 @@ pub fn propagate_futoshiki(
     board_size: u32,
     inequalities: Vec<u32>,
 ) -> Result<Vec<u32>, JsValue> {
-    let puzzle = validated_puzzle(&board, board_size, &inequalities)?;
+    board_total(&board, board_size)?;
+    let pairs = decode_inequalities(&board, board_size, &inequalities)?;
 
-    let mut csp = build_futoshiki_csp(&puzzle);
+    let (mut csp, given) = create_futoshiki_csp(&board, board_size, &pairs);
+
+    // Pin the givens: the same singleton restriction `solve_with_given` opens
+    // with (O(1) bitmask restrict; the removed-values iterator is dropped — the
+    // mutation is eager).
+    for (var, val) in &given {
+        let _ = csp.variables[*var as usize].domain.restrict_to(val);
+    }
+
     if csp.propagate().is_err() {
         return Err(coded_error(
             "UNSAT",

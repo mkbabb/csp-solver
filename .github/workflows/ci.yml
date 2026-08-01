@@ -496,7 +496,7 @@ jobs:
               # Ceiling drawn by the band's original convention — ~2.6% headroom
               # over the RUNNER-measured artifact (90,602→93,000 was the same draw):
               # runner measures 124,097 B at e6b19a4c, run 30719165442 (darwin
-              # measures 122,385 B at e961bdb7; toolchain delta +1,712 B — both
+              # measures 121,137 B at a3ada202; toolchain delta measured +1,712 B — both
               # halves re-measured this tranche) → fail >127,500 B. The band stays
               # put while the artifact moves; the run step prints what it measured.
               # A wire-dedup refactor banks with re-trigger: a sixth game, or any
@@ -595,7 +595,7 @@ jobs:
               run: |
                   set -euo pipefail
                   RAW=$(stat -c%s csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm)
-                  echo "lean artifact raw size: ${RAW} B (darwin measures 122,385 B at T5-W1; fail >127,500)"
+                  echo "lean artifact raw size: ${RAW} B (darwin measures 121,137 B at T5-W2; fail >127,500)"
                   if [ "$RAW" -gt 127500 ]; then
                     echo "::error::lean wasm artifact ${RAW} B exceeds the 127,500 B five-game band"
                     exit 1

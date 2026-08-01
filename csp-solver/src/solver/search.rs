@@ -26,15 +26,21 @@
 //!
 //! # Waiver: this file stays whole (CLOSED)
 //!
-//! At 504 LOC the module sits four lines over the file budget, and the two
-//! policies are visually fenced — a `BranchBound`-out split looks free. It
-//! isn't. `BranchBound` impls [`SearchPolicy`] and calls [`search`], so
-//! extracting it to a sibling module forces `trait SearchPolicy`, `fn search`,
-//! and likely `Step` — all currently private kernel internals — to widen to
-//! `pub(super)`. That re-widens three internals to buy a cosmetic file cut: an
-//! encapsulation regression inside an encapsulation pass. The single reason to
-//! change here is the one search skeleton; [`Feasibility`] and [`BranchBound`]
-//! are its co-designed leaves, not separable concerns. Waiver recorded, closed.
+//! The module is over the 500-line budget — **534 L** (`wc -l`, re-derived at
+//! T5-W2, this waiver included; 504 when the waiver was written, 516 at the T3
+//! ship, 528 before this re-derivation). The two policies are visually fenced,
+//! so a `BranchBound`-out split looks free. It isn't. `BranchBound` impls
+//! [`SearchPolicy`] and calls [`search`], so extracting it to a sibling module
+//! forces `trait SearchPolicy`, `fn search` and `enum Step` — the three private
+//! kernel internals below — to widen to `pub(super)`. That re-widens three
+//! internals to buy a cosmetic file cut: an encapsulation regression inside an
+//! encapsulation pass. The single reason to change here is the one search
+//! skeleton; [`Feasibility`] and [`BranchBound`] are its co-designed leaves,
+//! not separable concerns.
+//!
+//! The argument is a property of the module's shape, not of its length, so
+//! growth does not expire it — but the count is a citation and gets re-derived
+//! whenever this file is touched, never carried. Waiver recorded, closed.
 
 use smallvec::SmallVec;
 
