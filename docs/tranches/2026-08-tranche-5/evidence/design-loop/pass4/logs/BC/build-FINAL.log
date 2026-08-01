@@ -1,0 +1,70 @@
+
+> csp-solver-frontend@0.1.0 prebuild
+> npm run wasm
+
+
+> csp-solver-frontend@0.1.0 wasm
+> make -C ../../csp-solver/wasm wasm
+
+wasm-pack build --scope mkbabb --target web --profile wasm-release --no-default-features
+[INFO]: 🎯  Checking for the Wasm target...
+[INFO]: 🌀  Compiling to Wasm...
+    Finished `wasm-release` profile [optimized] target(s) in 0.03s
+[INFO]: found wasm-opt at "/opt/homebrew/bin/wasm-opt"
+[INFO]: Optimizing wasm binaries with `wasm-opt`...
+[INFO]: Optional field missing from Cargo.toml: 'repository'. This is not necessary, but recommended
+[INFO]: ✨   Done in 0.30s
+[INFO]: 📦   Your wasm pkg is ready to publish at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/wasm/pkg.
+rm -f pkg/.gitignore
+
+> csp-solver-frontend@0.1.0 build
+> vue-tsc -b && vite build
+
+vite v8.1.4 building client environment for production...
+
+ WARN  advancedChunks option is deprecated, please use codeSplitting instead.
+
+[2Ktransforming...✓ 259 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                      3.01 kB │ gzip:  1.23 kB
+dist/assets/firacode-subset-CbuNTc2aGjcY.woff2       3.62 kB
+dist/assets/patrickhand-subset-BqV1besB36ib.woff2    4.31 kB
+dist/assets/avatar-biqsjs3dzERf.png                  6.09 kB
+dist/assets/fraunces-subset-nWzWvP1GNv2C.woff2      13.78 kB
+dist/assets/solver.worker-DgkmWgoW.js               18.68 kB
+dist/assets/solver.worker-6NtqA_aI.js               18.74 kB
+dist/assets/solver.worker-C_UU4P8Y.js               18.77 kB
+dist/assets/solver.worker-BEnm5xkz.js               18.83 kB
+dist/assets/solver.worker-2vdKi-WA.js               18.88 kB
+dist/assets/csp_solver_wasm_bg-B_bsll75.wasm       122.38 kB │ gzip: 49.94 kB
+dist/assets/FutoshikiGame-D__Rgq4Xvkgq.css           0.25 kB │ gzip:  0.19 kB
+dist/assets/KenKenGame-DB8ip0IFmCma.css              0.26 kB │ gzip:  0.19 kB
+dist/assets/KillerGame-D3u6xLqLEf-R.css              0.26 kB │ gzip:  0.20 kB
+dist/assets/ThermoGame-BAuRBA-o1GQT.css              0.26 kB │ gzip:  0.20 kB
+dist/assets/FutoshikiPoster-C7OEgcLl464o.css         0.28 kB │ gzip:  0.16 kB
+dist/assets/PosterBoard-DDdWOzWzVgXD.css             0.39 kB │ gzip:  0.21 kB
+dist/assets/ThermoTube-GhMCOUSkuH3s.css              0.82 kB │ gzip:  0.27 kB
+dist/assets/AnswerKeyLaminate-Cih0GgPxHZT4.css       0.89 kB │ gzip:  0.40 kB
+dist/assets/KillerCage-CvKvElx6SB9c.css              0.98 kB │ gzip:  0.35 kB
+dist/assets/KenKenCage-C60rX2x-hE07.css              0.99 kB │ gzip:  0.35 kB
+dist/assets/index-DAK1q3g1ZgHV.css                  80.52 kB │ gzip: 16.00 kB
+dist/assets/ThermoPoster-DSusQB03IuPn.js             0.47 kB │ gzip:  0.35 kB
+dist/assets/SudokuPoster-n-jqaLiDJJHD.js             0.51 kB │ gzip:  0.34 kB
+dist/assets/KillerPoster-B5sXjfryjIvx.js             0.58 kB │ gzip:  0.37 kB
+dist/assets/KenKenPoster-D5nx8JOffASa.js             0.93 kB │ gzip:  0.45 kB
+dist/assets/ThermoTube-CCaymxUvBGFr.js               1.17 kB │ gzip:  0.72 kB
+dist/assets/FutoshikiPoster-9S7GbxFUpYfz.js          1.34 kB │ gzip:  0.83 kB
+dist/assets/KillerCage-C05Egbw1Hfkk.js               1.56 kB │ gzip:  0.93 kB
+dist/assets/KenKenCage-b8pnttKtw3GX.js               1.62 kB │ gzip:  0.96 kB
+dist/assets/PosterBoard-BtTejlDqPMJ2.js              2.34 kB │ gzip:  1.08 kB
+dist/assets/AnswerKeyLaminate-myPbF5Jr7kHE.js        2.49 kB │ gzip:  1.43 kB
+dist/assets/FutoshikiGame-CLqtYgx-wYC7.js            9.03 kB │ gzip:  3.36 kB
+dist/assets/animation-vendor-COmzXiBXjAdM.js        10.21 kB │ gzip:  4.24 kB
+dist/assets/KenKenGame-CXzWTrCwoCn8.js              12.03 kB │ gzip:  4.52 kB
+dist/assets/ThermoGame-BVFEVRImCFCp.js              12.25 kB │ gzip:  4.60 kB
+dist/assets/KillerGame-CNsEqXGx11xn.js              12.26 kB │ gzip:  4.65 kB
+dist/assets/vue-vendor-BEr3SFHdbMXO.js              83.82 kB │ gzip: 33.46 kB
+dist/assets/index-CePRW1yWbvW_.js                  238.95 kB │ gzip: 87.87 kB
+
+✓ built in 410ms

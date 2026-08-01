@@ -1,0 +1,739 @@
+  computed,
+  watch,
+import {
+  dealStaged,
+  publishMountedGame,
+  stageHandoff,
+  useStagedLedger,
+} from "@games/shared/useStagingBridge";
+
+// ── THE STAGING BRIDGE (T4-P1 F4) ──────────────────────────────────────────────────────
+// App names the MOUNTED game, because App already owns `?game=` and the page-turn seam — the
+// bridge transports, it never parses a second truth. `scene` IS the mounted id (it flips at the
+// seam, and synchronously for the gallery's cut), and `immediate` covers BOOT, deep links, and
+// the `?view=gallery` boot path — every entry the pass-1 `enterGallery`-only publish missed.
+watch(scene, (id) => publishMountedGame(id), { immediate: true });
+
+// The cross-game ledger, id-keyed: what each game is set to and whether a board waits there.
+// The mounted game writes its own row as it goes, so the picker reads ONE truth for all five
+// cards instead of dressing registry defaults as saved settings.
+const stagedLedger = useStagedLedger();
+const gallerySaved = computed(() => stagedLedger.value);
+
+// A deal is in flight — the band's verbs go inert until it lands (the double-deal guard the
+// pass-1 prototype documented on two components and never bound).
+const dealBusy = ref(false);
+
+/** THE FUSED TRANSACTION: pick a game AND its settings, deal once. Same game → the mounted
+ *  state's own `deal()` through the bridge (no remount, no second solver dispatch). Different
+ *  game → an id-keyed one-shot the incoming `useGameState` consumes BEFORE its init, so the
+ *  staged pair seeds that mount's single deal. Both paths unfold the picker exactly as a select
+ *  does — one choreography, no new durations. */
+async function onGalleryDeal(payload: {
+  id: string;
+  size: number | string;
+  difficulty: number | string;
+}) {
+  const pair = { size: Number(payload.size), difficulty: String(payload.difficulty) };
+  const sameGame = payload.id === game.value;
+  if (!sameGame) stageHandoff(payload.id, pair);
+  dealBusy.value = true;
+  unfoldToBoard(() => {
+    select();
+    setGame(payload.id, { cut: true });
+  });
+  try {
+    // The handoff path deals inside the incoming mount; only the same-game path has a live
+    // state to drive from here.
+    if (sameGame) await dealStaged(pair);
+  } finally {
+    dealBusy.value = false;
+  }
+}
+        :saved="gallerySaved"
+        :busy="dealBusy"
+        @deal="onGalleryDeal"
+      // T4-P1 F4: a drop-in also declares what the picker stages for it — its OWN selector
+      // options, the same two axes every shell carries.
+      staging: {
+        size: { label: "size", options: [{ value: 3, label: "3×3" }], default: 3 },
+        difficulty: {
+          label: "level",
+          options: [{ value: "EASY", label: "Easy" }],
+          default: "EASY",
+        },
+      },
+import {
+  sizeOptions,
+  difficultyOptions as sudokuDifficultyOptions,
+} from "@games/sudoku/ControlPanel/constants";
+import {
+  boardSizeOptions,
+  difficultyOptions as futoshikiDifficultyOptions,
+} from "@games/futoshiki/ControlPanel/constants";
+import {
+  sizeOptions as kenkenSizeOptions,
+  difficultyOptions as kenkenDifficultyOptions,
+} from "@games/kenken/ControlPanel/constants";
+/** One staging axis as the PICKER renders it — the game's own selector constants, erased to
+ *  presentation data (T4-P1 F4). `colorClass` is deliberately absent: the crayon tints are
+ *  scoped inside `GameControlPanel.vue`, so they are inert anywhere else until the AA ledger
+ *  is re-verified against `--color-card` (a standalone ship, not this seam's). */
+export interface StagingAxis {
+  label: string;
+  options: { value: number | string; label: string }[];
+  /** the value a game with no saved board is dealt at (its own composable's default). */
+  default: number | string;
+}
+
+/** The two axes every game in the estate carries. Not an `n`-axis schema: the shells have
+ *  exactly these two, and a third would be a slot the contract missed, not a config array. */
+export interface CardStaging {
+  size: StagingAxis;
+  difficulty: StagingAxis;
+}
+
+  /** what the picker STAGES for this game — the same constants its drawer selectors render. */
+  staging: CardStaging;
+// The three Sudoku-family rows stage off sudoku's OWN selector constants (the ratified
+// variant reuse — Thermo/Killer ARE Sudoku); futoshiki and kenken carry their own bands.
+// `default` mirrors each composable's DEFAULT_SIZE, the value a never-played game deals at.
+const sudokuStaging: CardStaging = {
+  size: { label: "size", options: sizeOptions, default: 3 },
+  difficulty: {
+    label: "level",
+    options: sudokuDifficultyOptions.map((o) => ({ value: o.value, label: o.label })),
+    default: "EASY",
+  },
+};
+
+  staging: sudokuStaging,
+  staging: {
+    size: { label: "size", options: boardSizeOptions, default: 5 },
+    difficulty: {
+      label: "level",
+      options: futoshikiDifficultyOptions.map((o) => ({
+        value: o.value,
+        label: o.label,
+      })),
+      default: "EASY",
+    },
+  },
+  staging: sudokuStaging,
+  staging: sudokuStaging,
+  staging: {
+    size: { label: "size", options: kenkenSizeOptions, default: 4 },
+    difficulty: {
+      label: "level",
+      options: kenkenDifficultyOptions.map((o) => ({ value: o.value, label: o.label })),
+      default: "EASY",
+    },
+  },
+import {
+  clearStagingSource,
+  consumeHandoff,
+  mountedGameId,
+  publishStagedLedger,
+  registerStagingSource,
+} from "./useStagingBridge";
+  // THE PICKER HANDOFF (T4-P1 F4) — consumed HERE, before init, id-keyed to this mount. A
+  // staged pair seeds the ONE mount deal (`canRestore` is ANDed with `!staged`, so a saved
+  // board is never resurrected only to be dealt over) — one solver dispatch, not two.
+  const staged = consumeHandoff(mountedGameId());
+  if (staged) {
+    solverSize.value = staged.size;
+    pendingSize.value = staged.size;
+    difficulty.value = staged.difficulty as TDiff;
+  }
+
+    !staged &&
+  // ── THE STAGING BRIDGE (T4-P1 F4) ────────────────────────────────
+  // Wired ONCE here, so all five games inherit it. Two directions:
+  //  · UP — the picker's live truth for THIS game (the staged pair + whether a board exists),
+  //    written on every settle: the ledger is what the other four cards read, so a card never
+  //    shows a fabricated default over a board the user actually left. `boardGeneration` covers
+  //    deal/clear/restore (every instant board-presence can change) without a deep `values`
+  //    watch — a user typing digits never rewrites the ledger.
+  //  · DOWN — a picker deal on the MOUNTED game: commit the pair, then the existing `deal()`
+  //    commit (arm-not-live is untouched; nothing new stages).
+  const stagedPair = computed(() => ({
+    size: pendingSize.value,
+    difficulty: String(difficulty.value),
+  }));
+  const stagingSource = {
+    pair: stagedPair,
+    deal: async (pair: { size: number; difficulty: string }) => {
+      pendingSize.value = pair.size;
+      difficulty.value = pair.difficulty as TDiff;
+      await deal();
+    },
+  };
+  registerStagingSource(stagingSource);
+  onUnmounted(() => clearStagingSource(stagingSource));
+  watch(
+    [pendingSize, difficulty, boardGeneration],
+    () => {
+      publishStagedLedger({
+        ...stagedPair.value,
+        board: Object.values(values.value).some((v) => v !== 0),
+      });
+    },
+    { immediate: true },
+  );
+
+  /** THE CROSS-GAME TRUTH (T4-P1 F4) — supplied only for a card with a SAVED board: the
+   *  sub-line then reports what is waiting there instead of the range of sizes on offer.
+   *  Absent → the range line, byte-unchanged. Every card tells you the same thing it can. */
+  subline?: string;
+  if (props.subline) return props.subline;
+import StagingBand from "./StagingBand.vue";
+import type { GalleryCard, GallerySaved } from "./types";
+  /** THE CROSS-GAME TRUTH (T4-P1 F4) — id-keyed: the settings each game was last left at and
+   *  whether a board is saved there. App assembles it from the staging bridge's ledger; a card
+   *  with no entry is a game never played, and the band reads "new" instead of dressing a
+   *  registry default as the board you left. */
+  saved?: Record<string, GallerySaved>;
+  /** A deal is in flight — the band's verbs go inert (double-deal guard). App PASSES this;
+   *  the pass-1 prototype declared the same prop and never bound it. */
+  busy?: boolean;
+  /** THE SECOND VERB (T4-P1 F4): deal THIS game a fresh board at THESE staged settings — the
+   *  fused transaction. `select` stays exactly what it was (visit: restore what was there). */
+  (
+    e: "deal",
+    payload: { id: string; size: number | string; difficulty: number | string },
+  ): void;
+// WHICH VERB the ribbon is confirming (T4-P1 F4). ONE ribbon, two intents: `select` is Wave D's
+// switch verbatim, `deal` routes the picker's destructive verb through the SAME confirmation
+// instead of minting a second idiom. A cross-game deal on a dirty board used to announce only
+// the new board and abandon the old marks silently; now the ribbon speaks first, always.
+const guardIntent = ref<"select" | "deal">("select");
+    guardIntent.value = "select";
+
+// ── THE STAGING BAND's state (T4-P1 F4) ──
+// The picked pair per card, held HERE (the band is a renderer). Unpicked cards fall back to the
+// cross-game ledger — what that game was actually left at — and only then to the registry
+// default, so the chips are never a fiction. Seeding is READ-ONLY (a computed that mutates
+// nothing), so no render-time write, no feedback loop.
+const picks = reactive<Record<string, { size: number | string; difficulty: number | string }>>(
+  {},
+);
+const activeCard = computed(() => props.cards[activeIndex.value] ?? null);
+const activeSaved = computed(() =>
+  activeCard.value ? (props.saved?.[activeCard.value.id] ?? null) : null,
+);
+const activePick = computed(() => {
+  const card = activeCard.value;
+  if (!card) return null;
+  const picked = picks[card.id];
+  const saved = props.saved?.[card.id];
+  return {
+    size: picked?.size ?? saved?.size ?? card.staging.size.default,
+    difficulty: picked?.difficulty ?? saved?.difficulty ?? card.staging.difficulty.default,
+  };
+});
+/** A card with a SAVED board reports it on its own sub-line — the flanks carry the truth too,
+ *  so the deck answers "where did I leave off?" without a select. No entry → the range line. */
+function sublineFor(card: GalleryCard): string | undefined {
+  const s = props.saved?.[card.id];
+  if (!s?.board) return undefined;
+  const size = card.staging.size.options.find((o) => o.value === s.size)?.label ?? s.size;
+  const level =
+    card.staging.difficulty.options.find((o) => o.value === s.difficulty)?.label ??
+    s.difficulty;
+  return `${size} ${String(level).toLowerCase()} · in progress`;
+}
+
+function onPick(axis: "size" | "difficulty", value: number | string) {
+  const card = activeCard.value;
+  const pair = activePick.value;
+  if (!card || !pair) return;
+  picks[card.id] = { ...pair, [axis]: value };
+}
+
+/** The DEAL verb. Destructive on any dirty board — same game (deals over your marks) or
+ *  different (abandons them) — so it goes through the ribbon in both cases, on every pointer. */
+function attemptDeal() {
+  const card = activeCard.value;
+  const pair = activePick.value;
+  if (!card || !pair || props.busy || guardIndex.value !== null) return;
+  if (props.dirty) {
+    guardIntent.value = "deal";
+    guardIndex.value = activeIndex.value;
+    return;
+  }
+  emit("deal", { id: card.id, ...pair });
+}
+
+/** The ribbon's confirm — it resolves whichever verb armed it. */
+  const intent = guardIntent.value;
+  if (!card) return;
+  if (intent === "deal") {
+    const pair = activePick.value;
+    if (pair) emit("deal", { id: card.id, ...pair });
+    return;
+  }
+  emit("select", card.id);
+    case "d":
+    case "D":
+      // The deal verb from the keyboard, for a listbox user whose focus never leaves the
+      // viewport. No visible hint on the band: a rendered "d" is a lie on touch. `g` (App) and
+      // `k` (the answer-key peek) are the only other single-letter globals; `d` was free.
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      e.preventDefault();
+      attemptDeal();
+      return;
+            :subline="sublineFor(card)"
+    <!-- THE STAGING BAND (T4-P1 F4) — the order slip for the ACTIVE card. A SIBLING of the
+         listbox, never a descendant of `role="option"`: the deck keeps its
+         aria-activedescendant contract and one band serves five cards, so no flank ever mounts
+         a control it will not paint. Bound to the active card; the box is reserved in CSS. -->
+    <StagingBand
+      v-if="activeCard && activePick"
+      :name="activeCard.name"
+      :staging="activeCard.staging"
+      :size="activePick.size"
+      :difficulty="activePick.difficulty"
+      :saved="activeSaved"
+      :busy="busy || guardIndex !== null"
+      @pick="onPick"
+      @resume="attemptSelect"
+      @deal="attemptDeal"
+    />
+
+         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches.
+         T4-P1 F4: the SAME ribbon now also confirms the picker's deal verb — one idiom, its
+         copy keyed to the intent, `.guard-keep`/`.guard-leave` unchanged as the act hooks. -->
+        :aria-label="guardIntent === 'deal' ? 'Deal a new board?' : 'Leave this puzzle?'"
+              {{
+                guardIntent === "deal" ? "deal over this puzzle?" : "leave this puzzle?"
+              }}<br /><span class="guard-note-sub">your marks aren't saved</span>
+                {{ guardIntent === "deal" ? "deal" : "leave" }}
+  /** what the staging band offers for this card — the structural twin of the registry's
+   *  `CardStaging` (the same `GalleryCard` trick: pencil declares the shape it consumes and
+   *  the richer registry row assigns straight in). */
+  staging: GalleryStaging;
+
+/** One staging axis, as presentation data. */
+export interface GalleryAxis {
+  label: string;
+  options: { value: number | string; label: string }[];
+  default: number | string;
+}
+
+export interface GalleryStaging {
+  size: GalleryAxis;
+  difficulty: GalleryAxis;
+}
+
+/** THE CROSS-GAME TRUTH (T4-P1 F4): what the app knows about each card's saved board. App
+ *  hands this down id-keyed; a card with NO entry is a game that has never been played, and
+ *  the band says so ("new") rather than dressing a registry default as your saved settings. */
+export interface GallerySaved {
+  size: number | string;
+  difficulty: number | string;
+  /** a restorable board exists — the band's `resume` vs `start` verb. */
+  board: boolean;
+}
+import { ref, shallowRef, type ComputedRef, type Ref } from "vue";
+
+/**
+ * THE STAGING BRIDGE (T4-P1 F4) — the picker↔game transport for "deal me THIS game at THESE
+ * settings", plus the cross-game ledger the picker reads its truth from. A module-level
+ * singleton on the `useDirtyBoard` register/identity-clear pattern.
+ *
+ * EVERYTHING HERE IS A `ref`. The pass-1 prototype held this state in plain module `let`s and
+ * read it through a `computed` — a computed over non-reactive state evaluates once and never
+ * invalidates, so the picker could never see a publish. Refs are the whole fix, and
+ * `useDirtyBoard` is the shipped precedent (`dirty` IS a ref).
+ *
+ * THREE SEAMS, one each:
+ *   1. `publishMountedGame` — App owns `?game=` and the scene seam, so App names the mounted
+ *      game; the bridge never parses a URL (no second truth). Published at BOOT and on every
+ *      game change (the pass-1 `enterGallery`-only publish left deep-links and `?view=gallery`
+ *      boots with a dead bridge).
+ *   2. `registerStagingSource` / `dealStaged` — the MOUNTED game hands up its live pair and its
+ *      deal act; a same-game picker deal rides this, no remount.
+ *   3. `stageHandoff` / `consumeHandoff` — the one-shot for the four lazy games, ID-KEYED.
+ *      Sizes are bare numbers with per-game meaning (sudoku 3 = 9×9, kenken 4 = 4×4), so an
+ *      unkeyed arm consumed by whichever game mounted next produced a wrong-size board. The key
+ *      closes it, and the arm is cleared by ANY mount — a mis-routed arm cannot outlive one
+ *      mount, so there is no TTL, no clock, and no silent expiry fallback.
+ */
+
+/** A staged pair: the game's OWN raw selector size (sudoku 3 = 9×9; kenken 4 = 4×4) + tier. */
+export interface StagedPair {
+  size: number;
+  difficulty: string;
+}
+
+/** A ledger row: the settings a game was last left at, and whether a board sits on disk. */
+export interface StagedLedgerEntry extends StagedPair {
+  /** a restorable board exists for this game — the picker's `resume` vs `start` truth. */
+  board: boolean;
+}
+
+const hasDom = typeof window !== "undefined";
+const LEDGER_KEY = "staging-ledger-v1";
+
+// ── 1 · The mounted game's identity (App publishes; the bridge transports) ──────────────
+const mountedId = ref<string | null>(null);
+
+/** App publishes the MOUNTED game id — at boot and at every scene change. */
+export function publishMountedGame(id: string | null): void {
+  mountedId.value = id;
+}
+
+/** The mounted game id, read by `useGameState` at setup to key its handoff + its ledger row. */
+export function mountedGameId(): string | null {
+  return mountedId.value;
+}
+
+// ── 2 · The mounted game's live pair + its deal act ─────────────────────────────────────
+interface StagingSource {
+  pair: ComputedRef<StagedPair> | Ref<StagedPair>;
+  deal: (pair: StagedPair) => Promise<void>;
+}
+// `shallowRef`: the holder is a slot, not a reactive graph — deep-unwrapping the source's own
+// `pair` computed would both flatten the identity guard's type and re-wrap what is already
+// reactive. The picker never reads through here; it reads the ledger.
+const source = shallowRef<StagingSource | null>(null);
+
+export function registerStagingSource(s: StagingSource): void {
+  source.value = s;
+}
+
+/** Identity-guarded (mount-before-unmount ordering during a swap — `useDirtyBoard`'s rule). */
+export function clearStagingSource(s: StagingSource): void {
+  if (source.value === s) source.value = null;
+}
+
+/** Apply a staged pair to the MOUNTED game and deal it. `false` = no game mounted to deal into
+ *  (the caller then has nothing to await — never a silent success). */
+export async function dealStaged(pair: StagedPair): Promise<boolean> {
+  const s = source.value;
+  if (!s) return false;
+  await s.deal(pair);
+  return true;
+}
+
+// ── 3 · The one-shot, ID-KEYED handoff (the four lazy games) ────────────────────────────
+const handoff = ref<{ id: string; pair: StagedPair } | null>(null);
+
+export function stageHandoff(id: string, pair: StagedPair): void {
+  handoff.value = { id, pair };
+}
+
+/** Consumed at the incoming game's setup, BEFORE its init — so the staged pair seeds the one
+ *  mount deal instead of racing a second one. Cleared unconditionally: a wrong-id arm dies at
+ *  the first mount rather than lying in wait. */
+export function consumeHandoff(id: string | null): StagedPair | null {
+  const h = handoff.value;
+  handoff.value = null;
+  return h && h.id === id ? h.pair : null;
+}
+
+// ── THE CROSS-GAME LEDGER ──────────────────────────────────────────────────────────────
+// The picker shows five cards and can only ever mount one game, so "what is futoshiki set to,
+// and does it have a board?" has no live answer. Each game persists its board under its OWN
+// storage key in its OWN shape (five codecs), so the picker cannot read them without importing
+// five games. The ledger is the one shared row the mounted game writes as it goes: settings +
+// board-presence, id-keyed, one key. A card with no row says "new" — never a fabricated default
+// presented as the board you left.
+function readLedger(): Record<string, StagedLedgerEntry> {
+  if (!hasDom) return {};
+  try {
+    const raw = window.localStorage.getItem(LEDGER_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: Record<string, StagedLedgerEntry> = {};
+    for (const [id, v] of Object.entries(parsed as Record<string, unknown>)) {
+      const e = v as Partial<StagedLedgerEntry>;
+      if (typeof e?.size === "number" && typeof e?.difficulty === "string")
+        out[id] = { size: e.size, difficulty: e.difficulty, board: e.board === true };
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+const ledger = ref<Record<string, StagedLedgerEntry>>(readLedger());
+
+/** The mounted game publishes its row (settings + board presence). Keyed by the mounted id. */
+export function publishStagedLedger(entry: StagedLedgerEntry): void {
+  const id = mountedId.value;
+  if (!id) return;
+  const prev = ledger.value[id];
+  if (
+    prev &&
+    prev.size === entry.size &&
+    prev.difficulty === entry.difficulty &&
+    prev.board === entry.board
+  )
+    return;
+  ledger.value = { ...ledger.value, [id]: entry };
+  if (!hasDom) return;
+  try {
+    window.localStorage.setItem(LEDGER_KEY, JSON.stringify(ledger.value));
+  } catch {
+    // best-effort, exactly like every per-game persist in the estate
+  }
+}
+
+/** The picker's read side — reactive, so a deal updates the chips without a remount. */
+export function useStagedLedger(): Readonly<Ref<Record<string, StagedLedgerEntry>>> {
+  return ledger;
+}
+<script setup lang="ts">
+/**
+ * StagingBand — the order slip under the deck (T4-P1 F4).
+ *
+ * A new game is ONE transaction, and it lives in the picker: the card you are pointing at names
+ * the game, this slip names the board. Size + level as chips in the estate's own `OptionSelector`
+ * grammar, one line of truth about what is already saved there, and the two verbs the picker has
+ * always had — one of which had no mark at all until now.
+ *
+ * WHY IT IS NOT ON THE CARD. The deck is an `aria-activedescendant` listbox: DOM focus lives on
+ * the viewport and options carry no tab stops, so chips and buttons inside a `role="option"` are
+ * a broken listbox (APG forbids interactive descendants of `option`) AND unreachable for screen
+ * readers. Hoisting the staging OUT of the deck — a band bound to the ACTIVE card, sibling to the
+ * viewport exactly as the guard ribbon is — fixes the contract, and takes three other defects
+ * with it: no five-instance flank reservation (so no `HandDrawnOutline` stamp frames baking four
+ * pose paths each for boxes `visibility:hidden` guarantees never paint), no blank lower third on
+ * the flank cards, and one control per axis instead of five.
+ *
+ * THE SOUL GATE. One `HandDrawnOutline` at `:pose="0"` — frozen, enrolling NO beat (the flank
+ * idiom). The chips ride `boilFrame: 0`, so their scribble underlines are a static raster, not a
+ * per-beat filter write. Nothing here paints at rest.
+ *
+ * THE TWO VERBS, both marked. `resume`/`start` restores what was; `deal` replaces it. The pass-1
+ * card put the destructive verb on the only button on screen and left the safe one an unlabelled
+ * click on the card body — an uninstructed reader was taught "the button wipes your board". Here
+ * both are words, side by side, reading order safe-first, with the state line above saying what
+ * `resume` would give you back. `deal` carries the heavier border (the ribbon's `guard-leave`
+ * ink) because it is the picker's headline act; it is not the only one.
+ *
+ * Pencil purity: props in, intents out. `staging` and `saved` are plain presentation data App
+ * assembles from the registry + the staging bridge; nothing here imports `games/**`.
+ */
+import { computed } from "vue";
+import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
+import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
+import type { GallerySaved, GalleryStaging } from "./types";
+
+const props = defineProps<{
+  /** The ACTIVE card's name — the band is bound to it, so it says whose slip this is. */
+  name: string;
+  staging: GalleryStaging;
+  /** The active card's picked pair (the gallery owns the state; the band renders it). */
+  size: number | string;
+  difficulty: number | string;
+  /** What is saved for THIS game, or null = never played (the band says "new"). */
+  saved: GallerySaved | null;
+  /** A deal is in flight, or the guard ribbon is armed on this card — both verbs go inert. */
+  busy?: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: "pick", axis: "size" | "difficulty", value: number | string): void;
+  (e: "resume"): void;
+  (e: "deal"): void;
+}>();
+
+/** The safe verb NAMES what it does — and IS the state line. A saved board is resumed, a game
+ *  never played is started. The card's own sub-line already reports what is waiting there, so
+ *  the band does not print it twice; the verb pair carries the whole distinction. */
+const safeVerb = computed(() => (props.saved?.board ? "resume" : "start"));
+</script>
+
+<template>
+  <div class="staging-band">
+    <HandDrawnOutline :pose="0" :stroke-width="3" :outset="4">
+      <div class="staging-slip bg-card edge-outlined">
+        <div class="staging-axes">
+          <div class="staging-axis">
+            <span class="staging-axis-label">{{ staging.size.label }}</span>
+            <OptionSelector
+              :options="staging.size.options"
+              :selected="size"
+              :boil-frame="0"
+              mobile
+              @change="(v) => emit('pick', 'size', v)"
+            />
+          </div>
+          <div class="staging-axis">
+            <span class="staging-axis-label">{{ staging.difficulty.label }}</span>
+            <OptionSelector
+              :options="staging.difficulty.options"
+              :selected="difficulty"
+              :boil-frame="0"
+              mobile
+              @change="(v) => emit('pick', 'difficulty', v)"
+            />
+          </div>
+        </div>
+
+        <div class="staging-verbs">
+          <button
+            type="button"
+            class="staging-btn staging-safe"
+            :disabled="busy"
+            :aria-label="`${safeVerb} ${name}`"
+            @click.stop="emit('resume')"
+          >
+            {{ safeVerb }}
+          </button>
+          <button
+            type="button"
+            class="staging-btn staging-deal"
+            :disabled="busy"
+            :aria-label="`deal a new ${name} board`"
+            @click.stop="emit('deal')"
+          >
+            deal
+          </button>
+        </div>
+      </div>
+    </HandDrawnOutline>
+  </div>
+</template>
+
+<style scoped>
+/* THE RESERVATION. The band's box is held by CSS, not by five mounted instances: the slip keeps
+   its height as the content swaps card to card (3 size chips vs 4, `resume` vs `start`), so the
+   deck above and the pips between never shift on a snap — and `HandDrawnOutline`'s
+   ResizeObserver never re-bakes its four pose paths mid-gesture. */
+.staging-band {
+  width: min(100%, 26rem);
+  align-self: center;
+}
+
+.staging-slip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.7rem 0.85rem 0.75rem;
+  border-radius: 0.75rem;
+  min-height: var(--staging-reserve, 10.5rem);
+}
+
+.staging-axes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.staging-axis {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The chips are INPUTS, not the headline. The shared selector steps up to 1.375rem at md —
+   which on the deck made the options louder than the acts they feed, the exact rank inversion
+   the picker is being fixed for. Pinned to the body rung here, so the verbs lead. */
+.staging-axis :deep(.ctrl-btn) {
+  font-size: 1rem;
+}
+
+/* The axis name in the hand register, muted and small — a caption on the chips, never a
+   sixth display-caps heading (the estate's own indicted grammar). */
+.staging-axis-label {
+  font-family: var(--font-hand);
+  font-size: 0.9rem;
+  line-height: 1;
+  color: var(--color-muted-foreground);
+  min-width: 2.6rem;
+  text-align: left;
+}
+
+/* The chips fill the rest of the row and stay left-aligned under their label. */
+.staging-axis :deep(.options-row) {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  padding: 0.15rem 0;
+}
+
+/* Coarse-pointer target floor — the estate's ≥44px convention (`.icon-btn`, the peek surface).
+   The shared `.ctrl-btn` is a 36px fine-pointer control; the band promotes chips to the primary
+   staging act on touch, so it pays the target cost HERE rather than widening every drawer. */
+@media (pointer: coarse) {
+  .staging-axis :deep(.ctrl-btn) {
+    min-height: 44px;
+  }
+}
+
+.staging-verbs {
+  display: flex;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: auto;
+}
+
+/* The verb grammar is the guard ribbon's, one surface up: a plain hand-written word in a soft
+   rounded border. Same size, same family, both named — the reader compares two words, not a
+   button against an absence. */
+.staging-btn {
+  font-family: var(--font-hand);
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 0.42rem 1.1rem;
+  min-height: 2.5rem;
+  border-radius: 0.45rem;
+  border: 2px solid color-mix(in srgb, var(--color-foreground) 30%, transparent);
+  background: transparent;
+  color: var(--color-foreground);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* `deal` is the picker's headline act, so it takes the ribbon's heavier ink — the SAME
+   weight the estate already gives its consequential verb. It is louder than `resume`; it is
+   not alone, and it is not the only thing on the slip with a border. */
+.staging-deal {
+  border-color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+  background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+}
+
+.staging-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.staging-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+@media (pointer: coarse) {
+  .staging-btn {
+    min-height: 44px;
+    padding-inline: 1.1rem;
+  }
+}
+
+/* Wide enough to set the slip as a row: the two axis lines stack on the left, the two verbs
+   stand together on the right at the slip's optical center. The chip rows keep their own width
+   (a side-by-side pair of axes wrapped at 3 chips and broke the reading order). */
+@media (min-width: 40rem) {
+  .staging-band {
+    width: min(100%, 32rem);
+  }
+
+  .staging-slip {
+    flex-direction: row;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.8rem 1rem;
+    min-height: var(--staging-reserve, 7rem);
+  }
+
+  .staging-verbs {
+    margin-top: 0;
+  }
+}
+</style>

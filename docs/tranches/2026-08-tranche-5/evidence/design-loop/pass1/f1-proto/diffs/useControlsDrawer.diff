@@ -1,0 +1,63 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/src/games/shared/useControlsDrawer.ts	2026-07-15 12:31:05
++++ /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/design-loop/pass1/f1-proto/real-diffs/useControlsDrawer.f1.ts	2026-07-31 03:33:18
+@@ -24,7 +24,9 @@
+  * counter-scale — rides one `element.animate()` with explicit [from, to] keyframes
+  * (`composite: replace`, `fill: none`): explicit keyframes have no "previous
+  * committed style", so the phantom-teleport class of bug (an intermediate recalc
+- * captured as a transition base) is structurally unreachable. ONE glass curve
++ * captured as a transition base) is structurally unreachable. F1 adds a FIFTH mover —
++ * the per-move toolbar strip on the board's left flank, counter-scaled exactly as the
++ * tab is; the roster is board+tab sheet, case, masthead, tab, toolbar. ONE glass curve
+  * (MOTION.curves.drawerGlide — §3-S3′, the audit-4 owner ruling: swift attack,
+  * long fluid settle, zero overshoot), one clock, zero stagger — sheet and case
+  * read as one solid. The geometry is the audit-2 fiction (§3-S5): the case rests
+@@ -119,6 +121,11 @@
+   panel: HTMLElement | null;
+   /** The pull-tab button — focus home on close. */
+   tab: HTMLElement | null;
++  /** F1 — `.game-toolbar`, the per-move strip on the board's LEFT flank (≥1280). Same
++   *  counter-scale contract as the tab: it lives inside the host, so the host's FLIP scale
++   *  would stretch its box; a fifth mover divides that back out. Null when a game mounts
++   *  none, and skipped below when it is in its fixed-tray pose (<1280). */
++  toolbar: HTMLElement | null;
+ }
+ 
+ interface DrawerMastheadEls {
+@@ -180,6 +187,7 @@
+   const host = scene.host!;
+   const rail = scene.rail!;
+   const tab = scene.tab;
++  const toolbar = scene.toolbar;
+   const mast = getMasthead?.() ?? null;
+   const block = mast?.block ?? null;
+   const anchor = mast?.anchor ?? null;
+@@ -234,6 +242,29 @@
+       to: "translateY(-50%) scale(1)",
+     });
+   }
++  // F1 — the per-move toolbar: the tab's mover mirrored onto the LEFT flank. Identical
++  // contract (host × strip ≈ 1 across the curve), one difference — the origin is the strip's
++  // RIGHT edge, the seam that faces the board, so the 0.75rem gutter reads pinned instead of
++  // breathing symmetrically about the strip's center. Same glass curve, same clock, no new
++  // keyframe grammar; absent when a game mounts no toolbar.
++  //
++  // THE POSITION GATE is load-bearing, not defensive: the drawer regime starts at 1024 but the
++  // toolbar's STRIP pose starts at 1280 (measured — see GameToolbar.vue), so between those two
++  // widths the element is a `position: fixed` viewport tray that rides no host transform.
++  // Animating it would drag the tray sideways every gesture. One computed-style read, once per
++  // glide, on an element the gesture already forced layout for.
++  //
++  // MEASURED: max |1 − (host × strip)| = 0.19%, strip-width drift ≤ 0.13px over two full
++  // open/close cycles at 1280×800 / 1440×900 / 1920×1080, chromium AND webkit (measure-c.mjs).
++  if (toolbar && getComputedStyle(toolbar).position === "absolute") {
++    const hostScale = firstH.width / lastH.width;
++    specs.push({
++      el: toolbar,
++      from: `translateY(-50%) scale(${1 / hostScale})`,
++      to: "translateY(-50%) scale(1)",
++      transformOrigin: "100% 50%",
++    });
++  }
+   // The masthead: the h1 glides anchored on the wordmark's center-bottom in the TARGET
+   // layout's box (the h1 spans the full group width — its own center is not the
+   // wordmark's), so the measured wordmark rect maps first → last exactly.

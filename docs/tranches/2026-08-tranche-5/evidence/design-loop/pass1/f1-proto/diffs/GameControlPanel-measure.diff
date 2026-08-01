@@ -1,0 +1,50 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/src/games/shared/GameControlPanel.vue	2026-07-15 10:58:22
++++ /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/design-loop/pass1/f1-proto/real-diffs/GameControlPanel.f1-measure.vue	2026-07-31 03:19:35
+@@ -424,11 +424,15 @@
+          clear/share). -->
+     <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); one
+          component, both games. Arms the user-mark authoring seam on the frozen native input. -->
+-    <PencilModeToggle v-model:mode="pencilMode" mobile />
++    <!-- F1 SLICE 3 (measurement scaffolding, NOT the rewrite): the three preference/
++         per-move rows the family re-homes are struck here so the card's real content height is
++         measurable against the shipped cap. The rewrite DELETES these mounts outright. -->
++    <PencilModeToggle v-if="false" v-model:mode="pencilMode" mobile />
+ 
+     <!-- Board assists (T4-W8 ROW 2 + ROW 3) — the error-check mode + persistent candidates; one
+          shared component, both games. Same segmented-control grammar as Marks / Size / Difficulty. -->
+     <AssistSettings
++      v-if="false"
+       :error-check-mode="errorCheckMode"
+       v-model:candidates-pinned="candidatesPinned"
+       mobile
+@@ -494,7 +498,7 @@
+          keeps its keys + legend, so this row is display:none on a fine pointer and never
+          disturbs that presentation. Same .icon-btn grammar as the action row above (44px
+          floor + written sublabel on coarse). -->
+-    <div class="play-controls">
++    <div v-if="false" class="play-controls">
+       <button
+         @click="onUndo()"
+         :disabled="loading"
+@@ -598,10 +602,11 @@
+     <!-- LIVE zone — acts on the CURRENT board. -->
+     <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); the
+          desktop twin of the mobile mount above. One component, both games. -->
+-    <PencilModeToggle v-model:mode="pencilMode" />
++    <PencilModeToggle v-if="false" v-model:mode="pencilMode" />
+ 
+     <!-- Board assists (T4-W8 ROW 2 + ROW 3) — the desktop twin of the mobile mount above. -->
+     <AssistSettings
++      v-if="false"
+       :error-check-mode="errorCheckMode"
+       v-model:candidates-pinned="candidatesPinned"
+       @update:error-check-mode="emit('update:errorCheckMode', $event)"
+@@ -675,7 +680,7 @@
+     <!-- Play tools (T4-WM §2) — coarse-only, so a fine desktop shows the legend below
+          (a keyboard is implied) and a coarse iPad in this row-regime gets the tappable
+          undo / redo / hint instead. The two are mutually exclusive by pointer media. -->
+-    <div class="play-controls">
++    <div v-if="false" class="play-controls">
+       <button
+         @click="onUndo()"
+         :disabled="loading"

@@ -1,0 +1,62 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/src/games/shared/GameScene.vue	2026-07-15 14:04:06
++++ /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/design-loop/pass1/f1-proto/real-diffs/GameScene.f1.vue	2026-07-31 03:17:52
+@@ -40,6 +40,12 @@
+ const railEl = ref<HTMLElement | null>(null);
+ const panelEl = ref<HTMLElement | null>(null);
+ const drawerTab = ref<InstanceType<typeof DrawerTab> | null>(null);
++// F1 — the per-move toolbar's element, handed to the drawer so its fifth counter-scale
++// mover can hold the strip's width constant across the glide (the tab's own trick, mirrored
++// on the opposite flank). The scene doesn't own the toolbar — the GAME mounts it through the
++// `#toolbar` slot below — so this ref rides the slot wrapper, not a component instance: one
++// ref, n games, no per-game plumbing.
++const toolbarEl = ref<HTMLElement | null>(null);
+ let unregisterDrawer: (() => void) | null = null;
+ onMounted(() => {
+   unregisterDrawer = registerDrawerScene(() => ({
+@@ -47,6 +53,10 @@
+     rail: railEl.value,
+     panel: panelEl.value,
+     tab: (drawerTab.value?.el as HTMLElement | undefined) ?? null,
++    // `firstElementChild` because the slot wrapper is a plain layout div; the toolbar the
++    // game mounts inside it is the element that actually parks on `transform`. Null when a
++    // game mounts no toolbar — the mover list is built conditionally, so that's a no-op.
++    toolbar: (toolbarEl.value?.firstElementChild as HTMLElement | null) ?? null,
+   }));
+ });
+ onUnmounted(() => unregisterDrawer?.());
+@@ -73,6 +83,15 @@
+              inside the peek host so it rides the glide, outside the board wrapper's
+              containment (§2 P2). ≥1024 only (its own display gate). -->
+         <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
++        <!-- F1 — the PER-MOVE stratum (`GameToolbar`), mounted by the game. Inside the peek
++             host on purpose: it rides the drawer glide's host transform and the gallery's
++             Teleport with the board, exactly as the tab does, and the `.in-live-face` kill
++             rule below strikes it from a card face with one selector. The wrapper is a bare
++             div (`display: contents` would break `firstElementChild` measurement, so it
++             stays a zero-box layout node). -->
++        <div ref="toolbarEl" class="toolbar-slot">
++          <slot name="toolbar" />
++        </div>
+       </div>
+     </Teleport>
+ 
+@@ -126,4 +145,19 @@
+ .board-peek-host.in-live-face :deep(.drawer-tab) {
+   display: none;
+ }
++
++/* F1 — nor the per-move toolbar. A gallery card face is a PREVIEW: the board travels, the
++   tools stay behind in the playing scene. One rule, the tab's precedent verbatim. */
++.board-peek-host.in-live-face :deep(.game-toolbar) {
++  display: none;
++}
++
++/* The slot wrapper contributes no box — the toolbar inside it is absolutely positioned
++   (≥lg) or fixed (<lg), so the wrapper must never widen the host and break the board's
++   shrink-wrap (the answer-key laminate's `inset: 0` depends on it). */
++.toolbar-slot {
++  display: block;
++  width: 0;
++  height: 0;
++}
+ </style>

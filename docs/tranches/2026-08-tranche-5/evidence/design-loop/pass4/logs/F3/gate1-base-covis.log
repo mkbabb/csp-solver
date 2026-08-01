@@ -1,0 +1,68 @@
+
+Running 6 tests using 6 workers
+
+  ✓  1 e2e/board-covisibility.spec.ts:180:3 › mark 6 — the band dissolves › the grade crests on the board — the celebration never moves the page (355ms)
+  ✓  2 e2e/board-covisibility.spec.ts:78:3 › mark 6 — the band dissolves › the strip below the board is one reserved line (369ms)
+  ✓  3 e2e/board-covisibility.spec.ts:55:3 › mark 6 — the band dissolves › the tally files with the deal, and the strip it left can still be seen (376ms)
+  ✓  5 e2e/board-covisibility.spec.ts:226:3 › the board fits the viewport it is drawn in › a landscape phone gets a board it can see, not one it must scroll (413ms)
+  ✘  4 e2e/board-covisibility.spec.ts:107:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width (491ms)
+  ✘  6 e2e/board-covisibility.spec.ts:256:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit (1.6s)
+
+
+  1) e2e/board-covisibility.spec.ts:107:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 1
+
+    - Array [
+    -   "strip",
+    - ]
+    + Array []
+
+      156 |       );
+      157 |
+    > 158 |     expect(await paints()).toEqual(["strip"]);
+          |                            ^
+      159 |     // …and the grade did not move the strip it prints in: the line was reserved before the
+      160 |     // solve and the voice stands down INTO it, rather than taking the block out of flow.
+      161 |     expect(await strip()).toBe(beforeStrip);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:158:28
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-mark-6--4e1a3-exactly-once-at-every-width/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-mark-6--4e1a3-exactly-once-at-every-width/error-context.md
+
+  2) e2e/board-covisibility.spec.ts:256:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit 
+
+    Error: expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 40.22
+    Received: 25.11
+
+    Expected precision:    1
+    Expected difference: < 0.05
+    Received difference:   15.11
+
+      287 |     const portrait = await settled();
+      288 |
+    > 289 |     expect(landscape).toBeCloseTo(portrait, 1);
+          |                       ^
+      290 |
+      291 |     // CONTROL: put pass 3's rung back — the cap that allows 10rem for chrome that is not
+      292 |     // beside the board below 1024 — and the same probe must see the rotation cost cells.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:289:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-the-boa-c67e7-he-cell-a-finger-has-to-hit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-the-boa-c67e7-he-cell-a-finger-has-to-hit/error-context.md
+
+  2 failed
+    e2e/board-covisibility.spec.ts:107:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width 
+    e2e/board-covisibility.spec.ts:256:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit 
+  4 passed (2.5s)

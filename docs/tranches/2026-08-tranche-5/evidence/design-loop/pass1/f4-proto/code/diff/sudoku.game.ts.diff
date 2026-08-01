@@ -1,0 +1,53 @@
+--- current/sudoku.game.ts	2026-07-31 03:19:21
++++ f4/sudoku.game.ts	2026-07-31 03:21:35
+@@ -1,18 +1,21 @@
+ /**
+  * The Sudoku game declared through the T4-W11 contract (`@games/registry`) — the
+- * `{ model, cell-furniture, clue-furniture, options, solver payloads }` a game dir becomes.
++ * `{ model, cell-furniture, clue-furniture, solver payloads }` a game dir becomes.
+  *
+  * A DECLARATION, not new wiring: it bundles the pieces the shells already consume (the
+- * `useSudoku` model, `SudokuCell`, the size/difficulty selector config, the W4-seam solver
+- * payloads) so W12's carousel and W13's third game read one contract. The live scene mounts
+- * these directly and is UNTOUCHED by this file (zero shell edits — the keystone rule).
++ * `useSudoku` model, `SudokuCell`, the W4-seam solver payloads) so W12's carousel and W13's
++ * third game read one contract. The live scene mounts these directly and is UNTOUCHED by this
++ * file (zero shell edits — the keystone rule).
++ *
++ * F4-D1: the `options: (model) => ControlSection[]` slot is GONE. Its only consumer was the
++ * drawer's staged zone, which F4 excises; staging is now static registry data on the card
++ * (`GameCard.staging`) and the mounted board's live pair travels through `useStagingBridge`.
++ * The selector constants stay where they are — the registry reads them for the card's band.
+  */
+ import { defineGame } from "@games/registry";
+ import { useSudoku } from "./composables/useSudoku";
+ import { useSolver } from "./solver/useSolver";
+ import SudokuCell from "./SudokuBoard/SudokuCell/SudokuCell.vue";
+-import { sizeOptions, difficultyOptions } from "./ControlPanel/constants";
+-import type { Difficulty } from "./types";
+ 
+ /**
+  * Sudoku has NO on-board clue furniture (its subgrid ticks are drawn by the board from the
+@@ -26,22 +29,5 @@
+   model: useSudoku,
+   cellFurniture: SudokuCell,
+   clueFurniture: null,
+-  options: (m) => [
+-    {
+-      key: "size",
+-      heading: "Size",
+-      ariaLabel: "Size",
+-      options: sizeOptions,
+-      selected: m.pendingSize.value,
+-      onChange: (v) => (m.pendingSize.value = v as number),
+-    },
+-    {
+-      key: "difficulty",
+-      heading: "Difficulty",
+-      options: difficultyOptions,
+-      selected: m.difficulty.value,
+-      onChange: (v) => (m.difficulty.value = v as Difficulty),
+-    },
+-  ],
+   solverPayloads: useSolver,
+ });

@@ -1,0 +1,38 @@
+--- ../current/SudokuGame.vue	2026-07-31 03:29:05
++++ SudokuGame.vue	2026-07-31 03:30:30
+@@ -12,7 +12,10 @@
+ import { prewarm } from "./solver/useSolver";
+ import GameScene from "@games/shared/GameScene.vue";
+ import SudokuBoard from "./SudokuBoard/SudokuBoard.vue";
+-import ControlPanel from "./ControlPanel/ControlPanel.vue";
++// F4: the per-game ControlPanel relay is DELETED — it existed only to supply the drawer's
++// `sections` (size/difficulty), which now live on the picker card as static registry staging. The
++// scene mounts the shared live-tools shell directly, one component less per game.
++import GameControlPanel from "@games/shared/GameControlPanel.vue";
+ import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
+ // Async + mounted-on-first-peek: keeps the laminate's ~227 LOC out of the main chunk (the W9
+ // bundle gate) — same discipline as FilterTuner. The chunk loads on the first K/hold,
+@@ -152,22 +155,16 @@
+     </template>
+ 
+     <template #controls="{ mobile }">
+-      <ControlPanel
+-        :size="sudoku.pendingSize.value"
+-        :difficulty="sudoku.difficulty.value"
++      <GameControlPanel
+         :loading="sudoku.loading.value"
+         :is-dirty="sudoku.isDirty.value"
+-        :solve-state="sudoku.solveState.value"
+         :pencil-mode="sudoku.pencilMode.value"
+         :error-check-mode="sudoku.errorCheckMode.value"
+         :candidates-pinned="sudoku.candidatesPinned.value"
+         :mobile="mobile"
+-        @update:size="sudoku.pendingSize.value = $event"
+-        @update:difficulty="sudoku.difficulty.value = $event"
+         @update:pencil-mode="sudoku.setPencilMode($event)"
+         @update:error-check-mode="sudoku.setErrorCheckMode($event)"
+         @update:candidates-pinned="sudoku.setCandidatesPinned($event)"
+-        @deal="sudoku.deal()"
+         @clear="sudoku.clearBoard()"
+         @solve="sudoku.solve()"
+         @fill-forced="sudoku.fillForced()"

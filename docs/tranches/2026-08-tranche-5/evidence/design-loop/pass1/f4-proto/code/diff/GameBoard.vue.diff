@@ -1,0 +1,24 @@
+--- current/GameBoard.vue	2026-07-31 03:19:21
++++ f4/GameBoard.vue	2026-07-31 03:28:13
+@@ -20,6 +20,10 @@
+ import MarginNote from "@pencil/chrome/MarginNote.vue";
+ import DifficultyTally from "@games/shared/DifficultyTally.vue";
+ import SolverErrorNote from "@games/shared/SolverErrorNote.vue";
++// F4-D4: the re-deal strip lives in the board's margin. Wired HERE, once — GameBoard is the one
++// shared board host behind all five game adapters, so no per-game edit and no slot threading.
++// The strip self-suppresses when the staging bridge has no axis/source (posters, tests).
++import RedealStrip from "@games/shared/RedealStrip.vue";
+ import type { TallyDescriptor } from "@games/shared/techniqueVoice";
+ import { mulberry32 } from "@mkbabb/pencil-boil";
+ import { generateCellRects } from "@pencil/grid/gridPaths";
+@@ -762,6 +766,10 @@
+         :retryable="errorNote.retryable"
+         @retry="emit('retry')"
+       />
++      <!-- F4-D4 — the re-deal strip: "same game, harder" at 2 taps and zero fold choreography,
++           in the margin the board already owns (it re-enables pointer-events on itself, the
++           SolverErrorNote idiom). Renders nothing until the shell publishes a quick axis. -->
++      <RedealStrip :loading="loading" />
+     </div>
+   </div>
+ </template>

@@ -1,0 +1,80 @@
+[WebServer] 
+[WebServer]  WARN  advancedChunks option is deprecated, please use codeSplitting instead.
+[WebServer] 
+
+Running 6 tests using 6 workers
+
+  ✓  1 [filter-census] › e2e/filter-census.spec.ts:468:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (8ms)
+  ✘  2 [filter-census] › e2e/filter-census.spec.ts:409:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) (2.0s)
+  ✓  3 [filter-census] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (2.5s)
+  ✓  6 [filter-census] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (2.7s)
+  ✓  5 [filter-census] › e2e/filter-census.spec.ts:423:1 › G3.2 · no retained fill supplies a computed transform (built dist) (2.7s)
+  ✘  4 [filter-census] › e2e/filter-census.spec.ts:402:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) (3.3s)
+
+
+  1) [filter-census] › e2e/filter-census.spec.ts:402:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) 
+
+    Error: [board] surfaces that mint a live filter on :hover
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "button.ctrl-btn → +1",
+    +   "div.zone-row → +1",
+    + ]
+
+      378 |     await hoverOffenders(page),
+      379 |     `[${regime}] surfaces that mint a live filter on :hover`,
+    > 380 |   ).toEqual([]);
+          |     ^
+      381 |
+      382 |   // THE CONTROL — the pass-2 defect, re-authored. If this does not fire, the pass above found
+      383 |   // no candidates and its clean result meant nothing.
+        at assertNoHoverFilters (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/filter-census.spec.ts:380:5)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/filter-census.spec.ts:406:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/filter-census-G3-5-·-no-ho-0eee2--—-board-regime-built-dist--filter-census/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/filter-census-G3-5-·-no-ho-0eee2--—-board-regime-built-dist--filter-census/error-context.md
+
+  2) [filter-census] › e2e/filter-census.spec.ts:409:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) 
+
+    Error: [picker] surfaces that mint a live filter on :hover
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "div.staging-axis → +1",
+    +   "button.ctrl-btn → +1",
+    + ]
+
+      378 |     await hoverOffenders(page),
+      379 |     `[${regime}] surfaces that mint a live filter on :hover`,
+    > 380 |   ).toEqual([]);
+          |     ^
+      381 |
+      382 |   // THE CONTROL — the pass-2 defect, re-authored. If this does not fire, the pass above found
+      383 |   // no candidates and its clean result meant nothing.
+        at assertNoHoverFilters (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/filter-census.spec.ts:380:5)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/filter-census.spec.ts:420:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/filter-census-G3-5-·-no-ho-bd1d4-—-PICKER-regime-built-dist--filter-census/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/filter-census-G3-5-·-no-ho-bd1d4-—-PICKER-regime-built-dist--filter-census/error-context.md
+
+  2 failed
+    [filter-census] › e2e/filter-census.spec.ts:402:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) 
+    [filter-census] › e2e/filter-census.spec.ts:409:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) 
+  4 passed (6.0s)

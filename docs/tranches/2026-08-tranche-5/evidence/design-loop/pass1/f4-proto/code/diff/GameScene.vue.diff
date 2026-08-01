@@ -1,0 +1,16 @@
+--- current/GameScene.vue	2026-07-31 03:19:21
++++ f4/GameScene.vue	2026-07-31 03:28:20
+@@ -122,8 +122,11 @@
+   pointer-events: none;
+ }
+ 
+-/* No pull-tab, no drawer furniture on a card face. */
+-.board-peek-host.in-live-face :deep(.drawer-tab) {
++/* No pull-tab, no drawer furniture on a card face — and no re-deal strip (F4-D4): the board
++   travels into the picker card with its whole margin, and the card carries its own Deal stamp.
++   One rule, both pieces of board furniture that have no business on a face. */
++.board-peek-host.in-live-face :deep(.drawer-tab),
++.board-peek-host.in-live-face :deep(.redeal-strip) {
+   display: none;
+ }
+ </style>

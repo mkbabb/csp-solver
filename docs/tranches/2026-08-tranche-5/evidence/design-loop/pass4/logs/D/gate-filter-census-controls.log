@@ -1,0 +1,26 @@
+=== GATE-1 control A: the injected node loses its filter (the control must red) ===
+  ✓  4 [filter-census] › e2e/filter-census.spec.ts:345:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (8ms)
+  ✓  3 [filter-census] › e2e/filter-census.spec.ts:300:1 › G3.2 · no retained fill supplies a computed transform (built dist) (2.7s)
+  ✘  1 [filter-census] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (2.7s)
+  ✘  2 [filter-census] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (3.5s)
+    Error: [row] the injected filtered node must be censused as unclaimed
+      256 |     `[${regime}] the injected filtered node must be censused as unclaimed`,
+      258 |   expect(withControl.length, `[${regime}] control raises the total by exactly one`).toBe(
+    test-results/filter-census-G3-1-·-live--f23c8-ly-area-and-all-built-dist--filter-census/test-failed-1.png
+    Error: [coarse] the injected filtered node must be censused as unclaimed
+      256 |     `[${regime}] the injected filtered node must be censused as unclaimed`,
+      258 |   expect(withControl.length, `[${regime}] control raises the total by exactly one`).toBe(
+    test-results/filter-census-G3-3-·-the-c-6e3f8-olds-below-1024-built-dist--filter-census/test-failed-1.png
+  2 failed
+  2 passed (4.3s)
+
+=== GATE-1 control B: the row union-area budget moved 45315 -> 41000 (must red) ===
+  ✓  3 [filter-census] › e2e/filter-census.spec.ts:345:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (8ms)
+  ✓  2 [filter-census] › e2e/filter-census.spec.ts:300:1 › G3.2 · no retained fill supplies a computed transform (built dist) (2.7s)
+  ✘  4 [filter-census] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (2.7s)
+  ✓  1 [filter-census] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (3.5s)
+    Error: [row] union raster area 45315 vs budget 41000 ±820 CSS px²
+      234 |     `[${regime}] union raster area ${area} vs budget ${budget} ±${slack} CSS px²`,
+    test-results/filter-census-G3-1-·-live--f23c8-ly-area-and-all-built-dist--filter-census/test-failed-1.png
+  1 failed
+  3 passed (4.3s)

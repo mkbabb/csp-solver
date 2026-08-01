@@ -1,0 +1,314 @@
+
+<style scoped>
+.control-panel-wrap {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+.control-panel-filtered {
+  filter: v-bind(panelFilter);
+  /* R3 (W5 repair): own compositing layer. Unlayered, this 3-pass stroke filter
+     re-rasterizes whenever the panel repaints OR MOVES — and H8's centered
+     .app-layout moves it on every board-height change (a size switch re-centers
+     the card), which carried ~+125 ms of size-switch raster past the p3 class.
+     Layerized, a move is a compositor offset and boil-tick invalidations stop
+     sharing tiles with the filter (measured −57% switch raster vs unlayered). */
+  will-change: transform;
+}
+
+/* T4-WU/U2 — the staged "New game" zone: the game sections + the Deal commit, grouped above
+   the peek divider (the live zone sits below). Structural grouping only — the zone reads
+   "provisional" by PLACEMENT + its heading; no box grammar is invented. */
+.new-game-zone {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The group's own eyebrow — names the staging so "next game" reads with zero copy. Quiet: the
+   same √φ section-heading register, centered + muted, never louder than the selectors it captions. */
+.new-game-heading {
+  text-align: center;
+  color: var(--color-muted-foreground);
+  margin-bottom: 0.35rem;
+}
+
+/* The Deal commit sits centered under the staged selectors, a comfortable target from the peek
+   divider that partitions it off from the live play tools (the spatial prophylaxis). */
+.deal-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.6rem;
+}
+
+/* Deal is the re-homed dice, but it earns its NAME on every pointer (not only coarse): the
+   primary verb of the staged zone reads with zero copy. The column layout + padded target
+   mirrors the coarse icon-btn grammar, applied to Deal at all widths. */
+.deal-btn {
+  flex-direction: column;
+  gap: 0.15rem;
+  width: auto;
+  height: auto;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.85rem;
+}
+
+.deal-btn .icon-sublabel {
+  display: block;
+}
+
+/* .section-heading type register lives in assets/typography.css (@layer
+   components) — the √φ subheading→heading eyebrow, shared by both games (D4).
+   Only the component-local hover flourish stays scoped here. */
+
+/* Crayon color utilities. The difficulty heading writes in the difficulty crayon, but as
+   light-mode heading text the raw wax fails AA (green 2.22 / orange 2.05 / rose 4.11 on
+   --color-card) — so the three difficulty tints read the ink tier (hue-locked, darkened to
+   AA in light; the ink aliases the wax in dark, where the crayon already glows AA). Gate 1,
+   T4-W10; ink hexes + ledger in assets/index.css. crayon-blue is unaffected (no heading use). */
+.crayon-green {
+  color: var(--color-green-ink);
+}
+.crayon-orange {
+  color: var(--color-orange-ink);
+}
+.crayon-rose {
+  color: var(--color-red-ink);
+}
+.crayon-blue {
+  color: var(--color-crayon-blue);
+}
+
+/* Hover flourishes, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter
+   write is retired (SvgFilters), so these static wobbles raster once per hover —
+   a resting pointer never re-enrolls a live painter (the b1 node-1006 finding).
+   T4-WM §2: fenced behind (hover: hover) — on touch the wobble filter stuck to the
+   last-tapped heading (r2 §4 sticky-hover leak); a coarse pointer sees none of it. */
+@media (hover: hover) {
+  .section-heading:hover {
+    filter: url(#wobble-heart);
+  }
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.5rem;
+  color: var(--color-muted-foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 150ms;
+  filter: url(#grain-static);
+}
+
+/* T4-WM §2: the icon-btn hover paint (bg + celestial wobble) stuck after a tap on touch
+   (r2 §4) — fenced to hover-capable pointers. Coarse gets its sublabel + :active scale. */
+@media (hover: hover) {
+  .icon-btn:hover {
+    color: var(--color-foreground);
+    background: var(--color-accent);
+    filter: url(#wobble-celestial);
+  }
+}
+
+.icon-btn:active {
+  transform: scale(0.93);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* Hold surface for the answer-key peek — hosts the BoilDivider, giving the
+   press-and-hold a comfortable target and disabling text-select / touch-scroll
+   so the browser doesn't swallow the gesture. The button tooltips are now washi
+   labels (SheetWashiLabel), which carry their own hover + :focus-visible reveal. */
+.peek-hold-surface {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.peek-hold-surface:active {
+  cursor: grabbing;
+}
+
+/* UI-5: persistent icon sublabels — the pencil hand at caption scale, muted. Hidden on
+   fine pointers (the hover washi carries the name there); written down on coarse. */
+.icon-sublabel {
+  display: none;
+  font-family: var(--font-hand);
+  font-size: var(--type-caption);
+  line-height: 1;
+  letter-spacing: var(--type-tracking-wide);
+  color: var(--color-muted-foreground);
+}
+
+/* The armed Clear asks in the teacher's rose — the one moment a sublabel raises its voice. */
+.icon-sublabel.is-armed {
+  color: var(--color-crayon-rose);
+  font-weight: 600;
+}
+
+/* ── Coarse pointers (T3-W11 U-A): the honest touch affordances ─────────
+   UI-4: the 14px peek hairline was under every tap floor — pad the hold surface to a
+   ≥44px target (the divider stays a hairline visually; the persistent washi labels it).
+   UI-5: the icon actions write their names beneath the icon. Fine pointers match none
+   of this — the hover grammar is structurally untouched. */
+@media (pointer: coarse) {
+  .peek-hold-surface {
+    padding-block: 1rem;
+  }
+
+  .icon-btn {
+    flex-direction: column;
+    gap: 0.15rem;
+    width: auto;
+    height: auto;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .icon-sublabel {
+    display: block;
+  }
+}
+
+/* Sparkle icon - pastel rainbow filled */
+.sparkle-icon :deep(*) {
+  stroke: url(#sparkle-rainbow) !important;
+  fill: url(#sparkle-rainbow) !important;
+}
+
+.sparkle-icon {
+  filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3));
+  transition: all 200ms;
+}
+
+@media (hover: hover) {
+  .icon-btn:hover .sparkle-icon {
+    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+  }
+}
+
+/* Play tools row (T4-WM §2) — undo / redo / hint. A COARSE affordance: hidden on a fine
+   pointer (the desktop keeps its keyboard shortcuts + legend, presentation unchanged),
+   shown as a tappable row on coarse — whether that lands in the mobile card (<lg) or the
+   iPad row-regime card (≥lg). The buttons are plain .icon-btn, so the existing coarse
+   block below gives them the 44px floor + written sublabels; this only governs the row. */
+.play-controls {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .play-controls {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 0.35rem;
+  }
+}
+
+/* Mobile layout */
+.mobile-control-panel {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+.mobile-heading-row {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.mobile-heading-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* UI-12: the inactive tab's current value — the pencil hand at caption scale, reduced-
+   pressure graphite. Deliberately quiet: it names what's closed without competing with
+   the active tab's underline. */
+.heading-value {
+  font-family: var(--font-hand);
+  font-size: var(--type-caption);
+  line-height: 1;
+  letter-spacing: var(--type-tracking-wide);
+  /* T4-W10 gate 1: 60% graphite was 4.10:1 on --color-card (< AA 4.5); 68% clears it —
+     5.23:1 light / 6.06:1 dark. Still the quiet closed-tab value, one pressure step firmer. */
+  color: color-mix(
+    in srgb,
+    var(--color-pencil-graphite, var(--grid-line-color)) 68%,
+    transparent
+  );
+}
+
+.mobile-heading-btn .section-heading.is-active {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+/* Share pop — a small tape-press flourish on the share act (Band C one-shot). */
+.share-pop {
+  display: inline-flex;
+  animation: sharePop 500ms ease;
+}
+
+@keyframes sharePop {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  30% {
+    transform: scale(1.18) rotate(-6deg);
+  }
+  55% {
+    transform: scale(0.96) rotate(4deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Eraser scrub animation */
+.eraser-scrub {
+  display: inline-flex;
+  animation: eraserScrub 400ms ease;
+}
+
+@keyframes eraserScrub {
+  0% {
+    transform: translateX(0) rotate(0deg);
+  }
+  15% {
+    transform: translateX(-4px) rotate(-8deg);
+  }
+  30% {
+    transform: translateX(4px) rotate(6deg);
+  }
+  45% {
+    transform: translateX(-3px) rotate(-5deg);
+  }
+  60% {
+    transform: translateX(3px) rotate(4deg);
+  }
+  80% {
+    transform: translateX(-1px) rotate(-1deg);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+</style>

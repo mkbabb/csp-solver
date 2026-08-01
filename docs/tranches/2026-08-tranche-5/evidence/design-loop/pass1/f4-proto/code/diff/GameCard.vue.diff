@@ -1,0 +1,334 @@
+--- current/GameCard.vue	2026-07-31 03:19:21
++++ f4/GameCard.vue	2026-07-31 03:24:06
+@@ -4,9 +4,21 @@
+  * click-to-select affordance, and the mid-game guard ribbon).
+  *
+  * A `HandDrawnOutline`-framed paper card (the app's `cartoon-shadow-md edge-outlined bg-card`
+- * idiom): face = the game's static `poster`, name as a lowercase wordmark `<text>`, a `range`
+- * sub-line in the Patrick Hand register.
++ * idiom): face = the game's static `poster`, name as a lowercase wordmark `<text>`, and — F4 —
++ * the STAGING BAND in the caption margin where the dead `range` sub-line used to sit.
+  *
++ * THE CARD HAS TWO VERBS (F4-D3). Body/Enter = VISIT: non-destructive, restores what was
++ * (today's exact `select` semantics, no-op cut included; `gallery-guard.spec.ts` ships
++ * unmodified). Stamp/`d` = DEAL: destructive, a fresh board at the staged settings. Every
++ * staging control and the stamp carry their own `@click.stop` (the guard-ribbon precedent) so a
++ * chip tap never bubbles into `visit`.
++ *
++ * THE SNAP-INVARIANT BOX (F4-D5, the Safari gate). The band renders on ALL five cards; a flank's
++ * is `inert` + `visibility: hidden` — the box is reserved, nothing paints, AT sees nothing. Card
++ * height is therefore snap-invariant, so `HandDrawnOutline`'s ResizeObserver never re-bakes its
++ * pose paths on a snap (the instrumented gate: 0 regenerations per snap). The active band fades
++ * in on the snap settle — opacity only, never height.
++ *
+  * THE SOUL GATE (Wave B's sharpest). This card enrols NO beat of its own. Its frame's boil is
+  * DRIVEN from the parent's `:pose` — the gallery holds the ONE shared-beat enrolment and feeds
+  * the live pose to the CENTERED card only; a flank card is handed pose 0 (frozen) and
+@@ -32,6 +44,8 @@
+ import { GLYPH_ANIM } from "@pencil/config/pencilConfig";
+ import { useTheme } from "@/composables/useTheme";
+ import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
++import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
++import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
+ import { scribbleUnderline } from "@pencil/chrome/OptionSelector/scribbleUnderline";
+ import type { GalleryCard } from "./types";
+ 
+@@ -57,11 +71,25 @@
+    *  (a one-shot the gallery sequences, staggered outward from center). 1 = settled/no-deal
+    *  (the center card folds in, it never deals; deep-link + PRM land at 1 with no motion). */
+   dealReveal?: number;
++  /** F4 — this card's chip state, `{ [axisKey]: value }`. The gallery owns it (transient refs
++   *  seeded from `card.staging[].default`, overlaid from the bridge for the current game); the
++   *  card only draws it and reports taps. */
++  staged: Record<string, string | number>;
++  /** F4-D3 — the deal verb is ARMED on this card: the stamp asks "sure?" for the 2.5s window.
++   *  The gallery owns the arm (it owns `dirty` + the keyboard), so both pointers and `d` share
++   *  ONE state machine — the drawer's two-tap, ported and un-fenced from `isCoarse`. */
++  armed?: boolean;
++  /** A deal is in flight / the board is loading — the stamp goes inert rather than double-deal. */
++  busy?: boolean;
+ }>();
+ 
+ const emit = defineEmits<{
+-  /** The centered card was chosen by pointer (click / tap). The gallery gates the guard. */
++  /** VISIT — the centered card was chosen by pointer (click / tap). The gallery gates the guard. */
+   (e: "select"): void;
++  /** F4 — a staging chip was tapped: the axis key + its new value (the gallery holds the state). */
++  (e: "chip", axis: string, value: string | number): void;
++  /** F4 — the Deal stamp was pressed. The gallery runs the arm gate and emits the deal. */
++  (e: "deal-press"): void;
+   /** The live-face mount element (or null when this card stops being live) — the gallery
+    *  relays it to App, which teleports the ONE board's subtree into it. A bare DOM element
+    *  crosses UP; pencil imports nothing from games (the boundary holds). */
+@@ -82,13 +110,21 @@
+   return `0 0 ${w} 60`;
+ });
+ 
+-const rangeLine = computed(() => {
+-  const { label, levels } = props.card.range;
+-  return levels.length ? `${label} · ${levels.join(" / ")}` : label;
+-});
++// F4 — the staging band's accessible name reads the STAGED pair, so the card's option (the
++// listbox row) announces what a visit/deal would land on, not just the game's name.
++const stagedLine = computed(() =>
++  props.card.staging
++    .map((axis) => {
++      const chosen = axis.options.find((o) => o.value === props.staged[axis.key]);
++      return chosen ? `${axis.label} ${chosen.label}` : "";
++    })
++    .filter(Boolean)
++    .join(", "),
++);
+ 
+ const ariaLabel = computed(
+-  () => `${props.card.name}, ${props.index + 1} of ${props.count}`,
++  () =>
++    `${props.card.name}, ${stagedLine.value}, ${props.index + 1} of ${props.count}`,
+ );
+ 
+ // ── The snap chime: wobble bloom + scribbleUnderline draw (Wave D §2) ──
+@@ -174,8 +210,41 @@
+   }
+ });
+ 
+-onUnmounted(stopChime);
++// ── The chip-tap underline burst (F4) ──
++// The drawer's `triggerBoil` grammar, ported verbatim in spirit: a selection change boils the
++// chosen option's scribble underline for 4 frames, then settles at 0. Bounded + self-clearing
++// (never a live painter): `scribbleUnderline` caches by (seed, colour), so a repeat tap re-uses
++// its rasters. The beat pose is deliberately NOT wired here — feeding the live pose would mint a
++// fresh data-URI every 150ms on the centered card (a new live paint surface, mark 4's refusal).
++const boilFrame = ref(0);
++let boilTimer: ReturnType<typeof setTimeout> | null = null;
++function triggerBoil() {
++  if (boilTimer) clearTimeout(boilTimer);
++  let frame = 1;
++  boilFrame.value = frame;
++  const tick = () => {
++    frame++;
++    if (frame >= 5) {
++      boilFrame.value = 0;
++      boilTimer = null;
++      return;
++    }
++    boilFrame.value = frame;
++    boilTimer = setTimeout(tick, 120);
++  };
++  boilTimer = setTimeout(tick, 120);
++}
+ 
++function onChip(axis: string, value: string | number) {
++  emit("chip", axis, value);
++  triggerBoil();
++}
++
++onUnmounted(() => {
++  stopChime();
++  if (boilTimer) clearTimeout(boilTimer);
++});
++
+ // Click-to-select (Wave D): the centered card is chosen on click (mouse/touch tap after a
+ // swipe-to-center); flanks are `inert`, so a click never reaches them. While the guard ribbon
+ // is armed the ribbon owns the interaction — a body click is inert.
+@@ -273,7 +342,63 @@
+               :style="underlineStyle"
+               aria-hidden="true"
+             />
+-            <span class="game-card-range">{{ rangeLine }}</span>
++
++            <!-- ── THE STAGING BAND (F4) ─────────────────────────────────────────────
++                 Rendered on EVERY card so the box is snap-invariant (D5); a flank is `inert`
++                 + `visibility: hidden` (reserved, unpainted, invisible to AT). One `@click.stop`
++                 on the band covers every control inside it: a chip tap stages, it never bubbles
++                 to `visit` (D6). The band is presentational — chip state lives in the gallery,
++                 taps leave as `chip`, the commit leaves as `deal-press`. -->
++            <div
++              class="card-staging"
++              :class="{ 'is-live': isActive }"
++              :inert="!isActive || undefined"
++              @click.stop
++            >
++              <div v-for="axis in card.staging" :key="axis.key" class="staging-axis">
++                <span class="staging-label">{{ axis.label }}</span>
++                <OptionSelector
++                  :options="axis.options"
++                  :selected="staged[axis.key]"
++                  :boil-frame="boilFrame"
++                  mobile
++                  @change="onChip(axis.key, $event)"
++                />
++              </div>
++
++              <!-- THE DEAL STAMP — the card's dominant act, at its proportional weight: full
++                   caption width, ≥56px, framed by the card's OWN beat pose (`:pose`, zero new
++                   enrolments, zero new bakes at rest). Armed, the sublabel asks "sure?" for the
++                   2.5s window (the ported two-tap, all pointers). A real <button>: tabbable,
++                   truthful aria-label, `@click.stop` so it never doubles as a visit. -->
++              <HandDrawnOutline
++                class="card-stamp-frame"
++                :pose="pose"
++                :stroke-width="3"
++                :outset="4"
++              >
++                <button
++                  type="button"
++                  class="card-stamp"
++                  :disabled="busy"
++                  :aria-label="
++                    armed
++                      ? `Press again to deal a new ${card.name} board`
++                      : `Deal a new ${card.name} board, ${stagedLine}`
++                  "
++                  @click.stop="emit('deal-press')"
++                >
++                  <DiceIcon :size="40" :playing="armed" />
++                  <span class="card-stamp-word" aria-hidden="true">Deal</span>
++                  <span
++                    class="card-stamp-sub"
++                    :class="{ 'is-armed': armed }"
++                    aria-hidden="true"
++                    >{{ armed ? "sure?" : "d" }}</span
++                  >
++                </button>
++              </HandDrawnOutline>
++            </div>
+           </div>
+         </div>
+       </HandDrawnOutline>
+@@ -412,14 +537,123 @@
+   clip-path: inset(0 calc((1 - var(--draw, 0)) * 100%) 0 0);
+ }
+ 
+-.game-card-range {
++/* ── THE STAGING BAND (F4) ──────────────────────────────────────────────────────
++   Reserved on every card (the snap-invariant box, D5): a flank keeps the geometry and drops
++   the paint via `visibility` — NEVER `display:none` (that would shrink the card on snap and
++   re-bake both HandDrawnOutline frames, the Safari-hostile failure the family must avoid).
++   The live band fades in on the snap settle: opacity only, no height channel. */
++.card-staging {
++  display: flex;
++  flex-direction: column;
++  align-self: stretch;
++  gap: 0.15rem;
++  margin-top: 0.35rem;
++  visibility: hidden;
++  opacity: 0;
++  transition: opacity var(--card-step-ms, 440ms) var(--ease-glassGlide);
++}
++
++.card-staging.is-live {
++  visibility: visible;
++  opacity: 1;
++}
++
++.staging-axis {
++  display: flex;
++  flex-direction: column;
++  align-items: center;
++  gap: 0;
++}
++
++/* The axis label rides the HAND, lowercase — deliberately NOT `.section-heading`: that register
++   is uppercase Fraunces, and the Fraunces subset carries no uppercase run beyond B/D/S (every
++   drawer heading today falls back to Georgia). Lowercase Patrick Hand is fully subset-covered,
++   so the band inks in the pencil voice with zero new glyph coverage (mark 4). */
++.staging-label {
+   font-family: var(--font-hand);
+-  font-size: var(--type-body, 1rem);
++  font-size: var(--type-caption);
+   line-height: 1.1;
++  letter-spacing: var(--type-tracking-wide);
+   color: var(--color-muted-foreground);
+-  letter-spacing: 0.01em;
+ }
+ 
++/* ── THE DEAL STAMP ─────────────────────────────────────────────────────────────
++   The card's dominant act: full caption width, a ≥56px target, framed in the card's own beat
++   pose. No new bake enrolment — `:pose` is the gallery's ONE beat, handed down (a flank's frame
++   is frozen at 0 like the card frame). */
++.card-stamp-frame {
++  display: block;
++  width: 100%;
++  margin-top: 0.5rem;
++}
++
++.card-stamp {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  gap: 0.5rem;
++  width: 100%;
++  min-height: 56px;
++  padding: 0.45rem 0.6rem;
++  border: none;
++  border-radius: 0.55rem;
++  background: transparent;
++  color: var(--color-foreground);
++  cursor: pointer;
++  -webkit-tap-highlight-color: transparent;
++}
++
++.card-stamp:focus-visible {
++  outline: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
++  outline-offset: 2px;
++}
++
++.card-stamp:active {
++  transform: scale(0.97);
++}
++
++.card-stamp:disabled {
++  opacity: 0.45;
++  pointer-events: none;
++}
++
++/* Fraunces "Deal" — D/e/a/l are all inside the self-hosted subset's unicode-range, so the
++   stamp's display word needs no font work (verified against assets/index.css @font-face). */
++.card-stamp-word {
++  font-family: var(--font-display);
++  font-size: var(--type-heading);
++  font-weight: 800;
++  font-optical-sizing: auto;
++  line-height: 1;
++  letter-spacing: var(--type-tracking-snug);
++}
++
++/* The keyboard tell in the hand, and the armed "sure?" — the drawer's `.icon-sublabel` register
++   and its one raised voice (the teacher's rose), moved here with the verb. */
++.card-stamp-sub {
++  font-family: var(--font-hand);
++  font-size: var(--type-caption);
++  line-height: 1;
++  letter-spacing: var(--type-tracking-wide);
++  color: var(--color-muted-foreground);
++}
++
++.card-stamp-sub.is-armed {
++  color: var(--color-crayon-rose);
++  font-weight: 600;
++}
++
++/* THE CRAYON TINTS ARE NOT HERE — and that is a prototype finding, not an omission.
++   `difficultyOptions[].colorClass` ("crayon-green" …) is applied by `OptionSelector` to its OWN
++   buttons, but the only `.crayon-*` rules in the app are SCOPED inside GameControlPanel.vue
++   (:775-791), so they have never reached an option chip: today only the drawer's <h2> heading
++   (rendered in that component's own template, via `headingClass`) is tinted. F4 has two chip
++   consumers — this band and `RedealStrip` — so the tint moves to ONE global home
++   (assets/index.css @layer components; see code/f4/index.css.crayon.hunk.css) rather than being
++   duplicated into two scoped blocks with `:deep()`. The drawer's scoped copies die with the
++   staged zone. AA holds on --color-card: green-ink 4.95 · orange-ink 4.91 · red-ink 4.98 (the
++   same tokens on the same paper as the drawer's ledger; dark aliases the wax, ≥10:1). */
++
+ @media (prefers-reduced-motion: reduce) {
+   .game-card {
+     /* Depth snaps under PRM — the state is reachable, nothing tweens. */
+@@ -429,5 +663,9 @@
+   .game-card.is-chiming .game-card-frame {
+     will-change: auto;
+   }
++  /* The band appears same-frame under PRM (reachable, no fade). */
++  .card-staging {
++    transition: none;
++  }
+ }
+ </style>

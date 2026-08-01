@@ -1,0 +1,69 @@
+--- current/useGameState.ts	2026-07-31 03:19:21
++++ f4/useGameState.ts	2026-07-31 03:27:10
+@@ -14,6 +14,12 @@
+ import { useUserMarks } from "./useUserMarks";
+ import { useAssists } from "./useAssists";
+ import { registerDirtySource, clearDirtySource } from "./useDirtyBoard";
++import {
++  consumeStagedHandoff,
++  registerStagingSource,
++  clearStagingSource,
++  type StagingSource,
++} from "./useStagingBridge";
+ import { formatGradeSignature, describeTally } from "@games/shared/techniqueVoice";
+ import type { HintResult, TechniqueId } from "@games/shared/techniqueEngine";
+ import type { SolveState, SolveStats } from "@games/shared/types";
+@@ -181,6 +187,19 @@
+   const solverSize = ref(domain.initialSize);
+   const pendingSize = ref(domain.initialSize);
+   const difficulty = ref<TDiff>(initial.difficulty);
++
++  // F4 — the cross-game staging handoff (`useStagingBridge`). A picker Deal on a card whose game
++  // isn't mounted arms a one-shot and cuts; THIS setup consumes it, so the staged pair seeds the
++  // size/difficulty the board is about to deal at. Seeding (not a second `deal()`) is what keeps
++  // it to ONE solver dispatch: the initialization below already deals when there's nothing to
++  // restore, and a handoff also SUPPRESSES the restore — a staged deal must not resurrect the
++  // board the user just left.
++  const handoff = consumeStagedHandoff();
++  if (handoff) {
++    solverSize.value = handoff.size;
++    pendingSize.value = handoff.size;
++    difficulty.value = handoff.difficulty as TDiff;
++  }
+   const boardSize = computed(() => domain.boardSizeOf(solverSize.value));
+   const totalCells = computed(() => boardSize.value ** 2);
+ 
+@@ -264,6 +283,23 @@
+   registerDirtySource(isDirty);
+   onUnmounted(() => clearDirtySource(isDirty));
+ 
++  // F4-D2 — the staging bridge, the same register/identity-clear pattern one line up. The picker
++  // card and the board-margin strip READ this board's staged pair (so their chips are truthful)
++  // and COMMIT it as one act. C7 is inherited knowingly (F4-D7): `difficulty` is a live model
++  // write and `pendingSize` is staged, and `applyAndDeal` writes both before dealing — so both
++  // read provisional-until-deal from either surface, with no new staging buffer and no change to
++  // the size/difficulty seam below.
++  const stagingSource: StagingSource = {
++    read: () => ({ size: pendingSize.value, difficulty: difficulty.value }),
++    applyAndDeal: async (staged) => {
++      pendingSize.value = staged.size;
++      difficulty.value = staged.difficulty as TDiff;
++      await deal();
++    },
++  };
++  registerStagingSource(stagingSource);
++  onUnmounted(() => clearStagingSource(stagingSource));
++
+   function initBoard() {
+     values.value = {};
+     givenCells.value = new Set();
+@@ -800,7 +836,9 @@
+   // ── Initialization ───────────────────────────────────────────────
+   domain.syncToUrl(solverSize.value, difficulty.value);
+ 
++  // F4: a staged handoff is an explicit "deal me a fresh one" — it out-ranks the persisted board.
+   const canRestore =
++    !handoff &&
+     (initial.source === "url+storage" ||
+       initial.source === "storage-only" ||
+       initial.source === "url-board") &&

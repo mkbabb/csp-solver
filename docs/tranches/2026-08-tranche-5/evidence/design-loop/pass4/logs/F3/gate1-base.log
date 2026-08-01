@@ -1,0 +1,89 @@
+
+Running 27 tests using 9 workers
+
+  ✓   3 e2e/board-covisibility.spec.ts:180:3 › mark 6 — the band dissolves › the grade crests on the board — the celebration never moves the page (442ms)
+  ✓   5 e2e/board-covisibility.spec.ts:55:3 › mark 6 — the band dissolves › the tally files with the deal, and the strip it left can still be seen (466ms)
+  ✓   6 e2e/board-covisibility.spec.ts:78:3 › mark 6 — the band dissolves › the strip below the board is one reserved line (450ms)
+  ✓   1 e2e/board-covisibility.spec.ts:226:3 › the board fits the viewport it is drawn in › a landscape phone gets a board it can see, not one it must scroll (515ms)
+  ✓   8 e2e/visual-regression.spec.ts:96:1 › light mode: layout, styles, filters, DOM contract (644ms)
+  ✘   4 e2e/board-covisibility.spec.ts:107:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width (595ms)
+  ✓   7 e2e/visual-regression.spec.ts:203:1 › dark mode: celestial swap, control panel carries no filter, DOM contract (688ms)
+  ✓  11 e2e/visual-regression.spec.ts:351:1 › graceful degradation: UI renders without backend API (482ms)
+  ✓  13 e2e/visual-regression.spec.ts:429:1 › the Deal die is not crushed: the commit verb's box fits its own content (431ms)
+  ✘   2 e2e/board-covisibility.spec.ts:256:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit (1.1s)
+  ✓  14 e2e/visual-regression.spec.ts:497:1 › the glass curve is the same curve in both layers (462ms)
+  ✓   9 e2e/visual-regression.spec.ts:235:1 › grid draw-in completes and path-based boil activates (1.4s)
+  ✓  17 e2e/visual-regression.spec.ts:760:1 › toggle warp rest pose: wrung into the page, no carousel travel (452ms)
+  ✓  16 e2e/visual-regression.spec.ts:696:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for (537ms)
+  ✓  15 e2e/visual-regression.spec.ts:621:1 › option chips keep their separation: ≥6px between neighbours, both axes (1.2s)
+  ✓  10 e2e/visual-regression.spec.ts:285:1 › randomize populates board and blank cells accept input (1.4s)
+  ✓  18 e2e/visual-regression.spec.ts:522:1 › the deal receipt keeps off the commit verb, hover included (1.3s)
+  ✓  20 e2e/mobile-platform.spec.ts:63:3 › ios-discipline (iPhone-geometry coarse) › game surfaces suppress selection + the double-tap-zoom delay (long-press-clean) (1.1s)
+  ✓  19 e2e/mobile-platform.spec.ts:52:3 › ios-discipline (iPhone-geometry coarse) › the board scene contains overscroll (no rubber-band / scroll-chain) (1.1s)
+  ✓  21 e2e/mobile-platform.spec.ts:105:3 › ios-discipline (iPhone-geometry coarse) › tap-highlight + text-size-adjust are delivered (preflight) app-wide (1.1s)
+  ✓  22 e2e/mobile-platform.spec.ts:125:3 › ios-discipline (iPhone-geometry coarse) › viewport opts into the notch + the fixed toggle pads clear of the safe area (1.1s)
+  ✓  23 e2e/mobile-platform.spec.ts:200:3 › keyboard-avoid (emulated visualViewport) › a focused below-fold cell scrolls clear of the emulated keyboard band (1.1s)
+  ✓  25 e2e/mobile-platform.spec.ts:364:3 › landscape phone (~844×390, coarse) › no horizontal overflow; entry works (1.1s)
+  ✓  24 e2e/mobile-platform.spec.ts:256:3 › the 296px keypad band (measured constant, driven through the composable) › every control can be seated clear of the keypad, verb and deepest chip alike (1.3s)
+  ✓  26 e2e/mobile-platform.spec.ts:392:3 › large iPad landscape (≥1024, coarse → desktop drawer layout) › the drawer tab is a clean ≥44px tap target and toggles the rail (1.2s)
+  ✓  27 e2e/mobile-platform.spec.ts:378:3 › iPad portrait (<1024, coarse, stacked) › no horizontal overflow; entry works (1.4s)
+  ✓  12 e2e/visual-regression.spec.ts:367:1 › size switching: 4x4, 9x9, 16x16 all render grid lines (4.2s)
+
+
+  1) e2e/board-covisibility.spec.ts:107:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 1
+
+    - Array [
+    -   "strip",
+    - ]
+    + Array []
+
+      156 |       );
+      157 |
+    > 158 |     expect(await paints()).toEqual(["strip"]);
+          |                            ^
+      159 |     // …and the grade did not move the strip it prints in: the line was reserved before the
+      160 |     // solve and the voice stands down INTO it, rather than taking the block out of flow.
+      161 |     expect(await strip()).toBe(beforeStrip);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:158:28
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-mark-6--4e1a3-exactly-once-at-every-width/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-mark-6--4e1a3-exactly-once-at-every-width/error-context.md
+
+  2) e2e/board-covisibility.spec.ts:256:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit 
+
+    Error: expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 40.22
+    Received: 28.06
+
+    Expected precision:    1
+    Expected difference: < 0.05
+    Received difference:   12.16
+
+      279 |     const portrait = await settled();
+      280 |
+    > 281 |     expect(landscape).toBeCloseTo(portrait, 1);
+          |                       ^
+      282 |
+      283 |     // CONTROL: put pass 3's rung back — the cap that allows 10rem for chrome that is not
+      284 |     // beside the board below 1024 — and the same probe must see the rotation cost cells.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:281:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-the-boa-c67e7-he-cell-a-finger-has-to-hit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-the-boa-c67e7-he-cell-a-finger-has-to-hit/error-context.md
+
+  2 failed
+    e2e/board-covisibility.spec.ts:107:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width 
+    e2e/board-covisibility.spec.ts:256:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit 
+  25 passed (6.0s)

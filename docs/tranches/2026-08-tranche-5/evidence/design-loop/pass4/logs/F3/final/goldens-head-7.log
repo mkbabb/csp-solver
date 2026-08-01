@@ -1,0 +1,74 @@
+
+> csp-solver-frontend@0.1.0 test:golden
+> playwright test --config playwright-golden.config.ts
+
+
+Running 4 tests using 4 workers
+
+  ✓  4 e2e/visual-golden.spec.ts:218:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer (980ms)
+  ✓  2 e2e/visual-golden.spec.ts:210:1 › golden · single cell with given glyph (light) (980ms)
+  ✓  3 e2e/visual-golden.spec.ts:180:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack (1.0s)
+  ✘  1 e2e/visual-golden.spec.ts:203:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose (1.8s)
+
+
+  1) e2e/visual-golden.spec.ts:203:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      1028 pixels (ratio 0.03 of all image pixels) are different.
+
+      Snapshot: toggle-crest-dark.png
+
+    Call log:
+      - Expect "toHaveScreenshot(toggle-crest-dark.png)" with timeout 15000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - 1028 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - 1194 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 250ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - 1194 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 500ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - 1028 pixels (ratio 0.03 of all image pixels) are different.
+
+
+      204 |   await loadSettled(page, { dark: true });
+      205 |   const clip = await center(page.locator('button.sun-moon-toggle'), 110, 110);
+    > 206 |   await expect(page).toHaveScreenshot('toggle-crest-dark.png', { ...CREST_FLOOR, clip });
+          |                      ^
+      207 | });
+      208 |
+      209 | // A single grid cell rendering the pinned given "5" — the hand-drawn glyph + cell grain.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/visual-golden.spec.ts:206:22
+
+    attachment #1: toggle-crest-dark (image/png) ───────────────────────────────────────────────────
+    Expected: e2e/goldens/toggle-crest-dark-darwin.png
+    Received: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/toggle-crest-dark-actual.png
+    Diff:     test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/toggle-crest-dark-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/error-context.md
+
+  1 failed
+    e2e/visual-golden.spec.ts:203:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+  3 passed (2.7s)

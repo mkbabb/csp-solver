@@ -1,0 +1,48 @@
+=== GATE-1 control: .icon-btn.deal-btn -> .deal-btn at :1054 (the pass-3 defect restored) ===
+Running 1 test using 1 worker
+  ✘  1 e2e/visual-regression.spec.ts:428:1 › the Deal die is not crushed: the commit verb's box fits its own content (438ms)
+  1) e2e/visual-regression.spec.ts:428:1 › the Deal die is not crushed: the commit verb's box fits its own content 
+    Error: expect(received).toBeLessThanOrEqual(expected)
+    Expected: <= 0.5
+    Received:    10.03125
+      468 |   // The die is square — the defect's whole signature was a squashed height against an intact
+      469 |   // width. Half a pixel of tolerance for sub-pixel layout, no more.
+    > 470 |   expect.soft(Math.abs(geom!.die!.h - geom!.die!.w)).toBeLessThanOrEqual(0.5);
+          |                                                      ^
+      471 |   expect.soft(geom!.die!.h).toBeGreaterThanOrEqual(27);
+      472 |
+      473 |   // …and the button's box is big enough for its own content. The bound is written against the
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/visual-regression.spec.ts:470:54
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+    Expected: >= 27
+    Received:    17.96875
+      469 |   // width. Half a pixel of tolerance for sub-pixel layout, no more.
+      470 |   expect.soft(Math.abs(geom!.die!.h - geom!.die!.w)).toBeLessThanOrEqual(0.5);
+    > 471 |   expect.soft(geom!.die!.h).toBeGreaterThanOrEqual(27);
+          |                             ^
+      472 |
+      473 |   // …and the button's box is big enough for its own content. The bound is written against the
+      474 |   // die's WIDTH, which is the dimension the defect leaves intact — `btn.h ≥ die.h + labelH`
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/visual-regression.spec.ts:471:29
+    Error: Deal's box is 44.00px for content demanding 54.05px (die 28.00 square + label 14.05 + padding 9.60 + gap 2.40)
+    expect(received).toBeGreaterThanOrEqual(expected)
+    Expected: >= 53.546875
+    Received:    44
+      485 |       `(die ${geom!.die!.w.toFixed(2)} square + label ${geom!.labelH.toFixed(2)} + ` +
+      486 |       `padding ${geom!.padY.toFixed(2)} + gap ${geom!.gap.toFixed(2)})`,
+    > 487 |   ).toBeGreaterThanOrEqual(demanded - 0.5);
+          |     ^
+      488 | });
+      489 |
+      490 | // ── Test 9: chip separation — the seam between adjacent option chips ─
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/visual-regression.spec.ts:487:5
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-regression-the-Deal-dad0a--s-box-fits-its-own-content/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: test-results/visual-regression-the-Deal-dad0a--s-box-fits-its-own-content/error-context.md
+  1 failed
+    e2e/visual-regression.spec.ts:428:1 › the Deal die is not crushed: the commit verb's box fits its own content 
+
+=== GREEN on the fix ===
+  ✓  1 e2e/visual-regression.spec.ts:428:1 › the Deal die is not crushed: the commit verb's box fits its own content (411ms)
+  1 passed (1.2s)

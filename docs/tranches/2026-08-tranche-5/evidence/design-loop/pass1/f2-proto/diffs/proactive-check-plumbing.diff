@@ -1,0 +1,91 @@
+--- a/src/games/sudoku/SudokuGame.vue
++++ b/src/games/sudoku/SudokuGame.vue
+@@ -160,6 +160,7 @@
+         :solve-state="sudoku.solveState.value"
+         :pencil-mode="sudoku.pencilMode.value"
+         :error-check-mode="sudoku.errorCheckMode.value"
++        :proactive-check="sudoku.proactiveCheck.value"
+         :candidates-pinned="sudoku.candidatesPinned.value"
+         :mobile="mobile"
+         @update:size="sudoku.pendingSize.value = $event"
+--- a/src/games/futoshiki/FutoshikiGame.vue
++++ b/src/games/futoshiki/FutoshikiGame.vue
+@@ -150,6 +150,7 @@
+         :solve-state="futoshiki.solveState.value"
+         :pencil-mode="futoshiki.pencilMode.value"
+         :error-check-mode="futoshiki.errorCheckMode.value"
++        :proactive-check="futoshiki.proactiveCheck.value"
+         :candidates-pinned="futoshiki.candidatesPinned.value"
+         :mobile="mobile"
+         @update:board-size="futoshiki.pendingBoardSize.value = $event"
+--- a/src/games/thermo/ThermoGame.vue
++++ b/src/games/thermo/ThermoGame.vue
+@@ -135,6 +135,7 @@
+         :is-dirty="thermo.isDirty.value"
+         :mobile="mobile"
+         :error-check-mode="thermo.errorCheckMode.value"
++        :proactive-check="thermo.proactiveCheck.value"
+         :share="onShare"
+         @update:pencil-mode="thermo.setPencilMode($event)"
+         @update:candidates-pinned="thermo.setCandidatesPinned($event)"
+--- a/src/games/killer/KillerGame.vue
++++ b/src/games/killer/KillerGame.vue
+@@ -125,6 +125,7 @@
+         :is-dirty="killer.isDirty.value"
+         :mobile="mobile"
+         :error-check-mode="killer.errorCheckMode.value"
++        :proactive-check="killer.proactiveCheck.value"
+         :share="onShare"
+         @update:pencil-mode="killer.setPencilMode($event)"
+         @update:candidates-pinned="killer.setCandidatesPinned($event)"
+--- a/src/games/kenken/KenKenGame.vue
++++ b/src/games/kenken/KenKenGame.vue
+@@ -124,6 +124,7 @@
+         :is-dirty="kenken.isDirty.value"
+         :mobile="mobile"
+         :error-check-mode="kenken.errorCheckMode.value"
++        :proactive-check="kenken.proactiveCheck.value"
+         :share="onShare"
+         @update:pencil-mode="kenken.setPencilMode($event)"
+         @update:candidates-pinned="kenken.setCandidatesPinned($event)"
+--- a/src/games/sudoku/ControlPanel/ControlPanel.vue
++++ b/src/games/sudoku/ControlPanel/ControlPanel.vue
+@@ -34,8 +34,11 @@
+   isDirty: boolean;
+   solveState: string;
+   mobile?: boolean;
+-  // T4-W8 ROW 2 — the error-check mode, relayed to the shell's AssistSettings.
++  // T4-W8 ROW 2 — the error-check mode, relayed to the shell.
+   errorCheckMode: ErrorCheckMode;
++  // F2/D4 — `useAssists().proactiveCheck`, the second axis of the teacher pen's four poses:
++  // it is what makes the on-demand edit-disarm visible (the pen lies back down on the desk).
++  proactiveCheck: boolean;
+   // T4-W3 share-truth — the parent's share act, handed as a callback so the OUTCOME travels back.
+   share: () => Promise<void>;
+ }>();
+@@ -84,6 +87,7 @@
+     :is-dirty="isDirty"
+     :mobile="mobile"
+     :error-check-mode="errorCheckMode"
++    :proactive-check="proactiveCheck"
+     :share="share"
+     @deal="emit('deal')"
+     @clear="emit('clear')"
+--- a/src/games/futoshiki/ControlPanel/ControlPanel.vue
++++ b/src/games/futoshiki/ControlPanel/ControlPanel.vue
+@@ -37,6 +37,7 @@
+   mobile?: boolean;
+   // T4-W8 ROW 2 (twin of the sudoku panel's) — the error-check mode, relayed to the shell.
+   errorCheckMode: ErrorCheckMode;
++  proactiveCheck: boolean;
+   // T4-W3 share-truth (twin of the sudoku panel's) — the share act as a callback so the outcome returns.
+   share: () => Promise<void>;
+ }>();
+@@ -85,6 +86,7 @@
+     :is-dirty="isDirty"
+     :mobile="mobile"
+     :error-check-mode="errorCheckMode"
++    :proactive-check="proactiveCheck"
+     :share="share"
+     @deal="emit('deal')"
+     @clear="emit('clear')"

@@ -1,0 +1,57 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/src/games/shared/scene.css	2026-07-15 14:12:31
++++ /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/design-loop/pass1/f1-proto/real-diffs/scene.f1.css	2026-07-31 03:27:21
+@@ -38,6 +38,11 @@
+    top edge at every viewport. Row-regime only: .controls-card lives inside the
+    hidden lg:flex rail. The T4-WU re-partition (staged/live zones) owns the
+    real-estate redesign; this is the layout-safety floor beneath it. */
++   F1 STATUS — the cap is the thing this family retires. It stays here through the
++   measurement slice (it is how `scrollHeight === clientHeight` is even askable), and is
++   DELETED at the rewrite: once the vertical OptionSelector branch dies and the three
++   preference rows leave the card, the content fits and a scroll container is a lie. The
++   four lines below are the −14 in the change inventory. */
+ .controls-card {
+   max-height: calc(min(42rem, 85vw, 100dvh - 10rem) - 2rem);
+   overflow-y: auto;
+@@ -128,6 +133,12 @@
+     align-items: center;
+     gap: 1.25rem;
+     width: 100%;
++    /* F1 — the fixed tray's own occlusion reserve. A `position: fixed` bar over a
++       scrolling page eats the last 65.6px of the card's foot at the bottom of the
++       scroll (measured, 390×664). One padding line buys it back: 4.25rem ≈ the tray's
++       57.6px box + its 0.5rem lift. At 390×844 / 430×932 the page already fits one
++       viewport and the tray sits clear, so this costs nothing there. */
++    padding-bottom: 4.25rem;
+   }
+ }
+ 
+@@ -140,12 +151,17 @@
+    PRM: the whole block gates to no-preference — mount and switch are both instant. */
+ @media (prefers-reduced-motion: no-preference) {
+   .mobile-board-width,
+-  .scene-controls {
++  .scene-controls,
++  /* F1 — the per-move toolbar is scene chrome too: it arrives with the card on the
++     page-turn's beat 3 and leaves with it on beat 1 / the gallery's beat 0. Three
++     selector lists, three added lines — no new curve, no new clock. */
++  .game-toolbar {
+     animation: controls-fade-in 250ms var(--ease-drawOn) 150ms backwards;
+   }
+ 
+   .app-layout.scene-leaving .mobile-board-width,
+-  .app-layout.scene-leaving .scene-controls {
++  .app-layout.scene-leaving .scene-controls,
++  .app-layout.scene-leaving .game-toolbar {
+     opacity: 0;
+     transition: opacity 200ms var(--ease-fadeOut);
+     animation: none;
+@@ -158,7 +174,8 @@
+      begins. Global-html + scoped-descendant, the `html.drawer-closed` pattern above. PRM: this
+      whole block is no-preference-gated, so entry stays an instant cut. */
+   html.gallery-leaving .mobile-board-width,
+-  html.gallery-leaving .scene-controls {
++  html.gallery-leaving .scene-controls,
++  html.gallery-leaving .game-toolbar {
+     opacity: 0;
+     transition: opacity 200ms var(--ease-fadeOut);
+     animation: none;

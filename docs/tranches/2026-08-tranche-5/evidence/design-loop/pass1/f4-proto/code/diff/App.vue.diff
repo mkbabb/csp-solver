@@ -1,0 +1,77 @@
+--- current/App.vue	2026-07-31 03:19:21
++++ f4/App.vue	2026-07-31 03:26:39
+@@ -22,6 +22,12 @@
+ import { useKeyboardViewport } from "@games/shared/useKeyboardViewport";
+ import { useGameGallery } from "@games/shared/useGameGallery";
+ import { useBoardDirty } from "@games/shared/useDirtyBoard";
++import {
++  armStagedHandoff,
++  dealStaged,
++  readStaging,
++  setQuickAxis,
++} from "@games/shared/useStagingBridge";
+ import { setLiveFaceTarget } from "@games/shared/useLiveFace";
+ import { useCoarsePointer } from "@games/shared/useCoarsePointer";
+ import { GAMES } from "@games/registry";
+@@ -206,6 +212,42 @@
+ const dirty = useBoardDirty();
+ const coarse = useCoarsePointer();
+ 
++// ── F4: the picker as the whole transaction ──────────────────────────────────────────────
++// The card's two verbs arrive as two emits. `select` is VISIT (unchanged). `deal` is the new
++// commit: App routes it — same game → the mounted board's `applyAndDeal` through the staging
++// bridge; a different game → arm the one-shot handoff, then the ordinary gallery cut, and the
++// incoming board seeds itself from the handoff (its mount deal IS the staged deal).
++//
++// `stagedSeed` is the mounted board's real pair, read at OPEN and handed to the pencil-pure
++// gallery as a plain value (pencil imports nothing from games): the current game's card opens on
++// what the board actually holds, every other card on its registry defaults.
++const stagedSeed = ref<Record<string, string | number> | null>(null);
++function readStagedSeed() {
++  const pair = readStaging();
++  stagedSeed.value = pair ? { size: pair.size, difficulty: pair.difficulty } : null;
++  // The board-margin re-deal strip's axis (F4-D4): App is the one legitimate registry consumer,
++  // so it publishes the current game's `quick` axis as data — `games/shared/**` may not import a
++  // concrete game, and the registry imports all five.
++  const axis = GAMES.find((c) => c.id === game.value)?.staging.find((a) => a.quick);
++  setQuickAxis(axis ? { key: axis.key, label: axis.label, options: axis.options } : null);
++}
++
++function onGalleryDeal(id: string, staged: Record<string, string | number>) {
++  const pair = { size: Number(staged.size), difficulty: String(staged.difficulty) };
++  if (id !== game.value) armStagedHandoff(pair); // consumed by the incoming useGameState
++  unfoldToBoard(() => {
++    select(); // view → playing, `?view` cleared
++    setGame(id, { cut: true }); // the seam, hidden under the still-small card
++  });
++  // Same game: the board is already mounted, so it deals AFTER the unfold has landed — the
++  // ritual reads fold-then-deal, and the deal beats play on a full-size board (no new duration:
++  // the existing `boardFoldMs`). PRM cuts, so it deals same-frame.
++  if (id === game.value) {
++    const after = reducedMotion.value ? 0 : MOTION.boardFoldMs;
++    window.setTimeout(() => void dealStaged(pair), after);
++  }
++}
++
+ // ── The board⇄card FOLD + THE LIVE CENTER FACE (T4-W12 Wave C/C2, §choreography) ──────────
+ // Grammar B (the drawer glide), generalized: App owns the board⇄card FLIP orchestration on the
+ // EXTRACTED `useFlipGlide` engine — the SAME proven primitive the drawer rides (no second
+@@ -307,6 +349,7 @@
+ // cuts every beat.
+ function enterGallery() {
+   preloadScenes(); // F6-D3: warm the lazy scene chunks on OPEN, so a select is cached
++  readStagedSeed(); // F4: the current card's chips open on the board's real staged pair
+   if (reducedMotion.value) {
+     entryAnimated.value = false;
+     openGallery(game.value); // PRM: same-frame cut — no chrome-leave, no fold, no deal
+@@ -429,8 +472,10 @@
+         :current-id="game"
+         :coarse="coarse"
+         :animate-entry="entryAnimated"
++        :staged="stagedSeed"
+         @snap="onGallerySnap"
+         @select="onGallerySelect"
++        @deal="onGalleryDeal"
+         @cancel="onGalleryCancel"
+         @live-face="onLiveFace"
+       />

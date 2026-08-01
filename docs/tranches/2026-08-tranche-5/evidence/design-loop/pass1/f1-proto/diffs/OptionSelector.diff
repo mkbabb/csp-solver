@@ -1,0 +1,51 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue	2026-07-13 03:55:15
++++ /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/design-loop/pass1/f1-proto/real-diffs/OptionSelector.f1.vue	2026-07-31 03:27:28
+@@ -4,11 +4,15 @@
+ 
+ const { isDark } = useTheme();
+ 
++// F1 §5 — the `mobile` prop is GONE. It selected between an `options-row` (horizontal) and a
++// `flex flex-col` stack, and the stack is the desktop card's overflow root: at n=2 sections
++// (size 4 + difficulty 3) plus Marks 3, Check 3, Candidates 2 it laid 15 option rows down the
++// card, ~370px of pure vertical. Horizontal is the only form now, at every width — one class
++// set, one size ramp. Every call site drops `:mobile`/`mobile` (7 sites, 7 deleted attributes).
+ defineProps<{
+   options: { value: string | number; label: string; colorClass?: string }[];
+   selected: string | number;
+   boilFrame: number;
+-  mobile?: boolean;
+ }>();
+ 
+ const emit = defineEmits<{
+@@ -25,16 +29,14 @@
+ </script>
+ 
+ <template>
+-  <div :class="mobile ? 'options-row' : 'flex flex-col items-center md:items-stretch'">
++  <div class="options-row">
+     <button
+       v-for="opt in options"
+       :key="opt.value"
+       @click="emit('change', opt.value)"
+       class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-all duration-150"
+       :class="[
+-        mobile
+-          ? 'text-[1rem] md:text-[1.375rem]'
+-          : 'text-[1.375rem] md:py-0.5 md:text-left md:text-[1.25rem]',
++        'text-[1rem] md:text-[1.25rem]',
+         selected === opt.value
+           ? `selected-item font-bold ${opt.colorClass ?? 'text-foreground'}`
+           : 'text-muted-foreground hover:text-foreground hover-item',
+@@ -108,6 +110,12 @@
+ .options-row {
+   display: flex;
+   justify-content: center;
++  /* F1 §5 — the row is now the ONLY form, so it must survive the narrow row-regime card
++     (346px measured at 1024) as well as a phone. Wrapping is the honest overflow: a
++     4-option size row that no longer fits breaks to a second line instead of clipping
++     or forcing the card wider. */
++  flex-wrap: wrap;
++  align-items: center;
+   gap: 0.25rem;
+   padding: 0.25rem 0;
+ }

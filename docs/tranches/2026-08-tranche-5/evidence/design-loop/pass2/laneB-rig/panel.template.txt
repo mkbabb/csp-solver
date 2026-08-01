@@ -1,0 +1,218 @@
+<template>
+  <!-- LANE B — ONE composition, both regimes. The mobile/desktop branch pair (two ~180-line
+       templates that differed in six attributes) collapses; `mobile` now drives only what it
+       must — the top margin, the hover-washi presence, and the keyboard legend.
+
+       THE TICKET (marks 1 + 2): the card is two drawn compartments and a live-verb row. Each
+       compartment is `HandDrawnOutline :pose="0"` — a frozen, filterless frame that enrols no
+       beat — tagged by a persistent washi tape that IS its name. The six display-caps eyebrows
+       (NEW GAME · SIZE · DIFFICULTY · MARKS · CHECK · CANDIDATES) become two washi tags and five
+       inline hand labels, so the card's ONE Fraunces voice is Deal, the verb that commits it. -->
+  <div class="control-panel-wrap" :class="{ 'panel-mobile': mobile }">
+    <!-- ══ WELL 1 · THE TICKET — the next board, staged. Selectors read provisional BY
+         PLACEMENT (arm-not-live: nothing here touches the live board until Deal). -->
+    <HandDrawnOutline
+      class="well well-ticket"
+      :stroke-width="2"
+      :outset="6"
+      :radius="4"
+      :pose="0"
+    >
+      <div class="well-body" role="group" aria-label="New game">
+        <div class="control-panel-filtered well-rows">
+          <!-- n-section-generic against ControlSection[]: 1..n rows, no tab machinery, no
+               single-section special case. A row is `label | options` on one baseline — the
+               docket line that replaced the stanza. -->
+          <div
+            v-for="section in sections"
+            :key="section.key"
+            class="ticket-row"
+            role="group"
+            :aria-label="section.ariaLabel ?? section.heading"
+          >
+            <h2 class="ticket-label" :class="labelTone(section)" aria-hidden="true">
+              {{ section.heading }}
+            </h2>
+            <OptionSelector
+              class="ticket-options"
+              :options="section.options"
+              :selected="section.selected"
+              :boil-frame="boilFrame"
+              @change="onSectionChange(section, $event)"
+            />
+          </div>
+        </div>
+
+        <!-- The Deal commit. Mark 1: the card's ONLY display-register voice, written at the
+             √φ heading rung the six eyebrows used to hold between them, beside a 34px die that
+             is pinned `flex: 0 0 auto` — the shipped 28px DiceIcon renders 17.6px tall because
+             a column-flex .icon-btn shrinks it, which is the actual mechanism of the inversion
+             the owner marked. "Deal" is also the one Fraunces string the shipped subset covers
+             whole (D·e·a·l), so it is the card's only chimera-free display text. -->
+        <div class="deal-row">
+          <button
+            @click="onDeal()"
+            :disabled="loading"
+            class="icon-btn deal-btn group relative"
+            :aria-label="dealArmed ? 'Tap again to deal a new board' : 'Deal a new board'"
+          >
+            <DiceIcon :size="34" :playing="dealAnimating" />
+            <span class="deal-verb" :class="{ 'is-armed': dealArmed }" aria-hidden="true">{{
+              dealArmed ? "sure?" : "Deal"
+            }}</span>
+          </button>
+        </div>
+      </div>
+      <SheetWashiLabel text="new game" :seed="13" anchor="center" persistent />
+    </HandDrawnOutline>
+
+    <!-- ══ WELL 2 · THE TEACHER'S — the three live-board preferences, same row grammar, same
+         `ControlSection[]` shape (the shell supplies these; the games supply the ticket's).
+         Three headings and two components' worth of wrapper markup collapse into one tag. -->
+    <HandDrawnOutline
+      class="well well-teacher"
+      :stroke-width="2"
+      :outset="6"
+      :radius="4"
+      :pose="0"
+    >
+      <div class="well-body" role="group" aria-label="Teacher's marks and checks">
+        <div class="well-rows">
+          <div
+            v-for="section in assistSections"
+            :key="section.key"
+            class="ticket-row"
+            role="group"
+            :aria-label="section.ariaLabel ?? section.heading"
+          >
+            <h2 class="ticket-label ticket-label-graphite" aria-hidden="true">
+              {{ section.heading }}
+            </h2>
+            <OptionSelector
+              class="ticket-options"
+              :options="section.options"
+              :selected="section.selected"
+              :boil-frame="0"
+              @change="section.onChange($event)"
+            />
+          </div>
+        </div>
+      </div>
+      <SheetWashiLabel text="teacher's" :seed="59" anchor="center" persistent />
+    </HandDrawnOutline>
+
+    <!-- Zone separator = the hold-to-peek BoilDivider (existing grammar): the wells above, the
+         live verbs below. Spatial prophylaxis — Deal is a full divider away from the play
+         tools, so a mid-game fat-finger never lands a board wipe. UI-4: the washi is PERSISTENT
+         on coarse pointers and pinned to the divider's own box; the surface pads to ≥44px. -->
+    <div
+      class="peek-hold-surface group relative my-2"
+      @pointerdown="onDividerHoldStart()"
+      @pointerup="onDividerHoldEnd()"
+      @pointerleave="onDividerHoldEnd()"
+      @pointercancel="onDividerHoldEnd()"
+    >
+      <BoilDivider />
+      <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
+    </div>
+
+    <!-- Live verbs — acts on the CURRENT board. DOM order FROZEN: Deal (in the ticket) ·
+         Clear · Fill · Solve · Share, so `.controls-card button.icon-btn` .nth(4) is still
+         Share (share-truth.spec.ts:57). Hover washi on fine pointers, persistent sublabels on
+         coarse (UI-5 — an iPad in the row regime reaches this layout with no hover). -->
+    <div class="flex items-center justify-evenly">
+      <button
+        @click="onClear()"
+        :disabled="loading"
+        class="icon-btn group relative"
+        :aria-label="clearArmed ? 'Tap again to clear board' : 'Clear board'"
+      >
+        <span :class="{ 'eraser-scrub': clearAnimating }">
+          <EraserIcon :size="28" />
+        </span>
+        <span class="icon-sublabel" :class="{ 'is-armed': clearArmed }" aria-hidden="true">{{
+          clearArmed ? "sure?" : "Clear"
+        }}</span>
+        <SheetWashiLabel v-if="!mobile" text="Clear" :seed="23" />
+      </button>
+
+      <button
+        @click="onFillForced()"
+        :disabled="loading"
+        class="icon-btn group relative"
+        aria-label="Fill in the forced cells"
+      >
+        <FillForcedIcon :size="26" :playing="fillAnimating" />
+        <span class="icon-sublabel" aria-hidden="true">Fill</span>
+        <SheetWashiLabel v-if="!mobile" text="fill forced" :seed="43" />
+      </button>
+
+      <button
+        @click="onSolve()"
+        :disabled="loading"
+        class="icon-btn group relative"
+        aria-label="Solve puzzle"
+      >
+        <ScribbleLoader
+          v-if="loading && !solveAnimating"
+          :size="22"
+          class="text-muted-foreground"
+        />
+        <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
+        <span class="icon-sublabel" aria-hidden="true">Solve</span>
+        <SheetWashiLabel v-if="!mobile" text="Solve" :seed="37" />
+      </button>
+
+      <button
+        @click="onShare()"
+        :disabled="loading"
+        class="icon-btn group relative"
+        :aria-label="shareAria"
+      >
+        <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
+        <span class="icon-sublabel" aria-hidden="true">{{ shareSublabel }}</span>
+        <SheetWashiLabel
+          v-if="!mobile"
+          :text="shareWashi"
+          :seed="71"
+          :wide="shareState === 'failed'"
+        />
+      </button>
+    </div>
+
+    <!-- Play tools (T4-WM §2) — coarse-only by CSS, so a fine desktop shows the legend below
+         (a keyboard is implied) and a coarse iPad gets the tappable undo / redo / hint. -->
+    <div class="play-controls">
+      <button
+        @click="onUndo()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Undo last move"
+      >
+        <UndoIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Undo</span>
+      </button>
+      <button
+        @click="onRedo()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Redo move"
+      >
+        <RedoIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Redo</span>
+      </button>
+      <button
+        @click="onHint()"
+        :disabled="loading"
+        class="icon-btn"
+        aria-label="Reveal a hint in the selected cell"
+      >
+        <HintIcon :size="26" />
+        <span class="icon-sublabel" aria-hidden="true">Hint</span>
+      </button>
+    </div>
+
+    <!-- UI-7b: the keyboard legend (row-regime card only — a keyboard is implied there). -->
+    <KeyboardLegend v-if="!mobile" />
+  </div>
+</template>

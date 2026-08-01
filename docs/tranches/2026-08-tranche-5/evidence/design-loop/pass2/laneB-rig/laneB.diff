@@ -1,0 +1,1117 @@
+diff --git a/web/frontend/e2e/mobile-affordances.spec.ts b/web/frontend/e2e/mobile-affordances.spec.ts
+index ea5a7897..469b3d6f 100644
+--- a/web/frontend/e2e/mobile-affordances.spec.ts
++++ b/web/frontend/e2e/mobile-affordances.spec.ts
+@@ -283,9 +283,12 @@ test("coarse affordances: persistent peek washi on a ≥44px target, icon sublab
+   const box = (await peek.boundingBox())!;
+   expect(box.height).toBeGreaterThanOrEqual(44);
+ 
+-  // The four icon actions carry written names on coarse pointers (T4-WU/U2: the dice re-homed
+-  // to "Deal" in the staged zone — still within the mobile panel, still writing its name).
+-  for (const label of ["Deal", "Clear", "Solve", "Share"]) {
++  // The icon actions carry written names on coarse pointers. Deal's name is no longer an
++  // `.icon-sublabel`: the commit verb is the ticket's dominant voice (`.deal-verb`, the card's
++  // one display-register string), so it is asserted as itself rather than as a caption.
++  await expect(panel.locator(".deal-verb")).toBeVisible();
++  await expect(panel.locator(".deal-verb")).toHaveText("Deal");
++  for (const label of ["Clear", "Solve", "Share"]) {
+     await expect(
+       panel.locator(".icon-sublabel", { hasText: label }).first(),
+     ).toBeVisible();
+@@ -349,7 +352,7 @@ test("Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty b
+   // "Deal a new board" — no "Tap again" phrasing — and its sublabel reads "Deal", never "sure?".
+   // (born-RED at base: `onDeal` was BARE — no arm, no dirty check.)
+   await expect(dealBtn).toHaveAttribute("aria-label", "Deal a new board");
+-  await expect(dealBtn.locator(".icon-sublabel")).toHaveText("Deal");
++  await expect(dealBtn.locator(".deal-verb")).toHaveText("Deal");
+ 
+   // DIRTY the board — a typed digit lifts the undo depth — and Deal ARMS on the first tap: the aria
+   // swaps and the sublabel shows "sure?" in rose, the board intact (armed ≠ dealt). The commit path
+@@ -364,6 +367,6 @@ test("Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty b
+   await expect(
+     panel.getByRole("button", { name: "Tap again to deal a new board" }),
+   ).toBeVisible();
+-  await expect(dealBtn.locator(".icon-sublabel")).toHaveText("sure?");
++  await expect(dealBtn.locator(".deal-verb")).toHaveText("sure?");
+   await expect(input).toHaveValue("5"); // the first tap armed — it did NOT deal a new board
+ });
+diff --git a/web/frontend/e2e/visual-regression.spec.ts b/web/frontend/e2e/visual-regression.spec.ts
+index d1214633..f8dbd4fa 100644
+--- a/web/frontend/e2e/visual-regression.spec.ts
++++ b/web/frontend/e2e/visual-regression.spec.ts
+@@ -140,17 +140,29 @@ test("light mode: layout, styles, filters, DOM contract", async ({ page }) => {
+   expect(fontFamily).toMatch(/Fraunces/i);
+ 
+   // Bigger touch targets
+-  const iconBtnWidth = await page
+-    .locator(".icon-btn")
++  // Scoped to the VISIBLE (row-regime) card and read as a real box. Unscoped, `.icon-btn`
++  // .first() resolved into the `lg:hidden` mobile card, where a `width: auto` control computes
++  // to the string "auto" — the old read only ever returned a number because every `.icon-btn`
++  // was clipped to a fixed 2.75rem box, Deal included.
++  const iconBtnBox = (await page
++    .locator(".controls-card .icon-btn")
+     .first()
+-    .evaluate((el) => parseFloat(getComputedStyle(el).width));
+-  expect(iconBtnWidth).toBeGreaterThanOrEqual(36);
+-
+-  const ctrlBtnFontSize = await page
+-    .locator(".ctrl-btn")
+-    .first()
+-    .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+-  expect(ctrlBtnFontSize).toBeGreaterThanOrEqual(19);
++    .boundingBox())!;
++  expect(iconBtnBox.width).toBeGreaterThanOrEqual(36);
++  expect(iconBtnBox.height).toBeGreaterThanOrEqual(36);
++
++  // The option's TARGET, not its type size. The row-regime selector used to be a vertical
++  // column at a hard-coded 1.25rem; it is one horizontal row at the sheet's own `--type-body`
++  // rung now (17.5px @1024 → 18.6px @1440), which is what lets a `label | options` docket line
++  // fit the rail. The thing this row actually guards — "bigger touch targets" — is the box, so
++  // the box is what it measures.
++  const ctrlBtn = page.locator(".controls-card .ctrl-btn").first();
++  const ctrlBtnBox = (await ctrlBtn.boundingBox())!;
++  expect(ctrlBtnBox.height).toBeGreaterThanOrEqual(28);
++  const ctrlBtnFontSize = await ctrlBtn.evaluate((el) =>
++    parseFloat(getComputedStyle(el).fontSize),
++  );
++  expect(ctrlBtnFontSize).toBeGreaterThanOrEqual(17);
+ 
+   // Logo renders with Fraunces font. T4-W1: the wordmark is a 4-pose stack baked to
+   // bitmaps (image.logo-pose-bmp, opacity-swapped) with the live filter stack as the
+diff --git a/web/frontend/src/games/shared/AssistSettings.vue b/web/frontend/src/games/shared/AssistSettings.vue
+deleted file mode 100644
+index 5bbf3c95..00000000
+--- a/web/frontend/src/games/shared/AssistSettings.vue
++++ /dev/null
+@@ -1,91 +0,0 @@
+-<script setup lang="ts">
+-/**
+- * Board-assist settings (T4-W8 ROW 2 + ROW 3) — the two check preferences beside the Marks
+- * toggle: the error-check MODE (Off / Ask / Live) and the persistent-candidates toggle (Off / On).
+- * Game-agnostic chrome: it owns no domain state, just relays the two settings (`update:*` v-model
+- * seams), so both games mount the identical component. It rides the app's own segmented-control
+- * primitive (OptionSelector) so the scribble-underline grammar matches Size / Difficulty / Marks
+- * exactly — one grammar, not a second look.
+- *
+- * "Ask" is the on-demand check: OptionSelector emits on every click (not only a value change), so
+- * re-tapping Ask re-arms a fresh point-in-time snapshot — the on-demand trigger needs no separate
+- * button. "Live" is the as-you-go continuous check; "Off" trains you (the Solve grade still grades).
+- */
+-import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
+-import type { ErrorCheckMode } from "./useAssists";
+-
+-// T4-W10 idiom (§defineModel) — `candidatesPinned` adopts defineModel (c2-idiom.md §1 #3): the
+-// runtime boolean↔'on'/'off' map is preserved (the `v === 'on'` write in onCandidatesChange +
+-// the `? 'on' : 'off'` template read). `errorCheckMode` STAYS a manual prop+emit (§1a #2):
+-// OptionSelector emits on every click and re-tapping "Ask" re-arms the on-demand snapshot on a
+-// SAME value — defineModel's hasChanged guard would swallow that re-emit, killing the re-check.
+-const candidatesPinned = defineModel<boolean>("candidatesPinned", {
+-  required: true,
+-});
+-defineProps<{
+-  errorCheckMode: ErrorCheckMode;
+-  mobile?: boolean;
+-}>();
+-const emit = defineEmits<{
+-  (e: "update:errorCheckMode", value: ErrorCheckMode): void;
+-}>();
+-
+-const CHECK_OPTIONS: { value: ErrorCheckMode; label: string }[] = [
+-  { value: "off", label: "Off" },
+-  { value: "on-demand", label: "Ask" },
+-  { value: "live", label: "Live" },
+-];
+-const CANDIDATE_OPTIONS = [
+-  { value: "off", label: "Off" },
+-  { value: "on", label: "On" },
+-];
+-
+-function onCheckChange(v: string | number) {
+-  emit("update:errorCheckMode", v as ErrorCheckMode);
+-}
+-function onCandidatesChange(v: string | number) {
+-  candidatesPinned.value = v === "on";
+-}
+-</script>
+-
+-<template>
+-  <div
+-    class="assist-settings flex flex-col gap-2"
+-    role="group"
+-    aria-label="Board assists"
+-  >
+-    <!-- Error-check mode (ROW 2): Off (train yourself) / Ask (check-anytime) / Live (as-you-go).
+-         Re-tapping Ask re-checks — OptionSelector emits on every click, so the on-demand snapshot
+-         needs no separate trigger. Default Ask, never a mistake-counter (§B3 design law). -->
+-    <div class="flex flex-col items-center gap-1 md:items-stretch">
+-      <h2 class="section-heading text-muted-foreground" aria-label="Check for errors">
+-        Check
+-      </h2>
+-      <OptionSelector
+-        :options="CHECK_OPTIONS"
+-        :selected="errorCheckMode"
+-        :boil-frame="0"
+-        :mobile="mobile"
+-        @change="onCheckChange"
+-      />
+-    </div>
+-
+-    <!-- Persistent auto-candidates (ROW 3): the engine's surviving domains, un-gated from the
+-         held-peek behind a persistent, opt-in toggle. Default Off (the NYT clutter lesson). -->
+-    <div class="flex flex-col items-center gap-1 md:items-stretch">
+-      <h2
+-        class="section-heading text-muted-foreground"
+-        aria-label="Show candidate marks"
+-      >
+-        Candidates
+-      </h2>
+-      <OptionSelector
+-        :options="CANDIDATE_OPTIONS"
+-        :selected="candidatesPinned ? 'on' : 'off'"
+-        :boil-frame="0"
+-        :mobile="mobile"
+-        @change="onCandidatesChange"
+-      />
+-    </div>
+-  </div>
+-</template>
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 296d7e36..e4cd1529 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -26,7 +26,7 @@ export interface ControlSection {
+ </script>
+ 
+ <script setup lang="ts">
+-import { computed, ref, onBeforeUnmount, useId } from "vue";
++import { computed, ref, onBeforeUnmount } from "vue";
+ import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
+ import FillForcedIcon from "@pencil/chrome/icons/FillForcedIcon.vue";
+ import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
+@@ -37,9 +37,8 @@ import RedoIcon from "@pencil/chrome/icons/RedoIcon.vue";
+ import HintIcon from "@pencil/chrome/icons/HintIcon.vue";
+ import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
+ import KeyboardLegend from "@pencil/chrome/KeyboardLegend.vue";
+-import PencilModeToggle from "@games/shared/PencilModeToggle.vue";
+-import AssistSettings from "@games/shared/AssistSettings.vue";
+ import BoilDivider from "@pencil/chrome/BoilDivider.vue";
++import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
+ import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
+ import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
+ import type { PencilMode } from "@games/shared/useUserMarks";
+@@ -122,32 +121,65 @@ const emit = defineEmits<{
+   (e: "update:errorCheckMode", value: ErrorCheckMode): void;
+ }>();
+ 
+-// The mobile tab-toggle exists ONLY because a game has ≥2 sections (the size/difficulty tabs).
+-// A single-section game shows a plain heading + its selector — never a dead tab (the named risk).
+-const showTabs = computed(() => props.sections.length >= 2);
+-
+-// Per-section derivations, DATA-driven (never a config flag):
+-//  • the difficulty heading writes in the selected option's crayon (colorClass present on
+-//    difficultyOptions, absent on the size options) → the tone is read, not toggled;
+-//  • the closed-tab value (UI-12) is the selected option's label.
+-function activeColorClass(section: ControlSection): string | undefined {
+-  return section.options.find((o) => o.value === section.selected)?.colorClass;
+-}
+-function headingClass(section: ControlSection): (string | Record<string, boolean>)[] {
+-  const cc = activeColorClass(section);
+-  return cc ? ["transition-colors", "duration-250", cc] : ["text-muted-foreground"];
+-}
+-// UI-12: the mobile tabs show only the active panel's options, so the inactive tab's current
+-// value is invisible while the other is open. Surface it small + graphite beneath the heading.
+-function valueLabel(section: ControlSection): string {
+-  return section.options.find((o) => o.value === section.selected)?.label ?? "";
++// Per-section derivation, DATA-driven (never a config flag): the difficulty label writes in the
++// selected option's crayon (colorClass present on difficultyOptions, absent on the size options)
++// → the tone is read, not toggled.
++function labelTone(section: ControlSection): (string | Record<string, boolean>)[] {
++  const cc = section.options.find((o) => o.value === section.selected)?.colorClass;
++  return cc ? ["transition-colors", "duration-250", cc] : ["ticket-label-graphite"];
+ }
+ function onSectionChange(section: ControlSection, val: string | number) {
+   section.onChange(val);
+   triggerBoil();
+ }
+ 
+-const expandedPanel = ref(props.sections[0]?.key ?? "");
++// ── The teacher's well (LANE B) — the three LIVE-board preferences as the same
++// `ControlSection[]` shape the games supply for the ticket, so ONE `v-for` renders both wells
++// (n-section-generic, the shell's own contract turned on itself). This is what absorbed
++// `PencilModeToggle.vue` (47) and `AssistSettings.vue` (91): both were a heading + an
++// OptionSelector, i.e. a ControlSection written as a component. `check` keeps the manual emit,
++// so re-picking "Ask" still re-arms the on-demand snapshot (useAssists.ts:42-46 — the
++// same-value re-emit is load-bearing and rides `onChange` untouched).
++const MARK_OPTIONS: { value: PencilMode; label: string }[] = [
++  { value: "off", label: "Normal" },
++  { value: "corner", label: "Corner" },
++  { value: "center", label: "Center" },
++];
++const CHECK_OPTIONS: { value: ErrorCheckMode; label: string }[] = [
++  { value: "off", label: "Off" },
++  { value: "on-demand", label: "Ask" },
++  { value: "live", label: "Live" },
++];
++const CANDIDATE_OPTIONS = [
++  { value: "off", label: "Off" },
++  { value: "on", label: "On" },
++];
++const assistSections = computed<ControlSection[]>(() => [
++  {
++    key: "marks",
++    heading: "Marks",
++    ariaLabel: "Pencil marks",
++    options: MARK_OPTIONS,
++    selected: pencilMode.value,
++    onChange: (v) => (pencilMode.value = v as PencilMode),
++  },
++  {
++    key: "check",
++    heading: "Check",
++    ariaLabel: "Check for errors",
++    options: CHECK_OPTIONS,
++    selected: props.errorCheckMode,
++    onChange: (v) => emit("update:errorCheckMode", v as ErrorCheckMode),
++  },
++  {
++    key: "candidates",
++    heading: "Candidates",
++    ariaLabel: "Show candidate marks",
++    options: CANDIDATE_OPTIONS,
++    selected: candidatesPinned.value ? "on" : "off",
++    onChange: (v) => (candidatesPinned.value = v === "on"),
++  },
++]);
+ 
+ // ── Hold-to-peek gesture on the BoilDivider (the hold surface, fe-composition
+ // §7b — the union diff held Solve, stale post-extraction). Press-and-hold ≥350ms
+@@ -235,10 +267,9 @@ const shareWashi = computed(() =>
+       : "share link",
+ );
+ 
+-// T4-WU/U2 — a unique id per panel instance so the staged zone's `role="group"` can be labelled by
+-// its own "New game" heading (each game mounts two panels — mobile card + desktop rail — so a
+-// static id would collide; `useId` keeps each accessible-name reference unambiguous).
+-const newGameId = useId();
++// LANE B — the staged group is named by `aria-label`, not `aria-labelledby`: the washi tape IS
++// the visible name, and a tooltip-role chip is not an id target. `useId` (and the collision it
++// solved across the doubled panel mount) goes with it.
+ 
+ const { animating: solveAnimating, trigger: triggerSolve } = useButtonAnimation(500);
+ const { animating: fillAnimating, trigger: triggerFill } = useButtonAnimation(500);
+@@ -326,264 +357,112 @@ function onHint() {
+ </script>
+ 
+ <template>
+-  <!-- Mobile layout -->
+-  <div v-if="mobile" class="control-panel-wrap mobile-control-panel mt-3">
+-    <!-- STAGED "New game" zone (T4-WU/U2) — the game sections are the provisional inputs to the
+-         NEXT board; the re-homed Deal is the verb that commits them. role="group" labelled by the
+-         New-game heading makes the staging legible to assistive tech (one new semantic, no live
+-         region). Selectors read provisional BY PLACEMENT and wipe nothing (arm-not-live). -->
+-    <div class="new-game-zone" role="group" :aria-labelledby="newGameId">
+-      <div class="control-panel-filtered">
+-        <h2 :id="newGameId" class="section-heading new-game-heading">New game</h2>
+-        <!-- The mobile tab-toggle — renders ONLY at n ≥ 2 sections (each tab is a section head;
+-             a single-section game shows a plain heading below instead of a dead tab). -->
+-        <div v-if="showTabs" class="mobile-heading-row">
+-          <button
++  <!-- LANE B — ONE composition, both regimes. The mobile/desktop branch pair (two ~180-line
++       templates that differed in six attributes) collapses; `mobile` now drives only what it
++       must — the top margin, the hover-washi presence, and the keyboard legend.
++
++       THE TICKET (marks 1 + 2): the card is two drawn compartments and a live-verb row. Each
++       compartment is `HandDrawnOutline :pose="0"` — a frozen, filterless frame that enrols no
++       beat — tagged by a persistent washi tape that IS its name. The six display-caps eyebrows
++       (NEW GAME · SIZE · DIFFICULTY · MARKS · CHECK · CANDIDATES) become two washi tags and five
++       inline hand labels, so the card's ONE Fraunces voice is Deal, the verb that commits it. -->
++  <div class="control-panel-wrap" :class="{ 'mobile-control-panel': mobile }">
++    <!-- ══ WELL 1 · THE TICKET — the next board, staged. Selectors read provisional BY
++         PLACEMENT (arm-not-live: nothing here touches the live board until Deal). -->
++    <HandDrawnOutline
++      class="well well-ticket"
++      :stroke-width="2"
++      :outset="6"
++      :radius="4"
++      :pose="0"
++    >
++      <div class="well-body" role="group" aria-label="New game">
++        <div class="control-panel-filtered well-rows">
++          <!-- n-section-generic against ControlSection[]: 1..n rows, no tab machinery, no
++               single-section special case. A row is `label | options` on one baseline — the
++               docket line that replaced the stanza. -->
++          <div
+             v-for="section in sections"
+             :key="section.key"
+-            class="mobile-heading-btn"
+-            :aria-expanded="expandedPanel === section.key"
+-            @click="expandedPanel = section.key"
++            class="ticket-row"
++            role="group"
++            :aria-label="section.ariaLabel ?? section.heading"
+           >
+-            <h2
+-              class="section-heading"
+-              :class="[
+-                headingClass(section),
+-                { 'is-active': expandedPanel === section.key },
+-              ]"
+-              :aria-label="section.ariaLabel"
+-            >
++            <h2 class="ticket-label" :class="labelTone(section)" aria-hidden="true">
+               {{ section.heading }}
+             </h2>
+-            <!-- UI-12: the current value, shown only while this tab is closed. -->
+-            <span v-if="expandedPanel !== section.key" class="heading-value">{{
+-              valueLabel(section)
+-            }}</span>
+-          </button>
++            <OptionSelector
++              class="ticket-options"
++              :options="section.options"
++              :selected="section.selected"
++              :boil-frame="boilFrame"
++              @change="onSectionChange(section, $event)"
++            />
++          </div>
+         </div>
+ 
+-        <template v-for="section in sections" :key="section.key">
+-          <!-- Single-section (n = 1): a plain heading above its selector, never a tab. -->
+-          <h2
+-            v-if="!showTabs"
+-            class="section-heading"
+-            :class="headingClass(section)"
+-            :aria-label="section.ariaLabel"
+-          >
+-            {{ section.heading }}
+-          </h2>
+-          <OptionSelector
+-            v-show="!showTabs || expandedPanel === section.key"
+-            :options="section.options"
+-            :selected="section.selected"
+-            :boil-frame="boilFrame"
+-            mobile
+-            @change="onSectionChange(section, $event)"
+-          />
+-        </template>
+-      </div>
+-
+-      <!-- The Deal commit — the DiceIcon re-homed from the action row (no new control, the WM
+-           input shape stays frozen). Its name shows always (the primary verb of the staged zone
+-           earns its label), so "next game" reads with zero copy. -->
+-      <div class="deal-row">
+-        <button
+-          @click="onDeal()"
+-          :disabled="loading"
+-          class="icon-btn deal-btn"
+-          :aria-label="dealArmed ? 'Tap again to deal a new board' : 'Deal a new board'"
+-        >
+-          <DiceIcon :size="28" :playing="dealAnimating" />
+-          <span
+-            class="icon-sublabel"
+-            :class="{ 'is-armed': dealArmed }"
+-            aria-hidden="true"
+-            >{{ dealArmed ? "sure?" : "Deal" }}</span
++        <!-- The Deal commit. Mark 1: the card's ONLY display-register voice, written at the
++             √φ heading rung the six eyebrows used to hold between them, beside a 34px die that
++             is pinned `flex: 0 0 auto` — the shipped 28px DiceIcon renders 17.6px tall because
++             a column-flex .icon-btn shrinks it, which is the actual mechanism of the inversion
++             the owner marked. "Deal" is also the one Fraunces string the shipped subset covers
++             whole (D·e·a·l), so it is the card's only chimera-free display text. -->
++        <div class="deal-row">
++          <button
++            @click="onDeal()"
++            :disabled="loading"
++            class="icon-btn deal-btn group relative"
++            :aria-label="dealArmed ? 'Tap again to deal a new board' : 'Deal a new board'"
+           >
+-        </button>
++            <DiceIcon :size="34" :playing="dealAnimating" />
++            <span class="deal-verb" :class="{ 'is-armed': dealArmed }" aria-hidden="true">{{
++              dealArmed ? "sure?" : "Deal"
++            }}</span>
++          </button>
++        </div>
+       </div>
+-    </div>
+-
+-    <!-- Zone separator = the hold-to-peek BoilDivider (existing grammar): staged zone above,
+-         live zone below. Spatial prophylaxis — Deal is a full divider away from the play tools,
+-         so a mid-game fat-finger never lands a board wipe. UI-4: the washi is PERSISTENT on
+-         coarse pointers and pinned to the divider's own box; the surface pads to a ≥44px target
+-         (CSS). Narrow fine-pointer windows keep the hover/focus reveal. -->
+-    <div
+-      class="peek-hold-surface group relative"
+-      @pointerdown="onDividerHoldStart()"
+-      @pointerup="onDividerHoldEnd()"
+-      @pointerleave="onDividerHoldEnd()"
+-      @pointercancel="onDividerHoldEnd()"
+-    >
+-      <BoilDivider />
+-      <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
+-    </div>
+-
+-    <!-- LIVE zone — acts on the CURRENT board (pencil mode, assists, undo/redo/hint, solve/
+-         clear/share). -->
+-    <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); one
+-         component, both games. Arms the user-mark authoring seam on the frozen native input. -->
+-    <PencilModeToggle v-model:mode="pencilMode" mobile />
+-
+-    <!-- Board assists (T4-W8 ROW 2 + ROW 3) — the error-check mode + persistent candidates; one
+-         shared component, both games. Same segmented-control grammar as Marks / Size / Difficulty. -->
+-    <AssistSettings
+-      :error-check-mode="errorCheckMode"
+-      v-model:candidates-pinned="candidatesPinned"
+-      mobile
+-      @update:error-check-mode="emit('update:errorCheckMode', $event)"
+-    />
+-
+-    <!-- Action buttons — UI-5: persistent sublabels in the pencil hand on coarse
+-         pointers (the washi is a hover grammar; sighted touch users got no text). Deal
+-         re-homed OUT of this row into the staged zone above (spatial prophylaxis). -->
+-    <div class="flex items-center justify-evenly">
+-      <button
+-        @click="onClear()"
+-        :disabled="loading"
+-        class="icon-btn"
+-        :aria-label="clearArmed ? 'Tap again to clear board' : 'Clear board'"
+-      >
+-        <span :class="{ 'eraser-scrub': clearAnimating }">
+-          <EraserIcon :size="28" />
+-        </span>
+-        <span
+-          class="icon-sublabel"
+-          :class="{ 'is-armed': clearArmed }"
+-          aria-hidden="true"
+-          >{{ clearArmed ? "sure?" : "Clear" }}</span
+-        >
+-      </button>
+-      <button
+-        @click="onFillForced()"
+-        :disabled="loading"
+-        class="icon-btn"
+-        aria-label="Fill in the forced cells"
+-      >
+-        <FillForcedIcon :size="26" :playing="fillAnimating" />
+-        <span class="icon-sublabel" aria-hidden="true">Fill</span>
+-      </button>
+-      <button
+-        @click="onSolve()"
+-        :disabled="loading"
+-        class="icon-btn"
+-        aria-label="Solve puzzle"
+-      >
+-        <ScribbleLoader
+-          v-if="loading && !solveAnimating"
+-          :size="22"
+-          class="text-muted-foreground"
+-        />
+-        <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
+-        <span class="icon-sublabel" aria-hidden="true">Solve</span>
+-      </button>
+-      <button
+-        @click="onShare()"
+-        :disabled="loading"
+-        class="icon-btn"
+-        :aria-label="shareAria"
+-      >
+-        <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
+-        <span class="icon-sublabel" aria-hidden="true">{{ shareSublabel }}</span>
+-      </button>
+-    </div>
+-
+-    <!-- Play tools (T4-WM §2) — the coarse touch surface for undo / redo / hint, the
+-         acts a fine pointer reaches by ⌘Z / ⇧⌘Z / H. Coarse-only (CSS gate): the desktop
+-         keeps its keys + legend, so this row is display:none on a fine pointer and never
+-         disturbs that presentation. Same .icon-btn grammar as the action row above (44px
+-         floor + written sublabel on coarse). -->
+-    <div class="play-controls">
+-      <button
+-        @click="onUndo()"
+-        :disabled="loading"
+-        class="icon-btn"
+-        aria-label="Undo last move"
+-      >
+-        <UndoIcon :size="26" />
+-        <span class="icon-sublabel" aria-hidden="true">Undo</span>
+-      </button>
+-      <button
+-        @click="onRedo()"
+-        :disabled="loading"
+-        class="icon-btn"
+-        aria-label="Redo move"
+-      >
+-        <RedoIcon :size="26" />
+-        <span class="icon-sublabel" aria-hidden="true">Redo</span>
+-      </button>
+-      <button
+-        @click="onHint()"
+-        :disabled="loading"
+-        class="icon-btn"
+-        aria-label="Reveal a hint in the selected cell"
+-      >
+-        <HintIcon :size="26" />
+-        <span class="icon-sublabel" aria-hidden="true">Hint</span>
+-      </button>
+-    </div>
+-  </div>
+-
+-  <!-- Desktop layout -->
+-  <div v-else class="control-panel-wrap flex flex-col items-center md:items-stretch">
+-    <!-- STAGED "New game" zone (T4-WU/U2) — the desktop twin of the mobile staged zone: the game
+-         sections stage the NEXT board, Deal commits. role="group" labelled by the New-game
+-         heading; the selectors read provisional by placement (arm-not-live — no live re-deal). -->
+-    <div
+-      class="new-game-zone flex flex-col items-center md:items-stretch"
+-      role="group"
+-      :aria-labelledby="newGameId"
++      <SheetWashiLabel text="new game" :seed="13" anchor="center" persistent />
++    </HandDrawnOutline>
++
++    <!-- ══ WELL 2 · THE TEACHER'S — the three live-board preferences, same row grammar, same
++         `ControlSection[]` shape (the shell supplies these; the games supply the ticket's).
++         Three headings and two components' worth of wrapper markup collapse into one tag. -->
++    <HandDrawnOutline
++      class="well well-teacher"
++      :stroke-width="2"
++      :outset="6"
++      :radius="4"
++      :pose="0"
+     >
+-      <div class="control-panel-filtered flex flex-col items-center md:items-stretch">
+-        <h2 :id="newGameId" class="section-heading new-game-heading">New game</h2>
+-        <template v-for="(section, i) in sections" :key="section.key">
+-          <hr v-if="i > 0" class="border-border/50 my-3 w-full" />
+-          <div class="flex flex-col items-center gap-1 md:items-stretch">
+-            <h2
+-              class="section-heading"
+-              :class="headingClass(section)"
+-              :aria-label="section.ariaLabel"
+-            >
++      <div class="well-body" role="group" aria-label="Teacher's marks and checks">
++        <div class="well-rows">
++          <div
++            v-for="section in assistSections"
++            :key="section.key"
++            class="ticket-row"
++            role="group"
++            :aria-label="section.ariaLabel ?? section.heading"
++          >
++            <h2 class="ticket-label ticket-label-graphite" aria-hidden="true">
+               {{ section.heading }}
+             </h2>
+             <OptionSelector
++              class="ticket-options"
+               :options="section.options"
+               :selected="section.selected"
+-              :boil-frame="boilFrame"
+-              @change="onSectionChange(section, $event)"
++              :boil-frame="0"
++              @change="section.onChange($event)"
+             />
+           </div>
+-        </template>
+-      </div>
+-
+-      <!-- The Deal commit — the DiceIcon re-homed from the action row (no new control, the WM
+-           input shape stays frozen). Hover washi on fine pointers; its name shows always so
+-           "next game" reads with zero copy. -->
+-      <div class="deal-row">
+-        <button
+-          @click="onDeal()"
+-          :disabled="loading"
+-          class="icon-btn deal-btn group relative"
+-          :aria-label="dealArmed ? 'Tap again to deal a new board' : 'Deal a new board'"
+-        >
+-          <DiceIcon :size="28" :playing="dealAnimating" />
+-          <span
+-            class="icon-sublabel"
+-            :class="{ 'is-armed': dealArmed }"
+-            aria-hidden="true"
+-            >{{ dealArmed ? "sure?" : "Deal" }}</span
+-          >
+-          <SheetWashiLabel text="Deal" :seed="11" />
+-        </button>
++        </div>
+       </div>
+-    </div>
++      <SheetWashiLabel text="teacher's" :seed="59" anchor="center" persistent />
++    </HandDrawnOutline>
+ 
+-    <!-- Zone separator = the hold-to-peek BoilDivider (existing grammar): staged zone above,
+-         live zone below. Spatial prophylaxis — Deal sits a full divider from the play tools, so
+-         a mid-game fat-finger never lands a board wipe. L14: a washi labels the hidden affordance.
+-         UI-9: anchored to the divider's OWN box, so the chip sits ON the ruled line. UI-4: also
+-         persistent on coarse pointers (iPad row regime), with a padded ≥44px target. -->
++    <!-- Zone separator = the hold-to-peek BoilDivider (existing grammar): the wells above, the
++         live verbs below. Spatial prophylaxis — Deal is a full divider away from the play
++         tools, so a mid-game fat-finger never lands a board wipe. UI-4: the washi is PERSISTENT
++         on coarse pointers and pinned to the divider's own box; the surface pads to ≥44px. -->
+     <div
+       class="peek-hold-surface group relative my-2"
+       @pointerdown="onDividerHoldStart()"
+@@ -595,21 +474,10 @@ function onHint() {
+       <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
+     </div>
+ 
+-    <!-- LIVE zone — acts on the CURRENT board. -->
+-    <!-- Pencil-marks mode (T4-W8 ROW 1) — the shared toggle (Normal / Corner / Center); the
+-         desktop twin of the mobile mount above. One component, both games. -->
+-    <PencilModeToggle v-model:mode="pencilMode" />
+-
+-    <!-- Board assists (T4-W8 ROW 2 + ROW 3) — the desktop twin of the mobile mount above. -->
+-    <AssistSettings
+-      :error-check-mode="errorCheckMode"
+-      v-model:candidates-pinned="candidatesPinned"
+-      @update:error-check-mode="emit('update:errorCheckMode', $event)"
+-    />
+-
+-    <!-- Action buttons — hover washi for fine pointers, persistent sublabels on coarse
+-         (UI-5: an iPad in the row regime reaches this layout with no hover). Deal re-homed OUT
+-         of this row into the staged zone above (spatial prophylaxis). -->
++    <!-- Live verbs — acts on the CURRENT board. DOM order FROZEN: Deal (in the ticket) ·
++         Clear · Fill · Solve · Share, so `.controls-card button.icon-btn` .nth(4) is still
++         Share (share-truth.spec.ts:57). Hover washi on fine pointers, persistent sublabels on
++         coarse (UI-5 — an iPad in the row regime reaches this layout with no hover). -->
+     <div class="flex items-center justify-evenly">
+       <button
+         @click="onClear()"
+@@ -620,13 +488,10 @@ function onHint() {
+         <span :class="{ 'eraser-scrub': clearAnimating }">
+           <EraserIcon :size="28" />
+         </span>
+-        <span
+-          class="icon-sublabel"
+-          :class="{ 'is-armed': clearArmed }"
+-          aria-hidden="true"
+-          >{{ clearArmed ? "sure?" : "Clear" }}</span
+-        >
+-        <SheetWashiLabel text="Clear" :seed="23" />
++        <span class="icon-sublabel" :class="{ 'is-armed': clearArmed }" aria-hidden="true">{{
++          clearArmed ? "sure?" : "Clear"
++        }}</span>
++        <SheetWashiLabel v-if="!mobile" text="Clear" :seed="23" />
+       </button>
+ 
+       <button
+@@ -637,7 +502,7 @@ function onHint() {
+       >
+         <FillForcedIcon :size="26" :playing="fillAnimating" />
+         <span class="icon-sublabel" aria-hidden="true">Fill</span>
+-        <SheetWashiLabel text="fill forced" :seed="43" />
++        <SheetWashiLabel v-if="!mobile" text="fill forced" :seed="43" />
+       </button>
+ 
+       <button
+@@ -653,7 +518,7 @@ function onHint() {
+         />
+         <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
+         <span class="icon-sublabel" aria-hidden="true">Solve</span>
+-        <SheetWashiLabel text="Solve" :seed="37" />
++        <SheetWashiLabel v-if="!mobile" text="Solve" :seed="37" />
+       </button>
+ 
+       <button
+@@ -665,6 +530,7 @@ function onHint() {
+         <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
+         <span class="icon-sublabel" aria-hidden="true">{{ shareSublabel }}</span>
+         <SheetWashiLabel
++          v-if="!mobile"
+           :text="shareWashi"
+           :seed="71"
+           :wide="shareState === 'failed'"
+@@ -672,9 +538,8 @@ function onHint() {
+       </button>
+     </div>
+ 
+-    <!-- Play tools (T4-WM §2) — coarse-only, so a fine desktop shows the legend below
+-         (a keyboard is implied) and a coarse iPad in this row-regime gets the tappable
+-         undo / redo / hint instead. The two are mutually exclusive by pointer media. -->
++    <!-- Play tools (T4-WM §2) — coarse-only by CSS, so a fine desktop shows the legend below
++         (a keyboard is implied) and a coarse iPad gets the tappable undo / redo / hint. -->
+     <div class="play-controls">
+       <button
+         @click="onUndo()"
+@@ -705,8 +570,8 @@ function onHint() {
+       </button>
+     </div>
+ 
+-    <!-- UI-7b: the keyboard legend (fine-pointer only — a keyboard is implied there). -->
+-    <KeyboardLegend />
++    <!-- UI-7b: the keyboard legend (row-regime card only — a keyboard is implied there). -->
++    <KeyboardLegend v-if="!mobile" />
+   </div>
+ </template>
+ 
+@@ -727,50 +592,141 @@ function onHint() {
+   will-change: transform;
+ }
+ 
+-/* T4-WU/U2 — the staged "New game" zone: the game sections + the Deal commit, grouped above
+-   the peek divider (the live zone sits below). Structural grouping only — the zone reads
+-   "provisional" by PLACEMENT + its heading; no box grammar is invented. */
+-.new-game-zone {
++/* ── THE WELLS (LANE B) ────────────────────────────────────────────────────
++   A well is a drawn compartment: `HandDrawnOutline :pose="0"` — a frozen, filterless frame
++   (its grain is baked into the path geometry, so a well enrols NO beat and adds NO painter)
++   — tagged with a persistent washi tape that IS its name. Two wells replace six eyebrows. */
++.well + .well {
++  margin-top: 0.85rem;
++}
++
++.well-body {
+   display: flex;
+   flex-direction: column;
++  gap: 0.4rem;
++  padding: 0.75rem 0.4rem 0.55rem;
+ }
+ 
+-/* The group's own eyebrow — names the staging so "next game" reads with zero copy. Quiet: the
+-   same √φ section-heading register, centered + muted, never louder than the selectors it captions. */
+-.new-game-heading {
+-  text-align: center;
+-  color: var(--color-muted-foreground);
+-  margin-bottom: 0.35rem;
++.well-rows {
++  display: flex;
++  flex-direction: column;
++  gap: 0.1rem;
++}
++
++/* The washi tag sits ON the well's drawn top edge — the UI-9 move the peek chip already makes
++   on the divider, applied to a compartment. `anchor="center"` supplies the pin-to-own-box base;
++   these declarations nudge it to the edge and keep it laid down on EVERY pointer (a self-label
++   is not a hover affordance — `persistent` alone only reveals it at pointer:coarse). */
++.well :deep(.washi-label) {
++  top: 0;
++  left: 1rem;
++  transform: translate(0, -52%) rotate(var(--washi-tilt));
++  opacity: 1;
++  text-transform: lowercase;
++}
++
++/* ── THE DOCKET LINE ───────────────────────────────────────────────────────
++   A row is `label | options` on one baseline. This is the stanza's replacement: the eyebrow
++   stops being a heading-register block above its own selector and becomes a caption in the
++   hand at the row's head, so the reader's eye runs left-to-right down a ruled list instead of
++   down six identical display-caps mastheads. `heading` is aria-hidden here and the row carries
++   the accessible name, so the label never doubles the group name to AT. */
++.ticket-row {
++  display: flex;
++  align-items: baseline;
++  justify-content: space-between;
++  gap: 0.5rem;
++}
++
++/* Rank voice 3 of 4 (the F5 pressure ladder, monotone with the options it captions): the
++   pencil hand at the small rung, `lowercase` so the shipped Patrick Hand subset covers every
++   glyph whole — the display-caps eyebrows it replaces painted per-glyph fallback chimeras
++   (Fraunces' subset holds only B·D·S uppercase, so SIZE/DIFFICULTY/MARKS/CHECK/CANDIDATES
++   each lost most of their letters to a system serif). Zero bytes, and the card gets its
++   typography back. */
++.ticket-label {
++  flex: 0 0 auto;
++  font-family: var(--font-hand);
++  font-size: var(--type-small);
++  font-weight: 400;
++  line-height: 1;
++  letter-spacing: var(--type-tracking-wide);
++  text-align: left;
++  text-transform: lowercase;
++  white-space: nowrap;
++}
++
++/* 68% graphite — the AA-clean rung (5.23:1 light / 6.06:1 dark on --color-card; 60% was
++   4.10:1 and failed). The difficulty row overrides it with its crayon INK tone instead. */
++.ticket-label-graphite {
++  color: color-mix(
++    in srgb,
++    var(--color-pencil-graphite, var(--grid-line-color)) 68%,
++    transparent
++  );
+ }
+ 
+-/* The Deal commit sits centered under the staged selectors, a comfortable target from the peek
++.ticket-options {
++  flex: 0 1 auto;
++  justify-content: flex-end;
++}
++
++/* The Deal commit sits centered under the staged rows, a comfortable target from the peek
+    divider that partitions it off from the live play tools (the spatial prophylaxis). */
+ .deal-row {
+   display: flex;
+   justify-content: center;
+-  margin-top: 0.6rem;
+-}
+-
+-/* Deal is the re-homed dice, but it earns its NAME on every pointer (not only coarse): the
+-   primary verb of the staged zone reads with zero copy. The column layout + padded target
+-   mirrors the coarse icon-btn grammar, applied to Deal at all widths. */
+-.deal-btn {
+-  flex-direction: column;
+-  gap: 0.15rem;
++  margin-top: 0.15rem;
++}
++
++/* Deal, laid out as a ROW (die then verb): the verb is the dominant ink in the card, so it
++   reads beside the die on one baseline instead of hanging under it at caption scale.
++   TWO-CLASS on purpose — MEASURED: `.deal-btn`'s `width: auto` never applied, because
++   `.icon-btn`'s `width: 2.75rem` has equal specificity and wins on source order, so the shipped
++   Deal is a 44px box its own contents overflow (its real hit area is 44×44 while it paints
++   ~100px wide). `.icon-btn.deal-btn` also outranks the `@media (pointer: coarse)` `.icon-btn`
++   column override, so the pose is one decision at every pointer instead of an accident of
++   cascade order. */
++.icon-btn.deal-btn {
++  flex-direction: row;
++  gap: 0.45rem;
+   width: auto;
+   height: auto;
+   min-width: 2.75rem;
+   min-height: 2.75rem;
+-  padding: 0.3rem 0.85rem;
++  padding: 0.25rem 0.9rem;
++}
++
++/* MEASURED, not assumed: inside a column-flex `.icon-btn` the die is a flex ITEM on the main
++   axis, so the shipped `:size="28"` DiceIcon actually renders ~17.6px tall — the mechanism of
++   the rank inversion the owner marked. Pinning the basis is what makes 34 mean 34. */
++.icon-btn.deal-btn > svg {
++  flex: 0 0 auto;
++}
++
++/* Rank voice 1 of 4 — mark 1. The card's ONLY display-register voice is the verb that commits
++   it: the √φ heading rung (25.9px ≥md) at the pencil override weight, in the foreground ink,
++   written SENTENCE-CASE because "Deal" is the one display string the shipped Fraunces subset
++   covers whole (D·e·a·l). Nothing else in the card now speaks in this register. */
++.deal-verb {
++  font-family: var(--font-display);
++  font-size: var(--type-subheading);
++  line-height: var(--type-leading-heading);
++  font-weight: 800;
++  letter-spacing: var(--type-tracking-snug);
++  color: var(--color-foreground);
+ }
+ 
+-.deal-btn .icon-sublabel {
+-  display: block;
++@media (min-width: 768px) {
++  .deal-verb {
++    font-size: var(--type-heading);
++  }
+ }
+ 
+-/* .section-heading type register lives in assets/typography.css (@layer
+-   components) — the √φ subheading→heading eyebrow, shared by both games (D4).
+-   Only the component-local hover flourish stays scoped here. */
++/* The armed Deal asks in the teacher's rose — the one moment the verb changes voice. */
++.deal-verb.is-armed {
++  color: var(--color-red-ink);
++}
+ 
+ /* Crayon color utilities. The difficulty heading writes in the difficulty crayon, but as
+    light-mode heading text the raw wax fails AA (green 2.22 / orange 2.05 / rose 4.11 on
+@@ -790,16 +746,8 @@ function onHint() {
+   color: var(--color-crayon-blue);
+ }
+ 
+-/* Hover flourishes, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter
+-   write is retired (SvgFilters), so these static wobbles raster once per hover —
+-   a resting pointer never re-enrolls a live painter (the b1 node-1006 finding).
+-   T4-WM §2: fenced behind (hover: hover) — on touch the wobble filter stuck to the
+-   last-tapped heading (r2 §4 sticky-hover leak); a coarse pointer sees none of it. */
+-@media (hover: hover) {
+-  .section-heading:hover {
+-    filter: url(#wobble-heart);
+-  }
+-}
++/* The `.section-heading:hover` wobble goes with the headings: no `.section-heading` survives in
++   this component, so the rule was a dead selector holding a live-filter reference. */
+ 
+ .icon-btn {
+   display: inline-flex;
+@@ -927,49 +875,14 @@ function onHint() {
+   }
+ }
+ 
+-/* Mobile layout */
++/* The stacked regime is now the SAME composition — only the top margin differs, so the mobile
++   tab machinery (.mobile-heading-row / .mobile-heading-btn / .heading-value / the is-active
++   underline) and its second font-family declaration are deleted with the branch they served. */
++/* The class NAME is kept verbatim: four e2e specs scope to `.mobile-control-panel`, and a
++   rename would have cost four spec edits for no design. Only its body shrinks — the duplicate
++   `font-family: var(--font-display)` it carried is already on `.control-panel-wrap`. */
+ .mobile-control-panel {
+-  font-family: var(--font-display);
+-  font-optical-sizing: auto;
+-}
+-
+-.mobile-heading-row {
+-  display: flex;
+-  justify-content: space-evenly;
+-}
+-
+-.mobile-heading-btn {
+-  display: flex;
+-  flex-direction: column;
+-  align-items: center;
+-  gap: 0.05rem;
+-  background: none;
+-  border: none;
+-  cursor: pointer;
+-  padding: 0;
+-}
+-
+-/* UI-12: the inactive tab's current value — the pencil hand at caption scale, reduced-
+-   pressure graphite. Deliberately quiet: it names what's closed without competing with
+-   the active tab's underline. */
+-.heading-value {
+-  font-family: var(--font-hand);
+-  font-size: var(--type-caption);
+-  line-height: 1;
+-  letter-spacing: var(--type-tracking-wide);
+-  /* T4-W10 gate 1: 60% graphite was 4.10:1 on --color-card (< AA 4.5); 68% clears it —
+-     5.23:1 light / 6.06:1 dark. Still the quiet closed-tab value, one pressure step firmer. */
+-  color: color-mix(
+-    in srgb,
+-    var(--color-pencil-graphite, var(--grid-line-color)) 68%,
+-    transparent
+-  );
+-}
+-
+-.mobile-heading-btn .section-heading.is-active {
+-  text-decoration: underline;
+-  text-decoration-thickness: 2px;
+-  text-underline-offset: 4px;
++  margin-top: 0.75rem;
+ }
+ 
+ /* Share pop — a small tape-press flourish on the share act (Band C one-shot). */
+diff --git a/web/frontend/src/games/shared/GameScene.vue b/web/frontend/src/games/shared/GameScene.vue
+index 0ec3ce74..cff3df30 100644
+--- a/web/frontend/src/games/shared/GameScene.vue
++++ b/web/frontend/src/games/shared/GameScene.vue
+@@ -98,7 +98,10 @@ onUnmounted(() => unregisterDrawer?.());
+       @keydown.escape.stop="closeDrawer"
+     >
+       <HandDrawnOutline :stroke-width="3">
+-        <div ref="panelEl" class="controls-card bg-card rounded-xl p-5">
++        <!-- p-4, not p-5: the panel's compartments now carry their own interior padding, so the
++             card's own inset was doubling it — and at 1024 the row-regime layout is only ~10px
++             inside the page edge, where 4px a side is legible air. -->
++        <div ref="panelEl" class="controls-card bg-card rounded-xl p-4">
+           <slot name="controls" :mobile="false" />
+         </div>
+       </HandDrawnOutline>
+diff --git a/web/frontend/src/games/shared/PencilModeToggle.vue b/web/frontend/src/games/shared/PencilModeToggle.vue
+deleted file mode 100644
+index fecce784..00000000
+--- a/web/frontend/src/games/shared/PencilModeToggle.vue
++++ /dev/null
+@@ -1,47 +0,0 @@
+-<script setup lang="ts">
+-/**
+- * Pencil-marks mode toggle (T4-W8 ROW 1) — the single control that arms user pencil marks and
+- * picks the placement slot: Normal (a digit is a value, the frozen T4-WM native entry) / Corner
+- * / Center (Snyder notation). Game-agnostic chrome: it owns no domain state, just relays the
+- * mode, so both games mount the identical component (`update:mode` is a v-model seam). It rides
+- * the app's own segmented-control primitive (OptionSelector) so the scribble-underline grammar
+- * matches Size/Difficulty exactly — one grammar, not a second look.
+- */
+-import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
+-import type { PencilMode } from "./useUserMarks";
+-
+-// T4-W10 idiom (§defineModel) — the `mode` two-way seam collapses to defineModel (c2-idiom.md
+-// §1 #1). The write-side `as PencilMode` cast (OptionSelector emits `string | number`) moves to
+-// the model assignment in onChange; SAFE — no same-value dependence.
+-const mode = defineModel<PencilMode>("mode", { required: true });
+-defineProps<{ mobile?: boolean }>();
+-
+-const MODE_OPTIONS: { value: PencilMode; label: string }[] = [
+-  { value: "off", label: "Normal" },
+-  { value: "corner", label: "Corner" },
+-  { value: "center", label: "Center" },
+-];
+-
+-function onChange(v: string | number) {
+-  mode.value = v as PencilMode;
+-}
+-</script>
+-
+-<template>
+-  <div
+-    class="pencil-mode-toggle flex flex-col items-center gap-1 md:items-stretch"
+-    role="group"
+-    aria-label="Pencil marks mode"
+-  >
+-    <h2 class="section-heading text-muted-foreground" aria-label="Pencil marks">
+-      Marks
+-    </h2>
+-    <OptionSelector
+-      :options="MODE_OPTIONS"
+-      :selected="mode"
+-      :boil-frame="0"
+-      :mobile="mobile"
+-      @change="onChange"
+-    />
+-  </div>
+-</template>
+diff --git a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+index 17346cd4..7c7adc83 100644
+--- a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
++++ b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+@@ -8,7 +8,6 @@ defineProps<{
+   options: { value: string | number; label: string; colorClass?: string }[];
+   selected: string | number;
+   boilFrame: number;
+-  mobile?: boolean;
+ }>();
+ 
+ const emit = defineEmits<{
+@@ -25,16 +24,17 @@ function scribbleSeed(val: string | number): number {
+ </script>
+ 
+ <template>
+-  <div :class="mobile ? 'options-row' : 'flex flex-col items-center md:items-stretch'">
++  <!-- ONE form at every width (LANE B). The `mobile` prop selected between a horizontal row and
++       a VERTICAL COLUMN, and the column is what made the row-regime card overflow: twelve stacked
++       option buttons at ~31px each. The row is the shipped mobile form, promoted to the only
++       form — measured, not asserted (see the lane's geometry ledger). -->
++  <div class="options-row">
+     <button
+       v-for="opt in options"
+       :key="opt.value"
+       @click="emit('change', opt.value)"
+-      class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-all duration-150"
++      class="ctrl-btn rounded-md px-1.5 py-1.5 text-center transition-all duration-150"
+       :class="[
+-        mobile
+-          ? 'text-[1rem] md:text-[1.375rem]'
+-          : 'text-[1.375rem] md:py-0.5 md:text-left md:text-[1.25rem]',
+         selected === opt.value
+           ? `selected-item font-bold ${opt.colorClass ?? 'text-foreground'}`
+           : 'text-muted-foreground hover:text-foreground hover-item',
+@@ -65,6 +65,11 @@ function scribbleSeed(val: string | number): number {
+ <style scoped>
+ .ctrl-btn {
+   font-family: "Fira Code", monospace;
++  /* One rung, one declaration — the four Tailwind size classes the `mobile` fork carried are
++     replaced by the fluid `--type-body` rung so the option scale tracks the sheet's own type
++     ladder instead of two hard-coded breakpoint pairs. */
++  font-size: var(--type-body);
++  line-height: 1.15;
+ }
+ 
+ /* Hover flourish, FROZEN at one pose (T3-W13 §1-P4-ii): the per-beat filter write
+@@ -108,7 +113,7 @@ function scribbleSeed(val: string | number): number {
+ .options-row {
+   display: flex;
+   justify-content: center;
+-  gap: 0.25rem;
+-  padding: 0.25rem 0;
++  gap: 0.1rem;
++  padding: 0.2rem 0;
+ }
+ </style>

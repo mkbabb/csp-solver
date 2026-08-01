@@ -1,0 +1,162 @@
+--- current/registry.ts	2026-07-31 03:19:21
++++ f4/registry.ts	2026-07-31 03:21:20
+@@ -14,7 +14,6 @@
+  * config flags).
+  */
+ import type { Component } from "vue";
+-import type { ControlSection } from "@games/shared/GameControlPanel.vue";
+ import { sudokuGame } from "@games/sudoku/game";
+ import { futoshikiGame } from "@games/futoshiki/game";
+ // The eager default game rides the main chunk (a STATIC import, resolved by its card's
+@@ -22,12 +21,21 @@
+ // Registry is tree-shaken out of the app build until App.vue consumes GAMES (W12 Wave B),
+ // so this import lands in the main chunk only once the gallery seam is wired — never before.
+ import SudokuGame from "@games/sudoku/SudokuGame.vue";
+-import { sizeOptions } from "@games/sudoku/ControlPanel/constants";
+-import { boardSizeOptions } from "@games/futoshiki/ControlPanel/constants";
++import {
++  sizeOptions,
++  difficultyOptions as sudokuDifficultyOptions,
++} from "@games/sudoku/ControlPanel/constants";
++import {
++  boardSizeOptions,
++  difficultyOptions as futoshikiDifficultyOptions,
++} from "@games/futoshiki/ControlPanel/constants";
+ // KenKen's own selector band (4/5/6) — a game never depends on another's ControlPanel
+-// constants for its own range sub-line. Thermo/Killer ARE Sudoku variants, so they reuse the
++// constants for its own staging band. Thermo/Killer ARE Sudoku variants, so they reuse the
+ // sudoku `sizeOptions` above (already imported for sudokuCard).
+-import { sizeOptions as kenkenSizeOptions } from "@games/kenken/ControlPanel/constants";
++import {
++  sizeOptions as kenkenSizeOptions,
++  difficultyOptions as kenkenDifficultyOptions,
++} from "@games/kenken/ControlPanel/constants";
+ 
+ /** The first-solution result — one shape across both games (the W6 stat-line payload). */
+ interface SolveResult {
+@@ -97,8 +105,6 @@
+    *  for a game with no on-board clue glyphs (Sudoku's subgrid ticks are drawn by the board
+    *  from a `subgridSize` VALUE, not a slot — so the absence is `null`, never a boolean). */
+   clueFurniture: Component | null;
+-  /** the 1..n OptionSelector sections the control-shell renders, built over the live model. */
+-  options: (model: TBoard) => ControlSection[];
+   /** the solver request builders over the shared transport (W4 seam), by clue type. */
+   solverPayloads: () => SolverPayloads<TClue>;
+ }
+@@ -142,6 +148,28 @@
+  * (a stricter id would force a `gameRegistry` edit too, defeating the invariant). W13's Thermo
+  * lands as a real row here; nothing else in the app changes.
+  */
++/**
++ * ONE STAGING AXIS (F4-D1) — the card's staging band, as STATIC data.
++ *
++ * This replaces two things at once: the dead `range` caption (5 producers, 1 consumer, 0 tests)
++ * and `GameDefinition.options: (model) => ControlSection[]`, whose only consumer was the
++ * drawer's staged zone. Staging moves to the picker card, so the registry must carry the SCHEMA
++ * — and it carries it without a live model: values in via props, intents out via emits (the
++ * pencil grammar). The mounted board's real pair arrives through `useStagingBridge`, never here.
++ *
++ * `key` is the URL/bridge vocabulary (`size` · `difficulty`) and stays uniform across the five;
++ * `label` is the game's OWN word — which is what fixes the old `range.label: "size"` lie on
++ * futoshiki/kenken, whose axis is a board side length, not a subgrid size.
++ */
++export interface StagingAxis {
++  key: string;
++  label: string;
++  /** shown on the board-margin re-deal strip as well as the card (the frequent axis). */
++  quick?: boolean;
++  options: { value: string | number; label: string; colorClass?: string }[];
++  default: string | number;
++}
++
+ export interface GameCard {
+   /** URL token + stable id; drives `?game=`, aria, and v-for keys. */
+   id: string;
+@@ -149,8 +177,8 @@
+   name: string;
+   /** optional bespoke name glyph; absent → the wordmark `<text>`. */
+   glyph?: Component;
+-  /** the size/difficulty sub-line, in the game's own vocabulary. */
+-  range: { label: string; levels: string[] };
++  /** the staging band the picker card draws (F4-D1), in the game's own vocabulary. */
++  staging: StagingAxis[];
+   /** the static, non-interactive, boil-alive-capable poster (a read-only mini-board). */
+   poster: () => Promise<Component>;
+   /** the playable scene loader (the `defineGame` mount target). */
+@@ -159,10 +187,26 @@
+   eager?: boolean;
+ }
+ 
++/** The difficulty axis — one shape, three per-game tier tables (each game owns its own). */
++function difficultyAxis(
++  options: { value: string; label: string; colorClass: string }[],
++): StagingAxis {
++  return {
++    key: "difficulty",
++    label: "difficulty",
++    quick: true, // the frequent axis: it also rides the board-margin re-deal strip (F4-D4)
++    options,
++    default: "MEDIUM",
++  };
++}
++
+ const sudokuCard: GameCard = {
+   id: "sudoku",
+   name: "sudoku",
+-  range: { label: "size", levels: sizeOptions.map((o) => o.label) },
++  staging: [
++    { key: "size", label: "size", options: sizeOptions, default: 3 },
++    difficultyAxis(sudokuDifficultyOptions),
++  ],
+   poster: () => import("@games/sudoku/SudokuPoster.vue").then((m) => m.default),
+   // Eager: the scene is already in the main chunk (the static import above), so its loader
+   // resolves instantly — the byte-for-byte twin of App.vue's static `import SudokuGame`.
+@@ -173,7 +217,11 @@
+ const futoshikiCard: GameCard = {
+   id: "futoshiki",
+   name: "futoshiki",
+-  range: { label: "size", levels: boardSizeOptions.map((o) => o.label) },
++  // "board size", not "size" — futoshiki's axis IS the side length (C1's mis-naming, fixed).
++  staging: [
++    { key: "size", label: "board size", options: boardSizeOptions, default: 5 },
++    difficultyAxis(futoshikiDifficultyOptions),
++  ],
+   poster: () => import("@games/futoshiki/FutoshikiPoster.vue").then((m) => m.default),
+   // Lazy: the whole Futoshiki scene (board + controls + useFutoshiki + its Worker) stays a
+   // dynamic chunk that downloads only on select — today's chunking, unchanged.
+@@ -185,7 +233,10 @@
+ const thermoCard: GameCard = {
+   id: "thermo",
+   name: "thermo",
+-  range: { label: "size", levels: sizeOptions.map((o) => o.label) },
++  staging: [
++    { key: "size", label: "size", options: sizeOptions, default: 3 },
++    difficultyAxis(sudokuDifficultyOptions),
++  ],
+   poster: () => import("@games/thermo/ThermoPoster.vue").then((m) => m.default),
+   scene: () => import("@games/thermo/ThermoGame.vue").then((m) => m.default),
+ };
+@@ -194,7 +245,10 @@
+ const killerCard: GameCard = {
+   id: "killer",
+   name: "killer",
+-  range: { label: "size", levels: sizeOptions.map((o) => o.label) },
++  staging: [
++    { key: "size", label: "size", options: sizeOptions, default: 3 },
++    difficultyAxis(sudokuDifficultyOptions),
++  ],
+   poster: () => import("@games/killer/KillerPoster.vue").then((m) => m.default),
+   scene: () => import("@games/killer/KillerGame.vue").then((m) => m.default),
+ };
+@@ -203,7 +257,10 @@
+ const kenkenCard: GameCard = {
+   id: "kenken",
+   name: "kenken",
+-  range: { label: "size", levels: kenkenSizeOptions.map((o) => o.label) },
++  staging: [
++    { key: "size", label: "board size", options: kenkenSizeOptions, default: 5 },
++    difficultyAxis(kenkenDifficultyOptions),
++  ],
+   poster: () => import("@games/kenken/KenKenPoster.vue").then((m) => m.default),
+   scene: () => import("@games/kenken/KenKenGame.vue").then((m) => m.default),
+ };

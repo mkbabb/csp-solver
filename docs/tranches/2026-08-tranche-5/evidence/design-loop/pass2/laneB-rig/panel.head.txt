@@ -1,0 +1,357 @@
+<script lang="ts">
+/**
+ * ControlSection — the per-game slot the control-shell renders. A game supplies 1..n of
+ * these (size, difficulty, …); the shell owns the New-game staging, the hold-to-peek
+ * divider, the live action + play-tool rows, and every `<style>`. The mobile tab-toggle
+ * renders ONLY at n ≥ 2 (KISS: n-section-generic — a single-section game shows a plain
+ * heading, never a dead tab). Divergence is DATA, never a config flag: the difficulty
+ * heading's crayon tone is derived from the selected option's `colorClass` (present on
+ * difficultyOptions, absent on the size options), so no boolean toggle names it.
+ */
+export interface ControlSection {
+  /** tab identity, `expandedPanel` value, and OptionSelector `:key` stability */
+  key: string;
+  /** the visible heading text */
+  heading: string;
+  /** optional aria-label (else the visible text is the accessible name) */
+  ariaLabel?: string;
+  /** the OptionSelector options (value/label + the optional crayon colorClass) */
+  options: { value: string | number; label: string; colorClass?: string }[];
+  /** the currently-selected value */
+  selected: string | number;
+  /** write-back on select — the shell adds the underline boil on top (so a same-value
+   *  re-tap still boils, exactly as the twins did) */
+  onChange: (value: string | number) => void;
+}
+</script>
+
+<script setup lang="ts">
+import { computed, ref, onBeforeUnmount } from "vue";
+import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
+import FillForcedIcon from "@pencil/chrome/icons/FillForcedIcon.vue";
+import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
+import EraserIcon from "@pencil/chrome/icons/EraserIcon.vue";
+import ShareIcon from "@pencil/chrome/icons/ShareIcon.vue";
+import UndoIcon from "@pencil/chrome/icons/UndoIcon.vue";
+import RedoIcon from "@pencil/chrome/icons/RedoIcon.vue";
+import HintIcon from "@pencil/chrome/icons/HintIcon.vue";
+import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
+import KeyboardLegend from "@pencil/chrome/KeyboardLegend.vue";
+import BoilDivider from "@pencil/chrome/BoilDivider.vue";
+import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
+import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
+import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
+import type { PencilMode } from "@games/shared/useUserMarks";
+import type { ErrorCheckMode } from "@games/shared/useAssists";
+import { useTheme } from "@/composables/useTheme";
+import { useButtonAnimation } from "@games/shared/useButtonAnimation";
+import { useCoarsePointer } from "@games/shared/useCoarsePointer";
+
+const { isDark } = useTheme();
+
+// Underline boil: brief burst on selection change, then settle
+const boilFrame = ref(0);
+let boilTimer: ReturnType<typeof setTimeout> | null = null;
+
+function triggerBoil() {
+  if (boilTimer) clearTimeout(boilTimer);
+  let frame = 1;
+  boilFrame.value = frame;
+  const tick = () => {
+    frame++;
+    if (frame >= 5) {
+      boilFrame.value = 0;
+      boilTimer = null;
+      return;
+    }
+    boilFrame.value = frame;
+    boilTimer = setTimeout(tick, 120);
+  };
+  boilTimer = setTimeout(tick, 120);
+}
+
+// Reactive filter URL for control panel — avoids :global(.dark) CSS scoping bug
+const panelFilter = computed(() =>
+  isDark.value ? "url(#stroke-dark)" : "url(#stroke-light)",
+);
+
+// T4-W10 idiom (§defineModel) — pencilMode/candidatesPinned are PLAIN relays (their child
+// v-model collapses in the template). The per-game size/difficulty models stay in the thin
+// game panels that supply the sections; `errorCheckMode` STAYS a manual prop+emit (§1a): its
+// same-value re-emit re-arms the on-demand snapshot, which defineModel's hasChanged guard would
+// swallow.
+const pencilMode = defineModel<PencilMode>("pencilMode", { required: true });
+const candidatesPinned = defineModel<boolean>("candidatesPinned", {
+  required: true,
+});
+
+const props = defineProps<{
+  // The 1..n game sections (size, difficulty, …). The shell renders the New-game zone,
+  // the mobile tab-toggle (n ≥ 2 only), and the OptionSelectors from these.
+  sections: ControlSection[];
+  loading: boolean;
+  // T4-WU/U3 — the board's dirty state (the composable's `isDirty` = undo-depth non-empty).
+  // Gates the coarse two-tap: a DIRTY Deal / Clear arms first, a pristine board acts instantly.
+  isDirty: boolean;
+  mobile?: boolean;
+  // T4-W8 ROW 2 — the error-check mode (off/on-demand/live), relayed to AssistSettings. LEFT a
+  // manual prop+emit (§1a): the on-demand re-arm rides its same-value re-emit.
+  errorCheckMode: ErrorCheckMode;
+  // T4-W3 share-truth: the parent's share act, handed as a callback rather than an emit so
+  // the OUTCOME travels back — it resolves iff the clipboard copy actually landed.
+  share: () => Promise<void>;
+}>();
+
+const emit = defineEmits<{
+  // T4-WU/U2 — the re-homed dice, the "Deal" commit: it lifts out of the live action row into
+  // the staged New-game zone and commits the staged sections. Same button grammar (DiceIcon
+  // `.icon-btn`), no new control; the WM input shape stays frozen.
+  (e: "deal"): void;
+  (e: "clear"): void;
+  (e: "solve"): void;
+  // T4-W8 — the fill-forced partial solve (W7's fillAllForced).
+  (e: "fill-forced"): void;
+  (e: "peek-start"): void;
+  (e: "peek-end"): void;
+  // T4-WM §2 — the touch surface for the play tools the desktop reaches by key (H, ⌘Z, ⇧⌘Z).
+  (e: "undo"): void;
+  (e: "redo"): void;
+  (e: "hint"): void;
+  // T4-W8 ROW 2 — the error-check mode changed (LEFT a manual v-model seam, §1a).
+  (e: "update:errorCheckMode", value: ErrorCheckMode): void;
+}>();
+
+// Per-section derivation, DATA-driven (never a config flag): the difficulty label writes in the
+// selected option's crayon (colorClass present on difficultyOptions, absent on the size options)
+// → the tone is read, not toggled.
+function labelTone(section: ControlSection): (string | Record<string, boolean>)[] {
+  const cc = section.options.find((o) => o.value === section.selected)?.colorClass;
+  return cc ? ["transition-colors", "duration-250", cc] : ["ticket-label-graphite"];
+}
+function onSectionChange(section: ControlSection, val: string | number) {
+  section.onChange(val);
+  triggerBoil();
+}
+
+// ── The teacher's well (LANE B) — the three LIVE-board preferences as the same
+// `ControlSection[]` shape the games supply for the ticket, so ONE `v-for` renders both wells
+// (n-section-generic, the shell's own contract turned on itself). This is what absorbed
+// `PencilModeToggle.vue` (47) and `AssistSettings.vue` (91): both were a heading + an
+// OptionSelector, i.e. a ControlSection written as a component. `check` keeps the manual emit,
+// so re-picking "Ask" still re-arms the on-demand snapshot (useAssists.ts:42-46 — the
+// same-value re-emit is load-bearing and rides `onChange` untouched).
+const MARK_OPTIONS: { value: PencilMode; label: string }[] = [
+  { value: "off", label: "Normal" },
+  { value: "corner", label: "Corner" },
+  { value: "center", label: "Center" },
+];
+const CHECK_OPTIONS: { value: ErrorCheckMode; label: string }[] = [
+  { value: "off", label: "Off" },
+  { value: "on-demand", label: "Ask" },
+  { value: "live", label: "Live" },
+];
+const CANDIDATE_OPTIONS = [
+  { value: "off", label: "Off" },
+  { value: "on", label: "On" },
+];
+const assistSections = computed<ControlSection[]>(() => [
+  {
+    key: "marks",
+    heading: "Marks",
+    ariaLabel: "Pencil marks",
+    options: MARK_OPTIONS,
+    selected: pencilMode.value,
+    onChange: (v) => (pencilMode.value = v as PencilMode),
+  },
+  {
+    key: "check",
+    heading: "Check",
+    ariaLabel: "Check for errors",
+    options: CHECK_OPTIONS,
+    selected: props.errorCheckMode,
+    onChange: (v) => emit("update:errorCheckMode", v as ErrorCheckMode),
+  },
+  {
+    key: "candidates",
+    heading: "Candidates",
+    ariaLabel: "Show candidate marks",
+    options: CANDIDATE_OPTIONS,
+    selected: candidatesPinned.value ? "on" : "off",
+    onChange: (v) => (candidatesPinned.value = v === "on"),
+  },
+]);
+
+// ── Hold-to-peek gesture on the BoilDivider (the hold surface, fe-composition
+// §7b — the union diff held Solve, stale post-extraction). Press-and-hold ≥350ms
+// → the answer-key laminate; a shorter press does nothing (the divider has no
+// click action, so no click-suppression bookkeeping is needed). App.vue owns the
+// peek state; this only reports the gesture. Keyboard peek rides App.vue's K/Esc.
+const PEEK_HOLD_MS = 350;
+let peekTimer: ReturnType<typeof setTimeout> | null = null;
+const isPeeking = ref(false);
+
+function onDividerHoldStart() {
+  if (peekTimer) clearTimeout(peekTimer);
+  peekTimer = setTimeout(() => {
+    peekTimer = null;
+    isPeeking.value = true;
+    emit("peek-start");
+  }, PEEK_HOLD_MS);
+}
+
+function onDividerHoldEnd() {
+  if (peekTimer) {
+    clearTimeout(peekTimer);
+    peekTimer = null;
+  }
+  if (isPeeking.value) {
+    isPeeking.value = false;
+    emit("peek-end");
+  }
+}
+
+onBeforeUnmount(() => {
+  if (peekTimer) clearTimeout(peekTimer);
+  if (isPeeking.value) emit("peek-end");
+  if (shareConfirmTimer) clearTimeout(shareConfirmTimer);
+  if (clearArmTimer) clearTimeout(clearArmTimer);
+  if (dealArmTimer) clearTimeout(dealArmTimer);
+});
+
+// ── Share-on-demand permalink (W6; T4-W3 share-truth) ──────────────────
+// `props.share()` resolves iff the clipboard copy actually landed. Confirm ("copied!") ONLY
+// on resolve; on reject (insecure context, permission-policy denial, absent Clipboard API)
+// the `?board=` link is still live in the address bar — so say exactly that. The washi,
+// sublabel, and aria-label all track the REAL outcome, never the optimistic flip the old
+// unconditional `shareConfirm = true` asserted over a possibly-empty clipboard.
+const { animating: shareAnimating, trigger: triggerShare } = useButtonAnimation(500);
+const shareState = ref<"idle" | "copied" | "failed">("idle");
+let shareConfirmTimer: ReturnType<typeof setTimeout> | null = null;
+async function onShare() {
+  triggerShare();
+  let copied = true;
+  try {
+    await props.share();
+  } catch {
+    copied = false;
+  }
+  shareState.value = copied ? "copied" : "failed";
+  if (shareConfirmTimer) clearTimeout(shareConfirmTimer);
+  // The failure line runs longer — it points the reader to the address bar, more to read.
+  shareConfirmTimer = setTimeout(
+    () => {
+      shareState.value = "idle";
+    },
+    copied ? 1600 : 3600,
+  );
+}
+const shareAria = computed(() =>
+  shareState.value === "copied"
+    ? "Link copied"
+    : shareState.value === "failed"
+      ? "couldn't copy — link is in the address bar"
+      : "Share board link",
+);
+const shareSublabel = computed(() =>
+  shareState.value === "copied"
+    ? "copied!"
+    : shareState.value === "failed"
+      ? "in address bar"
+      : "Share",
+);
+const shareWashi = computed(() =>
+  shareState.value === "copied"
+    ? "copied!"
+    : shareState.value === "failed"
+      ? "couldn't copy — link is in the address bar"
+      : "share link",
+);
+
+// LANE B — the staged group is named by `aria-label`, not `aria-labelledby`: the washi tape IS
+// the visible name, and a tooltip-role chip is not an id target. `useId` (and the collision it
+// solved across the doubled panel mount) goes with it.
+
+const { animating: solveAnimating, trigger: triggerSolve } = useButtonAnimation(500);
+const { animating: fillAnimating, trigger: triggerFill } = useButtonAnimation(500);
+const { animating: dealAnimating, trigger: triggerDeal } = useButtonAnimation(500);
+const { animating: clearAnimating, trigger: triggerClear } = useButtonAnimation(400);
+
+// T4-WU/U3 — the conditional confirm, generalized from the shipped Clear two-tap to Deal and
+// dirty-gated. On a coarse pointer a DIRTY board (undo-depth non-empty) arms first — the sublabel
+// asks "sure?" in the teacher's rose, the aria-label swaps, a 2.5s lapse re-arms — and a second tap
+// within the window deals; a PRISTINE board deals instantly (no nag by construction). Fine pointers
+// keep the one-click Deal + the board's Cmd/Ctrl+Z backstop (coarse-only, per the Clear precedent —
+// a ratify-me default, no fine-pointer variant). Same grammar/timer/aria swap as onClear below; the
+// two verbs share `isCoarse` + `props.isDirty`. Deal moved OUT of the live action row (U2), so the
+// confirm is prevention and the undo spine is recovery — the owner's "conditional," belt + suspenders.
+const isCoarse = useCoarsePointer();
+const dealArmed = ref(false);
+let dealArmTimer: ReturnType<typeof setTimeout> | null = null;
+function onDeal() {
+  if (isCoarse.value && props.isDirty && !dealArmed.value) {
+    dealArmed.value = true;
+    dealArmTimer = setTimeout(() => {
+      dealArmed.value = false;
+    }, 2500);
+    return;
+  }
+  if (dealArmTimer) {
+    clearTimeout(dealArmTimer);
+    dealArmTimer = null;
+  }
+  dealArmed.value = false;
+  triggerDeal();
+  emit("deal");
+}
+
+// T4-W8 — fill-forced (W7's fillAllForced): the icon marks draw themselves in on the press
+// (the fill/draw-in echo), and the game inks the forced cells through the board's reveal wave.
+function onFillForced() {
+  triggerFill();
+  emit("fill-forced");
+}
+
+// UI-5 confirm beat on Clear (recorded design call): Clear wipes the board — a `board` entry now,
+// so undo restores it (U1), but still a jarring wipe. On coarse pointers, where stray taps are
+// routine, the act takes two taps: the first arms (the sublabel asks "sure?" in the hand, rose),
+// the second within 2.5s clears; the window lapsing disarms quietly. T4-WU/U3 — DIRTY-GATED: the
+// arm now requires `props.isDirty` (born-RED at base: Clear armed unconditionally, even on a blank
+// board — the same undo-depth gate that arms Deal fixes it), so a pristine board clears instantly.
+// Fine pointers keep the one-click Clear — the confirm rides the same transient-label grammar as
+// the share "copied!" flip, no dialog machinery.
+const clearArmed = ref(false);
+let clearArmTimer: ReturnType<typeof setTimeout> | null = null;
+function onClear() {
+  if (isCoarse.value && props.isDirty && !clearArmed.value) {
+    clearArmed.value = true;
+    clearArmTimer = setTimeout(() => {
+      clearArmed.value = false;
+    }, 2500);
+    return;
+  }
+  if (clearArmTimer) {
+    clearTimeout(clearArmTimer);
+    clearArmTimer = null;
+  }
+  clearArmed.value = false;
+  triggerClear();
+  emit("clear");
+}
+
+function onSolve() {
+  triggerSolve();
+  emit("solve");
+}
+
+// T4-WM §2 — the play tools. Plain relays: the :active press-scale gives the tap its
+// feedback (no bespoke animation needed), and the game owns the actual undo/redo/hint act.
+function onUndo() {
+  emit("undo");
+}
+function onRedo() {
+  emit("redo");
+}
+function onHint() {
+  emit("hint");
+}
+</script>

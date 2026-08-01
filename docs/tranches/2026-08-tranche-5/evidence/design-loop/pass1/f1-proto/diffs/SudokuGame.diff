@@ -1,0 +1,36 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/src/games/sudoku/SudokuGame.vue	2026-07-15 10:58:22
++++ /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/design-loop/pass1/f1-proto/real-diffs/SudokuGame.f1.vue	2026-07-31 03:19:20
+@@ -13,6 +13,11 @@
+ import GameScene from "@games/shared/GameScene.vue";
+ import SudokuBoard from "./SudokuBoard/SudokuBoard.vue";
+ import ControlPanel from "./ControlPanel/ControlPanel.vue";
++// F1 slice 1 — the per-move stratum, mounted ONCE per scene (not per card): the doubled
++// controls card is a layout artifact, the toolbar is not. It goes straight into GameScene's
++// `#toolbar` slot rather than through the thin ControlPanel, because it carries no per-game
++// sections — undo/redo/hint/check are the same four acts in all five games.
++import GameToolbar from "@games/shared/GameToolbar.vue";
+ import { useAnswerKeyPeek } from "@games/shared/useAnswerKeyPeek";
+ // Async + mounted-on-first-peek: keeps the laminate's ~227 LOC out of the main chunk (the W9
+ // bundle gate) — same discipline as FilterTuner. The chunk loads on the first K/hold,
+@@ -151,6 +156,21 @@
+       />
+     </template>
+ 
++    <!-- F1 — the per-move toolbar. Same emit targets the panel's play-controls row used, so
++         the composable seam is unchanged: undo/redo route to the composable, hint reaches the
++         board's focused cell through the board ref, and Check re-asserts 'on-demand' (the
++         load-bearing same-value re-emit — `setErrorCheckMode` re-arms `checkArmed`). -->
++    <template #toolbar>
++      <GameToolbar
++        :loading="sudoku.loading.value"
++        :error-check-mode="sudoku.errorCheckMode.value"
++        @undo="sudoku.undo()"
++        @redo="sudoku.redo()"
++        @hint="sudokuBoard?.hintFocusedCell()"
++        @update:error-check-mode="sudoku.setErrorCheckMode($event)"
++      />
++    </template>
++
+     <template #controls="{ mobile }">
+       <ControlPanel
+         :size="sudoku.pendingSize.value"

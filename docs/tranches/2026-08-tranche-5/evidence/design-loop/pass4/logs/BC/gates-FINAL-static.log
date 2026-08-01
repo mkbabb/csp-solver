@@ -1,0 +1,59 @@
+
+> csp-solver-frontend@0.1.0 lint
+> prettier --check src/
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> csp-solver-frontend@0.1.0 lint:eslint
+> eslint .
+
+
+> csp-solver-frontend@0.1.0 lint:knip
+> knip
+
+
+> csp-solver-frontend@0.1.0 test:font-coverage
+> node scripts/check-font-coverage.mjs
+
+font coverage OK — 2 subset faces, each covered as authored AND as transformed:
+  Fraunces: 28 codepoints, 13788 B, 8 strings
+  Patrick Hand: 46 codepoints, 4312 B, 10 strings
+
+> csp-solver-frontend@0.1.0 lint:ink
+> node scripts/check-ink-pressure.mjs --self-test
+
+ink-pressure ladder — every rung clears its floor, strictly increasing, in all 3 scopes (light, dark, print), each resolved out of index.css:
+  --ink-press-rule    55%  3.53 light / 4.36 dark / 4.76 print  ≥3 (non-text)
+  --ink-press-quiet   68%  5.23 light / 6.06 dark / 7.86 print  ≥4.5 (text)
+  --ink-press-firm    72%  5.95 light / 6.66 dark / 9.23 print  ≥4.5 (text)
+  --color-red-ink          4.98 light / 6.32 dark  ≥4.5 (.icon-sublabel.is-armed)
+  washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+
+ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+  light  rule < muted-foreground < quiet < firm
+  dark   rule < quiet < firm < muted-foreground
+  the ramp and the register cross between themes. Booked in index.css §INK PRESSURE, not gated.
+
+> csp-solver-frontend@0.1.0 test:golden:bytes
+> node scripts/check-golden-bytes.mjs
+
+[golden-bytes] 8 golden(s), 99.0 KB total; per-image ceiling 150 KB
+  ok        3.8 KB  e2e/goldens/cell-light-darwin.png
+  ok        3.8 KB  e2e/goldens/cell-light-linux.png
+  ok       15.4 KB  e2e/goldens/grid-corner-light-darwin.png
+  ok       15.3 KB  e2e/goldens/grid-corner-light-linux.png
+  ok       23.5 KB  e2e/goldens/logo-light-darwin.png
+  ok       23.7 KB  e2e/goldens/logo-light-linux.png
+  ok        6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png
+  ok        6.8 KB  e2e/goldens/toggle-crest-dark-linux.png
+[golden-bytes] PASS — every golden within the per-image ceiling.
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+
+ Test Files  31 passed (31)
+      Tests  332 passed (332)
+   Start at  22:25:40
+   Duration  1.77s (transform 5.66s, setup 570ms, import 7.84s, tests 1.04s, environment 12.27s)
+

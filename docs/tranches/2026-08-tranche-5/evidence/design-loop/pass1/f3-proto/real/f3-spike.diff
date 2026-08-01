@@ -1,0 +1,342 @@
+--- a/src/games/shared/scene.css
++++ b/src/games/shared/scene.css
+@@ -128,7 +128,90 @@
+     align-items: center;
+     gap: 1.25rem;
+     width: 100%;
++    /* F3-SPIKE: the sheet is out of flow, so the column reserves the closed tongue's
++       48px + air itself. The shipping cut moves this to GameBoard's `<lg` height-guard
++       arm (spec D8/C2: `max-width: min(<existing>, calc(100dvh − 11rem))`); the padding
++       is the spike's one-line stand-in so the zero-scroll test is honest. */
++    padding-bottom: 3.75rem;
+   }
++
++  /* ── F3-SPIKE — THE UNDER-SHEET (<1024) ─────────────────────────────────────
++     The same `.scene-controls` node that is the pencil case ≥1024 becomes the
++     bottom sheet <1024. Three hardcoded detents (48 / 224 / full); no template
++     unification, no tab variant, no storage — physics only.
++
++     CHANNEL DISCIPLINE (spec D3, scene.css:76-82's own precedent, generalized):
++       · ANCHOR  — `top: var(--vv-height)`, the visible viewport's bottom edge in
++         LAYOUT px (useKeyboardViewport publishes it). The keyboard shrinks the
++         anchor; the sheet yields BY ANCHOR. No `bottom: 0` (iOS fixed-vs-visual
++         divergence), no height yield (a height change relayouts
++         `.control-panel-filtered` and re-rasters its 3-pass stroke filter).
++       · REST    — the `translate:` channel, `--sheet-rest` written ONCE at settle.
++         No mover animates `translate`, so no animation can capture it as a start
++         base (the F1-phantom's raw material, removed — W13 §3-S1).
++       · DRAG    — the `transform:` channel, a pure DELTA written per pointermove
++         (individual `translate` applies before `transform`, so the two compose
++         without either reading the other). Never a CSS var per frame.
++     The settle animates transform [delta → identity] with the rest pose ALREADY
++     landed — classic FLIP, `fill: none`, one glass curve, via useFlipGlide.run(). */
++  .scene-controls {
++    position: fixed;
++    left: 50%;
++    top: var(--vv-height, 100dvh);
++    translate: -50% calc(-1 * var(--sheet-rest, 3rem));
++    z-index: 45; /* over the board sheet; a stacking context for the bottom tab */
++    display: flex;
++    flex-direction: column;
++    width: min(42rem, calc(100vw - 1.5rem));
++    /* The sheet's own box is the FULL detent; closed/half reveal a band of it. */
++    max-height: calc(var(--vv-height, 100dvh) - 4rem);
++    padding-bottom: env(safe-area-inset-bottom, 0px);
++  }
++
++  /* The grabber — the spike's temporary drag surface (the shipping cut is
++     DrawerTab `edge="bottom"`, 92×48, mounted INSIDE this node). `touch-action:
++     none` so the pointer stream is ours, never the page's pan. */
++  .sheet-grabber {
++    flex: 0 0 auto;
++    height: 3rem; /* 48px — the closed tongue, ≥ the 44px floor */
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    touch-action: none;
++    cursor: grab;
++    background: var(--color-card);
++    border-radius: 0.75rem 0.75rem 0 0;
++    box-shadow: 0 -2px 10px color-mix(in srgb, var(--color-foreground) 10%, transparent);
++  }
++
++  .sheet-grabber::before {
++    content: "";
++    width: 2.25rem;
++    height: 0.25rem;
++    border-radius: 999px;
++    background: color-mix(in srgb, var(--color-foreground) 28%, transparent);
++  }
++
++  /* The pane: the ONE contained inner scroller (C7 — the index.css premise is
++     re-cut, not violated). Its max-height is the sheet's box minus the tongue. */
++  .scene-controls .controls-card {
++    flex: 1 1 auto;
++    max-height: none;
++    overflow-y: auto;
++    overscroll-behavior: contain;
++    touch-action: pan-y;
++  }
++
++  /* The gesture window — promote for its duration, arm NO transitions (the
++     `drawer-gesturing` model, axis-parallel). */
++  html.sheet-gesturing .scene-controls {
++    will-change: transform;
++  }
++
++  /* Never a document scroll while the sheet is being dragged. */
++  html.sheet-gesturing {
++    overflow: hidden;
++  }
+ }
+ 
+ /* ── F6 page-turn: the controls chrome follows the grid (T3-W10) ──────────────
+--- a/src/games/shared/GameScene.vue
++++ b/src/games/shared/GameScene.vue
+@@ -20,6 +20,8 @@
+   useControlsDrawer,
+ } from "@games/shared/useControlsDrawer";
+ import { useLiveFace } from "@games/shared/useLiveFace";
++import { useFlipGlide } from "@games/shared/useFlipGlide";
++import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
+ 
+ defineProps<{ leaving?: boolean }>();
+ 
+@@ -50,6 +52,135 @@
+   }));
+ });
+ onUnmounted(() => unregisterDrawer?.());
++
++// ══ F3-SPIKE — the <1024 under-sheet physics ═══════════════════════════════════
++// Falsifier rig for spec §PROTOTYPE SLICE items 2 (drag + settle). Inline HERE on
++// purpose: the shipping cut extracts all of it to `games/shared/useSheetDetents.ts`
++// (spec D2) — the spike proves the physics before the composable exists.
++//
++// F-a  does dragging over `.control-panel-filtered` re-raster its 3-pass filter?
++// F-c  does a `run()` settle FROM a live drag pose show the F1-phantom artifact?
++// (F-b/F-d are useKeyboardViewport's `--vv-height` + the focusout clamp.)
++
++/** The drawer's own GLIDE_MS — no new named timing, no ratify row (spec D1). */
++const SHEET_GLIDE_MS = 520;
++/** Hardcoded detents (spike): closed tongue · thumb row · everything. `full` is
++ *  resolved at runtime off the sheet's own clamped box. */
++const CLOSED_PX = 48;
++const HALF_PX = 224;
++const ARM_SLOP_PX = 10; // == useLongPress's slop: the peek hold self-cancels here
++const FLICK_PX_PER_MS = 0.5;
++
++type Detent = "closed" | "half" | "full";
++const sheetDetent = ref<Detent>("closed");
++const prm = usePrefersReducedMotion();
++
++/** Every detent's rest height in px. `full` = the sheet's clamped box (its
++ *  `max-height` is `--vv-height − 4rem`, so `offsetHeight` IS min(content, cap)). */
++function restFor(d: Detent): number {
++  if (d === "closed") return CLOSED_PX;
++  if (d === "half") return HALF_PX;
++  return railEl.value?.offsetHeight ?? HALF_PX;
++}
++
++/** The rest pose — the `translate:` channel, written ONCE per settle. */
++function landRest(d: Detent): void {
++  const el = railEl.value;
++  if (!el) return;
++  el.style.setProperty("--sheet-rest", `${restFor(d)}px`);
++  el.dataset.sheet = d;
++  sheetDetent.value = d;
++}
++
++const sheetGlide = useFlipGlide({
++  durationMs: SHEET_GLIDE_MS,
++  onSettle: () => {
++    // fill:none released the transform channel back to the underlying value, which
++    // we already set to identity at release — so this only drops the promotion.
++    document.documentElement.classList.remove("sheet-gesturing");
++    railEl.value?.style.removeProperty("transform");
++  },
++});
++
++// The accumulator (spec D2: no rect read, ever) — one pointer, four numbers.
++let down = false;
++let armed = false;
++let startY = 0;
++let startRest = 0;
++let liveRest = 0; // where the sheet's top edge sits RIGHT NOW, in rest-px
++let lastY = 0;
++let lastT = 0;
++let velocity = 0; // px/ms, upward positive
++
++function onSheetDown(e: PointerEvent): void {
++  if (!railEl.value) return;
++  down = true;
++  armed = false;
++  startY = lastY = e.clientY;
++  lastT = e.timeStamp;
++  velocity = 0;
++  startRest = liveRest = restFor(sheetDetent.value);
++}
++
++function onSheetMove(e: PointerEvent): void {
++  const el = railEl.value;
++  if (!down || !el) return;
++  const dy = startY - e.clientY; // upward positive
++  if (!armed) {
++    // ARBITRATION (spec D7): identical 10px slop to useLongPress — movement past it
++    // arms the drag at the exact instant the peek hold self-cancels. Zero peek edits.
++    if (Math.abs(dy) < ARM_SLOP_PX) return;
++    armed = true;
++    document.documentElement.classList.add("sheet-gesturing");
++  }
++  const dt = e.timeStamp - lastT;
++  if (dt > 0) velocity = (lastY - e.clientY) / dt;
++  lastY = e.clientY;
++  lastT = e.timeStamp;
++  // Clamped: a drag can never lift past `full` nor push below `closed`.
++  liveRest = Math.min(Math.max(startRest + dy, CLOSED_PX), restFor("full"));
++  el.style.transform = `translateY(${-(liveRest - startRest)}px)`;
++}
++
++/** Nearest detent by position, biased one step by a flick (spec D2). */
++function pickDetent(reach: number, v: number): Detent {
++  const rows: [Detent, number][] = [
++    ["closed", CLOSED_PX],
++    ["half", HALF_PX],
++    ["full", restFor("full")],
++  ];
++  let nearest = 0;
++  for (let i = 1; i < rows.length; i++)
++    if (Math.abs(reach - rows[i][1]) < Math.abs(reach - rows[nearest][1])) nearest = i;
++  if (v > FLICK_PX_PER_MS) nearest = Math.min(nearest + 1, rows.length - 1);
++  else if (v < -FLICK_PX_PER_MS) nearest = Math.max(nearest - 1, 0);
++  return rows[nearest][0];
++}
++
++function onSheetUp(): void {
++  const el = railEl.value;
++  down = false;
++  if (!el || !armed) return;
++  armed = false;
++  const target = pickDetent(liveRest, velocity);
++  const delta = liveRest - restFor(target); // px the pose must travel, upward positive
++  // LAND THE REST POSE ONCE (translate channel), release the drag's inline transform
++  // to identity, THEN animate transform [delta → identity]. Classic FLIP: nothing
++  // paints between the two writes; `fill: none` releases onto identity, so there is no
++  // committed-style phantom to capture (spec F-c's whole question) and no `reverse()`.
++  landRest(target);
++  el.style.transform = "";
++  if (prm.value || Math.abs(delta) < 0.5) {
++    document.documentElement.classList.remove("sheet-gesturing");
++    return;
++  }
++  // A fresh run() per release supersedes any in-flight glide — flick-during-settle is
++  // free, and the reverse() binary-flip limit (C5) never engages.
++  sheetGlide.run([{ el, from: `translateY(${-delta}px)`, to: "translateY(0px)" }]);
++}
++
++onMounted(() => landRest("closed"));
++onUnmounted(() => document.documentElement.classList.remove("sheet-gesturing"));
+ </script>
+ 
+ <template>
+@@ -76,8 +207,11 @@
+       </div>
+     </Teleport>
+ 
+-    <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
+-    <div class="mobile-board-width lg:hidden">
++    <!-- F3-SPIKE: the stacked mobile mount is `v-if="false"` — NOT deleted. The spike
++         proves ONE panel instance in the DOM at every width (success test 6) without
++         touching GameControlPanel's fork; the shipping cut deletes these 8 lines and
++         the `:mobile` slot prop outright (spec D5). -->
++    <div v-if="false" class="mobile-board-width lg:hidden">
+       <HandDrawnOutline :stroke-width="3">
+         <div class="bg-card rounded-lg px-2 py-1.5">
+           <slot name="controls" :mobile="true" />
+@@ -85,18 +219,27 @@
+       </HandDrawnOutline>
+     </div>
+ 
+-    <!-- Row-regime sidebar (≥lg — R3: iPad portrait clips at md): controls card,
+-         vertically centered against the board (H8-centering-only). T3-W12 §6: the rail
+-         IS the drawer — closed it parks under the board (scene.css), inert +
+-         visibility:hidden at rest (no invisible tab stops, W11 UI-6); Esc from within
+-         closes and returns focus to the tab. -->
++    <!-- THE ONE PANEL MOUNT. ≥lg: the row-regime rail — the pencil case, byte-untouched
++         (T3-W12 §6: closed it parks under the board per scene.css, inert +
++         visibility:hidden at rest, Esc from within closes and returns focus to the tab).
++         <lg (F3): the SAME node is the bottom under-sheet — `flex` instead of `hidden`,
++         a grabber prepended, the three detents driven by the spike physics above. Same
++         id, same ref, same F6 fade target, same slot. -->
+     <div
+       id="controls-drawer"
+       ref="railEl"
+-      class="scene-controls hidden lg:flex lg:flex-col lg:items-start"
++      class="scene-controls flex flex-col items-stretch lg:items-start"
+       :inert="drawerInert"
+       @keydown.escape.stop="closeDrawer"
++      @pointerdown="onSheetDown"
++      @pointermove="onSheetMove"
++      @pointerup="onSheetUp"
++      @pointercancel="onSheetUp"
+     >
++      <!-- The spike's temporary drag surface. Shipping cut: a second DrawerTab
++           instance, `edge="bottom"`, mounted right here (spec D6 — inside the z-45
++           sheet, so its z-index:-1 tongue is contained and C6 dissolves). -->
++      <div class="sheet-grabber lg:hidden" aria-hidden="true" />
+       <HandDrawnOutline :stroke-width="3">
+         <div ref="panelEl" class="controls-card bg-card rounded-xl p-5">
+           <slot name="controls" :mobile="false" />
+--- a/src/games/shared/useKeyboardViewport.ts
++++ b/src/games/shared/useKeyboardViewport.ts
+@@ -79,9 +79,29 @@
+   const layoutHeight = (): number =>
+     document.documentElement.clientHeight || window.innerHeight || 0;
+ 
++  /**
++   * F3 — the bottom sheet's fixed ANCHOR, in LAYOUT px: where the visible viewport's
++   * BOTTOM edge falls inside the layout viewport (`offsetTop + height`). A `position:
++   * fixed` element on iOS lays out against the LAYOUT viewport, so this — not
++   * `vv.height` alone — is the honest anchor under both keyboard and pinch-zoom.
++   *
++   * The `min(layoutHeight, …)` is load-bearing twice: it keeps the anchor on-screen,
++   * and it CLAMPS the iOS 26 `offsetTop`-non-reset (a stale non-zero offsetTop after
++   * keyboard dismiss would otherwise push the anchor below the fold and take the sheet
++   * with it — spec falsifier F-d, owner E-row rig verification).
++   */
++  function anchorPx(): number {
++    return Math.round(Math.min(layoutHeight(), vv.offsetTop + vv.height));
++  }
++
+   function publishInset(): void {
+     const inset = computeKeyboardInset(layoutHeight(), vv.height, vv.offsetTop);
+-    document.documentElement.style.setProperty("--keyboard-inset", `${inset}px`);
++    const root = document.documentElement.style;
++    // ORDERING IS THE CONTRACT (spec D3): both vars are written in THIS one handler,
++    // BEFORE `ensureVisible` reads geometry — one listener, deterministic sequence, so
++    // the sheet's yield and the cell's reveal can never race across frames.
++    root.setProperty("--vv-height", `${anchorPx()}px`);
++    root.setProperty("--keyboard-inset", `${inset}px`);
+   }
+ 
+   function ensureVisible(behavior: ScrollBehavior): void {
+@@ -136,7 +156,12 @@
+       activeInput = null;
+       // Focus left the board → the keyboard is dismissing. Reclaim the scene's scroll-room
+       // eagerly; the trailing visualViewport resize confirms it (and may be coalesced away).
+-      document.documentElement.style.setProperty("--keyboard-inset", "0px");
++      // F3: the sheet's anchor resets to the full layout viewport in the SAME beat — a
++      // sheet left anchored to the shrunken band would float mid-screen for the dismiss's
++      // whole animation, and under the iOS 26 offsetTop non-reset, permanently.
++      const root = document.documentElement.style;
++      root.setProperty("--vv-height", `${layoutHeight()}px`);
++      root.setProperty("--keyboard-inset", "0px");
+     });
+   }
+ 
+@@ -155,5 +180,6 @@
+     document.removeEventListener("focusout", onFocusOut);
+     cancelAnimationFrame(releaseRaf);
+     document.documentElement.style.removeProperty("--keyboard-inset");
++    document.documentElement.style.removeProperty("--vv-height"); // F3: the CSS fallback (100dvh) resumes
+   });
+ }

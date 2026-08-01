@@ -1,0 +1,39 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 e2e/gallery-deal.spec.ts:432:1 › deal: a same-game deal issued BEFORE the scene mounts still lands the staged pair (10.3s)
+
+
+  1) e2e/gallery-deal.spec.ts:432:1 › deal: a same-game deal issued BEFORE the scene mounts still lands the staged pair 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.futoshiki-cell')
+    Expected: 0
+    Received: 25
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('.futoshiki-cell')
+        24 × locator resolved to 25 elements
+           - unexpected value "25"
+
+
+      447 |   await page.goto('./?view=gallery&game=futoshiki');
+      448 |   await page.waitForSelector('.staging-band', { timeout: 20000 });
+    > 449 |   await expect(page.locator('.futoshiki-cell')).toHaveCount(0); // still resolving
+          |                                                 ^
+      450 |
+      451 |   await axis(page, 'size').getByRole('button', { name: '6×6' }).click();
+      452 |   await page.locator('.staging-deal').click();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery-deal.spec.ts:449:49
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-deal-deal-a-same-g-21454-still-lands-the-staged-pair/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-deal-deal-a-same-g-21454-still-lands-the-staged-pair/error-context.md
+
+  1 failed
+    e2e/gallery-deal.spec.ts:432:1 › deal: a same-game deal issued BEFORE the scene mounts still lands the staged pair 

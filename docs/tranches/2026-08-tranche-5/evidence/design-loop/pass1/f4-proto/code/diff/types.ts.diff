@@ -1,0 +1,41 @@
+--- current/types.ts	2026-07-31 03:19:21
++++ f4/types.ts	2026-07-31 03:20:13
+@@ -9,6 +9,26 @@
+  * gallery is handed already-erased presentation data + loader thunks; it never reaches
+  * into domain state.
+  */
++
++/**
++ * One staging axis of a card (F4-D1) — the structural twin of the registry's `StagingAxis`.
++ * STATIC data: a label, its options, a default. No live model crosses the boundary; the card
++ * holds transient chip state and hands the chosen pair back as a `deal` intent. `quick` marks
++ * the axis the board-margin re-deal strip also shows (difficulty); the picker shows every axis.
++ */
++export interface StagingAxis {
++  /** stable axis identity — `size` / `difficulty` across all five games (the URL vocabulary). */
++  key: string;
++  /** the visible label, in the game's OWN words ("size" · "board size" · "difficulty"). */
++  label: string;
++  /** also shown on the re-deal strip (the frequent axis). */
++  quick?: boolean;
++  /** the OptionSelector options (value/label + the optional crayon colorClass). */
++  options: { value: string | number; label: string; colorClass?: string }[];
++  /** the chip a card opens on when its game isn't the mounted one. */
++  default: string | number;
++}
++
+ export interface GalleryCard {
+   /** URL token + stable id; drives `?game=`, aria ids, and v-for keys. */
+   id: string;
+@@ -16,8 +36,9 @@
+   name: string;
+   /** optional bespoke name glyph (unused by the shell wave; reserved). */
+   glyph?: Component;
+-  /** the size/difficulty sub-line, in the game's own vocabulary. */
+-  range: { label: string; levels: string[] };
++  /** the card's staging band (F4-D1) — REPLACES the dead `range` caption: the data was already
++   *  there, and it becomes the live control. */
++  staging: readonly StagingAxis[];
+   /** the static, non-interactive poster face (a read-only mini-board). */
+   poster: () => Promise<Component>;
+ }

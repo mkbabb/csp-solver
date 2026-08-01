@@ -1,0 +1,30 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 e2e/visual-regression.spec.ts:497:1 › the glass curve is the same curve in both layers (355ms)
+
+
+  1) e2e/visual-regression.spec.ts:497:1 › the glass curve is the same curve in both layers ────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "0.32,0.72,0,1"
+    Received: "0.4,0.1,0.2,1"
+
+      514 |   const norm = (s: string) =>
+      515 |     (s.match(/-?[\d.]+/g) ?? []).map((n) => String(parseFloat(n))).join(",");
+    > 516 |   expect(norm(shipped)).toBe(norm(MOTION.curves.drawerGlide));
+          |                         ^
+      517 |   expect(norm(shipped)).not.toBe(""); // an unresolved var must not read as agreement
+      518 | });
+      519 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/visual-regression.spec.ts:516:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-regression-the-glas-99330-e-same-curve-in-both-layers/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-regression-the-glas-99330-e-same-curve-in-both-layers/error-context.md
+
+  1 failed
+    e2e/visual-regression.spec.ts:497:1 › the glass curve is the same curve in both layers ─────────

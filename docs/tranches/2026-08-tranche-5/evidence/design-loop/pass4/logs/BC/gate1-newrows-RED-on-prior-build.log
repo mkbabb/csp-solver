@@ -1,0 +1,40 @@
+    test-results/font-census-no-string-rend-76214-es-this-estate-has-ledgered/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/font-census-no-string-rend-76214-es-this-estate-has-ledgered/error-context.md
+
+  2) e2e/zone-grammar.spec.ts:162:1 › the permanent tape is a LABEL, not a tooltip — and the surface it names has a name 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.controls-card .peek-hold-surface')
+    Expected: "separator"
+    Received: ""
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('.controls-card .peek-hold-surface')
+        24 × locator resolved to <div data-v-5ed2b0b4="" class="peek-hold-surface group relative my-2">…</div>
+           - unexpected value "null"
+
+
+      190 |   // the gesture it carries has a keyboard twin (K), so the name says both.
+      191 |   const peek = page.locator(".controls-card .peek-hold-surface");
+    > 192 |   await expect(peek).toHaveAttribute("role", "separator");
+          |                      ^
+      193 |   const name = await peek.getAttribute("aria-label");
+      194 |   expect(name).toBeTruthy();
+      195 |   expect(name!.toLowerCase()).toContain("peek");
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/zone-grammar.spec.ts:192:22
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/zone-grammar-the-permanent-03a53-surface-it-names-has-a-name/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/zone-grammar-the-permanent-03a53-surface-it-names-has-a-name/error-context.md
+
+  2 failed
+    e2e/font-census.spec.ts:137:1 › no string renders in two faces except the ones this estate has ledgered 
+    e2e/zone-grammar.spec.ts:162:1 › the permanent tape is a LABEL, not a tooltip — and the surface it names has a name 
+  1 passed (11.1s)

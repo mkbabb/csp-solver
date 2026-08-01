@@ -1,0 +1,153 @@
+--- current/GameGallery.vue	2026-07-31 03:19:21
++++ f4/GameGallery.vue	2026-07-31 03:26:05
+@@ -23,6 +23,19 @@
+  * (App's dirty bridge → the `dirty` prop) does NOT switch immediately: it arms a pencil-note
+  * ribbon on the chosen card (keep / leave). Pristine boards and same-game selects switch
+  * freely. NOT a modal, NOT confirm().
++ *
++ * TWO VERBS, TWO CONFIRM IDIOMS, ONE EACH (F4-D3). `select` (body / Enter / Space) is VISIT and
++ * keeps the ribbon above, untouched. `deal` (the card's stamp / `d`) is the destructive verb and
++ * confirms with the DRAWER'S two-tap arm — ported here and un-fenced from `isCoarse`, so a fine
++ * pointer is protected too: on a dirty board the first press arms (2.5s window, "sure?" sublabel,
++ * aria-label swap, a polite announce), the second deals; a pristine board deals at once. The arm
++ * lives in THIS component — it owns `dirty` and the keyboard, so pointer and `d` share one state
++ * machine and the card stays presentational.
++ *
++ * CHIP STATE (F4-D2). Each card's staging chips are transient refs held here, seeded from the
++ * card's static `staging[].default` and — for the game being played — overlaid from `staged`
++ * (App reads the mounted board through the staging bridge; pencil never imports games). Chip
++ * taps arrive as `chip`, the commit leaves as `deal(id, staged)`.
+  */
+ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+ import {
+@@ -58,11 +71,21 @@
+   /** Entry was interactive (the wordmark / `g` fold), not a `?view=gallery` deep-link boot —
+    *  so BEAT 2 "the deal" (flanks draw IN) plays. Deep-link + PRM land the cards settled. */
+   animateEntry?: boolean;
++  /** F4 — the MOUNTED board's staged pair (`{ size, difficulty }`), read by App from the staging
++   *  bridge at open. Seeds the CURRENT game's card chips so its band tells the truth about what
++   *  a Deal would deal; every other card opens on its registry defaults. */
++  staged?: Record<string, string | number> | null;
++  /** F4 — a deal is in flight (the board is loading): the stamps go inert. */
++  busy?: boolean;
+ }>();
+ 
+ const emit = defineEmits<{
+   (e: "snap", index: number): void;
++  /** VISIT — restore that game as it was (unchanged semantics; the guard ribbon gates it). */
+   (e: "select", id: string): void;
++  /** DEAL (F4) — a fresh board of `id` at the card's staged chips. App routes it: same game →
++   *  the mounted board's `applyAndDeal`; a different game → the one-shot handoff + the cut. */
++  (e: "deal", id: string, staged: Record<string, string | number>): void;
+   (e: "cancel"): void;
+   /** THE LIVE CENTER FACE (Wave C2): the current-game centered card's live-face mount element
+    *  (or null when it stops being live). Relayed straight from the card; App teleports the ONE
+@@ -175,7 +198,55 @@
+ function announce(i: number) {
+   const card = props.cards[i];
+   if (card) liveText.value = `${card.name}, ${i + 1} of ${count.value}`;
++}
++
++// ── F4: chip state + the deal arm ───────────────────────────────────────────────────────
++// One chip map per card id, seeded lazily: the card's static defaults, overlaid with the mounted
++// board's real pair for the CURRENT game. Transient by design — a chip is provisional until a
++// Deal commits it (D7), and closing the picker forgets it.
++const chips = reactive<Record<string, Record<string, string | number>>>({});
++function chipsFor(card: GalleryCard): Record<string, string | number> {
++  let held = chips[card.id];
++  if (!held) {
++    held = {};
++    for (const axis of card.staging) held[axis.key] = axis.default;
++    if (card.id === props.currentId && props.staged)
++      for (const [k, v] of Object.entries(props.staged)) if (k in held) held[k] = v;
++    chips[card.id] = held;
++  }
++  return held;
++}
++function onChip(card: GalleryCard, axis: string, value: string | number) {
++  chipsFor(card)[axis] = value;
++  disarmDeal(); // re-staging retires an armed deal (the intent changed)
++}
++
++// The deal arm — the drawer's two-tap (GameControlPanel.vue:256-274), un-fenced from `isCoarse`
++// so every pointer confirms a destructive deal on a dirty board. The window lapses quietly; the
++// armed state is announced politely (T8), and the stamp's aria-label swaps on the card.
++const DEAL_ARM_MS = 2500;
++const dealArmedIndex = ref<number | null>(null);
++let dealArmTimer: ReturnType<typeof setTimeout> | null = null;
++function disarmDeal() {
++  if (dealArmTimer) clearTimeout(dealArmTimer);
++  dealArmTimer = null;
++  dealArmedIndex.value = null;
+ }
++/** The stamp (pointer) or `d` (keyboard) on the centered card — ONE gate for both. */
++function attemptDeal(i: number) {
++  const card = props.cards[i];
++  if (!card || props.busy) return;
++  if (props.dirty && dealArmedIndex.value !== i) {
++    dealArmedIndex.value = i;
++    if (dealArmTimer) clearTimeout(dealArmTimer);
++    dealArmTimer = setTimeout(disarmDeal, DEAL_ARM_MS);
++    liveText.value = `deal a new ${card.name} board? press again to confirm`;
++    return;
++  }
++  disarmDeal();
++  emit("deal", card.id, { ...chipsFor(card) });
++}
++onUnmounted(disarmDeal);
+ 
+ // ── The glide (glass-curve FLIP for keyboard/button; native snap for touch) ──
+ const viewport = ref<HTMLElement | null>(null);
+@@ -191,6 +262,7 @@
+   const next = clamp(i);
+   if (next === activeIndex.value) return;
+   dismissGuard();
++  disarmDeal(); // leaving the card abandons its armed deal
+   activeIndex.value = next;
+   glide.glideTo(next);
+   emit("snap", next);
+@@ -205,6 +277,7 @@
+   const next = clamp(i);
+   if (next === activeIndex.value) return;
+   dismissGuard();
++  disarmDeal();
+   activeIndex.value = next;
+   emit("snap", next);
+   announce(next);
+@@ -270,10 +343,22 @@
+     case " ":
+     case "Spacebar":
+       e.preventDefault();
+-      attemptSelect();
++      attemptSelect(); // VISIT — semantics unchanged (F4-D3)
++      return;
++    // F4-D6: `d` is the DEAL verb on the centered card — the stamp's keyboard twin, same arm
++    // semantics. No collision with the global `g` (App's own handler bails outside `playing`).
++    case "d":
++    case "D":
++      if (e.metaKey || e.ctrlKey || e.altKey) return;
++      e.preventDefault();
++      attemptDeal(activeIndex.value);
+       return;
+     case "Escape":
+       e.preventDefault();
++      if (dealArmedIndex.value !== null) {
++        disarmDeal(); // an armed deal is what Escape retires first
++        return;
++      }
+       emit("cancel");
+       return;
+   }
+@@ -339,7 +424,12 @@
+             :guard="guardIndex === i"
+             :live="isLive(i)"
+             :deal-reveal="dealReveal[i]"
++            :staged="chipsFor(card)"
++            :armed="dealArmedIndex === i"
++            :busy="busy"
+             @select="attemptSelect"
++            @chip="(axis: string, v: string | number) => onChip(card, axis, v)"
++            @deal-press="attemptDeal(i)"
+             @guard-keep="dismissGuard"
+             @guard-leave="guardLeave"
+             @face-mount="(el: HTMLElement | null) => emit('live-face', el)"
