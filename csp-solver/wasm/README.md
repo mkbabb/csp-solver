@@ -64,7 +64,7 @@ wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release
 lean build measures 121,137 B on darwin (`wc -c pkg/csp_solver_wasm_bg.wasm`,
 measured at a3ada202, 2026-08-01), under the 124,500 B re-derived ceiling (base
 plus per-game wire). The CI runner's toolchain builds the same source a couple of
-KB larger — it last measured 124,097 B, at e6b19a4c (run 30719165442) — and the twiggy lane enforces
+KB larger — it last measured 122,861 B, at f2ae188d (run 30722381389) — and the twiggy lane enforces
 the band on the runner's own figure, failing above 127,500 B. Both figures are
 stamped here on purpose: the doc-truth gate re-derives this number from whichever
 artifact is on the machine it runs on, so a site carrying one platform's figure

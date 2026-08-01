@@ -495,8 +495,8 @@ jobs:
               # kenken landings; the cage constraints themselves cost +2,608 B).
               # Ceiling drawn by the band's original convention — ~2.6% headroom
               # over the RUNNER-measured artifact (90,602→93,000 was the same draw):
-              # runner measures 124,097 B at e6b19a4c, run 30719165442 (darwin
-              # measures 121,137 B at a3ada202; toolchain delta measured +1,712 B — both
+              # runner measures 122,861 B at f2ae188d, run 30722381389 (darwin
+              # measures 121,137 B at a3ada202; toolchain delta measured +1,724 B — both
               # halves re-measured this tranche) → fail >127,500 B. The band stays
               # put while the artifact moves; the run step prints what it measured.
               # A wire-dedup refactor banks with re-trigger: a sixth game, or any
@@ -506,7 +506,7 @@ jobs:
                   WASM=lean-pkg/csp_solver_wasm_bg.wasm
                   test -f "$WASM" || { echo "::error::$WASM missing from the lean-wasm-pkg artifact"; exit 1; }
                   RAW=$(wc -c < "$WASM")
-                  echo "lean artifact raw size: ${RAW} B (runner-measured 124,097 B; fail >127,500)"
+                  echo "lean artifact raw size: ${RAW} B (runner-measured 122,861 B; fail >127,500)"
                   if [ "$RAW" -gt 127500 ]; then
                     echo "::error::lean wasm artifact ${RAW} B exceeds the 127,500 B five-game band"
                     exit 1
