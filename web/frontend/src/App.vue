@@ -122,8 +122,18 @@ const reducedMotion = usePrefersReducedMotion();
 function setGame(val: string | number, opts?: { cut?: boolean }) {
   const raw = String(val);
   const next: GameId = GAMES.some((c) => c.id === raw) ? raw : "sudoku";
+  // THE SAME-ID NO-OP, ADJUDICATED AND KEPT (T4-P1 F4 pass 4). The pass-2 order asked for this
+  // early return to be re-cut so a same-game pick could force a fresh mount. It is not re-cut,
+  // and the reason is that a remount is the wrong instrument for both callers: the gallery's
+  // same-game DEAL rides the staging bridge into the live board (`dealStaged` — no remount, no
+  // second solver dispatch, marks and undo spine intact), and the gallery's same-game SELECT is
+  // a visit to the board you are already on, which must preserve exactly that state. A forced
+  // remount would throw away the board on the one path whose whole promise is keeping it.
+  // What the `cut` line IS for: `scene` can lag `game` mid page-turn (`leaving` is in flight and
+  // the seam has not fired), so a re-select of the OUTGOING game re-asserts the mounted scene
+  // rather than deadlocking behind an `erased` that will never come for it.
   if (next === game.value) {
-    if (opts?.cut) scene.value = next; // re-select the same game from the gallery: no-op cut
+    if (opts?.cut) scene.value = next;
     return;
   }
   game.value = next;
@@ -403,10 +413,18 @@ async function onGalleryDeal(payload: {
     setGame(payload.id, { cut: true });
   });
   try {
-    // The handoff path deals inside the incoming mount; only the same-game path has a live
-    // state to drive from here. A `false` return means NO game was mounted to deal into — the
-    // arm would otherwise be dropped on the floor as a silent success, so it is re-staged and
-    // the incoming mount consumes it exactly as a cross-game deal would.
+    // The handoff path deals inside the incoming mount; only the same-game path has a live state
+    // to drive from here.
+    //
+    // `false` means the bridge had NO registered source — and `useGameState` registers at setup,
+    // so on the same-game path that says one thing exactly: the scene has not mounted yet. The
+    // reachable case is a `?view=gallery&game=<lazy>` deep link dealt before its chunk resolves
+    // (four of five games are lazy, and the picker only warms them). NOTHING remounts here to
+    // fix it — `setGame` to the id already selected is a no-op cut, by the ruling at that site —
+    // so the consumer is that scene's OWN first mount, which is the same id-keyed one-shot the
+    // cross-game path uses, `consumeHandoff` before init. Not a fallback for a mounted game: for
+    // a mounted game the source exists and this branch cannot be entered. Gated end to end
+    // (`gallery-deal.spec.ts`, "a same-game deal issued before the scene mounts").
     if (sameGame && !(await dealStaged(pair))) stageHandoff(payload.id, pair);
   } finally {
     dealBusy.value = false;

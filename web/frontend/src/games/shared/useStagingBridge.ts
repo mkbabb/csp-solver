@@ -44,8 +44,13 @@ export interface StagedPair {
  * are non-zero), so every freshly dealt, never-touched game read "in progress" and every deal
  * over it read as destroying work. Split:
  *
- *  · `board`     — a restorable board exists. Isomorphic with `useGameState`'s own `canRestore`
- *                  test, so it is exactly the picker's `resume` vs `start` truth.
+ *  · `board`     — a restorable board exists: the VALUE half of `useGameState`'s own `canRestore`
+ *                  (some cell is non-zero), which is the picker's `resume` vs `start` truth.
+ *                  Not the whole of `canRestore`, and the difference is named rather than
+ *                  rounded off: that test also requires an `initial.source` of url+storage /
+ *                  storage-only / url-board. Unreachable from the picker — `setGame` strips
+ *                  `board`/`size`/`difficulty`/`board_size` on every switch, so a cold read is
+ *                  always storage-only — but the ledger is a cache of a subset, not a copy.
  *  · `userMoves` — the user has written on it. The guard's truth: the ONLY thing a deal can
  *                  destroy. Givens are not work.
  */
@@ -230,7 +235,7 @@ function readPersistedBoard(key: string): StagedLedgerEntry | null {
     return {
       size,
       difficulty: b.difficulty,
-      // `board` mirrors `useGameState`'s own `canRestore` test — any non-zero cell.
+      // `board` mirrors the VALUE half of `canRestore` — any non-zero cell (see the interface).
       board: cells.length > 0,
       userMoves: cells.some(([k]) => !givens.has(k)),
     };
