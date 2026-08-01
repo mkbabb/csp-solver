@@ -61,6 +61,45 @@ export function useCarouselGlide(
     t.style.setProperty("--edge", `${edge}px`);
   }
 
+  /** How far the deck can travel — two sources, larger wins: the engine's own `scrollWidth −
+   *  clientWidth`, and GEOMETRY, the last slot's box plus the trailing `--edge` less the
+   *  viewport.
+   *
+   *  WebKit omits a ZERO-AREA box from a scroll container's scrollable overflow region, so
+   *  before `align-self: stretch` landed on the spacers (2ea11998) it reported a scrollWidth
+   *  448 px short of the deck's real width — and this clamp inherited that as its ceiling,
+   *  which is how kenken went unreachable by arrows, End, click and deep-link alike. Measured
+   *  on BOTH WebKit builds against the same artifact, darwin (Apple) and the runner's linux
+   *  playwright-webkit — the engine of CI run 30687323601: zero-area spacers give 2208 / max
+   *  960 in each, stretched gives 2656 / 1408 in each. Chromium counts the box either way.
+   *
+   *  What the floor does NOT do, measured rather than hoped: it cannot RECOVER a build that
+   *  excludes the air. `scrollLeft` is clamped by the engine on write — a target of 1408, or
+   *  of 99999, both land on 960 there — and the settle then reports the card that really is
+   *  centered, so arrows, End and deep-link all still rest one card short with the floor
+   *  exactly as without it. The declaration in the stylesheet is the cure; there is no cure
+   *  available here, and a clamp that pretended otherwise would only lie about position. What
+   *  the floor is for is narrower and worth the four lines: how far the deck reaches is a
+   *  fact about the deck, so the composable computes it instead of inheriting whatever one
+   *  engine says its scrollWidth is, and never asks for LESS travel than the geometry allows.
+   *  `glideTo` reads the position back so that asking for more is always safe. On every
+   *  engine measured the two numbers are equal. */
+  function maxScroll(): number {
+    const vp = viewport.value;
+    const t = track.value;
+    if (!vp) return 0;
+    const engine = vp.scrollWidth - vp.clientWidth;
+    const all = slots();
+    const last = all[all.length - 1];
+    if (!t || !last) return Math.max(0, engine);
+    const edge = parseFloat(t.style.getPropertyValue("--edge")) || 0;
+    return Math.max(
+      0,
+      engine,
+      last.offsetLeft + last.offsetWidth + edge - vp.clientWidth,
+    );
+  }
+
   /** The scrollLeft that centers slot `i` in the viewport — the scroll-snap-align:center
    *  point (measured via rects so it is independent of offsetParent), clamped to range. */
   function targetScrollLeft(i: number): number {
@@ -72,8 +111,7 @@ export function useCarouselGlide(
     const centerInContent =
       elRect.left - vpRect.left + vp.scrollLeft + elRect.width / 2;
     const raw = centerInContent - vp.clientWidth / 2;
-    const max = vp.scrollWidth - vp.clientWidth;
-    return Math.max(0, Math.min(max, raw));
+    return Math.max(0, Math.min(maxScroll(), raw));
   }
 
   function centeredIndex(): number {
@@ -112,20 +150,32 @@ export function useCarouselGlide(
   function suspendSnap() {
     viewport.value?.style.setProperty("scroll-snap-type", "none");
   }
-  function rearmSnap() {
-    // Re-arm on the next frame (position already on a snap point → no re-snap animation);
-    // clearing the inline override falls back to the stylesheet's `x mandatory`.
+  /** Re-arm on the next frame (position already on a snap point → no re-snap animation);
+   *  clearing the inline override falls back to the stylesheet's `x mandatory`.
+   *
+   *  GENERATION-GUARDED, and that guard is the whole of CI run 30687323601's WebKit reds. A
+   *  rAF is not a promise about the next 16 ms: under load it lands late, and the event loop
+   *  dispatches queued INPUT before it runs the rendering update — so a keypress arriving
+   *  during the jank is handled BEFORE a rAF the PREVIOUS gesture's settle already queued.
+   *  That stale re-arm switched `x mandatory` back on in the MIDDLE of the next glide, while
+   *  the track still carried its FLIP translateX; the engine then snapped the scroll back to
+   *  the visually-centered (pre-move) card, `centeredIndex()` read that correctly, and
+   *  `syncFromScroll` reported the revert as truth. One step silently undone — `gallery-deal`
+   *  stranded one card short of kenken, and `gallery-guard`'s ribbon never armed because the
+   *  step it depends on had been rolled back. Only the newest gesture may re-arm. */
+  function rearmSnap(forGen: number) {
     const vp = viewport.value;
     if (!vp) return;
     requestAnimationFrame(() => {
-      if (viewport.value === vp) vp.style.removeProperty("scroll-snap-type");
+      if (viewport.value === vp && forGen === gen)
+        vp.style.removeProperty("scroll-snap-type");
     });
   }
 
   function settle() {
     gen++;
     clearAnim();
-    rearmSnap();
+    rearmSnap(gen);
   }
 
   /** Instant — mount, resize, PRM. No tween, no report. */
@@ -135,9 +185,10 @@ export function useCarouselGlide(
     currentIndex = i;
     const vp = viewport.value;
     if (!vp) return;
+    const myGen = ++gen; // this gesture owns position — any pending re-arm is stale
     suspendSnap();
     vp.scrollLeft = targetScrollLeft(i);
-    rearmSnap();
+    rearmSnap(myGen);
   }
 
   /** The glass-curve step (keyboard/button). FLIP on WAAPI — one position write, one clock,
@@ -158,13 +209,21 @@ export function useCarouselGlide(
     clearAnim(); // drop any prior transform so the target read is clean
     const last = targetScrollLeft(i);
     if (Math.abs(first - last) < 0.5) return; // already centered — nothing to glide
+    const myGen = ++gen;
     suspendSnap(); // snap OFF for the whole glide (re-armed at settle)
     vp.scrollLeft = last; // the ONE position write — instant (snap suspended), never tweened
     // Classic FLIP: scrollLeft now rests at the target, so tx = (last − first) reproduces the
     // pre-move frame (a point renders at x − scrollLeft + tx); the transform then glides to 0,
     // the centered rest pose. scrollLeft itself never moves again this gesture.
-    const dx = last - first;
-    const myGen = ++gen;
+    // READ BACK, don't assume: the engine clamps the write to its own scrollable overflow, so
+    // the delta the transform inverts has to be what the scroll ACTUALLY did — otherwise the
+    // track glides in from a pose the position never left (the `maxScroll` floor above can ask
+    // for more travel than a given build will give).
+    const dx = vp.scrollLeft - first;
+    if (Math.abs(dx) < 0.5) {
+      rearmSnap(myGen); // the engine refused the move — no dead animation, snap back on
+      return;
+    }
     anim = t.animate(
       [{ transform: `translateX(${dx}px)` }, { transform: "translateX(0px)" }],
       {
