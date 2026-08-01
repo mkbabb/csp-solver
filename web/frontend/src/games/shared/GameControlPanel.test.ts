@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import GameControlPanel from "./GameControlPanel.vue";
 
@@ -200,5 +200,52 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
     const marking = mountPanel({ proactiveCheck: true });
     expect(marking.get(".check-status").text()).toContain("showing mistakes");
     expect(marking.get(".check-status").classes()).toContain("is-marking");
+  });
+});
+
+// ── The hold-to-peek recognizer (F3 pass-1 blocker 3) ──────────────────────────────────
+// The band self-cancelling on slop was ASSERTED by F3's spec and false against the code:
+// there was no `pointermove` handler at all, and on touch `pointerleave` never fires once
+// implicit capture lands, so a drag that began on the divider still flashed the answer key
+// at 350ms. These rows pin the recognizer's two halves against each other — the second is
+// the negative control, and it reds if the slop test is ever "passed" by disarming the hold.
+describe("hold-to-peek — a hold is a press that stays", () => {
+  afterEach(() => vi.useRealTimers());
+
+  // jsdom's MouseEvent keeps clientX/clientY read-only, so test-utils' `trigger` options
+  // cannot carry them — the gesture has to be dispatched as a real event or the probe is
+  // measuring a pointer that never moved.
+  const at = (type: string, x: number, y: number) =>
+    new MouseEvent(type, { clientX: x, clientY: y, bubbles: true });
+
+  const press = async (w: ReturnType<typeof mountPanel>, moves: [number, number][]) => {
+    const band = w.get(".peek-hold-surface").element;
+    band.dispatchEvent(at("pointerdown", 100, 100));
+    for (const [x, y] of moves) band.dispatchEvent(at("pointermove", x, y));
+    vi.advanceTimersByTime(400);
+    await w.vm.$nextTick();
+    return w.emitted("peek-start");
+  };
+
+  it("a drag off the band cancels the pending hold — no answer-key flash mid-gesture", async () => {
+    vi.useFakeTimers();
+    // 60px up: a deliberate drag, well past the 10px slop.
+    expect(
+      await press(mountPanel(), [
+        [102, 96],
+        [100, 40],
+      ]),
+    ).toBeUndefined();
+  });
+
+  it("a still press — and a hand's own 4px tremor — still peeks", async () => {
+    vi.useFakeTimers();
+    expect(await press(mountPanel(), [])).toHaveLength(1);
+    expect(
+      await press(mountPanel(), [
+        [103, 97],
+        [98, 102],
+      ]),
+    ).toHaveLength(1);
   });
 });

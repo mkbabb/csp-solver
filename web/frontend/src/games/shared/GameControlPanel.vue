@@ -150,12 +150,25 @@ const expandedPanel = ref(props.sections[0]?.key ?? "");
 // → the answer-key laminate; a shorter press does nothing (the divider has no
 // click action, so no click-suppression bookkeeping is needed). App.vue owns the
 // peek state; this only reports the gesture. Keyboard peek rides App.vue's K/Esc.
+//
+// SLOP (F3 pass-1 blocker 3, cured here): a hold is a press that STAYS. This recognizer
+// was `pointerdown` + a bare timer, and `pointerleave` was its only escape — which touch
+// never fires, because the first `pointermove` gives the divider implicit pointer capture,
+// so a finger that presses the band and travels 200px away still owns the event stream and
+// still trips the timer at 350ms. A deliberate drag over this band therefore flashed the
+// answer key. The cure is the recognizer's missing half, not an arbiter above it: a
+// `pointermove` past PEEK_SLOP_PX cancels the pending hold and ends a live peek, so the
+// band yields to any other gesture that begins on it — the arbitration F3's D7 asserted
+// already existed and did not.
 const PEEK_HOLD_MS = 350;
+const PEEK_SLOP_PX = 10;
 let peekTimer: ReturnType<typeof setTimeout> | null = null;
+let peekOrigin: { x: number; y: number } | null = null;
 const isPeeking = ref(false);
 
-function onDividerHoldStart() {
+function onDividerHoldStart(e?: PointerEvent) {
   if (peekTimer) clearTimeout(peekTimer);
+  peekOrigin = e ? { x: e.clientX, y: e.clientY } : null;
   peekTimer = setTimeout(() => {
     peekTimer = null;
     isPeeking.value = true;
@@ -163,7 +176,15 @@ function onDividerHoldStart() {
   }, PEEK_HOLD_MS);
 }
 
+function onDividerHoldMove(e: PointerEvent) {
+  if (!peekOrigin) return;
+  if (Math.hypot(e.clientX - peekOrigin.x, e.clientY - peekOrigin.y) <= PEEK_SLOP_PX)
+    return;
+  onDividerHoldEnd();
+}
+
 function onDividerHoldEnd() {
+  peekOrigin = null;
   if (peekTimer) {
     clearTimeout(peekTimer);
     peekTimer = null;
@@ -464,7 +485,8 @@ function onHint() {
          (CSS). Narrow fine-pointer windows keep the hover/focus reveal. -->
     <div
       class="peek-hold-surface group relative"
-      @pointerdown="onDividerHoldStart()"
+      @pointerdown="onDividerHoldStart($event)"
+      @pointermove="onDividerHoldMove($event)"
       @pointerup="onDividerHoldEnd()"
       @pointerleave="onDividerHoldEnd()"
       @pointercancel="onDividerHoldEnd()"
@@ -685,7 +707,8 @@ function onHint() {
          persistent on coarse pointers (iPad row regime), with a padded ≥44px target. -->
     <div
       class="peek-hold-surface group relative my-2"
-      @pointerdown="onDividerHoldStart()"
+      @pointerdown="onDividerHoldStart($event)"
+      @pointermove="onDividerHoldMove($event)"
       @pointerup="onDividerHoldEnd()"
       @pointerleave="onDividerHoldEnd()"
       @pointercancel="onDividerHoldEnd()"
