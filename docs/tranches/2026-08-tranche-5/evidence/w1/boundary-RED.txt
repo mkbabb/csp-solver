@@ -1,0 +1,311 @@
+T5-W1 ROW 1.4 — BOUNDARY LAW 20/20: THE BORN-RED BANK
+=====================================================
+banked      2026-08-01T19:22:00Z
+HEAD        f38c5130c8d2e97a5291795133d340754eca99eb  (short f38c5130)
+gate        npm run lint:boundary
+            -> eslint --no-config-lookup --config eslint.boundary.config.js src/games
+config      web/frontend/eslint.boundary.config.js   (NEW this row; overlay, not folded)
+script      web/frontend/package.json "lint:boundary" (NEW this row)
+toolchain   node v26.0.0 · npm 11.12.1 · eslint 10.7.0
+sources     r1/gate-soundness.md #23 + V4 (A4) · r1/component-census.md §5.1 (E5)
+            gates.json gates.W1.boundary  {rule: generated-cross-game-20-of-20,
+                                           bornRed: true, greensAt: "W2.5"}
+
+RESULT      EXIT 1 · 23 errors, 0 warnings · RED
+            The defect is LIVE at HEAD, so the gate's first recorded run is the red
+            itself (born-RED law, first clause). No canary needed for the pair matrix;
+            the canaries below cover the two claims the red alone cannot prove.
+
+
+1. WHAT THE INCUMBENT ENFORCES, RE-DERIVED
+------------------------------------------
+`eslint.config.js` hand-enumerates the matrix: `sudokuMayNotImportFutoshiki` (:57-80),
+`futoshikiMayNotImportSudoku` (:81-104), `sharedMayNotImportGames` (:114-142, its group
+naming only `@games/sudoku` + `@games/futoshiki`), wired at :196-200. Five families live
+under `src/games/` — futoshiki, kenken, killer, sudoku, thermo — so the ordered-pair space
+is 5x4 = 20 and the incumbent binds 2 of them. thermo, killer and kenken carry NO cross-game
+restriction in any form; `src/games/shared/** -> @games/kenken` also passes lint today.
+
+The overlay's matrix, dumped from the LANDED config object (not transcribed by hand —
+the dump imports eslint.boundary.config.js and reads back its generated blocks):
+
+    games discovered (dirs under src/games/ carrying game.ts): 5 — futoshiki, kenken, killer, sudoku, thermo
+    ordered pairs expected n*(n-1) = 5*4 = 20
+    ordered pairs generated: 20
+
+    THE MATRIX (importer -> forbidden target):
+      futoshiki  -/->  kenken, killer, sudoku, thermo
+      kenken     -/->  futoshiki, killer, sudoku, thermo
+      killer     -/->  futoshiki, kenken, sudoku, thermo
+      sudoku     -/->  futoshiki, kenken, killer, thermo
+      thermo     -/->  futoshiki, kenken, killer, sudoku
+
+    shared floor arm:
+      src/games/shared/**/*.{ts,vue}  -/->  futoshiki, kenken, killer, sudoku, thermo
+
+    incumbent eslint.config.js binds 2/20 ordered pairs:
+      BOUND    sudoku -/-> futoshiki
+      BOUND    futoshiki -/-> sudoku
+    unbound by the incumbent, bound by this overlay: 18
+      UNBOUND  futoshiki -/-> kenken
+      UNBOUND  futoshiki -/-> killer
+      UNBOUND  futoshiki -/-> thermo
+      UNBOUND  kenken -/-> futoshiki
+      UNBOUND  kenken -/-> killer
+      UNBOUND  kenken -/-> sudoku
+      UNBOUND  kenken -/-> thermo
+      UNBOUND  killer -/-> futoshiki
+      UNBOUND  killer -/-> kenken
+      UNBOUND  killer -/-> sudoku
+      UNBOUND  killer -/-> thermo
+      UNBOUND  sudoku -/-> kenken
+      UNBOUND  sudoku -/-> killer
+      UNBOUND  sudoku -/-> thermo
+      UNBOUND  thermo -/-> futoshiki
+      UNBOUND  thermo -/-> kenken
+      UNBOUND  thermo -/-> killer
+      UNBOUND  thermo -/-> sudoku
+
+20/20 ordered pairs bound. Two were already bound; eighteen were not.
+
+
+2. THE 23 LIVE VIOLATIONS, ENUMERATED
+-------------------------------------
+Every row below is one `no-restricted-imports` error from the run in §3. Line numbers are
+the IMPORT STATEMENT's opening line (what ESLint reports), not its `from` clause.
+
+ 1  src/games/kenken/ControlPanel/constants.ts     :1    kenken    -> futoshiki  @games/futoshiki/types
+ 2  src/games/kenken/KenKenBoard.vue               :15   kenken    -> futoshiki  @games/futoshiki/FutoshikiBoard/FutoshikiCell/FutoshikiCell.vue
+ 3  src/games/kenken/composables/kenkenUrlState.ts :14   kenken    -> futoshiki  @games/futoshiki/types
+ 4  src/games/kenken/composables/useKenken.ts      :23   kenken    -> futoshiki  @games/futoshiki/technique/futoshikiTechnique
+ 5  src/games/kenken/game.ts                       :18   kenken    -> futoshiki  @games/futoshiki/FutoshikiBoard/FutoshikiCell/FutoshikiCell.vue
+ 6  src/games/kenken/game.ts                       :21   kenken    -> futoshiki  @games/futoshiki/types
+ 7  src/games/kenken/solver/useSolver.ts           :14   kenken    -> futoshiki  @games/futoshiki/types
+ 8  src/games/killer/KillerBoard.vue               :14   killer    -> sudoku     @games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
+ 9  src/games/killer/KillerBoard.vue               :19   killer    -> sudoku     @games/sudoku/types
+10  src/games/killer/composables/killerUrlState.ts :14   killer    -> sudoku     @games/sudoku/types
+11  src/games/killer/composables/useKiller.ts      :21   killer    -> sudoku     @games/sudoku/technique/sudokuTechnique
+12  src/games/killer/game.ts                       :17   killer    -> sudoku     @games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
+13  src/games/killer/game.ts                       :19   killer    -> sudoku     @games/sudoku/ControlPanel/constants
+14  src/games/killer/game.ts                       :20   killer    -> sudoku     @games/sudoku/types
+15  src/games/killer/solver/useSolver.ts           :13   killer    -> sudoku     @games/sudoku/types
+16  src/games/thermo/ThermoBoard.vue               :14   thermo    -> sudoku     @games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
+17  src/games/thermo/ThermoBoard.vue               :19   thermo    -> sudoku     @games/sudoku/types
+18  src/games/thermo/composables/thermoUrlState.ts :13   thermo    -> sudoku     @games/sudoku/types
+19  src/games/thermo/composables/useThermo.ts      :20   thermo    -> sudoku     @games/sudoku/technique/sudokuTechnique
+20  src/games/thermo/game.ts                       :16   thermo    -> sudoku     @games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
+21  src/games/thermo/game.ts                       :18   thermo    -> sudoku     @games/sudoku/ControlPanel/constants
+22  src/games/thermo/game.ts                       :19   thermo    -> sudoku     @games/sudoku/types
+23  src/games/thermo/solver/useSolver.ts           :13   thermo    -> sudoku     @games/sudoku/types
+
+TOTAL 23   over 16 files and 3 of the 20 ordered pairs:
+
+    8  thermo -> sudoku
+    8  killer -> sudoku
+    7  kenken -> futoshiki
+
+The other 17 ordered pairs (and the shared-floor arm) are clean today — bound as tripwires,
+zero violations. `src/games/shared/**` reaches no concrete game: verified by this run, which
+reports nothing under `src/games/shared/`.
+
+
+3. THE RUN, VERBATIM
+--------------------
+$ cd web/frontend && npm run lint:boundary ; echo "EXIT=$?"
+(absolute path prefix `/Users/.../web/frontend/` stripped from the file headers; nothing else altered)
+
+> csp-solver-frontend@0.1.0 lint:boundary
+> eslint --no-config-lookup --config eslint.boundary.config.js src/games
+
+
+src/games/kenken/ControlPanel/constants.ts
+  1:1  error  '@games/futoshiki/types' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+src/games/kenken/KenKenBoard.vue
+  15:1  error  '@games/futoshiki/FutoshikiBoard/FutoshikiCell/FutoshikiCell.vue' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+src/games/kenken/composables/kenkenUrlState.ts
+  14:1  error  '@games/futoshiki/types' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+src/games/kenken/composables/useKenken.ts
+  23:1  error  '@games/futoshiki/technique/futoshikiTechnique' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+src/games/kenken/game.ts
+  18:1  error  '@games/futoshiki/FutoshikiBoard/FutoshikiCell/FutoshikiCell.vue' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+  21:1  error  '@games/futoshiki/types' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree                                           no-restricted-imports
+
+src/games/kenken/solver/useSolver.ts
+  14:1  error  '@games/futoshiki/types' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+src/games/killer/KillerBoard.vue
+  14:1  error  '@games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue' import is restricted from being used by a pattern. src/games/killer/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+  19:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/killer/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree                                  no-restricted-imports
+
+src/games/killer/composables/killerUrlState.ts
+  14:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/killer/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+src/games/killer/composables/useKiller.ts
+  21:1  error  '@games/sudoku/technique/sudokuTechnique' import is restricted from being used by a pattern. src/games/killer/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+src/games/killer/game.ts
+  17:1  error  '@games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue' import is restricted from being used by a pattern. src/games/killer/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+  19:1  error  '@games/sudoku/ControlPanel/constants' import is restricted from being used by a pattern. src/games/killer/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree                 no-restricted-imports
+  20:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/killer/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree                                  no-restricted-imports
+
+src/games/killer/solver/useSolver.ts
+  13:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/killer/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+src/games/thermo/ThermoBoard.vue
+  14:1  error  '@games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+  19:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree                                  no-restricted-imports
+
+src/games/thermo/composables/thermoUrlState.ts
+  13:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+src/games/thermo/composables/useThermo.ts
+  20:1  error  '@games/sudoku/technique/sudokuTechnique' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+src/games/thermo/game.ts
+  16:1  error  '@games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+  18:1  error  '@games/sudoku/ControlPanel/constants' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree                 no-restricted-imports
+  19:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree                                  no-restricted-imports
+
+src/games/thermo/solver/useSolver.ts
+  13:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+✖ 23 problems (23 errors, 0 warnings)
+
+EXIT=1
+
+
+4. CANARIES — THE TWO CLAIMS THE RED ALONE CANNOT PROVE
+-------------------------------------------------------
+The 23-error run proves the rule FIRES. It does not prove the matrix is GENERATED (a
+hand-enumerated 5-game config would produce byte-identical output today), nor that the
+generator refuses to green vacuously. Both were canaried in a throwaway tree under
+`web/frontend/t5w1-boundary-canary/` — the config copied VERBATIM, a synthetic `src/games/`
+built beneath it, the tree deleted after (confirmed absent; `git status --porcelain` shows
+no such path).
+
+CANARY A — a sixth family joins the matrix with ZERO config edits.
+Synthetic tree: six game dirs (alpha, beta, gamma, delta, epsilon, zeta) each carrying a
+`game.ts`, plus `notagame/` carrying only `helper.ts`, plus `shared/`. Two reaches planted:
+`alpha/reach.ts` imports `@games/zeta/types`; `shared/floor.ts` imports `@games/epsilon/types`.
+No string in eslint.boundary.config.js names any of these families.
+
+    $ npx eslint --no-config-lookup --config eslint.boundary.config.js src/games
+
+    src/games/alpha/reach.ts
+      1:1  error  '@games/zeta/types' import is restricted from being used by a pattern. src/games/alpha/** must not import src/games/zeta/** — games never import each other (boundary law, 30/30 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+
+    src/games/shared/floor.ts
+      1:1  error  '@games/epsilon/types' import is restricted from being used by a pattern. src/games/shared/** must not import a concrete game (@games/{alpha,beta,delta,epsilon,gamma,zeta}) — the shared floor stays game-agnostic  no-restricted-imports
+
+    ✖ 2 problems (2 errors, 0 warnings)
+    EXIT=1
+
+Three things at once: the pair count moved 20/20 -> 30/30 on its own (6x5); `zeta`, a family
+that appears in no config text, is bound as both importer scope and forbidden target; and
+`notagame/` — a directory with no `game.ts` — is correctly absent from the matrix, so the
+`shared` floor falls out structurally rather than by a name exception.
+
+CANARY B — the generator refuses to lint vacuously green.
+Same tree reduced to ONE game dir (alpha). A generator that silently produced an empty matrix
+would exit 0 and report a clean bill of health — the same class of defect as the incumbent's
+hand enumeration, one layer up. It throws instead:
+
+    $ npx eslint --no-config-lookup --config eslint.boundary.config.js src/games
+
+    Oops! Something went wrong! :(
+    ESLint: 10.7.0
+    Error: eslint.boundary.config.js: expected >=2 game families under .../t5w1-boundary-canary/src/games (a directory carrying game.ts); found 1 [alpha]. The boundary matrix cannot be generated — refusing to lint vacuously green.
+
+
+5. RECONCILIATION AGAINST THE AUDIT OF RECORD
+---------------------------------------------
+r1/component-census.md §5.1 heads its list "Twenty cross-game imports exist" and subtotals the
+three pairs at 7 / 6 / 6. gates.json `gates.W1.boundary.liveViolationsAtHead` carries 20.
+Reality at f38c5130 is 23.
+
+The census's ENUMERATION is exact — all 23 paths are listed there, 1:1 with §2 above, and
+nothing it names is stale. Only its arithmetic drifted:
+
+    pair                 census subtotal   census rows listed   this run
+    thermo -> sudoku            7                  8               8
+    killer -> sudoku            6                  8               8
+    kenken -> futoshiki         6                  7               7
+    ------------------------------------------------------------------
+    total                      "20"               23              23
+
+So `20` is the ORDERED-PAIR count (5x4, §5.1's own headline metric — "enforced for 2 of 20
+ordered pairs") leaking into the violation count in both the census prose and gates.json.
+The two numbers are 20 and 23 and they measure different things.
+
+One presentational difference, not a discrepancy: the census cites three multi-line imports at
+their `from` line (useThermo.ts:24, useKiller.ts:25, useKenken.ts:27); ESLint reports the
+statement's opening line (20, 21, 23). Same three imports — verified by reading the spans
+(useThermo.ts:20-24, useKiller.ts:21-25, useKenken.ts:23-27).
+
+ACTION FOR THE TEAM LEAD: `gates.json gates.W1.boundary.liveViolationsAtHead` reads 20 and
+should read 23 (or be renamed to `orderedPairs`). Not edited here — gates.json is not this
+row's surface.
+
+
+6. GREEN CONDITION
+------------------
+This gate greens when `npm run lint:boundary` exits 0 — i.e. when all 23 imports in §2 are
+broken. gates.json pins that to W2.5 (`gates.W1.boundary.greensAt`). The CI job carrying it
+(`evidence/w1/fragments/boundary.yml`) is EXPECTED RED until then, by design, in its own lane
+so the red is legible instead of folded into `frontend`. At W2.5 the overlay folds into
+`eslint.config.js` (retiring `sudokuMayNotImportFutoshiki` / `futoshikiMayNotImportSudoku` /
+`sharedMayNotImportGames`, which the generated matrix subsumes) and `lint:boundary` +
+`fragments/boundary.yml` retire with it.
+
+The three surfaces the 23 imports run through, for W2's estate moves:
+    @games/<other>/types                       (Difficulty, SolveState, SolveStats)   11 rows
+    @games/<other>/<Board>/<Cell>/<Cell>.vue   (cell furniture, depth 3)               5 rows
+    @games/<other>/technique/<game>Technique   (grade/hint/fillForced)                 3 rows
+    @games/<other>/ControlPanel/constants      (sizeOptions, difficultyOptions)        2 rows
+    @games/futoshiki/types (kenken ControlPanel constants re-export seam)               2 rows
+
+
+7. FOR W2'S KILL LIST — FALSE BOUNDARY COMMENTS (source NOT edited here)
+------------------------------------------------------------------------
+Three comments assert the boundary invariant while the same commit violates it. Row 1.4 item 4
+asks only for registry.ts; the other two are the same class and are recorded so the kill list
+is complete.
+
+R1  web/frontend/src/games/registry.ts:33-35 — THE ROW'S NAMED TARGET.
+    "// KenKen's own selector band (4/5/6) — a game never depends on another's ControlPanel
+     // constants for its own range sub-line. Thermo/Killer ARE Sudoku variants, so they reuse the
+     // sudoku `sizeOptions` above (already imported for sudokuCard)."
+    Contradicted at the same commit by rows 13 and 21 of §2: thermo/game.ts:18 and
+    killer/game.ts:19 both `import { sizeOptions, difficultyOptions } from
+    "@games/sudoku/ControlPanel/constants"`. The comment states the rule and the very next
+    sentence licenses its breach as "variant reuse".
+
+R2  web/frontend/src/games/registry.ts:130-132 — the same file, a second false claim.
+    "// The registry MAY import both concrete games: it lives at `games/registry.ts`, outside the
+     // four boundary globs (`pencil/**`, `games/{sudoku,futoshiki}/**`, `games/shared/**`), so no
+     // eslint rule addition is needed"
+    Two defects: "both concrete games" and the `{sudoku,futoshiki}` glob are three families
+    stale (registry.ts:18-19,24,36-39 import sudoku, futoshiki AND kenken), and the reasoning
+    is circular — the globs omit thermo/killer/kenken because nobody wrote them, not because
+    registry.ts is exempt. W2 kills `gameRegistry` outright, which is why the overlay leaves
+    registry.ts unbound rather than mint a red with no cure inside this wave.
+
+R3  web/frontend/src/games/kenken/ControlPanel/constants.ts:5-6 — cited by census §5.1.
+    "own file (games never depend on another game's ControlPanel constants for their own
+     selector data)" — and line 1 of that same file is row 1 of §2,
+    `import type { Difficulty } from "@games/futoshiki/types"`.
+
+
+8. ARTIFACTS
+------------
+web/frontend/eslint.boundary.config.js                  the generated overlay (NEW)
+web/frontend/package.json                               + "lint:boundary" script (NEW)
+docs/tranches/.../evidence/w1/boundary-RED.txt          this file
+docs/tranches/.../evidence/w1/fragments/boundary.yml    the CI job fragment (expected RED)
+
+No source file under src/ was edited by this row. No dev server was started; no :4188 preview
+was opened. The canary tree was created under web/frontend/t5w1-boundary-canary/ and deleted.

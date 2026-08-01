@@ -1,0 +1,243 @@
+T5-W1 row 1.3 — EVIDENCE-POLICY enforcement: BORN-RED at HEAD
+==============================================================
+date        2026-08-01T19:21:57Z
+HEAD        f38c5130c8d2e97a5291795133d340754eca99eb
+HEAD subj   T5-W0 SEAL: the record heals — doc-truth born-RED 10/10 then green, ledger-diff born, 34 orphans triaged to their owners
+node        v26.0.0   npm 11.12.1
+host        Darwin 25.4.0 arm64
+grandfather GRANDFATHERED_IMAGES = [] · GRANDFATHERED_WAVES = []  (empty at this run)
+
+The gate the policy promised at EVIDENCE-POLICY.md:13 and never got. This is its
+first recorded execution, against the estate as committed, with both grandfather
+lists empty — the defect is live, so the RED is the estate, not a canary.
+
+$ node scripts/check-evidence-policy.mjs --self-test
+--------------------------------------------------------------
+[evidence-policy] self-test ok    — per-image cap fires on one over-cap image
+[evidence-policy] self-test ok    — per-wave cap fires even when every image is under the per-image cap
+[evidence-policy] self-test ok    — name ban fires on a tiny -full.png
+[evidence-policy] self-test ok    — a policy-conformant estate reds nowhere
+[evidence-policy] self-test ok    — a grandfather pin exempts the file it names
+[evidence-policy] self-test ok    — a grandfather pin is a ceiling, not a blanket — growth past it reds
+[evidence-policy] self-test ok    — a wave pin is a ceiling too — a new image past it reds
+[evidence-policy] self-test ok    — a pin naming nothing is reported stale
+[evidence-policy] self-test PASS — 8/8 cases.
+
+[evidence-policy] scope docs/tranches/** — 290 png, 29,902,027 B across 26 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] grandfathered 0 image pin(s), 0 wave pin(s)
+
+[evidence-policy] FAIL — 73 breach(es):
+    name-ban: 4
+    per-image: 64
+    per-wave: 5
+
+  per-wave            4,324,819 B  > 2,097,152 B per-wave cap
+                      docs/tranches/2026-07-tranche-4/evidence/w12
+  per-wave            4,236,208 B  > 2,097,152 B per-wave cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10
+  per-wave            2,583,004 B  > 2,097,152 B per-wave cap
+                      docs/tranches/2026-07-tranche-4/evidence/w13
+  per-wave            2,564,266 B  > 2,097,152 B per-wave cap
+                      docs/tranches/2026-07-tranche-3/evidence/addendum
+  per-wave            2,467,705 B  > 2,097,152 B per-wave cap
+                      docs/tranches/2026-07-tranche-2/evidence/execution
+  per-image           574,907 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/addendum/d1-shots/solved-1440-prm.png
+  per-image           544,847 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/T3-W12-gate/shots/gate-completion-solved-1440x806.png
+  per-image           532,971 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/addendum/d1-shots/corner-1100-v2.png
+  per-image           531,066 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/addendum/a1-completion-live.png
+  per-image           495,086 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/w13/b1-idle.png
+  per-image           493,775 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/addendum/a1-solved-1440.png
+  per-image           455,779 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/pass2/p4-shots/07-board-16x16.png
+  per-image           445,286 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/w13/b4-close-midglide.png
+  per-image           438,431 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/execution/U5-engine-domains-marks/shots/05-sudoku-9x9-peek-dark.png
+  per-image           417,722 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/execution/U5-engine-domains-marks/shots/01-sudoku-9x9-peek-light.png
+  per-image           410,199 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/execution/U5-engine-domains-marks/shots/03-after-entry.png
+  per-image           384,708 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/execution/U5-engine-domains-marks/shots/04-unsat-conflict.png
+  per-image           375,931 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w13/killer-furniture-face.png
+  per-image           321,080 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/execution/U5-engine-domains-marks/shots/08-futoshiki-6x6-peek-dark.png
+  per-image           310,453 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-sudoku-dark-full-2.png
+  per-image           310,415 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-sudoku-dark-full.png
+  name-ban            310,415 B  name matches /-full\.png$/ — a crop, never a viewport
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-sudoku-dark-full.png
+  per-image           296,948 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/execution/U5-engine-domains-marks/shots/07-futoshiki-6x6-peek-light.png
+  per-image           295,245 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-grand-uplift/artifacts/union-screenshots/composite-peek-light.png
+  per-image           293,016 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-sudoku-light-full-2.png
+  per-image           292,795 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-sudoku-light-full.png
+  name-ban            292,795 B  name matches /-full\.png$/ — a crop, never a viewport
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-sudoku-light-full.png
+  per-image           291,443 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/pass2/p3-shots/mid-before-t1400.png
+  per-image           283,564 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/pass2/p3-shots/mid-after-t1400.png
+  per-image           271,175 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-futoshiki-dark-full-2.png
+  per-image           271,130 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-futoshiki-dark-full.png
+  name-ban            271,130 B  name matches /-full\.png$/ — a crop, never a viewport
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-futoshiki-dark-full.png
+  per-image           270,342 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-grand-uplift/artifacts/union-screenshots/motion-strip-laminate.png
+  per-image           263,044 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-futoshiki-light-full-2.png
+  per-image           263,006 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-grand-uplift/artifacts/union-screenshots/composite-peek-dark.png
+  per-image           262,711 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-futoshiki-light-full.png
+  name-ban            262,711 B  name matches /-full\.png$/ — a crop, never a viewport
+                      docs/tranches/2026-07-tranche-4/evidence/w10/parity-futoshiki-light-full.png
+  per-image           259,291 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/T3-WGATE-shots/live-solved-light.png
+  per-image           255,195 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/T3-WGATE-shots/live-solved-dark.png
+  per-image           247,626 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w13/kenken-furniture-face.png
+  per-image           244,611 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w9/p2-ungraded-16x16-sudoku-board.png
+  per-image           243,726 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/pass2/p4-shots/05-board-9x9-dark.png
+  per-image           234,376 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-grand-uplift/artifacts/union-screenshots/composite-idle-light.png
+  per-image           225,364 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/pass2/p4-shots/03-after-entry.png
+  per-image           222,461 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/pass2/p4-shots/01-board-9x9-light.png
+  per-image           217,004 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/T3-W11-gate/gate-failed-maroon-beat.png
+  per-image           215,429 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-grand-uplift/artifacts/union-screenshots/composite-idle-dark.png
+  per-image           215,071 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w9/p2-tier1-sudoku-board.png
+  per-image           211,976 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w12/captures/gallery-settled-dark.png
+  per-image           211,805 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/T3-W9-gate/probe5-solved-row-light.png
+  per-image           205,105 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w12/captures/gallery-settled.png
+  per-image           204,339 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/T3-W9-gate/prm-solved-instant.png
+  per-image           203,254 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w12/captures/gallery-prm.png
+  per-image           202,373 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w12/captures/gallery-focus-ring.png
+  per-image           202,344 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/T3-W9-gate/heart-crest-dark.png
+  per-image           201,420 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/evidence/p1/soul-glyph-bake/webkit-dark/board-1x.png
+  per-image           193,494 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/evidence/p1/soul-glyph-bake/webkit-light/board-1x.png
+  per-image           190,250 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/reflow-320-sudoku-dark.png
+  per-image           188,870 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w13/thermo-furniture-face.png
+  per-image           188,597 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-3/evidence/T3-W9-gate/failure-red-graphite-zero-gold.png
+  per-image           186,763 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w13/j1-killer-inapp-dark.png
+  per-image           185,710 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w9/p2-tier2-sudoku-board.png
+  per-image           184,801 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-2/evidence/pass2/p4-shots/04-unsat-conflict.png
+  per-image           176,214 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w9/p2-beyond-sudoku-board.png
+  per-image           175,123 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w8/crops/pi-collision-peek.png
+  per-image           169,687 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w13/jv-killer-inapp-dark.png
+  per-image           167,881 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/evidence/p1/soul-glyph-bake/chromium-dark/board-1x.png
+  per-image           166,974 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w13/j1-killer-inapp-light.png
+  per-image           166,283 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w13/j1-gallery-5cards-thermo-fold.png
+  per-image           165,448 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w13/jv-gallery-5cards-thermo-fold.png
+  per-image           164,059 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-grand-uplift/artifacts/union-screenshots/union-dark-held-board.png
+  per-image           161,256 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/reflow-320-futoshiki-dark.png
+  per-image           153,762 B  > 153,600 B per-image cap
+                      docs/tranches/2026-07-tranche-4/evidence/w10/forcedcolors-fullpage-light.png
+
+Recrop to the pixels under audit; text-first for anything a number can state (EVIDENCE-POLICY.md). Do NOT raise a cap and do NOT add a grandfather line.
+--------------------------------------------------------------
+exit status: 1  (verified below)
+
+A3 RE-DERIVATION — the audit's number, at the audit's scope
+==============================================================
+r2/verify-gate-criticals.md §2 stated '31 over-cap images and three over-cap
+waves' scoped to 2026-07-tranche-4. Re-derived here at citation:
+
+$ node -e (per-tranche census, caps 153600 B/image, 2097152 B/wave)
+--------------------------------------------------------------
+tranche                        png     total B   >150KiB  -full.png  waves>2MiB
+2026-07-grand-uplift            10     1766419        6          0           0
+2026-07-tranche-2               17     4475741       13          0           1
+2026-07-tranche-3               88     7574195       14          0           1
+2026-07-tranche-4              175    16085672       31          4           3
+---------------------------- ----- ----------- -------- ---------- -----------
+ESTATE (gate scope)            290    29902027       64          4           5
+
+waves over the 2 MiB cap:
+    4324819 B  2.06x  docs/tranches/2026-07-tranche-4/evidence/w12
+    4236208 B  2.02x  docs/tranches/2026-07-tranche-4/evidence/w10
+    2583004 B  1.23x  docs/tranches/2026-07-tranche-4/evidence/w13
+    2564266 B  1.22x  docs/tranches/2026-07-tranche-3/evidence/addendum
+    2467705 B  1.18x  docs/tranches/2026-07-tranche-2/evidence/execution
+--------------------------------------------------------------
+
+VERDICT
+  A3 at its stated scope (2026-07-tranche-4): 31 over-cap images, 3 over-cap
+  waves — CONFIRMED to the file.
+  At the gate's ordered scope (docs/tranches/**, per row 1.3): 64 over-cap
+  images, 5 over-cap waves, 4 banned -full.png names = 73 breaches. The three
+  pre-T4 tranches carry the extra 33 images and the extra 2 waves; they are
+  pre-ratification, and the adjudication disposes of them.
+  2026-08-tranche-5 carries 0 png at this HEAD — clean by absence, and now
+  clean by enforcement.
+
+ADDENDUM — the RED reproduced at the final instrument version
+==============================================================
+The run banked above is the gate's genuine first execution. Afterwards the
+instrument gained a 9th self-test case (an absent scope dir must throw rather
+than read as a clean estate) — a guard on the instrument, not a change to any
+of the three policy rules. To prove the RED is a property of the estate and not
+of that script version, the final script was copied beside itself with both
+grandfather lists spliced to [] and re-run against the same HEAD:
+
+$ node scripts/.redcheck-evidence-policy.mjs   (final script, lists emptied, then deleted)
+--------------------------------------------------------------
+[evidence-policy] scope docs/tranches/** — 290 png, 29,902,027 B across 26 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] grandfathered 0 image pin(s), 0 wave pin(s)
+[evidence-policy] FAIL — 73 breach(es):
+    name-ban: 4
+    per-image: 64
+    per-wave: 5
+--------------------------------------------------------------
+73 breaches, identical split. The copy was deleted immediately after the run:
+$ ls scripts/
+check-doc-truth.mjs
+check-evidence-policy.mjs
+dev.sh
+ledger-diff.mjs

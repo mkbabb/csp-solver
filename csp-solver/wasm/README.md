@@ -35,13 +35,20 @@ Requires `wasm-pack ≥ 0.14`.
 
 ```bash
 cd csp-solver/wasm
-make wasm            # wasm-pack build --target web --release → pkg/ (full, default features: + assignment)
+make wasm            # wasm-pack build --scope mkbabb --target web --profile wasm-release --no-default-features → pkg/
 ```
 
-The lean deploy artifact (the five puzzle families, no assignment):
+`make wasm` builds the LEAN deploy artifact — the five puzzle families, with the
+`assignment` feature and its whole serde/ndarray graph out of the compile. It is
+the exact recipe CI's `build-lean-wasm` lane runs and the one the frontend `file:`
+link expects, and it stamps the `exports` map onto `pkg/package.json` afterwards.
+
+The default-feature module (the same five families plus the `assignment` surface,
+whose transitive `ndarray` dominates the size delta) is not what ships. Build it
+explicitly when a size or surface question needs it:
 
 ```bash
-wasm-pack build --target web --profile wasm-release --no-default-features --out-dir pkg
+wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release
 ```
 
 `make wasm` writes `pkg/`:
@@ -56,9 +63,12 @@ wasm-pack build --target web --profile wasm-release --no-default-features --out-
 `--target web --no-default-features` artifact, the five puzzle families. That
 lean build measures 122,385 B on darwin (`wc -c pkg/csp_solver_wasm_bg.wasm`,
 measured at e961bdb7, 2026-08-01), under the 124,500 B re-derived ceiling (base
-plus per-game wire); the CI runner's toolchain adds a couple of KB, and the
-twiggy lane enforces the band on the runner's own figure, failing above
-127,500 B.
+plus per-game wire). The CI runner's toolchain builds the same source a couple of
+KB larger — it last measured 124,091 B, at d70073f3 — and the twiggy lane enforces
+the band on the runner's own figure, failing above 127,500 B. Both figures are
+stamped here on purpose: the doc-truth gate re-derives this number from whichever
+artifact is on the machine it runs on, so a site carrying one platform's figure
+alone reds on the other.
 
 ## Consume
 

@@ -1,0 +1,172 @@
+# T5-W1 row 1.2 — CI JOB FRAGMENT: gates.json gets an executor.
+#
+# THE HOLE THIS FILLS. `docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/
+# gates.json` is a committed threshold file that nothing has ever run. Audit A2 CONFIRMED;
+# r1/perf-disposition.md §3.2 put it plainly: "a regression to 79 fps idle would pass every
+# CI lane." The filter census is a good proxy for the cured MECHANISM, but proxy != surface —
+# a new perf defect with zero new filters is invisible to it.
+#
+# WHAT THIS LANE ENFORCES, and only this:
+#   desktop.idle3s.maxLong33 (0)  — GATE A, absolute, engine-portable
+#   desktop.idle3s.minFps    (97) — GATE B, transposed to a fraction of the runner's own
+#                                   measured rAF ceiling (97/98.4 = 98.577%)
+# Every other gates.json row — the sim block, gpuAttribution, deal/solveCelebration/
+# themeToggle/galleryGlide — needs real Safari, a real simulator, or `ps`-level process
+# attribution, and stays a documented MANUAL lane (web/frontend/perf-rig/README.md). This
+# fragment does not pretend otherwise, and the manual lane's first run-id banks at W-GATE.
+#
+# BORN-RED BANK (the defect was an absence, so the canary proves the gate CAN fail — both
+# assertions, both engines, four cells):
+#     docs/tranches/2026-08-tranche-5/evidence/w1/perf-canary-RED.txt
+# AT-HEAD GREEN, with the host-load confound disclosed:
+#     docs/tranches/2026-08-tranche-5/evidence/w1/perf-subset-at-HEAD.txt
+#     docs/tranches/2026-08-tranche-5/evidence/w1/perf-subset-contended-host-RED.txt
+#
+# WHAT A GREEN HERE DOES NOT MEAN. Playwright WebKit is not Safari. This harness read 80–98
+# fps on the exact surface the owner called a rendered mess — that is why the real-Safari rig
+# was built. Read this lane as a REGRESSION TRIPWIRE on the cured mechanism. It is not a
+# Safari number and it is not an iOS claim (E8 device smoke remains the only thing that
+# closes the latter).
+#
+# WHY ITS OWN JOB, not a step in `e2e`. `e2e` already has chromium+webkit installed and a
+# bundled `dist-throttle/` on disk, so folding in would cost one command and no setup — a
+# real option, and the integrator may take it (`--dist dist-throttle`, dropping the build
+# and install steps below). It is NOT the default for three reasons: `e2e` already carries
+# five suites against a 25-minute budget; a frame-timing window taken in the tail of a heavy
+# Playwright run measures a runner that has just been hammered; and the exit-3 retry below
+# has no clean home mid-suite. A standalone lane also keeps a perf red attributable at a
+# glance, which is the whole point of gating an outcome rather than a proxy.
+#
+# INTEGRATION (a single integrator lane owns .github/workflows/ci.yml — this file is a
+# fragment, not a patch): paste the block below into `jobs:` in ci.yml, after the `e2e:` job
+# (which ends where the `# Lane 10 / iai` comment begins, ci.yml:706-708). Indentation
+# matches the file: job key at 4 spaces, its keys at 8.
+#
+# COST: ~4 min. Node + a cached Playwright bundle + one `vite build`. No Rust toolchain: it
+# downloads `lean-wasm-pkg` for the same reason `frontend` and `e2e` do — package.json
+# file:-links `@mkbabb/csp-solver-wasm` to `csp-solver/wasm/pkg`, so `npm ci` cannot resolve
+# the lockfile without that directory on disk.
+#
+# EXIT-CODE CONTRACT — this is the part not to flatten:
+#     0  every threshold held
+#     1  a gates.json threshold was BREACHED               -> fail, never retried
+#     2  setup/usage error (no gates.json, bad port, …)    -> fail
+#     3  INSTRUMENT failure — too few clean windows, or the app-free control page itself
+#        dropped a long frame                              -> retried ONCE, then fails
+#
+# The retry covers exactly one documented flake class: host contention on a shared runner,
+# detected by the control page (an empty document with one rAF counter — if THAT drops a
+# frame, the runner is not measuring the surface). A breach is never retried, because a
+# breach is a fact about the bundle. Do not collapse 3 into 0: a gate that cannot measure
+# must not report green.
+
+    # ---------------------------------------------------------------- Lane 9b
+    # perf subset — gates.json's idle thresholds, executed (T5-W1 row 1.2).
+    #
+    # idle fps + long-frame(>33.4ms) census on the BUILT DIST, headless chromium
+    # AND webkit, thresholds read from the P1 patch's own gates.json at run time.
+    # Nothing here hardcodes a number; a missing gates.json is exit 2, never a
+    # default. Control and window are interleaved per P-W4's instrument law.
+    perf-subset:
+        name: perf subset (gates.json idle thresholds, chromium + webkit)
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        needs: [build-lean-wasm]
+        steps:
+            - uses: actions/checkout@v4
+            # `@mkbabb/csp-solver-wasm` is a file: link to the gitignored lean build
+            # output; `npm ci` refuses to resolve the lockfile without it present.
+            # Download rather than build — this lane stays Node-only.
+            - name: Download the lean wasm pkg (the package.json file-link target)
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            # Key the browser cache on the resolved Playwright version so a bump
+            # invalidates it (the on-disk bundle layout is version-specific). Same
+            # cache key as `e2e`, so whichever lane runs first warms it for the other.
+            - name: Resolve Playwright version (from the lockfile)
+              id: pw-version
+              working-directory: web/frontend
+              run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+            - name: Cache Playwright browser bundle
+              id: pw-cache
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
+            # Both engines: the P1 defect was WebKit's, and chromium alone would have
+            # missed it entirely. webkit is the load-bearing arm here; chromium is the
+            # cross-engine control that says a red belongs to one engine or to both.
+            - name: 'Install Playwright chromium + webkit (+ deps)'
+              working-directory: web/frontend
+              run: npx playwright install --with-deps chromium webkit
+            # THE GATE. `--build` forces a fresh `vite build` (skipping vue-tsc and the
+            # `prebuild` wasm make — the same call playwright-throttle.config.ts makes,
+            # for the same reasons). Port 4390 is the rig's own; the script refuses
+            # 3000/3001/4188/4288 outright and kills its server on the way out.
+            #
+            # Exit 3 (instrument failure) is retried ONCE and only once — see the
+            # exit-code contract in this file's header. Exit 1 (breach) never is.
+            - name: 'gates.json idle thresholds (idle fps + long-frame census)'
+              working-directory: web/frontend
+              run: |
+                  set -u
+                  set +e
+                  node perf-rig/ci-subset.mjs --port 4390 --runs 3 --build \
+                    --out perf-subset-report.txt
+                  CODE=$?
+                  if [ "$CODE" -eq 3 ]; then
+                    echo "::warning::perf subset could not measure (exit 3) — the runner's own app-free control page dropped a long frame, or too few windows came back clean. Retrying once; this is the documented contention flake class, NOT a threshold breach."
+                    node perf-rig/ci-subset.mjs --port 4390 --runs 3 \
+                      --out perf-subset-report.txt
+                    CODE=$?
+                  fi
+                  set -e
+                  case "$CODE" in
+                    0) echo "perf subset GREEN — every gates.json idle threshold held on both engines" ;;
+                    1) echo "::error::perf subset RED — a gates.json threshold was breached. See the report artifact; the BREACH lines name the engine, the measured value and the derived threshold. Do NOT retry this and do NOT tune the threshold: gates.json is the P1 patch's sealed commitment." ;;
+                    2) echo "::error::perf subset setup error — gates.json unreadable, a reserved port, or a failed build. This lane carries no fallback thresholds by design." ;;
+                    3) echo "::error::perf subset INSTRUMENT failure twice running — this runner cannot hold its own frame budget with an empty page on screen, so neither a green nor a red is admissible. Not a bundle regression." ;;
+                    *) echo "::error::perf subset exited $CODE (unexpected)" ;;
+                  esac
+                  exit "$CODE"
+            # Always uploaded, green or red: a perf number is only worth what its run
+            # record is worth, and the green runs are the baseline the next red is read
+            # against. The report carries the per-window curves, both control series and
+            # the host's load average at start and finish.
+            - name: Upload the perf subset report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: perf-subset-report
+                  path: web/frontend/perf-subset-report.txt
+                  if-no-files-found: warn
+                  retention-days: 30
+
+# ------------------------------------------------------------------------------
+# FOLD-IN ALTERNATIVE, integrator's call. To spend ~0 extra minutes instead of ~4,
+# delete the job above and append this single step to the existing `e2e` job, after
+# its "Run the built-dist gates" step (which is what produces dist-throttle/):
+#
+#             - name: 'gates.json idle thresholds (perf subset, reusing dist-throttle)'
+#               working-directory: web/frontend
+#               run: node perf-rig/ci-subset.mjs --port 4390 --runs 3 --dist dist-throttle
+#
+# The tradeoff, stated so it is chosen rather than stumbled into: the window is then
+# measured on a runner that has just finished five Playwright suites, and an exit-3
+# instrument failure fails the whole e2e lane with no retry and a misleading name.
+# ------------------------------------------------------------------------------

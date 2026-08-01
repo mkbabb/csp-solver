@@ -1,0 +1,108 @@
+T5-W1 row 1.3 — EVIDENCE-POLICY enforcement: GREEN after adjudication
+=====================================================================
+date        2026-08-01T19:28:21Z
+HEAD        f38c5130c8d2e97a5291795133d340754eca99eb
+node        v26.0.0   npm 11.12.1
+host        Darwin 25.4.0 arm64
+grandfather 64 image pin(s) + 5 wave pin(s), all sealed-tranche, each pinned at
+            its exact HEAD byte count. The 73-row crop-or-grandfather table is
+            evidence-adjudication.md. Zero images were cropped because zero
+            breaches are T5-era: 2026-08-tranche-5 carries 0 png at this HEAD.
+
+$ node scripts/check-evidence-policy.mjs --self-test
+---------------------------------------------------------------------
+[evidence-policy] self-test ok    — per-image cap fires on one over-cap image
+[evidence-policy] self-test ok    — per-wave cap fires even when every image is under the per-image cap
+[evidence-policy] self-test ok    — name ban fires on a tiny -full.png
+[evidence-policy] self-test ok    — a policy-conformant estate reds nowhere
+[evidence-policy] self-test ok    — a grandfather pin exempts the file it names
+[evidence-policy] self-test ok    — a grandfather pin is a ceiling, not a blanket — growth past it reds
+[evidence-policy] self-test ok    — a wave pin is a ceiling too — a new image past it reds
+[evidence-policy] self-test ok    — a pin naming nothing is reported stale
+[evidence-policy] self-test ok    — an absent scope dir throws rather than reading as a clean estate
+[evidence-policy] self-test PASS — 9/9 cases.
+
+[evidence-policy] scope docs/tranches/** — 290 png, 29,902,027 B across 26 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s)
+[evidence-policy] PASS — every image and every wave within policy.
+---------------------------------------------------------------------
+exit status: 0
+
+LIVE-ESTATE CANARY — the grandfather list did NOT blind the gate
+=====================================================================
+The 9-case --self-test above runs against a synthetic estate. These three
+arms plant a real breach in the REAL tree, with the real 64+5 grandfather
+pins loaded, and show the gate reds anyway. No sealed file is touched by any
+arm; every canary is removed afterwards and the green re-verified at the
+bottom. (Each arm's output is one run; the exit status line is a second,
+identical run of the same command — the gate is deterministic.)
+
+ARM A — a 200,000 B capture planted in the live wave docs/tranches/2026-08-tranche-5/evidence/w1
+$ node scripts/check-evidence-policy.mjs   (canary planted)
+---------------------------------------------------------------------
+[evidence-policy] scope docs/tranches/** — 291 png, 30,102,027 B across 27 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s)
+
+[evidence-policy] FAIL — 1 breach(es):
+    per-image: 1
+
+  per-image           200,000 B  > 153,600 B per-image cap
+                      docs/tranches/2026-08-tranche-5/evidence/w1/canary-oversize.png
+
+Recrop to the pixels under audit; text-first for anything a number can state (EVIDENCE-POLICY.md). Do NOT raise a cap and do NOT add a grandfather line.
+exit status: 1
+
+ARM B — a 2,048 B file named canary-viewport-full.png, far UNDER the byte cap
+         (proves the name ban is an independent rule, not a byte rule in disguise)
+$ node scripts/check-evidence-policy.mjs   (canary planted)
+---------------------------------------------------------------------
+[evidence-policy] scope docs/tranches/** — 291 png, 29,904,075 B across 27 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s)
+
+[evidence-policy] FAIL — 1 breach(es):
+    name-ban: 1
+
+  name-ban            2,048 B  name matches /-full\.png$/ — a crop, never a viewport
+                      docs/tranches/2026-08-tranche-5/evidence/w1/canary-viewport-full.png
+
+Recrop to the pixels under audit; text-first for anything a number can state (EVIDENCE-POLICY.md). Do NOT raise a cap and do NOT add a grandfather line.
+exit status: 1
+
+ARM C — 1,024 B added to the GRANDFATHERED wave docs/tranches/2026-07-tranche-4/evidence/w13
+         (pinned at 2,583,004 B; a blanket exemption would have swallowed this)
+$ node scripts/check-evidence-policy.mjs   (canary planted)
+---------------------------------------------------------------------
+[evidence-policy] scope docs/tranches/** — 291 png, 29,903,051 B across 26 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s)
+
+[evidence-policy] FAIL — 1 breach(es):
+    grandfather-wave: 1
+
+  grandfather-wave    2,584,028 B  > 2,583,004 B grandfather pin (it gained)
+                      docs/tranches/2026-07-tranche-4/evidence/w13
+
+Recrop to the pixels under audit; text-first for anything a number can state (EVIDENCE-POLICY.md). Do NOT raise a cap and do NOT add a grandfather line.
+exit status: 1
+
+CANARIES REMOVED — the estate re-verified clean
+=====================================================================
+$ find docs/tranches -name 'canary-*.png' | wc -l
+0
+
+$ git status --porcelain docs/tranches
+?? docs/tranches/2026-08-tranche-5/evidence/w1/
+  ^ this wave's own evidence dir, untracked because it is being authored now.
+    NOTHING under docs/tranches is MODIFIED — no sealed file was touched.
+
+$ node scripts/check-evidence-policy.mjs
+---------------------------------------------------------------------
+[evidence-policy] scope docs/tranches/** — 290 png, 29,902,027 B across 26 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s)
+[evidence-policy] PASS — every image and every wave within policy.
+---------------------------------------------------------------------
+exit status: 0

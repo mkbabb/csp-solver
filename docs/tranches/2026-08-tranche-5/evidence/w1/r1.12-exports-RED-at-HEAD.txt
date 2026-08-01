@@ -1,0 +1,18 @@
+# T5-W1 row 1.12 — BORN-RED at HEAD (I3/N2: no exports map on the wasm pkg)
+# HEAD: f38c5130   date: 2026-08-01T19:19:57Z
+# pkg as minted by wasm-pack 0.15.0 — UNTOUCHED at this point
+
+$ md5 csp-solver/wasm/pkg/package.json
+253050d6e0d52b89cbabf75e1d5b20b0
+$ grep -c exports csp-solver/wasm/pkg/package.json
+0
+
+$ node csp-solver/wasm/scripts/pkg-exports.mjs --check
+pkg-exports --check  @mkbabb/csp-solver-wasm@0.6.0
+  pkg      /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/wasm/pkg
+  exports  (absent)
+  resolve  OK   @mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm -> file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+  resolve  OK   @mkbabb/csp-solver-wasm/package.json -> file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/wasm/pkg/package.json
+  ERROR    manifest has NO `exports` field — the ./csp_solver_wasm_bg.wasm subpath rides Node's legacy fallback and is one wasm-pack release away from ERR_PACKAGE_PATH_NOT_EXPORTED
+  verdict  RED
+exit=1

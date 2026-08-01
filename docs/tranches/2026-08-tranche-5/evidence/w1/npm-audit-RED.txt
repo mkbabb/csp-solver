@@ -1,0 +1,58 @@
+# T5-W1 row 1.15 — BORN-RED bank (npm audit at HEAD)
+# Command: npm audit --audit-level=high   (cwd: web/frontend)
+# Date:    2026-08-01T20:50:22Z
+# HEAD:    f38c5130c8d2e97a5291795133d340754eca99eb
+# npm:     11.12.1   node: v26.0.0
+# NOTE: working tree carries concurrent T5-W1 lane edits to package.json /
+#       package-lock.json (coverage-v8, boundary, support-floor rows). Those
+#       lanes add devDependencies; none of them introduce or cure the three
+#       advisory roots below.
+# ---------------------------------------------------------------
+
+# npm audit report
+
+brace-expansion  2.0.0 - 2.1.2 || 4.0.0 - 5.0.7
+Severity: high
+brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash - https://github.com/advisories/GHSA-mh99-v99m-4gvg
+brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash - https://github.com/advisories/GHSA-mh99-v99m-4gvg
+fix available via `npm audit fix`
+node_modules/brace-expansion
+node_modules/editorconfig/node_modules/brace-expansion
+node_modules/glob/node_modules/brace-expansion
+
+postcss  <=8.5.17
+Severity: high
+PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure - https://github.com/advisories/GHSA-r28c-9q8g-f849
+fix available via `npm audit fix`
+node_modules/postcss
+
+sharp  <0.35.0
+Severity: high
+sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591 - https://github.com/advisories/GHSA-f88m-g3jw-g9cj
+fix available via `npm audit fix`
+node_modules/sharp
+  miniflare  <=0.0.0-fec45ed61 || 4.20250508.3 - 4.20260721.0
+  Depends on vulnerable versions of sharp
+  node_modules/miniflare
+    wrangler  <=0.0.0-7ae5dd357 || 4.16.0 - 4.113.0
+    Depends on vulnerable versions of miniflare
+    node_modules/wrangler
+
+5 high severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+
+# EXIT CODE: 1   (non-zero == RED; npm audit exits 1 when findings meet --audit-level)
+
+# --- JSON vulnerability census (npm audit --json | metadata.vulnerabilities) ---
+{
+  "info": 0,
+  "low": 0,
+  "moderate": 0,
+  "high": 5,
+  "critical": 0,
+  "total": 5
+}
+
+roots: brace-expansion, miniflare, postcss, sharp, wrangler

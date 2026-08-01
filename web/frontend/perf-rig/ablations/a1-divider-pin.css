@@ -1,0 +1,5 @@
+/* A1 — SANITY. Pin the divider's grain-static pose stack to pose 0 in CSS. The Apple-vendor
+   freeze (fb15253d) already does this in script; if the freeze holds, this ablation is a
+   no-op and every number matches baseline. A real gain here would mean the freeze leaks. */
+.boil-divider-wrap .boil-pose { opacity: 0 !important; }
+.boil-divider-wrap .boil-pose:first-of-type { opacity: 1 !important; }

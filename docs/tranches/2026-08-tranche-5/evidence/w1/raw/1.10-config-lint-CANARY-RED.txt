@@ -1,0 +1,16 @@
+PW PROJECT MATRIX — 3 configs, 9 projects, 4 declared single-engine holdouts (T5-W1 1.10 / CH-56)
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✗ 3 ENGINE COVERAGE — 2
+  ✓ 4 HOLDOUTS CLOSED
+  ✗ 5 COUNT FLOORS — 1
+
+3 failure(s):
+
+  • [3 ENGINE COVERAGE] mobile-affordances.spec.ts: runs in {chromium} — every spec runs in BOTH engines unless HOLDOUTS says why. This is CH-56's exact shape: a surface that quietly covers one engine while the suite still reads green. Widen it, or add a HOLDOUTS entry with the cite.
+
+  • [3 ENGINE COVERAGE] mobile-platform.spec.ts: runs in {chromium} — every spec runs in BOTH engines unless HOLDOUTS says why. This is CH-56's exact shape: a surface that quietly covers one engine while the suite still reads green. Widen it, or add a HOLDOUTS entry with the cite.
+
+  • [5 COUNT FLOORS] playwright.config.ts [webkit]: 91 tests, floor 110. Tests left the project. Raise the floor only alongside the reason they went.
+
+CANARY_EXIT=1

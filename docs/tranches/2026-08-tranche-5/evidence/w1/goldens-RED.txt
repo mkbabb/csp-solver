@@ -1,0 +1,112 @@
+T5-W1.13 — GOLDENS-ESTATE GATE, BORN RED AT HEAD
+repo   /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+HEAD   f38c5130  (T5-W0 SEAL: the record heals — doc-truth born-RED 10/10 then green, ledg)
+when   2026-08-01 15:22:51 -0400
+host   darwin 25.4.0 · node v26.0.0 · npm 11.12.1
+law    born-RED: the defect is LIVE at HEAD (4 fossils, ungated total), so the gate
+       runs FIRST and its RED is banked BEFORE any cure. Nothing deleted yet.
+
+===================================================================
+§1  THE FOSSIL GREP — the shadow estate at HEAD, before deletion
+===================================================================
+$ find e2e -name "*.png" -not -path "e2e/goldens/*"
+e2e/visual-golden.spec.ts-snapshots/cell-light-webkit-darwin.png
+e2e/visual-golden.spec.ts-snapshots/grid-corner-light-webkit-darwin.png
+e2e/visual-golden.spec.ts-snapshots/logo-light-webkit-darwin.png
+e2e/visual-golden.spec.ts-snapshots/toggle-crest-dark-webkit-darwin.png
+
+$ shasum + bytes (the record of what gets deleted in §3)
+      2638 B  5ad6299f447e247df1f481fcf1c85858f58eac00  e2e/visual-golden.spec.ts-snapshots/cell-light-webkit-darwin.png
+     10474 B  45b7851cc4a47c1405737a014f3c0f1a9f2b872c  e2e/visual-golden.spec.ts-snapshots/grid-corner-light-webkit-darwin.png
+     13250 B  d9b1956977fe1a6c548d8c4a43090b82c0030fc0  e2e/visual-golden.spec.ts-snapshots/logo-light-webkit-darwin.png
+      5854 B  8f9502b0900c42930e5d957ff3d92fae216fb4c6  e2e/visual-golden.spec.ts-snapshots/toggle-crest-dark-webkit-darwin.png
+
+$ git check-ignore -v <each>
+.gitignore:41:*.png	e2e/visual-golden.spec.ts-snapshots/cell-light-webkit-darwin.png
+.gitignore:41:*.png	e2e/visual-golden.spec.ts-snapshots/grid-corner-light-webkit-darwin.png
+.gitignore:41:*.png	e2e/visual-golden.spec.ts-snapshots/logo-light-webkit-darwin.png
+.gitignore:41:*.png	e2e/visual-golden.spec.ts-snapshots/toggle-crest-dark-webkit-darwin.png
+
+$ git ls-files e2e/visual-golden.spec.ts-snapshots   # untracked: no output
+(empty — all four untracked, invisible to every tracked-file gate)
+
+===================================================================
+§2  THE GATE AT HEAD — node scripts/check-golden-bytes.mjs
+===================================================================
+[golden-bytes] 8 golden(s) + 4 unsanctioned PNG(s) under e2e
+  estate total   130.4 KB  (goldens 99.0 KB, unsanctioned 31.5 KB)
+  estate band    110.0 KB  (OVER by 20.4 KB = 18.6% of the band)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] UNSANCTIONED — 4 *.png outside e2e/goldens:
+  FAIL     2.6 KB  e2e/visual-golden.spec.ts-snapshots/cell-light-webkit-darwin.png
+  FAIL    10.2 KB  e2e/visual-golden.spec.ts-snapshots/grid-corner-light-webkit-darwin.png
+  FAIL    12.9 KB  e2e/visual-golden.spec.ts-snapshots/logo-light-webkit-darwin.png
+  FAIL     5.7 KB  e2e/visual-golden.spec.ts-snapshots/toggle-crest-dark-webkit-darwin.png
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:212
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:223
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:182
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:206
+
+[golden-bytes] tracked-ness: 8 tracked / 8 on disk
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 2 defect(s):
+  · estate total: 133557 B > 112640 B band (over by 20917 B)
+  · fossils: 4 *.png outside e2e/goldens (31.5 KB) — auto-written baselines no config reads
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.
+EXIT=1
+
+
+===================================================================
+§3  THE BAND IS DERIVED, NOT RIGGED — every mint of every golden
+===================================================================
+The red must not be manufactured by a band chosen to produce it. The band comes
+from the estate own byte history; the fossils breach it by 20,917 B = 246x the
+largest total-byte movement the estate has ever made (85 B).
+
+$ git log --follow --format="%h %ad" --date=short -- <each golden>  (size via git cat-file -s)
+  cell-light-darwin
+      0ea30223  2026-07-13  3915 B
+  cell-light-linux
+      0ea30223  2026-07-13  3898 B
+  grid-corner-light-darwin
+      0ea30223  2026-07-13  15811 B
+  grid-corner-light-linux
+      0ea30223  2026-07-13  15691 B
+  logo-light-darwin
+      64fa37a4  2026-07-31  24062 B
+      b8acf3f7  2026-07-13  24161 B
+      0ea30223  2026-07-13  24231 B
+  logo-light-linux
+      098de1c9  2026-07-13  24284 B
+      0ea30223  2026-07-13  24904 B
+  toggle-crest-dark-darwin
+      b8acf3f7  2026-07-13  6697 B
+      0ea30223  2026-07-13  6403 B
+  toggle-crest-dark-linux
+      8c6af343  2026-07-13  6983 B
+      0ea30223  2026-07-13  6403 B
+
+  estate total at birth 0ea30223 (2026-07-13)     101,256 B
+  estate total at HEAD  f38c5130 (2026-08-01)     101,341 B  (+85 B = +0.08% over 19 d, 5 re-mints)
+  worst per-file re-mint drift ever recorded      toggle-crest-dark-linux 6,403 -> 6,983 B = +9.06%
+  all eight re-minted at once at that worst rate  101,341 x 1.0906 = 110,522 B
+  BAND = 110 KB = 112,640 B                       clears that worst case by 2,118 B (11.15% headroom today)
+  HEAD scan incl. fossils                         133,557 B -> OVER by 20,917 B
+  fossil quartet alone                             32,216 B = 31.8% of the legitimate estate
+
+VERDICT  exit 1 on two independent checks (estate total, fossils). RED banked before any cure.

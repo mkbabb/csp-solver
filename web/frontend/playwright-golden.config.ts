@@ -51,6 +51,23 @@ export default defineConfig({
       caret: 'hide',
     },
   },
+  // ENGINE: chromium, and only chromium — declared by omission (no `projects`, no
+  // `browserName`), argued here because r3/goldens-estate §4.3 found this the one lane
+  // whose engine pin carried no note at all. T5-W1.13 kept the pin. A webkit arm is not
+  // free: `snapshotPathTemplate` below has no {projectName}, so a second engine collides
+  // both onto ONE file — which is precisely how the four -webkit-darwin fossils were
+  // written inside 242fad7b's testIgnore window. Widening therefore means renaming all
+  // eight baselines (a path re-baseline of the whole estate), minting eight more (the
+  // darwin-webkit half measures 32,216 B; the linux-webkit half can only be minted by
+  // pushing), and electing a new estate band — for a bitmap compare on a surface that is
+  // already non-convergent in chromium. WebKit is not thereby unguarded: wordmark-integrity,
+  // filter-census-webkit and theme-bake-webkit all assert IN webkit on the built dist
+  // (playwright-throttle.config.ts:73-113) — property gates that carry no baseline family.
+  // The condition on any future widening is enforced, not merely noted:
+  // scripts/check-golden-bytes.mjs reds if an engine is ever declared here while the
+  // template lacks {projectName}. Full argument: docs/tranches/2026-08-tranche-5/evidence/
+  // w1/goldens-hardening.md §3.
+  //
   // Goldens land at e2e/goldens/<name>-<platform>.png — per-OS by construction
   // (font hinting + AA differ darwin/linux, so a shared golden would false-red).
   snapshotPathTemplate: '{testDir}/goldens/{arg}-{platform}{ext}',

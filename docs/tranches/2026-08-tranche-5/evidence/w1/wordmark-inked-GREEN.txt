@@ -1,0 +1,135 @@
+T5-W1 ROW 1.6 — WORDMARK FORCED-BLANK CANARY, THE INKED ARM
+HEAD f38c5130 · darwin 25.4.0 (arm64) · @playwright/test 1.61.1 · node v26.0.0 · npm 11.12.1
+Engine: Playwright WebKit (+ chromium for the theme-bake half). Surface: the same vite build the
+RED arms ran against, served by the SAME binary with the ablation flag off — the two arms differ
+in one thing only, and it is the thing under test.
+
+THE CONTROL THAT MAKES THE RED MEAN SOMETHING. A gate that reds on a blank proves nothing unless
+it greens on ink: `inkBoxViolations` returning ["no-ink"] would also be produced by a decoder
+that had quietly stopped reading. These are the same five labels through the same assertion with
+real ink under them.
+
+ARM SUMMARY
+  B2  spec CURED, real config, INKED, darwin, wordmark-webkit       6 passed   exit 0    3.8s
+  C2  spec CURED, real config, INKED, the FULL throttle config      39 passed  exit 0   27.0s
+
+THE INK BOXES THE GREEN ARM MEASURED (wordmark-canary/inked-*.png, pose-dump.mjs)
+  label       bytes   intrinsic   ink box                          margins t/b/l/r   verdict
+  sudoku      9490 B  381x112     top=16 bot=92 left=10 right=370   16/19/10/10      (none)
+  futoshiki  11375 B  472x112     top=16 bot=93 left=10 right=461   16/18/10/10      (none)
+  thermo      9774 B  384x112     top=16 bot=92 left=7  right=371   16/19/ 7/12      (none)
+  killer      7289 B  287x112     top=16 bot=91 left=9  right=277   16/20/ 9/ 9      (none)
+  kenken      8199 B  381x112     top=16 bot=92 left=9  right=372   16/19/ 9/ 8      (none)
+Margins re-derived at citation: top = box.top, bottom = (H-1) - box.bot, left = box.left,
+right = (W-1) - box.right. Every edge clears by 7 px or more — the invariant the row was born
+for (ink reaching the FINAL COLUMN on all five bitmaps) is held with room, and the assertion is
+not passing because it stopped looking.
+
+WHAT C2 COSTS. The throttle config went 23 tests -> 39 in this row: theme-bake-freshness was
+parameterised over all five labels (4 -> 20 rows across its two engine projects), which is the
+1/5 -> 5/5 widening of the residual vacuity guard. 39 rows, 9 workers, 27.0 s wall on this host
+against a built dist. No CI change buys it — it rides the existing
+"Run the built-dist gates (throttled-void + filter census + wordmark)" step unchanged.
+
+THE WIDENING'S OWN BORN-RED is banked beside this file in themebake-widening-RED.txt: the same
+forced-blank ablation reds all 20 theme-bake rows and names all five labels, where before the
+widening only `sudoku` was read at all.
+
+════════════════════════════════════════════════════════════════════════════════════════
+ARM B2 — spec CURED, REAL playwright-throttle.config.ts, INKED, darwin, wordmark-webkit
+  $ PLAYWRIGHT_BASE_URL=http://localhost:4191 npx playwright test \
+      --config playwright-throttle.config.ts --project=wordmark-webkit
+════════════════════════════════════════════════════════════════════════════════════════
+
+Running 6 tests using 6 workers
+
+  ✓  4 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges (2.5s)
+  ✓  6 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges (2.5s)
+  ✓  2 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges (2.6s)
+  ✓  5 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:204:3 › G3.4 · wordmark integrity (WebKit, built dist) › all five labels render every glyph in Fraunces — zero fallback glyphs (2.6s)
+  ✓  1 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges (2.7s)
+  ✓  3 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges (2.7s)
+
+  6 passed (3.8s)
+EXIT=0
+
+════════════════════════════════════════════════════════════════════════════════════════
+ARM C2 — the FULL throttle config (all six projects), INKED
+  $ PLAYWRIGHT_BASE_URL=http://localhost:4191 npx playwright test \
+      --config playwright-throttle.config.ts
+════════════════════════════════════════════════════════════════════════════════════════
+
+Running 39 tests using 9 workers
+
+  ✓   3 [filter-census-chromium] › e2e/filter-census.spec.ts:468:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (28ms)
+  ✓   2 [throttled-void] › e2e/throttled-void.spec.ts:38:1 › throttled first-select void recovers: loader or board-shell within budget (2.7s)
+  ✓   7 [filter-census-chromium] › e2e/filter-census.spec.ts:409:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) (3.1s)
+  ✓   1 [filter-census-chromium] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (3.5s)
+  ✓   5 [filter-census-chromium] › e2e/filter-census.spec.ts:423:1 › G3.2 · no retained fill supplies a computed transform (built dist) (3.5s)
+  ✓   9 [filter-census-chromium] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (3.5s)
+  ✓   4 [filter-census-chromium] › e2e/filter-census.spec.ts:402:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) (3.8s)
+  ✓  13 [filter-census-webkit] › e2e/filter-census.spec.ts:468:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (31ms)
+  ✓   8 [filter-census-webkit] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (5.2s)
+  ✓   6 [filter-census-webkit] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (5.4s)
+  ✓  10 [filter-census-webkit] › e2e/filter-census.spec.ts:402:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) (6.3s)
+  ✓  15 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges (3.6s)
+  ✓  14 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges (3.8s)
+  ✓  16 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges (3.5s)
+  ✓  11 [filter-census-webkit] › e2e/filter-census.spec.ts:409:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) (4.8s)
+  ✓  17 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges (3.1s)
+  ✓  12 [filter-census-webkit] › e2e/filter-census.spec.ts:423:1 › G3.2 · no retained fill supplies a computed transform (built dist) (5.0s)
+  ✓  18 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges (3.2s)
+  ✓  19 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:204:3 › G3.4 · wordmark integrity (WebKit, built dist) › all five labels render every glyph in Fraunces — zero fallback glyphs (3.3s)
+  ✓  20 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from light) › sudoku light → dark: both baked surfaces re-ink (3.1s)
+  ✓  21 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from light) › futoshiki light → dark: both baked surfaces re-ink (3.2s)
+  ✓  22 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from light) › thermo light → dark: both baked surfaces re-ink (3.1s)
+  ✓  23 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from light) › killer light → dark: both baked surfaces re-ink (3.1s)
+  ✓  24 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from light) › kenken light → dark: both baked surfaces re-ink (2.8s)
+  ✓  25 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from dark) › sudoku dark → light: both baked surfaces re-ink (3.1s)
+  ✓  26 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from dark) › futoshiki dark → light: both baked surfaces re-ink (3.1s)
+  ✓  27 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from dark) › thermo dark → light: both baked surfaces re-ink (3.2s)
+  ✓  28 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from dark) › killer dark → light: both baked surfaces re-ink (3.1s)
+  ✓  29 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from dark) › kenken dark → light: both baked surfaces re-ink (3.3s)
+  ✓  32 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from light) › futoshiki light → dark: both baked surfaces re-ink (5.2s)
+  ✓  31 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from light) › sudoku light → dark: both baked surfaces re-ink (5.2s)
+  ✓  35 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from dark) › sudoku dark → light: both baked surfaces re-ink (5.0s)
+  ✓  30 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from light) › thermo light → dark: both baked surfaces re-ink (6.5s)
+  ✓  33 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from light) › killer light → dark: both baked surfaces re-ink (6.2s)
+  ✓  34 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from light) › kenken light → dark: both baked surfaces re-ink (5.8s)
+  ✓  39 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from dark) › kenken dark → light: both baked surfaces re-ink (3.9s)
+  ✓  36 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from dark) › futoshiki dark → light: both baked surfaces re-ink (5.6s)
+  ✓  38 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from dark) › killer dark → light: both baked surfaces re-ink (5.6s)
+  ✓  37 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:223:7 › G4.5 · baked ink survives one theme toggle (from dark) › thermo dark → light: both baked surfaces re-ink (6.2s)
+
+  39 passed (27.0s)
+EXIT=0  wall=28s
+
+════════════════════════════════════════════════════════════════════════════════════════
+THE RETRIES GATE, run live at this HEAD (scripts/check-pw-retries.mjs --self-test)
+════════════════════════════════════════════════════════════════════════════════════════
+SELF-TEST — every check re-run against a census built to violate it
+  canary 1 THE LAW      → RED (1)
+  canary 2 THE CENSUS   → RED (1)
+  canary 3 THE REVOKED  → RED (1)
+  canary 4 NO OPT-OUT   → RED (1)
+
+RETRIES CENSUS
+  playwright.config.ts::<top-level>                    retries=0  failOnFlakyTests=undefined
+  playwright.config.ts::chromium                       retries=0  failOnFlakyTests=undefined
+  playwright.config.ts::webkit                         retries=0  failOnFlakyTests=undefined
+  playwright-golden.config.ts::<top-level>             retries=0  failOnFlakyTests=undefined
+  playwright-throttle.config.ts::<top-level>           retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::throttled-void        retries=1  failOnFlakyTests=true
+  playwright-throttle.config.ts::filter-census-chromium retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::filter-census-webkit  retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::wordmark-webkit       retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::theme-bake-chromium   retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::theme-bake-webkit     retries=0  failOnFlakyTests=true
+
+  green 1 THE LAW      retries imply failOnFlakyTests
+  green 2 THE CENSUS   every retry is a named grant
+  green 3 THE REVOKED  wordmark-webkit stays at 0
+  green 4 NO OPT-OUT   failOnFlakyTests is never false
+
+check-pw-retries: all checks green
+EXIT=0

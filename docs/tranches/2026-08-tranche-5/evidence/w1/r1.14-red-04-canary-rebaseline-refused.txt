@@ -1,0 +1,29 @@
+# CANARY C — the bake refuses to become a quiet re-baseline
+# Scratch floor = the FIRST (single-run) bake of 2026-08-01. Re-baking it against the n=10
+# sample minima DROPS 4 figures on the jittery scopes; the tool refuses without a reason.
+
+$ node scripts/check-coverage-floor.mjs --floor <scratch-single-run-bake.json> --write-floor --samples <evidence/w1/coverage-samples>
+TOTAL               |   153 |   35.03% |   31.34% |   27.13% |   34.82%
+
+[coverage-floor] --write-floor REFUSED: 4 figure(s) would drop:
+  - src/games/shared.statements: 53.19 -> 53.14
+  - src/games/shared.functions: 47.95 -> 47.74
+  - src/games/shared.lines: 53.38 -> 53.32
+  - TOTAL.lines: 34.82 -> 34.8
+  Lowering a floor is a re-baseline. Pass --allow-lower "<reason>" and record it in the wave.
+EXIT=1
+
+# And the same bake with NEITHER a sample nor the loud opt-out:
+$ node scripts/check-coverage-floor.mjs --floor <scratch> --write-floor
+
+[coverage-floor] --write-floor needs a SAMPLE, not one run. This instrument's own jitter was
+  measured at up to 0.82 pts (see the W1.14 bank); a floor baked from a lucky run flakes.
+  Sample it:  for i in $(seq 1 10); do rm -rf coverage && npm run test:unit:coverage \
+                && node scripts/check-coverage-floor.mjs --json > /tmp/cov/run-$i.json; done
+              node scripts/check-coverage-floor.mjs --write-floor --samples /tmp/cov
+  Or say so out loud with --single-run-ok.
+EXIT=2
+
+# The scratch floor is byte-unchanged by both refusals:
+$ shasum -a 256 <scratch>
+f4c729b6b141e14dec1123aa9306c10dcc35d1ccaef3812d098a0616d73daba2  floor-single-run-bake.json

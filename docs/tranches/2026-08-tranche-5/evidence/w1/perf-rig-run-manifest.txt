@@ -1,0 +1,68 @@
+T5-W1 ROW 1.2 — MANIFEST OF THE P1 RIG RUNS THAT STILL EXIST
+==============================================================================
+
+generated  2026-08-01T19:48:52Z
+source     /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/perf-rig/runs
+           ^ SESSION SCRATCHPAD. Ephemeral. This manifest is text; the runs are not banked.
+
+WHY THIS FILE. r1/perf-disposition.md §4 lists ten classes of P1 evidence as MISSING from
+the repo — M-1 (the eight banked probes), M-6 (the ballot artifacts), M-7 (P-W2's fresh-base
+ballot runs, the G2.5 GREEN evidence), M-8 (P-W3's rig runs, which the record says "were
+kept" while nothing in-tree keeps them), M-9 (P-W4's battery behind every gates.json row).
+They are not lost. They are sitting in this session's scratchpad, which will not survive it.
+
+This manifest is also the row's banked-run-id discipline, applied retroactively: it is the
+index that lets any number in gates.json or WGATE-record §9.1 be traced to the run that
+produced it, for as long as the runs themselves are reachable.
+
+NOT MY ROW TO BANK THE BYTES. The runs are 1.34 MB of JSONL (1.9 MB on disk — 303 small
+files against a 4 KB block); the P-W4 battery beside them is 15.9 MB, most of it PNG. Row
+1.3's evidence policy caps a wave at 2 MB and is landing in this same wave, so
+copying them in is a decision for the team lead, not a side effect of row 1.2. What follows
+is the inventory needed to make that decision.
+
+INVENTORY: 303 run files, 1.34 MB total
+
+  r1 desktop baseline (safari-C1..C3)             3  e.g. safari-C1, safari-C2, safari-C3
+  r1 sim baseline (sim-D1..D2)                    2  e.g. sim-D1, sim-D2
+  r1 ceilings (ceil-1, sim-ceil-1)                2  e.g. ceil-1, sim-ceil-1
+  r1 beat-train probes (idle-E1..E4)              4  e.g. idle-E1, idle-E2, idle-E3, idle-E4
+  r1 failure-mode records (safari-A/B)            4  e.g. safari-A1, safari-B1, safari-B2, safari-B3
+  L2 ablation matrix (a1..a13, aB, base)         97  e.g. a1-divider-pin-r1, a1-divider-pin-r2, a1-divider-pin-r3, a1-divider-pin-r4
+  M-7  P-W2 fresh-base ballot (rfb1..3)           3  e.g. ballot-c-glyph-rfb1, ballot-c-glyph-rfb2, ballot-c-glyph-rfb3
+  M-7  P-W2 ballot cells                          2  e.g. ballot-b-glyph-rb1, ballot-c-glyph-rb1
+  M-8  P-W3 rig runs (pw3*)                      14  e.g. pw3-base-1, pw3-base-2, pw3-base-3, pw3-gb1
+  cpu-attribution windows (ca-*)                  9  e.g. ca-a10-glyph-grain-none, ca-a13-glyph-layerize, ca-a2-grid-bitmap-pin, ca-aB2-best-plus-transitions
+  sim matrix (sim-*)                             44  e.g. sim-a1-divider-pin-bb1, sim-a1-divider-pin-bb2, sim-a1-divider-pin-bb3, sim-a1-divider-pin-bb4
+  (other / later lanes)                         119  e.g. abl-test-1, diag-idle-1, diag-idle-4894, diag-sim-idle
+
+==============================================================================
+THE r1 BASELINE, RE-READ FROM THE JSONL (not from the prose)
+==============================================================================
+
+Every number below is parsed out of the run files just now — the r1 tables are not
+trusted here, they are checked. scenario: fps / long33 / worst ms
+
+VERDICT OF THE CHECK: they agree. r1-rig-baseline.md §2 states the desktop ceiling as
+98.4 fps with zero long frames and the sim's as 59.76 with zero — ceil-1 and sim-ceil-1
+read exactly that. §3's desktop table (idle3s 83.5/75.0/81.6 across C1/C2/C3, long33
+4/24/16; themeToggle worst 210/194/266) and §4's sim table reproduce line for line from
+the JSONL. The prose was not embellished.
+
+ceil-1       rafCeiling 98.4/0/16
+safari-C1    idle3s 83.5/4/34 · deal 77.71/2/35 · undoBurst 56.6/14/36 · solveCelebration 65.4/32/63 · galleryGlide 71.57/8/187 · themeToggle 43.05/21/210
+safari-C2    idle3s 74.95/24/49 · deal 73.21/3/47 · undoBurst 54.39/15/42 · solveCelebration 79.86/28/100 · galleryGlide 68.65/9/194 · themeToggle 49.04/21/194
+safari-C3    idle3s 81.59/16/44 · deal 72.6/2/38 · undoBurst 54.78/15/45 · solveCelebration 81.07/25/110 · galleryGlide 71.83/7/197 · themeToggle 46.63/21/266
+sim-ceil-1   rafCeiling 59.76/0/22
+sim-D1       idle3s 54.39/9/131 · deal 59.63/0/33 · undoBurst 49.86/7/218 · solveCelebration 51.91/26/93 · galleryGlide 46.04/6/280 · themeToggle 43.05/13/194
+sim-D2       idle3s 54.01/16/44 · deal 58.19/0/33 · undoBurst 55.84/7/68 · solveCelebration 51.84/27/115 · galleryGlide 46.85/8/253 · themeToggle 42.93/14/223
+
+==============================================================================
+THE P-W4 BATTERY (M-9) — the runs behind every gates.json threshold
+==============================================================================
+
+239 entries, 15.9 MB at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/perf-rig/w4
+named records:
+  · PRODUCTION-PASS.md
+  · W4-BATTERY.md
+  · kenken-disposition.md

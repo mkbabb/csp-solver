@@ -1,0 +1,128 @@
+{
+  "$schema-note": "T5-W1.14 coverage floor bank (GAP-6). Read by scripts/check-coverage-floor.mjs against coverage/coverage-summary.json. Percentages are floored to 2dp and enforced with >=. The floor IS the W1 baseline — W2's distill must clear it, never re-cut it. Raise via --write-floor; lowering demands --allow-lower with a recorded reason.",
+  "derivedFrom": {
+    "head": "f38c5130",
+    "date": "2026-08-01",
+    "wave": "T5-W1.14 (completeness GAP-6)",
+    "node": "v26.0.0",
+    "npm": "11.12.1",
+    "vitest": "4.1.10",
+    "provider": "@vitest/coverage-v8@4.1.10",
+    "testFiles": 31,
+    "tests": 332,
+    "rule": "PRE-REGISTERED: each floor is the MINIMUM observed over the banked n=10 sample (docs/tranches/2026-08-tranche-5/evidence/w1/r1.14-coverage-samples/), truncated to 2dp, enforced with >=. Never a mean, never a single run — the instrument jitters by up to 0.82 pts."
+  },
+  "sample": {
+    "method": "min-over-samples",
+    "n": 10,
+    "runs": [
+      "run-1.json",
+      "run-10.json",
+      "run-2.json",
+      "run-3.json",
+      "run-4.json",
+      "run-5.json",
+      "run-6.json",
+      "run-7.json",
+      "run-8.json",
+      "run-9.json"
+    ]
+  },
+  "scopes": {
+    "src/games/sudoku": {
+      "prefix": "src/games/sudoku",
+      "statements": 52.79,
+      "branches": 55.39,
+      "functions": 35.24,
+      "lines": 50.57,
+      "files": 14
+    },
+    "src/games/futoshiki": {
+      "prefix": "src/games/futoshiki",
+      "statements": 38,
+      "branches": 47.33,
+      "functions": 20.74,
+      "lines": 35.46,
+      "files": 14
+    },
+    "src/games/thermo": {
+      "prefix": "src/games/thermo",
+      "statements": 18.43,
+      "branches": 4.57,
+      "functions": 12.37,
+      "lines": 18.22,
+      "files": 12
+    },
+    "src/games/killer": {
+      "prefix": "src/games/killer",
+      "statements": 30.57,
+      "branches": 14.2,
+      "functions": 18.75,
+      "lines": 30.19,
+      "files": 12
+    },
+    "src/games/kenken": {
+      "prefix": "src/games/kenken",
+      "statements": 34.06,
+      "branches": 16.36,
+      "functions": 19.14,
+      "lines": 33.59,
+      "files": 13
+    },
+    "src/games/shared": {
+      "prefix": "src/games/shared",
+      "statements": 53.14,
+      "branches": 45.57,
+      "functions": 47.74,
+      "lines": 53.32,
+      "files": 37
+    },
+    "src/games": {
+      "prefix": "src/games",
+      "statements": 100,
+      "branches": 100,
+      "functions": 100,
+      "lines": 100,
+      "files": 1
+    },
+    "src/pencil": {
+      "prefix": "src/pencil",
+      "statements": 14.61,
+      "branches": 15.16,
+      "functions": 10.02,
+      "lines": 15.51,
+      "files": 47
+    },
+    "src/composables": {
+      "prefix": "src/composables",
+      "statements": 100,
+      "branches": 100,
+      "functions": 100,
+      "lines": 100,
+      "files": 1
+    },
+    "src/lib": {
+      "prefix": "src/lib",
+      "statements": 100,
+      "branches": 100,
+      "functions": 100,
+      "lines": 100,
+      "files": 1
+    },
+    "src/App.vue": {
+      "prefix": "src/App.vue",
+      "statements": 0,
+      "branches": 0,
+      "functions": 0,
+      "lines": 0,
+      "files": 1
+    },
+    "TOTAL": {
+      "statements": 35.03,
+      "branches": 31.34,
+      "functions": 27.13,
+      "lines": 34.8,
+      "files": 153
+    }
+  }
+}

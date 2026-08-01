@@ -1,0 +1,28 @@
+# T5-W1 row 1.12 — CANARY: the gate CAN fail on resolution, not just on field-presence
+# date: 2026-08-01T19:20:27Z
+# STATE B = the N2 drift scenario: a wasm-pack release emits an exports map with NO .wasm row.
+# Built on a COPY of the real pkg; csp-solver/wasm/pkg itself untouched (md5 re-checked below).
+# Reproduces r2/verify-arch-fiction.md's state-B probe verbatim: ERR_PACKAGE_PATH_NOT_EXPORTED.
+
+$ node -p "…exports of the copied manifest"
+{
+  ".": {
+    "types": "./csp_solver_wasm.d.ts",
+    "default": "./csp_solver_wasm.js"
+  },
+  "./package.json": "./package.json"
+}
+
+$ node csp-solver/wasm/scripts/pkg-exports.mjs --check --pkg <copy>
+pkg-exports --check  @mkbabb/csp-solver-wasm@0.6.0
+  pkg      <copy>
+  exports  .  ./package.json
+  resolve  FAIL @mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm -> ERR_PACKAGE_PATH_NOT_EXPORTED
+  resolve  OK   @mkbabb/csp-solver-wasm/package.json -> file://<copy>/package.json
+  ERROR    exports is MISSING the row "./csp_solver_wasm_bg.wasm"
+  ERROR    subpath "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm" does NOT resolve: ERR_PACKAGE_PATH_NOT_EXPORTED
+  verdict  RED
+exit=1
+
+$ md5 -q csp-solver/wasm/pkg/package.json   # real artifact unchanged by the canary
+253050d6e0d52b89cbabf75e1d5b20b0

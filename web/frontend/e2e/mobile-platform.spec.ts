@@ -11,17 +11,51 @@ import { test, expect, type Page } from "@playwright/test";
 //   · landscape-ipad  — landscape phone + iPad portrait carry no horizontal overflow and take
 //                       entry; the large-iPad desktop-drawer layout keeps a ≥44px drawer tap target.
 //
-// Touch emulation: hasTouch + isMobile makes Chromium match `(pointer: coarse)` — the media the
-// coarse branch keys on. The iPhone/iPad descriptors default to webkit, which the chromium-only CI
-// lane does not install; every block pins chromium and drives the coarse media by hasTouch/isMobile.
-
-// browserName is pinned once at file scope (setting it inside a describe forces a new worker,
-// which Playwright rejects). Each describe overrides only viewport/hasTouch/isMobile — the
-// per-device geometry — which are free to vary within a worker.
-test.use({ browserName: "chromium", defaultBrowserType: "chromium" });
+// Touch emulation: hasTouch + isMobile makes BOTH engines match `(pointer: coarse)` — the media
+// the coarse branch keys on. THE ENGINE IS NOT PINNED HERE (T5-W1 1.10 / CH-56): the old file-scope
+// `browserName: "chromium"` existed because the then chromium-only CI lane installed no webkit. It
+// installs webkit now, the engine comes from the PROJECT, and both of playwright.config.ts's
+// projects claim this file. Each describe still overrides only viewport/hasTouch/isMobile — the
+// per-device geometry, free to vary within a worker (browserName is worker-scoped, which is why a
+// describe-level engine override is rejected outright; there is no longer one to reject).
+//
+// WHAT WEBKIT REPORTS DIFFERENTLY — measured at @playwright/test 1.61.1, banked in
+// evidence/w1/pw-residue.txt §2, and handled at the two assertion sites that read it:
+//   · `getComputedStyle(el).userSelect` is "" in WebKit while `-webkit-user-select` is "none"
+//     (Chromium reports both) — the ios-discipline selection row reads the effective value.
+//   · `-webkit-text-size-adjust` has NO computed value in WebKit at all (""), because it is an
+//     iOS-WebKit property and Playwright's WebKit is desktop Safari plus mobile EMULATION, not
+//     iOS. The tap-highlight row asserts the AUTHORED preflight declaration in both engines and
+//     the computed value only where an engine exposes one.
+// Neither is a product difference; both are the engine's own reporting surface. The limits that
+// are real API gaps (`mouse.wheel` under mobile WebKit, `maxTouchPoints`) are unreached here.
 
 async function hideDevChrome(page: Page) {
   await page.addStyleTag({ content: ".tuner-toggle { display: none !important; }" });
+}
+
+/** Every byte of CSS the document actually loaded: the <style> tags vite dev injects plus any
+ *  linked stylesheets (prod). Two rows below assert over AUTHORSHIP rather than computed style,
+ *  because the properties they guard are ones NEITHER engine exposes to the CSSOM — measured:
+ *  `CSS.supports('-webkit-touch-callout','none')` is false in Chromium AND in Playwright's
+ *  WebKit, and `-webkit-text-size-adjust` is false in WebKit. Authorship is what the preflight
+ *  and the game-surface rule actually control; the device smoke owns the taken-effect claim. */
+async function loadedCss(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    const texts: string[] = [];
+    for (const s of Array.from(document.querySelectorAll("style")))
+      texts.push(s.textContent ?? "");
+    for (const l of Array.from(
+      document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'),
+    )) {
+      try {
+        texts.push(await (await fetch(l.href)).text());
+      } catch {
+        /* cross-origin — skip */
+      }
+    }
+    return texts.join("\n");
+  });
 }
 
 /** Sudoku is the eager/default game (no lazy-chunk waterfall, no futoshiki §4 bake dependency). */
@@ -67,38 +101,39 @@ test.describe("ios-discipline (iPhone-geometry coarse)", () => {
     const surface = await page.evaluate(() => {
       const cells = document.querySelector(".board-cells")!;
       const cell = document.querySelector(".sudoku-cell")!; // inherits user-select from .board-cells
+      // Selection control has two spellings and the engines expose different ones: Chromium
+      // knows both, Playwright's WebKit knows ONLY `-webkit-user-select`
+      // (`CSS.supports('user-select','none')` is false there, so the unprefixed computed value
+      // is absent — measured, evidence/w1/pw-residue.txt §2). Read the effective value across
+      // spellings: the assertion is about the SUPPRESSION, not about which spelling an engine
+      // chose to publish. It still bites when the rule dies — an element outside `.board-cells`
+      // reads 'auto' in Chromium and 'text' in WebKit, never 'none' (ablation, §2).
+      const userSelect = (el: Element) => {
+        const cs = getComputedStyle(el);
+        return (
+          cs.getPropertyValue("user-select") || cs.getPropertyValue("-webkit-user-select")
+        );
+      };
       return {
         touchAction: getComputedStyle(cells).touchAction,
-        userSelectContainer: getComputedStyle(cells).userSelect,
-        userSelectCell: getComputedStyle(cell).userSelect,
+        userSelectContainer: userSelect(cells),
+        userSelectCell: userSelect(cell),
       };
     });
     expect(surface.touchAction).toBe("manipulation"); // born-RED: 'auto'
-    expect(surface.userSelectContainer).toBe("none"); // born-RED: webkit computed 'text'
+    expect(surface.userSelectContainer).toBe("none"); // born-RED: unsuppressed reads auto/text
     expect(surface.userSelectCell).toBe("none"); // inherited onto the cell
 
-    // -webkit-touch-callout is WebKit-only: Chromium DROPS the unknown property from the parsed
-    // CSSOM, so prove it is AUTHORED on the game surface by reading the RAW loaded CSS — the
-    // <style> tags vite dev injects + any linked stylesheets (prod). The callout suppression is
+    // -webkit-touch-callout is iOS-WebKit-only: NEITHER engine here parses it into the CSSOM
+    // (`CSS.supports('-webkit-touch-callout','none')` is false in Chromium AND in Playwright's
+    // WebKit — the latter is desktop Safari plus mobile emulation, not iOS). So prove it is
+    // AUTHORED on the game surface by reading the RAW loaded CSS. The callout suppression is
     // what keeps the iOS long-press loupe away from lane E's peek hold (device-verified in the
     // owner smoke; user-select:none above is the load-bearing, computable half).
-    const calloutAuthored = await page.evaluate(async () => {
-      const texts: string[] = [];
-      for (const s of Array.from(document.querySelectorAll("style")))
-        texts.push(s.textContent ?? "");
-      for (const l of Array.from(
-        document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'),
-      )) {
-        try {
-          texts.push(await (await fetch(l.href)).text());
-        } catch {
-          /* cross-origin — skip */
-        }
-      }
-      const css = texts.join("\n");
-      // The .board-cells rule authoring `-webkit-touch-callout: none` (dev-expanded or minified).
-      return /\.board-cells\b[^{}]*\{[^}]*-webkit-touch-callout\s*:\s*none/.test(css);
-    });
+    // The .board-cells rule authoring `-webkit-touch-callout: none` (dev-expanded or minified).
+    const calloutAuthored = /\.board-cells\b[^{}]*\{[^}]*-webkit-touch-callout\s*:\s*none/.test(
+      await loadedCss(page),
+    );
     expect(calloutAuthored).toBe(true); // born-RED: no -webkit-touch-callout anywhere in src
   });
 
@@ -115,11 +150,27 @@ test.describe("ios-discipline (iPhone-geometry coarse)", () => {
         textSizeAdjust: getComputedStyle(document.documentElement).getPropertyValue(
           "-webkit-text-size-adjust",
         ),
+        // Asked of the engine, not guessed from the platform: does it parse the property at all?
+        knowsTextSizeAdjust: CSS.supports("-webkit-text-size-adjust", "100%"),
       };
     });
-    // Transparent = 'rgba(0, 0, 0, 0)' (inherited from the html preflight rule).
+    // Transparent = 'rgba(0, 0, 0, 0)' (inherited from the html preflight rule). Both engines
+    // expose this one.
     expect(probe.tapHighlight.replace(/\s+/g, "")).toBe("rgba(0,0,0,0)");
-    expect(probe.textSizeAdjust).toBe("100%");
+
+    // `-webkit-text-size-adjust` is iOS-WebKit's. Playwright's WebKit is desktop Safari plus
+    // mobile emulation, so it does not know the property and publishes no computed value ("");
+    // Chromium knows it and reports the inherited "100%". The preflight controls DELIVERY, so
+    // the load-bearing assertion is over the AUTHORED declaration — it bites in both engines,
+    // and it is the same instrument the callout row above uses for the same reason. The
+    // computed read stays as an exact second assertion keyed to the engine's own answer: no
+    // fallback, no skip, both arms fail if either engine changes what it publishes.
+    const adjustAuthored =
+      /(?:^|[\s,{}])(?:html|:host)\b[^{}]*\{[^}]*-webkit-text-size-adjust\s*:\s*100%/.test(
+        await loadedCss(page),
+      );
+    expect(adjustAuthored).toBe(true); // born-RED: the preflight rule deleted
+    expect(probe.textSizeAdjust).toBe(probe.knowsTextSizeAdjust ? "100%" : "");
   });
 
   test("viewport opts into the notch + the fixed toggle pads clear of the safe area", async ({

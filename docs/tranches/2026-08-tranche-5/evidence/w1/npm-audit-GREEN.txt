@@ -1,0 +1,76 @@
+# T5-W1 rows 1.8 + 1.15 — GREEN bank (post-cure)
+# Date: 2026-08-01T20:54:07Z   base HEAD: f38c5130c8d2e97a5291795133d340754eca99eb
+# Pairs with npm-audit-RED.txt (same command, same cwd, 5 highs, exit 1).
+# ================================================================
+
+## 1. npm audit --audit-level=high   (cwd: web/frontend)
+
+found 0 vulnerabilities
+EXIT CODE: 0   (0 == GREEN)
+
+## 2. JSON census (metadata.vulnerabilities)
+{
+  "info": 0,
+  "low": 0,
+  "moderate": 0,
+  "high": 0,
+  "critical": 0,
+  "total": 0
+}
+
+## 3. The three advisory roots — RED -> GREEN, re-derived at citation
+
+package (lock path)                at HEAD (RED)  now (GREEN)    npm vulnerable range
+---------------------------------- -------------- -------------- --------------------
+node_modules/postcss               8.5.16         8.5.25         <=8.5.17 (patched 8.5.18)
+node_modules/sharp                 0.34.5         0.35.2         <0.35.0 (patched 0.35.0)
+node_modules/miniflare             4.20260708.1   4.20260730.0   4.20250508.3 - 4.20260721.0
+node_modules/wrangler              4.110.0        4.116.0        4.16.0 - 4.113.0
+node_modules/brace-expansion       5.0.7          5.0.9          2.0.0-2.1.2 || 4.0.0-5.0.7
+  editorconfig/../brace-expansion  2.1.2          2.1.4          (same)
+  glob/../brace-expansion          2.1.2          2.1.4          (same)
+
+## 4. HARD STOP honored — wrangler 4.116.0, never 4.117+
+#  Registry mapping re-derived 2026-08-01 (npm view wrangler@<v> dependencies.miniflare,
+#  then npm view miniflare@<mf> dependencies.sharp). Latest wrangler on the registry is
+#  4.118.0 — DELIBERATELY NOT TAKEN.
+
+#  wrangler 4.110.0   -> miniflare 4.20260708.1             -> sharp 0.34.5   
+#  wrangler 4.113.0   -> miniflare 4.20260721.0             -> sharp 0.34.5   
+#  wrangler 4.114.0   -> miniflare 4.20260722.0             -> sharp 0.35.2   
+#  wrangler 4.116.0   -> miniflare 4.20260730.0             -> sharp 0.35.2   <- TAKEN (newest stable-miniflare line)
+#  wrangler 4.117.0   -> miniflare 5.20260730.0-alpha       -> sharp 0.35.2   <- FORBIDDEN (miniflare 5.x-alpha wall)
+#  wrangler 4.118.0   -> miniflare 5.20260730.0-alpha       -> sharp 0.35.2   <- FORBIDDEN (miniflare 5.x-alpha wall)
+
+## 5. Manifest delta — ONE line (the hard stop made enforcing, not incidental)
+
+-    "wrangler": "^4.110.0"
++    "wrangler": "~4.116.0"
+
+#  ^4.110.0 admits 4.118.0, so a plain `npm update wrangler` — the literal text of
+#  r3/security-posture SEC-2 — would have landed the alpha. The caret was tightened to
+#  ~4.116.0 (>=4.116.0 <4.117.0) so the ruling and the config that enforces it land
+#  together. Everything else in this row is lockfile-only.
+
+## 6. npm run build
+
+dist/assets/vue-vendor-BEr3SFHdbMXO.js              83.82 kB │ gzip: 33.46 kB
+dist/assets/index-DBKuh5wqdjAB.js                  239.75 kB │ gzip: 88.13 kB
+
+✓ built in 449ms
+EXIT CODE: 0
+
+## 7. npx vitest run
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+
+ Test Files  31 passed (31)
+      Tests  332 passed (332)
+   Start at  16:53:36
+   Duration  1.62s (transform 4.97s, setup 352ms, import 7.21s, tests 937ms, environment 11.17s)
+
+EXIT CODE: 0
+
+## 8. toolchain
+npm 11.12.1  node v26.0.0   (engines.npm >=11 honored)

@@ -1,0 +1,337 @@
+T5-W1 ROW 1.10 — PW ENGINE RESIDUE (CH-56)
+==========================================================================================
+Banked 2026-08-01. Tree f38c5130 ("T5-W0 SEAL") plus this row's working edits.
+Host: darwin 26.4.1 (arm64) · node v26.0.0 · npm 11.12.1 · @playwright/test 1.61.1
+       (re-derived: `node -p "require('@playwright/test/package.json').version"`, cwd
+        web/frontend — the repo root has no local Playwright, and `npx playwright --version`
+        there answers 1.58.0 from a global. Cite the frontend's.)
+App under test: `npx vite --port 3007 --strictPort` (see §7.3 for why not :3000). Killed at
+       the close of this row; :3007 clear, :3000 returned to its owner (verified, §7.3).
+
+CH-56 (r1/chronic-ledger:120): "Playwright single-engine residue after the two-project fix:
+`mobile-*` pinned chromium; `share-truth` has no clipboard-write in PW-WebKit — the estate's
+last single-engine surface, recorded." Class A, 1 occurrence, OPEN.
+r1/gate-soundness V10 named the cost: "25 mobile tests never run in the engine the campaign
+is about" (that count is 19 — see §3.4).
+
+
+§0 — WHAT LANDED
+------------------------------------------------------------------------------------------
+web/frontend/playwright.config.ts          the webkit project stops excluding `mobile-*`;
+                                           share-truth's exclusion documented ON its line
+web/frontend/e2e/mobile-affordances.spec.ts   file-scope engine pin removed
+web/frontend/e2e/mobile-platform.spec.ts      file-scope engine pin removed; the two
+                                           computed-style reads made engine-honest
+web/frontend/scripts/check-pw-projects.mjs    NEW — the project-matrix lint (5 checks + canary)
+web/frontend/package.json                  one line: `test:e2e:projects`
+…/evidence/w1/fragments/config-lint.yml    the CI step, for the integrator lane
+
+NOT touched: .github/workflows/ci.yml (integrator's), the other two PW configs, any src/.
+
+
+§1 — THE API SURFACE, MEASURED
+------------------------------------------------------------------------------------------
+The row asks for a webkit arm "where the PW device API allows". Allowance was measured, not
+assumed: a standalone probe drove `webkit.launch()` and `chromium.launch()` against the live
+app under `devices["iPhone 13"]` and under an explicit `{viewport 390×844, hasTouch, isMobile}`
+context, then exercised every API the two mobile specs reach.
+
+WHAT PLAYWRIGHT'S WEBKIT ALLOWS (all measured true under mobile emulation):
+
+  isMobile + hasTouch accepted        newContext() does not throw; no "not supported" path
+  descriptor viewport honoured        innerWidth 390 / innerHeight 664 (iPhone 13), 390×844
+                                      (explicit) — the meta-viewport IS taken into account
+  deviceScaleFactor honoured          devicePixelRatio 3 under the iPhone 13 descriptor
+  (pointer: coarse)                   true          ← the media the whole coarse branch keys on
+  (hover: none)                       true
+  (any-pointer: coarse)               true
+  ontouchstart in window              true
+  locator.tap()                       OK
+  page.addInitScript()                OK            ← keyboard-avoid's fake visualViewport
+  window.visualViewport redefinable   OK            ← the 296px keypad-band probe's mechanism
+
+  ⇒ Both `mobile-*.spec.ts` files are FULLY runnable in PW-WebKit. Nothing they do is gated.
+
+WHAT IT REFUSES — the API cites, verbatim:
+
+  1. page.mouse.wheel(…)
+       Error: "mouse.wheel: Mouse wheel is not supported in mobile WebKit"
+       Source: playwright-core 1.61.1 — the WebKit raw-mouse impl throws whenever
+       `browserContext._options.isMobile` is set, before `Page.updateScrollingState`.
+       (`node_modules/playwright-core/lib/coreBundle.js`, the WebKit RawMouse `wheel` method.)
+       Chromium under the same descriptor: OK.
+       REACHED BY THESE SPECS? No. `grep -n "mouse.wheel" e2e/mobile-*.spec.ts` → nothing.
+       The specs scroll by assigning `doc.scrollTop` in-page (mobile-platform, `seat()`),
+       which is engine-neutral and measured working in both.
+
+  2. browserContext.grantPermissions(['clipboard-read','clipboard-write'])
+       Error: "browserContext.grantPermissions: Unknown permission: clipboard-write"
+       Chromium under the same descriptor: OK.
+       REACHED BY? `share-truth.spec.ts:65`. This is the one exclusion that stays — §6.
+
+  3. navigator.maxTouchPoints
+       WebKit reports 0 under emulation; Chromium reports 1. Not an error, a difference —
+       recorded because it is the shape of a future false-green.
+       REACHED BY? No spec reads it (`grep -rn maxTouchPoints e2e/` → nothing).
+
+ENGINE PRECEDENCE — the question the un-pinning turns on. `devices["iPhone 13"]` carries
+`defaultBrowserType: "webkit"`. Removing a file's explicit `browserName` therefore risks the
+chromium project silently running webkit. Measured with a throwaway config declaring both
+projects and a spec doing `test.use({...devices["iPhone 13"]})`:
+
+       RESOLVED browserName=chromium isMobile=true hasTouch=true
+       RESOLVED browserName=webkit   isMobile=true hasTouch=true
+
+  ⇒ An explicit project-level `browserName` outranks a file-level `defaultBrowserType`.
+    (`browserName`'s fixture default IS `defaultBrowserType`; a project that overrides
+    `browserName` outright replaces the fixture, so the file's change to `defaultBrowserType`
+    no longer reaches it.) The descriptor's default is inert under both projects. This is
+    what makes `test.use(devices["iPhone 13"])` — with no engine key at all — correct.
+
+
+§2 — THE TWO COMPUTED-STYLE DIVERGENCES, AND THE ABLATION THAT KEEPS THEM HONEST
+------------------------------------------------------------------------------------------
+Widening surfaced exactly two places where the engines PUBLISH differently. Neither is a
+product difference; both were measured, and both assertion sites now read what is actually
+there rather than what Chromium happens to expose.
+
+  A. user-select on `.board-cells`
+       chromium: getPropertyValue("user-select") = "none"  · "-webkit-user-select" = "none"
+                 CSS.supports("user-select","none") = true
+       webkit:   getPropertyValue("user-select") = ""      · "-webkit-user-select" = "none"
+                 CSS.supports("user-select","none") = FALSE — the unprefixed property does
+                 not exist there, and `getComputedStyle(el).userSelect` is `undefined`
+                 (which is the literal RED: "Expected: none / Received: undefined").
+       ABLATION (a fresh <div> outside `.board-cells`, i.e. the rule deleted):
+                 chromium "auto"/"auto"  ·  webkit ""/"text"
+       ⇒ Reading `user-select || -webkit-user-select` still fails when the rule dies, in both
+         engines. The assertion got engine-honest, not weaker.
+
+  B. -webkit-text-size-adjust on <html>
+       chromium: computed "100%"  ·  CSS.supports(…,"100%") = true
+       webkit:   computed ""      ·  CSS.supports(…,"100%") = FALSE
+       It is an iOS-WebKit property. Playwright's WebKit is desktop Safari plus mobile
+       EMULATION, not iOS, so the property is not implemented and publishes nothing.
+       The preflight DOES author it — found in the loaded CSS in both engines:
+           "html, :host { line-height: 1.5; -webkit-text-size-adjust: 100% …"
+       ⇒ The row now asserts the AUTHORED declaration (bites in both engines) and pins the
+         computed read to the engine's own `CSS.supports` answer. No skip, no fallback: both
+         arms red if either engine changes what it publishes.
+
+  C. -webkit-touch-callout — worth recording because the existing comment was half right.
+       CSS.supports("-webkit-touch-callout","none") is FALSE in Chromium AND in PW-WebKit.
+       The raw-CSS grep was never a chromium workaround; it is the only instrument either
+       engine leaves. Comment corrected in place; the assertion is unchanged.
+
+  Unchanged and green in both engines: overscroll-behavior-y "contain", touch-action
+  "manipulation", -webkit-tap-highlight-color "rgba(0, 0, 0, 0)", viewport-fit=cover,
+  the `.corner-right` safe-area authorship walk.
+
+
+§3 — THE MATRIX: --list, BEFORE AND AFTER
+------------------------------------------------------------------------------------------
+Instrument: `npx playwright test --list --reporter=json`, grouped by project × spec file.
+`--list` resolves testDir/testMatch/testIgnore exactly as a run does, and starts no server.
+
+§3.1  BEFORE (tree f38c5130, no edits) — `Total: 206 tests in 15 files`
+
+   10 chromium :: affordances          10 webkit :: affordances
+    6 chromium :: board-covisibility     6 webkit :: board-covisibility
+    6 chromium :: drawer                 6 webkit :: drawer
+    1 chromium :: font-census            1 webkit :: font-census
+    4 chromium :: futoshiki              4 webkit :: futoshiki
+   17 chromium :: gallery-deal          17 webkit :: gallery-deal
+    6 chromium :: gallery-guard          6 webkit :: gallery-guard
+    8 chromium :: gallery                8 webkit :: gallery
+   10 chromium :: mobile-affordances     ——  (excluded)
+    9 chromium :: mobile-platform        ——  (excluded)
+    6 chromium :: permalink              6 webkit :: permalink
+    5 chromium :: share-truth            ——  (excluded)
+    7 chromium :: sudoku-interaction     7 webkit :: sudoku-interaction
+   12 chromium :: visual-regression     12 webkit :: visual-regression
+    8 chromium :: zone-grammar           8 webkit :: zone-grammar
+  ---                                  ---
+  115 chromium                          91 webkit                      206 total
+
+§3.2  AFTER — `Total: 225 tests in 15 files`
+
+  Same table, plus  10 webkit :: mobile-affordances  and  9 webkit :: mobile-platform.
+  115 chromium  ·  110 webkit  ·  225 total.
+
+§3.3  ACROSS ALL THREE CONFIGS (what the lint holds)
+
+  playwright.config.ts           chromium 115 · webkit 110                        = 225
+  playwright-golden.config.ts    (default, chromium) 4                            =   4
+  playwright-throttle.config.ts  throttled-void 1 · filter-census-chromium 6 ·
+                                 filter-census-webkit 6 · wordmark-webkit 6 ·
+                                 theme-bake-chromium 2 · theme-bake-webkit 2      =  23
+                                                                          TOTAL     252
+  20 spec files on disk under e2e/, each claimed by exactly one config. 9 projects.
+
+§3.4  THE DELTA THIS ROW BUYS
+
+  +19 tests into WebKit (mobile-affordances 10 + mobile-platform 9) — 91 → 110, +20.9%.
+  Single-engine spec files: 6 → 4.
+  (V10's "25 mobile tests" over-counts: `--list` at f38c5130 resolves 19, not 25. Recorded
+   because numbers are re-derived at citation, not carried.)
+
+
+§4 — THE RUNS
+------------------------------------------------------------------------------------------
+§4.1  BORN-RED — the widened webkit arm, assertions untouched.
+      `npx playwright test mobile- --project=webkit --workers=2`
+      → raw/1.10-webkit-mobile-RED.txt · exit 1 · 17 passed, 2 FAILED
+
+        mobile-platform.spec.ts:73  game surfaces suppress selection …
+            Expected: "none"   Received: undefined       (§2A)
+        mobile-platform.spec.ts:115 tap-highlight + text-size-adjust …
+            Expected: "100%"   Received: ""              (§2B)
+
+      Both reds are the engine's reporting surface, discovered by running the arm rather
+      than by reasoning about it. mobile-affordances: 10/10 green in WebKit from the first
+      execution, unmodified.
+
+§4.2  AFTER THE §2 CURES — both engines, both files.
+      `npx playwright test mobile- --workers=3`  →  38 passed (28.7s), 0 failed.
+      19 tests × 2 engines. The chromium arm passes the same cured assertions.
+
+§4.3  THE WHOLE DEFAULT SUITE, BOTH ENGINES — proving the widening disturbed nothing.
+      `npx playwright test --workers=4`
+      run 1 → raw/1.10-full-suite-both-engines.txt      224 passed, 1 failed (1.3m)
+      run 2 → raw/1.10-full-suite-both-engines-run2.txt 225 passed, 0 failed (1.3m)
+
+      The single red is NOT this row's and is reported as a finding (§7.1):
+        [webkit] visual-regression.spec.ts:531 "the deal receipt keeps off the commit verb"
+        TypeError: Cannot read properties of null (reading 'gap')  at :559
+      `visual-regression.spec.ts` carried a webkit arm at f38c5130 already (§3.1, 12 tests) —
+      row 1.10 did not touch that file, that project, or that engine pairing. Re-run in
+      isolation: passes in 1.7s. 1 red in 450 observations, load-dependent.
+
+
+§5 — THE CONFIG-LINT AND ITS CANARY
+------------------------------------------------------------------------------------------
+web/frontend/scripts/check-pw-projects.mjs · `npm run test:e2e:projects` (carries --self-test)
+CI step: fragments/config-lint.yml (integrator lane merges it into the `e2e:` job).
+
+Why a lint at all: a narrowing is invisible by construction — the suite passes FASTER and
+greener when it covers less. Nothing in T4 watched the matrix, which is how 19 tests ran in
+one engine for a campaign while every count read green.
+
+It does not parse the config's prose. It asks Playwright for the resolved matrix
+(`--list --reporter=json`) and imports the config objects for each project's declared engine
+(Node 26 runs the .ts configs directly), then holds both against a manifest that must be
+edited on purpose. Five checks, all evaluated before the verdict:
+
+  1 DECLARED MATRIX   the 9 (project, engine) pairs across 3 configs, exactly
+  2 SPEC OWNERSHIP    all 20 specs claimed by exactly one config; no orphans, no double-claims
+  3 ENGINE COVERAGE   every spec in BOTH engines unless HOLDOUTS says why
+  4 HOLDOUTS CLOSED   a stale holdout (spec now runs wider) reds — the record follows the code
+  5 COUNT FLOORS      per-project counts never fall below the recorded floor
+
+§5.1  GREEN + SELF-TEST  → raw/1.10-config-lint-GREEN-selftest.txt · exit 0
+
+      ✓ 1 DECLARED MATRIX   ✓ 2 SPEC OWNERSHIP   ✓ 3 ENGINE COVERAGE
+      ✓ 4 HOLDOUTS CLOSED   ✓ 5 COUNT FLOORS
+      SELF-TEST — 7 sabotages over the 5 checks, every one RED (as it must):
+        a third project appears · webkit re-engined to chromium · a spec orphaned ·
+        a spec double-claimed · mobile-affordances loses its webkit arm (CH-56 regressing) ·
+        share-truth widened with the holdout record left standing · a project sheds tests
+      OK — 20 specs, 252 resolved tests, 4 recorded holdouts.
+
+§5.2  CANARY AT THE REAL CONFIG — the born-RED that matters.
+      `/mobile-.*\.spec\.ts$/` put back into the webkit project's testIgnore (HEAD's exact
+      shape), lint run against the actual file → raw/1.10-config-lint-CANARY-RED.txt · exit 1
+
+        ✗ 3 ENGINE COVERAGE — 2
+            mobile-affordances.spec.ts: runs in {chromium} …
+            mobile-platform.spec.ts:    runs in {chromium} …
+        ✗ 5 COUNT FLOORS — 1
+            playwright.config.ts [webkit]: 91 tests, floor 110.
+
+      Two independent checks catch CH-56, and the count floor names the exact 91 the audit
+      measured. Config restored immediately after (grep-verified) and re-run green.
+
+
+§6 — THE SINGLE-ENGINE ESTATE, CLOSED AND CITED
+------------------------------------------------------------------------------------------
+Four spec files do not run in both engines. Each is a HOLDOUTS entry in the lint carrying its
+reason; a fifth cannot appear by default — it must be written down.
+
+  share-truth.spec.ts        chromium only.  PW-WebKit has no clipboard-write permission:
+                             "Unknown permission: clipboard-write" (§1.2). The spec asserts a
+                             REAL write — `navigator.clipboard.readText()` at :76, granted at
+                             :65 — and there is no honest way to grant one there. THE CITE
+                             NOW LIVES ON THE EXCLUSION LINE ITSELF, in the webkit project's
+                             `testIgnore`, per this row's charge. Re-audition on any PW bump
+                             that adds the permission.
+
+  throttled-void.spec.ts     chromium only.  CDP: `page.context().newCDPSession(page)` at :50,
+                             and :49 already says "CDP is unavailable on other engines".
+                             Widening needs a non-CDP throttle, not a project.
+
+  wordmark-integrity.spec.ts WEBKIT only — the holdout that runs in the second engine rather
+                             than the first. "asserts in WebKit or asserts nothing"
+                             (playwright-throttle.config.ts:82-83).
+
+  visual-golden.spec.ts      chromium only, by omission: playwright-golden.config.ts declares
+                             no `projects` and no `use.browserName`, so it takes Playwright's
+                             default. ROW 1.13 OWNS THIS DECISION (r3/goldens-estate: "the
+                             goldens' chromium-only engine pin argued or widened"). See §7.2.
+
+Left this table at 1.10: mobile-affordances.spec.ts, mobile-platform.spec.ts.
+
+
+§7 — FINDINGS FOR THE TEAM LEAD
+------------------------------------------------------------------------------------------
+§7.1  A LIVE WEBKIT FLAKE, NOT THIS ROW'S, IN A CONFIG WITH retries: 0.
+      `visual-regression.spec.ts:531` webkit — 1 red in 450 observations (2 full sweeps ×
+      225), passes alone. The mechanism is visible in the source: line 557 waits a FIXED
+      `page.waitForTimeout(320)` and line 559 non-null-asserts the result of a query for
+      `.controls-card .deal-row`, so under worker contention the query returns null and the
+      `!` becomes a TypeError instead of a diagnosis. `retries: 0` in playwright.config.ts:33
+      means a recurrence reds CI outright. This is row 1.6's flake-policy surface and row
+      1.9's magnitude surface, not 1.10's — routing it rather than touching it. A fixed sleep
+      plus a non-null assertion is the same defect shape either row is chartered against.
+
+§7.2  SEQUENCING WITH ROW 1.13 — deliberate, and it will red if ignored.
+      The lint's manifest records playwright-golden.config.ts as one default (chromium)
+      project, and HOLDOUTS records visual-golden.spec.ts as chromium-only. If 1.13 widens
+      the goldens to a webkit arm, checks 1 and 4 red until BOTH lines move — which is the
+      "ruling lands with its enforcing config same-commit" rule, deliberately enforced. Two
+      lines, both in scripts/check-pw-projects.mjs, both signposted in-file with 1.13 named.
+      1.13 also owns the {projectName}-in-snapshotPathTemplate collision (check-golden-bytes
+      check 6); this lint does not duplicate it.
+
+§7.3  THE K46 TRAP, REPRODUCED LIVE — and the gate caught it.
+      :3000 on this host is held by an unrelated service (`{"status":"ok","service":
+      "palette-api"}`), so the app was run on :3007 and the owner's :3000 was never touched.
+      But `vite --port 3007` ALSO binds `[::1]:3000` for HMR — vite.config.ts:241-250 pins
+      `hmr.port: 3000` as a literal that does not track `--port`, and documents exactly this.
+      `localhost` resolves ::1 first, so a default-baseURL run then hit the HMR socket:
+
+        Error: [e2e assert-the-SPA] http://localhost:3000 answered 426 — that's not the app.
+        (raw/1.10-assert-the-spa-live-catch.txt, exit 1, at global-setup.ts:29)
+
+      The assert-the-SPA gate fired loudly and correctly on its first real encounter with the
+      condition it was written for. Recorded as a green observation of an existing gate.
+      Cleanup verified at the close of this row: my vite killed, :3007 clear, :3000 back to
+      200 from its owner's service, web/frontend/test-results/ removed.
+
+§7.4  FILE-SCOPE ENGINE PINS ARE NOW A CLASS, NOT AN INCIDENT.
+      Both mobile specs carried a chromium pin whose stated reason ("CI does not install
+      webkit") expired when CI gained webkit at T4-P1, and nothing connected the two. Check 3
+      is the standing instrument, but the cheap grep is worth keeping in the wave record:
+      `grep -rn 'browserName\|defaultBrowserType' e2e/*.spec.ts` must stay empty — the engine
+      belongs to the project:
+
+        grep -rnE '^[^/]*\b(browserName|defaultBrowserType)\s*:' e2e/*.spec.ts
+        → empty at this banking. (The `^[^/]*` guard is load-bearing: a bare grep now hits
+          the prose in mobile-*.spec.ts and zone-grammar.spec.ts:328, which are comments
+          ABOUT the rule, not violations of it.)
+
+      A related stale comment for whoever next reads it — NOT edited here, it is another
+      lane's file: zone-grammar.spec.ts:328-330 still says the iPhone descriptor "defaults to
+      webkit, which this chromium-only lane does not install". The lane is not chromium-only
+      and has not been since T4-P1; the file itself runs 8 tests in webkit at f38c5130 (§3.1).
+      Its CODE is already right — descriptor traits only, no engine pin — so check 3 stays
+      green and this is a doc-truth row, not a matrix row.

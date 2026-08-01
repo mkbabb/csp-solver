@@ -1,0 +1,47 @@
+# T5-W1.11 — fragments/support-floor.yml verification
+# HEAD f38c5130   date 2026-08-01T20:47:05Z
+# pyyaml 6.0.3
+
+1. standalone parse (the fragment is a steps-list, not a job)
+   type: list  len: 1
+     · support floor (browserslist vs the compiled targets; no sub-floor shims, self-tested)
+       working-directory: web/frontend
+       run: npm run test:support-floor
+   no continue-on-error, no `if:`, no `||  true` in the run line: True
+
+2. ci.yml at HEAD — the anchor the fragment names
+   jobs: ['lint', 'rust', 'py-compile', 'py-runtime', 'wasm', 'build-lean-wasm', 'twiggy', 'frontend', 'e2e', 'iai', 'cargo-audit']
+   frontend steps: 12
+     · actions/checkout@v4
+     · Download the lean wasm pkg (the package.json file-link target)
+     · Set up Node (LTS) with npm cache
+     · Pin npm >=11
+     · npm ci --dry-run (lockfile integrity gate)
+     · npm ci
+     · vue-tsc --noEmit
+     · eslint (colocation boundary rig)
+     · knip (dead-file / dead-dependency / dead-export gate)
+     · prettier (repo-pinned format check)
+     · font coverage (subset cmap vs rendered text)
+     · ink pressure (graphite ladder + ramp ownership, self-tested)
+   anchor (last step) = 'ink pressure (graphite ladder + ramp ownership, self-tested)'  run='npm run lint:ink'
+   anchor is the ink-pressure step the fragment names: True
+   no support-floor step present at HEAD: True
+
+3. merge parse (fragment appended to frontend.steps, indented to match)
+   jobs after merge: ['lint', 'rust', 'py-compile', 'py-runtime', 'wasm', 'build-lean-wasm', 'twiggy', 'frontend', 'e2e', 'iai', 'cargo-audit']
+   jobs preserved: True  (11 -> 11)
+   frontend steps: 12 -> 13
+   appended step identical to the standalone parse: True
+   pre-existing frontend steps untouched: True
+   no other job's steps moved: True
+
+4. agreement with gates.json W1.supportFloor
+   gates.json: {"declared": "browserslist", "shimGrepZero": true}
+   declared surface is `browserslist`; package.json carries it: True
+   package.json browserslist: ['chrome >= 111', 'edge >= 111', 'firefox >= 128', 'safari >= 16.4', 'ios_saf >= 16.4']
+   shimGrepZero required: True   live shim hits: 0
+   agree: True
+   npm script the fragment invokes exists: True  -> 'node scripts/check-support-floor.mjs --self-test'
+
+ALL FRAGMENT CHECKS PASS

@@ -1,0 +1,30 @@
+# T5-W1 row 1.12 — CONSUMER SURFACE verified against the NEW exports map
+# date: 2026-08-01T19:22:19Z   node v26.0.0 · npm 11.12.1
+# The five workers import the deep subpath; TypeScript resolves under moduleResolution=bundler.
+# Anything the map failed to declare would red here, not at some future publish.
+
+$ grep -rn 'csp_solver_wasm_bg.wasm?url' src/games/*/solver/solver.worker.ts
+src/games/futoshiki/solver/solver.worker.ts:23:import wasmUrl from "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url";
+src/games/kenken/solver/solver.worker.ts:18:import wasmUrl from "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url";
+src/games/killer/solver/solver.worker.ts:18:import wasmUrl from "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url";
+src/games/sudoku/solver/solver.worker.ts:37:import wasmUrl from "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url";
+src/games/thermo/solver/solver.worker.ts:18:import wasmUrl from "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url";
+
+$ npx vue-tsc --noEmit   -> exit 0 (bare '.' entry + subpath both type-resolve)
+
+$ npx vite build --outDir dist-exportcheck --logLevel warn   -> exit 0
+
+$ ls dist-exportcheck/assets/*.wasm
+-rw-r--r--  1 mkbabb  staff  122385 Aug  1 15:22 dist-exportcheck/assets/csp_solver_wasm_bg-B_bsll75.wasm
+
+$ grep -c -o '\.wasm' dist-exportcheck/assets/*.js | grep -v ':0' | head
+dist-exportcheck/assets/solver.worker-BEnm5xkz.js:2
+dist-exportcheck/assets/solver.worker-2vdKi-WA.js:2
+dist-exportcheck/assets/solver.worker-6NtqA_aI.js:2
+dist-exportcheck/assets/solver.worker-C_UU4P8Y.js:2
+dist-exportcheck/assets/solver.worker-DgkmWgoW.js:2
+
+# emitted wasm asset byte size (bundled copy of the pkg binary):
+122385 dist-exportcheck/assets/csp_solver_wasm_bg-B_bsll75.wasm
+# pkg source binary:
+122385 ../../csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm

@@ -1,0 +1,62 @@
+# T5-W1 row 1.15 — fragments/npm-audit.yml MERGE-PARSE CHECK
+# Date: 2026-08-01T20:59:26Z   ci.yml at: f38c5130c8d2e97a5291795133d340754eca99eb
+# The lane does NOT edit .github/workflows/ci.yml — the integrator lane owns it.
+# This proves the fragment is spliceable, not merely well-intentioned.
+# ---------------------------------------------------------------
+
+1. STANDALONE PARSE
+   pyyaml 6.0.3 - single document, one-key mapping
+   top-level keys: ['npm-audit']
+
+2. HOST WORKFLOW AT BASE
+   .github/workflows/ci.yml jobs: 11
+   lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, frontend, e2e, iai, cargo-audit
+   name collision with 'npm-audit': False
+
+3. SPLICE — every line indented 4, appended under `jobs:`
+   MERGED PARSE OK. jobs: 11 -> 12
+   job keys: ['runs-on', 'timeout-minutes', 'steps'] | runs-on: ubuntu-latest | timeout-minutes: 10
+   needs: ABSENT (deliberate — independent lane, no critical path)
+
+4. STEPS (7)
+   1. actions/checkout@v4
+   2. Set up Node (LTS)
+   3. Pin npm >=11
+      run: npm install -g npm@^11
+   4. npm version (recorded — the audit is only as good as the resolver)
+      run: npm --version
+   5. npm audit (high+, frontend lockfile)
+      run: npm audit --audit-level=high --package-lock-only
+      working-directory: web/frontend
+   6. Capture the audit JSON (failure only)
+      run: npm audit --json --package-lock-only > npm-audit.json || true
+      working-directory: web/frontend
+      if: failure()
+   7. Upload the audit JSON (failure only)
+      if: failure()
+
+5. POSTURE ASSERTIONS — asserted over the PARSED steps, never over raw text
+   (an earlier draft of this check grepped the file body and matched the word
+    `--omit=dev` inside a COMMENT that forbids it — a false positive. The checks
+    below read s['run'] only, so a comment can never satisfy or break one.)
+   exactly one gate step:                  True -> npm audit --audit-level=high --package-lock-only
+   gate has no `if:` (always runs):        True
+   gate has no `|| true` / `continue-on-error`: True
+   continue-on-error anywhere in the job:  False (want False)
+   --omit in any RUN command:              False (want False — dev-scope highs are the point)
+   --audit-level in any RUN but 'high':    False (want False)
+   every `|| true` sits on an if:failure() step: True
+   npm pinned >=11 before the gate:        True
+
+# ---------------------------------------------------------------
+# INTEGRATOR NOTES
+#  - Paste the block below the fragment's comment header into ci.yml's `jobs:`,
+#    indented by 4. Nothing else in ci.yml changes; the lane adds no `needs:` edge.
+#  - The job's failure-only artifact writes web/frontend/npm-audit.json. That path is
+#    NOT in .gitignore (line 21 covers web/frontend/vitest-report.json only). CI-only
+#    and harmless on a runner; if a local reproduction is expected to be routine, an
+#    additive .gitignore line is the tidy follow-up. NOT taken here — .gitignore is
+#    under concurrent edit by sibling W1 lanes and this row does not order it.
+#  - Job-name survey across all W1 fragments: no collision. boundary, evidence-policy,
+#    fe-unit, perf-subset, npm-audit are distinct; the remaining fragments are
+#    step-level or multi-document snippets that graft into existing jobs.

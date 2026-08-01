@@ -1,0 +1,78 @@
+T5-W1.9 — CH-42 MAGNITUDE PROBE · PILOT (instrument check; EXCLUDED from the sample per magnitude-rule.md §3.2)
+HEAD f38c5130c8d2e97a5291795133d340754eca99eb  platform darwin  node v26.0.0  pw Version 1.61.1
+dist built Aug  1 15:23:17 2026  base http://localhost:4188 (vite preview of built dist, started+killed by this lane)
+cmd: GOLDEN_MAGNITUDE=1 npx playwright test --config playwright-golden.config.ts -g 'toggle crest|logo wordmark' --repeat-each=1 --workers=1
+started 2026-08-01T20:26:07Z
+---
+
+Running 2 tests using 1 worker
+
+  ✓  1 e2e/visual-golden.spec.ts:195:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack (949ms)
+  ✘  2 e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose (1.9s)
+
+
+  1) e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      1028 pixels (ratio 0.03 of all image pixels) are different.
+
+      Snapshot: toggle-crest-dark.png
+
+    Call log:
+      - Expect "toHaveScreenshot(toggle-crest-dark.png)" with timeout 15000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - 1028 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - 1028 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 250ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - 1028 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 500ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - 1028 pixels (ratio 0.03 of all image pixels) are different.
+
+
+      222 |   await loadSettled(page, { dark: true });
+      223 |   const clip = await center(page.locator('button.sun-moon-toggle'), 110, 110);
+    > 224 |   await expect(page).toHaveScreenshot('toggle-crest-dark.png', { ...CREST_FLOOR, clip });
+          |                      ^
+      225 | });
+      226 |
+      227 | // A single grid cell rendering the pinned given "5" — the hand-drawn glyph + cell grain.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/visual-golden.spec.ts:224:22
+
+    attachment #1: toggle-crest-dark (image/png) ───────────────────────────────────────────────────
+    Expected: e2e/goldens/toggle-crest-dark-darwin.png
+    Received: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/toggle-crest-dark-actual.png
+    Diff:     test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/toggle-crest-dark-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/error-context.md
+
+  1 failed
+    e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+  1 passed (3.6s)
+--- JSONL emitted by the probe ---
+{"ts":"2026-08-01T20:26:09.737Z","arm":"pilot","golden":"logo-light","repeat":0,"retry":0,"status":"passed","ms":949,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:26:11.657Z","arm":"pilot","golden":"toggle-crest-dark","repeat":0,"retry":0,"status":"failed","ms":1855,"geomPx":48400,"capturesPx":[1028,1028,1028,1028,1028],"verdictPx":1028,"verdictRatio":0.021239669421487604,"worstRatio":0.021239669421487604}
+ended 2026-08-01T20:26:11Z

@@ -1,0 +1,63 @@
+# GREEN — instrument + floor, end to end, at HEAD f38c5130 (T5-W1.14)
+$ node --version; npm --version
+v26.0.0
+11.12.1
+
+$ npm run test:unit:coverage
+
+> csp-solver-frontend@0.1.0 test:unit:coverage
+> vitest run --coverage
+
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+      Coverage enabled with v8
+
+
+ Test Files  31 passed (31)
+      Tests  332 passed (332)
+   Start at  15:29:23
+   Duration  4.33s (transform 15.35s, setup 643ms, import 18.45s, tests 2.60s, environment 27.15s)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   35.03 |    31.34 |   27.13 |   34.82 |                   
+ src               |       0 |        0 |       0 |       0 |                   
+  … (per-file table elided; the banked figures are coverage-floor.json + coverage-baseline.json)
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 35.03% ( 2126/6068 )
+Branches     : 31.34% ( 1087/3468 )
+Functions    : 27.13% ( 419/1544 )
+Lines        : 34.82% ( 1865/5355 )
+================================================================================
+EXIT=0
+
+$ npm run test:coverage:floor
+[coverage-floor] self-test
+  ok   at-floor is green
+  ok   a single dipping scope reds even while TOTAL rises
+  ok   a vanished scope is structurally RED
+  ok   an explicitly retired scope passes
+  ok   an unscoped file is surfaced
+  ok   summary.total is not trusted
+[coverage-floor] self-test 6/6 — the gate can fail on a known-bad input.
+scope               | files |    stmts |   branch |    funcs |    lines
+-----------------------------------------------------------------------
+src/games/sudoku    |    14 |   52.79% |   55.39% |   35.24% |   50.57%
+src/games/futoshiki |    14 |   38.00% |   47.33% |   20.74% |   35.46%
+src/games/thermo    |    12 |   18.43% |    4.57% |   12.37% |   18.22%
+src/games/killer    |    12 |   30.57% |   14.20% |   18.75% |   30.19%
+src/games/kenken    |    13 |   34.06% |   16.36% |   19.14% |   33.59%
+src/games/shared    |    37 |   53.19% |   45.57% |   47.95% |   53.38%
+src/games           |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/pencil          |    47 |   14.61% |   15.16% |   10.02% |   15.51%
+src/composables     |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/lib             |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/App.vue         |     1 |    0.00% |    0.00% |    0.00% |    0.00%
+TOTAL               |   153 |   35.03% |   31.34% |   27.13% |   34.82%
+
+[coverage-floor] GREEN — 12 scopes at or above the W1.14 baseline (bank: f38c5130, 2026-08-01).
+EXIT=0

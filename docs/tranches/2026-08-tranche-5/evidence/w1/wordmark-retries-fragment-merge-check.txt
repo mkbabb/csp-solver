@@ -1,0 +1,46 @@
+# T5-W1.6 — fragments/wordmark-retries.yml verification
+# HEAD f38c5130   pyyaml 6.0.3
+
+1. standalone parse
+   type: list   steps: 1
+   · Playwright retries policy (1.6 — a retried pass never greens a lane)
+     run: npm run test:e2e:retries | working-directory: web/frontend
+   keys per step: ['name', 'run', 'working-directory']
+   continue-on-error present: False
+   '|| true' in the run body: False
+
+2. ci.yml at HEAD
+   jobs (11): ['lint', 'rust', 'py-compile', 'py-runtime', 'wasm', 'build-lean-wasm', 'twiggy', 'frontend', 'e2e', 'iai', 'cargo-audit']
+   e2e steps (15):
+     · actions/checkout@v4
+     · Download the lean wasm pkg (the package.json file-link target)
+     · Set up Node (LTS) with npm cache
+     · Pin npm >=11
+     · npm ci
+     · Resolve Playwright version (from the lockfile)
+     · Cache Playwright browser bundle
+     · Install Playwright chromium + webkit (+ deps)
+     · Run the Playwright e2e suite
+     · Run the visual golden gate
+     · Golden byte ceiling
+     · Run the built-dist gates (throttled-void + filter census + wordmark)
+     · Prod-shake proof (dev tuner absent from the bundle)
+     · Upload Playwright HTML report (failure only)
+     · Upload the built-dist gates' report (failure only)
+   a retries lint already present: False
+
+3. merge parse (fragment spliced into e2e.steps after `npm ci`)
+   `npm ci` step index: 4 -> splice at 5
+   e2e steps after merge: 15 -> 16
+   spliced step identical to the standalone parse: True
+   pre-existing e2e steps preserved, in order: True
+   job set unchanged (set compare — safe_dump sorts keys): True | 11 -> 11 jobs
+   no job other than e2e altered: True
+
+4. agreement with the gate it invokes
+   package.json test:e2e:retries = node scripts/check-pw-retries.mjs --self-test
+   fragment run                  = npm run test:e2e:retries
+   npm script exists and matches: True
+   gate exit code, run live at this HEAD: 0
+
+ALL FRAGMENT CHECKS PASS

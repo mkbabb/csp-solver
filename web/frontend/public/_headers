@@ -74,13 +74,36 @@
 #     = disabled for all origins incl. self). The app uses none of them; `clipboard`
 #     is deliberately NOT denied — the Share affordance writes the permalink via
 #     navigator.clipboard.writeText (SudokuGame/FutoshikiGame). Purely additive,
-#     breaks nothing (no COOP/COEP, no SharedArrayBuffer)
+#     breaks nothing (COOP is set below; no COEP, no SharedArrayBuffer)
 #   X-Frame-Options: DENY — no legitimate embed/iframe use case; blocks
 #     clickjacking
 #   X-Content-Type-Options: nosniff — stops MIME-sniffing so a served asset
 #     can't be reinterpreted as a different content-type
 #   Referrer-Policy — send only the origin cross-site, full URL same-site;
 #     avoids leaking path/query to third parties
+#
+# Cross-origin isolation pair (T5-W1 row 1.15; r3/security-posture.md G2+G3).
+# Both are free here — the app has no cross-origin surface for either to break —
+# and both are defense-in-depth, not fixes for a live defect:
+#   Cross-Origin-Opener-Policy: same-origin — puts this document in its own
+#     browsing-context group, so a window we open (or one that opens us) gets no
+#     `window.opener` handle. Verified safe before setting: `window.open` and
+#     `.opener` appear NOWHERE in src/, and the only two cross-origin links
+#     (AttributionCard's github.com anchors) already carry
+#     `rel="noopener noreferrer"` — COOP re-states at the transport layer what
+#     the markup already asserts. The solver's `postMessage` traffic is
+#     Worker-scoped; COOP governs browsing-context groups, not workers, so the
+#     wasm solver path is untouched. This closes the XS-Leaks/window-handle
+#     class. NOT paired with COEP: COEP is the expensive half (it would demand
+#     CORP/CORS on every subresource) and buys only SharedArrayBuffer, which
+#     this app never uses (`grep -r SharedArrayBuffer src/` → 0).
+#   Cross-Origin-Resource-Policy: same-site — a third-party page cannot embed
+#     our JS/wasm/fonts as subresources. `same-site` not `same-origin` on
+#     purpose: the registrable domain is babb.dev, so any *.babb.dev page can
+#     still pull these assets, while off-site embedding is refused. The assets
+#     are public static bytes, so this is anti-hotlink hygiene rather than a
+#     confidentiality control — recorded as such, not oversold.
+# Both are additive lines in the /* stanza below; no existing header moved.
 
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
@@ -89,6 +112,8 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: accelerometer=(), autoplay=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), web-share=(), xr-spatial-tracking=()
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-site
 
 # Transport. The file carried no Cache-Control before; the live `wasm
 # max-age=0` was a Cloudflare-Pages default filling the vacuum. Scoped to

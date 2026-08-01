@@ -1,0 +1,133 @@
+# =============================================================================
+# T5-W1 row 1.12 — CI fragment: the wasm pkg's resolution contract
+#
+# HANDOFF. The lane agent does not edit .github/workflows/ci.yml. This file is
+# the integrator's splice. It has TWO parts and BOTH are load-bearing:
+#
+#   PART A — a required step inside the EXISTING `build-lean-wasm` job.
+#   PART B — a new standalone job, `wasm-publish-dryrun`.
+#
+# Splicing only B gates an artifact that isn't the one the rest of CI consumes.
+# Do both.
+#
+# WHY (audit I3 NARROWED / N2, evidence r2/verify-arch-fiction.md).
+# `csp-solver/wasm/pkg/package.json` is gitignored and minted wholesale by
+# wasm-pack. Five production workers deep-import
+#   `@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url`
+# which today resolves ONLY through Node's legacy no-`exports` fallback. The day
+# a wasm-pack release begins emitting an `exports` map without a `.wasm` row, all
+# five workers die on ERR_PACKAGE_PATH_NOT_EXPORTED — with zero source change,
+# zero diff to review, and no gate watching. The contract now lives in
+# `csp-solver/wasm/scripts/pkg-exports.mjs`: `--write` stamps it onto the
+# artifact, `--check` reads the same constant backwards, so gate and postprocess
+# cannot drift.
+#
+# BORN-RED, banked before the cure:
+#   evidence/w1/r1.12-exports-RED-at-HEAD.txt      --check on the HEAD artifact -> RED, exit 1
+#   evidence/w1/r1.12-exports-CANARY-stateB.txt    the N2 drift scenario -> ERR_PACKAGE_PATH_NOT_EXPORTED
+#   evidence/w1/r1.12-exports-GREEN-after-cure.txt --check after `make wasm` -> GREEN, exit 0
+#   evidence/w1/r1.12-consumer-build-GREEN.txt     vue-tsc + vite build against the new map
+#   evidence/w1/publish-dryrun.txt                 the dry run + tarball-realized resolution
+#
+# NO SECRET REQUIRED. `npm publish --dry-run` exits 0 on an unauthenticated
+# runner (it warns and stops before the PUT) — proven in publish-dryrun.txt §6.
+# Do NOT add NODE_AUTH_TOKEN to this job; it must not be able to publish.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# PART A — insert into the EXISTING `build-lean-wasm` job (ci.yml ~:361),
+# BETWEEN "Build the lean wasm artifact" and "Upload the lean wasm pkg".
+#
+# The Makefile already runs this postprocess (`make wasm`), but CI's lane calls
+# `wasm-pack build` directly and then uploads pkg/ as `lean-wasm-pkg` — the
+# artifact `frontend`, `e2e` and `twiggy` all download. Without this step CI's
+# artifact carries a DIFFERENT resolution contract than the one `npm run build`
+# produces locally, and every downstream lane tests the wrong package.
+# Node is not otherwise installed in this job; setup-node comes first.
+#
+# (This file is multi-document YAML: `---` separates PART A's step list from
+# PART B's job mapping so the snippet parses standalone.)
+# -----------------------------------------------------------------------------
+---
+- name: Set up Node (for the pkg-exports postprocess)
+  uses: actions/setup-node@v4
+  with:
+      node-version: '24'
+- name: Stamp the pkg exports map (row 1.12 — the generator owns the resolution contract)
+  run: node csp-solver/wasm/scripts/pkg-exports.mjs --write
+
+
+# -----------------------------------------------------------------------------
+# PART B — a new job. Place it after `twiggy` (Lane 7) or beside `cargo-audit`.
+# It gates the SHIPPED artifact: it downloads the very tarball-source the other
+# lanes consume rather than rebuilding its own.
+# -----------------------------------------------------------------------------
+---
+wasm-publish-dryrun:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build-lean-wasm]
+    steps:
+        - uses: actions/checkout@v4
+        - name: Download the lean wasm pkg (the exact artifact frontend + e2e consume)
+          uses: actions/download-artifact@v4
+          with:
+              name: lean-wasm-pkg
+              path: csp-solver/wasm/pkg
+        - name: Set up Node (LTS)
+          uses: actions/setup-node@v4
+          with:
+              node-version: '24'
+        # npm 10 mis-resolves this repo's lockfiles; the pack/publish surface is
+        # pinned to the same floor every other Node lane uses.
+        - name: Pin npm >=11
+          run: npm install -g npm@^11
+        # The gate proper: exact-map assertion + a live import.meta.resolve of every
+        # declared subpath through a throwaway node_modules link. Reds on a MISSING
+        # row (the N2 drift) and on an UNDECLARED extra row (silent surface growth).
+        - name: pkg exports contract (--check)
+          run: node csp-solver/wasm/scripts/pkg-exports.mjs --check
+        # The publish path itself. --dry-run runs the whole flow except the final
+        # PUT; no token, no registry write, no publish capability in this job.
+        - name: npm publish --dry-run (NO publish)
+          working-directory: csp-solver/wasm/pkg
+          run: npm publish --dry-run
+        # Resolution as a REGISTRY CONSUMER receives it: pack the tarball, unpack it
+        # into a throwaway node_modules, resolve the five workers' subpath from there.
+        # Packing can drop a file the working directory still has (`files` is its own
+        # surface) — only the tarball proves what a consumer gets.
+        - name: Resolve the workers' subpath from the packed tarball
+          run: |
+              set -euo pipefail
+              SB="$(mktemp -d)"
+              mkdir -p "$SB/node_modules/@mkbabb/csp-solver-wasm"
+              npm pack ./csp-solver/wasm/pkg --pack-destination "$SB" >/dev/null
+              tar -xzf "$SB"/*.tgz -C "$SB/node_modules/@mkbabb/csp-solver-wasm" --strip-components=1
+              cd "$SB"
+              node --input-type=module -e '
+                const want = [
+                  "@mkbabb/csp-solver-wasm",
+                  "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm",
+                  "@mkbabb/csp-solver-wasm/package.json",
+                ];
+                let bad = 0;
+                for (const s of want) {
+                  try { console.log("OK  ", s, "->", import.meta.resolve(s)); }
+                  catch (e) { console.log("FAIL", s, "->", e.code); bad++; }
+                }
+                process.exit(bad ? 1 : 0);
+              '
+        # The byte band, re-derived on the artifact this job holds. Duplicated from
+        # twiggy on purpose: twiggy measures its own download, and a regen that
+        # changed the postprocess must not be able to slip a fat binary past this
+        # lane just because the other one happened to pass.
+        - name: lean raw-size band (fail >127,500 B)
+          run: |
+              set -euo pipefail
+              RAW=$(stat -c%s csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm)
+              echo "lean artifact raw size: ${RAW} B (darwin-measured 122,385 B at T5-W1; fail >127,500)"
+              if [ "$RAW" -gt 127500 ]; then
+                echo "::error::lean wasm artifact ${RAW} B exceeds the 127,500 B five-game band"
+                exit 1
+              fi

@@ -10,16 +10,16 @@ import { test, expect, devices, type Page } from "@playwright/test";
 //      from the retired e2e/digit-pad.spec.ts test 3 (they were never pad-specific; they probe the
 //      mobile control card, which survives the abrogation intact).
 //
-// Touch emulation: a real phone descriptor (isMobile + hasTouch) makes Chromium match
-// `(pointer: coarse)` — the exact media the coarse branch keys on. The iPhone descriptors default
-// to webkit, which CI does not install (chromium-only lane); pin chromium and keep the descriptor's
-// touch/viewport traits — matchMedia('(pointer: coarse)') is driven by hasTouch/isMobile, not the
-// engine.
-test.use({
-  ...devices["iPhone 13"],
-  browserName: "chromium",
-  defaultBrowserType: "chromium",
-});
+// Touch emulation: a real phone descriptor (isMobile + hasTouch) makes BOTH engines match
+// `(pointer: coarse)` — the exact media the coarse branch keys on. THE ENGINE IS NOT PINNED HERE
+// (T5-W1 1.10 / CH-56): the old `browserName/defaultBrowserType: "chromium"` pin existed because
+// the descriptor defaults to webkit and the then chromium-only CI lane installed none; CI installs
+// webkit now, so the engine comes from the PROJECT and both of playwright.config.ts's projects
+// claim this file. The descriptor's own `defaultBrowserType: "webkit"` is inert under them —
+// `browserName`'s fixture default IS `defaultBrowserType`, but each project overrides `browserName`
+// outright and an explicit project value outranks a file-level default (measured, not assumed:
+// evidence/w1/pw-residue.txt §1). Nothing below reads the engine.
+test.use(devices["iPhone 13"]);
 
 /** The dev-only FilterTuner toggle (env-gated OUT of prod builds) floats over the mobile panel
  *  and can intercept taps — dev chrome, not product surface, so the probe hides it. */

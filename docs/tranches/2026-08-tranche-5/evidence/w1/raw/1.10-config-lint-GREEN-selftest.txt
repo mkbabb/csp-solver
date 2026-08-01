@@ -1,0 +1,24 @@
+PW PROJECT MATRIX — 3 configs, 9 projects, 4 declared single-engine holdouts (T5-W1 1.10 / CH-56)
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+
+SELF-TEST — each check against a known-bad matrix:
+  [1 DECLARED MATRIX] a third project appears (a firefox arm nobody ratified)
+      → RED (as it must)
+  [1 DECLARED MATRIX] the webkit project is quietly re-engined to chromium
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is dropped from every project (the orphan)
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is claimed by two configs at once
+      → RED (as it must)
+  [3 ENGINE COVERAGE] CH-56 regresses — mobile-affordances loses its webkit arm
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED] share-truth is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+
+OK — 20 specs, 252 resolved tests, every spec in both engines except the 4 recorded holdouts.

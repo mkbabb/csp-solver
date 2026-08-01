@@ -1,0 +1,5 @@
+/* A7 — kill every animation and transition inside a game cell (the cell-reveal keyframe
+   family and the per-cell hover/select tweens). styleDump reports ZERO
+   .cell-reveal-animated nodes and zero running Web Animations at idle, so this is a
+   falsification test of the orientation census's "35 running CSSAnimations" claim. */
+.game-cell, .game-cell * { animation: none !important; transition: none !important; }

@@ -84,7 +84,7 @@ cd web/frontend && npm install && npm run dev
 
 ## Testing
 
-All counts measured at `e961bdb7`, Apple M5 Max, 2026-08-01.
+All counts measured at `e961bdb7`, Apple M5 Max, 2026-08-01 — except the e2e census, re-derived on the T5-W1 tree, where rows 1.6 and 1.10 widened the suite (WebKit 91 → 110 in the default config, the built-dist gates 23 → 39).
 
 ```bash
 # Rust: 208 passed, 0 failed, 0 ignored (26 test binaries + 4 doctests)
@@ -93,10 +93,10 @@ cargo test --workspace
 # Python wheel-contract: 27 passed, 0 skipped
 cd csp-solver/tests-py && uv run --no-sync pytest
 
-# e2e: 206 Playwright tests across 15 spec files in the default config (Chromium 115,
-#      WebKit 91). Five further specs are held out of it and ride two configs of their
-#      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (23 in 4).
-#      20 spec files on disk, 233 tests in all.
+# e2e: 225 Playwright tests across 15 spec files in the default config (Chromium 115,
+#      WebKit 110). Five further specs are held out of it and ride two configs of their
+#      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (39 in 4).
+#      20 spec files on disk, 268 tests in all.
 cd web/frontend && npx playwright test
 cd web/frontend && npx playwright test --config playwright-golden.config.ts && npm run test:e2e:throttle
 
@@ -109,7 +109,7 @@ cargo bench -p csp-solver --bench queens -- --test
 
 ## CI
 
-`.github/workflows/ci.yml` runs eleven lanes: fmt+clippy, the Rust/wasm/Python builds and tests, the wasm size budgets, the frontend typecheck+knip gate, e2e, a callgrind instruction-count baseline, and a cargo-audit advisory scan. Budgets and measured artifact sizes live in [`docs/benchmarks.md`](docs/benchmarks.md).
+`.github/workflows/ci.yml` runs eighteen lanes: fmt+clippy, the Rust/wasm/Python builds and tests, the wasm size budgets and the shipped package's resolution contract, the frontend typecheck+knip+support-floor gate, the unit estate under its count and coverage floors, e2e, the cross-game boundary law, a headless perf subset against the P1 idle thresholds, the doc-truth and evidence-policy gates, a callgrind instruction-count baseline, and the cargo-audit and npm-audit advisory scans. Budgets and measured artifact sizes live in [`docs/benchmarks.md`](docs/benchmarks.md).
 
 ## Deployment
 
@@ -117,7 +117,7 @@ A Cloudflare Pages static deploy. Solving and generation never leave the visitor
 
 ## Declarations
 
-- **Browser support**: Chromium and WebKit, each with its own lane. `playwright.config.ts` declares the two projects and CI installs both bundles, so "solves entirely in the browser" is asserted in each engine. Two files sit out the WebKit project: `mobile-*.spec.ts` pins Chromium at file scope (the iPhone/iPad descriptors would otherwise re-run as exact duplicates), and `share-truth.spec.ts` wants a clipboard permission Playwright's WebKit doesn't grant. Gecko carries no lane; Firefox is unasserted. The bundle targets ES2020.
+- **Browser support**: Chromium and WebKit, each with its own lane. `playwright.config.ts` declares the two projects and CI installs both bundles, so "solves entirely in the browser" is asserted in each engine. Two files sit out the WebKit project: `mobile-*.spec.ts` pins Chromium at file scope (the iPhone/iPad descriptors would otherwise re-run as exact duplicates), and `share-truth.spec.ts` wants a clipboard permission Playwright's WebKit doesn't grant. Gecko carries no lane; Firefox is unasserted. The declared support floor is Chrome 111, Edge 111, Firefox 128, Safari 16.4 and iOS Safari 16.4 (`web/frontend/package.json`, `browserslist`)—an arithmetic figure rather than a preference, since Tailwind v4 compiles every stylesheet against precisely those targets and nothing below them is served CSS it can parse. The bundle's own syntax targets ES2020, which sits well under that floor; `npm run test:support-floor` holds the declaration to both and refuses any guard in the source that defends a browser beneath it.
 - **English only**: the copy is authored inline in English, `<html lang="en">`, with no i18n or locale-negotiation layer.
 - **No telemetry**: nothing is measured and nothing is phoned home. The app's sole third-party network hit is the attribution avatar (`avatars.githubusercontent.com`, off first paint, `referrerpolicy="no-referrer"`); board state lives in the URL and stays on the device.
 - **No offline mode**: there's no service worker and no web-app manifest, so the shell and the wasm module come off the network at every cold load, and an unvisited game's chunk downloads on select. Once a game is resident, its generation and solving run wholly on-device.

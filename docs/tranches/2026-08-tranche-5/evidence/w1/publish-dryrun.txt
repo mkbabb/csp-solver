@@ -1,0 +1,104 @@
+# T5-W1 row 1.12 — npm publish --dry-run + registry-consumer resolution
+# NO REAL PUBLISH. --dry-run performs the whole publish flow except the final PUT.
+# HEAD: f38c5130   date: 2026-08-01T19:23:14Z
+# npm 11.12.1 · node v26.0.0 · wasm-pack 0.15.0
+# pkg minted by: make -C csp-solver/wasm wasm  (wasm-pack build + pkg-exports.mjs --write)
+
+================ 1. npm publish --dry-run (cwd = csp-solver/wasm/pkg) ================
+npm notice
+npm notice 📦  @mkbabb/csp-solver-wasm@0.6.0
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 4.7kB README.md
+npm notice 122.4kB csp_solver_wasm_bg.wasm
+npm notice 31.0kB csp_solver_wasm.d.ts
+npm notice 54.8kB csp_solver_wasm.js
+npm notice 648B package.json
+npm notice Tarball Details
+npm notice name: @mkbabb/csp-solver-wasm
+npm notice version: 0.6.0
+npm notice filename: mkbabb-csp-solver-wasm-0.6.0.tgz
+npm notice package size: 66.5 kB
+npm notice unpacked size: 214.6 kB
+npm notice shasum: 4b8772c63b44386dd41fa9f761a24d541746f30f
+npm notice integrity: sha512-Bg0K9mGKPQhhn[...]3Z2yi7AARpyFA==
+npm notice total files: 6
+npm notice
+npm notice Publishing to https://registry.npmjs.org/ with tag latest and default access (dry-run)
++ @mkbabb/csp-solver-wasm@0.6.0
+exit=0
+
+================ 2. the manifest that shipped in that tarball ================
+$ npm pack --pack-destination <sandbox> && tar -xzf … && cat package.json
+{
+  "name": "@mkbabb/csp-solver-wasm",
+  "type": "module",
+  "description": "WebAssembly bindings for csp-solver — the sudoku, futoshiki, and assignment solve surfaces.",
+  "version": "0.6.0",
+  "license": "MIT",
+  "files": [
+    "csp_solver_wasm_bg.wasm",
+    "csp_solver_wasm.js",
+    "csp_solver_wasm.d.ts"
+  ],
+  "main": "csp_solver_wasm.js",
+  "types": "csp_solver_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "exports": {
+    ".": {
+      "types": "./csp_solver_wasm.d.ts",
+      "default": "./csp_solver_wasm.js"
+    },
+    "./csp_solver_wasm_bg.wasm": "./csp_solver_wasm_bg.wasm",
+    "./package.json": "./package.json"
+  }
+}
+
+================ 3. RESOLUTION from a tarball-realized consumer ================
+# The tarball is unpacked into a throwaway node_modules — exactly what a registry
+# consumer receives — and Node is asked to resolve each specifier under exports semantics.
+
+$ import.meta.resolve('@mkbabb/csp-solver-wasm')
+file://<sandbox>/node_modules/@mkbabb/csp-solver-wasm/csp_solver_wasm.js
+
+$ import.meta.resolve('@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm')   # the 5 workers' subpath, minus Vite's ?url query
+file://<sandbox>/node_modules/@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm
+
+$ import.meta.resolve('@mkbabb/csp-solver-wasm/package.json')
+file://<sandbox>/node_modules/@mkbabb/csp-solver-wasm/package.json
+
+$ import.meta.resolve('@mkbabb/csp-solver-wasm/csp_solver_wasm.js')   # NOT declared — the map is a CLOSED surface
+ERR_PACKAGE_PATH_NOT_EXPORTED
+
+================ 4. tarball inventory (re-derived) ================
+total 448
+drwxr-xr-x  8 mkbabb  wheel     256 Aug  1 15:22 .
+drwxr-xr-x  3 mkbabb  wheel      96 Aug  1 15:22 ..
+-rw-r--r--  1 mkbabb  wheel    1066 Oct 26  1985 LICENSE
+-rw-r--r--  1 mkbabb  wheel    4744 Oct 26  1985 README.md
+-rw-r--r--  1 mkbabb  wheel   30987 Oct 26  1985 csp_solver_wasm.d.ts
+-rw-r--r--  1 mkbabb  wheel   54756 Oct 26  1985 csp_solver_wasm.js
+-rw-r--r--  1 mkbabb  wheel  122385 Oct 26  1985 csp_solver_wasm_bg.wasm
+-rw-r--r--  1 mkbabb  wheel     648 Oct 26  1985 package.json
+
+# lean .wasm raw size in the tarball: 122385 B  (band fail >127,500 B)
+
+================ 5. RESIDUE (out of row 1.12's scope, recorded not cured) ================
+# a) csp_solver_wasm_bg.wasm.d.ts exists in pkg/ but is absent from `files` -> absent from
+#    the tarball. A typings gap for registry consumers, not a resolution failure (r2 ancillary).
+# b) sideEffects: ["./snippets/*"] names a directory wasm-pack never emits here (r1 U10).
+# Both are generator-emitted fields; neither is touched by this row.
+
+================ 6. NO TOKEN NEEDED (the CI lane needs no NPM secret) ================
+# Re-run with EMPTY user+global npmrc, i.e. an unauthenticated runner:
+$ npm publish --dry-run --userconfig=<empty> --globalconfig=<empty>
+npm notice total files: 6
+npm notice
+npm warn This command requires you to be logged in to https://registry.npmjs.org/ (dry-run)
+npm notice Publishing to https://registry.npmjs.org/ with tag latest and default access (dry-run)
++ @mkbabb/csp-solver-wasm@0.6.0
+exit=0
+# It warns and exits 0 — the dry run never contacts the registry for a write, so the
+# CI check runs on a bare runner with no NODE_AUTH_TOKEN and no publish capability.

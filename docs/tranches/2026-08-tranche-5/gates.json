@@ -10,7 +10,7 @@
       "unitLane": { "job": "fe-unit", "floor": 300, "canary": "deliberate-red-on-branch" },
       "perfRig": { "executor": "perf-rig/ci-subset", "reads": "patches/p1-safari-ios-performance/gates.json", "thresholds": { "idleFpsMin": 97, "maxLong33": 0, "gpuCpuSecPer30sMax": 4.5, "simIdleMin": 59 }, "canary": "idle>=200-proves-failure", "manualLane": "run-id-banked-at-WGATE" },
       "evidencePolicy": { "script": "scripts/check-evidence-policy.mjs", "perImageBytesMax": 153600, "perWaveBytesMax": 2097152, "banNamePattern": "-full\\.png$", "bornRed": true, "liveBreachesAtHead": { "images": 31, "waves": 3 } },
-      "boundary": { "rule": "generated-cross-game-20-of-20", "bornRed": true, "liveViolationsAtHead": 20, "greensAt": "W2.5" },
+      "boundary": { "rule": "generated-cross-game-20-of-20", "bornRed": true, "liveViolationsAtHead": 23, "liveViolationsNote": "23 import-violations across the 20 ordered pairs — corrected at the W1 seal from the gate's own enumeration (boundary-RED.txt); 20 was the pair count", "greensAt": "W2.5" },
       "cargoAuditSchedule": "daily",
       "wordmarkHoist": { "canary": "forced-blank-both-arms", "clipAssertionPlatforms": ["darwin", "linux"] },
       "supportFloor": { "declared": "browserslist", "shimGrepZero": true },

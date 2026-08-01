@@ -1,0 +1,342 @@
+T5-W1.13 — CANARY BATTERY: proving each hardened check CAN fail
+HEAD   f38c5130   when 2026-08-01 15:41:23 -0400
+law    born-RED, absence branch: pairing/orphan/missing-baseline/decode/floor/
+       ceiling/engine-collision have no live defect at HEAD, so each gets a canary.
+method GOLDEN_CHECK_ROOT reroots the gate onto a perturbed COPY (scratchpad); the
+       real estate is never touched. C0 is the control — the pristine copy must
+       PASS, or every red below would be the copy is fault, not the perturbation.
+       tracked-ness prints SKIPPED off-git by construction (banked green on the
+       real tree in goldens-GREEN.txt).
+also   c6 (estate total) and c8 (fossils) re-prove the two BORN-RED conditions of
+       goldens-RED.txt with the FINAL script, after the fossils themselves were
+       deleted and could no longer be re-run against.
+
+===================================================================
+CANARY c0-control — CONTROL — pristine copy, no perturbation (must PASS, exit 0)
+===================================================================
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/c0-control
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+[golden-bytes] 8 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total    99.0 KB  (goldens 99.0 KB)
+  estate band    110.0 KB  (headroom 11.0 KB = 11.1% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:230
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:241
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:197
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:224
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] PASS — 8 goldens, 99.0 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+EXIT=0
+
+===================================================================
+CANARY c1-pairing — PAIRING — cell-light-linux.png removed (a darwin-only mint)
+===================================================================
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/c1-pairing
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+[golden-bytes] 7 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total    95.2 KB  (goldens 95.2 KB)
+  estate band    110.0 KB  (headroom 14.8 KB = 15.6% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  FAIL  cell-light  [darwin]  → e2e/visual-golden.spec.ts:230  MISSING: linux
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:241
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:197
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:224
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 1 defect(s):
+  · pairing: cell-light has no linux baseline
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.
+EXIT=1
+
+===================================================================
+CANARY c2-orphan — ORPHAN — a golden pair whose assertion no longer exists
+===================================================================
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/c2-orphan
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+[golden-bytes] 10 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total   106.6 KB  (goldens 106.6 KB)
+  estate band    110.0 KB  (headroom 3.4 KB = 3.2% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       3.8 KB  e2e/goldens/retired-glyph-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/retired-glyph-linux.png  [144×144]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:230
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:241
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:197
+  FAIL  retired-glyph  [darwin, linux]  → NO CONSUMING SPEC
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:224
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 1 defect(s):
+  · orphan: retired-glyph is asserted by no spec
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.
+EXIT=1
+
+===================================================================
+CANARY c3-missing — MISSING BASELINE — the spec asserts cell-light.png; neither file exists
+===================================================================
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/c3-missing
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+[golden-bytes] 6 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total    91.3 KB  (goldens 91.3 KB)
+  estate band    110.0 KB  (headroom 18.7 KB = 20.4% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:241
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:197
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:224
+  FAIL  cell-light  [no files]  → e2e/visual-golden.spec.ts:230
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 1 defect(s):
+  · missing baseline: e2e/visual-golden.spec.ts:230 asserts cell-light.png, which is not on disk
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.
+EXIT=1
+
+===================================================================
+CANARY c4-decode — DECODE — logo-light-darwin.png truncated by 500 B (a half-written mint)
+===================================================================
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/c4-decode
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+[golden-bytes] 8 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total    98.5 KB  (goldens 98.5 KB)
+  estate band    110.0 KB  (headroom 11.5 KB = 11.7% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  FAIL    23.0 KB  e2e/goldens/logo-light-darwin.png  [DECODE: truncated at chunk IDAT (declares 3447 B, 2981 B left)]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:230
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:241
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:197
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:224
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 1 defect(s):
+  · decode: e2e/goldens/logo-light-darwin.png — truncated at chunk IDAT (declares 3447 B, 2981 B left)
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.
+EXIT=1
+wrote 268 B transparent PNG
+
+===================================================================
+CANARY c5-blank — BLANK FLOOR — toggle-crest-dark-darwin.png replaced by a valid, wholly transparent capture
+===================================================================
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/c5-blank
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+[golden-bytes] 8 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total    92.7 KB  (goldens 92.7 KB)
+  estate band    110.0 KB  (headroom 17.3 KB = 18.7% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  FAIL     0.3 KB  e2e/goldens/toggle-crest-dark-darwin.png  [under the 1.0 KB blank-capture floor; 220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:230
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:241
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:197
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:224
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 1 defect(s):
+  · blank-capture floor: e2e/goldens/toggle-crest-dark-darwin.png is 268 B
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.
+EXIT=1
+wrote 640663 B noise PNG
+
+===================================================================
+CANARY c6-ceiling — PER-IMAGE CEILING + ESTATE TOTAL — one golden re-captured full-frame
+===================================================================
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/c6-ceiling
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+[golden-bytes] 8 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total   720.8 KB  (goldens 720.8 KB)
+  estate band    110.0 KB  (OVER by 610.8 KB = 555.3% of the band)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  FAIL   625.6 KB  e2e/goldens/cell-light-darwin.png  [over the 150.0 KB per-image ceiling; 400×400]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:230
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:241
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:197
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:224
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 2 defect(s):
+  · per-image ceiling: e2e/goldens/cell-light-darwin.png is 625.6 KB
+  · estate total: 738089 B > 112640 B band (over by 625449 B)
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.
+EXIT=1
+
+(diff of the perturbation)
+73a74
+>   projects: [{ name: 'chromium' }, { name: 'webkit' }],
+
+===================================================================
+CANARY c7-engine — ENGINE COLLISION — a second engine declared while the template lacks {projectName}
+===================================================================
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/c7-engine
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+[golden-bytes] 8 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total    99.0 KB  (goldens 99.0 KB)
+  estate band    110.0 KB  (headroom 11.0 KB = 11.1% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:230
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:241
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:197
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:224
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: FAIL engine declared without {projectName}  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 1 defect(s):
+  · engine collision: playwright-golden.config.ts declares an engine while snapshotPathTemplate lacks {projectName} — every engine would overwrite one baseline
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.
+EXIT=1
+
+===================================================================
+CANARY c8-fossil — FOSSIL RE-DETECTION — one auto-written baseline reappears after the deletion
+===================================================================
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/c8-fossil
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+[golden-bytes] 8 golden(s) + 1 unsanctioned PNG(s) under e2e
+  estate total   102.8 KB  (goldens 99.0 KB, unsanctioned 3.8 KB)
+  estate band    110.0 KB  (headroom 7.2 KB = 7.0% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] UNSANCTIONED — 1 *.png outside e2e/goldens:
+  FAIL     3.8 KB  e2e/visual-golden.spec.ts-snapshots/cell-light-webkit-darwin.png
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:230
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:241
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:197
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:224
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 1 defect(s):
+  · fossils: 1 *.png outside e2e/goldens (3.8 KB) — auto-written baselines no config reads
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.
+EXIT=1

@@ -1,0 +1,43 @@
+# T5-W1.13 — CI FRAGMENT: the SELF-DELTA (the gate that proves the gate).
+#
+# WHERE      .github/workflows/ci.yml, job `e2e` (Lane 9).
+# WHAT       a NEW step, after the magnitude report.
+# INDENT     `- name:` at 12 spaces inside `steps:`, matching the file.
+#
+# THE DEFECT. GOLDEN_DELTA=black|invert is the visual-golden machinery's own acceptance
+# test (visual-golden.spec.ts:123-144): it injects a deliberate, reproducible regression so
+# the capture-compare can be PROVEN to bite. `grep -rn GOLDEN_DELTA` finds it in the spec
+# and in prose, and in NO CI step — the gate that proves the gate has never run on a
+# runner (gate-soundness.md:114, confirmed at r3/goldens-estate §5.2 H6). A compare that
+# has silently stopped comparing looks exactly like a compare that is passing.
+#
+# THE ASSERTION IS INVERTED, deliberately: this step fails when playwright SUCCEEDS. A
+# green delta run means the machinery no longer bites, which is the vacuous-green the
+# golden system exists to prevent.
+#
+# COST, measured on darwin at HEAD (../goldens-selfdelta.txt): black arm 3 s wall, invert
+# arm 8 s, four tests each, 4/4 red in both. Both arms run here because they fail
+# differently — `black` proves the RASTER path compares (every asserted surface painted
+# solid), `invert` proves the THEME path does (the whole page's register flipped). Neither
+# writes a baseline; both write only test-results/ churn.
+#
+# ORDER      last of the three golden steps: it perturbs the app, so it must not precede a
+#            measuring step. It spawns its own dev server via the golden config, as the
+#            steps before it do.
+
+steps:
+    - name: "Self-delta — prove the golden compare still bites (both arms)"
+      if: ${{ !cancelled() }}
+      timeout-minutes: 6
+      working-directory: web/frontend
+      run: |
+          set -u
+          for arm in black invert; do
+            echo "::group::GOLDEN_DELTA=$arm"
+            if GOLDEN_DELTA="$arm" npx playwright test --config playwright-golden.config.ts --reporter=line; then
+              echo "::error::SELF-DELTA DID NOT BITE — the golden compare passed with the $arm regression injected."
+              exit 1
+            fi
+            echo "ok — the $arm arm red the compare, as it must"
+            echo "::endgroup::"
+          done

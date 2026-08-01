@@ -1,0 +1,98 @@
+# T5-W1.15 — CI job fragment: the npm advisory tripwire joins CI.
+#
+# A STANDALONE SNIPPET, not a workflow. The integrator lane owns .github/workflows/ci.yml.
+# The block below is written at column 0 so it parses on its own (a one-key mapping — that is
+# how it was verified); ci.yml indents its job keys by 4, so the integrator indents the whole
+# block by 4 when pasting it into `jobs:`. Merge-parse verified against ci.yml at f38c5130 —
+# see `evidence/w1/npm-audit-fragment-merge-check.txt`. `gates.json` W1.npmAudit pins the
+# level (`high`) and the born-RED expectation.
+#
+# WHY THE LANE EXISTS (r3/security-posture.md Row 4, the highest-leverage row in that document).
+# The repo gates its Rust supply chain and not its npm one: `grep -nE 'npm audit' ci.yml` at
+# f38c5130 -> NO HITS, while `cargo-audit` has had a job since T5-W5 and now a daily schedule
+# too (security-audit.yml, row 1.5). That asymmetry is not academic — it is the direct cause of
+# every finding in r3's Row 2. Three high-severity advisories sat live in
+# web/frontend/package-lock.json with nothing in CI able to say so:
+#
+#   postcss 8.5.16          GHSA-r28c-9q8g-f849  CVSS 7.5  (Dependabot #69, open)
+#   sharp 0.34.5            GHSA-f88m-g3jw-g9cj            (Dependabot #68, open)
+#   brace-expansion 5.0.7   GHSA-mh99-v99m-4gvg  CVSS 7.5  (Dependabot: AUTO-DISMISSED — read on)
+#
+# WHY THIS LANE IS NOT REDUNDANT WITH THE DEPENDABOT DASHBOARD. This is the point of the job,
+# and row 1.8's `select(.state == "open") | length == 0` gate cannot substitute for it.
+# Dependabot DID raise the brace-expansion alerts (#71, #72, created 2026-07-31T20:29:00Z) and
+# auto-triage suppressed both in the same second they were created — `auto_dismissed_at` ==
+# `created_at`, `dismissed_reason: null`, `scope: development`. They are the only two
+# auto_dismissed records in the repo's 62-alert history. A dev-scoped high therefore NEVER
+# enters the `open` set, so the dashboard reads zero while the advisory is live in the lockfile.
+# That is precisely what happened between the advisory's publication (2026-07-24) and this wave.
+# `npm audit` has no dev-scope suppression and no auto-triage. The two gates are COMPLEMENTARY,
+# and for this class THIS ONE IS THE ONLY ORACLE. Full adjudication, including the refutation of
+# r3's advisory-range-lag hypothesis (the GitHub and npm ranges are identical sets in different
+# notation): `evidence/w1/security-notes.md` §1.
+#
+# WHY NO `needs:` AND NO `npm ci`. `--package-lock-only` audits the committed lockfile directly:
+# no node_modules, no install, no `@mkbabb/csp-solver-wasm` file-link target, so no
+# `build-lean-wasm` edge. The job is checkout + node + one command, and it stays off every
+# other lane's critical path — the same independent posture ci.yml gives `cargo-audit`.
+# Equivalence to the installed-tree audit was verified both ways, banked in
+# `evidence/w1/npm-audit-canary.txt`: 5 highs / exit 1 on the pre-cure lock, 0 / exit 0 on the
+# cured one, matching the full runs case for case. The flag changes the input, not the verdict.
+#
+# WHAT FAILS. `npm audit --audit-level=high` exits nonzero when any advisory of severity high or
+# critical matches the lockfile. Unconditional: no `continue-on-error`, no `--omit`, no
+# allowlist. Moderate/low findings are reported by `npm audit` but do NOT fail at this level —
+# the same posture as cargo-audit's informational `unmaintained` warnings, and for the same
+# reason: a gate that is always red is a gate nobody reads. If the moderate census ever needs
+# teeth, adjudicate the level; do not add per-advisory exceptions.
+#
+# `--omit=dev` IS DELIBERATELY ABSENT. Adding it would reproduce, inside CI, the exact blindness
+# that let brace-expansion hide for a week. Dev-only advisories are still advisories: they run
+# on developer machines and on this runner. Anyone tempted to quiet this lane with `--omit=dev`
+# should read security-notes.md §1d first.
+#
+# CANARY (the defect was BOTH live advisories AND an absent lane, so both halves of the born-RED
+# law are banked): `evidence/w1/npm-audit-RED.txt` — 5 highs, exit 1, at the wave base with the
+# lane's full-tree command; `evidence/w1/npm-audit-canary.txt` — this job's VERBATIM step
+# command run against the pre-cure lockfile in isolation, exit 1. Green after the cure:
+# `evidence/w1/npm-audit-GREEN.txt`, exit 0.
+#
+# NPM 11 IS LOAD-BEARING, not ceremony. npm 10 mis-resolves this lockfile (engines.npm >=11,
+# packageManager npm@11.x), and a mis-resolved tree audits the wrong versions.
+
+npm-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # No `needs:` on purpose — see the header. Independent, cheap, off every critical path.
+    steps:
+        - uses: actions/checkout@v4
+        - name: Set up Node (LTS)
+          uses: actions/setup-node@v4
+          with:
+              node-version: '24'
+        # Node 24 ships npm 11.x already, but pin explicitly: npm 10 mis-resolves this
+        # lockfile, and an audit of a mis-resolved tree grades the wrong versions.
+        - name: Pin npm >=11
+          run: npm install -g npm@^11
+        - name: npm version (recorded — the audit is only as good as the resolver)
+          run: npm --version
+        # THE GATE. Reads web/frontend/package-lock.json as committed. Exit nonzero on any
+        # high/critical advisory. No --omit=dev: dev-scoped highs are exactly the class the
+        # Dependabot dashboard cannot see (security-notes.md §1d).
+        - name: npm audit (high+, frontend lockfile)
+          working-directory: web/frontend
+          run: npm audit --audit-level=high --package-lock-only
+        # A red lane should hand back the machine-readable census it red on, not just a
+        # console tail — the JSON carries every advisory id, path and range. `|| true` is
+        # scoped to THIS reporting step only; the gate above has already decided the job.
+        - name: Capture the audit JSON (failure only)
+          if: failure()
+          working-directory: web/frontend
+          run: npm audit --json --package-lock-only > npm-audit.json || true
+        - name: Upload the audit JSON (failure only)
+          if: failure()
+          uses: actions/upload-artifact@v4
+          with:
+              name: npm-audit-report
+              path: web/frontend/npm-audit.json
+              retention-days: 7

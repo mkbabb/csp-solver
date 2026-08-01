@@ -1,0 +1,16 @@
+Error: [e2e assert-the-SPA] http://localhost:3000 answered 426 — that's not the app.
+A 426 means baseURL is pointed at Vite's HMR websocket (hmr.port:3000), not the SPA.
+The app's server.port desyncs from a --port override by construction (K46): point PLAYWRIGHT_BASE_URL at the running app port (check `lsof -i -P | grep LISTEN`).
+
+   at global-setup.ts:29
+
+  27 |     const status = res?.status();
+  28 |     if (status === 426 || (status !== undefined && status >= 400)) {
+> 29 |       throw new Error(
+     |             ^
+  30 |         `[e2e assert-the-SPA] ${baseURL} answered ${status} — that's not the app.\n` +
+  31 |           `A 426 means baseURL is pointed at Vite's HMR websocket (hmr.port:3000), not the SPA.\n` +
+  32 |           `The app's server.port desyncs from a --port override by construction (K46): ` +
+    at globalSetup (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/global-setup.ts:29:13)
+
+EXIT=1

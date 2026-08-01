@@ -1,0 +1,54 @@
+# T5-W1.1 — the FE unit lane, run locally at the wave base (A1's 332 blocks / 31 files)
+# cwd: /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+# node v26.0.0 / npm 11.12.1 / vitest 4.1.10
+# HEAD f38c5130
+# date 2026-08-01T19:27:54Z
+# tree: src/ clean of the canary (it lives under evidence/w1/canary/, never in src/)
+
+$ npx vitest run
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+
+ Test Files  31 passed (31)
+      Tests  332 passed (332)
+   Start at  15:27:55
+   Duration  5.09s (transform 27.20s, setup 963ms, import 32.68s, tests 1.90s, environment 34.20s)
+
+VITEST_EXIT=0
+
+## DERIVATION — the executed count, three independent ways
+
+1. vitest's own summary (above):
+      Test Files  31 passed (31)
+           Tests  332 passed (332)
+
+2. static census of the source (what A1 counted):
+   $ find src -name '*.test.ts' | wc -l
+     31 files
+   $ grep -rhoE '^[[:space:]]*(it|test)(\.[a-z]+)?\(' src --include='*.test.ts' | wc -l
+     332 it/test blocks
+   $ grep -rhoE '^[[:space:]]*(it|test|describe)\.(skip|todo)\(' src --include='*.test.ts' | wc -l
+     0 skip/todo blocks
+
+3. per-file assertion census summed out of the JSON report (what the gate reads):
+     files             31
+     suites            133
+     summary counters  332 passed / 0 failed / 0 skipped / 0 todo / 332 total
+     assertion census  {"passed":332,"failed":0,"pending":0,"todo":0,"other":0}
+     EXECUTED = passed + failed = 332
+
+   All three agree: 332 EXECUTED across 31 files / 133 suites, 0 skipped, 0 todo.
+   FLOOR = 300 (gates.json W1.unitLane.floor) — 32 below the observed count, ~10% headroom.
+
+$ node scripts/check-unit-count.mjs vitest-report.json
+FE unit lane — 332 executed (332 passed / 0 failed), 0 skipped, 0 todo, over 31 files / 133 suites; floor 300; report age 0.1 min.
+unit count OK — 332 >= 300.
+GATE_EXIT=0
+
+$ node scripts/check-unit-count.mjs vitest-report.json --floor=400   # the floor shown live, on the real report
+FE unit lane — 332 executed (332 passed / 0 failed), 0 skipped, 0 todo, over 31 files / 133 suites; floor 400; report age 0.1 min.
+
+UNIT COUNT GATE FAILED
+  · only 332 tests EXECUTED (332 passed + 0 failed), floor is 400 — tests were excluded, skipped or never collected. (0 skipped, 0 todo, 332 total)
+GATE_EXIT=1

@@ -1,0 +1,100 @@
+T5-W1.9 — CH-42 MAGNITUDE INSTRUMENT · ARM workers=4 (the loaded arm)
+protocol: docs/tranches/2026-08-tranche-5/evidence/w1/magnitude-rule.md (PRE-REGISTERED, banked before any run)
+HEAD f38c5130c8d2e97a5291795133d340754eca99eb  platform darwin  node v26.0.0  playwright Version 1.61.1
+dist built Aug  1 15:23:17 2026  ·  base http://localhost:4188 = vite preview of web/frontend/dist
+subset: -g 'toggle crest|logo wordmark'  ·  --repeat-each=25  ·  --workers=4  ·  retries:0  ·  GOLDEN_MAGNITUDE=1
+ran AFTER the w=1 arm on the same host/session/tree/dist — arms never overlap (rule §3)
+started 2026-08-01T20:28:09Z
+======== playwright output ========
+      - captured a stable screenshot
+      - 677 pixels (ratio 0.02 of all image pixels) are different.
+
+
+      222 |   await loadSettled(page, { dark: true });
+      223 |   const clip = await center(page.locator('button.sun-moon-toggle'), 110, 110);
+    > 224 |   await expect(page).toHaveScreenshot('toggle-crest-dark.png', { ...CREST_FLOOR, clip });
+          |                      ^
+      225 | });
+      226 |
+      227 | // A single grid cell rendering the pinned given "5" — the hand-drawn glyph + cell grain.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/visual-golden.spec.ts:224:22
+
+    attachment #1: toggle-crest-dark (image/png) ───────────────────────────────────────────────────
+    Expected: e2e/goldens/toggle-crest-dark-darwin.png
+    Received: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose-repeat20/toggle-crest-dark-actual.png
+    Diff:     test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose-repeat20/toggle-crest-dark-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose-repeat20/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose-repeat20/error-context.md
+
+
+[46/50] e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+[47/50] e2e/visual-golden.spec.ts:195:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack
+[48/50] e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+[49/50] e2e/visual-golden.spec.ts:195:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack
+[50/50] e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+  7 failed
+    e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+    e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+    e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+    e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+    e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+    e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+    e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+  43 passed (23.4s)
+ended 2026-08-01T20:28:33Z
+======== RAW DISTRIBUTION (one JSONL row per attempt, as emitted by the probe) ========
+{"ts":"2026-08-01T20:28:11.711Z","arm":"4","golden":"logo-light","repeat":1,"retry":0,"status":"passed","ms":1129,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:11.712Z","arm":"4","golden":"logo-light","repeat":0,"retry":0,"status":"passed","ms":1131,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:13.191Z","arm":"4","golden":"logo-light","repeat":2,"retry":0,"status":"passed","ms":1047,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:13.903Z","arm":"4","golden":"toggle-crest-dark","repeat":0,"retry":0,"status":"failed","ms":3273,"geomPx":48400,"capturesPx":[677,677,1214,1214,677],"verdictPx":677,"verdictRatio":0.013987603305785124,"worstRatio":0.025082644628099175}
+{"ts":"2026-08-01T20:28:13.907Z","arm":"4","golden":"toggle-crest-dark","repeat":1,"retry":0,"status":"failed","ms":3285,"geomPx":48400,"capturesPx":[677,677,1214,1214,677],"verdictPx":677,"verdictRatio":0.013987603305785124,"worstRatio":0.025082644628099175}
+{"ts":"2026-08-01T20:28:14.233Z","arm":"4","golden":"toggle-crest-dark","repeat":2,"retry":0,"status":"failed","ms":2025,"geomPx":48400,"capturesPx":[643,643,375,375,643],"verdictPx":643,"verdictRatio":0.013285123966942149,"worstRatio":0.013285123966942149}
+{"ts":"2026-08-01T20:28:14.676Z","arm":"4","golden":"logo-light","repeat":3,"retry":0,"status":"passed","ms":1089,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:15.453Z","arm":"4","golden":"logo-light","repeat":4,"retry":0,"status":"passed","ms":1119,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:15.737Z","arm":"4","golden":"toggle-crest-dark","repeat":4,"retry":0,"status":"passed","ms":1054,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:16.267Z","arm":"4","golden":"logo-light","repeat":5,"retry":0,"status":"passed","ms":1113,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:16.404Z","arm":"4","golden":"toggle-crest-dark","repeat":3,"retry":0,"status":"failed","ms":2029,"geomPx":48400,"capturesPx":[643,643,375,375,643],"verdictPx":643,"verdictRatio":0.013285123966942149,"worstRatio":0.013285123966942149}
+{"ts":"2026-08-01T20:28:17.260Z","arm":"4","golden":"logo-light","repeat":6,"retry":0,"status":"passed","ms":1097,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:17.916Z","arm":"4","golden":"logo-light","repeat":7,"retry":0,"status":"passed","ms":1095,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:18.022Z","arm":"4","golden":"toggle-crest-dark","repeat":5,"retry":0,"status":"failed","ms":2084,"geomPx":48400,"capturesPx":[1028,643,643,1028,1028],"verdictPx":1028,"verdictRatio":0.021239669421487604,"worstRatio":0.021239669421487604}
+{"ts":"2026-08-01T20:28:18.778Z","arm":"4","golden":"toggle-crest-dark","repeat":7,"retry":0,"status":"passed","ms":1092,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:18.823Z","arm":"4","golden":"toggle-crest-dark","repeat":6,"retry":0,"status":"failed","ms":2077,"geomPx":48400,"capturesPx":[1028,643,643,1028,1028],"verdictPx":1028,"verdictRatio":0.021239669421487604,"worstRatio":0.021239669421487604}
+{"ts":"2026-08-01T20:28:19.453Z","arm":"4","golden":"logo-light","repeat":8,"retry":0,"status":"passed","ms":1122,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:19.528Z","arm":"4","golden":"toggle-crest-dark","repeat":8,"retry":0,"status":"passed","ms":1106,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:20.356Z","arm":"4","golden":"toggle-crest-dark","repeat":9,"retry":0,"status":"passed","ms":1112,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:20.383Z","arm":"4","golden":"logo-light","repeat":9,"retry":0,"status":"passed","ms":1139,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:21.074Z","arm":"4","golden":"logo-light","repeat":10,"retry":0,"status":"passed","ms":1135,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:21.115Z","arm":"4","golden":"toggle-crest-dark","repeat":10,"retry":0,"status":"passed","ms":1104,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:21.929Z","arm":"4","golden":"toggle-crest-dark","repeat":11,"retry":0,"status":"passed","ms":1083,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:21.965Z","arm":"4","golden":"logo-light","repeat":11,"retry":0,"status":"passed","ms":1118,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:22.688Z","arm":"4","golden":"logo-light","repeat":12,"retry":0,"status":"passed","ms":1136,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:22.695Z","arm":"4","golden":"toggle-crest-dark","repeat":12,"retry":0,"status":"passed","ms":1138,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:23.500Z","arm":"4","golden":"logo-light","repeat":13,"retry":0,"status":"passed","ms":1131,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:23.588Z","arm":"4","golden":"toggle-crest-dark","repeat":13,"retry":0,"status":"passed","ms":1126,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:24.326Z","arm":"4","golden":"toggle-crest-dark","repeat":14,"retry":0,"status":"passed","ms":1140,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:24.366Z","arm":"4","golden":"logo-light","repeat":14,"retry":0,"status":"passed","ms":1180,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:25.112Z","arm":"4","golden":"logo-light","repeat":15,"retry":0,"status":"passed","ms":1140,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:25.213Z","arm":"4","golden":"toggle-crest-dark","repeat":15,"retry":0,"status":"passed","ms":1138,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:25.954Z","arm":"4","golden":"toggle-crest-dark","repeat":16,"retry":0,"status":"passed","ms":1137,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:25.981Z","arm":"4","golden":"logo-light","repeat":16,"retry":0,"status":"passed","ms":1178,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:26.730Z","arm":"4","golden":"logo-light","repeat":17,"retry":0,"status":"passed","ms":1147,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:26.838Z","arm":"4","golden":"toggle-crest-dark","repeat":17,"retry":0,"status":"passed","ms":1133,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:27.542Z","arm":"4","golden":"logo-light","repeat":18,"retry":0,"status":"passed","ms":1130,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:27.552Z","arm":"4","golden":"toggle-crest-dark","repeat":18,"retry":0,"status":"passed","ms":1141,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:28.282Z","arm":"4","golden":"logo-light","repeat":19,"retry":0,"status":"passed","ms":1123,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:28.453Z","arm":"4","golden":"toggle-crest-dark","repeat":19,"retry":0,"status":"passed","ms":1150,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:29.143Z","arm":"4","golden":"logo-light","repeat":20,"retry":0,"status":"passed","ms":1151,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:29.900Z","arm":"4","golden":"logo-light","repeat":21,"retry":0,"status":"passed","ms":1127,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:29.992Z","arm":"4","golden":"toggle-crest-dark","repeat":20,"retry":0,"status":"failed","ms":1975,"geomPx":48400,"capturesPx":[677,1028,1194,375,677],"verdictPx":677,"verdictRatio":0.013987603305785124,"worstRatio":0.024669421487603305}
+{"ts":"2026-08-01T20:28:30.037Z","arm":"4","golden":"toggle-crest-dark","repeat":21,"retry":0,"status":"passed","ms":1127,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:30.757Z","arm":"4","golden":"logo-light","repeat":22,"retry":0,"status":"passed","ms":1150,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:31.521Z","arm":"4","golden":"toggle-crest-dark","repeat":22,"retry":0,"status":"passed","ms":1142,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:31.541Z","arm":"4","golden":"logo-light","repeat":23,"retry":0,"status":"passed","ms":1134,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:31.646Z","arm":"4","golden":"toggle-crest-dark","repeat":23,"retry":0,"status":"passed","ms":1145,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:32.380Z","arm":"4","golden":"logo-light","repeat":24,"retry":0,"status":"passed","ms":1136,"geomPx":173568,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}
+{"ts":"2026-08-01T20:28:33.029Z","arm":"4","golden":"toggle-crest-dark","repeat":24,"retry":0,"status":"passed","ms":1049,"geomPx":48400,"capturesPx":[0],"verdictPx":0,"verdictRatio":0,"worstRatio":0}

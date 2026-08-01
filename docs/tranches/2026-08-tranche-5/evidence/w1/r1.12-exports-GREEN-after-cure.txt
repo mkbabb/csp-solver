@@ -1,0 +1,63 @@
+# T5-W1 row 1.12 — GREEN after the generator cure (Makefile postprocess + regen)
+# HEAD: f38c5130   date: 2026-08-01T19:21:27Z
+# generator: wasm-pack 0.15.0 · node v26.0.0 · npm 11.12.1
+# recipe:    make wasm  (wasm-pack build --scope mkbabb --target web --profile wasm-release --no-default-features)
+#            + rm -f pkg/.gitignore + node scripts/pkg-exports.mjs --write
+
+$ cat csp-solver/wasm/pkg/package.json
+{
+  "name": "@mkbabb/csp-solver-wasm",
+  "type": "module",
+  "description": "WebAssembly bindings for csp-solver — the sudoku, futoshiki, and assignment solve surfaces.",
+  "version": "0.6.0",
+  "license": "MIT",
+  "files": [
+    "csp_solver_wasm_bg.wasm",
+    "csp_solver_wasm.js",
+    "csp_solver_wasm.d.ts"
+  ],
+  "main": "csp_solver_wasm.js",
+  "types": "csp_solver_wasm.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "exports": {
+    ".": {
+      "types": "./csp_solver_wasm.d.ts",
+      "default": "./csp_solver_wasm.js"
+    },
+    "./csp_solver_wasm_bg.wasm": "./csp_solver_wasm_bg.wasm",
+    "./package.json": "./package.json"
+  }
+}
+
+$ md5 -q csp-solver/wasm/pkg/package.json   # was 253050d6e0d52b89cbabf75e1d5b20b0 at HEAD
+1eb6e14c7765f5345bd03df1f4e83290
+
+$ node csp-solver/wasm/scripts/pkg-exports.mjs --check
+pkg-exports --check  @mkbabb/csp-solver-wasm@0.6.0
+  pkg      /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/wasm/pkg
+  exports  .  ./csp_solver_wasm_bg.wasm  ./package.json
+  resolve  OK   @mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm -> file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+  resolve  OK   @mkbabb/csp-solver-wasm/package.json -> file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/wasm/pkg/package.json
+  verdict  GREEN
+exit=0
+
+# ---- BYTE BAND (lean, fail >127,500 B — ci.yml:450-476) ----
+$ stat -f%z csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+122385
+headroom: 5115 B under the band  (95.98% of budget)
+prior darwin measurement (pre-cure, same file): 122385 B  ->  delta 0 B
+# the exports map is a package.json edit; it does not touch the .wasm — the band is unmoved by construction and re-measured anyway.
+
+$ ls -la csp-solver/wasm/pkg/
+total 464
+drwxr-xr-x   9 mkbabb  staff     288 Aug  1 15:21 .
+drwxr-xr-x  11 mkbabb  staff     352 Aug  1 15:21 ..
+-rw-r--r--   1 mkbabb  staff    1066 Jul 10 21:08 LICENSE
+-rw-r--r--   1 mkbabb  staff    4744 Aug  1 14:37 README.md
+-rw-r--r--   1 mkbabb  staff   30987 Aug  1 15:21 csp_solver_wasm.d.ts
+-rw-r--r--   1 mkbabb  staff   54756 Aug  1 15:21 csp_solver_wasm.js
+-rw-r--r--   1 mkbabb  staff  122385 Aug  1 15:21 csp_solver_wasm_bg.wasm
+-rw-r--r--   1 mkbabb  staff    6564 Aug  1 15:21 csp_solver_wasm_bg.wasm.d.ts
+-rw-r--r--   1 mkbabb  staff     648 Aug  1 15:21 package.json

@@ -1,0 +1,19 @@
+# T5-W1.14 fragment merge check — the integrator's paste, simulated and PARSED
+# ci.yml at f38c5130 + fragments/coverage.yml. Option A additionally splices W1.1's
+# fragments/fe-unit.yml, because the fold targets that job. Comment lines are dropped
+# in the simulation; only the YAML payload is pasted, at the indents the fragment states.
+
+$ python3 -c "yaml.safe_load(open(ci_merged))"   # the paste, parsed
+
+OPTION A — fold into fe-unit: PARSES. 12 jobs
+  lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, frontend, e2e, iai, cargo-audit, fe-unit
+  fe-unit: 12 steps, 3 of them this row's
+  fe-unit vitest step: npm run test:unit:report -- --coverage
+  fe-unit floor step:  npm run test:coverage:floor
+
+OPTION B — standalone fe-coverage: PARSES. 12 jobs
+  lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, frontend, e2e, iai, cargo-audit, fe-coverage
+  fe-coverage: 9 steps, needs=['build-lean-wasm'], timeout=15m
+
+Both options were parsed against ci.yml AS IT STANDS at f38c5130 — this row does
+not edit .github/workflows/ci.yml, and the file on disk is unchanged by this check.

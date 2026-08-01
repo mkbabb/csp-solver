@@ -1,0 +1,22 @@
+# T5-W1.1 — check-unit-count.mjs --self-test: every check against a known-bad input
+# HEAD f38c5130   date 2026-08-01T19:28:32Z
+# The gate guards a number nobody reads by hand, so the gate itself is proven able to
+# fail before CI trusts its green (the lint:ink house pattern). 'reds' = the known-bad
+# input was rejected; a 'GREENS' on any of them fails the self-test.
+
+$ node scripts/check-unit-count.mjs --self-test
+check-unit-count --self-test — each check against a known-bad input:
+  reds  missing report
+  reds  malformed JSON
+  reds  wrong shape (no counters)
+  reds  shape with counters but no testResults[]
+  reds  below the floor (299)
+  reds  stale report (3h old)
+  reds  future report (clock forgery)
+  reds  red run (failures present)
+  reds  forged counters (summary 400, census 5)
+  reds  skips carry the floor (299 executed + 40 skipped)
+  greens  exactly at the floor (300)
+
+self-test OK — every check fails on its known-bad input, and passes at the floor.
+SELFTEST_EXIT=0

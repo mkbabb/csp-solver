@@ -1,0 +1,54 @@
+control — ci.yml untouched
+  [HEAD gate]
+    exit=0
+    GREEN  ci-band-comment-406
+            derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >127,500 B; lean artifact 122,385 B; canon-declared stale: 222,436 B (docs/benchmarks.md:53)
+    0 RED / 10 GREEN — canon holds
+  [HARDENED gate]
+    exit=0
+    GREEN  ci-band-comment-406
+            derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >127,500 B; lean artifact 122,385 B; canon-declared stale: 222,436 B (docs/benchmarks.md:53)
+    0 RED / 12 GREEN — canon holds
+
+==============================================================
+ARM A — four comment lines push -gt 127500 out of the old 25-line window
+==============================================================
+  [HEAD gate — scripts/check-doc-truth.mjs at f38c5130]
+    exit=0
+    GREEN  ci-band-comment-406
+            derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >0 B; lean artifact 122,385 B; canon-declared stale: 222,436 B (docs/benchmarks.md:53)
+    0 RED / 10 GREEN — canon holds
+  [HARDENED gate — T5-W1]
+    exit=0
+    GREEN  ci-band-comment-406
+            derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >127,500 B; lean artifact 122,385 B; canon-declared stale: 222,436 B (docs/benchmarks.md:53)
+    0 RED / 12 GREEN — canon holds
+
+==============================================================
+ARM B — the full-band step renamed — -gt 240000 / -gt 230000 never reached
+==============================================================
+  [HEAD gate — scripts/check-doc-truth.mjs at f38c5130]
+    exit=0
+    GREEN  ci-band-comment-406
+            derived: enforced bands — full fail >0 B / warn >0 B · lean fail >127,500 B; lean artifact 122,385 B; canon-declared stale: 222,436 B (docs/benchmarks.md:53)
+    0 RED / 10 GREEN — canon holds
+  [HARDENED gate — T5-W1]
+    exit=1
+    RED    ci-band-comment-406
+            derived: enforced bands — full fail >0 B / warn >0 B · lean fail >127,500 B; lean artifact 122,385 B; canon-declared stale: 222,436 B (docs/benchmarks.md:53)
+    1 RED / 11 GREEN — doc canon disagrees with the tree
+
+==============================================================
+ARM C — the lean step: -gt 127500 comparison deleted — the band is simply gone
+==============================================================
+  [HEAD gate — scripts/check-doc-truth.mjs at f38c5130]
+    exit=0
+    GREEN  ci-band-comment-406
+            derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >0 B; lean artifact 122,385 B; canon-declared stale: 222,436 B (docs/benchmarks.md:53)
+    0 RED / 10 GREEN — canon holds
+  [HARDENED gate — T5-W1]
+    exit=1
+    RED    ci-band-comment-406
+            derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >0 B; lean artifact 122,385 B; canon-declared stale: 222,436 B (docs/benchmarks.md:53)
+    1 RED / 11 GREEN — doc canon disagrees with the tree
+

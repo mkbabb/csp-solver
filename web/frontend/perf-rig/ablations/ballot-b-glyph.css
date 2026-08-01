@@ -1,0 +1,17 @@
+/* BALLOT CELL B (glyph) — grain baked into stroke geometry, filter dropped.
+   @ballot-js: variant-b
+
+   THE MARKER ABOVE IS LOAD-BEARING and only ballot-server.mjs (:4895) honours it: run-safari.sh
+   can hand the page a CSS file and nothing else, so B — which needs a script — rides in as a
+   marker comment that the ballot host turns into <script src="/ballot/variant-b.js">. On :4894
+   this file degrades to exactly cell C (filter off, authored geometry), so a run must state its
+   PORT: B is only B at PORT=4895.
+
+   Knobs default to the wave's spec (arc field, chords ≤ wavelength/3). For the curve-safe
+   variant use ballot-bdense-glyph.css.
+
+   Rig-cost caveat for the fps read: the rig bakes on a MutationObserver, so scenarios that
+   swap `d` per frame (solveCelebration's flourish, the murmur) pay a per-frame bake the shipped
+   F3 would not — those B numbers are an UPPER BOUND. idle3s / deal / galleryGlide / themeToggle
+   never swap `d` and are clean. */
+.glyph-svg path { filter: none !important; }

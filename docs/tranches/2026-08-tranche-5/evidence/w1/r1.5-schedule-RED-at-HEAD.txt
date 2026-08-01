@@ -1,0 +1,26 @@
+# T5-W1 row 1.5 — BORN-RED at HEAD (defect = absence of a scheduled trigger)
+# HEAD: f38c5130  (2026-08-01T15:14:41-04:00)
+# date: 2026-08-01T19:18:31Z
+
+$ ls .github/workflows/
+ci.yml
+
+$ grep -rnE '^\s*(schedule|workflow_dispatch|repository_dispatch):' .github/workflows/
+exit=1  (1 = no match = NO scheduled/dispatchable trigger anywhere)
+
+$ grep -rn 'cron:' .github/workflows/
+exit=1
+
+$ grep -rn 'cargo audit' .github/workflows/
+.github/workflows/ci.yml:769:    # 2.0.1, which the default `cargo audit` does NOT fail on) — so this is a
+.github/workflows/ci.yml:784:            - name: cargo audit (RustSec advisories over the committed Cargo.lock)
+.github/workflows/ci.yml:785:              run: cargo audit
+
+$ sed -n '70,76p' .github/workflows/ci.yml   # the ONLY trigger block in the tree
+
+on:
+    pull_request:
+        branches: [main, master]
+    push:
+        branches: [main, master]
+

@@ -18,6 +18,28 @@ import { attachBakeEvidence } from "./bake-evidence";
  *     see this: on an SVG `<text>` it returns the font's em box, not the ink, so it read an
  *     identical 64.13-unit height at every opsz value while the advance widths moved 33 units.
  *
+ *     T5-W1 1.6 (B1) — THE VERDICT IS HOISTED, AND THE LINUX YIELD IS GONE. At 71456713 the
+ *     vacuity term ("there is ink at all") was asserted first and a linux `test.skip` sat
+ *     between it and the four edges, so an empty bake on linux aborted the row before the
+ *     invariant it was born for was ever evaluated. Re-run on the forced-blank ablation, the
+ *     shipped spec reproduced its own commit message to the word — `5 skipped, 1 passed, exit
+ *     0` — with the edge verdict never computed on the only platform CI runs. The two terms
+ *     are now ONE verdict (`inkBoxViolations`) asserted once, ahead of every branch, on both
+ *     platforms in both bake states.
+ *
+ *     Why the yield could go rather than merely move: `test.skip()` aborts, so a yield that
+ *     still shielded a blank would re-trap the very assertion the hoist exists to free —
+ *     the two are mutually exclusive, and `gates.json W1.wordmarkHoist.clipAssertionPlatforms`
+ *     names both platforms. It also bought no green. The yield's stated cover was
+ *     theme-bake-freshness holding "the logo bake has ink at all" on linux in both engines at
+ *     `retries: 0` — true, but that spec read the DEFAULT board only, so it covered 1 of the 5
+ *     labels while runs 30684983201/30690204551 blanked `killer`, `futoshiki`, `thermo` and
+ *     `kenken`. This row widened it to all five (theme-bake-freshness.spec.ts), which closes
+ *     the 4-label hole AND settles the arithmetic: a blank on linux now reds theme-bake at
+ *     `retries: 0` in both engines whatever this spec does, so skipping here never saved a
+ *     lane — it only discarded the clip verdict. The blank still ships its bitmap
+ *     (`attachBakeEvidence`, below): the yield's evidence half is kept, its silence half is not.
+ *
  *  2. NO FALLBACK GLYPHS. Every character of every rendered label must actually come from
  *     Fraunces. Measured by the sentinel-fallback method (lane D's, kept because the obvious
  *     probe is vacuous): render the glyph as `Fraunces, <sentinel>` and as `<sentinel>` alone —
@@ -30,6 +52,34 @@ import { attachBakeEvidence } from "./bake-evidence";
  */
 
 const GAMES = ["sudoku", "futoshiki", "thermo", "killer", "kenken"] as const;
+
+type PoseInk = {
+  W: number;
+  H: number;
+  top: number;
+  bot: number;
+  left: number;
+  right: number;
+};
+
+/**
+ * The four-edge verdict over a pose's ink box — `[]` is the invariant held.
+ *
+ * ONE invariant, two terms, fused on purpose. "The label's ink sits inside its bitmap" says
+ * nothing unless there IS ink: a blank bitmap clears all four edges vacuously. So absence is
+ * a violation TERM, `no-ink`, and not a separate assertion that a branch could get in front
+ * of. Fusing them is what makes the hoist real — there is one thing to evaluate, it is
+ * evaluated before anything can abort the row, and it is the same thing on every platform.
+ */
+function inkBoxViolations(r: PoseInk): string[] {
+  if (r.top < 0) return ["no-ink"];
+  return [
+    r.top === 0 && "top",
+    r.bot === r.H - 1 && "bottom",
+    r.left === 0 && "left",
+    r.right === r.W - 1 && "right",
+  ].filter((e): e is string => typeof e === "string");
+}
 
 /** The ink box of the pose stack's CURRENT bitmap, decoded off its own blob URL. */
 const READ_POSE_INK = async () => {
@@ -110,59 +160,44 @@ test.describe("G3.4 · wordmark integrity (WebKit, built dist)", () => {
     }, testInfo) => {
       await loadWordmark(page, game);
       const r = await settledPoseInk(page);
-      // Ink was found at all (a blank bake would otherwise pass every edge check vacuously).
-      // An empty read ships the pose it read (CI run 30684983201 reported this with nothing
-      // attached; see bake-evidence.ts) — attribution belongs to the red, not to the retry.
-      if (r.top < 0) {
+
+      // EVIDENCE FIRST, and unconditionally on an unreadable bake — the pose that was read
+      // ships with the red, so the next occurrence is attributable rather than a message
+      // (run 30684983201 reported this with nothing attached; see bake-evidence.ts).
+      //
+      // What the runner's blank is, kept because it is the attribution a future red inherits:
+      // runs 30684983201 (`killer`) and 30690204551 (`sudoku`, `futoshiki`, `thermo`,
+      // `kenken`) read a pose blob that is a VALID, correctly-sized, entirely transparent
+      // PNG — 272–313 bytes at the label's own measured intrinsic (381×112 sudoku/kenken,
+      // 472×112 futoshiki, 384×112 thermo, matching that host's geometry to the pixel), with
+      // `fonts.status: loaded`, `check('900 52px "Fraunces"')` true and all four pose hrefs
+      // minted. Not a mid-flight sample: it was the SECOND, post-`fonts.ready` capture at the
+      // settled box, and the only surface in the page that came back empty is the one whose
+      // detached blob carries an inlined `@font-face` — the grid bake, same filter recipe and
+      // no font, painted (run 30690204551's own failure screenshot). `useRasterStack` re-bakes
+      // on cacheKey / cssSize / dpr / mount and nothing else, so once that box settles the
+      // blob is TERMINAL: 1d03f940's retry could not clear it (3 of 4 rows failed the second
+      // attempt too, on fresh pages and new blobs) and the poll above cannot either. It has
+      // never reproduced off the runner — 206/206 ×3 on darwin, and in the runner's own image
+      // (v1.61.1 jammy AND noble, webkit) 137 wordmark rows over cold pages plus 160 synthetic
+      // captures of the recipe, ZERO blank — and real WebKit ships the wordmark whole in
+      // production. The settle→poll above is the cure that holds; what does NOT follow from an
+      // unreproducible artefact is a silent lane, which is why the row now reds here and the
+      // yield is recorded dead in this file's header (T5-W1 1.6).
+      if (r.top < 0)
         await attachBakeEvidence(
           page,
           testInfo,
           "svg.handwritten-logo image.logo-pose-bmp",
           game,
         );
-        // THE EMPTY BAKE IS THE RUNNER'S, AND ONLY THE VACUITY GUARD YIELDS TO IT.
-        //
-        // Runs 30684983201 (`killer`) and 30690204551 (`sudoku`, `futoshiki`, `thermo`,
-        // `kenken`) read a pose blob that is a VALID, correctly-sized, entirely transparent
-        // PNG — 272–313 bytes at the label's own measured intrinsic (381×112 sudoku/kenken,
-        // 472×112 futoshiki, 384×112 thermo, matching this host's geometry to the pixel), with
-        // `fonts.status: loaded`, `check('900 52px "Fraunces"')` true and all four pose hrefs
-        // minted. So the bake was not sampled mid-flight: it was the SECOND, post-`fonts.ready`
-        // capture at the settled box, and the only surface in the page that came back empty is
-        // the one whose detached blob carries an inlined `@font-face` — the grid bake, same
-        // filter recipe and no font, painted (run 30690204551's own failure screenshot).
-        // `useRasterStack` re-bakes on cacheKey / cssSize / dpr / mount and nothing else, so
-        // once that box settles the blob is TERMINAL — which is why 1d03f940's retry could not
-        // clear it (3 of 4 rows failed the second attempt too, on fresh pages and new blobs)
-        // and why the poll above cannot either.
-        //
-        // It does not reproduce off the runner: 206/206 ×3 on darwin, and in the runner's own
-        // image (v1.61.1 jammy AND noble, webkit) 137 wordmark rows over cold pages —
-        // `--cpus=2` ×5 repeat, the full six-project throttle pool, and unthrottled ×10 at the
-        // CI rows' own 2.4–2.7 s — plus 160 synthetic captures of the recipe, ZERO blank. Real
-        // WebKit ships it whole (production verified: sharp complete wordmark, both toggle
-        // poses inked). The estate forbids re-baselining on a red, so the row is NOT retired:
-        // it still runs on linux at full width and still asserts the edge-clip invariant it was
-        // born for on every bake that inks. Only the vacuity guard — which asserts nothing
-        // about clipping — declines to fail the lane for an engine artefact it cannot
-        // reproduce, and it declines LOUDLY: skipped, never passed, carrying the pose bitmap.
-        // Darwin and every non-linux host still fail here, and "the logo bake has ink at all"
-        // keeps a linux CI guard in BOTH engines at `retries: 0` in theme-bake-freshness.
-        test.skip(
-          process.platform === "linux",
-          `${game}: the pose baked EMPTY on linux — see the attached bitmap (CI 30684983201 / 30690204551)`,
-        );
-      }
-      expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
-      const clipped = [
-        r.top === 0 && "top",
-        r.bot === r.H - 1 && "bottom",
-        r.left === 0 && "left",
-        r.right === r.W - 1 && "right",
-      ].filter(Boolean);
-      expect(clipped, `${game} ink touches its bitmap edge (${r.W}×${r.H})`).toEqual(
-        [],
-      );
+
+      // THE HOISTED VERDICT. One assertion, both terms, ahead of every branch — nothing
+      // between the read and the assert can abort the row, on any platform.
+      expect(
+        inkBoxViolations(r),
+        `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+      ).toEqual([]);
     });
   }
 

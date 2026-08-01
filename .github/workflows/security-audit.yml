@@ -1,0 +1,93 @@
+# =============================================================================
+# security-audit — the RustSec advisory tripwire, on a clock.
+#
+# WHY THIS FILE EXISTS (T5-W1 row 1.5; audit A5 CONFIRMED, r1/gate-soundness V5).
+# `ci.yml`'s `cargo-audit` lane is sound in mechanism and near-vacuous in cadence.
+# It checks a STATIC input (the committed `Cargo.lock`) against a TIME-VARYING
+# oracle (the RustSec advisory DB, which moves daily) — but `ci.yml` declares only
+# `pull_request` and `push`. A new advisory filed against an unchanged lockfile
+# fires only when somebody happens to push, so the quieter the repo the blinder
+# the gate. For a time-varying oracle on a static input, push-only is close to
+# never. This workflow supplies the missing cadence.
+#
+# It does NOT replace `ci.yml`'s lane. That one is the pre-merge gate — it must
+# stay, because a PR that adds a vulnerable dependency has to red before it lands,
+# not up to 24 hours later. The two run the same command on purpose: identical
+# semantics, different trigger. Anything that changes the pass/fail rule here has
+# to change there too, or the repo gains two oracles that can disagree.
+#
+# ---------------------------------------------------------------- THE POSTURE
+# WHAT FAILS. `cargo audit` exits non-zero on a VULNERABILITY against any crate
+# in `Cargo.lock`. That is the tripwire, and it is unconditional — no allowlist,
+# no `--ignore`, no `continue-on-error`. If this workflow reds, the repo has a
+# live advisory and the run is the notice.
+#
+# WHAT DOES NOT FAIL. Informational `unmaintained` / `unsound` / `notice`
+# warnings do not fail the default `cargo audit`, and this lane keeps that
+# default. Re-derived at authoring (T5-W1, 2026-08-01, cargo-audit-audit 0.22.2,
+# 1,178 advisories loaded, 122 crate dependencies scanned): 0 vulnerabilities,
+# 2 allowed warnings —
+#     RUSTSEC-2025-0141  bincode 1.3.3            unmaintained
+#     RUSTSEC-2026-0173  proc-macro-error2 2.0.1  unmaintained
+# Both arrive transitively. Promoting `unmaintained` to a failure (`--deny
+# warnings`) would red this lane every day for two conditions nobody can fix by
+# Tuesday, and a gate that is always red is a gate nobody reads. They are
+# recorded here instead, so their number is a fact under review rather than a
+# habit. If that census grows, adjudicate it — do not widen the ignore list.
+#
+# WHAT THIS LANE CANNOT SEE. It reads `Cargo.lock` only. The npm surface
+# (`web/frontend/package-lock.json`) — where both live Dependabot alerts sit, and
+# where r3/security-posture.md names the CI supply-chain asymmetry — is NOT
+# covered here; that is row 1.15's `npm audit` lane. Nothing in this file should
+# be read as npm coverage.
+#
+# ---------------------------------------------------------------- THE FINE PRINT
+# Two properties of GitHub's scheduler bound what this buys, and both are the
+# V5 blindness reappearing one level up. Recorded, not hidden:
+#
+#   1. GITHUB DISABLES SCHEDULED WORKFLOWS AFTER 60 DAYS of repository
+#      inactivity, and re-enabling is a manual act. A repo quiet enough to need
+#      a scheduled advisory check is exactly the repo that loses it. Mitigations,
+#      in order of reliability: the `workflow_dispatch` below (a human can always
+#      fire it), and `ci.yml`'s push-triggered lane (any push re-checks).
+#   2. `schedule:` fires only on the DEFAULT BRANCH, and cron on shared runners
+#      is best-effort — high-load periods delay or drop a tick. Treat this as a
+#      "roughly daily" oracle, never as a real-time one.
+#
+# The cron is deliberately off-hour and off-minute: 13:17 UTC = 09:17 US/Eastern
+# (08:17 during standard time), inside the owner's morning and away from the
+# top-of-hour surge when GitHub's queue is deepest and drops are likeliest.
+#
+# FIRST RUN. Banked at the T5 seal via `workflow_dispatch` (team lead) — a
+# scheduled trigger cannot fire until this file is on the default branch, so the
+# dispatch run-id is the row's evidence and the first cron tick follows it.
+# =============================================================================
+name: security-audit
+
+on:
+    schedule:
+        # daily, 13:17 UTC — off-hour, off-minute (see THE FINE PRINT above)
+        - cron: '17 13 * * *'
+    workflow_dispatch:
+
+# Least privilege: the job reads the tree and nothing else. It has no reason to
+# write, and a supply-chain lane is the wrong place to hold a writable token.
+permissions:
+    contents: read
+
+jobs:
+    # Mirrors ci.yml's Lane 11 exactly — same runner, same install path, same
+    # command, no `needs:`. ubuntu-latest ships cargo, so only the cargo-audit
+    # binary is installed (taiki-e's prebuilt cache, no compile). The lane does
+    # not build the workspace, so it carries no cargo target cache either.
+    cargo-audit:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install cargo-audit (prebuilt binary, taiki-e cache)
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: cargo-audit
+            - name: cargo audit (RustSec advisories over the committed Cargo.lock)
+              run: cargo audit

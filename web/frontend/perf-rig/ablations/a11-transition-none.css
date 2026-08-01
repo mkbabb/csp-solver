@@ -1,0 +1,7 @@
+/* A11 (lane addition) — every CSS transition off. useTheme runs vueuse's useDark with
+   `disableTransition: false`, so the class flip on <html> does not suppress transitions:
+   the 46 elements computing `transition: all` with a non-zero duration all tween their
+   colour channels across the swap, and 16 of them (`button.icon-btn`) carry a live
+   url(#grain-static) reference filter that re-rasters on WebKit's software path every
+   frame of that tween. This cell separates the tween from the filter. */
+* { transition: none !important; }

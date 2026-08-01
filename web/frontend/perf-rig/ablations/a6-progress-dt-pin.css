@@ -1,0 +1,8 @@
+/* A6 — the progress-trace and difficulty-tally pose stacks stop flipping on the beat.
+   A `:first-of-type` pin does NOT reach these: the poses are <g> siblings that follow other
+   <g> in the parent, so the pin blanked all four (verified, sd-a9). They are removed
+   outright instead — read this cell as the UPPER BOUND on what the surface costs, since it
+   also drops the trace's own paint. styleDump reports .dt-pose count 0 in this regime, so
+   the cell is progress-trace only. */
+.progress-pose { display: none !important; }
+.dt-pose { display: none !important; }

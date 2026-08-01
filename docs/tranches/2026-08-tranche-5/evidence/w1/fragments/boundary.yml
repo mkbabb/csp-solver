@@ -1,0 +1,133 @@
+# T5-W1 row 1.4 — CI JOB FRAGMENT: the cross-game boundary law, 20/20 ordered pairs.
+#
+# ============================ EXPECTED RED UNTIL W2.5 ============================
+# THIS JOB FAILS ON PURPOSE FROM THE MOMENT IT LANDS. It is red at HEAD because the
+# defect is live — 23 cross-game imports across thermo->sudoku (8), killer->sudoku (8)
+# and kenken->futoshiki (7) — and it stays red until W2's estate moves break them.
+# The green date is pinned, not aspirational:
+#
+#     docs/tranches/2026-08-tranche-5/gates.json  ->  gates.W1.boundary.greensAt = "W2.5"
+#
+# Do NOT neutralise it in the meantime. No `continue-on-error`, no `|| true`, no
+# `--max-warnings`: a gate that cannot fail is not a gate, and masking this one would
+# hand back exactly the enforcement hole it exists to expose (r1/gate-soundness.md V4).
+# If the red is intolerable on `push` before W2.5, narrow its TRIGGER (see the commented
+# `if:` below) — never its exit code.
+#
+# The born-RED bank, with all 23 violations enumerated, the generated 20/20 matrix, the
+# two canaries and the census reconciliation:
+#     docs/tranches/2026-08-tranche-5/evidence/w1/boundary-RED.txt
+# =================================================================================
+#
+# WHY ITS OWN JOB, not a step in `frontend`. `frontend` gates every push (vue-tsc,
+# eslint, knip, prettier, font-coverage, ink-pressure). Folding a knowingly-red step
+# into it would red all of those by association and make the wave unpushable, and the
+# first person to hit it would reach for `continue-on-error`. A standalone lane keeps
+# the red legible and attributable: exactly one job is red, its name says why.
+#
+# AT W2.5 this whole fragment retires. `eslint.boundary.config.js` folds into
+# `eslint.config.js` (the generated matrix subsumes `sudokuMayNotImportFutoshiki`,
+# `futoshikiMayNotImportSudoku` and `sharedMayNotImportGames`), the `lint:boundary`
+# script and this job are deleted, and `frontend`'s existing eslint step carries the
+# law from then on. Deleting this job is part of W2.5's definition of done.
+#
+# INTEGRATION (single integrator lane owns .github/workflows/ci.yml — this file is a
+# fragment, not a patch): paste the block below into `jobs:` in ci.yml, after
+# `frontend:` (ends at the `iai:` lane's predecessor; `frontend:` begins at ci.yml:486).
+# Indentation matches the file: job key at 4 spaces, its keys at 8.
+#
+# COST: Node-only, ~1 min. It downloads the `lean-wasm-pkg` artifact for the same
+# reason `frontend` does — `package.json` file:-links `@mkbabb/csp-solver-wasm` to
+# `csp-solver/wasm/pkg`, so `npm ci` cannot resolve without that directory on disk.
+# It does not build, and it does not need a Rust toolchain.
+
+    # ---------------------------------------------------------------- Lane 6b
+    # Cross-game boundary law — 20/20 ordered pairs, GENERATED (T5-W1 row 1.4).
+    #
+    # `eslint.config.js` hand-enumerates the matrix and therefore binds 2 of 20
+    # ordered pairs: sudoku<->futoshiki, the two families that predate the
+    # colocation edict. thermo, killer and kenken joined the estate at T4-W13
+    # without joining the law, and `src/games/shared/**` may import three of the
+    # five games freely. `eslint.boundary.config.js` derives the whole matrix from
+    # the game list on disk — a directory under src/games/ carrying `game.ts` — so
+    # a sixth family is bound the moment it lands, with no edit to any config.
+    #
+    # EXPECTED RED until W2.5 (gates.json gates.W1.boundary.greensAt). See the
+    # header of evidence/w1/fragments/boundary.yml before touching this job.
+    boundary:
+        name: boundary law (cross-game, 20/20 — EXPECTED RED until W2.5)
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        needs: [build-lean-wasm]
+        steps:
+            - uses: actions/checkout@v4
+            # `@mkbabb/csp-solver-wasm` is a file: link to the gitignored lean build
+            # output. eslint never reads it, but `npm ci` refuses to resolve the
+            # lockfile without the directory present — so download rather than build
+            # (the T4-W2 compute-cost DAG: this lane stays Node-only).
+            - name: Download the lean wasm pkg (the package.json file-link target)
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            # The generator must be able to FAIL before its red is worth anything.
+            # A config that silently discovers zero games would lint vacuously green —
+            # the incumbent's defect, one layer up — so it throws below two families.
+            # Proven here on a throwaway tree, then deleted, before the real run is
+            # trusted (the --self-test discipline check-ink-pressure.mjs established).
+            # Banked equivalent: evidence/w1/boundary-RED.txt §4 canary B.
+            - name: canary — the generator refuses to lint vacuously green
+              working-directory: web/frontend
+              run: |
+                  set -u
+                  CANARY=t5w1-boundary-canary
+                  rm -rf "$CANARY"
+                  mkdir -p "$CANARY/src/games/alpha"
+                  printf 'export const alphaGame = {}\n' > "$CANARY/src/games/alpha/game.ts"
+                  cp eslint.boundary.config.js "$CANARY/eslint.boundary.config.js"
+                  set +e
+                  ( cd "$CANARY" && npx eslint --no-config-lookup --config eslint.boundary.config.js src/games ) > canary.log 2>&1
+                  CODE=$?
+                  set -e
+                  rm -rf "$CANARY"
+                  cat canary.log
+                  if [ "$CODE" -eq 0 ]; then
+                    echo "::error::the boundary generator linted GREEN on a one-family tree — it cannot fail, so its green is worthless"
+                    rm -f canary.log
+                    exit 1
+                  fi
+                  if ! grep -q 'refusing to lint vacuously green' canary.log; then
+                    echo "::error::the one-family canary failed for the WRONG reason (expected the generator's own guard; see the log above)"
+                    rm -f canary.log
+                    exit 1
+                  fi
+                  rm -f canary.log
+                  echo "canary OK — the generator throws rather than green vacuously"
+            # THE GATE. Red until W2.5 breaks the 23 live cross-game imports.
+            - name: eslint (cross-game boundary law, generated matrix)
+              working-directory: web/frontend
+              run: npm run lint:boundary
+
+# ------------------------------------------------------------------------------
+# OPTIONAL, integrator's call — if a permanently-red required check blocks merges
+# before W2.5, scope the TRIGGER rather than the exit code. Add to the job above:
+#
+#         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
+#
+# The gate still fails; it simply fires on fewer events. `continue-on-error: true`
+# would instead make it report success while failing, which is the one outcome this
+# row exists to prevent.
+# ------------------------------------------------------------------------------

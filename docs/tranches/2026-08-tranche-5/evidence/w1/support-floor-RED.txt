@@ -1,0 +1,197 @@
+T5-W1 ROW 1.11 — SUPPORT FLOOR: THE BORN-RED RUN
+================================================
+
+HEAD          f38c5130c8d2e97a5291795133d340754eca99eb  (f38c5130, master)
+Run at        2026-08-01T20:40:05Z  · darwin 25.4.0 · node v26.0.0 · npm 11.12.1
+Gate          web/frontend/scripts/check-support-floor.mjs --self-test
+Sources       audit/registry.md:93,96 (C5) · r2/verify-masked-and-drift.md §3.1-3.3 (J3) · r1/dead-code-census.md §S8
+
+THE DEFECT IS LIVE, so the gate's FIRST recorded run is this one, against the
+untouched tree. Two of the five checks find real violations; three cannot even
+run, because the artifact they measure against does not exist. That absence IS
+C5: r2 could only call the shims PLAUSIBLY dead — "no declared floor exists to be
+below" — and a guard nobody can adjudicate never dies.
+
+--- 1 · THE GATE, VERBATIM ---------------------------------------------------
+
+check-support-floor — T5-W1 row 1.11 (C5 + J3)
+
+  src files scanned: 185
+  declared floor:    NONE
+
+RED    1 FLOOR DECLARED
+         NO SUPPORT FLOOR DECLARED — web/frontend/package.json has no `browserslist` key. Nothing in the tree states which engines this product runs on, so no guard, polyfill or shim in it can be adjudicated (audit C5; r2 verify-masked-and-drift §3.3).
+RED    2 FLOOR SUFFICIENT
+         skipped — no usable declaration to measure
+RED    3 TARGET COHERENT
+         skipped — no usable declaration to measure
+RED    4 SHIMS DEAD
+         web/frontend/src/games/shared/useCoarsePointer.ts:15 — `addEventListener?.(` guards an engine without EventTarget listeners. No engine at or above the declared floor is such an engine; the branch is unreachable and untestable. Drop the `?.`.
+         web/frontend/src/pencil/chrome/AttributionCard/useHoverCard.ts:13 — `addEventListener?.(` guards an engine without EventTarget listeners. No engine at or above the declared floor is such an engine; the branch is unreachable and untestable. Drop the `?.`.
+         4b skipped — no declared floor to measure sub-floor prose against
+RED    5 README CITES
+         skipped — no usable declaration to measure
+
+self-test — every check against a known-bad input:
+  SKIPPED — the self-test mutates a valid declaration, and there is none to mutate.
+  (This is the born-RED state: the gate's own canary cannot run until the floor exists.)
+
+FAIL — 7 violation(s), 0 blind check(s)
+exit=1
+
+--- 2 · THE ABSENCE, RE-DERIVED BY HAND ------------------------------------
+
+$ grep -c browserslist web/frontend/package.json
+0
+$ ls web/frontend/.browserslistrc web/frontend/browserslist 2>&1
+ls: web/frontend/.browserslistrc: No such file or directory
+ls: web/frontend/browserslist: No such file or directory
+$ git grep -lI browserslist -- ':!docs' ':!*.lock' ':!package-lock.json' | head
+
+The only compiled floor on the tree is vite's, and it is a JS-syntax floor, not a
+support policy:
+$ grep -n "target: 'es" web/frontend/vite.config.ts
+257:    target: 'es2020',
+$ grep -n '"target"' web/frontend/tsconfig.json
+3:    "target": "ES2020",
+
+--- 3 · THE TWO SHIMS, AT HEAD --------------------------------------------
+
+$ grep -rn 'addEventListener?\.(' web/frontend/src
+web/frontend/src/games/shared/useCoarsePointer.ts:15:    mq.addEventListener?.("change", (e) => {
+web/frontend/src/pencil/chrome/AttributionCard/useHoverCard.ts:13:  mq.addEventListener?.("change", (e) => {
+
+$ grep -rnoE '(Safari|iOS|Chrome|Firefox|Edge)[[:space:]]*<[[:space:]]*[0-9]+(\.[0-9]+)?' web/frontend/src
+web/frontend/src/games/shared/useCoarsePointer.ts:13:Safari <14
+web/frontend/src/pencil/chrome/AttributionCard/useHoverCard.ts:8:Safari <14
+
+Exactly two of each, and they are the same two sites. Full context:
+
+web/frontend/src/games/shared/useCoarsePointer.ts:8-20
+     1	export function mediaRef(query: string, initial = false): Ref<boolean> {
+     2	  const r = ref(initial);
+     3	  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+     4	    const mq = window.matchMedia(query);
+     5	    r.value = mq.matches;
+     6	    // Safari <14 lacks addEventListener on MQL; the value is then load-time static,
+     7	    // which is correct for every real device (a pointer class doesn't hot-swap).
+     8	    mq.addEventListener?.("change", (e) => {
+     9	      r.value = e.matches;
+    10	    });
+    11	  }
+    12	  return r;
+    13	}
+
+web/frontend/src/pencil/chrome/AttributionCard/useHoverCard.ts:3-16
+     1	// Coarse-pointer probe, pencil-local by necessity: this composable lives in the pencil layer,
+     2	// which the boundary lint (eslint.config.js `pencilMayNotImportGames`) forbids from importing
+     3	// games/shared's `useCoarsePointer`. One module-level MediaQueryList, shared by every hover-card
+     4	// instance — the exact idiom of that composable, kept self-contained here so pencil stays
+     5	// game-agnostic. A pointer class never hot-swaps on a real device, so a load-time-static value
+     6	// (Safari <14, no MQL addEventListener) is correct.
+     7	const coarse = ref(false);
+     8	if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+     9	  const mq = window.matchMedia("(pointer: coarse)");
+    10	  coarse.value = mq.matches;
+    11	  mq.addEventListener?.("change", (e) => {
+    12	    coarse.value = e.matches;
+    13	  });
+    14	}
+
+--- 4 · WHAT THE FLOOR ACTUALLY IS (derived, not chosen) --------------------
+
+The row says "derive from what the estate already requires". Four independent
+constraints were measured off the tree; the floor is their maximum per engine.
+
+(a) THE CSS THE BUILD EMITS — BINDING.
+    Tailwind v4 compiles every stylesheet through its bundled Lightning CSS
+    against targets HARD-CODED in @tailwindcss/node. Nothing configures them and
+    nothing (browserslist included) overrides them, so they are the true floor of
+    the shipped stylesheet:
+
+    $ grep -o "targets:{[^}]*}" node_modules/@tailwindcss/node/dist/index.js
+targets:{safari:16<<16|1024,ios_saf:16<<16|1024,firefox:8388608,chrome:7274496}
+
+    Lightning CSS packs a version as major<<16 | minor<<8 | patch:
+      safari   16<<16|1024    =   1049600 -> 16.4.0
+      ios_saf  16<<16|1024    =   1049600 -> 16.4.0
+      firefox  8388608        =   8388608 -> 128.0.0
+      chrome   7274496        =   7274496 -> 111.0.0
+
+    -> chrome 111 · firefox 128 · safari 16.4 · ios_saf 16.4.
+    Corroborated in the emitted CSS itself, which carries the features those
+    numbers exist for (counts off web/frontend/dist/assets/*.css at this HEAD):
+      @property        42 occurrences
+      color-mix(       70 occurrences
+      :has(             8 occurrences
+      dvh               8 occurrences
+    @property is Chrome 85 / Safari 16.4 / Firefox 128; color-mix() is Chrome 111 /
+    Safari 16.2 / Firefox 113. Their per-engine maxima ARE the Lightning targets.
+
+(b) THE WASM — BELOW THE CSS FLOOR, SO NOT BINDING.
+    The lean cdylib's own sections were walked (scratch parser, sections + type
+    section decoded structurally — no opcode guessing):
+
+    $ node wasmfeat.mjs csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+      file: csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm bytes: 122385
+      sections: 1:314 2:508 3:398 4:9 5:3 6:25 7:2449 9:201 12:1 10:103363 11:14811 0:112 0:148
+      {
+        "multivalue": 10,
+        "bulkMemory": 50,
+        "nontrapFptoint": 55,
+        "signExt": 1296,
+        "refTypes": 40,
+        "simd": 8,
+        "tailcall": 253,
+        "extendedConst": 0
+      }
+
+    Two of those readings are structural, not heuristic:
+      · a DataCount section (id 12) is present at all — emitted only for
+        bulk-memory (memory.init / data.drop). Safari 15, Chrome 75, Firefox 79.
+      · the Type section carries 10 func types with >1 result — multi-value.
+        Safari 15, Chrome 85, Firefox 78.
+    (The opcode tallies are a raw byte scan and count immediates too; they are
+    reported for completeness and NOT relied on. sha256 of the artifact read:
+     cdabecfb240b63ea984f152956d12d2c98e0df8f92d46f6cc788b4de5297f9b2)
+    Safari 15 < Safari 16.4. The wasm does not move the floor.
+
+(c) UNGUARDED RUNTIME JS — BELOW THE CSS FLOOR, SO NOT BINDING.
+    $ grep -rn 'structuredClone' web/frontend/src
+      web/frontend/src/pencil/config/pencilConfig.ts:367:  structuredClone(DEFAULT_PRESETS) as Record<string, FilterPreset>,
+      web/frontend/src/pencil/config/pencilConfig.ts:372:  if (defaults) Object.assign(FILTER_PRESETS[id], structuredClone(defaults));
+    Module-scope, unguarded, on the config hub's import path: Safari 15.4,
+    Chrome 98, Firefox 94. Below 16.4/111/128.
+
+    The higher-looking APIs in the bundle were checked and are NOT floor drivers,
+    each for a reason read at the site:
+      · requestIdleCallback  — feature-detected with an rAF fallback
+                              (GameBoard.vue:150, SudokuGame.vue:86, FutoshikiGame.vue:49)
+      · OffscreenCanvas      — feature-detected, <canvas>.toBlob fallback (rasterPose.ts:90)
+      · scrollend            — progressive: a scroll+90ms-debounce path reports the
+                              same snap (useCarouselGlide.ts:258-266)
+      · toSorted/toReversed  — vue-vendor only, Vue's reactive-array instrumentation
+                              forwarding to the native method; zero call sites in src
+      · content-visibility   — one occurrence, inside a transition-property list
+
+(d) THE COMPILED JS TARGET — HEADROOM, NOT A FLOOR.
+    vite build.target 'es2020' emits syntax parsed since Safari 13.1 / Chrome 80 /
+    Firefox 74. That sits BELOW the policy floor, which is the safe direction: the
+    bundle parses everywhere the product is promised. Check 3 asserts exactly that
+    subset relation and would red if the target ever outran the declaration.
+
+    DERIVED FLOOR = max over (a)(b)(c) =
+        chrome >= 111 · edge >= 111 · firefox >= 128 · safari >= 16.4 · ios_saf >= 16.4
+    Safari 16.4 shipped 2023-03-27. The two shims defend Safari <14 (2020-09-16).
+    Against the derived floor they are not "plausibly" dead — they are dead by
+    two and a half years and four Safari majors.
+
+--- 5 · WHAT TURNS THIS GREEN --------------------------------------------
+
+  1. browserslist lands in web/frontend/package.json carrying the derived floor.
+  2. Both shims die in one diff (the ?. and the prose that justified it).
+  3. README states the floor in one sentence.
+  4. This same command re-runs, all five checks green, and the self-test — which
+     could not even execute here for want of a declaration to mutate — runs its
+     seven mutants and proves every check still bites.
+  Banked at: docs/tranches/2026-08-tranche-5/evidence/w1/support-floor-GREEN.txt

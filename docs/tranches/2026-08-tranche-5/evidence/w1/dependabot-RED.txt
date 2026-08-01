@@ -1,0 +1,17 @@
+# T5-W1 row 1.8 — BORN-RED bank (Dependabot open alerts at HEAD)
+# Date: 2026-08-01T20:50:32Z   HEAD: f38c5130c8d2e97a5291795133d340754eca99eb
+# Gate: zero-open. RED == count > 0.
+# ---------------------------------------------------------------
+
+$ gh api repos/mkbabb/csp-solver/dependabot/alerts --jq '[.[] | select(.state == "open")] | length'
+2
+
+# --- open alerts, detail ---
+#69  HIGH  postcss@<= 8.5.17  scope=runtime  manifest=web/frontend/package-lock.json  patched=8.5.18  GHSA-r28c-9q8g-f849
+#68  HIGH  sharp@< 0.35.0  scope=development  manifest=web/frontend/package-lock.json  patched=0.35.0  GHSA-f88m-g3jw-g9cj
+
+# --- state census (all alerts) ---
+   2 auto_dismissed
+   9 dismissed
+  49 fixed
+   2 open

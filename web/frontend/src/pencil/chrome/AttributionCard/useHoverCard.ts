@@ -4,13 +4,13 @@ import { ref } from "vue";
 // which the boundary lint (eslint.config.js `pencilMayNotImportGames`) forbids from importing
 // games/shared's `useCoarsePointer`. One module-level MediaQueryList, shared by every hover-card
 // instance — the exact idiom of that composable, kept self-contained here so pencil stays
-// game-agnostic. A pointer class never hot-swaps on a real device, so a load-time-static value
-// (Safari <14, no MQL addEventListener) is correct.
+// game-agnostic. The `matchMedia` guard is for the no-DOM case (SSR, jsdom), not for any
+// browser: every engine at the declared support floor carries MQL and its listeners.
 const coarse = ref(false);
 if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
   const mq = window.matchMedia("(pointer: coarse)");
   coarse.value = mq.matches;
-  mq.addEventListener?.("change", (e) => {
+  mq.addEventListener("change", (e) => {
     coarse.value = e.matches;
   });
 }

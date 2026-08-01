@@ -1,0 +1,57 @@
+# T5-W1 row 1.11 (audit C5 + J3) — CI fragment: the support-floor gate.
+#
+# FOR THE INTEGRATOR LANE (this wave's sole owner of .github/workflows/ci.yml).
+#
+# WHERE: inside the existing `frontend:` job, in `steps:`, immediately AFTER
+#            - name: ink pressure (graphite ladder + ramp ownership, self-tested)
+#              working-directory: web/frontend
+#              run: npm run lint:ink
+#        i.e. as the LAST step of that job (ci.yml:479-563 at f38c5130 — the frontend
+#        lane as it stands at the W0 seal; the ink-pressure step closes it today).
+#
+# WHY THERE. The frontend lane is already the home of every static, zero-dependency,
+# browser-free gate: font-coverage, ink-pressure, knip, prettier, eslint. This one is
+# the same species — it reads five files off the tree and exits. It needs the job's
+# `npm ci` (check 2 reads @tailwindcss/node out of node_modules, and REFUSES to pass
+# when that input is missing rather than degrading to a green), needs no dist, no
+# browser, no artifact beyond the one this lane already downloads, and adds no `needs:`,
+# no service, no cache key. It runs in well under a second.
+#
+# It goes LAST rather than beside font-coverage for one reason: it is the only gate in
+# the lane that asserts across the repo boundary (it reads the root README), so putting
+# it after everything frontend-local keeps the failure ordering legible — a floor red
+# never masks a lint red.
+#
+# WHAT IT GATES (web/frontend/scripts/check-support-floor.mjs, five checks + the canary):
+#   1 FLOOR DECLARED   `browserslist` in web/frontend/package.json — one `<engine> >= <v>`
+#                      per engine, for all five of chrome/edge/firefox/safari/ios_saf.
+#   2 FLOOR SUFFICIENT the declaration measured against the Lightning CSS targets that
+#                      Tailwind v4 hard-codes in @tailwindcss/node (chrome 111 · firefox
+#                      128 · safari 16.4 · ios_saf 16.4 at the pinned version). Read live,
+#                      never pinned — a Tailwind bump that raises the CSS baseline reds
+#                      the declaration instead of silently outrunning it.
+#   3 TARGET COHERENT  vite `build.target`'s ES year must be parseable AT the declared
+#                      floor. The compiled JS floor may sit under the promise (es2020 is
+#                      headroom today); it may never sit over it.
+#   4 SHIMS DEAD       zero `addEventListener?.(` / `removeEventListener?.(` in src, and
+#                      zero `Engine <N` comments naming a version at or below the floor.
+#                      This is J3's residue: two such guards lived at HEAD, defending
+#                      Safari <14 against a floor of Safari 16.4.
+#   5 README CITES     the root README states the same five versions the declaration
+#                      carries — compared to the declaration, not to a literal.
+# `--self-test` (carried by the npm script) re-runs all five against known-bad inputs —
+# seven mutants — and fails if any check stays green. The gate proves it can bite on
+# every run, not once at authoring time.
+#
+# EXIT CODE is the whole contract: 0 green, 1 with every violation printed. No
+# `continue-on-error`, no `|| true` — this job has none anywhere and this step must not
+# introduce the first.
+#
+# BORN-RED PROVENANCE: evidence/w1/support-floor-RED.txt is this gate's first recorded
+# run, against the untouched tree (7 violations, exit 1 — and its self-test could not
+# even execute, for want of a declaration to mutate). evidence/w1/support-floor-GREEN.txt
+# is the same command after the cure: five green, seven mutants biting, exit 0.
+
+- name: 'support floor (browserslist vs the compiled targets; no sub-floor shims, self-tested)'
+  working-directory: web/frontend
+  run: npm run test:support-floor

@@ -1,0 +1,143 @@
+T5-W1 ROW 1.2 — BORN-RED CANARY for web/frontend/perf-rig/ci-subset.mjs
+================================================================================
+
+The defect this gate cures is an ABSENCE: `patches/p1-safari-ios-performance/gates.json`
+has been a committed threshold file with no executor since the P1 seal (audit A2 CONFIRMED;
+r1/perf-disposition.md §3.2 — "a regression to 79 fps idle would pass every CI lane").
+Born-RED law for an absence defect: bank a canary run proving the gate CAN fail.
+
+Both assertions are proved able to fire, on both engines — four engine x gate cells.
+
+  ARM A  --idle-fps-min 200   impossible fps floor   -> GATE B fires, both engines
+  ARM B  --max-long33 -1      impossible long-frame  -> GATE A fires, both engines
+
+Neither arm touches the app, the dist, or gates.json on disk. The override enters at the
+command line and is echoed in the run header next to the committed value it displaces, so
+a canary output can never be mistaken for a real verdict.
+
+CONTROL VALIDITY is deliberately judged against the COMMITTED gates.json value, never the
+override — whether the harness is fit to measure is a fact about the harness, and a canary
+must not be able to switch the fitness check off. Both arms below carry a clean control
+(long33 0 on every control window, both engines), so both are admissible runs.
+
+Instrument: ci-subset.mjs, interleaved design (control-1, window-1, control-2, window-2, ...).
+Dist under test: assets/index-Dm02QDxyy-Zi.js, built at HEAD f38c5130.
+Exit code both arms: 1 (threshold breach). Run on darwin, port 4390, killed after.
+
+================================================================================
+ARM A — `node perf-rig/ci-subset.mjs --port 4390 --runs 3 --idle-fps-min 200`   EXIT 1
+================================================================================
+
+# perf-rig CI subset — idle fps + long-frame census on the built dist
+
+gates.json        /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+  desktop.ceilingFps         98.4
+  desktop.idle3s.minFps      97
+  desktop.idle3s.maxLong33   0
+  !! CANARY OVERRIDE  --idle-fps-min 200  (gates.json says 97)
+derived ratio     minFps/ceilingFps = 200/98.4 = 2.03252
+engines           chromium, webkit   windows/engine 3   port 4390
+
+dist              /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/dist
+entry             assets/index-Dm02QDxyy-Zi.js
+host              18 cpus, load 8.24 / 17.47 / 17.67 (1/5/15m) at start
+started           2026-08-01T19:33:20.909Z
+
+probe-server up on :4390
+
+## chromium
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36
+  control 1  fps 133.26  p50 7.7  p95 9.5  long33 0  long50 0  worst 14.6ms  ~130Hz
+  window 1   fps 132.49  p50 7.8  p95 9.4  long33 0  long50 0  worst 10.5ms  frames 398  wall 3004ms  attempt 1
+  control 2  fps 133.34  p50 7.8  p95 9.2  long33 0  long50 0  worst 10.3ms  ~128Hz
+  window 2   fps 132.99  p50 7.8  p95 9.3  long33 0  long50 0  worst 10.4ms  frames 399  wall 3000.3ms  attempt 1
+  control 3  fps 133.14  p50 7.7  p95 9.6  long33 0  long50 0  worst 11.8ms  ~130Hz
+  window 3   fps 133.55  p50 7.7  p95 9.6  long33 0  long50 0  worst 10.7ms  frames 401  wall 3002.7ms  attempt 1
+  control median 133.26 fps / long33 0
+
+## webkit
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15
+  control 1  fps 98.2  p50 10  p95 12  long33 0  long50 0  worst 13ms  ~100Hz
+  window 1   fps 98.37  p50 10  p95 12  long33 0  long50 0  worst 13ms  frames 296  wall 3009ms  attempt 1
+  control 2  fps 98.14  p50 10  p95 12  long33 0  long50 0  worst 14ms  ~100Hz
+  window 2   fps 98.63  p50 10  p95 12  long33 0  long50 0  worst 13ms  frames 296  wall 3001ms  attempt 1
+  control 3  fps 98.14  p50 10  p95 12  long33 0  long50 0  worst 13ms  ~100Hz
+  window 3   fps 98.3  p50 10  p95 12  long33 0  long50 0  worst 13ms  frames 295  wall 3001ms  attempt 1
+  control median 98.14 fps / long33 0
+
+## verdict
+
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| chromium | 133.26 | 0 | 132.99 | 270.85 | **FAIL** | 0 | 0 | PASS |
+| webkit | 98.14 | 0 | 98.37 | 199.47 | **FAIL** | 0 | 0 | PASS |
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+  chromium: 132.99 fps vs 200 — the anchor assumes a 98.4 fps ceiling; this harness measured 133.26. Absolute comparison is a category error and is reported only for the record.
+  webkit: 98.37 fps vs 200 — the anchor assumes a 98.4 fps ceiling; this harness measured 98.14. Absolute comparison is a category error and is reported only for the record.
+
+BREACH [chromium] idle fps: measured 132.99 < required 270.85 (203.252% of the 133.26 fps harness ceiling, derived from gates.json 200/98.4)
+BREACH [webkit] idle fps: measured 98.37 < required 199.47 (203.252% of the 98.14 fps harness ceiling, derived from gates.json 200/98.4)
+
+host at finish    load 4.48 / 14.87 / 16.69 (1/5/15m) · 2026-08-01T19:34:17.653Z
+
+RESULT: RED — at least one gates.json threshold breached.
+
+================================================================================
+ARM B — `node perf-rig/ci-subset.mjs --port 4390 --runs 3 --max-long33 -1`      EXIT 1
+================================================================================
+
+# perf-rig CI subset — idle fps + long-frame census on the built dist
+
+gates.json        /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+  desktop.ceilingFps         98.4
+  desktop.idle3s.minFps      97
+  desktop.idle3s.maxLong33   0
+  !! CANARY OVERRIDE  --max-long33 -1  (gates.json says 0)
+derived ratio     minFps/ceilingFps = 97/98.4 = 0.98577
+engines           chromium, webkit   windows/engine 3   port 4390
+
+dist              /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/dist
+entry             assets/index-Dm02QDxyy-Zi.js
+host              18 cpus, load 4.48 / 14.87 / 16.69 (1/5/15m) at start
+started           2026-08-01T19:34:17.724Z
+
+probe-server up on :4390
+
+## chromium
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36
+  control 1  fps 131.79  p50 7.8  p95 9.3  long33 0  long50 0  worst 10.2ms  ~128Hz
+  window 1   fps 132.29  p50 7.8  p95 9.7  long33 0  long50 0  worst 12.1ms  frames 397  wall 3001ms  attempt 1
+  control 2  fps 132.65  p50 7.8  p95 9.4  long33 0  long50 0  worst 10.7ms  ~128Hz
+  window 2   fps 133.44  p50 7.7  p95 9.2  long33 0  long50 0  worst 10.2ms  frames 401  wall 3005.2ms  attempt 1
+  control 3  fps 132.31  p50 7.8  p95 9.2  long33 0  long50 0  worst 10.7ms  ~128Hz
+  window 3   fps 133.78  p50 7.7  p95 9.2  long33 0  long50 0  worst 10.2ms  frames 402  wall 3004.9ms  attempt 1
+  control median 132.31 fps / long33 0
+
+## webkit
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15
+  control 1  fps 97.93  p50 10  p95 12  long33 0  long50 0  worst 13ms  ~100Hz
+  window 1   fps 98.54  p50 10  p95 12  long33 0  long50 0  worst 12ms  frames 296  wall 3004ms  attempt 1
+  control 2  fps 98.1  p50 10  p95 12  long33 0  long50 0  worst 12ms  ~100Hz
+  window 2   fps 98.27  p50 10  p95 12  long33 0  long50 0  worst 13ms  frames 295  wall 3002ms  attempt 1
+  control 3  fps 98.07  p50 10  p95 12  long33 0  long50 0  worst 12ms  ~100Hz
+  window 3   fps 98.3  p50 10  p95 12  long33 0  long50 0  worst 13ms  frames 295  wall 3001ms  attempt 1
+  control median 98.07 fps / long33 0
+
+## verdict
+
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| chromium | 132.31 | 0 | 133.44 | 130.43 | PASS | 0 | -1 | **FAIL** |
+| webkit | 98.07 | 0 | 98.3 | 96.67 | PASS | 0 | -1 | **FAIL** |
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+  chromium: 133.44 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 132.31. Absolute comparison is a category error and is reported only for the record.
+  webkit: 98.3 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 98.07. Absolute comparison is a category error and is reported only for the record.
+
+BREACH [chromium] long-frame census: measured 0 frames >33.4ms > allowed -1 (gates.json desktop.idle3s.maxLong33)
+BREACH [webkit] long-frame census: measured 0 frames >33.4ms > allowed -1 (gates.json desktop.idle3s.maxLong33)
+
+host at finish    load 2.99 / 12.70 / 15.76 (1/5/15m) · 2026-08-01T19:35:14.375Z
+
+RESULT: RED — at least one gates.json threshold breached.

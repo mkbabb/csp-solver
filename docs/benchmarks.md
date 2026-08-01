@@ -83,7 +83,9 @@ cargo bench -p csp-solver --bench queens -- --test
 # Deterministic instruction-count baseline (Linux/CI only; Valgrind can't run on
 # arm64-macOS). The `iai` CI lane (.github/workflows/ci.yml) runs this under
 # callgrind; instruction counts are a pure function of the compiled binary, so the
-# delta is exactly 0 on an unchanged binary (P6: 1,585,722 across 3 runners).
+# delta is exactly 0 run-to-run on an unchanged binary. The lane grades the measured
+# count against the committed golden csp-solver/benches/iai_queens.baseline —
+# 1,529,452 instructions, +/-2% — and reds on a speedup as loudly as on a regression.
 cargo bench -p csp-solver --bench iai_queens   # needs valgrind + iai-callgrind-runner
 
 # Wall-clock Sudoku timing + backtrack/propagation counts

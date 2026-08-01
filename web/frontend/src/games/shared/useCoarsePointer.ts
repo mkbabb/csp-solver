@@ -10,9 +10,7 @@ export function mediaRef(query: string, initial = false): Ref<boolean> {
   if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
     const mq = window.matchMedia(query);
     r.value = mq.matches;
-    // Safari <14 lacks addEventListener on MQL; the value is then load-time static,
-    // which is correct for every real device (a pointer class doesn't hot-swap).
-    mq.addEventListener?.("change", (e) => {
+    mq.addEventListener("change", (e) => {
       r.value = e.matches;
     });
   }

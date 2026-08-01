@@ -1,0 +1,35 @@
+# T5-W1.1 — fragments/fe-unit.yml verification
+# HEAD f38c5130   date 2026-08-01T19:27:27Z
+# pyyaml 6.0.3
+
+1. standalone parse
+   keys: ['fe-unit']
+   fe-unit keys: ['runs-on', 'timeout-minutes', 'needs', 'steps']
+   needs=['build-lean-wasm']  runs-on=ubuntu-latest  timeout-minutes=15
+   steps: 9
+     · actions/checkout@v4
+     · Download the lean wasm pkg (the package.json file-link target)
+     · Set up Node (LTS) with npm cache
+     · Pin npm >=11   ->  npm install -g npm@^11
+     · npm ci   ->  npm ci
+     · unit count gate self-test (every check shown able to fail)   ->  node scripts/check-unit-count.mjs --self-test
+     · vitest run (FE unit estate)   ->  npm run test:unit:report
+     · unit count floor (>=300 executed)   ->  npm run test:unit:count
+     · Upload the vitest JSON report (failure only)
+
+2. ci.yml at HEAD
+   jobs: ['lint', 'rust', 'py-compile', 'py-runtime', 'wasm', 'build-lean-wasm', 'twiggy', 'frontend', 'e2e', 'iai', 'cargo-audit']
+   fe-unit absent (A1: the unit estate runs in NO lane)
+
+3. merge parse (fragment indented by 4, appended to jobs:)
+   jobs after merge: ['lint', 'rust', 'py-compile', 'py-runtime', 'wasm', 'build-lean-wasm', 'twiggy', 'frontend', 'e2e', 'iai', 'cargo-audit', 'fe-unit']
+   fe-unit identical to the standalone parse: True
+   needs: target build-lean-wasm present: True
+   pre-existing jobs preserved: True  (11 -> 12)
+
+4. floor/job-name agreement with gates.json W1.unitLane
+   gates.json: job='fe-unit' floor=300 canary='deliberate-red-on-branch'
+   check-unit-count.mjs FLOOR = 300
+   job name + floor agree: True
+
+ALL FRAGMENT CHECKS PASS

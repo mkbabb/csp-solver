@@ -1,0 +1,33 @@
+# FOLD VERIFICATION — one vitest invocation serves BOTH W1.1's count floor and W1.14's coverage floor
+# (the fragment's recommended wiring: fe-unit's existing step gains --coverage)
+
+$ rm -rf coverage vitest-report.json
+$ npm run test:unit:report -- --coverage
+  … this run landed on the n=10 sample MINIMUM for lines (1864/5355 = 34.80%), so it is
+  the tightest possible check that the min-rule floor does not flake:
+    statements  2126/6068
+    branches    1087/3468
+    functions   419/1544
+    lines       1864/5355
+   vitest-report.json: numTotalTests 332 success true
+
+$ node scripts/check-coverage-floor.mjs --self-test   # the floor gate, same run
+  ok   summary.total is not trusted
+[coverage-floor] self-test 6/6 — the gate can fail on a known-bad input.
+scope               | files |    stmts |   branch |    funcs |    lines
+-----------------------------------------------------------------------
+src/games/sudoku    |    14 |   53.04% |   55.39% |   36.06% |   50.57%
+src/games/futoshiki |    14 |   38.00% |   47.33% |   20.74% |   35.46%
+src/games/thermo    |    12 |   18.43% |    4.57% |   12.37% |   18.22%
+src/games/killer    |    12 |   30.57% |   14.20% |   18.75% |   30.19%
+src/games/kenken    |    13 |   34.06% |   16.36% |   19.14% |   33.59%
+src/games/shared    |    37 |   53.14% |   45.57% |   47.74% |   53.32%
+src/games           |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/pencil          |    47 |   14.61% |   15.16% |   10.02% |   15.51%
+src/composables     |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/lib             |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/App.vue         |     1 |    0.00% |    0.00% |    0.00% |    0.00%
+TOTAL               |   153 |   35.03% |   31.34% |   27.13% |   34.80%
+
+[coverage-floor] GREEN — 12 scopes at or above the W1.14 baseline (bank: f38c5130, 2026-08-01).
+EXIT=0

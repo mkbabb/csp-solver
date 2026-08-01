@@ -38,23 +38,40 @@ export default defineConfig({
   // entire time (T4-P1 KENKEN-REACHABILITY — 8 of its 17 went red the first hour webkit ran).
   // Only the built-dist config named webkit, and only for the baked-bitmap specs.
   //
-  // SCOPE, MEASURED not assumed. The whole suite was run in webkit before this scope was
-  // written: 114 of 115 pass in 34.7 s (chromium 115/115 in ~20 s), so the second engine is
-  // affordable at full width and it runs at full width. Two files are held out, each for a
-  // reason that is not the app's:
-  //  · `mobile-*.spec.ts` pin `browserName: chromium` at FILE scope (the iPhone/iPad
-  //    descriptors default to webkit, which the historical chromium-only lane did not
-  //    install) — under a webkit project they would re-run as exact chromium duplicates.
-  //  · `share-truth.spec.ts` needs `grantPermissions(['clipboard-read','clipboard-write'])`,
-  //    and Playwright's WebKit has no such permission ("Unknown permission: clipboard-write").
-  //    A Playwright API gap, not a product row: the spec asserts a REAL clipboard write and
-  //    there is no honest way to grant one there.
+  // SCOPE, MEASURED not assumed. T4-P1 ran the whole suite in webkit before this scope was
+  // written: 114 of 115 passed in 34.7 s (chromium 115/115 in ~20 s), so the second engine is
+  // affordable at full width and it runs at full width.
+  //
+  // T5-W1 1.10 / CH-56 — the last engine residue closes here. `mobile-*.spec.ts` were held out
+  // of webkit for an INFRASTRUCTURE reason that has since expired: the iPhone/iPad descriptors
+  // default to webkit, the then chromium-only CI lane installed no webkit, so both files pinned
+  // `browserName: chromium` at FILE scope — under a webkit project they would have re-run as
+  // exact chromium duplicates. CI installs webkit now (`ci.yml`: `npx playwright install
+  // --with-deps chromium webkit`), the file-scope pins are gone, and 19 mobile tests run in both
+  // engines instead of one. Playwright's WebKit honours every mobile-emulation affordance those
+  // specs reach — isMobile, hasTouch, deviceScaleFactor, the descriptor viewport,
+  // `(pointer: coarse)` / `(hover: none)`, `tap()`, `addInitScript`, and a redefinable
+  // `window.visualViewport` — all measured, not assumed (evidence/w1/pw-residue.txt §1-§2).
+  // What it does NOT honour is recorded there with the same API cites, and neither limit is
+  // reached by these files: `page.mouse.wheel` throws "Mouse wheel is not supported in mobile
+  // WebKit" (no mobile spec wheels), and `navigator.maxTouchPoints` reads 0 under emulation
+  // where Chromium reports 1 (no spec reads it). Two computed-style reads DID diverge and are
+  // now engine-honest at their assertion sites, cited there.
+  //
+  // ONE file stays held out of webkit, and it is an API gap rather than a scope choice:
   projects: [
     { name: "chromium", use: { browserName: "chromium" } },
     {
       name: "webkit",
       use: { browserName: "webkit" },
-      testIgnore: [...OTHER_CONFIGS, /mobile-.*\.spec\.ts$/, /share-truth\.spec\.ts$/],
+      // share-truth.spec.ts:65 needs `grantPermissions(['clipboard-read','clipboard-write'])`
+      // and Playwright's WebKit has no such permission: `browserContext.grantPermissions:
+      // Unknown permission: clipboard-write` (re-measured at @playwright/test 1.61.1 —
+      // evidence/w1/pw-residue.txt §1). A Playwright API gap, not a product row: the spec
+      // asserts a REAL clipboard write (`navigator.clipboard.readText()`, :76) and there is no
+      // honest way to grant one there. Re-audition it whenever PW-WebKit gains the permission.
+      // scripts/check-pw-projects.mjs pins this hold-out as the ONLY one so it cannot grow.
+      testIgnore: [...OTHER_CONFIGS, /share-truth\.spec\.ts$/],
     },
   ],
   // Assert-the-SPA before any spec runs (R-11b/K46): fail loudly if baseURL is

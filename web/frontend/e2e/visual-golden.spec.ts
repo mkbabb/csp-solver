@@ -49,6 +49,18 @@ const FLOOR = { maxDiffPixelRatio: 0.02 } as const;
 // low-contrast feTurbulence grain shifts stay under the per-pixel `threshold`).
 const SOUL_FLOOR = { maxDiffPixelRatio: 0.017 } as const;
 
+// ── MAGNITUDE REPORT (T5-W1.13) ─────────────────────────────────────
+// The blind band: darwin soul floor 0.017 · every drift the campaign has ever measured
+// 0.03 · linux clause floor 0.05 (r3/goldens-estate §5.2 H3). On the ubuntu-only lane the
+// two clause-relaxed goldens are green for anything under 0.05 and print NOTHING when
+// green — Playwright emits the ratio only on failure — so a real 0.03 drift is invisible
+// on the only platform CI runs. The cure is VISIBILITY, not a floor change and not a new
+// baseline family: GOLDEN_MAGNITUDE=1 asserts the two at ratio 0 so every capture reports
+// its measured ratio. It only ever TIGHTENS — report mode cannot manufacture a green — and
+// the floors CI enforces are untouched below. Driver: scripts/golden-magnitude.mjs.
+const REPORT_MAGNITUDE = process.env.GOLDEN_MAGNITUDE === '1';
+const MAGNITUDE_FLOOR = { maxDiffPixelRatio: 0 } as const;
+
 // ── Pinned board (deterministic board-region goldens) ───────────────
 // Byte-identical to the composables' encodeBoard (see permalink.spec.ts): base64url
 // of `${size}.${base36 cells}`. size=3 → 9×9 (81 cells). A fixed given set in the
@@ -175,8 +187,11 @@ async function center(el: Locator, w: number, h: number) {
 // is the flaky-gate class W2 prunes; 0.05 keeps the linux tripwire (a real regression —
 // theme inversion, glyph loss, pose-set drift — moves far past it) while darwin, where
 // the bake converges, keeps the soul bite.
-const LOGO_FLOOR =
-  process.platform === 'linux' ? ({ maxDiffPixelRatio: 0.05 } as const) : SOUL_FLOOR;
+const LOGO_FLOOR = REPORT_MAGNITUDE
+  ? MAGNITUDE_FLOOR
+  : process.platform === 'linux'
+    ? ({ maxDiffPixelRatio: 0.05 } as const)
+    : SOUL_FLOOR;
 test('golden · logo wordmark (light) — W13 soul: baked logo pose stack', async ({ page }) => {
   await loadSettled(page);
   await expect(page.locator('svg.handwritten-logo')).toHaveScreenshot('logo-light.png', LOGO_FLOOR);
@@ -198,8 +213,11 @@ test('golden · logo wordmark (light) — W13 soul: baked logo pose stack', asyn
 // the same SHA), so its convergence is marginal, not absolute: the same sun-crest
 // clause as LOGO_FLOOR applies. 0.05 keeps the linux tripwire (theme inversion, glyph
 // loss, pose drift all move far past it); darwin keeps the soul bite.
-const CREST_FLOOR =
-  process.platform === 'linux' ? ({ maxDiffPixelRatio: 0.05 } as const) : SOUL_FLOOR;
+const CREST_FLOOR = REPORT_MAGNITUDE
+  ? MAGNITUDE_FLOOR
+  : process.platform === 'linux'
+    ? ({ maxDiffPixelRatio: 0.05 } as const)
+    : SOUL_FLOOR;
 test('golden · toggle crest (dark, moon) — W13 soul: celestial rest pose', async ({ page }) => {
   await loadSettled(page, { dark: true });
   const clip = await center(page.locator('button.sun-moon-toggle'), 110, 110);

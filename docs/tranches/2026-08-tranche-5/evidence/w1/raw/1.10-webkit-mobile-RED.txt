@@ -1,0 +1,72 @@
+
+Running 19 tests using 2 workers
+
+  ✓   1 [webkit] › e2e/mobile-affordances.spec.ts:107:1 › native bounded entry (sudoku 9×9): coarse cell raises the numeric keypad, iOS-congruent, 16px floor (2.5s)
+  ✓   2 [webkit] › e2e/mobile-affordances.spec.ts:123:1 › native bounded entry (sudoku 16×16): two-digit values 10–16 enter whole (3.0s)
+  ✓   3 [webkit] › e2e/mobile-affordances.spec.ts:139:1 › native bounded entry (futoshiki twin): coarse cell raises the numeric keypad, iOS-congruent (1.8s)
+  ✓   4 [webkit] › e2e/mobile-affordances.spec.ts:162:1 › touch play tools (T4-WM §2): undo / redo / hint tappable at ≥44px, wired, and no sticky hover (2.1s)
+  ✓   5 [webkit] › e2e/mobile-affordances.spec.ts:206:1 › hint two-press by touch (T4-W7): first tap names the technique, second inks the digit (1.8s)
+  ✓   6 [webkit] › e2e/mobile-affordances.spec.ts:232:1 › attribution opens on a single tap (T4-WM §2): the coarse focusin+click double-fire no longer nets closed (1.6s)
+  ✓   7 [webkit] › e2e/mobile-affordances.spec.ts:245:1 › long-press peek (T4-WM §3, sudoku): a hold on a cell opens the candidate glimpse; release clears it (2.5s)
+  ✓   8 [webkit] › e2e/mobile-affordances.spec.ts:252:1 › long-press peek (T4-WM §3, futoshiki twin): a hold on a cell opens the candidate glimpse; release clears it (3.4s)
+  ✓   9 [webkit] › e2e/mobile-affordances.spec.ts:268:1 › coarse affordances: persistent peek washi on a ≥44px target, icon sublabels, Clear confirm beat (1.7s)
+  ✓  10 [webkit] › e2e/mobile-affordances.spec.ts:341:1 › Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty board arms first (1.9s)
+  ✓  11 [webkit] › e2e/mobile-platform.spec.ts:62:3 › ios-discipline (iPhone-geometry coarse) › the board scene contains overscroll (no rubber-band / scroll-chain) (1.8s)
+  ✘  13 [webkit] › e2e/mobile-platform.spec.ts:115:3 › ios-discipline (iPhone-geometry coarse) › tap-highlight + text-size-adjust are delivered (preflight) app-wide (1.5s)
+  ✘  12 [webkit] › e2e/mobile-platform.spec.ts:73:3 › ios-discipline (iPhone-geometry coarse) › game surfaces suppress selection + the double-tap-zoom delay (long-press-clean) (1.7s)
+  ✓  15 [webkit] › e2e/mobile-platform.spec.ts:135:3 › ios-discipline (iPhone-geometry coarse) › viewport opts into the notch + the fixed toggle pads clear of the safe area (1.9s)
+  ✓  14 [webkit] › e2e/mobile-platform.spec.ts:210:3 › keyboard-avoid (emulated visualViewport) › a focused below-fold cell scrolls clear of the emulated keyboard band (2.9s)
+  ✓  17 [webkit] › e2e/mobile-platform.spec.ts:374:3 › landscape phone (~844×390, coarse) › no horizontal overflow; entry works (1.7s)
+  ✓  16 [webkit] › e2e/mobile-platform.spec.ts:266:3 › the 296px keypad band (measured constant, driven through the composable) › every control can be seated clear of the keypad, verb and deepest chip alike (2.9s)
+  ✓  19 [webkit] › e2e/mobile-platform.spec.ts:402:3 › large iPad landscape (≥1024, coarse → desktop drawer layout) › the drawer tab is a clean ≥44px tap target and toggles the rail (1.6s)
+  ✓  18 [webkit] › e2e/mobile-platform.spec.ts:388:3 › iPad portrait (<1024, coarse, stacked) › no horizontal overflow; entry works (1.8s)
+
+
+  1) [webkit] › e2e/mobile-platform.spec.ts:73:3 › ios-discipline (iPhone-geometry coarse) › game surfaces suppress selection + the double-tap-zoom delay (long-press-clean) 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "none"
+    Received: undefined
+
+      85 |     });
+      86 |     expect(surface.touchAction).toBe("manipulation"); // born-RED: 'auto'
+    > 87 |     expect(surface.userSelectContainer).toBe("none"); // born-RED: webkit computed 'text'
+         |                                         ^
+      88 |     expect(surface.userSelectCell).toBe("none"); // inherited onto the cell
+      89 |
+      90 |     // -webkit-touch-callout is WebKit-only: Chromium DROPS the unknown property from the parsed
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/mobile-platform.spec.ts:87:41
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/mobile-platform-ios-discip-6f187-oom-delay-long-press-clean--webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/mobile-platform-ios-discip-6f187-oom-delay-long-press-clean--webkit/error-context.md
+
+  2) [webkit] › e2e/mobile-platform.spec.ts:115:3 › ios-discipline (iPhone-geometry coarse) › tap-highlight + text-size-adjust are delivered (preflight) app-wide 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "100%"
+    Received: ""
+
+      130 |     // Transparent = 'rgba(0, 0, 0, 0)' (inherited from the html preflight rule).
+      131 |     expect(probe.tapHighlight.replace(/\s+/g, "")).toBe("rgba(0,0,0,0)");
+    > 132 |     expect(probe.textSizeAdjust).toBe("100%");
+          |                                  ^
+      133 |   });
+      134 |
+      135 |   test("viewport opts into the notch + the fixed toggle pads clear of the safe area", async ({
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/mobile-platform.spec.ts:132:34
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/mobile-platform-ios-discip-16a4d-elivered-preflight-app-wide-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/mobile-platform-ios-discip-16a4d-elivered-preflight-app-wide-webkit/error-context.md
+
+  2 failed
+    [webkit] › e2e/mobile-platform.spec.ts:73:3 › ios-discipline (iPhone-geometry coarse) › game surfaces suppress selection + the double-tap-zoom delay (long-press-clean) 
+    [webkit] › e2e/mobile-platform.spec.ts:115:3 › ios-discipline (iPhone-geometry coarse) › tap-highlight + text-size-adjust are delivered (preflight) app-wide 
+  17 passed (24.4s)

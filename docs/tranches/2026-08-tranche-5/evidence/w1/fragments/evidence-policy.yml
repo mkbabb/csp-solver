@@ -1,0 +1,57 @@
+# T5-W1 row 1.3 — EVIDENCE-POLICY enforcement lane.
+#
+# FRAGMENT, not a workflow. The integrator lane owns .github/workflows/ci.yml; this
+# is the block to paste under `jobs:`. Indentation matches ci.yml (4-space, job key
+# at 4, steps items at 12).
+#
+# What it gates: docs/tranches/EVIDENCE-POLICY.md:13 promised "the gate greps the
+# wave's evidence dir for *.png, sums bytes, and fails on breach" and nothing did.
+# Audit A3 CONFIRMED-worse: at f38c5130 the estate carried 73 live breaches — 64
+# images over the 153,600 B per-image cap, 5 wave buckets over the 2,097,152 B
+# per-wave cap, and 4 filenames matching the banned /-full\.png$/ viewport pattern.
+# RED banked at evidence/w1/evidence-policy-RED.txt; GREEN (after the once-only
+# sealed-tranche adjudication) at evidence-policy-GREEN.txt.
+#
+# Why its own job rather than a step in `frontend`: the scope is docs/tranches/**,
+# the script is zero-dependency Node with no package.json above it, and it must not
+# queue behind build-lean-wasm to tell an author their capture is 400 KB. It also
+# must not be maskable by — or mask — the frontend lane's signal. ~10 s wall.
+# If the integrator would rather keep one repo-docs lane, the `- name:` step at the
+# bottom of this file drops into the W1.7 doc-truth job unchanged; both scripts live
+# at repo root and neither needs npm.
+#
+# --self-test is NOT optional decoration. It re-proves all three rules able to FAIL
+# (and able NOT to fire on a conformant estate) against a synthetic tree before the
+# real audit runs, then exits 1 if any case misbehaves — so a green from this lane is
+# never a green from a broken instrument. Same discipline as `lint:ink`.
+#
+# No npm pin: this lane never invokes npm. The npm>=11 rule binds the lanes that do.
+
+    # ---------------------------------------------------------------- Lane 12
+    evidence-policy:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - uses: actions/checkout@v4
+            - name: Set up Node (LTS)
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+            # Walks docs/tranches/** on the checked-out worktree — which is exactly
+            # the tracked set, so CI and a local run agree (290 png / 290 tracked at
+            # f38c5130). Caps and the name ban come off EVIDENCE-POLICY.md:9-11 and
+            # are pinned by gates.json W1.evidencePolicy. The 64 image pins + 5 wave
+            # pins in the script are the sealed-tranche grandfather, each a byte
+            # CEILING: a grandfathered file that grows, or a grandfathered wave that
+            # gains an image, reds. Additions to those lists are forbidden — the cure
+            # for a breaching capture is a crop.
+            - name: evidence policy (per-image + per-wave caps, viewport name ban, self-tested)
+              run: node scripts/check-evidence-policy.mjs --self-test
+
+# ---------------------------------------------------------------------------
+# ALTERNATIVE placement — the same step, for folding into the W1.7 doc-truth job
+# instead of standing up Lane 12. Drop in after that job's own check step; it needs
+# nothing from it but a checkout and Node.
+#
+#            - name: evidence policy (per-image + per-wave caps, viewport name ban, self-tested)
+#              run: node scripts/check-evidence-policy.mjs --self-test

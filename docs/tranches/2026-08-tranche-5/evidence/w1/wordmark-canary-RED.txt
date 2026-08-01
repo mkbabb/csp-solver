@@ -1,0 +1,703 @@
+T5-W1 ROW 1.6 — WORDMARK FORCED-BLANK CANARY, THE RED ARMS
+HEAD f38c5130 · darwin 25.4.0 (arm64) · @playwright/test 1.61.1 · node v26.0.0 · npm 11.12.1
+Engine: Playwright WebKit. Surface: a vite build of the working tree, served static.
+
+THE ABLATION (wordmark-canary/blank-bake-server.mjs — 71456713's "forced blank", reconstructed)
+Every `svg.handwritten-logo image.logo-pose-bmp` href is replaced, as it is minted and on every
+re-mint, by a VALID, CORRECTLY-SIZED, ENTIRELY TRANSPARENT PNG at the pose's own measured
+intrinsic. The grid bake is untouched — in the real incident it painted. Injected as a classic
+<script> before </head> at serve time, so neither the dist on disk nor the spec is modified.
+Because it re-fires on every re-mint, the blank is TERMINAL the way the runner's was: the spec's
+15 s settle→poll cannot clear it, which is what the 18-20 s arm wall times below are.
+
+FIDELITY, re-derived here (wordmark-canary/*.png via pose-dump.mjs — the live blobs, not a shot):
+  blank sudoku        916 B  381x112   inkbox top=-1 bot=-1 left=-1 right=-1
+  blank futoshiki    1096 B  472x112   inkbox top=-1 bot=-1 left=-1 right=-1
+  blank thermo        924 B  384x112   inkbox top=-1 bot=-1 left=-1 right=-1
+  blank killer        734 B  287x112   inkbox top=-1 bot=-1 left=-1 right=-1
+  blank kenken        916 B  381x112   inkbox top=-1 bot=-1 left=-1 right=-1
+71456713 recorded the runner's blobs at "272-313 bytes … 381x112 sudoku/kenken, 472x112
+futoshiki, 384x112 thermo". The intrinsics match to the pixel on all four labels it named
+(killer it did not name; measured here at 287x112). Byte counts differ because WebKit's canvas
+encoder writes these rather than the app's bake path — same shape, same emptiness, other padding.
+
+ARM SUMMARY (full logs below)
+  A1  spec at HEAD,  real config,      BLANK, darwin      5 failed   1 passed  exit 1   37.1s
+  A0  spec at HEAD,  linux FORCED,     BLANK              5 SKIPPED  1 passed  exit 0   18.4s  <-- THE DEFECT
+  B1  spec CURED,    real config,      BLANK, darwin      5 failed   1 passed  exit 1   19.8s  <-- the cure reds
+  B0  spec CURED,    "linux variant",  BLANK              5 failed   1 passed  exit 1   19.3s
+
+WHAT A0 PROVES. Byte-for-byte the outcome 71456713's own commit message reports — "linux 5
+skipped, 1 passed, exit 0". Five of the six rows in the wordmark-webkit project stop asserting,
+the edge-clip verdict is never computed, and the lane exits 0. B1's surviving hole, made to
+happen on demand rather than argued about.
+
+WHAT CHANGED BETWEEN A AND B. At HEAD the blank arm dies at the VACUITY expect
+(wordmark-integrity.spec.ts:156, "no ink in the baked pose at all") and the edge-clip assertion
+at :157-165 is never reached on any platform where the yield fires — it sits BELOW a
+`test.skip` that aborts. Cured, the blank arm dies at the HOISTED verdict, which IS the clip
+assertion, carrying the label's own geometry:
+
+    Error: sudoku: baked ink must sit inside its own 381×112 bitmap on all four edges
+    - Expected  []          + Received  [ "no-ink" ]
+
+No skip remains in the file, so there is no platform on which the verdict goes unevaluated —
+gates.json W1.wordmarkHoist.clipAssertionPlatforms = [darwin, linux].
+
+PLATFORM NOTE — WHAT RAN WHERE, exactly. This host is darwin. NO LINUX RUN IS CLAIMED; CI at
+the seal is the linux proof. The linux code path was reached three ways, two kept, one rejected:
+
+ (i)  KEPT — A0's arm is the spec at HEAD with ONE token changed, `process.platform` -> `"linux"`,
+      in the skip predicate at :152. Verified byte-identical to HEAD before the sed
+      (`git show HEAD:… | diff -` = 0 bytes). The whole ablation:
+          --- e2e/wordmark-integrity.spec.ts (HEAD, verbatim)
+          +++ the A0 linux-forced ablation
+          @@ -149,7 +149,7 @@
+                   // Darwin and every non-linux host still fail here, and "the logo bake has ink at all"
+                   // keeps a linux CI guard in BOTH engines at `retries: 0` in theme-bake-freshness.
+                   test.skip(
+          -          process.platform === "linux",
+          +          "linux" === "linux",
+                     `${game}: the pose baked EMPTY on linux — see the attached bitmap (CI 30684983201 / 30690204551)`,
+                   );
+                 }
+
+ (ii) REJECTED, and recorded rather than hidden — a RUNTIME pin. Preloading a module that
+      redefines `process.platform` to "linux" does reach Playwright's workers (measured:
+      WORKER_PLATFORM=linux, against a darwin control), but Playwright resolves its browser
+      binaries off the same value, so every row then dies at "browserType.launch: Executable
+      doesn't exist at …/ms-playwright/webkit-2311/pw_run.sh". A pin that breaks the engine
+      cannot test the engine.
+
+ (iii) KEPT — B0's "linux variant" of the CURED spec IS the cured spec. The same sed has nothing
+      to bite on (`diff` = 0 bytes) because the cure removed the platform predicate outright.
+      The linux path and the darwin path are now one path, by construction:
+
+          $ grep -nE 'process\.platform|test\.skip\(|test\.fixme|test\.fail' \
+                e2e/wordmark-integrity.spec.ts
+          30: *     Why the yield could go rather than merely move: `test.skip()` aborts, so a yield that
+
+      One hit, and it is the header docstring's prose account of the removal — no predicate,
+      no runtime skip, no fixme, no expected-failure anywhere in the file.
+
+════════════════════════════════════════════════════════════════════════════════════════
+ARM A1 — spec at HEAD, REAL playwright-throttle.config.ts, BLANK, darwin
+════════════════════════════════════════════════════════════════════════════════════════
+
+Running 6 tests using 6 workers
+
+  ✓  5 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:169:3 › G3.4 · wordmark integrity (WebKit, built dist) › all five labels render every glyph in Fraunces — zero fallback glyphs (2.7s)
+  ✘  4 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges (17.9s)
+  ✘  6 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges (18.0s)
+  ✘  3 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges (18.0s)
+  ✘  1 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges (18.0s)
+  ✘  2 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges (18.1s)
+  ✘  9 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges (retry #1) (17.4s)
+  ✘  7 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges (retry #1) (17.5s)
+  ✘  8 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges (retry #1) (17.6s)
+  ✘  11 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges (retry #1) (17.5s)
+  ✘  10 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges (retry #1) (17.7s)
+
+
+  1) [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges 
+
+    Error: no ink in the baked pose at all
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      154 |         );
+      155 |       }
+    > 156 |       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
+          |                                                        ^
+      157 |       const clipped = [
+      158 |         r.top === 0 && "top",
+      159 |         r.bot === r.H - 1 && "bottom",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:156:56
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--1dcd4-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--1dcd4-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: no ink in the baked pose at all
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      154 |         );
+      155 |       }
+    > 156 |       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
+          |                                                        ^
+      157 |       const clipped = [
+      158 |         r.top === 0 && "top",
+      159 |         r.bot === r.H - 1 && "bottom",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:156:56
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--1dcd4-s-own-box-on-all-four-edges-wordmark-webkit-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--1dcd4-s-own-box-on-all-four-edges-wordmark-webkit-retry1/error-context.md
+
+  2) [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges 
+
+    Error: no ink in the baked pose at all
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      154 |         );
+      155 |       }
+    > 156 |       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
+          |                                                        ^
+      157 |       const clipped = [
+      158 |         r.top === 0 && "top",
+      159 |         r.bot === r.H - 1 && "bottom",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:156:56
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--40a10-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--40a10-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: no ink in the baked pose at all
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      154 |         );
+      155 |       }
+    > 156 |       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
+          |                                                        ^
+      157 |       const clipped = [
+      158 |         r.top === 0 && "top",
+      159 |         r.bot === r.H - 1 && "bottom",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:156:56
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--40a10-s-own-box-on-all-four-edges-wordmark-webkit-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--40a10-s-own-box-on-all-four-edges-wordmark-webkit-retry1/error-context.md
+
+  3) [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges 
+
+    Error: no ink in the baked pose at all
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      154 |         );
+      155 |       }
+    > 156 |       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
+          |                                                        ^
+      157 |       const clipped = [
+      158 |         r.top === 0 && "top",
+      159 |         r.bot === r.H - 1 && "bottom",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:156:56
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--cbad4-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--cbad4-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: no ink in the baked pose at all
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      154 |         );
+      155 |       }
+    > 156 |       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
+          |                                                        ^
+      157 |       const clipped = [
+      158 |         r.top === 0 && "top",
+      159 |         r.bot === r.H - 1 && "bottom",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:156:56
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--cbad4-s-own-box-on-all-four-edges-wordmark-webkit-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--cbad4-s-own-box-on-all-four-edges-wordmark-webkit-retry1/error-context.md
+
+  4) [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges 
+
+    Error: no ink in the baked pose at all
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      154 |         );
+      155 |       }
+    > 156 |       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
+          |                                                        ^
+      157 |       const clipped = [
+      158 |         r.top === 0 && "top",
+      159 |         r.bot === r.H - 1 && "bottom",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:156:56
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--74f8a-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--74f8a-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: no ink in the baked pose at all
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      154 |         );
+      155 |       }
+    > 156 |       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
+          |                                                        ^
+      157 |       const clipped = [
+      158 |         r.top === 0 && "top",
+      159 |         r.bot === r.H - 1 && "bottom",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:156:56
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--74f8a-s-own-box-on-all-four-edges-wordmark-webkit-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--74f8a-s-own-box-on-all-four-edges-wordmark-webkit-retry1/error-context.md
+
+  5) [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges 
+
+    Error: no ink in the baked pose at all
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      154 |         );
+      155 |       }
+    > 156 |       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
+          |                                                        ^
+      157 |       const clipped = [
+      158 |         r.top === 0 && "top",
+      159 |         r.bot === r.H - 1 && "bottom",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:156:56
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--c3ddf-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--c3ddf-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────
+
+    Error: no ink in the baked pose at all
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      154 |         );
+      155 |       }
+    > 156 |       expect(r.top, "no ink in the baked pose at all").toBeGreaterThanOrEqual(0);
+          |                                                        ^
+      157 |       const clipped = [
+      158 |         r.top === 0 && "top",
+      159 |         r.bot === r.H - 1 && "bottom",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:156:56
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--c3ddf-s-own-box-on-all-four-edges-wordmark-webkit-retry1/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--c3ddf-s-own-box-on-all-four-edges-wordmark-webkit-retry1/error-context.md
+
+  5 failed
+    [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:108:5 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges 
+  1 passed (37.1s)
+EXIT=1
+
+════════════════════════════════════════════════════════════════════════════════════════
+ARM A0 — spec at HEAD with the linux branch FORCED, BLANK.  *** THE DEFECT ***
+════════════════════════════════════════════════════════════════════════════════════════
+
+Running 6 tests using 6 workers
+
+  ✓  5 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:169:7 › G3.4 · wordmark integrity (WebKit, built dist) › all five labels render every glyph in Fraunces — zero fallback glyphs (2.6s)
+  -  3 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:108:9 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges
+  -  1 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:108:9 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges
+  -  6 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:108:9 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges
+  -  4 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:108:9 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges
+  -  2 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:108:9 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges
+
+  5 skipped
+  1 passed (18.4s)
+EXIT=0
+
+════════════════════════════════════════════════════════════════════════════════════════
+ARM B1 — spec CURED, REAL playwright-throttle.config.ts, BLANK, darwin
+════════════════════════════════════════════════════════════════════════════════════════
+
+Running 6 tests using 6 workers
+
+  ✓  4 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:204:3 › G3.4 · wordmark integrity (WebKit, built dist) › all five labels render every glyph in Fraunces — zero fallback glyphs (3.1s)
+  ✘  6 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges (18.2s)
+  ✘  5 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges (18.3s)
+  ✘  1 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges (18.3s)
+  ✘  3 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges (18.3s)
+  ✘  2 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges (18.4s)
+
+
+  1) [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges 
+
+    Error: sudoku: baked ink must sit inside its own 381×112 bitmap on all four edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "no-ink",
+    + ]
+
+      198 |         inkBoxViolations(r),
+      199 |         `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+    > 200 |       ).toEqual([]);
+          |         ^
+      201 |     });
+      202 |   }
+      203 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:200:9
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--1dcd4-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--1dcd4-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+  2) [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges 
+
+    Error: futoshiki: baked ink must sit inside its own 472×112 bitmap on all four edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "no-ink",
+    + ]
+
+      198 |         inkBoxViolations(r),
+      199 |         `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+    > 200 |       ).toEqual([]);
+          |         ^
+      201 |     });
+      202 |   }
+      203 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:200:9
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--40a10-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--40a10-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+  3) [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges 
+
+    Error: thermo: baked ink must sit inside its own 384×112 bitmap on all four edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "no-ink",
+    + ]
+
+      198 |         inkBoxViolations(r),
+      199 |         `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+    > 200 |       ).toEqual([]);
+          |         ^
+      201 |     });
+      202 |   }
+      203 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:200:9
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--cbad4-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--cbad4-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+  4) [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges 
+
+    Error: killer: baked ink must sit inside its own 287×112 bitmap on all four edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "no-ink",
+    + ]
+
+      198 |         inkBoxViolations(r),
+      199 |         `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+    > 200 |       ).toEqual([]);
+          |         ^
+      201 |     });
+      202 |   }
+      203 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:200:9
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--74f8a-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--74f8a-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+  5) [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges 
+
+    Error: kenken: baked ink must sit inside its own 381×112 bitmap on all four edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "no-ink",
+    + ]
+
+      198 |         inkBoxViolations(r),
+      199 |         `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+    > 200 |       ).toEqual([]);
+          |         ^
+      201 |     });
+      202 |   }
+      203 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/wordmark-integrity.spec.ts:200:9
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--c3ddf-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--c3ddf-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+  5 failed
+    [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:158:5 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges 
+  1 passed (19.8s)
+EXIT=1
+
+════════════════════════════════════════════════════════════════════════════════════════
+ARM B0 — spec CURED, 'linux variant' (byte-identical — the predicate is gone), BLANK
+════════════════════════════════════════════════════════════════════════════════════════
+
+Running 6 tests using 6 workers
+
+  ✓  6 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:204:7 › G3.4 · wordmark integrity (WebKit, built dist) › all five labels render every glyph in Fraunces — zero fallback glyphs (3.0s)
+  ✘  5 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges (17.9s)
+  ✘  1 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges (18.0s)
+  ✘  2 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges (18.1s)
+  ✘  4 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges (18.2s)
+  ✘  3 [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges (18.2s)
+
+
+  1) [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges 
+
+    Error: sudoku: baked ink must sit inside its own 381×112 bitmap on all four edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "no-ink",
+    + ]
+
+      198 |         inkBoxViolations(r),
+      199 |         `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+    > 200 |       ).toEqual([]);
+          |         ^
+      201 |     });
+      202 |   }
+      203 |
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:200:9
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--1dcd4-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--1dcd4-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+  2) [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges 
+
+    Error: futoshiki: baked ink must sit inside its own 472×112 bitmap on all four edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "no-ink",
+    + ]
+
+      198 |         inkBoxViolations(r),
+      199 |         `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+    > 200 |       ).toEqual([]);
+          |         ^
+      201 |     });
+      202 |   }
+      203 |
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:200:9
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--40a10-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--40a10-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+  3) [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges 
+
+    Error: thermo: baked ink must sit inside its own 384×112 bitmap on all four edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "no-ink",
+    + ]
+
+      198 |         inkBoxViolations(r),
+      199 |         `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+    > 200 |       ).toEqual([]);
+          |         ^
+      201 |     });
+      202 |   }
+      203 |
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:200:9
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--cbad4-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--cbad4-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+  4) [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges 
+
+    Error: killer: baked ink must sit inside its own 287×112 bitmap on all four edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "no-ink",
+    + ]
+
+      198 |         inkBoxViolations(r),
+      199 |         `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+    > 200 |       ).toEqual([]);
+          |         ^
+      201 |     });
+      202 |   }
+      203 |
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:200:9
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--74f8a-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--74f8a-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+  5) [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges 
+
+    Error: kenken: baked ink must sit inside its own 381×112 bitmap on all four edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "no-ink",
+    + ]
+
+      198 |         inkBoxViolations(r),
+      199 |         `${game}: baked ink must sit inside its own ${r.W}×${r.H} bitmap on all four edges`,
+    > 200 |       ).toEqual([]);
+          |         ^
+      201 |     });
+      202 |   }
+      203 |
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:200:9
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/wordmark-integrity-G3-4-·--c3ddf-s-own-box-on-all-four-edges-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/wordmark-integrity-G3-4-·--c3ddf-s-own-box-on-all-four-edges-wordmark-webkit/error-context.md
+
+  5 failed
+    [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges 
+    [wordmark-webkit] › ../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/canary/specs/wordmark-integrity.spec.ts:158:9 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges 
+  1 passed (19.3s)
+EXIT=1
+

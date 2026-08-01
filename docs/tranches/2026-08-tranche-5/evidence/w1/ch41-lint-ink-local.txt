@@ -1,0 +1,22 @@
+T5-W1.9 / CH-41 — `npm run lint:ink` LOCAL RUN
+tree f38c5130c8d2e97a5291795133d340754eca99eb · darwin · node v26.0.0 · npm 11.12.1
+script: web/frontend/scripts/check-ink-pressure.mjs --self-test  (package.json "lint:ink")
+CI site: .github/workflows/ci.yml:561, job `frontend` (line 486), step "ink pressure (graphite ladder + ramp ownership, self-tested)" — the lane exists and is wired; this row banks the LOCAL execution. The runner RUN-ID is read from the field at seal (gh run view --json conclusion on the seal SHA), never predicted here.
+run 2026-08-01T20:31:06Z
+======== output ========
+
+> csp-solver-frontend@0.1.0 lint:ink
+> node scripts/check-ink-pressure.mjs --self-test
+
+ink-pressure ladder — every rung clears its floor, strictly increasing, in all 3 scopes (light, dark, print), each resolved out of index.css:
+  --ink-press-rule    55%  3.53 light / 4.36 dark / 4.76 print  ≥3 (non-text)
+  --ink-press-quiet   68%  5.23 light / 6.06 dark / 7.86 print  ≥4.5 (text)
+  --ink-press-firm    72%  5.95 light / 6.66 dark / 9.23 print  ≥4.5 (text)
+  --color-red-ink          4.98 light / 6.32 dark  ≥4.5 (.icon-sublabel.is-armed)
+  washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+
+ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+  light  rule < muted-foreground < quiet < firm
+  dark   rule < quiet < firm < muted-foreground
+  the ramp and the register cross between themes. Booked in index.css §INK PRESSURE, not gated.
+======== exit 0 ========

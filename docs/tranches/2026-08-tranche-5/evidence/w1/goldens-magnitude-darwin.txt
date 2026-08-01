@@ -1,0 +1,308 @@
+T5-W1.13 — THE MAGNITUDE-REPORT INSTRUMENT, first runs (darwin, local)
+HEAD   f38c5130   when 2026-08-01 15:31:31 -0400
+what   the blind-band cure executed: the two clause-relaxed goldens print their
+       measured diff ratio on every run. Floors unchanged, no baseline written, no
+       engine added. GOLDEN_MAGNITUDE=1 only ever TIGHTENS (asserts at ratio 0).
+rig    a vite dev server I started on 127.0.0.1:5199 and kill at the end of this
+       file (:3000/:3001/:4288 are the owner s, untouched — :3000 is held by an
+       unrelated ws server and [::1]:5199 by an unrelated app, hence 127.0.0.1).
+       PLAYWRIGHT_BASE_URL set, so the golden config spawns no server of its own.
+tree   DIRTY with sibling W1 lanes in flight (package.json, vitest.config.ts,
+       eslint.boundary.config.js, perf-rig/, coverage/) — none render-side, but
+       these numbers are the INSTRUMENT DEMONSTRATED on darwin, not a verdict on
+       the estate. The blind band lives on linux; CI is where this step earns out.
+note   Playwright ceils its printed ratio to 2 dp: 1,028 px of 220x220 is 0.0212
+       and prints "0.03". Every 0.03 in the banked corpus is really (0.02, 0.03].
+       The instrument recomputes the exact ratio from the baseline IHDR geometry.
+
+===================================================================
+RUN 1 — $ PLAYWRIGHT_BASE_URL=http://127.0.0.1:5199 node scripts/golden-magnitude.mjs
+===================================================================
+[golden-magnitude] T5-W1.13 — REPORT ONLY. No floor changes; no baseline is written.
+  platform darwin · floors in force: logo-light 0.017 · toggle-crest-dark 0.017  (linux 0.05 = the sun-crest clause; darwin soul 0.017)
+  no blind band on this platform: the floor IS the soul floor 0.017. The band is a linux phenomenon [0.017, 0.05); here the magnitude is printed anyway, so darwin and linux logs read on one scale.
+  measured with GOLDEN_MAGNITUDE=1 (assert at ratio 0) against the committed *-darwin.png baselines.
+
+  golden              exact    pw     px      baseline    attempts min…max   reading
+  logo-light          0.0000     —       0    768×226                 —   byte-for-byte identical to the baseline
+  toggle-crest-dark   0.0000     —       0    220×220                 —   byte-for-byte identical to the baseline
+
+[golden-magnitude] JSON {"platform":"darwin","floor":0.017,"soulFloor":0.017,"measured":{"logo-light":{"ratio":0,"px":0,"worst":null},"toggle-crest-dark":{"ratio":0,"px":0,"worst":null}}}
+
+[golden-magnitude] reported 2/2. Magnitudes are REPORTED, never enforced here — the floors gate in the step before this one.
+EXIT=0
+
+===================================================================
+RUN 2 — $ PLAYWRIGHT_BASE_URL=http://127.0.0.1:5199 node scripts/golden-magnitude.mjs
+===================================================================
+[golden-magnitude] T5-W1.13 — REPORT ONLY. No floor changes; no baseline is written.
+  platform darwin · floors in force: logo-light 0.017 · toggle-crest-dark 0.017  (linux 0.05 = the sun-crest clause; darwin soul 0.017)
+  no blind band on this platform: the floor IS the soul floor 0.017. The band is a linux phenomenon [0.017, 0.05); here the magnitude is printed anyway, so darwin and linux logs read on one scale.
+  measured with GOLDEN_MAGNITUDE=1 (assert at ratio 0) against the committed *-darwin.png baselines.
+
+  golden              exact    pw     px      baseline    attempts min…max   reading
+  logo-light          0.0000     —       0    768×226                 —   byte-for-byte identical to the baseline
+  toggle-crest-dark   0.0000     —       0    220×220                 —   byte-for-byte identical to the baseline
+
+[golden-magnitude] JSON {"platform":"darwin","floor":0.017,"soulFloor":0.017,"measured":{"logo-light":{"ratio":0,"px":0,"worst":null},"toggle-crest-dark":{"ratio":0,"px":0,"worst":null}}}
+
+[golden-magnitude] reported 2/2. Magnitudes are REPORTED, never enforced here — the floors gate in the step before this one.
+EXIT=0
+
+===================================================================
+RUN 3 — $ PLAYWRIGHT_BASE_URL=http://127.0.0.1:5199 node scripts/golden-magnitude.mjs
+===================================================================
+[golden-magnitude] T5-W1.13 — REPORT ONLY. No floor changes; no baseline is written.
+  platform darwin · floors in force: logo-light 0.017 · toggle-crest-dark 0.017  (linux 0.05 = the sun-crest clause; darwin soul 0.017)
+  no blind band on this platform: the floor IS the soul floor 0.017. The band is a linux phenomenon [0.017, 0.05); here the magnitude is printed anyway, so darwin and linux logs read on one scale.
+  measured with GOLDEN_MAGNITUDE=1 (assert at ratio 0) against the committed *-darwin.png baselines.
+
+  golden              exact    pw     px      baseline    attempts min…max   reading
+  logo-light          0.0000     —       0    768×226                 —   byte-for-byte identical to the baseline
+  toggle-crest-dark   0.0000     —       0    220×220                 —   byte-for-byte identical to the baseline
+
+[golden-magnitude] JSON {"platform":"darwin","floor":0.017,"soulFloor":0.017,"measured":{"logo-light":{"ratio":0,"px":0,"worst":null},"toggle-crest-dark":{"ratio":0,"px":0,"worst":null}}}
+
+[golden-magnitude] reported 2/2. Magnitudes are REPORTED, never enforced here — the floors gate in the step before this one.
+EXIT=0
+
+===================================================================
+COLD/WARM PROBE — the dev server killed and restarted (new vite process,
+empty transform cache), then the instrument run back-to-back. Runs 1-3 above
+were all WARM and all 0 px; the very first run of the session (cold) measured
+logo-light 3,945 px. This probe asks whether cold is the difference.
+===================================================================
+
+COLD RUN (first hit on a fresh vite process)
+[golden-magnitude] T5-W1.13 — REPORT ONLY. No floor changes; no baseline is written.
+  platform darwin · floors in force: logo-light 0.017 · toggle-crest-dark 0.017  (linux 0.05 = the sun-crest clause; darwin soul 0.017)
+  no blind band on this platform: the floor IS the soul floor 0.017. The band is a linux phenomenon [0.017, 0.05); here the magnitude is printed anyway, so darwin and linux logs read on one scale.
+  measured with GOLDEN_MAGNITUDE=1 (assert at ratio 0) against the committed *-darwin.png baselines.
+
+  golden              exact    pw     px      baseline    attempts min…max   reading
+  logo-light          0.0000     —       0    768×226                 —   byte-for-byte identical to the baseline
+  toggle-crest-dark   0.0000     —       0    220×220                 —   byte-for-byte identical to the baseline
+
+[golden-magnitude] JSON {"platform":"darwin","floor":0.017,"soulFloor":0.017,"measured":{"logo-light":{"ratio":0,"px":0,"worst":null},"toggle-crest-dark":{"ratio":0,"px":0,"worst":null}}}
+
+[golden-magnitude] reported 2/2. Magnitudes are REPORTED, never enforced here — the floors gate in the step before this one.
+EXIT=0
+
+WARM RUN (same process, immediately after)
+[golden-magnitude] T5-W1.13 — REPORT ONLY. No floor changes; no baseline is written.
+  platform darwin · floors in force: logo-light 0.017 · toggle-crest-dark 0.017  (linux 0.05 = the sun-crest clause; darwin soul 0.017)
+  no blind band on this platform: the floor IS the soul floor 0.017. The band is a linux phenomenon [0.017, 0.05); here the magnitude is printed anyway, so darwin and linux logs read on one scale.
+  measured with GOLDEN_MAGNITUDE=1 (assert at ratio 0) against the committed *-darwin.png baselines.
+
+  golden              exact    pw     px      baseline    attempts min…max   reading
+  logo-light          0.0227  0.03    3945    768×226   3945…3945 (n=3)   OVER THE FLOOR 0.017 — the gate itself reds
+  toggle-crest-dark   0.0000     —       0    220×220                 —   byte-for-byte identical to the baseline
+
+[golden-magnitude] JSON {"platform":"darwin","floor":0.017,"soulFloor":0.017,"measured":{"logo-light":{"ratio":0.02273,"px":3945,"worst":0.02272884402654867},"toggle-crest-dark":{"ratio":0,"px":0,"worst":null}}}
+
+[golden-magnitude] reported 2/2. Magnitudes are REPORTED, never enforced here — the floors gate in the step before this one.
+EXIT=0
+
+COLD/WARM REFUTED — cold 0 px, warm 3,945 px. Not a cache effect. Four more
+back-to-back runs to see the shape of the variate:
+
+RUN 4
+[golden-magnitude] T5-W1.13 — REPORT ONLY. No floor changes; no baseline is written.
+  platform darwin · floors in force: logo-light 0.017 · toggle-crest-dark 0.017  (linux 0.05 = the sun-crest clause; darwin soul 0.017)
+  no blind band on this platform: the floor IS the soul floor 0.017. The band is a linux phenomenon [0.017, 0.05); here the magnitude is printed anyway, so darwin and linux logs read on one scale.
+  measured with GOLDEN_MAGNITUDE=1 (assert at ratio 0) against the committed *-darwin.png baselines.
+
+  golden              exact    pw     px      baseline    attempts min…max   reading
+  logo-light          0.0000     —       0    768×226                 —   byte-for-byte identical to the baseline
+  toggle-crest-dark   0.0000     —       0    220×220                 —   byte-for-byte identical to the baseline
+
+[golden-magnitude] JSON {"platform":"darwin","floor":0.017,"soulFloor":0.017,"measured":{"logo-light":{"ratio":0,"px":0,"worst":null},"toggle-crest-dark":{"ratio":0,"px":0,"worst":null}}}
+
+[golden-magnitude] reported 2/2. Magnitudes are REPORTED, never enforced here — the floors gate in the step before this one.
+EXIT=0
+
+RUN 5
+[golden-magnitude] T5-W1.13 — REPORT ONLY. No floor changes; no baseline is written.
+  platform darwin · floors in force: logo-light 0.017 · toggle-crest-dark 0.017  (linux 0.05 = the sun-crest clause; darwin soul 0.017)
+  no blind band on this platform: the floor IS the soul floor 0.017. The band is a linux phenomenon [0.017, 0.05); here the magnitude is printed anyway, so darwin and linux logs read on one scale.
+  measured with GOLDEN_MAGNITUDE=1 (assert at ratio 0) against the committed *-darwin.png baselines.
+
+  golden              exact    pw     px      baseline    attempts min…max   reading
+  logo-light          0.0000     —       0    768×226                 —   byte-for-byte identical to the baseline
+  toggle-crest-dark   0.0133  0.02     643    220×220     643…643 (n=5)   under the 0.017 soul floor
+
+[golden-magnitude] JSON {"platform":"darwin","floor":0.017,"soulFloor":0.017,"measured":{"logo-light":{"ratio":0,"px":0,"worst":null},"toggle-crest-dark":{"ratio":0.01329,"px":643,"worst":0.013285123966942149}}}
+
+[golden-magnitude] reported 2/2. Magnitudes are REPORTED, never enforced here — the floors gate in the step before this one.
+EXIT=0
+
+RUN 6
+[golden-magnitude] T5-W1.13 — REPORT ONLY. No floor changes; no baseline is written.
+  platform darwin · floors in force: logo-light 0.017 · toggle-crest-dark 0.017  (linux 0.05 = the sun-crest clause; darwin soul 0.017)
+  no blind band on this platform: the floor IS the soul floor 0.017. The band is a linux phenomenon [0.017, 0.05); here the magnitude is printed anyway, so darwin and linux logs read on one scale.
+  measured with GOLDEN_MAGNITUDE=1 (assert at ratio 0) against the committed *-darwin.png baselines.
+
+  golden              exact    pw     px      baseline    attempts min…max   reading
+  logo-light          0.0000     —       0    768×226                 —   byte-for-byte identical to the baseline
+  toggle-crest-dark   0.0133  0.02     643    220×220     375…643 (n=5)   under the 0.017 soul floor
+
+[golden-magnitude] JSON {"platform":"darwin","floor":0.017,"soulFloor":0.017,"measured":{"logo-light":{"ratio":0,"px":0,"worst":null},"toggle-crest-dark":{"ratio":0.01329,"px":643,"worst":0.013285123966942149}}}
+
+[golden-magnitude] reported 2/2. Magnitudes are REPORTED, never enforced here — the floors gate in the step before this one.
+EXIT=0
+
+RUN 7
+[golden-magnitude] T5-W1.13 — REPORT ONLY. No floor changes; no baseline is written.
+  platform darwin · floors in force: logo-light 0.017 · toggle-crest-dark 0.017  (linux 0.05 = the sun-crest clause; darwin soul 0.017)
+  no blind band on this platform: the floor IS the soul floor 0.017. The band is a linux phenomenon [0.017, 0.05); here the magnitude is printed anyway, so darwin and linux logs read on one scale.
+  measured with GOLDEN_MAGNITUDE=1 (assert at ratio 0) against the committed *-darwin.png baselines.
+
+  golden              exact    pw     px      baseline    attempts min…max   reading
+  logo-light          0.0000     —       0    768×226                 —   byte-for-byte identical to the baseline
+  toggle-crest-dark   0.0133  0.02     643    220×220     643…643 (n=5)   under the 0.017 soul floor
+
+[golden-magnitude] JSON {"platform":"darwin","floor":0.017,"soulFloor":0.017,"measured":{"logo-light":{"ratio":0,"px":0,"worst":null},"toggle-crest-dark":{"ratio":0.01329,"px":643,"worst":0.013285123966942149}}}
+
+[golden-magnitude] reported 2/2. Magnitudes are REPORTED, never enforced here — the floors gate in the step before this one.
+EXIT=0
+
+===================================================================
+THE GATE ITSELF, same rig, floors AS SHIPPED (no env var). Read-only:
+no --update-snapshots, retries:0 — what `npm run test:golden` does on darwin.
+===================================================================
+
+Running 4 tests using 4 workers
+
+  ✓  4 e2e/visual-golden.spec.ts:236:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer (1.2s)
+  ✓  2 e2e/visual-golden.spec.ts:228:1 › golden · single cell with given glyph (light) (1.3s)
+  ✓  3 e2e/visual-golden.spec.ts:221:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose (1.4s)
+  ✘  1 e2e/visual-golden.spec.ts:195:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack (1.6s)
+
+
+  1) e2e/visual-golden.spec.ts:195:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack 
+
+    Error: expect(locator).toHaveScreenshot(expected) failed
+
+    Locator: locator('svg.handwritten-logo')
+      3945 pixels (ratio 0.03 of all image pixels) are different.
+
+      Snapshot: logo-light.png
+
+    Call log:
+      - Expect "toHaveScreenshot(logo-light.png)" with timeout 15000ms
+        - verifying given screenshot expectation
+      - waiting for locator('svg.handwritten-logo')
+        - locator resolved to <svg data-v-3a485598="" aria-hidden="true" viewBox="0 0 205 60" class="handwritten-logo is-drawn" xmlns="http://www.w3.org/2000/svg">…</svg>
+      - taking element screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - attempting scroll into view action
+        - waiting for element to be stable
+      - 3945 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - waiting for locator('svg.handwritten-logo')
+        - locator resolved to <svg data-v-3a485598="" aria-hidden="true" viewBox="0 0 205 60" class="handwritten-logo is-drawn" xmlns="http://www.w3.org/2000/svg">…</svg>
+      - taking element screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - attempting scroll into view action
+        - waiting for element to be stable
+      - captured a stable screenshot
+      - 3945 pixels (ratio 0.03 of all image pixels) are different.
+
+
+      195 | test('golden · logo wordmark (light) — W13 soul: baked logo pose stack', async ({ page }) => {
+      196 |   await loadSettled(page);
+    > 197 |   await expect(page.locator('svg.handwritten-logo')).toHaveScreenshot('logo-light.png', LOGO_FLOOR);
+          |                                                      ^
+      198 | });
+      199 |
+      200 | // The toggle crest — the celestial rest pose stack (W13 §2), captured in DARK mode: the
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/visual-golden.spec.ts:197:54
+
+    attachment #1: logo-light (image/png) ──────────────────────────────────────────────────────────
+    Expected: e2e/goldens/logo-light-darwin.png
+    Received: test-results/visual-golden-golden-·-log-944fc--soul-baked-logo-pose-stack/logo-light-actual.png
+    Diff:     test-results/visual-golden-golden-·-log-944fc--soul-baked-logo-pose-stack/logo-light-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-log-944fc--soul-baked-logo-pose-stack/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-log-944fc--soul-baked-logo-pose-stack/error-context.md
+
+  1 failed
+    e2e/visual-golden.spec.ts:195:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack 
+  3 passed (2.5s)
+EXIT=1
+
+===================================================================
+SYNTHESIS — what one session of magnitudes says (darwin, HEAD f38c5130)
+===================================================================
+One host, one tree, one session, two vite processes (the restart is marked). No baseline
+was written; no floor was changed. "banked as" maps each row to its block above.
+
+  #   run                    banked as     logo px  exact     crest px  exact
+  A   magnitude, first       (console)       3,945  0.0227         677  0.0140
+  B   gate, floors shipped   (console)       3,945  0.0227           0  0.0000   logo RED
+  C   magnitude, crest only  (console)           —       —       1,028  0.0212
+  1   magnitude, warm        RUN 1               0  0.0000           0  0.0000
+  2   magnitude, warm        RUN 2               0  0.0000           0  0.0000
+  3   magnitude, warm        RUN 3               0  0.0000           0  0.0000
+  4   magnitude, COLD        COLD RUN            0  0.0000           0  0.0000
+  5   magnitude, warm        WARM RUN        3,945  0.0227           0  0.0000
+  6   magnitude, warm        RUN 4               0  0.0000           0  0.0000
+  7   magnitude, warm        RUN 5               0  0.0000         643  0.0133
+  8   magnitude, warm        RUN 6               0  0.0000         643  0.0133
+  9   magnitude, warm        RUN 7               0  0.0000         643  0.0133
+ 10   gate, floors shipped   (banked, last)  3,945  0.0227           0  0.0000   logo RED
+
+  Rows A/B/C ran before the instrument gained exact-ratio arithmetic and are transcribed
+  from the session console; rows 1-10 are banked verbatim above, and their exact ratios
+  are the instrument's own output. C's per-attempt spread, verbatim: 1028, 1194, 375,
+  1214, 1028. Row 8's spread: 375…643.
+
+  logo-light, 10 magnitude observations: 8 x 0 px, 2 x 3,945 px. Both gate runs: 3,945.
+  toggle-crest-dark, 10 magnitude observations: 7 x 0 px, 3 x 643 px (+ 677 and 1,028 in
+  the console rows). Both gate runs: 0.
+
+FOUR THINGS FALL OUT.
+
+1 · THE VARIATE IS DISCRETE AND BIMODAL, NOT DRIFT. logo-light took exactly two values on
+    this host — 0 px or 3,945 px — and nothing between, across twelve observations (one
+    run's attempt spread showed a third mode at 1,746). A drifting surface does not return
+    to byte-identical; a missing settle condition does. That is r3/goldens-estate §3.5's
+    middle row — "a settle condition is missing" — whose disposition is to tighten the
+    capture, with NO re-baseline. The crest behaves the same way over a small discrete set
+    {0, 375, 643, 677, 1028, 1194, 1214} px.
+
+2 · COLD/WARM IS REFUTED. Row 4 hit a freshly restarted vite with an empty transform cache
+    and measured 0 px; rows 5 and A hit warm servers and measured 3,945. Server warmth does
+    not predict the mode. (Load in r3 §3.5's sense — parallel workers — is untested here:
+    that is CH-42's arm, row 1.9's instrument, and this row leaves it untouched.)
+
+3 · THE RECORD'S "0.03" IS NOT 0.03. Playwright CEILS its printed ratio to two decimals:
+    1,028 px of 220x220 is 0.0212 and prints "0.03"; 643 px is 0.0133 and prints "0.02" —
+    UNDER the 0.017 soul floor while printing above it. Every 0.03 in the banked corpus
+    (D-report:70; F3/final/goldens-head-1.log:18,35) is really (0.02, 0.03]. A decision read
+    off the printed number is reading a bin, not a magnitude. The instrument now prints the
+    exact ratio, computed from the baseline's own IHDR geometry, beside Playwright's.
+
+4 · THE DARWIN GATE IS INTERMITTENTLY RED AT HEAD. Rows B and 10: `npm run test:golden`
+    reds on logo-light at 0.0227 > the 0.017 soul floor, on an otherwise green estate (cell,
+    grid-corner, crest all pass). This is NOT a W1.13 disposition — this row touches no floor
+    and no baseline — and it is NOT the linux CI state (the runner's clause floor is 0.05,
+    above the entire observed range). It is handed up: to the team lead as a live darwin red
+    at HEAD, and to row 1.9 as the same phenomenon its {workers 1, 4} arms are chartered to
+    separate, now with an instrument that reports a magnitude per attempt instead of a
+    verdict per run.
+
+ADDENDUM — a third gate observation, banked in goldens-selfdelta.txt
+The self-delta file's CONTROL run (unperturbed gate, same rig, minutes later) reds BOTH
+clause-relaxed goldens on darwin: logo-light 3,945 px (exact 0.0227) and toggle-crest-dark
+1,028 px (exact 0.0212), each repeated across its three capture attempts, with cell-light
+and grid-corner-light green. Same two modes, same exact magnitudes. Gate observations at
+HEAD on darwin now stand at 3 runs / 3 with a logo red.

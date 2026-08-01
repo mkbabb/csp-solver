@@ -19,8 +19,9 @@
 # py-runtime, and frontend jobs with the gac-ab/corpus-spine smokes, stubtest +
 # tripwire, and knip; T4-W2 added the eslint boundary lane, promoted knip to
 # error-level, and re-cut the flat fan-out into a compute-cost DAG; T4-W5 added
-# the cargo-audit advisory tripwire) — the lane set rides eleven jobs (the rust
-# job carries lanes 2 + 3):
+# the cargo-audit advisory tripwire; T5-W1 added lanes 12-18, every one of them a
+# gate the audit found absent, unwired, or scope-narrowed) — the lane set rides
+# EIGHTEEN jobs (the rust job carries lanes 2 + 3):
 #   0.  build-lean-wasm    -> build-lean-wasm (the SHIP lean artifact built ONCE,
 #                                         uploaded as `lean-wasm-pkg`; frontend +
 #                                         e2e + twiggy(lean half) `needs:` it and
@@ -44,15 +45,38 @@
 #   9.  e2e                -> e2e        (download lean pkg -> Playwright over the Vue SPA)
 #   10. iai                -> iai        (callgrind deterministic instruction-count baseline)
 #   11. cargo-audit        -> cargo-audit(RustSec advisory scan over Cargo.lock; independent, no needs:)
+#   12. FE unit estate     -> fe-unit    (T5-W1.1/1.14: vitest run + the >=300 executed
+#                                         count floor + the per-scope coverage floor,
+#                                         all off ONE instrumented vitest invocation)
+#   13. boundary law       -> boundary   (T5-W1.4: the generated 20/20 cross-game matrix.
+#                                         EXPECTED RED until W2.5 — read its banner)
+#   14. perf subset        -> perf-subset(T5-W1.2: the P1 patch's gates.json idle
+#                                         thresholds, executed on the built dist)
+#   15. wasm resolution    -> wasm-publish-dryrun
+#                                        (T5-W1.12: the pkg exports contract + a
+#                                         no-token `npm publish --dry-run`)
+#   16. evidence policy    -> evidence-policy
+#                                        (T5-W1.3: per-image + per-wave byte caps over
+#                                         docs/tranches/**, self-tested)
+#   17. doc truth          -> doc-truth  (T5-W0.2 + W1.7: thirteen rows, every figure
+#                                         re-derived from the tree at run time)
+#   18. npm advisories     -> npm-audit  (T5-W1.15: high+ over the frontend lockfile —
+#                                         the oracle the Dependabot dashboard is not)
 #
 # Compute-cost DAG (T4-W2, r4-corrected — a `needs:` saves redundant CI minutes,
 # NOT wall-time; a predecessor serializes onto each dependent's critical path, so
 # edges are added ONLY where they kill redundant compute without lengthening the
-# critical path): build-lean-wasm ← {frontend, e2e, twiggy}. lint/rust/py-*/wasm/
-# iai stay independent (they consume no wasm artifact). The cheap independent
-# jobs — W5's cargo-audit (landed, no `needs:`), W1's proof:browser (to come) —
-# slot in the same way (no lint-before-build gate: it would only lengthen the
-# build-lean-wasm critical path).
+# critical path): build-lean-wasm ← {frontend, e2e, twiggy, fe-unit, boundary,
+# perf-subset, wasm-publish-dryrun, doc-truth}. The five T5-W1 additions take that
+# edge for one reason only: web/frontend/package.json file:-links
+# @mkbabb/csp-solver-wasm to csp-solver/wasm/pkg, so `npm ci` cannot resolve the
+# lockfile until that directory exists — they DOWNLOAD the shared artifact rather
+# than rebuild it, and carry no Rust toolchain. lint/rust/py-*/wasm/iai stay
+# independent (they consume no wasm artifact), and so do T5-W1's two tree-only
+# lanes — evidence-policy and npm-audit read the checkout and nothing else.
+# W5's cargo-audit (landed, no `needs:`) slots in the same way (no
+# lint-before-build gate: it would only lengthen the build-lean-wasm critical
+# path).
 #
 # Build posture (STANDING, per the T15 refutation — synthesis-pass3.md §1 #14):
 # default release profile retained. NO lto=fat, NO codegen-units=1, NO strip
@@ -359,6 +383,19 @@ jobs:
                   key: cargo-build-lean-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
             - name: Build the lean wasm artifact (EXACT ship recipe — the package.json file-link target)
               run: wasm-pack build csp-solver/wasm --scope mkbabb --target web --profile wasm-release --no-default-features
+            # T5-W1 row 1.12 (audit I3/N2). `make wasm` runs this postprocess; this
+            # lane calls wasm-pack DIRECTLY and then uploads pkg/ as the artifact
+            # frontend, e2e, twiggy, fe-unit, boundary, perf-subset, doc-truth and
+            # wasm-publish-dryrun all download. Without it CI's artifact would carry a
+            # DIFFERENT resolution contract than the one `npm run build` mints locally,
+            # and every downstream lane would be testing the wrong package. Node is not
+            # otherwise installed in this job, so setup-node comes first.
+            - name: Set up Node (for the pkg-exports postprocess)
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+            - name: Stamp the pkg exports map (the generator owns the resolution contract)
+              run: node csp-solver/wasm/scripts/pkg-exports.mjs --write
             - name: Upload the lean wasm pkg (shared by frontend + e2e + twiggy)
               uses: actions/upload-artifact@v4
               with:
@@ -475,6 +512,95 @@ jobs:
                     exit 1
                   fi
 
+    # ---------------------------------------------------------------- Lane 15
+    # wasm-publish-dryrun — the pkg's RESOLUTION contract (T5-W1 row 1.12, audit
+    # I3 NARROWED / N2).
+    #
+    # csp-solver/wasm/pkg/package.json is gitignored and minted wholesale by
+    # wasm-pack. Five production workers deep-import
+    # `@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url`, which today resolves
+    # ONLY through Node's legacy no-`exports` fallback. The day a wasm-pack release
+    # begins emitting an `exports` map without a `.wasm` row, all five workers die
+    # on ERR_PACKAGE_PATH_NOT_EXPORTED — with zero source change, zero diff to
+    # review, and nothing watching. The contract now lives in
+    # csp-solver/wasm/scripts/pkg-exports.mjs: `--write` stamps it onto the
+    # artifact (build-lean-wasm, above), `--check` reads the same constant
+    # backwards, so gate and postprocess cannot drift.
+    #
+    # It gates the SHIPPED artifact: it DOWNLOADS the very pkg the other lanes
+    # consume rather than rebuilding its own.
+    #
+    # NO SECRET, EVER. `npm publish --dry-run` exits 0 on an unauthenticated runner
+    # (it warns and stops before the PUT) — proven in evidence/w1/publish-dryrun.txt
+    # §6. Do NOT add NODE_AUTH_TOKEN to this job; it must not be able to publish.
+    wasm-publish-dryrun:
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        needs: [build-lean-wasm]
+        steps:
+            - uses: actions/checkout@v4
+            - name: Download the lean wasm pkg (the exact artifact frontend + e2e consume)
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS)
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+            # npm 10 mis-resolves this repo's lockfiles; the pack/publish surface is
+            # pinned to the same floor every other Node lane uses.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            # Exact-map assertion + a live import.meta.resolve of every declared
+            # subpath through a throwaway node_modules link. Reds on a MISSING row
+            # (the N2 drift) and on an UNDECLARED extra row (silent surface growth).
+            - name: pkg exports contract (--check)
+              run: node csp-solver/wasm/scripts/pkg-exports.mjs --check
+            # The publish path itself. --dry-run runs the whole flow except the final
+            # PUT; no token, no registry write, no publish capability in this job.
+            - name: npm publish --dry-run (NO publish)
+              working-directory: csp-solver/wasm/pkg
+              run: npm publish --dry-run
+            # Resolution as a REGISTRY CONSUMER receives it: pack the tarball, unpack
+            # it into a throwaway node_modules, resolve the workers' subpath from
+            # there. Packing can drop a file the working directory still has (`files`
+            # is its own surface) — only the tarball proves what a consumer gets.
+            - name: Resolve the workers' subpath from the packed tarball
+              run: |
+                  set -euo pipefail
+                  SB="$(mktemp -d)"
+                  mkdir -p "$SB/node_modules/@mkbabb/csp-solver-wasm"
+                  npm pack ./csp-solver/wasm/pkg --pack-destination "$SB" >/dev/null
+                  tar -xzf "$SB"/*.tgz -C "$SB/node_modules/@mkbabb/csp-solver-wasm" --strip-components=1
+                  cd "$SB"
+                  node --input-type=module -e '
+                    const want = [
+                      "@mkbabb/csp-solver-wasm",
+                      "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm",
+                      "@mkbabb/csp-solver-wasm/package.json",
+                    ];
+                    let bad = 0;
+                    for (const s of want) {
+                      try { console.log("OK  ", s, "->", import.meta.resolve(s)); }
+                      catch (e) { console.log("FAIL", s, "->", e.code); bad++; }
+                    }
+                    process.exit(bad ? 1 : 0);
+                  '
+            # The byte band, re-derived on the artifact THIS job holds. Duplicated
+            # from twiggy on purpose: twiggy measures its own download, and a regen
+            # that changed the postprocess must not slip a fat binary past this lane
+            # just because the other one happened to pass.
+            - name: lean raw-size band (fail >127,500 B)
+              run: |
+                  set -euo pipefail
+                  RAW=$(stat -c%s csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm)
+                  echo "lean artifact raw size: ${RAW} B (darwin measures 122,385 B at T5-W1; fail >127,500)"
+                  if [ "$RAW" -gt 127500 ]; then
+                    echo "::error::lean wasm artifact ${RAW} B exceeds the 127,500 B five-game band"
+                    exit 1
+                  fi
+
     # ---------------------------------------------------------------- Lane 8
     # frontend — npm ci --dry-run (EUSAGE was P0, Pass-2 prototype 8) then npm ci +
     # vue-tsc --noEmit + eslint boundary rig + knip. @mkbabb/csp-solver-wasm is a
@@ -559,6 +685,213 @@ jobs:
             - name: ink pressure (graphite ladder + ramp ownership, self-tested)
               working-directory: web/frontend
               run: npm run lint:ink
+            # T5-W1 row 1.11 (audit C5 + J3) support floor. Same species as the four
+            # gates above it — static, zero-dependency, browser-free — and it needs
+            # this job's `npm ci`: check 2 reads @tailwindcss/node's Lightning CSS
+            # targets out of node_modules and REFUSES to pass when that input is
+            # missing rather than degrading to a green. It goes LAST because it is the
+            # only gate here that asserts across the repo boundary (it reads the root
+            # README), so a floor red never masks a lint red. Five checks + seven
+            # mutants under --self-test; born RED at 7 violations
+            # (evidence/w1/support-floor-RED.txt).
+            - name: 'support floor (browserslist vs the compiled targets; no sub-floor shims, self-tested)'
+              working-directory: web/frontend
+              run: npm run test:support-floor
+
+    # ---------------------------------------------------------------- Lane 12
+    # fe-unit — the FE unit estate joins CI (T5-W1 rows 1.1 + 1.14).
+    #
+    # Audit A1 CONFIRMED: 332 test blocks across 31 files, `test:unit` in
+    # package.json since T4-W2, and NOT ONE CI job invoked it. The whole estate was
+    # advisory. GAP-6 then found no coverage instrument anywhere in the repo — and
+    # W2 collapses ~4,150 LOC across five games. Collapsing a majority of an estate
+    # against an unmeasured test surface is the shape that ships a silent
+    # regression, so both floors land HERE, before the distill.
+    #
+    # ONE vitest invocation feeds both: `test:unit:report -- --coverage` emits
+    # vitest-report.json (the count floor's input) and coverage/coverage-summary.json
+    # (the coverage floor's) in a single run — fragments/coverage.yml OPTION A, the
+    # fold, verified end to end at r1.14-green-02-fold-one-invocation.txt. The
+    # standalone `fe-coverage` job that fragment also offers is NOT taken: it would
+    # re-run the same 332 tests for the same numbers.
+    #
+    # Node-only. It `needs:` build-lean-wasm for the file-link reason every Node
+    # lane here does, not because any unit imports the wasm package.
+    #
+    # STEP ORDER IS THE CONTRACT: each gate's --self-test runs BEFORE the green it
+    # grades (the lint:ink house pattern), and a red TEST is reported as a red test
+    # rather than as a coverage dip.
+    fe-unit:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        needs: [build-lean-wasm]
+        steps:
+            - uses: actions/checkout@v4
+            - name: Download the lean wasm pkg (the package.json file-link target)
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            # The gates, before the greens they grade.
+            - name: unit count gate self-test (every check shown able to fail)
+              working-directory: web/frontend
+              run: node scripts/check-unit-count.mjs --self-test
+            - name: coverage floor gate self-test (every check shown able to fail)
+              working-directory: web/frontend
+              run: node scripts/check-coverage-floor.mjs --self-test --print
+            # vitest run — human log + the JSON report + the v8 coverage summary, all
+            # from one pass. A red test exits nonzero HERE.
+            - name: vitest run --coverage (FE unit estate)
+              working-directory: web/frontend
+              run: npm run test:unit:report -- --coverage
+            # The count floor: >=300 EXECUTED (passed + failed; `.skip`/`.todo` are not
+            # executed and never count). 332 at the wave base; 300 is ~10% below, so
+            # ordinary churn doesn't red the lane while wholesale exclusion does. A
+            # narrowed `include`, a describe.skip over a whole file, or a collection
+            # error all exit 0 from the step above with a cheerful summary — only this
+            # one sees the number move. Re-derive the floor from a fresh census; never
+            # nudge it down to meet a red.
+            - name: unit count floor (>=300 executed)
+              working-directory: web/frontend
+              run: npm run test:unit:count
+            # The coverage floor: every scope at or above the W1.14 baseline in
+            # web/frontend/coverage-floor.json, which is the MINIMUM of a banked n=10
+            # sample, not one run. No tolerance at compare time — a tolerance would
+            # wave through exactly the sub-point regression the floor is for. A missing
+            # summary is a RED, never a skip.
+            - name: coverage floor (per-scope, >= the W1.14 baseline)
+              working-directory: web/frontend
+              run: npm run test:coverage:floor
+            # A red lane hands back the censuses it red on, not just a console tail.
+            - name: Upload the vitest JSON report (failure only)
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: vitest-report
+                  path: web/frontend/vitest-report.json
+                  retention-days: 7
+            - name: Upload the coverage summary (failure only)
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-summary
+                  path: |
+                      web/frontend/coverage/coverage-summary.json
+                      web/frontend/coverage/coverage-final.json
+                  retention-days: 7
+
+    # ---------------------------------------------------------------- Lane 13
+    # Cross-game boundary law — 20/20 ordered pairs, GENERATED (T5-W1 row 1.4).
+    #
+    # ======================= EXPECTED RED UNTIL W2.5 =======================
+    # THIS JOB FAILS ON PURPOSE FROM THE MOMENT IT LANDS. It is red because the
+    # defect is live — 23 cross-game imports across thermo->sudoku (8),
+    # killer->sudoku (8) and kenken->futoshiki (7) — and it stays red until W2's
+    # estate moves break them. The green date is pinned, not aspirational:
+    #
+    #     docs/tranches/2026-08-tranche-5/gates.json -> gates.W1.boundary.greensAt = "W2.5"
+    #
+    # Do NOT neutralise it in the meantime. No `continue-on-error`, no `|| true`, no
+    # `--max-warnings`: a gate that cannot fail is not a gate, and masking this one
+    # hands back exactly the enforcement hole it exists to expose (gate-soundness V4).
+    # If the red becomes intolerable before W2.5, narrow its TRIGGER with an `if:`,
+    # never its exit code. The born-RED bank, all 23 violations enumerated with the
+    # generated matrix and both canaries: evidence/w1/boundary-RED.txt.
+    # =======================================================================
+    #
+    # WHY ITS OWN JOB, not a step in `frontend`: folding a knowingly-red step into
+    # that lane would red vue-tsc, eslint, knip, prettier, font-coverage,
+    # ink-pressure and the support floor by association, make the wave unpushable,
+    # and send the first person who hit it reaching for `continue-on-error`. One
+    # job is red and its name says why.
+    #
+    # `eslint.config.js` hand-enumerates the matrix and therefore binds 2 of 20
+    # ordered pairs — the two families that predate the colocation edict. thermo,
+    # killer and kenken joined the estate at T4-W13 without joining the law.
+    # `eslint.boundary.config.js` derives the whole matrix from the game list on
+    # disk (a directory under src/games/ carrying `game.ts`), so a sixth family is
+    # bound the moment it lands, with no edit to any config.
+    #
+    # AT W2.5 this whole lane retires: the generated matrix folds into
+    # eslint.config.js, `lint:boundary` and this job are deleted, and `frontend`'s
+    # eslint step carries the law. Deleting it is part of W2.5's definition of done.
+    boundary:
+        name: boundary law (cross-game, 20/20 — EXPECTED RED until W2.5)
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        needs: [build-lean-wasm]
+        steps:
+            - uses: actions/checkout@v4
+            # eslint never reads the wasm pkg, but `npm ci` refuses to resolve the
+            # lockfile without the file: link target present — so download rather
+            # than build, and the lane stays Node-only.
+            - name: Download the lean wasm pkg (the package.json file-link target)
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            # The generator must be able to FAIL before its red is worth anything. A
+            # config that silently discovered zero games would lint vacuously green —
+            # the incumbent's defect one layer up — so it throws below two families.
+            # Proven here on a throwaway tree, then deleted, before the real run is
+            # trusted. Banked equivalent: evidence/w1/boundary-RED.txt §4 canary B.
+            - name: canary — the generator refuses to lint vacuously green
+              working-directory: web/frontend
+              run: |
+                  set -u
+                  CANARY=t5w1-boundary-canary
+                  rm -rf "$CANARY"
+                  mkdir -p "$CANARY/src/games/alpha"
+                  printf 'export const alphaGame = {}\n' > "$CANARY/src/games/alpha/game.ts"
+                  cp eslint.boundary.config.js "$CANARY/eslint.boundary.config.js"
+                  set +e
+                  ( cd "$CANARY" && npx eslint --no-config-lookup --config eslint.boundary.config.js src/games ) > canary.log 2>&1
+                  CODE=$?
+                  set -e
+                  rm -rf "$CANARY"
+                  cat canary.log
+                  if [ "$CODE" -eq 0 ]; then
+                    echo "::error::the boundary generator linted GREEN on a one-family tree — it cannot fail, so its green is worthless"
+                    rm -f canary.log
+                    exit 1
+                  fi
+                  if ! grep -q 'refusing to lint vacuously green' canary.log; then
+                    echo "::error::the one-family canary failed for the WRONG reason (expected the generator's own guard; see the log above)"
+                    rm -f canary.log
+                    exit 1
+                  fi
+                  rm -f canary.log
+                  echo "canary OK — the generator throws rather than green vacuously"
+            # THE GATE. Red until W2.5 breaks the 23 live cross-game imports.
+            - name: eslint (cross-game boundary law, generated matrix)
+              working-directory: web/frontend
+              run: npm run lint:boundary
 
     # ---------------------------------------------------------------- Lane 9
     # e2e — Playwright over the Vue SPA (ratification R6). Node-only after the
@@ -593,6 +926,34 @@ jobs:
             - name: npm ci
               working-directory: web/frontend
               run: npm ci
+            # T5-W1 row 1.10 (CH-56). `playwright test --list` only: no browser, no
+            # dist, seconds — so it belongs UPSTREAM of the ~4-minute browser install.
+            # A narrowed matrix is exactly the defect that makes the suite finish
+            # faster and greener, so the gate that catches it must not be paid for
+            # with the suite's own runtime. Five checks: the 9 (project, engine) pairs
+            # across the 3 configs · all 20 specs claimed by exactly one config · every
+            # spec on both engines unless HOLDOUTS says why · the 4 holdouts a closed,
+            # cited set · per-project count floors. --self-test re-runs each check
+            # against a known-bad matrix every run.
+            - name: 'Playwright project matrix (CH-56 — no silent single-engine narrowing)'
+              working-directory: web/frontend
+              run: npm run test:e2e:projects
+            # T5-W1 row 1.6 (B1 NARROWED). Reads the three Playwright configs through
+            # their own defineConfig export, not by regex over the source — a comment
+            # cannot satisfy it and a reformat cannot break it. Four checks: a config
+            # granting any retry must declare failOnFlakyTests: true · every non-zero
+            # retry is a NAMED grant carrying its class and reason · wordmark-webkit
+            # stays at retries 0 (that grant died with the linux vacuity yield this row
+            # hoisted the clip assertion out of) · failOnFlakyTests: false is never
+            # hand-declared. Run 30690204551 is why: wordmark-webkit's sudoku row red
+            # on attempt 1, green on attempt 2, reported flaky, lane exit 0.
+            #
+            # The SUITE half of row 1.6 — the hoisted edge-clip verdict and the 5/5
+            # theme-bake guard — rides the existing built-dist step below with no CI
+            # change: same job, same config, same preview, 23 tests -> 39.
+            - name: 'Playwright retries policy (1.6 — a retried pass never greens a lane)'
+              working-directory: web/frontend
+              run: npm run test:e2e:retries
             # Key the browser cache on the resolved Playwright version so a bump
             # invalidates it (the on-disk bundle layout is version-specific).
             - name: Resolve Playwright version (from the lockfile)
@@ -620,9 +981,69 @@ jobs:
             - name: "Run the visual golden gate"
               working-directory: web/frontend
               run: npx playwright test --config playwright-golden.config.ts
-            - name: "Golden byte ceiling"
+            # T5-W1.13, the BLIND BAND cure. darwin soul floor 0.017 < the observed
+            # drift 0.03 < the linux coarse floor 0.05 — and ubuntu is the only
+            # platform CI runs, so both clause-relaxed goldens (logo-light,
+            # toggle-crest-dark) are green AND SILENT here: Playwright prints
+            # "N pixels (ratio R)" only when an assertion FAILS, so a green run bans
+            # its own measurement and seventeen consecutive linux greens said nothing
+            # about a 0.03 drift. The cure is VISIBILITY, not a floor change — the
+            # sun-crest clause keeps its authority and 0.05 stands.
+            #
+            # NOT A GATE: it enforces no floor, mints no baseline, adds no engine.
+            # GOLDEN_MAGNITUDE=1 asserts both goldens at ratio 0 — strictly TIGHTER
+            # than the shipped floors, so report mode cannot manufacture a green. It
+            # exits non-zero for exactly one reason: the instrument produced no
+            # measurement. Grep the log for `[golden-magnitude] JSON {…}`; the ratio
+            # is recomputed from the baseline's IHDR geometry because Playwright CEILS
+            # its printed ratio to 2dp (643 px of 220x220 is 0.0133 and prints "0.02").
+            - name: "Magnitude report — the two clause-relaxed goldens (report only, no floor changes)"
+              if: ${{ !cancelled() }}
+              timeout-minutes: 6
+              working-directory: web/frontend
+              run: node scripts/golden-magnitude.mjs
+            # T5-W1.13. The step's NAME changed with its script: check-golden-bytes.mjs
+            # grew from one rule to six — per-image ceiling · ESTATE TOTAL (110 KB,
+            # derived from the estate's own mint history, summed since T4 and never
+            # gated until now) · fossils (any *.png under e2e/ outside e2e/goldens) ·
+            # decode + blank floor · pairing/orphans/missing baselines · the
+            # engine/template collision guard. A red has to read as what it is.
+            #
+            # `if: ${{ !cancelled() }}` is the one behavioural addition: this step used
+            # to be skipped whenever the golden COMPARE red, which made the estate
+            # check hostage to a flake in a different gate. An orphaned or unpaired
+            # golden is exactly the defect that arrives WITH a red compare.
+            - name: "Golden estate gate — bytes, total, fossils, decode, pairing"
+              if: ${{ !cancelled() }}
               working-directory: web/frontend
               run: npm run test:golden:bytes
+            # T5-W1.13 — the gate that proves the gate. GOLDEN_DELTA=black|invert is
+            # the visual-golden machinery's own acceptance test: it injects a
+            # deliberate, reproducible regression so the capture-compare can be PROVEN
+            # to bite. It lived in the spec and in prose and in NO CI step, and a
+            # compare that has silently stopped comparing looks exactly like a compare
+            # that is passing (gate-soundness.md:114).
+            #
+            # THE ASSERTION IS INVERTED: this step fails when playwright SUCCEEDS.
+            # Both arms run because they fail differently — `black` proves the RASTER
+            # path compares, `invert` proves the THEME path does. Neither writes a
+            # baseline. It runs LAST of the golden steps because it perturbs the app,
+            # so it must not precede a measuring step.
+            - name: "Self-delta — prove the golden compare still bites (both arms)"
+              if: ${{ !cancelled() }}
+              timeout-minutes: 6
+              working-directory: web/frontend
+              run: |
+                  set -u
+                  for arm in black invert; do
+                    echo "::group::GOLDEN_DELTA=$arm"
+                    if GOLDEN_DELTA="$arm" npx playwright test --config playwright-golden.config.ts --reporter=line; then
+                      echo "::error::SELF-DELTA DID NOT BITE — the golden compare passed with the $arm regression injected."
+                      exit 1
+                    fi
+                    echo "ok — the $arm arm red the compare, as it must"
+                    echo "::endgroup::"
+                  done
             # BUILT-DIST gates — three projects on ONE bundled preview build
             # (playwright-throttle.config.ts, port 4188), all testIgnored from the default
             # config so they must run explicitly or they go dark:
@@ -664,6 +1085,127 @@ jobs:
                   path: web/frontend/playwright-report-throttle
                   if-no-files-found: ignore
                   retention-days: 7
+
+    # ---------------------------------------------------------------- Lane 14
+    # perf subset — gates.json's idle thresholds, EXECUTED (T5-W1 row 1.2).
+    #
+    # THE HOLE THIS FILLS: the P1 patch's gates.json is a committed threshold file
+    # that nothing has ever run. r1/perf-disposition.md §3.2 put it plainly — "a
+    # regression to 79 fps idle would pass every CI lane". The filter census is a
+    # good proxy for the cured MECHANISM, but proxy != surface: a new perf defect
+    # with zero new filters is invisible to it.
+    #
+    # WHAT THIS LANE ENFORCES, and only this — idle fps + long-frame(>33.4ms)
+    # census on the BUILT DIST, headless chromium AND webkit, thresholds read from
+    # patches/p1-safari-ios-performance/gates.json at RUN TIME:
+    #   desktop.idle3s.maxLong33 (0)  GATE A, absolute, engine-portable
+    #   desktop.idle3s.minFps    (97) GATE B, transposed to a fraction of the
+    #                                 runner's own measured rAF ceiling
+    # Nothing here hardcodes a number; a missing gates.json is exit 2, never a
+    # default. Every other gates.json row needs real Safari, a real simulator or
+    # ps-level attribution and stays a documented MANUAL lane
+    # (web/frontend/perf-rig/README.md), whose first run-id banks at W-GATE.
+    #
+    # WHAT A GREEN HERE DOES NOT MEAN: Playwright WebKit is not Safari. This
+    # harness read 80-98 fps on the exact surface the owner called a rendered mess.
+    # Read the lane as a REGRESSION TRIPWIRE on the cured mechanism. It is not a
+    # Safari number and it is not an iOS claim.
+    #
+    # NOT folded into `e2e` (which has both engines and a dist-throttle/ already,
+    # so folding would cost one command): `e2e` carries five suites against a
+    # 25-minute budget, a frame-timing window taken in the tail of a heavy
+    # Playwright run measures a runner that has just been hammered, and the exit-3
+    # retry below has no clean home mid-suite.
+    #
+    # EXIT-CODE CONTRACT — the part not to flatten:
+    #   0 every threshold held
+    #   1 a gates.json threshold was BREACHED            -> fail, NEVER retried
+    #   2 setup/usage error (no gates.json, bad port, …) -> fail
+    #   3 INSTRUMENT failure — too few clean windows, or the app-free control page
+    #     itself dropped a long frame                    -> retried ONCE, then fails
+    # The retry covers exactly one documented flake class: host contention on a
+    # shared runner, detected by the control page. A breach is never retried,
+    # because a breach is a fact about the bundle. Do not collapse 3 into 0.
+    perf-subset:
+        name: perf subset (gates.json idle thresholds, chromium + webkit)
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        needs: [build-lean-wasm]
+        steps:
+            - uses: actions/checkout@v4
+            - name: Download the lean wasm pkg (the package.json file-link target)
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            # Same cache key as `e2e`, so whichever lane runs first warms it for the
+            # other.
+            - name: Resolve Playwright version (from the lockfile)
+              id: pw-version
+              working-directory: web/frontend
+              run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+            - name: Cache Playwright browser bundle
+              id: pw-cache
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
+            # Both engines: the P1 defect was WebKit's and chromium alone would have
+            # missed it entirely. webkit is the load-bearing arm; chromium is the
+            # cross-engine control that says whether a red belongs to one engine or both.
+            - name: 'Install Playwright chromium + webkit (+ deps)'
+              working-directory: web/frontend
+              run: npx playwright install --with-deps chromium webkit
+            # THE GATE. `--build` forces a fresh `vite build` (skipping vue-tsc and the
+            # prebuild wasm make — the same call playwright-throttle.config.ts makes,
+            # for the same reasons). Port 4390 is the rig's own; the script refuses
+            # 3000/3001/4188/4288 outright and kills its server on the way out.
+            - name: 'gates.json idle thresholds (idle fps + long-frame census)'
+              working-directory: web/frontend
+              run: |
+                  set -u
+                  set +e
+                  node perf-rig/ci-subset.mjs --port 4390 --runs 3 --build \
+                    --out perf-subset-report.txt
+                  CODE=$?
+                  if [ "$CODE" -eq 3 ]; then
+                    echo "::warning::perf subset could not measure (exit 3) — the runner's own app-free control page dropped a long frame, or too few windows came back clean. Retrying once; this is the documented contention flake class, NOT a threshold breach."
+                    node perf-rig/ci-subset.mjs --port 4390 --runs 3 \
+                      --out perf-subset-report.txt
+                    CODE=$?
+                  fi
+                  set -e
+                  case "$CODE" in
+                    0) echo "perf subset GREEN — every gates.json idle threshold held on both engines" ;;
+                    1) echo "::error::perf subset RED — a gates.json threshold was breached. See the report artifact; the BREACH lines name the engine, the measured value and the derived threshold. Do NOT retry this and do NOT tune the threshold: gates.json is the P1 patch's sealed commitment." ;;
+                    2) echo "::error::perf subset setup error — gates.json unreadable, a reserved port, or a failed build. This lane carries no fallback thresholds by design." ;;
+                    3) echo "::error::perf subset INSTRUMENT failure twice running — this runner cannot hold its own frame budget with an empty page on screen, so neither a green nor a red is admissible. Not a bundle regression." ;;
+                    *) echo "::error::perf subset exited $CODE (unexpected)" ;;
+                  esac
+                  exit "$CODE"
+            # Uploaded green or red: a perf number is worth what its run record is
+            # worth, and the green runs are the baseline the next red is read against.
+            - name: Upload the perf subset report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: perf-subset-report
+                  path: web/frontend/perf-subset-report.txt
+                  if-no-files-found: warn
+                  retention-days: 30
 
     # ---------------------------------------------------------------- Lane 10
     # iai — instruction-count baseline gate for the solver hot path (P6 ADOPT,
@@ -783,3 +1325,169 @@ jobs:
                   tool: cargo-audit
             - name: cargo audit (RustSec advisories over the committed Cargo.lock)
               run: cargo audit
+
+    # ---------------------------------------------------------------- Lane 16
+    # evidence-policy — the byte caps docs/tranches/EVIDENCE-POLICY.md promised and
+    # nothing enforced (T5-W1 row 1.3).
+    #
+    # EVIDENCE-POLICY.md:13 said "the gate greps the wave's evidence dir for *.png,
+    # sums bytes, and fails on breach". Audit A3 CONFIRMED-worse: at the wave base
+    # the estate carried 73 live breaches — 64 images over the 153,600 B per-image
+    # cap, 5 wave buckets over the 2,097,152 B per-wave cap, and 4 filenames
+    # matching the banned /-full\.png$/ viewport pattern. RED banked at
+    # evidence/w1/evidence-policy-RED.txt; GREEN after the once-only sealed-tranche
+    # adjudication at evidence-policy-GREEN.txt.
+    #
+    # Its own job rather than a step in `frontend`: the scope is docs/tranches/**,
+    # the script is zero-dependency Node with no package.json above it, and it must
+    # not queue behind build-lean-wasm to tell an author their capture is 400 KB.
+    # ~10 s wall. No npm pin — this lane never invokes npm.
+    #
+    # --self-test is not decoration: it re-proves all three rules able to FAIL (and
+    # able NOT to fire on a conformant estate) against a synthetic tree before the
+    # real audit runs, so a green here is never a green from a broken instrument.
+    evidence-policy:
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        steps:
+            - uses: actions/checkout@v4
+            - name: Set up Node (LTS)
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+            # Walks docs/tranches/** on the checked-out worktree — exactly the tracked
+            # set, so CI and a local run agree. Caps and the name ban come off
+            # EVIDENCE-POLICY.md:9-11 and are pinned by gates.json W1.evidencePolicy.
+            # The 64 image pins + 5 wave pins in the script are the sealed-tranche
+            # grandfather, each a byte CEILING: a grandfathered file that grows, or a
+            # grandfathered wave that gains an image, reds. Additions to those lists
+            # are forbidden — the cure for a breaching capture is a crop.
+            - name: evidence policy (per-image + per-wave caps, viewport name ban, self-tested)
+              run: node scripts/check-evidence-policy.mjs --self-test
+
+    # ---------------------------------------------------------------- Lane 17
+    # doc-truth — the doc-canon gate joins CI (T5-W0 row 0.2, wired at T5-W1 row 1.7).
+    #
+    # Thirteen rows, each of which RE-DERIVES its truth from the artifact at run time
+    # and then asserts the docs say that: a byte count off the built .wasm, a
+    # version off Cargo.toml/package.json, a test roster off the #[test] attributes,
+    # an e2e total off `playwright test --list`, the twiggy bands off the workflow's
+    # own guards, the iai golden off the baseline the iai lane grades against, the
+    # `make wasm` recipe off the Makefile's own recipe line. Nothing is pinned, so
+    # when the code moves the gate moves with it and the PROSE is what goes red.
+    # Born RED 10/10 pre-W0-merge, green at W0's landing (evidence/w0/).
+    #
+    # RE-DERIVATION, NOT PINNING — the lane is toolchain-drift tolerant by
+    # construction, and that is why it can live on `push` without becoming a
+    # restamping chore.
+    #
+    # WHY IT DOWNLOADS THE WASM ARTIFACT: the lean-bytes row measures whichever
+    # built artifact is on disk. With none it DEGRADES — it derives the figure from
+    # ci.yml's own band comment and then, correctly, refuses to grade ci.yml against
+    # a number it just read out of ci.yml. A degraded run is a guaranteed red, so
+    # the artifact is downloaded rather than skipped. darwin and this runner
+    # disagree by ~2 KB on the same source; the doc sites carry BOTH figures for
+    # exactly that reason.
+    #
+    # WHY IT RUNS `npm ci`: the e2e-census row shells `playwright test --list` over
+    # the three configs. `--list` launches no browser and starts no webServer, so no
+    # `playwright install` is needed here — only the node_modules that carry the
+    # runner and the configs' imports.
+    doc-truth:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        needs: [build-lean-wasm]
+        steps:
+            - uses: actions/checkout@v4
+            - name: Download the lean wasm pkg (the artifact the lean-bytes row measures)
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            # THE GATE. One line per failing site: row id, file:line, expected, got —
+            # and a `derived:` line under EVERY row, red or green, naming what the
+            # tree actually says. Read the derived lines: a band that derives to 0 is
+            # now a red (T5-W1), but the numbers are the point of the output.
+            - name: doc truth (thirteen rows, every figure re-derived at run time)
+              run: node scripts/check-doc-truth.mjs
+
+    # ---------------------------------------------------------------- Lane 18
+    # npm-audit — the npm advisory tripwire (T5-W1 row 1.15, r3/security-posture
+    # Row 4).
+    #
+    # The repo gated its Rust supply chain and not its npm one: `grep -nE 'npm
+    # audit' ci.yml` at the wave base had NO HITS while cargo-audit had had a job
+    # since T4-W5. Three high-severity advisories sat live in
+    # web/frontend/package-lock.json with nothing in CI able to say so (postcss
+    # GHSA-r28c-9q8g-f849, sharp GHSA-f88m-g3jw-g9cj, brace-expansion
+    # GHSA-mh99-v99m-4gvg).
+    #
+    # WHY THIS IS NOT REDUNDANT WITH THE DEPENDABOT DASHBOARD, which is the whole
+    # point of the lane: Dependabot DID raise the brace-expansion alerts (#71, #72)
+    # and auto-triage suppressed both in the same second they were created —
+    # `auto_dismissed_at` == `created_at`, `scope: development`. The only two
+    # auto_dismissed records in the repo's 62-alert history. A dev-scoped high
+    # therefore NEVER enters the `open` set, so row 1.8's zero-open gate reads clean
+    # while the advisory is live in the lockfile. `npm audit` has no dev-scope
+    # suppression and no auto-triage. For that class this lane is the ONLY oracle.
+    #
+    # `--omit=dev` IS DELIBERATELY ABSENT: adding it would reproduce, inside CI, the
+    # exact blindness that let brace-expansion hide for a week. Dev-only advisories
+    # run on developer machines and on this runner.
+    #
+    # `--package-lock-only` audits the committed lockfile directly — no
+    # node_modules, no install, no file-link target, so no `needs:` and no npm ci.
+    # Equivalence to the installed-tree audit was verified both ways
+    # (evidence/w1/npm-audit-canary.txt): the flag changes the input, not the
+    # verdict. Moderate/low findings are reported but do not fail at this level, the
+    # same posture cargo-audit takes with its informational `unmaintained` warnings.
+    # If the moderate census ever needs teeth, adjudicate the LEVEL; never add
+    # per-advisory exceptions.
+    npm-audit:
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        # No `needs:` on purpose — independent, cheap, off every critical path.
+        steps:
+            - uses: actions/checkout@v4
+            - name: Set up Node (LTS)
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+            # npm 11 is load-bearing, not ceremony: npm 10 mis-resolves this lockfile
+            # (engines.npm >=11), and an audit of a mis-resolved tree grades the wrong
+            # versions.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm version (recorded — the audit is only as good as the resolver)
+              run: npm --version
+            # THE GATE. Exit nonzero on any high/critical advisory. No
+            # continue-on-error, no --omit, no allowlist.
+            - name: npm audit (high+, frontend lockfile)
+              working-directory: web/frontend
+              run: npm audit --audit-level=high --package-lock-only
+            # A red lane hands back the machine-readable census it red on. `|| true`
+            # is scoped to THIS reporting step; the gate above already decided the job.
+            - name: Capture the audit JSON (failure only)
+              if: failure()
+              working-directory: web/frontend
+              run: npm audit --json --package-lock-only > npm-audit.json || true
+            - name: Upload the audit JSON (failure only)
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: npm-audit-report
+                  path: web/frontend/npm-audit.json
+                  retention-days: 7

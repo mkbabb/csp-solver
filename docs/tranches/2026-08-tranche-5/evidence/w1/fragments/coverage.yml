@@ -1,0 +1,169 @@
+# T5-W1.14 — CI fragment: the coverage instrument and its floor (completeness GAP-6).
+#
+# A STANDALONE SNIPPET, not a workflow. The integrator lane owns .github/workflows/ci.yml;
+# this file is never a patch to it. Two YAML documents, `---`-separated, each written at
+# column 0 so each parses alone: OPTION A is a STEP LIST (paste at +12 — fe-unit's step
+# indent inside ci.yml's `jobs:`), OPTION B is a JOB (paste at +4). Take one, not both.
+#
+# ============================ FOLD INTO fe-unit — RECOMMENDED ============================
+# THIS SHOULD NOT BE ITS OWN JOB. It wants exactly what W1.1's `fe-unit` already has —
+# checkout, the lean-wasm artifact, node 24, npm>=11, `npm ci`, one vitest run — and adding
+# `--coverage` to the run fe-unit ALREADY makes costs one flag and ~15 s. A separate lane
+# would re-pay the install and run the same 332 tests twice for the same signal.
+#
+# The integrator decides. Option A is the fold: ONE line of fe-unit changed, THREE steps
+# appended. Option B is the standalone job, provided in full for the case where fe-unit's
+# wall-time budget is spoken for or the two floors are wanted independently attributable on
+# the checks list.
+# ========================================================================================
+#
+# WHY IT EXISTS (r3/completeness-critic.md GAP-6). The audit's finding was not low coverage —
+# it was that NO coverage instrument existed anywhere in the repo. rust 208/0/0, py 27/0, FE
+# 332 blocks / 31 files, e2e 206, and no figure for what any of it reaches. W2 then collapses
+# ≈4,150 raw LOC across five games (r2/dup-matrix.md §5: 56% of the measured normalized surface
+# is destroyable duplicate). Collapsing a majority of an estate against an unmeasured test
+# surface is the shape that ships a silent regression, so the instrument lands FIRST and the
+# measured baseline becomes the floor W2's exit must clear
+# (gates.json -> gates.W1.coverage.floorGatesW2Exit).
+#
+# WHAT IT GATES. `scripts/check-coverage-floor.mjs` reads coverage/coverage-summary.json
+# (vitest's json-summary reporter) against the tracked `web/frontend/coverage-floor.json`,
+# per SCOPE — the five games, shared, the registry, pencil, composables, lib, App.vue, and
+# TOTAL. Per-scope because a flat number lets a well-covered scope subsidize one the distill
+# just gutted. Three ways it reds, all intended:
+#     1. a scope drops below its floor  (named per metric, with the magnitude)
+#     2. a gated scope matches ZERO files — deleting the module is not how a floor is met;
+#        the wave must bank `"retired": "<where its code went>"` and say where the code went
+#     3. a covered file answers to no scope — a new top-level dir cannot enter ungated
+#
+# THE FLOOR IS THE BASELINE, and the baseline is a SAMPLE MINIMUM, not one run. This
+# instrument jitters: an n=10 sample at the wave base moved by up to 0.82 pts
+# (src/games/sudoku.functions, 43↔44 of 122 — timer/microtask callbacks that may or may not
+# land before a test file's environment tears down). Every floor is the minimum observed over
+# that banked sample, truncated to 2dp, enforced with `>=`. No tolerance is applied at compare
+# time — a tolerance would wave through exactly the 0.8-pt regression the gate is for. The
+# sample and the pre-registered rule are banked; `--write-floor` refuses a single-run bake and
+# refuses to lower any figure without `--allow-lower "<reason>"`.
+#
+# --self-test is NOT decoration. Six cases drive the pure core and re-prove the gate able to
+# FAIL on known-bad input before CI trusts its green (the `lint:ink` house pattern): at-floor
+# is green · a single dipping scope reds even while TOTAL rises · a vanished scope is
+# structurally RED · an explicitly retired scope passes · an unscoped file is surfaced ·
+# summary.total is not trusted. It exits 1 if any case misbehaves.
+#
+# EVIDENCE (docs/tranches/2026-08-tranche-5/evidence/w1/):
+#   r1.14-red-01-instrument-absent.txt         `vitest run --coverage` at HEAD -> MISSING DEPENDENCY, exit 1
+#   r1.14-red-02-canary-floor-breach.txt       shared's covered counts halved -> 8 breaches, exit 1
+#   r1.14-red-03-canary-scope-dissolved.txt    futoshiki deleted from the estate -> structural RED, exit 1
+#   r1.14-red-04-canary-rebaseline-refused.txt --write-floor refuses to lower / to bake one run
+#   r1.14-green-01-coverage-run.txt            332 tests under coverage, 12 scopes green, exit 0
+#   r1.14-green-02-fold-one-invocation.txt     Option A verified: ONE vitest run feeds both floors
+#   coverage-baseline.md / .json         the baseline of record + the ranked uncovered set
+#   r1.14-coverage-samples/run-{1..10}.json    the n=10 sample the floor was cut from
+#
+# NO NEW npm DEPENDENCY BEYOND THE PROVIDER. `@vitest/coverage-v8@^4.1.10` (pinned to the
+# vitest minor) is the only addition; package-lock.json moved +168/-0 — purely additive, no
+# existing resolution touched. The `coverage/` report dir is gitignored; the tracked artifact
+# is `coverage-floor.json`.
+
+
+# =============================================================================
+# OPTION A — FOLD INTO `fe-unit` (recommended). Two edits to W1.1's job:
+#
+#   1. CHANGE the existing run step from
+#          run: npm run test:unit:report
+#      to
+#          run: npm run test:unit:report -- --coverage
+#      One invocation then emits BOTH vitest-report.json (W1.1's count floor) and
+#      coverage/coverage-summary.json (this floor). Verified end to end at the wave
+#      base — r1.14-green-02-fold-one-invocation.txt, where the run happened to land on the
+#      sample MINIMUM for lines (1864/5355), the tightest check the min-rule can get.
+#
+#   2. APPEND the three steps below, AFTER `unit count floor (>=300 executed)`. Order
+#      matters: a red test should be reported as a red test, not as a coverage dip.
+#
+# The steps below are written at column 0 so this document parses standalone as a step
+# list. On paste they take fe-unit's step indent: column 8 in fragments/fe-unit.yml,
+# column 12 once that job sits inside ci.yml's `jobs:`. Merge-parse verified both ways —
+# evidence/w1/r1.14-fragment-merge-check.txt.
+# =============================================================================
+
+# The gate, before the green it grades — same discipline as the unit-count self-test
+# two steps above.
+- name: coverage floor gate self-test (every check shown able to fail)
+  working-directory: web/frontend
+  run: node scripts/check-coverage-floor.mjs --self-test --print
+# The floor: every scope at or above the T5-W1.14 baseline banked in
+# web/frontend/coverage-floor.json. `test:coverage:floor` runs --self-test and THEN
+# enforces, so this one command is both halves. It reads the summary the step above
+# produced; a missing summary is a RED, never a skip.
+- name: coverage floor (per-scope, >= the W1.14 baseline)
+  working-directory: web/frontend
+  run: npm run test:coverage:floor
+# A red floor should hand back the census it red on, not just the console tail.
+- name: Upload the coverage summary (failure only)
+  if: failure()
+  uses: actions/upload-artifact@v4
+  with:
+      name: coverage-summary
+      path: |
+          web/frontend/coverage/coverage-summary.json
+          web/frontend/coverage/coverage-final.json
+      retention-days: 7
+
+---
+# =============================================================================
+# OPTION B — standalone `fe-coverage` job. Take this INSTEAD of Option A, never as
+# well: it re-runs the same 332 tests and would double the estate's unit wall-time
+# for one number. `needs: [build-lean-wasm]` for the same reason fe-unit does —
+# package.json file:-links @mkbabb/csp-solver-wasm, so `npm ci` cannot resolve the
+# tree until that directory exists. No unit imports the package; the install still
+# needs the link target. Node-only otherwise: no Rust toolchain, no wasm-pack, no
+# cargo cache, no Playwright browsers. ~3 min.
+# =============================================================================
+
+fe-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build-lean-wasm]
+    steps:
+        - uses: actions/checkout@v4
+        - name: Download the lean wasm pkg (the package.json file-link target)
+          uses: actions/download-artifact@v4
+          with:
+              name: lean-wasm-pkg
+              path: csp-solver/wasm/pkg
+        - name: Set up Node (LTS) with npm cache
+          uses: actions/setup-node@v4
+          with:
+              node-version: '24'
+              cache: npm
+              cache-dependency-path: web/frontend/package-lock.json
+        # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+        # mis-resolves the lockfile.
+        - name: Pin npm >=11
+          run: npm install -g npm@^11
+        - name: npm ci
+          working-directory: web/frontend
+          run: npm ci
+        # The gate, before the green it grades.
+        - name: coverage floor gate self-test (every check shown able to fail)
+          working-directory: web/frontend
+          run: node scripts/check-coverage-floor.mjs --self-test --print
+        # vitest run --coverage. A red test exits nonzero HERE, so a failing suite is
+        # never reported as a coverage dip.
+        - name: vitest run --coverage (FE unit estate)
+          working-directory: web/frontend
+          run: npm run test:unit:coverage
+        - name: coverage floor (per-scope, >= the W1.14 baseline)
+          working-directory: web/frontend
+          run: npm run test:coverage:floor
+        - name: Upload the coverage summary (failure only)
+          if: failure()
+          uses: actions/upload-artifact@v4
+          with:
+              name: coverage-summary
+              path: |
+                  web/frontend/coverage/coverage-summary.json
+                  web/frontend/coverage/coverage-final.json
+              retention-days: 7

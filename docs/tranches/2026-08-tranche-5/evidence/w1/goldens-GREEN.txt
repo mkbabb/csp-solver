@@ -1,0 +1,49 @@
+T5-W1.13 — THE GATE AFTER THE CURE (the RED in goldens-RED.txt precedes this)
+HEAD   f38c5130   when 2026-08-01 15:25:06 -0400
+cure   rm -rf web/frontend/e2e/visual-golden.spec.ts-snapshots  (4 untracked PNGs,
+       32,216 B; sha1s + check-ignore banked in goldens-RED.txt §1 before deletion)
+
+$ find e2e -name "*.png" -not -path "e2e/goldens/*" | wc -l
+       0
+
+$ git status --porcelain e2e/    # the deletion touches nothing tracked
+(empty — the fossils were untracked; the tracked eight are unchanged)
+
+$ shasum e2e/goldens/*.png       # the eight, byte-identical to HEAD
+8111441444e64a31739ffed95a2ed4a0ea5fb274  e2e/goldens/cell-light-darwin.png
+6a0917d34e77f9f9fa1ac1c10889c7546d85df38  e2e/goldens/cell-light-linux.png
+d3e380581e84e60f043d37cf70aa8a953f9122ff  e2e/goldens/grid-corner-light-darwin.png
+0b0aca4ca4766ec71e147ff3fa62fd2e39eaaffd  e2e/goldens/grid-corner-light-linux.png
+56e1fdcd24641d4b236d86ff20f62eeb944dc8bd  e2e/goldens/logo-light-darwin.png
+295033600b950e2bcaf1fee0b026b69e790bd19e  e2e/goldens/logo-light-linux.png
+8ce985243fc8ebb2c185c606f705bc902a8eaf0b  e2e/goldens/toggle-crest-dark-darwin.png
+b8f10649754a7e33a68845ca4e43329d239b8e42  e2e/goldens/toggle-crest-dark-linux.png
+
+===================================================================
+$ node scripts/check-golden-bytes.mjs
+===================================================================
+[golden-bytes] 8 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total    99.0 KB  (goldens 99.0 KB)
+  estate band    110.0 KB  (headroom 11.0 KB = 11.1% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:212
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:223
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:182
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:206
+
+[golden-bytes] tracked-ness: 8 tracked / 8 on disk
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] PASS — 8 goldens, 99.0 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+EXIT=0

@@ -1,0 +1,54 @@
+# T5-W1 row 1.2 — fragments/perf-subset.yml verification
+# HEAD f38c5130   date 2026-08-01T19:41:27Z
+# pyyaml 6.0.3
+
+1. standalone parse (job block dedented by 4)
+   keys: ['perf-subset']
+   perf-subset keys: ['name', 'runs-on', 'timeout-minutes', 'needs', 'steps']
+   name='perf subset (gates.json idle thresholds, chromium + webkit)'
+   needs=['build-lean-wasm']  runs-on=ubuntu-latest  timeout-minutes=20
+   steps: 10
+     · actions/checkout@v4
+     · Download the lean wasm pkg (the package.json file-link target)
+     · Set up Node (LTS) with npm cache
+     · Pin npm >=11   ->  npm install -g npm@^11
+     · npm ci   ->  npm ci
+     · Resolve Playwright version (from the lockfile)   ->  echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+     · Cache Playwright browser bundle
+     · Install Playwright chromium + webkit (+ deps)   ->  npx playwright install --with-deps chromium webkit
+     · gates.json idle thresholds (idle fps + long-frame census)
+     · Upload the perf subset report
+
+2. ci.yml at HEAD
+   jobs: ['lint', 'rust', 'py-compile', 'py-runtime', 'wasm', 'build-lean-wasm', 'twiggy', 'frontend', 'e2e', 'iai', 'cargo-audit']
+   perf-subset absent (A2: gates.json has no executor anywhere): True
+   grep -ciE 'fps|long33|jank|lighthouse' ci.yml = 0 (case-insensitive; 0 case-sensitive too)
+   Re-derived at citation, and it lands one notch worse than the audit recorded:
+   r1/perf-disposition.md §3.2 reports this grep "returns only the two *size* budget step
+   names". At HEAD f38c5130 it returns NOTHING — the two wasm byte-band steps are named in
+   bytes and match none of these terms. ci.yml carries no frame-timing enforcement of any
+   kind, by any spelling, before this fragment lands.
+
+3. merge parse (fragment indented by 4, appended to jobs:)
+   jobs after merge: ['lint', 'rust', 'py-compile', 'py-runtime', 'wasm', 'build-lean-wasm', 'twiggy', 'frontend', 'e2e', 'iai', 'cargo-audit', 'perf-subset']
+   perf-subset identical to the standalone parse: True
+   needs: target build-lean-wasm present: True
+   pre-existing jobs preserved: True  (11 -> 12)
+   e2e untouched: True
+
+4. the gate step's exit-code contract, as parsed
+   0) present
+   1) present
+   2) present
+   3) present
+   'exit "$CODE"' present (the step propagates, never swallows): True
+   no continue-on-error on the job: True
+   no '|| true' anywhere: True
+   retry is scoped to exit 3 only: True
+
+5. thresholds are READ, never restated
+   ci-subset.mjs contains a literal 97:  False
+   ci-subset.mjs contains a literal 98.4: False
+   fragment yaml contains a literal threshold: False
+   gates.json desktop.idle3s = {'minFps': 97, 'maxLong33': 0}  ceilingFps = 98.4
+   derived ratio 97/98.4 = 0.98577

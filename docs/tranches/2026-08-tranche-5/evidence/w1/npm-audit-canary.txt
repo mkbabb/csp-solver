@@ -1,0 +1,60 @@
+# T5-W1 row 1.15 — npm-audit lane CANARY (the gate shown able to fail)
+# Date: 2026-08-01T20:57:33Z
+#
+# The lane's defect is TWOFOLD, so both halves of the born-RED law apply:
+#   - the ADVISORIES were live at HEAD  -> npm-audit-RED.txt (5 highs, exit 1)
+#   - the LANE was absent from CI       -> this canary, proving the job's exact
+#     command exits nonzero on a known-bad input
+#
+# Method: the pre-cure package.json + package-lock.json (snapshotted before any
+# bump in this lane) copied into an isolated directory, then the fragment's
+# verbatim step command run against them. No node_modules, no install — this is
+# exactly what the CI job does.
+#
+# $ npm audit --audit-level=high --package-lock-only
+# ---------------------------------------------------------------
+
+# npm audit report
+
+brace-expansion  2.0.0 - 2.1.2 || 4.0.0 - 5.0.7
+Severity: high
+brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash - https://github.com/advisories/GHSA-mh99-v99m-4gvg
+brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash - https://github.com/advisories/GHSA-mh99-v99m-4gvg
+fix available via `npm audit fix`
+node_modules/brace-expansion
+node_modules/editorconfig/node_modules/brace-expansion
+node_modules/glob/node_modules/brace-expansion
+
+postcss  <=8.5.17
+Severity: high
+PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure - https://github.com/advisories/GHSA-r28c-9q8g-f849
+fix available via `npm audit fix`
+node_modules/postcss
+
+sharp  <0.35.0
+Severity: high
+sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591 - https://github.com/advisories/GHSA-f88m-g3jw-g9cj
+fix available via `npm audit fix`
+node_modules/sharp
+  miniflare  <=0.0.0-fec45ed61 || 4.20250508.3 - 4.20260721.0
+  Depends on vulnerable versions of sharp
+  node_modules/miniflare
+    wrangler  <=0.0.0-7ae5dd357 || 4.16.0 - 4.113.0
+    Depends on vulnerable versions of miniflare
+    node_modules/wrangler
+
+5 high severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+
+# EXIT CODE: 1   (nonzero == the gate fires)
+
+# --- the same command on the CURED tree, same flags ---
+found 0 vulnerabilities
+# EXIT CODE: 0   (0 == green)
+
+# --package-lock-only equivalence: the flag changes the INPUT (lockfile, no
+# node_modules), not the verdict — 5 highs / exit 1 on the pre-cure lock and
+# 0 / exit 0 on the cured one, matching the installed-tree runs in
+# npm-audit-RED.txt and npm-audit-GREEN.txt case for case.

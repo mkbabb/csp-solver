@@ -1,0 +1,53 @@
+# T5-W1 row 1.5 — CANARY: the command the schedule fires CAN fail
+# date: 2026-08-01T19:29:08Z   cargo-audit-audit 0.22.2
+#
+# The row's defect is ABSENCE (no schedule), so the born-RED law asks for a canary
+# proving the gate can fail. Two arms, both banked:
+#   ARM 1 — the CONFIG probe was genuinely red at HEAD: r1.5-schedule-RED-at-HEAD.txt
+#           (grep for schedule|workflow_dispatch|cron across .github/workflows -> exit 1).
+#   ARM 2 — the SCHEDULED COMMAND is not vacuous: below. A synthetic lockfile carrying a
+#           real RustSec vulnerability makes `cargo audit` exit 1.
+#
+# Built entirely in a scratchpad; the repo's Cargo.lock is never touched (md5 re-checked).
+
+$ cat <sandbox>/Cargo.lock
+version = 3
+
+[[package]]
+name = "canary-app"
+version = "0.1.0"
+dependencies = [
+ "time",
+]
+
+[[package]]
+name = "time"
+version = "0.1.44"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+$ cargo audit --file <sandbox>/Cargo.lock
+    Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
+      Loaded 1178 security advisories (from /Users/mkbabb/.cargo/advisory-db)
+    Updating crates.io index
+    Scanning <sandbox>/Cargo.lock for vulnerabilities (2 crate dependencies)
+Crate:     time
+Version:   0.1.44
+Title:     Potential segfault in the time crate
+Date:      2020-11-18
+ID:        RUSTSEC-2020-0071
+URL:       https://rustsec.org/advisories/RUSTSEC-2020-0071
+Severity:  6.2 (medium)
+Solution:  Upgrade to >=0.2.23
+
+error: 1 vulnerability found!
+exit=1   <- RED. The tripwire bites on a VULNERABILITY.
+
+# Contrast, same binary, same advisory DB, the repo's real lockfile:
+#   exit 0 with '2 allowed warnings found' (bincode + proc-macro-error2, both 'unmaintained')
+#   — see r1.5-schedule-GREEN-after-cure.txt. Vulnerability reds; informational does not.
+#   That asymmetry IS the documented posture, and both arms are now observed, not assumed.
+
+$ md5 -q Cargo.lock   # the repo's lockfile, unchanged by the canary
+b97f9561b5eb4b21707ceeebc14c52fb
+$ git status --porcelain Cargo.lock
+(empty = clean)

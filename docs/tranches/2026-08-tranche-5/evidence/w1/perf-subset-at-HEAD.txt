@@ -1,0 +1,90 @@
+T5-W1 ROW 1.2 — gates.json's IDLE THRESHOLDS EXECUTED AGAINST THE BUILT DIST AT HEAD
+================================================================================
+
+HEAD           f38c5130  ("T5-W0 SEAL: the record heals ...")
+dist           web/frontend/dist, rebuilt at HEAD -> assets/index-Dm02QDxyy-Zi.js
+thresholds     docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+               desktop.ceilingFps 98.4 · desktop.idle3s.minFps 97 · maxLong33 0
+engines        headless chromium 149.0.7827.55 + headless webkit 26.5 (playwright 1.61.1)
+command        node perf-rig/ci-subset.mjs --port 4390 --runs 3
+exit           0 — GREEN
+
+RESULT. 6/6 idle windows carry ZERO long frames (>33.4ms), both engines. Idle fps holds
+99.80% (chromium 132.30/132.57) and 100.34% (webkit 98.57/98.24) of each engine's own
+app-free control ceiling, against the 98.577% floor derived from gates.json (required:
+chromium 130.68 fps, measured 132.30; webkit 96.84 fps, measured 98.57). This is the
+expected post-P1 shape: the 125ms beat train that produced 23 long frames per 3s idle
+window at base (r1-rig-baseline.md §1) is gone from both headless engines.
+
+WHAT THIS DOES NOT SAY. Playwright WebKit is not Safari. The P1 rig exists precisely
+because this harness read 80-98 fps on a surface the owner called a rendered mess. Green
+here is a REGRESSION TRIPWIRE on the cured mechanism, not a Safari number and not an iOS
+claim (E8 device smoke remains the only thing that closes the latter). The absolute-fps
+line in the report is labelled advisory and does not gate, because gates.json's 97 is
+anchored to a 98.4 fps real-Safari ceiling that no headless runner has.
+
+HOST-LOAD CONFOUND, DISCLOSED. An earlier run of this same gate against this same dist,
+taken while the host sat at load 13.83/21.46 with two xcodebuild processes at ~60% CPU
+each, went RED on webkit (median long33 2; windows 2/9/0). It is banked in full beside
+this file as `perf-subset-contended-host-RED.txt`. Between that run and this one TWO
+things changed — the host quiesced to load 2.99, and the instrument gained engine warm-up
+plus control/window interleaving. The improvement is therefore NOT cleanly attributable to
+the instrument change alone, and this file does not claim it is. What both runs share is a
+clean control on every window, which is the honest limit of the control page: it proves
+the host's rAF cadence is intact, not that the host has CPU to spare for a real
+compositing workload. The consequence is written into perf-rig/README.md as a standing
+rule — a webkit RED from this gate must be reproduced on a quiescent host before it is
+treated as a fact about the surface.
+
+================================================================================
+
+# perf-rig CI subset — idle fps + long-frame census on the built dist
+
+gates.json        /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+  desktop.ceilingFps         98.4
+  desktop.idle3s.minFps      97
+  desktop.idle3s.maxLong33   0
+derived ratio     minFps/ceilingFps = 97/98.4 = 0.98577
+engines           chromium, webkit   windows/engine 3   port 4390
+
+dist              /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/dist
+entry             assets/index-Dm02QDxyy-Zi.js
+host              18 cpus, load 2.99 / 12.70 / 15.76 (1/5/15m) at start
+started           2026-08-01T19:35:14.446Z
+
+probe-server up on :4390
+
+## chromium
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36
+  control 1  fps 132.99  p50 7.8  p95 9.3  long33 0  long50 0  worst 10.1ms  ~128Hz
+  window 1   fps 132.17  p50 7.8  p95 9.4  long33 0  long50 0  worst 10.2ms  frames 397  wall 3003.6ms  attempt 1
+  control 2  fps 132.57  p50 7.8  p95 9.1  long33 0  long50 0  worst 10.7ms  ~128Hz
+  window 2   fps 132.3  p50 7.7  p95 9.5  long33 0  long50 0  worst 10.3ms  frames 397  wall 3000.8ms  attempt 1
+  control 3  fps 132.42  p50 7.8  p95 9.5  long33 0  long50 0  worst 10.4ms  ~128Hz
+  window 3   fps 132.93  p50 7.8  p95 9.3  long33 0  long50 0  worst 10.3ms  frames 399  wall 3001.6ms  attempt 1
+  control median 132.57 fps / long33 0
+
+## webkit
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15
+  control 1  fps 98.24  p50 10  p95 12  long33 0  long50 0  worst 12ms  ~100Hz
+  window 1   fps 98.04  p50 10  p95 12  long33 0  long50 0  worst 13ms  frames 295  wall 3009ms  attempt 1
+  control 2  fps 98.04  p50 10  p95 12  long33 0  long50 0  worst 13ms  ~100Hz
+  window 2   fps 98.57  p50 10  p95 12  long33 0  long50 0  worst 13ms  frames 296  wall 3003ms  attempt 1
+  control 3  fps 98.74  p50 10  p95 12  long33 0  long50 0  worst 13ms  ~100Hz
+  window 3   fps 98.57  p50 10  p95 12  long33 0  long50 0  worst 13ms  frames 296  wall 3003ms  attempt 1
+  control median 98.24 fps / long33 0
+
+## verdict
+
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| chromium | 132.57 | 0 | 132.3 | 130.68 | PASS | 0 | 0 | PASS |
+| webkit | 98.24 | 0 | 98.57 | 96.84 | PASS | 0 | 0 | PASS |
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+  chromium: 132.3 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 132.57. Absolute comparison is a category error and is reported only for the record.
+  webkit: 98.57 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 98.24. Absolute comparison is a category error and is reported only for the record.
+
+
+host at finish    load 4.14 / 11.29 / 15.02 (1/5/15m) · 2026-08-01T19:36:11.840Z
+RESULT: GREEN — every gates.json idle threshold held on every engine.

@@ -1,0 +1,13 @@
+/* pose-freeze-all — pin EVERY pose stack to its pose-0 and let nothing flip on the beat.
+   The same shape as the Apple-vendor divider freeze (fb15253d), applied estate-wide. If the
+   125ms idle hitch train survives this, the beat is not paying for the pose flips. */
+.boil-pose,
+.rest-pose,
+.dt-pose {
+  opacity: 0 !important;
+}
+.boil-pose:first-of-type,
+.rest-pose:first-of-type,
+.dt-pose:first-of-type {
+  opacity: 1 !important;
+}

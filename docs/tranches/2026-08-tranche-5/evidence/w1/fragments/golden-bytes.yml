@@ -1,0 +1,38 @@
+# T5-W1.13 — CI FRAGMENT: the golden ESTATE gate (was: the golden byte ceiling).
+#
+# WHERE      .github/workflows/ci.yml, job `e2e` (Lane 9).
+# WHAT       REPLACES the existing step verbatim — at f38c5130 that is ci.yml:623-625:
+#
+#                - name: "Golden byte ceiling"
+#                  working-directory: web/frontend
+#                  run: npm run test:golden:bytes
+#
+# INDENT     ci.yml puts `- name:` at 12 spaces inside `steps:`; this file is written at
+#            that exact indentation, so the block pastes in unmodified.
+# ORDER      keep it where it is, immediately after "Run the visual golden gate" (and after
+#            the magnitude report if fragments/golden-magnitude.yml lands too).
+# RUN LINE   unchanged — package.json's `test:golden:bytes` already points at the script,
+#            so no package.json edit is needed and no lane contends for that file.
+#
+# WHY THE STEP CHANGES AT ALL. The script behind it grew from one rule to six
+# (scripts/check-golden-bytes.mjs, T5-W1.13): per-image ceiling · ESTATE TOTAL (110 KB,
+# derived from the estate's own mint history) · fossils (any *.png under e2e/ outside
+# e2e/goldens) · decode + blank floor · pairing/orphans/missing baselines · the
+# engine/template collision guard. The name has to say what reds, or a red reads as a
+# byte breach that isn't one.
+#
+# `if: ${{ !cancelled() }}` IS THE ONE BEHAVIOURAL ADDITION. Today this step is skipped
+# whenever the golden COMPARE reds — the estate check is hostage to a flake in a different
+# gate. The two are independent: an orphaned or unpaired golden is exactly the kind of
+# defect that arrives WITH a red compare, and that is the run where you most want to see
+# it. Cancellation still stops it.
+#
+# BORN-RED   goldens-RED.txt (this script, this HEAD, exit 1: estate total 133,557 B >
+#            112,640 B band + 4 fossils) → cure (fossils deleted) → goldens-GREEN.txt
+#            (exit 0). goldens-canary-RED.txt proves the other five checks bite.
+
+steps:
+    - name: "Golden estate gate — bytes, total, fossils, decode, pairing"
+      if: ${{ !cancelled() }}
+      working-directory: web/frontend
+      run: npm run test:golden:bytes

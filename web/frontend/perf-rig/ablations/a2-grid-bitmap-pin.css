@@ -1,0 +1,5 @@
+/* A2 — the grid's four baked <image> siblings stop flipping on the beat. The board svg is
+   the largest painted region on the page; WebKit paints svg interiors unlayered, so an
+   inner opacity flip repaints the region rather than blending a layer. */
+image.boil-frame-bitmap { opacity: 0 !important; }
+image.boil-frame-bitmap:first-of-type { opacity: 1 !important; }

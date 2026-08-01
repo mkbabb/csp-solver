@@ -1,0 +1,97 @@
+T5-W1 ROW 1.2 — THE CONTENDED-HOST RED, banked for the record
+================================================================================
+
+This is the FIRST run of ci-subset.mjs against real gates.json thresholds, taken on a
+loaded developer host. It went RED on webkit. It is banked because the row's discipline is
+"if RED, report honestly — do not tune", and because it is the observation that drove the
+instrument's control-validity and interleaving design.
+
+command   node perf-rig/ci-subset.mjs --port 4390 --runs 3        exit 1
+dist      assets/index-Dm02QDxyy-Zi.js (HEAD f38c5130) — the SAME dist the green run used
+design    block: all three controls, then all three windows in one page load, no warm-up
+
+VERDICT AS MEASURED
+  chromium  control 133.75 fps / long33 0   median idle 132.25   GATE B PASS  GATE A PASS
+  webkit    control  98.33 fps / long33 0   median idle  96.01   GATE B FAIL  GATE A FAIL
+            windows: long33 2 / 9 / 0 · fps 96.01 / 87.16 / 98.27 · worst 41 / 76 / 22 ms
+
+  BREACH [webkit] idle fps: 96.01 < required 96.93 (98.577% of the 98.33 fps ceiling)
+  BREACH [webkit] long-frame census: 2 frames >33.4ms > allowed 0
+
+HOST CENSUS taken minutes after this run (2026-08-01T19:31:41Z)
+  load averages: 13.83 (1m) / 21.46 (5m) / 18.94 (15m) on 18 cpus
+  top CPU: xcodebuild 60.4%, xcodebuild 60.0%, chrome-headless-shell 53.5%,
+           ChatGPT Codex (Renderer) 48.9%, historicalaudiod 42.4%, opendirectoryd 32.5%,
+           Chrome Helper (GPU) 32.4%, cpptools 27.4%
+  This is the exact condition r1-rig-baseline.md §7 flags: "the machine was under load from
+  sibling lanes throughout."
+
+WHY THE CONTROL DID NOT CATCH IT. Every control window in this run reads long33 0 at
+98.33 fps. The control page renders nothing — one rAF counter on an empty document — so it
+coasts through contention that starves a real compositing workload. The control validates
+the host's rAF CADENCE, not its spare CPU. That asymmetry is the instrument's known blind
+spot and is written into perf-rig/README.md rather than papered over.
+
+WHAT WAS CHANGED AFTER THIS RUN, and what was not:
+  ADDED  engine warm-up before any measurement (a cold webkit's own control page read
+         74.67 fps with 10 long frames, then 98.2 fps with 0 once warm — a cold denominator
+         is a false-GREEN machine, since a depressed ceiling makes the ratio gate trivial)
+  ADDED  control/window INTERLEAVING, per P-W4's instrument law (p-w4-validate-deploy.md
+         :46-54 — those cells "adjudicate interleaved-or-quiesced only")
+  ADDED  control validity: a control that breaches long33 yields exit 3 (instrument
+         failure), never exit 1 (breach) — a broken control may not issue any verdict
+  NOT CHANGED  the thresholds, the ratio derivation, gates.json, or one line of app source.
+
+================================================================================
+FULL OUTPUT AS IT CAME
+================================================================================
+
+# perf-rig CI subset — idle fps + long-frame census on the built dist
+
+gates.json        /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+  desktop.ceilingFps         98.4
+  desktop.idle3s.minFps      97
+  desktop.idle3s.maxLong33   0
+derived ratio     minFps/ceilingFps = 97/98.4 = 0.98577
+engines           chromium, webkit   windows/engine 3   port 4390
+
+dist              /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/dist
+entry             assets/index-Dm02QDxyy-Zi.js
+
+probe-server up on :4390
+
+## chromium
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36
+  control 1 fps 133.75  p50 7.699999999999818  p95 9.5  long33 0  long50 0  worst 17.300000000000182ms  ~130Hz
+  control 2 fps 134.5  p50 7.7000000000000455  p95 9.300000000000182  long33 0  long50 0  worst 10.300000000000182ms  ~130Hz
+  control 3 fps 131.68  p50 7.7999999999999545  p95 9.799999999999955  long33 0  long50 0  worst 12.299999999999727ms  ~128Hz
+  control median: 133.75 fps, long33 0
+  window 1  fps 130.34  frames 392  wall 3007.5ms  p50 7.8  p95 10.1  long33 0  long50 0  worst 17.2ms  attempt 1
+  window 2  fps 134.07  frames 403  wall 3005.8ms  p50 7.6  p95 9.3  long33 0  long50 0  worst 11.3ms  attempt 1
+  window 3  fps 132.25  frames 397  wall 3001.9ms  p50 7.8  p95 9.9  long33 0  long50 0  worst 15.3ms  attempt 1
+
+## webkit
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15
+  control 1 fps 98.27  p50 10  p95 12  long33 0  long50 0  worst 15ms  ~100Hz
+  control 2 fps 98.54  p50 10  p95 12  long33 0  long50 0  worst 15ms  ~100Hz
+  control 3 fps 98.33  p50 10  p95 12  long33 0  long50 0  worst 14ms  ~100Hz
+  control median: 98.33 fps, long33 0
+  window 1  fps 96.01  frames 289  wall 3010ms  p50 10  p95 14  long33 2  long50 0  worst 41ms  attempt 1
+  window 2  fps 87.16  frames 262  wall 3006ms  p50 10  p95 26  long33 9  long50 2  worst 76ms  attempt 1
+  window 3  fps 98.27  frames 295  wall 3002ms  p50 10  p95 13  long33 0  long50 0  worst 22ms  attempt 1
+
+## verdict
+
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| chromium | 133.75 | 0 | 132.25 | 131.85 | PASS | 0 | 0 | PASS |
+| webkit | 98.33 | 0 | 96.01 | 96.93 | **FAIL** | 2 | 0 | **FAIL** |
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+  chromium: 132.25 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 133.75. Absolute comparison is a category error and is reported only for the record.
+  webkit: 96.01 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 98.33. Absolute comparison is a category error and is reported only for the record.
+
+BREACH [webkit] idle fps: measured 96.01 < required 96.93 (98.577% of the 98.33 fps harness ceiling, derived from gates.json 97/98.4)
+BREACH [webkit] long-frame census: measured 2 frames >33.4ms > allowed 0 (gates.json desktop.idle3s.maxLong33)
+
+RESULT: RED — at least one gates.json threshold breached.

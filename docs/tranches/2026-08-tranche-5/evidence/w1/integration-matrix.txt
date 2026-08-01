@@ -1,0 +1,46 @@
+T5-W1 INTEGRATION MATRIX
+host      Darwin arm64  node v26.0.0  npm 11.12.1
+head      f38c5130 (working tree, W1 uncommitted)
+when      2026-08-01T21:19:32Z
+
+-- workflow parse -------------------------------------------------------
+.github/workflows/ci.yml                   PARSES   18 jobs: lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, wasm-publish-dryrun, frontend, fe-unit, boundary, e2e, perf-subset, iai, cargo-audit, evidence-policy, doc-truth, npm-audit
+.github/workflows/security-audit.yml       PARSES   1 jobs: cargo-audit
+
+-- repo-root gates ------------------------------------------------------
+check-doc-truth                    exit=0   expect=0          0 RED / 13 GREEN — canon holds
+check-evidence-policy              exit=0   expect=0          [evidence-policy] PASS — every image and every wave within policy.
+
+-- frontend gates (web/frontend) ----------------------------------------
+check-golden-bytes                 exit=0   expect=0          [golden-bytes] PASS — 8 goldens, 99.0 KB of a 110.0 KB estate band; paired, consumed, decodable,
+check-pw-projects                  exit=0   expect=0          OK — 20 specs, 268 resolved tests, every spec in both engines except the 4 recorded holdouts.
+check-pw-retries                   exit=0   expect=0          check-pw-retries: all checks green
+check-support-floor                exit=0   expect=0          PASS — 0 violation(s), 0 blind check(s)
+lint:boundary                      exit=1   expect=NONZERO    ✖ 23 problems (23 errors, 0 warnings)
+
+-- the fe-unit fold: ONE vitest invocation feeds BOTH floors -------------
+test:unit:report --coverage        exit=0   expect=0          ================================================================================
+    -rw-r--r--  1 mkbabb  staff    54043 Aug  1 17:19 coverage/coverage-summary.json
+    -rw-r--r--  1 mkbabb  staff  1609799 Aug  1 17:19 vitest-report.json
+check-unit-count (>=300)           exit=0   expect=0          unit count OK — 332 >= 300.
+check-coverage-floor               exit=0   expect=0          [coverage-floor] GREEN — 12 scopes at or above the W1.14 baseline (bank: f38c5130, 2026-08-01).
+
+-- wasm resolution contract ---------------------------------------------
+pkg-exports --check                exit=0   expect=0            verdict  GREEN
+
+NOT RUN LOCALLY (browser/runner-bound; they are CI steps, not scripts):
+  golden-magnitude.mjs   spawns the golden config's dev server + chromium
+  golden self-delta      two GOLDEN_DELTA arms over the golden config
+  perf-rig/ci-subset.mjs vite build + chromium/webkit on :4390
+  npm audit --audit-level=high --package-lock-only  (network: the advisory DB)
+
+-- run after the matrix pass (network-bound) -----------------------------
+npm audit (high+, --package-lock-only)  exit=0   expect=0   found 0 vulnerabilities
+    (born RED at the wave base: 5 highs, exit 1 — evidence/w1/npm-audit-RED.txt)
+
+-- reconciliation --------------------------------------------------------
+lint:boundary reported 23 errors. gates.json W1.boundary.liveViolationsAtHead
+says 20. The lane's own bank (evidence/w1/boundary-RED.txt:14) says 23, and its
+enumeration §2 lists 23 rows. 20 is the ORDERED-PAIR count the rule generates
+("20/20"), not a violation count; gates.json conflates the two. Flagged for the
+team lead — a gates.json correction, not a code change.

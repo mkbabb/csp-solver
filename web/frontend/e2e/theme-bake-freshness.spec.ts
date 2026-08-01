@@ -37,7 +37,20 @@ import { attachBakeEvidence } from "./bake-evidence";
  * engines, on the current dist AND on the banked pre-W3 baseline — the defect predates the
  * `disableTransition` change). Cured by 0.10.1: `useRasterStack` yields one paint boundary
  * before it captures, so `poseSvg` reads the cascade the flip produced.
+ *
+ * ALL FIVE LABELS, not the default board (T5-W1 1.6, from B1's second hole). This spec carries
+ * a second load beyond its own: `expect(s.logoInk).not.toBe("no-ink")` at `retries: 0` in BOTH
+ * engines is the estate's unconditional "the logo bake decoded to something" guard, and
+ * wordmark-integrity's linux yield was granted against it. But `loadBaked` navigated
+ * `./?size=3&difficulty=EASY` — no `game=`, i.e. the default board — so all four rows read the
+ * SUDOKU wordmark and the guard covered 1 of the 5 labels, while the runs that motivated the
+ * yield (30684983201 / 30690204551) blanked `killer`, `futoshiki`, `thermo` and `kenken`: four
+ * fifths of the labels had no linux vacuity guard anywhere in the estate. The describe is now
+ * parameterised over the same five labels wordmark-integrity asserts, so the guard is 5/5 and
+ * the toggle itself is measured per game rather than inferred from one board.
  */
+
+const GAMES = ["sudoku", "futoshiki", "thermo", "killer", "kenken"] as const;
 
 const MIN_CONTRAST = 4; // WCAG AA large-text; the defect measured 1.02–1.13
 const MAX_GRID_DE = 24; // sRGB euclidean; a correct bake measures ~3.5, the stale one ~296
@@ -148,8 +161,8 @@ function deltaE(a: string, b: string): number {
   return Math.round(Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]) * 10) / 10;
 }
 
-async function loadBaked(page: Page) {
-  await page.goto("./?size=3&difficulty=EASY");
+async function loadBaked(page: Page, game: string) {
+  await page.goto(`./?game=${game}&size=3&difficulty=EASY`);
   await page.waitForSelector("svg.handwritten-logo image.logo-pose-bmp", {
     timeout: 30000,
   });
@@ -206,47 +219,51 @@ for (const start of ["light", "dark"] as const) {
   test.describe(`G4.5 · baked ink survives one theme toggle (from ${start})`, () => {
     test.use({ colorScheme: start });
 
-    test(`${start} → ${start === "light" ? "dark" : "light"}: both baked surfaces re-ink`, async ({
-      page,
-    }, testInfo) => {
-      await loadBaked(page);
-      const before = await settledSample(page);
-      // The fresh load is the control: if this reds, the sampler is broken, not the bake.
-      await assertAgrees(before, "fresh load", page, testInfo);
+    for (const game of GAMES) {
+      test(`${game} ${start} → ${start === "light" ? "dark" : "light"}: both baked surfaces re-ink`, async ({
+        page,
+      }, testInfo) => {
+        await loadBaked(page, game);
+        const before = await settledSample(page);
+        // The fresh load is the control: if this reds, the sampler is broken, not the bake.
+        await assertAgrees(before, `${game} fresh load`, page, testInfo);
 
-      await page.locator("button.sun-moon-toggle").click();
+        await page.locator("button.sun-moon-toggle").click();
 
-      // Wait on the re-bake ITSELF (the blob is re-minted), not on a wall-clock guess — and
-      // fail loudly if it never fires, which is the other way this surface could go stale.
-      await expect
-        .poll(
-          async () =>
-            await page.evaluate(
-              () =>
-                document
-                  .querySelector("svg.handwritten-logo image.logo-pose-bmp")
-                  ?.getAttribute("href") ?? null,
-            ),
-          { timeout: 20000, message: "the logo pose blob was never re-minted" },
-        )
-        .not.toBe(before.logoHref);
-      await expect
-        .poll(
-          async () =>
-            await page.evaluate(
-              () =>
-                document
-                  .querySelector("svg.hand-drawn-grid image")
-                  ?.getAttribute("href") ?? null,
-            ),
-          { timeout: 20000, message: "the grid pose blob was never re-minted" },
-        )
-        .not.toBe(before.gridHref);
-      await page.waitForTimeout(400); // let the atomic url swap settle across all poses
+        // Wait on the re-bake ITSELF (the blob is re-minted), not on a wall-clock guess — and
+        // fail loudly if it never fires, which is the other way this surface could go stale.
+        await expect
+          .poll(
+            async () =>
+              await page.evaluate(
+                () =>
+                  document
+                    .querySelector("svg.handwritten-logo image.logo-pose-bmp")
+                    ?.getAttribute("href") ?? null,
+              ),
+            { timeout: 20000, message: "the logo pose blob was never re-minted" },
+          )
+          .not.toBe(before.logoHref);
+        await expect
+          .poll(
+            async () =>
+              await page.evaluate(
+                () =>
+                  document
+                    .querySelector("svg.hand-drawn-grid image")
+                    ?.getAttribute("href") ?? null,
+              ),
+            { timeout: 20000, message: "the grid pose blob was never re-minted" },
+          )
+          .not.toBe(before.gridHref);
+        await page.waitForTimeout(400); // let the atomic url swap settle across all poses
 
-      const after = await settledSample(page);
-      expect(after.theme, "the toggle did not change the theme").not.toBe(before.theme);
-      await assertAgrees(after, "after ONE toggle", page, testInfo);
-    });
+        const after = await settledSample(page);
+        expect(after.theme, "the toggle did not change the theme").not.toBe(
+          before.theme,
+        );
+        await assertAgrees(after, `${game} after ONE toggle`, page, testInfo);
+      });
+    }
   });
 }

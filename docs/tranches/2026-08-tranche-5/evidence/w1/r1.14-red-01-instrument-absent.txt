@@ -1,0 +1,19 @@
+$ git rev-parse --short HEAD
+f38c5130
+
+$ node -p "require('./package.json').devDependencies['@vitest/coverage-v8'] ?? 'ABSENT'"
+ABSENT
+
+$ ls node_modules/@vitest/
+expect
+mocker
+pretty-format
+runner
+snapshot
+spy
+utils
+
+$ npx vitest run --coverage </dev/null; echo EXIT=$?
+ MISSING DEPENDENCY  Cannot find dependency '@vitest/coverage-v8'
+
+EXIT=1

@@ -1,0 +1,28 @@
+# CANARY B — a gated scope cannot satisfy its floor by ceasing to exist
+# Doctored summary: all 14 src/games/futoshiki entries deleted (the 'collapse dissolves
+# the module' case). Every surviving scope is byte-identical to the baseline.
+
+$ node scripts/check-coverage-floor.mjs --summary <canary-b-futoshiki-dissolved.json>
+scope            | files |    stmts |   branch |    funcs |    lines
+--------------------------------------------------------------------
+src/games/sudoku |    14 |   52.79% |   55.39% |   35.24% |   50.57%
+src/games/thermo |    12 |   18.43% |    4.57% |   12.37% |   18.22%
+src/games/killer |    12 |   30.57% |   14.20% |   18.75% |   30.19%
+src/games/kenken |    13 |   34.06% |   16.36% |   19.14% |   33.59%
+src/games/shared |    37 |   53.19% |   45.57% |   47.95% |   53.38%
+src/games        |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/pencil       |    47 |   14.61% |   15.16% |   10.02% |   15.51%
+src/composables  |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/lib          |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/App.vue      |     1 |    0.00% |    0.00% |    0.00% |    0.00%
+TOTAL            |   139 |   34.77% |   29.72% |   27.75% |   34.77%
+
+[coverage-floor] STRUCTURAL FAILURE (1):
+  - scope "src/games/futoshiki" matched ZERO files — a gated scope cannot vanish silently. If W2 collapsed it, bank `"retired": "<where its code went>"` on the scope.
+[coverage-floor] FLOOR BREACH (3):
+  - TOTAL.statements: 34.77% < floor 35.03% (-0.26 pts)
+  - TOTAL.branches: 29.72% < floor 31.34% (-1.62 pts)
+  - TOTAL.lines: 34.77% < floor 34.82% (-0.05 pts)
+
+[coverage-floor] RED. The floor is the T5-W1.14 baseline (f38c5130); W2's collapse must clear it, not re-cut it.
+EXIT=1

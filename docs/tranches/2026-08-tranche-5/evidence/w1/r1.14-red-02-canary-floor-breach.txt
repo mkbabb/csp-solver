@@ -1,0 +1,32 @@
+# CANARY A — the gate fires on a W2-shaped coverage regression
+# Doctored summary: every src/games/shared file's covered counts halved (37 files),
+# floor = the real W1.14 bank (coverage-floor.json @ f38c5130). Nothing else altered.
+
+$ node scripts/check-coverage-floor.mjs --summary <canary-a-shared-halved.json>
+scope               | files |    stmts |   branch |    funcs |    lines
+-----------------------------------------------------------------------
+src/games/sudoku    |    14 |   52.79% |   55.39% |   35.24% |   50.57%
+src/games/futoshiki |    14 |   38.00% |   47.33% |   20.74% |   35.46%
+src/games/thermo    |    12 |   18.43% |    4.57% |   12.37% |   18.22%
+src/games/killer    |    12 |   30.57% |   14.20% |   18.75% |   30.19%
+src/games/kenken    |    13 |   34.06% |   16.36% |   19.14% |   33.59%
+src/games/shared    |    37 |   26.16% |   22.38% |   22.58% |   26.17%
+src/games           |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/pencil          |    47 |   14.61% |   15.16% |   10.02% |   15.51%
+src/composables     |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/lib             |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/App.vue         |     1 |    0.00% |    0.00% |    0.00% |    0.00%
+TOTAL               |   153 |   25.19% |   23.03% |   19.49% |   25.06%
+
+[coverage-floor] FLOOR BREACH (8):
+  - src/games/shared.statements: 26.16% < floor 53.19% (-27.02 pts)
+  - src/games/shared.branches: 22.38% < floor 45.57% (-23.19 pts)
+  - src/games/shared.functions: 22.58% < floor 47.95% (-25.37 pts)
+  - src/games/shared.lines: 26.17% < floor 53.38% (-27.21 pts)
+  - TOTAL.statements: 25.19% < floor 35.03% (-9.83 pts)
+  - TOTAL.branches: 23.03% < floor 31.34% (-8.30 pts)
+  - TOTAL.functions: 19.49% < floor 27.13% (-7.64 pts)
+  - TOTAL.lines: 25.06% < floor 34.82% (-9.76 pts)
+
+[coverage-floor] RED. The floor is the T5-W1.14 baseline (f38c5130); W2's collapse must clear it, not re-cut it.
+EXIT=1

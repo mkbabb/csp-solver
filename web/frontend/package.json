@@ -9,6 +9,13 @@
     "npm": ">=11"
   },
   "packageManager": "npm@11.x",
+  "browserslist": [
+    "chrome >= 111",
+    "edge >= 111",
+    "firefox >= 128",
+    "safari >= 16.4",
+    "ios_saf >= 16.4"
+  ],
   "scripts": {
     "wasm": "make -C ../../csp-solver/wasm wasm",
     "prebuild": "npm run wasm",
@@ -17,11 +24,19 @@
     "preview": "vite preview",
     "lint": "prettier --check src/",
     "lint:eslint": "eslint .",
+    "lint:boundary": "eslint --no-config-lookup --config eslint.boundary.config.js src/games",
     "lint:knip": "knip",
     "lint:ink": "node scripts/check-ink-pressure.mjs --self-test",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
+    "test:unit:report": "vitest run --reporter=default --reporter=json --outputFile.json=vitest-report.json",
+    "test:unit:count": "node scripts/check-unit-count.mjs vitest-report.json",
+    "test:unit:coverage": "vitest run --coverage",
+    "test:coverage:floor": "node scripts/check-coverage-floor.mjs --self-test",
     "test:e2e": "playwright test",
+    "test:support-floor": "node scripts/check-support-floor.mjs --self-test",
+    "test:e2e:projects": "node scripts/check-pw-projects.mjs --self-test",
+    "test:e2e:retries": "node scripts/check-pw-retries.mjs --self-test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:throttle": "playwright test --config playwright-throttle.config.ts",
     "test:golden": "playwright test --config playwright-golden.config.ts",
@@ -43,6 +58,7 @@
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
     "@vitejs/plugin-vue": "^6.0.7",
+    "@vitest/coverage-v8": "^4.1.10",
     "@vue/test-utils": "^2.4.11",
     "esbuild": "^0.28.1",
     "eslint": "^10.7.0",
@@ -58,6 +74,6 @@
     "vitest": "^4.1.10",
     "vue-eslint-parser": "^10.4.1",
     "vue-tsc": "^3.3.7",
-    "wrangler": "^4.110.0"
+    "wrangler": "~4.116.0"
   }
 }

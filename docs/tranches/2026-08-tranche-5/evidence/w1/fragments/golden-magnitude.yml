@@ -1,0 +1,47 @@
+# T5-W1.13 — CI FRAGMENT: the MAGNITUDE REPORT (the blind-band cure).
+#
+# WHERE      .github/workflows/ci.yml, job `e2e` (Lane 9).
+# WHAT       a NEW step, inserted immediately AFTER "Run the visual golden gate"
+#            (ci.yml:620-622 at f38c5130) and before the estate gate, so a run's log reads
+#            verdict → magnitude → estate.
+# INDENT     `- name:` at 12 spaces inside `steps:`, matching the file.
+# NEEDS      nothing new: same checkout, same node_modules, same chromium bundle the
+#            golden gate just used. It spawns its own dev server through the golden
+#            config's `webServer` block (~15 s) exactly as the gate step does.
+#
+# THE DEFECT IT CURES (r3/goldens-estate §5.2 H3, the BLIND BAND):
+#
+#            darwin soul floor   0.017
+#            observed drift      0.03    ← logo-light AND toggle-crest-dark
+#            linux clause floor  0.05    ← the sun-crest clause, and CI's only platform
+#
+#            Between those two floors the clause-relaxed goldens are green AND SILENT:
+#            Playwright prints "N pixels (ratio R …)" only when an assertion FAILS, so a
+#            green run bans its own measurement. Seventeen consecutive linux greens
+#            therefore say nothing about a 0.03 drift. The cure is VISIBILITY: print the
+#            number on every run. Floors are unchanged — the sun-crest clause keeps its
+#            authority and the linux coarse floor 0.05 stands (argued in
+#            ../goldens-hardening.md §3).
+#
+# WHAT IT IS NOT. Not a gate: it enforces no floor, mints no baseline, adds no engine, and
+# its exit code carries no verdict about drift. GOLDEN_MAGNITUDE=1 asserts the two goldens
+# at ratio 0 — strictly TIGHTER than the shipped floors, so report mode can never
+# manufacture a green. It exits non-zero for ONE reason: the instrument produced no
+# measurement. A silent instrument is the defect this row exists to kill, so silence must
+# be loud.
+#
+# READ THE LOG FOR. `[golden-magnitude] JSON {…}` — one grep-able line per run carrying the
+# exact ratios, so magnitudes accumulate across the campaign without re-reading prose. The
+# exact ratio is recomputed from the baseline's IHDR geometry because Playwright CEILS its
+# printed ratio to two decimals: 643 px of 220x220 is 0.0133 and prints "0.02" — under the
+# soul floor while printing above it (../goldens-magnitude-darwin.txt §synthesis 3).
+#
+# EVIDENCE   ../goldens-magnitude-darwin.txt — 10 instrument runs + 2 gate runs on darwin,
+#            including the cold/warm refutation and the bimodal {0, 3945} finding.
+
+steps:
+    - name: "Magnitude report — the two clause-relaxed goldens (report only, no floor changes)"
+      if: ${{ !cancelled() }}
+      timeout-minutes: 6
+      working-directory: web/frontend
+      run: node scripts/golden-magnitude.mjs

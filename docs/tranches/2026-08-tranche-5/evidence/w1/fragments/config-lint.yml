@@ -1,0 +1,34 @@
+# T5-W1 row 1.10 (CH-56) — CI fragment: the Playwright project-matrix lint.
+#
+# FOR THE INTEGRATOR LANE (this wave's sole owner of .github/workflows/ci.yml).
+#
+# WHERE: inside the existing `e2e:` job, in `steps:`, immediately AFTER
+#            - name: npm ci
+#              working-directory: web/frontend
+#              run: npm ci
+#        and BEFORE
+#            - name: Resolve Playwright version (from the lockfile)
+#        (ci.yml:593-595 → :598 at f38c5130, the W0 seal — the line ci.yml last moved on).
+#
+# WHY THERE, and not later: the check runs `playwright test --list` only. It launches no
+# browser, needs no dist, and finishes in seconds — so it belongs upstream of the ~4-minute
+# browser install and the suite itself. A narrowed matrix is exactly the defect that makes the
+# suite finish FASTER and greener, so the gate that catches it must not be paid for with the
+# suite's own runtime. It reuses the job's checkout + node_modules; it adds no `needs:`, no
+# service, no cache key.
+#
+# WHAT IT GATES (scripts/check-pw-projects.mjs, five checks + the self-test canary):
+#   1 DECLARED MATRIX  — the 9 (project, engine) pairs across the 3 configs, exactly.
+#   2 SPEC OWNERSHIP   — all 20 e2e specs claimed by exactly one config, none orphaned.
+#   3 ENGINE COVERAGE  — every spec runs chromium AND webkit unless HOLDOUTS says why.
+#   4 HOLDOUTS CLOSED  — the 4 single-engine holdouts are a closed, cited set; a stale entry reds.
+#   5 COUNT FLOORS     — per-project test counts never fall below the recorded floor.
+# `--self-test` (carried by the npm script) re-runs each check against a known-bad matrix and
+# fails if any of them stays green — the gate proves it can bite on every run, not just once.
+#
+# EXIT CODE is the whole contract: 0 green, 1 with every violation printed. No `continue-on-error`,
+# no `|| true` — this job has none anywhere and this step must not introduce the first.
+
+- name: 'Playwright project matrix (CH-56 — no silent single-engine narrowing)'
+  working-directory: web/frontend
+  run: npm run test:e2e:projects
