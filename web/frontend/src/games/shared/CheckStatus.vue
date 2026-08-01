@@ -35,10 +35,19 @@ const props = defineProps<{
   mode: ErrorCheckMode;
 }>();
 
+/* ONE FACE (T4-P1, stage BC). `--font-hand` is a SUBSET — `index.css`'s Patrick Hand cut
+ * declares `U+0043, U+0052, U+0053` as its only capitals and no `U+00B7`. A codepoint outside a
+ * declared `unicode-range` does not fail to paint; it falls silently to the next family in the
+ * stack, so `board changed · Ask again` rendered its `·` and its `A` in the system cursive and
+ * the rest in Patrick Hand — a two-face caption at the exact rank this grammar exists to define.
+ * Cured by re-cutting the string, not the font: the interpunct becomes the em dash the spoken
+ * line already uses (U+2014, in the cut), and `Ask` becomes `ask` — which is the caption rank's
+ * own register anyway (`marks`, `candidates`, `pencils`, `hold to peek`, `new game` are all
+ * lowercase; only the chip it refers to is titlecased). Gated by `e2e/font-census.spec.ts`. */
 const text = computed(() => {
   if (props.mode === "off") return "not marking";
   if (props.mode === "live") return "marking as you go";
-  return props.marking ? "marked · showing mistakes" : "board changed · Ask again";
+  return props.marking ? "marked — showing mistakes" : "board changed — ask again";
 });
 
 // What a screen reader is told. The visible line is a fragment in the hand; this is the

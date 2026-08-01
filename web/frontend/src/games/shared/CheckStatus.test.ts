@@ -32,11 +32,11 @@ describe("CheckStatus — the visible sentence, one branch per state", () => {
   });
 
   it("on-demand + armed: the check landed and is showing", () => {
-    expect(visible(mountStatus(true, "on-demand"))).toBe("marked · showing mistakes");
+    expect(visible(mountStatus(true, "on-demand"))).toBe("marked — showing mistakes");
   });
 
   it("on-demand + STALE: names the decay AND the recovery — the state the card never showed", () => {
-    expect(visible(mountStatus(false, "on-demand"))).toBe("board changed · Ask again");
+    expect(visible(mountStatus(false, "on-demand"))).toBe("board changed — ask again");
   });
 });
 

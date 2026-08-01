@@ -196,7 +196,7 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
   });
 
   it("proactiveCheck reaches the status line — the decay the card never showed", () => {
-    expect(mountPanel().get(".check-status").text()).toContain("Ask again");
+    expect(mountPanel().get(".check-status").text()).toContain("ask again");
     const marking = mountPanel({ proactiveCheck: true });
     expect(marking.get(".check-status").text()).toContain("showing mistakes");
     expect(marking.get(".check-status").classes()).toContain("is-marking");

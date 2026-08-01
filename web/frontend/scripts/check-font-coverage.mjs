@@ -32,13 +32,16 @@ import { brotliDecompressSync } from "node:zlib";
 import process from "node:process";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
-const FONT = "src/assets/fonts/fraunces-subset.woff2";
 const INDEX_CSS = "src/assets/index.css";
 
 // ── The rendered corpus ─────────────────────────────────────────────────────────────────────
 // Every string the Fraunces face is asked to paint, AS AUTHORED, with the `text-transform` it
 // passes through on the way to the screen. Each string is required in both forms.
-const CORPUS = [
+const FACES = [
+  {
+    family: "Fraunces",
+    font: "src/assets/fonts/fraunces-subset.woff2",
+    corpus: [
   // `.section-heading` — `text-transform: lowercase` (assets/typography.css). The authored
   // strings are the games' `defineGame` sections, and after T4-P1's zone grammar that is ALL
   // of them: `New game` / `Marks` / `Check` / `Candidates` left this face for the pencil hand
@@ -54,10 +57,46 @@ const CORPUS = [
   },
   // The wordmark (HandwrittenLogo `.logo-text`) and the gallery card names
   // (GameCard `.card-wordmark`) — no transform, the five registered game ids.
+      {
+        where: "wordmark + gallery card names",
+        transform: "none",
+        strings: ["sudoku", "futoshiki", "thermo", "killer", "kenken"],
+      },
+    ],
+  },
+  // THE SECOND FACE (T4-P1, stage BC). The hand register was never in this gate, and the zone
+  // grammar moved four names into it — then minted a caption (`board changed · Ask again`)
+  // whose `·` and `A` sit outside the cut, so it painted in two faces at the rank the grammar
+  // exists to define. The corpus below is the register this loop owns: the compartment tapes,
+  // the row captions and the four status lines. It is deliberately NOT the whole hand estate —
+  // the icon sublabels and the keycaps carry capitals the cut has never held, a pre-existing
+  // and now-LEDGERED population (`e2e/font-census.spec.ts`), and claiming them here would be a
+  // gate that reds on a condition this pass did not create and cannot cure without a re-cut.
   {
-    where: "wordmark + gallery card names",
-    transform: "none",
-    strings: ["sudoku", "futoshiki", "thermo", "killer", "kenken"],
+    family: "Patrick Hand",
+    font: "src/assets/fonts/patrickhand-subset.woff2",
+    corpus: [
+      {
+        where: ".washi-tag (compartment names) + the peek tape",
+        transform: "none",
+        strings: ["new game", "pencils", "teacher's", "hold to peek"],
+      },
+      {
+        where: ".zone-row-label (row captions)",
+        transform: "none",
+        strings: ["marks", "candidates"],
+      },
+      {
+        where: ".check-status (the four visible states)",
+        transform: "none",
+        strings: [
+          "not marking",
+          "marking as you go",
+          "marked \u2014 showing mistakes",
+          "board changed \u2014 ask again",
+        ],
+      },
+    ],
   },
 ];
 
@@ -201,8 +240,8 @@ function cmapCodepoints(buf) {
 }
 
 // ── unicode-range ───────────────────────────────────────────────────────────────────────────
-function declaredRange(css) {
-  const face = css.slice(css.indexOf('font-family: "Fraunces"'));
+function declaredRange(css, family) {
+  const face = css.slice(css.indexOf(`font-family: "${family}"`));
   const decl = face.slice(
     face.indexOf("unicode-range:"),
     face.indexOf(";", face.indexOf("unicode-range:")),
@@ -213,34 +252,12 @@ function declaredRange(css) {
     const b = m[2] ? parseInt(m[2], 16) : a;
     for (let c = a; c <= b; c++) out.add(c);
   }
-  if (!out.size) throw new Error(`${INDEX_CSS}: no unicode-range parsed for Fraunces`);
+  if (!out.size) throw new Error(`${INDEX_CSS}: no unicode-range parsed for ${family}`);
   return out;
 }
 
-const buf = readFileSync(join(ROOT, FONT));
-const cmap = cmapCodepoints(buf);
-const declared = declaredRange(readFileSync(join(ROOT, INDEX_CSS), "utf8"));
-
+const css = readFileSync(join(ROOT, INDEX_CSS), "utf8");
 const problems = [];
-
-// 1. every rendered string is fully covered, in every case it can be rendered in.
-for (const group of CORPUS) {
-  for (const s of group.strings) {
-    const forms = new Set([s]); // as authored
-    if (group.transform === "lowercase") forms.add(s.toLowerCase());
-    if (group.transform === "uppercase") forms.add(s.toUpperCase());
-    for (const form of forms) {
-      const missing = [...form].filter((ch) => !cmap.has(ch.codePointAt(0)));
-      if (missing.length) {
-        problems.push(
-          `${group.where}: "${form}" misses ${missing.map((c) => JSON.stringify(c)).join(" ")}`,
-        );
-      }
-    }
-  }
-}
-
-// 2. the declared unicode-range equals the cmap — an honest descriptor, both directions.
 const only = (a, b) => [...a].filter((c) => !b.has(c)).sort((x, y) => x - y);
 const chars = (l) =>
   l
@@ -249,16 +266,45 @@ const chars = (l) =>
         `U+${c.toString(16).toUpperCase().padStart(4, "0")} ${JSON.stringify(String.fromCodePoint(c))}`,
     )
     .join(", ");
-const rangeExtra = only(declared, cmap);
-const cmapExtra = only(cmap, declared);
-if (rangeExtra.length)
-  problems.push(
-    `${INDEX_CSS} unicode-range claims codepoints the file lacks: ${chars(rangeExtra)}`,
+const banked = [];
+for (const face of FACES) {
+  const buf = readFileSync(join(ROOT, face.font));
+  const cmap = cmapCodepoints(buf);
+  const declared = declaredRange(css, face.family);
+
+  // 1. every rendered string is fully covered, in every case it can be rendered in.
+  for (const group of face.corpus) {
+    for (const s of group.strings) {
+      const forms = new Set([s]); // as authored
+      if (group.transform === "lowercase") forms.add(s.toLowerCase());
+      if (group.transform === "uppercase") forms.add(s.toUpperCase());
+      for (const form of forms) {
+        const missing = [...form].filter((ch) => !cmap.has(ch.codePointAt(0)));
+        if (missing.length)
+          problems.push(
+            `${face.family} · ${group.where}: "${form}" misses ${missing.map((c) => JSON.stringify(c)).join(" ")}`,
+          );
+      }
+    }
+  }
+
+  // 2. the declared unicode-range equals the cmap — an honest descriptor, both directions.
+  const rangeExtra = only(declared, cmap);
+  const cmapExtra = only(cmap, declared);
+  if (rangeExtra.length)
+    problems.push(
+      `${INDEX_CSS} unicode-range for ${face.family} claims codepoints the file lacks: ${chars(rangeExtra)}`,
+    );
+  if (cmapExtra.length)
+    problems.push(
+      `${face.font} carries codepoints the unicode-range gates out: ${chars(cmapExtra)}`,
+    );
+
+  banked.push(
+    `${face.family}: ${cmap.size} codepoints, ${buf.length} B, ` +
+      `${face.corpus.reduce((n, g) => n + g.strings.length, 0)} strings`,
   );
-if (cmapExtra.length)
-  problems.push(
-    `${FONT} carries codepoints the unicode-range gates out: ${chars(cmapExtra)}`,
-  );
+}
 
 if (problems.length) {
   console.error("font coverage FAILED:");
@@ -266,6 +312,6 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(
-  `font coverage OK — ${cmap.size} codepoints, ${buf.length} B; ` +
-    `${CORPUS.reduce((n, g) => n + g.strings.length, 0)} strings covered as authored AND as transformed`,
+  `font coverage OK — ${FACES.length} subset faces, each covered as authored AND as transformed:\n  ` +
+    banked.join("\n  "),
 );
