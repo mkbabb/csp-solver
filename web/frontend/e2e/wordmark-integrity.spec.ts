@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
+import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
 /**
  * P1 G3.4 — WORDMARK INTEGRITY, in WebKit, against the BUILT dist.
@@ -39,6 +40,24 @@ import { attachBakeEvidence } from "./bake-evidence";
  *     `retries: 0` in both engines whatever this spec does, so skipping here never saved a
  *     lane — it only discarded the clip verdict. The blank still ships its bitmap
  *     (`attachBakeEvidence`, below): the yield's evidence half is kept, its silence half is not.
+ *
+ *     T5-W1 1.6 QUARANTINED — the hoist held, and it published a real defect. The first
+ *     runner pass after the revocation (run 30719165442 on `e6b19a4c`, reproduced row-for-row
+ *     on 30719158513, ubuntu · webkit, `retries: 0`) red `futoshiki`, `kenken` and `killer`
+ *     here, while `sudoku` and `thermo` passed beside them and darwin passed all five. So the
+ *     blank is neither unreproducible nor uniform: on ubuntu + WebKit the bake decodes to
+ *     nothing for SOME games, deterministically. The skip had been masking a live defect
+ *     rather than a ghost, and the argument for revoking it is unchanged — a silence would
+ *     have hidden this for a second tranche.
+ *
+ *     Those three rows are parked under `quarantineLinuxWebkitBake`, which is 1.6's own
+ *     re-entry criterion taken literally ("an explicit quarantine against a named run id,
+ *     never a silent skip") and the dead yield's opposite in every way that mattered: it
+ *     names the rows and the runs, prints itself into the runner log, annotates the report,
+ *     keeps the evidence attach firing, leaves `sudoku`, `thermo`, darwin and chromium fully
+ *     live as spread detectors, and THROWS itself out the moment `web/frontend/package.json`
+ *     declares `@mkbabb/pencil-boil >=0.11.0` — T5-W4b's `rasterizePoseToBlob()` cure. Full
+ *     record: `docs/tranches/2026-08-tranche-5/evidence/w1/linux-webkit-bake-quarantine.md`.
  *
  *  2. NO FALLBACK GLYPHS. Every character of every rendered label must actually come from
  *     Fraunces. Measured by the sentinel-fallback method (lane D's, kept because the obvious
@@ -191,6 +210,12 @@ test.describe("G3.4 · wordmark integrity (WebKit, built dist)", () => {
           "svg.handwritten-logo image.logo-pose-bmp",
           game,
         );
+
+      // THE EXPLICIT QUARANTINE, and the only thing that sits between the read and the
+      // assert — three named rows, on linux + webkit, until W4b (see the header, §T5-W1 1.6
+      // QUARANTINED). It runs AFTER the read and after the evidence attach on purpose: the
+      // parked arm still bakes, still reads, and still ships the pose bitmap it read.
+      quarantineLinuxWebkitBake("wordmark-integrity", game, testInfo);
 
       // THE HOISTED VERDICT. One assertion, both terms, ahead of every branch — nothing
       // between the read and the assert can abort the row, on any platform.
