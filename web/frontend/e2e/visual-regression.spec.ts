@@ -246,20 +246,29 @@ test("grid draw-in completes and path-based boil activates", async ({ page }) =>
   // while the bake is in flight) should have settled: strokeDasharray=none,
   // strokeDashoffset=0. Once the steady bitmaps are baked there are no paths — that IS
   // the completed state (the transition layer has handed off), so 0 paths passes.
-  const allComplete = await page.evaluate(() => {
-    const lines = document.querySelectorAll("path.grid-line");
-    if (lines.length === 0) return true;
-    return Array.from(lines).every((el) => {
-      const s = (el as SVGPathElement).style;
-      return (
-        (s.strokeDasharray === "none" || s.strokeDasharray === "") &&
-        (s.strokeDashoffset === "0" ||
-          s.strokeDashoffset === "" ||
-          s.strokeDashoffset === "0px")
-      );
-    });
-  });
-  expect(allComplete).toBe(true);
+  //
+  // POLLED, not read once (T4-P1: this spec runs webkit now). The `.is-active` handoff and
+  // the transition layer's own cleanup are not the same frame in WebKit under load, so an
+  // instantaneous read catches paths mid-draw and reds a settle that arrives a beat later.
+  // The property asserted is unchanged — the paths SETTLE — and it is now bounded by the
+  // config's expect timeout instead of by one sampling instant.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const lines = document.querySelectorAll("path.grid-line");
+        if (lines.length === 0) return true;
+        return Array.from(lines).every((el) => {
+          const s = (el as SVGPathElement).style;
+          return (
+            (s.strokeDasharray === "none" || s.strokeDasharray === "") &&
+            (s.strokeDashoffset === "0" ||
+              s.strokeDashoffset === "" ||
+              s.strokeDashoffset === "0px")
+          );
+        });
+      }),
+    )
+    .toBe(true);
 
   // Steady-state grid: frameCount boil layers (baked bitmaps once ready, filter fallback
   // while baking), exactly one visible at a time. The per-tier geometry is baked into the
