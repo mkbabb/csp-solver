@@ -382,10 +382,19 @@ test('composed keyboard: K-peek from cell focus + roving tabindex (Ctrl+Home/End
   // — Roving tabindex: click seats focus; arrows move it —
   await cellInput(page, blank).click();
   expect(await focusedCellIndex(page)).toBe(blank);
-  const right = blank % 9 < 8 ? blank + 1 : blank;
-  await page.keyboard.press('ArrowRight');
-  expect(await focusedCellIndex(page)).toBe(right);
-  await page.keyboard.press('ArrowLeft');
+  // Walk toward a neighbour that EXISTS. `blank` is wherever the dig left the first hole, and
+  // on the last column ArrowRight is a no-op: the old `right = blank % 9 < 8 ? blank + 1 :
+  // blank` asserted that no-op as a pass, then walked ArrowLeft OFF the cell and expected to
+  // be back where it started (CI run 30687323601, `Expected: 8  Received: 7` — the dig had put
+  // the first hole in column 8). Deterministic in the board, not in the host: it fires for
+  // every board whose first blank lands on the right edge, ~1 draw in 9, which is why it read
+  // as a one-off. Both directions are the same roving contract, so take the one with room —
+  // and the step is now always a REAL move, in and back.
+  const rightward = blank % 9 < 8;
+  const neighbour = rightward ? blank + 1 : blank - 1;
+  await page.keyboard.press(rightward ? 'ArrowRight' : 'ArrowLeft');
+  expect(await focusedCellIndex(page)).toBe(neighbour);
+  await page.keyboard.press(rightward ? 'ArrowLeft' : 'ArrowRight');
   expect(await focusedCellIndex(page)).toBe(blank);
 
   // Ctrl+Home / Ctrl+End — board corners.
