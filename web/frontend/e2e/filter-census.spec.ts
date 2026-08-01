@@ -297,6 +297,129 @@ test.describe("G3.3 · the coarse regime", () => {
   });
 });
 
+// ── G3.5 — THE HOVERED PASS, in both regimes ────────────────────────────────────────────────
+// The census above samples the document AT REST, and pass 2's actual mark-4 breach was
+// `@media (hover:hover) .ctrl-btn:hover { filter: url(#wobble-heart) }` — a filter that computes
+// to `none` until a pointer is over the control, and is therefore invisible to every assertion
+// in this file. The grep that used to catch that class was retired as sole witness (pass-2
+// registry §4) and its replacement inherited the blindness: a rendered census taken at rest
+// cannot red on a rendered state it never enters.
+//
+// So the pointer is moved. Not `locator.hover()` — that runs actionability checks and SCROLLS,
+// which would move the population it is measuring — but a raw mouse move to each candidate's
+// own centre, in place, skipping anything off-screen or zero-sized. The assertion is the one a
+// count can carry: a hover may not RAISE the filtered population. `url(#wobble-heart)` is
+// already resident (the attribution hearts), so a value comparison would have missed the exact
+// defect this exists for; the count does not.
+//
+// Its own negative control runs in the same test, because a hover pass that has stopped finding
+// its candidates passes vacuously and looks identical to a clean estate.
+
+const HOVER_CANDIDATES =
+  'button, [role="option"], [role="group"], a[href], .ctrl-btn, .staging-btn, .game-card, .icon-btn, .washi-tag, label, summary';
+
+/** The counting rule of this file, as a bare population count (the hovered pass compares
+ *  totals, not rows — the gallery regime has no allowlist and does not need one for this). */
+async function filteredCount(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      Array.from(document.querySelectorAll("*")).filter((el) => {
+        const cs = getComputedStyle(el);
+        return cs.filter !== "none" && cs.display !== "none";
+      }).length,
+  );
+}
+
+/** Hover every on-screen candidate in turn; return the ones that minted a filtered surface. */
+async function hoverOffenders(page: Page): Promise<string[]> {
+  const rest = await filteredCount(page);
+  const spots = await page.evaluate((sel: string) => {
+    const seen = new Set<string>();
+    const out: { x: number; y: number; path: string }[] = [];
+    for (const el of Array.from(document.querySelectorAll(sel))) {
+      const r = el.getBoundingClientRect();
+      const x = r.x + r.width / 2;
+      const y = r.y + r.height / 2;
+      if (r.width <= 0 || r.height <= 0) continue;
+      if (x <= 0 || y <= 0 || x >= innerWidth || y >= innerHeight) continue;
+      const cls =
+        (typeof el.className === "string" ? el.className : "").trim().split(/\s+/)[0] ??
+        "";
+      const path = `${el.tagName.toLowerCase()}${cls ? `.${cls}` : ""}`;
+      // One sample per distinct surface class — the estate's controls come in families and
+      // hovering sixteen identical `.icon-btn`s measures the same CSS rule sixteen times.
+      if (seen.has(path)) continue;
+      seen.add(path);
+      out.push({ x, y, path });
+    }
+    return out;
+  }, HOVER_CANDIDATES);
+
+  const offenders: string[] = [];
+  for (const s of spots) {
+    await page.mouse.move(s.x, s.y);
+    const after = await filteredCount(page);
+    if (after > rest) offenders.push(`${s.path} → +${after - rest}`);
+  }
+  await page.mouse.move(0, 0);
+  return offenders;
+}
+
+/** The whole hovered pass for one settled regime, control included. */
+async function assertNoHoverFilters(page: Page, regime: string) {
+  // Precondition: the population is STILL. A drifting count would make every delta below noise.
+  const a = await filteredCount(page);
+  await page.waitForTimeout(400);
+  expect(await filteredCount(page), `[${regime}] population is stable before hovering`).toBe(
+    a,
+  );
+
+  expect(
+    await hoverOffenders(page),
+    `[${regime}] surfaces that mint a live filter on :hover`,
+  ).toEqual([]);
+
+  // THE CONTROL — the pass-2 defect, re-authored. If this does not fire, the pass above found
+  // no candidates and its clean result meant nothing.
+  await page.evaluate(() => {
+    const s = document.createElement("style");
+    s.id = "hover-census-control";
+    s.textContent =
+      ".ctrl-btn:hover, .staging-btn:hover, .icon-btn:hover, [role='option']:hover { filter: blur(1px) }";
+    document.head.appendChild(s);
+  });
+  expect(
+    (await hoverOffenders(page)).length,
+    `[${regime}] the injected :hover filter must be caught`,
+  ).toBeGreaterThan(0);
+  await page.evaluate(() => document.getElementById("hover-census-control")?.remove());
+  expect(
+    await hoverOffenders(page),
+    `[${regime}] population returns once the control is removed`,
+  ).toEqual([]);
+}
+
+test("G3.5 · no :hover state mints a live filter — board regime (built dist)", async ({
+  page,
+}) => {
+  await settleBoard(page);
+  await assertNoHoverFilters(page, "board");
+});
+
+test("G3.5 · no :hover state mints a live filter — PICKER regime (built dist)", async ({
+  page,
+}) => {
+  // The regime the staging band lives in, and the one the shipped census has never visited:
+  // `filterBudget.ts` states the board population and says so. The band's chips are the shared
+  // `OptionSelector`'s `.ctrl-btn` — the very class that carried the pass-2 hover wobble — so
+  // the picker is where a re-introduction would land first.
+  await page.goto("./?view=gallery&size=3&difficulty=EASY");
+  await page.waitForSelector(".game-gallery", { timeout: 20000 });
+  await page.waitForSelector(".staging-band", { timeout: 20000 });
+  await page.waitForTimeout(1200); // the deck's entry beats, settled
+  await assertNoHoverFilters(page, "picker");
+});
+
 test("G3.2 · no retained fill supplies a computed transform (built dist)", async ({
   page,
 }) => {

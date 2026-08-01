@@ -45,7 +45,10 @@
  * gallery census in both engines. Nothing about the board budget was ever breached. The
  * four `.baked-hidden` poses raster nothing and this budget deliberately excludes them; if a
  * bake ever fails they come back `display: block` and red THIS gate, which is the behaviour
- * you want. The gallery's own 17 is MEASURED, not gated here — that census is Lane A's row.
+ * you want. The gallery's own 17 is MEASURED, not an allowlist here — but it is no longer
+ * ungated: `filter-census.spec.ts` G3.5 runs the HOVERED pass in the picker regime as well as
+ * the board's, so a re-introduced `:hover { filter: url(#…) }` — the pass-2 breach, which every
+ * at-rest assertion in this file computes as `none` — reds in the regime it would land in.
  */
 
 export interface FilterBudgetRow {
