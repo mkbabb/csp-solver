@@ -1,0 +1,104 @@
+T5-W6 · row 6.1 — COVERAGE GATE: every §10 friction row maps to a precept row
+============================================================================
+
+Gate script, banked beside this file: ./precepts-coverage.mjs — reads the §10 table out of
+r2/prompt-recap-matrix.md AT RUN TIME (never transcribed), then asserts each row-s key phrases
+appear in docs/tranches/PRECEPTS.md §1. Exit 0 = covered; exit 1 = the orphans print.
+
+-- ARM 1 · BORN-RED (target absent — the gate can fail, and does) ----------------------------
+$ node precepts-coverage.mjs docs/tranches/PRECEPTS-DOES-NOT-EXIST.md
+T5-W6.1 — PRECEPTS COVERAGE GATE
+target : /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/PRECEPTS-DOES-NOT-EXIST.md  (ABSENT)
+source : /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-5/evidence/audit/r2/prompt-recap-matrix.md §10 — 25 friction rows read at run time
+rule   : every §10 row maps to one precept row in PRECEPTS.md §1, keyed on its own phrases
+
+| # | §10 edict (verbatim) | count | precept-row key phrase | covered |
+|---|---|---|---|---|
+| 1 | NO quick solutions / NO workarounds — idiomatic, gestalt | 8× | No quick solutions, no workarounds + idiomatic, gestalt | **NO** |
+| 2 | NO legacy code; clean breaks, no shims/aliases/dual paths | 6× | No legacy code + no aliases, shims, dual paths | **NO** |
+| 3 | Recap ALL prompts; silent drops forbidden | 6× | Recap ALL prompts + silent drops forbidden | **NO** |
+| 4 | Fold every deferred + chronic item; re-booking forbidden | 6× | Fold every deferred and chronic row + re-booking forbidden | **NO** |
+| 5 | Batches of 3 agents (widened to 5–6 in the 2026-07-31 loop) | 52 cron replays + 3 | Batches of 5–6 agents | **NO** |
+| 6 | abrogate unsubstantiated claims / editorializing / comparison sentiments | 3× in one session, then MIKE-STYLE | editorializing, or comparison sentiments | **NO** |
+| 7 | Recursive colocation, ALL dirs, both stacks | 4× | Recursive colocation, all directories | **NO** |
+| 8 | ALL design on Fable + the frontend-design plugin, actually invoked | 6× | frontend-design plugin, actually invoked | **NO** |
+| 9 | Core model orchestrates; Opus/Sonnet fan out; every spawn declares its model | 8× | Core model orchestrates + every spawn declares its model | **NO** |
+| 10 | No god modules >500 L | 3× | No god modules over 500 lines | **NO** |
+| 11 | Tranche development only; no source edits from a formulation prompt | 5× | Tranche development only | **NO** |
+| 12 | Concrete deliverables: file:line, failing probe; reject status reports | 4× | Concrete deliverables: file:line | **NO** |
+| 13 | Withhold the favored success narrative from most auditors | 3× | Withhold the favored success narrative | **NO** |
+| 14 | Born-RED gates; π/DELTA for every visual claim | 4× | Born-RED gates; π and DELTA | **NO** |
+| 15 | NEVER push bbnf-lang origin | every close | Never push bbnf-lang origin | **NO** |
+| 16 | The java branch STAYS | 6 blocks | The java branch stays | **NO** |
+| 17 | Dev server :3001 stays alive | 4× | :3001 stays alive | **NO** |
+| 18 | SOTA dep currency, "no 2021 cargos" | 3× | SOTA dep currency + no 2021 cargos | **NO** |
+| 19 | Session-durability; lose no progress to walls | 3× | Session durability | **NO** |
+| 20 | Continue indefatigably; don't relinquish control | 5× | Continue indefatigably | **NO** |
+| 21 | The thrice design protocol (Fable ∥ Opus → Fable adjudicates) | 2× | thrice design protocol | **NO** |
+| 22 | Extreme parsimony; process-lite, code-heavy | 2× | Extreme parsimony | **NO** |
+| 23 | Convergence is earned (≥3 passes, non-author audit, 2 clean) | 1× | Convergence is earned | **NO** |
+| 24 | Full shadcn abrogation | 1× | Full shadcn abrogation | **NO** |
+| 25 | Background-only browser sessions / a proper Safari MCP | 1× | Background-only browser and simulator sessions | **NO** |
+| U-10 | Marks close on an owner re-look (r2 §8, T5-W0.10) | 1× | A design mark closes only on an owner-side re-look + U-10 | **NO** |
+
+rows read   : 25 §10 + 1 U-row = 26
+covered     : 0
+uncovered   : 26
+VERDICT     : RED — 26 uncovered
+run at      : 2026-08-01
+EXIT=1
+
+-- ARM 2 · GREEN (the landed file, final text) -----------------------------------------------
+$ node precepts-coverage.mjs docs/tranches/PRECEPTS.md
+T5-W6.1 — PRECEPTS COVERAGE GATE
+target : /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/PRECEPTS.md
+source : /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-5/evidence/audit/r2/prompt-recap-matrix.md §10 — 25 friction rows read at run time
+rule   : every §10 row maps to one precept row in PRECEPTS.md §1, keyed on its own phrases
+
+| # | §10 edict (verbatim) | count | precept-row key phrase | covered |
+|---|---|---|---|---|
+| 1 | NO quick solutions / NO workarounds — idiomatic, gestalt | 8× | No quick solutions, no workarounds + idiomatic, gestalt | YES |
+| 2 | NO legacy code; clean breaks, no shims/aliases/dual paths | 6× | No legacy code + no aliases, shims, dual paths | YES |
+| 3 | Recap ALL prompts; silent drops forbidden | 6× | Recap ALL prompts + silent drops forbidden | YES |
+| 4 | Fold every deferred + chronic item; re-booking forbidden | 6× | Fold every deferred and chronic row + re-booking forbidden | YES |
+| 5 | Batches of 3 agents (widened to 5–6 in the 2026-07-31 loop) | 52 cron replays + 3 | Batches of 5–6 agents | YES |
+| 6 | abrogate unsubstantiated claims / editorializing / comparison sentiments | 3× in one session, then MIKE-STYLE | editorializing, or comparison sentiments | YES |
+| 7 | Recursive colocation, ALL dirs, both stacks | 4× | Recursive colocation, all directories | YES |
+| 8 | ALL design on Fable + the frontend-design plugin, actually invoked | 6× | frontend-design plugin, actually invoked | YES |
+| 9 | Core model orchestrates; Opus/Sonnet fan out; every spawn declares its model | 8× | Core model orchestrates + every spawn declares its model | YES |
+| 10 | No god modules >500 L | 3× | No god modules over 500 lines | YES |
+| 11 | Tranche development only; no source edits from a formulation prompt | 5× | Tranche development only | YES |
+| 12 | Concrete deliverables: file:line, failing probe; reject status reports | 4× | Concrete deliverables: file:line | YES |
+| 13 | Withhold the favored success narrative from most auditors | 3× | Withhold the favored success narrative | YES |
+| 14 | Born-RED gates; π/DELTA for every visual claim | 4× | Born-RED gates; π and DELTA | YES |
+| 15 | NEVER push bbnf-lang origin | every close | Never push bbnf-lang origin | YES |
+| 16 | The java branch STAYS | 6 blocks | The java branch stays | YES |
+| 17 | Dev server :3001 stays alive | 4× | :3001 stays alive | YES |
+| 18 | SOTA dep currency, "no 2021 cargos" | 3× | SOTA dep currency + no 2021 cargos | YES |
+| 19 | Session-durability; lose no progress to walls | 3× | Session durability | YES |
+| 20 | Continue indefatigably; don't relinquish control | 5× | Continue indefatigably | YES |
+| 21 | The thrice design protocol (Fable ∥ Opus → Fable adjudicates) | 2× | thrice design protocol | YES |
+| 22 | Extreme parsimony; process-lite, code-heavy | 2× | Extreme parsimony | YES |
+| 23 | Convergence is earned (≥3 passes, non-author audit, 2 clean) | 1× | Convergence is earned | YES |
+| 24 | Full shadcn abrogation | 1× | Full shadcn abrogation | YES |
+| 25 | Background-only browser sessions / a proper Safari MCP | 1× | Background-only browser and simulator sessions | YES |
+| U-10 | Marks close on an owner re-look (r2 §8, T5-W0.10) | 1× | A design mark closes only on an owner-side re-look + U-10 | YES |
+
+rows read   : 25 §10 + 1 U-row = 26
+covered     : 26
+uncovered   : 0
+VERDICT     : GREEN — every §10 row has a precept row
+run at      : 2026-08-01
+EXIT=0
+
+-- NOTES -------------------------------------------------------------------------------------
+· 25 §10 rows, parsed live from r2/prompt-recap-matrix.md §10 (file line 374 onward). That table
+  states its own provenance — counts re-read at 71456713; this gate re-parses it at run time, so
+  a row added or reworded there turns the gate RED until PRECEPTS.md answers it.
+· U-10 (a mark closes only on an owner re-look) is an r2 §8 T5-candidate row, not a §10 row; the
+  W6 charter names it explicitly, so the gate carries it as a 26th assertion.
+· §2 instrument laws (18 rows), §3 traps (6), and §4 the rig sit outside this gate-s question by
+  construction — their sources are CH-55/CH-57, the T4 WGATE traps ledger §6, the two session-
+  memory instrument files, and the W5 ballot 5 default. Each carries its pointer in the file.
+· PRECEPTS.md §1 holds 26 rows against 26 assertions — a one-to-one map, no row doing double duty.
+· run head: e6b19a4c, 2026-08-01

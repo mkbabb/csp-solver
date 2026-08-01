@@ -1,0 +1,60 @@
+T5-W6 · row 6.1 — CONSUMER-SURFACE ZERO-REFERENCE GREP
+=====================================================
+
+Claim: the precepts file is campaign-internal. No consumer surface links to it, names it, or
+points into docs/tranches/ at all. "Consumer surface" is exactly check-doc-truth.mjs:96-103-s
+DOCS list, widened to every tracked README outside docs/tranches/ and .claude/.
+
+-- THE SURFACE (14 files, git-tracked, enumerated not globbed) -------------------------------
+     1	README.md
+     2	csp-solver/README.md
+     3	csp-solver/wasm/README.md
+     4	csp-solver/wasm/pkg/README.md
+     5	docs/algorithms.md
+     6	docs/animation.md
+     7	docs/bbnf-integration.md
+     8	docs/benchmarks.md
+     9	docs/optimizations.md
+    10	docs/sudoku.md
+    11	web/frontend/README.md
+    12	web/frontend/perf-rig/README.md
+    13	web/frontend/src/games/futoshiki/README.md
+    14	web/frontend/src/games/sudoku/README.md
+
+-- PROBE 1 · any mention of the new file, by name or path ------------------------------------
+$ grep -nEi "PRECEPTS\.md|tranches/PRECEPTS" <surface>
+hits: 0
+
+-- PROBE 2 · any markdown link into docs/tranches/ (the campaign tree at large) --------------
+$ grep -nE "\]\([^)]*docs/tranches/" <surface>
+hits: 0
+
+-- PROBE 3 · the standing docs/precepts/ submodule leak (doc-truth row install-pin-0.5) ------
+$ grep -nE "\]\([^)]*docs/precepts/" <surface>
+hits: 0
+
+-- PROBE 4 · bare word "precept(s)" anywhere on the surface ----------------------------------
+$ grep -nwiE "precept|precepts" <surface>
+hits: 0
+
+-- CONTROL · the probes bite (same regexes, aimed at the campaign tree) ----------------------
+$ grep -rlEi "PRECEPTS\.md|tranches/PRECEPTS" docs/tranches/2026-08-tranche-5/ | head -5
+docs/tranches/2026-08-tranche-5/gates.json
+docs/tranches/2026-08-tranche-5/evidence/w0/wave-record-draft.md
+docs/tranches/2026-08-tranche-5/evidence/w0/f5-notes.md
+docs/tranches/2026-08-tranche-5/evidence/w6/precepts-coverage.txt
+docs/tranches/2026-08-tranche-5/evidence/w6/precepts-leak-grep.txt
+campaign-tree hits: 6  (non-zero — the regex is not vacuous)
+
+-- CROSS-CHECK · the estate-s own canon gate, re-run at this working tree --------------------
+$ node scripts/check-doc-truth.mjs   # row install-pin-0.5 owns the precepts-leak assertion
+GREEN  install-pin-0.5
+        derived: csp-solver crate version 0.6.0 → Install pin "0.6" · consumer surfaces carry no outbound link into docs/precepts/
+0 RED / 13 GREEN — canon holds
+
+-- VERDICT -----------------------------------------------------------------------------------
+ZERO on all four probes. docs/tranches/PRECEPTS.md is reachable only from inside the campaign
+tree; the published surfaces carry no link, no path, and not even the word. The docs/precepts/
+submodule is untouched:
+  $ git ls-files -s docs/precepts  →  160000 8781ebb06c03547f57e33182ec1a970fd96d7069 0	docs/precepts
+run at: 2026-08-01, head e6b19a4c; working tree carries this wave-s files only

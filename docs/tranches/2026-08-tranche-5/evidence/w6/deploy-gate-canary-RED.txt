@@ -1,0 +1,225 @@
+T5-W6 row 6.2 — DEPLOY GATE CANARY: born-RED refusal proof
+==========================================================
+date        2026-08-01T21:42:31Z
+HEAD        e6b19a4c9668db43b8da0ff44c8e31ddfb0551bd
+HEAD~1      f38c5130c8d2e97a5291795133d340754eca99eb
+host        Darwin 25.4.0 arm64
+bash        GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+gate        /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/scripts/deploy-gated.sh
+package     web/frontend package.json scripts.deploy -> bash ../../scripts/deploy-gated.sh
+
+NO DEPLOY IS EXECUTED BY THIS FILE. Arms marked --dry stop at a printed
+deploy line even if the gate wrongly passes, so 'reached wrangler' stays
+observable while staying inert. Arm a2 runs the REAL path with a tripwire
+npm/wrangler on PATH: if the gate ever let it through, a sentinel would
+fire and the run would die at exit 97 — the real binaries stay untouched.
+
+Path legend (elided in the printed commands for width):
+  $FIX      = the hand-built artifact fixtures, bodies printed at the foot
+  $TRIPWIRE = a shim dir holding sentinel npm/wrangler stubs
+
+A gate that refuses everything proves nothing. The ablation control — the
+same wrapper PASSING on a well-formed artifact — is the companion file
+deploy-gate-dry-GREEN.txt. Read the pair, not this file alone.
+
+─────────────────────────────────────────────────────────────────
+ARM a1 — NO ARTIFACT (--dry)
+  the row's arm (a): deploy invoked with no conclusion file at all
+  $ scripts/deploy-gated.sh --dry
+  exit: 1
+  ── captured output ──
+  | 
+  | ################################################################
+  | #  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57)
+  | #
+  | #  no --conclusion-file was given.
+  | #  A deploy requires a banked CI conclusion for the current HEAD.
+  | #
+  | #  Nothing was built. Nothing was deployed.
+  | #  Cure:
+  | #    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+  | #    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+  | ################################################################
+  ── assertions ──
+  [ok]   exit is nonzero (1)
+  [ok]   output carries the refusal token 'DEPLOY REFUSED'
+  [ok]   the deploy line was never reached (no 'wrangler pages deploy' in output)
+  [ok]   no tripwire sentinel fired (nothing built, nothing deployed)
+  ARM a1 — NO ARTIFACT (--dry): PASS (refused as required)
+
+─────────────────────────────────────────────────────────────────
+ARM a2 — NO ARTIFACT, REAL PATH (no --dry, tripwired)
+  the same arm on the production path — proves the refusal precedes 'npm run build'
+  $ env PATH=$TRIPWIRE:$PATH scripts/deploy-gated.sh
+  exit: 1
+  ── captured output ──
+  | 
+  | ################################################################
+  | #  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57)
+  | #
+  | #  no --conclusion-file was given.
+  | #  A deploy requires a banked CI conclusion for the current HEAD.
+  | #
+  | #  Nothing was built. Nothing was deployed.
+  | #  Cure:
+  | #    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+  | #    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+  | ################################################################
+  ── assertions ──
+  [ok]   exit is nonzero (1)
+  [ok]   output carries the refusal token 'DEPLOY REFUSED'
+  [ok]   the deploy line was never reached (no 'wrangler pages deploy' in output)
+  [ok]   no tripwire sentinel fired (nothing built, nothing deployed)
+  ARM a2 — NO ARTIFACT, REAL PATH (no --dry, tripwired): PASS (refused as required)
+
+─────────────────────────────────────────────────────────────────
+ARM a3 — THE REAL ENTRY POINT: npm run deploy (--dry)
+  proves the package.json rewire routes the standing 'npm run deploy' law through the gate
+  $ npm --prefix web/frontend run deploy -- --dry
+  exit: 1
+  ── captured output ──
+  | 
+  | > csp-solver-frontend@0.1.0 deploy
+  | > bash ../../scripts/deploy-gated.sh --dry
+  | 
+  | 
+  | ################################################################
+  | #  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57)
+  | #
+  | #  no --conclusion-file was given.
+  | #  A deploy requires a banked CI conclusion for the current HEAD.
+  | #
+  | #  Nothing was built. Nothing was deployed.
+  | #  Cure:
+  | #    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+  | #    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+  | ################################################################
+  ── assertions ──
+  [ok]   exit is nonzero (1)
+  [ok]   output carries the refusal token 'DEPLOY REFUSED'
+  [ok]   the deploy line was never reached (no 'wrangler pages deploy' in output)
+  [ok]   no tripwire sentinel fired (nothing built, nothing deployed)
+  ARM a3 — THE REAL ENTRY POINT: npm run deploy (--dry): PASS (refused as required)
+
+─────────────────────────────────────────────────────────────────
+ARM b1 — MISMATCHED SHA (--dry)
+  the row's arm (b), part 1: a genuine-shaped success artifact pinned to HEAD~1
+  $ scripts/deploy-gated.sh --dry --conclusion-file $FIX/mismatched-sha.txt
+  exit: 1
+  ── captured output ──
+  | 
+  | ################################################################
+  | #  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57)
+  | #
+  | #  artifact pins   f38c5130c8d2e97a5291795133d340754eca99eb
+  | #  HEAD is         e6b19a4c9668db43b8da0ff44c8e31ddfb0551bd
+  | #  A conclusion earned by another commit does not license this one.
+  | #
+  | #  Nothing was built. Nothing was deployed.
+  | #  Cure:
+  | #    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+  | #    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+  | ################################################################
+  ── assertions ──
+  [ok]   exit is nonzero (1)
+  [ok]   output carries the refusal token 'DEPLOY REFUSED'
+  [ok]   the deploy line was never reached (no 'wrangler pages deploy' in output)
+  [ok]   no tripwire sentinel fired (nothing built, nothing deployed)
+  ARM b1 — MISMATCHED SHA (--dry): PASS (refused as required)
+
+─────────────────────────────────────────────────────────────────
+ARM b2 — STALE ARTIFACT (--dry)
+  the row's arm (b), part 2: correct sha, conclusion success, timestamp 25h old
+  $ scripts/deploy-gated.sh --dry --conclusion-file $FIX/stale.txt
+  exit: 1
+  ── captured output ──
+  | 
+  | ################################################################
+  | #  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57)
+  | #
+  | #  artifact is stale: 90000s old (cap 86400s / 24h)
+  | #  Re-read the field: scripts/ci-conclusion.sh --sha "e6b19a4c9668db43b8da0ff44c8e31ddfb0551bd" --out <path>
+  | #
+  | #  Nothing was built. Nothing was deployed.
+  | #  Cure:
+  | #    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+  | #    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+  | ################################################################
+  ── assertions ──
+  [ok]   exit is nonzero (1)
+  [ok]   output carries the refusal token 'DEPLOY REFUSED'
+  [ok]   the deploy line was never reached (no 'wrangler pages deploy' in output)
+  [ok]   no tripwire sentinel fired (nothing built, nothing deployed)
+  ARM b2 — STALE ARTIFACT (--dry): PASS (refused as required)
+
+─────────────────────────────────────────────────────────────────
+ARM b3 — CONCLUSION != success (--dry)
+  the scar itself: correct sha, fresh, but CI concluded 'failure'
+  $ scripts/deploy-gated.sh --dry --conclusion-file $FIX/failed-ci.txt
+  exit: 1
+  ── captured output ──
+  | 
+  | ################################################################
+  | #  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57)
+  | #
+  | #  artifact conclusion is 'failure', not 'success'
+  | #  run 30719165442 for e6b19a4c9668db43b8da0ff44c8e31ddfb0551bd
+  | #
+  | #  Nothing was built. Nothing was deployed.
+  | #  Cure:
+  | #    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+  | #    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+  | ################################################################
+  ── assertions ──
+  [ok]   exit is nonzero (1)
+  [ok]   output carries the refusal token 'DEPLOY REFUSED'
+  [ok]   the deploy line was never reached (no 'wrangler pages deploy' in output)
+  [ok]   no tripwire sentinel fired (nothing built, nothing deployed)
+  ARM b3 — CONCLUSION != success (--dry): PASS (refused as required)
+
+─────────────────────────────────────────────────────────────────
+CANARY: 6 arm(s) refused as required, 0 arm(s) failed to refuse.
+
+Fixture bodies used above (hand-built, format per scripts/ci-conclusion.sh):
+
+  ── failed-ci.txt ──
+  | # CI conclusion artifact — HAND-BUILT FIXTURE for the T5-W6.2 canary
+  | sha             e6b19a4c9668db43b8da0ff44c8e31ddfb0551bd
+  | run_id          30719165442
+  | run_url         https://github.com/mkbabb/csp-solver/actions/runs/30719165442
+  | workflow        ci.yml
+  | status          completed
+  | conclusion      failure
+  | run_created_at  2026-08-01T21:27:14Z
+  | runs_for_sha    1
+  | timestamp       2026-08-01T21:42:31Z
+  | timestamp_epoch 1785620551
+  | generator       FIXTURE (scripts/ci-conclusion.sh format)
+
+  ── mismatched-sha.txt ──
+  | # CI conclusion artifact — HAND-BUILT FIXTURE for the T5-W6.2 canary
+  | sha             f38c5130c8d2e97a5291795133d340754eca99eb
+  | run_id          30719165442
+  | run_url         https://github.com/mkbabb/csp-solver/actions/runs/30719165442
+  | workflow        ci.yml
+  | status          completed
+  | conclusion      success
+  | run_created_at  2026-08-01T21:27:14Z
+  | runs_for_sha    1
+  | timestamp       2026-08-01T21:42:31Z
+  | timestamp_epoch 1785620551
+  | generator       FIXTURE (scripts/ci-conclusion.sh format)
+
+  ── stale.txt ──
+  | # CI conclusion artifact — HAND-BUILT FIXTURE for the T5-W6.2 canary
+  | sha             e6b19a4c9668db43b8da0ff44c8e31ddfb0551bd
+  | run_id          30719165442
+  | run_url         https://github.com/mkbabb/csp-solver/actions/runs/30719165442
+  | workflow        ci.yml
+  | status          completed
+  | conclusion      success
+  | run_created_at  2026-08-01T21:27:14Z
+  | runs_for_sha    1
+  | timestamp       2026-07-31T20:42:31Z
+  | timestamp_epoch 1785530551
+  | generator       FIXTURE (scripts/ci-conclusion.sh format)
