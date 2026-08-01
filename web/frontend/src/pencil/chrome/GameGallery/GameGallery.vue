@@ -693,11 +693,21 @@ onMounted(async () => {
 /* Leading/trailing air so the first and last card can scroll to TRUE center. Spacer flex
    ITEMS (not track/viewport padding: percentage padding doesn't extend a scroll container's
    scrollWidth) with a FIXED px basis (`--edge`, computed in useCarouselGlide from the live
-   viewport/slot widths — a % basis collapses to 0 under max-content sizing). */
+   viewport/slot widths — a % basis collapses to 0 under max-content sizing).
+   `align-self: stretch` is LOAD-BEARING, not cosmetic (T4-P1 KENKEN-REACHABILITY). WebKit
+   omits a ZERO-AREA box from a scroll container's scrollable overflow region, so a spacer
+   with no cross size contributes nothing to `scrollWidth`: measured 2208 against Chromium's
+   2656 at 1280 — exactly the trailing `--edge` of 448 px — which capped `maxScroll` 448 px
+   short of centering the LAST card, and `targetScrollLeft`'s clamp (useCarouselGlide.ts) then
+   stranded kenken out of reach by arrows, End, click and deep-link alike. A cross size makes
+   the box non-degenerate and WebKit counts it; the trailing one is the one that matters, but
+   both carry it so the rule reads once. Proven per-property against both engines — a real
+   spacer ELEMENT does not fix this, and a zero-height one still fails. */
 .gallery-track::before,
 .gallery-track::after {
   content: "";
   flex: 0 0 var(--edge, 0px);
+  align-self: stretch;
 }
 
 .gallery-card-slot {
