@@ -352,12 +352,19 @@ test.describe("the 296px keypad band (measured constant, driven through the comp
       )
       .toBe(`${BAND}px ${664 - BAND}px`);
 
-    /** The lowest painted instance of `sel`, and whether it is clear of the band — at scrollY 0. */
-    const seat = (sel: string) =>
+    /** The lowest painted instance of `sel`, and whether it is clear of the band — at scrollY 0.
+     *  `deep` scrolls the sheet's own scrollport to its end first: the dock is designed around
+     *  an interior scroll (`scene.css:230`, priced there), so a control below that fold is
+     *  reached by the gesture the design owns, not stranded under a keyboard. */
+    const seat = (sel: string, deep = false) =>
       page.evaluate(
-        ({ sel, band }) => {
+        ({ sel, band, deep }) => {
           const doc = document.scrollingElement || document.documentElement;
           doc.scrollTop = 0;
+          const port = document.querySelector(
+            "#controls-drawer .controls-card",
+          ) as HTMLElement | null;
+          if (port) port.scrollTop = deep ? port.scrollHeight : 0;
           void document.body.offsetHeight;
           const all = [...document.querySelectorAll(sel)].filter(
             (el) => el.getClientRects().length > 0,
@@ -365,14 +372,16 @@ test.describe("the 296px keypad band (measured constant, driven through the comp
           const el = all[all.length - 1] as HTMLElement | undefined;
           if (!el) return null;
           const r = el.getBoundingClientRect();
+          const p = port?.getBoundingClientRect();
           return {
             top: +r.top.toFixed(2),
             bottom: +r.bottom.toFixed(2),
             bandEdge: window.innerHeight - band,
             scrollTop: doc.scrollTop,
+            portBottom: p ? +p.bottom.toFixed(2) : null,
           };
         },
-        { sel, band: BAND },
+        { sel, band: BAND, deep },
       );
 
     const verb = await seat("#controls-drawer .deal-btn");
@@ -380,21 +389,30 @@ test.describe("the 296px keypad band (measured constant, driven through the comp
     expect(verb!.top).toBeGreaterThanOrEqual(0);
     expect(verb!.bottom).toBeLessThanOrEqual(verb!.bandEdge);
 
-    const deepest = await seat("#controls-drawer .ctrl-btn");
+    // T6 — THE READ IS SCROLL-AWARE, because the mechanism always was. The card is a scrollport
+    // on this dock and it overflowed at head too (~55px, priced in `scene.css`'s own comment);
+    // the row simply never scrolled it, so the deepest chip's rect happened to land above the
+    // band and the assertion passed on an accident. T6's receipt row and bigger verbs take the
+    // overflow to ~134 and the accident ends. What the anchor actually guarantees, and what is
+    // asserted here: the SCROLLPORT's bottom rides the keyboard's edge, and the deepest control
+    // seats inside it once the interior scroll is spent. Neither survives the ablation below.
+    const deepest = await seat("#controls-drawer .ctrl-btn", true);
     expect(deepest!.scrollTop).toBe(0);
+    expect(deepest!.portBottom).toBeLessThanOrEqual(deepest!.bandEdge);
     expect(deepest!.top).toBeGreaterThanOrEqual(0);
     expect(deepest!.bottom).toBeLessThanOrEqual(deepest!.bandEdge);
 
     // CONTROL — the ablation the charter banked: `bottom: 0` instead of the `--vv-height`
-    // anchor. The sheet stops tracking the keyboard's edge and the deepest chip strands under
-    // the band, with no scroll to redeem it. Without this arm the row above would pass on any
-    // tree whose sheet happens to be short.
+    // anchor. The sheet stops tracking the keyboard's edge, so the SCROLLPORT itself strands
+    // under the band and no amount of interior scroll can redeem a chip inside it. Without this
+    // arm the row above would pass on any tree whose sheet happens to be short.
     await page.addStyleTag({
       content:
         "#controls-drawer { top: auto !important; bottom: 0 !important; translate: none !important; }",
     });
     await page.waitForTimeout(200);
-    const stranded = await seat("#controls-drawer .ctrl-btn");
+    const stranded = await seat("#controls-drawer .ctrl-btn", true);
+    expect(stranded!.portBottom).toBeGreaterThan(stranded!.bandEdge);
     expect(stranded!.bottom).toBeGreaterThan(stranded!.bandEdge);
   });
 });

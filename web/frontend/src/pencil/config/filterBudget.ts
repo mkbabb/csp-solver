@@ -189,12 +189,22 @@ export const FILTER_BUDGET_CEILING = 14;
  * Measured T4-P1 pass 4 on the built dist: identical in chromium AND webkit, identical light and
  * dark, identical across runs — the layout is deterministic, so the tolerance is for sub-pixel
  * rect edges only. A new filtered surface, or an existing one growing, moves this far past 2%.
+ *
+ * T6 mark 8 RE-DERIVED BOTH, and the gate caught the growth it exists to catch. `.sparkle-icon`
+ * is the only counted surface the controls own, and the action strip's icons go 26/28 → 30px, so
+ * Solve's drop-shadow box grows 784 → 900 CSS px²: **+118 in both regimes, both engines**, from
+ * one in-page ablation of the one declaration (`t6/controls/probe-filter.mjs`). The population is
+ * still 9 — nothing new is filtered, one counted thing is bigger, which is precisely the half a
+ * count cannot see. `row` additionally absorbs 139 px² of drift that predates this lane and that
+ * the 2% tolerance had been carrying silently: a constant whose docstring calls it "the measured
+ * union" has to be the measured union, so it is re-derived here rather than left approximately
+ * right. Shipped: row 45572, coarse 6673 — chromium and webkit byte-identical.
  */
 export const FILTER_BUDGET_UNION_AREA = {
   /** ≥1024, 1280×800 dpr1 — the row regime every config in this repo runs at. */
-  row: 45315,
+  row: 45572,
   /** <1024, 393×699 dpr3 coarse — the mobile arm of the same one card. */
-  coarse: 6488,
+  coarse: 6673,
 } as const;
 
 /** Sub-pixel tolerance on the union, both directions. Not a growth allowance. */

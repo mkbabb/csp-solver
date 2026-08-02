@@ -55,10 +55,12 @@ const LEDGER: Record<string, string> = {
   "Fira Code|Live": "live-zone chip; L/v outside the cut",
   // ── Patrick Hand: the cut declares C/R/S as its only capitals. Every other capital in the
   // hand register falls through. Pre-existing.
-  "Patrick Hand|Deal": "icon sublabel + washi; D outside the cut",
-  "Patrick Hand|Fill": "icon sublabel; F outside the cut",
-  "Patrick Hand|Undo": "icon sublabel; U outside the cut",
-  "Patrick Hand|Hint": "icon sublabel; H outside the cut",
+  // T6 mark 12 RETIRED FOUR ROWS HERE — `Deal`, `Fill`, `Undo`, `Hint`. The sublabels wear
+  // `text-transform: lowercase` now, and this census applies the element's own transform
+  // before it reads, so those four strings render `deal` / `fill` / `undo` / `hint` and every
+  // codepoint is in the cut. Leaving them would red the BACKWARD arm at `:291` as stale, which
+  // is the direction that exists so a ledger cannot quietly become a list. (The `"Deal"`
+  // literal in the CAGE_LABEL negative control below is a regex fixture, not a ledger row.)
   "Patrick Hand|Easy": "closed-tab value (UI-12); E outside the cut",
   "Patrick Hand|Medium": "closed-tab value (UI-12); M outside the cut",
   "Patrick Hand|Hard": "closed-tab value (UI-12); H outside the cut",

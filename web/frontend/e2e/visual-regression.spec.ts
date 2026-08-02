@@ -560,18 +560,23 @@ test("the glass curve is the same curve in both layers", async ({ page }) => {
   expect(norm(shipped)).not.toBe(""); // an unresolved var must not read as agreement
 });
 
-// ── Test 8b: the receipt never crosses the verb ─────────────────────
+// ── Test 8b: the receipt sits UNDER the verb, on its axis ───────────
 
 test("the deal receipt keeps off the commit verb, hover included", async ({ page }) => {
   await loadApp(page);
 
-  // Mark 6 moved the difficulty tally out of the board's margin and into the ticket's deal
-  // row, where it shares ONE grid cell with Deal — verb centred, receipt end-aligned. The
-  // clearance between them is 7.53px at this rail. That is enough for a static receipt and
-  // not enough for a growing one, which is the whole reason the tally's hover reveal is
-  // retired (DifficultyTally): expanded to its old 16ch the name crossed Deal by 103.53px.
-  // This row is the bound — it fails for ANY child of the receipt that grows on hover,
-  // however it arrives, not just for the one that was deleted.
+  // Mark 6 moved the difficulty tally out of the board's margin into the ticket's deal row,
+  // where it SHARED one grid cell with Deal — verb centred, receipt end-aligned, 7.53px of
+  // horizontal clearance between them. This row read that gap in x, and T6 mark 8 spent it:
+  // a 36px die and a 1.9em tally leave no room to be side by side, so the receipt takes its
+  // own grid row beneath the verb.
+  //
+  // THE READ IS RE-AIMED, NOT RELAXED. In x the two boxes now overlap by construction — the
+  // old assertion would red on the cure and its old control (a child growing on hover) can no
+  // longer cross anything, so it had inverted into a row that greened on the defect. The
+  // clearance that carries the same claim is VERTICAL: the receipt's top at or below the
+  // verb's bottom, and both centred on the well's one spine. It still fails for any growth of
+  // either box toward the other, which is what the row is for.
   const clearance = async () =>
     page.evaluate(() => {
       const row = document.querySelector(".controls-card .deal-row");
@@ -580,42 +585,45 @@ test("the deal receipt keeps off the commit verb, hover included", async ({ page
       if (!verb || !receipt) return null;
       const v = verb.getBoundingClientRect();
       const t = receipt.getBoundingClientRect();
-      return { gap: +(t.left - v.right).toFixed(2), receiptW: +t.width.toFixed(2) };
+      return {
+        gap: +(t.top - v.bottom).toFixed(2),
+        axis: +Math.abs((t.left + t.right) / 2 - (v.left + v.right) / 2).toFixed(2),
+        receiptW: +t.width.toFixed(2),
+      };
     });
 
   const rest = await clearance();
   expect(rest).not.toBeNull();
-  expect(rest!.gap).toBeGreaterThan(0);
+  expect(rest!.gap).toBeGreaterThanOrEqual(0);
+  expect(rest!.axis, "verb and receipt share one centre").toBeLessThanOrEqual(1);
 
   await page.locator(".controls-card .deal-row .difficulty-tally").hover();
   await page.waitForTimeout(320); // longer than any reveal transition the estate has owned
   const hovered = await clearance();
-  expect(hovered!.gap).toBeGreaterThan(0);
+  expect(hovered!.gap).toBeGreaterThanOrEqual(0);
+  expect(hovered!.axis).toBeLessThanOrEqual(1);
   // …and the receipt is the same receipt. A reveal that grows it is the defect even when the
   // gap happens to survive on a wide rail.
   expect(hovered!.receiptW).toBeCloseTo(rest!.receiptW, 1);
 
-  // CONTROL: put the retired reveal back — the exact markup and the exact rule — and the same
-  // probe must see the name cross the verb.
-  await page.evaluate(() => {
-    const t = document.querySelector(".controls-card .deal-row .difficulty-tally")!;
-    const s = document.createElement("span");
-    // NOT `.dt-name`: the tree this row also has to run against (the pre-retirement dist)
-    // carries a `display:none` scoped to that class, which would swallow the control and
-    // red the row for the wrong reason. The probe is about ANY growing child.
-    s.className = "dtx-reveal-probe";
-    s.textContent = "hardest step: hidden single";
-    t.appendChild(s);
-  });
+  // CONTROL: put the SHARED CELL back — mark 6's own two declarations, verbatim — and the same
+  // probe must see the clearance collapse and the axes part.
+  //
+  // The audit rider named `grid-area: auto` for this injection. It cannot red and the reason
+  // is auto-placement: Deal keeps its explicit `1 / 1`, so an auto-placed receipt takes the
+  // first free cell, which IS row 2 column 1 — the cure, spelled differently. The injection
+  // that actually inverts the assertion is the state the cure replaced, so that is the one
+  // written here; it is the stronger control of the two, because it reproduces a shape this
+  // estate has really shipped rather than one it never could.
   await page.addStyleTag({
     content:
-      ".dtx-reveal-probe { font-size: var(--type-caption); max-width: 0; overflow: hidden; white-space: nowrap; opacity: 0; } " +
-      ".difficulty-tally:hover .dtx-reveal-probe { max-width: 16ch; opacity: 1; }",
+      ".controls-card .deal-row > .difficulty-tally { grid-area: 1 / 1; justify-self: end; }",
   });
   await page.locator(".controls-card .deal-row .difficulty-tally").hover();
   await page.waitForTimeout(320);
   const broken = await clearance();
   expect(broken!.gap).toBeLessThan(0);
+  expect(broken!.axis).toBeGreaterThan(1);
 });
 
 // ── Test 9: chip separation — the seam between adjacent option chips ─
@@ -755,7 +763,18 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for", 
   // exactly why the seam has to be paid for somewhere instead of simply added: a cure that
   // pushes the card past its own seal is a regression wearing a fix's name. The two payments
   // are the binary laid out as a pair (`.options-pair`) and the divider's un-doubled margin.
-  const SEAL = 1098.25;
+  //
+  // T6 RE-PRICES THE SEAL, AND SAYS WHAT IT BOUGHT. The P1 number carried 32.39px of unclaimed
+  // slack (head measured 1065.86 at this cell, both engines) and the owner's marks 3 · 8 spend
+  // 76.52 of deliberate vertical: the size/difficulty rule +18.60, the receipt onto its own
+  // row +32.79, Deal's box +12.36, the sticky bar's own padding +8.79, the strip's icons
+  // 26 → 30px +4.00. Every figure is an in-page ablation of the one declaration, measured on
+  // the built dist at this cell, chromium and webkit within 0.04px of each other
+  // (`t6/controls/probe-ipad.mjs`). Shipped reads 1142.38 chromium / 1142.34 webkit; the seal
+  // is that with 2.6px of engine slack and NO slack for a mark nobody ordered. The card is a
+  // scrollport here (`scene.css:60`), so this bounds DRIFT, never a clipping hazard — and the
+  // negative control below still has to break it, which is what keeps the number a gate.
+  const SEAL = 1145.0;
 
   const ctx = await browser.newContext({
     viewport: { width: 1280, height: 800 },
