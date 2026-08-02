@@ -39,7 +39,7 @@ export interface ControlSection {
 </script>
 
 <script setup lang="ts">
-import { computed, ref, onBeforeUnmount, useId } from "vue";
+import { computed, nextTick, ref, onBeforeUnmount, useId } from "vue";
 import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
 import FillForcedIcon from "@pencil/chrome/icons/FillForcedIcon.vue";
 import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
@@ -122,7 +122,18 @@ const props = defineProps<{
 
 // T6 mark 5 — the crib folds behind the action bar's `i`. Session-transient by design: a
 // reader opens it once, reads five rows, and closes it; nothing about the board changes.
+// Opening at the card's old scroll-end grows content above the sticky bar and leaves the
+// crib's head under it — the fold rides into the scrollport as it opens.
 const keysOpen = ref(false);
+function toggleKeys() {
+  keysOpen.value = !keysOpen.value;
+  if (keysOpen.value)
+    void nextTick(() => {
+      document
+        .getElementById("keys-fold")
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+}
 
 const emit = defineEmits<{
   // T4-WU/U2 — the re-homed dice, the "Deal" commit: it lifts out of the live action row into
@@ -831,7 +842,7 @@ function onHint() {
         aria-label="what the keys do"
         :aria-expanded="keysOpen"
         aria-controls="keys-fold"
-        @click="keysOpen = !keysOpen"
+        @click="toggleKeys"
       >
         <span class="info-glyph" aria-hidden="true">i</span>
       </button>
