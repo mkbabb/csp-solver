@@ -333,11 +333,69 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
     });
   });
 
+  // T6 mark 4 — the hint tapes. What a jsdom layer owns is the COMPOSITION: five of them, each
+  // a decorative sibling of the name it explains, none of them a second announced name. The
+  // reveal itself is `:hover` / `:focus-within` CSS and rides e2e/zone-grammar.
+  it("five hint tapes ride beside the names, and none of them is a name", () => {
+    const w = mountPanel({ mobile: false });
+    const hints = w.findAll(".zone-hint");
+    expect(hints).toHaveLength(5);
+    for (const h of hints) {
+      // The decorative-tape contract (SheetWashiLabel, default anchor): out of the AX tree,
+      // no tooltip role, and not a `.washi-tag` — so the three-tape census cannot see it.
+      expect(h.attributes("aria-hidden")).toBe("true");
+      expect(h.attributes("role")).toBeUndefined();
+      expect(h.classes()).not.toContain("washi-tag");
+      expect(h.text().length).toBeGreaterThan(10);
+    }
+  });
+
   it("proactiveCheck reaches the status line — the decay the card never showed", () => {
     expect(mountPanel().get(".check-status").text()).toContain("ask again");
     const marking = mountPanel({ proactiveCheck: true });
     expect(marking.get(".check-status").text()).toContain("mistakes shown");
     expect(marking.get(".check-status").classes()).toContain("is-marking");
+  });
+});
+
+// ── T6 mark 5 · the sticky bar's `i` and the fold behind it ────────────────────────────
+// The STICK is CSS and rides e2e/zone-grammar; what this layer owns is the disclosure's wiring
+// — that the toggle points at the fold, that it says so, and that it never claims the name the
+// legend already answers to (a11y 3.4 requires `/keyboard shortcuts/i` to resolve to exactly
+// one node, and a second one would red it from inside this component).
+describe("GameControlPanel — the keys fold behind the `i` (T6 mark 5)", () => {
+  const INFO = "button.info-btn";
+
+  it("the `i` points at the fold and flips it open, without ever naming itself 'keyboard shortcuts'", async () => {
+    const w = mountPanel({ mobile: false });
+    const info = w.get(INFO);
+    expect(info.attributes("aria-controls")).toBe("keys-fold");
+    expect(info.attributes("aria-expanded")).toBe("false");
+    expect(info.attributes("aria-label")).toBe("what the keys do");
+    expect(w.get("#keys-fold").classes()).not.toContain("is-open");
+
+    await info.trigger("click");
+    expect(w.get(INFO).attributes("aria-expanded")).toBe("true");
+    expect(w.get("#keys-fold").classes()).toContain("is-open");
+
+    await info.trigger("click");
+    expect(w.get(INFO).attributes("aria-expanded")).toBe("false");
+    expect(w.get("#keys-fold").classes()).not.toContain("is-open");
+  });
+
+  it("the crib stays in the tree at rest — collapsed is not hidden", () => {
+    // The 0fr collapse is load-bearing twice over (a11y 3.4 reads the legend's innerText at
+    // rest; the rail's width is its max-content). Neither survives a `v-if`, so the fold's
+    // CONTENT must be mounted whether it is open or shut.
+    const w = mountPanel({ mobile: false });
+    expect(w.find("#keys-fold .keyboard-legend").exists()).toBe(true);
+    expect(w.find("#keys-fold").attributes("aria-hidden")).toBeUndefined();
+  });
+
+  it("neither the fold nor its toggle exists on the phone's card", () => {
+    const w = mountPanel();
+    expect(w.find(INFO).exists()).toBe(false);
+    expect(w.find("#keys-fold").exists()).toBe(false);
   });
 });
 

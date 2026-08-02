@@ -60,7 +60,8 @@ import { SINGLE_KEY_SHORTCUTS } from "@/composables/useShortcutPolicy";
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0.15rem 0.75rem;
-    margin: 0.75rem 0 0;
+    /* It sits ABOVE the action bar now (T6 mark 5), not at the card's tail. */
+    margin: 0 0 0.5rem;
     justify-content: center;
     font-family: var(--font-hand);
     /* was 55% = 3.53:1 light / 4.36:1 dark — sub-AA in BOTH themes at caption size. */

@@ -284,6 +284,63 @@ test("selection is announced: every option chip carries aria-pressed, exactly on
   await expect(rows.first()).toBeVisible();
 });
 
+/** The bar against the card's VISIBLE frame, plus the reading that says the frame is real.
+ *  Returned as data so the same probe can be taken again after the sticky is struck. */
+const BAR_IN_FRAME = () => {
+  const card = document.querySelector(".controls-card") as HTMLElement | null;
+  const bar = document.querySelector(".controls-card .action-bar");
+  if (!card || !bar) return null;
+  const c = card.getBoundingClientRect();
+  const b = bar.getBoundingClientRect();
+  return {
+    scrollTop: card.scrollTop,
+    scrollable: card.scrollHeight - card.clientHeight,
+    belowFold: +(b.top - c.bottom).toFixed(2),
+    overhang: +(b.bottom - c.bottom).toFixed(2),
+    position: getComputedStyle(bar).position,
+  };
+};
+
+test("the action bar rides the card's own scrollport — at the TOP of a 1039px card, not only at its end", async ({
+  page,
+}) => {
+  await loadSudoku(page);
+
+  // T6 mark 5. The read is taken at `scrollTop 0` ON PURPOSE, and the audit rider is why: at
+  // the scroll END a static last child also sits at the card's bottom edge, so a scroll-end
+  // assertion greens on the incumbent and proves nothing. The discriminating state is the
+  // TOP of a card whose content is 400px taller than its frame — sticky puts the four verbs
+  // in view there and static leaves them a screenful below the fold.
+  await page.locator(".controls-card").evaluate((el) => {
+    el.scrollTop = 0;
+  });
+  const at = await page.evaluate(BAR_IN_FRAME);
+  expect(at, "the rail card and its action bar must both be mounted").not.toBeNull();
+
+  // The frame has to be a real scrollport or the row asserts nothing: a card that fits its
+  // content puts the bar in view whatever its `position` is.
+  expect(at!.scrollable, "the card must overflow its frame at this viewport").toBeGreaterThan(
+    40,
+  );
+  expect(at!.scrollTop).toBe(0);
+  expect(at!.position).toBe("sticky");
+  // In frame: the bar's bottom sits at or above the card's visible bottom edge.
+  expect(at!.overhang, "the bar hangs below the card's visible bottom").toBeLessThanOrEqual(1);
+  expect(at!.belowFold, "the bar's top is inside the frame").toBeLessThan(0);
+
+  // NEGATIVE CONTROL — strike the one declaration that does the work. The same probe must
+  // report the bar below the fold by roughly the card's whole unscrolled overflow.
+  await page.addStyleTag({
+    content: ".controls-card .action-bar { position: static !important; }",
+  });
+  const struck = await page.evaluate(BAR_IN_FRAME);
+  expect(struck!.position).toBe("static");
+  expect(
+    struck!.belowFold,
+    "negative control: a static bar must fall out of the card's frame",
+  ).toBeGreaterThan(0);
+});
+
 test("a frozen well mints ONE pose node and promotes nothing (the HandDrawnOutline prune)", async ({
   page,
 }) => {

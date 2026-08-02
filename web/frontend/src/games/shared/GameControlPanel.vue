@@ -120,6 +120,10 @@ const props = defineProps<{
   gradeTally?: TallyDescriptor;
 }>();
 
+// T6 mark 5 — the crib folds behind the action bar's `i`. Session-transient by design: a
+// reader opens it once, reads five rows, and closes it; nothing about the board changes.
+const keysOpen = ref(false);
+
 const emit = defineEmits<{
   // T4-WU/U2 — the re-homed dice, the "Deal" commit: it lifts out of the live action row into
   // the staged New-game zone and commits the staged sections. Same button grammar (DiceIcon
@@ -278,7 +282,7 @@ const shareWashi = computed(() =>
     ? "copied!"
     : shareState.value === "failed"
       ? "couldn't copy — link is in the address bar"
-      : "share link",
+      : "copy a link to this board",
 );
 
 // ── T4-P1 · THE ZONE GRAMMAR ────────────────────────────────────────────────────────
@@ -462,6 +466,15 @@ function onHint() {
       :aria-labelledby="newGameId"
     >
       <SheetWashiLabel :id="newGameId" text="new game" :seed="13" anchor="tag" />
+      <!-- T6 mark 4 — the tape says WHAT the compartment is; this second tape, revealed on
+           hover or on tabbing in, says what it DOES. Default anchor, so it inherits the
+           decorative tape's `aria-hidden` and stays out of every name census. -->
+      <SheetWashiLabel
+        class="zone-hint"
+        text="these settings wait here — the board only changes when you deal"
+        :seed="17"
+        wide
+      />
       <div class="control-panel-filtered">
         <!-- The mobile tab-toggle — renders ONLY at n ≥ 2 sections (each tab is a section head;
              a single-section game shows a plain heading below instead of a dead tab). It STAYS:
@@ -542,8 +555,10 @@ function onHint() {
 
       <!-- The Deal commit — the DiceIcon re-homed from the action row (no new control, the WM
            input shape stays frozen). Its name shows always (the primary verb of the staged zone
-           earns its label), so "next game" reads with zero copy; the washi is the fine-pointer
-           hover twin of that same word. -->
+           earns its label), so "next game" reads with zero copy.
+           T6 mark 12: the washi is no longer that same word said twice. Every verb's hover tape
+           now EXPLICATES — the sublabel names the act, the tape says what the act does — which
+           is the whole of what "the controls are not explicated" asked for. -->
       <div class="deal-row">
         <button
           @click="onDeal()"
@@ -554,14 +569,19 @@ function onHint() {
             dealArmed ? 'Press again to deal a new board' : 'Deal a new board'
           "
         >
-          <DiceIcon :size="28" :playing="dealAnimating" />
+          <DiceIcon :size="36" :playing="dealAnimating" />
           <span
             class="icon-sublabel"
             :class="{ 'is-armed': dealArmed }"
             aria-hidden="true"
             >{{ dealArmed ? "sure?" : "Deal" }}</span
           >
-          <SheetWashiLabel v-if="!mobile" text="Deal" :seed="11" />
+          <SheetWashiLabel
+            v-if="!mobile"
+            text="deal a new board with the settings above"
+            :seed="11"
+            wide
+          />
         </button>
         <!-- The receipt (mark 6): what the LAST deal actually produced, beside the verb that
              will replace it. The chips above are the ask; this is the answer. One home at
@@ -621,6 +641,12 @@ function onHint() {
       :aria-labelledby="pencilsId"
     >
       <SheetWashiLabel :id="pencilsId" text="pencils" :seed="29" anchor="tag" />
+      <SheetWashiLabel
+        class="zone-hint"
+        text="how your marks are written — and whether the solver shows its candidates"
+        :seed="19"
+        wide
+      />
       <div
         class="zone-row"
         :class="{ 'zone-row-stacked': !mobile }"
@@ -628,6 +654,12 @@ function onHint() {
         :aria-labelledby="marksId"
       >
         <span :id="marksId" class="zone-row-label">marks</span>
+        <SheetWashiLabel
+          class="zone-hint"
+          text="normal writes a digit — corner and center write small pencil marks"
+          :seed="31"
+          wide
+        />
         <OptionSelector
           :options="MODE_OPTIONS"
           :selected="pencilMode"
@@ -643,6 +675,12 @@ function onHint() {
         :aria-labelledby="candidatesId"
       >
         <span :id="candidatesId" class="zone-row-label">candidates</span>
+        <SheetWashiLabel
+          class="zone-hint"
+          text="show every digit still legal in a cell"
+          :seed="41"
+          wide
+        />
         <OptionSelector
           :options="CANDIDATE_OPTIONS"
           :selected="candidatesPinned ? 'on' : 'off'"
@@ -663,6 +701,12 @@ function onHint() {
       :aria-labelledby="teachersId"
     >
       <SheetWashiLabel :id="teachersId" text="teacher's" :seed="59" anchor="tag" />
+      <SheetWashiLabel
+        class="zone-hint"
+        text="when your mistakes get checked"
+        :seed="47"
+        wide
+      />
       <!-- One idea in the compartment, so the tape is the whole of its name — no row caption
            to duplicate it. The status line below says whether she is marking right now. -->
       <OptionSelector
@@ -675,71 +719,121 @@ function onHint() {
       <CheckStatus :marking="proactiveCheck" :mode="errorCheckMode" />
     </HandDrawnOutline>
 
+    <!-- T6 mark 5 — THE CRIB FOLDS, AND IT NEVER LEAVES THE FLOW. `grid-template-rows: 0fr→1fr`
+         collapses the fold to nothing while the `<dl>` inside keeps its own box: it stays in the
+         AX tree (a11y 3.4 reads `.keyboard-legend` for k/g/h/p/d and reds on display:none), its
+         text stays readable to both engines' text walkers (the `clip-path` note in the style
+         block — WebKit's `innerText` honours clipping and `overflow: hidden` blanked it), and —
+         the load-bearing half — its 2-column max-content still sizes the rail. The card is
+         shrink-to-fit at ≥1024; a `v-show`, a `<details>` or an absolute popover here drops that
+         contribution, narrows the card ~48px, and walks the centered board ~24px into the
+         `cell-light` golden. Measured at head: card 330 / boardLeft 191, and both must hold. -->
+    <div
+      v-if="!mobile"
+      id="keys-fold"
+      class="legend-fold"
+      :class="{ 'is-open': keysOpen }"
+    >
+      <div><KeyboardLegend /></div>
+    </div>
+
     <!-- Action buttons — hover washi for fine pointers, persistent sublabels on coarse
          (UI-5: the washi is a hover grammar, so sighted touch users got no text; an iPad in the
          row regime reaches this layout with no hover either). Deal re-homed OUT of this row
-         into the staged zone above (spatial prophylaxis). -->
-    <div class="flex items-center justify-evenly">
-      <button
-        @click="onClear()"
-        :disabled="loading"
-        class="icon-btn"
-        :class="{ 'group relative': !mobile }"
-        :aria-label="clearArmed ? 'Press again to clear the board' : 'Clear the board'"
-      >
-        <span :class="{ 'eraser-scrub': clearAnimating }">
-          <EraserIcon :size="28" />
-        </span>
-        <span
-          class="icon-sublabel"
-          :class="{ 'is-armed': clearArmed }"
-          aria-hidden="true"
-          >{{ clearArmed ? "sure?" : "Clear" }}</span
+         into the staged zone above (spatial prophylaxis).
+         T6 mark 5: the row is a BAR now — it sticks to the bottom of the card's scrollport, so
+         clear / fill / solve / share are reachable from anywhere in a 1039px-tall card, and the
+         `i` at its trailing edge is the only thing between the reader and the shortcuts. -->
+    <div class="action-bar">
+      <div class="action-verbs">
+        <button
+          @click="onClear()"
+          :disabled="loading"
+          class="icon-btn"
+          :class="{ 'group relative': !mobile }"
+          :aria-label="
+            clearArmed ? 'Press again to clear the board' : 'Clear the board'
+          "
         >
-        <SheetWashiLabel v-if="!mobile" text="Clear" :seed="23" />
-      </button>
+          <span :class="{ 'eraser-scrub': clearAnimating }">
+            <EraserIcon :size="28" />
+          </span>
+          <span
+            class="icon-sublabel"
+            :class="{ 'is-armed': clearArmed }"
+            aria-hidden="true"
+            >{{ clearArmed ? "sure?" : "Clear" }}</span
+          >
+          <SheetWashiLabel
+            v-if="!mobile"
+            text="wipe every digit you've written"
+            :seed="23"
+            wide
+          />
+        </button>
+        <button
+          @click="onFillForced()"
+          :disabled="loading"
+          class="icon-btn"
+          :class="{ 'group relative': !mobile }"
+          aria-label="Fill in every cell that has only one possible number"
+        >
+          <FillForcedIcon :size="26" :playing="fillAnimating" />
+          <span class="icon-sublabel" aria-hidden="true">Fill</span>
+          <SheetWashiLabel
+            v-if="!mobile"
+            text="ink the cells that have only one digit left"
+            :seed="43"
+            wide
+          />
+        </button>
+        <button
+          @click="onSolve()"
+          :disabled="loading"
+          class="icon-btn"
+          :class="{ 'group relative': !mobile }"
+          aria-label="Solve puzzle"
+        >
+          <ScribbleLoader
+            v-if="loading && !solveAnimating"
+            :size="22"
+            class="text-muted-foreground"
+          />
+          <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
+          <span class="icon-sublabel" aria-hidden="true">Solve</span>
+          <SheetWashiLabel
+            v-if="!mobile"
+            text="let the solver finish the board"
+            :seed="37"
+            wide
+          />
+        </button>
+        <button
+          @click="onShare()"
+          :disabled="loading"
+          class="icon-btn"
+          :class="{ 'group relative': !mobile }"
+          :aria-label="shareAria"
+        >
+          <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
+          <span class="icon-sublabel" aria-hidden="true">{{ shareSublabel }}</span>
+          <SheetWashiLabel v-if="!mobile" :text="shareWashi" :seed="71" wide />
+        </button>
+      </div>
+      <!-- The keys live behind ONE glyph, and its name is never "keyboard shortcuts": the
+           `<dl>` above already carries that name, and a11y 3.4 requires exactly one node to
+           answer to it. Fine-pointer only (CSS) — the legend it opens is itself fine-only, so
+           a coarse iPad rail would otherwise get a toggle for a crib it can never see. -->
       <button
-        @click="onFillForced()"
-        :disabled="loading"
-        class="icon-btn"
-        :class="{ 'group relative': !mobile }"
-        aria-label="Fill in every cell that has only one possible number"
+        v-if="!mobile"
+        type="button"
+        class="info-btn"
+        aria-label="what the keys do"
+        :aria-expanded="keysOpen"
+        aria-controls="keys-fold"
+        @click="keysOpen = !keysOpen"
       >
-        <FillForcedIcon :size="26" :playing="fillAnimating" />
-        <span class="icon-sublabel" aria-hidden="true">Fill</span>
-        <SheetWashiLabel v-if="!mobile" text="fill forced" :seed="43" />
-      </button>
-      <button
-        @click="onSolve()"
-        :disabled="loading"
-        class="icon-btn"
-        :class="{ 'group relative': !mobile }"
-        aria-label="Solve puzzle"
-      >
-        <ScribbleLoader
-          v-if="loading && !solveAnimating"
-          :size="22"
-          class="text-muted-foreground"
-        />
-        <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
-        <span class="icon-sublabel" aria-hidden="true">Solve</span>
-        <SheetWashiLabel v-if="!mobile" text="Solve" :seed="37" />
-      </button>
-      <button
-        @click="onShare()"
-        :disabled="loading"
-        class="icon-btn"
-        :class="{ 'group relative': !mobile }"
-        :aria-label="shareAria"
-      >
-        <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
-        <span class="icon-sublabel" aria-hidden="true">{{ shareSublabel }}</span>
-        <SheetWashiLabel
-          v-if="!mobile"
-          :text="shareWashi"
-          :seed="71"
-          :wide="shareState === 'failed'"
-        />
+        <span class="info-glyph" aria-hidden="true">i</span>
       </button>
     </div>
 
@@ -809,9 +903,6 @@ function onHint() {
         </button>
       </div>
     </Teleport>
-
-    <!-- UI-7b: the keyboard legend (fine-pointer only — a keyboard is implied there). -->
-    <KeyboardLegend v-if="!mobile" />
   </div>
 </template>
 
@@ -873,10 +964,17 @@ function onHint() {
   gap: 0;
 }
 
-/* The air the deleted `<hr>` was really buying, between the staged stanzas only — the
-   compartment's frame does the separating between compartments. */
+/* T6 mark 3 — the air the deleted `<hr>` was buying is now air AND a rule. Size and difficulty
+   read as one undifferentiated stack of six chips; a hairline between them is what says they
+   are two questions. `--ink-press-rule` already draws the crib's keycap borders in this same
+   card, so the stroke is the card's own, not a new one. Rail-only by construction: the phone
+   shows one section at a time behind its tabs, so the adjacent-sibling never matches there.
+   A BoilDivider here is refused — it mounts four live `url(#grain-static)` poses and takes the
+   filter census 9 → 13 in both regimes. */
 .staged-section + .staged-section {
-  margin-top: 0.6rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1.5px solid var(--ink-press-rule);
 }
 
 /* A row inside a compartment: the control's own quiet name beside it (over it, on the narrow
@@ -889,10 +987,53 @@ function onHint() {
    groups centre on one axis — measured 3.75rem clears `candidates` at every width this branch
    mounts at (48.8px at 390, 54px at 1023, against 60). */
 .zone-row {
+  position: relative; /* the containing block for this row's own hint tape */
   display: flex;
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+/* ── T6 mark 4 · the hint tapes ────────────────────────────────────────────────
+   A compartment's tape names it; a second tape, one hover away, says what it does. The
+   component is untouched: a DEFAULT-anchor `SheetWashiLabel` is already an `aria-hidden`
+   decorative tape with a hover reveal, so five sibling tapes buy the explication with zero
+   new markup grammar — invisible to zone-grammar's NAME_SELECTOR and to the permanent-tape
+   census, which is what keeps three tapes three.
+   The tape it hangs off has to be hoverable first: `.washi-label` ships `pointer-events: none`
+   (it is a tooltip that must not eat its own button's clicks) and a name you cannot point at
+   cannot reveal anything. */
+.tray-well .washi-tag,
+.zone-row-label {
+  pointer-events: auto;
+  cursor: help;
+}
+
+/* Hangs UNDER its tape, not over it: the card is a scrollport, and the default `bottom: 100%`
+   puts the first well's note above the card's own top edge, where it is clipped away. */
+.tray-well .zone-hint {
+  top: 1.1rem;
+  left: 0.85rem;
+  bottom: auto;
+  margin-bottom: 0;
+  transform: rotate(var(--washi-tilt));
+  transform-origin: left top;
+}
+
+/* `> .zone-hint` on the well, not a descendant: tabbing into the pencils compartment reveals
+   the COMPARTMENT's note, never all three of its tapes at once.
+
+   `:has(:focus-visible)` rather than `:focus-within`, and it is a measured distinction, not a
+   pedantic one: `useControlsDrawer` moves focus to the card's first control at open-settle, so
+   under `:focus-within` every TAP that opened the phone's sheet laid the new-game note across
+   the size and difficulty eyebrows with no gesture available to dismiss it. Probed both
+   engines: the drawer's programmatic focus is `:focus-within` true / `:focus-visible` FALSE,
+   and a real Tab walk is true in both. The keyboard reveal survives on every pointer; the
+   phantom one on touch does not. */
+.washi-tag:hover + .zone-hint,
+.zone-row-label:hover + .zone-hint,
+.tray-well:has(:focus-visible) > .zone-hint {
+  opacity: 1;
 }
 
 .zone-row-label {
@@ -926,19 +1067,23 @@ function onHint() {
 /* The Deal commit sits centered under the staged selectors, a comfortable target from the peek
    divider that partitions it off from the live play tools (the spatial prophylaxis).
 
-   ONE CELL, TWO ALIGNMENTS (mark 6). The receipt joined this row, and neither obvious layout
-   survived measurement. A centered flex row is not a centered verb — `justify-content: center`
-   over two items slides Deal ~43px off the well's own spine, the axis its staged chips are
-   centered on. `grid-template-columns: 1fr auto 1fr` holds the spine but is worse: under the
-   rail's shrink-to-fit MAX-CONTENT sizing the two `1fr` tracks resolve equal, so the EMPTY left
-   track mirrors the receipt's width and the row's max-content becomes verb + 2× receipt. It
-   widened the rail 276.25 → 283.14 and the centered `.app-layout` walked the board 3.45px left
-   — a sub-pixel phase change under `cell-light`, which is a committed golden. Measured, not
-   guessed: the golden went red and stayed red across runs while it reds nowhere on the base.
+   TWO ROWS, ONE AXIS (mark 6, re-cut at T6 mark 8). Neither obvious layout survived measurement
+   when the receipt first joined this row. A centered flex row is not a centered verb —
+   `justify-content: center` over two items slides Deal ~43px off the well's own spine, the axis
+   its staged chips are centered on. `grid-template-columns: 1fr auto 1fr` holds the spine but is
+   worse: under the rail's shrink-to-fit MAX-CONTENT sizing the two `1fr` tracks resolve equal,
+   so the EMPTY left track mirrors the receipt's width and the row's max-content becomes verb +
+   2× receipt. It widened the rail 276.25 → 283.14 and the centered `.app-layout` walked the
+   board 3.45px left — a sub-pixel phase change under `cell-light`, a committed golden.
 
-   Both marks share ONE cell instead. Deal centers on the row's axis, the receipt pins to its
-   trailing edge, and the row's max-content is the wider of the two — so the receipt contributes
-   nothing to the rail's width and the board does not move. */
+   Mark 6's answer was ONE shared cell — verb centred, receipt end-aligned — and it worked on a
+   clearance of 7.53px that mark 8's bigger die spends outright. So the receipt takes its own
+   row: die and name on row 1, `dealt |卅` centred beneath on row 2, both on the well's spine.
+   The single implicit column still resolves to `max(verb, receipt)`, exactly as the shared cell
+   did, so the rail's max-content is unchanged and the board does not move — measured, not
+   assumed. What the move retires is the hazard CLASS: no growth of either box can occlude the
+   other, because they no longer overlap. `visual-regression.spec.ts` reads the clearance
+   vertically now, with the shared cell as its negative control. */
 .deal-row {
   display: grid;
   align-items: center;
@@ -953,8 +1098,9 @@ function onHint() {
 }
 
 .deal-row > .difficulty-tally {
-  grid-area: 1 / 1;
-  justify-self: end;
+  grid-area: 2 / 1;
+  justify-self: center;
+  margin-top: 0.15rem;
   min-width: 0;
 }
 
@@ -965,9 +1111,10 @@ function onHint() {
    with the reading that decides it — expanded, the name crosses Deal by 103.53px at the 1440
    rail — and the row that keeps it from coming back is in `visual-regression.spec.ts`. */
 
-/* Deal is the re-homed dice, but it earns its NAME on every pointer (not only coarse): the
-   primary verb of the staged zone reads with zero copy. The column layout + padded target
-   mirrors the coarse icon-btn grammar, applied to Deal at all widths.
+/* Deal's own box. The column layout it used to restate here now lives on the base `.icon-btn`
+   (T6 mark 12 hoisted it out of the coarse block — every verb writes its name at every
+   pointer), so what is left is the two values that make this verb the PRIMARY one: a roomier
+   gutter and the air its 36px die needs.
 
    THE SELECTOR CARRIES .icon-btn ON PURPOSE — (0,2,0), so the cascade no longer depends on
    where this block sits. Authored as a bare `.deal-btn` it tied `.icon-btn` at (0,1,0) and
@@ -977,17 +1124,15 @@ function onHint() {
    overflow and painted 28 × 17.62 on every fine pointer for the life of the T4 panel.
    Geometry is gated: e2e/visual-regression.spec.ts "the Deal die is not crushed". */
 .icon-btn.deal-btn {
-  flex-direction: column;
-  gap: 0.15rem;
-  width: auto;
-  height: auto;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
-  padding: 0.3rem 0.85rem;
+  gap: 0.3rem;
+  padding: 0.5rem 1.1rem;
 }
 
+/* T6 mark 8 — Deal is the card's one primary verb and it wore the same caption its four
+   secondary siblings wear. The die goes 28 → 36 and the name up one rung; the strip's verbs
+   stay at `--type-caption`, and THAT difference is the hierarchy. */
 .deal-btn .icon-sublabel {
-  display: block;
+  font-size: var(--type-small);
 }
 
 /* .section-heading type register lives in assets/typography.css (@layer
@@ -1006,12 +1151,22 @@ function onHint() {
    displacement maps and two blends re-executing over the whole panel, twice per hover
    round-trip. The panel filter is gone now, and so is the flourish that abused it. */
 
+/* T6 mark 12 — the column pose is the ONLY pose now. It was authored twice: a 44px square here
+   and, under `@media (pointer: coarse)`, a column that stacked the icon over its written name.
+   The sublabels go on at every pointer (mark 12: a fine-pointer reader had a row of unlabelled
+   glyphs and a hover tape that only re-said the glyph's own name), so the coarse block's
+   geometry is the shipped geometry and it is hoisted here verbatim — one pose, one place. */
 .icon-btn {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
+  gap: 0.15rem;
+  width: auto;
+  height: auto;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.5rem;
   border-radius: 0.5rem;
   color: var(--color-muted-foreground);
   background: transparent;
@@ -1095,14 +1250,20 @@ function onHint() {
   opacity: 0.7;
 }
 
-/* UI-5: persistent icon sublabels — the pencil hand at caption scale, muted. Hidden on
-   fine pointers (the hover washi carries the name there); written down on coarse. */
+/* UI-5: persistent icon sublabels — the pencil hand at caption scale, muted. T6 mark 12: they
+   are written at EVERY pointer now. The fine-pointer arm used to hide them on the ground that
+   "the hover washi carries the name there", and the washi carried the name and nothing else —
+   so a desktop reader had five unlabelled glyphs and a tape that spelled the glyph back.
+   The names are inked; the tapes explicate.
+   `lowercase` is the chimera cure and it retires four font-census LEDGER rows in the same
+   commit: Patrick Hand's cut declares {C,R,S} as its only capitals, so Deal / Fill / Undo /
+   Hint have always painted their initial in the system face mid-word. */
 .icon-sublabel {
-  display: none;
   font-family: var(--font-hand);
   font-size: var(--type-caption);
   line-height: 1;
   letter-spacing: var(--type-tracking-wide);
+  text-transform: lowercase;
   color: var(--color-muted-foreground);
 }
 
@@ -1119,33 +1280,20 @@ function onHint() {
 /* ── Coarse pointers (T3-W11 U-A): the honest touch affordances ─────────
    UI-4: the 14px peek hairline was under every tap floor — pad the hold surface to a
    ≥44px target (the divider stays a hairline visually; the persistent washi labels it).
-   UI-5: the icon actions write their names beneath the icon. Fine pointers match none
-   of this — the hover grammar is structurally untouched. */
+   The icon column + the written names are no longer fenced here: T6 mark 12 hoisted both
+   onto the base `.icon-btn` / `.icon-sublabel`, so what stays is only what a finger needs
+   and a mouse does not. */
 @media (pointer: coarse) {
   .peek-hold-surface {
     padding-block: 1rem;
   }
 
-  .icon-btn {
-    flex-direction: column;
-    gap: 0.15rem;
-    width: auto;
-    height: auto;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-    padding: 0.3rem 0.5rem;
-  }
-
-  /* Restated at (0,2,0) because `.icon-btn.deal-btn` above now outranks this block. Coarse
-     keeps the SHIPPED pose byte-identical — every icon button, Deal included, wears the same
-     0.5rem gutter on touch. Widening Deal's mobile box to the fine 0.85rem is a design call,
-     not a cascade repair, so it is not made here; it is booked in blast-radius.md §2.6. */
+  /* Restated at (0,2,0) because `.icon-btn.deal-btn` above now outranks this block. Deal's
+     die grows with mark 8 at every pointer, but its GUTTER stays the touch gutter — every
+     icon button wears the same 0.5rem on a phone, where the fine rail's 1.1rem would push a
+     four-verb strip toward the card's edges. */
   .icon-btn.deal-btn {
     padding: 0.3rem 0.5rem;
-  }
-
-  .icon-sublabel {
-    display: block;
   }
 }
 
@@ -1164,6 +1312,126 @@ function onHint() {
   .icon-btn:hover .sparkle-icon {
     filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
   }
+}
+
+/* ── T6 mark 5 · the sticky action bar ─────────────────────────────────────────
+   The card is 1039px of content in a 640px scrollport at the 1440 rail, and the four verbs
+   sat at the bottom of the 1039 — so reading the difficulty chips and clearing the board were
+   never on screen together. The bar stays. `1fr auto` puts the verbs on the card's spine and
+   the `i` on its trailing edge; the ::before is a short fade so scrolled content dissolves
+   into the bar instead of being guillotined by it. */
+.action-bar {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  background: var(--color-card);
+  padding-block: 0.4rem 0.15rem;
+}
+
+.action-bar::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 100% 0;
+  height: 0.9rem;
+  background: linear-gradient(to top, var(--color-card), transparent);
+  pointer-events: none;
+}
+
+.action-verbs {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-evenly;
+  flex: 1;
+}
+
+/* Sticky ONLY where the card is a scrollport. `scene.css:60` makes the ≥1024 rail one and
+   `scene.css:230` makes the portrait dock one; the <1024 LANDSCAPE card is IN FLOW
+   (`scene.css:191` is that regime's key), so `bottom: 0` there would pin the bar to the
+   viewport and move a ratified rung. This condition is that regime key restated in a second
+   file — re-cut one and re-cut both. */
+@media (min-width: 1024px), (max-width: 1023.98px) and (orientation: portrait) {
+  .action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+  }
+}
+
+/* T6 mark 8 — the strip's verbs grow with Deal, one rung behind it. Scoped to the bar so the
+   fold's undo / redo / hint keep the 26px they were seated at on the dock. */
+.action-verbs .icon-btn svg {
+  width: 30px;
+  height: 30px;
+}
+
+/* The fold. `0fr → 1fr` and not `display`/`v-show`: see the template comment — the crib's
+   max-content is what sizes the rail, and its text is what a11y 3.4 reads.
+
+   THE CLIP IS `clip-path`, NOT `overflow: hidden`, AND THE REASON IS ENGINE-MEASURED. WebKit's
+   `innerText` walks with clipping honoured: text inside an `overflow: hidden` box of height 0
+   returns the EMPTY STRING, so a11y 3.4's `help.innerText()` read nothing and the row went red
+   in webkit while chromium passed it (both engines probed, six collapse variants). `clip-path`
+   clips the same pixels and neither engine's text walker sees it. Same box, same paint, one
+   engine-honest reading. */
+.legend-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  clip-path: inset(0);
+  transition: grid-template-rows 200ms var(--ease-drawOn);
+}
+
+.legend-fold.is-open {
+  grid-template-rows: 1fr;
+}
+
+.legend-fold > div {
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .legend-fold {
+    transition: none;
+  }
+}
+
+/* The legend the `i` opens is itself `(hover: hover) and (pointer: fine)` — so its toggle
+   restates that gate rather than a `v-if`, and an iPad rail gets neither. */
+.info-btn {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+  }
+}
+
+.info-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1.5px solid var(--ink-press-rule);
+  border-radius: 50%;
+  font-family: var(--font-hand);
+  font-size: var(--type-small);
+  line-height: 1;
+  color: var(--ink-press-quiet);
+}
+
+.info-btn[aria-expanded="true"] .info-glyph {
+  color: var(--color-foreground);
+  border-color: currentColor;
 }
 
 /* Play tools row (T4-WM §2) — undo / redo / hint. A COARSE affordance: hidden on a fine

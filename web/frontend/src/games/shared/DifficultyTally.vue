@@ -303,7 +303,7 @@ onUnmounted(stopDraws);
 }
 
 .dt-label {
-  font-size: var(--type-caption);
+  font-size: var(--type-small);
   letter-spacing: var(--type-tracking-wide);
   text-transform: lowercase;
   /* T4-W10 gate 1: 62% graphite was 4.32:1 on the board margin (< AA 4.5). The 68% that
@@ -311,8 +311,10 @@ onUnmounted(stopDraws);
   color: var(--ink-press-quiet);
 }
 
+/* T6 mark 8 — the receipt reads at a glance or it is not a receipt. The scale goes up with the
+   verb it files under; the strokes are geometry, so the count is the only thing that grows. */
 .dt-marks {
-  height: 1.5em;
+  height: 1.9em;
   width: auto;
   overflow: visible;
   flex: 0 0 auto;
