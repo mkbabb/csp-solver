@@ -292,3 +292,9 @@ retargeted specs, README restamp, gates.json axBaseline restamp, LEDGER CH-42 ev
 the PRECEPTS row, and this section. Expected CI: 18/18 (the a11y spec joins the default lane
 by glob — born-RED law discharged, it lands GREEN). The wave closes when the pinned run says
 so in its own tool result.
+
+**THE PINNED RUN SPOKE — twice.** Run 30734036107 attempt 1: 17/18, one red —
+`[webkit] futoshiki.spec.ts:131` solve-success timeout (worker solve latency vs a 15s UI wait
+on a contended runner; not an a11y row, green locally both engines). Same-SHA rerun (the
+formation-CI precedent): attempt 2 **18/18 success** — flake-classified from the field, the
+instance named here for the flake ledger. **T5-W3 SEALED at `9061b8c1`.**
