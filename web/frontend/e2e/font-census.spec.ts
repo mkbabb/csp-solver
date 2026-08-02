@@ -244,8 +244,26 @@ test("the ledger holds BOTH directions across two games and two regimes", async 
           await expect(p.locator("#controls-drawer .drawer-case")).toBeVisible();
         }
       }
-      await p.waitForTimeout(900);
-      const { faces, mixed } = await p.evaluate(MIXED_FACE);
+      // Settle is POLLED, never slept (the §2 law; CH-63 trigger-1 order for THIS row —
+      // run 30749219061 webkit: 900ms of sleep under runner contention left a producing
+      // cell unread and the BACKWARD direction called a live ledger row stale). Fonts
+      // resolve first, then the census is its own settle condition: two consecutive
+      // identical reads, 250ms apart. A genuinely stale row still never appears in any
+      // settled census, so the gate's teeth are untouched — only the sleep is gone.
+      await p.evaluate(() => document.fonts.ready);
+      let census = await p.evaluate(MIXED_FACE);
+      await expect
+        .poll(
+          async () => {
+            const next = await p.evaluate(MIXED_FACE);
+            const settled = JSON.stringify(next) === JSON.stringify(census);
+            census = next;
+            return settled;
+          },
+          { timeout: 15000, intervals: [250, 250, 250, 500] },
+        )
+        .toBe(true);
+      const { faces, mixed } = census;
       facesPerCell.push(faces);
       for (const m of mixed) {
         const k = ledgerKey(m);
