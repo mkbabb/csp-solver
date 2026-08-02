@@ -702,14 +702,20 @@ onUnmounted(() => {
   opacity: 0;
   visibility: hidden;
   /* outgoing icon: fade only in the last wring beat (240-340ms) — the body is
-       nearly a point before it fades; no mid-air ghost */
-  transition: opacity 100ms var(--ease-standard) 240ms;
+       nearly a point before it fades; no mid-air ghost.
+       !important THROUGHOUT THE GESTURE TRANSITIONS: useTheme's disableTransition
+       stamps `* { transition: none !important }` for exactly the flip frame — the
+       only frame these can start. Among importants, specificity wins, so the
+       toggle's own subtree keeps its tweens while the page-wide kill (the P1-W3
+       +23.5 fps cure) stands. Without these the storybook dies silently — found
+       by the owner's eye, 2026-08-02. */
+  transition: opacity 100ms var(--ease-standard) 240ms !important;
 }
 
 .toggle-icon.is-active {
   opacity: 1;
   /* incoming icon: 60-360ms rise with the bloom's first beats */
-  transition: opacity 300ms var(--ease-standard) 60ms;
+  transition: opacity 300ms var(--ease-standard) 60ms !important;
 }
 
 .sun-moon-toggle.is-turning .toggle-icon {
@@ -724,7 +730,7 @@ onUnmounted(() => {
   transform-box: view-box;
   transform-origin: 100px 100px;
   transform: scale(0.06) rotate(12deg) translateY(6px);
-  transition: transform 340ms var(--ease-accelIn);
+  transition: transform 340ms var(--ease-accelIn) !important;
 }
 
 /* Wring-down twist: shrinks AND sinks, twisting as paper does (-15deg — owner-taste
@@ -739,7 +745,7 @@ onUnmounted(() => {
    vector-crisp by construction (the warp is the filter's input). */
 .toggle-icon.is-active .warp {
   transform: none;
-  transition: transform 800ms var(--ease-springPop) 60ms;
+  transition: transform 800ms var(--ease-springPop) 60ms !important;
 }
 
 /* ─── The plush accent beats ─────────────────────────────────────────────
@@ -804,7 +810,7 @@ onUnmounted(() => {
   opacity: 0;
   transition:
     scale 150ms ease-in,
-    opacity 100ms ease-in;
+    opacity 100ms ease-in !important;
 }
 
 .toggle-icon.is-active .twinkle-star,
@@ -813,14 +819,14 @@ onUnmounted(() => {
   opacity: 1;
   transition:
     scale 150ms var(--ease-anticipatePop) 560ms,
-    opacity 120ms ease-out 560ms;
+    opacity 120ms ease-out 560ms !important;
 }
 
 .toggle-icon.is-active .twinkle-star-2 {
-  transition-delay: 640ms;
+  transition-delay: 640ms !important;
 }
 .toggle-icon.is-active .twinkle-star-3 {
-  transition-delay: 720ms;
+  transition-delay: 720ms !important;
 }
 
 /* Pause all animations on inactive icon to save GPU */
@@ -884,7 +890,7 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .toggle-icon {
     visibility: hidden;
-    transition: none;
+    transition: none !important;
     animation: none;
   }
 
