@@ -188,6 +188,16 @@ export function resolveInitialState(): InitialState {
   const decoded = decodeBoardParam(url.size, url.difficulty);
   const boardLink = decoded.status;
   const boardState = decoded.status === "ok" ? decoded.board : null;
+  // A REFUSED LINK LEAVES THE BAR, HERE (T5-W2 seal-fix). Failing closed and cleaning up are
+  // one act: a `?board=` the app just refused to open would otherwise stand in the address bar
+  // describing a board that isn't there, and a reload or a re-share re-serves the same lie.
+  // Deleted at the decode, not as a side effect of the degraded path's mount deal — that route
+  // only ever worked because a fresh deal happens to call `dropBoardParam` on the way past, so
+  // the cleanup raced the solver and lost under WebKit (permalink.spec.ts row 6). The side
+  // effect sits where `clearPersistedBoard()` below already sits: a resolve that finds the URL
+  // and the world disagreeing corrects the world. `linkError` is read off `boardLink`, so the
+  // corrupt-link notice still fires — the notice is the signal, the stale param never was.
+  if (decoded.status === "invalid") dropBoardParam();
   const persisted = loadPersistedBoard();
   // (a) hasUrl ORs in a VALID board so a board-only link isn't silently dropped (an
   // invalid board fell closed → boardState null → falls through to size/difficulty

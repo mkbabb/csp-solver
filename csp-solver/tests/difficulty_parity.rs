@@ -59,6 +59,20 @@
 //! `enum …Difficulty` declarations) and they join [`SIBLING_DEFINITIONS`] as
 //! `PascalCase` siblings. The sudoku wire-mirror set proper stays three.
 //!
+//! ## Reconciliation note (T5-W2, 2026-08-01)
+//!
+//! The distill collapsed the frontend's two byte-identical `Difficulty`
+//! declarations into one home. `games/sudoku/types.ts` is deleted outright;
+//! `games/futoshiki/types.ts` survives but no longer declares the axis (it
+//! keeps only what genuinely diverges — the caret clue, the size band). Both
+//! rows leave [`SIBLING_DEFINITIONS`]; one row replaces them:
+//! `games/shared/types.ts::Difficulty`, `Verbatim` like the TS unions before
+//! it, read directly by all five families. That's a scan-list follow, not a
+//! weakening — the invariant is unchanged and every surviving row still has
+//! to agree verbatim with `csp_solver::sudoku::Difficulty`. The frontend's
+//! mirror count drops two to one; the sudoku wire-mirror set proper is now
+//! PyO3, wasm, and that shared TS union.
+//!
 //! ## Scope boundary (read before adding a fifth casing or a new root)
 //!
 //! - The regex-free heuristics in [`looks_like_difficulty_definition`] key
@@ -155,11 +169,6 @@ const SIBLING_DEFINITIONS: &[(&str, &str, Casing)] = &[
         Casing::PascalCase,
     ),
     (
-        "games/sudoku/types.ts Difficulty (frontend TS)",
-        "../web/frontend/src/games/sudoku/types.ts",
-        Casing::Verbatim,
-    ),
-    (
         "puzzles/futoshiki/generate.rs::Difficulty (futoshiki core, T4-W6 — idiomatic casing)",
         "src/puzzles/futoshiki/generate.rs",
         Casing::PascalCase,
@@ -170,8 +179,9 @@ const SIBLING_DEFINITIONS: &[(&str, &str, Casing)] = &[
         Casing::PascalCase,
     ),
     (
-        "games/futoshiki/types.ts Difficulty (frontend TS, T4-W6)",
-        "../web/frontend/src/games/futoshiki/types.ts",
+        "games/shared/types.ts Difficulty (frontend TS, T5-W2 — the estate's one home, \
+         replacing the deleted games/sudoku/types.ts and the de-declared games/futoshiki/types.ts)",
+        "../web/frontend/src/games/shared/types.ts",
         Casing::Verbatim,
     ),
 ];

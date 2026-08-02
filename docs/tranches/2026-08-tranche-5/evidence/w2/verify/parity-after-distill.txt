@@ -1,0 +1,84 @@
+# T5-W2 SEAL-FIX VERIFY — difficulty_parity after the distill (CI run 30727947148 @ 74b2835d was RED on both tests)
+# what moved: the DISTILL collapsed the frontend Difficulty axis to one home — games/sudoku/types.ts DELETED,
+#             games/futoshiki/types.ts survives but no longer declares it; NEW mirror games/shared/types.ts.
+# what changed in the test: ONLY the SIBLING_DEFINITIONS scan list follows that estate (2 rows out, 1 row in,
+#             Casing::Verbatim per the TS-union convention). The INVARIANT is untouched — every surviving row
+#             still must agree verbatim with the rust canon csp_solver::sudoku::Difficulty. Ablations below prove it.
+# command  : cargo test -p csp-solver --test difficulty_parity   (crate root cwd, darwin, 2026-08-02T02:12:27Z)
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running tests/difficulty_parity.rs (target/debug/deps/difficulty_parity-fc4e8b9003c8ad79)
+
+running 2 tests
+test difficulty_variants_agree_across_all_known_definitions ... ok
+test no_unscanned_difficulty_definitions_exist ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+
+
+================================================================
+ABLATION A — the invariant still bites the NEW row
+  perturb: web/frontend/src/games/shared/types.ts line 14, "MEDIUM" -> "MED", then restore from backup
+================================================================
+     Running tests/difficulty_parity.rs (target/debug/deps/difficulty_parity-fc4e8b9003c8ad79)
+
+running 2 tests
+test difficulty_variants_agree_across_all_known_definitions ... FAILED
+test no_unscanned_difficulty_definitions_exist ... ok
+
+failures:
+
+---- difficulty_variants_agree_across_all_known_definitions stdout ----
+
+thread 'difficulty_variants_agree_across_all_known_definitions' (79524476) panicked at csp-solver/tests/difficulty_parity.rs:248:5:
+Difficulty parity broken across 5 known sibling definitions — canonical source is csp_solver::sudoku::Difficulty (src/puzzles/sudoku/generate.rs).
+games/shared/types.ts Difficulty (frontend TS, T5-W2 — the estate's one home, replacing the deleted games/sudoku/types.ts and the de-declared games/futoshiki/types.ts) (../web/frontend/src/games/shared/types.ts): missing canonical variant "MEDIUM" (expected Verbatim spelling "MEDIUM" in source text)
+
+
+failures:
+    difficulty_variants_agree_across_all_known_definitions
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p csp-solver --test difficulty_parity`
+
+[restored] git diff --stat web/frontend/src/games/shared/types.ts:
+(empty = byte-identical restore)
+
+
+================================================================
+ABLATION B — the discovery guard still catches a seventh definition
+  perturb: create web/frontend/src/games/shared/__ablation_stray.ts declaring a Difficulty-shaped type, then delete
+================================================================
+     Running tests/difficulty_parity.rs (target/debug/deps/difficulty_parity-fc4e8b9003c8ad79)
+
+running 2 tests
+test difficulty_variants_agree_across_all_known_definitions ... ok
+test no_unscanned_difficulty_definitions_exist ... FAILED
+
+failures:
+
+---- no_unscanned_difficulty_definitions_exist stdout ----
+
+thread 'no_unscanned_difficulty_definitions_exist' (79524518) panicked at csp-solver/tests/difficulty_parity.rs:362:5:
+found Difficulty-shaped definition(s) not in SIBLING_DEFINITIONS — this is exactly the D10c/T8 failure mode (a new mirror silently invisible to the parity check): ["../web/frontend/src/games/shared/__ablation_stray.ts"]
+Add each to SIBLING_DEFINITIONS in this file with an explicit Casing, or delete it if it's dead code.
+
+
+failures:
+    no_unscanned_difficulty_definitions_exist
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p csp-solver --test difficulty_parity`
+
+[removed] git status --short:
+ M csp-solver/tests/difficulty_parity.rs
+?? docs/tranches/2026-08-tranche-5/evidence/w2/verify/parity-after-distill.txt
+
+================================================================
+Both guards live post-fix. Only csp-solver/tests/difficulty_parity.rs is modified.
+================================================================

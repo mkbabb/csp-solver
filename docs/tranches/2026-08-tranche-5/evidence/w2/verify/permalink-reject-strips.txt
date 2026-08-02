@@ -1,0 +1,124 @@
+T5-W2 SEAL-FIX — permalink reject-strips-param
+repo head at capture: 74b2835d  (74b2835d + this patch)
+
+==============================================================
+(1) BORN RED — unit rows against the UNPATCHED codec
+    npx vitest run src/games/{sudoku,futoshiki}/composables/useUrlState.test.ts
+==============================================================
+     × strips ?board= on the untagged body (the dead v0 ratchet) 3ms
+     × strips ?board= on every other fail-closed arm 1ms
+     × keeps the rest of the query — only ?board= is deleted 0ms
+     × strips ?board= on the fail-closed arms 3ms
+     × keeps the rest of the query — only ?board= is deleted 0ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/games/futoshiki/composables/useUrlState.test.ts > a rejected link leaves the address bar > strips ?board= on the fail-closed arms
+AssertionError: expected true to be false // Object.is equality
+ FAIL  src/games/futoshiki/composables/useUrlState.test.ts > a rejected link leaves the address bar > keeps the rest of the query — only ?board= is deleted
+AssertionError: expected true to be false // Object.is equality
+ FAIL  src/games/sudoku/composables/useUrlState.test.ts > a rejected link leaves the address bar > strips ?board= on the untagged body (the dead v0 ratchet)
+AssertionError: expected true to be false // Object.is equality
+ FAIL  src/games/sudoku/composables/useUrlState.test.ts > a rejected link leaves the address bar > strips ?board= on every other fail-closed arm
+AssertionError: expected true to be false // Object.is equality
+ FAIL  src/games/sudoku/composables/useUrlState.test.ts > a rejected link leaves the address bar > keeps the rest of the query — only ?board= is deleted
+AssertionError: expected true to be false // Object.is equality
+ Test Files  2 failed (2)
+      Tests  5 failed | 46 passed (51)
+
+==============================================================
+(2) THE CURE — resolveInitialState() deletes a REFUSED ?board=
+==============================================================
+ .../futoshiki/composables/useUrlState.test.ts      | 36 +++++++++++++++
+ .../src/games/futoshiki/composables/useUrlState.ts |  4 ++
+ .../games/sudoku/composables/useUrlState.test.ts   | 52 ++++++++++++++++++++++
+ .../src/games/sudoku/composables/useUrlState.ts    | 10 +++++
+ 4 files changed, 102 insertions(+)
+
+diff --git a/web/frontend/src/games/futoshiki/composables/useUrlState.ts b/web/frontend/src/games/futoshiki/composables/useUrlState.ts
+index 03f85876..4c20d603 100644
+--- a/web/frontend/src/games/futoshiki/composables/useUrlState.ts
++++ b/web/frontend/src/games/futoshiki/composables/useUrlState.ts
+@@ -258,6 +258,10 @@ export function resolveInitialState(): InitialState {
+   const decoded = decodeBoardParam(url.boardSize, url.difficulty);
+   const boardLink = decoded.status;
+   const boardState = decoded.status === "ok" ? decoded.board : null;
++  // A refused link leaves the bar, here — the Sudoku port's twin (T5-W2 seal-fix; the reason
++  // is written out there). Deleted at the decode rather than left to the degraded path's mount
++  // deal, which raced the solver.
++  if (decoded.status === "invalid") dropBoardParam();
+   const persisted = loadPersistedBoard();
+   // hasUrl ORs in a VALID board so a board-only link isn't silently dropped (an
+   // invalid board fell closed → boardState null → falls through to the size path
+diff --git a/web/frontend/src/games/sudoku/composables/useUrlState.ts b/web/frontend/src/games/sudoku/composables/useUrlState.ts
+index 033bf8f6..53809398 100644
+--- a/web/frontend/src/games/sudoku/composables/useUrlState.ts
++++ b/web/frontend/src/games/sudoku/composables/useUrlState.ts
+@@ -188,6 +188,16 @@ export function resolveInitialState(): InitialState {
+   const decoded = decodeBoardParam(url.size, url.difficulty);
+   const boardLink = decoded.status;
+   const boardState = decoded.status === "ok" ? decoded.board : null;
++  // A REFUSED LINK LEAVES THE BAR, HERE (T5-W2 seal-fix). Failing closed and cleaning up are
++  // one act: a `?board=` the app just refused to open would otherwise stand in the address bar
++  // describing a board that isn't there, and a reload or a re-share re-serves the same lie.
++  // Deleted at the decode, not as a side effect of the degraded path's mount deal — that route
++  // only ever worked because a fresh deal happens to call `dropBoardParam` on the way past, so
++  // the cleanup raced the solver and lost under WebKit (permalink.spec.ts row 6). The side
++  // effect sits where `clearPersistedBoard()` below already sits: a resolve that finds the URL
++  // and the world disagreeing corrects the world. `linkError` is read off `boardLink`, so the
++  // corrupt-link notice still fires — the notice is the signal, the stale param never was.
++  if (decoded.status === "invalid") dropBoardParam();
+   const persisted = loadPersistedBoard();
+   // (a) hasUrl ORs in a VALID board so a board-only link isn't silently dropped (an
+   // invalid board fell closed → boardState null → falls through to size/difficulty
+
+==============================================================
+(3) THE MECHANISM, MEASURED — the race window row 6 rode
+    webkit · dist on :4188 · 5 loads of ?board=<untagged v0 body>
+    (probe: scratch playwright script, not repo-resident)
+==============================================================
+BEFORE (the two source hunks stashed, dist rebuilt):
+  run 1: 81 cells @ 30ms · ?board= gone @ 176ms · RACE WINDOW 146ms
+  run 2: 81 cells @ 29ms · ?board= gone @ 289ms · RACE WINDOW 260ms
+  run 3: 81 cells @ 32ms · ?board= gone @ 289ms · RACE WINDOW 257ms
+  run 4: 81 cells @ 32ms · ?board= gone @ 170ms · RACE WINDOW 138ms
+  run 5: 81 cells @ 31ms · ?board= gone @ 158ms · RACE WINDOW 127ms
+
+AFTER (the cure restored, dist rebuilt):
+  run 1: 81 cells @ 31ms · ?board= gone @ 31ms · RACE WINDOW 0ms
+  run 2: 81 cells @ 32ms · ?board= gone @ 32ms · RACE WINDOW 0ms
+  run 3: 81 cells @ 31ms · ?board= gone @ 31ms · RACE WINDOW 0ms
+  run 4: 81 cells @ 30ms · ?board= gone @ 30ms · RACE WINDOW 0ms
+  run 5: 81 cells @ 31ms · ?board= gone @ 31ms · RACE WINDOW 0ms
+
+READ: pre-cure the ONLY thing that ever deleted a refused ?board= was the degraded
+path's mount deal (useGameState:450, `domain.dropBoardParam()` after the solver
+resolves). Row 6's render polls settle on the EMPTY board ~130-260ms before that
+deal lands, so `expect(boardParam(page)).toBe(false)` at :179 read the param that
+was still standing — green on a fast box, red on a loaded runner (CI 30727947148,
+webkit). Post-cure the delete happens in resolveInitialState, before the first
+paint: window 0ms on every run, and the row no longer depends on solver latency.
+
+A local ablation of the e2e row is NOT reproducible on this box (6/6 pass unpatched,
+3.4s) — which is the defect's own shape. The deterministic red is the unit layer in
+(1); this probe is the mechanism it cures.
+
+==============================================================
+(4) GREEN — the cured tree
+==============================================================
+$ npx vitest run --silent
+ Test Files  30 passed (30)
+      Tests  357 passed (357)
+
+$ npm run build   # dist rebuilt, served on :4188 (vite preview --strictPort)
+$ PLAYWRIGHT_BASE_URL=http://localhost:4188 npx playwright test permalink --project=webkit
+[5/7] [webkit] › e2e/permalink.spec.ts:165:1 › an untagged ?board= body fails closed, never a board (sudoku)
+  7 passed (3.8s)
+
+$ PLAYWRIGHT_BASE_URL=http://localhost:4188 npx playwright test permalink --project=chromium
+[3/7] [chromium] › e2e/permalink.spec.ts:165:1 › an untagged ?board= body fails closed, never a board (sudoku)
+  7 passed (2.0s)
+
+$ ... playwright test permalink share-truth affordances   # both projects, no regression
+  59 passed (19.4s)
+
+$ npx vue-tsc -b                              # clean
+$ npx prettier --check src/games/{sudoku,futoshiki}/composables/   # clean

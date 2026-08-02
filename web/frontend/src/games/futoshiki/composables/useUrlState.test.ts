@@ -232,6 +232,42 @@ describe("difficulty persistence (?difficulty= + localStorage round-trip — the
   });
 });
 
+// The Sudoku port's twin (see its `useUrlState.test.ts`): a refused link is deleted from the
+// bar, never left standing. Futoshiki's `dropBoardParam` is scoped to the active game, so these
+// rows carry the `?game=futoshiki` a real deep link always carries.
+describe("a rejected link leaves the address bar", () => {
+  const boardInBar = () => new URLSearchParams(window.location.search).has("board");
+
+  it("strips ?board= on the fail-closed arms", () => {
+    for (const bad of [
+      toBase64Url(body(5, {}, "")), // untagged — the dead v0 ratchet
+      "@@@@", // undecodable base64
+      encVer(2, body(5, {}, "")), // unknown version
+      encV1(`5.${cells(5)}`), // 2-part body: no inequality field
+      encV1(body(5, {}, "0-2")), // non-adjacent pair
+    ]) {
+      go({ game: "futoshiki", board: bad });
+      expect(resolveInitialState().boardLink).toBe("invalid");
+      expect(boardInBar()).toBe(false);
+    }
+  });
+
+  it("keeps the rest of the query — only ?board= is deleted", () => {
+    go({ game: "futoshiki", board_size: "7", board: "@@@@" });
+    expect(resolveInitialState().boardLink).toBe("invalid");
+    expect(boardInBar()).toBe(false);
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("game")).toBe("futoshiki");
+    expect(params.get("board_size")).toBe("7");
+  });
+
+  it("an ACCEPTED link stays in the bar", () => {
+    go({ game: "futoshiki", board: encodeBoard(5, { 0: 1 }, 25, [[1, 0]]) });
+    expect(resolveInitialState().boardLink).toBe("ok");
+    expect(boardInBar()).toBe(true);
+  });
+});
+
 describe("bare size param + storage", () => {
   it("valid ?board_size resolves url-only", () => {
     go({ board_size: "7" });

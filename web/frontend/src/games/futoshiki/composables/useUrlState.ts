@@ -258,6 +258,10 @@ export function resolveInitialState(): InitialState {
   const decoded = decodeBoardParam(url.boardSize, url.difficulty);
   const boardLink = decoded.status;
   const boardState = decoded.status === "ok" ? decoded.board : null;
+  // A refused link leaves the bar, here — the Sudoku port's twin (T5-W2 seal-fix; the reason
+  // is written out there). Deleted at the decode rather than left to the degraded path's mount
+  // deal, which raced the solver.
+  if (decoded.status === "invalid") dropBoardParam();
   const persisted = loadPersistedBoard();
   // hasUrl ORs in a VALID board so a board-only link isn't silently dropped (an
   // invalid board fell closed → boardState null → falls through to the size path

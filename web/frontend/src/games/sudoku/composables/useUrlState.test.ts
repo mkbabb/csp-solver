@@ -159,6 +159,58 @@ describe("fail-closed branches", () => {
   });
 });
 
+// A rejection that leaves the link standing is a half-rejection: the bar goes on claiming to
+// describe a board the app refused to open, and a reload/share re-serves the same lie. Failing
+// closed and CLEANING UP are one act, and `dropBoardParam` is the app's one `.delete()` idiom
+// for it — the same helper Deal/Clear already call.
+describe("a rejected link leaves the address bar", () => {
+  const boardInBar = () => new URLSearchParams(window.location.search).has("board");
+
+  it("strips ?board= on the untagged body (the dead v0 ratchet)", () => {
+    go({ board: encUntagged(`3.${cells(3, { 0: 7 })}`) });
+    expect(resolveInitialState().boardLink).toBe("invalid");
+    expect(boardInBar()).toBe(false);
+  });
+
+  it("strips ?board= on every other fail-closed arm", () => {
+    for (const bad of [
+      "A".repeat(4097), // oversize, rejected before atob
+      "@@@@", // undecodable base64
+      encVer(2, `3.${cells(3)}`), // unknown version
+      encV1(`3.${"0".repeat(80)}`), // short cell count
+      encV1("3"), // no separator
+    ]) {
+      go({ board: bad });
+      expect(resolveInitialState().boardLink).toBe("invalid");
+      expect(boardInBar()).toBe(false);
+    }
+  });
+
+  it("keeps the rest of the query — only ?board= is deleted", () => {
+    // The size-mismatch arm: ?size= wins, and it must survive the cleanup.
+    go({ size: "4", difficulty: "hard", board: encodeBoard(3, { 0: 1 }, 81) });
+    const s = resolveInitialState();
+    expect(s.boardLink).toBe("invalid");
+    expect(s.size).toBe(4);
+    expect(boardInBar()).toBe(false);
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get("size")).toBe("4");
+    expect(params.get("difficulty")).toBe("hard");
+  });
+
+  it("an ACCEPTED link stays in the bar — the share permalink is not self-erasing", () => {
+    go({ board: encodeBoard(3, { 0: 5 }, 81) });
+    expect(resolveInitialState().boardLink).toBe("ok");
+    expect(boardInBar()).toBe(true);
+  });
+
+  it("an absent link touches nothing", () => {
+    go({ size: "3" });
+    expect(resolveInitialState().boardLink).toBe("absent");
+    expect(window.location.search).toBe("?size=3");
+  });
+});
+
 describe("bare size / difficulty params (no board)", () => {
   it("a valid ?size / ?difficulty resolves url-only with boardLink absent", () => {
     go({ size: "4" });
