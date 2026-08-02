@@ -214,6 +214,10 @@ test('stale-note: teacher-red and gold-star notes clear on the next edit', async
 test('tally: solve writes "N backtracks — Xms" in the note meta; the next edit clears it', async ({
   page,
 }) => {
+  // T6 mark 16 — the tally is DEBUG ink now, so this row seeds the flag before the load
+  // (addInitScript must precede goto). The value is the STRING 'true': useStorage's boolean
+  // codec reads anything else as false, silently.
+  await page.addInitScript(() => localStorage.setItem('sudoku-debug', 'true'));
   await loadSudoku(page, '?size=3&difficulty=MEDIUM');
 
   await expect(page.locator('.margin-note-meta')).toHaveCount(0); // idle → no tally
@@ -231,6 +235,21 @@ test('tally: solve writes "N backtracks — Xms" in the note meta; the next edit
   });
   await setCellValue(page, blank, '1');
   await expect(page.locator('.margin-note-meta')).toHaveCount(0, { timeout: 5000 });
+});
+
+// T6 mark 16 — the NEGATIVE row, the one the seeding above exists for. Solve-time
+// telemetry is DEBUG ink: with the flag unset (the visitor's default) a graded board
+// prints no tally at either mount, at any width. Born red against the ungated tree.
+
+test('tally: with debug off a solved board prints no tally at all', async ({ page }) => {
+  await loadSudoku(page, '?size=3&difficulty=MEDIUM');
+
+  await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+  await expect(page.locator('.board-wrapper')).toHaveClass(/solve-(success|failure)/, {
+    timeout: 20000,
+  });
+
+  await expect(page.locator('.vignette-meta, .margin-note-meta')).toHaveCount(0);
 });
 
 // ── 4. Undo — bounded, Ctrl AND Meta gated, plain z never swallowed ──

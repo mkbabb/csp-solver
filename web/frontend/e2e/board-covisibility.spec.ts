@@ -156,6 +156,10 @@ test.describe("mark 6 — the band dissolves", () => {
   test("a solved board prints its tally exactly once, at every width", async ({
     page,
   }) => {
+    // T6 mark 16 — the tally is DEBUG ink now, so the covisibility invariant is asserted with
+    // the flag seeded on (addInitScript must precede goto). The STRING "true" is load-bearing:
+    // useStorage's boolean codec reads anything else — "1" included — as false, silently.
+    await page.addInitScript(() => localStorage.setItem("sudoku-debug", "true"));
     await loadSudoku(page);
     await assertCoarse(page);
 
