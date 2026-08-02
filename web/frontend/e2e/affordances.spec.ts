@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { encodeSudoku } from './wire';
 
 // T2-W6 affordances — one spec per affordance, plus the composed keyboard spec
 // (Q7: cross-handler regressions pass isolated specs and fail only the composed
@@ -34,13 +35,12 @@ async function loadSudoku(page: Page, query = '?size=3&difficulty=EASY') {
 // givens; row 0 is left entirely blank → firstBlank = cell 0, its row-mate blank = cell
 // 1. Duplicating a value across them is a guaranteed row conflict; the board (only row 0
 // open, uniquely forced) still solves trivially for the gold-star half.
-function b64url(s: string): string {
-  return Buffer.from(s, 'binary')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
+//
+// Encoded via wire.ts — NOT hand-rolled. This board's first cut re-rolled the wire
+// grammar without the version byte (the dead v0 form the W2 ratchet refuses), so every
+// load was silently stripped at decode and dealt fresh: the 72-given settle poll below
+// went red on the runner with deal-luck censuses (24–35) that read exactly like an
+// auto-deal race. The replaceState ledger that settled it lives in the pass-8 record.
 // prettier-ignore
 const SOLVED_9 = [
   5, 3, 4, 6, 7, 8, 9, 1, 2,
@@ -53,10 +53,11 @@ const SOLVED_9 = [
   2, 8, 7, 4, 1, 9, 6, 3, 5,
   3, 4, 5, 2, 8, 6, 1, 7, 9,
 ];
-// encodeSudoku(3, {…}, 81): base64url of `${size}.${base36 cells}` (permalink.spec.ts),
-// row 0 zeroed (blank), rows 1–8 as their canonical digit.
-const CONFLICT_BOARD = b64url(
-  '3.' + SOLVED_9.map((v, i) => (i < 9 ? 0 : v).toString(36)).join(''),
+// Row 0 zeroed (blank), rows 1–8 as their canonical digit.
+const CONFLICT_BOARD = encodeSudoku(
+  3,
+  Object.fromEntries(SOLVED_9.map((v, i) => [i, i < 9 ? 0 : v])),
+  81,
 );
 
 /** Index of the first blank cell (no glyph). */

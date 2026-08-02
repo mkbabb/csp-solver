@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
+import { encodeSudoku } from './wire';
 
 /**
  * T4-W2 — the visual golden system (the π/DELTA MINT).
@@ -62,29 +63,12 @@ const REPORT_MAGNITUDE = process.env.GOLDEN_MAGNITUDE === '1';
 const MAGNITUDE_FLOOR = { maxDiffPixelRatio: 0 } as const;
 
 // ── Pinned board (deterministic board-region goldens) ───────────────
-// Byte-identical to the composables' encodeBoard (see permalink.spec.ts): base64url of
-// `<CODEC_VERSION>${size}.${base36 cells}`. size=3 → 9×9 (81 cells). A fixed given set in the
-// top-left box makes the grid-corner + first-cell goldens deterministic.
-//
-// THE VERSION BYTE IS MANDATORY (T5-W2 2.4d). This encoder wrote an untagged body and the
-// pinned link opened only because the codec's dead absent-tag-means-v0 arm let it. With the
-// ratchet gone the untagged link fails closed and both pinned goldens capture a RANDOM deal —
-// which is how the ratchet's death was measured rather than argued: its last two consumers in
-// the whole estate were this fixture and permalink.spec.ts's, and nothing in production ever
-// wrote one.
-function b64url(s: string): string {
-  return Buffer.from(s, 'binary')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-const CODEC_VERSION = String.fromCharCode(1);
-function encodeSudoku(size: number, cells: Record<number, number>, total: number): string {
-  let c = '';
-  for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
-  return b64url(CODEC_VERSION + `${size}.${c}`);
-}
+// The encoder lives in wire.ts (T5-W4 pass 8 — one wire grammar for every spec). This
+// fixture's own untagged-era history is written on that module: its pinned link once
+// opened only through the codec's dead absent-tag-means-v0 arm, and with the ratchet
+// gone an untagged link fails closed and a pinned golden captures a RANDOM deal.
+// size=3 → 9×9 (81 cells). A fixed given set in the top-left box makes the
+// grid-corner + first-cell goldens deterministic.
 // A stable 9×9 with givens seeded across the top-left 3×3 box (cell 0 = 5 anchors the
 // single-cell golden). Not necessarily a solvable puzzle — deterministic PIXELS are all
 // a golden needs.

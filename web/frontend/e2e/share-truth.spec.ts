@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { encodeSudoku } from './wire';
 
 /**
  * T4-W3 — share truth. The confirmation must key off the clipboard PROMISE, not assert a
@@ -19,18 +20,10 @@ import { test, expect, type Page } from '@playwright/test';
  * Fill button between Clear and Solve, so Share moved from the 4th to the 5th action icon.
  */
 
-function b64url(s: string): string {
-  return Buffer.from(s, 'binary')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-function encodeSudoku(size: number, cells: Record<number, number>, total: number): string {
-  let c = '';
-  for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
-  return b64url(`${size}.${c}`);
-}
+// Encoder from wire.ts — this spec's local copy was UNTAGGED (the dead v0 wire), so its
+// "shared board" fixtures were silently refused at decode and every share here shared a
+// fresh deal. Green anyway, because the assertions only ever read the share act's own
+// write-back — but the premise was false. T5-W4 pass 8, with the history on wire.ts.
 
 // "foobarbaz" — base64url-decodes cleanly but has no size-dot structure → the codec fails
 // closed to 'invalid' (never a corrupt board). A present-but-unreadable link.

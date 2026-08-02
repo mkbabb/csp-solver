@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { encodeSudoku, encodeFutoshiki, encodeUntagged } from './wire';
 
 // Share-on-demand permalink (T2-W6 · item 6). Proves the four load-bearing branches
 // of the `?board=` codec + resolver:
@@ -12,48 +13,9 @@ import { test, expect, type Page } from '@playwright/test';
 // Selector discipline (session-proven): scope every control query to `.controls-card`.
 // A bare aria-label ALSO resolves the hidden mobile panel's twin and the test hangs.
 
-// ── Encoders (byte-identical to the composables' `encodeBoard`) ─────────────
-//
-// THE VERSION BYTE IS MANDATORY (T5-W2 2.4d). These encoders wrote UNTAGGED bodies and rode
-// the graceful ratchet — the codec's absent-tag-means-v0 arm — so this spec was the estate's
-// last consumer of a wire format nothing writes. The ratchet is gone: a payload that does not
-// open with `CODEC_VERSION` fails closed, and these encoders now produce what the app itself
-// produces. Row 6 asserts the dead arm from the other side.
-const CODEC_VERSION = String.fromCharCode(1);
-
-function b64url(s: string): string {
-  return Buffer.from(s, 'binary')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-function encodeSudoku(size: number, cells: Record<number, number>, total: number): string {
-  let c = '';
-  for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
-  return b64url(CODEC_VERSION + `${size}.${c}`);
-}
-// The clue section is the UNIVERSAL one (T5-W2 2.4): whatever `spec.clues.encode` produces,
-// one base-36 word per element, `,`-joined. Futoshiki's encode flattens its pairs to
-// `[greater, lesser, …]`, so what used to read `1-0,5-0` now reads `1,0,5,0`.
-function encodeFutoshiki(
-  size: number,
-  cells: Record<number, number>,
-  total: number,
-  ineqs: [number, number][],
-): string {
-  let c = '';
-  for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
-  const iq = ineqs.flat().map((w) => w.toString(36)).join(',');
-  return b64url(CODEC_VERSION + `${size}.${c}.${iq}`);
-}
-
-/** The pre-T4-W3 wire: a body with no version byte at all. Nothing writes it; nothing reads it. */
-function encodeUntagged(size: number, cells: Record<number, number>, total: number): string {
-  let c = '';
-  for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
-  return b64url(`${size}.${c}`);
-}
+// Encoders live in wire.ts — ONE copy for every spec (T5-W4 pass 8: four hand-rolled
+// copies had forked, two of them untagged; the history is written on that module).
+// Row 6 asserts the dead v0 arm from the other side via `encodeUntagged`.
 
 function boardParam(page: Page): boolean {
   return new URL(page.url()).searchParams.has('board');
