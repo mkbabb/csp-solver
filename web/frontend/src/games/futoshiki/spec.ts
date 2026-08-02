@@ -18,8 +18,11 @@
 import { defineGame } from "@games/shared/defineGame";
 import DigitCell from "@games/shared/DigitCell.vue";
 import CaretOverlay from "./CaretOverlay.vue";
-import { useFutoshiki, nodeBudgetForSize } from "./composables/useFutoshiki";
-import { STORAGE_KEY } from "./composables/useUrlState";
+import {
+  useFutoshiki,
+  nodeBudgetForSize,
+  persistence,
+} from "./composables/useFutoshiki";
 import { caretFigures, futoshikiClue } from "./clue";
 import { latinSizes, difficultyOptions } from "@games/shared/selectors";
 import type { Difficulty } from "@games/shared/types";
@@ -50,7 +53,7 @@ export const futoshikiSpec = defineGame<ReturnType<typeof useFutoshiki>, Inequal
   },
   furniture: { cell: DigitCell },
   solver: { nodeBudget: nodeBudgetForSize },
-  urlCodec: { key: STORAGE_KEY },
+  urlCodec: { key: persistence.key },
   deal: {
     sizes: latinSizes,
     difficulty: difficultyOptions,

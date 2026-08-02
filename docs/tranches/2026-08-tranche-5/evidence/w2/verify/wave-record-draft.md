@@ -279,3 +279,67 @@ Dev servers: the owner's `:3000` (an unrelated `palette-api`), `:3001` and `:428
 touched. VERIFY's own `:4188` preview was started for π and **killed at close**.
 
 ROW-COMPLETE
+
+---
+
+## 10 · THE SEAL (2026-08-02, the lead's own hand)
+
+Everything after ROW-COMPLETE is the lead's: two oracle-cure commits, a finisher fleet, and the
+fourteen adjudications — each answered once at `../seal-adjudications.md`, none left `MEASURE-AT-SEAL`.
+
+**The cures** (`ff5a7cea`): difficulty-parity's scan list follows the estate (SIBLING_DEFINITIONS
+6→5, ablation-proven both guards); the reject-strip contract made real in `resolveInitialState`,
+born-RED first. The pinned run 30728779986 confirmed both — rust green, permalink green.
+
+**The same run refuted a declaration.** Its four reds were all the ubuntu-WebKit bake class: the
+0.11 `rasterizePoseToBlob` cure, declared on the judging run's single green, did not hold.
+Second pinning executed per the ruling's own else-branch: class quarantine restored (spread
+detectors live), re-entry re-aimed at ≥0.12.0 or W4b's rig verdict, **CH-62** born in the LEDGER,
+row 13 of the adjudications corrected without euphemism. The law the incident bought: never
+declare a nondeterministic class cured on a single green. Evidence:
+`bake-race-recurrence-30728779986.txt`.
+
+**The finisher** (workflow `wf_4f920366-c09`, two Opus lanes, evidence at `../finisher/`):
+
+- **Codec universalisation LANDED** (charter §1.1/§5.3's own verdict; ballot 7 dispatched with
+  default landed-per-the-design): one shared codec driven by `spec.clues`' pair, five
+  `*UrlState.ts` dead (−1,696 raw LOC), thermo/killer/kenken permalinks REAL, reject-strip
+  holding for all five — permalink e2e 20/20, both engines, born-RED first.
+- **2.2d wire guards 0/3 → 3/3** (`demandGroup`, one shared refusal) plus a fourth arm the lane
+  found: kenken's `?? "+"` operator fallback silently rewrote division cages into addition — now
+  throws.
+- **2.1b spec tests** land for sudoku + futoshiki: 5/5 games carry them, assertion classes
+  mirrored verbatim.
+- **`nodeBudget` WIRED** onto the one solver client (three distinct value tables measured — the
+  kill arm was never available); the worker honours the frame's cap; stated plainly by the lane
+  and confirmed at seal: this is naming, not a spec-member production read (§6's closure caveat
+  stands recorded).
+- **Row-6 sentinel** asserts given-ness, not digit identity (the old form flaked 1 board in 9).
+- **`tdz-probe.mjs`** born with both arms, ablation-proven RED in a scratch copy, wired to
+  `npm run lint:tdz`; madge folds into it (adjudication 7).
+- **The AX obligation DISCHARGED by the charter's own instrument executed late** — lane B rebuilt
+  the true PRE from `git archive f087a90d`: zero invariant deltas across 215 comparisons,
+  injection ablation 3/3, stability-pass-licensed. The miss itself stands as charged and its
+  cure is structural: gates.json W3 now carries `axBaseline` with a named-lane law.
+
+**The seal's own measurements** (numbers re-derived at citation): perGameFiles **27** (counted
+4+7+6+5+5 by the lead, then the lane's figure agreed); productionSlotReads **31** (no new
+spec-member reads — persistence wires composable-side, as 2.1 demands); units **392**; coverage
+floor re-derived route (b) by the instrument's pre-registered min-over-n=10 (sample banked at
+`../coverage-samples-post-distill/`, 8 figures lowered with cause in `loweredAt`, the rest
+ratcheted UP) — gate GREEN, self-test 6/6.
+
+**Local battery at the seal tree**: π 4/4 against built dist · built-dist gates 39/39 (darwin
+full strength through the re-pinned quarantine) · lint/prettier clean · knip silent ·
+empty-catch 0 · tdz-probe green with its negative control · doc-truth 13/13 · ledger-diff
+220/220 exit 0 (CH-19 terminal, CH-62 open).
+
+Two traps recorded, first bite each, record-only: `sampleMinima` silently no-ops on wrong-format
+sample files; the golden config's `:3000` fallback walks into the foreign palette-api when no
+`PLAYWRIGHT_BASE_URL` is set (the assert-the-SPA guard caught it — that guard is why the trap
+cost nothing).
+
+The seal commit carries: both quarantine re-pin specs + module, the finisher's whole surface,
+`gates.json` (four stamps), `coverage-floor.json`, LEDGER (CH-19 terminal, CH-62 born), ballot 7,
+the adjudications, and this section. Expected CI: **18/18** with the bake class parked. The wave
+closes when the pinned run says so in its own tool result — not before.

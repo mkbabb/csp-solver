@@ -1,14 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { toBase64Url } from "@/lib/base64url";
-import {
-  encodeBoard,
-  resolveInitialState,
-  persistBoard,
-  clearPersistedBoard,
-  type PersistedBoard,
-} from "./useUrlState";
+import { persistence, type PersistedBoard } from "./useSudoku";
 
-// FE-unit layer (T4-W2): the Sudoku `?board=` permalink codec. `decodeBoardParam` /
+const { encodeBoard, resolveInitialState, persistBoard, clearPersistedBoard } =
+  persistence;
+
+// FE-unit layer (T4-W2, re-homed onto the ONE codec at T5-W2 2.4): the Sudoku `?board=`
+// permalink. Sudoku's `clues: null` keeps its body two parts, so every frame forged here is
+// byte-identical to the wire it shipped with — the collapse is invisible on this game's wire. `decodeBoardParam` /
 // `readCodecVersion` are module-private (fail-closed by construction), so every branch is
 // driven through the public `resolveInitialState()` against a crafted URL + storage — the
 // exact surface the app boots on. Playwright could only ever hit the happy path; this

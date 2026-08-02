@@ -1,17 +1,25 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { toBase64Url } from "@/lib/base64url";
-import {
-  encodeBoard,
-  resolveInitialState,
-  persistBoard,
-  type PersistedBoard,
-} from "./useUrlState";
+import { persistence, type PersistedBoard } from "./useFutoshiki";
 
-// FE-unit layer (T4-W2): the Futoshiki `?board=` codec, driven through `resolveInitialState()`
-// (the decoder is module-private). The Futoshiki-specific surface is the INEQUALITY furniture
-// on the wire — adjacency, dedup, range, and the 3-part body split — the guards a crafted link
-// would otherwise weaponize (one floating caret per pair → main-thread freeze). The shared
-// fail-closed branches are re-checked lightly here (the port owns its own copy).
+const { encodeBoard, resolveInitialState, persistBoard } = persistence;
+
+// FE-unit layer (T4-W2, re-homed onto the ONE codec at T5-W2 2.4): the Futoshiki `?board=`
+// permalink, driven through `resolveInitialState()` (the decoder is module-private). The
+// Futoshiki-specific surface is the INEQUALITY furniture on the wire — adjacency, dedup,
+// range, and the 3-part body split — the guards a crafted link would otherwise weaponize (one
+// floating caret per pair → main-thread freeze).
+//
+// THE CLUE SECTION'S FORM CHANGED and it is the wave's one wire break (§1.4.1's row, the
+// lead's ballot). The hand-rolled codec spelled a pair `greater-lesser` and joined pairs with
+// `,`; the universal one serializes whatever `spec.clues.encode` produces — for futoshiki the
+// flat `[greater, lesser, …]` buffer — one base-36 word per element, `,`-joined. So `1-0,5-0`
+// is now `1,0,5,0`, and an old inequality-carrying link fails closed (never mis-decodes: a `-`
+// is not a canonical base-36 word). Sudoku's wire is untouched — it has no clue section.
+//
+// Two guard CLASSES moved with it and are asserted below in their new form: a dangling word is
+// caught by the codec's round-trip guard (decode → re-encode must equal the incoming buffer),
+// and adjacency/dedup/range/pair-count by `inequalitiesWellFormed` via `validateClue`.
 
 const V1 = String.fromCharCode(1);
 const encVer = (v: number, body: string) => toBase64Url(String.fromCharCode(v) + body);
@@ -25,7 +33,8 @@ function cells(boardSize: number, vals: Record<number, number> = {}): string {
   return s;
 }
 
-/** Forge a v1 futoshiki body: `${size}.${cells}.${ineqs}`. */
+/** Forge a v1 futoshiki body: `${size}.${cells}.${clueWords}` — the clue section is the flat
+ *  `[greater, lesser, …]` buffer, one base-36 word per element, `,`-joined. */
 const body = (size: number, vals: Record<number, number>, ineqs: string) =>
   `${size}.${cells(size, vals)}.${ineqs}`;
 
@@ -50,7 +59,7 @@ describe("encode/decode round-trip carries the inequality furniture", () => {
     const s = resolveInitialState();
     expect(s.source).toBe("url-board");
     expect(s.boardLink).toBe("ok");
-    expect(s.boardSize).toBe(5);
+    expect(s.size).toBe(5);
     expect(s.persisted?.values[0]).toBe(1);
     expect(s.persisted?.values[24]).toBe(5);
     expect([...(s.persisted?.givenCells ?? [])].sort()).toEqual(["0", "24"]);
@@ -71,41 +80,44 @@ describe("encode/decode round-trip carries the inequality furniture", () => {
 describe("inequality wire-boundary guards", () => {
   it("rejects a non-adjacent pair", () => {
     // size 5: |0-2| = 2 (not 1, not 5) → not orthogonally adjacent.
-    go({ board: encV1(body(5, {}, "0-2")) });
+    go({ board: encV1(body(5, {}, "0,2")) });
     expect(resolveInitialState().boardLink).toBe("invalid");
   });
 
   it("rejects a duplicate pair", () => {
-    go({ board: encV1(body(5, {}, "1-0,1-0")) });
+    go({ board: encV1(body(5, {}, "1,0,1,0")) });
     expect(resolveInitialState().boardLink).toBe("invalid");
   });
 
   it("rejects an out-of-range endpoint", () => {
-    go({ board: encV1(body(5, {}, "0-99")) });
+    go({ board: encV1(body(5, {}, "0,2r")) }); // 2r = 99 in base 36
     expect(resolveInitialState().boardLink).toBe("invalid");
     // b === totalCells (25) is out of range (>=), even though numerically neat.
-    go({ board: encV1(body(5, {}, "0-25")) });
+    go({ board: encV1(body(5, {}, "0,p")) }); // p = 25 in base 36
     expect(resolveInitialState().boardLink).toBe("invalid");
   });
 
-  it("rejects a malformed pair (missing / extra dash, non-integer)", () => {
-    for (const ineq of ["0", "0-1-2", "a-b"]) {
+  it("rejects a dangling word — the codec's round-trip guard, not a length check", () => {
+    // An odd word count decodes to a whole number of pairs with the tail SILENTLY DROPPED,
+    // which is exactly what re-encoding catches: the buffer that comes back is shorter than
+    // the one that went in, so the link is not what it claims to be.
+    for (const ineq of ["0", "0,1,2", "1,0,5"]) {
       go({ board: encV1(body(5, {}, ineq)) });
       expect(resolveInitialState().boardLink).toBe("invalid");
     }
   });
 
-  it("rejects a pair endpoint with trailing garbage (strict /^\\d+$/, SEC-4)", () => {
-    // Pre-fix, `parseInt('1abc', 10)` silently dropped 'abc' → the pair `[0,1]` passed
-    // adjacency and the crafted link decoded. The strict endpoint guard now fails it closed,
-    // uniform with the size guard. `0-1` alone would be a VALID adjacent pair, so this
-    // isolates the leniency (not the adjacency/range/dedup gates).
-    for (const ineq of ["0-1abc", "1abc-0", "0- 1", "0-+1", "0-0x1"]) {
+  it("rejects a non-canonical clue word (strict /^[0-9a-z]+$/, SEC-4)", () => {
+    // `parseInt` takes leading whitespace, a sign and `0x`, and drops trailing garbage — every
+    // one of which would let a crafted word decode to something other than what it reads as.
+    // `0,1` alone would be a VALID adjacent pair, so this isolates the leniency from the
+    // adjacency/range/dedup gates.
+    for (const ineq of ["0, 1", "0,+1", "0,-1", "0,", ",1", "0,1_"]) {
       go({ board: encV1(body(5, {}, ineq)) });
       expect(resolveInitialState().boardLink).toBe("invalid");
     }
     // Control: the canonical form of the same pair still decodes.
-    go({ board: encV1(body(5, {}, "0-1")) });
+    go({ board: encV1(body(5, {}, "0,1")) });
     expect(resolveInitialState().boardLink).toBe("ok");
   });
 
@@ -154,7 +166,7 @@ describe("shared fail-closed branches (owned copy)", () => {
     const s = resolveInitialState();
     expect(s.boardLink).toBe("invalid");
     expect(s.source).toBe("url-only");
-    expect(s.boardSize).toBe(6);
+    expect(s.size).toBe(6);
   });
 });
 
@@ -163,7 +175,7 @@ describe("difficulty persistence (?difficulty= + localStorage round-trip — the
     go({ board_size: "6", difficulty: "HARD" });
     const s = resolveInitialState();
     expect(s.source).toBe("url-only");
-    expect(s.boardSize).toBe(6);
+    expect(s.size).toBe(6);
     expect(s.difficulty).toBe("HARD");
   });
 
@@ -176,7 +188,7 @@ describe("difficulty persistence (?difficulty= + localStorage round-trip — the
     go({ difficulty: "HARD" });
     const s = resolveInitialState();
     expect(s.source).toBe("url-only");
-    expect(s.boardSize).toBe(5);
+    expect(s.size).toBe(5);
     expect(s.difficulty).toBe("HARD");
   });
 
@@ -232,7 +244,7 @@ describe("difficulty persistence (?difficulty= + localStorage round-trip — the
   });
 });
 
-// The Sudoku port's twin (see its `useUrlState.test.ts`): a refused link is deleted from the
+// The Sudoku port's twin (see its `persistence.test.ts`): a refused link is deleted from the
 // bar, never left standing. Futoshiki's `dropBoardParam` is scoped to the active game, so these
 // rows carry the `?game=futoshiki` a real deep link always carries.
 describe("a rejected link leaves the address bar", () => {
@@ -244,7 +256,7 @@ describe("a rejected link leaves the address bar", () => {
       "@@@@", // undecodable base64
       encVer(2, body(5, {}, "")), // unknown version
       encV1(`5.${cells(5)}`), // 2-part body: no inequality field
-      encV1(body(5, {}, "0-2")), // non-adjacent pair
+      encV1(body(5, {}, "0,2")), // non-adjacent pair
     ]) {
       go({ game: "futoshiki", board: bad });
       expect(resolveInitialState().boardLink).toBe("invalid");
@@ -273,7 +285,7 @@ describe("bare size param + storage", () => {
     go({ board_size: "7" });
     const s = resolveInitialState();
     expect(s.source).toBe("url-only");
-    expect(s.boardSize).toBe(7);
+    expect(s.size).toBe(7);
     expect(s.boardLink).toBe("absent");
   });
 
@@ -281,7 +293,7 @@ describe("bare size param + storage", () => {
     go({ board_size: "3" });
     const s = resolveInitialState();
     expect(s.source).toBe("fresh");
-    expect(s.boardSize).toBe(5);
+    expect(s.size).toBe(5);
   });
 
   it("storage-only when no URL", () => {
@@ -299,6 +311,6 @@ describe("bare size param + storage", () => {
     persistBoard(stored);
     const s = resolveInitialState();
     expect(s.source).toBe("storage-only");
-    expect(s.boardSize).toBe(6);
+    expect(s.size).toBe(6);
   });
 });

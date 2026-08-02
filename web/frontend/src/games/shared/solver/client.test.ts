@@ -114,12 +114,17 @@ const groupCodec: ClueCodec<number[][]> = {
 const boxed = (n: number) => n ** 2;
 const latin = (n: number) => n;
 
+/** A stand-in search cap. The real tables live on the five specs; this file proves the
+ *  MARSHALLING, so any function will do — what matters is that the frame carries it. */
+const budget = (dim: number) => 1_000 * dim;
+
 const unclued = () =>
   createSolverClient<void>({
     game: "sudoku",
     boardSide: boxed,
     clue: null,
     templates: null,
+    nodeBudget: budget,
   });
 
 describe("the one solver client — what each family puts on the one wire", () => {
@@ -130,6 +135,7 @@ describe("the one solver client — what each family puts on the one wire", () =
       boardSide: boxed,
       clue: null,
       templates,
+      nodeBudget: budget,
     });
     reply = (req) => generateReply(req.id, 16, []);
     const dealt = await client.getRandomBoard(2, "MEDIUM");
@@ -190,6 +196,7 @@ describe("the one solver client — what each family puts on the one wire", () =
       boardSide: latin,
       clue: pairs,
       templates: null,
+      nodeBudget: budget,
     });
     reply = (req) => solveReply(req.id, 25);
     await client.solveBoard({ "0": 3 }, 5, [
@@ -203,8 +210,11 @@ describe("the one solver client — what each family puts on the one wire", () =
     // A Latin board side IS the raw selector value: 5×5 = 25 cells, never 5⁴.
     expect(solve.board.length).toBe(25);
     expect(Array.from(solve.clue)).toEqual([1, 0, 7, 8]);
-    // No budget passed → the field is absent, and the wasm default (1,000,000) stands.
-    expect(solve.nodeBudget).toBeUndefined();
+    // No budget ARGUMENT passed → the frame carries THIS GAME's own cap (T5-W2 row 4: the
+    // budget is `spec.solver.nodeBudget`, held by the client, not threaded by the machine).
+    // It was `undefined` here before, which meant the wasm's flat 1,000,000-node default was
+    // what a caller that forgot the argument got.
+    expect(solve.nodeBudget).toBe(budget(5));
   });
 
   it("thermo/killer/kenken: the dealt clue comes back DECODED, and the bank is empty", async () => {
@@ -213,6 +223,7 @@ describe("the one solver client — what each family puts on the one wire", () =
       boardSide: boxed,
       clue: groupCodec,
       templates: null,
+      nodeBudget: budget,
     });
     reply = (req) => generateReply(req.id, 16, [3, 0, 1, 2, 2, 10, 11]);
     const dealt = await client.getRandomBoard(2, "HARD");
@@ -234,6 +245,7 @@ describe("the one solver client — what each family puts on the one wire", () =
       boardSide: boxed,
       clue: groupCodec,
       templates: null,
+      nodeBudget: budget,
     });
     reply = (req) => ({
       id: req.id,
@@ -306,7 +318,13 @@ describe("the one solver client — what each family puts on the one wire", () =
     const clients = (
       ["sudoku", "futoshiki", "thermo", "killer", "kenken"] as const
     ).map((game) =>
-      createSolverClient<void>({ game, boardSide: latin, clue: null, templates: null }),
+      createSolverClient<void>({
+        game,
+        boardSide: latin,
+        clue: null,
+        templates: null,
+        nodeBudget: budget,
+      }),
     );
     for (const c of clients) await c.getRandomBoard(2, "EASY");
 

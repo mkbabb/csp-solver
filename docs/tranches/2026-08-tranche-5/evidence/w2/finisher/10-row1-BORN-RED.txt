@@ -1,0 +1,51 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ❯ src/games/killer/composables/persistence.test.ts (0 test)
+ ❯ src/games/thermo/composables/persistence.test.ts (0 test)
+ ❯ src/games/kenken/composables/persistence.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/kenken/composables/persistence.test.ts [ src/games/kenken/composables/persistence.test.ts ]
+TypeError: Cannot destructure property 'encodeBoard' of 'persistence' as it is undefined.
+ ❯ src/games/kenken/composables/persistence.test.ts:10:9
+      8| // `clues.encode/decode` rather than by anything the persistence layer…
+      9|
+     10| const { encodeBoard, resolveInitialState } = persistence;
+       |         ^
+     11|
+     12| const V1 = String.fromCharCode(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/games/killer/composables/persistence.test.ts [ src/games/killer/composables/persistence.test.ts ]
+TypeError: Cannot destructure property 'encodeBoard' of 'persistence' as it is undefined.
+ ❯ src/games/killer/composables/persistence.test.ts:9:9
+      7| // deleted from the bar rather than left standing describing a board t…
+      8|
+      9| const { encodeBoard, resolveInitialState } = persistence;
+       |         ^
+     10|
+     11| const V1 = String.fromCharCode(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/games/thermo/composables/persistence.test.ts [ src/games/thermo/composables/persistence.test.ts ]
+TypeError: Cannot destructure property 'encodeBoard' of 'persistence' as it is undefined.
+ ❯ src/games/thermo/composables/persistence.test.ts:10:9
+      8| // `clues.encode/decode`, and a link this build refuses LEAVES THE BAR.
+      9|
+     10| const { encodeBoard, resolveInitialState } = persistence;
+       |         ^
+     11|
+     12| const V1 = String.fromCharCode(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  no tests
+   Start at  22:36:30
+   Duration  657ms (transform 235ms, setup 45ms, import 0ms, tests 0ms, environment 1.30s)
+

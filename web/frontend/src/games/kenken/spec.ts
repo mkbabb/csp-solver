@@ -23,8 +23,7 @@
 import { defineGame } from "@games/shared/defineGame";
 import DigitCell from "@games/shared/DigitCell.vue";
 import CageOverlay from "@games/shared/CageOverlay.vue";
-import { useKenken, nodeBudgetForSize } from "./composables/useKenken";
-import { STORAGE_KEY } from "./composables/kenkenUrlState";
+import { useKenken, nodeBudgetForSize, persistence } from "./composables/useKenken";
 import { cageFigures, kenkenClue } from "./clue";
 import { cagedLatinSizes, difficultyOptions } from "@games/shared/selectors";
 import type { Difficulty } from "@games/shared/types";
@@ -60,7 +59,7 @@ export const kenkenSpec = defineGame<ReturnType<typeof useKenken>, KenKenCage[]>
   },
   furniture: { cell: DigitCell },
   solver: { nodeBudget: nodeBudgetForSize },
-  urlCodec: { key: STORAGE_KEY },
+  urlCodec: { key: persistence.key },
   deal: {
     sizes: cagedLatinSizes,
     difficulty: difficultyOptions,

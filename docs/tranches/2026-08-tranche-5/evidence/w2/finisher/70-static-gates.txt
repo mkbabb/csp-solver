@@ -1,0 +1,69 @@
+=== FINISHER LANE A — STATIC GATES after rows 1-6 (honest exit codes) ===
+ff5a7cea T5-W2 oracle cures: the parity scan list follows the estate; the reject-strip contract becomes real
+
+--- npm run lint ---
+
+> csp-solver-frontend@0.1.0 lint
+> prettier --check src/
+
+Checking formatting...
+All matched files use Prettier code style!
+  EXIT=0
+--- npm run lint:eslint ---
+
+> csp-solver-frontend@0.1.0 lint:eslint
+> eslint .
+  EXIT=0
+--- npm run lint:boundary ---
+
+> csp-solver-frontend@0.1.0 lint:boundary
+> eslint --no-config-lookup --config eslint.boundary.config.js src/games
+  EXIT=0
+--- npm run lint:knip ---
+
+> csp-solver-frontend@0.1.0 lint:knip
+> knip
+  EXIT=0
+--- npm run lint:catch ---
+catch clauses scanned across 162 src files
+swallows (no statement, no explanation): 0
+
+negative control (inject one `catch { /* ignore */ }`): RED as required
+
+check-empty-catch: 0 swallowed catch bodies
+  EXIT=0
+--- npm run lint:ink ---
+  washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+
+ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+  light  rule < muted-foreground < quiet
+  dark   rule < quiet < muted-foreground
+  the ramp and the register cross between themes. Booked in index.css §INK PRESSURE, not gated.
+  EXIT=0
+--- npm run lint:tdz ---
+
+graph census (src/games): 0 cycle edge(s)
+
+negative control (a synthetic game importing the table): RED as required
+
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways
+  EXIT=0
+--- npx vue-tsc -b ---
+
+  EXIT=0
+--- node scripts/check-doc-truth.mjs (repo root) ---
+
+GREEN  test-count-208-vs-204
+        derived: 208 native #[test] attributes (csp-solver/src + csp-solver/tests, comments elided) · 29 #[wasm_bindgen_test] in the wasm crate (cfg'd to wasm32, not host-run) · 28 test binaries (csp-solver + csp-solver/wasm lib targets + integration files)
+
+GREEN  make-wasm-recipe
+        derived: csp-solver/wasm/Makefile:33 runs --no-default-features --profile wasm-release --scope mkbabb --target web — LEAN; 5 families registered (sudoku, futoshiki, thermo, killer, kenken)
+
+GREEN  ci-lane-count
+        derived: 18 jobs in .github/workflows/ci.yml (lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, wasm-publish-dryrun, frontend, fe-unit, boundary, e2e, perf-subset, iai, cargo-audit, evidence-policy, doc-truth, npm-audit)
+
+GREEN  iai-golden-figure
+        derived: 1,529,452 instructions enforced ±2.0% — csp-solver/benches/iai_queens.baseline, gated by .github/workflows/ci.yml's iai lane over bench iai_queens
+
+0 RED / 13 GREEN — canon holds
+  EXIT=0

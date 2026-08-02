@@ -11,14 +11,9 @@
 import { ref } from "vue";
 import { createSolverClient } from "@games/shared/solver/client";
 import { thermoClue } from "../clue";
-import {
-  resolveInitialState,
-  syncToUrl,
-  persistBoard,
-  clearPersistedBoard,
-  dropBoardParam,
-  writeShareUrl,
-} from "./thermoUrlState";
+import { createPersistence, type PersistedCore } from "@games/shared/persistence";
+import { subgridSizes } from "@games/shared/selectors";
+import type { Difficulty } from "@games/shared/types";
 import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
 import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
@@ -47,10 +42,38 @@ const api = createSolverClient({
   boardSide: boardSizeOf,
   clue: thermoClue,
   templates: null,
+  nodeBudget: nodeBudgetForSize,
+});
+
+/** Thermo's board on disk: the common slice, its own size key, and its tube furniture. */
+export interface ThermoPersisted extends PersistedCore {
+  size: number;
+  difficulty: Difficulty;
+  thermometers: ThermoLine[];
+}
+
+/**
+ * Thermo's slice of the ONE persistence codec. Where this row used to be 110 lines of
+ * empty-body no-ops — `boardLink` hard-coded `"absent"`, a `writeShareUrl` that did nothing
+ * behind a live Share button — it is now the same four facts every other game supplies, and
+ * the `?board=` permalink carries the thermometers because `thermoClue` already knew how.
+ */
+export const persistence = createPersistence<ThermoLine[], ThermoPersisted>({
+  game: "thermo",
+  key: "thermo-board-v1",
+  boardSide: boardSizeOf,
+  validSizes: subgridSizes.map((o) => o.value),
+  defaultSize: 3,
+  freshDifficulty: () => "EASY",
+  // Thermo's selectors live on disk, not in the query — the family never owned a size key.
+  sizeParam: null,
+  sizeField: "size",
+  clue: thermoClue,
+  clueField: "thermometers",
 });
 
 export function useThermo() {
-  const initial = resolveInitialState();
+  const initial = persistence.resolveInitialState();
 
   // The thermometer furniture — the Thermo divergence, the mirror of Futoshiki's
   // `inequalities` ref. Threaded into solve/propagate and carried through undo/persist.
@@ -60,7 +83,6 @@ export function useThermo() {
     initial,
     initialSize: initial.size,
     boardSizeOf,
-    nodeBudgetForSize,
     getRandomBoard: (n, difficulty) => api.getRandomBoard(n, difficulty),
     applyDealFurniture: (board) => {
       thermometers.value = board.clue;
@@ -69,7 +91,7 @@ export function useThermo() {
       thermometers.value = [];
     },
     grade: (values, n) => gradeBoard(createBoardAdapter("boxed", n), values),
-    solve: (values, n, budget) => api.solveBoard(values, n, thermometers.value, budget),
+    solve: (values, n) => api.solveBoard(values, n, thermometers.value),
     propagate: (values, n) => api.propagateBoard(values, n, thermometers.value),
     fillForced: (values, n) => fillAllForced(createBoardAdapter("boxed", n), values),
     hint: (values, n, preferred) =>
@@ -81,12 +103,17 @@ export function useThermo() {
     restorePersistedFurniture: (persisted) => {
       thermometers.value = persisted.thermometers.map((t) => [...t]);
     },
-    syncToUrl,
+    syncToUrl: persistence.syncToUrl,
     persist: (payload, n) =>
-      persistBoard({ size: n, ...payload, thermometers: thermometers.value }),
-    clearPersisted: clearPersistedBoard,
-    dropBoardParam,
-    writeShareUrl,
+      persistence.persistBoard({
+        size: n,
+        ...payload,
+        thermometers: thermometers.value,
+      }),
+    clearPersisted: persistence.clearPersistedBoard,
+    dropBoardParam: persistence.dropBoardParam,
+    writeShareUrl: (n, values, totalCells) =>
+      persistence.writeShareUrl(n, values, totalCells, thermometers.value),
   });
 
   // Re-label the machine's neutral size ref to the public `size`; expose the thermometer

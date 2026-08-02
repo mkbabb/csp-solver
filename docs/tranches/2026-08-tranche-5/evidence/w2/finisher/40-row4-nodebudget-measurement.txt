@@ -1,0 +1,28 @@
+=== ROW 4 — spec.solver.nodeBudget WIRE-OR-KILL: the measurement ===
+
+--- (a) production READS of spec.solver.nodeBudget (grep, non-test) ---
+src/games/shared/GameShell.vue:80:// there is one warm. It is imported here rather than asked of `spec.solver`, because a per-game
+src/games/shared/solver/client.ts:47: * each game for its own would be five handles onto one act. This is the death `spec.solver`'s
+src/games/thermo/composables/useThermo.ts:23: *  so `spec.solver.nodeBudget` NAMES this one table; the model reads it through the same
+src/games/kenken/composables/useKenken.ts:26: *  so `spec.solver.nodeBudget` NAMES this table rather than mirroring it; a KenKen board side
+src/games/killer/composables/useKiller.ts:23: *  so `spec.solver.nodeBudget` NAMES this one table rather than mirroring it. */
+
+--- (b) the five tables, verbatim ---
+[sudoku]
+33:  return NODE_BUDGET_BY_SIZE[n] ?? 1_000_000;
+[futoshiki]
+34:  return NODE_BUDGET_BY_SIZE[n] ?? 4_000_000;
+[thermo]
+31:  return NODE_BUDGET_BY_SIZE[n] ?? 1_000_000;
+[killer]
+30:  return NODE_BUDGET_BY_SIZE[n] ?? 1_000_000;
+[kenken]
+34:  return NODE_BUDGET_BY_SIZE[n] ?? 4_000_000;
+
+--- (c) distinct tables ---
+  sudoku == thermo == killer : {2:200_000, 3:2_000_000, 4:50_000_000} default 1_000_000
+  futoshiki                  : {4:2_000_000, 5:4_000_000, 6:10_000_000, 7:20_000_000} default 4_000_000
+  kenken                     : {4:2_000_000, 5:4_000_000, 6:10_000_000} default 4_000_000
+  => 3 DISTINCT tables across 5 games. NOT one identical value.
+
+VERDICT: WIRE (the kill arm required all five to hold one value; they hold three).

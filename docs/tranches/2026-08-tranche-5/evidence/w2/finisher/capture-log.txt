@@ -1,0 +1,201 @@
+T5-W2 FINISHER lane B — AX capture log
+date: 2026-08-01
+operator: Opus, under the Fable team lead
+tree at capture: ff5a7cea (working tree; docs-only modifications from sibling lanes, see 95-git-status below)
+
+================================================================
+0 · PROVENANCE
+================================================================
+
+$ git log --oneline -3
+ff5a7cea T5-W2 oracle cures: the parity scan list follows the estate; the reject-strip contract becomes real
+74b2835d T5-W2 THE DISTILL SEALED: the apotheosis lands — GameSpec→GameShell, one solver spine, the registry dead, −4,806 LOC off the priced class
+e63af853 T5-W2 runner-figure restamp: 122,861 B at f2ae188d from run 30722381389's own measurement
+
+$ git log --oneline -10
+...
+f087a90d T5-W2 RECOVERY 2: three kidnapped rust act banks restored from ce9b7573
+792378ba T5-W2 RECOVERY: the wave-open charter restored from the dangling canary commit
+f2ae188d T5-W2 OPENING SLICE: the union spec fixed, nine rust edges landed, pencil-boil 0.11.0 on the wire
+a3ada202 T5-W1 FIELD-FIX 2: ...
+
+$ git merge-base --is-ancestor f2ae188d f087a90d && echo YES
+YES
+
+ORDER: f2ae188d -> 792378ba -> f087a90d -> e63af853 -> 74b2835d (THE DISTILL) -> ff5a7cea
+
+PRE  = f087a90d — the last tree before the distill touched the frontend, and F1's own
+       stated base ("base `f087a90d` (clean)", evidence/w2/f1/README.md).
+       e63af853 is a docs restamp; it moves no frontend source.
+POST = ff5a7cea — the tip.
+
+$ git log -1 --format='%h %ci' -- web/frontend/src
+ff5a7cea 2026-08-01 22:23:39 -0400
+
+The committed dist was STALE at capture (dist/index.html 22:18 < 22:23 src commit), so the
+POST artifact was rebuilt. `find src -newer dist/index.html` had been empty only because the
+tip's useUrlState.ts edits post-dated the file it was compared against.
+
+================================================================
+1 · POST ARTIFACT
+================================================================
+
+$ cd web/frontend && npm run build
+  vue-tsc -b && vite build
+  dist/assets/index-BYN8DgFaMlhx.js   223.26 kB │ gzip: 84.03 kB
+  ✓ built in 425ms
+  GREEN
+
+POST dist manifest (md5 of the sorted per-file md5 list): c08193a472c47dc58cad4036e794e40a
+POST entry: dist/assets/index-BYN8DgFaMlhx.js
+
+================================================================
+2 · PRE ARTIFACT — recovered read-only
+================================================================
+
+No git state was changed. The tree was extracted with `git archive`, which only reads:
+
+$ rm -rf $SCRATCH/pre && mkdir -p $SCRATCH/pre
+$ git archive f087a90d | tar -x -C $SCRATCH/pre
+extracted
+
+$ ln -s <repo>/web/frontend/node_modules $SCRATCH/pre/web/frontend/node_modules
+
+$ cd $SCRATCH/pre/web/frontend && npx vite build
+  dist/assets/SudokuGame-*.js  dist/assets/FutoshikiGame-B48LlB9HRbDj.js
+  dist/assets/KenKenGame-izdHxH85wzOy.js  dist/assets/ThermoGame-BbKN3oPbERIP.js
+  dist/assets/KillerGame-eSL1lFqtYm_Z.js
+  dist/assets/index-DV9lWFOfe-fg.js   239.75 kB │ gzip: 88.12 kB
+  ✓ built in 442ms
+  GREEN
+
+The five per-game *Game chunks are the tell: this is the pre-distill estate, the scenes
+GameShell replaced. The POST build emits none of them.
+
+PRE dist manifest: a032bcbe254561184ef8b68f4cfde597
+PRE entry: dist/assets/index-DV9lWFOfe-fg.js
+
+The two manifests differ — the diff below is between two genuinely distinct artifacts, not
+a file compared with itself.
+
+Deviations from the repo build, both stated rather than hidden:
+  - `npx vite build`, not `npm run build`: the latter's prebuild runs `make -C ../../csp-solver/wasm`,
+    which would write into the repo. The type-check arm (vue-tsc) is likewise skipped; the
+    artifact is what's needed, not the type verdict, and the tree's own CI already judged it.
+  - node_modules is the CURRENT tree's, symlinked. The lockfiles at f087a90d and ff5a7cea were
+    not compared. A dependency that moved between the two would ride into the PRE build. This
+    is the one seam where the reconstruction is not the tree as it stood.
+
+================================================================
+3 · INSTRUMENT
+================================================================
+
+instrument/axprobe.mjs   — static server over a dist, repo's own playwright 1.61.1 chromium,
+                           AX read via CDP Accessibility.getFullAXTree, per game route:
+                           full role census + grid childIds resolution + DOM censuses +
+                           the picker (view=gallery). Five games per run.
+instrument/axprobe2.mjs  — the keyboard-walk: presses Tab until the order cycles, so tab-stop
+                           count is instrument-free. Also dumps cell tabindex (roving) and
+                           every anchor's visibility. sudoku only.
+instrument/axdiff.mjs    — the differ. Splits rows into invariant and deal-variant.
+
+Semantics deliberately mirror r1/a11y.md and r2/verify-gate-criticals.md §5 (getFullAXTree
+over a served dist, chromium). No axe-core: it's absent from node_modules and installing it
+would mutate the lockfile — the same bar r1 held.
+
+Routes: /?game=sudoku&size=3&difficulty=EASY, and /?game=<id>&difficulty=EASY for the four
+others (only sudoku and futoshiki parse `size`; the rest take the card default).
+Viewport 1440x900. Settle: wait for [role=grid], then gridcell count stable across a poll,
+then 1200ms.
+
+================================================================
+4 · RUNS
+================================================================
+
+$ node axprobe.mjs <PRE dist>  4224 ax-pre.json        -> captured sudoku futoshiki thermo killer kenken
+$ node axprobe.mjs <POST dist> 4222 ax-post.json       -> captured sudoku futoshiki thermo killer kenken
+$ node axprobe.mjs <POST dist> 4226 ax-post-run2.json  -> captured sudoku futoshiki thermo killer kenken
+$ node axprobe2.mjs <PRE dist>  4225 ax-pre-taborder.json
+$ node axprobe2.mjs <POST dist> 4223 ax-post-taborder.json
+
+Ports 4222-4226 chosen free and released; 3000/3001/4188/4288 untouched (sibling lanes).
+pageErrors: 0 on every game, both trees.
+
+--- keyboard walk, sudoku ---
+PRE  tabStops(real): 20   outsideMain: ["Show attribution card","@mbabb","View project on GitHub 🎉","Switch to dark mode"]
+POST tabStops(real): 20   outsideMain: ["Show attribution card","@mbabb","View project on GitHub 🎉","Switch to dark mode"]
+PRE  cells: {"cellTabindex":{"null":81},"cellInputCount":81,"inputTabindex":{"0":1,"-1":80}}
+POST cells: {"cellTabindex":{"null":81},"cellInputCount":81,"inputTabindex":{"0":1,"-1":80}}
+
+The roving tabindex — named in the charter's §3 list — is identical: one cell input at 0,
+eighty at -1, on both trees.
+
+================================================================
+5 · BORN-RED — the differ proved non-vacuous before it was believed
+================================================================
+
+The defect here would be ABSENCE of a delta, so the canary is by ablation: three plausible
+AX regressions injected into the PRE capture, then the differ run against the real POST.
+
+$ node -e '<inject>'   # sudoku gridcell 81->80; futoshiki grid label loses "futoshiki";
+                       # kenken gallery option 1->5
+$ node axdiff.mjs ax-pre-ABLATED.json ax-post.json ax-diff-CANARY.txt
+
+### sudoku
+  ! ax role gridcell: PRE=80  POST=81
+### futoshiki
+  ! gridAttrs: PRE={"rowcount":"5","colcount":"5","label":"5 by 5 board"}  POST={"rowcount":"5","colcount":"5","label":"5 by 5 futoshiki board"}
+### thermo
+### killer
+### kenken
+  ! gallery option(AX): PRE=5  POST=1
+TOTAL INVARIANT DELTAS: 3
+
+3 injected, 3 caught. The differ sees deltas when deltas exist.
+Banked: capture/ax-diff-CANARY.txt, capture/ax-pre-ABLATED.json
+
+================================================================
+6 · STABILITY — which rows are allowed to move on their own
+================================================================
+
+$ node axdiff.mjs ax-post.json ax-post-run2.json ax-stability.txt
+
+  ~ ax role image: PRE=30  POST=29   [deal-variant]
+  ~ ax role StaticText: PRE=46  POST=45   [deal-variant]
+  ~ ax role InlineTextBox: PRE=46  POST=45   [deal-variant]
+  ~ labelledSvgNoRoleByClass: PRE={"glyph-svg":1}  POST={}   [deal-variant]
+TOTAL INVARIANT DELTAS: 0
+
+Same tree, same instrument, two runs. kenken dealt a different board the second time and four
+rows moved with it. Those four are therefore deal-variant and carry no regression signal —
+classified on this measurement, not on assumption. Every structural row held across the two
+runs, which is what licenses reading 0 on the PRE/POST diff as meaning something.
+
+(The first cut of the differ had only `image` and `labelledSvgNoRoleByClass` in the variant
+set. This run is what put StaticText and InlineTextBox there.)
+
+================================================================
+7 · THE DIFF
+================================================================
+
+$ node axdiff.mjs ax-pre.json ax-post.json ax-diff.txt
+
+### sudoku    (rows compared: 43; moved-and-invariant: 0)
+### futoshiki (rows compared: 43; moved-and-invariant: 0)
+### thermo    (rows compared: 43; moved-and-invariant: 0)
+### killer    (rows compared: 43; moved-and-invariant: 0)
+### kenken    (rows compared: 43; moved-and-invariant: 0)
+
+TOTAL INVARIANT DELTAS: 0
+
+215 row comparisons, five games, zero invariant movement. The deal-variant rows also happened
+to agree on this pair — sudoku/futoshiki/thermo/killer dealt identically at fixed
+size+difficulty, and kenken happened to match — but no claim rests on them.
+
+Full AX role census, sudoku, byte-identical both trees:
+{"RootWebArea":1,"generic":182,"main":1,"button":23,"heading":3,"StaticText":106,
+ "InlineTextBox":106,"image":155,"progressbar":1,"grid":1,"status":2,"group":5,
+ "separator":1,"DescriptionList":1,"gridcell":81,"tooltip":5,"term":5,"definition":5,
+ "textbox":81}
+
+EXIT=0

@@ -136,7 +136,7 @@ const futoshikiCard: GameCard = {
 // used to, downloaded only on select — the chunking is byte-for-byte what it was.
 // `persistKey` stays a literal here, unlike sudoku's: naming `thermoSpec.urlCodec.key` would
 // mean a STATIC import, which drags a lazy game's spec into the main chunk. The key has one
-// source inside the game (`composables/thermoUrlState.STORAGE_KEY`, which the spec names);
+// source inside the game (`composables/useThermo.persistence.key`, which the spec names);
 // this row's copy is the pre-existing one and dies at F4 with the ledger's cold-start read.
 const thermoCard: GameCard = {
   id: "thermo",

@@ -15,7 +15,7 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { killerSpec } from "./spec";
-import { STORAGE_KEY } from "./composables/killerUrlState";
+import { persistence } from "./composables/useKiller";
 import CageOverlay from "@games/shared/CageOverlay.vue";
 import type { KillerCage } from "./types";
 
@@ -63,7 +63,7 @@ describe("Killer's GameSpec (T5-W2 F2 — the migrated contract)", () => {
   });
 
   it("names its board on disk once — the codec's own key", () => {
-    expect(killerSpec.urlCodec.key).toBe(STORAGE_KEY);
+    expect(killerSpec.urlCodec.key).toBe(persistence.key);
     expect(killerSpec.urlCodec.key).toBe("killer-board-v1");
   });
 

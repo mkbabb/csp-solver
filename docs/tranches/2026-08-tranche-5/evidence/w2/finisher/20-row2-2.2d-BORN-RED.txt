@@ -1,0 +1,63 @@
+=== T5-W2 2.2d WIRE GUARD — BORN-RED at HEAD (0/3 THROW) ===
+probe: the charter's 2.2d unit — a truncated group buffer must THROW for thermo, killer AND kenken
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ src/games/kenken/clue.test.ts:46:66
+     44|   it("THROWS on a truncated group rather than absorbing it (2.2d)", ()…
+     45|     // The group claims 3 cells; only 2 follow.
+     46|     expect(() => decodeCages(new Uint32Array([3, 2, 12, 0, 1]))).toThr…
+       |                                                                  ^
+     47|     // A dangling count with no op/target.
+     48|     expect(() => decodeCages(new Uint32Array([2, 0]))).toThrow(/trunca…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/games/killer/clue.test.ts > killer clue seam — the cage wire codec > THROWS on a truncated group rather than absorbing it (2.2d)
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ src/games/killer/clue.test.ts:44:59
+     42|   it("THROWS on a truncated group rather than absorbing it (2.2d)", ()…
+     43|     // The group claims 2 cells; only 1 follows.
+     44|     expect(() => decodeCages(new Uint32Array([2, 7, 0]))).toThrow(/tru…
+       |                                                           ^
+     45|     // A dangling count with no sum.
+     46|     expect(() => decodeCages(new Uint32Array([2]))).toThrow(/truncated…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/games/thermo/clue.test.ts > thermo clue seam — the thermometer wire codec > THROWS on a truncated group rather than absorbing it (2.2d)
+AssertionError: expected [Function] to throw an error
+
+- Expected:
+null
+
++ Received:
+undefined
+
+ ❯ src/games/thermo/clue.test.ts:41:66
+     39|   it("THROWS on a truncated group rather than absorbing it (2.2d)", ()…
+     40|     // The group claims 3 cells; only 2 follow.
+     41|     expect(() => decodeThermometers(new Uint32Array([3, 0, 1]))).toThr…
+       |                                                                  ^
+     42|     // A dangling count with no cells at all.
+     43|     expect(() => decodeThermometers(new Uint32Array([2]))).toThrow(/tr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  3 failed | 12 passed (15)
+   Start at  22:43:52
+   Duration  393ms (transform 51ms, setup 37ms, import 40ms, tests 12ms, environment 772ms)
+

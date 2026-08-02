@@ -21,8 +21,7 @@
 import { defineGame } from "@games/shared/defineGame";
 import DigitCell from "@games/shared/DigitCell.vue";
 import CageOverlay from "@games/shared/CageOverlay.vue";
-import { useKiller, nodeBudgetForSize } from "./composables/useKiller";
-import { STORAGE_KEY } from "./composables/killerUrlState";
+import { useKiller, nodeBudgetForSize, persistence } from "./composables/useKiller";
 import { cageFigures, killerClue } from "./clue";
 import { subgridSizes, difficultyOptions } from "@games/shared/selectors";
 import type { Difficulty } from "@games/shared/types";
@@ -57,7 +56,7 @@ export const killerSpec = defineGame<ReturnType<typeof useKiller>, KillerCage[]>
   },
   furniture: { cell: DigitCell },
   solver: { nodeBudget: nodeBudgetForSize },
-  urlCodec: { key: STORAGE_KEY },
+  urlCodec: { key: persistence.key },
   deal: {
     sizes: subgridSizes,
     difficulty: difficultyOptions,

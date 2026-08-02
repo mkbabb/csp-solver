@@ -33,6 +33,9 @@ function encodeSudoku(size: number, cells: Record<number, number>, total: number
   for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
   return b64url(CODEC_VERSION + `${size}.${c}`);
 }
+// The clue section is the UNIVERSAL one (T5-W2 2.4): whatever `spec.clues.encode` produces,
+// one base-36 word per element, `,`-joined. Futoshiki's encode flattens its pairs to
+// `[greater, lesser, …]`, so what used to read `1-0,5-0` now reads `1,0,5,0`.
 function encodeFutoshiki(
   size: number,
   cells: Record<number, number>,
@@ -41,7 +44,7 @@ function encodeFutoshiki(
 ): string {
   let c = '';
   for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
-  const iq = ineqs.map(([a, b]) => `${a}-${b}`).join(',');
+  const iq = ineqs.flat().map((w) => w.toString(36)).join(',');
   return b64url(CODEC_VERSION + `${size}.${c}.${iq}`);
 }
 
@@ -170,11 +173,72 @@ test('an untagged ?board= body fails closed, never a board (sudoku)', async ({ p
   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
 
   // A board still renders — the corrupt link degrades to the size/difficulty path, which is
-  // what every other fail-closed arm does — but it is NOT the shared one: the sentinel is gone.
+  // what every other fail-closed arm does — but it is NOT the shared one.
   await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(81);
+  // THE DISCRIMINATOR IS GIVEN-NESS, NOT A DIGIT (T5-W2 finisher row 5). This asserted that
+  // cell 0 did not hold `5` — but a fresh deal is nondeterministic and puts a `5` in cell 0
+  // roughly one board in nine, so the row could red on a correct build. What separates the two
+  // boards structurally is how many cells are GIVEN: the shared body carries exactly one
+  // (cell 0), while every dealt 9×9 carries dozens. A count above one is only reachable by a
+  // board this link did not describe.
   await expect
-    .poll(() => page.locator('.sudoku-cell input').first().inputValue(), { timeout: 15000 })
-    .not.toBe('5');
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+    .toBeGreaterThan(1);
   // And the stale link is dropped rather than left in the bar claiming to describe the board.
   expect(boardParam(page)).toBe(false);
 });
+
+// ── 8. The three newly-real permalinks: thermo, killer, kenken (T5-W2 2.4d, 5/5) ──
+//
+// These three shipped a Share button over an EMPTY codec: `writeShareUrl` was a no-op,
+// `dropBoardParam` was a no-op and `boardLink` was hard-coded 'absent', so the affordance
+// promised a link the app could not write and could not read back. One codec serves all five
+// now, and what it carries for these three is the clue furniture — a thermometer, a cage —
+// which is the half a board alone does not describe.
+//
+// The round trip is asserted end to end rather than by digits: share, reload the URL the app
+// itself wrote, and require the SAME givens back. A dealt board is nondeterministic; a shared
+// one is not, and that is the whole claim.
+
+const CLUED = [
+  { game: 'thermo', cell: '.sudoku-cell', clue: 'g.thermo-tube' },
+  { game: 'killer', cell: '.sudoku-cell', clue: 'g.killer-cage' },
+  { game: 'kenken', cell: '.futoshiki-cell', clue: 'g.kenken-cage' },
+] as const;
+
+/** The board as the URL must describe it: every cell's value, and how many clue figures. */
+async function signature(page: Page, cell: string, clue: string): Promise<string> {
+  const values = await page
+    .locator(`${cell} input`)
+    .evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value).join(','));
+  return `${await page.locator(clue).count()}|${values}`;
+}
+
+for (const { game, cell, clue } of CLUED) {
+  test(`share writes a REAL ?board= and it round-trips the board (${game})`, async ({ page }) => {
+    await page.goto(`./?game=${game}`);
+    await page.waitForSelector(cell, { timeout: 15000 });
+    // Settle on the CLUE, not on givens: a KenKen board is dealt with no given digits at all —
+    // its cages are the whole puzzle — so a glyph count would be a deal-luck settle for one of
+    // the three and a real one for the other two.
+    await expect
+      .poll(() => page.locator(clue).count(), { timeout: 20000 })
+      .toBeGreaterThan(0);
+    expect(boardParam(page)).toBe(false); // never ambient
+
+    await page.locator('.controls-card button[aria-label="Share board link"]').click();
+    await expect.poll(() => boardParam(page), { timeout: 5000 }).toBe(true);
+
+    const shared = page.url();
+    const before = await signature(page, cell, clue);
+
+    // Reload the link the app itself wrote. It must open, and open the SAME board.
+    await page.goto(shared);
+    await page.waitForSelector(cell, { timeout: 15000 });
+    await expect
+      .poll(() => signature(page, cell, clue), { timeout: 20000 })
+      .toBe(before);
+    // And the link the app just honoured stays in the bar (only a REFUSED one is stripped).
+    expect(boardParam(page)).toBe(true);
+  });
+}

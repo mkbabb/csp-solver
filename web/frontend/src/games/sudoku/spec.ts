@@ -18,8 +18,7 @@
  */
 import { defineGame } from "@games/shared/defineGame";
 import DigitCell from "@games/shared/DigitCell.vue";
-import { useSudoku, nodeBudgetForSize } from "./composables/useSudoku";
-import { STORAGE_KEY } from "./composables/useUrlState";
+import { useSudoku, nodeBudgetForSize, persistence } from "./composables/useSudoku";
 import { subgridSizes, difficultyOptions } from "@games/shared/selectors";
 import type { Difficulty } from "@games/shared/types";
 
@@ -38,7 +37,7 @@ export const sudokuSpec = defineGame<ReturnType<typeof useSudoku>, void>({
   clues: null,
   furniture: { cell: DigitCell },
   solver: { nodeBudget: nodeBudgetForSize },
-  urlCodec: { key: STORAGE_KEY },
+  urlCodec: { key: persistence.key },
   deal: {
     sizes: subgridSizes,
     difficulty: difficultyOptions,

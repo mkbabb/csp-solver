@@ -15,6 +15,7 @@
  */
 import type { CageFigure } from "@games/shared/CageOverlay.vue";
 import type { ClueCodec } from "@games/shared/solver/client";
+import { demandGroup } from "@games/shared/solver/wire";
 import type { KillerCage } from "./types";
 
 export function cageFigures(cages: KillerCage[]): CageFigure[] {
@@ -39,16 +40,18 @@ export function encodeCages(cages: KillerCage[]): Uint32Array<ArrayBuffer> {
   return buf;
 }
 
-/** Unpack the length-prefixed flat wire buffer back into `KillerCage[]`. */
+/** Unpack the length-prefixed flat wire buffer back into `KillerCage[]`. A cage that runs off
+ *  the end of the buffer THROWS (2.2d) — the bare `break` that used to drop the dangling count
+ *  handed the caller a cage it never sent. */
 export function decodeCages(flat: Uint32Array): KillerCage[] {
   const cages: KillerCage[] = [];
   let i = 0;
   while (i < flat.length) {
     const k = flat[i++];
-    if (i >= flat.length) break; // truncated (no sum) — drop the dangling count
+    demandGroup(flat, i, 1 + k, "killer cage");
     const sum = flat[i++];
     const cells: number[] = [];
-    for (let j = 0; j < k && i < flat.length; j++) cells.push(flat[i++]);
+    for (let j = 0; j < k; j++) cells.push(flat[i++]);
     cages.push({ sum, cells });
   }
   return cages;

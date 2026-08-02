@@ -21,8 +21,7 @@
 import { defineGame } from "@games/shared/defineGame";
 import DigitCell from "@games/shared/DigitCell.vue";
 import ThermoTube from "./ThermoTube.vue";
-import { useThermo, nodeBudgetForSize } from "./composables/useThermo";
-import { STORAGE_KEY } from "./composables/thermoUrlState";
+import { useThermo, nodeBudgetForSize, persistence } from "./composables/useThermo";
 import { thermoClue } from "./clue";
 import { subgridSizes, difficultyOptions } from "@games/shared/selectors";
 import type { Difficulty } from "@games/shared/types";
@@ -54,7 +53,7 @@ export const thermoSpec = defineGame<ReturnType<typeof useThermo>, ThermoLine[]>
   },
   furniture: { cell: DigitCell },
   solver: { nodeBudget: nodeBudgetForSize },
-  urlCodec: { key: STORAGE_KEY },
+  urlCodec: { key: persistence.key },
   deal: {
     sizes: subgridSizes,
     difficulty: difficultyOptions,

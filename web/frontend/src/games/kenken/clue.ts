@@ -16,6 +16,7 @@
  */
 import type { CageFigure } from "@games/shared/CageOverlay.vue";
 import type { ClueCodec } from "@games/shared/solver/client";
+import { demandGroup } from "@games/shared/solver/wire";
 import type { KenKenCage, KenKenOp } from "./types";
 
 export function cageFigures(cages: KenKenCage[]): CageFigure[] {
@@ -49,17 +50,23 @@ export function encodeCages(cages: KenKenCage[]): Uint32Array<ArrayBuffer> {
   return buf;
 }
 
-/** Unpack the length-prefixed flat wire buffer back into `KenKenCage[]`. */
+/** Unpack the length-prefixed flat wire buffer back into `KenKenCage[]`. A cage that runs off
+ *  the end of the buffer THROWS (2.2d), and so does an operator ordinal outside the four — the
+ *  `?? "+"` fallback silently rewrote a `÷` cage into a `+` one, which is a different puzzle. */
 export function decodeCages(flat: Uint32Array): KenKenCage[] {
   const cages: KenKenCage[] = [];
   let i = 0;
   while (i < flat.length) {
     const k = flat[i++];
-    if (i + 1 >= flat.length) break; // truncated (no op/target) — drop the dangling count
-    const op = ORDINAL_TO_OP[flat[i++]] ?? "+";
+    demandGroup(flat, i, 2 + k, "kenken cage");
+    const ordinal = flat[i++];
+    const op = ORDINAL_TO_OP[ordinal];
+    if (op === undefined) {
+      throw new RangeError(`kenken cage: unknown operator ordinal ${ordinal}`);
+    }
     const target = flat[i++];
     const cells: number[] = [];
-    for (let j = 0; j < k && i < flat.length; j++) cells.push(flat[i++]);
+    for (let j = 0; j < k; j++) cells.push(flat[i++]);
     cages.push({ op, target, cells });
   }
   return cages;

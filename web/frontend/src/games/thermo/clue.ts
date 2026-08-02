@@ -13,6 +13,7 @@
  * without instantiating the Worker.
  */
 import type { ClueCodec } from "@games/shared/solver/client";
+import { demandGroup } from "@games/shared/solver/wire";
 import type { ThermoLine } from "./types";
 
 /** Pack `ThermoLine[]` into the length-prefixed flat wire buffer. */
@@ -28,14 +29,16 @@ export function encodeThermometers(thermos: ThermoLine[]): Uint32Array<ArrayBuff
   return buf;
 }
 
-/** Unpack the length-prefixed flat wire buffer back into `ThermoLine[]`. */
+/** Unpack the length-prefixed flat wire buffer back into `ThermoLine[]`. A tube that runs off
+ *  the end of the buffer THROWS (2.2d) — a truncated frame is malformed, never a short tube. */
 export function decodeThermometers(flat: Uint32Array): ThermoLine[] {
   const thermos: ThermoLine[] = [];
   let i = 0;
   while (i < flat.length) {
     const k = flat[i++];
+    demandGroup(flat, i, k, "thermo tube");
     const line: number[] = [];
-    for (let j = 0; j < k && i < flat.length; j++) line.push(flat[i++]);
+    for (let j = 0; j < k; j++) line.push(flat[i++]);
     thermos.push(line);
   }
   return thermos;

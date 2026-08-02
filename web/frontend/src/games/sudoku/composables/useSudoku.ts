@@ -11,15 +11,8 @@
 import { createSolverClient } from "@games/shared/solver/client";
 import { TEMPLATE_BANK, tierSource } from "../data/templates";
 import type { Difficulty } from "@games/shared/types";
-import {
-  resolveInitialState,
-  syncToUrl,
-  persistBoard,
-  clearPersistedBoard,
-  encodeBoard,
-  writeBoardToUrl,
-  dropBoardParam,
-} from "./useUrlState";
+import { createPersistence, type PersistedCore } from "@games/shared/persistence";
+import { subgridSizes } from "@games/shared/selectors";
 import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
 import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
@@ -81,21 +74,47 @@ const api = createSolverClient<void>({
   boardSide: boardSizeOf,
   clue: null,
   templates: sudokuTemplates,
+  nodeBudget: nodeBudgetForSize,
+});
+
+/** Sudoku's board on disk: the common slice plus its own size key. No clue furniture. */
+export interface PersistedBoard extends PersistedCore {
+  size: number;
+  difficulty: Difficulty;
+}
+
+/**
+ * Sudoku's slice of the ONE persistence codec — the key, the size math and the STATED ABSENCE
+ * of a clue seam. `spec.urlCodec.key` names `persistence.key` rather than mirroring the string.
+ * A `clues: null` game's body is two parts, byte-identical to the wire sudoku shipped with.
+ */
+export const persistence = createPersistence<void, PersistedBoard>({
+  game: "sudoku",
+  key: "sudoku-board-state",
+  boardSide: boardSizeOf,
+  validSizes: subgridSizes.map((o) => o.value),
+  defaultSize: 3,
+  // Sudoku alone ROLLS its opening tier — the other four state EASY.
+  freshDifficulty: () =>
+    (["EASY", "MEDIUM", "HARD"] as const)[Math.floor(Math.random() * 3)],
+  sizeParam: "size",
+  sizeField: "size",
+  clue: null,
+  clueField: null,
 });
 
 export function useSudoku() {
-  const initial = resolveInitialState();
+  const initial = persistence.resolveInitialState();
 
   const { solverSize, ...machine } = useGameState({
     initial,
     initialSize: initial.size,
     boardSizeOf,
-    nodeBudgetForSize,
     getRandomBoard: (n, difficulty) => api.getRandomBoard(n, difficulty),
     applyDealFurniture: () => {}, // Sudoku prints no on-board clue furniture
     resetFurniture: () => {},
     grade: (values, n) => gradeBoard(createBoardAdapter("boxed", n), values),
-    solve: (values, n, budget) => api.solveBoard(values, n, undefined, budget),
+    solve: (values, n) => api.solveBoard(values, n, undefined),
     propagate: (values, n) => api.propagateBoard(values, n, undefined),
     fillForced: (values, n) => fillAllForced(createBoardAdapter("boxed", n), values),
     hint: (values, n, preferred) =>
@@ -103,12 +122,11 @@ export function useSudoku() {
     snapshotExtra: () => ({}),
     restoreExtra: () => {},
     restorePersistedFurniture: () => {},
-    syncToUrl,
-    persist: (payload, n) => persistBoard({ size: n, ...payload }),
-    clearPersisted: clearPersistedBoard,
-    dropBoardParam,
-    writeShareUrl: (n, values, totalCells) =>
-      writeBoardToUrl(encodeBoard(n, values, totalCells)),
+    syncToUrl: persistence.syncToUrl,
+    persist: (payload, n) => persistence.persistBoard({ size: n, ...payload }),
+    clearPersisted: persistence.clearPersistedBoard,
+    dropBoardParam: persistence.dropBoardParam,
+    writeShareUrl: persistence.writeShareUrl,
   });
 
   // Re-label the machine's neutral size ref to Sudoku's public `size`; everything else

@@ -111,8 +111,6 @@ export interface GameStateDomain<
   initialSize: number;
   /** Raw selector value → board side length: Sudoku `n**2` (subgrid → dim), Futoshiki `n`. */
   boardSizeOf: (rawSize: number) => number;
-  /** Size-scaled node budget for the client solve (per-game table). */
-  nodeBudgetForSize: (rawSize: number) => number;
   /** Deal a fresh board at a raw size + difficulty (the game's solver client). */
   getRandomBoard: (rawSize: number, difficulty: TDiff) => Promise<TDealt>;
   /** Apply the dealt board's own furniture (Futoshiki: set inequalities; Sudoku: noop). */
@@ -121,12 +119,10 @@ export interface GameStateDomain<
   resetFurniture: () => void;
   /** Grade the dealt board (W7 technique engine, over self-computed candidates). */
   grade: (values: Record<string, number>, rawSize: number) => GradeResultLike;
-  /** First-solution solve via the game's solver client (threads clues where it has them). */
-  solve: (
-    values: Record<string, number>,
-    rawSize: number,
-    nodeBudget: number,
-  ) => Promise<SolveResultLike>;
+  /** First-solution solve via the game's solver client (threads clues where it has them).
+   *  The node budget is NOT threaded here: it is `spec.solver.nodeBudget`, handed to the one
+   *  solver client at construction, so the machine no longer carries a per-game search table. */
+  solve: (values: Record<string, number>, rawSize: number) => Promise<SolveResultLike>;
   /** Root AC-3/GAC propagation → per-cell surviving-candidate bitmasks (engine marks). */
   propagate: (values: Record<string, number>, rawSize: number) => Promise<Uint32Array>;
   /** Every naked+hidden single present, in one sweep (W7 fill-all-forced). */
@@ -497,11 +493,7 @@ export function useGameState<
     const prevMarks = snapshotMarks();
 
     try {
-      const result = await domain.solve(
-        values.value,
-        solverSize.value,
-        domain.nodeBudgetForSize(solverSize.value),
-      );
+      const result = await domain.solve(values.value, solverSize.value);
       // Drop a stale solve (a board op superseded it mid-flight) — append nothing (T4-WU).
       if (boardGeneration.value !== dispatchGen) return;
       const newlySolved: Record<string, number> = {};
@@ -565,11 +557,7 @@ export function useGameState<
         ? (values.value[key] ?? 0)
         : 0;
     }
-    const result = await domain.solve(
-      givensOnly,
-      solverSize.value,
-      domain.nodeBudgetForSize(solverSize.value),
-    );
+    const result = await domain.solve(givensOnly, solverSize.value);
     peekCache.value = { gen: boardGeneration.value, values: { ...result.values } };
     return peekCache.value.values;
   }
@@ -823,7 +811,15 @@ export function useGameState<
       initial.source === "storage-only" ||
       initial.source === "url-board") &&
     initial.persisted != null &&
-    Object.values(initial.persisted.values).some((v) => v !== 0);
+    // A SHARED board is restored whatever its cells hold. The non-empty test guards the case it
+    // was written for — a SAVED board of all zeros is a session nobody started, so deal instead
+    // — but a `?board=` link is an explicit act, and for a family whose puzzle IS its clue
+    // furniture it is the only act available: a KenKen board is dealt with NO given digits at
+    // all, so "no non-zero value" there means "the whole puzzle", not "nothing to restore".
+    // Found the moment kenken's permalink became real (T5-W2 2.4): the link decoded, the
+    // machine refused it, and the mount deal dropped the param on its way past.
+    (initial.source === "url-board" ||
+      Object.values(initial.persisted.values).some((v) => v !== 0));
 
   if (canRestore) {
     restoreBoard(initial.persisted!);

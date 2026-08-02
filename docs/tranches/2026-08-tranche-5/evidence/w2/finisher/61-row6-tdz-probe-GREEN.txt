@@ -1,0 +1,16 @@
+=== ROW 6 — tdz-probe.mjs · GREEN on the tree ===
+$ node scripts/tdz-probe.mjs --self-test
+reproduction (4 modules, executed):
+  OLD graph (scene → game → registry → scene): THREW — ReferenceError: Cannot access 'scene' before initialization
+  NEW graph (spec → defineGame, cards → spec): BOOTED
+
+graph census (src/games): 0 cycle edge(s)
+
+negative control (a synthetic game importing the table): RED as required
+
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways
+EXIT=0
+
+--- the live tree is unchanged by the ablation ---
+ M web/frontend/src/games/thermo/spec.ts
+(no output above = thermo/spec.ts holds only the Row-1 rewire)

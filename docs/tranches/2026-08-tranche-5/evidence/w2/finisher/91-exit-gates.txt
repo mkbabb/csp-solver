@@ -1,0 +1,82 @@
+=== FINISHER LANE A — the remaining W2 exit gates ===
+--- npm run test:golden:bytes ---
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:205
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:232
+
+[golden-bytes] tracked-ness: 8 tracked / 8 on disk
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] PASS — 8 goldens, 99.0 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+  EXIT=0
+--- npm run test:prod-shake ---
+
+> csp-solver-frontend@0.1.0 test:prod-shake
+> node scripts/check-prod-shake.mjs
+
+[prod-shake] 20 bundle chunk(s) under dist-throttle; asserting 3 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, schedulerDebugInfo
+[prod-shake] PASS — the dev tuner is fully tree-shaken from production.
+  EXIT=0
+--- npm run test:font-coverage ---
+
+> csp-solver-frontend@0.1.0 test:font-coverage
+> node scripts/check-font-coverage.mjs
+
+font coverage OK — 2 subset faces, each covered as authored AND as transformed:
+  Fraunces: 28 codepoints, 13788 B, 8 strings
+  Patrick Hand: 46 codepoints, 4312 B, 10 strings
+  EXIT=0
+--- npm run test:support-floor ---
+  BITES  1 FLOOR DECLARED — an entry that is not a floor
+  BITES  2 FLOOR SUFFICIENT — safari floor dropped under the CSS target
+  BITES  3 TARGET COHERENT — build.target raised above the floor
+  BITES  4 SHIMS DEAD — an optional-call listener guard re-enters src
+  BITES  4 SHIMS DEAD — a sub-floor comment re-enters src
+  BITES  5 README CITES — the README floor sentence removed
+
+PASS — 0 violation(s), 0 blind check(s)
+  EXIT=0
+--- npm run test:e2e:projects ---
+  [3 ENGINE COVERAGE] CH-56 regresses — mobile-affordances loses its webkit arm
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED] share-truth is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+
+OK — 20 specs, 270 resolved tests, every spec in both engines except the 4 recorded holdouts.
+  EXIT=0
+--- npm run test:e2e:retries ---
+  playwright-throttle.config.ts::theme-bake-webkit     retries=0  failOnFlakyTests=true
+
+  green 1 THE LAW      retries imply failOnFlakyTests
+  green 2 THE CENSUS   every retry is a named grant
+  green 3 THE REVOKED  wordmark-webkit stays at 0
+  green 4 NO OPT-OUT   failOnFlakyTests is never false
+
+check-pw-retries: all checks green
+  EXIT=0
+--- npm run test:coverage:floor ---
+[coverage-floor] self-test
+  ok   at-floor is green
+  ok   a single dipping scope reds even while TOTAL rises
+  ok   a vanished scope is structurally RED
+  ok   an explicitly retired scope passes
+  ok   an unscoped file is surfaced
+  ok   summary.total is not trusted
+[coverage-floor] self-test 6/6 — the gate can fail on a known-bad input.
+  EXIT=0
+--- unit count instrument ---
+ Test Files  35 passed (35)
+      Tests  392 passed (392)
+   Start at  22:57:01
+   Duration  2.25s (transform 4.09s, setup 589ms, import 7.16s, tests 1.33s, environment 19.31s)
+
+JSON report written to /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/vitest-report.json
+
+> csp-solver-frontend@0.1.0 test:unit:count
+> node scripts/check-unit-count.mjs vitest-report.json
+
+FE unit lane — 392 executed (392 passed / 0 failed), 0 skipped, 0 todo, over 35 files / 146 suites; floor 300; report age 0.0 min.
+unit count OK — 392 >= 300.
+  EXIT=0

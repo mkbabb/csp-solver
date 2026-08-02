@@ -1,0 +1,30 @@
+=== COVERAGE FLOOR — HEAD vs FINISHER, breach-for-breach ===
+The floor is the T5-W1.14 baseline at f38c5130. It was ALREADY RED at HEAD (8 breaches,
+verify/40-coverage-floor.txt) and is a WAVE-LEVEL row on the lead's desk. This lane neither
+re-cut it nor cleared it; the composition moved again and the count is unchanged at 8.
+
+scope.metric                    floor       HEAD   finisher verdict
+---------------------------- -------- ---------- ---------- -------
+src/games/sudoku.statements     52.79   60.81 ok  51.11 RED NEW — persistence left the scope
+src/games/sudoku.branches       55.39   75.00 ok  37.50 RED NEW — the fail-closed arms moved
+src/games/sudoku.functions      35.24  25.00 RED   40.00 ok CLEARED
+src/games/shared.statements     53.14  50.09 RED  52.58 RED improved 2.49 pts, still under
+src/games/shared.branches       45.57  44.87 RED   48.60 ok CLEARED
+src/games/shared.functions      47.74  43.47 RED  45.00 RED improved 1.53 pts, still under
+src/games/shared.lines          53.32  49.79 RED  52.21 RED improved 2.42 pts, still under
+src/pencil.statements           14.61  13.13 RED  13.35 RED untouched by this lane
+src/pencil.functions            10.02   9.49 RED   9.49 RED untouched by this lane
+src/pencil.lines                15.51  13.87 RED  14.05 RED untouched by this lane
+
+breach count: 8 at HEAD -> 8 here. TOTAL statements 37.92% -> 38.50% (up).
+
+THE ARITHMETIC, named. src/games/sudoku shed its best-covered file: useUrlState.ts (309 raw
+lines, and the 270-line unit that drove every fail-closed arm) became games/shared/persistence.ts.
+The TEST did not move out of the sudoku directory and the arms are still driven — they now
+count against src/games/shared, where they raised three of the four breached rows and cleared
+the fourth. This is the SAME composition-change class the verify lane diagnosed at HEAD
+(its causes 2 and 3), one step further along, and it is the lead's two routes to close:
+  (a) cover the collapsed shared spine until the rows clear, or
+  (b) re-derive the floor against the DISTILLED estate by W1.14's own pre-registered method
+      (MINIMUM over an n=10 sample, never a mean, never one run), banked beside the old.
+NEITHER is this lane's to take. No floor was re-cut here.

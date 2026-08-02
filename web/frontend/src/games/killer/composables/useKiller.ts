@@ -11,14 +11,9 @@
 import { ref } from "vue";
 import { createSolverClient } from "@games/shared/solver/client";
 import { killerClue } from "../clue";
-import {
-  resolveInitialState,
-  syncToUrl,
-  persistBoard,
-  clearPersistedBoard,
-  dropBoardParam,
-  writeShareUrl,
-} from "./killerUrlState";
+import { createPersistence, type PersistedCore } from "@games/shared/persistence";
+import { subgridSizes } from "@games/shared/selectors";
+import type { Difficulty } from "@games/shared/types";
 import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
 import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
@@ -46,10 +41,32 @@ const api = createSolverClient({
   boardSide: boardSizeOf,
   clue: killerClue,
   templates: null,
+  nodeBudget: nodeBudgetForSize,
+});
+
+/** Killer's board on disk: the common slice, its own size key, and its cage furniture. */
+export interface KillerPersisted extends PersistedCore {
+  size: number;
+  difficulty: Difficulty;
+  cages: KillerCage[];
+}
+
+/** Killer's slice of the ONE persistence codec — thermo's row with a different clue. */
+export const persistence = createPersistence<KillerCage[], KillerPersisted>({
+  game: "killer",
+  key: "killer-board-v1",
+  boardSide: boardSizeOf,
+  validSizes: subgridSizes.map((o) => o.value),
+  defaultSize: 3,
+  freshDifficulty: () => "EASY",
+  sizeParam: null,
+  sizeField: "size",
+  clue: killerClue,
+  clueField: "cages",
 });
 
 export function useKiller() {
-  const initial = resolveInitialState();
+  const initial = persistence.resolveInitialState();
 
   // The cage furniture — the Killer divergence, the mirror of Futoshiki's `inequalities`
   // ref. Threaded into solve/propagate and carried through undo/persist.
@@ -59,7 +76,6 @@ export function useKiller() {
     initial,
     initialSize: initial.size,
     boardSizeOf,
-    nodeBudgetForSize,
     getRandomBoard: (n, difficulty) => api.getRandomBoard(n, difficulty),
     applyDealFurniture: (board) => {
       cages.value = board.clue;
@@ -68,7 +84,7 @@ export function useKiller() {
       cages.value = [];
     },
     grade: (values, n) => gradeBoard(createBoardAdapter("boxed", n), values),
-    solve: (values, n, budget) => api.solveBoard(values, n, cages.value, budget),
+    solve: (values, n) => api.solveBoard(values, n, cages.value),
     propagate: (values, n) => api.propagateBoard(values, n, cages.value),
     fillForced: (values, n) => fillAllForced(createBoardAdapter("boxed", n), values),
     hint: (values, n, preferred) =>
@@ -82,11 +98,13 @@ export function useKiller() {
     restorePersistedFurniture: (persisted) => {
       cages.value = persisted.cages.map((c) => ({ sum: c.sum, cells: [...c.cells] }));
     },
-    syncToUrl,
-    persist: (payload, n) => persistBoard({ size: n, ...payload, cages: cages.value }),
-    clearPersisted: clearPersistedBoard,
-    dropBoardParam,
-    writeShareUrl,
+    syncToUrl: persistence.syncToUrl,
+    persist: (payload, n) =>
+      persistence.persistBoard({ size: n, ...payload, cages: cages.value }),
+    clearPersisted: persistence.clearPersistedBoard,
+    dropBoardParam: persistence.dropBoardParam,
+    writeShareUrl: (n, values, totalCells) =>
+      persistence.writeShareUrl(n, values, totalCells, cages.value),
   });
 
   // Re-label the machine's neutral size ref to the public `size`; expose the cage furniture

@@ -1,0 +1,60 @@
+=== FINISHER LANE A — unit count + coverage floor, re-derived ===
+--- npm run test:unit:count (over the fresh vitest-report.json) ---
+
+> csp-solver-frontend@0.1.0 test:unit:count
+> node scripts/check-unit-count.mjs vitest-report.json
+
+FE unit lane — 392 executed (392 passed / 0 failed), 0 skipped, 0 todo, over 35 files / 146 suites; floor 300; report age 0.3 min.
+unit count OK — 392 >= 300.
+  EXIT=0
+
+--- npm run test:unit:coverage then the floor ---
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 38.5% ( 1985/5155 )
+Branches     : 35.92% ( 994/2767 )
+Functions    : 32.34% ( 416/1286 )
+Lines        : 38.42% ( 1728/4497 )
+================================================================================
+
+> csp-solver-frontend@0.1.0 test:coverage:floor
+> node scripts/check-coverage-floor.mjs --self-test
+
+[coverage-floor] self-test
+  ok   at-floor is green
+  ok   a single dipping scope reds even while TOTAL rises
+  ok   a vanished scope is structurally RED
+  ok   an explicitly retired scope passes
+  ok   an unscoped file is surfaced
+  ok   summary.total is not trusted
+[coverage-floor] self-test 6/6 — the gate can fail on a known-bad input.
+  EXIT=0
+--- the REAL floor check (no --self-test: that flag exits 0 after the control, by the script's own :352 note) ---
+scope               | files |    stmts |   branch |    funcs |    lines
+-----------------------------------------------------------------------
+src/games/sudoku    |     4 |   51.11% |   37.50% |   40.00% |   51.21%
+src/games/futoshiki |     7 |   78.04% |   93.47% |   48.78% |   77.77%
+src/games/thermo    |     6 |   72.72% |   83.33% |   50.00% |   73.91%
+src/games/killer    |     5 |   67.69% |  100.00% |   41.93% |   66.66%
+src/games/kenken    |     5 |   72.22% |  100.00% |   41.93% |   71.87%
+src/games/shared    |    48 |   52.58% |   48.60% |   45.00% |   52.21%
+src/games           |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/pencil          |    47 |   13.35% |   15.69% |    9.49% |   14.05%
+src/composables     |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/lib             |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/App.vue         |     1 |    0.00% |    0.00% |    0.00% |    0.00%
+TOTAL               |   126 |   38.50% |   35.92% |   32.34% |   38.42%
+
+[coverage-floor] FLOOR BREACH (8):
+  - src/games/sudoku.statements: 51.11% < floor 52.79% (-1.68 pts)
+  - src/games/sudoku.branches: 37.50% < floor 55.39% (-17.89 pts)
+  - src/games/shared.statements: 52.58% < floor 53.14% (-0.55 pts)
+  - src/games/shared.functions: 45.00% < floor 47.74% (-2.74 pts)
+  - src/games/shared.lines: 52.21% < floor 53.32% (-1.10 pts)
+  - src/pencil.statements: 13.35% < floor 14.61% (-1.26 pts)
+  - src/pencil.functions: 9.49% < floor 10.02% (-0.53 pts)
+  - src/pencil.lines: 14.05% < floor 15.51% (-1.45 pts)
+
+[coverage-floor] RED. The floor is the T5-W1.14 baseline (f38c5130); W2's collapse must clear it, not re-cut it.
+  EXIT=1

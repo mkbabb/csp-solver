@@ -1,0 +1,18 @@
+=== ROW 6 — tdz-probe.mjs · ABLATION (RED) ===
+The live tree is untouched: src/ is copied to a scratch root and the OLD cycle edge
+(a game importing the table) is induced THERE, then the probe is pointed at it with --root.
+
+$ head -2 <scratch>/src/games/thermo/spec.ts
+import { GAMES } from "@games/cards";
+void GAMES;
+
+$ node scripts/tdz-probe.mjs --root <scratch>
+reproduction (4 modules, executed):
+  OLD graph (scene → game → registry → scene): THREW — ReferenceError: Cannot access 'scene' before initialization
+  NEW graph (spec → defineGame, cards → spec): BOOTED
+
+graph census (../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tdz-ablation/src/games): 1 cycle edge(s)
+  [game→table] games/thermo/spec.ts:1  import { GAMES } from "@games/cards";
+
+tdz-probe: 1 cycle edge(s) — the TDZ hazard is live
+EXIT=1

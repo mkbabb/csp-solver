@@ -18,8 +18,7 @@ import { thermoSpec } from "./spec";
 import ThermoTube from "./ThermoTube.vue";
 import DigitCell from "@games/shared/DigitCell.vue";
 import { encodeThermometers, decodeThermometers } from "./clue";
-import { nodeBudgetForSize } from "./composables/useThermo";
-import { STORAGE_KEY } from "./composables/thermoUrlState";
+import { nodeBudgetForSize, persistence } from "./composables/useThermo";
 import type { ThermoLine } from "./types";
 
 describe("thermo — the eight slots (T5-W2 §1)", () => {
@@ -48,7 +47,7 @@ describe("thermo — the eight slots (T5-W2 §1)", () => {
     // `solver` is back to the charter's `{ nodeBudget }`: F1's `prewarm` amendment
     // discharged at F3, when one Worker left one warm for the shell to perform.
     expect(Object.keys(thermoSpec.solver)).toEqual(["nodeBudget"]);
-    expect(thermoSpec.urlCodec.key).toBe(STORAGE_KEY);
+    expect(thermoSpec.urlCodec.key).toBe(persistence.key);
     expect(thermoSpec.urlCodec.key).toBe("thermo-board-v1");
   });
 

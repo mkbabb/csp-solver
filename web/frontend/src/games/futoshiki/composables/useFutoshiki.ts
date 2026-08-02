@@ -9,16 +9,10 @@
 // the only shipped solve surface, with zero `/api/v1/*` dependency and no server to depend on.
 import { ref } from "vue";
 import { createSolverClient } from "@games/shared/solver/client";
-import { futoshikiClue } from "../clue";
-import {
-  resolveInitialState,
-  syncToUrl,
-  persistBoard,
-  clearPersistedBoard,
-  encodeBoard,
-  writeBoardToUrl,
-  dropBoardParam,
-} from "./useUrlState";
+import { futoshikiClue, inequalitiesWellFormed } from "../clue";
+import { createPersistence, type PersistedCore } from "@games/shared/persistence";
+import { latinSizes } from "@games/shared/selectors";
+import type { Difficulty } from "@games/shared/types";
 import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
 import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
@@ -51,10 +45,39 @@ const api = createSolverClient({
   boardSide: boardSizeOf,
   clue: futoshikiClue,
   templates: null,
+  nodeBudget: nodeBudgetForSize,
+});
+
+/** Futoshiki's board on disk: the common slice, its own size key, and the inequality furniture
+ *  (permanent board decoration — never part of the given/overridden bookkeeping). */
+export interface PersistedBoard extends PersistedCore {
+  boardSize: number;
+  difficulty: Difficulty;
+  inequalities: Inequality[];
+}
+
+/**
+ * Futoshiki's slice of the ONE persistence codec. Its whole divergence from sudoku's row is
+ * three values: the `board_size` query key it owns (sudoku owns `size`), the clue codec pair
+ * `spec.clues` already spreads, and the semantic guard a crafted pair would otherwise
+ * weaponize — a floating caret per pair is a main-thread freeze.
+ */
+export const persistence = createPersistence<Inequality[], PersistedBoard>({
+  game: "futoshiki",
+  key: "futoshiki-board-state",
+  boardSide: boardSizeOf,
+  validSizes: latinSizes.map((o) => o.value),
+  defaultSize: 5,
+  freshDifficulty: () => "EASY",
+  sizeParam: "board_size",
+  sizeField: "boardSize",
+  clue: futoshikiClue,
+  clueField: "inequalities",
+  validateClue: inequalitiesWellFormed,
 });
 
 export function useFutoshiki() {
-  const initial = resolveInitialState();
+  const initial = persistence.resolveInitialState();
 
   // Printed inequality furniture — [greater, lesser] pairs. NEVER in the given/overridden
   // bookkeeping (they aren't cell values); they ride along the board and feed the carets. Held in
@@ -67,9 +90,8 @@ export function useFutoshiki() {
     ...machine
   } = useGameState({
     initial,
-    initialSize: initial.boardSize,
+    initialSize: initial.size,
     boardSizeOf,
-    nodeBudgetForSize,
     getRandomBoard: (n, difficulty) => api.getRandomBoard(n, difficulty),
     applyDealFurniture: (board) => {
       inequalities.value = board.clue;
@@ -79,7 +101,7 @@ export function useFutoshiki() {
     },
     grade: (values, n) =>
       gradeBoard(createBoardAdapter("latin", n, inequalities.value), values),
-    solve: (values, n, budget) => api.solveBoard(values, n, inequalities.value, budget),
+    solve: (values, n) => api.solveBoard(values, n, inequalities.value),
     propagate: (values, n) => api.propagateBoard(values, n, inequalities.value),
     fillForced: (values, n) =>
       fillAllForced(createBoardAdapter("latin", n, inequalities.value), values),
@@ -94,13 +116,17 @@ export function useFutoshiki() {
     restorePersistedFurniture: (persisted) => {
       inequalities.value = persisted.inequalities.map(([a, b]) => [a, b] as Inequality);
     },
-    syncToUrl,
+    syncToUrl: persistence.syncToUrl,
     persist: (payload, n) =>
-      persistBoard({ boardSize: n, ...payload, inequalities: inequalities.value }),
-    clearPersisted: clearPersistedBoard,
-    dropBoardParam,
+      persistence.persistBoard({
+        boardSize: n,
+        ...payload,
+        inequalities: inequalities.value,
+      }),
+    clearPersisted: persistence.clearPersistedBoard,
+    dropBoardParam: persistence.dropBoardParam,
     writeShareUrl: (n, values, totalCells) =>
-      writeBoardToUrl(encodeBoard(n, values, totalCells, inequalities.value)),
+      persistence.writeShareUrl(n, values, totalCells, inequalities.value),
   });
   void _solverSize; // Futoshiki exposes the derived `boardSize`, not the raw `solverSize`
 

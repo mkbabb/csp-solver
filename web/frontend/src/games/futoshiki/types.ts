@@ -1,6 +1,6 @@
 /**
  * What is genuinely FUTOSHIKI, as types — has zero dependents inside games/futoshiki/, only
- * dependencies, so `useFutoshiki`, the clue seam and `useUrlState` share one vocabulary without
+ * dependencies, so `useFutoshiki`, the clue seam and the persistence codec share one vocabulary without
  * importing types from one another.
  *
  * `Difficulty` used to be declared here too, byte-identical to sudoku's, and kenken imported it
@@ -22,6 +22,3 @@
  * they never participate in the given/overridden/solved bookkeeping the cell values do.
  */
 export type Inequality = [greater: number, lesser: number];
-
-/** v1 Futoshiki board-size band. The selector offers exactly these. */
-export const VALID_BOARD_SIZES = [4, 5, 6, 7] as const;

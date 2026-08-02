@@ -1,0 +1,54 @@
+=== 2.1e perGameFiles CENSUS — after the codec universalisation ===
+[sudoku]
+src/games/sudoku/SudokuPoster.vue
+src/games/sudoku/composables/useSudoku.ts
+src/games/sudoku/data/templates.ts
+src/games/sudoku/spec.ts
+[futoshiki]
+src/games/futoshiki/CaretOverlay.vue
+src/games/futoshiki/FutoshikiCaret.vue
+src/games/futoshiki/FutoshikiPoster.vue
+src/games/futoshiki/clue.ts
+src/games/futoshiki/composables/useFutoshiki.ts
+src/games/futoshiki/spec.ts
+src/games/futoshiki/types.ts
+[thermo]
+src/games/thermo/ThermoPoster.vue
+src/games/thermo/ThermoTube.vue
+src/games/thermo/clue.ts
+src/games/thermo/composables/useThermo.ts
+src/games/thermo/spec.ts
+src/games/thermo/types.ts
+[killer]
+src/games/killer/KillerPoster.vue
+src/games/killer/clue.ts
+src/games/killer/composables/useKiller.ts
+src/games/killer/spec.ts
+src/games/killer/types.ts
+[kenken]
+src/games/kenken/KenKenPoster.vue
+src/games/kenken/clue.ts
+src/games/kenken/composables/useKenken.ts
+src/games/kenken/spec.ts
+src/games/kenken/types.ts
+TOTAL perGameFiles:       27
+
+baseline at HEAD: 32  ·  gates.json perGameFilesTarget: 22
+
+--- raw LOC moved (games/** non-test) ---
+  five *UrlState.ts DELETED (raw wc -l at HEAD):
+    sudoku useUrlState.ts             309
+    futoshiki useUrlState.ts          373
+    thermo thermoUrlState.ts          110
+    killer killerUrlState.ts          111
+    kenken kenkenUrlState.ts          111
+    ------------------------------------
+    total deleted                1696
+
+  ONE shared codec ADDED:
+    src/games/shared/persistence.ts       458
+    src/games/shared/solver/wire.ts        33
+
+  games/** non-test raw wc -l, before/after:
+    HEAD  :    13730
+    now   :    13355

@@ -23,8 +23,8 @@ enter. A campaign close carries this file forward; it never restarts it.
 
 | Row | State | The row · trigger, re-entry, or default |
 |---|---|---|
-| CH-19 | BUILD-by-trigger → T5-W2 | `index.css` `@layer` extraction, held ×4; the distill touches the tokens, so the hold reopens on its own criterion, byte-identity proof re-run |
 | CH-20 | HELD (healthy) | TypeScript 7.x, frontend pinned `~6.0.3`; trigger = `typescript-eslint` peer `<6.1.0` lifts |
+| CH-62 | KEEP-PARK | linux-WebKit blank-bake race, second pinning: pencil-boil 0.11.0's `rasterizePoseToBlob` REFUTED as cure (green 30727947148, red-4 30728779986 — one green was a sample, not a proof); class quarantined ubuntu+webkit bake-decode both specs, chromium/darwin full-strength spread detectors live; owner = T5-W4b root-cause on the runner with the real rig; triggers = W4b's rig verdict OR `@mkbabb/pencil-boil >=0.12.0` (the quarantine module THROWS itself out); cite `2026-08-tranche-5/evidence/w2/verify/bake-race-recurrence-30728779986.txt` |
 | CH-21 | HELD (healthy) | W8 mount idle-chunking (D7); retire-with-measurement floor 89 ms@1× / 355 ms@4×; trigger = a mid-device above-band trace |
 | CH-22 | HELD (healthy) | banked game set (Skyscrapers · Arrow · Kakuro · Sandwich · Hidato/Numbrix), per-row triggers at `2026-07-tranche-4/README.md:169-183` |
 | CH-26 | KEEP-PARK | Futoshiki N=7/N=8 solve cliff; trigger = a propagation-strength change |
@@ -56,6 +56,7 @@ enter. A campaign close carries this file forward; it never restarts it.
 
 | Row | State | Cite |
 |---|---|---|
+| CH-19 | CLOSED | `@layer` extraction re-opened on its own trigger at T5-W2, decision **DROP**: extraction emits a byte-identical stylesheet (same Vite content hash) and the distill shrank `index.css` 842→808 below the threshold — `evidence/w2/f4/60-ch19-decision.md`. The T3 appendix's "proof lives in the evidence dir" claim was false; F4 re-derived the runnable recipe, banked at the same cite |
 | CH-01 | CLOSED | dependabot phantoms vs `web/api/uv.lock`, dismissed T4-W0; the successor row is CH-37, not this one |
 | CH-02 | CLOSED | prettier global-shadow — `.prettierrc.json` + `lint: prettier --check src/`, built T4-W4 |
 | CH-03 | CLOSED | `mod.rs` flip; zero `mod.rs` on disk, `mod_module_files = "deny"` |

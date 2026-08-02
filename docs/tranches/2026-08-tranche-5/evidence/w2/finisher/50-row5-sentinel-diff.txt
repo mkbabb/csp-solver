@@ -1,0 +1,48 @@
+=== ROW 5 — the row-6 sentinel: digit identity -> given-ness (+ the futoshiki clue-wire follow) ===
+(e2e/ is not prettier-subject: the repo's lint script covers src/ only, and the e2e idiom is single-quoted. The
+ first attempt reformatted the file; it was reverted and only the two semantic hunks kept.)
+
+diff --git a/web/frontend/e2e/permalink.spec.ts b/web/frontend/e2e/permalink.spec.ts
+index cb3f7551..a4cc26a8 100644
+--- a/web/frontend/e2e/permalink.spec.ts
++++ b/web/frontend/e2e/permalink.spec.ts
+@@ -33,6 +33,9 @@ function encodeSudoku(size: number, cells: Record<number, number>, total: number
+   for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
+   return b64url(CODEC_VERSION + `${size}.${c}`);
+ }
++// The clue section is the UNIVERSAL one (T5-W2 2.4): whatever `spec.clues.encode` produces,
++// one base-36 word per element, `,`-joined. Futoshiki's encode flattens its pairs to
++// `[greater, lesser, …]`, so what used to read `1-0,5-0` now reads `1,0,5,0`.
+ function encodeFutoshiki(
+   size: number,
+   cells: Record<number, number>,
+@@ -41,7 +44,7 @@ function encodeFutoshiki(
+ ): string {
+   let c = '';
+   for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
+-  const iq = ineqs.map(([a, b]) => `${a}-${b}`).join(',');
++  const iq = ineqs.flat().map((w) => w.toString(36)).join(',');
+   return b64url(CODEC_VERSION + `${size}.${c}.${iq}`);
+ }
+ 
+@@ -170,11 +173,17 @@ test('an untagged ?board= body fails closed, never a board (sudoku)', async ({ p
+   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+ 
+   // A board still renders — the corrupt link degrades to the size/difficulty path, which is
+-  // what every other fail-closed arm does — but it is NOT the shared one: the sentinel is gone.
++  // what every other fail-closed arm does — but it is NOT the shared one.
+   await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(81);
++  // THE DISCRIMINATOR IS GIVEN-NESS, NOT A DIGIT (T5-W2 finisher row 5). This asserted that
++  // cell 0 did not hold `5` — but a fresh deal is nondeterministic and puts a `5` in cell 0
++  // roughly one board in nine, so the row could red on a correct build. What separates the two
++  // boards structurally is how many cells are GIVEN: the shared body carries exactly one
++  // (cell 0), while every dealt 9×9 carries dozens. A count above one is only reachable by a
++  // board this link did not describe.
+   await expect
+-    .poll(() => page.locator('.sudoku-cell input').first().inputValue(), { timeout: 15000 })
+-    .not.toBe('5');
++    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
++    .toBeGreaterThan(1);
+   // And the stale link is dropped rather than left in the bar claiming to describe the board.
+   expect(boardParam(page)).toBe(false);
+ });

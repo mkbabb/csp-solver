@@ -158,6 +158,38 @@ export function decodeInequalities(flat: Uint32Array): Inequality[] {
   return out;
 }
 
+/**
+ * THE UNTRUSTED-PAIR GUARD — the doc-invariant `types.ts` promises, enforced where an
+ * untrusted pair actually arrives (the `?board=` permalink hands this to
+ * `createPersistence`'s `validateClue`; a dealt board's furniture comes from the solver and
+ * satisfies it by construction).
+ *
+ * Each pair must be orthogonally ADJACENT — horizontal neighbours (|Δ| = 1, same row) or
+ * vertical (|Δ| = n) — every endpoint in range, exact duplicates refused, and the whole set
+ * bounded at the maximum adjacent-pair count 2·n·(n−1). Without it a crafted link renders one
+ * floating `<FutoshikiCaret>` per pair (100k pairs → main-thread freeze), and a non-adjacent
+ * pair draws a caret on an edge that doesn't exist.
+ */
+export function inequalitiesWellFormed(
+  inequalities: Inequality[],
+  dim: number,
+): boolean {
+  const totalCells = dim ** 2;
+  if (inequalities.length > 2 * dim * (dim - 1)) return false;
+  const seen = new Set<string>();
+  for (const [a, b] of inequalities) {
+    if (a < 0 || a >= totalCells || b < 0 || b >= totalCells) return false;
+    const adjacent =
+      (Math.abs(a - b) === 1 && Math.floor(a / dim) === Math.floor(b / dim)) ||
+      Math.abs(a - b) === dim;
+    if (!adjacent) return false;
+    const pair = `${a}-${b}`;
+    if (seen.has(pair)) return false;
+    seen.add(pair);
+  }
+  return true;
+}
+
 /** The codec pair, named once: `spec.clues` spreads it, the solver client is handed it. */
 export const futoshikiClue: ClueCodec<Inequality[]> = {
   encode: encodeInequalities,

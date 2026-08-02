@@ -10,5 +10,6 @@ Per the wave's own DAG clause — "Dispositions ratify at wave open (owner ballo
 4. **CH-38 blind readers** — ≥4 cold readers by the W4 gate, or the adjudicator re-scope executes. Default: re-scope.
 5. **W6.3 background rig** — provision a WebKit/automation MCP, or the headless-only law stands written. Default: headless-only.
 6. **W1.15 CSP** — accept `style-src 'unsafe-inline'` as documented limitation (CF Pages static cannot mint nonces). Default: accepted, documented.
+7. **W2 §5.3 permalink universalisation** *(added at the W2 seal)* — the union GameSpec's urlCodec verdict (BETA wins, V1-STUB dies) makes `?board=` permalinks real for thermo/killer/kenken, where they were silent no-ops. Behaviour break: URLs that previously did nothing now load state; reject-strip contract holds across all five. The lead landed it per the charter's own ruling — three SHA-identical stubs are the dual-path disease the start order forbids. Reversal is one commit. Default: landed-per-the-design.
 
 Dispatch channel: the execution session's status report to the owner, 2026-08-01. The owner ordered no-relinquish-until-total-completion in the same breath as the start order — the defaults are therefore the expected resolution path unless the owner interjects mid-run.

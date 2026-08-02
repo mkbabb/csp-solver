@@ -13,14 +13,9 @@
 import { ref } from "vue";
 import { createSolverClient } from "@games/shared/solver/client";
 import { kenkenClue } from "../clue";
-import {
-  resolveInitialState,
-  syncToUrl,
-  persistBoard,
-  clearPersistedBoard,
-  dropBoardParam,
-  writeShareUrl,
-} from "./kenkenUrlState";
+import { createPersistence, type PersistedCore } from "@games/shared/persistence";
+import { cagedLatinSizes } from "@games/shared/selectors";
+import type { Difficulty } from "@games/shared/types";
 import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
 import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
@@ -50,10 +45,33 @@ const api = createSolverClient({
   boardSide: boardSizeOf,
   clue: kenkenClue,
   templates: null,
+  nodeBudget: nodeBudgetForSize,
+});
+
+/** KenKen's board on disk: the common slice, its own size key, and its operator-cage furniture. */
+export interface KenKenPersisted extends PersistedCore {
+  boardSize: number;
+  difficulty: Difficulty;
+  cages: KenKenCage[];
+}
+
+/** KenKen's slice of the ONE persistence codec — a LATIN family, so the raw selector size IS
+ *  the board side, and the widest clue on the wire (an operator ordinal per cage). */
+export const persistence = createPersistence<KenKenCage[], KenKenPersisted>({
+  game: "kenken",
+  key: "kenken-board-v1",
+  boardSide: boardSizeOf,
+  validSizes: cagedLatinSizes.map((o) => o.value),
+  defaultSize: 4,
+  freshDifficulty: () => "EASY",
+  sizeParam: null,
+  sizeField: "boardSize",
+  clue: kenkenClue,
+  clueField: "cages",
 });
 
 export function useKenken() {
-  const initial = resolveInitialState();
+  const initial = persistence.resolveInitialState();
 
   // The operator-cage furniture — the KenKen divergence, the mirror of Futoshiki's
   // `inequalities` / Killer's `cages`. Threaded into solve/propagate and carried through
@@ -67,9 +85,8 @@ export function useKenken() {
     ...machine
   } = useGameState({
     initial,
-    initialSize: initial.boardSize,
+    initialSize: initial.size,
     boardSizeOf,
-    nodeBudgetForSize,
     getRandomBoard: (n, difficulty) => api.getRandomBoard(n, difficulty),
     applyDealFurniture: (board) => {
       cages.value = board.clue;
@@ -78,7 +95,7 @@ export function useKenken() {
       cages.value = [];
     },
     grade: (values, n) => gradeBoard(createBoardAdapter("latin", n), values),
-    solve: (values, n, budget) => api.solveBoard(values, n, cages.value, budget),
+    solve: (values, n) => api.solveBoard(values, n, cages.value),
     propagate: (values, n) => api.propagateBoard(values, n, cages.value),
     fillForced: (values, n) => fillAllForced(createBoardAdapter("latin", n), values),
     hint: (values, n, preferred) =>
@@ -104,12 +121,13 @@ export function useKenken() {
         cells: [...c.cells],
       }));
     },
-    syncToUrl,
+    syncToUrl: persistence.syncToUrl,
     persist: (payload, n) =>
-      persistBoard({ boardSize: n, ...payload, cages: cages.value }),
-    clearPersisted: clearPersistedBoard,
-    dropBoardParam,
-    writeShareUrl,
+      persistence.persistBoard({ boardSize: n, ...payload, cages: cages.value }),
+    clearPersisted: persistence.clearPersistedBoard,
+    dropBoardParam: persistence.dropBoardParam,
+    writeShareUrl: (n, values, totalCells) =>
+      persistence.writeShareUrl(n, values, totalCells, cages.value),
   });
   void _solverSize; // KenKen exposes the derived `boardSize`, not the raw `solverSize`
 

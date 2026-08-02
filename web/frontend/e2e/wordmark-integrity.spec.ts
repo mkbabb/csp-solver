@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
+import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
 /**
  * P1 G3.4 — WORDMARK INTEGRITY, in WebKit, against the BUILT dist.
@@ -212,6 +213,12 @@ test.describe("G3.4 · wordmark integrity (WebKit, built dist)", () => {
           "svg.handwritten-logo image.logo-pose-bmp",
           game,
         );
+
+      // THE EXPLICIT QUARANTINE, second pinning — the class (all five games), linux + webkit,
+      // until W4b's rig verdict or pencil-boil >=0.12.0 (see the module header). AFTER the
+      // read and the evidence attach on purpose: the parked arm still bakes, still reads, and
+      // still ships the pose bitmap it read.
+      quarantineLinuxWebkitBake("wordmark-integrity", game, testInfo);
 
       // THE HOISTED VERDICT. One assertion, both terms, ahead of every branch — nothing
       // between the read and the assert can abort the row, on any platform.

@@ -17,7 +17,7 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { kenkenSpec } from "./spec";
-import { STORAGE_KEY } from "./composables/kenkenUrlState";
+import { persistence } from "./composables/useKenken";
 import CageOverlay from "@games/shared/CageOverlay.vue";
 import type { KenKenCage } from "./types";
 
@@ -71,7 +71,7 @@ describe("KenKen's GameSpec (T5-W2 F2 — the migrated contract)", () => {
   });
 
   it("names its board on disk once — the codec's own key", () => {
-    expect(kenkenSpec.urlCodec.key).toBe(STORAGE_KEY);
+    expect(kenkenSpec.urlCodec.key).toBe(persistence.key);
     expect(kenkenSpec.urlCodec.key).toBe("kenken-board-v1");
   });
 

@@ -70,6 +70,16 @@ export interface SolverClientConfig<TClue> {
   clue: ClueCodec<TClue> | null;
   /** the generation bank, or `null` for a family that digs live (all but sudoku). */
   templates: ((dim: number, difficulty: Tier) => Uint32Array<ArrayBuffer>) | null;
+  /**
+   * The size-scaled cap on search effort — `spec.solver.nodeBudget`, the SAME function the
+   * spec names (T5-W2 2.4/F-A row 4). It lives here because this is the seam that puts it on
+   * the wire: the state machine used to carry the table through a domain slot and thread the
+   * number into every `solve` call, which made the budget a piece of the MACHINE rather than a
+   * piece of the game. Measured before moving: the five tables hold THREE distinct value sets
+   * (sudoku/thermo/killer share one, futoshiki and kenken differ), so the field is a per-game
+   * fact and the kill arm — hoist one constant into this client — was not available.
+   */
+  nodeBudget: (dim: number) => number;
 }
 
 /** A dealt puzzle: the board, and the clue furniture it was dealt with. */
@@ -166,16 +176,18 @@ export function createSolverClient<TClue>(
   }
 
   /**
-   * `nodeBudget` is optional and defaults to the wasm surface's own default (1,000,000 nodes,
-   * `SolveConfig::default()`). A caller that wants a browser-tab-scale cap can pass a tighter
-   * value; exhausting it surfaces a typed `BUDGET_EXCEEDED` `SolverError` — an `instanceof
-   * Error`, `.code`-bearing exception rather than a silently-wrong `solved: false`.
+   * `nodeBudget` defaults to THIS GAME's table (`config.nodeBudget`, which is
+   * `spec.solver.nodeBudget`) rather than to the wasm surface's own 1,000,000-node
+   * `SolveConfig::default()`. An explicit argument still wins — the answer-key peek and the
+   * budget-exhaustion row both pass one. Exhausting the cap surfaces a typed `BUDGET_EXCEEDED`
+   * `SolverError` — an `instanceof Error`, `.code`-bearing exception rather than a
+   * silently-wrong `solved: false`.
    */
   async function solveBoard(
     values: Record<string, number>,
     dim: number,
     clue: TClue,
-    nodeBudget?: number,
+    nodeBudget: number = config.nodeBudget(dim),
   ): Promise<SolveResult> {
     const board = toFlat(dim, values);
     const clueBuf = encodeClue(clue);

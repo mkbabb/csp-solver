@@ -1,0 +1,73 @@
+=== ROW 1 — GREEN: the three newly-real permalinks (thermo/killer/kenken) ===
+born-RED transcript: 10-row1-BORN-RED.txt (all three suites errored on the absent export)
+
+ ✓ src/games/kenken/composables/persistence.test.ts > kenken reject-strip: a refused link leaves the address bar > an absent link touches nothing 0ms
+ ✓ src/games/killer/composables/persistence.test.ts > killer permalink round-trip > restores the board AND its cage furniture from ?board= alone 7ms
+ ✓ src/games/killer/composables/persistence.test.ts > killer permalink round-trip > an empty cage set round-trips (the 3-part body's empty clue section) 0ms
+ ✓ src/games/killer/composables/persistence.test.ts > killer permalink round-trip > an ACCEPTED link stays in the bar 0ms
+ ✓ src/games/killer/composables/persistence.test.ts > killer reject-strip: a refused link leaves the address bar > strips ?board= on every fail-closed arm 6ms
+ ✓ src/games/killer/composables/persistence.test.ts > killer reject-strip: a refused link leaves the address bar > keeps the rest of the query — only ?board= is deleted 0ms
+ ✓ src/games/killer/composables/persistence.test.ts > killer reject-strip: a refused link leaves the address bar > an absent link touches nothing 0ms
+ ✓ src/games/thermo/composables/persistence.test.ts > thermo permalink round-trip > restores the board AND its thermometer furniture from ?board= alone 7ms
+ ✓ src/games/thermo/composables/persistence.test.ts > thermo permalink round-trip > an empty thermometer set round-trips (the 3-part body's empty clue section) 0ms
+ ✓ src/games/thermo/composables/persistence.test.ts > thermo permalink round-trip > an ACCEPTED link stays in the bar 0ms
+ ✓ src/games/thermo/composables/persistence.test.ts > thermo reject-strip: a refused link leaves the address bar > strips ?board= on every fail-closed arm 5ms
+ ✓ src/games/thermo/composables/persistence.test.ts > thermo reject-strip: a refused link leaves the address bar > keeps the rest of the query — only ?board= is deleted 0ms
+ ✓ src/games/thermo/composables/persistence.test.ts > thermo reject-strip: a refused link leaves the address bar > an absent link touches nothing 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > encode/decode round-trip carries the inequality furniture > restores values as givens + inequalities in order 7ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > encode/decode round-trip carries the inequality furniture > an empty inequality set round-trips (trailing-dot 3-part body) 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > inequality wire-boundary guards > rejects a non-adjacent pair 1ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > inequality wire-boundary guards > rejects a duplicate pair 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > inequality wire-boundary guards > rejects an out-of-range endpoint 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > inequality wire-boundary guards > rejects a dangling word — the codec's round-trip guard, not a length check 1ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > inequality wire-boundary guards > rejects a non-canonical clue word (strict /^[0-9a-z]+$/, SEC-4) 1ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > inequality wire-boundary guards > rejects a body that is not exactly 3 dot-parts 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > shared fail-closed branches (owned copy) > absent → absent, no board 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > shared fail-closed branches (owned copy) > oversize / bad base64 / unknown version / untagged 2ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > shared fail-closed branches (owned copy) > non-canonical / out-of-band size 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > shared fail-closed branches (owned copy) > out-of-range cell value (> boardSize) and short cell count 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > shared fail-closed branches (owned copy) > size mismatch: ?board_size= disagrees with the board 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > difficulty persistence (?difficulty= + localStorage round-trip — the W6 residue, T4-WU/U2) > a valid ?difficulty= resolves url-only and carries the tier (twin of sudoku's) 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > difficulty persistence (?difficulty= + localStorage round-trip — the W6 residue, T4-WU/U2) > difficulty is case-insensitive on the wire (a lower-cased param upper-cases) 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > difficulty persistence (?difficulty= + localStorage round-trip — the W6 residue, T4-WU/U2) > a bare ?difficulty= (no board_size) still arms url-only at the default size 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > difficulty persistence (?difficulty= + localStorage round-trip — the W6 residue, T4-WU/U2) > an absent or invalid ?difficulty= falls to EASY (never a fabricated tier) 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > difficulty persistence (?difficulty= + localStorage round-trip — the W6 residue, T4-WU/U2) > difficulty round-trips through localStorage (storage-only restores the tier) 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > difficulty persistence (?difficulty= + localStorage round-trip — the W6 residue, T4-WU/U2) > a shared ?board= adopts the URL difficulty (url-board carries the tier) 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > difficulty persistence (?difficulty= + localStorage round-trip — the W6 residue, T4-WU/U2) > url difficulty wins over a disagreeing stored tier (URL-wins, twin of sudoku's) 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > a rejected link leaves the address bar > strips ?board= on the fail-closed arms 1ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > a rejected link leaves the address bar > keeps the rest of the query — only ?board= is deleted 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > a rejected link leaves the address bar > an ACCEPTED link stays in the bar 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > bare size param + storage > valid ?board_size resolves url-only 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > bare size param + storage > invalid ?board_size is ignored → fresh (default 5) 0ms
+ ✓ src/games/futoshiki/composables/persistence.test.ts > bare size param + storage > storage-only when no URL 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > encode/decode round-trip (v1, the encodeBoard path) > restores a shared board: non-zero cells become the givens, URL wins 7ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > encode/decode round-trip (v1, the encodeBoard path) > defaults difficulty to EASY, or takes ?difficulty when present 1ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > encode/decode round-trip (v1, the encodeBoard path) > encodes empty cells as literal 0 (self-describing size prefix) 1ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > codec version byte (T4-W3, ratcheted shut T5-W2 2.4d) — tag or nothing > accepts explicit v1 1ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > codec version byte (T4-W3, ratcheted shut T5-W2 2.4d) — tag or nothing > a round trip through the codec's own encoder still opens 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > codec version byte (T4-W3, ratcheted shut T5-W2 2.4d) — tag or nothing > fails closed on an untagged body (the dead v0 ratchet) 1ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > codec version byte (T4-W3, ratcheted shut T5-W2 2.4d) — tag or nothing > fails closed on any version this build does not understand 1ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > fail-closed branches > absent: no ?board → absent 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > fail-closed branches > oversize: raw longer than the 4096 DoS bound rejects before atob 1ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > fail-closed branches > bad base64: undecodable payload 1ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > fail-closed branches > non-canonical size: leading space / sign / hex / out-of-range 1ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > fail-closed branches > out-of-range cell: value above size**2, or a non-base36 char 1ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > fail-closed branches > short / long count: cells.length must equal size**4 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > fail-closed branches > missing separator dot 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > fail-closed branches > size mismatch: ?size= that disagrees with the board fails closed (URL size still wins) 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > a rejected link leaves the address bar > strips ?board= on the untagged body (the dead v0 ratchet) 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > a rejected link leaves the address bar > strips ?board= on every other fail-closed arm 3ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > a rejected link leaves the address bar > keeps the rest of the query — only ?board= is deleted 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > a rejected link leaves the address bar > an ACCEPTED link stays in the bar — the share permalink is not self-erasing 1ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > a rejected link leaves the address bar > an absent link touches nothing 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > bare size / difficulty params (no board) > a valid ?size / ?difficulty resolves url-only with boardLink absent 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > bare size / difficulty params (no board) > an invalid ?size is ignored → fresh 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > storage precedence > storage-only when no URL 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > storage precedence > a valid shared board wins over stored state 0ms
+ ✓ src/games/sudoku/composables/persistence.test.ts > storage precedence > clearPersistedBoard removes the stored state 0ms
+
+ Test Files  5 passed (5)
+      Tests  69 passed (69)
+   Start at  22:59:10
+   Duration  842ms (transform 414ms, setup 74ms, import 639ms, tests 84ms, environment 2.66s)
+
