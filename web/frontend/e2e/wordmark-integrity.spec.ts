@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
+import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
 /**
  * P1 G3.4 — WORDMARK INTEGRITY, in WebKit, against the BUILT dist.
@@ -77,6 +78,14 @@ import { attachBakeEvidence } from "./bake-evidence";
  *     removal buys is a live census: the rows red on ubuntu·webkit at `retries: 0` and say
  *     which games, which is the only instrument that can tell a rate from a cure. LEDGER row
  *     CH-62 still carries the class. Record: `evidence/design-loop/pass7/bc/`.
+ *
+ *     PASS 8 — THE CENSUS SPOKE, AND THE CLASS IS ALIVE. Observation 1 (run 30746739106,
+ *     `eabc72e6`): zero bake reds. Observation 2 (run 30748405755, `6f4fcd09`): SEVEN —
+ *     futoshiki + thermo here, five theme-bake rows next door, the widest single-run
+ *     showing across two library generations. Verdict per the census protocol: THIRD
+ *     PINNING, re-entry re-aimed `>=0.13.0`; the runner rig root-cause (CH-62's owner) is
+ *     the only other exit. The rate now stands measured at 2-of-4 de-quarantined runs
+ *     red, 4-to-7 rows when it fires, game set never twice the same.
  *
  *  2. NO FALLBACK GLYPHS. Every character of every rendered label must actually come from
  *     Fraunces. Measured by the sentinel-fallback method (lane D's, kept because the obvious
@@ -229,6 +238,13 @@ test.describe("G3.4 · wordmark integrity (WebKit, built dist)", () => {
           "svg.handwritten-logo image.logo-pose-bmp",
           game,
         );
+
+      // THE EXPLICIT QUARANTINE, third pinning — the class (all five games), linux + webkit,
+      // until the runner-rig verdict or pencil-boil >=0.13.0 (see the module header; the
+      // CH-62 census closed at obs 2: run 30748405755 redded SEVEN bake rows). AFTER the
+      // read and the evidence attach on purpose: the parked arm still bakes, still reads,
+      // and still ships the pose bitmap it read.
+      quarantineLinuxWebkitBake("wordmark-integrity", game, testInfo);
 
       // THE HOISTED VERDICT. One assertion, both terms, ahead of every branch — nothing
       // between the read and the assert can abort the row, on any platform.

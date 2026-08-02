@@ -85,8 +85,10 @@ refusal fixture only. Net −60 lines.
    deterministic fixture defects, NOT contention-class members: they do not
    join the roster, do not count as "two reds in one run" (trigger 2), and do
    not enter the rate. `futoshiki.spec.ts:45` webkit on the same run IS a
-   candidate instance (new row, one per run — signature-consistent); it rides
-   the census reruns for classification. Ledger row amended in place.
+   candidate instance (new row, one per run — signature-consistent); it joins
+   the roster provisionally — green on 30748405755's main battery, and future
+   settled-tree runs classify it (the CH-62 census closed at its observation
+   2, so no dedicated reruns exist). Ledger row amended in place.
 3. The W2 permalink race record needs no amendment — it described a REFUSED
    link's strip racing the mount deal, cured at the decode. This episode is
    that cure observed working.

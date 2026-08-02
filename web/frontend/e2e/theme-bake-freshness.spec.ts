@@ -1,5 +1,6 @@
 import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
+import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
 /**
  * P1-W4 G4.5 — THE BAKED SURFACES CARRY THE LIVE THEME'S INK, against the BUILT dist.
@@ -74,6 +75,13 @@ import { attachBakeEvidence } from "./bake-evidence";
  * what the removal buys is a live census on ubuntu·webkit at `retries: 0`, the only instrument
  * that separates a rate from a cure. The judgment is MULTI-RUN and the lead's; LEDGER row
  * CH-62 still carries the class. Record: `evidence/design-loop/pass7/bc/`.
+ *
+ * PASS 8 — THE CENSUS SPOKE: THIRD PINNING. Obs 1 (30746739106, `eabc72e6`) zero bake reds;
+ * obs 2 (30748405755, `6f4fcd09`) SEVEN — five rows of THIS spec (thermo/killer/kenken
+ * light→dark, futoshiki/kenken dark→light) plus wordmark futoshiki/thermo. The widest
+ * single-run showing, across two library generations. Verdict per the protocol: re-pin the
+ * class, eviction re-aimed `>=0.13.0`; the runner-rig root-cause (CH-62's owner) is the only
+ * other exit.
  */
 
 const GAMES = ["sudoku", "futoshiki", "thermo", "killer", "kenken"] as const;
@@ -218,7 +226,13 @@ async function settledSample(page: Page, timeout = 15000): Promise<Sample> {
   return s;
 }
 
-async function assertAgrees(s: Sample, when: string, page: Page, testInfo: TestInfo) {
+async function assertAgrees(
+  s: Sample,
+  when: string,
+  page: Page,
+  testInfo: TestInfo,
+  game: string,
+) {
   // This spec reads the SAME baked pose bitmap wordmark-integrity does, so it is exposed to
   // the same unreadable-bake red (CI run 30684983201) and gets the same rule: ship the pose
   // that was read, so the next occurrence is attributable rather than a message.
@@ -229,6 +243,12 @@ async function assertAgrees(s: Sample, when: string, page: Page, testInfo: TestI
       "svg.handwritten-logo image.logo-pose-bmp",
       when.replace(/\W+/g, "-"),
     );
+  // THE EXPLICIT QUARANTINE, third pinning — the class (all five games), linux + webkit,
+  // until the runner-rig verdict or pencil-boil >=0.13.0 (see the module header; the CH-62
+  // census closed at obs 2: run 30748405755 redded five rows of THIS spec plus two next
+  // door). Behind the evidence attach and in front of the assertions, so the parked arm
+  // still reads its bake and still ships the bitmap it read.
+  quarantineLinuxWebkitBake("theme-bake-freshness", game, testInfo);
   expect(s.logoInk, `${when}: no logo bake to read`).toBeTruthy();
   expect(s.logoInk, `${when}: the logo bake decoded to nothing`).not.toBe("no-ink");
   expect(
@@ -252,7 +272,7 @@ for (const start of ["light", "dark"] as const) {
         await loadBaked(page, game);
         const before = await settledSample(page);
         // The fresh load is the control: if this reds, the sampler is broken, not the bake.
-        await assertAgrees(before, `${game} fresh load`, page, testInfo);
+        await assertAgrees(before, `${game} fresh load`, page, testInfo, game);
 
         await page.locator("button.sun-moon-toggle").click();
 
@@ -288,7 +308,7 @@ for (const start of ["light", "dark"] as const) {
         expect(after.theme, "the toggle did not change the theme").not.toBe(
           before.theme,
         );
-        await assertAgrees(after, `${game} after ONE toggle`, page, testInfo);
+        await assertAgrees(after, `${game} after ONE toggle`, page, testInfo, game);
       });
     }
   });
