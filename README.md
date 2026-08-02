@@ -93,10 +93,10 @@ cargo test --workspace
 # Python wheel-contract: 27 passed, 0 skipped
 cd csp-solver/tests-py && uv run --no-sync pytest
 
-# e2e: 307 Playwright tests across 17 spec files in the default config (Chromium 156,
-#      WebKit 151). Five further specs are held out of it and ride two configs of their
+# e2e: 309 Playwright tests across 17 spec files in the default config (Chromium 157,
+#      WebKit 152). Five further specs are held out of it and ride two configs of their
 #      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (39 in 4).
-#      22 spec files on disk, 336 tests in all.
+#      22 spec files on disk, 338 tests in all.
 cd web/frontend && npx playwright test
 cd web/frontend && npx playwright test --config playwright-golden.config.ts && npm run test:e2e:throttle
 
@@ -115,11 +115,13 @@ cargo bench -p csp-solver --bench queens -- --test
 
 A Cloudflare Pages static deploy. Solving and generation never leave the visitor's browser, so there's no server-side solve path to secure. `_headers` carries CSP/HSTS/X-Frame-Options; `_redirects` carries the SPA fallback only.
 
+One companion Worker deploys beside it and only shared boards ever reach it: `web/relay`, a hibernating Durable Object speaking the slice of NIP-01 that trystero's signalling uses. It stores nothing, hibernates between messages, and its origin is named in the page's `connect-src`—so the two deploy together or the socket is refused.
+
 ## Declarations
 
 - **Browser support**: Chromium and WebKit, each with its own lane. `playwright.config.ts` declares the two projects and CI installs both bundles, so "solves entirely in the browser" is asserted in each engine. Two files sit out the WebKit project: `mobile-*.spec.ts` pins Chromium at file scope (the iPhone/iPad descriptors would otherwise re-run as exact duplicates), and `share-truth.spec.ts` wants a clipboard permission Playwright's WebKit doesn't grant. Gecko carries no lane; Firefox is unasserted. The declared support floor is Chrome 111, Edge 111, Firefox 128, Safari 16.4 and iOS Safari 16.4 (`web/frontend/package.json`, `browserslist`)—an arithmetic figure rather than a preference, since Tailwind v4 compiles every stylesheet against precisely those targets and nothing below them is served CSS it can parse. The bundle's own syntax targets ES2020, which sits well under that floor; `npm run test:support-floor` holds the declaration to both and refuses any guard in the source that defends a browser beneath it.
 - **English only**: the copy is authored inline in English, `<html lang="en">`, with no i18n or locale-negotiation layer.
-- **No telemetry**: nothing is measured and nothing is phoned home. The app's sole third-party network hit is the attribution avatar (`avatars.githubusercontent.com`, off first paint, `referrerpolicy="no-referrer"`); board state lives in the URL and stays on the device.
+- **No telemetry**: nothing is measured and nothing is phoned home. There is no third-party network hit at all—the attribution avatar was bundled same-origin at T4-W8, which retired the last one. Board state lives in the URL and stays on the device. A shared board opens exactly one socket, to our own signalling relay (`web/relay`, a Cloudflare Durable Object), and only for as long as the session lasts: it carries WebRTC offers and presence between the players, never board contents, and a page playing alone never loads the transport at all.
 - **No offline mode**: there's no service worker and no web-app manifest, so the shell and the wasm module come off the network at every cold load, and an unvisited game's chunk downloads on select. Once a game is resident, its generation and solving run wholly on-device.
 
 ## Published artifacts

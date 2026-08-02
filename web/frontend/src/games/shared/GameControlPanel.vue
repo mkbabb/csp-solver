@@ -787,16 +787,27 @@ function onHint() {
         <SheetWashiLabel v-if="!mobile" :text="inviteAct.washi.value" :seed="73" wide />
       </button>
       <template v-else>
-        <!-- The roster scrolls rather than stretches: sixteen rows must not make the card
-             sixteen rows taller, and the card is already the page's one scrollport. -->
-        <ul class="players-roster">
-          <li v-for="p in session.players.value" :key="p.id" class="player-row">
-            <span class="player-swatch" :style="p.ink" aria-hidden="true"></span>
-            <span class="player-name">{{ p.slug }}</span>
-            <span v-if="p.self" class="player-self">you</span>
-          </li>
-        </ul>
-        <p class="players-note">anyone with this link can write on this board</p>
+        <!-- T6.1 — THE TABLE SAYS SO WHEN IT ISN'T UP YET. Between pressing the verb and
+             being on the wire there was nothing to see, and on the abrogated public relays
+             that nothing lasted 47–66 seconds. One line holds that gap, and it is a
+             `polite` live region so the resolution is spoken once rather than drawn only. -->
+        <p v-if="!session.live.value" class="players-status" aria-live="polite">
+          connecting…
+        </p>
+        <template v-else>
+          <!-- The roster scrolls rather than stretches: sixteen rows must not make the card
+               sixteen rows taller, and the card is already the page's one scrollport. -->
+          <ul class="players-roster">
+            <li v-for="p in session.players.value" :key="p.id" class="player-row">
+              <span class="player-swatch" :style="p.ink" aria-hidden="true"></span>
+              <span class="player-name">{{ p.slug }}</span>
+              <span v-if="p.self" class="player-self">you</span>
+            </li>
+          </ul>
+          <p class="players-note">anyone with this link can write on this board</p>
+        </template>
+        <!-- Leave stays through BOTH states: a room that never answers must still be one you
+             can walk away from. -->
         <button type="button" class="players-leave" @click="leaveSession()">
           leave
         </button>
@@ -1202,7 +1213,10 @@ function onHint() {
 }
 
 .player-self,
-.players-note {
+.players-note,
+/* T6.1 — the connecting line sits at the note's own rank, because it is the note's
+   understudy: the well says one quiet thing under the roster, whichever thing is true. */
+.players-status {
   font-family: var(--font-hand);
   font-size: var(--type-caption);
   line-height: 1.25;
@@ -1211,7 +1225,8 @@ function onHint() {
   color: var(--ink-press-quiet);
 }
 
-.players-note {
+.players-note,
+.players-status {
   margin: 0.35rem 0 0;
 }
 

@@ -1,0 +1,26 @@
+# The signalling relay (T6.1). One Worker, one hibernating Durable Object.
+#
+# NO route and NO custom domain here on purpose: the chair wires the hostname at deploy, and
+# the default `*.workers.dev` URL is the surface the frontend's VITE_RELAY_URL names. A route
+# committed here would be a claim about DNS this file cannot verify.
+#
+# The two tools this Worker needs are already devDependencies of web/frontend (wrangler,
+# vitest), so it carries no package.json and no node_modules of its own:
+#   cd web/relay   && ../frontend/node_modules/.bin/wrangler dev --port 4245   # local DO
+#   cd web/frontend && npx vitest run --root ../relay                          # the rows
+#   cd web/relay   && ../frontend/node_modules/.bin/wrangler deploy            # the CHAIR's
+# `wrangler dev` needs no account and no token; `deploy` does, and the lane never runs it.
+name = "sudoku-relay"
+main = "relay.ts"
+compatibility_date = "2026-08-01"
+
+[[durable_objects.bindings]]
+name = "RELAY"
+class_name = "Relay"
+
+# SQLITE-BACKED, and that is the free-plan condition rather than a storage choice: only
+# SQLite-backed Durable Objects are included on the free plan, and this object stores NOTHING
+# (see relay.ts §NO PERSISTENCE) — the backend is the eligibility, not a database.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Relay"]

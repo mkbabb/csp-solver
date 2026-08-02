@@ -7,10 +7,11 @@ import { test, expect, type Page } from "@playwright/test";
  * transport arm is a `BroadcastChannel`, which is scoped to an origin WITHIN a context —
  * two contexts do not share it and this file would test nothing. The arm is selected by
  * `?wire=local` behind the transport seam, which is also why the row exists at all: the
- * shipped arm signals over PUBLIC Nostr relays, and a public relay in CI is a flake machine
- * wearing a test's clothes. The relay arm is verified by a two-browser manual probe against
- * the preview build, with crops; what CI owns is the protocol above the seam — join, roster,
- * both-ways sync, last-writer-wins, and the undo guard.
+ * shipped arm signals over a WebSocket relay (ours since T6.1 — `web/relay`, a hibernating
+ * Durable Object; the public list is abrogated), and no socket belongs in CI, however fast
+ * its far end. The relay arm is verified where it can be: `wrangler dev` on :4245, two real
+ * pages, timings and crops in the T6.1 record. What CI owns is the protocol above the seam —
+ * join, roster, the connecting affordance, both-ways sync, last-writer-wins, the undo guard.
  *
  * THE FLOW IS THE PRODUCT'S, not a fixture's: page A presses the well's one verb, which mints
  * the room and writes `?board=&s=` into its own address bar; page B opens THAT URL. Nothing
@@ -68,6 +69,8 @@ async function invite(page: Page): Promise<string> {
 
 const roster = (page: Page) =>
   page.locator(".controls-card .players-roster .player-row");
+
+const status = (page: Page) => page.locator(".controls-card .players-status");
 
 test("solo boot opens no room, and pays no bytes for one", async ({ page }) => {
   const chunks: string[] = [];
@@ -237,6 +240,42 @@ test("a deal is an epoch: both boards follow, and neither undo stack crosses it"
   await b.locator(".sudoku-cell input").first().press("Meta+z");
   await b.waitForTimeout(250);
   expect(await boardSignature(b)).toBe(await boardSignature(a));
+
+  await ctx.close();
+});
+
+test("the table says connecting until the room answers, then shows who is at it", async ({
+  browser,
+}) => {
+  // T6.1. A page that FOLLOWED a link is joining somebody else's table, and until that room
+  // answers it has no honest roster to draw — which on the abrogated public relays was 47–66
+  // seconds of a well that looked joined and wasn't. The room here is empty on purpose: the
+  // waiting is the state under test, so it is entered deliberately rather than raced for.
+  const room = `t61-${Math.random().toString(36).slice(2, 10)}`;
+  const link = `${SOLO}&wire=local&s=${room}`;
+
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await boot(a, link);
+
+  await expect(status(a)).toHaveText("connecting…");
+  await expect(roster(a)).toHaveCount(0);
+  await expect(a.locator(".controls-card .players-note")).toHaveCount(0);
+  // The way out of a room that never answers stays on the card through both states.
+  await expect(a.locator(".controls-card .players-leave")).toBeVisible();
+
+  // Somebody arrives. The `hi` ack IS the answer, so the line resolves on the wire's own
+  // traffic rather than on a timer — nothing here sleeps.
+  const b = await ctx.newPage();
+  await boot(b, link);
+
+  for (const p of [a, b]) {
+    await expect(roster(p)).toHaveCount(2);
+    await expect(status(p)).toHaveCount(0);
+    await expect(p.locator(".controls-card .players-note")).toHaveText(
+      "anyone with this link can write on this board",
+    );
+  }
 
   await ctx.close();
 });

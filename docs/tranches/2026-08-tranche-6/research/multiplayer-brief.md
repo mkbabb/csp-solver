@@ -282,3 +282,28 @@ The owner: "plan to handle at least 16+ players, though within reason. KISS."
    never at 16 — on collision, re-roll (one loop, no numbering suffix).
 6. **Cursor slice note**: at 16 peers, cursor broadcasts throttle (rAF-coalesced or
    ~80ms, whichever the slice's incumbent idiom prefers). MVP cut 1 is unaffected.
+
+---
+
+## T6.1 RIDER (post-close, the owner's order — overrides body and both riders)
+
+1. **§7's "relay availability" risk is CLOSED, not mitigated.** The public relay
+   list is ABROGATED. `web/relay/` ships the NIP-01 subset trystero speaks on a
+   hibernating Durable Object beside the Pages deployment, and `relayConfig.urls`
+   is the one config word the seam promised. There is no fallback list, by
+   election: 47–66 s first contact is not a fallback. Measured on the local rig —
+   socket open 5–7 ms, first contact 57–322 ms (4 of 5 runs; the fifth 7.1 s on
+   trystero's 5,333 ms announce interval), digit 1–31 ms, prune 1–3 ms.
+2. **CSP narrows with it.** `connect-src 'self' wss:` → `'self'` plus the named
+   relay origin. The scheme-wide grant existed because a rotating public list has
+   no origin to name; one operator has one.
+3. **The well says "connecting…"** while the wire isn't carrying or the room hasn't
+   answered, and draws no roster until it has. A page that OPENED the table is at it
+   as soon as the socket opens; a page that followed a link waits for the room,
+   which is the state that used to be invisible.
+4. **§6's verification list gains its honest arm**: the relay arm is probed against
+   `wrangler dev` on :4245 with two SEPARATE browser contexts (a BroadcastChannel
+   cannot cross one), which is the proof the localWire e2e deliberately cannot give.
+5. **The trie veto (§8/rider-1 §6) is declined at its price**: the op ledger carries
+   20,000 ops from 16 authors, adversarially interleaved, to byte-identical
+   convergence across six replicas — `src/games/shared/useSession.stress.test.ts`.

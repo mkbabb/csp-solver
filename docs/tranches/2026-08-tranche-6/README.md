@@ -39,15 +39,23 @@ over bespoke, visual verification on real surfaces as the standard of proof.
    those words want (existing undo spine as per-player ledger, per-cell Lamport-LWW
    convergence) and documents the estate's prior trie rejection. Veto restores the
    literal trie at its priced cost.
-3. **Transport stays swappable.** Nostr-signaled WebRTC is the shipped arm; the
-   Cloudflare Durable-Object relay (hibernating, free-plan, same vendor as Pages) is
-   the banked fallback — one config word plus ~100 Worker lines — if public
-   signaling or no-TURN NAT failure (~8–15% of pairs) proves unacceptable.
+3. **Transport stays swappable — and the swap has been taken (AMENDED at T6.1,
+   2026-08-02, on the owner's order).** Nostr-signaled WebRTC is still the arm;
+   what changed is whose relay carries it. The Cloudflare Durable-Object relay is
+   no longer banked, it is SHIPPED (`web/relay/` — hibernating, free-plan,
+   SQLite-backed, same vendor as Pages), and the public relay list is ABROGATED:
+   nothing falls back to it, because 47–66 s to first contact is not a fallback.
+   The seam's promise was paid literally — `relayConfig.urls`, one config word —
+   and the seam remains the swap point for the NEXT arm, not this one. Measured on
+   the local rig (`wrangler dev`, two separate browser contexts): socket open 5–7 ms
+   after the invite, first contact 57–322 ms on four runs of five and 7.1 s on the
+   fifth (trystero's own 5,333 ms announce interval is the ceiling, not the relay),
+   digit sync 1–31 ms, peer prune 1–3 ms.
    **Scale bar (the owner's order, 2026-08-02): the code carries NO player cap and
    must handle 16+ within reason.** The mesh arm is honestly sized for it — board
    ops are bytes at human pace; its practical ceiling is connection setup at
-   ~16–24 peers — and the DO relay doubles as the scale arm beyond that (star
-   topology, room size a mesh won't carry).
+   ~16–24 peers — and the DO relay is now also the scale arm beyond that (star
+   topology, room size a mesh won't carry), reachable without a second decision.
 4. **CSP `connect-src` gains `wss:` in the same commit as the transport** (the
    ruling-lands-with-its-config law; verified on the deployed edge at close).
 5. **Color story is owned once** (AMENDED by the owner's 16+ order, 2026-08-02):
@@ -64,9 +72,12 @@ over bespoke, visual verification on real surfaces as the standard of proof.
    Controls owns the Fill washi's final text; voice's `:708` edit dies.
 7. **WASM-only multiplayer is declined, with numbers.** Every CRDT wasm arm
    (automerge 2,127,414 B) detonates the 127,500 B lean band; the owner's serverless
-   preference is honored by the no-server transport instead, and the DO relay
-   (ruling 3) is the Cloudflare fallback answering the owner's follow-up. The trie
-   veto joins multiplayer §8's owner questions, priced.
+   preference is honored by the no-server transport instead — and the DO relay
+   (ruling 3) keeps it, since a hibernating object is serverless in the sense the
+   owner meant: no host to run, no bill while nobody plays. The trie veto is
+   DECLINED (T6.1) on the condition it was priced against — the op ledger proven at
+   scale: 20,000 ops, 16 authors, adversarial interleave, six replicas byte-identical
+   (`useSession.stress.test.ts`).
 
 ## Verification bar (per lane, per merge — nothing heavier)
 

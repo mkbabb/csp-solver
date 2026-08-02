@@ -31,21 +31,38 @@
  * `canUndo`/`undoDepth`/`isDirty` consumer is untouched. The one cost is `useUndoHistory`'s
  * no-clobber guard, which is documented there.
  *
- * TRANSPORT IS A SEAM (README ruling 3). Two arms behind four methods: `relayWire` (trystero
- * over Nostr, `import()`ed so a solo player pays ZERO bytes for it) and `localWire`
- * (`BroadcastChannel`, ~20 lines) for a second tab on the same device — which is also what the
- * e2e battery drives, because a public relay in CI is a flake machine. The banked Cloudflare
- * Durable-Object relay lands behind the same four methods if public signalling ever proves
- * unacceptable.
+ * TRANSPORT IS A SEAM (README ruling 3). Two arms behind the same methods: `relayWire`
+ * (trystero's Nostr strategy, `import()`ed so a solo player pays ZERO bytes for it) and
+ * `localWire` (`BroadcastChannel`, ~20 lines) for a second tab on the same device — which is
+ * also what the e2e battery drives, because a relay in CI is a flake machine.
+ *
+ * THE RELAY IS OURS (T6.1). The public Nostr relay list is ABROGATED, and the measurement is
+ * the reason: 47–66 SECONDS to first contact on strangers' machines carrying strangers'
+ * traffic. `web/relay/` is ~150 lines of NIP-01 on a hibernating Durable Object next to the
+ * Pages deployment, and switching to it cost exactly the one config word the seam promised —
+ * `relayConfig.urls` below. What the seam is still FOR is the next swap, not this one.
  *
  * NO PLAYER CAP ANYWHERE. Board ops are bytes at human pace; the mesh's practical ceiling is
  * connection setup, not traffic. The room simply isn't capped.
  */
-import { computed, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import type { inkFor, slugFor } from "./playerIdentity";
 
-/** The app's own namespace on the public relays — rooms are scoped under it. */
+/** The app's own namespace on the relay — rooms are scoped under it. */
 const APP_ID = "sudoku-babb-dev";
+
+/**
+ * OUR relay, and only ours. One entry, because a list of one is what a relay you operate
+ * means: no redundancy shuffle, no slowest-of-five, no stranger's queue. `VITE_RELAY_URL`
+ * points a local `wrangler dev` (or a chair's re-hostnamed deployment) at the same seam —
+ * the probe rig uses it and so does the deploy, so the two never drift into different code.
+ *
+ * The CSP grant in `public/_headers` NAMES this origin. If the hostname moves, that line
+ * moves in the same deploy or the socket is blocked on the edge and nowhere else.
+ */
+const RELAY_URLS = [
+  import.meta.env.VITE_RELAY_URL || "wss://sudoku-relay.mkbabb.workers.dev",
+];
 
 /** `[lamport, author]`. Total order, and the tie-break is a peer id, so it is the SAME order
  *  on every page. Used for cells (which write wins) and for epochs (which board wins). */
@@ -62,6 +79,63 @@ const newer = (a: Stamp, b: Stamp) => a[0] > b[0] || (a[0] === b[0] && a[1] > b[
 export const wins = (incoming: Stamp, held?: Stamp): boolean =>
   !held || newer(incoming, held);
 
+// ── The op ledger ─────────────────────────────────────────────────────────────────
+
+/** One cell write, decoded off the wire. */
+export interface Op {
+  pos: number;
+  value: number;
+  solved: boolean;
+  stamp: Stamp;
+  epoch: Stamp;
+}
+
+/** What a page knows: the highest lamport it has seen, the board it is holding, and who owns
+ *  which cell. Three fields that only ever move together, so they are one object. */
+export interface Ledger {
+  lamport: number;
+  epoch: Stamp;
+  clock: Record<string, Stamp>;
+}
+
+/** `applied` — the cell is the op's. `stale` — an older write, or an older board; drop it.
+ *  `ahead` — a write against a board this page hasn't got, so ask for that board. */
+export type Verdict = "applied" | "stale" | "ahead";
+
+/**
+ * THE LEDGER'S ONE DECISION, and every op in the room passes through it. Pure over its
+ * argument — no wire, no Vue, no board — which is what lets the large-run proof drive twenty
+ * thousand ops through THIS function rather than through a re-implementation that would prove
+ * only itself (T6.1, the condition the trie veto was declined on).
+ *
+ * Order matters inside it: the lamport merge happens FIRST and unconditionally, because a page
+ * that ignores the clock of a write it rejects will mint its next stamp behind the room and
+ * lose a cell it should have won.
+ */
+export function admit(led: Ledger, op: Op): Verdict {
+  led.lamport = Math.max(led.lamport, op.stamp[0]);
+  if (op.epoch[0] !== led.epoch[0] || op.epoch[1] !== led.epoch[1])
+    return newer(op.epoch, led.epoch) ? "ahead" : "stale";
+  const pos = String(op.pos);
+  if (!wins(op.stamp, led.clock[pos])) return "stale";
+  led.clock[pos] = op.stamp;
+  return "applied";
+}
+
+/** A LOCAL write, stamped into the same ledger the wire's writes land in — one clock, one
+ *  rule, no second path for your own digits. */
+export function mintOp(
+  led: Ledger,
+  author: string,
+  pos: number,
+  value: number,
+  solved: boolean,
+): Op {
+  const stamp: Stamp = [++led.lamport, author];
+  led.clock[String(pos)] = stamp;
+  return { pos, value, solved, stamp, epoch: led.epoch };
+}
+
 type Kind = "hi" | "op" | "st";
 
 /** The wire carries JSON and nothing else — no binary framing to version, and the board blob
@@ -69,11 +143,15 @@ type Kind = "hi" | "op" | "st";
 type Json = null | string | number | boolean | Json[] | { [k: string]: Json };
 type Msg = { [k: string]: Json };
 
-/** The four methods a transport owes the session. Everything above this line is arm-agnostic. */
+/** What a transport owes the session. Everything above this line is arm-agnostic. */
 interface Wire {
   selfId: string;
   send: (kind: Kind, data: Msg, to?: string) => void;
   leave: () => void;
+  /** Resolves when this arm is actually carrying — the socket is OPEN, not merely asked for.
+   *  It is what the table's "connecting…" line waits on, so an arm that cannot connect never
+   *  claims a table (T6.1). */
+  carrying: Promise<void>;
 }
 
 interface Handlers {
@@ -134,17 +212,22 @@ function localWire(room: string, h: Handlers): Wire {
       bye();
       ch.close();
     },
+    // A channel on this device is open the moment it is constructed — there is nothing to
+    // connect TO. The waiting this arm does is for company, not for a socket.
+    carrying: Promise.resolve(),
   };
 }
 
 /**
- * trystero over the Nostr strategy — the shipped arm. `import()`ed, so the ~22 KB gz of
- * relay client and crypto never reaches a page that is playing alone; the e2e asserts that
- * absence on solo boot rather than minting a byte gate for it.
+ * trystero over the Nostr strategy, pointed at OUR relay — the shipped arm. `import()`ed, so
+ * the ~22 KB gz of relay client and crypto never reaches a page that is playing alone; the
+ * e2e asserts that absence on solo boot rather than minting a byte gate for it.
  */
 async function relayWire(room: string, h: Handlers): Promise<Wire> {
-  const { joinRoom, selfId } = await import("trystero/nostr");
-  const knock = joinRoom({ appId: APP_ID }, room);
+  const { joinRoom, selfId, getRelaySockets } = await import("trystero/nostr");
+  // `relayConfig.urls` REPLACES the default list outright (`getRelays`, core/utils) — the
+  // public relays are not a fallback behind ours, they are gone.
+  const knock = joinRoom({ appId: APP_ID, relayConfig: { urls: RELAY_URLS } }, room);
   const acts = (["hi", "op", "st"] as const).map((kind) => {
     const act = knock.makeAction<Msg>(kind);
     act.onMessage = (data, ctx) => h.message(kind, data, ctx.peerId);
@@ -161,6 +244,14 @@ async function relayWire(room: string, h: Handlers): Promise<Wire> {
         // watching for it — there is nothing to retry and nothing to report.
       }),
     leave: () => void knock.leave(),
+    // `joinRoom` opens the sockets synchronously (core's `init` runs inside it), so the map is
+    // already populated here; `getRelaySockets` is trystero's own handle on them and the only
+    // honest answer to "is this page on the relay yet".
+    carrying: new Promise<void>((open) => {
+      const socks = Object.values(getRelaySockets() as Record<string, WebSocket>);
+      if (socks.some((s) => s.readyState === WebSocket.OPEN)) return open();
+      for (const s of socks) s.addEventListener("open", () => open(), { once: true });
+    }),
   };
 }
 
@@ -182,13 +273,17 @@ const present = ref<string[]>([]);
 /** Every peer this page has ever seen. Departures leave the roster but NOT this map: their
  *  digits are still on the board and must keep their colour. */
 const known = ref<Record<string, Omit<Player, "self">>>({});
-const clock = ref<Record<string, Stamp>>({});
+/** The ledger this page keeps. `reactive` rather than a `ref` of a frozen copy: the ink
+ *  computed reads it per cell, and a room of sixteen writing at speed should not re-copy the
+ *  whole clock per op to say so. */
+const ledger = reactive<Ledger>({ lamport: 0, epoch: [0, ""], clock: {} });
+/** Is this page ACTUALLY at the table — carrying on the wire, and answered by the room if it
+ *  joined someone else's? Until then the well says so out loud (T6.1). */
+const live = ref(false);
 
 let wire: Wire | null = null;
 let source: SessionSource | null = null;
 let ident: { slugFor: typeof slugFor; inkFor: typeof inkFor } | null = null;
-let lamport = 0;
-let epoch: Stamp = [0, ""];
 let inkCursor = 0;
 /** One suppressed publish per adopted board — a flag rather than a timer, because the
  *  generation watch that would echo it runs on Vue's own flush, not on ours. */
@@ -196,6 +291,7 @@ let adopted = 0;
 
 export const session = {
   roomId,
+  live,
   /** you first, then everyone else in the order this page met them. */
   players: computed<Player[]>(() => {
     const me = known.value[selfId.value];
@@ -215,8 +311,8 @@ export const session = {
  */
 export const authorInk = computed(() => {
   const out: Record<string, Record<string, string>> = {};
-  for (const pos of Object.keys(clock.value)) {
-    const author = clock.value[pos][1];
+  for (const pos of Object.keys(ledger.clock)) {
+    const author = ledger.clock[pos][1];
     if (author === selfId.value) continue;
     const p = known.value[author];
     if (p) out[pos] = p.ink;
@@ -270,6 +366,7 @@ function onPeer(id: string, joined: boolean): void {
     present.value = present.value.filter((p) => p !== id);
     return;
   }
+  live.value = true; // somebody is here, so the table is
   if (!known.value[id]) known.value = { ...known.value, [id]: mint(id) };
   if (!present.value.includes(id)) present.value = [...present.value, id];
 }
@@ -291,13 +388,39 @@ function sendState(to?: string): void {
   const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
   wire.send(
     "st",
-    plain({ b: source.snapshot() as Json, c: clock.value, e: epoch[0], ea: epoch[1] }),
+    plain({
+      b: source.snapshot() as Json,
+      c: ledger.clock,
+      e: ledger.epoch[0],
+      ea: ledger.epoch[1],
+    }),
     to,
   );
 }
 
+/** An op, between the ledger's shape and the wire's three-letter one. */
+const toWire = (o: Op): Msg => ({
+  p: o.pos,
+  v: o.value,
+  s: o.solved ? 1 : 0,
+  l: o.stamp[0],
+  a: o.stamp[1],
+  e: o.epoch[0],
+  ea: o.epoch[1],
+});
+const fromWire = (d: Msg): Op => ({
+  pos: d.p as number,
+  value: d.v as number,
+  solved: !!d.s,
+  stamp: [d.l as number, d.a as string],
+  epoch: [d.e as number, d.ea as string],
+});
+
 function onMessage(kind: Kind, d: Msg, from: string): void {
   if (!wire || !source) return;
+  // ANYTHING heard from the room is the room answering: a page that joined someone else's
+  // table is at it from here (T6.1).
+  live.value = true;
   if (kind === "hi") {
     if (!d.ack) wire.send("hi", { ack: true }, from);
     if (holdsTheBoard(from)) sendState(from);
@@ -305,33 +428,33 @@ function onMessage(kind: Kind, d: Msg, from: string): void {
   }
   if (kind === "st") {
     const e: Stamp = [d.e as number, d.ea as string];
-    lamport = Math.max(lamport, e[0]);
-    if (!newer(e, epoch)) return; // an older board than the one this page holds
-    epoch = e;
-    clock.value = (d.c as Record<string, Stamp>) ?? {};
+    ledger.lamport = Math.max(ledger.lamport, e[0]);
+    if (!newer(e, ledger.epoch)) return; // an older board than the one this page holds
+    ledger.epoch = e;
+    ledger.clock = (d.c as Record<string, Stamp>) ?? {};
     adopted++;
     source.restore(d.b);
     return;
   }
-  // `op` — the cell write.
-  lamport = Math.max(lamport, d.l as number);
-  if (d.e !== epoch[0] || d.ea !== epoch[1]) {
-    // A write against a board this page isn't holding. Ask for that board rather than ink a
-    // digit into the wrong grid; an op from an OLDER epoch just drops.
-    if (newer([d.e as number, d.ea as string], epoch)) wire.send("hi", {});
-    return;
-  }
-  const pos = String(d.p);
-  const next: Stamp = [d.l as number, d.a as string];
-  if (!wins(next, clock.value[pos])) return;
-  clock.value = { ...clock.value, [pos]: next };
-  source.applyValue(d.p as number, d.v as number, !!d.s);
+  // `op` — the cell write, decided by the ledger and by nothing else.
+  const op = fromWire(d);
+  const verdict = admit(ledger, op);
+  // `ahead` — a write against a board this page isn't holding. Ask for that board rather than
+  // ink a digit into the wrong grid; an op from an OLDER epoch just drops.
+  if (verdict === "ahead") wire.send("hi", {});
+  if (verdict !== "applied") return;
+  source.applyValue(op.pos, op.value, op.solved);
 }
 
 /**
  * Join a room. `starter` is the page that MINTED the id — it opens the first epoch, so a
  * joiner (who starts at `[0, ""]`) always adopts the board rather than two pages staring
  * past each other at epoch zero.
+ *
+ * IT IS ALSO WHICH TABLE YOU ARE AT, which is what the "connecting…" line reads (T6.1). Open
+ * your own table and you are at it as soon as the wire carries — being alone at a table you
+ * opened is not a failure to connect. Follow someone's link and you are connecting until that
+ * room answers, because a table nobody is sitting at is exactly what you are waiting to learn.
  */
 export async function joinSession(room: string, starter = false): Promise<void> {
   if (roomId.value === room) return;
@@ -343,7 +466,13 @@ export async function joinSession(room: string, starter = false): Promise<void> 
   roomId.value = room;
   selfId.value = wire.selfId;
   known.value = { [wire.selfId]: mint(wire.selfId) };
-  if (starter) epoch = [++lamport, wire.selfId];
+  if (starter) {
+    ledger.epoch = [++ledger.lamport, wire.selfId];
+    const mine = wire;
+    void wire.carrying.then(() => {
+      if (wire === mine) live.value = true; // not a room this page has since left
+    });
+  }
   wire.send("hi", {});
 }
 
@@ -365,9 +494,10 @@ function teardown(): void {
   selfId.value = "";
   present.value = [];
   known.value = {};
-  clock.value = {};
-  lamport = 0;
-  epoch = [0, ""];
+  ledger.lamport = 0;
+  ledger.epoch = [0, ""];
+  ledger.clock = {};
+  live.value = false;
   inkCursor = 0;
   adopted = 0;
 }
@@ -385,17 +515,7 @@ export function leaveSession(): void {
  *  Outside a session this is one boolean test and a return — the solo cost of the feature. */
 export function noteWrite(pos: number, value: number, solved: boolean): void {
   if (!wire) return;
-  const stamp: Stamp = [++lamport, wire.selfId];
-  clock.value = { ...clock.value, [String(pos)]: stamp };
-  wire.send("op", {
-    p: pos,
-    v: value,
-    s: solved ? 1 : 0,
-    l: stamp[0],
-    a: stamp[1],
-    e: epoch[0],
-    ea: epoch[1],
-  });
+  wire.send("op", toWire(mintOp(ledger, wire.selfId, pos, value, solved)));
 }
 
 /**
@@ -409,7 +529,7 @@ export function publishBoard(): void {
     adopted--; // this bump IS the board we just took off the wire — don't echo it back
     return;
   }
-  epoch = [++lamport, wire.selfId];
-  clock.value = {};
+  ledger.epoch = [++ledger.lamport, wire.selfId];
+  ledger.clock = {};
   sendState();
 }

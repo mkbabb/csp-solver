@@ -19,6 +19,11 @@ web/frontend/coverage/
 # run it grades — a committed one is exactly the stale evidence the gate's freshness check
 # exists to red on.
 web/frontend/vitest-report.json
+# T6.1: what `wrangler dev` writes beside the relay — the miniflare local-runtime state and
+# its cf cache. The relay itself has no node_modules of its own (its two tools, wrangler and
+# vitest, come from the frontend's devDependencies — see web/relay/wrangler.toml).
+web/relay/.wrangler/
+web/relay/node_modules/
 
 # IDE
 .vscode/
