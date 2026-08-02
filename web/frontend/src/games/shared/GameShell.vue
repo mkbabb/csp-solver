@@ -186,6 +186,7 @@ function onCandidatePeekEnd() {
         @redo="model.redo()"
         @hint="boardHost?.hintFocusedCell()"
         :share="onShare"
+        :share-session="model.shareSession"
         @peek-start="startPeek()"
         @peek-end="endPeek()"
       />

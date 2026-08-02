@@ -15,6 +15,16 @@ import { useUserMarks } from "./useUserMarks";
 import { useAssists } from "./useAssists";
 import { registerDirtySource, clearDirtySource } from "./useDirtyBoard";
 import {
+  authorInk,
+  clearSessionSource,
+  joinSession,
+  noteWrite,
+  publishBoard,
+  readSessionParam,
+  registerSessionSource,
+  startSession,
+} from "./useSession";
+import {
   clearStagingSource,
   consumeHandoff,
   mountedGameId,
@@ -251,6 +261,16 @@ export function useGameState<
     applyMark: (slot, pos, list) => setMarkSlot(slot, String(pos), list),
     restoreBoard: (board, marks) => restoreBoardState(board, marks),
     pending: () => loading.value,
+    readValue: (pos) => values.value[String(pos)] ?? 0,
+    // T6 mark 13 — the whole local op stream, from the one push choke. A `value` entry is one
+    // op; a Fill sweep is its deltas; a `mark` stays private (notes are personal, cuts 1-2);
+    // a `board` entry is an EPOCH, published by the generation watch below rather than as 81
+    // writes. Outside a session `noteWrite` is one boolean test.
+    onEntry: (e) => {
+      if (e.kind === "value") noteWrite(e.pos, e.next, e.tone === "solved");
+      else if (e.kind === "batch")
+        for (const d of e.deltas) noteWrite(d.pos, d.next, d.tone === "solved");
+    },
   });
 
   // T4-WU/U3 — the conditional-confirm dirty gate. `isDirty` = undo-depth non-empty (E9 crit #8,
@@ -266,6 +286,38 @@ export function useGameState<
   // out the incoming board's source. Only one live board is ever mounted, so one slot suffices.
   registerDirtySource(isDirty);
   onUnmounted(() => clearDirtySource(isDirty));
+
+  // ── THE SESSION (T6 mark 13) ─────────────────────────────────────────────────────
+  // The same register-a-source shape: one live board, one slot, identity-guarded clear. What
+  // the session gets is three verbs and nothing else — it never reaches into the machine.
+  //  · `applyValue` routes a peer's write through the SAME two effects a local write and an
+  //    undo replay use, so a remote digit is a digit and a remote reveal is solver ink.
+  //  · `restore` adopts a board off the wire AND clears the log. THE EPOCH RULE: undo never
+  //    crosses a board swap, so the whole class of "my undo restores a board nobody else has"
+  //    dies in one line. (Solo is untouched: no session, no `restore`.)
+  const sessionSource = {
+    applyValue: (pos: number, value: number, solved: boolean) =>
+      solved ? applyHintInk(pos, value) : applyCellValue(pos, value),
+    snapshot: () => ({ b: snapshotBoard(), m: snapshotMarks() }),
+    restore: (blob: unknown) => {
+      const { b, m } = blob as { b: BoardBlob; m: MarksBlob };
+      restoreBoardState(b, m);
+      clearUndo();
+    },
+  };
+  registerSessionSource(sessionSource);
+  onUnmounted(() => clearSessionSource(sessionSource));
+
+  // A board-REPLACING act — deal, clear, an undone deal, a size commit — is a new epoch for
+  // the room, and every one of them bumps the generation. One watch covers all four at their
+  // single choke; `solve()` fills in place without bumping, so it publishes for itself.
+  watch(boardGeneration, () => publishBoard());
+
+  // THE PERMALINK IS THE SESSION. `?board=` carries the puzzle exactly as it always has and
+  // `?s=` carries the room — so "share into a live game" is the shipped share act plus one
+  // parameter, and opening the link IS the join.
+  const invitedTo = readSessionParam();
+  if (invitedTo) void joinSession(invitedTo);
 
   function initBoard() {
     values.value = {};
@@ -525,6 +577,7 @@ export function useGameState<
       // the same blob) and the celebration crest is untouched. A no-fill solve records nothing.
       if (cellsToAnimate.size > 0) {
         recordBoard(prevBlob, snapshotBoard(), prevMarks, snapshotMarks(), "solve");
+        publishBoard(); // a solve is an epoch too — it just doesn't bump the generation
       }
       queueSave();
     } catch (e) {
@@ -792,6 +845,13 @@ export function useGameState<
     return navigator.clipboard.writeText(window.location.href);
   }
 
+  /** The invite (T6 mark 13) — the share act with a room on it. `startSession` writes `?s=`
+   *  synchronously, so the href `shareBoard` copies is already the whole capability. */
+  function shareSession(): Promise<void> {
+    startSession();
+    return shareBoard();
+  }
+
   // ── Initialization ───────────────────────────────────────────────
   // THE PICKER HANDOFF (T4-P1 F4) — consumed HERE, before init, id-keyed to this mount. A
   // staged pair seeds the ONE mount deal (`canRestore` is ANDed with `!staged`, so a saved
@@ -942,6 +1002,8 @@ export function useGameState<
     gradeSignature,
     gradeTally,
     shareBoard,
+    shareSession,
+    authorInk,
     linkError,
     pencilMarks,
     setMarksActive,

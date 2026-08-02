@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { useUndoHistory } from "./useUndoHistory";
+import { useUndoHistory, type BatchDelta } from "./useUndoHistory";
 
 // FE-unit layer (T4-WU / E9): the history spine — one tagged inverse-delta log over a
 // content-hash-deduped board pool. The dispatcher is exercised through the effect it invokes
@@ -22,24 +22,60 @@ const board = (tag: string, values: Record<string, number> = {}): Board => ({
   values,
 });
 
+/**
+ * T6 mark 13 — THE HARNESS NOW HOLDS A BOARD, and it has to. The no-clobber guard reads the
+ * cell's CURRENT digit, so a harness whose effects wrote nowhere would report every cell as 0
+ * and skip every undo. The live machine writes and THEN records (`setCell` → `applyCellValue`
+ * → `recordEdit`), so the recorders below are wrapped to do the same: `cells` is the board,
+ * the effects mutate it exactly as the composable's do, and a spec that wants the guard to
+ * FIRE writes over a cell through `peerWrites` — which is what a teammate's op does.
+ */
 function harness(pendingInitial = false) {
   let paused = pendingInitial;
+  const cells: Record<number, number> = {};
   const effects = {
-    applyValue: vi.fn<(pos: number, value: number) => void>(),
-    applyHintInk: vi.fn<(pos: number, value: number) => void>(),
-    removeHintInk: vi.fn<(pos: number, prev: number) => void>(),
+    applyValue: vi.fn((pos: number, value: number) => {
+      cells[pos] = value;
+    }),
+    applyHintInk: vi.fn((pos: number, value: number) => {
+      cells[pos] = value;
+    }),
+    removeHintInk: vi.fn((pos: number, prev: number) => {
+      cells[pos] = prev;
+    }),
     applyMark:
       vi.fn<(slot: "corner" | "center", pos: number, list: number[]) => void>(),
-    restoreBoard: vi.fn<(b: Board, m: Marks) => void>(),
+    restoreBoard: vi.fn((b: Board, _m: Marks) => {
+      Object.assign(cells, b.values);
+    }),
     pending: () => paused,
+    readValue: (pos: number) => cells[pos] ?? 0,
+    onEntry: vi.fn<(entry: unknown) => void>(),
   };
   const h = useUndoHistory<Board, Marks>(effects);
   return {
     effects,
+    cells,
+    /** a teammate's write — lands on the board WITHOUT entering this player's log. */
+    peerWrites: (pos: number, value: number) => {
+      cells[pos] = value;
+    },
     pause: (v: boolean) => {
       paused = v;
     },
     ...h,
+    recordEdit: (pos: number, prev: number, next: number) => {
+      cells[pos] = next;
+      h.recordEdit(pos, prev, next);
+    },
+    recordHintInk: (pos: number, prev: number, next: number) => {
+      cells[pos] = next;
+      h.recordHintInk(pos, prev, next);
+    },
+    recordBatch: (deltas: BatchDelta[]) => {
+      for (const d of deltas) cells[d.pos] = d.next;
+      h.recordBatch(deltas);
+    },
   };
 }
 
@@ -356,5 +392,80 @@ describe("canUndo / canRedo / undoDepth — the signals a dirty gate reads", () 
     expect(canUndo.value).toBe(false);
     expect(canRedo.value).toBe(true);
     expect(undoDepth.value).toBe(0);
+  });
+});
+
+// ── T6 mark 13 — the log as the PER-PLAYER ledger ────────────────────────────────
+
+describe("onEntry — the one seam the local op stream leaves by", () => {
+  it("fires after every push, with the entry, and never for a peer's write", () => {
+    const { effects, recordEdit, recordBatch, recordMark, peerWrites } = harness();
+    recordEdit(5, 0, 3);
+    recordBatch([{ pos: 7, prev: 0, next: 4, tone: "solved" }]);
+    recordMark(9, { corner: { prev: [], next: [1] } });
+    peerWrites(11, 8); // a teammate's digit — on the board, off this player's log
+    expect(
+      effects.onEntry.mock.calls.map(([e]) => (e as { kind: string }).kind),
+    ).toEqual(["value", "batch", "mark"]);
+  });
+
+  it("a no-op write fires nothing — the immunity primitive holds at the new seam too", () => {
+    const { effects, recordEdit, recordBatch } = harness();
+    recordEdit(5, 4, 4);
+    recordBatch([{ pos: 7, prev: 2, next: 2 }]);
+    expect(effects.onEntry).not.toHaveBeenCalled();
+  });
+});
+
+describe("the no-clobber guard (BORN RED — the one silently-wrong-able spot)", () => {
+  it("skips and CONSUMES an undo whose cell a peer has overwritten", () => {
+    const { effects, cells, recordEdit, undo, canUndo, canRedo, peerWrites } =
+      harness();
+    recordEdit(5, 0, 3); // I wrote 3 over an empty cell
+    peerWrites(5, 8); // a teammate wrote 8 over my 3 — the cell is theirs now
+    undo();
+    // Born RED here: without the guard this called `applyValue(5, 0)` and DELETED the 8,
+    // then propagated the deletion as this player's authoritative write.
+    expect(effects.applyValue).not.toHaveBeenCalled();
+    expect(cells[5]).toBe(8); // their digit stands
+    // Consumed, not refused: the undo is spent, so the pointer moved.
+    expect(canUndo.value).toBe(false);
+    expect(canRedo.value).toBe(true);
+  });
+
+  it("undoes the deltas of a batch a peer half-overwrote, and only those", () => {
+    const { effects, cells, recordBatch, undo, peerWrites } = harness();
+    recordBatch([
+      { pos: 1, prev: 0, next: 4, tone: "solved" },
+      { pos: 2, prev: 0, next: 6, tone: "solved" },
+    ]);
+    peerWrites(2, 9);
+    undo();
+    expect(effects.removeHintInk.mock.calls).toEqual([[1, 0]]); // 2 skipped, 1 undone
+    expect(cells).toMatchObject({ 1: 0, 2: 9 });
+  });
+
+  it("solo is bit-identical: nothing else writes, so the guard never fires", () => {
+    const { effects, recordEdit, undo, redo } = harness();
+    recordEdit(5, 0, 3);
+    recordEdit(5, 3, 7);
+    undo();
+    undo();
+    redo();
+    expect(effects.applyValue.mock.calls).toEqual([
+      [5, 3],
+      [5, 0],
+      [5, 3],
+    ]);
+  });
+
+  it("the cap still evicts at 200 under mixed local + peer traffic", () => {
+    const { recordEdit, peerWrites, _historyLength, undoDepth } = harness();
+    for (let i = 0; i < 250; i++) {
+      recordEdit(i, 0, 1);
+      peerWrites(1000 + i, 5); // peer traffic is not log traffic
+    }
+    expect(_historyLength()).toBe(200);
+    expect(undoDepth.value).toBe(200);
   });
 });

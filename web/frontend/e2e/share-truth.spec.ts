@@ -42,12 +42,13 @@ const FAIL_INIT = () => {
   }
 };
 
-// The 5th .icon-btn in the desktop panel is Share. T4-WU/U2 re-homed the dice to the staged
-// New-game zone as "Deal", so the .icon-btn DOM order is now Deal · Clear · Fill · Solve · Share
-// (· Undo · Redo · Hint, hidden on fine pointers): Deal replaces Randomize at index 0, so nth(4)
-// still lands on Share.
+// Share is the LAST verb in the action bar's own row — addressed structurally, not by an index
+// into every `.icon-btn` on the card. The index was `nth(4)` and it broke the moment T6 mark 13
+// put a fifth `.icon-btn` (the players well's invite) ahead of the bar: a positional locator
+// over a card that grows compartments is a gate that reds on furniture. The `aria-label` can't
+// do the addressing here either — the label is exactly what these rows assert changes.
 function shareButton(page: Page) {
-  return page.locator('.controls-card button.icon-btn').nth(4);
+  return page.locator('.controls-card .action-verbs button.icon-btn').last();
 }
 
 // ── 1. Sudoku: success confirms off a REAL clipboard write ──────────────────

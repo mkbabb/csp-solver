@@ -83,6 +83,7 @@ function mountPanel(overrides: Record<string, unknown> = {}) {
       proactiveCheck: false,
       candidatesPinned: false,
       share: () => Promise.resolve(),
+      shareSession: () => Promise.resolve(),
       ...overrides,
     },
   });
@@ -204,18 +205,22 @@ describe("GameControlPanel — the .deal-btn cascade (Lane D ship 1)", () => {
 
 // T4-P1 · the zone grammar's composition contract — the half that needs no browser. The
 // RANKS (which register each name is written at, and the 44px floor) are CSS claims and ride
-// e2e/zone-grammar.spec.ts; what this layer owns is that the card mounts three named wells,
+// e2e/zone-grammar.spec.ts; what this layer owns is that the card mounts four named wells,
 // that each name is the visible tape the group points at, and that the check state actually
 // reaches the status line from the prop.
 describe("GameControlPanel — the zone grammar (T4-P1)", () => {
-  it("three wells, each a group named by its own visible tape", () => {
+  it("four wells, each a group named by its own visible tape", () => {
     const w = mountPanel();
     const wells = w.findAll(".tray-well");
-    expect(wells).toHaveLength(3);
+    // T6 mark 13 — `players` joins them. A compartment grammar with one compartment outside
+    // it is not a grammar, so the feature's well is the fourth of its family, not a fourth
+    // thing beside three of them.
+    expect(wells).toHaveLength(4);
     expect(w.findAll(".washi-tag").map((t) => t.text())).toEqual([
       "new game",
       "pencils",
       "teacher's",
+      "players",
     ]);
     for (const well of wells) {
       expect(well.attributes("role")).toBe("group");
@@ -333,13 +338,15 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
     });
   });
 
-  // T6 mark 4 — the hint tapes. What a jsdom layer owns is the COMPOSITION: five of them, each
-  // a decorative sibling of the name it explains, none of them a second announced name. The
-  // reveal itself is `:hover` / `:focus-within` CSS and rides e2e/zone-grammar.
-  it("five hint tapes ride beside the names, and none of them is a name", () => {
+  // T6 mark 4 — the hint tapes. What a jsdom layer owns is the COMPOSITION: one per named
+  // compartment, each a decorative sibling of the name it explains, none of them a second
+  // announced name. The reveal itself is `:hover` / `:focus-within` CSS and rides
+  // e2e/zone-grammar. Six now, because mark 13's well ships its own — a tape family with a
+  // hole in it is the inconsistency the tapes were minted to close.
+  it("six hint tapes ride beside the names, and none of them is a name", () => {
     const w = mountPanel({ mobile: false });
     const hints = w.findAll(".zone-hint");
-    expect(hints).toHaveLength(5);
+    expect(hints).toHaveLength(6);
     for (const h of hints) {
       // The decorative-tape contract (SheetWashiLabel, default anchor): out of the AX tree,
       // no tooltip role, and not a `.washi-tag` — so the three-tape census cannot see it.

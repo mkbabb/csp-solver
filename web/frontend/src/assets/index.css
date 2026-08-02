@@ -147,6 +147,17 @@
   /* Handwritten glyph colors */
   --color-user-ink: #2563eb;
 
+  /* T6 mark 13 — the LIGHTNESS BAND a remote player's ink is written at, and the only new
+     scalar the feature spends. Their colour is one formula, `oklch(var(--peer-ink-l) 0.11
+     hue)` with `hue = i × 137.5°` (playerIdentity.ts), so there is no palette to run out of
+     and no player cap to enforce — but a hue walk alone says nothing about contrast, and the
+     band is what makes the AA claim structural instead of a table of hand-checked hexes.
+     Measured over 40 indices at chroma 0.11: worst 5.26:1 on --color-background here, 9.56:1
+     on --color-card in the dark block below. The crayon tiers above are DIFFICULTY's
+     vocabulary and stay there; no player is ever assigned wax, and no player is ever assigned
+     the solver's rainbow, so the three inks never compete. */
+  --peer-ink-l: 0.5;
+
   /* Crayon palette — the wax. MEASURED dark-mode saturation rule (design-refinement.md §3.2):
      dark variants PRESERVE hue (±3°), RAISE lightness +7…+13 (OKLCH L +0.06…0.10), and let
      saturation RISE as needed to hold perceived chroma on the dark ground. Crayons don't
@@ -351,6 +362,9 @@
   --color-ring: hsl(48 8% 83%);
 
   --color-user-ink: #60a5fa;
+
+  /* The paper darkens and the ink lightens — same walk, same chroma, the other band. */
+  --peer-ink-l: 0.8;
 
   /* Crayon palette (dark) — hue-locked, lightness raised, chroma held per the §3.2 rule above. */
   --color-crayon-green: #3dd968;
@@ -837,6 +851,21 @@ html {
   .dark {
     --grid-line-color: hsl(0 0% 0%);
     --color-user-ink: #000;
+  }
+}
+
+/* THE PRINT RULE'S MISSING TWIN (T6 mark 13). Print already beats the per-cell player ink —
+ * a rule inside `@layer base` outranks the `stroke` PRESENTATION ATTRIBUTE the glyph carries,
+ * whatever `--color-user-ink` resolves to — so a shared worksheet still prints true black.
+ * Forced colours ask for the same thing and had nobody saying it: browsers force `color` and
+ * `background-color` but leave SVG `stroke` alone, so a high-contrast reader would have been
+ * handed a board written in five hues they had explicitly asked not to receive. The system
+ * ink is the whole point of the mode; the players' colours yield to it. */
+@media (forced-colors: active) {
+  @layer base {
+    .glyph-svg path {
+      stroke: CanvasText;
+    }
   }
 }
 

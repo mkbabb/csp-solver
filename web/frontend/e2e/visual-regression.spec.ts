@@ -770,11 +770,21 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for", 
   // row +32.79, Deal's box +12.36, the sticky bar's own padding +8.79, the strip's icons
   // 26 → 30px +4.00. Every figure is an in-page ablation of the one declaration, measured on
   // the built dist at this cell, chromium and webkit within 0.04px of each other
-  // (`t6/controls/probe-ipad.mjs`). Shipped reads 1142.38 chromium / 1142.34 webkit; the seal
-  // is that with 2.6px of engine slack and NO slack for a mark nobody ordered. The card is a
+  // (`t6/controls/probe-ipad.mjs`). Shipped read 1142.38 chromium / 1142.34 webkit; the seal
+  // was that with 2.6px of engine slack and NO slack for a mark nobody ordered. The card is a
   // scrollport here (`scene.css:60`), so this bounds DRIFT, never a clipping hazard — and the
   // negative control below still has to break it, which is what keeps the number a gate.
-  const SEAL = 1145.0;
+  //
+  // MARK 13 RE-PRICES IT ONCE MORE, and pays the same way: named, measured, ablated. The
+  // players compartment is the tranche's one ordered FEATURE, and a compartment is what the
+  // zone grammar charges for it — **82.42px chromium / 82.43px webkit**, split by in-page
+  // ablation into the tap-floored invite verb (52.03) and the well's own frame and daylight
+  // (30.39, of which 16.00 is the `margin-block` every well pays so consecutive drawn frames
+  // don't cross). Nothing here is slack: the 44px floor is the estate's, and a well that
+  // charged less would be a compartment that didn't read as one. Base is UNMOVED at
+  // 1142.38 / 1142.34 with the well ablated, which is the other half of the reading — the
+  // feature costs what it costs and nothing else drifted underneath it.
+  const SEAL = 1227.5;
 
   const ctx = await browser.newContext({
     viewport: { width: 1280, height: 800 },

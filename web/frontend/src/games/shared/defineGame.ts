@@ -73,6 +73,9 @@ export interface GameModel {
   errorCheckMode: ReadRef<ErrorCheckMode>;
   proactiveCheck: ReadRef<boolean>;
   candidatesPinned: ReadRef<boolean>;
+  /** T6 mark 13 — per-cell `--color-user-ink` rebindings for the cells a PEER authored.
+   *  Empty off-session, which is what makes a solo board byte-identical. */
+  authorInk: ReadRef<Record<string, Record<string, string>>>;
 
   setCell: (position: number, value: number) => void;
   toggleUserMark: (position: number, value: number) => void;
@@ -83,6 +86,8 @@ export interface GameModel {
   setMarksActive: (active: boolean) => void;
   peekSolution: () => Promise<Record<string, number>>;
   shareBoard: () => Promise<void>;
+  /** the share act with a room on it — mints `?s=` and joins before copying the link. */
+  shareSession: () => Promise<void>;
   deal: () => Promise<void> | void;
   clearBoard: () => void;
   solve: () => Promise<void> | void;

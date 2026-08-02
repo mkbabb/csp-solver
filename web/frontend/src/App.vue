@@ -177,7 +177,9 @@ function setGame(val: string | number, opts?: { cut?: boolean }) {
   // (up to ~256 chars) riding into the other game's URL defeats the clean-URL rationale
   // that made the permalink share-on-demand. Strip BOTH games' board/size params on
   // switch — the incoming game re-adds only its own via its composable's syncToUrl.
-  for (const key of ["board", "size", "difficulty", "board_size"])
+  // `s` joins them (T6 mark 13): a session is BOARD-bound, so switching games leaves it —
+  // the outgoing scene's unmount drops the wire, and the room id must not ride along.
+  for (const key of ["board", "size", "difficulty", "board_size", "s"])
     url.searchParams.delete(key);
   history.replaceState(null, "", url.toString());
   // Switching games unmounts the outgoing scene (v-if), which stops its keyboard listener and

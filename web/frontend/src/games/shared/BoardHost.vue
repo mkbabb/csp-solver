@@ -207,6 +207,12 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
         role="row"
         :aria-rowindex="r + 1"
       >
+        <!-- T6 mark 13 — THE PLAYER'S COLOUR, IN ONE BINDING. `HandwrittenGlyph` already
+             strokes with `var(--color-user-ink)`, so re-binding that var on a cell re-inks
+             the digit drawn in it with no component change at all; `authorInk` holds an
+             entry only for cells a PEER wrote, so your own board binds nothing and solo is
+             byte-identical. `DigitCell` is single-root with no `inheritAttrs: false`, so
+             the style falls through — five games, one line. -->
         <component
           :is="spec.furniture.cell"
           v-for="pos in cells"
@@ -227,6 +233,7 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
           :row-index="r + 1"
           :col-index="(pos % boardSize) + 1"
           :tab-index="pos === s.focusedPos ? 0 : -1"
+          :style="model.authorInk.value[String(pos)]"
           :ghost-path="s.cellRects[pos] ?? ''"
           :marks="s.marksFor(pos)"
           :corner-marks="model.cornerMarks.value[String(pos)]"

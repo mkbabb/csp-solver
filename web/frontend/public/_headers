@@ -54,9 +54,16 @@
 #                                  Safari/mobile validation pass — the prior
 #                                  zero-violation verification predated the
 #                                  pose-stack machinery)
-#   connect-src 'self'             the frontend solves in-browser (wasm Worker);
-#                                  there is no cross-origin fetch in the bundle
-#                                  to whitelist
+#   connect-src 'self' wss:        solving is still in-browser (wasm Worker) and there is
+#                                  still no cross-origin FETCH in the bundle. What `wss:`
+#                                  admits is the multiplayer signalling (T6 mark 13): a
+#                                  shared board joins a room over trystero's Nostr strategy,
+#                                  whose relay set is a rotating list of public WebSocket
+#                                  endpoints — no fixed origin to name, so the scheme is the
+#                                  narrowest honest grant. Additive and scheme-only: nothing
+#                                  else in this policy moved, `ws:` (cleartext) is NOT
+#                                  granted, and a solo page opens no socket at all because
+#                                  the transport is `import()`ed at join
 #   worker-src  'self' blob:      the wasm solver Worker
 #   object-src  'none'             no <object>/<embed> use anywhere
 #   base-uri    'self'             blocks <base> tag injection
@@ -106,7 +113,7 @@
 # Both are additive lines in the /* stanza below; no existing header moved.
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' wss:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

@@ -37,6 +37,13 @@ import { computed, ref } from "vue";
  * The composable is the SOLE log author — entries push AFTER an async op resolves, never
  * before, so a rejected or stale generate leaves ZERO orphan entries. Undo/redo REFUSE while
  * a board op is pending (`effects.pending`), matching the coarse buttons' `:disabled`.
+ *
+ * T6 mark 13 — THIS LOG IS ALSO THE PER-PLAYER LEDGER, and it needed no restructuring to be
+ * one. It holds MY moves and only mine: a peer's write applies through the same effects and
+ * is never pushed, so undo stays "undo your own moves" and every `canUndo`/`undoDepth`/
+ * `isDirty` consumer reads exactly what it read before. Two lines pay for it — `onEntry` at
+ * the push choke (the whole local op stream leaves from one seam) and the no-clobber guard in
+ * `replayUndo` (documented at `clobbered`).
  */
 
 /** Cap 200 (E9 r2 §5, from W6's `UNDO_CAP=128`): delta-dominated and flat across 100–200
@@ -63,7 +70,7 @@ export interface BatchDelta {
   tone?: "solved";
 }
 
-type UndoEntry =
+export type UndoEntry =
   | { kind: "value"; pos: number; prev: number; next: number; tone?: "solved" }
   | { kind: "batch"; deltas: BatchDelta[] }
   | { kind: "mark"; pos: number; corner?: SlotDelta; center?: SlotDelta }
@@ -98,13 +105,18 @@ interface UndoEffects<B, M> {
   /** True while a board op is in flight — undo/redo refuse (no cancel; the transport has no
    *  abort). Mirrors the coarse buttons' `:disabled="loading"`. */
   pending: () => boolean;
+  /** The cell's CURRENT digit — the no-clobber guard's only input (see `clobbered` below). */
+  readValue: (pos: number) => number;
+  /** T6 mark 13 — fires AFTER a push, at the single choke, so the whole local op stream
+   *  reaches the session from one seam instead of per-callsite plumbing. Absent ⇒ solo. */
+  onEntry?: (entry: UndoEntry) => void;
 }
 
 /** FNV-1a, two offset rounds → a ~64-bit hex digest. Content-addresses a pooled blob; a
  *  collision would (at worst) restore a wrong board on undo — a recoverable UX glitch, not
  *  data loss (the persisted board is a separate unit) — and for a session's <100 distinct
  *  boards the probability is ~1e-11. */
-function hashBlob(blob: unknown): string {
+export function hashBlob(blob: unknown): string {
   const s = JSON.stringify(blob);
   let h1 = 0x811c9dc5;
   let h2 = 0x811c9dc5 ^ 0x9e3779b9;
@@ -169,7 +181,23 @@ export function useUndoHistory<B, M>(effects: UndoEffects<B, M>) {
       if (evicted) releaseEntry(evicted);
     }
     undoIndex.value = undoStack.value.length;
+    effects.onEntry?.(entry);
   }
+
+  /**
+   * THE NO-CLOBBER GUARD (T6 mark 13) — the one place a plausible implementation is silently
+   * wrong, so it was born RED before it was written.
+   *
+   * An undo restores `prev` on the assumption the cell still holds what this entry wrote. In
+   * a session it may not: a teammate has since written over it, and that write is now the
+   * cell's truth. Restoring `prev` there does not undo YOUR move — it deletes THEIRS, and the
+   * LWW clock would then propagate the deletion as authoritative. So a moved cell is SKIPPED
+   * and the entry consumed: your undo is spent, their digit stands.
+   *
+   * Solo, this can never fire — nothing else writes — so the shipped behaviour is unchanged
+   * by construction rather than by inspection.
+   */
+  const clobbered = (pos: number, wrote: number) => effects.readValue(pos) !== wrote;
 
   // ── Recorders (the single-writer seam) ───────────────────────────────
   /** A cell write/erase (`prev===next` no-ops — the immunity primitive). */
@@ -218,13 +246,17 @@ export function useUndoHistory<B, M>(effects: UndoEffects<B, M>) {
   function replayUndo(e: UndoEntry) {
     switch (e.kind) {
       case "value":
+        if (clobbered(e.pos, e.next)) break; // a peer owns this cell now — skip, consume
         if (e.tone === "solved") effects.removeHintInk(e.pos, e.prev);
         else effects.applyValue(e.pos, e.prev);
         break;
       case "batch":
-        // Invert every delta in ONE step, inverse order (last placed → first undone).
+        // Invert every delta in ONE step, inverse order (last placed → first undone). The
+        // guard is PER DELTA: a sweep whose cells a peer has half-overwritten still undoes
+        // the half that is still yours.
         for (let i = e.deltas.length - 1; i >= 0; i--) {
           const d = e.deltas[i];
+          if (clobbered(d.pos, d.next)) continue;
           if (d.tone === "solved") effects.removeHintInk(d.pos, d.prev);
           else effects.applyValue(d.pos, d.prev);
         }

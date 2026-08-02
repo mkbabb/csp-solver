@@ -48,7 +48,7 @@ const countAt = (names: { rank: string }[], rank: string) =>
 
 // ── The rail (fine pointer, row regime) ─────────────────────────────────────────
 
-test("rendered-name census, rail: two eyebrows, three tapes, two captions — and the counter can see an injected one", async ({
+test("rendered-name census, rail: two eyebrows, four tapes, two captions — and the counter can see an injected one", async ({
   page,
 }) => {
   await loadSudoku(page);
@@ -61,11 +61,14 @@ test("rendered-name census, rail: two eyebrows, three tapes, two captions — an
     "Size",
     "Difficulty",
   ]);
-  // The compartments name themselves in the hand, one rank down.
+  // The compartments name themselves in the hand, one rank down. T6 mark 13 — `players` is
+  // the fourth, and it is in the census rather than beside it: a feature that mints a name on
+  // this card is named at one of this card's ranks or the census has stopped being one.
   expect(names.filter((n) => n.rank === "tape").map((n) => n.text)).toEqual([
     "new game",
     "pencils",
     "teacher's",
+    "players",
   ]);
   // Two controls share the `pencils` compartment, so each gets a quiet caption; `teacher's`
   // holds one idea and needs none — which is the taxonomy paying for itself.
@@ -119,10 +122,15 @@ test("every zone is named by its own VISIBLE tape — the accessible name and th
 }) => {
   await loadSudoku(page);
   const wells = page.locator(".controls-card .tray-well");
-  await expect(wells).toHaveCount(3);
+  await expect(wells).toHaveCount(4);
 
   const named = await page.evaluate(ZONE_NAMING);
-  expect(named.map((n) => n.drawn)).toEqual(["new game", "pencils", "teacher's"]);
+  expect(named.map((n) => n.drawn)).toEqual([
+    "new game",
+    "pencils",
+    "teacher's",
+    "players",
+  ]);
   for (const n of named) {
     // Resolves, is the visible tape, is NOT a tooltip (a tooltip role is not a legal
     // `aria-labelledby` target and was what pass 1 fought from the outside), and the two
@@ -173,7 +181,7 @@ test("the permanent tape is a LABEL, not a tooltip — and the surface it names 
     ".controls-card .washi-tag, .controls-card .washi-persistent",
   );
   const n = await permanent.count();
-  expect(n).toBe(4); // three compartment names + the peek tape
+  expect(n).toBe(5); // four compartment names + the peek tape
   for (let i = 0; i < n; i++)
     expect(
       await permanent.nth(i).getAttribute("role"),
@@ -356,7 +364,7 @@ test("a frozen well mints ONE pose node and promotes nothing (the HandDrawnOutli
       };
     }),
   );
-  expect(wells).toHaveLength(3);
+  expect(wells).toHaveLength(4);
   // A `:pose` outline never swaps, so the resident sibling stack bought nothing and cost a
   // permanently promoted layer each. One node, zero layers.
   for (const w of wells) {
@@ -536,7 +544,7 @@ test.describe("coarse regime", () => {
 
     const names = await census(page, panelSel);
     expect(countAt(names, "eyebrow")).toBe(2);
-    expect(countAt(names, "tape")).toBe(3);
+    expect(countAt(names, "tape")).toBe(4);
     expect(countAt(names, "caption")).toBe(2);
 
     // The tap floor is two-dimensional. The candidates "On" chip was 43.2px WIDE — under the

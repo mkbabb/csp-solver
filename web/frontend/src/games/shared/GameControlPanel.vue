@@ -62,6 +62,7 @@ import type { ErrorCheckMode } from "@games/shared/useAssists";
 import { useButtonAnimation } from "@games/shared/useButtonAnimation";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
 import { portraitDock } from "@games/shared/useControlsDrawer";
+import { leaveSession, session } from "@games/shared/useSession";
 
 // Underline boil: brief burst on selection change, then settle
 const boilFrame = ref(0);
@@ -113,6 +114,9 @@ const props = defineProps<{
   // T4-W3 share-truth: the parent's share act, handed as a callback rather than an emit so
   // the OUTCOME travels back — it resolves iff the clipboard copy actually landed.
   share: () => Promise<void>;
+  // T6 mark 13 — the same act with a room on it: mint `?s=`, join, then copy the whole link.
+  // Same callback shape for the same reason: the well confirms only on a real clipboard write.
+  shareSession: () => Promise<void>;
   // T4-P1 mark 6 — the dealt board's measured tier. It used to hang under the board, where on
   // a phone it was 30px of permanent in-flow height between the work and the controls; it is
   // the DEAL'S RECEIPT, so it files with the deal. Optional: an ungraded game (the engine
@@ -242,59 +246,73 @@ function onDividerHoldEnd() {
 onBeforeUnmount(() => {
   if (peekTimer) clearTimeout(peekTimer);
   if (isPeeking.value) emit("peek-end");
-  if (shareConfirmTimer) clearTimeout(shareConfirmTimer);
+  shareAct.stop();
+  inviteAct.stop();
   if (clearArmTimer) clearTimeout(clearArmTimer);
   if (dealArmTimer) clearTimeout(dealArmTimer);
 });
 
-// ── Share-on-demand permalink (W6; T4-W3 share-truth) ──────────────────
-// `props.share()` resolves iff the clipboard copy actually landed. Confirm ("copied!") ONLY
-// on resolve; on reject (insecure context, permission-policy denial, absent Clipboard API)
-// the `?board=` link is still live in the address bar — so say exactly that. The washi,
-// sublabel, and aria-label all track the REAL outcome, never the optimistic flip the old
-// unconditional `shareConfirm = true` asserted over a possibly-empty clipboard.
-const { animating: shareAnimating, trigger: triggerShare } = useButtonAnimation(500);
-const shareState = ref<"idle" | "copied" | "failed">("idle");
-let shareConfirmTimer: ReturnType<typeof setTimeout> | null = null;
-async function onShare() {
-  triggerShare();
-  let copied = true;
-  try {
-    await props.share();
-  } catch {
-    copied = false;
+// ── The copy acts (W6; T4-W3 share-truth) ──────────────────────────────
+// A copy either landed or it did not, and the button says which: confirm ("copied!") ONLY on
+// resolve; on reject (insecure context, permission-policy denial, absent Clipboard API) the
+// link is still live in the address bar — so say exactly that. The washi, the sublabel and
+// the aria-label all track the REAL outcome, never the optimistic flip the old unconditional
+// `shareConfirm = true` asserted over a possibly-empty clipboard.
+//
+// T6 mark 13 — written ONCE and called TWICE. The players well copies the same link with a
+// room on it, and a second hand-rolled copy of this state machine is how the failure sentence
+// — the one that matters most, and the one nobody exercises by accident — drifts out of true.
+function copyAct(
+  act: () => Promise<void>,
+  idle: { sublabel: string; washi: string; aria: string },
+) {
+  const { animating, trigger } = useButtonAnimation(500);
+  const state = ref<"idle" | "copied" | "failed">("idle");
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  async function press() {
+    trigger();
+    let copied = true;
+    try {
+      await act();
+    } catch {
+      copied = false;
+    }
+    state.value = copied ? "copied" : "failed";
+    if (timer) clearTimeout(timer);
+    // The failure line runs longer — it points the reader to the address bar, more to read.
+    timer = setTimeout(
+      () => {
+        state.value = "idle";
+      },
+      copied ? 1600 : 3600,
+    );
   }
-  shareState.value = copied ? "copied" : "failed";
-  if (shareConfirmTimer) clearTimeout(shareConfirmTimer);
-  // The failure line runs longer — it points the reader to the address bar, more to read.
-  shareConfirmTimer = setTimeout(
-    () => {
-      shareState.value = "idle";
+  const says = (copied: string, failed: string, quiet: string) =>
+    computed(() =>
+      state.value === "copied" ? copied : state.value === "failed" ? failed : quiet,
+    );
+  return {
+    animating,
+    press,
+    stop: () => {
+      if (timer) clearTimeout(timer);
     },
-    copied ? 1600 : 3600,
-  );
+    aria: says("Link copied", "couldn't copy — link is in the address bar", idle.aria),
+    sublabel: says("copied!", "in address bar", idle.sublabel),
+    washi: says("copied!", "couldn't copy — link is in the address bar", idle.washi),
+  };
 }
-const shareAria = computed(() =>
-  shareState.value === "copied"
-    ? "Link copied"
-    : shareState.value === "failed"
-      ? "couldn't copy — link is in the address bar"
-      : "Share board link",
-);
-const shareSublabel = computed(() =>
-  shareState.value === "copied"
-    ? "copied!"
-    : shareState.value === "failed"
-      ? "in address bar"
-      : "Share",
-);
-const shareWashi = computed(() =>
-  shareState.value === "copied"
-    ? "copied!"
-    : shareState.value === "failed"
-      ? "couldn't copy — link is in the address bar"
-      : "copy a link to this board",
-);
+
+const shareAct = copyAct(() => props.share(), {
+  sublabel: "Share",
+  washi: "copy a link to this board",
+  aria: "Share board link",
+});
+const inviteAct = copyAct(() => props.shareSession(), {
+  sublabel: "Play",
+  washi: "invite someone to write on this board with you",
+  aria: "Play together on this board",
+});
 
 // ── T4-P1 · THE ZONE GRAMMAR ────────────────────────────────────────────────────────
 // The card was seven near-identical stanzas under six `.section-heading` display eyebrows —
@@ -323,6 +341,7 @@ const shareWashi = computed(() =>
 const newGameId = useId();
 const pencilsId = useId();
 const teachersId = useId();
+const playersId = useId();
 // `pencils` holds two controls, so each row is its own `role="group"` named by that row's OWN
 // visible caption — otherwise assistive tech hears two unlabelled Off/On pairs inside one name
 // and cannot tell which is which. `teacher's` holds one, so the tape names it directly.
@@ -730,6 +749,60 @@ function onHint() {
       <CheckStatus :marking="proactiveCheck" :mode="errorCheckMode" />
     </HandDrawnOutline>
 
+    <!-- T6 mark 13 — THE PLAYERS COMPARTMENT. A fourth well on the zone grammar exactly as
+         written (`:pose="0"` outline + a tag washi that IS its accessible name), so it appears
+         in the desktop rail AND inside the portrait drawer with no second implementation. It
+         holds one idea, so like `teacher's` it needs no row caption.
+         Alone: one verb. In a session: who is here, in the colour their digits are written in.
+         The trust model is stated rather than implied — the link IS the whole capability, so
+         the well says so where the link is made. -->
+    <HandDrawnOutline
+      class="tray-well"
+      :stroke-width="1.5"
+      :outset="4"
+      :radius="3"
+      :pose="0"
+      role="group"
+      :aria-labelledby="playersId"
+    >
+      <SheetWashiLabel :id="playersId" text="players" :seed="67" anchor="tag" />
+      <SheetWashiLabel
+        class="zone-hint"
+        text="share this board and everyone writes on the same grid"
+        :seed="61"
+        wide
+      />
+      <button
+        v-if="!session.roomId.value"
+        @click="inviteAct.press()"
+        :disabled="loading"
+        class="icon-btn"
+        :class="{ 'group relative': !mobile }"
+        :aria-label="inviteAct.aria.value"
+      >
+        <ShareIcon :size="26" :class="{ 'share-pop': inviteAct.animating.value }" />
+        <span class="icon-sublabel" aria-hidden="true">{{
+          inviteAct.sublabel.value
+        }}</span>
+        <SheetWashiLabel v-if="!mobile" :text="inviteAct.washi.value" :seed="73" wide />
+      </button>
+      <template v-else>
+        <!-- The roster scrolls rather than stretches: sixteen rows must not make the card
+             sixteen rows taller, and the card is already the page's one scrollport. -->
+        <ul class="players-roster">
+          <li v-for="p in session.players.value" :key="p.id" class="player-row">
+            <span class="player-swatch" :style="p.ink" aria-hidden="true"></span>
+            <span class="player-name">{{ p.slug }}</span>
+            <span v-if="p.self" class="player-self">you</span>
+          </li>
+        </ul>
+        <p class="players-note">anyone with this link can write on this board</p>
+        <button type="button" class="players-leave" @click="leaveSession()">
+          leave
+        </button>
+      </template>
+    </HandDrawnOutline>
+
     <!-- T6 mark 5 — THE CRIB FOLDS, AND IT NEVER LEAVES THE FLOW. `grid-template-rows: 0fr→1fr`
          collapses the fold to nothing while the `<dl>` inside keeps its own box: it stays in the
          AX tree (a11y 3.4 reads `.keyboard-legend` for k/g/h/p/d and reds on display:none), its
@@ -820,15 +893,22 @@ function onHint() {
           />
         </button>
         <button
-          @click="onShare()"
+          @click="shareAct.press()"
           :disabled="loading"
           class="icon-btn"
           :class="{ 'group relative': !mobile }"
-          :aria-label="shareAria"
+          :aria-label="shareAct.aria.value"
         >
-          <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
-          <span class="icon-sublabel" aria-hidden="true">{{ shareSublabel }}</span>
-          <SheetWashiLabel v-if="!mobile" :text="shareWashi" :seed="71" wide />
+          <ShareIcon :size="26" :class="{ 'share-pop': shareAct.animating.value }" />
+          <span class="icon-sublabel" aria-hidden="true">{{
+            shareAct.sublabel.value
+          }}</span>
+          <SheetWashiLabel
+            v-if="!mobile"
+            :text="shareAct.washi.value"
+            :seed="71"
+            wide
+          />
         </button>
       </div>
       <!-- The keys live behind ONE glyph, and its name is never "keyboard shortcuts": the
@@ -1073,6 +1153,93 @@ function onHint() {
 .zone-row-stacked .zone-row-label {
   flex: 0 0 auto;
   text-align: left;
+}
+
+/* ── T6 mark 13 · the players compartment ──────────────────────────────────────
+   The roster SCROLLS. The owner's order is 16+ players within reason, and sixteen rows at
+   ~20px would add ~320px to a card that already overflows its frame at 1039px — the well
+   would push the action bar's whole scrollport out of reach. `max-height` + `overflow-y` is
+   the card's own idiom one level down: five rows read at a glance, the rest are a short
+   scroll, and the card's height stops depending on how many people turned up. */
+.players-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  max-height: 7.5rem;
+  overflow-y: auto;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-hand);
+  font-size: var(--type-caption);
+  line-height: 1.35;
+  color: var(--color-foreground);
+}
+
+/* The swatch is the digit's own ink, not a legend for it: `--color-user-ink` is what the
+   handwritten glyph strokes with, so a row inherits the peer's inline rebinding and YOUR row
+   — which rebinds nothing — draws the incumbent blue. One value, two places, no mapping. */
+.player-swatch {
+  flex: 0 0 auto;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--color-user-ink);
+}
+
+.player-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-self,
+.players-note {
+  font-family: var(--font-hand);
+  font-size: var(--type-caption);
+  line-height: 1.25;
+  /* The quiet rung (the ledgered token the row captions write at): 5.23:1 light / 6.06:1 dark
+     on --color-card, which is the floor below which a caption stops clearing AA. */
+  color: var(--ink-press-quiet);
+}
+
+.players-note {
+  margin: 0.35rem 0 0;
+}
+
+.players-leave {
+  align-self: flex-start;
+  margin-top: 0.3rem;
+  padding: 0.15rem 0.1rem;
+  font-family: var(--font-hand);
+  font-size: var(--type-caption);
+  letter-spacing: var(--type-tracking-wide);
+  color: var(--ink-press-quiet);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.players-leave:hover {
+  color: var(--color-foreground);
+}
+
+/* A thumb gets the estate's floor here as everywhere else — a written word is still a control. */
+@media (pointer: coarse) {
+  .players-leave {
+    min-height: 44px;
+    padding-inline: 0.5rem;
+  }
 }
 
 /* The Deal commit sits centered under the staged selectors, a comfortable target from the peek
