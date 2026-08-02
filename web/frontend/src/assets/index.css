@@ -318,17 +318,22 @@
      (durations + control points unchanged at every consumer). Role names derive
      from what the curve does, not its control points (census c1-easing.md).
 
-       token                easing              role                              sites
-       --ease-noteWrite     easeOutQuint        write-in / reveal / grow          10
-       --ease-standard      material standard   show-hide fade / slide            9 (1 dev)
-       --ease-springPop     backOut overshoot   icon / toggle pop                 6 (1 dev)
-       --ease-accelIn       easeInCubic         accelerate-away exit              4
-       --ease-fadeOut       easeIn flat-tail    solver-dim fade-out               3
-       --ease-ghostDraw     easeOutCubic        pencil-ghost glyph draw           2
-       --ease-drawOn        easeOutCubic'       pencil stroke draw-on / controls  2
-       --ease-loaderScrub   easeInOutCubic      loader continuous scrub           1
-       --ease-anticipatePop backInOut           anticipate + overshoot reveal     2
-       --ease-glassGlide    glass glide         answer-key laminate lay-down      2
+       token                easing              role
+       --ease-noteWrite     easeOutQuint        write-in / reveal / grow
+       --ease-standard      material standard   show-hide fade / slide
+       --ease-springPop     backOut overshoot   icon / toggle pop
+       --ease-accelIn       easeInCubic         accelerate-away exit
+       --ease-fadeOut       easeIn flat-tail    solver-dim fade-out
+       --ease-ghostDraw     easeOutCubic        pencil-ghost glyph draw
+       --ease-drawOn        easeOutCubic'       pencil stroke draw-on / controls
+       --ease-loaderScrub   easeInOutCubic      loader continuous scrub
+       --ease-anticipatePop backInOut           anticipate + overshoot reveal
+       --ease-glassGlide    glass glide         answer-key laminate lay-down
+
+     Site counts are census output — `grep -rc "var(--ease-"` at a gate — and are
+     not maintained here: a hand-kept column drifted stale twice (T6 motion's
+     observation, then batch B moved it again) and a count the tree can derive
+     should never be prose.
 
      --ease-accelIn: the spec's laminate gate names this `--ease-laminateLeave`,
      but the curve is shared across the laminate leave, ScribbleLoader, and
