@@ -994,23 +994,11 @@ function onHint() {
    components) — the √φ subheading→heading eyebrow, shared by both games (D4).
    Only the component-local hover flourish stays scoped here. */
 
-/* Crayon color utilities. The difficulty heading writes in the difficulty crayon, but as
-   light-mode heading text the raw wax fails AA (green 2.22 / orange 2.05 / rose 4.11 on
-   --color-card) — so the three difficulty tints read the ink tier (hue-locked, darkened to
-   AA in light; the ink aliases the wax in dark, where the crayon already glows AA). Gate 1,
-   T4-W10; ink hexes + ledger in assets/index.css. crayon-blue is unaffected (no heading use). */
-.crayon-green {
-  color: var(--color-green-ink);
-}
-.crayon-orange {
-  color: var(--color-orange-ink);
-}
-.crayon-rose {
-  color: var(--color-red-ink);
-}
-.crayon-blue {
-  color: var(--color-crayon-blue);
-}
+/* The four `.crayon-*` utilities are HOISTED to assets/index.css (T6 mark 7), unlayered,
+   beside the ink tiers they read. Scoped here they never reached a child component's
+   internals, so the selected difficulty CHIP carried `crayon-orange` and painted nothing
+   from it; global, the chip inks like the heading over it and the picker's band inks the
+   same way off the same class. */
 
 /* The `.section-heading:hover` wobble is DELETED (P1-W3, r3 §4.5). It was a decorative
    flourish on a non-interactive <h2> that lived INSIDE `.control-panel-filtered`, so swapping
@@ -1122,7 +1110,7 @@ function onHint() {
    Raw --color-crayon-rose is 4.10:1 on --color-card, sub-AA in light, and this is the ONE
    sublabel that must be read. --color-red-ink is that same hue locked at 346° and darkened
    to 4.98:1 for exactly this case (index.css:163); dark mode aliases it straight back to the
-   wax, so the night pose is byte-identical. Same swap .crayon-rose already makes above. */
+   wax, so the night pose is byte-identical. Same swap `.crayon-rose` makes in index.css. */
 .icon-sublabel.is-armed {
   color: var(--color-red-ink);
   font-weight: 600;

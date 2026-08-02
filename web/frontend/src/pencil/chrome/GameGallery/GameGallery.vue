@@ -745,6 +745,20 @@ onMounted(async () => {
   display: none;
 }
 
+/* The deck is a spread of paper you push (`useCarouselGlide`'s pointer drag). Fenced to a fine
+   hovering pointer: touch already drags natively and has no cursor to say so. */
+@media (hover: hover) and (pointer: fine) {
+  .gallery-viewport {
+    cursor: grab;
+  }
+
+  .gallery-viewport.is-dragging {
+    cursor: grabbing;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
 .gallery-viewport:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--color-foreground) 40%, transparent);
   outline-offset: -4px;

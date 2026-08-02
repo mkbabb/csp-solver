@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  computed,
   ref,
   watch,
   defineAsyncComponent,
@@ -12,7 +13,11 @@ import {
 } from "vue";
 import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
 import { MOTION } from "@pencil/config/pencilConfig";
-import { flipTransform, useFlipGlide } from "@games/shared/useFlipGlide";
+import {
+  flipTransform,
+  useFlipGlide,
+  type FlipMover,
+} from "@games/shared/useFlipGlide";
 import GameShell from "@games/shared/GameShell.vue";
 // The eager default game rides the MAIN CHUNK — a static spec import, the byte-for-byte twin
 // of the static `SudokuGame` import this replaces (ratified asymmetry, P4 #4). It is a spec
@@ -246,6 +251,16 @@ function closeAll() {
 // + the snapped index as props and emits @snap/@select/@cancel.
 const { view, snappedIndex, openGallery, snapTo, select, cancel } = useGameGallery();
 
+// THE HEADER THAT STAYS (T6 mark 7). The masthead survives the view flip, so it has to say
+// something true in both: the MOUNTED game while playing, the SNAPPED card while the deck is
+// open. HandwrittenLogo re-measures and re-bakes on a label change and declines to re-reveal
+// (its I2 ruling), so a snap redraws the wordmark for free.
+const headerName = computed(() =>
+  view.value === "gallery"
+    ? (GAMES[snappedIndex.value]?.name ?? game.value)
+    : game.value,
+);
+
 // The mid-game guard's inputs (T4-W12 Wave D §4). `dirty` is the mounted board's ONE
 // undo-depth signal, forwarded through the module bridge (no parallel bool); `coarse` is the
 // primary-pointer class. Both flow into the pencil-pure gallery as PROPS — pencil imports
@@ -273,6 +288,9 @@ const entryAnimated = ref(false);
 // The fold's board-pose anchor (FIRST rect), read before the chrome-leave; consumed by the
 // live-face fold once the center card's face mounts. Null after use / on deep-link (no fold).
 let pendingFoldFrom: DOMRect | null = null;
+/** The masthead's playing-view pose (FIRST rect), read in the same breath as the board's — the
+ *  wordmark is the SECOND mover in the same fold, so it travels instead of popping. */
+let pendingHeadFrom: DOMRect | null = null;
 
 /** The live board host's rect — the fold's full-pose anchor (read before the view flips). */
 function boardHostRect(): DOMRect | null {
@@ -314,8 +332,14 @@ function onLiveFace(el: HTMLElement | null) {
     // tweens. Deep-link / navigation land the face with no fold (pendingFoldFrom null).
     if (pendingFoldFrom && !reducedMotion.value) {
       const from = pendingFoldFrom;
+      const headFrom = pendingHeadFrom;
       pendingFoldFrom = null;
+      pendingHeadFrom = null;
       const last = board.getBoundingClientRect(); // face-slot pose (post-fit)
+      // The masthead rides the SAME fold as its second element — one `run`, one clock, one
+      // curve. `--logo-scale` is a LAYOUT size and has already landed at onset (classic FLIP);
+      // the transform covers the move on the baked poses, so it is compositor-only with one
+      // re-bake at settle — the drawer's own masthead precedent, verbatim.
       foldCtl.run([
         {
           el: board,
@@ -323,27 +347,44 @@ function onLiveFace(el: HTMLElement | null) {
           to: "translate(0px, 0px) scale(1)",
           transformOrigin: "50% 50%",
         },
+        ...mastheadMover(headFrom),
       ]);
     }
   });
 }
 
-/** Run ONE unfold mover once the view has flipped: in `nextTick` (pre-paint) read the mover's
- *  LAST rect and hand `useFlipGlide` a `first → last` delta, so the board-pose keyframe is
- *  on-screen from frame ONE (no rest-pose flash). A null mover → the cut stands. */
-function runFold(first: DOMRect, getMover: () => HTMLElement | null) {
+/** The masthead as a mover, or nothing when there is no FIRST rect to fold from. */
+function mastheadMover(first: DOMRect | null): FlipMover[] {
+  const el = mastheadEl.value;
+  if (!first || !el) return [];
+  return [
+    {
+      el,
+      from: flipTransform(first, el.getBoundingClientRect()),
+      to: "translate(0px, 0px) scale(1)",
+      transformOrigin: "50% 50%",
+    },
+  ];
+}
+
+/** Run the unfold movers once the view has flipped: in `nextTick` (pre-paint) read each
+ *  mover's LAST rect and hand `useFlipGlide` a `first → last` delta, so the board-pose keyframe
+ *  is on-screen from frame ONE (no rest-pose flash). A null mover drops out; all of them
+ *  dropping out leaves the cut standing. */
+function runFold(pairs: { first: DOMRect | null; el: () => HTMLElement | null }[]) {
   void nextTick(() => {
-    const el = getMover();
-    if (!el) return;
-    const last = el.getBoundingClientRect();
-    foldCtl.run([
-      {
+    const movers: FlipMover[] = [];
+    for (const pair of pairs) {
+      const el = pair.el();
+      if (!el || !pair.first) continue;
+      movers.push({
         el,
-        from: flipTransform(first, last),
+        from: flipTransform(pair.first, el.getBoundingClientRect()),
         to: "translate(0px, 0px) scale(1)",
         transformOrigin: "50% 50%",
-      },
-    ]);
+      });
+    }
+    if (movers.length) foldCtl.run(movers);
   });
 }
 
@@ -360,12 +401,14 @@ function enterGallery() {
     return;
   }
   const first = boardHostRect(); // the board's full pose, read BEFORE beat 0
+  const head = mastheadEl.value?.getBoundingClientRect() ?? null; // …and the wordmark's
   entryAnimated.value = true;
   if (!first) {
     openGallery(game.value); // no board to fold → cut (the deal still deals)
     return;
   }
   pendingFoldFrom = first;
+  pendingHeadFrom = head;
   document.documentElement.classList.add("gallery-leaving"); // BEAT 0 — chrome leaves (200ms)
   window.setTimeout(() => {
     document.documentElement.classList.remove("gallery-leaving");
@@ -382,10 +425,16 @@ function enterGallery() {
 function unfoldToBoard(applyState: () => void) {
   const card = centerCardEl();
   const first = card?.getBoundingClientRect() ?? null;
+  // BOTH firsts before `applyState()` — the state flip is what moves the masthead back to its
+  // playing pose, so its gallery rect has to be in hand before that happens.
+  const headFirst = mastheadEl.value?.getBoundingClientRect() ?? null;
   setLiveFaceTarget(null); // un-teleport the board home before the deck unmounts
   applyState(); // synchronous view→playing + game swap (the seam) or cancel (Wave B path)
   if (reducedMotion.value || !first) return; // PRM / no card → same-frame cut
-  runFold(first, () => document.querySelector<HTMLElement>(".board-peek-host"));
+  runFold([
+    { first, el: () => document.querySelector<HTMLElement>(".board-peek-host") },
+    { first: headFirst, el: () => mastheadEl.value },
+  ]);
 }
 
 function onGallerySelect(id: string) {
@@ -506,10 +555,17 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
     >
       <!-- The playing board stays MOUNTED under the gallery (v-show, not v-if): state is
            preserved across an open/cancel (the one live board on the page), and the FLIP
-           fold in Wave C reads the board's own rect. -->
-      <div class="board-group" v-show="view === 'playing'">
+           fold in Wave C reads the board's own rect.
+           T6 mark 7: the v-show sits one level DOWN — the group itself renders in both views
+           so the MASTHEAD travels into the gallery and stays, naming the card the deck has
+           snapped. The scene and the mobile attribution are what the gallery replaces. The
+           `<h1>` never moves in the DOM, so every rule hanging off `.board-group` parentage
+           (the landscape dock, the drawer-closed centering) is untouched; the teleported
+           `.board-peek-host` has already been relocated OUT of the scene root by the time the
+           face is live, so it keeps painting inside the card. -->
+      <div class="board-group" :class="{ 'is-gallery': view === 'gallery' }">
         <!-- Mobile: @mbabb in-flow, left-aligned with logo -->
-        <AttributionCard ref="mobileAttribution" mobile />
+        <AttributionCard ref="mobileAttribution" mobile v-show="view === 'playing'" />
         <!-- Masthead: the pencil wordmark renders the CURRENT game's name and OPENS THE
              GALLERY (T4-W12 Wave D — the dropdown listbox is retired; one game-select
              surface, the carousel). A real <button>; its click folds the board into the
@@ -519,8 +575,17 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
              wordmark button is the accessible name of that heading — the current game —
              so the h1 stays visually identical (reset to inherit; the button carries all
              the paint). -->
+        <!-- T6 mark 7: `headerName`, not `game` — in the gallery the wordmark names the card
+             the deck has snapped, and the heading goes INERT there (the deck is the one
+             game-select surface, so a wordmark that names the snapped card while acting as
+             cancel-to-the-entered-game would be a mislabelled control). -->
         <h1 ref="mastheadEl" class="masthead">
-          <HandwrittenLogo ref="logoMenu" :game="game" @open="enterGallery" />
+          <HandwrittenLogo
+            ref="logoMenu"
+            :game="headerName"
+            :inert-heading="view === 'gallery'"
+            @open="enterGallery"
+          />
         </h1>
 
         <!-- THE MOUNT FOLD (T4-W13): one scene mounts at a time, resolved from `scene` — the
@@ -529,28 +594,40 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
              chunk) or a lazy async component per game (its composable + Worker only start when
              that game is selected). The table-driven fold replaces the hardcoded two-game
              v-if union — game #3+ mount with zero edits here. -->
-        <component :is="sceneFor(scene)" :leaving="leaving" @erased="onSceneErased" />
+        <component
+          :is="sceneFor(scene)"
+          v-show="view === 'playing'"
+          :leaving="leaving"
+          @erased="onSceneErased"
+        />
       </div>
 
       <!-- The gallery mounts in the board's place when view==='gallery' (Wave B static cut;
            the board⇄card fold is Wave C). Pencil-pure: GAMES flows in as GalleryCard[] props,
-           the choice returns via @select — no games/** import crosses into pencil. -->
-      <GameGallery
-        v-if="view === 'gallery'"
-        :cards="GAMES"
-        :snapped-index="snappedIndex"
-        :dirty="dirty"
-        :current-id="game"
-        :coarse="coarse"
-        :animate-entry="entryAnimated"
-        :saved="gallerySaved"
-        :busy="dealBusy"
-        @snap="onGallerySnap"
-        @select="onGallerySelect"
-        @cancel="onGalleryCancel"
-        @deal="onGalleryDeal"
-        @live-face="onLiveFace"
-      />
+           the choice returns via @select — no games/** import crosses into pencil.
+           T6 mark 7: LEAVE-ONLY fade. The exit's protagonist is the board unfolding out of the
+           card, and the deck used to vanish under it on a hard cut; dissolving it closes that
+           hole for two rules and no added latency (`unfoldToBoard` parks the live board home
+           BEFORE the view flips, so the fading deck never contains the board). Entry needs
+           nothing — BEAT 2, the deal, already animates it. -->
+      <Transition name="gallery-fade">
+        <GameGallery
+          v-if="view === 'gallery'"
+          :cards="GAMES"
+          :snapped-index="snappedIndex"
+          :dirty="dirty"
+          :current-id="game"
+          :coarse="coarse"
+          :animate-entry="entryAnimated"
+          :saved="gallerySaved"
+          :busy="dealBusy"
+          @snap="onGallerySnap"
+          @select="onGallerySelect"
+          @cancel="onGalleryCancel"
+          @deal="onGalleryDeal"
+          @live-face="onLiveFace"
+        />
+      </Transition>
     </main>
   </div>
 </template>
@@ -610,6 +687,39 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
   flex-direction: column;
   align-items: stretch;
   overflow: visible;
+}
+
+/* THE GALLERY POSE (T6 mark 7). The group is now the masthead's carrier in both views, and in
+   the deck's view the wordmark is a caption over the spread: centred, small, out of every
+   regime's dock. At (0,3,0) these beat `html.drawer-closed .masthead` (0,2,1) and the landscape
+   dock's `.masthead` (0,1,0), which is what they have to do — both would otherwise re-park a
+   masthead that no longer has a board under it. `translate: none` is the dock's own
+   `translate: 0 -50%` neutralised. */
+.board-group.is-gallery {
+  align-items: center;
+}
+
+.board-group.is-gallery .masthead {
+  position: static;
+  align-items: center;
+  margin: 0 0 0.25rem;
+  translate: none;
+  --logo-scale: 0.72;
+}
+
+/* The deck's leave-only dissolve — the twin of BEAT 0's chrome-leave, on the same clock. */
+.gallery-fade-leave-active {
+  transition: opacity 200ms var(--ease-glassGlide);
+}
+
+.gallery-fade-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-fade-leave-active {
+    transition: none;
+  }
 }
 
 /* F6-D3 cold fallback host — the thinking-scribble centered on otherwise-blank paper,
@@ -690,6 +800,14 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
     --logo-scale: 0.38;
     z-index: 5;
     margin: 0;
+  }
+
+  /* The gallery has no board to dock beside, so its masthead comes back to the top of the
+     page — where a landscape PHONE has 390px of height for a deck, a slip and a wordmark. The
+     dock's own rung is what fits: measured at 0.72 the block spends ~150 of those 390 and the
+     deck is left a 90px strip. */
+  .board-group.is-gallery .masthead {
+    --logo-scale: 0.4;
   }
 }
 

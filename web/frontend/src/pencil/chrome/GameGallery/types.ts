@@ -26,10 +26,12 @@ export interface GalleryCard {
   poster: () => Promise<Component>;
 }
 
-/** One staging axis, as presentation data. */
+/** One staging axis, as presentation data. `colorClass` is the crayon tier an option is
+ *  written in — present on difficulty, absent on size (T6 mark 7: the band writes its axis
+ *  name and its selected chip in the same ink the drawer does). */
 interface GalleryAxis {
   label: string;
-  options: { value: number | string; label: string }[];
+  options: { value: number | string; label: string; colorClass?: string }[];
   default: number | string;
 }
 

@@ -45,6 +45,7 @@
 import { computed, useId } from "vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
+import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
 import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
 import type { GalleryStaging } from "./types";
 
@@ -76,6 +77,16 @@ const emit = defineEmits<{
 const uid = useId();
 const sizeLabelId = computed(() => `staging-size-${uid}`);
 const diffLabelId = computed(() => `staging-diff-${uid}`);
+const zoneId = computed(() => `staging-zone-${uid}`);
+
+/** The difficulty axis writes in the SELECTED tier's crayon — the drawer's own `headingClass`
+ *  rule, which reads the tone off the selected option and never off a flag. The size axis has
+ *  no tones, so it falls to the muted register and nothing is toggled. */
+const diffTone = computed(
+  () =>
+    props.staging.difficulty.options.find((o) => o.value === props.difficulty)
+      ?.colorClass ?? "text-muted-foreground",
+);
 
 const safeLabel = computed(() =>
   props.savedPair
@@ -112,12 +123,23 @@ function onKeydown(e: KeyboardEvent) {
 <template>
   <div class="staging-band" aria-keyshortcuts="d" @keydown="onKeydown">
     <HandDrawnOutline :pose="0" :stroke-width="3" :outset="4">
-      <div class="staging-slip bg-card edge-outlined">
+      <!-- The slip is a labelled compartment, in the drawer's own zone grammar: the SAME
+           component, text and seed the staged well wears one surface up, so the two read as
+           one system. The visible tape IS the accessible name (`anchor="tag"` drops
+           `role="tooltip"` for exactly that reason). -->
+      <SheetWashiLabel :id="zoneId" text="new game" :seed="13" anchor="tag" />
+      <div
+        class="staging-slip bg-card edge-outlined"
+        role="group"
+        :aria-labelledby="zoneId"
+      >
         <div class="staging-axes">
           <div class="staging-axis" role="group" :aria-labelledby="sizeLabelId">
-            <span :id="sizeLabelId" class="staging-axis-label">{{
-              staging.size.label
-            }}</span>
+            <span
+              :id="sizeLabelId"
+              class="section-heading staging-axis-label text-muted-foreground"
+              >{{ staging.size.label }}</span
+            >
             <OptionSelector
               :options="staging.size.options"
               :selected="size"
@@ -127,9 +149,12 @@ function onKeydown(e: KeyboardEvent) {
             />
           </div>
           <div class="staging-axis" role="group" :aria-labelledby="diffLabelId">
-            <span :id="diffLabelId" class="staging-axis-label">{{
-              staging.difficulty.label
-            }}</span>
+            <span
+              :id="diffLabelId"
+              class="section-heading staging-axis-label transition-colors duration-250"
+              :class="diffTone"
+              >{{ staging.difficulty.label }}</span
+            >
             <OptionSelector
               :options="staging.difficulty.options"
               :selected="difficulty"
@@ -208,14 +233,32 @@ function onKeydown(e: KeyboardEvent) {
   font-size: 1rem;
 }
 
-/* The axis name in the hand register, muted and small — a caption on the chips, never a
-   sixth display-caps heading (the estate's own indicted grammar). It is also the group's
-   accessible name, so it is a real label and not decoration. */
+/* The axis name takes the drawer's own eyebrow register (`.section-heading`, typography.css
+   @layer components) — the weight, the lowercase, the wide tracking — so the slip and the
+   drawer's staged well rank their parts the same way. Colour is never baked into that class:
+   it comes from the template, muted on size and the selected tier's crayon on difficulty,
+   which is the drawer's `headingClass` rule read on a second surface.
+
+   TWO PROPERTIES ARE PINNED BACK, both measured. The FACE stays `--font-hand`: the Fraunces
+   cut is 28 codepoints taken from the strings that face actually paints, and `v` is in none
+   of them — `level` in the display face would render its middle letter in Georgia
+   (`scripts/check-font-coverage.mjs` reds on exactly that string), and the rename that would
+   have made this axis `difficulty` is struck estate-wide. The SIZE is one rung under the
+   register's, because the chips this captions are pinned to the body rung; the drawer's
+   heading-to-chip ratio is what carries across, not its absolute rung.
+
+   `min-width` is the chips' shared left margin, so it is MEASURED and it HOLDS at 2.6rem: the
+   widest label under the new register is `level` at 41.66px on the 1280 cell (34.89 at 844,
+   25.95 at 390 — the small rung clamps down with the viewport), and 2.6rem is 41.6, so the two
+   axes still start their chips within 0.06px of each other. Widening it is not free and was
+   tried: 2.75rem takes 2.4px off the ≥40rem row, which is enough to wrap sudoku's three
+   difficulty chips to a second line and swing the slip 112 → 153px between cards — the shift
+   on snap the reserve exists to prevent. Re-derived after the tape landed: the tallest slip is
+   112px (7rem) at ≥40rem and 168px (10.5rem) below it, on all five cards, so both
+   `--staging-reserve` fallbacks are still exactly the ceiling and no card reaches past one. */
 .staging-axis-label {
   font-family: var(--font-hand);
-  font-size: 0.9rem;
-  line-height: 1;
-  color: var(--color-muted-foreground);
+  font-size: var(--type-small);
   min-width: 2.6rem;
   text-align: left;
 }
@@ -233,6 +276,22 @@ function onKeydown(e: KeyboardEvent) {
 @media (pointer: coarse) {
   .staging-axis :deep(.ctrl-btn) {
     min-height: 44px;
+  }
+}
+
+/* THE ACCENT HOVER — the one colour the band was still missing against the drawer, where
+   `--color-accent` has always been the hover ground under every `.icon-btn`. Same token, same
+   two properties, same hover fence; no grammar transplant, and nothing that mints a filter
+   (`filter-census` G3.5 walks this regime's hover states).
+
+   THE VERBS ONLY, and the chips deliberately not: the chips already share the drawer's hover
+   grammar because they are the same `OptionSelector` (muted ink lifting to foreground, the
+   ghost underline), and a ground under them here would be a divergence on the very surface
+   being brought into line — plus it would paint over the crayon the selected chip now carries. */
+@media (hover: hover) {
+  .staging-btn:not(:disabled):hover {
+    background: var(--color-accent);
+    color: var(--color-foreground);
   }
 }
 
