@@ -109,7 +109,7 @@ const DECLARED_RANGE: string = (() => {
   return range;
 })();
 
-/** Does the declared range reach the re-judgment point, i.e. `>=0.12.0`? */
+/** Does the declared range reach the re-judgment point, i.e. `>=0.13.0`? */
 function cureHasLanded(range: string): boolean {
   const m = /(\d+)\.(\d+)\.(\d+)/.exec(range);
   if (!m)
