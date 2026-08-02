@@ -333,6 +333,102 @@ test("a frozen well mints ONE pose node and promotes nothing (the HandDrawnOutli
   expect(unpruned.promoted).toBe(3);
 });
 
+// ── The rail, at coarse (≥1024) — the ONE cell where the pair branch exists ──────
+
+test.describe("coarse row regime (≥1024)", () => {
+  // THE BRANCH AND THE FLOOR HAVE NEVER MET (pass-4 BC-M1). `.options-pair` renders only on
+  // the RAIL — `OptionSelector` takes `.options-row` whenever `mobile` is passed, and the
+  // phone's card always passes it — so the branch is a ≥1024 fact. The 44px floor, meanwhile,
+  // runs only in the coarse-iPhone describe below, where the branch cannot appear. The pair
+  // was therefore gated as a CEILING alone (`panelH ≤ 1098.25`, visual-regression test 10),
+  // under which a COLLAPSED pair reads greener than a healthy one: halving each half's width
+  // shortens the card. The safety property the cure was sold on — each half 78.96 × 44 — was
+  // measured, banked, and never gated. 1280×800 at `pointer: coarse` is the cell that owns it:
+  // the branch renders AND a thumb is the instrument.
+  test.use({
+    viewport: { width: 1280, height: 800 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  test("the pair branch keeps a 44px floor in BOTH dimensions, where the branch exists", async ({
+    page,
+  }) => {
+    await loadSudoku(page);
+
+    // WITNESS — the regime, before any number. A pair measured at `pointer: fine` is a
+    // different box, and a pair measured on the phone's card does not exist at all.
+    const regime = await page.evaluate(() => ({
+      coarse: matchMedia("(pointer: coarse)").matches,
+      row: matchMedia("(min-width: 1024px)").matches,
+      rail: !!document.querySelector(".controls-card .control-panel-wrap"),
+    }));
+    expect(regime, "the rail's own coarse cell").toEqual({
+      coarse: true,
+      row: true,
+      rail: true,
+    });
+
+    /** Each half of every rendered pair, with the box a thumb actually gets. */
+    const halves = () =>
+      page.locator(".controls-card .ctrl-options.options-pair > .ctrl-btn").evaluateAll((els) =>
+        els.map((el) => {
+          const r = el.getBoundingClientRect();
+          return { text: el.textContent!.trim(), w: +r.width.toFixed(2), h: +r.height.toFixed(2) };
+        }),
+      );
+
+    // VACUITY GUARD. `options.length === 2` is the DATA's rule, so the branch's population is
+    // whatever the estate's option sets happen to be — exactly one group today (candidates
+    // Off/On). If a future edit takes it to zero this row would pass by measuring nothing, and
+    // that silence is the failure mode BC-M1 is about.
+    const shipped = await halves();
+    expect(shipped.length, "the pair branch must actually render here").toBeGreaterThanOrEqual(2);
+
+    for (const c of shipped) {
+      expect(c.w, `pair half "${c.text}" width`).toBeGreaterThanOrEqual(44);
+      expect(c.h, `pair half "${c.text}" height`).toBeGreaterThanOrEqual(44);
+    }
+
+    // NEGATIVE CONTROL, both dimensions, in the same run. The floor is two-dimensional
+    // because the collapse is: splitting a stacked chip into two halves spends WIDTH to buy
+    // height, so a probe that only reads height can never see the cure fail in the direction
+    // the cure moves. One control per dimension, each reverted before the next.
+    const collapse = async (css: string, dim: "w" | "h") => {
+      const tag = await page.addStyleTag({ content: css });
+      await page.waitForTimeout(80);
+      const broken = await halves();
+      expect(
+        Math.min(...broken.map((c) => c[dim])),
+        `negative control (${dim}): the collapsed pair must fall under the floor`,
+      ).toBeLessThan(44);
+      await tag.evaluate((el) => el.remove());
+      await page.waitForTimeout(80);
+    };
+    // Both controls strip `min-width`/`min-height` first ON PURPOSE. The 44px floor is not the
+    // pair's own rule — it is `index.css`'s shared `(pointer: coarse)` block
+    // (`.ctrl-btn { min-width: 2.75rem; min-height: 2.75rem }`, T4-P1's two-dimensional cure),
+    // and a control that leaves it standing cannot push a half under the bar in either
+    // dimension. Measured, not assumed: the first RED here read `Received: 44` with the basis
+    // set to 40px, which IS the shared rule holding the line.
+    await collapse(
+      ".ctrl-options.options-pair > .ctrl-btn { min-width: 0 !important; flex: 0 0 40px !important;" +
+        " padding-left: 0 !important; padding-right: 0 !important }",
+      "w",
+    );
+    await collapse(
+      ".ctrl-options.options-pair > .ctrl-btn { min-height: 0 !important; height: 40px !important;" +
+        " padding-top: 0 !important; padding-bottom: 0 !important; line-height: 1 !important }",
+      "h",
+    );
+
+    // and the shipped box is back after both controls — a control that leaks is a re-baseline.
+    const after = await halves();
+    expect(Math.min(...after.map((c) => c.w))).toBeGreaterThanOrEqual(44);
+    expect(Math.min(...after.map((c) => c.h))).toBeGreaterThanOrEqual(44);
+  });
+});
+
 // ── The card (coarse pointer) ───────────────────────────────────────────────────
 
 test.describe("coarse regime", () => {
@@ -388,6 +484,76 @@ test.describe("coarse regime", () => {
       expect(c.w, `chip "${c.text}" width`).toBeGreaterThanOrEqual(44);
       expect(c.h, `chip "${c.text}" height`).toBeGreaterThanOrEqual(44);
     }
+  });
+
+  test("the heading lock holds on the CARD too — the regime its rail arm never visits", async ({
+    page,
+  }) => {
+    await loadSudoku(page);
+    // B-5's lock (":212") runs at the default 1280 fine project and scopes itself to
+    // `.controls-card`, so it only ever sees the RAIL's two h2s — the second arm was one
+    // `test.use` away (pass-4 BC-m5). It does NOT travel by copying its selector, and that is
+    // the finding this arm carries: `.section-heading` marks DIFFERENT ELEMENTS in the two
+    // regimes. On the rail it is the `<h2>` itself; on the card the heading is
+    // `<h2 class="mobile-heading-head">` WRAPPING the section tab (W3's APG disclosure shape —
+    // heading wraps button, so an H-key walk lands on the heading and not inside a control),
+    // and `.section-heading` is the ink-bearing `<span>` inside that button. Read with the
+    // rail's selector this arm reports `span`, which is a probe defect, not an estate one.
+    // The PROPERTY is what carries across the seam, so the property is what is asserted.
+    const headings = await page
+      .locator(".mobile-board-width .section-heading")
+      .evaluateAll((els) =>
+        els.map((el) => {
+          const h = el.closest("h1,h2,h3");
+          return {
+            headingTag: h?.tagName.toLowerCase() ?? null,
+            hidden: h?.getAttribute("aria-hidden") ?? null,
+            inHidden: !!el.closest("[aria-hidden='true']"),
+            name: (el.getAttribute("aria-label") ?? el.textContent ?? "").trim(),
+            // Recorded, not asserted away: the tab `<button>` inside the heading is a11y r1's
+            // M9 row and belongs to that wave, not to this lock.
+            inButton: !!el.closest("button"),
+          };
+        }),
+      );
+    expect(headings.length).toBe(2);
+    for (const h of headings) {
+      expect(h.headingTag).toBe("h2");
+      expect(h.hidden).toBeNull();
+      expect(h.inHidden).toBe(false);
+      expect(h.name.length).toBeGreaterThan(0);
+    }
+    // The card's shape, pinned so a later flattening of the disclosure cannot pass this row by
+    // reverting to the rail's markup unnoticed.
+    expect(headings.every((h) => h.inButton)).toBe(true);
+    // No hidden subtree on the card may contain a heading — the "both" the order forbade,
+    // asserted where the card's own decorative `aria-hidden` population actually lives.
+    const hidden = await page
+      .locator(".mobile-board-width [aria-hidden='true']")
+      .evaluateAll((els) =>
+        els.map((el) => ({
+          cls: el.className.toString(),
+          heading:
+            el.tagName.toLowerCase().startsWith("h") || !!el.querySelector("h1,h2,h3"),
+        })),
+      );
+    expect(hidden.length).toBeGreaterThan(0);
+    for (const h of hidden)
+      expect(h, `aria-hidden ${h.cls}`).toMatchObject({ heading: false });
+
+    // NEGATIVE CONTROL — the lock passes on any tree that has no headings at all, and it
+    // passed on both builds when it landed. Hide one heading's subtree in-page and the same
+    // probe must report the violation it exists to catch.
+    const broken = await page.evaluate(() => {
+      const h = document.querySelector(".mobile-board-width .section-heading")!;
+      h.closest("h1,h2,h3")!.setAttribute("aria-hidden", "true");
+      return [...document.querySelectorAll(".mobile-board-width [aria-hidden='true']")].some(
+        (el) => el.tagName.toLowerCase().startsWith("h") || !!el.querySelector("h1,h2,h3"),
+      );
+    });
+    expect(broken, "negative control: a heading inside a hidden subtree must be seen").toBe(
+      true,
+    );
   });
 
   test("the teacher's well names the check state the card has never shown", async ({

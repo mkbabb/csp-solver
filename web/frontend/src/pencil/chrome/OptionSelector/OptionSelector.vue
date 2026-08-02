@@ -147,8 +147,26 @@ function scribbleSeed(val: string | number): number {
    than the 60.02/48.02 the two words need and wider than the stacked chip it replaces on the
    only axis a thumb was short of.
    The rule is the DATA's, not the control's — `options.length === 2` — so no caller learns a
-   flag and any future binary inherits it. Estate-wide there is exactly one today (candidates
-   Off/On); every game's size and difficulty axis carries 3–4. */
+   flag and any future binary inherits it. Estate-wide there is exactly ONE binary today and it
+   is `CANDIDATE_OPTIONS` (Off/On, `GameControlPanel.vue`). Every other axis is 3–4: the staged
+   bands all live in ONE module now — `games/shared/selectors.ts`, `difficultyOptions` 3 ·
+   `subgridSizes` 3 · `latinSizes` 4 · `cagedLatinSizes` 3 — and the two live-zone lists beside
+   the binary carry 3 each (`MODE_OPTIONS`, `CHECK_OPTIONS`). StagingBand's two selectors both
+   pass `mobile`, so they take `.options-row` regardless.
+   (T5-W4b, re-derived AT CITATION: pass 4 wrote "verified in all five `constants.ts`" and pass
+   4's audit corrected it to three. Both are stale — W2's distill left ONE `constants.ts`, and
+   the option bands it was counting were never in it. The substance has held through all three
+   readings; only the count kept rotting, which is the argument for re-deriving rather than
+   reciting.)
+
+   THE FLOOR IS GATED WHERE THE BRANCH EXISTS. The 44px two-dimensional floor these halves
+   ride is `index.css`'s shared `(pointer: coarse)` rule, not a rule of this component; the
+   pair was gated only as a CEILING (`panelH ≤ 1098.25`) under which a COLLAPSED pair reads
+   greener. `e2e/zone-grammar.spec.ts` — "the pair branch keeps a 44px floor in BOTH
+   dimensions" — asserts it at 1280×800 coarse, the one cell where this branch renders and a
+   thumb is the instrument, with a per-dimension negative control that strips the shared
+   `min-width`/`min-height` first (leave them standing and no control can push a half under
+   the bar). */
 .options-pair {
   display: flex;
 }

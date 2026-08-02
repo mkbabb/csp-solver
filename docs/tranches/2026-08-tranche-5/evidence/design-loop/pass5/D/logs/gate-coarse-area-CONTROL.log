@@ -1,0 +1,81 @@
+=== AUDIT ===
+row       pass-4 D-m2 — 'the coarse union-area budget (6,488) has no negative control of its own'
+ablation  filterBudget.ts FILTER_BUDGET_UNION_AREA.coarse  6488 -> 5900  (source, reverted after the run)
+why this  control A moved the DOM and control B moved the ROW budget; in the coarse arm control A
+          stops at the population assertion (a)/(b) before assertion (d) is ever reached. Moving the
+          COARSE BUDGET leaves (a),(b),(c) exact and reds (d) alone — the area row's own control.
+tree      HEAD 66fa5856 + the one-line ablation; artifact index-C5xqWLHq1mLl.js md5 2b16a65d0f79cbb50799adf184edca65
+cmd       PLAYWRIGHT_BASE_URL=http://127.0.0.1:4253 npx playwright test --config playwright-throttle.config.ts \
+            --project filter-census-chromium --project filter-census-webkit -g 'live-filter census'
+date      2026-08-02T06:03:26Z
+
+EXPECTED: G3.3 coarse RED in both engines naming the delta; G3.1 row GREEN in both (the control is scoped).
+OBSERVED: exactly that — 2 failed / 2 passed, and the red re-derives the measured coarse union at 6488.
+
+
+Running 4 tests using 4 workers
+
+  ✓  1 [filter-census-chromium] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (2.7s)
+  ✘  3 [filter-census-chromium] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (3.5s)
+  ✓  4 [filter-census-webkit] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (3.9s)
+  ✘  2 [filter-census-webkit] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (4.1s)
+
+
+  1) [filter-census-chromium] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) 
+
+    Error: [coarse] union raster area 6488 vs budget 5900 ±118 CSS px²
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 118
+    Received:    588
+
+      233 |     Math.abs(area - budget),
+      234 |     `[${regime}] union raster area ${area} vs budget ${budget} ±${slack} CSS px²`,
+    > 235 |   ).toBeLessThanOrEqual(slack);
+          |     ^
+      236 |
+      237 |   // (e) THE INJECTED-NODE CONTROL. A census that has stopped seeing the document passes every
+      238 |   // assertion above; this is the one row that reds when the instrument dies. A filtered box is
+        at assertCensus (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/filter-census.spec.ts:235:5)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/filter-census.spec.ts:296:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/filter-census-G3-3-·-the-c-6e3f8-olds-below-1024-built-dist--filter-census-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/filter-census-G3-3-·-the-c-6e3f8-olds-below-1024-built-dist--filter-census-chromium/error-context.md
+
+  2) [filter-census-webkit] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) 
+
+    Error: [coarse] union raster area 6488 vs budget 5900 ±118 CSS px²
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 118
+    Received:    588
+
+      233 |     Math.abs(area - budget),
+      234 |     `[${regime}] union raster area ${area} vs budget ${budget} ±${slack} CSS px²`,
+    > 235 |   ).toBeLessThanOrEqual(slack);
+          |     ^
+      236 |
+      237 |   // (e) THE INJECTED-NODE CONTROL. A census that has stopped seeing the document passes every
+      238 |   // assertion above; this is the one row that reds when the instrument dies. A filtered box is
+        at assertCensus (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/filter-census.spec.ts:235:5)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/filter-census.spec.ts:296:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/filter-census-G3-3-·-the-c-6e3f8-olds-below-1024-built-dist--filter-census-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/filter-census-G3-3-·-the-c-6e3f8-olds-below-1024-built-dist--filter-census-webkit/error-context.md
+
+  2 failed
+    [filter-census-chromium] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) 
+    [filter-census-webkit] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) 
+  2 passed (5.0s)
+
+=== REVERT PROOF ===
+$ git diff --stat web/frontend/src/pencil/config/filterBudget.ts   (after revert, before the pass-5 prose edit)
+(no output — the ablation left no residue)

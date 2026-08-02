@@ -234,8 +234,7 @@ const THEMES = themesOf(INDEX_CSS);
 /** literal sRGB out of the two spellings this stylesheet authors: #rgb/#rrggbb and hsl() */
 function parseColor(v) {
   const short = v.match(/^#([0-9a-f]{3})$/i);
-  if (short)
-    return [...short[1]].map((c) => parseInt(c + c, 16));
+  if (short) return [...short[1]].map((c) => parseInt(c + c, 16));
   const hex = v.match(/^#([0-9a-f]{6})$/i);
   if (hex) return [0, 2, 4].map((i) => parseInt(hex[1].slice(i, i + 2), 16));
   const h = v.match(/^hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)$/);
@@ -278,9 +277,7 @@ function mixOf(scope, decl) {
   const a = p * c1.a + (1 - p) * c2.a;
   if (a === 0) return { rgb: [0, 0, 0], a: 0 };
   return {
-    rgb: c1.rgb.map(
-      (v, i) => (p * c1.a * v + (1 - p) * c2.a * c2.rgb[i]) / a,
-    ),
+    rgb: c1.rgb.map((v, i) => (p * c1.a * v + (1 - p) * c2.a * c2.rgb[i]) / a),
     a,
   };
 }
@@ -378,6 +375,124 @@ function gateArmed(armed) {
 }
 
 /**
+ * CLOSURE 4 — THE SHIP-4 CENSUS (T4-P1 pass 5, Lane D; the pass-4 registry's D-m4).
+ *
+ * Ship 4 re-pitched six rendered surfaces and NONE of them entered an assertion or a golden:
+ * the sole witness was twelve crops from a node rig that never entered the repo either, so the
+ * next re-pitch of these six ships unwitnessed again. This is the row that stops that.
+ *
+ * WHAT IT ASSERTS, and what it deliberately does not. Each surface is pinned to the LADDER RUNG
+ * it was re-pitched onto — not to a number. The rung's own floor is already gated above in all
+ * three scopes (light/dark/print), so pinning the surface to the rung gives the surface a
+ * rendered-contrast floor transitively, and one gate keeps saying the truth when the ramp moves.
+ * A surface that goes back to an open-coded percentage loses the rung and reds here; a rung that
+ * drifts under its floor reds in `gateFloors`. Neither can happen quietly now.
+ *
+ * Surface 5 (`.icon-sublabel.is-armed`) is NOT repeated here — closure 3 (`gateArmed`) already
+ * owns it with a floor of its own, and a second gate on one surface is bookkeeping, not safety.
+ * Six surfaces, six assertions: five rows below plus closure 3.
+ *
+ * Row 3 is an ABSENCE row. Ship 4's third surface deleted `opacity: 0.7` off `.legend-sep`
+ * (2.877:1 against the card); there is no token to name, so the assertion is that no `opacity`
+ * declaration comes back — the separator inherits the legend's quiet rung or it is a defect.
+ */
+const SHIP4 = [
+  {
+    n: 1,
+    file: "pencil/chrome/KeyboardLegend.vue",
+    selector: ".keyboard-legend",
+    decl: "color",
+    token: "--ink-press-quiet",
+    was: "55% — 3.53:1 light / 4.36:1 dark, sub-AA in both themes at caption size",
+  },
+  {
+    n: 2,
+    file: "pencil/chrome/KeyboardLegend.vue",
+    selector: ".legend-row kbd",
+    decl: "border",
+    token: "--ink-press-rule",
+    was: "40% — 2.36:1 light / 2.87:1 dark, under the 1.4.11 non-text floor",
+  },
+  {
+    n: 3,
+    file: "pencil/chrome/KeyboardLegend.vue",
+    selector: ".legend-sep",
+    absent: "opacity",
+    was: "opacity: 0.7 — 2.877:1, deleted by ship 4",
+  },
+  {
+    n: 4,
+    // NB the pass-4 dossier's §5 table names this surface `.margin-note`. The rule is
+    // `.margin-note-meta`; `.margin-note` is the strip, and it carries no ink of its own.
+    // The correction is banked at pass5/D/correction-64fa37a4.md §3.
+    file: "pencil/chrome/MarginNote.vue",
+    selector: ".margin-note-meta",
+    decl: "color",
+    token: "--ink-press-quiet",
+    was: "62% — 4.34:1 light, sub-AA",
+  },
+  {
+    n: 6,
+    file: "pencil/chrome/CompletionVignette.vue",
+    selector: ".vignette-meta",
+    decl: "color",
+    token: "--ink-press-quiet",
+    was: "62% — 4.34:1 light, the second site the W10 sweep missed",
+  },
+];
+
+/** Every rule body authored for `selector` in `src` — a selector may be written twice (the
+ *  legend has a base rule and a `(hover: hover)` one), and the ink lives in exactly one.
+ *
+ *  COMMENTS COME OUT FIRST, and that is not a detail: every one of these five rules carries a
+ *  `/* was 55% … *\/` note recording what ship 4 moved, sitting between the previous `;` and the
+ *  declaration. The first cut of this gate kept them and went RED on a healthy tree in all five
+ *  rows — banked at `pass5/D/logs/gate-ship4-BORN-RED.log`, which is what born-RED is for. */
+const decomment = (s) => flat(s.replace(/\/\*[\s\S]*?\*\//g, ""));
+function bodiesOf(src, selector) {
+  const sel = flat(selector).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return [
+    ...decomment(src).matchAll(new RegExp(`(?:^|[};{])${sel}\\{([^}]*)\\}`, "g")),
+  ].map((m) => m[1]);
+}
+
+/** The value of one declaration, exactly — `border:` never matches `border-radius:`. */
+const declOf = (body, prop) =>
+  new RegExp(`(?:^|;)${prop}:([^;]*)`).exec(body)?.[1] ?? null;
+
+/** closure 4: each ship-4 surface still names the rung it was re-pitched onto */
+function gateShip4(rows) {
+  const fails = [];
+  for (const s of rows) {
+    const bodies = bodiesOf(readFileSync(join(SRC, s.file), "utf8"), s.selector);
+    if (!bodies.length) {
+      fails.push(
+        `ship-4 surface ${s.n}: ${s.selector} not found in ${s.file} — the assertion is unanchored`,
+      );
+      continue;
+    }
+    if (s.absent) {
+      const back = bodies.filter((b) => declOf(b, s.absent) !== null);
+      if (back.length) {
+        fails.push(
+          `ship-4 surface ${s.n}: ${s.selector} carries \`${s.absent}: ${declOf(back[0], s.absent)}\` again (was ${s.was})`,
+        );
+      }
+      continue;
+    }
+    const named = bodies.some((b) =>
+      (declOf(b, s.decl) ?? "").includes(`var(${s.token})`),
+    );
+    if (!named) {
+      fails.push(
+        `ship-4 surface ${s.n}: ${s.selector} no longer writes \`${s.decl}: var(${s.token})\` — it is off the rung ship 4 put it on (was ${s.was})`,
+      );
+    }
+  }
+  return fails;
+}
+
+/**
  * THE TAPE — `--sheet-washi-neutral`, the one estate-wide surface `blast-radius.md` §2.7 booked
  * as "zero assertions and zero goldens read this token's value: a free edit in test terms and a
  * wide one in rendered terms". The dark arm shipped at `e982a403` and the device shot confirmed
@@ -468,6 +583,20 @@ function selfTest() {
     ["theme-drift", () => gateFloors(drifted)],
     // The tape's dark arm reverted to the light arm's white base — verbatim the pose the
     // pass-2 dark shot caught and `e982a403` cured. If this passes, the tape is ungated again.
+    // CLOSURE 4, all three of its modes shown able to fail — the config is mutated, never the
+    // tree, so the self-test leaves no residue in the surfaces it grades (gateArmed's idiom).
+    [
+      "ship4-token",
+      () => gateShip4(SHIP4.map((r) => (r.token ? { ...r, token: ARMED.banned } : r))),
+    ],
+    [
+      "ship4-absence",
+      () => gateShip4(SHIP4.map((r) => (r.absent ? { ...r, absent: "font-size" } : r))),
+    ],
+    [
+      "ship4-anchor",
+      () => gateShip4(SHIP4.map((r) => ({ ...r, selector: `${r.selector}-gone` }))),
+    ],
     [
       "tape",
       () =>
@@ -492,6 +621,13 @@ function selfTest() {
     mute.push(
       `ownership found ${found.length} of the fixture's 2 reintroductions — the collector misses a spelling or an extension`,
     );
+  // Closure 4 must keep covering SIX surfaces: five rows here plus closure 3's armed sublabel.
+  // Without this, a row could be dropped and the gate would still self-test green on four.
+  const covered = new Set([...SHIP4.map((s) => s.n), 5]);
+  if (covered.size !== 6)
+    mute.push(
+      `ship-4 census covers ${covered.size} of the 6 re-pitched surfaces (${[...covered].join(",")}) — a row was dropped`,
+    );
   return mute;
 }
 
@@ -502,6 +638,7 @@ const fails = [
   ...gateMonotone(INDEX_CSS),
   ...gateOwnership(sources(SRC)),
   ...gateArmed(ARMED),
+  ...gateShip4(SHIP4),
   ...gateTape(INDEX_CSS, TAPE),
 ];
 const vacuous = process.argv.includes("--self-test") ? selfTest() : [];
@@ -554,6 +691,20 @@ const tapeRow = Object.fromEntries(
 console.log(
   `  ${"washi tape".padEnd(18)}       ${tapeRow.light.toFixed(2)} light / ${tapeRow.dark.toFixed(2)} dark  ≥${TAPE.floor} (${TAPE.ink} on ${TAPE.token})`,
 );
+
+/* Closure 4, printed: six re-pitched surfaces, six assertions, each naming its rung. */
+console.log(
+  `\nship-4 census — the six re-pitched surfaces, each pinned to the rung above (so the rung's floor is the surface's floor):`,
+);
+for (const s of [
+  ...SHIP4,
+  { n: 5, selector: ARMED.selector, token: ARMED.token, file: ARMED.file },
+].sort((a, b) => a.n - b.n)) {
+  const what = s.absent
+    ? `no \`${s.absent}\` declaration`
+    : `${s.decl ?? "color"}: var(${s.token})`;
+  console.log(`  ${String(s.n)}  ${s.selector.padEnd(24)} ${what}`);
+}
 
 /* The register the ladder does NOT govern, printed so the inversion can't go quiet. */
 const reg = Object.fromEntries(

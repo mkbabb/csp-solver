@@ -1,0 +1,89 @@
+AUDIT 2026-08-02T06:09:15Z · host darwin · sha 66fa5856+pass5A · harness PREVIEW (built dist-pass5A-abl :4247)
+ABLATIONS A2 + A3 TOGETHER on the BUILT artifact — attemptDeal's mounted arm narrowed to cross-game-only, and the band's d handler scoped to the deal button.
+EXPECT: exactly two rows red, each attributable by name; every other row green.
+cmd: PLAYWRIGHT_BASE_URL=http://localhost:4247 npx playwright test e2e/gallery-deal.spec.ts --project=chromium
+
+Running 18 tests using 9 workers
+
+  ✓   6 [chromium] › e2e/gallery-deal.spec.ts:189:1 › cold start: GIVENS ARE NOT WORK — a dealt, untouched board reads "dealt" (656ms)
+  ✓   5 [chromium] › e2e/gallery-deal.spec.ts:72:1 › band: a sibling of the listbox, never a control inside role=option (989ms)
+  ✓   1 [chromium] › e2e/gallery-deal.spec.ts:150:1 › cold start: an UNMOUNTED game reports its saved board and offers resume (1.1s)
+  ✓   9 [chromium] › e2e/gallery-deal.spec.ts:178:1 › cold start: a game with NO board offers start, and the card keeps its range line (1.1s)
+  ✓   8 [chromium] › e2e/gallery-deal.spec.ts:370:1 › guard: when BOTH boards hold work the sub-line says so (1.4s)
+  ✓   4 [chromium] › e2e/gallery-deal.spec.ts:243:1 › guard: the NEGATIVE control — an untouched target board deals straight through (1.6s)
+  ✓   3 [chromium] › e2e/gallery-deal.spec.ts:210:1 › guard: a deal onto ANOTHER game with work on it arms the ribbon (1.8s)
+  ✓   7 [chromium] › e2e/gallery-deal.spec.ts:346:1 › guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon (2.2s)
+  ✓  13 [chromium] › e2e/gallery-deal.spec.ts:518:1 › deal: a same-game deal rides the BRIDGE — the staged pair, and no remount (1.1s)
+  ✓  12 [chromium] › e2e/gallery-deal.spec.ts:488:1 › deal: a cross-game deal lands the TARGET game at the STAGED pair (1.2s)
+  ✓  11 [chromium] › e2e/gallery-deal.spec.ts:470:1 › guard: a PRISTINE mounted board deals across with no ribbon (the source-arm control) (1.6s)
+  ✓  14 [chromium] › e2e/gallery-deal.spec.ts:538:1 › deal: a same-game deal issued BEFORE the scene mounts still lands the staged pair (1.2s)
+  ✓  15 [chromium] › e2e/gallery-deal.spec.ts:609:1 › safe verb: `start` HONOURS the staged pair (a game with no board has none to restore) (1.2s)
+  ✓  16 [chromium] › e2e/gallery-deal.spec.ts:627:1 › safe verb: `resume` PRINTS the saved pair the moment the chips wander off it (1.1s)
+  ✓  18 [chromium] › e2e/gallery-deal.spec.ts:693:1 › a11y: the live region carries the staged pair and the board state (856ms)
+  ✓  17 [chromium] › e2e/gallery-deal.spec.ts:664:1 › safe verb: a wandered pair cannot OUTLIVE the transaction (1.3s)
+  ✘   2 [chromium] › e2e/gallery-deal.spec.ts:266:1 › guard: the `d` hotkey routes through the SAME ribbon, from the deck AND from the band (11.6s)
+  ✘  10 [chromium] › e2e/gallery-deal.spec.ts:447:1 › guard: a dirty SAME-game deal raises the ribbon too — the subsumption, gated (11.3s)
+
+
+  1) [chromium] › e2e/gallery-deal.spec.ts:266:1 › guard: the `d` hotkey routes through the SAME ribbon, from the deck AND from the band 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.gallery-guard')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('.gallery-guard')
+
+
+      307 |   ]) {
+      308 |     await origin.press('d');
+    > 309 |     await expect(page.locator('.gallery-guard')).toBeVisible();
+          |                                                  ^
+      310 |     await expect(page.locator('.gallery-guard .guard-leave')).toHaveText('deal');
+      311 |     await page.locator('.gallery-guard .guard-keep').click();
+      312 |     await expect(page.locator('.gallery-guard')).toBeHidden();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery-deal.spec.ts:309:50
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-deal-guard-the-d-h-3a557--the-deck-AND-from-the-band-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-deal-guard-the-d-h-3a557--the-deck-AND-from-the-band-chromium/error-context.md
+
+  2) [chromium] › e2e/gallery-deal.spec.ts:447:1 › guard: a dirty SAME-game deal raises the ribbon too — the subsumption, gated 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.gallery-guard')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('.gallery-guard')
+
+
+      463 |
+      464 |   const ribbon = page.locator('.gallery-guard');
+    > 465 |   await expect(ribbon).toBeVisible();
+          |                        ^
+      466 |   await expect(ribbon).toHaveAttribute('aria-label', 'deal over this puzzle?');
+      467 |   await expect(ribbon.locator('.guard-note-sub')).toHaveText("your marks aren't saved");
+      468 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery-deal.spec.ts:465:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-deal-guard-a-dirty-9d99d-too-—-the-subsumption-gated-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-deal-guard-a-dirty-9d99d-too-—-the-subsumption-gated-chromium/error-context.md
+
+  2 failed
+    [chromium] › e2e/gallery-deal.spec.ts:266:1 › guard: the `d` hotkey routes through the SAME ribbon, from the deck AND from the band 
+    [chromium] › e2e/gallery-deal.spec.ts:447:1 › guard: a dirty SAME-game deal raises the ribbon too — the subsumption, gated 
+  16 passed (12.9s)

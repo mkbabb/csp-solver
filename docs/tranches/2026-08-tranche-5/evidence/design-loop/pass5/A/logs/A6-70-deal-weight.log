@@ -1,0 +1,14 @@
+AUDIT 2026-08-02T06:19:07Z · host darwin · sha 66fa5856+pass5A · harness PREVIEW (built dist-pass5A :4246)
+cmd: node rig/deal-weight.mjs http://localhost:4246
+── fine  1280×900 dpr2  (pointer: fine)
+   type      deal 18.4px · chip 16px · axis label 14.4px      →  deal / chip = ×1.15
+   ink mass  deal 771.4 (92.2×40.0) · heaviest of 6 chips 272.42 (62.4×36.0) · all chips 797.41   →  ×2.832 vs the heaviest chip, 96.7% of the whole list
+   density   deal 0.20919 · heaviest chip 0.12126 · chip mean 0.05923   →  ×1.725 vs the heaviest chip
+── COARSE 390×844 dpr3  (pointer: coarse)
+   type      deal 18.4px · chip 16px · axis label 14.4px      →  deal / chip = ×1.15
+   ink mass  deal 806.25 (92.2×44.0) · heaviest of 6 chips 276.56 (62.4×44.0) · all chips 800.51   →  ×2.915 vs the heaviest chip, 100.7% of the whole list
+   density   deal 0.19877 · heaviest chip 0.10072 · chip mean 0.04866   →  ×1.973 vs the heaviest chip
+
+GATE — the commit verb out-ranks the option list it commits on TYPE, MASS and DENSITY in both regimes: PASS
+[{"regime":"fine  1280×900 dpr2","pointer":"fine","type":{"deal":18.4,"safe":18.4,"chip":16,"axisLabel":14.4},"chipCount":6,"dealBox":"92.2×40.0","chipBox":"62.4×36.0","massDeal":771.4,"massSafe":334.58,"massHeaviestChip":272.42,"massAllChips":797.41,"densityDeal":0.20919,"densityHeaviestChip":0.12126,"densityChipMean":0.05923,"typeRatio":1.15,"massRatioVsHeaviestChip":2.832,"densityRatioVsHeaviestChip":1.725,"massShareOfWholeList":0.967},{"regime":"COARSE 390×844 dpr3","pointer":"coarse","type":{"deal":18.4,"safe":18.4,"chip":16,"axisLabel":14.4},"chipCount":6,"dealBox":"92.2×44.0","chipBox":"62.4×44.0","massDeal":806.25,"massSafe":338.31,"massHeaviestChip":276.56,"massAllChips":800.51,"densityDeal":0.19877,"densityHeaviestChip":0.10072,"densityChipMean":0.04866,"typeRatio":1.15,"massRatioVsHeaviestChip":2.915,"densityRatioVsHeaviestChip":1.973,"massShareOfWholeList":1.007}]
+EXIT=0

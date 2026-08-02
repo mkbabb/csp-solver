@@ -218,12 +218,20 @@ function marksFor(pos: number): number[] | undefined {
 // floor and 38% under what the same phone shows in PORTRAIT. Pass 4 measured the whole ladder
 // on a built dist, both engines identical, at 844×390 (rig `pass4/rigF3/landladder.mjs`):
 //
-//   cap             board  cell    fits   pageVh   board-top→first chip
-//   none (pre-P3)     672  74.22  false    3.667   841.27   ← the board can't be seen whole
-//   100dvh − 10rem    230  25.11   true    2.533   399.27   ← pass 3's rung
-//   100dvh − 4rem     326  35.77   true    2.779   495.27
-//   100dvh − 1.5rem   366  40.22   true    2.882   535.27   ← SHIPPED
-//   100dvh            390  42.88   true    2.944   559.27   ← the whole short edge, still <44
+//   cap             board  cell    fits   pageVh   board-top→first chip   foldOverflow*
+//   none (pre-P3)     672  74.22  false    3.667   841.27                 392.58
+//   100dvh − 10rem    230  25.11   true    2.533   399.27   ← pass 3's rung      0
+//   100dvh − 4rem     326  35.77   true    2.779   495.27                  46.58
+//   100dvh − 1.5rem   366  40.22   true    2.882   535.27   ← SHIPPED        88.58
+//   100dvh            390  42.88   true    2.944   559.27   ← whole short edge  110.58
+//
+// *T5-W4c added the fold column, because it is the ONE dimension the ladder never priced and
+// the renamed gate ("a board no larger than the screen it is drawn on" = height ≤ innerHeight)
+// is satisfied at every rung above, including the two that put a third of the board under the
+// fold. `.board-cells` referent, chromium, this pass's build (`pass5/f3/rig/landladder.mjs`);
+// the drawn-frame referent runs 2px higher (see the box table below). It is now a GATE, with a
+// real bound: `board-covisibility.spec.ts` pins the shipped rung's overflow and REDS on the
+// `100dvh` rung — the election can no longer drift a cap without a red.
 //
 // So: the 44px floor is UNREACHABLE at 844×390 by any cap — a 9×9 at 44px cells is a 400px
 // board and the viewport is 390 tall. The floor is a CONTROL tap-target rule (`.ctrl-btn`
@@ -240,9 +248,30 @@ function marksFor(pos: number): number[] | undefined {
 // (390×844, 390×664, 320×568, 820×1180 all read identically with the cap on or off).
 //
 // WHAT IT COSTS, disclosed rather than discovered later: pass 3's 230px board fitted WHOLE
-// above the fold at 844×390 (bottom 342.58 of 390) and this one does not — bottom 478.58, an
-// overflow of 88.58px, the last two rows a scroll away at rest. The page is 2.533 → 2.882
-// viewports. That is a real loss and it is taken deliberately: the stack is a scroll at both
+// above the fold at 844×390 (bottom 342.58 of 390) and this one does not — the last two rows
+// are a scroll away at rest. The page is 2.533 → 2.882 viewports.
+//
+// T5-W4c (pass 5) — THE OVERFLOW NOW NAMES ITS BOX AND ITS ENGINE, which is the correction the
+// row actually needed. Three numbers were in the record for one quantity because three boxes
+// were being measured and none of them was named. Re-derived on this pass's build, 844×390,
+// shipped cap, both engines (`pass5/f3/rig/foldref.mjs`, `logs/foldref.log`) — and reproduced
+// byte-for-byte on the pre-collapse dist as the build control:
+//
+//   box                        chromium            webkit
+//   .board-cells (the grid)    86.58               85.98
+//   .board-wrapper (the frame) 88.58  ← the comment's number, and it is RIGHT
+//   .board-wrapper                                 87.98
+//   .board-shell / peek-host   119.06              118.44   (board + mark 6's reserved line)
+//
+// So the shipped 88.58 is CORRECT for chromium at the `.board-wrapper` referent — pass 4's own
+// `logs/F3/masthead-844x390.log` reads `boardBottom 478.58` against `vh 390`, and this pass
+// reads 478.58 again. The pass-4 registry's F3-G4 correction (`90.58 / 89.98`) is exactly
+// +2.00px on BOTH engines against every box in the table and does not reproduce at any referent;
+// it is routed back to the adjudicator rather than copied into this file, because writing an
+// unreproducible number here is the defect the row exists to fix. The honest engine pair is
+// 88.58 chromium / 87.98 webkit, and the box is the drawn frame.
+//
+// That is a real loss and it is taken deliberately: the stack is a scroll at both
 // caps (neither shows board + controls together), so what the smaller board bought was the
 // board's OWN whole-visibility, at 15.11px per cell on the surface where a finger spends the
 // session. And the loss has a named cure that is not a cap: the chrome above the board at

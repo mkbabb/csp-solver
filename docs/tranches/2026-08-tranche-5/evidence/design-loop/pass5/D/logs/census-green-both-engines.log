@@ -1,0 +1,25 @@
+=== AUDIT ===
+tree      HEAD 66fa5856 (T5-W3 record), working tree clean but for untracked pass-5 evidence
+artifact  dist/assets/index-C5xqWLHq1mLl.js  md5 2b16a65d0f79cbb50799adf184edca65
+served    frozen snapshot at scratchpad/dist-D on http://127.0.0.1:4253 (lane D's own port; :4241 is Lane BC's)
+cmd       PLAYWRIGHT_BASE_URL=http://127.0.0.1:4253 npx playwright test --config playwright-throttle.config.ts --project filter-census-{chromium,webkit} --reporter=list
+date      2026-08-02T06:03:14Z
+
+=== GREEN BASELINE · both engines · 12/12 ===
+
+Running 12 tests using 9 workers
+
+  ✓   1 [filter-census-chromium] › e2e/filter-census.spec.ts:468:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (23ms)
+  ✓   6 [filter-census-chromium] › e2e/filter-census.spec.ts:409:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) (2.7s)
+  ✓   4 [filter-census-chromium] › e2e/filter-census.spec.ts:423:1 › G3.2 · no retained fill supplies a computed transform (built dist) (3.5s)
+  ✓   7 [filter-census-chromium] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (3.5s)
+  ✓  12 [filter-census-webkit] › e2e/filter-census.spec.ts:468:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (11ms)
+  ✓   5 [filter-census-chromium] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (4.1s)
+  ✓   3 [filter-census-chromium] › e2e/filter-census.spec.ts:402:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) (4.2s)
+  ✓  10 [filter-census-webkit] › e2e/filter-census.spec.ts:409:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) (3.5s)
+  ✓   8 [filter-census-webkit] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (4.9s)
+  ✓   2 [filter-census-webkit] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (5.1s)
+  ✓   9 [filter-census-webkit] › e2e/filter-census.spec.ts:402:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) (5.7s)
+  ✓  11 [filter-census-webkit] › e2e/filter-census.spec.ts:423:1 › G3.2 · no retained fill supplies a computed transform (built dist) (4.0s)
+
+  12 passed (8.6s)

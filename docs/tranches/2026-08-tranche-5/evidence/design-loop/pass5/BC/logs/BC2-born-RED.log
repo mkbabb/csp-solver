@@ -1,0 +1,107 @@
+=== RED A: the widened FORWARD check, with the two new rows pulled out of the ledger
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › e2e/font-census.spec.ts:191:1 › the ledger holds BOTH directions across two games and two regimes (7.0s)
+
+
+  1) [chromium] › e2e/font-census.spec.ts:191:1 › the ledger holds BOTH directions across two games and two regimes 
+
+    Error: unledgered mixed-face strings
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 9
+
+    - Array []
+    + Array [
+    +   "kenken · fine rail 1280×800 — Patrick Hand|cage-op U+00F7 (text) misses U+00F7",
+    +   "kenken · fine rail 1280×800 — Patrick Hand|cage-op U+002B (text) misses U+002B",
+    +   "kenken · fine rail 1280×800 — Patrick Hand|cage-op U+00F7 (text) misses U+00F7",
+    +   "kenken · coarse card 390×844 — Patrick Hand|cage-op U+00F7 (text) misses U+00F7",
+    +   "kenken · coarse card 390×844 — Patrick Hand|cage-op U+002B (text) misses U+002B",
+    +   "kenken · coarse card 390×844 — Patrick Hand|cage-op U+00F7 (text) misses U+00F7",
+    +   "kenken · coarse card 390×844 — Patrick Hand|cage-op U+002B (text) misses U+002B",
+    + ]
+
+      240 |
+      241 |   // ── FORWARD: nothing renders mixed that the ledger has not accounted for.
+    > 242 |   expect(unledgered, "unledgered mixed-face strings").toEqual([]);
+          |                                                       ^
+      243 |
+      244 |   // ── BACKWARD: nothing sits in the ledger that no cell can produce. A ledger that can only
+      245 |   // grow is a list, not a gate; this is the direction pass 4 named and pass 3's C11 predicted.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/font-census.spec.ts:242:55
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #4: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-4.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/font-census.spec.ts:191:1 › the ledger holds BOTH directions across two games and two regimes 
+
+=== RED B: the BACKWARD check, with one unproducible row added to the ledger
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › e2e/font-census.spec.ts:194:1 › the ledger holds BOTH directions across two games and two regimes (7.0s)
+
+
+  1) [chromium] › e2e/font-census.spec.ts:194:1 › the ledger holds BOTH directions across two games and two regimes 
+
+    Error: ledger rows no cell produced — retire them or state the condition
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "Patrick Hand|Nonesuch-BORN-RED",
+    + ]
+
+      248 |   // grow is a list, not a gate; this is the direction pass 4 named and pass 3's C11 predicted.
+      249 |   const stale = Object.keys(LEDGER).filter((k) => !seen.has(k) && !(k in CONDITIONAL));
+    > 250 |   expect(stale, "ledger rows no cell produced — retire them or state the condition").toEqual(
+          |                                                                                      ^
+      251 |     [],
+      252 |   );
+      253 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/font-census.spec.ts:250:86
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-4.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #4: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/font-census.spec.ts:194:1 › the ledger holds BOTH directions across two games and two regimes 

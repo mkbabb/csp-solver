@@ -1,0 +1,44 @@
+=== AUDIT ===
+floor     T5-W3's a11y floor — 30 rows, options 5/5, k-peek guard, guardTitle one string.
+          Lane D's pass-5 work must not regress it; this is the run that says it did not.
+tree      HEAD 66fa5856 + lane D's pass-5 edits (filterBudget.ts prose, check-ink-pressure.mjs closure 4)
+cmd       PLAYWRIGHT_BASE_URL=http://127.0.0.1:4253 npx playwright test e2e/a11y.spec.ts --reporter=list
+note      run against lane D's OWN preview (:4253, the frozen dist snapshot). :3000 is the foreign
+          palette-api and was already listening, so Playwright reused rather than squatted it.
+date      2026-08-02T06:17:50Z
+
+
+Running 30 tests using 9 workers
+
+  ✓   4 [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells (2.0s)
+  ✓   7 [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells (1.8s)
+  ✓   3 [chromium] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options (2.2s)
+  ✓   8 [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells (1.7s)
+  ✓   6 [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells (1.9s)
+  ✓   9 [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells (2.6s)
+  ✓  11 [chromium] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d (1.1s)
+  ✓   2 [chromium] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state (3.3s)
+  ✓  12 [chromium] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes (1.1s)
+  ✓   5 [chromium] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) (2.9s)
+  ✓  13 [chromium] › e2e/a11y.spec.ts:444:3 › 3.5 unnamedImages › a filled cell announces its value exactly once (1.1s)
+  ✓  10 [chromium] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek (2.8s)
+  ✓  14 [chromium] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total (2.4s)
+  ✓   1 [chromium] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard (5.0s)
+  ✓  15 [chromium] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) (2.4s)
+  ✓  17 [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells (2.3s)
+  ✓  19 [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells (2.3s)
+  ✓  18 [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells (2.4s)
+  ✓  20 [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells (2.5s)
+  ✓  16 [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells (3.0s)
+  ✓  25 [webkit] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d (1.6s)
+  ✓  26 [webkit] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes (1.5s)
+  ✓  27 [webkit] › e2e/a11y.spec.ts:444:3 › 3.5 unnamedImages › a filled cell announces its value exactly once (1.5s)
+  ✓  21 [webkit] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) (3.6s)
+  ✓  22 [webkit] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state (3.6s)
+  ✓  28 [webkit] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total (2.3s)
+  ✓  24 [webkit] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek (3.4s)
+  ✓  29 [webkit] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) (2.9s)
+  ✓  23 [webkit] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard (5.5s)
+  ✓  30 [webkit] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options (1.9s)
+
+  30 passed (17.5s)

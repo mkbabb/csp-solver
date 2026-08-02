@@ -88,7 +88,19 @@ const safeLabel = computed(() =>
  *  `d` typed with a chip or a verb focused reached nothing. The band resolves its own now —
  *  through the same `deal` emit, so the gallery's one `attemptDeal` still owns the guard, the
  *  busy gate and the ribbon. Focus-scoped by construction (a keydown on the band's subtree),
- *  which is exactly what the attribute claims. */
+ *  which is exactly what the attribute claims.
+ *
+ *  THE RADIUS (pass-5 A3 / A-m7). This handler's radius is the BAND; the attribute sat on the
+ *  deal button alone, so the declared radius was one control of nine and the gate that read it
+ *  could not tell the two apart. The attribute now sits on BOTH, and the two placements say
+ *  different true things rather than the same thing twice:
+ *    · on `.staging-band` — the SCOPE. `d` is live anywhere in this region, which is precisely
+ *      what `onKeydown` delivers. It is not announced (the band takes no focus), so it is a
+ *      machine-readable declaration the gate holds equal to the handler, and nothing more.
+ *    · on `.staging-deal` — the TARGET, and the announced one. ARIA's own reading of
+ *      `aria-keyshortcuts` is "the keys that activate THIS element"; the button is the element
+ *      `d` activates and the only focusable in the band that can speak the claim to a reader.
+ *  Deleting either would leave a true statement unsaid. */
 function onKeydown(e: KeyboardEvent) {
   if (e.key !== "d" && e.key !== "D") return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -98,7 +110,7 @@ function onKeydown(e: KeyboardEvent) {
 </script>
 
 <template>
-  <div class="staging-band" @keydown="onKeydown">
+  <div class="staging-band" aria-keyshortcuts="d" @keydown="onKeydown">
     <HandDrawnOutline :pose="0" :stroke-width="3" :outset="4">
       <div class="staging-slip bg-card edge-outlined">
         <div class="staging-axes">

@@ -1,0 +1,11 @@
+AUDIT 2026-08-02T06:15:48Z · host darwin · sha 66fa5856+pass5A · harness PREVIEW (built dist-pass5A :4246)
+cmd: node rig/verb-ink.mjs http://localhost:4246
+regime               arm            safe box     deal box      mass safe→deal            density safe→deal        gate
+fine  1280×900 dpr2  shipped        87.9×40.0    92.2×40.0      334.58 →   771.4 ×2.306   0.09519 → 0.20919 ×2.198   PASS
+fine  1280×900 dpr2  control: flat  87.9×40.0    92.2×40.0      334.58 →   279.5 ×0.835   0.09519 → 0.0758 ×0.796   FAIL
+COARSE 390×844 dpr3  shipped        87.9×44.0    92.2×44.0      338.31 →  806.25 ×2.383   0.0875 → 0.19877 ×2.272   PASS
+COARSE 390×844 dpr3  control: flat  87.9×44.0    92.2×44.0      338.31 →  283.25 ×0.837   0.0875 → 0.06983 ×0.798   FAIL
+
+GATE: shipped PASSes both regimes AND the flat control FAILs both — PASS
+[{"regime":"fine  1280×900 dpr2","pointer":"fine","arm":"shipped","paper":253,"safeBox":"87.9×40.0","dealBox":"92.2×40.0","massSafe":334.58,"massDeal":771.4,"massRatio":2.306,"densitySafe":0.09519,"densityDeal":0.20919,"densityRatio":2.198,"gate":"PASS"},{"regime":"fine  1280×900 dpr2","pointer":"fine","arm":"control: flat","paper":253,"safeBox":"87.9×40.0","dealBox":"92.2×40.0","massSafe":334.58,"massDeal":279.5,"massRatio":0.835,"densitySafe":0.09519,"densityDeal":0.0758,"densityRatio":0.796,"gate":"FAIL"},{"regime":"COARSE 390×844 dpr3","pointer":"coarse","arm":"shipped","paper":253,"safeBox":"87.9×44.0","dealBox":"92.2×44.0","massSafe":338.31,"massDeal":806.25,"massRatio":2.383,"densitySafe":0.0875,"densityDeal":0.19877,"densityRatio":2.272,"gate":"PASS"},{"regime":"COARSE 390×844 dpr3","pointer":"coarse","arm":"control: flat","paper":253,"safeBox":"87.9×44.0","dealBox":"92.2×44.0","massSafe":338.31,"massDeal":283.25,"massRatio":0.837,"densitySafe":0.0875,"densityDeal":0.06983,"densityRatio":0.798,"gate":"FAIL"}]
+EXIT=0

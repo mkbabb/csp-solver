@@ -75,24 +75,60 @@ test.describe("mark 6 — the band dissolves", () => {
     await expect(page.locator(".board-margin .difficulty-tally")).toHaveCount(1);
   });
 
-  test("the strip below the board is one reserved line", async ({ page }) => {
+  /**
+   * T5-W4c (pass 5) — THE RULING'S LAST THIRD, GATED IN BOTH DIRECTIONS.
+   *
+   * "Solve-status is an EVENT, not a REGION" was landed in two limbs — the celebration crests on
+   * the board (`:180`) and the tally files with the deal (`:55`) — and the third limb has been
+   * carried as a phrase: "the band dissolves". It does not dissolve. It resolves to ONE RESERVED
+   * LINE, 51 → 21px, and the reservation is the design, not the residue: the line is what the
+   * voice speaks on, and reserving it is why the strip is the SAME HEIGHT before and after the
+   * grade instead of collapsing at the crest and growing back after it. A hand that reads
+   * "dissolves" and takes the last 21px to zero would re-introduce the reflow this row exists to
+   * prevent — and until now nothing would have stopped them, because the gate had a ceiling and
+   * no floor. The honest statement is the two-sided one, so the gate is two-sided.
+   */
+  test("the strip below the board is one reserved line — no more, and no less", async ({
+    page,
+  }) => {
     await loadSudoku(page);
     await assertCoarse(page);
 
     const read = () =>
       page.locator(".board-margin").evaluate((el) => (el as HTMLElement).offsetHeight);
 
-    // One voice line at the body rung + its reserved 1.3em. 30px is the ceiling; the tally
-    // alone was 30.4px on top of it, so this floor cannot be met with a second tenant.
+    // CEILING — one voice line at the body rung + its reserved 1.3em. 30px is the ceiling; the
+    // tally alone was 30.4px on top of it, so this cannot be met with a second tenant.
     const bare = await read();
     expect(bare).toBeLessThanOrEqual(30);
 
-    // CONTROL: give the strip back a tenant and the same probe must exceed the ceiling.
+    // FLOOR — and the floor is only meaningful with the voice SILENT, which is the whole point
+    // of a reservation: a strip that is tall because there are words in it is not reserving
+    // anything, and would collapse at the crest and grow back after it. The ink is REMOVED, not
+    // emptied — MarginNote mounts it under `v-if="text"`, and an emptied span keeps its own
+    // line-height, which is how the first cut of this row scored a struck reservation as a pass
+    // (21px on a tree with `min-height: 0`). Measured silent on the built dist at this cell:
+    // 21px both engines, against `min-height: 1.3em` = 20.8px computed; struck, it reads 0.
+    await page.evaluate(() => document.querySelector(".margin-note-ink")?.remove());
+    const silent = await read();
+    expect(silent).toBeGreaterThanOrEqual(16);
+
+    // CONTROL A: give the strip back a tenant and the same probe must exceed the ceiling.
     await page.evaluate(() => {
       const t = document.querySelector(".difficulty-tally")!.cloneNode(true);
       document.querySelector(".board-margin")!.prepend(t);
     });
     expect(await read()).toBeGreaterThan(30);
+
+    // CONTROL B: take the "dissolve" literally — strike the reservation itself, which is the
+    // one declaration holding the silent line open — and the same probe must fall through the
+    // floor. This is the direction the phrase invited and the gate never watched.
+    await page.evaluate(() => {
+      document.querySelector(".board-margin .difficulty-tally")?.remove();
+      const block = document.querySelector(".margin-note-block") as HTMLElement | null;
+      if (block) block.style.minHeight = "0";
+    });
+    expect(await read()).toBeLessThan(16);
   });
 
   /**
@@ -302,5 +338,74 @@ test.describe("the board fits the viewport it is drawn in", () => {
     });
     await page.waitForTimeout(400);
     expect(await settled()).toBeLessThan(portrait - 10);
+  });
+
+  /**
+   * T5-W4c (pass 5) — THE FOLD OVERFLOW GETS A REAL BOUND.
+   *
+   * The two rows above are both satisfied at every rung of the cap ladder, including the ones
+   * that put a third of the board under the fold: `height ≤ innerHeight` says nothing about
+   * WHERE the board sits, and rotation invariance says nothing about how much of it you can
+   * see. So the disclosed ~88px cost of the elected rung has been a comment, in a file, with no
+   * gate under it — the pass-4 registry's F3-G2, in one sentence.
+   *
+   * This is that gate. It pins the ELECTION, not a taste: the board's drawn frame may hang
+   * below the fold by no more than the chrome standing above it, because the named cure is the
+   * masthead (98.58 of the 114.58 above the board at this cell) and a cap that overflows by
+   * MORE than the masthead could hand back is a cap the masthead can no longer redeem.
+   *
+   * Measured on this pass's build, both engines, shipped rung: 88.58 chromium / 87.98 webkit at
+   * the `.board-wrapper` referent (86.58 / 85.98 at `.board-cells`). The bound is 114.58 — the
+   * whole chrome above the board — with the shipped rung sitting 26px under it. The `100dvh`
+   * rung reads 110.58 and still passes; the pre-pass-3 tree reads 392.58 and cannot.
+   *
+   * The referent is named in the assertion because the record carried three numbers for this
+   * one quantity, from three unnamed boxes, for a whole pass.
+   */
+  test("the board hangs no further below the fold than the chrome above it", async ({
+    page,
+  }) => {
+    await loadSudoku(page);
+    await assertCoarse(page);
+
+    // Both quantities off one settled read: the drawn frame's overflow, and the chrome that
+    // stands above the board and could be handed back to pay for it.
+    const read = () =>
+      page.evaluate(() => {
+        const frame = document.querySelector(".board-wrapper")!.getBoundingClientRect();
+        const host = document
+          .querySelector(".board-peek-host")!
+          .getBoundingClientRect();
+        return {
+          overflow: +Math.max(
+            0,
+            frame.bottom + window.scrollY - window.innerHeight,
+          ).toFixed(2),
+          chromeAbove: +(host.top + window.scrollY).toFixed(2),
+        };
+      });
+
+    const shipped = await read();
+    expect(shipped.chromeAbove).toBeGreaterThan(0);
+    expect(shipped.overflow).toBeLessThanOrEqual(shipped.chromeAbove);
+
+    // CONTROL 1 — the rung one step ABOVE the election (`100dvh`, the whole short edge). It is
+    // the cheapest drift available and the gate must still hold, or the bound is so tight it
+    // would red on a legitimate re-election rather than on a defect.
+    await page.addStyleTag({
+      content: ".board-shell { max-width: 100dvh !important; }",
+    });
+    await page.waitForTimeout(400);
+    const wholeEdge = await read();
+    expect(wholeEdge.overflow).toBeGreaterThan(shipped.overflow);
+    expect(wholeEdge.overflow).toBeLessThanOrEqual(wholeEdge.chromeAbove);
+
+    // CONTROL 2 — the tree this rung replaced. With no height arm at all the board hangs
+    // ~392px below a 390px fold, four times the chrome that could redeem it, and the same
+    // probe MUST red. A bound that the pre-cure tree also satisfies is a decoration.
+    await page.addStyleTag({ content: ".board-shell { max-width: none !important; }" });
+    await page.waitForTimeout(400);
+    const bare = await read();
+    expect(bare.overflow).toBeGreaterThan(bare.chromeAbove);
   });
 });

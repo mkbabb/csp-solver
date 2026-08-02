@@ -1,0 +1,58 @@
+AUDIT 2026-08-02T06:03:23Z · host darwin · sha 66fa5856 · tree=HEAD (no pass-5 edits) · harness PREVIEW (built dist-pass5A :4246)
+cmd: PLAYWRIGHT_BASE_URL=http://localhost:4246 npx playwright test e2e/gallery-deal.spec.ts --project=chromium
+
+Running 17 tests using 9 workers
+
+  ✓   8 [chromium] › e2e/gallery-deal.spec.ts:176:1 › cold start: GIVENS ARE NOT WORK — a dealt, untouched board reads "dealt" (630ms)
+  ✓   1 [chromium] › e2e/gallery-deal.spec.ts:165:1 › cold start: a game with NO board offers start, and the card keeps its range line (951ms)
+  ✓   2 [chromium] › e2e/gallery-deal.spec.ts:72:1 › band: a sibling of the listbox, never a control inside role=option (1.0s)
+  ✓   9 [chromium] › e2e/gallery-deal.spec.ts:137:1 › cold start: an UNMOUNTED game reports its saved board and offers resume (1.2s)
+  ✓   4 [chromium] › e2e/gallery-deal.spec.ts:342:1 › guard: when BOTH boards hold work the sub-line says so (1.5s)
+  ✓   5 [chromium] › e2e/gallery-deal.spec.ts:230:1 › guard: the NEGATIVE control — an untouched target board deals straight through (1.6s)
+  ✓   3 [chromium] › e2e/gallery-deal.spec.ts:197:1 › guard: a deal onto ANOTHER game with work on it arms the ribbon (1.6s)
+  ✓   7 [chromium] › e2e/gallery-deal.spec.ts:253:1 › guard: the `d` hotkey routes through the SAME ribbon, from the deck AND from the band (2.2s)
+  ✓  12 [chromium] › e2e/gallery-deal.spec.ts:412:1 › deal: a same-game deal rides the BRIDGE — the staged pair, and no remount (1.2s)
+  ✓  11 [chromium] › e2e/gallery-deal.spec.ts:382:1 › deal: a cross-game deal lands the TARGET game at the STAGED pair (1.3s)
+  ✓   6 [chromium] › e2e/gallery-deal.spec.ts:318:1 › guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon (2.4s)
+  ✓  10 [chromium] › e2e/gallery-deal.spec.ts:364:1 › guard: a PRISTINE mounted board deals across with no ribbon (the source-arm control) (1.8s)
+  ✓  14 [chromium] › e2e/gallery-deal.spec.ts:470:1 › safe verb: `start` HONOURS the staged pair (a game with no board has none to restore) (1.3s)
+  ✓  15 [chromium] › e2e/gallery-deal.spec.ts:488:1 › safe verb: `resume` PRINTS the saved pair the moment the chips wander off it (1.2s)
+  ✓  17 [chromium] › e2e/gallery-deal.spec.ts:554:1 › a11y: the live region carries the staged pair and the board state (706ms)
+  ✓  16 [chromium] › e2e/gallery-deal.spec.ts:525:1 › safe verb: a wandered pair cannot OUTLIVE the transaction (1.4s)
+  ✘  13 [chromium] › e2e/gallery-deal.spec.ts:432:1 › deal: a same-game deal issued BEFORE the scene mounts still lands the staged pair (10.8s)
+
+
+  1) [chromium] › e2e/gallery-deal.spec.ts:432:1 › deal: a same-game deal issued BEFORE the scene mounts still lands the staged pair 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.futoshiki-cell')
+    Expected: 0
+    Received: 25
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('.futoshiki-cell')
+        24 × locator resolved to 25 elements
+           - unexpected value "25"
+
+
+      455 |   await page.goto('./?view=gallery&game=futoshiki', { waitUntil: 'domcontentloaded' });
+      456 |   await page.waitForSelector('.staging-band', { timeout: 20000 });
+    > 457 |   await expect(page.locator('.futoshiki-cell')).toHaveCount(0); // still resolving
+          |                                                 ^
+      458 |
+      459 |   await axis(page, 'size').getByRole('button', { name: '6×6' }).click();
+      460 |   await page.locator('.staging-deal').click();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery-deal.spec.ts:457:49
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-deal-deal-a-same-g-21454-still-lands-the-staged-pair-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-deal-deal-a-same-g-21454-still-lands-the-staged-pair-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/gallery-deal.spec.ts:432:1 › deal: a same-game deal issued BEFORE the scene mounts still lands the staged pair 
+  16 passed (13.2s)

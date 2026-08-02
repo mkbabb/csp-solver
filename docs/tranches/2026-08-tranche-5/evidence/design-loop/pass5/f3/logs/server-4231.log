@@ -1,0 +1,25 @@
+
+<--- Last few GCs --->
+
+[41820:0x78740c000]   237426 ms: Scavenge 4088.1 (4092.6) -> 4085.8 (4092.9) MB, pooled: 0.0 MB, 2.45 / 0.00 ms (average mu = 0.227, current mu = 0.176) allocation failure; 
+[41820:0x78740c000]   238833 ms: Incremental Mark-Compact (reduce) 4085.8 (4092.9) -> 4085.7 (4087.9) MB, pooled: 0.0 MB, 1401.64 / 0.00 ms (+ 2.1 ms in 4 steps since start of marking, biggest step 1.0 ms, walltime since start of marking 1406 ms) (average
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 0x1083ea8e0 node::OOMErrorHandler(char const*, v8::OOMDetails const&) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 2: 0x1076b0780 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 3: 0x1076b0730 v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 4: 0x1078650bc v8::internal::Heap::IsLoadingInitialized() const [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 5: 0x107864570 v8::internal::Heap::OldGenerationConsumedBytes() const [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 6: 0x107863918 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags, v8::internal::PerformHeapLimitCheck, v8::internal::PerformIneffectiveMarkCompactCheck) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 7: 0x107873fa4 v8::internal::IncrementalMarkingJob::Task::RunInternal() [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 8: 0x1073dc254 node::PerIsolatePlatformData::RunForegroundTask(std::__1::unique_ptr<v8::Task, std::__1::default_delete<v8::Task>>) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+ 9: 0x1073db470 node::PerIsolatePlatformData::FlushForegroundTasksInternal() [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+10: 0x102b2a3cc uv__async_io [/opt/homebrew/Cellar/libuv/1.52.1/lib/libuv.1.0.0.dylib]
+11: 0x102b391b0 uv__io_poll [/opt/homebrew/Cellar/libuv/1.52.1/lib/libuv.1.0.0.dylib]
+12: 0x102b2ab64 uv_run [/opt/homebrew/Cellar/libuv/1.52.1/lib/libuv.1.0.0.dylib]
+13: 0x1072e8fd0 node::SpinEventLoopInternal(node::Environment*) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+14: 0x1073b9974 node::NodeMainInstance::Run(node::ExitCode*, node::Environment*) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+15: 0x1073b96a8 node::NodeMainInstance::Run() [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+16: 0x10735d2d0 node::Start(int, char**) [/opt/homebrew/Cellar/node/26.0.0/lib/libnode.147.dylib]
+17: 0x188e73da4 start [/usr/lib/dyld]

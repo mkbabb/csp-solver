@@ -396,8 +396,36 @@ function onHint() {
 </script>
 
 <template>
-  <!-- Mobile layout -->
-  <div v-if="mobile" class="control-panel-wrap mobile-control-panel mt-3">
+  <!--
+    ONE TREE, BOTH REGIMES (T5-W4c · the T′ collapse, pass-1 `f2-proto/MANIFEST.md:141`, cashed).
+    This file shipped a FULL mobile tree and a FULL desktop tree — the same six blocks written
+    twice, drifting apart every time a hand touched one of them (the divider's `my-2` lived in
+    exactly one copy until stage BC found it). The branches are gone. `mobile` now drives the
+    four things that actually differ, and nothing else:
+      1. the wrap's own layout class,
+      2. `OptionSelector :mobile`,
+      3. the hover grammar — `group relative` + the `SheetWashiLabel` children (a hover washi
+         is meaningless on a coarse pointer, and the sublabels already speak there: UI-5),
+      4. `zone-row-stacked` (the rail is a narrow column, so its captions sit OVER the
+         selectors) and the fine-pointer `KeyboardLegend`.
+    The ONE seam it cannot close is the staged block: the mobile tab-toggle is a different
+    control with a different reveal (`v-show` on the active panel) from the rail's stacked
+    stanzas, so collapsing it would move a box. It stays a declared branch, priced at 20 lines,
+    below.
+    RENDER IDENTITY IS THE SAFETY PROPERTY, AND IT IS MEASURED, NOT CLAIMED: the normalized
+    element tree + every rect, both arms, both engines —
+    `evidence/design-loop/pass5/f3/rig/domsnap.mjs`, banked in `logs/tprime-identity.log`.
+    It does NOT move the page: the collapse is a source quantity, the stack is a layout
+    quantity, and pass 5 measured the difference (§ the F3 dossier, trigger (b)).
+  -->
+  <div
+    class="control-panel-wrap"
+    :class="
+      mobile
+        ? 'mobile-control-panel mt-3'
+        : 'flex flex-col items-center md:items-stretch'
+    "
+  >
     <!-- STAGED "New game" zone (T4-WU/U2) — the game sections are the provisional inputs to the
          NEXT board; the re-homed Deal is the verb that commits them. role="group" labelled by the
          New-game heading makes the staging legible to assistive tech (one new semantic, no live
@@ -417,8 +445,8 @@ function onHint() {
              a single-section game shows a plain heading below instead of a dead tab). It STAYS:
              it is the card's largest single height saving on a phone, and spending it is what
              put pass 1's coarse gate 7px underwater. Deleting a component is not the same as
-             deleting its work. -->
-        <div v-if="showTabs" class="mobile-heading-row">
+             deleting its work. The rail has no tabs — it has the room. -->
+        <div v-if="mobile && showTabs" class="mobile-heading-row">
           <!-- a11y r1 M9: this was `<button><h2>`. `<button>`'s content model is phrasing
                content, so the heading was invalid nesting whose parse is engine-dependent, and
                a reader walking by H-key landed INSIDE an interactive control. The APG
@@ -454,35 +482,62 @@ function onHint() {
           </h2>
         </div>
 
+        <!-- THE ONE DECLARED SEAM (see the header). The phone reveals ONE section at a time
+             behind the tabs above; the rail stacks every section, each in its own `.staged-section`
+             (whose `+` margin is the air the deleted `<hr>` used to buy). Two different reveals
+             over the same data — a `v-show` and a wrapper box — so one tree here would have to
+             invent a box on the phone that has never been there. -->
         <template v-for="section in sections" :key="section.key">
-          <!-- Single-section (n = 1): a plain heading above its selector, never a tab. -->
-          <h2
-            v-if="!showTabs"
-            class="section-heading"
-            :class="headingClass(section)"
-            :aria-label="section.ariaLabel"
+          <div
+            v-if="!mobile"
+            class="staged-section flex flex-col items-center gap-1 md:items-stretch"
           >
-            {{ section.heading }}
-          </h2>
-          <OptionSelector
-            v-show="!showTabs || expandedPanel === section.key"
-            :options="section.options"
-            :selected="section.selected"
-            :boil-frame="boilFrame"
-            mobile
-            @change="onSectionChange(section, $event)"
-          />
+            <h2
+              class="section-heading"
+              :class="headingClass(section)"
+              :aria-label="section.ariaLabel"
+            >
+              {{ section.heading }}
+            </h2>
+            <OptionSelector
+              :options="section.options"
+              :selected="section.selected"
+              :boil-frame="boilFrame"
+              @change="onSectionChange(section, $event)"
+            />
+          </div>
+          <template v-else>
+            <!-- Single-section (n = 1): a plain heading above its selector, never a tab. -->
+            <h2
+              v-if="!showTabs"
+              class="section-heading"
+              :class="headingClass(section)"
+              :aria-label="section.ariaLabel"
+            >
+              {{ section.heading }}
+            </h2>
+            <OptionSelector
+              v-show="!showTabs || expandedPanel === section.key"
+              :options="section.options"
+              :selected="section.selected"
+              :boil-frame="boilFrame"
+              mobile
+              @change="onSectionChange(section, $event)"
+            />
+          </template>
         </template>
       </div>
 
       <!-- The Deal commit — the DiceIcon re-homed from the action row (no new control, the WM
            input shape stays frozen). Its name shows always (the primary verb of the staged zone
-           earns its label), so "next game" reads with zero copy. -->
+           earns its label), so "next game" reads with zero copy; the washi is the fine-pointer
+           hover twin of that same word. -->
       <div class="deal-row">
         <button
           @click="onDeal()"
           :disabled="loading"
           class="icon-btn deal-btn"
+          :class="{ 'group relative': !mobile }"
           :aria-label="dealArmed ? 'Tap again to deal a new board' : 'Deal a new board'"
         >
           <DiceIcon :size="28" :playing="dealAnimating" />
@@ -492,9 +547,11 @@ function onHint() {
             aria-hidden="true"
             >{{ dealArmed ? "sure?" : "Deal" }}</span
           >
+          <SheetWashiLabel v-if="!mobile" text="Deal" :seed="11" />
         </button>
         <!-- The receipt (mark 6): what the LAST deal actually produced, beside the verb that
-             will replace it. The chips above are the ask; this is the answer. -->
+             will replace it. The chips above are the ask; this is the answer. One home at
+             every width — the sheet's own rule. -->
         <DifficultyTally v-if="gradeTally" :descriptor="gradeTally" label="dealt" />
       </div>
     </HandDrawnOutline>
@@ -503,7 +560,12 @@ function onHint() {
          live zone below. Spatial prophylaxis — Deal is a full divider away from the play tools,
          so a mid-game fat-finger never lands a board wipe. UI-4: the washi is PERSISTENT on
          coarse pointers and pinned to the divider's own box; the surface pads to a ≥44px target
-         (CSS). Narrow fine-pointer windows keep the hover/focus reveal. -->
+         (CSS). Narrow fine-pointer windows keep the hover/focus reveal. UI-9: anchored to the
+         divider's OWN box, so the chip sits ON the ruled line.
+         NO `my-2` (T4-P1, stage BC): the wells on both sides already carry `margin-block: 0.5rem`,
+         priced at the frame-daylight floor, and the divider is not a drawn frame — its own margin
+         only doubled theirs (8+8 above and below, for a 14px rule). The phone never carried it and
+         read correctly; the branches agreed at BC, and there is now only one of them to agree. -->
     <div
       class="peek-hold-surface group relative"
       role="separator"
@@ -518,7 +580,9 @@ function onHint() {
       <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
     </div>
 
-    <!-- LIVE zone — two named compartments where three identical stanzas used to stack. -->
+    <!-- LIVE zone — two named compartments where three identical stanzas used to stack. The
+         rail is a narrow column, so THERE each row's caption sits over its selector
+         (`zone-row-stacked`); the phone has the width to put it beside. -->
     <HandDrawnOutline
       class="tray-well"
       :stroke-width="1.5"
@@ -529,23 +593,33 @@ function onHint() {
       :aria-labelledby="pencilsId"
     >
       <SheetWashiLabel :id="pencilsId" text="pencils" :seed="29" anchor="tag" />
-      <div class="zone-row" role="group" :aria-labelledby="marksId">
+      <div
+        class="zone-row"
+        :class="{ 'zone-row-stacked': !mobile }"
+        role="group"
+        :aria-labelledby="marksId"
+      >
         <span :id="marksId" class="zone-row-label">marks</span>
         <OptionSelector
           :options="MODE_OPTIONS"
           :selected="pencilMode"
           :boil-frame="0"
-          mobile
+          :mobile="mobile"
           @change="pencilMode = $event as PencilMode"
         />
       </div>
-      <div class="zone-row" role="group" :aria-labelledby="candidatesId">
+      <div
+        class="zone-row"
+        :class="{ 'zone-row-stacked': !mobile }"
+        role="group"
+        :aria-labelledby="candidatesId"
+      >
         <span :id="candidatesId" class="zone-row-label">candidates</span>
         <OptionSelector
           :options="CANDIDATE_OPTIONS"
           :selected="candidatesPinned ? 'on' : 'off'"
           :boil-frame="0"
-          mobile
+          :mobile="mobile"
           @change="candidatesPinned = $event === 'on'"
         />
       </div>
@@ -567,251 +641,22 @@ function onHint() {
         :options="CHECK_OPTIONS"
         :selected="errorCheckMode"
         :boil-frame="0"
-        mobile
-        @change="emit('update:errorCheckMode', $event as ErrorCheckMode)"
-      />
-      <CheckStatus :marking="proactiveCheck" :mode="errorCheckMode" />
-    </HandDrawnOutline>
-
-    <!-- Action buttons — UI-5: persistent sublabels in the pencil hand on coarse
-         pointers (the washi is a hover grammar; sighted touch users got no text). Deal
-         re-homed OUT of this row into the staged zone above (spatial prophylaxis). -->
-    <div class="flex items-center justify-evenly">
-      <button
-        @click="onClear()"
-        :disabled="loading"
-        class="icon-btn"
-        :aria-label="clearArmed ? 'Tap again to clear board' : 'Clear board'"
-      >
-        <span :class="{ 'eraser-scrub': clearAnimating }">
-          <EraserIcon :size="28" />
-        </span>
-        <span
-          class="icon-sublabel"
-          :class="{ 'is-armed': clearArmed }"
-          aria-hidden="true"
-          >{{ clearArmed ? "sure?" : "Clear" }}</span
-        >
-      </button>
-      <button
-        @click="onFillForced()"
-        :disabled="loading"
-        class="icon-btn"
-        aria-label="Fill in the forced cells"
-      >
-        <FillForcedIcon :size="26" :playing="fillAnimating" />
-        <span class="icon-sublabel" aria-hidden="true">Fill</span>
-      </button>
-      <button
-        @click="onSolve()"
-        :disabled="loading"
-        class="icon-btn"
-        aria-label="Solve puzzle"
-      >
-        <ScribbleLoader
-          v-if="loading && !solveAnimating"
-          :size="22"
-          class="text-muted-foreground"
-        />
-        <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
-        <span class="icon-sublabel" aria-hidden="true">Solve</span>
-      </button>
-      <button
-        @click="onShare()"
-        :disabled="loading"
-        class="icon-btn"
-        :aria-label="shareAria"
-      >
-        <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
-        <span class="icon-sublabel" aria-hidden="true">{{ shareSublabel }}</span>
-      </button>
-    </div>
-
-    <!-- Play tools (T4-WM §2) — the coarse touch surface for undo / redo / hint, the
-         acts a fine pointer reaches by ⌘Z / ⇧⌘Z / H. Coarse-only (CSS gate): the desktop
-         keeps its keys + legend, so this row is display:none on a fine pointer and never
-         disturbs that presentation. Same .icon-btn grammar as the action row above (44px
-         floor + written sublabel on coarse). -->
-    <div class="play-controls">
-      <button
-        @click="onUndo()"
-        :disabled="loading"
-        class="icon-btn"
-        aria-label="Undo last move"
-      >
-        <UndoIcon :size="26" />
-        <span class="icon-sublabel" aria-hidden="true">Undo</span>
-      </button>
-      <button
-        @click="onRedo()"
-        :disabled="loading"
-        class="icon-btn"
-        aria-label="Redo move"
-      >
-        <RedoIcon :size="26" />
-        <span class="icon-sublabel" aria-hidden="true">Redo</span>
-      </button>
-      <button
-        @click="onHint()"
-        :disabled="loading"
-        class="icon-btn"
-        aria-label="Reveal a hint in the selected cell"
-      >
-        <HintIcon :size="26" />
-        <span class="icon-sublabel" aria-hidden="true">Hint</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Desktop layout -->
-  <div v-else class="control-panel-wrap flex flex-col items-center md:items-stretch">
-    <!-- STAGED "New game" zone (T4-WU/U2) — the desktop twin of the mobile staged zone: the game
-         sections stage the NEXT board, Deal commits. role="group" labelled by the New-game
-         heading; the selectors read provisional by placement (arm-not-live — no live re-deal). -->
-    <HandDrawnOutline
-      class="tray-well new-game-zone"
-      :stroke-width="1.5"
-      :outset="4"
-      :radius="3"
-      :pose="0"
-      role="group"
-      :aria-labelledby="newGameId"
-    >
-      <SheetWashiLabel :id="newGameId" text="new game" :seed="13" anchor="tag" />
-      <div class="control-panel-filtered">
-        <!-- The `<hr>` between the staged stanzas is a donor: the compartment's own drawn frame
-             is the separation now, and two rules inside one box was the panel arguing with
-             itself. What the rule was really buying — air — is the stanza margin below. -->
-        <template v-for="section in sections" :key="section.key">
-          <div class="staged-section flex flex-col items-center gap-1 md:items-stretch">
-            <h2
-              class="section-heading"
-              :class="headingClass(section)"
-              :aria-label="section.ariaLabel"
-            >
-              {{ section.heading }}
-            </h2>
-            <OptionSelector
-              :options="section.options"
-              :selected="section.selected"
-              :boil-frame="boilFrame"
-              @change="onSectionChange(section, $event)"
-            />
-          </div>
-        </template>
-      </div>
-
-      <!-- The Deal commit — the DiceIcon re-homed from the action row (no new control, the WM
-           input shape stays frozen). Hover washi on fine pointers; its name shows always so
-           "next game" reads with zero copy. -->
-      <div class="deal-row">
-        <button
-          @click="onDeal()"
-          :disabled="loading"
-          class="icon-btn deal-btn group relative"
-          :aria-label="dealArmed ? 'Tap again to deal a new board' : 'Deal a new board'"
-        >
-          <DiceIcon :size="28" :playing="dealAnimating" />
-          <span
-            class="icon-sublabel"
-            :class="{ 'is-armed': dealArmed }"
-            aria-hidden="true"
-            >{{ dealArmed ? "sure?" : "Deal" }}</span
-          >
-          <SheetWashiLabel text="Deal" :seed="11" />
-        </button>
-        <!-- The receipt (mark 6) — the rail twin. One home at every width; the sheet's own rule. -->
-        <DifficultyTally v-if="gradeTally" :descriptor="gradeTally" label="dealt" />
-      </div>
-    </HandDrawnOutline>
-
-    <!-- Zone separator = the hold-to-peek BoilDivider (existing grammar): staged zone above,
-         live zone below. Spatial prophylaxis — Deal sits a full divider from the play tools, so
-         a mid-game fat-finger never lands a board wipe. L14: a washi labels the hidden affordance.
-         UI-9: anchored to the divider's OWN box, so the chip sits ON the ruled line. UI-4: also
-         persistent on coarse pointers (iPad row regime), with a padded ≥44px target.
-         NO `my-2` (T4-P1, stage BC): the wells on both sides already carry `margin-block: 0.5rem`,
-         priced at the frame-daylight floor, and the divider is not a drawn frame — its own margin
-         only doubled theirs (8+8 above and below, for a 14px rule). The mobile twin has never
-         carried it and reads correctly; the branches now agree. −16.00px at every column cell,
-         nothing moved inside the ≥44px hold target. -->
-    <div
-      class="peek-hold-surface group relative"
-      role="separator"
-      aria-label="Staged controls above, play tools below — press and hold, or press K, to peek at the answer key"
-      @pointerdown="onDividerHoldStart($event)"
-      @pointermove="onDividerHoldMove($event)"
-      @pointerup="onDividerHoldEnd()"
-      @pointerleave="onDividerHoldEnd()"
-      @pointercancel="onDividerHoldEnd()"
-    >
-      <BoilDivider />
-      <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
-    </div>
-
-    <!-- LIVE zone — the rail twins of the two compartments above. The rail is a narrow column,
-         so each row's caption sits OVER its selector rather than beside it. -->
-    <HandDrawnOutline
-      class="tray-well"
-      :stroke-width="1.5"
-      :outset="4"
-      :radius="3"
-      :pose="0"
-      role="group"
-      :aria-labelledby="pencilsId"
-    >
-      <SheetWashiLabel :id="pencilsId" text="pencils" :seed="29" anchor="tag" />
-      <div class="zone-row zone-row-stacked" role="group" :aria-labelledby="marksId">
-        <span :id="marksId" class="zone-row-label">marks</span>
-        <OptionSelector
-          :options="MODE_OPTIONS"
-          :selected="pencilMode"
-          :boil-frame="0"
-          @change="pencilMode = $event as PencilMode"
-        />
-      </div>
-      <div
-        class="zone-row zone-row-stacked"
-        role="group"
-        :aria-labelledby="candidatesId"
-      >
-        <span :id="candidatesId" class="zone-row-label">candidates</span>
-        <OptionSelector
-          :options="CANDIDATE_OPTIONS"
-          :selected="candidatesPinned ? 'on' : 'off'"
-          :boil-frame="0"
-          @change="candidatesPinned = $event === 'on'"
-        />
-      </div>
-    </HandDrawnOutline>
-
-    <HandDrawnOutline
-      class="tray-well"
-      :stroke-width="1.5"
-      :outset="4"
-      :radius="3"
-      :pose="0"
-      role="group"
-      :aria-labelledby="teachersId"
-    >
-      <SheetWashiLabel :id="teachersId" text="teacher's" :seed="59" anchor="tag" />
-      <OptionSelector
-        :options="CHECK_OPTIONS"
-        :selected="errorCheckMode"
-        :boil-frame="0"
+        :mobile="mobile"
         @change="emit('update:errorCheckMode', $event as ErrorCheckMode)"
       />
       <CheckStatus :marking="proactiveCheck" :mode="errorCheckMode" />
     </HandDrawnOutline>
 
     <!-- Action buttons — hover washi for fine pointers, persistent sublabels on coarse
-         (UI-5: an iPad in the row regime reaches this layout with no hover). Deal re-homed OUT
-         of this row into the staged zone above (spatial prophylaxis). -->
+         (UI-5: the washi is a hover grammar, so sighted touch users got no text; an iPad in the
+         row regime reaches this layout with no hover either). Deal re-homed OUT of this row
+         into the staged zone above (spatial prophylaxis). -->
     <div class="flex items-center justify-evenly">
       <button
         @click="onClear()"
         :disabled="loading"
-        class="icon-btn group relative"
+        class="icon-btn"
+        :class="{ 'group relative': !mobile }"
         :aria-label="clearArmed ? 'Tap again to clear board' : 'Clear board'"
       >
         <span :class="{ 'eraser-scrub': clearAnimating }">
@@ -823,24 +668,24 @@ function onHint() {
           aria-hidden="true"
           >{{ clearArmed ? "sure?" : "Clear" }}</span
         >
-        <SheetWashiLabel text="Clear" :seed="23" />
+        <SheetWashiLabel v-if="!mobile" text="Clear" :seed="23" />
       </button>
-
       <button
         @click="onFillForced()"
         :disabled="loading"
-        class="icon-btn group relative"
+        class="icon-btn"
+        :class="{ 'group relative': !mobile }"
         aria-label="Fill in the forced cells"
       >
         <FillForcedIcon :size="26" :playing="fillAnimating" />
         <span class="icon-sublabel" aria-hidden="true">Fill</span>
-        <SheetWashiLabel text="fill forced" :seed="43" />
+        <SheetWashiLabel v-if="!mobile" text="fill forced" :seed="43" />
       </button>
-
       <button
         @click="onSolve()"
         :disabled="loading"
-        class="icon-btn group relative"
+        class="icon-btn"
+        :class="{ 'group relative': !mobile }"
         aria-label="Solve puzzle"
       >
         <ScribbleLoader
@@ -850,18 +695,19 @@ function onHint() {
         />
         <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
         <span class="icon-sublabel" aria-hidden="true">Solve</span>
-        <SheetWashiLabel text="Solve" :seed="37" />
+        <SheetWashiLabel v-if="!mobile" text="Solve" :seed="37" />
       </button>
-
       <button
         @click="onShare()"
         :disabled="loading"
-        class="icon-btn group relative"
+        class="icon-btn"
+        :class="{ 'group relative': !mobile }"
         :aria-label="shareAria"
       >
         <ShareIcon :size="26" :class="{ 'share-pop': shareAnimating }" />
         <span class="icon-sublabel" aria-hidden="true">{{ shareSublabel }}</span>
         <SheetWashiLabel
+          v-if="!mobile"
           :text="shareWashi"
           :seed="71"
           :wide="shareState === 'failed'"
@@ -869,9 +715,10 @@ function onHint() {
       </button>
     </div>
 
-    <!-- Play tools (T4-WM §2) — coarse-only, so a fine desktop shows the legend below
-         (a keyboard is implied) and a coarse iPad in this row-regime gets the tappable
-         undo / redo / hint instead. The two are mutually exclusive by pointer media. -->
+    <!-- Play tools (T4-WM §2) — the coarse touch surface for undo / redo / hint, the acts a fine
+         pointer reaches by ⌘Z / ⇧⌘Z / H. Coarse-only (CSS gate), so a fine desktop shows the
+         legend below (a keyboard is implied) and a coarse iPad in the row regime gets the
+         tappable row instead. The two are mutually exclusive by pointer media, not by branch. -->
     <div class="play-controls">
       <button
         @click="onUndo()"
@@ -903,7 +750,7 @@ function onHint() {
     </div>
 
     <!-- UI-7b: the keyboard legend (fine-pointer only — a keyboard is implied there). -->
-    <KeyboardLegend />
+    <KeyboardLegend v-if="!mobile" />
   </div>
 </template>
 

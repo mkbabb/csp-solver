@@ -24,6 +24,20 @@ import { test, expect, type Page } from "@playwright/test";
  * The ledger is the estate as MEASURED, not as hoped. Re-cutting two subset woff2 files is a
  * font job with an owner-declined byte cost attached (P1-W3); what this row buys is that the
  * population cannot grow silently again, and that the one instance this loop minted is gone.
+ *
+ * T5-W4b — WHAT THAT SENTENCE WAS WORTH WHEN IT WAS WRITTEN, and what it is worth now.
+ * "The population cannot grow silently again" was written over a census of ONE game, ONE
+ * viewport, ONE regime, checked in ONE direction (pass-4 BC-M2). Both halves are paid below.
+ *   · SCOPE — `CELLS` is two games × two regimes and it is printed on the gate, so the claim
+ *     travels exactly as far as the cells do and no further. Widening cost four page loads and
+ *     found two real rows on the first run: KenKen's cage operators `+` (U+002B) and `÷`
+ *     (U+00F7) are outside the Patrick Hand cut while the digits, `-` and `×` are inside it, so
+ *     half the operators have always rendered in the system face mid-label — on every KenKen
+ *     board and on the gallery's KenKen poster still. Thirteen gates and four passes of a
+ *     sudoku-only census never saw them.
+ *   · DIRECTION — the ledger is checked BOTH ways. A row no cell can produce is STALE and reds,
+ *     unless it names its condition in `CONDITIONAL`. Before this, a coarse-only string could
+ *     sit here forever without ever being rendered and nothing would say so.
  */
 
 /** Strings that render in a second face today, with the reason each is tolerated. Keys are
@@ -66,7 +80,46 @@ const LEDGER: Record<string, string> = {
   "Patrick Hand|⌘": "keycap glyph U+2318",
   "Patrick Hand|⇧": "keycap glyph U+21E7",
   "Patrick Hand|/": "legend separator U+002F",
+  // ── T5-W4b (pass-4 BC-M2): the rows the ONE-GAME census could not see. Widening to a second
+  // game found them on the first run. KenKen inks its cage target in the hand face and the cut
+  // holds the DIGITS and holds `-` (U+002D) and `×` (U+00D7) — but not `+` and not `÷`. So two
+  // of the four operators fall through mid-label on every KenKen board and on the gallery's
+  // KenKen poster still: the target reads in Patrick Hand and its operator in the system face.
+  // Pre-existing, estate-wide, and the same owner-declined woff2 re-cut as every row above.
+  "Patrick Hand|cage-op U+002B": "kenken cage operator '+'; the digits ARE in the cut",
+  "Patrick Hand|cage-op U+00F7": "kenken cage operator '÷'; same class as '+'",
 };
+
+/** Ledger rows the CELL SET below cannot produce, each with the condition that would produce
+ *  it. The backward check exempts exactly these, by key — a row that stops rendering for any
+ *  OTHER reason still reds as stale, which is the direction the row was missing. */
+const CONDITIONAL: Record<string, string> = {
+  "Patrick Hand|Medium": "closed-tab value; every cell below deals EASY",
+  "Patrick Hand|Hard": "closed-tab value; every cell below deals EASY",
+  "Patrick Hand|Ctrl": "keycap; the legend draws ⌘ on Apple platforms and Ctrl elsewhere",
+};
+
+/** KenKen cage targets are GENERATED per deal — `3+`, `7+`, `6÷` — so an exact-match row over
+ *  the whole label is unstable by construction: a different deal mints a different string and
+ *  the gate would red on a puzzle, not on a regression. The row is keyed on the codepoint that
+ *  actually falls out of the cut instead. This is the ONE normalized key class; everything else
+ *  stays exact-match, and the row below proves the pattern cannot swallow a fixed string. */
+const CAGE_LABEL = /^\d+\s*[+\-×÷]$/u;
+
+const ledgerKey = (m: { face: string; shown: string; missing: string[] }) =>
+  CAGE_LABEL.test(m.shown)
+    ? `${m.face}|cage-op ${m.missing.join(" ")}`
+    : `${m.face}|${m.shown}`;
+
+/** THE SCOPE, PRINTED ON THE GATE. Two games × two regimes — the census is no longer "one
+ *  game, one viewport, one regime" and it no longer has to be believed about the estate on the
+ *  strength of sudoku's rail. Widening cost four page loads and bought two real rows. */
+const CELLS = [
+  { id: "sudoku · fine rail 1280×800", game: "sudoku", w: 1280, h: 800, coarse: false },
+  { id: "sudoku · coarse card 390×844", game: "sudoku", w: 390, h: 844, coarse: true },
+  { id: "kenken · fine rail 1280×800", game: "kenken", w: 1280, h: 800, coarse: false },
+  { id: "kenken · coarse card 390×844", game: "kenken", w: 390, h: 844, coarse: true },
+] as const;
 
 /** Visible text nodes whose face is a declared subset, and the codepoints that fall out of it.
  *  Screen-reader-only text is excluded on purpose: it is never painted, so it has no face. */
@@ -151,6 +204,86 @@ async function loadSudoku(page: Page) {
     .toBeGreaterThan(0);
 }
 
+test("the ledger holds BOTH directions across two games and two regimes", async ({
+  browser,
+}) => {
+  // BC-M2: "the population cannot grow silently again" was written over a census of one game,
+  // one viewport, one regime, checked in one direction — so a coarse-only string could sit in
+  // the ledger forever without ever being rendered, and a whole second game's chrome was
+  // invisible to it. Both halves are paid here.
+  const seen = new Map<string, string[]>();
+  const unledgered: string[] = [];
+  const facesPerCell: string[][] = [];
+
+  for (const cell of CELLS) {
+    const ctx = await browser.newContext({
+      viewport: { width: cell.w, height: cell.h },
+      isMobile: cell.coarse,
+      hasTouch: cell.coarse,
+      baseURL: test.info().project.use.baseURL,
+    });
+    const p = await ctx.newPage();
+    try {
+      await p.goto(`./?game=${cell.game}&difficulty=EASY`);
+      await p.waitForSelector("svg.handwritten-logo", { timeout: 15000 });
+      await p.addStyleTag({ content: ".tuner-toggle { display: none !important; }" });
+      // The regime is witnessed, not assumed — a coarse cell measured at `pointer: fine`
+      // censuses a layout no phone shows (the standing rule in zone-grammar).
+      expect(
+        await p.evaluate(() => matchMedia("(pointer: coarse)").matches),
+        `${cell.id}: regime witness`,
+      ).toBe(cell.coarse);
+      await p.waitForTimeout(900);
+      const { faces, mixed } = await p.evaluate(MIXED_FACE);
+      facesPerCell.push(faces);
+      for (const m of mixed) {
+        const k = ledgerKey(m);
+        seen.set(k, [...(seen.get(k) ?? []), cell.id]);
+        if (!(k in LEDGER))
+          unledgered.push(`${cell.id} — ${k} (${m.sel}) misses ${m.missing.join(" ")}`);
+      }
+    } finally {
+      await ctx.close();
+    }
+  }
+
+  // The census must actually have faces to read in EVERY cell, or a cell passes by finding
+  // nothing and the widening is decoration.
+  for (const [i, faces] of facesPerCell.entries())
+    expect(faces, `${CELLS[i].id}: declared subset faces`).toEqual(
+      expect.arrayContaining(["Fira Code", "Fraunces", "Patrick Hand"]),
+    );
+
+  // ── FORWARD: nothing renders mixed that the ledger has not accounted for.
+  expect(unledgered, "unledgered mixed-face strings").toEqual([]);
+
+  // ── BACKWARD: nothing sits in the ledger that no cell can produce. A ledger that can only
+  // grow is a list, not a gate; this is the direction pass 4 named and pass 3's C11 predicted.
+  const stale = Object.keys(LEDGER).filter((k) => !seen.has(k) && !(k in CONDITIONAL));
+  expect(stale, "ledger rows no cell produced — retire them or state the condition").toEqual(
+    [],
+  );
+
+  // The exemptions are exemptions, not blanket cover: each conditional row must still be
+  // ABSENT here, so a row that starts rendering unconditionally loses its excuse.
+  for (const k of Object.keys(CONDITIONAL))
+    expect(seen.has(k), `${k} is exempt because: ${CONDITIONAL[k]}`).toBe(false);
+
+  // NEGATIVE CONTROL for the backward half — the check must be able to name a stale row.
+  const withDecoy = { ...LEDGER, "Patrick Hand|Nonesuch": "control" };
+  expect(
+    Object.keys(withDecoy).filter((k) => !seen.has(k) && !(k in CONDITIONAL)),
+    "negative control: an unproducible ledger row must be reported",
+  ).toEqual(["Patrick Hand|Nonesuch"]);
+
+  // NEGATIVE CONTROL for the ONE normalized key class — the cage pattern must not swallow a
+  // fixed string. `9×9` and `16×16` are size chips and stay exact-match forever.
+  for (const fixed of ["9×9", "16×16", "Off", "Deal", "3"])
+    expect(CAGE_LABEL.test(fixed), `cage pattern must not match "${fixed}"`).toBe(false);
+  for (const cage of ["3+", "12×", "6÷", "2-"])
+    expect(CAGE_LABEL.test(cage), `cage pattern must match "${cage}"`).toBe(true);
+});
+
 test("no string renders in two faces except the ones this estate has ledgered", async ({
   page,
 }) => {
@@ -162,7 +295,7 @@ test("no string renders in two faces except the ones this estate has ledgered", 
     expect.arrayContaining(["Fira Code", "Fraunces", "Patrick Hand"]),
   );
 
-  const unledgered = mixed.filter((m) => !(`${m.face}|${m.shown}` in LEDGER));
+  const unledgered = mixed.filter((m) => !(ledgerKey(m) in LEDGER));
   expect(
     unledgered.map(
       (m) => `${m.face} · "${m.shown}" (${m.sel}) misses ${m.missing.join(" ")}`,

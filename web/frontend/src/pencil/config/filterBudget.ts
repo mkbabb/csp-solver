@@ -26,23 +26,44 @@
  * size** — the same one card, the mobile arm of it. That sentence used to be a header claim
  * nothing checked; it is now MEASURED and GATED: `filter-census.spec.ts` runs the identical
  * census a second time at 393×699 coarse/dpr3 and requires the same rows and the same total
- * (9 / 9, both engines, T4-P1 pass 4).
+ * (9 / 9, both engines, T4-P1 pass 4 — re-derived 12/12 green at `66fa5856` in pass 5,
+ * `pass5/D/logs/census-green-both-engines.log`).
  *
  * THE 9-vs-17 ROW, reconciled once, here, against the device (T4-P1 pass 4 — measured on
  * `perf-rig-iphone16`, real MobileSafari iOS 19, 393×699 dpr3, this dist):
  *
  *   scene    rule                                 total  what the delta is
- *   board    own display ≠ none (this budget)       9    —
+ *   board    own display ≠ none (this budget)       9    —  ← SETTLED, and the gated number
  *   board    display NOT consulted (perf-rig)      13    +4 HandDrawnGrid `.baked-hidden`
  *                                                        live-fallback poses
+ *   board    PRE-SETTLE cold load, EITHER rule     21    +8 `svg.rest-pose[.is-pose-active]`
+ *                                                        +4 `g.logo-pose[.is-active]` — the boot
+ *                                                        window, before the bake and the deal
  *   gallery  own display ≠ none                    17    +4 `g.logo-pose[.is-active]` (only
  *                                                        the gallery mounts the wordmark's
  *                                                        pose stack) +4 crayon-heart `g`
  *   gallery  display NOT consulted                 21    both deltas at once
  *
+ * THE SETTLE WINDOW, printed rather than assumed (T4-P1 pass 5, Lane D — the pass-4 registry's
+ * D-M2). Row 3 is the lane's own phone measurement and it belongs in the open: `censusBeforeDeal`
+ * on the board arm of `pass4/logs/D/r3b.jsonl` reads **spec 21 · device 21** on real MobileSafari
+ * — the settled nine plus eight `svg.rest-pose` and four `g.logo-pose`, none of them
+ * `display: none`, which is why both rules agree there and only there. The same log's
+ * `censusAfterDeal` reads 9 / 13: the rest poses are gone, the wordmark's four leave with the
+ * boot scene, and four `.baked-hidden` fallback poses stand in their place once the bitmaps land.
+ * The gate measures the SETTLED scene by construction — `filter-census.spec.ts`'s `settleBoard`
+ * waits on the bake and on zero running animations — and that is the right subject for an
+ * exact-match allowlist, since a boot window that counts poses mid-bake would red on host load
+ * rather than on a new surface. It is a deliberate scope, not an unmeasured one, and this
+ * campaign is about cold-load paint on a phone, so the window's own number is stated here.
+ * The 21 is UNGATED. TRIGGER to gate it: a second cold-load reading above 21, or any evidence
+ * that the boot window (not the settled scene) carries a beat-driven re-execution.
+ *
  * So the pass-3 device figure of 17 is the GALLERY scene's population — the sim battery's
  * `galleryGlide` scenario navigates there — and it agrees to the unit with Lane A's own
- * gallery census in both engines. Nothing about the board budget was ever breached. The
+ * gallery census in both engines. Nothing about the board budget was ever breached IN THE
+ * SETTLED SCENE this budget gates — the sentence is true of rows 1–2 and says nothing about
+ * row 3, which is the qualification pass 4 asked for and it is made here rather than argued. The
  * four `.baked-hidden` poses raster nothing and this budget deliberately excludes them; if a
  * bake ever fails they come back `display: block` and red THIS gate, which is the behaviour
  * you want. The gallery's own 17 is MEASURED, not an allowlist here — but it is no longer

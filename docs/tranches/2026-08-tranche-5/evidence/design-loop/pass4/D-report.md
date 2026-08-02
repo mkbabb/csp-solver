@@ -76,6 +76,14 @@ Pass 3's dossier said `logo-light` **and** `toggle-crest-dark` both red, both de
 | `toggle-crest-dark` | ✓ 6/6 | — | **✓ 7/11, ✘ 4/11 at 1028 px** | **FLAKY**, not off its baseline |
 | `cell-light` · `grid-corner-light` | ✓ 6/6 | ✓ | ✓ | untouched |
 
+> **ERRATUM · pass 5, Lane D, 2026-08-02.** The `toggle-crest-dark` cell above is wrong and so is
+> the "~36%" it feeds. The eleven post-remint runs on disk read **✓ 6/11 · ✘ 5/11 (45.5%)**, red in
+> r2, r3, r4, FINAL-1 and FINAL-3. Commit `64fa37a4`'s body errs the same way and in the same
+> direction (6/8 for 5/8, two reds for three). The wrong figures are left standing so the erratum
+> can be audited; the corrected table, every other arm, and the re-runnable instrument that
+> produces them are at `pass5/D/correction-64fa37a4.md` and `pass5/D/logs/crest-rate-tally.log`.
+> The row's DISPOSITION is untouched: watch-only, no re-baseline (CH-42; lead adjudication row 8).
+
 Two corrections, both against my own lane's pass-3 text:
 
 1. **`toggle-crest-dark` was never deterministic and is not off its baseline.** The 1028 px
@@ -301,6 +309,10 @@ goldens                    logo-light ✓ 11/11 · cell ✓ · grid-corner ✓ �
 
 Every gate banked under `pass4/logs/D/`. The one non-green row is §2's toggle-crest flake, which
 predates every commit in this pass and is routed, not owned.
+
+> **ERRATUM · pass 5, Lane D.** The sweep's `toggle-crest-dark ✘ 4/11` is **✘ 5/11** — see §2's
+> erratum and `pass5/D/correction-64fa37a4.md`. §11 row 1's "~36%" is **45.5%**. Every other
+> figure in this sweep re-derives against its log unchanged.
 
 ---
 

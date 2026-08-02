@@ -127,9 +127,22 @@ test('band: a sibling of the listbox, never a control inside role=option', async
   );
   expect(groupNames).toEqual(['size', 'level']);
 
-  // The deal verb advertises its shortcut on itself and on the listbox that hosts it.
+  // The deal verb advertises its shortcut on itself and on the listbox that hosts it — and,
+  // since pass-5 A3, on the BAND, whose subtree is the radius `onKeydown` actually has. The
+  // three placements are the three true statements: the listbox resolves `d`, the band resolves
+  // `d`, and `d` activates this button.
   await expect(page.locator('.gallery-viewport')).toHaveAttribute('aria-keyshortcuts', 'd');
+  await expect(page.locator('.staging-band')).toHaveAttribute('aria-keyshortcuts', 'd');
   await expect(page.locator('.staging-deal')).toHaveAttribute('aria-keyshortcuts', 'd');
+
+  // W3.3's FLOOR, carried into this lane's own battery (T5-W4a charter: "options 5/5 never
+  // regresses while the visual design moves"). W3 cured a HEAD where `inert` on the flanks
+  // collapsed Chrome's published listbox to ONE item; `a11y.spec.ts:331` owns the AX-tree half
+  // and keeps it. This is the structural half, sited in the file the picker's own composition
+  // changes land in — so a re-skin that drops or un-names an option reds the lane that made it,
+  // not only the a11y lane downstream.
+  await expect(page.getByRole('option')).toHaveCount(5);
+  await expect(page.getByRole('option', { name: /\S/ })).toHaveCount(5);
 });
 
 // ── 2. Cold-start truth: the cards report the boards that are actually on disk ──────────────
@@ -280,9 +293,28 @@ test('guard: the `d` hotkey routes through the SAME ribbon, from the deck AND fr
   // `aria-keyshortcuts="d"` on `.staging-deal` and pressed the key only on the listbox — the
   // band is the viewport's SIBLING, so the shortcut it advertised reached nothing. An attribute
   // assertion cannot fail on that; this can.
-  await page.locator('.staging-deal').press('d');
-  await expect(page.locator('.gallery-guard')).toBeVisible();
-  await expect(page.locator('.gallery-guard .guard-leave')).toHaveText('deal');
+  //
+  // THE RADIUS, PINNED (pass-5 A3 / A-m7). The handler is bound on `.staging-band`, so `d`
+  // resolves from ANY focus inside the band; pass 4 pressed it from the deal button alone, and
+  // a handler scoped back to that button passed the row. Three origins, one per focusable
+  // class the band owns — a chip, the safe verb, the deal verb — so the gate holds the radius
+  // the handler actually has. Ablation-RED banked at
+  // `pass5/A/logs/A3-20-RED-d-scoped-to-button.{dev,preview}.log`.
+  for (const origin of [
+    axis(page, 'size').getByRole('button').first(),
+    page.locator('.staging-safe'),
+    page.locator('.staging-deal'),
+  ]) {
+    await origin.press('d');
+    await expect(page.locator('.gallery-guard')).toBeVisible();
+    await expect(page.locator('.gallery-guard .guard-leave')).toHaveText('deal');
+    // Escape, not a click on `keep`: the ribbon arrives on a CSS transition and a click has to
+    // wait for the box to be STABLE, which turns three arm/retire cycles into an animation race.
+    // Escape is the ribbon's own documented dismissal (`onGuardKeydown` → `dismissGuard`) and it
+    // needs no geometry — the row is testing the key's radius, not the button's hit box.
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.gallery-guard')).toBeHidden();
+  }
 });
 
 // ── 3b. THE OTHER BOARD A DEAL CAN DESTROY — the arm pass 3 dropped ──────────────────────────
@@ -359,6 +391,84 @@ test('guard: when BOTH boards hold work the sub-line says so', async ({ page }) 
   await expect(page.locator('.gallery-guard .guard-note-sub')).toHaveText(
     "neither board's marks are saved",
   );
+});
+
+/** Dirty WITHOUT user moves: write a digit, then erase it. Two entries on the undo log, so
+ *  `isDirty` (undo-depth > 0, the T4-WU ruling `766aa068`) is true; no non-given cell holds a
+ *  value, so the ledger row reads `userMoves: false` (`useGameState.ts:879`). The two signals
+ *  the guard reads, pulled APART — measured, not assumed:
+ *  `staging-ledger-v1 = {"sudoku":{"size":3,"difficulty":"EASY","board":true,"userMoves":false}}`
+ *  (`pass5/A/logs/A2-probe-dirty-without-usermoves.log`). */
+async function dirtyButUnmarkedSudoku(page: Page) {
+  await page.goto('./?size=3&difficulty=EASY');
+  await page.waitForSelector('.sudoku-cell', { timeout: 20000 });
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 20000 })
+    .toBeGreaterThan(0);
+  const before = await page.locator('.sudoku-cell .glyph-svg').count();
+  const blank = await page.evaluate(() => {
+    const cells = document.querySelectorAll('.sudoku-cell');
+    for (let i = 0; i < cells.length; i++)
+      if (!cells[i].querySelector('.glyph-svg')) return i;
+    return -1;
+  });
+  expect(blank).toBeGreaterThanOrEqual(0);
+  for (const value of ['1', '']) {
+    await page.locator('.sudoku-cell').nth(blank).click();
+    await page.evaluate(
+      ([idx, v]) => {
+        const input = document.querySelectorAll('.sudoku-cell input')[
+          idx as number
+        ] as HTMLInputElement;
+        const setter = Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          'value',
+        )!.set!;
+        setter.call(input, v as string);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      },
+      [blank, value] as const,
+    );
+  }
+  // The board is back where it started — that is the point of the arm.
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 20000 })
+    .toBe(before);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            JSON.parse(localStorage.getItem('staging-ledger-v1') ?? '{}')?.sudoku?.userMoves,
+        ),
+      { timeout: 10000 },
+    )
+    .toBe(false);
+  await page.locator('button.logo-trigger').click();
+  await page.waitForSelector('.staging-band', { timeout: 20000 });
+}
+
+test('guard: a dirty SAME-game deal raises the ribbon too — the subsumption, gated', async ({
+  page,
+}) => {
+  // A-m1 (pass 4). `attemptDeal`'s mounted-board arm is DOCUMENTED as subsuming the pass-3
+  // same-id fallback (`dirty && card.id === currentId`) — "the id comparison the fallback made
+  // was the whole defect" — and nothing pressed it: every dirty-deal row in this file steps to
+  // a DIFFERENT card first, so an arm narrowed back to `card.id !== props.currentId` passes all
+  // seventeen. Asserted in prose, never gated; this is the four-line row that gates it.
+  //
+  // The arm is ISOLATED, which is what makes the row falsifiable: the target's own ledger says
+  // `userMoves: false`, so `attemptDeal`'s FIRST clause cannot fire and only the mounted-board
+  // clause can raise this ribbon. Ablation-RED banked at
+  // `pass5/A/logs/A2-10-RED-samegame-arm-narrowed.{dev,preview}.log` — narrow the clause and
+  // this row alone goes red, on both harnesses.
+  await dirtyButUnmarkedSudoku(page); // sudoku mounted and dirty, sudoku the centred card
+  await page.locator('.staging-deal').click();
+
+  const ribbon = page.locator('.gallery-guard');
+  await expect(ribbon).toBeVisible();
+  await expect(ribbon).toHaveAttribute('aria-label', 'deal over this puzzle?');
+  await expect(ribbon.locator('.guard-note-sub')).toHaveText("your marks aren't saved");
 });
 
 test('guard: a PRISTINE mounted board deals across with no ribbon (the source-arm control)', async ({
@@ -439,12 +549,37 @@ test('deal: a same-game deal issued BEFORE the scene mounts still lands the stag
   // deterministically here rather than raced: the chunk is released only after the click.
   let release!: () => void;
   const held = new Promise<void>((r) => (release = r));
-  // Futoshiki's lazy entry is its SPEC now (T5-W2 F2) — `cards.ts` loads
-  // `@games/futoshiki/spec`, and the scene it used to load is gone. Same chunk, same hold,
-  // new name: the module this route holds open must be the one the card actually requests.
-  await page.route(/futoshiki\/spec/, async (route) => {
+  // THE HOLD IS HARNESS-INDEPENDENT (pass-5 A1 / A-M1). Futoshiki's lazy entry is its SPEC
+  // (T5-W2 F2) — `cards.ts` loads `@games/futoshiki/spec` — but the two harnesses NAME that
+  // module differently and only one of the two names was ever routed:
+  //   · dev server → `/src/games/futoshiki/spec.ts`; the game is in the URL.
+  //   · built dist → `/assets/spec-<contenthash>.js`, and four chunks share that stem
+  //     (`spec-BkYbGe2P52BR` thermo · `spec-BobPrmIZKFO_` futoshiki · `spec-Cr7dd6GqvWtl`
+  //     killer · `spec-DsTAZmxlvXcf` kenken). The hash is CONTENT, not name, so no URL regex
+  //     can pick futoshiki's out — `/futoshiki\/spec/` matched nothing there, the hold was a
+  //     no-op, and the row degraded to the race it replaced.
+  // Banked RED for exactly that, on the preview harness and on this file's own words:
+  // `pass5/A/logs/A1-01-BEFORE-preview-chromium.log` — `.futoshiki-cell` 25 where the row
+  // wants 0, because the scene had already mounted by the time the band appeared.
+  // So: the pattern matches BOTH stems, and on the built stem identity is read off the BODY —
+  // hold the chunk that IS futoshiki's, serve every other one straight through.
+  let heldHits = 0;
+  await page.route(/futoshiki\/spec|\/assets\/spec-[A-Za-z0-9_-]+\.js/, async (route) => {
+    if (/futoshiki\/spec/.test(route.request().url())) {
+      heldHits++;
+      await held;
+      await route.continue();
+      return;
+    }
+    const res = await route.fetch();
+    const body = await res.text();
+    if (!/futoshiki/i.test(body)) {
+      await route.fulfill({ response: res, body });
+      return;
+    }
+    heldHits++;
     await held;
-    await route.continue();
+    await route.fulfill({ response: res, body });
   });
 
   // `domcontentloaded`, not the default `load`: this test deliberately HOLDS a module request
@@ -454,6 +589,14 @@ test('deal: a same-game deal issued BEFORE the scene mounts still lands the stag
   // The very next line waits for the band, which is the condition this test actually needs.
   await page.goto('./?view=gallery&game=futoshiki', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('.staging-band', { timeout: 20000 });
+  // NOT VACUOUS, two ways. `toHaveCount(0)` is satisfied by an empty document, so the deck is
+  // required to be up first; and a hold that matched nothing is indistinguishable from a hold
+  // that held — unless the hold is counted. This is the assertion A-M1 was missing, and it is
+  // the one that makes the row mean the same thing on both harnesses.
+  await expect(page.locator('.game-gallery')).toBeVisible();
+  await expect
+    .poll(() => heldHits, { timeout: 10000 })
+    .toBeGreaterThan(0); // the futoshiki spec module is held open on THIS harness
   await expect(page.locator('.futoshiki-cell')).toHaveCount(0); // still resolving
 
   await axis(page, 'size').getByRole('button', { name: '6×6' }).click();

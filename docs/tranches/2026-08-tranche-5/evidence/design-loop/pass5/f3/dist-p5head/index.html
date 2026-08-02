@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover (T4-WM lane C): opts the page into the notch/Dynamic-Island
+         region so `env(safe-area-inset-*)` returns real insets — the fixed top-right
+         celestial toggle pads clear of the notch (App.vue .corner-right). No
+         `maximum-scale`/`user-scalable`: pinch-zoom stays intact (WCAG 1.4.4); the iOS
+         focus-zoom is defeated structurally by the cells' 16px input font instead. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Sudoku - CSP Solver</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- P5 (Tranche II): fonts are self-hosted woff2 subsets, wired via @font-face
+         in src/assets/index.css — the Google Fonts CDN link is gone, so is the
+         fonts.googleapis.com / fonts.gstatic.com CSP allowance (see public/_headers). -->
+    <!-- Social unfurl (T4-W3) — game-agnostic: the same head serves both games; the
+         active game rides in the URL (?game=), so the copy names neither. og:image is
+         a committed static card (public/og-card.png, landed by the design lane). -->
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Hand-drawn logic puzzles, solved in your browser"
+    />
+    <meta
+      property="og:description"
+      content="Play and share hand-drawn constraint puzzles — a pencil-and-paper aesthetic, an in-browser CSP solver, and a permalink to every board."
+    />
+    <meta property="og:url" content="https://sudoku.babb.dev/" />
+    <meta property="og:image" content="https://sudoku.babb.dev/og-card.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Hand-drawn logic puzzles, solved in your browser"
+    />
+    <meta
+      name="twitter:description"
+      content="Play and share hand-drawn constraint puzzles — a pencil-and-paper aesthetic, an in-browser CSP solver, and a permalink to every board."
+    />
+    <meta name="twitter:image" content="https://sudoku.babb.dev/og-card.png" />
+    <script type="module" crossorigin src="/assets/index-NOVEzi_FEoGa.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vue-vendor-BZlvHBt1ZB_s.js">
+    <link rel="modulepreload" crossorigin href="/assets/animation-vendor-BISdRVo5DPrM.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-CxDt0SJdNCdn.css">
+    <link rel="modulepreload" href="/assets/solver.worker-CiwFumri.js">
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/firacode-subset-CbuNTc2aGjcY.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/fraunces-subset-nWzWvP1GNv2C.woff2">
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/patrickhand-subset-BqV1besB36ib.woff2">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>

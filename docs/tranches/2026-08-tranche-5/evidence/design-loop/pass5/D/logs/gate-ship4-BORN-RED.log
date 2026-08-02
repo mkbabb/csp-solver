@@ -1,0 +1,37 @@
+=== AUDIT ===
+gate      closure 4 · gateShip4 · scripts/check-ink-pressure.mjs (NEW at pass 5)
+law       born-RED: the gate runs RED before the cure, transcript banked first
+tree      HEAD 66fa5856 + the new gate, surfaces UNTOUCHED (no component edit in this lane)
+date      2026-08-02T06:09:36Z
+
+RUN 1 — the gate as first written, against a HEALTHY tree. Five of five rows red.
+Two distinct causes, and the run separates them:
+  (a) surfaces 3 and 6 'not found' + surfaces 1/2/4 'no longer writes' — the parser was
+      blind to CSS COMMENTS. Every one of these rules is preceded or interrupted by a
+      /* … */ note, so the anchor char and the ';' before the declaration were both eaten.
+      A gate that reds on a healthy tree is a broken gate; born-RED is what surfaced it.
+  (b) surface 4 is ALSO mis-named in the record: the pass-4 dossier §5 calls it
+      '.margin-note'; the ink lives on '.margin-note-meta'. This run was taken with the
+      DOSSIER's name on purpose, so the record defect is in a transcript and not a claim.
+
+$ node scripts/check-ink-pressure.mjs
+  ✗ ship-4 surface 1: .keyboard-legend no longer writes `color: var(--ink-press-quiet)` — it is off the rung ship 4 put it on (was 55% — 3.53:1 light / 4.36:1 dark, sub-AA in both themes at caption size)
+  ✗ ship-4 surface 2: .legend-row kbd no longer writes `border: var(--ink-press-rule)` — it is off the rung ship 4 put it on (was 40% — 2.36:1 light / 2.87:1 dark, under the 1.4.11 non-text floor)
+  ✗ ship-4 surface 3: .legend-sep not found in pencil/chrome/KeyboardLegend.vue — the assertion is unanchored
+  ✗ ship-4 surface 4: .margin-note no longer writes `color: var(--ink-press-quiet)` — it is off the rung ship 4 put it on (was 62% — 4.34:1 light, sub-AA)
+  ✗ ship-4 surface 6: .vignette-meta not found in pencil/chrome/CompletionVignette.vue — the assertion is unanchored
+
+ink-pressure: 5 violation(s), 0 vacuous gate(s)
+
+(exit 1)
+
+RUN 2 — comment-blindness cured, the dossier's selector name STILL in place. One row red,
+and it is the record defect alone, isolated: '.margin-note' is a real rule (the gate found a
+body for it) that carries no ink; the ink is on '.margin-note-meta'. The pass-4 §5 table names
+the strip, not the surface it re-pitched.
+
+$ node scripts/check-ink-pressure.mjs
+  ✗ ship-4 surface 4: .margin-note no longer writes `color: var(--ink-press-quiet)` — it is off the rung ship 4 put it on (was 62% — 4.34:1 light, sub-AA)
+
+ink-pressure: 1 violation(s), 0 vacuous gate(s)
+(exit 1)

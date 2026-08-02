@@ -1,0 +1,24 @@
+=== AUDIT ===
+THE RIG'S STDERR, BANKED — pass-4 D-m4: 'the ink rig is the one run with no log banked
+(the rig swallows a failed crop into stderr)'. This rig does not swallow: an unreachable
+surface or a failed crop is a named line here AND exit 1. Both runs are kept.
+date      2026-08-02T06:16:51Z
+
+── RUN 1 (exit 1) — six named misses, and every one of them a real finding:
+     · surface 4 .margin-note-meta is v-if'd away at 1700×1000 — the vignette owns the tally
+       at the wide rungs and the strip keeps it below 1280, so ONE width cannot witness both
+       4 and 6. Pass 4 cropped the pair from one context.
+     · surface 5 missed in 2 of 4 cells — clearArmed gates on isCoarse && isDirty and
+       re-disarms after a 2.5 s lapse, so the witness must dirty the board and read inside
+       the window. Now three verified attempts through the button's own aria-label.
+
+  ✗ chromium/light: surface 4 .margin-note-meta unreachable (after Solve)
+  ✗ chromium/dark: surface 4 .margin-note-meta unreachable (after Solve)
+  ✗ chromium/dark: surface 5 .icon-sublabel.is-armed unreachable (coarse + dirty + one tap)
+  ✗ webkit/light: surface 4 .margin-note-meta unreachable (after Solve)
+  ✗ webkit/dark: surface 4 .margin-note-meta unreachable (after Solve)
+  ✗ webkit/light: surface 5 .icon-sublabel.is-armed unreachable (coarse + dirty + one tap)
+
+── RUN 2 (exit 0) — 24 witnesses · 0 unreachable. stderr EMPTY, and the emptiness is the
+   claim: the stream that would have carried a swallowed crop carried nothing.
+(no output)

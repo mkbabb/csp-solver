@@ -1,0 +1,135 @@
+AUDIT · PASS-5 AGGLOMERATOR — adversarial re-derivation at fold time
+when  2026-08-02T06:34:42Z · host darwin · tree 66fa5856 + 12 uncommitted lane files
+
+== 1 · HOLLOW-DIST CENSUS (BC5-G2 says 23; re-derived) ==
+  pass2/dist-base -> _headers _redirects 
+  pass2/dist-f2pen -> _headers _redirects 
+  pass2/dist-f2type -> _headers _redirects 
+  pass3/dist-127fde0d -> _headers _redirects 
+  pass3/dist-A -> _headers _redirects 
+  pass3/dist-B0 -> _headers _redirects 
+  pass3/dist-B1 -> _headers _redirects 
+  pass3/dist-Bfinal -> _headers _redirects 
+  pass3/dist-F3base -> _headers _redirects 
+  pass3/dist-F3head -> _headers _redirects 
+  pass3/dist-base -> _headers _redirects 
+  pass3/dist-e982a403 -> _headers _redirects 
+  pass3/dist-head -> _headers _redirects 
+  pass3/dist-prune -> _headers _redirects 
+  pass3/measure/dist-head -> _headers _redirects 
+  pass3/stall/dist-head -> _headers _redirects 
+  pass4/dist-BChead -> _headers _redirects 
+  pass4/dist-F3base -> _headers _redirects 
+  pass4/dist-F3head -> _headers _redirects 
+  pass4/dist-FINAL -> _headers _redirects 
+  pass4/dist-curveCTRL -> _headers _redirects 
+  pass4/dist-noopCTRL -> _headers _redirects 
+  pass4/dist-p4base -> _headers _redirects 
+  pass4/dist-recon -> _headers _redirects 
+  pass4/measure/dist-head -> _headers _redirects 
+  TOTAL DIRS: 25  (BC published 23; the two omitted are pass3/measure/dist-head and pass4/measure/dist-head)
+
+== 2 · SINGLE-TREE md5 (MEASURE discipline item 1) ==
+MD5 (pass5/f3/dist-p5base/assets/index-C5xqWLHq1mLl.js) = 2b16a65d0f79cbb50799adf184edca65
+MD5 (pass5/BC/rig/dist-head/assets/index-C5xqWLHq1mLl.js) = 2b16a65d0f79cbb50799adf184edca65
+MD5 (pass5/f3/dist-p5head/assets/index-NOVEzi_FEoGa.js) = 7b00f5ee235f005fb87d5eb3770de323
+MD5 (pass5/f3/dist-p5ablate/assets/index-_eSj3LtWOe4u.js) = 9309e9b63d7cde7300eae5c715129bed
+  VERDICT: A/BC/D base arm == f3 base arm (2b16a65d...). f3 HEAD arm is a DIFFERENT artifact carrying the only product change of the pass.
+
+== 3 · THE 88.58 / 90.58 QUESTION, from pass 4's OWN banked log ==
+chromium base {"vh":390,"mastheadH":98.58,"mastheadBottom":114.58,"boardTop":114.58,"boardBottom":342.58,"squareH":230,"boardWholeAboveFold":true,"marginBottom":373.06,"chromeAboveBoard":114.58}
+chromium head {"vh":390,"mastheadH":98.58,"mastheadBottom":114.58,"boardTop":114.58,"boardBottom":478.58,"squareH":366,"boardWholeAboveFold":false,"marginBottom":509.06,"chromeAboveBoard":114.58}
+webkit base {"vh":390,"mastheadH":97.98,"mastheadBottom":113.98,"boardTop":113.98,"boardBottom":341.98,"squareH":230,"boardWholeAboveFold":true,"marginBottom":372.47,"chromeAboveBoard":113.98}
+webkit head {"vh":390,"mastheadH":97.98,"mastheadBottom":113.98,"boardTop":113.98,"boardBottom":477.98,"squareH":366,"boardWholeAboveFold":false,"marginBottom":508.44,"chromeAboveBoard":113.98}
+  chromium 478.58 - 390 = 88.58 · webkit 477.98 - 390 = 87.98
+  pass4-registry.md:110,:203 publishes 90.58 / 89.98 => +2.00 on BOTH engines. F3 is right; the registry is wrong.
+
+== 4 · BC's FLOOR DISCLAIMER, tested (BC-report.md:371-374) ==
+  claim: 'options 5/5 (W3.3) and the k-peek guard (W3.4) were NOT run by this lane - they live in the picker and mobile specs'
+252:test.describe('3.2 guardAnnounced', () => {
+323:test.describe('3.3 optionsInPicker', () => {
+369:test.describe('3.4 ctrlKDoesNotPeek', () => {
+  => BOTH live in e2e/a11y.spec.ts, the file BC ran to 30/30 (pass5/BC/logs/floors-a11y.log). The premise is false; the floors ARE covered.
+
+== 5 · T-PRIME, three magnitudes for one edit ==
+111	264	web/frontend/src/games/shared/GameControlPanel.vue
+  raw LOC 1357 -> 1204  = -153 (F3, basis named)
+  churn 111+264 = 375 (D's '~375 lines', basis unnamed) · BC's '-149 code lines' = comment-stripped, basis unnamed
+
+== 6 · SOURCE DIFF: code vs prose, all six touched src files ==
+46	5	web/frontend/src/games/shared/DifficultyTally.vue
+38	9	web/frontend/src/games/shared/GameBoard.vue
+111	264	web/frontend/src/games/shared/GameControlPanel.vue
+14	2	web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
+20	2	web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+24	3	web/frontend/src/pencil/config/filterBudget.ts
+  non-comment changed lines:
+    src/games/shared/GameBoard.vue: 0
+    src/games/shared/DifficultyTally.vue: 47
+    src/pencil/config/filterBudget.ts: 0
+    src/pencil/chrome/GameGallery/StagingBand.vue: 2
+  => the ONLY product code in the whole pass-5 diff: StagingBand.vue's one aria-keyshortcuts attribute, and GameControlPanel.vue's T-prime collapse.
+
+== 7 · ESTATE STATIC GATES, re-derived at fold time on the shared worktree ==
+  npm run lint:eslint -> exit 0  (D5-G2's probe-tmp.mjs is GONE from disk; the red is resolved)
+  npx vue-tsc -b --noEmit -> exit 0
+  probe-tmp.mjs: absent
+
+== 4 · BC's FLOOR DISCLAIMER, tested (BC-report.md:371-374) ==
+  claim: 'options 5/5 (W3.3) and the k-peek guard (W3.4) were NOT run by this lane — they live in the picker and mobile specs'
+317:// ═══ 3.3 optionsInPicker — the picker publishes five ════════════════
+323:test.describe('3.3 optionsInPicker', () => {
+363:// ═══ 3.4 ctrlKDoesNotPeek — single-key shortcuts guarded ════════════
+369:test.describe('3.4 ctrlKDoesNotPeek', () => {
+  => BOTH live in e2e/a11y.spec.ts, the file BC ran to 30/30 (pass5/BC/logs/floors-a11y.log). The premise is false; the floors ARE covered.
+
+== 5 · T-PRIME, three magnitudes for one edit ==
+111	264	web/frontend/src/games/shared/GameControlPanel.vue
+  raw LOC 1357 -> 1204 = -153 (F3, basis named)
+  churn 111+264 = 375 (D's '~375 lines', basis unnamed) · BC's '-149 code lines' = comment-stripped, basis unnamed
+
+== 6 · SOURCE DIFF: code vs prose ==
+46	5	web/frontend/src/games/shared/DifficultyTally.vue
+38	9	web/frontend/src/games/shared/GameBoard.vue
+111	264	web/frontend/src/games/shared/GameControlPanel.vue
+14	2	web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
+20	2	web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+24	3	web/frontend/src/pencil/config/filterBudget.ts
+  non-comment changed lines:
+    src/games/shared/GameBoard.vue: 0
+    src/games/shared/DifficultyTally.vue: 47
+    src/pencil/config/filterBudget.ts: 0
+    src/pencil/chrome/GameGallery/StagingBand.vue: 2
+    src/pencil/chrome/OptionSelector/OptionSelector.vue: 21
+  => product CODE in the entire pass-5 diff: StagingBand.vue's one aria-keyshortcuts attribute + GameControlPanel.vue's T-prime collapse. Everything else is prose or gate.
+
+== 7 · ESTATE STATIC GATES, re-derived at fold time on the shared worktree ==
+  npm run lint:eslint -> exit 0
+  npx vue-tsc -b --noEmit -> exit 0
+  probe-tmp.mjs: ABSENT — D5-G2's eslint red is resolved on disk
+
+== 6b · CORRECTION TO MY OWN §6, before anyone else has to find it ==
+  The '47' (DifficultyTally.vue) and '21' (OptionSelector.vue) above are FALSE POSITIVES of the crude filter:
+  both diffs sit INSIDE a block comment (HTML <!-- --> and /* */ respectively) whose continuation lines
+  begin with neither * nor //. Read by eye at fold time: DifficultyTally.vue = F3's dt-name/expand
+  disposition note, comment only; OptionSelector.vue = BC's 'five constants' re-wording, prose only.
+  Corrected non-comment counts: GameBoard 0 · DifficultyTally 0 · filterBudget 0 · OptionSelector 0 ·
+  StagingBand 2 (one attribute, +/- of one line) · GameControlPanel = the T-prime collapse.
+
+== 8 · WHAT THIS LOG DOES NOT ESTABLISH ==
+  No non-author (MEASURE) arm ran in pass 5. This agglomerator re-derived eight quantities from the
+  lanes' own banked artifacts and from git; it did not re-run a single lane rig, and an agglomerator
+  is not a non-author. The pass-4 registry's order — 'pass 5's fresh non-author audit re-verifies the
+  four corrected numbers' — is UNEXECUTED and rolls to pass 6.
+
+== 9 · TWO HEAD BUILDS, AND THE REPORT CITES THE DISCARDED ONE ==
+  build-p5base.log   01:58:50  index-C5xqWLHq1mLl.js  226.66 kB  gzip 85.17   <- banked as dist-p5base
+  build-p5head.log   02:04:29  index-BnZyEfPT90uS.js  222.47 kB  gzip 84.87   <- BANKED NOWHERE (find: 0 hits)
+  build-p5ablate.log 02:13:55  index-_eSj3LtWOe4u.js  222.41 kB  gzip 84.87   <- banked as dist-p5ablate
+  build-p5head2.log  02:13:11  index-NOVEzi_FEoGa.js  222.49 kB  gzip 84.88   <- banked as dist-p5head, and what EVERY figure ran on
+
+  F3-report.md §1.1 publishes raw 226.66 -> 222.47 (-4.19 kB) and gzip 85.17 -> 84.87 (-0.30).
+  Those are the FIRST head build's numbers. Against the artifact actually banked, served and
+  measured: 226.66 -> 222.49 = -4.17 kB raw, 85.17 -> 84.88 = -0.29 kB gzip.
+  Window between the two head builds: 8m42s, on a tree three other lanes were editing.
+  Precedent named by the loop itself: pass 3's offense was 'figures predating the dist by 5m52s'.

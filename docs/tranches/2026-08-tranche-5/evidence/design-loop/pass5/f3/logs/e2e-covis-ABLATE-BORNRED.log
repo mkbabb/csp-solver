@@ -1,0 +1,261 @@
+AUDIT: BORN-RED / ABLATION arm (final) — dist-p5ablate :4234 — 2026-08-02T06:15:53Z
+  ablation A: <lg board height cap deleted (pre-pass-3 tree) · ablation B: MarginNote min-height 1.3em -> 0
+
+Running 14 tests using 9 workers
+
+  ✓   3 [chromium] › e2e/board-covisibility.spec.ts:216:3 › mark 6 — the band dissolves › the grade crests on the board — the celebration never moves the page (425ms)
+  ✓   4 [chromium] › e2e/board-covisibility.spec.ts:55:3 › mark 6 — the band dissolves › the tally files with the deal, and the strip it left can still be seen (437ms)
+  ✘   7 [chromium] › e2e/board-covisibility.spec.ts:91:3 › mark 6 — the band dissolves › the strip below the board is one reserved line — no more, and no less (455ms)
+  ✘   6 [chromium] › e2e/board-covisibility.spec.ts:365:3 › the board fits the viewport it is drawn in › the board hangs no further below the fold than the chrome above it (470ms)
+  ✘   1 [chromium] › e2e/board-covisibility.spec.ts:267:3 › the board fits the viewport it is drawn in › a landscape phone gets a board no larger than the screen it is drawn on (526ms)
+  ✘   9 [chromium] › e2e/board-covisibility.spec.ts:143:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width (562ms)
+  ✓   8 [webkit] › e2e/board-covisibility.spec.ts:55:3 › mark 6 — the band dissolves › the tally files with the deal, and the strip it left can still be seen (1.1s)
+  ✘   5 [webkit] › e2e/board-covisibility.spec.ts:91:3 › mark 6 — the band dissolves › the strip below the board is one reserved line — no more, and no less (1.1s)
+  ✘   2 [chromium] › e2e/board-covisibility.spec.ts:297:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit (1.5s)
+  ✓  11 [webkit] › e2e/board-covisibility.spec.ts:216:3 › mark 6 — the band dissolves › the grade crests on the board — the celebration never moves the page (1.4s)
+  ✘  12 [webkit] › e2e/board-covisibility.spec.ts:267:3 › the board fits the viewport it is drawn in › a landscape phone gets a board no larger than the screen it is drawn on (1.4s)
+  ✘  14 [webkit] › e2e/board-covisibility.spec.ts:365:3 › the board fits the viewport it is drawn in › the board hangs no further below the fold than the chrome above it (1.4s)
+  ✘  10 [webkit] › e2e/board-covisibility.spec.ts:143:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width (1.6s)
+  ✘  13 [webkit] › e2e/board-covisibility.spec.ts:297:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit (2.8s)
+
+
+  1) [chromium] › e2e/board-covisibility.spec.ts:91:3 › mark 6 — the band dissolves › the strip below the board is one reserved line — no more, and no less 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 16
+    Received:    0
+
+      112 |     await page.evaluate(() => document.querySelector(".margin-note-ink")?.remove());
+      113 |     const silent = await read();
+    > 114 |     expect(silent).toBeGreaterThanOrEqual(16);
+          |                    ^
+      115 |
+      116 |     // CONTROL A: give the strip back a tenant and the same probe must exceed the ceiling.
+      117 |     await page.evaluate(() => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:114:20
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-mark-6--cbda5--line-—-no-more-and-no-less-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-mark-6--cbda5--line-—-no-more-and-no-less-chromium/error-context.md
+
+  2) [chromium] › e2e/board-covisibility.spec.ts:143:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 21
+    Received: 16
+
+      195 |     // …and the grade did not move the strip it prints in: the line was reserved before the
+      196 |     // solve and the voice stands down INTO it, rather than taking the block out of flow.
+    > 197 |     expect(await strip()).toBe(beforeStrip);
+          |                           ^
+      198 |     expect(await strip()).toBeLessThanOrEqual(30);
+      199 |
+      200 |     // The other regime, same solve: at the margin rung the vignette has room for the tally
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:197:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-mark-6--4e1a3-exactly-once-at-every-width-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-mark-6--4e1a3-exactly-once-at-every-width-chromium/error-context.md
+
+  3) [chromium] › e2e/board-covisibility.spec.ts:267:3 › the board fits the viewport it is drawn in › a landscape phone gets a board no larger than the screen it is drawn on 
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 390
+    Received:    672
+
+      278 |
+      279 |     const fitted = await read();
+    > 280 |     expect(fitted.h).toBeLessThanOrEqual(fitted.vh);
+          |                      ^
+      281 |
+      282 |     // CONTROL: strip the height arm — the exact shape of the tree before this rung — and the
+      283 |     // board must overflow the screen it is drawn on.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:280:22
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-the-boa-73a7b-n-the-screen-it-is-drawn-on-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-the-boa-73a7b-n-the-screen-it-is-drawn-on-chromium/error-context.md
+
+  4) [chromium] › e2e/board-covisibility.spec.ts:297:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit 
+
+    Error: expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 40.22
+    Received: 74.22
+
+    Expected precision:    1
+    Expected difference: < 0.05
+    Received difference:   34
+
+      328 |     const portrait = await settled();
+      329 |
+    > 330 |     expect(landscape).toBeCloseTo(portrait, 1);
+          |                       ^
+      331 |
+      332 |     // CONTROL: put pass 3's rung back — the cap that allows 10rem for chrome that is not
+      333 |     // beside the board below 1024 — and the same probe must see the rotation cost cells.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:330:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-the-boa-c67e7-he-cell-a-finger-has-to-hit-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-the-boa-c67e7-he-cell-a-finger-has-to-hit-chromium/error-context.md
+
+  5) [chromium] › e2e/board-covisibility.spec.ts:365:3 › the board fits the viewport it is drawn in › the board hangs no further below the fold than the chrome above it 
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 114.58
+    Received:    394.58
+
+      388 |     const shipped = await read();
+      389 |     expect(shipped.chromeAbove).toBeGreaterThan(0);
+    > 390 |     expect(shipped.overflow).toBeLessThanOrEqual(shipped.chromeAbove);
+          |                              ^
+      391 |
+      392 |     // CONTROL 1 — the rung one step ABOVE the election (`100dvh`, the whole short edge). It is
+      393 |     // the cheapest drift available and the gate must still hold, or the bound is so tight it
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:390:30
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-the-boa-86de4-ld-than-the-chrome-above-it-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-the-boa-86de4-ld-than-the-chrome-above-it-chromium/error-context.md
+
+  6) [webkit] › e2e/board-covisibility.spec.ts:91:3 › mark 6 — the band dissolves › the strip below the board is one reserved line — no more, and no less 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 16
+    Received:    0
+
+      112 |     await page.evaluate(() => document.querySelector(".margin-note-ink")?.remove());
+      113 |     const silent = await read();
+    > 114 |     expect(silent).toBeGreaterThanOrEqual(16);
+          |                    ^
+      115 |
+      116 |     // CONTROL A: give the strip back a tenant and the same probe must exceed the ceiling.
+      117 |     await page.evaluate(() => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:114:20
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-mark-6--cbda5--line-—-no-more-and-no-less-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-mark-6--cbda5--line-—-no-more-and-no-less-webkit/error-context.md
+
+  7) [webkit] › e2e/board-covisibility.spec.ts:143:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 21
+    Received: 16
+
+      195 |     // …and the grade did not move the strip it prints in: the line was reserved before the
+      196 |     // solve and the voice stands down INTO it, rather than taking the block out of flow.
+    > 197 |     expect(await strip()).toBe(beforeStrip);
+          |                           ^
+      198 |     expect(await strip()).toBeLessThanOrEqual(30);
+      199 |
+      200 |     // The other regime, same solve: at the margin rung the vignette has room for the tally
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:197:27
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-mark-6--4e1a3-exactly-once-at-every-width-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-mark-6--4e1a3-exactly-once-at-every-width-webkit/error-context.md
+
+  8) [webkit] › e2e/board-covisibility.spec.ts:267:3 › the board fits the viewport it is drawn in › a landscape phone gets a board no larger than the screen it is drawn on 
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 390
+    Received:    672
+
+      278 |
+      279 |     const fitted = await read();
+    > 280 |     expect(fitted.h).toBeLessThanOrEqual(fitted.vh);
+          |                      ^
+      281 |
+      282 |     // CONTROL: strip the height arm — the exact shape of the tree before this rung — and the
+      283 |     // board must overflow the screen it is drawn on.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:280:22
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-the-boa-73a7b-n-the-screen-it-is-drawn-on-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-the-boa-73a7b-n-the-screen-it-is-drawn-on-webkit/error-context.md
+
+  9) [webkit] › e2e/board-covisibility.spec.ts:297:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit 
+
+    Error: expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 40.22
+    Received: 74.22
+
+    Expected precision:    1
+    Expected difference: < 0.05
+    Received difference:   34
+
+      328 |     const portrait = await settled();
+      329 |
+    > 330 |     expect(landscape).toBeCloseTo(portrait, 1);
+          |                       ^
+      331 |
+      332 |     // CONTROL: put pass 3's rung back — the cap that allows 10rem for chrome that is not
+      333 |     // beside the board below 1024 — and the same probe must see the rotation cost cells.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:330:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-the-boa-c67e7-he-cell-a-finger-has-to-hit-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-the-boa-c67e7-he-cell-a-finger-has-to-hit-webkit/error-context.md
+
+  10) [webkit] › e2e/board-covisibility.spec.ts:365:3 › the board fits the viewport it is drawn in › the board hangs no further below the fold than the chrome above it 
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 113.98
+    Received:    393.98
+
+      388 |     const shipped = await read();
+      389 |     expect(shipped.chromeAbove).toBeGreaterThan(0);
+    > 390 |     expect(shipped.overflow).toBeLessThanOrEqual(shipped.chromeAbove);
+          |                              ^
+      391 |
+      392 |     // CONTROL 1 — the rung one step ABOVE the election (`100dvh`, the whole short edge). It is
+      393 |     // the cheapest drift available and the gate must still hold, or the bound is so tight it
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:390:30
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-the-boa-86de4-ld-than-the-chrome-above-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-the-boa-86de4-ld-than-the-chrome-above-it-webkit/error-context.md
+
+  10 failed
+    [chromium] › e2e/board-covisibility.spec.ts:91:3 › mark 6 — the band dissolves › the strip below the board is one reserved line — no more, and no less 
+    [chromium] › e2e/board-covisibility.spec.ts:143:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width 
+    [chromium] › e2e/board-covisibility.spec.ts:267:3 › the board fits the viewport it is drawn in › a landscape phone gets a board no larger than the screen it is drawn on 
+    [chromium] › e2e/board-covisibility.spec.ts:297:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit 
+    [chromium] › e2e/board-covisibility.spec.ts:365:3 › the board fits the viewport it is drawn in › the board hangs no further below the fold than the chrome above it 
+    [webkit] › e2e/board-covisibility.spec.ts:91:3 › mark 6 — the band dissolves › the strip below the board is one reserved line — no more, and no less 
+    [webkit] › e2e/board-covisibility.spec.ts:143:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width 
+    [webkit] › e2e/board-covisibility.spec.ts:267:3 › the board fits the viewport it is drawn in › a landscape phone gets a board no larger than the screen it is drawn on 
+    [webkit] › e2e/board-covisibility.spec.ts:297:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit 
+    [webkit] › e2e/board-covisibility.spec.ts:365:3 › the board fits the viewport it is drawn in › the board hangs no further below the fold than the chrome above it 
+  4 passed (5.0s)

@@ -1,0 +1,32 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › e2e/zone-grammar.spec.ts:354:3 › coarse row regime (≥1024) › the pair branch keeps a 44px floor in BOTH dimensions, where the branch exists (564ms)
+
+
+  1) [chromium] › e2e/zone-grammar.spec.ts:354:3 › coarse row regime (≥1024) › the pair branch keeps a 44px floor in BOTH dimensions, where the branch exists 
+
+    Error: pair half "Off" width
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 44
+    Received:    40
+
+      398 |
+      399 |     for (const c of shipped) {
+    > 400 |       expect(c.w, `pair half "${c.text}" width`).toBeGreaterThanOrEqual(44);
+          |                                                  ^
+      401 |       expect(c.h, `pair half "${c.text}" height`).toBeGreaterThanOrEqual(44);
+      402 |     }
+      403 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/zone-grammar.spec.ts:400:50
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/zone-grammar-coarse-row-re-6f649-ons-where-the-branch-exists-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/zone-grammar-coarse-row-re-6f649-ons-where-the-branch-exists-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/zone-grammar.spec.ts:354:3 › coarse row regime (≥1024) › the pair branch keeps a 44px floor in BOTH dimensions, where the branch exists 
