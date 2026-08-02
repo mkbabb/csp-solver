@@ -1,0 +1,21 @@
+T5-WGATE production re-pass — sudoku.babb.dev after deployment 801ac5de (2026-08-02)
+
+── dist-identity served-vs-disk arm ──
+AUDIT: build-identity — dist entry index-ZYnCGMYLIhQw.js · index.html md5 9f62712ee0aca8b4e2add852e32a27ef · 39 files / 722.3 KB · newest mtime 2026-08-02T14:59:29.529Z
+AUDIT: build-identity — https://sudoku.babb.dev serves the same entry (index-ZYnCGMYLIhQw.js)
+
+── five game routes (HTML 200 + entry present) ──
+  sudoku: HTTP 200 · entry-ref 1
+  futoshiki: HTTP 200 · entry-ref 1
+  thermo: HTTP 200 · entry-ref 1
+  killer: HTTP 200 · entry-ref 1
+  kenken: HTTP 200 · entry-ref 1
+
+── e2e smoke against the edge (chromium; permalink board-only + share-truth corrupt notice) ──
+
+[1/1] [chromium] › e2e/permalink.spec.ts:26:1 › board-only ?board= URL loads the encoded board (sudoku)
+  1 passed (1.7s)
+
+── second edge smoke row (the :123 line filter matched nothing — corrected here) ──
+[1/1] [chromium] › e2e/affordances.spec.ts:103:1 › print: chrome hidden, black strokes, washes stripped (CSS-only)
+  1 passed (3.2s)
