@@ -258,3 +258,27 @@ profiles against the deployed edge (CSP proof). Screenshots to `scratchpad/t6-re
    trie at its cost — a bespoke persistent-structure ledger the estate already
    rejected once (`useUndoHistory.ts:25–30`), a new module with no library arm, and
    re-derivation of undo/redo semantics atop it.
+
+---
+
+## AUDIT RIDER 2 (2026-08-02 — the owner's 16+ order; overrides body and rider 1 where they conflict)
+
+The owner: "plan to handle at least 16+ players, though within reason. KISS."
+
+1. **No player cap anywhere in code.** The 5-player cap dies with its reason (see 3).
+2. **Mesh sizing stands for 16+**: board ops are bytes at human pace; the mesh arm's
+   practical ceiling is connection setup (~16–24 peers), and the DO-relay fallback
+   is also the scale arm beyond it (star topology). No code change — the room just
+   isn't capped.
+3. **Player ink = one formula, not the crayon tiers**: remote player i gets
+   `oklch(L C (i × 137.5deg))` with L/C fixed per theme band so contrast clears
+   AA by construction for any N; you keep `--color-user-ink`. The crayon tiers
+   return to difficulty alone — §3f's tier assignment is struck, and the
+   chip-vs-digit coincidence (rider-1 era) is retired rather than watched.
+4. **Roster growth**: the players well wraps and scrolls past a handful of rows
+   (max-height + overflow, incumbent well idiom) — 16 rows must not stretch the
+   card.
+5. **Slug dedupe on join**: two-component animal names collide rarely but not
+   never at 16 — on collision, re-roll (one loop, no numbering suffix).
+6. **Cursor slice note**: at 16 peers, cursor broadcasts throttle (rAF-coalesced or
+   ~80ms, whichever the slice's incumbent idiom prefers). MVP cut 1 is unaffected.

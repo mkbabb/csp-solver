@@ -43,13 +43,20 @@ over bespoke, visual verification on real surfaces as the standard of proof.
    Cloudflare Durable-Object relay (hibernating, free-plan, same vendor as Pages) is
    the banked fallback — one config word plus ~100 Worker lines — if public
    signaling or no-TURN NAT failure (~8–15% of pairs) proves unacceptable.
+   **Scale bar (the owner's order, 2026-08-02): the code carries NO player cap and
+   must handle 16+ within reason.** The mesh arm is honestly sized for it — board
+   ops are bytes at human pace; its practical ceiling is connection setup at
+   ~16–24 peers — and the DO relay doubles as the scale arm beyond that (star
+   topology, room size a mesh won't carry).
 4. **CSP `connect-src` gains `wss:` in the same commit as the transport** (the
    ruling-lands-with-its-config law; verified on the deployed edge at close).
-5. **Color story is owned once:** you = `--color-user-ink`, remote players = the
-   four AA-gated crayon tiers; the solved-state rainbow stays the SOLVED voice; no
-   new color tokens anywhere. The chip-vs-digit coincidence (a green player beside
-   a green Easy chip) is accepted pending the chair's C-merge look — if it misreads,
-   remote assignment skips the active difficulty's tier, never mints tokens.
+5. **Color story is owned once** (AMENDED by the owner's 16+ order, 2026-08-02):
+   you = `--color-user-ink`; remote players = ONE formula, a golden-angle hue walk
+   in OKLCH (`hue_i = i × 137.5° mod 360`) at fixed lightness/chroma banded per
+   theme so AA holds by construction for any N — no token table, no player cap.
+   The crayon tiers return to difficulty's vocabulary alone, which retires the
+   chip-vs-digit coincidence the audit flagged. The solved-state rainbow stays the
+   SOLVED voice; no new color tokens anywhere.
 6. **Voice's register binds every later lane's strings.** Any user-facing string a
    lane mints (controls' hint tapes and washi explications chief among them) is
    written to voice's rules — plain English, no meta terms, no first person,
