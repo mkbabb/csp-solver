@@ -157,7 +157,7 @@ export function census(cssText) {
     [...css.matchAll(new RegExp(`${token}\\s*:([\\s\\S]*?);`, "g"))]
       .map((m) => m[1])
       .join(" ");
-  for (let changed = true; changed; ) {
+  for (let changed = true; changed;) {
     changed = false;
     for (const token of [...live]) {
       const body = declBodies(token);

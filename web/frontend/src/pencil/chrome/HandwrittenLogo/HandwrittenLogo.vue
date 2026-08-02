@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from "vue";
+import { ref, computed, watch, watchEffect, onMounted, nextTick, type Ref } from "vue";
 import {
   heldFrameCount,
   usePrefersReducedMotion,
@@ -150,6 +150,46 @@ watch(
 const logoSvgRef = ref<SVGSVGElement | null>(null);
 const { width: logoW, height: logoH } = useElementSize(logoSvgRef);
 
+/**
+ * BC6-G1 — THE CAPTURE KEY LATCHES; IT DOES NOT ROUND EVERY OBSERVATION.
+ *
+ * `Math.round(logoW)` put the bake's cache key on a 1 px grid, and the wordmark's measured
+ * width lands within measurement noise of that grid's flip boundary: on this rig, DPR2,
+ * 1280×800, `sudoku` and `kenken` measure **380.5313 css px in WebKit — 0.0313 px from the
+ * `.5` boundary**, so a wobble smaller than a sixteenth of a device pixel re-keys the whole
+ * stack and pays a full round of encodes for a box that never moved. Pass 6 read the same
+ * class as a 792↔794 device-px flip on its own rig; the label set and viewport differ, the
+ * class is the same one.
+ *
+ * QUANTIZING WAS AUDITIONED AND REJECTED, measured rather than assumed. HandDrawnGrid's 4 px
+ * idiom (`Math.round(s / 4) * 4`, there to survive a drag-resize) at a 2 px grid moves
+ * `sudoku`/`kenken` a comfortable 0.2344 px off the nearest boundary — and moves `killer` in
+ * Chromium ONTO one, 289.125 css px sitting 0.0625 px from a 288↔290 flip where the 1 px
+ * grid had it 0.375 px clear. A fixed grid relocates the hazard, it does not remove it, and
+ * this surface has five labels × two engines to relocate it onto.
+ *
+ * So the key latches instead: a measurement re-keys only when it moves a WHOLE pixel from
+ * the value the bake was captured at. There is no boundary for noise to straddle — the held
+ * value is stable under any sub-pixel wobble, from any starting point, on every label — while
+ * a real change (a game swap moves the width by tens of px, a breakpoint moves the height by
+ * a rung) re-keys immediately. Residual capture-vs-render mismatch is <1 px, the same order
+ * the incumbent round already carried. The seed stays 0 so the library still declines to bake
+ * at a non-positive `cssSize` rather than baking wrong.
+ *
+ * Height latches too, on the same argument: the `--logo-height` ladder's ≥640px rung is
+ * 5.724rem = 91.584 px at a 16 px root, 0.084 px from ITS flip boundary.
+ */
+function latchWholePx(src: Readonly<Ref<number>>): Ref<number> {
+  const held = ref(0);
+  watchEffect(() => {
+    const v = src.value;
+    if (v > 0 && Math.abs(v - held.value) >= 1) held.value = Math.round(v);
+  });
+  return held;
+}
+const captureW = latchWholePx(logoW);
+const captureH = latchWholePx(logoH);
+
 const FONT_FACE = `@font-face{font-family:'FrauncesBake';font-style:normal;font-weight:100 900;src:url('${frauncesInline}') format('woff2');}`;
 
 function escapeXml(s: string): string {
@@ -185,7 +225,9 @@ const logoRaster = useRasterStack(() => ({
   // non-positive cssSize and re-bakes when the box lands, so the invented 72 px seed — which
   // an <svg> needs because it has no offsetWidth, so `useElementSize` seeds 0 — is the
   // library's problem now, and it solves it by NOT baking rather than by baking wrong.
-  cssSize: { width: Math.round(logoW.value), height: Math.round(logoH.value) },
+  // BC6-G1: the latched whole-pixel box, not a fresh round of every observation — see
+  // `latchWholePx` above for the measurement that rejected quantization in its favour.
+  cssSize: { width: captureW.value, height: captureH.value },
 }));
 
 // The baked poses ARE object URLs now (pencil-boil 0.11) — `useRasterStack` reads its own

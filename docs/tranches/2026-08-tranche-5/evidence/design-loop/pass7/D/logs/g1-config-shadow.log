@@ -1,0 +1,30 @@
+AUDIT: D7-1b THE CONFIG SHADOW — why the gate line pins --config
+AUDIT: host darwin 25.4.0 · cwd web/frontend · static, no build
+AUDIT: date 2026-08-02T10:59:58Z
+
+The repo has ONE prettier config: web/frontend/.prettierrc.json. There is none at the repo
+root. Prettier resolves config per FILE, walking up from that file's directory — so a bare
+reach at ../../scripts/ walks /repo/scripts -> /repo -> /Users/mkbabb/Programming/csc411 ->
+/Users/mkbabb/Programming -> $HOME and lands on the machine-global shadow the CI comment at
+ci.yml:660-664 already names. That shadow is REAL on this host:
+
+--- $HOME/.prettierrc.json ---
+{
+    "printWidth": 88,
+    "useTabs": false,
+    "tabWidth": 4
+}
+
+--- resolveConfig for the three repo-root scripts, BARE (no --config) ---
+../../../../../.prettierrc.json
+../../../../../.prettierrc.json
+../../../../../.prettierrc.json
+
+--- resolveConfig for a frontend script, BARE ---
+.prettierrc.json
+
+READING: bare, the repo-root three are judged at tabWidth 4 on this host and at prettier's
+OWN defaults (printWidth 80, tabWidth 2) on a CI runner with no $HOME config — two different
+answers for the same file. --config .prettierrc.json collapses both to the estate's one
+config, which is why the gate line carries it. The ten in the born-RED log are ten under the
+PINNED config, so the scope figure is instrument-independent.

@@ -1,0 +1,27 @@
+AUDIT 2026-08-02T11:09:47Z · host darwin · sha 4b28f034 · harness NONE (git diff + anchored greps)
+cmd: git diff -U0 docs/tranches/PRECEPTS.md, read WITHOUT a filter that hides markdown bullets
+
+── EVERY CHANGED LINE IN THE FILE AT CLOSE (this lane's + the siblings') ──
++| **A rig states which tree it measured, before it measures.** `web/frontend/dist/` is `.gitignore`d, carries no comm
++| **An unbanked `2>/dev/null` is how a false number is born.** No instrument discards a stream it didn't bank: a rig 
+-- **prettier global-shadow**—closed by the in-repo `web/frontend/.prettierrc.json`; the shadow re-forms if that file 
+-- **prettier scope**—`prettier --check src/` only; `e2e/` is hand-matched and never swept.
++- **prettier global-shadow**—closed by the in-repo `web/frontend/.prettierrc.json` **for files under `web/frontend/` 
++- **prettier scope**—**RESTAMPED 2026-08-02 (D6-G1/D6-G5, pass-7 lane D).** Was `prettier --check src/` only. Now `--
+
+  numstat: 4	2	docs/tranches/PRECEPTS.md
+  THIS LANE'S SHARE: exactly one line, the §2 row beginning 'An unbanked 2>/dev/null'.
+  THE REST IS LANE D'S, landed concurrently: one §2 rig-build-identity row and two §3 prettier
+  restamps. This lane wrote nothing in §3.
+
+── THE CHAIR'S KEEP ROW, ANCHORED COMPARE ──
+  worktree md5 573084eea4657c2c598ea1a727880824
+  HEAD     md5 573084eea4657c2c598ea1a727880824
+  IDENTICAL — the KEEP row is byte-untouched at close.
+
+  METHOD NOTE, and it is this pass's own ruling biting its author: an UNANCHORED
+  `grep 'assert-the-SPA is tree-blind'` returns TWO lines in the worktree — lane D's new §2 row
+  cites the trap by name — and md5'ing that two-line output printed a confident CHANGED for a row
+  that had not moved. The filter, not the stream, was the liar. Anchored to '^- **' it reads true.
+  Same family as the ruling: a number is only as honest as the stream it is read from.
+EXIT=0

@@ -662,6 +662,17 @@ jobs:
             # with the tailwind class-sorter live; `npm run lint` is now the
             # non-destructive `prettier --check src/`, retiring the machine-global
             # `~/.prettierrc` shadow that rewrote the tree to 4-space on a bare run.
+            # T5-W4 pass-7 Lane D (D6-G1/D6-G5) WIDENS the scope past `src/`: BOTH script
+            # directories are in format scope and named — `web/frontend/scripts/` (13 files)
+            # and the repo-root `scripts/` (3 .mjs; the three .sh have no prettier parser and
+            # are skipped). Ten were unformatted and are formatted in the same commit as this
+            # line. The `--config .prettierrc.json` pin is load-bearing, not decoration: the
+            # repo has exactly ONE prettier config and it lives under web/frontend, so a BARE
+            # reach at `../../scripts/` resolves per-file UP past the repo and lands on the
+            # very `~/.prettierrc` shadow the paragraph above retired (measured on the author's
+            # host: `--find-config-path ../../scripts/ledger-diff.mjs` -> `$HOME`, tabWidth 4),
+            # while a runner with no $HOME config would answer with prettier's own defaults.
+            # Two answers for one file is how a green gate lies; the pin collapses them to one.
             - name: prettier (repo-pinned format check)
               working-directory: web/frontend
               run: npm run lint

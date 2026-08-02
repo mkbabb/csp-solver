@@ -16,15 +16,15 @@
 // after a bundled build so a dist actually exists (compute-cost DAG: reuse the
 // throttle gate's `dist-throttle`, no redundant build).
 
-import { readdirSync, statSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import process from 'node:process';
+import { readdirSync, statSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+import process from "node:process";
 
-const FRONTEND_ROOT = fileURLToPath(new URL('..', import.meta.url));
-const FORBIDDEN = ['FilterTuner', 'rafInstrumentation', 'schedulerDebugInfo'];
+const FRONTEND_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const FORBIDDEN = ["FilterTuner", "rafInstrumentation", "schedulerDebugInfo"];
 // The bundled build dir: an explicit CLI arg wins; else the first that exists.
-const CANDIDATE_DIRS = ['dist-throttle', 'dist'];
+const CANDIDATE_DIRS = ["dist-throttle", "dist"];
 
 function exists(p) {
   try {
@@ -45,7 +45,7 @@ if (!buildDir || !exists(buildDir)) {
   // nothing. Fail loud so a missing build never reads as a green prod-shake.
   console.error(
     `[prod-shake] FAIL — no production build dir found ` +
-      `(looked for ${argDir ?? CANDIDATE_DIRS.join(', ')} under ${relative(
+      `(looked for ${argDir ?? CANDIDATE_DIRS.join(", ")} under ${relative(
         process.cwd(),
         FRONTEND_ROOT,
       )}).\n  Build first (e.g. \`npx vite build\`) then re-run.`,
@@ -59,7 +59,7 @@ function collectJs(dir) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
     if (e.isDirectory()) out = out.concat(collectJs(p));
-    else if (e.isFile() && e.name.endsWith('.js')) out.push(p);
+    else if (e.isFile() && e.name.endsWith(".js")) out.push(p);
   }
   return out;
 }
@@ -76,7 +76,7 @@ if (jsFiles.length === 0) {
 
 const leaks = [];
 for (const f of jsFiles) {
-  const src = readFileSync(f, 'utf8');
+  const src = readFileSync(f, "utf8");
   const rel = relative(FRONTEND_ROOT, f);
   for (const sym of FORBIDDEN) {
     if (src.includes(sym)) leaks.push({ rel, sym });
@@ -86,7 +86,7 @@ for (const f of jsFiles) {
 console.log(
   `[prod-shake] ${jsFiles.length} bundle chunk(s) under ` +
     `${relative(FRONTEND_ROOT, buildDir)}; asserting ${FORBIDDEN.length} dev-only ` +
-    `symbol(s) absent: ${FORBIDDEN.join(', ')}`,
+    `symbol(s) absent: ${FORBIDDEN.join(", ")}`,
 );
 
 if (leaks.length > 0) {

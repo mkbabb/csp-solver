@@ -31,7 +31,6 @@ const SECTIONS = [
   {
     key: "size",
     heading: "Size",
-    ariaLabel: "Size",
     options: [
       { value: 3, label: "9×9" },
       { value: 4, label: "16×16" },
@@ -252,14 +251,10 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
     }
     // The heading is box-less by class contract, so the row's flex layout is untouched.
     expect(w.findAll("h2.mobile-heading-head")).toHaveLength(2);
-    // The name each tab announces is unchanged: the section's word, and the eyebrow's own
-    // `aria-label` where the section declares one, still ride the element inside the button —
-    // so the button's name-from-content computes exactly what it computed before.
+    // The name each tab announces is unchanged: the section's word rides the element inside
+    // the button, so the button's name-from-content computes exactly what it computed before.
     const eyebrows = w.findAll(".mobile-heading-btn .section-heading");
     expect(eyebrows.map((h) => h.text())).toEqual(["Size", "Difficulty"]);
-    expect(eyebrows.map((h) => h.attributes("aria-label"))).toEqual(
-      SECTIONS.map((s) => ("ariaLabel" in s ? s.ariaLabel : undefined)),
-    );
   });
 
   it("six co-equal eyebrows become two, and the four that left are named one rank down", () => {
@@ -272,6 +267,69 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
       "marks",
       "candidates",
     ]);
+  });
+
+  /**
+   * T5-W4 pass 7 — THE ONE-STRING LAW REACHES THE EYEBROWS (X6-G2, ruled from the chair).
+   *
+   * The wells have carried it since T4-P1: a `SheetWashiLabel` IS the well's accessible name
+   * via `aria-labelledby`, so the visible tape and the announced name cannot drift. The
+   * surviving eyebrows did NOT — `ControlSection` offered an optional `ariaLabel` and three
+   * `:aria-label="section.ariaLabel"` bindings sat under it. No game ever supplied one (all
+   * ten sections across five specs pass `heading` alone), so nothing had drifted yet; the
+   * ruling is that an optional second name is a drift vector regardless, and it is deleted.
+   *
+   * These rows are the guardTitle pattern (`GameGallery.a11y.test.ts` — "the accessible name
+   * IS the drawn heading, character for character"), written so they RED the moment a second
+   * literal comes back: the announced name is `aria-label ?? text()`, and it must equal the
+   * drawn text on EVERY eyebrow the panel can render. Casing is CSS
+   * (`.section-heading { text-transform: lowercase }`) and never a second string, so the
+   * comparison is against the authored text and is deliberately case-SENSITIVE.
+   */
+  describe("the eyebrow's accessible name IS its drawn ink — one string", () => {
+    /** name-from-content unless an `aria-label` overrides it; that is the whole seam. */
+    const announced = (h: {
+      attributes: (a: string) => string | undefined;
+      text: () => string;
+    }) => h.attributes("aria-label") ?? h.text();
+
+    for (const [surface, mount] of [
+      ["the mobile tabs", () => mountPanel()],
+      ["the desktop staged rail", () => mountPanel({ mobile: false })],
+    ] as const) {
+      it(`${surface}: drawn === announced, per eyebrow`, () => {
+        const w = mount();
+        const eyebrows = w.findAll(".section-heading");
+        expect(eyebrows.length).toBe(2);
+        for (const h of eyebrows) {
+          const drawn = h.text();
+          expect(drawn).not.toBe("");
+          expect(
+            announced(h),
+            `${surface}: the eyebrow draws "${drawn}" — AT must hear the same string`,
+          ).toBe(drawn);
+          // The seam itself: no eyebrow may carry a second literal at all.
+          expect(
+            h.attributes("aria-label"),
+            `${surface}: "${drawn}" grew an aria-label — the one-string law is broken`,
+          ).toBeUndefined();
+        }
+        w.unmount();
+      });
+    }
+
+    // n = 1 renders a plain heading rather than a tab, and it is the third binding site the
+    // ruling stripped — so it gets its own row rather than riding the two above.
+    it("the single-section heading: drawn === announced", () => {
+      const w = mountPanel({ sections: [SECTIONS[0]] });
+      const eyebrows = w.findAll(".section-heading");
+      expect(eyebrows.length).toBe(1);
+      const drawn = eyebrows[0].text();
+      expect(drawn).toBe("Size");
+      expect(announced(eyebrows[0])).toBe(drawn);
+      expect(eyebrows[0].attributes("aria-label")).toBeUndefined();
+      w.unmount();
+    });
   });
 
   it("proactiveCheck reaches the status line — the decay the card never showed", () => {

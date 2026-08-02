@@ -128,7 +128,7 @@ A Cloudflare Pages static deploy. Solving and generation never leave the visitor
 |---|---|---|
 | `csp-solver` | crates.io | 0.6.0 (published; the first release carrying all five puzzle families) |
 | `@mkbabb/csp-solver-wasm` | npm | 0.2.0 on npm; source is 0.6.0. The SPA file-links the lean build, not the registry package. |
-| `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.11.0 (tagged `v0.11.0`; the `stop()` no-throw contract and `rasterizePoseToBlob()`) |
+| `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.12.0 (tagged `v0.12.0`; the pose-stack cache `poseCacheSize` atop 0.11's `stop()` no-throw contract and `rasterizePoseToBlob()`) |
 
 ## Performance
 

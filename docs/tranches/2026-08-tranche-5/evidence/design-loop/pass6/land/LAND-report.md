@@ -124,10 +124,25 @@ and every surface a reader could reach was built from the bucket.
 `TECHNIQUE_NAME` plus a per-technique article, so there is one vocabulary where there were two —
 the root the defect grew from, not its symptom. **Zero new pixels**: the margin's reserved line
 was already drawn and already read on every deal. Measured on the built dist at 390×664
-(`shots/case-390x664-AFTER-*.png`): the line reads **`a fresh 9×9 — needs a naked single`**
-where it read `a fresh 9×9 — singles only`, and the tally's `aria-label` reads
-**`difficulty — needs a hidden single (1 of 5)`** where it read `difficulty — singles only
-(1 of 5)`. **Seven of the nine phrases come out byte-identical** to the hand-written table they
+(~~`shots/case-390x664-AFTER-*.png`~~ — **CORRECTED at pass 7, L6-G3: those files were never
+banked in this lane's `shots/`, which holds `case-fold-band-*` and `case-open-seam-*` only.
+The shot now exists and is banked one pass along: `pass7/F3/shots/case-390x664-AFTER-{chromium,
+webkit}.png`, with the legible crop `case-390x664-dtname-crop-*.png` and the strings recorded
+beside the pixels in `pass7/F3/logs/dtname-strings.json`. The measurement below was always
+sound — the pass-6 audit re-derived it independently on the live head dist — so what is
+corrected is the citation, not the finding**): the line reads
+**`a fresh 9×9 — needs a naked single`** where it read `a fresh 9×9 — singles only`, and the
+tally's `aria-label` reads **`difficulty — needs a naked single (1 of 5)`** where it read
+`difficulty — singles only (1 of 5)`.
+
+> **Pass-7 restamp, same row.** This paragraph originally quoted the tally as
+> `difficulty — needs a hidden single (1 of 5)`. **The deal is random per load and the
+> technique tracks it**, so the tally's step is a per-deal value and no single phrase can be
+> quoted as though it were fixed. Both the pass-6 audit and the pass-7 bank drew a
+> naked-single board and read `difficulty — needs a naked single (1 of 5)` on both engines.
+> The claim the row actually makes is the INVARIANT, and it is the one the unit rows gate:
+> the margin line and the tally's `aria-label` name **the same exact step as each other**,
+> from one vocabulary, whatever the deal. **Seven of the nine phrases come out byte-identical** to the hand-written table they
 replace; the two that change are exactly the two the bucket conflated — asserted as an
 inequality as well as two equalities, so a cure that renamed both to one new word would still red.
 

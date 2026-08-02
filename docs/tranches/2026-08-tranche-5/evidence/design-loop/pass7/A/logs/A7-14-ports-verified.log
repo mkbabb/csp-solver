@@ -1,0 +1,33 @@
+AUDIT 2026-08-02T11:07:39Z · host darwin · sha 4b28f034 · harness NONE (lsof/ps only)
+cmd: lsof -nP -iTCP -sTCP:LISTEN over the lane band 4230-4260, then ps on every hit
+THIS LANE STARTED NO SERVER. The band is reported, never claimed.
+
+── LISTENERS IN 4230-4260 ──
+node      81542 mkbabb   12u  IPv6  0xee546751edb5bdf      0t0  TCP *:4237 (LISTEN)
+  (rc=0 · 1 = band empty)
+
+── WHOSE ──
+81542 Sun Aug  2 07:00:11 2026     node /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass6/land/rig/serve.mjs 4237 /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/dist-seal
+
+── BC6-G5's two, re-checked (pass 6 ordered 4243 and 4245 killed) ──
+  :4243    :4245  
+── THE FOREIGN AND THE OWNER'S, UNTOUCHED ──
+node    48206 mkbabb   45u  IPv6 0xa7deaaae40736092      0t0  TCP *:3000 (LISTEN)
+
+FINDING: :4237 is pass-6 LAND's own rig server, up since 07:00:11, four hours after that lane
+sealed. Same class as BC6-G5. NOT KILLED HERE — it is not this lane's process and killing another
+lane's server is not in this fence. Booked A7-G4, routed to the lead.
+EXIT=0
+
+── CORRECTION, SAME RUN: the two blanks above are the shape this pass's own ruling condemns.
+   Re-stated in words, with the exit status read rather than the output eyeballed ──
+  :4243  DEAD   (lsof rc=1, no listener)
+  :4245  DEAD   (lsof rc=1, no listener)
+  :3000  LIVE   node 48206
+  :3001  DEAD   (lsof rc=1, no listener)
+  :4237  LIVE   node 81542
+
+  BC6-G5 DISCHARGED on this reading: 4243 and 4245 are both DEAD.
+  :3001 (the owner's, never killable) is DEAD of its own accord — not touched here.
+  :3000 is the foreign squatter — LIVE, untouched, as the standing law requires.
+EXIT=0

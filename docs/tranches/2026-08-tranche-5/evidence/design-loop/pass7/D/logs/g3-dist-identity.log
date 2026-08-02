@@ -1,0 +1,29 @@
+AUDIT: D7-2 D6-G3 — the dist stamp, born-RED and run on the real ownerless dist
+AUDIT: host darwin 25.4.0 · cwd web/frontend · node v26.0.0
+AUDIT: date 2026-08-02T11:05:46Z
+
+--- self-test (the instrument proving it can fail; the mismatch arm runs a real socket on :4247) ---
+  ok   a missing dist is RED (as it must)
+  ok   a husk — the .gitignore'd dist with no payload — is RED (as it must)
+  ok   a leftover stale entry chunk is RED (as it must)
+  ok   a well-formed dist yields its entry and a stable line
+AUDIT: build-identity — dist entry index-C0FFEE00.js · index.html md5 603cfdceb4ae1154ccc4fd9d3d9d964e · 2 files / 0.1 KB · newest mtime 2026-08-02T11:05:46.465Z
+AUDIT: build-identity MISMATCH — http://127.0.0.1:4247 serves index-DEADBEEF.js, this dist is index-C0FFEE00.js.
+The rig is measuring a tree that is not the one on disk. Rebuild, or point the rig at the dist you built; do not reconcile this in prose.
+  ok   a server serving ANOTHER tree's entry is RED (as it must)
+AUDIT: build-identity — dist entry index-C0FFEE00.js · index.html md5 603cfdceb4ae1154ccc4fd9d3d9d964e · 2 files / 0.1 KB · newest mtime 2026-08-02T11:05:46.465Z
+AUDIT: build-identity — http://127.0.0.1:4247/match serves the same entry (index-C0FFEE00.js)
+  ok   the same entry on both sides passes
+[dist-identity] self-test 6/6 — the instrument can fail on a known-bad dist.
+EXIT=0
+
+--- the line, against web/frontend/dist AS IT SITS (nobody in this lane built it) ---
+AUDIT: build-identity — dist entry index-Cr-QIa0O4Gc3.js · index.html md5 82d4bd20543f6228612a3d24df342e9f · 39 files / 722.4 KB · newest mtime 2026-08-02T11:03:41.021Z
+EXIT=0
+
+--- what git says about that dist's provenance: nothing. It is ignored, so it has no owner. ---
+12:web/frontend/dist/
+14:web/frontend/dist-throttle/
+
+--- port hygiene: :4247 after the self-test ---
+no listener on 4247 — dead, as required

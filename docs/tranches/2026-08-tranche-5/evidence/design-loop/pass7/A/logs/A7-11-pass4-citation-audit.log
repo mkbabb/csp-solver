@@ -1,0 +1,72 @@
+AUDIT 2026-08-02T11:01:06Z · host darwin · sha 4b28f034 · shell zsh 5.9 · harness NONE (filesystem + git object read)
+cmd: zsh rig/pass4-citation-audit.zsh
+
+── A6-G1 · THE CITED ARTIFACTS ──
+ls -d pass4/shots-A  ->  ls: /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/shots-A: No such file or directory
+ls -d pass4/rigA  ->  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/rigA
+
+pass4/rigA/ holds:
+node_modules
+package.json
+
+the three rig files §12 names:
+  rigA/verb-ink.mjs  ->  ABSENT
+  rigA/ribbon-shots.mjs  ->  ABSENT
+  rigA/serve.mjs  ->  ABSENT
+
+find, under pass4/, any shots-A or the three rigs:
+  (empty above = nothing found under pass4/)
+the same names anywhere else in docs/ — one hit, and it is pass 5's RE-AUTHORING, not pass 4's instrument:
+/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/A/rig/verb-ink.mjs
+
+ever committed? git log --all --diff-filter=A over the same names:
+  (empty above = never added in any branch)
+
+was a PNG under pass4/ ignorable? (the hollow-dist mechanism does NOT explain this one):
+docs/tranches/.gitignore:5:!**/*.png	/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/shots-A/x.png
+  a '!' rule matching = NOT ignored: docs/tranches/.gitignore re-includes every PNG.
+
+── A6-G2 · THE HARNESS BEHIND THE 36 RIBBON CELLS ──
+cells in ribbon-geom.log:         36
+cells in ribbon-geom.json:  36
+keys carried by every cell:
+  engine, head, noteH, noteW, overflowX, overflowY, state, sub, subLines, subSlackL, subSlackR, textToActions, theme, viewport
+  -> no harness, no baseURL, no build id, no AUDIT prepend on either file.
+
+server logs banked in pass4/logs/A/:
+gates-vitest-font-ink.log
+vite-5321.log
+  vite-5321.log line 2:    VITE v8.1.4  ready in 208 ms
+  its HMR/reload lines:  45
+  -> a DEV server, and the only one banked.
+
+any banked line in pass4/logs/A/ naming a preview port:
+  (empty above = none)
+
+the ONE built-dist attribution in that lane that IS derivable, and stays untouched:
+  playwright-throttle.config.ts: 77:const PREVIEW_PORT = 4188;
+  filter-census / wordmark-integrity / theme-bake-freshness ride that bundled-preview config:
+9://  · filter-census — P1 G3.1/G3.2: the live-filter budget is an exact-match allowlist against
+11://  · wordmark-integrity — P1 G3.4: asserts over the BAKED pose bitmaps in WebKit; the
+13://  · theme-bake-freshness — P1-W4 G4.5: also asserts over the BAKED pose bitmaps, in both
+22:  /filter-census\.spec\.ts$/,
+23:  /wordmark-integrity\.spec\.ts$/,
+24:  /theme-bake-freshness\.spec\.ts$/,
+  -> §9's 'e2e built-dist 16 passed · preview :4188' is CONFIG-DERIVABLE. Only the RIBBON
+     rig's harness is unbanked. The restamp is scoped to §1's 36 cells.
+
+── WHAT LATER PASSES DID REPRODUCE ON A BUILT DIST ──
+pass 5 (border referent, built dist :4246) — AUDIT prepend, verbatim:
+AUDIT 2026-08-02T06:14:57Z · host darwin · sha 66fa5856+pass5A · harness PREVIEW (built dist-pass5A :4246)
+cmd: node rig/ribbon-geom-longstring.mjs http://localhost:4246
+pass 6 (content referent, built dist :4252) — AUDIT prepend, verbatim:
+AUDIT 2026-08-02T07:27:15Z · host darwin · sha abe533c4 · harness PREVIEW (built dist :4252, index-BNMQu01IbxTY.js) · node v26.0.0
+cmd: node rig/ribbon-referent-arm.mjs http://localhost:4252
+
+pass-4 cells at 320, chromium/light, from ribbon-geom.log:
+chromium  light 320   select  note  255.83× 106.2  overflow 0/0  slack 51.96/51.98  text→acts 9.59  "your marks aren't saved"
+chromium  light 320   target  note  255.83× 106.2  overflow 0/0  slack 41.4/41.4  text→acts 9.59  "kenken's marks aren't saved"
+chromium  light 320   both    note  255.83× 106.2  overflow 0/0  slack 31.73/31.74  text→acts 9.59  "neither board's marks are saved"
+reproduced on a built dist by pass 6 (content referent), all three; the 'both' cell also by
+pass 5 at 45.33 border = 31.73 content + 13.60 padding. THREE of THIRTY-SIX.
+EXIT=0

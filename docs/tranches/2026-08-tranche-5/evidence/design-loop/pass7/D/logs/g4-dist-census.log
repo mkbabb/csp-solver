@@ -1,0 +1,52 @@
+AUDIT: D7-3 D6-G4 — the banked-dist census, re-derived by filesystem walk
+AUDIT: host darwin 25.4.0 · shell zsh · date 2026-08-02T11:09:19Z
+AUDIT: no build involved; this reads committed evidence directories only
+AUDIT: rule — a dist is FULL iff it holds assets/index-*.js; HOLLOW otherwise
+AUDIT: the test is `find -name 'index-*.js' -print -quit`, NOT a shell glob. Under zsh a
+AUDIT: non-matching glob is an ERROR, not an empty expansion, so `ls "$d"/assets/index-*.js`
+AUDIT: reports 'no matches found' on every hollow dir — and the obvious silencer for that
+AUDIT: (`2>/dev/null`) is the exact instrument PRECEPTS §2 forbids. First draft of this
+AUDIT: transcript hit it; the stream was banked, then the instrument was changed instead.
+
+$ find <design-loop> -type d -name 'dist-*' | wc -l
+      29
+
+--- classification ---
+HOLLOW  pass2/dist-base  [_headers _redirects ]
+HOLLOW  pass2/dist-f2pen  [_headers _redirects ]
+HOLLOW  pass2/dist-f2type  [_headers _redirects ]
+HOLLOW  pass3/dist-127fde0d  [_headers _redirects ]
+HOLLOW  pass3/dist-A  [_headers _redirects ]
+HOLLOW  pass3/dist-B0  [_headers _redirects ]
+HOLLOW  pass3/dist-B1  [_headers _redirects ]
+HOLLOW  pass3/dist-Bfinal  [_headers _redirects ]
+HOLLOW  pass3/dist-F3base  [_headers _redirects ]
+HOLLOW  pass3/dist-F3head  [_headers _redirects ]
+HOLLOW  pass3/dist-base  [_headers _redirects ]
+HOLLOW  pass3/dist-e982a403  [_headers _redirects ]
+HOLLOW  pass3/dist-head  [_headers _redirects ]
+HOLLOW  pass3/dist-prune  [_headers _redirects ]
+HOLLOW  pass3/measure/dist-head  [_headers _redirects ]
+HOLLOW  pass3/stall/dist-head  [_headers _redirects ]
+HOLLOW  pass4/dist-BChead  [_headers _redirects ]
+HOLLOW  pass4/dist-F3base  [_headers _redirects ]
+HOLLOW  pass4/dist-F3head  [_headers _redirects ]
+HOLLOW  pass4/dist-FINAL  [_headers _redirects ]
+HOLLOW  pass4/dist-curveCTRL  [_headers _redirects ]
+HOLLOW  pass4/dist-noopCTRL  [_headers _redirects ]
+HOLLOW  pass4/dist-p4base  [_headers _redirects ]
+HOLLOW  pass4/dist-recon  [_headers _redirects ]
+HOLLOW  pass4/measure/dist-head  [_headers _redirects ]
+FULL    pass5/BC/rig/dist-head
+FULL    pass5/f3/dist-p5ablate
+FULL    pass5/f3/dist-p5base
+FULL    pass5/f3/dist-p5head
+
+--- totals: banks=29  hollow=25  full=4 ---
+
+READING: 29 / 25 / 4 — the pass-6 audit's correction CONFIRMED independently.
+The pass-5 ruling carried 23. What the flat integer concealed: all 25 hollow banks are
+passes 2-4, all 4 full banks are pass 5. A clean break at the pass-5 boundary, not a
+scatter — the estate stopped losing payloads exactly when pass 5 began .tar.gz-ing them,
+and the four survivors are the four that prove the new policy already works. One of them
+is dist-p5ablate, which is the very ABLATE build D6-G3 is about.

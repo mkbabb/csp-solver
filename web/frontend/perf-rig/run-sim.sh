@@ -25,6 +25,14 @@ if ! curl -sf "http://localhost:${PORT}/__ping" >/dev/null; then
   exit 2
 fi
 
+# BUILD IDENTITY, first line of the run — see run-safari.sh's note (D6-G3). The sim shares
+# the host loopback, so it measures the SAME `../dist` any other lane may have rebuilt.
+if ! node "${RIG_DIR}/../scripts/dist-identity.mjs" \
+  --dist "${RIG_DIR}/../dist" --served "http://localhost:${PORT}/"; then
+  echo "build identity unresolved — this run would produce numbers with no tree attached"
+  exit 4
+fi
+
 UDID="$(xcrun simctl list devices 2>/dev/null | grep -F "${DEVICE}" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
 if [ -z "${UDID}" ]; then
   echo "no simulator matching '${DEVICE}'. Available:"

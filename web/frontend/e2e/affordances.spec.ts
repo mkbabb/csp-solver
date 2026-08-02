@@ -158,6 +158,14 @@ test('stale-note: teacher-red and gold-star notes clear on the next edit', async
   // deal test.skip'd (asserted nothing) when it happened to give <2 blanks in that row.
   await loadSudoku(page, '?board=' + CONFLICT_BOARD);
 
+  // The pinned board carries exactly 72 givens (rows 1–8). `firstBlank` reads "no glyph yet"
+  // as blank, so a scan during the draw-in can misread a still-mounting given — the CH-63
+  // trigger-1 red (b2 === -1, runner webkit, twice). A settle is polled, never slept: the
+  // given census reaches 72 before any blank is derived.
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+    .toBe(72);
+
   // Force a provable conflict in the first blank row across two blank cells, then grade it.
   const b1 = await firstBlank(page, '.sudoku-cell');
   const b2 = await page.evaluate((from) => {
@@ -264,6 +272,10 @@ test('fill batch: one Fill sweep undoes as ONE gesture, redo re-fills', async ({
   page,
 }) => {
   await loadSudoku(page, '?board=' + CONFLICT_BOARD);
+  // Same settle as the stale-note row: 72 givens polled before any blank is derived.
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+    .toBe(72);
   const anchor = await firstBlank(page, '.sudoku-cell'); // cell 0 — blank on the conflict board
 
   const filledBefore = await page.locator('.sudoku-cell .glyph-svg').count();

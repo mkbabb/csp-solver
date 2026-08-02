@@ -11,10 +11,23 @@
 export interface ControlSection {
   /** tab identity, `expandedPanel` value, and OptionSelector `:key` stability */
   key: string;
-  /** the visible heading text */
+  /**
+   * The eyebrow's ONE string — drawn ink and accessible name at once.
+   *
+   * T5-W4 pass 7 (X6-G2, ruled from the chair after five passes): the estate's one-string law
+   * (see the ZONE GRAMMAR header below, the `SheetWashiLabel` clause) EXTENDS to the drawer's
+   * surviving eyebrows. There was an `ariaLabel?: string` here and three
+   * `:aria-label="section.ariaLabel"` bindings under it — a second literal, optional, silent
+   * when it drifted. It is DELETED rather than documented, because an optional second name is
+   * a drift vector whether or not anyone has yet driven it: measured at the ruling, **no game
+   * supplied one** (all ten sections across five specs pass `heading` alone), so the attribute
+   * never rendered and the deletion moves no announced name at head.
+   *
+   * Casing is CSS and only CSS — `.section-heading { text-transform: lowercase }`
+   * (`assets/typography.css`), so the eyebrow DRAWS "size" and both the DOM text and the
+   * accessible name stay the authored "Size". A casing difference is never a second string.
+   */
   heading: string;
-  /** optional aria-label (else the visible text is the accessible name) */
-  ariaLabel?: string;
   /** the OptionSelector options (value/label + the optional crayon colorClass) */
   options: { value: string | number; label: string; colorClass?: string }[];
   /** the currently-selected value */
@@ -479,7 +492,6 @@ function onHint() {
                   headingClass(section),
                   { 'is-active': expandedPanel === section.key },
                 ]"
-                :aria-label="section.ariaLabel"
               >
                 {{ section.heading }}
               </span>
@@ -501,11 +513,7 @@ function onHint() {
             v-if="!mobile"
             class="staged-section flex flex-col items-center gap-1 md:items-stretch"
           >
-            <h2
-              class="section-heading"
-              :class="headingClass(section)"
-              :aria-label="section.ariaLabel"
-            >
+            <h2 class="section-heading" :class="headingClass(section)">
               {{ section.heading }}
             </h2>
             <OptionSelector
@@ -517,12 +525,7 @@ function onHint() {
           </div>
           <template v-else>
             <!-- Single-section (n = 1): a plain heading above its selector, never a tab. -->
-            <h2
-              v-if="!showTabs"
-              class="section-heading"
-              :class="headingClass(section)"
-              :aria-label="section.ariaLabel"
-            >
+            <h2 v-if="!showTabs" class="section-heading" :class="headingClass(section)">
               {{ section.heading }}
             </h2>
             <OptionSelector

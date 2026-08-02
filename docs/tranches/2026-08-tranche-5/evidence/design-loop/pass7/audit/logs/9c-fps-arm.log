@@ -1,0 +1,39 @@
+n per scenario per arm: idle3s=5/5 deal=5/5 solveCelebration=5/5 galleryGlide=5/5 themeToggle=5/5
+
+scenario           head r1..r5 (fps)                       med     base r1..r5                            med     Δ(head-base)  sign
+idle3s             56.55/59.04/58.02/59.63/59.86           59.04  59.92/59.66/59.37/59.33/59.84           59.66   -0.62      NEG
+deal               54.51/59.69/59.69/59.66/59.63           59.66  60.26/60.19/59.63/60.26/60.23           60.23   -0.57      NEG
+solveCelebration   58.60/58.34/58.08/58.63/58.12           58.34  59.62/58.85/59.09/58.88/58.82           58.88   -0.54      NEG
+galleryGlide       49.17/49.59/49.59/49.98/49.98           49.59  49.61/50.02/49.61/50.12/50.41           50.02   -0.43      NEG
+themeToggle        51.58/51.44/51.59/51.56/49.74           51.56  52.74/54.43/52.55/52.76/51.71           52.74   -1.18      NEG
+
+UNIFORM SIGN? YES — all five NEGATIVE
+magnitude range: -1.18 .. -0.43 fps
+worst |Δ| = 1.18 fps   vs ±2.5 law → INSIDE
+
+PAIRED per-round Δ (head r_i − base r_i):
+  idle3s              -3.37  -0.62  -1.35    0.3   0.02   neg 3/5
+  deal                -5.75   -0.5   0.06   -0.6   -0.6   neg 4/5
+  solveCelebration    -1.02  -0.51  -1.01  -0.25   -0.7   neg 5/5
+  galleryGlide        -0.44  -0.43  -0.02  -0.14  -0.43   neg 5/5
+  themeToggle         -1.16  -2.99  -0.96   -1.2  -1.97   neg 5/5
+
+idle3s head spread = 3.31 fps   (min 56.55 max 59.86)
+idle3s long33 head=6,4,4,1,1  base=2,2,3,3,2
+idle3s long50 head=1,0,0,0,0  base=0,0,0,0,0
+gate: idle3s ≥59 → head median 59.04 → PASS by 0.04
+LONG50 (>50ms) per round r1..r5:
+  idle3s             head 1,0,0,0,0   base 0,0,0,0,0
+  deal               head 0,0,0,0,0   base 0,0,0,0,0
+  solveCelebration   head 0,0,0,0,0   base 0,0,0,0,0
+  galleryGlide       head 3,3,4,3,3   base 3,3,3,3,3
+  themeToggle        head 2,2,2,3,3   base 2,2,2,2,2
+
+LONG33 (>33ms) per round r1..r5:
+  idle3s             head 6,4,4,1,1   base 2,2,3,3,2
+  deal               head 3,0,0,0,0   base 0,0,0,0,0
+  solveCelebration   head 3,4,3,3,2   base 1,4,3,3,3
+  galleryGlide       head 5,4,5,4,4   base 5,5,5,5,5
+  themeToggle        head 4,5,5,6,7   base 4,2,2,3,4
+
+focusEvents head: idle3s=00000 deal=00000 solveCelebration=00000 galleryGlide=00000 themeToggle=00000

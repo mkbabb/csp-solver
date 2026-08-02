@@ -44,7 +44,8 @@ import { pathToFileURL } from "node:url";
 const ROOT = path.join(import.meta.dirname, "..");
 
 /** The table, by every spelling an import can reach it with. */
-const TABLE = /from\s+["'](?:@games\/(?:cards|registry)|[./]*(?:games\/)?(?:cards|registry))["']/;
+const TABLE =
+  /from\s+["'](?:@games\/(?:cards|registry)|[./]*(?:games\/)?(?:cards|registry))["']/;
 /** A concrete game, from the shared floor's point of view. */
 const CONCRETE_GAME = /from\s+["']@games\/(?!shared\/)([a-z]+)(?:\/|["'])/;
 /** A STATIC (non-`import()`) reach into a spec module. */
@@ -66,7 +67,9 @@ function importLines(text) {
   return text
     .split("\n")
     .map((line, i) => ({ line, no: i + 1 }))
-    .filter(({ line }) => /^\s*(import|export)\s/.test(line) || /^\s*}\s*from\s/.test(line));
+    .filter(
+      ({ line }) => /^\s*(import|export)\s/.test(line) || /^\s*}\s*from\s/.test(line),
+    );
 }
 
 /**
@@ -171,7 +174,8 @@ async function reproduction() {
       await import(writeGraph(path.join(base, "old"), OLD_GRAPH));
       out.oldThrew = false;
     } catch (err) {
-      out.oldThrew = err instanceof ReferenceError && /before initialization/.test(err.message);
+      out.oldThrew =
+        err instanceof ReferenceError && /before initialization/.test(err.message);
       out.oldError = `${err.name}: ${err.message}`;
     }
     try {
@@ -199,7 +203,10 @@ function mintRedTree() {
     path.join(games, "thermo", "spec.ts"),
     'import { GAMES } from "@games/cards";\nexport const thermoSpec = { rows: GAMES.length };\n',
   );
-  fs.writeFileSync(path.join(games, "shared", "defineGame.ts"), "export const defineGame = (s) => s;\n");
+  fs.writeFileSync(
+    path.join(games, "shared", "defineGame.ts"),
+    "export const defineGame = (s) => s;\n",
+  );
   fs.writeFileSync(path.join(games, "cards.ts"), "export const GAMES = [];\n");
   return { base, games };
 }
@@ -249,13 +256,17 @@ async function main() {
       }`,
     );
     if (!ok) {
-      console.error("\ntdz-probe: the negative control did not red — the census is vacuous");
+      console.error(
+        "\ntdz-probe: the negative control did not red — the census is vacuous",
+      );
       process.exit(2);
     }
   }
 
   if (!repro.oldThrew) {
-    console.error("\ntdz-probe: the OLD-graph arm did not throw — the probe is vacuous");
+    console.error(
+      "\ntdz-probe: the OLD-graph arm did not throw — the probe is vacuous",
+    );
     process.exit(2);
   }
   if (!repro.newBooted) {
@@ -263,11 +274,15 @@ async function main() {
     process.exit(1);
   }
   if (violations.length) {
-    console.error(`\ntdz-probe: ${violations.length} cycle edge(s) — the TDZ hazard is live`);
+    console.error(
+      `\ntdz-probe: ${violations.length} cycle edge(s) — the TDZ hazard is live`,
+    );
     process.exit(1);
   }
 
-  console.log("\ntdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways");
+  console.log(
+    "\ntdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways",
+  );
   // Explicit, both paths: a self-test that falls through reports the tree under the control's
   // name, which is how a green control has twice been read as a green gate.
   process.exit(0);

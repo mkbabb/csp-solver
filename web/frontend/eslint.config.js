@@ -102,6 +102,14 @@ export default tseslint.config(
     },
   },
   {
+    // scripts/ are node instruments (dist-identity.mjs and kin), not browser code — they read
+    // process/argv by design and the browser-globals block above must not red them for it.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
     files: ['**/*.vue'],
     languageOptions: {
       parserOptions: {

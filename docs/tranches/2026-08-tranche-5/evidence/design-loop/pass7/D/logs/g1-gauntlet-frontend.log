@@ -1,0 +1,62 @@
+AUDIT: D7-1d THE GAUNTLET — every instrument among the ten, re-run POST-format
+AUDIT: host darwin 25.4.0 · cwd web/frontend (root scripts run from repo root) · static gates
+AUDIT: build-identity — none of these reads web/frontend/dist; all read source, docs or e2e/goldens
+AUDIT: date 2026-08-02T11:00:20Z
+
+=== npm run test:coverage:floor ===
+  ok   a single dipping scope reds even while TOTAL rises
+  ok   a vanished scope is structurally RED
+  ok   an explicitly retired scope passes
+  ok   an unscoped file is surfaced
+  ok   summary.total is not trusted
+[coverage-floor] self-test 6/6 — the gate can fail on a known-bad input.
+EXIT=
+
+=== npm run test:golden:bytes ===
+
+[golden-bytes] tracked-ness: 8 tracked / 8 on disk
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] PASS — 8 goldens, 99.0 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+EXIT=
+
+=== npm run test:e2e:projects ===
+  [4 HOLDOUTS CLOSED] share-truth is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+
+OK — 21 specs, 322 resolved tests, every spec in both engines except the 4 recorded holdouts.
+EXIT=
+
+=== npm run lint:tdz ===
+
+graph census (src/games): 0 cycle edge(s)
+
+negative control (a synthetic game importing the table): RED as required
+
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways
+EXIT=
+
+=== npm run test:prod-shake ===
+[prod-shake] 21 bundle chunk(s) under dist-throttle; asserting 3 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, schedulerDebugInfo
+[prod-shake] PASS — the dev tuner is fully tree-shaken from production.
+EXIT=
+
+=== node scripts/golden-magnitude.mjs ===
+  logo-light               —     —       —          —                 —   NOT RUN — the instrument never reached this golden
+  toggle-crest-dark        —     —       —          —                 —   NOT RUN — the instrument never reached this golden
+
+[golden-magnitude] JSON {"platform":"darwin","floor":0.017,"soulFloor":0.017,"measured":{"logo-light":null,"toggle-crest-dark":null}}
+
+[golden-magnitude] INSTRUMENT FAILED — 2 of 2 goldens yielded no magnitude. A silent instrument is the defect this step exists to kill, so this is a red.
+EXIT=0
+
+=== node scripts/check-theme-tokens.mjs ===
+@theme declared: 51
+unreferenced (corpus only):     0
+unreferenced (transitive rule): 0
+
+check-theme-tokens: 0 unreferenced @theme tokens
+EXIT=0

@@ -1,0 +1,32 @@
+AUDIT: D7-8 PORT HYGIENE AT CLOSE
+AUDIT: host darwin 25.4.0 · date 2026-08-02T11:16:11Z
+
+This lane opened exactly two sockets, both in the 4230-4260 own range (PRECEPTS §4):
+  :4247  dist-identity.mjs --self-test's mismatch arm (in-process, torn down in a finally)
+  :4251  perf-rig/probe-server.mjs, to smoke the rig's new build-identity block
+
+Both were killed and VERIFIED dead at 11:08:xxZ — :4251's listener was pid 89371, killed
+with SIGKILL, and 'lsof -nP -iTCP:4251 -sTCP:LISTEN' returned empty immediately after.
+
+Current state of the two:
+  :4247 — no listener
+  :4251 —
+COMMAND  PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+node    5359 mkbabb   14u  IPv4 0xcc35f46b81b012ca      0t0  TCP *:4251 (LISTEN)
+
+  ...and that is NOT this lane's process. Note the pid and the command:
+  PID  PPID STARTED                      COMMAND
+ 5359  5320 Sun Aug  2 07:13:55 2026     node /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/.bin/vite preview --outDir dist --port 4251 --strictPort
+
+A CONCURRENT lane bound :4251 at 07:13:55 local (11:13:55Z), five minutes after this lane
+released it — a different pid and a different program (vite preview, not probe-server).
+This lane's obligation is discharged; the port is simply in use again by someone else.
+
+Worth the chair's eye, because it is this lane's own subject twice over:
+  1. TWO lanes are drawing from the same 4230-4260 range with no allocation between them.
+     :4237 and :4238 are a pass-6 LAND rig; :4251 is now a fourth server. The range is a
+     convention with no registrar, and collisions are only avoided by luck of timing.
+  2. That lane is running 'vite preview --outDir dist' against the SHARED, unowned
+     web/frontend/dist — which is exactly D6-G3's hazard and exactly what
+     scripts/dist-identity.mjs --served exists to catch. The cure this lane landed is
+     applicable to a live rig in the tree right now.

@@ -53,7 +53,8 @@ board's (`your marks aren't saved`), or both (`neither board's marks are saved`)
 three states at every width (320×115.31 · 300.94×106.2 · 255.83×106.2), so the copy change moves
 no box and triggers no `HandDrawnOutline` re-bake; the longest string keeps 31.73px of slack per
 side in the tightest cell (320) and stays single-line; `text→actions` is 9.59px in all 36 — no
-wrap into the verb row. Shots: `pass4/shots-A/*.png` (36).
+wrap into the verb row. Shots: `pass4/shots-A/*.png` (36). **Testimony, artifact not banked**
+(pass 7; the restamp below carries the derivation).
 
 > **RESTAMPED at pass 6 (A5-G2, A5-G4, A6-G1) — the sentence above stands as written; these three
 > corrections ride beside it, nothing is erased.**
@@ -69,6 +70,36 @@ wrap into the verb row. Shots: `pass4/shots-A/*.png` (36).
 >    (`pass6/A/logs/A6-10-referent-arm.log`).
 > 3. **`pass4/shots-A/` does not exist in the tree.** No number here rides those shots — the geometry
 >    is in `logs/A/ribbon-geom.json`, and pass 6 regenerated it.
+
+> **RESTAMPED at pass 7 (A6-G1, A6-G2) — two evidence-CLASS corrections, on the chair's orders.
+> Neither touches a figure; the sentence above still stands as written, and nothing is erased.**
+> 4. **The shots are TESTIMONY, artifact not banked** — the hollow-dist grammar
+>    (`pass5-adjudications-at-seal.md` §2), applied to an artifact class one further out. Re-derived
+>    at citation: `pass4/shots-A/` is absent, `git log --all --diff-filter=A -- '*shots-A*'` returns
+>    nothing on any branch, and the mechanism that ate the 25 hollow dists does NOT explain this one —
+>    `docs/tranches/.gitignore:5`'s `!**/*.png` re-includes every PNG under `docs/tranches/`, so
+>    these were never committed rather than committed-and-eaten. **Cite `logs/A/ribbon-geom.{log,json}`
+>    (36 cells, banked, re-runnable arithmetic) for anything the shots were offered for.**
+>    Evidence: `pass7/A/logs/A7-11-pass4-citation-audit.log`.
+> 5. **"built dist" in the parenthetical above is TESTIMONY, harness not banked.** The 36 cells carry
+>    no harness: `ribbon-geom.json`'s per-cell keys are `engine, head, noteH, noteW, overflowX,
+>    overflowY, state, sub, subLines, subSlackL, subSlackR, textToActions, theme, viewport` — no
+>    baseURL, no build id, no AUDIT prepend on either file — and the only server log banked in
+>    `logs/A/` is `vite-5321.log`, a **vite DEV** server with 45 HMR/reload lines. The rig that would
+>    have served a dist (`rigA/serve.mjs`) is itself absent (item 6). What survives is stated with its
+>    own arithmetic: **3 of the 36 cells have since been reproduced on a real built dist** — pass 6's
+>    content-referent arm at `abe533c4` (`:4252`, `index-BNMQu01IbxTY.js`) reproduces all three
+>    chromium/light/320 states to ±0.05px, and pass 5's border-referent arm (`:4246`) reproduces the
+>    `both` cell at 45.33 = 31.73 + 13.60. **The other 33 have never been re-measured on a built
+>    dist**, and no claim may say otherwise. The scope is exactly this parenthetical: §9's
+>    *"e2e built-dist 16 passed · preview :4188"* is **config-derivable and untouched** —
+>    `playwright-throttle.config.ts:77` pins `PREVIEW_PORT = 4188` and `playwright.config.ts:22-24`
+>    routes filter-census, wordmark-integrity and theme-bake-freshness to that bundled-preview config.
+> 6. **The three rigs §12 names are absent too** — `rigA/{verb-ink.mjs, ribbon-shots.mjs, serve.mjs}`,
+>    none present, none ever added in any branch; `rigA/` holds a `node_modules` symlink and a
+>    2-line `package.json`. Booked at pass 7 as **A7-G1** and stamped at its own site in §12. It does
+>    not move a number — pass 6 classed the geometry REGENERABLE and regenerated it; the ink absolutes
+>    were already **permanently corroborated-only** for this exact reason (`pass6/A/A-report.md` §1).
 
 ---
 
@@ -304,3 +335,18 @@ gates-goldens.log · verb-ink.{json,log} · ribbon-geom.{json,log} · vite-5321.
 ```
 
 Rigs: `pass4/rigA/{verb-ink.mjs, ribbon-shots.mjs, serve.mjs}`. Shots: `pass4/shots-A/` (36).
+
+> **RESTAMPED at pass 7 (A6-G1 · A7-G1) — the line above stands; the stamp rides beside it.**
+> **Neither the shots nor the three rigs are in the tree, and neither ever was.** Re-derived at
+> citation (`pass7/A/logs/A7-11-pass4-citation-audit.log`): `pass4/shots-A/` does not exist;
+> `pass4/rigA/` holds a `node_modules` symlink and a 2-line `package.json`, and all three named
+> `.mjs` files read ABSENT; `git log --all --diff-filter=A` over `*shots-A*`, `*ribbon-shots.mjs*`,
+> `*rigA/serve.mjs`, `*rigA/verb-ink.mjs` and `*ribbon-geom.mjs` returns nothing on any branch. Per
+> the hollow-dist grammar (`pass5-adjudications-at-seal.md` §2) both lines are **testimony, artifact
+> not banked**. **What IS banked is this section's log list above** — 24 files under `logs/A/`,
+> including `ribbon-geom.{log,json}` (36 cells) and `verb-ink.{json,log}` — and that is what a
+> later pass cites. The consequence was already priced by pass 6: geometry **REGENERABLE** (and
+> regenerated at `abe533c4`), the `verb-ink` mass and density absolutes **permanently
+> corroborated-only**, because their instrument exists in no tree at any generation
+> (`pass6/A/A-report.md` §1). The one same-named file anywhere in `docs/` is
+> `pass5/A/rig/verb-ink.mjs` — pass 5's **re-authoring**, not this lane's instrument.

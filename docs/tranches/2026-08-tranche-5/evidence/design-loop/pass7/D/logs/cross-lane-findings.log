@@ -1,0 +1,67 @@
+AUDIT: D7-7 CROSS-LANE FINDINGS — two reds that are NOT this lane's, booked not fixed
+AUDIT: host darwin 25.4.0 · date 2026-08-02T11:12:13Z · working tree, concurrent lanes live
+
+### 1 · CH-62'S TRIGGER HAS FIRED, AND NOTHING BOOKED IT
+
+A concurrent lane bumped the pencil-boil dep in the working tree:
+  at HEAD 4b28f034:  "@mkbabb/pencil-boil": "^0.11.0",
+  working tree:      "@mkbabb/pencil-boil": "^0.12.0",
+
+CH-62 (LEDGER.md §1, KEEP-PARK) reads, verbatim:
+triggers = W4b's rig verdict OR `@mkbabb/pencil-boil >=0.12.0` (the quarantine module THROWS itself out); cite `2026-08-tranche-5/evidence/w2/verify/bake-race-recurrence-30728779986.txt`
+
+>=0.12.0 is satisfied. The trigger is LIVE on the tree right now, and the row still
+reads KEEP-PARK. This lane does not own CH-62 and changes nothing in it — but a fired
+trigger that nobody booked is the failure mode the chronic ledger exists to prevent,
+so it goes to the chair as a gap.
+
+### 2 · THE SAME BUMP REDS THE DOC-TRUTH GATE
+
+RED    pencil-boil-0.9.2
+        derived: web/frontend/package.json dependencies["@mkbabb/pencil-boil"] = ^0.12.0
+        README.md:131
+          expected: pencil-boil ^0.12.0
+          got:      ^0.11.0 — | `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.11.0 (tagged `v0.11.0`; the `stop()` no-throw contract and `rasterizePoseToBlob()`) |
+        README.md:131
+          expected: pencil-boil ^0.12.0
+          got:      0.11.0 — | `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.11.0 (tagged `v0.11.0`; the `stop()` no-throw contract and `rasterizePoseToBlob()`) |
+        web/frontend/README.md:11
+          expected: pencil-boil ^0.12.0
+          got:      ^0.11.0 — [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil) `^0.11.0`. The motion
+
+check-doc-truth exit: 1   (1 RED / 12 GREEN)
+
+The gate is working: a version moved in package.json and README.md:131 did not move with
+it — the 'a ruling lands in the same commit as its enforcing config' law, caught by an
+instrument instead of by a reader. Owner = whichever lane bumped the dep. NOT fixed here:
+README.md is outside this lane's fence and the bump is not this lane's to justify.
+
+### 3 · THE FORMAT GATE'S 3 src/ REDS ARE ALSO NOT THIS LANE'S
+
+prettier, BOTH scripts/ roots (this lane's whole scope):  exit=0
+prettier, src/ (scope since T4-W4, untouched by this lane): exit=1
+
+The three src/ files are dirty in another lane's hands:
+ M web/frontend/src/games/shared/GameControlPanel.test.ts
+ M web/frontend/src/games/shared/GameControlPanel.vue
+ M web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+
+src/ was already in the gate before this lane widened it, so the widening did not cause
+this and the widening does not mask it. Whoever lands those three runs prettier on them.
+
+### 4 · ADDENDUM 2026-08-02T11:15:00Z — CH-62's cure is LANDING, not merely triggered
+
+The quarantine module CH-62 says will 'THROW ITSELF OUT' at >=0.12.0 is deleted in the
+working tree:
+ D web/frontend/e2e/linux-webkit-bake-quarantine.ts
+  (at HEAD it was 170 lines, born T5-W2 seal 78448760)
+
+Nothing imports the deleted file — the two specs that still carry the string point at an
+evidence .md, not the module:
+web/frontend/e2e/theme-bake-freshness.spec.ts:67: * `docs/tranches/2026-08-tranche-5/evidence/w1/linux-webkit-bake-quarantine.md` (the park) ·
+web/frontend/e2e/wordmark-integrity.spec.ts:68: *     reached `>=0.12.0`. Record: `evidence/w1/linux-webkit-bake-quarantine.md` (first
+
+So the concurrent lane is executing CH-62's stated disposition exactly, and cleanly. The
+correction to finding 1 above: this is NOT 'a trigger nobody booked'. It is a trigger
+fired, a cure landing, and a LEDGER row that still reads KEEP-PARK. The gap is the record,
+not the work — and restamping CH-62 belongs to the chair, not to this lane.

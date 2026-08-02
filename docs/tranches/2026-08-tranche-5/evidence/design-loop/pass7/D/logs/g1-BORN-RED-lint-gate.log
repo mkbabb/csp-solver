@@ -1,0 +1,20 @@
+AUDIT: D7-1 BORN-RED — the proposed lint gate, run BEFORE the format lands
+AUDIT: host darwin 25.4.0 · cwd web/frontend · tree 4b28f034 + Lane-D working edits (none yet)
+AUDIT: build-identity — no build involved; this gate is static, reads source only
+AUDIT: prettier 3.9.5 · config web/frontend/.prettierrc.json (printWidth 88, tabWidth 2, 2-space, double quotes by default)
+AUDIT: date 2026-08-02T10:59:43Z
+
+--- PROPOSED GATE: prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/ ---
+Checking formatting...
+[warn] scripts/check-coverage-floor.mjs
+[warn] scripts/check-golden-bytes.mjs
+[warn] scripts/check-prod-shake.mjs
+[warn] scripts/check-pw-projects.mjs
+[warn] scripts/check-theme-tokens.mjs
+[warn] scripts/golden-magnitude.mjs
+[warn] scripts/tdz-probe.mjs
+[warn] ../../scripts/check-doc-truth.mjs
+[warn] ../../scripts/check-evidence-policy.mjs
+[warn] ../../scripts/ledger-diff.mjs
+[warn] Code style issues found in 10 files. Run Prettier with --write to fix.
+EXIT=1

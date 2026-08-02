@@ -204,7 +204,29 @@ Fold census at the case cell: masthead ends ≈132.22 · board 362 whole · rese
 in flow · verbs band ≈50 px with every target ≥44 px both dimensions · tongue 92×48 ·
 `doc ≡ vh`. Open state: sheet top ≈184 (masthead whole, top grid row peeks), interior scroll
 ≤55 px at the shortest cell only, board rect unmoved across the gesture (the no-relayout
-claim as a rect identity). Drawer-open cost, portrait, DPR 2, both engines: **blocked600 = 0,
+claim as a rect identity).
+
+> **PASS-7 RESTAMP — L6-G5. This paragraph is a SPEC's expectation and the landing outran it;
+> the expectation stays visible above and the measured truth is here.** Re-derived on the
+> sealed tree `4b28f034`, built from source, served on the lane's own port, both engines,
+> 390×664 (`pass7/F3/rig/openstate.mjs` · `logs/openstate-case.log`):
+>
+> | quantity | §6 expected | MEASURED at head | |
+> |---|---|---|---|
+> | sheet top | ≈184 | **216** chromium and webkit | 32 px lower — more masthead and more grid stay lit |
+> | interior scroll | ≤55 | **79** on both engines | **the expectation is EXCEEDED, not beaten** |
+> | board rect across the gesture | unmoved | **unmoved** — `.board-cells` `{14, 132.22, 362, 362}` before, open and after (webkit `y 131.63`) | the rect identity holds exactly |
+>
+> **The interior-scroll row is a correction, not a happy surprise, and it is the estate's
+> three-numbers-one-quantity class again — so the BOX is named this time.** The scroll does not
+> live on `.drawer-case` (`overflow-y: visible`; its `scrollHeight − clientHeight` reads a
+> meaningless **4**). It lives on **`.controls-card`**, the sheet's one `overflow-y: auto`
+> descendant: `scrollHeight 527 − clientHeight 448 = 79`, identical on both engines and stable
+> across 8 cold loads (`logs/interior-scroll-reps.log`). The pass-6 audit's fold census
+> published **55** for this quantity and 55 reproduces at NEITHER referent; it is withdrawn
+> rather than explained, because no box I can find yields it. What the row must carry forward
+> is the referent, not just the figure: **interior scroll is `.controls-card`, and at the case
+> cell it is 79**. Drawer-open cost, portrait, DPR 2, both engines: **blocked600 = 0,
 bakes = 0, encodes = 0** — structural (the re-fit rules are `≥1024`-scoped; CH-61's mechanism
 is unreachable below 1024). Desk control arm: 8 bakes / 8 encodes / ~300 ms, unmoved in both
 directions — CH-61 stays the BC lane's chartered row (Option B), not worsened and not
@@ -269,6 +291,15 @@ citation, never recited from this spec.
    four play verbs, so *playing* never needs the sheet. Mitigation priced, not hypothetical:
    the cap ladder's board-half rung buys 58% of the board back for 215 px of interior scroll
    at unchanged pageVh 1.000 — re-cuttable by the owner without reopening the row.
+
+   > **PASS-7 RESTAMP — L6-G5.** The `~52 px` above is the spec's expectation and the landing
+   > beat it: measured at head, the open sheet leaves **83.78 px chromium / 84.38 px webkit**
+   > of grid — **23.1% / 23.3% of the board**, roughly two of the nine rows rather than one
+   > (sheet top 216 − grid top 132.22 = 83.78; `pass7/F3/logs/openstate-case.log`). The risk
+   > itself is UNCHANGED and stays open: more grid is still not a touchable board, and the
+   > owner's call on the mode is the closure leg. **U-10 binds — nothing here closes a mark;
+   > this restamp moves a number, not a disposition.** The 58%-for-215px mitigation is
+   > untouched and still un-exercised.
 2. **The landscape rebuild junction** (§5.2) — identity is a target, not an inheritance.
 3. **AX tree at rest** below 1024 gains the named `controls` region with one button —
    disclosed, the owner's to accept.

@@ -1,6 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
-import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
 /**
  * P1 G3.4 — WORDMARK INTEGRITY, in WebKit, against the BUILT dist.
@@ -56,11 +55,28 @@ import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
  *     carrying `rasterizePoseToBlob()`. This wave declares `^0.11.0` and adopts it — the raster
  *     path hands back the capture canvas's own blob instead of round-tripping an `ImageBitmap`
  *     copy through a second surface and a re-encode, which deletes the stage the blank lived
- *     in. So the guard, its helper file and its call site are deleted whole rather than
- *     re-pinned, and every row is live on both platforms in both engines again. The runner is
- *     the judge: if ubuntu·WebKit still blanks, it reds here, at `retries: 0`, saying so.
- *     Record: `docs/tranches/2026-08-tranche-5/evidence/w1/linux-webkit-bake-quarantine.md`
- *     (the park) and `evidence/w2/f5/` (its removal).
+ *     in. So the guard, its helper file and its call site were deleted whole rather than
+ *     re-pinned, and every row went live on both platforms in both engines again. The runner
+ *     was the judge — and it spoke twice, disagreeing with itself: run 30727947148
+ *     (`74b2835d`) passed every de-quarantined row, run 30728779986 (`ff5a7cea`) redded four.
+ *     **The library cure is REFUTED as sufficient**, and one green run of a nondeterministic
+ *     race is a sample, not a proof. Record: `evidence/w2/verify/`.
+ *
+ *     T5-W4 SECOND PINNING — re-pinned as a class park (all five games, both specs,
+ *     ubuntu·webkit only) carrying a re-aimed eviction: the guard read this frontend's
+ *     `package.json` at spec load and THREW the moment the declared `@mkbabb/pencil-boil`
+ *     reached `>=0.12.0`. Record: `evidence/w1/linux-webkit-bake-quarantine.md` (first
+ *     pinning) · `evidence/w2/verify/bake-race-recurrence-30728779986.txt` (the refutation).
+ *
+ *     PASS 7 · LANE BC — THE THROW FIRED, AND THE QUARANTINE IS GONE FOR THE SECOND TIME.
+ *     This frontend declares `^0.12.0` (the pose-stack cache), so the guard's own re-entry
+ *     condition is met and its instructions are followed literally: the helper file, both
+ *     call sites and the now-unused `game` parameter are deleted, and linux CI judges the
+ *     class fresh. The judgment is explicitly MULTI-RUN and it is the lead's — 0.12.0 is a
+ *     cache, not a bake-race cure, and it is NOT hypothesized to fix this class. What the
+ *     removal buys is a live census: the rows red on ubuntu·webkit at `retries: 0` and say
+ *     which games, which is the only instrument that can tell a rate from a cure. LEDGER row
+ *     CH-62 still carries the class. Record: `evidence/design-loop/pass7/bc/`.
  *
  *  2. NO FALLBACK GLYPHS. Every character of every rendered label must actually come from
  *     Fraunces. Measured by the sentinel-fallback method (lane D's, kept because the obvious
@@ -213,12 +229,6 @@ test.describe("G3.4 · wordmark integrity (WebKit, built dist)", () => {
           "svg.handwritten-logo image.logo-pose-bmp",
           game,
         );
-
-      // THE EXPLICIT QUARANTINE, second pinning — the class (all five games), linux + webkit,
-      // until W4b's rig verdict or pencil-boil >=0.12.0 (see the module header). AFTER the
-      // read and the evidence attach on purpose: the parked arm still bakes, still reads, and
-      // still ships the pose bitmap it read.
-      quarantineLinuxWebkitBake("wordmark-integrity", game, testInfo);
 
       // THE HOISTED VERDICT. One assertion, both terms, ahead of every branch — nothing
       // between the read and the assert can abort the row, on any platform.

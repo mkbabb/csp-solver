@@ -149,7 +149,10 @@ where an fps would be arithmetic rather than measurement.
 A manual run is evidence only if it can be found again. Every run that backs a claim records:
 
 1. **the run id** — the `<runId>` argument, which names `runs/<runId>.jsonl`;
-2. **the commit** the dist was built at, and the dist's `index-*.js` hash;
+2. **the build identity** — `../dist`'s entry chunk, its `index.html` digest, and the assertion
+   that the server was serving that same tree. `run-safari.sh` and `run-sim.sh` now print it
+   themselves before anything else and **exit 4** if they cannot derive it, so this row is no
+   longer a thing you remember to write down;
 3. **the host** — machine, panel and refresh rate, and whether other lanes were running;
 4. **the ceiling run** taken in the same session, since no app number means anything without
    its denominator;
@@ -157,6 +160,27 @@ A manual run is evidence only if it can be found again. Every run that backs a c
 
 Base reds bank before cured greens, and one fresh base run goes in the same session as the
 cured run — an old base against a new cured is drift, not a result.
+
+**Why row 2 is an instrument and not a habit (T5-W4 pass-7, D6-G3).** `../dist` is
+`.gitignore`d. It has no owner and carries no commit: it holds whatever tree the last
+`npm run build` on this checkout produced, by whichever lane ran it. Pass 5 banked the
+consequence — `dist/` was holding an ABLATE build and every lane that measured
+`npm run preview` without rebuilding measured an ablation without knowing. The class then
+reproduced itself *while the row closing it was being written*: this rig's dist changed
+identity between two readings five minutes apart, rebuilt by a concurrent lane
+(`…/design-loop/pass7/D/logs/g3-caught-live.log`). "The commit the dist was built at" was
+never derivable from the dist — the entry chunk's content hash is, and that is what the
+line prints:
+
+```
+node scripts/dist-identity.mjs --dist <dist> --served <baseURL>
+AUDIT: build-identity — dist entry index-Cr-QIa0O4Gc3.js · index.html md5 82d4bd20… · 39 files / 722.4 KB · newest mtime …
+```
+
+The `--served` arm is the other half, and it is the cure for the `assert-the-SPA is tree-blind`
+trap (PRECEPTS §3): a lane port already holding **another** lane's dist passes the SPA gate
+happily, so the rig fetches the page and asserts the entry it references is the one on disk.
+Any AUDIT prepend anywhere in the estate can carry the same line by calling the same script.
 
 **The first manual run-id under this tranche banks at W-GATE.** Until it does, `gates.json`'s
 sim rows, GPU-attribution row (`maxGpuProcessCpuSecondsPer30sIdle` 4.5) and interaction rows
@@ -171,8 +195,9 @@ have the CI subset's coverage only for `idle3s`, and none at all for the rest.
 | `ci-subset.mjs` | the CI lane — the only file here that is not a straight landing of the P1 rig |
 | `probe-server.mjs` | zero-dep static host for `../dist`; injects the probe at serve time, never touches the dist on disk; collects `/__metrics` into `runs/` |
 | `probe.js` | the in-page scenario engine — vanilla classic script, no build step |
-| `run-safari.sh` | drives real desktop Safari via AppleScript |
-| `run-sim.sh` | drives real MobileSafari on the iOS simulator via `simctl` |
+| `run-safari.sh` | drives real desktop Safari via AppleScript; opens with the build-identity line (exit 4 if it won't derive) |
+| `run-sim.sh` | drives real MobileSafari on the iOS simulator via `simctl`; same build-identity open |
+| `../scripts/dist-identity.mjs` | the build-identity line itself — entry-chunk hash, `index.html` digest, extent, and an optional served-vs-disk assertion. `--self-test` 6/6. Lives in `scripts/` so any rig or AUDIT prepend can call it |
 | `cpu-attrib.sh` | per-process CPU attribution over an idle window (`WebKit.GPU` vs `WebKit.WebContent`) |
 | `matrix.sh` · `rounds.sh` · `sim-matrix.sh` | the ablation matrix, cell order shuffled per round |
 | `summarize.mjs` | folds run JSONL into markdown tables |

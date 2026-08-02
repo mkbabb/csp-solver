@@ -8,7 +8,7 @@ Solving runs in-browser via `@mkbabb/csp-solver-wasm` inside a per-game Worker;
 there's no backend.
 
 Shared animation primitives come from
-[`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil) `^0.11.0`. The motion
+[`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil) `^0.12.0`. The motion
 system — cadence bands, the unified scheduler, celebration timeline, grain hoist,
 filter presets — is documented in [`../../docs/animation.md`](../../docs/animation.md).
 

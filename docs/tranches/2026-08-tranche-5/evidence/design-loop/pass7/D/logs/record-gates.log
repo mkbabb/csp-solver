@@ -1,0 +1,46 @@
+AUDIT: D7-6 THE RECORD GATES, over every file this lane touched
+AUDIT: host darwin 25.4.0 · node v26.0.0 · date 2026-08-02T11:11:09Z
+AUDIT: no build; all four gates are static readers
+
+=== node scripts/check-doc-truth.mjs ===
+        derived: 208 native #[test] attributes (csp-solver/src + csp-solver/tests, comments elided) · 29 #[wasm_bindgen_test] in the wasm crate (cfg'd to wasm32, not host-run) · 28 test binaries (csp-solver + csp-solver/wasm lib targets + integration files)
+
+GREEN  make-wasm-recipe
+        derived: csp-solver/wasm/Makefile:33 runs --no-default-features --profile wasm-release --scope mkbabb --target web — LEAN; 5 families registered (sudoku, futoshiki, thermo, killer, kenken)
+
+GREEN  ci-lane-count
+        derived: 18 jobs in .github/workflows/ci.yml (lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, wasm-publish-dryrun, frontend, fe-unit, boundary, e2e, perf-subset, iai, cargo-audit, evidence-policy, doc-truth, npm-audit)
+
+GREEN  iai-golden-figure
+        derived: 1,529,452 instructions enforced ±2.0% — csp-solver/benches/iai_queens.baseline, gated by .github/workflows/ci.yml's iai lane over bench iai_queens
+
+1 RED / 12 GREEN — doc canon disagrees with the tree
+EXIT=
+
+=== node scripts/check-evidence-policy.mjs --self-test ===
+  per-wave            2,346,952 B  > 2,097,152 B per-wave cap
+                      docs/tranches/2026-08-tranche-5/evidence/design-loop
+  per-image           219,662 B  > 153,600 B per-image cap
+                      docs/tranches/2026-08-tranche-5/evidence/design-loop/pass7/F3/shots/case-390x664-AFTER-webkit.png
+  per-image           157,775 B  > 153,600 B per-image cap
+                      docs/tranches/2026-08-tranche-5/evidence/design-loop/pass7/F3/shots/case-390x664-AFTER-chromium.png
+
+Recrop to the pixels under audit; text-first for anything a number can state (EVIDENCE-POLICY.md). Do NOT raise a cap and do NOT add a grandfather line.
+
+=== node scripts/check-evidence-policy.mjs (the estate verdict) ===
+    per-wave: 1
+
+  per-wave            2,346,952 B  > 2,097,152 B per-wave cap
+                      docs/tranches/2026-08-tranche-5/evidence/design-loop
+  per-image           219,662 B  > 153,600 B per-image cap
+                      docs/tranches/2026-08-tranche-5/evidence/design-loop/pass7/F3/shots/case-390x664-AFTER-webkit.png
+  per-image           157,775 B  > 153,600 B per-image cap
+                      docs/tranches/2026-08-tranche-5/evidence/design-loop/pass7/F3/shots/case-390x664-AFTER-chromium.png
+
+Recrop to the pixels under audit; text-first for anything a number can state (EVIDENCE-POLICY.md). Do NOT raise a cap and do NOT add a grandfather line.
+
+=== npm run lint (web/frontend) — the widened format gate ===
+[warn] src/games/shared/GameControlPanel.test.ts
+[warn] src/games/shared/GameControlPanel.vue
+[warn] src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+[warn] Code style issues found in 3 files. Run Prettier with --write to fix.

@@ -31,6 +31,17 @@ if ! curl -sf "http://localhost:${PORT}/__ping" >/dev/null; then
   exit 2
 fi
 
+# BUILD IDENTITY, first line of the run (T5-W4 pass-7 Lane D, D6-G3). `../dist` is
+# `.gitignore`d and owned by whoever last built — pass 5 measured an ABLATE dist without
+# knowing it, and a concurrent lane rebuilt this one mid-session while the row was being
+# closed. The rig prints WHICH tree it is about to measure, and asserts the server on
+# :${PORT} is serving that same tree, before any number exists. Exit 4 if it cannot.
+if ! node "${RIG_DIR}/../scripts/dist-identity.mjs" \
+  --dist "${RIG_DIR}/../dist" --served "http://localhost:${PORT}/"; then
+  echo "build identity unresolved — this run would produce numbers with no tree attached"
+  exit 4
+fi
+
 if [ "${SCENARIOS}" = "rafCeiling" ]; then
   # the app-free control page: the display's rAF ceiling, same sampler shape
   URL="http://localhost:${PORT}/__ceiling?__run=${RUN_ID}"

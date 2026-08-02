@@ -1,0 +1,39 @@
+[golden-bytes] 8 golden(s) + 8 unsanctioned PNG(s) under e2e
+  estate total   139.7 KB  (goldens 99.0 KB, unsanctioned 40.7 KB)
+  estate band    110.0 KB  (OVER by 29.7 KB = 27.0% of the band)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] UNSANCTIONED — 8 *.png outside e2e/goldens:
+  FAIL     1.9 KB  e2e/visual-golden.spec.ts-snapshots/cell-light-chromium-darwin.png
+  FAIL     2.6 KB  e2e/visual-golden.spec.ts-snapshots/cell-light-webkit-darwin.png
+  FAIL     6.7 KB  e2e/visual-golden.spec.ts-snapshots/grid-corner-light-chromium-darwin.png
+  FAIL    10.2 KB  e2e/visual-golden.spec.ts-snapshots/grid-corner-light-webkit-darwin.png
+  FAIL     9.3 KB  e2e/visual-golden.spec.ts-snapshots/logo-light-chromium-darwin.png
+  FAIL     1.1 KB  e2e/visual-golden.spec.ts-snapshots/logo-light-webkit-darwin.png
+  FAIL     3.4 KB  e2e/visual-golden.spec.ts-snapshots/toggle-crest-dark-chromium-darwin.png
+  FAIL     5.4 KB  e2e/visual-golden.spec.ts-snapshots/toggle-crest-dark-webkit-darwin.png
+
+[golden-bytes] pairing + consumers (21 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:238
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:249
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:205
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:232
+
+[golden-bytes] tracked-ness: 8 tracked / 8 on disk
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 2 defect(s):
+  · estate total: 143036 B > 112640 B band (over by 30396 B)
+  · fossils: 8 *.png outside e2e/goldens (40.7 KB) — auto-written baselines no config reads
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.

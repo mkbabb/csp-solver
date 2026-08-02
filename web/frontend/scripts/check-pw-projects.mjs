@@ -133,7 +133,12 @@ function listMatrix(configFile) {
     raw = execFileSync(
       "npx",
       ["playwright", "test", "--config", configFile, "--list", "--reporter=json"],
-      { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 << 20 },
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        maxBuffer: 64 << 20,
+      },
     );
   } catch (err) {
     throw new Error(
@@ -241,7 +246,8 @@ function enginesPerSpec({ configs }) {
   const out = new Map();
   for (const { file, declared, matrix } of configs)
     for (const [projectName, { specs }] of matrix) {
-      const engine = declared.find((p) => p.name === projectName)?.engine ?? PW_DEFAULT_ENGINE;
+      const engine =
+        declared.find((p) => p.name === projectName)?.engine ?? PW_DEFAULT_ENGINE;
       for (const s of specs) {
         if (!out.has(s)) out.set(s, new Set());
         out.get(s).add(engine);
@@ -262,8 +268,8 @@ function check3EngineCoverage(model) {
       holdout
         ? `${spec}: declared holdout engines {${fmt(want)}} but resolves to {${fmt(got)}}.`
         : `${spec}: runs in {${fmt(got)}} — every spec runs in BOTH engines unless HOLDOUTS ` +
-          `says why. This is CH-56's exact shape: a surface that quietly covers one engine ` +
-          `while the suite still reads green. Widen it, or add a HOLDOUTS entry with the cite.`,
+            `says why. This is CH-56's exact shape: a surface that quietly covers one engine ` +
+            `while the suite still reads green. Widen it, or add a HOLDOUTS entry with the cite.`,
     );
   }
   return bad;
@@ -274,7 +280,9 @@ function check4HoldoutsClosed(model) {
   const engines = enginesPerSpec(model);
   for (const [spec, { engines: declaredEngines, why }] of Object.entries(HOLDOUTS)) {
     if (!model.onDisk.includes(spec)) {
-      bad.push(`HOLDOUTS lists ${spec}, which is not on disk — stale entry, delete it.`);
+      bad.push(
+        `HOLDOUTS lists ${spec}, which is not on disk — stale entry, delete it.`,
+      );
       continue;
     }
     const got = engines.get(spec);
@@ -285,7 +293,9 @@ function check4HoldoutsClosed(model) {
           `that widened it. (Recorded reason: ${why.slice(0, 90)}…)`,
       );
     if (!why || why.length < 40)
-      bad.push(`HOLDOUTS[${spec}] carries no usable reason — a holdout without a cite is a hole.`);
+      bad.push(
+        `HOLDOUTS[${spec}] carries no usable reason — a holdout without a cite is a hole.`,
+      );
   }
   return bad;
 }
@@ -341,13 +351,15 @@ const SABOTAGES = [
   [
     "1 DECLARED MATRIX",
     "the webkit project is quietly re-engined to chromium",
-    (m) => (defaultCfg(m).declared.find((p) => p.name === "webkit").engine = "chromium"),
+    (m) =>
+      (defaultCfg(m).declared.find((p) => p.name === "webkit").engine = "chromium"),
   ],
   [
     "2 SPEC OWNERSHIP",
     "a spec is dropped from every project (the orphan)",
     (m) => {
-      for (const { specs } of defaultCfg(m).matrix.values()) specs.delete("drawer.spec.ts");
+      for (const { specs } of defaultCfg(m).matrix.values())
+        specs.delete("drawer.spec.ts");
     },
   ],
   [
@@ -358,7 +370,8 @@ const SABOTAGES = [
   [
     "3 ENGINE COVERAGE",
     "CH-56 regresses — mobile-affordances loses its webkit arm",
-    (m) => defaultCfg(m).matrix.get("webkit").specs.delete("mobile-affordances.spec.ts"),
+    (m) =>
+      defaultCfg(m).matrix.get("webkit").specs.delete("mobile-affordances.spec.ts"),
   ],
   [
     "4 HOLDOUTS CLOSED",
@@ -404,7 +417,9 @@ const model = await collect();
 const failures = [];
 for (const [name, fn] of CHECKS) {
   const found = fn(model);
-  console.log(`  ${found.length ? "✗" : "✓"} ${name}${found.length ? ` — ${found.length}` : ""}`);
+  console.log(
+    `  ${found.length ? "✗" : "✓"} ${name}${found.length ? ` — ${found.length}` : ""}`,
+  );
   for (const f of found) failures.push(`[${name}] ${f}`);
 }
 

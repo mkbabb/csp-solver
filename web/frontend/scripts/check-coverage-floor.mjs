@@ -33,15 +33,15 @@
 //
 // Zero dependencies, node-only — it belongs beside check-golden-bytes.mjs in the frontend lane.
 
-import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import process from 'node:process';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+import { fileURLToPath } from "node:url";
+import process from "node:process";
 
-const FRONTEND_ROOT = fileURLToPath(new URL('..', import.meta.url));
-const DEFAULT_SUMMARY = join(FRONTEND_ROOT, 'coverage', 'coverage-summary.json');
-const DEFAULT_FLOOR = join(FRONTEND_ROOT, 'coverage-floor.json');
-const METRICS = ['statements', 'branches', 'functions', 'lines'];
+const FRONTEND_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const DEFAULT_SUMMARY = join(FRONTEND_ROOT, "coverage", "coverage-summary.json");
+const DEFAULT_FLOOR = join(FRONTEND_ROOT, "coverage-floor.json");
+const METRICS = ["statements", "branches", "functions", "lines"];
 
 // ---------------------------------------------------------------- argv
 
@@ -59,18 +59,18 @@ function parseArgs(argv) {
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--self-test') args.selfTest = true;
-    else if (a === '--write-floor') args.writeFloor = true;
-    else if (a === '--print') args.print = true;
-    else if (a === '--json') args.json = true;
-    else if (a === '--single-run-ok') args.singleRunOk = true;
-    else if (a === '--samples') args.samples = argv[++i];
-    else if (a === '--allow-lower') args.allowLower = argv[++i] ?? '(no reason given)';
-    else if (a === '--summary') args.summary = argv[++i];
-    else if (a === '--floor') args.floor = argv[++i];
-    else if (a === '--help' || a === '-h') {
+    if (a === "--self-test") args.selfTest = true;
+    else if (a === "--write-floor") args.writeFloor = true;
+    else if (a === "--print") args.print = true;
+    else if (a === "--json") args.json = true;
+    else if (a === "--single-run-ok") args.singleRunOk = true;
+    else if (a === "--samples") args.samples = argv[++i];
+    else if (a === "--allow-lower") args.allowLower = argv[++i] ?? "(no reason given)";
+    else if (a === "--summary") args.summary = argv[++i];
+    else if (a === "--floor") args.floor = argv[++i];
+    else if (a === "--help" || a === "-h") {
       console.log(
-        'check-coverage-floor.mjs [--summary p] [--floor p] [--json] [--print] [--self-test]\n' +
+        "check-coverage-floor.mjs [--summary p] [--floor p] [--json] [--print] [--self-test]\n" +
           '                        [--write-floor (--samples <dir> | --single-run-ok) [--allow-lower "reason"]]',
       );
       process.exit(0);
@@ -92,8 +92,11 @@ const floor2 = (n) => Math.floor(n * 100) / 100;
  * v8 writes absolute paths; `total` is the aggregate row and is dropped by the caller.
  */
 function toRelPath(key) {
-  const rel = key.startsWith(sep) || /^[A-Za-z]:[\\/]/.test(key) ? relative(FRONTEND_ROOT, key) : key;
-  return rel.split(sep).join('/');
+  const rel =
+    key.startsWith(sep) || /^[A-Za-z]:[\\/]/.test(key)
+      ? relative(FRONTEND_ROOT, key)
+      : key;
+  return rel.split(sep).join("/");
 }
 
 /**
@@ -103,7 +106,7 @@ function toRelPath(key) {
  */
 function aggregate(summary, scopeDefs) {
   const prefixes = Object.entries(scopeDefs)
-    .filter(([, def]) => typeof def.prefix === 'string')
+    .filter(([, def]) => typeof def.prefix === "string")
     .sort((a, b) => b[1].prefix.length - a[1].prefix.length);
 
   const acc = {};
@@ -114,9 +117,11 @@ function aggregate(summary, scopeDefs) {
   const unclaimed = [];
 
   for (const [key, entry] of Object.entries(summary)) {
-    if (key === 'total') continue;
+    if (key === "total") continue;
     const rel = toRelPath(key);
-    const hit = prefixes.find(([, def]) => rel === def.prefix || rel.startsWith(def.prefix + '/'));
+    const hit = prefixes.find(
+      ([, def]) => rel === def.prefix || rel.startsWith(def.prefix + "/"),
+    );
     if (!hit) {
       unclaimed.push(rel);
       continue;
@@ -135,7 +140,7 @@ function aggregate(summary, scopeDefs) {
   const total = { files: 0, metrics: {} };
   for (const m of METRICS) total.metrics[m] = { covered: 0, total: 0 };
   for (const [key, entry] of Object.entries(summary)) {
-    if (key === 'total') continue;
+    if (key === "total") continue;
     total.files++;
     for (const m of METRICS) {
       const e = entry[m];
@@ -165,10 +170,12 @@ function compare(derived, floorDoc) {
   for (const [name, def] of Object.entries(floorDoc.scopes)) {
     const got = derived[name];
     if (!got) {
-      structural.push(`scope "${name}" is banked but produced no aggregate (summary shape changed)`);
+      structural.push(
+        `scope "${name}" is banked but produced no aggregate (summary shape changed)`,
+      );
       continue;
     }
-    if (got.files === 0 && name !== 'TOTAL') {
+    if (got.files === 0 && name !== "TOTAL") {
       if (def.retired) {
         rows.push({ name, files: 0, retired: def.retired });
         continue;
@@ -183,7 +190,7 @@ function compare(derived, floorDoc) {
     for (const m of METRICS) {
       const have = got.metrics[m].pct;
       const want = def[m];
-      if (typeof want !== 'number') {
+      if (typeof want !== "number") {
         structural.push(`scope "${name}" has no banked floor for ${m}`);
         continue;
       }
@@ -209,9 +216,9 @@ const pct = (n) => `${floor2(n).toFixed(2)}%`;
 function renderTable(rows) {
   const nameW = Math.max(12, ...rows.map((r) => r.name.length));
   const head =
-    `${pad('scope', nameW)} | ${padL('files', 5)} | ${padL('stmts', 8)} | ${padL('branch', 8)} | ` +
-    `${padL('funcs', 8)} | ${padL('lines', 8)}`;
-  const out = [head, '-'.repeat(head.length)];
+    `${pad("scope", nameW)} | ${padL("files", 5)} | ${padL("stmts", 8)} | ${padL("branch", 8)} | ` +
+    `${padL("funcs", 8)} | ${padL("lines", 8)}`;
+  const out = [head, "-".repeat(head.length)];
   for (const r of rows) {
     if (r.retired) {
       out.push(`${pad(r.name, nameW)} | ${padL(0, 5)} | retired: ${r.retired}`);
@@ -219,10 +226,10 @@ function renderTable(rows) {
     }
     out.push(
       `${pad(r.name, nameW)} | ${padL(r.files, 5)} | ` +
-        METRICS.map((m) => padL(pct(r.metrics[m].have), 8)).join(' | '),
+        METRICS.map((m) => padL(pct(r.metrics[m].have), 8)).join(" | "),
     );
   }
-  return out.join('\n');
+  return out.join("\n");
 }
 
 // ---------------------------------------------------------------- self-test
@@ -238,7 +245,7 @@ function selfTest() {
     functions: { covered, total },
     branches: { covered, total },
   });
-  const scopeDefs = { alpha: { prefix: 'src/alpha' }, beta: { prefix: 'src/beta' } };
+  const scopeDefs = { alpha: { prefix: "src/alpha" }, beta: { prefix: "src/beta" } };
   const floorDoc = {
     scopes: {
       alpha: { statements: 50, branches: 50, functions: 50, lines: 50 },
@@ -251,70 +258,87 @@ function selfTest() {
 
   // 1. AT the floor → green (the floor is inclusive: `>=`).
   {
-    const s = { [F('src/alpha/a.ts')]: mk(5, 10), [F('src/beta/b.ts')]: mk(5, 10) };
+    const s = { [F("src/alpha/a.ts")]: mk(5, 10), [F("src/beta/b.ts")]: mk(5, 10) };
     const { scopes } = aggregate(s, scopeDefs);
     const r = compare(scopes, floorDoc);
-    cases.push({ name: 'at-floor is green', pass: r.breaches.length === 0 && r.structural.length === 0 });
+    cases.push({
+      name: "at-floor is green",
+      pass: r.breaches.length === 0 && r.structural.length === 0,
+    });
   }
   // 2. One scope dips 10% → RED, and it names that scope (not just the total).
   {
-    const s = { [F('src/alpha/a.ts')]: mk(4, 10), [F('src/beta/b.ts')]: mk(9, 10) };
+    const s = { [F("src/alpha/a.ts")]: mk(4, 10), [F("src/beta/b.ts")]: mk(9, 10) };
     const { scopes } = aggregate(s, scopeDefs);
     const r = compare(scopes, floorDoc);
-    const namesAlpha = r.breaches.some((b) => b.scope === 'alpha');
-    const totalStaysGreen = !r.breaches.some((b) => b.scope === 'TOTAL'); // 13/20 = 65% > 50
+    const namesAlpha = r.breaches.some((b) => b.scope === "alpha");
+    const totalStaysGreen = !r.breaches.some((b) => b.scope === "TOTAL"); // 13/20 = 65% > 50
     cases.push({
-      name: 'a single dipping scope reds even while TOTAL rises',
+      name: "a single dipping scope reds even while TOTAL rises",
       pass: r.breaches.length > 0 && namesAlpha && totalStaysGreen,
     });
   }
   // 3. A gated scope's files all vanish → RED (structural), never a vacuous pass.
   {
-    const s = { [F('src/beta/b.ts')]: mk(10, 10) };
+    const s = { [F("src/beta/b.ts")]: mk(10, 10) };
     const { scopes } = aggregate(s, scopeDefs);
     const r = compare(scopes, floorDoc);
     cases.push({
-      name: 'a vanished scope is structurally RED',
+      name: "a vanished scope is structurally RED",
       pass: r.structural.some((m) => m.includes('"alpha"')) && r.breaches.length === 0,
     });
   }
   // 4. …unless it is explicitly retired with a reason.
   {
-    const s = { [F('src/beta/b.ts')]: mk(10, 10) };
+    const s = { [F("src/beta/b.ts")]: mk(10, 10) };
     const { scopes } = aggregate(s, scopeDefs);
     const doc = JSON.parse(JSON.stringify(floorDoc));
-    doc.scopes.alpha.retired = 'folded into GameShell at W2';
+    doc.scopes.alpha.retired = "folded into GameShell at W2";
     const r = compare(scopes, doc);
     cases.push({
-      name: 'an explicitly retired scope passes',
+      name: "an explicitly retired scope passes",
       pass: r.structural.length === 0 && r.breaches.length === 0,
     });
   }
   // 5. A file matching no scope is surfaced (a new dir cannot slip in ungated).
   {
-    const s = { [F('src/gamma/g.ts')]: mk(0, 10), [F('src/alpha/a.ts')]: mk(5, 10), [F('src/beta/b.ts')]: mk(5, 10) };
+    const s = {
+      [F("src/gamma/g.ts")]: mk(0, 10),
+      [F("src/alpha/a.ts")]: mk(5, 10),
+      [F("src/beta/b.ts")]: mk(5, 10),
+    };
     const { unclaimed } = aggregate(s, scopeDefs);
-    cases.push({ name: 'an unscoped file is surfaced', pass: unclaimed.length === 1 && unclaimed[0] === 'src/gamma/g.ts' });
+    cases.push({
+      name: "an unscoped file is surfaced",
+      pass: unclaimed.length === 1 && unclaimed[0] === "src/gamma/g.ts",
+    });
   }
   // 6. Percentages are re-derived, NOT read from summary.total (a lying total is ignored).
   {
     const s = {
       total: { ...mk(999, 1000), lines: { covered: 999, total: 1000 } },
-      [F('src/alpha/a.ts')]: mk(1, 10),
-      [F('src/beta/b.ts')]: mk(1, 10),
+      [F("src/alpha/a.ts")]: mk(1, 10),
+      [F("src/beta/b.ts")]: mk(1, 10),
     };
     const { scopes } = aggregate(s, scopeDefs);
-    cases.push({ name: 'summary.total is not trusted', pass: Math.round(scopes.TOTAL.metrics.lines.pct) === 10 });
+    cases.push({
+      name: "summary.total is not trusted",
+      pass: Math.round(scopes.TOTAL.metrics.lines.pct) === 10,
+    });
   }
 
   const failed = cases.filter((c) => !c.pass);
-  console.log('[coverage-floor] self-test');
-  for (const c of cases) console.log(`  ${c.pass ? 'ok  ' : 'FAIL'} ${c.name}`);
+  console.log("[coverage-floor] self-test");
+  for (const c of cases) console.log(`  ${c.pass ? "ok  " : "FAIL"} ${c.name}`);
   if (failed.length) {
-    console.error(`[coverage-floor] SELF-TEST FAILED (${failed.length}/${cases.length}) — the gate cannot be trusted.`);
+    console.error(
+      `[coverage-floor] SELF-TEST FAILED (${failed.length}/${cases.length}) — the gate cannot be trusted.`,
+    );
     process.exit(1);
   }
-  console.log(`[coverage-floor] self-test ${cases.length}/${cases.length} — the gate can fail on a known-bad input.`);
+  console.log(
+    `[coverage-floor] self-test ${cases.length}/${cases.length} — the gate can fail on a known-bad input.`,
+  );
 }
 
 // ---------------------------------------------------------------- sample minima
@@ -328,18 +352,19 @@ function selfTest() {
 
 function sampleMinima(dir) {
   const files = readdirSync(dir)
-    .filter((f) => f.endsWith('.json'))
+    .filter((f) => f.endsWith(".json"))
     .sort();
   if (files.length === 0) throw new Error(`no *.json run aggregates under ${dir}`);
   const mins = {};
   for (const f of files) {
-    const run = JSON.parse(readFileSync(join(dir, f), 'utf8'));
+    const run = JSON.parse(readFileSync(join(dir, f), "utf8"));
     for (const [name, s] of Object.entries(run)) {
       mins[name] ??= { files: s.files, metrics: {} };
       for (const m of METRICS) {
         const pct = s[m].pct;
         const cur = mins[name].metrics[m];
-        if (cur === undefined || pct < cur.pct) mins[name].metrics[m] = { pct, covered: s[m].covered, total: s[m].total };
+        if (cur === undefined || pct < cur.pct)
+          mins[name].metrics[m] = { pct, covered: s[m].covered, total: s[m].total };
       }
     }
   }
@@ -364,7 +389,7 @@ if (!existsSync(args.floor)) {
   );
   process.exit(1);
 }
-const floorDoc = JSON.parse(readFileSync(args.floor, 'utf8'));
+const floorDoc = JSON.parse(readFileSync(args.floor, "utf8"));
 
 if (!existsSync(args.summary)) {
   console.error(
@@ -373,7 +398,7 @@ if (!existsSync(args.summary)) {
   );
   process.exit(1);
 }
-const summary = JSON.parse(readFileSync(args.summary, 'utf8'));
+const summary = JSON.parse(readFileSync(args.summary, "utf8"));
 
 const { scopes: derived, unclaimed } = aggregate(summary, floorDoc.scopes);
 
@@ -385,17 +410,21 @@ if (args.json) {
   for (const [name, s] of Object.entries(derived)) {
     out[name] = { files: s.files };
     for (const m of METRICS) {
-      out[name][m] = { covered: s.metrics[m].covered, total: s.metrics[m].total, pct: s.metrics[m].pct };
+      out[name][m] = {
+        covered: s.metrics[m].covered,
+        total: s.metrics[m].total,
+        pct: s.metrics[m].pct,
+      };
     }
   }
-  process.stdout.write(JSON.stringify(out) + '\n');
+  process.stdout.write(JSON.stringify(out) + "\n");
   process.exit(0);
 }
 
 const { breaches, structural, rows } = compare(derived, floorDoc);
 
 console.log(renderTable(rows));
-console.log('');
+console.log("");
 
 if (unclaimed.length) {
   console.error(
@@ -418,35 +447,42 @@ if (args.writeFloor) {
     process.exit(2);
   }
   let source = derived;
-  let sampleMeta = { method: 'single-run', n: 1 };
+  let sampleMeta = { method: "single-run", n: 1 };
   if (args.samples) {
     const { mins, n, files } = sampleMinima(args.samples);
     source = mins;
-    sampleMeta = { method: 'min-over-samples', n, runs: files };
+    sampleMeta = { method: "min-over-samples", n, runs: files };
   }
   const next = JSON.parse(JSON.stringify(floorDoc));
   const lowered = [];
   for (const [name, def] of Object.entries(next.scopes)) {
     const got = source[name];
-    if (!got || (got.files === 0 && name !== 'TOTAL')) continue;
+    if (!got || (got.files === 0 && name !== "TOTAL")) continue;
     for (const m of METRICS) {
       const was = def[m];
       const now = floor2(got.metrics[m].pct);
-      if (typeof was === 'number' && now < was) lowered.push(`${name}.${m}: ${was} -> ${now}`);
+      if (typeof was === "number" && now < was)
+        lowered.push(`${name}.${m}: ${was} -> ${now}`);
       def[m] = now;
     }
     def.files = got.files;
   }
   next.sample = sampleMeta;
   if (lowered.length && !args.allowLower) {
-    console.error(`[coverage-floor] --write-floor REFUSED: ${lowered.length} figure(s) would drop:`);
+    console.error(
+      `[coverage-floor] --write-floor REFUSED: ${lowered.length} figure(s) would drop:`,
+    );
     for (const l of lowered) console.error(`  - ${l}`);
-    console.error(`  Lowering a floor is a re-baseline. Pass --allow-lower "<reason>" and record it in the wave.`);
+    console.error(
+      `  Lowering a floor is a re-baseline. Pass --allow-lower "<reason>" and record it in the wave.`,
+    );
     process.exit(1);
   }
   if (lowered.length) next.loweredAt = { reason: args.allowLower, figures: lowered };
-  writeFileSync(args.floor, JSON.stringify(next, null, 2) + '\n');
-  console.log(`[coverage-floor] floor re-baked -> ${relative(FRONTEND_ROOT, args.floor)}`);
+  writeFileSync(args.floor, JSON.stringify(next, null, 2) + "\n");
+  console.log(
+    `[coverage-floor] floor re-baked -> ${relative(FRONTEND_ROOT, args.floor)}`,
+  );
   process.exit(0);
 }
 
@@ -460,13 +496,13 @@ if (breaches.length) {
   console.error(`[coverage-floor] FLOOR BREACH (${breaches.length}):`);
   for (const b of breaches) {
     console.error(
-      `  - ${b.scope}.${b.metric}: ${pct(b.have)} < floor ${pct(b.want)} (${b.delta >= 0 ? '+' : ''}${b.delta.toFixed(2)} pts)`,
+      `  - ${b.scope}.${b.metric}: ${pct(b.have)} < floor ${pct(b.want)} (${b.delta >= 0 ? "+" : ""}${b.delta.toFixed(2)} pts)`,
     );
   }
 }
 if (structural.length || breaches.length || unclaimed.length) {
   console.error(
-    `\n[coverage-floor] RED. The floor is the T5-W1.14 baseline (${floorDoc.derivedFrom?.head ?? 'unpinned'}); ` +
+    `\n[coverage-floor] RED. The floor is the T5-W1.14 baseline (${floorDoc.derivedFrom?.head ?? "unpinned"}); ` +
       `W2's collapse must clear it, not re-cut it.`,
   );
   process.exit(1);
@@ -474,5 +510,5 @@ if (structural.length || breaches.length || unclaimed.length) {
 
 console.log(
   `[coverage-floor] GREEN — ${rows.length} scopes at or above the W1.14 baseline ` +
-    `(bank: ${floorDoc.derivedFrom?.head ?? 'unpinned'}, ${floorDoc.derivedFrom?.date ?? 'undated'}).`,
+    `(bank: ${floorDoc.derivedFrom?.head ?? "unpinned"}, ${floorDoc.derivedFrom?.date ?? "undated"}).`,
 );

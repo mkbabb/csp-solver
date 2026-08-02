@@ -32,21 +32,21 @@
 // Run: `node scripts/check-golden-bytes.mjs` (npm run test:golden:bytes).
 // GOLDEN_CHECK_ROOT=<dir> reroots the scan for CANARY runs only; the banner says so.
 
-import { Buffer } from 'node:buffer';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { execFileSync } from 'node:child_process';
-import { crc32, inflateSync } from 'node:zlib';
-import process from 'node:process';
+import { Buffer } from "node:buffer";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
+import { crc32, inflateSync } from "node:zlib";
+import process from "node:process";
 
-const DEFAULT_ROOT = fileURLToPath(new URL('..', import.meta.url));
+const DEFAULT_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const CANARY_ROOT = process.env.GOLDEN_CHECK_ROOT;
 const FRONTEND_ROOT = CANARY_ROOT ? resolve(CANARY_ROOT) : DEFAULT_ROOT;
 
-const E2E_DIR = join(FRONTEND_ROOT, 'e2e');
-const GOLDENS_DIR = join(E2E_DIR, 'goldens');
-const GOLDEN_CONFIG = join(FRONTEND_ROOT, 'playwright-golden.config.ts');
+const E2E_DIR = join(FRONTEND_ROOT, "e2e");
+const GOLDENS_DIR = join(E2E_DIR, "goldens");
+const GOLDEN_CONFIG = join(FRONTEND_ROOT, "playwright-golden.config.ts");
 
 // Per-image cap — EVIDENCE-POLICY. Never raise it: a golden that can't clear 150 KB is
 // capturing too much frame (recrop to the asserted surface).
@@ -74,7 +74,7 @@ const MIN_IMAGE_BYTES = 1024;
 
 // The two platforms the campaign mints ({platform} in snapshotPathTemplate is
 // process.platform; darwin = the dev host, linux = every CI runner).
-const PLATFORMS = ['darwin', 'linux'];
+const PLATFORMS = ["darwin", "linux"];
 
 const rel = (p) => relative(FRONTEND_ROOT, p) || p;
 const kb = (b) => `${(b / 1024).toFixed(1)} KB`;
@@ -86,13 +86,13 @@ function collectPngs(dir) {
   try {
     entries = readdirSync(dir, { withFileTypes: true });
   } catch (err) {
-    if (err.code === 'ENOENT') return out;
+    if (err.code === "ENOENT") return out;
     throw err;
   }
   for (const e of entries) {
     const p = join(dir, e.name);
     if (e.isDirectory()) out = out.concat(collectPngs(p));
-    else if (e.isFile() && e.name.endsWith('.png')) out.push(p);
+    else if (e.isFile() && e.name.endsWith(".png")) out.push(p);
   }
   return out;
 }
@@ -101,23 +101,26 @@ function collectPngs(dir) {
  *  Throws with the reason on the first structural defect. Returns the geometry. */
 function decodePng(buf) {
   const SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-  if (buf.length < 8 || !buf.subarray(0, 8).equals(SIG)) throw new Error('bad PNG signature');
+  if (buf.length < 8 || !buf.subarray(0, 8).equals(SIG))
+    throw new Error("bad PNG signature");
   let off = 8;
   let ihdr = null;
   let iend = false;
   const idat = [];
   while (off + 8 <= buf.length) {
     const len = buf.readUInt32BE(off);
-    const type = buf.toString('ascii', off + 4, off + 8);
+    const type = buf.toString("ascii", off + 4, off + 8);
     const dataStart = off + 8;
     const dataEnd = dataStart + len;
     if (dataEnd + 4 > buf.length) {
-      throw new Error(`truncated at chunk ${type} (declares ${len} B, ${buf.length - dataStart} B left)`);
+      throw new Error(
+        `truncated at chunk ${type} (declares ${len} B, ${buf.length - dataStart} B left)`,
+      );
     }
     if (buf.readUInt32BE(dataEnd) !== crc32(buf.subarray(off + 4, dataEnd))) {
       throw new Error(`CRC mismatch in chunk ${type}`);
     }
-    if (type === 'IHDR') {
+    if (type === "IHDR") {
       if (len !== 13) throw new Error(`IHDR is ${len} B, expected 13`);
       ihdr = {
         width: buf.readUInt32BE(dataStart),
@@ -126,15 +129,17 @@ function decodePng(buf) {
         colorType: buf[dataStart + 9],
         interlace: buf[dataStart + 12],
       };
-    } else if (type === 'IDAT') idat.push(buf.subarray(dataStart, dataEnd));
-    else if (type === 'IEND') iend = true;
+    } else if (type === "IDAT") idat.push(buf.subarray(dataStart, dataEnd));
+    else if (type === "IEND") iend = true;
     off = dataEnd + 4;
   }
-  if (!ihdr) throw new Error('no IHDR chunk');
-  if (!ihdr.width || !ihdr.height) throw new Error(`zero geometry ${ihdr.width}×${ihdr.height}`);
-  if (idat.length === 0) throw new Error('no IDAT chunk (no pixel data)');
-  if (!iend) throw new Error('no IEND chunk (file truncated)');
-  if (off !== buf.length) throw new Error(`${buf.length - off} trailing byte(s) after IEND`);
+  if (!ihdr) throw new Error("no IHDR chunk");
+  if (!ihdr.width || !ihdr.height)
+    throw new Error(`zero geometry ${ihdr.width}×${ihdr.height}`);
+  if (idat.length === 0) throw new Error("no IDAT chunk (no pixel data)");
+  if (!iend) throw new Error("no IEND chunk (file truncated)");
+  if (off !== buf.length)
+    throw new Error(`${buf.length - off} trailing byte(s) after IEND`);
 
   let raw;
   try {
@@ -149,7 +154,9 @@ function decodePng(buf) {
     const stride = Math.ceil((ihdr.width * channels * ihdr.bitDepth) / 8);
     const expect = ihdr.height * (stride + 1);
     if (raw.length !== expect) {
-      throw new Error(`inflated ${raw.length} B, expected ${expect} B (incomplete image)`);
+      throw new Error(
+        `inflated ${raw.length} B, expected ${expect} B (incomplete image)`,
+      );
     }
   }
   return ihdr;
@@ -164,12 +171,14 @@ function parseGoldenName(file) {
 // ── Scan ────────────────────────────────────────────────────────────
 if (CANARY_ROOT) {
   console.log(`[golden-bytes] CANARY ROOT OVERRIDE — scanning ${FRONTEND_ROOT}`);
-  console.log('[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.\n');
+  console.log(
+    "[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.\n",
+  );
 }
 
 const allPngs = collectPngs(E2E_DIR).sort();
-const goldens = allPngs.filter((p) => p.startsWith(GOLDENS_DIR + '/'));
-const fossils = allPngs.filter((p) => !p.startsWith(GOLDENS_DIR + '/'));
+const goldens = allPngs.filter((p) => p.startsWith(GOLDENS_DIR + "/"));
+const fossils = allPngs.filter((p) => !p.startsWith(GOLDENS_DIR + "/"));
 
 if (allPngs.length === 0) {
   // No goldens is not a pass to celebrate — flag it so a wiped/gitignored goldens dir
@@ -191,14 +200,14 @@ for (const p of goldens) {
   const bytes = statSync(p).size;
   goldenBytes += bytes;
   const notes = [];
-  let verdict = 'ok  ';
+  let verdict = "ok  ";
   if (bytes > PER_IMAGE_CEILING) {
-    verdict = 'FAIL';
+    verdict = "FAIL";
     notes.push(`over the ${kb(PER_IMAGE_CEILING)} per-image ceiling`);
     failures.push(`per-image ceiling: ${rel(p)} is ${kb(bytes)}`);
   }
   if (bytes < MIN_IMAGE_BYTES) {
-    verdict = 'FAIL';
+    verdict = "FAIL";
     notes.push(`under the ${kb(MIN_IMAGE_BYTES)} blank-capture floor`);
     failures.push(`blank-capture floor: ${rel(p)} is ${bytes} B`);
   }
@@ -207,11 +216,11 @@ for (const p of goldens) {
     decoded.set(p, ihdr);
     notes.push(`${ihdr.width}×${ihdr.height}`);
   } catch (err) {
-    verdict = 'FAIL';
+    verdict = "FAIL";
     notes.push(`DECODE: ${err.message}`);
     failures.push(`decode: ${rel(p)} — ${err.message}`);
   }
-  rows.push(`  ${verdict}  ${kb(bytes).padStart(9)}  ${rel(p)}  [${notes.join('; ')}]`);
+  rows.push(`  ${verdict}  ${kb(bytes).padStart(9)}  ${rel(p)}  [${notes.join("; ")}]`);
 }
 
 const fossilBytes = fossils.reduce((s, p) => s + statSync(p).size, 0);
@@ -221,7 +230,7 @@ console.log(
   `[golden-bytes] ${goldens.length} golden(s) + ${fossils.length} unsanctioned PNG(s) under ` +
     `${rel(E2E_DIR)}\n` +
     `  estate total  ${kb(totalBytes).padStart(9)}  (goldens ${kb(goldenBytes)}` +
-    `${fossils.length ? `, unsanctioned ${kb(fossilBytes)}` : ''})\n` +
+    `${fossils.length ? `, unsanctioned ${kb(fossilBytes)}` : ""})\n` +
     `  estate band   ${kb(TOTAL_CEILING).padStart(9)}  ` +
     (totalBytes <= TOTAL_CEILING
       ? `(headroom ${kb(TOTAL_CEILING - totalBytes)} = ` +
@@ -241,8 +250,11 @@ if (totalBytes > TOTAL_CEILING) {
 
 // ── 3 · fossils ─────────────────────────────────────────────────────
 if (fossils.length > 0) {
-  console.log(`\n[golden-bytes] UNSANCTIONED — ${fossils.length} *.png outside ${rel(GOLDENS_DIR)}:`);
-  for (const p of fossils) console.log(`  FAIL  ${kb(statSync(p).size).padStart(9)}  ${rel(p)}`);
+  console.log(
+    `\n[golden-bytes] UNSANCTIONED — ${fossils.length} *.png outside ${rel(GOLDENS_DIR)}:`,
+  );
+  for (const p of fossils)
+    console.log(`  FAIL  ${kb(statSync(p).size).padStart(9)}  ${rel(p)}`);
   failures.push(
     `fossils: ${fossils.length} *.png outside ${rel(GOLDENS_DIR)} (${kb(fossilBytes)}) — ` +
       `auto-written baselines no config reads`,
@@ -251,11 +263,11 @@ if (fossils.length > 0) {
 
 // ── 5 · pairing + orphans ───────────────────────────────────────────
 const specFiles = readdirSync(E2E_DIR, { withFileTypes: true })
-  .filter((e) => e.isFile() && e.name.endsWith('.spec.ts'))
+  .filter((e) => e.isFile() && e.name.endsWith(".spec.ts"))
   .map((e) => join(E2E_DIR, e.name));
 const asserted = new Map(); // golden base → [spec:line, …]
 for (const f of specFiles) {
-  const lines = readFileSync(f, 'utf8').split('\n');
+  const lines = readFileSync(f, "utf8").split("\n");
   lines.forEach((line, i) => {
     for (const m of line.matchAll(/toHaveScreenshot\(\s*['"`]([^'"`]+)\.png['"`]/g)) {
       const at = `${rel(f)}:${i + 1}`;
@@ -266,7 +278,7 @@ for (const f of specFiles) {
 
 const onDisk = new Map(); // base → Set(platform)
 for (const p of goldens) {
-  const parsed = parseGoldenName(p.split('/').pop());
+  const parsed = parseGoldenName(p.split("/").pop());
   if (!parsed) {
     failures.push(`malformed name: ${rel(p)} carries no -{platform} suffix`);
     continue;
@@ -275,23 +287,28 @@ for (const p of goldens) {
   onDisk.get(parsed.base).add(parsed.platform);
 }
 
-console.log(`\n[golden-bytes] pairing + consumers (${specFiles.length} spec file(s) grepped):`);
+console.log(
+  `\n[golden-bytes] pairing + consumers (${specFiles.length} spec file(s) grepped):`,
+);
 for (const [base, plats] of [...onDisk].sort()) {
   const missing = PLATFORMS.filter((pl) => !plats.has(pl));
   const consumers = asserted.get(base) ?? [];
   const bad = missing.length > 0 || consumers.length === 0;
   console.log(
-    `  ${bad ? 'FAIL' : 'ok  '}  ${base}  [${[...plats].sort().join(', ')}]  ` +
-      `${consumers.length ? `→ ${consumers.join(', ')}` : '→ NO CONSUMING SPEC'}` +
-      `${missing.length ? `  MISSING: ${missing.join(', ')}` : ''}`,
+    `  ${bad ? "FAIL" : "ok  "}  ${base}  [${[...plats].sort().join(", ")}]  ` +
+      `${consumers.length ? `→ ${consumers.join(", ")}` : "→ NO CONSUMING SPEC"}` +
+      `${missing.length ? `  MISSING: ${missing.join(", ")}` : ""}`,
   );
-  if (missing.length > 0) failures.push(`pairing: ${base} has no ${missing.join('/')} baseline`);
+  if (missing.length > 0)
+    failures.push(`pairing: ${base} has no ${missing.join("/")} baseline`);
   if (consumers.length === 0) failures.push(`orphan: ${base} is asserted by no spec`);
 }
 for (const [name, at] of asserted) {
   if (!onDisk.has(name)) {
-    console.log(`  FAIL  ${name}  [no files]  → ${at.join(', ')}`);
-    failures.push(`missing baseline: ${at.join(', ')} asserts ${name}.png, which is not on disk`);
+    console.log(`  FAIL  ${name}  [no files]  → ${at.join(", ")}`);
+    failures.push(
+      `missing baseline: ${at.join(", ")} asserts ${name}.png, which is not on disk`,
+    );
   }
 }
 
@@ -301,26 +318,30 @@ for (const [name, at] of asserted) {
 let tracked = null;
 try {
   tracked = new Set(
-    execFileSync('git', ['ls-files', '--', rel(GOLDENS_DIR)], {
+    execFileSync("git", ["ls-files", "--", rel(GOLDENS_DIR)], {
       cwd: FRONTEND_ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
     })
-      .split('\n')
+      .split("\n")
       .filter(Boolean)
-      .map((p) => p.split('/').pop()),
+      .map((p) => p.split("/").pop()),
   );
 } catch {
-  console.log('\n[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.');
+  console.log(
+    "\n[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.",
+  );
 }
 if (tracked) {
-  const untracked = goldens.map((p) => p.split('/').pop()).filter((n) => !tracked.has(n));
+  const untracked = goldens
+    .map((p) => p.split("/").pop())
+    .filter((n) => !tracked.has(n));
   console.log(
     `\n[golden-bytes] tracked-ness: ${tracked.size} tracked / ${goldens.length} on disk` +
-      `${untracked.length ? ` — UNTRACKED: ${untracked.join(', ')}` : ''}`,
+      `${untracked.length ? ` — UNTRACKED: ${untracked.join(", ")}` : ""}`,
   );
   if (untracked.length > 0) {
-    failures.push(`untracked: ${untracked.join(', ')} exist(s) on disk but not in git`);
+    failures.push(`untracked: ${untracked.join(", ")} exist(s) on disk but not in git`);
   }
 }
 
@@ -332,16 +353,16 @@ if (tracked) {
 try {
   // Comments first: the config's own engine ARGUMENT names both keys in prose, and a guard
   // that reds on its own rationale is a guard nobody keeps.
-  const cfg = readFileSync(GOLDEN_CONFIG, 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|\s)\/\/.*$/gm, '$1');
+  const cfg = readFileSync(GOLDEN_CONFIG, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|\s)\/\/.*$/gm, "$1");
   const declaresEngines = /^\s*(projects\s*:|browserName\s*:)/m.test(cfg);
   const templated = /snapshotPathTemplate\s*:.*\{projectName\}/.test(cfg);
   const status = declaresEngines
     ? templated
-      ? 'ok   multi-engine + {projectName}'
-      : 'FAIL engine declared without {projectName}'
-    : 'ok   single implicit engine (chromium), no {projectName} needed';
+      ? "ok   multi-engine + {projectName}"
+      : "FAIL engine declared without {projectName}"
+    : "ok   single implicit engine (chromium), no {projectName} needed";
   console.log(`\n[golden-bytes] engine/template: ${status}  (${rel(GOLDEN_CONFIG)})`);
   if (declaresEngines && !templated) {
     failures.push(
@@ -350,7 +371,9 @@ try {
     );
   }
 } catch (err) {
-  console.log(`\n[golden-bytes] engine/template: UNREADABLE ${rel(GOLDEN_CONFIG)} — ${err.message}`);
+  console.log(
+    `\n[golden-bytes] engine/template: UNREADABLE ${rel(GOLDEN_CONFIG)} — ${err.message}`,
+  );
   failures.push(`engine collision: cannot read ${rel(GOLDEN_CONFIG)}`);
 }
 

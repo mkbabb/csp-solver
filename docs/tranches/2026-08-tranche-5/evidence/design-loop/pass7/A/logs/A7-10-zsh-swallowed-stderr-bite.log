@@ -1,0 +1,29 @@
+AUDIT 2026-08-02T11:00:13Z · host darwin · sha 4b28f034 · shell zsh 5.9 · harness NONE (git object read, no server)
+cmd: zsh rig/swallowed-stderr-bite.zsh
+subject: .guard-note's horizontal padding rule, the constant the pass-6 reconciliation rests on
+pattern: padding: 0.75rem 0.85rem 0.9rem
+path:    web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+
+ref 236d22fe   BITE(2>/dev/null) = 0   CURE(braced) = 1
+ref 94ce993e   BITE(2>/dev/null) = 0   CURE(braced) = 1
+ref c6eda619   BITE(2>/dev/null) = 0   CURE(braced) = 1
+ref 3969f512   BITE(2>/dev/null) = 0   CURE(braced) = 1
+ref abe533c4   BITE(2>/dev/null) = 0   CURE(braced) = 1
+
+── WHAT THE DISCARD THREW AWAY (same command, stderr kept) ──
+ref 236d22fe   fatal: ambiguous argument 'b/frontend/src/pencil/chrome/GameGallery/GameGallery.vue': unknown revision or path not in the working tree.
+ref 94ce993e   fatal: ambiguous argument 'b/frontend/src/pencil/chrome/GameGallery/GameGallery.vue': unknown revision or path not in the working tree.
+ref c6eda619   fatal: ambiguous argument 'b/frontend/src/pencil/chrome/GameGallery/GameGallery.vue': unknown revision or path not in the working tree.
+ref 3969f512   fatal: ambiguous argument 'b/frontend/src/pencil/chrome/GameGallery/GameGallery.vue': unknown revision or path not in the working tree.
+ref abe533c4   fatal: ambiguous argument 'b/frontend/src/pencil/chrome/GameGallery/GameGallery.vue': unknown revision or path not in the working tree.
+
+── FALSIFIER: the CURE arm on a path that does not exist at the ref ──
+ref 236d22fe   CURE(ghost path) = 0
+ref 94ce993e   CURE(ghost path) = 0
+ref c6eda619   CURE(ghost path) = 0
+ref 3969f512   CURE(ghost path) = 0
+ref abe533c4   CURE(ghost path) = 0
+
+GATE  the bite is LIVE on this shell (BITE 0 on every ref where the true count is 1): PASS
+GATE  the cure discriminates (ghost path reads 0, real path reads 1):                 PASS
+EXIT=0

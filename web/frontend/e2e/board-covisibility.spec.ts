@@ -274,13 +274,37 @@ test.describe("mark 6 — the band dissolves", () => {
     // pass 6 — THE CONTROL'S TWO ARMS PART COMPANY, and the reason is the fold itself.
     // `ctrlPush` is unchanged in meaning and in magnitude: an in-flow vignette shoves the band
     // under the board by its own height, and that is the defect this row watches. `docGrowth`
-    // is now CLAMPED — the document is exactly one viewport at rest, so the first
-    // `innerHeight − content` px of anything arriving in flow are absorbed by the clamp before
-    // `scrollHeight` moves at all. Measured 41 on this build, both engines, against 109 of
-    // real push. Kept as a floor rather than deleted (the page must still be seen to grow),
-    // lowered to what the clamp leaves, and the reason is written here rather than the number
-    // being quietly re-cut.
-    expect(c.docGrowth).toBeGreaterThan(0);
+    // is CLAMPED, so it reads smaller than the push and cannot carry the same floor.
+    //
+    // T5-W4 pass 7 (L6-G4) — THE FLOOR IS RE-CUT FROM MEASUREMENT, and the pass-6 numbers it
+    // replaces are wrong rather than merely superseded. Pass 6 wrote "measured 41 on this
+    // build, both engines, against 109 of real push" and set the floor to `> 0`. Re-derived at
+    // this row's own context (COARSE 390×664, the sealed dist, 6 reps per engine —
+    // `pass7/F3/rig/docgrowth2.mjs`, `logs/docgrowth-COARSE.log`): the control arm reads
+    // **docGrowth 61 chromium / 60 webkit against ctrlPush 123.53 on both**. Neither 41 nor
+    // 109 reproduces, and the quantity is engine-split where pass 6 called it identical. The
+    // reps are exact — 61/61/61/61/61/61 and 60/60/60/60/60/60 — so this is a layout constant,
+    // not a sample.
+    //
+    // The clamp's mechanism, since pass 6 named the wrong one (`pass7/F3/rig/absorber.mjs`):
+    // the doc is ALREADY exactly one viewport at rest (scrollHeight 664 ≡ innerHeight, slack
+    // 0), so there is no doc slack to absorb anything. What absorbs is the fold column's own
+    // headroom — `#fold-tools` rests with its bottom at 601.16, i.e. **62.84px above the
+    // viewport floor**, and the scene box stays 664 through the whole probe. The push moves
+    // the band 123.53 down; the first 62.84 of that travel merely spends the headroom, and
+    // only the remainder reaches `scrollHeight`: 123.53 − 62.84 = 60.69, which is the 61/60
+    // measured. So `docGrowth` is `push − headroom`, and both terms are layout constants.
+    //
+    // FLOOR = half the measured minimum, rounded down: 60 / 2 = 30. That is the same
+    // discipline the sibling assertion below already uses (`ctrlPush > 50` against a measured
+    // 123.53), applied to a quantity two-thirds the size. `> 0` was defensible only as a
+    // disclosure that nobody had measured the clamp; the clamp is measured now, so the weakest
+    // possible threshold is no longer the honest one. Born-RED at the re-cut
+    // (`pass7/F3/rig/bornred.mjs`, `logs/docgrowth-BORN-RED.log`): forcing the vignette to
+    // `height: 80px` (drawn 89.46, push 80) drops the control to **docGrowth 17 on both
+    // engines** — this line REDS and the pass-6 `> 0` floor still PASSES. That gap is exactly
+    // the discriminating power the pass-6 floor had given away.
+    expect(c.docGrowth).toBeGreaterThan(30);
     expect(c.ctrlPush).toBeGreaterThan(50);
   });
 

@@ -1,0 +1,78 @@
+AUDIT 2026-08-02T11:04:18Z · host darwin · sha 4b28f034 · harness NONE (grep over the tracked tree)
+cmd: git grep -n '2>/dev/null' -- <in-repo instrument surfaces>
+purpose: price the mechanization the new PRECEPTS §2 row does NOT ship with (A7-G3).
+
+── every tracked in-repo line that silences stderr ──
+csp-solver/benches/iai_gate.sh:52:    echo "----- ${RUN_LOG} tail -----"; tail -40 "$RUN_LOG" 2>/dev/null || true
+csp-solver/scripts/bench-compare.sh:21:    git worktree remove "$BASE_WT" --force 2>/dev/null || true
+csp-solver/scripts/bench-compare.sh:22:    git worktree remove "$HEAD_WT" --force 2>/dev/null || true
+csp-solver/scripts/bench-compare.sh:30:git worktree add "$BASE_WT" "$BASE_REF" 2>/dev/null
+csp-solver/scripts/bench-compare.sh:31:git worktree add "$HEAD_WT" "$HEAD_REF" 2>/dev/null
+docs/tranches/2026-07-tranche-4/evidence/w11/cen-census.sh:42:cloc "$ROOT/web/frontend/src/games/sudoku" --quiet 2>/dev/null | grep -iE 'SUM|Language|----' | sed 's/^/[sudoku]   /'
+docs/tranches/2026-07-tranche-4/evidence/w11/cen-census.sh:43:cloc "$ROOT/web/frontend/src/games/futoshiki" --quiet 2>/dev/null | grep -iE 'SUM' | sed 's/^/[futoshiki] /'
+docs/tranches/2026-07-tranche-4/evidence/w11/cen-census.sh:44:cloc "$ROOT/web/frontend/src/games/shared" --quiet 2>/dev/null | grep -iE 'SUM' | sed 's/^/[shared]    /'
+docs/tranches/2026-07-tranche-4/evidence/w11/cen-census.sh:47:  n=$(cloc "$ROOT/web/frontend/src/games/$d" --quiet --csv 2>/dev/null | awk -F, '/^[0-9]+,SUM/{print $5}')
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/measure/rig/run-sim.sh:28:UDID="$(xcrun simctl list devices 2>/dev/null | grep -F "${DEVICE}" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/measure/rig/run-sim.sh:34:STATE="$(xcrun simctl list devices 2>/dev/null | grep -F "${UDID}" | sed -E 's/.*\((Booted|Shutdown|Booting)\).*/\1/')"
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/measure/rig/run-sim.sh:39:  xcrun simctl boot "${UDID}" 2>/dev/null
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/measure/rig/run-sim.sh:59:PREV_APP="$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)"
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/measure/rig/run-sim.sh:75:  if [ "$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)" != "Simulator" ]; then
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/measure/rig/simq.sh:28:  if [ "$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)" != "Simulator" ]; then
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/stall/run-safari.sh:54:PREV_APP="$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)"
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/stall/run-safari.sh:86:FRONT_NOW="$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)"
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/stall/run-safari.sh:102:  if [ "$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)" != "Safari" ]; then
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/stall/run-safari.sh:128:( sleep 8; kill "${OSA}" 2>/dev/null ) >/dev/null 2>&1 &
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/stall/run-safari.sh:129:wait "${OSA}" 2>/dev/null || echo "(tab cleanup skipped — osascript refused or timed out)"
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/stall/simq.sh:28:  if [ "$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)" != "Simulator" ]; then
+scripts/dev.sh:38:    for child in $(pgrep -P "$pid" 2>/dev/null); do kill_tree "$child"; done
+scripts/dev.sh:39:    kill "$pid" 2>/dev/null || true
+scripts/dev.sh:50:    wait 2>/dev/null || true
+web/frontend/perf-rig/run-safari.sh:54:PREV_APP="$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)"
+web/frontend/perf-rig/run-safari.sh:80:FRONT_NOW="$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)"
+web/frontend/perf-rig/run-safari.sh:96:  if [ "$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)" != "Safari" ]; then
+web/frontend/perf-rig/run-safari.sh:122:( sleep 8; kill "${OSA}" 2>/dev/null ) >/dev/null 2>&1 &
+web/frontend/perf-rig/run-safari.sh:123:wait "${OSA}" 2>/dev/null || echo "(tab cleanup skipped — osascript refused or timed out)"
+web/frontend/perf-rig/run-sim.sh:28:UDID="$(xcrun simctl list devices 2>/dev/null | grep -F "${DEVICE}" | head -1 | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')"
+web/frontend/perf-rig/run-sim.sh:34:STATE="$(xcrun simctl list devices 2>/dev/null | grep -F "${UDID}" | sed -E 's/.*\((Booted|Shutdown|Booting)\).*/\1/')"
+web/frontend/perf-rig/run-sim.sh:39:  xcrun simctl boot "${UDID}" 2>/dev/null
+web/frontend/perf-rig/run-sim.sh:65:PREV_APP="$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)"
+web/frontend/perf-rig/run-sim.sh:81:  if [ "$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)" != "Simulator" ]; then
+  (rc=0 · 1 = no hits)
+
+── the same, whole tracked tree, count only ──
+  tracked lines carrying 2>/dev/null: 14
+  files above; the per-file lines:
+csp-solver/benches/iai_gate.sh:1
+csp-solver/scripts/bench-compare.sh:4
+docs/tranches/2026-07-tranche-4/evidence/w11/cen-census.sh:4
+docs/tranches/2026-08-tranche-5/evidence/audit/r3/rust-gestalt.md:2
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/measure/rig/run-sim.sh:5
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/measure/rig/simq.sh:1
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/stall/run-safari.sh:5
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/stall/simq.sh:1
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass6-registry.md:2
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass6/A/A-report.md:3
+docs/tranches/PRECEPTS.md:2
+scripts/dev.sh:3
+web/frontend/perf-rig/run-safari.sh:5
+web/frontend/perf-rig/run-sim.sh:5
+  (rc=0 · 1 = no hits)
+
+── CLASSED: executable surfaces only (prose mentions excluded) ──
+  lines: 34
+  files: 10
+  of those, guarded by '|| true' / '|| echo' on the same line: 9
+  prose mentions in .md (this ruling's own text included): 9
+
+  THE ONE LINE WITH THE BITE'S SHAPE — a silenced stream feeding a COUNT:
+docs/tranches/2026-07-tranche-4/evidence/w11/cen-census.sh:47:  n=$(cloc "$ROOT/web/frontend/src/games/$d" --quiet --csv 2>/dev/null | awk -F, '/^[0-9]+,SUM/{print $5}')
+    failure mode: cloc absent -> n empty -> 'code=' prints blank. A HOLE, not a confident zero.
+  UNGUARDED, but not number-bearing:
+csp-solver/scripts/bench-compare.sh:30:git worktree add "$BASE_WT" "$BASE_REF" 2>/dev/null
+csp-solver/scripts/bench-compare.sh:31:git worktree add "$HEAD_WT" "$HEAD_REF" 2>/dev/null
+    the script's own guard: 10:set -euo pipefail
+    -> a failed add ABORTS; the discard costs the diagnosis, never the number.
+
+VERDICT: no live confident-zero instance in the tracked tree. The §2 row is PREVENTIVE, and
+the census is what prices its mechanization (A7-G3).
+EXIT=0

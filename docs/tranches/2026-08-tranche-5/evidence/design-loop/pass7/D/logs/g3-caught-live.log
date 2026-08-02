@@ -1,0 +1,18 @@
+AUDIT: D7-2b D6-G3 CAUGHT LIVE — the class demonstrated itself inside this lane's session
+AUDIT: host darwin 25.4.0 · date 2026-08-02T11:06:08Z
+
+At 11:00:00Z this lane listed web/frontend/dist: every top-level file stamped 05:27.
+At 11:05:46Z the same dist read:
+
+AUDIT: build-identity — dist entry index-Cr-QIa0O4Gc3.js · index.html md5 82d4bd20543f6228612a3d24df342e9f · 39 files / 722.4 KB · newest mtime 2026-08-02T11:03:41.021Z
+
+newest mtime 11:03:41 — a CONCURRENT lane rebuilt web/frontend/dist between this lane's
+two readings, on a tree this lane never built and does not own. No notice, no stamp, no
+way to tell from the directory which tree it holds. That is D6-G3's class reproducing
+itself unprompted, five minutes apart, while the row about it was being closed.
+
+The current entry chunk, for the record:
+/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/dist/assets/index-Cr-QIa0O4Gc3.js
+
+(This lane measured NOTHING against this dist. The stamp exists so the next lane that
+does can say which tree it measured.)

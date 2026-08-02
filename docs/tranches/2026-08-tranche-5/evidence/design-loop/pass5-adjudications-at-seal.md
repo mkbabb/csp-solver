@@ -31,14 +31,26 @@ in pass 6 may write "cured" of mark 3.
 
 ## 2 · BC5-G2 — the hollow dists
 
-All 23 banked `dist-*` directories in the design-loop evidence hold `_headers`+`_redirects`
+~~All 23~~ **[RESTAMPED 2026-08-02 — D6-G4, pass-7 lane D: **29 banks / 25 hollow / 4 full**.
+The ruling's substance is untouched; its integer moves, and the correction is worth its ink
+because the count was low AND undifferentiated. Re-derived twice independently — by the pass-6
+audit, and here by filesystem walk (`find … -type d -name 'dist-*'`, classified on whether
+`assets/index-*.js` exists): 29 `dist-*` directories under the design-loop evidence, of which
+**25 are hollow and every one of them is from passes 2–4**, and **4 are full and every one of
+them is from pass 5** — `pass5/BC/rig/dist-head`, `pass5/f3/dist-p5ablate`, `dist-p5base`,
+`dist-p5head`. So the hollowness is not a scatter, it is a CLEAN BREAK at the pass-5 boundary,
+which is the fact the flat "23" concealed: the estate stopped losing payloads exactly when
+pass 5 started `.tar.gz`-ing them, and the four survivors are the four that prove the new
+policy already works. Ledger: `…/pass7/D/logs/g4-dist-census.log`]** banked `dist-*` directories
+in the design-loop evidence hold `_headers`+`_redirects`
 and no build — `.gitignore`'s dist rule ate every payload at commit time. RULING: the passes'
 md5/identity claims stand as **testimony** — their conclusions were independently re-confirmed
 by later fresh builds (pass 5 rebuilt and re-measured every figure it relied on) — but their
 re-runnable evidence is GONE, and no future claim may cite those directories as proof.
 POLICY, born now: a banked dist ships as a `.tar.gz` with an md5 manifest, or the record says
 "testimony, artifact not banked" in place. `check-evidence-policy.mjs` grows this rule in
-pass 6 (order added), born-RED against one of the 23 hollow dirs. No re-litigation of passes
+pass 6 (order added), born-RED against one of the ~~23~~ **25 (D6-G4, same restamp)** hollow
+dirs. No re-litigation of passes
 2–4: re-deriving their conclusions is pass-6-audit work only where a live row depends on one.
 
 ## 3 · The smaller rows

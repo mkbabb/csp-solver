@@ -1,0 +1,55 @@
+doc-truth — 13 rows, every figure re-derived at run time
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+head  4b28f034
+node  v26.0.0 darwin/arm64
+when  2026-08-02T11:37:37.147Z
+
+GREEN  frontend-readme-two-games
+        derived: 5 games registered (sudoku, futoshiki, thermo, killer, kenken) · pencil-boil ^0.12.0 · lint script "prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/"
+
+GREEN  root-readme-e2e-counts
+        derived: 279 tests in 16 files (default) · 21 .spec.ts on disk · golden 4/1 · throttle 39/4
+
+GREEN  chromium-alone-claim
+        derived: playwright projects: chromium + webkit · ci installs: playwright install --with-deps chromium webkit; playwright install --with-deps chromium webkit; playwright install` is needed here — only the node_modules that carry the
+
+GREEN  lean-wasm-4-sites
+        derived: 121,137 B ← csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+
+GREEN  ci-band-comment-406
+        derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >127,500 B; lean artifact 121,137 B; canon-declared stale: 222,436 B (docs/benchmarks.md:56)
+
+GREEN  sudoku-md-sections
+        derived: games registered: sudoku, futoshiki, thermo, killer, kenken — each owed a section in docs/sudoku.md
+
+GREEN  ofl-licenses-figures
+        derived: 3 woff2 subsets, 21,724 B total (firacode-subset.woff2 3,624 B, fraunces-subset.woff2 13,788 B, patrickhand-subset.woff2 4,312 B) · OFL texts: OFL-FiraCode.txt, OFL-Fraunces.txt, OFL-PatrickHand.txt · paired true
+
+GREEN  install-pin-0.5
+        derived: csp-solver crate version 0.6.0 → Install pin "0.6" · consumer surfaces carry no outbound link into docs/precepts/
+
+RED    pencil-boil-0.9.2
+        derived: web/frontend/package.json dependencies["@mkbabb/pencil-boil"] = ^0.12.0
+        README.md:131
+          expected: pencil-boil ^0.12.0
+          got:      ^0.11.0 — | `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.11.0 (tagged `v0.11.0`; the `stop()` no-throw contract and `rasterizePoseToBlob()`) |
+        README.md:131
+          expected: pencil-boil ^0.12.0
+          got:      0.11.0 — | `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.11.0 (tagged `v0.11.0`; the `stop()` no-throw contract and `rasterizePoseToBlob()`) |
+        web/frontend/README.md:11
+          expected: pencil-boil ^0.12.0
+          got:      ^0.11.0 — [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil) `^0.11.0`. The motion
+
+GREEN  test-count-208-vs-204
+        derived: 208 native #[test] attributes (csp-solver/src + csp-solver/tests, comments elided) · 29 #[wasm_bindgen_test] in the wasm crate (cfg'd to wasm32, not host-run) · 28 test binaries (csp-solver + csp-solver/wasm lib targets + integration files)
+
+GREEN  make-wasm-recipe
+        derived: csp-solver/wasm/Makefile:33 runs --no-default-features --profile wasm-release --scope mkbabb --target web — LEAN; 5 families registered (sudoku, futoshiki, thermo, killer, kenken)
+
+GREEN  ci-lane-count
+        derived: 18 jobs in .github/workflows/ci.yml (lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, wasm-publish-dryrun, frontend, fe-unit, boundary, e2e, perf-subset, iai, cargo-audit, evidence-policy, doc-truth, npm-audit)
+
+GREEN  iai-golden-figure
+        derived: 1,529,452 instructions enforced ±2.0% — csp-solver/benches/iai_queens.baseline, gated by .github/workflows/ci.yml's iai lane over bench iai_queens
+
+1 RED / 12 GREEN — doc canon disagrees with the tree
