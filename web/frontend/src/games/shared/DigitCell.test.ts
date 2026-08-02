@@ -260,6 +260,66 @@ describe("DigitCell (boxed) — peer-unit wash (T4-W8 ROW 4)", () => {
   });
 });
 
+// The cell speaks ONCE (T5-W3 3.5). Everything the cell draws — glyph, ghost ring, both mark
+// systems, the peer and hint washes — is ink for the sighted reader; the value, the coordinates
+// and the conflict all ride the input's own name and `aria-invalid`. So every graphic in the
+// cell is decorative, and the gate is structural: no `<svg>` outside an `aria-hidden` subtree.
+// Born red by ablation on both cures (`evidence/w3/b1-grid-and-census/03-unit-red-ablation.txt`):
+// dropping the glyph's `aria-hidden` restored the double-announce, dropping the ghost's restored
+// 81 unnamed graphics a 9×9.
+describe("DigitCell — the cell announces itself once (T5-W3 3.5)", () => {
+  /** Is this node inside (or itself) an `aria-hidden` subtree, as the AX tree computes it? */
+  function hiddenFromAT(el: Element): boolean {
+    for (let n: Element | null = el; n; n = n.parentElement) {
+      if (n.getAttribute("aria-hidden") === "true") return true;
+    }
+    return false;
+  }
+
+  it("no graphic in the cell is published to the AX tree", () => {
+    const w = mountCell({
+      value: 5,
+      isGiven: true,
+      isPeer: true,
+      isBecause: true,
+      isInvalid: true,
+      ghostPath: "M0,0 L10,10",
+      cornerMarks: [],
+      centerMarks: [],
+    });
+    const published = w
+      .findAll("svg")
+      .filter((s) => !hiddenFromAT(s.element))
+      .map((s) => s.attributes("class") ?? "(unclassed)");
+    expect(published, "every cell graphic is decorative").toEqual([]);
+  });
+
+  it("the digit is spoken by the cell's name, and the glyph that draws it is hidden", () => {
+    const w = mountCell({ value: 5, isGiven: true });
+    expect(w.get("input").attributes("aria-label")).toContain("given clue 5");
+    // The glyph carries its own `aria-label` for the surfaces that have no name of their own
+    // (poster board, caret, logo); inside a NAMED gridcell it is a second utterance.
+    expect(w.get(".glyph-svg").attributes("aria-hidden")).toBe("true");
+  });
+
+  it("the ghost ring — the focus/hover/conflict ink — is decorative", () => {
+    // Its three states are already spoken: focus by the input, the conflict by `aria-invalid`.
+    const w = mountCell({ isInvalid: true, ghostPath: "M0,0 L10,10" });
+    expect(w.get(".cell-ghost").attributes("aria-hidden")).toBe("true");
+    expect(w.get("input").attributes("aria-invalid")).toBe("true");
+  });
+
+  it("an empty cell publishes no graphic either (the marks layers stay decorative)", () => {
+    const w = mountCell({
+      value: 0,
+      marks: [1, 2, 3],
+      cornerMarks: [4],
+      centerMarks: [7],
+    });
+    expect(w.findAll("svg").filter((s) => !hiddenFromAT(s.element))).toEqual([]);
+  });
+});
+
 // ── The Latin family (futoshiki / kenken) ────────────────────────────────────────────────
 // Everything above holds on a BOXED board; these are the four claims the retired
 // `FutoshikiCell.test.ts` made that the boxed suite cannot: the family class, the width bound

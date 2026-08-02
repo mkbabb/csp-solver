@@ -269,8 +269,11 @@ onUnmounted(() => {
     :aria-valuenow="progressPercent"
     :aria-valuetext="`board ${progressPercent}% filled`"
   ></div>
+  <!-- Decorative: the board's drawn rules. Its shape is already published by the grid's own
+       role/rowcount/colcount and by every cell's name (a11y r1 M6). -->
   <svg
     ref="svgRef"
+    aria-hidden="true"
     class="hand-drawn-grid"
     :viewBox="`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`"
     preserveAspectRatio="xMidYMid meet"

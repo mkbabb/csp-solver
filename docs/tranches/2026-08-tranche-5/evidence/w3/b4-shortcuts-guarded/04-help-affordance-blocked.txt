@@ -1,0 +1,72 @@
+T5-W3 lane B4 (row 3.4) — THE HELP AFFORDANCE: WHAT BLOCKS IT, MEASURED
+tip: 78448760 + this lane's diff
+instrument: a scratch Playwright inspection (not a spec — e2e/a11y.spec.ts is read-only), which
+  re-runs the probe's own three assertions against three page states. States A and B are
+  simulated IN THE PAGE, never on disk.
+
+THE FACT: the estate ALREADY publishes exactly one `keyboard shortcuts`-labelled surface —
+`<dl class="keyboard-legend" aria-label="Keyboard shortcuts">` (src/pencil/chrome/KeyboardLegend.vue,
+mounted at GameControlPanel.vue:895), live and AX-visible at 1280x800. The probe asserts
+`toHaveCount(1)`, so the row cannot be cured by ADDING a second named help: it has to be cured
+in the one that exists.
+
+LANE B4'S FILE FENCE names App.vue's keyboard handling + a NEW component. KeyboardLegend.vue is
+neither, and it is exactly where a11y r1 L10 lands (the redo chord it misstates), so another lane
+may hold it right now. The measurement below is the complaint, not a refusal to do the work.
+======================================================================
+THE ESTATE AT THIS COMMIT (the guards landed; the crib untouched)
+
+[0] as it stands
+  toHaveCount(1)      -> 1 PASS
+  axStrip([])         -> [] PASS
+  names k,g,h,p,d     -> missing ["g","d"] FAIL
+  text                -> "K\npeek\nH\nhint\nP\npencil\n⌘\n/\nCtrl\nZ\nundo\n⇧\nZ\nredo"
+  VERDICT RED
+
+WHO MATCHES: ["DL.keyboard-legend @ control-panel-wrap flex flex-col items-center md:items-stretch"] 
+
+[A] the crib names all five (KeyboardLegend.vue grows two rows)
+  toHaveCount(1)      -> 1 PASS
+  axStrip([])         -> [] PASS
+  names k,g,h,p,d     -> missing [] PASS
+  text                -> "K\npeek\nH\nhint\nP\npencil\n⌘\n/\nCtrl\nZ\nundo\n⇧\nZ\nredo\nG\ngames\nD\ndeal"
+  VERDICT GREEN
+
+[B] a new labelled help mounted alongside the crib
+  toHaveCount(1)      -> 2 FAIL
+  axStrip([])         -> [] PASS
+  names k,g,h,p,d     -> missing ["k","g","h","p","d"] FAIL
+  text                -> null
+  VERDICT RED
+
+SUMMARY: A=GREEN  B=RED
+
+======================================================================
+THE PATCH, VERBATIM — 6 lines, src/pencil/chrome/KeyboardLegend.vue
+======================================================================
+The crib stops hand-spelling the single-key rows and renders the table the GUARD reads, so the
+two can never again disagree about what exists (the estate's one-string principle; the guard's
+key set and the crib's prose become one source). The chorded undo/redo rows are untouched — they
+are a11y L10's business, and that row's cure and this one do not overlap.
+
+ <script setup lang="ts">
++import { SINGLE_KEY_SHORTCUTS } from "@/composables/useShortcutPolicy";
+ </script>
+
+ <template>
+   <dl class="keyboard-legend" aria-label="Keyboard shortcuts">
+-    <div class="legend-row"><dt><kbd>K</kbd></dt><dd>peek</dd></div>
+-    <div class="legend-row"><dt><kbd>H</kbd></dt><dd>hint</dd></div>
+-    <div class="legend-row"><dt><kbd>P</kbd></dt><dd>pencil</dd></div>
++    <div v-for="s in SINGLE_KEY_SHORTCUTS" :key="s.key" class="legend-row">
++      <dt><kbd>{{ s.key }}</kbd></dt>
++      <dd>{{ s.does }}</dd>
++    </div>
+     ... the two chorded rows (undo / redo) unchanged ...
+
+(`src/pencil/**` may not import `src/games/**`; `@/composables/*` is neither, so the boundary
+lint is unaffected — verified by `npm run lint:boundary` + `npx eslint .` at this tree.)
+
+WHAT THE PATCH COSTS IN PIXELS: two more rows in a 2-column grid inside the controls card. That
+is a real visual delta on a fine pointer, so whoever lands it runs the goldens; this lane's own
+diff moves nothing (script-only — see 06-static-gates.txt).

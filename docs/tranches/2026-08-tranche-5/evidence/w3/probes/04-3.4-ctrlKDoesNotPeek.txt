@@ -1,0 +1,139 @@
+T5-W3 PROBES — BORN-RED TRANSCRIPT
+tip: 78448760 — T5-W2 THE SEAL: the finisher's six rows land, the bake race re-pins, fourteen adjudications close the wave
+date: 2026-08-02T03:58:00Z
+spec: web/frontend/e2e/a11y.spec.ts
+config: playwright.config.ts (DEFAULT — projects chromium + webkit)
+runner: npx playwright test a11y.spec.ts --reporter=list
+server: vite dev on :4240 via PLAYWRIGHT_BASE_URL — :3000 is held by a foreign palette-api on this host
+playwright: 1.61.1
+======================================================================
+FAMILY: 3.4 ctrlKDoesNotPeek
+HEAD truth (r1 M4 / L10): window keydown with no modifier guard; the legend names K/H/P and neither G nor D.
+rows: 4 (2 tests x 2 engines) — ALL RED
+======================================================================
+
+  10) [chromium] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek 
+
+    Error: Control+k triggered the answer-key peek
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "announced": false,
+    -   "laminate": 0,
+    +   "announced": true,
+    +   "laminate": 1,
+      }
+
+      385 |       await page.waitForTimeout(600); // the laminate lays down on a rAF + transition
+      386 |       const state = await peekState(page);
+    > 387 |       expect(state, `${chord} triggered the answer-key peek`).toEqual({
+          |                                                               ^
+      388 |         laminate: 0,
+      389 |         announced: false,
+      390 |       });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:387:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-4-ctrlKDoesNotPeek--65000-trigger-the-single-key-peek-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-4-ctrlKDoesNotPeek--65000-trigger-the-single-key-peek-chromium/error-context.md
+
+
+  11) [chromium] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+
+    Error: shortcuts help omits g, d — it reads "K\npeek\nH\nhint\nP\npencil\n⌘\n/\nCtrl\nZ\nundo\n⇧\nZ\nredo"
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "g",
+    +   "d",
+    + ]
+
+      411 |       (key) => !new RegExp(`(^|[^a-z])${key}([^a-z]|$)`, 'i').test(text),
+      412 |     );
+    > 413 |     expect(missing, `shortcuts help omits ${missing.join(', ')} — it reads ${JSON.stringify(text)}`).toEqual(
+          |                                                                                                      ^
+      414 |       [],
+      415 |     );
+      416 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:413:102
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-chromium/error-context.md
+
+
+  25) [webkit] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek 
+
+    Error: Control+k triggered the answer-key peek
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "announced": false,
+    -   "laminate": 0,
+    +   "announced": true,
+    +   "laminate": 1,
+      }
+
+      385 |       await page.waitForTimeout(600); // the laminate lays down on a rAF + transition
+      386 |       const state = await peekState(page);
+    > 387 |       expect(state, `${chord} triggered the answer-key peek`).toEqual({
+          |                                                               ^
+      388 |         laminate: 0,
+      389 |         announced: false,
+      390 |       });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:387:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-4-ctrlKDoesNotPeek--65000-trigger-the-single-key-peek-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-4-ctrlKDoesNotPeek--65000-trigger-the-single-key-peek-webkit/error-context.md
+
+
+  26) [webkit] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+
+    Error: shortcuts help omits g, d — it reads "K\npeek\nH\nhint\nP\npencil\n⌘\n/\nCtrl\nZ\nundo\n⇧\nZ\nredo"
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "g",
+    +   "d",
+    + ]
+
+      411 |       (key) => !new RegExp(`(^|[^a-z])${key}([^a-z]|$)`, 'i').test(text),
+      412 |     );
+    > 413 |     expect(missing, `shortcuts help omits ${missing.join(', ')} — it reads ${JSON.stringify(text)}`).toEqual(
+          |                                                                                                      ^
+      414 |       [],
+      415 |     );
+      416 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:413:102
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-webkit/error-context.md
+

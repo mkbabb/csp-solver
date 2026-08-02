@@ -1,0 +1,131 @@
+T5-W3 PROBES — BORN-RED TRANSCRIPT
+tip: 78448760 — T5-W2 THE SEAL: the finisher's six rows land, the bake race re-pins, fourteen adjudications close the wave
+date: 2026-08-02T03:58:00Z
+spec: web/frontend/e2e/a11y.spec.ts
+config: playwright.config.ts (DEFAULT — projects chromium + webkit)
+runner: npx playwright test a11y.spec.ts --reporter=list
+server: vite dev on :4240 via PLAYWRIGHT_BASE_URL — :3000 is held by a foreign palette-api on this host
+playwright: 1.61.1
+======================================================================
+FAMILY: 3.6 stability
+Deal-variance law (evidence/w2/finisher/ax-mitigation.md): every gated figure is N, N^2 or zero; glyph totals are annotated, never asserted.
+rows: 4 (2 tests x 2 engines) — ALL RED
+======================================================================
+
+  14) [chromium] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total 
+
+    Error: 4×4: 4 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 4
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - 4×4: 4 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      499 |       expect(n, `?size=${size} deals an ${side}×${side} board`).toBe(side);
+      500 |       await expect(grid.getByRole('gridcell')).toHaveCount(n * n);
+    > 501 |       await expect(grid.getByRole('row'), `${side}×${side}: ${side} rows`).toHaveCount(n);
+          |                                                                            ^
+      502 |       expect((await imageCensus(page)).unnamed, `${side}×${side}: no unnamed graphics`).toBe(0);
+      503 |     }
+      504 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:501:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-6-stability-the-gri-c49bf-and-9×9-never-a-magic-total-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-6-stability-the-gri-c49bf-and-9×9-never-a-magic-total-chromium/error-context.md
+
+
+  15) [chromium] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) 
+
+    Error: deal A: N rows
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 9
+    Received: 0
+
+      556 |       ['deal B', b],
+      557 |     ] as const) {
+    > 558 |       expect(s.rows, `${label}: N rows`).toBe(s.n);
+          |                                          ^
+      559 |       expect(s.gridcells, `${label}: N² gridcells`).toBe(s.n * s.n);
+      560 |       expect(s.unnamedImages, `${label}: zero unnamed graphics`).toBe(0);
+      561 |       expect(s.namedInGrid, `${label}: zero digit echoes inside the grid`).toBe(0);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:558:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-6-stability-the-inv-7d76c-ant-figures-never-asserted--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-6-stability-the-inv-7d76c-ant-figures-never-asserted--chromium/error-context.md
+
+
+  29) [webkit] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total 
+
+    Error: 4×4: 4 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 4
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - 4×4: 4 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      499 |       expect(n, `?size=${size} deals an ${side}×${side} board`).toBe(side);
+      500 |       await expect(grid.getByRole('gridcell')).toHaveCount(n * n);
+    > 501 |       await expect(grid.getByRole('row'), `${side}×${side}: ${side} rows`).toHaveCount(n);
+          |                                                                            ^
+      502 |       expect((await imageCensus(page)).unnamed, `${side}×${side}: no unnamed graphics`).toBe(0);
+      503 |     }
+      504 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:501:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-6-stability-the-gri-c49bf-and-9×9-never-a-magic-total-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-6-stability-the-gri-c49bf-and-9×9-never-a-magic-total-webkit/error-context.md
+
+
+  30) [webkit] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) 
+
+    Error: deal A: N rows
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 9
+    Received: 0
+
+      556 |       ['deal B', b],
+      557 |     ] as const) {
+    > 558 |       expect(s.rows, `${label}: N rows`).toBe(s.n);
+          |                                          ^
+      559 |       expect(s.gridcells, `${label}: N² gridcells`).toBe(s.n * s.n);
+      560 |       expect(s.unnamedImages, `${label}: zero unnamed graphics`).toBe(0);
+      561 |       expect(s.namedInGrid, `${label}: zero digit echoes inside the grid`).toBe(0);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:558:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-6-stability-the-inv-7d76c-ant-figures-never-asserted--webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-6-stability-the-inv-7d76c-ant-figures-never-asserted--webkit/error-context.md
+

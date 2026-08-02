@@ -1,0 +1,959 @@
+T5-W3 PROBES — BORN-RED TRANSCRIPT
+tip: 78448760 — T5-W2 THE SEAL: the finisher's six rows land, the bake race re-pins, fourteen adjudications close the wave
+date: 2026-08-02T03:58:00Z
+spec: web/frontend/e2e/a11y.spec.ts
+config: playwright.config.ts (DEFAULT — projects chromium + webkit)
+runner: npx playwright test a11y.spec.ts --reporter=list
+server: vite dev on :4240 via PLAYWRIGHT_BASE_URL — :3000 is held by a foreign palette-api on this host
+playwright: 1.61.1
+======================================================================
+
+
+Running 30 tests using 9 workers
+
+  ✘   3 [chromium] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options (2.2s)
+  ✘   4 [chromium] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state (2.3s)
+  ✘   7 [chromium] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard (4.2s)
+  ✘  11 [chromium] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d (1.4s)
+  ✘  10 [chromium] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek (2.5s)
+  ✘  12 [chromium] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes (1.4s)
+  ✘  13 [chromium] › e2e/a11y.spec.ts:444:3 › 3.5 unnamedImages › a filled cell announces its value exactly once (1.4s)
+  ✘  16 [chromium] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) (2.8s)
+  ✘   5 [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells (11.4s)
+  ✘   6 [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells (11.7s)
+  ✘   8 [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells (11.8s)
+  ✘   2 [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells (11.8s)
+  ✘   1 [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells (11.9s)
+  ✘   9 [chromium] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) (12.7s)
+  ✘  21 [webkit] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state (3.0s)
+  ✘  14 [chromium] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total (11.2s)
+  ✘  24 [webkit] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options (1.9s)
+  ✘  15 [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells (11.5s)
+  ✘  23 [webkit] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard (4.9s)
+  ✘  25 [webkit] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek (2.6s)
+  ✘  26 [webkit] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d (1.6s)
+  ✘  27 [webkit] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes (1.5s)
+  ✘  28 [webkit] › e2e/a11y.spec.ts:444:3 › 3.5 unnamedImages › a filled cell announces its value exactly once (1.7s)
+  ✘  17 [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells (11.4s)
+  ✘  18 [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells (11.5s)
+  ✘  30 [webkit] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) (2.9s)
+  ✘  20 [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells (11.8s)
+  ✘  19 [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells (11.9s)
+  ✘  22 [webkit] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) (12.9s)
+  ✘  29 [webkit] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total (11.4s)
+
+
+  1) [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: sudoku: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - sudoku: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-sudok-aa454--gridcell-N-rows-of-N-cells-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-sudok-aa454--gridcell-N-rows-of-N-cells-chromium/error-context.md
+
+  2) [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: futoshiki: role="grid" must own 5 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 5
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - futoshiki: role="grid" must own 5 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-futos-f3eb1--gridcell-N-rows-of-N-cells-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-futos-f3eb1--gridcell-N-rows-of-N-cells-chromium/error-context.md
+
+  3) [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: thermo: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - thermo: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-therm-2f642--gridcell-N-rows-of-N-cells-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-therm-2f642--gridcell-N-rows-of-N-cells-chromium/error-context.md
+
+  4) [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: killer: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - killer: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-kille-7aba5--gridcell-N-rows-of-N-cells-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-kille-7aba5--gridcell-N-rows-of-N-cells-chromium/error-context.md
+
+  5) [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: kenken: role="grid" must own 4 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 4
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - kenken: role="grid" must own 4 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-kenke-42e5e--gridcell-N-rows-of-N-cells-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-kenke-42e5e--gridcell-N-rows-of-N-cells-chromium/error-context.md
+
+  6) [chromium] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state 
+
+    Error: the armed guard was never announced; live regions said ["mark it and I'll grade","board changed — ask againNot checking — the board changed since the last check. Choose Ask again.","futoshiki, 2 of 5. 5×5 easy, new game"]
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      268 |       announced,
+      269 |       `the armed guard was never announced; live regions said ${JSON.stringify(heard)}`,
+    > 270 |     ).toBe(true);
+          |       ^
+      271 |   });
+      272 |
+      273 |   test('the armed guard contains focus (aria-modal + focus inside the dialog)', async ({
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:270:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-ar-881ba-d-announces-its-armed-state-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-ar-881ba-d-announces-its-armed-state-chromium/error-context.md
+
+  7) [chromium] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.gallery-guard')
+    Expected: "true"
+    Received: ""
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('.gallery-guard')
+        4 × locator resolved to <div data-v-08f2b41b="" role="alertdialog" aria-label="Leave this puzzle?" class="gallery-guard guard-ribbon-enter-active guard-ribbon-enter-to">…</div>
+          - unexpected value "null"
+        20 × locator resolved to <div data-v-08f2b41b="" role="alertdialog" class="gallery-guard" aria-label="Leave this puzzle?">…</div>
+           - unexpected value "null"
+
+
+      277 |     const guard = page.locator('.gallery-guard');
+      278 |     await expect(guard).toHaveAttribute('role', 'alertdialog');
+    > 279 |     await expect(guard).toHaveAttribute('aria-modal', 'true');
+          |                         ^
+      280 |
+      281 |     const where = await page.evaluate(() => {
+      282 |       const g = document.querySelector('.gallery-guard')!;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:279:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-th-be753-al-focus-inside-the-dialog--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-th-be753-al-focus-inside-the-dialog--chromium/error-context.md
+
+  8) [chromium] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard 
+
+    Error: the guard armed silently (announced=false) and the second Enter took the board from 1 user entries to 0
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      311 |       `the guard armed silently (announced=${announced}) and the second Enter took the board ` +
+      312 |         `from ${before} user entries to ${after}`,
+    > 313 |     ).toBe(true);
+          |       ^
+      314 |   });
+      315 | });
+      316 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:313:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-a--0d2e4-t-discard-the-board-unheard-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-a--0d2e4-t-discard-the-board-unheard-chromium/error-context.md
+
+  9) [chromium] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options 
+
+    Error: the browser AX tree publishes 1 options: ["sudoku, 1 of 5"]
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 5
+    Received length: 1
+    Received array:  ["sudoku, 1 of 5"]
+
+      344 |         names,
+      345 |         `the browser AX tree publishes ${names.length} options: ${JSON.stringify(names)}`,
+    > 346 |       ).toHaveLength(5);
+          |         ^
+      347 |       expect(names.filter((n) => n.trim() !== ''), 'every published option is named').toHaveLength(
+      348 |         5,
+      349 |       );
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:346:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-chromium/error-context.md
+
+  10) [chromium] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek 
+
+    Error: Control+k triggered the answer-key peek
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "announced": false,
+    -   "laminate": 0,
+    +   "announced": true,
+    +   "laminate": 1,
+      }
+
+      385 |       await page.waitForTimeout(600); // the laminate lays down on a rAF + transition
+      386 |       const state = await peekState(page);
+    > 387 |       expect(state, `${chord} triggered the answer-key peek`).toEqual({
+          |                                                               ^
+      388 |         laminate: 0,
+      389 |         announced: false,
+      390 |       });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:387:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-4-ctrlKDoesNotPeek--65000-trigger-the-single-key-peek-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-4-ctrlKDoesNotPeek--65000-trigger-the-single-key-peek-chromium/error-context.md
+
+  11) [chromium] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+
+    Error: shortcuts help omits g, d — it reads "K\npeek\nH\nhint\nP\npencil\n⌘\n/\nCtrl\nZ\nundo\n⇧\nZ\nredo"
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "g",
+    +   "d",
+    + ]
+
+      411 |       (key) => !new RegExp(`(^|[^a-z])${key}([^a-z]|$)`, 'i').test(text),
+      412 |     );
+    > 413 |     expect(missing, `shortcuts help omits ${missing.join(', ')} — it reads ${JSON.stringify(text)}`).toEqual(
+          |                                                                                                      ^
+      414 |       [],
+      415 |     );
+      416 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:413:102
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-chromium/error-context.md
+
+  12) [chromium] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes 
+
+    Error: 93 unnamed image nodes of 155 — decorative graphics must carry aria-hidden, meaningful ones a name
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 93
+
+      439 |       `${census.unnamed} unnamed image nodes of ${census.total} — decorative graphics must ` +
+      440 |         `carry aria-hidden, meaningful ones a name`,
+    > 441 |     ).toBe(0);
+          |       ^
+      442 |   });
+      443 |
+      444 |   test('a filled cell announces its value exactly once', async ({ page }) => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:441:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-5-unnamedImages-a-d-bed4f-es-zero-unnamed-image-nodes-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-5-unnamedImages-a-d-bed4f-es-zero-unnamed-image-nodes-chromium/error-context.md
+
+  13) [chromium] › e2e/a11y.spec.ts:444:3 › 3.5 unnamedImages › a filled cell announces its value exactly once 
+
+    Error: 61 named image nodes inside gridcells — each is a second utterance of a digit the cell's own name already carries
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 61
+
+      477 |       `${echoes} named image nodes inside gridcells — each is a second utterance of a digit ` +
+      478 |         `the cell's own name already carries`,
+    > 479 |     ).toBe(0);
+          |       ^
+      480 |   });
+      481 | });
+      482 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:479:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-5-unnamedImages-a-f-f7c33-nces-its-value-exactly-once-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-5-unnamedImages-a-f-f7c33-nces-its-value-exactly-once-chromium/error-context.md
+
+  14) [chromium] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total 
+
+    Error: 4×4: 4 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 4
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - 4×4: 4 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      499 |       expect(n, `?size=${size} deals an ${side}×${side} board`).toBe(side);
+      500 |       await expect(grid.getByRole('gridcell')).toHaveCount(n * n);
+    > 501 |       await expect(grid.getByRole('row'), `${side}×${side}: ${side} rows`).toHaveCount(n);
+          |                                                                            ^
+      502 |       expect((await imageCensus(page)).unnamed, `${side}×${side}: no unnamed graphics`).toBe(0);
+      503 |     }
+      504 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:501:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-6-stability-the-gri-c49bf-and-9×9-never-a-magic-total-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-6-stability-the-gri-c49bf-and-9×9-never-a-magic-total-chromium/error-context.md
+
+  15) [chromium] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) 
+
+    Error: deal A: N rows
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 9
+    Received: 0
+
+      556 |       ['deal B', b],
+      557 |     ] as const) {
+    > 558 |       expect(s.rows, `${label}: N rows`).toBe(s.n);
+          |                                          ^
+      559 |       expect(s.gridcells, `${label}: N² gridcells`).toBe(s.n * s.n);
+      560 |       expect(s.unnamedImages, `${label}: zero unnamed graphics`).toBe(0);
+      561 |       expect(s.namedInGrid, `${label}: zero digit echoes inside the grid`).toBe(0);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:558:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-6-stability-the-inv-7d76c-ant-figures-never-asserted--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-6-stability-the-inv-7d76c-ant-figures-never-asserted--chromium/error-context.md
+
+  16) [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: sudoku: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - sudoku: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-sudok-aa454--gridcell-N-rows-of-N-cells-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-sudok-aa454--gridcell-N-rows-of-N-cells-webkit/error-context.md
+
+  17) [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: futoshiki: role="grid" must own 5 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 5
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - futoshiki: role="grid" must own 5 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-futos-f3eb1--gridcell-N-rows-of-N-cells-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-futos-f3eb1--gridcell-N-rows-of-N-cells-webkit/error-context.md
+
+  18) [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: thermo: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - thermo: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-therm-2f642--gridcell-N-rows-of-N-cells-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-therm-2f642--gridcell-N-rows-of-N-cells-webkit/error-context.md
+
+  19) [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: killer: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - killer: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-kille-7aba5--gridcell-N-rows-of-N-cells-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-kille-7aba5--gridcell-N-rows-of-N-cells-webkit/error-context.md
+
+  20) [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: kenken: role="grid" must own 4 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 4
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - kenken: role="grid" must own 4 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-kenke-42e5e--gridcell-N-rows-of-N-cells-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-kenke-42e5e--gridcell-N-rows-of-N-cells-webkit/error-context.md
+
+  21) [webkit] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state 
+
+    Error: the armed guard was never announced; live regions said ["mark it and I'll grade","board changed — ask againNot checking — the board changed since the last check. Choose Ask again.","futoshiki, 2 of 5. 5×5 easy, new game"]
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      268 |       announced,
+      269 |       `the armed guard was never announced; live regions said ${JSON.stringify(heard)}`,
+    > 270 |     ).toBe(true);
+          |       ^
+      271 |   });
+      272 |
+      273 |   test('the armed guard contains focus (aria-modal + focus inside the dialog)', async ({
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:270:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-ar-881ba-d-announces-its-armed-state-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-ar-881ba-d-announces-its-armed-state-webkit/error-context.md
+
+  22) [webkit] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.gallery-guard')
+    Expected: "true"
+    Received: ""
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('.gallery-guard')
+        - locator resolved to <div data-v-08f2b41b="" role="alertdialog" aria-label="Leave this puzzle?" class="gallery-guard guard-ribbon-enter-from guard-ribbon-enter-active">…</div>
+        3 × unexpected value "null"
+          - locator resolved to <div data-v-08f2b41b="" role="alertdialog" aria-label="Leave this puzzle?" class="gallery-guard guard-ribbon-enter-active guard-ribbon-enter-to">…</div>
+        20 × unexpected value "null"
+           - locator resolved to <div data-v-08f2b41b="" role="alertdialog" class="gallery-guard" aria-label="Leave this puzzle?">…</div>
+        - unexpected value "null"
+
+
+      277 |     const guard = page.locator('.gallery-guard');
+      278 |     await expect(guard).toHaveAttribute('role', 'alertdialog');
+    > 279 |     await expect(guard).toHaveAttribute('aria-modal', 'true');
+          |                         ^
+      280 |
+      281 |     const where = await page.evaluate(() => {
+      282 |       const g = document.querySelector('.gallery-guard')!;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:279:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-th-be753-al-focus-inside-the-dialog--webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-th-be753-al-focus-inside-the-dialog--webkit/error-context.md
+
+  23) [webkit] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard 
+
+    Error: the guard armed silently (announced=false) and the second Enter took the board from 1 user entries to 0
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      311 |       `the guard armed silently (announced=${announced}) and the second Enter took the board ` +
+      312 |         `from ${before} user entries to ${after}`,
+    > 313 |     ).toBe(true);
+          |       ^
+      314 |   });
+      315 | });
+      316 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:313:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-a--0d2e4-t-discard-the-board-unheard-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-a--0d2e4-t-discard-the-board-unheard-webkit/error-context.md
+
+  24) [webkit] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options 
+
+    Error: options stripped from the accessibility tree: [null,"inert","inert","inert","inert"]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 6
+
+    - Array []
+    + Array [
+    +   "inert",
+    +   "inert",
+    +   "inert",
+    +   "inert",
+    + ]
+
+      357 |       stripped.filter((s) => s !== null),
+      358 |       `options stripped from the accessibility tree: ${JSON.stringify(stripped)}`,
+    > 359 |     ).toEqual([]);
+          |       ^
+      360 |   });
+      361 | });
+      362 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:359:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-webkit/error-context.md
+
+  25) [webkit] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek 
+
+    Error: Control+k triggered the answer-key peek
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "announced": false,
+    -   "laminate": 0,
+    +   "announced": true,
+    +   "laminate": 1,
+      }
+
+      385 |       await page.waitForTimeout(600); // the laminate lays down on a rAF + transition
+      386 |       const state = await peekState(page);
+    > 387 |       expect(state, `${chord} triggered the answer-key peek`).toEqual({
+          |                                                               ^
+      388 |         laminate: 0,
+      389 |         announced: false,
+      390 |       });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:387:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-4-ctrlKDoesNotPeek--65000-trigger-the-single-key-peek-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-4-ctrlKDoesNotPeek--65000-trigger-the-single-key-peek-webkit/error-context.md
+
+  26) [webkit] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+
+    Error: shortcuts help omits g, d — it reads "K\npeek\nH\nhint\nP\npencil\n⌘\n/\nCtrl\nZ\nundo\n⇧\nZ\nredo"
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "g",
+    +   "d",
+    + ]
+
+      411 |       (key) => !new RegExp(`(^|[^a-z])${key}([^a-z]|$)`, 'i').test(text),
+      412 |     );
+    > 413 |     expect(missing, `shortcuts help omits ${missing.join(', ')} — it reads ${JSON.stringify(text)}`).toEqual(
+          |                                                                                                      ^
+      414 |       [],
+      415 |     );
+      416 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:413:102
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-webkit/error-context.md
+
+  27) [webkit] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes 
+
+    Error: 93 unnamed image nodes of 155 — decorative graphics must carry aria-hidden, meaningful ones a name
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 93
+
+      439 |       `${census.unnamed} unnamed image nodes of ${census.total} — decorative graphics must ` +
+      440 |         `carry aria-hidden, meaningful ones a name`,
+    > 441 |     ).toBe(0);
+          |       ^
+      442 |   });
+      443 |
+      444 |   test('a filled cell announces its value exactly once', async ({ page }) => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:441:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-5-unnamedImages-a-d-bed4f-es-zero-unnamed-image-nodes-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-5-unnamedImages-a-d-bed4f-es-zero-unnamed-image-nodes-webkit/error-context.md
+
+  28) [webkit] › e2e/a11y.spec.ts:444:3 › 3.5 unnamedImages › a filled cell announces its value exactly once 
+
+    Error: 61 named image nodes inside gridcells — each is a second utterance of a digit the cell's own name already carries
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 61
+
+      477 |       `${echoes} named image nodes inside gridcells — each is a second utterance of a digit ` +
+      478 |         `the cell's own name already carries`,
+    > 479 |     ).toBe(0);
+          |       ^
+      480 |   });
+      481 | });
+      482 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:479:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-5-unnamedImages-a-f-f7c33-nces-its-value-exactly-once-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-5-unnamedImages-a-f-f7c33-nces-its-value-exactly-once-webkit/error-context.md
+
+  29) [webkit] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total 
+
+    Error: 4×4: 4 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 4
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - 4×4: 4 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      499 |       expect(n, `?size=${size} deals an ${side}×${side} board`).toBe(side);
+      500 |       await expect(grid.getByRole('gridcell')).toHaveCount(n * n);
+    > 501 |       await expect(grid.getByRole('row'), `${side}×${side}: ${side} rows`).toHaveCount(n);
+          |                                                                            ^
+      502 |       expect((await imageCensus(page)).unnamed, `${side}×${side}: no unnamed graphics`).toBe(0);
+      503 |     }
+      504 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:501:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-6-stability-the-gri-c49bf-and-9×9-never-a-magic-total-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-6-stability-the-gri-c49bf-and-9×9-never-a-magic-total-webkit/error-context.md
+
+  30) [webkit] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) 
+
+    Error: deal A: N rows
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 9
+    Received: 0
+
+      556 |       ['deal B', b],
+      557 |     ] as const) {
+    > 558 |       expect(s.rows, `${label}: N rows`).toBe(s.n);
+          |                                          ^
+      559 |       expect(s.gridcells, `${label}: N² gridcells`).toBe(s.n * s.n);
+      560 |       expect(s.unnamedImages, `${label}: zero unnamed graphics`).toBe(0);
+      561 |       expect(s.namedInGrid, `${label}: zero digit echoes inside the grid`).toBe(0);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:558:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-6-stability-the-inv-7d76c-ant-figures-never-asserted--webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-6-stability-the-inv-7d76c-ant-figures-never-asserted--webkit/error-context.md
+
+  30 failed
+    [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells 
+    [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells 
+    [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells 
+    [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells 
+    [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells 
+    [chromium] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state 
+    [chromium] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) 
+    [chromium] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard 
+    [chromium] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options 
+    [chromium] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek 
+    [chromium] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+    [chromium] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes 
+    [chromium] › e2e/a11y.spec.ts:444:3 › 3.5 unnamedImages › a filled cell announces its value exactly once 
+    [chromium] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total 
+    [chromium] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) 
+    [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells 
+    [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells 
+    [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells 
+    [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells 
+    [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells 
+    [webkit] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state 
+    [webkit] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) 
+    [webkit] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard 
+    [webkit] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options 
+    [webkit] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek 
+    [webkit] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+    [webkit] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes 
+    [webkit] › e2e/a11y.spec.ts:444:3 › 3.5 unnamedImages › a filled cell announces its value exactly once 
+    [webkit] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total 
+    [webkit] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) 

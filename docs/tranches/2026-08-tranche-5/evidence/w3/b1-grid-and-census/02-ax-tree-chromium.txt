@@ -1,0 +1,87 @@
+T5-W3 LANE B1 — THE BROWSER'S OWN AX TREE (row 3.1's mechanism, measured not assumed)
+instrument: CDP Accessibility.getFullAXTree, chromium (the same instrument r1/r2 banked H1 with)
+server: vite dev :4232 · script: scratchpad/ax.mjs (transient, not repo state)
+date: 2026-08-02T04:16:36Z
+
+PRE-CURE at tip 78448760, sudoku 9x9 (measured this lane, agrees with r1 H1 / r2 §H1):
+  {"total":155,"named":62,"unnamed":93}  SHAPE {"rowcount":"9","rows":0,"gridcells":81}  PW rows 0  named imgs in grid 61
+  81 x  div.grid.board-cells > div.game-cell > div.cell-ghost > svg  (unnamed)
+  61 x  div.grid.board-cells > div.game-cell > svg.glyph-svg          (named — the double-announce)
+
+POST-CURE, all five boards + the 4x4 arm:
+  n = the grid's own aria-rowcount · rows/cellsInRows = Playwright's role engine
+  CDP rows / cell parents / grid children = the BROWSER's tree — display:contents rows ARE published,
+  and every gridcell is parented by a row (not by the grid).
+----------------------------------------------------------------------
+chromium game=sudoku&size=3&difficulty=EASY {"n":9,"rows":9,"gridcells":81,"cellsInRows":81,"namedInGrid":0,"img":{"total":13,"named":1,"unnamed":12}}
+  UNNAMED 3 div.controls-card.bg-card > div.control-panel-wrap.flex > div.outline-container.tray-well > svg.outline-svg.is-pruned
+  UNNAMED 2 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg
+  UNNAMED 1 div.board-peek-host > div.board-shell.shell-md > div.board-wrapper.cartoon-shadow-md > svg.hand-drawn-grid
+  UNNAMED 1 div.board-peek-host > button.drawer-tab > div.outline-container > svg.outline-svg
+  UNNAMED 1 div.outline-container.tray-well > div.deal-row > button.icon-btn.deal-btn > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.peek-hold-surface.group > div.boil-divider-wrap > svg
+  UNNAMED 1 div.flex.items-center > button.icon-btn.group > span > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg.sparkle-icon
+  UNNAMED 1 div.app-layout > div.scene-controls.hidden > div.outline-container > svg.outline-svg
+  CDP rows = 9 cells = 81 cell parents = [ 'row' ]
+  CDP grid children = {"row":9}
+chromium game=futoshiki&board_size=5&difficulty=EASY {"n":5,"rows":5,"gridcells":25,"cellsInRows":25,"namedInGrid":0,"img":{"total":13,"named":1,"unnamed":12}}
+  UNNAMED 3 div.controls-card.bg-card > div.control-panel-wrap.flex > div.outline-container.tray-well > svg.outline-svg.is-pruned
+  UNNAMED 2 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg
+  UNNAMED 1 div.board-peek-host > div.board-shell.shell-md > div.board-wrapper.cartoon-shadow-md > svg.hand-drawn-grid
+  UNNAMED 1 div.board-peek-host > button.drawer-tab > div.outline-container > svg.outline-svg
+  UNNAMED 1 div.outline-container.tray-well > div.deal-row > button.icon-btn.deal-btn > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.peek-hold-surface.group > div.boil-divider-wrap > svg
+  UNNAMED 1 div.flex.items-center > button.icon-btn.group > span > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg.sparkle-icon
+  UNNAMED 1 div.app-layout > div.scene-controls.hidden > div.outline-container > svg.outline-svg
+  CDP rows = 5 cells = 25 cell parents = [ 'row' ]
+  CDP grid children = {"row":5}
+chromium game=thermo&difficulty=EASY {"n":9,"rows":9,"gridcells":81,"cellsInRows":81,"namedInGrid":0,"img":{"total":13,"named":1,"unnamed":12}}
+  UNNAMED 3 div.controls-card.bg-card > div.control-panel-wrap.flex > div.outline-container.tray-well > svg.outline-svg.is-pruned
+  UNNAMED 2 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg
+  UNNAMED 1 div.board-peek-host > div.board-shell.shell-md > div.board-wrapper.cartoon-shadow-md > svg.hand-drawn-grid
+  UNNAMED 1 div.board-peek-host > button.drawer-tab > div.outline-container > svg.outline-svg
+  UNNAMED 1 div.outline-container.tray-well > div.deal-row > button.icon-btn.deal-btn > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.peek-hold-surface.group > div.boil-divider-wrap > svg
+  UNNAMED 1 div.flex.items-center > button.icon-btn.group > span > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg.sparkle-icon
+  UNNAMED 1 div.app-layout > div.scene-controls.hidden > div.outline-container > svg.outline-svg
+  CDP rows = 9 cells = 81 cell parents = [ 'row' ]
+  CDP grid children = {"row":9}
+chromium game=killer&difficulty=EASY {"n":9,"rows":9,"gridcells":81,"cellsInRows":81,"namedInGrid":0,"img":{"total":13,"named":1,"unnamed":12}}
+  UNNAMED 3 div.controls-card.bg-card > div.control-panel-wrap.flex > div.outline-container.tray-well > svg.outline-svg.is-pruned
+  UNNAMED 2 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg
+  UNNAMED 1 div.board-peek-host > div.board-shell.shell-md > div.board-wrapper.cartoon-shadow-md > svg.hand-drawn-grid
+  UNNAMED 1 div.board-peek-host > button.drawer-tab > div.outline-container > svg.outline-svg
+  UNNAMED 1 div.outline-container.tray-well > div.deal-row > button.icon-btn.deal-btn > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.peek-hold-surface.group > div.boil-divider-wrap > svg
+  UNNAMED 1 div.flex.items-center > button.icon-btn.group > span > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg.sparkle-icon
+  UNNAMED 1 div.app-layout > div.scene-controls.hidden > div.outline-container > svg.outline-svg
+  CDP rows = 9 cells = 81 cell parents = [ 'row' ]
+  CDP grid children = {"row":9}
+chromium game=kenken&difficulty=EASY {"n":4,"rows":4,"gridcells":16,"cellsInRows":16,"namedInGrid":0,"img":{"total":13,"named":1,"unnamed":12}}
+  UNNAMED 3 div.controls-card.bg-card > div.control-panel-wrap.flex > div.outline-container.tray-well > svg.outline-svg.is-pruned
+  UNNAMED 2 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg
+  UNNAMED 1 div.board-peek-host > div.board-shell.shell-sm > div.board-wrapper.cartoon-shadow-md > svg.hand-drawn-grid
+  UNNAMED 1 div.board-peek-host > button.drawer-tab > div.outline-container > svg.outline-svg
+  UNNAMED 1 div.outline-container.tray-well > div.deal-row > button.icon-btn.deal-btn > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.peek-hold-surface.group > div.boil-divider-wrap > svg
+  UNNAMED 1 div.flex.items-center > button.icon-btn.group > span > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg.sparkle-icon
+  UNNAMED 1 div.app-layout > div.scene-controls.hidden > div.outline-container > svg.outline-svg
+  CDP rows = 4 cells = 16 cell parents = [ 'row' ]
+  CDP grid children = {"row":4}
+chromium game=sudoku&size=2&difficulty=EASY {"n":4,"rows":4,"gridcells":16,"cellsInRows":16,"namedInGrid":0,"img":{"total":13,"named":1,"unnamed":12}}
+  UNNAMED 3 div.controls-card.bg-card > div.control-panel-wrap.flex > div.outline-container.tray-well > svg.outline-svg.is-pruned
+  UNNAMED 2 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg
+  UNNAMED 1 div.board-peek-host > div.board-shell.shell-sm > div.board-wrapper.cartoon-shadow-md > svg.hand-drawn-grid
+  UNNAMED 1 div.board-peek-host > button.drawer-tab > div.outline-container > svg.outline-svg
+  UNNAMED 1 div.outline-container.tray-well > div.deal-row > button.icon-btn.deal-btn > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.peek-hold-surface.group > div.boil-divider-wrap > svg
+  UNNAMED 1 div.flex.items-center > button.icon-btn.group > span > svg
+  UNNAMED 1 div.control-panel-wrap.flex > div.flex.items-center > button.icon-btn.group > svg.sparkle-icon
+  UNNAMED 1 div.app-layout > div.scene-controls.hidden > div.outline-container > svg.outline-svg
+  CDP rows = 4 cells = 16 cell parents = [ 'row' ]
+  CDP grid children = {"row":4}

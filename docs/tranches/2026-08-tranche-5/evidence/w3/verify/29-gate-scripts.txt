@@ -1,0 +1,48 @@
+######## unit-count ########
+EXIT=0
+
+> csp-solver-frontend@0.1.0 test:unit:count
+> node scripts/check-unit-count.mjs vitest-report.json
+
+FE unit lane — 444 executed (444 passed / 0 failed), 0 skipped, 0 todo, over 41 files / 162 suites; floor 300; report age 0.0 min.
+unit count OK — 444 >= 300.
+######## coverage-floor ########
+EXIT=0
+  ok   a single dipping scope reds even while TOTAL rises
+  ok   a vanished scope is structurally RED
+  ok   an explicitly retired scope passes
+  ok   an unscoped file is surfaced
+  ok   summary.total is not trusted
+[coverage-floor] self-test 6/6 — the gate can fail on a known-bad input.
+######## golden-bytes ########
+EXIT=0
+
+[golden-bytes] tracked-ness: 8 tracked / 8 on disk
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] PASS — 8 goldens, 99.0 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+######## pw-projects ########
+EXIT=0
+  [4 HOLDOUTS CLOSED] share-truth is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+
+OK — 21 specs, 306 resolved tests, every spec in both engines except the 4 recorded holdouts.
+######## pw-retries ########
+EXIT=0
+  green 1 THE LAW      retries imply failOnFlakyTests
+  green 2 THE CENSUS   every retry is a named grant
+  green 3 THE REVOKED  wordmark-webkit stays at 0
+  green 4 NO OPT-OUT   failOnFlakyTests is never false
+
+check-pw-retries: all checks green
+######## support-floor ########
+EXIT=0
+  BITES  3 TARGET COHERENT — build.target raised above the floor
+  BITES  4 SHIMS DEAD — an optional-call listener guard re-enters src
+  BITES  4 SHIMS DEAD — a sub-floor comment re-enters src
+  BITES  5 README CITES — the README floor sentence removed
+
+PASS — 0 violation(s), 0 blind check(s)

@@ -66,7 +66,9 @@ const dividerFrame = useBeatFrame(
     <!-- T3-W13 §1-P2 fallback — grain-hoist stack (the grid's steady-state template
          VERBATIM, filter kept): static geometry per sibling, grain-static rasters
          once each, the beat only flips opacity. -->
+    <!-- Decorative: a drawn rule (a11y r1 M6). -->
     <svg
+      aria-hidden="true"
       viewBox="0 0 1000 16"
       preserveAspectRatio="none"
       xmlns="http://www.w3.org/2000/svg"

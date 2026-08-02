@@ -1,0 +1,88 @@
+T5-W3 lane B4 (row 3.4) — PROBE FAMILY 3.4, AFTER THE CURE
+tip: 78448760 + this lane's diff
+runner: PLAYWRIGHT_BASE_URL=http://localhost:4247 npx playwright test a11y.spec.ts -g "3.4" --reporter=list
+config: playwright.config.ts (DEFAULT — chromium + webkit)
+server: vite dev on :4247 (ports 4230-4260 are this lane's; :3000 holds the foreign palette-api,
+  which is why the HMR socket logs a port-in-use line and baseURL is overridden)
+
+  ctrlKDoesNotPeek       chromium GREEN · webkit GREEN   (born RED in both — probes/04)
+  keyboard-shortcuts help chromium RED  · webkit RED     (unchanged from born-RED; the cure is
+                          6 lines in src/pencil/chrome/KeyboardLegend.vue, OUTSIDE this lane's
+                          file fence — measured and patched in 04-help-affordance-blocked.txt)
+
+The first test's CONTROL matters as much as its gate: bare `k` must still peek from a focused
+board cell before the chords are tried, so this cannot green on an amputation.
+======================================================================
+
+Running 4 tests using 4 workers
+
+  ✘  3 [chromium] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d (1.4s)
+  ✘  2 [webkit] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d (1.6s)
+  ✓  4 [chromium] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek (3.1s)
+  ✓  1 [webkit] › e2e/a11y.spec.ts:370:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek (3.2s)
+
+
+  1) [chromium] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+
+    Error: shortcuts help omits g, d — it reads "K\npeek\nH\nhint\nP\npencil\n⌘\n/\nCtrl\nZ\nundo\n⇧\nZ\nredo"
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "g",
+    +   "d",
+    + ]
+
+      411 |       (key) => !new RegExp(`(^|[^a-z])${key}([^a-z]|$)`, 'i').test(text),
+      412 |     );
+    > 413 |     expect(missing, `shortcuts help omits ${missing.join(', ')} — it reads ${JSON.stringify(text)}`).toEqual(
+          |                                                                                                      ^
+      414 |       [],
+      415 |     );
+      416 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:413:102
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-chromium/error-context.md
+
+  2) [webkit] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+
+    Error: shortcuts help omits g, d — it reads "K\npeek\nH\nhint\nP\npencil\n⌘\n/\nCtrl\nZ\nundo\n⇧\nZ\nredo"
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "g",
+    +   "d",
+    + ]
+
+      411 |       (key) => !new RegExp(`(^|[^a-z])${key}([^a-z]|$)`, 'i').test(text),
+      412 |     );
+    > 413 |     expect(missing, `shortcuts help omits ${missing.join(', ')} — it reads ${JSON.stringify(text)}`).toEqual(
+          |                                                                                                      ^
+      414 |       [],
+      415 |     );
+      416 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:413:102
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-4-ctrlKDoesNotPeek--0affa-ts-help-names-k-g-h-p-and-d-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+    [webkit] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+  2 passed (4.4s)

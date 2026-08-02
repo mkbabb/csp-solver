@@ -182,8 +182,10 @@ watch(reducedMotion, (reduced) => {
 onUnmounted(stopChime);
 
 // Click-to-select (Wave D): the centered card is chosen on click (mouse/touch tap after a
-// swipe-to-center); flanks are `inert`, so a click never reaches them. While the guard ribbon
-// is armed the ribbon owns the interaction — a body click is inert.
+// swipe-to-center). THIS guard is the whole suppression — a flank's internals are inert (not
+// hit-testable, so the click resolves on the live root), and the root is deliberately live so
+// the option stays in the accessibility tree. While the guard ribbon is armed the ribbon owns
+// the interaction — a body click does nothing.
 function onCardClick() {
   if (props.isActive && !props.guard) emit("select");
 }
@@ -232,10 +234,15 @@ const dealStyle = computed(() => {
     role="option"
     :aria-selected="isActive"
     :aria-label="ariaLabel"
-    :inert="!isActive || undefined"
     @click.stop="onCardClick"
   >
-    <div class="game-card-deal" :style="dealStyle">
+    <!-- `inert` scopes to the card's INTERNALS, never the option root (T5-W3 3.3): inert on
+         the root strips the whole node from the accessibility tree, and the deck published a
+         one-item listbox for the life of the carousel. The internals are what carried the
+         property worth having — no tab stops, no hit targets in a flank — and they still do;
+         the option itself stays named and selectable-by-AT. Pointer selection is gated in
+         `onCardClick`, which is why the root can afford to be live. -->
+    <div class="game-card-deal" :style="dealStyle" :inert="!isActive || undefined">
       <HandDrawnOutline
         class="game-card-frame"
         :style="frameStyle"

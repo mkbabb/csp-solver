@@ -1,0 +1,23 @@
+T5-W3 lane B2 (row 3.2) — THE GUARD S OWN E2E, GREEN BOTH ENGINES UNDER MOVED FOCUS
+date: 2026-08-02T04:14:45Z
+The sharpest regression proof available: gallery-guard.spec.ts drives the ribbon entirely by
+keyboard (viewport.press Arrow/Enter) and by click on .guard-keep/.guard-leave. The cure pulls
+DOM focus off the listbox and into the dialog, so every one of these paths was re-proved.
+======================================================================
+
+Running 12 tests using 9 workers
+
+  ✓   4 [chromium] › e2e/gallery-guard.spec.ts:65:1 › snap chime: the centered card carries a scribble underline; flanks do not (961ms)
+  ✓   5 [chromium] › e2e/gallery-guard.spec.ts:49:1 › dropdown retired: the wordmark opens the gallery; no listbox affordance remains (1.3s)
+  ✓   9 [chromium] › e2e/gallery-guard.spec.ts:139:1 › guard: selecting the same game never asks, even when the board is dirty (1.6s)
+  ✓   7 [chromium] › e2e/gallery-guard.spec.ts:125:1 › guard: a pristine board switches to a different game with no ribbon (1.8s)
+  ✓   3 [webkit] › e2e/gallery-guard.spec.ts:65:1 › snap chime: the centered card carries a scribble underline; flanks do not (2.1s)
+  ✓   8 [chromium] › e2e/gallery-guard.spec.ts:106:1 › guard: keep dismisses the ribbon, stays in the gallery, board unchanged (2.2s)
+  ✓   1 [chromium] › e2e/gallery-guard.spec.ts:82:1 › guard: dirty + different arms the ribbon; leave abandons the marks and switches (2.3s)
+  ✓   2 [webkit] › e2e/gallery-guard.spec.ts:49:1 › dropdown retired: the wordmark opens the gallery; no listbox affordance remains (2.3s)
+  ✓   6 [webkit] › e2e/gallery-guard.spec.ts:82:1 › guard: dirty + different arms the ribbon; leave abandons the marks and switches (3.3s)
+  ✓  12 [webkit] › e2e/gallery-guard.spec.ts:139:1 › guard: selecting the same game never asks, even when the board is dirty (1.8s)
+  ✓  11 [webkit] › e2e/gallery-guard.spec.ts:125:1 › guard: a pristine board switches to a different game with no ribbon (2.0s)
+  ✓  10 [webkit] › e2e/gallery-guard.spec.ts:106:1 › guard: keep dismisses the ribbon, stays in the gallery, board unchanged (2.5s)
+
+  12 passed (6.0s)

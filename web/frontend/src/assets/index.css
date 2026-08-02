@@ -747,9 +747,15 @@ html {
   /* T4-P1 — the floor is TWO-dimensional, and the width half was missing. The candidates "On"
      chip measured 43.2px WIDE at coarse (`px-3` + two Fira Code characters), under the 44px
      floor in a dimension a height-only rule can never reach; every option chip now clears both.
-     Chips ONLY: the other three surfaces above are full-width or icon-sized already, so a width
-     floor there would pad without buying a target. */
-  .ctrl-btn {
+
+     T5-W3 (a11y r1 M8) — `.mobile-heading-btn` joins it. "Chips ONLY … the other three surfaces
+     are full-width or icon-sized already" was true of the other two and false of this one: the
+     section tabs are `padding: 0` and size to their own word, so the sudoku card's "Size" tab
+     measured 41.2 × 44 at 390×844 coarse — the sole sub-44 control on the page, and the very
+     defect class this block says it closed, on the one surface the width half did not name.
+     `.attribution-trigger` / `.error-note-retry` stay out: both re-measured full-width here. */
+  .ctrl-btn,
+  .mobile-heading-btn {
     min-width: 2.75rem;
   }
 }

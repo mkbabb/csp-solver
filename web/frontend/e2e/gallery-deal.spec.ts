@@ -214,7 +214,7 @@ test('guard: a deal onto ANOTHER game with work on it arms the ribbon', async ({
 
   const ribbon = page.locator('.gallery-guard');
   await expect(ribbon).toBeVisible();
-  await expect(ribbon).toHaveAttribute('aria-label', 'Deal a new board?');
+  await expect(ribbon).toHaveAttribute('aria-label', 'deal over this puzzle?');
   await expect(ribbon.locator('.guard-note-text')).toContainText('deal over this puzzle?');
   await expect(ribbon.locator('.guard-leave')).toHaveText('deal');
   // Both verbs go inert while the ribbon is up — a second deal cannot ride under it.
@@ -329,7 +329,7 @@ test('guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clea
 
   const ribbon = page.locator('.gallery-guard');
   await expect(ribbon).toBeVisible();
-  await expect(ribbon).toHaveAttribute('aria-label', 'Deal a new board?');
+  await expect(ribbon).toHaveAttribute('aria-label', 'deal over this puzzle?');
   // The marks at risk are the MOUNTED board's, and the sub-line says so.
   await expect(ribbon.locator('.guard-note-sub')).toHaveText("your marks aren't saved");
 

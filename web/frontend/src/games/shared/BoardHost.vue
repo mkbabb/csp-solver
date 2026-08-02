@@ -135,6 +135,17 @@ const idleGradeHint = computed(() =>
     : undefined,
 );
 
+/**
+ * The board's cells, grouped into rows (T5-W3 3.1) — `cellRows[r][c]` is the flat cell index,
+ * the same 0..N²-1 the model keys every map on. The board is square by construction
+ * (`totalCells === boardSize²`, useGameState.ts:188), so one derivation feeds both loops.
+ */
+const cellRows = computed(() =>
+  Array.from({ length: boardSize.value }, (_, r) =>
+    Array.from({ length: boardSize.value }, (_, c) => r * boardSize.value + c),
+  ),
+);
+
 // The clue layer's live props — the seam's own mapping, applied to the live clue.
 const clueProps = computed(() =>
   props.spec.clues ? props.spec.clues.props(props.clue, boardSize.value) : null,
@@ -180,37 +191,52 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
     @erased="emit('erased')"
   >
     <template #cells="s">
-      <component
-        :is="spec.furniture.cell"
-        v-for="pos in model.totalCells.value"
-        :key="pos - 1"
-        :ref="s.setCellApi"
-        :position="pos - 1"
-        :value="model.values.value[String(pos - 1)] ?? 0"
-        :is-given="model.givenCells.value.has(String(pos - 1))"
-        :is-overridden="model.overriddenCells.value.has(String(pos - 1))"
-        :is-solved="String(pos - 1) in model.solvedValues.value"
-        :is-revealed="s.isRevealed(pos - 1)"
-        :is-invalid="s.conflicts.positions.has(String(pos - 1))"
-        :is-because="s.hintBecause.has(String(pos - 1))"
-        :is-peer="s.peerCells.has(String(pos - 1))"
-        :noise-delay="s.noiseDelays.get(String(pos - 1)) ?? 0"
-        :board-size="boardSize"
-        :geometry="grammar.geometry"
-        :row-index="Math.floor((pos - 1) / boardSize) + 1"
-        :col-index="((pos - 1) % boardSize) + 1"
-        :tab-index="pos - 1 === s.focusedPos ? 0 : -1"
-        :ghost-path="s.cellRects[pos - 1] ?? ''"
-        :marks="s.marksFor(pos - 1)"
-        :corner-marks="model.cornerMarks.value[String(pos - 1)]"
-        :center-marks="model.centerMarks.value[String(pos - 1)]"
-        :pencil-mode="model.pencilMode.value"
-        @update="s.onCellUpdate"
-        @mark="s.onMark"
-        @cell-focus="s.onCellFocus"
-        @candidate-peek-start="s.onPeekStart"
-        @candidate-peek-end="s.onPeekEnd"
-      />
+      <!-- The row layer (T5-W3 3.1). `role="grid"` owns ROWS, never bare cells: the AX tree
+           read grid → gridcell×N² on all five boards, so the coordinates the cells carry in
+           their names had no structure behind them and row-wise reading commands had nothing
+           to walk. The wrapper is a BOX-LESS row: `display:contents` means the cells stay
+           direct grid items of `.board-cells`, placed by the same `grid-template-*`, so the
+           tree gains a level and the layout gains nothing. `aria-rowindex` rides the row AND
+           its cells (`DigitCell`'s own `rowIndex`) — one truth, both places. -->
+      <div
+        v-for="(cells, r) in cellRows"
+        :key="`row-${r}`"
+        class="board-row"
+        role="row"
+        :aria-rowindex="r + 1"
+      >
+        <component
+          :is="spec.furniture.cell"
+          v-for="pos in cells"
+          :key="pos"
+          :ref="s.setCellApi"
+          :position="pos"
+          :value="model.values.value[String(pos)] ?? 0"
+          :is-given="model.givenCells.value.has(String(pos))"
+          :is-overridden="model.overriddenCells.value.has(String(pos))"
+          :is-solved="String(pos) in model.solvedValues.value"
+          :is-revealed="s.isRevealed(pos)"
+          :is-invalid="s.conflicts.positions.has(String(pos))"
+          :is-because="s.hintBecause.has(String(pos))"
+          :is-peer="s.peerCells.has(String(pos))"
+          :noise-delay="s.noiseDelays.get(String(pos)) ?? 0"
+          :board-size="boardSize"
+          :geometry="grammar.geometry"
+          :row-index="r + 1"
+          :col-index="(pos % boardSize) + 1"
+          :tab-index="pos === s.focusedPos ? 0 : -1"
+          :ghost-path="s.cellRects[pos] ?? ''"
+          :marks="s.marksFor(pos)"
+          :corner-marks="model.cornerMarks.value[String(pos)]"
+          :center-marks="model.centerMarks.value[String(pos)]"
+          :pencil-mode="model.pencilMode.value"
+          @update="s.onCellUpdate"
+          @mark="s.onMark"
+          @cell-focus="s.onCellFocus"
+          @candidate-peek-start="s.onPeekStart"
+          @candidate-peek-end="s.onPeekEnd"
+        />
+      </div>
     </template>
 
     <template v-if="spec.clues" #overlay>
@@ -221,3 +247,14 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
     </template>
   </GameBoard>
 </template>
+
+<style scoped>
+/* THE ROW LAYER MUST NOT BE A BOX. `.board-cells` is the CSS grid and the cells are its items,
+   placed by `grid-template-columns/rows`; a rendered wrapper would become the single item and
+   collapse all N² cells into one track. `display:contents` puts the wrapper in the DOM (and so
+   in the accessibility tree) while leaving the box tree exactly as it was — the π condition
+   this row ships under. */
+.board-row {
+  display: contents;
+}
+</style>

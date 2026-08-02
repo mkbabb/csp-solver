@@ -1,0 +1,26 @@
+T5-W3 LANE B1 — π: THE GOLDEN IDENTITY, LOCAL (darwin)
+config: playwright-golden.config.ts (chromium, DPR2, PRM reduce) — NOT re-baselined, NOT touched
+dist: built from this working tree via 'npx vite build --outDir <scratchpad>/dist-w3b1' (vue-tsc -b run
+      separately, exit 0); served by 'vite preview' on :4231; PLAYWRIGHT_BASE_URL=http://localhost:4231
+why it matters: 3.1 changes the DOM AROUND rendered SVG on every cell of every board, and
+      'single cell with given glyph' + 'grid top-left corner' crop exactly that surface.
+date: 2026-08-02T04:17:52Z
+
+MECHANISM'S π ARGUMENT: the row wrapper is display:contents — it generates NO box, so the cells
+stay direct grid items of .board-cells, placed by the same grid-template-*. Nothing in the estate
+selects the grid's children structurally (every .board-cells rule in src/ + e2e/ is a DESCENDANT
+selector; cellRects is arithmetic, not DOM) and the two aria-* attributes paint nothing.
+======================================================================
+
+> csp-solver-frontend@0.1.0 test:golden
+> playwright test --config playwright-golden.config.ts
+
+
+Running 4 tests using 4 workers
+
+  ✓  4 e2e/visual-golden.spec.ts:236:1 › golden · single cell with given glyph (light) (1.0s)
+  ✓  3 e2e/visual-golden.spec.ts:244:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer (1.1s)
+  ✓  2 e2e/visual-golden.spec.ts:229:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose (1.1s)
+  ✓  1 e2e/visual-golden.spec.ts:203:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack (1.1s)
+
+  4 passed (2.1s)

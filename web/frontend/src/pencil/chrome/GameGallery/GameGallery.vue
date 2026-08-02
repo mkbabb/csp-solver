@@ -22,7 +22,17 @@
  * THE MID-GAME GUARD (Wave D §4). A select of a DIFFERENT game while the board is `dirty`
  * (App's dirty bridge → the `dirty` prop) does NOT switch immediately: it arms a pencil-note
  * ribbon on the chosen card (keep / leave). Pristine boards and same-game selects switch
- * freely. NOT a modal, NOT confirm().
+ * freely. Never `confirm()` — the ribbon is drawn, dismissible, and its own thing.
+ *
+ * THE GUARD SPEAKS (T5-W3 §3.2). It is drawn light and it BEHAVES modal: while armed, the
+ * listbox's Enter/Space/Escape resolve the ribbon rather than the deck, the staging band's
+ * verbs go busy, and both destructive verbs early-return. So it carries the modal semantics it
+ * already had the behaviour of — `alertdialog` + `aria-modal` + focus moved in, contained by
+ * Tab, and handed back to the listbox on retire. `alertdialog` alone is MUTE, though (it
+ * carries no implicit live semantics), and a live region born already-populated under `v-if`
+ * is unreliably spoken — so the arming utterance goes through a PERSISTENT assertive region
+ * that sits empty until there is work at risk. Before this, the second Enter took a dirty
+ * board 1 → 0 with nothing ever said (`evidence/audit/r2/verify-gate-criticals.md` §H2).
  */
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import {
@@ -104,9 +114,19 @@ const guardIndex = ref<number | null>(null);
 // instead of minting a second idiom. A deal on a board with work used to announce only the new
 // board and abandon the old marks silently; now the ribbon speaks first, always.
 const guardIntent = ref<"select" | "deal">("select");
+const guardEl = ref<HTMLElement | null>(null);
 function dismissGuard() {
   guardIndex.value = null;
 }
+/** THE ONE NAME (T5-W3 §3.2, the loop's guard-names row). This string is the ribbon's drawn
+ *  heading, its `aria-label`, and the stem of its spoken utterance — one literal, so the ink
+ *  and the announcement cannot drift. They had: the note drew "deal over this puzzle?" while
+ *  AT was told "Deal a new board?", two names for one act. */
+const guardTitle = computed(() =>
+  guardIntent.value === "deal" ? "deal over this puzzle?" : "leave this puzzle?",
+);
+/** The destructive verb's own word — drawn on the button, spoken in the utterance. */
+const guardVerb = computed(() => (guardIntent.value === "deal" ? "deal" : "leave"));
 /** The armed card, for the ribbon copy (rendered as an overlay centered on the deck — the
  *  chosen card IS the centered one, so it reads as "from the chosen card"). */
 const guardCard = computed(() =>
@@ -240,6 +260,15 @@ function announceStaged() {
   const card = activeCard.value;
   if (card) liveText.value = stagedLine(card);
 }
+
+// ── The guard's assertive region (T5-W3 §3.2) ──
+// The SECOND region, and the only warrant for one: `liveText` is polite by design (the deck's
+// snap chatter must never interrupt), and a prompt about losing work queued behind that chatter
+// is the old silence one beat later. This one is `role="alert"` — assertive, atomic — and it is
+// PERSISTENT: it stays mounted and empty so that arming is a text CHANGE inside a region the AT
+// is already watching, which is the only announcement browsers reliably make. Retiring the
+// ribbon empties it, so nothing stale can be re-read off the page.
+const guardAlert = ref("");
 
 // ── The glide (glass-curve FLIP for keyboard/button; native snap for touch) ──
 const viewport = ref<HTMLElement | null>(null);
@@ -482,6 +511,45 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
+/** The armed ribbon's own keyboard. Focus lives INSIDE the dialog now, so the listbox's handler
+ *  (bound on the viewport, a sibling) no longer sees these events — every key the armed state
+ *  answered still has to be answered, from here. Two rules on top of delegation:
+ *   · Tab is the containment. `aria-modal` promises the deck behind is out of reach; a Tab that
+ *     walked out into it would make that a lie, so Tab cycles the ribbon's own verbs.
+ *   · A focused BUTTON keeps its native activation. Delegating Enter/Space from a verb would
+ *     fire the ribbon's confirm ALONGSIDE the button's click — "keep" resolving as "leave", the
+ *     exact loss this ribbon exists to prevent. */
+function onGuardKeydown(e: KeyboardEvent) {
+  const stops = [...(guardEl.value?.querySelectorAll<HTMLElement>(".guard-btn") ?? [])];
+  if (e.key === "Tab" && stops.length) {
+    e.preventDefault();
+    const at = stops.indexOf(document.activeElement as HTMLElement);
+    const last = stops.length - 1;
+    const next = e.shiftKey ? (at <= 0 ? last : at - 1) : at >= last ? 0 : at + 1;
+    stops[next].focus();
+    return;
+  }
+  const onVerb = (e.target as Element | null)?.closest?.(".guard-btn");
+  if (onVerb && (e.key === "Enter" || e.key === " " || e.key === "Spacebar")) return;
+  onKeydown(e);
+}
+
+// Arm → speak, and take focus. Retire → fall silent, and hand focus back to the listbox (only
+// when the ribbon was holding it: a `keep` CLICK, or a touch snap through `syncFromScroll`, has
+// already placed focus elsewhere and stealing it back would be its own defect). The watcher runs
+// pre-patch, so the arming branch waits a tick for the ribbon to exist while the retiring branch
+// can still read the focus it is about to destroy.
+watch(guardIndex, (i, prev) => {
+  if (i !== null) {
+    guardAlert.value = `${guardTitle.value} ${guardSub.value}. Choose keep, or ${guardVerb.value}.`;
+    nextTick(() => guardEl.value?.focus({ preventScroll: true }));
+    return;
+  }
+  guardAlert.value = "";
+  if (prev === null || !guardEl.value?.contains(document.activeElement)) return;
+  nextTick(() => viewport.value?.focus({ preventScroll: true }));
+});
+
 // External index change (e.g. a fresh open sets snappedIndex to the current game) → jump.
 watch(
   () => props.snappedIndex,
@@ -591,20 +659,22 @@ onMounted(async () => {
     <Transition name="guard-ribbon">
       <div
         v-if="guardCard"
+        ref="guardEl"
         class="gallery-guard"
         role="alertdialog"
-        :aria-label="
-          guardIntent === 'deal' ? 'Deal a new board?' : 'Leave this puzzle?'
-        "
+        aria-modal="true"
+        tabindex="-1"
+        :aria-label="guardTitle"
+        aria-describedby="gallery-guard-stake"
+        @keydown="onGuardKeydown"
       >
         <HandDrawnOutline class="guard-note-frame" :stroke-width="3" :outset="4">
           <div class="guard-note cartoon-shadow-md edge-outlined bg-popover">
             <p class="guard-note-text">
-              {{
-                guardIntent === "deal"
-                  ? "deal over this puzzle?"
-                  : "leave this puzzle?"
-              }}<br /><span class="guard-note-sub">{{ guardSub }}</span>
+              <span class="guard-note-title">{{ guardTitle }}</span
+              ><br /><span id="gallery-guard-stake" class="guard-note-sub">{{
+                guardSub
+              }}</span>
             </p>
             <div class="guard-note-actions">
               <button
@@ -619,7 +689,7 @@ onMounted(async () => {
                 class="guard-btn guard-leave"
                 @click.stop="guardLeave"
               >
-                {{ guardIntent === "deal" ? "deal" : "leave" }}
+                {{ guardVerb }}
               </button>
             </div>
           </div>
@@ -629,6 +699,12 @@ onMounted(async () => {
 
     <!-- Polite live region — announces the snapped card on every step/swipe. -->
     <div class="gallery-live" aria-live="polite" role="status">{{ liveText }}</div>
+
+    <!-- The guard's assertive region — persistent and empty until work is at risk, so the
+         arming is a change the AT is already watching for (see the note on `guardAlert`).
+         Its OWN hook, never a second `.gallery-live`: three specs address the polite region by
+         that class alone and a shared one turns each of them into a strict-mode violation. -->
+    <div class="gallery-guard-live" role="alert">{{ guardAlert }}</div>
   </div>
 </template>
 
@@ -760,6 +836,15 @@ onMounted(async () => {
   }
 }
 
+/* The dialog container takes focus on arm (`tabindex="-1"`, never in the tab order). It is not
+   an operable control and the ribbon IS its own visual announcement, so the UA ring is dropped:
+   the two verbs inside keep their `:focus-visible` outlines, which is where a keyboard user's
+   focus actually lands and where the ring has something to say. Also holds the pixels still —
+   the ribbon's paint is asserted unchanged by W3's golden run. */
+.gallery-guard:focus {
+  outline: none;
+}
+
 .guard-note-frame {
   display: block;
   width: 100%;
@@ -843,8 +928,9 @@ onMounted(async () => {
   }
 }
 
-/* Visually-hidden live region (the standard clip pattern) — announced, never painted. */
-.gallery-live {
+/* Visually-hidden live regions (the standard clip pattern) — announced, never painted. */
+.gallery-live,
+.gallery-guard-live {
   position: absolute;
   width: 1px;
   height: 1px;

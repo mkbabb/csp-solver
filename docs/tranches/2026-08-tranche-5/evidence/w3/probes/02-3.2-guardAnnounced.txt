@@ -1,0 +1,183 @@
+T5-W3 PROBES — BORN-RED TRANSCRIPT
+tip: 78448760 — T5-W2 THE SEAL: the finisher's six rows land, the bake race re-pins, fourteen adjudications close the wave
+date: 2026-08-02T03:58:00Z
+spec: web/frontend/e2e/a11y.spec.ts
+config: playwright.config.ts (DEFAULT — projects chromium + webkit)
+runner: npx playwright test a11y.spec.ts --reporter=list
+server: vite dev on :4240 via PLAYWRIGHT_BASE_URL — :3000 is held by a foreign palette-api on this host
+playwright: 1.61.1
+======================================================================
+FAMILY: 3.2 guardAnnounced
+HEAD truth (r2 §H2): aria-modal null, focus outside, no live region names the ribbon, second Enter takes user entries 1 -> 0.
+rows: 6 (3 tests x 2 engines) — ALL RED
+======================================================================
+
+  6) [chromium] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state 
+
+    Error: the armed guard was never announced; live regions said ["mark it and I'll grade","board changed — ask againNot checking — the board changed since the last check. Choose Ask again.","futoshiki, 2 of 5. 5×5 easy, new game"]
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      268 |       announced,
+      269 |       `the armed guard was never announced; live regions said ${JSON.stringify(heard)}`,
+    > 270 |     ).toBe(true);
+          |       ^
+      271 |   });
+      272 |
+      273 |   test('the armed guard contains focus (aria-modal + focus inside the dialog)', async ({
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:270:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-ar-881ba-d-announces-its-armed-state-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-ar-881ba-d-announces-its-armed-state-chromium/error-context.md
+
+
+  7) [chromium] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.gallery-guard')
+    Expected: "true"
+    Received: ""
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('.gallery-guard')
+        4 × locator resolved to <div data-v-08f2b41b="" role="alertdialog" aria-label="Leave this puzzle?" class="gallery-guard guard-ribbon-enter-active guard-ribbon-enter-to">…</div>
+          - unexpected value "null"
+        20 × locator resolved to <div data-v-08f2b41b="" role="alertdialog" class="gallery-guard" aria-label="Leave this puzzle?">…</div>
+           - unexpected value "null"
+
+
+      277 |     const guard = page.locator('.gallery-guard');
+      278 |     await expect(guard).toHaveAttribute('role', 'alertdialog');
+    > 279 |     await expect(guard).toHaveAttribute('aria-modal', 'true');
+          |                         ^
+      280 |
+      281 |     const where = await page.evaluate(() => {
+      282 |       const g = document.querySelector('.gallery-guard')!;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:279:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-th-be753-al-focus-inside-the-dialog--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-th-be753-al-focus-inside-the-dialog--chromium/error-context.md
+
+
+  8) [chromium] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard 
+
+    Error: the guard armed silently (announced=false) and the second Enter took the board from 1 user entries to 0
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      311 |       `the guard armed silently (announced=${announced}) and the second Enter took the board ` +
+      312 |         `from ${before} user entries to ${after}`,
+    > 313 |     ).toBe(true);
+          |       ^
+      314 |   });
+      315 | });
+      316 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:313:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-a--0d2e4-t-discard-the-board-unheard-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-a--0d2e4-t-discard-the-board-unheard-chromium/error-context.md
+
+
+  21) [webkit] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state 
+
+    Error: the armed guard was never announced; live regions said ["mark it and I'll grade","board changed — ask againNot checking — the board changed since the last check. Choose Ask again.","futoshiki, 2 of 5. 5×5 easy, new game"]
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      268 |       announced,
+      269 |       `the armed guard was never announced; live regions said ${JSON.stringify(heard)}`,
+    > 270 |     ).toBe(true);
+          |       ^
+      271 |   });
+      272 |
+      273 |   test('the armed guard contains focus (aria-modal + focus inside the dialog)', async ({
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:270:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-ar-881ba-d-announces-its-armed-state-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-ar-881ba-d-announces-its-armed-state-webkit/error-context.md
+
+
+  22) [webkit] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.gallery-guard')
+    Expected: "true"
+    Received: ""
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('.gallery-guard')
+        - locator resolved to <div data-v-08f2b41b="" role="alertdialog" aria-label="Leave this puzzle?" class="gallery-guard guard-ribbon-enter-from guard-ribbon-enter-active">…</div>
+        3 × unexpected value "null"
+          - locator resolved to <div data-v-08f2b41b="" role="alertdialog" aria-label="Leave this puzzle?" class="gallery-guard guard-ribbon-enter-active guard-ribbon-enter-to">…</div>
+        20 × unexpected value "null"
+           - locator resolved to <div data-v-08f2b41b="" role="alertdialog" class="gallery-guard" aria-label="Leave this puzzle?">…</div>
+        - unexpected value "null"
+
+
+      277 |     const guard = page.locator('.gallery-guard');
+      278 |     await expect(guard).toHaveAttribute('role', 'alertdialog');
+    > 279 |     await expect(guard).toHaveAttribute('aria-modal', 'true');
+          |                         ^
+      280 |
+      281 |     const where = await page.evaluate(() => {
+      282 |       const g = document.querySelector('.gallery-guard')!;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:279:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-th-be753-al-focus-inside-the-dialog--webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-th-be753-al-focus-inside-the-dialog--webkit/error-context.md
+
+
+  23) [webkit] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard 
+
+    Error: the guard armed silently (announced=false) and the second Enter took the board from 1 user entries to 0
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      311 |       `the guard armed silently (announced=${announced}) and the second Enter took the board ` +
+      312 |         `from ${before} user entries to ${after}`,
+    > 313 |     ).toBe(true);
+          |       ^
+      314 |   });
+      315 | });
+      316 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:313:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-2-guardAnnounced-a--0d2e4-t-discard-the-board-unheard-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-2-guardAnnounced-a--0d2e4-t-discard-the-board-unheard-webkit/error-context.md
+

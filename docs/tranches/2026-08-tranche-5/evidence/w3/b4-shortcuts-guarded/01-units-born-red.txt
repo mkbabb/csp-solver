@@ -1,0 +1,186 @@
+T5-W3 lane B4 (row 3.4 SINGLE-KEY SHORTCUTS GUARDED) — UNIT BATTERY, BORN RED
+tip: 78448760 — T5-W2 THE SEAL
+date: 2026-08-02T00:15Z (local)
+subject: src/games/shared/useAnswerKeyPeek.ts:55-70 (the real composable, not a mock) via the
+  new policy at src/composables/useShortcutPolicy.ts
+battery: src/composables/useShortcutPolicy.test.ts (NEW, written before the cure)
+runner: npx vitest run src/composables/useShortcutPolicy.test.ts --reporter=verbose
+HEAD truth (r1 M4): window-level keydown, no metaKey/ctrlKey/altKey guard, preventDefault at :66
+  -> Ctrl+K / Cmd+K flash the answer key over the board. h/p (GameBoard.vue:471,479) guard
+  Ctrl/Cmd but NOT Alt. g (App.vue:458) and d (StagingBand.vue:92) are the correct pattern.
+
+TWO REDS BANKED, IN ORDER:
+ [A] red-by-absence — the module does not exist (the defect IS the absence).
+ [B] red-by-ablation — the module exists as a documented NO-OP stub, so every assertion fires
+     BEHAVIOURALLY rather than dying at import. Expected shape 6 RED / 5 GREEN; the 5 green are
+     deliberate regression floors asserted at HEAD and must stay green through the cure:
+       · a bare shortcut key is the app's; Shift is not a modifier
+       · Ctrl/Cmd/Alt + a shortcut key belongs to the browser   (vacuous at the stub, real after)
+       · keys the estate does not bind are never claimed
+       · THE DEFECT, LIVE — without the policy, Ctrl+K reaches the peek (the ablation control:
+         it forbids greening this row by amputating the K shortcut)
+       · bare K still peeks from a focused board cell, and Escape still lifts it
+======================================================================
+[A] MODULE ABSENT
+======================================================================
+ FAIL  src/composables/useShortcutPolicy.test.ts [ src/composables/useShortcutPolicy.test.ts ]
+Error: Failed to resolve import "./useShortcutPolicy" from
+  "src/composables/useShortcutPolicy.test.ts". Does the file exist?
+  Plugin: vite:import-analysis
+ Test Files  1 failed (1)
+      Tests  no tests
+
+======================================================================
+[B] NO-OP STUB — the behavioural red
+======================================================================
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ × src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > names every single-key shortcut the estate binds, each with its prose 4ms
+   → expected [] to deeply equal [ 'k', 'g', 'h', 'p', 'd' ]
+ ✓ src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > a bare shortcut key is the app's; Shift is not a modifier 0ms
+ ✓ src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > Ctrl / Cmd / Alt + a shortcut key belongs to the browser 0ms
+ ✓ src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > keys the estate does not bind as single-key shortcuts are never claimed 0ms
+ × src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > a typing context is a prose field — the board's digit cell is not one 1ms
+   → expected false to be true // Object.is equality
+ ✓ src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > THE DEFECT, LIVE: without the policy, Ctrl+K reaches the peek 7ms
+ × src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > Ctrl+K and Cmd+K never reach the peek 1ms
+   → expected true to be false // Object.is equality
+ ✓ src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > bare K still peeks from a focused board cell, and Escape still lifts it 1ms
+ × src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > bare K typed into a prose field is a character, not a command 1ms
+   → expected true to be false // Object.is equality
+ × src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > the verdict does not depend on which composable mounted first 2ms
+   → expected true to be false // Object.is equality
+ × src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > the policy leaves no listener behind when it unmounts 1ms
+   → expected [ 'k' ] to deeply equal []
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > names every single-key shortcut the estate binds, each with its prose
+AssertionError: expected [] to deeply equal [ 'k', 'g', 'h', 'p', 'd' ]
+
+- Expected
++ Received
+
+- [
+-   "k",
+-   "g",
+-   "h",
+-   "p",
+-   "d",
+- ]
++ []
+
+ ❯ src/composables/useShortcutPolicy.test.ts:79:66
+     77| describe("the single-key shortcut policy — 3.4", () => {
+     78|   it("names every single-key shortcut the estate binds, each with its …
+     79|     expect(SINGLE_KEY_SHORTCUTS.map((s) => s.key.toLowerCase())).toEqu…
+       |                                                                  ^
+     80|       "k",
+     81|       "g",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > a typing context is a prose field — the board's digit cell is not one
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/composables/useShortcutPolicy.test.ts:120:48
+    118|
+    119|   it("a typing context is a prose field — the board's digit cell is no…
+    120|     expect(isTypingContext(field("textarea"))).toBe(true);
+       |                                                ^
+    121|     expect(isTypingContext(field("input"))).toBe(true);
+    122|     expect(isTypingContext(field("select"))).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > Ctrl+K and Cmd+K never reach the peek
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/composables/useShortcutPolicy.test.ts:143:33
+    141|     const cell = boardCell();
+    142|     press(cell, "k", { ctrlKey: true });
+    143|     expect(board.vm.peekActive).toBe(false);
+       |                                 ^
+    144|     press(cell, "k", { metaKey: true });
+    145|     expect(board.vm.peekActive).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > bare K typed into a prose field is a character, not a command
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/composables/useShortcutPolicy.test.ts:162:33
+    160|     const board = mountBoard({ policy: true });
+    161|     press(field("textarea"), "k");
+    162|     expect(board.vm.peekActive).toBe(false);
+       |                                 ^
+    163|   });
+    164|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > the verdict does not depend on which composable mounted first
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/composables/useShortcutPolicy.test.ts:168:33
+    166|     const board = mountBoard({ policy: true, policyFirst: false });
+    167|     press(boardCell(), "k", { ctrlKey: true });
+    168|     expect(board.vm.peekActive).toBe(false);
+       |                                 ^
+    169|     press(boardCell(), "k");
+    170|     expect(board.vm.peekActive).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  src/composables/useShortcutPolicy.test.ts > the single-key shortcut policy — 3.4 > the policy leaves no listener behind when it unmounts
+AssertionError: expected [ 'k' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "k",
++ ]
+
+ ❯ src/composables/useShortcutPolicy.test.ts:180:20
+    178|       const board = mountBoard({ policy: true });
+    179|       press(boardCell(), "k", { ctrlKey: true });
+    180|       expect(seen).toEqual([]);
+       |                    ^
+    181|       board.unmount();
+    182|       wrapper = null;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 5 passed (11)
+   Start at  00:15:52
+   Duration  437ms (transform 23ms, setup 16ms, import 43ms, tests 19ms, environment 254ms)
+

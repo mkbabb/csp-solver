@@ -1,0 +1,93 @@
+=== W3: gallery-deal.spec.ts ONLY, chromium, serial (isolate the 2 guard rows) ===
+
+Running 17 tests using 1 worker
+
+  ✓   1 [chromium] › e2e/gallery-deal.spec.ts:72:1 › band: a sibling of the listbox, never a control inside role=option (433ms)
+  ✓   2 [chromium] › e2e/gallery-deal.spec.ts:137:1 › cold start: an UNMOUNTED game reports its saved board and offers resume (449ms)
+  ✓   3 [chromium] › e2e/gallery-deal.spec.ts:165:1 › cold start: a game with NO board offers start, and the card keeps its range line (453ms)
+  ✓   4 [chromium] › e2e/gallery-deal.spec.ts:176:1 › cold start: GIVENS ARE NOT WORK — a dealt, untouched board reads "dealt" (300ms)
+  ✘   5 [chromium] › e2e/gallery-deal.spec.ts:197:1 › guard: a deal onto ANOTHER game with work on it arms the ribbon (10.5s)
+  ✓   6 [chromium] › e2e/gallery-deal.spec.ts:230:1 › guard: the NEGATIVE control — an untouched target board deals straight through (607ms)
+  ✓   7 [chromium] › e2e/gallery-deal.spec.ts:253:1 › guard: the `d` hotkey routes through the SAME ribbon, from the deck AND from the band (662ms)
+  ✘   8 [chromium] › e2e/gallery-deal.spec.ts:318:1 › guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon (10.9s)
+  ✓   9 [chromium] › e2e/gallery-deal.spec.ts:342:1 › guard: when BOTH boards hold work the sub-line says so (938ms)
+  ✓  10 [chromium] › e2e/gallery-deal.spec.ts:364:1 › guard: a PRISTINE mounted board deals across with no ribbon (the source-arm control) (936ms)
+  ✓  11 [chromium] › e2e/gallery-deal.spec.ts:382:1 › deal: a cross-game deal lands the TARGET game at the STAGED pair (638ms)
+  ✓  12 [chromium] › e2e/gallery-deal.spec.ts:412:1 › deal: a same-game deal rides the BRIDGE — the staged pair, and no remount (414ms)
+  ✓  13 [chromium] › e2e/gallery-deal.spec.ts:432:1 › deal: a same-game deal issued BEFORE the scene mounts still lands the staged pair (459ms)
+  ✓  14 [chromium] › e2e/gallery-deal.spec.ts:470:1 › safe verb: `start` HONOURS the staged pair (a game with no board has none to restore) (610ms)
+  ✓  15 [chromium] › e2e/gallery-deal.spec.ts:488:1 › safe verb: `resume` PRINTS the saved pair the moment the chips wander off it (601ms)
+  ✓  16 [chromium] › e2e/gallery-deal.spec.ts:525:1 › safe verb: a wandered pair cannot OUTLIVE the transaction (832ms)
+  ✓  17 [chromium] › e2e/gallery-deal.spec.ts:554:1 › a11y: the live region carries the staged pair and the board state (483ms)
+
+
+  1) [chromium] › e2e/gallery-deal.spec.ts:197:1 › guard: a deal onto ANOTHER game with work on it arms the ribbon 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.gallery-guard')
+    Expected: "Deal a new board?"
+    Received: "deal over this puzzle?"
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('.gallery-guard')
+        4 × locator resolved to <div tabindex="-1" aria-modal="true" data-v-08f2b41b="" role="alertdialog" aria-label="deal over this puzzle?" aria-describedby="gallery-guard-stake" class="gallery-guard guard-ribbon-enter-active guard-ribbon-enter-to">…</div>
+          - unexpected value "deal over this puzzle?"
+        20 × locator resolved to <div tabindex="-1" aria-modal="true" data-v-08f2b41b="" role="alertdialog" class="gallery-guard" aria-label="deal over this puzzle?" aria-describedby="gallery-guard-stake">…</div>
+           - unexpected value "deal over this puzzle?"
+
+
+      215 |   const ribbon = page.locator('.gallery-guard');
+      216 |   await expect(ribbon).toBeVisible();
+    > 217 |   await expect(ribbon).toHaveAttribute('aria-label', 'Deal a new board?');
+          |                        ^
+      218 |   await expect(ribbon.locator('.guard-note-text')).toContainText('deal over this puzzle?');
+      219 |   await expect(ribbon.locator('.guard-leave')).toHaveText('deal');
+      220 |   // Both verbs go inert while the ribbon is up — a second deal cannot ride under it.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery-deal.spec.ts:217:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-deal-guard-a-deal--2247b--work-on-it-arms-the-ribbon-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-deal-guard-a-deal--2247b--work-on-it-arms-the-ribbon-chromium/error-context.md
+
+  2) [chromium] › e2e/gallery-deal.spec.ts:318:1 › guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.gallery-guard')
+    Expected: "Deal a new board?"
+    Received: "deal over this puzzle?"
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('.gallery-guard')
+        4 × locator resolved to <div tabindex="-1" aria-modal="true" data-v-08f2b41b="" role="alertdialog" aria-label="deal over this puzzle?" aria-describedby="gallery-guard-stake" class="gallery-guard guard-ribbon-enter-active guard-ribbon-enter-to">…</div>
+          - unexpected value "deal over this puzzle?"
+        20 × locator resolved to <div tabindex="-1" aria-modal="true" data-v-08f2b41b="" role="alertdialog" class="gallery-guard" aria-label="deal over this puzzle?" aria-describedby="gallery-guard-stake">…</div>
+           - unexpected value "deal over this puzzle?"
+
+
+      330 |   const ribbon = page.locator('.gallery-guard');
+      331 |   await expect(ribbon).toBeVisible();
+    > 332 |   await expect(ribbon).toHaveAttribute('aria-label', 'Deal a new board?');
+          |                        ^
+      333 |   // The marks at risk are the MOUNTED board's, and the sub-line says so.
+      334 |   await expect(ribbon.locator('.guard-note-sub')).toHaveText("your marks aren't saved");
+      335 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery-deal.spec.ts:332:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-deal-guard-a-cross-90214--sudoku-clean-target-ribbon-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-deal-guard-a-cross-90214--sudoku-clean-target-ribbon-chromium/error-context.md
+
+  2 failed
+    [chromium] › e2e/gallery-deal.spec.ts:197:1 › guard: a deal onto ANOTHER game with work on it arms the ribbon 
+    [chromium] › e2e/gallery-deal.spec.ts:318:1 › guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon 
+  15 passed (31.8s)

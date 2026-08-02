@@ -1,0 +1,135 @@
+T5-W3 LANE B3 (row 3.3) — THE LIVE AX TREE, BOTH ENGINES, AFTER THE CURE
+date: 2026-08-02T04:09:13Z
+probe:  a standalone Playwright script (scratchpad, not repo) against vite dev :4241
+url:    /?view=gallery&game=sudoku&size=3&difficulty=EASY
+
+WHAT IT MEASURES, per role="option" node:
+  rootInert   — inert on the option root itself  (HEAD: "" on the four flanks)
+  dealInert   — inert on .game-card-deal, the interactive internals  (HEAD: null)
+  tabbables   — focusable descendants NOT inside an inert subtree (the property root-inert bought)
+  strippedBy  — the a11y.spec.ts axStrip predicate: inert / aria-hidden / display / visibility
+                on the node or ANY ancestor
+  ax          — chromium only, the browser`s own tree via CDP Accessibility.getFullAXTree
+
+HEAD, for the diff (r1 H3 / r2 §H3, re-measured in probes/07-instrument-inert-blindness.txt):
+  CDP option names: ["sudoku, 1 of 5"]   ·  CDP listbox count: 1
+  axStrip over [role="option"]: [null,"inert","inert","inert","inert"]
+
+The ariaSnapshot of .gallery-viewport is trimmed to the deck`s own shape below; the centered
+card`s projected board subtree is the live board (row 3.1`s estate), not this row`s.
+======================================================================
+[
+ {
+  "engine": "chromium",
+  "dom": [
+   {
+    "id": "gallery-card-0",
+    "label": "sudoku, 1 of 5",
+    "selected": "true",
+    "rootInert": null,
+    "dealInert": null,
+    "tabbables": 82,
+    "strippedBy": null
+   },
+   {
+    "id": "gallery-card-1",
+    "label": "futoshiki, 2 of 5",
+    "selected": "false",
+    "rootInert": null,
+    "dealInert": "",
+    "tabbables": 0,
+    "strippedBy": null
+   },
+   {
+    "id": "gallery-card-2",
+    "label": "thermo, 3 of 5",
+    "selected": "false",
+    "rootInert": null,
+    "dealInert": "",
+    "tabbables": 0,
+    "strippedBy": null
+   },
+   {
+    "id": "gallery-card-3",
+    "label": "killer, 4 of 5",
+    "selected": "false",
+    "rootInert": null,
+    "dealInert": "",
+    "tabbables": 0,
+    "strippedBy": null
+   },
+   {
+    "id": "gallery-card-4",
+    "label": "kenken, 5 of 5",
+    "selected": "false",
+    "rootInert": null,
+    "dealInert": "",
+    "tabbables": 0,
+    "strippedBy": null
+   }
+  ],
+  "ax": {
+   "listboxes": 1,
+   "options": [
+    "sudoku, 1 of 5",
+    "futoshiki, 2 of 5",
+    "thermo, 3 of 5",
+    "killer, 4 of 5",
+    "kenken, 5 of 5"
+   ]
+  },
+  "snapshot": "- listbox \"Choose a puzzle\":\n  - option \"sudoku, 1 of 5\" [selected]:\n    - img\n    - text: 9×9 easy · dealt\n    - img\n  - option \"futoshiki, 2 of 5\":\n    - text: size · 4×4 / 5×5 / 6×6 / 7×7\n    - img\n  - option \"thermo, 3 of 5\":\n    - text: size · 4×4 / 9×9 / 16×16\n    - img\n  - option \"killer, 4 of 5\":\n    - text: size · 4×4 / 9×9 / 16×16\n    - img\n  - option \"kenken, 5 of 5\":\n    - text: size · 4×4 / 5×5 / 6×6\n    - img"
+ },
+ {
+  "engine": "webkit",
+  "dom": [
+   {
+    "id": "gallery-card-0",
+    "label": "sudoku, 1 of 5",
+    "selected": "true",
+    "rootInert": null,
+    "dealInert": null,
+    "tabbables": 82,
+    "strippedBy": null
+   },
+   {
+    "id": "gallery-card-1",
+    "label": "futoshiki, 2 of 5",
+    "selected": "false",
+    "rootInert": null,
+    "dealInert": "",
+    "tabbables": 0,
+    "strippedBy": null
+   },
+   {
+    "id": "gallery-card-2",
+    "label": "thermo, 3 of 5",
+    "selected": "false",
+    "rootInert": null,
+    "dealInert": "",
+    "tabbables": 0,
+    "strippedBy": null
+   },
+   {
+    "id": "gallery-card-3",
+    "label": "killer, 4 of 5",
+    "selected": "false",
+    "rootInert": null,
+    "dealInert": "",
+    "tabbables": 0,
+    "strippedBy": null
+   },
+   {
+    "id": "gallery-card-4",
+    "label": "kenken, 5 of 5",
+    "selected": "false",
+    "rootInert": null,
+    "dealInert": "",
+    "tabbables": 0,
+    "strippedBy": null
+   }
+  ],
+  "ax": null,
+  "snapshot": "- listbox \"Choose a puzzle\":\n  - option \"sudoku, 1 of 5\" [selected]:\n    - img\n    - text: 9×9 easy · dealt\n    - img\n  - option \"futoshiki, 2 of 5\":\n    - text: size · 4×4 / 5×5 / 6×6 / 7×7\n    - img\n  - option \"thermo, 3 of 5\":\n    - text: size · 4×4 / 9×9 / 16×16\n    - img\n  - option \"killer, 4 of 5\":\n    - text: size · 4×4 / 9×9 / 16×16\n    - img\n  - option \"kenken, 5 of 5\":\n    - text: size · 4×4 / 5×5 / 6×6\n    - img"
+ }
+]

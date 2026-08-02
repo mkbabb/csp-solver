@@ -141,8 +141,11 @@ const viewBox = computed(
              frameCount pre-baked grain-in-geometry siblings; the beat only flips
              which one is opacity:1 (compositor-only — no SourceGraphic invalidation,
              zero steady-state raster). -->
+    <!-- Decorative: the drawn frame around a box whose contents carry their own names
+         (a11y r1 M6 — five of the census's unnamed graphics were this one component). -->
     <svg
       v-if="frames.length"
+      aria-hidden="true"
       class="outline-svg"
       :class="{ 'is-pruned': pruned }"
       :viewBox="viewBox"

@@ -36,7 +36,10 @@ test('gallery: ?view=gallery lands in the carousel — listbox roles, labels, fo
   await expect(page.locator('#gallery-card-0')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-label', 'futoshiki, 2 of 5');
   await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-selected', 'false');
-  await expect(page.locator('#gallery-card-1')).toHaveAttribute('inert', '');
+  // W3 3.3 — inert moved off the option root onto the card's interactive internals, so the
+  // flank stays AX-visible as an option; the property gated here (no tab stops, no hit
+  // targets on a flank) lives one node down now.
+  await expect(page.locator('#gallery-card-1 .game-card-deal')).toHaveAttribute('inert', '');
   await expect(page.locator('#gallery-card-0')).not.toHaveAttribute('inert', '');
 
   // DOM focus is on the track container (the aria-activedescendant model).
@@ -64,7 +67,7 @@ test('gallery: keyboard step moves the snap, announces it, and updates aria + pi
   await expect(listbox).toHaveAttribute('aria-activedescendant', 'gallery-card-1');
   await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('#gallery-card-1')).not.toHaveAttribute('inert', '');
-  await expect(page.locator('#gallery-card-0')).toHaveAttribute('inert', '');
+  await expect(page.locator('#gallery-card-0 .game-card-deal')).toHaveAttribute('inert', '');
   // T4-P1 F4 — the announcement now carries the band's content too: the deck's position AND
   // the staged pair AND the board state, because a snap swaps the whole slip under the deck and
   // one live region has to speak for both. Re-stated EXACTLY (never loosened to a regex) in the
@@ -153,7 +156,7 @@ test('gallery: only the centered card boils — a flank frame is inert + frozen'
 
   // The centered card carries an active boil pose; the flank is inert.
   await expect(page.locator('#gallery-card-0 .boil-pose.is-active')).toHaveCount(1);
-  await expect(page.locator('#gallery-card-1')).toHaveAttribute('inert', '');
+  await expect(page.locator('#gallery-card-1 .game-card-deal')).toHaveAttribute('inert', '');
 
   // The flank's active pose index does NOT advance over a beat window (frozen pose 0), while
   // the centered card's does (it derives the shared beat). Sample the active-pose index twice.

@@ -38,6 +38,19 @@ const props = defineProps<{
   wide?: boolean;
 }>();
 
+/**
+ * T5-W3 (a11y r1 L11) — the default (hover/focus) tape is DECORATIVE, not a tooltip.
+ *
+ * It carried `role="tooltip"` and nothing pointed at it: `aria-describedby` has zero hits
+ * estate-wide, so the five default-anchor tapes (Deal / Clear / fill forced / Solve / Share)
+ * floated in the tree as unattached furniture whose text merely re-said the button's own
+ * `aria-label`. A tooltip no control references is not a tooltip — and the cure is NOT to wire
+ * five `aria-describedby`s, which would buy the reader a second recitation of a name they
+ * already have. Tag and persistent tapes are untouched: those ARE the name (the
+ * `aria-labelledby` targets described above), and hiding them would strip a real accessible
+ * name off four compartments and the peek surface.
+ */
+
 // Seeded geometry: torn ends on the left/right edges + a small tilt.
 const geom = computed(() => {
   const rng = mulberry32(props.seed * 2654435761 + props.text.charCodeAt(0));
@@ -69,7 +82,7 @@ const geom = computed(() => {
       'washi-wide': wide,
     }"
     :style="{ clipPath: geom.clip, '--washi-tilt': geom.tilt }"
-    :role="anchor === 'tag' || persistent ? undefined : 'tooltip'"
+    :aria-hidden="anchor === 'tag' || persistent ? undefined : 'true'"
     >{{ text }}</span
   >
 </template>

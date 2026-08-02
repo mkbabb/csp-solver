@@ -1,0 +1,52 @@
+T5-W3 lane B4 (row 3.4) — NO-REGRESSION SWEEP
+A window-level capture listener is a page-wide instrument, so the whole default suite ran, both
+engines, rather than the one family this lane owns.
+
+runner: PLAYWRIGHT_BASE_URL=http://localhost:4247 npx playwright test --reporter=list
+result:  245 passed · 18 failed (1.8m)
+
+EVERY FAILURE ATTRIBUTED — none is this lane's:
+  2  a11y 3.4 "a keyboard-shortcuts help names k,g,h,p,d"   this lane's row, BLOCKED at the file
+                                                            fence (04-help-affordance-blocked.txt)
+  4  a11y 3.5 unnamedImages / 3.6 stability                 sibling lanes' rows, still born-RED
+  12 gallery.spec + gallery-deal.spec aria assertions       sibling lanes' cures IN FLIGHT at this
+                                                            working tree (git status: GameGallery.vue,
+                                                            GameCard.vue, BoardHost.vue, DigitCell.vue
+                                                            all modified by other lanes). Sample:
+        expect(locator('.gallery-guard')).toHaveAttribute('aria-label', 'Deal a new board?')
+        received "deal over this puzzle?"   <- lane B2's guard-naming, not a keyboard defect
+        expect(locator('#gallery-card-0')).toHaveAttribute(...)  <- lane B3's picker
+
+THE SPECS THAT PRESS THIS LANE'S FIVE KEYS ALL PASSED, BOTH ENGINES — the load-bearing half of
+this sweep. `affordances.spec.ts` (k peek x6, h hint x2, Ctrl/Meta+z undo/redo), `drawer.spec.ts`
+(k with the drawer open), `gallery-deal.spec.ts:270,283` (d on the viewport and on the band), and
+above all:
+  ✓   70 [chromium] › e2e/gallery.spec.ts:123:1 › gallery: `g` opens the gallery from playing; a `g` typed into a cell does not (1.2s)
+  ✓  204 [webkit] › e2e/gallery.spec.ts:123:1 › gallery: `g` opens the gallery from playing; a `g` typed into a cell does not (1.9s)
+
+  — which is the one test that would have caught the policy over-reaching: it asserts `g` opens
+  the gallery AND that a `g` typed into a board cell does not. The policy deliberately exempts
+  the board's digit cells (so K still peeks from the grid, UI-7(a)); App.vue's own narrower `g`
+  guard is what keeps that key out of a cell, and it was left exactly as it was.
+
+FULL LIST OF FAILURES, VERBATIM FROM THE RUN:
+  18 failed
+    [chromium] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+    [chromium] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes 
+    [chromium] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total 
+    [chromium] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) 
+    [chromium] › e2e/gallery-deal.spec.ts:197:1 › guard: a deal onto ANOTHER game with work on it arms the ribbon 
+    [chromium] › e2e/gallery-deal.spec.ts:318:1 › guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon 
+    [chromium] › e2e/gallery.spec.ts:22:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips 
+    [chromium] › e2e/gallery.spec.ts:57:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips 
+    [chromium] › e2e/gallery.spec.ts:149:1 › gallery: only the centered card boils — a flank frame is inert + frozen 
+    [webkit] › e2e/a11y.spec.ts:394:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d 
+    [webkit] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes 
+    [webkit] › e2e/a11y.spec.ts:490:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total 
+    [webkit] › e2e/a11y.spec.ts:506:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted) 
+    [webkit] › e2e/gallery-deal.spec.ts:197:1 › guard: a deal onto ANOTHER game with work on it arms the ribbon 
+    [webkit] › e2e/gallery-deal.spec.ts:318:1 › guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon 
+    [webkit] › e2e/gallery.spec.ts:22:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips 
+    [webkit] › e2e/gallery.spec.ts:57:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips 
+    [webkit] › e2e/gallery.spec.ts:149:1 › gallery: only the centered card boils — a flank frame is inert + frozen 
+  245 passed (1.8m)

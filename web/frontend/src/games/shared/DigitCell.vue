@@ -301,9 +301,15 @@ defineExpose({ focus: focusInput, position: props.position });
       </span>
     </div>
 
-    <!-- SVG handwritten glyph overlay -->
+    <!-- SVG handwritten glyph overlay. DECORATIVE HERE (T5-W3 3.5): the glyph's own
+         `aria-label` is the digit, and `useGameCell`'s name already spends that digit on the
+         cell ("…, given clue 4"), so an exposed glyph made every filled cell announce twice
+         — once labelled, once as a bare graphic. `aria-hidden` rides the usage, not the
+         component: the poster board, the caret and the logo label their glyphs because
+         nothing else there carries the value. -->
     <HandwrittenGlyph
       v-if="value !== 0"
+      aria-hidden="true"
       :value="glyphChar"
       :is-given="isGiven"
       :is-overridden="isOverridden"
@@ -317,10 +323,14 @@ defineExpose({ focus: focusInput, position: props.position });
 
     <!-- Ghost cell highlight — the three-tier pencil-sketch focus/hover/invalid ring (§4.2).
          Hover = graphite (instant); :focus-visible = crayon-blue sketched-on; conflict = the
-         teacher's red circle (doubles as the aria-invalid indicator). -->
+         teacher's red circle (doubles as the aria-invalid indicator). Decorative (T5-W3 3.5):
+         one bare `<svg>` per cell mapped to an unnamed `image` — 81 of them on a 9×9 — and the
+         states it draws are all spoken elsewhere (focus by the input, the conflict by
+         `aria-invalid`). -->
     <div
       class="cell-ghost pointer-events-none absolute inset-0"
       :class="{ 'is-active': isActive }"
+      aria-hidden="true"
     >
       <svg
         class="absolute inset-0 h-full w-full overflow-visible"

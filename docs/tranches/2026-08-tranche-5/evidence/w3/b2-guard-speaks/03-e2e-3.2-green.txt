@@ -1,0 +1,19 @@
+T5-W3 lane B2 (row 3.2) — PROBE FAMILY 3.2 guardAnnounced, GREEN BOTH ENGINES
+date: 2026-08-02T04:13:17Z
+spec: e2e/a11y.spec.ts (READ-ONLY — run, never edited)
+config: playwright.config.ts DEFAULT (projects chromium + webkit)
+server: vite dev on :4240 (PLAYWRIGHT_BASE_URL) — :3000 is a foreign palette-api, :3001/:4288 are the owner s
+was: 6/6 RED at tip 78448760 (../probes/02-3.2-guardAnnounced.txt)
+runner: PLAYWRIGHT_BASE_URL=http://localhost:4240 npx playwright test a11y.spec.ts -g "3.2 guardAnnounced" --reporter=list
+======================================================================
+
+Running 6 tests using 6 workers
+
+  ✓  3 [chromium] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) (2.4s)
+  ✓  4 [chromium] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state (2.5s)
+  ✓  6 [webkit] › e2e/a11y.spec.ts:253:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state (3.6s)
+  ✓  1 [webkit] › e2e/a11y.spec.ts:273:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog) (3.7s)
+  ✓  2 [chromium] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard (4.3s)
+  ✓  5 [webkit] › e2e/a11y.spec.ts:296:3 › 3.2 guardAnnounced › a second Enter cannot discard the board unheard (5.6s)
+
+  6 passed (7.2s)

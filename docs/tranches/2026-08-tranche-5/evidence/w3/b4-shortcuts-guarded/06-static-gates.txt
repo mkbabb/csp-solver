@@ -1,0 +1,34 @@
+T5-W3 lane B4 (row 3.4) — STATIC GATES + THE π CLAIM
+--- npx vue-tsc -b --noEmit ---
+(clean)
+--- npm run lint (prettier --check src/) ---
+Checking formatting...
+All matched files use Prettier code style!
+--- npx eslint . ---
+(clean)
+--- npm run lint:boundary ---
+> eslint --no-config-lookup --config eslint.boundary.config.js src/games
+
+(clean)
+--- npm run lint:knip ---
+> csp-solver-frontend@0.1.0 lint:knip
+> knip
+
+(clean)
+--- npm run test:unit ---
+ Test Files  38 passed (38)
+      Tests  428 passed (428)
+   Start at  00:23:47
+   Duration  2.52s (transform 7.29s, setup 1.09s, import 9.09s, tests 1.79s, environment 19.96s)
+
+
+π / GOLDEN CLAIM — THIS LANE MOVES NO PIXELS.
+The whole diff is script-only:
+  src/composables/useShortcutPolicy.ts        NEW — a keydown listener and three pure predicates
+  src/composables/useShortcutPolicy.test.ts   NEW — units
+  src/App.vue                                 +1 import, +1 call, +2 comment blocks; <template>
+                                              and <style> byte-identical
+Nothing renders, nothing is styled, no DOM node is added, removed or re-attributed. The goldens
+were NOT run and were NOT touched (e2e/goldens is untouched by construction).
+The one change in this row that WOULD move pixels is the crib patch in 04, which this lane's
+fence forbids and which is flagged there as golden-bearing for whoever lands it.

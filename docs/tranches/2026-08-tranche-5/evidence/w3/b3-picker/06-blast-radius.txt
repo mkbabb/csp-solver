@@ -1,0 +1,125 @@
+T5-W3 LANE B3 (row 3.3) — BLAST RADIUS ON THE NEIGHBOURING GALLERY SPECS
+date: 2026-08-02T04:10:35Z
+runner: PLAYWRIGHT_BASE_URL=http://localhost:4241 npx playwright test gallery.spec.ts gallery-guard.spec.ts --project=webkit --workers=1 --reporter=list
+SERIAL, one worker — the parallel pass had ten dev-server contention flakes on top (see 05).
+EXPECT: exactly 3 red, all in e2e/gallery.spec.ts (:39, :67, :156), all asserting `inert` on the
+OPTION ROOT — the defect this row kills. That file is OUTSIDE this lane`s fence and was NOT
+touched; the retarget patch is banked in 05-collision-gallery-spec.md.
+======================================================================
+
+Running 14 tests using 1 worker
+
+  ✓   1 [webkit] › e2e/gallery-guard.spec.ts:49:1 › dropdown retired: the wordmark opens the gallery; no listbox affordance remains (1.4s)
+  ✓   2 [webkit] › e2e/gallery-guard.spec.ts:65:1 › snap chime: the centered card carries a scribble underline; flanks do not (751ms)
+  ✓   3 [webkit] › e2e/gallery-guard.spec.ts:82:1 › guard: dirty + different arms the ribbon; leave abandons the marks and switches (2.0s)
+  ✓   4 [webkit] › e2e/gallery-guard.spec.ts:106:1 › guard: keep dismisses the ribbon, stays in the gallery, board unchanged (2.0s)
+  ✓   5 [webkit] › e2e/gallery-guard.spec.ts:125:1 › guard: a pristine board switches to a different game with no ribbon (1.5s)
+  ✓   6 [webkit] › e2e/gallery-guard.spec.ts:139:1 › guard: selecting the same game never asks, even when the board is dirty (1.4s)
+  ✘   7 [webkit] › e2e/gallery.spec.ts:22:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips (10.7s)
+  ✘   8 [webkit] › e2e/gallery.spec.ts:57:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips (11.0s)
+  ✓   9 [webkit] › e2e/gallery.spec.ts:95:1 › gallery: Enter on futoshiki selects it — board swaps, ?game set, ?view cleared (1.3s)
+  ✓  10 [webkit] › e2e/gallery.spec.ts:111:1 › gallery: Escape cancels back to the board, no swap, ?view cleared (990ms)
+  ✓  11 [webkit] › e2e/gallery.spec.ts:123:1 › gallery: `g` opens the gallery from playing; a `g` typed into a cell does not (2.2s)
+  ✘  12 [webkit] › e2e/gallery.spec.ts:149:1 › gallery: only the centered card boils — a flank frame is inert + frozen (11.6s)
+  ✓  13 [webkit] › e2e/gallery.spec.ts:178:3 › gallery under prefers-reduced-motion › PRM: open is an instant cut — gallery present, no tweening (2.5s)
+  ✓  14 [webkit] › e2e/gallery.spec.ts:206:3 › gallery on a 375 phone › 375: one card near-fills the width, a neighbor peeks, pips present (2.1s)
+
+
+  1) [webkit] › e2e/gallery.spec.ts:22:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('#gallery-card-1')
+    Expected: ""
+    Received: serializes to the same string
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('#gallery-card-1')
+        24 × locator resolved to <div role="option" class="game-card" data-v-e1526f66="" data-v-08f2b41b="" id="gallery-card-1" aria-selected="false" aria-label="futoshiki, 2 of 5">…</div>
+           - unexpected value "null"
+
+
+      37 |   await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-label', 'futoshiki, 2 of 5');
+      38 |   await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-selected', 'false');
+    > 39 |   await expect(page.locator('#gallery-card-1')).toHaveAttribute('inert', '');
+         |                                                 ^
+      40 |   await expect(page.locator('#gallery-card-0')).not.toHaveAttribute('inert', '');
+      41 |
+      42 |   // DOM focus is on the track container (the aria-activedescendant model).
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:39:49
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-gallery-view-galle-c4819-box-roles-labels-focus-pips-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-gallery-view-galle-c4819-box-roles-labels-focus-pips-webkit/error-context.md
+
+  2) [webkit] › e2e/gallery.spec.ts:57:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('#gallery-card-0')
+    Expected: ""
+    Received: serializes to the same string
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('#gallery-card-0')
+        24 × locator resolved to <div role="option" class="game-card" data-v-e1526f66="" data-v-08f2b41b="" id="gallery-card-0" aria-selected="false" aria-label="sudoku, 1 of 5">…</div>
+           - unexpected value "null"
+
+
+      65 |   await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-selected', 'true');
+      66 |   await expect(page.locator('#gallery-card-1')).not.toHaveAttribute('inert', '');
+    > 67 |   await expect(page.locator('#gallery-card-0')).toHaveAttribute('inert', '');
+         |                                                 ^
+      68 |   // T4-P1 F4 — the announcement now carries the band's content too: the deck's position AND
+      69 |   // the staged pair AND the board state, because a snap swaps the whole slip under the deck and
+      70 |   // one live region has to speak for both. Re-stated EXACTLY (never loosened to a regex) in the
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:67:49
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-gallery-keyboard-s-71f6b-es-it-and-updates-aria-pips-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-gallery-keyboard-s-71f6b-es-it-and-updates-aria-pips-webkit/error-context.md
+
+  3) [webkit] › e2e/gallery.spec.ts:149:1 › gallery: only the centered card boils — a flank frame is inert + frozen 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('#gallery-card-1')
+    Expected: ""
+    Received: serializes to the same string
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('#gallery-card-1')
+        23 × locator resolved to <div role="option" class="game-card" data-v-e1526f66="" data-v-08f2b41b="" id="gallery-card-1" aria-selected="false" aria-label="futoshiki, 2 of 5">…</div>
+           - unexpected value "null"
+
+
+      154 |   // The centered card carries an active boil pose; the flank is inert.
+      155 |   await expect(page.locator('#gallery-card-0 .boil-pose.is-active')).toHaveCount(1);
+    > 156 |   await expect(page.locator('#gallery-card-1')).toHaveAttribute('inert', '');
+          |                                                 ^
+      157 |
+      158 |   // The flank's active pose index does NOT advance over a beat window (frozen pose 0), while
+      159 |   // the centered card's does (it derives the shared beat). Sample the active-pose index twice.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:156:49
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-gallery-only-the-c-0eea1-flank-frame-is-inert-frozen-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-gallery-only-the-c-0eea1-flank-frame-is-inert-frozen-webkit/error-context.md
+
+  3 failed
+    [webkit] › e2e/gallery.spec.ts:22:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips 
+    [webkit] › e2e/gallery.spec.ts:57:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips 
+    [webkit] › e2e/gallery.spec.ts:149:1 › gallery: only the centered card boils — a flank frame is inert + frozen 
+  11 passed (55.5s)

@@ -189,11 +189,16 @@ onUnmounted(stopDraws);
 </script>
 
 <template>
+  <!-- a11y r1 L12: the `tabindex="0"` is GONE. It existed to trigger the hover/focus reveal
+       that pass 4 retired (see the dead-markup note below); the stop outlived its purpose and
+       sat between "Deal a new board" and "Normal" as a Tab press that activates nothing and
+       reveals nothing. The name it announces is already announced — `role="img"` +
+       `aria-label` publish the tally to a reader browsing the card, which is the reading mode
+       a non-interactive graphic belongs to. -->
   <div
     class="difficulty-tally"
     :class="{ 'is-ungraded': !descriptor.graded }"
     role="img"
-    tabindex="0"
     :aria-label="descriptor.ariaLabel"
   >
     <span class="dt-label" aria-hidden="true">{{ label }}</span>
@@ -323,9 +328,6 @@ onUnmounted(stopDraws);
   stroke-dasharray: 2.5 3.5;
 }
 
-.difficulty-tally:focus-visible {
-  outline: 2px solid var(--color-focus-sketch, #3a7bc4);
-  outline-offset: 3px;
-  border-radius: 4px;
-}
+/* The `:focus-visible` ring goes with the tab stop it drew (a11y r1 L12). Nothing focuses a
+   `role="img"` div that no longer takes a tabindex, so the rule was unreachable. */
 </style>

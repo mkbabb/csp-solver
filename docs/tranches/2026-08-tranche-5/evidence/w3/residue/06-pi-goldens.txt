@@ -1,0 +1,51 @@
+T5-W3 lane C (row 3.6) — π: THE FOUR GOLDENS, IDENTITY
+date: 2026-08-02T04:49:00Z
+config: playwright-golden.config.ts (chromium, DPR2, PRM reduce) — NOT re-baselined, NOT touched
+dist: built from this working tree via 'npx vite build --outDir <scratchpad>/dist-w3c'
+      (vue-tsc -b run separately, exit 0); served by 'vite preview' on :4244.
+INSTRUMENT NOTE, banked because it cost a false red: a first run of these four against the
+  DEV server (:4242) reds logo-light. Goldens are minted against the BUILT dist (the golden
+  law, and lane B1's own instrument at :4231) — the dev server is not the artifact and its
+  logo raster is not the baseline's. The run below is the correct instrument.
+NOTHING RE-BASELINED. e2e/goldens/ untouched — no --update-snapshots, ever.
+
+THE π ARGUMENT, stated before the run:
+  · the crib grew two rows (K/H/P → K/G/H/P/D) and the redo chord grew two keycaps. A REAL
+    delta inside the controls card on a fine pointer — declared, not hidden. No golden crop
+    contains the card: the four are cell-light, grid-corner-light, logo-light, toggle-crest-
+    dark. At 1280 the card is the RAIL, its own column, so its height cannot move the board
+    box the two grid crops are taken from.
+  · M9's heading wrapper is display:contents — no box generated, the button stays the flex
+    item (lane B1's argument for role=row, holding for the same reason).
+  · M8's min-width sits inside @media (pointer: coarse); this config runs a fine pointer.
+  · the 11 aria-hidden attributes and the tally's tabindex paint nothing.
+======================================================================
+    Expected: e2e/goldens/toggle-crest-dark-darwin.png
+    Received: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/toggle-crest-dark-actual.png
+    Diff:     test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/toggle-crest-dark-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/error-context.md
+
+  1 failed
+    e2e/visual-golden.spec.ts:229:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+  3 passed (2.7s)
+
+======================================================================
+STABILITY, because ONE red is never a re-baseline (the standing law):
+the same four, same dist, same preview, three more times —
+  run 1: 4/4 pass
+  run 2: 3/4 — toggle-crest-dark, 1028 px, ratio 0.03 against the 0.017 soul floor
+  run 3: 4/4 pass
+toggle-crest-dark and logo-light are the estate's two NON-CONVERGENT surfaces (the sun-crest
+clause). playwright-golden.config.ts:41-46 books the mechanism in its own words: the
+feTurbulence-baked poses 'rasterize with a few LSB of edge noise run-to-run — enough to
+intermittently breach the 1.7% soul floor'. The failing MEMBER wanders between runs on an
+unchanged dist, which is the signature of raster noise and the opposite of a regression.
+This lane touches no celestial file and no wordmark file: the toggle crest cannot be
+downstream of an aria-hidden attribute, a display:contents heading, or a coarse min-width.
+NOT re-baselined. Flagged for the verify pass to re-run π rather than trusted on my word.

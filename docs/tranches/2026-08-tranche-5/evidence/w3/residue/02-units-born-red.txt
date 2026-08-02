@@ -1,0 +1,78 @@
+T5-W3 lane C (row 3.6) — THE UNIT GATES, BORN RED BY ABLATION
+date: 2026-08-02T04:40:00Z
+method: the four cures are REMOVED from the tree (the defect restored verbatim from 78448760),
+  the new gates run against the defect, and the transcript below is the red. The cures are then
+  restored byte-for-byte from a pre-ablation copy and the whole battery re-run (03-…).
+ablations: KeyboardLegend K/H/P + bare-⇧Z redo · SheetWashiLabel role=tooltip · DifficultyTally
+  tabindex=0 · GameControlPanel <button><h2>
+======================================================================
+AssertionError: expected { role: 'tooltip', hidden: undefined } to deeply equal { role: undefined, hidden: 'true' }
+
+- Expected
++ Received
+
+  {
+-   "hidden": "true",
+-   "role": undefined,
++   "hidden": undefined,
++   "role": "tooltip",
+  }
+
+ ❯ src/pencil/sheet/SheetWashiLabel.test.ts:30:23
+     28| describe("SheetWashiLabel — no tape claims a role nothing points at", …
+     29|   it("the default hover/focus tape is decorative: no role, out of the …
+     30|     expect(attrs({})).toEqual({ role: undefined, hidden: "true" });
+       |                       ^
+     31|   });
+     32|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  src/pencil/sheet/SheetWashiLabel.test.ts > SheetWashiLabel — no tape claims a role nothing points at > the same is true of an explicit 'above' anchor and of a wide note
+AssertionError: expected { role: 'tooltip', hidden: undefined } to deeply equal { role: undefined, hidden: 'true' }
+
+- Expected
++ Received
+
+  {
+-   "hidden": "true",
+-   "role": undefined,
++   "hidden": undefined,
++   "role": "tooltip",
+  }
+
+ ❯ src/pencil/sheet/SheetWashiLabel.test.ts:34:40
+     32|
+     33|   it("the same is true of an explicit 'above' anchor and of a wide not…
+     34|     expect(attrs({ anchor: "above" })).toEqual({ role: undefined, hidd…
+       |                                        ^
+     35|     expect(attrs({ wide: true })).toEqual({ role: undefined, hidden: "…
+     36|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+ FAIL  src/pencil/sheet/SheetWashiLabel.test.ts > SheetWashiLabel — no tape claims a role nothing points at > no arm carries role=tooltip
+AssertionError: {}: expected 'tooltip' to be undefined
+
+- Expected:
+undefined
+
++ Received:
+"tooltip"
+
+ ❯ src/pencil/sheet/SheetWashiLabel.test.ts:58:56
+     56|       { anchor: "tag", persistent: true },
+     57|     ])
+     58|       expect(attrs(props).role, JSON.stringify(props)).toBeUndefined();
+       |                                                        ^
+     59|   });
+     60|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯
+
+
+ Test Files  4 failed (4)
+      Tests  10 failed | 21 passed (31)
+   Start at  00:40:01
+   Duration  876ms (transform 914ms, setup 75ms, import 1.07s, tests 229ms, environment 1.16s)
+

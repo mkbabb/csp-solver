@@ -1,0 +1,383 @@
+T5-W3 lane C (row 3.6) — THE RESIDUE PROBE: EVERY LANDED ROW, PRE AND POST
+date: 2026-08-02T04:51:03Z
+instrument: a scratch Playwright measurement (NOT a spec — e2e/a11y.spec.ts is read-only to
+  this lane and the residue rows are not in it). Each r1 finding restated as a live boolean;
+  identical script both runs, dev server :4242. Desktop 1280x800 + a 390x844 coarse arm.
+  Script preserved verbatim below the figures so the measurement is re-runnable.
+======================================================================
+PRE (tip 78448760 + the four cure lanes, before this lane's first edit):
+{
+  "m7": {
+    "present": true,
+    "role": null,
+    "label": null,
+    "labelledby": null
+  },
+  "m9": [],
+  "l10": {
+    "present": true,
+    "display": "grid",
+    "text": "K peek H hint P pencil ⌘ / Ctrl Z undo ⇧ Z redo",
+    "keys": [
+      "K=peek",
+      "H=hint",
+      "P=pencil",
+      "⌘+Ctrl+Z=undo",
+      "⇧+Z=redo"
+    ],
+    "keyshortcuts": []
+  },
+  "l11": {
+    "total": 5,
+    "orphans": 5
+  },
+  "l12": [
+    "div[role=img] \"difficulty — singles only (1 of 5)\""
+  ],
+  "l13": {
+    "landmarks": [
+      "main"
+    ],
+    "outside": [
+      "Show attribution card",
+      "@mbabb",
+      "View project on GitHub \ud83c",
+      "Switch to dark mode"
+    ],
+    "skipLink": false
+  },
+  "l14": [
+    {
+      "labelChars": 95,
+      "focusable": false
+    }
+  ],
+  "l15": {
+    "stops": 107,
+    "unringed": 107,
+    "sample": [
+      "attribution-trigger",
+      "text-foreground",
+      "text-foreground",
+      "sun-moon-toggle",
+      "logo-trigger",
+      "cell-native-input"
+    ]
+  },
+  "m8": {
+    "coarse": true,
+    "under44": [
+      {
+        "label": "@mbabb",
+        "cls": "text-foreground",
+        "w": 45.4,
+        "h": 17.1
+      },
+      {
+        "label": "View project on GitHub \ud83c",
+        "cls": "text-foreground",
+        "w": 198,
+        "h": 18
+      },
+      {
+        "label": "Size",
+        "cls": "mobile-heading-btn",
+        "w": 41.2,
+        "h": 44
+      },
+      {
+        "label": "difficulty — singles onl",
+        "cls": "difficulty-tally",
+        "w": 72.8,
+        "h": 24
+      }
+    ]
+  },
+  "m9mobile": [
+    "h2.section-heading inside BUTTON.mobile-heading-btn",
+    "h2.section-heading inside BUTTON.mobile-heading-btn"
+  ],
+  "headingRoles": 0
+}
+
+======================================================================
+POST (after this lane's cures):
+{
+  "m7": {
+    "present": true,
+    "role": "region",
+    "label": "controls",
+    "labelledby": null
+  },
+  "m9": [],
+  "l10": {
+    "present": true,
+    "display": "grid",
+    "text": "K peek G games H hint P pencil D deal ⌘ / Ctrl Z undo ⌘ / Ctrl ⇧ Z redo",
+    "keys": [
+      "K=peek",
+      "G=games",
+      "H=hint",
+      "P=pencil",
+      "D=deal",
+      "⌘+Ctrl+Z=undo",
+      "⌘+Ctrl+⇧+Z=redo"
+    ],
+    "keyshortcuts": []
+  },
+  "l11": {
+    "total": 0,
+    "orphans": 0
+  },
+  "l12": [],
+  "l13": {
+    "landmarks": [
+      "main",
+      "div[region]"
+    ],
+    "outside": [
+      "Show attribution card",
+      "@mbabb",
+      "View project on GitHub \ud83c",
+      "Switch to dark mode"
+    ],
+    "skipLink": false
+  },
+  "l14": [
+    {
+      "labelChars": 95,
+      "focusable": false
+    }
+  ],
+  "l15": {
+    "stops": 106,
+    "unringed": 106,
+    "sample": [
+      "attribution-trigger",
+      "text-foreground",
+      "text-foreground",
+      "sun-moon-toggle",
+      "logo-trigger",
+      "cell-native-input"
+    ]
+  },
+  "m8": {
+    "coarse": true,
+    "under44": [
+      {
+        "label": "@mbabb",
+        "cls": "text-foreground",
+        "w": 45.4,
+        "h": 17.1
+      },
+      {
+        "label": "View project on GitHub \ud83c",
+        "cls": "text-foreground",
+        "w": 198,
+        "h": 18
+      }
+    ]
+  },
+  "m9mobile": [],
+  "headingRoles": 0
+}
+
+======================================================================
+M8, the cured tap target, measured exactly (390x844, pointer:coarse, settled):
+{"coarse":true,"tabs":[{"t":"size","w":44,"h":44},{"t":"difficulty Easy","w":101.7,"h":44}],"rowW":334,"cardW":350,"scrollX":false}
+
+  the Size tab: 41.2 x 44  ->  44 x 44. The row still fits its card (334 <= 350) and the
+  document does not scroll horizontally, so the floor was paid for out of slack, not layout.
+
+L15, measured at SOURCE (the live selector-matching arm of this probe is unreliable and its
+  107/107 figure is DISCARDED — a scoped-Vue [data-v-*] selector cannot be matched by the
+  naive strip this script does; saying so rather than citing a number I cannot stand behind):
+  · grep ':focus-visible' src/games/shared/GameControlPanel.vue          -> 2 hits, BOTH comments (:959, :1159), zero rules
+  · grep ':focus-visible' src/pencil/chrome/OptionSelector/OptionSelector.vue -> 0
+  · grep -rn 'outline: *none' src -> 4 hits, all scoped, each substituting a drawn ring
+    (gameCell.css:259, GameGallery.vue:845, DarkModeToggle.vue:662/667). No global suppression.
+  · files carrying an authored ring: 10.
+  => the UA focus ring is PRESENT and unsuppressed on the unringed controls. 2.4.7 passes
+     today; what is missing is the estate's crayon ring, which is a skin decision.
+
+======================================================================
+THE SCRIPT
+======================================================================
+/**
+ * T5-W3 lane C (row 3.6) — the M/L residue, measured live.
+ *
+ * Every row here is one of a11y r1's residue findings (M7/M8/M9/L11/L12/L13/L14/L15) restated
+ * as a boolean over the LIVE page, so the disposition table cites a measurement rather than a
+ * reading of the source. Run pre-cure (RED) and post-cure (GREEN); the script is identical
+ * across both runs.
+ */
+import { chromium } from '/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/@playwright/test/index.mjs';
+
+const BASE = process.argv[2] ?? 'http://localhost:4242';
+const URL = BASE + '/?game=sudoku&size=3&difficulty=EASY';
+
+const settle = async (page) => {
+  await page.waitForSelector('[role="grid"] [role="gridcell"]', { timeout: 20000 });
+  await page.waitForSelector('g.boil-frame-layer.is-active', { state: 'attached', timeout: 20000 });
+  await page.waitForTimeout(600);
+};
+
+async function desktop(browser) {
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.goto(URL);
+  await settle(page);
+
+  // M7 — the drawer is a named region (or focus is not moved into it).
+  const m7 = await page.evaluate(() => {
+    const d = document.querySelector('#controls-drawer');
+    if (!d) return { present: false };
+    return {
+      present: true,
+      role: d.getAttribute('role'),
+      label: d.getAttribute('aria-label'),
+      labelledby: d.getAttribute('aria-labelledby'),
+    };
+  });
+
+  // M9 — heading elements nested inside interactive controls.
+  const m9 = await page.evaluate(() =>
+    [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')]
+      .filter((h) => h.closest('button,a[href],[role="button"]'))
+      .map((h) => `${h.tagName.toLowerCase()}.${h.className.split(' ')[0]} inside ${h.closest('button,a[href],[role="button"]').tagName}`),
+  );
+
+  // L11 — orphan tooltips: role="tooltip" nodes nothing points at.
+  const l11 = await page.evaluate(() => {
+    const refs = new Set(
+      [...document.querySelectorAll('[aria-describedby]')].flatMap((n) =>
+        (n.getAttribute('aria-describedby') ?? '').split(/\s+/),
+      ),
+    );
+    const tips = [...document.querySelectorAll('[role="tooltip"]')];
+    return { total: tips.length, orphans: tips.filter((t) => !t.id || !refs.has(t.id)).length };
+  });
+
+  // L12 — dead tab stops: focusable nodes that activate nothing.
+  const l12 = await page.evaluate(() =>
+    [...document.querySelectorAll('[tabindex="0"]')]
+      .filter((el) => !el.matches('button,a[href],input,select,textarea,[role="button"],[role="option"],[role="listbox"],[role="tab"]'))
+      .map((el) => `${el.tagName.toLowerCase()}[role=${el.getAttribute('role')}] "${el.getAttribute('aria-label') ?? ''}"`),
+  );
+
+  // L13 — landmarks + controls outside them.
+  const l13 = await page.evaluate(() => {
+    const marks = [...document.querySelectorAll('main,header,footer,nav,aside,[role="main"],[role="banner"],[role="contentinfo"],[role="navigation"],[role="region"][aria-label],[role="complementary"]')];
+    const focusable = [...document.querySelectorAll('button,a[href],input,select,textarea,[tabindex="0"]')].filter(
+      (el) => el.offsetParent !== null && !el.closest('[inert]'),
+    );
+    return {
+      landmarks: marks.map((m) => m.tagName.toLowerCase() + (m.getAttribute('role') ? `[${m.getAttribute('role')}]` : '')),
+      outside: focusable.filter((el) => !marks.some((m) => m.contains(el))).map((el) => el.getAttribute('aria-label') ?? el.textContent.trim().slice(0, 24)),
+      skipLink: !!document.querySelector('a[href^="#"]'),
+    };
+  });
+
+  // L14 — role="separator" carrying a pointer-only gesture, and the length of what it says.
+  const l14 = await page.evaluate(() =>
+    [...document.querySelectorAll('[role="separator"]')].map((s) => ({
+      labelChars: (s.getAttribute('aria-label') ?? '').length,
+      focusable: s.hasAttribute('tabindex'),
+    })),
+  );
+
+  // L15 — tab stops with no authored :focus-visible ring (UA default outline).
+  const l15 = await page.evaluate(() => {
+    const rings = [];
+    for (const sheet of document.styleSheets) {
+      let rules;
+      try {
+        rules = sheet.cssRules;
+      } catch {
+        continue;
+      }
+      const walk = (list) => {
+        for (const r of list) {
+          if (r.cssRules) walk(r.cssRules);
+          else if (r.selectorText?.includes(':focus-visible') && /outline|box-shadow|border/.test(r.style?.cssText ?? ''))
+            rings.push(r.selectorText);
+        }
+      };
+      walk(rules);
+    }
+    const stops = [...document.querySelectorAll('button,a[href],input,select,textarea,[tabindex="0"]')].filter(
+      (el) => el.offsetParent !== null && !el.closest('[inert]'),
+    );
+    const unringed = stops.filter((el) => !rings.some((sel) => {
+      try {
+        return el.matches(sel.replace(/:focus-visible/g, '').replace(/::[a-z-]+/g, '').split(',').map((s) => s.trim()).filter(Boolean).join(',') || ':not(*)');
+      } catch {
+        return false;
+      }
+    }));
+    return { stops: stops.length, unringed: unringed.length, sample: unringed.slice(0, 6).map((el) => el.className.split(' ')[0] || el.tagName) };
+  });
+
+  // L10 — the crib: what it says, and whether the chord it prints is the one the board binds.
+  const l10 = await page.evaluate(() => {
+    const dl = document.querySelector('.keyboard-legend');
+    if (!dl) return { present: false };
+    const cs = getComputedStyle(dl);
+    return {
+      present: true,
+      display: cs.display,
+      text: dl.innerText.replace(/\s+/g, ' ').trim(),
+      keys: [...dl.querySelectorAll('.legend-row')].map((r) => [...r.querySelectorAll('kbd')].map((k) => k.textContent).join('+') + '=' + r.querySelector('dd').textContent),
+      keyshortcuts: [...document.querySelectorAll('[aria-keyshortcuts]')].map((n) => n.getAttribute('aria-keyshortcuts')),
+    };
+  });
+
+  await page.close();
+  return { m7, m9, l10, l11, l12, l13, l14, l15 };
+}
+
+async function mobile(browser) {
+  // M8 — the coarse tap-target floor, at the audit's own viewport.
+  const ctx = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 3,
+  });
+  const page = await ctx.newPage();
+  await page.emulateMedia({ media: 'screen', forcedColors: null });
+  await page.goto(URL);
+  await settle(page);
+  await page.waitForTimeout(900);
+  const m8 = await page.evaluate(() => {
+    const coarse = matchMedia('(pointer: coarse)').matches;
+    const under = [];
+    for (const el of document.querySelectorAll('button,a[href],input,select,textarea,[role="button"],[tabindex="0"]')) {
+      if (el.closest('[inert]') || el.offsetParent === null) continue;
+      if (el.closest('.game-cell')) continue; // the documented arithmetic exemption
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      if (r.width < 44 || r.height < 44)
+        under.push({
+          label: (el.getAttribute('aria-label') ?? el.textContent.trim()).slice(0, 24),
+          cls: el.className.split(' ')[0],
+          w: +r.width.toFixed(1),
+          h: +r.height.toFixed(1),
+        });
+    }
+    return { coarse, under44: under };
+  });
+  // M9 at the viewport where the mobile tab row actually renders.
+  const m9mobile = await page.evaluate(() =>
+    [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')]
+      .filter((h) => h.closest('button,a[href],[role="button"]'))
+      .map((h) => `${h.tagName.toLowerCase()}.${h.className.split(' ')[0]} inside ${h.closest('button,a[href],[role="button"]').tagName}.${h.closest('button,a[href],[role="button"]').className.split(' ')[0]}`),
+  );
+  const headingRoles = await page.evaluate(() => document.querySelectorAll('[role="heading"]').length);
+  await ctx.close();
+  return { m8, m9mobile, headingRoles };
+}
+
+const browser = await chromium.launch();
+const out = { ...(await desktop(browser)), ...(await mobile(browser)) };
+await browser.close();
+console.log(JSON.stringify(out, null, 2));

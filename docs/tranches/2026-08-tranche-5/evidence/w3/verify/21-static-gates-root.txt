@@ -1,0 +1,28 @@
+######## doc-truth ########
+        derived: 208 native #[test] attributes (csp-solver/src + csp-solver/tests, comments elided) · 29 #[wasm_bindgen_test] in the wasm crate (cfg'd to wasm32, not host-run) · 28 test binaries (csp-solver + csp-solver/wasm lib targets + integration files)
+
+GREEN  make-wasm-recipe
+        derived: csp-solver/wasm/Makefile:33 runs --no-default-features --profile wasm-release --scope mkbabb --target web — LEAN; 5 families registered (sudoku, futoshiki, thermo, killer, kenken)
+
+GREEN  ci-lane-count
+        derived: 18 jobs in .github/workflows/ci.yml (lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, wasm-publish-dryrun, frontend, fe-unit, boundary, e2e, perf-subset, iai, cargo-audit, evidence-policy, doc-truth, npm-audit)
+
+GREEN  iai-golden-figure
+        derived: 1,529,452 instructions enforced ±2.0% — csp-solver/benches/iai_queens.baseline, gated by .github/workflows/ci.yml's iai lane over bench iai_queens
+
+1 RED / 12 GREEN — doc canon disagrees with the tree
+EXIT=0
+######## ledger-diff ########
+    docs/tranches/2026-08-tranche-5/waves/T5-WGATE.md:7  CH-01…61
+    docs/tranches/LEDGER.md:7  CH-01…CH-61
+
+SATISFACTION
+  CORPUS     91
+  SELF       116
+  DELEGATED  13
+  ORPHAN     0
+  total      220
+
+VERDICT
+  GREEN — all 220 audited rows are present-or-cited. exit 0
+EXIT=0

@@ -1,0 +1,37 @@
+######## vue-tsc ########
+EXIT=0
+######## prettier(lint) ########
+EXIT=0
+
+Checking formatting...
+All matched files use Prettier code style!
+######## eslint ########
+EXIT=0
+> csp-solver-frontend@0.1.0 lint:eslint
+> eslint .
+
+######## boundary ########
+EXIT=0
+> csp-solver-frontend@0.1.0 lint:boundary
+> eslint --no-config-lookup --config eslint.boundary.config.js src/games
+
+######## knip ########
+EXIT=0
+> csp-solver-frontend@0.1.0 lint:knip
+> knip
+
+######## ink ########
+EXIT=0
+  light  rule < muted-foreground < quiet
+  dark   rule < quiet < muted-foreground
+  the ramp and the register cross between themes. Booked in index.css §INK PRESSURE, not gated.
+######## catch ########
+EXIT=0
+negative control (inject one `catch { /* ignore */ }`): RED as required
+
+check-empty-catch: 0 swallowed catch bodies
+######## tdz ########
+EXIT=0
+negative control (a synthetic game importing the table): RED as required
+
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways

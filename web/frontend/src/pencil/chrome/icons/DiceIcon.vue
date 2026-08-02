@@ -3,7 +3,10 @@ defineProps<{ size?: number; playing?: boolean }>();
 </script>
 
 <template>
+  <!-- Decorative: every icon sits inside a control that carries its own accessible name
+       (a11y r1 M6 — the census leak this file was one of four sources of). -->
   <svg
+    aria-hidden="true"
     :width="size ?? 28"
     :height="size ?? 28"
     viewBox="0 0 24 24"

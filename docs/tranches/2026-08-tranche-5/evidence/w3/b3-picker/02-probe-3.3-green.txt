@@ -1,0 +1,15 @@
+T5-W3 LANE B3 (row 3.3) — PROBE FAMILY 3.3, GREEN AFTER THE CURE
+date: 2026-08-02T04:08:54Z
+spec:   web/frontend/e2e/a11y.spec.ts (READ-ONLY — run, never edited)
+cure:   web/frontend/src/pencil/chrome/GameGallery/GameCard.vue (inert scoped to .game-card-deal)
+config: playwright.config.ts (DEFAULT — chromium + webkit)
+server: vite dev on :4241 (--strictPort) via PLAYWRIGHT_BASE_URL; :3000 holds a foreign palette-api
+runner: PLAYWRIGHT_BASE_URL=http://localhost:4241 npx playwright test a11y.spec.ts -g "3.3 optionsInPicker" --reporter=list
+======================================================================
+
+Running 2 tests using 2 workers
+
+  ✓  2 [chromium] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options (1.2s)
+  ✓  1 [webkit] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options (1.7s)
+
+  2 passed (2.8s)

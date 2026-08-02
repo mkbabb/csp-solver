@@ -100,10 +100,18 @@ onUnmounted(() => unregisterDrawer?.());
          IS the drawer — closed it parks under the board (scene.css), inert +
          visibility:hidden at rest (no invisible tab stops, W11 UI-6); Esc from within
          closes and returns focus to the tab. -->
+    <!-- a11y r1 M7: the rail moves focus like a dialog (`useControlsDrawer.focusPanel`) into a
+         region that had no accessible name, so the arrival was announced by nothing —
+         `aria-controls` can only name a region that HAS a name. `region` + the tab's own word:
+         one string for the drawn tongue and the AT label, so opening speaks "controls". At
+         closed-idle the rail is inert + visibility:hidden, so the landmark is absent at rest,
+         which is what it should be. -->
     <div
       v-if="rowRegime"
       id="controls-drawer"
       ref="railEl"
+      role="region"
+      aria-label="controls"
       class="scene-controls hidden lg:flex lg:flex-col lg:items-start"
       :inert="drawerInert"
       @keydown.escape.stop="closeDrawer"

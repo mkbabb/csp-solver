@@ -1,0 +1,353 @@
+T5-W3 PROBES — BORN-RED TRANSCRIPT
+tip: 78448760 — T5-W2 THE SEAL: the finisher's six rows land, the bake race re-pins, fourteen adjudications close the wave
+date: 2026-08-02T03:58:00Z
+spec: web/frontend/e2e/a11y.spec.ts
+config: playwright.config.ts (DEFAULT — projects chromium + webkit)
+runner: npx playwright test a11y.spec.ts --reporter=list
+server: vite dev on :4240 via PLAYWRIGHT_BASE_URL — :3000 is held by a foreign palette-api on this host
+playwright: 1.61.1
+======================================================================
+FAMILY: 3.1 rowsPerGrid
+HEAD truth (r1 H1 / r2 §H1): {grid:1, gridcell:81, row:0} — no row layer on any of the five boards.
+rows: 10 (5 tests x 2 engines) — ALL RED
+======================================================================
+
+  1) [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: sudoku: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - sudoku: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-sudok-aa454--gridcell-N-rows-of-N-cells-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-sudok-aa454--gridcell-N-rows-of-N-cells-chromium/error-context.md
+
+
+  2) [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: futoshiki: role="grid" must own 5 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 5
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - futoshiki: role="grid" must own 5 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-futos-f3eb1--gridcell-N-rows-of-N-cells-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-futos-f3eb1--gridcell-N-rows-of-N-cells-chromium/error-context.md
+
+
+  3) [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: thermo: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - thermo: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-therm-2f642--gridcell-N-rows-of-N-cells-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-therm-2f642--gridcell-N-rows-of-N-cells-chromium/error-context.md
+
+
+  4) [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: killer: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - killer: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-kille-7aba5--gridcell-N-rows-of-N-cells-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-kille-7aba5--gridcell-N-rows-of-N-cells-chromium/error-context.md
+
+
+  5) [chromium] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: kenken: role="grid" must own 4 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 4
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - kenken: role="grid" must own 4 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-kenke-42e5e--gridcell-N-rows-of-N-cells-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-kenke-42e5e--gridcell-N-rows-of-N-cells-chromium/error-context.md
+
+
+  16) [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: sudoku: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - sudoku: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-sudok-aa454--gridcell-N-rows-of-N-cells-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-sudok-aa454--gridcell-N-rows-of-N-cells-webkit/error-context.md
+
+
+  17) [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: futoshiki: role="grid" must own 5 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 5
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - futoshiki: role="grid" must own 5 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-futos-f3eb1--gridcell-N-rows-of-N-cells-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-futos-f3eb1--gridcell-N-rows-of-N-cells-webkit/error-context.md
+
+
+  18) [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: thermo: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - thermo: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-therm-2f642--gridcell-N-rows-of-N-cells-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-therm-2f642--gridcell-N-rows-of-N-cells-webkit/error-context.md
+
+
+  19) [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: killer: role="grid" must own 9 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 9
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - killer: role="grid" must own 9 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-kille-7aba5--gridcell-N-rows-of-N-cells-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-kille-7aba5--gridcell-N-rows-of-N-cells-webkit/error-context.md
+
+
+  20) [webkit] › e2e/a11y.spec.ts:194:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells 
+
+    Error: kenken: role="grid" must own 4 rows
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[role="grid"]').getByRole('row')
+    Expected: 4
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - kenken: role="grid" must own 4 rows with timeout 10000ms
+      - waiting for locator('[role="grid"]').getByRole('row')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      210 |       // THE GATE: a real row layer, N rows, each owning exactly N gridcells.
+      211 |       const rows = grid.getByRole('row');
+    > 212 |       await expect(rows, `${id}: role="grid" must own ${n} rows`).toHaveCount(n);
+          |                                                                   ^
+      213 |
+      214 |       // No orphan cells: every gridcell in the grid is inside a row.
+      215 |       expect(await rows.getByRole('gridcell').count()).toBe(n * n);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:212:67
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-1-rowsPerGrid-kenke-42e5e--gridcell-N-rows-of-N-cells-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-1-rowsPerGrid-kenke-42e5e--gridcell-N-rows-of-N-cells-webkit/error-context.md
+

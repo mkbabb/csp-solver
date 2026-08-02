@@ -1,0 +1,113 @@
+T5-W3 PROBES — BORN-RED TRANSCRIPT
+tip: 78448760 — T5-W2 THE SEAL: the finisher's six rows land, the bake race re-pins, fourteen adjudications close the wave
+date: 2026-08-02T03:58:00Z
+spec: web/frontend/e2e/a11y.spec.ts
+config: playwright.config.ts (DEFAULT — projects chromium + webkit)
+runner: npx playwright test a11y.spec.ts --reporter=list
+server: vite dev on :4240 via PLAYWRIGHT_BASE_URL — :3000 is held by a foreign palette-api on this host
+playwright: 1.61.1
+======================================================================
+FAMILY: 3.5 unnamedImages
+HEAD truth (r1 M5/M6): 155 image nodes, 62 named, 93 unnamed — 81 of them the per-cell ghost rings.
+rows: 4 (2 tests x 2 engines) — ALL RED
+======================================================================
+
+  12) [chromium] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes 
+
+    Error: 93 unnamed image nodes of 155 — decorative graphics must carry aria-hidden, meaningful ones a name
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 93
+
+      439 |       `${census.unnamed} unnamed image nodes of ${census.total} — decorative graphics must ` +
+      440 |         `carry aria-hidden, meaningful ones a name`,
+    > 441 |     ).toBe(0);
+          |       ^
+      442 |   });
+      443 |
+      444 |   test('a filled cell announces its value exactly once', async ({ page }) => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:441:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-5-unnamedImages-a-d-bed4f-es-zero-unnamed-image-nodes-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-5-unnamedImages-a-d-bed4f-es-zero-unnamed-image-nodes-chromium/error-context.md
+
+
+  13) [chromium] › e2e/a11y.spec.ts:444:3 › 3.5 unnamedImages › a filled cell announces its value exactly once 
+
+    Error: 61 named image nodes inside gridcells — each is a second utterance of a digit the cell's own name already carries
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 61
+
+      477 |       `${echoes} named image nodes inside gridcells — each is a second utterance of a digit ` +
+      478 |         `the cell's own name already carries`,
+    > 479 |     ).toBe(0);
+          |       ^
+      480 |   });
+      481 | });
+      482 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:479:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-5-unnamedImages-a-f-f7c33-nces-its-value-exactly-once-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-5-unnamedImages-a-f-f7c33-nces-its-value-exactly-once-chromium/error-context.md
+
+
+  27) [webkit] › e2e/a11y.spec.ts:425:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes 
+
+    Error: 93 unnamed image nodes of 155 — decorative graphics must carry aria-hidden, meaningful ones a name
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 93
+
+      439 |       `${census.unnamed} unnamed image nodes of ${census.total} — decorative graphics must ` +
+      440 |         `carry aria-hidden, meaningful ones a name`,
+    > 441 |     ).toBe(0);
+          |       ^
+      442 |   });
+      443 |
+      444 |   test('a filled cell announces its value exactly once', async ({ page }) => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:441:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-5-unnamedImages-a-d-bed4f-es-zero-unnamed-image-nodes-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-5-unnamedImages-a-d-bed4f-es-zero-unnamed-image-nodes-webkit/error-context.md
+
+
+  28) [webkit] › e2e/a11y.spec.ts:444:3 › 3.5 unnamedImages › a filled cell announces its value exactly once 
+
+    Error: 61 named image nodes inside gridcells — each is a second utterance of a digit the cell's own name already carries
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 61
+
+      477 |       `${echoes} named image nodes inside gridcells — each is a second utterance of a digit ` +
+      478 |         `the cell's own name already carries`,
+    > 479 |     ).toBe(0);
+          |       ^
+      480 |   });
+      481 | });
+      482 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:479:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-5-unnamedImages-a-f-f7c33-nces-its-value-exactly-once-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-5-unnamedImages-a-f-f7c33-nces-its-value-exactly-once-webkit/error-context.md
+

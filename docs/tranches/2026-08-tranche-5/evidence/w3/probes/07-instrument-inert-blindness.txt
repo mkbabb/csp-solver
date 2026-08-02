@@ -1,0 +1,52 @@
+T5-W3 PROBES — INSTRUMENT MEASUREMENT (why the picker gate cannot be a role count)
+playwright: 1.61.1  ·  date: 2026-08-02T03:59:06Z
+
+A synthetic listbox: 3 role=option nodes, 2 of them inert. If Playwright's role engine
+honoured inert, optionsVisible would read 1. It reads 3 — in BOTH engines. Hence 3.3 asserts
+the STRIPPING MECHANISM (inert/aria-hidden/display/visibility) plus, in Chromium, the
+browser's own AX tree via CDP. The same run shows a bare <svg> mapping to role=img and an
+aria-hidden one dropping out — which is what makes the 3.5 census portable.
+======================================================================
+
+{
+ "engine": "chromium",
+ "optionsVisible": 3,
+ "optionsIncludeHidden": 3,
+ "optionNames": [
+  "a, 1 of 3",
+  "b, 2 of 3",
+  "c, 3 of 3"
+ ],
+ "imgRole": 2,
+ "imgNames": [
+  "4",
+  "<none>"
+ ],
+ "graphicsDoc": 7,
+ "alertdialog": 1,
+ "snapshotLb": "- listbox:\n  - option \"a, 1 of 3\" [selected]: A\n  - option \"b, 2 of 3\": B\n  - option \"c, 3 of 3\": C",
+ "snapshotBody": "- listbox:\n  - option \"a, 1 of 3\" [selected]: A\n  - option \"b, 2 of 3\": B\n  - option \"c, 3 of 3\": C\n- grid:\n  - gridcell \"x\"\n- img \"4\"\n- img\n- alertdialog \"Leave this puzzle?\":\n  - paragraph: note"
+}
+{
+ "engine": "webkit",
+ "optionsVisible": 3,
+ "optionsIncludeHidden": 3,
+ "optionNames": [
+  "a, 1 of 3",
+  "b, 2 of 3",
+  "c, 3 of 3"
+ ],
+ "imgRole": 2,
+ "imgNames": [
+  "4",
+  "<none>"
+ ],
+ "graphicsDoc": 7,
+ "alertdialog": 1,
+ "snapshotLb": "- listbox:\n  - option \"a, 1 of 3\" [selected]: A\n  - option \"b, 2 of 3\": B\n  - option \"c, 3 of 3\": C",
+ "snapshotBody": "- listbox:\n  - option \"a, 1 of 3\" [selected]: A\n  - option \"b, 2 of 3\": B\n  - option \"c, 3 of 3\": C\n- grid:\n  - gridcell \"x\"\n- img \"4\"\n- img\n- alertdialog \"Leave this puzzle?\":\n  - paragraph: note"
+}
+
+--- CDP cross-check on the LIVE picker at HEAD (Accessibility.getFullAXTree) ---
+CDP option names at HEAD: ["sudoku, 1 of 5"]
+CDP listbox count: 1

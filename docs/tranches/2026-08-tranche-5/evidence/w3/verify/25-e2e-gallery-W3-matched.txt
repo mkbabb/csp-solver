@@ -1,0 +1,31 @@
+=== W3 TREE (dev server :4231): gallery.spec + gallery-deal.spec, both engines — SAME CONDITIONS AS HEAD CONTROL ===
+           - unexpected value "null"
+
+
+      154 |   // The centered card carries an active boil pose; the flank is inert.
+      155 |   await expect(page.locator('#gallery-card-0 .boil-pose.is-active')).toHaveCount(1);
+    > 156 |   await expect(page.locator('#gallery-card-1')).toHaveAttribute('inert', '');
+          |                                                 ^
+      157 |
+      158 |   // The flank's active pose index does NOT advance over a beat window (frozen pose 0), while
+      159 |   // the centered card's does (it derives the shared beat). Sample the active-pose index twice.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:156:49
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-gallery-only-the-c-0eea1-flank-frame-is-inert-frozen-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-gallery-only-the-c-0eea1-flank-frame-is-inert-frozen-webkit/error-context.md
+
+  10 failed
+    [chromium] › e2e/gallery-deal.spec.ts:197:1 › guard: a deal onto ANOTHER game with work on it arms the ribbon 
+    [chromium] › e2e/gallery-deal.spec.ts:318:1 › guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon 
+    [chromium] › e2e/gallery.spec.ts:22:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips 
+    [chromium] › e2e/gallery.spec.ts:57:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips 
+    [chromium] › e2e/gallery.spec.ts:149:1 › gallery: only the centered card boils — a flank frame is inert + frozen 
+    [webkit] › e2e/gallery-deal.spec.ts:197:1 › guard: a deal onto ANOTHER game with work on it arms the ribbon 
+    [webkit] › e2e/gallery-deal.spec.ts:318:1 › guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon 
+    [webkit] › e2e/gallery.spec.ts:22:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips 
+    [webkit] › e2e/gallery.spec.ts:57:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips 
+    [webkit] › e2e/gallery.spec.ts:149:1 › gallery: only the centered card boils — a flank frame is inert + frozen 
+  40 passed (28.6s)

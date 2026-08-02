@@ -54,6 +54,14 @@ const LEDGER: Record<string, string> = {
   "Patrick Hand|H": "keycap",
   "Patrick Hand|P": "keycap",
   "Patrick Hand|Z": "keycap",
+  // T5-W3 row 3.6 (a11y r1 L10): the crib grew the two bare keys it never named — G (games)
+  // and D (deal) — so the keycap class gains its 5th and 6th members under the identical,
+  // already-adjudicated reason. Same class, same fallback, no new class: the exact-match rule
+  // is intact and a genuinely new mixed string still reds. Neither letter is in the Patrick
+  // Hand cut ("Deal" at :44 has been ledgered for D since T4-P1), and re-cutting the woff2 is
+  // the owner-declined byte cost this ledger exists to stand in for.
+  "Patrick Hand|G": "keycap",
+  "Patrick Hand|D": "keycap",
   "Patrick Hand|Ctrl": "keycap; C is in the cut, t/r/l are not",
   "Patrick Hand|⌘": "keycap glyph U+2318",
   "Patrick Hand|⇧": "keycap glyph U+21E7",

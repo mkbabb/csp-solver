@@ -1,0 +1,90 @@
+T5-W3 LANE B3 (row 3.3 THE PICKER PUBLISHES FIVE) — UNIT BATTERY, BORN RED
+tip: 78448760 — T5-W2 THE SEAL
+date: 2026-08-02T04:05:25Z
+subject: src/pencil/chrome/GameGallery/GameCard.vue (UNCURED — :inert on the role="option" root)
+unit:    src/pencil/chrome/GameGallery/GameCard.test.ts
+runner:  npx vitest run src/pencil/chrome/GameGallery/GameCard.test.ts --reporter=verbose
+
+The three GATE rows are RED; the four CONTROL rows (name, aria-selected, the click gate in
+all three of its branches) are GREEN at HEAD — the defect is the AX strip alone, and the
+click suppression the root-inert also carried is proven present BEFORE it is relied on.
+======================================================================
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ × src/pencil/chrome/GameGallery/GameCard.test.ts > GameCard — the option publishes even when it is a flank > a flank's option root is NOT inert — the deck's other four stay AX-visible 97ms
+   → expected true to be false // Object.is equality
+ × src/pencil/chrome/GameGallery/GameCard.test.ts > GameCard — the option publishes even when it is a flank > a flank's interactive internals ARE inert — no invisible tab stops in the deck 4ms
+   → expected false to be true // Object.is equality
+ × src/pencil/chrome/GameGallery/GameCard.test.ts > GameCard — the option publishes even when it is a flank > nothing between the option root and the card's own box strips the node 3ms
+   → expected true to be false // Object.is equality
+ ✓ src/pencil/chrome/GameGallery/GameCard.test.ts > GameCard — the option publishes even when it is a flank > the centered card is inert nowhere — it is the one live, interactive card 2ms
+ ✓ src/pencil/chrome/GameGallery/GameCard.test.ts > GameCard — the click gate root-inert used to provide > a flank cannot be selected by pointer 2ms
+ ✓ src/pencil/chrome/GameGallery/GameCard.test.ts > GameCard — the click gate root-inert used to provide > a centered card under an armed guard cannot be selected by pointer 2ms
+ ✓ src/pencil/chrome/GameGallery/GameCard.test.ts > GameCard — the click gate root-inert used to provide > the centered card selects — the gate is a gate, not an amputation 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameCard.test.ts > GameCard — the option publishes even when it is a flank > a flank's option root is NOT inert — the deck's other four stay AX-visible
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/pencil/chrome/GameGallery/GameCard.test.ts:52:58
+     50| describe("GameCard — the option publishes even when it is a flank", ()…
+     51|   it("a flank's option root is NOT inert — the deck's other four stay …
+     52|     expect(inertOn(mountCard(false), '[role="option"]')).toBe(false);
+       |                                                          ^
+     53|   });
+     54|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameCard.test.ts > GameCard — the option publishes even when it is a flank > a flank's interactive internals ARE inert — no invisible tab stops in the deck
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/pencil/chrome/GameGallery/GameCard.test.ts:56:58
+     54|
+     55|   it("a flank's interactive internals ARE inert — no invisible tab sto…
+     56|     expect(inertOn(mountCard(false), ".game-card-deal")).toBe(true);
+       |                                                          ^
+     57|   });
+     58|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameCard.test.ts > GameCard — the option publishes even when it is a flank > nothing between the option root and the card's own box strips the node
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/pencil/chrome/GameGallery/GameCard.test.ts:62:40
+     60|     const w = mountCard(false);
+     61|     const root = w.get('[role="option"]').element;
+     62|     expect(root.hasAttribute("inert")).toBe(false);
+       |                                        ^
+     63|     expect(root.getAttribute("aria-hidden")).toBe(null);
+     64|     // The name and the selection state were never the defect — they a…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 4 passed (7)
+   Start at  00:05:25
+   Duration  1.19s (transform 513ms, setup 44ms, import 567ms, tests 113ms, environment 358ms)
+

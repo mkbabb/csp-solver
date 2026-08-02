@@ -1,0 +1,71 @@
+=== VACUITY ABLATION A — row 3.3 optionsInPicker ===
+SCRATCH TREE ONLY: /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/ablate (live tree untouched)
+Cure removed: GameCard.vue — :inert moved back onto the role=option root, off .game-card-deal
+
+
+Running 2 tests using 2 workers
+
+  ✘  1 [chromium] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options (1.2s)
+  ✘  2 [webkit] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options (1.7s)
+
+
+  1) [chromium] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options 
+
+    Error: the browser AX tree publishes 1 options: ["sudoku, 1 of 5"]
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 5
+    Received length: 1
+    Received array:  ["sudoku, 1 of 5"]
+
+      344 |         names,
+      345 |         `the browser AX tree publishes ${names.length} options: ${JSON.stringify(names)}`,
+    > 346 |       ).toHaveLength(5);
+          |         ^
+      347 |       expect(names.filter((n) => n.trim() !== ''), 'every published option is named').toHaveLength(
+      348 |         5,
+      349 |       );
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/ablate/web/frontend/e2e/a11y.spec.ts:346:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-chromium/error-context.md
+
+  2) [webkit] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options 
+
+    Error: options stripped from the accessibility tree: [null,"inert","inert","inert","inert"]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 6
+
+    - Array []
+    + Array [
+    +   "inert",
+    +   "inert",
+    +   "inert",
+    +   "inert",
+    + ]
+
+      357 |       stripped.filter((s) => s !== null),
+      358 |       `options stripped from the accessibility tree: ${JSON.stringify(stripped)}`,
+    > 359 |     ).toEqual([]);
+          |       ^
+      360 |   });
+      361 | });
+      362 |
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/ablate/web/frontend/e2e/a11y.spec.ts:359:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options 
+    [webkit] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options 

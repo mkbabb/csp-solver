@@ -179,13 +179,24 @@ test("the permanent tape is a LABEL, not a tooltip — and the surface it names 
       await permanent.nth(i).getAttribute("role"),
       `permanent tape ${await permanent.nth(i).innerText()}`,
     ).toBeNull();
-  // The hover washi on the icon buttons KEEPS `role="tooltip"` — it is a transient
-  // hover/focus description and the role is true of it. The distinction is the point.
+  // The hover washi on the icon buttons is DECORATIVE — and this clause is re-cut, not
+  // relaxed (T5-W3 row 3.6, a11y r1 L11). It read `role === "tooltip"` on the ground that the
+  // role "is true of" a transient hover/focus description. The live AX probe at `71456713`
+  // read five of them sitting in the tree (`tooltip: 5`) with `aria-describedby` at ZERO hits
+  // estate-wide: an ARIA tooltip is a description a control POINTS AT, and one nothing points
+  // at is furniture. Wiring the five references was the alternative and it is worse on the
+  // only measure that matters here — each tape's text is its own button's `aria-label`
+  // re-spelled ("Deal" under "Deal a new board"), so five references buy five second
+  // recitations. The distinction this row exists to protect is UNCHANGED and now states more,
+  // not less: the permanent tapes above are LABELS (role null, in the tree, naming their
+  // surface); the transient tape is DECORATION (role null AND out of the tree). Neither is a
+  // tooltip, and a `role="tooltip"` coming back to either arm still reddens here.
   const transient = page.locator(
     ".controls-card .washi-label:not(.washi-tag):not(.washi-persistent)",
   );
   expect(await transient.count()).toBeGreaterThan(0);
-  expect(await transient.first().getAttribute("role")).toBe("tooltip");
+  expect(await transient.first().getAttribute("role")).toBeNull();
+  expect(await transient.first().getAttribute("aria-hidden")).toBe("true");
 
   // The surface the permanent tape names was a bare <div> with pointer handlers and NO
   // accessible name at all — diagnosed in pass 3, cured here. It is the zone separator, and

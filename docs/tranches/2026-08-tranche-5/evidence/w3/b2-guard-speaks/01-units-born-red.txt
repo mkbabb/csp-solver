@@ -1,0 +1,580 @@
+T5-W3 lane B2 (row 3.2 THE GUARD SPEAKS) — UNIT BATTERY, BORN RED
+tip: 78448760 — T5-W2 THE SEAL
+date: 2026-08-02T04:07:27Z
+subject: src/pencil/chrome/GameGallery/GameGallery.vue (.gallery-guard — the destructive-work guard)
+battery: src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts (NEW, written before the cure)
+runner: npx vitest run src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts --reporter=verbose
+HEAD truth (r2 §H2): role=alertdialog present, aria-modal null, focus never enters, no describedby,
+  the only live region reads the CARD; second Enter takes user entries 1 -> 0 unheard.
+Expected shape: 12 RED / 2 GREEN. The 2 green are deliberate REGRESSION FLOORS asserted at HEAD
+  (keep-on-Enter keeps; the two intents say different things) — they must stay green through the cure.
+======================================================================
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > arming utters the guard's own name into an ASSERTIVE region 30ms
+   → the armed guard was never announced; live regions said ["sudoku, 1 of 2. 3 easy, new game"]: expected false to be true // Object.is equality
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > the assertive region is PERSISTENT — it exists before it speaks 3ms
+   → expected false to be true // Object.is equality
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > dismissal retires the utterance (no stale prompt left to re-read) 8ms
+   → Unable to get [role="alert"] within: <div data-v-08f2b41b="" class="game-gallery" style="--card-step-ms: 440ms;">
+  <div data-v-08f2b41b="" class="gallery-viewport" role="listbox" aria-label="Choose a puzzle" aria-roledescription="carousel" tabindex="0" aria-keyshortcuts="d" aria-activedescendant="gallery-card-0" style="scroll-snap-type: none;">
+    <div data-v-08f2b41b="" class="gallery-track" style="--edge: 0px;">
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="0" count="2" pose="0" dealreveal="1" isactive="true" guard="false" live="false"></game-card-stub>
+      </div>
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="1" count="2" pose="0" dealreveal="1" isactive="false" guard="false" live="false"></game-card-stub>
+      </div>
+    </div>
+  </div>
+  <!-- Page pips: the sketchbook page-number, snapped one inked (decorative — the listbox
+         already announces "N of M"; these are the visual/mobile position tell). -->
+  <div data-v-08f2b41b="" class="gallery-pips" aria-hidden="true"><span data-v-08f2b41b="" class="gallery-pip is-inked"></span><span data-v-08f2b41b="" class="gallery-pip"></span></div>
+  <!-- THE STAGING BAND (T4-P1 F4) — the order slip for the ACTIVE card. A SIBLING of the
+         listbox, never a descendant of `role="option"`: the deck keeps its
+         aria-activedescendant contract and one band serves five cards, so no flank ever mounts
+         a control it will not paint. Bound to the active card; the box is reserved in CSS. -->
+  <staging-band-stub data-v-08f2b41b="" name="sudoku" staging="[object Object]" size="3" difficulty="EASY" safeverb="start" busy="false"></staging-band-stub>
+  <!-- The mid-game guard ribbon (Wave D §4) — a pencil-note that SLIDES from the chosen
+         (centered) card on a dirty+different switch. An overlay outside the scroll viewport
+         (whose overflow would clip it), centered on the deck. NOT a modal, NOT confirm(): a
+         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches.
+         T4-P1 F4: the SAME ribbon now also confirms the picker's deal verb — one idiom, its
+         copy keyed to the intent, `.guard-keep`/`.guard-leave` unchanged as the act hooks. -->
+  <transition-stub data-v-08f2b41b="" name="guard-ribbon" appear="false" persisted="false" css="true">
+    <!--v-if-->
+  </transition-stub><!-- Polite live region — announces the snapped card on every step/swipe. -->
+  <div data-v-08f2b41b="" class="gallery-live" aria-live="polite" role="status">sudoku, 1 of 2. 3 easy, new game</div>
+</div>
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > claims modality and TAKES focus 4ms
+   → expected <div data-v-08f2b41b …(8)>…(1)</div> to be <div data-v-08f2b41b …(7)>…(1)</div> // Object.is equality
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > contains focus: Tab cycles the ribbon's verbs and never escapes to the deck 4ms
+   → expected <div data-v-08f2b41b …(8)>…(1)</div> to be <button data-v-08f2b41b …(2)></button> // Object.is equality
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > returns focus to the listbox when the ribbon retires 3ms
+   → expected true to be false // Object.is equality
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > describes itself: aria-describedby resolves to the stake sub-line 2ms
+   → the dialog must name what is at stake: expected undefined to be truthy
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > ONE name, drawn and spoken — the one-string rule > select: the accessible name IS the drawn heading, character for character 3ms
+   → Unable to get .guard-note-title within: <div data-v-08f2b41b="" class="game-gallery" style="--card-step-ms: 440ms;">
+  <div data-v-08f2b41b="" class="gallery-viewport" role="listbox" aria-label="Choose a puzzle" aria-roledescription="carousel" tabindex="0" aria-keyshortcuts="d" aria-activedescendant="gallery-card-0" style="scroll-snap-type: none;">
+    <div data-v-08f2b41b="" class="gallery-track" style="--edge: 0px;">
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="0" count="2" pose="0" dealreveal="1" isactive="true" guard="true" live="false"></game-card-stub>
+      </div>
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="1" count="2" pose="0" dealreveal="1" isactive="false" guard="false" live="false"></game-card-stub>
+      </div>
+    </div>
+  </div>
+  <!-- Page pips: the sketchbook page-number, snapped one inked (decorative — the listbox
+         already announces "N of M"; these are the visual/mobile position tell). -->
+  <div data-v-08f2b41b="" class="gallery-pips" aria-hidden="true"><span data-v-08f2b41b="" class="gallery-pip is-inked"></span><span data-v-08f2b41b="" class="gallery-pip"></span></div>
+  <!-- THE STAGING BAND (T4-P1 F4) — the order slip for the ACTIVE card. A SIBLING of the
+         listbox, never a descendant of `role="option"`: the deck keeps its
+         aria-activedescendant contract and one band serves five cards, so no flank ever mounts
+         a control it will not paint. Bound to the active card; the box is reserved in CSS. -->
+  <staging-band-stub data-v-08f2b41b="" name="sudoku" staging="[object Object]" size="3" difficulty="EASY" safeverb="start" busy="true"></staging-band-stub>
+  <!-- The mid-game guard ribbon (Wave D §4) — a pencil-note that SLIDES from the chosen
+         (centered) card on a dirty+different switch. An overlay outside the scroll viewport
+         (whose overflow would clip it), centered on the deck. NOT a modal, NOT confirm(): a
+         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches.
+         T4-P1 F4: the SAME ribbon now also confirms the picker's deal verb — one idiom, its
+         copy keyed to the intent, `.guard-keep`/`.guard-leave` unchanged as the act hooks. -->
+  <transition-stub data-v-08f2b41b="" name="guard-ribbon" appear="false" persisted="false" css="true">
+    <div data-v-08f2b41b="" class="gallery-guard" role="alertdialog" aria-label="Leave this puzzle?">
+      <div data-v-08f2b41b="" class="guard-note-frame" stroke-width="3" outset="4">
+        <div data-v-08f2b41b="" class="guard-note cartoon-shadow-md edge-outlined bg-popover">
+          <p data-v-08f2b41b="" class="guard-note-text">leave this puzzle?<br data-v-08f2b41b=""><span data-v-08f2b41b="" class="guard-note-sub">your marks aren't saved</span></p>
+          <div data-v-08f2b41b="" class="guard-note-actions"><button data-v-08f2b41b="" type="button" class="guard-btn guard-keep"> keep </button><button data-v-08f2b41b="" type="button" class="guard-btn guard-leave">leave</button></div>
+        </div>
+      </div>
+    </div>
+  </transition-stub><!-- Polite live region — announces the snapped card on every step/swipe. -->
+  <div data-v-08f2b41b="" class="gallery-live" aria-live="polite" role="status">sudoku, 1 of 2. 3 easy, new game</div>
+</div>
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > ONE name, drawn and spoken — the one-string rule > deal: the accessible name IS the drawn heading, character for character 4ms
+   → Unable to get .guard-note-title within: <div data-v-08f2b41b="" class="game-gallery" style="--card-step-ms: 440ms;">
+  <div data-v-08f2b41b="" class="gallery-viewport" role="listbox" aria-label="Choose a puzzle" aria-roledescription="carousel" tabindex="0" aria-keyshortcuts="d" aria-activedescendant="gallery-card-0" style="scroll-snap-type: none;">
+    <div data-v-08f2b41b="" class="gallery-track" style="--edge: 0px;">
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="0" count="2" pose="0" dealreveal="1" isactive="true" guard="true" live="false"></game-card-stub>
+      </div>
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="1" count="2" pose="0" dealreveal="1" isactive="false" guard="false" live="false"></game-card-stub>
+      </div>
+    </div>
+  </div>
+  <!-- Page pips: the sketchbook page-number, snapped one inked (decorative — the listbox
+         already announces "N of M"; these are the visual/mobile position tell). -->
+  <div data-v-08f2b41b="" class="gallery-pips" aria-hidden="true"><span data-v-08f2b41b="" class="gallery-pip is-inked"></span><span data-v-08f2b41b="" class="gallery-pip"></span></div>
+  <!-- THE STAGING BAND (T4-P1 F4) — the order slip for the ACTIVE card. A SIBLING of the
+         listbox, never a descendant of `role="option"`: the deck keeps its
+         aria-activedescendant contract and one band serves five cards, so no flank ever mounts
+         a control it will not paint. Bound to the active card; the box is reserved in CSS. -->
+  <staging-band-stub data-v-08f2b41b="" name="sudoku" staging="[object Object]" size="3" difficulty="EASY" safeverb="start" busy="true"></staging-band-stub>
+  <!-- The mid-game guard ribbon (Wave D §4) — a pencil-note that SLIDES from the chosen
+         (centered) card on a dirty+different switch. An overlay outside the scroll viewport
+         (whose overflow would clip it), centered on the deck. NOT a modal, NOT confirm(): a
+         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches.
+         T4-P1 F4: the SAME ribbon now also confirms the picker's deal verb — one idiom, its
+         copy keyed to the intent, `.guard-keep`/`.guard-leave` unchanged as the act hooks. -->
+  <transition-stub data-v-08f2b41b="" name="guard-ribbon" appear="false" persisted="false" css="true">
+    <div data-v-08f2b41b="" class="gallery-guard" role="alertdialog" aria-label="Deal a new board?">
+      <div data-v-08f2b41b="" class="guard-note-frame" stroke-width="3" outset="4">
+        <div data-v-08f2b41b="" class="guard-note cartoon-shadow-md edge-outlined bg-popover">
+          <p data-v-08f2b41b="" class="guard-note-text">deal over this puzzle?<br data-v-08f2b41b=""><span data-v-08f2b41b="" class="guard-note-sub">your marks aren't saved</span></p>
+          <div data-v-08f2b41b="" class="guard-note-actions"><button data-v-08f2b41b="" type="button" class="guard-btn guard-keep"> keep </button><button data-v-08f2b41b="" type="button" class="guard-btn guard-leave">deal</button></div>
+        </div>
+      </div>
+    </div>
+  </transition-stub><!-- Polite live region — announces the snapped card on every step/swipe. -->
+  <div data-v-08f2b41b="" class="gallery-live" aria-live="polite" role="status">sudoku, 1 of 2. 3 easy, new game</div>
+</div>
+ ✓ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > ONE name, drawn and spoken — the one-string rule > the two intents still say different things (the rule is one name, not one copy) 5ms
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > ONE name, drawn and spoken — the one-string rule > the utterance is built from that same name, so copy can never drift out of it 4ms
+   → Unable to get .guard-note-title within: <div data-v-08f2b41b="" class="game-gallery" style="--card-step-ms: 440ms;">
+  <div data-v-08f2b41b="" class="gallery-viewport" role="listbox" aria-label="Choose a puzzle" aria-roledescription="carousel" tabindex="0" aria-keyshortcuts="d" aria-activedescendant="gallery-card-0" style="scroll-snap-type: none;">
+    <div data-v-08f2b41b="" class="gallery-track" style="--edge: 0px;">
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="0" count="2" pose="0" dealreveal="1" isactive="true" guard="true" live="false"></game-card-stub>
+      </div>
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="1" count="2" pose="0" dealreveal="1" isactive="false" guard="false" live="false"></game-card-stub>
+      </div>
+    </div>
+  </div>
+  <!-- Page pips: the sketchbook page-number, snapped one inked (decorative — the listbox
+         already announces "N of M"; these are the visual/mobile position tell). -->
+  <div data-v-08f2b41b="" class="gallery-pips" aria-hidden="true"><span data-v-08f2b41b="" class="gallery-pip is-inked"></span><span data-v-08f2b41b="" class="gallery-pip"></span></div>
+  <!-- THE STAGING BAND (T4-P1 F4) — the order slip for the ACTIVE card. A SIBLING of the
+         listbox, never a descendant of `role="option"`: the deck keeps its
+         aria-activedescendant contract and one band serves five cards, so no flank ever mounts
+         a control it will not paint. Bound to the active card; the box is reserved in CSS. -->
+  <staging-band-stub data-v-08f2b41b="" name="sudoku" staging="[object Object]" size="3" difficulty="EASY" safeverb="start" busy="true"></staging-band-stub>
+  <!-- The mid-game guard ribbon (Wave D §4) — a pencil-note that SLIDES from the chosen
+         (centered) card on a dirty+different switch. An overlay outside the scroll viewport
+         (whose overflow would clip it), centered on the deck. NOT a modal, NOT confirm(): a
+         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches.
+         T4-P1 F4: the SAME ribbon now also confirms the picker's deal verb — one idiom, its
+         copy keyed to the intent, `.guard-keep`/`.guard-leave` unchanged as the act hooks. -->
+  <transition-stub data-v-08f2b41b="" name="guard-ribbon" appear="false" persisted="false" css="true">
+    <div data-v-08f2b41b="" class="gallery-guard" role="alertdialog" aria-label="Deal a new board?">
+      <div data-v-08f2b41b="" class="guard-note-frame" stroke-width="3" outset="4">
+        <div data-v-08f2b41b="" class="guard-note cartoon-shadow-md edge-outlined bg-popover">
+          <p data-v-08f2b41b="" class="guard-note-text">deal over this puzzle?<br data-v-08f2b41b=""><span data-v-08f2b41b="" class="guard-note-sub">your marks aren't saved</span></p>
+          <div data-v-08f2b41b="" class="guard-note-actions"><button data-v-08f2b41b="" type="button" class="guard-btn guard-keep"> keep </button><button data-v-08f2b41b="" type="button" class="guard-btn guard-leave">deal</button></div>
+        </div>
+      </div>
+    </div>
+  </transition-stub><!-- Polite live region — announces the snapped card on every step/swipe. -->
+  <div data-v-08f2b41b="" class="gallery-live" aria-live="polite" role="status">sudoku, 1 of 2. 3 easy, new game</div>
+</div>
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the armed ribbon still resolves — the Wave D contract, under moved focus > Enter on the focused dialog confirms LEAVE (the verb HEAD bound it to) 2ms
+   → expected undefined to deeply equal [ 'sudoku' ]
+ ✓ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the armed ribbon still resolves — the Wave D contract, under moved focus > Enter on the KEEP button keeps — the native button owns its own activation 2ms
+ × src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the armed ribbon still resolves — the Wave D contract, under moved focus > an arrow through the armed ribbon dismisses it, as it did from the listbox 2ms
+   → expected true to be false // Object.is equality
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 12 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > arming utters the guard's own name into an ASSERTIVE region
+AssertionError: the armed guard was never announced; live regions said ["sudoku, 1 of 2. 3 easy, new game"]: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:116:7
+    114|         liveRegions(w),
+    115|       )}`,
+    116|     ).toBe(true);
+       |       ^
+    117|     // Assertive, not polite: this interrupts. A destructive prompt qu…
+    118|     // snap chatter is the silence again, one beat later.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > the assertive region is PERSISTENT — it exists before it speaks
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:130:28
+    128|     const w = mountGallery();
+    129|     const alert = w.find('[role="alert"]');
+    130|     expect(alert.exists()).toBe(true);
+       |                            ^
+    131|     expect(alert.text()).toBe("");
+    132|     w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > dismissal retires the utterance (no stale prompt left to re-read)
+Error: Unable to get [role="alert"] within: <div data-v-08f2b41b="" class="game-gallery" style="--card-step-ms: 440ms;">
+  <div data-v-08f2b41b="" class="gallery-viewport" role="listbox" aria-label="Choose a puzzle" aria-roledescription="carousel" tabindex="0" aria-keyshortcuts="d" aria-activedescendant="gallery-card-0" style="scroll-snap-type: none;">
+    <div data-v-08f2b41b="" class="gallery-track" style="--edge: 0px;">
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="0" count="2" pose="0" dealreveal="1" isactive="true" guard="false" live="false"></game-card-stub>
+      </div>
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="1" count="2" pose="0" dealreveal="1" isactive="false" guard="false" live="false"></game-card-stub>
+      </div>
+    </div>
+  </div>
+  <!-- Page pips: the sketchbook page-number, snapped one inked (decorative — the listbox
+         already announces "N of M"; these are the visual/mobile position tell). -->
+  <div data-v-08f2b41b="" class="gallery-pips" aria-hidden="true"><span data-v-08f2b41b="" class="gallery-pip is-inked"></span><span data-v-08f2b41b="" class="gallery-pip"></span></div>
+  <!-- THE STAGING BAND (T4-P1 F4) — the order slip for the ACTIVE card. A SIBLING of the
+         listbox, never a descendant of `role="option"`: the deck keeps its
+         aria-activedescendant contract and one band serves five cards, so no flank ever mounts
+         a control it will not paint. Bound to the active card; the box is reserved in CSS. -->
+  <staging-band-stub data-v-08f2b41b="" name="sudoku" staging="[object Object]" size="3" difficulty="EASY" safeverb="start" busy="false"></staging-band-stub>
+  <!-- The mid-game guard ribbon (Wave D §4) — a pencil-note that SLIDES from the chosen
+         (centered) card on a dirty+different switch. An overlay outside the scroll viewport
+         (whose overflow would clip it), centered on the deck. NOT a modal, NOT confirm(): a
+         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches.
+         T4-P1 F4: the SAME ribbon now also confirms the picker's deal verb — one idiom, its
+         copy keyed to the intent, `.guard-keep`/`.guard-leave` unchanged as the act hooks. -->
+  <transition-stub data-v-08f2b41b="" name="guard-ribbon" appear="false" persisted="false" css="true">
+    <!--v-if-->
+  </transition-stub><!-- Polite live region — announces the snapped card on every step/swipe. -->
+  <div data-v-08f2b41b="" class="gallery-live" aria-live="polite" role="status">sudoku, 1 of 2. 3 easy, new game</div>
+</div>
+ ❯ VueWrapper.get node_modules/@vue/test-utils/dist/vue-test-utils.cjs.js:7182:15
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:141:14
+    139|     await flushPromises();
+    140|     expect(w.find(".gallery-guard").exists()).toBe(false);
+    141|     expect(w.get('[role="alert"]').text()).toBe("");
+       |              ^
+    142|     w.unmount();
+    143|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > claims modality and TAKES focus
+AssertionError: expected <div data-v-08f2b41b …(8)>…(1)</div> to be <div data-v-08f2b41b …(7)>…(1)</div> // Object.is equality
+
+Compared values have no visual difference.
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:148:36
+    146|     const w = mountGallery();
+    147|     // Control: the listbox holds focus until the ribbon arms.
+    148|     expect(document.activeElement).toBe(w.get(".gallery-viewport").ele…
+       |                                    ^
+    149|     await arm(w, "Enter");
+    150|     const g = guard(w);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > contains focus: Tab cycles the ribbon's verbs and never escapes to the deck
+AssertionError: expected <div data-v-08f2b41b …(8)>…(1)</div> to be <button data-v-08f2b41b …(2)></button> // Object.is equality
+
+- Expected
++ Received
+
+- <button
+-   class="guard-btn guard-keep"
++ <div
++   aria-activedescendant="gallery-card-0"
++   aria-keyshortcuts="d"
++   aria-label="Choose a puzzle"
++   aria-roledescription="carousel"
++   class="gallery-viewport"
++   data-v-08f2b41b=""
++   role="listbox"
++   style=""
++   tabindex="0"
++ >
++   <div
++     class="gallery-track"
++     data-v-08f2b41b=""
++     style="--edge: 0px;"
++   >
++     
++     <div
++       class="gallery-card-slot"
++       data-v-08f2b41b=""
++     >
++       <game-card-stub
++         card="[object Object]"
++         count="2"
++         data-v-08f2b41b=""
++         dealreveal="1"
++         guard="true"
++         index="0"
++         isactive="true"
++         live="false"
++         pose="0"
++       />
++     </div>
++     <div
++       class="gallery-card-slot"
+        data-v-08f2b41b=""
+-   type="button"
+      >
+-    keep 
+- </button>
++       <game-card-stub
++         card="[object Object]"
++         count="2"
++         data-v-08f2b41b=""
++         dealreveal="1"
++         guard="false"
++         index="1"
++         isactive="false"
++         live="false"
++         pose="0"
++       />
++     </div>
++     
++   </div>
++ </div>
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:167:36
+    165|
+    166|     await guard(w).trigger("keydown", { key: "Tab" });
+    167|     expect(document.activeElement).toBe(keep);
+       |                                    ^
+    168|     await guard(w).trigger("keydown", { key: "Tab" });
+    169|     expect(document.activeElement).toBe(leave);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > returns focus to the listbox when the ribbon retires
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:183:47
+    181|     await guard(w).trigger("keydown", { key: "Escape" });
+    182|     await flushPromises();
+    183|     expect(w.find(".gallery-guard").exists()).toBe(false);
+       |                                               ^
+    184|     expect(document.activeElement).toBe(w.get(".gallery-viewport").ele…
+    185|     w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > describes itself: aria-describedby resolves to the stake sub-line
+AssertionError: the dialog must name what is at stake: expected undefined to be truthy
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:192:57
+    190|     await arm(w, "Enter");
+    191|     const id = guard(w).attributes("aria-describedby");
+    192|     expect(id, "the dialog must name what is at stake").toBeTruthy();
+       |                                                         ^
+    193|     const sub = document.getElementById(id!);
+    194|     expect(sub?.textContent).toBe("your marks aren't saved");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > ONE name, drawn and spoken — the one-string rule > select: the accessible name IS the drawn heading, character for character
+Error: Unable to get .guard-note-title within: <div data-v-08f2b41b="" class="game-gallery" style="--card-step-ms: 440ms;">
+  <div data-v-08f2b41b="" class="gallery-viewport" role="listbox" aria-label="Choose a puzzle" aria-roledescription="carousel" tabindex="0" aria-keyshortcuts="d" aria-activedescendant="gallery-card-0" style="scroll-snap-type: none;">
+    <div data-v-08f2b41b="" class="gallery-track" style="--edge: 0px;">
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="0" count="2" pose="0" dealreveal="1" isactive="true" guard="true" live="false"></game-card-stub>
+      </div>
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="1" count="2" pose="0" dealreveal="1" isactive="false" guard="false" live="false"></game-card-stub>
+      </div>
+    </div>
+  </div>
+  <!-- Page pips: the sketchbook page-number, snapped one inked (decorative — the listbox
+         already announces "N of M"; these are the visual/mobile position tell). -->
+  <div data-v-08f2b41b="" class="gallery-pips" aria-hidden="true"><span data-v-08f2b41b="" class="gallery-pip is-inked"></span><span data-v-08f2b41b="" class="gallery-pip"></span></div>
+  <!-- THE STAGING BAND (T4-P1 F4) — the order slip for the ACTIVE card. A SIBLING of the
+         listbox, never a descendant of `role="option"`: the deck keeps its
+         aria-activedescendant contract and one band serves five cards, so no flank ever mounts
+         a control it will not paint. Bound to the active card; the box is reserved in CSS. -->
+  <staging-band-stub data-v-08f2b41b="" name="sudoku" staging="[object Object]" size="3" difficulty="EASY" safeverb="start" busy="true"></staging-band-stub>
+  <!-- The mid-game guard ribbon (Wave D §4) — a pencil-note that SLIDES from the chosen
+         (centered) card on a dirty+different switch. An overlay outside the scroll viewport
+         (whose overflow would clip it), centered on the deck. NOT a modal, NOT confirm(): a
+         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches.
+         T4-P1 F4: the SAME ribbon now also confirms the picker's deal verb — one idiom, its
+         copy keyed to the intent, `.guard-keep`/`.guard-leave` unchanged as the act hooks. -->
+  <transition-stub data-v-08f2b41b="" name="guard-ribbon" appear="false" persisted="false" css="true">
+    <div data-v-08f2b41b="" class="gallery-guard" role="alertdialog" aria-label="Leave this puzzle?">
+      <div data-v-08f2b41b="" class="guard-note-frame" stroke-width="3" outset="4">
+        <div data-v-08f2b41b="" class="guard-note cartoon-shadow-md edge-outlined bg-popover">
+          <p data-v-08f2b41b="" class="guard-note-text">leave this puzzle?<br data-v-08f2b41b=""><span data-v-08f2b41b="" class="guard-note-sub">your marks aren't saved</span></p>
+          <div data-v-08f2b41b="" class="guard-note-actions"><button data-v-08f2b41b="" type="button" class="guard-btn guard-keep"> keep </button><button data-v-08f2b41b="" type="button" class="guard-btn guard-leave">leave</button></div>
+        </div>
+      </div>
+    </div>
+  </transition-stub><!-- Polite live region — announces the snapped card on every step/swipe. -->
+  <div data-v-08f2b41b="" class="gallery-live" aria-live="polite" role="status">sudoku, 1 of 2. 3 easy, new game</div>
+</div>
+ ❯ VueWrapper.get node_modules/@vue/test-utils/dist/vue-test-utils.cjs.js:7182:15
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:207:23
+    205|       const w = mountGallery();
+    206|       await arm(w, key);
+    207|       const drawn = w.get(".guard-note-title").text();
+       |                       ^
+    208|       expect(drawn).not.toBe("");
+    209|       expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > ONE name, drawn and spoken — the one-string rule > deal: the accessible name IS the drawn heading, character for character
+Error: Unable to get .guard-note-title within: <div data-v-08f2b41b="" class="game-gallery" style="--card-step-ms: 440ms;">
+  <div data-v-08f2b41b="" class="gallery-viewport" role="listbox" aria-label="Choose a puzzle" aria-roledescription="carousel" tabindex="0" aria-keyshortcuts="d" aria-activedescendant="gallery-card-0" style="scroll-snap-type: none;">
+    <div data-v-08f2b41b="" class="gallery-track" style="--edge: 0px;">
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="0" count="2" pose="0" dealreveal="1" isactive="true" guard="true" live="false"></game-card-stub>
+      </div>
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="1" count="2" pose="0" dealreveal="1" isactive="false" guard="false" live="false"></game-card-stub>
+      </div>
+    </div>
+  </div>
+  <!-- Page pips: the sketchbook page-number, snapped one inked (decorative — the listbox
+         already announces "N of M"; these are the visual/mobile position tell). -->
+  <div data-v-08f2b41b="" class="gallery-pips" aria-hidden="true"><span data-v-08f2b41b="" class="gallery-pip is-inked"></span><span data-v-08f2b41b="" class="gallery-pip"></span></div>
+  <!-- THE STAGING BAND (T4-P1 F4) — the order slip for the ACTIVE card. A SIBLING of the
+         listbox, never a descendant of `role="option"`: the deck keeps its
+         aria-activedescendant contract and one band serves five cards, so no flank ever mounts
+         a control it will not paint. Bound to the active card; the box is reserved in CSS. -->
+  <staging-band-stub data-v-08f2b41b="" name="sudoku" staging="[object Object]" size="3" difficulty="EASY" safeverb="start" busy="true"></staging-band-stub>
+  <!-- The mid-game guard ribbon (Wave D §4) — a pencil-note that SLIDES from the chosen
+         (centered) card on a dirty+different switch. An overlay outside the scroll viewport
+         (whose overflow would clip it), centered on the deck. NOT a modal, NOT confirm(): a
+         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches.
+         T4-P1 F4: the SAME ribbon now also confirms the picker's deal verb — one idiom, its
+         copy keyed to the intent, `.guard-keep`/`.guard-leave` unchanged as the act hooks. -->
+  <transition-stub data-v-08f2b41b="" name="guard-ribbon" appear="false" persisted="false" css="true">
+    <div data-v-08f2b41b="" class="gallery-guard" role="alertdialog" aria-label="Deal a new board?">
+      <div data-v-08f2b41b="" class="guard-note-frame" stroke-width="3" outset="4">
+        <div data-v-08f2b41b="" class="guard-note cartoon-shadow-md edge-outlined bg-popover">
+          <p data-v-08f2b41b="" class="guard-note-text">deal over this puzzle?<br data-v-08f2b41b=""><span data-v-08f2b41b="" class="guard-note-sub">your marks aren't saved</span></p>
+          <div data-v-08f2b41b="" class="guard-note-actions"><button data-v-08f2b41b="" type="button" class="guard-btn guard-keep"> keep </button><button data-v-08f2b41b="" type="button" class="guard-btn guard-leave">deal</button></div>
+        </div>
+      </div>
+    </div>
+  </transition-stub><!-- Polite live region — announces the snapped card on every step/swipe. -->
+  <div data-v-08f2b41b="" class="gallery-live" aria-live="polite" role="status">sudoku, 1 of 2. 3 easy, new game</div>
+</div>
+ ❯ VueWrapper.get node_modules/@vue/test-utils/dist/vue-test-utils.cjs.js:7182:15
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:207:23
+    205|       const w = mountGallery();
+    206|       await arm(w, key);
+    207|       const drawn = w.get(".guard-note-title").text();
+       |                       ^
+    208|       expect(drawn).not.toBe("");
+    209|       expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > ONE name, drawn and spoken — the one-string rule > the utterance is built from that same name, so copy can never drift out of it
+Error: Unable to get .guard-note-title within: <div data-v-08f2b41b="" class="game-gallery" style="--card-step-ms: 440ms;">
+  <div data-v-08f2b41b="" class="gallery-viewport" role="listbox" aria-label="Choose a puzzle" aria-roledescription="carousel" tabindex="0" aria-keyshortcuts="d" aria-activedescendant="gallery-card-0" style="scroll-snap-type: none;">
+    <div data-v-08f2b41b="" class="gallery-track" style="--edge: 0px;">
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="0" count="2" pose="0" dealreveal="1" isactive="true" guard="true" live="false"></game-card-stub>
+      </div>
+      <div data-v-08f2b41b="" class="gallery-card-slot">
+        <game-card-stub data-v-08f2b41b="" card="[object Object]" index="1" count="2" pose="0" dealreveal="1" isactive="false" guard="false" live="false"></game-card-stub>
+      </div>
+    </div>
+  </div>
+  <!-- Page pips: the sketchbook page-number, snapped one inked (decorative — the listbox
+         already announces "N of M"; these are the visual/mobile position tell). -->
+  <div data-v-08f2b41b="" class="gallery-pips" aria-hidden="true"><span data-v-08f2b41b="" class="gallery-pip is-inked"></span><span data-v-08f2b41b="" class="gallery-pip"></span></div>
+  <!-- THE STAGING BAND (T4-P1 F4) — the order slip for the ACTIVE card. A SIBLING of the
+         listbox, never a descendant of `role="option"`: the deck keeps its
+         aria-activedescendant contract and one band serves five cards, so no flank ever mounts
+         a control it will not paint. Bound to the active card; the box is reserved in CSS. -->
+  <staging-band-stub data-v-08f2b41b="" name="sudoku" staging="[object Object]" size="3" difficulty="EASY" safeverb="start" busy="true"></staging-band-stub>
+  <!-- The mid-game guard ribbon (Wave D §4) — a pencil-note that SLIDES from the chosen
+         (centered) card on a dirty+different switch. An overlay outside the scroll viewport
+         (whose overflow would clip it), centered on the deck. NOT a modal, NOT confirm(): a
+         light, dismissible note. Keep stays in the gallery; Leave abandons the marks + switches.
+         T4-P1 F4: the SAME ribbon now also confirms the picker's deal verb — one idiom, its
+         copy keyed to the intent, `.guard-keep`/`.guard-leave` unchanged as the act hooks. -->
+  <transition-stub data-v-08f2b41b="" name="guard-ribbon" appear="false" persisted="false" css="true">
+    <div data-v-08f2b41b="" class="gallery-guard" role="alertdialog" aria-label="Deal a new board?">
+      <div data-v-08f2b41b="" class="guard-note-frame" stroke-width="3" outset="4">
+        <div data-v-08f2b41b="" class="guard-note cartoon-shadow-md edge-outlined bg-popover">
+          <p data-v-08f2b41b="" class="guard-note-text">deal over this puzzle?<br data-v-08f2b41b=""><span data-v-08f2b41b="" class="guard-note-sub">your marks aren't saved</span></p>
+          <div data-v-08f2b41b="" class="guard-note-actions"><button data-v-08f2b41b="" type="button" class="guard-btn guard-keep"> keep </button><button data-v-08f2b41b="" type="button" class="guard-btn guard-leave">deal</button></div>
+        </div>
+      </div>
+    </div>
+  </transition-stub><!-- Polite live region — announces the snapped card on every step/swipe. -->
+  <div data-v-08f2b41b="" class="gallery-live" aria-live="polite" role="status">sudoku, 1 of 2. 3 easy, new game</div>
+</div>
+ ❯ VueWrapper.get node_modules/@vue/test-utils/dist/vue-test-utils.cjs.js:7182:15
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:231:21
+    229|     const w = mountGallery();
+    230|     await arm(w, "d");
+    231|     const drawn = w.get(".guard-note-title").text();
+       |                     ^
+    232|     expect(w.get('[role="alert"]').text().toLowerCase()).toContain(dra…
+    233|     w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the armed ribbon still resolves — the Wave D contract, under moved focus > Enter on the focused dialog confirms LEAVE (the verb HEAD bound it to)
+AssertionError: expected undefined to deeply equal [ 'sudoku' ]
+
+- Expected:
+[
+  "sudoku",
+]
+
++ Received:
+undefined
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:243:38
+    241|     await guard(w).trigger("keydown", { key: "Enter" });
+    242|     await flushPromises();
+    243|     expect(w.emitted("select")?.[0]).toEqual(["sudoku"]);
+       |                                      ^
+    244|     w.unmount();
+    245|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/12]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the armed ribbon still resolves — the Wave D contract, under moved focus > an arrow through the armed ribbon dismisses it, as it did from the listbox
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:266:47
+    264|     await guard(w).trigger("keydown", { key: "ArrowRight" });
+    265|     await flushPromises();
+    266|     expect(w.find(".gallery-guard").exists()).toBe(false);
+       |                                               ^
+    267|     expect(w.emitted("select")).toBeUndefined();
+    268|     expect(w.emitted("snap")?.[0]).toEqual([1]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/12]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  12 failed | 2 passed (14)
+   Start at  00:07:27
+   Duration  736ms (transform 231ms, setup 15ms, import 273ms, tests 76ms, environment 263ms)
+

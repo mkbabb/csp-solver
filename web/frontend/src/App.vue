@@ -39,6 +39,7 @@ import {
 } from "@games/shared/useStagingBridge";
 import { GAMES } from "@games/cards";
 import type { AnyGameSpec } from "@games/shared/defineGame";
+import { useShortcutPolicy } from "@/composables/useShortcutPolicy";
 
 // T4-WM §1 keyboard-avoidance (lane C): one document-scoped install covers both games — it
 // keys on the shared `.board-cells` contract and no-ops for every other focus target. The OS
@@ -46,6 +47,14 @@ import type { AnyGameSpec } from "@games/shared/defineGame";
 // resizing the layout viewport, so this scrolls a focused board cell clear of the keyboard via
 // `visualViewport` (the one cross-engine path — WebKit ships no VirtualKeyboard/interactive-widget).
 useKeyboardViewport();
+
+// T5-W3 §3.4 — THE SINGLE-KEY SHORTCUT POLICY, installed once for the page. The five character
+// shortcuts (k/g/h/p/d) are bound in four different files and only two of them guarded the
+// modifiers; the peek's window handler guarded nothing, so Ctrl+K / Cmd+K flashed the answer
+// key instead of reaching the browser (a11y r1 M4, WCAG 2.1.4). The policy runs in the CAPTURE
+// phase, ahead of every one of those handlers, and hands a modified or typed-into chord back
+// with `stopPropagation` — the per-feature guards below and elsewhere stay exactly as they are.
+useShortcutPolicy();
 
 // OD-8 / T4-W13 — THE MOUNT FOLD: the table-driven scene mount. A gallery select / `?game=`
 // deep-link sets `scene` to a game id; `sceneFor` resolves it to the mountable component. The
@@ -455,6 +464,11 @@ async function onGalleryDeal(payload: {
 // into the center card). Pointing the wordmark at `enterGallery` + retiring the dropdown is
 // Wave D; this entry seam is additive and dropdown-agnostic, guarded so a `g` typed into a
 // board cell/field never fires it.
+//
+// Its own guard STAYS (T5-W3 §3.4): the policy above is the floor every character shortcut
+// shares, and `g` sits deliberately below it — the policy exempts the board's digit cells so
+// K still peeks from the grid (UI-7(a)), while a `g` typed in a cell must not throw the player
+// out to the picker. The narrower rule is this handler's to hold, and it holds it here.
 function onGlobalKeydown(e: KeyboardEvent) {
   if (e.key !== "g" && e.key !== "G") return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;

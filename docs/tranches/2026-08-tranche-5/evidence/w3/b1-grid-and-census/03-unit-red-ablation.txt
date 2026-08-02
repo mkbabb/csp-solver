@@ -1,0 +1,184 @@
+T5-W3 LANE B1 — UNIT BATTERY: born RED BY ABLATION, then green
+file: src/games/shared/DigitCell.test.ts (this lane's own unit tests)
+ablation: the two cures REMOVED from DigitCell.vue (aria-hidden off the HandwrittenGlyph usage
+          and off the .cell-ghost layer), everything else identical. Restored immediately after.
+date: 2026-08-02T04:17:35Z
+
+The row layer (3.1) has no unit arm: BoardHost only renders cells through GameBoard's slot,
+and mounting it needs the whole live model + the pencil grid. Its proof is the e2e family —
+10/10 on five boards in two engines (01-…) plus the browser's own tree (02-…).
+======================================================================
+RED (cures ablated) — 4 failed | 27 passed
+----------------------------------------------------------------------
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — native bounded entry contract (T4-WM §1) > carries the iOS-congruent numeric-entry attribute set 17ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — native bounded entry contract (T4-WM §1) > inputmode is a static 'numeric' — no path that suppresses the OS keyboard survives 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — native bounded entry contract (T4-WM §1) > maxlength admits the digit width + 1 override char — 2 for single-digit boards 2ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — native bounded entry contract (T4-WM §1) > maxlength admits 3 for the two-glyph 16×16 board (two display digits + 1 override) 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — native bounded entry contract (T4-WM §1) > the native @input write path is preserved (typing emits the clamped value) 2ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — native bounded entry contract (T4-WM §1) > handleInput clamps to the digit width — an append on a filled cell overrides in place 4ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — native bounded entry contract (T4-WM §1) > two-digit entry works at 16×16 (values 10–16 commit whole) 2ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — native bounded entry contract (T4-WM §1) > Backspace erases through the same emit path 2ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — long-press candidate peek (T4-WM §3) > a hold on an empty cell opens the candidate peek; release closes it 4ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — long-press candidate peek (T4-WM §3) > a filled cell has no candidate glimpse — the hold never arms 3ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — long-press candidate peek (T4-WM §3) > a short tap never opens the peek 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — long-press candidate peek (T4-WM §3) > moving past the slop cancels the pending peek (a scroll, not a hold) 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — long-press candidate peek (T4-WM §3) > the click that ends a recognized hold is swallowed — the peek release never focuses 2ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — long-press candidate peek (T4-WM §3) > a plain tap still focuses the cell (the native-entry path is preserved) 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — user pencil marks authoring (T4-W8 ROW 1) > Normal mode still writes a value — the WM native-entry path is untouched 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — user pencil marks authoring (T4-W8 ROW 1) > corner mode routes a digit to `mark`, never `update` 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — user pencil marks authoring (T4-W8 ROW 1) > pencil-mode Backspace on an empty cell erases the notes via mark(pos, 0) 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — user pencil marks authoring (T4-W8 ROW 1) > pencil mode ignores a digit on a FILLED cell — a note only lands on an empty one 2ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — user marks render distinctly from the engine marks (T4-W8 ROW 1) > corner + center notes render in their OWN layers, never the engine `.pencil-marks` 3ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — user marks render distinctly from the engine marks (T4-W8 ROW 1) > a filled cell hides its notes — the empty-cell gate the engine marks also use 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — peer-unit wash (T4-W8 ROW 4) > renders the peer wash when isPeer, on its own `.cell-peer` layer 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — peer-unit wash (T4-W8 ROW 4) > no wash when the cell is not in the focused unit 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (boxed) — peer-unit wash (T4-W8 ROW 4) > the wash covers the whole unit — a filled peer cell washes too, not just blanks 1ms
+ × src/games/shared/DigitCell.test.ts > DigitCell — the cell announces itself once (T5-W3 3.5) > no graphic in the cell is published to the AX tree 6ms
+   → every cell graphic is decorative: expected [ 'glyph-svg', …(1) ] to deeply equal []
+ × src/games/shared/DigitCell.test.ts > DigitCell — the cell announces itself once (T5-W3 3.5) > the digit is spoken by the cell's name, and the glyph that draws it is hidden 2ms
+   → expected undefined to be 'true' // Object.is equality
+ × src/games/shared/DigitCell.test.ts > DigitCell — the cell announces itself once (T5-W3 3.5) > the ghost ring — the focus/hover/conflict ink — is decorative 1ms
+   → expected undefined to be 'true' // Object.is equality
+ × src/games/shared/DigitCell.test.ts > DigitCell — the cell announces itself once (T5-W3 3.5) > an empty cell publishes no graphic either (the marks layers stay decorative) 4ms
+   → expected [ DOMWrapper{ …(3) } ] to deeply equal []
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (latin) — the geometry-derived divergence > wears the latin family class — the frozen DOM contract e2e + index.css key on 2ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (latin) — the geometry-derived divergence > bounds a 4..7 Latin board at maxlength 2 — the digit width + 1 override char 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (latin) — the geometry-derived divergence > folds the clue's constraint clause into the accessible name 1ms
+ ✓ src/games/shared/DigitCell.test.ts > DigitCell (latin) — the geometry-derived divergence > lays the engine-marks mini-grid on the tightest ceil-√ rectangle 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/DigitCell.test.ts > DigitCell — the cell announces itself once (T5-W3 3.5) > no graphic in the cell is published to the AX tree
+AssertionError: every cell graphic is decorative: expected [ 'glyph-svg', …(1) ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "glyph-svg",
++   "absolute inset-0 h-full w-full overflow-visible",
++ ]
+
+ ❯ src/games/shared/DigitCell.test.ts:294:59
+    292|       .filter((s) => !hiddenFromAT(s.element))
+    293|       .map((s) => s.attributes("class") ?? "(unclassed)");
+    294|     expect(published, "every cell graphic is decorative").toEqual([]);
+       |                                                           ^
+    295|   });
+    296|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/games/shared/DigitCell.test.ts > DigitCell — the cell announces itself once (T5-W3 3.5) > the digit is spoken by the cell's name, and the glyph that draws it is hidden
+AssertionError: expected undefined to be 'true' // Object.is equality
+
+- Expected:
+"true"
+
++ Received:
+undefined
+
+ ❯ src/games/shared/DigitCell.test.ts:302:59
+    300|     // The glyph carries its own `aria-label` for the surfaces that ha…
+    301|     // (poster board, caret, logo); inside a NAMED gridcell it is a se…
+    302|     expect(w.get(".glyph-svg").attributes("aria-hidden")).toBe("true");
+       |                                                           ^
+    303|   });
+    304|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/games/shared/DigitCell.test.ts > DigitCell — the cell announces itself once (T5-W3 3.5) > the ghost ring — the focus/hover/conflict ink — is decorative
+AssertionError: expected undefined to be 'true' // Object.is equality
+
+- Expected:
+"true"
+
++ Received:
+undefined
+
+ ❯ src/games/shared/DigitCell.test.ts:308:60
+    306|     // Its three states are already spoken: focus by the input, the co…
+    307|     const w = mountCell({ isInvalid: true, ghostPath: "M0,0 L10,10" });
+    308|     expect(w.get(".cell-ghost").attributes("aria-hidden")).toBe("true"…
+       |                                                            ^
+    309|     expect(w.get("input").attributes("aria-invalid")).toBe("true");
+    310|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/games/shared/DigitCell.test.ts > DigitCell — the cell announces itself once (T5-W3 3.5) > an empty cell publishes no graphic either (the marks layers stay decorative)
+AssertionError: expected [ DOMWrapper{ …(3) } ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   DOMWrapper {
++     "isDisabled": [Function anonymous],
++     "subTree": undefined,
++     "wrapperElement": <svg
++       class="absolute inset-0 h-full w-full overflow-visible"
++       data-v-6ba7cccc=""
++       preserveAspectRatio="xMidYMid meet"
++       viewBox="-16.666666666666668 -16.666666666666668 144.44444444444446 144.44444444444446"
++       xmlns="http://www.w3.org/2000/svg"
++     >
++       <path
++         class="cell-ghost-path"
++         d=""
++         data-v-6ba7cccc=""
++         pathLength="1"
++       />
++     </svg>,
++   },
++ ]
+
+ ❯ src/games/shared/DigitCell.test.ts:314:70
+    312|   it("an empty cell publishes no graphic either (the marks layers stay…
+    313|     const w = mountCell({ value: 0, marks: [1, 2, 3], cornerMarks: [4]…
+    314|     expect(w.findAll("svg").filter((s) => !hiddenFromAT(s.element))).t…
+       |                                                                      ^
+    315|   });
+    316| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 27 passed (31)
+   Start at  00:10:55
+   Duration  824ms (transform 245ms, setup 14ms, import 285ms, tests 77ms, environment 304ms)
+
+
+======================================================================
+GREEN (cures restored) — the file, then the whole battery
+----------------------------------------------------------------------
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+
+ Test Files  1 passed (1)
+      Tests  31 passed (31)
+   Start at  00:17:35
+   Duration  738ms (transform 216ms, setup 14ms, import 253ms, tests 62ms, environment 307ms)
+
+
+
+> csp-solver-frontend@0.1.0 test:unit
+> vitest run
+
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+
+ Test Files  38 passed (38)
+      Tests  428 passed (428)
+   Start at  00:17:37
+   Duration  2.45s (transform 5.54s, setup 470ms, import 8.88s, tests 1.65s, environment 19.71s)
+

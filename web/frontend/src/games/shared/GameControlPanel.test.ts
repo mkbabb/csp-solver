@@ -183,6 +183,39 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
     }
   });
 
+  // T5-W3 row 3.6 (a11y r1 M9). The mobile tab was `<button><h2 class="section-heading">`:
+  // `<button>` takes phrasing content and `<h2>` is flow content, so the nesting was invalid
+  // and its parse — hence the tab's accessible name — engine-dependent; the AX tree carried
+  // the heading role anyway, which put an H-key reader INSIDE an interactive control with an
+  // ambiguous next keystroke. The APG disclosure shape is the inverse. Both halves are gated:
+  // the heading wraps the button, and no heading survives inside one.
+  it("the mobile tab is a heading WRAPPING a button, never a heading inside one", () => {
+    const w = mountPanel();
+    const tabs = w.findAll(".mobile-heading-row .mobile-heading-btn");
+    expect(tabs).toHaveLength(2);
+    for (const tab of tabs) {
+      expect(tab.element.tagName).toBe("BUTTON");
+      expect(
+        tab.element.parentElement?.tagName,
+        "the tab's parent is its heading",
+      ).toBe("H2");
+      expect(
+        tab.findAll("h1,h2,h3,h4,h5,h6"),
+        "no heading inside the control",
+      ).toHaveLength(0);
+    }
+    // The heading is box-less by class contract, so the row's flex layout is untouched.
+    expect(w.findAll("h2.mobile-heading-head")).toHaveLength(2);
+    // The name each tab announces is unchanged: the section's word, and the eyebrow's own
+    // `aria-label` where the section declares one, still ride the element inside the button —
+    // so the button's name-from-content computes exactly what it computed before.
+    const eyebrows = w.findAll(".mobile-heading-btn .section-heading");
+    expect(eyebrows.map((h) => h.text())).toEqual(["Size", "Difficulty"]);
+    expect(eyebrows.map((h) => h.attributes("aria-label"))).toEqual(
+      SECTIONS.map((s) => ("ariaLabel" in s ? s.ariaLabel : undefined)),
+    );
+  });
+
   it("six co-equal eyebrows become two, and the four that left are named one rank down", () => {
     const w = mountPanel();
     expect(w.findAll(".section-heading").map((h) => h.text())).toEqual([

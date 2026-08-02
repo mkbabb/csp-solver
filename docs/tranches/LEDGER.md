@@ -37,7 +37,7 @@ enter. A campaign close carries this file forward; it never restarts it.
 | CH-38 | BALLOT at the W4 gate | ≥4 cold/blind readers for M4/M2. Default = the adjudicator re-scopes per the pass-5 order's own alternative |
 | CH-39 | FOLD → T5-W4 | landscape eye-on-glass / sim rotation; one act = election ratification + owner eye |
 | CH-41 | BUILD → T5-W1.9 | `lint:ink` wired at `ci.yml:553`; the open half is one banked runner run-id |
-| CH-42 | BUILD → T5-W1.10 · WATCH | `toggle-crest-dark` harness; NO re-baseline — the sun-crest clause governs |
+| CH-42 | BUILD → T5-W1.10 · WATCH | `toggle-crest-dark` harness; NO re-baseline — the sun-crest clause governs. W3-verify's control strengthened the row: on UNCHANGED HEAD `78448760` the crest breaches the 0.017 darwin soul floor 5 of 6 magnitude runs (worst 1,028 px, wanders 0.0000→0.0212), invisible on linux under the 0.05 clause floor — a flaky gate at HEAD on darwin, W3-excluded by control. Feeds the banked branch-C crop-tighten cure POST-W4; `evidence/w3/verify/` holds the runs |
 | CH-44 | WATCH | linux wordmark blank (runner-only terminal bake), annotated-if-it-recurs; narrowed by W1.6 |
 | CH-45 | BALLOT (owner) → T5-W6.3 | Safari/WebKit MCP provisioning so GUI sessions steal no focus. Default = the headless-only law stands, written in the precepts |
 | CH-46 | WATCH | the API reference box (`ssh -p 1022 mbabb@34.197.214.67`), owner self-deploys; standing declaration, no tranche action |

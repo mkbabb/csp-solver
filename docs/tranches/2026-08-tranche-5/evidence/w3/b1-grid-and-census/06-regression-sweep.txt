@@ -1,0 +1,24 @@
+T5-W3 LANE B1 — REGRESSION SWEEP (the board's behaviour under a new DOM level)
+specs: affordances + mobile-affordances + sudoku-interaction + futoshiki + board-covisibility + zone-grammar
+why: roving tabindex, arrow walking, long-press peek, reveal wave and the coarse floors all run
+     over the cell DOM the row layer now nests. Both engines.
+server: vite preview (built dist) on :4231
+date: 2026-08-02T04:18:03Z
+======================================================================
+  ✓  40 [chromium] › e2e/mobile-affordances.spec.ts:252:1 › long-press peek (T4-WM §3, futoshiki twin): a hold on a cell opens the candidate glimpse; release clears it (2.2s)
+  ✓  44 [chromium] › e2e/mobile-affordances.spec.ts:139:1 › native bounded entry (futoshiki twin): coarse cell raises the numeric keypad, iOS-congruent (2.2s)
+  ✓  36 [chromium] › e2e/mobile-affordances.spec.ts:162:1 › touch play tools (T4-WM §2): undo / redo / hint tappable at ≥44px, wired, and no sticky hover (2.6s)
+  ✓  41 [chromium] › e2e/mobile-affordances.spec.ts:245:1 › long-press peek (T4-WM §3, sudoku): a hold on a cell opens the candidate glimpse; release clears it (2.8s)
+  ✓  42 [chromium] › e2e/mobile-affordances.spec.ts:268:1 › coarse affordances: persistent peek washi on a ≥44px target, icon sublabels, Clear confirm beat (2.9s)
+  ✓  45 [chromium] › e2e/mobile-affordances.spec.ts:341:1 › Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty board arms first (1.4s)
+
+  45 passed (15.9s)
+
+  ✓  42 [webkit] › e2e/mobile-affordances.spec.ts:245:1 › long-press peek (T4-WM §3, sudoku): a hold on a cell opens the candidate glimpse; release clears it (6.5s)
+  ✓  37 [webkit] › e2e/mobile-affordances.spec.ts:123:1 › native bounded entry (sudoku 16×16): two-digit values 10–16 enter whole (7.4s)
+  ✓  39 [webkit] › e2e/mobile-affordances.spec.ts:162:1 › touch play tools (T4-WM §2): undo / redo / hint tappable at ≥44px, wired, and no sticky hover (7.6s)
+  ✓  44 [webkit] › e2e/mobile-affordances.spec.ts:268:1 › coarse affordances: persistent peek washi on a ≥44px target, icon sublabels, Clear confirm beat (6.9s)
+  ✓  43 [webkit] › e2e/mobile-affordances.spec.ts:252:1 › long-press peek (T4-WM §3, futoshiki twin): a hold on a cell opens the candidate glimpse; release clears it (7.1s)
+  ✓  45 [webkit] › e2e/mobile-affordances.spec.ts:341:1 › Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty board arms first (2.3s)
+
+  45 passed (29.9s)

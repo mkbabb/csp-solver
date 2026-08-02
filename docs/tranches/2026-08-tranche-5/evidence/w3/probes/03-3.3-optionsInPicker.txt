@@ -1,0 +1,72 @@
+T5-W3 PROBES — BORN-RED TRANSCRIPT
+tip: 78448760 — T5-W2 THE SEAL: the finisher's six rows land, the bake race re-pins, fourteen adjudications close the wave
+date: 2026-08-02T03:58:00Z
+spec: web/frontend/e2e/a11y.spec.ts
+config: playwright.config.ts (DEFAULT — projects chromium + webkit)
+runner: npx playwright test a11y.spec.ts --reporter=list
+server: vite dev on :4240 via PLAYWRIGHT_BASE_URL — :3000 is held by a foreign palette-api on this host
+playwright: 1.61.1
+======================================================================
+FAMILY: 3.3 optionsInPicker
+HEAD truth (r1 H3 / r2 §H3): five role="option" nodes in DOM, four inert — the browser publishes a one-item listbox.
+rows: 2 (1 tests x 2 engines) — ALL RED
+======================================================================
+
+  9) [chromium] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options 
+
+    Error: the browser AX tree publishes 1 options: ["sudoku, 1 of 5"]
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 5
+    Received length: 1
+    Received array:  ["sudoku, 1 of 5"]
+
+      344 |         names,
+      345 |         `the browser AX tree publishes ${names.length} options: ${JSON.stringify(names)}`,
+    > 346 |       ).toHaveLength(5);
+          |         ^
+      347 |       expect(names.filter((n) => n.trim() !== ''), 'every published option is named').toHaveLength(
+      348 |         5,
+      349 |       );
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:346:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-chromium/error-context.md
+
+
+  24) [webkit] › e2e/a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options 
+
+    Error: options stripped from the accessibility tree: [null,"inert","inert","inert","inert"]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 6
+
+    - Array []
+    + Array [
+    +   "inert",
+    +   "inert",
+    +   "inert",
+    +   "inert",
+    + ]
+
+      357 |       stripped.filter((s) => s !== null),
+      358 |       `options stripped from the accessibility tree: ${JSON.stringify(stripped)}`,
+    > 359 |     ).toEqual([]);
+          |       ^
+      360 |   });
+      361 | });
+      362 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:359:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-3-3-optionsInPicker-t-a3c4b-ve-named-AX-visible-options-webkit/error-context.md
+

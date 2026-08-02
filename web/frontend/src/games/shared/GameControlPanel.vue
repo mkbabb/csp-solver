@@ -419,28 +419,39 @@ function onHint() {
              put pass 1's coarse gate 7px underwater. Deleting a component is not the same as
              deleting its work. -->
         <div v-if="showTabs" class="mobile-heading-row">
-          <button
+          <!-- a11y r1 M9: this was `<button><h2>`. `<button>`'s content model is phrasing
+               content, so the heading was invalid nesting whose parse is engine-dependent, and
+               a reader walking by H-key landed INSIDE an interactive control. The APG
+               disclosure shape is the inverse — heading WRAPS button — and the wrapper is
+               `display: contents` (`.mobile-heading-head`), so the button stays the flex item
+               `.mobile-heading-row` lays out and not one pixel moves. Heading navigation keeps
+               its stop; it now lands on the heading, whose next keystroke is unambiguous. -->
+          <h2
             v-for="section in sections"
             :key="section.key"
-            class="mobile-heading-btn"
-            :aria-expanded="expandedPanel === section.key"
-            @click="expandedPanel = section.key"
+            class="mobile-heading-head"
           >
-            <h2
-              class="section-heading"
-              :class="[
-                headingClass(section),
-                { 'is-active': expandedPanel === section.key },
-              ]"
-              :aria-label="section.ariaLabel"
+            <button
+              class="mobile-heading-btn"
+              :aria-expanded="expandedPanel === section.key"
+              @click="expandedPanel = section.key"
             >
-              {{ section.heading }}
-            </h2>
-            <!-- UI-12: the current value, shown only while this tab is closed. -->
-            <span v-if="expandedPanel !== section.key" class="heading-value">{{
-              valueLabel(section)
-            }}</span>
-          </button>
+              <span
+                class="section-heading"
+                :class="[
+                  headingClass(section),
+                  { 'is-active': expandedPanel === section.key },
+                ]"
+                :aria-label="section.ariaLabel"
+              >
+                {{ section.heading }}
+              </span>
+              <!-- UI-12: the current value, shown only while this tab is closed. -->
+              <span v-if="expandedPanel !== section.key" class="heading-value">{{
+                valueLabel(section)
+              }}</span>
+            </button>
+          </h2>
         </div>
 
         <template v-for="section in sections" :key="section.key">
@@ -1255,6 +1266,12 @@ function onHint() {
 .mobile-heading-row {
   display: flex;
   justify-content: space-evenly;
+}
+
+/* The heading that wraps each tab (a11y r1 M9). Box-less by construction: the button remains
+   the flex item of `.mobile-heading-row`, so the row's layout is the row's layout. */
+.mobile-heading-head {
+  display: contents;
 }
 
 .mobile-heading-btn {

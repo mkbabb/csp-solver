@@ -9,29 +9,40 @@
  * a coarse-pointer/touch user has no keys, so it stays hidden there rather than adding
  * noise. Generic pencil chrome: it names shortcuts both games share (the boards' keydown
  * maps are D16 twins), owns no domain state.
+ *
+ * T5-W3 (a11y r1 L10, and the row-3.4 help gate lane B4 measured but could not reach —
+ * `evidence/w3/b4-shortcuts-guarded/04-help-affordance-blocked.txt`). Two lies left here:
+ *
+ *  · the crib hand-spelled K/H/P and named neither G nor D, so two of the five bare keys
+ *    the estate binds were advertised nowhere. The single-key rows now RENDER the policy's
+ *    own table (`SINGLE_KEY_SHORTCUTS`) instead of re-spelling it — one string, so a key
+ *    cannot again exist unguarded or unnamed.
+ *  · redo printed `⇧ Z`. Shift+Z alone does nothing: `GameBoard.vue:458-466` reaches the
+ *    `z` case only under `ctrlKey || metaKey` and THEN branches on shift. The chord is
+ *    ⌘/Ctrl + ⇧ + Z, and that is what it now prints.
+ *
+ * The chorded rows stay hand-written: they are the board's own bindings, not the policy's.
  */
+import { SINGLE_KEY_SHORTCUTS } from "@/composables/useShortcutPolicy";
 </script>
 
 <template>
   <dl class="keyboard-legend" aria-label="Keyboard shortcuts">
-    <div class="legend-row">
-      <dt><kbd>K</kbd></dt>
-      <dd>peek</dd>
-    </div>
-    <div class="legend-row">
-      <dt><kbd>H</kbd></dt>
-      <dd>hint</dd>
-    </div>
-    <div class="legend-row">
-      <dt><kbd>P</kbd></dt>
-      <dd>pencil</dd>
+    <div v-for="s in SINGLE_KEY_SHORTCUTS" :key="s.key" class="legend-row">
+      <dt>
+        <kbd>{{ s.key }}</kbd>
+      </dt>
+      <dd>{{ s.does }}</dd>
     </div>
     <div class="legend-row">
       <dt><kbd>⌘</kbd><span class="legend-sep">/</span><kbd>Ctrl</kbd><kbd>Z</kbd></dt>
       <dd>undo</dd>
     </div>
     <div class="legend-row">
-      <dt><kbd>⇧</kbd><kbd>Z</kbd></dt>
+      <dt>
+        <kbd>⌘</kbd><span class="legend-sep">/</span><kbd>Ctrl</kbd><kbd>⇧</kbd
+        ><kbd>Z</kbd>
+      </dt>
       <dd>redo</dd>
     </div>
   </dl>

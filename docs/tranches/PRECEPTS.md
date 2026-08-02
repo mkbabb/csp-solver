@@ -109,3 +109,15 @@ MCP, or the headless-only law stands written"—which fires at the close if the 
 **Re-entry.** The owner provisioning a WebKit or macOS-automation MCP flips this row: the law relaxes to
 background-GUI-permitted, and CH-35's device script, CH-39's rotation eye, and CH-40's re-entry unblock with
 it. Nothing else reopens it.
+
+## The :3000 squat (born T5-W3, third bite)
+
+On any dev box where another service holds `:3000`, both Playwright configs' `webServer
+{port: 3000, reuseExistingServer: true}` will latch onto the stranger — on the campaign
+machine that stranger is a foreign `palette-api`, and it has eaten three lanes' first runs
+(W3 probes, W3 verify, the W3 seal). The enforcing config already exists and held all three
+times: `global-setup.ts` asserts the SPA (status, `#app`, title) and throws loudly rather
+than letting a foreign page grade the suite. THE PRECEPT: local e2e runs on a contended box
+set `PLAYWRIGHT_BASE_URL` at a dev/preview server they started themselves (bands: 4230-4260
+for lanes, 4188 reserved for the golden/throttle configs' own webServer), and kill it at
+close. CI is unaffected — its `:3000` is the app. Re-entry to silence: none; the guard stays.
