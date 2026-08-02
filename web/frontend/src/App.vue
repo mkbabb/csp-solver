@@ -846,6 +846,18 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
   }
 }
 
+/* THE WORKSHEET CENTRES (T6 mark 9). Portrait spent its slack at the bottom: the block ended
+   at the verbs band and the rest of the screen was empty paper. Auto margins take that free
+   space and split it, so masthead, board, reserved line and verbs read as one assembly with
+   air above and below. Portrait-scoped — landscape really scrolls and keeps flex-start below.
+   Under overflow auto margins collapse to 0, which is flex-start again, so this can never clip
+   and never mints a scroll. */
+@media (max-width: 1023.98px) and (orientation: portrait) {
+  .board-group {
+    margin-block: auto;
+  }
+}
+
 @media (max-width: 1023px) {
   .main-content {
     justify-content: flex-start;

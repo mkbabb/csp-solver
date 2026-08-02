@@ -153,6 +153,11 @@
     align-items: center;
     gap: 1.25rem;
     width: 100%;
+    /* THE COLUMN, written once (T6 mark 9). The stacked regime's one width was spelled out
+       twice — here for the card, again for the fold's verbs band — and the dock's tongue
+       berth now has to inset to the same edge, which would have made it three. Declared on
+       `.app-layout` so every consumer inherits it; all three live inside that subtree. */
+    --board-col: min(42rem, calc(100vw - 1.5rem));
   }
 
   /* THE LANDSCAPE POSE, and the identity it owes. The `.mobile-board-width` twin is deleted,
@@ -162,7 +167,7 @@
      landscape-only block below because the portrait pose overrides it with `left/right`, and
      a value both orientations share should be written once.) */
   .scene-controls {
-    width: min(42rem, calc(100vw - 1.5rem));
+    width: var(--board-col);
   }
 }
 
@@ -173,17 +178,33 @@
 
    THE ANCHOR is `useKeyboardViewport`'s standing trigger, honoured verbatim: `top:
    var(--vv-height)` — the visual viewport's bottom edge in layout coords — with the rest pose
-   on `translate:`. NEVER `bottom: 0` (a risen keyboard occludes it outright: ablated, the
-   deepest chip strands at 616.92 under a 368 band edge) and NEVER a height yield (a height
+   on `translate:`. NEVER `bottom: 0` (a risen keyboard occludes it outright: re-ablated at T6
+   against the grown card, the deepest chip strands at 559.94 under a 368 band edge, both
+   engines — pass 6's 616.92 was the pre-T6 card's) and NEVER a height yield (a height
    animation is a layout animation, which this drawer has never once done). `100dvh` is the
    var's fallback, so an unpublished anchor is still a defined pose.
 
-   THE CAP is a derivation, not a tuning: 9rem = the measured chrome band above the board
-   (132.22 chromium / 131.63 webkit) and 3rem = the tongue's 48px riding proud of the case, so
-   the sheet — tongue included — stops BELOW the masthead. Price at the shortest live cell
-   (390×664): ~55px of internal scroll; every taller portrait cell fits whole. pageVh is 1.000
-   at every rung of that ladder, so the cap is a taste the owner may re-cut without reopening
-   the row.
+   THE CLOSED POSE TAKES THE FOLD'S OWN BOTTOM EDGE (T6 mark 9). Resting on the screen's floor
+   left the tongue poking out of the bottom-right corner with the worksheet's block ending far
+   above it. `useControlsDrawer` publishes `--fold-bottom` — `.app-layout`'s padded bottom in
+   document coords, which IS `#fold-tools`'s bottom, since the band is the layout's last
+   in-flow child here and the sheet is fixed — and the rest pose lifts by the difference,
+   clamped at 0 so the case can never sit below the visual floor. The tongue is `bottom: 100%`
+   of the berth, so it spans exactly the band's `padding-bottom: 3rem` and lands flush under
+   the verbs. Degradation is total-order safe: unset var → the `200dvh` arm → the clamp yields
+   `0px` → the shipped screen-bottom pose; keyboard up → `--vv-height` shrinks → the clamp pins
+   to the visual floor → the shipped keyboard pose exactly. NEVER re-cut this to
+   `position: absolute; top: 100%` — it reads cheaper and an absolutely-positioned ~527px case
+   contributes scrollable overflow, which kills `maxScroll 0`. Fixed in both states is the
+   contract.
+
+   THE CAP is a derivation, not a tuning: 9rem = the chrome band above the board and 3rem = the
+   tongue's 48px riding proud of the case, so the sheet — tongue included — stops BELOW the
+   masthead. The band is measured at the SHORTEST live cell, which is where the cap binds and
+   where mark 9's centring has almost no slack to spend: 133.64 chromium / 133.34 webkit at
+   390×664 (132.22/131.63 before the centring). Taller cells hand the block more air and push
+   the board further down, which only buys the cap room. pageVh is 1.000 at every rung of that
+   ladder, so the cap is a taste the owner may re-cut without reopening the row.
 
    The regime key is width AND orientation: `1023.98px` rather than `1023px` because a
    fractional-width viewport between the two would match NEITHER this rule nor the `min-width:
@@ -206,7 +227,7 @@
   }
 
   html.drawer-closed .scene-controls {
-    translate: 0 0;
+    translate: 0 min(0px, calc(var(--fold-bottom, 200dvh) - var(--vv-height, 100dvh)));
   }
 
   /* The case, not the region, is what hides and goes inert at closed-idle: the region must
@@ -239,22 +260,28 @@
   }
 
   /* The tongue's berth: the case's top-right, with the tongue itself positioned OUT of the
-     case (`bottom: 100%` on `.drawer-tab`), so closed it is the 48px poking up from under the
-     screen's bottom edge and open it is the handle at the corner. */
+     case (`bottom: 100%` on `.drawer-tab`), so closed it is the 48px sitting under the verbs
+     band and open it is the handle at the corner. The inset is to the COLUMN's right edge,
+     not the viewport's: the sheet spans the full width, so a viewport-relative `1rem` stranded
+     the tongue 58px outside the fold band at 820×1180. Both poses align to the column, so the
+     glide carries no unanimated x-hop. */
   .drawer-handle {
     display: block;
     position: absolute;
     top: 0;
-    right: 1rem;
+    right: calc((100vw - var(--board-col)) / 2 + 1rem);
     width: 0;
     height: 0;
   }
 
   /* The fold's play-verbs band — in flow, under the reserved line. Its children arrive by
-     Teleport from `GameControlPanel`, which owns their grammar; this owns only the berth. */
+     Teleport from `GameControlPanel`, which owns their grammar; this owns only the berth. The
+     bottom padding is the tongue's own 48px, RESERVED IN FLOW: the centring counts it, and the
+     published edge is the padded bottom, so the clamp needs no constant of its own. */
   .fold-tools {
     display: block;
-    width: min(42rem, calc(100vw - 1.5rem));
+    width: var(--board-col);
+    padding-bottom: 3rem;
   }
 }
 

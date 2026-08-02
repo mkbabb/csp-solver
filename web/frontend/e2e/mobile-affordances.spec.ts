@@ -259,6 +259,24 @@ test("attribution opens on a single tap (T4-WM §2): the coarse focusin+click do
   // stayed false. The focus-open half now stands down on coarse, so the tap opens the card.
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await expect(page.locator(".mobile-attribution .hover-card.is-open")).toBeVisible();
+
+  // …and it STAYS open under a tap on anything inside it. App.vue's root carries the
+  // outside-click `closeAll`, so every control in the card that did not stop propagation shut
+  // the card under the finger — measured on both GitHub links. The `.stop` now sits on the
+  // disclosure itself, which is what makes this a property of the card rather than a stance
+  // each control has to remember. Navigation is suppressed in CAPTURE, which runs before the
+  // card's own bubble handler and so leaves the propagation path — the thing under test —
+  // exactly as it ships.
+  const card = page.locator(".mobile-attribution .hover-card");
+  await page.evaluate(() =>
+    window.addEventListener("click", (e) => e.preventDefault(), { capture: true }),
+  );
+  await card.getByRole("link", { name: "@mbabb" }).tap();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await card.getByRole("link", { name: "View the project on GitHub" }).tap();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await card.getByRole("button").tap();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
 });
 
 test("long-press peek (T4-WM §3, sudoku): a hold on a cell opens the candidate glimpse; release clears it", async ({

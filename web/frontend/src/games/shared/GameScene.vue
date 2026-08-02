@@ -49,6 +49,7 @@ const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer
 // mobile arm — the pass-5 cure — carries down whole and nothing the owner marked is
 // re-imported.
 const rowRegime = useRowRegime();
+const layoutEl = ref<HTMLElement | null>(null);
 const peekHost = ref<HTMLElement | null>(null);
 const railEl = ref<HTMLElement | null>(null);
 const panelEl = ref<HTMLElement | null>(null);
@@ -56,6 +57,7 @@ const drawerTab = ref<InstanceType<typeof DrawerTab> | null>(null);
 let unregisterDrawer: (() => void) | null = null;
 onMounted(() => {
   unregisterDrawer = registerDrawerScene(() => ({
+    layout: layoutEl.value,
     host: peekHost.value,
     rail: railEl.value,
     panel: panelEl.value,
@@ -66,7 +68,7 @@ onUnmounted(() => unregisterDrawer?.());
 </script>
 
 <template>
-  <div class="app-layout" :class="{ 'scene-leaving': leaving }">
+  <div ref="layoutEl" class="app-layout" :class="{ 'scene-leaving': leaving }">
     <!-- Board + the held answer-key laminate (a sibling over the board, never inside the
          grid's filtered group — kill-gate rule 6). The host tightly wraps the board box so
          the laminate's inset:0 aligns to .board-cells.

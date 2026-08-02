@@ -280,34 +280,32 @@ test.describe("mark 6 — the band dissolves", () => {
     // under the board by its own height, and that is the defect this row watches. `docGrowth`
     // is CLAMPED, so it reads smaller than the push and cannot carry the same floor.
     //
-    // T5-W4 pass 7 (L6-G4) — THE FLOOR IS RE-CUT FROM MEASUREMENT, and the pass-6 numbers it
-    // replaces are wrong rather than merely superseded. Pass 6 wrote "measured 41 on this
-    // build, both engines, against 109 of real push" and set the floor to `> 0`. Re-derived at
-    // this row's own context (COARSE 390×664, the sealed dist, 6 reps per engine —
-    // `pass7/F3/rig/docgrowth2.mjs`, `logs/docgrowth-COARSE.log`): the control arm reads
-    // **docGrowth 61 chromium / 60 webkit against ctrlPush 123.53 on both**. Neither 41 nor
-    // 109 reproduces, and the quantity is engine-split where pass 6 called it identical. The
-    // reps are exact — 61/61/61/61/61/61 and 60/60/60/60/60/60 — so this is a layout constant,
-    // not a sample.
+    // T6 MARK 9 — THE ARITHMETIC IS RE-DERIVED, and its two terms moved in opposite directions.
+    // Pass 7 wrote the mechanism correctly and it still holds: the doc is ALREADY exactly one
+    // viewport at rest (scrollHeight 664 ≡ innerHeight, slack 0), so nothing in the document
+    // absorbs the push. What absorbs is the fold column's own HEADROOM — the gap between
+    // `#fold-tools`'s bottom and the viewport floor — and `docGrowth` is `push − headroom`.
     //
-    // The clamp's mechanism, since pass 6 named the wrong one (`pass7/F3/rig/absorber.mjs`):
-    // the doc is ALREADY exactly one viewport at rest (scrollHeight 664 ≡ innerHeight, slack
-    // 0), so there is no doc slack to absorb anything. What absorbs is the fold column's own
-    // headroom — `#fold-tools` rests with its bottom at 601.16, i.e. **62.84px above the
-    // viewport floor**, and the scene box stays 664 through the whole probe. The push moves
-    // the band 123.53 down; the first 62.84 of that travel merely spends the headroom, and
-    // only the remainder reaches `scrollHeight`: 123.53 − 62.84 = 60.69, which is the 61/60
-    // measured. So `docGrowth` is `push − headroom`, and both terms are layout constants.
+    // Mark 9 spent almost all of that headroom on purpose. The band now reserves the tongue's
+    // 3rem in flow and the whole block centres, so the fold rests within **13.42 chromium /
+    // 13.72 webkit** of the floor where pass 7 measured 62.84/63.44. Re-derived at this row's
+    // own context on the built dist, 6 reps per engine, exact every time: the control arm reads
+    // **docGrowth 89 both engines against ctrlPush 102.80 chromium / 102.50 webkit**. Layout
+    // constants, not samples — and engine-identical where pass 7's read was split, because the
+    // two engines' headrooms now differ by less than the rounding.
     //
-    // FLOOR = half the measured minimum, rounded down: 60 / 2 = 30. That is the same
-    // discipline the sibling assertion below already uses (`ctrlPush > 50` against a measured
-    // 123.53), applied to a quantity two-thirds the size. `> 0` was defensible only as a
-    // disclosure that nobody had measured the clamp; the clamp is measured now, so the weakest
-    // possible threshold is no longer the honest one. Born-RED at the re-cut
-    // (`pass7/F3/rig/bornred.mjs`, `logs/docgrowth-BORN-RED.log`): forcing the vignette to
-    // `height: 80px` (drawn 89.46, push 80) drops the control to **docGrowth 17 on both
-    // engines** — this line REDS and the pass-6 `> 0` floor still PASSES. That gap is exactly
-    // the discriminating power the pass-6 floor had given away.
+    // FLOOR STAYS `> 30`, and the reason is that raising it buys nothing. The measured minimum
+    // is 89, so pass 7's "half, rounded down" discipline would say 44 — but the ablation ladder
+    // (vignette forced to a fixed height; drawn / push / docGrowth) shows both arms now red
+    // together, because a near-zero headroom makes `docGrowth` track `push` almost 1:1:
+    //   80px → drawn 89.46, push 78.58/78.28, docGrowth 65   both arms PASS
+    //   60px → drawn 69.53, push 58.58/58.28, docGrowth 45   both arms PASS
+    //   50px → drawn 59.57, push 48.58/48.28, docGrowth 35    `ctrlPush > 50` REDS
+    //   40px → drawn 49.61, push 38.58/38.28, docGrowth 25    BOTH arms RED
+    // So `ctrlPush > 50` is the sensitive arm at this tree and 44 would only red where 50
+    // already has, while sitting close enough to a legitimate 60px vignette's 45 to red on a
+    // taste re-cut rather than a defect. Pass 7's own born-RED figure is superseded rather than
+    // wrong: at 80px the control read 17 against a 62.84 headroom, and reads 65 against 13.42.
     expect(c.docGrowth).toBeGreaterThan(30);
     expect(c.ctrlPush).toBeGreaterThan(50);
   });
@@ -384,6 +382,42 @@ test.describe("mark 6 — the band dissolves", () => {
     expect(fold.verbsInFold).toBeGreaterThanOrEqual(4);
     expect(fold.verbsBelowFold).toBe(0);
     expect(fold.verbFloorFails).toBe(0);
+
+    /**
+     * T6 MARK 9 — THE TWO LOCKS, RELATIONAL BY CONSTRUCTION. The mark moved portrait's
+     * absolutes on purpose (the board's top runs 132.22 → 223.64 at 390×844), so neither lock
+     * may pin a pixel: ATTACHMENT says the tongue's bottom edge rides the fold column's own
+     * padded bottom — the tongue spans the band's 3rem reservation and lands flush under the
+     * verbs — and CENTRING says the board's middle sits within 6% of the viewport's.
+     *
+     * Both rungs, because they fail differently. Born-RED at head, measured both engines:
+     * attachment reads 242.84/243.44 at 844 and 62.84/63.44 at 664 against a ≤1 bound, since
+     * the tongue used to rest on the screen's floor and those figures ARE the old fold headroom;
+     * centring reads 108.78/109.37 at 844 against a 50.64 slack and REDS, but 18.78/19.37 at
+     * 664 against 39.84 and PASSES — the short cell has so little free space that the centring
+     * is nearly invisible there by construction. A 664-only lock would have scored the mark as
+     * landed on a tree where nothing had moved.
+     */
+    const mark9 = () =>
+      page.evaluate(() => {
+        const vh = window.innerHeight;
+        const fold = document.querySelector("#fold-tools")!.getBoundingClientRect();
+        const tongue = document.querySelector(".drawer-tab")!.getBoundingClientRect();
+        const cells = document.querySelector(".board-cells")!.getBoundingClientRect();
+        return {
+          attach: +Math.abs(tongue.bottom - fold.bottom).toFixed(2),
+          offCentre: +Math.abs(cells.top + cells.height / 2 - vh / 2).toFixed(2),
+          slack: +(vh * 0.06).toFixed(2),
+        };
+      });
+
+    // Taller rung first, so the row ends back at the cell its own name claims.
+    for (const height of [844, 664]) {
+      await page.setViewportSize({ width: 390, height });
+      await expect.poll(async () => (await mark9()).attach).toBeLessThanOrEqual(1);
+      const m = await mark9();
+      expect(m.offCentre).toBeLessThanOrEqual(m.slack);
+    }
 
     // CONTROL A — the probe must be able to see a scroll. One in-flow block under the board
     // is exactly the shape the card used to be, and the same read must exceed the bound.

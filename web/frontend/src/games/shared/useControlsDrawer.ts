@@ -140,6 +140,8 @@ if (hasDom && !drawerOpen.value) applyLayout(false);
 // ── Registration — the scene owns the board/rail/tab, App owns the masthead ──
 
 interface DrawerSceneEls {
+  /** `.app-layout` — the scene root, whose padded bottom is the fold's own edge. */
+  layout: HTMLElement | null;
   /** `.board-peek-host` — the transformed worksheet (board + vignette + margin + tab). */
   host: HTMLElement | null;
   /** `.scene-controls` — the case that slides. */
@@ -161,14 +163,47 @@ let getScene: (() => DrawerSceneEls) | null = null;
 let getMasthead: (() => DrawerMastheadEls) | null = null;
 
 /** Called by each game scene on mount; the returned disposer settles any in-flight
- *  glide instantly (the F6 page-turn unmounts scenes mid-life). */
+ *  glide instantly (the F6 page-turn unmounts scenes mid-life) and stops the fold publisher. */
 export function registerDrawerScene(get: () => DrawerSceneEls): () => void {
   getScene = get;
+  const stopFold = publishFoldBottom(get().layout);
   return () => {
+    stopFold();
     if (getScene === get) {
       settleNow();
       getScene = null;
     }
+  };
+}
+
+/**
+ * `--fold-bottom` (T6 mark 9) — the fold column's padded bottom edge in document coords, the
+ * one number the portrait dock's closed pose is clamped against (scene.css). `#fold-tools` is
+ * `.app-layout`'s last IN-FLOW child there (the sheet is fixed), so the layout's own bottom is
+ * that edge and no second measurement is needed.
+ *
+ * ONE observer, on the layout and on its parent `.board-group` — the latter catches the
+ * attribution / masthead / status / keyboard-inset reflows that move the fold without resizing
+ * it — plus `resize` for the viewport itself. A zero height means the scene is `v-show`n off
+ * under the gallery: hold the last published edge rather than publish a collapsed one. Publish
+ * is unconditional otherwise; the portrait CSS is the only consumer, and gating on
+ * `portraitDock` would buy a branch to save a custom property nobody else reads.
+ */
+function publishFoldBottom(layout: HTMLElement | null): () => void {
+  if (!hasDom || !layout) return () => {};
+  const publish = () => {
+    const r = layout.getBoundingClientRect();
+    if (r.height === 0) return;
+    const edge = (r.bottom + window.scrollY).toFixed(2);
+    document.documentElement.style.setProperty("--fold-bottom", `${edge}px`);
+  };
+  const ro = new ResizeObserver(publish);
+  ro.observe(layout);
+  if (layout.parentElement) ro.observe(layout.parentElement);
+  window.addEventListener("resize", publish);
+  return () => {
+    ro.disconnect();
+    window.removeEventListener("resize", publish);
   };
 }
 
