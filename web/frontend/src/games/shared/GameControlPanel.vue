@@ -550,7 +550,9 @@ function onHint() {
           :disabled="loading"
           class="icon-btn deal-btn"
           :class="{ 'group relative': !mobile }"
-          :aria-label="dealArmed ? 'Tap again to deal a new board' : 'Deal a new board'"
+          :aria-label="
+            dealArmed ? 'Press again to deal a new board' : 'Deal a new board'
+          "
         >
           <DiceIcon :size="28" :playing="dealAnimating" />
           <span
@@ -584,8 +586,8 @@ function onHint() {
       role="separator"
       :aria-label="
         portraitDock
-          ? 'Staged controls above, play tools below'
-          : 'Staged controls above, play tools below — press and hold, or press K, to peek at the answer key'
+          ? 'New-game settings above, play tools below'
+          : 'New-game settings above, play tools below — press and hold, or press K, to see the answer key'
       "
       @pointerdown="onDividerHoldStart($event)"
       @pointermove="onDividerHoldMove($event)"
@@ -683,7 +685,7 @@ function onHint() {
         :disabled="loading"
         class="icon-btn"
         :class="{ 'group relative': !mobile }"
-        :aria-label="clearArmed ? 'Tap again to clear board' : 'Clear board'"
+        :aria-label="clearArmed ? 'Press again to clear the board' : 'Clear the board'"
       >
         <span :class="{ 'eraser-scrub': clearAnimating }">
           <EraserIcon :size="28" />
@@ -701,7 +703,7 @@ function onHint() {
         :disabled="loading"
         class="icon-btn"
         :class="{ 'group relative': !mobile }"
-        aria-label="Fill in the forced cells"
+        aria-label="Fill in every cell that has only one possible number"
       >
         <FillForcedIcon :size="26" :playing="fillAnimating" />
         <span class="icon-sublabel" aria-hidden="true">Fill</span>

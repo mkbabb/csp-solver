@@ -399,7 +399,7 @@ export const vignetteHasTally = computed(
   () => marginVignette.value && !vignetteDocked.value,
 );
 
-/** The margin voice hints once, ever, on the first real close ("your pencil case is
+/** The margin voice hints once, ever, on the first real close ("the controls are
  *  under the board"). Boards call this on the open→closed edge; a false return means
  *  stay quiet (already spoken, or storage denied — never risk a repeating hint). */
 export function consumeDrawerHint(): boolean {

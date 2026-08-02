@@ -63,7 +63,7 @@ defineExpose({ close });
                games), so it must name neither — a "Sudoku solver" line lied on Futoshiki. Twin of
                index.html's game-agnostic social head. -->
           <p class="text-muted-foreground mt-0.5 text-xs italic">
-            CSP-powered logic puzzles
+            logic puzzles, solved in your browser
           </p>
         </div>
         <CrayonHeart :size="32" />
@@ -74,7 +74,7 @@ defineExpose({ close });
         target="_blank"
         rel="noopener noreferrer"
         class="text-foreground block text-sm hover:underline"
-        >View project on GitHub 🎉</a
+        >View the project on GitHub</a
       >
     </div>
   </div>

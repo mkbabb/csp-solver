@@ -66,9 +66,9 @@ const props = defineProps<{
    *  Futoshiki is a plain Latin square (row/col only). Returns the peers minus the focused
    *  cell; the shell gates it on the grid actually holding focus. */
   peersFn: (focusedPos: number, boardSize: number) => Set<string>;
-  /** The fresh-board margin announce ("a fresh 9×9 — you asked for medium" /
-   *  "a fresh 5×5"). Game-side so the difficulty request voice + the one-shot link-error
-   *  clause stay per-game; called by the shell at the deferred/live announce moments. */
+  /** The fresh-board margin announce ("a fresh 9×9 — medium" / "a fresh 5×5").
+   *  Game-side so the difficulty request voice + the one-shot link-error clause
+   *  stay per-game; called by the shell at the deferred/live announce moments. */
   freshBoardCopy: () => string;
   /** Sudoku-only (UI-13): the once-per-board discoverability whisper. Receives the live
    *  values + boardSize, returns the copy iff a duplicate is visibly present while idle,
@@ -569,8 +569,7 @@ watch(
     } else if (state === "solving") {
       // Fast solves (the common case) resolve well under 2.5s and never reach this (§5.1 tiers).
       slowSolveTimer = setTimeout(() => {
-        if (props.solveState === "solving")
-          setMargin("still sharpening the pencil…", "graphite");
+        if (props.solveState === "solving") setMargin("still solving…", "graphite");
       }, 2500);
     } else if (state === "idle" && marginTone.value !== "graphite") {
       // Stale-note clear (W6, verify-14's widening): once the grade reverts, the red
@@ -605,13 +604,13 @@ watch(
 );
 
 // ── The drawer's margin voice (T3-W12 §6): hint once, ever, on the first close —
-// "your pencil case is under the board". Graphite-only window: a gold/red note is a
+// "the controls are under the board". Graphite-only window: a gold/red note is a
 // grade mid-speech (and the gold verdict feeds the vignette) — don't talk over it,
 // and don't burn the once-flag (consumeDrawerHint is only called inside the guard).
 const { drawerOpen } = useControlsDrawer();
 watch(drawerOpen, (open, prev) => {
   if (prev && !open && marginTone.value === "graphite" && consumeDrawerHint()) {
-    setMargin("your pencil case is under the board", "graphite");
+    setMargin("the controls are under the board", "graphite");
   }
 });
 
@@ -644,7 +643,7 @@ watch(
     // A same-size generation bump that leaves the board empty is a clear (§5.3). A size
     // change is announced by the givens 0→N watch instead, so skip it here.
     if (!mounted || sizeChanged) return;
-    if (props.givenCells.size === 0) setMargin("a fresh page.", "graphite");
+    if (props.givenCells.size === 0) setMargin("the board is clear", "graphite");
   },
 );
 
@@ -655,7 +654,7 @@ const errorNote = computed(() => {
     const f = classifyCode(props.errorCode);
     if (f.kind === "paper-note") return { text: f.message, retryable: f.retryable };
   }
-  // The default 'error' cause on the Worker (W6) path is BUDGET_EXCEEDED — the head-scratcher.
+  // The default 'error' cause on the Worker (W6) path is BUDGET_EXCEEDED.
   return { text: PAPER_NOTE_COPY.budget, retryable: true };
 });
 

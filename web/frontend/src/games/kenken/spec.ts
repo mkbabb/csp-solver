@@ -12,7 +12,7 @@
  * `geometry: "latin"` picks the BOXLESS grid (`subgridSize = side`, so `HandDrawnGrid` draws
  * one box, i.e. none), the row/column peer band, and the cage-blind Latin conflict derivation.
  * `requestVoice` and `gradeHint` are both FALSE, which is what `KenKenBoard` printed: its grid
- * label carried no difficulty word, its fresh-board margin carried no "— you asked for" clause,
+ * label carried no difficulty word, its fresh-board margin carried no difficulty clause,
  * and it handed `GameBoard` no idle grade hint at all. The cage ARITHMETIC is enforced
  * authoritatively by the wasm solve, which is why the red-pencil assist stays Latin-only.
  *
@@ -66,8 +66,8 @@ export const kenkenSpec = defineGame<ReturnType<typeof useKenken>, KenKenCage[]>
     options: (m) => [
       {
         key: "boardSize",
-        heading: "Board Size",
-        ariaLabel: "Board size",
+        heading: "Size",
+        ariaLabel: "Size",
         options: cagedLatinSizes,
         selected: m.pendingBoardSize.value,
         onChange: (v) => (m.pendingBoardSize.value = v as number),

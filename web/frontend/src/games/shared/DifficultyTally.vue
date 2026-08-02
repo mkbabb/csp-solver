@@ -272,8 +272,8 @@ onUnmounted(stopDraws);
          chrome, no new standing surface. `techniqueVoice.ts` now COMPOSES the difficulty
          signature from `TECHNIQUE_NAME` — the bucket table is deleted, so there is one
          vocabulary where there were two, which is the root the defect grew from rather than
-         its symptom. The margin's reserved line reads `a fresh 9×9 — needs a hidden single`
-         and THIS graphic's `aria-label` reads `difficulty — needs a hidden single (1 of 5)`.
+         its symptom. The margin's reserved line reads `a fresh 9×9 — hidden single`
+         and THIS graphic's `aria-label` reads `difficulty — hidden single (1 of 5)`.
          Zero new pixels: the line was already reserved, already drawn, already read on every
          deal. Seven of the nine phrases are byte-identical to the table they replace.
 

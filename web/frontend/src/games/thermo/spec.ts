@@ -9,7 +9,7 @@
  *
  * A Thermo-Sudoku IS a Sudoku variant, and the spec says so in data rather than by copying a
  * component: `geometry: "boxed"` buys the sub-grid band, the box-peer adjacency and the √n tick
- * count; `requestVoice`/`gradeHint` buy the "— you asked for medium" clause and the UI-13
+ * count; `requestVoice`/`gradeHint` buy the "— medium" difficulty clause and the UI-13
  * whisper. The ONE genuine divergence — the bulb+tube furniture and the `ThermoLine[]` the
  * solver threads — is the `clues` seam, entire: what the board draws, how it is propped, and
  * how the wire carries it.
@@ -35,9 +35,9 @@ export const thermoSpec = defineGame<ReturnType<typeof useThermo>, ThermoLine[]>
     // sudoku geometry, declared, where `ThermoBoard` re-typed it as thirty lines of adjacency.
     geometry: "boxed",
     noun: "thermo board",
-    // B-0: the margin says "— you asked for medium" until the engine has graded the board.
+    // B-0: the margin says "— medium" until the engine has graded the board.
     requestVoice: true,
-    // UI-13: the once-per-board "mark it and I'll grade" whisper.
+    // UI-13: the once-per-board "a number repeats" whisper.
     gradeHint: true,
   },
   clues: {

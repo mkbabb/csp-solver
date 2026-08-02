@@ -205,7 +205,7 @@ test("the permanent tape is a LABEL, not a tooltip — and the surface it names 
   await expect(peek).toHaveAttribute("role", "separator");
   const name = await peek.getAttribute("aria-label");
   expect(name).toBeTruthy();
-  expect(name!.toLowerCase()).toContain("peek");
+  expect(name!.toLowerCase()).toContain("answer key");
   expect(name!).toMatch(/\bK\b/);
 });
 
@@ -588,11 +588,11 @@ test.describe("coarse regime", () => {
     // control group carries its own name.
     const well = page.locator('#controls-drawer .tray-well:has-text("teacher\'s")');
     await well.locator('.ctrl-btn:text-is("Live")').tap();
-    await expect(status).toContainText("marking as you go");
+    await expect(status).toContainText("checking as you go");
     await expect(status).toHaveClass(/is-marking/);
 
     await well.locator('.ctrl-btn:text-is("Off")').tap();
-    await expect(status).toContainText("not marking");
+    await expect(status).toContainText("not checking");
     await expect(status).not.toHaveClass(/is-marking/);
   });
 });

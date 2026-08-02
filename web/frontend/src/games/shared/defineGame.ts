@@ -105,7 +105,7 @@ interface BoardGrammar {
   geometry: "boxed" | "latin";
   /** the grid's a11y label — "sudoku board", "kenken board". */
   noun: string;
-  /** does the fresh-board margin carry the "— you asked for medium" clause? */
+  /** does the fresh-board margin carry the "— medium" difficulty clause? */
   requestVoice: boolean;
   /** does the board whisper the UI-13 idle grade hint? */
   gradeHint: boolean;

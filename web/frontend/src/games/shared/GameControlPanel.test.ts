@@ -91,9 +91,10 @@ function mountPanel(overrides: Record<string, unknown> = {}) {
 const UNDO = 'button[aria-label="Undo last move"]';
 const REDO = 'button[aria-label="Redo move"]';
 const HINT = 'button[aria-label="Reveal a hint in the selected cell"]';
-const FILL = 'button[aria-label="Fill in the forced cells"]';
+const FILL =
+  'button[aria-label="Fill in every cell that has only one possible number"]';
 const DEAL = 'button[aria-label="Deal a new board"]';
-const CLEAR = 'button[aria-label="Clear board"]';
+const CLEAR = 'button[aria-label="Clear the board"]';
 
 /**
  * The play verbs are read FROM THE BERTH, and that is the assertion as much as the mechanism:
@@ -335,7 +336,7 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
   it("proactiveCheck reaches the status line — the decay the card never showed", () => {
     expect(mountPanel().get(".check-status").text()).toContain("ask again");
     const marking = mountPanel({ proactiveCheck: true });
-    expect(marking.get(".check-status").text()).toContain("showing mistakes");
+    expect(marking.get(".check-status").text()).toContain("mistakes shown");
     expect(marking.get(".check-status").classes()).toContain("is-marking");
   });
 });

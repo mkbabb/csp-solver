@@ -7,12 +7,12 @@
  *  - `formatHintNote` — the named-hint copy: *"naked single — only 4 fits here"* /
  *    *"hidden single — 7 goes nowhere else in this box"*. The caller passes the display
  *    character (sudoku's hex for 16×16, futoshiki's plain digit), so this stays glyph-agnostic.
- *  - `formatGradeSignature` — the honest difficulty signature: *"needs a hidden single"* /
- *    *"needs an X-wing"*, keyed to the hardest technique the deal-time grade needed and NAMING
- *    it (T5-W4 pass 6, dt-name: it used to bucket the tier, so two techniques shared one
- *    sentence — see the disposition below). This replaces W6's opaque bucket word ("you asked
- *    for medium") ONCE a board is graded; W6's request voice stays the pre-grade/fallback (a
- *    restored permalink, a hand-typed board — no measurement).
+ *  - `formatGradeSignature` — the honest difficulty signature: *"hidden single"* / *"X-wing"*,
+ *    keyed to the hardest technique the deal-time grade needed and NAMING it (T5-W4 pass 6,
+ *    dt-name: it used to bucket the tier, so two techniques shared one sentence — see the
+ *    disposition below). This replaces W6's opaque bucket word ONCE a board is graded; W6's
+ *    request voice stays the pre-grade/fallback (a restored permalink, a hand-typed board —
+ *    no measurement).
  */
 import type { HintResult, TechniqueId } from "./techniqueEngine";
 import { TECHNIQUE_TIER } from "./techniqueEngine";
@@ -43,14 +43,14 @@ export function formatHintNote(
     case "reveal":
       // The unnameable fallback: no one-step deduction places this cell yet, so the hint
       // is honest about revealing rather than reasoning.
-      return `no one-step reason — here's ${valueChar}`;
+      return `no simple step here — the answer is ${valueChar}`;
   }
 }
 
 /** THE technique vocabulary — one home, and now one home only. Every surface that names a
  *  technique reads this table: the margin's difficulty signature (`formatGradeSignature`
- *  above composes it with an article) and the tally's a11y label through it. The parallel
- *  bucket table that used to sit beside it is what pass 5's F3-G3 was about, and it is gone. */
+ *  below) and the tally's a11y label through it. The parallel bucket table that used to sit
+ *  beside it is what pass 5's F3-G3 was about, and it is gone. */
 const TECHNIQUE_NAME: Record<TechniqueId, string> = {
   "naked-single": "naked single",
   "hidden-single": "hidden single",
@@ -66,38 +66,13 @@ const TECHNIQUE_NAME: Record<TechniqueId, string> = {
 /**
  * ── T5-W4 PASS 6 · dt-name, DISPOSED — THE ESTATE STOPS RUNNING TWO VOCABULARIES ──────────
  *
- * There was a `GRADE_PHRASE` table here, and its first two rows both read "singles only".
- * That is the whole of pass 5's F3-G3: the estate spoke the difficulty in TIER BUCKETS while
- * `TECHNIQUE_NAME` (above) held the exact step, and the two never met — so naked-single and
- * hidden-single were indistinguishable everywhere a reader could look, in ink and in the
- * a11y label alike, and pass 4's claim that the exact step "still names itself at every width"
- * was true of no surface at all (measured: zero visible text nodes, zero aria-labels).
- *
- * The adjudicator's ruling was to route the REAL name to an EXISTING visible surface at zero
- * new chrome. The surface was already there and already drawn on every deal: the margin's own
- * reserved line, which prints `a fresh 9×9 — <signature>`. So the signature names the step.
- *
- * And the table goes with it, which is the part worth having. A second vocabulary is what
- * produced the defect; keeping it in sync would only have deferred the next one. The phrase is
- * now COMPOSED from `TECHNIQUE_NAME` — one vocabulary, one home — with the only thing the
- * frame actually needed that a name cannot carry: the article. Seven of the nine phrases come
- * out byte-identical to the table they replace; the two that change are exactly the two the
- * bucket conflated ("singles only" → "needs a naked single" / "needs a hidden single").
- *
- * The register question F3 handed up is answered by the frame, not by the jargon: "needs a
- * hidden single" is the same plain-spoken sentence the other seven tiers have always said.
+ * A `GRADE_PHRASE` table sat here and bucketed the tier ("singles only" for both singles)
+ * while `TECHNIQUE_NAME` held the exact step, so two techniques read identically in ink and
+ * in the a11y label alike. The bucket is deleted, and so is the `TECHNIQUE_ARTICLE` map that
+ * survived it: the signature is the NAME, on the margin's already-reserved line, one
+ * vocabulary, one home, zero new chrome. The frame is what the article was for, and the
+ * enclosing sentence ("a fresh 9×9 — ", "difficulty — ") already supplies it.
  */
-const TECHNIQUE_ARTICLE: Record<TechniqueId, string> = {
-  "naked-single": "a ",
-  "hidden-single": "a ",
-  "naked-pair": "a ",
-  "naked-triple": "a ",
-  pointing: "",
-  "box-line": "",
-  "inequality-forcing": "",
-  "inequality-chain": "an ",
-  "x-wing": "an ",
-};
 
 /**
  * The honest difficulty signature — the hardest technique the deal-time grade needed, NAMED.
@@ -110,9 +85,9 @@ export function formatGradeSignature(
   hardestTechnique: TechniqueId | null,
   solved: boolean,
 ): string {
-  if (!solved) return "beyond these techniques";
+  if (!solved) return "too hard to grade";
   if (!hardestTechnique) return "";
-  return `needs ${TECHNIQUE_ARTICLE[hardestTechnique]}${TECHNIQUE_NAME[hardestTechnique]}`;
+  return TECHNIQUE_NAME[hardestTechnique];
 }
 
 // ── The displayed-quality tally (T4-W9-B1) ───────────────────────────────────────────────
@@ -138,8 +113,8 @@ export interface TallyDescriptor {
   total: number;
   /** The always-on a11y label for the DIFFICULTY signal (distinct from FILL + CORRECTNESS).
    *  It carries the EXACT hardest step now, through `formatGradeSignature`, which is the
-   *  other half of the dt-name disposition: `difficulty — needs a hidden single (1 of 5)`
-   *  where it used to read `singles only` for two different techniques. */
+   *  other half of the dt-name disposition: `difficulty — hidden single (1 of 5)` where it
+   *  used to read `singles only` for two different techniques. */
   ariaLabel: string;
 }
 
@@ -185,7 +160,7 @@ export function describeTally(
       graded: false,
       filled: 0,
       total: TALLY_TOTAL,
-      ariaLabel: "difficulty not yet measured — deal a board to grade it",
+      ariaLabel: "difficulty not graded yet — deal a board to grade it",
     };
   }
   if (!solved) {
@@ -193,7 +168,7 @@ export function describeTally(
       graded: true,
       filled: TALLY_TOTAL,
       total: TALLY_TOTAL,
-      ariaLabel: `difficulty — beyond these techniques (${TALLY_TOTAL} of ${TALLY_TOTAL})`,
+      ariaLabel: `difficulty — too hard to grade (${TALLY_TOTAL} of ${TALLY_TOTAL})`,
     };
   }
   if (hardestTechnique === null) {
@@ -201,7 +176,7 @@ export function describeTally(
       graded: true,
       filled: 0,
       total: TALLY_TOTAL,
-      ariaLabel: "difficulty — no technique needed",
+      ariaLabel: "difficulty — no steps needed",
     };
   }
   const filled = TECHNIQUE_TIER[hardestTechnique];

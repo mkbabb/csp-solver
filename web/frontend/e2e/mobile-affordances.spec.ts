@@ -332,7 +332,7 @@ test("coarse affordances: persistent peek washi on a ≥44px target, icon sublab
   // T4-WU/U3 — Clear is now DIRTY-GATED (born-RED at base: `onClear` armed unconditionally, even on
   // a blank/pristine board). PRISTINE first: a freshly-loaded board has an empty undo depth (the
   // mount deal is off-log), so ONE Clear tap wipes it instantly — no "sure?" arm, no confirm.
-  const clearBtn = panel.getByRole("button", { name: /clear board/i });
+  const clearBtn = panel.getByRole("button", { name: /clear the board/i });
   const givenCount = await page.locator(".sudoku-cell .glyph-svg").count();
   expect(givenCount).toBeGreaterThan(0);
   await clearBtn.tap();
@@ -352,7 +352,7 @@ test("coarse affordances: persistent peek washi on a ≥44px target, icon sublab
   expect(dirtyCount).toBeGreaterThan(0);
   await clearBtn.tap();
   await expect(
-    panel.getByRole("button", { name: "Tap again to clear board" }),
+    panel.getByRole("button", { name: "Press again to clear the board" }),
   ).toBeVisible();
   await expect(panel.locator(".icon-sublabel", { hasText: "sure?" })).toBeVisible();
   expect(await page.locator(".sudoku-cell .glyph-svg").count()).toBe(dirtyCount); // armed ≠ cleared
@@ -401,7 +401,7 @@ test("Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty b
 
   await dealBtn.tap();
   await expect(
-    panel.getByRole("button", { name: "Tap again to deal a new board" }),
+    panel.getByRole("button", { name: "Press again to deal a new board" }),
   ).toBeVisible();
   await expect(dealBtn.locator(".icon-sublabel")).toHaveText("sure?");
   await expect(input).toHaveValue("5"); // the first tap armed — it did NOT deal a new board

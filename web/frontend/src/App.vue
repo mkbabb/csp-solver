@@ -114,8 +114,8 @@ function parseGame(): GameId {
   const id = new URLSearchParams(window.location.search).get("game") ?? "";
   return GAMES.some((c) => c.id === id) ? id : "sudoku";
 }
-// UI-8: the tab title names the CURRENT game — the static "Sudoku - CSP Solver" in
-// index.html lied on Futoshiki after both a deep-link (`?game=futoshiki`) and an in-app
+// UI-8: the tab title names the CURRENT game — the static "sudoku — CSP Solver" in
+// index.html lies on Futoshiki after both a deep-link (`?game=futoshiki`) and an in-app
 // switch. Set from the selected id at parse time and on every switch, so the title tracks
 // the wordmark/URL truthfully. Lowercase to match the wordmark; em dash, no spaces stripped.
 function applyTitle(g: GameId) {

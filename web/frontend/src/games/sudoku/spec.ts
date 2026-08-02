@@ -29,9 +29,9 @@ export const sudokuSpec = defineGame<ReturnType<typeof useSudoku>, void>({
     // A sub-grid band: peers include the box, and the board draws its ticks at √n.
     geometry: "boxed",
     noun: "sudoku board",
-    // B-0: the margin says "— you asked for medium" until the engine has graded the board.
+    // B-0: the margin says "— medium" until the engine has graded the board.
     requestVoice: true,
-    // UI-13: the once-per-board "mark it and I'll grade" whisper.
+    // UI-13: the once-per-board "a number repeats" whisper.
     gradeHint: true,
   },
   clues: null,

@@ -45,9 +45,9 @@ const props = defineProps<{
  * own register anyway (`marks`, `candidates`, `pencils`, `hold to peek`, `new game` are all
  * lowercase; only the chip it refers to is titlecased). Gated by `e2e/font-census.spec.ts`. */
 const text = computed(() => {
-  if (props.mode === "off") return "not marking";
-  if (props.mode === "live") return "marking as you go";
-  return props.marking ? "marked — showing mistakes" : "board changed — ask again";
+  if (props.mode === "off") return "not checking";
+  if (props.mode === "live") return "checking as you go";
+  return props.marking ? "checked — mistakes shown" : "board changed — ask again";
 });
 
 // What a screen reader is told. The visible line is a fragment in the hand; this is the

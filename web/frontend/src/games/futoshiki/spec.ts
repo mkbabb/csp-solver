@@ -60,8 +60,8 @@ export const futoshikiSpec = defineGame<ReturnType<typeof useFutoshiki>, Inequal
     options: (m) => [
       {
         key: "boardSize",
-        heading: "Board Size",
-        ariaLabel: "Board size",
+        heading: "Size",
+        ariaLabel: "Size",
         options: latinSizes,
         selected: m.pendingBoardSize.value,
         onChange: (v) => (m.pendingBoardSize.value = v as number),

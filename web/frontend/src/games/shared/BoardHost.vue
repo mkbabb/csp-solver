@@ -9,7 +9,7 @@
  *
  * All six are now READS off the spec:
  *   · `grammar.noun` names the grid · `grammar.geometry` picks the peer band and the sub-grid
- *     tick count · `grammar.requestVoice` gates the "— you asked for medium" clause (and the
+ *     tick count · `grammar.requestVoice` gates the "— medium" difficulty clause (and the
  *     difficulty word in the grid label, which co-varies with it across all five games) ·
  *     `grammar.gradeHint` gates the UI-13 whisper · `furniture.cell` is what fills `#cells` ·
  *     `clues` is what fills `#overlay`, and `null` is a game's STATED absence.
@@ -118,11 +118,11 @@ function freshBoardCopy(): string {
   const measured = props.model.gradeSignature.value
     ? ` — ${props.model.gradeSignature.value}`
     : difficultyWord.value
-      ? ` — you asked for ${difficultyWord.value}`
+      ? ` — ${difficultyWord.value}`
       : "";
   if (linkErrorPending) {
     linkErrorPending = false;
-    return `this shared link couldn't be read — ${fresh}${measured}`;
+    return `this shared link couldn't be read. ${fresh}${measured}`;
   }
   return `${fresh}${measured}`;
 }
@@ -131,7 +131,9 @@ function freshBoardCopy(): string {
 const idleGradeHint = computed(() =>
   grammar.value.gradeHint
     ? (values: Record<string, number>, n: number): string | null =>
-        conflictsFn(values, n).positions.size > 0 ? "mark it and I'll grade" : null
+        conflictsFn(values, n).positions.size > 0
+          ? "a number repeats — turn on checking to see where"
+          : null
     : undefined,
 );
 

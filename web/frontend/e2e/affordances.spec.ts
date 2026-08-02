@@ -280,7 +280,9 @@ test('fill batch: one Fill sweep undoes as ONE gesture, redo re-fills', async ({
   const anchor = await firstBlank(page, '.sudoku-cell'); // cell 0 — blank on the conflict board
 
   const filledBefore = await page.locator('.sudoku-cell .glyph-svg').count();
-  await page.locator('.controls-card button[aria-label="Fill in the forced cells"]').click();
+  await page
+    .locator('.controls-card button[aria-label="Fill in every cell that has only one possible number"]')
+    .click();
   // The sweep inks every forced cell (all of the blank row) in one press.
   await expect
     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 20000 })

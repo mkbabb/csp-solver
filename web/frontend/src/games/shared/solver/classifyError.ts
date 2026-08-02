@@ -43,9 +43,9 @@ export type Fiction =
  * plain — the storybook dressing is the paper, not purple copy.
  */
 export const PAPER_NOTE_COPY: Record<PaperNoteVariant, string> = {
-  budget: "this one's a real head-scratcher — the solver gave up.",
+  budget: "the solver ran out of steps on this board.",
   network: "couldn't reach the solver.",
-  unknown: "something went sideways. try again?",
+  unknown: "something went wrong.",
 };
 
 /** Codes graded as wrong work — the teacher's red pencil, on the board (never a card). */

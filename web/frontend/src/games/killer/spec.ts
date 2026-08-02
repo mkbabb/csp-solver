@@ -34,9 +34,9 @@ export const killerSpec = defineGame<ReturnType<typeof useKiller>, KillerCage[]>
     // A sub-grid band — killer shares sudoku's geometry outright; the cages sit over it.
     geometry: "boxed",
     noun: "killer board",
-    // B-0: the margin says "— you asked for medium" until the engine has graded the board.
+    // B-0: the margin says "— medium" until the engine has graded the board.
     requestVoice: true,
-    // UI-13: the once-per-board "mark it and I'll grade" whisper.
+    // UI-13: the once-per-board "a number repeats" whisper.
     gradeHint: true,
   },
   clues: {

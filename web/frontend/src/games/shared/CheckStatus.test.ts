@@ -23,16 +23,16 @@ const visible = (w: ReturnType<typeof mountStatus>) =>
 const spoken = (w: ReturnType<typeof mountStatus>) => w.get(".sr-only").text();
 
 describe("CheckStatus — the visible sentence, one branch per state", () => {
-  it("off: the teacher is not marking and the mode says why", () => {
-    expect(visible(mountStatus(false, "off"))).toBe("not marking");
+  it("off: the teacher is not checking and the mode says why", () => {
+    expect(visible(mountStatus(false, "off"))).toBe("not checking");
   });
 
-  it("live: marking continuously", () => {
-    expect(visible(mountStatus(true, "live"))).toBe("marking as you go");
+  it("live: checking continuously", () => {
+    expect(visible(mountStatus(true, "live"))).toBe("checking as you go");
   });
 
   it("on-demand + armed: the check landed and is showing", () => {
-    expect(visible(mountStatus(true, "on-demand"))).toBe("marked — showing mistakes");
+    expect(visible(mountStatus(true, "on-demand"))).toBe("checked — mistakes shown");
   });
 
   it("on-demand + STALE: names the decay AND the recovery — the state the card never showed", () => {
