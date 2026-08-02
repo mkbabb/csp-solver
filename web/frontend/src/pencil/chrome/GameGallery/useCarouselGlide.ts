@@ -7,9 +7,12 @@ import { MOTION } from "@pencil/config/pencilConfig";
  * extracts that engine into `useFlipGlide` and this composable consumes it; Wave B builds
  * the glide inline against the same rules so the seam is proven first.
  *
- * Two position mechanisms, one truth (`scrollLeft`):
+ * Three position mechanisms, one truth (`scrollLeft`):
  *  · TOUCH / trackpad — native `scroll-snap-type: x mandatory` inertia. On settle we read
  *    the centered card and report it (`onSnap`), so aria + the live region follow a swipe.
+ *  · MOUSE / PEN drag — the deck follows the pointer 1:1 (`scrollLeft` written per move) and
+ *    the RELEASE settles through `glideTo`, so a drag ends on the same glass curve, through
+ *    the same `onSnap` seam, with the a11y contract byte-identical to a swipe's.
  *  · KEYBOARD / button — a step must ride the ONE glass curve (`MOTION.curves.drawerGlide`),
  *    which CSS `scroll-behavior: smooth` cannot express (the drawer's exact reason for WAAPI
  *    over a CSS transition). So we FLIP: read FIRST scrollLeft, jump scrollLeft to the target
@@ -26,6 +29,16 @@ const GLIDE_EASING = MOTION.curves.drawerGlide;
 /** Never-never backstop (App.vue's seam-guard grammar): a glide whose `finished` can't
  *  resolve (unmounted mid-flight) settles late, never never. */
 const SETTLE_GUARD_MS = GLIDE_MS + 200;
+/** Below this the press is a CLICK, not a drag — the deck never moves and the card selects. */
+const DRAG_SLOP = 5;
+/** Release velocity (px/ms) above which the deck takes the flick as a card step. */
+const FLICK_VPX = 0.45;
+/** The shortest interval the velocity is allowed to be measured over. Pointer moves arrive
+ *  coalesced, and a pair landing inside the same millisecond divides a real px delta by ~1 —
+ *  which the EMA's 0.7 weight then reads as a hard flick out of a gesture that barely moved.
+ *  Measured: a two-sample 20px push read −2.2 px/ms and stepped a card it had no business
+ *  stepping. Half a frame is the floor; below it the sample accumulates instead. */
+const SAMPLE_MS = 8;
 
 interface GlideOptions {
   reducedMotion: () => boolean;
@@ -44,6 +57,19 @@ export function useCarouselGlide(
   let gen = 0;
   let currentIndex = 0;
   let resizeObs: ResizeObserver | null = null;
+  /** The live pointer drag: the grab's anchor (`x0`/`sl0`), the previous sample (`px`/`t`) and
+   *  the smoothed release velocity. `froze` records that the grab cancelled a glide, so the
+   *  no-drag release knows it still owes a settle. */
+  let drag: {
+    x0: number;
+    sl0: number;
+    px: number;
+    t: number;
+    v: number;
+    froze: boolean;
+  } | null = null;
+  let dragging = false;
+  let suppressClick = false;
 
   function slots(): HTMLElement[] {
     return track.value ? (Array.from(track.value.children) as HTMLElement[]) : [];
@@ -207,9 +233,21 @@ export function useCarouselGlide(
     }
     const first = vp.scrollLeft;
     clearAnim(); // drop any prior transform so the target read is clean
-    const last = targetScrollLeft(i);
-    if (Math.abs(first - last) < 0.5) return; // already centered — nothing to glide
+    // HOISTED ABOVE THE NO-OP RETURN, and that is the whole of the fix. This gesture owns
+    // position from here, so every path out of it — including the one that glides nowhere —
+    // is the newest generation and may re-arm.
     const myGen = ++gen;
+    const last = targetScrollLeft(i);
+    if (Math.abs(first - last) < 0.5) {
+      // Already centered — nothing to glide, but NOT nothing to do. Every caller until the
+      // pointer drag reached this line with snap still armed, so the bare `return` was
+      // harmless for all of them; a drag release arrives with snap SUSPENDED (the move
+      // suspended it) and would strand `scroll-snap-type: none` on the viewport forever —
+      // touch inertia stops snapping for the rest of the page's life. The invariant this
+      // pays: no path out of a drag leaves snap suspended.
+      rearmSnap(myGen);
+      return;
+    }
     suspendSnap(); // snap OFF for the whole glide (re-armed at settle)
     vp.scrollLeft = last; // the ONE position write — instant (snap suspended), never tweened
     // Classic FLIP: scrollLeft now rests at the target, so tx = (last − first) reproduces the
@@ -252,7 +290,10 @@ export function useCarouselGlide(
   // ── Native snap detection → onSnap (touch / trackpad inertia) ──
   let scrollDebounce: number | null = null;
   function reportSnap() {
-    if (anim) return; // a programmatic step owns position; do not double-report
+    // A programmatic step or a live drag owns position; do not double-report. The drag's own
+    // release reports ONCE, from the settled target, so the deck never announces the cards it
+    // merely travelled past.
+    if (anim || dragging) return;
     options.onSnap(centeredIndex());
   }
   function onScroll() {
@@ -260,10 +301,116 @@ export function useCarouselGlide(
     scrollDebounce = window.setTimeout(reportSnap, 90);
   }
 
+  // ── THE POINTER DRAG (mouse / pen) ──
+  // Touch already drags — native snap plus native inertia, untouched here (the `pointerType`
+  // bail below is what keeps it that way). What was missing was the mouse: the deck LOOKS like
+  // a spread of paper you push, and on a desktop it could only be stepped. The drag writes
+  // `scrollLeft` and nothing else, so the one truth stays one truth, and the release hands the
+  // target to `glideTo` — the same glass curve every other step rides.
+  function onPointerDown(e: PointerEvent) {
+    const vp = viewport.value;
+    if (!vp || e.pointerType === "touch" || e.button !== 0) return;
+    // THE MID-GLIDE FREEZE, and the ORDER IS LOAD-BEARING: read the track's live transform
+    // BEFORE `clearAnim()` drops it, then fold it into `scrollLeft`. A point renders at
+    // `layout − scrollLeft + tx`, so subtracting tx holds the pose the deck is SHOWING; read
+    // after the cancel and the matrix is identity and the deck jumps under the cursor.
+    let froze = false;
+    if (anim && track.value) {
+      const tx = new DOMMatrixReadOnly(getComputedStyle(track.value).transform).m41;
+      clearAnim();
+      vp.scrollLeft -= tx;
+      froze = true;
+    }
+    // NO POINTER CAPTURE, and that is a measured choice rather than an omission. Capture
+    // retargets the compatibility mouse events to the capturing element, so a `click` that
+    // began on a card is dispatched at the VIEWPORT instead — measured in Chromium, and it
+    // silently kills click-to-select for every plain press. The move/up listeners sit on the
+    // WINDOW instead, which is what capture was standing in for: they reach us wherever the
+    // pointer goes, and nothing inside the deck (the live board's own handlers among them) can
+    // swallow the release. The click a drag leaves behind is then swallowed on its own terms,
+    // identically in both engines.
+    suppressClick = false; // a release that landed outside the deck can't leave this armed
+    drag = {
+      x0: e.clientX,
+      sl0: vp.scrollLeft,
+      px: e.clientX,
+      t: e.timeStamp,
+      v: 0,
+      froze,
+    };
+  }
+
+  function onPointerMove(e: PointerEvent) {
+    const vp = viewport.value;
+    const d = drag;
+    if (!vp || !d) return;
+    const dx = e.clientX - d.x0;
+    if (!dragging) {
+      if (Math.abs(dx) < DRAG_SLOP) return; // a press under the slop stays a click
+      dragging = true;
+      ++gen; // this gesture owns position — any pending re-arm is stale
+      suspendSnap();
+      vp.classList.add("is-dragging");
+    }
+    const dt = e.timeStamp - d.t;
+    if (dt >= SAMPLE_MS) {
+      // 0.7/0.3 EMA — the release reads the flick, not the last noisy sample.
+      d.v = 0.7 * ((e.clientX - d.px) / dt) + 0.3 * d.v;
+      d.t = e.timeStamp;
+      d.px = e.clientX;
+    }
+    vp.scrollLeft = d.sl0 - dx;
+  }
+
+  function onPointerUp() {
+    const vp = viewport.value;
+    const d = drag;
+    drag = null;
+    if (!vp || !d) return;
+    if (!dragging) {
+      // A press that never moved is a click, and the card is free to take it. It may still
+      // have frozen a glide, though, and that glide's settle went with it — so hand the
+      // position back to `glideTo`, which re-arms snap on every path out.
+      if (d.froze) glideTo(centeredIndex());
+      return;
+    }
+    dragging = false;
+    vp.classList.remove("is-dragging");
+    suppressClick = true;
+    // READ THE POSITION BACK rather than assuming the writes took (this file's own maxScroll
+    // discipline): the engine clamps `scrollLeft` to its scrollable overflow, so where the
+    // deck IS is the only honest `from`.
+    const from = centeredIndex();
+    const dir = d.v < -FLICK_VPX ? 1 : d.v > FLICK_VPX ? -1 : 0;
+    const target = Math.max(0, Math.min(slots().length - 1, from + dir));
+    options.onSnap(target); // the touch path's own seam — aria, the live region, guard-dismiss
+    glideTo(target);
+  }
+
+  /** The capture-phase swallow. A release fires a `click` on whatever card sat under the
+   *  pointer, and GameCard's own bubble-phase `@click` would select it — a drag that ends over
+   *  a card must never choose it. Capture on the ANCESTOR means the card's listener is never
+   *  reached; a plain click (no drag) leaves the flag clear and passes straight through. */
+  function onClickCapture(e: MouseEvent) {
+    if (!suppressClick) return;
+    suppressClick = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  function onDragStart(e: Event) {
+    e.preventDefault(); // no native text/image drag inside the deck
+  }
+
   onMounted(() => {
     const vp = viewport.value;
     vp?.addEventListener("scroll", onScroll, { passive: true });
     vp?.addEventListener("scrollend", reportSnap);
+    vp?.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+    vp?.addEventListener("click", onClickCapture, { capture: true });
+    vp?.addEventListener("dragstart", onDragStart);
     recomputeEdges();
     // On resize: refresh the spacer widths and re-center the current card (the glide never
     // tweens a resize — an instant re-pin, like the drawer's regime-resize settle).
@@ -276,6 +423,12 @@ export function useCarouselGlide(
     const vp = viewport.value;
     vp?.removeEventListener("scroll", onScroll);
     vp?.removeEventListener("scrollend", reportSnap);
+    vp?.removeEventListener("pointerdown", onPointerDown);
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerUp);
+    window.removeEventListener("pointercancel", onPointerUp);
+    vp?.removeEventListener("click", onClickCapture, { capture: true });
+    vp?.removeEventListener("dragstart", onDragStart);
     resizeObs?.disconnect();
     if (scrollDebounce !== null) clearTimeout(scrollDebounce);
     clearAnim();

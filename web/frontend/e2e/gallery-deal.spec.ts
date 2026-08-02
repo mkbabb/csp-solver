@@ -102,14 +102,25 @@ test('band: a sibling of the listbox, never a control inside role=option', async
     page.evaluate(() =>
       Array.from(document.querySelectorAll('.staging-band button')).map((b) => ({
         name: b.getAttribute('aria-label') ?? b.textContent?.trim() ?? '',
-        group: b.closest('[role="group"]')?.getAttribute('aria-labelledby') ?? null,
+        axis: b.closest('.staging-axis[role="group"]')?.getAttribute('aria-labelledby') ?? null,
+        zone:
+          document
+            .getElementById(
+              b.closest('.staging-slip[role="group"]')?.getAttribute('aria-labelledby') ?? '',
+            )
+            ?.textContent?.trim() ?? null,
       })),
     );
 
   const stops = await stopsOn();
   expect(stops).toHaveLength(8);
   expect(stops.every((s) => s.name.length > 0), 'every stop is named').toBe(true);
-  expect(stops.filter((s) => s.group !== null), 'chips live in a named group').toHaveLength(6);
+  // The six chips live in their own AXIS group; the two verbs are the zone's, not an axis's —
+  // asserted on the axis specifically, because T6 mark 7 wrapped the whole slip in the
+  // drawer's staged-zone grammar and "has some group" stopped telling the two apart.
+  expect(stops.filter((s) => s.axis !== null), 'chips live in their axis group').toHaveLength(6);
+  // …and every stop sits inside the named zone, whose name is the washi tape itself.
+  expect(stops.every((s) => s.zone === 'new game'), 'the slip is the new-game zone').toBe(true);
 
   await stepTo(page, 'futoshiki');
   const futoStops = await stopsOn();

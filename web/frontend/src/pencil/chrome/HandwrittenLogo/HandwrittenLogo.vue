@@ -31,6 +31,11 @@ import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
 // a prop; the open is emitted back to App.vue, which owns `enterGallery` + the board⇄card fold.
 const props = defineProps<{
   game: string;
+  /** The wordmark is a NAME, not a control (T6 mark 7). In the gallery the deck is the one
+   *  game-select surface, so the heading renders as a `<span>` there: no button, no caret, no
+   *  activation. The `<h1>` keeps an accessible name off the visually-hidden label, since the
+   *  svg that carries all the ink is `aria-hidden`. */
+  inertHeading?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -243,14 +248,16 @@ const logoBaked = computed(
 
 <template>
   <div class="logo-menu">
-    <button
-      type="button"
+    <component
+      :is="inertHeading ? 'span' : 'button'"
+      :type="inertHeading ? undefined : 'button'"
       class="logo-trigger"
-      :aria-label="`Puzzle: ${label}. Choose a puzzle`"
-      @click.stop="emit('open')"
+      :aria-label="inertHeading ? undefined : `Puzzle: ${label}. Choose a puzzle`"
+      @click.stop="inertHeading || emit('open')"
       @pointerenter="hovered = true"
       @pointerleave="hovered = false"
     >
+      <span v-if="inertHeading" class="sr-only">{{ label }}</span>
       <svg
         ref="logoSvgRef"
         class="handwritten-logo"
@@ -300,7 +307,7 @@ const logoBaked = computed(
           <text class="logo-text" x="4" y="48" text-anchor="start">{{ label }}</text>
         </g>
       </svg>
-      <span class="logo-caret" aria-hidden="true">
+      <span v-if="!inertHeading" class="logo-caret" aria-hidden="true">
         <HandwrittenGlyph
           value=">"
           :is-given="true"
@@ -313,7 +320,7 @@ const logoBaked = computed(
           :is-hovered="hovered"
         />
       </span>
-    </button>
+    </component>
   </div>
 </template>
 
@@ -363,6 +370,12 @@ const logoBaked = computed(
   cursor: pointer;
   color: var(--color-foreground);
   -webkit-tap-highlight-color: transparent;
+}
+
+/* The inert heading is a name, not a target — no hand cursor over something that cannot be
+   pressed (the reset above is written for the button arm). */
+span.logo-trigger {
+  cursor: default;
 }
 
 .logo-trigger:focus-visible {

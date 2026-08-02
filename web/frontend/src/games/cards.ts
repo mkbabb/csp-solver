@@ -33,12 +33,12 @@ import {
 import { sudokuSpec } from "@games/sudoku/spec";
 
 /** One staging axis as the PICKER renders it — the game's own selector band, erased to
- *  presentation data (T4-P1 F4). `colorClass` is deliberately absent: the crayon tints are
- *  scoped inside `GameControlPanel.vue`, so they are inert anywhere else until the AA ledger
- *  is re-verified against `--color-card` (a standalone ship, not this seam's). */
+ *  presentation data (T4-P1 F4). `colorClass` rides through now (T6 mark 7): the crayon
+ *  utilities left `GameControlPanel`'s scoped block for `assets/index.css`, so the tints the
+ *  drawer writes its difficulty heading in are the tints the picker writes its own in. */
 interface StagingAxis {
   label: string;
-  options: { value: number | string; label: string }[];
+  options: { value: number | string; label: string; colorClass?: string }[];
   /** the value a game with no saved board is dealt at (its own composable's default). */
   default: number | string;
 }
@@ -75,7 +75,11 @@ export interface GameCard {
 /** The three tiers, erased to presentation data. Every game carries the same three, so the
  *  mapper is written once and each card names its own source band. */
 const tiers = (band: SelectorBand) =>
-  band.map((o) => ({ value: o.value as number | string, label: o.label }));
+  band.map((o) => ({
+    value: o.value as number | string,
+    label: o.label,
+    colorClass: o.colorClass,
+  }));
 
 // The three Sudoku-family rows stage off sudoku's OWN selector bands (the ratified variant
 // reuse — Thermo/Killer ARE Sudoku); futoshiki and kenken carry their own. A MIGRATED game's

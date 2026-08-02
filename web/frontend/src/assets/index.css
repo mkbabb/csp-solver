@@ -427,6 +427,31 @@
   }
 }
 
+/* Crayon color utilities — the difficulty semantic, in ink. The three difficulty tints read
+   the ink tier above rather than the raw wax, which fails AA as light-mode text (green 2.22 /
+   orange 2.05 / rose 4.11 on --color-card); the ink aliases the wax in dark, where the crayon
+   already glows AA. Gate 1, T4-W10; the hexes and their measurements are the ledger above.
+   crayon-blue is the focus wax and takes no ink tier (no text use).
+
+   UNLAYERED, and that is the point of the T6 hoist. These lived in `GameControlPanel`'s
+   SCOPED block, where a selector could never reach a child component's internals: the
+   drawer's selected difficulty chip has rendered `crayon-orange` since T4-P1 and painted
+   nothing from it. Here the chip inks like the heading over it, and the picker's staging band
+   reads the same four classes off the same page as the tokens they resolve through — a
+   layered home would lose to every unlayered author rule that sets `color`. */
+.crayon-green {
+  color: var(--color-green-ink);
+}
+.crayon-orange {
+  color: var(--color-orange-ink);
+}
+.crayon-rose {
+  color: var(--color-red-ink);
+}
+.crayon-blue {
+  color: var(--color-crayon-blue);
+}
+
 /* ── T4-WM (lane C) — iOS/mobile platform discipline ───────────────────────────
  * Deliberate, single-home touch hygiene for the E8 recut — unlayered so it beats the
  * layered utilities but never fights a scoped SFC rule (it only ADDS properties none of
