@@ -12,7 +12,7 @@ over bespoke, visual verification on real surfaces as the standard of proof.
 |---|---|---|---|
 | voice | `research/voice-brief.md` | 6, 10 | ~29 in-place rewrites (phases 1+2 together), net ~−40 LOC |
 | debug | `research/debug-brief.md` | 16 | one ref, one gate, born-RED negative row |
-| motion | `research/motion-brief.md` | 11, 14, 15 | sky bands + star bloom + outline flash, net ~−145 LOC |
+| motion | `research/motion-brief.md` | 11, 14, 15 | sky bands + star bloom + outline flash; landed net −8 (−161 of JS tween machinery; the vocabulary block's keyframes cost what the marks cost) |
 | gallery | `research/gallery-brief.md` | 2, 7 | drag + rearmSnap + masthead second-mover, ~+170/−40 |
 | controls | `research/controls-brief.md` | 3, 4, 5, 8, 12 | one component + two CSS values, ~+95 |
 | mobile | `research/mobile-brief.md` | 9 | margin-block auto + one published fold edge, ~+45/−15 |
