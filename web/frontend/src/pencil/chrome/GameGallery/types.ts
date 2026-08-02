@@ -2,9 +2,9 @@ import type { Component } from "vue";
 
 /**
  * The card shape the gallery renders (T4-W12) — a PENCIL-LOCAL type, deliberately NOT
- * imported from `@games/registry` (pencil imports nothing from games/**, the eslint
- * boundary). TypeScript is structural, so the registry's richer `GameCard` (which also
- * carries `scene`/`eager` — the mount half the gallery never touches) assigns straight
+ * imported from `@games/cards` (pencil imports nothing from games/**, the eslint
+ * boundary). TypeScript is structural, so the table's richer `GameCard` (which also
+ * carries `load`/`eager` — the mount half the gallery never touches) assigns straight
  * into `readonly GalleryCard[]` at App.vue's `<GameGallery :cards="GAMES">` seam. The
  * gallery is handed already-erased presentation data + loader thunks; it never reaches
  * into domain state.
@@ -18,9 +18,9 @@ export interface GalleryCard {
   glyph?: Component;
   /** the size/difficulty sub-line, in the game's own vocabulary. */
   range: { label: string; levels: string[] };
-  /** what the staging band offers for this card — the structural twin of the registry's
+  /** what the staging band offers for this card — the structural twin of the table's
    *  `CardStaging` (the same `GalleryCard` trick: pencil declares the shape it consumes and
-   *  the richer registry row assigns straight in). */
+   *  the richer card row assigns straight in). */
   staging: GalleryStaging;
   /** the static, non-interactive poster face (a read-only mini-board). */
   poster: () => Promise<Component>;
@@ -40,7 +40,7 @@ export interface GalleryStaging {
 
 /** THE CROSS-GAME TRUTH (T4-P1 F4): what the app knows about each card's saved board. App
  *  hands this down id-keyed; a card with NO entry is a game that has never been played, and
- *  the band says so ("start") rather than dressing a registry default as your saved settings. */
+ *  the band says so ("start") rather than dressing a table default as your saved settings. */
 export interface GallerySaved {
   size: number | string;
   difficulty: number | string;

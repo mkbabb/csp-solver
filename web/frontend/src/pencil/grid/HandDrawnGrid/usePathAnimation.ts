@@ -35,11 +35,7 @@ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>
 
   function cleanup() {
     drawAnimations.forEach((a) => {
-      try {
-        a.stop();
-      } catch {
-        /* ignore */
-      }
+      a.stop();
     });
     drawAnimations = [];
   }

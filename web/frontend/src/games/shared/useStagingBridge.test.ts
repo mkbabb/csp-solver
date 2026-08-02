@@ -1,18 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { computed, ref } from "vue";
-import {
-  __resetStagingBridge,
-  backfillLedger,
-  clearStagingSource,
-  consumeHandoff,
-  dealStaged,
-  mountedGameId,
-  publishMountedGame,
-  publishStagedLedger,
-  registerStagingSource,
-  stageHandoff,
-  useStagedLedger,
-} from "./useStagingBridge";
+
+/**
+ * THE MODULE IS BOOTED PER TEST, not reset by a seam it exports.
+ *
+ * The bridge is a module singleton over reactive refs, so a unit that mutates it would leak
+ * into the next one. It used to ship `__resetStagingBridge()` for exactly that — a public
+ * reset on a module singleton, which is a second lifecycle, shipped to production, called
+ * only by this file (T5-W2 2.3c, dead-code S7). `vi.resetModules()` + a fresh dynamic import
+ * gives the real thing instead: module init runs again, top to bottom, off whatever is on
+ * disk. That is also what a page reload IS, so the two "reload" tests below stopped
+ * simulating one and started performing one.
+ */
+type Bridge = typeof import("./useStagingBridge");
+let bridge: Bridge;
+const bootBridge = async (): Promise<Bridge> => {
+  vi.resetModules();
+  return import("./useStagingBridge");
+};
 
 /**
  * THE STAGING BRIDGE (T4-P1 F4) — the unit layer the pass-2 lane owed.
@@ -44,9 +49,9 @@ function persistedBoard(opts: {
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   window.localStorage.clear();
-  __resetStagingBridge();
+  bridge = await bootBridge();
 });
 
 describe("reactivity — the pass-1 defect this module exists to kill", () => {
@@ -55,28 +60,40 @@ describe("reactivity — the pass-1 defect this module exists to kill", () => {
     // computed over non-reactive state evaluates once and never invalidates, so the picker
     // could not see a publish no matter how many landed. This is that test, and it reds
     // against any re-introduction of a non-reactive holder.
-    const view = computed(() => useStagedLedger().value.sudoku?.difficulty ?? "none");
+    const view = computed(
+      () => bridge.useStagedLedger().value.sudoku?.difficulty ?? "none",
+    );
     expect(view.value).toBe("none");
 
-    publishMountedGame("sudoku");
-    publishStagedLedger({ size: 3, difficulty: "HARD", board: true, userMoves: false });
+    bridge.publishMountedGame("sudoku");
+    bridge.publishStagedLedger({
+      size: 3,
+      difficulty: "HARD",
+      board: true,
+      userMoves: false,
+    });
 
     expect(view.value).toBe("HARD");
   });
 
   it("publishes nothing when no game is mounted (the row has no key to take)", () => {
-    publishStagedLedger({ size: 3, difficulty: "HARD", board: true, userMoves: true });
-    expect(useStagedLedger().value).toEqual({});
+    bridge.publishStagedLedger({
+      size: 3,
+      difficulty: "HARD",
+      board: true,
+      userMoves: true,
+    });
+    expect(bridge.useStagedLedger().value).toEqual({});
     expect(window.localStorage.getItem(LEDGER)).toBeNull();
   });
 
   it("an identical republish neither re-writes storage nor churns the ref", () => {
-    publishMountedGame("kenken");
+    bridge.publishMountedGame("kenken");
     const row = { size: 6, difficulty: "HARD", board: true, userMoves: true };
-    publishStagedLedger(row);
-    const first = useStagedLedger().value;
-    publishStagedLedger({ ...row });
-    expect(useStagedLedger().value).toBe(first); // same object identity ⇒ no re-render
+    bridge.publishStagedLedger(row);
+    const first = bridge.useStagedLedger().value;
+    bridge.publishStagedLedger({ ...row });
+    expect(bridge.useStagedLedger().value).toBe(first); // same object identity ⇒ no re-render
   });
 });
 
@@ -84,36 +101,40 @@ describe("the id-keyed handoff", () => {
   it("is delivered to its own game and to no other", () => {
     // Sizes are bare numbers with per-game meaning (sudoku 3 = 9×9, kenken 4 = 4×4), so an
     // unkeyed arm consumed by whichever game mounted next dealt a wrong-size board.
-    stageHandoff("kenken", { size: 6, difficulty: "HARD" });
-    expect(consumeHandoff("sudoku")).toBeNull();
+    bridge.stageHandoff("kenken", { size: 6, difficulty: "HARD" });
+    expect(bridge.consumeHandoff("sudoku")).toBeNull();
     // …and it is GONE — a mis-routed arm dies at the first mount rather than lying in wait,
     // which is why there is no TTL and no clock.
-    expect(consumeHandoff("kenken")).toBeNull();
+    expect(bridge.consumeHandoff("kenken")).toBeNull();
   });
 
   it("is a ONE-SHOT for the right game", () => {
-    stageHandoff("kenken", { size: 6, difficulty: "HARD" });
-    expect(consumeHandoff("kenken")).toEqual({ size: 6, difficulty: "HARD" });
-    expect(consumeHandoff("kenken")).toBeNull();
+    bridge.stageHandoff("kenken", { size: 6, difficulty: "HARD" });
+    expect(bridge.consumeHandoff("kenken")).toEqual({ size: 6, difficulty: "HARD" });
+    expect(bridge.consumeHandoff("kenken")).toBeNull();
   });
 
   it("survives a null mounted id without throwing", () => {
-    stageHandoff("thermo", { size: 3, difficulty: "EASY" });
-    expect(consumeHandoff(null)).toBeNull();
+    bridge.stageHandoff("thermo", { size: 3, difficulty: "EASY" });
+    expect(bridge.consumeHandoff(null)).toBeNull();
   });
 });
 
 describe("the mounted source", () => {
-  it("dealStaged reports FALSE when no game is mounted to deal into", async () => {
+  it("bridge.dealStaged reports FALSE when no game is mounted to deal into", async () => {
     // The discarded return was pass 2's silent success: App awaited nothing and called the
     // transaction done. The caller re-stages on `false`; this is the signal it needs.
-    await expect(dealStaged({ size: 3, difficulty: "EASY" })).resolves.toBe(false);
+    await expect(bridge.dealStaged({ size: 3, difficulty: "EASY" })).resolves.toBe(
+      false,
+    );
   });
 
-  it("dealStaged drives the registered source and reports TRUE", async () => {
+  it("bridge.dealStaged drives the registered source and reports TRUE", async () => {
     const deal = vi.fn(async () => {});
-    registerStagingSource({ pair: ref({ size: 3, difficulty: "EASY" }), deal });
-    await expect(dealStaged({ size: 4, difficulty: "HARD" })).resolves.toBe(true);
+    bridge.registerStagingSource({ pair: ref({ size: 3, difficulty: "EASY" }), deal });
+    await expect(bridge.dealStaged({ size: 4, difficulty: "HARD" })).resolves.toBe(
+      true,
+    );
     expect(deal).toHaveBeenCalledWith({ size: 4, difficulty: "HARD" });
   });
 
@@ -126,10 +147,10 @@ describe("the mounted source", () => {
       pair: ref({ size: 6, difficulty: "HARD" }),
       deal: vi.fn(async () => {}),
     };
-    registerStagingSource(outgoing);
-    registerStagingSource(incoming); // the new scene registers at setup…
-    clearStagingSource(outgoing); // …before the old one's onUnmounted runs
-    await dealStaged({ size: 6, difficulty: "HARD" });
+    bridge.registerStagingSource(outgoing);
+    bridge.registerStagingSource(incoming); // the new scene registers at setup…
+    bridge.clearStagingSource(outgoing); // …before the old one's onUnmounted runs
+    await bridge.dealStaged({ size: 6, difficulty: "HARD" });
     expect(incoming.deal).toHaveBeenCalledTimes(1);
     expect(outgoing.deal).not.toHaveBeenCalled();
   });
@@ -157,16 +178,16 @@ describe("cold-start backfill — the falsity the whole installed base saw", () 
       }),
     );
 
-    backfillLedger(SOURCES);
+    bridge.backfillLedger(SOURCES);
 
-    expect(useStagedLedger().value.sudoku).toEqual({
+    expect(bridge.useStagedLedger().value.sudoku).toEqual({
       size: 3,
       difficulty: "HARD",
       board: true,
       userMoves: false,
     });
-    expect(useStagedLedger().value.kenken?.size).toBe(6);
-    expect(useStagedLedger().value.futoshiki).toBeUndefined(); // no board on disk ⇒ no row
+    expect(bridge.useStagedLedger().value.kenken?.size).toBe(6);
+    expect(bridge.useStagedLedger().value.futoshiki).toBeUndefined(); // no board on disk ⇒ no row
   });
 
   it("GIVENS ARE NOT WORK — a dealt, untouched board has no user moves", () => {
@@ -181,8 +202,8 @@ describe("cold-start backfill — the falsity the whole installed base saw", () 
         given: ["0", "1", "2"],
       }),
     );
-    backfillLedger(SOURCES);
-    expect(useStagedLedger().value.sudoku).toMatchObject({
+    bridge.backfillLedger(SOURCES);
+    expect(bridge.useStagedLedger().value.sudoku).toMatchObject({
       board: true,
       userMoves: false,
     });
@@ -199,16 +220,16 @@ describe("cold-start backfill — the falsity the whole installed base saw", () 
         mine: ["9"],
       }),
     );
-    backfillLedger(SOURCES);
-    expect(useStagedLedger().value.sudoku).toMatchObject({
+    bridge.backfillLedger(SOURCES);
+    expect(bridge.useStagedLedger().value.sudoku).toMatchObject({
       board: true,
       userMoves: true,
     });
   });
 
   it("NEVER overwrites a live row — the mounted game's publish always wins", () => {
-    publishMountedGame("sudoku");
-    publishStagedLedger({
+    bridge.publishMountedGame("sudoku");
+    bridge.publishStagedLedger({
       size: 4,
       difficulty: "MEDIUM",
       board: true,
@@ -219,9 +240,9 @@ describe("cold-start backfill — the falsity the whole installed base saw", () 
       persistedBoard({ sizeKey: "size", size: 2, difficulty: "EASY", given: ["0"] }),
     );
 
-    backfillLedger(SOURCES); // the debounced per-game persist trails the live row by ≤300ms
+    bridge.backfillLedger(SOURCES); // the debounced per-game persist trails the live row by ≤300ms
 
-    expect(useStagedLedger().value.sudoku).toMatchObject({
+    expect(bridge.useStagedLedger().value.sudoku).toMatchObject({
       size: 4,
       difficulty: "MEDIUM",
     });
@@ -237,21 +258,26 @@ describe("cold-start backfill — the falsity the whole installed base saw", () 
       "kenken-board-v1",
       JSON.stringify({ difficulty: "HARD" }),
     );
-    expect(() => backfillLedger(SOURCES)).not.toThrow();
-    expect(useStagedLedger().value).toEqual({});
+    expect(() => bridge.backfillLedger(SOURCES)).not.toThrow();
+    expect(bridge.useStagedLedger().value).toEqual({});
   });
 
-  it("survives a corrupt LEDGER on disk — a bad cache is not a boot failure", () => {
+  it("survives a corrupt LEDGER on disk — a bad cache is not a boot failure", async () => {
     window.localStorage.setItem(LEDGER, "]]not json[[");
-    __resetStagingBridge();
-    expect(useStagedLedger().value).toEqual({});
+    bridge = await bootBridge();
+    expect(bridge.useStagedLedger().value).toEqual({});
   });
 
-  it("rehydrates both board facts from a written ledger", () => {
-    publishMountedGame("thermo");
-    publishStagedLedger({ size: 3, difficulty: "HARD", board: true, userMoves: true });
-    __resetStagingBridge(); // a reload: the module re-reads its own key
-    expect(useStagedLedger().value.thermo).toEqual({
+  it("rehydrates both board facts from a written ledger", async () => {
+    bridge.publishMountedGame("thermo");
+    bridge.publishStagedLedger({
+      size: 3,
+      difficulty: "HARD",
+      board: true,
+      userMoves: true,
+    });
+    bridge = await bootBridge(); // a real reload: module init re-reads its own key
+    expect(bridge.useStagedLedger().value.thermo).toEqual({
       size: 3,
       difficulty: "HARD",
       board: true,
@@ -262,9 +288,9 @@ describe("cold-start backfill — the falsity the whole installed base saw", () 
 
 describe("the mounted id", () => {
   it("is what App published, and clears to null", () => {
-    publishMountedGame("futoshiki");
-    expect(mountedGameId()).toBe("futoshiki");
-    publishMountedGame(null);
-    expect(mountedGameId()).toBeNull();
+    bridge.publishMountedGame("futoshiki");
+    expect(bridge.mountedGameId()).toBe("futoshiki");
+    bridge.publishMountedGame(null);
+    expect(bridge.mountedGameId()).toBeNull();
   });
 });

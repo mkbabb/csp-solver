@@ -1,0 +1,28 @@
+T5-W2 F1 — BEFORE (baseline at HEAD f087a90d, tree clean)
+date: 2026-08-01T23:10:23Z
+
+## build
+npm run build → green (vue-tsc -b && vite build, 458ms)
+
+## goldens (npm run build && PLAYWRIGHT_BASE_URL=http://localhost:4188 playwright --config playwright-golden.config.ts)
+4 passed (2.1s) — cell-light, grid-corner-light, logo-light, toggle-crest-dark, darwin
+
+## unit
+npx vitest run --silent → Test Files 31 passed (31) · Tests 332 passed (332)
+
+## lint:boundary
+✖ 23 problems (23 errors, 0 warnings)
+
+## per-game files (2.1e probe)
+sudoku: 14
+futoshiki: 14
+thermo: 12
+killer: 12
+kenken: 13
+
+## scene/board files (2.1d probe)
+      12
+
+## cells / cages
+src/games/kenken/KenKenCage/KenKenCage.vue
+src/games/killer/KillerCage/KillerCage.vue

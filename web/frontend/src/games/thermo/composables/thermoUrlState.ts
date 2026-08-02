@@ -10,7 +10,7 @@
  * technique engine is reused for grading (the sudoku half of the board); the thermometer
  * relation is enforced authoritatively by the wasm solve.
  */
-import type { Difficulty } from "@games/sudoku/types";
+import type { Difficulty } from "@games/shared/types";
 import type { ThermoLine } from "../types";
 
 /** The persisted Thermo board — the common board slice plus its thermometer furniture. */
@@ -33,7 +33,9 @@ export interface InitialState {
   boardLink: "absent" | "ok" | "invalid";
 }
 
-const STORAGE_KEY = "thermo-board-v1";
+/** Thermo's board on disk. Exported so `spec.urlCodec.key` NAMES this one string rather than
+ *  mirroring it — the same discipline sudoku's `STORAGE_KEY` carries. */
+export const STORAGE_KEY = "thermo-board-v1";
 const DEFAULT_SIZE = 3;
 
 function isDifficulty(v: unknown): v is Difficulty {

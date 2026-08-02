@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
@@ -26,18 +26,50 @@ import { defineConfig, type Plugin } from 'vite'
 function sudokuTemplates(): Plugin {
   const SRC_REL = '../../csp-solver/data/sudoku_puzzles'
   const OUT_REL = 'src/games/sudoku/data/templates.ts'
-  // W4 (tranche-2) reshaped the bank: N=2 (all tiers), N=3-easy, N=3-medium, and
-  // the whole N=5 subtree were excised — the fast-path bank now ships only the
-  // tiers whose native generate breaches the in-browser budget (N=3-hard, N=4-*).
-  // Excised (size,difficulty) pairs have no on-disk directory; the frontend
-  // live-generates them via wasm (`TEMPLATE_BANK[size]?.[…] ?? []`). SIZES lists
-  // the sizes with *any* surviving bank; the per-difficulty `existsSync` guard
-  // below tolerates the missing tiers within a surviving size (N=3 keeps only hard).
-  const SIZES = [3, 4]
+  // THE TIER TABLE (T5-W2 2.4a) — the DECLARED source of every (size, difficulty) sudoku
+  // deals at, and the reason a lost directory can no longer pass for a deliberate one.
+  //
+  // W4 (tranche-2) reshaped the bank: N=2 (all tiers), N=3-easy, N=3-medium and the whole
+  // N=5 subtree were excised — the fast path ships only the tiers whose native generate
+  // breaches the in-browser budget (N=3-hard, N=4-*). Until this table existed the excision
+  // was recorded ONLY as an absence: `existsSync` wrote an empty tier either way and
+  // `useSudoku.ts` read it through `TEMPLATE_BANK[n]?.[…] ?? []`, so a `git rm` of the
+  // surviving bank emitted byte-identical output and shipped a silent live-gen regression on
+  // the one tier that has a bank because it needs one. Now the declaration is the truth and
+  // the disk is checked against it, both ways:
+  //   • a tier declared BANK whose directory is missing or empty FAILS THE BUILD, by name;
+  //   • a tier declared LIVEGEN that grows a directory FAILS THE BUILD too — the bank moved
+  //     and this table is stale, which is the same defect facing the other way;
+  //   • a size or difficulty on disk that this table does not name FAILS THE BUILD.
+  // `SIZES` is every size the picker offers (`shared/selectors.ts` `subgridSizes`), not just
+  // the banked ones, so N=2's live-gen is a declaration rather than a hole in the record.
+  const TIERS = {
+    2: { easy: 'livegen', medium: 'livegen', hard: 'livegen' },
+    3: { easy: 'livegen', medium: 'livegen', hard: 'bank' },
+    4: { easy: 'bank', medium: 'bank', hard: 'bank' },
+  } as const
+  const SIZES = Object.keys(TIERS).map(Number)
   const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
+
+  /** Every `{n}/{difficulty}` pair that actually exists under the bank root. */
+  function onDisk(srcDir: string): string[] {
+    if (!existsSync(srcDir))
+      throw new Error(
+        `sudoku-templates: the puzzle bank root ${SRC_REL} does not exist (looked in ` +
+          `${srcDir}). The tier table declares ${SIZES.length} sizes against it; nothing can ` +
+          `be checked while the root is gone.`,
+      )
+    const pairs: string[] = []
+    for (const n of readdirSync(srcDir))
+      if (existsSync(join(srcDir, n)) && statSync(join(srcDir, n)).isDirectory())
+        for (const d of readdirSync(join(srcDir, n)))
+          if (statSync(join(srcDir, n, d)).isDirectory()) pairs.push(`${n}/${d}`)
+    return pairs.sort()
+  }
 
   function render(srcDir: string): string {
     const bank: Record<number, Record<string, number[][]>> = {}
+    const declared = new Set<string>()
     let totalBoards = 0
     let rawCells = 0
     for (const n of SIZES) {
@@ -45,15 +77,27 @@ function sudokuTemplates(): Plugin {
       const total = (n * n) ** 2
       for (const d of DIFFICULTIES) {
         const dir = join(srcDir, String(n), d)
-        // Excised tier (git-rm'd by W4) → no directory → empty bank entry →
-        // the frontend falls back to wasm live-gen. Never let a missing dir throw.
-        if (!existsSync(dir)) {
-          bank[n][d] = []
-          continue
-        }
-        const files = readdirSync(dir)
-          .filter((f: string) => f.startsWith('template-') && f.endsWith('.json'))
-          .sort()
+        const source = TIERS[n as keyof typeof TIERS][d]
+        if (source === 'bank') declared.add(`${n}/${d}`)
+        const files = existsSync(dir)
+          ? readdirSync(dir)
+              .filter((f: string) => f.startsWith('template-') && f.endsWith('.json'))
+              .sort()
+          : []
+        // THE FAIL. A declared bank tier with no boards is a LOST bank, and it is named.
+        if (source === 'bank' && files.length === 0)
+          throw new Error(
+            `sudoku-templates: tier ${n}/${d} is declared \`bank\` but ${dir} holds no ` +
+              `template-*.json. The puzzle bank is the single source of truth for that tier ` +
+              `— restore the directory, or move the tier to \`livegen\` in vite.config.ts's ` +
+              `TIERS table and say so on purpose.`,
+          )
+        if (source === 'livegen' && files.length > 0)
+          throw new Error(
+            `sudoku-templates: tier ${n}/${d} is declared \`livegen\` but ${dir} holds ` +
+              `${files.length} template-*.json. The bank grew and the TIERS table is stale — ` +
+              `the app would live-generate a tier it now has boards for.`,
+          )
         const boards: number[][] = []
         for (const f of files) {
           const data = JSON.parse(readFileSync(join(dir, f), 'utf8')) as {
@@ -68,14 +112,44 @@ function sudokuTemplates(): Plugin {
         rawCells += boards.length * total
       }
     }
+    // The third arm: a directory the table does not name at all. Without it a bank could be
+    // added under a size the picker offers and never reach the app, silently.
+    const undeclared = onDisk(srcDir).filter((p) => !declared.has(p))
+    if (undeclared.length)
+      throw new Error(
+        `sudoku-templates: ${undeclared.join(', ')} exist on disk but no TIERS row declares ` +
+          `them \`bank\`. Add the row (or remove the directory) — an unnamed bank ships nothing.`,
+      )
+
     const banner =
       `// AUTO-GENERATED by vite.config.ts::sudokuTemplates from\n` +
       `// ${SRC_REL}/{n}/{difficulty}/template-*.json (\`puzzle\` field).\n` +
       `// ${totalBoards} boards, ${rawCells} u32 cells total. Do not hand-edit.\n`
+    const TIER_ACCESSOR = [
+      `export type TierSource = 'bank' | 'livegen'`,
+      `export type TierKey = 'easy' | 'medium' | 'hard'`,
+      ``,
+      `/** Where each (size, difficulty) gets its board. Checked against the bank at build time. */`,
+      `const TIER_SOURCE: Record<number, Record<TierKey, TierSource>> = ${JSON.stringify(TIERS)}`,
+      ``,
+      `/** The declared source for a tier. An undeclared size is a caller bug, never a fallback. */`,
+      `export function tierSource(n: number, difficulty: TierKey): TierSource {`,
+      `  const row = TIER_SOURCE[n]`,
+      `  if (!row)`,
+      `    throw new Error(`,
+      `      'sudoku: no tier is declared for size ' + n + ' — the TIERS table in vite.config.ts ' +`,
+      `        'names ' + Object.keys(TIER_SOURCE).join(', ') + '. A size the picker offers must be declared.',`,
+      `    )`,
+      `  return row[difficulty]`,
+      `}`,
+      ``,
+    ].join('\n')
+
     return (
       `${banner}\n` +
       `export type TemplateBank = Record<number, Record<'easy' | 'medium' | 'hard', number[][]>>\n\n` +
-      `export const TEMPLATE_BANK: TemplateBank = ${JSON.stringify(bank)}\n`
+      `export const TEMPLATE_BANK: TemplateBank = ${JSON.stringify(bank)}\n\n` +
+      TIER_ACCESSOR
     )
   }
 

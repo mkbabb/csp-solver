@@ -1,0 +1,56 @@
+T5-W2 F5 · THE FULL e2e SUITE, AND THE FENCES.
+date: 2026-08-02T01:34:11Z
+
+== the default e2e suite, run against the BUILT dist on this lane's :4188 preview ==
+   225 passed / 2 failed of 227, both engines.
+   THE TWO REDS ARE THIS LANE'S HARNESS, NOT THE TREE. Both are the same row —
+   gallery-deal.spec.ts:432 'a same-game deal issued BEFORE the scene mounts'. It holds a
+   module request open with page.route(/futoshiki\/spec/), a SOURCE module path. The default
+   config serves `npm run dev`, where the request really is /src/games/futoshiki/spec.ts and
+   the hold engages. On a built dist the four spec chunks are emitted as spec-<hash>.js
+   (measured below — no game name survives), so the route never matches, nothing is held,
+   the scene mounts immediately and the row's precondition (toHaveCount(0), 'still
+   resolving') is false by construction. Running it off a dist was the lane's choice, not
+   the row's contract.
+     spec-B7CPoIsrrrkC.js
+     spec-BJJjkjuFRifU.js
+     spec-CEVWUoT8JBGM.js
+     spec-Hl-YJ1bwBFID.js
+   LEAD'S ROW (latent, F2's line, not cured here): that row is now dev-server-BOUND by its
+   fixture. Correct for its own config, and worth knowing before anyone re-points the
+   default suite at a dist.
+
+== permalink + share-truth, both engines, against the built dist (the codec this lane cut) ==
+   [19/19] [webkit] › e2e/permalink.spec.ts:165:1 › an untagged ?board= body fails closed, never a board (sudoku)
+     19 passed (4.8s)
+   incl. the two NEW rows — an untagged ?board= body fails closed, chromium AND webkit.
+
+== THE FENCES — GameControlPanel · GameScene · GameGallery ==
+   git diff --stat, F1 through F5:
+      web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue | 6 +-----
+      1 file changed, 1 insertion(+), 5 deletions(-)
+
+   ONE FENCED FILE MOVED, AND IT IS DISCLOSED RATHER THAN QUIET. GameGallery.vue carries
+   6 changed lines: the 2.4b unwrap of its own `try { h.stop() } catch { /* ignore */ }`
+   at :181. The wave-open roster NAMES that site among the eleven the gate counts, so the
+   charter assigned it here; the fence forbids restyle, recompose and re-animate, and a
+   five-line deletion of a defensive guard around a contract-guaranteed call is none of
+   the three. The whole diff, so the lead can rule on it in one look:
+     diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+     index c56b5a9a..a3123abd 100644
+     --- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+     +++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+     @@ -176,11 +176,7 @@ const dealReveal = reactive<number[]>([]);
+      let dealHandles: SequenceHandle[] = [];
+      function stopDeal() {
+        for (const h of dealHandles) {
+     -    try {
+     -      h.stop();
+     -    } catch {
+     -      /* ignore */
+     -    }
+     +    h.stop();
+        }
+        dealHandles = [];
+      }
+   No style, no markup, no timing, no animation. GameControlPanel and GameScene: 0 lines.

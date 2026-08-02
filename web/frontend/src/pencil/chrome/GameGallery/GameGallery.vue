@@ -176,11 +176,7 @@ const dealReveal = reactive<number[]>([]);
 let dealHandles: SequenceHandle[] = [];
 function stopDeal() {
   for (const h of dealHandles) {
-    try {
-      h.stop();
-    } catch {
-      /* ignore */
-    }
+    h.stop();
   }
   dealHandles = [];
 }

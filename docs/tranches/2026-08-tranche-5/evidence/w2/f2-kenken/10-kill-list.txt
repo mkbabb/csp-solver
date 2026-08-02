@@ -1,0 +1,55 @@
+T5-W2 F2-KENKEN — THE TWIN-FILE KILL LIST (wc -l, before → after)
+banked 2026-08-01 · every number re-derived on this tree at banking
+
+## KILLED — 4 files, 535 lines, gone from disk
+  file                                   before  after
+  src/games/kenken/KenKenGame.vue           144      0   the Game.vue TWIN
+  src/games/kenken/KenKenBoard.vue          232      0   the Board twin
+  src/games/kenken/game.ts                   56      0   the GameDefinition declaration
+  src/games/kenken/game.test.ts             103      0   its contract test → spec.test.ts
+  TOTAL                                     535      0
+
+(F1 had already killed src/games/kenken/KenKenCage/KenKenCage.vue — 185 lines at HEAD —
+ into games/shared/CageOverlay.vue, and minted kenken/clue.ts. That row is F1's, not this
+ lane's; the numstat below carries it because the diff is measured against HEAD.)
+
+## BORN — 2 files
+        86 src/games/kenken/spec.ts
+       135 src/games/kenken/spec.test.ts
+       221 total
+
+## EDITED IN PLACE — 3 files, comment + one export keyword each
+  +3    -1    web/frontend/src/games/kenken/composables/kenkenUrlState.ts
+  +4    -2    web/frontend/src/games/kenken/composables/useKenken.ts
+  +8    -4    web/frontend/src/games/kenken/solver/useSolver.ts
+    useKenken.ts        nodeBudgetForSize is exported (spec.solver.nodeBudget NAMES it)
+    kenkenUrlState.ts   STORAGE_KEY is exported   (spec.urlCodec.key NAMES it)
+    solver/useSolver.ts prewarm is exported       (spec.solver.prewarm; the stale
+                        'no consumer yet' NOTE dies — F2 IS the consumer)
+
+## THE TABLE — the minimal per-game registration (the F1 pattern)
+  cards.ts      kenken row: scene: () => import("@games/kenken/KenKenGame.vue")…
+                         →  load:  () => import("@games/kenken/spec").then((m) => m.kenkenSpec)
+  cards.test.ts the migrated-row ledger gains "kenken" (the wave progress list)
+
+## NET, over src/games/kenken
+  per-game file count (probe 2.1e form), HEAD → now: 13 → 11
+  non-test raw LOC, HEAD → now: 1324 → 835
+  → −489 raw non-test over the kenken dir (F1's cage fold + this lane's twin kill)
+  → this lane's own share: −432 non-test killed (144+232+56), +99 born (86 spec + 13
+    comment/export lines), = −333 non-test raw
+
+## the full kenken tree, after
+  src/games/kenken/ControlPanel/constants.ts
+  src/games/kenken/KenKenPoster.vue
+  src/games/kenken/clue.ts
+  src/games/kenken/composables/kenkenUrlState.ts
+  src/games/kenken/composables/useKenken.ts
+  src/games/kenken/solver/kenkenWire.test.ts
+  src/games/kenken/solver/kenkenWire.ts
+  src/games/kenken/solver/protocol.ts
+  src/games/kenken/solver/solver.worker.ts
+  src/games/kenken/solver/useSolver.ts
+  src/games/kenken/spec.test.ts
+  src/games/kenken/spec.ts
+  src/games/kenken/types.ts

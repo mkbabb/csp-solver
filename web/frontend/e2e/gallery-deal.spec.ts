@@ -439,7 +439,10 @@ test('deal: a same-game deal issued BEFORE the scene mounts still lands the stag
   // deterministically here rather than raced: the chunk is released only after the click.
   let release!: () => void;
   const held = new Promise<void>((r) => (release = r));
-  await page.route(/FutoshikiGame\.vue/, async (route) => {
+  // Futoshiki's lazy entry is its SPEC now (T5-W2 F2) — `cards.ts` loads
+  // `@games/futoshiki/spec`, and the scene it used to load is gone. Same chunk, same hold,
+  // new name: the module this route holds open must be the one the card actually requests.
+  await page.route(/futoshiki\/spec/, async (route) => {
     await held;
     await route.continue();
   });

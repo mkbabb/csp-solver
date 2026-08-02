@@ -8,9 +8,9 @@
  * `HandwrittenGlyph`s (no hover boil, no beat), mirroring `FutoshikiCaret`'s glyph but
  * frozen: a flank-card still, never the live board.
  */
-import { computed } from "vue";
 import PosterBoard from "@games/shared/PosterBoard.vue";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
+import { caretFigures } from "./clue";
 import type { Inequality } from "./types";
 
 const N = 5;
@@ -30,51 +30,10 @@ const INEQUALITIES: Inequality[] = [
   [21, 22],
 ];
 
-// The caret descriptors — the exact edge-midpoint fraction math the live board uses
-// (FutoshikiBoard §caret layer), reproduced for the canned set. A caret sits on the
-// shared edge; its open mouth faces the greater value.
-interface CaretDescriptor {
-  key: string;
-  glyph: ">" | "<";
-  rotation: number;
-  leftPct: number;
-  topPct: number;
-  sizePct: number;
-  hash: number;
-}
-const carets = computed<CaretDescriptor[]>(() => {
-  const cellPct = 100 / N;
-  const out: CaretDescriptor[] = [];
-  for (const [gt, lt] of INEQUALITIES) {
-    const rg = Math.floor(gt / N);
-    const cg = gt % N;
-    const rl = Math.floor(lt / N);
-    const cl = lt % N;
-    let glyph: ">" | "<" = ">";
-    let rotation = 0;
-    let leftPct: number;
-    let topPct: number;
-    if (rg === rl) {
-      leftPct = (Math.min(cg, cl) + 1) * cellPct;
-      topPct = (rg + 0.5) * cellPct;
-      glyph = cg < cl ? ">" : "<";
-    } else {
-      topPct = (Math.min(rg, rl) + 1) * cellPct;
-      leftPct = (cg + 0.5) * cellPct;
-      rotation = rg < rl ? 90 : -90;
-    }
-    out.push({
-      key: `${gt}-${lt}`,
-      glyph,
-      rotation,
-      leftPct,
-      topPct,
-      sizePct: cellPct * 0.5,
-      hash: gt * 131 + lt * 7 + 1,
-    });
-  }
-  return out;
-});
+// The caret figures — the clue seam's own edge-midpoint math (T5-W2 F2), the very
+// derivation the live overlay draws from. The still and the board cannot print different
+// carets because there is one function; the canned set is the only thing that differs.
+const carets = caretFigures(INEQUALITIES, N);
 </script>
 
 <template>

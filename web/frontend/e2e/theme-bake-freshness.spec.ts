@@ -1,6 +1,5 @@
 import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
-import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
 /**
  * P1-W4 G4.5 — THE BAKED SURFACES CARRY THE LIVE THEME'S INK, against the BUILT dist.
@@ -58,12 +57,14 @@ import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
  * darwin passed all twenty: the class is a linux-WebKit blank bake on SOME games, deterministic,
  * and it is the defect wordmark-integrity's dead linux `test.skip` had been swallowing.
  *
- * The two red rows are parked under `quarantineLinuxWebkitBake` (both toggle directions, webkit
- * arm only — the red is on the pre-toggle control, which no `colorScheme` can reach). Cure owner
- * T5-W4b: `@mkbabb/pencil-boil` 0.11's `rasterizePoseToBlob()`. The guard reads this frontend's
- * `package.json` at spec load and THROWS rather than parking once that range reaches `>=0.11.0`,
- * so the quarantine cannot outlive its cure. Record:
- * `docs/tranches/2026-08-tranche-5/evidence/w1/linux-webkit-bake-quarantine.md`.
+ * T5-W2 2.4 — THE QUARANTINE IS GONE. The park carried its own removal: it read this
+ * frontend's `package.json` at spec load and THREW once the declared `@mkbabb/pencil-boil`
+ * range reached `>=0.11.0`. This wave declares `^0.11.0` and adopts `rasterizePoseToBlob()`,
+ * which deletes the `ImageBitmap` copy + re-encode stage the blank lived in — so the guard and
+ * its helper are deleted whole rather than re-pinned, and all five games are live again on both
+ * platforms in both engines. The runner is the judge. Record:
+ * `docs/tranches/2026-08-tranche-5/evidence/w1/linux-webkit-bake-quarantine.md` (the park) and
+ * `evidence/w2/f5/` (its removal).
  */
 
 const GAMES = ["sudoku", "futoshiki", "thermo", "killer", "kenken"] as const;
@@ -208,13 +209,7 @@ async function settledSample(page: Page, timeout = 15000): Promise<Sample> {
   return s;
 }
 
-async function assertAgrees(
-  s: Sample,
-  when: string,
-  page: Page,
-  testInfo: TestInfo,
-  game: string,
-) {
+async function assertAgrees(s: Sample, when: string, page: Page, testInfo: TestInfo) {
   // This spec reads the SAME baked pose bitmap wordmark-integrity does, so it is exposed to
   // the same unreadable-bake red (CI run 30684983201) and gets the same rule: ship the pose
   // that was read, so the next occurrence is attributable rather than a message.
@@ -225,10 +220,6 @@ async function assertAgrees(
       "svg.handwritten-logo image.logo-pose-bmp",
       when.replace(/\W+/g, "-"),
     );
-  // THE EXPLICIT QUARANTINE — `futoshiki` and `killer`, linux + webkit, until W4b (header).
-  // Behind the evidence attach and in front of the assertions, so the parked arm still reads
-  // its bake and still ships the bitmap it read.
-  quarantineLinuxWebkitBake("theme-bake-freshness", game, testInfo);
   expect(s.logoInk, `${when}: no logo bake to read`).toBeTruthy();
   expect(s.logoInk, `${when}: the logo bake decoded to nothing`).not.toBe("no-ink");
   expect(
@@ -252,7 +243,7 @@ for (const start of ["light", "dark"] as const) {
         await loadBaked(page, game);
         const before = await settledSample(page);
         // The fresh load is the control: if this reds, the sampler is broken, not the bake.
-        await assertAgrees(before, `${game} fresh load`, page, testInfo, game);
+        await assertAgrees(before, `${game} fresh load`, page, testInfo);
 
         await page.locator("button.sun-moon-toggle").click();
 
@@ -288,7 +279,7 @@ for (const start of ["light", "dark"] as const) {
         expect(after.theme, "the toggle did not change the theme").not.toBe(
           before.theme,
         );
-        await assertAgrees(after, `${game} after ONE toggle`, page, testInfo, game);
+        await assertAgrees(after, `${game} after ONE toggle`, page, testInfo);
       });
     }
   });

@@ -5,9 +5,12 @@
 // neutral `solverSize` ref to Sudoku's public `size`. Everything else — the return surface the
 // board/scene/panel consume — passes through unchanged.
 //
-// The solve/generate path is the in-browser wasm Worker (`useSolver`), the only shipped solve
-// surface. Zero `/api/v1/*` dependency — no fetch, no `/config` handshake, no server to depend on.
-import { useSolver } from "../solver/useSolver";
+// The solve/generate path is the ONE in-browser wasm Worker (`@games/shared/solver/client`), the
+// only shipped solve surface. Zero `/api/v1/*` dependency — no fetch, no `/config` handshake, no
+// server to depend on.
+import { createSolverClient } from "@games/shared/solver/client";
+import { TEMPLATE_BANK, tierSource } from "../data/templates";
+import type { Difficulty } from "@games/shared/types";
 import {
   resolveInitialState,
   syncToUrl,
@@ -17,11 +20,8 @@ import {
   writeBoardToUrl,
   dropBoardParam,
 } from "./useUrlState";
-import {
-  gradeSudoku,
-  hintSudoku,
-  fillForcedSudoku,
-} from "../technique/sudokuTechnique";
+import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
+import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
 
 /**
@@ -36,28 +36,70 @@ const NODE_BUDGET_BY_SIZE: Record<number, number> = {
   3: 2_000_000,
   4: 50_000_000,
 };
-function nodeBudgetForSize(n: number): number {
+export function nodeBudgetForSize(n: number): number {
   return NODE_BUDGET_BY_SIZE[n] ?? 1_000_000;
 }
 
+/** Sudoku's raw selector value is the SUB-GRID root; the board side is its square. ONE home:
+ *  `useGameState` sizes the board with it, the solver client counts cells with it. */
+const boardSizeOf = (n: number) => n ** 2;
+
+const DIFFICULTY_KEY: Record<Difficulty, "easy" | "medium" | "hard"> = {
+  EASY: "easy",
+  MEDIUM: "medium",
+  HARD: "hard",
+};
+
+/**
+ * Sudoku is the one family that DIGS from a bank instead of generating live: the templates are
+ * resolved from the bundled `../data/templates.ts` asset (generated at build time by the
+ * `sudokuTemplates` Vite plugin from the canonical `csp-solver/data/sudoku_puzzles/` bank —
+ * single source of truth, never hand-copied) and cross to the worker as one transferable
+ * buffer. The other four send an empty one.
+ *
+ * WHICH TIERS RIDE THE BANK IS DECLARED, NOT INFERRED (T5-W2 2.4a). `tierSource` reads the
+ * table the build checked the bank against, so an empty tier means `livegen` because someone
+ * SAID so — the excised N=2 and N=3-easy/medium — and never because the directory went
+ * missing. The old `TEMPLATE_BANK[n]?.[…] ?? []` could not tell those apart, and neither could
+ * the build; a dropped `3/hard` shipped a silent live-gen regression on the one tier that has
+ * a bank precisely because live generation breaches the in-browser budget there.
+ */
+function sudokuTemplates(n: number, difficulty: Difficulty): Uint32Array<ArrayBuffer> {
+  const tier = DIFFICULTY_KEY[difficulty];
+  if (tierSource(n, tier) === "livegen") return new Uint32Array(0);
+  const boards = TEMPLATE_BANK[n][tier];
+  const total = boardSizeOf(n) ** 2;
+  const templates = new Uint32Array(boards.length * total);
+  boards.forEach((b, i) => templates.set(b, i * total));
+  return templates;
+}
+
+// Sudoku prints no on-board clue furniture, so its clue seam is `null` — the same stated
+// absence `sudokuSpec.clues` declares, carried straight to an empty wire buffer.
+const api = createSolverClient<void>({
+  game: "sudoku",
+  boardSide: boardSizeOf,
+  clue: null,
+  templates: sudokuTemplates,
+});
+
 export function useSudoku() {
-  const api = useSolver();
   const initial = resolveInitialState();
 
   const { solverSize, ...machine } = useGameState({
     initial,
     initialSize: initial.size,
-    // Sudoku's raw selector value is the SUB-GRID root; the board side is its square.
-    boardSizeOf: (n) => n ** 2,
+    boardSizeOf,
     nodeBudgetForSize,
     getRandomBoard: (n, difficulty) => api.getRandomBoard(n, difficulty),
     applyDealFurniture: () => {}, // Sudoku prints no on-board clue furniture
     resetFurniture: () => {},
-    grade: (values, n) => gradeSudoku(values, n),
-    solve: (values, n, budget) => api.solveBoard(values, n, budget),
-    propagate: (values, n) => api.propagateBoard(values, n),
-    fillForced: (values, n) => fillForcedSudoku(values, n),
-    hint: (values, n, preferred) => hintSudoku(values, n, preferred),
+    grade: (values, n) => gradeBoard(createBoardAdapter("boxed", n), values),
+    solve: (values, n, budget) => api.solveBoard(values, n, undefined, budget),
+    propagate: (values, n) => api.propagateBoard(values, n, undefined),
+    fillForced: (values, n) => fillAllForced(createBoardAdapter("boxed", n), values),
+    hint: (values, n, preferred) =>
+      findHint(createBoardAdapter("boxed", n), values, preferred),
     snapshotExtra: () => ({}),
     restoreExtra: () => {},
     restorePersistedFurniture: () => {},

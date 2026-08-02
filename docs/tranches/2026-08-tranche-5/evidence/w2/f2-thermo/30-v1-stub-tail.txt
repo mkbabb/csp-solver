@@ -1,0 +1,67 @@
+# T5-W2 F2 (thermo) — THE V1-STUB TAIL, measured, and why it survives F2
+date: 2026-08-01T23:52Z · instrument re-run on this tree, not cited from memory
+
+wave-open §1.1 (urlCodec) rules V1-STUB dead and one persistence for all five, "the stubs'
+SHA-identical tails are the proof it always could". Measured here so 2.4 inherits the number.
+
+## THE INSTRUMENT
+
+  norm() { sed -n '/^\/\*\* v1: the selectors are not URL-synced/,$p' "$1" \
+    | sed -E -e 's/thermometer|cage//g' -e 's/Thermo|Killer|KenKen//g' \
+             -e 's/thermo|killer|kenken//g' -e 's/boardSize/size/g' -e 's/[ ]+/ /g'; }
+
+The substitution ORDER is load-bearing: 'thermometer' must be struck before 'thermo', or the
+prose word is mangled to 'meter' and the tails read as divergent when they are not. The first
+pass of this measurement made exactly that mistake and reported a false negative; the corrected
+run is the record.
+
+## RAW — the tails as they sit on disk
+
+  thermo   28 lines   md5 5cfc395d07f870c0a89ba912ae3e99fc   src/games/thermo/composables/thermoUrlState.ts
+  killer   28 lines   md5 ee4491625c8f887950eba7535e42881e   src/games/killer/composables/killerUrlState.ts
+  kenken   28 lines   md5 f5db3741569349393e11a2e5182d0838   src/games/kenken/composables/kenkenUrlState.ts
+
+## NORMALISED — the game's own name struck, nothing else
+
+  thermo   md5 627d2c31afef63b12333bebf829288ee
+  killer   md5 627d2c31afef63b12333bebf829288ee
+  kenken   md5 627d2c31afef63b12333bebf829288ee
+
+  diff thermo killer  ->  empty
+  diff thermo kenken  ->  empty
+
+**28 of 28 lines identical, 3 of 3 games.** The tail is one text written three times. Its raw
+divergence is the game's noun and, for kenken, the selector's label (`_boardSize` where the two
+sudoku variants say `_size`) — a parameter NAME on a function with an empty body.
+
+  thermo  :84  export function syncToUrl(_size: number, _difficulty: Difficulty): void {}
+  killer  :85  export function syncToUrl(_size: number, _difficulty: Difficulty): void {}
+  kenken  :85  export function syncToUrl(_boardSize: number, _difficulty: Difficulty): void {}
+  thermo :107  export function dropBoardParam(): void {}
+  killer :108  export function dropBoardParam(): void {}
+  kenken :108  export function dropBoardParam(): void {}
+  thermo :110  export function writeShareUrl(): void {}
+  killer :111  export function writeShareUrl(): void {}
+  kenken :111  export function writeShareUrl(): void {}
+
+## WHY IT SURVIVES F2 — a fence, recorded, not a miss
+
+Killing the tail means giving thermo a REAL `?board=`. That codec is `games/shared/persistence.ts`
+— one urlCodec for all five, parameterized by the clue seam's encode/decode, which `thermoSpec`
+now carries. It sits under the surface this lane is fenced from, and it cannot be written
+per-game without minting the sixth variant the charter forbids. It is also wave-open 2.4d, the
+single disclosed behaviour break and an OWNER RATIFICATION row — not a lane's call in either
+direction.
+
+The three stubs are load-bearing today: `GameStateDomain` requires `syncToUrl`, `dropBoardParam`
+and `writeShareUrl`, all non-optional (`useGameState.ts:146-159`). Deleting the bodies without
+the shared codec distils nothing; it breaks the domain slot.
+
+## STATE AT F2 EXIT, for 2.4
+
+  · thermoSpec.clues.{encode,decode} — the Uint32Array pair the shared codec consumes: LANDED
+  · thermoSpec.urlCodec.key = STORAGE_KEY, exported from composables/thermoUrlState.ts — ONE
+    source inside the game. cards.ts's `"thermo-board-v1"` literal is the pre-existing second
+    copy, unchanged by this lane, and `cards.test.ts` now pins the two equal so they cannot
+    drift while both live; the ledger's cold-start read is what retires the literal.
+  · the three no-ops: UNCHANGED, 3 declarations, awaiting games/shared/persistence.ts

@@ -11,7 +11,7 @@
  * across a shared URL. The futoshiki technique engine is reused for Latin grading; the cage
  * relations are enforced authoritatively by the wasm solve.
  */
-import type { Difficulty } from "@games/futoshiki/types";
+import type { Difficulty } from "@games/shared/types";
 import type { KenKenCage } from "../types";
 
 /** The persisted KenKen board — the common board slice plus its cage furniture. */
@@ -34,7 +34,9 @@ export interface InitialState {
   boardLink: "absent" | "ok" | "invalid";
 }
 
-const STORAGE_KEY = "kenken-board-v1";
+/** KenKen's board on disk. Exported so `spec.urlCodec.key` NAMES this one string rather than
+ *  mirroring it — the shell writes the board through the key the codec itself declares. */
+export const STORAGE_KEY = "kenken-board-v1";
 const DEFAULT_BOARD_SIZE = 4;
 
 function isDifficulty(v: unknown): v is Difficulty {

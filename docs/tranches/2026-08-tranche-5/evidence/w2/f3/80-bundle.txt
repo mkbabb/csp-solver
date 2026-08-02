@@ -1,0 +1,38 @@
+# T5-W2 F3 — THE BUNDLE ROW (π §3's obligation for step 2.2: 'worker chunk count 5->1,
+# main chunk not larger'). Both arms measured off the emitted dist, never the source.
+
+ENTRY  (dist at F3-open, banked in 10-pi-entry.txt's build)
+EXIT   (dist at F3-close, banked in 40-build.txt)
+
+ROW                                         ENTRY           EXIT        DELTA
+---                                         -----           ----        -----
+worker chunks                                   5              1           -4
+  their bytes                            93.49 kB       22.48 kB    -71.01 kB
+chunks importing the .wasm                      5              1           -4
+.wasm binaries emitted                          1              1            0
+lazy spec chunks (4)                     21.67 kB       14.94 kB     -6.73 kB
+MAIN CHUNK                              213.07 kB      213.44 kB     +0.37 kB
+  gzip                                   79.83 kB       79.99 kB     +0.16 kB
+TOTAL dist JS                           448.93 kB      372.58 kB    -76.35 kB
+  JS chunk count                               27             23           -4
+
+## THE ONE ROW THAT MISSED, STATED PLAINLY
+
+'main chunk not larger' is MISSED BY 0.37 kB (+0.17%; +0.16 kB gzipped). It is not a
+measurement artefact and it is not rounded away:
+
+  Before, the main chunk carried SUDOKU'S OWN client (the eager row is a static import, so
+  useSudoku -> useSolver rode the main chunk); the other four each carried a private copy
+  inside their own lazy spec chunk. After, the main chunk carries THE client — the one that
+  serves all five — and the four lazy chunks carry none. The one client is a little larger
+  than sudoku's solo client was, because it is parameterized over five families instead of
+  hard-coded to one. That difference, 0.37 kB, is the whole overage.
+
+  It buys: -71.01 kB of duplicated worker code, -6.73 kB across the four lazy chunks, and
+  -76.35 kB of dist JS overall. It also buys the thing bytes do not show — four cold wasm
+  instantiations that no longer happen, because a lazy game's first deal now lands on the
+  worker the eager game already warmed.
+
+  The lead's call, not the lane's: accept the 0.37 kB against the -76.35 kB, or restamp the
+  row. This lane did NOT tune the number to fit — the only way to hold 'not larger' would
+  have been to keep the eager game off the shared client, which is the collapse itself.

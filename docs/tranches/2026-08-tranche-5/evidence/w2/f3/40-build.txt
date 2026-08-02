@@ -1,0 +1,71 @@
+
+> csp-solver-frontend@0.1.0 prebuild
+> npm run wasm
+
+
+> csp-solver-frontend@0.1.0 wasm
+> make -C ../../csp-solver/wasm wasm
+
+wasm-pack build --scope mkbabb --target web --profile wasm-release --no-default-features
+[INFO]: 🎯  Checking for the Wasm target...
+[INFO]: 🌀  Compiling to Wasm...
+    Finished `wasm-release` profile [optimized] target(s) in 0.03s
+[INFO]: found wasm-opt at "/opt/homebrew/bin/wasm-opt"
+[INFO]: Optimizing wasm binaries with `wasm-opt`...
+[INFO]: Optional field missing from Cargo.toml: 'repository'. This is not necessary, but recommended
+[INFO]: ✨   Done in 0.35s
+[INFO]: 📦   Your wasm pkg is ready to publish at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/wasm/pkg.
+rm -f pkg/.gitignore
+node scripts/pkg-exports.mjs --write
+pkg-exports: stamped 3 rows onto /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/wasm/pkg/package.json
+
+> csp-solver-frontend@0.1.0 build
+> vue-tsc -b && vite build
+
+vite v8.1.4 building client environment for production...
+
+ WARN  advancedChunks option is deprecated, please use codeSplitting instead.
+
+[2Ktransforming...✓ 234 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                      3.28 kB │ gzip:  1.29 kB
+dist/assets/firacode-subset-CbuNTc2aGjcY.woff2       3.62 kB
+dist/assets/patrickhand-subset-BqV1besB36ib.woff2    4.31 kB
+dist/assets/avatar-biqsjs3dzERf.png                  6.09 kB
+dist/assets/fraunces-subset-nWzWvP1GNv2C.woff2      13.78 kB
+dist/assets/solver.worker-CiwFumri.js               22.47 kB
+dist/assets/csp_solver_wasm_bg-Cy09b5He.wasm       121.13 kB │ gzip: 49.17 kB
+dist/assets/HandwrittenGlyph-C7yR_jeF095t.css        0.14 kB │ gzip:  0.13 kB
+dist/assets/FutoshikiPoster-D9LDNJs_lqtS.css         0.28 kB │ gzip:  0.16 kB
+dist/assets/PosterBoard-DDdWOzWzVgXD.css             0.39 kB │ gzip:  0.21 kB
+dist/assets/spec-CAxGeu14Qq5g.css                    0.44 kB │ gzip:  0.25 kB
+dist/assets/AnswerKeyLaminate-Cih0GgPxHZT4.css       0.89 kB │ gzip:  0.40 kB
+dist/assets/CageOverlay-C4AEADXWxKx0.css             0.91 kB │ gzip:  0.35 kB
+dist/assets/ThermoTube-BuYfyXhY4ACx.css              0.98 kB │ gzip:  0.33 kB
+dist/assets/index-BoJxj7eK_xle.css                  75.45 kB │ gzip: 15.60 kB
+dist/assets/ThermoPoster-Y-v-6gxezks5.js             0.47 kB │ gzip:  0.35 kB
+dist/assets/clue-49IYR66FHU7L.js                     0.49 kB │ gzip:  0.29 kB
+dist/assets/SudokuPoster-ChoaUZodrCv1.js             0.51 kB │ gzip:  0.34 kB
+dist/assets/clue-BJZDUNJMl5b3.js                     0.57 kB │ gzip:  0.39 kB
+dist/assets/clue-DP3k5ctC19Uz.js                     0.63 kB │ gzip:  0.37 kB
+dist/assets/KillerPoster-mt8I81gIEhZo.js             0.68 kB │ gzip:  0.43 kB
+dist/assets/futoshikiTechnique-BtPqJzDxeRXa.js       0.94 kB │ gzip:  0.51 kB
+dist/assets/KenKenPoster-CM_Y7i81nPtW.js             1.03 kB │ gzip:  0.51 kB
+dist/assets/FutoshikiPoster-Di-eCXQmDcx9.js          1.11 kB │ gzip:  0.68 kB
+dist/assets/ThermoTube-D777xargBLQh.js               1.18 kB │ gzip:  0.73 kB
+dist/assets/CageOverlay-CeS67_GJDt4I.js              1.74 kB │ gzip:  0.99 kB
+dist/assets/AnswerKeyLaminate-BOG8qgL5xcry.js        2.33 kB │ gzip:  1.32 kB
+dist/assets/PosterBoard-xYxGo2glcj-T.js              2.43 kB │ gzip:  1.13 kB
+dist/assets/spec-idiyo8OV8VLr.js                     2.57 kB │ gzip:  1.24 kB
+dist/assets/spec-C09jK43aBPtI.js                     2.74 kB │ gzip:  1.29 kB
+dist/assets/spec-DtBwNAvuK3Z5.js                     2.79 kB │ gzip:  1.33 kB
+dist/assets/glyphRegistry-D6E4CQ3MaIgh.js            5.00 kB │ gzip:  1.99 kB
+dist/assets/spec-CP9L0Pbqu3Ss.js                     6.84 kB │ gzip:  2.81 kB
+dist/assets/HandwrittenGlyph-D1oYKb9_UDGE.js         8.15 kB │ gzip:  3.29 kB
+dist/assets/animation-vendor-BwvX-XDJzPCj.js        10.21 kB │ gzip:  4.25 kB
+dist/assets/vue-vendor-BZlvHBt1ZB_s.js              84.17 kB │ gzip: 33.59 kB
+dist/assets/index-S9rL2dS5qqH2.js                  213.44 kB │ gzip: 79.99 kB
+
+✓ built in 384ms
+BUILD_EXIT=0

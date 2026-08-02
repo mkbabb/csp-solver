@@ -20,12 +20,12 @@
  *                    grain-static at 20–32px.
  *
  * Geometry lives in heartPaths.ts beside this file; hexes import from
- * YOSHI_COLORS (the F7 truthing — no more literal twins of pencilConfig).
+ * MASCOT_COLORS (the F7 truthing — no more literal twins of pencilConfig).
  * The #wobble-heart preset is consumed as-is and NEVER retuned here — three
  * hover easter eggs share it (F7 §1.4).
  */
 import { computed } from "vue";
-import { PENCIL, YOSHI_COLORS } from "@pencil/config/pencilConfig";
+import { PENCIL, MASCOT_COLORS } from "@pencil/config/pencilConfig";
 import {
   HEART_BLUSH,
   HEART_EYES,
@@ -60,7 +60,7 @@ const props = withDefaults(
   },
 );
 
-const C = YOSHI_COLORS;
+const C = MASCOT_COLORS;
 
 const isTiny = computed(() => props.variant === "tiny");
 const isCelebration = computed(() => props.variant === "celebration");

@@ -1,0 +1,84 @@
+T5-W2 F1 — THE PROBE TABLE, RE-DERIVED ON THIS TREE
+Every figure below was re-run here; none is carried from wave-open.md.
+Probe commands are the wave-open §2 commands where they run as written, corrected inline where
+they do not (the correction is the record).
+
+── 2.1a · registry fiction ──────────────────────────────────────────────────────────
+cmd: grep -rn "gameRegistry" src | grep -v '\.test\.ts'
+  src/games/cards.ts:4: * The estate carried two registration tables: `gameRegistry` (a 2-of-5 parallel map with zero
+  src/games/registry.ts:107:export const gameRegistry = {
+  HEAD: 1 declaration (registry.ts:134), 0 production consumers, 2 of 5 games
+  F1:   1 declaration (registry.ts:107), 0 production consumers, 1 of 5 games — sudoku's
+        row left when its declaration became a spec. The remaining hit in cards.ts is PROSE
+        (the header naming the table it replaces). Green (0) is F4's, per the charter.
+
+── 2.1c · the TDZ edge, severed by construction ─────────────────────────────────────
+cmd: grep -rln "@games/registry" src/games/*/
+  src/games/futoshiki/game.ts
+  src/games/kenken/game.test.ts
+  src/games/kenken/game.ts
+  src/games/killer/game.test.ts
+  src/games/killer/game.ts
+  src/games/shared/useStagingBridge.ts
+  src/games/thermo/game.test.ts
+  src/games/thermo/game.ts
+  HEAD: 5 game.ts files import the table; the reproduced throw is
+        ReferenceError: Cannot access 'sudokuGame' before initialization
+  F1:   sudoku is OFF the list. Its spec imports @games/shared/defineGame, which imports
+        NOTHING from the table — so scene → game → registry → scene has no edge to close.
+        The proof is not the grep: SudokuGame.vue:40-55's hand-inlined control sections
+        (written expressly to dodge the cycle) are DELETED, and GameShell reads
+        spec.deal.options like every other game. The workaround died with its cause.
+        The shared/useStagingBridge.ts hit is a PROSE line about import direction, not an import.
+
+── 2.1d · one scene, one board, one cell, one cage ──────────────────────────────────
+  scenes  (*Game.vue, per-game):  HEAD 5  →  F1 4   src/games/thermo/ThermoGame.vue src/games/kenken/KenKenGame.vue src/games/killer/KillerGame.vue src/games/futoshiki/FutoshikiGame.vue 
+  boards  (*Board.vue, per-game): HEAD 5  →  F1 4   src/games/thermo/ThermoBoard.vue src/games/kenken/KenKenBoard.vue src/games/killer/KillerBoard.vue src/games/futoshiki/FutoshikiBoard/FutoshikiBoard.vue 
+  cell modules  (render .game-cell):  HEAD 2  →  F1 1   src/games/shared/DigitCell.vue 
+  cage modules  (draw a cage boundary): HEAD 2  →  F1 1   src/games/shared/CageOverlay.vue 
+  + the shell pair that replaces them: games/shared/GameShell.vue · games/shared/BoardHost.vue
+
+── 2.1e · per-game files (non-test, non-README) ─────────────────────────────────────
+  sudoku     11
+  futoshiki  13
+  thermo     12
+  killer     12
+  kenken     13
+  TOTAL      61   (HEAD 65 · gates.json target 22 · F4's number, not F1's)
+  sudoku 14 → 11: −SudokuGame.vue −SudokuBoard.vue −SudokuCell.vue −game.ts +spec.ts
+  killer/kenken hold at 12/13: each traded its cage component for a clue.ts label seam.
+
+── LOC (raw wc -l, non-test) ────────────────────────────────────────────────────────
+  the five game dirs:  7,744 → 6,459  (−1,285)
+  games/** whole:     16,661 → 16,549  (−112)
+  The five-dir figure is where the −4,150 target is priced. F1 spends most of its dividend
+  building the shell the other four have not moved onto yet, so games/** barely moves; the
+  F2 lanes collect against a shell already written and paid for.
+
+── 2.5 · cross-game boundary (npm run lint:boundary) ────────────────────────────────
+  ✖ 17 problems (17 errors, 0 warnings)
+  
+  HEAD 23 → F1 17. The six that died are exactly the cell reaches, enumerated:
+    thermo/game.ts        → @games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
+    thermo/ThermoBoard.vue→ @games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
+    killer/game.ts        → @games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
+    killer/KillerBoard.vue→ @games/sudoku/SudokuBoard/SudokuCell/SudokuCell.vue
+    kenken/game.ts        → @games/futoshiki/FutoshikiBoard/FutoshikiCell/FutoshikiCell.vue
+    kenken/KenKenBoard.vue→ @games/futoshiki/FutoshikiBoard/FutoshikiCell/FutoshikiCell.vue
+  …all six now one import of @games/shared/DigitCell. Green BY CONSTRUCTION, exactly as 2.5
+  predicts: nothing a game needed lived in a sibling, it lived in the shared floor all along.
+  (The two cage components were intra-game imports, so they never scored here — but they were
+  the same defect and died in the same act.)
+  The 17 survivors are types, technique modules and ControlPanel constants — F2/F3's rows.
+
+  INSTRUMENT CORRECTION, same commit: eslint.boundary.config.js discovered a game by
+  'a directory carrying game.ts'. Sudoku's registration point is spec.ts now, so the
+  generator silently dropped it and the matrix fell 20/20 → 12/12 — sudoku UNFENCED, and
+  the count would have read '18 problems' off a smaller law. The discriminator now names
+  both registration points; the matrix reads 20/20 again. Re-derived, not assumed.
+
+── BUNDLE ──────────────────────────────────────────────────────────────────────────
+  main chunk  239.75 kB → 209.76 kB   (gzip 88.12 → 78.21)
+  A dividend, not a target: one cell component instead of two, one cage instead of two, and
+  one scene+board pair instead of sudoku's own. No lazy chunk grew; the four unmigrated
+  scenes are within ~200 B of their HEAD sizes.

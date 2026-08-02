@@ -1,0 +1,117 @@
+T5-W2 F4 — THE KILL CENSUS. Every wave-open kill row, re-grepped on the exit tree.
+date: 2026-08-02T01:02:32Z
+
+Comment lines are excluded from every CODE row (the filter is ` *`/`//`/`/*` at line start).
+Where a row still shows prose, the prose is named.
+
+ROW                                                   HITS  target
+gameRegistry (code)                                      0  0
+GameDefinition (code)                                    0  0
+src/games/registry.ts on disk                            0  0
+src/games/registry.test.ts on disk                       0  0
+sudokuGame (code)                                        0  0
+CardMount / CardFace / card.scene (code)                 0  0
+two functions named defineGame                           1  1
+
+K15 AnswerKeyLaminate.subgridSize                        0  0
+K15 its bind site (GameShell)                            0  0
+K16 GameBoard.cornerMarks/centerMarks                    0  0
+K16 its board-level binds (BoardHost)                    0  0
+K17 unreferenced @theme tokens                           0  0
+K18 PENCIL dead keys (declaration form)                  0  0
+K19 MASCOT dead entries (declaration form)               0  0
+K20 __resetStagingBridge (production)                    0  0
+CH-31 the branded symbol, whole repo                     0  0
+
+knip rows                                                0  0
+lint:boundary errors                                     0  0
+
+SURVIVING KEYS, stated so the kill is legible as a kill and not a purge:
+  PENCIL.fruitOutline           LIVE — CrayonHeart.vue:76
+  MASCOT_COLORS.outlineBlack    LIVE — CrayonHeart.vue:122
+  MASCOT_COLORS.heart.*         LIVE — CrayonHeart.vue ×6 sub-keys
+  MASCOT_COLORS.leaf.fill       LIVE — CrayonHeart.vue:121  (leaf.vein died beside it)
+  MASCOT_COLORS.celestial.*     LIVE — DarkModeToggle.vue, CelebrationStar.vue
+  DRAW_IN_PRESETS.{gridFrame,gridSubgrid,gridCell,glyph}  LIVE — usePathAnimation.ts:90-92,
+        HandwrittenGlyph.vue:155-156. A DIFFERENT object that shares three key NAMES with
+        the dead PENCIL rows; a loose grep reads them as survivors of the kill. They are not.
+
+REMAINING PROSE MENTIONS, named rather than scrubbed (each is past tense, each is the record
+of what was severed — the estate's own history, not a live reference):
+  src/games/cards.ts:4: * The estate carried two registration tables: `gameRegistry` (a 2-of-5 parallel map with zero
+  src/games/cards.ts:11: * closed (`scene → game → registry → scene`) has no edge to form on. The eager row may
+  src/games/shared/defineGame.ts:6: * `scene → game → registry → scene` — the one that threw
+  src/games/sudoku/spec.ts:15: * imports nothing back. The old `scene → game → registry → scene` cycle — the one that threw
+  src/games/thermo/spec.test.ts:4: * The retired suite proved a NOVEL clue type could satisfy `GameDefinition` with zero shell
+  src/games/kenken/spec.test.ts:3: * successor to `game.test.ts`, re-derived through the contract that replaced `GameDefinition`.
+  src/games/kenken/spec.test.ts:5: * The old file's `GameDefinition<…, KenKenCage[]>` type assertion is gone because it moved to
+  src/games/kenken/spec.ts:4: * What used to be a scene, a board adapter and a `GameDefinition` is this one file plus the
+  src/games/killer/spec.test.ts:3: * `game.test.ts`, re-derived through the contract that replaced `GameDefinition`.
+  src/games/killer/spec.ts:4: * What used to be a scene, a board adapter and a `GameDefinition` is this one file plus the
+
+PER-GAME FILE COUNTS (2.1e — gates.json perGameFilesTarget 22; 65 at wave open)
+  sudoku       5
+  futoshiki    8
+  thermo       7
+  killer       6
+  kenken       6
+  TOTAL       32
+
+DIRECTORIES + MODULES KILLED AT F4:
+  src/games/registry.ts                    gone
+  src/games/registry.test.ts               gone
+  src/games/sudoku/types.ts                gone
+  src/games/sudoku/ControlPanel            gone
+  src/games/futoshiki/ControlPanel         gone
+  src/games/kenken/ControlPanel            gone
+  src/games/sudoku/technique               gone
+  src/games/futoshiki/technique            gone
+
+MODULES BORN AT F4 (the shared floor's new residents):
+  src/games/shared/techniqueAdapter.ts      151 lines
+  src/games/sudoku/technique.test.ts        265 lines
+  src/games/futoshiki/technique.test.ts     345 lines
+  scripts/check-theme-tokens.mjs            220 lines
+
+LOC, F4's own delta over src/ (git diff --numstat against the F3 tree is not available —
+the lead holds the commit — so this is the whole-wave figure at F4 exit):
+  +673 / -7945  over 93 files
+
+THE 32, ENUMERATED (the gate asks for 22 — the gap is named, not rounded off):
+  sudoku:
+    SudokuPoster.vue
+    spec.ts
+    composables/useUrlState.ts
+    composables/useSudoku.ts
+    data/templates.ts
+  futoshiki:
+    FutoshikiCaret.vue
+    CaretOverlay.vue
+    clue.ts
+    types.ts
+    spec.ts
+    FutoshikiPoster.vue
+    composables/useFutoshiki.ts
+    composables/useUrlState.ts
+  thermo:
+    clue.ts
+    ThermoPoster.vue
+    types.ts
+    spec.ts
+    ThermoTube.vue
+    composables/thermoUrlState.ts
+    composables/useThermo.ts
+  killer:
+    clue.ts
+    types.ts
+    spec.ts
+    KillerPoster.vue
+    composables/useKiller.ts
+    composables/killerUrlState.ts
+  kenken:
+    clue.ts
+    types.ts
+    spec.ts
+    KenKenPoster.vue
+    composables/kenkenUrlState.ts
+    composables/useKenken.ts

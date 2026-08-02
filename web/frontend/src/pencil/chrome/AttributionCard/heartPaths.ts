@@ -22,7 +22,7 @@ export const HEART_PLUSH_PATH =
 export const HEART_SHADOW_TRANSFORM = "translate(3 3)";
 
 /** Stitch line: the plush path re-used, inset, dashed. Stroke color is
- *  YOSHI_COLORS.heart.stitch — color-mix(in srgb, #1a1a1a 35%, #FF4D6D)
+ *  MASCOT_COLORS.heart.stitch — color-mix(in srgb, #1a1a1a 35%, #FF4D6D)
  *  baked to a constant (SVG presentation attrs can't color-mix). */
 export const HEART_STITCH = {
   transform: "translate(7 7) scale(0.86)",

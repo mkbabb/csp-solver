@@ -1,0 +1,107 @@
+# T5-W2 VERIFY — the repo-root instruments
+
+==================================================================
+== check-doc-truth
+$ node scripts/check-doc-truth.mjs
+doc-truth — 13 rows, every figure re-derived at run time
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+head  e63af853
+node  v26.0.0 darwin/arm64
+when  2026-08-02T01:43:29.084Z
+
+GREEN  frontend-readme-two-games
+        derived: 5 games registered (sudoku, futoshiki, thermo, killer, kenken) · pencil-boil ^0.11.0 · lint script "prettier --check src/"
+
+GREEN  root-readme-e2e-counts
+        derived: 227 tests in 15 files (default) · 20 .spec.ts on disk · golden 4/1 · throttle 39/4
+
+GREEN  chromium-alone-claim
+        derived: playwright projects: chromium + webkit · ci installs: playwright install --with-deps chromium webkit; playwright install --with-deps chromium webkit; playwright install` is needed here — only the node_modules that carry the
+
+GREEN  lean-wasm-4-sites
+        derived: 121,137 B ← csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+
+GREEN  ci-band-comment-406
+        derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >127,500 B; lean artifact 121,137 B; canon-declared stale: 222,436 B (docs/benchmarks.md:56)
+
+GREEN  sudoku-md-sections
+        derived: games registered: sudoku, futoshiki, thermo, killer, kenken — each owed a section in docs/sudoku.md
+
+GREEN  ofl-licenses-figures
+        derived: 3 woff2 subsets, 21,724 B total (firacode-subset.woff2 3,624 B, fraunces-subset.woff2 13,788 B, patrickhand-subset.woff2 4,312 B) · OFL texts: OFL-FiraCode.txt, OFL-Fraunces.txt, OFL-PatrickHand.txt · paired true
+
+GREEN  install-pin-0.5
+        derived: csp-solver crate version 0.6.0 → Install pin "0.6" · consumer surfaces carry no outbound link into docs/precepts/
+
+GREEN  pencil-boil-0.9.2
+        derived: web/frontend/package.json dependencies["@mkbabb/pencil-boil"] = ^0.11.0
+
+GREEN  test-count-208-vs-204
+        derived: 208 native #[test] attributes (csp-solver/src + csp-solver/tests, comments elided) · 29 #[wasm_bindgen_test] in the wasm crate (cfg'd to wasm32, not host-run) · 28 test binaries (csp-solver + csp-solver/wasm lib targets + integration files)
+
+GREEN  make-wasm-recipe
+        derived: csp-solver/wasm/Makefile:33 runs --no-default-features --profile wasm-release --scope mkbabb --target web — LEAN; 5 families registered (sudoku, futoshiki, thermo, killer, kenken)
+
+GREEN  ci-lane-count
+        derived: 18 jobs in .github/workflows/ci.yml (lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, wasm-publish-dryrun, frontend, fe-unit, boundary, e2e, perf-subset, iai, cargo-audit, evidence-policy, doc-truth, npm-audit)
+
+GREEN  iai-golden-figure
+        derived: 1,529,452 instructions enforced ±2.0% — csp-solver/benches/iai_queens.baseline, gated by .github/workflows/ci.yml's iai lane over bench iai_queens
+
+0 RED / 13 GREEN — canon holds
+EXIT=0
+
+==================================================================
+== check-evidence-policy
+$ node scripts/check-evidence-policy.mjs
+[evidence-policy] scope docs/tranches/** — 300 png, 29,952,740 B across 27 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s)
+[evidence-policy] PASS — every image and every wave within policy.
+EXIT=0
+
+==================================================================
+== ledger-diff --require-ledger
+$ node scripts/ledger-diff.mjs --require-ledger
+ledger-diff — T5 disposition completeness
+==============================================================================
+generated   2026-08-02T01:43:29.273Z
+node        v26.0.0
+repo HEAD   e63af853 2026-08-01 19:11:12 -0400 T5-W2 runner-figure restamp: 122,861 B at f2ae188d from run 30722381389's own measurement
+tranche     docs/tranches/2026-08-tranche-5
+mode        require-ledger (W-GATE)
+
+CORPUS (10 files)
+  docs/tranches/2026-08-tranche-5/waves/T5-W0-truth-and-record.md  3475 B
+  docs/tranches/2026-08-tranche-5/waves/T5-W1-gates.md  6147 B
+  docs/tranches/2026-08-tranche-5/waves/T5-W2-distill.md  5726 B
+  docs/tranches/2026-08-tranche-5/waves/T5-W3-a11y.md  2820 B
+  docs/tranches/2026-08-tranche-5/waves/T5-W4-design.md  4374 B
+  docs/tranches/2026-08-tranche-5/waves/T5-W5-decide.md  4803 B
+  docs/tranches/2026-08-tranche-5/waves/T5-W6-process.md  2699 B
+  docs/tranches/2026-08-tranche-5/waves/T5-WGATE.md  2238 B
+  docs/tranches/2026-08-tranche-5/README.md  5953 B
+  docs/tranches/LEDGER.md  13358 B
+
+INPUTS
+  docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md
+    61 row ids  (61 CH-nn)
+  docs/tranches/2026-08-tranche-5/evidence/audit/r2/prompt-recap-matrix.md
+    159 row ids  (137 PR-nn + 11 U-nn + 11 S-nn)
+  4 range expressions in the corpus, read as scope, not citation:
+    docs/tranches/2026-08-tranche-5/waves/T5-W5-decide.md:3  CH-01…CH-61
+    docs/tranches/2026-08-tranche-5/waves/T5-W5-decide.md:46  CH-01…61
+    docs/tranches/2026-08-tranche-5/waves/T5-WGATE.md:7  CH-01…61
+    docs/tranches/LEDGER.md:7  CH-01…CH-61
+
+SATISFACTION
+  CORPUS     91
+  SELF       116
+  DELEGATED  13
+  ORPHAN     0
+  total      220
+
+VERDICT
+  GREEN — all 220 audited rows are present-or-cited. exit 0
+EXIT=0
+

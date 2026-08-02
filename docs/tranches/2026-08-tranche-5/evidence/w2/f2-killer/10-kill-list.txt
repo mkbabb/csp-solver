@@ -1,0 +1,33 @@
+T5-W2 F2 — KILLER — THE TWIN-FILE KILL LIST
+date: 2026-08-01T23:46:14Z
+
+## KILLED (wc -l at F1's tree, the before)
+  264  src/games/killer/KillerBoard.vue      — the sudoku board twin; its ONE divergence (the
+                                            cage layer) is now spec.clues, read by BoardHost
+  145  src/games/killer/KillerGame.vue       — the ThermoGame wiring twin; GameShell is the scene
+   54  src/games/killer/game.ts              — the GameDefinition declaration; reborn as spec.ts
+   91  src/games/killer/game.test.ts         — its claims re-derived in spec.test.ts (see below)
+  ---
+  554  raw lines killed
+
+## BORN
+   83  src/games/killer/spec.ts              — the union GameSpec, seven slots + the clue seam
+  110  src/games/killer/spec.test.ts         — game.test.ts's successor, 8 cases (was 5)
+  ---
+  193
+
+## NET over src/games/killer: 1,241 → 887 raw  (−354)
+   non-test, non-README file count (2.1e instrument): 12 → 10
+
+## TOUCHED, not killed (the three residue exports the spec NAMES)
+ web/frontend/src/games/killer/composables/killerUrlState.ts |  4 +++-
+ web/frontend/src/games/killer/composables/useKiller.ts      |  5 +++--
+ web/frontend/src/games/killer/solver/useSolver.ts           | 12 ++++++++----
+ 3 files changed, 14 insertions(+), 7 deletions(-)
+   useKiller.ts       + export nodeBudgetForSize  → spec.solver.nodeBudget
+   killerUrlState.ts  + export STORAGE_KEY        → spec.urlCodec.key
+   solver/useSolver.ts+ export prewarm            → spec.solver.prewarm (the F1 SolverSpec amendment)
+
+## UNTOUCHED killer residue
+   KillerPoster.vue · clue.ts · types.ts · solver/{protocol,solver.worker,killerWire}.ts
+   composables/{useKiller,killerUrlState}.ts (bodies unchanged) · solver/killerWire.test.ts

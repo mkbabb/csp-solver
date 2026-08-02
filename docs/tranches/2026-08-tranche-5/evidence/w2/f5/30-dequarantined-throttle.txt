@@ -1,0 +1,61 @@
+T5-W2 F5 · THE QUARANTINE IS OFF — the de-quarantined rows, run on darwin against the BUILT dist.
+date: 2026-08-02T01:27:35Z
+
+WHAT CAME OFF. e2e/linux-webkit-bake-quarantine.ts (174 lines) deleted whole; its two imports
+and its two call sites gone; both specs' headers rewritten to say the park is over. The park
+was written to kill itself: it read web/frontend/package.json at spec load and THREW once the
+declared @mkbabb/pencil-boil range reached >=0.11.0. This wave declares ^0.11.0, so leaving the
+file in place would red every quarantined row by design — the removal and the bump are one act.
+
+WHAT THIS RUN PROVES, AND WHAT IT DOES NOT. It proves the rows pass on darwin where they always
+did, in BOTH engines, against the built dist — i.e. the de-quarantining did not break them here.
+It does NOT and cannot judge the defect: the class was ubuntu+WebKit ONLY, nondeterministic per
+run per game (runs 30719165442 / 30719158513 / 30720212628). LINUX CI IS THE JUDGE. The team lead
+pushes; if ubuntu-webkit still blanks, the re-quarantine (re-pinned) is the lead's call, not this
+lane's.
+
+== npm run test:e2e:throttle (its own dist-throttle build, its own :4188 preview) ==
+  Running 39 tests using 9 workers
+    ✓   9 [filter-census-chromium] › e2e/filter-census.spec.ts:468:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (9ms)
+    ✓   1 [throttled-void] › e2e/throttled-void.spec.ts:39:1 › throttled first-select void recovers: loader or board-shell within budget (1.8s)
+    ✓   3 [filter-census-chromium] › e2e/filter-census.spec.ts:409:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) (2.3s)
+    ✓   8 [filter-census-chromium] › e2e/filter-census.spec.ts:423:1 › G3.2 · no retained fill supplies a computed transform (built dist) (3.4s)
+    ✓   5 [filter-census-chromium] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (3.5s)
+    ✓   4 [filter-census-chromium] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (3.5s)
+    ✓  13 [filter-census-webkit] › e2e/filter-census.spec.ts:468:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (9ms)
+    ✓   6 [filter-census-webkit] › e2e/filter-census.spec.ts:274:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (4.0s)
+    ✓   7 [filter-census-webkit] › e2e/filter-census.spec.ts:294:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (4.2s)
+    ✓   2 [filter-census-chromium] › e2e/filter-census.spec.ts:402:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) (4.3s)
+    ✓  11 [filter-census-webkit] › e2e/filter-census.spec.ts:409:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) (2.9s)
+    ✓  10 [filter-census-webkit] › e2e/filter-census.spec.ts:402:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) (5.2s)
+    ✓  15 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:179:5 › G3.4 · wordmark integrity (WebKit, built dist) › futoshiki: baked ink sits inside its own box on all four edges (2.3s)
+    ✓  14 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:179:5 › G3.4 · wordmark integrity (WebKit, built dist) › sudoku: baked ink sits inside its own box on all four edges (2.6s)
+    ✓  12 [filter-census-webkit] › e2e/filter-census.spec.ts:423:1 › G3.2 · no retained fill supplies a computed transform (built dist) (3.8s)
+    ✓  16 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:179:5 › G3.4 · wordmark integrity (WebKit, built dist) › thermo: baked ink sits inside its own box on all four edges (2.5s)
+    ✓  17 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:179:5 › G3.4 · wordmark integrity (WebKit, built dist) › killer: baked ink sits inside its own box on all four edges (2.6s)
+    ✓  18 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:179:5 › G3.4 · wordmark integrity (WebKit, built dist) › kenken: baked ink sits inside its own box on all four edges (2.5s)
+    ✓  19 [wordmark-webkit] › e2e/wordmark-integrity.spec.ts:225:3 › G3.4 · wordmark integrity (WebKit, built dist) › all five labels render every glyph in Fraunces — zero fallback glyphs (2.7s)
+    ✓  20 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from light) › sudoku light → dark: both baked surfaces re-ink (2.8s)
+    ✓  21 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from light) › futoshiki light → dark: both baked surfaces re-ink (2.7s)
+    ✓  24 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from light) › kenken light → dark: both baked surfaces re-ink (3.0s)
+    ✓  22 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from light) › thermo light → dark: both baked surfaces re-ink (3.2s)
+    ✓  25 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from dark) › sudoku dark → light: both baked surfaces re-ink (2.7s)
+    ✓  23 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from light) › killer light → dark: both baked surfaces re-ink (3.3s)
+    ✓  26 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from dark) › futoshiki dark → light: both baked surfaces re-ink (3.2s)
+    ✓  27 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from dark) › thermo dark → light: both baked surfaces re-ink (3.2s)
+    ✓  28 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from dark) › killer dark → light: both baked surfaces re-ink (3.2s)
+    ✓  29 [theme-bake-chromium] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from dark) › kenken dark → light: both baked surfaces re-ink (2.9s)
+    ✓  30 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from light) › sudoku light → dark: both baked surfaces re-ink (3.1s)
+    ✓  32 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from light) › thermo light → dark: both baked surfaces re-ink (3.5s)
+    ✓  31 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from light) › futoshiki light → dark: both baked surfaces re-ink (3.6s)
+    ✓  33 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from light) › killer light → dark: both baked surfaces re-ink (3.5s)
+    ✓  34 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from light) › kenken light → dark: both baked surfaces re-ink (3.4s)
+    ✓  35 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from dark) › sudoku dark → light: both baked surfaces re-ink (3.3s)
+    ✓  36 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from dark) › futoshiki dark → light: both baked surfaces re-ink (3.3s)
+    ✓  37 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from dark) › thermo dark → light: both baked surfaces re-ink (3.5s)
+    ✓  39 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from dark) › kenken dark → light: both baked surfaces re-ink (3.1s)
+    ✓  38 [theme-bake-webkit] › e2e/theme-bake-freshness.spec.ts:240:7 › G4.5 · baked ink survives one theme toggle (from dark) › killer dark → light: both baked surfaces re-ink (3.5s)
+    39 passed (19.3s)
+
+  ROWS THAT WERE PARKED AND NOW SPEAK: wordmark-integrity × 5 games (webkit) and
+  theme-bake-freshness × 5 games × 2 toggle directions × 2 engines = 20. All green here.

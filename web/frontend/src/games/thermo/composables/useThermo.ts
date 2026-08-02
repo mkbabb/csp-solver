@@ -6,9 +6,11 @@
 // Thermo IS a Sudoku variant, so it reuses the sudoku subgrid math (`n**2`), node-budget
 // table, and technique engine; its one genuine divergence is the thermometer furniture,
 // threaded through solve/propagate exactly as Futoshiki threads its inequalities. The
-// solve/generate path is the in-browser wasm Worker (`useSolver`) — zero `/api/v1/*`.
+// solve/generate path is the ONE in-browser wasm Worker (`@games/shared/solver/client`) —
+// zero `/api/v1/*`.
 import { ref } from "vue";
-import { useSolver } from "../solver/useSolver";
+import { createSolverClient } from "@games/shared/solver/client";
+import { thermoClue } from "../clue";
 import {
   resolveInitialState,
   syncToUrl,
@@ -17,26 +19,37 @@ import {
   dropBoardParam,
   writeShareUrl,
 } from "./thermoUrlState";
-import {
-  gradeSudoku,
-  hintSudoku,
-  fillForcedSudoku,
-} from "@games/sudoku/technique/sudokuTechnique";
+import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
+import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
 import type { ThermoLine } from "../types";
 
-/** Size-scaled node budget — the sudoku table (Thermo shares the subgrid geometry). */
+/** Size-scaled node budget — the sudoku table (Thermo shares the subgrid geometry). Exported
+ *  so `spec.solver.nodeBudget` NAMES this one table; the model reads it through the same
+ *  export, so the budget has one home. */
 const NODE_BUDGET_BY_SIZE: Record<number, number> = {
   2: 200_000,
   3: 2_000_000,
   4: 50_000_000,
 };
-function nodeBudgetForSize(n: number): number {
+export function nodeBudgetForSize(n: number): number {
   return NODE_BUDGET_BY_SIZE[n] ?? 1_000_000;
 }
 
+/** Thermo's raw selector value is the SUB-GRID root; the board side is its square. ONE home:
+ *  `useGameState` sizes the board with it, the solver client counts cells with it. */
+const boardSizeOf = (n: number) => n ** 2;
+
+/** Thermo's slice of the ONE solver client — the wasm family, the size math, and the clue
+ *  codec `spec.clues` spreads. No worker of its own: there is one, and every game shares it. */
+const api = createSolverClient({
+  game: "thermo",
+  boardSide: boardSizeOf,
+  clue: thermoClue,
+  templates: null,
+});
+
 export function useThermo() {
-  const api = useSolver();
   const initial = resolveInitialState();
 
   // The thermometer furniture — the Thermo divergence, the mirror of Futoshiki's
@@ -46,21 +59,21 @@ export function useThermo() {
   const { solverSize, ...machine } = useGameState({
     initial,
     initialSize: initial.size,
-    // Thermo's raw selector value is the SUB-GRID root; the board side is its square.
-    boardSizeOf: (n) => n ** 2,
+    boardSizeOf,
     nodeBudgetForSize,
     getRandomBoard: (n, difficulty) => api.getRandomBoard(n, difficulty),
     applyDealFurniture: (board) => {
-      thermometers.value = board.thermometers;
+      thermometers.value = board.clue;
     },
     resetFurniture: () => {
       thermometers.value = [];
     },
-    grade: (values, n) => gradeSudoku(values, n),
+    grade: (values, n) => gradeBoard(createBoardAdapter("boxed", n), values),
     solve: (values, n, budget) => api.solveBoard(values, n, thermometers.value, budget),
     propagate: (values, n) => api.propagateBoard(values, n, thermometers.value),
-    fillForced: (values, n) => fillForcedSudoku(values, n),
-    hint: (values, n, preferred) => hintSudoku(values, n, preferred),
+    fillForced: (values, n) => fillAllForced(createBoardAdapter("boxed", n), values),
+    hint: (values, n, preferred) =>
+      findHint(createBoardAdapter("boxed", n), values, preferred),
     snapshotExtra: () => ({ thermometers: thermometers.value.map((t) => [...t]) }),
     restoreExtra: (blob) => {
       thermometers.value = blob.thermometers.map((t) => [...t]);

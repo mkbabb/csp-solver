@@ -10,9 +10,12 @@
  *     NOT participate in given/overridden bookkeeping.
  */
 import { toBase64Url, fromBase64Url } from "@/lib/base64url";
-import { VALID_BOARD_SIZES, type Difficulty, type Inequality } from "../types";
+import type { Difficulty } from "@games/shared/types";
+import { VALID_BOARD_SIZES, type Inequality } from "../types";
 
-const STORAGE_KEY = "futoshiki-board-state";
+/** Futoshiki's board on disk. Exported so `spec.urlCodec.key` NAMES this one string rather
+ *  than mirroring it — the card row's ledger source reads it back off the spec. */
+export const STORAGE_KEY = "futoshiki-board-state";
 const DEFAULT_BOARD_SIZE = 5;
 const DEFAULT_DIFFICULTY: Difficulty = "EASY";
 const VALID_SIZES: readonly number[] = VALID_BOARD_SIZES;
@@ -107,28 +110,22 @@ function loadPersistedBoard(): PersistedBoard | null {
 // constraints is not the same puzzle. The base64url codec is hoisted to
 // `@/lib/base64url` (shared with Sudoku's).
 
-// ── Codec version byte (T4-W3) ──────────────────────────────────────────────
-// A single leading byte tags the encoded payload so a future breaking codec revision
-// can't silently decode an old link into a *different* board. The byte's ABSENCE is
-// version 0 — every pre-wave link (its payload opens with the size digit, char code
-// ≥ 0x30) still decodes: the graceful ratchet. This wave writes version 1, whose body
-// is structurally identical to v0 (`${boardSize}.${cells}.${ineqs}`), so v0 and v1
-// share the decode below; only the tag differs. Any control-range (< 0x30) leading
-// byte that isn't a version this build understands fails closed → the corrupt-link
-// signal.
+// ── Codec version byte (T4-W3, ratcheted shut T5-W2 2.4d) ───────────────────
+// A single leading byte tags the encoded payload so a breaking codec revision can't silently
+// decode an old link into a *different* board. THE BYTE IS MANDATORY. It was not: an absent
+// tag used to mean "version 0" and decode anyway — the graceful ratchet — which made the
+// version byte advisory and left a permanent second accepted wire format that nothing writes
+// and no test could distinguish from a corrupt link that happens to open with a digit. A
+// payload that does not open with a version this build understands fails closed, which is what
+// every other malformed-link arm here already does.
 const CODEC_VERSION = 1;
-const VERSION_BYTE_FLOOR = 0x30; // '0' — a v0 body always opens ≥ here (the size digit)
 
-// Peel the version byte off a decoded payload: returns the numeric version and the
-// remaining body, or null when the leading byte is control-range but not a version
-// this build understands (fail closed).
+// Peel the version byte off a decoded payload: returns the version and the remaining body, or
+// null when the leading byte is not a version this build understands. An empty payload reads
+// NaN and fails closed on the same comparison.
 function readCodecVersion(payload: string): { version: number; body: string } | null {
-  const lead = payload.charCodeAt(0);
-  // Empty payload → NaN; a digit-led legacy body → ≥ 0x30. Either way, version 0.
-  if (Number.isNaN(lead) || lead >= VERSION_BYTE_FLOOR)
-    return { version: 0, body: payload };
-  if (lead !== CODEC_VERSION) return null; // unknown version → reject
-  return { version: lead, body: payload.slice(1) };
+  if (payload.charCodeAt(0) !== CODEC_VERSION) return null;
+  return { version: CODEC_VERSION, body: payload.slice(1) };
 }
 
 export function encodeBoard(
@@ -173,7 +170,7 @@ function decodeBoardParam(
   } catch {
     return { status: "invalid" };
   }
-  // Strip the version byte (absent = v0); an unknown version fails closed.
+  // Strip the version byte; an absent or unknown version fails closed.
   const versioned = readCodecVersion(payload);
   if (!versioned) return { status: "invalid" };
   const parts = versioned.body.split(".");

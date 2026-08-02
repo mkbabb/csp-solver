@@ -1,0 +1,41 @@
+# π EXIT — T5-W2 F5 (fail-explicit + the 0.11 adoption), the FINAL tree
+# date : 2026-08-02T01:25:21Z
+# base : http://localhost:4188 — vite preview over the BUILT DIST, ONE tree state, no rebuild between arms
+# main chunk : index-DA-Ufoe3uAsl.js md5 d3fd9ac4d16adf3ce09a2752e26c7725
+# css        : index-C0pH_diqlgC_.css md5 b0673c558012a533d865a4e316da64fe
+# animation-vendor (pencil-boil 0.11.0): animation-vendor-BISdRVo5DPrM.js md5 a5f02f9a508d96c33f7d65f6f35f15e4
+
+== run 1 ==
+  1 failed
+    e2e/visual-golden.spec.ts:229:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+  3 passed (2.7s)
+== run 2 ==
+[3/4] e2e/visual-golden.spec.ts:236:1 › golden · single cell with given glyph (light)
+[4/4] e2e/visual-golden.spec.ts:229:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+  4 passed (1.8s)
+== run 3 ==
+[3/4] e2e/visual-golden.spec.ts:229:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+[4/4] e2e/visual-golden.spec.ts:203:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack
+  4 passed (1.9s)
+
+== the toggle-crest-dark row, characterised rather than claimed ==
+   Run 1 of the three-run bank RED on toggle-crest-dark. Per the charter §3 that surface is
+   the wave's one NON-LOAD-BEARING golden — 0/8 · 5/11 · 5/14 across one host, one day at
+   wave open — so it is reported, never claimed. Characterised on THIS tree, same dist,
+   same preview, no rebuild:
+     toggle-crest-dark alone, 10 consecutive runs : 10 green / 0 red
+     the four-golden batch, 6 more consecutive   :  6 green / 0 red (24 golden assertions)
+   Batch total on this tree: 8 green / 1 red of 9 runs, the single red on the declared
+   non-convergent surface, under 4-worker contention. The three LOAD-BEARING surfaces —
+   cell-light, grid-corner-light, logo-light — are 9/9.
+
+== NO GOLDEN RE-BASELINED ==
+   (empty above = e2e/goldens/ byte-untouched, all 8 files)
+
+== the one π red this lane CAUSED, and its disposition ==
+   grid-corner-light red on the first run of the final tree — the fixture, not the pixels.
+   visual-golden.spec.ts's own encodeSudoku wrote an UNTAGGED body, so the pinned board rode
+   the v0 ratchet 2.4d kills; with the ratchet gone the link failed closed and the golden
+   captured a random deal. Cured by tagging the fixture with the version byte the app itself
+   writes. The estate's last two consumers of an untagged body were BOTH test fixtures
+   (this one and permalink.spec.ts's) — measured, not argued: production never wrote one.

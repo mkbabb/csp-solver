@@ -1,0 +1,37 @@
+T5-W2 F2 — KILLER — PROBES, RE-DERIVED ON THIS TREE
+date: 2026-08-01T23:46:34Z · tree: working (uncommitted; F1 + the concurrent F2 lanes)
+
+## EXIT PROBE — killer's registry.ts consumption is GONE
+cmd: grep -rn "@games/registry" src/games/killer
+  0 hits — killer imports nothing from the corpse
+
+cmd: grep -rn "gameRegistry\|GameDefinition" src/games/killer
+src/games/killer/spec.ts:4: * What used to be a scene, a board adapter and a `GameDefinition` is this one file plus the
+src/games/killer/spec.test.ts:3: * `game.test.ts`, re-derived through the contract that replaced `GameDefinition`.
+  (two PROSE mentions survive in spec.ts:4 / spec.test.ts:3, naming the contract that was
+   replaced — zero import edges, zero identifier uses.)
+
+## AND INERT the other way — registry.ts never carried killer
+cmd: grep -rn "killer" src/games/registry.ts src/games/registry.test.ts
+  0 hits — killer was never one of gameRegistry'\''s 2-of-5 rows, so F4 has nothing to unwire
+
+## 2.1d — one scene, one board (killer's contribution)
+cmd: find src/games/killer -name "*Game.vue" -o -name "*Board.vue"
+  0 — killer contributes no scene and no board; GameShell/BoardHost serve it
+
+## 2.1e — per-game files (non-test, non-README), gates.json target 22 for the FIVE dirs
+  sudoku     11
+  futoshiki  14
+  thermo     10
+  killer     10
+  kenken     13
+  (killer: 12 → 10. The four other lanes are mid-flight; the wave figure is the lead's at the barrier.)
+
+## THE V1-STUB TAIL — the SHA-identical proof, measured for whoever lands 2.4
+cmd: for f in {thermo,killer,kenken}UrlState.ts; do shasum of [boardLink:"absent"] + dropBoardParam + writeShareUrl; done
+  bf9135dc36d6  thermo/composables/thermoUrlState.ts
+  bf9135dc36d6  killer/composables/killerUrlState.ts
+  bf9135dc36d6  kenken/composables/kenkenUrlState.ts
+  → bf9135dc36d6 ×3, byte-identical. The FOURTH member of the tail, syncToUrl, diverges in a
+    PARAMETER NAME alone (kenken '_boardSize', thermo/killer '_size') — no body, no behaviour.
+  This is the proof the stub axis always could collapse. It does NOT collapse here: see README §BLOCKED.

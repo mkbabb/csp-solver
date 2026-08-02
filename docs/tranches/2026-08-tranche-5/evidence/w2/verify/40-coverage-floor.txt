@@ -1,0 +1,95 @@
+# T5-W2 VERIFY — the coverage floor (W1.14 exit condition), and WHY it reds
+
+$ npm run test:unit:coverage   -> EXIT 0 (349 tests, 30 files)
+$ node scripts/check-coverage-floor.mjs
+scope               | files |    stmts |   branch |    funcs |    lines
+-----------------------------------------------------------------------
+src/games/sudoku    |     5 |   60.81% |   75.00% |   25.00% |   59.05%
+src/games/futoshiki |     8 |   74.68% |   87.68% |   36.00% |   73.39%
+src/games/thermo    |     7 |   64.89% |   25.64% |   45.00% |   66.66%
+src/games/killer    |     6 |   59.52% |   25.64% |   37.14% |   60.27%
+src/games/kenken    |     6 |   62.50% |   30.23% |   37.14% |   63.63%
+src/games/shared    |    46 |   50.09% |   44.87% |   43.47% |   49.79%
+src/games           |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/pencil          |    47 |   13.13% |   15.20% |    9.49% |   13.87%
+src/composables     |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/lib             |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/App.vue         |     1 |    0.00% |    0.00% |    0.00% |    0.00%
+TOTAL               |   129 |   37.91% |   35.34% |   30.46% |   37.82%
+
+[coverage-floor] FLOOR BREACH (8):
+  - src/games/sudoku.functions: 25.00% < floor 35.24% (-10.24 pts)
+  - src/games/shared.statements: 50.09% < floor 53.14% (-3.04 pts)
+  - src/games/shared.branches: 44.87% < floor 45.57% (-0.69 pts)
+  - src/games/shared.functions: 43.47% < floor 47.74% (-4.27 pts)
+  - src/games/shared.lines: 49.79% < floor 53.32% (-3.52 pts)
+  - src/pencil.statements: 13.13% < floor 14.61% (-1.47 pts)
+  - src/pencil.functions: 9.49% < floor 10.02% (-0.53 pts)
+  - src/pencil.lines: 13.87% < floor 15.51% (-1.63 pts)
+
+[coverage-floor] RED. The floor is the T5-W1.14 baseline (f38c5130); W2's collapse must clear it, not re-cut it.
+EXIT=1
+
+================================================================
+DIAGNOSIS — numerator vs denominator, absolute, re-derived
+================================================================
+baseline = evidence/w1/r1.14-coverage-samples/run-1.json (head f38c5130, 332 tests)
+after    = this tree (349 tests)
+
+scope                        files |         stmts covered |           stmts total |             pct
+----------------------------------------------------------------------------------------------------
+src/games/sudoku       14->5   ( -9) |    209->90    ( -119) |    394->148   ( -246) |  53.05-> 60.81
+src/games/futoshiki    14->8   ( -6) |    187->177   (  -10) |    492->237   ( -255) |  38.01-> 74.68
+src/games/thermo       12->7   ( -5) |     47->61    (  +14) |    255->94    ( -161) |  18.43-> 64.89
+src/games/killer       12->6   ( -6) |     85->50    (  -35) |    278->84    ( -194) |  30.58-> 59.52
+src/games/kenken       13->6   ( -7) |     93->55    (  -38) |    273->88    ( -185) |  34.07-> 62.50
+src/games/shared       37->46  ( +9) |   1174->1277  ( +103) |   2209->2549  ( +340) |  53.15-> 50.10
+src/games               1->1   ( +0) |     36->35    (   -1) |     36->35    (   -1) | 100.00->100.00
+src/pencil             47->47  ( +0) |    292->244   (  -48) |   1964->1857  ( -107) |  14.87-> 13.14
+src/composables         1->1   ( +0) |      4->4     (   +0) |      4->4     (   +0) | 100.00->100.00
+src/lib                 1->1   ( +0) |      4->4     (   +0) |      4->4     (   +0) | 100.00->100.00
+src/App.vue             1->1   ( +0) |      0->0     (   +0) |    159->167   (   +8) |   0.00->  0.00
+TOTAL                 153->129 (-24) |   2131->1997  ( -134) |   6068->5267  ( -801) |  35.12-> 37.92
+
+THE 8 BREACHED ROWS, ABSOLUTE:
+  src/games/sudoku    .functions   covered    44->9    (  -35)  total   122->36   (  -86)  pct  36.07-> 25.00  floor  35.24
+  src/games/shared    .statements  covered  1174->1277 ( +103)  total  2209->2549 ( +340)  pct  53.15-> 50.10  floor  53.14
+  src/games/shared    .branches    covered   566->653  (  +87)  total  1242->1455 ( +213)  pct  45.57-> 44.88  floor  45.57
+  src/games/shared    .functions   covered   222->253  (  +31)  total   465->582  ( +117)  pct  47.74-> 43.47  floor  47.74
+  src/games/shared    .lines       covered  1025->1106 (  +81)  total  1922->2221 ( +299)  pct  53.33-> 49.80  floor  53.32
+  src/pencil          .statements  covered   292->244  (  -48)  total  1964->1857 ( -107)  pct  14.87-> 13.14  floor  14.61
+  src/pencil          .functions   covered    50->43   (   -7)  total   469->453  (  -16)  pct  10.66->  9.49  floor  10.02
+  src/pencil          .lines       covered   273->227  (  -46)  total  1734->1636 (  -98)  pct  15.74-> 13.88  floor  15.51
+
+================================================================
+READING — three causes, none of them a loss of testing
+================================================================
+1. src/games/shared (4 of 8 breaches) — COVERED ROSE, the denominator rose FASTER.
+   +103 stmts / +87 branches / +31 funcs / +81 lines covered; +340 / +213 / +117 / +299 total.
+   This IS the collapse: GameShell, BoardHost, one client, one worker, one protocol,
+   persistence and the shared cell all landed in this scope from the five per-game dirs.
+   The arriving code is less covered than the scope's pre-collapse mean, so the RATIO falls
+   while the absolute rises. Not a regression — a composition change.
+
+2. src/games/sudoku.functions — covered 44->9, total 122->36 (the scope shed 9 of 14 files).
+   What DIED was well-covered (sudokuTechnique, protocol, useSolver, the cell); what REMAINS
+   is spec/clue/poster/model/urlState. Ratio falls on the residue's own shape.
+
+3. src/pencil (3 breaches) — covered fell 48, total fell 107. F5's 2.8 + 0.11 adoption deleted
+   createGlyphDrawIn (a 44-line COPY that carried its own unit) and rasterPose's whole encode
+   half. 44.9% of the deleted statements were covered against a scope mean of 14.87%, so
+   deleting well-covered code from a thinly-covered scope lowers its ratio. Arithmetic.
+
+TOTAL is NOT breached and ROSE: 35.12% -> 37.92% statements. No scope vanished
+(src/games kept 1 file: registry.ts died, cards.ts took its place at the same prefix).
+
+THIS IS A WAVE-LEVEL RED, NOT A LANE RESIDUE. The gate's own words: "W2's collapse must
+clear it, not re-cut it." VERIFY fixes nothing structural, so it is reported, not cured.
+LEAD'S CALL, two honest routes:
+  (a) cover the collapsed shared spine (GameShell/BoardHost/client) until the four
+      src/games/shared rows clear, and sudoku.functions with it; or
+  (b) re-derive the floor against the DISTILLED estate by W1.14's own pre-registered
+      method — MINIMUM over an n=10 sample, never a mean, never one run — and bank the
+      new sample beside the old. That is a decision with a named cause, not a nudge.
+Route (b) is NOT re-cutting to meet a red only if the estate's shape genuinely changed,
+which it did; but the choice is the lead's and must be recorded either way.

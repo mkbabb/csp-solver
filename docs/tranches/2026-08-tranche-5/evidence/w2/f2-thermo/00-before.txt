@@ -1,0 +1,49 @@
+# T5-W2 F2 (thermo) — BASELINE, before the lane
+
+base commit: e63af8532e94fe437b055245f9a91080b618d7c6  (working tree carries F1 + two concurrent F2 lanes, uncommitted)
+date: 2026-08-01T23:44:01Z
+
+## thermo dir — wc -l, every file
+     255 src/games/thermo/ThermoBoard.vue
+     155 src/games/thermo/ThermoGame.vue
+      42 src/games/thermo/ThermoPoster.vue
+     130 src/games/thermo/ThermoTube/ThermoTube.vue
+     108 src/games/thermo/composables/thermoUrlState.ts
+      82 src/games/thermo/composables/useThermo.ts
+      47 src/games/thermo/game.test.ts
+      53 src/games/thermo/game.ts
+      81 src/games/thermo/solver/protocol.ts
+     117 src/games/thermo/solver/solver.worker.ts
+      28 src/games/thermo/solver/thermoWire.test.ts
+      35 src/games/thermo/solver/thermoWire.ts
+     151 src/games/thermo/solver/useSolver.ts
+      15 src/games/thermo/types.ts
+    1299 total
+
+## per-game file count (2.1e instrument, non-test, non-README)
+src/games/thermo/ThermoBoard.vue
+src/games/thermo/ThermoGame.vue
+src/games/thermo/ThermoPoster.vue
+src/games/thermo/ThermoTube/ThermoTube.vue
+src/games/thermo/composables/thermoUrlState.ts
+src/games/thermo/composables/useThermo.ts
+src/games/thermo/game.ts
+src/games/thermo/solver/protocol.ts
+src/games/thermo/solver/solver.worker.ts
+src/games/thermo/solver/thermoWire.ts
+src/games/thermo/solver/useSolver.ts
+src/games/thermo/types.ts
+count: 12
+
+## registry.ts consumption (thermo dir)
+src/games/thermo/game.test.ts:14:import type { GameDefinition } from "@games/registry";
+src/games/thermo/game.ts:2: * Thermo-Sudoku declared through the T4-W11 contract (`@games/registry`) — the third game,
+src/games/thermo/game.ts:13:import { defineGame } from "@games/registry";
+
+## the V1-STUB tail — thermo/killer/kenken empty-body no-ops, SHA over the normalised tail
+thermo   3 stub decls in src/games/thermo/composables/thermoUrlState.ts
+killer   3 stub decls in src/games/killer/composables/killerUrlState.ts
+kenken   3 stub decls in src/games/kenken/composables/kenkenUrlState.ts
+
+## vitest baseline on the SHARED tree (polluted by the two concurrent lanes)
+ Test Files  5 failed | 25 passed (30)

@@ -122,12 +122,15 @@ describe("shared fail-closed branches (owned copy)", () => {
     expect(resolveInitialState().boardLink).toBe("absent");
   });
 
-  it("oversize / bad base64 / unknown version", () => {
+  it("oversize / bad base64 / unknown version / untagged", () => {
     go({ board: "A".repeat(4097) });
     expect(resolveInitialState().boardLink).toBe("invalid");
     go({ board: "@@@@" });
     expect(resolveInitialState().boardLink).toBe("invalid");
     go({ board: encVer(2, body(5, {}, "")) });
+    expect(resolveInitialState().boardLink).toBe("invalid");
+    // The dead v0 ratchet (T5-W2 2.4d): an untagged body is a malformed link, not a legacy one.
+    go({ board: toBase64Url(body(5, {}, "")) });
     expect(resolveInitialState().boardLink).toBe("invalid");
   });
 

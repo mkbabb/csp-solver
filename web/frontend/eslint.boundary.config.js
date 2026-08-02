@@ -7,7 +7,7 @@
  * carry no cross-game restriction at all, and `sharedMayNotImportGames` names only the two
  * families that predate the edict. Hand enumeration is the defect: every family added since
  * T4-W13 joined the estate without joining the law. This file derives the whole matrix from
- * the game list on disk, so a sixth family is bound the moment its `game.ts` lands — no edit
+ * the game list on disk, so a sixth family is bound the moment its registration point lands — no edit
  * here, ever.
  *
  * OVERLAY, NOT A FOLD. This is a standalone config consumed by `npm run lint:boundary`. It is
@@ -29,17 +29,20 @@ import vueParser from 'vue-eslint-parser'
 const GAMES_DIR = path.join(import.meta.dirname, 'src', 'games')
 
 /**
- * THE GAME LIST, READ FROM DISK. A game IS a directory under `src/games/` carrying a `game.ts`
- * — the `defineGame` registration point (`registry.ts:121`). That file, not a name blocklist,
- * is the discriminator: `shared/` is the game-agnostic floor and has no `game.ts`, so it falls
- * out structurally rather than by exception. Sorted for deterministic rule order (stable
- * output across platforms — the RED bank must be diffable).
+ * THE GAME LIST, READ FROM DISK. A game IS a directory under `src/games/` carrying its
+ * REGISTRATION POINT — `spec.ts`, the T5-W2 `GameSpec`. That file, not a name blocklist, is the
+ * discriminator: `shared/` is the game-agnostic floor and carries none, so it falls out
+ * structurally rather than by exception. (W1 carried a second arm, `game.ts`, for the families
+ * still unmigrated; it died with the last of them at 2.1.) Sorted for deterministic rule order —
+ * stable output across platforms, so the census is diffable.
  */
+const REGISTRATION_POINTS = ['spec.ts']
 const games = fs
   .readdirSync(GAMES_DIR, { withFileTypes: true })
   .filter(
     (entry) =>
-      entry.isDirectory() && fs.existsSync(path.join(GAMES_DIR, entry.name, 'game.ts')),
+      entry.isDirectory() &&
+      REGISTRATION_POINTS.some((f) => fs.existsSync(path.join(GAMES_DIR, entry.name, f))),
   )
   .map((entry) => entry.name)
   .sort()
@@ -49,7 +52,7 @@ const games = fs
 if (games.length < 2) {
   throw new Error(
     `eslint.boundary.config.js: expected >=2 game families under ${GAMES_DIR} ` +
-      `(a directory carrying game.ts); found ${games.length} [${games.join(', ')}]. ` +
+      `(a directory carrying spec.ts); found ${games.length} [${games.join(', ')}]. ` +
       'The boundary matrix cannot be generated — refusing to lint vacuously green.',
   )
 }
@@ -71,7 +74,7 @@ const groupFor = (game) => [
  * by rule name, so n−1 same-scope blocks would leave only the last one live (the P2-T5 append
  * discipline `eslint.config.js:22-24` records the same trap).
  */
-const crossGameRules = games.map((self) => ({
+export const crossGameRules = games.map((self) => ({
   files: [`src/games/${self}/**/*.{ts,vue}`],
   rules: {
     'no-restricted-imports': [
@@ -98,7 +101,7 @@ const crossGameRules = games.map((self) => ({
  * defeated from below. Generated over the same list — the incumbent names only sudoku and
  * futoshiki, so `shared → @games/kenken` passes lint today.
  */
-const sharedMayNotImportGames = {
+export const sharedMayNotImportGames = {
   files: ['src/games/shared/**/*.{ts,vue}'],
   rules: {
     'no-restricted-imports': [

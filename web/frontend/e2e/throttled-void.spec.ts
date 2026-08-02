@@ -2,8 +2,9 @@ import { test, expect, type Page } from '@playwright/test';
 
 // D3 throttled-void gate (T3-W7 §e2e, G10 exhibit `g10-shots/first-select-void-400ms.png`).
 //
-// The Futoshiki scene is a lazy async chunk (App.vue: `defineAsyncComponent(() =>
-// import('@games/futoshiki/FutoshikiGame.vue'))`) with NO loading fallback. On
+// Futoshiki mounts from a lazy async chunk (its card's `load: () =>
+// import('@games/futoshiki/spec')`, resolved through App.vue's `defineAsyncComponent`) with
+// NO loading fallback. On
 // first select the outgoing Sudoku scene detaches same-frame while the chunk
 // fetches — a blank-paper void until it resolves. On unthrottled localhost the
 // void is ~14 ms (invisible — why it survived every prior sweep); on any real

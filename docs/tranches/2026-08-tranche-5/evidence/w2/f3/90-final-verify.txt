@@ -1,0 +1,48 @@
+# T5-W2 F3 — FINAL VERIFY, one pass over the closed tree (2026-08-01)
+
+## vue-tsc -b
+  exit=0
+
+## vitest run --silent
+   Test Files  31 passed (31)
+        Tests  350 passed (350)
+
+## prettier --check src/
+  All matched files use Prettier code style!
+
+## eslint .
+  (silence = clean)
+
+## lint:boundary — pre-existing 2.5 rows only, F3 adds none
+  errors: 12
+  cross-game import lines ADDED by the whole W2 working diff: 0
+    ($ git diff HEAD -- web/frontend/src/games | grep '^+' | grep -cE '@games/<game>/')
+
+## lint:knip — pre-existing 2.3 rows only
+  Unused exported types (4)
+  SolveState  type  src/games/futoshiki/types.ts:18:15
+  SolveStats  type  src/games/futoshiki/types.ts:18:27
+  SolveState  type  src/games/sudoku/types.ts:14:15   
+  SolveStats  type  src/games/sudoku/types.ts:14:27   
+
+## fences — 0 changed lines, all three
+  (no rows above = 0 changed lines in all three)
+  src/pencil/** whole:   0 files changed
+  src/index.css:         0 files changed
+
+## the spine, counted
+  new Worker (construction sites):  1   <- src/games/shared/solver/client.ts:36
+    (grep alone reads 3; two hits are PROSE — client.ts:31's own header and
+     transport.ts:24's doc comment. Counted by stripping comment lines, never by
+     eyeballing a grep total: a census that can't tell code from a comment about
+     code is the vacuous-green class this wave prunes.)
+  wasm?url sites:                   1
+  protocol.ts under src/games:      1
+  per-game solver files:            0
+  ensureInit definitions:           1
+  worker chunks in dist:            1
+  dist chunks importing the .wasm:  1
+
+## 2.2d — NOT landed, born-RED re-derived on the final tree
+  a truncated group buffer throws for thermo / killer / kenken:  0 / 3
+  (killer + kenken `break` and drop the dangling count; thermo guards nothing)

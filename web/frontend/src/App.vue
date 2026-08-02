@@ -8,11 +8,16 @@ import {
   onMounted,
   onBeforeUnmount,
   type Component,
+  type FunctionalComponent,
 } from "vue";
 import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
 import { MOTION } from "@pencil/config/pencilConfig";
 import { flipTransform, useFlipGlide } from "@games/shared/useFlipGlide";
-import SudokuGame from "@games/sudoku/SudokuGame.vue";
+import GameShell from "@games/shared/GameShell.vue";
+// The eager default game rides the MAIN CHUNK — a static spec import, the byte-for-byte twin
+// of the static `SudokuGame` import this replaces (ratified asymmetry, P4 #4). It is a spec
+// now, not a scene: there is one scene, and it is `GameShell`.
+import { sudokuSpec } from "@games/sudoku/spec";
 import DarkModeToggle from "@pencil/celestial/DarkModeToggle.vue";
 import SvgFilters from "@pencil/chrome/SvgFilters.vue";
 import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
@@ -32,7 +37,8 @@ import {
   stageHandoff,
   useStagedLedger,
 } from "@games/shared/useStagingBridge";
-import { GAMES } from "@games/registry";
+import { GAMES } from "@games/cards";
+import type { AnyGameSpec } from "@games/shared/defineGame";
 
 // T4-WM §1 keyboard-avoidance (lane C): one document-scoped install covers both games — it
 // keys on the shared `.board-cells` contract and no-ops for every other focus target. The OS
@@ -41,26 +47,39 @@ import { GAMES } from "@games/registry";
 // `visualViewport` (the one cross-engine path — WebKit ships no VirtualKeyboard/interactive-widget).
 useKeyboardViewport();
 
-// OD-8 / T4-W13 — THE MOUNT FOLD: the registry-driven scene mount. A gallery select / `?game=`
+// OD-8 / T4-W13 — THE MOUNT FOLD: the table-driven scene mount. A gallery select / `?game=`
 // deep-link sets `scene` to a game id; `sceneFor` resolves it to the mountable component. The
 // eager default (Sudoku) rides the main chunk (its static import above) — a byte-unchanged load
-// (ratified asymmetry, P4 #4); every other game is a LAZY `defineAsyncComponent` over the
-// registry's own `card.scene()` loader — the SAME dynamic-import chunk today's Futoshiki cut,
-// now generalized to all five so each game's composable + Worker start only when it's selected.
+// (ratified asymmetry, P4 #4); every other game is a LAZY `defineAsyncComponent` over its row's
+// `card.load()` spec loader — the SAME dynamic-import chunk today's Futoshiki cut, now
+// generalized to all five so each game's composable starts only when it's selected.
 // Memoized so each id keeps a STABLE component identity across re-renders/switches.
 // F6-D3 cold fallback: the lazy chunks preload on gallery OPEN (preloadScenes), so a select is
 // normally cached. A genuinely cold select (throttled — G10's `first-select-void-400ms.png`)
 // shows blank paper ≤300ms then the thinking-scribble (delay:300 + loadingComponent) — never a
 // spinner (design §5.1).
 const sceneCache = new Map<string, Component>();
+/** A migrated row's mount: `GameShell` bound to that game's spec, wearing the scene's
+ *  `leaving`/`erased` seam so the page-turn orchestrator below is untouched. */
+function shellFor(spec: AnyGameSpec): Component {
+  const Scene: FunctionalComponent<{ leaving?: boolean }, { erased: () => void }> = (
+    p,
+    { emit },
+  ) => h(GameShell, { spec, leaving: p.leaving, onErased: () => emit("erased") });
+  Scene.props = { leaving: { type: Boolean, default: false } };
+  Scene.emits = ["erased"];
+  Scene.displayName = `${spec.id}-scene`;
+  return Scene;
+}
 function sceneFor(id: string): Component {
   const cached = sceneCache.get(id);
   if (cached) return cached;
   const card = GAMES.find((c) => c.id === id) ?? GAMES[0];
   const comp: Component = card.eager
-    ? SudokuGame
+    ? shellFor(sudokuSpec)
     : defineAsyncComponent({
-        loader: card.scene,
+        // One arm, five games: a row hands the shell its spec and `GameShell` does the rest.
+        loader: async () => shellFor(await card.load()),
         loadingComponent: {
           render: () =>
             h("div", { class: "scene-loading" }, [h(ScribbleLoader, { size: 56 })]),
@@ -78,7 +97,7 @@ const FilterTuner = import.meta.env.DEV
   ? defineAsyncComponent(() => import("@pencil/dev/FilterTuner.vue"))
   : null;
 
-// T4-W13 — the id union WIDENS to `string` keyed on the registry (the W11 KEY precedent:
+// T4-W13 — the id union WIDENS to `string` keyed on the table (the W11 KEY precedent:
 // tiers erased at the boundary). `?game=` is validated against GAMES; an unknown id (or none)
 // lands on sudoku, the default.
 type GameId = string;
@@ -177,15 +196,16 @@ function onSceneErased() {
 // F6-D3: warm every LAZY scene's chunk the moment the picker OPENS — by selection time it's
 // cached, killing the first-select void structurally (G10 dramatized it: 150–3000ms of pure
 // empty paper under CDP throttle). Sudoku rides the main chunk (eager); the other four warm
-// through their OWN registry `scene()` loaders — generalizes the old Futoshiki-only warm to the
-// five-game registry. A cold select still resolves via `sceneFor`'s async loader (the warm is
+// through their OWN row's `load()` — generalizes the old Futoshiki-only warm to the five-game
+// table. A cold select still resolves via `sceneFor`'s async loader (the warm is
 // opportunistic), so warm-once suffices.
 let scenesWarm = false;
 function preloadScenes() {
   if (scenesWarm) return;
   scenesWarm = true;
+  // Every non-eager row warms its spec chunk.
   for (const card of GAMES) {
-    if (!card.eager) card.scene().catch(() => {});
+    if (!card.eager) card.load().catch(() => {});
   }
 }
 
@@ -378,7 +398,7 @@ watch(scene, (id) => publishMountedGame(id), { immediate: true });
 
 // COLD-START TRUTH (T4-P1 F4): seed the ledger from the five games' own saved boards, ONCE, at
 // boot. Without it the whole installed base opened the picker to `start` on games it had boards
-// for, and four of five cards showed a registry default dressed as saved settings. At boot and
+// for, and four of five cards showed a table default dressed as saved settings. At boot and
 // not on gallery open because `?view=gallery` is a real entry — a deep link would otherwise
 // render the deck before the truth existed. Five `getItem` + `JSON.parse` of the boards already
 // on disk; missing rows only, so the mounted game's live publish always wins.
@@ -387,7 +407,7 @@ backfillLedger(GAMES);
 // The cross-game ledger, id-keyed: what each game is set to, whether a board waits there, and
 // whether there is work on it. The mounted game writes its own row as it goes; the other four
 // come from the cold-start backfill below, so the picker reads ONE truth for all five cards
-// instead of dressing registry defaults as saved settings.
+// instead of dressing table defaults as saved settings.
 const gallerySaved = useStagedLedger();
 
 // A deal is in flight — the band's verbs go inert until it lands (the double-deal guard the
@@ -493,7 +513,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
              MOUNTED id, which flips at the page-turn's seam (`game` is the selected id, driving
              the wordmark/URL at click). `sceneFor` returns the eager Sudoku directly (main
              chunk) or a lazy async component per game (its composable + Worker only start when
-             that game is selected). The registry-driven fold replaces the hardcoded two-game
+             that game is selected). The table-driven fold replaces the hardcoded two-game
              v-if union — game #3+ mount with zero edits here. -->
         <component :is="sceneFor(scene)" :leaving="leaving" @erased="onSceneErased" />
       </div>

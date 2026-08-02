@@ -1,5 +1,5 @@
 import { ref } from "vue";
-import { GAMES } from "@games/registry";
+import { GAMES } from "@games/cards";
 
 /**
  * The game-gallery view state machine (T4-W12 §7) — a module-level singleton, the
@@ -7,7 +7,7 @@ import { GAMES } from "@games/registry";
  * URL truth; it does NOT own the game itself (`?game=` + the page-turn stay App.vue's,
  * so the no-router "gallery is a view over the same app" invariant holds — the gallery
  * is not a route). Import boundary: this lives at `games/shared`, so it may read the
- * game-agnostic `@games/registry` (the registration table, outside every concrete-game
+ * game-agnostic `@games/cards` (THE registration table, outside every concrete-game
  * glob) to map an `id` ⇄ carousel index; it imports NO concrete game.
  *
  *   view: 'playing' | 'gallery'   (default 'playing'; deep-link `?view=gallery` lands here)
@@ -33,7 +33,7 @@ function indexOfId(id: string): number {
   return i >= 0 ? i : 0;
 }
 
-/** The current `?game=` token, validated against the registry (falls back to game #1). */
+/** The current `?game=` token, validated against the table (falls back to game #1). */
 function parseGameId(): string {
   const fallback = GAMES[0]?.id ?? "sudoku";
   if (!hasDom) return fallback;

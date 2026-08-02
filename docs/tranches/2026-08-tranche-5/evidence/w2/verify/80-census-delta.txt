@@ -1,0 +1,258 @@
+# T5-W2 VERIFY — THE CENSUS DELTA
+# Every probe is the wave-open charter's, VERBATIM where it runs, with the charter's own
+# correction where it does not. Numbers re-derived on this tree, never inherited.
+# tree: working tree at e63af853 + F1..F5 uncommitted.
+
+══════════════════════════════════════════════════════════════════════
+2.1a · registry fiction dies      (charter RED at HEAD: 1 · green: 0)
+══════════════════════════════════════════════════════════════════════
+$ grep -rn "gameRegistry" web/frontend/src | grep -v "\.test\.ts" | grep -vc "^\s*\*\|//"
+1
+  raw hits (all forms, incl. prose):
+1
+  registry.ts on disk?
+    ls: web/frontend/src/games/registry.ts: No such file or directory
+  its replacements:
+    web/frontend/src/games/cards.ts
+    web/frontend/src/games/shared/defineGame.ts
+
+══════════════════════════════════════════════════════════════════════
+2.1c · TDZ edge severed           (charter RED: 5 game.ts import the table)
+══════════════════════════════════════════════════════════════════════
+$ grep -rln "@games/registry" web/frontend/src/games/*/
+    web/frontend/src/games/thermo/spec.ts
+  count: 1
+$ ls web/frontend/src/games/*/game.ts   (the old table-importing modules)
+  NOTE: the charter names 'node scripts/tdz-probe.mjs'. THAT SCRIPT WAS NEVER WRITTEN.
+        Nor is madge installed (charter §6.5 flagged both as a gap, not a green).
+        What IS proven: 0 modules under src/games/*/ import the table; the table is gone;
+        and SudokuGame.vue's hand-inlined cycle-dodge is deleted with its cause.
+
+══════════════════════════════════════════════════════════════════════
+2.1d · one scene, one board, one cell, one cage   (charter RED: 10 / 2 / 2)
+══════════════════════════════════════════════════════════════════════
+$ find web/frontend/src/games/*/ -name "*Game.vue" -o -name "*Board.vue" | wc -l
+2
+  cell modules (shared):
+    web/frontend/src/games/shared/DigitCell.vue
+  cage modules (shared):
+    web/frontend/src/games/shared/CageOverlay.vue
+  the shell pair:
+    web/frontend/src/games/shared/BoardHost.vue
+    web/frontend/src/games/shared/GameShell.vue
+
+══════════════════════════════════════════════════════════════════════
+2.1e · per-game file count        (charter RED: 65 · target: 22)
+══════════════════════════════════════════════════════════════════════
+$ for g in sudoku futoshiki thermo killer kenken; do find web/frontend/src/games/$g -type f ! -name "*.test.ts" ! -name "README.md"; done | wc -l
+    sudoku      5
+    futoshiki   8
+    thermo      7
+    killer      6
+    kenken      6
+    TOTAL      32
+  the enumeration:
+    web/frontend/src/games/sudoku/SudokuPoster.vue
+    web/frontend/src/games/sudoku/spec.ts
+    web/frontend/src/games/sudoku/composables/useUrlState.ts
+    web/frontend/src/games/sudoku/composables/useSudoku.ts
+    web/frontend/src/games/sudoku/data/templates.ts
+    web/frontend/src/games/futoshiki/FutoshikiCaret.vue
+    web/frontend/src/games/futoshiki/CaretOverlay.vue
+    web/frontend/src/games/futoshiki/clue.ts
+    web/frontend/src/games/futoshiki/types.ts
+    web/frontend/src/games/futoshiki/spec.ts
+    web/frontend/src/games/futoshiki/FutoshikiPoster.vue
+    web/frontend/src/games/futoshiki/composables/useFutoshiki.ts
+    web/frontend/src/games/futoshiki/composables/useUrlState.ts
+    web/frontend/src/games/thermo/clue.ts
+    web/frontend/src/games/thermo/ThermoPoster.vue
+    web/frontend/src/games/thermo/types.ts
+    web/frontend/src/games/thermo/spec.ts
+    web/frontend/src/games/thermo/ThermoTube.vue
+    web/frontend/src/games/thermo/composables/thermoUrlState.ts
+    web/frontend/src/games/thermo/composables/useThermo.ts
+    web/frontend/src/games/killer/clue.ts
+    web/frontend/src/games/killer/types.ts
+    web/frontend/src/games/killer/spec.ts
+    web/frontend/src/games/killer/KillerPoster.vue
+    web/frontend/src/games/killer/composables/useKiller.ts
+    web/frontend/src/games/killer/composables/killerUrlState.ts
+    web/frontend/src/games/kenken/clue.ts
+    web/frontend/src/games/kenken/types.ts
+    web/frontend/src/games/kenken/spec.ts
+    web/frontend/src/games/kenken/KenKenPoster.vue
+    web/frontend/src/games/kenken/composables/kenkenUrlState.ts
+    web/frontend/src/games/kenken/composables/useKenken.ts
+
+══════════════════════════════════════════════════════════════════════
+2.1a/c/d — WHY THE RAW PROBES READ 1 / 1 / 2, AND WHY ALL THREE ARE GREEN
+══════════════════════════════════════════════════════════════════════
+The charter's 2.1a filter is `grep -vc "^\s*\*\|//"` applied to `grep -rn` OUTPUT.
+`grep -rn` prefixes every line with `path:lineno:`, so the `^\s*\*` alternative anchors
+against the PATH, never against the comment marker — it can match nothing, ever. Only the
+unanchored `//` alternative fires. A block-comment `*` line therefore always survives the
+filter. This is a probe defect, not a surviving reference.
+
+  $ grep -rn "gameRegistry" web/frontend/src | grep -v "\.test\.ts" \
+      | grep -vcE "^[^:]+:[0-9]+:[[:space:]]*(\*|//|/\*)"     -> 0
+  the one raw hit: src/games/cards.ts:4 — past-tense prose in the header naming the table
+  it replaced. Code rows: 0.
+
+2.1c reads 1 because the probe form is `grep -rln` (FILE names, no comment filter at all).
+The hit is thermo/spec.ts:18, a past-tense header sentence describing the severed cycle.
+Actual import edges into the dead table:
+  $ grep -rn 'from "@games/registry"' web/frontend/src | wc -l   -> 0
+
+2.1d reads 2 because the charter's glob `src/games/*/` includes `src/games/shared/`. The two
+hits are shared/GameBoard.vue and shared/PosterBoard.vue — the one board the shell hosts and
+the gallery's thumbnail board. PER-GAME scenes/boards, the actual green condition:
+  $ find src/games/{sudoku,futoshiki,thermo,killer,kenken} \( -name "*Game.vue" -o -name "*Board.vue" \) | wc -l  -> 0
+
+══════════════════════════════════════════════════════════════════════
+2.2 · THE SOLVER SPINE                              gates: 1 / 1 / 1
+══════════════════════════════════════════════════════════════════════
+  workers            1   src/games/shared/solver/solver.worker.ts   (charter RED: 5)
+  protocols          1   src/games/shared/solver/protocol.ts        (charter RED: 5)
+  clients            1   src/games/shared/solver/client.ts
+  ?url sites         1   solver.worker.ts:45                        (charter RED: 5)
+  dist wasm chunks   1   dist/assets/solver.worker-CiwFumri.js
+  per-game solver/   0                                              (charter RED: 5 dirs, 15 files)
+  per-game *Wire.ts  0                                              (charter RED: 3)
+  ALL GREEN.
+
+══════════════════════════════════════════════════════════════════════
+2.3 / 2.4 · THE KILL ROWS — every one re-derived, portable filter
+══════════════════════════════════════════════════════════════════════
+  gameRegistry (code)                        0
+  GameDefinition (code)                      0
+  sudokuGame (code)                          0
+  card.scene / CardMount / CardFace          0
+  __resetStagingBridge (production)          0
+  AnswerKeyLaminate.subgridSize              0
+  GameBoard.cornerMarks / centerMarks        0
+  YOSHI_COLORS                               0
+  registry.ts + registry.test.ts on disk     0
+  per-game game.ts                           0
+  per-game ControlPanel/constants.ts         0
+  per-game technique adapters                0
+  unreferenced @theme tokens                 0 of 51 declared (both instrument arms agree)
+  functions named `defineGame`               1  (target 1)
+  catch{ignore}   $ grep -rn -A1 "} catch {" src | grep -c "/\* ignore \*/"   -> 0   (charter RED: 11)
+                  cross-check $ grep -rn -B2 "\.stop();" src | grep -c "try {" -> 0   (agrees)
+  gates.W2.censusDelta.killRowsZeroHits = TRUE — GREEN.
+
+══════════════════════════════════════════════════════════════════════
+2.8 · LIB SHADOWS                          charter green: 0 · 0 · 0
+══════════════════════════════════════════════════════════════════════
+  createGlyphDrawIn        0   SWAPPED to pencil-boil createStrokeDrawIn — verbatim twin
+  generateRectBoilFrames   5   NOT SWAPPED — F5 measured it NOT a twin (takes radius+grain,
+                               which boilRectFrames does not; HandDrawnOutline.vue:115 passes
+                               both, live; perturb strides differ f*997 vs f*1013)
+  arcBoilPoints            2   NOT SWAPPED — a floored partial arc is not a closed ring
+  ROW MISSES its stated 0·0·0. The charter's own π schedule pre-ruled this case:
+  "the draw-in twin swap is verbatim, so a moved pixel means the twin isn't one."
+  Swapping either would move pixels on a load-bearing surface, which §3 forbids.
+  LEAD'S ROW: restamp 2.8 to the measured shape, or re-lane to a pixel-licensed lane.
+
+══════════════════════════════════════════════════════════════════════
+registryFiction.productionSlotReads — floor 25 · charter predicted 40
+══════════════════════════════════════════════════════════════════════
+CODE reads (comment lines stripped) off a GameSpec value, whole production tree:
+
+  src/App.vue:71                       `${spec.id}-scene`
+  src/games/shared/GameShell.vue:57    props.spec.model()
+  src/games/shared/GameShell.vue:61    props.spec.deal.options(model)
+  src/games/shared/GameShell.vue:67    props.spec.clues?.from(model)
+  src/games/shared/BoardHost.vue:47    props.spec.grammar
+  src/games/shared/BoardHost.vue:140   props.spec.clues ? props.spec.clues.props(...)
+  src/games/shared/BoardHost.vue:184   :is="spec.furniture.cell"
+  src/games/shared/BoardHost.vue:216   v-if="spec.clues"
+  src/games/shared/BoardHost.vue:220   :is="spec.clues.overlay"
+  src/games/cards.ts:85                sudokuSpec.deal.sizes
+  src/games/cards.ts:90                tiers(sudokuSpec.deal.difficulty)
+  src/games/cards.ts:103               persistKey: sudokuSpec.urlCodec.key
+
+(`useStagingBridge.ts:109 s.deal(pair)` is a StagingSource.deal — NOT a GameSpec slot.
+ Excluded, named, so the census is not inflated by a homonym.)
+
+THE ENUMERATED CENSUS — slot × the games it is read for. There is ONE shell (App.vue:68
+mounts GameShell for all five rows; cards.ts carries 5 rows), so a slot the shell reads is
+read for all five games:
+
+  slot        read for       count
+  id          5 games          5
+  model       5 games          5
+  grammar     5 games          5
+  clues       5 games          5     (sudoku's is the stated null — still a read)
+  furniture   5 games          5
+  deal        5 games          5
+  urlCodec    1 game           1     <-- cards.ts:103, the EAGER row only
+  solver      0 games          0     <-- NOTHING reads it off the spec
+                             ----
+                               31
+
+  gates.W2.registryFiction.productionSlotReads = 25 (FLOOR)  ->  31.  GREEN, a fortiori.
+  The charter's §1.4(4) predicted 40 (8 slots x 5). MEASURED 31. The 9-read gap is exactly:
+
+  · `solver` 0/5 — every spec DECLARES `solver: { nodeBudget: nodeBudgetForSize }`, and every
+    model imports `nodeBudgetForSize` from its own composable. The fact has one home; nothing
+    reads it OFF THE SPEC. F3 stated this in its own record (note 5) after deleting the slot's
+    one live reader (`prewarm`) by its own schedule — GameShell.vue:80 now says so in prose:
+    "imported here rather than asked of `spec.solver`".
+  · `urlCodec` 1/5 — only sudoku's card row sources `persistKey` from the spec; the other four
+    spell the literal on the card and are guarded by cards.test.ts asserting the two agree
+    (F4's note 7 — the measured chunking trade).
+
+  BY THE CHARTER'S OWN CLOSURE LAW (§1.3): "A slot the shell doesn't read is deleted from the
+  type." `solver` meets that description exactly; `urlCodec` meets it for 4 of 5 games. The
+  gate PASSES on its floor and the union's closure claim does NOT hold whole. LEAD'S ROW.
+
+══════════════════════════════════════════════════════════════════════
+2.1e · PER-GAME FILE COUNT       gates: 22 · charter RED at HEAD: 65
+══════════════════════════════════════════════════════════════════════
+  sudoku 5 · futoshiki 8 · thermo 7 · killer 6 · kenken 6   =   32
+  65 -> 32 is -33 (-50.8%). TARGET 22 IS MISSED BY 10.
+  F4 named the residue rather than rounding it off: reaching 22 wants the five *UrlState.ts
+  folded into one persistence.ts and the four clue-typed types.ts folded into their clue.ts —
+  both of which the charter homes in 2.4, and 2.4's lane (F5) explicitly did not claim the
+  permalink universalisation. The gap is REAL and UNCLAIMED, not absorbed.
+
+══════════════════════════════════════════════════════════════════════
+censusDelta.locRemovedTarget — 4,150.  METHOD: raw `wc -l`, non-test,
+excluding README.md.  BEFORE = git show e63af853:<path>.  AFTER = worktree.
+══════════════════════════════════════════════════════════════════════
+  scope                        before    after     delta
+  games/** non-test (WHOLE)    16,661   13,716    -2,945
+  the FIVE game dirs            7,744    2,938    -4,806
+  games/shared                  8,617   10,580    +1,963
+  games/ top level (cards.ts)     300      198      -102
+
+  The BEFORE column reproduces the charter's §5 figures EXACTLY (16,661 whole · 7,744 five
+  dirs), which is the check that the method is the charter's and not a new one.
+
+  THE CHARTER FORBIDS AN UNNAMED DENOMINATOR (§5): "Any -4,150 claim at seal must name which."
+  So, both, stated plainly:
+
+  · ON THE ABSORBED CLASS (the five per-game dirs, which is what ALPHA's ~4,150 was priced
+    against — 5,294 norm x 1.40 ~ 7,387 raw):   -4,806.   TARGET HIT, by 656.
+  · ON THE WHOLE games/** TREE, NET:            -2,945.   TARGET MISSED, by 1,205.
+
+  The two differ by the +1,963 the shared floor GAINED: GameShell, BoardHost, the one client,
+  the one worker, the one protocol, DigitCell, CageOverlay and the shared selectors/adapter all
+  landed there. That is the distill working as designed — the code did not vanish, it stopped
+  being written five times. The honest headline is the pair, never one of them alone.
+
+══════════════════════════════════════════════════════════════════════
+2.7 · RUST EDGES (re-derived on this tree)
+══════════════════════════════════════════════════════════════════════
+  godModulesOver500Unwaived  0   only search.rs at 534, and its waiver comment is re-derived
+                                 AT T5-W2 naming 534 (":30 — T5-W2, this waiver included; 504
+                                 when the waiver was written, 516 at the T3"). assignment.rs
+                                 (607) and cage.rs (558) are both under 500 now.
+  futoshikiConforms          TRUE  create_futoshiki_csp(board,n,inequalities)
+                                     -> (Csp<BitsetDomain>, Vec<(VarId,u32)>)
+                                   solve_futoshiki(board,n,inequalities,&SolveConfig)
+                                     -> Option<Vec<u32>>       — 5/5 conform
+  from_difficulty            5/5   sudoku/generate.rs:369 joins the other four
+  board_total                1     csp-solver/wasm/src/errors.rs:40 — its declared home

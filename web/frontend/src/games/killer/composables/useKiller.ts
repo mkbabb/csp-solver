@@ -6,10 +6,11 @@
 // Killer IS a Sudoku variant, so it reuses the sudoku subgrid math (`n**2`), node-budget
 // table, and technique engine; its one genuine divergence is the cage furniture, threaded
 // through solve/propagate exactly as Futoshiki threads its inequalities and Thermo its
-// tubes. The solve/generate path is the in-browser wasm Worker (`useSolver`) — zero
-// `/api/v1/*`.
+// tubes. The solve/generate path is the ONE in-browser wasm Worker
+// (`@games/shared/solver/client`) — zero `/api/v1/*`.
 import { ref } from "vue";
-import { useSolver } from "../solver/useSolver";
+import { createSolverClient } from "@games/shared/solver/client";
+import { killerClue } from "../clue";
 import {
   resolveInitialState,
   syncToUrl,
@@ -18,26 +19,36 @@ import {
   dropBoardParam,
   writeShareUrl,
 } from "./killerUrlState";
-import {
-  gradeSudoku,
-  hintSudoku,
-  fillForcedSudoku,
-} from "@games/sudoku/technique/sudokuTechnique";
+import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
+import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
 import type { KillerCage } from "../types";
 
-/** Size-scaled node budget — the sudoku table (Killer shares the subgrid geometry). */
+/** Size-scaled node budget — the sudoku table (Killer shares the subgrid geometry). Exported
+ *  so `spec.solver.nodeBudget` NAMES this one table rather than mirroring it. */
 const NODE_BUDGET_BY_SIZE: Record<number, number> = {
   2: 200_000,
   3: 2_000_000,
   4: 50_000_000,
 };
-function nodeBudgetForSize(n: number): number {
+export function nodeBudgetForSize(n: number): number {
   return NODE_BUDGET_BY_SIZE[n] ?? 1_000_000;
 }
 
+/** Killer's raw selector value is the SUB-GRID root; the board side is its square. ONE home:
+ *  `useGameState` sizes the board with it, the solver client counts cells with it. */
+const boardSizeOf = (n: number) => n ** 2;
+
+/** Killer's slice of the ONE solver client — the wasm family, the size math, and the clue
+ *  codec `spec.clues` spreads. No worker of its own: there is one, and every game shares it. */
+const api = createSolverClient({
+  game: "killer",
+  boardSide: boardSizeOf,
+  clue: killerClue,
+  templates: null,
+});
+
 export function useKiller() {
-  const api = useSolver();
   const initial = resolveInitialState();
 
   // The cage furniture — the Killer divergence, the mirror of Futoshiki's `inequalities`
@@ -47,21 +58,21 @@ export function useKiller() {
   const { solverSize, ...machine } = useGameState({
     initial,
     initialSize: initial.size,
-    // Killer's raw selector value is the SUB-GRID root; the board side is its square.
-    boardSizeOf: (n) => n ** 2,
+    boardSizeOf,
     nodeBudgetForSize,
     getRandomBoard: (n, difficulty) => api.getRandomBoard(n, difficulty),
     applyDealFurniture: (board) => {
-      cages.value = board.cages;
+      cages.value = board.clue;
     },
     resetFurniture: () => {
       cages.value = [];
     },
-    grade: (values, n) => gradeSudoku(values, n),
+    grade: (values, n) => gradeBoard(createBoardAdapter("boxed", n), values),
     solve: (values, n, budget) => api.solveBoard(values, n, cages.value, budget),
     propagate: (values, n) => api.propagateBoard(values, n, cages.value),
-    fillForced: (values, n) => fillForcedSudoku(values, n),
-    hint: (values, n, preferred) => hintSudoku(values, n, preferred),
+    fillForced: (values, n) => fillAllForced(createBoardAdapter("boxed", n), values),
+    hint: (values, n, preferred) =>
+      findHint(createBoardAdapter("boxed", n), values, preferred),
     snapshotExtra: () => ({
       cages: cages.value.map((c) => ({ sum: c.sum, cells: [...c.cells] })),
     }),

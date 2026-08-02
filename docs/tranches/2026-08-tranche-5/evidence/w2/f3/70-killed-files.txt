@@ -1,0 +1,78 @@
+# T5-W2 F3 — THE KILLED-FILE LEDGER
+#
+# Counts are `wc -l` on the WORKING-TREE files as they stood at F3-open — the bytes actually
+# deleted — not HEAD's blobs. The two differ where an F2 lane had already edited a file
+# (futoshiki/solver/useSolver.ts reads 182 here, 193 at HEAD e63af853: the F2 futoshiki lane
+# had moved its wire head to clue.ts). Citing HEAD would have over-counted by 11 lines.
+
+$ wc -l src/games/{sudoku,futoshiki,thermo,killer,kenken}/solver/*.ts   # before deletion
+     231 src/games/sudoku/solver/protocol.test.ts
+      75 src/games/sudoku/solver/protocol.ts
+     144 src/games/sudoku/solver/solver.worker.ts
+     192 src/games/sudoku/solver/useSolver.ts
+     120 src/games/futoshiki/solver/protocol.test.ts
+      82 src/games/futoshiki/solver/protocol.ts
+     144 src/games/futoshiki/solver/solver.worker.ts
+     182 src/games/futoshiki/solver/useSolver.ts
+      81 src/games/thermo/solver/protocol.ts
+     117 src/games/thermo/solver/solver.worker.ts
+      28 src/games/thermo/solver/thermoWire.test.ts
+      35 src/games/thermo/solver/thermoWire.ts
+     155 src/games/thermo/solver/useSolver.ts
+      31 src/games/killer/solver/killerWire.test.ts
+      38 src/games/killer/solver/killerWire.ts
+      81 src/games/killer/solver/protocol.ts
+     114 src/games/killer/solver/solver.worker.ts
+     155 src/games/killer/solver/useSolver.ts
+      33 src/games/kenken/solver/kenkenWire.test.ts
+      47 src/games/kenken/solver/kenkenWire.ts
+      83 src/games/kenken/solver/protocol.ts
+     115 src/games/kenken/solver/solver.worker.ts
+     156 src/games/kenken/solver/useSolver.ts
+    2439 total
+
+  ── of which ────────────────────────────────────────────────────────────────────────────
+
+  DELETED OUTRIGHT — 15 modules, the five-fold spine
+    5 x useSolver.ts     192+182+155+155+156 =  840
+    5 x solver.worker.ts 144+144+117+114+115 =  634   (ensureInit byte-identical x5)
+    5 x protocol.ts       75+ 82+ 81+ 81+ 83 =  402
+                                        SUB   = 1876
+    + futoshiki/solver/protocol.test.ts       =  120   the sudoku twin, folded and dropped
+    + futoshiki/game.ts (49, HEAD blob)       =   49   the last gameRegistry corpse (see below)
+                                        TOTAL = 2045
+
+  MOVED, verbatim — 7 modules, re-homed rather than rewritten
+    thermoWire.ts   35  + .test 28  ->  src/games/thermo/clue.ts   + clue.test.ts
+    killerWire.ts   38  + .test 31  ->  src/games/killer/clue.ts   + clue.test.ts
+    kenkenWire.ts   47  + .test 33  ->  src/games/kenken/clue.ts   + clue.test.ts
+    sudoku/solver/protocol.test.ts 231 -> src/games/shared/solver/protocol.test.ts
+    (the codec is the SEAM's, not a worker's — futoshiki's F2 precedent, now 4/4)
+
+  WRITTEN in their place — 4 modules, the one spine
+    src/games/shared/solver/client.ts                238
+    src/games/shared/solver/solver.worker.ts         250
+    src/games/shared/solver/protocol.ts              128
+    src/games/shared/solver/client.test.ts           326
+                                                    ---
+                                      PRODUCTION      616   vs 1876 deleted
+
+  NET, production only: 1876 -> 616 raw lines (-1260, -67%), comment-rich on both sides.
+
+# WHY futoshiki/game.ts DIED HERE, and not at F4 where it was scheduled
+#
+# It was the last corpse feeding `gameRegistry` (the 2-of-5 parallel map, ZERO production
+# consumers, read only by its own test). Its `solverPayloads: useSolver` named a per-game
+# solver module — and F3 deleted every one there was. The two honest options were to point
+# it at the one client (a SECOND path to a seam that now has exactly one — the dual-path the
+# wave's laws forbid) or to let the row go with the module it named. It went. `registry.ts`
+# now declares `gameRegistry = {}`; F4 still deletes the file whole — table, type, identity
+# function and test together — so this ADVANCES 2.1a rather than colliding with it.
+
+# Per-game file counts (2.1e, non-test, non-README). Target 22; F3 owns the solver triple.
+#   sudoku       8
+#   futoshiki    10
+#   thermo       7
+#   killer       6
+#   kenken       7
+#   TOTAL        38   (65 at wave open -> 38 after F1/F2/F3; the residue is F4's)

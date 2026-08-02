@@ -98,11 +98,7 @@ function scheduleBlink() {
 
 function reset() {
   if (bounceSeq) {
-    try {
-      bounceSeq.stop();
-    } catch {
-      /* ignore */
-    }
+    bounceSeq.stop();
     bounceSeq = null;
   }
   for (const t of [blinkTimer, blinkEndTimer, murmurEndTimer]) {

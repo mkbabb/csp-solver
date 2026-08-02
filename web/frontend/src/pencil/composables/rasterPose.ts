@@ -8,7 +8,14 @@
  * literal colors. These helpers read both off the LIVE DOM — the filter straight from
  * `SvgFilters.vue`'s rendered defs (the bake SOURCE, so FilterTuner edits flow through) and
  * a cascade value resolved to its literal — so the blob is faithful to what shipped.
+ *
+ * T5-W2 2.4: the ENCODE half of this file is gone. `bitmapsToUrls`/`encodeBitmap`/`revokeUrls`
+ * were the round trip pencil-boil 0.11 deletes — `useRasterStack` reads its own capture canvas
+ * through `rasterizePoseToBlob()` and hands back object URLs it owns. What survives is what the
+ * app alone knows: how to read the live DOM, and when to hold a set across the null window.
  */
+import { ref, watch, type Ref } from "vue";
+import type { RasterStackHandle } from "@mkbabb/pencil-boil";
 
 /**
  * Serialize a live filter/gradient def element (by id) to a self-contained XML string for
@@ -45,67 +52,35 @@ export function resolveCssValue(
 }
 
 /**
- * Convert a resolved `ImageBitmap` stack into object URLs, one per pose, encoded ONCE. The
- * urls feed static SVG `<image>` / `<img>` siblings whose only per-beat change is an opacity
- * flip — the N-layer variant (no per-beat `drawImage`, so no residual tile raster).
+ * Hold the last resolved pose URLs across a re-bake's null window — the atomic-swap
+ * discipline (T4-WM rank 3), stated once for all three baked surfaces.
  *
- * Two residency wins over the retired synchronous `toDataURL` path (T4-WM ranks 2/4):
- *   • the encode runs through `OffscreenCanvas.convertToBlob` — async, off the main thread's
- *     synchronous PNG-encode burst (12 poses × up to 251 ms @4× at DPR3 is what it cost), and
- *   • the URL is a `createObjectURL` handle (a pointer), not a retained ~1.3 MB base64 string.
+ * `useRasterStack` nulls `urls` while a (re-)bake is in flight and keeps the outgoing set
+ * valid until its successor lands, so a surface that reads `urls` directly drops to the
+ * live-filter fallback for the whole bake — a visible flash on a re-tint it could have
+ * ridden through. Retaining is therefore a READ, never a copy: pencil-boil 0.11 mints the
+ * handles and owns their lifetime (`RasterStackHandle.urls` — "never revoke these"), and
+ * this composable holds nothing it must free.
  *
- * The source `ImageBitmap` is the REDUNDANT copy once its decode-backing URL exists (the
- * `<image>` decode is the single resident raster the compositor draws), so each is `close()`d
- * here — its off-heap decoded pixels are freed and the decode+bitmap double residency dies.
- * `useRasterStack` (0.9.2) captures fresh per bake and never memoizes the bitmap, so a closed
- * bitmap can never be re-handed to a warm re-bake. Returns `[]` for a null/empty stack (the
- * bake is still in flight; the consumer holds the fallback).
+ * `resetKey` is the STRUCTURAL escape. A re-tint's outgoing poses still describe the right
+ * geometry; a board-size change's do not. When the key changes the retained set is dropped
+ * and the fallback holds the new geometry until the re-bake lands.
  */
-export async function bitmapsToUrls(bitmaps: ImageBitmap[] | null): Promise<string[]> {
-  if (!bitmaps || bitmaps.length === 0 || typeof document === "undefined") return [];
-  const urls: string[] = [];
-  for (const bm of bitmaps) {
-    urls.push(URL.createObjectURL(await encodeBitmap(bm)));
-    bm.close(); // the URL/decode is the durable artifact; the bitmap is redundant
-  }
-  return urls;
-}
-
-/**
- * Revoke object URLs minted by {@link bitmapsToUrls} — the backing decode is released when a
- * re-bake replaces the stack or the surface unmounts. Revoking after an `<image>` has loaded
- * is safe (the element retains the decoded resource); it only stops the handle from leaking.
- */
-export function revokeUrls(urls: string[] | null | undefined): void {
-  if (!urls) return;
-  for (const u of urls) URL.revokeObjectURL(u);
-}
-
-/**
- * Encode one `ImageBitmap` to a PNG `Blob` asynchronously. `OffscreenCanvas.convertToBlob` is
- * the off-main-thread path; a plain `<canvas>.toBlob` is the fallback where OffscreenCanvas is
- * absent (both async — neither is the retired synchronous `toDataURL`).
- */
-async function encodeBitmap(bm: ImageBitmap): Promise<Blob> {
-  if (typeof OffscreenCanvas !== "undefined") {
-    const oc = new OffscreenCanvas(bm.width, bm.height);
-    const ctx = oc.getContext("2d");
-    if (ctx) {
-      ctx.drawImage(bm, 0, 0);
-      return oc.convertToBlob({ type: "image/png" });
-    }
-  }
-  const canvas = document.createElement("canvas");
-  canvas.width = bm.width;
-  canvas.height = bm.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("bitmapsToUrls: 2D canvas context unavailable");
-  ctx.drawImage(bm, 0, 0);
-  return await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) =>
-        blob ? resolve(blob) : reject(new Error("bitmapsToUrls: toBlob null")),
-      "image/png",
-    );
-  });
+export function retainedPoseUrls(
+  handle: RasterStackHandle,
+  resetKey?: () => unknown,
+): Ref<string[]> {
+  const held = ref<string[]>([]);
+  watch(
+    handle.urls,
+    (next) => {
+      if (next) held.value = next;
+    },
+    { immediate: true },
+  );
+  if (resetKey)
+    watch(resetKey, () => {
+      held.value = [];
+    });
+  return held;
 }

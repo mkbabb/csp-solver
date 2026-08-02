@@ -27,6 +27,7 @@
     "lint:boundary": "eslint --no-config-lookup --config eslint.boundary.config.js src/games",
     "lint:knip": "knip",
     "lint:ink": "node scripts/check-ink-pressure.mjs --self-test",
+    "lint:catch": "node scripts/check-empty-catch.mjs --self-test",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:unit:report": "vitest run --reporter=default --reporter=json --outputFile.json=vitest-report.json",
@@ -49,7 +50,7 @@
   },
   "dependencies": {
     "@mkbabb/csp-solver-wasm": "file:../../csp-solver/wasm/pkg",
-    "@mkbabb/pencil-boil": "^0.10.1",
+    "@mkbabb/pencil-boil": "^0.11.0",
     "@tailwindcss/vite": "^4.3.2",
     "@vueuse/core": "^14.3.0",
     "tailwindcss": "^4.3.2",

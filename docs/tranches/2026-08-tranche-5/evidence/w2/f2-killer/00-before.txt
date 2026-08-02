@@ -1,0 +1,28 @@
+T5-W2 F2 — KILLER — BEFORE
+date: 2026-08-01T23:42:48Z · tree: working (uncommitted; F1 landed, team lead commits)
+base: F1's tree (git HEAD baae148b + F1's working diff)
+
+## killer file inventory + wc -l
+     264 ./KillerBoard.vue
+     145 ./KillerGame.vue
+      44 ./KillerPoster.vue
+      15 ./clue.ts
+     109 ./composables/killerUrlState.ts
+      84 ./composables/useKiller.ts
+      91 ./game.test.ts
+      54 ./game.ts
+      31 ./solver/killerWire.test.ts
+      38 ./solver/killerWire.ts
+      81 ./solver/protocol.ts
+     114 ./solver/solver.worker.ts
+     151 ./solver/useSolver.ts
+      20 ./types.ts
+    1241 total
+
+## 2.1e instrument — per-game files (non-test, non-README)
+      12
+
+## registry.ts consumption
+game.test.ts:17:import type { GameDefinition } from "@games/registry";
+game.ts:2: * Killer-Sudoku declared through the T4-W11 contract (`@games/registry`) — the fourth game,
+game.ts:14:import { defineGame } from "@games/registry";

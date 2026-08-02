@@ -84,11 +84,16 @@ const contrast = (a, b) => {
 const press = (ink, p, surface) =>
   ink.map((c, i) => (c * p) / 100 + (surface[i] * (100 - p)) / 100);
 
-/** role floors: WCAG 1.4.3 text AA = 4.5 · WCAG 1.4.11 non-text = 3.0 */
+/** role floors: WCAG 1.4.3 text AA = 4.5 · WCAG 1.4.11 non-text = 3.0
+ *
+ *  Two rungs, not three: `--ink-press-firm` (72%) shipped with zero consumers and T5-W2 2.3
+ *  cut it, on the token block's own rule that a table with a zero-consumer rung is unearned
+ *  abstraction. The ladder's properties are unchanged — every rung clears its floor and the
+ *  set is strictly increasing in all three scopes — because dropping the TOP rung cannot
+ *  invert the ones below it. */
 const LADDER = [
   { token: "--ink-press-rule", role: "non-text", floor: 3.0 },
   { token: "--ink-press-quiet", role: "text", floor: 4.5 },
-  { token: "--ink-press-firm", role: "text", floor: 4.5 },
 ];
 
 /**

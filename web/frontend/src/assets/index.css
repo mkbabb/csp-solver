@@ -102,31 +102,28 @@
 }
 
 @theme {
-  --radius: 0.625rem;
-
   /* Type register bindings — the pencil faces bound into the vendored √φ ladder
      (./typography.css). This @theme block IS the rebrand override point: the
      scale rungs carry no family, so re-pointing these four vars once re-flavors
      every semantic register while the geometry inherits unchanged. The soul
      keeps its voice — Fraunces display · Patrick Hand hand · Fira Code mono —
-     and Plus Jakarta never ships. Defining --font-mono/--font-serif here also
+     and Plus Jakarta never ships. Defining --font-mono here also
      retires the D5 gap: Tailwind's `font-mono` now resolves to Fira Code (not
      the ui-monospace system default), so the mono surface is finally the soul's
      mono, not the platform's.
      P5 (Tranche II): --font-mono/--font-hand resolve against the self-hosted
      subsets above (comprehensive — every live consumer's glyphs are covered).
-     --font-text/--font-serif deliberately DROP 'Fraunces': the self-hosted
-     Fraunces subset only covers the wordmark + .section-heading repertoire, and
-     these two are the BODY/prose registers (text-body/text-prose/text-title/etc.,
-     all zero-consumer utilities today — so this changes no rendered pixel; the one
-     live body-inherited use, AttributionCard's caption + GitHub link, gets the
-     honest Georgia fallback instead of a mid-word glyph mismatch now that the CDN
-     link is gone). --font-display keeps 'Fraunces' — its only consumers
+     --font-text deliberately DROPS 'Fraunces': the self-hosted Fraunces subset
+     only covers the wordmark + .section-heading repertoire, and --font-text is the
+     BODY/prose register — so this changes no rendered pixel; the one live
+     body-inherited use, AttributionCard's caption + GitHub link, gets the honest
+     Georgia fallback instead of a mid-word glyph mismatch now that the CDN link is
+     gone. (--font-serif was its twin, byte-identical and read by nothing: T5-W2 2.3
+     killed it.) --font-display keeps 'Fraunces' — its only consumers
      (text-display*, .section-heading, the wordmark's own hardcoded family string)
      are exactly what the subset covers. */
   --font-text: Georgia, Cambria, "Times New Roman", serif;
   --font-display: "Fraunces", Georgia, Cambria, "Times New Roman", serif;
-  --font-serif: Georgia, Cambria, "Times New Roman", serif;
   --font-mono: "Fira Code", monospace;
   --font-hand: "Patrick Hand", cursive;
 
@@ -134,31 +131,18 @@
   --color-background: hsl(48 15% 98%);
   --color-foreground: hsl(0 0% 3.9%);
   --color-card: hsl(48 12% 99%);
-  --color-card-foreground: hsl(0 0% 3.9%);
   --color-popover: hsl(48 10% 98.5%);
-  --color-popover-foreground: hsl(0 0% 3.9%);
-  --color-primary: hsl(0 0% 9%);
-  --color-primary-foreground: hsl(0 0% 98%);
-  --color-secondary: hsl(48 8% 96.1%);
-  --color-secondary-foreground: hsl(0 0% 9%);
-  --color-muted: hsl(48 8% 96.1%);
   --color-muted-foreground: hsl(0 0% 45.1%);
   --color-accent: hsl(48 8% 96.1%);
-  --color-accent-foreground: hsl(0 0% 9%);
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(0 0% 98%);
   --color-border: hsl(48 5% 89.8%);
-  --color-input: hsl(48 5% 89.8%);
   --color-ring: hsl(0 0% 3.9%);
 
-  /* Difficulty colors ≙ the crayon ramp (design-refinement.md §3.3.1). One green, one orange,
-     one rose — the parallel near-duplicate set is retired. Dark variants ride the crayon
-     redefinition in `.dark` automatically (a var() resolves per subtree at use time), so there
-     is no separate dark difficulty block: the solve-feedback green/red now glow in dark like
-     every other crayon instead of the old muted-dark treatment. */
-  --color-easy: var(--color-crayon-green);
-  --color-medium: var(--color-crayon-orange);
-  --color-hard: var(--color-crayon-rose);
+  /* The difficulty ramp is the CRAYON ramp, with no alias tier between them. T3 aliased
+     --color-easy/medium/hard onto crayon-green/orange/rose to retire a parallel near-duplicate
+     set; nothing ever read the aliases — the selectors carry the crayon class names directly
+     (`crayon-green`, GameControlPanel's own scoped tints) and the headings write in the
+     hue-locked INK tier below. T5-W2 2.3 killed the three: an alias with no consumer is a
+     third name for a colour that already has two. */
 
   /* Handwritten glyph colors */
   --color-user-ink: #2563eb;
@@ -230,8 +214,8 @@
      `color-mix(in srgb, var(--color-pencil-graphite, …) N%, transparent)` at six different
      N, and the T4-W10 gate-1 sweep (which raised .heading-value 60→68 and .dt-label 62→68
      for exactly this reason) reached only two of them — MarginNote's note, the completion
-     voice, and the whole KeyboardLegend stayed sub-AA. Three stops with live consumers, no
-     more: a table with a zero-consumer rung is unearned abstraction. These resolve through
+     voice, and the whole KeyboardLegend stayed sub-AA. Stops with live consumers, no more:
+     a table with a zero-consumer rung is unearned abstraction. These resolve through
      --color-pencil-graphite, which already flips per theme via --grid-line-color, so ONE
      definition serves light and dark.
 
@@ -240,8 +224,9 @@
      a card or an ink re-prices the ladder instead of leaving it printing stale digits):
        rule  55%  3.53 / 4.36 / 4.76  — NON-TEXT only (WCAG 1.4.11 ≥3:1): kbd borders, hairlines
        quiet 68%  5.23 / 6.06 / 7.86  — the quiet caption-text rung (AA ≥4.5), the W10 gate-1 stop
-       firm  72%  5.95 / 6.66 / 9.23  — one pressure step firmer, for emphasis inside that register
-     Strictly increasing in all THREE scopes. The third is @media print — the only other place
+     Strictly increasing in all THREE scopes. (A third rung, `firm` at 72%, shipped with no
+     consumer and T5-W2 2.3 cut it — this block's own "a table with a zero-consumer rung is
+     unearned abstraction" applied to itself.) The third is @media print — the only other place
      that re-pitches --grid-line-color (to pure black, for :root and .dark at once) over a paper
      the same block forces white. Adding a stop means re-running that assertion over EVERY rung
      in EVERY scope, not just the new one — a fix that clears one site and inverts its neighbour
@@ -265,12 +250,6 @@
     var(--color-pencil-graphite, var(--grid-line-color)) 68%,
     transparent
   );
-  --ink-press-firm: color-mix(
-    in srgb,
-    var(--color-pencil-graphite, var(--grid-line-color)) 72%,
-    transparent
-  );
-
   /* Progress-ink — the SIXTH crayon (T4-W9 ROW 2): a violet coloured pencil that retraces
      the board frame arc-length-proportional to fill. NON-blue by construction (hue 258°,
      46° off --color-focus-sketch's 212° — the two never read as one when a focused board
@@ -365,25 +344,12 @@
   --color-background: hsl(24 8% 6%);
   --color-foreground: hsl(48 10% 92%);
   --color-card: hsl(24 6% 7%);
-  --color-card-foreground: hsl(48 10% 92%);
   --color-popover: hsl(24 7% 6.5%);
-  --color-popover-foreground: hsl(48 10% 92%);
-  --color-primary: hsl(48 10% 92%);
-  --color-primary-foreground: hsl(0 0% 9%);
-  --color-secondary: hsl(24 5% 15%);
-  --color-secondary-foreground: hsl(48 10% 92%);
-  --color-muted: hsl(24 5% 15%);
   --color-muted-foreground: hsl(48 5% 64%);
   --color-accent: hsl(24 5% 15%);
-  --color-accent-foreground: hsl(48 10% 92%);
-  --color-destructive: hsl(0 62.8% 30.6%);
-  --color-destructive-foreground: hsl(48 10% 92%);
   --color-border: hsl(24 4% 16%);
-  --color-input: hsl(24 4% 16%);
   --color-ring: hsl(48 8% 83%);
 
-  /* No dark difficulty overrides: --color-easy/medium/hard alias the crayon vars, which are
-     redefined just below — the merge (design-refinement.md §3.3.1) collapses the two ramps. */
   --color-user-ink: #60a5fa;
 
   /* Crayon palette (dark) — hue-locked, lightness raised, chroma held per the §3.2 rule above. */

@@ -5,10 +5,11 @@
 // Futoshiki board is a plain N×N Latin square, no subgrid) — as a slot object, then re-labels the
 // machine's neutral `pendingSize` ref to `pendingBoardSize` and adds the `inequalities` ref.
 //
-// The solve/generate path is the in-browser wasm Worker (`useSolver`), the only shipped solve
-// surface, with zero `/api/v1/*` dependency and no server to depend on.
+// The solve/generate path is the ONE in-browser wasm Worker (`@games/shared/solver/client`),
+// the only shipped solve surface, with zero `/api/v1/*` dependency and no server to depend on.
 import { ref } from "vue";
-import { useSolver } from "../solver/useSolver";
+import { createSolverClient } from "@games/shared/solver/client";
+import { futoshikiClue } from "../clue";
 import {
   resolveInitialState,
   syncToUrl,
@@ -18,11 +19,8 @@ import {
   writeBoardToUrl,
   dropBoardParam,
 } from "./useUrlState";
-import {
-  gradeFutoshiki,
-  hintFutoshiki,
-  fillForcedFutoshiki,
-} from "../technique/futoshikiTechnique";
+import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
+import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
 import type { Inequality } from "../types";
 
@@ -38,12 +36,24 @@ const NODE_BUDGET_BY_SIZE: Record<number, number> = {
   6: 10_000_000,
   7: 20_000_000,
 };
-function nodeBudgetForSize(n: number): number {
+export function nodeBudgetForSize(n: number): number {
   return NODE_BUDGET_BY_SIZE[n] ?? 4_000_000;
 }
 
+/** A Futoshiki board side length IS the raw selector value (no subgrid tier). ONE home:
+ *  `useGameState` sizes the board with it, the solver client counts cells with it. */
+const boardSizeOf = (n: number) => n;
+
+/** Futoshiki's slice of the ONE solver client — the wasm family, the size math, and the clue
+ *  codec `spec.clues` spreads. No worker of its own: there is one, and every game shares it. */
+const api = createSolverClient({
+  game: "futoshiki",
+  boardSide: boardSizeOf,
+  clue: futoshikiClue,
+  templates: null,
+});
+
 export function useFutoshiki() {
-  const api = useSolver();
   const initial = resolveInitialState();
 
   // Printed inequality furniture — [greater, lesser] pairs. NEVER in the given/overridden
@@ -58,22 +68,23 @@ export function useFutoshiki() {
   } = useGameState({
     initial,
     initialSize: initial.boardSize,
-    // A Futoshiki board side length IS the raw selector value (no subgrid tier).
-    boardSizeOf: (n) => n,
+    boardSizeOf,
     nodeBudgetForSize,
     getRandomBoard: (n, difficulty) => api.getRandomBoard(n, difficulty),
     applyDealFurniture: (board) => {
-      inequalities.value = board.inequalities;
+      inequalities.value = board.clue;
     },
     resetFurniture: () => {
       inequalities.value = [];
     },
-    grade: (values, n) => gradeFutoshiki(values, n, inequalities.value),
+    grade: (values, n) =>
+      gradeBoard(createBoardAdapter("latin", n, inequalities.value), values),
     solve: (values, n, budget) => api.solveBoard(values, n, inequalities.value, budget),
     propagate: (values, n) => api.propagateBoard(values, n, inequalities.value),
-    fillForced: (values, n) => fillForcedFutoshiki(values, n, inequalities.value),
+    fillForced: (values, n) =>
+      fillAllForced(createBoardAdapter("latin", n, inequalities.value), values),
     hint: (values, n, preferred) =>
-      hintFutoshiki(values, n, inequalities.value, preferred),
+      findHint(createBoardAdapter("latin", n, inequalities.value), values, preferred),
     snapshotExtra: () => ({
       inequalities: inequalities.value.map(([a, b]) => [a, b] as [number, number]),
     }),

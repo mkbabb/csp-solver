@@ -1,0 +1,106 @@
+T5-W2 F5 · 2.4a — TIER_SOURCE, GREEN, WITH ITS THREE NEGATIVE CONTROLS.
+date: 2026-08-02T01:28:16Z
+
+The born-RED bank for this row is 10-tier-source-born-red.txt: at HEAD the build EXITED 0
+with 3/hard parked, and the emitted artifact was indistinguishable from W4's deliberate
+excision. Below, the same experiment on the cured tree — plus the two arms the cure adds.
+
+== the declaration, as it ships (vite.config.ts::sudokuTemplates TIERS) ==
+   2: easy livegen · medium livegen · hard livegen   (the whole N=2 subtree, excised at W4)
+   3: easy livegen · medium livegen · hard BANK      (the one tier live-gen breaches budget on)
+   4: easy BANK    · medium BANK    · hard BANK
+   SIZES = every size the picker offers (shared/selectors.ts subgridSizes 2/3/4), so N=2's
+   live-gen is a DECLARATION, not a hole. The old SIZES=[3,4] never named it at all.
+
+== CONTROL 1 — a LOST bank directory (the row's own born-RED experiment, re-run) ==
+vite v8.1.4 building client environment for production...
+
+ WARN  advancedChunks option is deprecated, please use codeSplitting instead.
+
+✓ 0 modules transformed.
+✗ Build failed in 30ms
+error during build:
+Build failed with 1 error:
+
+[plugin sudoku-templates]
+Error: sudoku-templates: tier 3/hard is declared `bank` but /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/data/sudoku_puzzles/3/hard holds no template-*.json. The puzzle bank is the single source of truth for that tier — restore the directory, or move the tier to `livegen` in vite.config.ts's TIERS table and say so on purpose.
+    at render (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/.vite-temp/vite.config.ts.timestamp-1785634096925-c54fb2dbf39548.mjs:81:56)
+    at PluginContextImpl.buildStart (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/.vite-temp/vite.config.ts.timestamp-1785634096925-c54fb2dbf39548.mjs:127:17)
+    at PluginContextImpl.handler (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33271:13)
+    at plugin (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/bindingify-input-options-XPJLJOD0.mjs:1395:18)
+    at plugin.<computed> (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/bindingify-input-options-XPJLJOD0.mjs:1959:18)
+    at aggregateBindingErrorsIntoJsError (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/error-BHRSI0R7.mjs:48:18)
+    at unwrapBindingResult (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/error-BHRSI0R7.mjs:18:128)
+    at #build (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/rolldown-build-CtPvmZgJ.mjs:3276:34)
+    at async buildEnvironment (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33011:66)
+    at async Object.build (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33433:19)
+    at async Object.buildApp (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33430:153)
+    at async CAC.<anonymous> (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/cli.js:776:3) {
+  errors: [Getter/Setter]
+}
+EXIT=1
+   (restored)
+
+== CONTROL 2 — a LIVEGEN tier that grows a bank (the stale declaration, facing the other way) ==
+vite v8.1.4 building client environment for production...
+
+ WARN  advancedChunks option is deprecated, please use codeSplitting instead.
+
+✓ 0 modules transformed.
+✗ Build failed in 20ms
+error during build:
+Build failed with 1 error:
+
+[plugin sudoku-templates]
+Error: sudoku-templates: tier 3/easy is declared `livegen` but /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/csp-solver/data/sudoku_puzzles/3/easy holds 1 template-*.json. The bank grew and the TIERS table is stale — the app would live-generate a tier it now has boards for.
+    at render (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/.vite-temp/vite.config.ts.timestamp-1785634097362-4cb1496b0f51d8.mjs:82:57)
+    at PluginContextImpl.buildStart (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/.vite-temp/vite.config.ts.timestamp-1785634097362-4cb1496b0f51d8.mjs:127:17)
+    at PluginContextImpl.handler (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33271:13)
+    at plugin (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/bindingify-input-options-XPJLJOD0.mjs:1395:18)
+    at plugin.<computed> (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/bindingify-input-options-XPJLJOD0.mjs:1959:18)
+    at aggregateBindingErrorsIntoJsError (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/error-BHRSI0R7.mjs:48:18)
+    at unwrapBindingResult (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/error-BHRSI0R7.mjs:18:128)
+    at #build (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/rolldown-build-CtPvmZgJ.mjs:3276:34)
+    at async buildEnvironment (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33011:66)
+    at async Object.build (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33433:19)
+    at async Object.buildApp (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33430:153)
+    at async CAC.<anonymous> (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/cli.js:776:3) {
+  errors: [Getter/Setter]
+}
+EXIT=1
+   (removed)
+
+== CONTROL 3 — a bank under a size the table does not name ==
+vite v8.1.4 building client environment for production...
+
+ WARN  advancedChunks option is deprecated, please use codeSplitting instead.
+
+✓ 0 modules transformed.
+✗ Build failed in 25ms
+error during build:
+Build failed with 1 error:
+
+[plugin sudoku-templates]
+Error: sudoku-templates: 5/hard exist on disk but no TIERS row declares them `bank`. Add the row (or remove the directory) — an unnamed bank ships nothing.
+    at render (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/.vite-temp/vite.config.ts.timestamp-1785634097753-a98fa79acc0e28.mjs:96:32)
+    at PluginContextImpl.buildStart (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/.vite-temp/vite.config.ts.timestamp-1785634097753-a98fa79acc0e28.mjs:127:17)
+    at PluginContextImpl.handler (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33271:13)
+    at plugin (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/bindingify-input-options-XPJLJOD0.mjs:1395:18)
+    at plugin.<computed> (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/bindingify-input-options-XPJLJOD0.mjs:1959:18)
+    at aggregateBindingErrorsIntoJsError (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/error-BHRSI0R7.mjs:48:18)
+    at unwrapBindingResult (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/error-BHRSI0R7.mjs:18:128)
+    at #build (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/rolldown/dist/shared/rolldown-build-CtPvmZgJ.mjs:3276:34)
+    at async buildEnvironment (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33011:66)
+    at async Object.build (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33433:19)
+    at async Object.buildApp (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:33430:153)
+    at async CAC.<anonymous> (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/cli.js:776:3) {
+  errors: [Getter/Setter]
+}
+EXIT=1
+   (removed)
+
+== GREEN — the bank as it stands ==
+dist/assets/index-DA-Ufoe3uAsl.js                  223.23 kB │ gzip: 84.04 kB
+
+✓ built in 414ms
+EXIT=0

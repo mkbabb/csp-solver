@@ -345,7 +345,11 @@ const D = {
     crate: read("csp-solver/Cargo.toml")?.match(/^version\s*=\s*"(\d+)\.(\d+)\.(\d+)"/m) ?? null,
     pencil: JSON.parse(read("web/frontend/package.json") ?? "{}")?.dependencies?.["@mkbabb/pencil-boil"] ?? null,
     lint: JSON.parse(read("web/frontend/package.json") ?? "{}")?.scripts?.lint ?? null,
-    games: grep("web/frontend/src/games/registry.ts", /^\s*id:\s*"([a-z]+)"/).map((h) => h.m[0][1]),
+    // THE TABLE, wherever it lives: T5-W2 F1 moved the five card rows out of
+    // `registry.ts` (the 2-of-5 parallel map that dies with the file) into
+    // `cards.ts`, the estate's one registration list. The instrument follows the
+    // table — a derivation pointed at a retired file greens vacuously.
+    games: grep("web/frontend/src/games/cards.ts", /^\s*id:\s*"([a-z]+)"/).map((h) => h.m[0][1]),
     projects: grep("web/frontend/playwright.config.ts", /name:\s*"([a-z]+)"/).map((h) => h.m[0][1]),
     specs: walk("web/frontend/e2e", ".spec.ts").length,
     e2e: pwList(),

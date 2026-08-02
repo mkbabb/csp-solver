@@ -8,10 +8,11 @@
 // genuine divergence is the operator-cage furniture, threaded through solve/propagate exactly
 // as Futoshiki threads its inequalities and Killer its cages — but the cage RELATIONS are
 // enforced authoritatively by the wasm solve, so the technique grader (Latin-only, cage-blind,
-// empty inequality set) is the assist half only. The solve/generate path is the in-browser
-// wasm Worker (`useSolver`) — zero `/api/v1/*`.
+// empty inequality set) is the assist half only. The solve/generate path is the ONE in-browser
+// wasm Worker (`@games/shared/solver/client`) — zero `/api/v1/*`.
 import { ref } from "vue";
-import { useSolver } from "../solver/useSolver";
+import { createSolverClient } from "@games/shared/solver/client";
+import { kenkenClue } from "../clue";
 import {
   resolveInitialState,
   syncToUrl,
@@ -20,27 +21,38 @@ import {
   dropBoardParam,
   writeShareUrl,
 } from "./kenkenUrlState";
-import {
-  gradeFutoshiki,
-  hintFutoshiki,
-  fillForcedFutoshiki,
-} from "@games/futoshiki/technique/futoshikiTechnique";
+import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
+import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
 import type { KenKenCage } from "../types";
 
 /** Size-scaled node budget — a plain Latin board (4..6) solves in near-0 backtracks under the
- *  wasm AC-3+MRV config, so these caps are generous headroom for user-entered boards. */
+ *  wasm AC-3+MRV config, so these caps are generous headroom for user-entered boards. Exported
+ *  so `spec.solver.nodeBudget` NAMES this table rather than mirroring it; a KenKen board side
+ *  IS the raw selector value, so the spec's slot and the machine's read the same key. */
 const NODE_BUDGET_BY_SIZE: Record<number, number> = {
   4: 2_000_000,
   5: 4_000_000,
   6: 10_000_000,
 };
-function nodeBudgetForSize(n: number): number {
+export function nodeBudgetForSize(n: number): number {
   return NODE_BUDGET_BY_SIZE[n] ?? 4_000_000;
 }
 
+/** A KenKen board side length IS the raw selector value (no subgrid tier). ONE home:
+ *  `useGameState` sizes the board with it, the solver client counts cells with it. */
+const boardSizeOf = (n: number) => n;
+
+/** KenKen's slice of the ONE solver client — the wasm family, the size math, and the clue
+ *  codec `spec.clues` spreads. No worker of its own: there is one, and every game shares it. */
+const api = createSolverClient({
+  game: "kenken",
+  boardSide: boardSizeOf,
+  clue: kenkenClue,
+  templates: null,
+});
+
 export function useKenken() {
-  const api = useSolver();
   const initial = resolveInitialState();
 
   // The operator-cage furniture — the KenKen divergence, the mirror of Futoshiki's
@@ -56,21 +68,21 @@ export function useKenken() {
   } = useGameState({
     initial,
     initialSize: initial.boardSize,
-    // A KenKen board side length IS the raw selector value (no subgrid tier).
-    boardSizeOf: (n) => n,
+    boardSizeOf,
     nodeBudgetForSize,
     getRandomBoard: (n, difficulty) => api.getRandomBoard(n, difficulty),
     applyDealFurniture: (board) => {
-      cages.value = board.cages;
+      cages.value = board.clue;
     },
     resetFurniture: () => {
       cages.value = [];
     },
-    grade: (values, n) => gradeFutoshiki(values, n, []),
+    grade: (values, n) => gradeBoard(createBoardAdapter("latin", n), values),
     solve: (values, n, budget) => api.solveBoard(values, n, cages.value, budget),
     propagate: (values, n) => api.propagateBoard(values, n, cages.value),
-    fillForced: (values, n) => fillForcedFutoshiki(values, n, []),
-    hint: (values, n, preferred) => hintFutoshiki(values, n, [], preferred),
+    fillForced: (values, n) => fillAllForced(createBoardAdapter("latin", n), values),
+    hint: (values, n, preferred) =>
+      findHint(createBoardAdapter("latin", n), values, preferred),
     snapshotExtra: () => ({
       cages: cages.value.map((c) => ({
         op: c.op,

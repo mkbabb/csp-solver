@@ -1,0 +1,36 @@
+T5-W2 F2-KENKEN — THE BEFORE STATE
+banked 2026-08-01 · base commit e63af853 (the F-lanes' base) + F1's working tree
+
+## kenken's tree at HEAD (e63af853)
+src/games/kenken/ControlPanel/constants.ts
+src/games/kenken/KenKenBoard.vue
+src/games/kenken/KenKenCage/KenKenCage.vue
+src/games/kenken/KenKenGame.vue
+src/games/kenken/KenKenPoster.vue
+src/games/kenken/composables/kenkenUrlState.ts
+src/games/kenken/composables/useKenken.ts
+src/games/kenken/game.test.ts
+src/games/kenken/game.ts
+src/games/kenken/solver/kenkenWire.test.ts
+src/games/kenken/solver/kenkenWire.ts
+src/games/kenken/solver/protocol.ts
+src/games/kenken/solver/solver.worker.ts
+src/games/kenken/solver/useSolver.ts
+src/games/kenken/types.ts
+
+per-game file count, probe 2.1e form (no *.test.ts, no README.md): 13
+non-test raw LOC over src/games/kenken: 1324
+
+## the four files this lane kills, as F1 left them (wc -l, the state F2 inherited)
+  144  src/games/kenken/KenKenGame.vue      — the Game.vue TWIN (ThermoGame's wiring)
+  232  src/games/kenken/KenKenBoard.vue     — the Board twin (FutoshikiBoard's grammar)
+   56  src/games/kenken/game.ts             — the GameDefinition declaration
+  103  src/games/kenken/game.test.ts        — its contract test
+  535  TOTAL
+
+## the mount, before
+cards.ts kenken row: scene: () => import("@games/kenken/KenKenGame.vue").then((m) => m.default)
+
+## gates, before (this tree, shared with three sibling F2 lanes mid-flight)
+unit: 341 passed / 31 files (measured after the lane's own landing — see 30-after.txt;
+      a pre-landing figure is not attributable on a shared worktree with three live lanes)

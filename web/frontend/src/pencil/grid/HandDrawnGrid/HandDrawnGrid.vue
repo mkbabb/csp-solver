@@ -8,8 +8,7 @@ import { useBeatFrame } from "@pencil/composables/boilBeat";
 import {
   readFilterDefs,
   resolveCssValue,
-  bitmapsToUrls,
-  revokeUrls,
+  retainedPoseUrls,
 } from "@pencil/composables/rasterPose";
 import { useTheme } from "@/composables/useTheme";
 import { usePathAnimation } from "./usePathAnimation";
@@ -197,45 +196,22 @@ const gridRaster = useRasterStack(() => ({
   ),
 }));
 
-// ImageBitmap → object URL once per bake; the urls back static <image> siblings (opacity
-// flips only — no per-beat drawImage). `bitmaps` goes null while a (re-)bake is in flight,
-// but the urls are RETAINED across that null (the atomic-swap discipline, T4-WM rank 3): the
-// old theme's <image> stack keeps rendering until the new bitmaps resolve and convert, then
-// one assignment swaps — no mid-gesture drop to the live-filter fallback (the toggle Bloom
-// masks the moment). A monotonic token drops a conversion superseded by a newer bake.
-const bitmapUrls = ref<string[]>([]);
-let urlToken = 0;
-watch(
-  () => gridRaster.bitmaps.value,
-  async (bmps) => {
-    if (!bmps) return; // (re-)bake in flight — hold the live urls (atomic swap)
-    const token = ++urlToken;
-    const next = await bitmapsToUrls(bmps); // async encode + close the redundant bitmaps
-    if (token !== urlToken) {
-      revokeUrls(next); // a newer bake (or a structural reset) superseded this — drop it
-      return;
-    }
-    const prev = bitmapUrls.value;
-    bitmapUrls.value = next; // the one atomic swap
-    revokeUrls(prev); // free the previous decodes
-  },
-  { immediate: true },
+// The baked poses ARE object URLs (pencil-boil 0.11) backing static <image> siblings —
+// opacity flips only, no per-beat drawImage, and no bitmap re-draw/encode/close between the
+// capture and the render. `urls` goes null while a (re-)bake is in flight and the set is
+// RETAINED across that null (the atomic-swap discipline, T4-WM rank 3): the old theme's
+// <image> stack keeps rendering until the new poses land, then one assignment swaps — no
+// mid-gesture drop to the live-filter fallback (the toggle Bloom masks the moment).
+//
+// The reset key is the STRUCTURAL escape: a board/subgrid change is not a re-tint, so the
+// retained poses carry the wrong geometry. Dropping them takes the FROZEN-pose path —
+// showBaked → false, and the live-filter fallback pinned to pose 0 holds the new geometry
+// until the re-bake lands.
+const bitmapUrls = retainedPoseUrls(
+  gridRaster,
+  () => `${props.boardSize}-${props.subgridSize}`,
 );
 const showBaked = computed(() => bitmapUrls.value.length === BOIL_CONFIG.frameCount);
-
-// STRUCTURAL change (board / subgrid size) is not a color re-tint — the old bitmaps carry the
-// wrong geometry, so it takes the FROZEN-pose path, not the atomic swap: drop the baked urls
-// (showBaked → false) so the live-filter fallback, pinned to pose 0, holds the new geometry
-// until the re-bake lands. Bumping the token voids any in-flight old-geometry conversion.
-watch(
-  () => `${props.boardSize}-${props.subgridSize}`,
-  () => {
-    urlToken++;
-    const prev = bitmapUrls.value;
-    bitmapUrls.value = [];
-    revokeUrls(prev);
-  },
-);
 
 const showTransitionLayer = computed(() => props.animState !== "drawn");
 const showSteadyLayers = computed(() => props.animState === "drawn");
@@ -276,8 +252,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   cleanup();
-  urlToken++; // void any in-flight conversion
-  revokeUrls(bitmapUrls.value); // release the decode-backing object URLs
 });
 </script>
 

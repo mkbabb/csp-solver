@@ -3,6 +3,7 @@ import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import pluginVue from 'eslint-plugin-vue'
 import globals from 'globals'
+import { crossGameRules, sharedMayNotImportGames } from './eslint.boundary.config.js'
 
 /**
  * Boundary rules (the "mechanical" enforcement the colocation edict asks for). Exactly the
@@ -52,94 +53,27 @@ const pencilMayNotImportGames = {
   },
 }
 
-// games/sudoku and games/futoshiki never import each other — two independently-evolving
-// products sharing only pencil.
-const sudokuMayNotImportFutoshiki = {
-  files: ['src/games/sudoku/**/*.{ts,vue}'],
+// THE CROSS-GAME MATRIX + THE SHARED FLOOR, GENERATED — imported from the same module
+// `npm run lint:boundary` runs (`eslint.boundary.config.js`), never re-spelled here. The law
+// was hand-enumerated until T5-W2 2.5 and enforced 2 of its 20 ordered pairs: thermo, killer
+// and kenken carried no cross-game restriction at all. W1 generated the whole matrix but held
+// it OUT of this config because it was born RED at 23 live violations; 2.5 broke the last of
+// them, so the ruling lands here with its enforcing config (gates.W1.boundary.greensAt = W2.5).
+//
+// The pencil depth pattern is APPENDED into each generated block's own `patterns` array rather
+// than added as a second same-scope block: flat config overrides by rule name within a matching
+// scope, so a second block would silently clobber the boundary rule it means to sit beside
+// (the P2-T5 append discipline this file's header records).
+const withDepthRule = (block) => ({
+  files: block.files,
   rules: {
     'no-restricted-imports': [
       'error',
-      {
-        patterns: [
-          {
-            group: [
-              '@games/futoshiki',
-              '@games/futoshiki/*',
-              '@games/futoshiki/**',
-              '**/games/futoshiki/*',
-              '**/games/futoshiki/**',
-            ],
-            message:
-              'src/games/sudoku/** must not import src/games/futoshiki/** — games never import each other.',
-          },
-          pencilDepthPattern,
-        ],
-      },
+      { patterns: [...block.rules['no-restricted-imports'][1].patterns, pencilDepthPattern] },
     ],
   },
-}
-const futoshikiMayNotImportSudoku = {
-  files: ['src/games/futoshiki/**/*.{ts,vue}'],
-  rules: {
-    'no-restricted-imports': [
-      'error',
-      {
-        patterns: [
-          {
-            group: [
-              '@games/sudoku',
-              '@games/sudoku/*',
-              '@games/sudoku/**',
-              '**/games/sudoku/*',
-              '**/games/sudoku/**',
-            ],
-            message:
-              'src/games/futoshiki/** must not import src/games/sudoku/** — games never import each other.',
-          },
-          pencilDepthPattern,
-        ],
-      },
-    ],
-  },
-}
-
-// src/games/shared/** is the game-agnostic shared floor — logic consumed by BOTH games
-// (undo/marks/peek machines, shared types/constants). It must never reach back into a
-// concrete game (@games/sudoku, @games/futoshiki): that would couple the two games
-// through the shared layer, defeating the sudoku↮futoshiki boundary. A tripwire —
-// nothing violates it today (useAnswerKeyPeek takes a structural `target`) — kept as a
-// distinct `files` scope so it appends cleanly without clobbering the game rules'
-// same-named `no-restricted-imports` (flat config overrides by rule name within a
-// matching config; P2-T5 append discipline).
-const sharedMayNotImportGames = {
-  files: ['src/games/shared/**/*.{ts,vue}'],
-  rules: {
-    'no-restricted-imports': [
-      'error',
-      {
-        patterns: [
-          {
-            group: [
-              '@games/sudoku',
-              '@games/sudoku/*',
-              '@games/sudoku/**',
-              '@games/futoshiki',
-              '@games/futoshiki/*',
-              '@games/futoshiki/**',
-              '**/games/sudoku/*',
-              '**/games/sudoku/**',
-              '**/games/futoshiki/*',
-              '**/games/futoshiki/**',
-            ],
-            message:
-              'src/games/shared/** must not import a concrete game (@games/{sudoku,futoshiki}) — the shared floor stays game-agnostic.',
-          },
-          pencilDepthPattern,
-        ],
-      },
-    ],
-  },
-}
+})
+const gameBoundaryRules = [...crossGameRules, sharedMayNotImportGames].map(withDepthRule)
 
 // The app shell (App.vue, main.ts) lives outside src/games/** but is held to the same pencil
 // depth rule — it is a top-level consumer of the pencil chrome barrel. No cross-game/shared
@@ -194,8 +128,6 @@ export default tseslint.config(
     },
   },
   pencilMayNotImportGames,
-  sudokuMayNotImportFutoshiki,
-  futoshikiMayNotImportSudoku,
-  sharedMayNotImportGames,
+  ...gameBoundaryRules,
   appShellDepthRule,
 )

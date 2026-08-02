@@ -1,0 +1,59 @@
+# T5-W2 VERIFY — THE FENCES (charter §4, binding)
+# Enforcement clause: git diff --stat vs the wave base must read 0 changed lines on the
+# three fenced files, EXCEPT import re-homing (which must be visible as import-line-only).
+
+════════════════════════════════════════════════════════════
+web/frontend/src/games/shared/GameControlPanel.vue
+  0 changed lines — HELD
+
+════════════════════════════════════════════════════════════
+web/frontend/src/games/shared/GameScene.vue
+  0 changed lines — HELD
+
+════════════════════════════════════════════════════════════
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+   web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue | 6 +-----
+   1 file changed, 1 insertion(+), 5 deletions(-)
+
+  diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+  index c56b5a9a..a3123abd 100644
+  --- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+  +++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+  @@ -176,11 +176,7 @@ const dealReveal = reactive<number[]>([]);
+   let dealHandles: SequenceHandle[] = [];
+   function stopDeal() {
+     for (const h of dealHandles) {
+  -    try {
+  -      h.stop();
+  -    } catch {
+  -      /* ignore */
+  -    }
+  +    h.stop();
+     }
+     dealHandles = [];
+   }
+
+════════════════════════════════════════════════════════════
+VERDICT
+
+GameControlPanel.vue   0 lines — HELD, not even an import.
+GameScene.vue          0 lines — HELD, not even an import.
+GameGallery.vue        6 lines (1 insertion, 5 deletions) — ONE HUNK, and it is neither a
+                       restyle nor a recompose nor a re-animation. It is the 2.4b
+                       `try { h.stop() } catch { /* ignore */ }` unwrap, on the exact site
+                       the charter's own §2 2.4b roster ENUMERATES as one of the eleven
+                       ("GameGallery.vue:181"), driven by the gates.json row
+                       failExplicit.catchIgnoreCount = 0.
+
+THE CHARTER CONTRADICTS ITSELF HERE, and the contradiction is the record: §4's enforcement
+clause says 0 changed lines except imports; §2's 2.4b row names a line inside a fenced file
+and gates its deletion at 0. Both cannot hold. What can be said without interpretation:
+
+  · the fence's stated PROHIBITION — "does not restyle, recompose, or re-animate" — is intact;
+  · no pixel moved: π is 4/4 x 3 runs on this tree, and GameGallery is on the deal path the
+    `logo-light` and gallery surfaces exercise;
+  · the alternative (leaving the site) reds gates.W2.failExplicit.catchIgnoreCount.
+
+F5 raised this to the lead in its own record (note 3). VERIFY confirms it, does not cure it,
+and does not decide it. LEAD'S ROW: ratify the 6 lines as charter-commanded, or amend §4's
+enforcement clause to except the 2.4b roster by name.

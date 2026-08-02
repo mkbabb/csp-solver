@@ -16,6 +16,21 @@ const copyFeedback = ref(false);
 const preset = computed(() => FILTER_PRESETS[selectedId.value]);
 const presetIds = computed(() => Object.keys(FILTER_PRESETS));
 
+/**
+ * The wobble-offset cycle, hand-typed into a text field. A half-finished array is the normal
+ * state of an input mid-edit, so a parse failure holds the last good value — but it SAYS so, on
+ * the dev channel this whole panel already lives on. The swallow it replaces was the estate's
+ * last statement-free catch (T5-W2 2.4b).
+ */
+function setOffsets(target: typeof preset.value, e: Event): void {
+  const raw = (e.target as HTMLInputElement).value;
+  try {
+    target.wobble!.offsets = JSON.parse(raw);
+  } catch (err) {
+    console.warn(`[FilterTuner] offsets: ${raw} is not valid JSON —`, err);
+  }
+}
+
 /** Which filters reference each preset (approximate mapping) */
 const usageMap: Record<string, string> = {
   "grain-static": "Grid lines, glyphs, icon buttons (static)",
@@ -225,15 +240,7 @@ const isModified = computed(() => {
             <input
               type="text"
               :value="JSON.stringify(preset.wobble.offsets)"
-              @change="
-                (e: Event) => {
-                  try {
-                    preset.wobble!.offsets = JSON.parse(
-                      (e.target as HTMLInputElement).value,
-                    );
-                  } catch {}
-                }
-              "
+              @change="(e: Event) => setOffsets(preset, e)"
               class="tuner-seeds-input"
             />
           </div>

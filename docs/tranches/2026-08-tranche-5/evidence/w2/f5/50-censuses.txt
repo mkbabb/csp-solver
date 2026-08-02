@@ -1,0 +1,103 @@
+T5-W2 F5 · THE CENSUSES — every figure re-derived on the exit tree, this run.
+date: 2026-08-02T01:29:53Z
+
+== 2.4b · catch{ignore} — the wave-open CORRECTED command, and its cross-check ==
+$ grep -rn -A1 '} catch {' src | grep -c '/\* ignore \*/'   → 0   (born RED at 11)
+$ grep -rn -B2 '\.stop();' src | grep -c 'try {'            → 0   (born RED at 11)
+$ grep -rn 'catch {}' src | wc -l                           → 0   (the one dev site, cured)
+
+   THE ENFORCING CONFIG, same commit: scripts/check-empty-catch.mjs + npm run lint:catch,
+   wired into ci.yml beside lint:ink. Self-tested — a census that cannot be shown failing
+   is not a gate.
+   catch clauses scanned across 160 src files
+   swallows (no statement, no explanation): 0
+   
+   negative control (inject one `catch { /* ignore */ }`): RED as required
+   
+   check-empty-catch: 0 swallowed catch bodies
+
+   WHY A SCRIPT AND NOT A STOCK LINT ROW (the lead's §6.3 scope question, answered with data):
+     • core `no-empty` does not see the eleven — a block holding a comment is not empty to it.
+     • the obvious selector, CatchClause[body.body.length=0], WAS TRIED and reds 11 honest
+       sites in this estate whose catch bodies hold a real sentence and have no statement to
+       write (localStorage best-effort × 8, useControlsDrawer, useStagingBridge, the logo's
+       filter-defs read). Roster kept in this lane's README.
+     • so the rule is: a catch body runs a statement OR says something. `/* ignore */` says
+       nothing; a bare `catch {}` says less. SCOPE = all of src, src/pencil/dev/** INCLUDED —
+       a dev-only swallow is still a swallow, and one file's carve-out is the config-flag
+       disease. The lead may narrow it; narrowing costs the FilterTuner row and nothing else.
+
+== 2.4c/W4b · the declared and installed pencil-boil ==
+   package.json:     "@mkbabb/pencil-boil": "^0.11.0",
+   lockfile    :         "@mkbabb/pencil-boil": "^0.11.0",
+   csp-solver-frontend@0.1.0 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+   └── @mkbabb/pencil-boil@0.11.0
+   
+   registry shasum, read back: fd40671555eab161786f0ff79aac65a374746d20
+   banked upstream shasum     : fd40671555eab161786f0ff79aac65a374746d20  (evidence/w2/pencil-boil-0.11/README.md)
+
+== the 0.11 raster adoption, at the source ==
+   ImageBitmap round-trip helpers (bitmapsToUrls · encodeBitmap · revokeUrls): 0 as CODE
+     (3 grep hits, all one prose line in rasterPose.ts naming what died — verified by eye)
+   `.bitmaps` reads on a raster handle                                      : 0
+   URL.revokeObjectURL in src (the library owns every handle's lifetime now) : 0
+   surfaces on the retention helper (retainedPoseUrls)                       : 3  of 3
+
+== 2.8 · the lib shadows ==
+   createGlyphDrawIn        0   → createStrokeDrawIn  5   SWAPPED (born RED at 5)
+   generateRectBoilFrames   5   → boilRectFrames      0   NOT A TWIN — see below (born RED at 5)
+   arcBoilPoints            2   → ellipsePoints       0   NOT A TWIN — see below (born RED at 2)
+
+   THE TWIN CLAIM, MEASURED RATHER THAN INHERITED. The wave-open row asserts three verbatim
+   twins and a 0 · 0 · 0 green. One is verbatim. Two are not, and the charter's own π schedule
+   already rules on that case: "the draw-in twin swap is verbatim, so a moved pixel means the
+   twin isn't one."
+
+     createGlyphDrawIn → createStrokeDrawIn — VERBATIM, swapped. Same dash setup, same
+       createSequenceSubscription, same easeOutCubic, same 350 ms default, same
+       settle-to-`none` on completion written against the same approximate-pathLength defect.
+       The only differences are the option names and the PRM return (null vs an inert handle),
+       and the inert handle reaches the identical end state at both call sites — checked line
+       by line, not inferred. glyphAnimations.ts's copy is deleted.
+
+     generateRectBoilFrames vs boilRectFrames — NOT A TWIN. The app function takes `radius`
+       and `grain` and the lib function takes neither. HandDrawnOutline.vue:115 passes
+       `props.radius` (live: the jittered quarter-arc corner joins) AND
+       FILTER_PRESETS['grain-outline'].grain (live: the grain bake, T3-W13 §1-P2). The perturb
+       strides also differ — the app steps seed by f*997, boilLineFrames by f*1013. Swapping
+       deletes the rounded corners and the baked grain and re-seeds every frame. That is a
+       pixel change on a load-bearing golden, i.e. a defect under §3.
+
+     arcBoilPoints vs ellipsePoints — NOT A TWIN, and not the same shape. arcBoilPoints is a
+       partial arc (a0→a1, the four corner joins) with a jitter amplitude FLOORED at 0.75 so
+       corners boil in-family with the sides at any radius (T3-W12 §3). ellipsePoints is a
+       closed full ring with a seeded past-2π overshoot and an unfloored amplitude. Different
+       geometry, different jitter law.
+
+   DISPOSITION: one swap landed, two refused with the measurement above. The 0 · 0 · 0 green
+   is not reachable without moving pixels, which §3 forbids. LEAD'S ROW: restamp 2.8 to the
+   measured shape, or hand the two rows to a lane licensed to move the grid frame's pixels.
+
+== 2.4d · the v0 ratchet ==
+   VERSION_BYTE_FLOOR declarations : 0  (born RED at 4 — 2 codecs × decl+use)
+   untagged-body encoders in e2e   : 0  (the two fixtures, now tagged; 1 survives as the NEGATIVE control, named encodeUntagged)
+     e2e/permalink.spec.ts:20:// open with `CODEC_VERSION` fails closed, and these encoders now produce what the app itself
+     e2e/permalink.spec.ts:22:const CODEC_VERSION = String.fromCharCode(1);
+     e2e/permalink.spec.ts:34:  return b64url(CODEC_VERSION + `${size}.${c}`);
+     e2e/permalink.spec.ts:45:  return b64url(CODEC_VERSION + `${size}.${c}.${iq}`);
+     e2e/permalink.spec.ts:49:function encodeUntagged(size: number, cells: Record<number, number>, total: number): string {
+     e2e/permalink.spec.ts:168:  const enc = encodeUntagged(3, { 0: 5 }, 81);
+     e2e/visual-golden.spec.ts:66:// `<CODEC_VERSION>${size}.${base36 cells}`. size=3 → 9×9 (81 cells). A fixed given set in the
+     e2e/visual-golden.spec.ts:82:const CODEC_VERSION = String.fromCharCode(1);
+     e2e/visual-golden.spec.ts:86:  return b64url(CODEC_VERSION + `${size}.${c}`);
+
+== W1.11 · the two Safari<14 shims — stayed dead ==
+   (empty above = still dead)
+     BITES  4 SHIMS DEAD — a sub-floor comment re-enters src
+     BITES  5 README CITES — the README floor sentence removed
+   
+   PASS — 0 violation(s), 0 blind check(s)
+
+== the quarantine ==
+   e2e/linux-webkit-bake-quarantine.ts : DELETED (was 174 lines)
+   quarantineLinuxWebkitBake call sites: 0  (born RED at 4: 2 imports + 2 calls)

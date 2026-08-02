@@ -1,0 +1,189 @@
+# T5-W2 VERIFY — the static gate battery
+# tree: working tree at e63af853 + F1..F5 uncommitted
+
+==================================================================
+== lint:knip
+$ npm run lint:knip --silent
+
+EXIT=0
+
+==================================================================
+== lint (prettier --check src/)
+$ npm run lint --silent
+Checking formatting...
+All matched files use Prettier code style!
+EXIT=0
+
+==================================================================
+== lint:eslint (main config, boundary folded)
+$ npm run lint:eslint --silent
+
+EXIT=0
+
+==================================================================
+== lint:boundary
+$ npm run lint:boundary --silent
+
+EXIT=0
+
+==================================================================
+== lint:ink
+$ npm run lint:ink --silent
+ink-pressure ladder — every rung clears its floor, strictly increasing, in all 3 scopes (light, dark, print), each resolved out of index.css:
+  --ink-press-rule    55%  3.53 light / 4.36 dark / 4.76 print  ≥3 (non-text)
+  --ink-press-quiet   68%  5.23 light / 6.06 dark / 7.86 print  ≥4.5 (text)
+  --color-red-ink          4.98 light / 6.32 dark  ≥4.5 (.icon-sublabel.is-armed)
+  washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+
+ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+  light  rule < muted-foreground < quiet
+  dark   rule < quiet < muted-foreground
+  the ramp and the register cross between themes. Booked in index.css §INK PRESSURE, not gated.
+EXIT=0
+
+==================================================================
+== lint:catch
+$ npm run lint:catch --silent
+catch clauses scanned across 160 src files
+swallows (no statement, no explanation): 0
+
+negative control (inject one `catch { /* ignore */ }`): RED as required
+
+check-empty-catch: 0 swallowed catch bodies
+EXIT=0
+
+==================================================================
+== test:golden:bytes
+$ npm run test:golden:bytes --silent
+[golden-bytes] 8 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total    99.0 KB  (goldens 99.0 KB)
+  estate band    110.0 KB  (headroom 11.0 KB = 11.1% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.5 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       6.5 KB  e2e/goldens/toggle-crest-dark-darwin.png  [220×220]
+  ok       6.8 KB  e2e/goldens/toggle-crest-dark-linux.png  [220×220]
+
+[golden-bytes] pairing + consumers (20 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:238
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:249
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:205
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:232
+
+[golden-bytes] tracked-ness: 8 tracked / 8 on disk
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] PASS — 8 goldens, 99.0 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+EXIT=0
+
+==================================================================
+== test:prod-shake
+$ npm run test:prod-shake --silent
+[prod-shake] 20 bundle chunk(s) under dist; asserting 3 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, schedulerDebugInfo
+[prod-shake] PASS — the dev tuner is fully tree-shaken from production.
+EXIT=0
+
+==================================================================
+== test:font-coverage
+$ npm run test:font-coverage --silent
+font coverage OK — 2 subset faces, each covered as authored AND as transformed:
+  Fraunces: 28 codepoints, 13788 B, 8 strings
+  Patrick Hand: 46 codepoints, 4312 B, 10 strings
+EXIT=0
+
+==================================================================
+== test:support-floor
+$ npm run test:support-floor --silent
+check-support-floor — T5-W1 row 1.11 (C5 + J3)
+
+  src files scanned: 160
+  declared floor:    chrome 111 · edge 111 · firefox 128 · safari 16.4 · ios_saf 16.4
+
+GREEN  1 FLOOR DECLARED
+GREEN  2 FLOOR SUFFICIENT
+GREEN  3 TARGET COHERENT
+GREEN  4 SHIMS DEAD
+GREEN  5 README CITES
+
+self-test — every check against a known-bad input:
+  BITES  1 FLOOR DECLARED — browserslist deleted
+  BITES  1 FLOOR DECLARED — an entry that is not a floor
+  BITES  2 FLOOR SUFFICIENT — safari floor dropped under the CSS target
+  BITES  3 TARGET COHERENT — build.target raised above the floor
+  BITES  4 SHIMS DEAD — an optional-call listener guard re-enters src
+  BITES  4 SHIMS DEAD — a sub-floor comment re-enters src
+  BITES  5 README CITES — the README floor sentence removed
+
+PASS — 0 violation(s), 0 blind check(s)
+EXIT=0
+
+==================================================================
+== test:e2e:projects
+$ npm run test:e2e:projects --silent
+PW PROJECT MATRIX — 3 configs, 9 projects, 4 declared single-engine holdouts (T5-W1 1.10 / CH-56)
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+
+SELF-TEST — each check against a known-bad matrix:
+  [1 DECLARED MATRIX] a third project appears (a firefox arm nobody ratified)
+      → RED (as it must)
+  [1 DECLARED MATRIX] the webkit project is quietly re-engined to chromium
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is dropped from every project (the orphan)
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is claimed by two configs at once
+      → RED (as it must)
+  [3 ENGINE COVERAGE] CH-56 regresses — mobile-affordances loses its webkit arm
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED] share-truth is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+
+OK — 20 specs, 270 resolved tests, every spec in both engines except the 4 recorded holdouts.
+EXIT=0
+
+==================================================================
+== test:e2e:retries
+$ npm run test:e2e:retries --silent
+SELF-TEST — every check re-run against a census built to violate it
+  canary 1 THE LAW      → RED (1)
+  canary 2 THE CENSUS   → RED (1)
+  canary 3 THE REVOKED  → RED (1)
+  canary 4 NO OPT-OUT   → RED (1)
+
+RETRIES CENSUS
+  playwright.config.ts::<top-level>                    retries=0  failOnFlakyTests=undefined
+  playwright.config.ts::chromium                       retries=0  failOnFlakyTests=undefined
+  playwright.config.ts::webkit                         retries=0  failOnFlakyTests=undefined
+  playwright-golden.config.ts::<top-level>             retries=0  failOnFlakyTests=undefined
+  playwright-throttle.config.ts::<top-level>           retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::throttled-void        retries=1  failOnFlakyTests=true
+  playwright-throttle.config.ts::filter-census-chromium retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::filter-census-webkit  retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::wordmark-webkit       retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::theme-bake-chromium   retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::theme-bake-webkit     retries=0  failOnFlakyTests=true
+
+  green 1 THE LAW      retries imply failOnFlakyTests
+  green 2 THE CENSUS   every retry is a named grant
+  green 3 THE REVOKED  wordmark-webkit stays at 0
+  green 4 NO OPT-OUT   failOnFlakyTests is never false
+
+check-pw-retries: all checks green
+EXIT=0
+
+==================================================================
+== vue-tsc -b
+$ npx vue-tsc -b
+
+EXIT=0
+

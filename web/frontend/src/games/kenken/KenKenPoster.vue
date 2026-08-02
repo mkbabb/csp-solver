@@ -4,11 +4,12 @@
  *
  * A canned 6×6 snapshot on `PosterBoard` with the BOXLESS Latin geometry (subgrid-size =
  * boardSize → no interior box lines), cages-only (KenKen prints no givens), the operator-cage
- * outlines + `"12×"`-style corner targets inked via the game's own `KenKenCage` furniture
+ * outlines + `"12×"`-style corner targets inked via the shared `CageOverlay` over the game's own clue seam
  * (static, PRM-safe, aria-hidden) in the overlay slot. A flank-card still — never the live board.
  */
 import PosterBoard from "@games/shared/PosterBoard.vue";
-import KenKenCage from "./KenKenCage/KenKenCage.vue";
+import CageOverlay from "@games/shared/CageOverlay.vue";
+import { cageFigures } from "./clue";
 import type { KenKenCage as KenKenCageClue } from "./types";
 
 const N = 6;
@@ -39,7 +40,12 @@ const CAGES: KenKenCageClue[] = [
 <template>
   <PosterBoard :board-size="N" :subgrid-size="N" :values="{}">
     <template #overlay>
-      <KenKenCage :cages="CAGES" :board-size="N" />
+      <CageOverlay
+        :cages="cageFigures(CAGES)"
+        :board-size="N"
+        family="kenken"
+        :font-size="0.24"
+      />
     </template>
   </PosterBoard>
 </template>

@@ -19,7 +19,7 @@ import {
 const V1 = String.fromCharCode(1);
 const encVer = (v: number, body: string) => toBase64Url(String.fromCharCode(v) + body);
 const encV1 = (body: string) => toBase64Url(V1 + body);
-const encV0 = (body: string) => toBase64Url(body); // legacy, no version byte — the graceful ratchet
+const encUntagged = (body: string) => toBase64Url(body); // no version byte at all
 
 /** Base-36 cell string of length size**4 from a sparse {index: value} map (0 elsewhere). */
 function cells(size: number, vals: Record<number, number> = {}): string {
@@ -73,21 +73,29 @@ describe("encode/decode round-trip (v1, the encodeBoard path)", () => {
   });
 });
 
-describe("codec version byte (T4-W3) — accept / unknown-reject", () => {
+describe("codec version byte (T4-W3, ratcheted shut T5-W2 2.4d) — tag or nothing", () => {
   it("accepts explicit v1", () => {
     go({ board: encVer(1, `2.${cells(2, { 0: 3 })}`) });
     expect(resolveInitialState().boardLink).toBe("ok");
   });
 
-  it("accepts a legacy v0 body (no version byte) — the graceful ratchet", () => {
-    go({ board: encV0(`3.${cells(3, { 0: 7 })}`) });
+  it("a round trip through the codec's own encoder still opens", () => {
+    go({ board: encodeBoard(3, { 0: 7 }, 3 ** 4) });
     const s = resolveInitialState();
     expect(s.boardLink).toBe("ok");
     expect(s.persisted?.values[0]).toBe(7);
   });
 
-  it("fails closed on a control-range version this build does not understand", () => {
-    for (const v of [2, 0x2f]) {
+  // THE RATCHET IS GONE. An untagged body — the pre-T4-W3 wire, and the only thing the
+  // "graceful ratchet" ever accepted — now fails closed like every other malformed link. The
+  // byte is mandatory, so there is exactly one accepted wire format.
+  it("fails closed on an untagged body (the dead v0 ratchet)", () => {
+    go({ board: encUntagged(`3.${cells(3, { 0: 7 })}`) });
+    expect(resolveInitialState().boardLink).toBe("invalid");
+  });
+
+  it("fails closed on any version this build does not understand", () => {
+    for (const v of [0, 2, 0x2f, 0x33]) {
       go({ board: encVer(v, `3.${cells(3)}`) });
       expect(resolveInitialState().boardLink).toBe("invalid");
     }

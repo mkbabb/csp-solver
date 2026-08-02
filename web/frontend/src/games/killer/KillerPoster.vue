@@ -3,11 +3,12 @@
  * KillerPoster — Killer-Sudoku's static carousel face (T4-W13, the a-cards.md pattern).
  *
  * A canned 9×9 snapshot on `PosterBoard` (3×3 bands) + dotted cage boundaries with corner sums,
- * inked via the game's own `KillerCage` furniture (static, PRM-safe, aria-hidden) in the overlay
+ * inked via the shared `CageOverlay` over the game's own clue seam (static, PRM-safe, aria-hidden) in the overlay
  * slot. A flank-card still — never the live board.
  */
 import PosterBoard from "@games/shared/PosterBoard.vue";
-import KillerCage from "./KillerCage/KillerCage.vue";
+import CageOverlay from "@games/shared/CageOverlay.vue";
+import { cageFigures } from "./clue";
 import type { KillerCage as KillerCageClue } from "./types";
 
 const N = 9;
@@ -32,7 +33,12 @@ const CAGES: KillerCageClue[] = [
 <template>
   <PosterBoard :board-size="N" :subgrid-size="3" :values="values">
     <template #overlay>
-      <KillerCage :cages="CAGES" :board-size="N" />
+      <CageOverlay
+        :cages="cageFigures(CAGES)"
+        :board-size="N"
+        family="killer"
+        :font-size="0.26"
+      />
     </template>
   </PosterBoard>
 </template>

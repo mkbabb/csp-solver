@@ -48,8 +48,9 @@
 #   12. FE unit estate     -> fe-unit    (T5-W1.1/1.14: vitest run + the >=300 executed
 #                                         count floor + the per-scope coverage floor,
 #                                         all off ONE instrumented vitest invocation)
-#   13. boundary law       -> boundary   (T5-W1.4: the generated 20/20 cross-game matrix.
-#                                         EXPECTED RED until W2.5 — read its banner)
+#   13. boundary law       -> boundary   (T5-W1.4: the generated 20/20 cross-game matrix,
+#                                         GREEN since T5-W2 2.5; carries the generator's
+#                                         vacuity canary, which `eslint .` cannot)
 #   14. perf subset        -> perf-subset(T5-W1.2: the P1 patch's gates.json idle
 #                                         thresholds, executed on the built dist)
 #   15. wasm resolution    -> wasm-publish-dryrun
@@ -685,6 +686,16 @@ jobs:
             - name: ink pressure (graphite ladder + ramp ownership, self-tested)
               working-directory: web/frontend
               run: npm run lint:ink
+            # T5-W2 row 2.4b — the swallow census. A catch body must run a statement or say
+            # something; `/* ignore */` says nothing. The eleven it was born RED at were all
+            # guards against a contract pencil-boil did not state until 0.11.0, where `stop()`
+            # cannot throw in any lifecycle phase. Neither stock instrument measures the ruling
+            # (core `no-empty` sees a comment and passes; the obvious selector reds eleven
+            # honest sites whose only content IS a sentence), so the ruling carries its own,
+            # self-tested like its siblings. Same species again — static, browser-free.
+            - name: swallow census (no statement-free catch bodies, self-tested)
+              working-directory: web/frontend
+              run: npm run lint:catch
             # T5-W1 row 1.11 (audit C5 + J3) support floor. Same species as the four
             # gates above it — static, zero-dependency, browser-free — and it needs
             # this job's `npm ci`: check 2 reads @tailwindcss/node's Lightning CSS
@@ -798,40 +809,37 @@ jobs:
     # ---------------------------------------------------------------- Lane 13
     # Cross-game boundary law — 20/20 ordered pairs, GENERATED (T5-W1 row 1.4).
     #
-    # ======================= EXPECTED RED UNTIL W2.5 =======================
-    # THIS JOB FAILS ON PURPOSE FROM THE MOMENT IT LANDS. It is red because the
-    # defect is live — 23 cross-game imports across thermo->sudoku (8),
-    # killer->sudoku (8) and kenken->futoshiki (7) — and it stays red until W2's
-    # estate moves break them. The green date is pinned, not aspirational:
+    # GREEN SINCE T5-W2 2.5. This job landed EXPECTED RED at W1 and stayed red on
+    # purpose: the defect was live at 23 cross-game imports (thermo->sudoku 8,
+    # killer->sudoku 8, kenken->futoshiki 7), and the green date was pinned rather
+    # than aspirational —
     #
     #     docs/tranches/2026-08-tranche-5/gates.json -> gates.W1.boundary.greensAt = "W2.5"
     #
-    # Do NOT neutralise it in the meantime. No `continue-on-error`, no `|| true`, no
-    # `--max-warnings`: a gate that cannot fail is not a gate, and masking this one
-    # hands back exactly the enforcement hole it exists to expose (gate-soundness V4).
-    # If the red becomes intolerable before W2.5, narrow its TRIGGER with an `if:`,
-    # never its exit code. The born-RED bank, all 23 violations enumerated with the
-    # generated matrix and both canaries: evidence/w1/boundary-RED.txt.
-    # =======================================================================
+    # — which W2 satisfied. F1 folded the two cells and the two cages into
+    # `games/shared` (23 -> 17); F2/F3 took the boards, the scenes and the five solver
+    # spines (17 -> 12); 2.5 broke the last twelve by moving what they reached for into
+    # the shared floor rather than duplicating it: `Difficulty` to one home
+    # (`games/shared/types`), the three duplicate selector bands to
+    # `games/shared/selectors`, and the two technique adapters to ONE
+    # `games/shared/techniqueAdapter` parameterised by `BoardGeometry`. The count is
+    # 0 errors, re-derived; no rule was narrowed and no violation was suppressed.
     #
-    # WHY ITS OWN JOB, not a step in `frontend`: folding a knowingly-red step into
-    # that lane would red vue-tsc, eslint, knip, prettier, font-coverage,
-    # ink-pressure and the support floor by association, make the wave unpushable,
-    # and send the first person who hit it reaching for `continue-on-error`. One
-    # job is red and its name says why.
+    # THE RULING NOW LANDS WITH ITS ENFORCING CONFIG. `eslint.config.js` imports the
+    # generated blocks from `eslint.boundary.config.js` — the same module this job
+    # runs — so the law gates every push through the `frontend` lane's `eslint .`
+    # step. There is one generator and one law; `lint:boundary` is a census entry
+    # point over it, not a second copy.
     #
-    # `eslint.config.js` hand-enumerates the matrix and therefore binds 2 of 20
-    # ordered pairs — the two families that predate the colocation edict. thermo,
-    # killer and kenken joined the estate at T4-W13 without joining the law.
-    # `eslint.boundary.config.js` derives the whole matrix from the game list on
-    # disk (a directory under src/games/ carrying `game.ts`), so a sixth family is
-    # bound the moment it lands, with no edit to any config.
-    #
-    # AT W2.5 this whole lane retires: the generated matrix folds into
-    # eslint.config.js, `lint:boundary` and this job are deleted, and `frontend`'s
-    # eslint step carries the law. Deleting it is part of W2.5's definition of done.
+    # WHY THIS LANE SURVIVES THE FOLD (W1 predicted it would retire): the canary
+    # below. A generated matrix that silently discovered zero games would lint
+    # vacuously green — the incumbent's exact defect one layer up — so the generator
+    # throws below two families, and the canary PROVES that on a throwaway tree
+    # before the real run is trusted. `eslint .` has nowhere to carry a negative
+    # control; deleting this job would delete the only thing standing between a
+    # generated law and a vacuous green. The banner comes off; the proof stays.
     boundary:
-        name: boundary law (cross-game, 20/20 — EXPECTED RED until W2.5)
+        name: boundary law (cross-game, 20/20 — generated, with its vacuity canary)
         runs-on: ubuntu-latest
         timeout-minutes: 10
         needs: [build-lean-wasm]
@@ -870,7 +878,7 @@ jobs:
                   CANARY=t5w1-boundary-canary
                   rm -rf "$CANARY"
                   mkdir -p "$CANARY/src/games/alpha"
-                  printf 'export const alphaGame = {}\n' > "$CANARY/src/games/alpha/game.ts"
+                  printf 'export const alphaSpec = {}\n' > "$CANARY/src/games/alpha/spec.ts"
                   cp eslint.boundary.config.js "$CANARY/eslint.boundary.config.js"
                   set +e
                   ( cd "$CANARY" && npx eslint --no-config-lookup --config eslint.boundary.config.js src/games ) > canary.log 2>&1
@@ -890,7 +898,8 @@ jobs:
                   fi
                   rm -f canary.log
                   echo "canary OK — the generator throws rather than green vacuously"
-            # THE GATE. Red until W2.5 breaks the 23 live cross-game imports.
+            # THE GATE. 0 errors since T5-W2 2.5 — green because nothing a game needs
+            # lives in a sibling any more, not because the law was loosened.
             - name: eslint (cross-game boundary law, generated matrix)
               working-directory: web/frontend
               run: npm run lint:boundary

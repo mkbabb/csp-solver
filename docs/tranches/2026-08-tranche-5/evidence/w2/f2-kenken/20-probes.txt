@@ -1,0 +1,160 @@
+T5-W2 F2-KENKEN — THE PROBES, RE-DERIVED AT BANKING (2026-08-01)
+Every command below is runnable from web/frontend and was run to produce the output under it.
+
+==================================================================================
+1 · THE EXIT PROBE — kenken's registry.ts consumption is GONE (not merely inert)
+==================================================================================
+
+$ grep -rn "@games/registry" src/games/kenken | wc -l
+0
+  -> 0. kenken imported the table at game.ts:15 — import { defineGame } from "@games/registry".
+     That file is gone, and its successor imports @games/shared/defineGame, which imports
+     nothing back. The TDZ edge (probe 2.1c) has no kenken end left to close on.
+
+$ grep -c "kenken" src/games/registry.ts src/games/registry.test.ts
+src/games/registry.ts:0
+src/games/registry.test.ts:0
+  -> 0 and 0. kenken was never a gameRegistry row (the fiction was 2-of-5: sudoku, futoshiki),
+     so nothing there goes inert on kenken's account — it is absent, both directions.
+
+$ sed -n '/^export const gameRegistry/,/} as const/p' src/games/registry.ts
+export const gameRegistry = {
+  futoshiki: futoshikiGame,
+} as const;
+  -> the last row standing is futoshiki's, and it dies with the file at F4. Pending F4,
+     registry.ts is inert w.r.t. kenken by absence, and kenken is free of it by deletion.
+
+==================================================================================
+2 · THE TWINS ARE GONE — no module reference survives
+==================================================================================
+
+$ grep -rn "KenKenGame|KenKenBoard|kenkenGame|kenken/game" src e2e ../../scripts
+src/games/kenken/spec.ts:6: * its solver client. `KenKenGame.vue` was ThermoGame's wiring twin and `KenKenBoard.vue`
+src/games/kenken/spec.ts:14: * `requestVoice` and `gradeHint` are both FALSE, which is what `KenKenBoard` printed: its grid
+src/games/kenken/spec.ts:45:    // No UI-13 whisper — `KenKenBoard` handed `GameBoard` no idle grade hint.
+src/games/kenken/spec.test.ts:10: *      Latin grammar's four fields carry what `KenKenBoard` used to print;
+src/games/kenken/spec.test.ts:48:    // `KenKenBoard`'s grid label named no difficulty word and its margin carried no request
+  -> 5 hits, ALL of them prose inside this lane's own new files (doc comments naming what the
+     spec replaced). Zero import sites, zero identifier uses. The disk agrees:
+
+$ ls src/games/kenken/
+ControlPanel
+KenKenPoster.vue
+clue.ts
+composables
+solver
+spec.test.ts
+spec.ts
+types.ts
+
+==================================================================================
+3 · THE MOUNT — the table's kenken row
+==================================================================================
+
+$ grep -n "kenkenCard|@games/kenken/spec" src/games/cards.ts
+186:const kenkenCard: GameCard = {
+200:  load: () => import("@games/kenken/spec").then((m) => m.kenkenSpec),
+212:  kenkenCard,
+
+$ grep -n -A8 'filter((c) => c.load)' src/games/cards.test.ts
+53:    expect(GAMES.filter((c) => c.load).map((c) => c.id)).toEqual([
+54-      "sudoku",
+55-      "futoshiki",
+56-      "thermo",
+57-      "killer",
+58-      "kenken",
+59-    ]);
+60-  });
+61-
+
+==================================================================================
+4 · BOUNDARY — net delta ZERO on kenken's account
+==================================================================================
+
+$ npm run lint:boundary        (kenken rows only)
+src/games/kenken/ControlPanel/constants.ts
+  1:1  error  '@games/futoshiki/types' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+src/games/kenken/composables/kenkenUrlState.ts
+  14:1  error  '@games/futoshiki/types' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+src/games/kenken/composables/useKenken.ts
+  23:1  error  '@games/futoshiki/technique/futoshikiTechnique' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+src/games/kenken/solver/useSolver.ts
+  14:1  error  '@games/futoshiki/types' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+src/games/kenken/spec.ts
+  32:1  error  '@games/futoshiki/types' import is restricted from being used by a pattern. src/games/kenken/** must not import src/games/futoshiki/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+  -> 5 kenken rows, every one an @games/futoshiki import: the Difficulty type x4 (constants,
+     kenkenUrlState, solver/useSolver, spec) and the Latin technique engine x1 (useKenken).
+     game.ts carried exactly one of these five (its own Difficulty import, game.ts:21); spec.ts
+     carries the same one. NET DELTA 0 — this lane neither added nor removed a boundary error.
+     All five are 2.5's rows: they turn green when Difficulty and the Latin technique engine
+     land in games/shared, which is not this lane's surface.
+
+==================================================================================
+5 · TYPE + LINT + DEAD CODE
+==================================================================================
+
+$ npx vue-tsc -b --force       (error census by file)
+  (no output — zero type errors tree-wide at banking)
+  -> ZERO, and zero in src/games/kenken/** and src/games/cards* specifically. An earlier run
+     during this lane's work showed 4 rows in the thermo lane's in-flight ThermoTube.vue and
+     3 in this lane's spec.test.ts; the latter were the erased-seam mount (Record<string,
+     unknown> against CageOverlay's concrete props) and were cured by mounting through
+     spec.clues.overlay + spec.clues.props — the pair BoardHost itself binds — rather than by
+     a cast. Both are gone on this tree.
+
+$ npx eslint src/games/kenken src/games/cards.ts src/games/cards.test.ts
+  -> clean (no output is the pass)
+
+$ npx prettier --check src/games/kenken src/games/cards.ts src/games/cards.test.ts
+Checking formatting...
+All matched files use Prettier code style!
+
+$ npx knip                     (kenken rows only)
+  -> no kenken rows. spec.ts is reached from cards.ts; nothing in the dir is orphaned.
+
+==================================================================================
+6 · THE V1-STUB TAIL — the charter's proof, re-derived on kenken's row
+==================================================================================
+
+The three stub codecs at HEAD (thermo / killer / kenken), tail = from the syncToUrl no-op down:
+
+$ awk '/v1: the selectors are not URL/{p=1} p' <each>UrlState.ts | wc -l
+      28 k.tail
+      28 ki.tail
+      28 t.tail
+      84 total
+
+$ diff kenken.tail killer.tail
+1,2c1,2
+< /** v1: the selectors are not URL-synced for KenKen (they persist to localStorage instead). */
+< export function syncToUrl(_boardSize: number, _difficulty: Difficulty): void {}
+---
+> /** v1: the selectors are not URL-synced for Killer (they persist to localStorage instead). */
+> export function syncToUrl(_size: number, _difficulty: Difficulty): void {}
+4c4
+< /** Persist the board + its cage furniture + the selectors under the KenKen key. */
+---
+> /** Persist the board + its cage furniture + the selectors under the Killer key. */
+6c6
+<   state: KenKenPersisted & { difficulty: Difficulty; boardSize: number },
+---
+>   state: KillerPersisted & { difficulty: Difficulty; size: number },
+15c15
+< /** Drop the persisted KenKen board. */
+---
+> /** Drop the persisted Killer board. */
+24c24
+< /** v1: no `?board=` permalink for KenKen yet, so there is no board param to drop. */
+---
+> /** v1: no `?board=` permalink for Killer yet, so there is no board param to drop. */
+27c27
+< /** v1: KenKen share permalink is not yet wired. */
+---
+> /** v1: Killer share permalink is not yet wired. */
+
+  -> 28 lines each. 21 of 28 are BYTE-IDENTICAL across the triple; the 7 that differ are 5
+     prose comments naming the game, the syncToUrl parameter name (_boardSize vs _size), and
+     the persisted-type name. Of the CODE lines alone: 21 of 23 identical, and the three
+     empty bodies (syncToUrl, dropBoardParam, writeShareUrl) are identical in all three.
+     That is the charter's "the SHA-identical stub tail is the proof it always could" — one
+     persistence serves all five. See README.md for why this lane could not spend it.

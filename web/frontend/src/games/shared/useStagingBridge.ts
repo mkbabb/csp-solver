@@ -23,11 +23,11 @@ import { ref, shallowRef, type ComputedRef, type Ref } from "vue";
  *      closes it, and the arm is cleared by ANY mount — a mis-routed arm cannot outlive one
  *      mount, so there is no TTL, no clock, and no silent expiry fallback.
  *
- * IMPORT DIRECTION, load-bearing: this module imports NOTHING from `@games/registry`. The
- * registry statically imports `SudokuGame.vue`, whose scene reaches `useGameState`, which
- * reaches here — a registry import would close that cycle and TDZ the app at boot (the §1 rule
- * of the blast-radius map). The five ledger sources are therefore PASSED IN by App, which
- * already imports both sides.
+ * IMPORT DIRECTION, load-bearing: this module imports NOTHING from `@games/cards`. The table
+ * statically imports the eager game's spec, whose model reaches `useGameState`, which reaches
+ * here — a table import would close that cycle and TDZ the app at boot (the §1 rule of the
+ * blast-radius map). The five ledger sources are therefore PASSED IN by App, which already
+ * imports both sides.
  */
 
 /** A staged pair: the game's OWN raw selector size (sudoku 3 = 9×9; kenken 4 = 4×4) + tier. */
@@ -59,7 +59,7 @@ export interface StagedLedgerEntry extends StagedPair {
   userMoves: boolean;
 }
 
-/** Where a game's board lives on disk — the registry's row, handed in (see IMPORT DIRECTION). */
+/** Where a game's board lives on disk — the card row's own key, handed in (see IMPORT DIRECTION). */
 export interface LedgerSource {
   id: string;
   /** The game's own `localStorage` key. */
@@ -188,7 +188,7 @@ export function publishStagedLedger(entry: StagedLedgerEntry): void {
  * COLD-START BACKFILL (T4-P1 F4, pass-3 blocker 3). The ledger is a cache of a truth that
  * already exists on disk — five persisted boards — and pass 2 shipped it EMPTY on first run.
  * The whole installed base therefore saw `start` on games it had boards for, and every card but
- * the mounted one showed a registry default dressed as saved settings. One sweep of the five
+ * the mounted one showed a table default dressed as saved settings. One sweep of the five
  * keys on the picker's first open repairs that without importing a single game.
  *
  * Only MISSING rows are filled: the mounted game publishes its own row live (an immediate
@@ -247,13 +247,4 @@ function readPersistedBoard(key: string): StagedLedgerEntry | null {
 /** The picker's read side — reactive, so a deal updates the chips without a remount. */
 export function useStagedLedger(): Readonly<Ref<Record<string, StagedLedgerEntry>>> {
   return ledger;
-}
-
-/** Test seam ONLY — drops every ref to its boot state so units don't leak into each other.
- *  The app never calls it: a module singleton with a public reset is a second lifecycle. */
-export function __resetStagingBridge(): void {
-  mountedId.value = null;
-  source.value = null;
-  handoff.value = null;
-  ledger.value = readLedger();
 }

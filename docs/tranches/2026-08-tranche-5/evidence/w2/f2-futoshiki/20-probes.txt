@@ -1,0 +1,74 @@
+# T5-W2 F2 (futoshiki) — THE PROBES, re-derived on this tree
+
+date: 2026-08-01T23:49:14Z
+
+NOTE ON THE TREE: the four F2 lanes ran CONCURRENTLY on one working tree. Every
+whole-tree figure below is therefore a joint number; the futoshiki-only figures are
+taken with a path filter and are this lane's alone.
+
+## 1 · THE TWIN KILL LIST (wc -l before -> after)
+
+src/games/futoshiki/FutoshikiGame.vue                   178 -> GONE  
+src/games/futoshiki/FutoshikiBoard/FutoshikiBoard.vue    318 -> GONE  
+  (dir FutoshikiBoard/ itself)                            - -> GONE  
+                                              raw killed: 496
+
+MOVED, not killed (the glyph a caret IS, unchanged):
+FutoshikiBoard/FutoshikiCaret/FutoshikiCaret.vue         75 -> futoshiki/FutoshikiCaret.vue (75)
+
+NOT APPLICABLE — the V1-STUB codec row: futoshiki carries one of the two FULL codecs
+(sudoku + futoshiki). The SHA-identical stub tail belongs to thermo/killer/kenken.
+futoshiki/composables/useUrlState.ts stays, exactly as F1 left sudoku's.
+
+## 2 · WHAT SHRANK BY FOLDING, not by deleting
+src/games/futoshiki/FutoshikiPoster.vue                 136 -> 95    
+    the caret geometry was a hand-copy of the board's; both read clue.ts now
+src/games/futoshiki/solver/useSolver.ts                 193 -> 182   
+    toFlatInequalities/toPairs were the seam's encode/decode under other names
+
+## 3 · WHAT LANDED
+src/games/futoshiki/spec.ts                              74
+src/games/futoshiki/clue.ts                             158
+src/games/futoshiki/CaretOverlay.vue                     67
+src/games/futoshiki/clue.test.ts                        152
+
+## 4 · games/futoshiki NON-TEST RAW LOC
+  before: 1868   after: 1620   delta: -248
+  (2588 and 2492 whole-dir totals, less the test files and the README)
+
+## 5 · PER-GAME FILE COUNT (2.1e instrument)
+  before: 13   after: 14
+  UP by one, and honestly so: two twins died, three modules landed (spec, clue, overlay).
+  The 22-across-five target is reached by 2.2/F3 and F4, not here: futoshiki's solver dir
+  (protocol.ts + solver.worker.ts + useSolver.ts) is -3 at 2.2, useUrlState.ts is -1 when
+  the one persistence lands, and game.ts is -1 at F4 => 9.
+
+## 6 · REGISTRY CONSUMPTION — gone-or-inert (the exit's grep)
+
+$ grep -rn '@games/registry' src/games/futoshiki
+src/games/futoshiki/game.ts:2: * The Futoshiki declaration through the T4-W11 contract (`@games/registry`) — SUPERSEDED at
+src/games/futoshiki/game.ts:10:import { defineGame } from "@games/registry";
+
+  ONE import, in game.ts, the corpse. It is INERT by the exit's own terms: its single
+  consumer is registry.ts's `gameRegistry`, and gameRegistry has ZERO production readers.
+
+$ grep -rn 'gameRegistry' src | grep -v '\.test\.ts:'
+src/games/cards.ts:4: * The estate carried two registration tables: `gameRegistry` (a 2-of-5 parallel map with zero
+src/games/registry.ts:107:export const gameRegistry = {
+src/games/futoshiki/game.ts:7: * row of `gameRegistry`, the 2-of-5 parallel map with ZERO production consumers. Nothing
+
+  Two of the three hits are PROSE. The declaration at registry.ts:107 is the third.
+  registry.ts and game.ts die together at F4 — registry.ts is fenced from this lane.
+
+$ grep -rn 'futoshikiGame' src
+src/games/registry.ts:14:import { futoshikiGame } from "@games/futoshiki/game";
+src/games/registry.ts:108:  futoshiki: futoshikiGame,
+src/games/shared/GameControlPanel.test.ts:23:// sudoku's inline list and futoshiki's `futoshikiGame.options(futoshiki)` route are out of its
+src/games/futoshiki/game.ts:22:export const futoshikiGame = defineGame<
+
+## 7 · NO DANGLING REFERENCE TO A KILLED FILE
+$ grep -rn 'FutoshikiGame\|FutoshikiBoard/' src e2e
+src/games/shared/GameScene.vue:4: * FutoshikiGame) shared the same board+controls layout, the drawer registration, and the
+src/games/shared/useAnswerKeyPeek.ts:5: * (SudokuGame + FutoshikiGame). The laminate is read-only: the peek never touches `values`.
+src/games/shared/scene.css:2: * Shared game-scene layout — the board+controls row both scenes (SudokuGame, FutoshikiGame)
+src/games/sudoku/composables/useUrlState.ts:285:// otherwise nuke Futoshiki's shared board before FutoshikiGame even mounts.

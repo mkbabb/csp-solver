@@ -26,7 +26,6 @@ const props = defineProps<{
   active: boolean;
   solution: Record<string, number>;
   boardSize: number;
-  subgridSize: number;
   /** pristine given positions — these already sit on the page, no key needed
    *  UNLESS the laminate is opaque (PRT), when the whole key must be printed. */
   originalGivenCells: Set<string>;

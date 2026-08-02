@@ -77,9 +77,6 @@ const props = defineProps<{
   /** Engine-domains pencil marks (peek glimpse): per-position surviving candidates from the
    *  solver's own propagation. Opt-in (held only), released row-by-row on idle at ≥10-wide. */
   pencilMarks?: Record<string, number[]>;
-  /** The player's own corner/center pencil marks (T4-W8 ROW 1), forwarded per-cell. */
-  cornerMarks?: Record<string, number[]>;
-  centerMarks?: Record<string, number[]>;
   /** Stats from the last completed solve — the margin tally (MarginNote meta). */
   solveStats?: SolveStats | null;
   /** Optional typed error code (SolverErrorCode) for the paper-note copy. Absent → the

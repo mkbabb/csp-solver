@@ -127,11 +127,7 @@ let draws: SequenceHandle[] = [];
 
 function stopDraws() {
   for (const d of draws) {
-    try {
-      d.stop();
-    } catch {
-      /* ignore */
-    }
+    d.stop();
   }
   draws = [];
 }

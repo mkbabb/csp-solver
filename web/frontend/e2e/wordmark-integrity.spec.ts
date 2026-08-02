@@ -1,6 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
-import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
 /**
  * P1 G3.4 — WORDMARK INTEGRITY, in WebKit, against the BUILT dist.
@@ -50,14 +49,17 @@ import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
  *     rather than a ghost, and the argument for revoking it is unchanged — a silence would
  *     have hidden this for a second tranche.
  *
- *     Those three rows are parked under `quarantineLinuxWebkitBake`, which is 1.6's own
- *     re-entry criterion taken literally ("an explicit quarantine against a named run id,
- *     never a silent skip") and the dead yield's opposite in every way that mattered: it
- *     names the rows and the runs, prints itself into the runner log, annotates the report,
- *     keeps the evidence attach firing, leaves `sudoku`, `thermo`, darwin and chromium fully
- *     live as spread detectors, and THROWS itself out the moment `web/frontend/package.json`
- *     declares `@mkbabb/pencil-boil >=0.11.0` — T5-W4b's `rasterizePoseToBlob()` cure. Full
- *     record: `docs/tranches/2026-08-tranche-5/evidence/w1/linux-webkit-bake-quarantine.md`.
+ *     T5-W2 2.4 — THE QUARANTINE IS GONE, AND THE ROWS SPEAK AGAIN. 1.6's park was written
+ *     with its own removal wired in: it read `web/frontend/package.json` at spec load and
+ *     THREW once the declared `@mkbabb/pencil-boil` range reached `>=0.11.0`, the version
+ *     carrying `rasterizePoseToBlob()`. This wave declares `^0.11.0` and adopts it — the raster
+ *     path hands back the capture canvas's own blob instead of round-tripping an `ImageBitmap`
+ *     copy through a second surface and a re-encode, which deletes the stage the blank lived
+ *     in. So the guard, its helper file and its call site are deleted whole rather than
+ *     re-pinned, and every row is live on both platforms in both engines again. The runner is
+ *     the judge: if ubuntu·WebKit still blanks, it reds here, at `retries: 0`, saying so.
+ *     Record: `docs/tranches/2026-08-tranche-5/evidence/w1/linux-webkit-bake-quarantine.md`
+ *     (the park) and `evidence/w2/f5/` (its removal).
  *
  *  2. NO FALLBACK GLYPHS. Every character of every rendered label must actually come from
  *     Fraunces. Measured by the sentinel-fallback method (lane D's, kept because the obvious
@@ -210,12 +212,6 @@ test.describe("G3.4 · wordmark integrity (WebKit, built dist)", () => {
           "svg.handwritten-logo image.logo-pose-bmp",
           game,
         );
-
-      // THE EXPLICIT QUARANTINE, and the only thing that sits between the read and the
-      // assert — three named rows, on linux + webkit, until W4b (see the header, §T5-W1 1.6
-      // QUARANTINED). It runs AFTER the read and after the evidence attach on purpose: the
-      // parked arm still bakes, still reads, and still ships the pose bitmap it read.
-      quarantineLinuxWebkitBake("wordmark-integrity", game, testInfo);
 
       // THE HOISTED VERDICT. One assertion, both terms, ahead of every branch — nothing
       // between the read and the assert can abort the row, on any platform.

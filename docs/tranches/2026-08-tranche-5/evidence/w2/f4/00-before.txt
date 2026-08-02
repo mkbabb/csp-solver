@@ -1,0 +1,68 @@
+T5-W2 F4 — THE BEFORE BANK (born-RED probes, re-derived on the inherited tree)
+base: e63af853 + the F1/F2/F3 working tree · measured before a line of F4
+
+== 2.1a  registry fiction ==
+  registry.ts                     114 lines, on disk
+  registry.test.ts                 95 lines, on disk
+  gameRegistry declarations         1  (registry.ts:114, `{} as const`, 0 rows, 0 consumers)
+  GameDefinition                    1  exported interface, 0 implementors
+  defineGame, two functions named   2  (shared/defineGame.ts + registry.ts — F1's declared interim)
+  CardMount `scene` arm             1  union arm, 0 rows using it — F1's declared interim
+
+== 2.3a  theme tokens (the instrument lands here, born RED) ==
+  @theme declared                  68
+  unreferenced, corpus arm         17
+  unreferenced, transitive arm     17   <- both arms agree; equals the wave-open's own
+                                        independently-derived 17 (audit 15 + --color-muted + --radius)
+  negative control                 RED as required (re-add --color-input)
+
+== 2.3b  dead props ==
+  AnswerKeyLaminate.subgridSize     1  declared REQUIRED, 0 reads, 1 bind (GameShell:171)
+  GameBoard.cornerMarks/centerMarks 2  declared, bound at BoardHost:165-166, 0 reads
+
+== 2.3c  test-only seam in production ==
+  __resetStagingBridge              1  shipped export (useStagingBridge.ts:254), 4 callers, all the test
+
+== 2.3d  PENCIL / MASCOT dead keys ==
+  PENCIL.fruitOutline               2  LIVE (CrayonHeart)
+  PENCIL.gridFrame                  0
+  PENCIL.gridSubgrid                0
+  PENCIL.gridCell                   0
+  PENCIL.logoText                   0
+  PENCIL.vine                       0   <- 5 of 6 keys dead
+  YOSHI_COLORS.heart                LIVE (6 sub-keys)   ·  .leaf.fill LIVE  ·  .outlineBlack LIVE  ·  .celestial LIVE
+  YOSHI_COLORS.apple/banana/grapes/flower/vine + leaf.vein   0 reads each
+  YOSHI_COLORS symbol refs         11  (CH-31, chronic ×3, never renamed)
+
+== 2.5  boundary ==
+  npm run lint:boundary            12 errors  (23 at W1's bank; F1 took 6, F2/F3 took 5)
+     kenken/ControlPanel/constants.ts  -> @games/futoshiki/types
+     kenken/composables/kenkenUrlState -> @games/futoshiki/types
+     kenken/composables/useKenken      -> @games/futoshiki/technique/futoshikiTechnique
+     kenken/spec.ts                    -> @games/futoshiki/types
+     killer/composables/killerUrlState -> @games/sudoku/types
+     killer/composables/useKiller      -> @games/sudoku/technique/sudokuTechnique
+     killer/spec.ts                    -> @games/sudoku/ControlPanel/constants, @games/sudoku/types
+     thermo/composables/thermoUrlState -> @games/sudoku/types
+     thermo/composables/useThermo      -> @games/sudoku/technique/sudokuTechnique
+     thermo/spec.ts                    -> @games/sudoku/ControlPanel/constants, @games/sudoku/types
+
+== knip ==
+  4 rows — SolveState/SolveStats re-export shells, ×2 games (2.3's kill list)
+
+== 2.6  CH-19 ==
+  src/assets/index.css            842 lines, monolithic, no partials dir
+  emitted CSS bundle sha256       bbfd1940959010eae1c3a52f068fda5640db79f46ad666895a69200095046738
+  emitted bundle bytes            75,960
+
+== π, entry, against the pre-kill dist ==
+  run 1  3/4 — logo-light red
+  run 2  3/4 — toggle-crest-dark red, 1028 <-> 1194 px between consecutive captures (ratio 0.03)
+  run 3  4/4
+  run 4  4/4
+  run 5  4/4
+  READ: 4/4. The two reds are the two NON-CONVERGENT surfaces the charter names
+  (logo-light WATCH ROW, toggle-crest-dark NO-CLAIM), each passing on rerun against the
+  byte-identical dist — visual-golden.spec.ts:206-215's own documented behaviour, and
+  F3's banked entry read. cell-light and grid-corner-light — the two LOAD-BEARING
+  surfaces — passed 5/5. No golden was re-baselined; e2e/goldens/ has no diff.

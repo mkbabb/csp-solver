@@ -2,9 +2,12 @@
  * Glyph animation utilities — every one rides the unified boil scheduler (W8), zero
  * keyframes.js `RAFPlayback` loops.
  *
- * - Draw-in (stroke-dashoffset, one-shot) — a `sequence` subscriber. Was a keyframes.js
- *   `KeyframesAnimation`, i.e. one independent native rAF loop per drawing cell (up to
- *   boardSize² during a reveal). Now one shared chain (W8 4th workstream).
+ * The draw-in left this file at T5-W2 2.8: it was a verbatim shadow of pencil-boil's own
+ * `createStrokeDrawIn` — same dash setup, same `createSequenceSubscription`, same
+ * `easeOutCubic`, same 350 ms default, same settle-to-`none` on completion (the approximate
+ * `pathLength` defect both were written against). `HandwrittenGlyph.vue` calls the library's
+ * directly, passing the measured glyph length the lib's doc says to pass.
+ *
  * - Flourish (finite variant-morph, the celebration's beat-2 wave + beat-3 murmur cycle) —
  *   a `sequence` subscriber that traverses variants for a fixed cycle count, then settles on
  *   the base variant. Finite by construction, so the subscriber floor returns to ambient.
@@ -15,7 +18,6 @@
 import {
   createBoilTicker,
   createSequenceSubscription,
-  easeOutCubic,
   linear,
   usePrefersReducedMotion,
 } from "@mkbabb/pencil-boil";
@@ -29,52 +31,6 @@ const reducedMotion = usePrefersReducedMotion();
 export interface GlyphAnimHandle {
   play(): void;
   stop(): void;
-}
-
-/**
- * Draw-in for a glyph path (stroke-dashoffset from length → 0), one-shot on the shared chain.
- *
- * On completion it clears the dash pattern outright (`strokeDasharray: 'none'`). This is the
- * W8 fix for the still-live dasharray-reset defect: glyphPaths.ts lengths are *approximate*,
- * so leaving `strokeDasharray = length` at rest (keyframes.js's `fillMode: 'forwards'` end
- * state) left a permanent dash-gap on drawn glyphs — visible the instant a glyph freezes at
- * the end of the celebration (beat 3). Clearing the array makes the settled stroke solid
- * regardless of length accuracy.
- */
-export function createGlyphDrawIn(
-  pathEl: SVGPathElement,
-  pathLength: number,
-  options: {
-    duration?: number;
-    delay?: number;
-    onComplete?: () => void;
-  } = {},
-): GlyphAnimHandle | null {
-  if (reducedMotion.value) {
-    pathEl.style.strokeDasharray = "none";
-    pathEl.style.strokeDashoffset = "0";
-    options.onComplete?.();
-    return null;
-  }
-
-  pathEl.style.strokeDasharray = String(pathLength);
-  pathEl.style.strokeDashoffset = String(pathLength);
-
-  const seq = createSequenceSubscription({
-    durationMs: options.duration ?? 350,
-    delayMs: options.delay ?? 0,
-    easing: easeOutCubic,
-    onProgress: (eased) => {
-      pathEl.style.strokeDashoffset = String(pathLength * (1 - eased));
-    },
-    onComplete: () => {
-      pathEl.style.strokeDasharray = "none";
-      pathEl.style.strokeDashoffset = "0";
-      options.onComplete?.();
-    },
-  });
-
-  return { play: () => seq.start(), stop: () => seq.stop() };
 }
 
 /**

@@ -1,0 +1,135 @@
+# T5-W2 F2 (thermo) — AFTER, on this working tree
+date: 2026-08-01T23:48:35Z · tree: working, uncommitted (the lead commits)
+NOTE: three F2 lanes (futoshiki, thermo, killer/kenken) ran CONCURRENTLY on one working
+tree. Every whole-tree number below is therefore a SHARED reading, named as such; the
+thermo-scoped numbers are this lane's alone.
+
+## THE TWIN-FILE KILL LIST — wc -l before → after
+
+file                                             before    after
+src/games/thermo/ThermoGame.vue                     155     GONE
+src/games/thermo/ThermoBoard.vue                    255     GONE
+src/games/thermo/game.ts                             53     GONE
+src/games/thermo/game.test.ts                        47     GONE
+  (subtotal killed)                                 510        0
+
+src/games/thermo/spec.ts                              0       79
+src/games/thermo/spec.test.ts                         0      103
+
+MOVED (the parent dir died with the per-component convention):
+  src/games/thermo/ThermoTube/ThermoTube.vue -> src/games/thermo/ThermoTube.vue  (130 -> 148)
+
+## thermo dir — wc -l, every file, after
+      42 src/games/thermo/ThermoPoster.vue
+     148 src/games/thermo/ThermoTube.vue
+     110 src/games/thermo/composables/thermoUrlState.ts
+      84 src/games/thermo/composables/useThermo.ts
+      81 src/games/thermo/solver/protocol.ts
+     117 src/games/thermo/solver/solver.worker.ts
+      28 src/games/thermo/solver/thermoWire.test.ts
+      35 src/games/thermo/solver/thermoWire.ts
+     155 src/games/thermo/solver/useSolver.ts
+     103 src/games/thermo/spec.test.ts
+      79 src/games/thermo/spec.ts
+      15 src/games/thermo/types.ts
+     997 total
+
+## per-game file count (2.1e instrument, non-test, non-README)
+src/games/thermo/ThermoPoster.vue
+src/games/thermo/ThermoTube.vue
+src/games/thermo/composables/thermoUrlState.ts
+src/games/thermo/composables/useThermo.ts
+src/games/thermo/solver/protocol.ts
+src/games/thermo/solver/solver.worker.ts
+src/games/thermo/solver/thermoWire.ts
+src/games/thermo/solver/useSolver.ts
+src/games/thermo/spec.ts
+src/games/thermo/types.ts
+count: 12 -> 10
+
+## non-test LOC over the thermo dir (censusDelta instrument, this lane's slice)
+before: 1224   (1299 total minus game.test.ts 47 and thermoWire.test.ts 28)
+after:  866
+
+## GREP PROOF — registry.ts consumption, gone
+$ grep -rn '@games/registry' src/games/thermo
+src/games/thermo/spec.ts:18: * imports nothing back. `thermo/game.ts` reached into `@games/registry`, which reached back
+
+$ grep -rn 'defineGame' src/games/thermo   # the ONE registration point, and it is the shared contract
+src/games/thermo/types.ts:8: * clue that made Thermo the W11 `defineGame` contract proof: a novel clue type plugged in
+src/games/thermo/spec.test.ts:5: * edits. That claim is now structural: `defineGame<ReturnType<typeof useThermo>, ThermoLine[]>`
+src/games/thermo/spec.ts:17: * The import edge that mattered: this module imports `defineGame` from `games/shared`, which
+src/games/thermo/spec.ts:21:import { defineGame } from "@games/shared/defineGame";
+src/games/thermo/spec.ts:32:export const thermoSpec = defineGame<ReturnType<typeof useThermo>, ThermoLine[]>({
+
+$ grep -rn 'thermo' src/games/registry.ts   # registry.ts's own file: INERT for thermo pending F4
+src/games/registry.ts:72: * (Futoshiki `Inequality[]`, Sudoku `void`, Thermo a thermometer path) — the FE twin of
+
+$ grep -rn 'gameRegistry' src/games/registry.ts
+107:export const gameRegistry = {
+  ^ the surviving declaration is futoshiki-shaped only; thermo left it at F1 and is not
+    in it now. registry.test.ts:36 declares a LOCAL compile-time `thermoGame` stub of its
+    own (never imported from src/games/thermo) — that is registry.ts's own corpse-test and
+    dies with the file at F4. Nothing under src/games/thermo/ reads the table.
+
+## boundary lint (2.5) — thermo's own rows
+thermo cross-game errors: 6 -> 5   (ThermoBoard.vue's '@games/sudoku/types' died with it;
+  spec.ts inherits game.ts's two. No new edge — the survivors are the pre-existing
+  sudoku-variant reuse the 2.5 step folds into games/shared.)
+    13:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+    20:1  error  '@games/sudoku/technique/sudokuTechnique' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+    13:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+    28:1  error  '@games/sudoku/ControlPanel/constants' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree  no-restricted-imports
+    29:1  error  '@games/sudoku/types' import is restricted from being used by a pattern. src/games/thermo/** must not import src/games/sudoku/** — games never import each other (boundary law, 20/20 ordered pairs, generated from the game list). Lift the shared surface into src/games/shared/** or duplicate it into this game's own tree                   no-restricted-imports
+
+## UNIT LANE — whole tree, shared reading
+ Test Files  31 passed (31)
+✖ 15 problems (15 errors, 0 warnings)
+
+## GREP PROOF, tightened to IMPORTS (the loose grep above catches this lane's own prose
+   at spec.ts:18, which names the dead edge in order to record that it is dead)
+
+$ grep -rn 'from "@games/registry"' src/games/thermo
+  0 matches — thermo's registry.ts consumption is GONE, not inert.
+
+$ grep -rln 'registry' src/games/thermo   # any mention at all
+src/games/thermo/spec.ts
+
+## UNIT LANE — whole tree, shared reading (three lanes' work resolved together)
+ Test Files  31 passed (31)
+      Tests  341 passed (341)
+
+## boundary lint — whole tree, shared reading
+✖ 15 problems (15 errors, 0 warnings)
+
+## prettier + eslint over this lane's surface
+Checking formatting...
+All matched files use Prettier code style!
+eslint src/games/thermo: clean
+
+## TYPECHECK — `npx vue-tsc -b --force`, run at close
+  src/games/thermo + src/games/cards errors: 0
+  whole tree (shared reading, all three lanes' work): 0
+
+  IT CAUGHT ONE. Flattening ThermoTube out of its own directory left its `import type
+  { ThermoLine } from "../types"` pointing at src/games/types, which does not exist.
+  vitest stayed GREEN through it — a type-only import is erased at transpile, so the
+  runtime never resolved the path and 341 tests passed over a broken module graph.
+  Banked as the reason this lane typechecked rather than trusting the unit lane: the
+  unit gate cannot see a type-only edge, and the F2 charter's exit criteria do not
+  include the build that would have.
+
+  NOTE for the barrier: App.vue:84's `loader: card.scene!` typechecks CLEAN (a non-null
+  assertion over a union arm that is now `undefined` on every row). vue-tsc, vitest,
+  eslint and prettier are all green over a mount path that cannot resolve. Only the
+  build + a select gesture surface it. See 20-barrier.md §1.
+
+## CLOSING GATE READINGS
+ Test Files  31 passed (31)
+      Tests  341 passed (341)
+✖ 15 problems (15 errors, 0 warnings)
+All matched files use Prettier code style!
+eslint src/games/thermo: clean (0 problems)
+
+NOT RUN, by charter: npm run build · playwright · goldens. The pi gate after the
+barrier belongs to F3. No preview server was started; :4188 free at close.

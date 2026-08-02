@@ -55,7 +55,7 @@ Depth lives elsewhere, single-homed: the public API, `max_solutions` semantics, 
 | Killer | Sudoku plus arithmetic cages: AllDifferent within a cage and a target sum | 4×4, 9×9, 16×16 |
 | KenKen | N×N Latin square (no subgrids), cages carrying a `+ − × ÷` target | N=4,5,6 (4×4–6×6) |
 
-The carousel game-select is the front door. Each game registers one card (`web/frontend/src/games/registry.ts`), and the carousel mounts it lazily on pick: Sudoku rides the main chunk, the rest download on select. All five generate and validate in the Worker. Sudoku's N=2 and N=3 easy/medium boards are dealt live; N=3-hard and all N=4 come from the embedded bank of 45 boards (32,095 B), owned by `csp-solver/data/sudoku_puzzles/` and derived into the SPA at build time. Futoshiki, Thermo, Killer, and KenKen deal live and prove uniqueness under a `max_solutions = 2` check.
+The carousel game-select is the front door. Each game registers one card (`web/frontend/src/games/cards.ts`) plus one `GameSpec`, and the carousel mounts it lazily on pick: Sudoku rides the main chunk, the rest download on select. All five generate and validate in the Worker. Sudoku's N=2 and N=3 easy/medium boards are dealt live; N=3-hard and all N=4 come from the embedded bank of 45 boards (32,095 B), owned by `csp-solver/data/sudoku_puzzles/` and derived into the SPA at build time. Futoshiki, Thermo, Killer, and KenKen deal live and prove uniqueness under a `max_solutions = 2` check.
 
 ## Frontend
 
@@ -93,10 +93,10 @@ cargo test --workspace
 # Python wheel-contract: 27 passed, 0 skipped
 cd csp-solver/tests-py && uv run --no-sync pytest
 
-# e2e: 225 Playwright tests across 15 spec files in the default config (Chromium 115,
-#      WebKit 110). Five further specs are held out of it and ride two configs of their
+# e2e: 227 Playwright tests across 15 spec files in the default config (Chromium 116,
+#      WebKit 111). Five further specs are held out of it and ride two configs of their
 #      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (39 in 4).
-#      20 spec files on disk, 268 tests in all.
+#      20 spec files on disk, 270 tests in all.
 cd web/frontend && npx playwright test
 cd web/frontend && npx playwright test --config playwright-golden.config.ts && npm run test:e2e:throttle
 
@@ -128,7 +128,7 @@ A Cloudflare Pages static deploy. Solving and generation never leave the visitor
 |---|---|---|
 | `csp-solver` | crates.io | 0.6.0 (published; the first release carrying all five puzzle families) |
 | `@mkbabb/csp-solver-wasm` | npm | 0.2.0 on npm; source is 0.6.0. The SPA file-links the lean build, not the registry package. |
-| `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.10.1 |
+| `@mkbabb/pencil-boil` | npm (frontend dep) | ^0.11.0 (tagged `v0.11.0`; the `stop()` no-throw contract and `rasterizePoseToBlob()`) |
 
 ## Performance
 

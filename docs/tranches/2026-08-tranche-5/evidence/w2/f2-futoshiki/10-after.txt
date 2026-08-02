@@ -1,0 +1,71 @@
+# T5-W2 F2 (futoshiki) — AFTER
+
+date: 2026-08-01T23:48:20Z
+
+## futoshiki dir — wc -l, every file
+      67 src/games/futoshiki/CaretOverlay.vue
+      31 src/games/futoshiki/ControlPanel/constants.ts
+      75 src/games/futoshiki/FutoshikiCaret.vue
+      95 src/games/futoshiki/FutoshikiPoster.vue
+       8 src/games/futoshiki/README.md
+     152 src/games/futoshiki/clue.test.ts
+     158 src/games/futoshiki/clue.ts
+      99 src/games/futoshiki/composables/useFutoshiki.ts
+     265 src/games/futoshiki/composables/useUrlState.test.ts
+     374 src/games/futoshiki/composables/useUrlState.ts
+      48 src/games/futoshiki/game.ts
+     120 src/games/futoshiki/solver/protocol.test.ts
+      82 src/games/futoshiki/solver/protocol.ts
+     144 src/games/futoshiki/solver/solver.worker.ts
+     182 src/games/futoshiki/solver/useSolver.ts
+      74 src/games/futoshiki/spec.ts
+     327 src/games/futoshiki/technique/futoshikiTechnique.test.ts
+     152 src/games/futoshiki/technique/futoshikiTechnique.ts
+      39 src/games/futoshiki/types.ts
+    2492 total
+
+## per-game file count (2.1e instrument, non-test, non-README)
+src/games/futoshiki/CaretOverlay.vue
+src/games/futoshiki/ControlPanel/constants.ts
+src/games/futoshiki/FutoshikiCaret.vue
+src/games/futoshiki/FutoshikiPoster.vue
+src/games/futoshiki/clue.ts
+src/games/futoshiki/composables/useFutoshiki.ts
+src/games/futoshiki/composables/useUrlState.ts
+src/games/futoshiki/game.ts
+src/games/futoshiki/solver/protocol.ts
+src/games/futoshiki/solver/solver.worker.ts
+src/games/futoshiki/solver/useSolver.ts
+src/games/futoshiki/spec.ts
+src/games/futoshiki/technique/futoshikiTechnique.ts
+src/games/futoshiki/types.ts
+count: 14
+
+## futoshiki unit lane, in isolation
+ Test Files  4 passed (4)
+      Tests  61 passed (61)
+   Start at  19:48:20
+   Duration  496ms (transform 238ms, setup 61ms, import 226ms, tests 48ms, environment 1.14s)
+
+
+## whole-tree unit lane at lane close (JOINT — four F2 lanes on one tree)
+$ npx vitest run --silent
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+
+ Test Files  31 passed (31)
+      Tests  341 passed (341)
+   Start at  19:52:51
+   Duration  3.22s (transform 7.69s, setup 646ms, import 12.72s, tests 2.08s, environment 24.89s)
+
+## fences — git diff --stat, the three W4 surfaces
+src/games/shared/GameControlPanel.vue          — 0 changed lines
+src/games/shared/GameScene.vue                 — 0 changed lines
+src/pencil/chrome/GameGallery/GameGallery.vue  — 0 changed lines
+
+## lint/typecheck, futoshiki + the card row
+prettier   : all matched files use Prettier code style
+eslint     : clean
+vue-tsc -b : zero futoshiki/cards errors
+boundary   : no rule names src/games/futoshiki/** as an offender (futoshiki imports no sibling);
+             the 5 futoshiki mentions in the run are all kenken->futoshiki, that lane's rows

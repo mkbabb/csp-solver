@@ -6,12 +6,21 @@ import { test, expect, type Page } from '@playwright/test';
 //   2. a length/size mismatch between ?board= and ?size= FAILS CLOSED (never a corrupt board);
 //   3. a game switch strips the outgoing game's board/size params (no ~256-char blob rides along);
 //   4. Randomize drops ?board= (the shared configuration is stale once a new board is dealt);
-//   5. the share affordance writes ?board= on the explicit act.
+//   5. the share affordance writes ?board= on the explicit act;
+//   6. an UNTAGGED body fails closed (T5-W2 2.4d — the v0 ratchet is dead).
 //
 // Selector discipline (session-proven): scope every control query to `.controls-card`.
 // A bare aria-label ALSO resolves the hidden mobile panel's twin and the test hangs.
 
 // ── Encoders (byte-identical to the composables' `encodeBoard`) ─────────────
+//
+// THE VERSION BYTE IS MANDATORY (T5-W2 2.4d). These encoders wrote UNTAGGED bodies and rode
+// the graceful ratchet — the codec's absent-tag-means-v0 arm — so this spec was the estate's
+// last consumer of a wire format nothing writes. The ratchet is gone: a payload that does not
+// open with `CODEC_VERSION` fails closed, and these encoders now produce what the app itself
+// produces. Row 6 asserts the dead arm from the other side.
+const CODEC_VERSION = String.fromCharCode(1);
+
 function b64url(s: string): string {
   return Buffer.from(s, 'binary')
     .toString('base64')
@@ -22,7 +31,7 @@ function b64url(s: string): string {
 function encodeSudoku(size: number, cells: Record<number, number>, total: number): string {
   let c = '';
   for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
-  return b64url(`${size}.${c}`);
+  return b64url(CODEC_VERSION + `${size}.${c}`);
 }
 function encodeFutoshiki(
   size: number,
@@ -33,7 +42,14 @@ function encodeFutoshiki(
   let c = '';
   for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
   const iq = ineqs.map(([a, b]) => `${a}-${b}`).join(',');
-  return b64url(`${size}.${c}.${iq}`);
+  return b64url(CODEC_VERSION + `${size}.${c}.${iq}`);
+}
+
+/** The pre-T4-W3 wire: a body with no version byte at all. Nothing writes it; nothing reads it. */
+function encodeUntagged(size: number, cells: Record<number, number>, total: number): string {
+  let c = '';
+  for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
+  return b64url(`${size}.${c}`);
 }
 
 function boardParam(page: Page): boolean {
@@ -142,4 +158,23 @@ test('board-only ?board= loads a futoshiki board with its inequalities, randomiz
 
   await page.locator('.controls-card button[aria-label="Deal a new board"]').click();
   await expect.poll(() => boardParam(page), { timeout: 15000 }).toBe(false);
+});
+
+// ── 7. An untagged body fails closed — the dead v0 ratchet (T5-W2 2.4d) ─────
+
+test('an untagged ?board= body fails closed, never a board (sudoku)', async ({ page }) => {
+  // Byte-for-byte what rows 1–6 used to send, and what the ratchet used to accept: the same
+  // 9×9 body carrying the same sentinel given, minus the version byte.
+  const enc = encodeUntagged(3, { 0: 5 }, 81);
+  await page.goto('./?board=' + enc);
+  await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+
+  // A board still renders — the corrupt link degrades to the size/difficulty path, which is
+  // what every other fail-closed arm does — but it is NOT the shared one: the sentinel is gone.
+  await expect.poll(() => page.locator('.sudoku-cell').count(), { timeout: 15000 }).toBe(81);
+  await expect
+    .poll(() => page.locator('.sudoku-cell input').first().inputValue(), { timeout: 15000 })
+    .not.toBe('5');
+  // And the stale link is dropped rather than left in the bar claiming to describe the board.
+  expect(boardParam(page)).toBe(false);
 });

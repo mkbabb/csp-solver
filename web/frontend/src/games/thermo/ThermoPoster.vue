@@ -7,7 +7,7 @@
  * the overlay slot. A flank-card still — never the live board (no Worker, no solver, no beat).
  */
 import PosterBoard from "@games/shared/PosterBoard.vue";
-import ThermoTube from "./ThermoTube/ThermoTube.vue";
+import ThermoTube from "./ThermoTube.vue";
 import type { ThermoLine } from "./types";
 
 const N = 9;

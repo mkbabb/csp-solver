@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, inject, onMounted, onUnmounted, watch } from "vue";
 import { getVariant, getAllVariants } from "./glyphRegistry";
+import { createStrokeDrawIn, type SequenceHandle } from "@mkbabb/pencil-boil";
 import {
-  createGlyphDrawIn,
   createGlyphFlourish,
   createGlyphWiggle,
   type GlyphAnimHandle,
@@ -40,7 +40,7 @@ const props = defineProps<{
 const flourish = inject("flourish", ref(false));
 
 // Stable TEMPLATE ref (never an inline `:ref="(el) => ..."` closure). This is the W8 task-4
-// discipline: the draw-in's dasharray reset (§ createGlyphDrawIn) is written imperatively to
+// discipline: the draw-in's dasharray reset (§ createStrokeDrawIn) is written imperatively to
 // `pathRef.value.style`, NOT bound reactively — so it survives every re-render (a re-bound
 // inline function ref would fire unbind→rebind on each poll/tick and silently re-arm the
 // pre-draw dash values, reverting a completed reset). A stable string ref only fires on real
@@ -63,7 +63,7 @@ const pathRef = ref<SVGPathElement | null>(null);
 // `contain: paint` on `.glyph-svg` STAYS: it bounds a `d`-swap's invalidation to the ~40×56
 // cell box regardless of what paints it.
 
-let drawInAnim: GlyphAnimHandle | null = null;
+let drawInAnim: SequenceHandle | null = null;
 let celebrationAnim: GlyphAnimHandle | null = null; // beat-2 flourish OR beat-3 murmur cycle
 let hoverAnim: GlyphAnimHandle | null = null;
 let murmurRegistered = false;
@@ -111,27 +111,15 @@ function unregisterFromMurmur() {
 
 function cleanupAnimations() {
   if (drawInAnim) {
-    try {
-      drawInAnim.stop();
-    } catch {
-      /* ignore */
-    }
+    drawInAnim.stop();
     drawInAnim = null;
   }
   if (celebrationAnim) {
-    try {
-      celebrationAnim.stop();
-    } catch {
-      /* ignore */
-    }
+    celebrationAnim.stop();
     celebrationAnim = null;
   }
   if (hoverAnim) {
-    try {
-      hoverAnim.stop();
-    } catch {
-      /* ignore */
-    }
+    hoverAnim.stop();
     hoverAnim = null;
   }
   unregisterFromMurmur();
@@ -175,11 +163,7 @@ function murmurWiggleOnce() {
   const variants = getAllVariants(props.value);
   if (variants.length < 2) return;
   if (celebrationAnim) {
-    try {
-      celebrationAnim.stop();
-    } catch {
-      /* ignore */
-    }
+    celebrationAnim.stop();
     celebrationAnim = null;
   }
   // The murmur's grain-hoist is retired with the filter (P1-W3): a `d` swap on an
@@ -212,11 +196,12 @@ function setupReveal() {
   if (props.isRevealed) {
     // Beat 1 — the reveal wave: draw-in on the board-normalized noise stagger (delay
     // supplied by the board). One-shot sequence subscriber, not a keyframes.js loop.
-    drawInAnim = createGlyphDrawIn(el, glyph.value.length, {
-      duration: DRAW_IN_PRESETS.glyph.duration,
-      delay: props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay,
+    drawInAnim = createStrokeDrawIn(el, {
+      pathLength: glyph.value.length,
+      durationMs: DRAW_IN_PRESETS.glyph.duration,
+      delayMs: props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay,
     });
-    drawInAnim?.play();
+    drawInAnim.start();
 
     // Beat 2 — only the solver's rainbow ink celebrates, and only when the BOARD is
     // celebrating (T3-W13 §4.1 flourish gate): a hint's one-cell reveal writes itself
@@ -240,11 +225,12 @@ function setupReveal() {
 
   // Quick draw-in for user-typed cells on blank cells.
   if (!props.isGiven && !props.isSolved) {
-    drawInAnim = createGlyphDrawIn(el, glyph.value.length, { duration: 150, delay: 0 });
-    if (drawInAnim) {
-      drawInAnim.play();
-      return;
-    }
+    drawInAnim = createStrokeDrawIn(el, {
+      pathLength: glyph.value.length,
+      durationMs: 150,
+    });
+    drawInAnim.start();
+    return;
   }
 
   el.style.strokeDasharray = "none";
@@ -271,11 +257,7 @@ watch(
         hoverAnim?.play();
       }
     } else if (hoverAnim) {
-      try {
-        hoverAnim.stop();
-      } catch {
-        /* ignore */
-      }
+      hoverAnim.stop();
       hoverAnim = null;
       // Vue reactivity restores the correct d via :d="displayPath" on next tick
     }
@@ -288,11 +270,7 @@ watch(
   (overridden) => {
     if (overridden) {
       if (celebrationAnim) {
-        try {
-          celebrationAnim.stop();
-        } catch {
-          /* ignore */
-        }
+        celebrationAnim.stop();
         celebrationAnim = null;
       }
       unregisterFromMurmur();

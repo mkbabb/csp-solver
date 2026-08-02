@@ -40,7 +40,7 @@
 // A cell's candidate set is a bitmask: bit v (1-based) set ⇔ value v is a candidate. Bit 0
 // is unused (values are 1..n). A FILLED cell — or a broken cell with no candidates — has
 // mask 0 and is never a deduction target. This mirrors the wasm mask convention
-// (`useSolver.ts` propagate path, bit v = value v) so the two substrates are directly
+// (the solver client's propagate path, bit v = value v) so the two substrates are directly
 // comparable in the tripwire test.
 
 /** All bits 1..n set — a cell's full domain before any elimination. */
@@ -545,8 +545,8 @@ export function findStep(view: PuzzleView): Deduction | null {
 /**
  * A per-game adapter: the two things the engine can't know without a game. `computeCandidates`
  * is the SELF-COMPUTED basic-elimination substrate (never GAC); `houses`/`n`/`totalCells`/
- * `constraints` are the structure. Sudoku's adapter lives in `games/sudoku/technique/`;
- * futoshiki's (lane E2) in `games/futoshiki/`.
+ * `constraints` are the structure. One adapter builds them all — `techniqueAdapter.ts`,
+ * parameterised by `BoardGeometry` (T5-W2 2.5); the two per-game twins are gone.
  */
 export interface TechniqueAdapter {
   n: number;

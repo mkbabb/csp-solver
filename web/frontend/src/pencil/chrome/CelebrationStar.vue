@@ -18,11 +18,11 @@ import {
   usePrefersReducedMotion,
   type SequenceHandle,
 } from "@mkbabb/pencil-boil";
-import { CELEBRATION, YOSHI_COLORS } from "@pencil/config/pencilConfig";
+import { CELEBRATION, MASCOT_COLORS } from "@pencil/config/pencilConfig";
 
 // T3-W10 celestial rewire (F8 §2.2): the star's gold is the celestial family's —
-// sparkle fill + rays stroke from YOSHI_COLORS, not duplicated hexes. Values unchanged.
-const GOLD = YOSHI_COLORS.celestial.sun;
+// sparkle fill + rays stroke from MASCOT_COLORS, not duplicated hexes. Values unchanged.
+const GOLD = MASCOT_COLORS.celestial.sun;
 
 const props = defineProps<{ active: boolean }>();
 
@@ -42,11 +42,7 @@ const STAR_D =
 
 function reset() {
   if (drawSeq) {
-    try {
-      drawSeq.stop();
-    } catch {
-      /* ignore */
-    }
+    drawSeq.stop();
     drawSeq = null;
   }
   if (gleamTimer) {

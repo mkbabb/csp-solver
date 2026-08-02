@@ -341,21 +341,17 @@ import {
 import { useElementSize } from "@vueuse/core";
 import { useTheme } from "@/composables/useTheme";
 import {
-  YOSHI_COLORS,
+  MASCOT_COLORS,
   MOTION,
   wobblePoseId,
   wobblePoseFrequencies,
   FILTER_PRESETS,
 } from "@pencil/config/pencilConfig";
 import { useBoilBeat } from "@pencil/composables/boilBeat";
-import {
-  readFilterDefs,
-  bitmapsToUrls,
-  revokeUrls,
-} from "@pencil/composables/rasterPose";
+import { readFilterDefs, retainedPoseUrls } from "@pencil/composables/rasterPose";
 
-const SUN = YOSHI_COLORS.celestial.sun;
-const MOON = YOSHI_COLORS.celestial.moon;
+const SUN = MASCOT_COLORS.celestial.sun;
+const MOON = MASCOT_COLORS.celestial.moon;
 
 // Shared geometry (live instance + rest stacks render the same ink)
 const SUN_SPIRAL_D =
@@ -557,46 +553,12 @@ const moonRaster = useRasterStack(() => ({
   cssSize: { width: captureSize.value, height: captureSize.value },
 }));
 
-// ImageBitmap → object URL once per bake; async encode + close the redundant bitmaps
-// (T4-WM rank 2/4). Urls are RETAINED while `bitmaps` is null (a resize re-bake in flight)
-// so the icon swaps atomically; a monotonic token drops a superseded conversion and the
-// previous urls revoke. Sun and moon are separate rasters, each with its own token.
-const sunUrls = ref<string[]>([]);
-const moonUrls = ref<string[]>([]);
-let sunUrlToken = 0;
-let moonUrlToken = 0;
-watch(
-  () => sunRaster.bitmaps.value,
-  async (b) => {
-    if (!b) return;
-    const token = ++sunUrlToken;
-    const next = await bitmapsToUrls(b);
-    if (token !== sunUrlToken) {
-      revokeUrls(next);
-      return;
-    }
-    const prev = sunUrls.value;
-    sunUrls.value = next;
-    revokeUrls(prev);
-  },
-  { immediate: true },
-);
-watch(
-  () => moonRaster.bitmaps.value,
-  async (b) => {
-    if (!b) return;
-    const token = ++moonUrlToken;
-    const next = await bitmapsToUrls(b);
-    if (token !== moonUrlToken) {
-      revokeUrls(next);
-      return;
-    }
-    const prev = moonUrls.value;
-    moonUrls.value = next;
-    revokeUrls(prev);
-  },
-  { immediate: true },
-);
+// The baked poses ARE object URLs (pencil-boil 0.11) — no bitmap re-draw, re-encode or close
+// between the capture and the <img>. Each set is RETAINED while its handle's `urls` is null
+// (a resize re-bake in flight) so the icon swaps atomically. Sun and moon are separate
+// rasters; the library owns both sets' lifetime, so this surface revokes nothing.
+const sunUrls = retainedPoseUrls(sunRaster);
+const moonUrls = retainedPoseUrls(moonRaster);
 const sunBaked = computed(() => sunUrls.value.length === 4);
 const moonBaked = computed(() => moonUrls.value.length === 4);
 
@@ -677,10 +639,6 @@ onUnmounted(() => {
   clearTimeout(turnTimer);
   clearTimeout(gestureTimer);
   document.documentElement.classList.remove("theme-turning");
-  sunUrlToken++;
-  moonUrlToken++;
-  revokeUrls(sunUrls.value);
-  revokeUrls(moonUrls.value);
 });
 </script>
 

@@ -3,23 +3,32 @@ import { reactive } from "vue";
 
 // ── Stroke rendering ──────────────────────────────────────────────
 
+/**
+ * Stroke presets. ONE key, because one surface reads one: `CrayonHeart` takes
+ * `fruitOutline.strokeWidth`. The five others — `gridFrame`, `gridSubgrid`, `gridCell`,
+ * `logoText`, `vine` — were a config table for surfaces that compute their own stroke widths
+ * from live geometry and always did; T5-W2 2.3 cut them. A preset nobody reads is a lie about
+ * where a number comes from.
+ */
 export const PENCIL = {
   fruitOutline: { strokeWidth: 4, roughness: 1.0 },
-  gridFrame: { strokeWidth: 6, roughness: 0.35 },
-  gridSubgrid: { strokeWidth: 4, roughness: 0.5 },
-  gridCell: { strokeWidth: 2.5, roughness: 0.3 },
-  logoText: { strokeWidth: 5, roughness: 2.2 },
-  vine: { strokeWidth: 8, roughness: 1.4 },
 } as const;
 
 // ── Felt-craft mascot color palette ───────────────────────────────
+//
+// CH-31, landed whole (T5-W2 2.3): the const carried a borrowed mascot's brand name for a
+// palette that draws a heart fruit, its leaf, and the sun/moon faces. Renamed with its four
+// imports and its comments in ONE act, which is the only way a source-symbol rename lands —
+// and the reason the row sat chronic for four tranches. The dead entries went in the same act:
+// `apple`/`banana`/`grapes`/`flower`/`vine` were a fruit bowl nothing drew, and `leaf.vein` a
+// stroke nothing stroked.
 
-export const YOSHI_COLORS = {
+export const MASCOT_COLORS = {
   outlineBlack: "#1a1a1a",
   // T3-W9 (F7 §3.0): `stitch` is color-mix(in srgb, #1a1a1a 35%, #FF4D6D) baked to a
-  // constant — SVG presentation attrs can't color-mix; `stem` is the vine green
-  // (= vine.main below), the Heart Fruit's earned tell. CrayonHeart.vue imports these
-  // instead of duplicating literals (the F7 hex-truthing).
+  // constant — SVG presentation attrs can't color-mix; `stem` is the vine green, the Heart
+  // Fruit's earned tell. CrayonHeart.vue imports these instead of duplicating literals
+  // (the F7 hex-truthing).
   heart: {
     fill: "#FF4D6D",
     shadow: "#C9184A",
@@ -28,12 +37,7 @@ export const YOSHI_COLORS = {
     stitch: "#8f3a50",
     stem: "#16a34a",
   },
-  apple: { fill: "#ef4444", shadow: "#b91c1c" },
-  banana: { fill: "#fbbf24", shadow: "#d97706" },
-  grapes: { fill: "#8b5cf6", shadow: "#6d28d9" },
-  flower: { petals: "#ffffff", center: "#fb923c" },
-  leaf: { fill: "#22c55e", vein: "#16a34a" },
-  vine: { main: "#16a34a", secondary: "#22c55e" },
+  leaf: { fill: "#22c55e" },
   // Mascot palette — the sun/moon hexes formerly welded into DarkModeToggle.vue's template
   // (design-refinement.md §3.3.4). Single source; roles map 1:1 to the toggle's
   // fills/strokes, now actually consumed there (T3-W10 rewire). CelebrationStar's gold

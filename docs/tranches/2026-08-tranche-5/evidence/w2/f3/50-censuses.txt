@@ -1,0 +1,49 @@
+# T5-W2 F3 — THE EXIT CENSUSES (re-derived on the final tree, 2026-08-01)
+
+## workers census — gates.json solverSpine.workers: 1
+$ grep -rn "new Worker" src/
+src/games/shared/solver/transport.ts:24:  /** Builds a fresh worker — the game supplies `() => new Worker(new URL('./solver.worker.ts', import.meta.url), { type: 'module' })`. */
+src/games/shared/solver/client.ts:31: * THE Worker. One `new Worker` in the whole estate (`solverSpine.workers: 1`), over the one
+src/games/shared/solver/client.ts:36:    new Worker(new URL("./solver.worker.ts", import.meta.url), { type: "module" }),
+CONSTRUCTION SITES: 1  (client.ts:36). The other two hits are PROSE — client.ts:31's own
+                       header and transport.ts:24's doc comment. Comment lines stripped
+                       before counting; a grep total that can't tell code from a comment
+                       about code is not a census.
+
+$ ls dist/assets/ | grep -i worker    # the BUILT truth, 5 chunks -> 1
+solver.worker-CiwFumri.js
+WORKER CHUNKS: 1
+
+## ?url census — gates.json solverSpine.urlContractSites: 1
+$ grep -rn "wasm?url" src/
+src/games/shared/solver/solver.worker.ts:45:import wasmUrl from "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url";
+URL SITES: 1
+
+$ grep -l "csp_solver_wasm_bg" dist/assets/*.js   # exactly one chunk imports the binary
+solver.worker-CiwFumri.js
+WASM BINARIES EMITTED: 1
+
+## protocols census — gates.json solverSpine.protocols: 1
+$ find src/games -name "protocol.ts"
+src/games/shared/solver/protocol.ts
+
+## per-game solver directories — 5 -> 0
+$ find src/games -path "*/solver/*" -type f | grep -v shared
+  (none)
+
+## ensureInit — was byte-identical x5 (md5 262633211412, DIVERGED x0); now x1
+$ grep -rn "function ensureInit" src/
+src/games/shared/solver/solver.worker.ts:56:function ensureInit(): Promise<unknown> {
+
+## the surviving spine
+      89 src/games/shared/solver/classifyError.ts
+     326 src/games/shared/solver/client.test.ts
+     238 src/games/shared/solver/client.ts
+      33 src/games/shared/solver/describeError.ts
+     267 src/games/shared/solver/protocol.test.ts
+     128 src/games/shared/solver/protocol.ts
+     250 src/games/shared/solver/solver.worker.ts
+      42 src/games/shared/solver/solverError.ts
+     175 src/games/shared/solver/transport.test.ts
+     155 src/games/shared/solver/transport.ts
+    1703 total

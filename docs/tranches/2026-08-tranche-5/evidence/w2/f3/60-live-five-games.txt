@@ -1,0 +1,18 @@
+# T5-W2 F3 — THE LIVE PROOF (the final dist, http://localhost:4188)
+#
+# Greps prove the collapse; they cannot prove the spine RUNS. This does: a real chromium
+# against the built dist, one page per family, each dealing a board (wasm generate_*) and
+# solving it to completion (wasm solve_*) through the ONE worker over the ONE binary — and
+# each clued family printing its furniture, which also discharges the F2 clue barrier.
+# Every deal after the first also proves the shared transport: one hot wasm, five games.
+
+game        deal(generate)   clue nodes   solve(->complete)   errors   aria-label
+----------  ---------------  -----------  ------------------  -------  ----------
+sudoku      81 cells         0            22 -> 81/81         0        "9 by 9 sudoku board, hard"
+futoshiki   25 cells         12           15 -> 25/25         0        "5 by 5 futoshiki board"
+thermo      81 cells         9            61 -> 81/81         0        "9 by 9 thermo board, easy"
+killer      81 cells         100          61 -> 81/81         0        "9 by 9 killer board, easy"
+kenken      16 cells         25           2 -> 16/16          0        "4 by 4 kenken board"
+
+ALL FIVE FAMILIES: generate + solve through the ONE worker, over the ONE wasm binary, zero page errors.
+EXIT=0

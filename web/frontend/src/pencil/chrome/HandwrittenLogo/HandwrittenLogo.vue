@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import {
   heldFrameCount,
   usePrefersReducedMotion,
@@ -19,8 +19,7 @@ import { useBeatFrame } from "@pencil/composables/boilBeat";
 import {
   readFilterDefs,
   resolveCssValue,
-  bitmapsToUrls,
-  revokeUrls,
+  retainedPoseUrls,
 } from "@pencil/composables/rasterPose";
 import frauncesInline from "@/assets/fonts/fraunces-subset.woff2?inline";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
@@ -189,36 +188,15 @@ const logoRaster = useRasterStack(() => ({
   cssSize: { width: Math.round(logoW.value), height: Math.round(logoH.value) },
 }));
 
-// ImageBitmap → object URL once per bake; async encode + close the redundant bitmaps
-// (T4-WM rank 2/4). The urls are RETAINED while `bitmaps` is null (a re-bake in flight) so
-// the wordmark swaps atomically — the old label/ink holds until the new poses convert, then
-// one assignment. A monotonic token drops a superseded conversion; the previous urls revoke.
-const logoUrls = ref<string[]>([]);
-let logoUrlToken = 0;
-watch(
-  () => logoRaster.bitmaps.value,
-  async (b) => {
-    if (!b) return; // re-bake in flight — hold the live urls (atomic swap)
-    const token = ++logoUrlToken;
-    const next = await bitmapsToUrls(b);
-    if (token !== logoUrlToken) {
-      revokeUrls(next);
-      return;
-    }
-    const prev = logoUrls.value;
-    logoUrls.value = next;
-    revokeUrls(prev);
-  },
-  { immediate: true },
-);
+// The baked poses ARE object URLs now (pencil-boil 0.11) — `useRasterStack` reads its own
+// capture canvas and mints the handles, so there is no bitmap to re-draw, re-encode or close
+// here. The urls are RETAINED while the handle's `urls` is null (a re-bake in flight) so the
+// wordmark swaps atomically: the old label/ink holds until the new poses land, then one
+// assignment. The library owns every handle's lifetime; this surface revokes nothing.
+const logoUrls = retainedPoseUrls(logoRaster);
 const logoBaked = computed(
   () => logoUrls.value.length > 0 && logoUrls.value.length === logoPoseIds.value.length,
 );
-
-onUnmounted(() => {
-  logoUrlToken++;
-  revokeUrls(logoUrls.value);
-});
 </script>
 
 <template>

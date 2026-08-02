@@ -1,0 +1,78 @@
+T5-W2 F2-KENKEN — THE GATES AT LANE CLOSE (2026-08-01)
+
+The lane's exit gate is UNIT ONLY, by the charter: the π gate, the goldens and the build belong
+to F3, after the F2 barrier. Nothing below spawned a preview, a dev server or a browser; the
+owner's :3000/:3001/:4288 were never touched and this lane opened no :4188.
+
+==================================================================================
+UNIT — npx vitest run --silent
+==================================================================================
+
+$ npx vitest run --silent=true
+ Test Files  31 passed (31)
+      Tests  341 passed (341)
+   Duration  1.89s
+
+  -> 341 EXECUTED, 341 passed, 0 failed, 31 files.
+
+  ATTRIBUTION, honestly: this is a SHARED worktree with three sibling F2 lanes live on it, so
+  341 is the tree's figure, not kenken's contribution. kenken's own share, measured alone:
+
+$ npx vitest run --silent=true src/games/kenken
+ Test Files  2 passed (2)
+      Tests  13 passed (13)
+
+  -> 13 (spec.test.ts 10 + solver/kenkenWire.test.ts 3). The predecessor game.test.ts carried
+     6; the six became ten because the seam is now proved THROUGH the spec (the grammar's four
+     fields, the codec identity, the key's single source, the node-budget table) instead of
+     through hand-named components.
+
+$ npx vitest run --silent=true src/games/cards.test.ts
+  -> the table's 7 rows pass, including "gives every row exactly one mount" with the migrated
+     ledger now reading sudoku · futoshiki · thermo · killer · kenken.
+
+==================================================================================
+STATIC GATES (see 20-probes.txt for the transcripts)
+==================================================================================
+
+  vue-tsc -b --force ............ 0 errors, tree-wide
+  eslint (kenken + table) ....... clean
+  prettier --check .............. clean
+  knip .......................... no kenken rows
+  lint:boundary ................. 5 kenken rows, NET DELTA 0 (2.5's rows, not this lane's)
+
+==================================================================================
+FENCES — held, verified by diff
+==================================================================================
+
+$ git diff --stat -- src/games/shared/GameControlPanel.vue src/games/shared/GameScene.vue \
+                     src/pencil/chrome/GameGallery/GameGallery.vue
+  (empty)
+
+  -> 0 changed lines on all three W4 surfaces. Not one line, not even an import.
+
+$ git status --short -- src/games/shared src/App.vue src/games/registry.ts
+ M src/App.vue                          <- F1's mount fold
+ M src/games/registry.ts                <- F1's gameRegistry shrink
+ A  src/games/shared/DigitCell.test.ts  <- F1
+ M src/games/shared/useGameGallery.ts   <- F1
+ ?? src/games/shared/{BoardHost,CageOverlay,DigitCell,GameShell,defineGame,selectors}  <- F1
+
+  -> every row is F1's or a sibling lane's. NONE is this lane's: the complete list of files
+     this lane wrote is below, and it is src/games/kenken/** plus the two table files.
+
+==================================================================================
+FILES THIS LANE TOUCHED — the whole list
+==================================================================================
+
+  born     src/games/kenken/spec.ts                       86
+  born     src/games/kenken/spec.test.ts                 135
+  killed   src/games/kenken/KenKenGame.vue              (144)
+  killed   src/games/kenken/KenKenBoard.vue             (232)
+  killed   src/games/kenken/game.ts                      (56)
+  killed   src/games/kenken/game.test.ts                (103)
+  edited   src/games/kenken/composables/useKenken.ts       +4 -2   (export nodeBudgetForSize)
+  edited   src/games/kenken/composables/kenkenUrlState.ts  +3 -1   (export STORAGE_KEY)
+  edited   src/games/kenken/solver/useSolver.ts            +8 -4   (export prewarm)
+  edited   src/games/cards.ts                              row: scene -> load, + its comment
+  edited   src/games/cards.test.ts                         +1      (the migrated-row ledger)

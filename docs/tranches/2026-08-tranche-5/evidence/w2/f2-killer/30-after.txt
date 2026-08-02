@@ -1,0 +1,39 @@
+T5-W2 F2 — KILLER — AFTER
+date: 2026-08-01T23:48:47Z · tree: working (uncommitted; the team lead commits)
+
+## UNIT — the whole suite, this tree
+cmd: npx vitest run --silent
+ Test Files  31 passed (31)
+      Tests  341 passed (341)
+   Start at  19:48:48
+   Duration  1.81s (transform 5.77s, setup 607ms, import 6.79s, tests 1.08s, environment 12.94s)
+
+
+TREE CAVEAT, stated because the number is not this lane's alone: F2's futoshiki, thermo and
+kenken lanes were landing into the same working tree while this ran. The suite is GREEN and
+31/31 files pass, but 341 is the FOUR lanes' count. This lane's own delta is exact:
+  − src/games/killer/game.test.ts   1 file,  5 cases
+  + src/games/killer/spec.test.ts   1 file,  8 cases
+  = files 0, cases +3. cards.test.ts stays 7 cases (assertions added INSIDE two existing ones).
+F1 banked 30 files / 315 cases; killer alone would read 30 / 318.
+
+## UNIT — this lane's own files, isolated (attributable)
+cmd: npx vitest run src/games/killer src/games/cards.test.ts --silent
+ Test Files  3 passed (3)
+      Tests  18 passed (18)
+   killer/spec.test.ts 8 · killer/solver/killerWire.test.ts 3 · cards.test.ts 7
+
+## TYPES — vue-tsc -b, this lane's surface
+cmd: npx vue-tsc -b --force 2>&1 | grep "games/killer\|games/cards"
+  0 errors under src/games/killer and src/games/cards*
+  (The tree as a whole is NOT clean — thermo/ThermoTube.vue and kenken/spec.test.ts carry
+   errors from lanes still in flight. kenken's are the SAME defect vue-tsc caught in this
+   lane and this lane fixed — see README §FOR THE LEAD 4.)
+
+## PRETTIER / ESLINT — this lane's surface
+All matched files use Prettier code style!
+eslint  0 problems
+
+## NOT RUN, BY THE CHARTER
+  build · playwright · the four goldens — the pi gate after the barrier belongs to F3.
+  No preview server was started; :3000/:3001/:4288 were never touched; no :4188 was opened.

@@ -11,7 +11,7 @@
  * Sudoku's technique engine is reused for grading (the sudoku half of the board); the cage
  * relation is enforced authoritatively by the wasm solve.
  */
-import type { Difficulty } from "@games/sudoku/types";
+import type { Difficulty } from "@games/shared/types";
 import type { KillerCage } from "../types";
 
 /** The persisted Killer board — the common board slice plus its cage furniture. */
@@ -34,7 +34,9 @@ export interface InitialState {
   boardLink: "absent" | "ok" | "invalid";
 }
 
-const STORAGE_KEY = "killer-board-v1";
+/** Killer's board on disk. Exported so `spec.urlCodec.key` NAMES this one string rather than
+ *  mirroring it — the shell writes the board through the key the codec itself declares. */
+export const STORAGE_KEY = "killer-board-v1";
 const DEFAULT_SIZE = 3;
 
 function isDifficulty(v: unknown): v is Difficulty {
