@@ -5,12 +5,17 @@ import { useHoverCard } from "./useHoverCard";
 // under /assets/ (immutable-cached per public/_headers) and serves it same-origin; the resolved
 // URL is inlined here. This retires the app's SOLE third-party network hit (see the <img> note).
 import avatarUrl from "./avatar.png";
+// T6 mark 16 — the hidden DEBUG disclosure. This card IS the hiding place: it's already a
+// hover/focus-within card, so the toggle costs no new chrome and no settings surface.
+import { useDebug } from "@/composables/useDebug";
 
 defineProps<{
   mobile?: boolean;
 }>();
 
 const { isOpen, toggle, close, onHoverEnter, onHoverLeave } = useHoverCard();
+
+const debug = useDebug();
 
 defineExpose({ close });
 </script>
@@ -76,6 +81,21 @@ defineExpose({ close });
         class="text-foreground block text-sm hover:underline"
         >View the project on GitHub</a
       >
+      <!-- T6 mark 16 — the DEBUG disclosure. `@click.stop` matches the trigger's stance, so
+           the card stays open across the toggle on a fine pointer; the card's own
+           focus-within disclosure puts it on the Tab walk right after the GitHub link. On a
+           COARSE pointer the card closes ~150ms after the tap — `onHoverEnter` returns before
+           it clears the close timer (useHoverCard.ts:38), which is the incumbent behaviour of
+           every focusable in this card, the GitHub link included. Measured, not assumed; the
+           flag still lands, and the cure belongs to that composable, not to this row. -->
+      <button
+        type="button"
+        class="text-muted-foreground hover:text-foreground mt-1 block font-mono text-xs"
+        :aria-pressed="debug"
+        @click.stop="debug = !debug"
+      >
+        debug · {{ debug ? "on" : "off" }}
+      </button>
     </div>
   </div>
 </template>

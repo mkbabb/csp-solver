@@ -1,5 +1,6 @@
 import { SolverError, isSerializedSolverError } from "./solverError";
 import type { PingRequest, PingResponse } from "./protocol";
+import { useDebug } from "@/composables/useDebug";
 
 /**
  * The game-agnostic solver Worker transport — single-sourced for both games (T4-W4
@@ -124,6 +125,10 @@ export function createSolverTransport<
    * Idempotent: the `warmed` guard makes repeated calls a no-op. The ping response carries
    * no pending `id`, so the standard message handler ignores it; a one-shot listener here
    * logs the warm confirmation for the smoke.
+   *
+   * T6 mark 16 — the two smoke lines are DEBUG ink and shipped in the prod bundle. Gated on
+   * the flag rather than `import.meta.env.DEV`-stripped on purpose: prewarm health is exactly
+   * what a debug mode exists to show, and it is only interesting on the built artifact.
    */
   function prewarm(): void {
     if (warmed) return;
@@ -134,12 +139,13 @@ export function createSolverTransport<
     const onPong = (event: MessageEvent<Res | PingResponse>) => {
       if ("kind" in event.data && event.data.kind === "ping") {
         w.removeEventListener("message", onPong as EventListener);
-        console.debug(`[${options.tag}] prewarm: worker hot (wasm instantiated)`);
+        if (useDebug().value)
+          console.debug(`[${options.tag}] prewarm: worker hot (wasm instantiated)`);
       }
     };
     w.addEventListener("message", onPong as EventListener);
     w.postMessage({ id: pingId, kind: "ping" } satisfies PingRequest);
-    console.debug(`[${options.tag}] prewarm: warm ping sent`);
+    if (useDebug().value) console.debug(`[${options.tag}] prewarm: warm ping sent`);
   }
 
   function throwIfError(res: Res): void {

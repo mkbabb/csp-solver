@@ -39,6 +39,7 @@ import {
   vignetteDocked,
   vignetteHasTally,
 } from "@games/shared/useControlsDrawer";
+import { useDebug } from "@/composables/useDebug";
 import type { HintResult } from "@games/shared/techniqueEngine";
 import type { SolveState, SolveStats } from "@games/shared/types";
 import type { AnimationState } from "@pencil/types";
@@ -659,7 +660,12 @@ const errorNote = computed(() => {
 });
 
 // ── The tally (T3-W9 §2) — preformatted upstream, rendered by MarginNote's meta line ──
-const tally = computed(() => formatSolveTally(props.solveStats));
+// T6 mark 16 — and DEBUG ink, so it flows through the one gate. This is the single point
+// all tally string-making passes: both mounts below guard on `v-if="meta"`, and `""` is
+// already the formatter's own idle value for null stats, so the flag off unmounts the line
+// in every game, at every width, on the solved and the failed grade alike.
+const debug = useDebug();
+const tally = computed(() => (debug.value ? formatSolveTally(props.solveStats) : ""));
 
 // Grid animation state machine
 const gridAnimState = ref<AnimationState>("hidden");
