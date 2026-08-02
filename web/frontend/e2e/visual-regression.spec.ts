@@ -63,6 +63,30 @@ async function steadyGridCounts(page: Page) {
     "image.boil-frame-bitmap.is-active, g.boil-frame-layer.is-active",
     { timeout: 10000 },
   );
+  // SETTLE IS POLLED, NEVER READ ONCE (CH-63 trigger-1 order for :235 — the row redded
+  // `layerCount 0 vs ≥2` at the formation CI and again at the T5 close seal, webkit
+  // both times). `.is-active` matching and the census's evaluate are not the same frame:
+  // under load the bake's generation swap unmounts the filter layers before the bitmaps
+  // append, and an instantaneous read catches the empty window. The settled invariant —
+  // ≥2 layers, exactly one visible — is what every caller asserts anyway, so the census
+  // waits for it (bounded by the poll's own timeout) and returns the settled read; a
+  // genuinely broken boil (0 layers forever, 2 visible forever) still times out RED.
+  await page
+    .waitForFunction(
+      () => {
+        const baked = document.querySelectorAll("image.boil-frame-bitmap");
+        const filtered = document.querySelectorAll("g.boil-frame-layer");
+        const layers = baked.length ? baked : filtered;
+        if (layers.length < 2) return false;
+        let visible = 0;
+        for (const l of layers)
+          if (parseFloat(getComputedStyle(l).opacity) > 0) visible += 1;
+        return visible === 1;
+      },
+      undefined,
+      { timeout: 15000 },
+    )
+    .catch(() => {}); // the returned census still tells the truth; the assertions red on it
   return page.evaluate(() => {
     const baked = Array.from(document.querySelectorAll("image.boil-frame-bitmap"));
     const filtered = Array.from(document.querySelectorAll("g.boil-frame-layer"));
