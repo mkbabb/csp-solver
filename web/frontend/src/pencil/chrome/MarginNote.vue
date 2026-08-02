@@ -146,7 +146,7 @@ const NOTE_STAR_D =
 
 .margin-note-ink {
   display: inline-block;
-  animation: note-write-in 250ms var(--ease-noteWrite) both;
+  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
 }
 
 /* The inline star: sized to the hand's own em, seated on the baseline like a glyph.
@@ -177,23 +177,6 @@ const NOTE_STAR_D =
      .dt-label for this exact reason never reached the note. */
   color: var(--ink-press-quiet);
   pointer-events: auto;
-  animation: note-write-in 250ms var(--ease-noteWrite) both;
-}
-
-@keyframes note-write-in {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .margin-note-ink,
-  .margin-note-meta {
-    animation: none;
-    clip-path: none;
-  }
+  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
 }
 </style>

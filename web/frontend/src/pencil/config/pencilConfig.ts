@@ -121,14 +121,18 @@ export interface FilterPreset {
 export const MOTION = {
   /** The one beat window every perpetual boil swap lands on (~8Hz). */
   beatMs: 125,
-  /** Named cadence bands, in whole beats. */
+  /** Named cadence bands — the beat divisor a pose stack steps on, so a slower
+   *  sky still lands its swaps in the shared dirty frame. 1.5 is rational on the
+   *  beat grid (2 flips per 3 beats, an alternating 250/125ms dwell): no band
+   *  ever needs a second clock. `boil: 1` retired here with its last consumer. */
   bands: {
-    /** Grid/outline/divider path boil (BOIL_CONFIG.intervalMs quantizes here). */
-    boil: 1,
-    // sunRays (6 beats) RETIRED at the W13 c1 soul-gate close: the sun rest
-    // stack is a whole-icon 4-pose stack on the beat — one noise field per
-    // instant (the ray/disc sub-stack split held two fields at 3 of 4 beats
-    // and failed the 0.983 line at every misaligned phase). Dead config dies.
+    /** The sun's whole-icon pose stack: every 2nd beat, 8Hz → 4Hz (T6 mark 11 —
+     *  the owner read the shipped 8Hz as twice too fast). The W13 c1 soul gate
+     *  had already retired the 6-beat `sunRays` sub-stack; what this halves is
+     *  the whole-icon stack that replaced it, one noise field per instant. */
+    sun: 2,
+    /** The moon's, 8Hz → 5.33Hz — the mark's 1.5× on the same stack. */
+    moon: 1.5,
   },
   /** Carousel card-step glide (T4-W12) — a keyboard/button step of the gallery
    *  track rides the ONE glass curve (`curves.drawerGlide`) as a WAAPI FLIP transform
@@ -458,12 +462,15 @@ export const GLYPH_ANIM = {
 // ── Solve celebration — "the gold-star moment" (design-refinement.md §1.3) ──
 //
 // A celebration is a moment, not a state: three beats, one timeline, finite, ≤3.2s crest.
-// Every duration below rides the scheduler's `sequence` subscriber kind (or a setTimeout
-// window, for the murmur) — never a per-cell keyframes.js RAFPlayback.
+// The board's own beats ride the scheduler's `sequence` subscriber kind; the star and the
+// heart (T6 marks 14/15) ride the CSS animation vocabulary instead (assets/index.css §THE
+// MOTION VOCABULARY), binding these numbers as `--*-dur`/`--*-delay` — zero subscribers,
+// zero timers. Never a per-cell keyframes.js RAFPlayback either way.
 //
 // Budget (worst case): beat-1 reveal window ≈1.2s → 150ms breath → beat-2 onset ≈1.35s;
 // the diagonal front crosses in ≈0.5s (last onset ≈1.85s); each flourish is 2×600ms → the
-// last cell crests ≈3.05s, inside the 3.2s cap.
+// last cell crests ≈3.05s. The star's own tail is the longest limb: crest 2650 + fade 540
+// = 3.19s. Both inside the 3.2s cap.
 export const CELEBRATION = {
   /** Beat 1: total board-normalized reveal window; per-cell stagger = window / blankCount. */
   revealWindowMs: 1200,
@@ -479,18 +486,27 @@ export const CELEBRATION = {
   wiggleCycleMs: 600,
   /** Beat 3: classroom murmur — one solved cell wakes for a single wiggle per this window. */
   murmurWindowMs: 2500,
-  /** Gold-star garnish: draw-on duration and onset (~beat-2 crest, draws by ~3.0s). */
-  starDrawInMs: 350,
+  /** The gold star, T6 mark 14 — it BLOOMS over the whole board and hands the
+   *  moment to the corners. Onset 2050ms, 600ms of storybook growth (one 1.06
+   *  overshoot) landing exactly on the crest; at the crest the star's OUTLINE
+   *  alone flashes (320ms) while the body plateaus and dissolves (540ms, quiet
+   *  by 3.19s — the ≤3.2s cap held), and the corner sticker presses on (260ms).
+   *  `starCrestMs` keeps its meaning: the crest is one instant, shared. */
+  starBloomStartMs: 2050,
+  starBloomMs: 600,
   starCrestMs: 2650,
-  /** Union foil-gleam tail: a single specular sweep over the garnish (OD-1 default: ships). */
-  gleamMs: 400,
+  starFlashMs: 320,
+  starFadeMs: 540,
+  starLandMs: 260,
   /** The felt heart (T3-W9, F7 §3.2) — the Heart Fruit crests board bottom-right.
    *  Bounce onset = the star's crest (one shared moment), 550ms of reciprocal-axis
    *  squash on the HOST WRAPPER (never the filtered <g>), settling ≈3.2s — at the cap.
-   *  The blink is post-crest ambient: one setTimeout, once, ~1.8s after settle. */
+   *  The blink is post-crest ambient: one shut-and-open on the eyes group, once,
+   *  1.8s after settle (T6 mark 15 — a bound delay on `plush-blink`, no timer). */
   heartCrestMs: 2650,
   heartBounceMs: 550,
   heartBlinkDelayMs: 1800,
+  heartBlinkMs: 240,
 } as const;
 
 /** Beat-1 stagger, board-normalized so the reveal window is ~constant across sizes. */

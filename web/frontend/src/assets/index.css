@@ -593,7 +593,7 @@ html {
      design-refinement.md §3.3.1/§3.4). !important is defensive — the grid strokes
      via a presentation attribute, which any CSS rule already beats. */
   .solve-failure {
-    animation: shake 0.6s linear;
+    animation: refuse-shake 0.6s linear;
     box-shadow:
       8px 5px 0px color-mix(in srgb, var(--color-teacher-red) 25%, transparent),
       0 8px 0px color-mix(in srgb, var(--color-teacher-red) 20%, transparent),
@@ -606,27 +606,6 @@ html {
       var(--color-teacher-red) 30%,
       var(--grid-line-color)
     ) !important;
-  }
-
-  /* Shake animation */
-  @keyframes shake {
-    0%,
-    100% {
-      transform: translateX(0);
-    }
-    10%,
-    30%,
-    50%,
-    70%,
-    90% {
-      transform: translateX(-4px);
-    }
-    20%,
-    40%,
-    60%,
-    80% {
-      transform: translateX(4px);
-    }
   }
 
   /* Cell reveal animation */
@@ -833,5 +812,224 @@ html {
   .dark {
     --grid-line-color: hsl(0 0% 0%);
     --color-user-ink: #000;
+  }
+}
+
+/* ── T6 §THE MOTION VOCABULARY (marks 14, 15) ─────────────────────────────────
+ * The estate's finite verb list, in ONE place, so a celebration reads as grammar
+ * rather than as five components each inventing a tween. Scoped SFC keyframes hash
+ * per component (keyFade-41bb021b), so a verb two components share must live here —
+ * beside `.pencil-draw-on`, the primitive that established the pattern.
+ *
+ *   family    verb            consumer
+ *   ───────   ─────────────   ────────────────────────────────────────────────
+ *   COMPLETE  bloom-in        .celebration-star.is-bloom   (GameBoard overlay)
+ *             outline-flash   .star-flash                  (the bloom's twin path)
+ *             bloom-out       .celebration-star.is-bloom
+ *             sticker-pop     .celebration-star            (the vignette sticker)
+ *             plush-bounce    .celebration-heart
+ *   KIN       plush-murmur    .celebration-heart.is-murmuring
+ *             plush-blink     .celebration-heart .eyes
+ *             ink-write-in    .margin-note-ink · .margin-note-meta ·
+ *                             .vignette-voice · .vignette-meta
+ *             note-in         .error-note
+ *             (incumbents, kept where they are: cell-reveal, pencil-draw-on)
+ *   ERROR     refuse-shake    .solve-failure — the ERROR verb is the VERDICT's, never
+ *                             the keystroke's; there is no per-cell shake surface.
+ *
+ * NUMBERS DO NOT LIVE HERE. Every duration and delay arrives as a bound custom
+ * property from `CELEBRATION` (the `.pencil-draw-on` --draw-dur/--draw-delay
+ * precedent); what lives here is shape and curve.
+ *
+ * TWO DISCIPLINES, enforced by construction:
+ *
+ *  1. FILL — never `forwards`/`both`. `backwards` where a verb must hold a pre-delay
+ *     pose; nothing retains an effect-sourced transform (the r3 §3.1 promoted-layer
+ *     class, the census's own subject). Every `to` equals its consumer's cascade rest
+ *     pose, so releasing the fill changes no pixel. `bloom-out` takes no fill at all
+ *     and opens exactly where `bloom-in` closes — a later `backwards` animation would
+ *     out-rank the earlier one through its whole delay, and contiguity is what keeps
+ *     the rest pose from showing between them.
+ *  2. PRM — `animation: none !important` at the foot. Load-bearing, not ceremony: the
+ *     global PRM rule zeroes DURATIONS and leaves DELAYS alone, so a 2650ms-delayed
+ *     `backwards` verb would hold its 0% pose — scale 0, opacity 0 — for 2.65s under
+ *     reduced motion. Rest CSS is the settled pose, so this shows the END state at once.
+ *
+ * OWNER KNOBS: `bloom-in`'s 1.06 overshoot; `bloom-out`'s 25% plateau (how long the
+ * grown star holds before it dissolves); the dissolve's 1.12. */
+@layer utilities {
+  @keyframes bloom-in {
+    from {
+      transform: scale(0.06);
+      opacity: 0;
+      animation-timing-function: var(--ease-drawOn);
+    }
+    14% {
+      opacity: 1;
+    }
+    72% {
+      transform: scale(1.06);
+      animation-timing-function: var(--ease-standard);
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes outline-flash {
+    from,
+    to {
+      opacity: 0;
+    }
+    18%,
+    46% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes bloom-out {
+    from {
+      transform: scale(1);
+      opacity: 1;
+    }
+    25% {
+      transform: scale(1);
+      opacity: 1;
+      animation-timing-function: var(--ease-accelIn);
+    }
+    to {
+      transform: scale(1.12);
+      opacity: 0;
+    }
+  }
+
+  @keyframes sticker-pop {
+    from {
+      transform: scale(0.2) rotate(-8deg);
+      opacity: 0;
+      animation-timing-function: var(--ease-drawOn);
+    }
+    30% {
+      opacity: 1;
+    }
+    70% {
+      transform: scale(1.08) rotate(2deg);
+      animation-timing-function: var(--ease-standard);
+    }
+    to {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  /* The reciprocal-axis squash IS the plush bounce (F7 §3.2): grow to
+     (1.15, 0.92) wide-and-squashed, rebound to (0.97, 1.02) tall, settle at 1 —
+     an overall 0 → ~1.12 → 1 read, nothing snaps. Poses verbatim from the JS
+     tween this replaced; its per-segment easeOutCubic is --ease-drawOn. */
+  @keyframes plush-bounce {
+    from {
+      transform: scale(0, 0);
+      animation-timing-function: var(--ease-drawOn);
+    }
+    55% {
+      transform: scale(1.15, 0.92);
+      animation-timing-function: var(--ease-drawOn);
+    }
+    80% {
+      transform: scale(0.97, 1.02);
+      animation-timing-function: var(--ease-drawOn);
+    }
+    to {
+      transform: scale(1, 1);
+    }
+  }
+
+  /* Murmur participation (F2 §C): one soft toy-bob on the host wrapper when the
+     classroom's 1-in-8 window falls to the heart, then still. */
+  @keyframes plush-murmur {
+    from,
+    to {
+      transform: scale(1, 1);
+    }
+    35% {
+      transform: scale(1.06, 0.94) rotate(-2deg);
+    }
+    70% {
+      transform: scale(0.97, 1.03) rotate(1.5deg);
+    }
+  }
+
+  /* One blink: the EYES group squashes inside the unscaled filtered content, so
+     the filter region never grows. Shut ~140ms of the 240ms verb, once. */
+  @keyframes plush-blink {
+    from,
+    to {
+      transform: scaleY(1);
+    }
+    12%,
+    70% {
+      transform: scaleY(0.1);
+    }
+  }
+
+  /* The hand writes left to right — the logo's reveal mechanic, shortened. ONE
+     keyframe for the margin note and the vignette both (they were byte-twins). */
+  @keyframes ink-write-in {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes note-in {
+    from {
+      transform: translateY(8px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes refuse-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-4px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(4px);
+    }
+  }
+
+  /* `.cell-reveal-animated` rides here too: it is the incumbent instance of the very
+     delay trap the discipline names (`--reveal-delay` up to 1.2s of held scale(0)). */
+  @media (prefers-reduced-motion: reduce) {
+    .celebration-star,
+    .celebration-star .star-flash,
+    .celebration-heart,
+    .celebration-heart .eyes,
+    .cell-reveal-animated,
+    .margin-note-ink,
+    .margin-note-meta,
+    .vignette-voice,
+    .vignette-meta,
+    .error-note,
+    .solve-failure {
+      animation: none !important;
+    }
   }
 }

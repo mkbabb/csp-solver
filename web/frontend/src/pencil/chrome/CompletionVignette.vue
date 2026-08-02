@@ -7,7 +7,7 @@
  * teacher's margin — the left column beside the work, ~255px wide at 1440 and empty
  * until now — at real grading scale, tilted like a hand-graded slant:
  *
- *   - the foil star at 6.5–7rem (the draw-on + gleam finally read),
+ *   - the foil star at 6.5–7rem (the landing finally reads),
  *   - "solved it!" beneath it in the hand,
  *   - the tally folded into ONE caption line — two text rungs total.
  *
@@ -15,10 +15,11 @@
  * MarginNote's `quiet`): no fold overflow, no scroll, no occlusion.
  *
  * Composition only — the W9 pieces re-composed, never re-invented: CelebrationStar
- * keeps its dashoffset draw-on + mask-sweep gleam (zero new subscribers); the live
- * region keeps its DOM home in the strip (this whole vignette is aria-hidden
- * decoration; the voice still announces the grade). Stays MOUNTED (v-show) so the
- * star's `active` watch sees the false→true flip — the T3-W9 v-show discipline.
+ * presses on as a sticker at the crest (T6 mark 14 — the foil-gleam rectangle it used
+ * to sweep is dead); the live region keeps its DOM home in the strip (this whole
+ * vignette is aria-hidden decoration; the voice still announces the grade). Stays
+ * MOUNTED (v-show) so the star's `active` watch sees the false→true flip — the T3-W9
+ * v-show discipline.
  *
  * Rungs (crit-corrected): ≥1280 the full left-margin vignette; below that it presses the
  * board's top-RIGHT frame as a sticker (the top-left dock collided with the corner-barb fix
@@ -124,21 +125,12 @@ withDefaults(
   color: var(--ink-press-quiet);
 }
 
-/* The voice + tally write in with the note's own 250ms clip wipe (the logo's reveal
-   mechanic, shortened — the strip's grammar, inherited). The star needs nothing: its
-   draw-on is dashoffset on the shared chain. */
+/* The voice + tally write in with the note's own 250ms clip wipe — `ink-write-in`, the
+   vocabulary's one write-in verb (this rule and the margin note's were byte-twins). The
+   star needs nothing here: it plays its own landing. */
 .vignette-voice,
 .vignette-meta {
-  animation: vignette-write-in 250ms var(--ease-noteWrite) both;
-}
-
-@keyframes vignette-write-in {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
+  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
 }
 
 /* ── Row regime base (≥1024): the corner-press sticker over the board's top-RIGHT
@@ -194,14 +186,6 @@ withDefaults(
 
   .completion-vignette:not(.is-docked) .vignette-voice {
     font-size: 2rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vignette-voice,
-  .vignette-meta {
-    animation: none;
-    clip-path: none;
   }
 }
 </style>
