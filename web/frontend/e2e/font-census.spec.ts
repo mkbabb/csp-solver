@@ -99,6 +99,13 @@ const CONDITIONAL: Record<string, string> = {
   "Patrick Hand|Ctrl": "keycap; the legend draws ⌘ on Apple platforms and Ctrl elsewhere",
 };
 
+/** Rows the cells produce on SOME deals. KenKen mints its cages per deal, so a given board may
+ *  carry no `+` or no `÷` at all — the backward arm redded once per engine on exactly these two
+ *  keys (CH-63 roster), on a puzzle, not a regression. Exempt from the backward check like
+ *  CONDITIONAL, but CONDITIONAL's absence assertion cannot hold for them: present is the
+ *  forward arm's business, absent is the deal's. */
+const PER_DEAL = new Set(["Patrick Hand|cage-op U+002B", "Patrick Hand|cage-op U+00F7"]);
+
 /** KenKen cage targets are GENERATED per deal — `3+`, `7+`, `6÷` — so an exact-match row over
  *  the whole label is unstable by construction: a different deal mints a different string and
  *  the gate would red on a puzzle, not on a regression. The row is keyed on the codepoint that
@@ -288,7 +295,9 @@ test("the ledger holds BOTH directions across two games and two regimes", async 
 
   // ── BACKWARD: nothing sits in the ledger that no cell can produce. A ledger that can only
   // grow is a list, not a gate; this is the direction pass 4 named and pass 3's C11 predicted.
-  const stale = Object.keys(LEDGER).filter((k) => !seen.has(k) && !(k in CONDITIONAL));
+  const stale = Object.keys(LEDGER).filter(
+    (k) => !seen.has(k) && !(k in CONDITIONAL) && !PER_DEAL.has(k),
+  );
   expect(stale, "ledger rows no cell produced — retire them or state the condition").toEqual(
     [],
   );
@@ -301,7 +310,9 @@ test("the ledger holds BOTH directions across two games and two regimes", async 
   // NEGATIVE CONTROL for the backward half — the check must be able to name a stale row.
   const withDecoy = { ...LEDGER, "Patrick Hand|Nonesuch": "control" };
   expect(
-    Object.keys(withDecoy).filter((k) => !seen.has(k) && !(k in CONDITIONAL)),
+    Object.keys(withDecoy).filter(
+      (k) => !seen.has(k) && !(k in CONDITIONAL) && !PER_DEAL.has(k),
+    ),
     "negative control: an unproducible ledger row must be reported",
   ).toEqual(["Patrick Hand|Nonesuch"]);
 
