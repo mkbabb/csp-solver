@@ -212,7 +212,19 @@ const CREST_FLOOR = REPORT_MAGNITUDE
     : SOUL_FLOOR;
 test('golden · toggle crest (dark, moon) — W13 soul: celestial rest pose', async ({ page }) => {
   await loadSettled(page, { dark: true });
-  const clip = await center(page.locator('button.sun-moon-toggle'), 110, 110);
+  // CH-42 BRANCH C (the banked crop-tighten cure, executed at WGATE): the 110×110
+  // centered crop claimed to exclude the twinkle cluster and did not — the ratio-0 diff
+  // shows two twinkle stars inside the window's top-right (center-rel x∈[+20,+55],
+  // y∈[−55,−30] CSS), and their baked raster relocating between two offsets IS the
+  // 643↔1028-px bimodality W1.10 classified REAL-DRIFT (both states appear within one
+  // toHaveScreenshot attempt's own call log). The disc core rasterizes stably. 72×72
+  // shifted down-left (center-rel x∈[−48,+24], y∈[−20,+52]) keeps the moon body and
+  // crescent rim, puts both stars out of frame, and is disjoint from their y-range
+  // with 10px to spare. Same golden name — the geometry change and its re-mint are one
+  // reviewed act; the diff geography is banked at evidence/wgate/ch42-branch-c/.
+  const clip = await center(page.locator('button.sun-moon-toggle'), 72, 72);
+  clip.x -= 12;
+  clip.y += 16;
   await expect(page).toHaveScreenshot('toggle-crest-dark.png', { ...CREST_FLOOR, clip });
 });
 
