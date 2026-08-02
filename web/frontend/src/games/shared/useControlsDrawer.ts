@@ -1,4 +1,4 @@
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 import { mediaRef, useRowRegime } from "./useCoarsePointer";
 import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
@@ -13,10 +13,23 @@ import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
  * persisted in localStorage — default OPEN: primary controls are never hidden by
  * default; tucking away is the owner's gesture, remembered.
  *
- * Regime rule (crit-design hazard 1): the drawer exists at ≥1024 ONLY. Below 1024 the
- * layout stacks and the mobile panel card stays in flow exactly as today — a defined
- * no-op (`toggleDrawer` early-returns; the tab is display:none there), never a silent
- * break. A touch bottom-sheet is an explicit non-goal this wave.
+ * Regime rule — THREE POSES OF ONE DRAWER (T5-W4 pass 6). T3-W12 wrote "≥1024 ONLY" and
+ * named a touch bottom-sheet an explicit non-goal *that wave*; the pass-6 charter spends the
+ * loop's one blocking row by moving the mobile controls out of flow into this same surface.
+ * There is still exactly ONE drawer, one state, one persistence key, one glide engine:
+ *   · **≥1024** — the shipped parked rail, byte-untouched (the audit-4 fiction).
+ *   · **<1024 portrait** — the case is a `position: fixed` bottom sheet anchored on
+ *     `top: var(--vv-height)` with its rest pose on `translate:` (`useKeyboardViewport`'s
+ *     standing trigger, honoured verbatim). The tongue rides the CASE, not the board.
+ *   · **<1024 landscape** — the shipped in-flow presentation, unchanged, and the toggle stays
+ *     the defined no-op it has always been there. The lead's charter (c) HOLDS that rung
+ *     RATIFIED, so this regime is keyed on width AND orientation, never width alone.
+ *
+ * G3, and it is a ruling rather than a preference: **portrait always lands closed.** An open
+ * sheet restored across a portrait load would resurrect the covered-board pose the covis row
+ * exists to kill. The desk's persisted key is untouched and desk-scoped; opens made on portrait
+ * do not write it, and a persisted-open desk choice crossing into portrait is parked
+ * non-persistently, so rotating back restores the desk's own pose from the desk's own key.
  *
  * Choreography (Band D, user-triggered one-shot, ~520ms): classic FLIP on WAAPI
  * (T3-W13 §3). The layout class lands ONCE at gesture onset — one forced layout per
@@ -89,17 +102,39 @@ const drawerPhase = ref<DrawerPhase>("idle");
 // off that same ref (P1-W4), so the regime this file's §6 rule gates on and the regime the
 // DOM carries are the one ref, not two readings of the same width.
 const rowRegime = useRowRegime();
+/** Orientation is the second half of the regime key — the lead's charter (c) holds the
+ *  landscape rung RATIFIED, so a width-only rule would move a ratified surface. */
+const portrait = mediaRef("(orientation: portrait)", true);
 const wideMargin = mediaRef("(min-width: 1360px)", true);
 const marginVignette = mediaRef("(min-width: 1280px)", true);
 const reducedMotion = mediaRef("(prefers-reduced-motion: reduce)", false);
 
+/** The portrait dock — the sheet pose. Below the row regime AND portrait; the one place the
+ *  `<1024` drawer is a live surface. Exported because the scene mints the tongue's berth and
+ *  the panel teleports its play verbs on exactly this ref (never a second reading of it). */
+export const portraitDock = computed(() => !rowRegime.value && portrait.value);
+
+/** Where the drawer is a surface at all. Landscape below 1024 keeps the shipped in-flow
+ *  presentation, so the toggle stays the defined no-op it has always been there. */
+const drawerLive = computed(() => rowRegime.value || portraitDock.value);
+
 /** The ONE layout step — `html.drawer-closed` drives every closed-regime rule
- *  (scene.css rail park, App.vue masthead centering, the boards' loosened caps). */
+ *  (scene.css rail park + the portrait sheet's rest pose, App.vue masthead centering, the
+ *  boards' loosened caps). */
 function applyLayout(open: boolean) {
   document.documentElement.classList.toggle("drawer-closed", !open);
 }
 
-// Pre-first-paint restore: a persisted-closed drawer must never flash open.
+/** G3 — opens made on portrait are transient. The desk's key is the DESK's, and a sheet that
+ *  remembered itself open would land a covered board on the next portrait visit. */
+function persistIfDesk(open: boolean) {
+  if (portraitDock.value) return;
+  persist(open);
+}
+
+// Pre-first-paint restore: a persisted-closed drawer must never flash open — and a portrait
+// mount lands closed whatever the desk remembered (G3), before the first paint, not after it.
+if (hasDom && portraitDock.value) drawerOpen.value = false;
 if (hasDom && !drawerOpen.value) applyLayout(false);
 
 // ── Registration — the scene owns the board/rail/tab, App owns the masthead ──
@@ -198,16 +233,29 @@ function glide(toOpen: boolean, scene: DrawerSceneEls) {
   const lastA = anchor?.getBoundingClientRect() ?? null;
 
   const specs: FlipMover[] = [];
+  // DOES THE WORKSHEET ACTUALLY MOVE? On the desk it does — that reciprocity IS the fiction.
+  // On the portrait dock it does NOT: the sheet is `position: fixed`, so the board's rect is
+  // identical before and after (the no-relayout claim, written as a rect identity and gated
+  // as one). Pushing a mover whose `from` equals its `to` promotes a filtered layer, animates
+  // it to itself and demotes it — a per-gesture raster this estate pays for nothing. Every
+  // host-derived mover below rides this same read, tongue counter-scale included: the tongue
+  // has nothing to counter when the host holds still.
+  const hostMoved =
+    Math.abs(firstH.width - lastH.width) > 0.5 ||
+    Math.abs(firstH.left - lastH.left) > 0.5 ||
+    Math.abs(firstH.top - lastH.top) > 0.5;
   // The worksheet: board + vignette + margin + tab ride ONE translate+scale. It rasters
   // at its FINAL size from frame one (the crit kill — the filtered board's SIZE is never
   // tweened): `flipTransform` maps its old full-size pose onto the grown box via scale
   // only — byte-identical to the pre-extraction host string.
-  specs.push({
-    el: host,
-    from: flipTransform(firstH, lastH),
-    to: "translate(0px, 0px) scale(1)",
-    transformOrigin: "50% 50%",
-  });
+  if (hostMoved) {
+    specs.push({
+      el: host,
+      from: flipTransform(firstH, lastH),
+      to: "translate(0px, 0px) scale(1)",
+      transformOrigin: "50% 50%",
+    });
+  }
   // The case: translate-only, same curve, same clock — sheet and case one solid; it
   // pulls out from under the sheet HORIZONTALLY (§3-S5 — the rect deltas are the tuck's
   // own geometry, and the glass curve is monotone, so no frame carries the case above
@@ -220,7 +268,7 @@ function glide(toOpen: boolean, scene: DrawerSceneEls) {
   });
   // The tab: counter-scales the host's ride so its 48px tongue reads constant
   // (host × tab ≈ 1 across the curve — F5's kept behavior, a WAAPI mover).
-  if (tab) {
+  if (tab && hostMoved) {
     const hostScale = firstH.width / lastH.width;
     specs.push({
       el: tab,
@@ -231,7 +279,7 @@ function glide(toOpen: boolean, scene: DrawerSceneEls) {
   // The masthead: the h1 glides anchored on the wordmark's center-bottom in the TARGET
   // layout's box (the h1 spans the full group width — its own center is not the
   // wordmark's), so the measured wordmark rect maps first → last exactly.
-  if (block && lastB && firstA && lastA) {
+  if (block && lastB && firstA && lastA && hostMoved) {
     specs.push({
       el: block,
       from: `translate(${cx(firstA) - cx(lastA)}px, ${firstA.bottom - lastA.bottom}px) scale(${firstA.width / lastA.width})`,
@@ -258,7 +306,7 @@ function settleNow() {
 function retarget() {
   targetOpen = !targetOpen;
   drawerOpen.value = targetOpen;
-  persist(targetOpen);
+  persistIfDesk(targetOpen);
   drawerPhase.value = targetOpen ? "opening" : "closing";
   glideCtl.reverse();
   if (!targetOpen) reclaimFocus();
@@ -285,15 +333,33 @@ function focusPanel() {
 
 // ── Public surface (via useControlsDrawer() — the scenes' one door) ──
 
+// Crossing the regime LIVE (a rotation, a resize across 1024). Into the portrait dock: park an
+// open desk choice WITHOUT writing it away, so rotating back restores the desk's own pose from
+// the desk's own key. Out of it: that key is still intact, so read it. Declared here, below the
+// glide engine, because it settles an in-flight gesture before it re-poses the layout.
+if (hasDom) {
+  watch(portraitDock, () => {
+    settleNow();
+    const next = portraitDock.value ? false : readStored();
+    if (next === drawerOpen.value && targetOpen === next) return;
+    drawerOpen.value = next;
+    targetOpen = next;
+    drawerPhase.value = "idle";
+    applyLayout(next);
+  });
+}
+
 function toggleDrawer() {
-  if (!hasDom || !rowRegime.value) return; // §6 regime rule: defined no-op <1024
+  // The regime rule, now three-posed: the desk rail and the portrait dock are live surfaces;
+  // landscape below 1024 keeps the shipped in-flow card, where this stays a defined no-op.
+  if (!hasDom || !drawerLive.value) return;
   if (drawerPhase.value !== "idle") {
     retarget();
     return;
   }
   const next = !drawerOpen.value;
   drawerOpen.value = next;
-  persist(next);
+  persistIfDesk(next);
   const scene = getScene?.();
   if (!next) reclaimFocus();
   if (reducedMotion.value || !scene?.host || !scene.rail) {

@@ -55,6 +55,21 @@ no box and triggers no `HandDrawnOutline` re-bake; the longest string keeps 31.7
 side in the tightest cell (320) and stays single-line; `text→actions` is 9.59px in all 36 — no
 wrap into the verb row. Shots: `pass4/shots-A/*.png` (36).
 
+> **RESTAMPED at pass 6 (A5-G2, A5-G4, A6-G1) — the sentence above stands as written; these three
+> corrections ride beside it, nothing is erased.**
+> 1. **`overflow 0/0` is RETIRED as evidence.** Pass 5's falsifying arm reads 0/0 on a string that
+>    cannot fit (4 lines, `noteH` 106.2 → 166.2) — the note grows, it does not clip — so the column
+>    reported a property this layout cannot violate. The load-bearing columns are **`subLines`** and
+>    **`noteH`**. No headline may cite the ribbon's `overflow` again.
+> 2. **31.73px is a CONTENT-box slack, and the noun is now required.** Pass 5 read 45.33 on the same
+>    shipped ribbon from the note's BORDER box; pass 6's one-instrument arm reproduces all three of
+>    this row's 320 cells — 51.96/51.98 · 41.40/41.40 · 31.73/31.74 — on the content referent at
+>    `abe533c4`, two waves later, and the gap is exactly `.guard-note`'s 13.60px horizontal padding.
+>    Both figures are true of the same pixels; neither is struck
+>    (`pass6/A/logs/A6-10-referent-arm.log`).
+> 3. **`pass4/shots-A/` does not exist in the tree.** No number here rides those shots — the geometry
+>    is in `logs/A/ribbon-geom.json`, and pass 6 regenerated it.
+
 ---
 
 ## 2 · ROW-BY-ROW DISPOSITION

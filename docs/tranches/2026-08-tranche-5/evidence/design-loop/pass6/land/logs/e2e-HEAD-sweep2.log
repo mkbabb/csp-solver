@@ -1,0 +1,61 @@
+AUDIT: pass-6 LAND · e2e sweep 2 after the re-cuts, HEAD dist :4232 · 2026-08-02T09:03:15Z
+          - element is outside of the viewport
+        - retrying tap action
+          - waiting 100ms
+        54 × waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - element is outside of the viewport
+         - retrying tap action
+           - waiting 500ms
+
+
+      329 |     await installFakeVisualViewport(page);
+      330 |     await loadSudoku(page);
+    > 331 |     await page.locator(".drawer-tab").tap();
+          |                                       ^
+      332 |     await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
+      333 |     await page.waitForTimeout(700);
+      334 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/mobile-platform.spec.ts:331:39
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/mobile-platform-the-296px--935b5-ar-of-the-band-at-scrollY-0-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/mobile-platform-the-296px--935b5-ar-of-the-band-at-scrollY-0-webkit/error-context.md
+
+  4) [webkit] › e2e/visual-regression.spec.ts:641:1 › option chips keep their separation: ≥6px between neighbours, both axes 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('.ctrl-btn') to be visible
+        32 × locator resolved to 14 elements. Proceeding with the first one: <button data-v-66d9df7b="" aria-pressed="false" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 text-[1rem] md:text-[1.375rem] text-muted-foreground hover:text-foreground hover-item">4×4</button>
+
+
+      692 |     await phone.goto("./");
+      693 |     await phone.waitForSelector("svg.handwritten-logo", { timeout: 15000 });
+    > 694 |     await phone.waitForSelector(".ctrl-btn", { timeout: 15000 });
+          |                 ^
+      695 |     // The regime witness: a number taken at `pointer: fine` on phone geometry is a different
+      696 |     // number (the pass-1 harness). Refuse it rather than bank it.
+      697 |     expect(await phone.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/visual-regression.spec.ts:694:17
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-regression-option-c-5641d-etween-neighbours-both-axes-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-regression-option-c-5641d-etween-neighbours-both-axes-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-regression-option-c-5641d-etween-neighbours-both-axes-webkit/error-context.md
+
+  4 failed
+    [chromium] › e2e/mobile-platform.spec.ts:325:3 › the 296px keypad band (measured constant, driven through the composable) › with the keypad up, every control seats clear of the band at scrollY 0 
+    [chromium] › e2e/visual-regression.spec.ts:641:1 › option chips keep their separation: ≥6px between neighbours, both axes 
+    [webkit] › e2e/mobile-platform.spec.ts:325:3 › the 296px keypad band (measured constant, driven through the composable) › with the keypad up, every control seats clear of the band at scrollY 0 
+    [webkit] › e2e/visual-regression.spec.ts:641:1 › option chips keep their separation: ≥6px between neighbours, both axes 
+  275 passed (1.3m)

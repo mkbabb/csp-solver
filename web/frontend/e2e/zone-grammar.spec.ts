@@ -431,6 +431,20 @@ test.describe("coarse row regime (≥1024)", () => {
 
 // ── The card (coarse pointer) ───────────────────────────────────────────────────
 
+/**
+ * T5-W4 pass 6 — the coarse card moved BEHIND A DOOR on the portrait dock, and the selector
+ * moved with it: `.mobile-board-width` was the deleted stacked twin's name for the same box,
+ * and there is one card now (`#controls-drawer`'s own case). Every row below reads the CARD, so
+ * every row below opens it first. It is a named call rather than a `beforeEach` because the
+ * fold's rows — the ones that must hold with the sheet SHUT — live in other files and must
+ * never inherit this.
+ */
+async function openCard(page: Page) {
+  await page.locator(".drawer-tab").tap();
+  await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
+  await page.waitForTimeout(700); // the Band-D glide's own clock, then settle
+}
+
 test.describe("coarse regime", () => {
   // The phone descriptor's TRAITS only — `browserName`/`defaultBrowserType` cannot be set in a
   // describe group (it would force a new worker), and the iPhone descriptor defaults to webkit,
@@ -448,7 +462,8 @@ test.describe("coarse regime", () => {
     page,
   }) => {
     await loadSudoku(page);
-    const panelSel = ".mobile-board-width .control-panel-wrap";
+    await openCard(page);
+    const panelSel = "#controls-drawer .control-panel-wrap";
 
     // WITNESS — three independent observables, asserted before any number is read. Without
     // this the whole test can pass at `pointer: fine` against a layout no phone ever shows.
@@ -490,6 +505,7 @@ test.describe("coarse regime", () => {
     page,
   }) => {
     await loadSudoku(page);
+    await openCard(page);
     // B-5's lock (":212") runs at the default 1280 fine project and scopes itself to
     // `.controls-card`, so it only ever sees the RAIL's two h2s — the second arm was one
     // `test.use` away (pass-4 BC-m5). It does NOT travel by copying its selector, and that is
@@ -501,7 +517,7 @@ test.describe("coarse regime", () => {
     // rail's selector this arm reports `span`, which is a probe defect, not an estate one.
     // The PROPERTY is what carries across the seam, so the property is what is asserted.
     const headings = await page
-      .locator(".mobile-board-width .section-heading")
+      .locator("#controls-drawer .section-heading")
       .evaluateAll((els) =>
         els.map((el) => {
           const h = el.closest("h1,h2,h3");
@@ -529,7 +545,7 @@ test.describe("coarse regime", () => {
     // No hidden subtree on the card may contain a heading — the "both" the order forbade,
     // asserted where the card's own decorative `aria-hidden` population actually lives.
     const hidden = await page
-      .locator(".mobile-board-width [aria-hidden='true']")
+      .locator("#controls-drawer [aria-hidden='true']")
       .evaluateAll((els) =>
         els.map((el) => ({
           cls: el.className.toString(),
@@ -545,9 +561,9 @@ test.describe("coarse regime", () => {
     // passed on both builds when it landed. Hide one heading's subtree in-page and the same
     // probe must report the violation it exists to catch.
     const broken = await page.evaluate(() => {
-      const h = document.querySelector(".mobile-board-width .section-heading")!;
+      const h = document.querySelector("#controls-drawer .section-heading")!;
       h.closest("h1,h2,h3")!.setAttribute("aria-hidden", "true");
-      return [...document.querySelectorAll(".mobile-board-width [aria-hidden='true']")].some(
+      return [...document.querySelectorAll("#controls-drawer [aria-hidden='true']")].some(
         (el) => el.tagName.toLowerCase().startsWith("h") || !!el.querySelector("h1,h2,h3"),
       );
     });
@@ -560,7 +576,8 @@ test.describe("coarse regime", () => {
     page,
   }) => {
     await loadSudoku(page);
-    const status = page.locator(".mobile-board-width .check-status");
+    await openCard(page);
+    const status = page.locator("#controls-drawer .check-status");
     await expect(status).toHaveAttribute("role", "status");
     // Default mode is on-demand with the snapshot armed by nothing yet — the stale sentence,
     // which is precisely the state `checkArmed` decays into and no control could report.
@@ -569,7 +586,7 @@ test.describe("coarse regime", () => {
     // Live: the sentence changes AND the pressure rung with it (the class the ink ladder keys).
     // Scoped to the well — `Off` is a label in two compartments, which is exactly why each
     // control group carries its own name.
-    const well = page.locator('.mobile-board-width .tray-well:has-text("teacher\'s")');
+    const well = page.locator('#controls-drawer .tray-well:has-text("teacher\'s")');
     await well.locator('.ctrl-btn:text-is("Live")').tap();
     await expect(status).toContainText("marking as you go");
     await expect(status).toHaveClass(/is-marking/);

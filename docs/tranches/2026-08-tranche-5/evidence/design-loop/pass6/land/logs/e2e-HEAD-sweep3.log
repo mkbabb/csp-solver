@@ -1,0 +1,51 @@
+AUDIT: pass-6 LAND · e2e sweep 3, HEAD dist :4232 · 2026-08-02T09:06:00Z
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.drawer-tab')
+        - locator resolved to <button type="button" data-v-e2ae95bb="" data-v-199d1164="" class="drawer-tab" aria-expanded="false" aria-controls="controls-drawer">…</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - element is outside of the viewport
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - element is outside of the viewport
+        - retrying click action
+          - waiting 100ms
+        54 × waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - element is outside of the viewport
+         - retrying click action
+           - waiting 500ms
+
+
+      335 |     // viewport" against the stand-in. The tongue's own touch target is gated where it belongs,
+      336 |     // on the real object: `drawer.spec.ts`'s portrait row taps it and reads 92×48.
+    > 337 |     await page.locator(".drawer-tab").click();
+          |                                       ^
+      338 |     await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
+      339 |     await page.waitForTimeout(700);
+      340 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/mobile-platform.spec.ts:337:39
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/mobile-platform-the-296px--935b5-ar-of-the-band-at-scrollY-0-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/mobile-platform-the-296px--935b5-ar-of-the-band-at-scrollY-0-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/mobile-platform.spec.ts:325:3 › the 296px keypad band (measured constant, driven through the composable) › with the keypad up, every control seats clear of the band at scrollY 0 
+    [webkit] › e2e/mobile-platform.spec.ts:325:3 › the 296px keypad band (measured constant, driven through the composable) › with the keypad up, every control seats clear of the band at scrollY 0 
+  277 passed (1.3m)

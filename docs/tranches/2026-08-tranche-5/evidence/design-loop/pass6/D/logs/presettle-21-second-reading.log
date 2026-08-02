@@ -1,0 +1,99 @@
+=== AUDIT ===
+row       D5-G3 — the pre-settle 21 is n=1 (one device arm, one session). Order (4): take a
+          second cold-load reading, or print n=1 explicitly. THIS LANE DOES BOTH.
+subject   filterBudget.ts:39-45 row 3 and :59 — "PRE-SETTLE cold load, EITHER rule = 21",
+          UNGATED, trigger = "a second cold-load reading above 21".
+tree      HEAD abe533c4
+artifact  scratchpad/dist-D6, built by this lane from HEAD, served on 127.0.0.1:4245
+rig       pass6/D/rig/presettle-census.mjs — 393x699 dpr3 coarse, FRESH CONTEXT PER RUN
+          (cold cache, cold storage), rAF-sampled from before the first page script runs
+          until the population holds still for 900ms, PEAK reported, both counting rules.
+arm       Playwright chromium + webkit at the descriptor. NOT real MobileSafari on real
+          hardware — the pass-4 figure came off `perf-rig-iphone16`/iOS 19 and no
+          emulation replaces it. Read this as a second INSTRUMENT, not a second device.
+date      2026-08-02T07:34:04Z
+
+pre-settle census — 393x699 dpr3, coarse, cold context per run
+base http://127.0.0.1:4245
+
+engine    run  frames  PEAK spec  PEAK device   at t(ms)  rest/active  logo/active   settled spec/device
+chromium  1    141            21           21        453          8/2          4/1   9/13
+chromium  2    145            21           21        322          8/2          4/1   9/13
+chromium  3    146            21           21        352          8/2          4/1   9/13
+webkit    1    102            20           20         95          8/2          4/1   9/13
+webkit    2    98             20           20         96          8/2          4/1   9/13
+webkit    3    92             20           20         99          8/2          4/1   9/13
+
+peak population, by element (run 1 of each engine):
+  [chromium] peak 21 @ t=453ms
+        2  g
+        3  g.boil-pose
+        1  g.boil-pose.is-active
+        3  g.logo-pose
+        1  g.logo-pose.is-active
+        6  svg.rest-pose
+        2  svg.rest-pose.is-pose-active
+        1  svg.sparkle-icon
+        1  svg.toggle-icon.toggle-moon
+        1  svg.toggle-icon.toggle-sun
+  [webkit] peak 20 @ t=95ms
+        2  g
+        3  g.boil-pose
+        1  g.boil-pose.is-active
+        3  g.logo-pose
+        1  g.logo-pose.is-active
+        6  svg.rest-pose
+        2  svg.rest-pose.is-pose-active
+        1  svg.toggle-icon.toggle-moon
+        1  svg.toggle-icon.toggle-sun
+
+  DELTA chromium-minus-webkit at peak:
+      +1  svg.sparkle-icon
+
+peaks 21, 21, 21, 20, 20, 20  — max 21  — readings ABOVE 21: 0
+TRIGGER DOES NOT FIRE on this arm: no reading above 21.
+
+################ WHAT IT SAYS
+
+1. CHROMIUM REPRODUCES 21 ELEMENT FOR ELEMENT, 3/3 runs. Not just the total — the arithmetic
+   `filterBudget.ts` prints:
+
+     settled nine   g 2 · toggle-sun 1 · toggle-moon 1 · boil-pose 3 + is-active 1 · sparkle 1  =  9
+     rest poses     svg.rest-pose 6 + svg.rest-pose.is-pose-active 2                            = +8
+     wordmark       g.logo-pose 3 + g.logo-pose.is-active 1                                     = +4
+                                                                                          total  21
+
+   Every row of the pass-4 device breakdown re-derives on an independent instrument. The
+   figure was n=1 and it is no longer alone.
+
+2. BOTH RULES AGREE AT THE PEAK, which is row 3's whole claim. spec == device in all six runs
+   (21/21 chromium, 20/20 webkit): before the bake lands nothing is `display: none` yet, so
+   consulting own-display changes nothing. The claim held on a second instrument.
+
+3. THE SETTLED FLOOR RE-DERIVES TOO: 9 / 13 in every run, both engines — rows 1 and 2 of the
+   same table, unchanged.
+
+4. WEBKIT PEAKS AT 20, AND THE MISSING ONE HAS A NAME: `svg.sparkle-icon`. Every other row is
+   identical in name and count. It is a sampling-window artifact, not an absent surface —
+   WebKit's peak lands at t≈96-101ms against Chromium's t≈291-472ms, i.e. before the sparkle
+   joins the population, and WebKit's own SETTLED count is 9, which includes it. The boot
+   window is simply shorter on WebKit. No surface is missing; nothing is over budget.
+
+5. THE TRIGGER DOES NOT FIRE. It reads "a second cold-load reading ABOVE 21". Max across six
+   cold contexts, two engines: 21. Nothing above. The 21 stays UNGATED with its trigger intact
+   — and now with a corroborating reading under it rather than a single session.
+
+################ AND THE n=1 IS STILL PRINTED, BECAUSE IT IS STILL TRUE
+
+The REAL-DEVICE arm remains n = 1: one session, one phone, `pass4/logs/D/r3b.jsonl`, real
+MobileSafari iOS 19 at 393x699 dpr3. This lane did not add a device reading and cannot: the
+rig is the owner's. What it added is n = 6 on an emulated arm that agrees with it exactly on
+Chromium and explains its own one-element shortfall on WebKit.
+
+So the pass-6 record carries both, and neither is dressed as the other:
+    real device, real MobileSafari ......... n = 1   (21, and the source of the printed figure)
+    Playwright chromium @ descriptor ....... n = 3   (21, 21, 21 — element-for-element match)
+    Playwright webkit @ descriptor ......... n = 3   (20, 20, 20 — sparkle outside the window)
+
+D5-G3 closes as CORROBORATED-NOT-GATED. The device n stays 1 and says so; the number it
+carries is no longer unreplicated.

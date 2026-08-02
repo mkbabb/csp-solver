@@ -1,0 +1,22 @@
+AUDIT: re-run D's crest-rate-tally rig as non-author 2026-08-02T09:46:13Z HEAD=abe533c4
+TOGGLE-CREST-DARK — every banked arm, re-derived from the logs (pass 5, Lane D)
+
+arm                                   green   red     n   red-rate   what it is
+pass3 MEASURE · BASE r1..r3              3     0     3      0.0%   pre-remint, base dist
+pass3 MEASURE · HEAD r1..r3              3     0     3      0.0%   pre-remint, pass-3 HEAD
+pass4 D · pre-remint BEFORE              1     0     1      0.0%   the run that opened pass 4
+pass4 D · POST-REMINT (the row)          6     5    11     45.5%   the eleven D published as 7/11 · 4/11
+pass4 D · the 8 on disk at 64fa37a4      5     3     8     37.5%   what the commit body counted
+pass4 MEASURE · head r1..r8              8     0     8      0.0%   non-author, same host, same day
+pass4 F3 · final HEAD 1..14              9     5    14     35.7%   F3's rate arm
+pass4 F3 · final NO-OP 1..14            11     3    14     21.4%   F3's no-op control arm
+pass4 F3 · final BASE 1..7               7     0     7      0.0%   F3's base arm
+pass4 A · gates-goldens                  1     0     1      0.0%   Lane A's single sweep
+
+the W3 magnitude instrument (runs, not test rows) — OVER THE FLOOR is what reds the gate
+
+W3-verify · W3 dist (6 runs)          runs 6  ·  OVER 1  ·  under-floor 2  ·  byte-identical 3  ·  worst 1028 px
+W3-verify · HEAD CONTROL (6 runs)     runs 6  ·  OVER 5  ·  under-floor 0  ·  byte-identical 1  ·  worst 1028 px
+
+POOLED across the pass-4 host-day (caveat in the header): 43 green · 13 red · n=56 · 23.2%
+NO rate here authorises a re-baseline. CH-42 is WATCH-ONLY (lead adjudication row 8).

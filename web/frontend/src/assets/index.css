@@ -736,6 +736,26 @@ html {
  * impossibility — D12). min-height only: every listed control centers its own
  * content; the scribble/ghost underlines keep tracking the content box.
  * (T4-W12 Wave D — the `.logo-menu-item` listbox rows retired with the dropdown.) */
+/* T5-P6 (BC5-G5) — WHOSE FLOOR THIS IS. No component owns 44px; this block does, and four
+ * components inherit it. Stating it at the branch that enforces it read as a property of that
+ * branch, which is how pass 5 came to red the wrong assertion first: a control that leaves
+ * this rule standing cannot push itself under the bar, so a failure here is a failure of this
+ * block, never of the component that reported it.
+ *
+ * THE DEPENDENTS, re-derived at this citation rather than carried (pass 5 wrote "three"; the
+ * grep over rendered `class=` attributes returns FOUR, one component per selector, and the
+ * two halves of the floor do not reach the same set):
+ *   min-height — .ctrl-btn            pencil/chrome/OptionSelector/OptionSelector.vue
+ *              · .mobile-heading-btn  games/shared/GameControlPanel.vue
+ *              · .attribution-trigger pencil/chrome/AttributionCard/AttributionCard.vue
+ *              · .error-note-retry    games/shared/SolverErrorNote.vue
+ *   min-width  — .ctrl-btn and .mobile-heading-btn ONLY (see the block below for why).
+ *
+ * NOT dependents, though they gate on the same number: `.icon-btn` (undo/redo/hint) and
+ * `.peek-hold-surface` clear 44px on their own geometry — `e2e/mobile-affordances.spec.ts`
+ * measures those, and deleting this rule would not move them. The gate that DOES read this
+ * block is `e2e/zone-grammar.spec.ts`, "the pair branch keeps a 44px floor in BOTH
+ * dimensions", and it stays where the branch exists rather than moving here with the prose. */
 @media (pointer: coarse) {
   .ctrl-btn,
   .mobile-heading-btn,
@@ -777,7 +797,10 @@ html {
   .mobile-attribution,
   .masthead,
   .controls-card,
-  .mobile-board-width,
+  /* T5-W4 pass 6: `.mobile-board-width` is deleted — the stacked twin it named is gone and the
+     ONE card is `.controls-card`, already listed above. What replaced it in the portrait fold
+     is the play-verbs band, and a printed worksheet wants no undo button either. */
+  .fold-tools,
   .celebration-star,
   .board-margin,
   .answer-key-laminate {

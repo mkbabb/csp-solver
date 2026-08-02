@@ -9,12 +9,32 @@
 // whole tranche. This script is the missing gate, and its scope is the estate the
 // policy actually binds: `docs/tranches/**`.
 //
-// Three rules, each straight off the policy text:
+// Four rules. Three are straight off the policy text:
 //   1. per-image  ≤ 153,600 B   (`:10` "Per-image cap: ≤150 KB")
 //   2. per-wave   ≤ 2,097,152 B (`:11` "Per-wave cap: ≤2 MB of images")
 //   3. name ban   /-full\.png$/ (`:9`  "Crops, never full viewports")
 // The two byte figures are the binary-prefix reading pinned by the tranche-5
 // gates block (`gates.json` → W1.evidencePolicy.perImageBytesMax / perWaveBytesMax).
+//
+//   4. BANKED DIST — born at the T5-W4 pass-5 seal, adjudication §2 (BC5-G2).
+//      Every banked `dist-*` directory in the design-loop evidence turned out to
+//      hold `_headers` + `_redirects` and no build: the payload never survived the
+//      commit, so every md5/identity claim resting on those directories is
+//      testimony with its exhibit missing. The ruling let the conclusions stand
+//      (later passes rebuilt and re-measured) and wrote the policy this rule now
+//      enforces: A BANKED DIST SHIPS AS A `.tar.gz` WITH AN md5 MANIFEST BESIDE
+//      IT, OR THE RECORD SAYS "testimony, artifact not banked" IN PLACE.
+//      Concretely, under `docs/tranches/**`:
+//        (a) a directory whose basename is `dist` or starts `dist-` is a breach
+//            unless it carries a `TESTIMONY.md` naming itself as testimony;
+//        (b) a `TESTIMONY.md` that does not contain the literal phrase
+//            "testimony, artifact not banked" is not a marker — a placeholder
+//            file must not be able to buy an exemption;
+//        (c) a `dist*.tar.gz` without a non-empty sibling md5 manifest
+//            (`<archive>.md5` or `<archive>.tar.gz.md5`) is a breach — an archive
+//            nobody can verify is the same hole in a smaller box.
+//      The estate that existed when the rule was written is grandfathered by name
+//      (GRANDFATHERED_DISTS), so the gate reds on NEW hollow banks only.
 //
 // A "wave" is the bucket the per-wave cap is summed over: the directory one level
 // under the nearest `evidence/` segment (`.../evidence/w10`, and `.../evidence/w12`
@@ -27,14 +47,16 @@
 // capture before it can be committed.
 //
 // Run: `node scripts/check-evidence-policy.mjs [--self-test]`
-// `--self-test` re-proves all three rules able to FAIL (and able NOT to fire on a
+// `--self-test` re-proves all four rules able to FAIL (and able NOT to fire on a
 // clean estate) against synthetic inputs before the real audit runs, so a green here
-// is never a green from a broken instrument. CI passes the flag.
+// is never a green from a broken instrument. CI passes the flag. The self-test does
+// not exit: control falls through to the real audit on purpose. See the main block.
 
 import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   rmSync,
   statSync,
@@ -52,9 +74,18 @@ const PER_IMAGE_BYTES_MAX = 153600; // 150 KiB — EVIDENCE-POLICY:10
 const PER_WAVE_BYTES_MAX = 2097152; // 2 MiB   — EVIDENCE-POLICY:11
 const BANNED_NAME = /-full\.png$/; //            EVIDENCE-POLICY:9
 
+// Rule 4 — pass-5 seal, adjudication §2. `dist` and `dist-<anything>`; `distillate` is not a
+// dist bank, hence the anchored `(-|$)` rather than a bare prefix.
+const DIST_DIR = /^dist(-|$)/;
+const DIST_ARCHIVE = /^dist.*\.tar\.gz$/;
+const TESTIMONY_FILE = 'TESTIMONY.md';
+/** The words the adjudication put in the record's mouth. A marker must actually say them. */
+const TESTIMONY_PHRASE = 'testimony, artifact not banked';
+
 // ---------------------------------------------------------------- grandfather
 //
-// ADDITIONS TO THESE TWO LISTS ARE FORBIDDEN.
+// ADDITIONS TO THESE LISTS ARE FORBIDDEN. (Two here; the dist list below says the
+// same thing in its own words, on its own terms.)
 //
 // The lists are the once-only adjudication of the estate that existed when the gate
 // was built — the sealed tranches (2026-06 / 2026-07), whose evidence was authored
@@ -147,6 +178,61 @@ const GRANDFATHERED_IMAGES = [
   ['docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/evidence/p1/soul-glyph-bake/webkit-light/board-1x.png', 193494],
 ];
 
+// ------------------------------------------------- grandfather: the dist banks
+//
+// ADDITIONS TO THIS LIST ARE FORBIDDEN, on the same terms as the two above.
+//
+// This is the banked-dist estate as it stood when rule 4 was written (T5-W4 pass 6,
+// at `abe533c4`). The adjudication that ordered the rule counted "all 23 banked
+// `dist-*` directories"; re-derived at citation, the filesystem holds **29** banked
+// dist directories, of which **25 are hollow** (`_headers` + `_redirects`, nothing
+// else) and **4 are full** (39 files each, a real build). The 23 is corrected here
+// rather than copied — the ruling's substance is untouched, only its count.
+//
+// Every entry is a CEILING on FILE COUNT, not a blanket: a grandfathered bank that
+// GAINS files reds. That is the point. Re-filling a hollow directory with loose
+// build output is exactly the practice the rule retires; the cure for wanting a
+// payload back is a `.tar.gz` + md5 under a NEW name, which this list does not
+// cover and rule 4 therefore checks properly.
+//
+/** @type {Array<[string, number]>} dist bank → pinned file count. 29 entries. */
+const GRANDFATHERED_DISTS = [
+  // HOLLOW — 25. The BC5-G2 subject: payload absent, claims stand as testimony only,
+  // and no future claim may cite these directories as proof (adjudication §2).
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/dist-base', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/dist-f2pen', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/dist-f2type', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-127fde0d', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-A', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-B0', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-B1', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-Bfinal', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-F3base', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-F3head', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-base', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-e982a403', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-head', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-prune', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/measure/dist-head', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/stall/dist-head', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-BChead', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-F3base', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-F3head', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-FINAL', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-curveCTRL', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-noopCTRL', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-p4base', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-recon', 2],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/measure/dist-head', 2],
+  // FULL — 4. Payload present (39 files each, pass 5 banked real builds), but LOOSE:
+  // not a `.tar.gz`, no md5 manifest. They are grandfathered because they are real
+  // evidence that predates the rule, not because loose is acceptable going forward.
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/BC/rig/dist-head', 39],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/f3/dist-p5ablate', 39],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/f3/dist-p5base', 39],
+  ['docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/f3/dist-p5head', 39],
+];
+
 /** @type {Array<[string, number]>} wave bucket → pinned byte ceiling. 5 entries, all sealed. */
 const GRANDFATHERED_WAVES = [
   ['docs/tranches/2026-07-tranche-2/evidence/execution', 2467705],
@@ -178,6 +264,74 @@ function collectPngs(dir) {
   return out;
 }
 
+/**
+ * Every banked dist under `dir`, as `{ dir: absPath, files: n, marker: 'ok'|'empty'|'absent' }`,
+ * plus every `dist*.tar.gz` as `{ archive: absPath, manifest: boolean }`. One walk, because the
+ * two halves of rule 4 live in the same tree and a dist dir never nests inside another.
+ */
+function collectDistBanks(dir) {
+  const dirs = [];
+  const archives = [];
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    if (err.code === 'ENOENT') return { dirs, archives };
+    throw err;
+  }
+  for (const e of entries) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) {
+      if (DIST_DIR.test(e.name)) {
+        dirs.push({ dir: p, files: countFiles(p), marker: readMarker(p) });
+        // Do NOT descend: a banked dist is judged whole, and its own build output
+        // must never be mistaken for further banks.
+        continue;
+      }
+      const inner = collectDistBanks(p);
+      dirs.push(...inner.dirs);
+      archives.push(...inner.archives);
+    } else if (e.isFile() && DIST_ARCHIVE.test(e.name)) {
+      archives.push({ archive: p, manifest: hasManifest(p) });
+    }
+  }
+  return { dirs, archives };
+}
+
+function countFiles(dir) {
+  let n = 0;
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    if (e.isDirectory()) n += countFiles(join(dir, e.name));
+    else if (e.isFile()) n += 1;
+  }
+  return n;
+}
+
+/** 'ok' = a TESTIMONY.md saying the words; 'empty' = one that does not; 'absent' = none. */
+function readMarker(dir) {
+  const abs = join(dir, TESTIMONY_FILE);
+  if (!existsSync(abs)) return 'absent';
+  let text = '';
+  try {
+    text = readFileSync(abs, 'utf8');
+  } catch {
+    return 'empty';
+  }
+  return text.toLowerCase().includes(TESTIMONY_PHRASE) ? 'ok' : 'empty';
+}
+
+/** `<archive>.md5` or `<archive-without-.tar.gz>.md5`, and it must have something in it. */
+function hasManifest(archiveAbs) {
+  const candidates = [`${archiveAbs}.md5`, archiveAbs.replace(/\.tar\.gz$/, '.md5')];
+  return candidates.some((c) => {
+    try {
+      return statSync(c).size > 0;
+    } catch {
+      return false;
+    }
+  });
+}
+
 /** The bucket the per-wave cap sums over. See the header. */
 function waveKeyFor(rel) {
   const seg = rel.split('/');
@@ -190,9 +344,10 @@ function waveKeyFor(rel) {
  * The whole policy in one pure function, so `--self-test` can run it against a
  * synthetic estate with its own pins.
  */
-function audit({ root, scope, images = [], waves = [] }) {
+function audit({ root, scope, images = [], waves = [], dists = [] }) {
   const imagePins = new Map(images);
   const wavePins = new Map(waves);
+  const distPins = new Map(dists);
   const scopeDir = join(root, scope);
   // An absent scope dir is a BROKEN INSTRUMENT, not a clean estate — a moved script
   // or a renamed docs tree would otherwise green forever on zero files.
@@ -236,9 +391,50 @@ function audit({ root, scope, images = [], waves = [] }) {
     }
   }
 
-  const stale = [...imagePins.keys(), ...wavePins.keys()].filter((k) => !seenPins.has(k)).sort();
+  // ---- rule 4: the banked dists -------------------------------------------
+  const banks = collectDistBanks(scopeDir);
+  const distDirs = banks.dirs.sort((a, b) => a.dir.localeCompare(b.dir));
+  const distArchives = banks.archives.sort((a, b) => a.archive.localeCompare(b.archive));
+
+  for (const d of distDirs) {
+    const rel = relative(root, d.dir).split(sep).join('/');
+    const pin = distPins.get(rel);
+    if (pin !== undefined) {
+      seenPins.add(rel);
+      // A ceiling, not a blanket — same grammar as the image and wave pins.
+      if (d.files > pin) {
+        breaches.push({ rule: 'grandfather-dist', path: rel, bytes: d.files, limit: pin });
+      }
+      continue;
+    }
+    if (d.marker === 'ok') continue; // the record says the words; the bank is declared testimony
+    breaches.push({
+      rule: d.marker === 'empty' ? 'dist-marker-mute' : 'dist-loose',
+      path: rel,
+      bytes: d.files,
+      limit: null,
+    });
+  }
+
+  for (const a of distArchives) {
+    if (a.manifest) continue;
+    const rel = relative(root, a.archive).split(sep).join('/');
+    breaches.push({ rule: 'dist-no-manifest', path: rel, bytes: statSync(a.archive).size, limit: null });
+  }
+
+  const stale = [...imagePins.keys(), ...wavePins.keys(), ...distPins.keys()]
+    .filter((k) => !seenPins.has(k))
+    .sort();
   breaches.sort((a, b) => b.bytes - a.bytes || a.path.localeCompare(b.path));
-  return { files: files.length, totalBytes, byWave, breaches, stale };
+  return {
+    files: files.length,
+    totalBytes,
+    byWave,
+    breaches,
+    stale,
+    distDirs: distDirs.length,
+    distArchives: distArchives.length,
+  };
 }
 
 const RULE_TEXT = {
@@ -247,6 +443,18 @@ const RULE_TEXT = {
   'name-ban': (b) => `${fmt(b.bytes)} B  name matches /-full\\.png$/ — a crop, never a viewport`,
   'grandfather-image': (b) => `${fmt(b.bytes)} B  > ${fmt(b.limit)} B grandfather pin (it grew)`,
   'grandfather-wave': (b) => `${fmt(b.bytes)} B  > ${fmt(b.limit)} B grandfather pin (it gained)`,
+  'dist-loose': (b) =>
+    `${fmt(b.bytes)} file(s)  a banked dist DIRECTORY — ship a .tar.gz + md5 manifest, or ` +
+    `drop a ${TESTIMONY_FILE} saying "${TESTIMONY_PHRASE}"`,
+  'dist-marker-mute': (b) =>
+    `${fmt(b.bytes)} file(s)  ${TESTIMONY_FILE} present but it never says ` +
+    `"${TESTIMONY_PHRASE}" — a placeholder buys no exemption`,
+  'dist-no-manifest': (b) =>
+    `${fmt(b.bytes)} B  dist archive with no non-empty sibling md5 (<archive>.md5) — ` +
+    `an archive nobody can verify is the same hole in a smaller box`,
+  'grandfather-dist': (b) =>
+    `${fmt(b.bytes)} file(s)  > ${fmt(b.limit)} grandfather pin (the bank gained files — ` +
+    `re-filling a hollow dist loosely is the practice rule 4 retires)`,
 };
 
 // ---------------------------------------------------------------- self-test
@@ -257,6 +465,15 @@ function plant(root, files) {
     const abs = join(root, SCOPE, rel);
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, Buffer.alloc(bytes));
+  }
+}
+
+/** Materialise `[relPathUnderScope, text]` pairs — for markers and manifests. */
+function plantText(root, files) {
+  for (const [rel, text] of files) {
+    const abs = join(root, SCOPE, rel);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, text);
   }
 }
 
@@ -322,6 +539,104 @@ function selfTest() {
       files: [],
       wantThrow: /scope directory does not exist/,
     },
+
+    // ---- rule 4, the banked dists ---------------------------------------
+    {
+      name: 'rule 4 — a NEW hollow dist bank reds (the BC5-G2 shape, exactly)',
+      files: [
+        [`${W1}/dist-head/_headers`, 9349],
+        [`${W1}/dist-head/_redirects`, 40],
+      ],
+      want: { 'dist-loose': 1 },
+    },
+    {
+      name: 'rule 4 — a FULL loose dist bank reds too: the rule is the FORM, not the payload',
+      files: [
+        [`${W1}/dist-head/index.html`, 3015],
+        [`${W1}/dist-head/assets/index-abc.js`, 222490],
+        [`${W1}/dist-head/_headers`, 9349],
+      ],
+      want: { 'dist-loose': 1 },
+    },
+    {
+      name: 'rule 4 — TESTIMONY.md saying the words exempts the bank',
+      files: [[`${W1}/dist-head/_headers`, 9349]],
+      texts: [
+        [`${W1}/dist-head/TESTIMONY.md`, '# dist-head\n\ntestimony, artifact not banked.\n'],
+      ],
+      want: {},
+    },
+    {
+      name: 'rule 4 — a TESTIMONY.md that never says the words buys nothing',
+      files: [[`${W1}/dist-head/_headers`, 9349]],
+      texts: [[`${W1}/dist-head/TESTIMONY.md`, '# dist-head\n\nbuilt from HEAD, trust me.\n']],
+      want: { 'dist-marker-mute': 1 },
+    },
+    {
+      name: 'rule 4 — a .tar.gz WITHOUT an md5 manifest reds',
+      files: [[`${W1}/dist-head.tar.gz`, 4096]],
+      want: { 'dist-no-manifest': 1 },
+    },
+    {
+      name: 'rule 4 — a .tar.gz WITH a non-empty sibling md5 is the compliant bank',
+      files: [[`${W1}/dist-head.tar.gz`, 4096]],
+      texts: [[`${W1}/dist-head.tar.gz.md5`, 'd41d8cd98f00b204e9800998ecf8427e  dist-head.tar.gz\n']],
+      want: {},
+    },
+    {
+      name: 'rule 4 — an EMPTY md5 manifest is not a manifest',
+      files: [
+        [`${W1}/dist-head.tar.gz`, 4096],
+        [`${W1}/dist-head.tar.gz.md5`, 0],
+      ],
+      want: { 'dist-no-manifest': 1 },
+    },
+    {
+      name: 'rule 4 — a grandfathered bank is exempt at its pinned file count',
+      files: [
+        [`${W1}/dist-head/_headers`, 9349],
+        [`${W1}/dist-head/_redirects`, 40],
+      ],
+      dists: [[`${WAVE}/dist-head`, 2]],
+      want: {},
+    },
+    {
+      name: 'rule 4 — a grandfathered bank is a CEILING: re-filling it loosely reds',
+      files: [
+        [`${W1}/dist-head/_headers`, 9349],
+        [`${W1}/dist-head/_redirects`, 40],
+        [`${W1}/dist-head/index.html`, 3015],
+      ],
+      dists: [[`${WAVE}/dist-head`, 2]],
+      want: { 'grandfather-dist': 1 },
+    },
+    {
+      name: 'rule 4 — a stale dist pin is reported, not silently carried',
+      files: [[`${W1}/crop.png`, 1024]],
+      dists: [[`${WAVE}/dist-pruned-long-ago`, 2]],
+      want: {},
+      staleCount: 1,
+    },
+    {
+      name: 'rule 4 — `distillate/` is NOT a dist bank (the anchored name, not a prefix)',
+      files: [[`${W1}/distillate/notes.txt`, 100]],
+      want: {},
+    },
+    {
+      name: 'rule 4 — build output INSIDE a dist bank is not counted as further banks',
+      files: [
+        [`${W1}/dist-head/_headers`, 9349],
+        [`${W1}/dist-head/dist-nested/index.html`, 10],
+      ],
+      want: { 'dist-loose': 1 },
+    },
+    {
+      // The anti-vacuity control for rule 4: an estate with no dist banks at all must not
+      // manufacture one, and an estate with a compliant one must stay silent.
+      name: 'rule 4 — an estate with no dist bank reds nowhere',
+      files: [[`${W1}/crop.png`, 1024]],
+      want: {},
+    },
   ];
 
   let failed = 0;
@@ -347,7 +662,14 @@ function selfTest() {
         continue;
       }
       plant(root, c.files);
-      const r = audit({ root, scope: SCOPE, images: c.images ?? [], waves: c.waves ?? [] });
+      plantText(root, c.texts ?? []);
+      const r = audit({
+        root,
+        scope: SCOPE,
+        images: c.images ?? [],
+        waves: c.waves ?? [],
+        dists: c.dists ?? [],
+      });
       const got = {};
       for (const b of r.breaches) got[b.rule] = (got[b.rule] ?? 0) + 1;
       const wantStr = JSON.stringify(c.want);
@@ -381,6 +703,11 @@ function selfTest() {
 
 // ---------------------------------------------------------------- main
 
+// THE FALL-THROUGH IS LOAD-BEARING. `--self-test` proves the instrument, it does not replace
+// the audit: control MUST reach the real `audit()` below and the process MUST exit on ITS
+// verdict. Two scripts in this estate have shipped an `exit(0)` at the end of their self-test
+// and greened CI while auditing nothing. Do not add one here — `selfTest()` returns, and the
+// only exits in this file are the instrument-broken exit, the breach exit, and the PASS exit.
 if (process.argv.includes('--self-test')) selfTest();
 
 let r;
@@ -390,6 +717,7 @@ try {
     scope: SCOPE,
     images: GRANDFATHERED_IMAGES,
     waves: GRANDFATHERED_WAVES,
+    dists: GRANDFATHERED_DISTS,
   });
 } catch (err) {
   console.error(`[evidence-policy] FAIL — the instrument cannot run: ${err.message}`);
@@ -405,8 +733,12 @@ console.log(
     `name ban /-full\\.png$/`,
 );
 console.log(
+  `[evidence-policy] banked dists — ${fmt(r.distDirs)} directory bank(s), ` +
+    `${fmt(r.distArchives)} archive(s); form required: .tar.gz + md5, or ${TESTIMONY_FILE}`,
+);
+console.log(
   `[evidence-policy] grandfathered ${GRANDFATHERED_IMAGES.length} image pin(s), ` +
-    `${GRANDFATHERED_WAVES.length} wave pin(s)`,
+    `${GRANDFATHERED_WAVES.length} wave pin(s), ${GRANDFATHERED_DISTS.length} dist pin(s)`,
 );
 
 for (const s of r.stale) {
@@ -429,5 +761,7 @@ if (r.breaches.length > 0) {
   process.exit(1);
 }
 
-console.log(`[evidence-policy] PASS — every image and every wave within policy.`);
+console.log(
+  `[evidence-policy] PASS — every image, every wave and every banked dist within policy.`,
+);
 process.exit(0);

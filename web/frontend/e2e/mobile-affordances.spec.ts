@@ -27,6 +27,19 @@ async function hideDevChrome(page: Page) {
   await page.addStyleTag({ content: ".tuner-toggle { display: none !important; }" });
 }
 
+/**
+ * T5-W4 pass 6 — THE CARD IS BEHIND A DOOR ON THE PORTRAIT DOCK, and that is the design rather
+ * than an obstacle to route around. The fold keeps the board, its reserved line and the four
+ * play verbs; deal / clear / solve / share / every selector are BETWEEN-MOVES acts and live in
+ * the sheet. So a row that probes the card opens it first, and a row that probes the fold must
+ * not — which is why this is a named helper and not a blanket `beforeEach`.
+ */
+async function openDrawer(page: Page) {
+  await page.locator(".drawer-tab").tap();
+  await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
+  await page.waitForTimeout(700); // the Band-D glide's own clock, then settle
+}
+
 async function loadSudoku(page: Page, query = "?size=3&difficulty=EASY") {
   await page.goto("./" + query);
   await page.waitForSelector("svg.handwritten-logo", { timeout: 15000 });
@@ -163,7 +176,12 @@ test("touch play tools (T4-WM §2): undo / redo / hint tappable at ≥44px, wire
   page,
 }) => {
   await loadSudoku(page);
-  const panel = page.locator(".mobile-control-panel");
+  // pass 6 — the play verbs left the card for the FOLD. The scope moves with them, and it
+  // moves to `#fold-tools` rather than to a bare page query on purpose: the point of the band
+  // is that these four are reachable with the sheet SHUT, and a page-wide locator would score
+  // them green from inside a closed drawer.
+  const panel = page.locator("#fold-tools");
+  await expect(panel).toBeVisible();
 
   const undo = panel.getByRole("button", { name: "Undo last move" });
   const redo = panel.getByRole("button", { name: "Redo move" });
@@ -207,8 +225,9 @@ test("hint two-press by touch (T4-W7): first tap names the technique, second ink
   page,
 }) => {
   await loadSudoku(page);
+  // pass 6: the hint is a PLAY verb, so it lives in the fold with the sheet shut.
   const hint = page
-    .locator(".mobile-control-panel")
+    .locator("#fold-tools")
     .getByRole("button", { name: "Reveal a hint in the selected cell" });
 
   const blank = await firstBlank(page, ".sudoku-cell");
@@ -270,18 +289,37 @@ test("coarse affordances: persistent peek washi on a ≥44px target, icon sublab
 }) => {
   await loadSudoku(page);
 
-  // Selector discipline (affordances.spec.ts): scope to the MOBILE panel — the desktop twin is
-  // display:none here but still in the DOM, and a bare query trips strict mode against it.
+  /**
+   * T5-W4 pass 6 — THE PEEK AFFORDANCE MOVED, AND THE ROW MOVES WITH IT, IN BOTH DIRECTIONS.
+   *
+   * On the portrait dock the hold-to-peek divider rides INSIDE the raised case, so a held peek
+   * would lay the answer key over a board the sheet has just covered: the gesture would still
+   * fire and would still show nothing worth seeing. The washi promised a hold that could no
+   * longer do its work, so it stands down with it, and the gesture rehomes to a peek CHIP in
+   * the fold — beside the play verbs, on the same 350ms/10px recognizer, with the board fully
+   * uncovered.
+   *
+   * Both halves are asserted, because either alone would let the other rot: the chip exists and
+   * clears the floor, AND the divider no longer announces or accepts a hold.
+   */
+  const chip = page.locator("#fold-tools .peek-chip");
+  await expect(chip).toBeVisible();
+  await expect(chip).toHaveText("peek"); // its visible word IS its accessible name
+  const chipBox = (await chip.boundingBox())!;
+  expect(chipBox.height).toBeGreaterThanOrEqual(44);
+  expect(chipBox.width).toBeGreaterThanOrEqual(44);
+
+  // Now the card, which is behind the door.
+  await openDrawer(page);
   const panel = page.locator(".mobile-control-panel");
 
-  // The peek affordance is honest on touch: the washi is laid down at rest (no hover exists here)
-  // and the hold surface clears the 44px tap floor.
+  // The divider's hold has STOOD DOWN: it keeps its separator office and its ruled line, takes
+  // no pointer events, and its name no longer promises a hold it cannot honour.
   const peek = panel.locator(".peek-hold-surface");
-  const washi = peek.locator(".washi-label");
-  await expect(washi).toBeVisible();
-  await expect(washi).toHaveText("hold to peek");
-  const box = (await peek.boundingBox())!;
-  expect(box.height).toBeGreaterThanOrEqual(44);
+  await expect(peek).toHaveAttribute("role", "separator");
+  await expect(peek.locator(".washi-label")).toHaveCount(0);
+  expect(await peek.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
+  expect(await peek.getAttribute("aria-label")).not.toMatch(/hold/i);
 
   // The four icon actions carry written names on coarse pointers (T4-WU/U2: the dice re-homed
   // to "Deal" in the staged zone — still within the mobile panel, still writing its name).
@@ -342,6 +380,7 @@ test("Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty b
   page,
 }) => {
   await loadSudoku(page);
+  await openDrawer(page); // pass 6: Deal is a between-moves act, behind the door
   const panel = page.locator(".mobile-control-panel");
   const dealBtn = panel.getByRole("button", { name: /deal a new board/i });
 

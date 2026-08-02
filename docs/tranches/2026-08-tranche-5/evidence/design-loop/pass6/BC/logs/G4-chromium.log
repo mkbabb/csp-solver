@@ -1,0 +1,18 @@
+AUDIT: BC5-G4 encode-threading rig, engine=chromium, arms idle/toBlob/convertToBlob/worker, 3 reps each
+AUDIT: host MacBook-Pro node v26.0.0 2026-08-02T07:26:34Z port 4243
+--- chromium/idle ---
+g4-chromium-idle#1  wall   401.5  blocked       0  worst    9.5  long100 0  frames  54  bytes 0  hash 
+g4-chromium-idle#2  wall     401  blocked       0  worst    9.7  long100 0  frames  54  bytes 0  hash 
+g4-chromium-idle#3  wall   401.3  blocked       0  worst    9.9  long100 0  frames  54  bytes 0  hash 
+--- chromium/toBlob ---
+g4-chromium-toBlob#1  wall    33.2  blocked       0  worst    8.8  long100 0  frames   4  bytes 882691  hash aad9ffef.4751ba7c.4c4a2680.231ce582.465d0773.ebe403b3.fdcffe89.02f6065f
+g4-chromium-toBlob#2  wall    25.7  blocked       0  worst    9.7  long100 0  frames   3  bytes 882691  hash aad9ffef.4751ba7c.4c4a2680.231ce582.465d0773.ebe403b3.fdcffe89.02f6065f
+g4-chromium-toBlob#3  wall    46.2  blocked       0  worst    8.5  long100 0  frames   6  bytes 882691  hash aad9ffef.4751ba7c.4c4a2680.231ce582.465d0773.ebe403b3.fdcffe89.02f6065f
+--- chromium/convertToBlob ---
+g4-chromium-convertToBlob#1  wall    30.9  blocked       0  worst    8.1  long100 0  frames   4  bytes 882691  hash aad9ffef.4751ba7c.4c4a2680.231ce582.465d0773.ebe403b3.fdcffe89.02f6065f
+g4-chromium-convertToBlob#2  wall    40.5  blocked       0  worst    8.1  long100 0  frames   5  bytes 882691  hash aad9ffef.4751ba7c.4c4a2680.231ce582.465d0773.ebe403b3.fdcffe89.02f6065f
+g4-chromium-convertToBlob#3  wall    30.8  blocked       0  worst    8.4  long100 0  frames   4  bytes 882691  hash aad9ffef.4751ba7c.4c4a2680.231ce582.465d0773.ebe403b3.fdcffe89.02f6065f
+--- chromium/worker ---
+g4-chromium-worker#1  wall    31.7  blocked       0  worst    9.7  long100 0  frames   5  bytes 882691  hash aad9ffef.4751ba7c.4c4a2680.231ce582.465d0773.ebe403b3.fdcffe89.02f6065f
+g4-chromium-worker#2  wall    20.4  blocked       0  worst    8.3  long100 0  frames   2  bytes 882691  hash aad9ffef.4751ba7c.4c4a2680.231ce582.465d0773.ebe403b3.fdcffe89.02f6065f
+g4-chromium-worker#3  wall      32  blocked       0  worst      8  long100 0  frames   4  bytes 882691  hash aad9ffef.4751ba7c.4c4a2680.231ce582.465d0773.ebe403b3.fdcffe89.02f6065f

@@ -39,6 +39,17 @@ async function loadSudoku(page: Page) {
     .toBeGreaterThan(0);
 }
 
+/**
+ * T5-W4 pass 6 — the between-moves acts live behind the door now. A row that reaches Deal,
+ * Solve or a chip on the portrait dock must open the sheet first; a row that reads the fold
+ * must not. Both are the design, so both are written down rather than assumed.
+ */
+async function openDrawer(page: Page) {
+  await page.locator(".drawer-tab").click();
+  await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
+  await page.waitForTimeout(700); // the Band-D glide's own clock, then settle
+}
+
 /** Three independent observables, asserted before any coarse number is banked. */
 async function assertCoarse(page: Page) {
   const r = await page.evaluate(() => ({
@@ -58,7 +69,9 @@ test.describe("mark 6 — the band dissolves", () => {
     await loadSudoku(page);
     await assertCoarse(page);
 
-    const inTicket = page.locator(".mobile-board-width .deal-row .difficulty-tally");
+    // pass 6: the ticket's home is the ONE card, which below 1024 is the drawer's own case.
+    // `.mobile-board-width` was the deleted twin's name for the same box.
+    const inTicket = page.locator("#controls-drawer .deal-row .difficulty-tally");
     await expect(inTicket).toHaveCount(1);
     // The word in front of the glyph is the well's, not the strip's: `Difficulty` is an
     // eyebrow two rows up, so the receipt says what it is instead of saying that twice.
@@ -150,6 +163,8 @@ test.describe("mark 6 — the band dissolves", () => {
       page.locator(".board-margin").evaluate((el) => (el as HTMLElement).offsetHeight);
     const beforeStrip = await strip();
 
+    // pass 6: Solve is a between-moves act and lives behind the door on the portrait dock.
+    await openDrawer(page);
     await page.locator('button[aria-label="Solve puzzle"]').click();
     await expect(page.locator(".board-wrapper")).toHaveClass(
       /solve-(success|failure)/,
@@ -223,7 +238,12 @@ test.describe("mark 6 — the band dissolves", () => {
       page.evaluate(() => {
         const doc = document.scrollingElement || document.documentElement;
         const v = document.querySelector<HTMLElement>(".completion-vignette")!;
-        const host = document.querySelector<HTMLElement>(".mobile-board-width")!;
+        // pass 6 — THE REFERENT SWAPS, and the office is unchanged. The witness must be a
+        // surface still IN FLOW below the board, because that is what a celebration in flow
+        // would shove down the page. The controls card left the flow on the portrait dock, so
+        // the fold's play-verbs band inherits the job: it sits under the board, it is the last
+        // thing in the column, and it is exactly what the player would lose.
+        const host = document.querySelector<HTMLElement>("#fold-tools")!;
         const before = { doc: doc.scrollHeight, top: host.getBoundingClientRect().top };
         const prior = v.style.display;
         v.style.display = "block"; // exactly what `celebrating` does — v-show writes display
@@ -251,8 +271,115 @@ test.describe("mark 6 — the band dissolves", () => {
       content: ".completion-vignette { position: static !important; }",
     });
     const c = await grade();
-    expect(c.docGrowth).toBeGreaterThan(50);
+    // pass 6 — THE CONTROL'S TWO ARMS PART COMPANY, and the reason is the fold itself.
+    // `ctrlPush` is unchanged in meaning and in magnitude: an in-flow vignette shoves the band
+    // under the board by its own height, and that is the defect this row watches. `docGrowth`
+    // is now CLAMPED — the document is exactly one viewport at rest, so the first
+    // `innerHeight − content` px of anything arriving in flow are absorbed by the clamp before
+    // `scrollHeight` moves at all. Measured 41 on this build, both engines, against 109 of
+    // real push. Kept as a floor rather than deleted (the page must still be seen to grow),
+    // lowered to what the clamp leaves, and the reason is written here rather than the number
+    // being quietly re-cut.
+    expect(c.docGrowth).toBeGreaterThan(0);
     expect(c.ctrlPush).toBeGreaterThan(50);
+  });
+
+  /**
+   * T5-W4 PASS 6 · THE COVIS GATE — the drawer comes down to portrait, and the page stops
+   * scrolling.
+   *
+   * The loop's one blocking row, finally written as a bound instead of a figure. For three
+   * passes the record carried "trigger (b)" as a measured number with nothing under it: pass 4
+   * banked 1,132px at this cell, pass 5 re-derived it unmoved (**pageVh 1.705 chromium /
+   * 1.703 webkit** on the built dist, `pass5/f3/rig/out-covis-p5head-*.json`) and priced the
+   * decomposition — 132.22 of chrome above the board, 393.19 of board host, and **the controls
+   * card, which is the rest**. The gap between 1.705 and 1.000 IS the card. The pass-6 charter
+   * spends it the only way that is not a trade: the card moves out of flow into the estate's
+   * own drawer surface, and what stays in flow is the board, its one reserved line, and the
+   * play verbs.
+   *
+   * The bound is 1.000 — `docScrollH ≡ innerHeight`, `maxScroll 0` — and it is not a taste:
+   * a portrait page whose document is one viewport tall is the whole claim of the row, and any
+   * fraction above it is a scroll between the player and a control. It is asserted at THE CASE
+   * cell (390×664, the shortest live portrait rung on the ladder) because every taller portrait
+   * cell is strictly easier and a bound that only the tall cells meet is a bound that has not
+   * been met.
+   *
+   * BORN RED, and the number is banked: on `abe533c4`'s own built dist this row reads 1.705 /
+   * 1.703 — `pass6/land/logs/fold-BASE-{chromium,webkit}.log`, whose nine-cell base arm
+   * reproduces pass 5's banked table exactly before any head figure was read.
+   *
+   * The two controls are the estate's GATE-1 discipline, and they watch opposite directions:
+   * a probe that cannot count a scroll would score anything green, and a bound met by parking
+   * the controls somewhere unreachable is not the design.
+   */
+  test("the case: at 390x664 the page is one viewport, and the play verbs are in it", async ({
+    page,
+  }) => {
+    await loadSudoku(page);
+    await assertCoarse(page);
+
+    const read = () =>
+      page.evaluate(() => {
+        const doc = document.documentElement;
+        const vh = window.innerHeight;
+        const tools = document.querySelector("#fold-tools");
+        const verbs = [
+          ...document.querySelectorAll<HTMLElement>(
+            "#fold-tools .icon-btn, .play-controls .icon-btn",
+          ),
+          // PAINTED, not merely styled: `getClientRects()` is empty when ANY ancestor is
+          // display:none, and the verbs are teleported children of `#fold-tools`, so a read of
+          // the button's own computed display would score a hidden band as four live targets.
+        ].filter((el) => el.getClientRects().length > 0);
+        return {
+          pageVh: Math.round((doc.scrollHeight / vh) * 1000) / 1000,
+          maxScroll: doc.scrollHeight - vh,
+          // the verbs are IN the fold, not merely in the document
+          verbsInFold: verbs.length,
+          verbsBelowFold: verbs.filter(
+            (el) => el.getBoundingClientRect().bottom + window.scrollY > vh,
+          ).length,
+          verbFloorFails: verbs.filter((el) => {
+            const r = el.getBoundingClientRect();
+            return r.width < 44 || r.height < 44;
+          }).length,
+          toolsPresent: !!tools,
+        };
+      });
+
+    const fold = await read();
+    // THE BOUND.
+    expect(fold.pageVh).toBeLessThanOrEqual(1.0);
+    expect(fold.maxScroll).toBe(0);
+    // …and the fold is worth having: the four play verbs are in it, each a legal target.
+    expect(fold.verbsInFold).toBeGreaterThanOrEqual(4);
+    expect(fold.verbsBelowFold).toBe(0);
+    expect(fold.verbFloorFails).toBe(0);
+
+    // CONTROL A — the probe must be able to see a scroll. One in-flow block under the board
+    // is exactly the shape the card used to be, and the same read must exceed the bound.
+    await page.evaluate(() => {
+      const spacer = document.createElement("div");
+      spacer.style.height = "300px";
+      spacer.id = "covis-control-spacer";
+      document.querySelector(".app-layout")!.appendChild(spacer);
+    });
+    const withSpacer = await read();
+    expect(withSpacer.pageVh).toBeGreaterThan(1.0);
+    expect(withSpacer.maxScroll).toBeGreaterThan(0);
+    await page.evaluate(() =>
+      document.getElementById("covis-control-spacer")!.remove(),
+    );
+
+    // CONTROL B — the other direction: a page can always be made one viewport tall by
+    // hiding what is in it. Strike the verbs band and the same read must lose the fold's
+    // reason to exist, so a "cure" that parks the controls out of reach cannot pass here.
+    await page.addStyleTag({
+      content: "#fold-tools, .play-controls { display: none !important; }",
+    });
+    const stripped = await read();
+    expect(stripped.verbsInFold).toBe(0);
   });
 });
 
@@ -354,10 +481,15 @@ test.describe("the board fits the viewport it is drawn in", () => {
    * masthead (98.58 of the 114.58 above the board at this cell) and a cap that overflows by
    * MORE than the masthead could hand back is a cap the masthead can no longer redeem.
    *
-   * Measured on this pass's build, both engines, shipped rung: 88.58 chromium / 87.98 webkit at
-   * the `.board-wrapper` referent (86.58 / 85.98 at `.board-cells`). The bound is 114.58 — the
-   * whole chrome above the board — with the shipped rung sitting 26px under it. The `100dvh`
-   * rung reads 110.58 and still passes; the pre-pass-3 tree reads 392.58 and cannot.
+   * T5-W4 pass 6 EXECUTED the masthead hand-back this prose priced (L6-G1 restamp at the
+   * seal): at head the shipped rung reads overflow 0 / 0 both engines at the `.board-wrapper`
+   * referent — the board sits WHOLE above the fold at 844×390 — and the chrome above it is
+   * 16px. The pass-5 figures this block carried (88.58 chromium / 87.98 webkit under a 114.58
+   * bound, 26px of headroom) are the PRE-move truth, kept here as the born-RED lineage: the
+   * pre-pass-3 tree reads 392.58 and cannot pass; the pre-move tree read 88.58 and passed on
+   * headroom; the moved tree passes on zero. The gate's discriminating power now rides the
+   * negative control below, not the shipped arm's slack (0 ≤ 16 is near-vacuous by itself,
+   * disclosed rather than discovered).
    *
    * The referent is named in the assertion because the record carried three numbers for this
    * one quantity, from three unnamed boxes, for a whole pass.

@@ -35,17 +35,26 @@ import { BOARD_CELLS_CLASS } from "./constants";
  * scroll question and the scroll-room answers it. Gated in `mobile-platform.spec.ts`, with the
  * control that matters: stop spending the inset and the deepest control strands under the band.
  *
- * THE `--vv-height` ANCHOR — **RETIRED, with its trigger named.** The charter banked
+ * THE `--vv-height` ANCHOR — **THE TRIGGER FIRED, T5-W4 PASS 6.** The charter banked
  * `top: var(--vv-height)` + translate-up (never `bottom: 0`, never height-yield) as the iOS
  * fixed-bottom idiom, proven necessary by Lane B's G4 control where a fixed tray was 100%
- * occluded. It has no consumer and cannot get one: below 1024 there is NO fixed surface — the
- * control card is in flow and `#controls-drawer` is `v-if="rowRegime"` (blast §2.5) — and the
- * drag-sheet that would have needed it is retired on the stall lane's per-gesture bill. So this
- * composable publishes `--keyboard-inset` alone, and one custom property is the right number of
- * custom properties for one consumer. TRIGGER, binding on the next hand: the first
+ * occluded. Pass 4 retired it with its trigger written down, verbatim: *"the first
  * position:fixed surface that mounts below 1024 must anchor on `top: var(--vv-height)` with the
  * rest pose on `translate:` — publish the var HERE, in this same resize handler, vars before
- * `ensureVisible`, and it inherits this file's one listener and its deterministic ordering.
+ * `ensureVisible`."* That surface now exists — the portrait controls sheet (`scene.css`, the
+ * `<1024`-portrait pose of `#controls-drawer`) — so the clause is honoured exactly as written,
+ * in this handler, both vars before any scroll.
+ *
+ * WHAT THE NUMBER IS: `vv.height + vv.offsetTop` — the visual viewport's BOTTOM EDGE in layout
+ * coordinates, not its height. Under a risen keyboard that edge moves up by the band; under
+ * pinch-zoom `offsetTop` keeps it honest, exactly as `computeKeyboardInset` already does. A
+ * sheet anchored `top: var(--vv-height)` with its rest pose on `translate` therefore rides the
+ * keyboard's edge instead of being occluded by it, and never yields height (a height animation
+ * is a layout animation, which is the one thing this estate's drawer never does).
+ *
+ * The necessity is not asserted from the idiom: it is ablated. Restore `bottom: 0` in place of
+ * the anchor and the deepest chip strands under the 296px band; anchored, every seat is clear
+ * at `scrollY 0` in both engines (`pass6/land/logs/keypad-*.log`).
  */
 
 /** The cell wrappers a board input lives inside — we scroll the whole cell, not the bare input. */
@@ -106,9 +115,22 @@ export function useKeyboardViewport(): void {
   const layoutHeight = (): number =>
     document.documentElement.clientHeight || window.innerHeight || 0;
 
+  /** Both vars, in the one handler, BEFORE any `ensureVisible` — the trigger's own ordering. */
   function publishInset(): void {
     const inset = computeKeyboardInset(layoutHeight(), vv.height, vv.offsetTop);
     document.documentElement.style.setProperty("--keyboard-inset", `${inset}px`);
+    // The visual viewport's bottom edge in layout coords — the portrait sheet's anchor.
+    // CLAMPED TO THE LAYOUT VIEWPORT, and that is an invariant rather than a defence: the
+    // visual viewport is a window ONTO the layout viewport, so its bottom edge can never sit
+    // below the layout's own. Unclamped, any engine or harness that reports a stale height
+    // anchors the sheet off the bottom of the page — which is exactly how the emulated-keypad
+    // row found this (a stand-in `visualViewport` captured 1669 against a 664 layout, and the
+    // sheet went with it). `--keyboard-inset` was already immune by its own `Math.max(0, …)`,
+    // which is why nothing had reddened before there was a second consumer.
+    document.documentElement.style.setProperty(
+      "--vv-height",
+      `${Math.round(Math.max(0, Math.min(layoutHeight(), vv.height + vv.offsetTop)))}px`,
+    );
   }
 
   function ensureVisible(behavior: ScrollBehavior): void {
@@ -182,5 +204,9 @@ export function useKeyboardViewport(): void {
     document.removeEventListener("focusout", onFocusOut);
     cancelAnimationFrame(releaseRaf);
     document.documentElement.style.removeProperty("--keyboard-inset");
+    // The sheet's CSS carries `100dvh` as the var's fallback, so an unpublished anchor is a
+    // defined pose rather than an invalid `top` — the sheet rests on the layout viewport's
+    // own bottom edge, which is where it sits whenever no keyboard is up anyway.
+    document.documentElement.style.removeProperty("--vv-height");
   });
 }

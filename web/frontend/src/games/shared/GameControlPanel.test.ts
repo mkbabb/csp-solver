@@ -51,8 +51,29 @@ const SECTIONS = [
   },
 ];
 
+/**
+ * T5-W4 pass 6 — THE BERTH IS PART OF THE MOUNT NOW, and it is not a test convenience.
+ *
+ * On the portrait dock the play verbs are TELEPORTED out of the card into the scene's
+ * `#fold-tools` band, so they can be reached with the sheet shut. `GameScene` mints that berth;
+ * this file mounts the SHELL alone, so it must mint it too or the Teleport has nowhere to land
+ * — and jsdom's `matchMedia` stub reports no match for `(min-width: 1024px)`, which puts every
+ * mount here in exactly the regime that teleports.
+ *
+ * This was found by SIX RED ROWS, not by reading: without a berth the target resolves null,
+ * the play tools leave the tree, and the render then crashes downstream (which is how two rows
+ * that never touch a play verb — fill-forced, the fine-pointer Clear — went red with them).
+ * `defer` on the Teleport is the other half of the same lesson, and it lives in the component:
+ * `GameScene` mints `#fold-tools` AFTER the panel in its own template, so an undeferred
+ * Teleport resolves its target too early and loses the tools in the real app the same way.
+ */
 function mountPanel(overrides: Record<string, unknown> = {}) {
+  document.getElementById("fold-tools")?.remove();
+  const berth = document.createElement("div");
+  berth.id = "fold-tools";
+  document.body.appendChild(berth);
   return mount(GameControlPanel, {
+    attachTo: document.body,
     props: {
       sections: SECTIONS,
       loading: false,
@@ -75,35 +96,60 @@ const FILL = 'button[aria-label="Fill in the forced cells"]';
 const DEAL = 'button[aria-label="Deal a new board"]';
 const CLEAR = 'button[aria-label="Clear board"]';
 
-describe("GameControlPanel — touch play tools (T4-WM §2)", () => {
-  it("renders tappable undo / redo / hint buttons with written sublabels", () => {
-    const w = mountPanel();
-    expect(w.get(UNDO).find(".icon-sublabel").text()).toBe("Undo");
-    expect(w.get(REDO).find(".icon-sublabel").text()).toBe("Redo");
-    expect(w.get(HINT).find(".icon-sublabel").text()).toBe("Hint");
+/**
+ * The play verbs are read FROM THE BERTH, and that is the assertion as much as the mechanism:
+ * on the portrait dock these four must be reachable with the sheet shut, which is only true if
+ * they are in `#fold-tools` and not in the card. A `wrapper.get()` would search the component's
+ * own subtree and cannot see them — so a row that still passed through the wrapper would be a
+ * row that had stopped watching the thing it is for.
+ */
+const inFold = (sel: string): HTMLElement => {
+  const el = document.querySelector<HTMLElement>(`#fold-tools ${sel}`);
+  if (!el) throw new Error(`no ${sel} in the fold's play-verbs band`);
+  return el;
+};
+
+describe("GameControlPanel — touch play tools (T4-WM §2, T5-W4 pass 6: in the fold)", () => {
+  it("renders tappable undo / redo / hint buttons with written sublabels, IN the fold band", () => {
+    mountPanel();
+    expect(inFold(UNDO).querySelector(".icon-sublabel")!.textContent).toBe("Undo");
+    expect(inFold(REDO).querySelector(".icon-sublabel")!.textContent).toBe("Redo");
+    expect(inFold(HINT).querySelector(".icon-sublabel")!.textContent).toBe("Hint");
+    // …and the card does NOT also hold a copy. One tree, one instance: a teleport that left a
+    // twin behind would double every one of these verbs.
+    expect(document.querySelectorAll(`${UNDO}`).length).toBe(1);
   });
 
   it("each play button carries the .icon-btn grammar (the 44px coarse floor rides that class)", () => {
-    const w = mountPanel();
+    mountPanel();
     for (const sel of [UNDO, REDO, HINT]) {
-      expect(w.get(sel).classes()).toContain("icon-btn");
+      expect([...inFold(sel).classList]).toContain("icon-btn");
     }
+  });
+
+  it("the peek chip joins them, and its visible word IS its accessible name", () => {
+    // Graft G2: the divider's hold cannot work from inside a raised sheet, so the gesture
+    // rehomes here. One string does both jobs — no aria-label to drift away from the ink.
+    mountPanel();
+    const chip = inFold(".peek-chip");
+    expect([...chip.classList]).toContain("icon-btn");
+    expect(chip.textContent!.trim()).toBe("peek");
+    expect(chip.getAttribute("aria-label")).toBeNull();
   });
 
   it("undo / redo / hint each emit their own event on tap", async () => {
     const w = mountPanel();
-    await w.get(UNDO).trigger("click");
-    await w.get(REDO).trigger("click");
-    await w.get(HINT).trigger("click");
+    for (const sel of [UNDO, REDO, HINT]) inFold(sel).click();
+    await w.vm.$nextTick();
     expect(w.emitted("undo")).toHaveLength(1);
     expect(w.emitted("redo")).toHaveLength(1);
     expect(w.emitted("hint")).toHaveLength(1);
   });
 
   it("the play tools disable with the board (loading) — no undo mid-solve", () => {
-    const w = mountPanel({ loading: true });
+    mountPanel({ loading: true });
     for (const sel of [UNDO, REDO, HINT]) {
-      expect(w.get(sel).attributes("disabled")).toBeDefined();
+      expect(inFold(sel).hasAttribute("disabled")).toBe(true);
     }
   });
 });

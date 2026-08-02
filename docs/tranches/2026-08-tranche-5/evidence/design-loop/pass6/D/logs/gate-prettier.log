@@ -1,0 +1,48 @@
+=== AUDIT ===
+gate      `prettier --check src/` + scripts — D-report §9 cited "clean · §static" (D5-G4)
+tree      HEAD abe533c4, clean but for the untracked pass6 dir
+tool      prettier 3.6.2 (repo-pinned; .prettierrc.json, .prettierignore excludes only the
+          generated src/games/sudoku/data/templates.ts)
+cmd       (a) npm run lint          -> prettier --check src/     [the CI gate, step 11]
+          (b) npx prettier --check scripts/                      [NOT a CI gate]
+finding   THE SECOND HALF OF THE PASS-5 ROW IS WRONG. src/ is clean; scripts/ is RED on
+          SEVEN files. The row published both halves as "clean" off an unbanked run —
+          which is the whole substance of D5-G4, now demonstrated rather than argued.
+scope     nothing shipped broken: CI checks src/ only, so scripts/ was never gated and the
+          seven files are pre-existing (last touched at T4-W4 2026-07-13 through T5-W2
+          2026-08-01, none of them Lane D`s). Correction, not a regression.
+date      2026-08-02T07:26:48Z
+
+--- (a) npm run lint  ==  prettier --check src/  ---
+
+> csp-solver-frontend@0.1.0 lint
+> prettier --check src/
+
+Checking formatting...
+All matched files use Prettier code style!
+EXIT=0
+
+--- (b) npx prettier --check scripts/ ---
+Checking formatting...
+[warn] scripts/check-coverage-floor.mjs
+[warn] scripts/check-golden-bytes.mjs
+[warn] scripts/check-prod-shake.mjs
+[warn] scripts/check-pw-projects.mjs
+[warn] scripts/check-theme-tokens.mjs
+[warn] scripts/golden-magnitude.mjs
+[warn] scripts/tdz-probe.mjs
+[warn] Code style issues found in 7 files. Run Prettier with --write to fix.
+EXIT=1
+
+--- provenance of the seven: last commit to touch each ---
+  check-coverage-floor.mjs a3ada202 2026-08-01  T5-W1 FIELD-FIX 2: the spread detectors detected — the blank bake i
+  check-golden-bytes.mjs   e6b19a4c 2026-08-01  T5-W1 SEAL: eleven lanes become eighteen — every absent enforcement
+  check-prod-shake.mjs     54b1bcb5 2026-07-13  T4-W4: the excision — one grammar, one seam, the two diseases decid
+  check-pw-projects.mjs    e6b19a4c 2026-08-01  T5-W1 SEAL: eleven lanes become eighteen — every absent enforcement
+  check-theme-tokens.mjs   74b2835d 2026-08-01  T5-W2 THE DISTILL SEALED: the apotheosis lands — GameSpec→GameShell
+  golden-magnitude.mjs     e6b19a4c 2026-08-01  T5-W1 SEAL: eleven lanes become eighteen — every absent enforcement
+  tdz-probe.mjs            78448760 2026-08-01  T5-W2 THE SEAL: the finisher's six rows land, the bake race re-pins
+
+No file was reformatted by this lane: the row is a RECORD correction, and the cure (run
+prettier --write on the seven, or state that scripts/ is out of format scope) belongs to
+whoever owns the estate lint policy. Booked as D6-G1.

@@ -16,6 +16,7 @@ import { onMounted, onUnmounted, ref } from "vue";
 import DrawerTab from "@games/shared/DrawerTab.vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import {
+  portraitDock,
   registerDrawerScene,
   useControlsDrawer,
 } from "@games/shared/useControlsDrawer";
@@ -38,13 +39,15 @@ const { faceTarget } = useLiveFace();
 // ~480ms FLIP glide, and focus. Esc closes from within (the rail's keydown).
 const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer();
 
-// ── ONE control-panel twin, never both (P1-W4, the banked P-W3 conditional) ──────────────
-// Its trigger fired: themeToggle came in at 83.80 against the gates.json ≥85 floor, and the
-// two twins were the last always-mounted duplicate on the theme swap's recalc path — every
-// control, icon and pose in the unpainted card is still style-resolved and still rasters (the
-// filter census counted the hidden twin's 4 divider poses at every width, which is the proof).
-// The Tailwind classes below STAY: they are the synchronous regime (a v-if flushes on the next
-// tick) and they define the same 1024 boundary this ref reads, so no frame can show neither.
+// ── ONE control-panel CARD, full stop (T5-W4 pass 6) ─────────────────────────────────────
+// P1-W4's rule was "one twin, never both"; it RETIRES BY CONSTRUCTION here, because there is
+// no longer a second card to be the other twin. The stacked `<lg` card is deleted and its two
+// offices pass to the one `#controls-drawer`: below 1024 in LANDSCAPE it takes the in-flow
+// static pose the twin used to hold (byte-identical box — the lead's charter (c) holds that
+// rung RATIFIED), and below 1024 in PORTRAIT it becomes the fixed sheet the covis row was
+// waiting for. `rowRegime` still decides which INTERIOR the card renders (`:mobile`), so the
+// mobile arm — the pass-5 cure — carries down whole and nothing the owner marked is
+// re-imported.
 const rowRegime = useRowRegime();
 const peekHost = ref<HTMLElement | null>(null);
 const railEl = ref<HTMLElement | null>(null);
@@ -81,19 +84,28 @@ onUnmounted(() => unregisterDrawer?.());
         <slot name="board" />
         <!-- The pull-tab (T3-W12 §6): the tucked case's tongue at the board's right edge —
              inside the peek host so it rides the glide, outside the board wrapper's
-             containment (§2 P2). ≥1024 only (its own display gate). -->
-        <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
+             containment (§2 P2).
+
+             T5-W4 pass 6 — IT RIDES THE CASE, NOT THE BOARD, ON PORTRAIT, and that was born of
+             a red rather than of taste: a board-anchored tongue is COVERED by the risen sheet,
+             so the drawer becomes untouchable the moment it opens. On the desk the case slides
+             AWAY from the board and the board's own edge is exactly where the tongue belongs;
+             on the phone the case slides OVER it. ONE component, one word, one ARIA pair — a
+             Teleport, not a second tab (a second tab is a second `aria-controls` claiming the
+             same region). `defer` because the berth is minted later in this same template. -->
+        <Teleport defer to="#drawer-handle" :disabled="!portraitDock">
+          <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
+        </Teleport>
       </div>
     </Teleport>
 
-    <!-- Stacked (<lg, incl. iPad portrait — R3): unified controls card below board -->
-    <div v-if="!rowRegime" class="mobile-board-width lg:hidden">
-      <HandDrawnOutline :stroke-width="3">
-        <div class="bg-card rounded-lg px-2 py-1.5">
-          <slot name="controls" :mobile="true" />
-        </div>
-      </HandDrawnOutline>
-    </div>
+    <!-- THE FOLD'S PLAY-VERBS BAND (pass 6) — the berth `GameControlPanel` teleports
+         `.play-controls` into on the portrait dock. Undo · redo · hint · peek, in flow, always
+         on screen, because the sheet that holds every between-moves act is a gesture away and
+         PLAYING must never need it. Coarse-only and portrait-only by CSS, exactly like the
+         `.play-controls` row it receives; empty and display:none everywhere else, so no regime
+         but the dock's pays a box for it. -->
+    <div id="fold-tools" class="fold-tools" />
 
     <!-- Row-regime sidebar (≥lg — R3: iPad portrait clips at md): controls card,
          vertically centered against the board (H8-centering-only). T3-W12 §6: the rail
@@ -106,19 +118,37 @@ onUnmounted(() => unregisterDrawer?.());
          one string for the drawn tongue and the AT label, so opening speaks "controls". At
          closed-idle the rail is inert + visibility:hidden, so the landmark is absent at rest,
          which is what it should be. -->
+    <!-- T5-W4 pass 6 — the `v-if="rowRegime"` is GONE. One card, three poses (scene.css), and
+         `inert` splits by regime because an inert rail is an unopenable drawer: on the desk the
+         WHOLE region goes inert at closed-idle (shipped, byte-untouched); on the portrait dock
+         the CASE goes inert and the region keeps carrying its tongue. Disclosed AX change, the
+         owner's to accept: below 1024 the named `controls` region is present in the tree at
+         rest, holding exactly one named button. Not a modal — same landmark, same
+         `aria-expanded`/`aria-controls` on the same button, Esc closes from within. -->
     <div
-      v-if="rowRegime"
       id="controls-drawer"
       ref="railEl"
       role="region"
       aria-label="controls"
-      class="scene-controls hidden lg:flex lg:flex-col lg:items-start"
-      :inert="drawerInert"
+      class="scene-controls lg:flex lg:flex-col lg:items-start"
+      :inert="rowRegime ? drawerInert : undefined"
       @keydown.escape.stop="closeDrawer"
     >
-      <HandDrawnOutline :stroke-width="3">
-        <div ref="panelEl" class="controls-card bg-card rounded-xl p-5">
-          <slot name="controls" :mobile="false" />
+      <!-- The tongue's berth on the dock: the case's top-right. Closed, the case sits below
+           the screen's bottom edge and the 48px pokes up from under it; open, the handle is
+           at the case's corner. Zero box outside the dock. -->
+      <div id="drawer-handle" class="drawer-handle" />
+      <HandDrawnOutline
+        :stroke-width="3"
+        class="drawer-case"
+        :inert="!rowRegime && drawerInert"
+      >
+        <div
+          ref="panelEl"
+          class="controls-card bg-card"
+          :class="rowRegime ? 'rounded-xl p-5' : 'rounded-lg px-2 py-1.5'"
+        >
+          <slot name="controls" :mobile="!rowRegime" />
         </div>
       </HandDrawnOutline>
     </div>

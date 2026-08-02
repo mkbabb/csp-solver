@@ -1,0 +1,312 @@
+AUDIT: pencil-boil full suite (npm test = tsc --noEmit + 13 proofs + package-boundary) at upstream 3f41141
+AUDIT: 2026-08-02T07:55:20Z
+
+> @mkbabb/pencil-boil@0.11.1 test
+> npm run check && npm run proof && npm run verify:package
+
+
+> @mkbabb/pencil-boil@0.11.1 check
+> tsc --noEmit
+
+
+> @mkbabb/pencil-boil@0.11.1 proof
+> node --import ./proofs/loader.mjs proofs/boil-guard.proof.ts && node --import ./proofs/loader.mjs proofs/frames.proof.ts && node --import ./proofs/loader.mjs proofs/cache.proof.ts && node --import ./proofs/loader.mjs proofs/prebake.proof.ts && node --import ./proofs/loader.mjs proofs/celestial.proof.ts && node --import ./proofs/loader.mjs proofs/raster-serialize.proof.ts && node --import ./proofs/loader.mjs proofs/raster-capture.proof.ts && node --import ./proofs/loader.mjs proofs/raster-blob.proof.ts && node --import ./proofs/loader.mjs proofs/vue-raster-stack.proof.ts && node --import ./proofs/loader.mjs proofs/raster-stack-cache.proof.ts && node --import ./proofs/loader.mjs proofs/raster-theme-flip.proof.ts && node --import ./proofs/loader.mjs proofs/hold.proof.ts && node --import ./proofs/loader.mjs proofs/stop-contract.proof.ts
+
+  ok   (a) frameCount=1 mounts => neither timer nor rAF ever armed
+  ok   (a) frameCount=1 => scheduler not armed after pumps
+  ok   (b) frameCount=3 mounts => scheduler armed (parked on the beat timer)
+  ok   (b) frameCount=3 => a wake is pending
+  ok   (b) frameCount=3 => scheduler re-arms across ticks
+  ok   (b) unmount => pending beat wake cancelled (disarmed)
+  ok   (b) unmount => scheduler stops re-arming (zero subscribers => disarmed)
+  ok   (c) PRM=reduce + frameCount=3 => never armed (independent gate)
+  ok   (c) PRM=reduce => scheduler not armed
+  ok   (c) usePrefersReducedMotion() reflects the live state
+  ok   (d) starts at frameCount=1 => not armed during draw phase
+  ok   (d) frameCount 1->3 => enrols & arms after the draw
+  ok   (d) frameCount 3->1 => withdraws (pending wake cancelled)
+  ok   (d) frameCount 3->1 => scheduler disarms (no other subscribers)
+  ok   (e) frameCount=3 arms before PRM engages
+  ok   (e) PRM engage mid-session => pending wake cancelled
+  ok   (e) PRM engage mid-session => active subscriber torn down (not just gated)
+  ok   (e) PRM engage => subscribers force-cleared
+  ok   (f) sequence.start() arms the continuous rAF chain (not the beat park)
+  ok   (f) one sequence subscriber enrolled
+  ok   (f) sequence completes with eased progress === 1
+  ok   (f) sequence fires onComplete
+  ok   (f) completed sequence self-unsubscribes => chain disarms
+  ok   (f) no subscribers remain after completion
+  ok   (g) enrol parks on the beat timer — NO rAF armed at rest
+  ok   (g) exactly one beat wake pending
+  ok   (g) debug reads parked, chains=0 (asleep)
+  ok   (g) the wake lands exactly ONE rAF
+  ok   (g) no timer pending while the landing rAF is in flight
+  ok   (g) the tick consumes its rAF — the chain does not respin on vsync
+  ok   (g) the tick re-parks on the next beat boundary
+  ok   (g) exactly one rAF per beat across cycles (no extra frames)
+  ok   (g) steady state is timer-parked after every cycle
+  ok   (g) a live sequence supersedes the park — continuous chain
+  ok   (g) the chain stays continuous while the sequence runs
+  ok   (g) sequence completion falls back to beat parking
+  ok   (g) withdrawal disarms both wake shapes
+
+boil-guard.proof: 37 assertions passed
+  ok   (c) a cache hit does not re-run the generator
+  ok   (c) a touched entry survives LRU eviction
+  ok   (c) the untouched oldest entry was evicted
+  ok   (a) a repeated key returns the same cached array (generator runs once)
+  ok   (a) the cached value is the first generation, not the second
+  ok   (b) float parts within 4 decimals share a key
+  ok   (b) float parts differing at 4 decimals key distinctly
+
+frames.proof: 7 assertions passed
+  ok   (a) a repeated key returns the first computed scalar
+  ok   (a) a cache hit does not re-run compute
+  ok   (b) a frame array is cached in the SAME entry a scalar would occupy
+  ok   (b) the entry was computed once — one Map, one cap
+  ok   (c) a miss past cap runs compute once
+  ok   (c) a touched entry survives eviction
+  ok   (c) the untouched oldest entry was evicted
+  ok   (e) evicting a disposer-less entry runs no disposer, though the evicting call carries one
+  ok   (e) a disposer-less eviction stays silent
+  ok   (d) onEvict fires exactly once on LRU eviction
+  ok   (d) onEvict receives the EVICTED value, not the evictor
+  ok   (d) an evicted key's disposer does not re-fire on recompute
+
+cache.proof: 12 assertions passed
+  ok   (a) boilLineFrames emits exactly frameCount strings
+  ok   (a) boilRectFrames emits exactly frameCount strings
+  ok   (b) boilLineFrames is deterministic for a fixed seed
+  ok   (b) boilRectFrames is deterministic for a fixed seed
+  ok   (c) a boiled line shivers frame 0 → frame 1 under a non-zero amount
+  ok   (c) a zero boil amount holds every frame identical to the base
+  ok   (d) every boilLineFrames path holds only finite coordinates
+  ok   (d) every boilRectFrames path holds only finite coordinates
+  ok   (e) every rect frame is a closed path
+  ok   (f) < 2 points serialize to the empty string
+  ok   (f) a single point serializes to the empty string
+  ok   (f) exactly two points serialize as a straight M…L segment (no cubic)
+  ok   (f) three+ points serialize as cubic bezier segments
+  ok   (f) catmullRomToBezier is deterministic (pure)
+  ok   (f) every serialized coordinate is finite
+  ok   (g) "easeInCubic" resolves to easeInCubic
+  ok   (g) "easeInOutCubic" resolves to easeInOutCubic
+  ok   (g) "linear" resolves to linear
+  ok   (g) "easeOutCubic" resolves to easeOutCubic
+  ok   (g) an unknown name defaults to easeOutCubic
+
+prebake.proof: 20 assertions passed
+  ok   (diamond) emits exactly 4 vertices
+  ok   (diamond) every coordinate is finite
+  ok   (diamond) deterministic for a fixed seed
+  ok   (diamond) distinct seeds diverge
+  ok   (star) emits exactly 10 vertices
+  ok   (star) every coordinate is finite
+  ok   (star) deterministic for a fixed seed
+  ok   (star) distinct seeds diverge
+  ok   (rays) outerPoly has 20 points (10 rays × 2)
+  ok   (rays) innerPoly has 20 points (10 rays × 2)
+  ok   (rays) every coordinate is finite
+  ok   (rays) deterministic for a fixed seed
+  ok   (rays) distinct seeds diverge
+  ok   (ellipse) emits segments + 1 points (i = 0..seg inclusive)
+  ok   (ellipse) yields [x, y] number pairs, not a string
+  ok   (ellipse) every coordinate is finite
+  ok   (ellipse) deterministic for a fixed seed
+  ok   (ellipse) distinct seeds diverge
+  ok   (ellipse) segments clamps to a floor of 12 (=> 13 points)
+  ok   (perturbClosed) preserves the point count
+  ok   (perturbClosed) every perturbed coordinate is finite
+  ok   (perturbClosed) deterministic for a fixed seed
+  ok   (perturbClosed) a non-zero amount moves the ring
+  ok   (perturbClosed) a zero amount holds every point
+  ok   (perturbClosed) a ring of < 3 points passes through unchanged
+
+celestial.proof: 25 assertions passed
+  ok   (a) serializePoseSvg inlines the <defs> into the document
+  ok   (a) no defs given => no <defs> wrapper emitted
+  ok   (b) root <svg> carries width/height and a defaulted viewBox
+  ok   (b) the document closes with </svg>
+  ok   (b) an explicit viewBox overrides the default
+  ok   (c) a fixed pose serializes byte-identically (deterministic)
+  ok   (d) four poses serialize to four distinct strings
+  ok   (e) a resolved-literal pose SVG is self-contained
+  ok   (e) a currentColor leak is NOT self-contained (dropped def)
+  ok   (e) a var() leak is NOT self-contained (dropped def)
+
+raster-serialize.proof: 10 assertions passed
+  ok   (a) one capture => one blob document
+  ok   (a) blob root width = round(cssSize.width × dpr) = 600
+  ok   (a) blob root height = round(cssSize.height × dpr) = 240
+  ok   (c) the viewBox is untouched — user space preserved, only render resolution moves
+  ok   (d) the stamped intrinsic equals the canvas the capture draws into (600×240)
+  ok   (e) everything after the root tag (inlined <defs> included) is byte-identical
+  ok   (e) the svg namespace survives the stamp
+  ok   (b) round(33.3 × 3) = 100 stamped (no fractional intrinsic)
+  ok   (b) round(17.7 × 3) = 53 stamped
+  ok   (b) the stamp and the canvas agree on the rounded device box (100×53)
+  ok   (a) the default dpr (2) stamps 240×120 for a 120×60 css box
+  ok   (f) a viewBox-less root throws a named rasterizePoseToBlob error
+  ok   (f) the error names the missing viewBox
+  ok   (f) nothing was baked — the throw precedes blob creation
+  ok   (g) a currentColor leak rejects on the cascade guard, not the viewBox guard
+  ok   (g) a leaked pose bakes nothing
+
+raster-capture.proof: 16 assertions passed
+  ok   (a) ONE canvas per capture — no intermediate surface
+  ok   (a) exactly one encode
+  ok   (a) the encode reads the CAPTURE canvas box (600x240 = round(cssSize x dpr))
+  ok   (a) the encoded surface IS the surface the pose was drawn into
+  ok   (b) ZERO createImageBitmap copies on the blob path
+  ok   (c) capture intrinsic stamped: width = 600 device px
+  ok   (c) capture intrinsic stamped: height = 240 device px
+  ok   (c) the viewBox is untouched — user space preserved, only render resolution moves
+  ok   (c) everything after the root tag is byte-identical to the serialized pose
+  ok   (d) PNG by default
+  ok   (d) the returned blob carries the encoded mime
+  ok   (d) an explicit mime is honoured
+  ok   (e) a currentColor leak rejects on the cascade guard
+  ok   (e) the leaking pose was never captured and never encoded
+  ok   (e) a viewBox-less root rejects on the intrinsic guard
+  ok   (e) the un-stampable pose was never captured and never encoded
+  ok   (f) a null encode rejects with a NAMED error
+  ok   (f) the failed encode produced no artifact
+
+raster-blob.proof: 18 assertions passed
+(node:54896) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:54906) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ok   (a) a 0×0 cssSize captures NOTHING (zero blob documents)
+  ok   (a) urls stays null — the consumer keeps the live-filter fallback
+  ok   (a) ready is false at a zero box
+  ok   (b) a zero HEIGHT captures nothing either
+  ok   (b) urls still null after the half-box watch fire
+  ok   (c) the landed box bakes EXACTLY ONCE — poseCount captures in total, no pre-layout bake
+  ok   (c) every pose resolved to a URL
+  ok   (c) ready flips true on the landed bake
+  ok   (c) every capture ran at cssSize × dpr = 640×120 (no 1×1 stand-in among them)
+  ok   (c) every encode read the device-px capture surface (640×120)
+  ok   (c) ZERO ImageBitmap copies — the bake encodes the capture canvas itself
+  ok   (e) every live pose URL was minted here and is still valid
+  ok   (d) collapsing back to a zero box captures nothing further
+  ok   (d) the SAME urls array survives — nothing nulled it, no stand-in bake superseded it
+  ok   (d) the surviving pose URLs were not revoked — the rendered images stay decodable
+  ok   (e) a re-bake mints a fresh URL set
+  ok   (e) the superseded set is RETAINED and still valid — the cache holds it for the return
+  ok   (e) the LIVE set is never revoked out from under the surface
+  ok   (e) every minted handle is revoked by teardown — no object URL outlives the surface
+  ok   (e) the composable revoked them, not the proof — teardown did the work itself
+
+vue-raster-stack.proof: 20 assertions passed
+(node:54972) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ok   setup: the first bake resolved every pose
+  ok   setup: a NEW size costs a full bake (4 encodes)
+  ok   (a) returning to a baked size performs ZERO encodes
+  ok   (b) the return hands back the IDENTICAL handles — the same blobs, not a re-encode
+  ok   (b) no handle in the cached stack was revoked while it was resident
+  ok   (b) the return revokes nothing at all — both stacks stay live and reachable
+  ok   (c) urls never passes through null on a hit — no live-filter flicker on the gesture
+  ok   (c) the size we LEFT is retained too — the next toggle back is free as well
+  ok   (a) three further toggles cost ZERO encodes between them
+  ok   (e) rebake() drops the live entry and re-captures — force still means force
+  ok   (f) unmount revokes EVERY handle the surface ever minted — resident stacks included
+  ok   (f) no handle is revoked twice across the whole lifetime
+  ok   (f) urls is null after unmount
+  ok   (d) the cap evicts the least recently served stack and revokes its handles
+  ok   (d) eviction revokes each evicted handle exactly once
+  ok   (d) an evicted size re-encodes — the cap is real, not advisory
+  ok   (g) CONTROL: at poseCacheSize 1 the return to a baked size RE-ENCODES — the harness can see the cost that (a) reports as gone
+  ok   (g) CONTROL: and it hands back fresh handles, not the originals
+  ok   (g) CONTROL: the 0.11 revoke-on-swap ordering survives as the cap-1 eviction
+  ok   (h) setup: two pre-font stacks resolved, at two different boxes
+  ok   (h) the font-ready bake RE-CAPTURES at the current box — no pre-font stack is served
+  ok   (h) the surface renders the post-font handles, never the fallback-glyph ones
+  ok   (h) the NON-CURRENT pre-font stack is cleared too — it can never be served on a return
+  ok   (h) returning to that box re-encodes with the real face — the stale stack is gone
+
+raster-stack-cache.proof: 24 assertions passed
+(node:55033) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ok   (a) the fresh bake captured poseCount poses
+  ok   (a) every fresh pose serialized the LIGHT cascade ink
+  ok   (a) ready on the fresh bake
+  ok   (c) the flip cost EXACTLY poseCount captures — no pre-flip round thrown away
+  ok   (b) every re-baked pose serialized the POST-FLIP cascade ink (born RED at 0.10.0)
+  ok   (b) no pose carried the ink of the theme just left
+  ok   (b) the re-bake resolved — the surface is not stranded on the fallback
+  ok   (d1) the round trip captures NOTHING — the final cascade is already baked and resident
+  ok   (d1) the surface ends on the FINAL cascade’s own stack, handle for handle
+  ok   (d1) and it never passed through null — the superseded light bake was orphaned, not shown
+  ok   (d2) a double flip onto a COLD key resolves to the FINAL cascade, not the one passed through
+  ok   (d2) no capture carried the ink of the theme the flip passed through
+  ok   (d2) the superseded bake left the baked URLs resolved, not null
+
+raster-theme-flip.proof: 13 assertions passed
+  ok   (a) no hold at rest
+  ok   (a) heldFrameCount passes the base value through when unheld
+  ok   (a) acquireHold engages isBoilHeld
+  ok   (a) heldFrameCount collapses to 1 while held
+  ok   (a) a repeated reason deduped — one release clears it
+  ok   (a) heldFrameCount returns to the base value on release
+  ok   (a) still held while another reason is outstanding
+  ok   (a) released only after the LAST reason clears
+  ok   (b) holds cleared before the freeze test
+  ok   (b) frameCount=4 mounts => scheduler armed (parked on the beat timer)
+  ok   (b) one boil subscriber enrolled
+  ok   (b) acquire => count->1 withdraws the subscriber, scheduler disarms
+  ok   (b) the pending beat wake is cancelled on hold
+  ok   (b) no boil subscriber remains while held
+  ok   (b) FREEZE IN PLACE — currentFrame unchanged (no snap to 0)
+  ok   (b) a held mark does not advance across beats
+  ok   (c) release => count->4 re-enrols the subscriber (re-armed)
+  ok   (c) the boil subscriber is back on the chain
+  ok   (c) resumes mid-cadence — currentFrame not reset by the hold
+  ok   (c) teardown disarms the scheduler
+
+hold.proof: 20 assertions passed
+  ok   (a) frame handle stopped before start returns
+  ok   (a) sequence handle stopped before start returns
+  ok   (a) the frame subscriber enrolled
+  ok   (a) frame handle stopped MID-FLIGHT returns
+  ok   (a) mid-flight stop withdrew the subscriber
+  ok   (a) sequence handle stopped MID-TWEEN returns
+  ok   (a) mid-tween stop withdrew the subscriber
+  ok   (a) frame handle stopped FROM INSIDE ITS OWN TICK returns
+  ok   (a) sequence handle stopped FROM INSIDE onProgress returns
+(node:55109) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ok   (a) the tween completed and self-unsubscribed
+  ok   (a) sequence handle stopped AFTER COMPLETION returns
+  ok   (a) DOUBLE stop returns (idempotent withdrawal)
+  ok   (a) PRM engage cleared every subscriber
+  ok   (a) stop AFTER a central PRM clear returns
+  ok   (a) the inert PRM createStrokeDrawIn handle stops without throwing
+  ok   (a) stop AFTER the owning scope tore down returns
+  ok   (b) HOSTILE HOST: mid-flight frame stop returns
+  ok   (b) the hostile arm ran against a live subscriber
+  ok   (c) NEGATIVE CONTROL: the hostile-host withdrawal still LANDED (subscriber left the set)
+  ok   (b) HOSTILE HOST: a second mid-flight stop returns
+  ok   (c) NEGATIVE CONTROL: the stopped mark never advances again under the hostile host
+  ok   (b) HOSTILE HOST: mid-tween sequence stop returns
+  ok   (c) NEGATIVE CONTROL: the hostile-host tween withdrawal LANDED
+  ok   (b) the composable enrolled its subscriber
+  ok   (b) HOSTILE HOST: composable teardown stop() returns
+  ok   (c) NEGATIVE CONTROL: the teardown withdrawal LANDED under the hostile host
+
+stop-contract.proof: 26 assertions passed
+
+> @mkbabb/pencil-boil@0.11.1 verify:package
+> npm run build && node proofs/package-boundary.proof.mjs
+
+
+> @mkbabb/pencil-boil@0.11.1 build
+> npm run clean && tsc
+
+
+> @mkbabb/pencil-boil@0.11.1 clean
+> node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"
+
+{"schema":"pencil-boil-package-boundary/v1","terminal":"CLEAN","package":{"name":"@mkbabb/pencil-boil","version":"0.11.1"},"commands":[{"command":"npm pack --ignore-scripts --json --silent --pack-destination /var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/pack","exit":0,"durationMs":2620.8,"stdout":"[\n  {\n    \"id\": \"@mkbabb/pencil-boil@0.11.1\",\n    \"name\": \"@mkbabb/pencil-boil\",\n    \"version\": \"0.11.1\",\n    \"size\": 36012,\n    \"unpackedSize\": 104526,\n    \"shasum\": \"61ef758931911580bd9a4962ebca7113cc705c65\",\n    \"integrity\": \"sha512-CzNHxXUmdFg3Ezb3ufIY4n/eXSSYwFoQ2qwirfalqN/6xqKG9w9StaCkIvNU6Nvlum/W/Q6qqZe0KMqp5aJV+A==\",\n    \"filename\": \"mkbabb-pencil-boil-0.11.1.tgz\",\n    \"files\": [\n      {\n        \"path\": \"LICENSE\",\n        \"size\": 1212,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"README.md\",\n        \"size\": 8654,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/boilHoldGate.d.ts\",\n        \"size\": 1543,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/boilHoldGate.js\",\n        \"size\": 1830,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/celestial.d.ts\",\n        \"size\": 641,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/celestial.js\",\n        \"size\": 2965,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/easings.d.ts\",\n        \"size\": 1066,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/easings.js\",\n        \"size\": 1287,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/frames.d.ts\",\n        \"size\": 2385,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/frames.js\",\n        \"size\": 3728,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/index.d.ts\",\n        \"size\": 945,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/index.js\",\n        \"size\": 806,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/path.d.ts\",\n        \"size\": 3775,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/path.js\",\n        \"size\": 9542,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/random.d.ts\",\n        \"size\": 122,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/random.js\",\n        \"size\": 349,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/raster.d.ts\",\n        \"size\": 7288,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/raster.js\",\n        \"size\": 8775,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/vue.d.ts\",\n        \"size\": 6784,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"dist/vue.js\",\n        \"size\": 38655,\n        \"mode\": 420\n      },\n      {\n        \"path\": \"package.json\",\n        \"size\": 2174,\n        \"mode\": 420\n      }\n    ],\n    \"entryCount\": 21,\n    \"bundled\": []\n  }\n]\n","stderr":""},{"command":"tar -xOf /var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/pack/mkbabb-pencil-boil-0.11.1.tgz package/package.json","exit":0,"durationMs":16.81,"stdout":"{\n  \"name\": \"@mkbabb/pencil-boil\",\n  \"version\": \"0.11.1\",\n  \"description\": \"Hand-drawn boil utilities for SVG and Vue 3.\",\n  \"type\": \"module\",\n  \"main\": \"./dist/index.js\",\n  \"module\": \"./dist/index.js\",\n  \"types\": \"./dist/index.d.ts\",\n  \"sideEffects\": false,\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"import\": \"./dist/index.js\",\n      \"default\": \"./dist/index.js\"\n    },\n    \"./package.json\": \"./package.json\"\n  },\n  \"files\": [\n    \"dist\",\n    \"README.md\",\n    \"LICENSE\"\n  ],\n  \"scripts\": {\n    \"clean\": \"node -e \\\"require('node:fs').rmSync('dist', { recursive: true, force: true })\\\"\",\n    \"build\": \"npm run clean && tsc\",\n    \"check\": \"tsc --noEmit\",\n    \"verify:package\": \"npm run build && node proofs/package-boundary.proof.mjs\",\n    \"proof\": \"node --import ./proofs/loader.mjs proofs/boil-guard.proof.ts && node --import ./proofs/loader.mjs proofs/frames.proof.ts && node --import ./proofs/loader.mjs proofs/cache.proof.ts && node --import ./proofs/loader.mjs proofs/prebake.proof.ts && node --import ./proofs/loader.mjs proofs/celestial.proof.ts && node --import ./proofs/loader.mjs proofs/raster-serialize.proof.ts && node --import ./proofs/loader.mjs proofs/raster-capture.proof.ts && node --import ./proofs/loader.mjs proofs/raster-blob.proof.ts && node --import ./proofs/loader.mjs proofs/vue-raster-stack.proof.ts && node --import ./proofs/loader.mjs proofs/raster-stack-cache.proof.ts && node --import ./proofs/loader.mjs proofs/raster-theme-flip.proof.ts && node --import ./proofs/loader.mjs proofs/hold.proof.ts && node --import ./proofs/loader.mjs proofs/stop-contract.proof.ts\",\n    \"test\": \"npm run check && npm run proof && npm run verify:package\",\n    \"proof:browser\": \"npm run build && playwright test\",\n    \"prepack\": \"npm run build\"\n  },\n  \"keywords\": [\n    \"svg\",\n    \"animation\",\n    \"hand-drawn\",\n    \"wobble\",\n    \"boil\",\n    \"vue\"\n  ],\n  \"author\": \"mkbabb\",\n  \"license\": \"Unlicense\",\n  \"engines\": {\n    \"node\": \">=22\"\n  },\n  \"packageManager\": \"npm@11.12.1\",\n  \"peerDependencies\": {\n    \"vue\": \"^3.5.0\"\n  },\n  \"devDependencies\": {\n    \"@playwright/test\": \"^1.61.1\",\n    \"typescript\": \"^7.0.2\",\n    \"vue\": \"^3.5.39\"\n  }\n}\n","stderr":""},{"command":"npm install --ignore-scripts --no-audit --no-fund","exit":0,"durationMs":9456.94,"stdout":"\nadded 26 packages in 9s\n","stderr":""},{"command":"/opt/homebrew/Cellar/node/26.0.0/bin/node /var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/consumer/runtime.mjs","exit":0,"durationMs":545.6,"stdout":"{\"exports\":[\"acquireHold\",\"boilLineFrames\",\"boilRectFrames\",\"catmullRomToBezier\",\"createBoilTicker\",\"createSequenceSubscription\",\"createStrokeDrawIn\",\"easeInCubic\",\"easeInOutCubic\",\"easeOutCubic\",\"ellipsePoints\",\"generateSunRays\",\"heldFrameCount\",\"isBoilHeld\",\"isSelfContainedSvg\",\"linear\",\"mulberry32\",\"perturbPoints\",\"perturbPointsClosed\",\"pointsToLinear\",\"rasterizePoseToBlob\",\"releaseHold\",\"resolveEasing\",\"schedulerDebugInfo\",\"serializePoseSvg\",\"useBoilCache\",\"useLineBoil\",\"usePrefersReducedMotion\",\"useRasterStack\",\"wobbleDiamond\",\"wobbleLine\",\"wobbleLinePoints\",\"wobbleRect\",\"wobbleStarPolygon\"],\"required\":[\"catmullRomToBezier\",\"ellipsePoints\",\"perturbPoints\",\"perturbPointsClosed\",\"pointsToLinear\",\"useLineBoil\",\"wobbleLinePoints\"]}\n","stderr":""},{"command":"/var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/consumer/node_modules/.bin/tsc -p /var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/consumer/tsconfig.bundler.json","exit":0,"durationMs":4462.3,"stdout":"","stderr":""},{"command":"/var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/consumer/node_modules/.bin/tsc -p /var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/consumer/tsconfig.node16.json","exit":0,"durationMs":2265.92,"stdout":"","stderr":""},{"command":"/var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/consumer/node_modules/.bin/tsc -p /var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/consumer/tsconfig.nodenext.json","exit":0,"durationMs":3639.49,"stdout":"","stderr":""}],"pack":{"path":"/var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/pack/mkbabb-pencil-boil-0.11.1.tgz","sha256":"2a3ab82aee3cbab96ba9b9d6b5e8783053db4bb60fb15700ac7f6f54d6327ec3","bytes":36012,"membership":["LICENSE","README.md","dist/boilHoldGate.d.ts","dist/boilHoldGate.js","dist/celestial.d.ts","dist/celestial.js","dist/easings.d.ts","dist/easings.js","dist/frames.d.ts","dist/frames.js","dist/index.d.ts","dist/index.js","dist/path.d.ts","dist/path.js","dist/random.d.ts","dist/random.js","dist/raster.d.ts","dist/raster.js","dist/vue.d.ts","dist/vue.js","package.json"],"packageVersion":"0.11.1"},"install":{"exit":0,"consumerRoot":"/var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/consumer","installedPackagePath":"/var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/consumer/node_modules/@mkbabb/pencil-boil","installedPackageRealPath":"/private/var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy/consumer/node_modules/@mkbabb/pencil-boil","installedPackageSymlink":false,"package":{"name":"@mkbabb/pencil-boil","version":"0.11.1"},"vue":{"name":"vue","version":"3.5.39","symlink":false}},"runtime":{"executable":"/opt/homebrew/Cellar/node/26.0.0/bin/node","exit":0,"exports":["acquireHold","boilLineFrames","boilRectFrames","catmullRomToBezier","createBoilTicker","createSequenceSubscription","createStrokeDrawIn","easeInCubic","easeInOutCubic","easeOutCubic","ellipsePoints","generateSunRays","heldFrameCount","isBoilHeld","isSelfContainedSvg","linear","mulberry32","perturbPoints","perturbPointsClosed","pointsToLinear","rasterizePoseToBlob","releaseHold","resolveEasing","schedulerDebugInfo","serializePoseSvg","useBoilCache","useLineBoil","usePrefersReducedMotion","useRasterStack","wobbleDiamond","wobbleLine","wobbleLinePoints","wobbleRect","wobbleStarPolygon"],"required":["catmullRomToBezier","ellipsePoints","perturbPoints","perturbPointsClosed","pointsToLinear","useLineBoil","wobbleLinePoints"]},"types":{"Bundler":{"exit":0,"durationMs":4462.3},"Node16":{"exit":0,"durationMs":2265.92},"NodeNext":{"exit":0,"durationMs":3639.49}},"cleanup":{"temporaryRoot":"/var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/pencil-package-boundary-kLUPqy","packDirectoryAbsent":true,"consumerRootAbsent":true}}
+EXIT=0

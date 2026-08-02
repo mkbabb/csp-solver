@@ -1,0 +1,15 @@
+AUDIT: font-census BACKWARD direction ablation — one ledger row nothing renders 2026-08-02T09:51:34Z
+  ✘  2 [chromium] › e2e/font-census.spec.ts:208:1 › the ledger holds BOTH directions across two games and two regimes (4.9s)
+  ✘  1 [webkit] › e2e/font-census.spec.ts:208:1 › the ledger holds BOTH directions across two games and two regimes (6.1s)
+    Error: ledger rows no cell produced — retire them or state the condition
+      274 |   const stale = Object.keys(LEDGER).filter((k) => !seen.has(k) && !(k in CONDITIONAL));
+    > 275 |   expect(stale, "ledger rows no cell produced — retire them or state the condition").toEqual(
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-1.png
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-2.png
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-4.png
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/test-failed-3.png
+    Error Context: test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/error-context.md
+    Error: ledger rows no cell produced — retire them or state the condition
+      274 |   const stale = Object.keys(LEDGER).filter((k) => !seen.has(k) && !(k in CONDITIONAL));
+    > 275 |   expect(stale, "ledger rows no cell produced — retire them or state the condition").toEqual(
+    test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-webkit/test-failed-1.png

@@ -1,0 +1,18 @@
+ink-pressure ladder — every rung clears its floor, strictly increasing, in all 3 scopes (light, dark, print), each resolved out of index.css:
+  --ink-press-rule    55%  3.53 light / 4.36 dark / 4.76 print  ≥3 (non-text)
+  --ink-press-quiet   68%  5.23 light / 6.06 dark / 7.86 print  ≥4.5 (text)
+  --color-red-ink          4.98 light / 6.32 dark  ≥4.5 (.icon-sublabel.is-armed)
+  washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+
+ship-4 census — the six re-pitched surfaces, each pinned to the rung above (so the rung's floor is the surface's floor):
+  1  .keyboard-legend         color: var(--ink-press-quiet)
+  2  .legend-row kbd          border: var(--ink-press-rule)
+  3  .legend-sep              no `opacity` declaration
+  4  .margin-note-meta        color: var(--ink-press-quiet)
+  5  .icon-sublabel.is-armed  color: var(--color-red-ink)
+  6  .vignette-meta           color: var(--ink-press-quiet)
+
+ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+  light  rule < muted-foreground < quiet
+  dark   rule < quiet < muted-foreground
+  the ramp and the register cross between themes. Booked in index.css §INK PRESSURE, not gated.

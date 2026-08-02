@@ -92,6 +92,9 @@ Environment failures that bit, got diagnosed, and stay written so nobody redisco
 - **cp314**—host Python 3.14 is PyO3-incompatible; the backend runs 3.13 via `uv`.
 - **fmt-in-gates**—the format check belongs in its own CI gate, never folded into a build lane that masks it.
 - **cwd-drift**—compound shell inherits a drifted working directory; every compound command opens with an absolute path.
+- **shared-tree HMR**—a dev server reloads under ANOTHER lane's edit and the reload lands mid-test: 5 of 36 rows failed with `navigated to …` in the call log and the deck reset to card 0 (T5-W4 pass-5 Lane A, `A1-40` attempt 1; the same churn is legible in pass 4's own `vite-5321.log`). Not K46—that's a port desync, this is a foreign edit. Re-run on a quiesced server (36/36) or measure a built dist. Re-entry: any e2e or rig run against a dev server on a tree another lane is editing.
+- **zsh eats `git show $sha:path`**—zsh applies history-style modifiers after a colon, so `git show "$c:web/…"` expands to a mangled path and `git` errors; with `2>/dev/null` on the line it returns a silent, confident **0** from the `grep -c` downstream. Brace the ref: `git show "${c}":"path"`. It bit a pass-6 Lane-A verification and produced a wrong count on five commits before the stderr was looked at. Re-entry: any loop that pins a number at a historical SHA.
+- **assert-the-SPA is tree-blind**—`global-setup`'s gate (status, `#app`, title) proves the port serves THE app, never YOUR app: a lane port already holding another lane's dist passes it, and `vite --strictPort`'s failed bind backgrounds silently (pass-5 Lane A banked and discarded one such log). `lsof` the port, then diff the served entry against your own build—`curl -s $BASE | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'` vs `ls dist/assets` (pass-6 Lane A: `index-BNMQu01IbxTY.js` both sides, checked before the arm measured anything). Re-entry: any base URL you did not start this session.
 
 ---
 

@@ -19,9 +19,9 @@ const descriptor: TallyDescriptor = {
   graded: true,
   filled: 1,
   total: 5,
-  name: "hidden single",
-  expand: "hardest step: hidden single",
-  ariaLabel: "difficulty — singles only (1 of 5)",
+  // pass 6 (dt-name): the label carries the EXACT step. It read "singles only" here, which was
+  // the same sentence a naked-single board produced — the conflation F3-G3 measured.
+  ariaLabel: "difficulty — needs a hidden single (1 of 5)",
 };
 
 const tally = (d: Partial<TallyDescriptor> = {}) =>

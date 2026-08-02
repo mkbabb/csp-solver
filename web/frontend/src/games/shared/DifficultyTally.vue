@@ -253,56 +253,39 @@ onUnmounted(stopDraws);
          verb: measured at the 1440 rail, expanded, verb→receipt clearance goes +7.53px →
          −103.53px in BOTH engines (`pass4/rigF3/out-assets-*.json`) — the name lies across
          Deal. The rail itself does not move (card 281 / board left 215.5, byte-identical) —
-         the shared grid cell holds — so this is occlusion, not layout. The pass-3 tree hid it
-         with `.deal-row :deep(.dt-name){display:none}` and described that as "suppressed inside
-         the ticket only"; the ticket is the tally's ONLY mount, so it was already retired
-         everywhere, silently, desktop included. Now it is retired on the record and the dead
-         markup goes with it. The glyph goes back to what its own comment calls it: a glanceable
-         magnitude. `TallyDescriptor.expand` KEEPS its home in techniqueVoice.ts (tested there,
-         5 rows) and has, from here, no renderer.
+         the shared grid cell holds — so this is occlusion, not layout.
 
-         T5-W4c (pass 5) — THE RESIDUE ROWS, DISPOSED, AND ONE SENTENCE ABOVE CORRECTED.
+         T5-W4c (pass 5) — THE CORRECTION THAT MADE THIS A REAL ROW. Pass 4's retirement note
+         claimed the exact hardest step "still names itself at every width — in the tally's own
+         `aria-label`". It did not. The estate ran TWO vocabularies: `GRADE_PHRASE` bucketed the
+         tier ("singles only") and `TECHNIQUE_NAME` gave the step ("hidden single"), and
+         `ariaLabel` was built from the bucket, so naked-single and hidden-single read
+         identically through it. Measured on the built dist at 390×664 (`pass5/f3/rig/dtname.mjs`,
+         `logs/dtname.log`): visible margin ink `a fresh 9×9 — singles only` · tally aria-label
+         `difficulty — singles only (1 of 5)` · exact technique names in ZERO visible text nodes
+         and ZERO aria-labels. The deletion had removed the only visible route and the stated
+         replacement was never there.
 
-         THE CORRECTION FIRST, because it is the load-bearing fact. Pass 4's retirement note
-         said the exact hardest step "still names itself at every width — in the tally's own
-         `aria-label` and in the margin voice's hint line". It does not, and the estate has two
-         vocabularies rather than one: `GRADE_PHRASE` buckets the tier ("singles only", "needs
-         an X-wing") and `TECHNIQUE_NAME` gives the exact step ("hidden single"). `ariaLabel` is
-         built from `formatGradeSignature`, so it carries the BUCKET; naked-single and
-         hidden-single read identically through it. Measured on the built dist at 390×664
-         (`pass5/f3/rig/dtname.mjs`, `logs/dtname.log`): visible margin ink `a fresh 9×9 —
-         singles only` · tally aria-label `difficulty — singles only (1 of 5)` · exact technique
-         names found in ZERO visible text nodes and ZERO aria-labels. So `TallyDescriptor.name`
-         and `.expand` are BOTH consumer-less, and the replacement pass 4 named was never there.
+         T5-W4 PASS 6 — DISPOSED, AND THE RESIDUE GOES WITH IT.
 
-         (1) `dt-name` — the ADJUDICATOR row, alternatives PRICED, not described. What is
-         actually missing is a visible route to the EXACT step; the difficulty SIGNATURE is
-         visible today, drawn, at every width, with no gesture, on the strip's own reserved line:
-           a. RESTORE THE HOVER REVEAL — measured, rejected on arithmetic: verb→receipt
-              clearance +7.53 → −103.53px at the 1440 rail, both engines. The name lies across
-              Deal. It is a hover grammar besides, so it was never a route on the surface the
-              campaign is about.
-           b. A SECOND LINE UNDER THE TALLY, always drawn — ≈17px per card at the body rung, in
-              flow, at every width. The stack at 390×664 is 1.705 viewports and the loop's only
-              blocking row IS that number: a new permanent line in the card spends the exact
-              currency trigger (b) is short of.
-           c. UPGRADE THE MARGIN VOICE from bucket to exact step — ZERO new pixels: the line is
-              already reserved, already drawn, already read on every deal, and this is a string
-              swap at one call site, not a surface. Its real price is a REGISTER change: "singles
-              only" is a deliberately plain-spoken bucket and "hidden single" is the jargon the
-              bucket exists to spare the reader. Cheapest in pixels, dearest in voice.
-           d. TAP-TO-REVEAL on the tally — a new interactive control on a `role="img"` graphic,
-              i.e. the tab stop L12 just retired, re-minted with a gesture on it.
-         The lane's read, put up rather than taken: (c) is the only option that does not charge
-         the blocking row, and the question it turns on is a VOICE question, which is the
-         adjudicator's, not a measuring lane's.
+         The adjudicator ruled: route the REAL name to an EXISTING visible surface, zero new
+         chrome, no new standing surface. `techniqueVoice.ts` now COMPOSES the difficulty
+         signature from `TECHNIQUE_NAME` — the bucket table is deleted, so there is one
+         vocabulary where there were two, which is the root the defect grew from rather than
+         its symptom. The margin's reserved line reads `a fresh 9×9 — needs a hidden single`
+         and THIS graphic's `aria-label` reads `difficulty — needs a hidden single (1 of 5)`.
+         Zero new pixels: the line was already reserved, already drawn, already read on every
+         deal. Seven of the nine phrases are byte-identical to the table they replace.
 
-         (2) `TallyDescriptor.expand` (and `.name` with it) — KEPT, trigger named, because the
-         deletion is the one move that is expensive to undo: the five unit rows are the only
-         thing pinning this wording, and both fields are the restoration cost of (b) and (c).
-         TRIGGER: if the adjudicator rules that the exact step needs no visible surface, `name`,
-         `expand` and the five rows retire in that same change — a field kept for an option that
-         has been closed is exactly the residue this note is about. -->
+         `TallyDescriptor.name` and `.expand` are RETIRED, on the trigger pass 5 wrote for them:
+         they were kept as "the restoration cost" of the options that might still have needed
+         them, one of those options has now landed, and a field kept for a closed option is
+         exactly the residue that note was about. The five unit rows that pinned their wording
+         retire in the same change; every proper name they published is still asserted, inside
+         the sentence that now actually reaches a reader (`techniqueVoice.test.ts`).
+
+         What this graphic is, unchanged: a glanceable MAGNITUDE. The count is the tier; the
+         name lives in the label and in the margin, at every width, with no gesture. -->
   </div>
 </template>
 

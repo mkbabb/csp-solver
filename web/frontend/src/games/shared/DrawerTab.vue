@@ -5,12 +5,16 @@
  * vertical washi label ("controls") that is persistent — the W11 UI-4/5 affordance
  * grammar inherited, not reinvented (a tab is furniture, its name stays on it).
  *
- * Lives INSIDE `.board-peek-host` (so it rides the board's glide transform and stays
- * outside `.board-wrapper`'s containment/promotion — §2 P2), painted at negative z
- * within the host's stacking context: under the board's opaque paper, over the case.
- * ≥1024 only (display:none below — the stacked regime has no drawer). 48×92px ≥ the
- * 44px floor. `aria-expanded` rides the shared intent ref (truthful at click);
- * `aria-controls` names the rail.
+ * On the DESK (≥1024) it lives INSIDE `.board-peek-host` — so it rides the board's glide
+ * transform and stays outside `.board-wrapper`'s containment/promotion (§2 P2) — painted at
+ * negative z within the host's stacking context: under the board's opaque paper, over the
+ * case. 48×92px ≥ the 44px floor.
+ *
+ * On the PORTRAIT DOCK (T5-W4 pass 6) the scene teleports this same instance into
+ * `#drawer-handle` on the case itself, and the pose axis-swaps to 92×48 (styles below). ONE
+ * component, one drawn word, one `aria-expanded`/`aria-controls` pair — a second tab would be
+ * a second control claiming the same region. Landscape below 1024 keeps `display: none`: that
+ * rung has no drawer, as shipped.
  */
 import { ref } from "vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
@@ -71,13 +75,6 @@ defineExpose({
   }
 }
 
-/* During the glide the host scales; the tongue counter-scales as the composable's
-   fourth WAAPI mover (same glass curve, same clock — W13 §3-S3′), so its 48px never
-   pops at the onset's layout step (product ≈ 1 throughout). No CSS transition here:
-   the old spring-transition rule died with the audit-4 ruling — it computed identity
-   (nothing writes --drawer-glide-scale since the WAAPI recut) yet still started a
-   live spring-eased transition on every gesture, a second curve on the one clock. */
-
 .drawer-tab :deep(.outline-container) {
   width: 100%;
   height: 100%;
@@ -117,6 +114,48 @@ defineExpose({
   outline: 2px dashed currentColor;
   outline-offset: 3px;
 }
+
+/* ── THE PORTRAIT DOCK'S TONGUE (T5-W4 pass 6) — the same tab, axis-swapped ──────────────
+   Same component, same drawn word, same ARIA pair; what changes is the axis, because the case
+   it belongs to now slides UP instead of sideways. It is teleported into `#drawer-handle`
+   inside `#controls-drawer` — it rides the CASE, not the board — so `bottom: 100%` puts it
+   immediately above the case's top edge: closed (case below the screen's bottom edge) that is
+   48px poking up from under the fold; open it is the handle at the case's top-right corner.
+
+   Positive `z-index` here, where the desk's tongue paints at `-1`: on the desk the tongue
+   tucks UNDER the board's opaque paper, which is the tuck's whole fiction; on the dock there
+   is no paper above it and a negative layer would put the one control that opens the drawer
+   behind the page. Portrait-scoped so the desk's `-1` is untouched. */
+@media (max-width: 1023.98px) and (orientation: portrait) {
+  .drawer-tab {
+    display: block;
+    left: auto;
+    right: 0;
+    top: auto;
+    bottom: 100%;
+    z-index: 1;
+    width: 5.75rem; /* 92px — the axes swap, the 44px floor is cleared on both */
+    height: 3rem; /* 48px */
+    transform: none;
+  }
+
+  .drawer-tab-tongue {
+    border-radius: 0.75rem 0.75rem 0 0;
+  }
+
+  /* The washi label turns with the tongue — horizontal down a horizontal tab. */
+  .drawer-tab-text {
+    writing-mode: horizontal-tb;
+    padding: 0.15rem 0.5rem;
+  }
+}
+
+/* During the glide the host scales; the tongue counter-scales as the composable's
+   fourth WAAPI mover (same glass curve, same clock — W13 §3-S3′), so its 48px never
+   pops at the onset's layout step (product ≈ 1 throughout). No CSS transition here:
+   the old spring-transition rule died with the audit-4 ruling — it computed identity
+   (nothing writes --drawer-glide-scale since the WAAPI recut) yet still started a
+   live spring-eased transition on every gesture, a second curve on the one clock. */
 
 @media print {
   .drawer-tab {

@@ -7,16 +7,28 @@
  * or the layout silently breaks (there is no build-time link between this file and the templates):
  *   .app-layout        the outer board+controls flex row (column when stacked)
  *   .board-peek-host   the positioning context wrapping the board + answer-key laminate
- *   .controls-card     the row-regime (≥lg) controls card
- *   .mobile-board-width the stacked (<lg) controls card's board-matched width
- *   .scene-controls    the row-regime controls rail (the F6 fade target wrapping the card)
+ *   .controls-card     THE controls card — one of them now, at every width
+ *   .drawer-case       the HandDrawnOutline frame around it (the portrait sheet's inert half)
+ *   .drawer-handle     the tongue's berth on the portrait dock (the case's top-right)
+ *   .fold-tools        the portrait fold's play-verbs band (`#fold-tools`, a Teleport berth)
+ *   .scene-controls    the ONE controls drawer (`#controls-drawer`) — the F6 fade target
  *   .scene-leaving     ON .app-layout while the F6 page-turn's beat 1 runs (chrome fades out)
  *
- * THE DRAWER (T3-W12 §6, ≥1024 only) adds two GLOBAL html classes, driven by
- * useControlsDrawer.ts: `html.drawer-closed` (the settled tucked layout — the rail
- * parks out of flow under the board, hidden) and `html.drawer-gesturing` (the ~520ms
- * transform-only glide window — Band D, user-triggered one-shot). The scenes also
- * mount a DrawerTab inside .board-peek-host.
+ * THE DRAWER adds two GLOBAL html classes, driven by useControlsDrawer.ts:
+ * `html.drawer-closed` (the settled rest pose) and `html.drawer-gesturing` (the ~520ms
+ * transform-only glide window — Band D, user-triggered one-shot).
+ *
+ * T5-W4 PASS 6 — THREE POSES OF ONE DRAWER, and the regime key is WIDTH AND ORIENTATION:
+ *   · `≥1024`                       the shipped parked rail, byte-untouched (audit-4);
+ *   · `<1024` **portrait**          a `position: fixed` bottom sheet anchored on
+ *                                   `top: var(--vv-height)`, rest pose on `translate:`;
+ *   · `<1024` **landscape**         the in-flow static card, geometry-identical to the
+ *                                   `.mobile-board-width` twin it replaces — the lead's
+ *                                   charter (c) holds that rung RATIFIED, so a width-only
+ *                                   rule would have moved a ratified surface (Opus's own
+ *                                   head read 1.472 there against the shipped 2.882).
+ * `.mobile-board-width` is DELETED: it was the twin's board-matched width and its office is
+ * now the landscape pose's `width` arm below, on the one element.
  */
 
 /* H8-centering-only: row regime centers the controls card against the board. */
@@ -37,12 +49,21 @@
    scroll. Centered by .app-layout, the rail then sits 1rem inside the sheet's
    top edge at every viewport. Row-regime only: .controls-card lives inside the
    hidden lg:flex rail. The T4-WU re-partition (staged/live zones) owns the
-   real-estate redesign; this is the layout-safety floor beneath it. */
-.controls-card {
-  max-height: calc(min(42rem, 85vw, 100dvh - 10rem) - 2rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
+   real-estate redesign; this is the layout-safety floor beneath it.
+
+   T5-W4 pass 6: SCOPED to the row regime, where it always belonged. Its own comment already
+   said "Row-regime only: .controls-card lives inside the hidden lg:flex rail" — true when the
+   rail was `v-if="rowRegime"`, false the moment one card serves every width. Left unscoped it
+   would cap the LANDSCAPE card at `100dvh − 10rem − 2rem` = 198px on an 844×390 phone and buy
+   the whole ratified rung an internal scrollbar. The portrait dock gets its own cap below,
+   derived from its own chrome. */
+@media (min-width: 1024px) {
+  .controls-card {
+    max-height: calc(min(42rem, 85vw, 100dvh - 10rem) - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
 }
 
 /* ── The drawer regime (T3-W12 §6, ≥1024 only) ────────────────────────
@@ -117,8 +138,12 @@
   z-index: 45;
 }
 
-.mobile-board-width {
-  width: min(42rem, calc(100vw - 1.5rem));
+/* The fold's play-verbs band and the dock's handle berth carry NO box outside the portrait
+   dock: they are Teleport targets, and a Teleport target with a box is a box every regime
+   pays for. Portrait <1024 turns them on, below. */
+.fold-tools,
+.drawer-handle {
+  display: none;
 }
 
 /* Stacked regime — <lg after R3 (iPad portrait clips in the row layout). */
@@ -128,6 +153,108 @@
     align-items: center;
     gap: 1.25rem;
     width: 100%;
+  }
+
+  /* THE LANDSCAPE POSE, and the identity it owes. The `.mobile-board-width` twin is deleted,
+     so landscape identity is REBUILT rather than inherited — this width arm IS that twin's
+     one declaration, moved onto the one card. Target and gate: `pageVh 2.882` both engines at
+     844×390, byte-identical to the pass-5 table. (`width` is stated here rather than in the
+     landscape-only block below because the portrait pose overrides it with `left/right`, and
+     a value both orientations share should be written once.) */
+  .scene-controls {
+    width: min(42rem, calc(100vw - 1.5rem));
+  }
+}
+
+/* ── THE PORTRAIT DOCK (T5-W4 pass 6) — the drawer comes down to portrait ────────────────
+   The lever, and the whole of it: the controls card leaves the flow. What stays below the
+   board is the reserved line and the play verbs, so the document is ONE VIEWPORT and the page
+   stops scrolling (`pageVh 1.000`, gated in `e2e/board-covisibility.spec.ts`).
+
+   THE ANCHOR is `useKeyboardViewport`'s standing trigger, honoured verbatim: `top:
+   var(--vv-height)` — the visual viewport's bottom edge in layout coords — with the rest pose
+   on `translate:`. NEVER `bottom: 0` (a risen keyboard occludes it outright: ablated, the
+   deepest chip strands at 616.92 under a 368 band edge) and NEVER a height yield (a height
+   animation is a layout animation, which this drawer has never once done). `100dvh` is the
+   var's fallback, so an unpublished anchor is still a defined pose.
+
+   THE CAP is a derivation, not a tuning: 9rem = the measured chrome band above the board
+   (132.22 chromium / 131.63 webkit) and 3rem = the tongue's 48px riding proud of the case, so
+   the sheet — tongue included — stops BELOW the masthead. Price at the shortest live cell
+   (390×664): ~55px of internal scroll; every taller portrait cell fits whole. pageVh is 1.000
+   at every rung of that ladder, so the cap is a taste the owner may re-cut without reopening
+   the row.
+
+   The regime key is width AND orientation: `1023.98px` rather than `1023px` because a
+   fractional-width viewport between the two would match NEITHER this rule nor the `min-width:
+   1024px` rail block, and land the card with no pose at all. */
+@media (max-width: 1023.98px) and (orientation: portrait) {
+  .scene-controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    width: auto;
+    top: var(--vv-height, 100dvh);
+    max-height: calc(100dvh - 12rem);
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    /* OPEN is the pose without a class; the rest pose is the class. Both ride the `translate:`
+       CHANNEL, which no mover animates — the F1 phantom's raw material stays removed. */
+    translate: 0 -100%;
+  }
+
+  html.drawer-closed .scene-controls {
+    translate: 0 0;
+  }
+
+  /* The case, not the region, is what hides and goes inert at closed-idle: the region must
+     keep carrying the tongue or the drawer is unopenable. (`inert` is bound in the template
+     on this same element; this is its visual half.) */
+  html.drawer-closed .drawer-case {
+    visibility: hidden;
+  }
+
+  html.drawer-gesturing .drawer-case {
+    visibility: visible;
+  }
+
+  html.drawer-gesturing .scene-controls {
+    will-change: transform;
+  }
+
+  /* The card fills the sheet and scrolls INSIDE it — the sheet's own box never moves, so an
+     interior scroll can never become a page scroll. 1.5rem is the outline frame's own outset
+     plus the card's padding-block, measured, not guessed. */
+  .controls-card {
+    max-height: calc(100dvh - 13.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+
+  .drawer-case {
+    width: 100%;
+  }
+
+  /* The tongue's berth: the case's top-right, with the tongue itself positioned OUT of the
+     case (`bottom: 100%` on `.drawer-tab`), so closed it is the 48px poking up from under the
+     screen's bottom edge and open it is the handle at the corner. */
+  .drawer-handle {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 1rem;
+    width: 0;
+    height: 0;
+  }
+
+  /* The fold's play-verbs band — in flow, under the reserved line. Its children arrive by
+     Teleport from `GameControlPanel`, which owns their grammar; this owns only the berth. */
+  .fold-tools {
+    display: block;
+    width: min(42rem, calc(100vw - 1.5rem));
   }
 }
 
@@ -139,12 +266,12 @@
    `animation: none` so the mount fade-in can never fight the leave.
    PRM: the whole block gates to no-preference — mount and switch are both instant. */
 @media (prefers-reduced-motion: no-preference) {
-  .mobile-board-width,
+  /* One card now, so one selector: `.mobile-board-width` was the other twin's name in each of
+     these three rules and it named the same fade. */
   .scene-controls {
     animation: controls-fade-in 250ms var(--ease-drawOn) 150ms backwards;
   }
 
-  .app-layout.scene-leaving .mobile-board-width,
   .app-layout.scene-leaving .scene-controls {
     opacity: 0;
     transition: opacity 200ms var(--ease-fadeOut);
@@ -157,7 +284,6 @@
      App holds `html.gallery-leaving` for the beat-0 window (MOTION.chromeLeaveMs), then the fold
      begins. Global-html + scoped-descendant, the `html.drawer-closed` pattern above. PRM: this
      whole block is no-preference-gated, so entry stays an instant cut. */
-  html.gallery-leaving .mobile-board-width,
   html.gallery-leaving .scene-controls {
     opacity: 0;
     transition: opacity 200ms var(--ease-fadeOut);

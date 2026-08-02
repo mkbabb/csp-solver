@@ -1,0 +1,30 @@
+AUDIT: pencil-boil raster-stack-cache.proof — GREEN arm at upstream commit 3f41141 (working tree = commit + the other lane's WIP import extensions)
+AUDIT: host MacBook-Pro node v26.0.0 2026-08-02T07:55:11Z
+(node:54320) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  ok   setup: the first bake resolved every pose
+  ok   setup: a NEW size costs a full bake (4 encodes)
+  ok   (a) returning to a baked size performs ZERO encodes
+  ok   (b) the return hands back the IDENTICAL handles — the same blobs, not a re-encode
+  ok   (b) no handle in the cached stack was revoked while it was resident
+  ok   (b) the return revokes nothing at all — both stacks stay live and reachable
+  ok   (c) urls never passes through null on a hit — no live-filter flicker on the gesture
+  ok   (c) the size we LEFT is retained too — the next toggle back is free as well
+  ok   (a) three further toggles cost ZERO encodes between them
+  ok   (e) rebake() drops the live entry and re-captures — force still means force
+  ok   (f) unmount revokes EVERY handle the surface ever minted — resident stacks included
+  ok   (f) no handle is revoked twice across the whole lifetime
+  ok   (f) urls is null after unmount
+  ok   (d) the cap evicts the least recently served stack and revokes its handles
+  ok   (d) eviction revokes each evicted handle exactly once
+  ok   (d) an evicted size re-encodes — the cap is real, not advisory
+  ok   (g) CONTROL: at poseCacheSize 1 the return to a baked size RE-ENCODES — the harness can see the cost that (a) reports as gone
+  ok   (g) CONTROL: and it hands back fresh handles, not the originals
+  ok   (g) CONTROL: the 0.11 revoke-on-swap ordering survives as the cap-1 eviction
+  ok   (h) setup: two pre-font stacks resolved, at two different boxes
+  ok   (h) the font-ready bake RE-CAPTURES at the current box — no pre-font stack is served
+  ok   (h) the surface renders the post-font handles, never the fallback-glyph ones
+  ok   (h) the NON-CURRENT pre-font stack is cleared too — it can never be served on a return
+  ok   (h) returning to that box re-encodes with the real face — the stale stack is gone
+
+raster-stack-cache.proof: 24 assertions passed

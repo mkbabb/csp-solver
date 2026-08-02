@@ -233,6 +233,17 @@ test("the ledger holds BOTH directions across two games and two regimes", async 
         await p.evaluate(() => matchMedia("(pointer: coarse)").matches),
         `${cell.id}: regime witness`,
       ).toBe(cell.coarse);
+      // T5-W4 pass 6 — THE PHONE ARM OPENS THE DRAWER, and it must. On the portrait dock the
+      // card's strings are behind the door: unopened, this census would read the fold alone
+      // and the BACKWARD direction would then retire every ledger row the card owns as
+      // "stale". A census that cannot see a surface cannot gate it either way.
+      if (cell.coarse) {
+        const tab = p.locator(".drawer-tab");
+        if (await tab.isVisible()) {
+          await tab.click();
+          await expect(p.locator("#controls-drawer .drawer-case")).toBeVisible();
+        }
+      }
       await p.waitForTimeout(900);
       const { faces, mixed } = await p.evaluate(MIXED_FACE);
       facesPerCell.push(faces);

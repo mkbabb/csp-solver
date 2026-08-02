@@ -1,0 +1,36 @@
+AUDIT: pass-6 LAND · FINAL default e2e battery · head dist index-Cwxgaa3tBBf6.js on :4232 · 2026-08-02T09:28:07Z
+  ✓  274 [webkit] › e2e/mobile-affordances.spec.ts:224:1 › hint two-press by touch (T4-W7): first tap names the technique, second inks the digit (3.9s)
+  ✓  271 [webkit] › e2e/mobile-affordances.spec.ts:136:1 › native bounded entry (sudoku 16×16): two-digit values 10–16 enter whole (5.0s)
+  ✓  273 [webkit] › e2e/mobile-affordances.spec.ts:175:1 › touch play tools (T4-WM §2): undo / redo / hint tappable at ≥44px, wired, and no sticky hover (5.0s)
+  ✓  275 [webkit] › e2e/mobile-affordances.spec.ts:251:1 › attribution opens on a single tap (T4-WM §2): the coarse focusin+click double-fire no longer nets closed (4.5s)
+  ✓  277 [webkit] › e2e/mobile-affordances.spec.ts:271:1 › long-press peek (T4-WM §3, futoshiki twin): a hold on a cell opens the candidate glimpse; release clears it (4.0s)
+  ✓  276 [webkit] › e2e/mobile-affordances.spec.ts:264:1 › long-press peek (T4-WM §3, sudoku): a hold on a cell opens the candidate glimpse; release clears it (5.0s)
+  ✓  279 [webkit] › e2e/mobile-affordances.spec.ts:379:1 › Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty board arms first (3.8s)
+  ✓  278 [webkit] › e2e/mobile-affordances.spec.ts:287:1 › coarse affordances: persistent peek washi on a ≥44px target, icon sublabels, Clear confirm beat (4.2s)
+
+
+  1) [webkit] › e2e/affordances.spec.ts:155:1 › stale-note: teacher-red and gold-star notes clear on the next edit 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      170 |   }, b1);
+      171 |   // The pinned board guarantees it — a hard assertion now, never a runtime skip.
+    > 172 |   expect(b2).toBeGreaterThanOrEqual(0);
+          |              ^
+      173 |
+      174 |   // A value that already appears in neither cell: 9 duplicated in one row is
+      175 |   // UNSAT regardless of the rest of the deal only if neither cell is a given —
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/affordances.spec.ts:172:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/affordances-stale-note-tea-d4717-otes-clear-on-the-next-edit-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/affordances-stale-note-tea-d4717-otes-clear-on-the-next-edit-webkit/error-context.md
+
+  1 failed
+    [webkit] › e2e/affordances.spec.ts:155:1 › stale-note: teacher-red and gold-star notes clear on the next edit 
+  278 passed (1.2m)

@@ -1,0 +1,56 @@
+AUDIT: pass-6 LAND · BORN-RED arm · covis gate run against abe533c4's OWN built dist (index-BNMQu01IbxTY.js) served on :4231 · product code unmodified · 2026-08-02T08:46:34Z
+
+Running 2 tests using 2 workers
+
+  ✘  1 [chromium] › e2e/board-covisibility.spec.ts:287:3 › mark 6 — the band dissolves › the case: at 390x664 the page is one viewport, and the play verbs are in it (311ms)
+  ✘  2 [webkit] › e2e/board-covisibility.spec.ts:287:3 › mark 6 — the band dissolves › the case: at 390x664 the page is one viewport, and the play verbs are in it (953ms)
+
+
+  1) [chromium] › e2e/board-covisibility.spec.ts:287:3 › mark 6 — the band dissolves › the case: at 390x664 the page is one viewport, and the play verbs are in it 
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    1.705
+
+      322 |     const fold = await read();
+      323 |     // THE BOUND.
+    > 324 |     expect(fold.pageVh).toBeLessThanOrEqual(1.0);
+          |                         ^
+      325 |     expect(fold.maxScroll).toBe(0);
+      326 |     // …and the fold is worth having: the four play verbs are in it, each a legal target.
+      327 |     expect(fold.verbsInFold).toBeGreaterThanOrEqual(4);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:324:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-mark-6--6e179-nd-the-play-verbs-are-in-it-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-mark-6--6e179-nd-the-play-verbs-are-in-it-chromium/error-context.md
+
+  2) [webkit] › e2e/board-covisibility.spec.ts:287:3 › mark 6 — the band dissolves › the case: at 390x664 the page is one viewport, and the play verbs are in it 
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    1.703
+
+      322 |     const fold = await read();
+      323 |     // THE BOUND.
+    > 324 |     expect(fold.pageVh).toBeLessThanOrEqual(1.0);
+          |                         ^
+      325 |     expect(fold.maxScroll).toBe(0);
+      326 |     // …and the fold is worth having: the four play verbs are in it, each a legal target.
+      327 |     expect(fold.verbsInFold).toBeGreaterThanOrEqual(4);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/board-covisibility.spec.ts:324:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/board-covisibility-mark-6--6e179-nd-the-play-verbs-are-in-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/board-covisibility-mark-6--6e179-nd-the-play-verbs-are-in-it-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/board-covisibility.spec.ts:287:3 › mark 6 — the band dissolves › the case: at 390x664 the page is one viewport, and the play verbs are in it 
+    [webkit] › e2e/board-covisibility.spec.ts:287:3 › mark 6 — the band dissolves › the case: at 390x664 the page is one viewport, and the play verbs are in it 
+EXIT=1

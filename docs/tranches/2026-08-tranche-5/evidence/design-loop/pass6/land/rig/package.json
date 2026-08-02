@@ -1,0 +1,6 @@
+{
+  "name": "land-rig",
+  "private": true,
+  "type": "module",
+  "comment": "The LAND lane's rig — it runs Playwright from the APP TREE, never a second install. To reproduce: `ln -s ../../../../../../../../web/frontend/node_modules node_modules` here (the link is not banked — a symlink into node_modules is not evidence), then `tar xzf dist-base.tar.gz && tar xzf dist-head.tar.gz`, `node serve.mjs 4231 dist-base` and `node serve.mjs 4232 dist-head`, then fold.mjs / mast.mjs / delta.mjs. `opencost.mjs` resolves the app's package.json itself and needs no link. Ports stay inside 4230-4260; :3000 is foreign."
+}

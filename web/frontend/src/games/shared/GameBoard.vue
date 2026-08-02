@@ -271,13 +271,14 @@ function marksFor(pos: number): number[] | undefined {
 // unreproducible number here is the defect the row exists to fix. The honest engine pair is
 // 88.58 chromium / 87.98 webkit, and the box is the drawn frame.
 //
-// That is a real loss and it is taken deliberately: the stack is a scroll at both
-// caps (neither shows board + controls together), so what the smaller board bought was the
-// board's OWN whole-visibility, at 15.11px per cell on the surface where a finger spends the
-// session. And the loss has a named cure that is not a cap: the chrome above the board at
-// 844×390 measures 114.58px, of which the MASTHEAD is 98.58 — hand back 88.58 of it and
-// portrait parity is whole above the fold too. Landscape's defect is the masthead, which is
-// what pass 3's §5 said in words; this is the same row with the pixels attached.
+// That loss was taken deliberately and then REDEEMED: pass 6 executed the named cure (the
+// masthead move at 844×390 — the chrome above the board fell 114.58 → 16px), and at head the
+// drawn frame sits WHOLE above the fold, overflow 0 both engines
+// (`e2e/board-covisibility.spec.ts`, the fold-overflow gate; restamped at the pass-6 seal,
+// L6-G1). The 88.58/114.58 arithmetic above is the pre-move pricing, kept as the derivation
+// that chose the cure. Landscape's defect WAS the masthead, which is what pass 3's §5 said in
+// words; the pixels are now attached to the fix, not the debt. CH-39's owner eye remains the
+// closure leg — this comment records geometry, not the mark's closure.
 // `lg:` restores the row regime's 10rem verbatim — at 1280×800 the golden board is 640 with
 // it and 672 without, so the cap at ≥1024 is a golden subject and is not touched.
 // A media cap is not a gesture: it bakes at load and rotate, so it costs nothing against the

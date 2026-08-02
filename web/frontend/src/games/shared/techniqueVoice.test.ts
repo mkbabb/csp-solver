@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   formatHintNote,
   formatGradeSignature,
-  formatTechniqueName,
   describeTally,
   TALLY_TOTAL,
 } from "./techniqueVoice";
@@ -38,9 +37,27 @@ describe("formatHintNote — the named-hint margin copy", () => {
 });
 
 describe("formatGradeSignature — the honest difficulty signature", () => {
-  it("singles-only boards read 'singles only' (both single rungs collapse to it)", () => {
-    expect(formatGradeSignature("naked-single", true)).toBe("singles only");
-    expect(formatGradeSignature("hidden-single", true)).toBe("singles only");
+  // T5-W4 pass 6 (dt-name) — THE ROW THAT PINNED THE DEFECT, INVERTED. It used to assert that
+  // "both single rungs collapse to it", which is precisely the collapse pass 5 measured as the
+  // whole of F3-G3: two different techniques arriving at one sentence, on the only surface that
+  // prints the difficulty. The signature names the step now, so the row asserts they are TOLD
+  // APART — and it is written as an inequality as well as two equalities, because the equalities
+  // alone would still pass if both strings changed to the same new word.
+  it("the two single rungs are NAMED, and named apart", () => {
+    expect(formatGradeSignature("naked-single", true)).toBe("needs a naked single");
+    expect(formatGradeSignature("hidden-single", true)).toBe("needs a hidden single");
+    expect(formatGradeSignature("naked-single", true)).not.toBe(
+      formatGradeSignature("hidden-single", true),
+    );
+  });
+
+  // The other seven come out BYTE-IDENTICAL to the table they replace, which is the control on
+  // the composition: an article map plus one vocabulary must reproduce the phrases that were
+  // written by hand, or the cure moved more voice than it was licensed to.
+  it("every other rung is byte-identical to the retired phrase table", () => {
+    expect(formatGradeSignature("naked-pair", true)).toBe("needs a naked pair");
+    expect(formatGradeSignature("naked-triple", true)).toBe("needs a naked triple");
+    expect(formatGradeSignature("box-line", true)).toBe("needs box-line");
   });
 
   it("names the hardest technique for graded intermediate/advanced boards", () => {
@@ -68,16 +85,11 @@ describe("formatGradeSignature — the honest difficulty signature", () => {
   });
 });
 
-describe("formatTechniqueName — the expand/hover proper name", () => {
-  it("names every rung, X-wing capitalised", () => {
-    expect(formatTechniqueName("naked-single")).toBe("naked single");
-    expect(formatTechniqueName("hidden-single")).toBe("hidden single");
-    expect(formatTechniqueName("naked-pair")).toBe("naked pair");
-    expect(formatTechniqueName("pointing")).toBe("pointing");
-    expect(formatTechniqueName("inequality-chain")).toBe("inequality chain");
-    expect(formatTechniqueName("x-wing")).toBe("X-wing");
-  });
-});
+// `formatTechniqueName` is retired with `TallyDescriptor.name`/`.expand` (pass 6, dt-name):
+// it was the accessor for a field with no renderer, and its vocabulary is now read directly by
+// the one surface that names a technique. The rows that pinned its output live on above, in
+// `formatGradeSignature` — every proper name it published is still asserted, inside the
+// sentence that actually reaches a reader.
 
 describe("describeTally — the honesty spine, in one derivation", () => {
   it("gates the whole display on graded: an ungraded board inks NOTHING (no fabricated tier)", () => {
@@ -85,18 +97,21 @@ describe("describeTally — the honesty spine, in one derivation", () => {
     expect(d.graded).toBe(false);
     expect(d.filled).toBe(0);
     expect(d.total).toBe(TALLY_TOTAL);
-    expect(d.name).toBe("");
-    expect(d.expand).toBe("not yet graded");
     // Even with a technique argument present, ungraded refuses to render it.
     expect(d.ariaLabel).not.toMatch(/x-wing/i);
   });
 
-  it("singles-only board: 1 inked stroke, 'hardest step: hidden single'", () => {
+  it("singles board: 1 inked stroke, and the a11y label NAMES the step", () => {
+    // The label is the tally's only voice, and until pass 6 it spoke the bucket: this exact
+    // string read "difficulty — singles only (1 of 5)" for naked-single and hidden-single
+    // alike. The count is still magnitude; the name is now the precise claim it always said
+    // it was.
     const d = describeTally(true, "hidden-single", true);
     expect(d.filled).toBe(1);
-    expect(d.name).toBe("hidden single");
-    expect(d.expand).toBe("hardest step: hidden single");
-    expect(d.ariaLabel).toBe("difficulty — singles only (1 of 5)");
+    expect(d.ariaLabel).toBe("difficulty — needs a hidden single (1 of 5)");
+    expect(describeTally(true, "naked-single", true).ariaLabel).toBe(
+      "difficulty — needs a naked single (1 of 5)",
+    );
   });
 
   it("pairs/pointing board: 2 inked strokes", () => {
@@ -105,10 +120,9 @@ describe("describeTally — the honesty spine, in one derivation", () => {
     expect(describeTally(true, "inequality-forcing", true).filled).toBe(2);
   });
 
-  it("X-wing board: 3 inked strokes, 'hardest step: X-wing'", () => {
+  it("X-wing board: 3 inked strokes, and the label is unmoved", () => {
     const d = describeTally(true, "x-wing", true);
     expect(d.filled).toBe(3);
-    expect(d.expand).toBe("hardest step: X-wing");
     expect(d.ariaLabel).toBe("difficulty — needs an X-wing (3 of 5)");
   });
 
@@ -119,14 +133,13 @@ describe("describeTally — the honesty spine, in one derivation", () => {
   it("a board the ladder could not finish inks the top stroke and names the honest ceiling — never a fabricated tier 4", () => {
     const d = describeTally(true, "hidden-single", false);
     expect(d.filled).toBe(TALLY_TOTAL);
-    expect(d.name).toBe("beyond these techniques");
-    expect(d.expand).toBe("beyond these techniques");
+    expect(d.ariaLabel).toBe("difficulty — beyond these techniques (5 of 5)");
   });
 
   it("a graded board that needed no step inks nothing but stays graded (no fake tier)", () => {
     const d = describeTally(true, null, true);
     expect(d.graded).toBe(true);
     expect(d.filled).toBe(0);
-    expect(d.expand).toBe("no step needed");
+    expect(d.ariaLabel).toBe("difficulty — no technique needed");
   });
 });

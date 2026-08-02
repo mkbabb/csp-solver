@@ -1,0 +1,123 @@
+=== AUDIT ===
+order     (3) — land ship-1`s margin sentence at e2e/visual-regression.spec.ts:491.
+law       "every number re-derived at citation" — so the sentence was NOT pasted from the
+          pass-5 report. It was measured first, and the measurement moved it.
+tree      HEAD abe533c4 + this lane`s comment-only edit to the spec
+artifact  scratchpad/dist-D6 — built by this lane from HEAD (npx vite build --outDir …),
+          served read-only on 127.0.0.1:4245. NOT web/frontend/dist: see the TRAP below.
+rig       pass6/D/rig/ship1-margin.mjs — same selectors, same getComputedStyle spellings
+          as the row, at the row`s OWN viewport (playwright.config.ts:85 = 1280x800)
+date      2026-08-02T07:31:17Z
+
+################ TRAP FOUND FIRST — web/frontend/dist WAS THE ABLATION CONTROL
+
+  md5 web/frontend/dist/index.html                     8cfd2f49255b4c427fe73728b58b7c2e
+  md5 …/pass5/f3/dist-p5ablate/index.html              8cfd2f49255b4c427fe73728b58b7c2e   <-- MATCH
+  md5 …/pass5/f3/dist-p5head/index.html                cb801851661bf435b7d2c98425660d99
+  md5 …/pass5/f3/dist-p5base/index.html                a17e9e44c1ffe8f9fbca319a906019c9
+  md5 …/pass5/BC/rig/dist-head/index.html              a17e9e44c1ffe8f9fbca319a906019c9
+
+  The shared build directory was left holding F3`s pass-5 ABLATE build (mtime 02:13Z).
+  Any lane that ran e2e against `npm run preview` without rebuilding was measuring an
+  ablation and calling it HEAD. This lane built its own and never wrote to dist/.
+  Booked as D6-G3.
+
+################ THE MEASUREMENT — 3 readings, 2 engines
+
+---- reading 1 ----
+[chromium]
+  btn        h  54.03   w  55.27   computed height: 54.0312px
+  die        h  28.00   w  28.00   (square within 0.5? true)
+  labelH      14.05
+  padY         9.60
+  gap          2.40
+  demanded = die.w + labelH + padY + gap =  54.05
+  HEADROOM   btn.h - demanded =  -0.02    (the row allows -0.50)
+  IDENTITY   die.h + labelH + padY + gap =  54.05  vs btn.h  54.03  -> delta  -0.02
+
+[webkit]
+  btn        h  54.03   w  55.28   computed height: 54.03125px
+  die        h  28.00   w  28.00   (square within 0.5? true)
+  labelH      14.05
+  padY         9.60
+  gap          2.40
+  demanded = die.w + labelH + padY + gap =  54.05
+  HEADROOM   btn.h - demanded =  -0.02    (the row allows -0.50)
+  IDENTITY   die.h + labelH + padY + gap =  54.05  vs btn.h  54.03  -> delta  -0.02
+
+---- reading 2 ----
+[chromium]
+  btn        h  54.03   w  55.27   computed height: 54.0312px
+  die        h  28.00   w  28.00   (square within 0.5? true)
+  labelH      14.05
+  padY         9.60
+  gap          2.40
+  demanded = die.w + labelH + padY + gap =  54.05
+  HEADROOM   btn.h - demanded =  -0.02    (the row allows -0.50)
+  IDENTITY   die.h + labelH + padY + gap =  54.05  vs btn.h  54.03  -> delta  -0.02
+
+[webkit]
+  btn        h  54.03   w  55.28   computed height: 54.03125px
+  die        h  28.00   w  28.00   (square within 0.5? true)
+  labelH      14.05
+  padY         9.60
+  gap          2.40
+  demanded = die.w + labelH + padY + gap =  54.05
+  HEADROOM   btn.h - demanded =  -0.02    (the row allows -0.50)
+  IDENTITY   die.h + labelH + padY + gap =  54.05  vs btn.h  54.03  -> delta  -0.02
+
+---- reading 3 ----
+[chromium]
+  btn        h  54.03   w  55.27   computed height: 54.0312px
+  die        h  28.00   w  28.00   (square within 0.5? true)
+  labelH      14.05
+  padY         9.60
+  gap          2.40
+  demanded = die.w + labelH + padY + gap =  54.05
+  HEADROOM   btn.h - demanded =  -0.02    (the row allows -0.50)
+  IDENTITY   die.h + labelH + padY + gap =  54.05  vs btn.h  54.03  -> delta  -0.02
+
+[webkit]
+  btn        h  54.03   w  55.28   computed height: 54.03125px
+  die        h  28.00   w  28.00   (square within 0.5? true)
+  labelH      14.05
+  padY         9.60
+  gap          2.40
+  demanded = die.w + labelH + padY + gap =  54.05
+  HEADROOM   btn.h - demanded =  -0.02    (the row allows -0.50)
+  IDENTITY   die.h + labelH + padY + gap =  54.05  vs btn.h  54.03  -> delta  -0.02
+
+
+################ WIDTH CONTROL — why the pass-5 figure reads 54.38
+
+Same rig, viewport 1440x800 (the reading the earlier passes evidently took):
+
+  [chromium]  labelH 14.39   demanded 54.39   btn.h 54.38   HEADROOM -0.02
+  [webkit]    labelH 14.38   demanded 54.38   btn.h 54.36   HEADROOM -0.02
+
+`labelH` tracks the viewport (a fluid type ramp), so `demanded` does too: 54.05 at 1280,
+54.38–54.39 at 1440. The HEADROOM does not move — it is -0.02 at both widths, both engines.
+
+################ VERDICT — the sentence lands, two of its numbers do not
+
+1. THE SUBSTANCE HOLDS AND GETS STRONGER. `btn.h` is `auto` (computed 54.0312px, no author
+   height), so the box IS its content and the bound is an identity. The row does not clear
+   `demanded` with room; it clears `demanded - 0.5`. The tolerance IS the margin.
+
+2. "0.00 px of headroom" IS WRONG. Re-derived, the headroom is -0.02px — NEGATIVE. `btn.h`
+   comes in two hundredths of a pixel UNDER its own content sum (getBoundingClientRect's
+   fractional height against the summed parts), so the assertion is carried entirely by the
+   tolerance. Stable at n=3, identical in chromium and webkit, at both widths tested.
+
+3. "54.38" IS A 1440-WIDE NUMBER IN A 1280-WIDE ROW. playwright.config.ts:85 pins the suite
+   at 1280x800, where the row actually reads 54.05. The 54.38 already sitting in the file's
+   comment (":489, `44 < 28 + 14.38 + 9.6 + 2.4 = 54.38`") inherits the same mismatch: it
+   describes the broken pose at a width the row never runs at. Left in place, no history
+   rewrite; the landed paragraph names it and gives the row's own figure beside it.
+
+WHAT LANDED: the sentence at :493-503, carrying 54.05 / 54.03 / -0.02 / n=3 and citing this
+rig, not the pass-5 paragraph. Comment-only — the non-comment diff of this file is empty.
+`prettier --check e2e/visual-regression.spec.ts` clean; the row re-runs 2/2 green, both
+engines, after the edit.
+
+Booked as D6-G2 (the 0.00/54.38 correction).

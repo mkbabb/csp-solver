@@ -642,6 +642,57 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
   }
 }
 
+/* ── THE MASTHEAD MOVE (T5-W4 pass 6, the lead's landscape ratification) ─────────────────
+   The row this pays off has been a comment for two passes. At 844×390 the board's drawn frame
+   hangs **88.58px** below the fold (chromium; 87.98 webkit — the `.board-wrapper` referent,
+   re-derived here rather than quoted, and NOT the pass-4 registry's unreproducible 90.58/89.98:
+   pass 5's F3-G2 is the party in the right). The named cure has always been the masthead,
+   which spends **98.58 of the 114.58** standing above the board at that cell. It is the only
+   move that is not a trade: every rung of the cap ladder buys fold with CELL, and the lead's
+   charter (c) holds the shipped rung — 40.22px of cell, portrait parity — RATIFIED.
+
+   So the masthead MOVES rather than shrinks its way down the page. A landscape phone is wide
+   and short: the board takes 366 of 844 and leaves ~239px of gutter on each side doing nothing.
+   The wordmark docks into the left gutter, vertically centred against the board — which is not
+   a new grammar, it is the DESK's grammar (the rail sits beside the board, centred, for exactly
+   this reason), read in the one orientation that has the width to spare and not the height.
+
+   `--logo-scale` is the estate's own knob for this, already consumed by `HandwrittenLogo`'s
+   height calc and already used at 1.05 by the closed-desk pose. The value is DERIVED and the
+   derivation was corrected once by a shot: the gutter is not half the viewport, it is the page
+   gutter to the board's own left edge — `.board-group` starts at x 86 and `.board-wrapper` at
+   x 239, so the room is **153px**, not 239. The first cut took the wider number, scaled to
+   0.68, and the wordmark lay across four columns of the grid (`shots/land-*-AFTER-*`, the shot
+   that caught it — the campaign's proxy≠surface family once more, and once more caught by an
+   eye rather than by a number). Measured at 0.68 the masthead box draws 249.52 wide, so the
+   scale that fits 153 − 12 of gap is 0.68 × 141 / 249.52 = **0.384**; 0.38 lands it at ~139
+   wide by ~39 tall, which is a tenth of this cell's short edge and reads whole.
+
+   ORIENTATION-SCOPED, like everything else this pass touches: portrait is the dock's regime and
+   its masthead stays whole above the board, which is the pose the covis row is built on. */
+@media (max-width: 1023.98px) and (orientation: landscape) {
+  .board-group {
+    position: relative;
+  }
+
+  .masthead {
+    position: absolute;
+    left: 0;
+    /* `50dvh`, NOT `50%`: the containing block is the whole board GROUP, which at this cell is
+       ~1124px tall (the page still scrolls to reach the controls card, as the shipped rung
+       does), so a percentage would centre the wordmark against the document and park it 484px
+       down, out of sight of the board it names. The board now occupies the first viewport
+       whole — that is what this move buys — so half the short edge IS the board's own middle.
+       Measured: board 16 → 380, centre 198; `50dvh` = 195. */
+    top: 50dvh;
+    translate: 0 -50%;
+    align-items: flex-start;
+    --logo-scale: 0.38;
+    z-index: 5;
+    margin: 0;
+  }
+}
+
 /* ── The drawer's masthead half (T3-W12 §6, ≥1024 only) ───────────────
    Closed: the wordmark centers on the page axis (align-self beats the ladder's
    flex-start) and grows one soft step (--logo-scale, consumed by HandwrittenLogo's

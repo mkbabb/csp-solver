@@ -48,6 +48,7 @@ import type { PencilMode } from "@games/shared/useUserMarks";
 import type { ErrorCheckMode } from "@games/shared/useAssists";
 import { useButtonAnimation } from "@games/shared/useButtonAnimation";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
+import { portraitDock } from "@games/shared/useControlsDrawer";
 
 // Underline boil: brief burst on selection change, then settle
 const boilFrame = ref(0);
@@ -173,6 +174,14 @@ let peekTimer: ReturnType<typeof setTimeout> | null = null;
 let peekOrigin: { x: number; y: number } | null = null;
 const isPeeking = ref(false);
 
+// T5-W4 pass 6 — THE PEEK COMES OUT OF THE SHEET, and this is why. On the portrait dock the
+// divider rides INSIDE the raised case, so a held peek would lay the answer key over a board
+// the sheet has just covered: the affordance survives as a gesture and dies as a function.
+// So the peek joins the play verbs in the fold, carrying THIS recognizer — the same 350ms and
+// the same 10px slop, read off the same two constants, both consumers in this one file, no new
+// composable and no second set of numbers to drift. On the dock the divider's hold surface
+// stands down (`pointer-events: none`, washi hidden, CSS below) and its label drops the hold
+// promise, because an affordance that cannot work must not be announced as one.
 function onDividerHoldStart(e?: PointerEvent) {
   if (peekTimer) clearTimeout(peekTimer);
   peekOrigin = e ? { x: e.clientX, y: e.clientY } : null;
@@ -568,8 +577,13 @@ function onHint() {
          read correctly; the branches agreed at BC, and there is now only one of them to agree. -->
     <div
       class="peek-hold-surface group relative"
+      :class="{ 'is-stood-down': portraitDock }"
       role="separator"
-      aria-label="Staged controls above, play tools below — press and hold, or press K, to peek at the answer key"
+      :aria-label="
+        portraitDock
+          ? 'Staged controls above, play tools below'
+          : 'Staged controls above, play tools below — press and hold, or press K, to peek at the answer key'
+      "
       @pointerdown="onDividerHoldStart($event)"
       @pointermove="onDividerHoldMove($event)"
       @pointerup="onDividerHoldEnd()"
@@ -577,7 +591,16 @@ function onHint() {
       @pointercancel="onDividerHoldEnd()"
     >
       <BoilDivider />
-      <SheetWashiLabel text="hold to peek" :seed="53" anchor="center" persistent />
+      <!-- The washi is the hold's own promise, so it leaves with the hold. The RULE stays: the
+           divider is still the zone separator, and that is the office `role="separator"` and
+           the one-string label above describe on the dock. -->
+      <SheetWashiLabel
+        v-if="!portraitDock"
+        text="hold to peek"
+        :seed="53"
+        anchor="center"
+        persistent
+      />
     </div>
 
     <!-- LIVE zone — two named compartments where three identical stanzas used to stack. The
@@ -719,35 +742,68 @@ function onHint() {
          pointer reaches by ⌘Z / ⇧⌘Z / H. Coarse-only (CSS gate), so a fine desktop shows the
          legend below (a keyboard is implied) and a coarse iPad in the row regime gets the
          tappable row instead. The two are mutually exclusive by pointer media, not by branch. -->
-    <div class="play-controls">
-      <button
-        @click="onUndo()"
-        :disabled="loading"
-        class="icon-btn"
-        aria-label="Undo last move"
-      >
-        <UndoIcon :size="26" />
-        <span class="icon-sublabel" aria-hidden="true">Undo</span>
-      </button>
-      <button
-        @click="onRedo()"
-        :disabled="loading"
-        class="icon-btn"
-        aria-label="Redo move"
-      >
-        <RedoIcon :size="26" />
-        <span class="icon-sublabel" aria-hidden="true">Redo</span>
-      </button>
-      <button
-        @click="onHint()"
-        :disabled="loading"
-        class="icon-btn"
-        aria-label="Reveal a hint in the selected cell"
-      >
-        <HintIcon :size="26" />
-        <span class="icon-sublabel" aria-hidden="true">Hint</span>
-      </button>
-    </div>
+    <!-- T5-W4 pass 6 — ON THE PORTRAIT DOCK THESE VERBS LEAVE THE CARD AND STAY ON SCREEN.
+         The sheet holds every BETWEEN-MOVES act (deal, size, difficulty, marks, candidates,
+         teacher's, clear/fill/solve/share); these four are the acts of PLAYING, so playing must
+         never need the sheet. They teleport into the scene's `#fold-tools` berth, in flow,
+         under the board's reserved line.
+
+         `defer` IS LOAD-BEARING and it was found by a red, not by reading: the berth is minted
+         later in `GameScene`'s own template, so without `defer` the target resolves null before
+         scene insertion and the play tools leave the tree entirely (`present: false`, measured;
+         six unit rows red). `:disabled` outside the dock keeps the shipped seating byte-exact
+         on the desk and on landscape — a disabled Teleport renders in place, which is a no-op.
+    -->
+    <Teleport defer to="#fold-tools" :disabled="!portraitDock">
+      <div class="play-controls">
+        <button
+          @click="onUndo()"
+          :disabled="loading"
+          class="icon-btn"
+          aria-label="Undo last move"
+        >
+          <UndoIcon :size="26" />
+          <span class="icon-sublabel" aria-hidden="true">Undo</span>
+        </button>
+        <button
+          @click="onRedo()"
+          :disabled="loading"
+          class="icon-btn"
+          aria-label="Redo move"
+        >
+          <RedoIcon :size="26" />
+          <span class="icon-sublabel" aria-hidden="true">Redo</span>
+        </button>
+        <button
+          @click="onHint()"
+          :disabled="loading"
+          class="icon-btn"
+          aria-label="Reveal a hint in the selected cell"
+        >
+          <HintIcon :size="26" />
+          <span class="icon-sublabel" aria-hidden="true">Hint</span>
+        </button>
+        <!-- THE PEEK CHIP (pass 6, graft G2) — the divider's affordance, rehomed where it can
+             still do its work. Coarse-only like its three siblings (a finger has no K key; K
+             itself is untouched, App.vue owns it and W3.4 gates it). Its visible word IS its
+             accessible name — one string, not a label and a name that can drift apart — and
+             the glyphs stay lowercase latin inside the Patrick Hand cut (the BC5-G3 lesson).
+             It enrolls in no beat and adds no live filter. -->
+        <button
+          v-if="portraitDock"
+          class="icon-btn peek-chip"
+          type="button"
+          :disabled="loading"
+          @pointerdown="onDividerHoldStart($event)"
+          @pointermove="onDividerHoldMove($event)"
+          @pointerup="onDividerHoldEnd()"
+          @pointerleave="onDividerHoldEnd()"
+          @pointercancel="onDividerHoldEnd()"
+        >
+          <span class="peek-chip-word">peek</span>
+        </button>
+      </div>
+    </Teleport>
 
     <!-- UI-7b: the keyboard legend (fine-pointer only — a keyboard is implied there). -->
     <KeyboardLegend v-if="!mobile" />
@@ -1012,6 +1068,38 @@ function onHint() {
 
 .peek-hold-surface:active {
   cursor: grabbing;
+}
+
+/* THE DIVIDER STANDS DOWN ON THE PORTRAIT DOCK (pass 6, graft G2). It keeps its office — it is
+   the ruled line between the staged zone and the live one, and `role="separator"` still says
+   so — and loses only the hold it can no longer honour from inside a raised sheet. The peek
+   chip in the fold carries that gesture now. `pointer-events: none` rather than a removed
+   listener: the recognizer is one function with two consumers and deleting a listener per
+   regime is how two recognizers are born. */
+.peek-hold-surface.is-stood-down {
+  pointer-events: none;
+  cursor: default;
+  touch-action: auto;
+}
+
+/* The peek chip — a play verb, so it wears the play verbs' grammar (`.icon-btn` gives it the
+   coarse 44px floor and the column layout). Its word is a WORD rather than an icon because
+   this act has no drawn glyph in the estate and inventing one is a new standing surface; the
+   hand at caption scale is the same voice the sublabels beside it speak in. */
+.peek-chip-word {
+  font-family: var(--font-hand);
+  font-size: var(--type-small);
+  line-height: 1.6;
+  letter-spacing: var(--type-tracking-wide);
+  color: var(--color-foreground);
+  background: var(--sheet-washi-neutral);
+  padding: 0.25rem 0.5rem;
+  clip-path: polygon(3% 4%, 97% 0%, 100% 52%, 98% 96%, 4% 100%, 0% 48%);
+}
+
+.peek-chip:active .peek-chip-word {
+  background: var(--sheet-washi-neutral);
+  opacity: 0.7;
 }
 
 /* UI-5: persistent icon sublabels — the pencil hand at caption scale, muted. Hidden on

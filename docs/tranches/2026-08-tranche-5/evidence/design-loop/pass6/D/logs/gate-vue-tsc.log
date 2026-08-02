@@ -1,0 +1,18 @@
+=== AUDIT ===
+gate      `vue-tsc -b` — the D-report §9 row cited "0 · §static" with no transcript (D5-G4)
+tree      HEAD abe533c4 (T5-W4 PASS 5 SEALED), working tree clean but for this untracked pass6 dir
+tool      vue-tsc 6.0.3 · node v26.0.0 · npm 11.12.1
+cmd       (a) npx vue-tsc -b        (b) npx vue-tsc -b --force
+note      -b is INCREMENTAL: a cached .tsbuildinfo can green a no-op, so the honest arm is
+          (b) --force, which discards the cache and type-checks the whole project graph.
+          Both arms are run and both are printed. CI step 8 runs `vue-tsc --noEmit` instead.
+date      2026-08-02T07:26:26Z
+
+--- (a) npx vue-tsc -b ---
+EXIT=0
+
+--- (b) npx vue-tsc -b --force (cache discarded, full graph) ---
+EXIT=0
+
+Both arms silent, both exit 0. vue-tsc prints nothing on a clean graph; the exit code IS
+the result. §static retired: this file is the transcript.

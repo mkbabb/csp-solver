@@ -1,0 +1,153 @@
+=== AUDIT ===
+row       D5-G5 — "the runner execution was re-verified against the API rather than copied"
+          and NO API transcript was banked. This file is that transcript, plus the local arm.
+tree      HEAD abe533c4, clean but for the untracked pass6 dir
+cmds      local:  npm run lint:ink  ->  node scripts/check-ink-pressure.mjs --self-test
+          API:    gh api repos/mkbabb/csp-solver/actions/runs/<id>
+                  gh api repos/mkbabb/csp-solver/actions/jobs/<id>
+                  gh api repos/mkbabb/csp-solver/actions/jobs/<id>/logs
+date      2026-08-02T07:27:35Z
+
+################ 1 · THE API, PULLED — run 30734036107 (the pass-5 citation)
+
+$ gh api repos/{owner}/{repo}/actions/runs/30734036107 --jq "{id,name,head_sha,status,conclusion,created_at}"
+{"conclusion":"success","created_at":"2026-08-02T05:23:20Z","head_sha":"9061b8c1826b0e65f094e85b1854ef82ad42d5a8","html_url":"https://github.com/mkbabb/csp-solver/actions/runs/30734036107","id":30734036107,"name":"ci","status":"completed"}
+
+$ gh api repos/{owner}/{repo}/actions/jobs/91460503817 --jq "{id,name,conclusion,started_at,completed_at,head_sha,run_id}"
+{"completed_at":"2026-08-02T05:24:36Z","conclusion":"success","head_sha":"9061b8c1826b0e65f094e85b1854ef82ad42d5a8","id":91460503817,"name":"frontend","run_id":30734036107,"started_at":"2026-08-02T05:24:03Z"}
+
+$ ... --jq ".steps[] | select(.number>=11 and .number<=15)"
+  step 11  success  2026-08-02T05:24:34Z  prettier (repo-pinned format check)
+  step 12  success  2026-08-02T05:24:34Z  font coverage (subset cmap vs rendered text)
+  step 13  success  2026-08-02T05:24:34Z  ink pressure (graphite ladder + ramp ownership, self-tested)
+  step 14  success  2026-08-02T05:24:34Z  swallow census (no statement-free catch bodies, self-tested)
+  step 15  success  2026-08-02T05:24:35Z  support floor (browserslist vs the compiled targets; no sub-floor shims, self-tested)
+
+---- job log, step 13 verbatim (gh api .../jobs/91460503817/logs) ----
+2026-08-02T05:24:34.5205534Z ##[group]Run npm run lint:ink
+2026-08-02T05:24:34.5205868Z [36;1mnpm run lint:ink[0m
+2026-08-02T05:24:34.5255074Z shell: /usr/bin/bash -e {0}
+2026-08-02T05:24:34.5255365Z ##[endgroup]
+2026-08-02T05:24:34.6337503Z 
+2026-08-02T05:24:34.6338578Z > csp-solver-frontend@0.1.0 lint:ink
+2026-08-02T05:24:34.6339301Z > node scripts/check-ink-pressure.mjs --self-test
+2026-08-02T05:24:34.6339684Z 
+2026-08-02T05:24:34.7023359Z ink-pressure ladder — every rung clears its floor, strictly increasing, in all 3 scopes (light, dark, print), each resolved out of index.css:
+2026-08-02T05:24:34.7024930Z   --ink-press-rule    55%  3.53 light / 4.36 dark / 4.76 print  ≥3 (non-text)
+2026-08-02T05:24:34.7025855Z   --ink-press-quiet   68%  5.23 light / 6.06 dark / 7.86 print  ≥4.5 (text)
+2026-08-02T05:24:34.7026744Z   --color-red-ink          4.98 light / 6.32 dark  ≥4.5 (.icon-sublabel.is-armed)
+2026-08-02T05:24:34.7028437Z   washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+2026-08-02T05:24:34.7048658Z 
+2026-08-02T05:24:34.7049341Z ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+2026-08-02T05:24:34.7049844Z   light  rule < muted-foreground < quiet
+2026-08-02T05:24:34.7050200Z   dark   rule < quiet < muted-foreground
+2026-08-02T05:24:34.7050844Z   the ramp and the register cross between themes. Booked in index.css §INK PRESSURE, not gated.
+2026-08-02T05:24:34.7198373Z ##[group]Run npm run lint:catch
+2026-08-02T05:24:34.7198705Z [36;1mnpm run lint:catch[0m
+2026-08-02T05:24:34.7247541Z shell: /usr/bin/bash -e {0}
+2026-08-02T05:24:34.7247822Z ##[endgroup]
+2026-08-02T05:24:34.8292567Z 
+2026-08-02T05:24:34.8293393Z > csp-solver-frontend@0.1.0 lint:catch
+2026-08-02T05:24:34.8293967Z > node scripts/check-empty-catch.mjs --self-test
+
+
+################ 2 · THE SAME STEP ON THE PASS-5 SEAL — run 30736604333
+
+$ gh api repos/{owner}/{repo}/actions/runs/30736604333 --jq "{id,name,head_sha,status,conclusion,created_at}"
+{"conclusion":"success","created_at":"2026-08-02T06:48:57Z","head_sha":"abe533c4416a4a527537fa7b02b634152b40147e","html_url":"https://github.com/mkbabb/csp-solver/actions/runs/30736604333","id":30736604333,"name":"ci","status":"completed"}
+
+$ gh api repos/{owner}/{repo}/actions/runs/30736604333/jobs --jq "the frontend job"
+  job 91467698015  frontend  success  2026-08-02T06:49:36Z -> 2026-08-02T06:50:21Z
+  step 11  success  2026-08-02T06:50:16Z  prettier (repo-pinned format check)
+  step 12  success  2026-08-02T06:50:16Z  font coverage (subset cmap vs rendered text)
+  step 13  success  2026-08-02T06:50:16Z  ink pressure (graphite ladder + ramp ownership, self-tested)
+  step 14  success  2026-08-02T06:50:17Z  swallow census (no statement-free catch bodies, self-tested)
+  step 15  success  2026-08-02T06:50:17Z  support floor (browserslist vs the compiled targets; no sub-floor shims, self-tested)
+
+---- job log, step 13 verbatim (gh api .../jobs/91467698015/logs) ----
+2026-08-02T06:50:16.6490759Z ##[group]Run npm run lint:ink
+2026-08-02T06:50:16.6491126Z [36;1mnpm run lint:ink[0m
+2026-08-02T06:50:16.6535656Z shell: /usr/bin/bash -e {0}
+2026-08-02T06:50:16.6535924Z ##[endgroup]
+2026-08-02T06:50:16.7900901Z 
+2026-08-02T06:50:16.7918025Z > csp-solver-frontend@0.1.0 lint:ink
+2026-08-02T06:50:16.7932418Z > node scripts/check-ink-pressure.mjs --self-test
+2026-08-02T06:50:16.7932993Z 
+2026-08-02T06:50:16.8637066Z ink-pressure ladder — every rung clears its floor, strictly increasing, in all 3 scopes (light, dark, print), each resolved out of index.css:
+2026-08-02T06:50:16.8639090Z   --ink-press-rule    55%  3.53 light / 4.36 dark / 4.76 print  ≥3 (non-text)
+2026-08-02T06:50:16.8641160Z   --ink-press-quiet   68%  5.23 light / 6.06 dark / 7.86 print  ≥4.5 (text)
+2026-08-02T06:50:16.8642635Z   --color-red-ink          4.98 light / 6.32 dark  ≥4.5 (.icon-sublabel.is-armed)
+2026-08-02T06:50:16.8644598Z   washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+2026-08-02T06:50:16.8645475Z 
+2026-08-02T06:50:16.8649626Z ship-4 census — the six re-pitched surfaces, each pinned to the rung above (so the rung's floor is the surface's floor):
+2026-08-02T06:50:16.8651080Z   1  .keyboard-legend         color: var(--ink-press-quiet)
+2026-08-02T06:50:16.8651867Z   2  .legend-row kbd          border: var(--ink-press-rule)
+2026-08-02T06:50:16.8652621Z   3  .legend-sep              no `opacity` declaration
+2026-08-02T06:50:16.8653343Z   4  .margin-note-meta        color: var(--ink-press-quiet)
+2026-08-02T06:50:16.8654082Z   5  .icon-sublabel.is-armed  color: var(--color-red-ink)
+2026-08-02T06:50:16.8654810Z   6  .vignette-meta           color: var(--ink-press-quiet)
+2026-08-02T06:50:16.8665904Z 
+2026-08-02T06:50:16.8667266Z ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+2026-08-02T06:50:16.8668100Z   light  rule < muted-foreground < quiet
+2026-08-02T06:50:16.8668661Z   dark   rule < quiet < muted-foreground
+2026-08-02T06:50:16.8669772Z   the ramp and the register cross between themes. Booked in index.css §INK PRESSURE, not gated.
+
+
+################ 3 · LOCAL, THIS TREE
+
+$ cd web/frontend && npm run lint:ink
+
+> csp-solver-frontend@0.1.0 lint:ink
+> node scripts/check-ink-pressure.mjs --self-test
+
+ink-pressure ladder — every rung clears its floor, strictly increasing, in all 3 scopes (light, dark, print), each resolved out of index.css:
+  --ink-press-rule    55%  3.53 light / 4.36 dark / 4.76 print  ≥3 (non-text)
+  --ink-press-quiet   68%  5.23 light / 6.06 dark / 7.86 print  ≥4.5 (text)
+  --color-red-ink          4.98 light / 6.32 dark  ≥4.5 (.icon-sublabel.is-armed)
+  washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+
+ship-4 census — the six re-pitched surfaces, each pinned to the rung above (so the rung's floor is the surface's floor):
+  1  .keyboard-legend         color: var(--ink-press-quiet)
+  2  .legend-row kbd          border: var(--ink-press-rule)
+  3  .legend-sep              no `opacity` declaration
+  4  .margin-note-meta        color: var(--ink-press-quiet)
+  5  .icon-sublabel.is-armed  color: var(--color-red-ink)
+  6  .vignette-meta           color: var(--ink-press-quiet)
+
+ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+  light  rule < muted-foreground < quiet
+  dark   rule < quiet < muted-foreground
+  the ramp and the register cross between themes. Booked in index.css §INK PRESSURE, not gated.
+EXIT=0
+
+
+################ 4 · WHAT THE THREE ARMS SAY WHEN READ TOGETHER
+
+(a) The pass-5 citation re-derives EXACT. Run 30734036107 · job 91460503817 "frontend" ·
+    success · head_sha 9061b8c1826b0e65f094e85b1854ef82ad42d5a8 · step 13 "ink pressure
+    (graphite ladder + ramp ownership, self-tested)" · success · completed 05:24:34Z. Every
+    field the pass-5 report printed is what the API returns. Nothing was copied wrong.
+
+(b) The step runs `npm run lint:ink`, and the log's own echo shows the flag:
+    `> node scripts/check-ink-pressure.mjs --self-test`. The self-test is SILENT when it
+    passes (check-ink-pressure.mjs:644 — `const vacuous = argv.includes("--self-test") ?
+    selfTest() : []`, and only a vacuous or non-biting gate prints), which is why no
+    self-test block appears under step 13 while step 15's support-floor prints one. The
+    absence of that block is the script's design, not a missing self-test.
+
+(c) THE FORWARD CLAIM IN §6 IS NOW SETTLED, and it settles GREEN. §6 wrote "from the next
+    push, that same step also carries closure 4's three new modes and its coverage check."
+    The next push was the pass-5 seal. Diff the two step-13 bodies:
+
+      run 30734036107 (9061b8c1, W3):   ladder (4 rungs) ..................... ungoverned
+      run 30736604333 (abe533c4, seal): ladder (4 rungs) + SHIP-4 CENSUS (6) . ungoverned
+
+    The six-surface census — .keyboard-legend, .legend-row kbd, .legend-sep,
+    .margin-note-meta, .icon-sublabel.is-armed, .vignette-meta — appears on the seal run and
+    not on the W3 run. Closure 4 is on a runner, not a promise.
+
+(d) The local arm at HEAD abe533c4 reproduces the seal run's step-13 body verbatim: same four
+    rungs (3.53/4.36/4.76 · 5.23/6.06/7.86 · 4.98/6.32 · 17.36/9.06), same six census rows,
+    same ungoverned-register block, same 4.65/7.69. Two hosts, one output. EXIT 0.
+
+D5-G5 CLOSES on this file. The row was a record defect, and the record now carries the pull.

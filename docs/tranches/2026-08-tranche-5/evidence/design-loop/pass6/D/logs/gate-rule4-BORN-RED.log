@@ -1,0 +1,136 @@
+=== AUDIT ===
+gate      scripts/check-evidence-policy.mjs RULE 4 — the banked-dist rule (pass-5 seal
+          adjudication §2, BC5-G2). NEW at pass 6, Lane D.
+law       BORN-RED: the rule runs RED against a real hollow bank before the grandfather
+          list is allowed to quiet it, and the transcript is banked first.
+tree      HEAD abe533c4 + the rule
+date      2026-08-02T07:37:35Z
+
+################ RUN 1 — BORN RED against one of the real hollow banks
+
+The grandfather line for `pass3/dist-head` (2 files: _headers + _redirects, payload gone)
+is commented out in source. Nothing else changes. Reverted immediately after the run.
+
+$ node scripts/check-evidence-policy.mjs
+[evidence-policy] scope docs/tranches/** — 351 png, 31,445,688 B across 28 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] banked dists — 29 directory bank(s), 0 archive(s); form required: .tar.gz + md5, or TESTIMONY.md
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s), 28 dist pin(s)
+
+[evidence-policy] FAIL — 1 breach(es):
+    dist-loose: 1
+
+  dist-loose          2 file(s)  a banked dist DIRECTORY — ship a .tar.gz + md5 manifest, or drop a TESTIMONY.md saying "testimony, artifact not banked"
+                      docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-head
+
+Recrop to the pixels under audit; text-first for anything a number can state (EVIDENCE-POLICY.md). Do NOT raise a cap and do NOT add a grandfather line.
+EXIT=1
+
+
+################ RUN 2 — THE LINE RESTORED, THE GATE GREEN
+
+The one-line revert is verified by diff against the pre-probe copy: identical.
+
+$ node scripts/check-evidence-policy.mjs --self-test
+[evidence-policy] self-test ok    — per-image cap fires on one over-cap image
+[evidence-policy] self-test ok    — per-wave cap fires even when every image is under the per-image cap
+[evidence-policy] self-test ok    — name ban fires on a tiny -full.png
+[evidence-policy] self-test ok    — a policy-conformant estate reds nowhere
+[evidence-policy] self-test ok    — a grandfather pin exempts the file it names
+[evidence-policy] self-test ok    — a grandfather pin is a ceiling, not a blanket — growth past it reds
+[evidence-policy] self-test ok    — a wave pin is a ceiling too — a new image past it reds
+[evidence-policy] self-test ok    — a pin naming nothing is reported stale
+[evidence-policy] self-test ok    — an absent scope dir throws rather than reading as a clean estate
+[evidence-policy] self-test ok    — rule 4 — a NEW hollow dist bank reds (the BC5-G2 shape, exactly)
+[evidence-policy] self-test ok    — rule 4 — a FULL loose dist bank reds too: the rule is the FORM, not the payload
+[evidence-policy] self-test ok    — rule 4 — TESTIMONY.md saying the words exempts the bank
+[evidence-policy] self-test ok    — rule 4 — a TESTIMONY.md that never says the words buys nothing
+[evidence-policy] self-test ok    — rule 4 — a .tar.gz WITHOUT an md5 manifest reds
+[evidence-policy] self-test ok    — rule 4 — a .tar.gz WITH a non-empty sibling md5 is the compliant bank
+[evidence-policy] self-test ok    — rule 4 — an EMPTY md5 manifest is not a manifest
+[evidence-policy] self-test ok    — rule 4 — a grandfathered bank is exempt at its pinned file count
+[evidence-policy] self-test ok    — rule 4 — a grandfathered bank is a CEILING: re-filling it loosely reds
+[evidence-policy] self-test ok    — rule 4 — a stale dist pin is reported, not silently carried
+[evidence-policy] self-test ok    — rule 4 — `distillate/` is NOT a dist bank (the anchored name, not a prefix)
+[evidence-policy] self-test ok    — rule 4 — a dist bank`s own build output is not counted as further banks
+[evidence-policy] self-test ok    — rule 4 — an estate with no dist bank reds nowhere
+[evidence-policy] self-test PASS — 22/22 cases.
+
+[evidence-policy] scope docs/tranches/** — 351 png, 31,445,688 B across 28 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] banked dists — 29 directory bank(s), 0 archive(s); form required: .tar.gz + md5, or TESTIMONY.md
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s), 29 dist pin(s)
+[evidence-policy] PASS — every image, every wave and every banked dist within policy.
+EXIT=0
+
+
+################ RUN 3 — THE EXIT-HONESTY ARM (the fall-through trap)
+
+The trap this estate has been bitten by twice: a script that runs its self-test and then
+exits 0, greening CI while auditing nothing. The probe is the adversarial one — self-test
+GREEN and the real estate RED in the same invocation. The exit code must follow the AUDIT.
+
+Grandfather line for pass3/dist-head commented out again; --self-test passed this time.
+
+$ node scripts/check-evidence-policy.mjs --self-test
+[evidence-policy] self-test ok    — per-image cap fires on one over-cap image
+[evidence-policy] self-test ok    — per-wave cap fires even when every image is under the per-image cap
+[evidence-policy] self-test ok    — name ban fires on a tiny -full.png
+[evidence-policy] self-test ok    — a policy-conformant estate reds nowhere
+[evidence-policy] self-test ok    — a grandfather pin exempts the file it names
+[evidence-policy] self-test ok    — a grandfather pin is a ceiling, not a blanket — growth past it reds
+[evidence-policy] self-test ok    — a wave pin is a ceiling too — a new image past it reds
+[evidence-policy] self-test ok    — a pin naming nothing is reported stale
+[evidence-policy] self-test ok    — an absent scope dir throws rather than reading as a clean estate
+[evidence-policy] self-test ok    — rule 4 — a NEW hollow dist bank reds (the BC5-G2 shape, exactly)
+[evidence-policy] self-test ok    — rule 4 — a FULL loose dist bank reds too: the rule is the FORM, not the payload
+[evidence-policy] self-test ok    — rule 4 — TESTIMONY.md saying the words exempts the bank
+[evidence-policy] self-test ok    — rule 4 — a TESTIMONY.md that never says the words buys nothing
+[evidence-policy] self-test ok    — rule 4 — a .tar.gz WITHOUT an md5 manifest reds
+[evidence-policy] self-test ok    — rule 4 — a .tar.gz WITH a non-empty sibling md5 is the compliant bank
+[evidence-policy] self-test ok    — rule 4 — an EMPTY md5 manifest is not a manifest
+[evidence-policy] self-test ok    — rule 4 — a grandfathered bank is exempt at its pinned file count
+[evidence-policy] self-test ok    — rule 4 — a grandfathered bank is a CEILING: re-filling it loosely reds
+[evidence-policy] self-test ok    — rule 4 — a stale dist pin is reported, not silently carried
+[evidence-policy] self-test ok    — rule 4 — `distillate/` is NOT a dist bank (the anchored name, not a prefix)
+[evidence-policy] self-test ok    — rule 4 — build output INSIDE a dist bank is not counted as further banks
+[evidence-policy] self-test ok    — rule 4 — an estate with no dist bank reds nowhere
+[evidence-policy] self-test PASS — 22/22 cases.
+
+[evidence-policy] scope docs/tranches/** — 351 png, 31,445,688 B across 28 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] banked dists — 29 directory bank(s), 0 archive(s); form required: .tar.gz + md5, or TESTIMONY.md
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s), 28 dist pin(s)
+
+[evidence-policy] FAIL — 1 breach(es):
+    dist-loose: 1
+
+  dist-loose          2 file(s)  a banked dist DIRECTORY — ship a .tar.gz + md5 manifest, or drop a TESTIMONY.md saying "testimony, artifact not banked"
+                      docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-head
+
+Recrop to the pixels under audit; text-first for anything a number can state (EVIDENCE-POLICY.md). Do NOT raise a cap and do NOT add a grandfather line.
+EXIT=1
+
+################ WHAT THE THREE RUNS ESTABLISH
+
+RUN 1  born-RED. With one real hollow bank's grandfather line removed —
+       `pass3/dist-head`, 2 files, `_headers` + `_redirects`, the exact BC5-G2 shape —
+       the gate reds with one breach, names the rule (`dist-loose`), names the path, and
+       prints the two ways out. EXIT 1. The rule bites the thing it was written for.
+
+RUN 2  the line restored (verified by diff against the pre-probe copy: identical), the
+       gate is GREEN across the whole estate: 29 directory banks, 0 archives, 29 dist
+       pins, PASS. 22/22 self-test cases, up from 9.
+
+RUN 3  exit honesty, probed adversarially: self-test GREEN and estate RED in one
+       invocation. `--self-test` printed 22/22 PASS and the process still exited 1 on the
+       audit's verdict. The self-test proves the instrument; it does not stand in for the
+       audit, and it cannot swallow a breach. Source restored byte-identical afterwards.
+
+The 13 new self-test cases cover every arm of rule 4 in both directions: a new hollow bank
+reds; a FULL loose bank reds too (the rule is the FORM, not the payload); a TESTIMONY.md
+that says the words exempts; one that does not say them buys nothing; an archive without a
+manifest reds; an archive with a non-empty sibling md5 passes; an EMPTY manifest is not a
+manifest; a pin exempts at its count and reds above it; a stale pin is reported; `distillate/`
+is not a dist bank; build output nested inside a bank is not a second bank; and an estate with
+no bank at all reds nowhere (the anti-vacuity control).

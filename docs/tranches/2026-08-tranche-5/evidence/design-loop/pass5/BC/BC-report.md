@@ -373,6 +373,27 @@ live in the picker and mobile specs that Lanes A and F3 are actively editing rig
 result from those files today is not attributable to anyone. `guardTitle`'s one-string floor is
 covered by the 24/24 above. Nothing in BC's diff touches any of the three.
 
+> **CORRECTION — 2026-08-02, pass-6 lane BC, per the pass-5 registry's BC5-G6 and the pass-6
+> order to restate this against the sealed tree.** The paragraph above is FALSE in its premise
+> and the paragraph stays, struck rather than erased, because the estate corrects beside a line
+> and does not rewrite one. Both floors live in `e2e/a11y.spec.ts` — `3.3 optionsInPicker` at
+> line 323 and `3.4 ctrlKDoesNotPeek` at line 369, re-derived by grep at the pass-5 seal
+> `abe533c4`, not carried from the registry. That is the very file this section reports at
+> **30 / 30**, and this lane's own banked log proves it row by row: `logs/floors-a11y.log`
+> carries six passing rows for the two guards, three per engine —
+> `a11y.spec.ts:324:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible
+> options` and `a11y.spec.ts:370:3` + `394:3` for `3.4`, in chromium and in webkit.
+>
+> So the floors WERE run by this lane, they ARE attributable to it, and they were green. The
+> disclaimer also mis-locates them: neither guard lives in "the picker and mobile specs" Lanes
+> A and F3 were editing, so the attribution hazard it invokes did not apply to them either.
+>
+> Booked as the same class it would have been in reverse: a claim of non-coverage where
+> coverage exists costs a reader the same thing as a claim of coverage where none exists — the
+> reader re-runs work already done, or declines to trust a green that was earned. The
+> conclusion this changes is small and named: the pass-5 W3-floor tally for lane BC is
+> **complete**, not partial.
+
 ---
 
 ## 8 · NEW GAPS (raised by this lane, against itself and against the evidence set)

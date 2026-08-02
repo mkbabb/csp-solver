@@ -273,23 +273,117 @@ test.describe('drawer under prefers-reduced-motion', () => {
   });
 });
 
-// ── 6. The regime rule: <1024 is a defined no-op — today's stacked flow, no tab ──
+// ── 6. The regime rule, RE-CUT (T5-W4 pass 6) ────────────────────────────────────────────
+//
+// The old row asserted a world: "<1024: no tab, stacked panel in flow exactly as today". That
+// world is half gone and half RATIFIED, and one assertion cannot say both, so it splits into
+// the two rungs the pass-6 charter actually rules on:
+//   · LANDSCAPE <1024 — HELD. The lead's charter (c) ratifies the shipped rung, so this arm is
+//     the old row's claim, kept verbatim in meaning: no tab, the card in flow, the toggle a
+//     defined no-op. It carries the orientation guard's own ablation as its control, because
+//     an unscoped `<1024` pose reads ~1.47 there and would have moved a ratified surface.
+//   · PORTRAIT <1024 — THE DOCK. Tab visible and tappable, the card a fixed sheet, inert and
+//     hidden at rest, the board's rect IDENTICAL across the gesture, always lands closed, and a
+//     persisted-open desk choice does not carry the crossing.
+// Both were born RED on `abe533c4`: below 1024 no tab exists at all on that tree.
 
-test.describe('drawer below the row regime', () => {
-  test.use({ viewport: { width: 900, height: 800 } });
+test.describe('drawer below the row regime — LANDSCAPE holds the shipped rung', () => {
+  test.use({ viewport: { width: 900, height: 500 } });
 
-  test('<1024: no tab, stacked panel in flow exactly as today', async ({ page }) => {
+  test('<1024 landscape: no tab, the card in flow, the toggle a defined no-op', async ({
+    page,
+  }) => {
     await loadSudoku(page);
 
     await expect(page.locator('.drawer-tab')).toBeHidden();
-    await expect(page.locator('.mobile-board-width')).toBeVisible();
-    await expect(page.locator('#controls-drawer')).toBeHidden(); // lg:hidden rail
+    const card = page.locator('#controls-drawer');
+    await expect(card).toBeVisible();
+    expect(await card.evaluate((el) => getComputedStyle(el).position)).toBe('static');
 
-    // Even a persisted-closed drawer must not touch the stacked layout.
+    // Even a persisted-closed drawer must not touch this layout: the toggle is a no-op here,
+    // so the persisted desk pose has nothing to act on.
     await page.evaluate(() => localStorage.setItem('csp-drawer-open', '0'));
     await page.reload();
     await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
-    await expect(page.locator('.mobile-board-width')).toBeVisible();
+    await expect(page.locator('#controls-drawer')).toBeVisible();
     await expect(page.locator('.drawer-tab')).toBeHidden();
+
+    // CONTROL — ablate the orientation guard (the portrait pose applied on width alone) and
+    // the same probe must see the ratified rung leave the flow. This is the exact defect the
+    // graft exists to prevent, and without this arm the row above would pass on a tree that
+    // had never scoped the pose at all.
+    await page.addStyleTag({
+      content: '#controls-drawer { position: fixed !important; }',
+    });
+    expect(await card.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+  });
+});
+
+test.describe('drawer below the row regime — PORTRAIT is the dock', () => {
+  test.use({ viewport: { width: 390, height: 664 }, hasTouch: true, isMobile: true });
+
+  test('<1024 portrait: the tongue summons a fixed sheet, and the board never moves', async ({
+    page,
+  }) => {
+    await loadSudoku(page);
+
+    const tab = page.locator('.drawer-tab');
+    const drawer = page.locator('#controls-drawer');
+    const drawerCase = page.locator('#controls-drawer .drawer-case');
+
+    // The tongue is there and it is a legal target on both axes (92×48).
+    await expect(tab).toBeVisible();
+    const tabBox = (await tab.boundingBox())!;
+    expect(Math.min(tabBox.width, tabBox.height)).toBeGreaterThanOrEqual(44);
+
+    // The sheet is fixed, and at rest the CASE is what hides — never the region, which must
+    // keep carrying the tongue or the drawer would be unopenable-closed.
+    expect(await drawer.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+    await expect(drawerCase).toBeHidden();
+    await expect(tab).toHaveAttribute('aria-expanded', 'false');
+
+    // THE NO-RELAYOUT CLAIM, WRITTEN AS A RECT IDENTITY rather than as a phrase.
+    const boardRect = () =>
+      page.locator('.board-cells').evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return { x: +r.x.toFixed(2), y: +r.y.toFixed(2), w: +r.width.toFixed(2) };
+      });
+    const before = await boardRect();
+
+    await tab.tap();
+    await expect(drawerCase).toBeVisible();
+    await page.waitForTimeout(700);
+    await expect(tab).toHaveAttribute('aria-expanded', 'true');
+    expect(await boardRect()).toEqual(before);
+
+    await tab.tap();
+    await page.waitForTimeout(700);
+    await expect(drawerCase).toBeHidden();
+    expect(await boardRect()).toEqual(before);
+  });
+
+  test('<1024 portrait always lands closed, and a persisted-open desk choice does not carry', async ({
+    page,
+  }) => {
+    // G3, and it is a ruling rather than a preference: an open sheet restored on a portrait
+    // load would resurrect the covered-board pose the covis row exists to kill. The desk's key
+    // is untouched and desk-scoped — this only refuses to READ it into a portrait mount.
+    await page.goto('./?size=3&difficulty=EASY');
+    await page.evaluate(() => localStorage.setItem('csp-drawer-open', '1'));
+    await page.reload();
+    await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+
+    await expect(page.locator('#controls-drawer .drawer-case')).toBeHidden();
+    await expect(page.locator('.drawer-tab')).toHaveAttribute('aria-expanded', 'false');
+
+    // …and an open made HERE is transient: it must not write the desk's key.
+    await page.locator('.drawer-tab').tap();
+    await expect(page.locator('#controls-drawer .drawer-case')).toBeVisible();
+    await page.waitForTimeout(700);
+    expect(await page.evaluate(() => localStorage.getItem('csp-drawer-open'))).toBe('1');
+
+    // CONTROL — the probe must be able to see the key change. The desk writes it.
+    await page.evaluate(() => localStorage.setItem('csp-drawer-open', '0'));
+    expect(await page.evaluate(() => localStorage.getItem('csp-drawer-open'))).toBe('0');
   });
 });

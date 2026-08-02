@@ -1,0 +1,36 @@
+[evidence-policy] self-test ok    — per-image cap fires on one over-cap image
+[evidence-policy] self-test ok    — per-wave cap fires even when every image is under the per-image cap
+[evidence-policy] self-test ok    — name ban fires on a tiny -full.png
+[evidence-policy] self-test ok    — a policy-conformant estate reds nowhere
+[evidence-policy] self-test ok    — a grandfather pin exempts the file it names
+[evidence-policy] self-test ok    — a grandfather pin is a ceiling, not a blanket — growth past it reds
+[evidence-policy] self-test ok    — a wave pin is a ceiling too — a new image past it reds
+[evidence-policy] self-test ok    — a pin naming nothing is reported stale
+[evidence-policy] self-test ok    — an absent scope dir throws rather than reading as a clean estate
+[evidence-policy] self-test ok    — rule 4 — a NEW hollow dist bank reds (the BC5-G2 shape, exactly)
+[evidence-policy] self-test ok    — rule 4 — a FULL loose dist bank reds too: the rule is the FORM, not the payload
+[evidence-policy] self-test ok    — rule 4 — TESTIMONY.md saying the words exempts the bank
+[evidence-policy] self-test ok    — rule 4 — a TESTIMONY.md that never says the words buys nothing
+[evidence-policy] self-test ok    — rule 4 — a .tar.gz WITHOUT an md5 manifest reds
+[evidence-policy] self-test ok    — rule 4 — a .tar.gz WITH a non-empty sibling md5 is the compliant bank
+[evidence-policy] self-test ok    — rule 4 — an EMPTY md5 manifest is not a manifest
+[evidence-policy] self-test ok    — rule 4 — a grandfathered bank is exempt at its pinned file count
+[evidence-policy] self-test ok    — rule 4 — a grandfathered bank is a CEILING: re-filling it loosely reds
+[evidence-policy] self-test ok    — rule 4 — a stale dist pin is reported, not silently carried
+[evidence-policy] self-test ok    — rule 4 — `distillate/` is NOT a dist bank (the anchored name, not a prefix)
+[evidence-policy] self-test ok    — rule 4 — build output INSIDE a dist bank is not counted as further banks
+[evidence-policy] self-test ok    — rule 4 — an estate with no dist bank reds nowhere
+[evidence-policy] self-test PASS — 22/22 cases.
+
+[evidence-policy] scope docs/tranches/** — 365 png, 31,902,951 B across 28 wave bucket(s)
+[evidence-policy] caps 153,600 B/image · 2,097,152 B/wave · name ban /-full\.png$/
+[evidence-policy] banked dists — 29 directory bank(s), 2 archive(s); form required: .tar.gz + md5, or TESTIMONY.md
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s), 28 dist pin(s)
+
+[evidence-policy] FAIL — 1 breach(es):
+    dist-loose: 1
+
+  dist-loose          2 file(s)  a banked dist DIRECTORY — ship a .tar.gz + md5 manifest, or drop a TESTIMONY.md saying "testimony, artifact not banked"
+                      docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-head
+
+Recrop to the pixels under audit; text-first for anything a number can state (EVIDENCE-POLICY.md). Do NOT raise a cap and do NOT add a grandfather line.

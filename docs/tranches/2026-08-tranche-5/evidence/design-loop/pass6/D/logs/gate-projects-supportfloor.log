@@ -1,0 +1,70 @@
+=== AUDIT ===
+gates     `test:e2e:projects` + `test:support-floor` — D-report §9 cited "PASS / PASS ·
+          §static" with no transcript (D5-G4). Both are SELF-TESTED instruments: each
+          re-proves every check against a known-bad input before trusting its own green,
+          so the transcript below carries the bite list as well as the result.
+tree      HEAD abe533c4, clean but for the untracked pass6 dir
+cmd       npm run test:e2e:projects   ->  node scripts/check-pw-projects.mjs --self-test
+          npm run test:support-floor  ->  node scripts/check-support-floor.mjs --self-test
+date      2026-08-02T07:27:14Z
+
+--- npm run test:e2e:projects ---
+
+> csp-solver-frontend@0.1.0 test:e2e:projects
+> node scripts/check-pw-projects.mjs --self-test
+
+PW PROJECT MATRIX — 3 configs, 9 projects, 4 declared single-engine holdouts (T5-W1 1.10 / CH-56)
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+
+SELF-TEST — each check against a known-bad matrix:
+  [1 DECLARED MATRIX] a third project appears (a firefox arm nobody ratified)
+      → RED (as it must)
+  [1 DECLARED MATRIX] the webkit project is quietly re-engined to chromium
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is dropped from every project (the orphan)
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is claimed by two configs at once
+      → RED (as it must)
+  [3 ENGINE COVERAGE] CH-56 regresses — mobile-affordances loses its webkit arm
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED] share-truth is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+
+OK — 21 specs, 316 resolved tests, every spec in both engines except the 4 recorded holdouts.
+EXIT=0
+
+--- npm run test:support-floor ---
+
+> csp-solver-frontend@0.1.0 test:support-floor
+> node scripts/check-support-floor.mjs --self-test
+
+check-support-floor — T5-W1 row 1.11 (C5 + J3)
+
+  src files scanned: 169
+  declared floor:    chrome 111 · edge 111 · firefox 128 · safari 16.4 · ios_saf 16.4
+
+GREEN  1 FLOOR DECLARED
+GREEN  2 FLOOR SUFFICIENT
+GREEN  3 TARGET COHERENT
+GREEN  4 SHIMS DEAD
+GREEN  5 README CITES
+
+self-test — every check against a known-bad input:
+  BITES  1 FLOOR DECLARED — browserslist deleted
+  BITES  1 FLOOR DECLARED — an entry that is not a floor
+  BITES  2 FLOOR SUFFICIENT — safari floor dropped under the CSS target
+  BITES  3 TARGET COHERENT — build.target raised above the floor
+  BITES  4 SHIMS DEAD — an optional-call listener guard re-enters src
+  BITES  4 SHIMS DEAD — a sub-floor comment re-enters src
+  BITES  5 README CITES — the README floor sentence removed
+
+PASS — 0 violation(s), 0 blind check(s)
+EXIT=0
+
+Both green, both self-tested, 7 + 7 known-bad inputs bitten. §static retired.

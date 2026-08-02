@@ -1,0 +1,42 @@
+AUDIT: Option B re-measured by non-author 2026-08-02T09:55:54Z
+  BEFORE = published 0.11.0 src (md5 vue e2090bd4 == upstream f8ab8b7) :4254 index-BWczaVI5YUjo.js
+  AFTER  = 0.12.0 candidate src from upstream 3f41141 :4255 index-DRt48gA079Ma.js
+  LIMIT: the isolated node_modules inlines pencil-boil into index (no animation-vendor chunk); BOTH arms share it, and the restore control rebuilt BEFORE byte-identical.
+
+[BEFORE-0.11.0] webkit 1280x810 DPR2 · open/close/open · 3 reps, fresh page each
+  rep 1  revokes=64 mints=80
+    g1: encodes= 4 blocked=  26ms worst=  26ms  boxes=[766x226,766x226,766x226,766x226]
+    g2: encodes= 8 blocked= 248ms worst= 190ms  boxes=[794x234,794x234,794x234,794x234,1320x1320,1320x1320,1320x1320,1320x1320]
+    g3: encodes= 8 blocked= 244ms worst= 244ms  boxes=[766x226,766x226,766x226,766x226,1296x1296,1296x1296,1296x1296,1296x1296]
+    payload identity  g1==g2: true   g1==g3: true   (n poses 8/8/8)
+  rep 2  revokes=64 mints=80
+    g1: encodes= 4 blocked=  30ms worst=  30ms  boxes=[766x226,766x226,766x226,766x226]
+    g2: encodes= 8 blocked= 294ms worst= 294ms  boxes=[794x234,794x234,794x234,794x234,1320x1320,1320x1320,1320x1320,1320x1320]
+    g3: encodes= 8 blocked= 263ms worst= 263ms  boxes=[766x226,766x226,766x226,766x226,1296x1296,1296x1296,1296x1296,1296x1296]
+    payload identity  g1==g2: true   g1==g3: true   (n poses 8/8/8)
+  rep 3  revokes=64 mints=80
+    g1: encodes= 4 blocked=   0ms worst=   0ms  boxes=[766x226,766x226,766x226,766x226]
+    g2: encodes= 8 blocked= 254ms worst= 254ms  boxes=[794x234,794x234,794x234,794x234,1320x1320,1320x1320,1320x1320,1320x1320]
+    g3: encodes= 8 blocked= 251ms worst= 251ms  boxes=[766x226,766x226,766x226,766x226,1296x1296,1296x1296,1296x1296,1296x1296]
+    payload identity  g1==g2: true   g1==g3: true   (n poses 8/8/8)
+  TOTALS: encodes/gesture 4,8,8,4,8,8,4,8,8 · pure-hit gestures (0 encodes) 0/9 · blocked 0–294 ms
+
+
+[AFTER-0.12-candidate] webkit 1280x810 DPR2 · open/close/open · 3 reps, fresh page each
+  rep 1  revokes=36 mints=64
+    g1: encodes= 4 blocked=   0ms worst=   0ms  boxes=[766x226,766x226,766x226,766x226]
+    g2: encodes= 8 blocked= 257ms worst= 257ms  boxes=[794x234,794x234,794x234,794x234,1320x1320,1320x1320,1320x1320,1320x1320]
+    g3: encodes= 0 blocked=   0ms worst=   0ms  boxes=[]
+    payload identity  g1==g2: true   g1==g3: true   (n poses 8/8/8)
+  rep 2  revokes=36 mints=64
+    g1: encodes= 4 blocked=   0ms worst=   0ms  boxes=[766x226,766x226,766x226,766x226]
+    g2: encodes= 8 blocked= 268ms worst= 268ms  boxes=[794x234,794x234,794x234,794x234,1320x1320,1320x1320,1320x1320,1320x1320]
+    g3: encodes= 0 blocked=   0ms worst=   0ms  boxes=[]
+    payload identity  g1==g2: true   g1==g3: true   (n poses 8/8/8)
+  rep 3  revokes=36 mints=64
+    g1: encodes= 4 blocked=  18ms worst=  18ms  boxes=[766x226,766x226,766x226,766x226]
+    g2: encodes= 8 blocked= 279ms worst= 279ms  boxes=[794x234,794x234,794x234,794x234,1320x1320,1320x1320,1320x1320,1320x1320]
+    g3: encodes= 0 blocked=   0ms worst=   0ms  boxes=[]
+    payload identity  g1==g2: true   g1==g3: true   (n poses 8/8/8)
+  TOTALS: encodes/gesture 4,8,0,4,8,0,4,8,0 · pure-hit gestures (0 encodes) 3/9 · blocked 0–279 ms
+

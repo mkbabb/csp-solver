@@ -1,0 +1,71 @@
+AUDIT: pass-6 LAND · FULL DEFAULT e2e, first sweep on HEAD dist index-Dbg4YfTRMMqM.js :4232 · 2026-08-02T08:57:53Z
+    Received: 0
+
+      517 |         }),
+      518 |       );
+    > 519 |     expect(headings.length).toBe(2);
+          |                             ^
+      520 |     for (const h of headings) {
+      521 |       expect(h.headingTag).toBe("h2");
+      522 |       expect(h.hidden).toBeNull();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/zone-grammar.spec.ts:519:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/zone-grammar-coarse-regime-25e0a-e-its-rail-arm-never-visits-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/zone-grammar-coarse-regime-25e0a-e-its-rail-arm-never-visits-webkit/error-context.md
+
+  22) [webkit] › e2e/zone-grammar.spec.ts:559:3 › coarse regime › the teacher's well names the check state the card has never shown 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: locator('.mobile-board-width .check-status')
+    Expected: "status"
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('.mobile-board-width .check-status')
+
+
+      562 |     await loadSudoku(page);
+      563 |     const status = page.locator(".mobile-board-width .check-status");
+    > 564 |     await expect(status).toHaveAttribute("role", "status");
+          |                          ^
+      565 |     // Default mode is on-demand with the snapshot armed by nothing yet — the stale sentence,
+      566 |     // which is precisely the state `checkArmed` decays into and no control could report.
+      567 |     await expect(status).toContainText("ask again");
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/zone-grammar.spec.ts:564:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/zone-grammar-coarse-regime-19ade-te-the-card-has-never-shown-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/zone-grammar-coarse-regime-19ade-te-the-card-has-never-shown-webkit/error-context.md
+
+  22 failed
+    [chromium] › e2e/drawer.spec.ts:281:3 › drawer below the row regime › <1024: no tab, stacked panel in flow exactly as today 
+    [chromium] › e2e/font-census.spec.ts:207:1 › the ledger holds BOTH directions across two games and two regimes 
+    [chromium] › e2e/mobile-affordances.spec.ts:162:1 › touch play tools (T4-WM §2): undo / redo / hint tappable at ≥44px, wired, and no sticky hover 
+    [chromium] › e2e/mobile-affordances.spec.ts:206:1 › hint two-press by touch (T4-W7): first tap names the technique, second inks the digit 
+    [chromium] › e2e/mobile-affordances.spec.ts:268:1 › coarse affordances: persistent peek washi on a ≥44px target, icon sublabels, Clear confirm beat 
+    [chromium] › e2e/mobile-affordances.spec.ts:341:1 › Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty board arms first 
+    [chromium] › e2e/mobile-platform.spec.ts:307:3 › the 296px keypad band (measured constant, driven through the composable) › every control can be seated clear of the keypad, verb and deepest chip alike 
+    [chromium] › e2e/visual-regression.spec.ts:640:1 › option chips keep their separation: ≥6px between neighbours, both axes 
+    [chromium] › e2e/zone-grammar.spec.ts:447:3 › coarse regime › the coarse card: regime witnessed first, then two eyebrows and a 44px floor in BOTH dimensions 
+    [chromium] › e2e/zone-grammar.spec.ts:489:3 › coarse regime › the heading lock holds on the CARD too — the regime its rail arm never visits 
+    [chromium] › e2e/zone-grammar.spec.ts:559:3 › coarse regime › the teacher's well names the check state the card has never shown 
+    [webkit] › e2e/drawer.spec.ts:281:3 › drawer below the row regime › <1024: no tab, stacked panel in flow exactly as today 
+    [webkit] › e2e/font-census.spec.ts:207:1 › the ledger holds BOTH directions across two games and two regimes 
+    [webkit] › e2e/mobile-affordances.spec.ts:162:1 › touch play tools (T4-WM §2): undo / redo / hint tappable at ≥44px, wired, and no sticky hover 
+    [webkit] › e2e/mobile-affordances.spec.ts:206:1 › hint two-press by touch (T4-W7): first tap names the technique, second inks the digit 
+    [webkit] › e2e/mobile-affordances.spec.ts:268:1 › coarse affordances: persistent peek washi on a ≥44px target, icon sublabels, Clear confirm beat 
+    [webkit] › e2e/mobile-affordances.spec.ts:341:1 › Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty board arms first 
+    [webkit] › e2e/mobile-platform.spec.ts:307:3 › the 296px keypad band (measured constant, driven through the composable) › every control can be seated clear of the keypad, verb and deepest chip alike 
+    [webkit] › e2e/visual-regression.spec.ts:640:1 › option chips keep their separation: ≥6px between neighbours, both axes 
+    [webkit] › e2e/zone-grammar.spec.ts:447:3 › coarse regime › the coarse card: regime witnessed first, then two eyebrows and a 44px floor in BOTH dimensions 
+    [webkit] › e2e/zone-grammar.spec.ts:489:3 › coarse regime › the heading lock holds on the CARD too — the regime its rail arm never visits 
+    [webkit] › e2e/zone-grammar.spec.ts:559:3 › coarse regime › the teacher's well names the check state the card has never shown 
+  253 passed (1.8m)

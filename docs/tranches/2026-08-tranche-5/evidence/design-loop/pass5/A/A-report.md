@@ -209,6 +209,16 @@ Disclosed: the shipped `both` slack reads 45.33/45.34 here against pass 4's 31.7
 same nominal cell. Two trees apart (T5-W2/W3 moved the estate) and two instruments apart — see
 §5.1. The pair inside this run is single-instrument and single-tree, which is what the arm needs.
 
+> **STAMPED at pass 6 (A5-G2, A5-G4).** (a) The `overflow` column is **RETIRED**: it is printed
+> here and gated nowhere, and no headline may cite it again — `subLines` and `noteH` carry the
+> claim. (b) The disclosure above is **now reconciled, and the explanation it offered was wrong on
+> both axes**: neither the tree nor the instrument moved the number. The gap is the REFERENT —
+> 45.33 is measured from the note's BORDER box, 31.73 from its CONTENT box, and the difference is
+> exactly `.guard-note`'s 13.60px horizontal padding, a rule byte-identical at both trees. Pass 6's
+> one-instrument arm reproduces all three of pass 4's 320 cells on the content referent at
+> `abe533c4` and reds on the border referent, as it must: `pass6/A/logs/A6-10-referent-arm.log`.
+> Neither figure is struck; both are quoted with the referent named or not at all.
+
 ---
 
 ## 5 · THREE THINGS FOUND WHILE DOING THE WORK

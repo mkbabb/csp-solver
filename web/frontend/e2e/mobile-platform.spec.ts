@@ -304,74 +304,98 @@ test.describe("keyboard-avoid (emulated visualViewport)", () => {
 test.describe("the 296px keypad band (measured constant, driven through the composable)", () => {
   test.use({ viewport: { width: 390, height: 664 }, hasTouch: true, isMobile: true });
 
-  test("every control can be seated clear of the keypad, verb and deepest chip alike", async ({
+  /**
+   * T5-W4 PASS 6 — THE METRIC MOVES, AND IT MOVES BECAUSE THE MECHANISM DID.
+   *
+   * Pass 4 measured this band as a SCROLL question: the controls card was in flow, the
+   * composable spent `--keyboard-inset` as bottom scroll-room, and the gate asked whether every
+   * control could be SCROLLED clear of the keypad. On the portrait dock the card is no longer in
+   * flow — it is a `position: fixed` sheet anchored on `top: var(--vv-height)`, and the page does
+   * not scroll at all (`pageVh 1.000`, `board-covisibility.spec.ts`). A doc-growth assertion on
+   * this tree would measure a mechanism that no longer exists and pass on any tree at all.
+   *
+   * So the metric becomes the honest one: **every control seats clear of the 296px band at
+   * `scrollY 0`** — no scroll, because the sheet rides the keyboard's own edge. That is the
+   * charter's iOS idiom doing precisely the work it was banked for.
+   *
+   * The RED arm is the ablation the charter named: restore `bottom: 0` in place of the anchor
+   * — the shape every naive fixed sheet has — and the deepest chip strands under the band with
+   * no scroll available to redeem it, because there is no scroll.
+   */
+  test("with the keypad up, every control seats clear of the band at scrollY 0", async ({
     page,
   }) => {
     const BAND = 296;
     await installFakeVisualViewport(page);
     await loadSudoku(page);
-
-    const roomBefore = await page.evaluate(
-      () => (document.scrollingElement || document.documentElement).scrollHeight,
-    );
+    // `.click()`, not `.tap()`, and the reason is the harness rather than the product: this
+    // row replaces `window.visualViewport` with a fake before load, and Playwright's touch
+    // path converts its point through that object — the tongue's box (616–664 at this cell,
+    // measured) is inside the viewport, but the emulated tap resolves "outside of the
+    // viewport" against the stand-in. The tongue's own touch target is gated where it belongs,
+    // on the real object: `drawer.spec.ts`'s portrait row taps it and reads 92×48.
+    await page.locator(".drawer-tab").click();
+    await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
+    await page.waitForTimeout(700);
 
     await page.evaluate((b) => (window as unknown as VVWindow).__setVV(664 - b), BAND);
+    // BOTH vars publish from the one handler — the trigger's own ordering, gated.
     await expect
       .poll(() =>
-        page.evaluate(() =>
-          getComputedStyle(document.documentElement)
-            .getPropertyValue("--keyboard-inset")
-            .trim(),
-        ),
+        page.evaluate(() => {
+          const cs = getComputedStyle(document.documentElement);
+          return [
+            cs.getPropertyValue("--keyboard-inset").trim(),
+            cs.getPropertyValue("--vv-height").trim(),
+          ].join(" ");
+        }),
       )
-      .toBe(`${BAND}px`);
+      .toBe(`${BAND}px ${664 - BAND}px`);
 
-    /** Scroll a control so its whole box sits above the keypad; report the rendered pose. */
-    const seat = (sel: string, band: number) =>
+    /** The lowest painted instance of `sel`, and whether it is clear of the band — at scrollY 0. */
+    const seat = (sel: string) =>
       page.evaluate(
         ({ sel, band }) => {
           const doc = document.scrollingElement || document.documentElement;
+          doc.scrollTop = 0;
+          void document.body.offsetHeight;
           const all = [...document.querySelectorAll(sel)].filter(
             (el) => el.getClientRects().length > 0,
           );
           const el = all[all.length - 1] as HTMLElement | undefined;
           if (!el) return null;
-          const bandH = window.innerHeight - band;
-          const pageBottom = el.getBoundingClientRect().bottom + doc.scrollTop;
-          doc.scrollTop = Math.min(
-            doc.scrollHeight - window.innerHeight,
-            Math.max(0, Math.ceil(pageBottom + 8 - bandH)),
-          );
-          void document.body.offsetHeight;
           const r = el.getBoundingClientRect();
-          const out = { top: +r.top.toFixed(2), bottom: +r.bottom.toFixed(2), bandH };
-          doc.scrollTop = 0;
-          return out;
+          return {
+            top: +r.top.toFixed(2),
+            bottom: +r.bottom.toFixed(2),
+            bandEdge: window.innerHeight - band,
+            scrollTop: doc.scrollTop,
+          };
         },
-        { sel, band },
+        { sel, band: BAND },
       );
 
-    // The room the band asks for is the room the scene claims — measured 292 of 296, the
-    // shortfall smaller than the 8px seating margin below it.
-    const roomAfter = await page.evaluate(
-      () => (document.scrollingElement || document.documentElement).scrollHeight,
-    );
-    expect(roomAfter - roomBefore).toBeGreaterThanOrEqual(BAND - 8);
-
-    const verb = await seat(".mobile-board-width .deal-btn", BAND);
+    const verb = await seat("#controls-drawer .deal-btn");
+    expect(verb!.scrollTop).toBe(0);
     expect(verb!.top).toBeGreaterThanOrEqual(0);
-    expect(verb!.bottom).toBeLessThanOrEqual(verb!.bandH);
+    expect(verb!.bottom).toBeLessThanOrEqual(verb!.bandEdge);
 
-    const deepest = await seat(".mobile-board-width .ctrl-btn", BAND);
+    const deepest = await seat("#controls-drawer .ctrl-btn");
+    expect(deepest!.scrollTop).toBe(0);
     expect(deepest!.top).toBeGreaterThanOrEqual(0);
-    expect(deepest!.bottom).toBeLessThanOrEqual(deepest!.bandH);
+    expect(deepest!.bottom).toBeLessThanOrEqual(deepest!.bandEdge);
 
-    // CONTROL: stop spending the inset — the exact thing App.vue does with it — and the
-    // deepest control can no longer be brought out from under the keypad at any scroll.
-    await page.addStyleTag({ content: ".board-group { padding-bottom: 0 !important; }" });
+    // CONTROL — the ablation the charter banked: `bottom: 0` instead of the `--vv-height`
+    // anchor. The sheet stops tracking the keyboard's edge and the deepest chip strands under
+    // the band, with no scroll to redeem it. Without this arm the row above would pass on any
+    // tree whose sheet happens to be short.
+    await page.addStyleTag({
+      content:
+        "#controls-drawer { top: auto !important; bottom: 0 !important; translate: none !important; }",
+    });
     await page.waitForTimeout(200);
-    const stranded = await seat(".mobile-board-width .ctrl-btn", BAND);
-    expect(stranded!.bottom).toBeGreaterThan(stranded!.bandH);
+    const stranded = await seat("#controls-drawer .ctrl-btn");
+    expect(stranded!.bottom).toBeGreaterThan(stranded!.bandEdge);
   });
 });
 

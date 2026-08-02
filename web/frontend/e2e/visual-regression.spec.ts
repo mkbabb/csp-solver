@@ -490,6 +490,16 @@ test("the Deal die is not crushed: the commit verb's box fits its own content", 
   // 54.38 and reds. GATE-1 control run at the pass-4 close: patched back to the bare
   // `.deal-btn` selector this row goes RED on exactly this line (44.00 for 54.38 demanded),
   // green on the fix.
+  //
+  // AND THE SLACK BELOW IS NOT HEADROOM. `btn.h` is `auto`, so at the healthy pose the box IS
+  // its own content and the bound is an identity, not a margin: at this config's 1280×800 the
+  // sum re-derives to 54.05 against a delivered 54.03 — minus 0.02px, chromium and webkit
+  // alike, n=3 (T5-W4 pass 6, Lane D, `pass6/D/rig/ship1-margin.mjs`). The row passes on the
+  // 0.5 TOLERANCE, not on slack. The bound has real range only in the direction the defect
+  // travels — height pinned, die squashed, width intact — which is why it's written against
+  // `die.w`, and the GATE-1 control is what proves it can fail. Anyone reading
+  // "54.03 ≥ 54.05 − 0.5" as room to spare is reading a tolerance as evidence. (The 54.38
+  // above is a 1440-wide reading; `labelH` tracks the viewport — 14.05 here, 14.39 there.)
   const demanded = geom!.die!.w + geom!.labelH + geom!.padY + geom!.gap;
   expect
     .soft(
@@ -591,7 +601,8 @@ test("the deal receipt keeps off the commit verb, hover included", async ({ page
  *  one closed. Groups of one contribute no pair and are reported as such, never as a pass. */
 const CHIP_SEPARATION = () => {
   const panel = document.querySelector(
-    ".controls-card .control-panel-wrap, .mobile-board-width .control-panel-wrap",
+    // pass 6: one card at every width — `.mobile-board-width` was the deleted twin's name.
+    ".controls-card .control-panel-wrap",
   );
   const vis = (el: Element) => el.getClientRects().length > 0;
   const out: { axis: string | null; n: number; gap: number | null; first: string }[] =
@@ -680,12 +691,19 @@ test("option chips keep their separation: ≥6px between neighbours, both axes",
   try {
     await phone.goto("./");
     await phone.waitForSelector("svg.handwritten-logo", { timeout: 15000 });
-    await phone.waitForSelector(".ctrl-btn", { timeout: 15000 });
+    await phone.waitForSelector(".ctrl-btn", { state: "attached", timeout: 15000 });
     // The regime witness: a number taken at `pointer: fine` on phone geometry is a different
     // number (the pass-1 harness). Refuse it rather than bank it.
     expect(await phone.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(
       true,
     );
+    // pass 6: the chips are between-moves controls and live behind the door on the portrait
+    // dock. `CHIP_SEPARATION` counts only PAINTED chips (`getClientRects`), so an unopened
+    // sheet yields zero pairs and `check` reds on its own vacuity guard — which is the guard
+    // doing its job, not a reason to loosen it.
+    await phone.locator(".drawer-tab").tap();
+    await expect(phone.locator("#controls-drawer .drawer-case")).toBeVisible();
+    await phone.waitForTimeout(700);
     await check(phone, "coarse row");
   } finally {
     await ctx.close();
@@ -697,7 +715,8 @@ test("option chips keep their separation: ≥6px between neighbours, both axes",
 /** The rail panel's own box at the cell that owns the price. */
 const PANEL_H = () => {
   const panel = document.querySelector(
-    ".controls-card .control-panel-wrap, .mobile-board-width .control-panel-wrap",
+    // pass 6: one card at every width — `.mobile-board-width` was the deleted twin's name.
+    ".controls-card .control-panel-wrap",
   );
   return panel ? +panel.getBoundingClientRect().height.toFixed(2) : null;
 };

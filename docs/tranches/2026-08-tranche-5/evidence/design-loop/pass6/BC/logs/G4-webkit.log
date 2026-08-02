@@ -1,0 +1,19 @@
+AUDIT: BC5-G4 encode-threading rig, engine=webkit, arms idle/toBlob/convertToBlob/worker, 3 reps each
+AUDIT: host MacBook-Pro node v26.0.0 2026-08-02T07:25:48Z port 4243
+AUDIT: repo HEAD abe533c4
+--- webkit/idle ---
+g4-webkit-idle#1  wall     401  blocked       0  worst     12  long100 0  frames  39  bytes 0  hash 
+g4-webkit-idle#2  wall     401  blocked       0  worst     12  long100 0  frames  39  bytes 0  hash 
+g4-webkit-idle#3  wall     402  blocked       0  worst     13  long100 0  frames  39  bytes 0  hash 
+--- webkit/toBlob ---
+g4-webkit-toBlob#1  wall      62  blocked      72  worst     72  long100 0  frames   2  bytes 883885  hash ea4fc5d2.b3db31ba.43acc795.c481b7b1.fb20b226.9b808567.46245e03.c664b447
+g4-webkit-toBlob#2  wall      70  blocked      77  worst     77  long100 0  frames   1  bytes 883885  hash ea4fc5d2.b3db31ba.43acc795.c481b7b1.fb20b226.9b808567.46245e03.c664b447
+g4-webkit-toBlob#3  wall      57  blocked      63  worst     63  long100 0  frames   1  bytes 883885  hash ea4fc5d2.b3db31ba.43acc795.c481b7b1.fb20b226.9b808567.46245e03.c664b447
+--- webkit/convertToBlob ---
+g4-webkit-convertToBlob#1  wall      59  blocked      69  worst     69  long100 0  frames   2  bytes 883885  hash ea4fc5d2.b3db31ba.43acc795.c481b7b1.fb20b226.9b808567.46245e03.c664b447
+g4-webkit-convertToBlob#2  wall      64  blocked      74  worst     74  long100 0  frames   1  bytes 883885  hash ea4fc5d2.b3db31ba.43acc795.c481b7b1.fb20b226.9b808567.46245e03.c664b447
+g4-webkit-convertToBlob#3  wall      65  blocked      66  worst     66  long100 0  frames   2  bytes 883885  hash ea4fc5d2.b3db31ba.43acc795.c481b7b1.fb20b226.9b808567.46245e03.c664b447
+--- webkit/worker ---
+g4-webkit-worker#1  wall      90  blocked       0  worst     12  long100 0  frames   9  bytes 883885  hash ea4fc5d2.b3db31ba.43acc795.c481b7b1.fb20b226.9b808567.46245e03.c664b447
+g4-webkit-worker#2  wall      60  blocked       0  worst     12  long100 0  frames   6  bytes 883885  hash ea4fc5d2.b3db31ba.43acc795.c481b7b1.fb20b226.9b808567.46245e03.c664b447
+g4-webkit-worker#3  wall      75  blocked       0  worst     11  long100 0  frames   8  bytes 883885  hash ea4fc5d2.b3db31ba.43acc795.c481b7b1.fb20b226.9b808567.46245e03.c664b447
