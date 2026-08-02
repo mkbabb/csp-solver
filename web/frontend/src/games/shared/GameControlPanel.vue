@@ -131,7 +131,7 @@ function toggleKeys() {
     void nextTick(() => {
       document
         .getElementById("keys-fold")
-        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        ?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
     });
 }
 
