@@ -60,7 +60,7 @@ onMounted(async () => {
 <style scoped>
 .error-note {
   pointer-events: auto; /* the strip container passes events through; the card takes them back */
-  animation: note-slide-in 250ms var(--ease-noteWrite) both;
+  animation: note-in 250ms var(--ease-noteWrite) backwards;
 }
 
 .error-note-card {
@@ -103,31 +103,5 @@ onMounted(async () => {
 
 .error-note-retry:active {
   transform: scale(0.94);
-}
-
-@keyframes note-slide-in {
-  from {
-    transform: translateY(8px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* PRM: fade only, no translate (§5.2). */
-@media (prefers-reduced-motion: reduce) {
-  .error-note {
-    animation: note-fade-in 200ms linear both;
-  }
-  @keyframes note-fade-in {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
 }
 </style>

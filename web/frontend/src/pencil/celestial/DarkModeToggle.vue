@@ -25,7 +25,7 @@
       filter="url(#wobble-celestial)"
     >
       <g class="warp">
-        <!-- Rays: irregular per pose; the 240s spin is QUANTIZED to the beat
+        <!-- Rays: irregular per pose; the spin is QUANTIZED to the pose flips
                  (g1 F-2) — one shared angle table with the rest stack. -->
         <g class="sun-rays" :style="liveRaysStyle">
           <polygon
@@ -186,11 +186,12 @@
          exists for that state — the c1 soul-gate forensics). No post-filter
          transform wrappers — a compositor rotate or scale of a cached pose raster
          resamples it, and the soul gate fails on the blur (sun 0.9145 vs the 0.983
-         line). The 240s ray spin is QUANTIZED to the beat at its true rate and
-         baked pre-filter into each pose (RAY_ANGLES — vector-crisp, one raster per
-         pose); the 6s breathe is retired (script note). The ray comb re-jitters on
-         the beat with everything else — the page speaks one pose-stack grammar
-         (grid, logo, outlines, moon: 4 poses on the beat). -->
+         line). The ray spin is QUANTIZED to the pose flips and baked pre-filter into
+         each pose (RAY_ANGLES — vector-crisp, one raster per pose); the 6s breathe
+         is retired (script note). The ray comb re-jitters with the pose, on the one
+         beat grid everything else swaps on — the page speaks one pose-stack grammar
+         (grid, logo, outlines: 4 poses on the beat), and the SKY alone steps a slower
+         band of it (T6 mark 11 — `MOTION.bands.sun/moon`). -->
     <div
       class="toggle-rest rest-sun"
       :class="{ 'is-active': !isDark }"
@@ -371,8 +372,8 @@ const reducedMotion = usePrefersReducedMotion();
 // Mode gating is the advance-guard below (only the LIVE body's frames tick — the
 // parked icon stays frozen); PRM freezes the beat itself centrally.
 const beat = useBoilBeat();
-const starFrame = ref(0); // dark: whole-moon pose stack, every beat (~8fps)
-const sunFrame = ref(0); // light: whole-sun pose stack, every beat (~8fps)
+const starFrame = ref(0); // dark: whole-moon pose stack, every 1.5 beats (~5.33fps)
+const sunFrame = ref(0); // light: whole-sun pose stack, every 2 beats (4fps)
 // The celestial pose set is exactly wobble-celestial's frozen poses (single source):
 // geometry pose i pairs with filter pose `wobble-celestial-p{i}`, so the count derives
 // from wobblePoseFrequencies rather than a hardcoded 4 (T4-W4 P4 reconcile).
@@ -384,24 +385,34 @@ const CELESTIAL_POSE_COUNT = wobblePoseFrequencies(
 // `useBeatFrame` does — by reading the WRAPPED count and taking the `total <= 1` freeze-in-place
 // branch. Without this the answer-key laminate stilled the board and the sun kept turning.
 const heldPoseCount = heldFrameCount(() => CELESTIAL_POSE_COUNT);
-watch(beat, () => {
+// T6 mark 11: the sky DERIVES its pose from the beat rather than incrementing on it,
+// so a band can be fractional without a second clock or an accumulator — floor(b/1.5)
+// spends 2 beats on one pose and 1 on the next, the 250/125ms dwell the 1.5 band means.
+// A beat that does not advance the band assigns the ref its own value; Vue's setter
+// no-ops, so the slower sky costs no extra write.
+watch(beat, (b) => {
   const total = heldPoseCount();
   if (total <= 1) return; // held — freeze in place, no snap to pose 0
+  const step = (band: number) => Math.floor(b / band) % total;
   if (isDark.value) {
-    starFrame.value = (starFrame.value + 1) % total;
+    starFrame.value = step(MOTION.bands.moon);
   } else {
-    sunFrame.value = (sunFrame.value + 1) % total;
+    sunFrame.value = step(MOTION.bands.sun);
   }
 });
 
 // ── The ray spin, QUANTIZED TO THE POSE FLIPS (W13 gate g1 F-2) ──
-// The 240s revolution keeps its rate, advanced once per beat (0.1875°/125ms) —
-// the angle is a pure function of the pose index, so it bakes pre-filter into each
+// The angle is a pure function of the POSE INDEX, so it bakes pre-filter into each
 // rest pose as static vector geometry: crisp at every angle, one raster per pose,
 // zero recurring paint. The 4-pose wrap (−0.5625°) lands on the same flip that
 // re-jitters the whole ray comb — at this rate the spin is a micro-dither by
 // design (it was a 240s ambient to begin with). One angle table serves the live
 // sun and the rest stack alike.
+//
+// The table is BYTE-IDENTICAL under the mark-11 band; what re-derives is the wall
+// time it spans. 0.1875°/pose used to be 0.1875°/125ms — a 240s revolution. A pose
+// now dwells `bands.sun` beats (250ms), so the notional revolution is 240s × 2 =
+// 480s. The micro-dither reading is unchanged, and so are the baked pose bitmaps.
 //
 // The 6s ±3% breathe is RETIRED with the wrappers: post-filter scale resamples the
 // cached pose rasters (the soul gate fails on the blur), pre-filter scale would
@@ -409,9 +420,9 @@ watch(beat, () => {
 // into the 4-pose cycle it becomes 8fps scale flicker, not a breath. Its only
 // other home was the ~1s gesture window, where its excursion was ≤0.6% —
 // imperceptible. Dead config dies.
-const RAY_DEG_PER_BEAT = 360 / ((240 * 1000) / MOTION.beatMs); // 0.1875°
+const RAY_DEG_PER_POSE = 360 / ((240 * 1000) / MOTION.beatMs); // 0.1875°
 const RAY_ANGLES = Array.from({ length: CELESTIAL_POSE_COUNT }, (_, i) =>
-  (i * RAY_DEG_PER_BEAT).toFixed(4),
+  (i * RAY_DEG_PER_POSE).toFixed(4),
 );
 
 // ── The pose sets, baked ONCE (T3-W13 §1-P3) ──

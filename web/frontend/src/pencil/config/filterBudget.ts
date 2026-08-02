@@ -239,37 +239,14 @@ export const FILL_ALLOWLIST: readonly FillAllowRow[] = [
     reason:
       "ends at opacity var(--draw-opacity, 1) — consumers set it below 1, so the fill holds",
   },
-  {
-    file: "src/pencil/chrome/MarginNote.vue",
-    animation: "note-write-in",
-    count: 2,
-    reason:
-      "ends at clip-path inset(0 0 0 0); the cascade is `none` — the wipe must stay open",
-  },
-  {
-    file: "src/pencil/chrome/CompletionVignette.vue",
-    animation: "vignette-write-in",
-    count: 1,
-    reason: "same clip-path wipe as the margin note; the cascade is `none`",
-  },
-  {
-    file: "src/games/shared/SolverErrorNote.vue",
-    animation: "note-slide-in",
-    count: 1,
-    // BANKED RESIDUE, named honestly: this one ends at `transform: translateY(0)`, which
-    // computes to a matrix and not to `none` — the same mechanism as `cell-reveal`, at a
-    // population of 0–1 transient notes instead of 35–81 board cells. It stays because the
-    // note is v-if'd out of the default scene entirely, so nothing is retained at idle.
-    // TRIGGER: the note becoming resident (a persistent error strip), or a second such site.
-    reason:
-      "transient error note (v-if, absent at idle); ends at translateY(0) — banked residue",
-  },
-  {
-    file: "src/games/shared/SolverErrorNote.vue",
-    animation: "note-fade-in",
-    count: 1,
-    reason: "the PRM arm of the same note — opacity only, no transform; absent at idle",
-  },
+  // T6 marks 14/15 RETIRED four rows / five sites here, and the retirement is the point of
+  // the vocabulary (assets/index.css §THE MOTION VOCABULARY): every verb in it fills
+  // `backwards`, never `forwards`/`both`. `note-write-in` ×2 (MarginNote) and
+  // `vignette-write-in` ×1 folded into ONE `ink-write-in` whose end state
+  // (`clip-path: inset(0 0 0 0)`) renders identically to the cascade's `none` — the fill was
+  // never load-bearing, only the wipe's opening was. `note-slide-in` + its PRM twin
+  // `note-fade-in` (SolverErrorNote) became `note-in`, and the BANKED RESIDUE that row
+  // carried — a retained `translateY(0)` matrix — is banked no longer.
   {
     file: "src/pencil/celestial/DarkModeToggle.vue",
     animation: "toggle-squash",

@@ -1,100 +1,50 @@
 <script setup lang="ts">
 /**
- * The gold-star garnish + the union's foil-gleam tail (design-refinement.md §4.3,
- * design-union.md §4.3). A tiny hand-drawn star draws on at beat-2's crest (~t=2.65→3.0s,
- * inside the ≤3.2s cap) on the shared scheduler's `sequence` kind — then a single 400ms
- * specular sweep crosses it (a CSS `mask-position` animation: compositor-cheap, zero raster
- * ticks, zero backdrop sampling). Fiction: gold-star stickers are foil; foil gleams once when
- * the light catches it.
+ * The gold star — ONE component, TWO instances (T6 mark 14).
  *
- * OD-1 default executes: the foil-gleam SHIPS unconditionally (it is severable by design —
- * delete the `.gleam` element to drop it — but it is not gated behind anything here).
- * PRM: the star appears instantly drawn; no gleam ever fires.
+ *  · the STICKER (default): the foil star pressed into the completion vignette's slot,
+ *    landing at the crest with `sticker-pop`.
+ *  · the BLOOM (`bloom`): an overlay inside `.board-wrapper` that grows a small star to
+ *    the whole board — the storybook read the mark asks for — flashes its OUTLINE ALONE,
+ *    then dissolves and hands the moment to the sticker and the heart.
+ *
+ * The bloom's layout box rests at the FINAL board size and only ever scales DOWN to it
+ * (0.06 → 1.06), the estate's raster rule: no cached raster upsamples. It carries NO
+ * filter, so the census is untouched.
+ *
+ * The union's foil-gleam is DELETED. It was a full-slot gold plate sweeping a mask —
+ * the rectangle flash the owner marked. What replaces it is a twin of the star's own
+ * path, `fill: none`, animating opacity: the flash is literally just the outline.
+ *
+ * Motion is the CSS vocabulary (assets/index.css) with CELEBRATION's numbers bound in —
+ * zero subscribers, zero timers, no dashoffset dance.
+ * PRM / a remount while solved: `is-settled` — the sticker is simply there, the bloom
+ * never mounts a second time.
  */
-import { nextTick, ref, watch, onUnmounted } from "vue";
-import {
-  createSequenceSubscription,
-  easeOutCubic,
-  usePrefersReducedMotion,
-  type SequenceHandle,
-} from "@mkbabb/pencil-boil";
+import { ref, watch } from "vue";
+import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
 import { CELEBRATION, MASCOT_COLORS } from "@pencil/config/pencilConfig";
 
 // T3-W10 celestial rewire (F8 §2.2): the star's gold is the celestial family's —
 // sparkle fill + rays stroke from MASCOT_COLORS, not duplicated hexes. Values unchanged.
 const GOLD = MASCOT_COLORS.celestial.sun;
 
-const props = defineProps<{ active: boolean }>();
+const props = defineProps<{ active: boolean; bloom?: boolean }>();
 
-// Stable template ref (task-4 discipline): the draw-on dashoffset is written imperatively to
-// `.style`, never bound, so a re-render can't revert a completed reset.
-const starPathRef = ref<SVGPathElement | null>(null);
 const visible = ref(false);
-const gleaming = ref(false);
+const settled = ref(false);
 const reducedMotion = usePrefersReducedMotion();
 
-let drawSeq: SequenceHandle | null = null;
-let gleamTimer: ReturnType<typeof setTimeout> | null = null;
+const bloomDelay = `${CELEBRATION.starBloomStartMs}ms`;
+const bloomDur = `${CELEBRATION.starBloomMs}ms`;
+const crestDelay = `${CELEBRATION.starCrestMs}ms`;
+const flashDur = `${CELEBRATION.starFlashMs}ms`;
+const fadeDur = `${CELEBRATION.starFadeMs}ms`;
+const landDur = `${CELEBRATION.starLandMs}ms`;
 
 // A slightly wonky hand-drawn 5-point star (viewBox 0 0 48 48), open at Z for a crayon feel.
 const STAR_D =
   "M23.5,4.2 L28.9,17.3 L43.2,18.1 L31.4,26.6 L36,40.4 L24.2,31.7 L12,40 L16.6,26.3 L4.8,17.6 L19.1,17.7 Z";
-
-function reset() {
-  if (drawSeq) {
-    drawSeq.stop();
-    drawSeq = null;
-  }
-  if (gleamTimer) {
-    clearTimeout(gleamTimer);
-    gleamTimer = null;
-  }
-  gleaming.value = false;
-  visible.value = false;
-}
-
-async function play(settled = false) {
-  reset();
-  visible.value = true;
-  // The <path> mounts on Vue's next flush; a same-tick ref read is null on
-  // every first activation, silently skipping the draw-in + gleam.
-  await nextTick();
-  const el = starPathRef.value;
-  if (!el) return;
-
-  // Settled activation (T3-W12 §1 P5): `active` was already true when this component
-  // mounted — a remount while solved (state-derived `celebrating`), not a fresh crest.
-  // The sticker is simply THERE, fully drawn: no crest-delayed redraw, no second gleam.
-  if (settled || reducedMotion.value) {
-    el.style.strokeDasharray = "none";
-    el.style.strokeDashoffset = "0";
-    return; // no gleam under PRM / on a settled remount
-  }
-
-  const len = el.getTotalLength();
-  el.style.strokeDasharray = String(len);
-  el.style.strokeDashoffset = String(len);
-
-  drawSeq = createSequenceSubscription({
-    durationMs: CELEBRATION.starDrawInMs,
-    delayMs: CELEBRATION.starCrestMs,
-    easing: easeOutCubic,
-    onProgress: (eased) => {
-      el.style.strokeDashoffset = String(len * (1 - eased));
-    },
-    onComplete: () => {
-      el.style.strokeDasharray = "none";
-      el.style.strokeDashoffset = "0";
-      // Union foil-gleam tail — one sweep, then it goes quiet (a moment, not a state).
-      gleaming.value = true;
-      gleamTimer = setTimeout(() => {
-        gleaming.value = false;
-        gleamTimer = null;
-      }, CELEBRATION.gleamMs + 80);
-    },
-  });
-  drawSeq.start();
-}
 
 // `immediate` + the `prev === undefined` probe: a component that MOUNTS with
 // active=true (remount while solved) settles instantly; a live false→true flip
@@ -102,45 +52,66 @@ async function play(settled = false) {
 watch(
   () => props.active,
   (a, prev) => {
-    if (a) play(prev === undefined);
-    else reset();
+    settled.value = prev === undefined || reducedMotion.value;
+    // The bloom is a MOMENT, and a settled activation has no moment left to play — it
+    // never mounts at all. The sticker mounts either way; `is-settled` stills it.
+    visible.value = a && !(props.bloom && settled.value);
   },
   { immediate: true },
 );
 
-onUnmounted(reset);
+// The bloom is a MOMENT: it leaves the DOM when its dissolve ends. Global keyframe
+// names are unhashed, so the name is the whole test.
+function onEnd(e: AnimationEvent) {
+  if (props.bloom && e.animationName.startsWith("bloom-out")) visible.value = false;
+}
 </script>
 
 <template>
-  <div v-if="visible" class="celebration-star" aria-hidden="true">
+  <div
+    v-if="visible"
+    class="celebration-star"
+    :class="{ 'is-bloom': bloom, 'is-settled': settled }"
+    aria-hidden="true"
+    @animationend="onEnd"
+  >
     <svg class="star-svg" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
       <path
-        ref="starPathRef"
         :d="STAR_D"
         :fill="GOLD.sparkle"
-        fill-opacity="0.9"
+        :fill-opacity="bloom ? 0.22 : 0.9"
         :stroke="GOLD.rays"
         stroke-width="2.4"
         stroke-linecap="round"
         stroke-linejoin="round"
-        filter="url(#grain-static)"
+        :filter="bloom ? undefined : 'url(#grain-static)'"
+      />
+      <!-- The flash: the star's own outline, nothing else. Opacity only — no fill, no
+           plate, no mask sweep; the compositor never touches a pixel it did not own. -->
+      <path
+        v-if="bloom"
+        class="star-flash"
+        :d="STAR_D"
+        fill="none"
+        :stroke="GOLD.rays"
+        stroke-width="2.4"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       />
     </svg>
-    <div class="gleam" :class="{ play: gleaming }"></div>
   </div>
 </template>
 
 <style scoped>
-/* T3-W9 §2: the star is a foil sticker pressed into the completion block's slot —
-   in flow beside the verdict (the slot owns the 3.25rem square), no overlay anchor,
-   no z-index. Collision with the margin text impossible by construction. `relative`
-   with zero offsets is the in-flow ("static") placement the hoist asks for, kept
-   positioned only so the gleam's `inset: 0` keeps anchoring to the star itself. */
+/* T3-W9 §2: the sticker is a foil star pressed into the completion block's slot —
+   in flow beside the verdict (the slot owns the square), no overlay anchor, no
+   z-index. Collision with the margin text impossible by construction. */
 .celebration-star {
   position: relative;
   width: 100%;
   height: 100%;
   pointer-events: none;
+  animation: sticker-pop v-bind(landDur) linear v-bind(crestDelay) backwards;
 }
 
 .star-svg {
@@ -149,60 +120,25 @@ onUnmounted(reset);
   overflow: visible;
 }
 
-/* Foil-gleam: a diagonal specular band masked over a gold plate, swept once via
-   mask-position — a compositor transform, no repaint, no raster tick. */
-.gleam {
+/* The bloom fills the board square it is mounted in and never travels: absolute,
+   inset 0, above the cells and the heart, inert. `bloom-out` opens exactly where
+   `bloom-in` closes (2050+600 = the crest), so the two read as one gesture. */
+.celebration-star.is-bloom {
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, #fde68a, #fffdf0 55%, #fde68a);
-  -webkit-mask-image: linear-gradient(
-    105deg,
-    transparent 40%,
-    hsl(0 0% 100% / 0.85) 50%,
-    transparent 60%
-  );
-  mask-image: linear-gradient(
-    105deg,
-    transparent 40%,
-    hsl(0 0% 100% / 0.85) 50%,
-    transparent 60%
-  );
-  -webkit-mask-size: 260% 100%;
-  mask-size: 260% 100%;
-  -webkit-mask-position: 160% 0;
-  mask-position: 160% 0;
-  mix-blend-mode: screen;
+  z-index: 4;
+  animation:
+    bloom-in v-bind(bloomDur) linear v-bind(bloomDelay) backwards,
+    bloom-out v-bind(fadeDur) linear v-bind(crestDelay);
+}
+
+.star-flash {
   opacity: 0;
-  pointer-events: none;
+  animation: outline-flash v-bind(flashDur) linear v-bind(crestDelay) backwards;
 }
 
-.gleam.play {
-  animation: gleam-sweep 400ms linear 1;
-}
-
-@keyframes gleam-sweep {
-  0% {
-    -webkit-mask-position: 160% 0;
-    mask-position: 160% 0;
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  85% {
-    opacity: 1;
-  }
-  100% {
-    -webkit-mask-position: -160% 0;
-    mask-position: -160% 0;
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gleam.play {
-    animation: none;
-    opacity: 0;
-  }
+/* Settled (a remount while solved) or PRM: the reward is simply THERE, unmoving. */
+.celebration-star.is-settled {
+  animation: none;
 }
 </style>

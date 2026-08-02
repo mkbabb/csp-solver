@@ -16,6 +16,7 @@
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from "vue";
 import HandDrawnGrid from "@pencil/grid/HandDrawnGrid/HandDrawnGrid.vue";
 import CelebrationHeart from "@pencil/chrome/CelebrationHeart.vue";
+import CelebrationStar from "@pencil/chrome/CelebrationStar.vue";
 import CompletionVignette from "@pencil/chrome/CompletionVignette.vue";
 import MarginNote from "@pencil/chrome/MarginNote.vue";
 import SolverErrorNote from "@games/shared/SolverErrorNote.vue";
@@ -789,6 +790,12 @@ function isRevealed(pos: number): boolean {
 
       <!-- Overlay furniture (Futoshiki's caret layer over the cells); empty for Sudoku. -->
       <slot name="overlay" />
+
+      <!-- The star BLOOMS over the whole board (T6 mark 14) — small at 2.05s, grown to
+         the square by the crest, outline flashed, gone by 3.19s. Absolute inside the
+         wrapper, so the page never moves for it; unfiltered, so the census never sees
+         it. The corner sticker is the same component's other instance, in the vignette. -->
+      <CelebrationStar :active="celebrating" bloom />
 
       <!-- The felt heart (T3-W9, F2-C/F7 §3.2) — the Heart Fruit crests the board's
          bottom-right corner at the star's moment, diagonal opposite of the margin
