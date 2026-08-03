@@ -33,6 +33,7 @@
     "lint:lanes": "node scripts/check-lane-membership.mjs --self-test",
     "lint:sleep": "node scripts/check-sleep-lint.mjs --self-test",
     "lint:motion": "node scripts/check-motion-contract.mjs --self-test",
+    "lint:copy": "node scripts/check-copy-register.mjs --self-test",
     "lint:tdz": "node scripts/tdz-probe.mjs --self-test",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
@@ -65,7 +66,7 @@
     "unique-names-generator": "^4.7.1",
     "vue": "^3.5.39"
   },
-  "//devDependencies": "esbuild is listed DIRECTLY with no direct import, and that is the answer to T7-W6's dead-dependency row rather than an oversight: vite and wrangler each depend on it, and npm dedupes them to ONE copy only while the range they both resolve to is pinned here (`npm ls esbuild` — 0.28.1, deduped under vite 8 and wrangler 4). Unpinned, wrangler's exact-version dependency splits the tree into two installs of a multi-megabyte platform binary and lets the build and the deploy disagree about the same syntax. Knip sees no importer for it by design; the pin is the consumer.",
+  "//devDependencies": "esbuild is listed DIRECTLY with no direct import, and that is the answer to T7-W6's dead-dependency row rather than an oversight: vite and wrangler each depend on it, and npm dedupes them to ONE copy only while the range they both resolve to is pinned here (`npm ls esbuild` \u2014 0.28.1, deduped under vite 8 and wrangler 4). Unpinned, wrangler's exact-version dependency splits the tree into two installs of a multi-megabyte platform binary and lets the build and the deploy disagree about the same syntax. Knip sees no importer for it by design; the pin is the consumer.",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",

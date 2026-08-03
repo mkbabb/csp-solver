@@ -39,7 +39,6 @@ export const futoshikiSpec = defineGame<ReturnType<typeof useFutoshiki>, Inequal
     // for medium", and its grid label carries no difficulty word (the two co-vary).
     requestVoice: false,
     // No idle grade whisper: the carets are the board's own running commentary.
-    gradeHint: false,
   },
   clues: {
     // The live clue, off the model — the seam names the field a generic shell cannot guess.

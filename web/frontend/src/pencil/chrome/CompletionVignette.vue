@@ -38,7 +38,7 @@ withDefaults(
     active: boolean;
     /** The verdict line, verbatim from the margin voice ("solved it!"). */
     text: string;
-    /** The one-line tally ("0 backtracks — 1ms"), preformatted upstream. */
+    /** The one-line tally ("0 backtracks · 1ms"), preformatted upstream. */
     meta?: string;
     /** Force the corner-press rung regardless of viewport — the drawer's hook (§6). */
     docked?: boolean;

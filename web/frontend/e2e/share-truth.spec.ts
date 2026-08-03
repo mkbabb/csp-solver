@@ -87,7 +87,9 @@ test('sudoku share failure: "couldn\'t copy" signal, link still live in the addr
 
   await share.click();
 
-  const failMsg = "couldn't copy — link is in the address bar";
+  // T8-W6 M16 — the em dash that joined the two clauses is banned in product copy; the
+  // failure now says both as sentences.
+  const failMsg = "couldn't copy. the link is in the address bar";
   await expect(share).toHaveAttribute('aria-label', failMsg);
   await expect(share.locator('.washi-label')).toHaveText(failMsg);
   // The clean break's guarantee: the shared link is NOT lost — it's in the address bar.
@@ -110,7 +112,9 @@ test('futoshiki share failure: the same "couldn\'t copy" signal (twin)', async (
 
   await share.click();
 
-  const failMsg = "couldn't copy — link is in the address bar";
+  // T8-W6 M16 — the em dash that joined the two clauses is banned in product copy; the
+  // failure now says both as sentences.
+  const failMsg = "couldn't copy. the link is in the address bar";
   await expect(share).toHaveAttribute('aria-label', failMsg);
   await expect(share.locator('.washi-label')).toHaveText(failMsg);
   expect(new URL(page.url()).searchParams.has('board')).toBe(true);

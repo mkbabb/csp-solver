@@ -13,7 +13,7 @@
  * selection/hover model, accessible-name derivation) has lived in `useGameCell` since
  * T4-W11; this file is the one template that composable was always addressing.
  */
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
 import { useGameCell } from "@games/shared/useGameCell";
 import type { PencilMode } from "@games/shared/useUserMarks";
@@ -118,6 +118,38 @@ const {
   }),
 });
 
+// ── T8-W6 · A FINISHED REVEAL GOES INERT (root cure for W2-B's M7b storm) ────────────────
+// `isRevealed` is `animatingCells.has(pos)`, and that set is never emptied when the wave ends
+// — it is cleared by the NEXT act (a deal, a clear, a restore). So `.cell-reveal-animated` sat
+// on every revealed cell indefinitely, ARMED: a CSS animation replays whenever its element is
+// removed and re-inserted, so any DOM move of the board re-fired one 0.3s scale-from-zero per
+// cell. B cured the move that exposed it (the fold's 61-animation storm); the standing arm is
+// why the next move would have found it again.
+//
+// The class is a function of the REVEAL, not of the set: it lives from the moment a cell is
+// named to `animationend`, and not one frame longer. The store is untouched (`animatingCells`
+// still feeds `celebrating` and the solver-ink tone), and `HandwrittenGlyph` still receives the
+// raw `isRevealed` prop for its own draw-in — only the cell's own CSS arm expires.
+//
+// PRM is spent at the door rather than waited on: the reduced-motion block sets
+// `animation: none !important` on this class, so `animationend` never fires there and an
+// arm-until-end rule would be an arm-forever rule for exactly the readers least served by it.
+// No animation, no arm, and no replay to cure.
+const reducedMotion =
+  typeof window !== "undefined" &&
+  !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const revealSpent = ref(reducedMotion);
+watch(
+  () => props.isRevealed,
+  (on) => {
+    if (on) revealSpent.value = reducedMotion; // a NEW reveal re-arms
+  },
+);
+const revealArmed = computed(() => props.isRevealed && !revealSpent.value);
+function onRevealEnd(e: AnimationEvent) {
+  if (e.animationName === "cell-reveal") revealSpent.value = true;
+}
+
 // T4-W10 idiom (§:ref) — `position` is exposed alongside `focus` so the board's STABLE
 // `setCellApi` bound handler keys the cellApi registry off the instance (el.position) instead
 // of a per-render inline closure that captured the loop index. Position is invariant per
@@ -131,7 +163,7 @@ defineExpose({ focus: focusInput, position: props.position });
     :class="[
       familyClass,
       {
-        'cell-reveal-animated': isRevealed,
+        'cell-reveal-animated': revealArmed,
         'is-active': isActive,
         'is-invalid': isInvalid,
         'is-because': isBecause,
@@ -140,7 +172,8 @@ defineExpose({ focus: focusInput, position: props.position });
     role="gridcell"
     :aria-rowindex="rowIndex"
     :aria-colindex="colIndex"
-    :style="isRevealed ? { '--reveal-delay': `${noiseDelay}ms` } : undefined"
+    :style="revealArmed ? { '--reveal-delay': `${noiseDelay}ms` } : undefined"
+    @animationend="onRevealEnd"
     @click="onCellClick"
     @pointerdown="onCellPointerDown"
     @pointermove="longPress.onPointerMove"

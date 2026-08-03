@@ -17,7 +17,7 @@ export function tierSource(n: number, difficulty: TierKey): TierSource {
   const row = TIER_SOURCE[n]
   if (!row)
     throw new Error(
-      'sudoku: no tier is declared for size ' + n + ' — the TIERS table in vite.config.ts ' +
+      'sudoku: no tier is declared for size ' + n + '. the TIERS table in vite.config.ts ' +
         'names ' + Object.keys(TIER_SOURCE).join(', ') + '. A size the picker offers must be declared.',
     )
   return row[difficulty]

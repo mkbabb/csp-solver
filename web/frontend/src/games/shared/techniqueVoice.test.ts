@@ -1,90 +1,67 @@
 import { describe, it, expect } from "vitest";
-import {
-  formatHintNote,
-  formatGradeSignature,
-  describeTally,
-  TALLY_TOTAL,
-} from "./techniqueVoice";
+import { formatHintNote, describeTally, TALLY_TOTAL } from "./techniqueVoice";
+import { TECHNIQUE_TIER, type TechniqueId } from "./techniqueEngine";
 
-// The technique layer's marginalia voice (T4-W7, lane E3) — the named-hint copy and the honest
-// grade signature. Pure string formatting over the engine's own vocabulary; the display char is
-// handed in (glyph-agnostic), so these units never touch the glyph registry.
+// The technique layer's marginalia voice (T4-W7, lane E3) — the named-hint copy, and the tally
+// descriptor beside it. Pure string formatting; the display char is handed in (glyph-agnostic),
+// so these units never touch the glyph registry.
+//
+// T8-W6 · M16 — THE ROWS ARE INVERTED, BECAUSE THE DEFECT IS NOW THE STRING COMING BACK.
+// `formatGradeSignature` and `TECHNIQUE_NAME` published nine solver proper names to the board
+// caption and the tally's a11y label; the owner's mark abrogates that register outright. So the
+// assertions that used to pin those names in place now pin their ABSENCE, over every id the
+// engine can emit rather than over a hand-picked few — the enumeration is what makes the
+// absence a claim about the vocabulary instead of about three examples.
 
-describe("formatHintNote — the named-hint margin copy", () => {
-  it("naked single points at the cell: 'only V fits here'", () => {
-    expect(formatHintNote("naked-single", "4")).toBe("naked single — only 4 fits here");
+/** Every technique the engine can name — the enumeration the absence rows sweep. */
+const EVERY_TECHNIQUE = Object.keys(TECHNIQUE_TIER) as TechniqueId[];
+
+/** The solver's own words, as a reader would meet them. */
+const JARGON = /naked|hidden single|x-wing|swordfish|pointing|box-line|forcing|chain/i;
+/** The banned character, in both its widths, plus the spaced hyphen that poses as one. */
+const DASHY = /[—–]| - /;
+
+describe("formatHintNote — what to write, in the reader's words", () => {
+  it("a lone candidate says only that, with no technique named", () => {
+    expect(formatHintNote("naked-single", "4")).toBe("only 4 fits here");
   });
 
-  it("hidden single names the house the argument turns on", () => {
+  it("a value with one home names the house, and nothing about the deduction's class", () => {
     expect(formatHintNote("hidden-single", "7", "box")).toBe(
-      "hidden single — 7 goes nowhere else in this box",
+      "7 goes nowhere else in this box",
     );
     expect(formatHintNote("hidden-single", "3", "row")).toBe(
-      "hidden single — 3 goes nowhere else in this row",
+      "3 goes nowhere else in this row",
     );
     expect(formatHintNote("hidden-single", "5", "col")).toBe(
-      "hidden single — 5 goes nowhere else in this column",
+      "5 goes nowhere else in this column",
     );
   });
 
   it("takes the display char verbatim (16×16 hex rides through unchanged)", () => {
-    expect(formatHintNote("naked-single", "G")).toBe("naked single — only G fits here");
+    expect(formatHintNote("naked-single", "G")).toBe("only G fits here");
   });
 
-  it("the unnameable fallback is honest about revealing, not reasoning", () => {
-    expect(formatHintNote("reveal", "2")).toBe("no simple step here — the answer is 2");
-  });
-});
-
-describe("formatGradeSignature — the honest difficulty signature", () => {
-  // T5-W4 pass 6 (dt-name) — THE ROW THAT PINNED THE DEFECT, INVERTED. It used to assert that
-  // "both single rungs collapse to it", which is precisely the collapse pass 5 measured as the
-  // whole of F3-G3: two different techniques arriving at one sentence, on the only surface that
-  // prints the difficulty. The signature names the step now, so the row asserts they are TOLD
-  // APART — and it is written as an inequality as well as two equalities, because the equalities
-  // alone would still pass if both strings changed to the same new word.
-  it("the two single rungs are NAMED, and named apart", () => {
-    expect(formatGradeSignature("naked-single", true)).toBe("naked single");
-    expect(formatGradeSignature("hidden-single", true)).toBe("hidden single");
-    expect(formatGradeSignature("naked-single", true)).not.toBe(
-      formatGradeSignature("hidden-single", true),
-    );
+  it("the fallback gives the answer and says nothing about its own reasoning", () => {
+    expect(formatHintNote("reveal", "2")).toBe("the answer is 2");
   });
 
-  // Every rung is the bare name out of `TECHNIQUE_NAME`, which is the control on the cure:
-  // one vocabulary and no second table, or the cure moved more voice than it was licensed to.
-  // The article map that used to frame these is gone with the bucket — the enclosing sentence
-  // ("a fresh 9×9 — ", "difficulty — ") is the frame, so no phrase needs one of its own.
-  it("every other rung is the bare name out of the one vocabulary", () => {
-    expect(formatGradeSignature("naked-pair", true)).toBe("naked pair");
-    expect(formatGradeSignature("naked-triple", true)).toBe("naked triple");
-    expect(formatGradeSignature("box-line", true)).toBe("box-line");
-  });
-
-  it("names the hardest technique for graded intermediate/advanced boards", () => {
-    expect(formatGradeSignature("naked-pair", true)).toBe("naked pair");
-    expect(formatGradeSignature("pointing", true)).toBe("pointing");
-    expect(formatGradeSignature("x-wing", true)).toBe("X-wing");
-    expect(formatGradeSignature("inequality-forcing", true)).toBe("inequality forcing");
-    expect(formatGradeSignature("inequality-chain", true)).toBe("inequality chain");
-  });
-
-  it("a board the R1–R3 ladder could not finish is 'too hard to grade' (never under-reported)", () => {
-    // hardest reached is only a single, but the ladder stalled — the true difficulty is above it.
-    expect(formatGradeSignature("hidden-single", false)).toBe("too hard to grade");
-    expect(formatGradeSignature(null, false)).toBe("too hard to grade");
-  });
-
-  it("no signature (empty string) for a graded board that needed no step — falls back to the request voice", () => {
-    expect(formatGradeSignature(null, true)).toBe("");
+  // The purge, asserted rather than remembered: every hint the engine can produce, over both
+  // house axes and the unnameable arm, carrying neither the vocabulary nor the character.
+  it("no hint carries solver jargon or an em dash, over every arm the engine emits", () => {
+    const notes = [
+      formatHintNote("reveal", "9"),
+      ...(["row", "col", "box", undefined] as const).map((axis) =>
+        formatHintNote("hidden-single", "6", axis),
+      ),
+      formatHintNote("naked-single", "1"),
+    ];
+    for (const note of notes) {
+      expect(note).not.toMatch(JARGON);
+      expect(note).not.toMatch(DASHY);
+    }
   });
 });
-
-// `formatTechniqueName` is retired with `TallyDescriptor.name`/`.expand` (pass 6, dt-name):
-// it was the accessor for a field with no renderer, and its vocabulary is now read directly by
-// the one surface that names a technique. The rows that pinned its output live on above, in
-// `formatGradeSignature` — every proper name it published is still asserted, inside the
-// sentence that actually reaches a reader.
 
 describe("describeTally — the honesty spine, in one derivation", () => {
   it("gates the whole display on graded: an ungraded board inks NOTHING (no fabricated tier)", () => {
@@ -92,20 +69,18 @@ describe("describeTally — the honesty spine, in one derivation", () => {
     expect(d.graded).toBe(false);
     expect(d.filled).toBe(0);
     expect(d.total).toBe(TALLY_TOTAL);
-    // Even with a technique argument present, ungraded refuses to render it.
-    expect(d.ariaLabel).not.toMatch(/x-wing/i);
+    expect(d.ariaLabel).toBe("difficulty not graded yet");
   });
 
-  it("singles board: 1 inked stroke, and the a11y label NAMES the step", () => {
-    // The label is the tally's only voice, and until pass 6 it spoke the bucket: this exact
-    // string read "difficulty — singles only (1 of 5)" for naked-single and hidden-single
-    // alike. The count is still magnitude; the name is now the precise claim it always said
-    // it was.
+  it("singles board: 1 inked stroke, and the label is the COUNT — never the step", () => {
+    // Until T8-W6 this exact string read "difficulty — hidden single (1 of 5)". The magnitude
+    // is unchanged and the proper name is gone; the two single rungs read alike now, which is
+    // the point rather than a regression — a reader was never owed the distinction.
     const d = describeTally(true, "hidden-single", true);
     expect(d.filled).toBe(1);
-    expect(d.ariaLabel).toBe("difficulty — hidden single (1 of 5)");
+    expect(d.ariaLabel).toBe("difficulty 1 of 5");
     expect(describeTally(true, "naked-single", true).ariaLabel).toBe(
-      "difficulty — naked single (1 of 5)",
+      "difficulty 1 of 5",
     );
   });
 
@@ -115,26 +90,47 @@ describe("describeTally — the honesty spine, in one derivation", () => {
     expect(describeTally(true, "inequality-forcing", true).filled).toBe(2);
   });
 
-  it("X-wing board: 3 inked strokes, and the label is unmoved", () => {
+  it("X-wing board: 3 inked strokes", () => {
     const d = describeTally(true, "x-wing", true);
     expect(d.filled).toBe(3);
-    expect(d.ariaLabel).toBe("difficulty — X-wing (3 of 5)");
+    expect(d.ariaLabel).toBe("difficulty 3 of 5");
   });
 
   it("inequality-chain (futoshiki tier 3) also inks 3", () => {
     expect(describeTally(true, "inequality-chain", true).filled).toBe(3);
   });
 
-  it("a board the ladder could not finish inks the top stroke and names the honest ceiling — never a fabricated tier 4", () => {
+  it("a board the ladder could not finish inks the top stroke — never a fabricated tier 4", () => {
     const d = describeTally(true, "hidden-single", false);
     expect(d.filled).toBe(TALLY_TOTAL);
-    expect(d.ariaLabel).toBe("difficulty — too hard to grade (5 of 5)");
+    expect(d.ariaLabel).toBe("difficulty 5 of 5");
   });
 
   it("a graded board that needed no step inks nothing but stays graded (no fake tier)", () => {
     const d = describeTally(true, null, true);
     expect(d.graded).toBe(true);
     expect(d.filled).toBe(0);
-    expect(d.ariaLabel).toBe("difficulty — no steps needed");
+    expect(d.ariaLabel).toBe("difficulty 0 of 5");
+  });
+
+  // The absence, swept over the whole vocabulary and every gating arm — nine techniques × the
+  // graded/stalled/ungraded branches, plus the two step-free arms. This is the row that reds if
+  // any name finds its way back into the one label the tally speaks.
+  it("no label, on any branch, carries solver jargon or an em dash", () => {
+    const labels = [
+      describeTally(false, null, false).ariaLabel,
+      describeTally(true, null, true).ariaLabel,
+      ...EVERY_TECHNIQUE.flatMap((t) => [
+        describeTally(true, t, true).ariaLabel,
+        describeTally(true, t, false).ariaLabel,
+        describeTally(false, t, true).ariaLabel,
+      ]),
+    ];
+    expect(labels.length).toBe(2 + EVERY_TECHNIQUE.length * 3);
+    for (const label of labels) {
+      expect(label).not.toMatch(JARGON);
+      expect(label).not.toMatch(DASHY);
+      expect(label).toMatch(/^difficulty (not graded yet|\d of \d)$/);
+    }
   });
 });

@@ -64,7 +64,6 @@ export interface GameModel {
   linkError: ReadRef<boolean>;
   isDirty: ReadRef<boolean>;
   hintReasoning: ReadRef<HintResult | null>;
-  gradeSignature: ReadRef<string>;
   gradeTally: ReadRef<TallyDescriptor>;
   pencilMarks: ReadRef<Record<string, number[]>>;
   cornerMarks: ReadRef<Record<string, number[]>>;
@@ -99,7 +98,7 @@ export interface GameModel {
 
 /**
  * The two grid families, and the three render facts that correlate with them but are not
- * them. One flat record, never a tagged union: `noun`/`requestVoice`/`gradeHint` are
+ * them. One flat record, never a tagged union: `noun`/`requestVoice` are
  * RENDERED STRINGS, and folding a render difference into a geometry name smuggles a real
  * divergence behind a rename.
  *
@@ -112,8 +111,6 @@ interface BoardGrammar {
   noun: string;
   /** does the fresh-board margin carry the "— medium" difficulty clause? */
   requestVoice: boolean;
-  /** does the board whisper the UI-13 idle grade hint? */
-  gradeHint: boolean;
 }
 
 /**

@@ -191,13 +191,20 @@ test('stale-note: teacher-red and gold-star notes clear on the next edit', async
   await setCellValue(page, b2, '9');
   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
 
+  // T8-W6 M16 — the verdict lost its softener AND the em dash that joined it: it read
+  // 'not quite — check row 3' and now reads 'check row 3' (or 'no solution from here' where
+  // the grader cannot point at one). The row matches the sentence that survived, and asserts
+  // the deleted half cannot come back with it.
   const note = page.locator('.margin-note');
   await expect(note).toHaveClass(/teacher-red/, { timeout: 15000 });
-  await expect(note).toContainText(/not quite/, { timeout: 15000 });
+  await expect(note).toContainText(/check row|no solution from here/, { timeout: 15000 });
+  await expect(note).not.toContainText(/not quite|[—–]/);
 
   // The next edit reverts the grade to idle — the red note goes stale and clears.
   await setCellValue(page, b2, '');
-  await expect(note).not.toContainText(/not quite/, { timeout: 5000 });
+  await expect(note).not.toContainText(/check row|no solution from here/, {
+    timeout: 5000,
+  });
   await expect(note).not.toHaveClass(/teacher-red/, { timeout: 5000 });
 
   // Gold-star path (verify-14's widening): solve to success, then edit — the
@@ -215,7 +222,7 @@ test('stale-note: teacher-red and gold-star notes clear on the next edit', async
 // MarginNote's `meta` line (`.margin-note-meta`, outside the live region) inside
 // the completion block. Same lifecycle, new DOM truth.
 
-test('tally: solve writes "N backtracks — Xms" in the note meta; the next edit clears it', async ({
+test('tally: solve writes "N backtracks · Xms" in the note meta; the next edit clears it', async ({
   page,
 }) => {
   // T6 mark 16 — the tally is DEBUG ink now, so this row seeds the flag before the load
@@ -229,7 +236,8 @@ test('tally: solve writes "N backtracks — Xms" in the note meta; the next edit
 
   const stat = page.locator('.margin-note-meta');
   await expect(stat).toBeVisible({ timeout: 20000 });
-  await expect(stat).toHaveText(/^\d+ backtracks?( — (\d+ms|\d+\.\d+s))?$/);
+  // T8-W6 M16 — the join is the estate's middle dot; the em dash is banned in product copy.
+  await expect(stat).toHaveText(/^\d+ backtracks?( · (\d+ms|\d+\.\d+s))?$/);
 
   // The tally goes stale with the grade.
   const blank = await page.evaluate(() => {
@@ -368,16 +376,23 @@ test('permalink: share writes ?board= and a reload reproduces the exact board', 
 // the margin and lights its becauseCells in the peek-laminate tone; only the SECOND H inks
 // the digit through the existing reveal draw-in (born-RED: one press revealed, no name).
 
-test('hint: first H names the technique + highlights, second H inks the digit', async ({ page }) => {
+test('hint: first H gives the reasoning + highlights, second H inks the digit', async ({ page }) => {
   await loadSudoku(page);
   const blank = await firstBlank(page, '.sudoku-cell');
 
   await cellInput(page, blank).click();
 
-  // First press — reasoning, not the answer: the margin NAMES the cheapest single and the
+  // First press — reasoning, not the answer: the margin says WHY the digit belongs and the
   // becauseCells light up. No digit inks yet (the two-press semantics).
+  //
+  // T8-W6 M16 — the note no longer NAMES the technique ('naked single — only 4 fits here'
+  // became 'only 4 fits here'), so the row matches the surviving sentence and asserts the
+  // solver's vocabulary and the banned character cannot return with it.
   await page.keyboard.press('h');
-  await expect(page.locator('.margin-note')).toContainText('single');
+  await expect(page.locator('.margin-note')).toContainText(
+    /fits here|goes nowhere else|the answer is/,
+  );
+  await expect(page.locator('.margin-note')).not.toContainText(/naked|hidden single|[—–]/);
   await expect(page.locator('.sudoku-cell.is-because').first()).toBeVisible();
 
   // Second press — the digit inks in through the reveal draw-in: one more solver-ink glyph.

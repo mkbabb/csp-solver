@@ -70,7 +70,6 @@ import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
 type DrawerPhase = "idle" | "closing" | "opening";
 
 const STORAGE_KEY = "csp-drawer-open";
-const HINT_KEY = "csp-drawer-hint-spoken";
 /** Band-D one-shot — the movers' shared WAAPI clock (scene.css arms no transitions).
  *  520ms: the glass settle wants a touch more breath than the dead spring's 480
  *  (auditioned 480/520/560 by eye at :3001 — the S3′ retune, within Band D). */
@@ -418,20 +417,6 @@ export const vignetteDocked = computed(() => drawerOpen.value && !wideMargin.val
 export const vignetteHasTally = computed(
   () => marginVignette.value && !vignetteDocked.value,
 );
-
-/** The margin voice hints once, ever, on the first real close ("the controls are
- *  under the board"). Boards call this on the open→closed edge; a false return means
- *  stay quiet (already spoken, or storage denied — never risk a repeating hint). */
-export function consumeDrawerHint(): boolean {
-  if (!hasDom) return false;
-  try {
-    if (window.localStorage.getItem(HINT_KEY)) return false;
-    window.localStorage.setItem(HINT_KEY, "1");
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 export function useControlsDrawer() {
   return {

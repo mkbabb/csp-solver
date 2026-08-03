@@ -38,7 +38,6 @@ describe("Killer's GameSpec (T5-W2 F2 — the migrated contract)", () => {
     expect(killerSpec.grammar.geometry).toBe("boxed");
     expect(killerSpec.grammar.noun).toBe("killer board");
     expect(killerSpec.grammar.requestVoice).toBe(true);
-    expect(killerSpec.grammar.gradeHint).toBe(true);
     expect(killerSpec.furniture.cell).toBeTruthy();
     expect(typeof killerSpec.solver.nodeBudget).toBe("function");
     // `solver` is back to the charter's `{ nodeBudget }`: F1's `prewarm` amendment

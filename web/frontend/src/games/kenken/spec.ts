@@ -11,9 +11,9 @@
  * KenKen IS a Latin family, and the grammar says so as DATA rather than by copying a board:
  * `geometry: "latin"` picks the BOXLESS grid (`subgridSize = side`, so `HandDrawnGrid` draws
  * one box, i.e. none), the row/column peer band, and the cage-blind Latin conflict derivation.
- * `requestVoice` and `gradeHint` are both FALSE, which is what `KenKenBoard` printed: its grid
- * label carried no difficulty word, its fresh-board margin carried no difficulty clause,
- * and it handed `GameBoard` no idle grade hint at all. The cage ARITHMETIC is enforced
+ * `requestVoice` is FALSE, which is what `KenKenBoard` printed: its grid label carried no
+ * difficulty word. (Its `gradeHint` twin died at T8-W6 with the string it gated.) The cage
+ * ARITHMETIC is enforced
  * authoritatively by the wasm solve, which is why the red-pencil assist stays Latin-only.
  *
  * ONE codec, two consumers: `clues.encode/decode` names `kenkenWire`'s length-prefixed cage
@@ -40,7 +40,6 @@ export const kenkenSpec = defineGame<ReturnType<typeof useKenken>, KenKenCage[]>
     // KenKen's margin names the MEASURED grade or nothing; it never carries the request.
     requestVoice: false,
     // No UI-13 whisper — `KenKenBoard` handed `GameBoard` no idle grade hint.
-    gradeHint: false,
   },
   clues: {
     // The live clue, off the model — the seam names the field a generic shell cannot guess.

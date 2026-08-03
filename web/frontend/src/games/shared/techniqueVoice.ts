@@ -1,18 +1,21 @@
 /**
- * The technique layer's marginalia voice (T4-W7, lane E3) — the two prose strings the
- * technique engine feeds the margin. Kept out of the engine (which stays pure geometry) and
- * shared by both games so the phrasing never drifts (SudokuBoard/FutoshikiBoard both call it).
- * Derivation-free by the MarginNote contract: it returns a finished string, tone owned upstream.
+ * The technique layer's marginalia voice (T4-W7, lane E3) — the one prose string the technique
+ * engine feeds the margin. Kept out of the engine (which stays pure geometry) and shared by
+ * every game so the phrasing never drifts. Derivation-free by the MarginNote contract: it
+ * returns a finished string, tone owned upstream.
  *
- *  - `formatHintNote` — the named-hint copy: *"naked single — only 4 fits here"* /
- *    *"hidden single — 7 goes nowhere else in this box"*. The caller passes the display
- *    character (sudoku's hex for 16×16, futoshiki's plain digit), so this stays glyph-agnostic.
- *  - `formatGradeSignature` — the honest difficulty signature: *"hidden single"* / *"X-wing"*,
- *    keyed to the hardest technique the deal-time grade needed and NAMING it (T5-W4 pass 6,
- *    dt-name: it used to bucket the tier, so two techniques shared one sentence — see the
- *    disposition below). This replaces W6's opaque bucket word ONCE a board is graded; W6's
- *    request voice stays the pre-grade/fallback (a restored permalink, a hand-typed board —
- *    no measurement).
+ *  - `formatHintNote` — what to write, and why, in the reader's own words: *"only 4 fits
+ *    here"* / *"7 goes nowhere else in this box"*. The caller passes the display character
+ *    (sudoku's hex for 16×16, futoshiki's plain digit), so this stays glyph-agnostic.
+ *
+ * ── T8-W6 · M16, THE COPY LAW ──────────────────────────────────────────────────────────────
+ * The solver's own vocabulary is GONE from every string a reader can reach. `TECHNIQUE_NAME`
+ * (nine proper names: "naked single", "X-wing", "box-line", "inequality forcing", …) and
+ * `formatGradeSignature`, which published them to the board caption and the tally's a11y label,
+ * are deleted rather than reworded: "'a naked single'--what?" is not a phrasing defect, it is a
+ * register the product does not get to speak. `TechniqueId` stays what it always was — an
+ * ENGINE identifier, never display — and the tally still carries the measurement it earned, as
+ * a count out of five, which is the same claim without the jargon. No em dash survives here.
  */
 import type { HintResult, TechniqueId } from "./techniqueEngine";
 import { TECHNIQUE_TIER } from "./techniqueEngine";
@@ -35,70 +38,39 @@ export function formatHintNote(
 ): string {
   switch (technique) {
     case "naked-single":
-      return `naked single — only ${valueChar} fits here`;
+      return `only ${valueChar} fits here`;
     case "hidden-single": {
       const where = (houseAxis && HOUSE_WORD[houseAxis]) ?? "house";
-      return `hidden single — ${valueChar} goes nowhere else in this ${where}`;
+      return `${valueChar} goes nowhere else in this ${where}`;
     }
     case "reveal":
-      // The unnameable fallback: no one-step deduction places this cell yet, so the hint
-      // is honest about revealing rather than reasoning.
-      return `no simple step here — the answer is ${valueChar}`;
+      // No one-step deduction places this cell yet, so the hint gives the answer and says
+      // nothing about its own reasoning.
+      return `the answer is ${valueChar}`;
   }
 }
 
-/** THE technique vocabulary — one home, and now one home only. Every surface that names a
- *  technique reads this table: the margin's difficulty signature (`formatGradeSignature`
- *  below) and the tally's a11y label through it. The parallel bucket table that used to sit
- *  beside it is what pass 5's F3-G3 was about, and it is gone. */
-const TECHNIQUE_NAME: Record<TechniqueId, string> = {
-  "naked-single": "naked single",
-  "hidden-single": "hidden single",
-  "naked-pair": "naked pair",
-  "naked-triple": "naked triple",
-  pointing: "pointing",
-  "box-line": "box-line",
-  "inequality-forcing": "inequality forcing",
-  "inequality-chain": "inequality chain",
-  "x-wing": "X-wing",
-};
-
 /**
- * ── T5-W4 PASS 6 · dt-name, DISPOSED — THE ESTATE STOPS RUNNING TWO VOCABULARIES ──────────
+ * ── T8-W6 · M16 — THE TECHNIQUE VOCABULARY LEAVES THE PRODUCT ────────────────────────────
  *
- * A `GRADE_PHRASE` table sat here and bucketed the tier ("singles only" for both singles)
- * while `TECHNIQUE_NAME` held the exact step, so two techniques read identically in ink and
- * in the a11y label alike. The bucket is deleted, and so is the `TECHNIQUE_ARTICLE` map that
- * survived it: the signature is the NAME, on the margin's already-reserved line, one
- * vocabulary, one home, zero new chrome. The frame is what the article was for, and the
- * enclosing sentence ("a fresh 9×9 — ", "difficulty — ") already supplies it.
+ * `TECHNIQUE_NAME` (the nine proper names) and `formatGradeSignature` (which published them
+ * to the board caption and to this file's tally label) stood here. They are DELETED, not
+ * reworded: the owner's mark names the exemplar and generalizes it — solver jargon is not a
+ * register the product speaks, in ink or in an accessible name. Nothing replaces them at the
+ * caption, and the tally's label below carries the same measurement as a plain count.
+ *
+ * What survives is the ENGINE's own `TechniqueId` and `TECHNIQUE_TIER`, which never faced a
+ * reader: the tier is how many strokes the tally inks, and that is the whole of its reach.
  */
-
-/**
- * The honest difficulty signature — the hardest technique the deal-time grade needed, NAMED.
- * `solved` false means the R1–R3 ladder stalled before completion, so the true difficulty is
- * strictly above anything it could name: say so rather than under-report. An empty string
- * (never graded, or a board that needed no step) means "no signature" — the board falls back
- * to W6's request voice.
- */
-export function formatGradeSignature(
-  hardestTechnique: TechniqueId | null,
-  solved: boolean,
-): string {
-  if (!solved) return "too hard to grade";
-  if (!hardestTechnique) return "";
-  return TECHNIQUE_NAME[hardestTechnique];
-}
 
 // ── The displayed-quality tally (T4-W9-B1) ───────────────────────────────────────────────
-// The glyph twin of the grade signature: FIVE gate strokes for the engine's five ascending
-// tiers — 1 singles · 2 pairs/pointing · 3 X-wing · 4 swordfish/XY-wing · 5 beyond. The
-// engine names tiers 1–3 and reports "not solved" past its X-wing ceiling; tier 4 (swordfish/
-// XY-wing) is a labelled rung the ladder cannot yet emit, so a graded board inks 1, 2, 3, or 5
-// strokes — the count is the tier REACHED (cumulative, magnitude), the name is the EXACT
-// hardest step (the precise claim). The whole display gates on `graded`: an ungraded board
-// (unsupported size, restored permalink, hand-typed — the engine never ran) inks NOTHING and
-// reads the dashed placeholder, never a fabricated tier (ROW 5 honesty spine).
+// FIVE gate strokes for the engine's five ascending tiers. The ladder reaches tiers 1–3 and
+// reports "not solved" past its ceiling; tier 4 is a rung it cannot yet emit, so a graded board
+// inks 1, 2, 3, or 5 strokes — the count is the tier REACHED (cumulative, magnitude). Since
+// T8-W6 the count is ALSO the whole claim: the exact hardest step is the engine's business and
+// no reader's. The display gates on `graded`: an ungraded board (unsupported size, restored
+// permalink, hand-typed — the engine never ran) inks NOTHING and reads the dashed placeholder,
+// never a fabricated tier (ROW 5 honesty spine).
 
 /** The five gate strokes in the tally scale. */
 export const TALLY_TOTAL = 5;
@@ -112,9 +84,10 @@ export interface TallyDescriptor {
   /** Strokes in the scale (always TALLY_TOTAL). */
   total: number;
   /** The always-on a11y label for the DIFFICULTY signal (distinct from FILL + CORRECTNESS).
-   *  It carries the EXACT hardest step now, through `formatGradeSignature`, which is the
-   *  other half of the dt-name disposition: `difficulty — hidden single (1 of 5)` where it
-   *  used to read `singles only` for two different techniques. */
+   *  T8-W6 M16: it is the COUNT, and only the count — `difficulty 3 of 5`. It used to name the
+   *  hardest technique, which put the solver's vocabulary into an accessible name, where a
+   *  reader has even less recourse than at the caption. The number is the measurement; the
+   *  name was the register. */
   ariaLabel: string;
 }
 
@@ -123,9 +96,12 @@ export interface TallyDescriptor {
  *
  * They were kept through pass 5 with the reason written at their renderer: "the restoration
  * cost of options (b) and (c)" — the two ways the exact step might have been given a visible
- * surface. Option (c) has now LANDED (the margin signature names the step, above), so there is
- * no option left to restore, and the trigger's own words were "if the exact step gets its
- * surface, `name`, `expand` and the five rows retire in that same change". This is that change.
+ * surface. Option (c) LANDED at T5-W4 pass 6 (the margin signature named the step), so no
+ * option was left to restore, and the trigger's own words were "if the exact step gets its
+ * surface, `name`, `expand` and the five rows retire in that same change". That was the change.
+ * T8-W6 then retired the signature itself under M16, which closes the row from the other end:
+ * there is no surface for the exact step, because the step is not the product's to name. The
+ * retirement stands on either reason.
  *
  * The alternatives, priced, in one paragraph, because a deletion should record what it closed:
  * (a) RESTORE THE HOVER REVEAL — measured and rejected on arithmetic, verb→receipt clearance
@@ -141,14 +117,15 @@ export interface TallyDescriptor {
 
 /**
  * Derive the tally from the raw grade state. The honesty spine, in one function:
- *  - ungraded → nothing inked, dashed placeholder, "not yet graded" (never a fabricated tier);
- *  - graded but the ladder stalled (`!solved`) → the board needs strictly more than X-wing, so
- *    ink the top stroke and name the ceiling — never fabricate tier 4;
- *  - graded + solved + a named hardest step → ink `TECHNIQUE_TIER[hardest]` strokes, name it;
+ *  - ungraded → nothing inked, dashed placeholder, "not graded yet" (never a fabricated tier);
+ *  - graded but the ladder stalled (`!solved`) → the board needs strictly more than the
+ *    engine's ceiling, so ink the top stroke — never fabricate tier 4;
+ *  - graded + solved + a hardest step → ink `TECHNIQUE_TIER[hardest]` strokes;
  *  - graded + solved + no step (a board that arrived complete) → nothing inked, no fake tier.
- * The a11y phrase reuses `formatGradeSignature`, so the tally and the margin cannot drift —
- * and since pass 6 that phrase carries the exact step rather than the tier bucket, which is
- * where two different techniques used to arrive at one sentence.
+ * T8-W6 M16: every branch says the SAME thing in the same shape — a count out of five — so
+ * there is one sentence to read and no vocabulary to learn. The stalled board tops out at 5 of
+ * 5, which is the honest reading of "strictly more than we can name" and reports no more than
+ * the strokes already do.
  */
 export function describeTally(
   graded: boolean,
@@ -160,30 +137,18 @@ export function describeTally(
       graded: false,
       filled: 0,
       total: TALLY_TOTAL,
-      ariaLabel: "difficulty not graded yet — deal a board to grade it",
+      ariaLabel: "difficulty not graded yet",
     };
   }
-  if (!solved) {
-    return {
-      graded: true,
-      filled: TALLY_TOTAL,
-      total: TALLY_TOTAL,
-      ariaLabel: `difficulty — too hard to grade (${TALLY_TOTAL} of ${TALLY_TOTAL})`,
-    };
-  }
-  if (hardestTechnique === null) {
-    return {
-      graded: true,
-      filled: 0,
-      total: TALLY_TOTAL,
-      ariaLabel: "difficulty — no steps needed",
-    };
-  }
-  const filled = TECHNIQUE_TIER[hardestTechnique];
+  const filled = !solved
+    ? TALLY_TOTAL
+    : hardestTechnique === null
+      ? 0
+      : TECHNIQUE_TIER[hardestTechnique];
   return {
     graded: true,
     filled,
     total: TALLY_TOTAL,
-    ariaLabel: `difficulty — ${formatGradeSignature(hardestTechnique, true)} (${filled} of ${TALLY_TOTAL})`,
+    ariaLabel: `difficulty ${filled} of ${TALLY_TOTAL}`,
   };
 }

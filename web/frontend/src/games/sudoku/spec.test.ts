@@ -23,7 +23,6 @@ describe("sudoku — the eight slots (T5-W2 §1)", () => {
       geometry: "boxed",
       noun: "sudoku board",
       requestVoice: true,
-      gradeHint: true,
     });
   });
 

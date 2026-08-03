@@ -26,7 +26,7 @@ export function demandGroup(
 ): void {
   if (at + span > buf.length) {
     throw new RangeError(
-      `${what}: truncated group — ${span} word(s) claimed at offset ${at}, ` +
+      `${what}: truncated group, ${span} word(s) claimed at offset ${at}, ` +
         `${Math.max(0, buf.length - at)} present`,
     );
   }

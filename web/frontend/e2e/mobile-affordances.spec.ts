@@ -225,7 +225,7 @@ test("touch play tools (T4-WM §2): undo / redo / hint tappable at ≥44px, wire
   expect(bg).toBe("rgba(0, 0, 0, 0)");
 });
 
-test("hint two-press by touch (T4-W7): first tap names the technique, second inks the digit", async ({
+test("hint two-press by touch (T4-W7): first tap gives the reasoning, second inks the digit", async ({
   page,
 }) => {
   await loadSudoku(page);
@@ -237,10 +237,15 @@ test("hint two-press by touch (T4-W7): first tap names the technique, second ink
   const blank = await firstBlank(page, ".sudoku-cell");
   await cellInput(page, blank).tap();
 
-  // First tap — reasoning, not the answer: the margin NAMES the cheapest single and the
-  // becauseCells light in the peek-laminate tone. No digit inks yet.
+  // First tap — reasoning, not the answer: the margin says WHY the digit belongs and the
+  // becauseCells light in the peek-laminate tone. No digit inks yet. T8-W6 M16 took the
+  // technique's name out of that sentence, so the row matches what survived and holds the
+  // jargon out.
   await hint.tap();
-  await expect(page.locator(".margin-note")).toContainText("single");
+  await expect(page.locator(".margin-note")).toContainText(
+    /fits here|goes nowhere else|the answer is/,
+  );
+  await expect(page.locator(".margin-note")).not.toContainText(/naked|hidden single|[—–]/);
   await expect(page.locator(".sudoku-cell.is-because").first()).toBeVisible();
 
   // Second tap — the digit inks in through the reveal draw-in: one more solver-ink glyph. The

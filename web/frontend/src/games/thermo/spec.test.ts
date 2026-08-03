@@ -30,7 +30,6 @@ describe("thermo — the eight slots (T5-W2 §1)", () => {
       geometry: "boxed",
       noun: "thermo board",
       requestVoice: true,
-      gradeHint: true,
     });
   });
 

@@ -1,6 +1,8 @@
 /**
- * The margin tally, preformatted (T3-W9 §2, f3 §4 NO-duplication) — "128 backtracks — 42ms":
- * search effort in the pencil hand, understated. Both boards used to carry this derivation
+ * The margin tally, preformatted (T3-W9 §2, f3 §4 NO-duplication) — "128 backtracks · 42ms":
+ * search effort in the pencil hand, understated. Debug-gated at its one call site, but the
+ * copy law reaches it anyway (T8-W6 M16), so the join is the estate's middle dot and not the
+ * banned character. Both boards used to carry this derivation
  * as byte-identical `statLine` twins; it now lives here and arrives at MarginNote as a
  * preformatted `meta` string (the pencil layer stays derivation-free — same contract as
  * `text`). Present on 'solved' AND 'failed' (a refutation's search effort is honest
@@ -16,7 +18,7 @@ export function formatSolveTally(stats: SolveStats | null | undefined): string {
     stats.elapsedMs == null
       ? ""
       : stats.elapsedMs < 1000
-        ? ` — ${Math.max(1, Math.round(stats.elapsedMs))}ms`
-        : ` — ${(stats.elapsedMs / 1000).toFixed(1)}s`;
+        ? ` · ${Math.max(1, Math.round(stats.elapsedMs))}ms`
+        : ` · ${(stats.elapsedMs / 1000).toFixed(1)}s`;
   return `${stats.backtracks} ${word}${time}`;
 }

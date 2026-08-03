@@ -19,9 +19,11 @@ const descriptor: TallyDescriptor = {
   graded: true,
   filled: 1,
   total: 5,
-  // pass 6 (dt-name): the label carries the EXACT step. It read "singles only" here, which was
-  // the same sentence a naked-single board produced — the conflation F3-G3 measured.
-  ariaLabel: "difficulty — hidden single (1 of 5)",
+  // T8-W6 (M16): the label is the COUNT. It carried the exact technique name from pass 6 until
+  // the copy law took the solver's vocabulary out of every reader-facing string, an accessible
+  // name most of all — the renderer is a pure pass-through either way, which is what this
+  // fixture exists to prove.
+  ariaLabel: "difficulty 1 of 5",
 };
 
 const tally = (d: Partial<TallyDescriptor> = {}) =>
@@ -42,10 +44,10 @@ describe("DifficultyTally — a graphic, not a tab stop", () => {
     const el = tally({
       graded: false,
       filled: 0,
-      ariaLabel: "difficulty — not yet graded",
+      ariaLabel: "difficulty not graded yet",
     }).get(".difficulty-tally");
     expect(el.attributes("tabindex")).toBeUndefined();
-    expect(el.attributes("aria-label")).toBe("difficulty — not yet graded");
+    expect(el.attributes("aria-label")).toBe("difficulty not graded yet");
   });
 
   it("no descendant smuggles the stop back in", () => {

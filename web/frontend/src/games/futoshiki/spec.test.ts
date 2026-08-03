@@ -3,9 +3,9 @@
  *
  * The twin of `sudoku/spec.test.ts`, and the same assertion classes thermo/killer/kenken
  * carry. Futoshiki is where `geometry: "latin"` is pinned against a board that genuinely has
- * no box band, and where the two render facts that CORRELATE with geometry but are not it —
- * `requestVoice`, `gradeHint` — are asserted false, which is the whole reason `BoardGrammar`
- * is a flat record rather than a tagged union.
+ * no box band, and where the render fact that CORRELATES with geometry but is not it —
+ * `requestVoice` — is asserted false, which is the whole reason `BoardGrammar` is a flat
+ * record rather than a tagged union.
  */
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
@@ -25,7 +25,6 @@ describe("futoshiki — the eight slots (T5-W2 §1)", () => {
       // The margin carries the MEASURED signature only, and the board keeps no idle whisper —
       // two render facts that travel with the geometry without being it.
       requestVoice: false,
-      gradeHint: false,
     });
   });
 

@@ -825,6 +825,13 @@ jobs:
             - name: motion contract (every spec declares its PRM posture, self-tested)
               working-directory: web/frontend
               run: npm run lint:motion
+            # T8-W6 gate — M16's one machine-checkable clause. Every template text node and
+            # every user-string literal in src/** (+ index.html's head) must carry no em or
+            # en dash. Comments are masked; two allowlisted files carry their reason.
+            # Self-tested, both colours.
+            - name: copy register (no em dash in product copy, self-tested)
+              working-directory: web/frontend
+              run: npm run lint:copy
             # T5-W1 row 1.11 (audit C5 + J3) support floor. Same species as the seven
             # gates above it — static, zero-dependency, browser-free — and it needs
             # this job's `npm ci`: check 2 reads @tailwindcss/node's Lightning CSS

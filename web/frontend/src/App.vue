@@ -288,6 +288,30 @@ registerDrawerMasthead(() => ({
   anchor: (logoMenu.value?.$el as HTMLElement | undefined) ?? null,
 }));
 
+/**
+ * THE FOLD MOVES THE INK, NOT THE `<h1>`'s WHITESPACE (T8-W4, CH-67's second half).
+ *
+ * `flipTransform` takes its scale from a WIDTH RATIO, and the `<h1>`'s width is not the
+ * wordmark's: playing, the heading is a stretched flex item **1020.22px** wide with the ink
+ * left-aligned inside it; in the gallery `.board-group.is-gallery { align-items: center }`
+ * shrinks it to its content, **283px**. So a fold that moved the heading scaled the wordmark by
+ * **3.61×** to cover a box whose ink only changes by **1.39×** (382.39 → 275.36) — the wordmark
+ * ballooned to two and a half times its true size mid-flight and shrank back, and the baked
+ * bitmap rode that magnification at a measured **ratio 0.385 for 34 of 178 fold frames**
+ * (`evidence/w4-logo/report.md`).
+ *
+ * The heading paints nothing — no background, no border, no ink of its own — so moving it was
+ * only ever a way of moving what is inside it. Moving that directly is the same gesture with
+ * the distortion taken out: same clock, same curve, same `foldCtl.run`, one element deeper.
+ * `logoMenu.$el` is the wordmark's own box and it is STABLE across the view flip (the
+ * `component :is` button↔span swap happens inside it), so first and last rects describe one
+ * element. The `<h1>` is kept as the fallback referent, so a moved class name degrades to the
+ * incumbent behaviour rather than to no fold at all.
+ */
+function wordmarkEl(): HTMLElement | null {
+  return (logoMenu.value?.$el as HTMLElement | undefined) ?? mastheadEl.value;
+}
+
 function closeAll() {
   desktopAttribution.value?.close();
   mobileAttribution.value?.close();
@@ -476,10 +500,12 @@ function onLiveFace(el: HTMLElement | null) {
       pendingFoldFrom = null;
       pendingHeadFrom = null;
       const last = board.getBoundingClientRect(); // face-slot pose (post-fit)
-      // The masthead rides the SAME fold as its second element — one `run`, one clock, one
+      // The wordmark rides the SAME fold as its second element — one `run`, one clock, one
       // curve. `--logo-scale` is a LAYOUT size and has already landed at onset (classic FLIP);
       // the transform covers the move on the baked poses, so it is compositor-only with one
-      // re-bake at settle — the drawer's own masthead precedent, verbatim.
+      // re-bake at settle — the drawer's own masthead precedent, verbatim. The referent is the
+      // wordmark's own box and not the `<h1>`'s (§wordmarkEl) — the heading's width is mostly
+      // whitespace, and FLIP-ing whitespace magnified the baked ink 2.6× more than the fold does.
       foldCtl.run([
         {
           el: board,
@@ -493,9 +519,9 @@ function onLiveFace(el: HTMLElement | null) {
   });
 }
 
-/** The masthead as a mover, or nothing when there is no FIRST rect to fold from. */
+/** The wordmark as a mover, or nothing when there is no FIRST rect to fold from. */
 function mastheadMover(first: DOMRect | null): FlipMover[] {
-  const el = mastheadEl.value;
+  const el = wordmarkEl();
   if (!first || !el) return [];
   return [
     {
@@ -542,7 +568,7 @@ function enterGallery() {
     return;
   }
   const first = boardHostRect(); // the board's full pose, read BEFORE beat 0
-  const head = mastheadEl.value?.getBoundingClientRect() ?? null; // …and the wordmark's
+  const head = wordmarkEl()?.getBoundingClientRect() ?? null; // …and the wordmark's own box
   entryAnimated.value = true;
   if (!first) {
     openGallery(game.value); // no board to fold → cut (the deal still deals)
@@ -566,15 +592,15 @@ function enterGallery() {
 function unfoldToBoard(applyState: () => void) {
   const card = centerCardEl();
   const first = card?.getBoundingClientRect() ?? null;
-  // BOTH firsts before `applyState()` — the state flip is what moves the masthead back to its
+  // BOTH firsts before `applyState()` — the state flip is what moves the wordmark back to its
   // playing pose, so its gallery rect has to be in hand before that happens.
-  const headFirst = mastheadEl.value?.getBoundingClientRect() ?? null;
+  const headFirst = wordmarkEl()?.getBoundingClientRect() ?? null;
   moveLiveBoard(null); // un-teleport the board home before the deck unmounts
   applyState(); // synchronous view→playing + game swap (the seam) or cancel (Wave B path)
   if (reducedMotion.value || !first) return; // PRM / no card → same-frame cut
   runFold([
     { first, el: () => document.querySelector<HTMLElement>(".board-peek-host") },
-    { first: headFirst, el: () => mastheadEl.value },
+    { first: headFirst, el: () => wordmarkEl() },
   ]);
 }
 

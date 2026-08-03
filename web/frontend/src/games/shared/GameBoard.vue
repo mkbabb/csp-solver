@@ -34,12 +34,7 @@ import { BOARD_CELLS_CLASS } from "@games/shared/constants";
 import { formatSolveTally } from "@games/shared/solveTally";
 import { formatHintNote } from "@games/shared/techniqueVoice";
 import { toDisplayChar } from "@pencil/glyph/glyphRegistry";
-import {
-  consumeDrawerHint,
-  useControlsDrawer,
-  vignetteDocked,
-  vignetteHasTally,
-} from "@games/shared/useControlsDrawer";
+import { vignetteDocked, vignetteHasTally } from "@games/shared/useControlsDrawer";
 import { useDebug } from "@/composables/useDebug";
 import type { HintResult } from "@games/shared/techniqueEngine";
 import type { SolveState, SolveStats } from "@games/shared/types";
@@ -68,9 +63,9 @@ const props = defineProps<{
    *  Futoshiki is a plain Latin square (row/col only). Returns the peers minus the focused
    *  cell; the shell gates it on the grid actually holding focus. */
   peersFn: (focusedPos: number, boardSize: number) => Set<string>;
-  /** The fresh-board margin announce ("a fresh 9×9 — medium" / "a fresh 5×5").
-   *  Game-side so the difficulty request voice + the one-shot link-error clause
-   *  stay per-game; called by the shell at the deferred/live announce moments. */
+  /** The board-arrival margin announce. T8-W6 M16 emptied it of everything but the one-shot
+   *  corrupt-link clause, so it now returns "" on an ordinary deal and the strip stays quiet;
+   *  it stays game-side because that clause is the game's own to raise. */
   freshBoardCopy: () => string;
   /** T7-W7 — the generation bump's PROVENANCE: true iff this board arrived from a deal.
    *  A no-givens family (KenKen prints no digit on 69% of deals) reaches the generation
@@ -79,10 +74,6 @@ const props = defineProps<{
    *  grades every dealt board and blanks that grade on clear/restore, and `dealt` carries
    *  that bit here. Absent → the pre-T7 read (an empty grid is taken for a clear). */
   dealt?: boolean;
-  /** Sudoku-only (UI-13): the once-per-board discoverability whisper. Receives the live
-   *  values + boardSize, returns the copy iff a duplicate is visibly present while idle,
-   *  else null. Absent for Futoshiki → the shell's idle-values watch no-ops. */
-  idleGradeHint?: (values: Record<string, number>, boardSize: number) => string | null;
   /** Engine-domains pencil marks (peek glimpse): per-position surviving candidates from the
    *  solver's own propagation. Opt-in (held only), released row-by-row on idle at ≥10-wide. */
   pencilMarks?: Record<string, number[]>;
@@ -569,10 +560,10 @@ watch(
       setMargin("solved it!", "gold-star");
     } else if (state === "failed") {
       const c = conflicts.value;
+      // T8-W6 M16: "not quite" was a softener in front of the real sentence, and the em dash
+      // that joined the two is banned outright. The verdict says the one useful thing.
       setMargin(
-        c.firstRow
-          ? `not quite — check row ${c.firstRow}`
-          : "not quite — no solution from here.",
+        c.firstRow ? `check row ${c.firstRow}` : "no solution from here",
         "teacher-red",
       );
     } else if (state === "solving") {
@@ -591,37 +582,15 @@ watch(
   },
 );
 
-// ── UI-13 (ratified: KEEP grade-after-Solve + say-it) — Sudoku-only via `idleGradeHint` ──
-// The teacher still grades actual work — `conflicts` above stays gated on 'failed'. What was
-// missing is discoverability: a fresh user doesn't know the grader exists. The first time a
-// duplicate is visibly present while idle, the margin voice whispers that it does — once per
-// board, graphite (never the red verdict tone), and it marks NOTHING. The per-game hook reads
-// the values (a read-only peek used solely to decide whether to speak); Futoshiki omits it.
-const gradeHintShown = ref(false);
-watch(
-  () => props.values,
-  () => {
-    if (!mounted || gradeHintShown.value || !props.idleGradeHint) return;
-    if (props.solveState !== "idle") return; // a real grade owns the voice; don't talk over it
-    const copy = props.idleGradeHint(props.values, props.boardSize);
-    if (copy) {
-      gradeHintShown.value = true;
-      setMargin(copy, "graphite");
-    }
-  },
-  { deep: true },
-);
-
-// ── The drawer's margin voice (T3-W12 §6): hint once, ever, on the first close —
-// "the controls are under the board". Graphite-only window: a gold/red note is a
-// grade mid-speech (and the gold verdict feeds the vignette) — don't talk over it,
-// and don't burn the once-flag (consumeDrawerHint is only called inside the guard).
-const { drawerOpen } = useControlsDrawer();
-watch(drawerOpen, (open, prev) => {
-  if (prev && !open && marginTone.value === "graphite" && consumeDrawerHint()) {
-    setMargin("the controls are under the board", "graphite");
-  }
-});
+// ── T8-W6 · M16 — TWO WHISPERS DELETED, AND THE MARGIN STOPS NARRATING THE UI ───────────
+// UI-13's idle grade hint ("a number repeats — turn on checking to see where") and T3-W12's
+// first-close drawer hint ("the controls are under the board") both spoke ABOUT the interface
+// rather than about the puzzle — the meta register the mark abrogates — and the first carried
+// the banned character besides. The margin's remaining voice is the puzzle's: the hint it
+// asked for, the verdict on a solve, the wipe receipt, the paper note's failure. The drawer
+// subscription, `consumeDrawerHint`'s once-flag and the `idleGradeHint` prop are deleted at
+// source with them: a mechanism kept for a string that no longer exists is the residue the
+// next copy defect grows from.
 
 // Board-load announcements (also fixes the silent randomize, §4.3).
 let mounted = false;
@@ -646,7 +615,6 @@ watch(
   () => props.boardGeneration,
   () => {
     focusedPos.value = 0;
-    gradeHintShown.value = false; // a fresh board re-arms the UI-13 grade hint
     const sizeChanged = props.boardSize !== prevBoardSize;
     prevBoardSize = props.boardSize;
     // A size change is announced by the givens 0→N watch instead, so skip it here.

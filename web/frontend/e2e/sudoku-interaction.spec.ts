@@ -234,23 +234,47 @@ test('solve failure: conflicting user values produce solve-failure state', async
 
 // ── Test 6: Noise Animation — Multiple Unique Reveal Delays ────────
 
+// T8-W6 — THE PROBE MOVES FROM THE RESIDUE TO THE EVENT, because the residue is what the
+// cure deleted. `.cell-reveal-animated` used to sit on every revealed cell forever (the arm
+// that replayed the whole wave on any DOM move); it now expires at `animationend`, so a
+// snapshot taken after the wave finds an empty set and would red for the cure rather than for
+// a defect. The reveal ANNOUNCES itself — `animationstart` carries the animation name and the
+// element — so the listener is armed BEFORE the deal and records every firing. Deterministic
+// by construction rather than by window: no sleep, and it asserts the delays actually DROVE
+// an animation, which the old snapshot could only assume.
 test('noise animation: randomize produces multiple unique reveal delays', async ({ page }) => {
   await loadApp(page);
 
-  await randomizeBoard(page);
-
-  // Collect all --reveal-delay values from cells with cell-reveal-animated class
-  const delays = await page.evaluate(() => {
-    const cells = document.querySelectorAll('.cell-reveal-animated');
-    return Array.from(cells).map((c) => {
-      return (c as HTMLElement).style.getPropertyValue('--reveal-delay');
-    }).filter(Boolean);
+  await page.evaluate(() => {
+    (window as unknown as { __revealDelays: string[] }).__revealDelays = [];
+    document.addEventListener(
+      'animationstart',
+      (e) => {
+        const ev = e as AnimationEvent;
+        if (ev.animationName !== 'cell-reveal') return;
+        const d = (ev.target as HTMLElement).style.getPropertyValue('--reveal-delay');
+        if (d) (window as unknown as { __revealDelays: string[] }).__revealDelays.push(d);
+      },
+      true,
+    );
   });
 
-  // Should have multiple cells animating
-  expect(delays.length).toBeGreaterThan(3);
+  await randomizeBoard(page);
 
-  // Should have multiple unique delay values (noise-shuffled, not all the same)
-  const uniqueDelays = new Set(delays);
+  const read = () =>
+    page.evaluate(() => (window as unknown as { __revealDelays: string[] }).__revealDelays);
+
+  // Should have multiple cells animating.
+  await expect.poll(async () => (await read()).length, { timeout: 15000 }).toBeGreaterThan(3);
+
+  // Should have multiple unique delay values (noise-shuffled, not all the same).
+  const uniqueDelays = new Set(await read());
   expect(uniqueDelays.size).toBeGreaterThan(1);
+
+  // AND THE ARM EXPIRES. The wave's longest delay is 1.2s + a 0.3s animation, so once every
+  // recorded start has had its run, no cell may still carry the class — that standing arm is
+  // precisely what replayed on the fold's DOM move.
+  await expect
+    .poll(() => page.locator('.cell-reveal-animated').count(), { timeout: 10000 })
+    .toBe(0);
 });

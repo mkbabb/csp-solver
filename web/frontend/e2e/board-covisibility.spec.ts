@@ -116,6 +116,21 @@ test.describe("mark 6 — the band dissolves", () => {
 
     // CEILING — one voice line at the body rung + its reserved 1.3em. 30px is the ceiling; the
     // tally alone was 30.4px on top of it, so this cannot be met with a second tenant.
+    //
+    // T8-W6 M16 — THE STRIP LOADS SILENT NOW. The board caption was the mark's exemplar and is
+    // deleted, so an idle board has no ink and a bare read would meet the ceiling by having
+    // nothing in it, which measures the reservation twice and the ceiling never. The voice is
+    // PLANTED for this arm — the same idiom CONTROL A already uses for the tally — so the
+    // ceiling still grades a strip that is speaking.
+    await page.evaluate(() => {
+      const p = document.querySelector(".margin-note");
+      if (p && !p.querySelector(".margin-note-ink")) {
+        const span = document.createElement("span");
+        span.className = "margin-note-ink";
+        span.textContent = "check row 3";
+        p.appendChild(span);
+      }
+    });
     const bare = await read();
     expect(bare).toBeLessThanOrEqual(30);
 
@@ -149,7 +164,7 @@ test.describe("mark 6 — the band dissolves", () => {
   });
 
   /**
-   * The solve tally ("0 backtracks — 1ms") is one string with two possible mounts: the
+   * The solve tally ("0 backtracks · 1ms") is one string with two possible mounts: the
    * teacher's-margin vignette (≥1280, undocked) and the strip's reserved line. Exactly one
    * of them paints it, at every width. The pass-3 close had BOTH standing down below 1280 —
    * the vignette's `.vignette-meta` was `display:none` outside the margin rung and the strip
@@ -242,10 +257,21 @@ test.describe("mark 6 — the band dissolves", () => {
     await loadSudoku(page);
     await assertCoarse(page);
 
+    // T8-W6 M16 — THE VIGNETTE MUST BE PROBED WITH A CELEBRATION IN IT. Its voice line reads
+    // `marginText`, and until this wave that ref was never empty at rest: the board caption
+    // (the mark's own exemplar) sat in it from the first deal, so forcing `display:block`
+    // happened to reveal a vignette of celebration height for free. The caption is deleted, so
+    // the forced vignette is an empty box — 75.11px of star against 94.34 with a voice on it —
+    // and the control arm read 32 where its ladder is calibrated at >50. The verdict is
+    // PLANTED, the same string a solve writes, INSIDE the probe: Vue owns that text node and
+    // patches it back to "" on the next render, so a plant staged outside would survive the
+    // first `grade()` and be gone by the control's.
     const grade = () =>
       page.evaluate(() => {
         const doc = document.scrollingElement || document.documentElement;
         const v = document.querySelector<HTMLElement>(".completion-vignette")!;
+        const voice = v.querySelector<HTMLElement>(".vignette-voice")!;
+        if (!voice.textContent?.trim()) voice.textContent = "solved it!";
         // pass 6 — THE REFERENT SWAPS, and the office is unchanged. The witness must be a
         // surface still IN FLOW below the board, because that is what a celebration in flow
         // would shove down the page. The controls card left the flow on the portrait dock, so
@@ -303,14 +329,31 @@ test.describe("mark 6 — the band dissolves", () => {
     //   60px → drawn 69.53, push 58.58/58.28, docGrowth 45   both arms PASS
     //   50px → drawn 59.57, push 48.58/48.28, docGrowth 35    `ctrlPush > 50` REDS
     //   40px → drawn 49.61, push 38.58/38.28, docGrowth 25    BOTH arms RED
-    expect(c.ctrlPush).toBeGreaterThan(50);
+    //
+    // ── T8-W6 · M16 — THE FLOOR IS RE-DERIVED, AND THE OLD ONE WAS MET BY THE WRONG STRING ──
+    // The 50 above was never earned by a celebration. `.vignette-voice` renders `marginText`,
+    // and this probe forces the box open WITHOUT solving, so whatever the margin happened to be
+    // saying at rest is what got measured — which, until this wave, was the board caption. At
+    // 390px "a fresh 9×9 — medium" WRAPS TO TWO LINES: voice 48.24px, vignette 113.58, push
+    // 55.80 chromium / 55.50 webkit. The row cleared its floor on the caption's length.
+    //
+    // The verdict a solve actually writes is "solved it!" — ONE line, and it is what the probe
+    // plants now: voice 29.00, vignette 94.34, push **42.45 in BOTH engines**. So the real
+    // celebration was always below the floor this row claimed to hold it to, and the 8px it
+    // seemed to clear were the exemplar's second line (proxy ≠ surface, lessons §1).
+    // Re-derived at the true string, with the ladder's own sensitivity kept: the empty box is
+    // 32.00 (star alone, no voice), so a floor of 38 is above the no-voice case and below the
+    // measured push in both engines, and still reds every rung of the ablation at 40px and
+    // under. Measured, not chosen: 32.00 < 38 < 42.45.
+    expect(c.ctrlPush).toBeGreaterThan(38);
 
     // T6.2 MARK A — THE ARITHMETIC IS RE-DERIVED AGAIN, and this time HEADROOM is the term that
     // moved. The ribbon gave up mark 9's 3rem tongue reservation (the opener is in flow among
     // the verbs now) and the attribution left the assembly for the head line, so the fold rests
     // **60.42 chromium / 60.72 webkit** above the floor where mark 9 measured 13.42/13.72. The
     // auto margins' free space is twice that, which now EXCEEDS the real vignette's own
-    // 102.80/102.50 push: an in-flow celebration is absorbed whole and `docGrowth` reads 0 at
+    // push (102.80/102.50 as mark A measured it; 42.45 both engines once T8-W6 put the true
+    // verdict in the voice): an in-flow celebration is absorbed whole and `docGrowth` reads 0 at
     // this cell, in both engines, on a tree where nothing is wrong. A floor on that number would
     // be a floor on the headroom, so the arm keeps its bite by out-growing the headroom instead
     // of assuming it — which is exactly what the ladder above does, one rung further out. The

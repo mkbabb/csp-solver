@@ -14,7 +14,7 @@
  * clip-path wipe — the logo's own reveal mechanic, shortened; instant under PRM.
  *
  * T3-W9 §2 — the completion block, hoisted:
- * - `meta` — the pencil's own tally under the voice ("0 backtracks — 1ms"), rendered
+ * - `meta` — the pencil's own tally under the voice ("0 backtracks · 1ms"), rendered
  *   OUTSIDE the live region (W6 stance kept verbatim: the voice announces the grade;
  *   the tally is there for whoever leans in). Preformatted upstream — same
  *   derivation-free contract as `text`. Always graphite (system law: metadata never

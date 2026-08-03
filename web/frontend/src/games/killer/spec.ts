@@ -9,8 +9,8 @@
  *
  * A Killer-Sudoku IS a Sudoku variant, and the grammar says so as DATA rather than by copying
  * a board: `geometry: "boxed"` picks the sub-grid peer band, the √n tick count and the boxed
- * conflict derivation; `requestVoice`/`gradeHint` carry the two marginalia clauses
- * `KillerBoard` printed verbatim from `SudokuBoard`. The cage SUM relation is enforced
+ * conflict derivation; `requestVoice` carries the grid label's difficulty word, printed
+ * verbatim from `SudokuBoard`. The cage SUM relation is enforced
  * authoritatively by the wasm solve — the board's red-pencil assist stays the cage-blind
  * sudoku box/row/col grader, unchanged, because that is what `geometry` alone decides.
  *
@@ -37,7 +37,6 @@ export const killerSpec = defineGame<ReturnType<typeof useKiller>, KillerCage[]>
     // B-0: the margin says "— medium" until the engine has graded the board.
     requestVoice: true,
     // UI-13: the once-per-board "a number repeats" whisper.
-    gradeHint: true,
   },
   clues: {
     // The live clue, off the model — the seam names the field a generic shell cannot guess.

@@ -50,8 +50,6 @@ describe("KenKen's GameSpec (T5-W2 F2 — the migrated contract)", () => {
     // `KenKenBoard`'s grid label named no difficulty word and its margin carried no request
     // clause — the same axis, false on both counts.
     expect(kenkenSpec.grammar.requestVoice).toBe(false);
-    // It handed `GameBoard` no idle grade hint at all.
-    expect(kenkenSpec.grammar.gradeHint).toBe(false);
   });
 
   it("declares the operator-cage clue seam as furniture + a codec, never a boolean", () => {

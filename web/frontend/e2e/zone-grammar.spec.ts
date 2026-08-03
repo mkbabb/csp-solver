@@ -68,13 +68,16 @@ test("rendered-name census, rail: two eyebrows, four tapes, two captions — and
   // The compartments name themselves in the hand, one rank down. T6 mark 13 — `players` is
   // the fourth, and it is in the census rather than beside it: a feature that mints a name on
   // this card is named at one of this card's ranks or the census has stopped being one.
+  // T8-W6 M16 — the third tape reads `checking`. A teacher is a metaphor and the possessive
+  // gave a compartment to someone who is not in the room; the chips choose when your work gets
+  // checked, so the tape says that.
   expect(names.filter((n) => n.rank === "tape").map((n) => n.text)).toEqual([
     "new game",
     "pencils",
-    "teacher's",
+    "checking",
     "players",
   ]);
-  // Two controls share the `pencils` compartment, so each gets a quiet caption; `teacher's`
+  // Two controls share the `pencils` compartment, so each gets a quiet caption; `checking`
   // holds one idea and needs none — which is the taxonomy paying for itself.
   expect(names.filter((n) => n.rank === "caption").map((n) => n.text)).toEqual([
     "marks",
@@ -132,7 +135,7 @@ test("every zone is named by its own VISIBLE tape — the accessible name and th
   expect(named.map((n) => n.drawn)).toEqual([
     "new game",
     "pencils",
-    "teacher's",
+    "checking",
     "players",
   ]);
   for (const n of named) {
@@ -653,17 +656,18 @@ test.describe("coarse regime", () => {
   });
 
   // T8-W1 M3 — THE STATUS LINE IS PRUNED, so this row inverts: it used to assert the sentence
-  // under the teacher's chips through three states, and every one of those sentences restated
+  // under this well's chips through three states, and every one of those sentences restated
   // the chip selected above it ("not checking" under `Off`, "checking as you go" under `Live`).
   // The owner named the third by name. What survives is the well's own contract — one control,
   // named by its tape, and the chips answering for themselves — plus the fact that the line
   // does not come back, which is the defect a bare deletion could not have stated.
-  test("the teacher's well says one thing: its chips", async ({ page }) => {
+  // T8-W6 M16 renamed the tape itself, `teacher's` to `checking`; the selector follows it.
+  test("the checking well says one thing: its chips", async ({ page }) => {
     await loadSudoku(page);
     await openCard(page);
     await expect(page.locator("#controls-drawer .check-status")).toHaveCount(0);
 
-    const well = page.locator('#controls-drawer .tray-well:has-text("teacher\'s")');
+    const well = page.locator('#controls-drawer .tray-well:has-text("checking")');
     await expect(well.locator(".ctrl-btn")).toHaveText(["Off", "Ask", "Live"]);
 
     // The chips still carry the whole of the state, and they say it the way every other option

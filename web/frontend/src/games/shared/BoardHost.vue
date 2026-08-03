@@ -3,16 +3,15 @@
  * BoardHost — THE board. One module, five games (T5-W2 2.1).
  *
  * The five `*Board.vue` adapters were 2.0% apart: each declared the same twenty-one props,
- * relayed the same ten emits, and differed only in the four functions `GameBoard` asks a game
- * for — the grid's a11y label, the conflict/peer adjacency, the fresh-board margin, and the
- * idle grade whisper — plus which cell it slotted and which clue layer it laid over them.
+ * relayed the same ten emits, and differed only in the functions `GameBoard` asks a game
+ * for — the grid's a11y label, the conflict/peer adjacency, the fresh-board margin — plus
+ * which cell it slotted and which clue layer it laid over them.
  *
- * All six are now READS off the spec:
+ * All of them are now READS off the spec:
  *   · `grammar.noun` names the grid · `grammar.geometry` picks the peer band and the sub-grid
- *     tick count · `grammar.requestVoice` gates the "— medium" difficulty clause (and the
- *     difficulty word in the grid label, which co-varies with it across all five games) ·
- *     `grammar.gradeHint` gates the UI-13 whisper · `furniture.cell` is what fills `#cells` ·
- *     `clues` is what fills `#overlay`, and `null` is a game's STATED absence.
+ *     tick count · `grammar.requestVoice` gates the difficulty word in the grid label ·
+ *     `furniture.cell` is what fills `#cells` · `clues` is what fills `#overlay`, and `null`
+ *     is a game's STATED absence.
  *
  * The prop-drill dies with the adapters: this host takes the MODEL, so the twenty-one
  * board props and the ten emit relays are bound once, here, instead of five times over.
@@ -110,32 +109,34 @@ function peersFn(pos: number, n: number): Set<string> {
   return set;
 }
 
-// ── The fresh-board announce — the measured signature, the B-0 request voice where the
-// grammar has one, and the one-shot corrupt-link clause. ──
+// ── T8-W6 · M16 — THE BOARD CAPTION IS GONE, AND THIS IS THE EXEMPLAR IT WAS TAKEN FROM ──
+// It read `a fresh 9×9 — naked single`: a contrivance ("a fresh"), the solver's own vocabulary
+// ("naked single") and the banned character, in six words the owner screenshotted. Deleted
+// whole rather than reworded — the board's size and tier are already the grid's accessible
+// name (`gridLabel` above), the deal's tier is already the drawer's tally, and a caption that
+// only restates them is the duplication the mark is about.
+//
+// The FAILURE survives, because it is not decoration: a shared link that would not parse is
+// news the reader cannot get anywhere else, and it is the one thing this function still says.
+// Empty otherwise, which `MarginNote` renders as no ink at all (`v-if="text"`); the strip's
+// reserved line stays, since the verdict/hint/error voice still lands on it and its whole
+// office is that nothing below the board moves when one does.
 let linkErrorPending = props.model.linkError.value;
 function freshBoardCopy(): string {
-  const fresh = `a fresh ${boardSize.value}×${boardSize.value}`;
-  const measured = props.model.gradeSignature.value
-    ? ` — ${props.model.gradeSignature.value}`
-    : difficultyWord.value
-      ? ` — ${difficultyWord.value}`
-      : "";
   if (linkErrorPending) {
     linkErrorPending = false;
-    return `this shared link couldn't be read. ${fresh}${measured}`;
+    return "this shared link couldn't be read";
   }
-  return `${fresh}${measured}`;
+  return "";
 }
 
-// ── UI-13 — the once-per-board grade-hint whisper, where the grammar asks for it. ──
-const idleGradeHint = computed(() =>
-  grammar.value.gradeHint
-    ? (values: Record<string, number>, n: number): string | null =>
-        conflictsFn(values, n).positions.size > 0
-          ? "a number repeats — turn on checking to see where"
-          : null
-    : undefined,
-);
+// ── T8-W6 · M16 — UI-13's WHISPER IS DELETED, AND SO IS ITS PLUMBING ─────────────────────
+// It read `a number repeats — turn on checking to see where`: the banned character, and a
+// sentence whose second half narrates a control the reader is looking at. That is meta
+// language by the mark's own definition, and its purpose (make the grader discoverable) was
+// meta from the start — the drawer's `checking` compartment is where a reader learns the
+// grader exists. The `idleGradeHint` prop, the `gradeHint` grammar flag and the five specs'
+// rows go with it: a copy law that leaves a dead prop behind has only hidden the string.
 
 /**
  * The board's cells, grouped into rows (T5-W3 3.1) — `cellRows[r][c]` is the flat cell index,
@@ -175,7 +176,6 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
     :peers-fn="peersFn"
     :fresh-board-copy="freshBoardCopy"
     :dealt="model.gradeTally.value.graded"
-    :idle-grade-hint="idleGradeHint"
     :pencil-marks="model.pencilMarks.value"
     :solve-stats="model.solveStats.value"
     :error-code="model.errorCode.value"

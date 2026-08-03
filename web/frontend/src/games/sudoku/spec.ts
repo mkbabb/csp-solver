@@ -32,7 +32,6 @@ export const sudokuSpec = defineGame<ReturnType<typeof useSudoku>, void>({
     // B-0: the margin says "— medium" until the engine has graded the board.
     requestVoice: true,
     // UI-13: the once-per-board "a number repeats" whisper.
-    gradeHint: true,
   },
   clues: null,
   furniture: { cell: DigitCell },

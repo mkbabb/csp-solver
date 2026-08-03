@@ -14,6 +14,12 @@ import GameBoard from "./GameBoard.vue";
  *
  * Two rows, one for each side of the gate, because the cure has to hold BOTH: the deal
  * must stop saying "clear", and the clear must keep saying it.
+ *
+ * T8-W6 · M16 — the announce these rows ROUTE to is now empty on an ordinary deal (the board
+ * caption was the mark's own exemplar and is deleted at `BoardHost`). The routing is still the
+ * subject, so the stub returns a SENTINEL rather than any string a reader would ever see; the
+ * production shape gets its own row at the foot, where the deal must leave the strip silent
+ * and must still not reach for the wipe receipt.
  */
 
 // The board's furniture is not the subject — stub the SVG grid, the celebration, and the
@@ -51,7 +57,7 @@ function mountBoard(props: Record<string, unknown> = {}) {
       gridLabel: "4 by 4 kenken board",
       conflictsFn: () => ({ positions: new Set<string>(), firstRow: null }),
       peersFn: () => new Set<string>(),
-      freshBoardCopy: () => "a fresh 4×4 — moderate",
+      freshBoardCopy: () => "<announce>",
       ...props,
     },
     global: { stubs: STUBS },
@@ -66,7 +72,7 @@ describe("GameBoard — the generation receipt on a no-givens family", () => {
     // The deal lands: the model grades the dealt board, then bumps the generation.
     await w.setProps({ dealt: true, boardGeneration: 2 });
     await nextTick();
-    expect(receipt(w)).toBe("a fresh 4×4 — moderate");
+    expect(receipt(w)).toBe("<announce>");
     expect(receipt(w)).not.toContain("clear");
     w.unmount();
   });
@@ -93,7 +99,33 @@ describe("GameBoard — the givens watch stays the announcer where there ARE giv
       boardGeneration: 2,
     });
     await nextTick();
-    expect(receipt(w)).toBe("a fresh 4×4 — moderate");
+    expect(receipt(w)).toBe("<announce>");
+    w.unmount();
+  });
+});
+
+// T8-W6 · M16 — THE PRODUCTION SHAPE. `BoardHost.freshBoardCopy` returns "" on every ordinary
+// deal now, so the row that matters is the one the sentinel cannot state: a deal must leave the
+// strip SILENT, and silence must not be mistaken for the wipe. The defect this guards is the
+// caption coming back, in either direction.
+describe("GameBoard — an ordinary deal says nothing at all", () => {
+  it("routes to an empty announce and never falls through to the wipe receipt", async () => {
+    const w = mountBoard({ dealt: false, freshBoardCopy: () => "" });
+    await w.setProps({ dealt: true, boardGeneration: 2 });
+    await nextTick();
+    expect(receipt(w)).toBe("");
+    w.unmount();
+  });
+
+  it("the corrupt-link clause is the one thing that still speaks on arrival", async () => {
+    const w = mountBoard({
+      dealt: false,
+      freshBoardCopy: () => "this shared link couldn't be read",
+    });
+    await w.setProps({ dealt: true, boardGeneration: 2 });
+    await nextTick();
+    expect(receipt(w)).toBe("this shared link couldn't be read");
+    expect(receipt(w)).not.toMatch(/[—–]/);
     w.unmount();
   });
 });

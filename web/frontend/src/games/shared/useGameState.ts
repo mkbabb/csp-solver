@@ -31,7 +31,7 @@ import {
   publishStagedLedger,
   registerStagingSource,
 } from "./useStagingBridge";
-import { formatGradeSignature, describeTally } from "@games/shared/techniqueVoice";
+import { describeTally } from "@games/shared/techniqueVoice";
 import type { HintResult, TechniqueId } from "@games/shared/techniqueEngine";
 import type { SolveState, SolveStats } from "@games/shared/types";
 
@@ -216,17 +216,16 @@ export function useGameState<
   const boardGeneration = ref(0);
 
   // ── The honest grade (T4-W7) — the hardest technique the engine needed to solve the DEALT
-  // board IS its difficulty. Held on the game state: W9-B1 reads `hardestTechnique` for the
-  // tally; the margin signature reads `gradeSignature`. Set at deal; null on clear/init/restore.
+  // board IS its difficulty. Held on the game state and read by W9-B1's tally alone: T8-W6's
+  // M16 retired `gradeSignature`, the computed that published the technique's NAME to the board
+  // caption, so the grade now leaves this module as a count and never as a word. Set at deal;
+  // null on clear/init/restore.
   const hardestTechnique = ref<TechniqueId | null>(null);
   const gradeSolved = ref(false);
   // T4-W9-B1 — the honesty gate: `graded` is true ONLY after the engine has run on a dealt,
   // supported board. A restored permalink or hand-typed board never trips it, so the tally shows
   // the dashed placeholder rather than a fabricated tier (ROW 5).
   const graded = ref(false);
-  const gradeSignature = computed(() =>
-    formatGradeSignature(hardestTechnique.value, gradeSolved.value),
-  );
   // The displayed-quality tally descriptor (W9-B1) — fully derived here (DifficultyTally renders).
   const gradeTally = computed(() =>
     describeTally(graded.value, hardestTechnique.value, gradeSolved.value),
@@ -1018,7 +1017,6 @@ export function useGameState<
     hintCell,
     hintReasoning,
     hardestTechnique,
-    gradeSignature,
     gradeTally,
     shareBoard,
     shareSession,
