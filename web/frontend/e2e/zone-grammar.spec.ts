@@ -652,27 +652,35 @@ test.describe("coarse regime", () => {
     );
   });
 
-  test("the teacher's well names the check state the card has never shown", async ({
-    page,
-  }) => {
+  // T8-W1 M3 — THE STATUS LINE IS PRUNED, so this row inverts: it used to assert the sentence
+  // under the teacher's chips through three states, and every one of those sentences restated
+  // the chip selected above it ("not checking" under `Off`, "checking as you go" under `Live`).
+  // The owner named the third by name. What survives is the well's own contract — one control,
+  // named by its tape, and the chips answering for themselves — plus the fact that the line
+  // does not come back, which is the defect a bare deletion could not have stated.
+  test("the teacher's well says one thing: its chips", async ({ page }) => {
     await loadSudoku(page);
     await openCard(page);
-    const status = page.locator("#controls-drawer .check-status");
-    await expect(status).toHaveAttribute("role", "status");
-    // Default mode is on-demand with the snapshot armed by nothing yet — the stale sentence,
-    // which is precisely the state `checkArmed` decays into and no control could report.
-    await expect(status).toContainText("ask again");
+    await expect(page.locator("#controls-drawer .check-status")).toHaveCount(0);
 
-    // Live: the sentence changes AND the pressure rung with it (the class the ink ladder keys).
-    // Scoped to the well — `Off` is a label in two compartments, which is exactly why each
-    // control group carries its own name.
     const well = page.locator('#controls-drawer .tray-well:has-text("teacher\'s")');
-    await well.locator('.ctrl-btn:text-is("Live")').tap();
-    await expect(status).toContainText("checking as you go");
-    await expect(status).toHaveClass(/is-marking/);
+    await expect(well.locator(".ctrl-btn")).toHaveText(["Off", "Ask", "Live"]);
 
+    // The chips still carry the whole of the state, and they say it the way every other option
+    // row in the estate does — `aria-pressed`, which is the announcement the sentence duplicated.
+    await well.locator('.ctrl-btn:text-is("Live")').tap();
+    await expect(well.locator('.ctrl-btn:text-is("Live")')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await well.locator('.ctrl-btn:text-is("Off")').tap();
-    await expect(status).toContainText("not checking");
-    await expect(status).not.toHaveClass(/is-marking/);
+    await expect(well.locator('.ctrl-btn:text-is("Off")')).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(well.locator('.ctrl-btn:text-is("Live")')).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 });

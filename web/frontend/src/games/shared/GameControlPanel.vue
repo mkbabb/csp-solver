@@ -58,7 +58,6 @@ import BoilDivider from "@pencil/chrome/BoilDivider.vue";
 import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
-import CheckStatus from "@games/shared/CheckStatus.vue";
 import DifficultyTally from "@games/shared/DifficultyTally.vue";
 import type { TallyDescriptor } from "@games/shared/techniqueVoice";
 import type { PencilMode } from "@games/shared/useUserMarks";
@@ -111,13 +110,13 @@ const props = defineProps<{
   // T4-W8 ROW 2 — the error-check mode (off/on-demand/live). LEFT a manual prop+emit (§1a):
   // the on-demand re-arm rides its same-value re-emit.
   errorCheckMode: ErrorCheckMode;
-  // T4-P1 — `useAssists`' derived display gate (live, OR on-demand with the snapshot still
-  // armed). The mode alone cannot say whether the teacher is marking RIGHT NOW: `checkArmed`
-  // decays on the next board edit, and that decay is the state the panel has never shown.
-  proactiveCheck: boolean;
-  // T7-W7 — the board is finished. One bit, one consumer (`CheckStatus`): the stale-check nag
-  // asks the player to re-arm a check on a board that has nothing left to check.
-  solved?: boolean;
+  // T8-W1 M3 — `proactiveCheck` and `solved` left with `CheckStatus`. They existed for ONE
+  // consumer, a status line under the teacher's chips whose five branches each restated the
+  // chip already selected beside them ("not checking" under Off, "checking as you go" under
+  // Live) or narrated a mechanism the control performs on a second tap. The owner named the
+  // stale branch by name; the other four are the same sentence in other states, so the line
+  // and the two bits that fed it go together. `useAssists` still owns the state; nothing about
+  // WHEN the teacher marks changed — only the panel's habit of saying so twice.
   // T4-W3 share-truth: the parent's share act, handed as a callback rather than an emit so
   // the OUTCOME travels back — it resolves iff the clipboard copy actually landed.
   share: () => Promise<void>;
@@ -678,12 +677,10 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
             aria-hidden="true"
             >{{ dealArmed ? "sure?" : "Deal" }}</span
           >
-          <SheetWashiLabel
-            v-if="!mobile"
-            text="deal a new board with the settings above"
-            :seed="11"
-            wide
-          />
+          <!-- T8-W1 M3 — the hover tape is PRUNED. "deal a new board with the settings above"
+               is the button's own sublabel plus the contents of the compartment it stands in,
+               and the well's tape already says the settings wait for this press. The verb keeps
+               its name; the compartment keeps its one explication. -->
         </button>
         <!-- The receipt (mark 6): what the LAST deal actually produced, beside the verb that
              will replace it. The chips above are the ask; this is the answer. One home at
@@ -742,13 +739,11 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
       role="group"
       :aria-labelledby="pencilsId"
     >
+      <!-- T8-W1 M3 — the compartment's own hint is PRUNED. It read "how your marks are written
+           — and whether the solver shows its candidates", which is the two row captions
+           directly under it (`marks`, `candidates`) said again in a longer sentence. The rows
+           keep their own hints, which explain what the chips mean; only the enumeration went. -->
       <SheetWashiLabel :id="pencilsId" text="pencils" :seed="29" anchor="tag" />
-      <SheetWashiLabel
-        class="zone-hint"
-        text="how your marks are written — and whether the solver shows its candidates"
-        :seed="19"
-        wide
-      />
       <div
         class="zone-row"
         :class="{ 'zone-row-stacked': !mobile }"
@@ -818,7 +813,6 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
         :mobile="mobile"
         @change="emit('update:errorCheckMode', $event as ErrorCheckMode)"
       />
-      <CheckStatus :marking="proactiveCheck" :mode="errorCheckMode" :solved="solved" />
     </HandDrawnOutline>
 
     <!-- T6 mark 13 — THE PLAYERS COMPARTMENT. A fourth well on the zone grammar exactly as
@@ -904,7 +898,11 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
               <span v-if="p.self" class="player-self">you</span>
             </li>
           </ul>
-          <p class="players-note">anyone with this link can write on this board</p>
+          <!-- T8-W1 M3 — the note under the roster is PRUNED. "anyone with this link can write
+               on this board" is the well's own description ("share this board and everyone
+               writes on the same grid") said a second time, in the one state where the reader
+               has already acted on it. The description stays; it is the well's `aria-describedby`
+               and it is there before the share, which is when the statement does its work. -->
         </template>
         <!-- Leave stays through BOTH states: a room that never answers must still be one you
              can walk away from. -->
@@ -1317,9 +1315,8 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
 }
 
 .player-self,
-.players-note,
-/* T6.1 — the connecting line sits at the note's own rank, because it is the note's
-   understudy: the well says one quiet thing under the roster, whichever thing is true. */
+/* T6.1 — the connecting line sits at the roster's own quiet rank: the well says one thing
+   under the list while the wire is coming up, and nothing once it has. */
 .players-status {
   font-family: var(--font-hand);
   font-size: var(--type-caption);
@@ -1329,7 +1326,6 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   color: var(--ink-press-quiet);
 }
 
-.players-note,
 .players-status {
   margin: 0.35rem 0 0;
 }
@@ -1347,6 +1343,12 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   background: none;
   border: none;
   cursor: pointer;
+  /* T8-W1 (agent C's M5 census, R2) — the lift TWEENS, like every sibling ink lift in this
+     card. `.icon-btn` has carried `color 150ms` since P1-W3 narrowed it off `all`; this one
+     snapped, so the two quiet words in the players well answered the pointer in two different
+     languages. One property, the same 150ms, on the estate's standard curve — and NOT `all`,
+     which is the exact width P1-W3 measured the cost of. */
+  transition: color 150ms var(--ease-standard);
 }
 
 .players-leave:hover {
@@ -1386,12 +1388,22 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
    assumed. What the move retires is the hazard CLASS: no growth of either box can occlude the
    other, because they no longer overlap. `visual-regression.spec.ts` reads the clearance
    vertically now, with the shared cell as its negative control. */
+/* T8-W1 M2 — THE RULE ABOVE THE COMMIT. The well stacks two questions and then an ACT, and
+   nothing said where the asking stopped: `Hard` and the die sat in one undifferentiated
+   column. The divider is the estate's own, not a new one — the same 1.5px `--ink-press-rule`
+   hairline at the same 0.85rem of air that already separates `size` from `difficulty` two
+   rules up, so the well reads as three parts ruled the same way rather than two grammars.
+   `BoilDivider` is refused here for the reason the staged-section rule states: it mounts four
+   live `url(#grain-static)` poses and takes the filter census 9 → 13.
+   Both regimes: the phone shows one section at a time behind its tabs, so the staged-section
+   rule never matches there and this is the only rule the sheet gets — which is the surface the
+   owner marked. */
 .deal-row {
   display: grid;
   align-items: center;
-  /* 0.35rem, not 0.6: the well's own bottom padding now carries the rest of the air the
-     0.6rem was buying against a bare stack. */
-  margin-top: 0.35rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1.5px solid var(--ink-press-rule);
 }
 
 .deal-row > .deal-btn {
@@ -1788,6 +1800,20 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   border-color: currentColor;
 }
 
+/* T8-W1 (agent C's M5 census, R2) — THE `i` ANSWERS THE POINTER. Every other interactive text
+   surface in this card lifts its ink under a hover (`.icon-btn`, `.players-leave`, the chips'
+   ghost underline); this one had a pressed state and nothing before it, so the only control in
+   the action bar that opens something gave no sign it was a control. The lift is the SAME two
+   properties the pressed rule above already writes — no new vocabulary, and hovering an open
+   `i` is therefore a no-op rather than a third appearance. Fenced to hover-capable pointers
+   like every ink lift in the estate; the button itself is fine-pointer-only anyway. */
+@media (hover: hover) {
+  .info-btn:hover .info-glyph {
+    color: var(--color-foreground);
+    border-color: currentColor;
+  }
+}
+
 /* Play tools row (T4-WM §2) — undo / redo / hint. A COARSE affordance: hidden on a fine
    pointer (the desktop keeps its keyboard shortcuts + legend, presentation unchanged),
    shown as a tappable row on coarse — whether that lands in the mobile card (<lg) or the
@@ -1852,6 +1878,19 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
+}
+
+/* T8-W1 (agent C's M5 census, R2) — THE TABS ANSWER THE POINTER. The staged tab heads are the
+   card's largest interactive text and they had exactly one state to read: the underline on the
+   ACTIVE one. Pointing at an inactive tab did nothing, which on a row of two or three reads as
+   "this one is not a control". The lift is the estate's own — muted ink to foreground, the
+   `.icon-btn` / `.ctrl-btn` grammar — and it lands on the heading rather than the button so it
+   is the WORD that answers, which is what the reader is pointing at. The active head is already
+   at foreground, so it cannot double-report. */
+@media (hover: hover) {
+  .mobile-heading-btn:hover .section-heading {
+    color: var(--color-foreground);
+  }
 }
 
 /* Share pop — a small tape-press flourish on the share act (Band C one-shot). */

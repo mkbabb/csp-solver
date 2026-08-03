@@ -619,15 +619,51 @@ html {
   /* T3-W10 dusk ease (disposition keep, re-anchored AT click): when the theme turns,
      the world dims rather than snaps — body + the paper sheets take a one-shot
      ~350ms color ease. Scoped to html.theme-turning (DarkModeToggle puts the class
-     on at click, flip included, and holds it ~400ms — never a deferral) and
+     on at click, BEFORE the flip, and holds it ~400ms — never a deferral) and
      no-preference-gated: under PRM the page colors snap. Conforms to the 500ms
-     stroke/box-shadow solve-success precedent above. */
+     stroke/box-shadow solve-success precedent above.
+
+     THE NARROWING (T8-W2 M9). `!important` here is the cure `d8942ced` itself named and
+     banked: `disableTransition: true` stamps `* { transition: none !important }` across the
+     one flip frame — the only frame this tween can start — so from P1-W3 to T8 the page
+     SNAPPED while the toggle bloomed over it, and the class plus this rule sat inert for
+     three tranches. The commit's own words: "the cure if the owner wants the dusk back is to
+     NARROW the 46 tweening selectors, not to re-blanket them." This IS the narrowing, and it
+     is enforced by specificity rather than argued in prose: among `!important` declarations
+     the more specific selector wins, so exactly the FIVE named below out-rank the page-wide
+     kill and everything else keeps it along with the +23.5 fps it bought. Measured on this
+     tree, they resolve to THREE elements in the default board scene (page-root, board-wrapper,
+     action-bar; body is a fourth, occluded) against the 46 the flip used to tween. It is the
+     same instrument `827905fa` used one surface over for the toggle's own gesture
+     transitions; the dusk is the half of that cure that was left banked. Doubly narrow in
+     TIME as well: `html.theme-turning` is up for ~400ms per click and never otherwise, so
+     nothing here transitions at rest.
+
+     THE GROUND SET, re-derived at restoration rather than recited (T8-W2 M9; lessons §1,
+     proxy ≠ surface). `body` + `.bg-card` was the whole list in T3-W10 and it is no longer
+     the page: `.page-root` took the app's ground on a later wave and OCCLUDES body entirely,
+     so the old rule tweened a background nobody can see while the one they can see snapped —
+     two grounds at two speeds, which reads worse than the snap it replaced. Measured on this
+     tree, the elements whose painted `background-color` actually differs between themes at
+     >4000 px² are SIX: body (1024000, occluded) · .page-root/.bg-background (1024000) ·
+     .board-wrapper (409600) · .controls-card (197125) · .action-bar (18421) ·
+     .drawer-tab-tongue (4416). Both of the last two sit ON a dusking .bg-card and would
+     otherwise cut a lit rectangle out of it, so they are named. Two tokens carry all six —
+     `--color-background` and `--color-card` — and the list below is those two tokens'
+     consumers, nothing wider. RE-DERIVE THIS LIST whenever a new full-bleed ground lands.
+     The instrument is three lines in a page context: snapshot every element's computed
+     `background-color` light and dark, keep the visible ones that DIFFER above ~4000 px²,
+     rank by area. A ground missing from this list snaps while its neighbours ease, which is
+     the failure mode that made the old two-selector rule read worse than no rule at all. */
   @media (prefers-reduced-motion: no-preference) {
     html.theme-turning body,
-    html.theme-turning .bg-card {
+    html.theme-turning .bg-background,
+    html.theme-turning .bg-card,
+    html.theme-turning .action-bar,
+    html.theme-turning .drawer-tab-tongue {
       transition:
         background-color 350ms ease,
-        color 350ms ease;
+        color 350ms ease !important;
     }
   }
 

@@ -165,6 +165,15 @@ function onKeydown(e: KeyboardEvent) {
           </div>
         </div>
 
+        <!-- T8-W1 M4 — THE VERBS WEAR THE ESTATE'S HAND, not a rounded rect. They shipped as
+             `border: 2px solid` + `border-radius: 0.45rem` — a geometric chrome standing inside
+             a slip, a deck and four wells that are all drawn by `HandDrawnOutline`, which is
+             the one box grammar this estate has. The cure is the component, not a new radius:
+             `DrawerTab`'s own idiom verbatim (a bare `<button>` wrapping an outline wrapping the
+             tongue), at `:pose="0"` so each frame is pruned to a single static path — no beat
+             enrolled, no layer promoted, no filter minted (the poses carry the geometric grain
+             bake, so `filter-census` G3.5 is untouched). The outline is `pointer-events: none`,
+             so the button remains the whole target. -->
         <div class="staging-verbs">
           <button
             type="button"
@@ -173,8 +182,15 @@ function onKeydown(e: KeyboardEvent) {
             :aria-label="safeLabel"
             @click.stop="emit('safe')"
           >
-            {{ safeVerb }}
-            <span v-if="savedPair" class="staging-sub">{{ savedPair }}</span>
+            <HandDrawnOutline
+              :pose="0"
+              :stroke-width="2"
+              :outset="2"
+              class="staging-face"
+            >
+              {{ safeVerb }}
+              <span v-if="savedPair" class="staging-sub">{{ savedPair }}</span>
+            </HandDrawnOutline>
           </button>
           <button
             type="button"
@@ -184,8 +200,15 @@ function onKeydown(e: KeyboardEvent) {
             :aria-label="`deal a new ${name} board`"
             @click.stop="emit('deal')"
           >
-            <DiceIcon :size="20" aria-hidden="true" />
-            deal
+            <HandDrawnOutline
+              :pose="0"
+              :stroke-width="2.5"
+              :outset="2"
+              class="staging-face"
+            >
+              <DiceIcon :size="20" aria-hidden="true" />
+              deal
+            </HandDrawnOutline>
           </button>
         </div>
       </div>
@@ -194,11 +217,33 @@ function onKeydown(e: KeyboardEvent) {
 </template>
 
 <style scoped>
-/* THE RESERVATION. The band's box is held by CSS, not by five mounted instances: the slip keeps
-   its height as the content swaps card to card (3 size chips vs 4, `resume` vs `start`, with a
-   saved-pair sublabel or without), so the deck above and the pips between never shift on a
-   snap — and `HandDrawnOutline`'s ResizeObserver never re-bakes its four pose paths mid-gesture. */
+/* THE RESERVATION (T8-W1 M8, re-derived). The band's box is held by CSS, not by five mounted
+   instances — but until this pass it was held on ONE axis and only by luck on the other. The
+   three numbers below are what actually pin it, and each is the MEASURED maximum over all five
+   cards, in both engines, not a guess:
+
+     · `--staging-label-col: 3rem` (48px) ≥ the widest axis caption. `level` measures 41.66px on
+       Chromium and 43.88px on WebKit at 1280 — the shipped `min-width: 2.6rem` (41.6px) was
+       UNDER the WebKit figure, so the caption pushed its own chips 2.28px right there and
+       nowhere else. 48 clears both with 4.1px to spare.
+     · `--staging-opts-col` — the row regime's chip column, ≥ the widest option set. That is
+       futoshiki's four size chips; the difficulty band (`Easy Medium Hard`, on all five cards)
+       is second. Both are measured below.
+     · `--staging-verbs-col: 12.5rem` (200px) ≥ the widest verb pair. `resume`+`deal` measured
+       188.06px against `start`+`deal`'s 173.42 — a 14.64px swing that moved every chip on the
+       card sideways, because the axes took whatever the verbs left. Reserved, so they do not.
+
+   THE DEFECT THIS CURES, stated as it was measured. At the shipped 32rem the difficulty row
+   had 0.67px of slack on sudoku in WebKit and wrapped: `Easy Medium` on one line, `Hard`
+   orphaned below, the `level` caption floating between them because a flex row centres its
+   items — the owner's m3/m4 exactly. The band then stood 152.73px tall on sudoku against
+   112px on the other four, so the page reflowed on every snap through the deck. Reproduced
+   before the cure at `webkit 1280`, and the arithmetic above is why it cannot recur: nothing
+   in the row is elastic any more, so a card either fits the reserve or the reserve is wrong,
+   and the reserve is the max. */
 .staging-band {
+  --staging-label-col: 3rem;
+  --staging-verbs-col: 12.5rem;
   width: min(100%, 26rem);
   align-self: center;
 }
@@ -220,17 +265,32 @@ function onKeydown(e: KeyboardEvent) {
   min-width: 0;
 }
 
+/* T8-W1 M4 — THE TWO AXES ARE ONE SHAPE. They shipped as flex rows whose caption was a
+   `min-width`'d inline: identical in source, and identical on screen only while neither row
+   wrapped. The moment one did, the two rows stopped being the same object — one caption sat on
+   its chips' baseline, the other floated at the centre of a two-line block. A GRID with a fixed
+   caption column cannot express that difference: label in column 1, options in column 2, one
+   row each, whatever the content. `minmax(0, 1fr)` so a long option set is a measurement
+   problem (below) rather than a silent overflow of the grid track. */
 .staging-axis {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--staging-label-col) minmax(0, 1fr);
   align-items: center;
-  gap: 0.5rem;
+  column-gap: 0.5rem;
 }
 
 /* The chips are INPUTS, not the headline. The shared selector steps up to 1.375rem at md —
    which on the deck made the options louder than the acts they feed, the exact rank inversion
-   the picker is being fixed for. Pinned to the body rung here, so the verbs lead. */
+   the picker is being fixed for. Pinned to the body rung here, so the verbs lead.
+   T8-W1 M4: the horizontal padding comes down from the shared `px-3` (12px) to 0.65rem
+   (10.4px), band-scoped. It buys 38.4px on the widest row in the estate — futoshiki's four
+   size chips — which is the difference between a row-regime reserve that fits at the shipped
+   band width and one that needs the band to grow past the deck it hangs under. The drawer's
+   own chips are untouched; they stand in a 290px rail where three per row is the whole
+   population. */
 .staging-axis :deep(.ctrl-btn) {
   font-size: 1rem;
+  padding-inline: 0.65rem;
 }
 
 /* The axis name takes the drawer's own eyebrow register (`.section-heading`, typography.css
@@ -247,26 +307,26 @@ function onKeydown(e: KeyboardEvent) {
    register's, because the chips this captions are pinned to the body rung; the drawer's
    heading-to-chip ratio is what carries across, not its absolute rung.
 
-   `min-width` is the chips' shared left margin, so it is MEASURED and it HOLDS at 2.6rem: the
-   widest label under the new register is `level` at 41.66px on the 1280 cell (34.89 at 844,
-   25.95 at 390 — the small rung clamps down with the viewport), and 2.6rem is 41.6, so the two
-   axes still start their chips within 0.06px of each other. Widening it is not free and was
-   tried: 2.75rem takes 2.4px off the ≥40rem row, which is enough to wrap sudoku's three
-   difficulty chips to a second line and swing the slip 112 → 153px between cards — the shift
-   on snap the reserve exists to prevent. Re-derived after the tape landed: the tallest slip is
-   112px (7rem) at ≥40rem and 168px (10.5rem) below it, on all five cards, so both
-   `--staging-reserve` fallbacks are still exactly the ceiling and no card reaches past one. */
+   T8-W1 M4: the caption's WIDTH is the grid's now, not the caption's. `min-width: 2.6rem`
+   (41.6px) sat under `level`'s own WebKit measurement of 43.88px, so on that engine the label
+   set the column and the two axes started their chips 2.28px apart — the shipped rule was
+   measured on one engine and held on one engine. `--staging-label-col` is the track for both
+   rows at once, so they cannot disagree by construction, and it is 48px because 48 > 43.88. */
 .staging-axis-label {
   font-family: var(--font-hand);
   font-size: var(--type-small);
-  min-width: 2.6rem;
   text-align: left;
 }
 
-/* The chips fill the rest of the row and stay left-aligned under their label. */
+/* THE ROW NEVER WRAPS (T8-W1 M4). This was `flex-wrap: wrap`, which is the mechanism the
+   owner's m3/m4 caught in the act: it converts a 0.67px shortfall into a second line, an
+   orphaned `Hard`, a caption floating mid-column, and a 40.73px jump in the band's height —
+   all silently, and only on the one engine whose caption is 2.28px wider. `nowrap` makes the
+   same shortfall a MEASURABLE overflow instead of a layout, which is what the reserve numbers
+   above are derived against. */
 .staging-axis :deep(.options-row) {
   justify-content: flex-start;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   padding: 0.15rem 0;
 }
 
@@ -287,9 +347,12 @@ function onKeydown(e: KeyboardEvent) {
    THE VERBS ONLY, and the chips deliberately not: the chips already share the drawer's hover
    grammar because they are the same `OptionSelector` (muted ink lifting to foreground, the
    ghost underline), and a ground under them here would be a divergence on the very surface
-   being brought into line — plus it would paint over the crayon the selected chip now carries. */
+   being brought into line — plus it would paint over the crayon the selected chip now carries.
+
+   T8-W1 M4: the ground moves onto `.staging-face`, which is the box the drawn frame encloses —
+   painting it on the button would put the ink outside its own outline. */
 @media (hover: hover) {
-  .staging-btn:not(:disabled):hover {
+  .staging-btn:not(:disabled):hover .staging-face {
     background: var(--color-accent);
     color: var(--color-foreground);
   }
@@ -304,26 +367,40 @@ function onKeydown(e: KeyboardEvent) {
   margin-top: auto;
 }
 
-/* The verb grammar is the guard ribbon's, one surface up: a plain hand-written word in a soft
-   rounded border. Same size, same family, both named — the reader compares two words, not a
-   button against an absence. */
+/* THE VERB IS A DRAWN BOX NOW (T8-W1 M4). The button itself is stripped to a bare target — no
+   border, no radius, no padding — and the `HandDrawnOutline` inside it carries every one of
+   those jobs in the estate's own hand. `DrawerTab` established the shape (button → outline →
+   tongue) and this is that shape, so nothing new was invented to say "box". The `border-radius`
+   the ribbon and this band shared is what the owner marked as out of family; the ribbon's own
+   copy is agent B's fence and rides a wiring request. */
 .staging-btn {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-foreground);
+  font-family: var(--font-hand);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The FACE is the box the outline draws around: its padding is the frame's air, and it is the
+   node the hover ground paints, so the drawn stroke sits ON the ground rather than beside it.
+   `min-width` is what makes the pair a stable column — `resume` and `start` differ by 14.64px
+   of text, and a verb column that breathes with its own word is the horizontal half of the
+   reflow M8 names. */
+.staging-face {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.1rem;
-  font-family: var(--font-hand);
-  font-size: 1.15rem;
-  line-height: 1;
-  padding: 0.42rem 1.1rem;
+  min-width: 5.4rem;
   min-height: 2.5rem;
-  border-radius: 0.45rem;
-  border: 2px solid color-mix(in srgb, var(--color-foreground) 30%, transparent);
-  background: transparent;
-  color: var(--color-foreground);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+  padding: 0.42rem 0.9rem;
+  border-radius: 0.3rem;
 }
 
 /* The saved pair, printed under `resume` when the chips have wandered off it. The guard note's
@@ -334,20 +411,26 @@ function onKeydown(e: KeyboardEvent) {
   color: var(--color-muted-foreground);
 }
 
-/* `deal` is the picker's headline act AND its only destructive one, so it takes the ribbon's
-   heavier ink and the estate's own die — the SAME mark the drawer's Deal button wears. The
-   glyph is the structural tell: a reader who can see neither border weight nor colour still
-   sees one verb marked and one bare. */
-.staging-deal {
+/* `deal` is the picker's headline act AND its only destructive one, so it takes the heavier
+   ink — the outline's own `stroke-width` now, which is the hand's way of saying weight — and
+   the estate's own die, the SAME mark the drawer's Deal button wears. The glyph is the
+   structural tell: a reader who can see neither stroke weight nor colour still sees one verb
+   marked and one bare. */
+.staging-deal .staging-face {
   flex-direction: row;
   gap: 0.4rem;
-  border-color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
   background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
 }
 
+/* The focus ring rides the FACE, so it traces the drawn box rather than a zero-padding
+   button that is now smaller than the frame around it. */
 .staging-btn:focus-visible {
+  outline: none;
+}
+
+.staging-btn:focus-visible .staging-face {
   outline: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
-  outline-offset: 2px;
+  outline-offset: 4px;
 }
 
 .staging-btn:disabled {
@@ -356,22 +439,37 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 @media (pointer: coarse) {
-  .staging-btn {
+  .staging-face {
     min-height: 44px;
-    padding-inline: 1.1rem;
   }
 }
 
 /* Wide enough to set the slip as a row: the two axis lines stack on the left, the two verbs
    stand together on the right at the slip's optical center. The chip rows keep their own width
-   (a side-by-side pair of axes wrapped at 3 chips and broke the reading order). */
-@media (min-width: 40rem) {
+   (a side-by-side pair of axes wrapped at 3 chips and broke the reading order).
+
+   T8-W1 M8 — THE ROW REGIME IS A GRID, AND ITS COLUMNS ARE THE RESERVE. As a flex row the axes
+   took `1fr` of whatever the verbs left, so `resume` (sudoku, a saved board) and `start` (the
+   other four) handed the chips two different widths: 271.94px against 286.58px, measured, and
+   the narrower one is the card that wrapped. Two explicit tracks — chips, then a reserved verb
+   column — and every card gets the same two boxes whatever word is in the second one. The
+   band's own width goes 32rem → 34rem, which is what the arithmetic needs and no more:
+   544 − 32 (padding) − 20 (gap) − 200 (verbs) = 292px of chip column against a widest option
+   set of 220.04px (futoshiki's four size chips at the trimmed padding) plus 48 + 8 for the
+   caption — 276px, so 16px stands spare on the worst card in the estate.
+
+   The breakpoint moves 40rem → 42rem with it: at 40rem the band would be 100%-limited to under
+   34rem and the arithmetic above would be a claim about a width the band does not have. 42rem
+   (672px) is the narrowest viewport at which `min(100%, 34rem)` actually resolves to 34rem
+   here, measured, so the regime and its reserve begin at the same number. */
+@media (min-width: 42rem) {
   .staging-band {
-    width: min(100%, 32rem);
+    width: min(100%, 34rem);
   }
 
   .staging-slip {
-    flex-direction: row;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--staging-verbs-col);
     align-items: center;
     gap: 1.25rem;
     padding: 0.8rem 1rem;

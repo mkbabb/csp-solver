@@ -97,7 +97,7 @@ defineExpose({ close });
            coarse gate rather than after it. -->
       <button
         type="button"
-        class="text-muted-foreground hover:text-foreground mt-1 block font-mono text-xs"
+        class="text-muted-foreground hover:text-foreground mt-1 block font-mono text-xs transition-colors duration-200"
         :aria-pressed="debug"
         @click.stop="debug = !debug"
       >

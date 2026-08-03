@@ -65,6 +65,14 @@ function scribbleSeed(val: string | number): number {
                 scribbleSeed(opt.value) + boilFrame * 1000,
                 inkColor(),
               ),
+              // THE SELECTED CHIP BOILS UNDER THE POINTER (T8-W2 M5). One pose forward on the
+              // SAME seed grammar the boil beat uses (`+ boilFrame * 1000`), so the hover
+              // realization is the chip's own next frame and not a second vocabulary. Two
+              // cached data URIs per chip; no filter, no raster, no beat enrolled.
+              '--scribble-underline-hover': scribbleUnderline(
+                scribbleSeed(opt.value) + (boilFrame + 1) * 1000,
+                inkColor(),
+              ),
               '--scribble-width': `${opt.label.length + 1}ch`,
             }
           : {
@@ -111,10 +119,24 @@ function scribbleSeed(val: string | number): number {
 }
 
 /* The ghost underline is a hover preview — gated so it neither appears nor sticks on
-   touch (T4-WM §2); the selected option's real scribble underline is unconditional. */
+   touch (T4-WM §2); the selected option's real scribble underline is unconditional.
+
+   THE ROW ANSWERS AS ONE (T8-W2 M5). The selected chip used to be the single inert word in
+   an otherwise live row: it drops `hover-item`, so neither the ink lift nor the ghost could
+   reach it, and pointing at `9×9` did nothing while pointing at `4×4` beside it drew a
+   scribble — the inconsistency the mark's own shot frames. Its ink can't lift (it is already
+   at foreground, or at its tier's crayon), so the affordance lands where the chip's other
+   state already lives: the underline REDRAWS, one boil step forward, a pencil going over its
+   own line. A hard swap, not a tween — pose-swap is the estate's grammar for a drawn mark
+   changing (grid, logo, celestial), and `transition-colors` never touched background-image
+   anyway. Same fence as the ghost, so neither sticks after a tap. */
 @media (hover: hover) {
   .hover-item:hover {
     background-image: var(--ghost-underline);
+  }
+
+  .selected-item:hover {
+    background-image: var(--scribble-underline-hover, var(--scribble-underline));
   }
 }
 

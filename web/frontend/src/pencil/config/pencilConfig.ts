@@ -202,6 +202,58 @@ export function beatsFor(intervalMs: number): number {
   return Math.max(1, Math.round(intervalMs / MOTION.beatMs));
 }
 
+// ── THE HOVER GRAMMAR — what boils under a pointer, and what never does ──────────
+//
+// THE RULE, in two clauses, DERIVED from the estate's dominant pattern (T8-W2 M5, censused
+// row by row across every text surface the chrome paints — masthead, drawer, picker, gallery,
+// ribbon, cards, notes; the table is the wave report's):
+//
+//   R1  NO TEXT BOILS. Ever — not at rest, not on hover. Boil is for DRAWN GEOMETRY (the grid,
+//       the outlines, the wordmark's pose stack, the celestial pair, the divider) and for the
+//       DRAWN MARKS text wears (the option chips' scribble/ghost underlines, which are seeded
+//       data-URI backgrounds, not filters). A text RUN never carries `filter: url(#…)` and a
+//       hover never mints one. This clause is not new and it is not advice: P1-W3 deleted the
+//       estate's three hover wobbles at source (`.ctrl-btn:hover`, `.section-heading:hover`,
+//       `.icon-btn:hover`) and `e2e/filter-census.spec.ts` G3.5 walks the pointer over every
+//       candidate surface in BOTH regimes and reds if one comes back. Census 9, unmoved by
+//       anything on this page — a hover cure that needs a filter is the wrong cure.
+//
+//   R2  EVERY INTERACTIVE TEXT SURFACE TAKES EXACTLY ONE HOVER AFFORDANCE; INERT TEXT TAKES
+//       NONE. The affordance is the CONTROL's, not each text run's — a sublabel that stays
+//       muted inside a button whose ground lights conforms, because the rank it carries is
+//       the point. Three forms, and there is no fourth:
+//         · INK LIFT — muted → `--color-foreground`, tweened 150–250ms. The default for a
+//           bare word (chips, `leave`, `@mbabb`, the debug toggle).
+//         · A DRAWN MARK — the chips' ghost scribble appears (unselected) or redraws one boil
+//           step (selected, T8-W2). The pencil answer, for words that already sit at
+//           foreground and have no lift left.
+//         · A GROUND — `--color-accent` behind a BOXED control (`.icon-btn`, `.staging-btn`,
+//           `.error-note-retry`). Boxes only; a ground under a bare word is a fourth form.
+//       Fence every hover rule in `@media (hover: hover)` so nothing sticks after a tap.
+//
+// THE COUNTS, and only the ones that can be re-derived on demand. R1 is gated and its number
+// is 9 — `FILTER_BUDGET_TOTAL`, exact-match in both directions, both engines, both regimes,
+// hovered and at rest. R2 is not gated yet; what the census found is SIX violations against
+// it, every one an interactive surface answering nothing, and inert text conforming with no
+// exceptions at all. Two are cured in this wave (`OptionSelector`'s selected chip — the only
+// inert word in an otherwise live row, the mark's own shot; `AttributionCard`'s debug toggle,
+// an ink lift that snapped where every sibling tweens). Four sit behind other agents' fences
+// and ride wiring requests: the guard ribbon's two buttons, the gallery card's title and
+// subline, the drawer's `i` glyph, and its mobile heading tab.
+//
+// PROMOTE R2 TO A GATE ON ITS NEXT BITE. This is the family's second appearance (P1-W3 cut
+// three hover wobbles; T8-W2 counts six silent controls), and a rule stated only in a comment
+// is exactly what lessons §3 warns about. The cheap instrument already exists in shape:
+// `filter-census.spec.ts` G3.5 already walks the pointer over every candidate surface in both
+// regimes — a second assertion in that walk ("every interactive text surface's computed style
+// DIFFERS hovered vs at rest") turns this paragraph into a count.
+//
+// The wordmark is the instructive conforming case: the WORD never changes, and the control
+// still answers — its caret glyph wiggles (`HandwrittenGlyph`'s `isHovered`, the one hover
+// wiggle that reaches chrome at all). In the gallery the heading renders as a `<span>` and
+// the caret is not mounted, so the inert form correctly answers nothing. Same component,
+// both clauses, no exception.
+
 // ── Path-based boil config ───────────────────────────────────────
 
 export interface BoilConfig {

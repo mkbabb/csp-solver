@@ -648,9 +648,18 @@ const liveStarPoints = gestureBound(() => STAR_POSES_D[starFrame.value]);
 const liveStarTwinkles = gestureBound(() => TWINKLE_BY_FRAME[starFrame.value]);
 
 function handleToggle() {
-  toggleDark();
-  if (reducedMotion.value) return;
+  if (reducedMotion.value) {
+    toggleDark(); // PRM: the flip stands alone — no dusk, no gesture (index.css agrees)
+    return;
+  }
+  // THE DUSK ARMS FIRST (T8-W2 M9). `theme-turning` must be ON the root BEFORE the theme
+  // class is written, because vueuse's `disableTransition` computes the new colours inside
+  // the same synchronous act (it force-reads `getComputedStyle(document.body)` to flush the
+  // suppressed restyle). Armed after, the dusk rule is not matching at the only instant it
+  // could have started a tween, and the page snaps however the cascade is written. Armed
+  // first, the flip frame resolves WITH the `!important` colour transition standing.
   document.documentElement.classList.add("theme-turning");
+  toggleDark();
   clearTimeout(turnTimer);
   turnTimer = setTimeout(() => {
     document.documentElement.classList.remove("theme-turning");

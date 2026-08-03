@@ -360,18 +360,20 @@ test("no string renders in two faces except the ones this estate has ledgered", 
     "unledgered mixed-face strings",
   ).toEqual([]);
 
-  // The status line is the instance this loop minted and cured; it is named here so a
-  // regression cannot hide inside the ledger's tolerance for the pre-existing set.
-  const status = (
-    await page.locator(".check-status span[aria-hidden]").innerText()
-  ).trim();
-  expect(status.length).toBeGreaterThan(0);
-  expect(mixed.some((m) => m.shown === status)).toBe(false);
+  // T8-W1 M3 — THE NAMED INSTANCE MOVES. It used to be the teacher's status line, the string
+  // this loop minted and cured; that line is pruned (it restated the chip above it), so the
+  // named instance is the drawer's other hand-cut caption family — the row captions, whose
+  // `candidates` was cut for this face at the same time and by the same rule. Named for the
+  // same reason: a regression here must not hide inside the ledger's tolerance for the
+  // pre-existing set.
+  const caption = (await page.locator(".zone-row-label").first().innerText()).trim();
+  expect(caption.length).toBeGreaterThan(0);
+  expect(mixed.some((m) => m.shown === caption)).toBe(false);
 
   // NEGATIVE CONTROL: plant a string with a codepoint outside the hand cut and the census
   // must see it. Without this the row passes on any page with no text at all.
   const planted = await page.evaluate(() => {
-    const host = document.querySelector(".check-status") as HTMLElement;
+    const host = document.querySelector(".zone-row") as HTMLElement;
     const p = document.createElement("span");
     p.textContent = "Xylophone";
     p.style.fontFamily = "var(--font-hand)";

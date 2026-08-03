@@ -23,9 +23,11 @@ import GameControlPanel from "./GameControlPanel.vue";
 // sudoku's inline list and futoshiki's `futoshikiGame.options(futoshiki)` route are out of its
 // reach by construction. They are covered instead by `games/sudoku/game.test.ts` (the eager
 // scene's hand copy ≡ the declaration, with a live-model behavioural leg).
-// T4-P1 adds 3 rows here (the zone grammar's composition contract) and a `CheckStatus.test.ts`
-// of 9; the RANKS and the tap floor those names are written at are CSS and ride
-// e2e/zone-grammar.spec.ts, because a layer that applies no stylesheet cannot witness a rank.
+// T4-P1 adds 3 rows here (the zone grammar's composition contract); the RANKS and the tap floor
+// those names are written at are CSS and ride e2e/zone-grammar.spec.ts, because a layer that
+// applies no stylesheet cannot witness a rank.
+// T8-W1 M3: `CheckStatus.test.ts` (9 rows) left with the component it covered — the status line
+// under the teacher's chips, whose every branch restated the chip beside it.
 
 const SECTIONS = [
   {
@@ -80,7 +82,6 @@ function mountPanel(overrides: Record<string, unknown> = {}) {
       mobile: true,
       pencilMode: "off",
       errorCheckMode: "on-demand",
-      proactiveCheck: false,
       candidatesPinned: false,
       share: () => Promise.resolve(),
       shareSession: () => Promise.resolve(),
@@ -341,12 +342,15 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
   // T6 mark 4 — the hint tapes. What a jsdom layer owns is the COMPOSITION: one per named
   // compartment, each a decorative sibling of the name it explains, none of them a second
   // announced name. The reveal itself is `:hover` / `:focus-within` CSS and rides
-  // e2e/zone-grammar. Six now, because mark 13's well ships its own — a tape family with a
-  // hole in it is the inconsistency the tapes were minted to close.
-  it("six hint tapes ride beside the names, and none of them is a name", () => {
+  // e2e/zone-grammar.
+  // T8-W1 M3: FIVE. The `pencils` compartment's tape enumerated the two row captions under it
+  // ("how your marks are written — and whether the solver shows its candidates"), which is a
+  // tape that says the two names it sits above rather than what they mean. Its two ROW tapes
+  // stay — they explain the chips, which is the office the family was minted for.
+  it("five hint tapes ride beside the names, and none of them is a name", () => {
     const w = mountPanel({ mobile: false });
     const hints = w.findAll(".zone-hint");
-    expect(hints).toHaveLength(6);
+    expect(hints).toHaveLength(5);
     for (const h of hints) {
       // The decorative-tape contract (SheetWashiLabel, default anchor): out of the AX tree,
       // no tooltip role, and not a `.washi-tag` — so the three-tape census cannot see it.
@@ -357,11 +361,20 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
     }
   });
 
-  it("proactiveCheck reaches the status line — the decay the card never showed", () => {
-    expect(mountPanel().get(".check-status").text()).toContain("ask again");
-    const marking = mountPanel({ proactiveCheck: true });
-    expect(marking.get(".check-status").text()).toContain("mistakes shown");
-    expect(marking.get(".check-status").classes()).toContain("is-marking");
+  // T8-W1 M3 — THE STATUS LINE IS GONE, and this row is its epitaph rather than its deletion:
+  // the defect it guards against is the line coming BACK, which is what a bare removal cannot
+  // say. Every branch it rendered restated the chip selected two lines above it, and the owner
+  // named the stale one ("board changed — ask again") by name.
+  it("the teacher's well says one thing: its chips", () => {
+    const w = mountPanel();
+    expect(w.find(".check-status").exists()).toBe(false);
+    const well = w.findAll(".tray-well").find((t) => t.text().includes("teacher's"))!;
+    expect(well.findAll(".ctrl-btn").map((b) => b.text())).toEqual([
+      "Off",
+      "Ask",
+      "Live",
+    ]);
+    w.unmount();
   });
 });
 

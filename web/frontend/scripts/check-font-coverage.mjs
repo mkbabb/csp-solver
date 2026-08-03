@@ -86,15 +86,15 @@ const FACES = [
         transform: "none",
         strings: ["marks", "candidates"],
       },
+      // T8-W1 M3 \u2014 `.check-status`'s four states left the corpus with the line that painted
+      // them. The cut is NOT re-narrowed: `level` (the picker's difficulty caption, the string
+      // the band's own comment pins this face for) and the two row captions above still hold
+      // every codepoint the subset must carry, and a shrunk subset is a re-cut this pass has
+      // no order for.
       {
-        where: ".check-status (the four visible states)",
+        where: ".staging-axis-label (the picker's axis captions)",
         transform: "none",
-        strings: [
-          "not marking",
-          "marking as you go",
-          "marked \u2014 showing mistakes",
-          "board changed \u2014 ask again",
-        ],
+        strings: ["size", "level"],
       },
     ],
   },

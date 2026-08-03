@@ -179,9 +179,9 @@ test("the invite carries the board, and both pages sit at one table", async ({
   for (const p of [a, b]) {
     await expect(roster(p)).toHaveCount(2);
     await expect(p.locator(".players-roster .player-self")).toHaveText("you");
-    await expect(p.locator(".players-note")).toHaveText(
-      "anyone with this link can write on this board",
-    );
+    // T8-W1 M3 — the `.players-note` under the roster is PRUNED; it restated the well's own
+    // description. What the room state is asserted by now is the roster itself.
+    await expect(p.locator(".players-note")).toHaveCount(0);
   }
   const names = await roster(a).locator(".player-name").allInnerTexts();
   expect(new Set(names).size).toBe(2);
@@ -357,7 +357,6 @@ test("the table says connecting until the room answers, then shows who is at it"
 
   await expect(status(a)).toHaveText("connecting…");
   await expect(roster(a)).toHaveCount(0);
-  await expect(a.locator(".controls-card .players-note")).toHaveCount(0);
   // The way out of a room that never answers stays on the card through both states.
   await expect(a.locator(".controls-card .players-leave")).toBeVisible();
 
@@ -369,9 +368,9 @@ test("the table says connecting until the room answers, then shows who is at it"
   for (const p of [a, b]) {
     await expect(roster(p)).toHaveCount(2);
     await expect(status(p)).toHaveCount(0);
-    await expect(p.locator(".controls-card .players-note")).toHaveText(
-      "anyone with this link can write on this board",
-    );
+    // The resolution IS the roster: `connecting…` goes and two named rows arrive. The note
+    // that used to stand under them is pruned (T8-W1 M3).
+    await expect(p.locator(".controls-card .players-roster")).toBeVisible();
   }
 
   await ctx.close();

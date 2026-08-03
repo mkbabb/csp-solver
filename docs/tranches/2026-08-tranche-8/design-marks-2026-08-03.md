@@ -26,6 +26,7 @@ states ladder position, never closure).
 | M12 | Previews are LIVE and the ACTUAL state of each game; state persists and saves between gallery switches | m6 |
 | M13 | Multiplayer × gallery: define ALL edge cases when a user switches gallery items mid-session | — |
 | M14 | Join/leave properly animated: controls expand + draw the player in; the board draws in briefly with the joining player's color (debounced); leaving is the same muted + reversed; potentially a player icon | — |
+| M16 | (added same day, owner's words verbatim) "all language like this is to be abrogated completely and removed wholesale. 'a naked single'--what? And this is to be done generally, NOT just this one item. Abstract over it. If we ever do display language, we can never us an em dash, and never use metaphor, meta language, or contrivance--plain english only." THE COPY LAW: every user-visible string censused estate-wide; jargon/metaphor/meta/contrivance removed wholesale; survivors rewritten in plain English; NO em dashes in product copy, ever. This supersedes the register tolerance W1's M3 census graded under — every KEEP verdict re-adjudicates | m7 |
 
 ## The waves
 
