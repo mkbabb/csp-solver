@@ -63,11 +63,10 @@ const boardSignature = (page: Page): Promise<string> =>
 
 /** The first cell no player and no deal has written — a free square to contend for. */
 const firstEmpty = (page: Page): Promise<number> =>
-  page.evaluate(
-    () =>
-      [...document.querySelectorAll(".sudoku-cell input")].findIndex(
-        (i) => !(i as HTMLInputElement).value,
-      ),
+  page.evaluate(() =>
+    [...document.querySelectorAll(".sudoku-cell input")].findIndex(
+      (i) => !(i as HTMLInputElement).value,
+    ),
   );
 
 async function write(page: Page, index: number, digit: string) {
@@ -243,6 +242,35 @@ test("undo skips a cell a peer has taken — your move is spent, their digit sta
   await ctx.close();
 });
 
+test("an undo is a move the room sees: the digit leaves both boards, and redo restores it", async ({
+  browser,
+}) => {
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await boot(a, SOLO + "&wire=local");
+  const b = await ctx.newPage();
+  await boot(b, await invite(a));
+
+  const cell = await firstEmpty(a);
+  await write(a, cell, "5");
+  await expect.poll(() => digitAt(b, cell)).toBe("5");
+
+  // A undoes an UNCONTESTED write. The replay erases the cell locally — and announces the
+  // erasure, because a replay is a write. Without the announcement B keeps a digit A no
+  // longer has, and the two boards silently fork until the next epoch papers over it.
+  await a.locator(".sudoku-cell input").nth(cell).press("Meta+z");
+  await expect.poll(() => digitAt(a, cell)).toBe("");
+  await expect.poll(() => digitAt(b, cell)).toBe("");
+
+  // Redo is the same law in the other direction.
+  await a.locator(".sudoku-cell input").nth(cell).press("Meta+Shift+z");
+  await expect.poll(() => digitAt(a, cell)).toBe("5");
+  await expect.poll(() => digitAt(b, cell)).toBe("5");
+
+  expect(await boardSignature(a)).toBe(await boardSignature(b));
+  await ctx.close();
+});
+
 test("a deal is an epoch: both boards follow, and neither undo stack crosses it", async ({
   browser,
 }) => {
@@ -415,7 +443,11 @@ const WORDMARK_RECORDER = () => {
   requestAnimationFrame(tick);
 };
 
-type WordmarkRecord = { samples: number; emptySamples: number; sets: { ink: number[] }[] };
+type WordmarkRecord = {
+  samples: number;
+  emptySamples: number;
+  sets: { ink: number[] }[];
+};
 const wordmarkRecord = (page: Page): Promise<WordmarkRecord> =>
   page.evaluate(() => (window as unknown as { __wordmark: WordmarkRecord }).__wordmark);
 
@@ -437,14 +469,17 @@ test("the wordmark holds through the join, under an op flood arriving mid-boot",
   // which an unpainted bake is on screen, which is why the report says "occasionally" and says
   // "second player".
   const flood = (async () => {
-    for (let n = 0; n < 40; n++) await writeFast(a, empties[n % empties.length], (n % 9) + 1);
+    for (let n = 0; n < 40; n++)
+      await writeFast(a, empties[n % empties.length], (n % 9) + 1);
   })();
   await boot(b, link);
   await flood;
 
   // POLLED to the state under test — the stack must have been HANDED a baked set, or the row
   // would pass by never having looked at one.
-  await expect.poll(() => wordmarkRecord(b).then((r) => r.sets.length)).toBeGreaterThan(0);
+  await expect
+    .poll(() => wordmarkRecord(b).then((r) => r.sets.length))
+    .toBeGreaterThan(0);
   await expect
     .poll(() => b.locator("image.logo-pose-bmp").count())
     .toBe(await b.locator("image.logo-pose-bmp").count());
@@ -609,9 +644,13 @@ test("three hundred ops as fast as the wire takes them, and the boards are one b
   // still draining, a target captured before the poll starts is a target the room has already
   // moved past, and the row would red on its own stopwatch rather than on convergence.
   await expect
-    .poll(() => Promise.all([boardSignature(a), boardSignature(b)]).then(([x, y]) => x === y), {
-      timeout: 30000,
-    })
+    .poll(
+      () =>
+        Promise.all([boardSignature(a), boardSignature(b)]).then(([x, y]) => x === y),
+      {
+        timeout: 30000,
+      },
+    )
     .toBe(true);
 
   // MEMORY SHAPE. The clock is `pos → stamp` over a FIXED index set, so it can never hold more
@@ -640,7 +679,9 @@ test("three hundred ops as fast as the wire takes them, and the boards are one b
  * OPT-IN (`T62_REAL_RELAY=1`): the far end is a live Cloudflare deployment. See the file header
  * for why that is a flag rather than a default.
  */
-test("the real relay carries the board with RTCPeerConnection deleted", async ({ browser }) => {
+test("the real relay carries the board with RTCPeerConnection deleted", async ({
+  browser,
+}) => {
   test.skip(process.env.T62_REAL_RELAY !== "1", "opt-in: reaches the live relay");
   test.slow();
   const ctx = await browser.newContext();
@@ -654,7 +695,11 @@ test("the real relay carries the board with RTCPeerConnection deleted", async ({
       throw new Error("RTCPeerConnection is not available");
     };
     for (const k of ["RTCPeerConnection", "webkitRTCPeerConnection"])
-      Object.defineProperty(window, k, { value: dead, configurable: true, writable: true });
+      Object.defineProperty(window, k, {
+        value: dead,
+        configurable: true,
+        writable: true,
+      });
   });
   await boot(b, link);
 
@@ -671,7 +716,9 @@ test("the real relay carries the board with RTCPeerConnection deleted", async ({
   const before = await boardSignature(a);
   await a.locator('.controls-card button[aria-label="Deal a new board"]').click();
   await expect.poll(() => boardSignature(a), { timeout: 30000 }).not.toBe(before);
-  await expect.poll(() => boardSignature(b), { timeout: 30000 }).toBe(await boardSignature(a));
+  await expect
+    .poll(() => boardSignature(b), { timeout: 30000 })
+    .toBe(await boardSignature(a));
 
   await ctx.close();
 });

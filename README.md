@@ -93,10 +93,10 @@ cargo test --workspace
 # Python wheel-contract: 27 passed, 0 skipped
 cd csp-solver/tests-py && uv run --no-sync pytest
 
-# e2e: 323 Playwright tests across 17 spec files in the default config (Chromium 164,
-#      WebKit 159). Five further specs are held out of it and ride two configs of their
+# e2e: 325 Playwright tests across 17 spec files in the default config (Chromium 165,
+#      WebKit 160). Five further specs are held out of it and ride two configs of their
 #      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (39 in 4).
-#      22 spec files on disk, 352 tests in all.
+#      22 spec files on disk, 354 tests in all.
 cd web/frontend && npx playwright test
 cd web/frontend && npx playwright test --config playwright-golden.config.ts && npm run test:e2e:throttle
 

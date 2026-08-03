@@ -255,9 +255,21 @@ export function useGameState<
     canRedo,
     undoDepth,
   } = useUndoHistory<BoardBlob, MarksBlob>({
-    applyValue: (pos, value) => applyCellValue(pos, value),
-    applyHintInk: (pos, value) => applyHintInk(pos, value),
-    removeHintInk: (pos, prev) => removeHintInk(pos, prev),
+    // T6.2 — a replay is a write. Undo/redo pops the log rather than pushing it, so `onEntry`
+    // below never fires for a replay; each effect announces its own board change or the room
+    // never hears an undo. No echo risk: a peer's write arrives via `sessionSource`, not here.
+    applyValue: (pos, value) => {
+      applyCellValue(pos, value);
+      noteWrite(pos, value, false);
+    },
+    applyHintInk: (pos, value) => {
+      applyHintInk(pos, value);
+      noteWrite(pos, value, true);
+    },
+    removeHintInk: (pos, prev) => {
+      removeHintInk(pos, prev);
+      noteWrite(pos, prev, false);
+    },
     applyMark: (slot, pos, list) => setMarkSlot(slot, String(pos), list),
     restoreBoard: (board, marks) => restoreBoardState(board, marks),
     pending: () => loading.value,
