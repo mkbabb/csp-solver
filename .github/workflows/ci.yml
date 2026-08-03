@@ -20,8 +20,9 @@
 # tripwire, and knip; T4-W2 added the eslint boundary lane, promoted knip to
 # error-level, and re-cut the flat fan-out into a compute-cost DAG; T4-W5 added
 # the cargo-audit advisory tripwire; T5-W1 added lanes 12-18, every one of them a
-# gate the audit found absent, unwired, or scope-narrowed) — the lane set rides
-# EIGHTEEN jobs (the rust job carries lanes 2 + 3):
+# gate the audit found absent, unwired, or scope-narrowed; T7-W3 split webkit out
+# of the e2e job into ×3 single-worker shards — burst-forensics.md §6, option B) —
+# the lane set rides NINETEEN jobs (the rust job carries lanes 2 + 3):
 #   0.  build-lean-wasm    -> build-lean-wasm (the SHIP lean artifact built ONCE,
 #                                         uploaded as `lean-wasm-pkg`; frontend +
 #                                         e2e + twiggy(lean half) `needs:` it and
@@ -44,7 +45,14 @@
 #                                         half downloads the shared ship artifact)
 #   8.  frontend           -> frontend   (download lean pkg; npm ci --dry-run; npm ci;
 #                                         vue-tsc --noEmit; eslint boundary rig; knip)
-#   9.  e2e                -> e2e        (download lean pkg -> Playwright over the Vue SPA)
+#   9.  e2e                -> e2e        (download lean pkg -> Playwright over the Vue SPA,
+#                                         CHROMIUM project only since T7-W3 + the
+#                                         built-dist gates; webkit rides its own job)
+#   9b. e2e webkit         -> e2e-webkit (T7-W3 sharding option B: the webkit project
+#                                         alone, ×3 shards, workers:1 — the wandering
+#                                         deadline family is contention-amplified and
+#                                         engine-localized, so webkit gets an
+#                                         uncontended browser per runner)
 #   10. iai                -> iai        (callgrind deterministic instruction-count baseline)
 #   11. cargo-audit        -> cargo-audit(RustSec advisory scan over Cargo.lock; independent, no needs:)
 #   12. FE unit estate     -> fe-unit    (T5-W1.1/1.14: vitest run + the >=300 executed
@@ -69,8 +77,8 @@
 # Compute-cost DAG (T4-W2, r4-corrected — a `needs:` saves redundant CI minutes,
 # NOT wall-time; a predecessor serializes onto each dependent's critical path, so
 # edges are added ONLY where they kill redundant compute without lengthening the
-# critical path): build-lean-wasm ← {frontend, e2e, twiggy, fe-unit, boundary,
-# perf-subset, wasm-publish-dryrun, doc-truth}. The five T5-W1 additions take that
+# critical path): build-lean-wasm ← {frontend, e2e, e2e-webkit, twiggy, fe-unit,
+# boundary, perf-subset, wasm-publish-dryrun, doc-truth}. The five T5-W1 additions take that
 # edge for one reason only: web/frontend/package.json file:-links
 # @mkbabb/csp-solver-wasm to csp-solver/wasm/pkg, so `npm ci` cannot resolve the
 # lockfile until that directory exists — they DOWNLOAD the shared artifact rather
@@ -803,6 +811,27 @@ jobs:
             - name: lane membership (every gate/probe is wired or declared, self-tested)
               working-directory: web/frontend
               run: npm run lint:lanes
+            # T7-W3 gate 1 — the sleep lint. No fixed-duration wait may precede an
+            # assertion on a value read from a live or animating surface — geometry,
+            # pixel, or a count a still-running guard can mutate. Born RED at af508288
+            # on 16 sites (evidence/w3/sleep-lint-born-red.txt), every one cured to a
+            # polled read of the ASSERTED invariant (evidence/w3/sleep-lint-residue-cures.txt);
+            # four cited gallery exemptions where the sleep IS the measurement window,
+            # one cited sleep-ok (a11y's absence claim). Recursive over e2e/, self-tested.
+            - name: sleep lint (no sleep-then-one-shot-read, self-tested)
+              working-directory: web/frontend
+              run: npm run lint:sleep
+            # T7-W3 gate 2 — the per-file motion contract. Every spec declares
+            # "PRM: frozen — <cite>" or "PRM: live, because <reason>" in its head;
+            # a frozen declaration must route through emulateMedia (the only route
+            # that lands at @playwright/test 1.61.1 — the config/test.use forms are
+            # void, pinned by e2e/prm-void-audition.spec.ts so an upstream fix reds
+            # loudly instead of silently changing every capture). Born RED on all 22
+            # then-silent specs (evidence/w3/motion-contract-born-red.txt); 25/25
+            # declare today. Recursive, self-tested.
+            - name: motion contract (every spec declares its PRM posture, self-tested)
+              working-directory: web/frontend
+              run: npm run lint:motion
             # T5-W1 row 1.11 (audit C5 + J3) support floor. Same species as the seven
             # gates above it — static, zero-dependency, browser-free — and it needs
             # this job's `npm ci`: check 2 reads @tailwindcss/node's Lightning CSS
@@ -1096,14 +1125,34 @@ jobs:
             - name: "Install Playwright chromium + webkit (+ deps)"
               working-directory: web/frontend
               run: npx playwright install --with-deps chromium webkit
-            - name: "Run the Playwright e2e suite"
+            # T7-W3 sharding (burst-forensics.md §6, option B): this job runs CHROMIUM
+            # only (0 reds in 1,131 executed rows — workers:2 stays); webkit moved to
+            # the e2e-webkit job below, ×3 shards at workers:1, driving webkit
+            # contention-seconds 762 → 0. The falsifiable read-out is banked: the seven
+            # deadline-family rows go to zero under this shape or contention is refuted.
+            - name: "Run the Playwright e2e suite (chromium)"
               working-directory: web/frontend
-              run: npx playwright test
+              run: npx playwright test --project=chromium
+            # T7-W3 (forensics §5): the default suite banked NO report on any red run —
+            # playwright.config.ts now emits e2e-report.json in CI; upload it while the
+            # failure is fresh, before the built-dist gates overwrite the context.
+            - name: Upload the default-suite report (failure only)
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: e2e-chromium-report
+                  path: web/frontend/e2e-report.json
+                  if-no-files-found: ignore
             # T4-W2 golden gate — the capture/compare/review system (visual-golden.spec.ts
             # vs committed e2e/goldens/*-linux.png crops) + the per-image byte ceiling.
             # Runs in this job to reuse the checkout/node_modules/chromium bundle
             # (compute-cost DAG: no redundant setup for a 4-test suite).
+            # `if: !cancelled()` (T7-W3, forensics §5): these built-dist gates used to be
+            # skipped on any default-suite red — un-run exactly when the estate is
+            # unstable. They assert a different artifact (the built dist) and must speak
+            # regardless of the dev-suite verdict; the job still fails on the suite red.
             - name: "Run the visual golden gate"
+              if: ${{ !cancelled() }}
               working-directory: web/frontend
               run: npx playwright test --config playwright-golden.config.ts
             # T5-W1.13, the BLIND BAND cure. darwin soul floor 0.017 < the observed
@@ -1202,6 +1251,7 @@ jobs:
             #     1, and theme-bake-webkit's is 0 — all 10 of its rows are parked, which makes
             #     that project a name rather than a gate on the only platform CI runs.
             - name: "Run the built-dist gates (throttled-void + filter census + wordmark)"
+              if: ${{ !cancelled() }}
               working-directory: web/frontend
               run: npm run test:e2e:throttle
             # T4-W4 prod-shake proof (FAM-5): the DEV-gated FilterTuner /
@@ -1216,6 +1266,7 @@ jobs:
             # production build the throttle gate just produced) — compute-cost DAG, no
             # redundant build.
             - name: "Prod-shake proof (dev tuner absent from the bundle)"
+              if: ${{ !cancelled() }}
               working-directory: web/frontend
               run: npm run test:prod-shake -- dist-throttle
             # T7-W1 gate 1.1, the BUILT-CSS arm. The src census (the static-lint lane) can
@@ -1226,6 +1277,7 @@ jobs:
             # (exit 2) rather than greening when the dist is absent. Born RED at cbf2ab49 on
             # the two chunks that carry the dead blocks (evidence/w1/gate1.1-dist-arm.txt).
             - name: "theme-selector census (built CSS: no dead selector survives the build)"
+              if: ${{ !cancelled() }}
               working-directory: web/frontend
               run: npm run lint:theme-selectors -- --dist dist-throttle
             - name: Upload Playwright HTML report (failure only)
@@ -1248,6 +1300,83 @@ jobs:
                   path: web/frontend/playwright-report-throttle
                   if-no-files-found: ignore
                   retention-days: 7
+
+    # ---------------------------------------------------------------- Lane 9b
+    # e2e-webkit — T7-W3 sharding, OPTION B (evidence/w3/burst-forensics.md §6).
+    #
+    # THE EVIDENCE THIS SHAPE ANSWERS: across seven forensic runs, 10 of 10 default-
+    # suite reds were [webkit] against 1,131 executed chromium rows (null-model
+    # P = 8.3×10⁻⁴), 7 of 10 deadline-shaped, futoshiki.spec.ts:131 the head row in
+    # 3 of 7 — the wandering webkit deadline family: engine-localized, contention-
+    # amplified, discipline-seeded. The disciplines are cured in this wave; the
+    # contention is cured HERE. Under the old shape webkit shared one runner with
+    # chromium at workers:2 — ~762 webkit contention-seconds per run. This job gives
+    # webkit ×3 shards at workers:1: one browser, one worker, an uncontended CPU.
+    # Contention-seconds 762 → ~210 total across shards, wall 15.2m → ~7.3m,
+    # +11.4 runner-minutes — priced and accepted in the forensics.
+    #
+    # FALSIFIABLE, on the record: the seven deadline-family rows go to ZERO under
+    # this shape, or contention is refuted and the family gets per-row forensics.
+    # a11y.spec.ts:490 is excluded from that prediction — its cure is the polled
+    # census that landed with this wave, not the shard.
+    #
+    # Same setup spine as the e2e job (checkout → lean-pkg download → node 24 →
+    # npm@^11 → npm ci → cached webkit bundle); no golden/throttle/built-dist steps
+    # here — those assert the built dist and live in the e2e job. The list-time
+    # matrix/retries gates run once, there, not per-shard.
+    e2e-webkit:
+        runs-on: ubuntu-latest
+        timeout-minutes: 25
+        needs: [build-lean-wasm]
+        strategy:
+            fail-fast: false
+            matrix:
+                shard: [1, 2, 3]
+        steps:
+            - uses: actions/checkout@v4
+            - name: Download the lean wasm pkg (the package.json file-link target)
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            - name: Resolve Playwright version (from the lockfile)
+              id: pw-version
+              working-directory: web/frontend
+              run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+            - name: Cache Playwright browser bundle
+              id: pw-cache
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
+            - name: "Install Playwright webkit (+ deps)"
+              working-directory: web/frontend
+              run: npx playwright install --with-deps webkit
+            # workers=1 is the treatment, not a slowdown to apologize for: the
+            # deadline family fires when webkit's raf cadence is starved by a
+            # neighboring browser. One worker per shard makes starvation structural
+            # zero on this runner class.
+            - name: "Run the Playwright e2e suite (webkit, shard ${{ matrix.shard }}/3)"
+              working-directory: web/frontend
+              run: npx playwright test --project=webkit --workers=1 --shard=${{ matrix.shard }}/3
+            - name: Upload the webkit shard report (failure only)
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: e2e-webkit-report-shard-${{ matrix.shard }}
+                  path: web/frontend/e2e-report.json
+                  if-no-files-found: ignore
 
     # ---------------------------------------------------------------- Lane 14
     # perf subset — gates.json's idle thresholds, EXECUTED (T5-W1 row 1.2).
@@ -1396,7 +1525,7 @@ jobs:
                   case "$CODE" in
                     0) echo "perf subset GREEN — GATE A (long-frame census), GATE B (idle fps), GATE C (undoBurst) and GATE D (boot TBT) all held, on every engine that could measure them" ;;
                     1) echo "::error::perf subset RED — a gates.json threshold was breached. See the report artifact; the BREACH lines name the engine, the measured value and the derived threshold. Do NOT retry this and do NOT tune the threshold: gates.json is the P1 patch's sealed commitment." ;;
-                    2) echo "::error::perf subset setup error — gates.json unreadable, a reserved port, or a failed build. This lane carries no fallback thresholds by design." ;;
+                    2) echo "::error::perf subset setup/usage error — gates.json unreadable or missing a threshold key, an unknown engine name, a reserved port, a failed build, no engine able to measure boot TBT, or CPU throttling requested and not applied. This lane carries no fallback thresholds by design." ;;
                     # Exit-3-twice ruling (W1 seal-fix, run 30719165442): an instrument
                     # that cannot hold its own budget asserts NO verdict — failing the
                     # job would claim a red the instrument itself refuses. The report

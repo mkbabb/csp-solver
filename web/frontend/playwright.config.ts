@@ -34,6 +34,14 @@ export default defineConfig({
   expect: { timeout: 10000 },
   fullyParallel: true,
   retries: 0,
+  // T7-W3 (burst-forensics §5): a red default-suite run used to bank NO machine-readable
+  // report — the HTML uploads belong to the built-dist configs, so a default red survived
+  // as one log line and the forensics had to re-derive rosters from step text. In CI the
+  // suite emits e2e-report.json beside the line reporter; ci.yml uploads it on failure
+  // from the chromium job and each webkit shard.
+  reporter: process.env.CI
+    ? [["line"], ["json", { outputFile: "e2e-report.json" }]]
+    : "list",
   // TWO ENGINES, not one. Until T4-P1 this config declared no `projects` and no `browserName`,
   // so the whole suite ran Playwright's default (chromium) and every WebKit-shaped defect it
   // already asserts over was invisible: the deck's LAST CARD was unreachable in Safari for the

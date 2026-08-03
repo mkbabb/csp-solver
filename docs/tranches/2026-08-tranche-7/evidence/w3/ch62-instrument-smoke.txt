@@ -1,0 +1,176 @@
+T7-W3 · CH-62 — THE ADMISSION INSTRUMENT + THE RIG PROBE, BUILT AND SMOKED
+=========================================================================
+date      2026-08-03
+tree      af508288 (working tree; siblings' W1/W2/W6 edits live beside these)
+host      darwin 25.4.0 · node v26.0.0 · @playwright/test 1.61.1 · @mkbabb/pencil-boil ^0.12.0
+ports     4250 (ARM A bundle) · 4251 (ARM B bundle) · 4252 (plain control bundle)
+
+WHAT LANDED
+  web/frontend/src/pencil/composables/rasterPose.ts   the instrument + the ARM B ablation
+  web/frontend/e2e/ch62-admission.ts                  the spec-side census plumbing
+  .github/workflows/ch62-probe.yml                    the probe — workflow_dispatch ONLY, NOT dispatched
+
+The probe is BUILT, NOT RUN. The owner authorises the dispatch; the dated default fires at T8.
+Nothing here decides CH-62 — this file proves the instrument can be believed when it does.
+
+
+§1 · THE GATE, AND WHY A COUNTER RATHER THAN A READING
+------------------------------------------------------
+`posePaints` admits on five paths it cannot answer and one it can refuse. Every admit is
+SILENT, so from outside the app a gate that fired and a gate that never ran look identical —
+which is how the class has been pinned three times. One field per exit, per surface:
+
+  exit (current line)   field                  meaning
+  :108 no DOM/Image     noEnv                  the no-DOM admit
+  :114 decode threw     decodeRejected         the engine refused the decode
+  :120 no 2D context    noCtx
+  :127 draw/read threw  taintRejected          a tainted canvas
+  :125 decoded + empty  refused                THE REAL POSITIVE — the gate firing
+  :147 rebake spent     maxRebakesExhausted    admitted a still-blank set past MAX_REBAKES
+       rebake asked     rebakes
+       set landed       admitted, probed       the denominators that make `refused > 0` readable
+       ARM B only       ablatedAdmits          proof the ablation flag took
+
+Line numbers drift; the exits do not. Each counter sits ON its exit, count-and-continue: no
+return value, no ordering and no exit moved. The one structural edit is `next.map(posePaints)`
+→ `next.map((u) => posePaints(u, surface))`, which also stops the array index being passed as
+a second argument to a one-arity function.
+
+Per-surface WITHOUT touching the three call sites (`HandwrittenLogo.vue`, `HandDrawnGrid.vue`,
+`DarkModeToggle.vue` are not this wave's files): the key is read off the calling component via
+`getCurrentInstance().type.__name`, which the SFC compiler emits in production builds too, with
+a per-instance ordinal separating `DarkModeToggle`'s sun and moon stacks. Measured, 20 keys
+over five games:
+  <game>/HandwrittenLogo · <game>/HandDrawnGrid · <game>/DarkModeToggle · <game>/DarkModeToggle#2
+
+
+§2 · THE FENCE — `__bakeAdmission` DOES NOT SHIP
+-------------------------------------------------
+Gated on `import.meta.env.DEV || MODE === "ch62-probe" || MODE === "ch62-ablate"`, written as a
+ternary whose live arm owns the only occurrence of the string. Vite substitutes `MODE` with a
+literal, so an ordinary build folds the condition to `false` and drops the arm whole.
+
+  $ NODE_ENV=production npx vite build --outDir dist-ch62-plain
+  $ grep -rlE '__bakeAdmission|ablatedAdmits|ch62-probe|ch62-ablate|maxRebakesExhausted|ch62ablate' dist-ch62-plain
+    ABSENT (clean)
+
+  $ npm run test:prod-shake -- dist-ch62-plain
+    [prod-shake] 23 bundle chunk(s); asserting 3 dev-only symbol(s) absent
+    [prod-shake] PASS — the dev tuner is fully tree-shaken from production.
+
+  chunks carrying `__bakeAdmission`:
+    dist-ch62-plain    0     (NODE_ENV=production, no --mode)
+    dist-ch62          1     (--mode ch62-probe)
+    dist-ch62-ablate   1     (--mode ch62-ablate)
+
+The ablation is likewise unshippable and, in the ARM B bundle, TOTAL — esbuild collapses the
+whole probe to its first branch:
+    async function _s(e,n){return cn(n,"ablatedAdmits"),!0}
+and the `ablated` flag reads `bs=!0` in ARM B against `ks=!1` in ARM A. Not a runtime hope: the
+bundle carries no other path.
+
+A standing gate for this belongs in `scripts/check-prod-shake.mjs`'s FORBIDDEN list — see the
+wiring request; that file is not this wave's to edit.
+
+
+§3 · THE SMOKE — EVERY COUNTER PROVEN AGAINST ITS OWN EXIT
+-----------------------------------------------------------
+Five games, fresh load + one theme toggle (the two specs' own gesture), census polled to a
+settled value rather than slept on. Four page-side controls each patch ONE browser primitive,
+so exactly one exit is forced — the only way to show a counter is wired to the exit it names
+rather than to a plausible neighbour.
+
+  control  engine    ablated  probed admitted refused rebakes decRej noCtx taint noEnv maxReb ablAdm
+  none     chromium  false      120      30       0       0      0     0     0     0     0      0
+  none     webkit    false      128      30       6       2      0     0     0     0     0      0
+  blank    chromium  false       72       6      72      12      0     0     0     0     6      0
+  decode   chromium  false       24       6       0       0     24     0     0     0     0      0
+  noctx    chromium  false       24       6       0       0      0    24     0     0     0      0
+  taint    chromium  false       24       6       0       0      0     0    24     0     0      0
+  ARM B    chromium  true         0       6       0       0      0     0     0     0     0     24
+  ARM B    webkit    true         0       6       0       0      0     0     0     0     0     24
+
+  blank  = every decoded pose reads transparent (`getImageData` alpha zeroed)
+  decode = `HTMLImageElement.prototype.decode` rejects
+  noctx  = the 24x24 detached PROBE canvas alone returns no 2D context
+  taint  = `getImageData` throws
+
+READ THE `blank` ROW — it is the real-positive chain end to end, and the arithmetic closes:
+72 refusals over 6 stacks, 12 rebakes (2 per stack, MAX_REBAKES), 6 exhausted admissions
+(1 per stack), and every set admitted anyway. Fail open, delay a bake, never wedge a surface.
+
+The first `noctx` attempt nulled EVERY 2d context and the app rendered nothing — no poses, no
+census, `NO INSTRUMENT on the page`. Recorded because it is the shape of a bad control: it
+removed the subject instead of one of its exits. The refined patch fences on the probe
+canvas's own 24x24 detached geometry.
+
+`noEnv` (`:108`) is the one exit no page can force — it needs no `document` and no `Image`,
+i.e. a non-browser host. It is wired identically to its four siblings and is UNPROVEN by
+execution. Said plainly rather than counted as proven.
+
+THE REAL POSITIVE FIRES UNFORCED, ON DARWIN WEBKIT:
+  futoshiki/HandwrittenLogo  refused 3 · rebakes 1 · admitted 2 · every fail-open 0
+  kenken/HandwrittenLogo     refused 3 · rebakes 1 · admitted 2 · every fail-open 0
+Two of the games the class historically blanks, on the wordmark surface, cured by the re-bake
+with no fail-open touched. The gate is not decorative and `refused > 0` is reachable — which
+is the ARM A term the wave would otherwise have had to take on faith.
+
+
+§4 · ZERO BEHAVIOUR CHANGE, MEASURED
+-------------------------------------
+The two bake-adjacent specs, same command, three bundles:
+
+  wordmark-webkit + theme-bake-chromium + theme-bake-webkit, --config playwright-throttle.config.ts
+    dist-ch62-plain  (no instrument)   26 passed (12.6s)
+    dist-ch62        (ARM A shape)     26 passed (13.2s)
+    dist-ch62-ablate (ARM B shape)     26 passed (14.4s)
+
+ARM B passing here is EXPECTED and is not evidence of anything: the ablation only has purchase
+where the bake blanks, and the blank is a linux·WebKit fact. Darwin cannot exercise the
+control — which is precisely why the probe is a linux `workflow_dispatch` and why ARM B's
+≥2/6 is a VOID condition rather than a nice-to-have.
+
+
+§5 · THE PROBE, AND THE ONE SEAM IT CARRIES
+--------------------------------------------
+`.github/workflows/ch62-probe.yml` — `workflow_dispatch` only, 2 arms × 6 reps, `fail-fast:
+false` (a red IS the measurement in ARM B). Setup mirrored, not invented: the lean-wasm build
+is ci.yml lane 0's exact ship recipe, the browser half is lane 9's e2e job step-for-step
+(node 24 · npm >=11 · npm ci · Playwright cache keyed on the resolved version · `install
+--with-deps chromium webkit`). ci.yml's e2e job downloads `lean-wasm-pkg` from lane 0; a
+workflow cannot reach another workflow's artifact, so lane 0 is rebuilt here and the twelve arm
+jobs download it.
+
+Per rep: the quarantine is overwritten with an inert stub IN THE CHECKOUT ONLY (so the rows red
+instead of `test.fixme`, and so the `>=0.13.0` re-entry throw does not fire on its own subject);
+the arm bundle is built with `NODE_ENV=production` pinned — `vite build --mode <x>` with NODE_ENV
+unset resolves `isProduction: false`, i.e. a dev-flavoured Vue build, a different app than the
+one under test; a vacuity guard greps the bundle for the instrument and REFUSES rather than
+measuring all-zero counters; the two specs run against that bundle over the throttle config's
+documented external-preview path; the census is dumped per engine; a rollup emits one row.
+
+The verdict job computes the conjunction and prints every term's own number beside it:
+  RETIRE ⟺ ARM B red ≥2/6 ∧ ARM A red 0/6 ∧ ARM A refused > 0 ∧ all five fail-opens 0
+VOID conditions are distinct from DO-NOT-RETIRE and named as such: a short sample, a missing
+report, an instrument that reported no surfaces, `ablated !== true`, or `ablatedAdmits === 0`
+in any ARM B rep. A void probe is not a pass and not a pinning. The job reds unless the probe
+retires, so a dispatch that decided nothing cannot be read off a green checkmark.
+
+THE SEAM, NAMED NOT HIDDEN: the census comes from the workflow's own pass over the same five
+surfaces, not from inside the two quarantined specs. Those specs are another executor's rows
+this wave and an instrument that needs its subjects edited is an instrument that changes what
+it measures. `e2e/ch62-admission.ts::attachBakeAdmission` is written to drop in beside the
+existing `attachBakeEvidence` call the day that wave lands; then the reds and the counters come
+off the same pages. Until then the census and the red count are same-bundle, same-runner,
+same-dispatch — but not same-page.
+
+
+§6 · CONTENDED-RUN DISCIPLINE
+------------------------------
+The first census run reported `NO INSTRUMENT on the page` for every game on the ARM A arm. It
+was not a defect: port 4231 was already held by a SIBLING WAVE's dev server, `--strictPort`
+refused, and the pass measured someone else's bundle. Caught by comparing the served
+`assets/index-<hash>.js` against the dist on disk, re-run on 4250/4251/4252 with that identity
+checked first. Nothing from the contended run is banked. The probe workflow does not inherit
+the hazard — an isolated runner, one port, and a preview whose readiness is polled rather than
+slept on.

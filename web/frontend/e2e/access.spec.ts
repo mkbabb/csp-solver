@@ -98,14 +98,31 @@ async function occlusionCensus(
         return r.width > 0 && r.height > 0;
       }) as HTMLElement[];
 
+      /**
+       * THE FOCUS-SCROLL, SETTLED (T7-W3, the sleep-lint residue). `scroll-padding-*` and
+       * `scroll-margin-*` land on the frame the focus schedules, and the old form waited a fixed
+       * 120ms for it — a proxy that can red nowhere and that hands a PRE-SCROLL box to a census
+       * whose entire subject is where the box sits. The rect is now read across animation frames
+       * and only AGREEMENT between two consecutive ones counts as settled. The frame cap bounds
+       * the loop, not the wait: a settled box costs two frames rather than 120ms, and a box that
+       * never stops is measured where it ended instead of silently at frame one.
+       */
+      const settledRect = async (el: HTMLElement) => {
+        let prev = "";
+        for (let f = 0; f < 40; f++) {
+          await new Promise((r) => requestAnimationFrame(r));
+          const b = el.getBoundingClientRect();
+          const now = `${b.top.toFixed(2)}|${b.left.toFixed(2)}`;
+          if (now === prev) break;
+          prev = now;
+        }
+        return el.getBoundingClientRect();
+      };
+
       const out: Row[] = [];
       for (const el of els) {
         el.focus();
-        // The focus-scroll, settled. `scroll-padding-*` and `scroll-margin-*` both land on this
-        // frame; a measurement taken before it is a measurement of the pre-scroll box.
-        await new Promise((r) => setTimeout(r, 120));
-
-        const rect = el.getBoundingClientRect();
+        const rect = await settledRect(el);
         let covered = 0;
         let total = 0;
         const blockers = new Set<string>();
@@ -148,6 +165,43 @@ async function occlusionCensus(
     },
     { roots, allowlist },
   );
+}
+
+/**
+ * THE DRAWER, SETTLED (T7-W3, the sleep-lint residue). The Band-D glide carries its own clock
+ * and the old form simply waited it out — a fixed 900ms in front of a census that reads every
+ * control's painted box. A glide still running when the census starts moves those boxes under
+ * it, and their positions ARE the figure. So the rail's rect is read across two consecutive
+ * animation frames in one round trip, only agreement counts as settled, and a rail that never
+ * stops reds saying so rather than handing a mid-glide census to an assertion.
+ */
+async function settledDrawer(page: Page) {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            new Promise<boolean>((res) => {
+              const read = () => {
+                const r = document
+                  .querySelector("#controls-drawer")!
+                  .getBoundingClientRect();
+                return `${r.top.toFixed(2)}|${r.left.toFixed(2)}|${r.height.toFixed(2)}`;
+              };
+              requestAnimationFrame(() => {
+                const a = read();
+                requestAnimationFrame(() => res(a === read()));
+              });
+            }),
+        ),
+      {
+        timeout: 8000,
+        message:
+          "the drawer's rect never agreed across two consecutive frames — the Band-D glide is " +
+          "still running, so every box the occlusion census measures is still moving",
+      },
+    )
+    .toBe(true);
 }
 
 const pct = (r: Row) => (r.total === 0 ? 0 : r.covered / r.total);
@@ -279,7 +333,7 @@ test.describe("2.2 drawer-open inert census — the phone", () => {
     await page.locator(".drawer-tab").tap();
     await expect(page.locator(".drawer-tab")).toHaveAttribute("aria-expanded", "true");
     await expect(page.locator("#controls-drawer .controls-card")).toBeVisible();
-    await page.waitForTimeout(900); // the Band-D glide's own clock, then settle
+    await settledDrawer(page);
 
     // CONTROL, and it is deliberately not "the four verbs are in the census": after A2 they
     // are inert, hence out of it. What must hold in both worlds is that they EXIST — a cure

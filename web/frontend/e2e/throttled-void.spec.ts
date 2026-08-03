@@ -1,5 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// PRM: live, because the row times a CDP-throttled mount—the void's recovery budget is chunk
+//   fetch plus scene mount, not motion, and freezing the beat wouldn't move that clock.
+
 // D3 throttled-void gate (T3-W7 §e2e, G10 exhibit `g10-shots/first-select-void-400ms.png`).
 //
 // Futoshiki mounts from a lazy async chunk (its card's `load: () =>

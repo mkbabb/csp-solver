@@ -1,5 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// PRM: live, because this file's subject IS the running glide—the close row samples
+//   `document.getAnimations()` mid-flight for the four movers' easings, and PRM swaps the drawer
+//   to an instant state cut, which reds it. The `drawer under prefers-reduced-motion` describe
+//   emulates reduce at the test that wants it; the file's rule stays NO-PRM, and the CH-65
+//   reclassification of these rows stays dead.
+
 // T3-W12 §6 — THE DRAWER: the controls card as the pencil case tucked under the
 // worksheet. Codifies the owner's verbatim brief ("controls function as a drawer that
 // slides underneath the board, with the board and logo centering and growing bigger…
@@ -32,6 +38,54 @@ const boardBox = (page: Page) =>
     return { w: r.width, cx: r.x + r.width / 2 };
   });
 
+/**
+ * THE SETTLED READ (T7-W3 — CH-63 instance 10, the discipline cure).
+ *
+ * `boardBox` one-shot is honest only if the board has stopped moving, and nothing here ever
+ * established that: the 900ms rAF window below is the glide CONTRACT's measurement window, not
+ * a settle, and on a loaded runner its last frame can still be mid-glide. The figure then went
+ * straight into a non-retrying `expect` — the disease's exact shape (`scripts/check-sleep-lint.mjs`
+ * W2).
+ *
+ * So the rect is read across TWO CONSECUTIVE ANIMATION FRAMES, in one round trip, and only
+ * agreement between them counts as settled. Nothing is derived from elapsed time: a moving
+ * board keeps disagreeing until it stops, and a board that never stops reds with what it was
+ * doing instead of quietly handing a mid-glide sample to an assertion.
+ */
+const twoFrameBoardBox = (page: Page) =>
+  page.evaluate(
+    () =>
+      new Promise<{ w: number; cx: number }[]>((res) => {
+        const read = () => {
+          const r = document.querySelector('.board-wrapper')!.getBoundingClientRect();
+          return { w: +r.width.toFixed(2), cx: +(r.x + r.width / 2).toFixed(2) };
+        };
+        requestAnimationFrame(() => {
+          const a = read();
+          requestAnimationFrame(() => res([a, read()]));
+        });
+      }),
+  );
+
+async function settledBoardBox(page: Page, where: string) {
+  let pair = await twoFrameBoardBox(page);
+  await expect
+    .poll(
+      async () => {
+        pair = await twoFrameBoardBox(page);
+        return pair[0].w === pair[1].w && pair[0].cx === pair[1].cx;
+      },
+      {
+        timeout: 4000,
+        message:
+          `${where}: the board's rect never agreed across two consecutive frames, so it is ` +
+          `still moving — every figure read off it here is a mid-glide sample`,
+      },
+    )
+    .toBe(true);
+  return pair[1];
+}
+
 // ── 1. Default OPEN + the tab affordance ─────────────────────────────
 
 test('drawer: default open — tab present (≥44px), aria wired, controls visible', async ({
@@ -54,6 +108,29 @@ test('drawer: default open — tab present (≥44px), aria wired, controls visib
 //        W13 §3-S2), the case tucks HORIZONTALLY under the sheet on the ONE
 //        ledgered glass curve (§3-S5 + S3′, the audit-4 owner ruling), board
 //        grows ≥24px and centers on the page axis; state persists across reload ──
+//
+// NO PRM ON THIS ROW, BY CONSTRUCTION — T7-W3, and it closes the CH-65 reclassification so it
+// cannot be re-proposed.
+//
+// CITED BY CONTENT, NEVER BY LINE (T7-W3 ruling 2). The wave ordered cites to `:148`/`:150`;
+// those were re-derived once and then invalidated by a six-line sibling edit inside the same
+// wave, so a reader following the numbers landed on the rail-drift assertion — an assertion PRM
+// would not touch — and the annotation argued for itself out of the wrong evidence. The
+// referents are named by their own text instead:
+//
+//   · THE EASING-CARRIAGE CHECK — `expect(midEasings.length).toBeGreaterThan(0)`: the mid-glide
+//     frames must carry easings AT ALL.
+//   · THE FOUR-MOVERS-SAME-FRAME CHECK —
+//     `expect(Math.max(...midSamples.map((s) => s.easings.length))).toBe(4)`: sheet, case, tab
+//     and masthead all reporting in ONE frame.
+//
+// Both read `document.getAnimations()` while the glide runs, and both live under the S3′ comment
+// below. Under `emulateMedia({reducedMotion:'reduce'})` the drawer swaps its two layout states
+// in one frame: `drawer-gesturing` never latches, the movers never animate, and both go red on
+// a perfectly healthy tree. Freezing motion here does not stabilise the row, it deletes what the
+// row measures. The file's ONLY PRM emulation is the `drawer under prefers-reduced-motion`
+// describe (§5), scoped there deliberately; this row's flake cure is the settled read below,
+// not a frozen clock.
 
 test('drawer: close glides transform-only, board grows ≥24px + centers, persists', async ({
   page,
@@ -150,10 +227,25 @@ test('drawer: close glides transform-only, board grows ≥24px + centers, persis
   expect(Math.max(...midSamples.map((s) => s.easings.length))).toBe(4);
   for (const e of midEasings) expect(e).toBe('cubic-bezier(0.32, 0.72, 0, 1)');
 
-  // The verdict geometry: the board grew ≥24px and took the page's true axis.
-  const after = await boardBox(page);
-  expect(after.w - before.w).toBeGreaterThanOrEqual(24);
-  expect(Math.abs(after.cx - 720)).toBeLessThanOrEqual(2);
+  // The verdict geometry, taken at SETTLE rather than at a deadline (T7-W3, CH-63 instance 10).
+  // The old form read `boardBox` once, 40 lines downstream of a fixed 900ms window, and fed it
+  // to a non-retrying expect: the row passed because the machine was fast, and it is the same
+  // shape as every other discipline defect in the class. Now the rect must agree across two
+  // consecutive frames before any figure comes off it, and the verdict itself retries — a
+  // mid-glide sample can no longer reach an assertion.
+  await expect
+    .poll(
+      async () => {
+        const after = await settledBoardBox(page, 'the closed board');
+        return {
+          grew: after.w - before.w >= 24,
+          onAxis: Math.abs(after.cx - 720) <= 2,
+          measured: `Δw=${(after.w - before.w).toFixed(2)} cx=${after.cx.toFixed(2)}`,
+        };
+      },
+      { timeout: 8000, message: 'the closed board must grow ≥24px and take the page axis' },
+    )
+    .toMatchObject({ grew: true, onAxis: true });
 
   // The case is hidden AND inert — no invisible tab stops (W11 UI-6).
   const rail = page.locator('#controls-drawer');
@@ -161,12 +253,17 @@ test('drawer: close glides transform-only, board grows ≥24px + centers, persis
   await expect(rail).toHaveAttribute('inert', '');
   await expect(page.locator('.drawer-tab')).toHaveAttribute('aria-expanded', 'false');
 
-  // Persisted: a reload lands closed with no drawer flash.
+  // Persisted: a reload lands closed with no drawer flash. Settled read again — a reload's
+  // board grows into place, so a one-shot rect here is the same defect one beat later.
   await page.reload();
   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
   await expect(rail).toBeHidden();
-  const persisted = await boardBox(page);
-  expect(persisted.w - before.w).toBeGreaterThanOrEqual(24);
+  await expect
+    .poll(
+      async () => (await settledBoardBox(page, 'the reloaded board')).w - before.w,
+      { timeout: 8000, message: 'the closed pose must survive the reload' },
+    )
+    .toBeGreaterThanOrEqual(24);
 });
 
 // ── 3. A11y choreography: focus into the drawer on open, Esc closes from within,

@@ -14,7 +14,7 @@
  * through `rasterizePoseToBlob()` and hands back object URLs it owns. What survives is what the
  * app alone knows: how to read the live DOM, and when to hold a set across the null window.
  */
-import { ref, watch, type Ref } from "vue";
+import { getCurrentInstance, ref, watch, type Ref } from "vue";
 import type { RasterStackHandle } from "@mkbabb/pencil-boil";
 
 /**
@@ -92,6 +92,135 @@ export function resolveCssValue(
  * and the fallback holds the new geometry until the re-bake lands.
  */
 
+/**
+ * CH-62 · THE ADMISSION INSTRUMENT (T7-W3) — counts, never decides.
+ *
+ * The gate above fails open in five places and every one of them is SILENT: a `return true`
+ * from an unanswerable probe is indistinguishable, from outside, from a pose that painted.
+ * So a green ARM A proves nothing on its own — it is equally the shape of a gate that never
+ * ran. W3's rig probe retires CH-62 only on `refused > 0` with every fail-open counter at 0,
+ * and that arithmetic needs a number per exit. Hence one field per `posePaints` exit:
+ *
+ *   noEnv               no `document`/`Image`      (the no-DOM admit)
+ *   decodeRejected      `img.decode()` threw       (the engine refused the decode)
+ *   noCtx               no 2D context
+ *   taintRejected       `drawImage`/`getImageData` threw (a tainted canvas)
+ *   painted             decoded AND inked          — the REAL NEGATIVE, the gate standing down
+ *   refused             decoded AND empty          — the REAL positive, the gate firing
+ *   rebakes             a refusal that asked for another bake
+ *   maxRebakesExhausted admitted a still-blank set past `MAX_REBAKES` (the fifth fail-open)
+ *   probed / admitted   the denominators that make `refused > 0` readable
+ *   ablatedAdmits       ARM B only — proof the ablation flag actually took
+ *
+ * `painted` closes the census (T7-W3 residue, non-author FINDING 5). It was the one `return
+ * true` in `posePaints` carrying no counter, and while it is derivable — `probed − noEnv −
+ * decodeRejected − noCtx − taintRejected − refused` — the fail-open census IS the instrument,
+ * so "every exit is counted" has to be true on inspection rather than by subtraction. With it
+ * the per-surface row is self-checking: `probed` must equal
+ * `noEnv + decodeRejected + noCtx + taintRejected + painted + refused`, and a row that does not
+ * add up says the instrument lost an exit rather than the gate having behaved.
+ *
+ * ZERO BEHAVIOUR CHANGE. Every counter is count-and-continue on a path that already existed;
+ * no exit moved, no return value changed, no ordering changed.
+ *
+ * GATED, and gated on a form the bundler can fold. `import.meta.env.MODE` is substituted with
+ * a string literal at build, so `MODE === "ch62-probe"` collapses to `false` in an ordinary
+ * build and the ternary's live arm — the only place the `__bakeAdmission` string exists — is
+ * dropped whole. Proof: `npm run test:prod-shake` discipline, re-run per build in
+ * `evidence/w3/ch62-instrument-smoke.txt` (`__bakeAdmission` absent from `dist/`, present in
+ * `dist-ch62/`). The probe builds run `vite build --mode ch62-probe|ch62-ablate` with
+ * `NODE_ENV=production`, so they are production bundles in every respect but this fence.
+ */
+type BakeAdmissionCounters = {
+  probed: number;
+  admitted: number;
+  painted: number;
+  refused: number;
+  rebakes: number;
+  decodeRejected: number;
+  noCtx: number;
+  taintRejected: number;
+  noEnv: number;
+  maxRebakesExhausted: number;
+  ablatedAdmits: number;
+};
+
+declare global {
+  interface Window {
+    /** DEV / `--mode ch62-*` only. Per-surface admission census; see the block above. */
+    __bakeAdmission?: {
+      ablated: boolean;
+      surfaces: Record<string, BakeAdmissionCounters>;
+    };
+  }
+}
+
+/** The instrument fence, written so the substitution folds to a literal `false` in prod. */
+const CH62_INSTRUMENT =
+  import.meta.env.DEV ||
+  import.meta.env.MODE === "ch62-probe" ||
+  import.meta.env.MODE === "ch62-ablate";
+
+/**
+ * ARM B — the vacuity control. `posePaints` admits unconditionally, so the gate is present
+ * and inert; if ARM B does not red at the class rate the probe is VOID and ARM A's green is
+ * worth nothing. Never shippable: the build mode is the only production route to it, and the
+ * DEV query arm (`?ch62ablate=1`) exists so the ablation can be exercised on a dev server
+ * without a bespoke build.
+ */
+const CH62_ABLATE =
+  import.meta.env.MODE === "ch62-ablate" ||
+  (import.meta.env.DEV &&
+    typeof location !== "undefined" &&
+    new URLSearchParams(location.search).has("ch62ablate"));
+
+const ZERO_COUNTERS = (): BakeAdmissionCounters => ({
+  probed: 0,
+  admitted: 0,
+  painted: 0,
+  refused: 0,
+  rebakes: 0,
+  decodeRejected: 0,
+  noCtx: 0,
+  taintRejected: 0,
+  noEnv: 0,
+  maxRebakesExhausted: 0,
+  ablatedAdmits: 0,
+});
+
+/** Bump one field of one surface's census. The dead arm is what ships. */
+const ch62: (surface: string, field: keyof BakeAdmissionCounters) => void =
+  CH62_INSTRUMENT
+    ? (surface, field) => {
+        if (typeof window === "undefined") return;
+        const g = (window.__bakeAdmission ??= {
+          ablated: CH62_ABLATE,
+          surfaces: {},
+        });
+        (g.surfaces[surface] ??= ZERO_COUNTERS())[field]++;
+      }
+    : () => {};
+
+/**
+ * The surface a stack belongs to, read off the CALLING COMPONENT rather than a new parameter:
+ * the three call sites live in files this wave does not own, and an instrument that needs its
+ * subjects edited is an instrument that changes behaviour to measure it. `__name` is emitted
+ * by the SFC compiler in production builds too, so the key survives minification. The
+ * per-instance ordinal separates `DarkModeToggle`'s two stacks (sun, moon) without inventing
+ * a label for either.
+ */
+const stackOrdinal = new WeakMap<object, number>();
+const ch62Surface: () => string = CH62_INSTRUMENT
+  ? () => {
+      const inst = getCurrentInstance();
+      if (!inst) return "detached";
+      const name = (inst.type as { __name?: string }).__name ?? "anonymous";
+      const n = (stackOrdinal.get(inst) ?? 0) + 1;
+      stackOrdinal.set(inst, n);
+      return n === 1 ? name : `${name}#${n}`;
+    }
+  : () => "";
+
 /** Probe raster, in px. The question is "did this pose paint at all", so it is asked of a
  *  thumbnail: one small `drawImage` and ~2 KB of alpha per pose, not a full-size read-back. */
 const PROBE_PX = 24;
@@ -104,26 +233,47 @@ const MAX_REBAKES = 2;
  * bitmap that decoded and is empty — every other outcome (no DOM, no 2D context, a decode the
  * engine refuses) is an unanswerable probe and admits.
  */
-async function posePaints(url: string): Promise<boolean> {
-  if (typeof document === "undefined" || typeof Image === "undefined") return true;
+async function posePaints(url: string, surface: string): Promise<boolean> {
+  // ARM B. Present, inert, counted — the control the wave voids itself without.
+  if (CH62_ABLATE) {
+    ch62(surface, "ablatedAdmits");
+    return true;
+  }
+  ch62(surface, "probed");
+  if (typeof document === "undefined" || typeof Image === "undefined") {
+    ch62(surface, "noEnv");
+    return true;
+  }
   const img = new Image();
   img.src = url;
   try {
     await img.decode();
   } catch {
+    ch62(surface, "decodeRejected");
     return true;
   }
   const canvas = document.createElement("canvas");
   canvas.width = PROBE_PX;
   canvas.height = PROBE_PX;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return true;
+  if (!ctx) {
+    ch62(surface, "noCtx");
+    return true;
+  }
   try {
     ctx.drawImage(img, 0, 0, PROBE_PX, PROBE_PX);
     const { data } = ctx.getImageData(0, 0, PROBE_PX, PROBE_PX);
-    for (let i = 3; i < data.length; i += 4) if (data[i] > 8) return true;
+    // The painted exit, counted like its siblings — count-and-continue, same DEV/probe-mode
+    // fence, same position in the flow. Zero behaviour change: the `return true` is where it was.
+    for (let i = 3; i < data.length; i += 4)
+      if (data[i] > 8) {
+        ch62(surface, "painted");
+        return true;
+      }
+    ch62(surface, "refused");
     return false;
   } catch {
+    ch62(surface, "taintRejected");
     return true;
   }
 }
@@ -133,6 +283,7 @@ export function retainedPoseUrls(
   resetKey?: () => unknown,
 ): Ref<string[]> {
   const held = ref<string[]>([]);
+  const surface = ch62Surface();
   // A monotonic token, the same discipline the library's own bake token keeps: a set that is
   // still being admitted when its successor arrives must not land on top of it.
   let admitting = 0;
@@ -142,14 +293,21 @@ export function retainedPoseUrls(
     (next) => {
       if (!next) return;
       const token = ++admitting;
-      void Promise.all(next.map(posePaints)).then((paints) => {
+      // `next.map(posePaints)` fed the index through as a second argument; the arrow keeps
+      // the call one-arity-honest now that the probe carries a surface.
+      void Promise.all(next.map((u) => posePaints(u, surface))).then((paints) => {
         if (token !== admitting) return; // superseded by a newer bake
-        if (paints.every(Boolean) || rebakes >= MAX_REBAKES) {
+        const allPaint = paints.every(Boolean);
+        if (allPaint || rebakes >= MAX_REBAKES) {
+          // The fifth fail-open: a set that stayed blank past MAX_REBAKES is admitted anyway.
+          if (!allPaint) ch62(surface, "maxRebakesExhausted");
           rebakes = 0;
           held.value = next;
+          ch62(surface, "admitted");
           return;
         }
         rebakes++;
+        ch62(surface, "rebakes");
         handle.rebake();
       });
     },

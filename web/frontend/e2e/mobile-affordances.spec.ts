@@ -1,5 +1,9 @@
 import { test, expect, devices, type Page } from "@playwright/test";
 
+// PRM: live, because the coarse rows drive the app's real beats—the deck's entry glide, the peek
+//   washi, the Clear confirm—and then read the affordances they leave behind. No route applies
+//   PRM here, and the tap-target reads are layout the boil never touches.
+
 // T4-WM §1 — the mobile-affordances home. Two charges live here:
 //   1. NATIVE BOUNDED ENTRY (the pad abrogation): with the custom keypad excised, the per-cell
 //      opacity-0 `<input>` is the sole entry surface on every pointer. On a coarse device it must

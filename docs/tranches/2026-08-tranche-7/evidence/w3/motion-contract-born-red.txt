@@ -1,0 +1,104 @@
+T7-W3 · CROSS-CUTTING GATE 2 — THE MOTION CONTRACT · BORN-RED BANK
+===================================================================
+banked   2026-08-03T07:21:02Z
+tree     af508288 (+ W2's untracked e2e/access.spec.ts, + this wave's two new files)
+gate     web/frontend/scripts/check-motion-contract.mjs
+spec     docs/tranches/2026-08-tranche-7/waves/W3-the-flake-disease.md §"The four cross-cutting gates" 2
+runner   node v26.0.0 · @playwright/test 1.61.1 · darwin 26.4.1
+
+
+THE COUNT, RE-DERIVED
+---------------------
+The wave says "Born RED on all 22 spec files on disk — none carries the declaration today".
+Both halves are stale at execution time; the field:
+
+  25  e2e/*.spec.ts on disk right now  (24 before this wave added prm-void-audition.spec.ts)
+   3  already declaring                (theme-quadrants.spec.ts:3 — W1, committed at af508288;
+                                        access.spec.ts:3 — W2, untracked at bank time;
+                                        prm-void-audition.spec.ts:6 — this wave, `PRM: live`)
+  22  SILENT — the born-RED roster below
+
+The 22 is right for the wrong reason: the wave counted 22 files with zero declared, and the
+tree holds 24 pre-existing files of which 2 were declared by sibling waves landing while this
+one ran. Same number, different arithmetic. The roster is what's load-bearing, not the count —
+and 22 files named below is the gate's own output, not a reference.
+
+BORN-RED ROSTER (check 1 DECLARED, 22 files)
+--------------------------------------------
+a11y · affordances · board-covisibility · drawer · filter-census · font-census · futoshiki ·
+gallery-deal · gallery-guard · gallery · mobile-affordances · mobile-platform · multiplayer ·
+permalink · share-truth · sudoku-interaction · theme-bake-freshness · throttled-void ·
+visual-golden · visual-regression · wordmark-integrity · zone-grammar        (all `.spec.ts`)
+
+Three of them (drawer, gallery, visual-golden) already call `emulateMedia` inline and will
+declare `frozen`/`live` citing it; the rest have never stated a motion state anywhere. The
+sweep that adds the declarations is a LATER agent's — this bank is the pre-cure tree, so the
+gate is provably able to red before anything is written to satisfy it (`font-census:256-261`
+precedent).
+
+
+VERBATIM — `node scripts/check-motion-contract.mjs --self-test`, cwd web/frontend, exit 1
+------------------------------------------------------------------------------------------
+MOTION CONTRACT — 25 specs, 3 declaring, 22 silent (head = first 20 lines)
+  ✗ 1 DECLARED — 22
+  ✓ 2 GRAMMAR
+  ✓ 3 ROUTE
+
+SELF-TEST — each check against a known-bad model:
+  [1 DECLARED] the declaration is deleted in a refactor (the silent-by-default state)
+      → RED (as it must)
+  [1 DECLARED] the declaration slides below the head window during a doc-block edit
+      → RED (as it must)
+  [2 GRAMMAR] a third mode is invented (`PRM: reduced`)
+      → RED (as it must)
+  [2 GRAMMAR] `PRM: live` lands with no reason — a declaration that says nothing
+      → RED (as it must)
+  [2 GRAMMAR] `PRM: frozen` lands with an empty cite
+      → RED (as it must)
+  [2 GRAMMAR] two declarations disagree (a merge keeps both sides)
+      → RED (as it must)
+  [3 ROUTE] CH-65 regresses — the freeze is 'restored' as `test.use({ reducedMotion })`
+      → RED (as it must)
+  [3 ROUTE] a frozen file loses its emulateMedia call entirely
+      → RED (as it must)
+
+22 failure(s):
+
+  • [1 DECLARED] a11y.spec.ts: NO motion declaration. Add one to the head:
+        // PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto
+        // PRM: live, because <reason>
+
+  … 21 more of the identical shape, one per file in the roster above (full stderr is
+    reproducible verbatim by re-running the command against this tree) …
+
+
+WHAT EACH CHECK IS FOR
+----------------------
+1 DECLARED   every e2e/*.spec.ts carries a `PRM:` line in its first 20 lines. A declaration
+             read after 200 lines of setup isn't a declaration, so the window is the head and
+             the error says so when a `PRM:` line exists lower down.
+2 GRAMMAR    `frozen — <cite>` or `live, because <reason>`, cite/reason ≥8 chars, and never
+             both modes in one file. A near-miss reds as MALFORMED rather than silently
+             falling back into "undeclared" — the diagnosis has to name the actual defect.
+3 ROUTE      a `frozen` claim must be backed by an `emulateMedia({ … reducedMotion … })` in
+             the file, or in an e2e helper the head cites by filename. A file whose only PRM
+             route is `test.use`/config `use` reds with the cite, because that route is VOID
+             at 1.61.1 — measured, and pinned live by e2e/prm-void-audition.spec.ts.
+
+Check 3 is the half that makes CH-65 un-re-derivable. The class's real residue was never the
+void option itself (cured at T6.2); it was that the finding sat in ONE spec's comment with no
+gate, so the golden family re-derived it from scratch 22 days later. A comment informs whoever
+opens that file. This reds in CI.
+
+Self-test discipline follows check-pw-projects.mjs: eight sabotages against a CLONE of the
+collected model, `--self-test` failing if any check stays green under the defect it names. It
+sabotages the model, never the repo, so it needs no branch and leaves no residue. It also
+needs at least one file already declaring `frozen` to wound — at a fully-silent tree it says
+so by name instead of passing vacuously (today it wounds theme-quadrants.spec.ts).
+
+
+GREEN CONDITION
+---------------
+The gate goes green when all 25 heads declare. That's the sweep agent's row, not this one's:
+this file is the proof that the gate reds on the tree as it stands, before any declaration was
+written to satisfy it.

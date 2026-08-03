@@ -1,5 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// PRM: live, because the guard ribbon slides in and out on its own transition and this file arms
+//   and dismisses it repeatedly; the deck's snap and underline are the app's motion, asserted as
+//   the app ships them. Nothing here reads a pixel the boil moves.
+
 // T4-W12 Wave D — the retired dropdown, the mid-game guard ribbon, and the snap-chime
 // underline. The wordmark now OPENS THE GALLERY (the in-place listbox is deleted); a switch
 // to a DIFFERENT game while the board is DIRTY (WU's undo-depth signal) slides a pencil-note

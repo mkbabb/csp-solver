@@ -1,0 +1,222 @@
+T7-W3 · RESIDUE CLOSEOUT — findings 2, 3, 5, the record corrections, the gate gap
+================================================================================
+executor   T7-W3 residue executor (chair-adjudicated), non-author to every artefact
+date       2026-08-03
+tree       working tree over 4b4c7aeb (T7-W6), sibling waves' edits present
+host       darwin 26.4.1 · node v26.0.0 · python3 (PyYAML) for the workflow parse
+scope      the six residue items that are NOT the sleep-lint cures; those are banked
+           in `sleep-lint-residue-cures.txt` beside this file.
+verdict    all closed. motion-contract exit 0 (+8 sabotages red) · ledger-diff
+           --assert-state --verify-cites exit 0 · ch62-probe.yml parses, 16 run:
+           blocks bash -n clean, guard exercised across 11 synthetic scenarios ·
+           vue-tsc --noEmit exit 0.
+
+────────────────────────────────────────────────────────────────────────────────
+1 · drawer.spec.ts — THE NO-PRM ANNOTATION, RE-CITED BY CONTENT (FINDING 2)
+────────────────────────────────────────────────────────────────────────────────
+
+The annotation existed so the CH-65 reclassification "cannot be re-proposed", and a
+reader following its numbers landed on the rail-drift assertion — an assertion PRM
+would not touch. The wave ordered cites to `:148`/`:150`; those were re-derived once
+and then invalidated by a six-line `PRM: live` head declaration a same-wave sibling
+added after the cure was written. Off by exactly six, twice.
+
+Per ruling 2 the numbers are gone. The two referents are now named by their own text:
+
+    · THE EASING-CARRIAGE CHECK
+        expect(midEasings.length).toBeGreaterThan(0)
+    · THE FOUR-MOVERS-SAME-FRAME CHECK
+        expect(Math.max(...midSamples.map((s) => s.easings.length))).toBe(4)
+
+Both sit under the S3′ comment in the close-glide row and both read
+`document.getAnimations()` while the glide runs — which is the whole argument for
+NO-PRM on this row, and it now survives any edit above it.
+
+The third cite in the same block went with them: `§5's own row (:332)` — correct as
+written when the verifier read it, and still a line number — now reads "the
+`drawer under prefers-reduced-motion` describe (§5)". Same drift class, same cure.
+
+    RE-RUN: e2e/drawer.spec.ts, both engines, in the seven-file set — 140 passed
+    twice (see sleep-lint-residue-cures.txt §5).
+
+────────────────────────────────────────────────────────────────────────────────
+2 · ch62-probe.yml — THE ARM B VACUITY GUARD, BOTH HALVES (FINDING 3)
+────────────────────────────────────────────────────────────────────────────────
+
+THE HOLE. The wave: "ARM B must red at the class rate — ≥2 of 6 runs, 4–7 rows — or
+the run is void." The verdict implemented `redRuns(B) < 2` and nothing else, so an
+ARM B that red with a SINGLE row in each of three runs cleared the term and the
+workflow printed RETIRE CH-62. A one-row red is not the class's rate; the control
+exists to REPRODUCE THE CLASS, not merely to be red.
+
+THE CURE, as a comparison rather than new data (the per-rep row counts were already
+printed beside the term):
+
+    const CLASS_MIN_ROWS = 2;
+    const bCounted = B.filter((r) => (r.reds ?? 0) >= CLASS_MIN_ROWS);
+    const bThin    = B.filter((r) => (r.reds ?? 0) > 0 && (r.reds ?? 0) < CLASS_MIN_ROWS);
+    const bRed     = bCounted.length;      // VOID unless ≥ 2
+
+Thin reds are NAMED in the void text rather than silently dropped, and the terms
+table row now reads `ARM B red ≥2/6, each ≥2 rows` with the per-rep rows and the
+uncounted-thin count beside it.
+
+THE BAND, REPORTED AND BINDING NOTHING. The wave's "4–7 rows" is four observations of
+a ten-red class (`burst-forensics.md` §2), not a bound the control has to land inside;
+enforcing it as a range would VOID a control that reproduced the class harder than the
+sample happened to, which is the wrong direction for a vacuity guard. It prints beside
+the verdict with that sentence attached, and the comment in the workflow says exactly
+this. The enforced floor is the ≥2-rows-per-counted-run term.
+
+EXERCISED, the verifier's method — the verdict source is EXTRACTED FROM THE WORKFLOW'S
+OWN HEREDOC (indent-stripped, verbatim; the harness refuses to run if `CLASS_MIN_ROWS`
+is absent from what it extracted), then run against synthetic rep files:
+
+  #   scenario                                                    exit  verdict
+  ──  ──────────────────────────────────────────────────────────  ────  ─────────────
+   1  all four terms hold (ARM B 4,5,6,4,0,0)                        0  RETIRE CH-62
+   2  FINDING 3's hole — ARM B one row in each of three runs         1  VOID          ← WAS "RETIRE"
+   3  ARM B red 1/6                                                 1  VOID
+   4  ARM B two runs at exactly the ≥2 floor, outside 4–7           0  RETIRE CH-62   ← band is reported, not binding
+   5  ARM B two at rate + two thin                                  0  RETIRE CH-62   ← thin reds excluded, floor still met
+   6  ARM B one at rate + three thin                                1  VOID           ← thin reds cannot make the floor
+   7  ARM A refused = 0                                             1  DO NOT RETIRE (FOURTH PINNING)
+   8  ARM A fail-open fired (noCtx 1)                               1  DO NOT RETIRE
+   9  ARM A red 1/6                                                 1  DO NOT RETIRE
+  10  ARM B ablation flag never took on one rep                     1  VOID
+  11  short sample (ARM B 5 reps)                                   1  VOID
+
+Row 2 is the finding, closed. Rows 4/5/6 are the new boundary, shown from both sides.
+VOID stays genuinely distinguished from DO-NOT-RETIRE in both text and exit path.
+
+STRUCTURE RE-CHECKED after the edit (actionlint is not installed on this host, so the
+file is parsed and exercised instead, as the verifier did):
+
+    $ python3 -c "yaml.safe_load(open('.github/workflows/ch62-probe.yml'))"
+      YAML OK · triggers: workflow_dispatch ONLY · jobs: build-lean-wasm, probe, verdict
+    $ every `run:` block extracted and `bash -n`'d
+      16 run: blocks · 16 clean
+
+────────────────────────────────────────────────────────────────────────────────
+3 · rasterPose.ts — THE PAINTED EXIT, COUNTED (FINDING 5)
+────────────────────────────────────────────────────────────────────────────────
+
+The one `return true` in `posePaints` carrying no counter was the REAL NEGATIVE: the
+in-loop exit taken when a pose actually painted (`data[i] > 8`). It is derivable —
+painted = probed − noEnv − decodeRejected − noCtx − taintRejected − refused — and the
+retire conjunction never needs it, so nothing the probe decides turns on this. It is
+counted anyway, because the fail-open census IS the instrument and "every exit is
+counted" has to be true on inspection rather than by subtraction.
+
+    for (let i = 3; i < data.length; i += 4)
+      if (data[i] > 8) {
+        ch62(surface, "painted");
+        return true;
+      }
+
+ZERO BEHAVIOUR CHANGE: the `return true` is where it was, the loop is the loop, the
+counter is count-and-continue behind the same `CH62_INSTRUMENT` fence as its five
+siblings (folds to `() => {}` in an ordinary build). `painted` is added to the
+counter type, to `ZERO_COUNTERS`, to the spec-side twin `e2e/ch62-admission.ts`
+(type + `totalBakeAdmission`), and to both `FIELDS` lists in the workflow (the
+per-surface dump and the rollup), so the two sides of the instrument stay isomorphic.
+It is NOT a term of the retire conjunction and the verdict arithmetic is untouched.
+
+WHAT IT BUYS: the per-surface row is self-checking —
+`probed = noEnv + decodeRejected + noCtx + taintRejected + painted + refused` — so a
+row that does not add up says the instrument lost an exit rather than the gate having
+behaved. Stated in the header block above the type.
+
+    $ npx vue-tsc --noEmit -p tsconfig.json        exit 0
+
+────────────────────────────────────────────────────────────────────────────────
+4 · THE RECORD CORRECTIONS (the forensics' headline)
+────────────────────────────────────────────────────────────────────────────────
+
+4.1 `evidence/w0/ci-preflight.md` — a dated correction block APPENDED, never a
+    silent edit. It states the three things the file got wrong and why the misread was
+    structural rather than careless: run 30781866393 carried ONE test red
+    (`1 failed · 2 skipped · 322 passed`), the "golden job 3→4 toHaveScreenshot reds"
+    are the self-delta canary arms which fail BY DESIGN in every run including the
+    fully green 30780989714, and row 8 (`30780222492`) is wrong twice over — its suite
+    passed and the job died at the estate gate on a deterministic orphan cured by
+    source commit `1cc8f4e4`. On a suite red the runner SKIPS the downstream golden
+    and built-dist steps, so the `if: always()` canary is the only screenshot output
+    left in the log and a top-down read meets it first. That is the trap, named.
+    The block also states what still stands: W0's acts — no golden re-mint, the resume
+    block's re-mint mechanism struck — rest on the un-miscounted half of the evidence,
+    which the forensics confirms.
+
+4.2 `docs/tranches/LEDGER.md` CH-64 — the row restated on the honest reading. It now
+    carries: FORENSICS EXECUTED 2026-08-03 with `evidence/w3/burst-forensics.md` as the
+    record; the class as measured (engine-localized, contention-amplified,
+    discipline-seeded — 10/10 webkit against 1,131 chromium rows, P = 8.3 × 10⁻⁴,
+    2.7–3.1× per-row cost, 7 of 10 deadline-shaped, head row `futoshiki.spec.ts:131` at
+    3 of 7 runs, accumulation and cold-start falsified, infra ruled out, and the verdict
+    stated as contention-AMPLIFIED rather than PROVEN because no run banks per-row
+    durations); the CITATION CORRECTED with the qualifying bursts named
+    (30765365438 at 3, 30786643192 at 2 — burst 2 carried 1 and never met the bar);
+    THE CANARY TRAP as a standing rule; and the trigger RE-ARMED on honest arithmetic —
+    ≥2 genuine TEST reds in one settled-head run, self-delta canary arms excluded BY
+    NAME, each green on the next runner pass with no surface change. The class stays
+    BANKED with the priced sharding cure recorded as a chair wiring act and the
+    falsifiable read-out banked with it.
+
+    $ node scripts/ledger-diff.mjs --assert-state --verify-cites
+      ORPHAN 142/142 · TERMINALITY clean · PROBE clean · DUPLICATE clean · CITES clean
+      GREEN — exit 0
+
+────────────────────────────────────────────────────────────────────────────────
+5 · check-motion-contract.mjs — THE SUBDIRECTORY HOLE, CLOSED
+────────────────────────────────────────────────────────────────────────────────
+
+From the script's own gap list. `specs()` was a flat `readdirSync(E2E)`, so a spec
+filed one level down — the ordinary shape the first time a suite is grouped by family
+— carried no obligation at all and the gate stayed green over it. A contract with a
+directory-shaped hole is not a contract.
+
+`walk()` now recurses `e2e/` and every directory under it (dot-dirs and
+`node_modules` skipped), returning paths relative to `e2e/` so a red names the file the
+way the runner does. Helpers resolve the same way and are keyed by relative path;
+check 3 matches a cite against the BASENAME, so a `frozen` file may still cite its
+route helper by bare filename from any depth.
+
+HEAD_LINES stays 20, and the header now states it as a LIMIT rather than leaving it
+implied: the declaration must sit inside a file's first twenty lines, above the doc
+essay; twenty is chosen so the contract lands in a diff hunk's context and on the first
+screen of `head`, and raising it would let a contract hide behind a prologue — the
+exact failure the gate is for. Check 1 already says so by name when it finds a
+declaration below the window.
+
+    $ node scripts/check-motion-contract.mjs --self-test
+      MOTION CONTRACT — 25 specs, 25 declaring, 0 silent (head = first 20 lines)
+        ✓ 1 DECLARED   ✓ 2 GRAMMAR   ✓ 3 ROUTE
+      all 8 sabotages RED, including the two that matter — `PRM: frozen` restored as
+      `test.use({ reducedMotion })` (the CH-65 regression) and a frozen file that
+      loses its emulateMedia entirely
+      exit 0
+
+    RECURSION PROVEN, not asserted. A throwaway `e2e/__recursion-probe/undeclared.spec.ts`
+    carrying no declaration was written, the gate run, and the directory deleted:
+
+      MOTION CONTRACT — 26 specs, 25 declaring, 1 silent
+        ✗ 1 DECLARED — 1
+        • [1 DECLARED] __recursion-probe/undeclared.spec.ts: NO motion declaration.
+
+    Named by its relative path, which is the point. Against the flat collection it was
+    invisible. Tree re-checked clean after removal (25 specs, exit 0).
+
+────────────────────────────────────────────────────────────────────────────────
+6 · THE SYMMETRIC HOLE, ROUTED RATHER THAN TAKEN
+────────────────────────────────────────────────────────────────────────────────
+
+`check-sleep-lint.mjs` collects the same way the motion contract used to —
+`readdirSync(E2E).filter((f) => f.endsWith(".spec.ts"))`, flat. A spec in an `e2e/`
+subdirectory escapes the sleep lint exactly as it escaped the motion contract, and a
+helper module under `e2e/` is outside both gates' collection entirely (only `.spec.ts`
+is linted), so a fixed wait moved into `e2e/anything.ts` is invisible to the gate that
+exists to find it.
+
+The chair scoped the recursion order to the motion contract. This is the same one-line
+change in the same shape and it is routed, not taken — noted here so it cannot be
+rediscovered from scratch, which is CH-65's own residue class.

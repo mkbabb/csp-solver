@@ -1,0 +1,225 @@
+T7-W3 · SLEEP-LINT RESIDUE — THE CURES, AND THE THIRD DISCIPLINE ROW
+================================================================================
+executor   T7-W3 residue executor (chair-adjudicated), non-author to the gate
+date       2026-08-03
+tree       working tree over 4b4c7aeb (T7-W6), sibling waves' edits present
+host       darwin 26.4.1 · node v26.0.0 · @playwright/test 1.61.1
+ports      dev :4250 · built-dist preview :4251 (uncontended; :3000 and :4241 held
+           by sibling agents and never touched)
+verdict    check-sleep-lint.mjs EXIT 0 at the working tree · every cured spec green
+           twice, both engines · zero sites left FLAG, zero exemptions added.
+
+The wave's acceptance puts the gate in the estate, and a gate at exit 1 is a lint
+nobody can turn on (non-author FINDING 1). This file is the residue closed.
+
+────────────────────────────────────────────────────────────────────────────────
+1 · BEFORE — the gate at head, verbatim
+────────────────────────────────────────────────────────────────────────────────
+
+    $ node scripts/check-sleep-lint.mjs        # cwd web/frontend
+    SLEEP LINT — 25 specs · 39 waitForTimeout sites in 13 files ·
+                 2 fixed in-page sampling windows · 4 cited exemptions · 1 sleep-ok tags
+
+    13 failure(s):
+      ✗ a11y.spec.ts:156                sleep 700ms   helper `armGuard()`
+      ✗ a11y.spec.ts:465                sleep 600ms   → `state` :466, asserted :467
+      ✗ access.spec.ts:76               window 120ms  helper `occlusionCensus()`
+      ✗ access.spec.ts:282              sleep 900ms   → `rows` :289, asserted :290
+      ✗ board-covisibility.spec.ts:635  sleep 400ms   → `wholeEdge` :636, asserted :637
+      ✗ board-covisibility.spec.ts:644  sleep 400ms   → `bare` :645, asserted :646
+      ✗ filter-census.spec.ts:111       sleep 600ms   helper `settleBoard()`
+      ✗ filter-census.spec.ts:376       sleep 400ms   helper `assertNoHoverFilters()`
+      ✗ mobile-platform.spec.ts:494     sleep 200ms   → `stranded` :495, asserted :496
+      ✗ visual-regression.spec.ts:605   sleep 320ms   → `hovered` :606, asserted :607
+      ✗ visual-regression.spec.ts:627   sleep 320ms   → `broken` :628, asserted :629
+      ✗ zone-grammar.spec.ts:468        sleep 80ms    → `broken` :469, asserted :470
+      ✗ zone-grammar.spec.ts:475        sleep 80ms    helper `collapse()`
+    exit 1
+
+Eleven of the thirteen predate the wave; two (`access.spec.ts` :76/:282) are W2's
+brand-new file, which is the residue GROWING during the wave — the reason it had to
+be closed rather than allowlisted.
+
+────────────────────────────────────────────────────────────────────────────────
+2 · AFTER
+────────────────────────────────────────────────────────────────────────────────
+
+    $ node scripts/check-sleep-lint.mjs
+    SLEEP LINT — 25 specs · 28 waitForTimeout sites in 13 files ·
+                 1 fixed in-page sampling window · 4 cited exemptions · 2 sleep-ok tags
+
+    OK — no fixed-duration wait precedes a one-shot assertion on a live surface
+         across 25 specs.
+    exit 0
+
+    $ node scripts/check-sleep-lint.mjs --self-test
+    4 RED fixtures flag · 4 GREEN fixtures stay clean · the stale-exemption canary
+    reports 4 stale on a gallery.spec.ts with none of its sites.        exit 0
+
+39 → 28 `waitForTimeout` sites: eleven deleted outright, none moved into a helper,
+none re-tagged out of the gate's reach. The census line re-derives on every run.
+
+ESCAPES, WHOLE — nothing was added to the EXEMPT table, and exactly ONE new
+`sleep-ok` tag was minted (a11y, the peek negative; §3.2 says why):
+
+      · a11y.spec.ts:477                sleep 600ms  — sleep-ok   ← NEW, this file
+      · gallery.spec.ts:77              sleep 50ms   — exempt
+      · gallery.spec.ts:238             sleep 700ms  — exempt
+      · gallery.spec.ts:327             sleep 100ms  — exempt·inert
+      · gallery.spec.ts:341             sleep 30ms   — exempt
+      · theme-bake-freshness.spec.ts:263 sleep 500ms — sleep-ok   (the wave's, intact)
+
+────────────────────────────────────────────────────────────────────────────────
+3 · THE THIRTEEN, EACH ON ITS OWN INVARIANT
+────────────────────────────────────────────────────────────────────────────────
+
+The idiom is the wave's: poll the invariant the ASSERTION names, never a clock.
+Where a whole read is one-shot, the verdict itself retries and carries its measured
+figures, so a red names what it saw (`drawer.spec.ts`'s settled-read precedent).
+Where the surface is continuously moving, the read is taken until two consecutive
+samples AGREE and only then handed to an assertion — a settle, not a deadline.
+
+3.1 a11y.spec.ts:156 — `armGuard()`, the 700ms before the select
+    ASSERTED INVARIANT: `Enter` selects whatever the deck has COMMITTED. Cured with
+    two auto-retrying attribute assertions on the commit itself — the listbox's
+    `aria-activedescendant` reading `gallery-card-1` and that card's
+    `aria-selected` reading true. The sleep could not red: a press sent into an
+    uncommitted deck re-selects sudoku, arms no guard, and every caller of the
+    helper inherited the race.
+
+3.2 a11y.spec.ts:465 → :477 — the Ctrl+K / Cmd+K peek, TAGGED `sleep-ok`
+    The one site in the thirteen where the elapsed time IS the subject, and the
+    only tag minted here. The claim is an ABSENCE across a window — the laminate
+    must never lay down — so there is no state to poll toward:
+    `expect.poll(…).toBe(0)` greens on its first tick against a peek that simply
+    has not arrived yet, which is a tautology, not a cure. This is the shape of the
+    table's own `gallery.spec.ts:238` exemption ("nothing advances across several
+    ~8Hz beats"). It is honest here because the row carries its own positive
+    control ten lines up: bare `k` is POLLED to `laminate === 1` and Escape polled
+    back to 0 in the same test, so the key pipeline is proven live and a quiet
+    window is a real silence rather than a dead surface. Reason banked inline,
+    ≥12 chars, cited to the mechanism (the laminate's rAF + transition).
+
+3.3 access.spec.ts:76 — the 120ms focus-scroll window inside `occlusionCensus()`
+    ASSERTED INVARIANT: the box being censused has stopped moving. `scroll-padding-*`
+    and `scroll-margin-*` land on the frame the focus schedules, and a fixed 120ms
+    hands a PRE-SCROLL box to a census whose whole subject is where the box sits.
+    Cured in page: the rect is re-read across animation frames and only agreement
+    between two consecutive ones counts as settled, with a FRAME CAP bounding the
+    loop rather than the wait. Faster in the common case (two frames ≈ 33ms against
+    120ms fixed, per control, times every tabbable) and it can red — a box that
+    never settles is measured where it ended, not silently at frame one.
+
+3.4 access.spec.ts:282 — the 900ms Band-D glide before the drawer census
+    Cured with a new file-local `settledDrawer(page)`: the rail's rect read across
+    two consecutive animation frames in ONE round trip, polled until they agree,
+    reding with the reason if the glide never stops. The census that follows reads
+    every control's painted box; a glide still running moves those boxes, and their
+    positions ARE the figure.
+
+3.5/3.6 board-covisibility.spec.ts:635 / :644 — the two fold controls
+    Both are style-injection ablations (`max-width: 100dvh`, then `max-width: none`)
+    followed by a one-shot overflow read. Cured with the settled-read idiom: the
+    verdict is an `expect.poll(…).toMatchObject({…})` over the same `read()`, the
+    returned object carrying `overflow`/`chromeAbove` so a red prints them. Control
+    2's ablation — the arm that proves the bound is not a decoration — is no longer
+    itself timing-dependent.
+
+3.7 filter-census.spec.ts:111 — the 600ms "one settled beat past the bake"
+    ASSERTED INVARIANT: the FILTERED POPULATION is still. The pose swap rides the
+    estate's own scheduler beat rather than the WAAPI, so the `getAnimations()` poll
+    directly above cannot see it and the sleep was standing in for it. Cured by
+    polling `filteredCount(page)` until two consecutive reads agree — the census's
+    own figure, held still. A grid still swapping poses in and out of the filtered
+    set keeps disagreeing until it stops.
+
+3.8 filter-census.spec.ts:376 — `assertNoHoverFilters()`'s stability precondition
+    The old form sampled, slept 400ms, sampled again and asserted equality: it reds
+    on a regime that is merely SLOW to settle and greens on one that drifts on a
+    400ms period. Same two-agreeing-reads poll; stillness is now waited for and
+    asserted as itself, and the regime name rides the failure message.
+
+3.9 mobile-platform.spec.ts:494 — the `bottom: 0` keyboard-anchor ablation
+    Re-anchoring the sheet re-lays it and re-runs the interior scroll `seat()`
+    drives. Cured to a polled `toMatchObject({portStranded, chipStranded})` carrying
+    `portBottom`/`bottom`/`bandEdge` in the object, so the ablation arm reds on the
+    geometry rather than on the clock.
+
+3.10/3.11 visual-regression.spec.ts:605 / :627 — the deal-receipt hover pair
+    The old comment ("longer than any reveal transition the estate has owned") is a
+    claim about the estate, not about this frame. Cured with a file-local
+    `settledClearance(where)`: the verb/receipt boxes are re-read until `gap`,
+    `axis` and `receiptW` all agree across two consecutive reads, and only the
+    settled figure reaches the (unchanged) assertions — so a transient reveal is
+    still caught, which a poll-to-true would have masked.
+
+3.12/3.13 zone-grammar.spec.ts:468 / :475 — `collapse()`, both 80ms waits
+    Both halves cured. The injected-rule wait becomes
+    `expect.poll(min width|height).toBeLessThan(44)`; the post-revert wait becomes
+    `expect.poll(…).toBeGreaterThanOrEqual(44)` — the shipped box coming back IS the
+    settle, so it is the thing waited on, and the two dimension arms can no longer
+    measure each other.
+
+────────────────────────────────────────────────────────────────────────────────
+4 · THE THIRD DISCIPLINE ROW — a11y's one-shot image census
+────────────────────────────────────────────────────────────────────────────────
+
+Handed over by `evidence/w3/burst-forensics.md` §2 (reds 4 and 5) and named again in
+its §5: `a11y.spec.ts`'s `3.5 unnamedImages` row read
+`expect((await imageCensus(page)).unnamed).toBe(0)` ONE-SHOT. No sleep precedes it,
+so the sleep lint never sees it — and it is the same disease regardless: `unnamed`
+is a DIFFERENCE OF TWO ROLE COUNTS taken off a board whose per-cell ghost rings are
+still being named as the glyphs land.
+
+    RED IN CI TWICE, both webkit, both `imageCensus.unnamed` 0 ≠ 1:
+      · run 30770223565 (`ccbc20bb`) — webkit position 15/152 (10% into the block)
+      · run 30781866393 (`afc72ba1`) — webkit position 15/160 (9%)
+
+    CURED with the same polled idiom: `expect.poll` re-reads the census and matches
+    `^0 unnamed of `, so the red prints the live counts; the annotation still pushes
+    the settled total/named/unnamed. The gate is unchanged — ZERO unnamed, never a
+    total (the deal-variance law the file's own header states).
+
+This is one of the three reds in the class's ten that sharding will not touch, and
+the forensics says so in those words. Curing it is why that stays true.
+
+────────────────────────────────────────────────────────────────────────────────
+5 · THE RUNS — executed, twice, spaced, both engines
+────────────────────────────────────────────────────────────────────────────────
+
+DEFAULT CONFIG (dev server :4250) — the six cured files plus `drawer.spec.ts`,
+which the annotation edit touched:
+
+    $ PLAYWRIGHT_BASE_URL=http://localhost:4250 npx playwright test \
+        e2e/a11y.spec.ts e2e/access.spec.ts e2e/board-covisibility.spec.ts \
+        e2e/mobile-platform.spec.ts e2e/visual-regression.spec.ts \
+        e2e/zone-grammar.spec.ts e2e/drawer.spec.ts
+      run 1: 140 passed (37.7s)      run 2: 140 passed (43.1s)
+
+BUILT-DIST CONFIG (preview :4251) — `filter-census.spec.ts` runs there, both engines,
+`retries: 0` by its own projects (a retried census is a census that lies):
+
+    $ PLAYWRIGHT_BASE_URL=http://localhost:4251 npx playwright test \
+        --config playwright-throttle.config.ts \
+        --project filter-census-chromium --project filter-census-webkit
+      run 1: 12 passed (7.3s)        run 2: 12 passed (7.6s)
+
+No suspicious red occurred in any pass, so the RESILIENCE re-run allowance
+(3× spaced) was never drawn on. TYPECHECK: `vue-tsc --noEmit -p tsconfig.json`
+exit 0 (the `painted` counter of §6's sibling item rides in the same tree).
+
+────────────────────────────────────────────────────────────────────────────────
+6 · WHAT THIS DID NOT REACH
+────────────────────────────────────────────────────────────────────────────────
+
+· Everything ran on darwin. The class these rows sit inside (CH-64's webkit deadline
+  family) is a linux-runner class; a darwin green says the cures are correct and
+  says nothing about the runner.
+· The gate's collection is FLAT — `readdirSync(E2E)` over `*.spec.ts`. A spec filed
+  in an `e2e/` subdirectory carries no obligation to it. The same hole was closed in
+  `check-motion-contract.mjs` this pass, on the chair's order; closing it here is a
+  one-line symmetric change the chair has not ordered, and it is routed rather than
+  taken.
+· `npm run lint:sleep`, which the script's own header advertises, still does not
+  exist in `web/frontend/package.json` — a sibling agent holds that file this wave.
+  Wiring is a chair act; the gate is exit 0 and ready for it.

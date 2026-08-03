@@ -1,0 +1,549 @@
+# ch62-probe — the two-arm born-RED rig probe that decides CH-62 (T7-W3).
+#
+# BUILT, NOT DISPATCHED. `workflow_dispatch` is the ONLY trigger and no wave runs it: the
+# owner authorises the dispatch, and the dated default fires at T8. Until then this file is
+# the probe's specification in executable form, which is the point — a probe described in
+# prose is a probe nobody can disagree with.
+#
+# WHAT IT DECIDES. CH-62 (the linux-WebKit blank bake) has been pinned three times and the
+# library hypothesis is spent twice. T6.2's admission gate in
+# `web/frontend/src/pencil/composables/rasterPose.ts` is the first cure to attack the
+# runner-side mechanism, but `posePaints` fails OPEN in five places and every one of them is
+# silent, so a green suite is equally the shape of a gate that never fired. Reading the code
+# cannot tell those apart. Two arms and a counter can:
+#
+#   ARM B (control, MUST red)  `posePaints` ablated to `return true` — the gate present and
+#                              inert. Red in ≥2 of 6 runs, or the whole probe is VOID. This
+#                              is the vacuity guard; without it a green ARM A is the
+#                              false-green mistake for a third time.
+#   ARM A (the claim)          shipped tree, gate live. 0 bake reds across all 6.
+#   Instrument (BOTH arms)     `window.__bakeAdmission`, one field per `posePaints` exit.
+#
+#   RETIRE CH-62 ⟺ ARM B red ≥2/6 ∧ ARM A red 0/6 ∧ ARM A `refused` > 0
+#                  ∧ decodeRejected = noCtx = taintRejected = noEnv = maxRebakesExhausted = 0
+#
+# A green ARM A with any fail-open fired is a masked blank, not a clean pass. Anything short
+# of the whole conjunction is a fourth pinning, and the summary job says so in those words.
+#
+# THE QUARANTINE IS DELETED FOR THE RUN. `e2e/linux-webkit-bake-quarantine.ts` is overwritten
+# with an inert stub in the checkout (never in the repo) so the class's rows red instead of
+# `test.fixme`-ing. Its `>=0.13.0` re-entry throw is stubbed out with it — the probe is the
+# other eviction path that guard names, so it must not trip on its own subject.
+#
+# SETUP IS MIRRORED, NOT INVENTED. The lean-wasm build is ci.yml lane 0's exact ship recipe
+# and the browser half is ci.yml lane 9's e2e job step-for-step (node 24 · npm >=11 · npm ci ·
+# Playwright bundle cache keyed on the resolved version · `install --with-deps chromium
+# webkit`). ci.yml's e2e job DOWNLOADS `lean-wasm-pkg` from lane 0; this workflow cannot reach
+# another workflow's artifact, so it builds it once here and the twelve arm jobs download it.
+#
+# THE ONE SEAM, NAMED. The admission census is taken by this workflow's own pass over the
+# same five surfaces (`ch62-dump.mjs` below), not scraped out of the two quarantined specs:
+# those specs are another executor's rows this wave, and an instrument that needs its subjects
+# edited is an instrument that changes what it measures. `e2e/ch62-admission.ts` carries
+# `attachBakeAdmission` ready to be dropped in beside the existing `attachBakeEvidence` call
+# the day the wave that owns them lands; then the census and the reds come off the same pages.
+#
+# PRM: live, because the census counts bake and RE-BAKE admissions on a running surface — the
+# pose rotation is the thing under measurement, and freezing motion would measure a different
+# app than the two specs assert over (neither declares `emulateMedia` here).
+name: ch62-probe
+
+on:
+    workflow_dispatch:
+        inputs:
+            note:
+                description: 'Why this dispatch (banked into the verdict artifact)'
+                required: false
+                default: 'CH-62 rig probe — owner-authorised dispatch'
+
+# The preview port for every arm job. 4230-4260 is W3's band; the runner is isolated, so one
+# port serves all twelve jobs.
+env:
+    CH62_PORT: '4230'
+
+jobs:
+    # ------------------------------------------------------------------ lean wasm
+    # ci.yml lane 0, verbatim: the EXACT ship recipe, built once, downloaded by the arms.
+    # `web/frontend/package.json` file:-links @mkbabb/csp-solver-wasm to csp-solver/wasm/pkg,
+    # so `npm ci` cannot resolve the lockfile until that directory exists.
+    build-lean-wasm:
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Rust stable toolchain (wasm32)
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: wasm32-unknown-unknown
+            - name: Install wasm-pack (>=0.14 floor)
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: wasm-pack
+            - name: Cache cargo registry + target
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
+                  key: cargo-ch62-lean-wasm-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+            - name: Build the lean wasm artifact (EXACT ship recipe)
+              run: wasm-pack build csp-solver/wasm --scope mkbabb --target web --profile wasm-release --no-default-features
+            - name: Set up Node (for the pkg-exports postprocess)
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+            - name: Stamp the pkg exports map (the generator owns the resolution contract)
+              run: node csp-solver/wasm/scripts/pkg-exports.mjs --write
+            - name: Upload the lean wasm pkg
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ch62-lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+                  if-no-files-found: error
+                  retention-days: 1
+
+    # ------------------------------------------------------------------ the arms
+    # 2 arms × 6 reps = 12 independent runs. `fail-fast: false` because a RED IS THE
+    # MEASUREMENT in arm B — a matrix that cancels its siblings on the first red would
+    # destroy the very sample the vacuity guard is counting.
+    probe:
+        name: 'arm ${{ matrix.arm.id }} · rep ${{ matrix.rep }}'
+        runs-on: ubuntu-latest
+        timeout-minutes: 35
+        needs: [build-lean-wasm]
+        strategy:
+            fail-fast: false
+            max-parallel: 4
+            matrix:
+                arm:
+                    - id: A
+                      mode: ch62-probe
+                    - id: B
+                      mode: ch62-ablate
+                rep: [1, 2, 3, 4, 5, 6]
+        steps:
+            - uses: actions/checkout@v4
+            - name: Download the lean wasm pkg (the package.json file-link target)
+              uses: actions/download-artifact@v4
+              with:
+                  name: ch62-lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            - name: Resolve Playwright version (from the lockfile)
+              id: pw-version
+              working-directory: web/frontend
+              run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+            - name: Cache Playwright browser bundle
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/ms-playwright
+                  key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
+            - name: Install Playwright chromium + webkit (+ deps)
+              working-directory: web/frontend
+              run: npx playwright install --with-deps chromium webkit
+
+            # THE QUARANTINE, DELETED FOR THIS RUN. Overwritten in the checkout only. The
+            # stub keeps the module's exported shape so both specs still import cleanly, and
+            # drops the `>=0.13.0` re-entry throw — this probe IS the other eviction path the
+            # guard names, so it must not red on its own subject.
+            - name: Delete the linux-webkit bake quarantine (checkout-local)
+              working-directory: web/frontend
+              run: |
+                  set -euo pipefail
+                  cat > e2e/linux-webkit-bake-quarantine.ts <<'STUB'
+                  import type { TestInfo } from "@playwright/test";
+
+                  /**
+                   * CH-62 PROBE STUB — the quarantine is DELETED for the duration of one
+                   * `ch62-probe` dispatch, in the runner's checkout and nowhere else. Both arms
+                   * need the class's rows to RED rather than `test.fixme`, because the red count
+                   * is the measurement. Never committed; see .github/workflows/ch62-probe.yml.
+                   */
+                  export type QuarantinedSpec = "wordmark-integrity" | "theme-bake-freshness";
+
+                  export function quarantineLinuxWebkitBake(
+                    _spec: QuarantinedSpec,
+                    _row: string,
+                    _testInfo: TestInfo,
+                  ): void {}
+                  STUB
+                  git --no-pager diff --stat -- e2e/linux-webkit-bake-quarantine.ts
+
+            # NODE_ENV is pinned because `vite build --mode <x>` with an unset NODE_ENV and a
+            # non-'production' mode resolves `isProduction: false` — a dev-flavoured Vue build,
+            # i.e. a different app than the one under test. With it set, the arm bundles are
+            # production in every respect except the instrument fence.
+            - name: Build the arm bundle (mode ${{ matrix.arm.mode }})
+              working-directory: web/frontend
+              env:
+                  NODE_ENV: production
+                  VITE_BASE_URL: /
+              run: npx vite build --mode ${{ matrix.arm.mode }} --outDir dist-ch62 --logLevel warn
+
+            # A build that silently lost the instrument would report all-zero counters, which
+            # reads exactly like a clean ARM A. Refuse before measuring.
+            - name: Vacuity guard — the instrument is IN this bundle
+              working-directory: web/frontend
+              run: |
+                  set -euo pipefail
+                  if ! grep -rq '__bakeAdmission' dist-ch62/assets/*.js; then
+                    echo "::error::the CH-62 instrument is absent from the ${{ matrix.arm.mode }} bundle — every counter would read 0 and ARM A would green vacuously"
+                    exit 1
+                  fi
+                  echo "instrument present in dist-ch62 (mode ${{ matrix.arm.mode }})"
+
+            - name: Serve the arm bundle on :${{ env.CH62_PORT }}
+              working-directory: web/frontend
+              run: |
+                  set -euo pipefail
+                  npx vite preview --outDir dist-ch62 --port "${CH62_PORT}" --strictPort > preview.log 2>&1 &
+                  echo $! > preview.pid
+                  for _ in $(seq 1 60); do
+                    curl -sf "http://localhost:${CH62_PORT}/" > /dev/null && break
+                    sleep 1
+                  done
+                  curl -sfI "http://localhost:${CH62_PORT}/" > /dev/null || {
+                    echo "::error::the preview never answered on :${CH62_PORT}"; cat preview.log; exit 1;
+                  }
+
+            # The two specs that read a baked bitmap, on the arm's own bundle. `|| true`
+            # because a red IS the measurement — the exit code is banked and read by the
+            # rollup, never by the shell. PLAYWRIGHT_BASE_URL suppresses the throttle config's
+            # own build+preview (its documented external-preview path), so both specs assert
+            # over THIS bundle rather than a freshly-built shipped one.
+            - name: Run the bake rows (wordmark + theme-bake, both engines)
+              working-directory: web/frontend
+              env:
+                  PLAYWRIGHT_BASE_URL: http://localhost:${{ env.CH62_PORT }}
+                  PLAYWRIGHT_JSON_OUTPUT_NAME: ch62-report.json
+              run: |
+                  set +e
+                  npx playwright test --config playwright-throttle.config.ts \
+                    --project wordmark-webkit \
+                    --project theme-bake-chromium \
+                    --project theme-bake-webkit \
+                    --reporter=json,line
+                  echo "$?" > suite-exit.txt
+                  set -e
+                  echo "suite exit: $(cat suite-exit.txt)"
+
+            # THE CENSUS. One pass per engine over the same five surfaces the specs assert on,
+            # with the same gesture (fresh load, then ONE toggle). `window.__bakeAdmission` is
+            # per-document, so each game's census is read before the next navigation and the
+            # surfaces are keyed `<game>/<surface>`.
+            - name: Dump window.__bakeAdmission (chromium + webkit)
+              working-directory: web/frontend
+              env:
+                  CH62_BASE: http://localhost:${{ env.CH62_PORT }}
+              run: |
+                  set -euo pipefail
+                  cat > ch62-dump.mjs <<'DUMP'
+                  import { chromium, webkit } from '@playwright/test';
+                  import { writeFileSync } from 'node:fs';
+
+                  const BASE = process.env.CH62_BASE;
+                  const GAMES = ['sudoku', 'futoshiki', 'thermo', 'killer', 'kenken'];
+                  // `painted` is the real NEGATIVE and binds nothing in the verdict; it is
+                  // carried so a surface's row adds up on inspection — probed = noEnv +
+                  // decodeRejected + noCtx + taintRejected + painted + refused (T7-W3 FINDING 5).
+                  const FIELDS = [
+                    'probed', 'admitted', 'painted', 'refused', 'rebakes', 'decodeRejected',
+                    'noCtx', 'taintRejected', 'noEnv', 'maxRebakesExhausted', 'ablatedAdmits',
+                  ];
+                  const zero = () => Object.fromEntries(FIELDS.map((f) => [f, 0]));
+
+                  async function censusOne(engine, launcher) {
+                    const browser = await launcher.launch();
+                    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+                    const surfaces = {};
+                    let ablated = null;
+                    const notes = [];
+                    for (const game of GAMES) {
+                      const page = await ctx.newPage();
+                      try {
+                        await page.goto(`${BASE}/?game=${game}&size=3&difficulty=EASY`, { waitUntil: 'domcontentloaded' });
+                        // The same two waits theme-bake-freshness uses, then one toggle: the
+                        // gesture that produced the class in the first place.
+                        await page.waitForSelector('svg.handwritten-logo image.logo-pose-bmp', { timeout: 30000 }).catch(() => notes.push(`${game}: no logo pose`));
+                        await page.waitForSelector('svg.hand-drawn-grid image', { timeout: 30000 }).catch(() => notes.push(`${game}: no grid pose`));
+                        await page.locator('button.sun-moon-toggle').click({ timeout: 10000 }).catch(() => notes.push(`${game}: no toggle`));
+                        // The admission race settles asynchronously (decode + at most two
+                        // re-bakes); poll until the census stops moving rather than sleeping on
+                        // a number. Bounded, and the bound is a note, never a silent zero.
+                        let prev = '', stable = 0;
+                        for (let i = 0; i < 40 && stable < 3; i++) {
+                          await page.waitForTimeout(250);
+                          const now = JSON.stringify(await page.evaluate(() => window.__bakeAdmission ?? null));
+                          stable = now === prev ? stable + 1 : 0;
+                          prev = now;
+                        }
+                        if (stable < 3) notes.push(`${game}: census still moving at the 10s bound`);
+                        const dump = await page.evaluate(() => window.__bakeAdmission ?? null);
+                        if (dump === null) { notes.push(`${game}: NO INSTRUMENT on the page`); continue; }
+                        ablated = dump.ablated;
+                        for (const [k, v] of Object.entries(dump.surfaces)) surfaces[`${game}/${k}`] = v;
+                      } finally {
+                        await page.close();
+                      }
+                    }
+                    await browser.close();
+                    const totals = zero();
+                    for (const row of Object.values(surfaces))
+                      for (const f of FIELDS) totals[f] += row[f] ?? 0;
+                    return { engine, ablated, surfaces, totals, notes };
+                  }
+
+                  const out = [];
+                  for (const [name, launcher] of [['chromium', chromium], ['webkit', webkit]])
+                    out.push(await censusOne(name, launcher));
+                  writeFileSync('ch62-admission.json', JSON.stringify(out, null, 1));
+                  for (const e of out) console.log(e.engine, JSON.stringify(e.totals), e.notes.join(' | '));
+                  DUMP
+                  node ch62-dump.mjs
+
+            - name: Stop the preview
+              if: always()
+              working-directory: web/frontend
+              run: kill "$(cat preview.pid)" 2>/dev/null || true
+
+            # One row per rep, the shape the summary's arithmetic reads. A bake red is any
+            # failed row of the two bake specs (both exist ONLY to assert over baked bitmaps);
+            # `blankBakeReds` is the `no-ink` subset, reported so the class's own signature is
+            # visible beside the count rather than inferred from it.
+            - name: Roll the rep up
+              if: always()
+              working-directory: web/frontend
+              env:
+                  CH62_ARM: ${{ matrix.arm.id }}
+                  CH62_REP: ${{ matrix.rep }}
+                  CH62_MODE: ${{ matrix.arm.mode }}
+              run: |
+                  set -euo pipefail
+                  cat > ch62-rollup.mjs <<'ROLL'
+                  import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+
+                  const read = (p, d) => (existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : d);
+                  const report = read('ch62-report.json', null);
+                  const admission = read('ch62-admission.json', []);
+                  const suiteExit = existsSync('suite-exit.txt') ? Number(readFileSync('suite-exit.txt', 'utf8').trim()) : null;
+
+                  const rows = [];
+                  const walk = (suite) => {
+                    for (const spec of suite.specs ?? [])
+                      for (const t of spec.tests ?? [])
+                        for (const r of t.results ?? [])
+                          if (r.status !== 'passed' && r.status !== 'skipped')
+                            rows.push({
+                              file: spec.file, title: spec.title, project: t.projectName,
+                              status: r.status,
+                              error: (r.error?.message ?? '').slice(0, 400),
+                            });
+                    for (const s of suite.suites ?? []) walk(s);
+                  };
+                  if (report) for (const s of report.suites ?? []) walk(s);
+
+                  const FIELDS = ['probed','admitted','painted','refused','rebakes','decodeRejected','noCtx','taintRejected','noEnv','maxRebakesExhausted','ablatedAdmits'];
+                  const totals = Object.fromEntries(FIELDS.map((f) => [f, 0]));
+                  for (const e of admission) for (const f of FIELDS) totals[f] += e.totals?.[f] ?? 0;
+
+                  const out = {
+                    arm: process.env.CH62_ARM,
+                    rep: Number(process.env.CH62_REP),
+                    mode: process.env.CH62_MODE,
+                    suiteExit,
+                    reportPresent: report !== null,
+                    // A run whose report never landed cannot contribute a 0 — it contributes
+                    // nothing, and the summary voids on a short sample rather than averaging.
+                    reds: report === null ? null : rows.length,
+                    blankBakeReds: rows.filter((r) => /no-ink|decoded to nothing|no ink/i.test(r.error)).length,
+                    rows,
+                    admission: totals,
+                    instrumentPresent: admission.some((e) => Object.keys(e.surfaces ?? {}).length > 0),
+                    ablatedFlag: admission.map((e) => e.ablated),
+                    notes: admission.flatMap((e) => e.notes ?? []),
+                  };
+                  writeFileSync(`ch62-rep-${out.arm}-${out.rep}.json`, JSON.stringify(out, null, 1));
+                  console.log(JSON.stringify(out, null, 1));
+                  ROLL
+                  node ch62-rollup.mjs
+
+            # TWO artifacts, not one. The verdict job downloads every `ch62-rep-*` with
+            # `merge-multiple`, so the rollup must be the ONLY file in that artifact — the
+            # per-rep report/census/log all share a filename across reps and would clobber
+            # each other in the merged directory.
+            - name: Upload the rep's rollup (the verdict's only input)
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ch62-rep-${{ matrix.arm.id }}-${{ matrix.rep }}
+                  path: web/frontend/ch62-rep-*.json
+                  if-no-files-found: warn
+                  retention-days: 90
+            - name: Upload the rep's raw evidence
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ch62-evidence-${{ matrix.arm.id }}-${{ matrix.rep }}
+                  path: |
+                      web/frontend/ch62-report.json
+                      web/frontend/ch62-admission.json
+                      web/frontend/suite-exit.txt
+                      web/frontend/preview.log
+                  if-no-files-found: warn
+                  retention-days: 14
+            - name: Upload the Playwright report (failure rows carry their bitmaps)
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ch62-pw-report-${{ matrix.arm.id }}-${{ matrix.rep }}
+                  path: web/frontend/playwright-report-throttle
+                  if-no-files-found: ignore
+                  retention-days: 14
+
+    # ------------------------------------------------------------------ the verdict
+    # It computes; it does not decide. The conjunction is the wave's, written once here and
+    # printed with every term's own number beside it, so a reader can disagree with the
+    # arithmetic rather than with a word.
+    verdict:
+        name: verdict (the probe's arithmetic)
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        needs: [probe]
+        if: always()
+        steps:
+            - uses: actions/checkout@v4
+            - name: Download every rep
+              uses: actions/download-artifact@v4
+              with:
+                  pattern: ch62-rep-*
+                  path: reps
+                  merge-multiple: true
+            - name: Compute the verdict
+              run: |
+                  set -euo pipefail
+                  cat > verdict.mjs <<'V'
+                  import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+                  import { join } from 'node:path';
+
+                  const dir = 'reps';
+                  const reps = readdirSync(dir)
+                    .filter((f) => /^ch62-rep-[AB]-\d+\.json$/.test(f))
+                    .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')));
+
+                  const arm = (id) => reps.filter((r) => r.arm === id).sort((a, b) => a.rep - b.rep);
+                  const A = arm('A'), B = arm('B');
+                  const FAIL_OPEN = ['decodeRejected','noCtx','taintRejected','noEnv','maxRebakesExhausted'];
+                  const sum = (rows, f) => rows.reduce((n, r) => n + (r.admission?.[f] ?? 0), 0);
+                  const redRuns = (rows) => rows.filter((r) => (r.reds ?? 0) > 0).length;
+
+                  const voids = [];
+                  // A short or holed sample is VOID, never averaged: six reps per arm is the
+                  // sample size the ≥2/6 rate was drawn against.
+                  if (A.length !== 6 || B.length !== 6) voids.push(`sample: ARM A ${A.length}/6, ARM B ${B.length}/6 reps landed`);
+                  for (const r of [...A, ...B])
+                    if (!r.reportPresent || r.reds === null) voids.push(`ARM ${r.arm} rep ${r.rep}: no Playwright report — the run produced no red count`);
+                  for (const r of [...A, ...B])
+                    if (!r.instrumentPresent) voids.push(`ARM ${r.arm} rep ${r.rep}: the instrument reported no surfaces — counters cannot be read as clean`);
+                  // ARM B has to be ABLATED. An arm that quietly built the shipped gate is not
+                  // a control, and its reds would be ARM A's reds under another name.
+                  for (const r of B) {
+                    if (!r.ablatedFlag.every(Boolean)) voids.push(`ARM B rep ${r.rep}: window.__bakeAdmission.ablated is not true — the ablation flag never took`);
+                    if ((r.admission.ablatedAdmits ?? 0) === 0) voids.push(`ARM B rep ${r.rep}: ablatedAdmits = 0 — posePaints never took the ablated path`);
+                  }
+                  // THE VACUITY GUARD, BOTH HALVES (T7-W3 residue, non-author FINDING 3). The
+                  // wave's condition is "≥2 of 6 runs, 4–7 rows — or the run is void", and only
+                  // the run count was implemented: an ARM B that red with a SINGLE row in each of
+                  // three runs cleared the term and the workflow printed RETIRE CH-62. A one-row
+                  // red is not the class's rate, and the control exists to REPRODUCE THE CLASS
+                  // rather than merely to be red. So a run counts toward the ≥2 only when it
+                  // carries ≥2 red rows, and the thin reds are named rather than silently dropped.
+                  const CLASS_MIN_ROWS = 2;
+                  const bCounted = B.filter((r) => (r.reds ?? 0) >= CLASS_MIN_ROWS);
+                  const bThin = B.filter((r) => (r.reds ?? 0) > 0 && (r.reds ?? 0) < CLASS_MIN_ROWS);
+                  const bRed = bCounted.length;
+                  if (bRed < 2) voids.push(`ARM B red at the class rate in ${bRed}/6 runs (a run counts only at ≥${CLASS_MIN_ROWS} red rows; rows per rep: ${B.map((r) => r.reds).join(',')}${bThin.length ? `; ${bThin.length} single-row red run(s) do NOT count` : ''}) — the control did not reproduce the class, so ARM A's green is not evidence`);
+                  // The wave's "4–7 rows" is REPORTED BESIDE THE VERDICT AND BINDS NOTHING: it is
+                  // four observations of a ten-red class (evidence/w3/burst-forensics.md §2), not
+                  // a bound the control has to land inside. Enforcing n=4 as a range would void a
+                  // control that reproduced the class HARDER than the sample happened to, which
+                  // is the wrong direction for a vacuity guard. The floor above is the term.
+                  const BAND = [4, 7];
+                  const bBand = bCounted.filter((r) => r.reds >= BAND[0] && r.reds <= BAND[1]).length;
+
+                  const aRed = redRuns(A);
+                  const aRefused = sum(A, 'refused');
+                  const aFailOpen = Object.fromEntries(FAIL_OPEN.map((f) => [f, sum(A, f)]));
+                  const failOpenFired = FAIL_OPEN.filter((f) => aFailOpen[f] > 0);
+
+                  const terms = [
+                    { t: `ARM B red ≥2/6, each ≥${CLASS_MIN_ROWS} rows`, ok: bRed >= 2, got: `${bRed}/6 at rate (rows: ${B.map((r) => r.reds).join(',')}${bThin.length ? `; ${bThin.length} single-row red run(s) uncounted` : ''})` },
+                    { t: 'ARM A red 0/6', ok: aRed === 0, got: `${aRed}/6 (rows: ${A.map((r) => r.reds).join(',')})` },
+                    { t: 'ARM A refused > 0', ok: aRefused > 0, got: String(aRefused) },
+                    { t: 'ARM A fail-opens all 0', ok: failOpenFired.length === 0, got: JSON.stringify(aFailOpen) },
+                  ];
+                  const clean = voids.length === 0;
+                  const retire = clean && terms.every((x) => x.ok);
+
+                  const L = [];
+                  L.push('# CH-62 rig probe — verdict', '');
+                  L.push(`sample: ARM A ${A.length}/6 · ARM B ${B.length}/6`, '');
+                  L.push('| term | required | measured | held |', '|---|---|---|---|');
+                  for (const x of terms) L.push(`| ${x.t} | yes | ${x.got} | ${x.ok ? 'YES' : 'NO'} |`);
+                  L.push('');
+                  L.push(`REPORTED, NOT BINDING — the wave's historical ARM B row band ${BAND[0]}–${BAND[1]}: ${bBand} of the ${bRed} counted run(s) land inside it. This is n=4 observations of a ten-red class (evidence/w3/burst-forensics.md §2), never a term of the conjunction; the enforced floor is ≥${CLASS_MIN_ROWS} red rows per counted run.`, '');
+                  if (voids.length) { L.push('## VOID', ''); for (const v of voids) L.push(`- ${v}`); L.push(''); }
+                  L.push('## Verdict', '');
+                  L.push(retire
+                    ? 'RETIRE CH-62 — every term of the conjunction held. The gate fired (`refused > 0`), no fail-open masked it, and the ablated control reproduced the class at rate.'
+                    : clean
+                      ? 'DO NOT RETIRE — the sample is sound and the conjunction failed. This is a FOURTH PINNING, and the failing term above names why.'
+                      : 'VOID — the run cannot decide anything. Fix the listed defects and re-dispatch; a void probe is NOT a pass and NOT a pinning.');
+                  L.push('');
+                  L.push('Per-rep ARM A admission totals:');
+                  for (const r of A) L.push(`  rep ${r.rep}: reds ${r.reds} (blank-bake ${r.blankBakeReds}) · ${JSON.stringify(r.admission)}`);
+                  L.push('Per-rep ARM B admission totals:');
+                  for (const r of B) L.push(`  rep ${r.rep}: reds ${r.reds} (blank-bake ${r.blankBakeReds}) · ${JSON.stringify(r.admission)}`);
+
+                  const text = L.join('\n');
+                  console.log(text);
+                  writeFileSync('ch62-verdict.md', text + '\n');
+                  writeFileSync('ch62-verdict.json', JSON.stringify({ retire, clean, voids, terms, A, B }, null, 1));
+                  // The job reds unless the probe RETIRES, so a dispatch that decided nothing
+                  // cannot be read off the checkmark. The record is the artifact either way.
+                  process.exit(retire ? 0 : 1);
+                  V
+                  set +e
+                  node verdict.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+                  echo "${PIPESTATUS[0]}" > verdict-exit.txt
+                  set -e
+            - name: Upload the verdict
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ch62-verdict
+                  path: |
+                      ch62-verdict.md
+                      ch62-verdict.json
+                      verdict-exit.txt
+                  if-no-files-found: warn
+                  retention-days: 90
+            - name: Fail unless the probe retired CH-62
+              run: |
+                  code=$(cat verdict-exit.txt)
+                  if [ "$code" != "0" ]; then
+                    echo "::error::the probe did not retire CH-62 — read ch62-verdict.md (VOID and DO-NOT-RETIRE are different verdicts and the file says which)"
+                    exit 1
+                  fi

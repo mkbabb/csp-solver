@@ -1,5 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// PRM: live, because the noise row asserts the reveal wave's per-cell delays, and PRM sets
+//   `animation: none` on `.cell-reveal-animated` (index.css)—a freeze would leave that row
+//   asserting delays that drive nothing.
+
 // ── Helpers ─────────────────────────────────────────────────────────
 
 async function loadApp(page: Page) {

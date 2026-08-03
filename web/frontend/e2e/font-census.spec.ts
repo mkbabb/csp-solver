@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
+// PRM: live, because no route applies it and none is wanted: the census resolves rendered text
+//   against each face's declared unicode-range, and the ~8 Hz beat swaps filter poses—never a
+//   string's family, transform or paint.
+
 /**
  * THE MIXED-FACE CENSUS (T4-P1, stage BC) — every visible string against the unicode-range of
  * the face it asks for.
@@ -122,9 +126,20 @@ const ledgerKey = (m: { face: string; shown: string; missing: string[] }) =>
 
 /** THE SCOPE, PRINTED ON THE GATE. Two games × two regimes — the census is no longer "one
  *  game, one viewport, one regime" and it no longer has to be believed about the estate on the
- *  strength of sudoku's rail. Widening cost four page loads and bought two real rows. */
+ *  strength of sudoku's rail. Widening cost four page loads and bought two real rows.
+ *
+ *  T7-W7 — THE MATRIX GAINS A SHORT DESKTOP, and the reason is a class it could not see. Every
+ *  fine cell here stood 800px tall, so the ladder the estate actually ships on (1366×768,
+ *  1280×720, 1024×768 — the laptop rungs) was measured by nothing: the ≥1024 board cap
+ *  `100dvh − 10rem` budgets 160px of chrome and the below-board caption strip spends ~30 of it
+ *  outside every box the page column measures, which put a 9–10px phantom scrollbar and a
+ *  sliced caption on all three for five closes. The geometry cure lands in `App.vue`; this is
+ *  the matrix admitting the rung, so a short-desktop regression has a cell to red in. 1366×768
+ *  is the shortest fine rung and the widest of the three — the type scale is a vw clamp, so it
+ *  is also the fine cell farthest from 1280 on the axis this census reads. One page load. */
 const CELLS = [
   { id: "sudoku · fine rail 1280×800", game: "sudoku", w: 1280, h: 800, coarse: false },
+  { id: "sudoku · fine rail 1366×768", game: "sudoku", w: 1366, h: 768, coarse: false },
   { id: "sudoku · coarse card 390×844", game: "sudoku", w: 390, h: 844, coarse: true },
   { id: "kenken · fine rail 1280×800", game: "kenken", w: 1280, h: 800, coarse: false },
   { id: "kenken · coarse card 390×844", game: "kenken", w: 390, h: 844, coarse: true },

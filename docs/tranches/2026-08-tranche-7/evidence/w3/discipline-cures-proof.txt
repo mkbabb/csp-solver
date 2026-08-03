@@ -1,0 +1,304 @@
+T7-W3 — THE TWO OPEN CH-63 DISCIPLINE ROWS: born-RED proofs
+===========================================================
+2026-08-03 · darwin · @playwright/test 1.61.1 · dev server on :4238 (own port, sibling waves
+hold :3000/:4235/:4241/:4256) · both engines for the green runs, chromium for the proofs.
+
+Rows cured
+  · a11y.spec.ts   instance 8  — the 2000ms sleep at the old :305 → a POLLED DISJUNCTION
+                                 (ribbon held ∨ scene swapped), sampled atomically with the
+                                 count the row asserts.
+  · drawer.spec.ts instance 10 — the one-shot `boardBox` at the old :154, 40 lines downstream
+                                 of a fixed 900ms rAF window → a SETTLED read (two consecutive
+                                 frames must agree) behind a retrying assertion; plus the
+                                 explicit NO-PRM annotation citing :206/:208 and §5's :332.
+
+Discipline of the proofs: each cure is exhibited against the condition its predecessor hid,
+one-off, page-side only (no source mutated), the harnesses env-gated (`CH63_PROOF=1`) so a
+sibling wave's run never saw them, and DELETED after this bank. Their source is reproduced in
+§4 so the runs can be re-cut without archaeology.
+
+────────────────────────────────────────────────────────────────────────────────────────────
+§0 — BASELINE, PRE-CURE (the rows were green; the defect is not a red, it is a false green)
+────────────────────────────────────────────────────────────────────────────────────────────
+  $ PLAYWRIGHT_BASE_URL=http://localhost:4238 npx playwright test e2e/drawer.spec.ts \
+      e2e/a11y.spec.ts --workers=2
+  46 passed (46.5s)     [chromium + webkit, tracked tree before the edit]
+
+────────────────────────────────────────────────────────────────────────────────────────────
+§1 — THE PROOF RUN (verbatim)
+────────────────────────────────────────────────────────────────────────────────────────────
+  $ CH63_PROOF=1 PLAYWRIGHT_BASE_URL=http://localhost:4238 npx playwright test \
+      e2e/a11y.spec.ts e2e/drawer.spec.ts --project=chromium --grep "CH-63 proof" --workers=1
+
+
+Running 5 tests using 1 worker
+
+  ✓  1 [chromium] › e2e/a11y.spec.ts:670:3 › CH-63 proof › ARM 1 — the OLD form (2000ms sleep, one-shot count) GREENS on it (4.4s)
+  ✘  2 [chromium] › e2e/a11y.spec.ts:684:3 › CH-63 proof › ARM 2 — the CURED form REDS on it (10.3s)
+  ✘  3 [chromium] › e2e/drawer.spec.ts:484:3 › CH-63 proof › ARM 1 — the OLD form (one-shot boardBox) REDS mid-glide (1.5s)
+  ✓  4 [chromium] › e2e/drawer.spec.ts:491:3 › CH-63 proof › ARM 2 — the CURED form (two consecutive frames agree) GREENS (1.9s)
+  ✘  5 [chromium] › e2e/drawer.spec.ts:508:3 › CH-63 proof › ARM 3 — ABLATION: drop the agreement, keep the frame — REDS (1.5s)
+
+
+  1) [chromium] › e2e/a11y.spec.ts:684:3 › CH-63 proof › ARM 2 — the CURED form REDS on it ─────────
+
+    Error: the second Enter must settle into HELD or SWAPPED
+
+    the second Enter must settle into HELD or SWAPPED
+
+    expect(received).toMatch(expected)
+
+    Expected pattern: /^(held|swapped)$/
+    Received string:  "in flight {\"enterSeen\":1,\"ribbon\":false,\"game\":\"sudoku\",\"outgoing\":81,\"entries\":1}"
+
+    Call Log:
+    - Timeout 8000ms exceeded while waiting on the predicate
+
+      702 |         { timeout: 8000, message: 'the second Enter must settle into HELD or SWAPPED' },
+      703 |       )
+    > 704 |       .toMatch(/^(held|swapped)$/);
+          |        ^
+      705 |     const after = seen.entries;
+      706 |     expect(announced || after === before, `announced=${announced} ${settleName(seen)}`).toBe(true);
+      707 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/a11y.spec.ts:704:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/a11y-CH-63-proof-ARM-2-—-the-CURED-form-REDS-on-it-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/a11y-CH-63-proof-ARM-2-—-the-CURED-form-REDS-on-it-chromium/error-context.md
+
+  2) [chromium] › e2e/drawer.spec.ts:484:3 › CH-63 proof › ARM 1 — the OLD form (one-shot boardBox) REDS mid-glide 
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 2
+    Received:    80.63235473632812
+
+      486 |     const after = await boardBox(page);
+      487 |     expect(after.w - before.w).toBeGreaterThanOrEqual(24);
+    > 488 |     expect(Math.abs(after.cx - 720)).toBeLessThanOrEqual(2);
+          |                                      ^
+      489 |   });
+      490 |
+      491 |   test('ARM 2 — the CURED form (two consecutive frames agree) GREENS', async ({ page }) => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/drawer.spec.ts:488:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/drawer-CH-63-proof-ARM-1-—-55bbf-hot-boardBox-REDS-mid-glide-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/drawer-CH-63-proof-ARM-1-—-55bbf-hot-boardBox-REDS-mid-glide-chromium/error-context.md
+
+  3) [chromium] › e2e/drawer.spec.ts:508:3 › CH-63 proof › ARM 3 — ABLATION: drop the agreement, keep the frame — REDS 
+
+    Error: expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 2
+    Received:    70.00999999999999
+
+      510 |     const after = (await twoFrameBoardBox(page))[0]; // one frame, nothing to agree with
+      511 |     expect(after.w - before.w).toBeGreaterThanOrEqual(24);
+    > 512 |     expect(Math.abs(after.cx - 720)).toBeLessThanOrEqual(2);
+          |                                      ^
+      513 |   });
+      514 | });
+      515 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/drawer.spec.ts:512:38
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/drawer-CH-63-proof-ARM-3-—-89705-ement-keep-the-frame-—-REDS-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/drawer-CH-63-proof-ARM-3-—-89705-ement-keep-the-frame-—-REDS-chromium/error-context.md
+
+  3 failed
+    [chromium] › e2e/a11y.spec.ts:684:3 › CH-63 proof › ARM 2 — the CURED form REDS on it ──────────
+    [chromium] › e2e/drawer.spec.ts:484:3 › CH-63 proof › ARM 1 — the OLD form (one-shot boardBox) REDS mid-glide 
+    [chromium] › e2e/drawer.spec.ts:508:3 › CH-63 proof › ARM 3 — ABLATION: drop the agreement, keep the frame — REDS 
+  2 passed (22.0s)
+
+────────────────────────────────────────────────────────────────────────────────────────────
+§2 — WHAT EACH ARM PROVES
+────────────────────────────────────────────────────────────────────────────────────────────
+a11y — instance 8. THE CONDITION: a genuinely silent guard. Every live region loses its
+`role`/`aria-live` (so `guardAnnounced` is false) and the second Enter is answered with neither
+a hold nor a switch — the ribbon simply vanishes. Page-side, no source touched.
+
+  ARM 1 · the OLD form (2000ms sleep → one-shot `userEntries` → non-retrying implication)
+          PASSED. This is the disease, exhibited: the guard was never heard, the ribbon never
+          held, nothing settled — and because the count happened to read unchanged when the
+          timer went off, the row certified the silence as compliance. No fixed duration fixes
+          this; a longer sleep only moves the sample.
+  ARM 2 · the CURED form REDS, and reds with the state it kept seeing:
+            in flight {"enterSeen":1,"ribbon":false,"game":"sudoku","outgoing":81,"entries":1}
+          Every field is load-bearing. `enterSeen:1` — the app DID receive the key, so this is
+          not a lost keystroke. `ribbon:false` — it did not hold. `game:"sudoku"` with
+          `outgoing:81` — it did not switch either. The disjunction has no arm to resolve on,
+          so the poll exhausts and says so, where the sleep said nothing.
+
+drawer — instance 10. THE CONDITION: the read lands MID-GLIDE. Nothing is mutated at all — the
+fixed 900ms window is simply absent, which is exactly what a loaded runner does to it.
+
+  ARM 1 · the OLD form (one-shot `boardBox`) REDS: |cx − 720| = 80.63px against a ≤2px band.
+          The row's green was never earned by the assertion; it was bought by the 900ms window
+          landing after a 520ms glide, on this machine, this time.
+  ARM 2 · the CURED form (two consecutive frames must agree, verdict retried) GREENS from the
+          same mid-glide instant — it waits for the board rather than for the clock.
+  ARM 3 · ABLATION, the direct control: keep the frame, drop the agreement — read ONE frame of
+          `twoFrameBoardBox` and assert it one-shot. REDS at |cx − 720| = 70.01px. So the
+          consecutive-frame agreement is what earns ARM 2's green; the helper's shape does not.
+
+Read together the two directions close the row: without the settle the assertion passes on a
+lie (a11y ARM 1) or fails on the truth (drawer ARM 1/3), and with it the assertion means what
+it says in both files.
+
+────────────────────────────────────────────────────────────────────────────────────────────
+§3 — POST-CURE GREEN, BOTH ENGINES, TWICE (spaced, uncontended port)
+────────────────────────────────────────────────────────────────────────────────────────────
+  $ PLAYWRIGHT_BASE_URL=http://localhost:4238 npx playwright test e2e/drawer.spec.ts e2e/a11y.spec.ts --workers=2
+  run 1: 46 passed (47.7s)
+  run 2: 46 passed (49.1s)
+
+  Sleep-lint (scripts/check-sleep-lint.mjs), the two named sites — BEFORE:
+    ✗ a11y.spec.ts:305   sleep 2000ms — FLAG (one-shot `after` at :306, asserted at :309)
+    ✗ drawer.spec.ts:78  window 900ms — FLAG (one-shot `after` at :154, asserted at :155)
+  AFTER (census line + this file's rows):
+    SLEEP LINT — 25 specs · 39 waitForTimeout sites in 13 files · 2 fixed in-page sampling windows · 4 cited exemptions · 1 sleep-ok tags
+    · a11y.spec.ts:400 sleep 800ms — clean
+    · drawer.spec.ts:136 window 900ms — clean
+    · drawer.spec.ts:433 sleep 700ms — clean
+    · drawer.spec.ts:438 sleep 700ms — clean
+    · drawer.spec.ts:460 sleep 700ms — clean
+    ✗ a11y.spec.ts:152 sleep 700ms — FLAG
+    ✗ a11y.spec.ts:461 sleep 600ms — FLAG
+  The a11y:305 site is GONE (the sleep is deleted, not tagged); drawer's 900ms window survives
+  as the glide contract's own measurement window and now reads CLEAN, because nothing one-shot
+  reads a live surface after it. The two rows still flagged in a11y.spec.ts are NOT these rows
+  and are untouched here: `:152` (the 700ms inside `armGuard`) and `:461` (the 600ms before the
+  laminate census). They are handed off, not cured, per this executor's scope.
+
+────────────────────────────────────────────────────────────────────────────────────────────
+§4 — THE HARNESSES (deleted from the tree; reproduced so the runs can be re-cut)
+────────────────────────────────────────────────────────────────────────────────────────────
+--- appended to e2e/a11y.spec.ts ------------------------------------------------------------
+// ═══ TEMPORARY — T7-W3 CH-63 instance 8 born-RED harness ════════════════════
+// Env-gated so a sibling wave's run never sees it. Deleted after the bank.
+test.describe('CH-63 proof', () => {
+  test.skip(!process.env.CH63_PROOF, 'proof harness — set CH63_PROOF=1');
+  test.describe.configure({ mode: 'serial' });
+
+  /** THE MUTATION: a genuinely silent guard. It speaks to nothing (every live region loses its
+   *  role/aria-live) and it answers the second Enter with neither a hold nor a switch — the
+   *  ribbon simply vanishes. Page-side only; no source is touched. */
+  async function silentGuard(page: Page) {
+    await page.evaluate(() => {
+      for (const r of document.querySelectorAll('[aria-live],[role="status"],[role="alert"]')) {
+        r.removeAttribute('aria-live');
+        r.removeAttribute('role');
+      }
+      window.addEventListener(
+        'keydown',
+        (e) => {
+          if (e.key !== 'Enter') return;
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          document.querySelector('.gallery-guard')?.remove();
+        },
+        true,
+      );
+    });
+  }
+
+  test('ARM 1 — the OLD form (2000ms sleep, one-shot count) GREENS on it', async ({ page }) => {
+    await armGuard(page);
+    const before = await userEntries(page);
+    const announced = await guardAnnounced(page);
+    await silentGuard(page);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(2000);
+    const after = await userEntries(page);
+    expect(
+      announced || after === before,
+      `announced=${announced} before=${before} after=${after}`,
+    ).toBe(true);
+  });
+
+  test('ARM 2 — the CURED form REDS on it', async ({ page }) => {
+    await armGuard(page);
+    const before = await userEntries(page);
+    const announced = await guardAnnounced(page);
+    await page.evaluate(() => {
+      const w = window as unknown as { __enterSeen: number };
+      w.__enterSeen = 0;
+      window.addEventListener('keydown', (e) => e.key === 'Enter' && w.__enterSeen++, true);
+    });
+    await silentGuard(page);
+    await page.keyboard.press('Enter');
+    let seen = await enterVerdict(page);
+    await expect
+      .poll(
+        async () => {
+          seen = await enterVerdict(page);
+          return settleName(seen);
+        },
+        { timeout: 8000, message: 'the second Enter must settle into HELD or SWAPPED' },
+      )
+      .toMatch(/^(held|swapped)$/);
+    const after = seen.entries;
+    expect(announced || after === before, `announced=${announced} ${settleName(seen)}`).toBe(true);
+  });
+});
+--- appended to e2e/drawer.spec.ts ----------------------------------------------------------
+// ═══ TEMPORARY — T7-W3 CH-63 instance 10 born-RED harness ═══════════════════
+// Env-gated so a sibling wave's run never sees it. Deleted after the bank.
+test.describe('CH-63 proof', () => {
+  test.skip(!process.env.CH63_PROOF, 'proof harness — set CH63_PROOF=1');
+
+
+  /** THE CONDITION: the read lands MID-GLIDE. Nothing is mutated — the fixed 900ms window is
+   *  simply not there to carry the row, which is exactly what a loaded runner does to it. */
+  const closeAndReadNow = async (page: Page) => {
+    await loadSudoku(page);
+    const before = await boardBox(page);
+    await page.locator('.drawer-tab').click();
+    return before;
+  };
+
+  test('ARM 1 — the OLD form (one-shot boardBox) REDS mid-glide', async ({ page }) => {
+    const before = await closeAndReadNow(page);
+    const after = await boardBox(page);
+    expect(after.w - before.w).toBeGreaterThanOrEqual(24);
+    expect(Math.abs(after.cx - 720)).toBeLessThanOrEqual(2);
+  });
+
+  test('ARM 2 — the CURED form (two consecutive frames agree) GREENS', async ({ page }) => {
+    const before = await closeAndReadNow(page);
+    await expect
+      .poll(
+        async () => {
+          const after = await settledBoardBox(page, 'the closed board');
+          return {
+            grew: after.w - before.w >= 24,
+            onAxis: Math.abs(after.cx - 720) <= 2,
+            measured: `Δw=${(after.w - before.w).toFixed(2)} cx=${after.cx.toFixed(2)}`,
+          };
+        },
+        { timeout: 8000 },
+      )
+      .toMatchObject({ grew: true, onAxis: true });
+  });
+
+  test('ARM 3 — ABLATION: drop the agreement, keep the frame — REDS', async ({ page }) => {
+    const before = await closeAndReadNow(page);
+    const after = (await twoFrameBoardBox(page))[0]; // one frame, nothing to agree with
+    expect(after.w - before.w).toBeGreaterThanOrEqual(24);
+    expect(Math.abs(after.cx - 720)).toBeLessThanOrEqual(2);
+  });
+});
+--- end ------------------------------------------------------------------------------------
+Both blocks were appended, run, and removed within one session; `git status` shows only the
+two cured specs modified. The drawer block ran without `test.describe.configure({mode:'serial'})`
+so ARM 1's designed red could not skip ARMs 2/3 (the first capture, with serial on, skipped
+them — re-run, and that is the run banked above).

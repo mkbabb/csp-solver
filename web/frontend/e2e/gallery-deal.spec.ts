@@ -1,5 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// PRM: live, because the guard ribbon arms and retires on a CSS transition, and these rows are
+//   written around that motion (Escape rather than a click, so an arm/retire cycle never waits
+//   on a box to be stable). Freezing would rewrite the timing the file navigates.
+
 // T4-P1 F4 — THE STAGING BAND: the picker's order slip, and the fused cross-game transaction.
 //
 // Under the standing ruling the picker owns the CROSS-GAME SWITCH; the everyday same-game

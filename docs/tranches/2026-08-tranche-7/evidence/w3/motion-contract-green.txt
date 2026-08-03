@@ -1,0 +1,149 @@
+T7-W3 — THE PRM DECLARATION SWEEP (cross-cutting gate 2, per-file motion contract)
+Banked 2026-08-03 · executor: PRM sweep · repo master, no commit
+node v26.0.0 · @playwright/test 1.61.1 (the version at which the `test.use` route is VOID)
+
+WHAT LANDED
+  Every `web/frontend/e2e/*.spec.ts` head now carries its motion state in the binding grammar:
+    // PRM: frozen — <cite of the emulateMedia call that lands>
+    // PRM: live, because <what the file measures that needs, or tolerates, the beat>
+  22 files declared by this sweep; 3 already carried declarations from sibling waves and were
+  left untouched (access.spec.ts, theme-quadrants.spec.ts, prm-void-audition.spec.ts).
+  HEAD COMMENT REGION ONLY — no assertion, helper, config, workflow or golden was touched.
+
+─────────────────────────────────────────────────────────────────────────────────────────────
+1 · BORN RED — the tree as W3 found it
+─────────────────────────────────────────────────────────────────────────────────────────────
+Reproduced against the pre-sweep sources (tracked files at `53a6b56d`, untracked specs as they
+sit on disk), the gate run out of a scratch copy so the repo was never wound:
+
+  $ node scripts/check-motion-contract.mjs
+  MOTION CONTRACT — 25 specs, 3 declaring, 22 silent (head = first 20 lines)
+    ✗ 1 DECLARED — 22
+    ✓ 2 GRAMMAR
+    ✓ 3 ROUTE
+
+  22 failure(s):
+
+    • [1 DECLARED] a11y.spec.ts: NO motion declaration. Add one to the head:
+          // PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto
+          // PRM: live, because <reason>
+
+    …21 further blocks, identical but for the filename. The full silent roster:
+
+      a11y  affordances  board-covisibility  drawer  filter-census  font-census  futoshiki
+      gallery-deal  gallery-guard  gallery  mobile-affordances  mobile-platform  multiplayer
+      permalink  share-truth  sudoku-interaction  theme-bake-freshness  throttled-void
+      visual-golden  visual-regression  wordmark-integrity  zone-grammar
+
+  The W3 spec's census said "born RED on all 22 spec files on disk — none carries the
+  declaration today". The disk now holds 25 (W1 minted theme-quadrants, W2 minted access, W3
+  minted prm-void-audition, all three declaring at birth). 22 silent stands, unchanged.
+
+─────────────────────────────────────────────────────────────────────────────────────────────
+2 · GREEN — after the sweep
+─────────────────────────────────────────────────────────────────────────────────────────────
+  $ cd web/frontend && node scripts/check-motion-contract.mjs
+  MOTION CONTRACT — 25 specs, 25 declaring, 0 silent (head = first 20 lines)
+    ✓ 1 DECLARED
+    ✓ 2 GRAMMAR
+    ✓ 3 ROUTE
+
+  OK — 25 specs, every one declaring its motion state, every `frozen` backed by the route that
+  lands.
+
+─────────────────────────────────────────────────────────────────────────────────────────────
+3 · SELF-TEST — the gate shown able to fail, on the swept tree
+─────────────────────────────────────────────────────────────────────────────────────────────
+The canary needs a file already declaring `PRM: frozen` to wound; before the sweep it could
+only throw. It now runs whole:
+
+  $ node scripts/check-motion-contract.mjs --self-test
+  SELF-TEST — each check against a known-bad model:
+    [1 DECLARED] the declaration is deleted in a refactor (the silent-by-default state)
+        → RED (as it must)
+    [1 DECLARED] the declaration slides below the head window during a doc-block edit
+        → RED (as it must)
+    [2 GRAMMAR] a third mode is invented (`PRM: reduced`)
+        → RED (as it must)
+    [2 GRAMMAR] `PRM: live` lands with no reason — a declaration that says nothing
+        → RED (as it must)
+    [2 GRAMMAR] `PRM: frozen` lands with an empty cite
+        → RED (as it must)
+    [2 GRAMMAR] two declarations disagree (a merge keeps both sides)
+        → RED (as it must)
+    [3 ROUTE] CH-65 regresses — the freeze is 'restored' as `test.use({ reducedMotion })`
+        → RED (as it must)
+    [3 ROUTE] a frozen file loses its emulateMedia call entirely
+        → RED (as it must)
+
+  OK — 25 specs, every one declaring its motion state, every `frozen` backed by the route that
+  lands.
+
+─────────────────────────────────────────────────────────────────────────────────────────────
+4 · THE DISPOSITION — what each head now says, and why it's true
+─────────────────────────────────────────────────────────────────────────────────────────────
+FROZEN (1 of the 22; the only file with a route that lands over its whole run)
+  visual-golden        `loadSettled` calls page.emulateMedia({reducedMotion:'reduce'}) before
+                       every goto, so each crop compares at pose 0. Its own `test.use` and the
+                       golden config's `use.reducedMotion` are void at 1.61.1 and stay as the
+                       re-audition trap (gate 4). Cited in the head, not merely implied.
+
+LIVE — the beat is the subject; a freeze would red or void the row
+  drawer               the close row samples document.getAnimations() mid-glide for the four
+                       movers' easings; PRM swaps the drawer to an instant cut. The
+                       `drawer under prefers-reduced-motion` describe is the per-test exception
+                       and emulates reduce itself. This is the NO-PRM annotation the wave
+                       ordered: the CH-65 reclassification of these rows stays dead.
+  gallery              the soul gate IS the beat — the centered card's pose must advance across
+                       a ~700ms window while a flank's stays frozen. Freezing pins both and the
+                       row asserts nothing. Its PRM describe emulates reduce at the test.
+  visual-regression    the draw-in→boil handoff and the one-visible-layer pose-stack contract,
+                       read on a beat that's running.
+  multiplayer          the wordmark-through-join row watches the stack AS the beat walks it; a
+                       blank pose 1..n is only visible when the beat steps onto it.
+  filter-census        G3.2 reads getAnimations() retained fills — the reveal wave has to run;
+                       the settle is a poll on running-animation count → 0, never a freeze.
+  sudoku-interaction   the noise row asserts the reveal wave's per-cell delays, and PRM sets
+                       `animation: none` on `.cell-reveal-animated` (index.css:1079).
+  board-covisibility   the celebration crest is the subject, and PRM kills the whole
+                       `.celebration-*` family (index.css:1079) — the event the no-reflow rows
+                       measure would not happen.
+  affordances          the print row asserts the print sheet strips animation to `none`; a
+                       freeze hands it that answer for free, and the 500ms box-shadow
+                       transition is settled on its terminal value, not abolished.
+  a11y                 the destructive-work guard and the answer-key laminate arrive on real
+                       transitions this file waits out; PRM strips them.
+  gallery-deal         the guard ribbon arms/retires on a CSS transition, and the rows are
+                       written around it (Escape over click, so no stability wait).
+  gallery-guard        same ribbon, armed and dismissed repeatedly.
+  mobile-affordances   the coarse rows drive the deck's entry glide, the peek washi and the
+                       Clear confirm, then read what they leave behind.
+  mobile-platform      the keypad rows drive the drawer's real glide and the app's scroll-clear
+                       before reading rest positions.
+
+LIVE — no route applies PRM, and no assertion reads anything the beat can move
+  font-census          rendered text vs each face's unicode-range; the beat swaps filter poses.
+  zone-grammar         the rendered-name census, plus a frozen-well row asserting a pose stack
+                       that never swaps by construction.
+  permalink            address bar, codec fail-closed branches, cell values.
+  share-truth          clipboard promise, aria confirmation, margin voice.
+  futoshiki            first-coverage smoke: first rendered pose label, then a terminal solve.
+  throttled-void       a CDP-throttled mount clock — chunk fetch plus scene mount, not motion.
+
+LIVE — declared as measured, and flagged (see the handoff rows below)
+  wordmark-integrity   decodes the CURRENT pose bitmap's blob URL and polls until the ink box
+                       stops moving, with the beat walking the stack under it.
+  theme-bake-freshness flips the theme and re-reads the baked pose bitmap off its blob URL,
+                       likewise under a running beat.
+
+─────────────────────────────────────────────────────────────────────────────────────────────
+5 · WHAT THIS SWEEP DID NOT DO
+─────────────────────────────────────────────────────────────────────────────────────────────
+  · No posture was CHANGED. Where a file's motion state looks wrong, the declaration states the
+    truth as measured and the argument goes to the wave's handoffs — a sweep that quietly
+    re-postured two bake specs would be re-deriving CH-65, not recording it.
+  · No workflow, package.json or golden baseline touched. CI wiring rides the wave's
+    wiring_requests.
+  · Prettier: `npx prettier --check "e2e/*.spec.ts"` warns on the same 19 files before and
+    after (verified file-by-file against `53a6b56d`) — the estate's standing prettier drift,
+    not this sweep's. Prettier does not reflow comments, so no head here can move it.

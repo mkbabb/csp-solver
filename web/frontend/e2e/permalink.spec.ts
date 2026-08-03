@@ -1,6 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 import { encodeSudoku, encodeFutoshiki, encodeUntagged } from './wire';
 
+// PRM: live, because nothing here is motion: the rows read the address bar, the codec's
+//   fail-closed branches and cell values, none of which the boil beat can move. No route applies
+//   PRM, and none would change an assertion.
+
 // Share-on-demand permalink (T2-W6 · item 6). Proves the four load-bearing branches
 // of the `?board=` codec + resolver:
 //   1. a board-only URL (no ?size=) loads the encoded board (URL wins over storage);

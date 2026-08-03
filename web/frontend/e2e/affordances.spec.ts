@@ -1,6 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 import { encodeSudoku } from './wire';
 
+// PRM: live, because the print row asserts the print stylesheet strips animation to `none`—a
+//   freeze would hand it that answer for free—and the wrapper's 500ms box-shadow transition is
+//   settled on its terminal value here, not abolished.
+
 // T2-W6 affordances — one spec per affordance, plus the composed keyboard spec
 // (Q7: cross-handler regressions pass isolated specs and fail only the composed
 // one — this suite is the FIRST keyboard codification; 0 keyboard assertions

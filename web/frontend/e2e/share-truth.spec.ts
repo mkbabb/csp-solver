@@ -1,6 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import { encodeSudoku } from './wire';
 
+// PRM: live, because what's asserted is the clipboard promise, the aria confirmation and the
+//   margin voice—text and state, never geometry or pixels the beat moves. No route applies PRM.
+
 /**
  * T4-W3 — share truth. The confirmation must key off the clipboard PROMISE, not assert a
  * success it never checked, and a corrupt `?board=` must SIGNAL rather than silently deal a

@@ -1,5 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// PRM: live, because the rows ride the app's own beats—the destructive-work guard and the
+//   answer-key laminate arrive on real transitions this file waits out, and PRM strips them
+//   (index.css `animation: none` on that family). Nothing here reads a pixel the boil moves.
+
 /**
  * T5-W3 — THE ACCESSIBLE BOARD, as gates.
  *
@@ -35,7 +39,9 @@ import { test, expect, type Page } from '@playwright/test';
 
 // ── The estate, and how to reach each board ─────────────────────────
 //
-// `?game=` is universal (App.vue:105). Only sudoku and futoshiki URL-sync their size
+// `?game=` is universal (App.vue's `parseGame`, which validates it against GAMES and falls
+// back to sudoku — cited by symbol, not by line: the old `App.vue:105` had drifted off it).
+// Only sudoku and futoshiki URL-sync their size
 // (`sizeParam` "size" / "board_size"); the other three deal at their `defaultSize`, which is
 // why no size rides their query. No row below hardcodes a board side — N comes off the grid.
 const GAMES = [
@@ -147,7 +153,13 @@ async function armGuard(page: Page) {
   const viewport = page.locator('.gallery-viewport');
   await viewport.waitFor({ state: 'visible', timeout: 20000 });
   await viewport.press('ArrowRight'); // → futoshiki, a different game
-  await page.waitForTimeout(700); // the snap settles before the select (deck entry beats)
+  // SETTLED, NOT SLEPT (T7-W3, the sleep-lint residue). `Enter` selects whatever the deck has
+  // COMMITTED, so the precondition is the commit itself, not an elapsed span: the listbox's own
+  // `aria-activedescendant` and the flank's `aria-selected`, both auto-retrying. The old fixed
+  // 700ms stood in for exactly these two facts and could not red — a press sent into a deck that
+  // had not committed yet selects sudoku, arms no guard, and every caller inherits the race.
+  await expect(viewport).toHaveAttribute('aria-activedescendant', 'gallery-card-1');
+  await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-selected', 'true');
   await viewport.press('Enter');
   await page.locator('.gallery-guard').waitFor({ state: 'visible', timeout: 20000 });
 }
@@ -171,6 +183,48 @@ async function guardAnnounced(page: Page): Promise<boolean> {
       (r) => norm(r.textContent).includes(key),
     );
   });
+}
+
+/**
+ * THE SETTLED VERDICT OF THE SECOND ENTER (T7-W3 — CH-63 instance 8, the discipline cure).
+ *
+ * One atomic read of the page: both settled outcomes AND the entry count the row asserts, so
+ * the settle and the figure can never be sampled at different instants — which is precisely
+ * what a sleep guarantees they are.
+ *
+ *  · HELD — the ribbon is still up and the app is still on the outgoing game. Nothing was
+ *    discarded, and nothing can be: the switch is what discards.
+ *  · SWAPPED — the app committed the switch (`?game=` is App's own truth, written synchronously
+ *    by `setGame` inside the select handler) AND the outgoing scene is gone (`.sudoku-cell`, a
+ *    frozen DOM contract — DigitCell.vue). Only then is `entries` the post-discard count rather
+ *    than a mid-teardown reading of a board still being erased.
+ *
+ * `enterSeen` is what makes this a settle rather than a race. The capture-phase witness counts
+ * the key into the document ahead of every app handler, and everything the app does with it —
+ * `guardLeave` → `select` → `setGame` — is synchronous with that dispatch, so a sample that has
+ * seen the key has seen the app's whole answer to it. Without the witness the first poll tick
+ * reads HELD off a ribbon that has not been told yet, which is the old sleep's false green with
+ * a shorter timer.
+ */
+async function enterVerdict(page: Page) {
+  return page.evaluate(() => {
+    const guard = document.querySelector('.gallery-guard');
+    return {
+      enterSeen: (window as unknown as { __enterSeen?: number }).__enterSeen ?? 0,
+      ribbon: !!guard && guard.getClientRects().length > 0,
+      game: new URLSearchParams(location.search).get('game') ?? 'sudoku',
+      outgoing: document.querySelectorAll('.sudoku-cell').length,
+      entries: document.querySelectorAll('input[aria-label*="your entry"]').length,
+    };
+  });
+}
+
+/** Name the sampled state, so a poll that never settles reds with WHAT it kept seeing. */
+function settleName(v: Awaited<ReturnType<typeof enterVerdict>>) {
+  if (v.enterSeen === 0) return `unheard — the key never reached the app ${JSON.stringify(v)}`;
+  if (v.ribbon && v.game === 'sudoku') return 'held';
+  if (v.game !== 'sudoku' && v.outgoing === 0) return 'swapped';
+  return `in flight ${JSON.stringify(v)}`;
 }
 
 /** The answer-key peek, as the page publishes it: the laminate plus its own status utterance. */
@@ -299,17 +353,46 @@ test.describe('3.2 guardAnnounced', () => {
     expect(before, 'the board must be dirty for this row to mean anything').toBeGreaterThan(0);
 
     const announced = await guardAnnounced(page);
+
+    // The witness goes in FIRST, capture phase, so it counts the key ahead of every app
+    // handler and no sample below can resolve before the app has answered the press.
+    await page.evaluate(() => {
+      const w = window as unknown as { __enterSeen: number };
+      w.__enterSeen = 0;
+      window.addEventListener('keydown', (e) => e.key === 'Enter' && w.__enterSeen++, true);
+    });
     await page.keyboard.press('Enter');
-    // Either outcome is a SETTLED state — the guard held, or the switch completed — so this
-    // waits for the slower one rather than polling for a particular verdict.
-    await page.waitForTimeout(2000);
-    const after = await userEntries(page);
+
+    // THE POLLED DISJUNCTION (T7-W3, CH-63 instance 8) — this was a 2000ms sleep, and the
+    // sleep is what made the row a lie: `userEntries` is a count the guard the test is racing
+    // can still mutate, so a loaded runner read it MID-SWAP, saw it unchanged, and greened a
+    // guard that had never been heard. Both settled outcomes are polled for by name, together
+    // with the count, and the third outcome — a guard that neither holds nor completes — reds
+    // here rather than passing as "unchanged".
+    let seen = await enterVerdict(page);
+    await expect
+      .poll(
+        async () => {
+          seen = await enterVerdict(page);
+          return settleName(seen);
+        },
+        {
+          timeout: 15000,
+          message:
+            'the second Enter must settle into HELD (the ribbon still up, still on sudoku) ' +
+            'or SWAPPED (the switch committed and the outgoing board gone)',
+        },
+      )
+      .toMatch(/^(held|swapped)$/);
+    const after = seen.entries;
 
     // The implication, not a bare count: work may only be discarded if the arming was spoken.
+    // The count is now read off the SETTLED sample above, so `after === before` means the work
+    // survived rather than "the work had not been taken yet when the timer went off".
     expect(
       announced || after === before,
-      `the guard armed silently (announced=${announced}) and the second Enter took the board ` +
-        `from ${before} user entries to ${after}`,
+      `the guard armed silently (announced=${announced}) and the second Enter settled as ` +
+        `${settleName(seen)}, taking the board from ${before} user entries to ${after}`,
     ).toBe(true);
   });
 });
@@ -364,7 +447,10 @@ test.describe('3.3 optionsInPicker', () => {
 //
 // HEAD: `useAnswerKeyPeek.ts:55-70` is a window-level keydown with no modifier guard and a
 // `preventDefault()`, so Ctrl+K / Cmd+K flash the answer key over the board (r1 M4). The
-// correct pattern already exists twice in the estate (App.vue:438, GameGallery.vue:482).
+// correct pattern already exists twice in the estate — the `e.metaKey || e.ctrlKey ||
+// e.altKey` bail in App.vue's `onGlobalKeydown` (the `g` shortcut) and in GameGallery's
+// `onKeydown` (the `d` verb). Cited by symbol, not by line: the old `App.vue:438` /
+// `GameGallery.vue:482` had both drifted off their guards.
 
 test.describe('3.4 ctrlKDoesNotPeek', () => {
   test('Ctrl+K and Cmd+K never trigger the single-key peek', async ({ page }) => {
@@ -382,7 +468,13 @@ test.describe('3.4 ctrlKDoesNotPeek', () => {
     for (const chord of ['Control+k', 'Meta+k']) {
       await page.locator('.game-cell input').first().focus();
       await page.keyboard.press(chord);
-      await page.waitForTimeout(600); // the laminate lays down on a rAF + transition
+      // The claim is an ABSENCE across a window — the laminate must never lay down — so there is
+      // no state to poll toward: `expect.poll(…).toBe(0)` greens on its first tick against a
+      // peek that simply has not arrived yet. The control above (bare `k`, POLLED to
+      // `laminate === 1`, then Escape polled back to 0) proves in this same test that the key
+      // pipeline is live, so a quiet window here is a real silence and not a dead surface.
+      // sleep-ok: the 600ms IS the observation window, sized past the laminate's rAF + transition
+      await page.waitForTimeout(600);
       const state = await peekState(page);
       expect(state, `${chord} triggered the answer-key peek`).toEqual({
         laminate: 0,
@@ -428,17 +520,34 @@ test.describe('3.5 unnamedImages', () => {
       .poll(() => page.locator('.game-cell .glyph-svg').count(), { timeout: 20000 })
       .toBeGreaterThan(0);
 
-    const census = await imageCensus(page);
+    // POLLED, NOT ONE-SHOT (T7-W3 — the third discipline row, handed over by
+    // `docs/tranches/2026-08-tranche-7/evidence/w3/burst-forensics.md` §2, reds 4 and 5). No
+    // sleep precedes this read, so the sleep lint never sees it — and it is the same disease
+    // anyway: `unnamed` is a DIFFERENCE OF TWO COUNTS taken off a board whose ghost rings are
+    // still being named as the glyphs land, and the row red twice in CI (`a11y:490`, webkit,
+    // runs 30770223565 and 30781866393) on `0 ≠ 1` — one ring, read a beat early. The figure
+    // now has to agree with the assertion rather than merely coincide with it.
+    let census = await imageCensus(page);
+    await expect
+      .poll(
+        async () => {
+          census = await imageCensus(page);
+          return `${census.unnamed} unnamed of ${census.total}`;
+        },
+        {
+          timeout: 15000,
+          message:
+            'decorative graphics must carry aria-hidden and meaningful ones a name; the ' +
+            'census never settled at zero unnamed image nodes',
+        },
+      )
+      .toMatch(/^0 unnamed of /);
+
     // Deal-invariant by construction: the gate is ZERO, and the total is only ever reported.
     test.info().annotations.push({
       type: 'image-census',
       description: `total=${census.total} named=${census.named} unnamed=${census.unnamed}`,
     });
-    expect(
-      census.unnamed,
-      `${census.unnamed} unnamed image nodes of ${census.total} — decorative graphics must ` +
-        `carry aria-hidden, meaningful ones a name`,
-    ).toBe(0);
   });
 
   test('a filled cell announces its value exactly once', async ({ page }) => {

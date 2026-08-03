@@ -1,0 +1,208 @@
+T7-W3 — THE TWO QUARANTINED SPECS' POLLS, RE-CUT ONTO THE ASSERTED INVARIANT
+2026-08-03 · tracked head 53a6b56d (working tree carries the sibling waves) · darwin 25.4.0
+@playwright/test 1.61.1 · node v26.0.0 · vite preview of a working-tree `vite build`, port 4249
+
+The wave's order, one sentence: "re-cut both quarantined specs' polls onto the asserted
+invariant (wordmark-integrity.spec.ts:183 polls 'has ink' while asserting ink-box edges;
+theme-bake-freshness.spec.ts:223 polls `unread` while asserting contrast). That defect holds
+whatever the probe decides." It does, and it's measured below rather than argued.
+
+
+§1  THE DEFECT, AT BOTH SITES
+
+wordmark-integrity.spec.ts:179-187 (pre-cut)
+    async function settledPoseInk(page, timeout = 15000) {
+      let r = await page.evaluate(READ_POSE_INK);
+      while (r.top < 0 && Date.now() < deadline) { await page.waitForTimeout(500); … }
+      return r;
+    }
+  The predicate is `r.top < 0` — "is there ink at all". The assertion 70 lines down is
+  `inkBoxViolations(r)`, a verdict over the four EDGES of that ink. The poll returns the FIRST
+  inked sample, and the bake has two stages (`useRasterStack` captures on `document.fonts.ready`,
+  then again when `measure()` re-fits `vbWidth` under a new `cacheKey`). Stage one's bitmap has
+  ink. So the poll's exit condition is satisfied by a box that's still being re-fitted, and the
+  edge verdict gets computed on it.
+
+theme-bake-freshness.spec.ts:218-227 (pre-cut)
+    const unread = (v) => !v || v === "no-ink" || v === "load-failed";
+    while ((unread(s.logoInk) || unread(s.gridInk)) && Date.now() < deadline) { … }
+  The predicate is "did the two blobs decode". The assertions are a CONTRAST (logo ink vs live
+  paper, ≥ 4) and a ΔE (grid ink vs live `--grid-line-color`, ≤ 24) — each read against a live
+  cascade value the poll never looks at. Both blobs can decode perfectly while the numbers the
+  row rules on are still moving, and that's not hypothetical: see §3.
+
+Same shape both times — the poll waits for the VACUITY TERM and the assertion rules on the
+INVARIANT. It's CH-63's discipline defect one level in: not a sleep standing in for a settle,
+but a settle predicate aimed at the wrong quantity.
+
+
+§2  THE BAKE TIMELINE, MEASURED (sizes the window; scratch instrument, both engines)
+
+Sampled every 100ms for 4s after `waitForSelector(image.logo-pose-bmp)` + `fonts.ready`,
+webkit, built dist, five games. Distinct states and the last change in the window:
+
+  game       pose@      fonts.ready@   last change   what moved
+  sudoku     684ms      692ms          912ms         grid bake lands (logo box already final)
+  futoshiki  572ms      582ms          804ms         grid bake lands
+  thermo     586ms      594ms          819ms         grid bake lands
+  killer     895ms      909ms          925ms         nothing after the first read
+  kenken     606ms      617ms          738ms         grid bake lands
+
+  · The LOGO ink box is final within ~10ms of `fonts.ready` on this host, every game. The grid
+    bake next door lands 114–221ms later. The two-stage gap is real, it's just short on an idle
+    darwin box — a 4-vCPU runner at 2 workers stretches exactly this kind of gap, which is the
+    class CH-62/CH-64 keep re-observing.
+  · Across ONE toggle, webkit: the paper flips at 93–229ms and the pose blobs re-mint 100–110ms
+    AFTER it. There's a real window where the page is fine, both blobs decode, and the contrast
+    reads the defect. Chromium: the paper flips in 2–3ms, same ordering.
+
+
+§3  THE PREDICATE DIFFERENTIAL — old vs new, on the same moving surface
+
+PART 1 · theme-bake, on the REAL toggle. Both predicates start the instant the paper flips
+(`waitForFunction` on the computed background, polling: 10 — no wall-clock guess). MIN_CONTRAST 4.
+
+  webkit                    contrast   ΔE      settled in   verdict
+  sudoku      OLD           1.02       292.8   121ms        RED
+              NEW          16.18       0       1138ms       PASS
+  futoshiki   OLD           1.02       289.3   124ms        RED
+              NEW          16.18       0       1138ms       PASS
+  thermo      OLD           1.02       292.8   123ms        RED
+              NEW          16.18       0       1138ms       PASS
+  killer      OLD           1.02       292.8   126ms        RED
+              NEW          16.18       0       1135ms       PASS
+  kenken      OLD           1.02       289.3    96ms        RED
+              NEW          16.18       0       1100ms       PASS
+
+  chromium: identical shape, OLD 1.04 / ΔE 289.3 in 5–9ms across all five, NEW 16.18 / ΔE 0 in
+  ~1.02s across all five.
+
+  Read it carefully, because it's the whole argument: 1.02 and ΔE 289–293 are the G4.5 defect's
+  OWN numbers, off a page where nothing is broken. The old predicate can't tell "the bake is
+  carrying the other theme's ink" from "the bake hasn't re-minted yet" — both decode. 10 of 10.
+
+PART 2 · wordmark, on an injected two-stage bake (stage one inked and clipped at the right edge,
+stage two landing 300ms later — the injection stands in for the re-fit, no product ablation):
+
+  webkit    OLD (poll "has ink?")      → 200x60:10,49,10,199  violations=[right]  RED   in 10ms
+            NEW (poll "box settled?")  → 200x60:10,49,10,189  violations=[]       PASS  in 1026ms
+  chromium  same, both rows.
+
+WHAT THIS PROVES AND WHAT IT DOESN'T. It proves the two predicates disagree on a surface that's
+still moving, and that the old one hands the assertion a sample the assertion then rules RED on
+— a false red, which is the flake. It does NOT claim the shipped spec was red at that exact
+site: the post-toggle sample is guarded by the two href `expect.poll`s above it, so the old
+predicate's weakness was masked THERE. The unguarded site is the FRESH LOAD (`before = await
+settledSample(page)` behind `loadBaked`'s selectors + `fonts.ready` + a fixed 1200ms), and the
+wordmark rows likewise. Those are the sites the re-cut is for.
+
+
+§4  THE RE-CUT, AS LANDED
+
+wordmark-integrity.spec.ts — the settle is the EDGES (`:206`):
+    const inkBox = (r) => `${r.W}x${r.H}:${r.top},${r.bot},${r.left},${r.right}`;
+    let prev = await page.evaluate(READ_POSE_INK);
+    while (Date.now() < deadline) {
+      await page.waitForTimeout(500);
+      const next = await page.evaluate(READ_POSE_INK);
+      if (next.top >= 0 && inkBox(next) === inkBox(prev)) return next;
+      prev = next;
+    }
+    return prev;
+
+theme-bake-freshness.spec.ts — the settle is the CONTRAST READ (`:251`):
+    function verdictReads(s) {                       // the two numbers assertAgrees rules on
+      if (unread(s.logoInk) || unread(s.gridInk)) return null;
+      return [contrast(s.logoInk, s.paper), deltaE(s.gridInk, s.liveGrid)];
+    }
+    … if (a && b && a[0] === b[0] && a[1] === b[1]) return next;
+
+Three properties, each deliberate:
+
+  1. IT IS NOT A POLL ON THE ASSERTION. `MIN_CONTRAST` and `MAX_GRID_DE` appear nowhere in the
+     predicate, and `inkBoxViolations` appears nowhere in the other. A stale bake is TERMINAL
+     (it caches under the incoming theme's key and nothing invalidates it again) and a clipped
+     box is likewise stable, so both settle on the first quiet window and red AT ONCE. Polling
+     until the invariant is satisfied would have been the masking cure; this waits out motion,
+     never a verdict.
+  2. THE VACUITY TERM KEEPS ITS FULL WINDOW. An undecoded surface is never "settled", so a
+     terminal blank still burns the whole 15s and still reds — `no-ink` through
+     `inkBoxViolations`, and the estate's unconditional `not.toBe("no-ink")` next door. The
+     linux-webkit blank class (CH-62) sees no change in exposure: same deadline, same evidence
+     attach, same quarantine call in the same place.
+  3. THE LIMIT IS STATED, NOT GLOSSED. One quiet 500ms window is what "stopped moving" means
+     here. A re-bake landing after a full quiet window reads as settled to this or any stability
+     predicate; bounding THAT needs a causal signal — the `cacheKey` the bake fires on — not a
+     longer wait. Both file comments say so.
+
+
+§5  TWO FIXED WAITS WENT WITH IT (and one stayed)
+
+  · wordmark-integrity `loadWordmark` — the fixed 1200ms after `fonts.ready` is DELETED. It was
+    a guess at the second bake; the edge-stability poll measures that now, and the
+    glyph-coverage row that shares the helper needs only the font readiness it already awaits.
+  · theme-bake-freshness — the fixed 400ms "let the atomic url swap settle" after the two href
+    polls is DELETED. Both surfaces are already proven re-minted by the polls above it; what
+    was left to wait out is the READ, which `settledSample` now settles on directly.
+  · theme-bake-freshness `loadBaked` — the 1200ms STAYS. It sits in front of the fresh-load
+    sample and the sleep-lint reads it clean; deleting it would be churn on a site the wave's
+    own gate doesn't name.
+
+`check-sleep-lint.mjs` census, these two files, before → after:
+
+  before   wordmark:183   sleep 500ms   clean      (the wrong-invariant poll — the gate's own
+                                                    header names it as not-its-row)
+           wordmark:200   sleep 1200ms  FLAG
+           theme-bake:206 sleep 1200ms  clean
+           theme-bake:223 sleep 500ms   FLAG       (helper hole: `settledSample` is a live read)
+           theme-bake:305 sleep 400ms   FLAG
+  after    wordmark:206   sleep 500ms   clean
+           theme-bake:206 sleep 1200ms  clean
+           theme-bake:253 sleep 500ms   sleep-ok   (cited: the 500ms IS the sample interval)
+  The three findings this row owned are gone: wordmark:200, theme-bake:223, theme-bake:305.
+  Estate totals at the moment of the cut, 42 sites → 39 and 18 findings → 14 (13 an hour later
+  as a sibling row landed) — that number keeps moving under the wave and isn't this row's to
+  claim. What IS this row's: neither file carries a finding, and the poll sites are visible to
+  the gate rather than hidden from it.
+
+  Note on the literal: both poll intervals keep a LITERAL `500` rather than a named constant,
+  because `check-sleep-lint.mjs` matches `waitForTimeout(<digits>)` — hoisting it to `POLL_MS`
+  made both sites invisible to the gate, which is evasion by accident. The literal stays literal
+  and the sites are ruled on, one clean and one cited.
+
+
+§6  GREEN, LOCALLY, BOTH ENGINES
+
+`playwright test --config playwright-throttle.config.ts` against the working-tree preview
+(PLAYWRIGHT_BASE_URL=http://localhost:4249), projects wordmark-webkit + theme-bake-chromium +
+theme-bake-webkit, workers 3, retries 0 (`failOnFlakyTests: true` in that config):
+
+  rep 1   26 passed (31.7s)
+  rep 2   26 passed (33.5s)
+  rep 3   26 passed (33.8s)
+  rep 4   wordmark-webkit --repeat-each=2      12 passed (10.3s)   ← the row that lost its 1200ms
+  rep 5   theme-bake × both --repeat-each=2    40 passed (53.6s)   ← the row that lost its 400ms
+  rep 6   26 passed (30.8s)                                        ← after the last comment edit
+
+  156 executions, zero reds, zero flaky. Wordmark rows settle in 1.2–2.3s each (was ~2.5s with
+  the 1200ms wait); theme-bake rows 3.3–4.2s each.
+
+Also clean: `prettier --check` on both files; `tsc --noEmit` reports zero errors under `e2e/`
+(the 13 errors it prints are pre-existing `src/` ones on the `*.vue` shim, untouched here);
+`check-sleep-lint.mjs --self-test` 9/9 fixtures.
+
+
+§7  WHAT THIS DOES NOT DECIDE
+
+  · CH-62 is untouched. `quarantineLinuxWebkitBake` keeps its third pinning, its call sites, its
+    position (after the read and the evidence attach, in front of the assertions) and its
+    `>=0.13.0` re-entry throw. The rig probe decides that class; this row is the defect the wave
+    says "holds whatever the probe decides".
+  · No PRM declaration was added to either file — gate 2's sweep owns that, and neither spec
+    emulates reduced motion today.
+  · Neither `ci.yml` nor any `package.json` was touched. The sleep-lint wiring is gate 1's
+    request, not this row's.
+
+FILES
+  web/frontend/e2e/wordmark-integrity.spec.ts     (+45 / −9)
+  web/frontend/e2e/theme-bake-freshness.spec.ts   (+52 / −10)

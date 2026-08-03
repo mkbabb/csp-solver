@@ -1,0 +1,253 @@
+════════════════════════════════════════════════════════════════════════════════
+T7-W3 · CROSS-CUTTING GATE 1 — THE SLEEP LINT · BORN-RED BANK
+════════════════════════════════════════════════════════════════════════════════
+
+  date            2026-08-03
+  repo HEAD       af5082880e59951a99aac12c19c8ad6b922882f3  (master)
+  gate            web/frontend/scripts/check-sleep-lint.mjs
+  gate sha256     ae18dab5bdf97c5014051349ced8b670da63f9f04bfd07339e593e5adbe9ef95
+  invocation      node scripts/check-sleep-lint.mjs --self-test --census
+  exit            1   (RED — as it must be, before any cure lands)
+  determinism     3 consecutive runs byte-identical
+                  (174529274741d2846c91b2c29f54f2e512e935f5042fa8c75d9abb244d71216d)
+                  Static, browser-free, no dev server — nothing here can be
+                  contended by a sibling wave's Playwright run.
+
+WHAT IS BANKED
+  The gate reding against the PRE-CURE tree — the `font-census:256-261`
+  precedent. Both born-RED targets the wave enumerates appear below by name and
+  by line, and NEITHER is reachable by a naive `waitForTimeout` grep:
+
+    · a11y.spec.ts:305 — the 2000ms sleep before `:306`'s `userEntries(page)`,
+      a COUNT the very guard the test races can still mutate, asserted
+      non-retrying at `:309`. Needs helper resolution — `userEntries` wraps a
+      `.count()`, so a gate that knows only Playwright's own read verbs misses
+      it, which is the narrow "geometry or pixel" wording the wave struck.
+
+    · drawer.spec.ts:78 → :154 — the FIXED 900ms rAF sampling window
+      (`if (t < 900) requestAnimationFrame(tick)`), then the one-shot `boardBox`
+      at `:154`, asserted non-retrying at `:155`. There is no `waitForTimeout`
+      anywhere in this row; a sleep-only gate calls it green, which is how it
+      survived. Needs BOTH the in-page deadline detector and helper resolution
+      (`boardBox` wraps a `getBoundingClientRect`), and the two are 40 lines
+      apart, so it needs a scope-wide window rather than the ten-line one.
+
+  The cures agent is gated on this bank: a cure counts as GREEN only against a
+  gate already shown RED here.
+
+SELF-TEST
+  Nine fixtures, in-memory, no disk residue: four RED (plain sleep→boundingBox,
+  the a11y helper-count shape, the drawer rAF-deadline shape, a `sleep-ok` tag
+  whose reason is a shrug) and four GREEN (expect.poll, a cited `sleep-ok`, a
+  sleep before an auto-retrying locator matcher, a sleep before a read that
+  feeds no assertion), plus the stale-exemption canary. A red fixture that
+  passes or a green fixture that flags fails the run.
+
+CENSUS — RE-DERIVED, NEVER QUOTED
+  Tracked tree at af508288: 39 waitForTimeout sites / 12 spec files, plus 1
+  fixed in-page sampling window. The wave's "39 / 12" is CONFIRMED.
+  4 exempt (all gallery.spec.ts — :72, :233, :322, :336, cited in the script's
+  EXEMPT table and re-located by CONTENT; all four resolve, none drifted),
+  16 findings, the rest clean.
+
+  A WORKING TREE carrying sibling waves' new specs reads 42 / 13 — W2's
+  `access.spec.ts` (+3 sleeps, +1 window) and W3-gate-4's
+  `prm-void-audition.spec.ts` (+0). Both runs are recorded so the delta is
+  visible rather than silently folded in. The census line re-derives on every
+  run, so this number is never quoted from a document again.
+
+────────────────────────────────────────────────────────────────────────────────
+RUN 1 — TRACKED TREE AT af508288 (git archive HEAD; sibling specs excluded)
+────────────────────────────────────────────────────────────────────────────────
+SLEEP LINT — 23 specs · 39 waitForTimeout sites in 12 files · 1 fixed in-page sampling window · 4 cited exemptions · 0 sleep-ok tags
+  ✗ a11y.spec.ts:150 sleep 700ms — FLAG
+  ✗ a11y.spec.ts:305 sleep 2000ms — FLAG
+  · a11y.spec.ts:327 sleep 800ms — clean
+  ✗ a11y.spec.ts:385 sleep 600ms — FLAG
+  · board-covisibility.spec.ts:50 sleep 700ms — clean
+  · board-covisibility.spec.ts:222 sleep 500ms — clean
+  · board-covisibility.spec.ts:548 sleep 250ms — clean
+  · board-covisibility.spec.ts:555 sleep 400ms — clean
+  · board-covisibility.spec.ts:563 sleep 400ms — clean
+  · board-covisibility.spec.ts:567 sleep 400ms — clean
+  ✗ board-covisibility.spec.ts:631 sleep 400ms — FLAG
+  ✗ board-covisibility.spec.ts:640 sleep 400ms — FLAG
+  ✗ drawer.spec.ts:78 window 900ms — FLAG
+  · drawer.spec.ts:355 sleep 700ms — clean
+  · drawer.spec.ts:360 sleep 700ms — clean
+  · drawer.spec.ts:382 sleep 700ms — clean
+  ✗ filter-census.spec.ts:107 sleep 600ms — FLAG
+  ✗ filter-census.spec.ts:372 sleep 400ms — FLAG
+  · filter-census.spec.ts:419 sleep 1200ms — clean
+  · gallery.spec.ts:72 sleep 50ms — exempt
+  · gallery.spec.ts:233 sleep 700ms — exempt
+  · gallery.spec.ts:322 sleep 100ms — exempt·inert
+  · gallery.spec.ts:336 sleep 30ms — exempt
+  · mobile-affordances.spec.ts:40 sleep 700ms — clean
+  · mobile-platform.spec.ts:409 sleep 700ms — clean
+  ✗ mobile-platform.spec.ts:490 sleep 200ms — FLAG
+  · multiplayer.spec.ts:238 sleep 250ms — clean
+  · multiplayer.spec.ts:295 sleep 250ms — clean
+  · theme-bake-freshness.spec.ts:206 sleep 1200ms — clean
+  ✗ theme-bake-freshness.spec.ts:223 sleep 500ms — FLAG
+  ✗ theme-bake-freshness.spec.ts:305 sleep 400ms — FLAG
+  ✗ visual-regression.spec.ts:601 sleep 320ms — FLAG
+  ✗ visual-regression.spec.ts:623 sleep 320ms — FLAG
+  · visual-regression.spec.ts:738 sleep 700ms — clean
+  · visual-regression.spec.ts:827 sleep 120ms — clean
+  · wordmark-integrity.spec.ts:183 sleep 500ms — clean
+  ✗ wordmark-integrity.spec.ts:200 sleep 1200ms — FLAG
+  ✗ zone-grammar.spec.ts:464 sleep 80ms — FLAG
+  ✗ zone-grammar.spec.ts:471 sleep 80ms — FLAG
+  · zone-grammar.spec.ts:510 sleep 700ms — clean
+
+SELF-TEST — red fixtures must flag, green fixtures must not:
+  ✓ RED — sleep → boundingBox → one-shot expect (the plain disease)
+      → 1 flag(s), expected flag
+  ✓ RED — sleep → helper-wrapped .count() → one-shot expect (a11y:305's shape)
+      → 1 flag(s), expected flag
+  ✓ RED — fixed rAF deadline → distant one-shot geometry (drawer:154's shape)
+      → 1 flag(s), expected flag
+  ✓ RED — sleep-ok tag present but the reason is a shrug
+      → 1 flag(s), expected flag
+  ✓ GREEN — the cure: expect.poll over the same surface, no sleep at all
+      → 0 flag(s), expected clean
+  ✓ GREEN — sleep with a cited sleep-ok: the elapsed time is the subject
+      → 0 flag(s), expected clean
+  ✓ GREEN — a sleep before a retrying assertion (auto-waiting locator matcher)
+      → 0 flag(s), expected clean
+  ✓ GREEN — a sleep before a read that feeds NO assertion in the window
+      → 0 flag(s), expected clean
+  ✓ RED — an EXEMPT entry that no longer resolves to a site
+      → 4 stale
+
+16 failure(s):
+
+  • a11y.spec.ts:150 — a fixed 700ms sleep sits inside `armGuard()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • a11y.spec.ts:305 — a fixed 2000ms sleep precedes a ONE-SHOT read off a live surface at :306 (`after`), asserted non-retrying at :309. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • a11y.spec.ts:385 — a fixed 600ms sleep precedes a ONE-SHOT read off a live surface at :386 (`state`), asserted non-retrying at :387. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • board-covisibility.spec.ts:631 — a fixed 400ms sleep precedes a ONE-SHOT read off a live surface at :632 (`wholeEdge`), asserted non-retrying at :633. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • board-covisibility.spec.ts:640 — a fixed 400ms sleep precedes a ONE-SHOT read off a live surface at :641 (`bare`), asserted non-retrying at :642. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • drawer.spec.ts:78 — a fixed 900ms in-page sampling window precedes a ONE-SHOT read off a live surface at :154 (`after`), asserted non-retrying at :155. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • filter-census.spec.ts:107 — a fixed 600ms sleep sits inside `settleBoard()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • filter-census.spec.ts:372 — a fixed 400ms sleep sits inside `assertNoHoverFilters()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • mobile-platform.spec.ts:490 — a fixed 200ms sleep precedes a ONE-SHOT read off a live surface at :491 (`stranded`), asserted non-retrying at :492. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • theme-bake-freshness.spec.ts:223 — a fixed 500ms sleep sits inside `settledSample()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • theme-bake-freshness.spec.ts:305 — a fixed 400ms sleep precedes a ONE-SHOT read off a live surface at :307 (`after`), asserted non-retrying at :308. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • visual-regression.spec.ts:601 — a fixed 320ms sleep precedes a ONE-SHOT read off a live surface at :602 (`hovered`), asserted non-retrying at :603. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • visual-regression.spec.ts:623 — a fixed 320ms sleep precedes a ONE-SHOT read off a live surface at :624 (`broken`), asserted non-retrying at :625. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • wordmark-integrity.spec.ts:200 — a fixed 1200ms sleep sits inside `loadWordmark()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • zone-grammar.spec.ts:464 — a fixed 80ms sleep precedes a ONE-SHOT read off a live surface at :465 (`broken`), asserted non-retrying at :466. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • zone-grammar.spec.ts:471 — a fixed 80ms sleep sits inside `collapse()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+
+────────────────────────────────────────────────────────────────────────────────
+RUN 2 — WORKING TREE 2026-08-03 (two sibling waves' untracked specs on disk)
+────────────────────────────────────────────────────────────────────────────────
+SLEEP LINT — 25 specs · 42 waitForTimeout sites in 13 files · 2 fixed in-page sampling windows · 4 cited exemptions · 0 sleep-ok tags
+  ✗ a11y.spec.ts:150 sleep 700ms — FLAG
+  ✗ a11y.spec.ts:305 sleep 2000ms — FLAG
+  · a11y.spec.ts:327 sleep 800ms — clean
+  ✗ a11y.spec.ts:385 sleep 600ms — FLAG
+  ✗ access.spec.ts:76 window 120ms — FLAG
+  ✗ access.spec.ts:282 sleep 900ms — FLAG
+  · access.spec.ts:343 sleep 1200ms — clean
+  · access.spec.ts:360 sleep 1200ms — clean
+  · board-covisibility.spec.ts:50 sleep 700ms — clean
+  · board-covisibility.spec.ts:222 sleep 500ms — clean
+  · board-covisibility.spec.ts:548 sleep 250ms — clean
+  · board-covisibility.spec.ts:555 sleep 400ms — clean
+  · board-covisibility.spec.ts:563 sleep 400ms — clean
+  · board-covisibility.spec.ts:567 sleep 400ms — clean
+  ✗ board-covisibility.spec.ts:631 sleep 400ms — FLAG
+  ✗ board-covisibility.spec.ts:640 sleep 400ms — FLAG
+  ✗ drawer.spec.ts:78 window 900ms — FLAG
+  · drawer.spec.ts:355 sleep 700ms — clean
+  · drawer.spec.ts:360 sleep 700ms — clean
+  · drawer.spec.ts:382 sleep 700ms — clean
+  ✗ filter-census.spec.ts:107 sleep 600ms — FLAG
+  ✗ filter-census.spec.ts:372 sleep 400ms — FLAG
+  · filter-census.spec.ts:419 sleep 1200ms — clean
+  · gallery.spec.ts:72 sleep 50ms — exempt
+  · gallery.spec.ts:233 sleep 700ms — exempt
+  · gallery.spec.ts:322 sleep 100ms — exempt·inert
+  · gallery.spec.ts:336 sleep 30ms — exempt
+  · mobile-affordances.spec.ts:40 sleep 700ms — clean
+  · mobile-platform.spec.ts:409 sleep 700ms — clean
+  ✗ mobile-platform.spec.ts:490 sleep 200ms — FLAG
+  · multiplayer.spec.ts:238 sleep 250ms — clean
+  · multiplayer.spec.ts:295 sleep 250ms — clean
+  · theme-bake-freshness.spec.ts:206 sleep 1200ms — clean
+  ✗ theme-bake-freshness.spec.ts:223 sleep 500ms — FLAG
+  ✗ theme-bake-freshness.spec.ts:305 sleep 400ms — FLAG
+  ✗ visual-regression.spec.ts:601 sleep 320ms — FLAG
+  ✗ visual-regression.spec.ts:623 sleep 320ms — FLAG
+  · visual-regression.spec.ts:738 sleep 700ms — clean
+  · visual-regression.spec.ts:827 sleep 120ms — clean
+  · wordmark-integrity.spec.ts:183 sleep 500ms — clean
+  ✗ wordmark-integrity.spec.ts:200 sleep 1200ms — FLAG
+  ✗ zone-grammar.spec.ts:464 sleep 80ms — FLAG
+  ✗ zone-grammar.spec.ts:471 sleep 80ms — FLAG
+  · zone-grammar.spec.ts:510 sleep 700ms — clean
+
+18 failure(s):
+
+  • a11y.spec.ts:150 — a fixed 700ms sleep sits inside `armGuard()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • a11y.spec.ts:305 — a fixed 2000ms sleep precedes a ONE-SHOT read off a live surface at :306 (`after`), asserted non-retrying at :309. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • a11y.spec.ts:385 — a fixed 600ms sleep precedes a ONE-SHOT read off a live surface at :386 (`state`), asserted non-retrying at :387. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • access.spec.ts:76 — a fixed 120ms in-page sampling window sits inside `occlusionCensus()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • access.spec.ts:282 — a fixed 900ms sleep precedes a ONE-SHOT read off a live surface at :289 (`rows`), asserted non-retrying at :290. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • board-covisibility.spec.ts:631 — a fixed 400ms sleep precedes a ONE-SHOT read off a live surface at :632 (`wholeEdge`), asserted non-retrying at :633. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • board-covisibility.spec.ts:640 — a fixed 400ms sleep precedes a ONE-SHOT read off a live surface at :641 (`bare`), asserted non-retrying at :642. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • drawer.spec.ts:78 — a fixed 900ms in-page sampling window precedes a ONE-SHOT read off a live surface at :154 (`after`), asserted non-retrying at :155. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • filter-census.spec.ts:107 — a fixed 600ms sleep sits inside `settleBoard()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • filter-census.spec.ts:372 — a fixed 400ms sleep sits inside `assertNoHoverFilters()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • mobile-platform.spec.ts:490 — a fixed 200ms sleep precedes a ONE-SHOT read off a live surface at :491 (`stranded`), asserted non-retrying at :492. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • theme-bake-freshness.spec.ts:223 — a fixed 500ms sleep sits inside `settledSample()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • theme-bake-freshness.spec.ts:305 — a fixed 400ms sleep precedes a ONE-SHOT read off a live surface at :307 (`after`), asserted non-retrying at :308. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • visual-regression.spec.ts:601 — a fixed 320ms sleep precedes a ONE-SHOT read off a live surface at :602 (`hovered`), asserted non-retrying at :603. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • visual-regression.spec.ts:623 — a fixed 320ms sleep precedes a ONE-SHOT read off a live surface at :624 (`broken`), asserted non-retrying at :625. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • wordmark-integrity.spec.ts:200 — a fixed 1200ms sleep sits inside `loadWordmark()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • zone-grammar.spec.ts:464 — a fixed 80ms sleep precedes a ONE-SHOT read off a live surface at :465 (`broken`), asserted non-retrying at :466. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • zone-grammar.spec.ts:471 — a fixed 80ms sleep sits inside `collapse()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+
+────────────────────────────────────────────────────────────────────────────────
+NOT RULED ON HERE
+────────────────────────────────────────────────────────────────────────────────
+  wordmark-integrity.spec.ts:183 reads CLEAN — it polls. It polls "has ink"
+  while asserting ink-box EDGES, which is the wave's separate wrong-invariant
+  order, a different defect with a different cure. The sleep lint must not
+  absorb it, or its green here would be misread as a ruling on it.

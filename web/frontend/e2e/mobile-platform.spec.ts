@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
+// PRM: live, because the keypad rows drive the drawer's real glide and the app's own scroll-clear
+//   before reading where anything came to rest; the platform reads (overscroll, callout,
+//   safe-area, text-size-adjust) are computed styles the beat never touches.
+
 // T4-WM §1/§5 — the iOS platform-discipline + landscape/iPad geometry probes (lane C). Three
 // gate rows live here, all born-RED at HEAD (zero visualViewport references; no overscroll /
 // touch-callout / user-select / viewport-fit in src — crit-mobile grep-confirmed):
@@ -487,10 +491,31 @@ test.describe("the 296px keypad band (measured constant, driven through the comp
       content:
         "#controls-drawer { top: auto !important; bottom: 0 !important; translate: none !important; }",
     });
-    await page.waitForTimeout(200);
-    const stranded = await seat("#controls-drawer .ctrl-btn", true);
-    expect(stranded!.portBottom).toBeGreaterThan(stranded!.bandEdge);
-    expect(stranded!.bottom).toBeGreaterThan(stranded!.bandEdge);
+    // POLLED, NOT SLEPT (T7-W3, the sleep-lint residue). Re-anchoring the sheet re-lays it and
+    // re-runs the interior scroll `seat()` drives; the old fixed 200ms let a mid-relayout box
+    // reach a non-retrying `expect`, so the ablation arm — the thing that proves the row above
+    // can fail — was itself timing-dependent. The verdict retries and carries its figures.
+    await expect
+      .poll(
+        async () => {
+          const s = await seat("#controls-drawer .ctrl-btn", true);
+          return {
+            portStranded: s !== null && s.portBottom !== null && s.portBottom > s.bandEdge,
+            chipStranded: s !== null && s.bottom > s.bandEdge,
+            measured: s
+              ? `portBottom=${s.portBottom} bottom=${s.bottom} bandEdge=${s.bandEdge}`
+              : "no painted .ctrl-btn",
+          };
+        },
+        {
+          timeout: 6000,
+          message:
+            "with `bottom: 0` in place of the `--vv-height` anchor the scrollport itself must " +
+            "strand under the keyboard band, and the deepest chip with it — without this arm " +
+            "the row above passes on any tree whose sheet happens to be short",
+        },
+      )
+      .toMatchObject({ portStranded: true, chipStranded: true });
   });
 });
 

@@ -2,6 +2,10 @@ import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
 import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
+// PRM: live, because nothing in the bundled-preview lane applies it—this spec flips the theme and
+//   re-reads the baked pose bitmap off its own blob URL while the beat walks the stack. What it
+//   asserts (the re-mint carries the live theme's ink) is theme-driven, never beat-driven.
+
 /**
  * P1-W4 G4.5 — THE BAKED SURFACES CARRY THE LIVE THEME'S INK, against the BUILT dist.
  *
@@ -206,24 +210,63 @@ async function loadBaked(page: Page, game: string) {
   await page.waitForTimeout(1200);
 }
 
+const unread = (v: string | null) => !v || v === "no-ink" || v === "load-failed";
+
 /**
- * `sample`, POLLED until both baked surfaces decode to real ink or the window closes.
+ * The two numbers `assertAgrees` rules on — the READS themselves, not the blobs behind them.
+ * `null` while either surface is undecoded, which is never a settled state.
+ */
+function verdictReads(s: Sample): [number, number] | null {
+  if (unread(s.logoInk) || unread(s.gridInk)) return null;
+  return [contrast(s.logoInk!, s.paper), deltaE(s.gridInk!, s.liveGrid)];
+}
+
+/**
+ * `sample`, POLLED until THE CONTRAST READ STOPS MOVING.
  *
  * The same settle wordmark-integrity takes, for the same reason: the bake is asynchronous and
  * two-stage (`useRasterStack` captures on `document.fonts.ready`, then again when the box
  * re-fits under a new `cacheKey`), and the consumer holds the previous URLs across the second
- * capture. Sampling on a wall-clock guess reads whatever that sequence has reached; this waits
- * the settle out. First read wins whenever the stack is already settled.
+ * capture. Sampling on a wall-clock guess reads whatever that sequence has reached.
+ *
+ * T7-W3 — RE-CUT ONTO THE ASSERTED INVARIANT. The predicate was `unread(logoInk) ||
+ * unread(gridInk)`: it waited for the blobs to decode to something and returned the first
+ * sample that did, while the assertions below are a CONTRAST and a ΔE — each read against a
+ * live cascade value (`paper`, `liveGrid`) the poll never looked at. Two ways that bites, both
+ * measured on the built dist (evidence/w3/requarantine-polls.txt): across the toggle the paper
+ * flips 93–229ms before the pose blobs re-mint, so there is a real window where both surfaces
+ * decode fine and the contrast reads the DEFECT (1.02 dark-on-dark) with nothing stale about
+ * the page; and the grid bake lands 114–221ms after the logo on a fresh load. A poll on
+ * "decoded" clears both windows.
+ *
+ * So the settle is now the verdict's own numbers: two consecutive samples yielding the same
+ * contrast and the same ΔE. It is NOT a poll on the thresholds — `MIN_CONTRAST` and
+ * `MAX_GRID_DE` appear nowhere in the predicate, so a stale bake (which is terminal: it caches
+ * under the incoming theme's key and nothing invalidates it again) is stable at once and reds
+ * on the first quiet window. And an undecoded surface is never settled, so the estate's
+ * unconditional `not.toBe("no-ink")` guard keeps its full window and its red.
+ *
+ * Measured differential, 5 games × both engines, started the instant the paper flips: the old
+ * predicate returned in 5–126ms reading contrast 1.02 (webkit) / 1.04 (chromium) and ΔE
+ * 289–293 — the defect's own numbers, off a page where nothing is broken and both blobs decode
+ * fine. The new predicate waited it out in ~1.0–1.1s and read 16.18 / ΔE 0, 10 of 10. Same
+ * stated limit as its twin next door: one quiet 500ms window is what "stopped moving" means.
  */
 async function settledSample(page: Page, timeout = 15000): Promise<Sample> {
-  const unread = (v: string | null) => !v || v === "no-ink" || v === "load-failed";
   const deadline = Date.now() + timeout;
-  let s = await sample(page);
-  while ((unread(s.logoInk) || unread(s.gridInk)) && Date.now() < deadline) {
+  let prev = await sample(page);
+  while (Date.now() < deadline) {
+    // The literal stays literal so `check-sleep-lint.mjs` can see this site and rule on it:
+    // the elapsed time is the measurement here — the read after it is compared with the read
+    // before it — not a settle proxy standing in front of a one-shot read.
+    // sleep-ok: the 500ms is the INTERVAL BETWEEN TWO SAMPLES of a stability poll.
     await page.waitForTimeout(500);
-    s = await sample(page);
+    const next = await sample(page);
+    const [a, b] = [verdictReads(prev), verdictReads(next)];
+    if (a && b && a[0] === b[0] && a[1] === b[1]) return next;
+    prev = next;
   }
-  return s;
+  return prev;
 }
 
 async function assertAgrees(
@@ -236,7 +279,7 @@ async function assertAgrees(
   // This spec reads the SAME baked pose bitmap wordmark-integrity does, so it is exposed to
   // the same unreadable-bake red (CI run 30684983201) and gets the same rule: ship the pose
   // that was read, so the next occurrence is attributable rather than a message.
-  if (!s.logoInk || s.logoInk === "no-ink" || s.logoInk === "load-failed")
+  if (unread(s.logoInk))
     await attachBakeEvidence(
       page,
       testInfo,
@@ -302,8 +345,11 @@ for (const start of ["light", "dark"] as const) {
             { timeout: 20000, message: "the grid pose blob was never re-minted" },
           )
           .not.toBe(before.gridHref);
-        await page.waitForTimeout(400); // let the atomic url swap settle across all poses
 
+        // A fixed 400ms "let the atomic url swap settle" used to stand here. It is gone with
+        // the poll re-cut (T7-W3): both surfaces are already proven re-minted by the polls
+        // above, and what was left to wait out is the READ — which `settledSample` now settles
+        // on directly, contrast and ΔE, rather than guessing a duration in front of it.
         const after = await settledSample(page);
         expect(after.theme, "the toggle did not change the theme").not.toBe(
           before.theme,

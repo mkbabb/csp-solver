@@ -1,5 +1,9 @@
 import { test, expect, devices, type Page } from "@playwright/test";
 
+// PRM: live, because the census reads rendered names and ranks, and the frozen-well row asserts a
+//   pose stack that never swaps by construction—both hold with the beat running, and no route
+//   here applies PRM.
+
 /**
  * T4-P1 · THE ZONE GRAMMAR — the gates for the control card's naming, in both pointer regimes.
  *
@@ -461,14 +465,25 @@ test.describe("coarse row regime (≥1024)", () => {
     // the cure moves. One control per dimension, each reverted before the next.
     const collapse = async (css: string, dim: "w" | "h") => {
       const tag = await page.addStyleTag({ content: css });
-      await page.waitForTimeout(80);
-      const broken = await halves();
-      expect(
-        Math.min(...broken.map((c) => c[dim])),
-        `negative control (${dim}): the collapsed pair must fall under the floor`,
-      ).toBeLessThan(44);
+      // POLLED, NOT SLEPT (T7-W3, the sleep-lint residue). An injected rule re-lays the pair,
+      // and the old fixed 80ms was a proxy for that relayout landing — in front of a
+      // non-retrying `expect`, which made the NEGATIVE CONTROL itself timing-dependent. The one
+      // arm that proves the floor above can fail must not be able to pass or fail on the clock.
+      await expect
+        .poll(async () => Math.min(...(await halves()).map((c) => c[dim])), {
+          timeout: 6000,
+          message: `negative control (${dim}): the collapsed pair must fall under the floor`,
+        })
+        .toBeLessThan(44);
       await tag.evaluate((el) => el.remove());
-      await page.waitForTimeout(80);
+      // The revert has to LAND before the next control runs, or the two arms measure each
+      // other. The shipped box coming back IS that settle, so it is the thing waited on.
+      await expect
+        .poll(async () => Math.min(...(await halves()).map((c) => c[dim])), {
+          timeout: 6000,
+          message: `negative control (${dim}): the shipped box never returned after the revert`,
+        })
+        .toBeGreaterThanOrEqual(44);
     };
     // Both controls strip `min-width`/`min-height` first ON PURPOSE. The 44px floor is not the
     // pair's own rule — it is `index.css`'s shared `(pointer: coarse)` block

@@ -1,3 +1,7 @@
+// PRM: live, because G3.2 reads `document.getAnimations()` for retained fills—the reveal wave has
+//   to actually run for that census to mean anything—and the settle is a poll on the
+//   running-animation count reaching zero, never a freeze.
+
 import { test, expect, type Page } from "@playwright/test";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -103,8 +107,30 @@ async function settleBoard(page: Page) {
       },
     )
     .toBe(0);
-  // One settled beat window past the bake, so no pose swap is mid-flight either.
-  await page.waitForTimeout(600);
+  // STILL, not slept (T7-W3, the sleep-lint residue). The pose swap rides the estate's own
+  // scheduler beat rather than the WAAPI, so `getAnimations()` above cannot see it and the old
+  // form waited a fixed 600ms for it instead — a proxy in front of a census whose figure IS the
+  // filtered population. What the census needs is that population holding still: two consecutive
+  // reads that agree. Nothing here is derived from elapsed time — a grid still swapping poses in
+  // and out of the filtered set keeps disagreeing until it stops, and one that never stops reds
+  // here, naming the drift, instead of handing a transient to an exact-match allowlist.
+  let held = await filteredCount(page);
+  await expect
+    .poll(
+      async () => {
+        const now = await filteredCount(page);
+        const still = now === held;
+        held = now;
+        return still;
+      },
+      {
+        timeout: 20000,
+        message:
+          "the filtered population never agreed across two consecutive reads — a pose swap is " +
+          "still in flight and every figure the census takes off it is a transient",
+      },
+    )
+    .toBe(true);
 }
 
 async function census(page: Page, selectors: readonly string[]): Promise<CensusHit[]> {
@@ -368,11 +394,24 @@ async function hoverOffenders(page: Page): Promise<string[]> {
 /** The whole hovered pass for one settled regime, control included. */
 async function assertNoHoverFilters(page: Page, regime: string) {
   // Precondition: the population is STILL. A drifting count would make every delta below noise.
-  const a = await filteredCount(page);
-  await page.waitForTimeout(400);
-  expect(await filteredCount(page), `[${regime}] population is stable before hovering`).toBe(
-    a,
-  );
+  // POLLED, not slept (T7-W3): the old form sampled, waited a fixed 400ms, sampled again and
+  // asserted equality — which reds on a regime that is merely SLOW to settle and greens on one
+  // that drifts on a 400ms period. Stillness is now waited for and asserted as itself.
+  let held = await filteredCount(page);
+  await expect
+    .poll(
+      async () => {
+        const now = await filteredCount(page);
+        const still = now === held;
+        held = now;
+        return still;
+      },
+      {
+        timeout: 15000,
+        message: `[${regime}] the population never held still, so every hover delta below is noise`,
+      },
+    )
+    .toBe(true);
 
   expect(
     await hoverOffenders(page),

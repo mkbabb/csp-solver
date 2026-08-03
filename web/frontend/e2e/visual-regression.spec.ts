@@ -1,6 +1,10 @@
 import { test, expect, devices, type Page } from "@playwright/test";
 import { MOTION } from "../src/pencil/config/pencilConfig";
 
+// PRM: live, because the steady-state rows assert the boil machinery as it ships—the draw-in→boil
+//   handoff, the pose stack's shape, exactly one layer visible—on a beat that's actually running.
+//   The screenshot half that would want a freeze retired to visual-golden.spec.ts (T4-W2).
+
 // SVG-filter / theme / grid-boil DOM-contract register for the default (Sudoku) scene.
 //
 // T4-W2: the WRITE-ONLY screenshot half of this file (three `page.screenshot()` PNGs
@@ -592,19 +596,50 @@ test("the deal receipt keeps off the commit verb, hover included", async ({ page
       };
     });
 
+  /**
+   * THE SETTLED READ (T7-W3, the sleep-lint residue). The hover reveal is a real transition and
+   * the old form waited a fixed 320ms for it — "longer than any reveal transition the estate has
+   * owned", which is a claim about the estate rather than about this frame, and it reds nowhere
+   * when the frame runs long. The two boxes are now read until two consecutive reads AGREE; only
+   * a settled figure reaches an assertion, and a row that never stops moving reds saying so
+   * rather than handing a mid-transition sample to a non-retrying `expect`.
+   */
+  const settledClearance = async (where: string) => {
+    let held = await clearance();
+    await expect
+      .poll(
+        async () => {
+          const now = await clearance();
+          const same =
+            !!now &&
+            !!held &&
+            now.gap === held.gap &&
+            now.axis === held.axis &&
+            now.receiptW === held.receiptW;
+          held = now;
+          return same;
+        },
+        {
+          timeout: 6000,
+          message: `${where}: the deal row's boxes never agreed across two consecutive reads`,
+        },
+      )
+      .toBe(true);
+    return held!;
+  };
+
   const rest = await clearance();
   expect(rest).not.toBeNull();
   expect(rest!.gap).toBeGreaterThanOrEqual(0);
   expect(rest!.axis, "verb and receipt share one centre").toBeLessThanOrEqual(1);
 
   await page.locator(".controls-card .deal-row .difficulty-tally").hover();
-  await page.waitForTimeout(320); // longer than any reveal transition the estate has owned
-  const hovered = await clearance();
-  expect(hovered!.gap).toBeGreaterThanOrEqual(0);
-  expect(hovered!.axis).toBeLessThanOrEqual(1);
+  const hovered = await settledClearance("the hovered receipt");
+  expect(hovered.gap).toBeGreaterThanOrEqual(0);
+  expect(hovered.axis).toBeLessThanOrEqual(1);
   // …and the receipt is the same receipt. A reveal that grows it is the defect even when the
   // gap happens to survive on a wide rail.
-  expect(hovered!.receiptW).toBeCloseTo(rest!.receiptW, 1);
+  expect(hovered.receiptW).toBeCloseTo(rest!.receiptW, 1);
 
   // CONTROL: put the SHARED CELL back — mark 6's own two declarations, verbatim — and the same
   // probe must see the clearance collapse and the axes part.
@@ -620,10 +655,9 @@ test("the deal receipt keeps off the commit verb, hover included", async ({ page
       ".controls-card .deal-row > .difficulty-tally { grid-area: 1 / 1; justify-self: end; }",
   });
   await page.locator(".controls-card .deal-row .difficulty-tally").hover();
-  await page.waitForTimeout(320);
-  const broken = await clearance();
-  expect(broken!.gap).toBeLessThan(0);
-  expect(broken!.axis).toBeGreaterThan(1);
+  const broken = await settledClearance("the shared-cell control");
+  expect(broken.gap).toBeLessThan(0);
+  expect(broken.axis).toBeGreaterThan(1);
 });
 
 // ── Test 9: chip separation — the seam between adjacent option chips ─

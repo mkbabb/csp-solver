@@ -1,5 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// PRM: live, because the soul gate IS the beat—the centered card's active pose must advance
+//   across a ~700ms window while a flank's stays frozen, and freezing the page pins both sides
+//   and the row asserts nothing. The `gallery under prefers-reduced-motion` describe emulates
+//   reduce itself; that's the file's one exception, at the test where it belongs.
+
 // T4-W12 Wave B — THE GALLERY (the carousel, static). The game-select screen as a spread of
 // paper worksheets dealt onto a desk: a HandDrawnOutline-framed deck, a listbox-over-carousel
 // (W3C APG), scroll-snap for touch + a glass-curve FLIP for keyboard, page pips, and the soul

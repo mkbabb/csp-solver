@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
+// PRM: live, because the celebration crest is the subject—the grade has to actually crest on the
+//   board while the page holds still, and PRM sets `animation: none` on the whole
+//   `.celebration-*` family (index.css), erasing the event the no-reflow rows measure.
+
 /**
  * T4-P1 · MARK 6 — the mobile solve-status band dissolves, and the board fits the screen.
  *
@@ -628,17 +632,49 @@ test.describe("the board fits the viewport it is drawn in", () => {
     await page.addStyleTag({
       content: ".board-shell { max-width: 100dvh !important; }",
     });
-    await page.waitForTimeout(400);
-    const wholeEdge = await read();
-    expect(wholeEdge.overflow).toBeGreaterThan(shipped.overflow);
-    expect(wholeEdge.overflow).toBeLessThanOrEqual(wholeEdge.chromeAbove);
+    // POLLED, NOT SLEPT (T7-W3, the sleep-lint residue). An injected `max-width` re-lays the
+    // board and the frame keeps moving while it does; the old fixed 400ms let a mid-reflow
+    // overflow reach a non-retrying `expect`, which greens or reds on the runner's mood. The
+    // verdict itself retries now, and it carries the figures so a red names what it read.
+    await expect
+      .poll(
+        async () => {
+          const r = await read();
+          return {
+            grew: r.overflow > shipped.overflow,
+            redeemed: r.overflow <= r.chromeAbove,
+            measured: `overflow=${r.overflow} chromeAbove=${r.chromeAbove}`,
+          };
+        },
+        {
+          timeout: 6000,
+          message:
+            "the 100dvh rung must overflow further than the shipped one and still be redeemed " +
+            `by the chrome above it (shipped overflow=${shipped.overflow})`,
+        },
+      )
+      .toMatchObject({ grew: true, redeemed: true });
 
     // CONTROL 2 — the tree this rung replaced. With no height arm at all the board hangs
     // ~392px below a 390px fold, four times the chrome that could redeem it, and the same
     // probe MUST red. A bound that the pre-cure tree also satisfies is a decoration.
     await page.addStyleTag({ content: ".board-shell { max-width: none !important; }" });
-    await page.waitForTimeout(400);
-    const bare = await read();
-    expect(bare.overflow).toBeGreaterThan(bare.chromeAbove);
+    await expect
+      .poll(
+        async () => {
+          const r = await read();
+          return {
+            unredeemed: r.overflow > r.chromeAbove,
+            measured: `overflow=${r.overflow} chromeAbove=${r.chromeAbove}`,
+          };
+        },
+        {
+          timeout: 6000,
+          message:
+            "with no height arm at all the board must hang further below the fold than the " +
+            "chrome above it can redeem — a bound the pre-cure tree also satisfies is a decoration",
+        },
+      )
+      .toMatchObject({ unredeemed: true });
   });
 });

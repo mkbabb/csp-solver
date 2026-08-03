@@ -1,5 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// PRM: live, because the smoke path freezes nothing—it waits on the pose stack's first rendered
+//   label and on a solve reaching a terminal state, both of which hold with the beat running.
+
 // First-coverage smoke suite for the Futoshiki scene (previously zero e2e coverage).
 // KISS: reach the game via the gallery carousel (T4-W12 Wave D — the wordmark dropdown
 // listbox is retired; the wordmark now OPENS THE GALLERY), prove the board renders with its

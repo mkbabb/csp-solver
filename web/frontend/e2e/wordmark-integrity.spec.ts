@@ -2,6 +2,10 @@ import { test, expect, type Page } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
 import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
+// PRM: live, because nothing in the webkit built-dist lane applies it—the spec decodes the
+//   CURRENT pose bitmap's blob URL and polls until the ink box stops moving, with the beat
+//   walking the stack under it.
+
 /**
  * P1 G3.4 — WORDMARK INTEGRITY, in WebKit, against the BUILT dist.
  *
@@ -166,24 +170,57 @@ const READ_POSE_INK = async () => {
   return { W, H, top, bot, left, right };
 };
 
+/** The verdict's own subject, as a comparable: the bitmap and the four edges inside it. */
+const inkBox = (r: PoseInk) => `${r.W}x${r.H}:${r.top},${r.bot},${r.left},${r.right}`;
+
 /**
- * Read the pose stack, POLLING the live `<image>` until it carries ink or the window closes.
+ * Read the pose stack, POLLING until the INK BOX STOPS MOVING.
  *
  * The bake is asynchronous and two-stage: `useRasterStack` bakes once on `document.fonts.ready`
  * and again when `measure()` re-fits `vbWidth` (a new `cacheKey`), and the consumer holds the
  * previous URLs across the second bake so the wordmark swaps atomically. A fixed wait samples
- * whatever that sequence happens to have reached; this re-reads the CURRENT href, so a re-bake
- * landing late — or a decode that had not finished — is waited out rather than asserted on.
- * First read wins when the stack is already settled, which is every green run.
+ * whatever that sequence happens to have reached, so the poll waits it out instead.
+ *
+ * T7-W3 — RE-CUT ONTO THE ASSERTED INVARIANT. The predicate was `while (r.top < 0)`: it waited
+ * for "there is ink at all" and returned the FIRST inked sample, while the assertion below is
+ * over the four EDGES of that ink. Those are different claims, and the gap between them is the
+ * whole second stage of the bake — stage one's bitmap has ink, so the old poll returned it and
+ * the edge verdict was computed on a box still being re-fitted. Measured on the built dist
+ * (darwin·webkit, evidence/w3/requarantine-polls.txt): the logo box was final within ~10ms of
+ * `fonts.ready` here, while the grid bake beside it landed 114–221ms after its own first read.
+ * The stage gap is real — this host is just idle, and the runner is neither.
+ *
+ * So the settle is now the EDGES: two consecutive reads of the same inked box. Two things it
+ * deliberately is NOT:
+ *  · not "poll until the assertion passes" — a clipped or stale box is perfectly stable, so it
+ *    settles on the first quiet window and reds at once. The poll waits out motion, never a
+ *    verdict.
+ *  · not a weaker vacuity term — absence of ink is never a settled state, so a terminal blank
+ *    still burns the whole window and still reds through `inkBoxViolations`'s `no-ink`, exactly
+ *    as before.
+ *
+ * Measured differential, both engines, on an injected two-stage bake (stage one inked and
+ * clipped at the right edge, stage two landing 300ms later): the old predicate returned stage
+ * one in 10ms and read `violations=[right]`, the new one returned the bitmap that ships in
+ * ~1.0s and read `[]`. And the limit, stated rather than glossed: one quiet 500ms window is
+ * what "stopped moving" means here, so a re-bake landing after a full quiet window would read
+ * as settled to this or any stability predicate. Bounding that needs a causal signal — the
+ * `cacheKey` the bake fires on — not a longer wait.
  */
 async function settledPoseInk(page: Page, timeout = 15000) {
   const deadline = Date.now() + timeout;
-  let r = await page.evaluate(READ_POSE_INK);
-  while (r.top < 0 && Date.now() < deadline) {
+  let prev = await page.evaluate(READ_POSE_INK);
+  while (Date.now() < deadline) {
+    // The literal stays literal so `check-sleep-lint.mjs` can see this site and rule on it:
+    // the elapsed time is the measurement here — the read after it is compared with the read
+    // before it — not a settle proxy standing in front of a one-shot read.
+    // sleep-ok: the 500ms is the INTERVAL BETWEEN TWO SAMPLES of a stability poll.
     await page.waitForTimeout(500);
-    r = await page.evaluate(READ_POSE_INK);
+    const next = await page.evaluate(READ_POSE_INK);
+    if (next.top >= 0 && inkBox(next) === inkBox(prev)) return next;
+    prev = next;
   }
-  return r;
+  return prev;
 }
 
 async function loadWordmark(page: Page, game: string) {
@@ -196,8 +233,11 @@ async function loadWordmark(page: Page, game: string) {
     })
     .toBeGreaterThan(0);
   // …and re-baked after `document.fonts.ready`, which is when `measure()` re-fits the box.
+  // A fixed 1200ms wait used to stand here for that second stage. It is gone with the poll
+  // re-cut (T7-W3): `settledPoseInk` now settles on the EDGES themselves, so the wait it was
+  // guessing at is measured instead of assumed, and the glyph-coverage row below needs only
+  // the font readiness it already awaits.
   await page.evaluate(() => document.fonts.ready);
-  await page.waitForTimeout(1200);
 }
 
 test.describe("G3.4 · wordmark integrity (WebKit, built dist)", () => {

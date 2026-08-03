@@ -1,0 +1,372 @@
+T7-W3 · NON-AUTHOR VERIFICATION
+================================================================================
+verifier   non-author executor, T7-W3
+date       2026-08-03
+tree       HEAD 53a6b56d (T7-W2) + W3's working-tree edits + sibling waves' edits
+host       darwin 26.4.1 · node v26.0.0 · @playwright/test 1.61.1
+ports      dev :4230 · built-dist preview :4231 (W3's band; no :3000 contention)
+verdict    NOT GREEN — 5 findings, one of them blocking gate 1's wiring.
+
+Everything below was executed, not read. Numbers are re-derived from the field;
+where a document is quoted it is quoted to be checked against a run.
+
+────────────────────────────────────────────────────────────────────────────────
+1 · THE GATES AND THE SPECS
+────────────────────────────────────────────────────────────────────────────────
+
+1.1 check-sleep-lint.mjs — RED, exit 1, 13 findings.  ✗ (FINDING 1)
+    $ node scripts/check-sleep-lint.mjs
+    SLEEP LINT — 25 specs · 39 waitForTimeout sites in 13 files ·
+                 2 fixed in-page sampling windows · 4 cited exemptions · 1 sleep-ok tags
+    13 failure(s) — a11y :156 :465 · access :76 :282 · board-covisibility :635 :644 ·
+                    filter-census :111 :376 · mobile-platform :494 ·
+                    visual-regression :605 :627 · zone-grammar :468 :475
+
+    Both born-RED targets ARE cured — that half holds:
+      · a11y.spec.ts:305's 2000ms sleep is GONE from the tree (deleted, not tagged);
+        no site remains at that row.
+      · drawer.spec.ts's 900ms rAF window survives at :142 and reads `clean` — nothing
+        one-shot reads a live surface after it.
+    Three further sites were cured by the re-quarantine executor (theme-bake :223/:305,
+    wordmark :200), so the wave cured 5 of the 16 born-RED findings. Arithmetic checks:
+    16 (pre-cure) − 5 (cured) + 2 (W2's new access.spec.ts) = 13. The residue is scope,
+    named as such in discipline-cures-proof.txt §3 — but a gate at exit 1 is a gate that
+    cannot be wired. See FINDING 1.
+
+    4 exemptions INTACT. All four gallery.spec.ts entries resolve by content, exactly one
+    site each, none stale: :77 (50ms drag cadence), :238 (700ms `nothing advances`),
+    :327 (100ms mid-flight grab, reported `exempt·inert`), :341 (30ms two-sample interval).
+    These are the wave's :72/:233/:322/:336 at HEAD, shifted +5 by the PRM head declaration
+    — the content re-location did its job and no reformat widened the table.
+
+    SELF-TEST green: 4 RED fixtures flag, 4 GREEN fixtures stay clean, and the
+    stale-exemption canary reports 4 stale on a gallery.spec.ts with none of its sites.
+
+1.2 check-motion-contract.mjs — GREEN, exit 0.  ✓
+    MOTION CONTRACT — 25 specs, 25 declaring, 0 silent
+      ✓ 1 DECLARED   ✓ 2 GRAMMAR   ✓ 3 ROUTE
+    SELF-TEST green: all 8 sabotages against the cloned model go RED, including the two
+    that matter — `PRM: frozen` restored as `test.use({ reducedMotion })` (the CH-65
+    regression), and a frozen file that loses its emulateMedia entirely.
+
+    Declaration census, read off the tree independently of the sweep's own account:
+    3 `frozen` (access, theme-quadrants, visual-golden) · 22 `live`. Every `frozen` file
+    carries a real `emulateMedia({…reducedMotion…})`; no `live` file carries a file-wide
+    reducedMotion emulation. drawer and gallery hold theirs inside a scoped describe, which
+    both heads name. The posture is honest as declared.
+
+1.3 prm-void-audition.spec.ts — PASSES both engines: upstream is STILL VOID.  ✓
+    Arm 1 `test.use({reducedMotion})` reads false (chromium + webkit) — the pin holds at
+    1.61.1. Arms 2–4 (page.emulateMedia, test.use({contextOptions}), browser.newContext)
+    all read true, so the false is the dedicated option and not a broken probe.
+
+1.4 The four specs, both engines, TWICE (spaced, own ports, uncontended).  ✓
+    $ PLAYWRIGHT_BASE_URL=http://localhost:4230 npx playwright test \
+        e2e/a11y.spec.ts e2e/drawer.spec.ts e2e/prm-void-audition.spec.ts
+      run 1: 54 passed (19.6s)      run 2: 54 passed (17.9s)
+    $ PLAYWRIGHT_BASE_URL=http://localhost:4231 npx playwright test \
+        --config playwright-throttle.config.ts \
+        --project wordmark-webkit --project theme-bake-chromium --project theme-bake-webkit
+      run 1: 26 passed (15.5s)      run 2: 26 passed (15.2s)
+    wordmark-integrity is webkit-only by config (playwright-throttle.config.ts's
+    `wordmark-webkit` project) — that is the estate's standing scope, not a gap here.
+    No re-run was needed: no suspicious red occurred in either pass.
+
+────────────────────────────────────────────────────────────────────────────────
+2 · THE BORN-RED BANKS — PRESENT, ORDERED, AND REPRODUCED
+────────────────────────────────────────────────────────────────────────────────
+
+Ordering, by banked stamp and by file mtime, is correct:
+    motion-contract-born-red   07:21:02Z (03:21)  ─┐ reds
+    sleep-lint-born-red        03:23             ─┘
+    prm-void-audition          03:23
+    ch62-instrument-smoke      03:36
+    discipline-cures-proof     03:56              ─┐ cures, strictly after
+    requarantine-polls         04:00               │
+    motion-contract-green      04:09              ─┘
+
+REPRODUCED, not taken on trust. The LANDED gates were run against the pre-cure tree
+(`git archive af508288 web/frontend/e2e` into a scratch dir, scripts copied in):
+
+    $ node scripts/check-sleep-lint.mjs      # vs af508288
+    SLEEP LINT — 23 specs · 39 waitForTimeout sites in 12 files ·
+                 1 fixed in-page sampling window · 4 cited exemptions · 0 sleep-ok tags
+    16 failure(s) — including BOTH mandated targets by name:
+      ✗ a11y.spec.ts:305   sleep 2000ms  — FLAG
+      ✗ drawer.spec.ts:78  window 900ms  — FLAG
+
+    $ node scripts/check-motion-contract.mjs # vs af508288
+    MOTION CONTRACT — 23 specs, 1 declaring, 22 silent
+      ✗ 1 DECLARED — 22
+
+Both banks match the reproduction to the row. The census "39 waitForTimeout sites / 12
+files" is CONFIRMED independently: `git grep -c waitForTimeout af508288 -- web/frontend/e2e`
+sums to 39 across 12 files (HEAD 53a6b56d reads 42/13, the delta being W2's access.spec.ts).
+The banks' correction of the wave's stale counts is right, and the roster — not the count —
+is what carries.
+
+THE CURES PROOF shows the old form failing, in both directions, and says which is which:
+  · drawer instance 10 — ARM 1, the OLD one-shot `boardBox`, REDS mid-glide at
+    |cx − 720| = 80.63px against a ≤2px band. ARM 2 (cured, two consecutive frames agree)
+    GREENS from the same instant. ARM 3 ablation — keep the frame, drop the agreement —
+    REDS at 70.01px, so the agreement is what earns the green, not the helper's shape.
+  · a11y instance 8 — the defect is a FALSE GREEN, so the proof is inverted and openly so:
+    ARM 1 (old 2000ms sleep → one-shot count) PASSES against a deliberately silent guard;
+    ARM 2 (cured polled disjunction) REDS on the same page and reds with the state it kept
+    seeing — `enterSeen:1, ribbon:false, game:"sudoku", outgoing:81`. That is the correct
+    shape for this defect: the cure must be able to red where the sleep could not.
+  · §0 records the pre-cure baseline as 46 passed — the rows were green before, which is
+    the whole point.
+  · The `CH63_PROOF` harnesses are DELETED from the tree (grep: zero hits in e2e/ and src/)
+    and reproduced verbatim in §4, so the runs can be re-cut without archaeology.
+
+────────────────────────────────────────────────────────────────────────────────
+3 · rasterPose.ts — THE INSTRUMENT DIFF
+────────────────────────────────────────────────────────────────────────────────
+
+Every exit read line by line against `git diff HEAD`:
+
+  exit                                counter                return value
+  ──────────────────────────────────  ─────────────────────  ─────────────
+  CH62_ABLATE (new, ARM B only)       ablatedAdmits          true   (new path, dead in prod)
+  :no document/Image                  noEnv                  true   UNCHANGED
+  :decode() threw                     decodeRejected         true   UNCHANGED
+  :no 2D context                      noCtx                  true   UNCHANGED
+  :alpha > 8 — the pose PAINTED       (none)                 true   UNCHANGED  ← FINDING 5
+  :decoded and empty                  refused                false  UNCHANGED
+  :drawImage/getImageData threw       taintRejected          true   UNCHANGED
+  set admitted past MAX_REBAKES       maxRebakesExhausted    (no return; count-then-continue)
+  set admitted                        admitted               (after held.value, no reorder)
+  refusal asks another bake           rebakes                (after rebakes++, before rebake())
+
+ZERO BEHAVIOUR CHANGE CONFIRMED. No exit moved, no return value changed, no ordering
+changed; `paints.every(Boolean)` is hoisted to `allPaint` with identical semantics.
+The one call-shape change is honest and commented: `next.map(posePaints)` (which fed
+index and array through as ignored extra args) becomes `next.map((u) => posePaints(u, surface))`.
+`ch62Surface()` reads the calling component off `getCurrentInstance()` rather than adding a
+parameter to three call sites this wave does not own; it folds to `() => ""` in prod.
+
+DEV-GATED GLOBAL AND ABLATION FLAG — UNSHIPPABLE, PROVEN BY BUILD + GREP:
+  plain `vite build` → dist-w3v/
+      __bakeAdmission            0 chunks
+      ablatedAdmits              0 chunks
+      ch62ablate                 0 chunks
+      decodeRejected/taintRejected/maxRebakesExhausted   0 chunks
+      willReadFrequently         1 chunk   ← the shipped gate is STILL LIVE, un-ablated
+  `NODE_ENV=production vite build --mode ch62-probe` → dist-w3v-probe/
+      __bakeAdmission 1 · willReadFrequently 1 · the ablate branch folded OUT.
+      Minified ARM A body verified by eye: probed → noEnv → decodeRejected → noCtx →
+      (alpha loop) → refused → taintRejected, all present, gate intact.
+  `vite build --mode ch62-ablate` → dist-w3v-abl/
+      __bakeAdmission 1 · ablatedAdmits 1 · willReadFrequently 0 — the entire probe body is
+      dead-code-eliminated behind the unconditional admit. ARM B is real ablation, and it is
+      reachable only through a build mode no shippable build uses.
+
+────────────────────────────────────────────────────────────────────────────────
+4 · ch62-probe.yml — PARSED AND EXERCISED
+────────────────────────────────────────────────────────────────────────────────
+
+actionlint is not installed on this host, so the file was parsed and exercised instead:
+  · YAML parses. Triggers: `["workflow_dispatch"]` — DISPATCH-ONLY, nothing else. ✓
+    Jobs build-lean-wasm → probe (2 arms × 6 reps, fail-fast:false, max-parallel 4) →
+    verdict (needs:[probe], if:always()). 19 steps in `probe`.
+  · All 16 `run:` blocks extracted and `bash -n` clean.
+  · All four heredoc terminators (STUB/DUMP/ROLL/V) land at column 0 after YAML block-scalar
+    stripping — verified on the extracted scripts, not assumed from the indentation.
+  · The three embedded ES modules are `node --check` clean. ch62-rollup.mjs was executed
+    against absent inputs and degrades correctly (`reds: null` on a missing report).
+  · The checkout-local quarantine STUB matches the real module's exported surface exactly
+    (`QuarantinedSpec` type + `quarantineLinuxWebkitBake(spec,row,testInfo)`), which is all
+    wordmark-integrity.spec.ts:3 and theme-bake-freshness.spec.ts:3 import.
+
+VERDICT ARITHMETIC — EXERCISED against synthetic rep files, seven scenarios:
+  all four terms hold                     → exit 0, "RETIRE CH-62"
+  ARM A refused = 0                       → exit 1, "DO NOT RETIRE … FOURTH PINNING"
+  ARM A fail-open fired (noCtx 1)         → exit 1, "DO NOT RETIRE"
+  ARM A red 1/6                           → exit 1, "DO NOT RETIRE"
+  ARM B red 1/6                           → exit 1, "VOID — the run cannot decide anything"
+  ARM B ablation flag never took          → exit 1, "VOID", every rep named
+  ARM B reds only 1 row per red run       → exit 0, "RETIRE"   ← FINDING 3
+The conjunction matches the wave on all four terms, and VOID is genuinely distinguished from
+DO-NOT-RETIRE in both the text and the exit path. The gap is the row band; see FINDING 3.
+
+Two design points worth recording as correct: the sample-size void (`A.length !== 6`) refuses
+to average a short sample rather than reporting a partial rate, and a rep whose Playwright
+report never landed contributes `null`, not a 0 — a run that produced no red count cannot
+masquerade as a clean one. The build-time vacuity guard (grep `__bakeAdmission` in the arm
+bundle before measuring) closes the "instrument silently absent → all-zero counters → ARM A
+greens vacuously" hole, which is the same class the wave's ARM B exists for.
+
+────────────────────────────────────────────────────────────────────────────────
+5 · burst-forensics.md — ADJUDICATED, AND THE HEADLINE CORRECTION VERIFIED
+────────────────────────────────────────────────────────────────────────────────
+
+The file's load-bearing correction was re-read from the field, not accepted:
+
+  $ gh run view 30781866393 --log        → `1 failed · 2 skipped · 322 passed (13.3m)`
+                                            plus a separate `3 failed` and `4 failed`
+  $ gh run view 30780989714 --log        → `323 passed (11.8m)` — the FULLY GREEN run —
+                                            and it carries `3 failed` and `4 failed` too
+  $ gh run view 30786643192 --log        → `2 failed · 321 passed`
+  $ gh run view 30791082765 --log        → `320 passed`, 3 suite reds
+  $ gh run view 30780222492 --log        → suite `323 passed`, golden gate `4 passed`,
+                                            `orphan: cell-light is asserted by no spec`
+
+CONFIRMED on every count. The "3→4 toHaveScreenshot reds" the W0 preflight counted are the
+self-delta canary arms, which fail by design in every run including the green one; and
+30780222492 is not a flake at all — its suite passed and the job died at the estate gate on a
+deterministic orphan, cured by source commit 1cc8f4e4. The preflight's row for that run is
+wrong twice over, exactly as the forensics says. The trigger deserved to fire; its citation
+does not stand.
+
+MECHANISM ADJUDICATION — supported by the evidence it cites, and honest about its limit:
+  · Engine localization is established, not asserted: 10/10 reds webkit, 0 chromium reds in
+    1,131 executed chromium rows. The null-model figure re-derives — 1096/2227 = 0.4921,
+    0.4921^10 = 8.3e-4. Webkit at 2.7–3.1× per-row cost is tabulated per run.
+  · Contention-ACCUMULATION is falsified rather than argued away (reds at 9/10/32/32/33/35/
+    59/67/70/73% of the webkit block — uniform), and cold-start is falsified with it.
+  · Infra is ruled out with the right evidence: one image version across seven distinct
+    ephemeral runners, zero OOM/ECONNREFUSED/segfault/Target-closed strings.
+  · The verdict is stated as "contention-AMPLIFIED, not contention-PROVEN", and §4 says
+    plainly why the direct proof cannot be produced — playwright.config.ts declares no
+    reporter, so no run banks per-row durations. Naming the missing instrument instead of
+    inferring past it is the correct move, and it is the file's highest-leverage row.
+  · It refuses to oversell: 3 of 10 reds (a11y:490 ×2, multiplayer:454) are read-discipline
+    defects sharding will not touch, and the file says so in those words.
+
+SHARDING — the numbers are recomputed here and they hold:
+    today       15.2m critical path · 762 contention-sec · 15.2 runner-min
+    A (as-written by gate 3)  2 jobs, workers=2 each → 10.4m · 762 UNCHANGED · 15.1
+    B (recommended) chromium w=2 + webkit ×3 shards w=1 → 7.3m · 210 · 26.6
+    C  chromium w=2 + webkit ×2 shards w=1 → 10.4m · 210 · 25.4
+  Every figure re-derives: webkit 552s at w=2 → 1104 single-worker sec ÷ 3 = 368s + 70s setup
+  = 438s = 7.3m; contention 762 → 210 is −72%; path 15.2 → 7.3 is −52%; +11.4 billed minutes.
+  The correction of gate 3 is right — a plain project split changes contention-seconds by
+  exactly zero, because each shard still runs two workers on its own 4-vCPU box. The "~7m
+  each, half the contention-seconds" claim in the wave is only true at three webkit shards at
+  workers=1, and the file says which. Chromium staying at w=2 on 0 reds in 1,131 rows is the
+  right call. The banked falsifiable prediction (deadline family → 0 under B while a11y:490
+  keeps flaking; futoshiki:131 still reding at w=1 refutes contention) makes the next burst
+  diagnostic instead of ambiguous.
+
+  Caveats are stated rather than buried, including the conservative direction of the
+  single-worker estimate and the file-granularity of `--shard`.
+
+────────────────────────────────────────────────────────────────────────────────
+6 · LEDGER CHECK (read-only — the chair patches, not this verifier)
+────────────────────────────────────────────────────────────────────────────────
+
+docs/tranches/LEDGER.md §1, at cbf2ab49 (W0's restamp):
+
+  CH-63  PRESENT · "FOLDED → T7-W3", both open discipline rows named by file and by row
+         title, and the retirement stated: "On their cure the class NAME retires into
+         CH-64; the rest of the roster is contention-shaped and already belongs to CH-64."
+         The retirement is a disposition awaiting the close, which is correct at this point
+         in the wave. NOT MISSED.
+  CH-64  PRESENT · "BANKED · third-burst trigger FIRED 2026-08-03", with the trigger's own
+         definition, the fired act homed in T7-W3, and bursts 1/2 cited. NOT MISSED — but
+         its citation is refuted by W3's own forensics. See FINDING 4.
+  CH-65  ALL FOUR corrections present (the wave says "three" and numbers four):
+         (1) residue re-framed as knowledge-propagation → T7-W3;
+         (2) "T7 estate wave" trigger DELETED as un-fireable;
+         (3) clause-floor trigger qualified "below 0.0322";
+         (4) the config-`use` clause STANDS for playwright-golden.config.ts, the
+             default-suite claim struck. NOT MISSED.
+  CH-62  PRESENT · the dated firing default is intact and unambiguous: "if the owner does
+         not authorize the runner dispatch before T8 formation, CH-62 RETIRES as
+         library-hypothesis-spent, with the fully-specified probe as its standing re-entry
+         — the park does not ride a fourth close." The probe conjunction is recorded with
+         it. NOT MISSED.
+
+The W0 restamp missed none of the four. The one ledger defect is an accuracy defect the
+wave's own forensics found and already routed to the chair (§7.4).
+
+────────────────────────────────────────────────────────────────────────────────
+7 · FINDINGS
+────────────────────────────────────────────────────────────────────────────────
+
+FINDING 1 — HIGH — web/frontend/scripts/check-sleep-lint.mjs
+  The gate is RED at head: exit 1, 13 findings across 8 files. Gate 1 cannot be wired into
+  CI as it stands; whatever `wiring_requests` asks for, the lane goes red on the first run.
+  The two mandated born-RED targets ARE cured and three more sites went with them, so this
+  is residue rather than omission — the cures executor names its hand-off explicitly
+  (discipline-cures-proof.txt §3, a11y :152/:461) — but the wave's acceptance puts the gate
+  in the estate, and a gate at exit 1 is a lint nobody can turn on.
+  Eleven of the thirteen predate the wave (they flag identically against af508288); two are
+  in W2's `access.spec.ts` (:76, :282), a sibling wave's brand-new file, which means the
+  residue GREW during the wave and will keep growing on every new spec.
+  The script's own header advertises `npm run lint:sleep`, and no such script exists in
+  package.json. Chair's call, and it is a real fork: cure the remaining 13, or land the gate
+  with an explicit scoped/allowlisted starting set that shrinks by ratchet. Landing it
+  unwired is the third option and the worst — an ungated gate is the exact
+  knowledge-propagation failure CH-65's residue names.
+
+FINDING 2 — MEDIUM — web/frontend/e2e/drawer.spec.ts:113-115
+  The NO-PRM annotation cites the wrong lines. It reads "`:206` demands that the mid-glide
+  frames carry easings at all, and `:208` demands all four movers … in the SAME frame".
+  In the file as it stands, `:206` is `expect(Math.abs(settled.railT - samples[0].railT))
+  .toBeLessThanOrEqual(6)` — the rail-drift assertion — and `:208` is a comment. The real
+  referents are `:212` (`expect(midEasings.length).toBeGreaterThan(0)`) and `:214`
+  (`expect(Math.max(...midSamples.map((s) => s.easings.length))).toBe(4)`): off by exactly
+  six, the length of the `PRM: live` head declaration the sweep executor added after the
+  cure was written. The wave ordered cites to `:148`/`:150`; those were correctly re-derived
+  once and then invalidated by a same-wave sibling edit.
+  This matters more than a stray number: the annotation exists so the CH-65 reclassification
+  "cannot be re-proposed", and a reader who follows the cites lands on an assertion PRM would
+  not touch. Same defect family as the App.vue cites this wave already re-cited by symbol —
+  and the same cure applies: cite `midEasings.length` and `easings.length).toBe(4)` by
+  symbol, not by line. (`:332` for §5's PRM row is correct as written.)
+
+FINDING 3 — LOW — .github/workflows/ch62-probe.yml:463-464
+  The ARM B vacuity guard drops half of the wave's condition. The wave: "Must red at the
+  class rate — ≥2 of 6 runs, 4–7 rows — or the run is void." The verdict tests only
+  `redRuns(B) < 2`. Exercised: an ARM B that reds with a single row in each of three runs
+  clears the guard and the workflow prints RETIRE CH-62. A one-row red is not the class's
+  rate, and the term exists precisely so the control reproduces the class rather than
+  something else that happens to be red. The per-rep row counts are already printed beside
+  the term, so the fix is a comparison, not new data.
+  Noted in mitigation: LEDGER.md's CH-62 row states the conjunction without the row band
+  too, so two of the three records agree with the implementation and only the wave carries
+  it. Either the band goes into the guard or it comes out of the wave — it should not sit in
+  the spec of record unenforced.
+
+FINDING 4 — LOW — docs/tranches/LEDGER.md:46 (CH-64)
+  The fired-trigger citation is refuted by this wave's own forensics and by the run logs read
+  here: the row cites 30781866393 as carrying "an a11y-webkit red plus the golden set", and
+  that run reads `1 failed · 2 skipped · 322 passed`, with the "golden set" being the
+  by-design self-delta canary that fails identically in the fully green 30780989714. The
+  qualifying third burst is 30786643192 (2 reds), and burst 2 (30770223565) never met the
+  ≥2 bar either. The trigger stands; the evidence under it does not.
+  Already routed to the chair in burst-forensics.md §7.4 — recorded here because the ledger
+  is the record the next close reads, and because the same misreading is still live in
+  evidence/w0/ci-preflight.md, which no one has struck. The canary trap belongs in the
+  class's row so the misread cannot recur.
+
+FINDING 5 — LOW — web/frontend/src/pencil/composables/rasterPose.ts (posePaints)
+  One exit is still silent: the in-loop `return true` taken when a pose actually painted
+  (`data[i] > 8`) carries no counter, against the wave's "Every `return true` in
+  `posePaints` gets a counter, so no admit is silent". It is derivable —
+  painted = probed − noEnv − decodeRejected − noCtx − taintRejected − refused — and the
+  retire conjunction never needs it, so nothing the probe decides turns on this. Recorded
+  because the fail-open census is the whole instrument and "every exit counted" should be
+  true on inspection rather than by subtraction; a `painted` field costs one line and makes
+  the per-surface row self-checking (probed must equal the sum).
+
+────────────────────────────────────────────────────────────────────────────────
+8 · WHAT THIS VERIFICATION DID NOT REACH
+────────────────────────────────────────────────────────────────────────────────
+
+· The probe was NOT dispatched — by design; ch62-probe.yml is workflow_dispatch-only and
+  the owner authorises. Its arithmetic is verified against synthetic reps, not against a
+  real run, so nothing here says the gate will pass; it says the workflow will report
+  honestly when it runs.
+· Everything ran on darwin. The classes at issue (CH-62's blank bake, CH-64's webkit
+  deadlines) are linux-runner classes, and a darwin green is not evidence about either.
+  The ch62 smoke's unforced `refused 3` on darwin WebKit is the useful darwin result: the
+  ARM A term `refused > 0` is reachable rather than hoped for.
+· The two banked reds were reproduced against `af508288`, the tracked tree the banks name —
+  not against the wave's own working tree at the moment each executor ran, which no longer
+  exists.
+· Sibling waves hold the same repo; the working tree carries their edits. Every number above
+  that touches a line cite was read from the tree as it stands, which is what makes FINDING 2
+  visible at all.

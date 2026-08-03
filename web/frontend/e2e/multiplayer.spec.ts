@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 
+// PRM: live, because the wordmark-through-join row watches the pose stack AS the beat walks it—a
+//   bake whose poses 1..n come back blank is only visible when the beat steps onto them, so
+//   pinning pose 0 would hide the exact defect that row hunts.
+
 /**
  * TWO PAGES, ONE BOARD (T6 mark 13, MVP cut 1).
  *
