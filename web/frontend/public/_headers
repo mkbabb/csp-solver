@@ -58,9 +58,11 @@
 #     wss://sudoku-relay
 #       .mkbabb.workers.dev        solving is still in-browser (wasm Worker) and there is
 #                                  still no cross-origin FETCH in the bundle. The one socket
-#                                  is the multiplayer signalling: a shared board joins a room
-#                                  over trystero's Nostr strategy, pointed at OUR relay
-#                                  (web/relay — a hibernating Durable Object). T6.1 ABROGATED
+#                                  is the multiplayer session, and since T6.2 it carries the
+#                                  BOARD as well as the presence: a shared board joins a room
+#                                  by speaking NIP-01 to OUR relay directly (web/relay — a
+#                                  hibernating Durable Object; the WebRTC arm and the trystero
+#                                  that negotiated it are gone). T6.1 ABROGATED
 #                                  the public relay list, and the scheme-wide `wss:` grant
 #                                  that list forced goes with it: one operator, one origin,
 #                                  one name in the policy. THE PAIR MOVES TOGETHER — this

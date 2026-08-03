@@ -1,13 +1,12 @@
 /**
  * THE SESSION (T6 mark 13) — the board becomes a table.
  *
- * Two or more pages write on ONE grid, with no server: WebRTC data channels signalled over
- * public Nostr relays (trystero), an author-stamped op per cell write, and per-cell
- * Lamport-LWW to converge them. No CRDT library is bought, because the problem a CRDT
- * library solves is not the problem here: the board is `pos → digit` over a FIXED index set,
- * cells never move, so there is no sequence to reconcile — just a last-writer rule per cell,
- * which is six lines. (@automerge/automerge-wasm is 2,127,414 B of wasm against a 127,500 B
- * lean band; the arithmetic was never close.)
+ * Two or more pages write on ONE grid, with no server of our own beyond a relay: an
+ * author-stamped op per cell write, and per-cell Lamport-LWW to converge them. No CRDT library
+ * is bought, because the problem a CRDT library solves is not the problem here: the board is
+ * `pos → digit` over a FIXED index set, cells never move, so there is no sequence to reconcile
+ * — just a last-writer rule per cell, which is six lines. (@automerge/automerge-wasm is
+ * 2,127,414 B of wasm against a 127,500 B lean band; the arithmetic was never close.)
  *
  * THREE MESSAGES, and each earns its place:
  *   · `hi` — "I'm here, and I don't have the board." Presence ACK back to the sender, plus
@@ -32,24 +31,29 @@
  * no-clobber guard, which is documented there.
  *
  * TRANSPORT IS A SEAM (README ruling 3). Two arms behind the same methods: `relayWire`
- * (trystero's Nostr strategy, `import()`ed so a solo player pays ZERO bytes for it) and
- * `localWire` (`BroadcastChannel`, ~20 lines) for a second tab on the same device — which is
- * also what the e2e battery drives, because a relay in CI is a flake machine.
+ * (`relayWire.ts`, `import()`ed so a solo player pays ZERO bytes for it) and `localWire`
+ * (`BroadcastChannel`, ~20 lines) for a second tab on the same device — which is also what the
+ * e2e battery drives, because a relay in CI is a flake machine.
  *
  * THE RELAY IS OURS (T6.1). The public Nostr relay list is ABROGATED, and the measurement is
  * the reason: 47–66 SECONDS to first contact on strangers' machines carrying strangers'
  * traffic. `web/relay/` is ~150 lines of NIP-01 on a hibernating Durable Object next to the
- * Pages deployment, and switching to it cost exactly the one config word the seam promised —
- * `relayConfig.urls` below. What the seam is still FOR is the next swap, not this one.
+ * Pages deployment.
  *
- * NO PLAYER CAP ANYWHERE. Board ops are bytes at human pace; the mesh's practical ceiling is
- * connection setup, not traffic. The room simply isn't capped.
+ * THE OPS RIDE IT TOO (T6.2), and the seam is what made that one file. Through T6.1 the relay
+ * carried only SIGNALLING and the board rode WebRTC data channels; the owner's report — player
+ * actions and choices not arriving in real time — is the two ways that fails, and both are in
+ * `relayWire.ts`'s header with the rig readings that convicted them. trystero left with the
+ * peer connections it existed to negotiate: −61.3 kB of lazy chunk for ~2 kB of NIP-01, and a
+ * star through one object instead of a mesh that has to be negotiated per pair.
+ *
+ * NO PLAYER CAP ANYWHERE. Board ops are bytes at human pace, and since T6.2 the topology is a
+ * STAR rather than a mesh — one socket per page, fanned out by the relay — so the ceiling that
+ * used to be per-pair connection setup is now one object's fanout, and neither is reached at a
+ * puzzle's traffic. The room simply isn't capped.
  */
 import { computed, reactive, ref } from "vue";
 import type { inkFor, slugFor } from "./playerIdentity";
-
-/** The app's own namespace on the relay — rooms are scoped under it. */
-const APP_ID = "sudoku-babb-dev";
 
 /**
  * OUR relay, and only ours. One entry, because a list of one is what a relay you operate
@@ -136,15 +140,15 @@ export function mintOp(
   return { pos, value, solved, stamp, epoch: led.epoch };
 }
 
-type Kind = "hi" | "op" | "st";
+export type Kind = "hi" | "op" | "st";
 
 /** The wire carries JSON and nothing else — no binary framing to version, and the board blob
  *  is already content-hashed JSON by the undo pool. */
 type Json = null | string | number | boolean | Json[] | { [k: string]: Json };
-type Msg = { [k: string]: Json };
+export type Msg = { [k: string]: Json };
 
 /** What a transport owes the session. Everything above this line is arm-agnostic. */
-interface Wire {
+export interface Wire {
   selfId: string;
   send: (kind: Kind, data: Msg, to?: string) => void;
   leave: () => void;
@@ -154,9 +158,10 @@ interface Wire {
   carrying: Promise<void>;
 }
 
-interface Handlers {
+export interface Handlers {
   message: (kind: Kind, data: Msg, from: string) => void;
-  /** joins are idempotent — the local arm derives presence from traffic, not from a callback. */
+  /** joins are idempotent — both shipped arms derive presence from traffic, not from a
+   *  connection callback. */
   peer: (id: string, joined: boolean) => void;
 }
 
@@ -219,40 +224,13 @@ function localWire(room: string, h: Handlers): Wire {
 }
 
 /**
- * trystero over the Nostr strategy, pointed at OUR relay — the shipped arm. `import()`ed, so
- * the ~22 KB gz of relay client and crypto never reaches a page that is playing alone; the
- * e2e asserts that absence on solo boot rather than minting a byte gate for it.
+ * The shipped arm: our relay, spoken directly (`relayWire.ts` — its header carries the two
+ * measured failures of the WebRTC one it replaces). `import()`ed, so a page playing alone pays
+ * ZERO bytes for it; the e2e asserts that absence on solo boot rather than minting a byte gate.
  */
-async function relayWire(room: string, h: Handlers): Promise<Wire> {
-  const { joinRoom, selfId, getRelaySockets } = await import("trystero/nostr");
-  // `relayConfig.urls` REPLACES the default list outright (`getRelays`, core/utils) — the
-  // public relays are not a fallback behind ours, they are gone.
-  const knock = joinRoom({ appId: APP_ID, relayConfig: { urls: RELAY_URLS } }, room);
-  const acts = (["hi", "op", "st"] as const).map((kind) => {
-    const act = knock.makeAction<Msg>(kind);
-    act.onMessage = (data, ctx) => h.message(kind, data, ctx.peerId);
-    return [kind, act] as const;
-  });
-  const table = Object.fromEntries(acts) as Record<Kind, (typeof acts)[number][1]>;
-  knock.onPeerJoin = (id) => h.peer(id, true);
-  knock.onPeerLeave = (id) => h.peer(id, false);
-  return {
-    selfId,
-    send: (kind, data, to) =>
-      void table[kind].send(data, to ? { target: to } : undefined).catch(() => {
-        // A send that loses its peer mid-flight is a leave, and `onPeerLeave` is already
-        // watching for it — there is nothing to retry and nothing to report.
-      }),
-    leave: () => void knock.leave(),
-    // `joinRoom` opens the sockets synchronously (core's `init` runs inside it), so the map is
-    // already populated here; `getRelaySockets` is trystero's own handle on them and the only
-    // honest answer to "is this page on the relay yet".
-    carrying: new Promise<void>((open) => {
-      const socks = Object.values(getRelaySockets() as Record<string, WebSocket>);
-      if (socks.some((s) => s.readyState === WebSocket.OPEN)) return open();
-      for (const s of socks) s.addEventListener("open", () => open(), { once: true });
-    }),
-  };
+async function loadRelayWire(room: string, h: Handlers): Promise<Wire> {
+  const { relayWire } = await import("./relayWire");
+  return relayWire(room, RELAY_URLS, h);
 }
 
 // ── The live session ──────────────────────────────────────────────────────────────
@@ -462,7 +440,7 @@ export async function joinSession(room: string, starter = false): Promise<void> 
   ident = await import("./playerIdentity");
   const handlers: Handlers = { message: onMessage, peer: onPeer };
   const local = new URLSearchParams(window.location.search).get("wire") === "local";
-  wire = local ? localWire(room, handlers) : await relayWire(room, handlers);
+  wire = local ? localWire(room, handlers) : await loadRelayWire(room, handlers);
   roomId.value = room;
   selfId.value = wire.selfId;
   known.value = { [wire.selfId]: mint(wire.selfId) };
