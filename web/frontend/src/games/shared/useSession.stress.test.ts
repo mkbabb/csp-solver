@@ -247,39 +247,46 @@ describe("the ledger's undo spine under the same flood", () => {
     };
   }
 
-  it("the cap holds at 200 through 20,000 of my own writes braided with the room's", () => {
-    const me = player("me");
-    const room = mintStream().ops;
-    const rand = rng(97);
-    const t0 = performance.now();
-    let mine = 0;
-    for (let i = 0; i < OPS; i++) {
-      // Braided, not batched: my write, then a handful of the room's, then mine again.
-      if (
-        rand() < 0.5 &&
-        me.write(Math.floor(rand() * CELLS), 1 + Math.floor(rand() * 9))
-      )
-        mine++;
-      me.hear(room[i]);
-    }
-    const ms = performance.now() - t0;
+  // 945 ms on the reference box, 7.3 s on the shared CI runner — the braid's wall
+  // clock is hardware's, the invariants are ours. The budget is a ceiling for a
+  // hung loop, never a performance gate.
+  it(
+    "the cap holds at 200 through 20,000 of my own writes braided with the room's",
+    { timeout: 30_000 },
+    () => {
+      const me = player("me");
+      const room = mintStream().ops;
+      const rand = rng(97);
+      const t0 = performance.now();
+      let mine = 0;
+      for (let i = 0; i < OPS; i++) {
+        // Braided, not batched: my write, then a handful of the room's, then mine again.
+        if (
+          rand() < 0.5 &&
+          me.write(Math.floor(rand() * CELLS), 1 + Math.floor(rand() * 9))
+        )
+          mine++;
+        me.hear(room[i]);
+      }
+      const ms = performance.now() - t0;
 
-    expect(me.history._historyLength()).toBe(UNDO_CAP);
-    expect(me.history.undoDepth.value).toBe(UNDO_CAP);
-    // Nothing pooled: value entries are self-contained deltas, so a flood of them cannot
-    // leak board blobs into the pool (the one place a long session could grow memory).
-    expect(me.history._poolSize()).toBe(0);
-    // The clock stays the board, not the traffic — mine and theirs share the same 81 keys.
-    expect(Object.keys(me.led.clock).length).toBeLessThanOrEqual(CELLS);
-    expect(me.sent.length).toBe(mine);
+      expect(me.history._historyLength()).toBe(UNDO_CAP);
+      expect(me.history.undoDepth.value).toBe(UNDO_CAP);
+      // Nothing pooled: value entries are self-contained deltas, so a flood of them cannot
+      // leak board blobs into the pool (the one place a long session could grow memory).
+      expect(me.history._poolSize()).toBe(0);
+      // The clock stays the board, not the traffic — mine and theirs share the same 81 keys.
+      expect(Object.keys(me.led.clock).length).toBeLessThanOrEqual(CELLS);
+      expect(me.sent.length).toBe(mine);
 
-    console.log(
-      `[T6.1 undo spine] ${mine} local writes + ${OPS} remote ops in ${ms.toFixed(0)} ms → ` +
-        `${(((mine + OPS) / ms) * 1000).toFixed(0)} ops/sec · stack ${me.history._historyLength()}/` +
-        `${UNDO_CAP} · pool ${me.history._poolSize()} · clock ` +
-        `${Object.keys(me.led.clock).length}/${CELLS}`,
-    );
-  });
+      console.log(
+        `[T6.1 undo spine] ${mine} local writes + ${OPS} remote ops in ${ms.toFixed(0)} ms → ` +
+          `${(((mine + OPS) / ms) * 1000).toFixed(0)} ops/sec · stack ${me.history._historyLength()}/` +
+          `${UNDO_CAP} · pool ${me.history._poolSize()} · clock ` +
+          `${Object.keys(me.led.clock).length}/${CELLS}`,
+      );
+    },
+  );
 
   it("the no-clobber guard still holds mid-flood — my undo is spent, their digit stands", () => {
     const me = player("me");
