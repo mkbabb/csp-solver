@@ -42,10 +42,14 @@ lands every ruling with the gate that holds it.
 | W6 | The contrivance sweep | dead lanes, dual paths, masked fallbacks, gate-honesty; the god-module and inline-test gates |
 | W7 | The product polish | the gestalt non-criticals — sticky sliver, kenken receipt, gallery void, the rest |
 
-`DISPOSITIONS.md` is the input set: every chronic, deferred, banked, elected, and
-prompt-recap row with a terminal decision — build, fold, or retire — and its owning wave.
-Re-booking is forbidden; a partial counted as done is the close-class lie. `PROMPT-RECAP.md`
-carries every owner ask from Tranche 2 to now with its verdict.
+`DISPOSITIONS.md` is the input set: 120 rows across seven classes — every chronic, deferred,
+banked, elected, and prompt-recap row, plus the twelve defects the formation audit found in
+the record itself — each carrying exactly one terminal verdict: `TERMINAL-CLOSED`, `FOLDED`
+(into a wave), `RETIRED`, `BANKED` (owner + a machine-evaluable trigger), or `BALLOT`. The 23
+ballot rows consolidate into 20 dispatched ballots, each with a firing default, so the shelf
+empties whether the owner answers or not. Re-booking is forbidden; a partial counted as done
+is the close-class lie. `PROMPT-RECAP.md` carries every owner ask from Tranche 2 to now with
+its verdict.
 
 ## Standing rulings (binding on execution)
 

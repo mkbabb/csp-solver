@@ -87,10 +87,15 @@ is the exact 43–400%-slack mechanism these rows exist to remove.
   only one in `csp-solver/src`, born 19 hours after the T2 zero-declaration, with no gate. Extract
   the tests to `csp-solver/tests/` (the U-09 precedent, one dir over) and add a
   `grep -rn '#\[cfg(test)\]' csp-solver/src` gate, born RED at HEAD.
-- **God modules (T7-R08):** `search.rs` 534 L documents its own uncured breach; `GameControlPanel.vue`
-  is 1,746 L — the component the owner marked five times — and 12 frontend files exceed 500 with
-  enforcement "none." Add a line-budget gate with the frontend explicitly in scope, born RED on
-  the current breaches, and split the worst offenders (`GameControlPanel.vue` chief) as the cure.
+- **God modules (T7-R08) — contingent on BAL-10.** `search.rs` 534 L documents its own uncured
+  breach; `GameControlPanel.vue` is 1,746 L — the component the owner marked five times — and 12
+  frontend files exceed 500 with enforcement "none." But the parsimony edict never priced a line
+  *ceiling*, so the budget itself is a ballot (`DISPOSITIONS.md` BAL-10). **Default arm — retire
+  the budget:** strike the two prose cites (`search.rs:29`, `py.rs:14`) and land no gate. **Enforce
+  arm:** a `max-lines` gate with the frontend explicitly in scope, born RED on the current
+  breaches, with named waivers, and `GameControlPanel.vue` split as the cure. W6's gate lands
+  **only on the enforce arm** — on the default arm W6 lands the two prose-cite strikes and nothing
+  else.
 
 ## Stale-doc-in-code
 
