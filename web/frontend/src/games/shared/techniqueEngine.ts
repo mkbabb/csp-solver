@@ -9,13 +9,14 @@
  * The engine grades over SELF-COMPUTED basic-elimination candidates — a cell's candidates =
  * `1..n minus the values already filled in its all-different houses` — NEVER over the masks
  * `propagateBoard` returns. Those masks are POST-FULL-GAC: at full GAC strength most served
- * boards collapse to all-singleton domains (`csp-solver/wasm/src/sudoku.rs:186-188`), which
- * is strictly stronger than any human single/pair. Feeding GAC-collapsed masks to a
- * technique grader is corrupted — every empty cell reads as a naked single and the grade
- * collapses to tier-1. The candidate substrate here is the adapter's `computeCandidates`,
- * which does basic elimination and nothing stronger. `techniqueEngine.test.ts` pins this
- * with a permanent tripwire (self-computed candidates asserted NOT equal to the collapsed
- * GAC substrate on a board where GAC over-prunes past the human sequence).
+ * boards collapse to all-singleton domains (`propagate_sudoku` in
+ * `csp-solver/wasm/src/sudoku.rs`), which is strictly stronger than any human single/pair.
+ * Feeding GAC-collapsed masks to a technique grader is corrupted — every empty cell reads
+ * as a naked single and the grade collapses to tier-1. The candidate substrate here is the
+ * adapter's `computeCandidates`, which does basic elimination and nothing stronger.
+ * `techniqueEngine.test.ts` pins this with a permanent tripwire (self-computed candidates
+ * asserted NOT equal to the collapsed GAC substrate on a board where GAC over-prunes past
+ * the human sequence).
  *
  * ── Game-agnostic by construction ──────────────────────────────────────────────────────
  * The core reasons over an abstract `PuzzleView` — `{ n, candidates, houses, constraints? }` —

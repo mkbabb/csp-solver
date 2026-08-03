@@ -1,0 +1,431 @@
+T7-W0 — NON-AUTHOR VERIFICATION
+==============================
+banked   2026-08-03
+HEAD     6a180b35
+tree     W0 work in progress, uncommitted (16 modified files)
+verifier non-author executor; edits limited to this file
+
+── 1a. node scripts/ledger-diff.mjs --assert-state --verify-cites ───────────────────────────
+ledger-diff — 2026-08-tranche-7 disposition completeness + ledger currency
+==============================================================================
+generated   2026-08-03T06:18:50.448Z
+node        v26.0.0
+repo HEAD   6a180b35 2026-08-03 01:15:03 -0400 T7 formation: round-3 reconciliation — homes, dated defaults, born-RED fixes
+tranche     docs/tranches/2026-08-tranche-7  (open)
+arms        ORPHAN · TERMINALITY · PROBE · DUPLICATE · CITES
+mode        dry-run
+
+THE ESTATE (sealed = a close record on disk)
+  docs/tranches/2026-07-tranche-2    SEALED  superseded by 2026-07-tranche-3
+  docs/tranches/2026-07-tranche-3    SEALED  superseded by 2026-07-tranche-4
+  docs/tranches/2026-07-tranche-4    SEALED  WGATE-record.md
+  docs/tranches/2026-08-tranche-5    SEALED  evidence/wgate/close-record.md
+  docs/tranches/2026-08-tranche-6    SEALED  CLOSE.md
+  docs/tranches/2026-08-tranche-7    open   ← this tranche
+
+CORPUS (11 files)
+  docs/tranches/2026-08-tranche-7/waves/W0-the-record-heals.md  7559 B
+  docs/tranches/2026-08-tranche-7/waves/W1-the-theme-mismatch.md  5476 B
+  docs/tranches/2026-08-tranche-7/waves/W2-the-access-wave.md  5625 B
+  docs/tranches/2026-08-tranche-7/waves/W3-the-flake-disease.md  8063 B
+  docs/tranches/2026-08-tranche-7/waves/W4-the-multiplayer-battery.md  6368 B
+  docs/tranches/2026-08-tranche-7/waves/W5-the-multiplayer-record.md  7030 B
+  docs/tranches/2026-08-tranche-7/waves/W6-the-contrivance-sweep.md  10107 B
+  docs/tranches/2026-08-tranche-7/waves/W7-the-product-polish.md  5290 B
+  docs/tranches/2026-08-tranche-7/PROMPT-RECAP.md  4871 B
+  docs/tranches/2026-08-tranche-7/README.md  5904 B
+  docs/tranches/LEDGER.md  34340 B
+
+INPUTS (excluded from the corpus — a row set cannot cite itself terminal)
+  docs/tranches/2026-08-tranche-7/DISPOSITIONS.md
+    48 row ids  (39 CH-nn + 1 PR-nn + 8 U-nn)
+  1 range expressions in the corpus, read as scope, not citation
+
+LIVING LEDGER  docs/tranches/LEDGER.md
+  §1 Open — what the next close must carry             10 rows   ← open
+  §2 Terminal — decided, closed, retired, excluded     55 rows
+  §3 Recap orphans, homed                               7 rows
+  §4 The unaddressed eleven                            11 rows
+  §5 The superseded eleven                             11 rows
+  §6 T7 — the unledgered, homed 2026-08-03             32 rows
+
+SATISFACTION (ORPHAN arm)
+  CORPUS     48
+  SELF       0
+  DELEGATED  0
+  ORPHAN     0
+  total      48
+
+TERMINALITY — clean
+
+PROBE — clean
+
+DUPLICATE — clean
+
+CITES — clean
+
+VERDICT
+  GREEN — 48 audited rows present-or-cited; 10 open ledger rows current under ORPHAN · TERMINALITY · PROBE · DUPLICATE · CITES. exit 0
+EXIT=0
+
+── 1b. node scripts/check-doc-truth.mjs ─────────────────────────────────────────────────────
+doc-truth — 22 rows, every figure re-derived at run time
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+head  6a180b35
+node  v26.0.0 darwin/arm64
+when  2026-08-03T06:18:51.634Z
+
+GREEN  frontend-readme-two-games
+        derived: 5 games registered (sudoku, futoshiki, thermo, killer, kenken) · pencil-boil ^0.12.0 · lint script "prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/"
+
+GREEN  root-readme-e2e-counts
+        derived: 325 tests in 17 files (default) · 22 .spec.ts on disk · golden 4/1 · throttle 39/4
+
+GREEN  chromium-alone-claim
+        derived: playwright projects: chromium + webkit · ci installs: chromium + webkit
+
+GREEN  lean-wasm-4-sites
+        derived: 121,137 B ← csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+
+GREEN  ci-band-comment-406
+        derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >127,500 B; lean artifact 121,137 B; canon-declared stale: 222,436 B (docs/benchmarks.md:56)
+
+GREEN  sudoku-md-sections
+        derived: games registered: sudoku, futoshiki, thermo, killer, kenken — each owed a section in docs/sudoku.md
+
+GREEN  ofl-licenses-figures
+        derived: 3 woff2 subsets, 21,724 B total (firacode-subset.woff2 3,624 B, fraunces-subset.woff2 13,788 B, patrickhand-subset.woff2 4,312 B) · OFL texts: OFL-FiraCode.txt, OFL-Fraunces.txt, OFL-PatrickHand.txt · paired true
+
+GREEN  install-pin-0.5
+        derived: csp-solver crate version 0.6.0 → Install pin "0.6" · consumer surfaces carry no outbound link into docs/precepts/
+
+GREEN  pencil-boil-0.9.2
+        derived: web/frontend/package.json dependencies["@mkbabb/pencil-boil"] = ^0.12.0
+
+GREEN  test-count-208-vs-204
+        derived: 208 native #[test] attributes (csp-solver/src + csp-solver/tests, comments elided) · 29 #[wasm_bindgen_test] in the wasm crate (cfg'd to wasm32, not host-run) · 28 test binaries (csp-solver + csp-solver/wasm lib targets + integration files)
+
+GREEN  make-wasm-recipe
+        derived: csp-solver/wasm/Makefile:33 runs --no-default-features --profile wasm-release --scope mkbabb --target web — LEAN; 5 families registered (sudoku, futoshiki, thermo, killer, kenken)
+
+GREEN  ci-lane-count
+        derived: 18 jobs in .github/workflows/ci.yml (lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, wasm-publish-dryrun, frontend, fe-unit, boundary, e2e, perf-subset, iai, cargo-audit, evidence-policy, doc-truth, npm-audit)
+
+GREEN  iai-golden-figure
+        derived: 1,529,452 instructions enforced ±2.0% — csp-solver/benches/iai_queens.baseline, gated by .github/workflows/ci.yml's iai lane over bench iai_queens
+
+GREEN  permalink-games
+        derived: 5/5 game specs declare a urlCodec under web/frontend/src/games — wired: futoshiki, kenken, killer, sudoku, thermo
+
+GREEN  cited-paths-exist
+        derived: 1006 source basenames indexed · 8 docs scanned (README.md, docs/algorithms.md, docs/animation.md, docs/bbnf-integration.md, docs/benchmarks.md, docs/optimizations.md, docs/sudoku.md, web/frontend/README.md) · roots: repo, web/frontend, web/frontend/src, csp-solver, csp-solver/src, the doc's own dir · aliases @games/ @pencil/ @/
+
+GREEN  worker-topology
+        derived: 1 worker module(s) under web/frontend/src: web/frontend/src/games/shared/solver/solver.worker.ts
+
+GREEN  e2e-total-arithmetic
+        derived: default 325/17 + golden 4/1 + throttle 39/4 = 368 tests in 22 files
+
+GREEN  constraint-enum-variants
+        derived: 6 ConstraintEnum variants in csp-solver/src/constraint/dispatch.rs: NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom
+
+GREEN  frontend-scripts-roster
+        derived: 14 in web/frontend/scripts (check-coverage-floor.mjs, check-empty-catch.mjs, check-font-coverage.mjs, check-golden-bytes.mjs, check-ink-pressure.mjs, check-prod-shake.mjs, check-pw-projects.mjs, check-pw-retries.mjs, check-support-floor.mjs, check-theme-tokens.mjs, check-unit-count.mjs, dist-identity.mjs, golden-magnitude.mjs, tdz-probe.mjs) · 6 in scripts (check-doc-truth.mjs, check-evidence-policy.mjs, ci-conclusion.sh, deploy-gated.sh, dev.sh, ledger-diff.mjs)
+
+RED    bench-target-roster
+        derived: 9 [[bench]] targets in csp-solver/Cargo.toml: assignment, cost_finite_domain, futoshiki, gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+        docs/benchmarks.md:66
+          expected: every bench target named, or fewer than three — csp-solver/Cargo.toml declares 9: assignment, cost_finite_domain, futoshiki, gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+          got:      names 5: assignment, cost_finite_domain, lattice, queens, sudoku — missing futoshiki, gac_ab, iai_queens, map_coloring
+
+GREEN  redirects-rule-count
+        derived: 2 rule(s) in web/frontend/public/_redirects: /assets/* /404.html 404 · /* /index.html 200
+
+GREEN  perf-rig-scenario-roster
+        derived: 10 SCENARIOS keys in web/frontend/perf-rig/probe.js (domDump, styleDump, idle3s, deal, solveCelebration, galleryGlide, themeToggle, undoBurst, hoverSweep, solveWindow) · driver default set: idle3s,deal,undoBurst,solveCelebration,galleryGlide,themeToggle · diagnostic-only: domDump, styleDump · CI-gated: idle3s
+
+1 RED / 21 GREEN — doc canon disagrees with the tree
+EXIT=1
+
+── 1c. node scripts/ledger-diff.mjs --self-test (SELF-TEST block only) ──────────────────────
+SELF-TEST — each arm against a synthetic violation and its conformant control
+  [TERMINALITY] an open row lands at a wave of a sealed tranche
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [PROBE] an open row's claim is refuted by the tree
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [PROBE/CH-16] the registered CH-16 probe fires when every game spec carries urlCodec
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [DUPLICATE] one id is tabled open and terminal at once
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [CITES/resolve] a cite runs past the end of the file it names
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [CITES/anchor] the anchor moved and the line-cite did not
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [CITES/row-token] a file-plus-row-token cite that greps to nothing
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [ORPHAN] an audited id reaches no disposition in the corpus
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+
+VERDICT
+  GREEN — 48 audited rows present-or-cited; 10 open ledger rows current under ORPHAN. exit 0
+EXIT=0 (whole run exited 0)
+
+── 1d. node scripts/check-doc-truth.mjs --self-test ─────────────────────────────────────────
+doc-truth --self-test — 27 fixtures over 11 rows
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+
+PASS  permalink-games  expect RED · got RED
+        a clause giving the permalink to a proper subset
+        · README.md:1: names 2: futoshiki, sudoku — Sudoku and Futoshiki share a board over `?board=`;
+
+PASS  permalink-games  expect RED · got RED
+        the unwired claim, over specs that all declare a urlCodec
+        · README.md:1: Their share permalink isn't wired — `writeShareUrl` no-ops.
+
+PASS  permalink-games  expect GREEN · got GREEN
+        the cure: the permalink clause names every wired game
+
+PASS  cited-paths-exist  expect RED · got RED
+        a backticked path and a bare basename, neither in the tree
+        · README.md:1: `games/registry.ts` — nothing in the tree answers to it
+        · README.md:1: `game.ts` — no file by that name
+
+PASS  cited-paths-exist  expect RED · got RED
+        a tree block naming a directory that does not exist
+        · README.md:3: `SudokuBoard/` → web/frontend/SudokuBoard — absent
+
+PASS  cited-paths-exist  expect GREEN · got GREEN
+        the cure: the paths that actually hold the table and the contract
+
+PASS  worker-topology  expect RED · got RED
+        the per-game topology and its count
+        · README.md:1: Each game owns `solver/solver.worker.ts`. Five workers ride one transport.
+        · README.md:1: Five — Each game owns `solver/solver.worker.ts`. Five workers ride one transport.
+
+PASS  worker-topology  expect GREEN · got GREEN
+        the cure: one worker module, web/frontend/src/games/shared/solver/solver.worker.ts
+
+PASS  e2e-total-arithmetic  expect RED · got RED
+        a whole-suite total that is not the sum of the three configs
+        · README.md:1: 369 — 369 tests in all.
+
+PASS  e2e-total-arithmetic  expect GREEN · got GREEN
+        the cure: 325 + 4 + 39 = 368
+
+PASS  constraint-enum-variants  expect RED · got RED
+        the retired `Soft` variant, and an enumeration missing the cages
+        · docs/optimizations.md:1: `ConstraintEnum` names `NotEqual`, `AllDifferent`, `AllDifferentExcept`, `Soft`, `Custom`.
+        · docs/optimizations.md:1: names 4 of 6: NotEqual, AllDifferent, AllDifferentExcept, Custom — missing CageSum, CageProduct
+
+PASS  constraint-enum-variants  expect GREEN · got GREEN
+        the cure: NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom
+
+PASS  frontend-scripts-roster  expect RED · got RED
+        a roster naming two of the frontend gate scripts
+        · README.md:1: names 2 of 14: check-coverage-floor, check-empty-catch
+
+PASS  frontend-scripts-roster  expect RED · got RED
+        a file tree naming one of the root scripts/ entries
+        · README.md:3: the tree names 1: check-doc-truth.mjs — scripts/check-doc-truth.mjs
+
+PASS  frontend-scripts-roster  expect GREEN · got GREEN
+        the cure: all 14 frontend gates and all 6 root entries
+
+PASS  bench-target-roster  expect RED · got RED
+        a bench roster of three, against a manifest declaring more
+        · README.md:1: names 3: assignment, cost_finite_domain, futoshiki — missing gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+
+PASS  bench-target-roster  expect GREEN · got GREEN
+        the cure: all 9 targets
+
+PASS  redirects-rule-count  expect RED · got RED
+        the SPA-fallback-only claim over a two-rule file
+        · README.md:1: `_redirects` carries the SPA fallback only.
+
+PASS  redirects-rule-count  expect RED · got RED
+        a rule count that disagrees with the file
+        · README.md:1: 3 — `_redirects` carries 3 rules.
+
+PASS  redirects-rule-count  expect GREEN · got GREEN
+        the cure: two rules, the 404 guard named
+
+PASS  perf-rig-scenario-roster  expect RED · got RED
+        a scenario sentence that stops short of the table
+        · web/frontend/perf-rig/README.md: absent from the rig's own reference
+        · web/frontend/perf-rig/README.md: absent from the rig's own reference
+
+PASS  perf-rig-scenario-roster  expect GREEN · got GREEN
+        the cure: all 10 keys, each in its partition
+
+PASS  pencil-boil-0.9.2  expect RED · got RED
+        the pin on the line AFTER the package name — the miss this row was fixed for
+        · docs/animation.md:2: ^0.0.1 — `^0.0.1`: the scheduler.
+
+PASS  pencil-boil-0.9.2  expect GREEN · got GREEN
+        the cure: ^0.12.0, wherever in the window it sits
+
+PASS  chromium-alone-claim  expect RED · got RED
+        a single-browser claim against a two-project config
+        · README.md:1: CI runs chromium alone.
+
+PASS  chromium-alone-claim  expect RED · got RED
+        a both-engines claim against a ONE-project config — the case the old early return greened [stub: {"projects":["chromium"]}]
+        · README.md:1: The suite runs chromium + webkit, each with its own lane.
+        · README.md:1: The suite runs chromium + webkit, each with its own lane.
+
+PASS  chromium-alone-claim  expect GREEN · got GREEN
+        the cure under a one-project config: say chromium alone [stub: {"projects":["chromium"]}]
+
+27 PASS / 0 FAIL — every row proved both colours
+EXIT=0
+
+── 2. BORN-RED BANKS — present, ordered, and REPRODUCED ────────────────────────────────────
+Both banks exist and both were re-run independently rather than read. Method: `git archive HEAD`
+into a scratch dir (pristine LEDGER.md and pristine docs), `git init` + `git add -A` so the cite
+arm has a tracked set, then the WORKING-TREE scripts copied in. The record's own claim — that
+the rebuilt instruments red on a tree the old ones greened — is therefore verified, not assumed.
+
+  evidence/w0/ledger-diff-born-red.txt
+    banked   RED — 12 TERMINALITY · 1 PROBE · 1 CITES. exit 1
+    re-run   RED — 12 TERMINALITY · 1 PROBE · 1 CITES. exit 1   (identical finding set)
+    ordered reds Gate 0.2 names, all present:
+      CH-16  PROBE   — §1 asserts the ?board= half UNWIRED; urlCodec in 5/5 game specs
+      CH-29  TERMINALITY — "BUILD → T5-W2",       T5 sealed at evidence/wgate/close-record.md
+      CH-31  TERMINALITY — "FOLD → T5-W2"
+      CH-37  TERMINALITY — "BUILD → T5-W1.8"
+      CH-56  TERMINALITY — "BUILD → T5-W1.10"
+    plus CH-39/41/45/53/57/58/59/61 (the other eight T5-landing rows) and CH-41's CITES red
+    (`ci.yml:553` for `lint:ink`, which greps to :699 and :744).
+
+  evidence/w0/doc-truth-born-red.txt
+    banked   10 RED / 12 GREEN
+    re-run   11 RED / 11 GREEN — the one delta is `lean-wasm-4-sites`, which reds only because
+             csp-solver/wasm/pkg/ is a build artifact absent from `git archive`. Every other row
+             matches the bank exactly.
+    all nine NEW rows red: permalink-games · cited-paths-exist · worker-topology ·
+    e2e-total-arithmetic · constraint-enum-variants · frontend-scripts-roster ·
+    bench-target-roster · redirects-rule-count · perf-rig-scenario-roster
+    plus the FIXED `pencil-boil-0.9.2` row, red on docs/animation.md's `^0.9.2` against the
+    tree's `^0.12.0` — the hot-window fix 0.4 ordered. The wave text reads "the 13 existing rows
+    stay green"; twelve do, and the thirteenth reds because the same wave ordered it repaired.
+    `chromium-alone-claim` is green at HEAD (two projects declared, no doc claiming otherwise);
+    both its directions are proven by fixture in --self-test instead.
+
+── 3. TRUTH AUDIT — every claim re-derived from the tree ───────────────────────────────────
+D-series (own derivation, not the D1–D20 table):
+  D1  cards.ts present, registry.ts absent anywhere        · frontend README:114 cures
+  D2  spec.ts in 5/5 game dirs, zero `game.ts` in the tree · frontend README:118 cures
+  D3  ONE worker module, games/shared/solver/solver.worker.ts · README:28,:62 + fe README cure
+  D4  per-game dirs re-listed from disk (sudoku: spec.ts, SudokuPoster.vue, composables/,
+      data/, README.md; futoshiki adds CaretOverlay.vue + FutoshikiCaret.vue + clue.ts) — the
+      cured tree matches `ls` for all five
+  D5  playwright.config.ts webkit project testIgnore = [OTHER_CONFIGS, share-truth.spec.ts]
+      ALONE; mobile-*.spec.ts carry no engine pin, only comments recording its deletion
+  D6  325 + 4 + 39 = 368, derived in-gate from all three configs      · README:99 cures
+  D7  docs/benchmarks.md:29 measures 1.6–2.9× (0.46/0.61/0.35 ratios) · csp README:106 cures
+  D8  package.json ^0.12.0                                            · docs/animation.md:6 cures
+  D9  ConstraintEnum = NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom
+      — six, `Soft` absent; optimizations.md, algorithms.md, csp README:158 all cure
+  D10 crossGameRules = games.map over 5 dirs carrying spec.ts, pairs = 5×4 = 20; imported at
+      eslint.config.js:6; zero cross-game imports in the tree by alias or traversal
+  D11 scripts.deploy = `bash ../../scripts/deploy-gated.sh`            · fe README:29 cures
+  D12 scripts.lint  = `prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/`
+  D13 csp-solver/tests/ = 23 .rs files                                 · README:20 cures
+  D14 9 [[bench]] targets in Cargo.toml — README + csp README cure, docs/benchmarks.md DOES NOT
+      (see FINDING 1)
+  D15 _redirects = 2 rules (/assets/* → /404.html 404, /* → /index.html 200)
+  D16 _headers CSP grants connect-src wss://sudoku-relay.mkbabb.workers.dev
+  D17 14 .mjs in web/frontend/scripts, 6 entries in scripts/
+  D18 eslint.boundary.config.js exists and carries rules 2/3          · fe README:130 cures
+  D19 scripts/ holds 6 entries, not `dev.sh` alone                    · README:31 cures
+  D20 probe.js SCENARIOS = 10 keys; hoverSweep + solveWindow named as the ungated remainder
+  CH-16 5/5 specs declare urlCodec; README:62 and fe README:167ff both restate all five
+
+0.5 cite-symbols, each replacement resolved against the tree:
+  scene.css   `.controls-card { overflow-y: auto }` appears exactly twice — under
+              @media (min-width:1024px) and under @media (max-width:1023.98px) and
+              (orientation:portrait); the stacked @media (max-width:1023px) block gives
+              .scene-controls a width and nothing more. The comment now names the keys.
+  index.css   the difficulty-heading ink-tier block carries --color-red-ink at 4.98:1
+  MANIFEST.md §5 DEVIATIONS opens at the heading, T′ is that section's first bullet
+  useGameState `totalCells` is a computed, `boardSize ** 2`
+  App.vue     carries no file:NNN cite at HEAD — nothing to cure; correctly left alone
+
+LEDGER:
+  §1 = 10 rows, every one terminal-directional: 4 BALLOT dispatched 2026-08-03 with the default
+       firing at T7 WGATE (CH-35/36/39/45 → BAL-01/02/04/03), 4 FOLDED onto T7 waves
+       (CH-62→W3, CH-63→W3, CH-53→W6, CH-59→W7), 2 BANKED flake classes (CH-64, CH-65).
+       Zero rows name a sealed tranche's wave — TERMINALITY clean, and it is armed, since the
+       same arm reds on 12 rows one tree back.
+  CH-62's dated firing default is intact and verbatim-faithful to DISPOSITIONS: retire as
+       library-hypothesis-spent if the runner dispatch isn't authorized before T8 formation.
+  CH-64 carries the third-burst trigger FIRED 2026-08-03 against run 30781866393, with the
+       forensics homed in T7-W3 — a fired trigger became an act, not a new row.
+  Eight spot-checks against DISPOSITIONS verdicts, all matching:
+       CH-20 BANKED·WATCH (tseslint 8.63.0 peers typescript >=4.8.4 <6.1.0, installed — probe
+             re-run here, unfired; frontend pins ~6.0.3)
+       CH-29 LANDED (generate_templates.rs refuses N outside 2..=4 at the argument)
+       CH-31 LANDED (zero YOSHI under src; MASCOT_COLORS in pencilConfig.ts)
+       CH-41 LANDED, cite restamped to the ink-pressure STEP NAME, not a line (ruling 2)
+       CH-44 RETIRE → into CH-62
+       CH-16 CLOSED-landed `78448760`, left §1 outright — a §1 restamp would not have greened
+             the PROBE arm, which is the arm's whole design
+       CH-51 RETIRE, trigger fired at the T6 mark audit and declined
+       CH-56 LANDED (mobile pin deleted, share-truth the sole WebKit hold-out)
+  §2 residue restamps all present: CH-17 → CLOSED, CH-28 → BANKED, PR-034 → BANKED,
+       U-01..U-06 + U-09 → CLOSED, U-11 → FOLDED → W0 citing the born-RED bank. U-09 re-derived:
+       assignment.rs 284 L with builder/assignment/{branch_and_bound,error,lap}.rs beside it,
+       cage.rs 304 L, tests/cage.rs 373 L.
+  §6 holds 62 rows under four inert subheads (19 + 11 + 13 + 19) — counted off disk. The
+       instrument reports 32 (see FINDING 4).
+
+── 4. SCOPE CHECK — git diff ───────────────────────────────────────────────────────────────
+16 files modified, every one named as an owner's in this wave:
+  .github/workflows/ci.yml · README.md · csp-solver/README.md · docs/algorithms.md
+  docs/animation.md · docs/optimizations.md · docs/tranches/LEDGER.md · docs/tranches/PRECEPTS.md
+  scripts/check-doc-truth.mjs · scripts/deploy-gated.sh · scripts/ledger-diff.mjs
+  web/frontend/README.md · web/frontend/perf-rig/README.md
+  web/frontend/src/games/shared/{BoardHost.vue,GameControlPanel.vue,useFlipGlide.ts}
+  Untracked: docs/tranches/2026-08-tranche-7/evidence/ (this wave's banks).
+NO golden file and NO e2e spec appears in the diff, tracked or untracked.
+The three cite-symbols source files diff COMMENT-ONLY — every changed hunk sits inside a /** */
+or /* */ or an HTML comment; no executable line moves. `prettier --check` over src/, scripts/
+and ../../scripts/ is clean, so the repo-pinned format lane will not red on this work.
+
+── 5. FINDINGS ─────────────────────────────────────────────────────────────────────────────
+1 HIGH  docs/benchmarks.md:65-66 — check-doc-truth exits 1. `bench-target-roster` reds: the
+        Reproducing block names 5 of the 9 [[bench]] targets, missing futoshiki, gac_ab,
+        iai_queens, map_coloring. W0's acceptance is "check-doc-truth green at the new, larger
+        row count"; it is 1 RED / 21 GREEN. The file is a third roster site the D14 row never
+        named, and no owner holds it.
+2 MED   .github/workflows/ci.yml:62,:1453 — both the lane roster and the step name still read
+        "thirteen rows" over a gate that now runs 22. The file was edited in this wave, one
+        line above, to add the ledger-diff step.
+3 MED   docs/tranches/PRECEPTS.md:38 — "none—regressed (U-09: builder/assignment.rs 607 L,
+        constraint/cage.rs 558 L); T5-W2.7 splits them". The tree reads 284 L and 304 L, T5 is
+        sealed, and LEDGER §4 now stamps U-09 CLOSED for exactly these two files. Edited file,
+        left false: numbers-not-re-derived, in the precepts that forbid it.
+4 MED   scripts/ledger-diff.mjs — ANY_ID_CELL requires `-\d+` at the cell's end, so `T7-R15`,
+        `T7-R13a`, `P-5e`, `EL-3a` never parse as rows. §6 holds 62 rows; the report prints
+        "32 rows". A false count in an emitted report, and 30 rows outside every arm — were one
+        of them later filed open against a sealed wave, TERMINALITY would not see it.
+5 LOW   web/frontend/eslint.boundary.config.js:13-22 — the header declares "OVERLAY, NOT A
+        FOLD … deliberately NOT merged into eslint.config.js" and "EXPECTED RED until W2.5",
+        while eslint.config.js:6 imports crossGameRules today; and it cites
+        `src/games/registry.ts` ("registry.ts:127-133"), the same deleted file D1 just swept
+        out of the README. Source comments sit outside cited-paths-exist, which scans docs only.
+6 LOW   scripts/ledger-diff.mjs --owner-block — 4 of the 12 emitted rows print "(unstated)" for
+        Trigger (the BAL rows, which carry a Default rather than a Trigger), and the State cell
+        truncates mid-phrase ("BALLOT → BAL-01, dispatched 2026-08-03,"). 0.6 makes this
+        emission the close record's owner block, so both land in the record as written.
+7 LOW   waves/W0-the-record-heals.md:32 — Gate 0.2 declares born RED "at afc72ba1"; every bank
+        is at 6a180b35, one commit later. Reproduced here at 6a180b35, so the gate is met on
+        the merits; the SHA in the spec wants restamping or a note at the seal.

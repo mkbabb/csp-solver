@@ -52,8 +52,9 @@ describe("sudoku — the eight slots (T5-W2 §1)", () => {
   });
 
   it("builds a size + difficulty section over the LIVE model", () => {
-    // The row `SudokuGame.vue:57-73` used to HAND-INLINE, because the TDZ cycle made reading
-    // it off the declaration throw. The cycle is gone and the eager game reads its own slot.
+    // The since-deleted `SudokuGame.vue` HAND-INLINED this row, because the TDZ cycle made
+    // reading it off the declaration throw. The cycle is gone, the slot read lives in
+    // `GameShell`, and the eager game reads its own `deal.options` like every other.
     const sections = sudokuSpec.deal.options(sudokuSpec.model());
     expect(sections.map((s) => s.key)).toEqual(["size", "difficulty"]);
   });

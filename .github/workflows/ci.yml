@@ -59,7 +59,7 @@
 #   16. evidence policy    -> evidence-policy
 #                                        (T5-W1.3: per-image + per-wave byte caps over
 #                                         docs/tranches/**, self-tested)
-#   17. doc truth          -> doc-truth  (T5-W0.2 + W1.7: thirteen rows, every figure
+#   17. doc truth          -> doc-truth  (T5-W0.2 + W1.7, widened at T7-W0: every figure
 #                                         re-derived from the tree at run time)
 #   18. npm advisories     -> npm-audit  (T5-W1.15: high+ over the frontend lockfile —
 #                                         the oracle the Dependabot dashboard is not)
@@ -1450,8 +1450,18 @@ jobs:
             # and a `derived:` line under EVERY row, red or green, naming what the
             # tree actually says. Read the derived lines: a band that derives to 0 is
             # now a red (T5-W1), but the numbers are the point of the output.
-            - name: doc truth (thirteen rows, every figure re-derived at run time)
+            - name: doc truth (every row and figure re-derived at run time)
               run: node scripts/check-doc-truth.mjs
+            # THE LEDGER'S OWN GATE (T7-W0 0.2 / T7-R04, U-11's cure made real). The doc-truth
+            # rows grade prose against the tree; this one grades the LIVING LEDGER against it —
+            # a §1 row landing at a wave of a sealed tranche, a row a one-line probe refutes, and
+            # a file:line cite that no longer points where it says. Zero dependencies, no
+            # artifact, no npm: it rides here only because this is the doc-gate lane. Born RED at
+            # 6a180b35 on fourteen rows (evidence/w0/ledger-diff-born-red.txt); the same script
+            # printed GREEN over four of them for a whole campaign, which is why --self-test is
+            # not decoration — it re-proves every arm able to FAIL before the audit runs.
+            - name: ledger truth (per-tranche corpus, state currency, cite resolution, self-tested)
+              run: node scripts/ledger-diff.mjs --require-ledger --assert-state --verify-cites --self-test
 
     # ---------------------------------------------------------------- Lane 18
     # npm-audit — the npm advisory tripwire (T5-W1 row 1.15, r3/security-posture

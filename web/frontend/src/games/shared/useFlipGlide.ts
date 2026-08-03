@@ -2,8 +2,9 @@ import { MOTION } from "@pencil/config/pencilConfig";
 
 /**
  * useFlipGlide (T4-W12 §8, the M10 distillation) — the FLIP-on-WAAPI mover engine,
- * EXTRACTED verbatim from useControlsDrawer's glide (:156-318) so the drawer AND the
- * gallery's board⇄card fold ride ONE proven primitive. This is the wave's NAMED RISK:
+ * EXTRACTED verbatim from `useControlsDrawer`'s glide engine — what stayed behind there is the
+ * domain half, `glideCtl` and `glide()` — so the drawer AND the gallery's board⇄card fold ride
+ * ONE proven primitive. This is the wave's NAMED RISK:
  * the drawer is the four-times-owner-audited surface, so the extraction is a strict
  * no-behavior-change refactor — the drawer's e2e (`drawer.spec`) easing + goldens are
  * byte-for-π unedited — before any second consumer builds on it.

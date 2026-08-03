@@ -140,7 +140,8 @@ const idleGradeHint = computed(() =>
 /**
  * The board's cells, grouped into rows (T5-W3 3.1) — `cellRows[r][c]` is the flat cell index,
  * the same 0..N²-1 the model keys every map on. The board is square by construction
- * (`totalCells === boardSize²`, useGameState.ts:188), so one derivation feeds both loops.
+ * (`totalCells === boardSize²` — the `totalCells` computed in `useGameState`), so one
+ * derivation feeds both loops.
  */
 const cellRows = computed(() =>
   Array.from({ length: boardSize.value }, (_, r) =>

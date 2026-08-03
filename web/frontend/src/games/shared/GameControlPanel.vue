@@ -453,7 +453,8 @@ function onHint() {
 
 <template>
   <!--
-    ONE TREE, BOTH REGIMES (T5-W4c · the T′ collapse, pass-1 `f2-proto/MANIFEST.md:141`, cashed).
+    ONE TREE, BOTH REGIMES (T5-W4c · the T′ collapse, pass-1 `f2-proto/MANIFEST.md` §5
+    deviation T′, cashed).
     This file shipped a FULL mobile tree and a FULL desktop tree — the same six blocks written
     twice, drifting apart every time a hand touched one of them (the divider's `my-2` lived in
     exactly one copy until stage BC found it). The branches are gone. `mobile` now drives the
@@ -1461,10 +1462,11 @@ function onHint() {
 }
 
 /* The armed Clear asks in the teacher's rose — the one moment a sublabel raises its voice.
-   Raw --color-crayon-rose is 4.10:1 on --color-card, sub-AA in light, and this is the ONE
-   sublabel that must be read. --color-red-ink is that same hue locked at 346° and darkened
-   to 4.98:1 for exactly this case (index.css:163); dark mode aliases it straight back to the
-   wax, so the night pose is byte-identical. Same swap `.crayon-rose` makes in index.css. */
+   Raw --color-crayon-rose is sub-AA on --color-card in light, and this is the ONE sublabel
+   that must be read. --color-red-ink is that same hue locked at 346° and darkened to AA for
+   exactly this case; index.css's ink-tier block holds the measured ratios and is the record
+   for them — no second copy here. Dark mode aliases it straight back to the wax, so the
+   night pose is byte-identical: the same swap `.crayon-rose` makes in index.css. */
 .icon-sublabel.is-armed {
   color: var(--color-red-ink);
   font-weight: 600;
@@ -1538,11 +1540,13 @@ function onHint() {
   flex: 1;
 }
 
-/* Sticky ONLY where the card is a scrollport. `scene.css:60` makes the ≥1024 rail one and
-   `scene.css:230` makes the portrait dock one; the <1024 LANDSCAPE card is IN FLOW
-   (`scene.css:191` is that regime's key), so `bottom: 0` there would pin the bar to the
-   viewport and move a ratified rung. This condition is that regime key restated in a second
-   file — re-cut one and re-cut both. */
+/* Sticky ONLY where the card is a scrollport. In `scene.css` it's `.controls-card` that takes
+   `overflow-y: auto`, and it does so twice: under `@media (min-width: 1024px)` (the rail) and
+   under `@media (max-width: 1023.98px) and (orientation: portrait)` (the dock). The <1024
+   LANDSCAPE card is IN FLOW — the stacked `@media (max-width: 1023px)` block gives
+   `.scene-controls` a `--board-col` width and nothing else — so `bottom: 0` there would pin the
+   bar to the viewport and move a ratified rung. This condition is that pair of regime keys
+   restated in a second file — re-cut one and re-cut both. */
 @media (min-width: 1024px), (max-width: 1023.98px) and (orientation: portrait) {
   .action-bar {
     position: sticky;

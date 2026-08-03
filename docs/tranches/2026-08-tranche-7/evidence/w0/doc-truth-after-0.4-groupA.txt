@@ -1,0 +1,76 @@
+doc-truth — 22 rows, every figure re-derived at run time
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+head  6a180b35
+node  v26.0.0 darwin/arm64
+when  2026-08-03T06:12:20.419Z
+
+GREEN  frontend-readme-two-games
+        derived: 5 games registered (sudoku, futoshiki, thermo, killer, kenken) · pencil-boil ^0.12.0 · lint script "prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/"
+
+GREEN  root-readme-e2e-counts
+        derived: 325 tests in 17 files (default) · 22 .spec.ts on disk · golden 4/1 · throttle 39/4
+
+GREEN  chromium-alone-claim
+        derived: playwright projects: chromium + webkit · ci installs: chromium + webkit
+
+GREEN  lean-wasm-4-sites
+        derived: 121,137 B ← csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+
+GREEN  ci-band-comment-406
+        derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >127,500 B; lean artifact 121,137 B; canon-declared stale: 222,436 B (docs/benchmarks.md:56)
+
+GREEN  sudoku-md-sections
+        derived: games registered: sudoku, futoshiki, thermo, killer, kenken — each owed a section in docs/sudoku.md
+
+GREEN  ofl-licenses-figures
+        derived: 3 woff2 subsets, 21,724 B total (firacode-subset.woff2 3,624 B, fraunces-subset.woff2 13,788 B, patrickhand-subset.woff2 4,312 B) · OFL texts: OFL-FiraCode.txt, OFL-Fraunces.txt, OFL-PatrickHand.txt · paired true
+
+GREEN  install-pin-0.5
+        derived: csp-solver crate version 0.6.0 → Install pin "0.6" · consumer surfaces carry no outbound link into docs/precepts/
+
+GREEN  pencil-boil-0.9.2
+        derived: web/frontend/package.json dependencies["@mkbabb/pencil-boil"] = ^0.12.0
+
+GREEN  test-count-208-vs-204
+        derived: 208 native #[test] attributes (csp-solver/src + csp-solver/tests, comments elided) · 29 #[wasm_bindgen_test] in the wasm crate (cfg'd to wasm32, not host-run) · 28 test binaries (csp-solver + csp-solver/wasm lib targets + integration files)
+
+GREEN  make-wasm-recipe
+        derived: csp-solver/wasm/Makefile:33 runs --no-default-features --profile wasm-release --scope mkbabb --target web — LEAN; 5 families registered (sudoku, futoshiki, thermo, killer, kenken)
+
+GREEN  ci-lane-count
+        derived: 18 jobs in .github/workflows/ci.yml (lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, wasm-publish-dryrun, frontend, fe-unit, boundary, e2e, perf-subset, iai, cargo-audit, evidence-policy, doc-truth, npm-audit)
+
+GREEN  iai-golden-figure
+        derived: 1,529,452 instructions enforced ±2.0% — csp-solver/benches/iai_queens.baseline, gated by .github/workflows/ci.yml's iai lane over bench iai_queens
+
+GREEN  permalink-games
+        derived: 5/5 game specs declare a urlCodec under web/frontend/src/games — wired: futoshiki, kenken, killer, sudoku, thermo
+
+GREEN  cited-paths-exist
+        derived: 1006 source basenames indexed · 8 docs scanned (README.md, docs/algorithms.md, docs/animation.md, docs/bbnf-integration.md, docs/benchmarks.md, docs/optimizations.md, docs/sudoku.md, web/frontend/README.md) · roots: repo, web/frontend, web/frontend/src, csp-solver, csp-solver/src, the doc's own dir · aliases @games/ @pencil/ @/
+
+GREEN  worker-topology
+        derived: 1 worker module(s) under web/frontend/src: web/frontend/src/games/shared/solver/solver.worker.ts
+
+GREEN  e2e-total-arithmetic
+        derived: default 325/17 + golden 4/1 + throttle 39/4 = 368 tests in 22 files
+
+GREEN  constraint-enum-variants
+        derived: 6 ConstraintEnum variants in csp-solver/src/constraint/dispatch.rs: NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom
+
+GREEN  frontend-scripts-roster
+        derived: 14 in web/frontend/scripts (check-coverage-floor.mjs, check-empty-catch.mjs, check-font-coverage.mjs, check-golden-bytes.mjs, check-ink-pressure.mjs, check-prod-shake.mjs, check-pw-projects.mjs, check-pw-retries.mjs, check-support-floor.mjs, check-theme-tokens.mjs, check-unit-count.mjs, dist-identity.mjs, golden-magnitude.mjs, tdz-probe.mjs) · 6 in scripts (check-doc-truth.mjs, check-evidence-policy.mjs, ci-conclusion.sh, deploy-gated.sh, dev.sh, ledger-diff.mjs)
+
+RED    bench-target-roster
+        derived: 9 [[bench]] targets in csp-solver/Cargo.toml: assignment, cost_finite_domain, futoshiki, gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+        docs/benchmarks.md:66
+          expected: every bench target named, or fewer than three — csp-solver/Cargo.toml declares 9: assignment, cost_finite_domain, futoshiki, gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+          got:      names 5: assignment, cost_finite_domain, lattice, queens, sudoku — missing futoshiki, gac_ab, iai_queens, map_coloring
+
+GREEN  redirects-rule-count
+        derived: 2 rule(s) in web/frontend/public/_redirects: /assets/* /404.html 404 · /* /index.html 200
+
+GREEN  perf-rig-scenario-roster
+        derived: 10 SCENARIOS keys in web/frontend/perf-rig/probe.js (domDump, styleDump, idle3s, deal, solveCelebration, galleryGlide, themeToggle, undoBurst, hoverSweep, solveWindow) · driver default set: idle3s,deal,undoBurst,solveCelebration,galleryGlide,themeToggle · diagnostic-only: domDump, styleDump · CI-gated: idle3s
+
+1 RED / 21 GREEN — doc canon disagrees with the tree

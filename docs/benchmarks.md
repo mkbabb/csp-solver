@@ -63,8 +63,9 @@ wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
 ## Reproducing
 
 ```bash
-# Criterion benchmarks (Sudoku, Queens, map coloring, lattice, assignment,
-# cost_finite_domain). The lattice bench runs each workload under BOTH propagation
+# Criterion benchmarks — all nine targets: assignment, cost_finite_domain, futoshiki,
+# gac_ab, iai_queens, lattice, map_coloring, queens, sudoku.
+# The lattice bench runs each workload under BOTH propagation
 # paths: the default groups (adjacency built → AC-3) and the `*_sweep` groups
 # (no finalize() → monotonic sweep, bbnf's actual path).
 cargo bench

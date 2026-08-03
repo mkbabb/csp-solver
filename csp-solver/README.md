@@ -103,7 +103,7 @@ enumerate-all (`max_solutions = usize::MAX`) has a defined, pruning-invariant se
 GAC all-different (Régin 1994) is default-ON for any `AllDifferent` with at least
 `GAC_MIN_PARTICIPANTS = 3` live participants (`solver/gac.rs`); a
 `GAC_IN_ALLDIFF_ENABLED` atomic toggles it. It's a net win on the sudoku corpus,
-though not uniformly: 3 of 5 named hard 9×9 boards run 1.8–3.3× slower with it on.
+though not uniformly: 3 of 5 named hard 9×9 boards run 1.6–2.9× slower with it on.
 Stamped tables live in [`../docs/benchmarks.md`](../docs/benchmarks.md).
 
 ### Difficulty casing
@@ -155,7 +155,7 @@ src/
 │   ├── implication.rs      ImplicationConstraint
 │   ├── lambda.rs           LambdaConstraint, generic closure-based
 │   ├── scratch.rs          pub(crate) reusable scratch buffers for propagators
-│   └── dispatch.rs         ConstraintEnum, devirtualized dispatch (NotEqual, AllDifferent, cages, boxed Custom)
+│   └── dispatch.rs         ConstraintEnum, devirtualized dispatch (NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, boxed Custom)
 ├── domain.rs + domain/
 │   ├── traits.rs           Domain, LatticeDomain, CostDomain traits
 │   ├── bitset.rs           BitsetDomain (u128) + BitsetIter (zero-alloc trailing_zeros)
@@ -232,9 +232,10 @@ cargo run --release --example generate_templates -- <N> <difficulty> <count>
 check is blackbox against the public surface.
 
 **Benches** (`benches/`, criterion): `assignment`, `cost_finite_domain`,
-`iai_queens`, `lattice`, `map_coloring`, `queens`, `sudoku`. The queens bench
-embeds ground-truth `assert_eq!` counts (92 / 14200) that run only under
-`cargo bench -p csp-solver --bench queens -- --test`, the CI queens smoke lane.
+`futoshiki`, `gac_ab`, `iai_queens`, `lattice`, `map_coloring`, `queens`, `sudoku`.
+The queens bench embeds ground-truth `assert_eq!` counts (92 / 14200) that run
+only under `cargo bench -p csp-solver --bench queens -- --test`, the CI queens
+smoke lane.
 `iai_queens` is the deterministic instruction-count baseline (Linux/CI only;
 Valgrind can't run on arm64-macOS).
 

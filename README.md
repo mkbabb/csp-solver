@@ -17,18 +17,18 @@ A constraint-satisfaction engine in Rust, and five hand-drawn games that ride it
 │   │   ├── builder/             AssignmentBuilder (B&B assignment/COP surface)
 │   │   └── py/                  PyO3 bindings (feature = "py"): module `csp_solver`
 │   ├── data/sudoku_puzzles/     embedded template bank (N=3-hard + N=4, include_dir!)
-│   ├── tests/                   integration suite (22 files)
+│   ├── tests/                   integration suite (23 files)
 │   ├── tests-py/                wheel-contract pytest suite
-│   ├── benches/                 criterion: sudoku, queens, map_coloring, lattice, assignment,
-│   │                            cost_finite_domain; iai_queens (callgrind)
+│   ├── benches/                 criterion: assignment, cost_finite_domain, futoshiki, gac_ab,
+│   │                            lattice, map_coloring, queens, sudoku; iai_queens (callgrind)
 │   ├── examples/                time_sudoku, gac_ab_corpus, verify_bank_uniqueness, …
 │   └── wasm/                    csp-solver-wasm crate → npm @mkbabb/csp-solver-wasm
 ├── web/frontend/                Vue 3 + TypeScript + Tailwind v4
 │   ├── src/pencil/              the shared hand-drawn aesthetic: grid, glyphs, chrome, filters
-│   ├── src/games/               sudoku/, futoshiki/, thermo/, killer/, kenken/ + shared/ (each with its own solver/ Worker)
+│   ├── src/games/               sudoku/, futoshiki/, thermo/, killer/, kenken/ + shared/ (which holds the one solver Worker)
 │   └── e2e/                     Playwright suite
 ├── docs/                        algorithms, sudoku, benchmarks, bbnf-integration, optimizations, animation
-├── scripts/dev.sh               thin frontend launcher
+├── scripts/                     the gate scripts and the thin frontend launcher
 ├── rust-toolchain.toml          stable pin, wasm32 target
 └── Cargo.toml                   workspace = ["csp-solver", "csp-solver/wasm"]
 ```
@@ -38,7 +38,7 @@ A constraint-satisfaction engine in Rust, and five hand-drawn games that ride it
 ```
 Browser ── Web Worker: @mkbabb/csp-solver-wasm (lean build) ── csp_solver (Rust)
 
-Static SPA (Cloudflare Pages, sudoku.babb.dev) ── _redirects: SPA fallback only
+Static SPA (Cloudflare Pages, sudoku.babb.dev) ── _redirects: two rules (/assets/* 404, SPA fallback)
 ```
 
 The engine in brief. `ConstraintEnum` dispatch is devirtualized, so the hot path carries no vtable; a u128-backed `BitsetDomain` iterates without allocating. AC-3 runs a bitset-worklist propagation, with a monotonic sweep for lattice domains, and GAC all-different (Régin 1994, via Hopcroft-Karp plus iterative Tarjan SCC) is default-ON at ≥3 live participants. Backtracking lives in one kernel, `solver/search.rs`. `SolveConfig::default()` is `Ac3 + FailFirst`, `max_solutions = 1`, node budget 1M.
@@ -59,7 +59,7 @@ The carousel game-select is the front door. Each game registers one card (`web/f
 
 ## Frontend
 
-Vue 3 Composition API, no router, no state library. `src/pencil/` carries the hand-drawn aesthetic; `src/games/{sudoku,futoshiki,thermo,killer,kenken}/` are the surfaces, each with its own `solver/` Worker module and cross-boundary imports ESLint-enforced. Affordances: the carousel game-select, an undo spine (one shared history, cap 200), a named-technique hint, the player's own pencil marks (Snyder corner/center notation) beside the solver's peek-gated engine marks, error-check assists (off / on-demand / live, on-demand the default and never a lives counter), hold-to-peek, and board permalinks. Sudoku and Futoshiki share a board over `?board=`; Thermo, Killer, and KenKen persist to localStorage in v1. Animation runs on `@mkbabb/pencil-boil`'s scheduler and defers to `prefers-reduced-motion`; the grid is an ARIA grid with keyboard navigation. Fonts are three self-hosted woff2 subsets under the SIL Open Font License, 21,724 B total.
+Vue 3 Composition API, no router, no state library. `src/pencil/` carries the hand-drawn aesthetic; `src/games/{sudoku,futoshiki,thermo,killer,kenken}/` are the surfaces, all five riding the one Worker module, `games/shared/solver/solver.worker.ts`, with cross-boundary imports ESLint-enforced. Affordances: the carousel game-select, an undo spine (one shared history, cap 200), a named-technique hint, the player's own pencil marks (Snyder corner/center notation) beside the solver's peek-gated engine marks, error-check assists (off / on-demand / live, on-demand the default and never a lives counter), hold-to-peek, and board permalinks. All five—Sudoku, Futoshiki, Thermo, Killer, and KenKen—round-trip a whole board over `?board=` through one shared codec. Animation runs on `@mkbabb/pencil-boil`'s scheduler and defers to `prefers-reduced-motion`; the grid is an ARIA grid with keyboard navigation. Fonts are three self-hosted woff2 subsets under the SIL Open Font License, 21,724 B total.
 
 The hint grammar sits in one place: a technique engine (`src/games/shared/techniqueEngine.ts`) names the cheapest human-deduction step for the board and grades the board by the hardest technique that step-ladder needs. Sudoku and Futoshiki carry named-technique modules (naked single, hidden single, and up); Thermo, Killer, and KenKen surface the solver-derived hint through the same margin voice.
 
@@ -84,7 +84,7 @@ cd web/frontend && npm install && npm run dev
 
 ## Testing
 
-All counts measured at `e961bdb7`, Apple M5 Max, 2026-08-01 — except the e2e census, re-derived on the T5-W1 tree, where rows 1.6 and 1.10 widened the suite (WebKit 91 → 110 in the default config, the built-dist gates 23 → 39).
+All counts measured at `e961bdb7`, Apple M5 Max, 2026-08-01 — except the e2e census, which `scripts/check-doc-truth.mjs` re-derives from all three Playwright configs on every run, and which T5-W1 rows 1.6 and 1.10 widened (WebKit 91 → 110 in the default config, the built-dist gates 23 → 39).
 
 ```bash
 # Rust: 212 passed, 0 failed, 0 ignored (28 test binaries + 4 doctests)
@@ -96,7 +96,7 @@ cd csp-solver/tests-py && uv run --no-sync pytest
 # e2e: 325 Playwright tests across 17 spec files in the default config (Chromium 165,
 #      WebKit 160). Five further specs are held out of it and ride two configs of their
 #      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (39 in 4).
-#      22 spec files on disk, 354 tests in all.
+#      22 spec files on disk, 368 tests in all.
 cd web/frontend && npx playwright test
 cd web/frontend && npx playwright test --config playwright-golden.config.ts && npm run test:e2e:throttle
 
@@ -113,13 +113,13 @@ cargo bench -p csp-solver --bench queens -- --test
 
 ## Deployment
 
-A Cloudflare Pages static deploy. Solving and generation never leave the visitor's browser, so there's no server-side solve path to secure. `_headers` carries CSP/HSTS/X-Frame-Options; `_redirects` carries the SPA fallback only.
+A Cloudflare Pages static deploy. Solving and generation never leave the visitor's browser, so there's no server-side solve path to secure. `_headers` carries CSP/HSTS/X-Frame-Options; `_redirects` carries two rules: the `/assets/*` → `/404.html` guard that keeps an unknown hashed asset from resolving to the shell and poisoning the edge cache, and the SPA fallback.
 
 One companion Worker deploys beside it and only shared boards ever reach it: `web/relay`, a hibernating Durable Object speaking the slice of NIP-01 a shared board needs. It stores nothing, hibernates between messages, and its origin is named in the page's `connect-src`—so the two deploy together or the socket is refused. Since T6.2 the board itself rides those frames: the WebRTC arm is retired, and with it the class of pair that could see a roster and never a digit.
 
 ## Declarations
 
-- **Browser support**: Chromium and WebKit, each with its own lane. `playwright.config.ts` declares the two projects and CI installs both bundles, so "solves entirely in the browser" is asserted in each engine. Two files sit out the WebKit project: `mobile-*.spec.ts` pins Chromium at file scope (the iPhone/iPad descriptors would otherwise re-run as exact duplicates), and `share-truth.spec.ts` wants a clipboard permission Playwright's WebKit doesn't grant. Gecko carries no lane; Firefox is unasserted. The declared support floor is Chrome 111, Edge 111, Firefox 128, Safari 16.4 and iOS Safari 16.4 (`web/frontend/package.json`, `browserslist`)—an arithmetic figure rather than a preference, since Tailwind v4 compiles every stylesheet against precisely those targets and nothing below them is served CSS it can parse. The bundle's own syntax targets ES2020, which sits well under that floor; `npm run test:support-floor` holds the declaration to both and refuses any guard in the source that defends a browser beneath it.
+- **Browser support**: Chromium and WebKit, each with its own lane. `playwright.config.ts` declares the two projects and CI installs both bundles, so "solves entirely in the browser" is asserted in each engine. One file sits out the WebKit project: `share-truth.spec.ts` wants a clipboard permission Playwright's WebKit doesn't grant. Gecko carries no lane; Firefox is unasserted. The declared support floor is Chrome 111, Edge 111, Firefox 128, Safari 16.4 and iOS Safari 16.4 (`web/frontend/package.json`, `browserslist`)—an arithmetic figure rather than a preference, since Tailwind v4 compiles every stylesheet against precisely those targets and nothing below them is served CSS it can parse. The bundle's own syntax targets ES2020, which sits well under that floor; `npm run test:support-floor` holds the declaration to both and refuses any guard in the source that defends a browser beneath it.
 - **English only**: the copy is authored inline in English, `<html lang="en">`, with no i18n or locale-negotiation layer.
 - **No telemetry**: nothing is measured and nothing is phoned home. There is no third-party network hit at all—the attribution avatar was bundled same-origin at T4-W8, which retired the last one. Board state lives in the URL and stays on the device. A shared board opens exactly one socket, to our own relay (`web/relay`, a Cloudflare Durable Object), and only for as long as the session lasts: it carries presence and the players' cell writes between the players, it is stored nowhere at either end, and a page playing alone never loads the transport at all.
 - **No offline mode**: there's no service worker and no web-app manifest, so the shell and the wasm module come off the network at every cold load, and an unvisited game's chunk downloads on select. Once a game is resident, its generation and solving run wholly on-device.

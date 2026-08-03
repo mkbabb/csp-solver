@@ -3,7 +3,7 @@
 The frontend's hand-drawn motion layer. This is the peer reference for
 `web/frontend/`; the README points here rather than duplicating it. Shared
 primitives come from [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil)
-`^0.9.2`: the unified rAF scheduler, `usePrefersReducedMotion()`,
+`^0.12.0`: the unified rAF scheduler, `usePrefersReducedMotion()`,
 `useBoilFrame`/`useFilterParamBoil`, the `sequence` subscriber kind,
 `createStrokeDrawIn`, the `useBoilCache`/`boilLineFrames`/`boilRectFrames` prebake
 surface, the four house easing curves (`easeOutCubic`/`resolveEasing`), and the

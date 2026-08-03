@@ -11,6 +11,10 @@
 #   3. conclusion == success
 #   4. fresher than 24h
 #
+# A fifth refusal joined at T7-W0 0.2 and is not about the artifact: the living
+# ledger must be current under scripts/ledger-diff.mjs. A deploy ships the record
+# with the product, so a record the tree refutes refuses the deploy.
+#
 # The wrangler invocation below moved here VERBATIM from web/frontend
 # package.json scripts.deploy. The wrapper is the only change to how the deploy
 # runs; the deploy line itself is byte-identical to what it replaced.
@@ -124,6 +128,18 @@ AGE=$((NOW_EPOCH - ART_EPOCH))
 ((AGE < MAX_AGE_SECONDS)) || refuse \
     "artifact is stale: ${AGE}s old (cap ${MAX_AGE_SECONDS}s / 24h)" \
     "Re-read the field: scripts/ci-conclusion.sh --sha \"$HEAD_SHA\" --out <path>"
+
+# ── 5. The living ledger must be current ──────────────────
+# A deploy ships the record with the product. T7-W0 0.2 (T7-R04): a §1 row landing at a
+# wave of a sealed tranche, a row the tree refutes, or a cite that points nowhere means
+# the ledger describes a repo that no longer exists. Same instrument CI runs, same flags.
+if ! LEDGER_OUT="$(node "$ROOT/scripts/ledger-diff.mjs" --require-ledger --assert-state --verify-cites 2>&1)"; then
+    printf '%s\n' "$LEDGER_OUT" >&2
+    refuse \
+        "the living ledger is not current — ledger-diff exited nonzero (report above)." \
+        "Restamp or move the rows it names, then re-run:" \
+        "  node scripts/ledger-diff.mjs --require-ledger --assert-state --verify-cites"
+fi
 
 # ── Gate passed ───────────────────────────────────────────
 echo "[deploy-gated] gate PASSED"

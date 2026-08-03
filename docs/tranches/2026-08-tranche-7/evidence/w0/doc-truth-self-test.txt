@@ -1,0 +1,120 @@
+T7-W0 0.3 + 0.4 — check-doc-truth --self-test (the born-RED PROOF)
+SHA   6a180b35 (working tree: scripts/check-doc-truth.mjs only)
+date  2026-08-03
+cmd   node scripts/check-doc-truth.mjs --self-test
+law   every new/fixed row is shown BOTH colours against fixtures. RED cases
+      are docs that lie; GREEN cases are the same claim told true and are
+      BUILT from the derivations, so a cure text that rots reds itself.
+      chromium-alone-claim declares a posture stub — the single-engine arm
+      cannot be reached while playwright.config.ts declares two projects.
+
+────────────────────────────────────────────────────────────────────────
+
+doc-truth --self-test — 27 fixtures over 11 rows
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+
+PASS  permalink-games  expect RED · got RED
+        a clause giving the permalink to a proper subset
+        · README.md:1: names 2: futoshiki, sudoku — Sudoku and Futoshiki share a board over `?board=`;
+
+PASS  permalink-games  expect RED · got RED
+        the unwired claim, over specs that all declare a urlCodec
+        · README.md:1: Their share permalink isn't wired — `writeShareUrl` no-ops.
+
+PASS  permalink-games  expect GREEN · got GREEN
+        the cure: the permalink clause names every wired game
+
+PASS  cited-paths-exist  expect RED · got RED
+        a backticked path and a bare basename, neither in the tree
+        · README.md:1: `games/registry.ts` — nothing in the tree answers to it
+        · README.md:1: `game.ts` — no file by that name
+
+PASS  cited-paths-exist  expect RED · got RED
+        a tree block naming a directory that does not exist
+        · README.md:3: `SudokuBoard/` → web/frontend/SudokuBoard — absent
+
+PASS  cited-paths-exist  expect GREEN · got GREEN
+        the cure: the paths that actually hold the table and the contract
+
+PASS  worker-topology  expect RED · got RED
+        the per-game topology and its count
+        · README.md:1: Each game owns `solver/solver.worker.ts`. Five workers ride one transport.
+        · README.md:1: Five — Each game owns `solver/solver.worker.ts`. Five workers ride one transport.
+
+PASS  worker-topology  expect GREEN · got GREEN
+        the cure: one worker module, web/frontend/src/games/shared/solver/solver.worker.ts
+
+PASS  e2e-total-arithmetic  expect RED · got RED
+        a whole-suite total that is not the sum of the three configs
+        · README.md:1: 369 — 369 tests in all.
+
+PASS  e2e-total-arithmetic  expect GREEN · got GREEN
+        the cure: 325 + 4 + 39 = 368
+
+PASS  constraint-enum-variants  expect RED · got RED
+        the retired `Soft` variant, and an enumeration missing the cages
+        · docs/optimizations.md:1: `ConstraintEnum` names `NotEqual`, `AllDifferent`, `AllDifferentExcept`, `Soft`, `Custom`.
+        · docs/optimizations.md:1: names 4 of 6: NotEqual, AllDifferent, AllDifferentExcept, Custom — missing CageSum, CageProduct
+
+PASS  constraint-enum-variants  expect GREEN · got GREEN
+        the cure: NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom
+
+PASS  frontend-scripts-roster  expect RED · got RED
+        a roster naming two of the frontend gate scripts
+        · README.md:1: names 2 of 14: check-coverage-floor, check-empty-catch
+
+PASS  frontend-scripts-roster  expect RED · got RED
+        a file tree naming one of the root scripts/ entries
+        · README.md:3: the tree names 1: check-doc-truth.mjs — scripts/check-doc-truth.mjs
+
+PASS  frontend-scripts-roster  expect GREEN · got GREEN
+        the cure: all 14 frontend gates and all 6 root entries
+
+PASS  bench-target-roster  expect RED · got RED
+        a bench roster of three, against a manifest declaring more
+        · README.md:1: names 3: assignment, cost_finite_domain, futoshiki — missing gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+
+PASS  bench-target-roster  expect GREEN · got GREEN
+        the cure: all 9 targets
+
+PASS  redirects-rule-count  expect RED · got RED
+        the SPA-fallback-only claim over a two-rule file
+        · README.md:1: `_redirects` carries the SPA fallback only.
+
+PASS  redirects-rule-count  expect RED · got RED
+        a rule count that disagrees with the file
+        · README.md:1: 3 — `_redirects` carries 3 rules.
+
+PASS  redirects-rule-count  expect GREEN · got GREEN
+        the cure: two rules, the 404 guard named
+
+PASS  perf-rig-scenario-roster  expect RED · got RED
+        a scenario sentence that stops short of the table
+        · web/frontend/perf-rig/README.md: absent from the rig's own reference
+        · web/frontend/perf-rig/README.md: absent from the rig's own reference
+
+PASS  perf-rig-scenario-roster  expect GREEN · got GREEN
+        the cure: all 10 keys, each in its partition
+
+PASS  pencil-boil-0.9.2  expect RED · got RED
+        the pin on the line AFTER the package name — the miss this row was fixed for
+        · docs/animation.md:2: ^0.0.1 — `^0.0.1`: the scheduler.
+
+PASS  pencil-boil-0.9.2  expect GREEN · got GREEN
+        the cure: ^0.12.0, wherever in the window it sits
+
+PASS  chromium-alone-claim  expect RED · got RED
+        a single-browser claim against a two-project config
+        · README.md:1: CI runs chromium alone.
+
+PASS  chromium-alone-claim  expect RED · got RED
+        a both-engines claim against a ONE-project config — the case the old early return greened [stub: {"projects":["chromium"]}]
+        · README.md:1: The suite runs chromium + webkit, each with its own lane.
+        · README.md:1: The suite runs chromium + webkit, each with its own lane.
+
+PASS  chromium-alone-claim  expect GREEN · got GREEN
+        the cure under a one-project config: say chromium alone [stub: {"projects":["chromium"]}]
+
+27 PASS / 0 FAIL — every row proved both colours
+
+exit 0

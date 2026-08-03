@@ -29,7 +29,8 @@ invoked by nothing (`git grep` outside `docs/` → one prettier comment). Fixes:
   claim a one-line probe refutes, reds.
 - Wire it into CI and the deploy gate.
 
-**Gate 0.2 (born RED):** at `afc72ba1`, `ledger-diff --assert-state` must red on CH-16
+**Gate 0.2 (born RED):** at `6a180b35` (execution head; the formation pinned `afc72ba1`,
+one docs-only commit back — the reds reproduce at both), `ledger-diff --assert-state` must red on CH-16
 (claims UNWIRED; `permalink.spec.ts` proves wired), CH-29/31/37/56 (name sealed waves), and
 go green only after 0.1 restamps them. The current `VERDICT GREEN` over four proven-false
 rows is the vacuity this arm removes.
@@ -78,10 +79,16 @@ The highest-leverage gate rows collapse many of these into a class:
 **Gate 0.4 (born RED):** each new row reds against its live false claim in the table above; the 13 existing rows stay green.
 
 ### 0.5 — The cite-symbols ruling
-Replace the four false line-number comment cites (`GameControlPanel.vue:1541`, `BoardHost.vue:143`,
-`App.vue:57`, `useFlipGlide.ts:5`) with symbol names. Adopt the convention repo-wide:
-comments cite symbols, which move with the code. No gate needed — the convention is the cure;
-a `check-comment-lines` gate is optional and priced in W6 if the owner wants enforcement.
+Replace the false line-number comment cites with symbol names. Executed 2026-08-03: the
+population re-derived at HEAD was **three** of the four named sites (`GameControlPanel.vue`,
+`BoardHost.vue`, `useFlipGlide.ts` — five cites; the `App.vue:57` entry was itself a phantom,
+App.vue has never carried a `file:NNN` comment cite — the record-cannot-verify-record family
+landing on the wave that closes it) **plus nine further live rows in seven files** the
+execution sweep surfaced (useGameGallery, pencilConfig, KeyboardLegend.vue + its test,
+techniqueEngine, sudoku technique/spec tests, a11y.spec preambles — the last cured in W3's
+scope). Adopt the convention repo-wide: comments cite symbols, which move with the code. No
+gate needed — the convention is the cure; a `check-comment-lines` gate is optional and priced
+in W6 if the owner wants enforcement.
 
 ### 0.6 — Ledger the unledgered
 The fourteen T6-born rows, the PyPI-403 blocker, and the OD residue get homes per

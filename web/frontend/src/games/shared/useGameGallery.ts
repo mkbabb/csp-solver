@@ -53,7 +53,8 @@ const view = ref<View>(parseView());
 const snappedIndex = ref<number>(indexOfId(parseGameId()));
 const enteredFrom = ref<string>(parseGameId());
 
-/** `?view=gallery` added on open, cleared on select/cancel (replaceState — App.vue:80-88). */
+/** `?view=gallery` added on open, cleared on select/cancel (replaceState — the URL-truth
+ *  grammar App's `setGame` writes with). */
 function writeViewParam(open: boolean) {
   if (!hasDom) return;
   const url = new URL(window.location.href);

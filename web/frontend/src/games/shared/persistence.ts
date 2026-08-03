@@ -5,7 +5,12 @@
  * no-ops. The two real ones were 71-of-74-line twins that diverged only where the clue
  * furniture entered the wire; the three stubs hard-coded `boardLink: "absent"` and shipped a
  * `writeShareUrl` that did nothing, so thermo/killer/kenken had a Share affordance over a
- * codec that was never written. The axis collapses here because it was never a per-game axis:
+ * codec that was never written. Those five files are gone: every game's composable now holds
+ * one `createPersistence` and hands `useGameState` a LIVE `writeShareUrl`, with
+ * `spec.urlCodec.key` naming that instance's storage key. Five games, one wire — a Share
+ * writes a `?board=` that decodes, on every one of them.
+ *
+ * The axis collapses here because it was never a per-game axis:
  * what a game alone knows is its KEY, its SIZE MATH, and its CLUE — and the clue already
  * carries its own codec pair on `spec.clues`, because the worker wire needed one.
  *

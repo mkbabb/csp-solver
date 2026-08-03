@@ -4,7 +4,7 @@
 
 `Box<dyn Constraint<D>>` imposes a vtable indirection on every `revise()` call. AC-3 invokes `revise()` thousands of times per solve -- for a hard 9x9 Sudoku, tens of thousands. The indirect call defeats branch prediction and prevents inlining.
 
-`ConstraintEnum<D>` replaces the trait object with an enum: `NotEqual`, `AllDifferent`, `AllDifferentExcept`, `Soft`, `Custom`. The first two are the overwhelmingly common cases. `scope()`, `check()`, and `revise()` are all `#[inline]` match arms on the enum -- the compiler emits a direct branch to the concrete implementation. `Custom` retains a `Box<dyn Constraint<D>>` for extensibility but rarely appears on the hot path. (The former `Lambda` variant was excised; it had zero construction sites.)
+`ConstraintEnum<D>` replaces the trait object with an enum: `NotEqual`, `AllDifferent`, `AllDifferentExcept`, `CageSum`, `CageProduct`, `Custom`. The first two are the overwhelmingly common cases. `scope()`, `check()`, and `revise()` are all `#[inline]` match arms on the enum -- the compiler emits a direct branch to the concrete implementation. `Custom` retains a `Box<dyn Constraint<D>>` for extensibility but rarely appears on the hot path. (The former `Lambda` variant was excised; it had zero construction sites.)
 
 Under profiling, constraint revision dominates self-time -- the _productive_ work of domain pruning rather than dispatch overhead. The dispatch cost the enum removes is the vtable indirection, not the revision work itself.
 

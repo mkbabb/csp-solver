@@ -102,7 +102,8 @@ node summarize.mjs <runId> [<runId>…]
 ```
 
 Scenarios, in the order they are state-safe (this is the default set):
-`idle3s,deal,undoBurst,solveCelebration,galleryGlide,themeToggle`, plus `domDump` /
+`idle3s,deal,undoBurst,solveCelebration,galleryGlide,themeToggle`, plus `hoverSweep` and
+`solveWindow` (ungated — pass them by name or they don't run), `domDump` /
 `styleDump` (diagnostic) and `rafCeiling` (the app-free control page).
 
 Query knobs: `__attempts` (default 3), `__settle` (default 1200 ms), `__theme=light|dark|auto`,

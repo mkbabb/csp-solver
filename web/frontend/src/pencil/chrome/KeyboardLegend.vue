@@ -17,8 +17,8 @@
  *    the estate binds were advertised nowhere. The single-key rows now RENDER the policy's
  *    own table (`SINGLE_KEY_SHORTCUTS`) instead of re-spelling it — one string, so a key
  *    cannot again exist unguarded or unnamed.
- *  · redo printed `⇧ Z`. Shift+Z alone does nothing: `GameBoard.vue:458-466` reaches the
- *    `z` case only under `ctrlKey || metaKey` and THEN branches on shift. The chord is
+ *  · redo printed `⇧ Z`. Shift+Z alone does nothing: `GameBoard`'s `onBoardKeydown` reaches
+ *    its `z` case only under `ctrlKey || metaKey` and THEN branches on shift. The chord is
  *    ⌘/Ctrl + ⇧ + Z, and that is what it now prints.
  *
  * The chorded rows stay hand-written: they are the board's own bindings, not the policy's.

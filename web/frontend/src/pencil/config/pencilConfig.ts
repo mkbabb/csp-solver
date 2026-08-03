@@ -416,8 +416,10 @@ export function wobblePoseId(presetId: string, pose: number): string {
 
 // ── Draw-in timing presets ────────────────────────────────────────
 
-// Only gridFrame/gridSubgrid/gridCell/glyph have consumers (usePathAnimation.ts:90-92,
-// HandwrittenGlyph.vue:155-156). The former `solveCell` (500/120) and `logo` (1800/280)
+// Only gridFrame/gridSubgrid/gridCell/glyph have consumers, four files' worth:
+// `usePathAnimation`'s `animateDrawIn` (the three grid tiers), `HandwrittenGlyph`'s reveal
+// draw-in and `DifficultyTally`'s tally stagger (glyph), `GameGallery`'s deal reveal
+// (gridFrame's duration). The former `solveCell` (500/120) and `logo` (1800/280)
 // presets were dead config — zero consumers, deleted per design-refinement.md §1.2 / §7.1.
 // The logo actually reveals via a 1.2 s clip-path wipe (HandwrittenLogo.vue), not a stroke
 // draw-in; the celebration defines its own timing (see CELEBRATION), not a resurrected preset.

@@ -17,7 +17,8 @@ Both the `Changed` and `Unsatisfiable` arms push the revised constraint's whole 
 
 - **NotEqual** checks if either variable's domain is a singleton. If variable X is fixed to value `v`, it removes `v` from Y's domain (and vice versa). O(1) for `BitsetDomain` -- a single bit-clear operation.
 - **AllDifferent** propagates all singleton values to peers -- for each assigned variable in the scope, remove its value from every unassigned variable's domain. It then invokes the GAC propagator (below) whenever the live-participant count is at least `GAC_MIN_PARTICIPANTS` (3).
-- **AllDifferentExcept / Soft / Custom** fall back to pairwise support checking: for each value in a variable's domain, test whether some consistent assignment of the other variables exists. Uses a reusable `Vec<D::Value>` buffer to avoid per-call allocation.
+- **CageSum / CageProduct** run n-ary bounds propagation: each cell's domain is tightened by the residual target, a value pruned only when that target can't be met under any choice of the other cells' current bounds. Bounds consistency is sound -- it never removes a value that participates in a full solution -- but not domain-complete; `tests/cage_revise.rs` is the revise-level differential oracle on exactly that.
+- **AllDifferentExcept / Custom** fall back to pairwise support checking: for each value in a variable's domain, test whether some consistent assignment of the other variables exists. Uses a reusable `Vec<D::Value>` buffer to avoid per-call allocation.
 
 When `revise()` returns `Changed`, only the constraint's precomputed neighbors (constraints sharing at least one variable) are enqueued -- not the entire constraint set. The adjacency graph computes these neighbor lists at `finalize()` time. Work is proportional to the number of affected constraints, not the total number.
 

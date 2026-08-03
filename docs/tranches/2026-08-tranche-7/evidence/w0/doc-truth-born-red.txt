@@ -1,0 +1,189 @@
+T7-W0 0.3 (gate half) + 0.4 — check-doc-truth BORN-RED BANK
+SHA   6a180b35 (working tree: scripts/check-doc-truth.mjs only)
+date  2026-08-03
+cmd   node scripts/check-doc-truth.mjs
+law   nine NEW rows + the two FIXED rows red on their live false claims;
+      the eleven untouched rows stay green. 22 rows total (13 + 9).
+
+────────────────────────────────────────────────────────────────────────
+
+doc-truth — 22 rows, every figure re-derived at run time
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+head  6a180b35
+node  v26.0.0 darwin/arm64
+when  2026-08-03T05:58:41.266Z
+
+GREEN  frontend-readme-two-games
+        derived: 5 games registered (sudoku, futoshiki, thermo, killer, kenken) · pencil-boil ^0.12.0 · lint script "prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/"
+
+GREEN  root-readme-e2e-counts
+        derived: 325 tests in 17 files (default) · 22 .spec.ts on disk · golden 4/1 · throttle 39/4
+
+GREEN  chromium-alone-claim
+        derived: playwright projects: chromium + webkit · ci installs: chromium + webkit
+
+GREEN  lean-wasm-4-sites
+        derived: 121,137 B ← csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+
+GREEN  ci-band-comment-406
+        derived: enforced bands — full fail >240,000 B / warn >230,000 B · lean fail >127,500 B; lean artifact 121,137 B; canon-declared stale: 222,436 B (docs/benchmarks.md:56)
+
+GREEN  sudoku-md-sections
+        derived: games registered: sudoku, futoshiki, thermo, killer, kenken — each owed a section in docs/sudoku.md
+
+GREEN  ofl-licenses-figures
+        derived: 3 woff2 subsets, 21,724 B total (firacode-subset.woff2 3,624 B, fraunces-subset.woff2 13,788 B, patrickhand-subset.woff2 4,312 B) · OFL texts: OFL-FiraCode.txt, OFL-Fraunces.txt, OFL-PatrickHand.txt · paired true
+
+GREEN  install-pin-0.5
+        derived: csp-solver crate version 0.6.0 → Install pin "0.6" · consumer surfaces carry no outbound link into docs/precepts/
+
+RED    pencil-boil-0.9.2
+        derived: web/frontend/package.json dependencies["@mkbabb/pencil-boil"] = ^0.12.0
+        docs/animation.md:6
+          expected: pencil-boil ^0.12.0 (web/frontend/package.json)
+          got:      ^0.9.2 — `^0.9.2`: the unified rAF scheduler, `usePrefersReducedMotion()`,
+
+GREEN  test-count-208-vs-204
+        derived: 208 native #[test] attributes (csp-solver/src + csp-solver/tests, comments elided) · 29 #[wasm_bindgen_test] in the wasm crate (cfg'd to wasm32, not host-run) · 28 test binaries (csp-solver + csp-solver/wasm lib targets + integration files)
+
+GREEN  make-wasm-recipe
+        derived: csp-solver/wasm/Makefile:33 runs --no-default-features --profile wasm-release --scope mkbabb --target web — LEAN; 5 families registered (sudoku, futoshiki, thermo, killer, kenken)
+
+GREEN  ci-lane-count
+        derived: 18 jobs in .github/workflows/ci.yml (lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, wasm-publish-dryrun, frontend, fe-unit, boundary, e2e, perf-subset, iai, cargo-audit, evidence-policy, doc-truth, npm-audit)
+
+GREEN  iai-golden-figure
+        derived: 1,529,452 instructions enforced ±2.0% — csp-solver/benches/iai_queens.baseline, gated by .github/workflows/ci.yml's iai lane over bench iai_queens
+
+RED    permalink-games
+        derived: 5/5 game specs declare a urlCodec under web/frontend/src/games — wired: futoshiki, kenken, killer, sudoku, thermo
+        README.md:62
+          expected: every wired game named, or none — the permalink is wired for all 5 (futoshiki, kenken, killer, sudoku, thermo)
+          got:      names 2: futoshiki, sudoku — Sudoku and Futoshiki share a board over `?board=`;
+        web/frontend/README.md:160
+          expected: no unwired-permalink claim — all 5 registered games declare a urlCodec (futoshiki, kenken, killer, sudoku, thermo)
+          got:      `?view=gallery` deep-links the picker, and sudoku and futoshiki round-trip a whole board through `?board=` (base64url) alongside `?size=`/`?difficulty=`. Thermo, killer, and kenken persist to their own `localStorage` keys; their share permalink isn't wired
+        web/frontend/README.md:160
+          expected: every wired game named, or none — the permalink is wired for all 5 (futoshiki, kenken, killer, sudoku, thermo)
+          got:      names 2: futoshiki, sudoku — `?view=gallery` deep-links the picker, and sudoku and futoshiki round-trip a whole board through `?board=` (base64url) alongside `?size=`/`?difficulty=`.
+
+RED    cited-paths-exist
+        derived: 1006 source basenames indexed · 8 docs scanned (README.md, docs/algorithms.md, docs/animation.md, docs/bbnf-integration.md, docs/benchmarks.md, docs/optimizations.md, docs/sudoku.md, web/frontend/README.md) · roots: repo, web/frontend, web/frontend/src, csp-solver, csp-solver/src, the doc's own dir · aliases @games/ @pencil/ @/
+        web/frontend/README.md:114
+          expected: a cited path that resolves — roots: repo, web/frontend, web/frontend/src, csp-solver, csp-solver/src, web/frontend
+          got:      `games/registry.ts` — nothing in the tree answers to it
+        web/frontend/README.md:118
+          expected: a source file named game.ts somewhere in the tree
+          got:      `game.ts` — no file by that name
+        web/frontend/README.md:167
+          expected: a cited path that resolves — roots: repo, web/frontend, web/frontend/src, csp-solver, csp-solver/src, web/frontend
+          got:      `solver/solver.worker.ts` — nothing in the tree answers to it
+        web/frontend/README.md:73
+          expected: a file tree that names only paths that exist
+          got:      `registry.ts` → web/frontend/src/games/registry.ts — absent
+        web/frontend/README.md:75
+          expected: a file tree that names only paths that exist
+          got:      `SudokuBoard/` → web/frontend/src/games/sudoku/SudokuBoard — absent
+        web/frontend/README.md:75
+          expected: a file tree that names only paths that exist
+          got:      `SudokuCell/` → web/frontend/src/games/sudoku/SudokuCell — absent
+        web/frontend/README.md:75
+          expected: a file tree that names only paths that exist
+          got:      `ControlPanel/` → web/frontend/src/games/sudoku/ControlPanel — absent
+        web/frontend/README.md:77
+          expected: a file tree that names only paths that exist
+          got:      `FutoshikiBoard/` → web/frontend/src/games/futoshiki/FutoshikiBoard — absent
+        web/frontend/README.md:77
+          expected: a file tree that names only paths that exist
+          got:      `technique/` → web/frontend/src/games/futoshiki/technique — absent
+        web/frontend/README.md:78
+          expected: a file tree that names only paths that exist
+          got:      `ThermoTube/` → web/frontend/src/games/thermo/ThermoTube — absent
+        web/frontend/README.md:79
+          expected: a file tree that names only paths that exist
+          got:      `KillerCage/` → web/frontend/src/games/killer/KillerCage — absent
+        web/frontend/README.md:80
+          expected: a file tree that names only paths that exist
+          got:      `KenKenCage/` → web/frontend/src/games/kenken/KenKenCage — absent
+
+RED    worker-topology
+        derived: 1 worker module(s) under web/frontend/src: web/frontend/src/games/shared/solver/solver.worker.ts
+        README.md:28
+          expected: no per-game worker claim — the tree carries ONE worker module (web/frontend/src/games/shared/solver/solver.worker.ts), shared by every game
+          got:      │   ├── src/games/               sudoku/, futoshiki/, thermo/, killer/, kenken/ + shared/ (each with its own solver/ Worker)
+        README.md:62
+          expected: no per-game worker claim — the tree carries ONE worker module (web/frontend/src/games/shared/solver/solver.worker.ts), shared by every game
+          got:      Vue 3 Composition API, no router, no state library. `src/pencil/` carries the hand-drawn aesthetic; `src/games/{sudoku,futoshiki,thermo,killer,kenken}/` are the surfaces, each with its own `solver/` Worker module and cross-boundary imports ESLint-enforced. Affordances: the carousel game-select, an undo spine (one shared history, cap 200), a named-technique hint, the player's own pencil marks (Snyder corner/center notation) beside the solver's peek-gated engine marks, error-check assists (off / on-demand / live, on-demand the default and never a lives counter), hold-to-peek, and board permalinks. Sudoku and Futoshiki share a board over `?board=`; Thermo, Killer, and KenKen persist to localStorage in v1. Animation runs on `@mkbabb/pencil-boil`'s scheduler and defers to `prefers-reduced-motion`; the grid is an ARIA grid with keyboard navigation. Fonts are three self-hosted woff2 subsets under the SIL Open Font License, 21,724 B total.
+        web/frontend/README.md:7
+          expected: no per-game worker claim — the tree carries ONE worker module (web/frontend/src/games/shared/solver/solver.worker.ts), shared by every game
+          got:      Solving runs in-browser via `@mkbabb/csp-solver-wasm` inside a per-game Worker;
+        web/frontend/README.md:167
+          expected: no per-game worker claim — the tree carries ONE worker module (web/frontend/src/games/shared/solver/solver.worker.ts), shared by every game
+          got:      Each game owns `solver/solver.worker.ts`, an ES-module Worker that top-level-imports
+        web/frontend/README.md:169
+          expected: 1 (one) worker module — web/frontend/src/games/shared/solver/solver.worker.ts
+          got:      Five — search tail never blocks the boil. Five workers and five per-game protocols ride one
+
+RED    e2e-total-arithmetic
+        derived: default 325/17 + golden 4/1 + throttle 39/4 = 368 tests in 22 files
+        README.md:99
+          expected: 368 tests in all — 325 (default) + 4 (golden) + 39 (throttle)
+          got:      354 — #      22 spec files on disk, 354 tests in all.
+
+RED    constraint-enum-variants
+        derived: 6 ConstraintEnum variants in csp-solver/src/constraint/dispatch.rs: NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom
+        docs/algorithms.md:20
+          expected: no `Soft` variant — csp-solver/src/constraint/dispatch.rs carries NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom and nothing else
+          got:      - **AllDifferentExcept / Soft / Custom** fall back to pairwise support checking: for each value in a variable's domain, test whether some consistent assignment of the other variables exists. Uses a reusable `Vec<D::Value>` buffer to avoid per-call allocation.
+        docs/optimizations.md:7
+          expected: no `Soft` variant — csp-solver/src/constraint/dispatch.rs carries NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom and nothing else
+          got:      `ConstraintEnum<D>` replaces the trait object with an enum: `NotEqual`, `AllDifferent`, `AllDifferentExcept`, `Soft`, `Custom`. The first two are the overwhelmingly common cases. `scope()`, `check()`, and `revise()` are all `#[inline]` match arms on the enum -- the compiler emits a direct branch to the concrete implementation. `Custom` retains a `Box<dyn Constraint<D>>` for extensibility but rarely appears on the hot path. (The former `Lambda` variant was excised; it had zero construction sites.)
+        docs/optimizations.md:7
+          expected: every variant named where the enum is enumerated: NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom
+          got:      names 4 of 6: NotEqual, AllDifferent, AllDifferentExcept, Custom — missing CageSum, CageProduct
+        csp-solver/README.md:158
+          expected: every variant named where the enum is enumerated: NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom
+          got:      names 3 of 6: NotEqual, AllDifferent, Custom — missing AllDifferentExcept, CageSum, CageProduct
+
+RED    frontend-scripts-roster
+        derived: 14 in web/frontend/scripts (check-coverage-floor.mjs, check-empty-catch.mjs, check-font-coverage.mjs, check-golden-bytes.mjs, check-ink-pressure.mjs, check-prod-shake.mjs, check-pw-projects.mjs, check-pw-retries.mjs, check-support-floor.mjs, check-theme-tokens.mjs, check-unit-count.mjs, dist-identity.mjs, golden-magnitude.mjs, tdz-probe.mjs) · 6 in scripts (check-doc-truth.mjs, check-evidence-policy.mjs, ci-conclusion.sh, deploy-gated.sh, dev.sh, ledger-diff.mjs)
+        README.md:31
+          expected: every entry of scripts/ in the file tree, or the directory as one node — it holds 6: check-doc-truth.mjs, check-evidence-policy.mjs, ci-conclusion.sh, deploy-gated.sh, dev.sh, ledger-diff.mjs
+          got:      the tree names 1: dev.sh — scripts/dev.sh
+        web/frontend/README.md:52
+          expected: every file in web/frontend/scripts named, or none — the directory holds 14: check-coverage-floor.mjs, check-empty-catch.mjs, check-font-coverage.mjs, check-golden-bytes.mjs, check-ink-pressure.mjs, check-prod-shake.mjs, check-pw-projects.mjs, check-pw-retries.mjs, check-support-floor.mjs, check-theme-tokens.mjs, check-unit-count.mjs, dist-identity.mjs, golden-magnitude.mjs, tdz-probe.mjs
+          got:      names 4 of 14: check-font-coverage, check-golden-bytes, check-ink-pressure, check-prod-shake
+
+RED    bench-target-roster
+        derived: 9 [[bench]] targets in csp-solver/Cargo.toml: assignment, cost_finite_domain, futoshiki, gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+        README.md:22
+          expected: every bench target named, or fewer than three — csp-solver/Cargo.toml declares 9: assignment, cost_finite_domain, futoshiki, gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+          got:      names 7: assignment, cost_finite_domain, iai_queens, lattice, map_coloring, queens, sudoku — missing futoshiki, gac_ab
+        docs/benchmarks.md:66
+          expected: every bench target named, or fewer than three — csp-solver/Cargo.toml declares 9: assignment, cost_finite_domain, futoshiki, gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+          got:      names 5: assignment, cost_finite_domain, lattice, queens, sudoku — missing futoshiki, gac_ab, iai_queens, map_coloring
+        csp-solver/README.md:234
+          expected: every bench target named, or fewer than three — csp-solver/Cargo.toml declares 9: assignment, cost_finite_domain, futoshiki, gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+          got:      names 7: assignment, cost_finite_domain, iai_queens, lattice, map_coloring, queens, sudoku — missing futoshiki, gac_ab
+
+RED    redirects-rule-count
+        derived: 2 rule(s) in web/frontend/public/_redirects: /assets/* /404.html 404 · /* /index.html 200
+        README.md:41
+          expected: no "only" claim about _redirects — it carries 2 rules: /assets/* /404.html 404 · /* /index.html 200
+          got:      Static SPA (Cloudflare Pages, sudoku.babb.dev) ── _redirects: SPA fallback only
+        README.md:116
+          expected: no "only" claim about _redirects — it carries 2 rules: /assets/* /404.html 404 · /* /index.html 200
+          got:      A Cloudflare Pages static deploy. Solving and generation never leave the visitor's browser, so there's no server-side solve path to secure. `_headers` carries CSP/HSTS/X-Frame-Options; `_redirects` carries the SPA fallback only.
+
+RED    perf-rig-scenario-roster
+        derived: 10 SCENARIOS keys in web/frontend/perf-rig/probe.js (domDump, styleDump, idle3s, deal, solveCelebration, galleryGlide, themeToggle, undoBurst, hoverSweep, solveWindow) · driver default set: idle3s,deal,undoBurst,solveCelebration,galleryGlide,themeToggle · diagnostic-only: domDump, styleDump · CI-gated: idle3s
+        web/frontend/perf-rig/README.md
+          expected: the scenario `hoverSweep` named — web/frontend/perf-rig/probe.js declares it
+          got:      absent from the rig's own reference
+        web/frontend/perf-rig/README.md
+          expected: the scenario `solveWindow` named — web/frontend/perf-rig/probe.js declares it
+          got:      absent from the rig's own reference
+
+10 RED / 12 GREEN — doc canon disagrees with the tree
+
+exit 1

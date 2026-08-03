@@ -4,8 +4,9 @@ Vue 3 + TypeScript + Tailwind v4 single-page app with a hand-drawn pencil-and-pa
 aesthetic (custom SVG glyphs, path-based grid boil, stroke-dasharray draw-ins). No
 router, no state library. Five games — sudoku, futoshiki, thermo, killer, kenken —
 share one aesthetic layer, one board/scene/controls shell, and one solver transport.
-Solving runs in-browser via `@mkbabb/csp-solver-wasm` inside a per-game Worker;
-there's no backend.
+Solving runs in-browser via `@mkbabb/csp-solver-wasm` in one Worker every game shares;
+the only server the deploy carries is the multiplayer relay, and a solo page never
+opens it.
 
 Shared animation primitives come from
 [`@mkbabb/pencil-boil`](https://github.com/mkbabb/pencil-boil) `^0.12.0`. The motion
@@ -20,13 +21,13 @@ npm run wasm             # build @mkbabb/csp-solver-wasm into pkg/ — the file:
 npm run dev              # Vite dev server (:3000)
 npm run build            # vue-tsc -b && vite build (a prebuild hook re-runs `npm run wasm`)
 npm run preview          # preview the production build
-npm run lint             # prettier --check src/
+npm run lint             # prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/
 npm run lint:eslint      # ESLint (boundary + depth rules, correctness)
 npm run lint:knip        # knip — dead files, exports, deps
 npm run test:unit        # Vitest (jsdom, src/**/*.test.ts)
 npm run test:e2e         # Playwright — chromium + webkit
 npm run test:golden      # visual goldens (DPR2, sRGB-pinned, reduced motion)
-npm run deploy           # build + wrangler pages deploy dist
+npm run deploy           # bash ../../scripts/deploy-gated.sh — no fresh green CI conclusion, no deploy
 ```
 
 `engines`: Node ≥24, npm ≥11.
@@ -49,7 +50,7 @@ frontend/
 ├── playwright-throttle.config.ts   # throttled probes on their own build + preview (:4188)
 ├── eslint.config.js                # the boundary + pencil-depth rules (see Boundaries)
 ├── knip.json                       # dead-code gate
-├── scripts/                        # check-ink-pressure · check-golden-bytes · check-font-coverage · check-prod-shake
+├── scripts/                        # the frontend gate scripts — 14 .mjs, most behind an npm run lint:*/test:*
 ├── e2e/                            # specs + goldens/
 └── src/
     ├── App.vue                     # the shell: masthead, gallery view, the mount fold, ?game=/?view= truth
@@ -70,14 +71,15 @@ frontend/
     │   ├── dev/                    # FilterTuner + rafInstrumentation — DEV-gated, 0 bytes in prod
     │   └── types.ts
     └── games/
-        ├── registry.ts             # defineGame + the GAMES card table the gallery reads
-        ├── shared/                 # the shells and machines every game rides (below)
-        ├── sudoku/                 # SudokuGame/Poster, SudokuBoard/ (+ SudokuCell/), ControlPanel/, composables/,
-        │                           #   solver/, technique/, data/templates.ts (generated — never hand-edit)
-        ├── futoshiki/              # same shape; FutoshikiBoard/ carries the inequality carets, plus its own technique/
-        ├── thermo/                 # ThermoGame/Poster/Board + ThermoTube/
-        ├── killer/                 # KillerGame/Poster/Board + KillerCage/
-        └── kenken/                 # KenKenGame/Poster/Board + KenKenCage/
+        ├── cards.ts                # the GAMES card table the gallery reads
+        ├── shared/                 # the shells, the machines, and the one solver every game rides (below)
+        ├── sudoku/                 # spec.ts + SudokuPoster.vue, composables/, README.md,
+        │                           #   data/templates.ts (generated — never hand-edit)
+        ├── futoshiki/              # same shape, plus CaretOverlay.vue + FutoshikiCaret.vue for the
+        │                           #   inequality carets and clue.ts to encode them
+        ├── thermo/                 # spec.ts + ThermoPoster.vue, ThermoTube.vue, clue.ts, composables/
+        ├── killer/                 # spec.ts + KillerPoster.vue, clue.ts, composables/
+        └── kenken/                 # spec.ts + KenKenPoster.vue, clue.ts, composables/
 ```
 
 `games/shared` is the game-agnostic floor:
@@ -92,8 +94,9 @@ frontend/
   `techniqueEngine` + `techniqueVoice`, `useControlsDrawer` and `useFlipGlide`
   (FLIP-on-WAAPI), `useGameGallery`, `useStagingBridge`, `useLiveFace`,
   `useKeyboardViewport`, `useCoarsePointer`, `honestHaptics`.
-- **`shared/solver/`** — `transport.ts` (the Worker singleton, pending map, prewarm,
-  bounded respawn), `protocol.ts`, `solverError.ts`, `classifyError.ts`,
+- **`shared/solver/`** — `solver.worker.ts` (the estate's one Worker module),
+  `transport.ts` (the Worker singleton, pending map, prewarm, bounded respawn),
+  `client.ts`, `protocol.ts`, `wire.ts`, `solverError.ts`, `classifyError.ts`,
   `describeError.ts`.
 
 ## Architecture
@@ -106,18 +109,20 @@ App.vue
 ├── view === 'playing'
 │   ├── HandwrittenLogo         # the wordmark IS the picker's handle — a click folds the board into the gallery
 │   └── <scene>                 # one game mounted at a time: sudoku eager (main chunk), the rest lazy
-│       └── GameScene → GameBoard (#cells + #overlay slots) · GameControlPanel
+│       └── GameShell → GameScene → BoardHost → GameBoard (#cells + #overlay slots) · GameControlPanel
 └── view === 'gallery'
     └── GameGallery             # the five cards; flanks are static posters, the centre face is the live board
 ```
 
-`GAMES` in `games/registry.ts` is the registration table: each card names its id
-(`?game=` token), its wordmark, its size/level sub-line drawn from the game's own
-selector constants, its `localStorage` key, and the poster + scene loaders. A game
-drops in by pushing one card; `App.vue` resolves the scene from it and nothing else
-changes. `defineGame` pins the contract each game dir declares in its `game.ts` — the
-model composable, cell furniture, clue furniture, control sections, solver payloads.
-Every field is a component slot or a per-game function, never a config flag.
+`GAMES` in `games/cards.ts` is the registration table: each card names its id
+(`?game=` token), its wordmark, the size/difficulty bands it stages off the shared
+selector vocabulary, its `localStorage` key, and the poster + spec loaders. A game
+drops in by pushing one card; `App.vue` hands the row's spec to `GameShell` and nothing
+else changes. `defineGame` pins the contract each game dir declares in its `spec.ts` —
+the model composable, the board grammar, the clue seam, the cell furniture, the solver
+spec, the url codec, the deal. The poster stays on the card row, so the gallery draws
+five thumbnails without loading five specs. Every field is a component slot or a
+per-game function, never a config flag.
 
 One live board ever. The gallery doesn't clone it: `GameScene` wraps its board host in
 a `<Teleport>` whose target `App.vue` points at the centre card's face, so the mounted
@@ -127,12 +132,16 @@ home DOM.
 
 ## Boundaries
 
-`eslint.config.js` enforces the layering mechanically:
+`eslint.config.js` enforces the layering mechanically. Rules 2 and 3 aren't written
+there: `eslint.boundary.config.js` generates them from the game list on disk, and
+`eslint.config.js` imports them.
 
 1. `src/pencil/**` never imports `src/games/**`. The aesthetic layer draws whatever
    generic, already-erased data it's handed via props; it never reaches into domain
    state. The reverse is expected and unrestricted.
-2. `src/games/sudoku/**` and `src/games/futoshiki/**` never import each other.
+2. No game imports another. `crossGameRules` derives the whole matrix — n×(n−1) = 20
+   ordered pairs over the five directories carrying a `spec.ts` — so a sixth family is
+   bound the moment its spec lands, with no edit to the config.
 3. `src/games/shared/**` never imports a concrete game — the shared floor stays
    game-agnostic.
 4. Depth: `src/games/**`, `App.vue`, and `main.ts` may not reach 4+ levels into pencil
@@ -140,9 +149,11 @@ home DOM.
    (`@pencil/<subsystem>/<Component>/<Component>.vue`) is the deepest legal reach;
    flat modules sit shallower.
 
-The variants ride their base game's furniture — thermo and killer import sudoku's
-cell, tier constants, and technique module; kenken imports futoshiki's. Rule 2's glob
-set names the sudoku/futoshiki pair alone, so those edges are convention, not lint.
+The matrix runs twice: folded into `npm run lint:eslint` (each generated block carrying
+the depth pattern too) and standalone as `npm run lint:boundary`, its own CI lane, which
+throws rather than lint vacuously green if it reads fewer than 2 families. Nothing the
+variants share comes from a sibling — the cell, the tier constants, and the technique
+engine all sit in `src/games/shared/**`, and no cross-game import survives in the tree.
 
 ## State
 
@@ -156,22 +167,24 @@ controls drawer, the gallery view, the staging bridge, the live face, the dirty
 register — lives in module-level singletons rather than a store.
 
 URLs carry the truth the app boots from: `?game=` names the mounted game,
-`?view=gallery` deep-links the picker, and sudoku and futoshiki round-trip a whole
-board through `?board=` (base64url) alongside `?size=`/`?difficulty=`. Thermo, killer,
-and kenken persist to their own `localStorage` keys; their share permalink isn't wired
-— `boardLink` reads `"absent"` and `writeShareUrl` no-ops — so those boards survive a
-reload but not a shared link.
+`?view=gallery` deep-links the picker, and all five games — sudoku, futoshiki, thermo,
+killer, kenken — round-trip a whole board through `?board=` (base64url) alongside
+`?size=`/`?difficulty=`. Each also persists to its own `localStorage` key, so a board
+survives a reload as readily as a send.
 
 ## Solve path
 
-Each game owns `solver/solver.worker.ts`, an ES-module Worker that top-level-imports
-`@mkbabb/csp-solver-wasm` and runs generate/solve/propagate off the main thread, so the
-search tail never blocks the boil. Five workers and five per-game protocols ride one
-shared transport: the memoized singleton, the pending map, prewarm, and a bounded
-respawn — a worker-level `error` rejects every in-flight call with `WORKER_FAILURE` and
-retires the singleton, so the next call instantiates a fresh worker rather than posting
-into a corpse. There's no network solve path; the shipped deploy has zero server
-dependency.
+`games/shared/solver/solver.worker.ts` is the tree's only Worker module — an ES-module
+Worker that top-level-imports `@mkbabb/csp-solver-wasm` and runs generate/solve/propagate
+off the main thread, so the search tail never blocks the boil. Five per-game protocols
+ride one shared transport: the memoized singleton, the pending map, prewarm, and a
+bounded respawn — a worker-level `error` rejects every in-flight call with
+`WORKER_FAILURE` and retires the singleton, so the next call instantiates a fresh worker
+rather than posting into a corpse. There's no network solve path: the search never leaves
+the tab. The deploy isn't server-free, though: `public/_headers` grants one `connect-src`
+to `wss://sudoku-relay.mkbabb.workers.dev`, the co-deployed `web/relay` Durable Object
+the multiplayer session speaks NIP-01 to. A solo page opens no socket at all, because
+that transport is `import()`ed at join.
 
 `solveBoard` caps the client search at a size-scaled node budget (larger boards
 legitimately explore more); exhausting it surfaces a typed `BUDGET_EXCEEDED`

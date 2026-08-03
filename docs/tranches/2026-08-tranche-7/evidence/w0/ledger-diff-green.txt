@@ -1,0 +1,173 @@
+T7-W0 0.1 + 0.6 — GATE 0.2, GREEN AFTER THE RESTAMP
+===================================================
+banked      2026-08-03  (re-banked after id-grammar widening)
+SHA         6a180b35 + the in-progress W0 tree (LEDGER.md and PRECEPTS.md reworked; the chair commits)
+command     node scripts/ledger-diff.mjs --assert-state --verify-cites
+exit        0
+
+WHAT THE RE-BANK CHANGED
+  The first bank of this file was green on a grammar narrower than the estate's own ids. ANY_ID_CELL
+  wanted `-\d+` at a cell's end, so `T7-R15`, `T7-R13a`, `P-5e` and `EL-3a` never parsed as rows: the
+  report printed "§6 … 32 rows" over 62 on disk and left 30 rows outside every arm — a false number
+  inside the instrument's own output, which is the class the instrument exists to catch. Three fixes,
+  none of them a weakened arm:
+    · The id grammar reads the population, not a guess at it: a family, an ordinal that may carry the
+      recap `R` (`T7-R13`) and a lettered sub-row (`P-5e`, `EL-3a`), and slash-lists (`CH-47/48/49`).
+      An input cell may also carry the row's own title, which is how DISPOSITIONS §3-§7 writes it.
+      §6 now counts 62 — 19 + 11 + 13 + 19, its four subsections.
+    · ROW_FAMILIES widened from CH/PR/U/S to every family the estate tables: + O, P, N, B, D, Q, EL,
+      BAL and the tranche-scoped `T<n>-R`. The ORPHAN arm's input went 48 row ids → 142, the whole
+      DISPOSITIONS corpus (120 rows, CH-47/48/49 expanding to three, plus the 20-ballot sheet).
+    · --owner-block stopped truncating and stopped printing "(unstated)" over a firing default. A
+      balloted row carries a default, not a trigger; the block prints it, labeled `default:`. A close
+      record embeds this output verbatim, so a cell cut at a column width is a state amputated
+      mid-phrase — "BALLOT → BAL-01, dispatched 2026-08-03," was the whole of CH-35's state.
+
+  THE WIDENED ARM'S OWN FINDING, cured in the ledger and not in the gate: nine of the twelve
+  formation-defect rows of DISPOSITIONS §7 were named in no wave file and no ledger row, so they
+  reached no disposition in the corpus and orphaned. The ledger already carried the idiom for the
+  other three — CH-41 names N-03, CH-37 names N-10, CH-65 names N-01 — so each of the nine now sits
+  with the act that discharges it: N-02 and N-11 at CH-65, N-04 at B-1, N-05 in the restamp
+  paragraph, N-06 at T7-R08, N-07/N-08/N-12 at U-11, N-09 at P-1. No row was added, no verdict moved.
+
+WHAT CHANGED BETWEEN THE FIRST TWO BANKS (unaltered, and still the gate's provenance)
+  ledger-diff-born-red.txt, same SHA, same command, exit 1 on fourteen findings. Every one is
+  answered by an act, not by a weakened arm — the gate is byte-identical between the runs:
+    · CH-29/31/37/41/56/57/58/61  TERMINALITY → moved to LEDGER §2 with a terminal state and a
+      landing cite, per DISPOSITIONS §1.
+    · CH-39/45  TERMINALITY → restamped BALLOT → BAL-04 / BAL-03, dispatched 2026-08-03, the
+      default firing at the T7 WGATE. No sealed-wave token survives in either State cell.
+    · CH-53/59  TERMINALITY → refolded onto this tranche's own waves (T7-W6, T7-W7).
+    · CH-16     PROBE → the row LEAVES §1 for §2 as CLOSED-landed 78448760. Restamping in place
+      would not have greened it, by design: the probe reads the tree, and the tree says wired.
+    · CH-41     CITES → the ci.yml:553 line-cite is gone; the row names the ink-pressure STEP
+      instead (ruling 2, N-03). Re-grepped 2026-08-03: lint:ink runs at ci.yml:699 and is
+      referenced again at :744.
+  §1 went 31 rows → 10: the four ballots, the four T7 folds, and the two surviving banked flake
+  classes. Twenty-one rows landed in §2; §6 opened with the sixty-two unledgered rows of
+  DISPOSITIONS §3-§6. Nothing was deleted — every id that left §1 is tabled later, which is what
+  keeps the ORPHAN arm from firing in the TERMINALITY arm's place.
+
+ledger-diff — 2026-08-tranche-7 disposition completeness + ledger currency
+==============================================================================
+generated   2026-08-03T06:40:13.790Z
+node        v26.0.0
+repo HEAD   6a180b35 2026-08-03 01:15:03 -0400 T7 formation: round-3 reconciliation — homes, dated defaults, born-RED fixes
+tranche     docs/tranches/2026-08-tranche-7  (open)
+arms        ORPHAN · TERMINALITY · PROBE · DUPLICATE · CITES
+mode        dry-run
+
+THE ESTATE (sealed = a close record on disk)
+  docs/tranches/2026-07-tranche-2    SEALED  superseded by 2026-07-tranche-3
+  docs/tranches/2026-07-tranche-3    SEALED  superseded by 2026-07-tranche-4
+  docs/tranches/2026-07-tranche-4    SEALED  WGATE-record.md
+  docs/tranches/2026-08-tranche-5    SEALED  evidence/wgate/close-record.md
+  docs/tranches/2026-08-tranche-6    SEALED  CLOSE.md
+  docs/tranches/2026-08-tranche-7    open   ← this tranche
+
+CORPUS (11 files)
+  docs/tranches/2026-08-tranche-7/waves/W0-the-record-heals.md  8160 B
+  docs/tranches/2026-08-tranche-7/waves/W1-the-theme-mismatch.md  5476 B
+  docs/tranches/2026-08-tranche-7/waves/W2-the-access-wave.md  5625 B
+  docs/tranches/2026-08-tranche-7/waves/W3-the-flake-disease.md  8063 B
+  docs/tranches/2026-08-tranche-7/waves/W4-the-multiplayer-battery.md  6368 B
+  docs/tranches/2026-08-tranche-7/waves/W5-the-multiplayer-record.md  7030 B
+  docs/tranches/2026-08-tranche-7/waves/W6-the-contrivance-sweep.md  10107 B
+  docs/tranches/2026-08-tranche-7/waves/W7-the-product-polish.md  5290 B
+  docs/tranches/2026-08-tranche-7/PROMPT-RECAP.md  4871 B
+  docs/tranches/2026-08-tranche-7/README.md  5904 B
+  docs/tranches/LEDGER.md  34995 B
+
+INPUTS (excluded from the corpus — a row set cannot cite itself terminal)
+  docs/tranches/2026-08-tranche-7/DISPOSITIONS.md
+    142 row ids  (39 CH-nn + 1 PR-nn + 8 U-nn + 8 EL-nn + 6 Q-nn + 5 D-nn + 1 B-nn + 10 O-nn + 13 P-nn + 19 T7-nn + 12 N-nn + 20 BAL-nn)
+  1 range expressions in the corpus, read as scope, not citation
+
+LIVING LEDGER  docs/tranches/LEDGER.md
+  §1 Open — what the next close must carry             10 rows   ← open
+  §2 Terminal — decided, closed, retired, excluded     55 rows
+  §3 Recap orphans, homed                               7 rows
+  §4 The unaddressed eleven                            11 rows
+  §5 The superseded eleven                             11 rows
+  §6 T7 — the unledgered, homed 2026-08-03             62 rows
+
+SATISFACTION (ORPHAN arm)
+  CORPUS     142
+  SELF       0
+  DELEGATED  0
+  ORPHAN     0
+  total      142
+
+TERMINALITY — clean
+
+PROBE — clean
+
+DUPLICATE — clean
+
+CITES — clean
+
+VERDICT
+  GREEN — 142 audited rows present-or-cited; 10 open ledger rows current under ORPHAN · TERMINALITY · PROBE · DUPLICATE · CITES. exit 0
+
+APPENDIX A — the deploy-gate invocation (scripts/deploy-gated.sh runs this verbatim)
+====================================================================================
+$ node scripts/ledger-diff.mjs --require-ledger --assert-state --verify-cites
+exit 0
+
+APPENDIX B — the owner block, DERIVED (T7-R14): every banked row yields an owner and a
+machine-evaluable trigger, every balloted row its dated firing default, and nothing is
+truncated — a close record embeds this instead of typing it
+=========================================================================================
+<!-- derived: node scripts/ledger-diff.mjs --owner-block · docs/tranches/LEDGER.md · 2026-08-03T06:40:13.872Z -->
+
+| Row | State | Owner | Trigger | Cite |
+|---|---|---|---|---|
+| CH-35 | BALLOT → BAL-01, dispatched 2026-08-03, default fires at T7 WGATE | the owner | default: the iOS claim RETIRES to sim-scope, and stays sim-scoped permanently unless the owner runs the smoke before T8 formation. No later tranche may re-book it | `docs/tranches/LEDGER.md:39` |
+| CH-36 | BALLOT → BAL-02, dispatched 2026-08-03, default fires at T7 WGATE | the owner | default: accepted-limitation, hash-rotation stands | `docs/tranches/LEDGER.md:40` |
+| CH-39 | BALLOT → BAL-04, dispatched 2026-08-03, default fires at T7 WGATE | the owner | default: RATIFIED as shipped and CH-39 retires with it | `docs/tranches/LEDGER.md:41` |
+| CH-45 | BALLOT → BAL-03, dispatched 2026-08-03, default fires at T7 WGATE | the owner | default: the headless-only law stands as written in docs/tranches/PRECEPTS.md §4 | `docs/tranches/LEDGER.md:42` |
+| CH-64 | BANKED · third-burst trigger FIRED 2026-08-03 | the CI keeper lane | a THIRD burst, defined as ≥2 reds in one settled-head run, each green on the next runner pass with no change to its surface → runner-rig forensics. The trigger FIRED 2026-08-03: run 30781866393 on afc72ba1 carried an a11y-webkit red plus the golden set, and every one greened at 6a180b35 under a docs-only delta — docs/tranches/2026-08-tranche-7/evidence/w0/ci-preflight.md. A fired trigger becomes an act, never a new row: the forensics are homed in T7-W3. Bursts 1 and 2 stand at runs 30765365438 and 30770223565 | `docs/tranches/LEDGER.md:46` |
+| CH-65 | BANKED | the CI keeper lane | any logo-surface change, where the golden step is the detector, or any clause-floor tightening below 0.0322 — both self-evidencing, since a tightening into (0.0322, 0.05] yields no red, no runner artifact, no lawful mint, and silently consumes the trigger. The "T7 estate wave" trigger is DELETED as un-fireable: no referent estate-wide, and a docs wave produces no runner artifact. The opening config-use clause STANDS — visual-golden runs under web/frontend/playwright-golden.config.ts, which declares reduced motion | `docs/tranches/LEDGER.md:47` |
+| CH-28 | BANKED · WATCH | wasm lane | the lean artifact crossing the 127,500 B band, evaluated at the band step every run | `docs/tranches/LEDGER.md:75` |
+| CH-20 | BANKED · WATCH | executor lane | the typescript-eslint peer cap on typescript lifting past 7. Probed unfired 2026-08-03 — installed tseslint 8.63.0 peers typescript >=4.8.4 <6.1.0 | `docs/tranches/LEDGER.md:88` |
+| CH-21 | BANKED · WATCH | perf lane | a perf-rig trace on a NAMED mid-tier profile at or above 89 ms@1× / 355 ms@4×, banked as evidence. "Mid-device" never named a device, which is why it held six closes | `docs/tranches/LEDGER.md:89` |
+| CH-22 | BANKED · WATCH | the owner | an owner ask naming a game | `docs/tranches/LEDGER.md:90` |
+| CH-26 | BANKED · WATCH | solver lane | any diff under csp-solver/src/solver/ touching propagation strength or the GAC default | `docs/tranches/LEDGER.md:91` |
+| CH-30 | BANKED · WATCH | wasm lane | a sixth game, or any solver wire >12k — probed unfired at five games today. Evaluated at the lean raw-size band step of .github/workflows/ci.yml every run | `docs/tranches/LEDGER.md:93` |
+
+APPENDIX C — node scripts/ledger-diff.mjs --self-test (same tree, same day)
+===========================================================================
+SELF-TEST — each arm against a synthetic violation and its conformant control
+  [GRAMMAR/reads] a lettered, recap-prefixed or titled id cell falls outside the grammar
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [GRAMMAR/refuses] prose, a header or a verdict is read as a row id
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [OWNER-BLOCK] a balloted row prints no trigger and no default, or a state cut mid-phrase
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [TERMINALITY] an open row lands at a wave of a sealed tranche
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [PROBE] an open row's claim is refuted by the tree
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [PROBE/CH-16] the registered CH-16 probe fires when every game spec carries urlCodec
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [DUPLICATE] one id is tabled open and terminal at once
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [CITES/resolve] a cite runs past the end of the file it names
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [CITES/anchor] the anchor moved and the line-cite did not
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [CITES/row-token] a file-plus-row-token cite that greps to nothing
+      violation → RED (as it must)
+      control   → GREEN (as it must)
+  [ORPHAN] an audited id reaches no disposition in the corpus
+      violation → RED (as it must)
+      control   → GREEN (as it must)

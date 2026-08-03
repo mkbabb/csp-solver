@@ -64,15 +64,16 @@ describe("the sudoku ladder grades by hardest-technique-required", () => {
 describe("the corrupted-substrate tripwire (r3 KILL-LIST #3) — permanent", () => {
   // The load-bearing invariant: the engine grades over SELF-COMPUTED basic candidates, never
   // over propagateBoard's post-full-GAC masks. GAC over-prunes — at full strength a served
-  // board collapses to all-singleton domains (sudoku.rs:186-188), so every empty cell reads
-  // as a naked single and the grade collapses to tier-1. This board grades tier-3 honestly;
-  // if the engine ever read the GAC substrate it would grade tier-1. The two substrates MUST
-  // differ, and this test fails the instant a rung starts reading the GAC masks.
+  // board collapses to all-singleton domains (propagate_sudoku in sudoku.rs), so every
+  // empty cell reads as a naked single and the grade collapses to tier-1. This board grades
+  // tier-3 honestly; if the engine ever read the GAC substrate it would grade tier-1. The
+  // two substrates MUST differ, and this test fails the instant a rung reads the GAC masks.
   const adapter = createBoardAdapter("boxed", 3);
   const selfComputed = adapter.computeCandidates(XWING_BOARD);
 
   // Model propagateBoard's GAC collapse: a uniquely-solvable board's full-GAC fixpoint pins
-  // every empty cell to a singleton — its solution value (sudoku.rs:186-188). Filled cells: 0.
+  // every empty cell to a singleton — its solution value (propagate_sudoku in sudoku.rs).
+  // Filled cells: 0.
   const gacCollapsed = new Uint32Array(81);
   for (let c = 0; c < 81; c++)
     gacCollapsed[c] = XWING_BOARD[c] !== 0 ? 0 : 1 << XWING_SOLUTION[c];
