@@ -1,0 +1,110 @@
+# Raw probe output — the gallery's lost flick (T7-WGATE, 2026-08-03)
+# companion to gallery-swallow-cure.md
+#
+# rig: mcr.microsoft.com/playwright:v1.61.1-noble — the CI image and version — driving the
+#      repo's own playwright.config.ts (webServer block dropped) against the host's vite dev
+#      server on :4246. This is the engine that reds; darwin webkit does not reproduce it.
+
+===== A. THE SWALLOW IS INNOCENT =====
+# A capture-phase click listener registered on .gallery-viewport AFTER the composable's own,
+# so it runs straight after it on the same node: 'prevented' here IS the swallow's fingerprint.
+
+── settle-drag -20 (THE ARMING RELEASE) ──
+   win-capture              pointerdown   t=  17868 prevented=false div.live-face-fit
+   win-bubble               pointerdown   t=  17868 prevented=false div.live-face-fit
+   win-capture              mousedown     t=  17868 prevented=false div.live-face-fit
+   win-bubble               mousedown     t=  17868 prevented=false div.live-face-fit
+   win-capture              pointerup     t=  18076 prevented=false div.live-face-fit
+   win-bubble               pointerup     t=  18076 prevented=false div.live-face-fit
+   win-capture              mouseup       t=  18076 prevented=false div.live-face-fit
+   win-bubble               mouseup       t=  18076 prevented=false div.live-face-fit
+   win-capture              click         t=  18076 prevented=false div.live-face-fit
+   vp-capture-after-swallow click         t=  18076 prevented=true  div.live-face-fit
+   >>> a click followed the drag release? true
+
+   STATE before the plain click: {"activedescendant":"gallery-card-0","c0_selected":"true","c0_class":"game-card is-center is-chiming","centerCards":["gallery-card-0"],"guardRibbons":0,"scrollLeft":0,"trackTx":0,"liveFaceIn":"gallery-card-0","liveFaceChildren":1,"search":"?view=gallery&size=3&difficulty=EASY"}
+   #gallery-card-0 box: {"x":473.59375,"y":161.15625,"width":332.8125,"height":407.984375}
+   elementFromPoint at its centre: div.live-face-fit
+
+── PLAIN CLICK on #gallery-card-0 ──
+   win-capture              pointerdown   t=  21282 prevented=false div.live-face-fit
+   win-bubble               pointerdown   t=  21282 prevented=false div.live-face-fit
+   win-capture              mousedown     t=  21282 prevented=false div.live-face-fit
+   win-bubble               mousedown     t=  21282 prevented=false div.live-face-fit
+   win-capture              pointerup     t=  21282 prevented=false div.live-face-fit
+   win-bubble               pointerup     t=  21282 prevented=false div.live-face-fit
+   win-capture              mouseup       t=  21282 prevented=false div.live-face-fit
+   win-bubble               mouseup       t=  21282 prevented=false div.live-face-fit
+   win-capture              click         t=  21282 prevented=false div.live-face-fit
+   vp-capture-after-swallow click         t=  21282 prevented=false div.live-face-fit
+   REACHED #gallery-card-0  click         t=  21282 prevented=false div.live-face-fit
+   >>> the plain click reached vp capture, prevented=false
+   >>> .game-gallery count after the plain click: 1  (0 = selected, 1 = EATEN)
+   STATE after: {"activedescendant":"gallery-card-0","c0_selected":"true","c0_class":"game-card is-center is-chiming","centerCards":["gallery-card-0"],"guardRibbons":0,"scrollLeft":0,"trackTx":0,"liveFaceIn":"gallery-card-0","liveFaceChildren":0,"search":"?size=3&difficulty=EASY"}
+
+
+===== B. THE LOST FLICK — a red, captured on the uncured tree =====
+# .gallery-viewport sampled on every scroll and pointer event; ts = the event's own timeStamp,
+# and the sampler's floor is SAMPLE_MS = 8.
+
+  Error: expect(locator).toHaveAttribute(expected) failed
+  Locator:  locator('.gallery-viewport')
+  Expected: "gallery-card-1"
+  Received: "gallery-card-0"
+  Timeout:  10000ms
+
+   228  installed                        sl=    0  tx=       0  snap=none
+   483  EV pointermove x=640 ts=482      sl=    0  tx=       0  snap=x mandatory
+   501  EV pointerdown x=640 ts=501      sl=    0  tx=       0  snap=x mandatory
+   502  EV pointermove x=586 ts=502      sl=    0  tx=       0  snap=x mandatory
+   507  EV pointermove x=533 ts=507      sl=   54  tx=       0  snap=none
+   508  EV pointermove x=480 ts=508      sl=  107  tx=       0  snap=none
+   510  EV pointerup x=480 ts=510        sl=  160  tx=       0  snap=none
+   515  EV click x=480 ts=510            sl=    0  tx=    -160  snap=none
+   520  scroll                           sl=    0  tx=    -160  snap=none
+   619  EV pointermove x=480 ts=619      sl=    0  tx=   -36.7  snap=none
+
+#   501 down, then legs of 1 / 6 / 7 ms — every one under the floor, every one skipped.
+#   Released at v = 0 out of a 160px push thrown in 7ms, so dir = 0 and the target fell back
+#   to centeredIndex() at sl=160 → card 0. The deck glided BACK to the card it came from.
+
+
+===== C. THE SAME PUSH, GREEN — one millisecond of difference =====
+   483  installed                        sl=    0  tx=       0  snap=none
+   911  EV pointermove x=640 ts=910      sl=    0  tx=       0  snap=x mandatory
+  1121  EV pointerdown x=640 ts=1120     sl=    0  tx=       0  snap=x mandatory
+  1123  EV pointermove x=586 ts=1122     sl=    0  tx=       0  snap=x mandatory
+  1129  EV pointermove x=533 ts=1129     sl=   54  tx=       0  snap=none
+  1131  EV pointermove x=480 ts=1130     sl=  107  tx=       0  snap=none
+  1133  EV pointerup x=480 ts=1132       sl=  160  tx=       0  snap=none
+  1142  ARIA=gallery-card-1              sl=  352  tx=     192  snap=none
+  1156  scroll                           sl=  352  tx=     192  snap=none
+  1373  EV pointermove x=480 ts=1373     sl=  352  tx=       7  snap=none
+  1543  EV pointermove x=640 ts=1543     sl=  352  tx=     0.1  snap=none
+  1554  EV pointerdown x=640 ts=1554     sl=  352  tx=     0.1  snap=none
+  1558  EV pointermove x=693 ts=1558     sl=  351  tx=       0  snap=none
+  1565  EV pointermove x=746 ts=1564     sl=  298  tx=       0  snap=none
+  1565  EV pointermove x=800 ts=1565     sl=  245  tx=       0  snap=none
+  1567  scroll                           sl=  191  tx=       0  snap=none
+  1602  EV pointerup x=800 ts=1567       sl=  191  tx=       0  snap=none
+  1609  ARIA=gallery-card-0              sl=    0  tx=    -191  snap=none
+  1619  EV click x=800 ts=1567           sl=    0  tx=    -191  snap=none
+  1626  scroll                           sl=    0  tx=    -191  snap=none
+  1708  EV pointermove x=800 ts=1708     sl=    0  tx=   -25.5  snap=none
+  1994  EV pointermove x=640 ts=1993     sl=    0  tx=       0  snap=none
+  2031  EV pointerdown x=640 ts=2031     sl=    0  tx=       0  snap=x mandatory
+  2033  EV pointermove x=630 ts=2033     sl=    0  tx=       0  snap=x mandatory
+  2086  scroll                           sl=   10  tx=       0  snap=none
+  2114  EV pointermove x=620 ts=2095     sl=   10  tx=       0  snap=none
+  2140  scroll                           sl=   20  tx=       0  snap=none
+  2167  EV pointerup x=620 ts=2167       sl=   20  tx=       0  snap=none
+  2172  EV click x=620 ts=2167           sl=    0  tx=     -20  snap=none
+  2178  scroll                           sl=    0  tx=     -20  snap=none
+  2272  EV pointermove x=620 ts=2272     sl=    0  tx=    -4.4  snap=none
+  2711  EV pointermove x=640 ts=2711     sl=    0  tx=       0  snap=x mandatory
+  2712  EV pointerdown x=640 ts=2711     sl=    0  tx=       0  snap=x mandatory
+  2713  EV pointerup x=640 ts=2711       sl=    0  tx=       0  snap=x mandatory
+  2713  EV click x=640 ts=2711           sl=    0  tx=       0  snap=x mandatory
+
+#   The +160 flick at 1546: legs of 2 / 7 / 8 ms. The third one spans the floor, samples at
+#   0.7·(160/8) = 14 px/ms, and the deck steps. dt=8 samples; dt=7 does not.

@@ -362,7 +362,7 @@ export function useCarouselGlide(
     vp.scrollLeft = d.sl0 - dx;
   }
 
-  function onPointerUp() {
+  function onPointerUp(e?: PointerEvent) {
     const vp = viewport.value;
     const d = drag;
     drag = null;
@@ -377,6 +377,27 @@ export function useCarouselGlide(
     dragging = false;
     vp.classList.remove("is-dragging");
     suppressClick = true;
+    // THE RELEASE IS A SAMPLE, and it is the one that decides the gesture. `onPointerMove`
+    // SKIPS any pair closer than SAMPLE_MS and leaves the travel to accumulate against the
+    // last anchor — but a gesture that ENDS inside that window accumulated into nothing, and
+    // `v` is still its initial 0: the hardest flick a mouse can throw reads as a dead settle.
+    // MEASURED on linux WebKit (T7-WGATE gallery-swallow-cure §2), the whole defect one
+    // millisecond wide: the driver's three interpolated moves for a 160 px flick landed
+    // 2/7/7 ms after the press, every one under the floor, `v` stayed 0, `dir` read 0, and the
+    // release snapped the deck back to the card it came from. The same push in the run before
+    // it landed its third move at 8 ms, sampled, and stepped correctly.
+    //
+    // So the release folds the outstanding leg in — over its own duration, floored at the same
+    // half-frame the sampler uses, so it can never divide a real delta by ~0. Two arms and no
+    // third: a leg that spans a full sample window carries information, and a gesture that
+    // never sampled at all has nothing else to go on. Anything shorter than a window on top of
+    // an existing `v` is left alone — it holds no new information, and folding a zero-travel
+    // leg in would DAMP a real flick by the EMA's 0.7.
+    const legMs = (e?.timeStamp ?? d.t) - d.t;
+    if (legMs >= SAMPLE_MS || d.v === 0) {
+      const span = Math.max(SAMPLE_MS, legMs);
+      d.v = 0.7 * (((e?.clientX ?? d.px) - d.px) / span) + 0.3 * d.v;
+    }
     // READ THE POSITION BACK rather than assuming the writes took (this file's own maxScroll
     // discipline): the engine clamps `scrollLeft` to its scrollable overflow, so where the
     // deck IS is the only honest `from`.

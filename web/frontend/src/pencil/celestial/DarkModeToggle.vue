@@ -207,12 +207,14 @@
         alt=""
       />
       <!-- Fallback while baking: the live wobble-celestial stack. T4-WM rank 1: PINNED to
-             pose 0 while unbaked — the live filter rasters ONCE, not per beat. -->
+             pose 0 while unbaked — the live filter rasters ONCE, not per beat.
+             CH-66: MOUNTED THROUGH THE BAKE (`baked-hidden`, never `v-for="…Baked ? [] : …"`)
+             — see the script's §CH-66 block. -->
       <svg
-        v-for="(sparkles, i) in sunBaked ? [] : SPARKLE_POSES"
+        v-for="(sparkles, i) in SPARKLE_POSES"
         :key="`sun-${i}`"
         class="rest-pose"
-        :class="{ 'is-pose-active': i === 0 }"
+        :class="{ 'is-pose-active': !sunBaked && i === 0, 'baked-hidden': sunBaked }"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 200 200"
         :filter="`url(#${poseFilterId(i)})`"
@@ -282,12 +284,14 @@
         alt=""
       />
       <!-- Fallback while baking: the live wobble-celestial stack. T4-WM rank 1: PINNED to
-             pose 0 while unbaked — the live filter rasters ONCE, not per beat. -->
+             pose 0 while unbaked — the live filter rasters ONCE, not per beat.
+             CH-66: MOUNTED THROUGH THE BAKE (`baked-hidden`, never `v-for="…Baked ? [] : …"`)
+             — see the script's §CH-66 block. -->
       <svg
-        v-for="(stars, i) in moonBaked ? [] : STAR_POSES_D"
+        v-for="(stars, i) in STAR_POSES_D"
         :key="`moon-${i}`"
         class="rest-pose"
-        :class="{ 'is-pose-active': i === 0 }"
+        :class="{ 'is-pose-active': !moonBaked && i === 0, 'baked-hidden': moonBaked }"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 200 200"
         :filter="`url(#${poseFilterId(i)})`"
@@ -572,6 +576,28 @@ const sunUrls = retainedPoseUrls(sunRaster);
 const moonUrls = retainedPoseUrls(moonRaster);
 const sunBaked = computed(() => sunUrls.value.length === 4);
 const moonBaked = computed(() => moonUrls.value.length === 4);
+
+/**
+ * ── CH-66 · THE REST STACKS ARE HIDDEN, NEVER TORN OUT (T7-WGATE) ────────────────────
+ *
+ * Both stacks used to be removed from the document the instant their bitmaps landed
+ * (`v-for="… Baked ? [] : POSES"`), which is the shape that drops a WebKit press: the engine
+ * synthesizes a `click` only from a mousedown/mouseup pair whose targets still share an
+ * ancestor in the document, and a press straddling that swap loses the half whose target was
+ * destroyed. The wordmark is where it was MEASURED (5 of 90 unaided darwin-WebKit presses,
+ * evidence/wgate/ch66-product-cure.md) and where it was felt; these two sites are the same
+ * defect shape and are cured with it rather than left as the estate's last two instances.
+ *
+ * This surface never lost a press to it, and the reason is worth keeping: `.toggle-rest` and
+ * `.toggle-icon` are `pointer-events: none`, so the hit has always landed on the `<button>` —
+ * a node no bake unmounts. That immunity was incidental; being mounted is structural.
+ *
+ * Parked, a stack is `display: none` (HandDrawnGrid's `baked-hidden`, verbatim): no box, no
+ * layer, no filter raster, and the live-filter census excludes it by its own counting rule.
+ * `is-pose-active` is pinned OFF rather than left on pose 0 — invisible either way under
+ * `display: none`, and it keeps "exactly one pose visible per active sub-stack" true as a
+ * statement about OPACITY, which is how the estate reads it.
+ */
 
 // Dusk ease (T3-W10 keep, re-anchored): html.theme-turning goes on AT click, the theme
 // flip included — body + the paper sheets ease colors ~350ms instead of snapping
@@ -875,6 +901,13 @@ onUnmounted(() => {
 
 .rest-pose.is-pose-active {
   opacity: 1;
+}
+
+/* CH-66 — the parked live stack, once the bitmaps hold the surface: mounted, connected, and
+   generating nothing. `display: none` is HandDrawnGrid's `baked-hidden` verbatim: no box, no
+   layer, no filter raster, and the live-filter census excludes it by its own counting rule. */
+.rest-pose.baked-hidden {
+  display: none;
 }
 
 /* Stack twinkles: baked pose transforms, same origin semantics as the live field. */

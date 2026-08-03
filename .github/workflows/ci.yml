@@ -1374,10 +1374,22 @@ jobs:
             # from 10:12 to the JOB's 25-minute kill — the suite never ran and the red read
             # as a shard failure. 8 minutes is 2× the worst observed install; a hang now
             # fails fast under its own name.
-            - name: "Install Playwright webkit (+ deps)"
-              timeout-minutes: 8
+            #
+            # SECOND OCCURRENCE (run 30807184504, shard 3) made the hang a class, so the
+            # step self-heals: each attempt is bounded at 4 minutes and a stalled first
+            # attempt gets exactly one fresh retry — a stall is a stall, not a verdict on
+            # the runner. The attempt that succeeds names itself in the log.
+            - name: "Install Playwright webkit (+ deps, bounded + one retry)"
+              timeout-minutes: 9
               working-directory: web/frontend
-              run: npx playwright install --with-deps webkit
+              run: |
+                  if timeout 240 npx playwright install --with-deps webkit; then
+                    echo "webkit install: attempt 1"
+                  else
+                    echo "::warning::webkit install attempt 1 stalled or failed — retrying once"
+                    timeout 240 npx playwright install --with-deps webkit
+                    echo "webkit install: attempt 2"
+                  fi
             # workers=1 is the treatment, not a slowdown to apologize for: the
             # deadline family fires when webkit's raf cadence is starved by a
             # neighboring browser. One worker per shard makes starvation structural
@@ -1459,8 +1471,10 @@ jobs:
     #     vacuous); or CPU throttling requested and not applied, because an
     #     unthrottled number read against a throttled floor is not a lenient
     #     measurement, it is a different one                -> fail
-    #   3 INSTRUMENT failure — too few clean windows, or the app-free control page
-    #     itself dropped a long frame                    -> retried ONCE, then fails
+    #   3 INSTRUMENT failure — too few clean windows, the app-free control page
+    #     itself dropped a long frame, or the host CPU anchor read over its
+    #     admissibility ceiling (T7-WGATE — GATE D refuses to grade on a host
+    #     outside the runner class it was derived on)    -> retried ONCE, then fails
     #
     # PRECEDENCE (T7-W6): every measured result is graded BEFORE any exit is chosen,
     # and the code is the WORST FACT in the run — 1 > 2 > 3 > 0. A breach outranks a
@@ -1553,7 +1567,7 @@ jobs:
                     # twice therefore says nothing breached on what DID measure; the
                     # admissible webkit evidence is the darwin perf-rig lane + the
                     # manual Safari matrix.
-                    3) echo "::warning::perf subset INADMISSIBLE-HOST — the runner's app-free control dropped a long frame twice running; neither green nor red is admissible for webkit here. Recorded, report uploaded; the darwin perf-rig lane and the manual Safari matrix carry the webkit verdict. Not a bundle regression."
+                    3) echo "::warning::perf subset INADMISSIBLE-HOST — an engine's instrument refused to grade: the app-free control dropped long frames twice running, too few clean windows survived, or the host CPU anchor read over its ceiling (the INADMISSIBLE line in the report names the engine and the cause). Neither green nor red is admissible for that engine here. Recorded, report uploaded; the darwin perf-rig lane and the manual Safari matrix carry the webkit verdict. Not a bundle regression."
                        CODE=0 ;;
                     *) echo "::error::perf subset exited $CODE (unexpected)" ;;
                   esac

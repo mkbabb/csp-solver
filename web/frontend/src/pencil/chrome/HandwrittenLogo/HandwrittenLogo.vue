@@ -335,6 +335,40 @@ const logoUrls = retainedPoseUrls(logoRaster, () => `${label.value}-${vbWidth.va
 const logoBaked = computed(
   () => logoUrls.value.length > 0 && logoUrls.value.length === logoPoseIds.value.length,
 );
+
+/**
+ * ── CH-66 · THE STACK IS HIDDEN, NEVER TORN OUT (T7-WGATE) ───────────────────────────
+ *
+ * WebKit synthesizes a `click` only from a mousedown/mouseup PAIR whose targets still share
+ * an ancestor IN THE DOCUMENT. `logoBaked` flipping used to remove the whole live `<g>` stack
+ * (`v-for="… logoBaked ? [] : logoPoseIds"`) and put `<image>` siblings in its place, so a
+ * press straddling the bake lost the half whose target had been destroyed and the wordmark —
+ * a real `<button>` on a real user's screen — did nothing at all, silently.
+ *
+ * MEASURED, on the disease's own instrument (evidence/wgate/ch66-product-cure.md; the rig is
+ * `futoshiki.spec.ts`'s exact path, one fresh context per iteration, document-level capture
+ * listeners): 5 of 90 unaided presses dropped on darwin WebKit, 0 of 30 on Chromium — and two
+ * of those five caught the mechanism whole, `mousedown → text.logo-text`, `mouseup →
+ * image.logo-pose-bmp`, NO click, both halves in the document and no common ancestor left
+ * between them. Post-cure: 0 of 90.
+ *
+ * THE CURE IS THE ESTATE'S OWN IMMUNE GRAMMAR, copied rather than invented: `HandDrawnGrid`
+ * and `HandDrawnOutline` bake identically and keep the live stack MOUNTED and `display: none`
+ * (`baked-hidden`). A `display: none` subtree generates no boxes, no layers and no filter
+ * raster — the live-filter census excludes it by its own counting rule (own computed `display`
+ * ≠ none, `filterBudget.ts`) — while its NODES stay connected, which is the entire property the
+ * pointer needs. The parked stack is also pinned OFF rather than following the beat, so unlike
+ * the grid's reference it takes not one write per beat while hidden.
+ *
+ * THE SECOND HALF, and it is the direction the harness cure could not reach: the reset key
+ * (`label`-`vbWidth`) sends a baked wordmark BACK to the live arm on a game swap or a post-font
+ * re-measure, and THAT tear-out is the `<image>` stack's — which cannot be mounted through a
+ * bake, since poses baked at the old width would stretch into the new viewBox (the fringed
+ * wordmark this file's retention note rejects). So neither arm is a pointer target at all:
+ * `pointer-events: none` puts the hit on the `<svg>`/`<button>`, which no bake in either
+ * direction unmounts. This is not a new idea either — `DarkModeToggle`'s rest stacks have been
+ * pointer-transparent since T3-W13, which is why its two tear-out sites never dropped a press.
+ */
 </script>
 
 <template>
@@ -387,12 +421,18 @@ const logoBaked = computed(
         <!-- Fallback while baking: the live #wobble-logo-p{i} pose stack
                      (T3-W13 §1-P3). T4-WM rank 1: PINNED to pose 0 — `is-active` never
                      follows the beat while unbaked, so the live filter rasters ONCE, not
-                     per beat. One raster per appearance — no startup flash. -->
+                     per beat. One raster per appearance — no startup flash.
+                     CH-66: MOUNTED THROUGH THE BAKE, never torn out — see the script's
+                     §CH-66 block. Parked, it is `display: none` and carries neither
+                     `logo-pose` nor `is-active`: it has left the STACK (which is what
+                     both classes name, and what the estate censuses) and become a node
+                     that only the pointer still has business with. -->
         <g
-          v-for="(pid, f) in logoBaked ? [] : logoPoseIds"
+          v-for="(pid, f) in logoPoseIds"
           :key="pid"
-          class="logo-pose"
-          :class="{ 'is-active': f === 0 }"
+          :class="
+            logoBaked ? 'logo-pose-parked' : ['logo-pose', { 'is-active': f === 0 }]
+          "
           :filter="`url(#${pid})`"
         >
           <text class="logo-text" x="4" y="48" text-anchor="start">{{ label }}</text>
@@ -504,6 +544,15 @@ span.logo-trigger {
   opacity: 1;
 }
 
+/* CH-66 — the parked live stack, once the bitmaps hold the surface: mounted, connected, and
+   generating nothing. `display: none` is HandDrawnGrid's `baked-hidden` verbatim: no box, no
+   layer, no filter raster, and the live-filter census excludes it by its own counting rule.
+   No `will-change` — a promoted layer with nothing to promote is residency for free
+   (HandDrawnOutline's pose-prune says the same in its own words). */
+.logo-pose-parked {
+  display: none;
+}
+
 /* T4-W1 baked poses: the same opacity-swap discipline on static <image> siblings (filter
    removed) — the flip is compositor-only, no raster recurs. */
 .logo-pose-bmp {
@@ -513,6 +562,16 @@ span.logo-trigger {
 
 .logo-pose-bmp.is-active {
   opacity: 1;
+}
+
+/* CH-66 — NEITHER ARM IS A TARGET. The wordmark's affordance is the `<button>`; the poses are
+   ink inside an `aria-hidden` svg. Both stacks are swapped out from under a live pointer at
+   some point in a bake cycle (the live groups when the bitmaps land, the bitmaps when the reset
+   key sends the surface back), so the hit belongs on a node no bake unmounts. `.logo-measure`
+   has always declared this for itself; the poses now say it too. */
+.logo-pose,
+.logo-pose-bmp {
+  pointer-events: none;
 }
 
 /* The measuring text is invisible — it exists only to keep getBBox alive for the

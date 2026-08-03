@@ -60,6 +60,11 @@ async function deckCenter(page: Page) {
  *     stalls past 118ms, which is the margin a loaded nine-worker run needs. A Node-side loop
  *     cannot do this at all — every `mouse.move` is its own round trip and Chromium's land
  *     47–163ms apart, so the same script reads as a flick in WebKit and a crawl in Chromium.
+ *     The stall was only ever HALF the exposure, and the other half is what red this row on
+ *     the runner: those same three steps can land TOO CLOSE — all three inside the sampler's
+ *     8ms floor — and the release then read v=0 out of a 17 px/ms push. The composable folds
+ *     the release's own leg in now (`useCarouselGlide.onPointerUp`), and the row below this
+ *     file's drag block asserts that arm at the event level, where it is deterministic.
  *   · settle (default) — the opposite problem, so it is paced from Node on purpose: ~10px per
  *     ~55ms is 0.18 px/ms, under the threshold in both engines, and load only slows it
  *     further — the one direction that cannot turn a settle into a flick. */
@@ -314,6 +319,56 @@ test('drag: a flick moves exactly one card; a release over the centered card sel
   // A PLAIN click still selects — the swallow is one-shot, not a mode.
   await page.locator('#gallery-card-0').click();
   await expect(page.locator('.game-gallery')).toHaveCount(0);
+});
+
+test('drag: a flick whose every move lands inside the sample floor is still a flick', async ({
+  page,
+}) => {
+  await openGalleryDeepLink(page);
+  await deckSettled(page);
+
+  // THE MECHANISM, ASSERTED WHERE IT IS DETERMINISTIC. The row above rides the driver, and the
+  // driver's pace is the runner's to decide: it emitted a 160px flick's three interpolated
+  // moves 2/7/8ms after the press in one run and 2/7/7ms in the next, and the composable's
+  // sampler skips any leg under its 8ms floor. Every leg skipped meant the release read v=0
+  // out of a 17 px/ms push, `dir` read 0, and the deck snapped back to the card it came from —
+  // 2/2 on the runner at fd6a141a, reproduced 3 in 24 on linux WebKit locally, and never once
+  // in Chromium, whose driver paces the same call in tens of milliseconds.
+  //
+  // So this row DISPATCHES the gesture instead of driving it: one synchronous task, so every
+  // move carries the same `timeStamp` and the sampler is guaranteed to skip all of them — the
+  // worst case the driver can produce, produced on purpose. What the composable sees is what
+  // it reads off any PointerEvent (clientX / timeStamp / pointerType / button), so a
+  // dispatched gesture is the same gesture to it. The deck must step ONE card.
+  await page.evaluate(() => {
+    const vp = document.querySelector<HTMLElement>('.gallery-viewport')!;
+    const box = vp.getBoundingClientRect();
+    const y = box.top + box.height / 2;
+    const x0 = box.left + box.width / 2;
+    const at = (type: string, x: number, target: EventTarget) =>
+      target.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerType: 'mouse',
+          button: 0,
+          clientX: x,
+          clientY: y,
+        }),
+      );
+    at('pointerdown', x0, vp);
+    for (const step of [53, 106, 160]) at('pointermove', x0 - step, window); // ← past the slop
+    at('pointerup', x0 - 160, window);
+  });
+
+  // 160px is UNDER one slot (352px), and it releases nearer card 0 than card 1 — so a deck
+  // that lost the velocity snaps back to 0 and this reads gallery-card-0. Only the flick
+  // steps it.
+  await expect(page.locator('.gallery-viewport')).toHaveAttribute(
+    'aria-activedescendant',
+    'gallery-card-1',
+  );
+  await expect(page.locator('.gallery-pip').nth(1)).toHaveClass(/is-inked/);
 });
 
 test('drag: a grab during a keyboard glide freezes the deck where it is drawn', async ({

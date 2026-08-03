@@ -234,3 +234,206 @@ reading, not a new scenario, so doc-truth's D20 row reads exactly as W6 left it.
   c) 1750 IS STILL PROVISIONAL: n=2 VMs, both quiescent. Re-derive with the rest of the
      floors, and price galleryDrag/drawerToggle in the same sitting per W6 §3.
   d) THE DARWIN ASYMMETRY (§4) retires when (b) lands, and not before.
+
+
+================================================================================
+§CLOSE-RULING — 2026-08-03, T7 WGATE. APPENDED, NOTHING ABOVE REWRITTEN.
+Chair ruling on the n>=3 this file asked for. Tree sealed through 141fdbad.
+================================================================================
+
+C.0 · DISCHARGE
+--------------------------------------------------------------------------------
+§3's clause — "WHAT WGATE DOES WITH IT: three runner readings decide the question on
+evidence. If tbt/anchor holds across host classes, GATE D transposes onto it and the
+absolute retires" — is DISCHARGED-REFUTED. It went to n=3 and the answer was no. §8(b) is
+closed with it. §8(a) is closed by C.3. §8(c) and §8(d) stand.
+
+
+C.1 · THE FIELD DATA
+--------------------------------------------------------------------------------
+Three post-anchor runner runs, chromium 4x, plus the two that preceded the instrument:
+
+  run          anchor ms    median boot TBT    tbt/anchor
+  ----------   ---------    ---------------    ----------
+  job A            —              1276 ms          —
+  job B            —              1333 ms          —
+  post-1         155              1263 ms         8.15
+  post-2         157              1282 ms         8.17
+  post-3         177              1284 ms         7.25
+
+  TBT medians, n=5:   1276 / 1333 / 1263 / 1282 / 1284
+  anchors,     n=3:   155 / 157 / 177
+  ratios,      n=3:   8.15 / 8.17 / 7.25
+
+Spreads, all on the same basis — (max - min) / min:
+
+  TBT        (1333 - 1263) / 1263  =  5.5 %   over five runs
+  anchor     ( 177 -  155) /  155  = 14.2 %   over three
+  ratio      (8.17 - 7.25) / 7.25  = 12.7 %   over three
+
+
+C.2 · TRANSPOSITION REFUTED, on the record
+--------------------------------------------------------------------------------
+The hypothesis §3 built the anchor to test was that `tbt/anchor` is portable across host
+classes — that the anchor EXPLAINS TBT's variance, so dividing by it would leave a tighter,
+travel-safe quantity. The test is one-line falsifiable, and it falsified:
+
+  If the anchor explained TBT's variance, tbt/anchor would be TIGHTER than TBT.
+  It is LOOSER — 12.7 % against 5.5 %.
+
+The denominator moved 14.2 % while the numerator sat still at 5.5 %. That is the signature
+of a denominator whose variance is INDEPENDENT of the numerator's, and dividing by an
+independent noisy quantity strictly adds variance — it cannot subtract any. On this
+homogeneous runner class the anchor does not explain TBT, it contributes its own noise, and
+a gate is only ever as tight as the noise in the quantity it grades. Transposing would have
+bought a floor needing roughly 2.3x the headroom for the same false-red rate, in exchange
+for portability to host classes this lane does not run on.
+
+RULED: GATE D STAYS HOST-ABSOLUTE at 1750 for the runner population. The derivation basis in
+§4 is UNCHANGED — the worst observed window is still 1368 (post-run medians 1263/1282/1284
+all sit below the 1276/1333 the number was cut from), and five medians now corroborate the
+band the arithmetic assumed. The anchor column STAYS in the report: it earns its line as the
+admissibility instrument in C.3, not as a divisor, and a reader looking at a boot-TBT number
+is owed the host's speed beside it.
+
+CORRECTION TO §4, on the record. Step 3 reads "1730.5 -> 1750 ms, rounded DOWN". 1730.5 to
+1750 is rounded UP, by 19.5 ms (1.1 %). The number stands and the basis stands; the word was
+wrong. Down is the tight direction for a ceiling and C.3 below actually does it.
+
+
+C.3 · THE CONTROL — GATE D's admissibility ceiling
+--------------------------------------------------------------------------------
+§8(a) named this the biggest open item: GATE A/B/C refuse a verdict when the app-free
+control drops a frame, and GATE D graded straight through. Implemented in ci-subset.mjs as
+`ANCHOR_CEILING_MS`, judged BEFORE the threshold, exactly where control-validity is judged
+for the frame gates.
+
+  THE CEILING:  max observed runner anchor 177 x 2 = 354  ->  350 ms
+                rounded DOWN to grain (down is the tight direction for a ceiling)
+
+  ROUTING:      anchor median > ceiling  ->  instrument failure, exit 3.
+                Never a pass, never a breach. GATE D prints INADMISSIBLE with the anchor
+                named and issues no verdict at all.
+
+WHY THE HEADROOM IS WIDE — 2x, deliberately:
+  - n=3, one runner class, all three quiescent. A ceiling cut close to three samples would
+    police ordinary fleet variance, which is the frame control's job and not this one's.
+  - The costs are asymmetric. A false refusal costs one retry. A false GRADE costs a red on
+    a clean tree — the exact defect the §4 restamp exists to retire.
+  - It is meant to catch a DIFFERENT class from the one the samples represent, and a number
+    cut to the sample would catch only the sample.
+
+WHAT IT CATCHES, STATED EXACTLY — because the obvious claim is the one that did NOT survive
+measurement, and this file does not get to assert the convenient half.
+
+  MEASURED, holds:   the anchor separates THROTTLE RATES (darwin 30 ms at 1x vs 107 ms at
+                     4x, 3.57x separation) and HOST CLASSES (darwin 111-120 ms, runner
+                     155-177 ms). It is a real throughput instrument.
+  MEASURED, fails:   it is NOT a general contention detector. Under 40 synthetic CPU loops
+                     this box went to load-average 53.46 against a calm 7.25 and the anchor
+                     read 113.5 ms against 116 ms — TBT 281 vs 344 ms. Neither moved.
+  MEASURED, partial: during a real mixed-browser contention excursion (the first forced-
+                     refusal attempt, sibling waves live) the anchor read 143.5 ms against a
+                     calm 116 — up 24 % — while TBT went 344 -> 869 ms, up 153 %. The anchor
+                     moves the right way and nowhere near far enough. A 350 ms ceiling would
+                     NOT have refused that run.
+
+So `ANCHOR_CEILING_MS` is a HOST-CLASS GUARD — it refuses a host materially slower than the
+class 1750 was derived on — and it is NOT the cure for the 3.40x contention exposure §4
+banked. That exposure is still open. Saying otherwise would be the proxy-vs-surface mistake
+the lessons file names, committed on the instrument built to avoid it.
+
+KNOWN COST, declared. The ceiling converts what would have been an exit 1 into an exit 3 on
+any host slower than 350 ms of anchor — so a genuine boot regression on such a host goes
+ungraded rather than red. That window is narrow (2x the worst runner reading ever seen) and
+it is the same trade control-validity already makes for GATE A/B/C, but it is a trade and it
+is written down.
+
+RE-DERIVE AT T8 with more samples, per the floor-timing clause.
+
+
+C.4 · PROOFS
+--------------------------------------------------------------------------------
+GREEN, control live (darwin, load 7.25, head dist `index-C6VeTDEvjVkF.js`):
+
+  $ node perf-rig/ci-subset.mjs --engines chromium --runs 3 --dist <head dist>
+    bootTbt 1/2/3   tbt 344 / 294 / 345 ms   anchor 116 / 116 / 116 ms
+    | chromium | yes | 344ms | 1750 | PASS |
+    | chromium | 4x | 116 (30000000 iter) | 344ms | 2.97 |
+    RESULT: GREEN — every gates.json threshold held on every engine.      EXIT=0
+
+  (The anchor read 116 three times running on a calm box. Its 14 % runner spread is fleet
+  variance between VMs, not sampling noise within a host — which is precisely why it cannot
+  serve as a per-run divisor.)
+
+FORCED REFUSAL — ceiling hand-edited 350 -> 50 for one run, reverted in the same command,
+`git diff` confirms the file carries no trace. GATE A/B relaxed through the file's own
+CANARY-ONLY flags so that nothing but GATE D could set the exit code:
+
+  $ node perf-rig/ci-subset.mjs --engines chromium --runs 2 --max-long33 20 --idle-fps-min 30
+    !! CANARY OVERRIDE  --idle-fps-min 30  (gates.json says 97)
+    !! CANARY OVERRIDE  --max-long33 20    (gates.json says 0)
+    bootTbt 1/2   tbt 365 / 346 ms   anchor 116 / 116 ms
+    | chromium | 133.97 | 0 | 134.12 | 40.84 | PASS | 0 | 20 | PASS | 134.06 | 120.57 | PASS |
+    | chromium | yes | — | 1750 | **INADMISSIBLE** (anchor 116ms) |
+    NOT MEASURED [chromium] — boot TBT: host CPU anchor 116ms > 50ms ceiling — this host is
+      not computing fast enough for its boot TBT to be a fact about the bundle, so GATE D
+      refuses to grade it. Neither a green nor a red. Re-run on a quiescent machine.
+    RESULT: INADMISSIBLE — no threshold breached on what was measured…       EXIT=3
+
+  Note the semantics that matter: TBT was 365/346 ms and would have PASSED 1750 comfortably.
+  The refusal outranks the would-be pass, because a gate that will not grade must not grade
+  in the bundle's favour either. No median is printed for a row it refused to measure.
+
+  An earlier attempt at this proof landed mid-contention and exited 1, not 3 — GATE A's
+  long-frame census breached at median 0.5 on the same run. That is the precedence law
+  working (a breach outranks an instrument failure, T7-W6), and it is why the isolating run
+  above relaxes A and B through the canary flags rather than waiting for a quiet box.
+
+ci.yml — NO CHANGE NEEDED, confirmed by reading (this agent is fenced from it in any case).
+The refusal routes through the EXISTING exit-3 instrument class: `instrumentFails` is the
+same array the control-validity refusal and the too-few-clean-windows refusal push to, and
+the exit expression is unchanged (`1 > 2 > 3 > 0`). ci.yml's contract already maps 3 to
+"retried ONCE, then fails", and a second 3 to the INADMISSIBLE-HOST warning with CODE=0. No
+new exit code, no new branch, no change to the contract table. Two PROSE strings there are
+now incomplete rather than wrong — they enumerate the causes of a 3 as "too few clean
+windows, or the app-free control page itself dropped a long frame", and the 3-branch warning
+attributes the inadmissibility to webkit's control specifically. Raised to the chair as a
+wiring request; neither is contract.
+
+Lint: `npx eslint perf-rig/probe.js perf-rig/ci-subset.mjs` clean. `perf-rig/` is outside the
+prettier gate's scope (`src/ scripts/ ../../scripts/`) and both files were already
+prettier-dirty at head. Scenario roster still 13 keys — the anchor is a field on the existing
+`bootTbt` reading, not a new scenario, so doc-truth's D20 row is untouched.
+
+
+C.5 · FILES CHANGED BY THIS RULING
+--------------------------------------------------------------------------------
+  web/frontend/perf-rig/ci-subset.mjs
+      `ANCHOR_CEILING_MS = 350` with the derivation at the site; the admissibility check in
+      the GATE D loop, before the threshold; the header's GATE D paragraph and the anchor
+      column's block comment re-cut to record the refutation.
+  web/frontend/perf-rig/probe.js
+      the anchor's purpose comment re-cut: hypothesis refuted, instrument repurposed.
+  docs/tranches/2026-08-tranche-7/evidence/w3/gate-d-restamp.txt
+      this section, appended.
+
+  gates.json is NOT touched by this ruling — 1750 stands as derived in §4, and no threshold
+  moved. The ceiling is an admissibility law about the harness, not a commitment about the
+  bundle, so it lives in the harness where the control-validity law lives.
+
+
+C.6 · RESIDUE AFTER THIS RULING
+--------------------------------------------------------------------------------
+  a) THE 3.40x CONTENTION EXPOSURE IS STILL OPEN (§4, C.3). The anchor is not its cure. A
+     control that catches it would have to read something the boot burst itself contends
+     for — the frame path during the boot window, most likely — and that is a T8 design
+     question, not a threshold.
+  b) 1750 AND 350 ARE BOTH PROVISIONAL: n=5 medians and n=3 anchors, one runner class, every
+     sample quiescent. Re-derive at T8 with the rest of the floors.
+  c) DARWIN ASYMMETRY (§4) survives the refutation — transposition was the route to retiring
+     it and that route is now closed. GATE D is a runner-class gate by construction and the
+     darwin manual lane grades nothing with it.
+  d) THE ANCHOR'S OWN VARIANCE (14.2 % across VMs, 0 % across three runs on one box) says the
+     runner fleet is less homogeneous than its TBT spread suggests. Worth one look at T8: if
+     the fleet splits into two hardware classes, 1750 is covering both with one number.

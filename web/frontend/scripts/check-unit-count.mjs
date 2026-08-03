@@ -56,9 +56,10 @@ const SELF = fileURLToPath(import.meta.url);
 
 /* FLOOR STAMP — rewritten by `--restamp`, never by hand. A floor citing a tranche-old SHA
  * is legible as slack rather than as a decision. */
-const FLOOR_STAMP = "T5-W1.1 birth · f38c5130 · 332 executed — never restamped";
+const FLOOR_STAMP =
+  "141fdbad · 2026-08-03 · 483 executed / 47 files / 180 suites · floor = 10% under live";
 
-const FLOOR = 300; // gates.json W1.unitLane.floor
+const FLOOR = 434; // gates.json W1.unitLane.floor
 const MAX_AGE_MIN = 120; // a report older than the job that made it is not evidence
 
 /**

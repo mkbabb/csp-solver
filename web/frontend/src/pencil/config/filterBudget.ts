@@ -59,6 +59,14 @@
  * The 21 is UNGATED. TRIGGER to gate it: a second cold-load reading above 21, or any evidence
  * that the boot window (not the settled scene) carries a beat-driven re-execution.
  *
+ * T7-WGATE delta (2026-08-03, the CH-66 cure): the wordmark's and the toggle's pose stacks
+ * stopped TEARING OUT on bake and park mounted instead — display:none, HandDrawnGrid's own
+ * grammar (LEDGER CH-66; evidence/wgate/ch66-product-cure.md). The display-blind rows above
+ * therefore grew while the gated rows did not move: display-NOT-consulted reads 25 settled
+ * (+4 `.logo-pose-parked` +8 toggle `.baked-hidden` beyond the 13), and the gated
+ * `own display ≠ none` stays 9 — re-measured both engines, both regimes, in the cure's
+ * evidence. The table above stands as the dated T4-P1 device reading it always was.
+ *
  * So the pass-3 device figure of 17 is the GALLERY scene's population — the sim battery's
  * `galleryGlide` scenario navigates there — and it agrees to the unit with Lane A's own
  * gallery census in both engines. Nothing about the board budget was ever breached IN THE

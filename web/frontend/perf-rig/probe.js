@@ -765,12 +765,15 @@
         // filtered out above — it cannot inflate the number it exists to normalise. Min of
         // three reps: contention only ever adds.
         //
-        // What it is FOR: ci-subset prints tbt/anchor beside the verdict. That ratio is the
-        // portable form GATE D would need — if it holds across host classes, WGATE transposes
-        // the floor onto it and the absolute retires; if it does not, the transposition is
-        // refuted by measurement and the runner-derived absolute is the honest instrument.
-        // Diagnostic until then. Nothing here may change a verdict on the strength of one
-        // host's reading.
+        // WHAT IT IS FOR, settled. It was built to test one hypothesis — that `tbt/anchor` is
+        // portable across host classes, so GATE D could be transposed the way GATE B is. WGATE
+        // ran it to n=3 and REFUTED that: runner anchors 155/157/177 ms against TBT medians
+        // 1263/1282/1284, i.e. the denominator moved 14 % while the numerator sat still, and
+        // dividing a tight number by a noisier one only loosens the gate. GATE D stays
+        // host-absolute. What this reading DID earn is GATE D's admissibility ceiling in
+        // ci-subset.mjs (ANCHOR_CEILING_MS): an anchor over it means the host is not computing
+        // fast enough for its boot TBT to be a fact about the bundle, and the gate refuses to
+        // grade — instrument failure, never a pass and never a breach.
         var ANCHOR_N = 30000000;
         var anchorMs = Infinity;
         var anchorSum = 0;

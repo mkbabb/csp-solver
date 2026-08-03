@@ -56,15 +56,16 @@
  *     Throttling that is requested and cannot be applied is likewise exit 2: an unthrottled
  *     number read against a throttled floor is not a lenient measurement, it is a different one.
  *
- *     ALONE AMONG THE FOUR, GATE D IS AN ABSOLUTE — A/B/C all divide by a ceiling this harness
- *     measures per host, and boot TBT has no such denominator, so its number is a fact about
- *     the HOST CLASS as much as about the bundle. W6 set 1200 from darwin without ever having
- *     seen the runner; the runner's first reading of a clean tree was 1276/1333 (T7-W3
- *     restamp, 2026-08-03 — gates.json carries the arithmetic). The denominator is now
- *     MEASURED and printed as `tbt/anchor` below the verdict, diagnostic and gating nothing,
- *     so WGATE can transpose GATE D or refute the transposition on evidence rather than repeat
- *     the guess. It is comparable only WITHIN one engine at one cpuThrottleRate: TBT subtracts
- *     a flat 50 ms per task, which is not scale-invariant (darwin read 2.21 at 4x, 0.58 at 1x).
+ *     ALONE AMONG THE FOUR, GATE D IS AN ABSOLUTE, and it stays one. A/B/C all divide by a
+ *     ceiling this harness measures per host; boot TBT has no such denominator, so its number
+ *     is a fact about the HOST CLASS as much as about the bundle. W6 set 1200 from darwin
+ *     without ever having seen the runner; the runner's first reading of a clean tree was
+ *     1276/1333 (T7-W3 restamp, 2026-08-03 — gates.json carries the arithmetic). W3 then
+ *     MEASURED the missing denominator to test a transposition, and WGATE refuted it at n=3:
+ *     TBT's spread is 5.5% over five runs, `tbt/anchor`'s is 12.7% over three, so the division
+ *     only loosens the gate. What the anchor DID earn is GATE D's admissibility ceiling — the
+ *     control A/B/C always had and this gate did not (see ANCHOR_CEILING_MS). An anchor over
+ *     that ceiling books an instrument failure, never a pass and never a breach.
  *
  *   The absolute fps against the absolute 97 is printed as ADVISORY and does NOT gate. It is
  *   labelled with the measured ceiling so it cannot be misread as a real-Safari number.
@@ -149,6 +150,39 @@ const CANARY_FAIL = arg("--canary-fail", "");
 // Ports the owner's dev servers and the throttle-e2e rig already hold. Refuse rather than
 // collide: a stolen port would either fail to bind or, worse, serve someone else's bundle.
 const RESERVED = new Set([3000, 3001, 4188, 4288]);
+
+// ── GATE D's ADMISSIBILITY CEILING (T7 WGATE close ruling, 2026-08-03) ──────────────────────
+// GATE A/B/C refuse a verdict when the app-free control page drops a frame. GATE D had no such
+// control and graded straight through, so a contended host's boot TBT was booked as a fact
+// about the BUNDLE and shipped as a breach ci.yml never retries. Measured exposure at the W3
+// restamp: darwin, same dist, same 4× rate, frame control CLEAN and EXIT=0 in every run, median
+// 256 → 871 ms (3.40×) as the 1-minute load went 10 → 41. This is that missing control.
+//
+// The anchor is NOT a divisor. The transposition it was built to test is REFUTED at n=3:
+// runner anchors 155/157/177 ms against TBT medians 1263/1282/1284 — TBT's relative spread is
+// 5.5 % over five runs, the ratio's 12.7 % over three. The denominator moved 14 % while TBT sat
+// still, so on this host class dividing by it does not explain TBT variance, it adds its own,
+// and a looser gate is the only thing the division buys. GATE D stays HOST-ABSOLUTE. The anchor
+// earns its line here instead — as the fitness check, which is the one job the field data says
+// it can do.
+//
+// THE CEILING: max observed runner anchor 177 ms × 2 = 354 → 350 ms, rounded DOWN to grain
+// (down is the tight direction for a ceiling). The 2× headroom is deliberately wide, and every
+// reason is about what this number is FOR:
+//   • n=3, one runner class, all three quiescent. A ceiling cut close to three samples would
+//     police ordinary fleet variance — that is the frame control's job, not this one's.
+//   • WHAT IT CATCHES, stated exactly, because the obvious claim is the one the measurement
+//     did NOT support. The anchor separates throttle rates (darwin 30 ms at 1× vs 107 ms at
+//     4×) and host classes (darwin 111–120 ms, runner 155–177 ms). It did NOT move under
+//     pure-CPU contention: at load-average 53.46 against a calm 7.25, this box read 113.5 ms
+//     against 116 ms, with TBT 281 vs 344 ms. So 350 is a HOST-CLASS guard — it refuses a host
+//     materially slower than the class 1750 was derived on — and it is NOT a general
+//     contention detector. Whether the anchor rises during the mixed browser contention that
+//     moved darwin's TBT to 871 ms is UNMEASURED. Banked for T8; do not claim it until then.
+//   • The costs are asymmetric: a false refusal costs one retry, a false GRADE costs a red on a
+//     clean tree — the exact defect this ruling retires. So the number leans loose.
+// RE-DERIVE AT T8 with more samples, per the floor-timing clause.
+const ANCHOR_CEILING_MS = 350;
 
 const lines = [];
 function say(s = "") {
@@ -676,6 +710,27 @@ async function main() {
         bootUnsupported++;
         continue;
       }
+      // GATE D ADMISSIBILITY — the control the frame gates always had and this one did not.
+      // Judged BEFORE the threshold, exactly as control-validity is judged before GATE A/B/C:
+      // a host whose fixed-work reading has blown out is not measuring the bundle, so it may
+      // issue neither a green nor a red. Books an instrument failure (exit 3, retried once by
+      // ci.yml), never a breach — the existing class, no new exit code. Reached only by
+      // engines that ship `longtask` and therefore ran at gates.json's own throttle rate; an
+      // engine measuring GATE D at any other rate is already this file's exit-2 class.
+      const anchors = lines2
+        .map((b) => b.cpuAnchorMs)
+        .filter((n) => typeof n === "number");
+      const anchorMed = anchors.length ? median(anchors) : null;
+      if (anchorMed !== null && anchorMed > ANCHOR_CEILING_MS) {
+        say(
+          `| ${r.name} | yes | — | ${bootMaxTbtMs} | **INADMISSIBLE** (anchor ${r2(anchorMed)}ms) |`,
+        );
+        instrumentFails.push({
+          name: r.name,
+          why: `boot TBT: host CPU anchor ${r2(anchorMed)}ms > ${ANCHOR_CEILING_MS}ms ceiling — this host is not computing fast enough for its boot TBT to be a fact about the bundle, so GATE D refuses to grade it. Neither a green nor a red. Re-run on a quiescent machine.`,
+        });
+        continue;
+      }
       const med = median(lines2.map((b) => b.tbtMs));
       const dOk = med <= bootMaxTbtMs;
       if (!dOk) breached = true;
@@ -684,17 +739,15 @@ async function main() {
         `| ${r.name} | yes | ${r2(med)}ms | ${bootMaxTbtMs} | ${dOk ? "PASS" : "**FAIL**"} |`,
       );
     }
-    // GATE D's MISSING DENOMINATOR, measured and reported — DIAGNOSTIC, gates nothing (T7-W3,
-    // 2026-08-03). GATE B is portable because it divides by a ceiling this harness measures
-    // per host; GATE D is an absolute in ms and is therefore a fact about the HOST CLASS as
-    // much as about the bundle — head 6d612ec5 read 373 ms here and 1276/1333 ms on the
-    // runner, same task census, no regression between them. The fps ceiling cannot serve as
-    // the denominator (it is a frame-scheduler cap: the runner reports p50 = p95 = 16.7 ms),
-    // so probe.js measures one directly, under the same throttle, after the window closes.
-    // `tbt/anchor` is the candidate portable column: if it holds across host classes at n>=3,
-    // WGATE transposes GATE D onto it the way GATE B is transposed and the absolute retires;
-    // if it does not, the transposition is refuted BY MEASUREMENT and the runner-derived
-    // absolute stands. Either way WGATE reads a number instead of guessing one.
+    // THE ANCHOR COLUMN — diagnostic, gates nothing, and its original question is now ANSWERED.
+    // W3 measured this denominator to test one hypothesis: that `tbt/anchor` is portable across
+    // host classes, so GATE D could be transposed the way GATE B is. WGATE ran it to n=3 and
+    // REFUTED it (the arithmetic is on ANCHOR_CEILING_MS above and in evidence/w3/
+    // gate-d-restamp.txt §CLOSE-RULING). GATE D stays host-absolute; the column stays because
+    // the anchor turned out to be the admissibility instrument GATE D was missing, and because
+    // a reader looking at a boot-TBT number is owed the host's speed beside it. Comparable only
+    // WITHIN one engine at one cpuThrottleRate: TBT subtracts a flat 50 ms per task, which is
+    // not scale-invariant (darwin read 2.21 at 4×, 0.58 at 1×).
     const anchored = results
       .map((r) => {
         const bl = (r.boot || []).filter((b) => !b.error && typeof b.cpuAnchorMs === "number");
