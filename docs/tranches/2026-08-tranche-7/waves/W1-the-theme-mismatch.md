@@ -1,7 +1,8 @@
 # W1 — THE THEME MISMATCH (CRITICAL)
 
-The single worst product defect the audit found, and a textbook instance of the estate's
-own lesson: a ruling written without its enforcing config landing in the same commit.
+KenKen's cage clues are the puzzle, so the mismatch quadrants make the board unplayable — the
+highest-severity row the audit measured. It is the estate's own lesson in miniature: a ruling
+written without its enforcing config landing in the same commit.
 
 ## The defect
 
@@ -43,8 +44,8 @@ A script over `src/**/*.{vue,css}` that collects every `:root[data-theme=…]` a
 exists (`setAttribute('data-theme'` or a media-query consumer the app honors) **or** the
 selector is on an allowlist with a reason. Born RED: it flags the `CageOverlay`/`ThermoTube`
 `data-theme` blocks at `afc72ba1`; green after the cure removes them. This is the census the
-estate's "ruling lands with its enforcing config" lesson demanded and never got — knip cannot
-see CSS selectors, so nothing else will ever catch this class.
+estate's "ruling lands with its enforcing config" lesson demanded and never got — knip
+resolves modules, not selectors, so no gate in the estate reads this surface today.
 
 ### Gate 1.2 — four-quadrant ink IDENTITY, not an absolute floor (born RED)
 A Playwright row in the built-dist config over killer/kenken cage label+boundary and thermo

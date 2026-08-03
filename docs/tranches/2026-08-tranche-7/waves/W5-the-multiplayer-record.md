@@ -32,7 +32,15 @@ runner-dependent or measures something no longer in the tree.
 
 ## The ten doc-truth rows (land with the page)
 
-Ordered by value; each derives from the tree at run time in the gate's idiom:
+Ordered by value; each derives from the tree at run time in the gate's idiom. **Born-RED where
+the record already lies** (ruling 4 — these do not land "green," they land red on the current
+prose and green on the cure): `relay-loc` reds on `useSession.ts:40`'s "~150 lines" (relay.ts
+is 219), `retired-arm-clean` reds on `relay.ts:11-26`'s trystero header, `multiplayer-wire-verbs`
+reds on `useSession.ts:11`'s "THREE MESSAGES" for the four-verb grammar. The remaining rows
+(`relay-origin-pair`, `relay-event-kind`, `slug-space-figures`, `peer-ink-formula`,
+`session-stress-constants`, `relay-backoff-ladder`, `multiplayer-md-sections`) green at HEAD
+because the values agree today — they are the standing invariants the page must not drift from,
+and each carries its `--self-test` fixture so the gate itself is proven to bite.
 
 1. **`relay-origin-pair`** — the CSP `connect-src` origin, `useSession.ts`'s `RELAY_URLS`
    default, and `wrangler.toml`'s `name` are one string. The estate's most load-bearing
@@ -59,13 +67,17 @@ All one root cause on the relay side: `relay.ts` and `wrangler.toml` have exactl
   `web/frontend/README.md:174` "zero server dependency" are false — the relay fans out whole-board
   `st` frames; the frontend README is entirely silent on the session subsystem. True them.
 - **C20 (the substantive one):** the marks-privacy contract is half-true. `useGameState.ts:277`
-  says marks stay private; but `sessionSource.snapshot` is `{board, marks}` (`:313`), so a
-  joiner adopts the board-holder's marks and every deal/clear/solve pushes the publisher's
-  marks over every peer's. Marks are private per-op, public per-epoch. The doc must state this
+  says marks stay private; but `sessionSource.snapshot` is `{b, m}` (`:313` — board and marks on
+  the wire), so a joiner adopts the board-holder's marks and every deal/clear/solve pushes the
+  publisher's marks over every peer's. Marks are private per-op, public per-epoch. The doc must state this
   precisely, the comment must stop saying "private" unqualified, **and this becomes an owner
   election** (Q-2) — feature or bug.
 - **C18/C19:** "~150 lines" is 219/127; three disagreeing byte figures for the trystero
   deletion (−23.2 / −22.4 / "~2 kB") — carry one with its evidence or none.
+- **C21 (spec-symbol-phantom):** the README and a rider call the relay endpoint "one config
+  word, `relayConfig.urls`" — no such symbol exists; the landed shape is a module-private
+  `RELAY_URLS` const plus a build-time env read. `relay-origin-pair` gates the invariant; the
+  doc must name the real symbol, not the phantom.
 - **C24 (evidence-phantom):** `relayWire.ts:6` cites `evidence/t6.2/realtime/`, which does not
   exist — T6 was process-lite, so the measured numbers live only in `CLOSE.md` prose. Either
   bank the surviving rig logs under an `evidence/` directory or attribute every T6.2 number to
@@ -74,6 +86,7 @@ All one root cause on the relay side: `relay.ts` and `wrangler.toml` have exactl
 ## Acceptance
 
 `docs/multiplayer.md` written in the estate register (voice anchors banked in the audit output),
-every claim cited, the ten doc-truth rows landed and green, the 25 contradictions cured in the
-same commit, C20 raised to the owner as an election, the evidence-phantom citation resolved.
-The doc-truth gate green at its new, larger row count.
+every claim cited, the ten doc-truth rows landed — three born-RED on the current prose
+(`relay-loc`, `retired-arm-clean`, `multiplayer-wire-verbs`), the rest with a `--self-test`
+fixture — the 25 contradictions cured in the same commit, C20 raised to the owner as an election,
+the evidence-phantom citation resolved. The doc-truth gate green at its new, larger row count.

@@ -70,11 +70,15 @@ into the main vitest run) keeps `check-unit-count.mjs`'s report shape reading th
 was floored against. Re-cut the fixture fossil: `relay.test.ts:32-37,52` builds fixtures from
 trystero's dead 250-topic filter; re-aim at the shipped `{kinds:[20411], "#x":[one]}` filter.
 
-**Flagged, not booked — the relayWire arm in CI:** a `playwright-relay.config.ts` whose
-`webServer` runs `wrangler dev --port 4245`, carrying the existing opt-in `:682` row against a
-local DO. Closes the "shipped arm untested in CI" gap without the public internet, ~30s. The
-blocker is real: wrangler needs node@22 and every CI node lane pins 24. This is the owner's
-decision, not the wave's to assume away.
+**The relayWire arm in CI — banked with a firing default:** a `playwright-relay.config.ts`
+whose `webServer` runs `wrangler dev --port 4245`, carrying the existing opt-in `:682` row
+against a local DO. Closes the "shipped arm untested in CI" gap without the public internet,
+~30s. The blocker is real: wrangler needs node@22 and every CI node lane pins 24. **Owner: the
+CI keeper lane. Firing default:** the localWire e2e rows and the relay units are the coverage of
+record, and the relayWire config lands the day a CI node lane clears node@22 (the re-entry is
+that lane existing). The wave does not assume the node bump away, and does not leave the arm
+undecided — the born-RED relay units (U1/U2) already cover the fanout and close-announce logic
+the DO relays; the config only adds the transport round-trip in CI.
 
 ## Acceptance
 

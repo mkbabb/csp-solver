@@ -8,17 +8,21 @@ born RED where the defect is live at `afc72ba1`; execution awaits the owner's wo
 
 ## How it was formed
 
-Twelve auditors across two rounds, Opus fanout under a Fable chair, each lens blind to
-the favored narrative. Round 1 opened six orthogonal lenses (plan-vs-landed, gate
-soundness, gestalt product, ledger dispositions, prompt recap, consumer truth). Round 2
-sent adversarial refuters at every round-1 high, built the disease-class evidence base,
-shaped the two owner deliverables, and swept the three lenses round 1 left unstaffed
-(perf, a11y, doc/canon drift). Every round-1 family survived attack; several sharpened;
-none was overturned. The findings, with file:line and reproduction, are the waves.
+Twelve auditors across two rounds, then two round-3 verifiers, Opus fanout under a Fable
+chair, each lens blind to the favored narrative. Round 1 opened six orthogonal lenses
+(plan-vs-landed, gate soundness, gestalt product, ledger dispositions, prompt recap, consumer
+truth). Round 2 sent adversarial refuters at every round-1 high, built the disease-class
+evidence base, shaped the two owner deliverables, and swept the three lenses round 1 left
+unstaffed (perf, a11y, doc/canon drift). Every round-1 family survived as a family; four
+premises were corrected in round 2 (the hibernation attachment cap, CH-65's residue, the LOC
+reading, the kenken-receipt mechanism), and a handful of probe artifacts retired. Round 3 — a
+completeness critic and a born-RED verifier — reproduced the load-bearing defects to the pixel
+and returned this plan's own corrections; they are folded in. The findings, with file:line and
+reproduction, are the waves.
 
 ## What the audit found — the shape of it
 
-The estate's code is sound. Its **record** is not. The permalink feature shipped while
+The record's defects outnumber the runtime's. The permalink feature shipped while
 three documents still say it didn't; the PRM root cause sat in a comment for 22 days
 while the golden family re-derived it from scratch; the dependabot cure closed its alerts
 75 seconds after the push and the "owner row" outlived it by two closes; the living
@@ -63,7 +67,10 @@ its verdict.
    close without its condition re-evaluated against the tree at that commit. `ledger-diff`
    gains the arm that enforces it.
 4. **Born RED or it did not gate.** Every acceptance gate names the probe that reds on the
-   defect at `afc72ba1` and greens on the cure. A gate that cannot fail is not in T7.
+   defect at `afc72ba1` and greens on the cure. A gate that cannot fail is not in T7. The one
+   carve-out is visual/design work (W7): the estate's established discipline there is before/after
+   crops on the real surface plus the chair's look, not an automated gate — so those rows carry
+   crops-and-look, not a born-RED probe, and say so at the row.
 5. **Proportion is measured, not asserted.** The MP suite's additions are priced against
    the suite's own wall-clock; a row that doubles cost for a claim already proven a layer
    down does not enter (W4 argues five such rows out).

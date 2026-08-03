@@ -1,8 +1,8 @@
 # W7 — THE PRODUCT POLISH
 
 The gestalt lens's non-critical finds — real, user-visible, none blocking, all measured
-against the built artifact. Grouped so a batch can take them together. Each is design work;
-the DesignSync/frontend-design plugin owns the visual calls, the chair adjudicates.
+against the built artifact. Grouped so a batch can take them together. Each is design work; the
+frontend-design plugin owns the visual calls, the chair adjudicates.
 
 ## Layout
 
@@ -11,7 +11,15 @@ the DesignSync/frontend-design plugin owns the visual calls, the chair adjudicat
   bleeds beneath the toolbar (captured: "how your marks are writt", "Corner", "pencils"). At
   1280×720 the Deal button is 34% covered and its sublabel swallowed. Sibling of A1 (W2) —
   the same bar, the same missing `scroll-padding-bottom` — but this half is the visual bleed,
-  not the focus occlusion. Make the bar flush with the scroll viewport's bottom.
+  not the focus occlusion (W2 owns the padding, W7 owns the flush geometry; see W2's
+  coordination note). Make the bar flush with the scroll viewport's bottom. The washi-tape label
+  also paints *through* the bar (`SheetWashiLabel` at `z-50` inside the `z-45` context, the bar
+  at 3) — re-order the stack so the bar occludes the tape, not the reverse.
+- **The gallery frame void**: the sketchbook frame carries a 38–41% left void with cards
+  chopped on the right at every desktop width (778/538/458 px measured across the matrix). This
+  is the gallery *layout* the README's wave table names — distinct from the gallery-exit-gather
+  election (BAL-11, `runFlanks(-1)`) and the standing gallery-slices election; it collides with
+  neither. Center the frame on the card set and stop the right-edge clip.
 - **The 390-wide drawer-tab over the wordmark**: sheet-open at 390×844, the tab covers the
   wordmark's final letter ("sudok"). Both engines, 390-wide class only (clean at 430/820/768).
   Dock the sheet-open tab clear of the masthead's measured box at ≤400px. (A5 in W2 confirmed
@@ -32,6 +40,15 @@ the DesignSync/frontend-design plugin owns the visual calls, the chair adjudicat
 - **Invite vs share, one glyph**: "Play together on this board" and "Share board link" render
   byte-identical SVG, visible in the same card. Give the invite its own mark (two figures / a
   table) or merge the two acts. (Also relevant to W5's affordance section.)
+
+## The eyebrow read (CH-59 / T7-R15, folded here)
+
+CH-59's eyebrow carries two registers across pass-4/pass-5 with no terminal state in any file.
+This is not a fix — it is the one chair-adjudicated read the row has been owed for four closes:
+look at the eyebrow in both registers on the real surface and record a verdict (keep one, keep
+both with a stated reason, or restyle). It leaves W7 with a written disposition, not another
+deferral. (CH-59's other two arms already close in DISPOSITIONS — the guard's two names at W3.2,
+the idle uniform-sign watch unfired.)
 
 ## Celebration
 
