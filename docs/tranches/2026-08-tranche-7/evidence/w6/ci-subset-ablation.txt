@@ -1,0 +1,238 @@
+T7-W6 — THE PERF LANE'S GRADING ORDER: false green reproduced, cured, ablated.
+================================================================================
+Row: W6 §vacuous gates — "`ci-subset.mjs` grades after the engine loop, so a later
+engine's early return discards a measured chromium breach, and `ci.yml:1223` maps
+exit 3 -> CODE=0."
+
+host   darwin, 18 cpus, 2026-08-03 (a contended box — sibling waves building and
+       running Playwright throughout; every arm below prints its own load average)
+dist   BOTH ablation arms ran against the SAME dist, entry assets/index-D2gF0ovvWmO7.js.
+       A sibling rebuilt dist/ mid-session (three entry hashes across the day: 
+       index-c2jZv3HXdfIh -> index-BbRtDGOlVTam -> index-D2gF0ovvWmO7). The ablation is a
+       claim about GRADING ORDER, not about the bundle, so the only thing it needs is that
+       BEFORE and AFTER read the same tree — they do.
+gates  docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+
+--------------------------------------------------------------------------------
+0 · THE REPRODUCTION HOOK
+--------------------------------------------------------------------------------
+The false green needs "chromium breaches AND webkit's instrument dies" in one run.
+Waiting for a contended runner to supply the second half is not reproduction, so the
+fix ships a canary flag beside the two the file already had (--idle-fps-min,
+--max-long33): `--canary-fail <engine>` injects the failure AT THE REAL SITE — the
+control-validity branch — rather than around it.
+
+The BEFORE binary is HEAD's ci-subset.mjs with that hook and NOTHING else. The whole
+diff, verbatim:
+
+$ git show HEAD:web/frontend/perf-rig/ci-subset.mjs > perf-rig/ci-subset-head-canary.mjs
+$ # (hook applied)
+$ diff <(git show HEAD:web/frontend/perf-rig/ci-subset.mjs) perf-rig/ci-subset-head-canary.mjs
+93a94
+> const CANARY_FAIL = arg("--canary-fail", ""); // ABLATION HOOK ONLY — the sole delta from HEAD
+410c411
+<         if (ceilLong33 > maxLong33Spec) {
+---
+>         if (ceilLong33 > maxLong33Spec || CANARY_FAIL === name) { // ABLATION HOOK ONLY
+
+Two lines. The grading order is untouched. (The temp binary was deleted after the run;
+the flag survives in the cured file, so this is re-runnable with one command.)
+
+--------------------------------------------------------------------------------
+1 · BEFORE — the false green, at HEAD
+--------------------------------------------------------------------------------
+$ node perf-rig/ci-subset-head-canary.mjs --port 4236 --runs 1 \
+    --engines chromium,webkit --max-long33 -1 --canary-fail webkit
+EXIT=3
+
+    # perf-rig CI subset — idle fps + long-frame census on the built dist
+    
+    gates.json        /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+      desktop.ceilingFps         98.4
+      desktop.idle3s.minFps      97
+      desktop.idle3s.maxLong33   0
+      !! CANARY OVERRIDE  --max-long33 -1  (gates.json says 0)
+    derived ratio     minFps/ceilingFps = 97/98.4 = 0.98577
+    engines           chromium, webkit   windows/engine 1   port 4236
+    
+    dist              /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/dist
+    entry             assets/index-D2gF0ovvWmO7.js
+    host              18 cpus, load 12.03 / 16.58 / 18.75 (1/5/15m) at start
+    started           2026-08-03T07:43:14.473Z
+    
+    probe-server up on :4236
+    
+    ## chromium
+      UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36
+      control 1  fps 134.09  p50 7.7  p95 9.2  long33 0  long50 0  worst 10ms  ~130Hz
+      window 1   fps 134.37  p50 7.7  p95 9.2  long33 0  long50 0  worst 10.3ms  frames 404  wall 3006.7ms  attempt 1
+      control median 134.09 fps / long33 0
+    
+    ## webkit
+      UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15
+      control 1  fps 98.14  p50 10  p95 13  long33 0  long50 0  worst 20ms  ~100Hz
+      window 1   fps 98.5  p50 10  p95 14  long33 0  long50 0  worst 18ms  frames 296  wall 3005ms  attempt 1
+      control median 98.14 fps / long33 0
+      INSTRUMENT FAILURE: the app-free control dropped 0 frames >33.4ms (gates.json allows 0).
+      The harness cannot hold its own frame budget on this host, so neither a GREEN nor a RED is
+      admissible for webkit. Re-run on a quiescent machine. (r1-rig-baseline.md §2: both real
+      surfaces hold their ceiling with zero long frames.)
+    
+
+READ WHAT IS AND IS NOT THERE. chromium measured a window: long33 0 against a canary
+ceiling of -1, which is a GATE A breach. There is NO `## verdict` section, no GATE
+column, no BREACH line, no RESULT line — the report ends at webkit's instrument
+failure. The measured chromium breach was never graded, because grading lived after
+the loop and webkit's `return 3` left the loop first.
+
+$ grep -c "verdict\|BREACH\|RESULT" <the report above>
+0
+
+And then ci.yml finishes the job. The mapping, simulated against the live case block
+(ci.yml:1237-1250):
+
+    script exit 0 -> job CODE 0
+    script exit 1 -> job CODE 1
+    script exit 2 -> job CODE 2
+    script exit 3 -> job CODE 0      <-- `3) … CODE=0 ;;` at ci.yml:1247-1248
+
+A bundle that breached GATE A on chromium ships with a green perf lane. That is the
+row, reproduced.
+
+--------------------------------------------------------------------------------
+2 · THE FIX
+--------------------------------------------------------------------------------
+web/frontend/perf-rig/ci-subset.mjs:
+
+  · per-engine outcomes ACCUMULATE — `results` / `instrumentFails` / `setupErrors`.
+    Nothing in the engine loop returns; every failure path pushes and `continue`s.
+  · the verdict block is unconditional. Every measured result is graded before any
+    exit is chosen.
+  · the exit code is the WORST FACT in the run, in this order:
+        1 (a breach, anywhere) > 2 (setup) > 3 (instrument) > 0
+    A breach outranks an instrument failure because a breach is a fact about the
+    BUNDLE and an instrument failure is a fact about the HOST. A bad host cannot
+    un-measure a bad bundle.
+  · engine NAMES are validated before the loop opens, so a typo can no longer be the
+    early return that eats a verdict either.
+  · the report names what did not measure — `NOT MEASURED [engine] — why` — so a RED
+    with one engine missing cannot be misread as a full-matrix red.
+
+--------------------------------------------------------------------------------
+3 · AFTER — the same command, the cured file
+--------------------------------------------------------------------------------
+$ node perf-rig/ci-subset.mjs --port 4237 --runs 1 \
+    --engines chromium,webkit --max-long33 -1 --canary-fail webkit
+EXIT=1
+
+    ## verdict
+    
+    | engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+    | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    | chromium | 129.23 | 0 | 133.52 | 127.39 | PASS | 0 | -1 | **FAIL** | 133.46 | 118.89 | PASS |
+    
+    | engine | longtask | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+    | --- | --- | --- | --- | --- |
+    | chromium | yes | 316ms | 1200 | PASS |
+    
+    advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+      chromium: 133.52 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 129.23. Absolute comparison is a category error and is reported only for the record.
+    
+    BREACH [chromium] long-frame census: measured 0 frames >33.4ms > allowed -1 (gates.json desktop.idle3s.maxLong33)
+    NOT MEASURED [webkit] — synthetic (--canary-fail webkit)
+    
+    host at finish    load 17.25 / 16.40 / 18.46 (1/5/15m) · 2026-08-03T07:44:27.068Z
+    
+    RESULT: RED — at least one gates.json threshold breached (and 1 engine-row(s) did not measure — listed above; the breach stands regardless).
+
+Exit 1 -> ci.yml CODE 1 -> the job fails, and the RED is never retried (the retry arm
+is exit 3 only). The false green is closed.
+
+--------------------------------------------------------------------------------
+4 · NEGATIVE CONTROL — an instrument failure alone must NOT become a breach
+--------------------------------------------------------------------------------
+The cure would be worthless if it turned every host hiccup into a red. Same canary
+failure, NO synthetic breach:
+
+$ node perf-rig/ci-subset.mjs --port 4238 --runs 1 --engines chromium,webkit --canary-fail webkit
+EXIT=3
+
+    advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+      chromium: 113.04 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 111.26. Absolute comparison is a category error and is reported only for the record.
+    
+    NOT MEASURED [webkit] — synthetic (--canary-fail webkit)
+    
+    host at finish    load 16.53 / 16.61 / 18.45 (1/5/15m) · 2026-08-03T07:45:12.411Z
+    
+    RESULT: INADMISSIBLE — no threshold breached on what was measured, but 1 engine(s) never produced an admissible window. No verdict.
+
+Still 3, still INADMISSIBLE, still mapped to CODE=0 by ci.yml's documented
+exit-3-twice ruling. Precedence does what it says: it promotes nothing.
+
+--------------------------------------------------------------------------------
+5 · THE WEBKIT LONGTASK ARM — exit 2, never a vacuous pass
+--------------------------------------------------------------------------------
+W6 §vacuous gates: "WebKit lacks `longtask` — any long-task assertion on the webkit
+lane is vacuous. Assert support first and exit setup-error otherwise, matching
+ci-subset.mjs's exit-2 discipline."
+
+Support is asserted IN THE PAGE (`PerformanceObserver.supportedEntryTypes`) and the
+bit travels with the reading, because an engine that reports no long tasks because it
+cannot see them is indistinguishable from a clean boot unless it says so. Measured:
+
+    chromium   longtask yes   tbt 218-357ms over the 3000ms boot window at 4x CPU
+    webkit     longtask NO    tbt —   -> row prints NOT MEASURED, never PASS
+
+A run where NO engine could measure it refuses to issue a verdict at all:
+
+$ node perf-rig/ci-subset.mjs --port 4235 --runs 3 --engines webkit
+EXIT=2
+
+    ## verdict
+    
+    | engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+    | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    | webkit | 98 | 0 | 98.07 | 96.61 | PASS | 0 | 0 | PASS | 98.09 | 90.16 | PASS |
+    
+    | engine | longtask | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+    | --- | --- | --- | --- | --- |
+    | webkit | NO | — | 1200 | NOT MEASURED |
+    
+    SETUP ERROR: no engine in this run could measure boot TBT — none of webkit ships the
+      `longtask` entry type. A GATE D green from an instrument that ran nowhere is vacuous, so the
+      run refuses one. Include chromium, or drop the row from gates.json and say why.
+    
+    advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+      webkit: 98.07 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 98. Absolute comparison is a category error and is reported only for the record.
+    
+    SETUP ERROR [webkit] — boot TBT measured on no engine (no longtask entry type anywhere in this run)
+    
+    host at finish    load 16.96 / 18.00 / 19.33 (1/5/15m) · 2026-08-03T07:42:38.201Z
+    
+    RESULT: SETUP ERROR — no threshold breached on what was measured, but 1 row(s) could not be graded.
+
+Note what the same run does NOT do: webkit's own GATE A/B/C rows are graded and pass,
+and they still stand — the setup error is scoped to the row that could not be measured.
+That is the same discipline as §2: every measured thing is graded, and the exit code is
+the worst fact, not the first one.
+
+The third mouth of the same rule — throttling. GATE D's floor is derived at
+boot.tbt.cpuThrottleRate (4x). If CDP throttling is requested and cannot be applied,
+the run exits 2 rather than measuring at 1x: an unthrottled number read against a
+throttled floor is a different measurement, not a lenient one. The throttle's own
+control, same box, same script, gates.json copy with cpuThrottleRate:1 —
+
+    1x   bootTbt tbt 5ms / 4ms   (1 task, longest 55ms)
+    4x   bootTbt tbt 287/357/316ms   (10-11 tasks, longest 248-274ms)
+
+— a 60-70x separation, so the rate is demonstrably applied and not silently dropped.
+
+--------------------------------------------------------------------------------
+6 · WHAT THIS DOES NOT CLOSE
+--------------------------------------------------------------------------------
+ci.yml's own prose still claims "chromium's verdict (computed before webkit) gates via
+exit 1 whenever it breaches" (ci.yml:1244-1245). That sentence was FALSE at HEAD —
+§1 is its disproof — and it is still the wrong reason now: what makes a chromium breach
+gate is that every measured result is graded, not that chromium runs first. `--engines`
+order is a caller's argument, not a law. The strike + replacement is filed as a W6
+wiring request; W6's executors do not edit ci.yml.

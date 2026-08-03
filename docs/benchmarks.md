@@ -45,7 +45,7 @@ The unified search kernel is verified sound. Evidence from `evidence/kernel-soun
 Local test suite, run here:
 
 ```
-cargo test --workspace  →  212 passed, 0 failed, 0 ignored (28 test binaries + 4 doctests)
+cargo test --workspace  →  212 passed, 0 failed, 0 ignored (29 test binaries + 4 doctests)
 # measured at a3ada202, Apple M5 Max, 2026-08-01
 ```
 

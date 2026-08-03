@@ -1,12 +1,17 @@
 {
-  "source": "P-W4 thresholds from r2's measured cured ceilings; themeToggle at the ≥85 branch — the panel filter retired by the G2.4 C ruling",
+  "source": "P-W4 thresholds from r2's measured cured ceilings; themeToggle at the ≥85 branch — the panel filter retired by the G2.4 C ruling. T7-W6 adds desktop.undoBurst and boot.tbt: two rows the rig has measured every run and priced nowhere.",
   "desktop": {
     "ceilingFps": 98.4,
     "idle3s": { "minFps": 97, "maxLong33": 0 },
     "deal": { "minFps": 96 },
     "solveCelebration": { "minFps": 95, "maxLong33": 2 },
     "themeToggle": { "minFps": 85 },
-    "galleryGlide": { "minFps": 83 }
+    "galleryGlide": { "minFps": 83 },
+    "undoBurst": {
+      "minFps": 52,
+      "ciMinPctOfCeiling": 0.9,
+      "note": "T7-W6 / CH-53. TWO SURFACES, TWO NUMBERS. minFps 52 is the real-Safari floor for the manual matrix — the r1/T5-W1 train read 56.6 / 54.39 / 54.78 with ~15 long frames (perf-rig-run-manifest.txt:53-55), median 54.78, floored ~5% under. ciMinPctOfCeiling is what the CI subset grades (GATE C): headless WebKit and chromium both hold their ceiling on this window, so transposing 52/98.4 would hand CI a floor ~47% below live — the slack W6 exists to remove. 0.90 = the measured minimum over clean windows (100.09% of ceiling, chromium 100.26-100.7 / webkit 100.09-100.12) less 10 points; derivation in evidence/w6/perf-floor-derivation.md. RESTAMP AT WGATE per W6's floor-timing clause."
+    }
   },
   "sim": {
     "ceilingFps": 59.76,
@@ -14,6 +19,15 @@
     "galleryGlide": { "minFps": 49 },
     "themeToggle": { "minFps": 45 },
     "noScenarioRegressesBase": true
+  },
+  "boot": {
+    "tbt": {
+      "maxTbtMs": 1200,
+      "cpuThrottleRate": 4,
+      "windowMs": 3000,
+      "engines": "every engine whose PerformanceObserver ships the longtask entry type — chromium does, WebKit does not; the CI subset reports an unsupporting engine NOT MEASURED and refuses a green if no engine could measure it at all",
+      "note": "T7-W6. The idle law watches steady state only; the boot burst had nothing to trip. Measured on the W6 darwin rig at 4x: medians 218 / 275 / 316 ms (longest single task 210-274 ms); the same windows at 1x read 4-5 ms, which is the throttle's own control. 1200 is PROVISIONAL and generous by design — the ubuntu runner is several times slower per thread than this box and the floor must not manufacture a red on day one; the W6 audit's own cited train is ~714 ms at 4x. RESTAMP AT WGATE off a runner reading, per the floor-timing clause. Derivation in evidence/w6/perf-floor-derivation.md."
+    }
   },
   "gpuAttribution": { "maxGpuProcessCpuSecondsPer30sIdle": 4.5 },
   "shamCell": "a1-divider-pin",

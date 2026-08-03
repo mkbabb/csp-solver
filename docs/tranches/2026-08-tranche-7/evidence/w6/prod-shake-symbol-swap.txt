@@ -1,0 +1,52 @@
+T7-W6 — check-prod-shake.mjs: schedulerDebugInfo -> __schedulerDebug
+================================================================================
+claim (W6)   `schedulerDebugInfo` can never appear (esbuild mangles it); the
+             surviving symbol is `__schedulerDebug`.
+host         darwin, 2026-08-03
+tree         af5082880e59951a99aac12c19c8ad6b922882f3
+
+=== 1 · the two spellings in source ===
+8: * `@mkbabb/pencil-boil`'s `schedulerDebugInfo()` — re-exposed here as
+9: * `window.__schedulerDebug` (the library ships the function but registers no
+26:import { schedulerDebugInfo } from "@mkbabb/pencil-boil";
+32:    __schedulerDebug?: typeof schedulerDebugInfo;
+65:  // `schedulerDebugInfo` as a plain export but no global, so the dev probe wires it here.
+66:  window.__schedulerDebug = schedulerDebugInfo;
+
+  :26  an IMPORT BINDING  — a local name, free for the minifier to rename
+  :66  a WINDOW PROPERTY  — renaming it would break the read, so it survives
+
+=== 2 · the shipped bundle (the DEV fence intact) ===
+$ npx vite build --outDir dist-w6-shake
+chunks: 23
+  FilterTuner          0 chunk(s)
+  rafInstrumentation   0 chunk(s)
+  schedulerDebugInfo   0 chunk(s)
+  __schedulerDebug     0 chunk(s)
+
+  All four absent — the fence holds, so this build cannot distinguish a symbol that
+  is shaken out from a symbol that could never appear. Hence step 3.
+
+=== 3 · THE ABLATION — the DEV fence deliberately broken ===
+A two-line entry doing exactly what the probe does at rafInstrumentation.ts:26,66:
+
+    import { schedulerDebugInfo } from "@mkbabb/pencil-boil";
+    window.__schedulerDebug = schedulerDebugInfo;
+
+$ npx esbuild leak-probe.js --bundle --minify --format=esm --external:vue
+  schedulerDebugInfo   0 occurrence(s) in the minified output
+  __schedulerDebug     1 occurrence(s) in the minified output
+
+  tail of the minified probe:
+    size,kinds:{frame:t,sequence:n}}}window.__schedulerDebug=d;
+
+  VERDICT. With the leak PRESENT, the old symbol scores 0 and the new one scores 1.
+  `schedulerDebugInfo` was asserting the absence of a string the minifier had already
+  deleted — one third of this gate was vacuous by construction. `__schedulerDebug`
+  reds on the same leak.
+
+=== 4 · the gate after the swap ===
+$ node scripts/check-prod-shake.mjs dist-w6-shake
+[prod-shake] 23 bundle chunk(s) under dist-w6-shake; asserting 3 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, __schedulerDebug
+[prod-shake] PASS — the dev tuner is fully tree-shaken from production.
+EXIT=0

@@ -1,6 +1,33 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "project": ["src/**/*.{ts,vue,css}"],
+
+  // T7-W6. `project` was `src/**` alone for two campaigns, so `scripts/**` and the NON-SPEC
+  // half of `e2e/` sat outside the census entirely — which is how `e2e/magnitude-reporter.mjs`
+  // (zero referents, retired here) and `scripts/check-theme-tokens.mjs` (no lane runs it)
+  // survived a `files: "error"` rule. A dead-file rule that cannot see two of the three
+  // first-party source dirs is not a dead-file rule. Widened to both.
+  //
+  // `perf-rig/**` stays OUT, deliberately and on the record: its six modules run as CHILD
+  // PROCESSES of each other and of `run-safari.sh`/`run-sim.sh`, never as imports, so knip's
+  // module graph reads all six as unused and the widening would buy six false reds instead of
+  // one true one. The rig's own membership question is the perf-lane row (W6, ci-subset.mjs),
+  // and `scripts/check-lane-membership.mjs` is the instrument that answers it — it reads
+  // ci.yml, which is where the rig's callers live.
+  "project": ["src/**/*.{ts,vue,css}", "scripts/**/*.mjs", "e2e/**/*.{ts,mjs}"],
+
+  // Roots whose CALLER is not JavaScript, so no module graph can reach them. Each is named
+  // here with the caller that runs it — a file listed without one is a hole.
+  //   scripts/golden-magnitude.mjs   ci.yml, the golden lane: `run: node scripts/golden-magnitude.mjs`
+  //   scripts/dist-identity.mjs      perf-rig/run-safari.sh + run-sim.sh, the AUDIT prepend
+  //   e2e/ch62-admission.ts          .github/workflows/ch62-probe.yml, the CH-62 admission arm
+  // NOT a place to park an unwired gate: a `check-*.mjs` belongs to a lane or declares
+  // NOT-A-LANE in its own header, and check-lane-membership.mjs reds if it does neither.
+  "entry": [
+    "scripts/golden-magnitude.mjs",
+    "scripts/dist-identity.mjs",
+    "e2e/ch62-admission.ts"
+  ],
+
   "ignore": ["src/games/shared/scene.css", "src/games/shared/gameCell.css"],
   "ignoreBinaries": ["make"],
   "playwright": {

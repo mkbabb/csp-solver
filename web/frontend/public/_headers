@@ -72,7 +72,21 @@
 #                                  NOT granted — the local probe runs against a dev server,
 #                                  which serves none of this file — and a solo page opens no
 #                                  socket at all because the transport is `import()`ed at join
-#   worker-src  'self' blob:      the wasm solver Worker
+#   worker-src  'self'             the wasm solver Worker, and NOTHING ELSE. `blob:` sat here
+#                                  from the policy's first draft and never had a caller: the
+#                                  estate's one `new Worker` (games/shared/solver/client.ts)
+#                                  takes `new URL('./solver.worker.ts', import.meta.url)`,
+#                                  which Vite emits as a content-hashed same-origin chunk
+#                                  (`/assets/solver.worker-*.js` in the built bundle) — never a
+#                                  Blob. `createObjectURL` appears nowhere in src/; the two
+#                                  sites in the shipped bundle are pencil-boil's pose bake,
+#                                  and both hand their URL to an `<img>`, which is what the
+#                                  `img-src blob:` grant above is for and earned by. A CSP
+#                                  source nothing requests is not headroom, it's an unclaimed
+#                                  grant: blob: worker origins are the standard script-injection
+#                                  escape from a same-origin script-src. Narrowed T7-W6, with
+#                                  a build+grep of the emitted bundle on the record
+#                                  (evidence/w6/worker-src-blob-unused.txt)
 #   object-src  'none'             no <object>/<embed> use anywhere
 #   base-uri    'self'             blocks <base> tag injection
 #   form-action 'self'             no forms post off-origin
@@ -121,7 +135,7 @@
 # Both are additive lines in the /* stanza below; no existing header moved.
 
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' wss://sudoku-relay.mkbabb.workers.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' wss://sudoku-relay.mkbabb.workers.dev; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff

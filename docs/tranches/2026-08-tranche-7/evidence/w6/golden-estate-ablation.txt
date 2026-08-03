@@ -1,0 +1,112 @@
+T7-W6 — the golden estate gate: two vacuous arms, reproduced then cured.
+================================================================================
+claims (W6)  · "The golden estate gate exits 0 on a wiped goldens dir."
+             · "The golden band derives TOTAL_CEILING from a stale 101,341 B
+                (today 92.5 KB), so two more cell goldens pass under the ceiling
+                the doc calls a ruling. Pin the count at 8."
+instrument   GOLDEN_CHECK_ROOT canary roots (the gate's own reroot hook): the
+             specs and playwright-golden.config.ts copied verbatim, the goldens
+             dir varied. BEFORE runs `git show HEAD:…/check-golden-bytes.mjs`.
+host         darwin, 2026-08-03
+tree         af5082880e59951a99aac12c19c8ad6b922882f3
+
+=== ARM 1 · THE WIPED ESTATE ===
+canary: 25 spec files, playwright-golden.config.ts, e2e/goldens/ EMPTY.
+Four goldens are asserted by visual-golden.spec.ts; zero baselines exist.
+
+--- BEFORE (HEAD) ---
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/wiped-estate
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+[golden-bytes] no *.png under e2e — nothing to police.
+  (Capture with: npm run test:golden:update)
+EXIT=0
+
+  The scan returned at `allPngs.length === 0` BEFORE the spec census ran, so the
+  gate never learned that four goldens are asserted. A wiped, gitignored or
+  never-checked-out estate read as a green bloat guard.
+
+--- AFTER (this wave) ---
+[golden-bytes] CANARY ROOT OVERRIDE — scanning /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/wiped-estate
+[golden-bytes] this run is NOT the gate; it exists to prove the gate bites.
+
+
+[golden-bytes] FAIL — ZERO goldens under e2e/goldens while 4 golden(s) are asserted by 25 spec file(s):
+  cell-light.png  ← e2e/visual-golden.spec.ts:275
+  grid-corner-light.png  ← e2e/visual-golden.spec.ts:289
+  logo-light.png  ← e2e/visual-golden.spec.ts:222
+  toggle-crest-dark.png  ← e2e/visual-golden.spec.ts:266
+
+A wiped, gitignored, or never-checked-out estate is the loudest defect this gate can see, and it used to exit 0 on it ("nothing to police"). Every compare
+downstream would fail open or write its own baseline. Restore the estate — never
+re-mint it to make this green.
+EXIT=1
+
+=== ARM 2 · THE NINTH (AND TENTH) GOLDEN ===
+canary: the eight real goldens plus one more reviewed PAIR (cell-dark-{darwin,linux},
+byte-identical copies of cell-light), asserted by an appended spec row — the exact
+drift the wave describes. 100.2 KB total against a 110 KB band.
+
+--- BEFORE (HEAD) — the pair rides the band ---
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.7 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       3.4 KB  e2e/goldens/toggle-crest-dark-darwin.png  [144×144]
+  ok       3.4 KB  e2e/goldens/toggle-crest-dark-linux.png  [144×144]
+
+[golden-bytes] pairing + consumers (25 spec file(s) grepped):
+  ok    cell-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:293
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:275
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:289
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:222
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:266
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] PASS — 10 goldens, 100.2 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+EXIT=0
+
+  9.8 KB of headroom left. The header calls a ninth golden "a ruling"; the
+  arithmetic called it fine. Every reviewed crop-tighten re-derives the band
+  downward and buys the next pair its room — the re-derivation IS the drift.
+
+--- AFTER (this wave) — the count pin ---
+[golden-bytes] count pin: 10 on disk, pinned at 8  ← RULING REQUIRED
+
+[golden-bytes] pairing + consumers (25 spec file(s) grepped):
+  ok    cell-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:293
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:275
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:289
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:222
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:266
+
+[golden-bytes] tracked-ness: SKIPPED (no git here) — not a pass, an absence.
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] FAIL — 1 defect(s):
+  · count pin: 10 goldens on disk, pinned at 8. A new golden is a ruling — argue it, then bump GOLDEN_COUNT in the same commit. The byte band is the secondary control and cannot make this judgment.
+
+Recrop to the asserted surface, delete what no config reads, re-mint the missing
+half of a pair — never raise a cap to make this green.
+EXIT=1
+  [CORRECTION 2026-08-03] this line was banked as EXIT=0. The count pin exits 1 —
+  re-measured by the non-author verifier (w6-verify.txt §4.1/§4.2). The transcription
+  understated the cure; the mechanism is unchanged.
+
+=== CONTROL · the real estate, unperturbed ===
+
+[golden-bytes] tracked-ness: 8 tracked / 8 on disk
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] PASS — 8 goldens (pinned at 8), 92.5 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+EXIT=0
+
+  A gate that reds on everything is not a gate. The pin is an EQUALITY: a vanished
+  eighth reds on the same line as a ninth, and both land their ruling with
+  GOLDEN_COUNT bumped in the same commit.

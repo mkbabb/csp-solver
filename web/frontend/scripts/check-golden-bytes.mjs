@@ -15,7 +15,20 @@
 //       is the one EVIDENCE-POLICY number that had no enforcement, and a *total* is the
 //       exact shape of the failure the gate was born for.
 //
-// Six checks now, all evaluated before the verdict (a run reports every defect it finds,
+// T7-W6 — two more holes, both ablation-proven:
+//
+//   B4  a WIPED goldens dir exited 0. `allPngs.length === 0` printed "nothing to police"
+//       and returned before the spec scan ever ran, so the estate's own disappearance —
+//       four goldens asserted by two specs, zero baselines on disk — read as a green
+//       bloat guard. The scan now happens FIRST and an asserted-but-absent estate is the
+//       loudest red this file has.
+//   B5  the ESTATE TOTAL was doing a count's job by arithmetic. `TOTAL_CEILING` was
+//       derived from a "101,341 B" that is 92.5 KB today, so two more cell goldens fit
+//       under the band the header calls a ruling — and every crop-tighten re-derives the
+//       band downward, which IS the drift mechanism. The COUNT is now pinned at 8 (check
+//       7); the byte band stays as a secondary control on what those 8 may weigh.
+//
+// Eight checks now, all evaluated before the verdict (a run reports every defect it finds,
 // never just the first):
 //
 //   1  PER-IMAGE CEILING   ≤ 150 KB      — EVIDENCE-POLICY per-image cap (unchanged).
@@ -28,6 +41,10 @@
 //   6  ENGINE COLLISION    playwright-golden.config.ts may not declare a second engine
 //                          while snapshotPathTemplate lacks {projectName} — the precise
 //                          mechanism that minted the fossils (r3/goldens-estate §3.6).
+//   7  COUNT PIN           exactly GOLDEN_COUNT goldens on disk. A ninth is a ruling by
+//                          construction; so is a vanished eighth.
+//   8  ESTATE PRESENT      a spec asserting a golden with ZERO baselines on disk reds,
+//                          rather than exiting 0 on "nothing to police".
 //
 // Run: `node scripts/check-golden-bytes.mjs` (npm run test:golden:bytes).
 // GOLDEN_CHECK_ROOT=<dir> reroots the scan for CANARY runs only; the banner says so.
@@ -61,10 +78,19 @@ const PER_IMAGE_CEILING = 150 * 1024;
 //   · 101,341 × 1.0906 = 110,522 B — every one of the eight re-minted at once, at the
 //     worst rate the campaign has ever produced. 110 KB = 112,640 B clears that with
 //     2,118 B to spare (11.15% headroom over today's total).
-// A NINTH golden is therefore not drift, it's a ruling — and the ruling lands with this
-// band bumped in the same commit (T2–T4 lesson: the ruling lands with its enforcing
-// config, same commit). That is the intended bite, not a nuisance.
+// T7-W6 DEMOTION: this band is now the SECONDARY control. The estate's size is pinned by
+// COUNT below, because the byte arithmetic above has to be re-derived at every reviewed
+// crop-tighten — and a number that must be re-derived to stay true is a number that drifts.
+// It still answers the question the count cannot: whether the eight are ballooning.
 const TOTAL_CEILING = 110 * 1024;
+
+// THE COUNT PIN (check 7). The estate has been eight files since birth 0ea30223
+// (2026-07-13) — four goldens × {darwin,linux}. A ninth is a RULING, and a ruling lands
+// with this constant bumped in the same commit (T2–T4 lesson: the ruling lands with its
+// enforcing config). Under the byte band alone a ninth and tenth simply fit: the band was
+// derived against a 101,341 B total that reads 92.5 KB today, so the drift left ~18 KB of
+// unearned room. An exact equality has no room to leave.
+const GOLDEN_COUNT = 8;
 
 // Blank-capture floor. `statSync().size` alone passes a 0-byte or solid-transparent PNG
 // (hole B3). A 110×110 DPR2 solid crop deflates to a few hundred bytes; the SMALLEST
@@ -180,17 +206,51 @@ const allPngs = collectPngs(E2E_DIR).sort();
 const goldens = allPngs.filter((p) => p.startsWith(GOLDENS_DIR + "/"));
 const fossils = allPngs.filter((p) => !p.startsWith(GOLDENS_DIR + "/"));
 
-if (allPngs.length === 0) {
-  // No goldens is not a pass to celebrate — flag it so a wiped/gitignored goldens dir
-  // doesn't read as a green bloat-guard.
+// The spec census runs BEFORE any early exit (T7-W6 / B4). It used to live down in check
+// 5, after an `allPngs.length === 0 → exit 0` return, which is how a wiped estate greened:
+// the gate never got as far as asking what the specs assert.
+const specFiles = readdirSync(E2E_DIR, { withFileTypes: true })
+  .filter((e) => e.isFile() && e.name.endsWith(".spec.ts"))
+  .map((e) => join(E2E_DIR, e.name));
+const asserted = new Map(); // golden base → [spec:line, …]
+for (const f of specFiles) {
+  // Whole-file scan, NOT per-line: prettier is free to wrap the call so
+  // `toHaveScreenshot(` and its string land on different lines, and a per-line
+  // regex then reports a consumed golden as an orphan (T6.2 — logo-light and
+  // cell-light both "orphaned" by a reflow). The line number is derived.
+  const text = readFileSync(f, "utf8");
+  for (const m of text.matchAll(/toHaveScreenshot\(\s*['"`]([^'"`]+)\.png['"`]/g)) {
+    const at = `${rel(f)}:${text.slice(0, m.index).split("\n").length}`;
+    asserted.set(m[1], [...(asserted.get(m[1]) ?? []), at]);
+  }
+}
+
+const failures = [];
+
+// ── 8 · the estate must be PRESENT ──────────────────────────────────
+if (goldens.length === 0) {
+  if (asserted.size > 0) {
+    console.error(
+      `\n[golden-bytes] FAIL — ZERO goldens under ${rel(GOLDENS_DIR)} while ${asserted.size} ` +
+        `golden(s) are asserted by ${specFiles.length} spec file(s):\n` +
+        [...asserted]
+          .sort()
+          .map(([n, at]) => `  ${n}.png  ← ${at.join(", ")}`)
+          .join("\n") +
+        `\n\nA wiped, gitignored, or never-checked-out estate is the loudest defect this ` +
+        `gate can see, and it used to exit 0 on it ("nothing to police"). Every compare\n` +
+        `downstream would fail open or write its own baseline. Restore the estate — never\n` +
+        `re-mint it to make this green.`,
+    );
+    process.exit(1);
+  }
+  // No goldens AND no spec asserts one: the estate genuinely does not exist yet.
   console.log(
-    `[golden-bytes] no *.png under ${rel(E2E_DIR)} — nothing to police.\n` +
+    `[golden-bytes] no *.png under ${rel(E2E_DIR)} and no spec asserts one — nothing to police.\n` +
       `  (Capture with: npm run test:golden:update)`,
   );
   process.exit(0);
 }
-
-const failures = [];
 
 // ── 1 · per-image ceiling · 4 · decode + floor ──────────────────────
 let goldenBytes = 0;
@@ -261,23 +321,24 @@ if (fossils.length > 0) {
   );
 }
 
-// ── 5 · pairing + orphans ───────────────────────────────────────────
-const specFiles = readdirSync(E2E_DIR, { withFileTypes: true })
-  .filter((e) => e.isFile() && e.name.endsWith(".spec.ts"))
-  .map((e) => join(E2E_DIR, e.name));
-const asserted = new Map(); // golden base → [spec:line, …]
-for (const f of specFiles) {
-  // Whole-file scan, NOT per-line: prettier is free to wrap the call so
-  // `toHaveScreenshot(` and its string land on different lines, and a per-line
-  // regex then reports a consumed golden as an orphan (T6.2 — logo-light and
-  // cell-light both "orphaned" by a reflow). The line number is derived.
-  const text = readFileSync(f, "utf8");
-  for (const m of text.matchAll(/toHaveScreenshot\(\s*['"`]([^'"`]+)\.png['"`]/g)) {
-    const at = `${rel(f)}:${text.slice(0, m.index).split("\n").length}`;
-    asserted.set(m[1], [...(asserted.get(m[1]) ?? []), at]);
-  }
+// ── 7 · the count pin ───────────────────────────────────────────────
+// Equality, not a ceiling. A ninth golden and a vanished eighth are both rulings, and a
+// ruling lands with GOLDEN_COUNT bumped in the same commit.
+console.log(
+  `\n[golden-bytes] count pin: ${goldens.length} on disk, pinned at ${GOLDEN_COUNT}` +
+    `${goldens.length === GOLDEN_COUNT ? "" : "  ← RULING REQUIRED"}`,
+);
+if (goldens.length !== GOLDEN_COUNT) {
+  failures.push(
+    `count pin: ${goldens.length} goldens on disk, pinned at ${GOLDEN_COUNT}. ` +
+      (goldens.length > GOLDEN_COUNT
+        ? `A new golden is a ruling — argue it, then bump GOLDEN_COUNT in the same commit.`
+        : `A golden left the estate — say where it went, then bump GOLDEN_COUNT in the same commit.`) +
+      ` The byte band is the secondary control and cannot make this judgment.`,
+  );
 }
 
+// ── 5 · pairing + orphans ───────────────────────────────────────────
 const onDisk = new Map(); // base → Set(platform)
 for (const p of goldens) {
   const parsed = parseGoldenName(p.split("/").pop());
@@ -391,7 +452,8 @@ if (failures.length > 0) {
 }
 
 console.log(
-  `\n[golden-bytes] PASS — ${goldens.length} goldens, ${kb(goldenBytes)} of a ${kb(TOTAL_CEILING)} ` +
-    `estate band; paired, consumed, decodable, tracked; no fossils.`,
+  `\n[golden-bytes] PASS — ${goldens.length} goldens (pinned at ${GOLDEN_COUNT}), ` +
+    `${kb(goldenBytes)} of a ${kb(TOTAL_CEILING)} estate band; paired, consumed, decodable, ` +
+    `tracked; no fossils.`,
 );
 process.exit(0);

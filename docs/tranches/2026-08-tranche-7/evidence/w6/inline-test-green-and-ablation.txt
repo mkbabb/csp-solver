@@ -1,0 +1,76 @@
+T7-W6 — INLINE-TEST GATE (T7-R01): GREEN AFTER THE CUT, plus the live ablation
+date      2026-08-03T07:22:34Z   (born-RED transcript: inline-test-born-red.txt)
+
+1. THE CUT — the tests moved one directory over, assertions untouched.
+   csp-solver/src/builder/kuhn_munkres.rs  265 L -> 133 L (the #[cfg(test)] mod is gone)
+   csp-solver/tests/kuhn_munkres.rs        NEW, 5 tests, same names, same numbers
+
+$ cargo test --workspace   (tail)
+     Running tests/kuhn_munkres.rs (target/debug/deps/kuhn_munkres-6dfc5d2fd9a70fd8)
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   workspace total: 212 passed, 0 failed, 0 ignored (208 attributes + 4 doctests) across
+   31 'test result:' lines = 29 test binaries + 2 doctest sections. THE BINARY COUNT MOVED:
+   28 -> 29, because a new integration file IS a new binary. See the handoff — three doc
+   sites say 28 and the doc-truth row test-count-208-vs-204 grades them.
+
+$ cargo fmt --all --check   -> exit 0
+$ cargo clippy --workspace --all-targets -- -D warnings   -> exit 0
+
+2. THE GATE, GREEN on the cut tree
+[inline-tests] scope csp-solver/src + csp-solver/wasm/src — 74 .rs file(s) across 2 workspace member(s)
+[inline-tests] PASS — no test attribute under any member's src/.
+   exit 0
+
+3. ABLATION — put the breach back, on the live tree, and watch it red.
+$ printf '#[cfg(test)]
+mod tests {
+    #[test]
+    fn t() {}
+}
+' >> csp-solver/src/bitscan.rs
+[inline-tests] scope csp-solver/src + csp-solver/wasm/src — 74 .rs file(s) across 2 workspace member(s)
+
+[inline-tests] FAIL — 2 inline test attribute(s):
+  cfg-test        csp-solver/src/bitscan.rs:54: #[cfg(test)]
+  test-attr       csp-solver/src/bitscan.rs:56: #[test]
+
+Move the module to <member>/tests/ (Cargo links it as its own binary). A private, dependency-free module is reachable from there with `#[path = "../src/…"] mod …;` — see csp-solver/tests/kuhn_munkres.rs. There is no waiver list.
+   exit 1
+
+$ git checkout csp-solver/src/bitscan.rs   (ablation reverted)
+[inline-tests] scope csp-solver/src + csp-solver/wasm/src — 74 .rs file(s) across 2 workspace member(s)
+[inline-tests] PASS — no test attribute under any member's src/.
+   exit 0 — the tree is clean again.
+
+The self-test's 10 synthetic arms (transcript in inline-test-born-red.txt) prove the other
+spellings — all(test, ...), a bare #[test], #[wasm_bindgen_test] — plus the three negative
+controls that keep the instrument from reding on prose.
+
+4. THE ONE CONSEQUENCE — the test-binary count moves 28 -> 29 (HANDOFF, not a break)
+A new file under csp-solver/tests/ IS a new Cargo test binary, and check-doc-truth.mjs's
+test-count-208-vs-204 row derives that number from the tree. Three doc sites say 28:
+
+csp-solver/README.md:216:cargo test --workspace                     # 212 passed, 0 failed, 0 ignored across 28 test binaries + 4 doctests (measured at a3ada202, Apple M5 Max, 2026-08-01)
+docs/benchmarks.md:48:cargo test --workspace  →  212 passed, 0 failed, 0 ignored (28 test binaries + 4 doctests)
+README.md:90:# Rust: 212 passed, 0 failed, 0 ignored (28 test binaries + 4 doctests)
+
+$ node scripts/check-doc-truth.mjs   (the row, verbatim)
+RED    test-count-208-vs-204
+        derived: 208 native #[test] attributes (csp-solver/src + csp-solver/tests, comments elided) · 29 #[wasm_bindgen_test] in the wasm crate (cfg'd to wasm32, not host-run) · 29 test binaries (csp-solver + csp-solver/wasm lib targets + integration files)
+        README.md:90
+          expected: 29 test binaries
+          got:      28 test binaries — # Rust: 212 passed, 0 failed, 0 ignored (28 test binaries + 4 doctests)
+        docs/benchmarks.md:48
+          expected: 29 test binaries
+          got:      28 test binaries — cargo test --workspace  →  212 passed, 0 failed, 0 ignored (28 test binaries + 4 doctests)
+
+The passing total is UNCHANGED — 212 = 208 attributes + 4 doctests — because the five
+tests moved address, they did not multiply. Only '28 test binaries' -> '29 test binaries'
+at the three sites above. Those files belong to no W6 executor, so the restamp ships as a
+handoff; the row is red until it lands and green the moment it does.
+
+Full lane state at this tree: 4 RED / 18 GREEN. The other three reds are not this wave's
+work — root-readme-e2e-counts and e2e-total-arithmetic move with the e2e specs sibling
+waves are adding, and perf-rig-scenario-roster reds on the drawerToggle scenario W6's perf
+executor added to probe.js minutes ago. cited-paths-exist stayed GREEN across every
+comment rewrite in this task.

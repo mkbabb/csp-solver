@@ -1,0 +1,178 @@
+T7-W6 — RERUN LAUNDERING: the deploy chain's blindness, reproduced then cured.
+================================================================================
+claim (W6 §vacuous gates)  `ci-conclusion.sh:93` banks `runs_for_sha` and
+                           `deploy-gated.sh` never reads it, so a red run re-run
+                           until one green attempt appears rides the gate green.
+instrument                 synthetic conclusion artifacts (no network, no gh call);
+                           `--dry` so the gate is exercised without a deploy.
+host                       darwin, 2026-08-03
+tree                       af5082880e59951a99aac12c19c8ad6b922882f3 (clean at the reproduction)
+
+=== BEFORE (HEAD af508288) — the false green ===
+$ grep -n 'runs_for_sha\|run_attempt' scripts/deploy-gated.sh
+(no match — the deploy gate never reads either field)
+
+$ bash scripts/deploy-gated.sh --conclusion-file laundered.txt --dry
+[deploy-gated] gate PASSED
+[deploy-gated]   sha         af5082880e59951a99aac12c19c8ad6b922882f3 (== HEAD)
+[deploy-gated]   run         30781866393
+[deploy-gated]   conclusion  success
+[deploy-gated]   artifact    12s old (cap 86400s)
+[deploy-gated] DRY — the deploy line was NOT executed. It would be:
+[deploy-gated]   $ npm run build
+[deploy-gated]   $ npm run deploy:raw   # wrangler pages deploy dist --project-name=sudoku --branch=master --commit-dirty=true
+EXIT=0
+
+
+=== THE FIX ===
+scripts/ci-conclusion.sh   banks `run_attempt` beside `runs_for_sha`; an unreadable
+                           attempt banks as `unknown` (refused downstream, never
+                           permissive). Prints a warning when its own green is not
+                           the sha's only conclusion.
+scripts/deploy-gated.sh    refusal 5: both fields must be PRESENT and both must read
+                           1. A missing field refuses (an artifact from the older
+                           generator is exactly the blindness being cured). The one
+                           lift is `reruns_permitted yes` + a `reruns_reason` line,
+                           hand-added — the generator never writes either.
+
+=== AFTER (this wave) — the same artifacts against the fixed gate ===
+
+───────── a-launder-runs.txt
+conclusion      success
+runs_for_sha    7
+run_attempt     1
+$ bash scripts/deploy-gated.sh --conclusion-file a-launder-runs.txt --dry
+
+################################################################
+#  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57)
+#
+#  the green is NOT this sha's only conclusion:
+#  runs_for_sha is 7 — this sha collected 7 workflow runs
+#  A red re-run until one attempt comes out green ships the red tree.
+#  Fix the cause and push, or declare it in the artifact, on purpose:
+#    reruns_permitted yes
+#    reruns_reason    <why these extra conclusions are not laundering>
+#
+#  Nothing was built. Nothing was deployed.
+#  Cure:
+#    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+#    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+################################################################
+
+EXIT=1
+
+───────── b-launder-attempt.txt
+conclusion      success
+runs_for_sha    1
+run_attempt     3
+$ bash scripts/deploy-gated.sh --conclusion-file b-launder-attempt.txt --dry
+
+################################################################
+#  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57)
+#
+#  the green is NOT this sha's only conclusion:
+#  run_attempt is 3 — run 30781866393 was re-run at least once
+#  A red re-run until one attempt comes out green ships the red tree.
+#  Fix the cause and push, or declare it in the artifact, on purpose:
+#    reruns_permitted yes
+#    reruns_reason    <why these extra conclusions are not laundering>
+#
+#  Nothing was built. Nothing was deployed.
+#  Cure:
+#    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+#    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+################################################################
+
+EXIT=1
+
+───────── c-legacy.txt
+conclusion      success
+$ bash scripts/deploy-gated.sh --conclusion-file c-legacy.txt --dry
+
+################################################################
+#  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57)
+#
+#  artifact has no 'runs_for_sha' field: /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/c-legacy.txt
+#  It predates the rerun-laundering gate. Re-read the field with today's generator:
+#    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+#
+#  Nothing was built. Nothing was deployed.
+#  Cure:
+#    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+#    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+################################################################
+
+EXIT=1
+
+───────── d-declared.txt
+conclusion      success
+runs_for_sha    7
+run_attempt     1
+reruns_permitted yes
+reruns_reason    the first six runs died on a GitHub outage, not on a test — run 30781866393 is the only one that executed
+$ bash scripts/deploy-gated.sh --conclusion-file d-declared.txt --dry
+[deploy-gated] RERUNS PERMITTED — declared in the artifact, not inferred:
+[deploy-gated]   runs_for_sha is 7 — this sha collected 7 workflow runs
+[deploy-gated]   reason: the first six runs died on a GitHub outage, not on a test — run 30781866393 is the only one that executed
+[deploy-gated] gate PASSED
+[deploy-gated]   sha         af5082880e59951a99aac12c19c8ad6b922882f3 (== HEAD)
+[deploy-gated]   run         30781866393
+[deploy-gated]   conclusion  success
+[deploy-gated]   runs/attempt 7 / 1  (reruns_permitted yes)
+[deploy-gated]   artifact    16s old (cap 86400s)
+[deploy-gated] DRY — the deploy line was NOT executed. It would be:
+[deploy-gated]   $ npm run build
+[deploy-gated]   $ npm run deploy:raw   # wrangler pages deploy dist --project-name=sudoku --branch=master --commit-dirty=true
+EXIT=0
+
+───────── e-declared-noreason.txt
+conclusion      success
+runs_for_sha    7
+run_attempt     1
+reruns_permitted yes
+$ bash scripts/deploy-gated.sh --conclusion-file e-declared-noreason.txt --dry
+
+################################################################
+#  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57)
+#
+#  'reruns_permitted yes' carries no 'reruns_reason' line.
+#  A permission without a reason is the laundering it licenses.
+#
+#  Nothing was built. Nothing was deployed.
+#  Cure:
+#    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+#    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+################################################################
+
+EXIT=1
+
+───────── f-clean.txt
+conclusion      success
+runs_for_sha    1
+run_attempt     1
+$ bash scripts/deploy-gated.sh --conclusion-file f-clean.txt --dry
+[deploy-gated] gate PASSED
+[deploy-gated]   sha         af5082880e59951a99aac12c19c8ad6b922882f3 (== HEAD)
+[deploy-gated]   run         30781866393
+[deploy-gated]   conclusion  success
+[deploy-gated]   runs/attempt 1 / 1
+[deploy-gated]   artifact    16s old (cap 86400s)
+[deploy-gated] DRY — the deploy line was NOT executed. It would be:
+[deploy-gated]   $ npm run build
+[deploy-gated]   $ npm run deploy:raw   # wrangler pages deploy dist --project-name=sudoku --branch=master --commit-dirty=true
+EXIT=0
+
+
+=== THE MATRIX ===
+artifact                runs_for_sha  run_attempt  declaration            verdict
+a-launder-runs.txt      7             1            —                      REFUSED  exit 1
+b-launder-attempt.txt   1             3            —                      REFUSED  exit 1
+c-legacy.txt            (absent)      (absent)     —                      REFUSED  exit 1
+d-declared.txt          7             1            yes + reason           passed   exit 0
+e-declared-noreason.txt 7             1            yes, no reason         REFUSED  exit 1
+f-clean.txt             1             1            —                      passed   exit 0
+
+The wave's preferred arm is refusal; d- is the declared escape hatch and it prints
+the count it was asked to forgive. e- proves the hatch cannot be opened silently.
+f- proves the gate still passes an honest green — a gate that refuses everything is
+not a gate either.

@@ -7,7 +7,7 @@ reports frame curves back over HTTP. Two lanes come out of it:
 
 | lane | what runs it | what it can say |
 | --- | --- | --- |
-| **CI subset** | `ci-subset.mjs`, headless chromium + webkit | idle fps + long-frame census, as a regression tripwire |
+| **CI subset** | `ci-subset.mjs`, headless chromium + webkit | idle fps, long-frame census, `undoBurst`, boot TBT — four gates, as a regression tripwire |
 | **manual matrix** | `run-safari.sh` / `run-sim.sh` / `cpu-attrib.sh`, real Safari + the iOS simulator | every row in `gates.json`, including the fps numbers the patch sealed on |
 
 The thresholds both lanes read live in
@@ -21,7 +21,7 @@ default.
 
 ```bash
 node perf-rig/ci-subset.mjs                       # both engines, 3 windows each
-node perf-rig/ci-subset.mjs --engines webkit      # one engine
+node perf-rig/ci-subset.mjs --engines chromium    # one engine (webkit alone exits 2 — GATE D)
 node perf-rig/ci-subset.mjs --build --out run.txt # force a rebuild, tee the report
 ```
 
@@ -29,7 +29,14 @@ It builds-or-reuses `dist/`, serves it on **:4390** (its own port — never 3000
 4288, which it refuses outright), drives the engines, and kills its server on the way out.
 Exit `0` pass · `1` threshold breach · `2` setup error · `3` instrument failure.
 
-**Two assertions, both derived from gates.json at run time.**
+**Boot blocking is priced, not declared** (T7-W6). The wave offered two arms — add a boot-window
+TBT scenario with a floor, or record that boot blocking goes unpriced. This rig took the floor:
+`bootTbt` runs in its own throttled page load, so it measures a boot rather than the tail of a
+steady-state window, and GATE D grades it. What stays declared is narrower and named above —
+the **webkit** boot window, which no `longtask`-less engine can measure, and which the report
+prints `NOT MEASURED` rather than passing.
+
+**Four assertions, every one read out of gates.json at run time.**
 
 - **GATE A** — `median(long33) <= desktop.idle3s.maxLong33`. Unit-free and engine-portable: a
   frame over 33.4 ms is a dropped frame at any refresh rate. This is the P1 defect's own
@@ -40,6 +47,35 @@ Exit `0` pass · `1` threshold breach · `2` setup error · `3` instrument failu
   portable (r1-rig-baseline.md §8, "the %-of-ceiling column is the portable one"), and the
   ceiling is re-measured every run by the app-free `/__ceiling` page. The absolute comparison
   is printed **advisory** and does not gate.
+- **GATE C** — `median(undoBurstFps) >= desktop.undoBurst.ciMinPctOfCeiling * measuredCeilingFps`
+  (T7-W6, CH-53). `undoBurst` has been measured every manual run since P1 and priced nowhere;
+  a committed instrument with no threshold is the same defect as a committed threshold with no
+  executor. It carries **two** numbers because it has two surfaces. `minFps` (52) is the
+  real-Safari floor the manual matrix enforces — real Safari reads ~55 fps with ~15 long frames
+  on this window. Headless WebKit reads its *ceiling* on the same window, so transposing
+  52/98.4 the way GATE B does would hand CI a floor ~47 % under live, which is the slack this
+  gate exists to remove. The CI arm therefore declares its fraction outright. Same shape as
+  GATE B, one derived from an anchored pair and one measured here.
+- **GATE D** — `median(bootTbtMs) <= boot.tbt.maxTbtMs`, taken over the first
+  `boot.tbt.windowMs` of a page load under `boot.tbt.cpuThrottleRate`× CPU throttling (CDP,
+  applied before the navigation). Every other row watches steady state; the boot burst happens
+  once, before the first idle window opens, and had nothing to trip. **Graded only where
+  `longtask` exists.** `PerformanceObserver.supportedEntryTypes` is checked in the page and the
+  bit travels with the reading: WebKit ships no `longtask` entry type, so its row prints
+  `NOT MEASURED`, never `PASS` — an empty task list from an engine that cannot see tasks is not
+  a clean boot. A run in which *no* engine could measure it exits `2`, and throttling that is
+  requested and cannot be applied exits `2` as well: an unthrottled number read against a
+  throttled floor is a different measurement, not a lenient one.
+
+**Grading order.** Every measured result is graded before any exit is taken, and the exit code
+is the worst fact in the run: `1` (a breach, anywhere) > `2` (setup) > `3` (instrument) > `0`. A
+breach outranks an instrument failure because a breach is a fact about the *bundle* and an
+instrument failure is a fact about the *host* — a bad host cannot un-measure a bad bundle. The
+lane used to grade after the engine loop, so a later engine's early return discarded a chromium
+breach that had already been measured; with `ci.yml` mapping exit 3 to `CODE=0`, that shipped
+green. Ablation-proven both ways at
+`docs/tranches/2026-08-tranche-7/evidence/w6/ci-subset-ablation.txt`; `--canary-fail <engine>`
+is the reproduction hook.
 
 **Control validity.** `/__ceiling` is an empty page with one rAF counter. If *that* drops a
 long frame, the host is not measuring the surface, and the run exits `3` — no verdict, green
@@ -101,12 +137,62 @@ TAG=<tag> ./cpu-attrib.sh a10-glyph-grain-none
 node summarize.mjs <runId> [<runId>…]
 ```
 
-Scenarios, in the order they are state-safe (this is the default set):
-`idle3s,deal,undoBurst,solveCelebration,galleryGlide,themeToggle`, plus `hoverSweep` and
-`solveWindow` (ungated — pass them by name or they don't run), `domDump` /
-`styleDump` (diagnostic) and `rafCeiling` (the app-free control page).
+### The scenario roster
 
-Query knobs: `__attempts` (default 3), `__settle` (default 1200 ms), `__theme=light|dark|auto`,
+Every key in `probe.js`'s `SCENARIOS`, in its partition. The drivers' default set — the order
+they are state-safe in — is `idle3s,deal,undoBurst,solveCelebration,galleryGlide,themeToggle`;
+everything else runs only when passed by name.
+
+| scenario | partition | what prices it |
+| --- | --- | --- |
+| `idle3s` | default · **CI subset** | GATE A + GATE B, gates.json `desktop.idle3s` |
+| `undoBurst` | default · **CI subset** | GATE C, gates.json `desktop.undoBurst` (T7-W6) |
+| `bootTbt` | **CI subset** only | GATE D, gates.json `boot.tbt` (T7-W6); own page load, throttled |
+| `deal` | default | `desktop.deal.minFps`, manual matrix |
+| `solveCelebration` | default | `desktop.solveCelebration`, manual matrix |
+| `galleryGlide` | default | `desktop.galleryGlide.minFps`, manual matrix |
+| `themeToggle` | default | `desktop.themeToggle.minFps`, manual matrix |
+| `hoverSweep` | by name · **unpriced** | nothing — diagnostic, see below |
+| `solveWindow` | by name · **unpriced** | nothing — diagnostic, see below |
+| `galleryDrag` | by name · **unpriced** | nothing — diagnostic, see below (T7-W6) |
+| `drawerToggle` | by name · **unpriced** | nothing — diagnostic, see below (T7-W6) |
+| `domDump` | by name | diagnostic only — a DOM census, no frames, no fps |
+| `styleDump` | by name | diagnostic only — a computed-style census, no frames, no fps |
+
+`rafCeiling` is not in the table because it is not an app scenario: it is the app-free
+`/__ceiling` control page, the denominator every number above is read against.
+
+### The unpriced rows, and why they say so
+
+Four scenarios are **measured, ungated**. Naming them here is the price of keeping them: a
+measured number with no floor is a reading, and a reading that no one has declared unpriced
+reads like a gate to the next person.
+
+- **`hoverSweep`** — replays the app's own `*:hover` declarations across the control row.
+  Diagnostic because it measures a *replay*, not a pointer: no floor can be honest about a
+  gesture the page cannot actually perform. Pinned to 9×9/Easy (a 16×16 board turns the window
+  from 68.9 fps into 19.5 — the pin is in the scenario, not in the reader's memory).
+- **`solveWindow`** — arms the 16×16 loader and reads its filter execution rate. Diagnostic
+  because its number (`filterExecPerSec`) is a mechanism census, not a frame budget; the census
+  it feeds is `filterBudget`'s, which has its own lane.
+- **`galleryDrag`** (T7-W6) — the mouse drag the owner's T6 mark created: a `scrollLeft` write
+  per pointer move, snap suspended, one `glideTo` settle on release. Distinct from
+  `galleryGlide`, which steps the same deck with the arrow keys. **No floor yet** — the surface
+  has two takes, both on one machine in W6, and a floor derived off two takes on one machine is
+  the 43–400 %-slack mechanism this tranche is removing. It carries its own proof of work
+  (`dragMoved`, `scrollLeftFrom/Peak/To`) so a gesture the app ignored cannot pass for a fast one.
+- **`drawerToggle`** (T7-W6) — the under-board glass drawer, two full 520 ms sweeps per window,
+  ending in the state it started. Desk regime only (`.drawer-tab` is `display:none` under
+  1024), which the lookup reports rather than silently measuring nothing. **No floor yet**, same
+  reason; `expandedTrail`/`drawerMoved` are its proof of work.
+
+W6's readings for both new rows, both engines, at
+`docs/tranches/2026-08-tranche-7/evidence/w6/perf-floor-derivation.md`. Both surfaces drop
+frames (worst 74–131 ms), which is the argument for pricing them once there is a train worth
+pricing against — the WGATE restamp is where that decision belongs.
+
+Query knobs: `__attempts` (default 3), `__settle` (default 1200 ms), `__bootMs` (default
+3000 ms — the boot window `bootTbt` sums over), `__theme=light|dark|auto`,
 `__ablate` (URI-encoded CSS, injected before the app boots — pass a **file** to the drivers,
 which encode it). `EXTRA='game=sudoku&size=3&difficulty=EASY'` pins board state on the URL,
 which any base-vs-cured pair **must** do: the app's state is localStorage-persisted per origin,

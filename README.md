@@ -87,7 +87,7 @@ cd web/frontend && npm install && npm run dev
 All counts measured at `e961bdb7`, Apple M5 Max, 2026-08-01 — except the e2e census, which `scripts/check-doc-truth.mjs` re-derives from all three Playwright configs on every run, and which T5-W1 rows 1.6 and 1.10 widened (WebKit 91 → 110 in the default config, the built-dist gates 23 → 39).
 
 ```bash
-# Rust: 212 passed, 0 failed, 0 ignored (28 test binaries + 4 doctests)
+# Rust: 212 passed, 0 failed, 0 ignored (29 test binaries + 4 doctests)
 cargo test --workspace
 
 # Python wheel-contract: 27 passed, 0 skipped

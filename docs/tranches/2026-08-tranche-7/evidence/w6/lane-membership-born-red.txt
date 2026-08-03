@@ -1,0 +1,88 @@
+T7-W6 — LANE-MEMBERSHIP CENSUS, BORN RED
+date: 2026-08-03T07:30:43Z  HEAD: af508288
+
+The corpus is pinned to HEAD, not the working tree: sibling W6 lanes are landing new
+scripts into web/frontend/scripts/ concurrently, so the live dir carries files HEAD does
+not (check-motion-contract.mjs, check-sleep-lint.mjs, and this gate itself — all four
+red in the live tree too, and all cure through the same wiring). --root reads a pristine
+`git archive HEAD` tree in the scratchpad, so this figure is reproducible at the seal.
+
+$ git archive HEAD .github/workflows/ci.yml web/frontend/package.json web/frontend/scripts | tar -x -C <head-tree>
+$ node scripts/check-lane-membership.mjs --root <head-tree> --self-test
+===============================================================================
+LANE-MEMBERSHIP CENSUS — 13 gate/probe script(s) under web/frontend/scripts, 101 CI-reachable command(s) (17 npm script(s) resolved)
+  · check-coverage-floor.mjs — ci.yml:792, package.json scripts.test:coverage:floor
+  · check-empty-catch.mjs — package.json scripts.lint:catch
+  · check-font-coverage.mjs — package.json scripts.test:font-coverage
+  · check-golden-bytes.mjs — package.json scripts.test:golden:bytes
+  · check-ink-pressure.mjs — package.json scripts.lint:ink
+  · check-prod-shake.mjs — package.json scripts.test:prod-shake
+  · check-pw-projects.mjs — package.json scripts.test:e2e:projects
+  · check-pw-retries.mjs — package.json scripts.test:e2e:retries
+  · check-support-floor.mjs — package.json scripts.test:support-floor
+  · check-theme-selectors.mjs — package.json scripts.lint:theme-selectors
+  ✗ check-theme-tokens.mjs — NOTHING RUNS IT
+  · check-unit-count.mjs — ci.yml:787, package.json scripts.test:unit:count
+  ✗ tdz-probe.mjs — NOTHING RUNS IT
+  ✗ 1 UNCLAIMED SCRIPT — 2
+  ✓ 2 DECLARATION SOUND
+  ✓ 3 LANE RESOLVES
+
+SELF-TEST — each check against fixture models:
+  [1 UNCLAIMED SCRIPT] the wave's exact shape — a census with no npm script and no step
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] the tdz shape — a package.json script exists, no CI step calls it
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] the only mention is a ci.yml comment — documentation is not a lane
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] a same-named script under the REPO-ROOT scripts/ — wrong tree, not this lane
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] a declaration below the header window is not a declaration
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] a header that QUOTES the token is discussing the law, not invoking it
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] positive control — a step runs `npm run lint:ink`, which runs the file
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — a step runs `node scripts/…` directly
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — reached transitively through a chained npm script
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — a block-scalar `run: |` body counts
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — a helper is not a gate, and owes no lane
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — the declared escape hatch
+      → GREEN (want GREEN)
+  [2 DECLARATION SOUND] a declaration whose reason is a shrug
+      → RED (want RED)
+  [2 DECLARATION SOUND] a long reason that cites nothing checkable
+      → RED (want RED)
+  [2 DECLARATION SOUND] the file says NOT-A-LANE and a lane runs it
+      → RED (want RED)
+  [2 DECLARATION SOUND] positive control — reason above the floor, with a cite
+      → GREEN (want GREEN)
+  [3 LANE RESOLVES] a step runs an npm script package.json does not have
+      → RED (want RED)
+  [3 LANE RESOLVES] a step runs a guard that is not on disk
+      → RED (want RED)
+  [3 LANE RESOLVES] positive control — every lane names something that exists
+      → GREEN (want GREEN)
+
+2 failure(s):
+
+  • [1 UNCLAIMED SCRIPT] scripts/check-theme-tokens.mjs — NO CI LANE names it and it declares nothing. It runs nowhere, so its green means nothing and its red would never be seen. Wire it (a step beside `lint:ink`/`lint:catch`, or a `node scripts/check-theme-tokens.mjs` run), delete it, or put `NOT-A-LANE: <reason with a cite>` in its header (first 60 lines).
+
+  • [1 UNCLAIMED SCRIPT] scripts/tdz-probe.mjs — NO CI LANE names it and it declares nothing. It runs nowhere, so its green means nothing and its red would never be seen. Wire it (a step beside `lint:ink`/`lint:catch`, or a `node scripts/tdz-probe.mjs` run), delete it, or put `NOT-A-LANE: <reason with a cite>` in its header (first 60 lines).
+EXIT=1
+===============================================================================
+
+TWO born-RED at HEAD, exactly the pair the wave names:
+  · check-theme-tokens.mjs (T5-W2 2.3a) — no npm script, no step, never run
+  · tdz-probe.mjs (T5-W2 2.1c)          — `lint:tdz` exists in package.json and no
+                                          CI step calls it
+
+Both PASS today, so neither is a broken gate — they're unrun ones. Verified this wave:
+  $ node scripts/check-theme-tokens.mjs --self-test  -> 0 unreferenced, control RED, exit 0
+  $ node scripts/tdz-probe.mjs --self-test           -> 0 cycle edges, control RED, exit 0
+The recommendation is WIRE, not delete: both carry live negative controls, and the tdz
+probe re-executes the old ReferenceError on every invocation.

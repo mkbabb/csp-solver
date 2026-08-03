@@ -1,0 +1,46 @@
+T7-W6 — CSP worker-src: the blob: grant has no caller. NARROWED TO 'self'.
+date: 2026-08-03T07:29:55Z  HEAD: af508288
+
+Built to a PRIVATE outDir (dist-w6): sibling W6 lanes rebuild dist/ concurrently and
+its chunk hashes moved twice under this audit. `npx vite build --outDir dist-w6`.
+
+1 · SOURCE — every Worker construction in the estate
+-------------------------------------------------------------------------------
+src/games/shared/solver/transport.ts:25:  /** Builds a fresh worker — the game supplies `() => new Worker(new URL('./solver.worker.ts', import.meta.url), { type: 'module' })`. */
+src/games/shared/solver/client.ts:31: * THE Worker. One `new Worker` in the whole estate (`solverSpine.workers: 1`), over the one
+src/games/shared/solver/client.ts:36:    new Worker(new URL("./solver.worker.ts", import.meta.url), { type: "module" }),
+
+2 · SOURCE — every blob-URL mint in the estate
+-------------------------------------------------------------------------------
+(zero createObjectURL sites in src/)
+
+3 · BUILT BUNDLE — every Worker construction that ships
+-------------------------------------------------------------------------------
+index-D1mnrSPYXXUI.js :: all:i,prewarm:g,throwIfError:c}}var Ze=Ic({createWorker:()=>new Worker(new URL("/assets/solver.worker-eJy8PYEB.js",""+import.meta.url),{type:"module"}),tag:"solver"}),ca=Ze.prewarm
+
+4 · BUILT BUNDLE — every blob-URL mint that ships, and what receives it
+-------------------------------------------------------------------------------
+animation-vendor-BHoVqYDzMghH.js :: w Blob([i],{type:"image/svg+xml;charset=utf-8"}),c=URL.createObjectURL(s);try{const d=await ge(c),l=document.createElement("canvas");l.width=o,l.height=r;c
+animation-vendor-BHoVqYDzMghH.js :: ize,P));try{const x=(await Promise.all(z)).map(ie=>URL.createObjectURL(ie));if(p!==g){r(x);return}const R=c(a,P);l(R,x,Math.max(1,a.poseCacheSize??_)),s=R,
+
+   Both sites are pencil-boil's pose bake (node_modules/@mkbabb/pencil-boil/dist/raster.js:116):
+    const blob = new Blob([captureSvg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    try {
+        const img = await loadSvgImage(url);
+   `loadSvgImage(url)` — an <img> decode, revoked in the finally. The second site maps
+   encoded pose Blobs to <img> handles for the pose layers. Both are img-src blob:,
+   which the policy already grants and earned at T4-P1; neither is a Worker.
+
+5 · THE EMITTED POLICY (public/_headers is copied verbatim into the build output)
+-------------------------------------------------------------------------------
+138:  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' wss://sudoku-relay.mkbabb.workers.dev; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+6 · THE WORKER CHUNK VITE EMITS — same-origin, content-hashed, not a Blob
+-------------------------------------------------------------------------------
+-rw-r--r--   1 mkbabb  staff   22477 Aug  3 03:29 solver.worker-eJy8PYEB.js
+
+VERDICT: worker-src 'self' blob: granted a blob: worker origin nothing requests.
+Narrowed to 'self'. Not recorded as deliberate headroom — an unclaimed blob: worker
+origin is the standard escape from a same-origin script-src, and the one Worker the app
+has loads from /assets/solver.worker-*.js, which 'self' covers whole.

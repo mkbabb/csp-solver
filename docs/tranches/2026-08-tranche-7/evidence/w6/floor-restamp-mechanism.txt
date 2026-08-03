@@ -1,0 +1,77 @@
+T7-W6 — THE RESTAMP MECHANISM (landed here, RUN at WGATE).
+================================================================================
+W6 §floor timing, binding: every floor lands its MECHANISM in W6 and restamps its
+NUMBERS at WGATE, after the last row lands anywhere in the tranche. W2 and W4 both
+add tests; a floor derived at W6's own seal is stale on arrival, which is the exact
+43–400% slack these rows exist to remove. NOTHING BELOW WAS WRITTEN — every run is
+`--dry`, and the floors in the tree are still W1/W2's.
+host   darwin, 2026-08-03
+tree   af5082880e59951a99aac12c19c8ad6b922882f3
+
+=== 1 · THE UNIT FLOOR — 300 against a live 477 ===
+W6 read the census at 471 and the disposition input at 444; both are stale — the
+tranche is still adding tests, which is precisely why the number waits for WGATE.
+
+$ node scripts/check-unit-count.mjs <fresh report>
+FE unit lane — 477 executed (477 passed / 0 failed), 0 skipped, 0 todo, over 44 files / 173 suites; floor 300; report age 2.5 min.
+  floor stamped: T5-W1.1 birth · f38c5130 · 332 executed — never restamped  ·  slack 59%
+unit count OK — 477 >= 300.
+
+$ node scripts/check-unit-count.mjs --restamp <fresh report> --dry
+RESTAMP — 477 executed → floor 300 → 429
+  stamp: af508288 · 2026-08-03 · 477 executed / 44 files / 173 suites · floor = 10% under live
+
+--dry — nothing written.
+
+  A restamp cannot be founded on a report that is not a clean census — every other
+  check in the gate must pass first, with the floor's own opinion removed:
+
+$ node scripts/check-unit-count.mjs --restamp <report with 2 failures> --dry
+--restamp REFUSED: the report is not a clean census.
+  · report is not a passing run: 2 failed, success=false
+  · summary counters disagree with the per-file census: summary 475 passed / 2 failed vs census 477 passed / 0 failed over 477 assertions in 44 files
+EXIT=1
+
+=== 2 · THE COVERAGE FLOOR — pencil 13.35 against an observed 31.42 ===
+An 18.7-point regression passes today (W6's figure was 32.07 against 13.35; the
+live measurement moved, the slack did not).
+
+TWO CONTRACTS, kept apart:
+  --write-floor   bank the observed figure EXACTLY; it can LOWER, and lowering is a
+                  re-baseline needing --allow-lower "<reason>". Unchanged.
+  --restamp       a RATCHET: ~10% under live, and keep whichever is HIGHER — the new
+                  figure or the banked one. Closing slack must never hand any back.
+                  A first cut applied the haircut unconditionally and proposed
+                  lowering 29 already-tight figures (thermo.branches 83.33 -> 75,
+                  killer.branches 100 -> 90, …). That is loosening a gate in the name
+                  of restamping it. The max() is the cure.
+
+$ node scripts/check-coverage-floor.mjs --restamp --single-run-ok --dry
+src/App.vue         |     1 |    0.00% |    0.00% |    0.00% |    0.00%
+TOTAL               |   130 |   45.78% |   42.23% |   39.34% |   46.34%
+
+[coverage-floor] --dry — 8 figure(s) would move; nothing written:
+  src/pencil.statements: 13.35 -> 28.28
+  src/pencil.branches: 15.69 -> 26.88
+  src/pencil.functions: 9.49 -> 21.73
+  src/pencil.lines: 14.05 -> 30.05
+  TOTAL.statements: 38.51 -> 41.2
+  TOTAL.branches: 35.91 -> 38
+  TOTAL.functions: 32.37 -> 35.41
+  TOTAL.lines: 38.43 -> 41.71
+
+  Eight figures move, all UPWARD, all in the two scopes the wave named. Every other
+  floor holds. WGATE runs it for real against a SAMPLE (--samples <dir>), not one
+  run — v8 coverage jitters up to 0.82 pts on this estate and a floor baked from a
+  lucky run flakes.
+
+=== 3 · THE COUNT FLOORS — see pw-manifest-ablation.txt §4 ===
+`check-pw-projects.mjs --restamp` carries the same law, plus one of its own:
+quarantines subtract at their DECLARED platform, never the running one. It also
+refuses its own lowerings.
+
+=== 4 · NOTHING WAS WRITTEN ===
+  (no line above coverage-floor.json = the bank is untouched)
+  check-unit-count.mjs:59:const FLOOR_STAMP = "T5-W1.1 birth · f38c5130 · 332 executed — never restamped";
+  check-unit-count.mjs:61:const FLOOR = 300; // gates.json W1.unitLane.floor
+  check-pw-projects.mjs:85:const FLOOR_STAMP = "T5-W1 1.10 birth — never restamped";

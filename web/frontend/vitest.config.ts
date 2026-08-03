@@ -61,6 +61,15 @@ export default defineConfig({
         // The bootstrap: `createApp(App).mount('#app')`. Executed by the browser, never
         // by a unit — counting it only adds a permanently-0% file to the denominator.
         'src/main.ts',
+        // T7-W6. Same species as `main.ts`, different reason: 306 lines of DECLARED filter
+        // census — the ROW-regime population the built dist is asserted against — whose sole
+        // importer is `e2e/filter-census.spec.ts`. Playwright executes it against a real
+        // build; no unit ever can, and no unit should (a unit that imported it would assert
+        // the table against itself). It sat at a permanent 0% in the `src/pencil` denominator,
+        // dragging a floor that exists to catch LOST testing with a file that never had any.
+        // Excluded here rather than moved: the record has to live in `src/` for the app's own
+        // prose to cite it, and `e2e/` is not `src/`.
+        'src/pencil/config/filterBudget.ts',
       ],
       // Report every included file, imported by a unit or not (see the header note).
       all: true,

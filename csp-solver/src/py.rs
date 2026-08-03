@@ -11,8 +11,8 @@
 //!
 //! Build: `maturin develop --release --features py`
 //!
-//! Split into submodules (each well under the 500-line budget) rather than
-//! one monolithic file:
+//! Split into submodules along the binding seams rather than one monolithic
+//! file:
 //! - `enums` — `Pruning` / `Ordering` + their `From` impls into the
 //!   Rust-core equivalents.
 //! - `config` — `SolveConfig`, `SolveStats`, and the `CancelToken`

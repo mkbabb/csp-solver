@@ -1,0 +1,106 @@
+T7-W6 — THE T6 LOC RECORD, RE-DERIVED FROM THE TREE
+2026-08-03 · git 2.x · repo at master
+
+THE METHOD, STATED BEFORE THE NUMBERS
+--------------------------------------
+Range: `26674449..b220c445` — the parent of the T6 formation commit (`d062a841^`) through
+the close head (`b220c445`, "T6 multiplayer: the board becomes a table"). Both endpoints are
+CLOSE.md's own chain table; `26674449` is the post-T5-close CH-63 fix that sat between the
+T5 seal (`055da52c`) and T6's first commit, so it belongs to neither tranche and anchors the
+base. 20 commits.
+
+Instrument: `git diff --numstat <base> <head>` — a TREE-TO-TREE diff, not a sum of per-commit
+diffs. Tree-to-tree is what "the tranche changed the estate by N lines" means; summing
+commits double-counts every line a later commit rewrote (the two differ by ~36/~36 here).
+No `-w`, no rename detection tuning, defaults throughout, so anyone re-runs it and gets this.
+
+THE TOTAL
+---------
+  $ git diff --shortstat 26674449 b220c445
+  76 files changed, 5466 insertions(+), 996 deletions(-)        net +4,470
+
+BY BUCKET (the partition matters — a LOC claim about an estate is not a claim about its docs)
+
+  bucket                       files    insertions  deletions   net
+  docs/**                        10        +1,870        −1     +1,869
+  *.md elsewhere                  1            +3        −3         +0
+  web/frontend/src (non-test)    43        +2,402      −837     +1,565
+  colocated *.test.ts             6          +362       −46       +316
+  web/frontend/e2e               11          +764       −90       +674
+  config / other                  5           +65       −19        +46
+                                                                 ──────
+  TOTAL                          76        +5,466      −996     +4,470
+
+  CODE (everything but docs and .md)      65 files  +3,593  −992   net +2,601
+  CODE minus package-lock.json (+45)      64 files  +3,548  −992   net +2,556
+
+  The "config / other" five: index.html (1/1), package-lock.json (45/0), package.json (2/0),
+  public/_headers (11/4), vite.config.ts (6/14).
+
+  Top src movers: GameControlPanel.vue +623/−187 · useSession.ts +415/−0 ·
+  assets/index.css +274/−22 · App.vue +171/−39 · useCarouselGlide.ts +157/−4 ·
+  useSession.test.ts +144/−0 · useUndoHistory.test.ts +116/−5 · CelebrationStar.vue +77/−141.
+
+THE SIX MARK LANES
+------------------
+CLOSE.md names them in its chain table: voice `45b0f6fb`, debug `e6c1e28a`, motion
+`8c241315`, gallery `aea36ec6`, controls `2c71f03c`, mobile `771958c4`. Each measured
+against its OWN parent (`git show --numstat`), because a lane is a commit, not a range:
+
+  lane       commit      insertions  deletions   net
+  voice      45b0f6fb         +112       −136     −24
+  debug      e6c1e28a          +71         −3     +68
+  motion     8c241315         +433       −444     −11
+  gallery    aea36ec6         +676        −88    +588
+  controls   2c71f03c         +624       −176    +448
+  mobile     771958c4         +171        −43    +128
+                                                 ─────
+  SUMMED                    +2,087       −890  +1,197   (68 file-touches, zero docs)
+
+Three of the six are net-negative and only two by more than a dozen lines. The two lanes the
+README prices individually land close — voice "~−40" vs −24, motion "−8" vs −11 — so the
+per-lane arithmetic was roughly honest. The aggregate is where the record broke.
+
+THE THREE SITES, AGAINST THE MEASUREMENT
+-----------------------------------------
+1. `CLOSE.md:33` — "tranche diff ≈ +2,900/−600 with the feature"
+   Measured +5,466/−996 whole, +3,593/−992 code-only. Insertions understated by 2,566
+   (whole) or 693 (code-only); deletions understated by 396 either way. No partition of the
+   tree reproduces +2,900/−600 — it isn't a docs-vs-code framing question.
+
+2. `CLOSE.md:34` — "the six mark lanes alone net ≈ −75"
+   Measured +1,197. Off by 1,272 AND sign-inverted: the lanes that were said to have paid
+   for the feature are the tranche's second-largest addition after the docs.
+
+3. `README.md:107` + `AUDIT.md:59` — "Tranche net ≈ +550 LOC … mark lanes … net-negative
+   (~−100)"
+   Measured net +4,470 whole · +2,601 code-only · +2,556 code minus the lockfile. Off by
+   3,920 / 2,051 / 2,006 respectively. The mark-lane half is the same −75-class error at a
+   different rounding: measured +1,197.
+
+The two published sites also disagree with EACH OTHER by ~1,750 lines (CLOSE's +2,900/−600
+nets +2,300; README/AUDIT says +550), which is the tell that neither was derived from the
+tree at its citation. Both were written the same day, about the same range.
+
+CROSS-CHECK
+-----------
+Per-commit sums against the tree-to-tree diff, as a check that no commit was missed:
+six lanes +2,087/−890 · multiplayer `874bf7d5` +36/−5 and `b220c445` +1,475/−91 · formation
+`d062a841` +1,844/−14 · chair and true-up commits (`c03eb78f` +14/−3, `827905fa` +26/−20,
+`b89cfd55` +1/−1, `cbc5749f` +1/−1, `f4859643` +2/−2, `d0e8bbbe` +15/−4, `3a848258` +1/−1)
+= +5,502/−1,032. Against the tree-to-tree +5,466/−996: 36 insertions and 36 deletions of
+double-count, exactly as expected where a later commit rewrites an earlier one's line. The
+chain is complete.
+
+POST-CLOSE, FOR THE ADDENDA ROWS
+--------------------------------
+CLOSE.md's counts are AT CLOSE, so the range above stops at `b220c445` and the correction
+blocks say so. Through the T6.2 head (`26674449..1cc8f4e4`): 90 files, +7,495/−1,131, net
++6,364. Through T6.1 (`..c958a139`): 83 files, +6,520/−1,008.
+
+WHAT THIS IS NOT
+----------------
+It's a measurement, not a verdict. Whether +2,601 code lines for a multiplayer feature,
+seventeen owner marks and a debug lane is parsimonious is the owner's question — this file
+only makes sure the question gets asked against real numbers. The fewer-lines law binds each
+lane's cut; three of six lanes cut, three grew, and the record said all six cut.

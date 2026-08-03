@@ -25,3 +25,13 @@
 9. **Deploy:** only via `npm run deploy` (`set -a && source ~/Programming/value.js/.env`);
    wrangler needs node@22; post-deploy `dist-identity.mjs --served https://sudoku.babb.dev`.
 10. **Memory + crons:** delete the durability cron at the seal; update the campaign memory.
+11. **Count reds mid-tranche are the gate working, not a defect:** every wave that adds
+    tests reds `root-readme-e2e-counts`/`e2e-total-arithmetic`/`test-count-208-vs-204` until
+    its seal trues the README figures — each wave-seal commit runs `check-doc-truth` locally
+    and trues what its wave moved (W3: +prm-void-audition + access already on disk; W4: +6
+    e2e rows + relay lane; W6: rust 28→29 binaries post-extraction); WGATE restamps final.
+    Intermediate pushed heads `af508288`/`53a6b56d` red on exactly this and are so noted.
+12. **The webkit contention roster is WANDERING** (three consecutive runner reds:
+    futoshiki:131 ×3; a11y:490, gallery-deal:485, permalink:52, multiplayer:454 each once) —
+    corroborates W3's sharding adoption; the close needs the sharding wiring landed and a
+    green run under it.

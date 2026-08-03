@@ -1,0 +1,53 @@
+T7-W6 — knip project scope: THE FALSE GREEN, ABLATION-PROVEN
+date: 2026-08-03T07:28:38Z  HEAD: af508288
+
+HEAD knip.json: "project": ["src/**/*.{ts,vue,css}"] — scripts/** and the non-spec
+half of e2e/ are outside the census, so a `files: "error"` rule cannot see them.
+
+THE FALSE GREEN, REPRODUCED. Two zero-referent files are planted — one in e2e/ (the
+magnitude-reporter shape), one in scripts/ (the check-theme-tokens shape) — and knip is
+run at the HEAD scope and at the widened scope over the SAME tree.
+===============================================================================
+$ ls e2e/__w6-ablation-dead.ts scripts/__w6-ablation-dead.mjs
+e2e/__w6-ablation-dead.ts
+scripts/__w6-ablation-dead.mjs
+
+--- ARM 1 · npx knip --config <HEAD knip.json>  (project: src/** only) ---
+(no output)
+EXIT=0   <- GREEN. Two dead files on disk, the dead-file gate says nothing.
+
+--- ARM 2 · npx knip  (this wave's widened knip.json) ---
+Unused files (6)
+e2e/__w6-ablation-dead.ts        
+scripts/__w6-ablation-dead.mjs   
+scripts/check-lane-membership.mjs
+scripts/check-motion-contract.mjs
+scripts/check-sleep-lint.mjs     
+scripts/check-theme-tokens.mjs   
+Unused exports (1)
+CODEC_VERSION  e2e/wire.ts:39:14
+EXIT=1   <- RED, and it names both planted files.
+
+===============================================================================
+THE STANDING STATE after the plants are removed (still RED, and correctly so):
+Unused files (4)
+scripts/check-lane-membership.mjs
+scripts/check-motion-contract.mjs
+scripts/check-sleep-lint.mjs     
+scripts/check-theme-tokens.mjs   
+Unused exports (1)
+CODEC_VERSION  e2e/wire.ts:39:14
+EXIT=1
+
+  · check-theme-tokens.mjs   — the wave's dead lane; cures when the chair wires
+                               `lint:theme-tokens` into package.json
+  · check-lane-membership.mjs — this wave's new gate; cures with `lint:lanes`
+  · check-motion-contract.mjs / check-sleep-lint.mjs — sibling W6 lanes' new gates,
+                               same cure (see handoffs)
+  · CODEC_VERSION (e2e/wire.ts) — the permalink dual-path row; the round-trip test
+                               that W6 adds is what consumes it
+
+knip and check-lane-membership.mjs now agree on the same four files by two different
+roads: knip resolves the module graph, the census reads ci.yml. Neither alone sees both
+halves — knip cannot follow `run: node scripts/x.mjs`, and the census cannot follow an
+import. That is why both entries in knip.json's `entry` block name their non-JS caller.

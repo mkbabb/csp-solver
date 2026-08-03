@@ -107,3 +107,23 @@ routes + two edge smoke rows); the owner sees crops per mark. Standing T5 rows
 Tranche net ≈ +550 LOC — the multiplayer feature rides atop mark lanes that are
 net-negative (~−100). The fewer-lines law binds each lane's cut, not the feature's
 existence.
+
+> **CORRECTION — 2026-08-03 (T7-W6).** Both numbers in that sentence are wrong; the frame
+> is sealed, so the true ones land here. Re-derived tree-to-tree,
+> `git diff --numstat 26674449 b220c445` (formation's parent → the close head, 20 commits,
+> git defaults):
+>
+> - **Tranche net +4,470** (`+5,466/−996` over 76 files). Docs are +1,870/−1 of that, so
+>   code alone is **+3,593/−992, net +2,601** — +2,556 without `package-lock.json`. The
+>   published ≈ +550 is off by 3,920 whole, 2,051 code-only.
+> - **The mark lanes net +1,197, not ~−100.** voice −24 · debug +68 · motion −11 ·
+>   gallery +588 · controls +448 · mobile +128. Three of six cut. The two lanes this table
+>   prices individually land close (voice's ~−40 measures −24, motion's −8 measures −11) —
+>   the per-lane arithmetic was roughly honest and the aggregate was not.
+>
+> So the feature does NOT ride atop net-negative mark lanes: the lanes are the tranche's
+> second-largest addition after the docs. The fewer-lines law still binds each lane's cut —
+> what's corrected is the claim that every lane paid it. `CLOSE.md`'s "≈ +2,900/−600 …
+> six lanes ≈ −75" and `AUDIT.md:59` carry the same correction; the two sites disagreed
+> with each other by ~1,750 lines, which is how the drift surfaced. Arithmetic:
+> `docs/tranches/2026-08-tranche-7/evidence/w6/loc-rederivation.txt`.

@@ -76,8 +76,10 @@ const withDepthRule = (block) => ({
 const gameBoundaryRules = [...crossGameRules, sharedMayNotImportGames].map(withDepthRule)
 
 // The app shell (App.vue, main.ts) lives outside src/games/** but is held to the same pencil
-// depth rule — it is a top-level consumer of the pencil chrome barrel. No cross-game/shared
-// boundary applies here, so a standalone block (no clobber risk).
+// depth rule — it imports pencil components by their own public files, at the same depths a game
+// reaches (the subdir barrels are gone, per the depth-lint note above; this comment used to call
+// the shell "a consumer of the pencil chrome barrel", which the same file had already recorded as
+// deleted). No cross-game/shared boundary applies here, so a standalone block (no clobber risk).
 const appShellDepthRule = {
   files: ['src/App.vue', 'src/main.ts'],
   rules: {

@@ -1,0 +1,146 @@
+T7-W6 — the self-delta `invert` arm red at its own postcondition, not the compare.
+================================================================================
+claim (W6)   "The self-delta `invert` arm reds the crest at its own postcondition,
+             not the compare (the crest boots dark, invert leaves light). Make the
+             delta direction-aware or parse the JSON report and require every
+             golden to red with a `toHaveScreenshot` message."
+             BOTH landed: the delta is direction-aware AND the grading now reads
+             the JSON report.
+instrument   scripts/golden-selfdelta.mjs (new), against a dev server on :4247
+             (PLAYWRIGHT_BASE_URL — the wave's 4230-4260 band).
+host         darwin, 2026-08-03
+tree         af5082880e59951a99aac12c19c8ad6b922882f3
+
+=== 0 · THE DEFECT, RAW ===
+`GOLDEN_DELTA=invert` at HEAD, straight from playwright's JSON report:
+
+FAILED  golden · logo wordmark (light) — W13 soul: baked logo pose stack
+    Error: expect(locator).toHaveScreenshot(expected) failed /  / Locator: locator('svg.handwritten-logo') /   165139 pixels (ratio 0.96 of all image pixels) are different.
+
+FAILED  golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+    Error: expect(locator).toHaveClass(expected) failed /  / Locator: locator('html') / Expected pattern: /dark/
+
+FAILED  golden · single cell with given glyph (light)
+    Error: expect(locator).toHaveScreenshot(expected) failed /  / Locator: locator('.sudoku-cell').first() /   18005 pixels (ratio 0.87 of all image pixels) are different.
+
+FAILED  golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+    Error: expect(page).toHaveScreenshot(expected) failed /  /   114448 pixels (ratio 0.89 of all image pixels) are different. / 
+
+  Three rows red at `toHaveScreenshot` — the compare. The crest red at
+  `toHaveClass(/dark/)`: the golden BOOTS dark (loadSettled `{dark:true}`), the
+  delta clicks the toggle to LIGHT, and the settle then waits for `dark` to be
+  there. It reds three lines before any screenshot is taken.
+
+  ci.yml's inline step grades on one bit — "playwright exited nonzero, therefore
+  the compare bit". For this row that inference is false, and the step has no way
+  to notice: a postcondition red and a compare red exit the same.
+
+=== 1 · BEFORE — HEAD's spec, graded by the new harness ===
+[self-delta] the gate that proves the gate — graded on WHY each arm red, not that it did.
+
+[self-delta] ARM black — every asserted surface painted solid — the grain-static→solid-black class
+  ok   golden · logo wordmark (light) — W13 soul: baked logo pose stack
+       red at the compare
+  ok   golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+       red at the compare
+  ok   golden · single cell with given glyph (light)
+       red at the compare
+  ok   golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+       red at the compare
+
+[self-delta] ARM invert — the theme flipped under the capture — direction-aware since T7-W6
+  ok   golden · logo wordmark (light) — W13 soul: baked logo pose stack
+       red at the compare
+  FAIL golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+       RED, BUT NOT AT THE COMPARE
+       Error: expect(locator).toHaveClass(expected) failed · Locator: locator('html')
+  ok   golden · single cell with given glyph (light)
+       red at the compare
+  ok   golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+       red at the compare
+
+[self-delta] FAIL — 1 of 8 row(s):
+  · [invert] golden · toggle crest (dark, moon) — W13 soul: celestial rest pose: red, but with no toHaveScreenshot in its message — the arm never reached the compare, so it proves nothing about it. First error: Error: expect(locator).toHaveClass(expected) failed · Locator: locator('html')
+
+Fix the ARM, never the grading: an arm that reds for its own reasons is the same
+vacuous green in a louder costume.
+EXIT=1
+
+=== 2 · THE CURE ===
+visual-golden.spec.ts   the `invert` delta reads the theme BEFORE the click and
+                        settles on the flip wherever it lands (`.not.toHaveClass`
+                        when it was dark). No arm-specific direction is assumed.
+scripts/golden-selfdelta.mjs
+                        both arms, `--reporter=json`, and the claim graded as
+                        written: EVERY golden must red, and every red must carry a
+                        `toHaveScreenshot` message. Anything else is a SETUP ERROR
+                        (exit 1); no JSON at all is an instrument failure (exit 2).
+
+=== 3 · AFTER — the same two arms, the same rig ===
+[self-delta] the gate that proves the gate — graded on WHY each arm red, not that it did.
+
+[self-delta] ARM black — every asserted surface painted solid — the grain-static→solid-black class
+  ok   golden · logo wordmark (light) — W13 soul: baked logo pose stack
+       red at the compare
+  ok   golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+       red at the compare
+  ok   golden · single cell with given glyph (light)
+       red at the compare
+  ok   golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+       red at the compare
+
+[self-delta] ARM invert — the theme flipped under the capture — direction-aware since T7-W6
+  ok   golden · logo wordmark (light) — W13 soul: baked logo pose stack
+       red at the compare
+  ok   golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+       red at the compare
+  ok   golden · single cell with given glyph (light)
+       red at the compare
+  ok   golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+       red at the compare
+
+[self-delta] PASS — 8 row(s) across 2 arms, every one red at its toHaveScreenshot. The golden compare still compares.
+EXIT=0
+
+=== 4 · THE HARNESS'S OTHER BITE (canary) ===
+A gate that only ever passes is not a gate. A third arm injecting NOTHING
+(`GOLDEN_DELTA=none-at-all`, a no-op the spec ignores) stands in for the original
+defect — a compare that has stopped comparing:
+
+[self-delta] ARM none-at-all — CANARY: an arm that injects nothing
+  FAIL golden · logo wordmark (light) — W13 soul: baked logo pose stack
+       GREEN — THE DELTA DID NOT BITE
+       
+  FAIL golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+       GREEN — THE DELTA DID NOT BITE
+       
+  FAIL golden · single cell with given glyph (light)
+       GREEN — THE DELTA DID NOT BITE
+       
+  FAIL golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+       GREEN — THE DELTA DID NOT BITE
+       
+
+[self-delta] FAIL — 4 of 12 row(s):
+  · [none-at-all] golden · logo wordmark (light) — W13 soul: baked logo pose stack: PASSED with the regression injected — the compare has stopped comparing, which looks exactly like a compare that is passing.
+  · [none-at-all] golden · toggle crest (dark, moon) — W13 soul: celestial rest pose: PASSED with the regression injected — the compare has stopped comparing, which looks exactly like a compare that is passing.
+  · [none-at-all] golden · single cell with given glyph (light): PASSED with the regression injected — the compare has stopped comparing, which looks exactly like a compare that is passing.
+  · [none-at-all] golden · grid top-left corner (light) — W13 soul: grain-static steady layer: PASSED with the regression injected — the compare has stopped comparing, which looks exactly like a compare that is passing.
+
+Fix the ARM, never the grading: an arm that reds for its own reasons is the same
+vacuous green in a louder costume.
+EXIT=1
+
+  Four greens under an injected regression, four FAILs. The canary script was
+  deleted after the run; nothing of it is in the tree.
+
+=== 5 · CONTROL — the unperturbed compare, same rig, same minute ===
+
+Running 4 tests using 4 workers
+
+[1/4] e2e/visual-golden.spec.ts:296:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+[2/4] e2e/visual-golden.spec.ts:285:1 › golden · single cell with given glyph (light)
+[3/4] e2e/visual-golden.spec.ts:261:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+[4/4] e2e/visual-golden.spec.ts:230:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack
+  4 passed (2.4s)
+EXIT=0

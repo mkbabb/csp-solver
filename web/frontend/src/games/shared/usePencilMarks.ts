@@ -38,6 +38,19 @@ export function usePencilMarks(
         // Last-write-wins seq guard + the gesture may have released mid-flight.
         if (seq === marksSeq && marksActive.value) pencilMasks.value = masks;
       } catch {
+        // NO `classifyError` HERE — the asymmetry is deliberate, and booked (T7-W6). Its two
+        // sibling call sites, `useGameState`'s deal and solve, route a fault into `solveState`
+        // + `errorCode` + `errorMessage`; those refs are the classifier's whole point, since
+        // what it returns is a Fiction to RENDER. This composable neither takes nor returns
+        // them, and marks have no error surface by contract (the header: a fault CLEARS them,
+        // because they're a courtesy). Classifying here would mint a value nothing reads —
+        // the contrivance, not the cure.
+        //
+        // WHAT IT COSTS, stated: a WORKER_FAILURE mid-peek reads exactly like "the engine had
+        // nothing to say", so the paper note the identical fault raises on solve never comes.
+        // Curing that is a UI ruling, not a sweep item — a fifth return here, slots in
+        // `useGameState`, `defineGame`'s contract and the shell, and a decision on whether a
+        // held gesture may pop a note at all. Give marks a surface and this catch routes.
         if (seq === marksSeq) pencilMasks.value = null;
       }
     }, delayMs);

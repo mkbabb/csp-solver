@@ -22,22 +22,28 @@
  * `encodeUntagged` stays exported for exactly one purpose — asserting the refusal
  * from the other side (permalink.spec.ts, "an untagged ?board= body fails
  * closed"). Nothing else may use it.
+ *
+ * THE BASE64URL SPELLING IS THE APP'S (T7-W6). This module carried its own `b64url`
+ * — a fifth copy of `+`→`-`, `/`→`_`, strip-padding — written over node's `Buffer`
+ * while the app's went through `btoa`. Two implementations of the outer envelope
+ * under a module whose entire reason for existing is that the wire has ONE spelling.
+ * They agreed byte for byte over the full latin-1 range, which is precisely how a
+ * dual path survives: it costs nothing until the day it doesn't. One import kills it,
+ * and it kills the node-only symbol with it — `wire.ts` is now plain DOM-typed source,
+ * which is what lets `src/games/sudoku/composables/wire-parity.test.ts` import this
+ * file from inside the app's own tsconfig program and hold the two encoders to
+ * byte-identity at unit speed.
  */
+import { toBase64Url } from '../src/lib/base64url';
 
-export const CODEC_VERSION = String.fromCharCode(1);
-
-export function b64url(s: string): string {
-  return Buffer.from(s, 'binary')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
+/** Module-private, like the codec's own (persistence.ts:139). Nothing imported it; the three
+ *  encoders below are the only sanctioned way to spell a body, tagged. */
+const CODEC_VERSION = String.fromCharCode(1);
 
 export function encodeSudoku(size: number, cells: Record<number, number>, total: number): string {
   let c = '';
   for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
-  return b64url(CODEC_VERSION + `${size}.${c}`);
+  return toBase64Url(CODEC_VERSION + `${size}.${c}`);
 }
 
 // The clue section is the UNIVERSAL one (T5-W2 2.4): whatever `spec.clues.encode` produces,
@@ -52,7 +58,7 @@ export function encodeFutoshiki(
   let c = '';
   for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
   const iq = ineqs.flat().map((w) => w.toString(36)).join(',');
-  return b64url(CODEC_VERSION + `${size}.${c}.${iq}`);
+  return toBase64Url(CODEC_VERSION + `${size}.${c}.${iq}`);
 }
 
 /** The pre-T4-W3 wire: a body with no version byte at all. Nothing writes it; nothing reads
@@ -61,5 +67,5 @@ export function encodeFutoshiki(
 export function encodeUntagged(size: number, cells: Record<number, number>, total: number): string {
   let c = '';
   for (let i = 0; i < total; i++) c += (cells[i] ?? 0).toString(36);
-  return b64url(`${size}.${c}`);
+  return toBase64Url(`${size}.${c}`);
 }

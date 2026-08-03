@@ -1,0 +1,172 @@
+T7-W6 — THE CHAIR'S WIRING: APPLIED AND VERIFIED
+================================================================================
+date   2026-08-03T08:29:40Z
+tree   working tree at HEAD 53a6b56d (sibling waves W3 still writing under it —
+       two of their scripts are uncommitted on disk and are named below, twice,
+       as the ONLY expected red)
+scope  .github/workflows/ci.yml · web/frontend/package.json · the 28→29 restamp ·
+       three banked EXIT corrections · W6's stale-doc paragraph. Nothing else.
+
+The executors filed wiring_requests because ci.yml and package.json are out of
+executor scope (w6-verify.txt §3). This file is the record that they landed and
+that the lanes they create actually run.
+
+
+§1 — ci.yml PARSES
+================================================================================
+$ python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/ci.yml'))"
+  OK — 18 jobs, 1,721 lines. lint carries 7 steps (was 5).
+  perf-subset name: "perf subset (gates.json idle + undoBurst + boot-TBT
+                     thresholds, chromium + webkit)"
+
+
+§2 — THE THREE NEWLY-WIRED FRONTEND GATES
+================================================================================
+$ npm run lint:theme-tokens                                              EXIT=0
+  @theme declared: 52 · unreferenced (corpus only) 0 · unreferenced
+  (transitive rule) 0 · negative control (re-add --color-input): RED as required
+  check-theme-tokens: 0 unreferenced @theme tokens
+
+$ npm run lint:tdz                                                       EXIT=0
+  OLD graph (scene → game → registry → scene): THREW —
+    ReferenceError: Cannot access 'scene' before initialization
+  NEW graph (spec → defineGame, cards → spec): BOOTED
+  graph census (src/games): 0 cycle edge(s)
+  negative control (a synthetic game importing the table): RED as required
+
+$ npm run lint:lanes                                          EXIT=1, EXPECTED
+LANE-MEMBERSHIP CENSUS — 16 gate/probe script(s) under web/frontend/scripts,
+108 CI-reachable command(s) (20 npm script(s) resolved)
+  · check-coverage-floor.mjs — ci.yml:874, package.json scripts.test:coverage:floor
+  · check-empty-catch.mjs — package.json scripts.lint:catch
+  · check-font-coverage.mjs — package.json scripts.test:font-coverage
+  · check-golden-bytes.mjs — package.json scripts.test:golden:bytes
+  · check-ink-pressure.mjs — package.json scripts.lint:ink
+  · check-lane-membership.mjs — package.json scripts.lint:lanes
+  ✗ check-motion-contract.mjs — NOTHING RUNS IT
+  · check-prod-shake.mjs — package.json scripts.test:prod-shake
+  · check-pw-projects.mjs — package.json scripts.test:e2e:projects
+  · check-pw-retries.mjs — package.json scripts.test:e2e:retries
+  ✗ check-sleep-lint.mjs — NOTHING RUNS IT
+  · check-support-floor.mjs — package.json scripts.test:support-floor
+  · check-theme-selectors.mjs — package.json scripts.lint:theme-selectors
+  · check-theme-tokens.mjs — package.json scripts.lint:theme-tokens
+  · check-unit-count.mjs — ci.yml:869, package.json scripts.test:unit:count
+  · tdz-probe.mjs — package.json scripts.lint:tdz
+  ✗ 1 UNCLAIMED SCRIPT — 2      ✓ 2 DECLARATION SOUND      ✓ 3 LANE RESOLVES
+  19/19 self-test fixtures correct (11 RED controls, 8 GREEN).
+
+  THE RED IS THE EXPECTED ONE AND ONLY IT. `check-motion-contract.mjs` and
+  `check-sleep-lint.mjs` are sibling wave W3's, uncommitted on this disk and
+  absent from the W6 commit — the runner will not see them. Every W6 script the
+  census could see at the born-RED bank (evidence/w6/lane-membership-born-red.txt
+  named five) now resolves: check-theme-tokens, tdz-probe and check-lane-membership
+  itself cure through this wiring, exactly as the green-condition file predicted
+  from its scratch tree.
+
+
+§3 — THE REPO-ROOT GATE
+================================================================================
+$ node scripts/check-inline-tests.mjs --self-test        (from repo ROOT)  EXIT=0
+  [inline-tests] self-test PASS — 10/10 cases.
+  [inline-tests] scope csp-solver/src + csp-solver/wasm/src — 74 .rs file(s)
+                 across 2 workspace member(s)
+  [inline-tests] PASS — no test attribute under any member's src/.
+  Wired into lane 1 (lint) beside fmt and clippy, with its own Node setup.
+
+
+§4 — golden-selfdelta RESOLVES FROM ITS NEW CALL SITE
+================================================================================
+The self-delta step's inline `run: |` block (which graded on playwright's exit
+bit alone) is replaced by `run: node scripts/golden-selfdelta.mjs`, and
+`test:golden:selfdelta` is added to package.json so knip can see the file.
+
+$ node scripts/golden-selfdelta.mjs      (dry — no dev server, no battery run)
+  [self-delta] the gate that proves the gate — graded on WHY each arm red, not
+               that it did.
+  [self-delta] ARM black — …
+    INSTRUMENT FAILED — the arm resolved ZERO goldens.
+  EXIT=2
+  The module resolves, banners, and takes its documented instrument-failure exit
+  (2) rather than a green. The full two-arm battery is NOT run here — it needs a
+  dev server and a golden estate, and it belongs to the golden lane.
+
+
+§5 — BUILD, FORMAT, THE OTHER LANES
+================================================================================
+$ npm run build            (vue-tsc -b && vite build)                    EXIT=0
+  dist/assets/index-C6VeTDEvjVkF.js  216.59 kB │ gzip 73.85 kB  — the banked W6
+  figures to the byte-string. The transient TS2591 Buffer break a sibling
+  reported through e2e/wire.ts is CURED at this tree; no type reference needed
+  touching.
+
+$ npx prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/
+  All matched files use Prettier code style!  EXIT=0
+  Nothing needed --write: check-lane-membership.mjs and check-pw-projects.mjs,
+  the two candidates the chair flagged, are already conformant.
+
+$ npm run lint:eslint      clean, EXIT=0
+$ npm run lint:boundary    clean, EXIT=0
+$ npm run lint:knip        EXIT=1 — Unused files (2): scripts/check-motion-contract.mjs,
+                           scripts/check-sleep-lint.mjs
+  The same two sibling-W3 files, and ONLY them. The widened knip scope named
+  five at the W6 bank; the three that were W6's own — golden-selfdelta.mjs,
+  check-theme-tokens.mjs, check-lane-membership.mjs — are claimed by this wiring.
+
+
+§6 — DOC TRUTH AFTER THE 28 → 29 RESTAMP
+================================================================================
+$ node scripts/check-doc-truth.mjs                                       EXIT=1
+  2 RED / 20 GREEN
+
+  GREEN  test-count-208-vs-204
+         — cured by this pass. `28 test binaries` → `29` at all three live sites
+           (README.md:90, docs/benchmarks.md:48, csp-solver/README.md:216), a
+           token-only substitution: `212 passed` and `+ 4 doctests` are unchanged,
+           because the five kuhn_munkres tests moved address, they did not
+           multiply. A new file under csp-solver/tests/ IS a new Cargo binary.
+
+  RED    root-readme-e2e-counts
+  RED    e2e-total-arithmetic
+         — NOT this pass's. Both move with the e2e specs sibling waves are still
+           adding; they true at W3's seal, not at the chair's wiring. Recorded as
+           expected residue.
+
+  perf-rig-scenario-roster is GREEN (it red at the W6 bank, on the drawerToggle
+  scenario added minutes before it): 13 SCENARIOS keys, CI-gated bootTbt, idle3s,
+  undoBurst.
+
+
+§7 — THE THREE BANKED EXIT CORRECTIONS
+================================================================================
+A tranche about honest records cannot bank wrong exit codes. The non-author
+verifier measured three banked lines that print a 0 where the gate actually reds
+(w6-verify.txt §4.1/§4.2); each site now carries the measured value and a dated
+correction note. The mechanisms are unchanged — the transcriptions understated
+the cures.
+
+  pw-manifest-ablation.txt   §1 AFTER (deleted spec)      EXIT=0 → EXIT=1
+  pw-manifest-ablation.txt   §4 --restamp refusal         EXIT=0 → EXIT=1
+  golden-estate-ablation.txt ARM 2 AFTER (count pin)      EXIT=0 → EXIT=1
+
+
+§8 — THE STALE-DOC PARAGRAPH, CORRECTED IN THE WAVE ITSELF
+================================================================================
+W6-the-contrivance-sweep.md §Stale-doc-in-code asserted the boundary banner "is
+correctly *not* merged, so only the RED half is false, a one-clause strike."
+False at the tree: `eslint.config.js:6` imports `crossGameRules` and
+`sharedMayNotImportGames` from it and consumes them at :76/:141, merged since
+T5-W2 2.5. THREE clauses were false (the merge claim, the EXPECTED-RED claim, and
+a SCOPE carve-out citing `src/games/registry.ts`, deleted with `gameRegistry` at
+the W2 apotheosis), so the banner was rewritten whole rather than struck in part.
+Corrected in place, dated 2026-08-03.
+
+
+§9 — WHAT WAS NOT TOUCHED
+================================================================================
+No floor number restamped (W6's binding floor-timing clause: mechanisms here,
+numbers at WGATE). No spec, golden, src file or sibling-wave artifact moved. No
+commit, no push, no stash. The lint scope itself was not widened — the prettier
+comment was trued to the scope the `lint` script already spells (src/, scripts/,
+../../scripts/), with e2e/ and web/relay/ recorded as deliberate exclusions
+rather than narrated away.

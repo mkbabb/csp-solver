@@ -1,6 +1,11 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { encodeSudoku } from "./wire";
 
+// PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto
+//   Applied in `loadSettled` ahead of every navigation, so the boil beat rests at pose 0 and each
+//   crop compares against the same pose. The config's `use.reducedMotion` and this file's
+//   `test.use` twin are VOID at @playwright/test 1.61.1 and survive only as the re-audition trap.
+
 /**
  * T4-W2 — the visual golden system (the π/DELTA MINT).
  *
@@ -150,6 +155,16 @@ async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) 
   // compare can be PROVEN to bite (spec §π/DELTA). Default (unset) is a no-op — normal
   // runs are unperturbed. GOLDEN_DELTA=black paints every asserted surface solid black
   // (the grain-static→solid-black regression); =invert flips the theme.
+  //
+  // T7-W6 — `invert` WAS DIRECTIONLESS, and on the crest it never reached the compare.
+  // It clicked the toggle and then asserted `html` carries `dark` — but the crest golden
+  // BOOTS dark, so the click leaves it light and the arm red at its own postcondition:
+  // `expect(locator).toHaveClass(expected) failed · Expected pattern: /dark/`, three lines
+  // before any screenshot was taken. The CI step reads "playwright exited nonzero" as
+  // "the compare bit", so one quarter of the acceptance test was proving its own
+  // precondition. The settle now follows the flip WHEREVER it lands: read the theme, click,
+  // wait for the opposite. Banked:
+  // docs/tranches/2026-08-tranche-7/evidence/w6/selfdelta-invert-ablation.txt.
   const delta = process.env.GOLDEN_DELTA;
   if (delta === "black") {
     await page.addStyleTag({
@@ -163,11 +178,15 @@ async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) 
       `,
     });
   } else if (delta === "invert") {
+    // Direction-aware: whichever theme this golden settled into, the delta is the OTHER one.
+    const wasDark = await page
+      .locator("html")
+      .evaluate((el) => el.classList.contains("dark"));
     await page.locator("button.sun-moon-toggle").dispatchEvent("click");
-    // Settle on the theme swap completing (DELTA path only): html gains `dark` and the
-    // crest's turn animation ends — the same conditions the dark boot above asserts,
-    // never a fixed sleep.
-    await expect(page.locator("html")).toHaveClass(/dark/, { timeout: 5000 });
+    // Settle on the theme swap completing (DELTA path only): `dark` toggles the way it was
+    // pointed and the crest's turn animation ends — never a fixed sleep.
+    const html = expect(page.locator("html"));
+    await (wasDark ? html.not : html).toHaveClass(/dark/, { timeout: 5000 });
     await expect(page.locator("button.sun-moon-toggle.is-turning")).toHaveCount(0, {
       timeout: 5000,
     });

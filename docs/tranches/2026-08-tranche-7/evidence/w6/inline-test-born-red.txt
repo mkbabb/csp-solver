@@ -1,0 +1,39 @@
+T7-W6 — INLINE-TEST GATE (T7-R01): BORN RED at the uncut tree
+commit    af5082880e59951a99aac12c19c8ad6b922882f3 (af508288)
+date      2026-08-03T07:18:51Z
+command   node scripts/check-inline-tests.mjs --self-test
+exit      1
+
+The gate reds BEFORE the extraction, on the one inline module the estate carries:
+csp-solver/src/builder/kuhn_munkres.rs:135, born 19 h 18 m after ed07ba6b certified zero.
+The 10 self-test cases run first, so this red comes from a proven instrument.
+
+--- transcript ---
+[inline-tests] self-test ok    — the T7-R01 shape — an inline `#[cfg(test)] mod tests` reds
+[inline-tests] self-test ok    — `#[cfg(all(test, feature = "x"))]` reds — the same breach wearing a hat
+[inline-tests] self-test ok    — a bare `#[test]` with no cfg gate reds
+[inline-tests] self-test ok    — `#[wasm_bindgen_test]` in src reds too — the wasm crate is in scope
+[inline-tests] self-test ok    — prose naming the attribute does NOT red — a doc line is the law explained
+[inline-tests] self-test ok    — `#[cfg(feature = "test")]` does NOT red — quoted strings are stripped first
+[inline-tests] self-test ok    — `#[cfg_attr(test, …)]` does NOT red — a conditional attribute is not a test module
+[inline-tests] self-test ok    — tests under `<member>/tests/` are out of scope — that is where they belong
+[inline-tests] self-test ok    — a conformant tree reds nowhere
+[inline-tests] self-test ok    — an empty scope throws rather than reading as a clean tree
+[inline-tests] self-test PASS — 10/10 cases.
+
+[inline-tests] scope csp-solver/src + csp-solver/wasm/src — 74 .rs file(s) across 2 workspace member(s)
+
+[inline-tests] FAIL — 6 inline test attribute(s):
+  cfg-test        csp-solver/src/builder/kuhn_munkres.rs:135: #[cfg(test)]
+  test-attr       csp-solver/src/builder/kuhn_munkres.rs:185: #[test]
+  test-attr       csp-solver/src/builder/kuhn_munkres.rs:196: #[test]
+  test-attr       csp-solver/src/builder/kuhn_munkres.rs:207: #[test]
+  test-attr       csp-solver/src/builder/kuhn_munkres.rs:218: #[test]
+  test-attr       csp-solver/src/builder/kuhn_munkres.rs:225: #[test]
+
+Move the module to <member>/tests/ (Cargo links it as its own binary). A private, dependency-free module is reachable from there with `#[path = "../src/…"] mod …;` — see csp-solver/tests/kuhn_munkres.rs. There is no waiver list.
+--- exit 1 ---
+
+--- the raw grep the wave named, for the record ---
+$ grep -rn '#\[cfg(test)\]' csp-solver/src csp-solver/wasm/src
+csp-solver/src/builder/kuhn_munkres.rs:135:#[cfg(test)]

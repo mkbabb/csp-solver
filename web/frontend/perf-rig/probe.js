@@ -28,6 +28,46 @@
   var RUN = q.get("__run");
   if (!RUN) return; // not a probe load — leave the app alone
 
+  // ── boot long-task capture, armed BEFORE anything else this file does ─────
+  // TBT is the sum of main-thread blocking while the page comes up, so the observer has to
+  // exist before the ablation style, before the theme pin, and long before the app's deferred
+  // module. It is armed on every probe load and read by the `bootTbt` scenario; a load that
+  // never asks for that scenario pays one idle observer.
+  //
+  // WEBKIT SHIPS NO `longtask` ENTRY TYPE. Support is CHECKED, never assumed, and the check is
+  // reported out with the reading: `bootTbt` on an engine without it returns
+  // `longtaskSupported:false` and a null TBT, and ci-subset.mjs turns that into a setup error
+  // rather than a pass. An unmeasurable gate that returns green is the vacuity this row exists
+  // to remove — an empty task list is indistinguishable from a clean boot unless the support
+  // bit travels with it.
+  var LT_SUPPORTED = (function () {
+    try {
+      return (
+        typeof PerformanceObserver === "function" &&
+        (PerformanceObserver.supportedEntryTypes || []).indexOf("longtask") >= 0
+      );
+    } catch (e) {
+      return false;
+    }
+  })();
+  var LONGTASKS = [];
+  if (LT_SUPPORTED) {
+    try {
+      // `buffered:true` back-fills the tasks the engine recorded before this line ran — the
+      // parse of the app's own entry chunk among them.
+      new PerformanceObserver(function (list) {
+        var es = list.getEntries();
+        for (var i = 0; i < es.length; i++)
+          LONGTASKS.push({
+            startMs: Math.round(es[i].startTime),
+            durMs: Math.round(es[i].duration),
+          });
+      }).observe({ type: "longtask", buffered: true });
+    } catch (e) {
+      LT_SUPPORTED = false; // registered as supported, refused at observe() — report the truth
+    }
+  }
+
   // ── ablation CSS goes in FIRST (before the app's deferred module runs) ──
   var ABLATE = q.get("__ablate") || "";
   if (ABLATE) {
@@ -277,6 +317,26 @@
     };
     el.dispatchEvent(new KeyboardEvent("keydown", init));
     el.dispatchEvent(new KeyboardEvent("keyup", init));
+  }
+
+  /** A synthetic pointer. `useCarouselGlide` bails on `pointerType === "touch"` and on any
+   *  `button !== 0`, and it listens for move/up on the WINDOW (deliberately, no capture), so
+   *  the down goes to the element and the rest go to `window`. */
+  function pointer(target, type, x, y) {
+    target.dispatchEvent(
+      new PointerEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        pointerId: 1,
+        pointerType: "mouse",
+        isPrimary: true,
+        button: type === "pointermove" ? -1 : 0,
+        buttons: type === "pointerup" ? 0 : 1,
+        clientX: x,
+        clientY: y,
+      }),
+    );
   }
 
   function typeDigit(input, d) {
@@ -655,6 +715,158 @@
           await sleep(60);
         }
       });
+      },
+    },
+
+    // ── T7-W6 ─────────────────────────────────────────────────────────────────────────────
+    // BOOT TBT — the blocking the idle law cannot see. Every other scenario here samples
+    // steady state; the boot burst (bundle parse, mount, the pose bake) happens once, before
+    // the first window opens, and nothing has ever had a number on it. Total Blocking Time
+    // over the boot window: for each long task STARTING inside the window, the milliseconds
+    // it ran past 50 — the standard definition, so the number is readable against any other
+    // TBT and does not need this rig to interpret it.
+    //
+    // It reads the observer armed at the top of this file; it does NOT sample frames, so it
+    // owns its page load rather than sharing one. A load that has already been driven has
+    // already had its boot window perturbed.
+    bootTbt: {
+      run: async function () {
+        var WINDOW_MS = Number(q.get("__bootMs") || 3000);
+        var ready = true;
+        try {
+          await waitFor(boardReady, 20000, "board ready");
+        } catch (e) {
+          ready = false; // report the window anyway — a boot that never painted is the finding
+        }
+        while (performance.now() < WINDOW_MS) await sleep(50);
+        var inWin = LONGTASKS.filter(function (t) {
+          return t.startMs < WINDOW_MS;
+        });
+        var tbt = 0;
+        var longest = 0;
+        for (var i = 0; i < inWin.length; i++) {
+          tbt += Math.max(0, inWin[i].durMs - 50);
+          if (inWin[i].durMs > longest) longest = inWin[i].durMs;
+        }
+        return {
+          fps: null,
+          frames: 0,
+          wallMs: Math.round(performance.now()),
+          longtaskSupported: LT_SUPPORTED,
+          boardPainted: ready,
+          bootWindowMs: WINDOW_MS,
+          tbtMs: LT_SUPPORTED ? Math.round(tbt) : null,
+          tasks: LT_SUPPORTED ? inWin.length : null,
+          longestTaskMs: LT_SUPPORTED ? longest : null,
+          train: inWin.slice(0, 24),
+          note: LT_SUPPORTED
+            ? null
+            : "no longtask entry type on this engine — the window is UNMEASURED, not clean",
+        };
+      },
+    },
+
+    // GALLERY DRAG — the owner's T6 mark, given an instrument. `galleryGlide` steps the deck
+    // with the arrow keys; the drag is a different machine (a `scrollLeft` write per pointer
+    // move, snap suspended, then one `glideTo` settle on release) and it had no reading at all.
+    // MEASURED, UNPRICED: no floor in gates.json — see README, "the unpriced rows".
+    galleryDrag: {
+      prepare: async function () {
+        await waitFor(boardReady, 20000, "board ready");
+      },
+      run: async function () {
+        var trigger = visibleOne("button.logo-trigger");
+        if (!trigger) throw new Error("no visible .logo-trigger");
+        press(trigger);
+        var vp = await waitFor(
+          function () {
+            return visibleOne(".gallery-viewport");
+          },
+          6000,
+          ".gallery-viewport",
+        );
+        await sleep(900); // the deal's entry animation is not part of a drag
+        var box = vp.getBoundingClientRect();
+        var y = Math.round(box.top + box.height / 2);
+        var x0 = Math.round(box.left + box.width * 0.8);
+        var STEP = 12;
+        var MOVES = 26;
+        // A synthetic gesture that the app quietly ignored would still return a plausible
+        // frame curve — of the deck sitting still. The reading carries its own proof of work:
+        // where the deck was, where it ended, and whether it moved at all.
+        var slFrom = vp.scrollLeft;
+        var slPeak = slFrom;
+        var out = await sampleFor(2400, async function () {
+          pointer(vp, "pointerdown", x0, y);
+          await sleep(16);
+          // 12px per ~16ms ≈ 0.75 px/ms — past DRAG_SLOP on the first move and above
+          // FLICK_VPX (0.45) at release, so the gesture exercises the flick branch too.
+          for (var i = 1; i <= MOVES; i++) {
+            pointer(window, "pointermove", x0 - i * STEP, y);
+            if (Math.abs(vp.scrollLeft - slFrom) > Math.abs(slPeak - slFrom))
+              slPeak = vp.scrollLeft;
+            await sleep(16);
+          }
+          pointer(window, "pointerup", x0 - MOVES * STEP, y);
+          await sleep(1100); // the glide settle
+        });
+        out.scrollLeftFrom = Math.round(slFrom);
+        out.scrollLeftPeak = Math.round(slPeak);
+        out.scrollLeftTo = Math.round(vp.scrollLeft);
+        out.dragMoved = Math.abs(slPeak - slFrom) > 5;
+        // leave the gallery so later scenarios see a board again
+        try {
+          var vp2 = visibleOne(".gallery-viewport");
+          if (vp2) {
+            key(vp2, "Escape");
+            await waitFor(
+              function () {
+                return !visibleOne(".gallery-viewport");
+              },
+              5000,
+              "gallery close",
+            );
+          }
+        } catch (e) {
+          out.teardownError = String((e && e.message) || e);
+        }
+        await sleep(600);
+        return out;
+      },
+    },
+
+    // DRAWER TOGGLE — the under-board glass drawer the owner marked five times, on its own
+    // 520ms cubic-bezier(0.32,0.72,0,1) sweep. Two sweeps per window (shut, then open), so the
+    // app ends the window in the state it entered it. Desk regime only: below 1024 the stacked
+    // panel is the controls' home and `.drawer-tab` is `display:none` by rule, which the lookup
+    // reports rather than silently measuring nothing.
+    // MEASURED, UNPRICED: no floor in gates.json — see README, "the unpriced rows".
+    drawerToggle: {
+      prepare: async function () {
+        await waitFor(boardReady, 20000, "board ready");
+      },
+      run: async function () {
+        var tab = visibleOne(".drawer-tab");
+        if (!tab)
+          throw new Error(
+            "no visible .drawer-tab — this regime has no drawer (under 1024, or landscape)",
+          );
+        // Same proof-of-work discipline as galleryDrag: a toggle the app ignored would still
+        // hand back a frame curve, so the reading carries the state it actually moved through.
+        var seen = [tab.getAttribute("aria-expanded")];
+        var out = await sampleFor(2600, async function () {
+          press(tab);
+          await sleep(1150);
+          var back = visibleOne(".drawer-tab");
+          seen.push(back ? back.getAttribute("aria-expanded") : null);
+          if (back) press(back);
+          await sleep(1150);
+        });
+        var end = visibleOne(".drawer-tab");
+        seen.push(end ? end.getAttribute("aria-expanded") : null);
+        out.expandedTrail = seen;
+        out.drawerMoved = seen[0] !== seen[1];
+        return out;
       },
     },
 

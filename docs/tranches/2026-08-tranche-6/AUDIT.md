@@ -59,6 +59,21 @@ to its brief; riders override the brief body where they conflict.
 - **LOC honesty**: tranche net ≈ +550 — the feature rides atop mark lanes that are
   net-negative (~−100). The fewer-lines law binds each lane's cut, not the feature's
   existence. Stated in the README frame.
+
+  > **CORRECTION — 2026-08-03 (T7-W6).** The row is sealed and its two numbers are wrong,
+  > so they're corrected in place rather than rewritten. Re-derived tree-to-tree over the
+  > tranche's own range, `git diff --numstat 26674449 b220c445` (formation's parent → the
+  > close head `b220c445`, 20 commits, git defaults): **tranche net +4,470**
+  > (`+5,466/−996`, 76 files), of which docs are +1,870/−1 — code alone **+3,593/−992,
+  > net +2,601**. **The mark lanes net +1,197, not ~−100**: voice −24 · debug +68 ·
+  > motion −11 · gallery +588 · controls +448 · mobile +128, each against its own parent.
+  > Three of six cut, three grew.
+  >
+  > A row titled LOC HONESTY is the one row that has to be re-derived at its citation.
+  > This one was carried, and it was carried into two other sites (`README.md:107`,
+  > `CLOSE.md:33-34`) that then disagreed with each other by ~1,750 lines. All three now
+  > carry the correction; the arithmetic and the per-commit cross-check live at
+  > `docs/tranches/2026-08-tranche-7/evidence/w6/loc-rederivation.txt`.
 - Deferred to the chair's eyes at merge: band-vs-drawer icon scale after mark 8
   (parity is hierarchy/icons/colors, not absolute size — if the band reads as a
   different family, its die goes to 24); mark 7's "both ways" resting on the

@@ -1,0 +1,253 @@
+T7-W6 — NON-AUTHOR VERIFICATION
+================================================================================
+verifier   non-author executor, W6
+date       2026-08-03
+host       darwin, 18 cpus, contended (sibling waves building and driving Playwright
+           throughout — every timing-sensitive arm below prints its own load or was
+           re-run until a clean window)
+tree       working tree at HEAD 53a6b56d (the banked lanes ran at af508288; HEAD moved
+           under them — every re-run below is against the LIVE tree, and the BEFORE
+           arms are re-extracted from THIS head, not copied from the record)
+ports      4252-4257
+
+Nothing in the repo was edited to produce this file except this file. Every BEFORE arm
+runs from `git show HEAD:<path>` into a scratch tree — no live spec, golden, config or
+source was moved, and no repo file was planted or deleted.
+
+
+§1 — THE ABLATIONS, RE-RUN
+================================================================================
+
+1.1 ci-subset breach-discard                                        REPRODUCED · CURED
+--------------------------------------------------------------------------------
+BEFORE binary rebuilt from scratch: `git show HEAD:…/ci-subset.mjs` + the 2-line canary
+hook. The diff is byte-for-byte the one the record cites:
+
+    93a94  > const CANARY_FAIL = arg("--canary-fail", "");
+    410c411  if (ceilLong33 > maxLong33Spec || CANARY_FAIL === name) {
+
+  BEFORE  --port 4253 --runs 1 --engines chromium,webkit --max-long33 -1 --canary-fail webkit
+          EXIT=3 · chromium measured a window (long33 0 against a canary ceiling of -1 —
+          a GATE A breach) · grep 'verdict|BREACH|RESULT' = 0 hits. The breach was
+          measured and discarded; ci.yml maps 3 -> CODE=0.
+  AFTER   same command, cured file, --port 4254
+          EXIT=1 · `## verdict` present · `BREACH [chromium] long-frame census: measured
+          0 frames >33.4ms > allowed -1` · `NOT MEASURED [webkit] — synthetic`.
+  NEG     canary failure, NO synthetic breach (--port 4255)
+          EXIT=3 · RESULT: INADMISSIBLE. Precedence promotes nothing.
+  WEBKIT  --engines webkit --port 4256
+          EXIT=2 · GATE D row prints `longtask NO … NOT MEASURED`, webkit's own GATE
+          A/B/C rows still grade and pass. A vacuous GATE D green is refused.
+
+1.2 rerun-laundering                                                REPRODUCED · CURED
+--------------------------------------------------------------------------------
+Synthetic artifacts pinned to the CURRENT head, six arms. BEFORE = HEAD's
+deploy-gated.sh run out of a scratch tree whose `.git` points at the real gitdir.
+
+  BEFORE  conclusion success / runs_for_sha 7  ->  `gate PASSED`, EXIT=0.
+  AFTER   a  runs_for_sha 7 ................................... REFUSED  exit 1
+          b  run_attempt 3 .................................... REFUSED  exit 1
+          c  legacy artifact, both fields absent ............... REFUSED  exit 1
+          d  7 runs + reruns_permitted yes + reason ............ passed   exit 0
+          e  reruns_permitted yes, no reason .................. REFUSED  exit 1
+          f  1 / 1 ............................................ passed   exit 0
+  Matches the banked matrix arm for arm, including the printed count on the d- arm.
+
+1.3 empty-catch arrow form                                          REPRODUCED · CURED
+--------------------------------------------------------------------------------
+Scratch tree = live `src/` with ONLY `App.vue` reverted to HEAD's.
+
+  ABLATION  cured census, uncured site .... EXIT=1 · `src/App.vue:224 /* (empty) */`,
+            exactly one swallow, on the one site the audit named.
+  CONTROL   cured census, live tree ....... EXIT=0 · 0 swallows / 176 files.
+  Three self-test controls ride every run: statement form RED, arrow form RED (with the
+  frozen pre-W6 head seeing 0 beside it), prose-quoted GREEN.
+  legacy-head-probe.mjs re-run: the pre-W6 head is BLIND to all three arrow spellings
+  and finds no clause head at App.vue:224 — structural, not a tuning slip.
+
+1.4 spec-file manifest (deleted spec)                               REPRODUCED · CURED
+--------------------------------------------------------------------------------
+Canary tree (e2e/ + configs copied, src/node_modules symlinked), `drawer.spec.ts`
+deleted. No live spec moved.
+
+  BEFORE  HEAD's check-pw-projects.mjs .... EXIT=0 · 5/5 green · "24 specs, 400 tests".
+  AFTER   cured gate ...................... EXIT=1 · `✗ 6 SPEC MANIFEST — 1`,
+          "drawer.spec.ts: in SPEC_MANIFEST, NOT on disk".
+  NOTE: the banked record prints EXIT=0 under this AFTER arm. The gate really exits 1
+  (see §4.2) — the transcription understates the cure.
+
+1.5 golden empty-dir exit + count pin                               REPRODUCED · CURED
+--------------------------------------------------------------------------------
+GOLDEN_CHECK_ROOT canary roots; the real estate never touched.
+
+  ARM 1 wiped estate   BEFORE EXIT=0 ("no *.png under e2e — nothing to police")
+                       AFTER  EXIT=1 (ZERO goldens while 4 asserted by 25 spec files,
+                              each named with its cite)
+  ARM 2 ninth+tenth    BEFORE EXIT=0 ("PASS — 10 goldens, 100.2 KB of a 110.0 KB band")
+                       AFTER  EXIT=1 ("count pin: 10 on disk, pinned at 8 ← RULING REQUIRED")
+  CONTROL real estate  AFTER  EXIT=0 ("PASS — 8 goldens (pinned at 8), 92.5 KB")
+
+1.6 self-delta invert                                               REPRODUCED · CURED
+--------------------------------------------------------------------------------
+Scratch e2e tree + a dev server on :4257 (PLAYWRIGHT_BASE_URL). BEFORE = HEAD's
+`visual-golden.spec.ts` graded by the NEW harness.
+
+  BEFORE  EXIT=1 · 1 of 8 rows FAIL — the crest red at
+          `expect(locator).toHaveClass(expected) failed · Locator: locator('html')`,
+          i.e. its own postcondition, never the compare.
+  AFTER   EXIT=0 · `PASS — 8 row(s) across 2 arms, every one red at its toHaveScreenshot`.
+  CONTROL unperturbed golden run, same rig, same minute: 4 passed.
+
+1.7 prod-shake symbol                                               REPRODUCED · CURED
+--------------------------------------------------------------------------------
+Two-line leak probe, `esbuild --bundle --minify --format=esm`:
+  schedulerDebugInfo  0 occurrences      __schedulerDebug  1 occurrence
+  tail: `…kinds:{frame:t,sequence:n}}}window.__schedulerDebug=d;`
+With the leak PRESENT the retired symbol scores 0 — it was asserting the absence of a
+string the minifier had already deleted. The gate on the real dist:
+  `asserting 3 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, __schedulerDebug`
+  PASS, EXIT=0.
+
+1.8 knip scope                                                      DIFFERENTIAL CONFIRMED
+--------------------------------------------------------------------------------
+Same live tree, two configs, no files planted:
+  HEAD scope   (`project: src/**`) ......... EXIT=0, silent.
+  widened      (this wave's knip.json) ..... EXIT=1, names 5 unused files.
+The `CODEC_VERSION` export the widening surfaced is cleared (private now, like the
+codec's own). The five it names are the live dead lanes — see §3.
+
+
+§2 — THE NEW SCRIPTS' --self-test
+================================================================================
+  check-empty-catch ....... EXIT 0 · 3 controls (statement RED, arrow RED, prose GREEN)
+  check-pw-projects ....... EXIT 0 · 10/10 sabotage arms RED, incl. both new checks
+  check-golden-bytes ...... EXIT 0 · PASS on the real estate
+  check-unit-count ........ EXIT 0 · 4 arms
+  check-coverage-floor .... EXIT 0 · 6/6
+  check-inline-tests ...... EXIT 0 · 10/10 (3 negative controls, empty-scope throws)
+  check-lane-membership ... 19/19 FIXTURES CORRECT (11 RED controls, 8 GREEN), and the
+                            run exits 1 on its LOAD-BEARING real audit: five unclaimed
+                            scripts (check-lane-membership, check-motion-contract,
+                            check-sleep-lint, check-theme-tokens, tdz-probe). That red
+                            is the born-RED state and cures only through the chair's
+                            wiring — see §3.
+  golden-selfdelta ........ no --self-test; graded by its own two-arm run (§1.6).
+
+
+§3 — WIRING: WHAT STILL RUNS NOWHERE
+================================================================================
+Three W6 scripts have ZERO referents in the tree — no ci.yml step, no package.json
+script (both files are out of executor scope, so this is expected pending the chair's
+wiring_requests). Two of them are additionally invisible to W6's own class cure:
+
+  scripts/check-inline-tests.mjs          repo-root, so OUTSIDE check-lane-membership's
+                                          corpus (web/frontend/scripts only) and outside
+                                          knip's frontend project scope. Nothing can see
+                                          that it is unwired.
+  web/frontend/scripts/golden-selfdelta.mjs
+                                          matches neither corpus form (`check-*.mjs`,
+                                          `*-probe.mjs`), so the census cannot see it
+                                          either; only knip lists it. Meanwhile
+                                          ci.yml:1068-1082 still grades both self-delta
+                                          arms on playwright's exit code alone — the
+                                          exact vacuity §1.6 cures.
+  web/frontend/scripts/check-lane-membership.mjs
+                                          in its own corpus, correctly red on itself.
+
+ci.yml:1244's "chromium's verdict (computed before webkit)" sentence and 1247's
+`3) … CODE=0` mapping are both still in the tree, as filed.
+
+
+§4 — WHERE THE RECORD AND THE RUN DISAGREE
+================================================================================
+4.1 Three banked EXIT lines are wrong, all in the same direction — the record shows a
+    0 where the gate actually reds:
+      golden-estate-ablation.txt  ARM 2 AFTER ........ says EXIT=0, measured 1
+      pw-manifest-ablation.txt    §1 AFTER ........... says EXIT=0, measured 1
+      pw-manifest-ablation.txt    §4 restamp refusal . says EXIT=0, measured 1
+    The mechanisms are sound; the transcription understates them.
+
+4.2 Measured here, for the record:
+      wiped-estate AFTER 1 · ninth-golden AFTER 1 · deleted-spec AFTER 1 ·
+      `--restamp --dry` REFUSED 1, and the file's md5 is byte-identical before and
+      after (57b5f3a7d752b8e6f8156215e5664553) — it wrote nothing.
+
+
+§5 — CARGO
+================================================================================
+  cargo test --workspace ....... EXIT=0 · 212 passed / 0 failed across 31 result lines
+  tests/kuhn_munkres.rs ........ present, 5 tests, all green
+                                 (degenerate_shapes, known_3x3, rectangular_more_cols,
+                                 rectangular_more_rows, brute_force_agreement_small)
+  #[cfg(test)] under any member's src/ ... ZERO
+  scripts/check-inline-tests.mjs (real audit) ... EXIT=0, 74 .rs files, 2 members
+
+
+§6 — FRONTEND BUILD AND THE FRAUNCES NUMBERS
+================================================================================
+  npm run build (`vue-tsc -b && vite build`) ......... EXIT=0
+  entry dist/assets/index-C6VeTDEvjVkF.js ............ 216.59 kB │ gzip 73.85 kB
+      — the banked "after" figures, to the byte-string.
+  long base64 font URIs in the entry chunk ........... 0
+  the only `data:font/woff2` left ......... the loader's own template literal
+  standalone face ......... assets/fraunces-subset-nWzWvP1GNv2C.woff2, 13,788 B,
+                            referenced from index.html (preload), index CSS (@font-face)
+                            and the entry chunk (the bake's fetch) — one ship, three cites.
+  wordmark-webkit against the built dist (preview :4252, PLAYWRIGHT_BASE_URL):
+      6 passed (4.7s), retries 0 — five per-game ink-box rows + the zero-fallback-glyph row.
+
+Other lanes, live tree:
+  vitest ............ 44 files / 477 tests passed (the parity row's +6 included)
+  prettier (`npm run lint`, src/ scripts/ ../../scripts/) ... clean
+  eslint . .......... clean          lint:boundary ......... clean
+  coverage .......... src/pencil 46 files, 31.42% st / 33.39% ln — the banked figures
+  check-coverage-floor ... GREEN, 12 scopes      check-unit-count ... 477 >= 300, EXIT=0
+  check-evidence-policy .. PASS
+
+
+§7 — SCOPE
+================================================================================
+Read `git diff --stat` whole. NOT touched, confirmed by status and by diff:
+  · web/frontend/src/games/shared/useSession.ts    (W5 owns it — untouched)
+  · .github/workflows/ci.yml                        (unmodified)
+  · any package.json                                (unmodified)
+  · e2e/goldens/**                                  (no golden byte moved)
+
+Spec edits in the tree that are NOT W6's are all attributed to a sibling: a11y.spec.ts,
+drawer.spec.ts, theme-bake-freshness.spec.ts, wordmark-integrity.spec.ts and
+pencil/composables/rasterPose.ts each carry T7-W3 markers and no W6 marker. A second
+sibling batch landed MID-VERIFICATION — ~14 more specs (affordances, board-covisibility,
+filter-census, gallery*, mobile*, multiplayer, permalink, share-truth, …) gained `PRM:`
+annotations, and `visual-golden.spec.ts` picked one up beside its W6 edit. None carries a
+W6 marker; none is W6's. The only spec W6 edits is `visual-golden.spec.ts` — the delta's
+direction-awareness, which the wave names. `e2e/wire.ts` and the deleted
+`e2e/magnitude-reporter.mjs` are likewise named.
+`magnitude-reporter` now has exactly one referent in the tree: a prose cite in knip.json.
+
+_headers reads `worker-src 'self'`; `createObjectURL` appears nowhere in `src/`, and the
+estate's one `new Worker` takes a bundled URL (games/shared/solver/client.ts:36).
+
+LOC re-derivation spot-checked against the tree: `git diff --shortstat
+26674449..b220c445` = 76 files changed, 5466 insertions(+), 996 deletions(-) — the
+figure all three corrected sites now carry.
+
+
+§8 — FLOOR NUMBERS: NOT RESTAMPED
+================================================================================
+HEAD vs working tree, literal for literal:
+  check-unit-count       FLOOR 300 -> 300                  (slack 59% printed, not cured)
+  check-golden-bytes     TOTAL_CEILING 110*1024 unchanged; GOLDEN_COUNT 8 is NEW (the pin
+                         is the mechanism, and 8 is the count on disk today)
+  check-pw-projects      115 / 110 / 4 / 1 / 6 / 6 / 2 / 14 / 14 all unchanged
+  coverage-floor.json    unmodified (git status clean on it)
+  gates.json (P1)        purely ADDITIVE — desktop.undoBurst and boot.tbt added, every
+                         pre-existing threshold byte-identical
+Two pw floors DID move: wordmark-webkit 6 -> 1, theme-bake-webkit 2 -> 0. That is the
+quarantine-subtraction row, not a restamp, and it had to land with the semantics or the
+mechanism would red the linux lane on its first run. Recorded consequence: the floor is
+one constant across platforms, so on darwin (live 6 and 10) those two projects now carry
+5 and 10 rows of slack where wordmark's floor used to be exact. WGATE's `--restamp`
+derives at the DECLARED platform, so the restamp will keep 1 and 0.
+
+`--restamp --dry` on check-pw-projects: EXIT=1, REFUSED on its own output (2 floors would
+drop), file unchanged. The mechanism is landed and unfired, as the binding clause requires.

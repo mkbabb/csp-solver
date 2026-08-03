@@ -1,0 +1,29 @@
+T7-W6 — filterBudget.ts OUT of the coverage denominator (vitest.config.ts)
+date: 2026-08-03T07:25:35Z  HEAD: af508288
+
+306 lines in src/, sole importer e2e/filter-census.spec.ts, permanently 0% —
+excluded beside main.ts (the wave's cheaper arm; the file does NOT move, because the
+app's own prose cites src/pencil/config/filterBudget.ts at four sites).
+
+$ grep -rn 'filterBudget' src/ e2e/ | (importers only)
+  e2e/filter-census.spec.ts:13:} from "../src/pencil/config/filterBudget";   <- the ONE import
+  src/pencil/config/pencilConfig.ts:246          prose cite
+  src/pencil/chrome/SvgFilters.test.ts:38        prose cite
+  src/pencil/glyph/HandwrittenGlyph.vue:58       prose cite
+  e2e/visual-regression.spec.ts:245              prose cite
+
+$ npx vitest run --coverage --coverage.reportsDirectory=./coverage-w6-{before,after}
+-------------------------------------------------------------------------------
+the file, BEFORE: statements 0/12, lines 0/11, functions 0/1 — 0% on every metric
+the file, AFTER : absent from the denominator
+
+src/pencil scope (the floor's own aggregate, check-coverage-floor.mjs prefix):
+  BEFORE  47 files  statements 31.23% (620/1985)  lines 33.18% (578/1742)  functions 24.10%
+  AFTER   46 files  statements 31.42% (620/1973)  lines 33.39% (578/1731)  functions 24.15%
+
+TOTAL: statements 45.75% -> 45.85%, lines 46.32% -> 46.42% (2584 and 2267 covered, unmoved)
+
+Nothing covered was lost — only uncoverable denominator. `files` is informational in
+coverage-floor.json (compare() enforces metrics and reds only on files===0), so the
+47->46 shift is not a structural red; the pencil floor moves UP, never down. The floor
+restamp itself is WGATE's, per the wave's binding floor-timing clause.

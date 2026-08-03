@@ -117,8 +117,14 @@ is the exact 43–400%-slack mechanism these rows exist to remove.
 
 ## Stale-doc-in-code
 
-the `eslint.boundary.config.js` banner (its "EXPECTED RED until W2.5" clause — the config runs
-clean as its own lane; it is correctly *not* merged, so only the RED half is false, a one-clause strike),
+the `eslint.boundary.config.js` banner (**corrected 2026-08-03** — the wave's own reading was
+wrong and the strike is not one clause. `eslint.config.js` *imports* `crossGameRules` and
+`sharedMayNotImportGames` from it and consumes them in its export, merged since T5-W2 2.5, so
+the "deliberately NOT merged" clause is false; "EXPECTED RED until W2.5" is false — W2.5 landed
+and the lane runs 0 errors; and the SCOPE clause carves out `src/games/registry.ts`, a file that
+died with `gameRegistry` at the W2 apotheosis, which is the W0 cite-symbols family exactly.
+THREE clauses false, so the banner is rewritten whole rather than struck in part, naming the
+live discriminator — each game's own `spec.ts`, read from disk by the config),
 the `vite.config.ts` head-hints two-game rationale, the `useSession.ts` "THREE MESSAGES" (four),
 the self-contradicting `eslint.config.js` barrel comment — all cited in the audit, all fixed
 here under the W0 cite-symbols ruling.

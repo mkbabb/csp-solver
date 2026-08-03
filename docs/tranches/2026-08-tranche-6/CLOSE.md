@@ -33,6 +33,29 @@ tranche) · throttle 39 · filter census 9 · wasm band untouched (no csp-solver
 changes) · tranche diff ≈ +2,900/−600 with the feature; the six mark lanes alone
 net ≈ −75.
 
+> **CORRECTION — 2026-08-03 (T7-W6).** The two LOC figures in the paragraph above are
+> wrong and the record is sealed, so they're corrected here rather than edited out.
+> Re-derived from the tree at `git diff --numstat 26674449 b220c445` — the parent of the
+> formation commit (`d062a841^`) through this table's own close head, tree-to-tree, git
+> defaults, 20 commits:
+>
+> - **Tranche diff: `76 files changed, 5466 insertions(+), 996 deletions(-)`** (net +4,470),
+>   of which docs are +1,870/−1. Code alone — everything but `docs/**` and `.md` — is
+>   **+3,593/−992** (net +2,601) across 65 files, or +3,548/−992 without
+>   `package-lock.json`. The published +2,900/−600 matches no partition of the tree.
+> - **The six mark lanes net +1,197, not −75** — sign inverted, off by 1,272. Each lane
+>   against its own parent: voice `45b0f6fb` −24 · debug `e6c1e28a` +68 · motion `8c241315`
+>   −11 · gallery `aea36ec6` +588 · controls `2c71f03c` +448 · mobile `771958c4` +128.
+>   Three of six cut; the record said all six did.
+>
+> `README.md:107` and `AUDIT.md:59` carry the same claim as "net ≈ +550", which disagrees
+> with this line by ~1,750 — the tell that neither site was derived at its citation. Both
+> now carry the same correction. Arithmetic, buckets and the per-commit cross-check:
+> `docs/tranches/2026-08-tranche-7/evidence/w6/loc-rederivation.txt`.
+>
+> The counts above are AT CLOSE, so the range stops at `b220c445`. Through the T6.2 head
+> (`..1cc8f4e4`) the tree moved +7,495/−1,131 over 90 files.
+
 ## Owner elections, standing
 
 1. ~~**Trie veto**~~ — **RESOLVED at T6.1: declined**, on the condition it was priced

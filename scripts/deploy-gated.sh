@@ -10,10 +10,26 @@
 #   2. pinned to the CURRENT HEAD sha
 #   3. conclusion == success
 #   4. fresher than 24h
+#   5. that success is the sha's ONLY conclusion — one run, one attempt
 #
 # A fifth refusal joined at T7-W0 0.2 and is not about the artifact: the living
 # ledger must be current under scripts/ledger-diff.mjs. A deploy ships the record
 # with the product, so a record the tree refutes refuses the deploy.
+#
+# A SIXTH joined at T7-W6 — RERUN LAUNDERING, ablation-proven. `conclusion success`
+# says nothing about how many verdicts the sha collected on its way there:
+# ci-conclusion.sh banked `runs_for_sha` from birth and this gate never read it, so an
+# artifact carrying `conclusion success` / `runs_for_sha 7` rode the gate green (banked:
+# docs/tranches/2026-08-tranche-7/evidence/w6/rerun-laundering-ablation.txt). Re-running
+# a red until one attempt comes out green is the reflex the whole gated chain exists to
+# defeat, and it costs nothing to perform. So the green must be the sha's ONLY
+# conclusion: exactly one run, exactly one attempt. Both fields must be PRESENT — an
+# artifact from a generator too old to bank them is refused, never waved through, because
+# a missing field defaulting permissive is the same blindness in a new spelling.
+#
+# The one lift is explicit and signed: `reruns_permitted yes` plus a one-line
+# `reruns_reason` in the artifact. ci-conclusion.sh never writes either; a human adds
+# them, and this gate then prints the count it was asked to forgive.
 #
 # The wrangler invocation below moved here VERBATIM from web/frontend
 # package.json scripts.deploy. The wrapper is the only change to how the deploy
@@ -79,6 +95,18 @@ artifact_field() {
     return 1
 }
 
+# Same read, but the value is the WHOLE remainder of the line — `reruns_reason` is a
+# sentence, and a one-word reason is not a reason.
+artifact_rest() {
+    local want="$1" file="$2" key value
+    while read -r key value || [[ -n "$key" ]]; do
+        [[ "$key" == "$want" ]] || continue
+        printf '%s' "$value"
+        return 0
+    done <"$file"
+    return 1
+}
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --conclusion-file) CONCLUSION_FILE="${2:?--conclusion-file needs a value}"; shift 2 ;;
@@ -103,6 +131,10 @@ ART_SHA="$(artifact_field sha "$CONCLUSION_FILE" || true)"
 ART_CONCLUSION="$(artifact_field conclusion "$CONCLUSION_FILE" || true)"
 ART_EPOCH="$(artifact_field timestamp_epoch "$CONCLUSION_FILE" || true)"
 ART_RUN_ID="$(artifact_field run_id "$CONCLUSION_FILE" || true)"
+ART_RUNS="$(artifact_field runs_for_sha "$CONCLUSION_FILE" || true)"
+ART_ATTEMPT="$(artifact_field run_attempt "$CONCLUSION_FILE" || true)"
+ART_RERUNS_OK="$(artifact_field reruns_permitted "$CONCLUSION_FILE" || true)"
+ART_RERUNS_WHY="$(artifact_rest reruns_reason "$CONCLUSION_FILE" || true)"
 
 [[ -n "$ART_SHA" ]] || refuse "artifact has no 'sha' field: $CONCLUSION_FILE"
 [[ -n "$ART_EPOCH" ]] || refuse "artifact has no 'timestamp_epoch' field: $CONCLUSION_FILE"
@@ -129,7 +161,41 @@ AGE=$((NOW_EPOCH - ART_EPOCH))
     "artifact is stale: ${AGE}s old (cap ${MAX_AGE_SECONDS}s / 24h)" \
     "Re-read the field: scripts/ci-conclusion.sh --sha \"$HEAD_SHA\" --out <path>"
 
-# ── 5. The living ledger must be current ──────────────────
+# ── 5. The green must be the sha's ONLY conclusion ────────
+# The wave's preferred arm is REFUSAL; the declaration is the escape hatch, not the path.
+[[ -n "$ART_RUNS" ]] || refuse \
+    "artifact has no 'runs_for_sha' field: $CONCLUSION_FILE" \
+    "It predates the rerun-laundering gate. Re-read the field with today's generator:" \
+    "  scripts/ci-conclusion.sh --sha \"\$(git rev-parse HEAD)\" --out <path>"
+[[ -n "$ART_ATTEMPT" ]] || refuse \
+    "artifact has no 'run_attempt' field: $CONCLUSION_FILE" \
+    "It predates the rerun-laundering gate. Re-read the field with today's generator."
+[[ "$ART_RUNS" =~ ^[0-9]+$ ]] || refuse "artifact 'runs_for_sha' is not an integer: '$ART_RUNS'"
+
+LAUNDERED=()
+[[ "$ART_RUNS" == "1" ]] || LAUNDERED+=("runs_for_sha is $ART_RUNS — this sha collected $ART_RUNS workflow runs")
+[[ "$ART_ATTEMPT" == "1" ]] || LAUNDERED+=("run_attempt is $ART_ATTEMPT — run $ART_RUN_ID was re-run at least once")
+
+if ((${#LAUNDERED[@]} > 0)); then
+    if [[ "$ART_RERUNS_OK" == "yes" ]]; then
+        [[ -n "$ART_RERUNS_WHY" ]] || refuse \
+            "'reruns_permitted yes' carries no 'reruns_reason' line." \
+            "A permission without a reason is the laundering it licenses."
+        echo "[deploy-gated] RERUNS PERMITTED — declared in the artifact, not inferred:"
+        for l in "${LAUNDERED[@]}"; do echo "[deploy-gated]   $l"; done
+        echo "[deploy-gated]   reason: $ART_RERUNS_WHY"
+    else
+        refuse \
+            "the green is NOT this sha's only conclusion:" \
+            "${LAUNDERED[@]}" \
+            "A red re-run until one attempt comes out green ships the red tree." \
+            "Fix the cause and push, or declare it in the artifact, on purpose:" \
+            "  reruns_permitted yes" \
+            "  reruns_reason    <why these extra conclusions are not laundering>"
+    fi
+fi
+
+# ── 6. The living ledger must be current ──────────────────
 # A deploy ships the record with the product. T7-W0 0.2 (T7-R04): a §1 row landing at a
 # wave of a sealed tranche, a row the tree refutes, or a cite that points nowhere means
 # the ledger describes a repo that no longer exists. Same instrument CI runs, same flags.
@@ -146,6 +212,7 @@ echo "[deploy-gated] gate PASSED"
 echo "[deploy-gated]   sha         $ART_SHA (== HEAD)"
 echo "[deploy-gated]   run         $ART_RUN_ID"
 echo "[deploy-gated]   conclusion  $ART_CONCLUSION"
+echo "[deploy-gated]   runs/attempt $ART_RUNS / $ART_ATTEMPT${ART_RERUNS_OK:+  (reruns_permitted $ART_RERUNS_OK)}"
 echo "[deploy-gated]   artifact    ${AGE}s old (cap ${MAX_AGE_SECONDS}s)"
 
 cd "$FRONTEND"

@@ -29,13 +29,34 @@
 // `--self-test` runs every check against a known-bad input and fails if any of them
 // PASSES (the check-ink-pressure house pattern): a gate that cannot fail is not a gate.
 //
+// T7-W6 — THE FLOOR IS SLACK AND HAS NO INSTRUMENT. 300 against 471 executed is 36% of
+// room: a whole file's worth of estate can leave and the lane still reads green. Worse, the
+// floor was a hand-typed constant with no way to re-derive it, so "re-derive from a fresh
+// census" was advice rather than a command — and advice erodes. `--restamp` is the command.
+// It reads a live report, computes the ~10%-under figure, refuses a LOWERING without a
+// spoken reason, and stamps the tree it measured into this file.
+//
+// FLOOR TIMING (W6 §floor timing, binding): the MECHANISM lands at W6, the NUMBER restamps
+// at WGATE — after the last row lands anywhere in the tranche (W2 and W4 both add tests). A
+// floor derived at W6's own seal is stale on arrival, which is the exact slack this row
+// exists to remove. So FLOOR still reads 300 here, on purpose.
+//
 //   node scripts/check-unit-count.mjs <vitest-report.json> [--floor=N] [--max-age-min=N]
 //   node scripts/check-unit-count.mjs --self-test
+//   node scripts/check-unit-count.mjs --restamp <vitest-report.json> [--dry] [--allow-lower "why"]
 
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import process from "node:process";
+
+const SELF = fileURLToPath(import.meta.url);
+
+/* FLOOR STAMP — rewritten by `--restamp`, never by hand. A floor citing a tranche-old SHA
+ * is legible as slack rather than as a decision. */
+const FLOOR_STAMP = "T5-W1.1 birth · f38c5130 · 332 executed — never restamped";
 
 const FLOOR = 300; // gates.json W1.unitLane.floor
 const MAX_AGE_MIN = 120; // a report older than the job that made it is not evidence
@@ -276,6 +297,59 @@ function selfTest() {
   return vacuous;
 }
 
+/* ── --restamp: re-derive the floor from a live census (WGATE only) ─────── */
+
+/** ~10% under live, floored. The band is deliberately coarse: it catches estate-scale
+ *  loss, not one retired unit, and a tighter band would red on ordinary churn. */
+const floorFor = (executed) => Math.floor(executed * 0.9);
+
+function restamp(reportPath, { dry, allowLower }) {
+  const { failures, stats } = check(reportPath, { floor: 0 });
+  // A red or stale report cannot found a floor. `floor: 0` above removes the floor's own
+  // opinion from that judgment — every OTHER check still has to pass.
+  if (failures.length) {
+    console.error(
+      `--restamp REFUSED: the report is not a clean census.\n` +
+        failures.map((f) => `  · ${f}`).join("\n"),
+    );
+    process.exit(1);
+  }
+  const want = floorFor(stats.executed);
+  const sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+    cwd: join(SELF, "..", "..", ".."),
+    encoding: "utf8",
+  }).trim();
+  const stamp =
+    `${sha} · ${new Date().toISOString().slice(0, 10)} · ${stats.executed} executed / ` +
+    `${stats.files} files / ${stats.suites} suites · floor = 10% under live`;
+  console.log(
+    `RESTAMP — ${stats.executed} executed → floor ${FLOOR} → ${want}` +
+      `${want < FLOOR ? "   ↓ LOWERED" : ""}\n  stamp: ${stamp}`,
+  );
+  if (want < FLOOR && !allowLower) {
+    console.error(
+      `\n--restamp REFUSED: the floor would DROP ${FLOOR} -> ${want}. Lowering a floor is a\n` +
+        `  re-baseline, and the house does not re-baseline on a red. Say where the tests went:\n` +
+        `  --restamp <report> --allow-lower "<reason>"`,
+    );
+    process.exit(1);
+  }
+  if (dry) {
+    console.log("\n--dry — nothing written.");
+    return;
+  }
+  const src = readFileSync(SELF, "utf8");
+  const next = src
+    .replace(/const FLOOR_STAMP = "[^"]*";/, `const FLOOR_STAMP = "${stamp}";`)
+    .replace(/const FLOOR = \d+;/, `const FLOOR = ${want};`);
+  if (next === src) {
+    console.error("--restamp: the FLOOR/FLOOR_STAMP literals moved — fix the rewrite.");
+    process.exit(1);
+  }
+  writeFileSync(SELF, next);
+  console.log(`\nwritten -> scripts/${SELF.split("/").pop()}`);
+}
+
 /* ── main ───────────────────────────────────────────────────────────────── */
 
 const argv = process.argv.slice(2);
@@ -297,13 +371,27 @@ if (argv.includes("--self-test")) {
   process.exit(0);
 }
 
-const reportPath = argv.find((a) => !a.startsWith("--"));
+const positional = argv.filter((a) => !a.startsWith("--"));
+const allowLowerAt = argv.indexOf("--allow-lower");
+const reportPath = positional.find(
+  (a) => allowLowerAt < 0 || a !== argv[allowLowerAt + 1],
+);
 if (!reportPath) {
   console.error(
     "usage: node scripts/check-unit-count.mjs <vitest-report.json> [--floor=N] [--max-age-min=N]\n" +
-      "       node scripts/check-unit-count.mjs --self-test",
+      "       node scripts/check-unit-count.mjs --self-test\n" +
+      '       node scripts/check-unit-count.mjs --restamp <report> [--dry] [--allow-lower "why"]',
   );
   process.exit(2);
+}
+
+if (argv.includes("--restamp")) {
+  restamp(reportPath, {
+    dry: argv.includes("--dry"),
+    allowLower:
+      allowLowerAt >= 0 ? (argv[allowLowerAt + 1] ?? "(no reason given)") : null,
+  });
+  process.exit(0);
 }
 
 const floor = flag("floor", FLOOR);
@@ -316,7 +404,11 @@ if (stats) {
   console.log(
     `FE unit lane — ${stats.executed} executed (${stats.passed} passed / ${stats.failed} failed), ` +
       `${stats.skipped} skipped, ${stats.todo} todo, over ${stats.files} files / ${stats.suites} suites; ` +
-      `floor ${floor}; report age ${stats.ageMin.toFixed(1)} min.`,
+      `floor ${floor}; report age ${stats.ageMin.toFixed(1)} min.\n` +
+      `  floor stamped: ${FLOOR_STAMP}` +
+      (stats.executed >= floor
+        ? `  ·  slack ${(((stats.executed - floor) / floor) * 100).toFixed(0)}%`
+        : ""),
   );
 }
 

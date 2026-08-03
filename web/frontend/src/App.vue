@@ -221,7 +221,13 @@ function preloadScenes() {
   scenesWarm = true;
   // Every non-eager row warms its spec chunk.
   for (const card of GAMES) {
-    if (!card.eager) card.load().catch(() => {});
+    if (!card.eager)
+      card.load().catch(() => {
+        // The warm is OPPORTUNISTIC and this rejection is therefore not the user's news: a
+        // cold select re-requests the same chunk through `sceneFor`'s own async loader, which
+        // is where a real load failure is seen and surfaced. Reporting here would raise a
+        // fault for a fetch nobody asked for, on a picker the user only hovered.
+      });
   }
 }
 

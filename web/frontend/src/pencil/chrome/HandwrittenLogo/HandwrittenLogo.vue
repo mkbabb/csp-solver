@@ -1,3 +1,61 @@
+<script lang="ts">
+import frauncesUrl from "@/assets/fonts/fraunces-subset.woff2?url";
+
+/**
+ * ── T7-W6 §FRAUNCES SHIPS ONCE ────────────────────────────────────────────────
+ *
+ * The bake needs the face as BYTES inside its detached blob (a blob SVG cannot reach the
+ * page's loaded `@font-face` — see the pose-bake note below). It used to get them from a
+ * static `?inline` import, which base64s the woff2 into the module graph: 18,407 chars of
+ * data URI in the entry chunk, **16,038 B gzipped**, ON THE CRITICAL PATH, for a file the
+ * page already downloads standalone under `/assets/fraunces-subset-*.woff2` (13,788 B,
+ * `<link rel=preload as=font>`, immutable-cached). Two copies of one font, one of them
+ * parsed by every visitor before first paint.
+ *
+ * So the bake FETCHES the copy that already ships. `credentials: "omit"` matches the
+ * anonymous mode of head-hints' preload (vite.config.ts); `connect-src 'self'` already
+ * admits the request (public/_headers). The data URI it builds is byte-identical to the one
+ * `?inline` emitted — same bytes, same `font/woff2` mime, same base64 — so every serialized
+ * pose SVG, every baked bitmap and every golden is unmoved by construction.
+ *
+ * WHAT IT COSTS, MEASURED rather than rounded to zero (evidence/w6/fraunces-single-ship.txt).
+ * Preload matching keys on DESTINATION, and a `fetch()` has none, so this can't consume an
+ * `as=font` preload however its credentials mode is set. Against a server applying the
+ * production `/assets/*` immutable rule: chromium takes 1 server hit for the face (this
+ * fetch is served from cache), webkit takes 2. Worst case is one extra off-critical-path
+ * request for 13,788 immutable-cached bytes, on one engine, against 15.07 kB gz removed
+ * from the render-blocking chunk on every visit in both.
+ *
+ * Memoized at module scope: one fetch per document, however many wordmarks mount.
+ */
+let bakeFacePromise: Promise<string | null> | null = null;
+
+async function loadBakeFace(): Promise<string | null> {
+  try {
+    const res = await fetch(frauncesUrl, { credentials: "omit" });
+    if (!res.ok) throw new Error(`fraunces subset: HTTP ${res.status}`);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    // Chunked so a 13.8 KB face never spreads as one argument list (`String.fromCharCode`
+    // takes the bytes as arguments; the whole file at once is an engine stack limit away).
+    // `Uint8Array.toBase64` would be one call, but browserslist floors at safari 16.4.
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000)
+      bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return `data:font/woff2;base64,${btoa(bin)}`;
+  } catch {
+    // The face never arrived, so there is nothing to bake WITH: a pose captured without it
+    // freezes a Georgia wordmark into a bitmap that no re-bake trigger would ever invalidate.
+    // Declining leaves the live-filter pose-0 fallback up, which paints the page's own loaded
+    // Fraunces — the same ink, held still.
+    return null;
+  }
+}
+
+function bakeFace(): Promise<string | null> {
+  return (bakeFacePromise ??= loadBakeFace());
+}
+</script>
+
 <script setup lang="ts">
 import { ref, computed, watch, watchEffect, onMounted, nextTick, type Ref } from "vue";
 import {
@@ -21,7 +79,6 @@ import {
   resolveCssValue,
   retainedPoseUrls,
 } from "@pencil/composables/rasterPose";
-import frauncesInline from "@/assets/fonts/fraunces-subset.woff2?inline";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
 
 // The wordmark IS the game picker. It renders the CURRENT game's name in the display face
@@ -145,8 +202,9 @@ watch(
 // The wordmark rides a resident #wobble-logo-p{i} pose stack opacity-swapped on the beat.
 // Capture each frozen pose to an ImageBitmap once (useRasterStack) and opacity-swap static
 // <image> siblings with the filter removed. A DETACHED SVG blob cannot reach the page's
-// loaded @font-face, so the Fraunces subset is embedded (?inline) into each pose's <style>;
-// the ink color resolves to a literal at capture. Re-bake fires on the label (game swap),
+// loaded @font-face, so the Fraunces subset is embedded into each pose's <style> — fetched
+// from the standalone woff2 the page already preloads (§FRAUNCES SHIPS ONCE, above), never
+// bundled a second time; the ink color resolves to a literal at capture. Re-bake fires on the label (game swap),
 // the measured viewBox width, theme (ink), and DPR. The measuring <text> (template,
 // invisible) keeps getBBox alive once the poses are baked, so the variable-width box still
 // sizes on a swap. The live-filter stack is the during-bake fallback; useRasterStack awaits
@@ -203,9 +261,26 @@ const captureH = latchWholePx(logoH);
 // (the latched height), one bake per geometry change, no window to race. The width half of
 // BC6-G1's latch is obsolete by construction — an integer `vbWidth` times a latched height
 // cannot wobble; the height half keeps its measured rationale above.
-const captureW = computed(() => (captureH.value * vbWidth.value) / 60);
+//
+// T7-W6 — THE FACE IS THE OTHER HALF OF "MEASURED". `bakeFace()` resolves a document late
+// (one fetch off the HTTP cache), and a pose captured before it lands would freeze GEORGIA
+// into a bitmap under a cache key nothing re-keys. So the width reads 0 until the bytes are
+// in: pencil-boil returns before the token bump at a non-positive box — the same contract
+// the seed note below cites — and the opts watch re-bakes the instant it goes positive. The
+// gate is the box, not a branch inside `logoPoseSvg`, so there is exactly one place that
+// decides whether this surface is bakeable.
+const faceCss = ref<string | null>(null);
+void bakeFace().then((face) => {
+  faceCss.value = face;
+});
+const captureW = computed(() =>
+  faceCss.value === null ? 0 : (captureH.value * vbWidth.value) / 60,
+);
 
-const FONT_FACE = `@font-face{font-family:'FrauncesBake';font-style:normal;font-weight:100 900;src:url('${frauncesInline}') format('woff2');}`;
+const FONT_FACE = computed(
+  () =>
+    `@font-face{font-family:'FrauncesBake';font-style:normal;font-weight:100 900;src:url('${faceCss.value}') format('woff2');}`,
+);
 
 function escapeXml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -217,7 +292,7 @@ function logoPoseSvg(f: number): string {
   const w = vbWidth.value;
   const defs =
     readFilterDefs(pid) +
-    `<style>${FONT_FACE}text{font-family:'FrauncesBake',Georgia,serif;` +
+    `<style>${FONT_FACE.value}text{font-family:'FrauncesBake',Georgia,serif;` +
     // `font-variation-settings:'opsz' 52` PINNED, matching `.logo-text` below (mark 4 M2).
     // `font-optical-sizing: auto` resolves opsz to the axis MINIMUM (9) in WebKit here, not to
     // the 52 px font-size — measured: the same label is 211.39 user units at auto/opsz 9 and

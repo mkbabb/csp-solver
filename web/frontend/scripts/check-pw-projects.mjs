@@ -21,20 +21,50 @@
 //   4  HOLDOUTS CLOSED   the holdout table is a closed set: a stale entry (the spec now runs
 //                        wider) reds, so the record follows the code in the same commit. New
 //                        entries are a deliberate edit with a cite, never a config default.
-//   5  COUNT FLOORS      per (config, project) test counts never fall below the recorded floor.
+//   5  COUNT FLOORS      per (config, project) LIVE test counts never fall below the floor.
+//   6  SPEC MANIFEST     the e2e/*.spec.ts set on disk is EXACTLY SPEC_MANIFEST's.
+//   7  QUARANTINES CLOSED every declared quarantine's cited module is still on disk.
+//
+// T7-W6 — checks 6 and 7, and the "LIVE" in check 5:
+//
+//   · A DELETED SPEC FILE STAYED GREEN (ablation-proven; e2e/drawer.spec.ts, 16 tests, removed
+//     from a canary tree: 5/5 checks green, exit 0). Check 2 seeds its claim map from `onDisk`,
+//     so a vanished spec is neither an orphan nor a double-claim — it simply stops existing in
+//     every model the gate builds. The count floors sat 43–400% under live and absorbed the
+//     loss without moving. SPEC_MANIFEST is the fix: a name set that has to be edited on
+//     purpose, exactly like CONFIGS and HOLDOUTS. Banked:
+//     docs/tranches/2026-08-tranche-7/evidence/w6/pw-manifest-ablation.txt.
+//   · THE FLOORS COUNTED QUARANTINED ROWS AS COVERAGE. On ubuntu·webkit the bake quarantine
+//     (e2e/linux-webkit-bake-quarantine.ts) `test.fixme`s 5 of wordmark-webkit's 6 rows and
+//     ALL 10 of theme-bake-webkit's, so those projects assert 1 and 0 things on the only
+//     platform CI runs — while `--list` still counts 6 and 10 and the floors read 6 and 2.
+//     A floor is now a floor on LIVE assertions: listed minus the declared quarantine, on the
+//     platform the quarantine names. theme-bake-webkit's live floor is therefore 0, and that
+//     zero is the point — the gate now PRINTS that the project asserts nothing on linux
+//     instead of hiding it behind a floor of 2.
+//
+// FLOOR TIMING (W6 §floor timing, binding): the MECHANISM lands here; the NUMBERS restamp at
+// WGATE, after the last row lands anywhere in the tranche. `--restamp` is that instrument —
+// it re-derives every floor from a live census and stamps the SHA into this file. It is not
+// run at W6's own seal: a floor derived here is stale on arrival, which is the exact slack
+// these rows exist to remove. The two quarantine subtractions below ARE landed now, because
+// leaving them would have the mechanism red the linux lane on its first run.
 //
 // Run: `node scripts/check-pw-projects.mjs` (npm run test:pw-projects), cwd web/frontend.
 //      `--self-test` re-runs each check against a known-bad matrix and FAILS if any of them
 //      passes — the canary. It sabotages the collected model rather than the repo, so it needs
 //      no branch and leaves no residue.
+//      `--restamp` re-derives the floors from the live census and rewrites them in this file
+//      (WGATE only). `--restamp --dry` prints the diff and writes nothing.
 
-import { readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import process from "node:process";
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const SELF = fileURLToPath(import.meta.url);
+const ROOT = resolve(dirname(SELF), "..");
 const E2E = join(ROOT, "e2e");
 
 /* ── the manifest ──────────────────────────────────────────────────────────────
@@ -49,6 +79,34 @@ const ENGINES = ["chromium", "webkit"];
 /** The name the JSON reporter gives a config that declares no `projects`. */
 const UNNAMED = "(default)";
 
+/* FLOOR STAMP — rewritten by `--restamp`, never by hand. It records WHEN the floors below
+ * were last derived and from what tree, so a floor citing a tranche-old SHA is legible as
+ * slack rather than as a decision. */
+const FLOOR_STAMP = "T5-W1 1.10 birth — never restamped";
+
+/**
+ * DECLARED QUARANTINES. A `test.fixme` under a platform/engine condition is a test that
+ * LISTS but does not ASSERT, and `--list` cannot tell the two apart. Each entry says how
+ * many of a project's listed tests are parked, on which platform, and cites the module that
+ * parks them — check 7 reds when that module leaves the tree with the subtraction still here.
+ */
+const QUARANTINES = {
+  "wordmark-webkit": {
+    platform: "linux",
+    tests: 5,
+    cite: "e2e/linux-webkit-bake-quarantine.ts — the five game rows of wordmark-integrity.spec.ts, THIRD PINNING (CH-62). 1 of 6 rows asserts on ubuntu·webkit.",
+  },
+  "theme-bake-webkit": {
+    platform: "linux",
+    tests: 10,
+    cite: "e2e/linux-webkit-bake-quarantine.ts — all 10 rows of theme-bake-freshness.spec.ts (2 starts × 5 games), THIRD PINNING (CH-62). 0 of 10 assert on ubuntu·webkit; the project is a name, not a gate, on the platform CI runs.",
+  },
+};
+const QUARANTINE_CITE_FILES = ["e2e/linux-webkit-bake-quarantine.ts"];
+
+// `floor` is a floor on LIVE tests — listed minus any declared quarantine that applies on
+// the running platform. Small projects sit at their exact live count (their arity is
+// deliberate); the two big ones carry ~10%'s worth of churn room. Both restamp at WGATE.
 const CONFIGS = [
   {
     file: "playwright.config.ts",
@@ -67,13 +125,50 @@ const CONFIGS = [
       { name: "throttled-void", engine: "chromium", floor: 1 },
       { name: "filter-census-chromium", engine: "chromium", floor: 6 },
       { name: "filter-census-webkit", engine: "webkit", floor: 6 },
-      { name: "wordmark-webkit", engine: "webkit", floor: 6 },
+      { name: "wordmark-webkit", engine: "webkit", floor: 1 },
       { name: "theme-bake-chromium", engine: "chromium", floor: 2 },
-      { name: "theme-bake-webkit", engine: "webkit", floor: 2 },
+      { name: "theme-bake-webkit", engine: "webkit", floor: 0 },
       { name: "theme-quadrants-chromium", engine: "chromium", floor: 14 },
       { name: "theme-quadrants-webkit", engine: "webkit", floor: 14 },
     ],
   },
+];
+
+/**
+ * THE SPEC MANIFEST (check 6). Every e2e/*.spec.ts, by name, sorted. Deleting a spec file is
+ * a deliberate act and must be spelled here in the same commit; so is adding one. Nothing
+ * else in this gate can see a deletion — check 2 builds its claim map FROM the disk, so a
+ * spec that vanishes vanishes from the question too.
+ *
+ * `--restamp` does NOT touch this list. A restamp that re-derived the manifest from disk
+ * would agree with any deletion it found, which is the whole defect.
+ */
+const SPEC_MANIFEST = [
+  "a11y.spec.ts",
+  "access.spec.ts",
+  "affordances.spec.ts",
+  "board-covisibility.spec.ts",
+  "drawer.spec.ts",
+  "filter-census.spec.ts",
+  "font-census.spec.ts",
+  "futoshiki.spec.ts",
+  "gallery-deal.spec.ts",
+  "gallery-guard.spec.ts",
+  "gallery.spec.ts",
+  "mobile-affordances.spec.ts",
+  "mobile-platform.spec.ts",
+  "multiplayer.spec.ts",
+  "permalink.spec.ts",
+  "prm-void-audition.spec.ts",
+  "share-truth.spec.ts",
+  "sudoku-interaction.spec.ts",
+  "theme-bake-freshness.spec.ts",
+  "theme-quadrants.spec.ts",
+  "throttled-void.spec.ts",
+  "visual-golden.spec.ts",
+  "visual-regression.spec.ts",
+  "wordmark-integrity.spec.ts",
+  "zone-grammar.spec.ts",
 ];
 
 /**
@@ -302,17 +397,70 @@ function check4HoldoutsClosed(model) {
   return bad;
 }
 
+/** Tests a project LISTS minus the declared quarantine that applies on this platform. */
+function liveTests(projectName, listed, platform = process.platform) {
+  const q = QUARANTINES[projectName];
+  return q && q.platform === platform ? Math.max(0, listed - q.tests) : listed;
+}
+
 function check5CountFloors({ configs }) {
   const bad = [];
   for (const { file, matrix } of configs)
     for (const p of CONFIGS.find((c) => c.file === file).projects) {
       const got = matrix.get(p.name)?.tests ?? 0;
-      if (got < p.floor)
+      const live = liveTests(p.name, got);
+      if (live < p.floor)
         bad.push(
-          `${file} [${p.name}]: ${got} tests, floor ${p.floor}. Tests left the project. Raise ` +
-            `the floor only alongside the reason they went.`,
+          `${file} [${p.name}]: ${live} LIVE tests${live === got ? "" : ` (${got} listed − ${got - live} quarantined)`}, ` +
+            `floor ${p.floor}. Tests left the project. Raise the floor only alongside the ` +
+            `reason they went.`,
         );
     }
+  return bad;
+}
+
+function check6SpecManifest({ onDisk }) {
+  const bad = [];
+  const manifest = new Set(SPEC_MANIFEST);
+  const disk = new Set(onDisk);
+  for (const s of SPEC_MANIFEST)
+    if (!disk.has(s))
+      bad.push(
+        `${s}: in SPEC_MANIFEST, NOT on disk. A deleted spec is invisible to every other ` +
+          `check here — check 2 seeds its claim map from the disk, so a vanished spec is ` +
+          `neither an orphan nor a double-claim. Delete it from the manifest in the same ` +
+          `commit that deleted the file, with the reason.`,
+      );
+  for (const s of onDisk)
+    if (!manifest.has(s))
+      bad.push(
+        `${s}: on disk, NOT in SPEC_MANIFEST. A new spec is a deliberate act — add it here ` +
+          `in the same commit, and check its engine coverage while you are at it.`,
+      );
+  return bad;
+}
+
+function check7QuarantinesClosed() {
+  const bad = [];
+  for (const [project, q] of Object.entries(QUARANTINES)) {
+    const known = CONFIGS.some((c) => c.projects.some((p) => p.name === project));
+    if (!known)
+      bad.push(
+        `QUARANTINES names project "${project}", which no config declares — a subtraction ` +
+          `against nothing. Delete the entry.`,
+      );
+    if (!q.cite || q.cite.length < 40)
+      bad.push(
+        `QUARANTINES[${project}] carries no usable cite — an undeclared park is a hole.`,
+      );
+  }
+  for (const f of QUARANTINE_CITE_FILES)
+    if (!existsSync(join(ROOT, f)))
+      bad.push(
+        `${f} is gone, but the floors still subtract its rows. When a quarantine is lifted ` +
+          `the subtraction and the floor move together, in that commit — otherwise the lane ` +
+          `silently re-earns coverage it never regained.`,
+      );
   return bad;
 }
 
@@ -322,6 +470,8 @@ const CHECKS = [
   ["3 ENGINE COVERAGE", check3EngineCoverage],
   ["4 HOLDOUTS CLOSED", check4HoldoutsClosed],
   ["5 COUNT FLOORS", check5CountFloors],
+  ["6 SPEC MANIFEST", check6SpecManifest],
+  ["7 QUARANTINES CLOSED", check7QuarantinesClosed],
 ];
 
 /* ── self-test: every check shown able to fail ─────────────────────────────── */
@@ -385,6 +535,31 @@ const SABOTAGES = [
     "the chromium project sheds half its tests",
     (m) => (defaultCfg(m).matrix.get("chromium").tests = 40),
   ],
+  [
+    "6 SPEC MANIFEST",
+    "a whole spec FILE is deleted (green on all 5 checks before T7-W6)",
+    (m) => (m.onDisk = m.onDisk.filter((s) => s !== "drawer.spec.ts")),
+  ],
+  [
+    "6 SPEC MANIFEST",
+    "a spec lands on disk that the manifest never sanctioned",
+    (m) => m.onDisk.push("smuggled.spec.ts"),
+  ],
+];
+
+/** Check 7 reads the tree, not the model, so its sabotage is its own. */
+const SABOTAGE_7 = [
+  "7 QUARANTINES CLOSED",
+  "the quarantine module is deleted while the floors still subtract its rows",
+  () => {
+    const saved = [...QUARANTINE_CITE_FILES];
+    QUARANTINE_CITE_FILES.length = 0;
+    QUARANTINE_CITE_FILES.push("e2e/a-quarantine-that-is-not-there.ts");
+    const found = check7QuarantinesClosed();
+    QUARANTINE_CITE_FILES.length = 0;
+    QUARANTINE_CITE_FILES.push(...saved);
+    return found;
+  },
 ];
 
 function selfTest(model) {
@@ -402,20 +577,133 @@ function selfTest(model) {
           `it names, so it is not a gate.`,
       );
   }
+  {
+    const [target, description, run] = SABOTAGE_7;
+    const found = run();
+    console.log(
+      `  [${target}] ${description}\n      → ${found.length ? "RED (as it must)" : "GREEN — VACUOUS"}`,
+    );
+    if (!found.length)
+      vacuous.push(
+        `check "${target}" stayed GREEN under: ${description}. It cannot fail for the defect ` +
+          `it names, so it is not a gate.`,
+      );
+  }
   return vacuous;
+}
+
+/* ── --restamp: re-derive the floors from a live census (WGATE only) ───────── */
+
+/**
+ * The floor rule, stated once so the bank and the gate never diverge: a project with more
+ * than ten live tests keeps ~10% of churn room; a smaller one sits at its exact live count,
+ * because its arity is a decision and one lost test there is the signal, not noise.
+ */
+const floorFor = (live) => (live > 10 ? Math.floor(live * 0.9) : live);
+
+function restamp(model, { dry, allowLower }) {
+  const src = readFileSync(SELF, "utf8");
+  let next = src;
+  const rows = [];
+  for (const { file, matrix } of model.configs)
+    for (const p of CONFIGS.find((c) => c.file === file).projects) {
+      const listed = matrix.get(p.name)?.tests ?? 0;
+      // WORST CASE across platforms, never the running one. A restamp taken on darwin (where
+      // no quarantine applies) would bank floors of 6 and 10 for the two parked projects and
+      // red the ubuntu lane on its next run — a floor derived where the defect isn't.
+      const q = QUARANTINES[p.name];
+      const live = liveTests(p.name, listed, q?.platform ?? process.platform);
+      const want = floorFor(live);
+      rows.push({ file, project: p.name, listed, live, was: p.floor, now: want });
+      // Every project literal is one line: `{ name: "x", engine: "y", floor: N },`.
+      const re = new RegExp(
+        `(\\{\\s*name:\\s*(?:"${p.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"|UNNAMED)\\s*,[^}]*floor:\\s*)\\d+`,
+      );
+      if (!re.test(next))
+        throw new Error(`--restamp: cannot locate the floor literal for "${p.name}"`);
+      next = next.replace(re, `$1${want}`);
+    }
+  const sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+    cwd: ROOT,
+    encoding: "utf8",
+  }).trim();
+  const stamp =
+    `${sha} · ${new Date().toISOString().slice(0, 10)} · platform ${process.platform} · ` +
+    `live census ${rows.reduce((n, r) => n + r.live, 0)} of ${rows.reduce((n, r) => n + r.listed, 0)} listed`;
+  next = next.replace(
+    /const FLOOR_STAMP = "[^"]*";/,
+    `const FLOOR_STAMP = "${stamp}";`,
+  );
+
+  const w = Math.max(...rows.map((r) => r.project.length));
+  console.log(
+    `\nRESTAMP — floors re-derived: >10 live tests keep ~10% churn room, ≤10 sit exact.\n` +
+      `  Quarantines are subtracted at their DECLARED platform, not the running one.`,
+  );
+  for (const r of rows)
+    console.log(
+      `  ${r.project.padEnd(w)}  listed ${String(r.listed).padStart(3)}  live ${String(r.live).padStart(3)}  ` +
+        `floor ${String(r.was).padStart(3)} → ${String(r.now).padStart(3)}${r.now < r.was ? "   ↓ LOWERED" : ""}`,
+    );
+  console.log(`  stamp: ${stamp}`);
+
+  // Lowering a floor is a re-baseline, and the house does not re-baseline on a red
+  // (check-coverage-floor.mjs's `--allow-lower` law, applied to the same problem).
+  const lowered = rows.filter((r) => r.now < r.was);
+  if (lowered.length && !allowLower) {
+    console.error(
+      `\n--restamp REFUSED: ${lowered.length} floor(s) would DROP:\n` +
+        lowered.map((r) => `  - ${r.project}: ${r.was} -> ${r.now}`).join("\n") +
+        `\n  Say why out loud: --restamp --allow-lower "<where the tests went>".`,
+    );
+    process.exit(1);
+  }
+  if (dry) {
+    console.log("\n--dry — nothing written.");
+    return;
+  }
+  writeFileSync(SELF, next);
+  console.log(`\nwritten -> scripts/${SELF.split("/").pop()}`);
 }
 
 /* ── main ──────────────────────────────────────────────────────────────────── */
 
 const wantSelfTest = process.argv.includes("--self-test");
+const wantRestamp = process.argv.includes("--restamp");
 
 console.log(
   `PW PROJECT MATRIX — ${CONFIGS.length} configs, ` +
     `${CONFIGS.reduce((n, c) => n + c.projects.length, 0)} projects, ` +
-    `${Object.keys(HOLDOUTS).length} declared single-engine holdouts (T5-W1 1.10 / CH-56)`,
+    `${SPEC_MANIFEST.length} manifest specs, ${Object.keys(HOLDOUTS).length} declared ` +
+    `single-engine holdouts, ${Object.keys(QUARANTINES).length} declared quarantines ` +
+    `(T5-W1 1.10 / CH-56 · T7-W6)\n` +
+    `  floors stamped: ${FLOOR_STAMP}`,
 );
 
 const model = await collect();
+
+if (wantRestamp) {
+  const i = process.argv.indexOf("--allow-lower");
+  restamp(model, {
+    dry: process.argv.includes("--dry"),
+    allowLower: i >= 0 ? (process.argv[i + 1] ?? "(no reason given)") : null,
+  });
+  process.exit(0);
+}
+
+// The live census, printed whether or not a floor bites — a quarantined project's real
+// assertion count is the number this gate exists to keep visible.
+for (const { file, matrix } of model.configs)
+  for (const p of CONFIGS.find((c) => c.file === file).projects) {
+    const listed = matrix.get(p.name)?.tests ?? 0;
+    const live = liveTests(p.name, listed);
+    if (live === listed) continue;
+    console.log(
+      `  QUARANTINED  ${p.name}: ${listed} listed − ${listed - live} parked on ` +
+        `${QUARANTINES[p.name].platform} = ${live} LIVE (floor ${p.floor})` +
+        `${live === 0 ? "  ← asserts NOTHING on this platform" : ""}`,
+    );
+  }
 const failures = [];
 for (const [name, fn] of CHECKS) {
   const found = fn(model);

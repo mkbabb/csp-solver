@@ -1,0 +1,68 @@
+T7-W6 — LANE-MEMBERSHIP CENSUS, THE GREEN CONDITION
+date: 2026-08-03T07:31:01Z  HEAD: af508288
+
+The born-RED cures ONLY through the wiring this wave requests of the chair — proven,
+not asserted. The HEAD tree is copied to a scratch tree, the exact wiring_requests text
+is applied there (two package.json scripts + three ci.yml steps), the new gate is
+dropped in beside its siblings, and the census is re-run against it.
+
+--- package.json (scratch diff) ---
+@@ -29,6 +29,8 @@
+     "lint:ink": "node scripts/check-ink-pressure.mjs --self-test",
+     "lint:catch": "node scripts/check-empty-catch.mjs --self-test",
+     "lint:theme-selectors": "node scripts/check-theme-selectors.mjs --self-test",
++    "lint:theme-tokens": "node scripts/check-theme-tokens.mjs --self-test",
++    "lint:lanes": "node scripts/check-lane-membership.mjs --self-test",
+     "lint:tdz": "node scripts/tdz-probe.mjs --self-test",
+     "test:unit": "vitest run",
+     "test:unit:watch": "vitest",
+
+--- ci.yml (scratch diff) ---
+@@ -721,6 +721,15 @@
+             - name: theme-selector census (no never-written selectors, self-tested)
+               working-directory: web/frontend
+               run: npm run lint:theme-selectors
++            - name: theme-token census (every @theme token has a consumer, self-tested)
++              working-directory: web/frontend
++              run: npm run lint:theme-tokens
++            - name: tdz probe (no registration cycle; reproduction both ways)
++              working-directory: web/frontend
++              run: npm run lint:tdz
++            - name: lane membership (every gate/probe is wired or declared, self-tested)
++              working-directory: web/frontend
++              run: npm run lint:lanes
+             # T5-W1 row 1.11 (audit C5 + J3) support floor. Same species as the four
+             # gates above it — static, zero-dependency, browser-free — and it needs
+             # this job's `npm ci`: check 2 reads @tailwindcss/node's Lightning CSS
+
+$ node scripts/check-lane-membership.mjs --root <wired-tree>
+===============================================================================
+LANE-MEMBERSHIP CENSUS — 14 gate/probe script(s) under web/frontend/scripts, 107 CI-reachable command(s) (20 npm script(s) resolved)
+  · check-coverage-floor.mjs — ci.yml:801, package.json scripts.test:coverage:floor
+  · check-empty-catch.mjs — package.json scripts.lint:catch
+  · check-font-coverage.mjs — package.json scripts.test:font-coverage
+  · check-golden-bytes.mjs — package.json scripts.test:golden:bytes
+  · check-ink-pressure.mjs — package.json scripts.lint:ink
+  · check-lane-membership.mjs — package.json scripts.lint:lanes
+  · check-prod-shake.mjs — package.json scripts.test:prod-shake
+  · check-pw-projects.mjs — package.json scripts.test:e2e:projects
+  · check-pw-retries.mjs — package.json scripts.test:e2e:retries
+  · check-support-floor.mjs — package.json scripts.test:support-floor
+  · check-theme-selectors.mjs — package.json scripts.lint:theme-selectors
+  · check-theme-tokens.mjs — package.json scripts.lint:theme-tokens
+  · check-unit-count.mjs — ci.yml:796, package.json scripts.test:unit:count
+  · tdz-probe.mjs — package.json scripts.lint:tdz
+  ✓ 1 UNCLAIMED SCRIPT
+  ✓ 2 DECLARATION SOUND
+  ✓ 3 LANE RESOLVES
+
+OK — every gate and probe in web/frontend/scripts is named by a CI lane or declares itself NOT-A-LANE with a cite, and every lane names something that exists.
+EXIT=0
+===============================================================================
+
+The step NAMES in the scratch ci.yml are placeholders for shape only — the chair owns
+the final wording. What the run proves is that the npm-script form (`lint:theme-tokens`,
+`lint:tdz`, `lint:lanes`, each called from a `working-directory: web/frontend` step) is
+sufficient. It is also the form that greens `npm run lint:knip` at the widened project
+scope, because knip reads package.json scripts and cannot read ci.yml. A ci.yml-direct
+`run: node scripts/x.mjs` step would green THIS census and leave knip red.

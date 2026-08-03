@@ -181,11 +181,11 @@ function sudokuTemplates(): Plugin {
  *
  * Reads the emitted content-hashed asset names off the rollup bundle and injects,
  * into the `<head>` of the built `index.html`:
- *   - `<link rel="modulepreload">` for the ACTIVE (default) game's `solver.worker`
- *     chunk only — the wasm Worker boots lazily on its first message
- *     (`useSolver.ts` `ensureWorker`), so preloading the chunk shaves the first
- *     solve/generate's serial chain. The other game's worker is speculative
- *     cold-path work (T4-W1 §preload) and is left to lazy fetch on port entry.
+ *   - `<link rel="modulepreload">` for the `solver.worker` chunk — the wasm Worker
+ *     boots lazily on its first message (`useSolver.ts` `ensureWorker`), so
+ *     preloading the chunk shaves the first solve/generate's serial chain. One
+ *     chunk serves all five families (T5-W2's one-module worker), so nothing here
+ *     is speculative cold-path work for a port nobody entered.
  *   - `<link rel="preload" as="font" crossorigin>` for the three subset woff2 —
  *     the hand-drawn wordmark is the aesthetic centerpiece and today the faces
  *     are late-discovered via `@font-face` only (index.css), a FOUT the preload
@@ -215,20 +215,20 @@ function headHints(): Plugin {
         if (!bundle) return html
         const files = Object.keys(bundle)
         const tags: import('vite').HtmlTagDescriptor[] = []
-        // Preload ONLY the active (default) game's `solver.worker` chunk. Both games
-        // emit a distinct hashed `solver.worker-*.js` asset (same basename — they're twin
-        // ports), but the app boots on the default game (sudoku; `?game=futoshiki`
-        // switches at runtime, App.vue) and only that worker instantiates cold.
-        // Modulepreloading the other is speculative cold-path work the browser pays for on
-        // every load (T4-W1 §preload) — the futoshiki worker is fetched lazily when (if)
-        // the port is entered.
+        // Preload the `solver.worker` chunk. There is exactly ONE since T5-W2 2.2 — one
+        // module, one message loop, one wasm binary for all five families
+        // (`shared/solver/solver.worker.ts`) — so the preload is the chunk every game boots,
+        // not a bet on the default one. It was five chunks when this was written, one per
+        // game, and preloading any of them bought the browser four cold-path fetches nobody
+        // asked for (T4-W1 §preload).
         //
-        // Vite 8's bundler emits these workers as ASSETS with no `originalFileName` /
-        // `facadeModuleId`, so the active worker is identified by a wasm binding only its
-        // game's source references. The count assertion fails the build if that
-        // discriminator ever drifts (both/neither match) rather than silently preloading
-        // the wrong chunk or regressing to both.
-        const ACTIVE_WORKER_MARK = 'solveSudoku' // the default game's core wasm binding
+        // Vite 8's bundler emits the worker as an ASSET with no `originalFileName` /
+        // `facadeModuleId`, so it is identified by a wasm binding its source references. The
+        // count assertion fails the build if that discriminator ever drifts (neither/several
+        // match) rather than silently preloading the wrong chunk — and it is what keeps this
+        // honest if the worker ever re-splits per game: exactly one chunk would still carry
+        // the mark, and that one is the default game's.
+        const ACTIVE_WORKER_MARK = 'solveSudoku' // the shared worker imports it; sudoku's own if it ever re-splits
         const workerFiles = files.filter((f) => /solver\.worker[.-][^/]*\.js$/.test(f))
         const activeWorkers = workerFiles.filter((f) => {
           const src = (bundle[f] as { source?: unknown }).source

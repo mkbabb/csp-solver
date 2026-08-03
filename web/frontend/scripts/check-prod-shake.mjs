@@ -10,8 +10,29 @@
 // would ride to production — fail loud here, do NOT relax the check.
 //
 // Symbols proven-absent: FilterTuner (the tuner component), rafInstrumentation
-// (the RAF probe module), schedulerDebugInfo (pencil-boil's scheduler introspect,
-// re-exposed only by the dev probe). Run: `node scripts/check-prod-shake.mjs [dir]`
+// (the RAF probe module), __schedulerDebug (the global the dev probe writes).
+//
+// T7-W6 — THE THIRD SYMBOL WAS VACUOUS. It read `schedulerDebugInfo` until this wave:
+// pencil-boil's export name, which the probe imports as a LOCAL BINDING
+// (rafInstrumentation.ts:26) and esbuild renames to one letter on the way through. So
+// the literal could never appear in a bundle, leaked or not, and a third of this check
+// was asserting the absence of a string the minifier had already deleted. Measured with
+// the DEV fence deliberately broken (a two-line entry doing exactly what the probe does,
+// `npx esbuild --bundle --minify`): `schedulerDebugInfo` 0 occurrences,
+// `__schedulerDebug` 1 — `window.__schedulerDebug=d`. A property written on `window`
+// survives minification because renaming it would break the read; that is why the global,
+// not the import, is the symbol worth policing. Banked:
+// docs/tranches/2026-08-tranche-7/evidence/w6/prod-shake-symbol-swap.txt.
+//
+// THE CAVEAT this check cannot outrun: substring-policing a minified bundle only reaches
+// identifiers minification has a reason to KEEP — property names, string literals, and
+// the chunk FILE NAMES vite derives from a dynamically-imported module (they land in the
+// parent chunk as import specifiers). `FilterTuner` and `rafInstrumentation` are caught
+// on that last path. Neither would survive as a plain local binding, so this gate proves
+// "the dev chunk is not referenced", not "no dev code is present" — the ink-level claim
+// belongs to the filter census, not here.
+//
+// Run: `node scripts/check-prod-shake.mjs [dir]`
 // — dir defaults to the first existing production build dir. CI runs it right
 // after a bundled build so a dist actually exists (compute-cost DAG: reuse the
 // throttle gate's `dist-throttle`, no redundant build).
@@ -22,7 +43,9 @@ import { fileURLToPath } from "node:url";
 import process from "node:process";
 
 const FRONTEND_ROOT = fileURLToPath(new URL("..", import.meta.url));
-const FORBIDDEN = ["FilterTuner", "rafInstrumentation", "schedulerDebugInfo"];
+// `__schedulerDebug`, NOT `schedulerDebugInfo` — see the swap note in the header. The
+// rule for adding a fourth: it must be a symbol the minifier is obliged to preserve.
+const FORBIDDEN = ["FilterTuner", "rafInstrumentation", "__schedulerDebug"];
 // The bundled build dir: an explicit CLI arg wins; else the first that exists.
 const CANDIDATE_DIRS = ["dist-throttle", "dist"];
 

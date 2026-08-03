@@ -1,0 +1,142 @@
+T7-W6 — THE SWALLOW CENSUS, ARROW ARM: ABLATION RECORD
+======================================================
+subject   web/frontend/scripts/check-empty-catch.mjs (CATCH_HEAD, was :47)
+site      web/frontend/src/App.vue:224 — `card.load().catch(() => {})`
+base      af5082880e59951a99aac12c19c8ad6b922882f3 (T7-W1 head)
+date      2026-08-03
+host      darwin, node from the repo toolchain
+
+The rule: reproduce the false green, extend the instrument, show it RED on the live site
+BEFORE the site is cured, then show it green after. Three stanzas, in that order.
+
+
+§1 — THE FALSE GREEN (base, unmodified)
+---------------------------------------
+$ node scripts/check-empty-catch.mjs --self-test
+catch clauses scanned across 175 src files
+swallows (no statement, no explanation): 0
+
+negative control (inject one `catch { /* ignore */ }`): RED as required
+
+check-empty-catch: 0 swallowed catch bodies
+EXIT=0
+
+Zero swallows, control green — while `App.vue:224` swallowed four dynamic-import rejections
+wordlessly. The census that exists to catch that could not see it.
+
+(The scanned-file count reads 175 here and 176 from §3 on: sibling W6 lanes landed a `src/`
+file between the two runs. The count is a scope readout, not a result — every run below is on
+the same 176.)
+
+
+§2 — THE MISS IS STRUCTURAL, NOT A TUNING SLIP
+----------------------------------------------
+The pre-W6 head, `/\bcatch\s*(?:\([^)]*\)\s*)?\{/g`, run directly over the live file and over
+three synthetic arrow controls:
+
+$ node docs/tranches/2026-08-tranche-7/evidence/w6/legacy-head-probe.mjs        # from repo root
+subject: web/frontend/src/App.vue @ af508288
+legacy CATCH_HEAD over src/App.vue — clause heads found at lines: (none)
+App.vue:224 source: "if (!card.eager) card.load().catch(() => {});"
+is line 224 among them? false
+legacy sees "warm().catch(() => {});" -> BLIND
+legacy sees "warm().catch((e) => {});" -> BLIND
+legacy sees "warm().catch(async () => {});" -> BLIND
+
+Why it cannot match at any offset: on `.catch(() => {`, the optional param group `\([^)]*\)`
+opens at the handler's own `(` and `[^)]*` halts at the arrow parens' `)`, so the following
+`\{` lands on `=`; dropping the group puts `\{` on `(`. No threshold, allowlist or exception
+would ever have reached this form — only a second alternative does. Hence: the promise-handler
+grammar is now a first-class arm of the head, and the frozen old regex rides in the self-test
+as the discriminating control, so the cure has to keep proving itself at every run.
+
+
+§3 — THE ABLATION: NEW HEAD, SITE STILL UNCURED
+-----------------------------------------------
+CATCH_HEAD extended (arrow arm + comment mask); `App.vue:224` deliberately left as it was.
+Re-run against the FINAL instrument, and reproducible from any tree:
+
+$ git show HEAD:web/frontend/src/App.vue > /tmp/App.head.vue
+$ cp src/App.vue /tmp/App.mine.vue && cp /tmp/App.head.vue src/App.vue
+$ node scripts/check-empty-catch.mjs --self-test
+catch clauses scanned across 176 src files
+swallows (no statement, no explanation): 1
+  src/App.vue:224  /* (empty) */
+
+negative controls:
+  statement form  `catch { /* ignore */ }`  ->  1 swallow(s), RED as required
+  arrow form      `.catch(() => {})`  ->  1 swallow(s), RED as required; the pre-W6 head saw 0 — the structural miss this cures
+  quoted in prose `/** … .catch(() => {}) … */`  ->  0 swallow(s), GREEN as required
+
+check-empty-catch: 1 swallowed catch bodies
+EXIT=1
+
+Born RED at HEAD, on exactly one site — the one the audit named. The other live arrow catch
+(`useCarouselGlide.ts:282`) already says something ("cancelled by a newer step — its own settle
+owns the track") and stays green, so the new arm is not a blanket.
+
+
+§4 — THE OVER-REACH ARM
+-----------------------
+`relayWire.ts:16` QUOTES `.catch(() => {})` in prose, to record the swallow T6.2 cured. The
+naive extension reds that comment — a census that reds the documentation of a fix. Heads are
+therefore matched over a comment-blanked copy (offsets and newlines preserved; bodies still
+sliced from the original, because the body's prose is what the rule grades), and brace counting
+moved onto the same masked copy, so a `}` inside a comment is prose rather than a brace. Reach
+is comments only: a swallow spelled inside a string literal still reds, which is loud and wrong
+in the safe direction. Control 3 above holds this arm.
+
+
+§5 — THE CURE (site fixed)
+--------------------------
+App.vue:224 now names the reason in the catch — the warm is opportunistic, a cold select
+re-requests the chunk through `sceneFor`'s own loader, which is where a real load failure is
+seen and surfaced. Behavior byte-for-byte unchanged: the rejection is still absorbed.
+
+$ cp /tmp/App.mine.vue src/App.vue
+$ node scripts/check-empty-catch.mjs --self-test
+catch clauses scanned across 176 src files
+swallows (no statement, no explanation): 0
+
+negative controls:
+  statement form  `catch { /* ignore */ }`  ->  1 swallow(s), RED as required
+  arrow form      `.catch(() => {})`  ->  1 swallow(s), RED as required; the pre-W6 head saw 0 — the structural miss this cures
+  quoted in prose `/** … .catch(() => {}) … */`  ->  0 swallow(s), GREEN as required
+
+check-empty-catch: 0 swallowed catch bodies
+EXIT=0
+
+Green earned, not inherited: §3 is the same command on the same instrument with the site
+uncured, and it exits 1.
+
+
+§6 — LANES, AT THE SEAL
+-----------------------
+$ npx prettier --check --config .prettierrc.json src/App.vue src/games/shared/usePencilMarks.ts \
+    src/games/sudoku/composables/wire-parity.test.ts scripts/check-empty-catch.mjs
+All matched files use Prettier code style!
+
+$ npx eslint .            → clean
+$ npx vue-tsc --noEmit    → clean (it now typechecks `e2e/wire.ts` too — the parity test pulls
+                            it into the app program, which is why the node-only `Buffer` had
+                            to go; see codec-parity.txt §3 and the wire.ts header)
+$ npx knip                → 4 unused files, all sibling-owned unwired gates
+                            (check-lane-membership / check-motion-contract / check-sleep-lint /
+                            check-theme-tokens). NOT mine, and knip's own scope widening is a
+                            sibling row. The one row that WAS mine — `CODEC_VERSION` exported
+                            from e2e/wire.ts with zero importers, surfaced the moment the
+                            widening let knip see e2e non-specs — is cleared: made private,
+                            like the codec's own (persistence.ts:139).
+$ npx vitest run          → 44 files, 477 tests passed (was 43/471 at HEAD: +1 file, +6 rows,
+                            all six from wire-parity.test.ts)
+$ npx playwright test --list  e2e/permalink.spec.ts e2e/share-truth.spec.ts e2e/affordances.spec.ts
+                          → 47 tests in 3 files
+$ npx playwright test --list --config playwright-golden.config.ts
+                          → 4 tests in 1 file
+                            All four `wire.ts` consumers still transform and resolve after the
+                            base64url collapse (visual-golden rides the golden config, which is
+                            why it needs the second invocation).
+
+NOT MINE, seen in passing: `npm run lint` (the repo prettier lane) reds on
+`scripts/check-lane-membership.mjs` and `scripts/check-pw-projects.mjs`, both in flight from
+sibling W6 lanes at the time of this run. Reported, not touched.

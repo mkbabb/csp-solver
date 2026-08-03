@@ -27,7 +27,9 @@
 #                                         e2e + twiggy(lean half) `needs:` it and
 #                                         download — kills 2 redundant lean builds
 #                                         + the Rust toolchain in frontend/e2e)
-#   1.  fmt + clippy       -> lint       (clippy -D warnings; strict, no continue-on-error)
+#   1.  fmt + clippy       -> lint       (clippy -D warnings, strict, no continue-on-error;
+#       + the inline-test law             + T7-W6's inline-test law — no test attribute
+#                                         under any member's src/, self-tested)
 #   2.  build + test       -> rust       (cargo build/test --workspace — NEVER per-crate)
 #   3.  bench + corpus smoke-> rust      (queens assert_eq!(92/14200); gac_ab --test;
 #                                         gac_ab_corpus 0/50 false-UNSAT + 4,153,388→8,222
@@ -101,8 +103,8 @@ on:
 
 jobs:
     # ---------------------------------------------------------------- Lane 1
-    # fmt + clippy. Kept in a job of its own so a red clippy does NOT mask the
-    # build/test/queens signal. Strict, no continue-on-error.
+    # fmt + clippy + the inline-test law. Kept in a job of its own so a red clippy
+    # does NOT mask the build/test/queens signal. Strict, no continue-on-error.
     lint:
         runs-on: ubuntu-latest
         timeout-minutes: 15
@@ -124,6 +126,34 @@ jobs:
               run: cargo fmt --all --check
             - name: clippy (-D warnings, workspace, all targets)
               run: cargo clippy --workspace --all-targets -- -D warnings
+            # T7-W6 (T7-R01) — THE INLINE-TEST LAW. `csp-solver/src/builder/kuhn_munkres.rs`
+            # carried a `#[cfg(test)] mod tests` born 19 hours after T2 declared the estate free
+            # of them, and nothing in CI read the surface: `cargo test` runs an inline module
+            # exactly as happily as an integration one, so the breach was invisible to every
+            # green. The tests moved one directory over — `csp-solver/tests/kuhn_munkres.rs`,
+            # same five names, same numbers, the U-09 precedent — and this gate keeps the door
+            # shut: no test attribute under any workspace member's `src/`, in any spelling
+            # (`#[cfg(test)]`, `#[cfg(all(test, …))]`, a bare `#[test]`, `#[wasm_bindgen_test]`).
+            # There is no waiver list.
+            #
+            # `--self-test` runs 10 synthetic cases BEFORE the real audit — seven that must red,
+            # three negative controls that must not (prose naming the attribute,
+            # `#[cfg(feature = "test")]`, `#[cfg_attr(test, …)]`) — and an empty scope THROWS
+            # rather than reading as a clean tree. A gate that cannot fail is not a gate; a gate
+            # that reads zero files is worse. Born RED at af508288 on six attributes
+            # (evidence/w6/inline-test-born-red.txt); green after the cut, with the ablation
+            # re-run on the live tree (evidence/w6/inline-test-green-and-ablation.txt).
+            #
+            # It rides THIS lane because it is a static, zero-dependency read of the Rust source
+            # — the same species as fmt and clippy — and needs no cargo, no target dir, no cache.
+            # Node is set up for it alone, after the two cargo steps so a Node install never
+            # delays a clippy red.
+            - name: Set up Node (LTS) for the inline-test gate
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+            - name: inline-test law (no test attribute under any member's src/, self-tested)
+              run: node scripts/check-inline-tests.mjs --self-test
 
     # ---------------------------------------------------------------- Lanes 2 + 3
     # build + test + queens-bench smoke. --workspace only, NEVER per-crate: the
@@ -640,8 +670,14 @@ jobs:
             - name: vue-tsc --noEmit
               working-directory: web/frontend
               run: npx vue-tsc --noEmit
-            # eslint — the colocation boundary rig (T4-W2, eslint.config.js):
-            # pencil↮games, sudoku↮futoshiki, and the 3-level pencil-depth rule.
+            # eslint — the colocation boundary rig (T4-W2, eslint.config.js): pencil↮games, the
+            # 3-level pencil-depth rule, and — IMPORTED from `eslint.boundary.config.js` since
+            # T5-W2 2.5 — the GENERATED cross-game matrix: all 20/20 ordered pairs plus the
+            # shared floor (`games/shared` may not import a game). The hand-spelled pair this
+            # line used to name enforced 2 of 20; thermo, killer and kenken carried no
+            # cross-game restriction at all. The generator reads the game list off disk (each
+            # family's own `spec.ts`), so a sixth family is bound the moment its registration
+            # point lands, with no edit here and none there.
             # Wired here so a cross-boundary import reds the frontend lane (born-RED
             # proven: a src/pencil/** -> @games/** import trips no-restricted-imports).
             # Build output (dist*/) is ignored by the config so bundled JS never
@@ -663,10 +699,16 @@ jobs:
             # non-destructive `prettier --check src/`, retiring the machine-global
             # `~/.prettierrc` shadow that rewrote the tree to 4-space on a bare run.
             # T5-W4 pass-7 Lane D (D6-G1/D6-G5) WIDENS the scope past `src/`: BOTH script
-            # directories are in format scope and named — `web/frontend/scripts/` (13 files)
-            # and the repo-root `scripts/` (3 .mjs; the three .sh have no prettier parser and
+            # directories are in format scope and named — `web/frontend/scripts/` (20 files)
+            # and the repo-root `scripts/` (4 .mjs; the three .sh have no prettier parser and
             # are skipped). Ten were unformatted and are formatted in the same commit as this
-            # line. The `--config .prettierrc.json` pin is load-bearing, not decoration: the
+            # line. THE SCOPE IS THOSE THREE DIRECTORIES AND NOTHING ELSE — `src/`, `scripts/`,
+            # `../../scripts/`, exactly as the `lint` script spells it. This is not a repo-wide
+            # format gate: `web/frontend/e2e/` and `web/relay/` are OUT, deliberately, and
+            # recorded here as such rather than narrated away (T7-W6 — 22 files across the two
+            # are non-conformant today, which is what an unstated exclusion buys). Widening is
+            # a ruling, and a ruling lands with its enforcing config.
+            # The `--config .prettierrc.json` pin is load-bearing, not decoration: the
             # repo has exactly ONE prettier config and it lives under web/frontend, so a BARE
             # reach at `../../scripts/` resolves per-file UP past the repo and lands on the
             # very `~/.prettierrc` shadow the paragraph above retired (measured on the author's
@@ -721,7 +763,47 @@ jobs:
             - name: theme-selector census (no never-written selectors, self-tested)
               working-directory: web/frontend
               run: npm run lint:theme-selectors
-            # T5-W1 row 1.11 (audit C5 + J3) support floor. Same species as the four
+            # T5-W2 2.3a — the theme-token census, WIRED at T7-W6. Every `@theme` custom
+            # property must have a consumer, and the consumed surface is read three ways: a
+            # `var(--tok)` anywhere in the corpus, a Tailwind v4 utility minted from the token's
+            # NAMESPACE, and — inside index.css itself — TRANSITIVELY, so an alias chain cannot
+            # kill its own base. A token nobody reads is not a palette, it's a decoy: the next
+            # hand picks a colour off the block and inherits shadcn's default greys in a crayon
+            # estate. It passed and self-tested from the day it landed, in NO lane; that is one
+            # of the two instances the lane-membership law below exists for.
+            - name: theme-token census (every @theme token has a consumer, self-tested)
+              working-directory: web/frontend
+              run: npm run lint:theme-tokens
+            # T5-W2 2.1c — the TDZ probe, WIRED at T7-W6. `lint:tdz` has been in package.json
+            # since 2.1 and no CI step ever called it, which is a package.json script, not a
+            # lane. Two arms: the GRAPH arm asserts the three severed edges of the old
+            # `scene → game → registry → scene` cycle on the real tree, and the REPRODUCTION arm
+            # writes four synthetic modules and imports them for real — the OLD shape must throw
+            # the TDZ `ReferenceError: Cannot access '…' before initialization` and the NEW one
+            # must boot, or the probe cannot see the hazard it claims to gate. The red arm is
+            # the canary and runs on every invocation, not only under `--self-test`.
+            - name: tdz probe (no registration cycle; reproduction both ways)
+              working-directory: web/frontend
+              run: npm run lint:tdz
+            # T7-W6 — THE LANE-MEMBERSHIP CENSUS: the CLASS cure for the two rows above, not two
+            # more instances. A gate no lane runs is not a gate, it's a decoy that reads like
+            # enforcement, and the question "does a CI lane name this file?" is answerable from
+            # two files on disk. Every `scripts/check-*.mjs` and `*-probe.mjs` is either named by
+            # a CI-REACHABLE command — a `run:` line, or an `npm run <name>` in a
+            # `working-directory: web/frontend` step resolved through package.json, chained runs
+            # and npm's pre/post hooks included — or carries a `NOT-A-LANE:` declaration with a
+            # reason and a cite. Only `run:` text counts: ci.yml narrates these scripts by name
+            # in its comments all over, and treating a comment as enforcement is the exact false
+            # green this refuses. Check 3 is the dual — a lane that names a script that is not on
+            # disk reds too, so deleting a guard out from under its step cannot go quiet. Born
+            # RED at HEAD on the two unwired guards (evidence/w6/lane-membership-born-red.txt);
+            # green only through this wiring (evidence/w6/lane-membership-green-condition.txt).
+            # W1's selector census and W2's occlusion gates land under it on day one, so a new
+            # guard cannot ship unwired again.
+            - name: lane membership (every gate/probe is wired or declared, self-tested)
+              working-directory: web/frontend
+              run: npm run lint:lanes
+            # T5-W1 row 1.11 (audit C5 + J3) support floor. Same species as the seven
             # gates above it — static, zero-dependency, browser-free — and it needs
             # this job's `npm ci`: check 2 reads @tailwindcss/node's Lightning CSS
             # targets out of node_modules and REFUSES to pass when that input is
@@ -795,14 +877,21 @@ jobs:
             - name: vitest run --coverage (FE unit estate)
               working-directory: web/frontend
               run: npm run test:unit:report -- --coverage
-            # The count floor: >=300 EXECUTED (passed + failed; `.skip`/`.todo` are not
-            # executed and never count). 332 at the wave base; 300 is ~10% below, so
-            # ordinary churn doesn't red the lane while wholesale exclusion does. A
-            # narrowed `include`, a describe.skip over a whole file, or a collection
-            # error all exit 0 from the step above with a cheerful summary — only this
-            # one sees the number move. Re-derive the floor from a fresh census; never
-            # nudge it down to meet a red.
-            - name: unit count floor (>=300 executed)
+            # The count floor: >= the floor STAMPED in check-unit-count.mjs, counted in
+            # EXECUTED tests (passed + failed; `.skip`/`.todo` are not executed and never
+            # count). 300 was ~10% under 332 at the T5-W1 wave base; live is 477 today, so
+            # the floor carries 59% of slack and a whole file's worth of estate can leave
+            # with the lane still green. A narrowed `include`, a describe.skip over a whole
+            # file, or a collection error all exit 0 from the step above with a cheerful
+            # summary — only this one sees the number move. `--restamp <report>` is the
+            # COMMAND that re-derives the floor (~10% under a live, clean census; it refuses
+            # a report that is not a passing, self-consistent run, refuses a LOWERING without
+            # a spoken `--allow-lower "why"`, and stamps the tree it measured into the file),
+            # where "re-derive from a fresh census" was advice — and advice erodes. T7-W6
+            # lands the mechanism; WGATE runs it, after the last row lands anywhere in the
+            # tranche. A floor derived at W6's own seal is stale on arrival, which is the
+            # exact slack the row exists to remove. Never nudge it down to meet a red.
+            - name: unit count floor (>= the stamped floor)
               working-directory: web/frontend
               run: npm run test:unit:count
             # The coverage floor: every scope at or above the W1.14 baseline in
@@ -1039,17 +1128,28 @@ jobs:
               working-directory: web/frontend
               run: node scripts/golden-magnitude.mjs
             # T5-W1.13. The step's NAME changed with its script: check-golden-bytes.mjs
-            # grew from one rule to six — per-image ceiling · ESTATE TOTAL (110 KB,
+            # grew from one rule to eight — per-image ceiling · ESTATE TOTAL (110 KB,
             # derived from the estate's own mint history, summed since T4 and never
             # gated until now) · fossils (any *.png under e2e/ outside e2e/goldens) ·
             # decode + blank floor · pairing/orphans/missing baselines · the
             # engine/template collision guard. A red has to read as what it is.
             #
+            # T7-W6 adds the last two. COUNT PIN — exactly 8 goldens on disk, an EQUALITY, so
+            # a ninth is a ruling by construction instead of by arithmetic that must be
+            # re-derived at every reviewed crop-tighten; that re-derivation IS the drift
+            # mechanism, since the band was cut against a 101,341 B total that reads 92.5 KB
+            # today and a ninth AND tenth simply fit inside the ~18 KB of unearned room. The
+            # byte band is demoted to the SECONDARY control — it still answers the question
+            # the count cannot, whether the eight are ballooning. ESTATE PRESENT — a wiped
+            # goldens dir used to exit 0 on "nothing to police"; it reds now whenever specs
+            # assert goldens and zero baselines are on disk. Both ablation-proven, with the
+            # unperturbed estate as the control (evidence/w6/golden-estate-ablation.txt).
+            #
             # `if: ${{ !cancelled() }}` is the one behavioural addition: this step used
             # to be skipped whenever the golden COMPARE red, which made the estate
             # check hostage to a flake in a different gate. An orphaned or unpaired
             # golden is exactly the defect that arrives WITH a red compare.
-            - name: "Golden estate gate — bytes, total, fossils, decode, pairing"
+            - name: "Golden estate gate — count pin, bytes, total, fossils, decode, pairing"
               if: ${{ !cancelled() }}
               working-directory: web/frontend
               run: npm run test:golden:bytes
@@ -1060,7 +1160,19 @@ jobs:
             # compare that has silently stopped comparing looks exactly like a compare
             # that is passing (gate-soundness.md:114).
             #
-            # THE ASSERTION IS INVERTED: this step fails when playwright SUCCEEDS.
+            # GRADED ON WHY EACH ARM RED, NOT ON THE EXIT BIT. This step used to invert
+            # playwright's own exit code — red when the run SUCCEEDED — and an arm that
+            # reds for its OWN reasons is the same vacuous green in a louder costume: the
+            # `invert` arm red at `toHaveClass(/dark/)`, its own postcondition, three lines
+            # before any screenshot was taken, and a postcondition red and a compare red
+            # exit identically. `scripts/golden-selfdelta.mjs` runs both arms with
+            # `--reporter=json` and grades the claim as written — EVERY golden must red, and
+            # every red must carry a `toHaveScreenshot` message. Anything else is a setup
+            # error (exit 1); no JSON at all is an instrument failure (exit 2). The ARM was
+            # fixed too, never the grading: the `invert` delta reads the theme BEFORE the
+            # click and settles on the flip wherever it lands
+            # (evidence/w6/selfdelta-invert-ablation.txt).
+            #
             # Both arms run because they fail differently — `black` proves the RASTER
             # path compares, `invert` proves the THEME path does. Neither writes a
             # baseline. It runs LAST of the golden steps because it perturbs the app,
@@ -1069,17 +1181,7 @@ jobs:
               if: ${{ !cancelled() }}
               timeout-minutes: 6
               working-directory: web/frontend
-              run: |
-                  set -u
-                  for arm in black invert; do
-                    echo "::group::GOLDEN_DELTA=$arm"
-                    if GOLDEN_DELTA="$arm" npx playwright test --config playwright-golden.config.ts --reporter=line; then
-                      echo "::error::SELF-DELTA DID NOT BITE — the golden compare passed with the $arm regression injected."
-                      exit 1
-                    fi
-                    echo "ok — the $arm arm red the compare, as it must"
-                    echo "::endgroup::"
-                  done
+              run: node scripts/golden-selfdelta.mjs
             # BUILT-DIST gates — three projects on ONE bundled preview build
             # (playwright-throttle.config.ts, port 4188), all testIgnored from the default
             # config so they must run explicitly or they go dark:
@@ -1091,13 +1193,28 @@ jobs:
             #   · wordmark-integrity — P1 G3.4, in WEBKIT: the five wordmarks' baked ink inside
             #     its own box, and zero Georgia-fallback glyphs. Both defects are WebKit's, so
             #     this project pins `browserName: webkit` and the job installs that bundle too.
+            #     ON THIS RUNNER, count it honestly: `e2e/linux-webkit-bake-quarantine.ts`
+            #     `test.fixme`s the five per-game rows on ubuntu·webkit (CH-62, THIRD PINNING),
+            #     so 1 of the 6 asserts here — the zero-fallback-glyph row. The other five are
+            #     live on darwin and nowhere in CI. T7-W6 subtracts declared quarantines from
+            #     the count floors at their DECLARED platform (check-pw-projects.mjs), so a
+            #     parked row is no longer counted as coverage: wordmark-webkit's live floor is
+            #     1, and theme-bake-webkit's is 0 — all 10 of its rows are parked, which makes
+            #     that project a name rather than a gate on the only platform CI runs.
             - name: "Run the built-dist gates (throttled-void + filter census + wordmark)"
               working-directory: web/frontend
               run: npm run test:e2e:throttle
             # T4-W4 prod-shake proof (FAM-5): the DEV-gated FilterTuner /
-            # rafInstrumentation / schedulerDebugInfo must be tree-shaken out of the
-            # shipped bundle. Reuses dist-throttle/ (the bundled production build the
-            # throttle gate just produced) — compute-cost DAG, no redundant build.
+            # rafInstrumentation / __schedulerDebug (T7-W6: the third symbol read
+            # `schedulerDebugInfo` until this wave — a LOCAL binding esbuild renames to one
+            # letter, so the literal could never appear in a bundle, leaked or not; the
+            # global the probe writes on `window` is the one minification must keep) must be
+            # tree-shaken out of the shipped bundle. Note the reach: identifier-substring
+            # policing of a minified bundle only catches what minification has a REASON to
+            # keep — property names, string literals, and the chunk file names vite derives
+            # from a dynamically-imported module. Reuses dist-throttle/ (the bundled
+            # production build the throttle gate just produced) — compute-cost DAG, no
+            # redundant build.
             - name: "Prod-shake proof (dev tuner absent from the bundle)"
               working-directory: web/frontend
               run: npm run test:prod-shake -- dist-throttle
@@ -1142,11 +1259,37 @@ jobs:
     # with zero new filters is invisible to it.
     #
     # WHAT THIS LANE ENFORCES, and only this — idle fps + long-frame(>33.4ms)
-    # census on the BUILT DIST, headless chromium AND webkit, thresholds read from
+    # census, an undo burst, and a boot-window TBT on the BUILT DIST, headless
+    # chromium AND webkit, thresholds read from
     # patches/p1-safari-ios-performance/gates.json at RUN TIME:
     #   desktop.idle3s.maxLong33 (0)  GATE A, absolute, engine-portable
     #   desktop.idle3s.minFps    (97) GATE B, transposed to a fraction of the
     #                                 runner's own measured rAF ceiling
+    #   desktop.undoBurst             GATE C (T7-W6, CH-53) — the scenario has been
+    #                                 measured on every manual run since P1 and
+    #                                 priced nowhere; a committed instrument with no
+    #                                 threshold is the same defect as a committed
+    #                                 threshold with no executor, read from the other
+    #                                 end. TWO numbers, because there are two
+    #                                 surfaces: `minFps` (52) is the REAL-SAFARI
+    #                                 floor the manual matrix enforces, and
+    #                                 `ciMinPctOfCeiling` is this harness's own
+    #                                 %-of-ceiling, DECLARED rather than transposed —
+    #                                 headless WebKit reads its ceiling on this
+    #                                 window, so 52/98.4 would hand CI a floor ~47%
+    #                                 under live, the very slack W6 exists to remove
+    #   boot.tbt.maxTbtMs             GATE D (T7-W6) — median TBT over the first
+    #                                 boot.tbt.windowMs, measured under
+    #                                 boot.tbt.cpuThrottleRate× CPU throttling. Every
+    #                                 other row here watches STEADY STATE; the boot
+    #                                 burst happens once, before the first idle window
+    #                                 opens, and had nothing to trip. Graded only on
+    #                                 engines whose PerformanceObserver ships the
+    #                                 `longtask` entry type — WebKit's does not, so
+    #                                 its row prints NOT MEASURED, never PASS, and a
+    #                                 run where NO engine could measure it is a setup
+    #                                 error rather than a green from an instrument
+    #                                 that ran nowhere
     # Nothing here hardcodes a number; a missing gates.json is exit 2, never a
     # default. Every other gates.json row needs real Safari, a real simulator or
     # ps-level attribution and stays a documented MANUAL lane
@@ -1166,14 +1309,30 @@ jobs:
     # EXIT-CODE CONTRACT — the part not to flatten:
     #   0 every threshold held
     #   1 a gates.json threshold was BREACHED            -> fail, NEVER retried
-    #   2 setup/usage error (no gates.json, bad port, …) -> fail
+    #   2 setup/usage error — no gates.json, a missing threshold key, an unknown
+    #     engine name, a reserved port, a failed build; NO engine in the run able to
+    #     measure boot TBT (a GATE D green from an instrument that ran nowhere is
+    #     vacuous); or CPU throttling requested and not applied, because an
+    #     unthrottled number read against a throttled floor is not a lenient
+    #     measurement, it is a different one                -> fail
     #   3 INSTRUMENT failure — too few clean windows, or the app-free control page
     #     itself dropped a long frame                    -> retried ONCE, then fails
+    #
+    # PRECEDENCE (T7-W6): every measured result is graded BEFORE any exit is chosen,
+    # and the code is the WORST FACT in the run — 1 > 2 > 3 > 0. A breach outranks a
+    # setup error and an instrument failure because a breach is a fact about the
+    # BUNDLE while the other two are facts about the HOST, and a bad host cannot
+    # un-measure a bad bundle. The old shape graded AFTER the engine loop, so a later
+    # engine's early return discarded a chromium breach that had already been measured
+    # and the job shipped green (evidence/w6/ci-subset-ablation.txt). Precedence
+    # promotes nothing on its own: an instrument failure with no breach beside it is
+    # still a 3.
+    #
     # The retry covers exactly one documented flake class: host contention on a
     # shared runner, detected by the control page. A breach is never retried,
     # because a breach is a fact about the bundle. Do not collapse 3 into 0.
     perf-subset:
-        name: perf subset (gates.json idle thresholds, chromium + webkit)
+        name: perf subset (gates.json idle + undoBurst + boot-TBT thresholds, chromium + webkit)
         runs-on: ubuntu-latest
         timeout-minutes: 20
         needs: [build-lean-wasm]
@@ -1235,15 +1394,21 @@ jobs:
                   fi
                   set -e
                   case "$CODE" in
-                    0) echo "perf subset GREEN — every gates.json idle threshold held on both engines" ;;
+                    0) echo "perf subset GREEN — GATE A (long-frame census), GATE B (idle fps), GATE C (undoBurst) and GATE D (boot TBT) all held, on every engine that could measure them" ;;
                     1) echo "::error::perf subset RED — a gates.json threshold was breached. See the report artifact; the BREACH lines name the engine, the measured value and the derived threshold. Do NOT retry this and do NOT tune the threshold: gates.json is the P1 patch's sealed commitment." ;;
                     2) echo "::error::perf subset setup error — gates.json unreadable, a reserved port, or a failed build. This lane carries no fallback thresholds by design." ;;
                     # Exit-3-twice ruling (W1 seal-fix, run 30719165442): an instrument
                     # that cannot hold its own budget asserts NO verdict — failing the
                     # job would claim a red the instrument itself refuses. The report
-                    # still uploads; chromium's verdict (computed before webkit) gates
-                    # via exit 1 whenever it breaches; the admissible webkit evidence
-                    # is the darwin perf-rig lane + the manual Safari matrix.
+                    # still uploads. Since T7-W6 a 3 means what it says: every measured
+                    # result is graded before an exit is chosen and the code is the
+                    # WORST FACT in the run (1 > 2 > 3 > 0), so a breach anywhere exits
+                    # 1 no matter which engine's instrument died. What makes a chromium
+                    # breach gate is that grading, NOT that chromium runs first —
+                    # `--engines` order is a caller's argument, not a law. Reaching 3
+                    # twice therefore says nothing breached on what DID measure; the
+                    # admissible webkit evidence is the darwin perf-rig lane + the
+                    # manual Safari matrix.
                     3) echo "::warning::perf subset INADMISSIBLE-HOST — the runner's app-free control dropped a long frame twice running; neither green nor red is admissible for webkit here. Recorded, report uploaded; the darwin perf-rig lane and the manual Safari matrix carry the webkit verdict. Not a bundle regression."
                        CODE=0 ;;
                     *) echo "::error::perf subset exited $CODE (unexpected)" ;;

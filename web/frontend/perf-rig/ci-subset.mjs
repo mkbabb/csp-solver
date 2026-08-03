@@ -6,13 +6,16 @@
  *
  * WHY THIS EXISTS. `patches/p1-safari-ios-performance/gates.json` has been a committed
  * threshold file with no executor since the patch sealed: a regression to 79 fps idle passed
- * every CI lane. This is the executor for the two rows that survive a headless runner. The
- * sim, GPU-attribution and interaction rows (deal/solveCelebration/themeToggle/galleryGlide)
- * stay a MANUAL lane — see README.md; they need real Safari, a real simulator, and `ps`-level
- * process attribution that no ubuntu runner can give.
+ * every CI lane. This is the executor for the four rows that survive a headless runner —
+ * idle3s's two, plus undoBurst and boot TBT, which T7-W6 priced. The sim, GPU-attribution and
+ * remaining interaction rows (deal/solveCelebration/themeToggle/galleryGlide) stay a MANUAL
+ * lane — see README.md; they need real Safari, a real simulator, and `ps`-level process
+ * attribution that no ubuntu runner can give.
  *
  * ── THE GATE RULE, pre-registered ─────────────────────────────────────────────────────────
- * Two assertions, both derived from gates.json at run time. Nothing here is a literal.
+ * Four assertions, every one of them read out of gates.json at run time. Nothing here is a
+ * literal (A/B from the P1 patch's own rows; C/D added by T7-W6 for two surfaces the file
+ * measured and never priced).
  *
  *   GATE A — long-frame census: median(long33) <= desktop.idle3s.maxLong33.
  *     Engine-portable and unit-free: a frame over 33.4ms is a dropped frame on a 60Hz runner
@@ -28,8 +31,42 @@
  *     column is the portable one". The ceiling is re-measured per engine, per run, by the
  *     rig's own app-free /__ceiling page (the same sampler shape, empty page).
  *
+ *   GATE C — undoBurst as a fraction of the measured ceiling:
+ *     median(undoBurstFps) >= desktop.undoBurst.ciMinPctOfCeiling * measuredCeilingFps.
+ *     T7-W6, CH-53: the scenario has been measured every manual run since P1 and priced
+ *     nowhere — a committed instrument with no threshold is the same defect as a committed
+ *     threshold with no executor, read from the other end.
+ *
+ *     TWO NUMBERS, because there are two surfaces, and this is where the transposition GATE B
+ *     leans on runs out. `desktop.undoBurst.minFps` (52) is the REAL-SAFARI floor, sibling to
+ *     deal/themeToggle/galleryGlide, enforced by the manual matrix: real Safari reads ~55 fps
+ *     with ~15 long frames on this window (T5-W1 perf-rig-run-manifest.txt:53-55). Headless
+ *     WebKit reads its ceiling on the same window — transposing 52/98.4 would hand CI a floor
+ *     ~47% under live, which is the very slack W6 exists to remove. So the CI arm declares its
+ *     own %-of-ceiling directly. Same shape as GATE B (a fraction of the measured ceiling),
+ *     one derived from an anchored pair, one declared from this harness's own measurement.
+ *
+ *   GATE D — boot TBT: median(tbtMs over the boot window) <= boot.tbt.maxTbtMs, measured
+ *     under `boot.tbt.cpuThrottleRate`× CPU throttling. Every other row here watches STEADY
+ *     STATE; the boot burst happens once, before the first idle window opens, and had nothing
+ *     to trip. Graded only on engines whose PerformanceObserver ships the `longtask` entry
+ *     type — WebKit's does not. An engine without it is reported NOT MEASURED, never PASS,
+ *     and a run in which NO engine could measure it is a setup error (exit 2), because a
+ *     green from an instrument that ran nowhere is the vacuity this gate was added to remove.
+ *     Throttling that is requested and cannot be applied is likewise exit 2: an unthrottled
+ *     number read against a throttled floor is not a lenient measurement, it is a different one.
+ *
  *   The absolute fps against the absolute 97 is printed as ADVISORY and does NOT gate. It is
  *   labelled with the measured ceiling so it cannot be misread as a real-Safari number.
+ *
+ *   GRADING ORDER, and it is load-bearing (T7-W6). Every measured result is graded BEFORE any
+ *   exit is taken. The old shape graded after the engine loop, so a later engine's early
+ *   return — an instrument failure, an unknown engine name — discarded a chromium breach that
+ *   had already been measured, and `ci.yml` maps exit 3 to CODE=0: a real breach shipped green.
+ *   Per-engine outcomes accumulate; the exit code is then the WORST fact in this order:
+ *     1 (a threshold breached, anywhere)  >  2 (setup)  >  3 (instrument)  >  0.
+ *   A breach outranks an instrument failure because a breach is a fact about the BUNDLE and an
+ *   instrument failure is a fact about the HOST — a bad host cannot un-measure a bad bundle.
  *
  *   CONTROL VALIDITY — the app-free control page must itself hold the long-frame threshold,
  *     or no verdict is issued (exit 3, not exit 1). A host that drops frames with nothing on
@@ -54,6 +91,12 @@
  *     --out <file>        tee the report to a file
  *     --idle-fps-min <n>  CANARY ONLY — override gates.json's minFps
  *     --max-long33 <n>    CANARY ONLY — override gates.json's maxLong33
+ *     --canary-fail <e>   CANARY ONLY — inject a synthetic instrument failure for engine <e>
+ *                         at the control-validity site, without measuring it. The ablation
+ *                         hook for the grading-order fix above: it makes "chromium breaches,
+ *                         webkit's instrument dies" reproducible in one command instead of
+ *                         waiting for a contended runner. Banked at
+ *                         docs/tranches/2026-08-tranche-7/evidence/w6/ci-subset-ablation.txt.
  *
  * Exit: 0 pass · 1 threshold breach · 2 setup/usage error · 3 instrument failure
  */
@@ -91,6 +134,7 @@ const OUT = arg("--out", "");
 const FORCE_BUILD = flag("--build");
 const OVERRIDE_FPS = flag("--idle-fps-min") ? Number(arg("--idle-fps-min")) : null;
 const OVERRIDE_LONG33 = flag("--max-long33") ? Number(arg("--max-long33")) : null;
+const CANARY_FAIL = arg("--canary-fail", "");
 
 // Ports the owner's dev servers and the throttle-e2e rig already hold. Refuse rather than
 // collide: a stolen port would either fail to bind or, worse, serve someone else's bundle.
@@ -141,11 +185,22 @@ async function waitForPing(deadlineMs) {
   return false;
 }
 
-/** Drive one page load to completion, then hand back its posted JSONL lines. */
-async function drive(browserType, url, runId, timeoutMs) {
+/** Drive one page load to completion, then hand back its posted JSONL lines.
+ *
+ *  `opts.cpuThrottle` applies CDP `Emulation.setCPUThrottlingRate` BEFORE the navigation, so
+ *  the boot burst itself is throttled rather than whatever happens after it. CDP is chromium
+ *  only; a caller that asks for throttling on an engine that cannot deliver it gets a THROWN
+ *  error, never a quietly unthrottled window — a number taken at 1× and read against a floor
+ *  derived at 4× is not a lenient reading, it is a different measurement wearing the same name.
+ */
+async function drive(browserType, url, runId, timeoutMs, opts = {}) {
   const page = await browserType.newPage({ viewport: { width: 1440, height: 900 } });
   const pageErrors = [];
   page.on("pageerror", (e) => pageErrors.push(String(e).slice(0, 300)));
+  if (opts.cpuThrottle) {
+    const session = await page.context().newCDPSession(page);
+    await session.send("Emulation.setCPUThrottlingRate", { rate: opts.cpuThrottle });
+  }
   await page.goto(url, { waitUntil: "load", timeout: 60000 });
   const t0 = Date.now();
   let done = false;
@@ -191,10 +246,20 @@ async function main() {
   const ceilingFps = gates?.desktop?.ceilingFps;
   const minFpsSpec = gates?.desktop?.idle3s?.minFps;
   const maxLong33Spec = gates?.desktop?.idle3s?.maxLong33;
+  const undoMinFpsSpec = gates?.desktop?.undoBurst?.minFps;
+  const undoPct = gates?.desktop?.undoBurst?.ciMinPctOfCeiling;
+  const bootMaxTbtMs = gates?.boot?.tbt?.maxTbtMs;
+  const bootThrottle = gates?.boot?.tbt?.cpuThrottleRate;
+  const bootWindowMs = gates?.boot?.tbt?.windowMs;
   for (const [k, v] of [
     ["desktop.ceilingFps", ceilingFps],
     ["desktop.idle3s.minFps", minFpsSpec],
     ["desktop.idle3s.maxLong33", maxLong33Spec],
+    ["desktop.undoBurst.minFps", undoMinFpsSpec],
+    ["desktop.undoBurst.ciMinPctOfCeiling", undoPct],
+    ["boot.tbt.maxTbtMs", bootMaxTbtMs],
+    ["boot.tbt.cpuThrottleRate", bootThrottle],
+    ["boot.tbt.windowMs", bootWindowMs],
   ]) {
     if (typeof v !== "number") {
       say(`SETUP ERROR: ${GATES_PATH} is missing a numeric ${k}`);
@@ -204,6 +269,7 @@ async function main() {
   const minFps = OVERRIDE_FPS ?? minFpsSpec;
   const maxLong33 = OVERRIDE_LONG33 ?? maxLong33Spec;
   const ratio = minFps / ceilingFps;
+  const undoRatio = undoPct;
 
   say("# perf-rig CI subset — idle fps + long-frame census on the built dist");
   say("");
@@ -211,6 +277,12 @@ async function main() {
   say(`  desktop.ceilingFps         ${ceilingFps}`);
   say(`  desktop.idle3s.minFps      ${minFpsSpec}`);
   say(`  desktop.idle3s.maxLong33   ${maxLong33Spec}`);
+  say(
+    `  desktop.undoBurst          minFps ${undoMinFpsSpec} (real Safari, manual lane) · ciMinPctOfCeiling ${undoPct} (this lane)`,
+  );
+  say(
+    `  boot.tbt                   maxTbtMs ${bootMaxTbtMs} over a ${bootWindowMs}ms window at ${bootThrottle}× CPU`,
+  );
   if (OVERRIDE_FPS !== null)
     say(
       `  !! CANARY OVERRIDE  --idle-fps-min ${OVERRIDE_FPS}  (gates.json says ${minFpsSpec})`,
@@ -222,6 +294,13 @@ async function main() {
   say(
     `derived ratio     minFps/ceilingFps = ${minFps}/${ceilingFps} = ${ratio.toFixed(5)}`,
   );
+  say(
+    `declared fraction undoBurst.ciMinPctOfCeiling = ${undoRatio.toFixed(5)} (× this harness's own measured ceiling)`,
+  );
+  if (CANARY_FAIL)
+    say(
+      `  !! CANARY OVERRIDE  --canary-fail ${CANARY_FAIL}  (a synthetic instrument failure is injected for this engine)`,
+    );
   say(
     `engines           ${ENGINES.join(", ")}   windows/engine ${RUNS}   port ${PORT}`,
   );
@@ -299,14 +378,24 @@ async function main() {
 
     const { chromium, webkit } = await import("playwright");
     const TYPES = { chromium, webkit };
+    // Every measured result, plus every engine that failed to produce one. Nothing here
+    // returns mid-loop: the whole point of the T7-W6 fix is that a measured breach on engine 1
+    // survives whatever engine 2 does. Grading happens once, after the loop, over `results`.
     const results = [];
+    const setupErrors = [];
+    const instrumentFails = [];
+
+    // Engine names are validated BEFORE anything is measured, so a typo can never be the
+    // early return that eats a verdict. It stays a setup error either way — this just moves
+    // it to the only place where nothing has been measured yet.
+    const unknown = ENGINES.filter((n) => !TYPES[n]);
+    if (unknown.length) {
+      say(`SETUP ERROR: unknown engine(s) ${unknown.join(", ")} (chromium|webkit)`);
+      return 2;
+    }
 
     for (const name of ENGINES) {
       const type = TYPES[name];
-      if (!type) {
-        say(`SETUP ERROR: unknown engine "${name}" (chromium|webkit)`);
-        return 2;
-      }
       const browser = await type.launch();
       try {
         // (0) warm the engine. A browser's FIRST page pays compositor spin-up and JIT
@@ -335,8 +424,12 @@ async function main() {
         //     its ceiling with ZERO long frames.
         const ceilRuns = [];
         const windows = [];
+        const undoWindows = [];
+        const bootLines = [];
         let envLine = null;
         const pageErrors = [];
+        let ceilingMissing = null;
+        let throttleError = null;
         for (let i = 1; i <= RUNS; i++) {
           const ceilId = `ci-${name}-ceiling-${process.pid}-${i}`;
           const ceil = await drive(
@@ -347,21 +440,66 @@ async function main() {
           );
           const line = ceil.posted.find((l) => l.scenario === "rafCeiling");
           if (!line || typeof line.fps !== "number") {
-            say(`INSTRUMENT FAILURE [${name}]: no rafCeiling line (done=${ceil.done})`);
-            return 3;
+            ceilingMissing = `no rafCeiling line on window ${i} (done=${ceil.done})`;
+            break;
           }
           ceilRuns.push(line);
 
+          // idle3s then undoBurst, in the drivers' own state-safe order and in ONE page load:
+          // undoBurst's prepare deals a board, which is exactly why it never runs first.
           const idleId = `ci-${name}-idle-${process.pid}-${i}`;
           const idle = await drive(
             browser,
-            `http://127.0.0.1:${PORT}/?__run=${idleId}&__scenarios=idle3s`,
+            `http://127.0.0.1:${PORT}/?__run=${idleId}&__scenarios=idle3s,undoBurst`,
             idleId,
-            90000,
+            120000,
           );
           windows.push(...idle.posted.filter((l) => l.scenario === "idle3s"));
+          undoWindows.push(...idle.posted.filter((l) => l.scenario === "undoBurst"));
           envLine ??= idle.posted.find((l) => l.kind === "env");
           pageErrors.push(...idle.pageErrors);
+
+          // BOOT TBT gets its OWN load. It is a fact about a page coming up, so it cannot
+          // share a load with a scenario that has already driven the app, and it is measured
+          // under gates.json's own CPU throttle rate — the condition its floor was derived at.
+          const bootId = `ci-${name}-boot-${process.pid}-${i}`;
+          const throttled = name === "chromium" ? { cpuThrottle: bootThrottle } : {};
+          let boot;
+          try {
+            boot = await drive(
+              browser,
+              `http://127.0.0.1:${PORT}/?__run=${bootId}&__scenarios=bootTbt&__bootMs=${bootWindowMs}`,
+              bootId,
+              120000,
+              throttled,
+            );
+          } catch (e) {
+            throttleError = `boot window ${i}: ${e.message}`;
+            break;
+          }
+          const bl = boot.posted.find((l) => l.scenario === "bootTbt");
+          if (bl) bootLines.push(bl);
+          pageErrors.push(...boot.pageErrors);
+        }
+        if (ceilingMissing) {
+          say(`## ${name}`);
+          say(`  INSTRUMENT FAILURE: ${ceilingMissing}`);
+          say("");
+          instrumentFails.push({ name, why: ceilingMissing });
+          continue;
+        }
+        if (throttleError) {
+          say(`## ${name}`);
+          say(
+            `  SETUP ERROR: ${bootThrottle}× CPU throttling could not be applied — ${throttleError}`,
+          );
+          say(
+            `  gates.json's boot.tbt floor is derived AT that rate; an unthrottled window read against it`,
+          );
+          say(`  is a different measurement, not a lenient one. Refusing to grade it.`);
+          say("");
+          setupErrors.push({ name, why: `cpu throttling unavailable: ${throttleError}` });
+          continue;
         }
         const ceilFps = median(ceilRuns.map((l) => l.fps));
         const ceilLong33 = median(ceilRuns.map((l) => l.long33));
@@ -386,17 +524,29 @@ async function main() {
           );
         }
         say(`  control median ${r2(ceilFps)} fps / long33 ${ceilLong33}`);
+        for (const [i, u] of undoWindows.entries())
+          say(
+            u.error
+              ? `  undoBurst ${i + 1} ERROR ${String(u.error).split("\n")[0].slice(0, 90)}`
+              : `  undoBurst ${i + 1} fps ${r2(u.fps)}  p50 ${r2(u.p50)}  p95 ${r2(u.p95)}  long33 ${u.long33}  worst ${r2(u.worstMs)}ms  attempt ${u.attempt}${u.tainted ? "  TAINTED" : ""}`,
+          );
+        for (const [i, b] of bootLines.entries())
+          say(
+            b.error
+              ? `  bootTbt ${i + 1}   ERROR ${String(b.error).split("\n")[0].slice(0, 90)}`
+              : `  bootTbt ${i + 1}   longtask ${b.longtaskSupported ? "yes" : "NO"}  tbt ${b.tbtMs === null ? "—" : `${b.tbtMs}ms`}  tasks ${b.tasks ?? "—"}  longest ${b.longestTaskMs ?? "—"}ms  window ${b.bootWindowMs}ms  painted ${b.boardPainted}`,
+          );
         if (pageErrors.length) say(`  page errors: ${pageErrors.join(" | ")}`);
 
         // A median wants a majority of clean windows behind it. Fewer means the instrument
         // failed, which is a different fact from the surface being slow — never conflate them.
         const needed = Math.ceil(RUNS / 2);
         if (clean.length < needed) {
-          say(
-            `  INSTRUMENT FAILURE: ${clean.length}/${RUNS} clean windows (need ${needed}); ${errored.length} errored, ${windows.filter((w) => w.tainted).length} tainted`,
-          );
+          const why = `${clean.length}/${RUNS} clean idle windows (need ${needed}); ${errored.length} errored, ${windows.filter((w) => w.tainted).length} tainted`;
+          say(`  INSTRUMENT FAILURE: ${why}`);
           say("");
-          return 3;
+          instrumentFails.push({ name, why });
+          continue;
         }
 
         // CONTROL VALIDITY. The ceiling page has no app on it: nothing to style, nothing to
@@ -407,9 +557,14 @@ async function main() {
         // Judged against the COMMITTED spec, never a canary override: whether the harness is
         // fit to measure is a fact about the harness, and a canary must not be able to switch
         // the fitness check off.
-        if (ceilLong33 > maxLong33Spec) {
+        // `--canary-fail` injects the failure right here, at the real site, so the ablation
+        // exercises the production path rather than a bypass around it.
+        if (ceilLong33 > maxLong33Spec || CANARY_FAIL === name) {
+          const synthetic = CANARY_FAIL === name && ceilLong33 <= maxLong33Spec;
           say(
-            `  INSTRUMENT FAILURE: the app-free control dropped ${ceilLong33} frames >33.4ms (gates.json allows ${maxLong33Spec}).`,
+            synthetic
+              ? `  INSTRUMENT FAILURE: SYNTHETIC (--canary-fail ${name}) — the control held (${ceilLong33} long frames), the failure is injected.`
+              : `  INSTRUMENT FAILURE: the app-free control dropped ${ceilLong33} frames >33.4ms (gates.json allows ${maxLong33Spec}).`,
           );
           say(
             `  The harness cannot hold its own frame budget on this host, so neither a GREEN nor a RED is`,
@@ -419,9 +574,18 @@ async function main() {
           );
           say(`  surfaces hold their ceiling with zero long frames.)`);
           say("");
-          return 3;
+          instrumentFails.push({
+            name,
+            why: synthetic
+              ? `synthetic (--canary-fail ${name})`
+              : `control dropped ${ceilLong33} long frames`,
+          });
+          continue;
         }
 
+        const cleanUndo = undoWindows.filter(
+          (w) => !w.error && !w.tainted && typeof w.fps === "number",
+        );
         results.push({
           name,
           ceilingFps: ceilFps,
@@ -430,6 +594,13 @@ async function main() {
           medLong33: median(clean.map((w) => w.long33)),
           clean: clean.length,
           windows: windows.length,
+          // GATE C. Too few clean undoBurst windows is an instrument fact about THAT row and
+          // is carried as such — the idle verdict for this engine still stands on its own.
+          undoMedFps: cleanUndo.length >= needed ? median(cleanUndo.map((w) => w.fps)) : null,
+          undoClean: cleanUndo.length,
+          // GATE D. `longtaskSupported` is read, never inferred: an engine that reports no
+          // tasks because it cannot see them must not be confused with one that had none.
+          boot: bootLines,
         });
         say("");
       } finally {
@@ -438,21 +609,86 @@ async function main() {
     }
 
     // ── verdict ────────────────────────────────────────────────────────────────────────
+    // EVERY MEASURED RESULT IS GRADED, unconditionally, before any exit is chosen. This block
+    // used to be reachable only when no engine took an early return; the engines that DID
+    // measure had their verdicts thrown away by the ones that didn't.
     say("## verdict");
     say("");
     say(
-      "| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A |",
+      "| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |",
     );
-    say("| --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+    say("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
     let breached = false;
     for (const r of results) {
       const required = ratio * r.ceilingFps;
+      const undoRequired = undoRatio * r.ceilingFps;
       const bOk = r.medFps >= required;
       const aOk = r.medLong33 <= maxLong33;
-      if (!bOk || !aOk) breached = true;
+      const cOk = r.undoMedFps === null ? null : r.undoMedFps >= undoRequired;
+      if (!bOk || !aOk || cOk === false) breached = true;
+      // An unmeasurable GATE C must not ride out as a green on the strength of GATE A/B. The
+      // engine's idle verdict stands (it was measured); the undoBurst row is booked as the
+      // instrument failure it is, and the run can no longer exit 0.
+      if (cOk === null)
+        instrumentFails.push({
+          name: r.name,
+          why: `undoBurst: ${r.undoClean}/${RUNS} clean windows — GATE C unmeasured, never assumed passed`,
+        });
       say(
-        `| ${r.name} | ${r2(r.ceilingFps)} | ${r.ceilingLong33} | ${r2(r.medFps)} | ${r2(required)} | ${bOk ? "PASS" : "**FAIL**"} | ${r.medLong33} | ${maxLong33} | ${aOk ? "PASS" : "**FAIL**"} |`,
+        `| ${r.name} | ${r2(r.ceilingFps)} | ${r.ceilingLong33} | ${r2(r.medFps)} | ${r2(required)} | ${bOk ? "PASS" : "**FAIL**"} | ${r.medLong33} | ${maxLong33} | ${aOk ? "PASS" : "**FAIL**"} | ${r.undoMedFps === null ? "—" : r2(r.undoMedFps)} | ${r2(undoRequired)} | ${cOk === null ? "NOT MEASURED" : cOk ? "PASS" : "**FAIL**"} |`,
       );
+    }
+    say("");
+
+    // ── GATE D, boot TBT ───────────────────────────────────────────────────────────────
+    // Support is asserted, not assumed, and the three outcomes are kept apart: MEASURED (a
+    // verdict), NOT MEASURED (an engine with no `longtask` entry type — WebKit), and MISSING
+    // (a probe that reported nothing at all, which is a setup fact about this rig, not a pass).
+    say(
+      `| engine | longtask | median boot TBT | max (${bootThrottle}× CPU, ${bootWindowMs}ms window) | GATE D |`,
+    );
+    say("| --- | --- | --- | --- | --- |");
+    const bootMeasured = [];
+    let bootUnsupported = 0;
+    for (const r of results) {
+      const lines2 = (r.boot || []).filter((b) => !b.error);
+      const supportBits = lines2.map((b) => b.longtaskSupported);
+      if (!lines2.length || supportBits.some((s) => typeof s !== "boolean")) {
+        say(`| ${r.name} | ? | — | ${bootMaxTbtMs} | **MISSING** |`);
+        setupErrors.push({
+          name: r.name,
+          why: "the bootTbt probe reported no usable longtask-support bit — support may never be inferred from an empty task list",
+        });
+        continue;
+      }
+      if (!supportBits.every(Boolean)) {
+        say(`| ${r.name} | NO | — | ${bootMaxTbtMs} | NOT MEASURED |`);
+        bootUnsupported++;
+        continue;
+      }
+      const med = median(lines2.map((b) => b.tbtMs));
+      const dOk = med <= bootMaxTbtMs;
+      if (!dOk) breached = true;
+      bootMeasured.push({ name: r.name, med });
+      say(
+        `| ${r.name} | yes | ${r2(med)}ms | ${bootMaxTbtMs} | ${dOk ? "PASS" : "**FAIL**"} |`,
+      );
+    }
+    if (results.length && !bootMeasured.length && bootUnsupported === results.length) {
+      say("");
+      say(
+        `SETUP ERROR: no engine in this run could measure boot TBT — none of ${ENGINES.join(", ")} ships the`,
+      );
+      say(
+        `  \`longtask\` entry type. A GATE D green from an instrument that ran nowhere is vacuous, so the`,
+      );
+      say(
+        `  run refuses one. Include chromium, or drop the row from gates.json and say why.`,
+      );
+      setupErrors.push({
+        name: ENGINES.join("+"),
+        why: "boot TBT measured on no engine (no longtask entry type anywhere in this run)",
+      });
     }
     say("");
     say(
@@ -473,19 +709,50 @@ async function main() {
         say(
           `BREACH [${r.name}] long-frame census: measured ${r.medLong33} frames >33.4ms > allowed ${maxLong33} (gates.json desktop.idle3s.maxLong33)`,
         );
+      const undoRequired = undoRatio * r.ceilingFps;
+      if (r.undoMedFps !== null && r.undoMedFps < undoRequired)
+        say(
+          `BREACH [${r.name}] undoBurst fps: measured ${r2(r.undoMedFps)} < required ${r2(undoRequired)} (${(undoRatio * 100).toFixed(3)}% of the ${r2(r.ceilingFps)} fps harness ceiling, gates.json desktop.undoBurst.ciMinPctOfCeiling)`,
+        );
     }
+    for (const b of bootMeasured)
+      if (b.med > bootMaxTbtMs)
+        say(
+          `BREACH [${b.name}] boot TBT: measured ${r2(b.med)}ms > allowed ${bootMaxTbtMs}ms over the first ${bootWindowMs}ms at ${bootThrottle}× CPU (gates.json boot.tbt.maxTbtMs)`,
+        );
+    for (const f of instrumentFails) say(`NOT MEASURED [${f.name}] — ${f.why}`);
+    for (const f of setupErrors) say(`SETUP ERROR [${f.name}] — ${f.why}`);
     say("");
     say(
       `host at finish    load ${loadavg()
         .map((n) => n.toFixed(2))
         .join(" / ")} (1/5/15m) · ${new Date().toISOString()}`,
     );
+    // THE EXIT CODE, chosen from every fact this run collected rather than from the first one
+    // that wanted to leave. A breach outranks everything: it is a fact about the bundle, and a
+    // host that later failed to measure a SECOND engine cannot un-measure the first.
+    say("");
     if (breached) {
-      say("");
-      say("RESULT: RED — at least one gates.json threshold breached.");
+      say(
+        `RESULT: RED — at least one gates.json threshold breached${
+          instrumentFails.length || setupErrors.length
+            ? ` (and ${instrumentFails.length + setupErrors.length} engine-row(s) did not measure — listed above; the breach stands regardless)`
+            : ""
+        }.`,
+      );
       code = 1;
+    } else if (setupErrors.length) {
+      say(
+        `RESULT: SETUP ERROR — no threshold breached on what was measured, but ${setupErrors.length} row(s) could not be graded.`,
+      );
+      code = 2;
+    } else if (instrumentFails.length) {
+      say(
+        `RESULT: INADMISSIBLE — no threshold breached on what was measured, but ${instrumentFails.length} engine(s) never produced an admissible window. No verdict.`,
+      );
+      code = 3;
     } else {
-      say("RESULT: GREEN — every gates.json idle threshold held on every engine.");
+      say("RESULT: GREEN — every gates.json threshold held on every engine.");
       code = 0;
     }
   } finally {

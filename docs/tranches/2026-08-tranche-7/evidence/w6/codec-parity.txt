@@ -1,0 +1,89 @@
+T7-W6 — THE PERMALINK CODEC'S ONE CROSS-CHECK
+=============================================
+row       W6 §Dual paths — "`persistence.ts::encodeBoard` vs `e2e/wire.ts::encodeSudoku` …
+          seven spellings of the version byte, two grammars, zero cross-check"
+lands     web/frontend/src/games/sudoku/composables/wire-parity.test.ts (beside persistence.test.ts)
+base      af5082880e59951a99aac12c19c8ad6b922882f3
+date      2026-08-03
+
+Six rows: four byte-parity boards, one decoder anchor, one discrimination row.
+
+
+§1 — GREEN, AS WRITTEN
+----------------------
+$ npx vitest run src/games/sudoku/composables/wire-parity.test.ts
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+
+The boards are chosen for the features a fork actually gets wrong:
+  · 4×4 empty                — the all-zero body
+  · 9×9 sparse               — first, middle and last index
+  · 9×9 dense                — every cell carrying a digit
+  · 16×16, values 10/13/16   — where base-36 stops being decimal ('a','d','g'). A writer that
+                               reached for `String(v)` passes all three 9×9 rows and only this
+                               one reds.
+
+The anchor row is the answer to "both writers could drift together": the spec-side frame is
+base64url-decoded and must open with the mandatory version byte, then handed to the app's own
+`resolveInitialState()`, which must resolve `boardLink: "ok"` / `source: "url-board"` with the
+cells intact. Parity to a lie is not parity — the pair is pinned to the live decoder.
+
+
+§2 — THE ABLATION: THE ROWS CAN RED
+-----------------------------------
+A throwaway copy of the file, with the wire-side writer swapped for `encodeUntagged` — the
+pre-T4-W3 body, and the exact shape two of the four hand-rolled spec copies actually wrote:
+
+$ npx vitest run src/games/sudoku/composables/wire-parity.ablation.test.ts
+ Test Files  1 failed (1)
+      Tests  5 failed | 1 passed (6)
+
+AssertionError: expected 'NC5hMDAwMDAwZDAwMDAwMDAwMDAwMDAwMDAwM…' to be 'ATQuYTAwMDAwMGQwMDAwMDAwMDAwMDAwMDAwM…'
+  Expected: "ATQuYTAwMDAwMGQw…"   ← `AT` — the version byte leads the body
+  Received: "NC5hMDAwMDAwZDAw…"   ← no tag; the payload opens on the size digit
+
+All four parity boards red, and so does the discrimination row when its `.not.toBe` is flipped.
+The one survivor is the decoder anchor, which calls `encodeSudoku` directly and so is untouched
+by the swap — the rows are independent, not one assertion wearing six names.
+
+The ablation copy was deleted after the run; the discrimination row (`the comparison bites`)
+stays in the shipped file as the standing proof that the comparison is not vacuous.
+
+
+§3 — WHAT THE IMPORT COST, AND WHY IT WAS WORTH IT
+--------------------------------------------------
+The wave's premise — "e2e already imports from `../src/`, so the seam exists" — is true in one
+direction only. Pulling `e2e/wire.ts` INTO the app's tsconfig program (which a `src/**` unit
+does, by importing it) put the file under `vue-tsc` for the first time, and it reached for
+node's `Buffer` while the repo carries no `@types/node` — it's a browser app, deliberately:
+
+  e2e/wire.ts(30,10): error TS2591: Cannot find name 'Buffer'.
+
+CI runs `npx vue-tsc --noEmit` (ci.yml:642), so that is a red build lane, not a born-RED gate.
+The cure is the wave's own medicine rather than a shim: `wire.ts` was carrying a FIFTH copy of
+base64url (`+`→`-`, `/`→`_`, strip padding) written over `Buffer`, while the app's copy — the
+one the codec under test actually uses — goes through `btoa` in `src/lib/base64url.ts`. A
+module whose entire reason for existing is that the wire has one spelling had two spellings of
+its own envelope. Deleted; `wire.ts` imports `toBase64Url` at all three call sites.
+
+Byte-identity of the two implementations, checked before the swap over 403 inputs — every
+latin-1 code point 0..255 in 53 lengths, plus the tagged sudoku and 16×16 bodies:
+
+  cases: 403 divergences: 0
+
+Also cleared while in the file: `CODEC_VERSION` was exported with zero importers (invisible
+until a sibling W6 row widened knip's `project` to e2e non-specs). Made private, matching the
+codec's own (persistence.ts:139).
+
+DECLARED: `e2e/wire.ts` is named in this executor's task as an import source, not an edit
+target. The edit is 6 lines plus a header stanza, it's a dual-path collapse under W6's own
+acceptance list, and without it the named deliverable cannot compile. Flagged for the chair.
+
+
+§4 — WHAT IS STILL UNCROSSED
+----------------------------
+`e2e/wire.ts::encodeFutoshiki` — the three-part grammar, clue section and all — has no parity
+row. Sudoku's two-part body is the one four specs forked, so it's the row that lands here; the
+latin/clue twin needs a second file under `src/games/futoshiki/composables/`, because the
+cross-game boundary law forbids one test reaching both families and the shared floor may not
+import a concrete game at all. Booked, not fixed.

@@ -1,0 +1,150 @@
+T7-W6 — FRAUNCES SHIPS ONCE
+2026-08-03 · darwin 25.4.0 · node v26.0.0 · npm 11.12.1 · ports 4231 (vite preview) / 4241-4242 (edge-sim)
+
+THE DOUBLE SHIP, MEASURED
+-------------------------
+Baseline build (`npm run build`, tree at session start):
+
+  dist/assets/index-BL1qk4f5_Hqz.js          234.46 kB │ gzip: 88.89 kB
+  dist/assets/fraunces-subset-nWzWvP1GNv2C.woff2  13.78 kB   (standalone, preloaded)
+
+Ablating ONLY the base64 payload out of the entry chunk (node, gzip -9):
+
+  data:font/woff2 URIs in the entry chunk ....... 1
+  URI length ................................... 18,407 chars
+  chunk raw with / without ..................... 234,464 → 216,057 B   (Δ 18,407)
+  chunk gz  with / without ..................... 88,798 → 72,760 B     (Δ 16,038)
+
+So the entry chunk carried 16,038 B gzipped of a font the page ALSO downloads
+standalone under /assets/, immutable-cached, with a `<link rel=preload as=font>` on it.
+Two copies of one face, one of them parsed by every visitor before first paint.
+
+THE CURE
+--------
+`web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue`
+
+  - import frauncesInline from "@/assets/fonts/fraunces-subset.woff2?inline";
+  + import frauncesUrl    from "@/assets/fonts/fraunces-subset.woff2?url";
+
+The bake still needs the face as BYTES (a detached blob SVG cannot reach the page's loaded
+`@font-face`), so it fetches the copy that already ships and base64s it once, memoized at
+module scope. `credentials: "omit"` matches the anonymous mode of head-hints' preload;
+`connect-src 'self'` (public/_headers) already admits the request — no CSP change.
+
+The data URI built at runtime is byte-identical to the one `?inline` emitted (same bytes,
+same `font/woff2` mime, same base64), so every serialized pose SVG, every baked bitmap and
+every golden is unmoved BY CONSTRUCTION rather than by tolerance.
+
+The bake is gated on the bytes, not branched inside `logoPoseSvg`: `captureW` reads 0 until
+the face lands, and pencil-boil returns before its token bump at a non-positive box (the
+contract the file's own seed note already cites). A pose captured without the face would
+freeze GEORGIA into a bitmap under a cache key nothing re-keys — that window is closed by
+construction, not by ordering luck.
+
+(a) BUNDLE — PAIRED BUILDS, BACK TO BACK
+----------------------------------------
+Sibling waves are editing App.vue / GameControlPanel.vue / scene.css / rasterPose.ts in the
+same tree, so the two builds were run minutes apart to keep their drift out of the delta.
+
+  before  dist/assets/index-c2jZv3HXdfIh.js   234.50 kB │ gzip: 88.91 kB
+  after   dist/assets/index-BbRtDGOlVTam.js   216.59 kB │ gzip: 73.84 kB
+  Δ                                           −17.91 kB │ gzip: −15.07 kB
+
+−15.07 kB gz off the render-blocking entry chunk, every visit, both engines. (The 16,038 B
+ablation figure and the 15.07 kB build delta differ by the ~500 B the loader itself costs.)
+
+No inline payload survives: the only `data:font/woff2` left in dist is the template literal
+in the loader —
+
+  $ grep -o "data:font/woff2[^\"']\{0,60\}" dist/assets/index-BbRtDGOlVTam.js
+  data:font/woff2;base64,${btoa(t)}`}catch{return null}}function ev(){return
+
+and the face is referenced by URL from exactly three places, all the standalone file:
+
+  dist/assets/index-*.js   fraunces-subset-nWzWvP1GNv2C.woff2   (the bake's fetch)
+  dist/assets/index-*.css  fraunces-subset-nWzWvP1GNv2C.woff2   (@font-face)
+  dist/index.html          fraunces-subset-nWzWvP1GNv2C.woff2   (head-hints preload)
+
+(b) THE WORDMARK STILL RENDERS FRAUNCES — the named spec, green
+---------------------------------------------------------------
+Built dist served on :4231 (`npx vite preview --port 4231 --strictPort`), PLAYWRIGHT_BASE_URL
+set so the throttle config's own build+preview is suppressed (its documented 418x escape).
+
+  $ PLAYWRIGHT_BASE_URL=http://localhost:4231 npx playwright test \
+      --config playwright-throttle.config.ts --project wordmark-webkit
+
+  ✓ sudoku / futoshiki / thermo / killer / kenken: baked ink sits inside its own box, four edges
+  ✓ all five labels render every glyph in Fraunces — zero fallback glyphs
+  6 passed (4.0s)
+
+Adjacent bake surfaces, same dist, both engines:
+
+  --project theme-bake-chromium --project theme-bake-webkit
+  --project filter-census-chromium --project filter-census-webkit
+  32 passed (22.7s)
+
+`retries: 0` on all of them — no retried read greened anything here.
+
+(c) FOUT / CRITICAL PATH — what was actually observed
+-----------------------------------------------------
+The wordmark's VISIBLE face never came from the inline copy: it is painted from the page's
+own `@font-face` (index.css) via the live-filter pose stack, and only the BAKE consumed the
+embedded bytes. So the estate's accepted FOUT (font-display: swap + the preload that erases
+it) is untouched — nothing that renders text moved.
+
+What did move is when the bake lands. Paired probe, cold profile, dist on :4231, time from
+`goto(load)` to the first `image.logo-pose-bmp` in the DOM:
+
+  engine      before      after
+  chromium    343 ms      326 ms
+  webkit      677 ms      651 ms
+
+Both within run-to-run noise and neither slower — the extra fetch overlaps the boot the bake
+was already waiting through (`document.fonts.ready`). Zero console errors, zero page errors,
+4 poses baked, `Fraunces` measured present by the sentinel-fallback method, both engines,
+both states. Until the poses land the live-filter pose-0 stack renders, which is the SAME
+during-bake fallback the surface already shipped — the wordmark is never blank and never
+Georgia.
+
+THE COST, NAMED. The bake's fetch does not match the `as=font crossorigin` preload's entry
+(preload matching keys on destination, and a `fetch()` has none), so it can be a second
+request for the same URL. Measured against a server that applies the production /assets/*
+rule (`Cache-Control: public, max-age=31536000, immutable`, public/_headers) and tallies
+every request that actually reaches it:
+
+  chromium   1 server hit for fraunces-subset-*.woff2   (the fetch is served from cache)
+  webkit     2 server hits                              (WebKit re-asks; it already made
+                                                         two font requests for this file
+                                                         BEFORE this change, under preview)
+
+Worst case, then: one extra conditional-free request for 13,788 B of immutable-cached bytes,
+off the critical path, on one engine — against 15.07 kB gz removed from the render-blocking
+chunk on every visit in both. Total first-visit wire bytes go from ~29.8 kB (13.79 standalone
++ 16.04 gz inline) to 13.79–27.6 kB. Recorded as an observed cost, not rounded to zero.
+
+FAILURE ARM. If the fetch never resolves (offline, a 404, a poisoned edge entry) the loader
+returns null, the width gate never opens and the surface holds its live-filter pose-0
+fallback — the page's own Fraunces, held still, no boil. The catch says that in words and
+`check-empty-catch.mjs` reads it as an explanation (0 swallows across 176 src files).
+
+GATES RUN ON THE EDIT
+---------------------
+  prettier --check ........................ pass
+  eslint .................................. pass (0)
+  vue-tsc --noEmit (src, w6 tsconfig) ..... pass (0)
+  knip .................................... clean
+  check-empty-catch.mjs ................... 0 swallows / 176 files
+
+RE-RUN ON THE SEALED SOURCE. The measured cost above was folded back into the file's own
+header comment (a code comment must not claim a reuse the measurement refutes), so the
+artifact was rebuilt and the named spec re-run on it:
+`dist/assets/index-D2gF0ovvWmO7.js 216.59 kB │ gzip: 73.85 kB` · wordmark-webkit 6 passed.
+Prettier, eslint and vue-tsc re-run clean on the final source.
+
+TRAP BANKED: `npm run build` reds at HEAD for a reason that is NOT this change —
+`e2e/wire.ts(30,10): error TS2591: Cannot find name 'Buffer'`. A sibling wave's new
+`src/games/sudoku/composables/wire-parity.test.ts` imports `../../../../e2e/wire`, which
+drags `e2e/wire.ts` into the src-only tsconfig graph where `types: node` is not configured.
+Reproduced three times, spaced 45 s and 90 s apart. The artifact here was built with
+`npx vite build` (the same command playwright-throttle.config.ts uses) and the typecheck
+proven separately over `src/**` with that one file excluded — exit 0.

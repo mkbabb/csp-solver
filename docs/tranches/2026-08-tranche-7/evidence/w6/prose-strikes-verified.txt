@@ -1,0 +1,97 @@
+T7-W6 — THE PROSE STRIKES, EACH VERIFIED AT THE TREE BEFORE THE EDIT
+date   2026-08-03T07:26:47Z   head af508288
+
+==============================================================================
+1. BAL-10 DEFAULT ARM — the two 500-line-budget cites struck (no gate lands)
+==============================================================================
+DISPOSITIONS.md BAL-10 default: RETIRE the budget and strike its two prose cites.
+W6's max-lines gate lands ONLY on the enforce arm, which the owner has not elected.
+
+$ grep -rn '500-line\|500 line' csp-solver/src csp-solver/wasm/src   # BEFORE
+csp-solver/src/py.rs:14://! Split into submodules (each well under the 500-line budget) rather than
+csp-solver/src/solver/search.rs:29://! The module is over the 500-line budget — **534 L** (`wc -l`, re-derived at
+
+AFTER — the only surviving occurrence is the retirement note itself:
+csp-solver/src/solver/search.rs:38://! This stood as a WAIVER against a 500-line budget. The budget retired at T7
+
+search.rs keeps its ARGUMENT (BranchBound's split would widen three private kernel
+internals to pub(super)) and loses the budget, the 534 L citation and the re-derive-
+at-every-touch chore — the drift mechanism, not the reason. py.rs loses the parenthetical.
+No max-lines gate lands. The estate's 13 frontend files over 500 stay unenforced and
+undeclared, which is what retiring an unenforced budget means.
+
+==============================================================================
+2. eslint.boundary.config.js — the banner lied THREE ways (W0 verifier CONFIRMED)
+==============================================================================
+LIE 1 — 'deliberately NOT merged into eslint.config.js'. It is merged:
+$ grep -n 'eslint.boundary.config' web/frontend/eslint.config.js
+6:import { crossGameRules, sharedMayNotImportGames } from './eslint.boundary.config.js'
+57:// `npm run lint:boundary` runs (`eslint.boundary.config.js`), never re-spelled here. The law
+$ grep -n 'gameBoundaryRules' web/frontend/eslint.config.js   # and consumed in the export
+76:const gameBoundaryRules = [...crossGameRules, sharedMayNotImportGames].map(withDepthRule)
+141:  ...gameBoundaryRules,
+
+LIE 2 — 'EXPECTED RED until W2.5'. W2.5 landed; the lane is green:
+$ npm run lint:boundary   (web/frontend)
+  0 errors, exit 0 — verified this session, twice, uncontended
+ci.yml's own boundary-job annotation agrees, and says so in three headings:
+837:    # GREEN SINCE T5-W2 2.5. This job landed EXPECTED RED at W1 and stayed red on
+853:    # THE RULING NOW LANDS WITH ITS ENFORCING CONFIG. `eslint.config.js` imports the
+859:    # WHY THIS LANE SURVIVES THE FOLD (W1 predicted it would retire): the canary
+
+LIE 3 — the SCOPE clause carves out 'src/games/registry.ts (registry.ts:127-133)'.
+$ ls web/frontend/src/games/registry.ts
+ls: web/frontend/src/games/registry.ts: No such file or directory
+   The file died with gameRegistry at T5-W2 (the W2 apotheosis). A line cite into a
+   deleted file is the W0 cite-symbols family exactly; the rewrite names the live
+   discriminator instead (each game's own spec.ts, read from disk by this config).
+
+$ ls web/frontend/src/games/*/spec.ts   # five families -> 20 ordered pairs, generated
+web/frontend/src/games/futoshiki/spec.ts
+web/frontend/src/games/kenken/spec.ts
+web/frontend/src/games/killer/spec.ts
+web/frontend/src/games/sudoku/spec.ts
+web/frontend/src/games/thermo/spec.ts
+
+Also struck in the same file, same ruling: the `eslint.config.js:22-24` line cite in
+the crossGameRules docblock, now a symbol cite (`pencilDepthPattern`).
+
+==============================================================================
+3. eslint.config.js — the self-contradicting barrel comment
+==============================================================================
+The depth-lint note says the subdir barrels were DELETED at T4-W4; 60 lines later the
+app-shell note called App.vue 'a top-level consumer of the pencil chrome barrel'.
+$ find web/frontend/src/pencil -name index.ts
+   (no output — there is no barrel to consume)
+$ grep -n '@pencil' web/frontend/src/App.vue
+15:import { MOTION } from "@pencil/config/pencilConfig";
+26:import DarkModeToggle from "@pencil/celestial/DarkModeToggle.vue";
+27:import SvgFilters from "@pencil/chrome/SvgFilters.vue";
+28:import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
+29:import HandwrittenLogo from "@pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue";
+30:import AttributionCard from "@pencil/chrome/AttributionCard/AttributionCard.vue";
+31:import GameGallery from "@pencil/chrome/GameGallery/GameGallery.vue";
+111:  ? defineAsyncComponent(() => import("@pencil/dev/FilterTuner.vue"))
+   Every one is a component's own public file. The comment now agrees with its own file.
+
+==============================================================================
+4. vite.config.ts head-hints — the two-game rationale against the five-game tree
+==============================================================================
+The comment claimed 'Both games emit a distinct hashed solver.worker-*.js asset (same
+basename — they're twin ports)' and that 'the futoshiki worker is fetched lazily when
+(if) the port is entered'. Since T5-W2 2.2 there is ONE worker module for five families:
+$ find web/frontend/src -name 'solver.worker.ts'
+web/frontend/src/games/shared/solver/solver.worker.ts
+$ grep -rn 'new Worker(' web/frontend/src
+web/frontend/src/games/shared/solver/transport.ts:25:  /** Builds a fresh worker — the game supplies `() => new Worker(new URL('./solver.worker.ts', import.meta.url), { type: 'module' })`. */
+web/frontend/src/games/shared/solver/client.ts:36:    new Worker(new URL("./solver.worker.ts", import.meta.url), { type: "module" }),
+$ ls web/frontend/dist/assets | grep worker    # one emitted chunk (dist is a sibling wave's build)
+solver.worker-eJy8PYEB.js
+$ head -3 web/frontend/src/games/shared/solver/solver.worker.ts
+/**
+ * THE solver Worker — one module, five families, one wasm binary (T5-W2 2.2 / F3).
+ *
+
+The CODE is unchanged and stays correct in both worlds: exactly one chunk carries
+ACTIVE_WORKER_MARK today (the shared one), and exactly one would carry it if the worker
+ever re-split per game (sudoku's). Only the rationale moved to the live truth.

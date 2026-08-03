@@ -25,15 +25,29 @@
 //     A re-bake that quietly ratchets down is a re-baseline, and the house does not
 //     re-baseline on a red.
 //
+// T7-W6 — THE FLOOR IS SLACK, AND THE SLACK IS ONE-DIRECTIONAL. `src/pencil` banks 13.35%
+// against an observed 32.07: an 18.7-point regression passes today. `--write-floor` banks the
+// observed minimum EXACTLY, which is why the bank only ever caught up to reality when someone
+// remembered to run it — and between rememberings the gap is pure slack. `--restamp` is
+// `--write-floor` with the house's own margin applied (~10% under live, the same band the unit
+// floor uses) and the tree it measured stamped into `derivedFrom`, so a floor citing a
+// tranche-old SHA reads as slack rather than as a decision.
+//
+// FLOOR TIMING (W6 §floor timing, binding): the MECHANISM lands at W6, the NUMBERS restamp at
+// WGATE, after the last row lands anywhere in the tranche. The figures below are still W1/W2's,
+// on purpose — a floor derived at W6's own seal is stale on arrival.
+//
 // Usage:
 //   node scripts/check-coverage-floor.mjs                  # enforce (CI)
 //   node scripts/check-coverage-floor.mjs --self-test      # prove the gate can fail, then enforce
 //   node scripts/check-coverage-floor.mjs --write-floor    # re-bake the floor from the summary
+//   node scripts/check-coverage-floor.mjs --restamp        # re-bake at ~10% under live, stamped
 //   node scripts/check-coverage-floor.mjs --print          # table only, exit 0 (reporting)
 //
 // Zero dependencies, node-only — it belongs beside check-golden-bytes.mjs in the frontend lane.
 
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
@@ -56,11 +70,16 @@ function parseArgs(argv) {
     json: false,
     samples: null,
     singleRunOk: false,
+    restamp: false,
+    dry: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--self-test") args.selfTest = true;
     else if (a === "--write-floor") args.writeFloor = true;
+    // --restamp IS --write-floor, with the margin and the stamp applied below.
+    else if (a === "--restamp") args.restamp = args.writeFloor = true;
+    else if (a === "--dry") args.dry = true;
     else if (a === "--print") args.print = true;
     else if (a === "--json") args.json = true;
     else if (a === "--single-run-ok") args.singleRunOk = true;
@@ -71,7 +90,8 @@ function parseArgs(argv) {
     else if (a === "--help" || a === "-h") {
       console.log(
         "check-coverage-floor.mjs [--summary p] [--floor p] [--json] [--print] [--self-test]\n" +
-          '                        [--write-floor (--samples <dir> | --single-run-ok) [--allow-lower "reason"]]',
+          '                        [--write-floor (--samples <dir> | --single-run-ok) [--allow-lower "reason"]]\n' +
+          "                        [--restamp … [--dry]]   # --write-floor at ~10% under live, SHA-stamped",
       );
       process.exit(0);
     } else {
@@ -453,6 +473,15 @@ if (args.writeFloor) {
     source = mins;
     sampleMeta = { method: "min-over-samples", n, runs: files };
   }
+  // THE TWO CONTRACTS, kept apart on purpose:
+  //   --write-floor  bank the observed figure EXACTLY. It can lower, and lowering is a
+  //                  re-baseline that needs `--allow-lower "<reason>"`. Unchanged.
+  //   --restamp      a RATCHET. Take ~10% under live and keep whichever is HIGHER, the new
+  //                  figure or the banked one. Its job is to close slack (pencil 13.35 vs an
+  //                  observed 31.42), never to hand any back — a haircut applied to an
+  //                  already-tight floor would loosen the gate in the name of restamping it.
+  //                  A scope that genuinely lost coverage still lowers only through
+  //                  --write-floor --allow-lower, out loud.
   const next = JSON.parse(JSON.stringify(floorDoc));
   const lowered = [];
   for (const [name, def] of Object.entries(next.scopes)) {
@@ -460,7 +489,9 @@ if (args.writeFloor) {
     if (!got || (got.files === 0 && name !== "TOTAL")) continue;
     for (const m of METRICS) {
       const was = def[m];
-      const now = floor2(got.metrics[m].pct);
+      const derived = floor2(got.metrics[m].pct * (args.restamp ? 0.9 : 1));
+      const now =
+        args.restamp && typeof was === "number" ? Math.max(was, derived) : derived;
       if (typeof was === "number" && now < was)
         lowered.push(`${name}.${m}: ${was} -> ${now}`);
       def[m] = now;
@@ -468,6 +499,27 @@ if (args.writeFloor) {
     def.files = got.files;
   }
   next.sample = sampleMeta;
+  if (args.restamp) {
+    let sha = "unpinned";
+    try {
+      sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+        cwd: FRONTEND_ROOT,
+        encoding: "utf8",
+      }).trim();
+    } catch {
+      /* a tree with no git still restamps; the stamp just says so */
+    }
+    next.derivedFrom = {
+      ...(floorDoc.derivedFrom ?? {}),
+      head: sha,
+      date: new Date().toISOString().slice(0, 10),
+      wave: "T7-WGATE restamp (mechanism landed T7-W6)",
+      rule:
+        "RESTAMP: each floor is 90% of the observed figure (the ~10% churn band the unit " +
+        "and count floors use), truncated to 2dp, enforced with >=. `--write-floor` still " +
+        "banks the observed minimum exactly; `--restamp` is the one that leaves room.",
+    };
+  }
   if (lowered.length && !args.allowLower) {
     console.error(
       `[coverage-floor] --write-floor REFUSED: ${lowered.length} figure(s) would drop:`,
@@ -479,9 +531,24 @@ if (args.writeFloor) {
     process.exit(1);
   }
   if (lowered.length) next.loweredAt = { reason: args.allowLower, figures: lowered };
+  if (args.dry) {
+    const moved = [];
+    for (const [name, def] of Object.entries(next.scopes))
+      for (const m of METRICS) {
+        const was = floorDoc.scopes[name]?.[m];
+        if (typeof was === "number" && was !== def[m])
+          moved.push(`  ${name}.${m}: ${was} -> ${def[m]}`);
+      }
+    console.log(
+      `[coverage-floor] --dry — ${moved.length} figure(s) would move; nothing written:\n` +
+        moved.join("\n"),
+    );
+    process.exit(0);
+  }
   writeFileSync(args.floor, JSON.stringify(next, null, 2) + "\n");
   console.log(
-    `[coverage-floor] floor re-baked -> ${relative(FRONTEND_ROOT, args.floor)}`,
+    `[coverage-floor] floor ${args.restamp ? "RESTAMPED (~10% under live)" : "re-baked"} -> ` +
+      `${relative(FRONTEND_ROOT, args.floor)}`,
   );
   process.exit(0);
 }

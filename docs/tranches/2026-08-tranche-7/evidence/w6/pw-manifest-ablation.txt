@@ -1,0 +1,157 @@
+T7-W6 — check-pw-projects.mjs: a deleted spec file stayed green.
+================================================================================
+claim (W6)   "The count floors sit 43–400% below live; deleting a whole spec file
+             stays green (a vanished spec is neither orphan nor double-claim,
+             since check 2 seeds from onDisk). Add a spec-file manifest so a
+             deletion reds." Plus: "the linux bake quarantine runs 1-of-6 and
+             0-of-10 live webkit assertions while the count floors count them as
+             coverage."
+instrument   a canary tree in scratch (e2e/ + the three configs copied,
+             node_modules and src symlinked) so no live spec file is ever moved
+             out of the repo — sibling waves run Playwright concurrently.
+host         darwin, 2026-08-03
+tree         af5082880e59951a99aac12c19c8ad6b922882f3
+
+=== 0 · the slack, measured ===
+project                   live (--list)   floor at HEAD   slack
+chromium                        175            115         +52%
+webkit                          170            110         +55%
+(default) [golden]                4              4           0
+throttled-void                    1              1           0
+filter-census-chromium            6              6           0
+filter-census-webkit              6              6           0
+wordmark-webkit                   6              6           0     ← 1 LIVE on linux
+theme-bake-chromium              10              2        +400%
+theme-bake-webkit                10              2        +400%    ← 0 LIVE on linux
+theme-quadrants-chromium         14             14           0
+theme-quadrants-webkit           14             14           0
+
+=== 1 · THE ABLATION — e2e/drawer.spec.ts deleted (16 tests) ===
+
+--- BEFORE (HEAD's check-pw-projects.mjs, in the canary) ---
+PW PROJECT MATRIX — 3 configs, 11 projects, 4 declared single-engine holdouts (T5-W1 1.10 / CH-56)
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+
+OK — 24 specs, 400 resolved tests, every spec in both engines except the 4 recorded holdouts.
+EXIT=0
+
+  Five checks, five greens, 400 resolved tests where there were 416. Check 2 builds
+  its claim map FROM `onDisk`, so the deleted spec is not an orphan (nothing claims
+  it) and not a double-claim (nothing claims it twice) — it left the question, not
+  just the suite. The floors had 52%/55% of slack and never noticed 16 tests go.
+
+--- AFTER (this wave, same canary, same deletion) ---
+PW PROJECT MATRIX — 3 configs, 11 projects, 25 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6)
+  floors stamped: T5-W1 1.10 birth — never restamped
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✗ 6 SPEC MANIFEST — 1
+  ✓ 7 QUARANTINES CLOSED
+
+1 failure(s):
+
+  • [6 SPEC MANIFEST] drawer.spec.ts: in SPEC_MANIFEST, NOT on disk. A deleted spec is invisible to every other check here — check 2 seeds its claim map from the disk, so a vanished spec is neither an orphan nor a double-claim. Delete it from the manifest in the same commit that deleted the file, with the reason.
+
+EXIT=1
+  [CORRECTION 2026-08-03] this line was banked as EXIT=0. The gate exits 1 — re-measured by
+  the non-author verifier (w6-verify.txt §4.1/§4.2). The transcription understated the cure;
+  the mechanism is unchanged.
+
+=== 2 · THE QUARANTINE SUBTRACTION ===
+A `test.fixme` under a platform condition LISTS but does not ASSERT, and `--list`
+cannot tell the two apart. e2e/linux-webkit-bake-quarantine.ts parks 5 of
+wordmark-webkit's 6 rows and all 10 of theme-bake-webkit's, on ubuntu·webkit — the
+only platform CI runs. The floors read 6 and 2 against those, i.e. they counted
+parked rows as coverage.
+
+--- the gate on the runner's platform (process.platform forced to linux) ---
+PW PROJECT MATRIX — 3 configs, 11 projects, 25 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6)
+  floors stamped: T5-W1 1.10 birth — never restamped
+  QUARANTINED  wordmark-webkit: 6 listed − 5 parked on linux = 1 LIVE (floor 1)
+  QUARANTINED  theme-bake-webkit: 10 listed − 10 parked on linux = 0 LIVE (floor 0)  ← asserts NOTHING on this platform
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+
+EXIT=0
+
+  theme-bake-webkit's floor is 0 and that zero is the finding: the project is a
+  name, not a gate, on ubuntu. The number is now PRINTED every run instead of
+  sitting behind a floor of 2 that made 10 parked rows look like coverage.
+
+=== 3 · THE SELF-TEST — every check shown able to fail ===
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+
+SELF-TEST — each check against a known-bad matrix:
+  [1 DECLARED MATRIX] a third project appears (a firefox arm nobody ratified)
+      → RED (as it must)
+  [1 DECLARED MATRIX] the webkit project is quietly re-engined to chromium
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is dropped from every project (the orphan)
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is claimed by two configs at once
+      → RED (as it must)
+  [3 ENGINE COVERAGE] CH-56 regresses — mobile-affordances loses its webkit arm
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED] share-truth is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+  [6 SPEC MANIFEST] a whole spec FILE is deleted (green on all 5 checks before T7-W6)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a spec lands on disk that the manifest never sanctioned
+      → RED (as it must)
+  [7 QUARANTINES CLOSED] the quarantine module is deleted while the floors still subtract its rows
+      → RED (as it must)
+
+OK — 25 specs, 416 resolved tests, every spec in both engines except the 4 recorded holdouts.
+
+=== 4 · THE RESTAMP MECHANISM (W6 lands it; WGATE runs it) ===
+Floors restamp AFTER the last row lands anywhere in the tranche — W2/W4 both add
+tests, so a floor derived at W6's own seal is stale on arrival. `--restamp` is the
+instrument; `--dry` shows what it would write. Quarantines subtract at their
+DECLARED platform, never the running one (a darwin restamp would otherwise bank 6
+and 10 for the two parked projects and red the ubuntu lane on its next run).
+
+$ node scripts/check-pw-projects.mjs --restamp --dry
+
+RESTAMP — floors re-derived: >10 live tests keep ~10% churn room, ≤10 sit exact.
+  Quarantines are subtracted at their DECLARED platform, not the running one.
+  chromium                  listed 175  live 175  floor 115 → 157
+  webkit                    listed 170  live 170  floor 110 → 153
+  (default)                 listed   4  live   4  floor   4 →   4
+  throttled-void            listed   1  live   1  floor   1 →   1
+  filter-census-chromium    listed   6  live   6  floor   6 →   6
+  filter-census-webkit      listed   6  live   6  floor   6 →   6
+  wordmark-webkit           listed   6  live   1  floor   1 →   1
+  theme-bake-chromium       listed  10  live  10  floor   2 →  10
+  theme-bake-webkit         listed  10  live   0  floor   0 →   0
+  theme-quadrants-chromium  listed  14  live  14  floor  14 →  12   ↓ LOWERED
+  theme-quadrants-webkit    listed  14  live  14  floor  14 →  12   ↓ LOWERED
+  stamp: af508288 · 2026-08-03 · platform darwin · live census 401 of 416 listed
+
+--restamp REFUSED: 2 floor(s) would DROP:
+  - theme-quadrants-chromium: 14 -> 12
+  - theme-quadrants-webkit: 14 -> 12
+  Say why out loud: --restamp --allow-lower "<where the tests went>".
+EXIT=1
+  [CORRECTION 2026-08-03] this line was banked as EXIT=0. The refusal exits 1 — re-measured
+  by the non-author verifier (w6-verify.txt §4.1/§4.2), which also confirmed the file's md5
+  is byte-identical before and after: it wrote nothing.
+
+  It REFUSES on its own output: lowering a floor is a re-baseline, and the house
+  does not re-baseline silently (check-coverage-floor.mjs's --allow-lower law,
+  applied to the same problem). Nothing was written — the floors in the tree are
+  still W1's, by design, and this wave restamps NO numbers.

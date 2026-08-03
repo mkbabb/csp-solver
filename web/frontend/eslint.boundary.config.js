@@ -2,24 +2,34 @@
 /**
  * THE CROSS-GAME BOUNDARY LAW — n×(n−1) ordered pairs, GENERATED (T5-W1 row 1.4).
  *
- * `eslint.config.js` hand-enumerates the matrix and so enforces 2 of 20 ordered pairs
- * (`sudokuMayNotImportFutoshiki`, `futoshikiMayNotImportSudoku`); thermo, killer and kenken
- * carry no cross-game restriction at all, and `sharedMayNotImportGames` names only the two
- * families that predate the edict. Hand enumeration is the defect: every family added since
- * T4-W13 joined the estate without joining the law. This file derives the whole matrix from
- * the game list on disk, so a sixth family is bound the moment its registration point lands — no edit
- * here, ever.
+ * Hand enumeration was the defect. `eslint.config.js` used to spell the matrix out and so
+ * enforced 2 of 20 ordered pairs (`sudokuMayNotImportFutoshiki`, `futoshikiMayNotImportSudoku`);
+ * thermo, killer and kenken carried no cross-game restriction at all, and the shared floor named
+ * only the two families that predate the edict — every family added since T4-W13 joined the
+ * estate without joining the law. This file derives the whole matrix from the game list on disk,
+ * so a sixth family is bound the moment its registration point lands — no edit here, ever.
  *
- * OVERLAY, NOT A FOLD. This is a standalone config consumed by `npm run lint:boundary`. It is
- * deliberately NOT merged into `eslint.config.js`: it is EXPECTED RED until W2.5 breaks the 23
- * live imports (gates.json `gates.W1.boundary.greensAt` = "W2.5"). Folding a red rule into the
- * lane that gates every push would wall the wave. W2.5 performs the fold when it greens.
+ * FOLDED, AND GREEN SINCE T5-W2 2.5. `eslint.config.js` IMPORTS `crossGameRules` and
+ * `sharedMayNotImportGames` from this module, so the law gates every push through the frontend
+ * lane's `eslint .`. It was born RED at 23 live cross-game imports and held out of that lane on
+ * purpose (gates.json `gates.W1.boundary.greensAt` = "W2.5") because folding a red rule into the
+ * push gate would have walled the wave; 2.5 broke the last of them and the ruling landed with its
+ * enforcing config. One generator, one law. The consumer appends its `pencilDepthPattern` into
+ * each generated block's own `patterns` array rather than adding a second same-scope block — see
+ * `withDepthRule`, and the append-discipline note on `pencilDepthPattern` itself.
+ *
+ * WHY `npm run lint:boundary` AND ITS CI JOB SURVIVE THE FOLD: the vacuity canary. A generated
+ * matrix that silently discovered zero games would lint green — the incumbent's exact defect one
+ * layer up — so the generator throws below two families, and the `boundary` job proves that on a
+ * throwaway one-family tree before the real run is trusted (its "canary — the generator refuses
+ * to lint vacuously green" step). `eslint .` has nowhere to carry a negative control. This lane
+ * is a census entry point over the one generator, never a second copy of the law.
  *
  * SCOPE. The ordered-pair matrix plus the shared floor — nothing else. The pencil↮games arm and
- * the `@pencil/**` depth rule stay in `eslint.config.js`, already green and already wired.
- * `src/games/registry.ts` is deliberately unbound: it sits outside `src/games/<game>/**` and IS
- * the registration point (registry.ts:127-133). W2 kills `gameRegistry` outright, so binding it
- * here would mint a red with no cure inside this wave.
+ * the `@pencil/**` depth rule stay in `eslint.config.js`. Nothing outside `src/games/<game>/**`
+ * and `src/games/shared/**` is bound: the registration point is each game's own `spec.ts`, read
+ * from disk below (the standalone `src/games/registry.ts` this clause used to carve out died with
+ * `gameRegistry` at T5-W2).
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -72,7 +82,7 @@ const groupFor = (game) => [
  * One config block per game, each carrying ONE `no-restricted-imports` whose `patterns` array
  * holds every OTHER game. Not one block per pair: within a matching scope flat config overrides
  * by rule name, so n−1 same-scope blocks would leave only the last one live (the P2-T5 append
- * discipline `eslint.config.js:22-24` records the same trap).
+ * discipline `eslint.config.js`'s `pencilDepthPattern` records the same trap).
  */
 export const crossGameRules = games.map((self) => ({
   files: [`src/games/${self}/**/*.{ts,vue}`],

@@ -1,0 +1,27 @@
+T7-W6 — e2e/magnitude-reporter.mjs: ZERO REFERENTS, RETIRED
+date: 2026-08-03T07:24:04Z  HEAD: af508288
+
+$ grep -rn 'magnitude-reporter' <repo, minus node_modules / .git / .claude/worktrees / this evidence dir>
+-------------------------------------------------------------------------------
+web/frontend/e2e/magnitude-reporter.mjs:8:// Usage: MAGNITUDE_OUT=<file> MAGNITUDE_ARM=<n> --reporter=./e2e/magnitude-reporter.mjs,list
+docs/tranches/2026-08-tranche-5/evidence/w1/wave-record-draft.md:280:?? web/frontend/e2e/magnitude-reporter.mjs
+docs/tranches/2026-08-tranche-5/evidence/w1/magnitude-rule.md:85:    --reporter=./e2e/magnitude-reporter.mjs,list
+docs/tranches/2026-08-tranche-5/evidence/w1/magnitude-rule.md:111:`web/frontend/e2e/magnitude-reporter.mjs` — a Playwright **reporter**, ~25 lines, added on
+docs/tranches/2026-08-tranche-5/evidence/w1/magnitude-summary.md:6:**Probe**: `web/frontend/e2e/magnitude-reporter.mjs` — a reporter, not a gate; no spec,
+docs/tranches/2026-08-tranche-7/waves/W6-the-contrivance-sweep.md:20:- **`e2e/magnitude-reporter.mjs`** — zero referents; the job it was written for is done by
+-------------------------------------------------------------------------------
+Five hits, no callers:
+  · e2e/magnitude-reporter.mjs:8       — its OWN usage line
+  · docs/.../tranche-5/evidence/w1/ ×4 — the T5 record of when it was written
+  · docs/.../tranche-7/waves/W6…       — this wave's retirement row
+
+$ grep -rn 'reporter' playwright.config.ts playwright-golden.config.ts playwright-throttle.config.ts
+-------------------------------------------------------------------------------
+web/frontend/playwright-golden.config.ts:79:  reporter: [['list'], ['html', { open: 'never' }]],
+web/frontend/playwright-throttle.config.ts:92:  // ITS OWN report folder. This config declared no reporter at all, so a red here printed
+web/frontend/playwright-throttle.config.ts:97:  reporter: [
+-------------------------------------------------------------------------------
+playwright.config.ts declares no reporter at all; neither of the other two names this
+file; no ci.yml step passes --reporter=./e2e/magnitude-reporter.mjs. The job it was
+written for (T5-W1 1.13) is scripts/golden-magnitude.mjs, which the golden lane runs
+at ci.yml:1040. Deleted.
