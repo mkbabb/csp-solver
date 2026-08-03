@@ -1,8 +1,16 @@
-# The signalling relay (T6.1). One Worker, one hibernating Durable Object.
+# The shared board's relay (T6.1; it has carried the board itself since T6.2, not just the
+# signalling). One Worker, one hibernating Durable Object.
 #
 # NO route and NO custom domain here on purpose: the chair wires the hostname at deploy, and
-# the default `*.workers.dev` URL is the surface the frontend's VITE_RELAY_URL names. A route
-# committed here would be a claim about DNS this file cannot verify.
+# the default `*.workers.dev` URL is the surface the SPA names. A route committed here would be
+# a claim about DNS this file cannot verify.
+#
+# `name` BELOW IS LOAD-BEARING, and it is the same string in three files that deploy apart: it
+# is the first label of the origin `useSession.ts`'s module-private `RELAY_URLS` defaults to
+# (overridden at build time by `VITE_RELAY_URL`, and by nothing else), and of the one origin
+# `web/frontend/public/_headers` grants in `connect-src`. Move any one of the three alone and
+# the socket is refused on the edge, with no console line and no server log — the doc-truth
+# row `relay-origin-pair` is what holds them together.
 #
 # The two tools this Worker needs are already devDependencies of web/frontend (wrangler,
 # vitest), so it carries no package.json and no node_modules of its own:

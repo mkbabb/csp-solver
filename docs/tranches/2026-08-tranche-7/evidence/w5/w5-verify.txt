@@ -1,0 +1,164 @@
+T7-W5 · NON-AUTHOR VERIFICATION
+date: 2026-08-03 · head fd6a141a + the W5 working diff · node v26.0.0 darwin/arm64
+verifier ran everything below itself; nothing is copied from the author banks.
+
+── 1. the gate, at its new row count ────────────────────────────────────────────────────
+
+node scripts/check-doc-truth.mjs
+  0 RED / 32 GREEN — canon holds · exit 0
+  head fd6a141a · when 2026-08-03T10:44:02.489Z
+  row count: 22 → 32. Re-derived, not taken: `git show d3fa41df:scripts/check-doc-truth.mjs`
+  carries 22 row objects, the working tree 32 — the ten W5 rows and no others.
+  All ten green, each printing a derivation off the tree:
+    relay-origin-pair       one origin, sudoku-relay.mkbabb.workers.dev, from all three files
+    retired-arm-clean       trystero deps none · web/relay scope + 12 published docs
+    multiplayer-wire-verbs  4 verbs — kinds actually sent: bye, hi, op, st
+    relay-event-kind        20411 both sides · NIP-01 ephemeral 20000–29999
+    slug-space-figures      1,145/1,202 · 345/355 — 395,025
+    peer-ink-formula        oklch(var(--peer-ink-l) 0.11 i×137.5°%360) · band 0.5 / 0.8
+    session-stress-constants 20,000 · 16 · 81 · cap 200 = shipped cap
+    relay-loc               relay.ts 299/154 · web/relay/ 648
+    relay-backoff-ladder    [250,500,1000,2000,4000], capped at 4000
+    multiplayer-md-sections page present, wire + relay + trust, linked from both READMEs
+
+node scripts/check-doc-truth.mjs --self-test
+  49 PASS / 0 FAIL over 21 rows · exit 0
+  The W5 fixtures bite in both directions — 21 of the 49 are the new rows', every one of
+  the ten proving a RED and a GREEN off its own derivation (relay-origin-pair on a staging
+  host, wire-verbs on a three-word enumeration AND on the ts header, event-kind on 20412,
+  slug on 1,146, ink on a 0.7 night value, stress on 17 authors, loc on "~150", ladder on a
+  3000 rung, md-sections on a dropped heading and on an unlinked page).
+
+Adjacent gates, run for the same commit:
+  node scripts/check-evidence-policy.mjs                 PASS (451 png, 30 wave buckets)
+  cd web/frontend && npx vitest run --root ../relay      21/21, 128 ms
+  cd web/frontend && npm run lint                        prettier clean (the script covers
+                                                         ../../scripts/, so the gate file is in)
+
+── 2. the born-RED bank ─────────────────────────────────────────────────────────────────
+
+mp-rows-born-red.txt shows 4 RED / 28 GREEN at pre-cure head d3fa41df, ordered and each
+carrying the offending line verbatim: relay-loc (useSession.ts:40 "~150"), retired-arm-clean
+(relay.ts:11-12, trystero's nostr strategy as the consumer), multiplayer-wire-verbs
+(useSession.ts:11 "THREE MESSAGES"), multiplayer-md-sections (file absent). That is the
+wave's predicted three plus the page row, which cannot be otherwise. The bank's derivations
+match what the current gate prints for every unchanged input; the one that moved — relay LOC
+286→299, dir 627→648 — moved because the header rewrite grew the file, and the row grades a
+±10% band, so both readings pass and the page carries the post-cure one. Checked and agreed.
+
+── 3. docs/multiplayer.md, read end to end ──────────────────────────────────────────────
+
+14 `##` sections, and they are the wave's fourteen: The shape · The arithmetic · The epoch ·
+The wire · Marks — private per-op, public per-epoch · Identity and ink · The transport seam ·
+The relay · Trust, and what it rests on · The affordance · What it doesn't do · How it's
+proved · Operating it · The declined roads.
+
+Fifteen cited claims re-derived against the tree, not read back off the page:
+   1 star topology, one stream per page — relayWire.ts:26-27. holds.
+   2 `[lamport, author]`, total order, `wins` six lines — useSession.ts:82-92. holds.
+   3 `admit` merges the clock first, unconditionally, then applied/stale/ahead —
+     useSession.ts:128. holds.
+   4 four verbs — useSession.ts:11 "FOUR MESSAGES"; `Kind | "bye"` at :208;
+     relay.ts:255 announceLeave. holds.
+   5 frame sizes 72 / 364 / 616 / 9,401 B — evidence/w4/frame-sizes.txt, exact.
+   6 MAX_FRAME 64 KiB = 65_536 (relay.ts:172), "about 7×" = the bank's 6.97×; the 5 MB
+     precedent is evidence/w4/u1-u2-born-red.txt:5-6. holds.
+   7 attachment 172 B, 1.05% of 16 KiB — frame-sizes.txt, exact.
+   8 relay 299 lines / 154 code / 648 dir — the gate re-counts it this run. holds.
+   9 slug space 1,145 / 345 / 395,025 off `^[a-ik-wyz]+$` — playerIdentity.ts:27-30, and
+     1,145 × 345 = 395,025 checked by hand. holds.
+  10 the 128-name string-seed space over 20,000 seeds, sixteen players colliding better than
+     half the time — playerIdentity.ts:38-42, stated there as measured. holds.
+  11 ink formula and band — playerIdentity.ts:69 (`0.11`, `137.5`), index.css:159 / :372
+     (0.5 / 0.8); contrast 5.26:1 / 9.56:1 over 40 indices is index.css:155-156's own
+     measurement, cited to that block, not re-asserted bare. holds.
+  12 RETRY_MS [250,500,1000,2000,4000], last rung the cap — relayWire.ts:58,146. holds.
+  13 stress run — AUTHORS 16, CELLS 81, OPS 20_000, UNDO_CAP 200 (:36-39); five seeds
+     [1,7,42,1009,65_537] plus the mint-order reference = the six replicas the page claims;
+     one op in eight twice (`i % 8`); 2,000 stale + 2,000 ahead = 4,000 dead-epoch ops;
+     throughput asserted as a floor only. Every number holds.
+  14 `?s=` twelve base36 (`toString(36).slice(2,14)`, useSession.ts:497) and `r-` + 12 hex
+     (relayWire.ts:69). holds.
+  15 the origin triple — _headers:138 connect-src, useSession.ts:76 RELAY_URLS,
+     wrangler.toml `name = "sudoku-relay"`. One string, three files. holds.
+  Also spot-checked and holding: automerge 2,127,414 B vs the 127,500 B lean band
+  (useSession.ts:8-9, and the band is what ci-band-comment-406 enforces); the thirteen e2e
+  rows named in §How it's proved all exist in multiplayer.spec.ts, including the opt-in
+  real-relay row with RTCPeerConnection deleted (:925); `npm run test:prod-shake` resolves;
+  GameControlPanel.vue:907 `.players-note` and :318 `inviteAct` resolve; the operating
+  commands match wrangler.toml's header verbatim.
+
+C20 — stated precisely. §Marks gives both halves with their mechanisms: `onEntry` holds
+`mark` entries back (private per op), `sessionSource.snapshot` returns `{b, m}` (public per
+epoch, so a joiner adopts the holder's and every deal / clear / solve pushes the publisher's
+over every peer's). Both cite useGameState.ts; both are true of :286-289 and :320. BAL-14 is
+named as the election that settles it, and the unbuilt arm is said to be unbuilt.
+
+C21 — the page names `useSession.ts:RELAY_URLS`, "a module-private const, overridable
+per-build by the `VITE_RELAY_URL` env read, which is the whole configuration surface". The
+phantom `relayConfig.urls` appears nowhere in the page; a repo grep finds it only in two
+SEALED T6 records, which are not this wave's to rewrite.
+
+Pinned numbers — none bare. Every runner-dependent or historical figure carries its source
+at the point of use: 596 / 602 ms, 15/24 ms, 1 ms, 47–66 s, 7.0 M admits/sec, −22.4 kB gz
+and the node-22 trap all to docs/tranches/2026-08-tranche-6/CLOSE.md (verified present at
+:21, :23, :66); the frame sizes to evidence/w4/frame-sizes.txt; the born-RED frame-cap
+precedent to evidence/w4/u1-u2-born-red.txt; 299/154/648 and the slug counts stamped
+"re-derived 2026-08-03" beside a row that re-counts them; the contrast pair to the
+index.css block that measured it. The forbidden-pin list is clean.
+
+Register — the estate's. No comparison sentiment, no success narrative, no unsubstantiated
+claim; failures are stated as plainly as capabilities (§What it doesn't do carries the open
+presence hole rather than burying it). Process vocabulary is confined to what the wave
+requires — evidence paths, CLOSE.md as record of record, BAL rows for the elections that
+settle shipped behaviour, T6.x/T7-W4 as dates on the record. One exception, filed below.
+
+── 4. the contradictions, walked ────────────────────────────────────────────────────────
+
+C1–C10  relay.ts's header rewritten. Verified in the file: it names relayWire.ts as the
+        consumer, one constant kind 20411, one topic `sudoku-babb-dev/${room}` on the `x`
+        tag, no `since`, the `{kind,data,from,to}` envelope carrying the board, and EVENT /
+        REQ / CLOSE answered OK / EOSE / NOTICE. trystero appears once, as DROPPED at T6.2.
+        The 250-topic batch, the strToNum(topic)+20000 kinds and the offer/answer payloads
+        are gone from the file. since/until survive at :31-33 restated as NIP-01
+        conformance, and `matches` no longer cites the retired arm. Three riders confirmed:
+        room separation is the `#x` tag alone, `pubkey` is a per-page id with an empty
+        `sig`, the attachment carries the departing envelope since T7-W4. relay.test.ts's
+        rename was W4's — confirmed, and the suite is 21/21.
+C11     README.md:3 trued and carrying the page link. Reads: no puzzle generated or solved
+        off the device that shows it, a shared board is the one thing that leaves.
+C12–C16 web/frontend/README.md: **Session** bullet at :97, two §State paragraphs at
+        :190-198 (arms, DEV gate, the marks contract), and §Solve path's server sentence at
+        :207-213 naming the co-deployed relay. Two links to the page.
+C17     wrangler.toml no longer says "signalling relay"; the three-file origin invariant is
+        stated in the file that owns the third string.
+C18/C19 useSession.ts:40-ish now reads 299 lines / 154 code, said as a band the row
+        re-counts. One deletion figure survives repo-wide, −22.4 kB gz, attributed to the
+        close record at both sites — greps for 23.2 and 61.3 return nothing outside sealed
+        tranche records.
+C20     useGameState.ts:283-285 and :312-313 say private-per-op / public-per-epoch with
+        `{b, m}` named. Raised as the owner's question, decided by BAL-14, not decided here.
+C21     as above.
+C24     `evidence/t6.2` returns zero hits in source; relayWire.ts:7-8 and relay.ts:6-8 both
+        attribute to CLOSE.md as record of record. check-evidence-policy.mjs PASS.
+Also    relayWire.ts's "the relay is UNCHANGED" is gone; the header now says which half of
+        the presence problem T7-W4 closed and which is still open.
+Both READMEs link docs/multiplayer.md — README.md:3 and :118, web/frontend/README.md:198
+and :213 — and multiplayer-md-sections gates the pair.
+
+Limitation of this walk, stated rather than papered: the repo carries no enumerated
+C1–C25 list (the wave cites "the audit's doc-skeleton output", which is not in-tree), so
+C22, C23 and C25 have no in-repo definition to check a cure against. Every contradiction
+the wave names by label is cured and re-verified above; the three unlabelled ones are
+unverifiable from the record as it stands.
+
+── 5. findings ──────────────────────────────────────────────────────────────────────────
+
+One, low: docs/multiplayer.md:306's deploy line ends "# deploy — the chair's". "Chair" is a
+process role; it appears in no other published doc (README.md, web/frontend/README.md and
+the other seven docs/*.md return zero). It rode in from wrangler.toml's comment, where it is
+in register. "owner-authorized per deploy" — which the very next line already says — carries
+the same instruction without the role.
+
+Nothing else. The gate is green at 32 rows with proven teeth, the page's numbers are the
+tree's, and the record and the runtime say one thing.

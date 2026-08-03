@@ -94,6 +94,9 @@ frontend/
   `techniqueEngine` + `techniqueVoice`, `useControlsDrawer` and `useFlipGlide`
   (FLIP-on-WAAPI), `useGameGallery`, `useStagingBridge`, `useLiveFace`,
   `useKeyboardViewport`, `useCoarsePointer`, `honestHaptics`.
+- **Session** — `useSession` (the room, the roster, the Lamport ledger, and the
+  transport seam), `relayWire` (NIP-01 straight to the co-deployed Durable Object,
+  `import()`ed at join), `playerIdentity` (each peer's animal slug and its ink).
 - **`shared/solver/`** — `solver.worker.ts` (the estate's one Worker module),
   `transport.ts` (the Worker singleton, pending map, prewarm, bounded respawn),
   `client.ts`, `protocol.ts`, `wire.ts`, `solverError.ts`, `classifyError.ts`,
@@ -172,6 +175,28 @@ killer, kenken — round-trip a whole board through `?board=` (base64url) alongs
 `?size=`/`?difficulty=`. Each also persists to its own `localStorage` key, so a board
 survives a reload as readily as a send.
 
+`?s=` carries the other kind of truth: a room, and the whole of the capability to enter
+it. `useSession` is the subsystem behind it — the one state that leaves the device.
+Every cell write goes out author-stamped with a Lamport pair `[lamport, author]`, and the
+higher pair takes the cell on every page, so the room converges whatever order the writes
+arrive in; a second stamp, the epoch, marks which board a write was aimed at, so a digit
+meant for the board before the last deal is dropped rather than inked into the new one. No
+CRDT library rides along: the board is `pos → digit` over a fixed index set, and a cell
+that cannot move needs no sequence reconciled. The wire is four verbs:
+`hi`, `op`, `st`, `bye` — presence, one cell write, the whole board, and the departure.
+A peer's digits carry that peer's own ink, walked off the golden angle, so two players at
+one board are never handed the same hue.
+
+Transport is a seam with two arms behind one interface. `relayWire` speaks NIP-01 to the
+Durable Object below and is `import()`ed at join, so a page playing alone downloads none
+of it; `localWire` carries the identical script over `BroadcastChannel` for a second tab
+on the same device, is DEV-only behind `?wire=local`, and is what the multiplayer e2e
+battery drives, because a live relay in CI is a flake machine. Marks are private per op
+and public per epoch: no `op` ever carries a mark, but the whole-board `st` frame carries
+the board AND its marks, so a joiner adopts the publisher's and every deal, clear, or
+solve republishes them. The protocol, both halves of the seam, is single-homed in
+[`../../docs/multiplayer.md`](../../docs/multiplayer.md).
+
 ## Solve path
 
 `games/shared/solver/solver.worker.ts` is the tree's only Worker module — an ES-module
@@ -184,7 +209,8 @@ rather than posting into a corpse. There's no network solve path: the search nev
 the tab. The deploy isn't server-free, though: `public/_headers` grants one `connect-src`
 to `wss://sudoku-relay.mkbabb.workers.dev`, the co-deployed `web/relay` Durable Object
 the multiplayer session speaks NIP-01 to. A solo page opens no socket at all, because
-that transport is `import()`ed at join.
+that transport is `import()`ed at join. The session — its arithmetic, wire grammar, and
+trust model — is documented in [`../../docs/multiplayer.md`](../../docs/multiplayer.md).
 
 `solveBoard` caps the client search at a size-scaled node budget (larger boards
 legitimately explore more); exhausting it surfaces a typed `BUDGET_EXCEEDED`

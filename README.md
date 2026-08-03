@@ -1,6 +1,6 @@
 # CSP Solver
 
-A constraint-satisfaction engine in Rust, and five hand-drawn games that ride it: Sudoku, Futoshiki, Thermo, Killer, and KenKen. The engine (`csp-solver/`, with a wasm sibling crate) is the sole solver; the Vue 3 frontend (`web/frontend/`) solves entirely in the browser, in a Web Worker over `@mkbabb/csp-solver-wasm`. The PyO3 bindings build as the `csp_solver` wheel, consumed by bbnf-lang and the wheel-contract tests, and there's no HTTP service here: no server ever touches a puzzle.
+A constraint-satisfaction engine in Rust, and five hand-drawn games that ride it: Sudoku, Futoshiki, Thermo, Killer, and KenKen. The engine (`csp-solver/`, with a wasm sibling crate) is the sole solver; the Vue 3 frontend (`web/frontend/`) solves entirely in the browser, in a Web Worker over `@mkbabb/csp-solver-wasm`. The PyO3 bindings build as the `csp_solver` wheel, consumed by bbnf-lang and the wheel-contract tests, and there's no HTTP service here: no puzzle is ever generated or solved off the device that shows it. A shared board is the one thing that leaves — a companion Worker (`web/relay`) fans whole boards between the players and stores none of them, documented end to end in [`docs/multiplayer.md`](docs/multiplayer.md).
 
 **Live**: [sudoku.babb.dev](https://sudoku.babb.dev)
 
@@ -115,7 +115,7 @@ cargo bench -p csp-solver --bench queens -- --test
 
 A Cloudflare Pages static deploy. Solving and generation never leave the visitor's browser, so there's no server-side solve path to secure. `_headers` carries CSP/HSTS/X-Frame-Options; `_redirects` carries two rules: the `/assets/*` → `/404.html` guard that keeps an unknown hashed asset from resolving to the shell and poisoning the edge cache, and the SPA fallback.
 
-One companion Worker deploys beside it and only shared boards ever reach it: `web/relay`, a hibernating Durable Object speaking the slice of NIP-01 a shared board needs. It stores nothing, hibernates between messages, and its origin is named in the page's `connect-src`—so the two deploy together or the socket is refused. Since T6.2 the board itself rides those frames: the WebRTC arm is retired, and with it the class of pair that could see a roster and never a digit.
+One companion Worker deploys beside it and only shared boards ever reach it: `web/relay`, a hibernating Durable Object speaking the slice of NIP-01 a shared board needs. It stores nothing, hibernates between messages, and its origin is named in the page's `connect-src`—so the two deploy together or the socket is refused. Since T6.2 the board itself rides those frames: the WebRTC arm is retired, and with it the class of pair that could see a roster and never a digit. The whole subsystem—session arithmetic, wire grammar, relay, trust model—single-homes in [`docs/multiplayer.md`](docs/multiplayer.md).
 
 ## Declarations
 

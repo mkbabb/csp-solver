@@ -3,47 +3,59 @@
  * Durable Object.
  *
  * The board became a table at T6 by signalling over PUBLIC Nostr relays, and the measurement
- * that closed the tranche is why this file exists: 47–66 SECONDS to first contact. The relays
- * are strangers' machines carrying strangers' traffic, and a sudoku's four signalling messages
- * wait in that queue. Nothing about the shipped transport was wrong — the seam is exactly
- * where it should be — so the cure is one config word on our side of it, and this on ours.
+ * that closed the tranche is why this file exists: 47–66 SECONDS to first contact, recorded in
+ * `docs/tranches/2026-08-tranche-6/CLOSE.md` — T6 ran process-lite, so that prose is the record
+ * of record for every T6 figure this file cites. The relays are strangers' machines carrying
+ * strangers' traffic, and a shared board's frames wait in that queue. Nothing about the shipped
+ * transport was wrong — the seam is exactly where it should be — so the cure is one origin on
+ * our side of it, and this on ours.
  *
- * WHAT IT SPEAKS is the subset trystero's nostr strategy actually uses, and nothing else
- * (`@trystero-p2p/nostr/dist/index.mjs`, read before writing):
- *   · `["EVENT", ev]`      — publish. Kind is `strToNum(topic) + 20000` (ephemeral by NIP-01's
- *                            own range), tagged `["x", topic]`, content the signalling payload.
+ * WHOM IT SERVES is `relayWire.ts` in the SPA, directly and only. trystero was DROPPED at T6.2
+ * with the WebRTC arm it existed to negotiate, and the board came onto these frames in their
+ * place; the batched topic filters, the hashed per-room kinds, and the offer/answer payloads
+ * went the same way. What the shipped client speaks, and nothing else:
+ *   · `["EVENT", ev]`      — publish. ONE kind, the constant 20411, tagged `["x", topic]` with
+ *                            ONE topic, `sudoku-babb-dev/${room}`. The content is the app's own
+ *                            `{kind, data, from, to}` envelope and the payload is the BOARD:
+ *                            presence, one cell write, or a whole grid with its clock.
  *                            Answered `["OK", id, true, ""]`, then fanned out.
- *   · `["REQ", subId, …f]` — subscribe. The strategy batches up to 250 topics into ONE filter
- *                            `{kinds, since, "#x": [...]}`, so a filter is a set, not a scalar.
+ *   · `["REQ", subId, f]`  — subscribe. ONE filter, `{kinds: [20411], "#x": [topic]}`, and no
+ *                            `since` — the client asks for the room, not for a window of it.
  *                            Answered `["EOSE", subId]` at once: there is no history to walk.
  *   · `["CLOSE", subId]`   — drop the subscription.
- * The client's socket handler reads `[type, subId, payload]` and warns on `["OK", …, false]`
- * or `["NOTICE", msg]`, which is why both are spelled exactly.
+ * The client's socket handler reads `[type, subId, payload]` and drops what it cannot read;
+ * `["OK", …, false]` and `["NOTICE", msg]` are spelled exactly, because they are the only two
+ * ways this relay refuses a frame.
+ *
+ * `matches` below implements `since` and `until` anyway. That is NIP-01 CONFORMANCE, not the
+ * live path: no shipped caller sets either, and a relay that quietly ignores a condition its
+ * subscriber declared fans out events that subscriber excluded.
  *
  * WHAT IT DOES NOT DO, deliberately:
- *   · NO PERSISTENCE. Every event here is presence or a WebRTC offer/answer — worthless one
- *     second later, and the strategy subscribes with `since: now` so it would never read a
- *     stored event anyway. A relay that stores nothing has no storage bill, no eviction
- *     policy, and no privacy surface.
- *   · NO SIGNATURE VERIFICATION. Schnorr over secp256k1 for every frame buys authenticity
- *     of a throwaway keypair the client mints at page load — it authenticates nobody. The
- *     room id in the `x` tag is the capability, exactly as the invite link is the capability
- *     upstairs; the trust model is stated in the players well and it is the same one.
+ *   · NO PERSISTENCE. Every event here is presence, or a write against a board still being
+ *     played — superseded by the next one, and useless to a page that wasn't listening, which
+ *     asks the room for the whole board rather than for the event again. A relay that stores
+ *     nothing has no storage bill, no eviction policy, and no privacy surface.
+ *   · NO SIGNATURE VERIFICATION. `pubkey` is a random id the client mints per page load and
+ *     `sig` is the empty string — Schnorr over a throwaway authenticates nobody, and there is
+ *     nothing here to verify it against. The room id in the `x` tag is the capability, exactly
+ *     as the invite link is the capability upstairs; the trust model is stated in the players
+ *     well and it is the same one.
  *
  * HIBERNATION IS THE BILL. `state.acceptWebSocket` hands the socket to the runtime: between
  * messages the object is EVICTED FROM MEMORY and bills no duration, and the sockets stay open
  * across the eviction. `webSocketMessage` reconstructs the object on the next frame. A room
  * idling overnight costs nothing; the free plan's included requests carry a puzzle's traffic
  * with room to spare. The subscriptions therefore CANNOT live in a field — they ride
- * `serializeAttachment`, which survives the eviction with the socket.
+ * `serializeAttachment`, which survives the eviction with the socket, and since T7-W4 the
+ * departing peer's envelope rides beside them for the same reason.
  *
- * ONE INSTANCE, named "relay", for every room. Room separation is already the `#x` tag filter
- * — the strategy hashes the room id into both the kind and the tag — so a per-room object
- * would buy isolation the filter already provides and spend a cold start to do it. At
- * sudoku traffic this is the honest arm. If a room ever needs its own object (isolation for a
- * paying tenant, or fanout past what one object should carry), the upgrade is
- * `idFromName(room)` at the `fetch` below plus the room on the URL — the protocol above does
- * not move.
+ * ONE INSTANCE, named "relay", for every room. Room separation is the `#x` tag filter and
+ * nothing else, since the kind is one constant across every room — so a per-room object would
+ * buy isolation the filter already provides and spend a cold start to do it. At sudoku traffic
+ * this is the honest arm. If a room ever needs its own object (isolation for a paying tenant,
+ * or fanout past what one object should carry), the upgrade is `idFromName(room)` at the
+ * `fetch` below plus the room on the URL — the protocol above does not move.
  */
 
 // ── The runtime, as narrowly as this file uses it ────────────────────────────────────────
@@ -90,13 +102,14 @@ const has = (set: unknown, v: string | number): boolean =>
 
 /**
  * Does this event satisfy this filter? The whole discrimination the relay performs, exported
- * because it is the whole claim — a fanout that matches too widely leaks another room's
- * signalling into this one, and one that matches too narrowly is a room that never connects.
+ * because it is the whole claim — a fanout that matches too widely leaks another room's board
+ * into this one, and one that matches too narrowly is a room that never connects.
  *
- * `since`/`until` are INCLUSIVE, and the inclusivity is load-bearing rather than pedantic:
- * the strategy subscribes with `since: now()` in whole seconds and publishes with the same
- * clock, so the first event of a room routinely carries `created_at === since`. An exclusive
- * comparison would drop exactly the frame that opens a connection, on the second it opens.
+ * `since`/`until` are INCLUSIVE, which is the NIP-01 reading and also the safe one: whole
+ * seconds are a coarse clock, and a client that subscribed with `since: now()` would routinely
+ * see the room's first event carry `created_at === since`. An exclusive comparison would drop
+ * exactly the frame that opens a connection, on the second it opens. No shipped caller sets
+ * either bound — see the header on why both arms are here regardless.
  */
 export function matches(filter: Filter, ev: NostrEvent): boolean {
   if (!has(filter.ids, ev.id)) return false;
@@ -254,7 +267,7 @@ export class Relay {
   }
 
   /** Every OTHER socket whose subscriptions want this event, once per matching subscription —
-   *  the sender already has it, and echoing would double every peer's own signalling. */
+   *  the sender already has it, and echoing would double every peer's own traffic. */
   private fanout(from: Sock, ev: NostrEvent): void {
     for (const ws of this.state.getWebSockets()) {
       if (ws === from) continue;

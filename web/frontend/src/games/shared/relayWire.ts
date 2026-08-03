@@ -3,7 +3,10 @@
  *
  * T6 signalled over Nostr and carried the board on WebRTC data channels (trystero). The owner's
  * report — "player actions don't update in real time, either. Or choices." — is what that
- * costs. Two mechanisms, both measured rather than assumed (evidence/t6.2/realtime/):
+ * costs. Two mechanisms, both measured on a rig rather than assumed. T6.2 ran process-lite and
+ * banked no evidence directory, so those readings survive only in the tranche's close prose,
+ * `docs/tranches/2026-08-tranche-6/CLOSE.md`, which is the record of record for them and for
+ * every other T6 figure quoted below:
  *
  *   · NO CHANNEL, NO ROOM. trystero's presence IS the data channel: `onPeerJoin` fires when
  *     the channel opens, so a pair that cannot get a channel up (the no-TURN NAT class, README
@@ -22,19 +25,24 @@
  * fans out to every socket whose REQ filter matches — so the ops ride the SAME frames the
  * signalling did, as ephemeral events on the room's `x` tag. A star through one operator's
  * object: no ICE, no NAT class, no per-pair setup, one ordered reliable stream per page. The
- * relay is UNCHANGED — this arm is written against what it already serves.
+ * relay took no change to serve it at T6.2 — this arm was written against what it already
+ * spoke — and the two it has taken since are T7-W4's, both in `relay.ts`: the frame cap, and
+ * the close-announce this header's next paragraph owes its cure to.
  *
- * WHAT IT COSTS AND WHAT IT BUYS. trystero leaves with the WebRTC it existed to negotiate:
- * −61.3 kB of lazy chunk (−23.2 kB gz) against ~2 kB here, and the 5.3 s announce interval
- * goes with it. What leaves WITH it is connection-derived presence: a peer that vanishes
- * without a `bye` (a hard crash, a severed link) lingers on the roster until the room is left,
- * where `onPeerLeave` used to prune it. That is the `localWire` arm's behaviour, shipped since
- * T6 and asserted by the churn row; the honest fix is a relay-side presence timeout, which
- * would be a relay change, and the relay is sealed. FLAGGED, not smuggled.
+ * WHAT IT COSTS AND WHAT IT BUYS. trystero leaves with the WebRTC it existed to negotiate, and
+ * the close record carries ONE figure for the net of that deletion against this file: −22.4 kB
+ * gzip. Its announce interval goes with it. What left WITH it was connection-derived presence:
+ * a peer that vanishes without a `bye` (a hard crash, a severed link) has no traffic to be
+ * absent from, where `onPeerLeave` used to prune it. The relay is the only party that knows,
+ * so since T7-W4 it says the word itself on `webSocketClose` (`relay.ts`'s `announceLeave`).
+ * That covers the socket that CLOSES, which is what a crashed tab is. A socket that stays OPEN
+ * behind a dead page is nobody's `bye` yet, and wants the presence timeout flagged here:
+ * cut-2's, not this.
  *
- * NO SIGNATURES, and the relay agrees — it verifies shape and fans out (see its header on why
- * Schnorr over a throwaway page-load keypair authenticates nobody). The room id in the `x` tag
- * is the capability, exactly as the invite link is the capability upstairs.
+ * NO SIGNATURES, and the relay agrees — it verifies shape and fans out (see its header: this
+ * arm publishes under a random per-page id with an empty `sig`, so there is nothing a
+ * signature could authenticate). The room id in the `x` tag is the capability, exactly as the
+ * invite link is the capability upstairs.
  */
 import type { Handlers, Kind, Msg, Wire } from "./useSession";
 

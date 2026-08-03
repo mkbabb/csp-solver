@@ -275,9 +275,14 @@ export function useGameState<
     pending: () => loading.value,
     readValue: (pos) => values.value[String(pos)] ?? 0,
     // T6 mark 13 — the whole local op stream, from the one push choke. A `value` entry is one
-    // op; a Fill sweep is its deltas; a `mark` stays private (notes are personal, cuts 1-2);
-    // a `board` entry is an EPOCH, published by the generation watch below rather than as 81
-    // writes. Outside a session `noteWrite` is one boolean test.
+    // op; a Fill sweep is its deltas; a `board` entry is an EPOCH, published by the generation
+    // watch below rather than as 81 writes. Outside a session `noteWrite` is one boolean test.
+    //
+    // MARKS ARE PRIVATE PER OP AND PUBLIC PER EPOCH, and the unqualified word was wrong (T7-W5
+    // C20). A `mark` entry puts nothing on the wire — notes are personal, cuts 1-2 — but
+    // `sessionSource.snapshot` below is `{b, m}`, board AND marks, so every epoch hands the
+    // publisher's marks to the room: a joiner adopts them, and each deal / clear / solve
+    // overwrites every peer's with the publisher's. Feature or bug is the owner's to say.
     onEntry: (e) => {
       if (e.kind === "value") noteWrite(e.pos, e.next, e.tone === "solved");
       else if (e.kind === "batch")
@@ -301,9 +306,11 @@ export function useGameState<
 
   // ── THE SESSION (T6 mark 13) ─────────────────────────────────────────────────────
   // The same register-a-source shape: one live board, one slot, identity-guarded clear. What
-  // the session gets is three verbs and nothing else — it never reaches into the machine.
+  // the session gets is three methods and nothing else — it never reaches into the machine.
   //  · `applyValue` routes a peer's write through the SAME two effects a local write and an
   //    undo replay use, so a remote digit is a digit and a remote reveal is solver ink.
+  //  · `snapshot` is the epoch's payload, `{b, m}` — the board and its marks together, which
+  //    is what makes marks public per epoch (see the `onEntry` note above).
   //  · `restore` adopts a board off the wire AND clears the log. THE EPOCH RULE: undo never
   //    crosses a board swap, so the whole class of "my undo restores a board nobody else has"
   //    dies in one line. (Solo is untouched: no session, no `restore`.)

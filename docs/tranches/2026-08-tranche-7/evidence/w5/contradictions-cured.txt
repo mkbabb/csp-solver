@@ -1,0 +1,127 @@
+T7-W5 · THE 25 CONTRADICTIONS — CURED SAME-COMMIT
+date: 2026-08-03 · head at cure: fd6a141a (working tree = the cure) · node v26.0.0 darwin/arm64
+cmd:  node scripts/check-doc-truth.mjs
+      node scripts/check-doc-truth.mjs --self-test
+      node scripts/check-evidence-policy.mjs
+      cd web/frontend && npx vitest run --root ../relay
+      cd web/frontend && npx vue-tsc -b --noEmit && npm run lint
+
+Scope: the comment and README half of the wave — relay.ts's header, wrangler.toml, both
+READMEs, useSession.ts, relayWire.ts, useGameState.ts. docs/multiplayer.md is the page
+author's and landed beside this cure.
+
+── what was cured, and where ────────────────────────────────────────────────────────────
+
+C1–C10  web/relay/relay.ts, the header. It described the retired arm's nostr strategy as
+        the consumer it serves. Rewritten to the real one: it serves relayWire.ts in the
+        SPA directly; EVENT / REQ / CLOSE answered OK / EOSE / NOTICE; ONE kind, the
+        constant 20411; ONE topic, `sudoku-babb-dev/${room}`, on the `x` tag; no `since`;
+        the content is the app's own {kind,data,from,to} envelope and the payload is the
+        board. trystero is named once, as the arm DROPPED at T6.2. The 250-topic batch,
+        the strToNum(topic)+20000 kinds and the WebRTC offer/answer payloads are gone.
+        The since/until arms stay, restated as NIP-01 conformance rather than the live
+        path — in the header and in `matches`'s own doc, which had cited the retired
+        strategy's `since: now()` as the reason for inclusivity. Three further stale
+        claims went with it: room separation is the `#x` tag ALONE (the kind is one
+        constant, not hashed per room); `pubkey` is a random per-page id with an empty
+        `sig`, not a keypair; the hibernation attachment carries the departing peer's
+        envelope since T7-W4. relay.test.ts needed nothing — the shippedFilter rename
+        landed at W4 (verified, 21/21 green).
+
+C11     README.md:3. "no server ever touches a puzzle" → no puzzle is generated or solved
+        off the device that shows it, and a SHARED board is the one thing that leaves: the
+        companion Worker fans whole boards and stores none of them. Carries the page link.
+
+C12–C16 web/frontend/README.md. The session subsystem was undocumented. Extended, not
+        duplicated (W0 had already trued the zero-server claim in §Solve path): a
+        **Session** bullet in the games/shared floor, and two paragraphs under §State —
+        `?s=` as the room and the capability, the Lamport pair and the epoch, why no CRDT,
+        the four verbs, peer ink, the two transport arms, the marks contract. Both READMEs
+        now link docs/multiplayer.md.
+
+C17     wrangler.toml's header called the Worker "the signalling relay" — true through
+        T6.1, false since T6.2. Trued, and the three-file origin invariant stated where
+        the third file lives: `name` is the first label of the origin RELAY_URLS defaults
+        to and _headers grants.
+
+C18/C19 One byte figure with its evidence, or none. useSession.ts's "~150 lines" for
+        web/relay is now relay.ts's re-derived 299 lines, 154 of them code — a band the
+        `relay-loc` row re-counts, said so in the prose. The three disagreeing deletion
+        figures (−61.3 kB / −23.2 kB gz / "~2 kB") are down to ONE, −22.4 kB gzip,
+        attributed at both surviving sites to the T6 close record.
+
+C20     useGameState.ts. The marks comment no longer says "private" unqualified: marks are
+        private PER OP (a `mark` entry puts nothing on the wire) and public PER EPOCH
+        (`sessionSource.snapshot` is `{b, m}`, so every joiner and every deal / clear /
+        solve takes the publisher's). Stated at the snapshot seam too, and in the frontend
+        README. Feature-or-bug is raised to the owner as Q-2 — not decided here.
+
+C21     The real symbol is named where the endpoint is described: the module-private
+        `RELAY_URLS` const plus the build-time `VITE_RELAY_URL` read. `relayConfig.urls`
+        exists nowhere in the tree; its two surviving mentions are in CLOSED T6 records
+        (docs/tranches/2026-08-tranche-6/README.md:48, research/multiplayer-brief.md:292)
+        — chair's call, not re-written here.
+
+C24     relayWire.ts:6 cited `evidence/t6.2/realtime/`, which does not exist — T6 ran
+        process-lite and banked no evidence directory. Replaced by the attribution the
+        wave asked for: docs/tranches/2026-08-tranche-6/CLOSE.md is the record of record
+        for every T6 figure either header quotes. relay.ts says the same about its own.
+        check-evidence-policy.mjs: PASS.
+
+Also cured on the way, same class: relayWire.ts claimed "the relay is UNCHANGED" and
+flagged the vanished-peer roster as unfixable while the relay was sealed. T7-W4 landed
+both the frame cap and the close-announce, so the header now says what the relay took and
+which half of the presence problem is still open — the socket that stays OPEN behind a
+dead page, which is cut-2's presence timeout, not this.
+
+── the ten rows after the cure ──────────────────────────────────────────────────────────
+
+GREEN  relay-origin-pair
+        derived: connect-src wss://sudoku-relay.mkbabb.workers.dev (web/frontend/public/_headers) · RELAY_URLS default wss://sudoku-relay.mkbabb.workers.dev (web/frontend/src/games/shared/useSession.ts) · wrangler name "sudoku-relay" (web/relay/wrangler.toml) — one origin: sudoku-relay.mkbabb.workers.dev
+
+GREEN  retired-arm-clean
+        derived: trystero deps: none · scope: web/relay/relay.test.ts, web/relay/relay.ts, web/relay/wrangler.toml + 11 published docs
+
+GREEN  multiplayer-wire-verbs
+        derived: 4 verbs on the wire (hi/op/st/bye) — Kind declares hi/op/st, the arms extend it; kinds actually sent: bye, hi, op, st
+
+GREEN  relay-event-kind
+        derived: EVENT_KIND 20411 (web/frontend/src/games/shared/relayWire.ts) · relay fixtures 20411 (web/relay/relay.test.ts) · NIP-01 ephemeral range 20000–29999
+
+GREEN  slug-space-figures
+        derived: ^[a-ik-wyz]+$ over unique-names-generator: 1,145 of 1,202 adjectives, 345 of 355 animals — 395,025 names
+
+GREEN  peer-ink-formula
+        derived: oklch(var(--peer-ink-l) 0.11 i × 137.5° % 360) (web/frontend/src/games/shared/playerIdentity.ts) · --peer-ink-l band 0.5 / 0.8 (web/frontend/src/assets/index.css)
+
+GREEN  session-stress-constants
+        derived: 20,000 ops · 16 authors · 81 cells · undo cap 200 (web/frontend/src/games/shared/useSession.stress.test.ts), shipped cap 200 (web/frontend/src/games/shared/useUndoHistory.ts)
+
+GREEN  relay-loc
+        derived: web/relay/relay.ts: 299 lines, 154 of code · web/relay/: 648 lines across relay.test.ts, relay.ts, wrangler.toml
+
+GREEN  relay-backoff-ladder
+        derived: RETRY_MS [250, 500, 1000, 2000, 4000] ms, capped at 4000 (web/frontend/src/games/shared/relayWire.ts)
+
+GREEN  multiplayer-md-sections
+        derived: docs/multiplayer.md present — owed the wire, the relay, and the trust model, linked from both READMEs
+        — red until the page author landed docs/multiplayer.md beside this cure; both
+          README link arms are this executor's, and the page's figures agree with the
+          prose here (299/154/648, −22.4 kB gz, RELAY_URLS — no drift, no phantom).
+
+── gate + battery ───────────────────────────────────────────────────────────────────────
+
+check-doc-truth.mjs             0 RED / 32 GREEN   (canon holds — page landed)
+check-doc-truth.mjs --self-test 49 PASS / 0 FAIL   (every row proved both colours)
+check-evidence-policy.mjs       PASS
+web/relay vitest                21/21
+useSession + relayWire units    9/9
+vue-tsc -b --noEmit             exit 0
+prettier --check                clean
+
+── the figure that moved ────────────────────────────────────────────────────────────────
+
+The header rewrite grew relay.ts: 286 → 299 lines, code unchanged at 154, the directory
+627 → 648. The rows author's contract quoted 286/154/627 off pre-cure HEAD; `relay-loc`
+grades a ±10% band (269–329 unqualified, 139–169 as code), so 286 and 299 both pass and
+the prose carries the re-derived one.

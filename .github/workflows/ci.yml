@@ -1783,8 +1783,11 @@ jobs:
             # and a `derived:` line under EVERY row, red or green, naming what the
             # tree actually says. Read the derived lines: a band that derives to 0 is
             # now a red (T5-W1), but the numbers are the point of the output.
-            - name: doc truth (every row and figure re-derived at run time)
-              run: node scripts/check-doc-truth.mjs
+            # --self-test (T7-W5): the gate proves every row bites both colours off its own
+            # fixtures before grading the tree — 49 fixtures over 21 rows at land. The flag
+            # was local-only until this wave; the ledger-diff step below always carried it.
+            - name: doc truth (every row and figure re-derived at run time, self-tested)
+              run: node scripts/check-doc-truth.mjs --self-test && node scripts/check-doc-truth.mjs
             # THE LEDGER'S OWN GATE (T7-W0 0.2 / T7-R04, U-11's cure made real). The doc-truth
             # rows grade prose against the tree; this one grades the LIVING LEDGER against it —
             # a §1 row landing at a wave of a sealed tranche, a row a one-line probe refutes, and

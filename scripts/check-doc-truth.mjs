@@ -2,7 +2,7 @@
 /**
  * check-doc-truth — the doc-canon gate.
  *
- * Twenty-two rows, each of which RE-DERIVES its truth from the artifact at run
+ * Thirty-two rows, each of which RE-DERIVES its truth from the artifact at run
  * time and then asserts the docs say that. Nothing here is pinned: every expected
  * value comes off the tree — a byte count off the built `.wasm`, a version off
  * `Cargo.toml`/`package.json`, a test roster off the `#[test]` attributes, an
@@ -14,10 +14,10 @@
  * Exit 0 = every row green. Exit 1 = one line per failing site: row id,
  * file:line, expected, got.
  *
- * `--self-test` runs the fixtures instead: each T7-W0 row against a doc that
- * lies (must RED) and the same claim told true (must GREEN). A row that cannot
- * be shown to red is a decoration; the fixtures are the proof, and the GREEN
- * ones are built from the derivations, so they rot the day the tree moves.
+ * `--self-test` runs the fixtures instead: each T7-W0 and T7-W5 row against a
+ * doc that lies (must RED) and the same claim told true (must GREEN). A row that
+ * cannot be shown to red is a decoration; the fixtures are the proof, and the
+ * GREEN ones are built from the derivations, so they rot the day the tree moves.
  *
  * A DERIVATION THAT FAILS IS A RED, NEVER A SKIP (T5-W1). The band row used to
  * drop its assertions when it could not read a budget out of the workflow and
@@ -53,6 +53,15 @@
  * links outward into `docs/precepts/`, a submodule of campaign substrate: the
  * pin and the leak are one wave row (T5-W0 0.5) and stay one gate row.
  *
+ * The multiplayer rows (T7-W5) read SOURCE as well as docs, and that is the
+ * point: the session protocol is documented in four file headers written a
+ * tranche apart from each other, so the prose the rows hold to the tree is
+ * partly comment. `slug-space-figures` is the one row that reaches outside the
+ * repo's own files — it runs the estate's writeable-name regex over the
+ * dictionaries `unique-names-generator` actually ships, which wants
+ * `web/frontend/node_modules` present, the same tree `playwright test --list`
+ * is driven from. Absent, the row reds and says so rather than skipping.
+ *
  * The `ci.yml` band comment: hand-copied measurements inside comments are a
  * chronic class (CH-32). The gate asserts only the present-tense "yields A full
  * / B lean" sentence, since the lines below it are an explicitly dated log. The
@@ -62,6 +71,7 @@
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -705,6 +715,254 @@ function treeCites(rel) {
   return out;
 }
 
+// ── T7-W5 derivations: the multiplayer seam ────────────────────────────────
+//
+// The session is one protocol written down in two places that no gate held
+// together: a client under `web/frontend/src/games/shared` and a Durable Object
+// under `web/relay`, whose only commit predates the client that speaks to it.
+// Every derivation below reads the seam's OWN declarations — the CSP grant, the
+// `Kind` union, `EVENT_KIND`, `RETRY_MS`, the writeable-slug regex, the ink
+// template, the stress consts — so the prose is what moves when the code does.
+
+const MP = {
+  relay: "web/relay/relay.ts",
+  relayTest: "web/relay/relay.test.ts",
+  toml: "web/relay/wrangler.toml",
+  headers: "web/frontend/public/_headers",
+  session: "web/frontend/src/games/shared/useSession.ts",
+  wire: "web/frontend/src/games/shared/relayWire.ts",
+  wireTest: "web/frontend/src/games/shared/relayWire.test.ts",
+  ident: "web/frontend/src/games/shared/playerIdentity.ts",
+  css: "web/frontend/src/assets/index.css",
+  stress: "web/frontend/src/games/shared/useSession.stress.test.ts",
+  undo: "web/frontend/src/games/shared/useUndoHistory.ts",
+  page: "docs/multiplayer.md",
+};
+
+/**
+ * The prose a multiplayer claim can be made in: the published docs plus the four
+ * headers that ARE this protocol's documentation. `docs/multiplayer.md` joins
+ * through `DOCS` the moment it exists, so the page inherits every row below.
+ */
+const mpProse = () => [...DOCS, MP.session, MP.wire, MP.relay];
+
+/** Windows of `span` lines over `rel`, 1-indexed at the window's first line. */
+function windows(rel, span = 2) {
+  const lines = (read(rel) ?? "").split("\n");
+  return lines.map((_, i) => ({
+    file: rel,
+    line: i + 1,
+    text: lines
+      .slice(i, i + span)
+      .join(" ")
+      .trim(),
+  }));
+}
+
+/**
+ * Sentences, for the claims that outrun a line. A band stated as "0.5 on paper
+ * and 0.8 at night" wraps in every file that states it, and a sliding window
+ * always has an edge that holds half of it — which would red on the true prose.
+ * Comment furniture comes off first so the sentence reads as the author wrote it.
+ */
+function sentences(rel) {
+  return (read(rel) ?? "")
+    .replace(/^\s*(\/\*+|\*+\/|\*|\/\/|#)\s?/gm, "")
+    .replace(/\s*\n\s*/g, " ")
+    .split(/(?<=[.!?;])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+const digits = (s) => Number(String(s).replace(/[_,]/g, ""));
+const hostOf = (u) => (u ? u.replace(/^wss:\/\//, "").replace(/\/.*$/, "") : null);
+
+/**
+ * The relay's identity, in the three files that each hold a copy of it: the CSP
+ * `connect-src` grant, the client's `RELAY_URLS` default, and the Worker's name.
+ */
+function deriveRelayOrigin() {
+  const policy =
+    (read(MP.headers) ?? "").match(/^\s*Content-Security-Policy:.*$/m)?.[0] ?? "";
+  const csp = policy.match(/connect-src[^;]*?(wss:\/\/[^\s;]+)/)?.[1] ?? null;
+  const url =
+    (read(MP.session) ?? "")
+      .match(/const RELAY_URLS\s*=\s*\[([\s\S]*?)\]/)?.[1]
+      ?.match(/"(wss:\/\/[^"]+)"/)?.[1] ?? null;
+  const name = (read(MP.toml) ?? "").match(/^name\s*=\s*"([^"]+)"/m)?.[1] ?? null;
+  return { csp, url, name, cspHost: hostOf(csp), urlHost: hostOf(url) };
+}
+
+/** The ephemeral kind, on both sides of the seam, and the range it is drawn from. */
+function deriveEventKind() {
+  const kindOf = (rel) =>
+    read(rel)?.match(/const EVENT_KIND\s*=\s*([\d_]+)/)?.[1] ?? null;
+  const range = (read(MP.wire) ?? "").match(/(\d{5})\s*[–—-]\s*(\d{5})/);
+  const client = kindOf(MP.wire);
+  const test = kindOf(MP.relayTest);
+  return {
+    kind: client === null ? null : digits(client),
+    testKind: test === null ? null : digits(test),
+    range: range ? [digits(range[1]), digits(range[2])] : [],
+  };
+}
+
+/**
+ * The wire's grammar. `Kind` is the session's own three; the fourth word rides
+ * the `Kind | "bye"` extension every arm widens its signature with — it never
+ * reaches `onMessage`, which is exactly why the type says three and the wire
+ * speaks four. `sent` is the other direction: every kind literal this estate
+ * actually puts on a socket, so a fifth word reds the row from the code.
+ */
+function deriveWireVerbs() {
+  const session = read(MP.session) ?? "";
+  const wire = read(MP.wire) ?? "";
+  const lits = (s, re) => [...s.matchAll(re)].map((m) => m[1]);
+  const kinds = lits(
+    session.match(/export type Kind\s*=\s*([^;]+);/)?.[1] ?? "",
+    /"(\w+)"/g,
+  );
+  const extra = lits([session, wire].join("\n"), /Kind\s*\|\s*"(\w+)"/g);
+  const sent = [
+    ...lits(session, /\b(?:wire\.send|post)\(\s*"(\w+)"/g),
+    ...lits(wire, /\bsend\(\s*"(\w+)"/g),
+    ...lits(read(MP.relay) ?? "", /\bkind:\s*"(\w+)"/g),
+  ];
+  return {
+    kinds,
+    verbs: [...new Set([...kinds, ...extra])],
+    sent: [...new Set(sent)].sort(),
+  };
+}
+
+/**
+ * The writeable name space: the estate's OWN filter regex applied to the OWN
+ * dictionaries the app ships, not a count anyone typed. The library is required
+ * out of the frontend's `node_modules` — the same tree `playwright test --list`
+ * is driven from a few rows up.
+ */
+function deriveSlugSpace() {
+  const src = read(MP.ident) ?? "";
+  const source = src.match(/const WRITEABLE\s*=\s*\/([^/]+)\//)?.[1] ?? null;
+  if (!source) return { source: null, rows: [], names: null, error: null };
+  let dicts = null;
+  let error = null;
+  try {
+    dicts = createRequire(abs("web/frontend/package.json"))("unique-names-generator");
+  } catch (e) {
+    error = String(e.message).split("\n")[0];
+  }
+  if (!dicts) return { source, rows: [], names: null, error };
+  const re = new RegExp(source);
+  const rows = ["adjectives", "animals"]
+    .filter((k) => Array.isArray(dicts[k]))
+    .map((k) => ({
+      k,
+      all: dicts[k].length,
+      kept: dicts[k].filter((w) => re.test(w)).length,
+    }));
+  return {
+    source,
+    rows,
+    names: rows.length === 2 ? rows.reduce((a, r) => a * r.kept, 1) : null,
+    error,
+  };
+}
+
+/** The peer-ink formula: one template in `playerIdentity.ts`, one band in the CSS. */
+function deriveInk() {
+  const src = read(MP.ident) ?? "";
+  const tpl = src.match(/oklch\(var\((--[\w-]+)\)\s+([\d.]+)\s/);
+  const angle = src.match(/index \* ([\d.]+)/)?.[1] ?? null;
+  const wheel = src.match(/index \* [\d.]+\)\s*%\s*(\d+)/)?.[1] ?? null;
+  const varName = tpl?.[1] ?? null;
+  const band = varName
+    ? [
+        ...(read(MP.css) ?? "").matchAll(
+          new RegExp(`${varName}\\s*:\\s*([\\d.]+)`, "g"),
+        ),
+      ].map((m) => m[1])
+    : [];
+  return {
+    varName,
+    chroma: tpl?.[2] ?? null,
+    angle,
+    wheel,
+    band,
+    light: band[0] ?? null,
+    dark: band[1] ?? null,
+  };
+}
+
+/** The large run's dimensions, off the stress file, against the SHIPPED undo cap. */
+function deriveStress() {
+  const s = read(MP.stress) ?? "";
+  const c = (name) => {
+    const m = s.match(new RegExp(`const ${name}\\s*=\\s*([\\d_]+)`));
+    return m ? digits(m[1]) : null;
+  };
+  const shipped = read(MP.undo)?.match(/const UNDO_CAP\s*=\s*([\d_]+)/)?.[1] ?? null;
+  return {
+    ops: c("OPS"),
+    authors: c("AUTHORS"),
+    cells: c("CELLS"),
+    cap: c("UNDO_CAP"),
+    shippedCap: shipped === null ? null : digits(shipped),
+  };
+}
+
+/** Lines: the shipped module, and the whole directory it sits in. */
+function deriveRelayLoc() {
+  const count = (rel) => {
+    const text = read(rel);
+    if (text === null) return { total: 0, code: 0 };
+    const lines = text.split("\n");
+    if (lines[lines.length - 1] === "") lines.pop();
+    let block = false;
+    let code = 0;
+    for (const raw of lines) {
+      const t = raw.trim();
+      if (block) {
+        if (t.includes("*/")) block = false;
+        continue;
+      }
+      if (!t || t.startsWith("//") || t.startsWith("#")) continue;
+      if (t.startsWith("/*")) {
+        if (!t.includes("*/")) block = true;
+        continue;
+      }
+      code++;
+    }
+    return { total: lines.length, code };
+  };
+  const files = has("web/relay")
+    ? readdirSync(abs("web/relay"))
+        .filter((f) => /\.(ts|toml)$/.test(f))
+        .sort()
+    : [];
+  const dir = files.reduce((a, f) => a + count(`web/relay/${f}`).total, 0);
+  return { ...count(MP.relay), dir, files };
+}
+
+/** The reconnect ladder, off the array the arm indexes. */
+function deriveLadder() {
+  const arr = (read(MP.wire) ?? "").match(/const RETRY_MS\s*=\s*\[([^\]]*)\]/)?.[1];
+  return arr
+    ? arr
+        .split(",")
+        .map((s) => digits(s.trim()))
+        .filter((n) => Number.isFinite(n))
+    : [];
+}
+
+/** Every dependency naming the retired peer-connection arm. */
+function deriveRetiredDeps() {
+  const pkg = JSON.parse(read("web/frontend/package.json") ?? "{}");
+  return Object.keys({ ...pkg.dependencies, ...pkg.devDependencies }).filter((k) =>
+    /trystero/i.test(k),
+  );
+}
+
 const D = {
   lean: deriveLeanWasm(),
   fonts: deriveFonts(),
@@ -744,6 +1002,15 @@ const D = {
   redirects: deriveRedirects(),
   scenarios: deriveScenarios(),
   basenames: deriveBasenames(),
+  origin: deriveRelayOrigin(),
+  kind: deriveEventKind(),
+  verbs: deriveWireVerbs(),
+  slugs: deriveSlugSpace(),
+  ink: deriveInk(),
+  stress: deriveStress(),
+  loc: deriveRelayLoc(),
+  ladder: deriveLadder(),
+  retiredDeps: deriveRetiredDeps(),
 };
 D.pin = D.crate ? `${D.crate[1]}.${D.crate[2]}` : null;
 
@@ -1974,6 +2241,562 @@ const ROWS = [
       return out;
     },
   },
+
+  // ── T7-W5: the multiplayer record ────────────────────────────────────────
+  // Ten rows landing with `docs/multiplayer.md`. The relay and its client were
+  // written a tranche apart and never re-read against each other; these hold the
+  // seam's two halves to one truth, and hold the page to both.
+  {
+    // W5 row 1, and the estate's most load-bearing UNENFORCED invariant: the CSP
+    // grant, the client's default URL, and the Worker's own name are one string
+    // in three files that deploy separately. It was prose at `CLOSE.md` and
+    // nothing else. A deploy that trues one is a socket blocked on the edge and
+    // nowhere else — the failure with no console line and no server log.
+    id: "relay-origin-pair",
+    derived: () => {
+      const o = D.origin;
+      return o.cspHost && o.urlHost && o.name
+        ? `connect-src ${o.csp} (${MP.headers}) · RELAY_URLS default ${o.url} (${MP.session}) · wrangler name "${o.name}" (${MP.toml}) — one origin: ${o.cspHost}`
+        : `UNDERIVED: csp ${o.csp ?? "none"} · default ${o.url ?? "none"} · name ${o.name ?? "none"}`;
+    },
+    run: () => {
+      const o = D.origin;
+      const out = [];
+      if (!o.csp)
+        out.push(
+          fail(MP.headers, "a wss:// origin in the CSP connect-src clause", "none"),
+        );
+      if (!o.url)
+        out.push(
+          fail(MP.session, "a wss:// default in the RELAY_URLS literal", "none"),
+        );
+      if (!o.name) out.push(fail(MP.toml, 'name = "…"', "none"));
+      if (out.length) return out;
+      if (o.cspHost !== o.urlHost)
+        out.push(
+          fail(
+            `${MP.headers} + ${MP.session}`,
+            `one origin — the CSP grant and the RELAY_URLS default name the same host`,
+            `connect-src ${o.cspHost} vs RELAY_URLS ${o.urlHost}`,
+          ),
+        );
+      else if (o.urlHost.split(".")[0] !== o.name)
+        out.push(
+          fail(
+            MP.toml,
+            `name = "${o.urlHost.split(".")[0]}" — the Worker's name is the first label of ${o.urlHost}`,
+            `name = "${o.name}"`,
+          ),
+        );
+      for (const rel of mpProse())
+        for (const h of grep(rel, /wss:\/\/[\w.-]+/))
+          for (const m of h.m) {
+            // A sentence's full stop is not part of the hostname.
+            const host = hostOf(m[0]).replace(/\.+$/, "");
+            if (host === o.cspHost || /\.invalid$/.test(host)) continue;
+            out.push(
+              fail(
+                `${h.file}:${h.line}`,
+                `the one relay origin, wss://${o.cspHost}`,
+                `${m[0]} — ${h.text}`,
+              ),
+            );
+          }
+      return out;
+    },
+  },
+  {
+    // W5 row 2. T6.2 replaced the client and nobody re-read the relay: its header
+    // still describes trystero's nostr strategy as the consumer it serves —
+    // batched 250-topic filters, WebRTC offer/answer payloads, `strToNum(topic)`
+    // kinds — none of which has been true since. One row converts the whole
+    // contradiction class (C1–C4, C9, C10) from a prose fix into a standing gate.
+    //
+    // A line that RETIRES the name is not naming it as the live client: the
+    // autopsy is the point of `relayWire.ts`'s header and of the fixture note in
+    // `relay.test.ts`, so past tense passes and present tense does not. The
+    // client-side headers are out of scope by the same argument — they exist to
+    // record what left and why.
+    id: "retired-arm-clean",
+    derived: () =>
+      `trystero deps: ${D.retiredDeps.join(", ") || "none"} · scope: ${D.loc.files.map((f) => `web/relay/${f}`).join(", ")} + ${DOCS.length} published docs`,
+    run: () => {
+      const RETIRED_ARM =
+        /\b(left|leaves|leaving|gone|went|retired|removed|deleted|dead|fossil|excised|dropped|no longer|used to|former(?:ly)?|replac\w+|since T6\.2|until T6\.2)\b/i;
+      const out = D.retiredDeps.map((d) =>
+        fail(
+          "web/frontend/package.json",
+          "no trystero dependency — the peer-connection arm went at T6.2",
+          `dependency ${d}`,
+        ),
+      );
+      for (const rel of [...D.loc.files.map((f) => `web/relay/${f}`), ...DOCS])
+        for (const h of grep(rel, /trystero/i)) {
+          if (RETIRED_ARM.test(h.text)) continue;
+          out.push(
+            fail(
+              `${h.file}:${h.line}`,
+              "trystero named only as the arm that LEFT — the shipped client speaks NIP-01 to this relay directly (T6.2)",
+              h.text,
+            ),
+          );
+        }
+      return out;
+    },
+  },
+  {
+    // W5 row 3. The grammar is four words, and the type says three: `bye` rides
+    // the `Kind | "bye"` extension both arms widen their signature with, because
+    // it never reaches `onMessage`. `useSession.ts`'s header counts the type,
+    // which is why the estate has documented a three-word wire since T6 and a
+    // relay that says the fourth word since T7-W4.
+    id: "multiplayer-wire-verbs",
+    derived: () => {
+      const v = D.verbs;
+      return v.verbs.length
+        ? `${v.verbs.length} verbs on the wire (${v.verbs.join("/")}) — Kind declares ${v.kinds.join("/")}, the arms extend it; kinds actually sent: ${v.sent.join(", ")}`
+        : `UNDERIVED: no Kind union parsed out of ${MP.session}`;
+    },
+    run: () => {
+      const { verbs, sent } = D.verbs;
+      if (!verbs.length)
+        return [
+          fail(MP.session, "an `export type Kind` union to count", "none parsed"),
+        ];
+      const out = [];
+      const missing = sent.filter((k) => !verbs.includes(k));
+      if (missing.length || sent.length !== verbs.length)
+        out.push(
+          fail(
+            `${MP.session} + ${MP.wire} + ${MP.relay}`,
+            `the wire's verbs and the kinds it sends are one set: ${verbs.join("/")}`,
+            `sent: ${sent.join(", ") || "none"}${missing.length ? ` — outside the grammar: ${missing.join(", ")}` : ""}`,
+          ),
+        );
+      // `(?<![\w-])` keeps the version half of `NIP-01` from reading as a count.
+      const COUNT =
+        /(?<![\w-])(zero|one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(?:\w+\s+)?(messages?|verbs?)\b/gi;
+      for (const rel of mpProse()) {
+        for (const h of grep(rel, COUNT))
+          for (const m of h.m) {
+            const got = /^\d+$/.test(m[1])
+              ? Number(m[1])
+              : WORDS.indexOf(m[1].toLowerCase());
+            if (got === verbs.length) continue;
+            out.push(
+              fail(
+                `${h.file}:${h.line}`,
+                `${WORDS[verbs.length]} ${m[2].toLowerCase()} — ${verbs.join("/")}`,
+                `${m[1]} — ${h.text}`,
+              ),
+            );
+          }
+        // An enumeration that names three of the four is the shape the wire's
+        // fourth word disappears in — the `bench-target-roster` rule, on verbs.
+        for (const h of grep(rel, /`(?:hi|op|st|bye)`|\bhi\/op\/st(?:\/bye)?\b/)) {
+          const named = verbs.filter((v) =>
+            new RegExp(`\`${v}\`|(?<![\\w/])${v}/|/${v}(?![\\w/])`).test(h.text),
+          );
+          if (named.length < 3 || named.length === verbs.length) continue;
+          out.push(
+            fail(
+              `${h.file}:${h.line}`,
+              `every verb named, or fewer than three — the grammar is ${verbs.join("/")}`,
+              `names ${named.length}: ${named.join(", ")} — ${h.text}`,
+            ),
+          );
+        }
+      }
+      return out;
+    },
+  },
+  {
+    // W5 row 4. One constant, two sides of the seam — the client publishes on it
+    // and the relay's own fixtures filter for it — plus every 5-digit kind the
+    // prose quotes. NIP-01's reserved ephemeral window is the one exception, and
+    // only its bounds, only on a line that says so.
+    id: "relay-event-kind",
+    derived: () => {
+      const k = D.kind;
+      return k.kind
+        ? `EVENT_KIND ${k.kind} (${MP.wire}) · relay fixtures ${k.testKind ?? "none"} (${MP.relayTest}) · NIP-01 ephemeral range ${k.range.join("–") || "unstated"}`
+        : `UNDERIVED: no EVENT_KIND parsed out of ${MP.wire}`;
+    },
+    run: () => {
+      const k = D.kind;
+      if (!k.kind)
+        return [fail(MP.wire, "a `const EVENT_KIND` to derive from", "none")];
+      const out = [];
+      if (k.testKind !== k.kind)
+        out.push(
+          fail(
+            MP.relayTest,
+            `EVENT_KIND ${k.kind} — the kind the shipped arm publishes on`,
+            `${k.testKind ?? "none"} — the relay's fixtures filter for a kind nothing sends`,
+          ),
+        );
+      // Prose only. `relay.test.ts` quotes kinds it means to MISS (a filter that
+      // takes another kind is the bug the fixture exists to catch), and its own
+      // constant is asserted above rather than scanned.
+      for (const rel of mpProse())
+        for (const h of grep(rel, /kind/i)) {
+          const ranged = /NIP-01|ephemeral|reserve|range/i.test(h.text);
+          for (const m of h.text.matchAll(/\b\d[\d_]*\b/g)) {
+            const got = digits(m[0]);
+            if (String(got).length !== 5) continue;
+            if (got === k.kind) continue;
+            if (ranged && k.range.includes(got)) continue;
+            out.push(
+              fail(
+                `${h.file}:${h.line}`,
+                `kind ${k.kind}${k.range.length ? ` (or the bare range bounds ${k.range.join("/")} on a line that names the range)` : ""}`,
+                `${m[0]} — ${h.text}`,
+              ),
+            );
+          }
+        }
+      return out;
+    },
+  },
+  {
+    // W5 row 5. The name space is the estate's own filter regex over the
+    // dictionaries it ships — the `j`/`x` the hand-drawn subset can't draw are
+    // what cuts it — so the figures are derived by running that regex here, not
+    // by trusting the three counts the comment states.
+    id: "slug-space-figures",
+    derived: () => {
+      const s = D.slugs;
+      return s.names
+        ? `${s.source} over unique-names-generator: ${s.rows.map((r) => `${fmt(r.kept)} of ${fmt(r.all)} ${r.k}`).join(", ")} — ${fmt(s.names)} names`
+        : `UNDERIVED: ${s.source ? `dictionaries unreadable (${s.error ?? "no roster"})` : `no WRITEABLE regex in ${MP.ident}`}`;
+    },
+    run: () => {
+      const s = D.slugs;
+      if (!s.source)
+        return [
+          fail(MP.ident, "a `const WRITEABLE` filter regex to derive from", "none"),
+        ];
+      if (!s.names)
+        return [
+          fail(
+            "web/frontend/node_modules/unique-names-generator",
+            "the shipped dictionaries, to run the filter over",
+            s.error ?? "no adjectives/animals roster — run npm ci in web/frontend",
+          ),
+        ];
+      const by = Object.fromEntries(s.rows.map((r) => [r.k, r]));
+      const out = [];
+      for (const rel of [...mpProse(), MP.ident]) {
+        for (const h of grep(rel, /([\d,]+)\s+of\s+([\d,]+)\s+(animals|adjectives)/gi))
+          for (const m of h.m) {
+            const r = by[m[3].toLowerCase()];
+            if (!r || (num(m[1]) === r.kept && num(m[2]) === r.all)) continue;
+            out.push(
+              fail(
+                `${h.file}:${h.line}`,
+                `${fmt(r.kept)} of ${fmt(r.all)} ${r.k} survive ${s.source}`,
+                `${m[1]} of ${m[2]} — ${h.text}`,
+              ),
+            );
+          }
+        for (const h of grep(rel, /([\d][\d,]{4,})\s+names\b/g))
+          for (const m of h.m) {
+            if (num(m[1]) === s.names) continue;
+            out.push(
+              fail(
+                `${h.file}:${h.line}`,
+                `${fmt(s.names)} names — ${s.rows.map((r) => fmt(r.kept)).join(" × ")}`,
+                `${m[1]} — ${h.text}`,
+              ),
+            );
+          }
+      }
+      return out;
+    },
+  },
+  {
+    // W5 row 6. The ink claim is structural or it is a table of hand-checked
+    // hexes: one golden-angle walk at one chroma, banded by a lightness the theme
+    // sets twice. Three numbers, three files, and the contrast claim rests on all
+    // of them agreeing.
+    id: "peer-ink-formula",
+    derived: () => {
+      const i = D.ink;
+      return i.varName && i.angle
+        ? `oklch(var(${i.varName}) ${i.chroma} i × ${i.angle}° % ${i.wheel}) (${MP.ident}) · ${i.varName} band ${i.band.join(" / ") || "none"} (${MP.css})`
+        : `UNDERIVED: no inkFor template parsed out of ${MP.ident}`;
+    },
+    run: () => {
+      const i = D.ink;
+      if (!i.varName || !i.angle || !i.chroma)
+        return [
+          fail(MP.ident, "the `inkFor` oklch template to derive from", "none parsed"),
+        ];
+      if (i.band.length !== 2)
+        return [
+          fail(
+            MP.css,
+            `two \`${i.varName}\` declarations — the paper band and the night one`,
+            `${i.band.length}: ${i.band.join(", ") || "none"}`,
+          ),
+        ];
+      const out = [];
+      const bandSet = [i.light, i.dark].sort().join("/");
+      for (const rel of [...mpProse(), MP.ident, MP.css]) {
+        for (const h of grep(rel, /oklch/i)) {
+          if (!h.text.includes(i.varName) || h.text.includes(i.chroma)) continue;
+          out.push(
+            fail(
+              `${h.file}:${h.line}`,
+              `chroma ${i.chroma} — the one the walk is measured at`,
+              h.text,
+            ),
+          );
+        }
+        for (const h of grep(rel, /[×x]\s*([\d.]+)\s*°/g))
+          for (const m of h.m) {
+            if (m[1] === i.angle) continue;
+            out.push(
+              fail(
+                `${h.file}:${h.line}`,
+                `the golden angle, ${i.angle}°`,
+                `${m[1]}° — ${h.text}`,
+              ),
+            );
+          }
+        for (const s of sentences(rel)) {
+          // A DECLARATION is the band, not a claim about it — the CSS states the
+          // two values one at a time and is not lying by doing so.
+          const prose = s.replace(new RegExp(`${i.varName}\\s*:[^;]*;?`, "g"), "");
+          if (
+            !prose.includes(i.varName) ||
+            !/\b(paper|night|light|dark)\b/i.test(prose)
+          )
+            continue;
+          const seen = [
+            ...new Set([...prose.matchAll(/\b0\.\d\b/g)].map((m) => m[0])),
+          ].sort();
+          if (!seen.length || seen.join("/") === bandSet) continue;
+          out.push(
+            fail(
+              rel,
+              `both lightnesses — ${i.light} on paper, ${i.dark} at night`,
+              `${seen.join("/")} — ${s.slice(0, 160)}`,
+            ),
+          );
+        }
+      }
+      return out;
+    },
+  },
+  {
+    // W5 row 7. The large run is the condition the trie veto was declined on, so
+    // its dimensions are a claim: twenty thousand ops, sixteen authors, eighty-one
+    // cells, and the SHIPPED undo cap — a stress row proving a cap the app does
+    // not have proves nothing, so the two consts are held together here.
+    id: "session-stress-constants",
+    derived: () => {
+      const s = D.stress;
+      return s.ops
+        ? `${fmt(s.ops)} ops · ${s.authors} authors · ${s.cells} cells · undo cap ${s.cap} (${MP.stress}), shipped cap ${s.shippedCap} (${MP.undo})`
+        : `UNDERIVED: no OPS const parsed out of ${MP.stress}`;
+    },
+    run: () => {
+      const s = D.stress;
+      const missing = ["ops", "authors", "cells", "cap"].filter((k) => !s[k]);
+      if (missing.length)
+        return [
+          fail(
+            MP.stress,
+            "OPS · AUTHORS · CELLS · UNDO_CAP",
+            `unparsed: ${missing.join(", ")}`,
+          ),
+        ];
+      const out = [];
+      if (s.cap !== s.shippedCap)
+        out.push(
+          fail(
+            MP.stress,
+            `UNDO_CAP ${s.shippedCap} — the cap the board actually ships (${MP.undo})`,
+            `${s.cap} — the run proves a cap nothing else has`,
+          ),
+        );
+      const figure = (win, re) => {
+        const m = win.match(re);
+        if (!m) return null;
+        return /^\d/.test(m[1]) ? num(m[1]) : WORDS.indexOf(m[1].toLowerCase());
+      };
+      const WORD =
+        "\\d[\\d,]*|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen";
+      for (const rel of [...mpProse(), MP.stress, MP.undo])
+        for (const w of windows(rel)) {
+          const t = w.text;
+          if (/\b(ops|writes)\b/i.test(t) && /\bauthors?\b/i.test(t)) {
+            const ops = figure(
+              t,
+              new RegExp(`(${WORD})\\s+(?:\\w+\\s+)?(?:ops|writes)\\b`, "i"),
+            );
+            const authors = figure(t, new RegExp(`(${WORD})\\s+authors?\\b`, "i"));
+            if (ops !== null && ops !== s.ops)
+              out.push(
+                fail(`${w.file}:${w.line}`, `${fmt(s.ops)} ops`, `${ops} — ${t}`),
+              );
+            if (authors !== null && authors !== s.authors)
+              out.push(
+                fail(
+                  `${w.file}:${w.line}`,
+                  `${s.authors} authors`,
+                  `${authors} — ${t}`,
+                ),
+              );
+          }
+          if (/\bcells\b/i.test(t) && /\b(ops|writes)\b/i.test(t)) {
+            const cells = figure(t, new RegExp(`(${WORD})\\s+cells\\b`, "i"));
+            if (cells !== null && cells !== s.cells)
+              out.push(
+                fail(`${w.file}:${w.line}`, `${s.cells} cells`, `${cells} — ${t}`),
+              );
+          }
+          if (/\bundo\b/i.test(t) && /\bcapp?e?d?\b/i.test(t)) {
+            const cap = figure(
+              t,
+              new RegExp(`cap(?:ped)?\\s*(?:at|of|=|:)?\\s*(${WORD})`, "i"),
+            );
+            if (cap !== null && cap !== s.cap)
+              out.push(fail(`${w.file}:${w.line}`, `cap ${s.cap}`, `${cap} — ${t}`));
+          }
+        }
+      return out;
+    },
+  },
+  {
+    // W5 row 8, C18. `useSession.ts` has called the relay "~150 lines" since
+    // T6.1, and T6.2 and T7-W4 both grew it — the frame cap, the close-announce.
+    // A line count is a figure that moves with every edit, so the row asserts a
+    // BAND rather than an integer, and reads the qualifier: "lines" is the file,
+    // "lines of code" is the file minus its comments, and both are honest.
+    id: "relay-loc",
+    derived: () =>
+      `${MP.relay}: ${D.loc.total} lines, ${D.loc.code} of code · web/relay/: ${D.loc.dir} lines across ${D.loc.files.join(", ")}`,
+    run: () => {
+      const { total, code } = D.loc;
+      if (!total)
+        return [fail(MP.relay, "the relay module, to count", "file absent or empty")];
+      const band = (n, of) => Math.abs(n - of) <= of * 0.1;
+      const out = [];
+      for (const rel of mpProse())
+        for (const h of grep(rel, /(~|about\s+)?\b([\d,]{2,})\s+lines\b/g)) {
+          if (!/web\/relay|relay\.ts/.test(h.text)) continue;
+          for (const m of h.m) {
+            const got = num(m[2]);
+            const asCode = /lines of code|code lines?|non-comment|statements/i.test(
+              h.text,
+            );
+            if (band(got, asCode ? code : total)) continue;
+            out.push(
+              fail(
+                `${h.file}:${h.line}`,
+                asCode
+                  ? `${code} lines of code (±10%)`
+                  : `${total} lines (±10%) — ${code} of them code, if that is the figure meant`,
+                `${m[2]} — ${h.text}`,
+              ),
+            );
+          }
+        }
+      return out;
+    },
+  },
+  {
+    // W5 row 9. The reconnect ladder is the whole of the arm's durability claim —
+    // a table left open overnight must come back, and must not walk itself out to
+    // a ten-minute retry. The prose may repeat the last rung (that IS the cap);
+    // it may not invent one.
+    id: "relay-backoff-ladder",
+    derived: () =>
+      D.ladder.length
+        ? `RETRY_MS [${D.ladder.join(", ")}] ms, capped at ${D.ladder[D.ladder.length - 1]} (${MP.wire})`
+        : `UNDERIVED: no RETRY_MS array parsed out of ${MP.wire}`,
+    run: () => {
+      const l = D.ladder;
+      if (l.length < 2)
+        return [
+          fail(
+            MP.wire,
+            "a `const RETRY_MS` ladder to derive from",
+            `${l.length} rungs`,
+          ),
+        ];
+      const out = [];
+      if (!l.every((n, i) => i === 0 || n > l[i - 1]))
+        out.push(
+          fail(
+            MP.wire,
+            "a strictly rising ladder — the cap is the last rung, which is what the arm indexes",
+            `[${l.join(", ")}]`,
+          ),
+        );
+      const want = l.join(",");
+      for (const rel of [...mpProse(), MP.wireTest])
+        for (const w of windows(rel)) {
+          if (!/back-?off|retr(?:y|ies|ied)|reconnect/i.test(w.text)) continue;
+          const seen = [...w.text.matchAll(/\b\d{3,4}\b/g)].map((m) => Number(m[0]));
+          if (seen.length < 3) continue;
+          while (seen.length > 1 && seen[seen.length - 1] === seen[seen.length - 2])
+            seen.pop();
+          if (seen.join(",") === want) continue;
+          out.push(
+            fail(
+              `${w.file}:${w.line}`,
+              `the ladder as declared: ${l.join(" · ")} ms (the last rung may repeat — that is the cap)`,
+              `${seen.join(" · ")} — ${w.text}`,
+            ),
+          );
+        }
+      return out;
+    },
+  },
+  {
+    // W5 row 10. The page is one truth across a seam whose two halves deploy
+    // separately; the sections a future edit is likeliest to drop are the ones
+    // that document the half the editor isn't looking at. `sudoku-md-sections`'
+    // shape, on the multiplayer record — plus the two links, because a page no
+    // README reaches is a page nobody reads.
+    id: "multiplayer-md-sections",
+    derived: () =>
+      `${MP.page} ${has(MP.page) ? "present" : "ABSENT"} — owed the wire, the relay, and the trust model, linked from both READMEs`,
+    run: () => {
+      const text = read(MP.page);
+      if (text === null)
+        return [
+          fail(
+            MP.page,
+            "the client + relay reference, one page across the seam",
+            "file absent",
+          ),
+        ];
+      const heads = (text.match(/^##+ .*/gm) ?? []).map((h) => h.trim());
+      const out = [/\bwire\b/i, /\brelay\b/i, /\btrust\b/i]
+        .filter((re) => !heads.some((h) => re.test(h)))
+        .map((re) =>
+          fail(
+            MP.page,
+            `a section heading matching ${re}`,
+            `headings: ${heads.join(" · ") || "none"}`,
+          ),
+        );
+      for (const rel of ["README.md", "web/frontend/README.md"])
+        if (!/\]\([^)]*multiplayer\.md\)/.test(read(rel) ?? ""))
+          out.push(
+            fail(
+              rel,
+              `a link to ${MP.page}`,
+              "no link — the page is unreachable from here",
+            ),
+          );
+      return out;
+    },
+  },
 ];
 
 // ── self-test: every T7-W0 row proved able to red, and to green ────────────
@@ -2216,6 +3039,189 @@ function selfTestCases() {
       docs: { "README.md": "CI runs chromium alone." },
       expect: "GREEN",
     },
+
+    // ── T7-W5, the multiplayer record ────────────────────────────────────
+    // Four of these ten rows are born RED on the tree as it stands, so their
+    // GREEN case has to mount the cure over the site that lies — which makes
+    // the pair the cure contract, executable, exactly as it is above.
+    {
+      row: "relay-origin-pair",
+      why: "a doc naming a relay origin the CSP does not grant",
+      docs: {
+        "README.md": "The board joins over `wss://sudoku-relay-staging.workers.dev`.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "relay-origin-pair",
+      why: `the cure: the one origin, wss://${D.origin.cspHost}`,
+      docs: {
+        "README.md": `The board joins over \`${D.origin.url}\` — the origin \`_headers\` grants and \`${D.origin.name}\` answers on.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "retired-arm-clean",
+      why: "the relay header describing trystero as the consumer it serves",
+      docs: {
+        [MP.relay]:
+          "// WHAT IT SPEAKS is the subset trystero's nostr strategy actually uses.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "retired-arm-clean",
+      why: "the cure: trystero named only as the arm that left",
+      docs: {
+        [MP.relay]:
+          "// trystero left with the WebRTC it existed to negotiate (T6.2); the client speaks these frames itself.",
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "multiplayer-wire-verbs",
+      why: "the header counting the type instead of the wire",
+      docs: { [MP.session]: " * THREE MESSAGES, and each earns its place:" },
+      expect: "RED",
+    },
+    {
+      row: "multiplayer-wire-verbs",
+      why: "an enumeration that drops the fourth word",
+      docs: { "README.md": "The wire speaks `hi`, `op` and `st`." },
+      expect: "RED",
+    },
+    {
+      row: "multiplayer-wire-verbs",
+      why: `the cure: ${WORDS[D.verbs.verbs.length]} verbs, ${D.verbs.verbs.join("/")}`,
+      docs: {
+        "README.md": `${WORDS[D.verbs.verbs.length]} messages ride it — ${D.verbs.verbs.map((v) => `\`${v}\``).join(", ")}.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "relay-event-kind",
+      why: "a kind inside the ephemeral range that is not the one the arm publishes",
+      docs: { "README.md": `Ops ride ephemeral kind ${D.kind.kind + 1}.` },
+      expect: "RED",
+    },
+    {
+      row: "relay-event-kind",
+      why: `the cure: kind ${D.kind.kind}, named inside its range`,
+      docs: {
+        "README.md": `Ops ride ephemeral kind ${D.kind.kind}, inside NIP-01's ${D.kind.range.join("–")} do-not-store range.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "slug-space-figures",
+      why: "a survivor count the filter regex does not produce",
+      docs: {
+        "README.md": `${fmt(D.slugs.rows[0].kept + 1)} of ${fmt(D.slugs.rows[0].all)} ${D.slugs.rows[0].k} survive the cut.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "slug-space-figures",
+      why: `the cure: ${D.slugs.rows.map((r) => `${fmt(r.kept)}/${fmt(r.all)}`).join(" · ")} — ${fmt(D.slugs.names)} names`,
+      docs: {
+        "README.md": `${D.slugs.rows.map((r) => `${fmt(r.kept)} of ${fmt(r.all)} ${r.k}`).join(" and ")} survive the cut, which is ${fmt(D.slugs.names)} names.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "peer-ink-formula",
+      why: "half the band — the night value drifted",
+      docs: {
+        "README.md": `A peer's \`${D.ink.varName}\` is ${D.ink.light} on paper and 0.7 at night.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "peer-ink-formula",
+      why: `the cure: chroma ${D.ink.chroma}, ${D.ink.angle}°, ${D.ink.light}/${D.ink.dark}`,
+      docs: {
+        "README.md": `Every peer writes in \`oklch(var(${D.ink.varName}) ${D.ink.chroma} hue)\` with \`hue = i × ${D.ink.angle}°\`; \`${D.ink.varName}\` is ${D.ink.light} on paper and ${D.ink.dark} at night.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "session-stress-constants",
+      why: "an author count the large run does not use",
+      docs: {
+        "README.md": `The ledger takes ${fmt(D.stress.ops)} ops from ${D.stress.authors + 1} authors.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "session-stress-constants",
+      why: `the cure: ${fmt(D.stress.ops)} · ${D.stress.authors} · ${D.stress.cells} · cap ${D.stress.cap}`,
+      docs: {
+        "README.md": `The ledger takes ${fmt(D.stress.ops)} ops from ${D.stress.authors} authors over ${D.stress.cells} cells, beside an undo history capped at ${D.stress.cap}.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "relay-loc",
+      why: "the ~150-line relay, three growths ago",
+      docs: {
+        [MP.session]: " * `web/relay/` is ~150 lines of NIP-01 on a Durable Object.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "relay-loc",
+      why: `the cure: ${D.loc.total} lines, ${D.loc.code} of code`,
+      docs: {
+        [MP.session]: ` * \`web/relay/relay.ts\` is ${D.loc.total} lines of NIP-01, ${D.loc.code} of them code.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "relay-backoff-ladder",
+      why: "a rung that is not in the array",
+      docs: {
+        "README.md": `A dropped socket retries at ${[...D.ladder.slice(0, -2), 3000, D.ladder[D.ladder.length - 1]].join(", ")} ms.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "relay-backoff-ladder",
+      why: `the cure: ${D.ladder.join(" · ")} ms, the last rung repeating as the cap`,
+      docs: {
+        "README.md": `A dropped socket retries at ${D.ladder.join(", ")} ms, then ${D.ladder[D.ladder.length - 1]} forever.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "multiplayer-md-sections",
+      why: "a page that dropped the relay's half of the seam",
+      docs: {
+        [MP.page]: "# Multiplayer\n\n## The wire\n\n## Trust, and what it rests on",
+        "README.md": `[the multiplayer record](${MP.page})`,
+        "web/frontend/README.md": `[the multiplayer record](../../${MP.page})`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "multiplayer-md-sections",
+      why: "the page whole, but reachable from neither README",
+      docs: {
+        [MP.page]:
+          "# Multiplayer\n\n## The wire\n\n## The relay\n\n## Trust, and what it rests on",
+      },
+      expect: "RED",
+    },
+    {
+      row: "multiplayer-md-sections",
+      why: "the cure: all three sections, linked from both READMEs",
+      docs: {
+        [MP.page]:
+          "# Multiplayer\n\n## The wire\n\n## The relay\n\n## Trust, and what it rests on",
+        "README.md": `[the multiplayer record](${MP.page})`,
+        "web/frontend/README.md": `[the multiplayer record](../../${MP.page})`,
+      },
+      expect: "GREEN",
+    },
   ];
 }
 
@@ -2223,7 +3229,16 @@ function runSelfTest() {
   const out = [];
   const say = (s = "") => out.push(s);
   const cases = selfTestCases();
-  const scoped = [...DOCS, "web/frontend/perf-rig/README.md"];
+  // The W5 rows read source, not only docs — their prose lives in the headers
+  // that ARE the protocol's documentation — so the overlay has to blank those
+  // too, or a fixture would be graded against the live tree beside it. Every
+  // W5 derivation is taken at module load, off the real files, so blanking a
+  // site here moves the assertion and never the expected value.
+  const scoped = [
+    ...DOCS,
+    "web/frontend/perf-rig/README.md",
+    ...Object.values(MP).filter((rel) => rel !== MP.page),
+  ];
   let bad = 0;
   say(
     `doc-truth --self-test — ${cases.length} fixtures over ${new Set(cases.map((c) => c.row)).size} rows`,

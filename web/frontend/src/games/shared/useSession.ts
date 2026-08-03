@@ -8,16 +8,22 @@
  * — just a last-writer rule per cell, which is six lines. (@automerge/automerge-wasm is
  * 2,127,414 B of wasm against a 127,500 B lean band; the arithmetic was never close.)
  *
- * THREE MESSAGES, and each earns its place:
+ * FOUR MESSAGES, and each earns its place:
  *   · `hi` — "I'm here, and I don't have the board." Presence ACK back to the sender, plus
  *     the board itself from whichever peer holds the lowest id. It is also the RE-REQUEST: a
  *     page that hears an op stamped with an epoch it doesn't hold asks with the same word.
  *   · `op` — one cell write `{p, v, s?, l, a, e, ea}`. `l`/`a` are the Lamport stamp that
  *     decides the cell; `e`/`ea` are the EPOCH, which decides whether the write is even about
  *     the board this page is looking at.
- *   · `st` — the whole board plus its clock, ~1 KB at 9×9. Sent to a joiner, and broadcast by
- *     whoever deals / clears / solves / undoes a deal. Board swaps never cross as ops: a deal
- *     is a new board, not 81 writes.
+ *   · `st` — the whole board plus its clock. Sent to a joiner, and broadcast by whoever
+ *     deals / clears / solves / undoes a deal. Board swaps never cross as ops: a deal is a
+ *     new board, not 81 writes.
+ *   · `bye` — the departure word. Said by a page on `pagehide`, and said FOR the page that
+ *     never got to say it by the relay itself, on `webSocketClose` (T7-W4, `relay.ts`'s
+ *     `announceLeave`) — both arms derive presence from traffic, and an absence produces
+ *     none, so somebody has to speak for the socket that went. It is the one kind that never
+ *     reaches `onMessage`: the arms widen their signature to `Kind | "bye"` and filter it into
+ *     `peer(id, false)`, which is why the union below counts three and the grammar four.
  *
  * THE EPOCH IS THE ONE NUMBER THAT CAN AGREE. `boardGeneration` is a per-page counter and two
  * pages' counters mean nothing to each other, so it cannot discriminate a stale op across the
@@ -32,20 +38,23 @@
  *
  * TRANSPORT IS A SEAM (README ruling 3). Two arms behind the same methods: `relayWire`
  * (`relayWire.ts`, `import()`ed so a solo player pays ZERO bytes for it) and `localWire`
- * (`BroadcastChannel`, ~20 lines) for a second tab on the same device — which is also what the
- * e2e battery drives, because a relay in CI is a flake machine.
+ * (`BroadcastChannel`, 35 lines below) for a second tab on the same device — DEV-only behind
+ * `?wire=local` since T7-W4, and what the e2e battery drives, because a relay in CI is a
+ * flake machine.
  *
  * THE RELAY IS OURS (T6.1). The public Nostr relay list is ABROGATED, and the measurement is
  * the reason: 47–66 SECONDS to first contact on strangers' machines carrying strangers'
- * traffic. `web/relay/` is ~150 lines of NIP-01 on a hibernating Durable Object next to the
- * Pages deployment.
+ * traffic, against 596 ms on ours (`docs/tranches/2026-08-tranche-6/CLOSE.md` — T6 ran
+ * process-lite, so its close prose is the record of record for every figure it took).
+ * `web/relay/relay.ts` is 299 lines of NIP-01, 154 of them code, on a hibernating Durable
+ * Object next to the Pages deployment — a band, not a pin: `relay-loc` re-counts it.
  *
  * THE OPS RIDE IT TOO (T6.2), and the seam is what made that one file. Through T6.1 the relay
  * carried only SIGNALLING and the board rode WebRTC data channels; the owner's report — player
  * actions and choices not arriving in real time — is the two ways that fails, and both are in
  * `relayWire.ts`'s header with the rig readings that convicted them. trystero left with the
- * peer connections it existed to negotiate: −61.3 kB of lazy chunk for ~2 kB of NIP-01, and a
- * star through one object instead of a mesh that has to be negotiated per pair.
+ * peer connections it existed to negotiate — −22.4 kB gzip off the lazy chunk, by the same
+ * close record — and a star through one object replaced a mesh negotiated per pair.
  *
  * NO PLAYER CAP ANYWHERE. Board ops are bytes at human pace, and since T6.2 the topology is a
  * STAR rather than a mesh — one socket per page, fanned out by the relay — so the ceiling that
@@ -140,6 +149,9 @@ export function mintOp(
   return { pos, value, solved, stamp, epoch: led.epoch };
 }
 
+/** The kinds `onMessage` routes. The grammar's fourth word, `bye`, is deliberately NOT one:
+ *  both arms widen their own signature to `Kind | "bye"` and turn it into a roster removal
+ *  before the session sees it, so no consumer has to handle a departure as a message. */
 export type Kind = "hi" | "op" | "st";
 
 /** The wire carries JSON and nothing else — no binary framing to version, and the board blob
