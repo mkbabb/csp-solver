@@ -267,13 +267,15 @@ const specFiles = readdirSync(E2E_DIR, { withFileTypes: true })
   .map((e) => join(E2E_DIR, e.name));
 const asserted = new Map(); // golden base → [spec:line, …]
 for (const f of specFiles) {
-  const lines = readFileSync(f, "utf8").split("\n");
-  lines.forEach((line, i) => {
-    for (const m of line.matchAll(/toHaveScreenshot\(\s*['"`]([^'"`]+)\.png['"`]/g)) {
-      const at = `${rel(f)}:${i + 1}`;
-      asserted.set(m[1], [...(asserted.get(m[1]) ?? []), at]);
-    }
-  });
+  // Whole-file scan, NOT per-line: prettier is free to wrap the call so
+  // `toHaveScreenshot(` and its string land on different lines, and a per-line
+  // regex then reports a consumed golden as an orphan (T6.2 — logo-light and
+  // cell-light both "orphaned" by a reflow). The line number is derived.
+  const text = readFileSync(f, "utf8");
+  for (const m of text.matchAll(/toHaveScreenshot\(\s*['"`]([^'"`]+)\.png['"`]/g)) {
+    const at = `${rel(f)}:${text.slice(0, m.index).split("\n").length}`;
+    asserted.set(m[1], [...(asserted.get(m[1]) ?? []), at]);
+  }
 }
 
 const onDisk = new Map(); // base → Set(platform)
