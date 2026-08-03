@@ -119,12 +119,18 @@ function parseGame(): GameId {
   const id = new URLSearchParams(window.location.search).get("game") ?? "";
   return GAMES.some((c) => c.id === id) ? id : "sudoku";
 }
-// UI-8: the tab title names the CURRENT game — the static "sudoku — CSP Solver" in
-// index.html lies on Futoshiki after both a deep-link (`?game=futoshiki`) and an in-app
-// switch. Set from the selected id at parse time and on every switch, so the title tracks
-// the wordmark/URL truthfully. Lowercase to match the wordmark; em dash, no spaces stripped.
+// UI-8: the tab title names the CURRENT game — the static title in index.html lies on Futoshiki
+// after both a deep-link (`?game=futoshiki`) and an in-app switch. Set from the selected id at
+// parse time and on every switch, so the title tracks the wordmark/URL truthfully. Lowercase to
+// match the wordmark.
+//
+// T8 M16 — the em dash goes. It is the one piece of rendered product copy in this file, the
+// edict is categorical about the character, and the estate already owns a separator for a
+// compound label: the middle dot the deck's own sublines are set with ("9×9 easy · dealt").
+// `index.html`'s STATIC title still reads the old string and is outside this fence — filed as a
+// wiring request rather than reached for, so the two cannot land half-changed.
 function applyTitle(g: GameId) {
-  document.title = `${g} — CSP Solver`;
+  document.title = `${g} · CSP Solver`;
 }
 // ── F6 page-turn orchestrator (T3-W10) ───────────────────────────────────
 // The two games are exercises in the same graded workbook: a switch is the pencil erasing
@@ -231,6 +237,42 @@ function preloadScenes() {
   }
 }
 
+// THE POSTERS WARM AT IDLE, NOT AT THE FOLD (T8 M7b — the fold's residual stall).
+// The four flank faces are their own lazy modules and the deck's MOUNT was their first
+// request, so their `defineAsyncComponent`s resolved mid-glide and `Suspense` swapped four
+// posters in at once. MEASURED at 1280×900, chromium: 435 DOM nodes and 27 SVGs landing in a
+// single 49.3ms frame 62ms into a 520ms fold, followed by a 1.9ms catch-up frame that walked
+// the board 78px in one step — the last jitter standing once the reveal replay was cured. The
+// tell is unmistakable in the trace: it is exactly the frame on which the deck's blank faces go
+// 4 → 0 and its node count goes 802 → 1237.
+//
+// This warms them at IDLE instead, and DELIBERATELY NOT inside `preloadScenes`: that one warms
+// the four lazy SPEC chunks, which drag their models and solver clients with them and are lazy
+// for that reason — it must keep firing on OPEN and never at boot. A poster is a read-only
+// mini-board with no such tail, so it can be had for free after first paint and the deck then
+// mounts with its faces already in hand, on the FIRST open as much as the second. (Measured
+// against `enterGallery`-time warming, which was the first cut: the 200ms chrome-leave does not
+// cover a cold fetch — open #1 still stalled 42.3ms while opens #2/#3 ran clean at 15.0/11.7.)
+let postersWarm = false;
+function warmPosters() {
+  if (postersWarm) return;
+  postersWarm = true;
+  for (const card of GAMES)
+    card.poster().catch(() => {
+      // Opportunistic, on the spec warm's own terms: the card's `Suspense` re-requests this
+      // module when it renders, and that is where a genuine poster failure is seen.
+    });
+}
+/** After first paint, on the browser's own slack. `requestIdleCallback` is Chromium/Firefox
+ *  only — WebKit ships none — so the timeout is the engine-neutral floor rather than a
+ *  fallback: whichever fires first warms, and `postersWarm` makes the second a no-op. */
+function scheduleWarmPosters() {
+  const ric = (window as Window & { requestIdleCallback?: (cb: () => void) => void })
+    .requestIdleCallback;
+  ric?.(warmPosters);
+  window.setTimeout(warmPosters, 1200);
+}
+
 const desktopAttribution = ref<InstanceType<typeof AttributionCard> | null>(null);
 const mobileAttribution = ref<InstanceType<typeof AttributionCard> | null>(null);
 const logoMenu = ref<InstanceType<typeof HandwrittenLogo> | null>(null);
@@ -307,6 +349,82 @@ function boardHostRect(): DOMRect | null {
     null
   );
 }
+
+// ── THE REPARENT MUST NOT REPLAY THE BOARD'S INK (T8 M7b) ─────────────────────────────────
+// The projection MOVES the board's DOM (GameScene's Teleport), and a DOM move is a remove plus
+// an insert: every CSS animation on the moved subtree is cancelled by the removal and STARTED
+// AGAIN by the insert. Measured on a dealt 9×9 at 1280×900, chromium:
+// `document.getAnimations()` reads 0 with the board at rest and 64 one frame after `g`, 61 of
+// them `cell-reveal` — one per written cell, `scale(0) → scale(1.1) → scale(1)` plus
+// `opacity 0 → 1`, each behind its own noise-staggered `--reveal-delay`. So the ink vanished
+// and re-dealt itself cell by cell for 1.4 s across a 520 ms fold, and the exit's park-home
+// restarted the same 61 on the way back. THAT is the jitter the mark names: the FLIP itself is
+// continuous — 61 uninvited reveals ride on top of it, and the style/paint they cost is the
+// 34.9 ms frame at the fold's head (followed by a 1.6 ms catch-up frame, the tell of a tween
+// whose clock ran while the main thread did not).
+//
+// The cure is AT THE MOVE, because the move is the cause. Snapshot what is genuinely in flight
+// in the subtree, move, then put the subtree back where it was: an animation that was running
+// resumes at its own phase, and one the move INVENTED is finished on the spot. Finished, never
+// cancelled — a finished animation's contribution is a settled question in both engines
+// (`fill: backwards` means it is out of effect and the cell paints its cascade value, which is
+// the rest pose), where a cancelled CSS animation's association with its owning element is not.
+// Nothing about the fold, the deck or the cards changes; the board just stops re-drawing itself
+// for having been carried.
+type AnimPhase = Map<Element, Map<string, number>>;
+
+/** The animation's identity WITHIN its element — the CSS name, or the transitioned property. */
+function animKey(a: Animation): string {
+  const css = a as Animation & { animationName?: string; transitionProperty?: string };
+  return css.animationName ?? css.transitionProperty ?? "";
+}
+
+function boardAnimations(): Animation[] {
+  const host = document.querySelector<HTMLElement>(".board-peek-host");
+  return host?.getAnimations ? host.getAnimations({ subtree: true }) : [];
+}
+
+/** What is genuinely mid-flight in the board subtree, keyed by (element, animation). */
+function snapshotBoardAnims(): AnimPhase {
+  const phase: AnimPhase = new Map();
+  for (const a of boardAnimations()) {
+    if (a.playState !== "running" && a.playState !== "paused") continue;
+    const el = a.effect instanceof KeyframeEffect ? a.effect.target : null;
+    const at = a.currentTime;
+    if (!el || typeof at !== "number") continue;
+    const byName = phase.get(el) ?? new Map<string, number>();
+    byName.set(animKey(a), at);
+    phase.set(el, byName);
+  }
+  return phase;
+}
+
+/** Put the subtree back: what was running resumes at its phase, what the move invented lands
+ *  finished (its rest pose). */
+function restoreBoardAnims(phase: AnimPhase) {
+  for (const a of boardAnimations()) {
+    const el = a.effect instanceof KeyframeEffect ? a.effect.target : null;
+    const was = el ? phase.get(el)?.get(animKey(a)) : undefined;
+    if (was != null) {
+      a.currentTime = was;
+      continue;
+    }
+    // An infinite animation cannot be finished (`finish()` throws InvalidStateError) — and an
+    // infinite one is a genuine steady state rather than a mount reveal, so it is left alone
+    // rather than cancelled: restarting a loop mid-cycle is invisible, killing it is not.
+    if (a.effect?.getComputedTiming().iterations === Infinity) continue;
+    a.finish();
+  }
+}
+
+/** THE ONE BOARD'S MOVE — into the gallery's live face, or home. The Teleport lands inside the
+ *  flush this schedules against, so the restore runs in the same PRE-PAINT tick: no frame ever
+ *  shows the replay. */
+function moveLiveBoard(el: HTMLElement | null) {
+  const phase = snapshotBoardAnims();
+  setLiveFaceTarget(el);
+  void nextTick(() => restoreBoardAnims(phase));
+}
 /** The centered card's box — the exit unfold's card-pose anchor. */
 function centerCardEl(): HTMLElement | null {
   return document.querySelector<HTMLElement>(".game-card.is-center");
@@ -321,7 +439,7 @@ function onGallerySnap(index: number) {
 // (`setLiveFaceTarget` → GameScene's Teleport — one instance, marks/Worker/state survive),
 // fits it to the face box, and — on an interactive entry — runs BEAT 1, the fold.
 function onLiveFace(el: HTMLElement | null) {
-  setLiveFaceTarget(el); // teleport the board into the face, or park it home (null)
+  moveLiveBoard(el); // teleport the board into the face, or park it home (null)
   if (!el) return;
   void nextTick(() => {
     const board = document.querySelector<HTMLElement>(".board-peek-host");
@@ -417,6 +535,7 @@ function runFold(pairs: { first: DOMRect | null; el: () => HTMLElement | null }[
 // cuts every beat.
 function enterGallery() {
   preloadScenes(); // F6-D3: warm the lazy scene chunks on OPEN, so a select is cached
+  warmPosters(); // …and the deck's faces, if the idle warm has not already had them
   if (reducedMotion.value) {
     entryAnimated.value = false;
     openGallery(game.value); // PRM: same-frame cut — no chrome-leave, no fold, no deal
@@ -450,7 +569,7 @@ function unfoldToBoard(applyState: () => void) {
   // BOTH firsts before `applyState()` — the state flip is what moves the masthead back to its
   // playing pose, so its gallery rect has to be in hand before that happens.
   const headFirst = mastheadEl.value?.getBoundingClientRect() ?? null;
-  setLiveFaceTarget(null); // un-teleport the board home before the deck unmounts
+  moveLiveBoard(null); // un-teleport the board home before the deck unmounts
   applyState(); // synchronous view→playing + game swap (the seam) or cancel (Wave B path)
   if (reducedMotion.value || !first) return; // PRM / no card → same-frame cut
   runFold([
@@ -550,7 +669,10 @@ function onGlobalKeydown(e: KeyboardEvent) {
   e.preventDefault();
   enterGallery();
 }
-onMounted(() => window.addEventListener("keydown", onGlobalKeydown));
+onMounted(() => {
+  window.addEventListener("keydown", onGlobalKeydown);
+  scheduleWarmPosters(); // T8 M7b: the deck's faces, off the fold's frame budget
+});
 onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 </script>
 

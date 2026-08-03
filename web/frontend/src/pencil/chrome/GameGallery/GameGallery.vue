@@ -13,7 +13,14 @@
  *
  * A11y — listbox-over-carousel (W3C APG). DOM focus lives on the track container; the
  * highlighted card is tracked with `aria-activedescendant`. ←/→ step · Home/End first/last ·
- * Enter/Space select · Esc cancel. A polite live region announces each snap.
+ * Enter/Space select · Esc cancel. A polite live region announces each snap. The full key map,
+ * with its one owner per key, is stated at `onWindowEscape` below — Esc is the one key bound on
+ * the WINDOW rather than the listbox, because it is the way out (T8 M7a).
+ *
+ * POINTER (T8 M10). A click on the CENTERED card selects it; a click on a FLANK warps the deck
+ * to that card, through `go()` — the same glass curve, the same `@snap` seam, the same live
+ * region a keyboard step drives. A drag that merely ends over a card is not a click: the
+ * capture-phase swallow in `useCarouselGlide` eats that release before any card sees it.
  *
  * THE SOUL GATE. This component holds the ONE shared-beat enrolment (`useBeatFrame`) on behalf
  * of the centered card, and feeds the live pose to that card ALONE; every flank gets pose 0
@@ -450,9 +457,50 @@ function guardLeave() {
   emit("select", card.id);
 }
 
+/* ── THE GALLERY'S KEY MAP (T8 M7a) — one key, one owner ──────────────────────────────────
+ *
+ *   ← → ↑ ↓   step the deck one card          listbox   dismisses an armed ribbon, then moves
+ *   Home End  first / last card               listbox   same
+ *   Enter ␣   choose the CENTERED card        listbox   armed ribbon → confirms its verb
+ *   d         deal the centered card's slip   listbox   bare only; routed through the ribbon
+ *   Tab       cycle the ribbon's two verbs    ribbon    armed only — `aria-modal`'s containment
+ *   Esc       THE ONE WAY BACK                WINDOW    armed ribbon → dismiss it (keep) and
+ *                                                       stop there; otherwise cancel the deck
+ *                                                       and unfold to the board you came from
+ *
+ * ESC IS DOCUMENT-SCOPED, and that is the whole of the mark. Every other key above belongs to
+ * the listbox and is bound on the viewport, which is right for them: they are the listbox's
+ * navigation and they should only fire while the listbox has focus. Escape is not navigation —
+ * it is the way OUT, and a way out that works only from one element is not a way out. Bound on
+ * the viewport it was inert the moment focus went anywhere else, which on this screen is most
+ * of the time: MEASURED at 1280×900, Esc was dead after a click on the staging band's chips,
+ * after a click on its verbs, after a click on a pip, and after a click on bare page — four of
+ * six ordinary states, silently, with the deck still up and the board still underneath it.
+ *
+ * So the deck owns Escape for as long as the deck is mounted, from the window, and NOTHING else
+ * in this file answers that key: the listbox's switch below has no Escape case, and the ribbon's
+ * handler delegates to it, so there is exactly one place the precedence (ribbon, then deck) is
+ * written down. `defaultPrevented` is honoured, so a future control that genuinely claims Escape
+ * inside the deck keeps it. */
+function onWindowEscape(e: KeyboardEvent) {
+  if (e.key !== "Escape" || e.defaultPrevented) return;
+  e.preventDefault();
+  // ONE PRESS, ONE LEVEL. The ribbon is `aria-modal` and it is the thing in front of you, so it
+  // is what an Escape cancels — the deck stays, exactly as `keep` leaves it. A second press then
+  // leaves the deck.
+  if (guardIndex.value !== null) {
+    dismissGuard();
+    return;
+  }
+  emit("cancel"); // the wordmark fold's inverse: unfold the board back out of the centered card
+}
+onMounted(() => window.addEventListener("keydown", onWindowEscape));
+onUnmounted(() => window.removeEventListener("keydown", onWindowEscape));
+
 function onKeydown(e: KeyboardEvent) {
-  // While the guard ribbon is up, the listbox keys resolve IT: Enter/Space confirms Leave,
-  // Escape dismisses (Keep). Arrows fall through to `step`, which dismisses + navigates.
+  // While the guard ribbon is up, the listbox keys resolve IT: Enter/Space confirms Leave.
+  // Escape is the window handler's above — the one owner. Arrows fall through to `step`, which
+  // dismisses + navigates.
   if (guardIndex.value !== null) {
     switch (e.key) {
       case "Enter":
@@ -460,10 +508,6 @@ function onKeydown(e: KeyboardEvent) {
       case "Spacebar":
         e.preventDefault();
         guardLeave();
-        return;
-      case "Escape":
-        e.preventDefault();
-        dismissGuard();
         return;
     }
   }
@@ -491,10 +535,6 @@ function onKeydown(e: KeyboardEvent) {
     case "Spacebar":
       e.preventDefault();
       attemptSelect();
-      return;
-    case "Escape":
-      e.preventDefault();
-      emit("cancel");
       return;
     case "d":
     case "D":
@@ -613,6 +653,7 @@ onMounted(async () => {
             :deal-reveal="dealReveal[i]"
             :subline="sublineFor(card)"
             @select="attemptSelect"
+            @warp="go(i)"
             @guard-keep="dismissGuard"
             @guard-leave="guardLeave"
             @face-mount="(el: HTMLElement | null) => emit('live-face', el)"
@@ -676,20 +717,42 @@ onMounted(async () => {
                 guardSub
               }}</span>
             </p>
+            <!-- THE VERBS TAKE THE DRAWN BOX (T8-W1 M4, agent A's wiring request). They wore a
+                 2px CSS border on a 0.45rem radius — geometric chrome inside a note whose own
+                 frame is drawn by `HandDrawnOutline`, which is this estate's one box grammar.
+                 So they wear it too, at `:pose="0"`: one static path per frame, no beat
+                 enrolled, no layer promoted, no filter minted (the poses carry the geometric
+                 grain bake, so `filter-census` is untouched). The outline is
+                 `pointer-events: none`, so the `<button>` is still the whole target — and the
+                 `.guard-keep`/`.guard-leave` hooks the specs address are unmoved. -->
             <div class="guard-note-actions">
               <button
                 type="button"
                 class="guard-btn guard-keep"
                 @click.stop="dismissGuard"
               >
-                keep
+                <HandDrawnOutline
+                  :pose="0"
+                  :stroke-width="2"
+                  :outset="2"
+                  class="guard-face"
+                >
+                  keep
+                </HandDrawnOutline>
               </button>
               <button
                 type="button"
                 class="guard-btn guard-leave"
                 @click.stop="guardLeave"
               >
-                {{ guardVerb }}
+                <HandDrawnOutline
+                  :pose="0"
+                  :stroke-width="2.5"
+                  :outset="2"
+                  class="guard-face"
+                >
+                  {{ guardVerb }}
+                </HandDrawnOutline>
               </button>
             </div>
           </div>
@@ -921,27 +984,77 @@ onMounted(async () => {
   gap: 0.65rem;
 }
 
+/* The button is now a bare hit target: zero padding, no border, no ground. Everything the eye
+   reads is the FACE inside it, and the box around the face is drawn (`.staging-btn`'s idiom
+   verbatim — one grammar, two files). */
 .guard-btn {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-foreground);
   font-family: var(--font-hand);
   font-size: var(--type-body, 1rem);
   line-height: 1;
-  padding: 0.32rem 1rem;
-  border-radius: 0.45rem;
-  border: 2px solid color-mix(in srgb, var(--color-foreground) 30%, transparent);
-  background: transparent;
-  color: var(--color-foreground);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.guard-btn:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
-  outline-offset: 2px;
+/* The FACE is the box the outline draws around: its padding is the frame's air, and it is the
+   node the hover ground paints, so the drawn stroke sits ON the ground rather than beside it. */
+.guard-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.32rem 0.9rem;
+  border-radius: 0.3rem;
+  transition:
+    background-color 150ms var(--ease-standard),
+    color 150ms var(--ease-standard);
 }
 
-.guard-leave {
-  border-color: color-mix(in srgb, var(--color-foreground) 60%, transparent);
+/* THE GROUND FORM (T8 M5, agent C's boil census — R2 in this fence). These are the two most
+   consequential buttons the deck has and they answered a pointer with nothing at all, while
+   every other boxed control in the estate grounds on hover: `.staging-btn .staging-face` a
+   sibling file away, `.icon-btn` in the rail. Same declaration, on the same node, so the ribbon
+   is not a third idiom. `(hover: hover)` only — a coarse pointer gets the press, never a stuck
+   ground. */
+@media (hover: hover) {
+  .guard-btn:hover .guard-face {
+    background: var(--color-accent);
+    color: var(--color-foreground);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guard-face {
+    transition: none;
+  }
+}
+
+/* The focus ring rides the FACE, so it traces the drawn box rather than a zero-padding button
+   that is now smaller than the frame around it (`.staging-btn`'s own ruling). */
+.guard-btn:focus-visible {
+  outline: none;
+}
+
+.guard-btn:focus-visible .guard-face {
+  outline: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
+  outline-offset: 4px;
+}
+
+/* The destructive verb takes the heavier ink — the outline's own `stroke-width` above, which is
+   the hand's way of saying weight — plus the 8% ground, exactly as `deal` wears it in the band.
+   A reader who can see neither stroke weight nor colour still sees one verb marked and one
+   bare. */
+.guard-leave .guard-face {
   background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+}
+
+@media (pointer: coarse) {
+  .guard-face {
+    min-height: 44px;
+  }
 }
 
 /* The ribbon SLIDES in (a note pulled from the card) — a CSS transition on the Vue

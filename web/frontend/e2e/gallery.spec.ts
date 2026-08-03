@@ -194,6 +194,44 @@ test('gallery: Escape cancels back to the board, no swap, ?view cleared', async 
   expect(new URL(page.url()).searchParams.get('view')).toBeNull();
 });
 
+// ── 4b. Escape is the WINDOW's, not the listbox's (T8 M7a) ──
+//
+// Escape was bound on `.gallery-viewport` alongside the deck's navigation keys, so it answered
+// only while DOM focus was inside the listbox — and on this screen focus leaves the listbox
+// constantly. MEASURED at 1280×900 before the cure: Esc was inert after a click on the staging
+// band's chips, after a click on a pip, and after a click on bare page — four of six ordinary
+// states, silently, with the deck still up. Navigation keys SHOULD be focus-scoped; the way out
+// must not be, which is the whole distinction this row pins.
+//
+// The states are exercised through the deck's own first-party hooks, and the claim is
+// focus-INDEPENDENCE rather than any one control: each gesture is checked to have actually
+// moved focus off the listbox before Escape is pressed, so a row that stops proving anything
+// (because some future click no longer blurs) fails loudly instead of passing vacuously.
+
+const focusIsListbox = (page: Page) =>
+  page.evaluate(() => document.activeElement?.classList.contains('gallery-viewport') === true);
+
+for (const [what, blur] of [
+  ['a staged chip', async (page: Page) => page.locator('.staging-axis button').first().click()],
+  ['a page pip', async (page: Page) => page.locator('.gallery-pip').nth(2).click({ force: true })],
+  ['bare page', async (page: Page) => page.mouse.click(12, 12)],
+] as const) {
+  test(`gallery: Escape still exits with focus moved off the listbox by ${what}`, async ({
+    page,
+  }) => {
+    await openGalleryDeepLink(page);
+    await expect.poll(() => focusIsListbox(page)).toBe(true); // the control: it starts there
+    await blur(page);
+    await expect.poll(() => focusIsListbox(page)).toBe(false); // …and the gesture moved it
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.game-gallery')).toHaveCount(0);
+    await expect(page.locator('.board-group.is-gallery')).toHaveCount(0);
+    await expect(page.locator('.sudoku-cell').first()).toBeVisible();
+    expect(new URL(page.url()).searchParams.get('view')).toBeNull();
+  });
+}
+
 // ── 5. Entry: `g` opens the gallery from the playing view (guarded off editable targets) ──
 
 test('gallery: `g` opens the gallery from playing; a `g` typed into a cell does not', async ({
@@ -517,6 +555,123 @@ test('drag: a grab during a keyboard glide freezes the deck where it is drawn', 
       page.locator('.gallery-viewport').evaluate((el) => getComputedStyle(el).scrollSnapType),
     )
     .toBe('x mandatory');
+});
+
+// ── 9b. CLICK-TO-WARP (T8 M10) — a flank click centers it; the centered card still selects ──
+
+/** Click a card AT ITS MEASURED POINT, with the mouse — never `locator.click()`.
+ *
+ *  `locator.click()` calls `scrollIntoViewIfNeeded` first, and `force: true` does NOT skip it
+ *  (force waives the actionability checks, not the scroll). The deck is a horizontal scroll
+ *  container, so that auto-scroll writes `scrollLeft` — which is exactly the gesture a touch
+ *  swipe makes, and `useCarouselGlide`'s scroll listener reports it as a native snap 90ms later.
+ *  A flank click on an off-viewport card therefore raced its own precondition: scroll, snap,
+ *  and the card the test meant to WARP to was already centered by the time the click landed, so
+ *  it SELECTED. Caught born-red on the runner at three workers (`?game` read `thermo`), never
+ *  once serially — the 90ms debounce is the whole width of the window.
+ *
+ *  The mouse moves nothing it is not asked to move, so the card's position at press time is the
+ *  position the row measured. That is also how a person clicks a card they can see. */
+async function clickCard(page: Page, id: string) {
+  const box = (await page.locator(`#${id}`).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+}
+
+test('click: a flank warps the deck to it, aria + the live region following the same seam', async ({
+  page,
+}) => {
+  await openGalleryDeepLink(page);
+  await deckSettled(page);
+  const listbox = page.locator('.gallery-viewport');
+
+  // THE REVERSAL. Wave D refused a flank click by design; the owner's law is that pointing at a
+  // card is an order to bring it to the middle. It routes through the gallery's `go()` — the
+  // SAME seam a keyboard step rides — so this row asserts the seam's whole output, not just the
+  // position: the activedescendant, the option's own selected state, the pip, and the live
+  // region's exact sentence (never loosened to a regex; `gallery-deal.spec.ts` gates the band's
+  // half of that sentence on its own).
+  await clickCard(page, 'gallery-card-1');
+  await expect(listbox).toHaveAttribute('aria-activedescendant', 'gallery-card-1');
+  await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.gallery-pip').nth(1)).toHaveClass(/is-inked/);
+  await expect(page.locator('.gallery-live')).toHaveText(
+    'futoshiki, 2 of 5. 5×5 easy, new game',
+  );
+
+  // …and it is a WARP, never a choice: the deck is still up and no game was swapped. `?game` is
+  // polled rather than read once — a select's own URL write is synchronous with the view flip,
+  // so a stray one would land inside this window and a single read could step over it.
+  await expect(page.locator('.game-gallery')).toBeVisible();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('game'))
+    .toBeNull();
+
+  // Back the other way — the warp is a normal step, not a one-shot, and it is reversible.
+  await deckSettled(page);
+  await clickCard(page, 'gallery-card-0');
+  await expect(listbox).toHaveAttribute('aria-activedescendant', 'gallery-card-0');
+  await expect(page.locator('.gallery-live')).toHaveText('sudoku, 1 of 5. 9×9 easy, board dealt');
+});
+
+test('click: the card the warp delivered then SELECTS on the next click', async ({ page }) => {
+  await openGalleryDeepLink(page);
+  await deckSettled(page);
+
+  await clickCard(page, 'gallery-card-1');
+  await expect(page.locator('.gallery-viewport')).toHaveAttribute(
+    'aria-activedescendant',
+    'gallery-card-1',
+  );
+
+  // COMMITTED, not one-shot — the deck may still be gliding in from the warp when this lands,
+  // and a click refused mid-settle is refused once and silently (the same species the centered
+  // -card row above documents). pressCommitted presses like a person, who presses again. The
+  // card is centred by now, so its own locator can carry the press: nothing is left to scroll.
+  await pressCommitted(
+    page.locator('#gallery-card-1'),
+    async () => (await page.locator('.game-gallery').count()) === 0,
+    { what: 'the warped-to card selects on its second click' },
+  );
+  await expect(page.locator('.futoshiki-cell').first()).toBeVisible({ timeout: 15000 });
+  expect(new URL(page.url()).searchParams.get('game')).toBe('futoshiki');
+});
+
+test('drag: a release that lands over a FLANK is swallowed, not taken as a warp', async ({
+  page,
+}) => {
+  await openGalleryDeepLink(page);
+  await deckSettled(page);
+
+  // THE SWALLOW, ON THE ARM M10 OPENED. The capture-phase listener sits on the VIEWPORT, so it
+  // has always eaten the release-click of every card — but until a flank click MEANT something,
+  // only the centered card's arm could red. A drag that merely ends over a flank is not an
+  // order to warp to it, and this is the row that says so.
+  //
+  // The gesture is inlined rather than routed through `dragDeck`, because it must PRESS on the
+  // flank (that is the whole subject) where the helper presses at the deck's centre. It is
+  // paced from Node at ~10px per ~50ms = 0.2 px/ms, the helper's own settle pace: comfortably
+  // under the composable's 0.45 px/ms flick threshold, and load only slows it further — the one
+  // direction that cannot turn a settle into a flick. 20px is far under the half-slot the
+  // settle needs to step, so the deck must come back to the card it started on.
+  const flank = (await page.locator('#gallery-card-1').boundingBox())!;
+  const x = flank.x + flank.width / 2;
+  const y = flank.y + flank.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let i = 1; i <= 2; i++) {
+    await page.mouse.move(x - 10 * i, y);
+    await page.waitForTimeout(50);
+  }
+  await page.mouse.up();
+
+  await expect(page.locator('.gallery-viewport')).toHaveAttribute(
+    'aria-activedescendant',
+    'gallery-card-0',
+  );
+  await expect(page.locator('.gallery-pip').nth(0)).toHaveClass(/is-inked/);
+  await expect(page.locator('.game-gallery')).toBeVisible();
 });
 
 test('drag: kenken — the LAST card — is reachable by dragging', async ({ page }) => {

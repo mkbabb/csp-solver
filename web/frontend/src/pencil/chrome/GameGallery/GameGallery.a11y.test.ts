@@ -260,6 +260,46 @@ describe("the armed ribbon still resolves — the Wave D contract, under moved f
     w.unmount();
   });
 
+  // T8 M7a — ESC IS THE WINDOW'S, and the ribbon comes first. The deck's other keys are the
+  // listbox's and are bound on the viewport; Escape is bound on the WINDOW, because a way out
+  // that only answers while one element holds focus is not a way out (measured: it was inert
+  // after a click on the staging band, on a pip, or on bare page — four of six ordinary
+  // states). These two rows pin the precedence at the component layer, where "which handler
+  // answered" is checkable: one press retires the ribbon and NOTHING else, the next leaves.
+  it("Esc from OUTSIDE the deck retires the ribbon first — the deck stays", async () => {
+    const w = mountGallery();
+    await arm(w, "Enter");
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await flushPromises();
+    expect(w.find(".gallery-guard").exists()).toBe(false);
+    expect(w.emitted("cancel"), "one press, one level").toBeUndefined();
+    w.unmount();
+  });
+
+  it("…and the next Esc from outside leaves the deck", async () => {
+    const w = mountGallery();
+    await flushPromises();
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await flushPromises();
+    expect(w.emitted("cancel")).toHaveLength(1);
+    w.unmount();
+  });
+
+  it("an unmounted deck no longer answers Escape (the listener dies with it)", async () => {
+    const w = mountGallery();
+    await flushPromises();
+    w.unmount();
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await flushPromises();
+    expect(w.emitted("cancel")).toBeUndefined();
+  });
+
   it("an arrow through the armed ribbon dismisses it, as it did from the listbox", async () => {
     const w = mountGallery();
     await arm(w, "Enter");

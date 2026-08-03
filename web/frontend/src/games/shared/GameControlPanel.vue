@@ -303,9 +303,13 @@ function copyAct(
     stop: () => {
       if (timer) clearTimeout(timer);
     },
-    aria: says("Link copied", "couldn't copy — link is in the address bar", idle.aria),
+    aria: says(
+      "Link copied",
+      "couldn't copy. the link is in the address bar",
+      idle.aria,
+    ),
     sublabel: says("copied!", "in address bar", idle.sublabel),
-    washi: says("copied!", "couldn't copy — link is in the address bar", idle.washi),
+    washi: says("copied!", "couldn't copy. the link is in the address bar", idle.washi),
   };
 }
 
@@ -331,9 +335,15 @@ const inviteAct = copyAct(() => props.shareSession(), {
 // pencil case names its compartments — a strip of tape across a drawn frame, in the hand, lower
 // case, one rank down. The taxonomy is re-cut on the way, which is the design claim rather than
 // the move: candidates ARE pencil marks (the engine's, beside yours), so they file under
-// `pencils`; checking is what the teacher does. That leaves `teacher's` holding exactly one
-// idea — which is what lets it carry a status line about one thing, and why its row needs no
-// caption of its own.
+// `pencils`; grading your work is `checking`. That leaves `checking` holding exactly one idea,
+// which is why its row needs no caption of its own.
+//
+// T8-W6 M16 — THE THIRD TAPE WAS `teacher's`, AND A TEACHER IS A METAPHOR. It named a
+// compartment holding one control, whose three chips choose WHEN mistakes get marked, by
+// invoking a person who is not in the room; the possessive made it a place belonging to her.
+// `checking` is the same compartment said plainly, and it is what the reader is actually
+// choosing. The RED PENCIL stays what it is — a drawing style, not a sentence — so nothing
+// about how a mistake looks is touched here.
 //
 // Each well is a `HandDrawnOutline :pose="0"` — 1.5px inside a card drawn at 3px, subordinate
 // by weight so three wells never read as three cards, frozen at setup so it enrols no beat (a
@@ -346,7 +356,7 @@ const inviteAct = copyAct(() => props.shareSession(), {
 // twin `v-if`), but the ids must be unambiguous either way.
 const newGameId = useId();
 const pencilsId = useId();
-const teachersId = useId();
+const checkingId = useId();
 const playersId = useId();
 // T7-W2 Q-4 — the well's DESCRIPTION, not a second name. The zone hint already says the one
 // thing the tag "players" cannot ("share this board and everyone writes on the same grid"), and
@@ -355,7 +365,7 @@ const playersId = useId();
 const playersHintId = useId();
 // `pencils` holds two controls, so each row is its own `role="group"` named by that row's OWN
 // visible caption — otherwise assistive tech hears two unlabelled Off/On pairs inside one name
-// and cannot tell which is which. `teacher's` holds one, so the tape names it directly.
+// and cannot tell which is which. `checking` holds one, so the tape names it directly.
 const marksId = useId();
 const candidatesId = useId();
 
@@ -567,15 +577,11 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
       :aria-labelledby="newGameId"
     >
       <SheetWashiLabel :id="newGameId" text="new game" :seed="13" anchor="tag" />
-      <!-- T6 mark 4 — the tape says WHAT the compartment is; this second tape, revealed on
-           hover or on tabbing in, says what it DOES. Default anchor, so it inherits the
-           decorative tape's `aria-hidden` and stays out of every name census. -->
-      <SheetWashiLabel
-        class="zone-hint"
-        text="these settings wait here — the board only changes when you deal"
-        :seed="17"
-        wide
-      />
+      <!-- T8-W6 M16 — THIS ZONE'S HINT IS DELETED. It read "these settings wait here — the
+           board only changes when you deal": the banned character, a personified contrivance
+           ("settings wait"), and a sentence whose whole content is a narration of what the
+           Deal button beside it does. The compartment is named, the verb is named, and the
+           chips are provisional by placement — which is the arrangement that says it. -->
       <div class="control-panel-filtered">
         <!-- The mobile tab-toggle — renders ONLY at n ≥ 2 sections (each tab is a section head;
              a single-section game shows a plain heading below instead of a dead tab). It STAYS:
@@ -705,8 +711,8 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
       role="separator"
       :aria-label="
         portraitDock
-          ? 'New-game settings above, play tools below'
-          : 'New-game settings above, play tools below — press and hold, or press K, to see the answer key'
+          ? 'New game settings above, play tools below'
+          : 'New game settings above, play tools below. Press and hold, or press K, to see the answer key'
       "
       @pointerdown="onDividerHoldStart($event)"
       @pointermove="onDividerHoldMove($event)"
@@ -753,7 +759,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
         <span :id="marksId" class="zone-row-label">marks</span>
         <SheetWashiLabel
           class="zone-hint"
-          text="normal writes a digit — corner and center write small pencil marks"
+          text="normal writes a digit. corner and center write small pencil marks"
           :seed="31"
           wide
         />
@@ -774,7 +780,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
         <span :id="candidatesId" class="zone-row-label">candidates</span>
         <SheetWashiLabel
           class="zone-hint"
-          text="show every digit still legal in a cell"
+          text="show every digit that still fits in a cell"
           :seed="41"
           wide
         />
@@ -795,9 +801,9 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
       :radius="3"
       :pose="0"
       role="group"
-      :aria-labelledby="teachersId"
+      :aria-labelledby="checkingId"
     >
-      <SheetWashiLabel :id="teachersId" text="teacher's" :seed="59" anchor="tag" />
+      <SheetWashiLabel :id="checkingId" text="checking" :seed="59" anchor="tag" />
       <SheetWashiLabel
         class="zone-hint"
         text="when your mistakes get checked"
@@ -805,7 +811,8 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
         wide
       />
       <!-- One idea in the compartment, so the tape is the whole of its name — no row caption
-           to duplicate it. The status line below says whether she is marking right now. -->
+           to duplicate it. (The status line that used to sit under these chips died at W1-M3;
+           every branch of it restated the chip beside it.) -->
       <OptionSelector
         :options="CHECK_OPTIONS"
         :selected="errorCheckMode"
@@ -818,7 +825,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
     <!-- T6 mark 13 — THE PLAYERS COMPARTMENT. A fourth well on the zone grammar exactly as
          written (`:pose="0"` outline + a tag washi that IS its accessible name), so it appears
          in the desktop rail AND inside the portrait drawer with no second implementation. It
-         holds one idea, so like `teacher's` it needs no row caption.
+         holds one idea, so like `checking` it needs no row caption.
          Alone: one verb. In a session: who is here, in the colour their digits are written in.
          The trust model is stated rather than implied — the link IS the whole capability, so
          the well says so where the link is made. -->
@@ -977,7 +984,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
           <span class="icon-sublabel" aria-hidden="true">Fill</span>
           <SheetWashiLabel
             v-if="!mobile"
-            text="ink the cells that have only one digit left"
+            text="fill the cells that have only one digit left"
             :seed="43"
             wide
           />
@@ -998,7 +1005,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
           <span class="icon-sublabel" aria-hidden="true">Solve</span>
           <SheetWashiLabel
             v-if="!mobile"
-            text="let the solver finish the board"
+            text="the solver finishes the board"
             :seed="37"
             wide
           />
@@ -1882,11 +1889,27 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
 
 /* T8-W1 (agent C's M5 census, R2) — THE TABS ANSWER THE POINTER. The staged tab heads are the
    card's largest interactive text and they had exactly one state to read: the underline on the
-   ACTIVE one. Pointing at an inactive tab did nothing, which on a row of two or three reads as
-   "this one is not a control". The lift is the estate's own — muted ink to foreground, the
-   `.icon-btn` / `.ctrl-btn` grammar — and it lands on the heading rather than the button so it
-   is the WORD that answers, which is what the reader is pointing at. The active head is already
-   at foreground, so it cannot double-report. */
+   ACTIVE one. Pointing at a tab did nothing, which on a row of two or three reads as "this one
+   is not a control". The lift is the estate's own — muted ink to foreground, the `.icon-btn` /
+   `.ctrl-btn` grammar — and it lands on the heading rather than the button so it is the WORD
+   that answers, which is what the reader is pointing at.
+
+   MEASURED, both engines, at 820×1000 (the mobile arm on a pointer that can hover):
+     · `Size` [active]   rgb(168,166,159) → rgb(237,236,233)
+     · `Difficulty`      rgb(61,217,104)  → rgb(237,236,233)
+   Two facts that reading alone would have got wrong, so they are written down rather than
+   assumed. FIRST: the active head lifts too — it wears `text-muted-foreground` like its
+   sibling and is distinguished by its UNDERLINE, not by its ink, so there is no
+   already-at-foreground state and no double-report either way. SECOND: the difficulty head
+   carries the selected tier's crayon, and the lift overrides it for the duration of the hover
+   — flagged to the M5 census rather than special-cased here, because the chips one rung down
+   answer the same problem differently (their underline redraws precisely BECAUSE their ink
+   cannot lift) and which of the two grammars the crayon-tinted heading takes is that census's
+   ruling to make, not this file's.
+
+   The fence is load-bearing and it was witnessed: under `isMobile`/`hasTouch` emulation
+   `(hover: hover)` resolves FALSE and neither head moves, which is the rule doing its job on a
+   thumb rather than the rule failing. */
 @media (hover: hover) {
   .mobile-heading-btn:hover .section-heading {
     color: var(--color-foreground);

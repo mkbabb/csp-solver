@@ -217,10 +217,13 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
     // it is not a grammar, so the feature's well is the fourth of its family, not a fourth
     // thing beside three of them.
     expect(wells).toHaveLength(4);
+    // T8-W6 M16 — the third tape reads `checking`, not `teacher's`. A teacher is a metaphor,
+    // and the possessive made a compartment belong to a person who is not in the room; the
+    // control chooses when your work gets checked, so that is what the tape says.
     expect(w.findAll(".washi-tag").map((t) => t.text())).toEqual([
       "new game",
       "pencils",
-      "teacher's",
+      "checking",
       "players",
     ]);
     for (const well of wells) {
@@ -347,11 +350,16 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
   // ("how your marks are written — and whether the solver shows its candidates"), which is a
   // tape that says the two names it sits above rather than what they mean. Its two ROW tapes
   // stay — they explain the chips, which is the office the family was minted for.
-  it("five hint tapes ride beside the names, and none of them is a name", () => {
+  // T8-W6 M16: FOUR. The `new game` well's tape ("these settings wait here — the board only
+  // changes when you deal") went with it: the banned character, a personified contrivance, and
+  // a sentence whose whole content narrates the button beside it. The survivors are asserted
+  // clean of the character here, which is the half of the law a composition test can hold.
+  it("four hint tapes ride beside the names, none of them a name, none of them dashed", () => {
     const w = mountPanel({ mobile: false });
     const hints = w.findAll(".zone-hint");
-    expect(hints).toHaveLength(5);
+    expect(hints).toHaveLength(4);
     for (const h of hints) {
+      expect(h.text()).not.toMatch(/[—–]/);
       // The decorative-tape contract (SheetWashiLabel, default anchor): out of the AX tree,
       // no tooltip role, and not a `.washi-tag` — so the three-tape census cannot see it.
       expect(h.attributes("aria-hidden")).toBe("true");
@@ -365,10 +373,10 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
   // the defect it guards against is the line coming BACK, which is what a bare removal cannot
   // say. Every branch it rendered restated the chip selected two lines above it, and the owner
   // named the stale one ("board changed — ask again") by name.
-  it("the teacher's well says one thing: its chips", () => {
+  it("the checking well says one thing: its chips", () => {
     const w = mountPanel();
     expect(w.find(".check-status").exists()).toBe(false);
-    const well = w.findAll(".tray-well").find((t) => t.text().includes("teacher's"))!;
+    const well = w.findAll(".tray-well").find((t) => t.text().includes("checking"))!;
     expect(well.findAll(".ctrl-btn").map((b) => b.text())).toEqual([
       "Off",
       "Ask",

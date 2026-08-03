@@ -66,6 +66,10 @@ const props = defineProps<{
 const emit = defineEmits<{
   /** The centered card was chosen by pointer (click / tap). The gallery gates the guard. */
   (e: "select"): void;
+  /** A FLANK was clicked (T8 M10) — the deck warps to it. Never a choice of the game: the
+   *  gallery routes this through the same `go()` a keyboard step rides, so the glass curve,
+   *  the `@snap` seam, aria-activedescendant and the live region all follow one path. */
+  (e: "warp"): void;
   /** The live-face mount element (or null when this card stops being live) — the gallery
    *  relays it to App, which teleports the ONE board's subtree into it. A bare DOM element
    *  crosses UP; pencil imports nothing from games (the boundary holds). */
@@ -111,8 +115,17 @@ const bloom = ref(0);
 /** 0→1 over the chime — the left-to-right reveal of the scribble underline (a real draw-in). */
 const draw = ref(0);
 
+/** THE BLOOM NEVER RIDES A LIVE FACE (T8 M7b). The wobble is a scale on the FRAME, and the
+ *  live board is teleported INSIDE that frame — so on every entry the 3.5% bloom multiplied the
+ *  board's own 520ms fold and the fold's measured landing pose was a moving target. Measured at
+ *  1280×900: the face slot travelled 304.0 → 314.7px and back while the board was folding into
+ *  it, so the board settled, then rubber-banded 3.5% after the curve had finished. The chime's
+ *  OTHER half — the underline drawing in under the name — is a clip on an 8px strip and touches
+ *  no ancestor of the board, so it plays exactly as before. One card carries the live board and
+ *  it is the one card whose entrance is already animated; the bloom belongs to the four that
+ *  aren't. */
 const frameStyle = computed(() => ({
-  transform: `scale(${1 + bloom.value * 0.035})`,
+  transform: `scale(${1 + (props.live ? 0 : bloom.value) * 0.035})`,
 }));
 const underlineStyle = computed(() => ({
   "--draw": String(draw.value),
@@ -181,13 +194,31 @@ watch(reducedMotion, (reduced) => {
 
 onUnmounted(stopChime);
 
-// Click-to-select (Wave D): the centered card is chosen on click (mouse/touch tap after a
-// swipe-to-center). THIS guard is the whole suppression — a flank's internals are inert (not
+// Click-to-select (Wave D) + CLICK-TO-WARP (T8 M10). A flank's internals are inert (not
 // hit-testable, so the click resolves on the live root), and the root is deliberately live so
-// the option stays in the accessibility tree. While the guard ribbon is armed the ribbon owns
-// the interaction — a body click does nothing.
+// the option stays in the accessibility tree — which is what makes a flank click reachable at
+// all. Two acts on one gesture, keyed by position, and the position is the whole rule:
+//
+//   · centered  → SELECT. Unchanged, byte for byte: this is the choice of a game.
+//   · a flank   → WARP. Wave D refused it by design ("you select the centered card"), and the
+//                 owner reverses that: pointing at a card is an order to bring it to the middle,
+//                 not a null gesture. It is never a select — the deck glides, the card that
+//                 arrives is then the one a second click chooses.
+//
+// The drag swallow is untouched and still binds: `useCarouselGlide`'s capture-phase listener
+// sits on the VIEWPORT, an ancestor of every card, so a release that ends over a FLANK is eaten
+// before this handler is ever reached. A drag is not a warp order, and never becomes one.
+//
+// While the guard ribbon is armed the ribbon owns the centered card (`guard` is only ever true
+// there). A flank click routes through the gallery's `go()`, which dismisses the ribbon and
+// moves — the same rule an ArrowRight has held since Wave D, on the gesture that means the same
+// thing.
 function onCardClick() {
-  if (props.isActive && !props.guard) emit("select");
+  if (!props.isActive) {
+    emit("warp");
+    return;
+  }
+  if (!props.guard) emit("select");
 }
 
 // ── THE LIVE CENTER FACE (Wave C2) ──
@@ -344,12 +375,32 @@ const dealStyle = computed(() => {
   transform-origin: center center;
 }
 
-/* Fine-pointer only: the centered card reads as pressable (click-to-select). Coarse pointers
-   get NO hover state (the gallery's `is-coarse` guard + this media query — the pencil-pure
-   realization of §10's "no hover states (coarse pointer)"). */
+/* Fine-pointer only: a card reads as pressable. Coarse pointers get NO hover state (the
+   gallery's `is-coarse` guard + this media query — the pencil-pure realization of §10's "no
+   hover states (coarse pointer)").
+   T8 M10: the FLANKS carry it too, because they answer a click now (they warp to center). The
+   deck's own `cursor: grab` still owns the air between the cards, so the two affordances stay
+   legible — grab the spread, point at a card. */
 @media (hover: hover) and (pointer: fine) {
-  .game-gallery:not(.is-coarse) .game-card.is-center {
+  .game-gallery:not(.is-coarse) .game-card {
     cursor: pointer;
+  }
+
+  /* THE INK LIFT (T8 M5, agent C's boil census — R2 in this fence). A card's words are the
+     label of a control and said nothing when pointed at.
+     IT LANDS ON THE SUB-LINE ALONE, and that is a correction to the prescription rather than a
+     narrowing of it: the name is already full-strength ink (`.game-card-name` declares
+     `color: var(--color-foreground)` and `.card-wordmark` fills with `currentColor`), so a
+     `fill: var(--color-foreground)` there computes to the value it already had — a declaration
+     that says "hover" and paints nothing. The muted register on this card is the range line,
+     and lifting muted → foreground is the estate's ink-lift exactly.
+     EVERY card carries it, not just the centered one, and that is M10's doing: a flank answers
+     a click now (it warps), so a flank is a control and has to say so. What still separates
+     them is the DEPTH grammar, which is the right channel for it — a flank rests at scale 0.9
+     and opacity 0.62 and stays there while its ink lifts, so the hover reads as "this one
+     answers" without ever reading as "this one is live". */
+  .game-gallery:not(.is-coarse) .game-card:hover .game-card-range {
+    color: var(--color-foreground);
   }
 }
 
@@ -430,6 +481,7 @@ const dealStyle = computed(() => {
   line-height: 1.1;
   color: var(--color-muted-foreground);
   letter-spacing: 0.01em;
+  transition: color 150ms var(--ease-standard);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -440,6 +492,10 @@ const dealStyle = computed(() => {
   }
   .game-card.is-chiming .game-card-frame {
     will-change: auto;
+  }
+  /* The hover lift lands, it just doesn't travel. */
+  .game-card-range {
+    transition: none;
   }
 }
 </style>

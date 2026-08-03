@@ -81,6 +81,24 @@ describe("GameCard — the click gate root-inert used to provide", () => {
     expect(w.emitted("select")).toBeUndefined();
   });
 
+  // T8 M10 — the gate is a gate, and what passes through it CHANGED. A flank click was a null
+  // gesture by design ("you select the centered card"); the owner reverses that, so the same
+  // click that must never SELECT now has to WARP. The row above keeps the half that still
+  // holds; this one states the half that replaces the silence, and the two together are the
+  // whole law — a flank click emits exactly one verb, and it is not `select`.
+  it("a flank click warps the deck to it instead — one verb, and never `select`", async () => {
+    const w = mountCard(false);
+    await w.get('[role="option"]').trigger("click");
+    expect(w.emitted("warp")).toHaveLength(1);
+    expect(w.emitted("select")).toBeUndefined();
+  });
+
+  it("the centered card warps nowhere — it is already there", async () => {
+    const w = mountCard(true);
+    await w.get('[role="option"]').trigger("click");
+    expect(w.emitted("warp")).toBeUndefined();
+  });
+
   it("a centered card under an armed guard cannot be selected by pointer", async () => {
     const w = mountCard(true, { guard: true });
     await w.get('[role="option"]').trigger("click");
