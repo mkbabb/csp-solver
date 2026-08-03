@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// NOT-A-LANE: it ran inside the e2e job's built-dist steps, and the browser-executing CI lanes were removed on the owner's ruling of 2026-08-03 — the golden estate is a local instrument now, this cap enforced beside it at mint time; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
 // T4-W2 — the golden bloat guard (FAM-15 / EVIDENCE-POLICY B1).
 // T5-W1.13 — hardened per r3/goldens-estate: the guard now polices the failure modes
 // that HAVE occurred, not only the one that never has.

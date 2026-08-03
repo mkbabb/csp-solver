@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// NOT-A-LANE: the browser-executing CI lanes (e2e, e2e-webkit, perf-subset) were removed on the owner's ruling of 2026-08-03 — the Playwright suites are local instruments now and this project-matrix lint rides them locally via `npm run test:e2e:projects`; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
 // T5-W1 row 1.10 (CH-56) — the Playwright project-matrix lint.
 //
 // CH-56 is the estate's last single-engine residue, and the thing that made it survivable for a

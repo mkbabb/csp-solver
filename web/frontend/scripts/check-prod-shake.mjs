@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// NOT-A-LANE: it ran inside the e2e job's built-dist steps, and the browser-executing CI lanes were removed on the owner's ruling of 2026-08-03 — it rides the local built-dist pass before any deploy instead; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
 // T4-W4 — the prod-shake proof (FAM-5).
 //
 // FilterTuner.vue / rafInstrumentation.ts (src/pencil/dev/) are NOT dead — they

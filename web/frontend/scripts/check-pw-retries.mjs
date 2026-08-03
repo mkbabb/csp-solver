@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// NOT-A-LANE: the browser-executing CI lanes were removed on the owner's ruling of 2026-08-03 — the Playwright suites are local instruments now and this retries-policy lint rides them locally via `npm run test:e2e:retries`; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
 /**
  * check-pw-retries.mjs — T5-W1 1.6. THE RETRIES POLICY, enforced rather than written down.
  *

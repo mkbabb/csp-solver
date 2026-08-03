@@ -21,13 +21,16 @@
 # error-level, and re-cut the flat fan-out into a compute-cost DAG; T4-W5 added
 # the cargo-audit advisory tripwire; T5-W1 added lanes 12-18, every one of them a
 # gate the audit found absent, unwired, or scope-narrowed; T7-W3 split webkit out
-# of the e2e job into ×3 single-worker shards — burst-forensics.md §6, option B) —
-# the lane set rides NINETEEN jobs (the rust job carries lanes 2 + 3):
+# of the e2e job into ×3 single-worker shards; T7-WGATE removed the browser-executing
+# lanes outright on the owner's ruling (2026-08-03, DISPOSITIONS O-12): e2e,
+# e2e-webkit, and perf-subset are gone from CI — the Playwright suites stay in-repo
+# as local instruments, and deployment validation is visual, on the live site —
+# the lane set rides SIXTEEN jobs (the rust job carries lanes 2 + 3):
 #   0.  build-lean-wasm    -> build-lean-wasm (the SHIP lean artifact built ONCE,
 #                                         uploaded as `lean-wasm-pkg`; frontend +
-#                                         e2e + twiggy(lean half) `needs:` it and
+#                                         twiggy(lean half) `needs:` it and
 #                                         download — kills 2 redundant lean builds
-#                                         + the Rust toolchain in frontend/e2e)
+#                                         + the Rust toolchain in frontend)
 #   1.  fmt + clippy       -> lint       (clippy -D warnings, strict, no continue-on-error;
 #       + the inline-test law             + T7-W6's inline-test law — no test attribute
 #                                         under any member's src/, self-tested)
@@ -45,14 +48,6 @@
 #                                         half downloads the shared ship artifact)
 #   8.  frontend           -> frontend   (download lean pkg; npm ci --dry-run; npm ci;
 #                                         vue-tsc --noEmit; eslint boundary rig; knip)
-#   9.  e2e                -> e2e        (download lean pkg -> Playwright over the Vue SPA,
-#                                         CHROMIUM project only since T7-W3 + the
-#                                         built-dist gates; webkit rides its own job)
-#   9b. e2e webkit         -> e2e-webkit (T7-W3 sharding option B: the webkit project
-#                                         alone, ×3 shards, workers:1 — the wandering
-#                                         deadline family is contention-amplified and
-#                                         engine-localized, so webkit gets an
-#                                         uncontended browser per runner)
 #   10. iai                -> iai        (callgrind deterministic instruction-count baseline)
 #   11. cargo-audit        -> cargo-audit(RustSec advisory scan over Cargo.lock; independent, no needs:)
 #   12. FE unit estate     -> fe-unit    (T5-W1.1/1.14: vitest run + the >=300 executed
@@ -61,8 +56,6 @@
 #   13. boundary law       -> boundary   (T5-W1.4: the generated 20/20 cross-game matrix,
 #                                         GREEN since T5-W2 2.5; carries the generator's
 #                                         vacuity canary, which `eslint .` cannot)
-#   14. perf subset        -> perf-subset(T5-W1.2: the P1 patch's gates.json idle
-#                                         thresholds, executed on the built dist)
 #   15. wasm resolution    -> wasm-publish-dryrun
 #                                        (T5-W1.12: the pkg exports contract + a
 #                                         no-token `npm publish --dry-run`)
@@ -77,8 +70,8 @@
 # Compute-cost DAG (T4-W2, r4-corrected — a `needs:` saves redundant CI minutes,
 # NOT wall-time; a predecessor serializes onto each dependent's critical path, so
 # edges are added ONLY where they kill redundant compute without lengthening the
-# critical path): build-lean-wasm ← {frontend, e2e, e2e-webkit, twiggy, fe-unit,
-# boundary, perf-subset, wasm-publish-dryrun, doc-truth}. The five T5-W1 additions take that
+# critical path): build-lean-wasm ← {frontend, twiggy, fe-unit,
+# boundary, wasm-publish-dryrun, doc-truth}. The five T5-W1 additions take that
 # edge for one reason only: web/frontend/package.json file:-links
 # @mkbabb/csp-solver-wasm to csp-solver/wasm/pkg, so `npm ci` cannot resolve the
 # lockfile until that directory exists — they DOWNLOAD the shared artifact rather
@@ -424,7 +417,7 @@ jobs:
               run: wasm-pack build csp-solver/wasm --scope mkbabb --target web --profile wasm-release --no-default-features
             # T5-W1 row 1.12 (audit I3/N2). `make wasm` runs this postprocess; this
             # lane calls wasm-pack DIRECTLY and then uploads pkg/ as the artifact
-            # frontend, e2e, twiggy, fe-unit, boundary, perf-subset, doc-truth and
+            # frontend, twiggy, fe-unit, boundary, doc-truth and
             # wasm-publish-dryrun all download. Without it CI's artifact would carry a
             # DIFFERENT resolution contract than the one `npm run build` mints locally,
             # and every downstream lane would be testing the wrong package. Node is not
@@ -435,7 +428,7 @@ jobs:
                   node-version: '24'
             - name: Stamp the pkg exports map (the generator owns the resolution contract)
               run: node csp-solver/wasm/scripts/pkg-exports.mjs --write
-            - name: Upload the lean wasm pkg (shared by frontend + e2e + twiggy)
+            - name: Upload the lean wasm pkg (shared by frontend + twiggy)
               uses: actions/upload-artifact@v4
               with:
                   name: lean-wasm-pkg
@@ -578,7 +571,7 @@ jobs:
         needs: [build-lean-wasm]
         steps:
             - uses: actions/checkout@v4
-            - name: Download the lean wasm pkg (the exact artifact frontend + e2e consume)
+            - name: Download the lean wasm pkg (the exact artifact frontend consumes)
               uses: actions/download-artifact@v4
               with:
                   name: lean-wasm-pkg
@@ -1056,532 +1049,6 @@ jobs:
             - name: eslint (cross-game boundary law, generated matrix)
               working-directory: web/frontend
               run: npm run lint:boundary
-
-    # ---------------------------------------------------------------- Lane 9
-    # e2e — Playwright over the Vue SPA (ratification R6). Node-only after the
-    # T4-W2 compute-cost DAG: it `needs:` build-lean-wasm and DOWNLOADS the lean
-    # @mkbabb/csp-solver-wasm pkg (the file: link target) rather than rebuilding it
-    # — no Rust toolchain / wasm-pack / cargo cache here. It still pins npm >=11
-    # (older Node's npm 10 mis-resolves the lockfile). playwright.config.ts's
-    # webServer block spins `npm run dev` on :3000 for the run. The chromium
-    # browser bundle is cached (keyed on the resolved Playwright version from the
-    # lockfile) to keep CI-minutes cost down; the HTML report uploads on failure.
-    e2e:
-        runs-on: ubuntu-latest
-        timeout-minutes: 25
-        needs: [build-lean-wasm]
-        steps:
-            - uses: actions/checkout@v4
-            - name: Download the lean wasm pkg (the package.json file-link target)
-              uses: actions/download-artifact@v4
-              with:
-                  name: lean-wasm-pkg
-                  path: csp-solver/wasm/pkg
-            - name: Set up Node (LTS) with npm cache
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '24'
-                  cache: npm
-                  cache-dependency-path: web/frontend/package-lock.json
-            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
-            # mis-resolves the lockfile.
-            - name: Pin npm >=11
-              run: npm install -g npm@^11
-            - name: npm ci
-              working-directory: web/frontend
-              run: npm ci
-            # T5-W1 row 1.10 (CH-56). `playwright test --list` only: no browser, no
-            # dist, seconds — so it belongs UPSTREAM of the ~4-minute browser install.
-            # A narrowed matrix is exactly the defect that makes the suite finish
-            # faster and greener, so the gate that catches it must not be paid for
-            # with the suite's own runtime. Five checks: the 9 (project, engine) pairs
-            # across the 3 configs · all 20 specs claimed by exactly one config · every
-            # spec on both engines unless HOLDOUTS says why · the 4 holdouts a closed,
-            # cited set · per-project count floors. --self-test re-runs each check
-            # against a known-bad matrix every run.
-            - name: 'Playwright project matrix (CH-56 — no silent single-engine narrowing)'
-              working-directory: web/frontend
-              run: npm run test:e2e:projects
-            # T5-W1 row 1.6 (B1 NARROWED). Reads the three Playwright configs through
-            # their own defineConfig export, not by regex over the source — a comment
-            # cannot satisfy it and a reformat cannot break it. Four checks: a config
-            # granting any retry must declare failOnFlakyTests: true · every non-zero
-            # retry is a NAMED grant carrying its class and reason · wordmark-webkit
-            # stays at retries 0 (that grant died with the linux vacuity yield this row
-            # hoisted the clip assertion out of) · failOnFlakyTests: false is never
-            # hand-declared. Run 30690204551 is why: wordmark-webkit's sudoku row red
-            # on attempt 1, green on attempt 2, reported flaky, lane exit 0.
-            #
-            # The SUITE half of row 1.6 — the hoisted edge-clip verdict and the 5/5
-            # theme-bake guard — rides the existing built-dist step below with no CI
-            # change: same job, same config, same preview, 23 tests -> 39.
-            - name: 'Playwright retries policy (1.6 — a retried pass never greens a lane)'
-              working-directory: web/frontend
-              run: npm run test:e2e:retries
-            # Key the browser cache on the resolved Playwright version so a bump
-            # invalidates it (the on-disk bundle layout is version-specific).
-            - name: Resolve Playwright version (from the lockfile)
-              id: pw-version
-              working-directory: web/frontend
-              run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-            - name: Cache Playwright browser bundle
-              id: pw-cache
-              uses: actions/cache@v4
-              with:
-                  path: ~/.cache/ms-playwright
-                  key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
-            # webkit too: P1 G3.4 (wordmark integrity) asserts in WebKit by construction — mark
-            # 4's opsz and bake-intrinsic defects do not reproduce in Chromium.
-            - name: "Install Playwright chromium + webkit (+ deps)"
-              working-directory: web/frontend
-              run: npx playwright install --with-deps chromium webkit
-            # T7-W3 sharding (burst-forensics.md §6, option B): this job runs CHROMIUM
-            # only (0 reds in 1,131 executed rows — workers:2 stays); webkit moved to
-            # the e2e-webkit job below, ×3 shards at workers:1, driving webkit
-            # contention-seconds 762 → 0. The falsifiable read-out is banked: the seven
-            # deadline-family rows go to zero under this shape or contention is refuted.
-            - name: "Run the Playwright e2e suite (chromium)"
-              working-directory: web/frontend
-              run: npx playwright test --project=chromium
-            # T7-W3 (forensics §5): the default suite banked NO report on any red run —
-            # playwright.config.ts now emits e2e-report.json in CI; upload it while the
-            # failure is fresh, before the built-dist gates overwrite the context.
-            - name: Upload the default-suite report (failure only)
-              if: failure()
-              uses: actions/upload-artifact@v4
-              with:
-                  name: e2e-chromium-report
-                  path: web/frontend/e2e-report.json
-                  if-no-files-found: ignore
-            # T4-W2 golden gate — the capture/compare/review system (visual-golden.spec.ts
-            # vs committed e2e/goldens/*-linux.png crops) + the per-image byte ceiling.
-            # Runs in this job to reuse the checkout/node_modules/chromium bundle
-            # (compute-cost DAG: no redundant setup for a 4-test suite).
-            # `if: !cancelled()` (T7-W3, forensics §5): these built-dist gates used to be
-            # skipped on any default-suite red — un-run exactly when the estate is
-            # unstable. They assert a different artifact (the built dist) and must speak
-            # regardless of the dev-suite verdict; the job still fails on the suite red.
-            - name: "Run the visual golden gate"
-              if: ${{ !cancelled() }}
-              working-directory: web/frontend
-              run: npx playwright test --config playwright-golden.config.ts
-            # T5-W1.13, the BLIND BAND cure. darwin soul floor 0.017 < the observed
-            # drift 0.03 < the linux coarse floor 0.05 — and ubuntu is the only
-            # platform CI runs, so both clause-relaxed goldens (logo-light,
-            # toggle-crest-dark) are green AND SILENT here: Playwright prints
-            # "N pixels (ratio R)" only when an assertion FAILS, so a green run bans
-            # its own measurement and seventeen consecutive linux greens said nothing
-            # about a 0.03 drift. The cure is VISIBILITY, not a floor change — the
-            # sun-crest clause keeps its authority and 0.05 stands.
-            #
-            # NOT A GATE: it enforces no floor, mints no baseline, adds no engine.
-            # GOLDEN_MAGNITUDE=1 asserts both goldens at ratio 0 — strictly TIGHTER
-            # than the shipped floors, so report mode cannot manufacture a green. It
-            # exits non-zero for exactly one reason: the instrument produced no
-            # measurement. Grep the log for `[golden-magnitude] JSON {…}`; the ratio
-            # is recomputed from the baseline's IHDR geometry because Playwright CEILS
-            # its printed ratio to 2dp (643 px of 220x220 is 0.0133 and prints "0.02").
-            - name: "Magnitude report — the two clause-relaxed goldens (report only, no floor changes)"
-              if: ${{ !cancelled() }}
-              timeout-minutes: 6
-              working-directory: web/frontend
-              run: node scripts/golden-magnitude.mjs
-            # T5-W1.13. The step's NAME changed with its script: check-golden-bytes.mjs
-            # grew from one rule to eight — per-image ceiling · ESTATE TOTAL (110 KB,
-            # derived from the estate's own mint history, summed since T4 and never
-            # gated until now) · fossils (any *.png under e2e/ outside e2e/goldens) ·
-            # decode + blank floor · pairing/orphans/missing baselines · the
-            # engine/template collision guard. A red has to read as what it is.
-            #
-            # T7-W6 adds the last two. COUNT PIN — exactly 8 goldens on disk, an EQUALITY, so
-            # a ninth is a ruling by construction instead of by arithmetic that must be
-            # re-derived at every reviewed crop-tighten; that re-derivation IS the drift
-            # mechanism, since the band was cut against a 101,341 B total that reads 92.5 KB
-            # today and a ninth AND tenth simply fit inside the ~18 KB of unearned room. The
-            # byte band is demoted to the SECONDARY control — it still answers the question
-            # the count cannot, whether the eight are ballooning. ESTATE PRESENT — a wiped
-            # goldens dir used to exit 0 on "nothing to police"; it reds now whenever specs
-            # assert goldens and zero baselines are on disk. Both ablation-proven, with the
-            # unperturbed estate as the control (evidence/w6/golden-estate-ablation.txt).
-            #
-            # `if: ${{ !cancelled() }}` is the one behavioural addition: this step used
-            # to be skipped whenever the golden COMPARE red, which made the estate
-            # check hostage to a flake in a different gate. An orphaned or unpaired
-            # golden is exactly the defect that arrives WITH a red compare.
-            - name: "Golden estate gate — count pin, bytes, total, fossils, decode, pairing"
-              if: ${{ !cancelled() }}
-              working-directory: web/frontend
-              run: npm run test:golden:bytes
-            # T5-W1.13 — the gate that proves the gate. GOLDEN_DELTA=black|invert is
-            # the visual-golden machinery's own acceptance test: it injects a
-            # deliberate, reproducible regression so the capture-compare can be PROVEN
-            # to bite. It lived in the spec and in prose and in NO CI step, and a
-            # compare that has silently stopped comparing looks exactly like a compare
-            # that is passing (gate-soundness.md:114).
-            #
-            # GRADED ON WHY EACH ARM RED, NOT ON THE EXIT BIT. This step used to invert
-            # playwright's own exit code — red when the run SUCCEEDED — and an arm that
-            # reds for its OWN reasons is the same vacuous green in a louder costume: the
-            # `invert` arm red at `toHaveClass(/dark/)`, its own postcondition, three lines
-            # before any screenshot was taken, and a postcondition red and a compare red
-            # exit identically. `scripts/golden-selfdelta.mjs` runs both arms with
-            # `--reporter=json` and grades the claim as written — EVERY golden must red, and
-            # every red must carry a `toHaveScreenshot` message. Anything else is a setup
-            # error (exit 1); no JSON at all is an instrument failure (exit 2). The ARM was
-            # fixed too, never the grading: the `invert` delta reads the theme BEFORE the
-            # click and settles on the flip wherever it lands
-            # (evidence/w6/selfdelta-invert-ablation.txt).
-            #
-            # Both arms run because they fail differently — `black` proves the RASTER
-            # path compares, `invert` proves the THEME path does. Neither writes a
-            # baseline. It runs LAST of the golden steps because it perturbs the app,
-            # so it must not precede a measuring step.
-            - name: "Self-delta — prove the golden compare still bites (both arms)"
-              if: ${{ !cancelled() }}
-              timeout-minutes: 6
-              working-directory: web/frontend
-              run: node scripts/golden-selfdelta.mjs
-            # BUILT-DIST gates — three projects on ONE bundled preview build
-            # (playwright-throttle.config.ts, port 4188), all testIgnored from the default
-            # config so they must run explicitly or they go dark:
-            #   · throttled-void — the T4-W2 D3 recovery probe.
-            #   · filter-census  — P1 G3.1/G3.2, the live-filter budget
-            #     (src/pencil/config/filterBudget.ts) enforced as an EXACT-MATCH allowlist
-            #     against the artifact that deploys, plus the forwards/both fill census.
-            #     A new filter surface reds here even when an old one retires.
-            #   · wordmark-integrity — P1 G3.4, in WEBKIT: the five wordmarks' baked ink inside
-            #     its own box, and zero Georgia-fallback glyphs. Both defects are WebKit's, so
-            #     this project pins `browserName: webkit` and the job installs that bundle too.
-            #     ON THIS RUNNER, count it honestly: `e2e/linux-webkit-bake-quarantine.ts`
-            #     `test.fixme`s the five per-game rows on ubuntu·webkit (CH-62, THIRD PINNING),
-            #     so 1 of the 6 asserts here — the zero-fallback-glyph row. The other five are
-            #     live on darwin and nowhere in CI. T7-W6 subtracts declared quarantines from
-            #     the count floors at their DECLARED platform (check-pw-projects.mjs), so a
-            #     parked row is no longer counted as coverage: wordmark-webkit's live floor is
-            #     1, and theme-bake-webkit's is 0 — all 10 of its rows are parked, which makes
-            #     that project a name rather than a gate on the only platform CI runs.
-            - name: "Run the built-dist gates (throttled-void + filter census + wordmark)"
-              if: ${{ !cancelled() }}
-              working-directory: web/frontend
-              run: npm run test:e2e:throttle
-            # T4-W4 prod-shake proof (FAM-5): the DEV-gated FilterTuner /
-            # rafInstrumentation / __schedulerDebug (T7-W6: the third symbol read
-            # `schedulerDebugInfo` until this wave — a LOCAL binding esbuild renames to one
-            # letter, so the literal could never appear in a bundle, leaked or not; the
-            # global the probe writes on `window` is the one minification must keep) must be
-            # tree-shaken out of the shipped bundle. Note the reach: identifier-substring
-            # policing of a minified bundle only catches what minification has a REASON to
-            # keep — property names, string literals, and the chunk file names vite derives
-            # from a dynamically-imported module. Reuses dist-throttle/ (the bundled
-            # production build the throttle gate just produced) — compute-cost DAG, no
-            # redundant build.
-            - name: "Prod-shake proof (dev tuner absent from the bundle)"
-              if: ${{ !cancelled() }}
-              working-directory: web/frontend
-              run: npm run test:prod-shake -- dist-throttle
-            # T7-W1 gate 1.1, the BUILT-CSS arm. The src census (the static-lint lane) can
-            # read green while a dead selector still ships — a stale chunk, a vendored
-            # stylesheet, or an unrebuilt dist all land only here, and W1's acceptance is
-            # written about the BUILT CSS. Reuses dist-throttle/, the production build the
-            # throttle gate just produced, per prod-shake's idiom above; the arm REFUSES
-            # (exit 2) rather than greening when the dist is absent. Born RED at cbf2ab49 on
-            # the two chunks that carry the dead blocks (evidence/w1/gate1.1-dist-arm.txt).
-            - name: "theme-selector census (built CSS: no dead selector survives the build)"
-              if: ${{ !cancelled() }}
-              working-directory: web/frontend
-              run: npm run lint:theme-selectors -- --dist dist-throttle
-            - name: Upload Playwright HTML report (failure only)
-              if: failure()
-              uses: actions/upload-artifact@v4
-              with:
-                  name: playwright-report
-                  path: web/frontend/playwright-report
-                  retention-days: 7
-            # The built-dist gates report SEPARATELY (playwright-report-throttle/): they run
-            # last, and until run 30684983201 they wrote no HTML report at all — that red named
-            # a test-results/ screenshot this job never uploaded, and `playwright-report`
-            # carried the golden gate's report instead. Both paths ship now, so a throttle red
-            # arrives with its screenshot, its error context and its bake attachments.
-            - name: Upload the built-dist gates' report (failure only)
-              if: failure()
-              uses: actions/upload-artifact@v4
-              with:
-                  name: playwright-report-throttle
-                  path: web/frontend/playwright-report-throttle
-                  if-no-files-found: ignore
-                  retention-days: 7
-
-    # ---------------------------------------------------------------- Lane 9b
-    # e2e-webkit — T7-W3 sharding, OPTION B (evidence/w3/burst-forensics.md §6).
-    #
-    # THE EVIDENCE THIS SHAPE ANSWERS: across seven forensic runs, 10 of 10 default-
-    # suite reds were [webkit] against 1,131 executed chromium rows (null-model
-    # P = 8.3×10⁻⁴), 7 of 10 deadline-shaped, futoshiki.spec.ts:131 the head row in
-    # 3 of 7 — the wandering webkit deadline family: engine-localized, contention-
-    # amplified, discipline-seeded. The disciplines are cured in this wave; the
-    # contention is cured HERE. Under the old shape webkit shared one runner with
-    # chromium at workers:2 — ~762 webkit contention-seconds per run. This job gives
-    # webkit ×3 shards at workers:1: one browser, one worker, an uncontended CPU.
-    # Contention-seconds 762 → ~210 total across shards, wall 15.2m → ~7.3m,
-    # +11.4 runner-minutes — priced and accepted in the forensics.
-    #
-    # FALSIFIABLE, on the record: the seven deadline-family rows go to ZERO under
-    # this shape, or contention is refuted and the family gets per-row forensics.
-    # a11y.spec.ts:490 is excluded from that prediction — its cure is the polled
-    # census that landed with this wave, not the shard.
-    #
-    # Same setup spine as the e2e job (checkout → lean-pkg download → node 24 →
-    # npm@^11 → npm ci → cached webkit bundle); no golden/throttle/built-dist steps
-    # here — those assert the built dist and live in the e2e job. The list-time
-    # matrix/retries gates run once, there, not per-shard.
-    e2e-webkit:
-        runs-on: ubuntu-latest
-        timeout-minutes: 25
-        needs: [build-lean-wasm]
-        strategy:
-            fail-fast: false
-            matrix:
-                shard: [1, 2, 3]
-        steps:
-            - uses: actions/checkout@v4
-            - name: Download the lean wasm pkg (the package.json file-link target)
-              uses: actions/download-artifact@v4
-              with:
-                  name: lean-wasm-pkg
-                  path: csp-solver/wasm/pkg
-            - name: Set up Node (LTS) with npm cache
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '24'
-                  cache: npm
-                  cache-dependency-path: web/frontend/package-lock.json
-            - name: Pin npm >=11
-              run: npm install -g npm@^11
-            - name: npm ci
-              working-directory: web/frontend
-              run: npm ci
-            - name: Resolve Playwright version (from the lockfile)
-              id: pw-version
-              working-directory: web/frontend
-              run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-            - name: Cache Playwright browser bundle
-              id: pw-cache
-              uses: actions/cache@v4
-              with:
-                  path: ~/.cache/ms-playwright
-                  key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
-            # Step-scoped timeout (T7 post-seal, run 30804572335): shard 2's install hung
-            # from 10:12 to the JOB's 25-minute kill — the suite never ran and the red read
-            # as a shard failure. 8 minutes is 2× the worst observed install; a hang now
-            # fails fast under its own name.
-            #
-            # SECOND OCCURRENCE (run 30807184504, shard 3) made the hang a class, so the
-            # step self-heals: each attempt is bounded at 4 minutes and a stalled first
-            # attempt gets exactly one fresh retry — a stall is a stall, not a verdict on
-            # the runner. The attempt that succeeds names itself in the log.
-            - name: "Install Playwright webkit (+ deps, bounded + one retry)"
-              timeout-minutes: 9
-              working-directory: web/frontend
-              run: |
-                  if timeout 240 npx playwright install --with-deps webkit; then
-                    echo "webkit install: attempt 1"
-                  else
-                    echo "::warning::webkit install attempt 1 stalled or failed — retrying once"
-                    timeout 240 npx playwright install --with-deps webkit
-                    echo "webkit install: attempt 2"
-                  fi
-            # workers=1 is the treatment, not a slowdown to apologize for: the
-            # deadline family fires when webkit's raf cadence is starved by a
-            # neighboring browser. One worker per shard makes starvation structural
-            # zero on this runner class.
-            - name: "Run the Playwright e2e suite (webkit, shard ${{ matrix.shard }}/3)"
-              working-directory: web/frontend
-              run: npx playwright test --project=webkit --workers=1 --shard=${{ matrix.shard }}/3
-            - name: Upload the webkit shard report (failure only)
-              if: failure()
-              uses: actions/upload-artifact@v4
-              with:
-                  name: e2e-webkit-report-shard-${{ matrix.shard }}
-                  path: web/frontend/e2e-report.json
-                  if-no-files-found: ignore
-
-    # ---------------------------------------------------------------- Lane 14
-    # perf subset — gates.json's idle thresholds, EXECUTED (T5-W1 row 1.2).
-    #
-    # THE HOLE THIS FILLS: the P1 patch's gates.json is a committed threshold file
-    # that nothing has ever run. r1/perf-disposition.md §3.2 put it plainly — "a
-    # regression to 79 fps idle would pass every CI lane". The filter census is a
-    # good proxy for the cured MECHANISM, but proxy != surface: a new perf defect
-    # with zero new filters is invisible to it.
-    #
-    # WHAT THIS LANE ENFORCES, and only this — idle fps + long-frame(>33.4ms)
-    # census, an undo burst, and a boot-window TBT on the BUILT DIST, headless
-    # chromium AND webkit, thresholds read from
-    # patches/p1-safari-ios-performance/gates.json at RUN TIME:
-    #   desktop.idle3s.maxLong33 (0)  GATE A, absolute, engine-portable
-    #   desktop.idle3s.minFps    (97) GATE B, transposed to a fraction of the
-    #                                 runner's own measured rAF ceiling
-    #   desktop.undoBurst             GATE C (T7-W6, CH-53) — the scenario has been
-    #                                 measured on every manual run since P1 and
-    #                                 priced nowhere; a committed instrument with no
-    #                                 threshold is the same defect as a committed
-    #                                 threshold with no executor, read from the other
-    #                                 end. TWO numbers, because there are two
-    #                                 surfaces: `minFps` (52) is the REAL-SAFARI
-    #                                 floor the manual matrix enforces, and
-    #                                 `ciMinPctOfCeiling` is this harness's own
-    #                                 %-of-ceiling, DECLARED rather than transposed —
-    #                                 headless WebKit reads its ceiling on this
-    #                                 window, so 52/98.4 would hand CI a floor ~47%
-    #                                 under live, the very slack W6 exists to remove
-    #   boot.tbt.maxTbtMs             GATE D (T7-W6) — median TBT over the first
-    #                                 boot.tbt.windowMs, measured under
-    #                                 boot.tbt.cpuThrottleRate× CPU throttling. Every
-    #                                 other row here watches STEADY STATE; the boot
-    #                                 burst happens once, before the first idle window
-    #                                 opens, and had nothing to trip. Graded only on
-    #                                 engines whose PerformanceObserver ships the
-    #                                 `longtask` entry type — WebKit's does not, so
-    #                                 its row prints NOT MEASURED, never PASS, and a
-    #                                 run where NO engine could measure it is a setup
-    #                                 error rather than a green from an instrument
-    #                                 that ran nowhere
-    # Nothing here hardcodes a number; a missing gates.json is exit 2, never a
-    # default. Every other gates.json row needs real Safari, a real simulator or
-    # ps-level attribution and stays a documented MANUAL lane
-    # (web/frontend/perf-rig/README.md), whose first run-id banks at W-GATE.
-    #
-    # WHAT A GREEN HERE DOES NOT MEAN: Playwright WebKit is not Safari. This
-    # harness read 80-98 fps on the exact surface the owner called a rendered mess.
-    # Read the lane as a REGRESSION TRIPWIRE on the cured mechanism. It is not a
-    # Safari number and it is not an iOS claim.
-    #
-    # NOT folded into `e2e` (which has both engines and a dist-throttle/ already,
-    # so folding would cost one command): `e2e` carries five suites against a
-    # 25-minute budget, a frame-timing window taken in the tail of a heavy
-    # Playwright run measures a runner that has just been hammered, and the exit-3
-    # retry below has no clean home mid-suite.
-    #
-    # EXIT-CODE CONTRACT — the part not to flatten:
-    #   0 every threshold held
-    #   1 a gates.json threshold was BREACHED            -> fail, NEVER retried
-    #   2 setup/usage error — no gates.json, a missing threshold key, an unknown
-    #     engine name, a reserved port, a failed build; NO engine in the run able to
-    #     measure boot TBT (a GATE D green from an instrument that ran nowhere is
-    #     vacuous); or CPU throttling requested and not applied, because an
-    #     unthrottled number read against a throttled floor is not a lenient
-    #     measurement, it is a different one                -> fail
-    #   3 INSTRUMENT failure — too few clean windows, the app-free control page
-    #     itself dropped a long frame, or the host CPU anchor read over its
-    #     admissibility ceiling (T7-WGATE — GATE D refuses to grade on a host
-    #     outside the runner class it was derived on)    -> retried ONCE, then fails
-    #
-    # PRECEDENCE (T7-W6): every measured result is graded BEFORE any exit is chosen,
-    # and the code is the WORST FACT in the run — 1 > 2 > 3 > 0. A breach outranks a
-    # setup error and an instrument failure because a breach is a fact about the
-    # BUNDLE while the other two are facts about the HOST, and a bad host cannot
-    # un-measure a bad bundle. The old shape graded AFTER the engine loop, so a later
-    # engine's early return discarded a chromium breach that had already been measured
-    # and the job shipped green (evidence/w6/ci-subset-ablation.txt). Precedence
-    # promotes nothing on its own: an instrument failure with no breach beside it is
-    # still a 3.
-    #
-    # The retry covers exactly one documented flake class: host contention on a
-    # shared runner, detected by the control page. A breach is never retried,
-    # because a breach is a fact about the bundle. Do not collapse 3 into 0.
-    perf-subset:
-        name: perf subset (gates.json idle + undoBurst + boot-TBT thresholds, chromium + webkit)
-        runs-on: ubuntu-latest
-        timeout-minutes: 20
-        needs: [build-lean-wasm]
-        steps:
-            - uses: actions/checkout@v4
-            - name: Download the lean wasm pkg (the package.json file-link target)
-              uses: actions/download-artifact@v4
-              with:
-                  name: lean-wasm-pkg
-                  path: csp-solver/wasm/pkg
-            - name: Set up Node (LTS) with npm cache
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '24'
-                  cache: npm
-                  cache-dependency-path: web/frontend/package-lock.json
-            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
-            # mis-resolves the lockfile.
-            - name: Pin npm >=11
-              run: npm install -g npm@^11
-            - name: npm ci
-              working-directory: web/frontend
-              run: npm ci
-            # Same cache key as `e2e`, so whichever lane runs first warms it for the
-            # other.
-            - name: Resolve Playwright version (from the lockfile)
-              id: pw-version
-              working-directory: web/frontend
-              run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-            - name: Cache Playwright browser bundle
-              id: pw-cache
-              uses: actions/cache@v4
-              with:
-                  path: ~/.cache/ms-playwright
-                  key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
-            # Both engines: the P1 defect was WebKit's and chromium alone would have
-            # missed it entirely. webkit is the load-bearing arm; chromium is the
-            # cross-engine control that says whether a red belongs to one engine or both.
-            - name: 'Install Playwright chromium + webkit (+ deps)'
-              working-directory: web/frontend
-              run: npx playwright install --with-deps chromium webkit
-            # THE GATE. `--build` forces a fresh `vite build` (skipping vue-tsc and the
-            # prebuild wasm make — the same call playwright-throttle.config.ts makes,
-            # for the same reasons). Port 4390 is the rig's own; the script refuses
-            # 3000/3001/4188/4288 outright and kills its server on the way out.
-            - name: 'gates.json idle thresholds (idle fps + long-frame census)'
-              working-directory: web/frontend
-              run: |
-                  set -u
-                  set +e
-                  node perf-rig/ci-subset.mjs --port 4390 --runs 3 --build \
-                    --out perf-subset-report.txt
-                  CODE=$?
-                  if [ "$CODE" -eq 3 ]; then
-                    echo "::warning::perf subset could not measure (exit 3) — the runner's own app-free control page dropped a long frame, or too few windows came back clean. Retrying once; this is the documented contention flake class, NOT a threshold breach."
-                    node perf-rig/ci-subset.mjs --port 4390 --runs 3 \
-                      --out perf-subset-report.txt
-                    CODE=$?
-                  fi
-                  set -e
-                  case "$CODE" in
-                    0) echo "perf subset GREEN — GATE A (long-frame census), GATE B (idle fps), GATE C (undoBurst) and GATE D (boot TBT) all held, on every engine that could measure them" ;;
-                    1) echo "::error::perf subset RED — a gates.json threshold was breached. See the report artifact; the BREACH lines name the engine, the measured value and the derived threshold. Do NOT retry. The sealed P1 rows (desktop.idle3s/deal/solveCelebration/themeToggle/galleryGlide) are NEVER tuned; the W6-provisional rows (desktop.undoBurst, boot.tbt) restamp only by a ruling with its derivation banked — w3/gate-d-restamp.txt is the precedent and the form." ;;
-                    2) echo "::error::perf subset setup/usage error — gates.json unreadable or missing a threshold key, an unknown engine name, a reserved port, a failed build, no engine able to measure boot TBT, or CPU throttling requested and not applied. This lane carries no fallback thresholds by design." ;;
-                    # Exit-3-twice ruling (W1 seal-fix, run 30719165442): an instrument
-                    # that cannot hold its own budget asserts NO verdict — failing the
-                    # job would claim a red the instrument itself refuses. The report
-                    # still uploads. Since T7-W6 a 3 means what it says: every measured
-                    # result is graded before an exit is chosen and the code is the
-                    # WORST FACT in the run (1 > 2 > 3 > 0), so a breach anywhere exits
-                    # 1 no matter which engine's instrument died. What makes a chromium
-                    # breach gate is that grading, NOT that chromium runs first —
-                    # `--engines` order is a caller's argument, not a law. Reaching 3
-                    # twice therefore says nothing breached on what DID measure; the
-                    # admissible webkit evidence is the darwin perf-rig lane + the
-                    # manual Safari matrix.
-                    3) echo "::warning::perf subset INADMISSIBLE-HOST — an engine's instrument refused to grade: the app-free control dropped long frames twice running, too few clean windows survived, or the host CPU anchor read over its ceiling (the INADMISSIBLE line in the report names the engine and the cause). Neither green nor red is admissible for that engine here. Recorded, report uploaded; the darwin perf-rig lane and the manual Safari matrix carry the webkit verdict. Not a bundle regression."
-                       CODE=0 ;;
-                    *) echo "::error::perf subset exited $CODE (unexpected)" ;;
-                  esac
-                  exit "$CODE"
-            # Uploaded green or red: a perf number is worth what its run record is
-            # worth, and the green runs are the baseline the next red is read against.
-            - name: Upload the perf subset report
-              if: always()
-              uses: actions/upload-artifact@v4
-              with:
-                  name: perf-subset-report
-                  path: web/frontend/perf-subset-report.txt
-                  if-no-files-found: warn
-                  retention-days: 30
 
     # ---------------------------------------------------------------- Lane 10
     # iai — instruction-count baseline gate for the solver hot path (P6 ADOPT,

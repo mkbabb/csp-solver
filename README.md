@@ -109,7 +109,7 @@ cargo bench -p csp-solver --bench queens -- --test
 
 ## CI
 
-`.github/workflows/ci.yml` runs nineteen lanes: fmt+clippy, the Rust/wasm/Python builds and tests, the wasm size budgets and the shipped package's resolution contract, the frontend typecheck+knip+support-floor gate, the unit estate under its count and coverage floors, e2e in Chromium beside a three-shard WebKit lane of its own, the cross-game boundary law, a headless perf subset against the P1 idle thresholds, the doc-truth and evidence-policy gates, a callgrind instruction-count baseline, and the cargo-audit and npm-audit advisory scans. Budgets and measured artifact sizes live in [`docs/benchmarks.md`](docs/benchmarks.md).
+`.github/workflows/ci.yml` runs sixteen lanes: fmt+clippy, the Rust/wasm/Python builds and tests, the wasm size budgets and the shipped package's resolution contract, the frontend typecheck+knip+support-floor gate, the unit estate under its count and coverage floors, the cross-game boundary law, the doc-truth and evidence-policy gates, a callgrind instruction-count baseline, and the cargo-audit and npm-audit advisory scans. The Playwright e2e, golden, and perf suites live in-repo as local instruments — run on demand, not in CI (owner ruling, 2026-08-03); deployment validation is visual, on the live site. Budgets and measured artifact sizes live in [`docs/benchmarks.md`](docs/benchmarks.md).
 
 ## Deployment
 
