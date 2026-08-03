@@ -1,0 +1,325 @@
+T7-W7 — NON-AUTHOR VERIFICATION
+================================================================================
+Verifier: a non-author executor. Nothing edited but this file.
+Date: 2026-08-03. Tree: working tree at branch master, HEAD 6d612ec5 (T7-W3).
+Surface: the vite dev server I started myself on localhost:4245 (NOT the built
+dist, NOT a sibling's server) — the wave's own discipline is crops on the real
+surface, and every number below is re-measured, never copied from a lane's file.
+
+TRAP, BANKED FOR WHOEVER RUNS THIS NEXT: port 3000 on this box is held by an
+unrelated project ("palette-api", PID 48206, answers 200 with JSON). Playwright's
+`webServer.reuseExistingServer` latches onto it and every run dies in
+global-setup at `waitForSelector('#app')`. Two full-suite runs burned that way.
+The cure is `PLAYWRIGHT_BASE_URL=http://localhost:<own port>` against a dev
+server you started yourself. The assert-the-SPA gate (K46) did its job — it
+failed loudly in 10s instead of 351 opaque reds.
+
+================================================================================
+1. THE CROP LEDGER — every lane, every pair
+================================================================================
+Nine rows carry crops; not one lane is bare.
+
+  ROW                     PAIRS BANKED                                  VERDICT
+  ---------------------------------------------------------------------------
+  sticky-bar sliver +     sticky-bar-{before,after}-1440x900.png         PAIRED
+    washi z-order         sticky-bar-{before,after}-1280x720.png
+                          + sticky-bar-{before,after}.json,
+                            sticky-bar-paint-probe.json, sticky-bar.md
+
+  gallery frame void      gallery-frame-{before,after}-{1024,1280,1440}  PAIRED
+                          gallery-frame-step1-{before,after}-{1024,
+                            1280,1440}   (the interior pose)
+                          + frame-and-tab-measure.json
+
+  390 drawer-tab over     drawer-tab-{before,after}-390x844-{chromium,   PAIRED
+    the wordmark            webkit}.png
+                          drawer-tab-{before,after}-430x932-{chromium,
+                            webkit}.png  (the untouched control)
+
+  768/720-tall overflow   overflow-768-{before,after}-{1366x768,         PAIRED
+                            1280x720}.png
+                          overflow-768-candidate-a-* (the refused cut)
+                          overflow-768-closed-ink-1366x768-{chromium,
+                            webkit}.png (the disclosed residue's control)
+                          + overflow-768.json, closed-pose.json
+
+  --live-fit width-only   live-fit-{before,after}-390x844.png            PAIRED
+                          live-fit-candidate-a-390x844.png
+                          + live-fit.json
+
+  kenken clear-receipt    kenken-receipt-{before,after}-1280x800.png     PAIRED
+
+  invite vs share glyph   invite-glyph-{before,after}-1440x900-{light,   PAIRED
+                            dark}.png + -detail- pairs
+                          invite-glyph-candidate-{a,b}-* (both drawn)
+                          + invite-glyph.md, candidate-b.vue.txt
+
+  celebration heart       celebration-heart-{before,after}-1280x800.png  PAIRED
+                          celebration-heart-{before,after}-390x844.png
+
+  post-solve stale nag    postsolve-zone-{before,after}-1280x800.png     PAIRED
+
+  the eyebrow read        eyebrow-register-{shipped,A,B}-{1440x900,      READ:
+    (CH-59 / T7-R15)        390x844}-{light,dark}.png + -detail- shots   3-WAY,
+                          + eyebrow-register.json, eyebrow-read.md,      NOT A
+                            rig/eyebrow-register-capture.mjs             PAIR
+
+  The eyebrow row is a READ, not a fix — shipped/A/B is the right shape for it
+  and the rig is banked verbatim. Its one gap is a verdict; see FINDING 3.
+
+  Coverage gaps worth a line, none of them findings: no gallery crop at 1920
+  (measured, not shot), and the 768-overflow row shoots 1366x768 + 1280x720 but
+  not 1024x768 (measured in overflow-768.json; I re-measured it myself, §4).
+
+================================================================================
+2. THE SUITES — run here, once, both engines
+================================================================================
+e2e, default config, `npx playwright test` (chromium + webkit, no shard):
+    349 passed · 2 skipped · 0 failed · 2.0m
+    log: scratchpad/e2e-full3.log
+  The rows that could have been collateral all ran and all passed:
+  zone-grammar.spec.ts:316 (the bar rides the card's own scrollport),
+  drawer.spec.ts:219 (the case's drift across the close glide — the row the
+  overflow lane's first cut redded at 18.09 born-RED), board-covisibility,
+  mobile-affordances, mobile-platform, a11y, access, gallery*, permalink,
+  font-census.
+
+unit, `npx vitest run`:
+    47 files · 483 passed · 0 failed · 483 executed
+    unit-count gate: 483 >= floor 300, OK.
+  The wave's own new unit is green: GameBoard.receipt.test.ts, 3 rows
+  (zero-given DEAL announces the fresh line; a real clear still says "the board
+  is clear"; a sudoku-shaped deal keeps its 0->N line). CheckStatus.test.ts
+  gains the SOLVED row and passes; GameControlPanel.test.ts 24/24.
+  BORN-RED: not re-executed by me (it needs a src ablation, and I edit nothing).
+  Verified by reading instead, and it holds: the pre-W7 line was
+  `if (givenCells.size === 0) setMargin("the board is clear")`, and row 1 mounts
+  with an empty `givenCells` on both sides of the bump — under the old line it
+  returns "the board is clear" against an expected "a fresh 4x4 — moderate".
+  The gate bites.
+
+PRM headers — INTACT. `npm run lint:motion` (check-motion-contract, W3's gate,
+25/25 specs must declare) is GREEN, and font-census.spec.ts — the one spec W7
+touches — carries W3's `// PRM: live, because …` header above W7's data edit.
+
+Every discipline gate, run here, all GREEN:
+    lint (prettier) · lint:eslint · lint:boundary · lint:ink · lint:catch ·
+    lint:theme-selectors · lint:theme-tokens · lint:lanes · lint:sleep ·
+    lint:motion · test:unit:count
+Golden + throttle configs NOT run (they want the built dist; out of this task's
+scope). Assessed instead: all four golden subjects are element-anchored clips
+(handwritten-logo, sun-moon-toggle, .sudoku-cell, .board-wrapper corner) and the
+one geometry they read — board/cell size at 1280x800 — is unmoved (§4).
+
+================================================================================
+3. THE DIFFS — read whole, scoped per lane
+================================================================================
+W7's src surface is exactly eleven files and nothing else:
+  App.vue ................. the 768/720 reservation + `--live-fit` contain-fit
+  GameControlPanel.vue .... the skirt, z 3->60, InviteIcon, `solved` prop
+  SheetWashiLabel.vue ..... the 50-is-half-a-pair cross-reference (comment only)
+  GameGallery.vue ......... one @media (min-width:64rem) block, CSS ONLY
+  DrawerTab.vue ........... one @media (max-width:25rem)+portrait block, CSS ONLY
+  GameBoard.vue ........... the `dealt` prop + the receipt gate + boardIsBlank()
+  BoardHost.vue ........... one line: :dealt="model.gradeTally.value.graded"
+  GameShell.vue ........... one line: :solved="model.solveState.value==='solved'"
+  CheckStatus.vue ......... the `solved` branch, visible line + spoken line
+  CheckStatus.test.ts ..... one new row
+  CelebrationHeart.vue .... right -0.9->-0.6rem, bottom -0.4->-3.6rem
+  + NEW: InviteIcon.vue, GameBoard.receipt.test.ts
+
+W2's `scroll-padding-bottom` — UNTOUCHED. `scene.css` has no diff at all; the
+declaration still reads `scroll-padding-bottom: var(--action-bar-h, 0px)` at
+scene.css:151, and W2's publisher formula (`ceil(bar height + pad)`) is
+byte-identical. W7 adds a SECOND reader of the same measurement (`--card-pad-b`)
+in the same ResizeObserver rather than a second measurement. Verified live:
+`--card-pad-b` = 20px = the card's computed padding-bottom at every desktop rung.
+
+Gallery elections — CLEAN. GameGallery.vue's diff is +29 lines, all inside one
+media block, zero script changes. `runFlanks` still has zero occurrences in the
+tree (BAL-11 untouched) and no `.icon-btn` verb transplant appears anywhere
+(BAL-12 untouched). No exit-gather, no slices.
+
+The eyebrow's temporary edits — NONE IN src. The rig injects both mock registers
+with `page.addStyleTag` and removes the handle after each shot; it writes only
+into evidence/w7/. Independently checked: `grep -i eyebrow` over src returns only
+pre-existing prose and typography.css declarations, and the src diff contains no
+`console.log`, no `debugger`, no TEMP/FIXME/HACK, no `window.__` addition.
+
+CROSS-WAVE, NOT W7 — the chair should not attribute these to this wave when
+reading the diff. GameControlPanel.vue also carries a `T7-W4 M1` hunk
+(`.players-leave { min-width: 44px }`), and the tree at large carries W4/W5/W6
+work: useSession.ts, relay.ts/relay.test.ts, multiplayer.spec.ts,
+visual-golden.spec.ts, perf-rig/*, scripts/check-prod-shake.mjs,
+scripts/golden-selfdelta.mjs, p1 gates.json, and .github/workflows/ci.yml
+(ci.yml went dirty mid-session under a sibling; I touched nothing).
+
+================================================================================
+4. RE-MEASURED AT THE DEFECT VIEWPORTS — my numbers, not the lanes'
+================================================================================
+chromium + webkit, localhost:4245, drawer at its shipped open pose, controls card
+scrolled to 62% of its own overflow. Both engines agree to the hundredth unless
+stated.
+
+THE BAR IS FLUSH.
+  viewport   card padB  --card-pad-b  skirt h  bar z  max washi z  band paint
+  1440x900     20px        20px        20px     60        50       .action-bar x5
+  1366x768     20px        20px        20px     60        50       .action-bar x5
+  1280x800     20px        20px        20px     60        50       .action-bar x5
+  1280x720     20px        20px        20px     60        50       .action-bar x5
+  1024x768     20px        20px        20px     60        50       .action-bar x5
+  Five sample points across the band, at every rung, in both engines, now hit
+  `.action-bar` — before the cure the same points hit a live `button.ctrl-btn`
+  (the lane's paint probe; the bleed was pressable, not just visible). Skirt
+  background rgb(253,253,252) === the card's own background at every rung.
+  The bar's BOX still stops 20px short by design — the skirt paints the band.
+  The card's side gutters are clean too: elementFromPoint in the bottom-left and
+  bottom-right 20px squares returns the card itself, so nothing bleeds around
+  the skirt's ends.
+
+NO PAGE OVERFLOW, playing view, drawer OPEN (the shipped default):
+  1366x768   overflowY 0   overflowX 0     (both engines)
+  1280x720   overflowY 0   overflowX 0
+  1024x768   overflowY 0   overflowX 0
+  1280x800   overflowY 0   overflowX 0
+  1440x900   overflowY 0   overflowX 0
+  Gallery view, same widths + 1920x1080: overflowX 0 / overflowY 0 everywhere,
+  frame centred (1440: 192..1248, w 1056), 0 cards bisected by the frame edge at
+  1024 / 1280 / 1366 / 1440 / 1920, both engines. Before, one card was cut at
+  every width.
+
+  DRAWER CLOSED — the disclosed residue, reproduced exactly. I closed the sheet
+  through its own tongue and re-read:
+              chromium          webkit
+  1366x768    overflow 6        overflow 5     masthead box top -5.42 / -5.13
+  1280x720    overflow 6        overflow 5     -5.27 / -4.97
+  1024x768    overflow 5        overflow 5     -4.83 / -4.53
+  1280x800    overflow 6        overflow 5     -5.27 / -4.97
+  1440x900    overflow 0        overflow 0     +4.45 / +4.75
+  These match closed-pose.json to the hundredth (head was 19-21). The lane's
+  disclosure is honest and its handoff is named. See FINDING 1.
+
+THE GOLDEN CONTROL — the board cap is genuinely untouched:
+  1280x800: board grid 636x636, `.sudoku-cell` width 70.66 — identical in both
+  engines and identical to the lane's pre-cure reading. 1366x768 604 / 67.11,
+  1280x720 556 / 61.77, 1440x900 668 / 74.22, both engines.
+
+THE 390x844 BOARD IS WHOLE.
+  Gallery live face: --live-fit 0.6516452074391988, slot 256.22x256.22, host
+  238.50x256.22, overhang 0.00 (chromium) / -0.05 (webkit). Before: fit 0.7000,
+  host 275.25 tall in a 256.22 box, 9.51px cut off — the caption entirely.
+  Playing view: `.board-wrapper` 366x366 at (12, 222.6), fully inside the
+  viewport on all four edges, page overflow 0/0, both engines.
+
+THE TAB IS CLEAR OF THE WORDMARK AT 390.
+  Sheet OPEN, 390x844:
+             tab box              masthead box            overlap   gap
+  chromium   (342,124) 44x92      (58.14,146.42) 273.72   0 px^2    10.14px
+  webkit     (342,124) 44x92      (58.73,146.70) 272.53   0 px^2    10.73px
+  Tap floor 44x92 — the 44 floor held on both axes. Tab right edge inside the
+  viewport, page overflowX 0. Before: ~2969 / ~3329 px^2 of overlap.
+
+================================================================================
+5. FINDINGS
+================================================================================
+All CONFIRMED — each one re-derived here, none taken from a lane's prose.
+None of them is a code defect; four are record/close-discipline, two are looks
+for the chair's eye. No lane's cure regressed anything I could find.
+
+FINDING 1 — MEDIUM — docs/tranches/2026-08-tranche-7/waves/W7-the-product-polish.md
+  The "768/720-tall overflow" row closes PARTIAL, and the record should say so
+  in the close, not only in a source comment. Open pose: cured, 0 at all three
+  named viewports, both engines. Closed pose: still 5-6px at 1366x768 /
+  1280x720 / 1280x800 and 5px at 1024x768, with the masthead's box top at -4.8
+  to -5.4 — a user-reachable, localStorage-persisted pose. I reproduced every
+  number independently. The lane discloses it in App.vue + closed-pose.json,
+  proves the ink survives (0 px under luminance 140 in the top 6 scanlines), and
+  names the cure and its owner (`html.drawer-closed`'s cap + `--logo-scale:1.05`
+  made height-aware, GameBoard.vue). It also improves the pose 21 -> 6 rather
+  than worsening it. The finding is that a row named for a defect at three
+  viewports must not read as closed-whole when one pose at those same three
+  viewports still overflows.
+
+FINDING 2 — LOW — web/frontend/e2e/font-census.spec.ts
+  W7's viewport-matrix row is ALREADY COMMITTED, under W3's commit 6d612ec5,
+  not in the working diff the chair is about to commit as W7. The change is
+  present and correct (`sudoku · fine rail 1366x768` in CELLS, W3's PRM header
+  above it, 4 tests before and after — CELLS is a data loop, so the row costs no
+  test count), but a W7 close that cites "the matrix gains a short desktop"
+  points at a commit W7 didn't make. Cite 6d612ec5 explicitly, or the row reads
+  as unlanded on a `git show <W7 commit>`.
+
+FINDING 3 — LOW — docs/tranches/2026-08-tranche-7/evidence/w7/eyebrow-read.md
+  The eyebrow row has NO VERDICT anywhere in the tree. The spec says the row
+  "leaves W7 with a written disposition, not another deferral"; the file says,
+  in its own second paragraph, "It carries NO verdict — the chair writes that."
+  The material is excellent and complete (three rendered registers, both cells,
+  both themes, measured ladder, name census, the rig verbatim, the mock-sheet
+  method disclosed against a source edit). But if the chair does not write the
+  verdict at WGATE, CH-59 / T7-R15 defers a fifth time — which is the one
+  outcome the row was folded here to prevent.
+
+FINDING 4 — LOW — docs/tranches/2026-08-tranche-7/DISPOSITIONS.md
+  The W7 OWNER row "Killer sums at 14px on mobile … default = leave" exists in
+  exactly one place in the estate — the W7 spec, lines 63-64. It carries no
+  ballot ID and no disposition anywhere in DISPOSITIONS.md, and no W7 evidence
+  file records its default firing. Its two siblings are both ballotted (BAL-04
+  the landscape/CH-39 row, BAL-08 the font-subset residue), so this is the one
+  OWNER row with no machinery behind it, and the acceptance clause asks for it
+  "resolved by the owner's word or their stated default".
+
+FINDING 5 — LOW (a look, for the chair) —
+  evidence/w7/sticky-bar-after-1280x720.png
+  The after is better than the before on the row's own terms — the "Live" bleed
+  is gone and the band is card. But the cure introduces a look the before didn't
+  have: the hover tape "when your mistakes get checked" is now sliced through
+  the middle of its letterforms by the bar's top edge, which reads as a clipped
+  render rather than a deliberate stop. Caveat, stated plainly: the tape is
+  opacity-0 unless hovered or focused, its anchor here is scrolled UNDER the
+  bar, and W2's scroll-padding pulls a FOCUSED control clear of the bar — so
+  this state may be reachable only by the capture rig. Worth the chair's eye
+  before it's called a look the estate ships.
+
+FINDING 6 — LOW (a look, for the chair) —
+  evidence/w7/gallery-frame-after-{1024,1280,1440}.png
+  The named before/after pair shoots the START pose, where the deck centres card
+  one — so the after still shows a large leading void (~351px of a 1049px frame
+  at 1440, ~33%) against a row literally named "the gallery frame void". The
+  cure genuinely lands: 0 cards bisected at all five widths in both engines
+  (I re-measured), and the gallery-frame-step1-after-* crops show three whole
+  cards filling the frame end to end, which is the picture the row is asking
+  for. The lane explains the leading air as the deck's own reserved slot. The
+  finding is presentational: read the named pair alone and the row looks
+  uncured. The step1 pair should be the one the chair looks at first.
+
+INFORMATIONAL, NOT W7's — `node scripts/check-doc-truth.mjs` is 2 RED / 20 GREEN
+at this tree: README's e2e counts say 345/416, the tree lists 351/422. The
+delta is exactly +6 and it is entirely W4's: multiplayer.spec.ts goes 15 -> 18
+`test(` at HEAD -> worktree, x2 engines. W7 contributes zero (font-census holds
+at 4 tests). Flagged so the chair does not book it against this wave.
+
+================================================================================
+6. WHAT I CHECKED AND FOUND NOTHING WRONG WITH
+================================================================================
+- The receipt gate's provenance bit is sound at the source. `graded` is set
+  TRUE synchronously inside the deal, on the line before `boardGeneration++`
+  (useGameState.ts:508 then :513), and `clearGrade()` runs before the clear's
+  own bump — so the watch never reads a stale `dealt` in either direction. The
+  new `boardIsBlank()` is the second half of the wipe gate, so a restored link
+  carrying work stays quiet.
+- `givenCells.size > 0 -> return` is exactly equivalent to the old fall-through
+  (the old branch did nothing in that case); the 0->N watch keeps the announce.
+- The skirt is deliberately not `pointer-events: none` and that is the right
+  call — the band it covers was clickable before.
+- `--board-col` (DrawerTab), `--card-w` (GameGallery) and
+  `--type-body`/`--type-leading-caption` (App.vue) all resolve at the scopes
+  their new rules run in; none of the three calc()s can drop.
+- The gallery frame can't mint horizontal overflow by construction:
+  3 * min(22rem, (100vw-3rem)/3) <= 100vw - 3rem at every width; measured 0 at
+  five widths, both engines.
+- 430x932 is byte-identical before/after in the drawer-tab pair, as ordered.
+- The invite glyph is legible as two figures at a table at its shipped 26px and
+  is no longer confusable with the share graph 120px away; candidate B is
+  preserved as a drop-in .vue.txt so the swap is one copy.
+- CheckStatus's new visible line is lowercase with no `A` — inside Patrick
+  Hand's cut, so it mints no new font-census row. font-census is green.

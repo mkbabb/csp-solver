@@ -14,8 +14,8 @@ import type { ErrorCheckMode } from "./useAssists";
 // `scripts/check-ink-pressure.mjs`, and jsdom applies no stylesheet. Splitting it that way
 // keeps each gate on the layer that can actually see its subject.
 
-function mountStatus(marking: boolean, mode: ErrorCheckMode) {
-  return mount(CheckStatus, { props: { marking, mode } });
+function mountStatus(marking: boolean, mode: ErrorCheckMode, solved = false) {
+  return mount(CheckStatus, { props: { marking, mode, solved } });
 }
 
 const visible = (w: ReturnType<typeof mountStatus>) =>
@@ -37,6 +37,15 @@ describe("CheckStatus — the visible sentence, one branch per state", () => {
 
   it("on-demand + STALE: names the decay AND the recovery — the state the card never showed", () => {
     expect(visible(mountStatus(false, "on-demand"))).toBe("board changed — ask again");
+  });
+
+  // T7-W7 — the solve writes every remaining cell, so the values watch disarms the snapshot
+  // and the well met "solved it!" with an instruction to re-check. The nag outlived its subject.
+  it("on-demand + SOLVED: the stale nag gives way — there is nothing left to check", () => {
+    expect(visible(mountStatus(false, "on-demand", true))).toBe(
+      "nothing left to check",
+    );
+    expect(visible(mountStatus(false, "on-demand", true))).not.toContain("ask again");
   });
 });
 

@@ -53,3 +53,7 @@
     its file, its wave. Item 12's requirement stands, re-read: the close needs a green
     run under sharding B WITH the guarded-press helper landed — the sharding alone was
     proven insufficient (burst-forensics §8).
+16. **O-11 / BAL-21, late-minted 2026-08-03 (W7 seal, verify FINDING 4)** — the killer-sums
+    OWNER row reached W7 with no machinery; O-11 homes it in the verdict table and BAL-21
+    restates its stated default (LEAVE). BAL-21 fires at WGATE with the twenty dispatched
+    ballots; its reversal arm is the owner's word before T8 formation.

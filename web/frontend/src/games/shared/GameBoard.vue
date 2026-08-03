@@ -72,6 +72,13 @@ const props = defineProps<{
    *  Game-side so the difficulty request voice + the one-shot link-error clause
    *  stay per-game; called by the shell at the deferred/live announce moments. */
   freshBoardCopy: () => string;
+  /** T7-W7 — the generation bump's PROVENANCE: true iff this board arrived from a deal.
+   *  A no-givens family (KenKen prints no digit on 69% of deals) reaches the generation
+   *  watch with an empty grid, and a dealt empty grid and a wiped one are the same pixels
+   *  — so the receipt cannot be read off the board. The model can tell them apart: it
+   *  grades every dealt board and blanks that grade on clear/restore, and `dealt` carries
+   *  that bit here. Absent → the pre-T7 read (an empty grid is taken for a clear). */
+  dealt?: boolean;
   /** Sudoku-only (UI-13): the once-per-board discoverability whisper. Receives the live
    *  values + boardSize, returns the copy iff a duplicate is visibly present while idle,
    *  else null. Absent for Futoshiki → the shell's idle-values watch no-ops. */
@@ -642,12 +649,27 @@ watch(
     gradeHintShown.value = false; // a fresh board re-arms the UI-13 grade hint
     const sizeChanged = props.boardSize !== prevBoardSize;
     prevBoardSize = props.boardSize;
-    // A same-size generation bump that leaves the board empty is a clear (§5.3). A size
-    // change is announced by the givens 0→N watch instead, so skip it here.
+    // A size change is announced by the givens 0→N watch instead, so skip it here.
     if (!mounted || sizeChanged) return;
-    if (props.givenCells.size === 0) setMargin("the board is clear", "graphite");
+    // A board that arrived WITH givens is the 0→N watch's to announce.
+    if (props.givenCells.size > 0) return;
+    // T7-W7 — the wipe receipt used to be the whole of this branch, on the reasoning that a
+    // same-size bump leaving no givens could only be a clear (§5.3). That reasoning holds for
+    // the games that print givens and fails outright for the ones that don't: every KenKen
+    // deal that prints no digit — 69% of them — announced "the board is clear" for a board
+    // nobody had cleared. The act decides the receipt now, not the emptiness:
+    //   · dealt → the no-givens family's fresh line, the same voice every other deal gets.
+    //   · not dealt, and the grid is genuinely blank → the wipe receipt.
+    // Anything else (a restored link with work on it, say) keeps its peace.
+    if (props.dealt) setMargin(props.freshBoardCopy(), "graphite");
+    else if (boardIsBlank()) setMargin("the board is clear", "graphite");
   },
 );
+
+/** Every cell empty — a clear's own signature, and the second half of the wipe gate. */
+function boardIsBlank(): boolean {
+  return Object.values(props.values).every((v) => !v);
+}
 
 // ── The paper note (§5.2) ────────────────────────────────────────────
 const showErrorNote = computed(() => props.solveState === "error");
@@ -933,20 +955,67 @@ function isRevealed(pos: number): boolean {
    per rung, the dvh cap loosens 10rem → 9rem. Unlayered scoped rules beat the
    layered Tailwind utilities above; the swap lands in the settle's ONE layout step
    (the glide already covered the move with a transform — no filtered-element size
-   tween, the §6 binding constraint). The shell-lg rung is Sudoku's 16×16-only reach. */
+   tween, the §6 binding constraint). The shell-lg rung is Sudoku's 16×16-only reach.
+   The WIDTH arm rides every height: below the height gate the 10rem cap is the smaller
+   number at every rung, so it binds and the widened allowance never renders. */
 @media (min-width: 1024px) {
   html.drawer-closed .board-shell.shell-sm {
     width: min(28rem, 85vw);
-    max-width: calc(100dvh - 9rem);
   }
 
   html.drawer-closed .board-shell.shell-md {
     width: min(46rem, 85vw);
-    max-width: calc(100dvh - 9rem);
   }
 
   html.drawer-closed .board-shell.shell-lg {
     width: min(56rem, 90vw);
+  }
+}
+
+/* ── …AND THE HEIGHT ARM IS HEIGHT-AWARE (T7-W7, the closed-pose residue) ──────────────────
+   PAIRED WITH `html.drawer-closed .masthead { --logo-scale: 1.05 }` in App.vue — the two halves
+   of the closed grow, and they flip on the SAME condition or the pose trades one overflow for
+   another. Plain CSS has no shared custom media, so that condition is duplicated there verbatim
+   with a cross-reference back to this block; edit neither alone. (The estate's pair idiom, as
+   SheetWashiLabel and its z-order sibling cite each other.)
+
+   THE 896px IS DERIVED, not chosen. Closed, the desk asks the page's height for four authored
+   things, and the page supplies exactly its own height:
+
+     masthead at --logo-scale: 1.05    124.53   measured, invariant across width; webkit 123.94
+     board                             min(46rem, 100dvh − 9rem)   ← the 9×9 rung, the desk's own
+     .board-margin margin-top            6.40   0.4rem, authored above
+     the strip's one caption line      ≤ 28.60   --type-body's own ceiling 1.375rem × leading 1.3
+                                                 (typography.css) — so this term is width-free
+
+   The column centres in `.page-root`'s content box, so an over-tall column hangs HALF above the
+   fold and half below: overflow = (demand − vh) / 2, and the masthead's box top is −that (which
+   is why the two numbers are always the same 5–6px, opposite signs). While the dvh cap binds,
+   demand − vh = noteH − 13.07 — POSITIVE AT EVERY HEIGHT: no page is ever tall enough to pay for
+   a cap that grows with it, which is the whole reason 1366×768 / 1280×720 / 1024×768 / 1280×800
+   all overflow and none of them is a width problem. The pose can only come clean where the WIDTH
+   rung binds instead:
+
+     demand ≤ vh   ⇔   124.53 + 736 + 6.4 + noteH ≤ vh   ⇔   vh ≥ 866.93 + noteH
+
+   At the type ceiling that is 895.53 → 896px, width-independent by construction (85vw exceeds
+   46rem at every viewport this regime covers, so the 736 always binds). Measured on both sides
+   of the boundary: 1280×800 asks 810.54 of 800 — over by 10.54, the 5–6px — and 1440×900 asks
+   891.12 of 900, under by 8.88, predicting a masthead box top of +4.44 against a surface that
+   reads +4.45 chromium / +4.75 webkit. BELOW the gate the closed pose takes the open pose's
+   geometry exactly (masthead 118.92, cap 10rem) and asks vh − 34.68 + noteH, clean at every
+   height by the same ceiling. Both sides of the flip are clean; that is the property this number
+   was solved for, not the number itself.
+
+   THE OTHER TWO RUNGS by the same arithmetic, since one condition governs all three: shell-sm's
+   own threshold is 607.53 (28rem), so gating it costs a 4×4 desk nothing above 608 — there the
+   10rem cap already exceeds 448 and the width rung binds either way — and it cures 1024×600.
+   shell-lg's is 1055.53 (56rem), so a 16×16 desk above 896 keeps a residue of the same shape;
+   measured, disclosed and NOT claimed cured in `evidence/w7/closed-pose-cure.md`. */
+@media (min-width: 1024px) and (min-height: 896px) {
+  html.drawer-closed .board-shell.shell-sm,
+  html.drawer-closed .board-shell.shell-md,
+  html.drawer-closed .board-shell.shell-lg {
     max-width: calc(100dvh - 9rem);
   }
 }

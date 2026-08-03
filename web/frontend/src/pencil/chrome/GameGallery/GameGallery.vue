@@ -806,6 +806,35 @@ onMounted(async () => {
   padding-inline: 0.6rem;
 }
 
+/* ── THE FRAME ON THE CARD SET (T7-W7) ──────────────────────────────────────────────────
+   The viewport IS the sketchbook frame — its ring is the rectangle the deck is read inside —
+   and on the desk it spanned the whole page while holding ONE centred card. So the frame
+   carried a void where its left third should have been cards (measured to the centred card's
+   own ink: 778px at 1920, 538 at 1440, 458 at 1280 — 38–41% of the frame) and its right edge
+   fell wherever the page ended, which was through the third card's face at every width.
+   Both halves are the same missing declaration: the frame was never sized to what it frames.
+   It is sized to a WHOLE NUMBER of slots here, so its edges can only land ON a slot boundary
+   and no card can be bisected by one; and the number is THREE, the odd count, because the
+   deck centres its active card — an even frame would cut the pair beside it in half. Three
+   slots is also exactly what the deck's own leading air already reserves ((frame − slot) / 2
+   = one slot), so the end poses read as the deck's beginning rather than as a gap, and the
+   interior poses fill the frame end to end.
+   The card only shrinks where three at 22rem will not fit — 1024, where the slot lands at
+   325px — and the 3rem allowance is the page's own gutter plus room for a scrollbar, so the
+   third slot can never be the one the cap clips. Below the desk this is untouched: the phone
+   keeps its 78vw peek deck, which is a one-card frame by design. */
+@media (min-width: 64rem) {
+  .game-gallery {
+    --card-w: min(22rem, calc((100vw - 3rem) / 3));
+  }
+
+  .gallery-viewport {
+    width: calc(var(--card-w) * 3);
+    max-width: 100%;
+    margin-inline: auto;
+  }
+}
+
 .gallery-pips {
   display: flex;
   align-items: center;

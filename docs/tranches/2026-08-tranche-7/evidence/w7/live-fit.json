@@ -1,0 +1,73 @@
+{
+ "row": "W7 layout \u2014 `--live-fit` width-only (B-1, the \"Ledger it deliberately\" order)",
+ "surface": "vite dev server, localhost:4231, chromium, isMobile+hasTouch, 390x844, ?game=sudoku&view=gallery",
+ "captured": "2026-08-03",
+ "culprit": "App.vue onLiveFace derived the face scale from WIDTH ALONE (`faceW / boardW`). The face slot is `overflow:hidden`, and the teleported subtree is `.board-peek-host` \u2014 below 1024 that host carries the board square PLUS the in-flow `.board-margin` strip, so it is taller than it is wide and the bottom got cut.",
+ "cure": "Math.min(faceW / boardBox.width, faceH / boardBox.height) \u2014 the contain fit. Identity wherever the board box is square-or-wider (every >=1024 face).",
+ "before": {
+  "liveFit": "0.7000512295081968",
+  "slot": {
+   "x": 66.89,
+   "y": 174.27,
+   "w": 256.22,
+   "h": 256.22,
+   "bottom": 430.48
+  },
+  "board": {
+   "x": 66.89,
+   "y": 164.75,
+   "w": 256.22,
+   "h": 275.25,
+   "bottom": 440
+  },
+  "overhang": 9.51,
+  "card": {
+   "x": 52.5,
+   "y": 159.88,
+   "w": 285,
+   "h": 357.78,
+   "bottom": 517.66
+  }
+ },
+ "after": {
+  "liveFit": "0.6516452074391988",
+  "slot": {
+   "x": 66.89,
+   "y": 174.27,
+   "w": 256.22,
+   "h": 256.22,
+   "bottom": 430.48
+  },
+  "board": {
+   "x": 75.75,
+   "y": 174.27,
+   "w": 238.5,
+   "h": 256.22,
+   "bottom": 430.48
+  },
+  "overhang": -0.01,
+  "card": {
+   "x": 52.5,
+   "y": 159.88,
+   "w": 285,
+   "h": 357.78,
+   "bottom": 517.66
+  }
+ },
+ "unscaled_board_box_390x844": "366.00 x 393.20 against a 256.22 square face",
+ "identity_control_desktop": {
+  "1280x800 deep-link": {
+   "liveFit": "0.475048828125",
+   "note": "unchanged \u2014 304.03/640; board box square, min() picks width"
+  },
+  "1440x900 deep-link": {
+   "liveFit": "0.45242745535714285"
+  },
+  "1366x768 deep-link": {
+   "liveFit": "0.5000513980263158"
+  },
+  "1280x800 interactive fold": {
+   "liveFit": "0.475048828125"
+  }
+ }
+}

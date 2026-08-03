@@ -171,6 +171,37 @@ defineExpose({
   }
 }
 
+/* ── THE ≤400 DOCK (T7-W7) ───────────────────────────────────────────────────────────────
+   Sheet UP at 390×844, the tongue lay across the wordmark's last letter and its caret — "sudok"
+   — in both engines. The arithmetic leaves no room to argue with: the tongue's band is the 48px
+   above the risen case, the masthead's measured box spends 58.7 → 331.3 of the 390 in exactly
+   that band, and a 92-wide tongue at the column's inset starts at 270. The strip the masthead
+   does NOT occupy is 58.7px, and the pose that fits it is one this component already owns — the
+   DESK's vertical tongue — turned back onto the page's own right edge. 44×92: the tap floor on
+   the axis the strip constrains, cleared twice over on the other, so W2's A5 reading holds.
+   Measured after: clear by 10.1px at 390 and 2.6px at 375, both engines. 430 and up never
+   collided and are not in this query.
+   SHEET-OPEN ONLY. Shut, the tongue is a peer verb in the fold's ribbon (mark A above) and
+   keeps that box to the pixel — `board-covisibility`'s one-line lock reads it there.
+   The right anchor leaves the COLUMN on purpose. The berth (`scene.css .drawer-handle`) insets
+   to the column's right edge plus 1rem, and at this rung that inset IS the collision, so it is
+   subtracted back out: the one place where the page's edge, not the column's, is the correct
+   one to hang a tongue from. 0.25rem of air is left so the drawn outline's outset stays inside
+   the viewport and mints no horizontal scroll. */
+@media (max-width: 25rem) and (orientation: portrait) {
+  html:not(.drawer-closed) .drawer-tab {
+    width: 2.75rem; /* 44px — the floor, on the axis the masthead's strip constrains */
+    height: 5.75rem; /* 92px */
+    right: calc(-0.75rem - (100vw - var(--board-col)) / 2);
+  }
+
+  /* The label turns with the tongue, back to the desk's axis. */
+  html:not(.drawer-closed) .drawer-tab-text {
+    writing-mode: vertical-rl;
+    padding: 0.5rem 0.15rem;
+  }
+}
+
 /* During the glide the host scales; the tongue counter-scales as the composable's
    fourth WAAPI mover (same glass curve, same clock — W13 §3-S3′), so its 48px never
    pops at the onset's layout step (product ≈ 1 throughout). No CSS transition here:

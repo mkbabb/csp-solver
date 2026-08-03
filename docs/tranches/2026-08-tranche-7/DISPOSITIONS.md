@@ -122,6 +122,7 @@ grepped against LEDGER.md return zero; the three `trie` hits are substring false
 | O-8 SEC-5/6/7 + the auto-triage preset | T5-W1 | "owner-side one-click toggles, not this lane's rows", 2 closes | **BALLOT** → BAL-07 | `…/evidence/w1/security-notes.md:236-251` |
 | O-9 madge re-entry | T5-W2 seal | folded into `tdz-probe.mjs`, 2 closes | **BANKED** — owner: frontend lane. Trigger: any TDZ or cycle incident births the madge lane on the spot. The wiring defect rides W6 — `lint:tdz` exists and CI never runs it | `…/evidence/w2/seal-adjudications.md:15` |
 | O-10 `filterBudget.ts` placement | T5-W2 seal | DEFER-and-record, "the deferral is the decision" | **FOLDED** → W6 — the deferral now has a measurable consequence: 306 lines in `src/`, imported only by `e2e/filter-census.spec.ts`, sitting at 0% in the coverage denominator | seal-adjudications.md:14 |
+| O-11 Killer sums at 14px on mobile — legible or a bump | W7 spec :63-64 | the one OWNER row that reached W7 with no ballot, no DISPOSITIONS row and no default machinery — caught by the W7 verify (FINDING 4), homed here 2026-08-03 | **BALLOT** → BAL-21 — the spec's own stated default (LEAVE) fires at WGATE | `…/evidence/w7/w7-verify.txt` §5 F4 |
 
 ## 5. Pre-T5 rows that never reached the living ledger
 
@@ -187,6 +188,9 @@ grepped against LEDGER.md return zero; the three `trie` hits are substring false
 Twenty ballots, each restating a row decided above; none mints a row of its own. Every one
 carries a firing default, so the shelf empties whether the owner answers or not. Dispatched
 at W0 open, defaults fire at WGATE. BAL-01 carries a dated permanent clause besides.
+BAL-21 was late-minted at the W7 seal (2026-08-03, the verify's FINDING 4) — the W7 spec's
+own OWNER row that had no machinery; it restates that row's stated default and rides the
+same WGATE firing.
 
 | id | question | origin | FIRING DEFAULT |
 |---|---|---|---|
@@ -210,6 +214,7 @@ at W0 open, defaults fire at WGATE. BAL-01 carries a dated permanent clause besi
 | BAL-18 | surface `nodesExplored` / `propagations` | Q-5 | Not surfaced |
 | BAL-19 | debug button copy — "debug · off" against "telemetry" | Q-6 | The current copy stands |
 | BAL-20 | restore the literal trie | EL-1 | The declination stands permanently; the standing option retires at T8 formation |
+| BAL-21 | Killer sums at 14px on mobile — legible or a bump | O-11 (W7 spec :63-64) | **The stated default fires: LEAVE.** Late-minted 2026-08-03 at the W7 seal on the verify's FINDING 4 — the one OWNER row that reached W7 with no ballot ID, no DISPOSITIONS row and no evidence of its default ever firing. This entry is that machinery; it restates O-11's stated default and mints nothing new. Reversal = the owner's word before T8 formation |
 
 ## 9. Chair memory corrections, due at the T7 seal
 

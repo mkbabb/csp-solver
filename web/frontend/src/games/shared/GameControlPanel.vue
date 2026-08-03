@@ -46,6 +46,9 @@ import FillForcedIcon from "@pencil/chrome/icons/FillForcedIcon.vue";
 import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
 import EraserIcon from "@pencil/chrome/icons/EraserIcon.vue";
 import ShareIcon from "@pencil/chrome/icons/ShareIcon.vue";
+// T7-W7 — invite and share drew the same glyph in the same card. Share keeps the link graph;
+// invite gets the table.
+import InviteIcon from "@pencil/chrome/icons/InviteIcon.vue";
 import UndoIcon from "@pencil/chrome/icons/UndoIcon.vue";
 import RedoIcon from "@pencil/chrome/icons/RedoIcon.vue";
 import HintIcon from "@pencil/chrome/icons/HintIcon.vue";
@@ -112,6 +115,9 @@ const props = defineProps<{
   // armed). The mode alone cannot say whether the teacher is marking RIGHT NOW: `checkArmed`
   // decays on the next board edit, and that decay is the state the panel has never shown.
   proactiveCheck: boolean;
+  // T7-W7 — the board is finished. One bit, one consumer (`CheckStatus`): the stale-check nag
+  // asks the player to re-arm a check on a board that has nothing left to check.
+  solved?: boolean;
   // T4-W3 share-truth: the parent's share act, handed as a callback rather than an emit so
   // the OUTCOME travels back — it resolves iff the clipboard copy actually landed.
   share: () => Promise<void>;
@@ -472,6 +478,18 @@ function onHint() {
 //     PADDING edge, so that gap is part of the band the bar owns (ceil(65.16) + 20 = 86px at head).
 // Republished whenever the bar's box changes; the card is where it lands, since the card is the
 // scrollport (`scene.css` reads `--action-bar-h` there).
+//
+// ── T7-W7 — THE SECOND TERM IS NOW SPENT TWICE, AND THE SUM IS UNCHANGED ─────────────────
+// W2 derived that pad because the band the bar OWNS runs to the padding edge even though the
+// bar's own box stops short of it. W7 makes that band opaque (the bar's skirt — see
+// `.action-bar::after` in the style block), so the same padding is now also what the skirt is
+// tall. One measurement, two readers: `--action-bar-h` (W2's, arithmetic and formula untouched)
+// and `--card-pad-b` (W7's, the skirt's height).
+//
+// MEASURED, NOT SPELLED, for the same reason W2's is: the card's padding is a utility class on
+// someone else's template (`GameScene.vue` — `p-5` on the rail, `px-2 py-1.5` on the dock), so a
+// number written here would go stale the first time that class is re-cut, silently, and in the
+// one direction that reopens this row.
 const actionBarEl = ref<HTMLElement | null>(null);
 
 useResizeObserver(actionBarEl, () => {
@@ -479,6 +497,7 @@ useResizeObserver(actionBarEl, () => {
   const card = bar?.closest<HTMLElement>(".controls-card");
   if (!bar || !card) return;
   const pad = parseFloat(getComputedStyle(card).paddingBottom) || 0;
+  card.style.setProperty("--card-pad-b", `${pad}px`);
   card.style.setProperty(
     "--action-bar-h",
     `${Math.ceil(bar.getBoundingClientRect().height + pad)}px`,
@@ -799,7 +818,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
         :mobile="mobile"
         @change="emit('update:errorCheckMode', $event as ErrorCheckMode)"
       />
-      <CheckStatus :marking="proactiveCheck" :mode="errorCheckMode" />
+      <CheckStatus :marking="proactiveCheck" :mode="errorCheckMode" :solved="solved" />
     </HandDrawnOutline>
 
     <!-- T6 mark 13 — THE PLAYERS COMPARTMENT. A fourth well on the zone grammar exactly as
@@ -838,7 +857,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
         :class="{ 'group relative': !mobile }"
         :aria-label="inviteAct.aria.value"
       >
-        <ShareIcon :size="26" :class="{ 'share-pop': inviteAct.animating.value }" />
+        <InviteIcon :size="26" :class="{ 'share-pop': inviteAct.animating.value }" />
         <span class="icon-sublabel" aria-hidden="true">{{
           inviteAct.sublabel.value
         }}</span>
@@ -1334,10 +1353,15 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   color: var(--color-foreground);
 }
 
-/* A thumb gets the estate's floor here as everywhere else — a written word is still a control. */
+/* A thumb gets the estate's floor here as everywhere else — a written word is still a control.
+   T7-W4 M1: the floor held on ONE dimension. `min-height` alone measured 40.09×44 on
+   devices["iPhone 13"], both engines — the word "leave" plus its 0.5rem padding is simply
+   narrower than a thumb, and `align-self: flex-start` keeps the box shrink-to-fit so nothing
+   else was going to widen it. `min-width` is the other half of the same floor. */
 @media (pointer: coarse) {
   .players-leave {
     min-height: 44px;
+    min-width: 44px;
     padding-inline: 0.5rem;
   }
 }
@@ -1635,7 +1659,56 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   .action-bar {
     position: sticky;
     bottom: 0;
-    z-index: 3;
+    /* ── T7-W7 · THE BAR OCCLUDES THE TAPE ───────────────────────────────────────────────
+       Was 3 — above the well's drawn outline (z 1) and its `.washi-tag` (z 2), and BELOW every
+       hover/hint tape in the card: `SheetWashiLabel` ships `z-index: 50`, and the card is one
+       stacking context (`.controls-card`, z 45 in `scene.css`), so a tape hanging off a control
+       under the bar painted straight THROUGH it — "invite someone to write on this board with
+       you" over the clear/fill/solve/share sublabels, 20.26px of overlap at 1440×900, 10.43px
+       at 1280×720. A bar that content scrolls under is opaque by definition; it is the last
+       thing painted in this card. 60 keeps all three older relations intact and clears 50 by a
+       rung. Its OWN tapes are children of this stacking context and still ride above it.
+       Re-cut `SheetWashiLabel`'s 50 and re-cut this — the pair is noted at both ends. */
+    z-index: 60;
+  }
+
+  /* ── T7-W7 · THE FLUSH — THE BAR'S SKIRT ────────────────────────────────────────────────
+     `bottom: 0` was never the bottom the eye reads, and the 20px it left over is not a tuning
+     anybody chose. A sticky box is constrained to its CONTAINING BLOCK — the card's CONTENT box
+     — while the scrollport it sticks to is the card's PADDING box; the card carries `p-5`, so
+     the bar halted exactly one `padding-bottom` above the edge and the card scrolled LIVE
+     CONTENT through the leftover band. Measured on the dev server before the cure: 20.00px at
+     1440×900 and 20.00px at 1280×720 — the padding to the hundredth, at both — reading as a
+     severed line under the verbs ("how your marks are writt", "Corner", "Live") and, at
+     1280×720, 34% of the Deal button with its sublabel swallowed.
+
+     THE BAND IS THE BAR'S, SO THE BAR PAINTS IT. Three geometric cures were tried against the
+     real surface first, and all three are worse:
+       · `margin-bottom: -20px` + an equal `padding-bottom` — MEASURED INERT. Chrome constrains
+         the sticky BORDER box, not the margin box, so the bar grew UPWARD (top 598.64 → 578.64)
+         and its bottom never left 663.45. The sliver survived the change untouched.
+       · `bottom: -20px` — a negative inset extends the sticky rectangle below the scrollport,
+         but the containing block still binds first: a no-op that reads like a fix.
+       · zeroing the card's `padding-bottom` and re-housing that air — the only true geometry,
+         and it costs a spelled constant here, against a Tailwind class in a second file
+         (`GameScene.vue`'s `p-5` / `px-2 py-1.5`), which is exactly the drift W2 refused.
+     The skirt is one absolutely-positioned strip, `--card-pad-b` tall — published by the bar's
+     own observer off the card's computed padding, measured, never spelled — hanging from the
+     bar's bottom edge in the card's own colour. It rides the bar's stacking context, so it
+     occludes what the bar occludes; it stops exactly at the padding edge, so the card's overflow
+     clip and its `rounded-xl` corner take it; and it is deliberately NOT `pointer-events: none`
+     — everything the old sliver showed was also clickable through it, and a control you cannot
+     see must not be a control you can press.
+     Layout-neutral by construction: no box moves, `scrollHeight`/`maxScroll` hold (1113/585 at
+     1440×900 across the cure), and W2's `--action-bar-h` keeps both its terms and its value.
+     INSIDE the sticky block on purpose — the <1024 landscape card is in flow and its bar has
+     siblings below it, where a skirt would paint over the play tools instead of over nothing. */
+  .action-bar::after {
+    content: "";
+    position: absolute;
+    inset: 100% 0 auto 0;
+    height: var(--card-pad-b, 0px);
+    background: var(--color-card);
   }
 }
 

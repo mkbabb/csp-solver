@@ -107,6 +107,12 @@ const geom = computed(() => {
   opacity: 0;
   pointer-events: none;
   transition: opacity 150ms;
+  /* T7-W7 — 50 IS HALF OF A PAIR. A tape floats over its own neighbourhood, so it needs to beat
+     the ordinary content around it; it must NOT beat a surface that content scrolls UNDER. The
+     controls card's sticky `.action-bar` was at 3 and a tape hanging off a control beneath it
+     painted straight through (20.26px of overlap at 1440×900, 10.43px at 1280×720, measured);
+     the bar now sits at 60 in that same stacking context. Raise this number past 60 and the
+     tape goes back through the bar — re-cut them together. */
   z-index: 50;
 }
 

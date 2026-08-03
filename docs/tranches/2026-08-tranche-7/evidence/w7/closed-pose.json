@@ -1,0 +1,89 @@
+{
+ "row": "W7 layout \u2014 the 768/720-tall overflow, THE CLOSED-DRAWER RESIDUE (handoff, not cured here)",
+ "surface": "vite dev server, localhost:4231, chromium, ?game=sudoku, localStorage csp-drawer-open=0 (drawer CLOSED)",
+ "captured": "2026-08-03",
+ "CURED": "2026-08-03, same wave, by the named cure — see closed-pose-cure.md + closed-pose-cure-{before,after}.json. The GROW's two halves are height-gated at a DERIVED 896px (= 124.53 masthead + 736 the 46rem width rung + 6.4 the strip gap + 28.6 the --type-body caption ceiling, the height at which the closed demand stops chasing the supply). Closed now reads overflow 0 with the masthead box on the page at 1366x768 / 1280x720 / 1024x768 / 1280x800 / 1024x600, both engines; the OPEN pose is byte-identical to this lane's cure at all seven cells; 1440x900 keeps the grow whole (board 736, --logo-scale 1.05). Everything below this line stands as measured at the time of the handoff.",
+ "claim": "The closed desk pose is over-budget by 10.85px BEFORE any reservation and overflows 19-21px at HEAD. The W7 reservation applies in BOTH poses and takes it 21 -> 5/6; it does not cure it, and does not claim to. The residue is the GROW's.",
+ "why": {
+  "closed_grow": "html.drawer-closed loosens the cap 100dvh-10rem -> 100dvh-9rem (+16px of board, GameBoard scoped CSS) and grows the masthead to --logo-scale:1.05 (118.92 -> 124.53, App.vue)",
+  "budget": "closed assembly = masthead 124.53 + board 624 + strip 30.32 = 778.85 against a 768px page \u2014 over by 10.85 BEFORE any reservation",
+  "why_reserving_fails": "reserving under a column that cannot fit spends the deficit off the TOP: the masthead BOX lands at -5.42. Measured, that costs no ink (see ink_control), and the alternative \u2014 scoping the rule to the open pose \u2014 reds the drawer's drift gate. So the rule lands in both poses and the box overhang is the disclosed cost.",
+  "named_cure": "make the closed GROW height-aware \u2014 gate the `html.drawer-closed .board-shell.shell-* { max-width: calc(100dvh - 9rem) }` block (GameBoard.vue scoped CSS, ~:930) and App.vue's `html.drawer-closed .masthead { --logo-scale: 1.05 }` on a min-height. GameBoard.vue belongs to another W7 executor (the kenken clear-receipt row), so it is handed off rather than edited.",
+  "why_not_scoped": "scoping the reservation to the open pose makes the column height pose-dependent and walks the sheet's centre 15px across the close glide \u2014 e2e/drawer.spec.ts:219 reds at 18.09 against its <=6 bound, both engines. So the rule lands in both poses."
+ },
+ "measured": {
+  "1366x768": {
+   "head": {
+    "overflow": 21,
+    "mastheadTop": 9.73,
+    "board": 624
+   },
+   "after": {
+    "overflow": 6,
+    "mastheadTop": -5.42,
+    "board": 624
+   }
+  },
+  "1280x720": {
+   "head": {
+    "overflow": 21,
+    "mastheadTop": 9.73,
+    "board": 576
+   },
+   "after": {
+    "overflow": 6,
+    "mastheadTop": -5.27,
+    "board": 576
+   }
+  },
+  "1024x768": {
+   "head": {
+    "overflow": 19,
+    "mastheadTop": 9.73,
+    "board": 624
+   },
+   "after": {
+    "overflow": 5,
+    "mastheadTop": -4.83,
+    "board": 624
+   }
+  },
+  "1280x800": {
+   "head": {
+    "overflow": 21,
+    "mastheadTop": 9.73,
+    "board": 656
+   },
+   "after": {
+    "overflow": 6,
+    "mastheadTop": -5.27,
+    "board": 656
+   }
+  },
+  "1440x900": {
+   "head": {
+    "overflow": 0
+   },
+   "after": {
+    "overflow": 0,
+    "mastheadTop": 4.45
+   }
+  },
+  "webkit_after": {
+   "1366x768": 5,
+   "1280x720": 5,
+   "1024x768": 5,
+   "1280x800": 5,
+   "1024x600": 5,
+   "1440x900": 0,
+   "1920x1080": 0
+  }
+ },
+ "ink_control": {
+  "question": "does the closed pose's -5.42px masthead BOX top clip the drawn wordmark?",
+  "method": "screenshot the top 6 scanlines across the wordmark's own x-span and count pixels under luminance 140",
+  "result": "0 dark pixels \u2014 chromium AND webkit, at 1366x768, 1280x720 and 1024x600, drawer closed",
+  "reason": "the painted geometry sits ~17px inside the logo SVG's own box; the -10/-11 `pathInkTop` readings are the boil grain layer's bounding boxes, not ink",
+  "shots": "overflow-768-closed-ink-1366x768-chromium.png / -webkit.png \u2014 the top 150px band, drawer closed, wordmark whole in both engines"
+ }
+}

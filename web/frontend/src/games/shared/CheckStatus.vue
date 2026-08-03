@@ -33,6 +33,13 @@ const props = defineProps<{
   /** `proactiveCheck` — live, or on-demand with the snapshot still armed. */
   marking: boolean;
   mode: ErrorCheckMode;
+  /** T7-W7 — the board is finished (`solveState === 'solved'`, which any edit drops back to
+   *  idle). The stale sentence is an instruction to re-arm a check, and a completed board has
+   *  nothing left to check: the solve itself disarmed the snapshot (it writes every remaining
+   *  cell, and the values watch clears `checkArmed`), so the well greeted "solved it!" by
+   *  telling the player their board had changed and to ask again. Optional: absent is the
+   *  unfinished board, which is every other moment. */
+  solved?: boolean;
 }>();
 
 /* ONE FACE (T4-P1, stage BC). `--font-hand` is a SUBSET — `index.css`'s Patrick Hand cut
@@ -47,7 +54,11 @@ const props = defineProps<{
 const text = computed(() => {
   if (props.mode === "off") return "not checking";
   if (props.mode === "live") return "checking as you go";
-  return props.marking ? "checked — mistakes shown" : "board changed — ask again";
+  if (props.marking) return "checked — mistakes shown";
+  // The stale branch, with its one exception: on a finished board the nag has outlived its
+  // subject. Same slot, same quiet rung, a true sentence — and lowercase with no `A`, so it
+  // stays inside Patrick Hand's cut like the rest of this line (the census gate above).
+  return props.solved ? "nothing left to check" : "board changed — ask again";
 });
 
 // What a screen reader is told. The visible line is a fragment in the hand; this is the
@@ -56,7 +67,9 @@ const spoken = computed(() =>
   props.marking
     ? "Checking this board for mistakes"
     : props.mode === "on-demand"
-      ? "Not checking — the board changed since the last check. Choose Ask again."
+      ? props.solved
+        ? "This board is solved — there is nothing left to check."
+        : "Not checking — the board changed since the last check. Choose Ask again."
       : "Not checking this board",
 );
 </script>

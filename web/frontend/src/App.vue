@@ -329,11 +329,25 @@ function onLiveFace(el: HTMLElement | null) {
     // Fit: shrink the full board into the face box. The board's LAYOUT never changes (the crit
     // kill) — `.live-face-fit` carries a COMPOSITOR scale, so the board keeps its playing-view
     // raster and only travels. Measured at scale 1, applied, then re-read — all pre-paint.
-    const slot = el.parentElement; // .live-face-slot
-    const faceW = slot?.getBoundingClientRect().width ?? 0;
-    const boardW = board.getBoundingClientRect().width;
-    if (faceW > 0 && boardW > 0)
-      el.style.setProperty("--live-fit", String(faceW / boardW));
+    //
+    // T7-W7 / B-1 — CONTAIN, not width-fit. This derived the scale from WIDTH ALONE and the
+    // face slot is `overflow: hidden`, so any board subtree taller than it is wide got its
+    // bottom cut off. The teleported subtree is the peek-host, and below 1024 that host carries
+    // the board square PLUS the in-flow margin strip beneath it: measured at 390×844,
+    // 366×393.2 unscaled against a 256.22 square face — width-fit 0.7000 drew 256.22×275.25
+    // into a 256.22 box and clipped 9.51px off each end (the caption, entirely). The height
+    // term is the whole cure: `min(w, h)` is the contain fit, it is identity wherever the board
+    // is square-or-wider (every ≥1024 face), and the compositor scale stays the one channel
+    // that moves.
+    const slot = el.parentElement?.getBoundingClientRect(); // .live-face-slot
+    const boardBox = board.getBoundingClientRect();
+    const faceW = slot?.width ?? 0;
+    const faceH = slot?.height ?? 0;
+    if (faceW > 0 && faceH > 0 && boardBox.width > 0 && boardBox.height > 0)
+      el.style.setProperty(
+        "--live-fit",
+        String(Math.min(faceW / boardBox.width, faceH / boardBox.height)),
+      );
     // BEAT 1 — the fold: the live board scales DOWN from its full pose into the face slot on
     // the glass curve. `flipTransform` makes the (now face-sized) board LOOK full at its old
     // position, then it glides to identity, settling into the face — only the transform channel
@@ -708,6 +722,63 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
   overflow: visible;
 }
 
+/* ── THE BELOW-BOARD STRIP GETS ITS ROOM BACK (T7-W7, the 768/720-tall overflow) ───────────
+   THE ~10px CONSTANT, derived rather than tuned. At ≥1024 the board's cap is
+   `calc(100dvh − 10rem)` (GameBoard `boardSizeClasses`) and `.board-margin` — the status voice
+   below the square — goes `position: absolute; top: 100%`, so its 0.4rem gap plus its one
+   reserved line hang OUTSIDE every box the page column measures. Nothing in the 10rem budget
+   ever paid for them. Run the column at a capped height:
+
+     boardSide = vh − 160            (the cap binds)
+     colH      = masthead 118.92 + boardSide            = vh − 41.08
+     mainH     = vh − 24             (`.page-root` py-3)
+     slack     = (mainH − colH) / 2  = 8.54             ← constant, vh cancels
+     stripBottom = 12 + 8.54 + 118.92 + boardSide + 6.4 + noteH = vh − 14.14 + noteH
+     overflow    = noteH − 14.14
+
+   `noteH` is the caption's line box, `--type-body × --type-leading-caption` — 23.92 at 1366,
+   23.61 at 1280, 22.72 at 1024. So the overflow is 9.78 / 9.47 / 8.58 → the phantom scrollbar
+   at 10 / 10 / 9px, IDENTICAL at every capped height because vh cancels out. 1440/1920 are
+   clean for the reason the derivation predicts: there the 42rem width rung binds instead of
+   the dvh cap, and the column keeps real slack.
+
+   The cure reserves the strip in the column, and it does NOT touch the cap: `100dvh − 10rem`
+   is a golden subject (1280×800 draws a 640 board — the cell and grid-corner goldens both
+   read that size), and moving it either way re-mints them. Reserving here changes the board's
+   POSITION only; the goldens are element-anchored clips, so the pixels are untouched.
+   The value is the strip's own two authored constants — GameBoard's `.board-margin`
+   `margin-top: 0.4rem` and the note's line box — so the reservation cannot drift from the
+   thing it reserves. Playing view only: the deck has no board and no strip. The reservation
+   is a LAYOUT size, so on a drawer gesture it lands in the settle's one layout step beside
+   the cap swap, never in a tween.
+
+   BOTH DRAWER POSES, and that is a MEASURED choice — the first cut scoped it to
+   `html:not(.drawer-closed)` and the drawer's own gate caught it. Closed, the cap loosens to
+   `100dvh − 9rem` (+16px of board) and the masthead grows to `--logo-scale: 1.05` (+5.61), so
+   the closed assembly asks 778.85px of a 768px page: over-budget by 10.85 BEFORE any
+   reservation, which is why head already overflows 19–21px closed at 1366×768 / 1280×720 /
+   1024×768 / 1280×800 (`evidence/w7/closed-pose.json`) — a bigger, separate row this one does
+   not claim to cure. Reserving in ONE pose makes the column height pose-dependent, and the
+   sheet's centre then walks 15px between them: `drawer.spec.ts:219` reads the case's total
+   vertical drift across the close glide and reds at 18.09 against its ≤6 bound (born-RED on
+   the scoped cut, chromium AND webkit). Reserving in BOTH keeps the drift the sheet's own
+   ~2.8px, cures the open pose outright, and takes the closed pose 21 → 6.
+
+   What the closed pose paid for that was 5.42px of the masthead's BOX above the fold, and the
+   box is not the ink: the wordmark's painted geometry sits ~17px inside its own SVG, so the
+   drawn wordmark was whole in both engines at every rung measured (shots in
+   `evidence/w7/closed-pose.json`'s control). The residue was real and it was the GROW's, not
+   this rule's — CURED SAME WAVE (2026-08-03): the grow's two halves are now height-gated at a
+   derived 896px, the cap in GameBoard.vue's scoped CSS and `--logo-scale` in the paired block
+   below. The closed pose reads overflow 0 with the box back on the page at all four cells,
+   both engines (`evidence/w7/closed-pose-cure.md`). This rule is unchanged by that cure — it
+   still lands in both poses, for the drift reason above. */
+@media (min-width: 1024px) {
+  .board-group:not(.is-gallery) {
+    padding-bottom: calc(0.4rem + var(--type-body) * var(--type-leading-caption));
+  }
+}
+
 /* THE GALLERY POSE (T6 mark 7). The group is now the masthead's carrier in both views, and in
    the deck's view the wordmark is a caption over the spread: centred, small, out of every
    regime's dock. At (0,3,0) these beat `html.drawer-closed .masthead` (0,2,1) and the landscape
@@ -834,11 +905,12 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
    Closed: the wordmark centers on the page axis (align-self beats the ladder's
    flex-start) and grows one soft step (--logo-scale, consumed by HandwrittenLogo's
    height calc — a LAYOUT size, so the settle's one layout step carries it; the
-   glide covers the move with a real transform). */
+   glide covers the move with a real transform).
+   The CENTRING rides every height — it costs the column nothing. The GROW does not: it
+   is height-gated below, with its board-cap twin. */
 @media (min-width: 1024px) {
   html.drawer-closed .masthead {
     align-items: center;
-    --logo-scale: 1.05;
   }
 
   html.drawer-closed .masthead .logo-menu {
@@ -851,6 +923,29 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
      class arms NO transition — it only promotes for the gesture's duration. */
   html.drawer-gesturing .masthead {
     will-change: transform;
+  }
+}
+
+/* ── The grow's masthead half, HEIGHT-AWARE (T7-W7, the closed-pose residue) ────────────────
+   THE OTHER HALF OF THIS PAIR IS `html.drawer-closed .board-shell.shell-*`'s `max-width:
+   calc(100dvh − 9rem)` in GameBoard.vue's scoped CSS, under the SAME `(min-width: 1024px) and
+   (min-height: 896px)`. The two must flip together: the cap alone spends +16px of board and this
+   one +5.61px of wordmark, and gating either without the other trades one overflow for another.
+   Plain CSS has no shared custom media, so the condition is written twice and each site names
+   the other — the estate's pair idiom. THE FULL DERIVATION OF 896 LIVES AT THE GameBoard SITE;
+   in one line: closed, the desk asks 124.53 + min(46rem, 100dvh − 9rem) + 6.4 + noteH of a page
+   that supplies vh, the column centres so the excess hangs half above the fold and half below,
+   and while the dvh cap binds the excess is `noteH − 13.07` — positive at EVERY height. Only
+   where the 46rem width rung binds does the demand stop chasing the supply: vh ≥ 866.93 + noteH,
+   which at `--type-body`'s ceiling is 895.53 → 896px.
+
+   This is the row the reservation above disclosed and handed off. It closes it: at 1366×768 /
+   1280×720 / 1024×768 / 1280×800 the closed pose now reads overflow 0 with the masthead's box
+   top back on the page, and at 1440×900 the grow still applies whole (board 736, --logo-scale
+   1.05). `evidence/w7/closed-pose-cure.md` carries the before/after table in both engines. */
+@media (min-width: 1024px) and (min-height: 896px) {
+  html.drawer-closed .masthead {
+    --logo-scale: 1.05;
   }
 }
 

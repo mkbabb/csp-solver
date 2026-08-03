@@ -62,6 +62,9 @@ the idle uniform-sign watch unfired.)
 
 - **Killer sums at 14px on mobile** against 33 cages — dense even in the correct theme. A
   minimum rendered-height floor per board width would settle it. **OWNER** call; default = leave.
+  *(Addendum 2026-08-03, the W7 seal: this row reached execution with no ballot and no
+  DISPOSITIONS entry — the one OWNER row without machinery, caught by the verify's FINDING 4.
+  Homed as **O-11**, ballotted as **BAL-21**; the stated default fires at WGATE with the rest.)*
 - **The font-subset residue** (T7-R10 / P1-D7): Patrick Hand's cut lacks `:`/`+`/`÷`·`A`,
   Fraunces lacks `v` — documented only in a spec docstring. **OWNER**: the woff2 re-cut the
   owner declined at P1-W3, or accept the documented deviations. Default = accept.

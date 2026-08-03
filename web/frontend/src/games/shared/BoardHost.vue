@@ -174,6 +174,7 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
     :conflicts-fn="conflictsFn"
     :peers-fn="peersFn"
     :fresh-board-copy="freshBoardCopy"
+    :dealt="model.gradeTally.value.graded"
     :idle-grade-hint="idleGradeHint"
     :pencil-marks="model.pencilMarks.value"
     :solve-stats="model.solveStats.value"

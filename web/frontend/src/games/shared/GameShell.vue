@@ -172,6 +172,7 @@ function onCandidatePeekEnd() {
         :pencil-mode="model.pencilMode.value"
         :error-check-mode="model.errorCheckMode.value"
         :proactive-check="model.proactiveCheck.value"
+        :solved="model.solveState.value === 'solved'"
         :candidates-pinned="model.candidatesPinned.value"
         :mobile="mobile"
         :grade-tally="model.gradeTally.value"
