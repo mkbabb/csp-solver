@@ -1,0 +1,18 @@
+T7-W4 · frame sizes on the shipped wire — where MAX_FRAME = 65,536 comes from
+date: 2026-08-03 · measured with the shipped shapes: relayWire.ts's EVENT envelope
+(id 64 hex, pubkey r-<12>, kind 20411, tags [["x", "sudoku-babb-dev/<room>"]]) around
+useSession.ts's payloads (sendState's {b,c,e,ea}; toWire's {p,v,s,l,a,e,ea}).
+
+st content bytes   : 8085
+st WIRE FRAME bytes: 9401
+op WIRE FRAME bytes: 364
+REQ bytes          : 72
+typical st content : 616
+
+worst-case st = a 9x9 board, every cell inked and solved, every cell carrying nine corner
+AND nine centre marks, given/origGiven/overridden all 81 long, plus the killer/kenken cage
+furniture (41 two-cell cages) and thermo's thermometers. Nothing the app can send is bigger.
+
+the cap: 65,536 B = 6.97x the worst st frame, 180x an ordinary op, 910x the REQ.
+the hibernation attachment (separate ceiling, 16,384 B): subs + the close-announce envelope
+  = 157 B on the test fixture, 172 B on a live 12-char room id — 1.05% of the cap.

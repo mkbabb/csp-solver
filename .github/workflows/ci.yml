@@ -931,6 +931,16 @@ jobs:
             - name: coverage floor (per-scope, >= the W1.14 baseline)
               working-directory: web/frontend
               run: npm run test:coverage:floor
+            # T7-W4 — the relay estate (web/relay: the DO's close-announce, the frame
+            # cap, the hibernation-attachment budget, mid-loop fanout death; 21 rows,
+            # ~140ms). A SEPARATE step on purpose, never merged into the main vitest
+            # invocation above: check-unit-count.mjs reads that run's report, whose
+            # floor was cut against the frontend estate alone — folding the relay rows
+            # in would move the number the gate reads without moving the estate it
+            # measures.
+            - name: vitest run (the relay estate, web/relay)
+              working-directory: web/frontend
+              run: npm run test:unit:relay
             # A red lane hands back the censuses it red on, not just a console tail.
             - name: Upload the vitest JSON report (failure only)
               if: failure()
@@ -1524,7 +1534,7 @@ jobs:
                   set -e
                   case "$CODE" in
                     0) echo "perf subset GREEN — GATE A (long-frame census), GATE B (idle fps), GATE C (undoBurst) and GATE D (boot TBT) all held, on every engine that could measure them" ;;
-                    1) echo "::error::perf subset RED — a gates.json threshold was breached. See the report artifact; the BREACH lines name the engine, the measured value and the derived threshold. Do NOT retry this and do NOT tune the threshold: gates.json is the P1 patch's sealed commitment." ;;
+                    1) echo "::error::perf subset RED — a gates.json threshold was breached. See the report artifact; the BREACH lines name the engine, the measured value and the derived threshold. Do NOT retry. The sealed P1 rows (desktop.idle3s/deal/solveCelebration/themeToggle/galleryGlide) are NEVER tuned; the W6-provisional rows (desktop.undoBurst, boot.tbt) restamp only by a ruling with its derivation banked — w3/gate-d-restamp.txt is the precedent and the form." ;;
                     2) echo "::error::perf subset setup/usage error — gates.json unreadable or missing a threshold key, an unknown engine name, a reserved port, a failed build, no engine able to measure boot TBT, or CPU throttling requested and not applied. This lane carries no fallback thresholds by design." ;;
                     # Exit-3-twice ruling (W1 seal-fix, run 30719165442): an instrument
                     # that cannot hold its own budget asserts NO verdict — failing the

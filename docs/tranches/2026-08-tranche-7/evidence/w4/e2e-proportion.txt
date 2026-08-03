@@ -1,0 +1,73 @@
+T7-W4 · THE E2E PROPORTION, MEASURED
+2026-08-03 · darwin · @playwright/test 1.61.1 · vite dev server on :4250 · both engines
+
+THE MEASUREMENT. One `npx playwright test --workers=1 --reporter=list` over the whole default
+config — the numerator and the denominator come out of the SAME run, so the box's load (other
+T7 lanes are driving this tree and this dev server) moves both together and the proportion
+survives it in a way two separately-timed runs would not. Durations are the list reporter's
+per-row wall times, summed.
+
+  rows measured:            349  (2 skipped: the opt-in real-relay row, both engines)
+  whole config serial:      546.6s
+  the config WITHOUT the three added rows:  526.7s
+  multiplayer.spec serial:   50.8s incumbent
+
+The three rows were re-timed at `--workers=1` after the contention harden below (the settle in
+`openWell`, and its tightened poll cadence), so the added figure is the shipped one:
+
+    chromium 1.3s  a page that reloads mid-session comes back to the same table and the same board
+    chromium 3.3s  two phones sit at one table, and the well is reachable with the sheet shut
+    chromium 4.2s  a digit tapped on a phone crosses, and the sheet does not move under the traffic
+    webkit   2.0s  a page that reloads mid-session comes back to the same table and the same board
+    webkit   4.0s  two phones sit at one table, and the well is reachable with the sheet shut
+    webkit   4.8s  a digit tapped on a phone crosses, and the sheet does not move under the traffic
+                 ─────
+    the three added rows:  19.6s / 6 runs
+
+  THE ADDED PROPORTION — CONFIG:  +3.7%   (526.7s → 546.3s)
+  the added proportion — file:    +38.6%  (50.8s → 70.4s)
+
+THE HARDEN, AND WHAT IT COST. Under `--workers=2` the mobile rows first went red on
+`locator.click: Test ended` with Playwright's own log reading "element is not stable" ×30s: the
+well's verb was clicked INTO the drawer's Band-D glide, and the retry loop ate the row's whole
+deadline without the product ever misbehaving. Two cures, both in the spec: `openWell` settles
+the card (the same polled two-agreeing-reads instrument the geometry rows use) before anything
+is clicked, and `invite()` waits for the verb to be ENABLED (it is `:disabled` while a board is
+in flight). The settle's poll cadence is pinned to [100,100,200] rather than the default ramp —
+the default billed 1.5s of ramp for a 520ms glide and pushed the three rows to 28.2s / +5.4%,
+outside the price. Re-verified after: 18/18 green at `--repeat-each=3 --workers=4`, and the
+whole file 34/34 twice at `--workers=2`.
+
+AGAINST THE PRICE. The wave priced +3 rows / +6 runs at ≈+44.5s serial and +4.1% on the whole
+config. Measured: +19.6s and +3.7%. The wall-clock figures are a darwin box's and a CI runner's
+are slower, but the RATIO is the claim, and it lands inside the priced envelope. The file's own
+share of the config's serial cost goes 9.6% → 12.9%, and it is the estate's most expensive spec
+either way. The two mobile rows are now the most
+expensive rows in it (a phone boots the whole estate into a quarter of the width), and the
+reload row is the cheapest thing added.
+
+COUNTS. `playwright test --list` now resolves 351 tests in 19 files in the default config
+(chromium 178 / webkit 173), 25 spec files on disk, 422 in all — was 345/416. README.md:96 still
+says 345/416 and `scripts/check-doc-truth.mjs` reds on it (`root-readme-e2e-counts`); the README
+is not this lane's file, and the true-up is handed off with the derived numbers.
+
+THE THREE REDS IN THE SERIAL RUN, and why none is a row of this wave's:
+  · `multiplayer.spec.ts:658` [chromium] — the incumbent 300-op soak, on
+    `page.evaluate: Execution context was destroyed, most likely because of a navigation`. A
+    navigation nobody in the row asked for: T7-W7 is editing `src/` in this same tree and the
+    dev server's HMR full-reloaded the page mid-flood (30 reload events in the server log over
+    the session). Green in the isolated `--workers=1` pass of the same file.
+  · `mobile-affordances.spec.ts:401` [chromium], `gallery-deal.spec.ts:489` [webkit] — neither
+    is this lane's; both sit on surfaces W7 has open (the deal ribbon, the coarse control card).
+
+STABILITY OF THE THREE NEW ROWS, after the harden. Both engines every time: 18/18 at
+`--repeat-each=3 --workers=4`, 34/34 twice over the whole file at `--workers=2`, 34/34 at
+`--workers=1`. Before the harden the same set had two red windows, one of them the glide race
+cured above and one where a T7-W7 save HMR-reloaded the pages mid-row (the vite log carries the
+reloads inside that window and none inside the clean runs) — which is why every red here was
+re-run up to four times before it was believed, per the wave's own resilience order.
+
+THE FENCE'S OWN EFFECT is not measurable here and does not pretend to be: the flake it answers
+(`multiplayer.spec.ts:498` [webkit], `Test timeout of 30000ms`) is a CI-runner event under
+full-suite contention. The claim is falsifiable on the record the same way W3's sharding is —
+the ≥3-page rows go quiet under the load-aware budget, or the budget is refuted.

@@ -1,0 +1,167 @@
+T7-W4 · NON-AUTHOR VERIFICATION
+2026-08-03 · darwin, node v26.0.0, @playwright/test 1.61.1, vitest 4.1.10
+tree: master `6d612ec5` + W4's working diff (W2's roster edits and W7's in-flight polish present)
+dev server: the shared vite on :4250 · nothing edited but this file
+
+VERDICT: GREEN with two open rows against the chair, neither in W4's own code — the relay lane
+is still in no CI workflow (the wave's structural half), and README's e2e counts are the
+sanctioned wave-seal restamp. Everything W4 claims in its digest reproduces, born-RED banks
+included, and every number below is re-derived here rather than copied.
+
+── 1 · THE RUNS, ALL GREEN ────────────────────────────────────────────────────────────────
+
+multiplayer.spec.ts, both engines, `--workers=2`:
+    36 tests → 34 passed, 2 skipped (the opt-in real-relay row, both engines), 42.0s wall
+    M1 `:841` chromium 3.5s / webkit 4.2s · M2 `:869` chromium 4.5s / webkit 4.9s
+    R1 `:715` chromium 1.5s / webkit 2.6s — all four fenced rows (`:497 :542 :597` + the two
+    mobile) carry `test.slow()`, and `boot()`'s budget scales on `context().pages().length`.
+
+The WHOLE default config, `--workers=2`, JSON-reportered: 351 rows resolved, 0 non-green,
+2 skipped. The `:658` 300-op soak and the two W7-surface rows the author's serial pass saw red
+are green here — consistent with the author's reading that those were HMR reloads out of W7's
+concurrent saves, not rows.
+
+relay suite (`npx vitest run --root ../relay`): 21 passed / 21, four repeats, 25–41 ms of test
+time each (0.8–2.8 s whole-invocation wall on a contended box). 14 incumbent rows → 21: U1, U2,
+U3 (`:281` attachment budget), U4 (`:297` fanout survival), plus two more presence rows
+(`:223` never to the departed socket nor into another room, `:238` silence for a socket that
+never published). The fixture re-cut is honest — `relayWire.ts:104` does send
+`{kinds:[20411], "#x":[topic]}` with no `since`, which is what `shippedFilter` now builds.
+
+frontend units: `relayWire.test.ts` (U5) + `useSession.parity.test.ts` (U6) — 2 files, 2 tests,
+green 12 times over (4 timed + 8 repeats), 0 failures. Whole FE lane 483 executed / 47 files /
+0 failed, and `check-unit-count.mjs` reads 483 ≥ floor 300, 61% slack.
+
+Gates on W4's surface, all green here: prettier (`npm run lint`), eslint on the four named
+sources, knip, lint:sleep, lint:motion, lint:lanes, test:e2e:projects, test:e2e:retries, and
+`vue-tsc -b` via the build.
+
+── 2 · THE BORN-RED BANKS, REPRODUCED (not read) ──────────────────────────────────────────
+
+M1 — an independent probe (scratchpad `m1-probe.mjs`, `devices["iPhone 13"]`, well opened, box
+read after two agreeing reads), with the coarse rule's `min-width` neutralised by an injected
+`min-width: auto` and then as shipped:
+
+    chromium  ABLATED  40.09375 × 44   →  AS-SHIPPED  44 × 44   (pointer: coarse = true)
+    webkit    ABLATED  40.109375 × 44  →  AS-SHIPPED  44 × 44
+
+The banked figures to the fifth decimal. The cure is `min-width: 44px` at
+GameControlPanel.vue:1364, inside the `(pointer: coarse)` block at :1361 — re-anchored under
+W2's and W7's edits, and it is W4's ONLY hunk in that file.
+
+U1/U2 — the two cures stripped out of a scratch copy of `relay.ts` (`announceLeave` call and
+the pre-parse `MAX_FRAME` check) and the shipped suite run against it:
+    × announces `bye` … — AssertionError: expected [] to have a length of 1 but got +0
+    × refuses a 5 MB frame … — expected [['OK','e1',true,'']] to equal [['OK','',false,…]]
+    Tests 2 failed | 19 passed (21)
+The empty sent log and the acked-and-fanned 5 MB are exactly the banked reds. Both evidence
+files order the red before the cure.
+
+`measure-frames.mjs` re-run here: st content 8085 B, st wire frame 9401 B, op 364 B, REQ 72 B —
+identical to `frame-sizes.txt`. MAX_FRAME 65,536 is 6.97× the worst frame the app can produce.
+The `raw.length` code-unit test is sound: UTF-8 bytes are never fewer than UTF-16 code units, so
+the cap never refuses a frame a byte cap would have passed.
+
+The U1 cure also integrates: `relayWire.ts:76` publishes under `pubkey === selfId` and its
+`onmessage` routes `kind === "bye"` to `h.peer(from, false)`, so the relay's synthesized frame
+lands on the existing client path with no client change.
+
+── 3 · PROPORTION, MEASURED HERE ──────────────────────────────────────────────────────────
+
+One `--workers=2` pass over the whole default config, numerator and denominator out of the same
+run (the author's method, at two workers rather than one):
+
+    the six added runs:      21.4s   (chromium 1.4 / 3.4 / 4.4 · webkit 2.6 / 4.3 / 5.3)
+    config serial-sum:      498.6s   ·  without the six: 477.2s
+    added proportion:        +4.48%
+
+Against the price (+3 rows / +6 runs ≈ +44.5s serial, +4.1% on the config): the ABSOLUTE cost
+lands at 48% of the priced seconds, with 23s of headroom. The RATIO reads 4.48% here against
+the banked 3.7%, and the difference is entirely the denominator — this box ran the config in
+477s where the author's serial pass read 527s, so the same numerator divides into a smaller
+whole. Both readings sit within a few tenths of the priced ratio and the added seconds are half
+the price either way; no blowout. The ratio is the noisier of the two claims and should be cited
+with its denominator wherever it is repeated.
+
+units: the two new files' own test time 10–22 ms across four runs, against the <50 ms budget —
+~3× headroom, matching the banked 16.1–17.8 ms. relay: 25–41 ms of test time, whole invocation
+0.8–2.8 s against the 0.56 s price; the delta is transform/import on a loaded box, not rows.
+
+Flake discipline: the three new rows run 12/12 green at `--repeat-each=2 --workers=4`, on top of
+the file pass and the whole-config pass — three clean executions each, no red seen at any point,
+so nothing needed the 3× re-run allowance.
+
+── 4 · THE LEAK CURE — BUILT AND GREPPED HERE, THEN ABLATED ───────────────────────────────
+
+`npm run build` on this tree, then the census over `dist/assets/*.js`:
+    wire=local 0 · localWire 0 · asksLocalWire 0 · BroadcastChannel 0
+`node scripts/check-prod-shake.mjs dist` → PASS, 23 chunks, 4 forbidden symbols, exit 0.
+
+ABLATION, in a scratch copy of the whole frontend (real `node_modules` symlinked, repo source
+untouched): drop `import.meta.env.DEV &&` from `useSession.ts:460` and rebuild —
+    wire=local → dist/assets/index-NA8u2P87gLqv.js · BroadcastChannel → the same chunk
+    [prod-shake] FAIL — 1 dev-only symbol(s) leaked … wire=local in …/index-NA8u2P87gLqv.js
+    exit 1
+So the gate bites the exact defect and the DEV fold is what shakes the arm out. The whole
+same-device transport leaves production, not merely the param.
+
+TWO NOTES, neither a defect:
+  · CI polices `dist-throttle` (`ci.yml:1271`, `test:prod-shake -- dist-throttle`), and that dir
+    is built fresh in the same job — the gate reads the tree it gates. Locally the bare script
+    picks up whatever `dist-throttle` is on disk; pass the dir explicitly when checking a fresh
+    build by hand.
+  · the FORBIDDEN entry is non-vacuous only because the source now writes ONE `key=value`
+    literal. A reintroduction spelled `get("wire") === "local"` is two literals the minifier
+    never joins and would slip the gate — which is why the pre-cure `dist-throttle` on disk here
+    passes despite predating the cure. The author documents this at both ends; it is inherent to
+    substring policing and worth carrying to whoever adds a fifth symbol.
+
+── 5 · DIFF SCOPE ─────────────────────────────────────────────────────────────────────────
+
+  ✓ `.players-leave` coarse rule carries `min-width: 44px` (GameControlPanel.vue:1361-1365);
+    every other hunk in that file is W7's or W2's and is untouched by W4.
+  ✓ useSession.ts head comments intact — `:11` "THREE MESSAGES", `:40` "~150 lines". The diff's
+    first hunk starts at `:188`; W5's born-RED targets are live.
+  ✓ useSession.ts is exactly the two seams: `export` on `localWire`, and the DEV-gated read
+    (plus `LOCAL_WIRE_PARAM`/`asksLocalWire`, which the gate needs to be enforceable).
+  ✓ relay.ts:11-26 header untouched — first hunk at `:134`.
+  ✓ W3's PRM declaration preserved verbatim at multiplayer.spec.ts:10-12.
+  ✓ nothing outside the named files: the rest of the working tree's `src/` and `perf-rig/`
+    churn is W7's and W3's, expected, and not graded here.
+  ✓ no `package.json` and no `ci.yml` edit — see the finding below, which is the cost of that.
+
+── 6 · FINDINGS ───────────────────────────────────────────────────────────────────────────
+
+F-1 (MAJOR) · THE RELAY LANE STILL RUNS NOWHERE. The wave calls the CI lane "owner ask 2's
+structural half" and its acceptance says the relay lane runs in CI. On this tree:
+`web/frontend/package.json` has no `test:unit:relay`; `.github/workflows/ci.yml` mentions
+`web/relay` only to exclude it from the format gate (`:715`); and no wiring request exists —
+`grep -rn "test:unit:relay"` over the tranche returns only the wave file itself, and
+DISPOSITIONS carries no row for it. The executor's constraint forbids editing either file, so
+the deliverable was a wiring request, and none was filed. 21 relay rows — including both
+born-RED cures for the ghost roster and the uncapped fanout — pass locally and would not have
+caught a regression on any pushed head. The fix is small and the chair's: the one-line script
+and one step in `fe-unit` (measured cost here ~1 s), or an explicit disposition retiring the
+clause.
+
+F-2 (LOW) · README's e2e counts are red, and only handed off in prose. `check-doc-truth.mjs`
+reads 2 RED / 20 GREEN on this tree — `root-readme-e2e-counts` (README.md:96 says 345 across 19
+files, Chromium 175 / WebKit 170; derived 351, 178/173) and `e2e-total-arithmetic` (README.md:99
+says 416, derived 422 = 351 + 4 + 67). Both are W4's +6 runs. This is the sanctioned mid-tranche
+shape — runbook-notes §11 names W4's rows explicitly and puts the true-up on the wave-seal
+commit — so it is a chair action, not a defect; it is logged here because the handoff lives only
+inside `e2e-proportion.txt`'s closing paragraph and nowhere the seal checklist reads.
+
+── APPENDIX · WHAT WAS RUN ────────────────────────────────────────────────────────────────
+  npx playwright test e2e/multiplayer.spec.ts --workers=2 --reporter=list
+  npx playwright test --workers=2 --reporter=json            (whole default config)
+  npx playwright test e2e/multiplayer.spec.ts -g "<the three rows>" --repeat-each=2 --workers=4
+  node <scratch>/m1-probe.mjs                                (M1 born-RED, both engines)
+  npx vitest run --root ../relay                             (×4) · and ×1 against ablated cures
+  npx vitest run src/games/shared/{relayWire,useSession.parity}.test.ts   (×12)
+  npx vitest run  ·  node scripts/check-unit-count.mjs <scratch>/vitest-report.json
+  npm run build · grep census over dist/assets · node scripts/check-prod-shake.mjs dist
+  vite build in a scratch copy with the DEV gate removed · check-prod-shake against it
+  node docs/.../evidence/w4/measure-frames.mjs
+  npm run lint · lint:knip · lint:sleep · lint:motion · lint:lanes · test:e2e:projects ·
+    test:e2e:retries · npx eslint <the four sources> · node scripts/check-doc-truth.mjs

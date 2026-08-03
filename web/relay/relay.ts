@@ -131,10 +131,32 @@ function isEvent(v: unknown): v is NostrEvent {
   );
 }
 
-/** `subId → filters`, carried on the socket itself so it survives hibernation. */
+/** `subId → filters`. */
 type Subs = Record<string, Filter[]>;
 
-const subsOf = (ws: Sock): Subs => (ws.deserializeAttachment() as Subs | null) ?? {};
+/**
+ * Everything a socket must remember across an eviction, carried on the socket itself. Two
+ * things only: what it asked for, and — once it has published — the ENVELOPE it publishes
+ * under, which is all `webSocketClose` has left to name the peer that went. Cloudflare's
+ * ceiling here is 16,384 B; a shipped socket spends 172 B of it, 1.05% (the budget row).
+ */
+interface Attachment {
+  subs: Subs;
+  who?: { pubkey: string; kind: number; tags: string[][] };
+}
+
+const attOf = (ws: Sock): Attachment =>
+  (ws.deserializeAttachment() as Attachment | null) ?? { subs: {} };
+
+/**
+ * The biggest frame this app can produce, with room around it. Measured on the shipped wire
+ * (`evidence/w4/frame-sizes.txt`): a REQ is 72 B, an `op` 364 B, and the worst `st` — a 9×9
+ * board with every cell inked, nine corner AND nine centre marks on every one, plus the
+ * killer/kenken cage furniture — 9,401 B. 64 KiB is ~7× that and ~180× an ordinary frame, so
+ * nothing the app sends comes near it, and a frame that does is not this app's. Without the
+ * cap a 5 MB `content` is acked and fanned WHOLE, once per subscriber (5,000,144 B each).
+ */
+const MAX_FRAME = 65_536;
 
 export class Relay {
   constructor(private state: State) {}
@@ -149,6 +171,12 @@ export class Relay {
   }
 
   webSocketMessage(ws: Sock, raw: string | ArrayBuffer): void {
+    // Refused BEFORE the parse — a relay that `JSON.parse`s 5 MB to decide 5 MB is too much has
+    // already paid for it. Code units for a string, not bytes: a UTF-8 byte is never fewer than
+    // one UTF-16 code unit, so this never refuses a frame that would have fit.
+    if ((typeof raw === "string" ? raw.length : raw.byteLength) > MAX_FRAME)
+      return ws.send(JSON.stringify(["OK", "", false, "invalid: frame too large"]));
+
     let msg: unknown;
     try {
       msg = JSON.parse(typeof raw === "string" ? raw : new TextDecoder().decode(raw));
@@ -160,30 +188,69 @@ export class Relay {
 
     if (verb === "EVENT") {
       if (!isEvent(a)) return ws.send(JSON.stringify(["OK", "", false, "invalid: shape"]));
+      // Keep the envelope, never the payload: `webSocketClose` has no frame to read, and this
+      // is the only place the socket says who it is. Once per socket, not once per frame — a
+      // page publishes under one pubkey for its whole life.
+      const att = attOf(ws);
+      if (att.who?.pubkey !== a.pubkey) {
+        att.who = { pubkey: a.pubkey, kind: a.kind, tags: a.tags };
+        ws.serializeAttachment(att);
+      }
       ws.send(JSON.stringify(["OK", a.id, true, ""]));
       this.fanout(ws, a);
       return;
     }
     if (verb === "REQ") {
-      const subs = subsOf(ws);
-      subs[a as string] = rest;
-      ws.serializeAttachment(subs);
+      const att = attOf(ws);
+      att.subs[a as string] = rest;
+      ws.serializeAttachment(att);
       // No stored events, so the end of the stream is the start of it.
       return ws.send(JSON.stringify(["EOSE", a]));
     }
     if (verb === "CLOSE") {
-      const subs = subsOf(ws);
-      delete subs[a as string];
-      ws.serializeAttachment(subs);
+      const att = attOf(ws);
+      delete att.subs[a as string];
+      ws.serializeAttachment(att);
       return;
     }
     ws.send(JSON.stringify(["NOTICE", `unsupported: ${String(verb)}`]));
   }
 
   webSocketClose(ws: Sock, code: number, reason: string): void {
+    this.announceLeave(ws);
     // 1006 is "abnormal" and a socket may not be closed WITH it; a peer that vanished gets the
     // normal code instead, which is what a dropped tab is.
     ws.close(code === 1006 ? 1000 : code, reason);
+  }
+
+  /**
+   * A peer that vanishes without a `bye` lingers on every other roster, because both shipped
+   * arms derive presence from traffic and an absence produces no traffic (`relayWire.ts`'s
+   * header flags exactly this class). The relay is the only party that knows, so it says so,
+   * in the arm's own grammar: `bye` in the content of an ordinary event on the departed
+   * socket's own kind and tag, which every subscriber to that room already matches. No payload
+   * is read to do it — `pubkey` IS the peer id the client reads as `from` (`relayWire.ts:61,76`
+   * mints one per page and publishes under it), so the envelope is enough.
+   *
+   * This covers the socket that CLOSES: a crashed tab, a page navigated away, a link the
+   * runtime gives up on. A peer whose socket stays open while the page behind it is dead is
+   * still the roster's problem, and that one wants a presence timeout — cut-2's, not this.
+   * A socket that only ever subscribed is on nobody's roster, and gets no announcement.
+   * A page that said its OWN `bye` on `pagehide` and then closed produces a second one; the
+   * client's `peer(id, false)` is a filter, so the second costs nothing.
+   */
+  private announceLeave(ws: Sock): void {
+    const who = attOf(ws).who;
+    if (!who) return;
+    this.fanout(ws, {
+      id: `bye-${who.pubkey}`,
+      pubkey: who.pubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      kind: who.kind,
+      tags: who.tags,
+      content: JSON.stringify({ kind: "bye", data: {}, from: who.pubkey }),
+      sig: "",
+    });
   }
 
   /** Every OTHER socket whose subscriptions want this event, once per matching subscription —
@@ -191,7 +258,7 @@ export class Relay {
   private fanout(from: Sock, ev: NostrEvent): void {
     for (const ws of this.state.getWebSockets()) {
       if (ws === from) continue;
-      for (const [subId, filters] of Object.entries(subsOf(ws))) {
+      for (const [subId, filters] of Object.entries(attOf(ws).subs)) {
         if (!filters.some((f) => matches(f, ev))) continue;
         try {
           ws.send(JSON.stringify(["EVENT", subId, ev]));

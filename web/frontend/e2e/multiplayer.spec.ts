@@ -1,4 +1,11 @@
-import { test, expect, type Page } from "@playwright/test";
+import {
+  test,
+  expect,
+  devices,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 
 // PRM: live, because the wordmark-through-join row watches the pose stack AS the beat walks it—a
 //   bake whose poses 1..n come back blank is only visible when the beat steps onto them, so
@@ -48,12 +55,39 @@ import { test, expect, type Page } from "@playwright/test";
 const SOLO = "./?size=3&difficulty=EASY";
 const cellInput = (p: Page, i: number) => p.locator(".sudoku-cell input").nth(i);
 
+/**
+ * ── T7-W4 · THE FENCE, and it is a BUDGET rather than a serial describe ────────────────────
+ *
+ * The file's heavy rows are its contention-amplified ones: `multiplayer.spec.ts:498` [webkit]
+ * died on `Test timeout of 30000ms` at head `6a180b35` and passed clean in isolation
+ * (evidence/w0/ci-preflight.md; its arithmetic corrected in evidence/w3/burst-forensics.md §1,
+ * which also has `:454` on the same list). Both reds are the ROW's own deadline or a boundary
+ * read at the end of one — never a selector that resolved late — so what has to move is the
+ * time a booting page is allowed while other pages are awake beside it. `boot()` scales its
+ * waits with the room (a fourth page contends with three others' wasm, board adoption and paint
+ * on one thread), and the heavy rows carry `test.slow()`, which lifts the row deadline by the
+ * same ×3. A selector budget above the test timeout buys nothing, so the two move together.
+ *
+ * NOT `describe.configure({ mode: "serial" })`: it re-indents ~120 lines to say something about
+ * this file's rows while the contention is the whole suite's — W3 already shards webkit to
+ * `workers: 1`, which serializes them — and it turns one row's red into two skips, so the
+ * four-page row's evidence would vanish the moment the flood row went first.
+ */
+const BOOT_MS = 20000;
+
+/** The board is up, on a budget the live page count sets: 1 page → 20s, 4 → 60s, capped where
+ *  `test.slow()` caps. */
+async function settled(page: Page) {
+  const budget = BOOT_MS * Math.min(3, page.context().pages().length);
+  await page.waitForSelector("svg.handwritten-logo", { timeout: budget });
+  await expect
+    .poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: budget })
+    .toBeGreaterThan(0);
+}
+
 async function boot(page: Page, url: string) {
   await page.goto(url);
-  await page.waitForSelector("svg.handwritten-logo", { timeout: 20000 });
-  await expect
-    .poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: 20000 })
-    .toBeGreaterThan(0);
+  await settled(page);
 }
 
 /** Every cell's digit, as one string — the same signature the interaction suite settles on. */
@@ -85,9 +119,14 @@ const digitAt = (page: Page, index: number) => cellInput(page, index).inputValue
  *  `?s=` and `?board=` with `replaceState` BEFORE it touches the clipboard, which is exactly
  *  the property the share-truth rows exist to protect. */
 async function invite(page: Page): Promise<string> {
-  await page
-    .locator('.controls-card button[aria-label="Play together on this board"]')
-    .click();
+  const verb = page.locator(
+    '.controls-card button[aria-label="Play together on this board"]',
+  );
+  // The well's verb is `:disabled` while a board is in flight. Polled, because a click that
+  // lands on the disabled beat spends the row's whole deadline in Playwright's actionability
+  // retry and then reports the ambiguous "Test ended" — measured under two-worker contention.
+  await expect(verb).toBeEnabled();
+  await verb.click();
   await expect.poll(() => new URL(page.url()).searchParams.get("s")).not.toBeNull();
   expect(new URL(page.url()).searchParams.get("board")).not.toBeNull();
   return page.url();
@@ -458,6 +497,7 @@ const wordmarkRecord = (page: Page): Promise<WordmarkRecord> =>
 test("the wordmark holds through the join, under an op flood arriving mid-boot", async ({
   browser,
 }) => {
+  test.slow(); // fenced: two pages AND forty ops arriving while the second one boots
   const ctx = await browser.newContext();
   const a = await ctx.newPage();
   await boot(a, SOLO + "&wire=local");
@@ -488,8 +528,16 @@ test("the wordmark holds through the join, under an op flood arriving mid-boot",
     .poll(() => b.locator("image.logo-pose-bmp").count())
     .toBe(await b.locator("image.logo-pose-bmp").count());
 
+  // POLLED to its own floor (T7-W4 seal — the file's last CH-63 boundary read): on the
+  // runner the rAF sampler had ticked exactly 10 times when a one-shot read landed, so
+  // the row's vacuity guard red on a boundary the sampler crosses one frame later. The
+  // invariant is "the sampler RAN past its floor" — the read retries to it, and the
+  // record is then read ONCE for the grading below, where more samples only strengthen
+  // the blank census.
+  await expect
+    .poll(() => wordmarkRecord(b).then((r) => r.samples))
+    .toBeGreaterThan(10);
   const rec = await wordmarkRecord(b);
-  expect(rec.samples).toBeGreaterThan(10); // the sampler ran; the row is not vacuous
   expect(rec.emptySamples).toBe(0);
   // Every pose of every admitted set paints. `-1` is a handle superseded before it could be
   // read, which is not a blank; `0` is a bitmap with no ink in it, which is the defect.
@@ -502,6 +550,7 @@ test("the wordmark holds through the join, under an op flood arriving mid-boot",
 test("four pages, one board: every roster, every ink, every digit, one contended cell", async ({
   browser,
 }) => {
+  test.slow(); // fenced: four pages on one thread — the row that died on the 30s deadline
   const ctx = await browser.newContext();
   const a = await ctx.newPage();
   await boot(a, SOLO + "&wire=local");
@@ -556,6 +605,7 @@ test("four pages, one board: every roster, every ink, every digit, one contended
 test("a player leaves mid-flood: the rosters prune and the survivors keep writing", async ({
   browser,
 }) => {
+  test.slow(); // fenced: three pages, and the churn happens under twenty ops
   const ctx = await browser.newContext();
   const a = await ctx.newPage();
   await boot(a, SOLO + "&wire=local");
@@ -666,6 +716,195 @@ test("three hundred ops as fast as the wire takes them, and the boards are one b
     }));
     expect(shape.cells).toBe(81);
   }
+
+  await ctx.close();
+});
+
+test("a page that reloads mid-session comes back to the same table and the same board", async ({
+  browser,
+}) => {
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await boot(a, SOLO + "&wire=local");
+  const link = await invite(a);
+  const b = await ctx.newPage();
+  await boot(b, link);
+  await expect(roster(b)).toHaveCount(2);
+
+  // A DEALS, and the epoch takes both boards. B's address bar keeps the ORIGINAL `?board=` —
+  // the permalink is written by the share act, and no peer's deal rewrites it — so B is now
+  // holding a link to a board nobody at the table is playing.
+  const stale = await boardSignature(a); // the board B's `?board=` encodes, from here on
+  await a.locator('.controls-card button[aria-label="Deal a new board"]').click();
+  await expect.poll(() => boardSignature(a)).not.toBe(stale);
+  await expect.poll(() => boardSignature(b)).toBe(await boardSignature(a));
+  expect(new URL(b.url()).searchParams.get("board")).toBe(
+    new URL(link).searchParams.get("board"),
+  );
+
+  // AND THEN B RELOADS — a phone that slept, a tab the OS reaped, a refresh. Boot restores the
+  // stale permalink board and `readSessionParam` re-joins the room in the same beat, so the row
+  // is a race with a right answer: the ROOM's board wins over the URL's, because the room is
+  // where the other player is. The guard is for the `readSessionParam→joinSession` vs
+  // `publishBoard` order — an adoption that echoed back as a fresh epoch would drag A onto B's
+  // stale board instead, and both pages would leave the board they were playing.
+  const table = await boardSignature(a); // read before the reload — the room's board
+  expect(table).not.toBe(stale);
+  await b.reload();
+  await settled(b);
+  for (const p of [a, b]) await expect(roster(p)).toHaveCount(2);
+  await expect.poll(() => boardSignature(b)).toBe(table);
+  // A NEVER MOVED. The other half of the race: an adoption that echoed back as a fresh epoch
+  // would have dragged the room onto the joiner's stale board instead.
+  expect(await boardSignature(a)).toBe(table);
+
+  // The same table, not merely the same picture: a digit still crosses after the round trip.
+  const cell = await firstEmpty(a);
+  await write(a, cell, "3");
+  await expect.poll(() => digitAt(b, cell)).toBe("3");
+
+  await ctx.close();
+});
+
+// ── T7-W4 · TWO PHONES AT ONE TABLE ────────────────────────────────────────────────────────
+//
+// Fifteen rows of multiplayer ran at 1280×800 and nowhere else, which left the estate's most
+// social feature unproven on the surface people actually play it on: the well is behind the
+// portrait dock's door, the roster is read with a thumb over it, and the one verb out of a room
+// is a written word rather than a button-shaped thing.
+//
+// THE DESCRIPTOR RIDES `newContext`, not `test.use`. `devices["iPhone 13"]` is the estate's
+// incumbent phone (mobile-affordances.spec.ts owns its other home) and no new viewport number
+// is minted here — but the local arm is a `BroadcastChannel`, so ONE context is what makes two
+// pages a room, and the device has to be spread onto the same call the room is.
+
+const PHONE = devices["iPhone 13"];
+
+/** The dev-only FilterTuner toggle floats over the coarse panel and eats taps — dev chrome, not
+ *  product surface, hidden here for the same reason mobile-affordances hides it. */
+const hideDevChrome = (page: Page) =>
+  page.addStyleTag({ content: ".tuner-toggle { display: none !important; }" });
+
+/** A box read AFTER it stopped moving, polled rather than slept for: the drawer glides on
+ *  Band-D (cubic-bezier(0.32,0.72,0,1) @520ms) and every row below measures where it STOPPED.
+ *  Two agreeing reads is the settle, and it is also the instrument M2 needs — "the sheet does
+ *  not move" is the same read taken twice with traffic in between. */
+async function stableBox(loc: Locator) {
+  const read = async () => {
+    const b = await loc.boundingBox();
+    return (
+      b && {
+        x: Math.round(b.x),
+        y: Math.round(b.y),
+        width: Math.round(b.width),
+        height: Math.round(b.height),
+      }
+    );
+  };
+  let prev = "";
+  await expect
+    .poll(
+      async () => {
+        const now = JSON.stringify(await read());
+        const same = now !== "null" && now === prev;
+        prev = now;
+        return same;
+      },
+      // A TIGHT CADENCE, deliberately: the default poll ramps 100/250/500/1000ms and would bill
+      // the row a second and a half of ramp for a 520ms glide. Three reads at 100ms and the rest
+      // at 200 settles it in ~600ms and still gives a loaded box 15s to stop moving.
+      { intervals: [100, 100, 200], timeout: 15000 },
+    )
+    .toBe(true);
+  return (await read())!;
+}
+
+/** The card is behind a door on the portrait dock (T5-W4 pass 6), so a row that probes the
+ *  players well opens it first. */
+async function openWell(page: Page) {
+  await hideDevChrome(page);
+  await page.locator(".drawer-tab").tap();
+  await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
+  await expect(page.locator(".controls-card")).toBeVisible();
+  // AND THEN IT HAS TO STOP. Visible is not still: the door glides on Band-D, and a click issued
+  // into the glide spends the row's deadline inside Playwright's own stability retry ("element
+  // is not stable", ×30s) rather than failing on anything the product did — measured under
+  // two-worker contention. The settle is the same polled read every geometry row below takes.
+  await stableBox(page.locator(".controls-card"));
+}
+
+/** Two phones, one room, both wells open — M1 and M2 open the same way and diverge after. */
+async function twoPhones(ctx: BrowserContext) {
+  const a = await ctx.newPage();
+  await boot(a, SOLO + "&wire=local");
+  await openWell(a);
+  const link = await invite(a);
+
+  const b = await ctx.newPage();
+  await boot(b, link);
+  await openWell(b);
+  return { a, b };
+}
+
+test("two phones sit at one table, and the well is reachable with the sheet shut", async ({
+  browser,
+}) => {
+  test.slow(); // fenced: two phones, and each one drives the drawer glide before it is read
+  const ctx = await browser.newContext({ ...PHONE });
+  const { a, b } = await twoPhones(ctx);
+
+  // The room is real on both phones — same board, two rows, each naming itself.
+  expect(await boardSignature(b)).toBe(await boardSignature(a));
+  for (const p of [a, b]) {
+    await expect(roster(p)).toHaveCount(2);
+    await expect(p.locator(".players-roster .player-self")).toHaveText("you");
+  }
+  expect(await a.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
+
+  // THE WAY OUT IS A TARGET, on both phones. `leave` is a written word, and a written word is
+  // still a control: the estate's floor is ≥44px on BOTH dimensions everywhere else on this
+  // card (mobile-affordances' play tools, the peek chip, the drawer tab), and the coarse rule
+  // here set `min-height` alone — 40.09×44, wide enough to read and narrow enough to miss.
+  for (const p of [a, b]) {
+    const box = await stableBox(p.locator(".controls-card .players-leave"));
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.width).toBeGreaterThanOrEqual(44);
+  }
+
+  await ctx.close();
+});
+
+test("a digit tapped on a phone crosses, and the sheet does not move under the traffic", async ({
+  browser,
+}) => {
+  test.slow(); // fenced: two phones, three glides, and a twenty-op flood across them
+  const ctx = await browser.newContext({ ...PHONE });
+  const { a, b } = await twoPhones(ctx);
+  for (const p of [a, b]) await expect(roster(p)).toHaveCount(2);
+
+  // A SHUTS THE SHEET AND PLAYS. The fold keeps the board and the four play verbs, so this is
+  // the phone's whole write path end to end: a thumb on the cell, the OS keypad's own key, and
+  // the digit on the wire — not `fill()` into a focused input the way the desktop rows write.
+  await a.locator(".drawer-tab").tap();
+  await expect(a.locator("#controls-drawer .drawer-case")).toBeHidden();
+  const cell = await firstEmpty(a);
+  await cellInput(a, cell).tap();
+  await a.keyboard.type("7");
+  await expect.poll(() => digitAt(b, cell)).toBe("7");
+
+  // AND THE SHEET HOLDS UNDER THE TRAFFIC. B is reading the roster with the well open while A
+  // writes; twenty arriving ops must not re-lay the card out under the reader's thumb, which is
+  // the mobile shape of the flash the T6.2 battery cured on the desktop. Both boxes are settled
+  // reads, so this is where the drawer STOPPED against where it stopped — not a race with the
+  // glide.
+  const sheet = b.locator("#controls-drawer .drawer-case");
+  const before = await stableBox(sheet);
+  const empties = await emptyCells(a);
+  const flooded = empties.slice(0, 20);
+  for (let n = 0; n < flooded.length; n++) await writeFast(a, flooded[n], (n % 9) + 1);
+  await expect.poll(() => digitAt(b, flooded[flooded.length - 1])).not.toBe("");
+  expect(await stableBox(sheet)).toEqual(before);
+  await expect(roster(b)).toHaveCount(2); // traffic is not presence
 
   await ctx.close();
 });

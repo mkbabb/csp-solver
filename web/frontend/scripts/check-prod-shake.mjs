@@ -45,7 +45,20 @@ import process from "node:process";
 const FRONTEND_ROOT = fileURLToPath(new URL("..", import.meta.url));
 // `__schedulerDebug`, NOT `schedulerDebugInfo` — see the swap note in the header. The
 // rule for adding a fourth: it must be a symbol the minifier is obliged to preserve.
-const FORBIDDEN = ["FilterTuner", "rafInstrumentation", "__schedulerDebug"];
+//
+// The fourth (T7-W4): `wire=local`, the same-device transport's opt-in. It is a STRING
+// LITERAL, which is the one category minification is obliged to keep whole, and it is written
+// as one `key=value` token in `useSession.ts` for exactly that reason — a `get("wire") ===
+// "local"` pair is two literals the minifier never joins, so policing the joined form would
+// have been vacuous by construction. Gated on `import.meta.env.DEV` in the same wave: read
+// unconditionally the param survived every strip path and rode copied invite links, and the
+// built page's `BroadcastChannel` answered with a room that never left the recipient's device.
+const FORBIDDEN = [
+  "FilterTuner",
+  "rafInstrumentation",
+  "__schedulerDebug",
+  "wire=local",
+];
 // The bundled build dir: an explicit CLI arg wins; else the first that exists.
 const CANDIDATE_DIRS = ["dist-throttle", "dist"];
 

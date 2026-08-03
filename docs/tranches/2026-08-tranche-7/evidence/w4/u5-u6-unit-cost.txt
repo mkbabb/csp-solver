@@ -1,0 +1,43 @@
+T7-W4 · U5 + U6 · THE FRONTEND UNIT LANE — cost and green
+
+Box: darwin, node v26.0.0, vitest 4.1.10.  Date: 2026-08-03.
+Tree: the T7-W4 working tree (W7's polish edits and W2's roster edits present and untouched).
+
+── the two rows ──────────────────────────────────────────────────────────────────────
+  U5  src/games/shared/relayWire.test.ts          1 test — the reconnect ladder
+  U6  src/games/shared/useSession.parity.test.ts  1 test — localWire ∥ relayWire parity
+
+── the lane, three runs each, with and without them ──────────────────────────────────
+  with     483 executed  ·  0 failed  ·  47 files
+  without  481 executed  ·  0 failed  ·  45 files
+
+  sum of per-file durations, with:    13899.3 / 4557.0 / 4619.6 ms
+  sum of per-file durations, without:  5356.0 / 4199.8 / 4098.6 ms
+  the two new files alone:                17.8 /   16.9 /   16.1 ms
+
+  THE HONEST NUMBER IS THE LAST ROW. Suite totals are dominated by cold transform/environment
+  (run 1 above is a cold cache at 13.9 s against 4.6 s warm) and by the 1.7 s stress row, so a
+  with-minus-without subtraction reads noise. The two files' own measured cost is 16–18 ms
+  against W4's <50 ms budget. Ceiling headroom: ~3×.
+
+  For the WGATE `check-unit-count.mjs --restamp`: the FE lane reads 483 executed / 47 files
+  at this bank. That number moves again if W2 or W7 land further rows — restamp last, per
+  W6 §floor timing.
+
+── what the 16 ms buys ───────────────────────────────────────────────────────────────
+  U5 is fake-timered end to end (`vi.useFakeTimers` + a stub socket), so 60 s of simulated
+  backoff costs nothing and the row cannot flake under suite contention — the point of putting
+  the slow-network claim here rather than on CDP throttling, which is chromium-only and so a
+  HOLDOUT violation.
+
+  U6 drains the loop rather than sleeping a fixed number of turns, and turns it with
+  `setImmediate` (check phase, microseconds) rather than `setTimeout(0)` (timer phase,
+  millisecond floor). At a fixed one-turn settle the row measured 1 red in 3 — see the drain's
+  header; the fixed count was the flake, and the drain is the cure.
+
+── flake discipline ──────────────────────────────────────────────────────────────────
+  Post-cure repetition, this tree:
+    25 × the two files together, JSON-reportered  →  0 failed
+    12 × the whole FE unit suite                   →  0 failed
+   200 × the local arm's script in one process     →  0 mismatched
+   200 × the relay arm's script in one process     →  0 mismatched

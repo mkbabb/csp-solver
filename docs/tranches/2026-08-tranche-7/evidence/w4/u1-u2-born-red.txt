@@ -1,0 +1,89 @@
+T7-W4 · U1/U2 BORN RED — the relay lane
+date: 2026-08-03 · head: 6d612ec5 · cmd: cd web/frontend && npx vitest run --root ../relay
+
+U1 — a socket that leaves is announced. Today the peer's sent log is [].
+U2 — a frame past the cap is refused. Today a 5 MB content is acked true and fanned WHOLE:
+     5,000,144 B per subscriber (JSON.stringify(["EVENT", subId, ev]) on the 5 MB event).
+
+── the run, cures absent ────────────────────────────────────────────────────────────────
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/relay
+
+ ❯ relay.test.ts (21 tests | 2 failed) 16ms
+     × announces `bye` to the room on the departed socket's own kind and tag 3ms
+     × refuses a 5 MB frame, and no subscriber pays for it 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  relay.test.ts > presence — a socket that leaves is announced (T7-W4 U1) > announces `bye` to the room on the departed socket's own kind and tag
+AssertionError: expected [] to have a length of 1 but got +0
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ relay.test.ts:212:20
+    210|     r.webSocketClose(a, 1006, "");
+    211|
+    212|     expect(b.sent).toHaveLength(1);
+       |                    ^
+    213|     const [verb, subId, body] = b.sent[0] as [string, string, NostrEve…
+    214|     expect([verb, subId]).toEqual(["EVENT", "sub-b"]);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  relay.test.ts > the frame cap — a frame past it is refused, not relayed (T7-W4 U2) > refuses a 5 MB frame, and no subscriber pays for it
+AssertionError: expected [ [ 'OK', 'e1', true, '' ] ] to deeply equal [ [ 'OK', '', false, …(1) ] ]
+
+- Expected
++ Received
+
+  [
+    [
+      "OK",
++     "e1",
++     true,
+      "",
+-     false,
+-     "invalid: frame too large",
+    ],
+  ]
+
+ ❯ relay.test.ts:258:20
+    256|     feed(r, a, ["EVENT", ev({ content: "x".repeat(5_000_000) })]);
+    257|
+    258|     expect(a.sent).toEqual([["OK", "", false, "invalid: frame too larg…
+       |                    ^
+    259|     expect(b.sent).toEqual([]);
+    260|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 19 passed (21)
+   Start at  05:03:49
+   Duration  140ms (transform 18ms, setup 0ms, import 25ms, tests 16ms, environment 0ms)
+
+
+── the same suite, cures landed (U1-U4 + the re-cut fixtures) ───────────────────────────
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/relay
+
+
+ Test Files  1 passed (1)
+      Tests  21 passed (21)
+   Start at  05:08:24
+   Duration  137ms (transform 22ms, setup 0ms, import 28ms, tests 8ms, environment 0ms)
+
+
+── ablation, U4 (regression guard, not born-RED) ────────────────────────────────────────
+Delete the try/catch around the fanout send and the row falls over on its own:
+  x the fanout survives a socket that dies mid-loop — the rest of the room still hears it
+  Tests  1 failed | 20 passed (21)          (reverted; the file ships with the guard)
+
+the cures: relay.ts — MAX_FRAME = 65,536 checked BEFORE the parse (U2); Attachment.who +
+Relay.announceLeave, a `bye` on the departed socket's own kind and tag (U1). Sizes and
+their derivation: evidence/w4/frame-sizes.txt, measure-frames.mjs.

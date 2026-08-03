@@ -1,0 +1,54 @@
+T7-W4 · U5 + U6 · ABLATION LEDGER
+
+Neither row is born-RED — U1/U2 carry that duty in web/relay. The estate's rule is that a
+row which cannot fail is not a row, so each is run against a deliberately broken arm and
+shown to bite. Source is restored after every ablation; the git diff at the foot proves it.
+Box: darwin, node v26.0.0, vitest 4.1.10.  Date: 2026-08-03.
+
+══ 1 — U5 · announce BEFORE subscribe (swap the two lines in connect()) ══
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: REQ first — a `hi` published before the subscription lands is answered into a room this page is not listening to: expected 'EVENT' to be 'REQ' // Object.is equality
+      Tests  1 failed (1)
+
+══ 2 — U5 · uncap the ladder (drop the Math.min) ══
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: rung 1: no socket before 500ms: expected [ FakeSocket{ …(7) }, …(2) ] to have a length of 2 but got 3
+      Tests  1 failed (1)
+
+══ 3 — U5 · a page that left keeps reconnecting (drop BOTH `closed` guards) ══
+  Two attempts, and the first one is the finding. Dropping the guard in `onclose` ALONE leaves
+  the row GREEN, and so does dropping `connect()`'s alone: the ladder is double-guarded, and
+  either guard on its own is sufficient. Neither is dead code — each covers the other's window —
+  but the row's claim is about the BEHAVIOUR, so the honest ablation removes both.
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: a socket closing under `leave()` must not reconnect: expected [ FakeSocket{ …(7) }, …(7) ] to have a length of 7 but got 8
+      Tests  1 failed (1)
+
+══ 4 — U6 · relayWire BROADCASTS a directed frame (drop the `to` filter) ══
+  This is the one that found the HARNESS's own hole. Against a two-seat table it stayed
+  GREEN — the only other socket in the room was the addressee, so an arm ignoring `to`
+  delivers the identical log. Seat C, the non-addressee, is the cure.
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected '{\n "A": {\n  "msgs": [\n   "B hi #2"…' to be '{\n "A": {\n  "msgs": [\n   "B hi #2"…' // Object.is equality
++    "B hi #4",
+-    "B op #7"
++    "B op #7",
++    "A st #8"
+      Tests  1 failed (1)
+
+══ 5 — U6 · relayWire swallows the `bye` (a peer that leaves is never announced) ══
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+AssertionError: expected '{\n "A": {\n  "msgs": [\n   "B hi #2"…' to be '{\n "A": {\n  "msgs": [\n   "B hi #2"…' // Object.is equality
+-    "B leave",
+-    "A leave",
+-    "B join",
+-    "B leave"
++    "B join"
+      Tests  1 failed (1)
+
+══ RESTORED ══
+      Tests  2 passed (2)
+   Duration  545ms (transform 82ms, setup 28ms, import 99ms, tests 13ms, environment 667ms)
+
+git diff on the ablated source after restore (must be empty):
+  bytes: 0

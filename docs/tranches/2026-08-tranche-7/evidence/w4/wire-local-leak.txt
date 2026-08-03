@@ -1,0 +1,70 @@
+T7-W4 · THE `?wire=local` LEAK — cure, proof, and the two ablations that make it a proof
+
+Box: darwin, node v26.0.0, vite 8.  Date: 2026-08-03.  Tree: T7-W4 working.
+Census helper: for each pattern, occurrences across dist/assets/*.js.
+
+══ A · PRE-CURE — HEAD's line, restored verbatim ══
+   const local = new URLSearchParams(window.location.search).get("wire") === "local";
+   Read unconditionally: it survives every strip path and rides a copied invite link, and
+   the BUILT page's BroadcastChannel answers with a room that never leaves the device.
+    wire=local         0
+    "wire"           1
+    "local"          2
+    localWire          0
+    BroadcastChannel   1
+   → the read is IN the bundle, and so is the arm it selects. The leak is real.
+   → and `wire=local` reads 0: a `get("wire") === "local"` pair is TWO literals the
+     minifier never joins, so policing the joined form against THIS source would have been
+     vacuous — which is why the cure writes the param as one `key=value` token.
+[prod-shake] 23 bundle chunk(s) under dist-leakprobe; asserting 4 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, __schedulerDebug, wire=local
+[prod-shake] PASS — the dev tuner is fully tree-shaken from production.
+
+══ B · BORN RED — the joined literal, UNGATED (drop `import.meta.env.DEV &&`) ══
+    wire=local         1
+    "wire"           0
+    "local"          1
+    localWire          0
+    BroadcastChannel   1
+[prod-shake] FAIL — 1 dev-only symbol(s) leaked into the prod bundle:
+  wire=local  in  dist-leakprobe/assets/index-DwvniRvv6XuB.js
+
+A dev import escaped its `import.meta.env.DEV` fence — trace it and re-fence; do NOT relax this check.
+
+══ C · CURED — `const local = import.meta.env.DEV && asksLocalWire();` ══
+    wire=local         0
+    "wire"           0
+    "local"          1
+    localWire          0
+    BroadcastChannel   0
+   → `import.meta.env.DEV` folds to false at build, the ternary folds to the relay call,
+     and rollup then shakes `localWire`, `asksLocalWire` and `LOCAL_WIRE_PARAM` out
+     TOGETHER. Not just the param — the whole same-device arm leaves the shipped bundle.
+[prod-shake] 23 bundle chunk(s) under dist-leakprobe; asserting 4 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, __schedulerDebug, wire=local
+[prod-shake] PASS — the dev tuner is fully tree-shaken from production.
+
+══ the shipped dist (npm run build), same tree ══
+[prod-shake] 23 bundle chunk(s) under dist; asserting 4 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, __schedulerDebug, wire=local
+[prod-shake] PASS — the dev tuner is fully tree-shaken from production.
+
+git diff on useSession.ts vs the W4 working tree after restore (must be empty):
+  bytes: 0
+
+══ D · THE DEV GATE IS TRANSPARENT TO THE BATTERY ══
+   The whole MP battery drives `npm run dev`, so the gate is only correct if the dev server
+   still answers `?wire=local`. Vite dev on :4231, chromium, three pages in ONE context —
+   `joinSession()` driven through the served module, arm read off the self id's prefix
+   (`local-…` = BroadcastChannel, `r-…` = the relay):
+
+     arm    room           url
+     local  t7w4-devgate   /?wire=local
+     local  t7w4-devgate   /?wire=local&s=t7w4-devgate
+     r      t7w4-devgate   /
+
+   The served module carries the gate intact (`curl :4231/src/games/shared/useSession.ts`):
+     165: const LOCAL_WIRE_PARAM = "wire=local";
+     168: function asksLocalWire() {
+     367: const local = import.meta.env.DEV && asksLocalWire();
+
+   So: dev keeps the arm, a build has neither the param nor the arm, and a page that never
+   asked gets the relay on either. The invite link a player copies out of the dev server is
+   the only place `wire=local` can now appear, and it means nothing to the shipped bundle.

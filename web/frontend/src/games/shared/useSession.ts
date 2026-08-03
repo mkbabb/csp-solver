@@ -186,8 +186,11 @@ interface SessionSource {
  * the e2e). Presence is derived from traffic: any message from an unseen id IS a join, and
  * a page announces itself with `hi` and acks the announcements it hears, so the two pages
  * find each other whichever opened first.
+ *
+ * EXPORTED for the parity harness (T7-W4, U6): the seam's whole claim is that both arms hand
+ * the same script to the same handlers, and a unit cannot check that on an arm it can't build.
  */
-function localWire(room: string, h: Handlers): Wire {
+export function localWire(room: string, h: Handlers): Wire {
   const selfId = `local-${Math.random().toString(36).slice(2, 10)}`;
   const ch = new BroadcastChannel(`board:${room}`);
   const post = (kind: Kind | "bye", data: Msg, to?: string) =>
@@ -231,6 +234,21 @@ function localWire(room: string, h: Handlers): Wire {
 async function loadRelayWire(room: string, h: Handlers): Promise<Wire> {
   const { relayWire } = await import("./relayWire");
   return relayWire(room, RELAY_URLS, h);
+}
+
+/**
+ * The same-device arm's opt-in, and DEV-ONLY (T7-W4). Written as ONE `key=value` literal
+ * rather than a `get("wire") === "local"` pair because `check-prod-shake.mjs` polices it by
+ * substring, and a split pair is a token the minifier never joins — the gate would assert the
+ * absence of a string that could not appear, which is the vacuity W6 just finished excising.
+ */
+const LOCAL_WIRE_PARAM = "wire=local";
+
+/** Does the address bar ask for the same-device arm? Called only behind `import.meta.env.DEV`,
+ *  so a build folds the call away and takes the literal with it. */
+function asksLocalWire(): boolean {
+  const [key, want] = LOCAL_WIRE_PARAM.split("=");
+  return new URLSearchParams(window.location.search).get(key) === want;
 }
 
 // ── The live session ──────────────────────────────────────────────────────────────
@@ -439,7 +457,14 @@ export async function joinSession(room: string, starter = false): Promise<void> 
   teardown();
   ident = await import("./playerIdentity");
   const handlers: Handlers = { message: onMessage, peer: onPeer };
-  const local = new URLSearchParams(window.location.search).get("wire") === "local";
+  // THE LOCAL ARM IS A DEV FACILITY, and `import.meta.env.DEV` is a compile-time constant —
+  // so a build folds this to `false`, the ternary to the relay call, and `localWire` with its
+  // literal out of the bundle entirely. It has to leave: read unconditionally the param
+  // survived every strip path and rode COPIED INVITE LINKS, where the built page's
+  // `BroadcastChannel` answered a `?s=…&wire=local` recipient with a room that never reached
+  // off their device — two people at two tables, each seeing one player. The dev server keeps
+  // it, which is what the whole MP battery drives (T7-W4).
+  const local = import.meta.env.DEV && asksLocalWire();
   wire = local ? localWire(room, handlers) : await loadRelayWire(room, handlers);
   roomId.value = room;
   selfId.value = wire.selfId;

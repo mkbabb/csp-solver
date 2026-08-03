@@ -1,0 +1,90 @@
+T7-W4 · M1 BORN RED — "two phones sit at one table, and the well is reachable with the sheet shut"
+2026-08-03 · tree: master + W4 (spec row landed, cure NOT yet landed) · dev server: vite :4250
+Command: PLAYWRIGHT_BASE_URL=http://localhost:4250 npx playwright test e2e/multiplayer.spec.ts \
+           -g "two phones sit at one table" --reporter=list
+
+THE DEFECT: `.players-leave` under `(pointer: coarse)` carried `min-height: 44px` and no width
+floor, so the estate's ≥44px target floor held on one dimension only. Exact boxes, read off both
+engines on devices["iPhone 13"] with the well open (scratchpad probe, unrounded):
+
+  chromium {"x":16,"y":592.890625,"width":40.09375,"height":44}
+  webkit   {"x":16,"y":592.890625,"width":40.109375,"height":44}
+
+Everything upstream of the assertion is GREEN in both engines — the drawer opens by tap, the
+invite mints the room, the roster reads 2 on both phones, `(pointer: coarse)` matches. The row
+reds on the leave target's WIDTH alone, which is the defect the wave named (40.09×44).
+
+── RUN OUTPUT ─────────────────────────────────────────────────────────────────────────────
+
+Running 2 tests using 2 workers
+
+  ✘  1 [chromium] › e2e/multiplayer.spec.ts:773:1 › two phones sit at one table, and the well is reachable with the sheet shut (3.0s)
+  ✘  2 [webkit] › e2e/multiplayer.spec.ts:773:1 › two phones sit at one table, and the well is reachable with the sheet shut (4.5s)
+
+
+  1) [chromium] › e2e/multiplayer.spec.ts:773:1 › two phones sit at one table, and the well is reachable with the sheet shut 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 44
+    Received:    40
+
+      792 |     const box = await stableBox(p.locator(".controls-card .players-leave"));
+      793 |     expect(box.height).toBeGreaterThanOrEqual(44);
+    > 794 |     expect(box.width).toBeGreaterThanOrEqual(44);
+          |                       ^
+      795 |   }
+      796 |
+      797 |   await ctx.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/multiplayer.spec.ts:794:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/multiplayer-two-phones-sit-3fcd5-achable-with-the-sheet-shut-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/multiplayer-two-phones-sit-3fcd5-achable-with-the-sheet-shut-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/multiplayer-two-phones-sit-3fcd5-achable-with-the-sheet-shut-chromium/error-context.md
+
+  2) [webkit] › e2e/multiplayer.spec.ts:773:1 › two phones sit at one table, and the well is reachable with the sheet shut 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 44
+    Received:    40
+
+      792 |     const box = await stableBox(p.locator(".controls-card .players-leave"));
+      793 |     expect(box.height).toBeGreaterThanOrEqual(44);
+    > 794 |     expect(box.width).toBeGreaterThanOrEqual(44);
+          |                       ^
+      795 |   }
+      796 |
+      797 |   await ctx.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/multiplayer.spec.ts:794:23
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/multiplayer-two-phones-sit-3fcd5-achable-with-the-sheet-shut-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/multiplayer-two-phones-sit-3fcd5-achable-with-the-sheet-shut-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/multiplayer-two-phones-sit-3fcd5-achable-with-the-sheet-shut-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/multiplayer.spec.ts:773:1 › two phones sit at one table, and the well is reachable with the sheet shut 
+    [webkit] › e2e/multiplayer.spec.ts:773:1 › two phones sit at one table, and the well is reachable with the sheet shut 
+
+── THE CURE, and the same measurement after it ────────────────────────────────────────────
+`min-width: 44px` on the `(pointer: coarse)` `.players-leave` rule in
+web/frontend/src/games/shared/GameControlPanel.vue (the rule re-anchored to :1356 under W2's
+and W7's edits to the same file — the wave cites its pre-edit line 1253). Re-read, same probe:
+
+  chromium {"x":16,"y":592.890625,"width":44,"height":44}
+  webkit   {"x":16,"y":592.890625,"width":44,"height":44}
+
+M1 greens in both engines. The word "leave" and its underline sit unchanged inside a box that
+is now 4px wider — verified on the rendered phone, not only in the numbers.
