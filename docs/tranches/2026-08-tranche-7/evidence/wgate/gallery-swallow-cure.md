@@ -276,3 +276,174 @@ There is also a **CH-64 credit** to record: this is the second head row of that 
 named mechanism (CH-66 was the first), and the second one where the "contention-amplified" reading
 was refuted at one worker. CH-64's own field verdict said a one-worker red would refute contention as
 sufficient cause; this red was one-worker, shard 2, 2/2.
+
+---
+
+# ADDENDUM — 2026-08-03, the second bite: the fold's excluded case
+
+**Field red at `a7bf7a3e`, run 30814609152 — and it bit in CHROMIUM.**
+
+The fold shipped above with two arms and a deliberate exclusion: *anything shorter than a sample
+window on top of an existing `v` is left alone*, reasoned as "it holds no new information, and folding
+a zero-travel leg would damp a real flick." The first half of that is false. A short leg holds no new
+information **only when it is slow**. A short FAST leg is the most informative thing in the gesture,
+and the exclusion discarded exactly that.
+
+The shape the runner found:
+
+> a gesture samples ONCE, early and slowly — a small `v` is now standing — and then throws its real
+> push inside the final sub-8ms window. `legMs < SAMPLE_MS` and `d.v !== 0`, so neither arm fires,
+> nothing folds, the stale small `v` survives, and a genuine flick reads as a settle.
+
+It is the same lost flick, one arm further in — and because it needs no particular engine pacing, only
+one early sample followed by a fast tail, **it reds in both engines**:
+
+| job | row | error |
+|---|---|---|
+| `e2e-chromium` (workers=2) | `gallery.spec.ts:300` | the FIRST flick's gate — expected `gallery-card-1`, received `gallery-card-0` |
+| `e2e-webkit (2)` (workers=1, shard 2/3) | `gallery.spec.ts:300` | the same row's tail, through CH-66's guarded press: *"nothing committed after 5 press(es) in 20000ms"* — the deck was on a flank, so no press could ever commit |
+
+The WebKit form is worth reading twice: the guarded-press helper did its job and reported honestly
+that this is **not** the dropped-press race its budget covers. A flank cannot be pressed into
+committing, however many times you press it.
+
+## The guard — a velocity arm, not a duration one
+
+```diff
+     const legMs = (e?.timeStamp ?? d.t) - d.t;
+-    if (legMs >= SAMPLE_MS || d.v === 0) {
+-      const span = Math.max(SAMPLE_MS, legMs);
+-      d.v = 0.7 * (((e?.clientX ?? d.px) - d.px) / span) + 0.3 * d.v;
+-    }
++    const span = Math.max(SAMPLE_MS, legMs);
++    const legV = ((e?.clientX ?? d.px) - d.px) / span;
++    if (legMs >= SAMPLE_MS || d.v === 0 || Math.abs(legV) > FLICK_VPX) {
++      d.v = 0.7 * legV + 0.3 * d.v;
++    }
+```
+
+**The invariant, stated at the site: fast tails always count, slow tails never damp.** The third arm
+fires on the leg's OWN velocity rather than on its duration, and that is what makes it safe by
+construction rather than by argument — a leg travelling faster than the flick threshold is not a
+settle, whatever velocity is standing behind it, so the damping worry cannot apply to it. What stays
+excluded is the only case that ever justified an exclusion: a short **slow** tail on top of an
+existing `v`.
+
+The arm is narrow by arithmetic as well as by intent. It can only fire when `legMs < SAMPLE_MS`, where
+`span` is pinned at 8 — so it demands more than 3.6 px of travel inside a sub-8ms window. That is the
+definition of a flick-rate leg, and nothing a settle produces: `dragDeck`'s settle paces ~10 px per
+~55 ms and releases ≥50 ms after its last move with zero travel since, so its release leg takes the
+FIRST arm and merely damps, exactly as before.
+
+## Proofs
+
+**The excluded case, made deterministic and born RED.** `gallery.spec.ts` gains
+*"drag: a slow first sample does not swallow the flick that follows it"*, beside the first mechanism
+row. Its two halves are paced by different mechanisms on purpose: a real 24 ms gap for the first leg
+so it genuinely samples (8 px, 0.33 px/ms — a settle so far as the deck knows), then the remaining
+152 px and the release in ONE synchronous task so the sampler is guaranteed to skip all of it.
+
+Ablated against the **first cure** (the precise before-state, not the pristine tree):
+
+| tree | *…inside the sample floor* | *…slow first sample* |
+|---|---|---|
+| first cure, chromium | PASS | **FAIL** — expected `gallery-card-1`, received `gallery-card-0` |
+| first cure, webkit | PASS | **FAIL** — expected `gallery-card-1`, received `gallery-card-0` |
+| guarded, both engines | PASS | PASS |
+
+The original mechanism row stays green throughout — the guard adds folds, it changes none.
+
+**Settles still undamped** — the guard's whole claim, proven on the rows that would feel it:
+
+| | result |
+|---|---|
+| `kenken — the LAST card` (4 consecutive settle drags), both engines | PASS |
+| the whole `drag:` block, both engines | 12 passed |
+| `gallery.spec.ts` whole file, webkit `--workers=1` ×3 | 15 passed ×3 |
+| `gallery.spec.ts` whole file, chromium ×2 | 15 passed ×2 |
+| `npm run test:unit` | 483 passed |
+| `lint:sleep` · `lint:motion` self-tests | OK — 25 specs each |
+| `prettier --check` · `vue-tsc -b` · `doc-truth` · `pw-projects` | clean · clean · 32 GREEN · 426 resolved |
+
+The new row uses no Playwright-side fixed wait — its 24 ms gap is an in-page timer inside the single
+`page.evaluate`, which is why `lint:sleep` stays green with it in the file.
+
+## The load-shaped residual — ablated, and it is HARNESS-SIDE
+
+The guarded tree did **not** come back clean on the linux rig. Run under the whole `drag:` block at
+`--repeat-each=14` (84 tests a round), `:294` still red — always the same symptom, the deck resting on
+futoshiki, reported through `pressCommitted` as *"nothing committed after 5 press(es)"*, which is the
+helper correctly refusing to call a flank a dropped press. So it was ablated against `a7bf7a3e` on the
+same box, same server, same image, arms alternated:
+
+| tree | round total (84 tests) | of which `:294` |
+|---|---|---|
+| **guarded** | 4 failed¹, 1 failed, 0 failed | 3, 1, 0 |
+| **`a7bf7a3e`, no guard** | 11 failed² | ≥4 |
+| **guarded, `:294` in ISOLATION** (`--repeat-each=14` × 5 rounds, 70 runs) | — | **0** |
+
+¹ three `:294` plus one `page.goto` 30s timeout — my LAN-served dev server, not the row.
+² inflated by design: the new `slow first sample` row is born-RED on this tree and accounts for most
+of it. `:294` itself was counted red ≥4 times from the live artifact directory before the round was
+capped. The comparison that matters is `:294`-to-`:294`, and there the unguarded tree is the worse of
+the two.
+
+**Present on both trees, and the guard is not the worse of them.** The
+verdict is harness-side, and the isolation row is what settles it: the same row, same tree, same
+engine, reds only when it runs inside the loaded block and never on its own. That is the exposure the
+`dragDeck` comment has documented from the start — *a step stalling past ~118ms* — and it is the arm
+no composable change may touch, because a gesture whose every leg is genuinely slow **is** a settle
+and the deck is RIGHT to read one. The velocity guard is orthogonal to it by construction: it fires
+only on a sub-window leg carrying >3.6 px, which a stalled driver never produces.
+
+The population matters. This rig is a darwin box at load average 17+ running the vite server, the
+container and sibling agents' suites at once, reaching the app over the LAN — one round even lost a
+`page.goto` to a 30s timeout. CI's webkit shards run `workers=1` and the settling act runs quiescent.
+**No cure is ordered; this books as a load-only watch note.**
+
+One limitation of the new row, found by the same ablation and worth stating: on a box this loaded the
+`slow first sample` row does not fail 14/14 on the unguarded tree the way it does on a quiet one. Its
+burst relies on all four dispatches sharing a `timeStamp`, and each dispatch runs the composable's
+`scrollLeft` write synchronously — under load a single dispatch can itself outlast the 8ms floor, at
+which point the leg samples and the row passes even uncured. It is deterministic where determinism is
+claimed for it (a quiet box, both engines, §Proofs) and merely a weaker detector under thrash. That is
+the honest scope; it is not a reason to loosen the row.
+
+One candidate is worth recording and NOT acting on: under a stalled main thread the engine stamps a
+real user's fast flick with dispatch-time `timeStamp`s, so the composable under-reads a genuine push.
+`PointerEvent.getCoalescedEvents()` carries true input times and would read it honestly. That is a
+real improvement and a much larger change, unproven here, with no field defect behind it — named for
+whoever next has a reason.
+
+## The ledger amendment — one sentence, the chair applies it
+
+CH-67's drafted CURED clause reads "the release folds its own outstanding leg in, over that leg's
+duration floored at `SAMPLE_MS`, with a zero-travel leg deliberately left out so it cannot damp a real
+flick." That sentence describes the cure that was field-falsified. Replace it with:
+
+> CURED in two passes, and the second is the row's real lesson: the release folds its own outstanding
+> leg in over that leg's duration floored at `SAMPLE_MS`, and folds it whenever the leg spans a full
+> sample window, or the gesture never sampled at all, **or the leg's OWN velocity clears the flick
+> threshold** — the third arm added after run 30814609152 at `a7bf7a3e` red the same row in CHROMIUM
+> as well as WebKit, where a gesture that sampled once early and slowly then threw its real push
+> inside the final sub-window folded nothing and kept the stale small velocity. The invariant is
+> stated at the site — fast tails always count, slow tails never damp — and the guard is a VELOCITY
+> one rather than a duration one precisely so it is safe by construction: a leg travelling faster than
+> the flick threshold is not a settle, whatever velocity stands behind it.
+
+The first draft's proof sentence should also gain: *the excluded case has its own born-RED row,
+ablated against the first cure rather than the pristine tree, failing in BOTH engines there and
+passing guarded.*
+
+**Read this as a correction to the row, not a second row.** One mechanism — the release's outstanding
+leg discarded — found twice because the first fix's exclusion was drawn on the wrong axis. Re-booking
+it as CH-68 would split one defect across two ids.
+
+## Residue, this pass
+
+1. Not chased, reported as asked: `e2e-webkit (3)` in the same run red `mobile-affordances.spec.ts:401`
+   once, its second sighting across engines. Nothing in the instrumented gallery runs touched that row
+   and none of them caught it misbehaving — no evidence either way from here.
+2. `multiplayer.spec.ts:925` also red in the chromium job of run 30814609152 (*"the real relay carries
+   the board with RTCPeerConnection deleted"*, empty error body). Outside this fence, named so the
+   chair's roster is complete.

@@ -382,6 +382,53 @@ test('drag: a flick whose every move lands inside the sample floor is still a fl
   await expect(page.locator('.gallery-pip').nth(1)).toHaveClass(/is-inked/);
 });
 
+test('drag: a slow first sample does not swallow the flick that follows it', async ({ page }) => {
+  await openGalleryDeepLink(page);
+  await deckSettled(page);
+
+  // THE ROW ABOVE'S EXCLUDED CASE, and it is the one that bit in the field — run 30814609152
+  // at `a7bf7a3e`, red in CHROMIUM at the first flick's gate and in WebKit at the same row's
+  // tail. The release folds its outstanding leg in, but the first cure folded only when the leg
+  // spanned a sample window OR the gesture had never sampled at all. A gesture that samples
+  // ONCE, early and slowly, and THEN throws its real push inside the final sub-window satisfies
+  // neither: the stale small velocity survives untouched and a genuine flick reads as a settle.
+  //
+  // So this row builds exactly that shape, and the two halves are paced by different mechanisms
+  // on purpose. The FIRST leg gets a real 24ms gap, so it samples — slowly, 8px, 0.33 px/ms,
+  // well under the 0.45 threshold, a settle so far as the deck knows. The REST is one
+  // synchronous task, so every event carries the same `timeStamp` and the sampler is guaranteed
+  // to skip all of it. The composable must still read the 152px thrown in that window as the
+  // flick it is: a leg that fast is not a settle, whatever the velocity standing behind it.
+  await page.evaluate(async () => {
+    const vp = document.querySelector<HTMLElement>('.gallery-viewport')!;
+    const box = vp.getBoundingClientRect();
+    const y = box.top + box.height / 2;
+    const x0 = box.left + box.width / 2;
+    const at = (type: string, x: number, target: EventTarget) =>
+      target.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerType: 'mouse',
+          button: 0,
+          clientX: x,
+          clientY: y,
+        }),
+      );
+    at('pointerdown', x0, vp);
+    await new Promise((r) => setTimeout(r, 24)); // ← a real gap: this leg SAMPLES, and slowly
+    at('pointermove', x0 - 8, window); //            8px past the slop, 0.33 px/ms — a settle
+    for (const step of [60, 110, 160]) at('pointermove', x0 - step, window); // ← the real push
+    at('pointerup', x0 - 160, window);
+  });
+
+  await expect(page.locator('.gallery-viewport')).toHaveAttribute(
+    'aria-activedescendant',
+    'gallery-card-1',
+  );
+  await expect(page.locator('.gallery-pip').nth(1)).toHaveClass(/is-inked/);
+});
+
 test('drag: a grab during a keyboard glide freezes the deck where it is drawn', async ({
   page,
 }) => {

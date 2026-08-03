@@ -388,15 +388,26 @@ export function useCarouselGlide(
     // it landed its third move at 8 ms, sampled, and stepped correctly.
     //
     // So the release folds the outstanding leg in — over its own duration, floored at the same
-    // half-frame the sampler uses, so it can never divide a real delta by ~0. Two arms and no
-    // third: a leg that spans a full sample window carries information, and a gesture that
-    // never sampled at all has nothing else to go on. Anything shorter than a window on top of
-    // an existing `v` is left alone — it holds no new information, and folding a zero-travel
-    // leg in would DAMP a real flick by the EMA's 0.7.
+    // half-frame the sampler uses, so it can never divide a real delta by ~0.
+    //
+    // THE INVARIANT, and it is the whole of the arm list: FAST TAILS ALWAYS COUNT, SLOW TAILS
+    // NEVER DAMP. A leg spanning a full sample window carries information; a gesture that never
+    // sampled has nothing else to go on; and a leg whose OWN velocity clears the flick threshold
+    // is by construction not a settle, so the damping worry cannot apply to it. What stays out
+    // is the only case that would hurt: a short, slow tail on top of an existing `v`, which
+    // holds no new information and would only damp a real flick by the EMA's 0.7 weight.
+    //
+    // The third arm is the FIELD's, not a hypothetical — run 30814609152 at `a7bf7a3e`, and it
+    // bit in CHROMIUM as well as WebKit, which the first two arms had left open. A gesture that
+    // samples ONCE early and slowly, then throws its real push inside the final sub-window,
+    // folded nothing: `legMs` was under the floor and `v` was non-zero, so the stale small `v`
+    // survived and a genuine flick read as a settle. `gallery.spec.ts:300`'s first flick lost,
+    // expected gallery-card-1, received gallery-card-0.
     const legMs = (e?.timeStamp ?? d.t) - d.t;
-    if (legMs >= SAMPLE_MS || d.v === 0) {
-      const span = Math.max(SAMPLE_MS, legMs);
-      d.v = 0.7 * (((e?.clientX ?? d.px) - d.px) / span) + 0.3 * d.v;
+    const span = Math.max(SAMPLE_MS, legMs);
+    const legV = ((e?.clientX ?? d.px) - d.px) / span;
+    if (legMs >= SAMPLE_MS || d.v === 0 || Math.abs(legV) > FLICK_VPX) {
+      d.v = 0.7 * legV + 0.3 * d.v;
     }
     // READ THE POSITION BACK rather than assuming the writes took (this file's own maxScroll
     // discipline): the engine clamps `scrollLeft` to its scrollable overflow, so where the
