@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
 import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
-import { useElementSize } from "@vueuse/core";
 import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
 import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
@@ -9,6 +8,7 @@ import {
   readFilterDefs,
   resolveCssValue,
   retainedPoseUrls,
+  useLayoutBoxSize,
 } from "@pencil/composables/rasterPose";
 import { useTheme } from "@/composables/useTheme";
 import { usePathAnimation } from "./usePathAnimation";
@@ -146,7 +146,11 @@ const steadyFrames = computed(() =>
 // this path). Re-bake fires on DPR (useRasterStack's matchMedia), theme flip (the cacheKey
 // token, masked by the toggle's Bloom), and container resize (useElementSize).
 const { isDark } = useTheme();
-const { width: hostW, height: hostH } = useElementSize(svgRef);
+// CH-67's lens (T8-W4): `useElementSize` reads the TRANSFORM-inclusive rect for SVG targets,
+// and a resize tick landing inside a transform window latches the wrong box permanently —
+// measured here as board rules drifting 0.918/1.0898 across drawer toggles. The layout box
+// is the only honest bake input.
+const { width: hostW, height: hostH } = useLayoutBoxSize(svgRef);
 
 // The grid renders as a centered square (preserveAspectRatio meet), so capture a SQUARE
 // bitmap at the rendered side — displaying it back at width=height=1000 can't squash it.

@@ -726,6 +726,94 @@ test('header: the masthead persists in the gallery, names the snapped card, and 
   );
 });
 
+// ── 7b. CH-67 · THE CAPTURE INVARIANT, counted across the fold in both directions ──────────
+//
+// The wordmark's bake is minted at `cssSize × dpr`, so a bitmap displayed at any other size is
+// soft — and the fold is where the sizes diverge: it FLIPs the wordmark, and the
+// `component :is` button↔span swap re-creates the `<svg>` inside that transform window. Through
+// T8 the size the bake was captured at came from `useElementSize`, which reads
+// `getBoundingClientRect()` for SVG targets — a rect that carries every ancestor transform. A
+// ResizeObserver tick forced into the FLIP therefore latched a MAGNIFIED box, and because a
+// transform fires no second tick the wrong intrinsic was the surface's steady state afterwards.
+//
+// Born RED at `9ef3fd23`, measured chromium/DPR2/1280×800: the third reading below read
+// **0.2955** — a quarter-resolution wordmark standing in the playing view after one gallery
+// visit, reproduced on every cycle — while the second read **3.6116**, eight PNGs at 1989×582
+// for a 551-device-px box. Both signs are the same defect, so the band has both ends.
+//
+// The floor is 0.99, not 1.0: `latchWholePx` deliberately holds a capture within a whole CSS
+// pixel of the box (HandwrittenLogo.vue argues why), which is 0.997 at the estate's narrowest
+// cell. The full state table — mobile, landscape, 320, DPR1, the rungs, five labels, both
+// engines — is `docs/tranches/2026-08-tranche-8/evidence/w4-logo/report.md`; this row walks the
+// one path that made the error PERMANENT.
+const CAPTURE_BAND = { min: 0.99, max: 1.5 };
+
+/** The wordmark AT REST: the bake has landed and no transform is carrying its box. Polled on
+ *  the pose href (a re-bake changes it) plus the rendered rect (a FLIP changes it every frame),
+ *  never on the beat — `image.logo-pose-bmp` index 0 is the same node whichever pose is active. */
+async function wordmarkAtRest(page: Page) {
+  await page.waitForFunction(
+    () => {
+      const svg = document.querySelector<SVGSVGElement>('svg.handwritten-logo');
+      const img = document.querySelector<SVGImageElement>('image.logo-pose-bmp');
+      if (!svg || !img || document.fonts.status !== 'loaded') return false;
+      const r = svg.getBoundingClientRect();
+      const key = `${img.getAttribute('href')}|${r.width.toFixed(3)}x${r.height.toFixed(3)}`;
+      const w = window as unknown as { __wm?: string };
+      const prev = w.__wm;
+      w.__wm = key;
+      return prev === key;
+    },
+    null,
+    { timeout: 20000, polling: 150 },
+  );
+  return await page.evaluate(async () => {
+    const svg = document.querySelector<SVGSVGElement>('svg.handwritten-logo')!;
+    const img = document.querySelector<SVGImageElement>('image.logo-pose-bmp')!;
+    const bmp = new Image();
+    bmp.src = img.getAttribute('href')!;
+    await bmp.decode();
+    const r = svg.getBoundingClientRect();
+    return {
+      ratio: bmp.naturalWidth / (r.width * devicePixelRatio),
+      baked: `${bmp.naturalWidth}×${bmp.naturalHeight}`,
+      shown: `${r.width.toFixed(2)}×${r.height.toFixed(2)} @${devicePixelRatio}`,
+    };
+  });
+}
+
+test('CH-67: every settled wordmark bake is minted at the size it is shown at', async ({
+  page,
+}) => {
+  await page.goto('./?size=3&difficulty=EASY');
+  await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+
+  const readings: { state: string; ratio: number; baked: string; shown: string }[] = [];
+  readings.push({ state: 'playing, fresh', ...(await wordmarkAtRest(page)) });
+
+  // INTERACTIVE entry, not a deep link: `pendingFoldFrom` is only set by the wordmark press, so
+  // a deep-linked gallery never folds and never opens the window this row is about.
+  await pressCommitted(
+    page.locator('button.logo-trigger'),
+    async () => (await page.locator('.game-gallery').count()) === 1,
+    { what: 'the wordmark folds the board into the deck' },
+  );
+  readings.push({ state: 'gallery, post-fold', ...(await wordmarkAtRest(page)) });
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.game-gallery')).toHaveCount(0);
+  readings.push({ state: 'playing, post-unfold', ...(await wordmarkAtRest(page)) });
+
+  const violations = readings.filter(
+    (r) => r.ratio < CAPTURE_BAND.min || r.ratio > CAPTURE_BAND.max,
+  );
+  expect(
+    violations,
+    `capture ratio outside [${CAPTURE_BAND.min}, ${CAPTURE_BAND.max}] — ` +
+      readings.map((r) => `${r.state}: ${r.ratio.toFixed(4)} (${r.baked} for ${r.shown})`).join('; '),
+  ).toEqual([]);
+});
+
 // ── 8. Mobile 375: one card fills the viewport, a neighbor peeks, pips are the position tell ──
 
 test.describe('gallery on a 375 phone', () => {

@@ -64,7 +64,6 @@ import {
   serializePoseSvg,
   useRasterStack,
 } from "@mkbabb/pencil-boil";
-import { useElementSize } from "@vueuse/core";
 import { useTheme } from "@/composables/useTheme";
 import {
   FILTER_PRESETS,
@@ -78,6 +77,7 @@ import {
   readFilterDefs,
   resolveCssValue,
   retainedPoseUrls,
+  useLayoutBoxSize,
 } from "@pencil/composables/rasterPose";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
 
@@ -211,7 +211,12 @@ watch(
 // document.fonts.ready before the first bake, so the page face is in before the wordmark
 // bakes.
 const logoSvgRef = ref<SVGSVGElement | null>(null);
-const { height: logoH } = useElementSize(logoSvgRef);
+// CH-67 — the LAYOUT box, not `useElementSize`'s bounding client rect. The masthead is FLIP-ed
+// on every gallery fold and the `component :is` swap below re-creates this `<svg>` inside that
+// transform window, so the incumbent measured the wordmark at ×3.61 entering and ×0.30 leaving
+// — and a transform fires no second ResizeObserver tick, so the wrong intrinsic STAYS. Full
+// measurement + the invariant this restores: `rasterPose.ts` §CH-67.
+const { height: logoH } = useLayoutBoxSize(logoSvgRef);
 
 /**
  * BC6-G1 — THE CAPTURE KEY LATCHES; IT DOES NOT ROUND EVERY OBSERVATION.
@@ -252,7 +257,7 @@ function latchWholePx(src: Readonly<Ref<number>>): Ref<number> {
 }
 const captureH = latchWholePx(logoH);
 // T6.2 — the capture WIDTH is DERIVED, not observed. `width: auto` off the height ladder
-// means the box's width IS `height × vbWidth/60`; reading it back through useElementSize
+// means the box's width IS `height × vbWidth/60`; reading it back off the element
 // was a second async observation of the same fact, and it arrives a ResizeObserver tick
 // AFTER a re-measured `vbWidth` re-keys the bake — so every post-font correction and every
 // game swap baked TWICE, and the first bake (new viewBox, stale width) was rastered at the
@@ -307,13 +312,40 @@ function logoPoseSvg(f: number): string {
   return serializePoseSvg({ width: w, height: 60, viewBox: `0 0 ${w} 60`, defs, body });
 }
 
+/**
+ * ── THE CAPTURE INVARIANT (CH-67, T8-W4) ─────────────────────────────────────────────
+ *
+ * A bitmap shown at any size other than the one it was baked at is soft, and the wordmark is
+ * the surface with the most ways to be shown at another size — a height ladder with four rungs,
+ * two `--logo-scale` regimes, a game swap, a DPR change, and a masthead that is FLIP-ed on
+ * every gallery fold. So the bake site carries a number rather than an intention:
+ *
+ *   In every SETTLED state, for every pose:
+ *       intrinsic device px  ÷  (rendered CSS box × devicePixelRatio)  ∈ [0.99, 1.5]
+ *   and the count of settled states outside that band is 0.
+ *
+ * The floor is 0.99 and not 1.0 because `latchWholePx` deliberately holds a reading within a
+ * whole pixel of the box (its own note argues why), so the capture may sit up to 1 css px under
+ * a box measured in the hundreds — 0.997 at 320 px wide, the tightest cell in the estate. The
+ * CEILING is half the invariant: an over-bake is the same defect with the other sign, and it is
+ * the sign CH-67 actually shipped for a tranche (×3.61 in the gallery, eight PNGs at 1989×582
+ * for a 551-device-px box). One band catches both.
+ *
+ * COUNTED by `e2e/gallery.spec.ts` §CH-67, which walks playing → gallery → playing and asserts
+ * the band at each rest. It is born RED against the incumbent: 0.2955 on the third reading.
+ *
+ * The three inputs the band rests on, so a future edit knows what it may not break: `captureH`
+ * is the LAYOUT box (never a bounding client rect — §CH-67 in `rasterPose.ts`), `captureW` is
+ * derived from it rather than observed a second time (T6.2, above), and `dpr` is the library's
+ * (`matchMedia` re-arm, so a monitor change re-bakes).
+ */
 const logoRaster = useRasterStack(() => ({
   cacheKey: `logo-${label.value}-${isDark.value ? "d" : "l"}-${vbWidth.value}`,
   poseCount: logoPoseIds.value.length,
   poseSvg: logoPoseSvg,
   // No fallback arithmetic: pencil-boil 0.10.0's F2 returns before the token bump at a
   // non-positive cssSize and re-bakes when the box lands, so the invented 72 px seed — which
-  // an <svg> needs because it has no offsetWidth, so `useElementSize` seeds 0 — is the
+  // an <svg> needs because it has no offsetWidth, so any element-size seed reads 0 — is the
   // library's problem now, and it solves it by NOT baking rather than by baking wrong.
   // BC6-G1: the latched whole-pixel box, not a fresh round of every observation — see
   // `latchWholePx` above for the measurement that rejected quantization in its favour.

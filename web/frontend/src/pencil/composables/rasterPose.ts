@@ -15,7 +15,65 @@
  * app alone knows: how to read the live DOM, and when to hold a set across the null window.
  */
 import { getCurrentInstance, ref, watch, type Ref } from "vue";
+import { useResizeObserver } from "@vueuse/core";
 import type { RasterStackHandle } from "@mkbabb/pencil-boil";
+
+/**
+ * CH-67 · THE CAPTURE BOX IS THE LAYOUT BOX, NEVER A TRANSFORMED ONE (T8-W4).
+ *
+ * `useElementSize` SPECIAL-CASES SVG TARGETS and reads `getBoundingClientRect()` for them
+ * (@vueuse/core 14.3.0, `isSVG` branch) — and a bounding client rect carries every ancestor
+ * CSS transform. Two of the three baked surfaces observe an `<svg>` root, so both of them were
+ * measuring a box that a `scale()` somewhere above them could multiply at will.
+ *
+ * That is only a transient error for a size that keeps changing. It is a PERMANENT one for a
+ * bake, and the reason is the asymmetry between the two channels: a ResizeObserver fires on
+ * LAYOUT, and a transform is not layout. So a tick that lands inside a transform window reads
+ * an inflated or deflated box, the capture key latches it, the bitmap is minted at the wrong
+ * intrinsic — and when the transform later resolves to identity NOTHING FIRES AGAIN. The wrong
+ * bitmap is the surface's steady state until some other trigger happens by.
+ *
+ * MEASURED on the wordmark (chromium, 1280×800, DPR2, `evidence/w4-logo/`), which is the
+ * shape the owner's mark named three times. The gallery fold FLIPs `h1.masthead` — and the
+ * `component :is` button↔span swap re-creates the `<svg>` inside that window, so a tick is
+ * FORCED into it every time:
+ *
+ *   state                          baked (device px)   shown × DPR   ratio
+ *   playing, fresh boot                765 × 224           764.8      1.0003
+ *   gallery at rest (post-fold)       1989 × 582           550.7      3.6116   ← ×3.6 over-bake
+ *   playing at rest (post-unfold)      226 ×  66           764.8      0.2955   ← THE MARK
+ *
+ * A ratio of 0.2955 is a quarter-resolution wordmark, standing, in the view the page spends
+ * its life in, until a game swap or a theme flip re-keys it. Reproduced on every cycle.
+ *
+ * The cure is to read the box the CSS actually laid out. `contentRect` is that box by
+ * definition — physical, transform-blind, and for an `<svg>` ROOT (a replaced element with a
+ * real CSS box) it is the CSS content box rather than the user-unit bbox; verified equal to
+ * the untransformed `getBoundingClientRect()` in both engines. No debounce, no transform
+ * arithmetic, no new state: the observation was simply being taken through the wrong lens.
+ *
+ * THE INVARIANT it buys, stated where the bake reads it (`HandwrittenLogo.vue` §THE CAPTURE
+ * INVARIANT) and counted by `e2e/gallery.spec.ts`'s CH-67 row: every baked pose's intrinsic
+ * device-pixel width lands within [0.99, 1.5] of its rendered box × DPR in every SETTLED
+ * state — undersized displays 0, and the ceiling catches the over-bake, which is the same
+ * defect wearing the other sign.
+ */
+export function useLayoutBoxSize<T extends HTMLElement | SVGElement>(
+  target: Readonly<Ref<T | null>>,
+): { width: Ref<number>; height: Ref<number> } {
+  const width = ref(0);
+  const height = ref(0);
+  // A getter, not the ref itself: `MaybeComputedElementRef` is invariant in its element type, so
+  // a `Ref<SVGSVGElement | null>` cannot be handed over directly while a getter returning one can.
+  useResizeObserver(
+    () => target.value,
+    ([entry]) => {
+      width.value = entry.contentRect.width;
+      height.value = entry.contentRect.height;
+    },
+  );
+  return { width, height };
+}
 
 /**
  * Serialize a live filter/gradient def element (by id) to a self-contained XML string for
