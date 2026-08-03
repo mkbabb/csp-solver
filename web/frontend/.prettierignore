@@ -1,3 +1,10 @@
 # Generated artifacts are not format-subject — the vite sudokuTemplates plugin
 # regenerates this file on every build in its own single-line form.
 src/games/sudoku/data/templates.ts
+
+# e2e/ is OUT of the format gate BY DESIGN (ci.yml frontend lane checks src/ scripts/
+# ../../scripts/ only): the specs keep a single-quote convention and check-sleep-lint.mjs
+# EXEMPT anchors match against it — a manual `prettier --write` over e2e/ severed one on
+# 2026-08-03 (close-record §9.1, second bite of the class). Configuration now refuses what
+# memory once had to.
+e2e/

@@ -168,3 +168,29 @@ row only under CPU-class starvation (`taskpolicy -b` + burners; load alone at 33
 14/14 green), and was re-scoped by O-12 to the product question alone; its evidence lands
 as `evidence/wgate/gallery-press-refusal.md` when the lane concludes. The row itself now
 lives where the owner put it: a local instrument, not a wall.
+
+### 9.1 · The mechanism landed after all (appended 2026-08-03, post-seal)
+
+The paragraph above aged in hours: the lane concluded WITH the mechanism — CH-67's third
+species, and a real hand's defect, not a driver's. `pointermove` is coalesced to one per
+rendering frame; `pointerup` is not coalesced at all — so a release lands 0–16.7ms after
+the last reported move with the hand still travelling, its leg reads ZERO TRAVEL, and the
+release fold multiplied a correctly measured flick by 0.3 (a declared 0.45 px/ms threshold
+behaving like 1.5, decided by where the release fell inside a frame). Cured at `8fdacd87`
+by replacing the arm list with its invariant — **the release may only ADD to what the
+gesture measured, never subtract from it** — born-RED in BOTH engines against `4d74afe8`,
+drag block 14/14 both engines cured; the full booking is the CH-67 amendment in
+`docs/tranches/LEDGER.md` and `evidence/wgate/gallery-press-refusal.md`.
+
+Production reconciliation, stated because the record must not imply otherwise: the 14:58
+deploy (`30ac068e`) was built `--commit-dirty=true` from a tree that already carried the
+agent's uncommitted cure, so the live entry `index-C9b17OTx4t72.js` has been the CURED
+composable from the first §9 deploy on — the §9 visual pass exercised exactly these
+bytes. `8fdacd87` committed them verbatim (CI 16/16 green, run 30826356755) and the
+re-deploy (`aaa4d3b6`) uploaded zero files against the same entry: byte-identity confirmed
+twice by `dist-identity --served`. Residue owned by the O-12 regime: the born-RED flick
+row has no automated home (no browser lane) and a lost flick is invisible to a screenshot —
+it rides the local `drag:` block, which belongs in every deploy-time pass. A `.prettierignore`
+now guards `e2e/` from manual reformats (second bite of the format-gate trap: a chair-run
+`prettier --write` flipped the file's quote convention and severed a sleep-lint exemption
+anchor; reconstructed exactly, then configured away per the trap→config law).
