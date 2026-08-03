@@ -1,0 +1,470 @@
+T7-W3 §8 — THE WANDERING FUTOSHIKI ROW: LOCAL FORENSICS
+2026-08-03 · darwin 25.4.0 · @playwright/test 1.61.1 · vite 8.1.4 dev server on :4231
+tracked head 6d612ec5 (working tree carries sibling waves' uncommitted edits — none in e2e/futoshiki.spec.ts)
+
+NOTE ON THIS FILE'S NAME. It was commissioned as "coldchunk" forensics against the F3
+cold-chunk hypothesis. The measurements below REFUTE that hypothesis. The name is kept so the
+commissioning record and the answer share a path; read the content, not the filename.
+
+
+── 0. THE FIELD RED, RE-PULLED ─────────────────────────────────────────────────────────────
+
+  gh run view --job 91643242493 --log-failed        (run 30799424855, head 6d612ec5)
+
+  e2e-webkit shard 1/3, `npx playwright test --project=webkit --workers=1 --shard=1/3`
+  Running 57 tests using 1 worker, shard 1 of 3
+
+    [51/57] 09:16:04.958  futoshiki.spec.ts:48  gallery switches to futoshiki      → PASSED (5.9s)
+    [52/57] 09:16:10.858  futoshiki.spec.ts:75  size switching 4×4/5×5/6×6/7×7     → FAILED
+
+      TimeoutError: locator.waitFor: Timeout 15000ms exceeded.
+      Call log:
+        - waiting for locator('.gallery-viewport') to be visible
+      > 33 |   await viewport.waitFor({ state: 'visible', timeout: 15000 });
+        at switchToFutoshiki (…/e2e/futoshiki.spec.ts:33:18)
+        at …/e2e/futoshiki.spec.ts:77:3
+
+    1 failed · 56 passed (4.6m)
+
+  The prior attempt red at futoshiki.spec.ts:48 — SAME SITE, line 33, same 15,000ms on
+  `.gallery-viewport`. So the row wanders and the SITE does not: both reds are the gallery
+  failing to open after the wordmark press, which is upstream of every futoshiki chunk.
+
+
+── 1. WHAT THE SITE RULES OUT BEFORE ANY MEASUREMENT ───────────────────────────────────────
+
+  · CONTENTION — `--workers=1`, no neighbouring browser, no co-resident row. §6's option-B
+    prediction fires: refuted as a sufficient cause.
+  · THE F3 COLD-CHUNK WATERFALL — `.gallery-viewport` lives in `GameGallery.vue`, a STATIC
+    import in `App.vue` (`import GameGallery from "@pencil/chrome/GameGallery/GameGallery.vue"`,
+    App.vue:31). It rides the main chunk. No lazy chunk is in the path to that selector, and
+    the failing wait never reaches the futoshiki chunk at all.
+  · ORDERING — shard 1's row [51] opened the same deck 6 seconds earlier and passed. Nothing
+    the shard could have warmed was cold at [52].
+  · A DEAD BUDGET — 15,000ms against a beat whose whole nominal cost is
+    MOTION.chromeLeaveMs = 200ms plus a mount.
+
+  The one gate on `.gallery-viewport` is `enterGallery()` running at all (App.vue:418):
+
+      function enterGallery() {
+        preloadScenes();
+        if (reducedMotion.value) { entryAnimated.value = false; openGallery(game.value); return; }
+        ...
+        document.documentElement.classList.add("gallery-leaving");   // BEAT 0
+        window.setTimeout(() => { …remove…; openGallery(game.value); }, MOTION.chromeLeaveMs);
+      }
+
+  and `openGallery` writes `?view=gallery` through `history.replaceState`
+  (useGameGallery.ts). Both leave observable marks. Both were read on every red below.
+
+
+── 2. RIG ──────────────────────────────────────────────────────────────────────────────────
+
+  Ports: :3000 occupied (foreign palette-api) and :3001 (owner slot) — untouched. :4230 held by
+  a sibling lane — untouched. This work used :4231 exclusively, `npx vite --port 4231
+  --strictPort`, with `PLAYWRIGHT_BASE_URL=http://localhost:4231` (K46: the HMR socket does not
+  follow the port, and global-setup.ts's assert-the-SPA gate covers the desync).
+
+  Every probe replays futoshiki.spec.ts's exact path: goto → waitForSelector
+  'svg.handwritten-logo' → click 'button.logo-trigger' → wait '.gallery-viewport' visible, one
+  fresh browser context per iteration (no HTTP cache, no module cache — the CI shape).
+
+
+── 3. COLD vs WARM: THE WATERFALL IS NOT IN THE PATH ────────────────────────────────────────
+
+  Cold vite process, `node_modules/.vite` removed, fresh context each iteration:
+
+    [webkit] iter 1  load=439ms  click=225ms  CLICK→GALLERY=299ms  →futoshiki-cell=288ms  →caret=475ms
+    [webkit] iter 2  load=349ms  click=252ms  CLICK→GALLERY=231ms  →futoshiki-cell=390ms  →caret=503ms
+    [webkit] iter 3  load=371ms  click=419ms  CLICK→GALLERY=249ms  →futoshiki-cell=577ms  →caret=591ms
+    [webkit] iter 4  load=375ms  click=623ms  CLICK→GALLERY=313ms  →futoshiki-cell=499ms  →caret=537ms
+
+  Cold and warm are the same number. The lazy futoshiki chunk costs 288–577ms to first cell on
+  the FIRST contact of a cold server — nowhere near a 15,000ms budget, and it is not the
+  wait that reds anyway.
+
+  Beat-level instrumentation (patched `window.setTimeout` at d=200, MutationObserver on
+  `.gallery-viewport`) on the same rig:
+
+    iter 1  click→gallery(wall)=534ms  |  200ms-timer actual latency=279ms  dom-after-timer=435ms
+    iter 2  click→gallery(wall)=TIMEOUT>180000ms  |  200ms-timer actual latency=203ms  dom-after-timer=n/a
+
+  iter 2 is the failure, reproduced on darwin. THE TIMER FIRED ON TIME (203ms). The gallery
+  never entered the DOM. Main-thread starvation by `preloadScenes()`'s module graph — the last
+  survivor of the waterfall family — is refuted by its own instrument.
+
+
+── 4. THE STATE AT THE RED ──────────────────────────────────────────────────────────────────
+
+  8 unaided webkit iterations, 15,000ms budget, state dumped on red:
+
+    iter 1 click→gallery=503ms      iter 5 click→gallery=553ms
+    iter 2 click→gallery=581ms      iter 6 click→gallery=505ms
+    iter 3 RED(>15000)              iter 7 click→gallery=526ms
+    iter 4 click→gallery=521ms      iter 8 click→gallery=544ms
+    FAILS 1/8
+
+    RED STATE = {"url":"http://localhost:4231/?size=3&difficulty=MEDIUM",
+                 "leaving":"", "gallery":false, "viewport":false,
+                 "triggerTag":"BUTTON", "main":680492}
+
+  Read it row by row:
+    · no `?view=gallery`      ⇒ `openGallery()` never ran
+    · html className empty    ⇒ `gallery-leaving` was never added ⇒ `enterGallery()` never ran
+    · triggerTag BUTTON       ⇒ `view` is still 'playing'; the wordmark never went inert
+    · main innerHTML 680,492  ⇒ the app is alive and dealt; nothing crashed, nothing hung
+
+  No console error, no pageerror, on any iteration. The click was DELIVERED by Playwright and
+  the handler NEVER RAN.
+
+
+── 5. THE MECHANISM, CAUGHT ────────────────────────────────────────────────────────────────
+
+  30 unaided webkit iterations with document-level CAPTURE listeners on mousedown/mouseup/click
+  and a MutationObserver on `html[class]`. Only reds print:
+
+    iter 1–18   green (487–562ms)
+    iter 19 RED  preBox=[130,6,424,112] postBox=[130,6,424,112] url=?size=3&difficulty=EASY
+        mouseup@523->image.logo-pose-bmp[130,6,424,112]
+    iter 20–25  green
+    iter 26 RED  preBox=[130,6,424,112] postBox=[130,6,424,112] url=?size=3&difficulty=EASY
+        mousedown@554->text.logo-text[130,6,424,112]
+    iter 27–30  green
+    FAILS 2/30  [engine=webkit]
+
+  THE SMOKING GUN, and it is unambiguous:
+
+    iter 19 — a lone `mouseup`, no `mousedown`, NO `click`.
+    iter 26 — a lone `mousedown`, no `mouseup`, NO `click`.
+
+  WebKit synthesizes `click` only from a mousedown/mouseup PAIR. One half of the pair never
+  reached the document, so no `click` was ever dispatched, so Vue's
+  `@click.stop="inertHeading || emit('open')"` never ran. Everything downstream — the 200ms
+  beat, `openGallery`, `?view=gallery`, `.gallery-viewport` — was correctly never reached.
+
+  The wordmark's box is IDENTICAL before and after ([130,6,424,112] both times, and on both
+  reds), so this is NOT a layout/geometry race and not the post-font re-measure.
+
+  What differs between the two halves is the NODE UNDER THE POINTER. The surviving event in
+  iter 19 landed on `image.logo-pose-bmp`; in iter 26 on `text.logo-text`. Those are the two
+  ARMS of the wordmark's pose stack (HandwrittenLogo.vue):
+
+      <template v-if="logoBaked">
+        <image v-for="(url, f) in logoUrls" class="logo-pose-bmp" …/>      ← baked arm
+      </template>
+      <g v-for="(pid, f) in logoBaked ? [] : logoPoseIds" class="logo-pose" …>
+        <text class="logo-text" …>{{ label }}</text>                        ← live-filter arm
+      </g>
+
+  When the raster bake lands, `logoBaked` flips and the ENTIRE live `<g>` stack is torn out of
+  the document and replaced by `<image>` siblings. A mouse pair that straddles that swap loses
+  the half whose target is destroyed, and WebKit drops the gesture silently.
+
+  `loadApp` waits on `svg.handwritten-logo` — the earliest instant the wordmark exists in the
+  DOM, well inside the bake window. That is why THIS file carries the family: rows :75, :100
+  and :134 press the wordmark immediately after that wait with nothing in between, and :48
+  waits only for `.sudoku-cell` to be visible, which lands in the same window. Every other
+  gallery-opening spec first waits out a DEALT board (a11y's `armGuard` polls
+  `.game-cell .glyph-svg > 0`; gallery-guard and permalink fill a cell first), which spends the
+  bake window before pressing. The concentration is a property of the wait, not of futoshiki.
+
+  ENGINE SCOPE — 25 chromium iterations, same rig, same path: 0 dropped presses.
+  The defect is WebKit-only, which is exactly why the chromium CI job stayed green on rows the
+  webkit shard red.
+
+
+── 6. THE CURE, MEASURED ON BOTH ARMS ──────────────────────────────────────────────────────
+
+  Arm A — "poses": wait for the bake to land (`svg.handwritten-logo image.logo-pose-bmp`)
+          before pressing.
+    FAILS 0/30  [webkit]   clicks: 1 × 30
+
+  Arm B — "retry": poll the invariant — press, and if the deck did not commit, press again.
+    FAILS 0/30  [webkit]   clicks: 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,1,1,1,2,1,1,1,1,1,1,1
+    FAILS 0/25  [chromium] clicks: 1 × 25
+
+  Arm B measures the disease from the other side and lands it in the field: 4 of 30 first
+  presses were DROPPED and recovered by a second press — 13%, against arm-less 2/30 reds. Same
+  number, two instruments.
+
+  ARM B IS ADOPTED. Arm A passes but is a proxy: it asserts a rendering artifact of the
+  wordmark, it cannot see a LATER re-bake (`retainedPoseUrls` drops poses whenever
+  `label`/`vbWidth` change), and it cures nothing if a press is dropped for any other reason.
+  Arm B polls the INVARIANT the test actually needs — the deck is open — which is the
+  sleep-lint's own law, and it is robust to cause.
+
+  Idempotence, checked before adopting: `openGallery()` returns early on `view === 'gallery'`
+  (useGameGallery.ts), and the wordmark renders a `<span>` rather than a `<button>` once the
+  deck commits (`:inert-heading="view === 'gallery'"`, App.vue:610). A re-press therefore costs
+  one beat and can never double-toggle; the inert `<span>` is also the arm that distinguishes a
+  LATE open from a dropped press, and `openDeck` reads it as such.
+
+
+── 7. PROOF ────────────────────────────────────────────────────────────────────────────────
+
+  Cold vite process on :4231, `e2e/futoshiki.spec.ts` alone, `--workers=1` (the CI shard shape):
+
+    webkit run 1 (COLD server)  4 passed (9.1s)
+    webkit run 2                4 passed (8.4s)
+    webkit run 3                4 passed (8.4s)
+    webkit run 4                4 passed (8.8s)
+    webkit run 5                4 passed (8.1s)
+    webkit run 6                4 passed (8.8s)
+    webkit run 7                4 passed (9.3s)
+    chromium                    4 passed (6.1s)   ← no regression
+
+  7 webkit runs × 4 rows = 28 deck opens, zero reds. At the measured 13% drop rate the unaided
+  shape would drop ~3.6 presses across that span.
+
+  Estate gates on the edited file:
+    npm run lint:sleep  → "OK — no fixed-duration wait precedes a one-shot assertion on a live
+                           surface across 25 specs" (self-test canaries all as required)
+    npm run lint:catch  → 0 swallowed catch bodies (negative controls RED as required)
+    eslint              → e2e/ is ignore-patterned (unchanged by this edit)
+    prettier            → e2e/ is outside the `lint` lane (`src/ scripts/ ../../scripts/`);
+                          futoshiki.spec.ts read unclean at HEAD, as do permalink/gallery-guard/
+                          a11y — no formatting action taken
+
+
+── 8. RESIDUE ──────────────────────────────────────────────────────────────────────────────
+
+  · THE PRODUCT ROW, not cured here (src/ is outside this agent's fence): a real Safari user
+    who presses the wordmark while the pose bake lands gets nothing — no gallery, no feedback,
+    press again. Measured 2/30 (≈7%) on darwin WebKit at first contact. The estate's own cure
+    shape exists one surface over: the toggle-ink gate. Candidates: hold the live-filter arm
+    mounted (opacity-swap rather than tear out, which is already the grid-boil grammar's own
+    steady state), or bake before the wordmark becomes interactive.
+  · THE CLASS, harness side: `a11y.spec.ts` (armGuard), `gallery-guard.spec.ts` (openGallery),
+    `permalink.spec.ts:64`, `gallery-deal.spec.ts` ×4 and `throttled-void.spec.ts:66` all press
+    the wordmark with a single unguarded `.click()`. They are shielded today only by having
+    waited out a dealt board first — a timing accident, not a contract. `openDeck`'s shape
+    belongs in a shared e2e helper. Those files are outside this agent's fence.
+  · `futoshiki.spec.ts` never inherited W3's a11y settle before `Enter` (activedescendant +
+    aria-selected). It is added here — a live trap, same wave, same law.
+
+
+── 9. COMMANDS ─────────────────────────────────────────────────────────────────────────────
+
+  npx vite --port 4231 --strictPort
+  PROBE_BASE=http://localhost:4231 PROBE_ENGINE=webkit PROBE_ITERS=30 node <probe>.mjs
+  PLAYWRIGHT_BASE_URL=http://localhost:4231 npx playwright test e2e/futoshiki.spec.ts \
+    --project=webkit --workers=1
+
+  Probes are scratch (session scratchpad, not banked): w3s7-coldchunk-probe.mjs (§3 timings),
+  w3s7-beat-probe.mjs (§3 timer latency), w3s7-crash-probe.mjs (§4 red state),
+  w3s7-decide.mjs (§5 the mouse-pair trace), w3s7-cure.mjs (§6 both arms). Every figure above
+  is their stdout, pasted, not paraphrased.
+
+
+════════════════════════════════════════════════════════════════════════════════════════════
+ADDENDUM §10 — THE CLASS INVARIANT (2026-08-03, chair ruling on §8 residue item 2)
+════════════════════════════════════════════════════════════════════════════════════════════
+
+The ruling: a timing-accident shield is not a contract, and the wandering family's one-off reds
+(`gallery-deal:485`, `permalink:52`, `a11y:490`) are ≥2nd occurrences. The guard is extracted
+and every unguarded press in the class is converted.
+
+
+── 10.1 THE HELPER ─────────────────────────────────────────────────────────────────────────
+
+  web/frontend/e2e/committed-press.ts — a module sibling of `wire.ts` / `ch62-admission.ts`,
+  the e2e tree's existing sharing idiom.
+
+  CONTRACT
+    pressCommitted(trigger: Locator, committed: Committed, opts?) => Promise<number>
+      Committed = Locator (⇒ "this is visible") | (() => Promise<boolean>)
+      opts = { beatMs = 4000, budgetMs = 20000, what?: string }
+
+    GUARANTEES the press's asserted effect is true on return. Does NOT guarantee one press,
+    and callers must not depend on that. Returns the count actually sent, so a run can measure
+    the drop rate instead of assuming it.
+
+    Presses until `committed`, bounded by `budgetMs`, each attempt given `beatMs`. If the
+    trigger stops resolving it is treated as INERT-ON-SUCCESS (the wordmark renders a `<span>`
+    once the deck commits) and the helper waits the effect out rather than pressing a control
+    that no longer exists.
+
+    CALLER'S OBLIGATION: `committed` MUST BE FALSE BEFORE THE PRESS. See §10.3 — this is the
+    defect the conversion's first cut shipped, and it is written into the module header.
+
+    No fixed waits: every wait is a retrying Playwright wait or `expect.poll`.
+
+  THE CRITERION FOR CONVERTING A PRESS, and it is structural rather than taste. Convert iff a
+  TEAR-OUT can occur under the pointer — the shape that destroys the node mid-gesture:
+
+      v-for="… Baked ? [] : POSES"
+
+  Estate-wide census, re-derived 2026-08-03 (`grep -rn 'v-for="[^"]*? \[\] :' src/`):
+
+      src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue:392   logoBaked ? [] : logoPoseIds
+      src/pencil/celestial/DarkModeToggle.vue:212                 sunBaked  ? [] : SPARKLE_POSES
+      src/pencil/celestial/DarkModeToggle.vue:287                 moonBaked ? [] : STAR_POSES_D
+
+  THREE sites, TWO components. Nothing else in the estate tears out.
+
+  THE COUNTER-EXAMPLE IS THE PRODUCT-SIDE CURE. `HandDrawnGrid.vue` and `HandDrawnOutline.vue`
+  bake exactly the same way and are NOT in the family: the live stack STAYS MOUNTED and is
+  hidden (`baked-hidden`, `display:none`) while the baked `<image>` siblings paint. No node is
+  ever destroyed under a pointer. That is the estate's own immune grammar, already shipped, one
+  component over from the defect — and it is the shape §8.7 residue item 1 should take.
+
+
+── 10.2 CONVERSION TABLE ───────────────────────────────────────────────────────────────────
+
+  CONVERTED — 10 sites, all of them the wordmark (`button.logo-trigger`), the one tear-out
+  surface any spec in scope presses:
+
+    file                    site   committed-effect probe        why that probe
+    ──────────────────────────────────────────────────────────────────────────────────────
+    futoshiki.spec.ts       :46    .gallery-viewport visible     openDeck delegates; deck never
+                                                                 open earlier in these rows
+    a11y.spec.ts            :158   .gallery-viewport visible     armGuard; one open per test
+    gallery-guard.spec.ts   :50    .gallery-viewport visible     openGallery helper; one per test
+    gallery-guard.spec.ts   :66    .game-gallery visible         THE ROW'S OWN SUBJECT — it
+                                                                 asserts the wordmark opens the
+                                                                 CAROUSEL, so the probe is the
+                                                                 carousel. The guard cannot
+                                                                 manufacture the pass: an
+                                                                 in-place listbox would never
+                                                                 commit `.game-gallery`.
+    permalink.spec.ts       :69    .gallery-viewport visible     `permalink:52`, a named red
+    throttled-void.spec.ts  :74    .gallery-viewport visible     beatMs 8000 / budget 24000 —
+                                                                 CDP throttle is LIVE from the
+                                                                 line above. Untouched:
+                                                                 VOID_RECOVERY_BUDGET_MS, the
+                                                                 row's gate, measured after the
+                                                                 select.
+    gallery-deal.spec.ts    :389   ?view=gallery on the URL      via `pressDeckOpen` — see §10.3
+    gallery-deal.spec.ts    :489   ?view=gallery on the URL      for why this file's probe is
+    gallery-deal.spec.ts    :522   ?view=gallery on the URL      the URL and not a node
+    gallery-deal.spec.ts    :729   ?view=gallery on the URL
+
+  LEFT AS PLAIN `.click()` — deliberately, with the reason. None of these sit over a tear-out,
+  so a guard would buy nothing and would hide a real defect behind a retry:
+
+    surface                                   files              why plain
+    ──────────────────────────────────────────────────────────────────────────────────────
+    .controls-card button[aria-label=…]       a11y, permalink,   plain buttons; no bake, no
+      (Deal / Share / Solve)                  futoshiki          pose stack, nothing re-renders
+                                                                 under the pointer
+    .staging-deal / .staging-safe             gallery-deal ×9    band verbs; plain buttons
+    .guard-keep / .guard-leave                gallery-deal,      ribbon verbs; plain buttons
+                                              gallery-guard
+    .staging-axis chips (size / level)        gallery-deal ×7    plain buttons
+    .sudoku-cell / .game-cell                 a11y, gallery-*,   cells host HandwrittenGlyph,
+                                              gallery-deal       which is NOT a useRasterStack
+                                                                 consumer — no tear-out
+    keyboard `.press(…)` on .gallery-viewport every file         not a pointer gesture at all;
+                                                                 the mousedown/mouseup pairing
+                                                                 defect cannot reach it
+    gallery CARD faces                        gallery-deal       GameCard imports
+                                                                 HandDrawnOutline, not a
+                                                                 tear-out component
+    DarkModeToggle                            — none in scope    IS a tear-out surface (2 of the
+                                                                 3 census sites) but no spec in
+                                                                 this conversion presses it.
+                                                                 Flagged for whoever does.
+
+
+── 10.3 THE CONVERSION'S OWN DEFECT, CAUGHT BY ABLATION ────────────────────────────────────
+
+  The first cut of `pressCommitted` opened its loop with an "already committed ⇒ nothing to do"
+  fast path. `gallery-deal.spec.ts:699` ("safe verb: a wandered pair cannot OUTLIVE the
+  transaction") went RED on it, and the ablation is unambiguous:
+
+      guarded (first cut)          1 failed × 4 runs
+      unguarded (HEAD shape)       1 passed × 4 runs
+      variant B (locator.waitFor
+        instead of waitForSelector) 1 passed × 2 runs   ⇒ the wait was never the difference
+
+  Instrumented at the site, the cause printed itself:
+
+      PROBE after cancel: {"bandCount":1,"bandVisible":true,"galleryCount":1,
+                           "triggerCount":1,"url":"?size=3&difficulty=EASY"}
+      PROBE presses: 0
+
+  That row re-opens the deck after a cancel. Immediately after
+  `expect('.game-gallery').toBeHidden()` PASSED, `.staging-band` still read **visible** — the
+  deck is mid-leave, and `.game-gallery` reaches a hidden state while its descendant band still
+  has a box. The fast path saw a true probe, sent ZERO presses, the deck never re-opened, and
+  the row correctly observed the stale 4×4 chips it exists to forbid. The guard had turned a
+  real assertion into a skipped one — the worst failure mode available to a harness cure.
+
+  TWO FIXES, both landed:
+    1. The fast path is GONE. `pressCommitted` always sends at least one press unless the
+       trigger is already inert. The caller's obligation is now written into the module header
+       with this row as its birth certificate.
+    2. `gallery-deal`'s four sites probe `?view=gallery` — the URL truth `openGallery` writes
+       and `cancel` deletes — through a file-local `pressDeckOpen`. It is false before every one
+       of those presses and true only after this one lands. The `.staging-band` wait stays as
+       its own line: it is the JOURNEY's precondition, not the press's committed effect, and
+       conflating the two is exactly what red.
+
+  Re-rated after the fix: **1 passed × 4 runs** on the same row, guard in place.
+
+  The control group did its job again (lessons-from-t2-t4: born-RED + ablation caught it,
+  ceremony would not have). A cure that skips the work it was guarding is not a cure.
+
+
+── 10.4 MULTIPLAYER HANDOFF — A MEASURED NONE ──────────────────────────────────────────────
+
+  `multiplayer.spec.ts` was not touched (W4 owns it). Censused rather than skipped:
+
+      grep -n "logo-trigger|gallery-viewport|game-gallery|staging-band|dark-mode|celestial"
+        → no matches
+      every press site: :112 cell, :129 verb, :331/:730/:952 .controls-card Deal,
+                        :387 .controls-card .players-leave, :818/:880 .drawer-tab (tap),
+                        :883 cellInput (tap)
+
+  NONE of these sits over a tear-out surface — no wordmark press, no toggle press, and cells /
+  drawer tabs / controls-card verbs are not `useRasterStack` consumers. **W4's seal has nothing
+  to take from this class.** If W4 adds a wordmark or dark-mode-toggle press, it takes the
+  helper; that is the only trigger.
+
+
+── 10.5 PROOFS ─────────────────────────────────────────────────────────────────────────────
+
+  Dev server: cold `npx vite --port 4231 --strictPort`, `PLAYWRIGHT_BASE_URL` matching.
+  :3000 / :3001 / :4230 never touched.
+
+    FIVE CONVERTED FILES, webkit, --workers=1, one run each
+      a11y.spec.ts             15 passed (28.9s)
+      gallery-guard.spec.ts     6 passed (10.3s)
+      permalink.spec.ts        10 passed (11.0s)
+      gallery-deal.spec.ts     18 passed (27.0s)
+      futoshiki.spec.ts         4 passed  (8.2s)
+
+    FUTOSHIKI THROUGH THE DELEGATED HELPER, webkit, ×2 more
+      run 2                     4 passed  (8.4s)
+      run 3                     4 passed  (8.6s)
+
+    CHROMIUM REGRESSION PASS
+      futoshiki + gallery-deal 22 passed (24.5s)
+
+    THROTTLED-VOID on its OWN config — the real path, not a substitute: built its bundled
+    preview (`vite build --outDir dist-throttle` — an ISOLATED outDir, so `dist/` is never
+    clobbered and no sibling lane's golden/prod-shake surface is disturbed) and served it on
+    :4188.
+      npx playwright test --config playwright-throttle.config.ts --project=throttled-void
+        1 passed (4.5s)   ← first attempt; the config runs failOnFlakyTests with retries:1
+
+    GATE SELF-TESTS (all after the conversion)
+      npm run lint:sleep   OK — no fixed-duration wait precedes a one-shot assertion on a live
+                                surface across 25 specs
+      npm run lint:motion  OK — 25 specs, every one declaring its motion state, every `frozen`
+                                backed by the route that lands
+      npm run lint:catch   check-empty-catch: 0 swallowed catch bodies
+
+    PRM DECLARATIONS — all six converted files still carry theirs, unedited (a11y,
+    gallery-guard, permalink, gallery-deal, throttled-void, futoshiki: `// PRM: live, …`).
+
+
+── 10.6 RESIDUE AFTER THIS PASS ────────────────────────────────────────────────────────────
+
+  · §8.7 item 1 STANDS UNCHANGED — the product row is uncured and `src/` remains outside the
+    fence. §10.1 now names the shipped cure shape (HandDrawnGrid's mounted-and-hidden live
+    stack), which should shorten that work considerably.
+  · DarkModeToggle is a tear-out surface with no spec pressing it in this conversion. Whoever
+    writes the first toggle-press spec takes `pressCommitted`; worth a line in the class's row
+    so it is not rediscovered.
+  · §8.7 item 3 stands: §6's banked prediction is spent and should be marked discharged.

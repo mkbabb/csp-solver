@@ -1,0 +1,236 @@
+GATE D (boot TBT) — RULING AND RESTAMP
+T7-W3 · 2026-08-03 · head 6d612ec5 · trigger: CI run 30799424855, perf-subset RED
+================================================================================
+
+  BREACH [chromium] boot TBT: measured 1276ms > allowed 1200ms  (gates.json boot.tbt.maxTbtMs)
+  NOT MEASURED [webkit] — control dropped 1 long frame           (admissibility refusal)
+
+VERDICT: the threshold was wrong, the bundle was not. RESTAMPED 1200 -> 1750, still
+provisional, still dated, still marked for WGATE. Nothing sealed was touched.
+
+
+1 · PROVENANCE — W6-provisional CONFIRMED, not a P1 seal
+--------------------------------------------------------------------------------
+gates.json has exactly two commits:
+
+  117c18ef  P1-W4 gates.json — the wave's thresholds as config
+  4b4c7aeb  T7-W6: the contrivance sweep
+
+`git show 117c18ef:…/gates.json` has NO `boot` key at all — the P1 seal is
+desktop{ceilingFps,idle3s,deal,solveCelebration,themeToggle,galleryGlide} + sim +
+gpuAttribution + shamCell + discipline, and nothing else. `boot.tbt` arrives whole at
+4b4c7aeb (T7-W6), carrying its own "1200 is PROVISIONAL … RESTAMP AT WGATE off a runner
+reading" in the note it shipped with. evidence/w6/perf-floor-derivation.md §2 says the
+same in its own words.
+
+So the number is W6's, it is nine hours old, and restamping it is what its author asked
+for. The P1 seal is untouched by this ruling: every `desktop.*` row except `undoBurst`
+(also W6's), all of `sim`, `gpuAttribution`, `shamCell` and `discipline` are byte-identical
+to 117c18ef. The edit is one value and one note.
+
+
+2 · REGRESSION CHECK — darwin holds its basis. NOT a product regression.
+--------------------------------------------------------------------------------
+W6 changed the boot path (Fraunces single-ship: the bake fetches a standalone woff2), so
+the breach had to be cleared of being real before any threshold moved.
+
+Method: `git archive 6d612ec5 web/frontend` into a scratch tree (two sibling workflows hold
+uncommitted src/ edits — measuring this working tree would have measured THEIR waves), the
+repo's node_modules and csp-solver symlinked in, `npx vite build`. The scratch build's entry
+hash is `index-C6VeTDEvjVkF.js`. The lane's own harness, unmodified, chromium-only:
+
+  node perf-rig/ci-subset.mjs --engines chromium --runs 3 --dist <scratch dist>
+
+  run          load@start   median TBT   tasks     longest task
+  ----------   ----------   ----------   -------   ------------
+  banked            10.02       256 ms   10        197-243 ms
+  anchor-4x         12.41     309.5 ms   10        166-255 ms
+  run1              11.88       373 ms   10-11     250-256 ms
+  ..............................  the box then went to war  ...........
+  run2              16.99       701 ms   7-10      352-449 ms
+  run4              40.64       871 ms   11        239-418 ms
+  run5              42.55       867 ms   11        347-582 ms
+  run3              60.11       655 ms   10-11     265-447 ms
+
+THE THREE CALM MEDIANS: 256 / 309.5 / 373, median-of-medians 309.5 ms.
+W6's basis (perf-floor-derivation.md §2): 218 / 275 / 316 / 343, median-of-medians 295.5.
+
+  309.5 / 295.5 = 1.047 — inside noise on a box whose 1-minute load never sat still.
+
+The structural check is the stronger one, because a median can drift and a census cannot.
+W6 recorded 9-11 long tasks per boot window, longest 210-274 ms. Today: 10-11 tasks,
+longest 197-256 ms. A new synchronous raster or decode on the boot path — the regression
+class GATE D was built to catch — adds a task or stretches the longest one. Neither moved.
+The Fraunces single-ship did not land on the boot burst.
+
+FULL MATRIX GREEN on the pre-restamp file, both engines, calm box:
+  chromium control 133.54 / long33 0 · idle 134.38 vs required 131.64 · undoBurst 134.02
+  webkit   control  97.97 / long33 0 · idle  98.44 vs required  96.58 · undoBurst  98.16
+  boot TBT chromium 256 ms vs 1200 · webkit NOT MEASURED (no longtask entry type)
+  RESULT: GREEN, exit 0
+
+VERDICT: the gap is host class, not the bundle. The runner's 1276/1333 and darwin's 256-373
+are the same boot train read on two machines.
+
+
+3 · WHY GATE D IS NOT TRANSPOSED — the refusal is measured, not asserted
+--------------------------------------------------------------------------------
+The strong preference was to do to GATE D what GATE B does to idle fps: divide by something
+the harness measures per host, so a darwin-derived number can gate a runner. GATE B's
+denominator is the app-free control's rAF ceiling. It cannot be borrowed here:
+
+  THE FPS CEILING IS A CAP, NOT A THROUGHPUT READING. The runner's control page reports
+  p50 16.7, p95 16.7, worst 16.8 ms — three digits of the same number. A clamped quantity
+  carries no information about how fast the host computes. Darwin's 132.57 vs the runner's
+  60.35 is 130 Hz against 60 Hz; it is a display fact.
+
+It happens to correlate here — 132.57/60.35 = 2.20 against a true boot-work ratio of
+(1883/917) = 2.05 measured on total long-task time — and that near-agreement is exactly the
+trap. Two refresh rates agreeing to 7% on one host pair is numerology, and its failure mode
+is not hypothetical: a CPU-slow 60 Hz host would read a ratio of 1.0 and be handed darwin's
+floor, manufacturing a red. Transposition through a capped denominator is refused.
+
+SO THE DENOMINATOR WAS MEASURED INSTEAD. probe.js now runs fixed integer work — 3e7
+iterations of `h = Math.imul(h ^ i, 2654435761) >>> 0`, no allocation, no DOM, no engine
+builtin, checksum reported so an elided loop cannot pass for a fast host — under whatever
+throttle the caller applied, AFTER the boot window has closed (its long tasks start past
+WINDOW_MS and are filtered out, so it cannot inflate what it exists to normalise), min of 3.
+
+It is a real throughput instrument, and here is the proof, the same shape as W6's throttle
+control (a gates.json copy with cpuThrottleRate 1):
+
+  rate   anchor    boot TBT
+  1x      30 ms      17.5 ms
+  4x     107 ms     309.5 ms      anchor separation 3.57x — the throttle is applied and
+                                  the anchor sees it, unlike the fps ceiling
+
+It is DIAGNOSTIC and gates nothing. ci-subset prints `tbt/anchor` beside the verdict:
+
+  | engine   | throttle | anchor ms | median boot TBT | tbt/anchor |
+  | chromium | 4x       | 116       | 256ms           | 2.21       |
+  | chromium | 4x       | 109       | 346ms           | 3.17       |
+  | webkit   | 1x       | 167       | —               | —          |
+
+Comparable only within one engine at one cpuThrottleRate: TBT subtracts a flat 50 ms per
+task, which is not scale-invariant (2.21 at 4x, 0.58 at 1x). Cross-engine is likewise
+meaningless — WebKit's JS engine reads 167 ms on the same loop V8 runs in 30.
+
+WHAT WGATE DOES WITH IT: three runner readings decide the question on evidence. If
+tbt/anchor holds across host classes, GATE D transposes onto it and the absolute retires. If
+it does not, the transposition is refuted BY MEASUREMENT and a runner-derived absolute is
+the honest instrument. Either way WGATE reads a number instead of repeating W6's guess.
+
+
+4 · THE RESTAMP — arithmetic
+--------------------------------------------------------------------------------
+BASIS. Runner, head 6d612ec5, quiescent (4 cpus, load 0.92 -> 1.96, chromium control fps
+60.35 with long33 0). Two VMs, six windows:
+
+  job A (original)   median 1276 ms
+  job B (rerun, 91643242319, artifact perf-subset-report.txt)
+                     1368 / 1256 / 1333 -> median 1333 ms
+
+  worst window          1368 ms
+  worst median          1333 ms
+  within-run spread     1368/1256 = 1.089
+  cross-VM spread       1333/1276 = 1.045
+
+STEP 1 — spread.        1368 x 1.10 = 1504.8      (covers the larger observed spread, n=2 VMs)
+
+STEP 2 — no control.    1504.8 x 1.15 = 1730.5
+
+  GATE D is the one gate in this lane with no app-free denominator. The control-validity
+  law refuses a verdict when the control page drops a frame — that protects A, B and C. A
+  contended boot TBT is graded straight through as a fact about the bundle, and ci.yml
+  never retries an exit 1. THE EXPOSURE IS MEASURED, in §2's table: same dist, same 4x rate,
+  frame control clean and EXIT=0 in every one of those runs, and the median still moved
+  256 -> 871 ms (3.40x) as the 1-minute load went 10 -> 41.
+
+  1.15 buys the first slice of a 3.40x exposure. It is not a cover for it. The cure is a
+  control, not a bigger number, and the instrument for one is now in the harness.
+
+STEP 3 — grain.         1730.5 -> 1750 ms, rounded DOWN (the conservative direction for a
+                        ceiling; the file's siblings are round: 1200, 52, 0.90).
+
+TRIPWIRE RETAINED. 1750 - 1333 = 417 ms of headroom over the worst quiescent runner median.
+One new synchronous boot task of X ms unthrottled contributes ~(4X - 50) ms, so the gate
+trips at X >= 117 ms — against an app whose own largest boot task is ~149 ms unthrottled
+(595 ms at 4x on the runner). W6's declared class is caught by a comfortable margin.
+
+WHAT THE INCUMBENT ACTUALLY WAS. 1200 sat BELOW the clean-tree reading on the only host that
+runs this lane. It was never a floor; it was a false-red machine, and its first field
+contact is what proved it. This is the lessons-file's proxy-vs-surface rule read from the
+config end: a threshold derived on a host it will never grade is a guess wearing a number's
+clothes. 1750 is derived where it is graded.
+
+DARWIN ASYMMETRY, DECLARED. 1750 is 6.8x darwin's calm median — on darwin this gate is
+loose. That is by construction: the ubuntu runner is the population GATE D grades, the
+darwin perf-rig is a separate manual lane, and the asymmetry is the exact thing the
+transposition in §3 would remove once it has evidence. Flagged for WGATE.
+
+
+5 · THE WEBKIT ROW — left exactly as it is
+--------------------------------------------------------------------------------
+  NOT MEASURED [webkit] — control dropped 1 long frame
+
+Honest and untouched. The app-free control read long33 1 with worst frames 47/53/50 ms, so
+neither a green nor a red is admissible for webkit on that host — which is the law working,
+not failing. Note that webkit's undoBurst in that same run read 53.24-54.63 fps (87-89% of
+its 61.56 ceiling, under the 0.90 floor): the run refused to grade numbers it had no
+business grading. Same argument W6 made at derivation time.
+
+EXIT-CODE PRECEDENCE, VERIFIED BY EXECUTION rather than by reading:
+
+  $ node perf-rig/ci-subset.mjs --engines chromium,webkit --runs 2 --canary-fail webkit
+    | chromium | yes | 275ms | 1750 | PASS |
+    NOT MEASURED [webkit] — synthetic (--canary-fail webkit)
+    RESULT: INADMISSIBLE — no threshold breached on what was measured…
+    EXIT=3
+
+An instrument failure with no breach beside it is still a 3, so ci.yml's retry-once path is
+intact: 3 -> warning + one rerun -> a second 3 -> `CODE=0` with the INADMISSIBLE-HOST
+warning. Precedence promotes nothing on its own. Unchanged by this ruling.
+
+
+6 · PROOF ON THE RESTAMPED FILE
+--------------------------------------------------------------------------------
+  $ node -e 'JSON.parse(fs.readFileSync(gates.json))'          -> parses
+  $ node perf-rig/ci-subset.mjs --engines chromium,webkit --runs 3 --dist <head dist>
+
+    boot.tbt   maxTbtMs 1750 over a 3000ms window at 4x CPU
+    | chromium | yes | 346ms | 1750 | PASS |
+    | webkit   | NO  | —     | 1750 | NOT MEASURED |
+    | chromium | 4x | 109 (30000000 iter) | 346ms | 3.17 |
+    | webkit   | 1x | 162 (30000000 iter) | —     | —    |
+    RESULT: GREEN — every gates.json threshold held on every engine.   EXIT=0
+
+  $ npx eslint perf-rig/probe.js perf-rig/ci-subset.mjs                -> clean
+
+`perf-rig/` is outside the prettier gate's scope (`src/ scripts/ ../../scripts/`) and both
+files were already prettier-dirty at head — pre-existing, untouched, not this ruling's.
+
+The scenario roster is UNCHANGED at 13 keys: the anchor is a field on the existing bootTbt
+reading, not a new scenario, so doc-truth's D20 row reads exactly as W6 left it.
+
+
+7 · FILES CHANGED
+--------------------------------------------------------------------------------
+  docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+      boot.tbt.maxTbtMs 1200 -> 1750, and its note re-derived and dated. ONE key and its
+      note. Every P1-sealed row byte-identical to 117c18ef.
+  web/frontend/perf-rig/probe.js
+      the host CPU anchor inside bootTbt — measured, checksummed, post-window, diagnostic.
+  web/frontend/perf-rig/ci-subset.mjs
+      `anchor` on the per-window bootTbt line; the tbt/anchor table under the GATE D
+      verdict; the GATE D header paragraph records that it is the one absolute among four.
+
+
+8 · RESIDUE FOR WGATE
+--------------------------------------------------------------------------------
+  a) GATE D HAS NO CONTROL. Measured exposure 3.40x (§2). Every other gate here can refuse
+     a contended host; this one cannot, and it is the one whose breach is never retried.
+     The anchor is the instrument a control would use — a ceiling on anchorMs is one line.
+  b) TRANSPOSE OR REFUTE at n>=3 runner readings of tbt/anchor (§3).
+  c) 1750 IS STILL PROVISIONAL: n=2 VMs, both quiescent. Re-derive with the rest of the
+     floors, and price galleryDrag/drawerToggle in the same sitting per W6 §3.
+  d) THE DARWIN ASYMMETRY (§4) retires when (b) lands, and not before.

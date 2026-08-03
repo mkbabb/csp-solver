@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { pressCommitted } from './committed-press';
 
 // PRM: live, because the guard ribbon arms and retires on a CSS transition, and these rows are
 //   written around that motion (Escape rather than a click, so an arm/retire cycle never waits
@@ -48,6 +49,33 @@ async function seed(page: Page, entries: Record<string, unknown>) {
     for (const [k, v] of Object.entries(rows))
       window.localStorage.setItem(k, JSON.stringify(v));
   }, entries);
+}
+
+/**
+ * GUARDED PRESS into the picker (T7-W3 §9 — mechanism in `committed-press.ts`). The wordmark
+ * tears out its live pose stack when the bake lands and WebKit drops the half of the mouse pair
+ * whose target went with it; these four sites press it and were shielded only by having waited
+ * out a dealt board first, which is a timing accident and not a contract.
+ *
+ * THE PROBE IS THE URL, NOT A NODE, and that is load-bearing rather than fastidious. The obvious
+ * probe — `.staging-band` is up — is STALE-TRUE here: `:699` re-opens the deck after a cancel,
+ * and measured immediately after `expect('.game-gallery').toBeHidden()` passed, the band still
+ * read `visible` (the deck is mid-leave; the gallery hits a hidden state while its descendant
+ * band still has a box). A probe true before the press is a press that never has to happen.
+ * `?view=gallery` is the truth `openGallery` writes and `cancel` deletes, so it is false before
+ * every one of these presses and true only after this one lands.
+ *
+ * The band wait stays as its own line: it is the JOURNEY's precondition (`stepTo`, then
+ * `.staging-deal`/`.staging-safe`), not the press's committed effect, and conflating the two is
+ * what made the first cut of this conversion red.
+ */
+async function pressDeckOpen(page: Page) {
+  await pressCommitted(
+    page.locator('button.logo-trigger'),
+    () => page.evaluate(() => new URLSearchParams(location.search).get('view') === 'gallery'),
+    { what: 'the gallery deck', budgetMs: 20000 },
+  );
+  await page.waitForSelector('.staging-band', { timeout: 20000 });
 }
 
 async function openDeck(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
@@ -358,8 +386,7 @@ async function dirtySudoku(page: Page) {
   }, blank);
   await expect(page.locator('.sudoku-cell').nth(blank).locator('.glyph-svg')).toHaveCount(1);
   // Into the picker the way a player gets there.
-  await page.locator('button.logo-trigger').click();
-  await page.waitForSelector('.staging-band', { timeout: 20000 });
+  await pressDeckOpen(page);
 }
 
 test('guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon', async ({
@@ -459,8 +486,7 @@ async function dirtyButUnmarkedSudoku(page: Page) {
       { timeout: 10000 },
     )
     .toBe(false);
-  await page.locator('button.logo-trigger').click();
-  await page.waitForSelector('.staging-band', { timeout: 20000 });
+  await pressDeckOpen(page);
 }
 
 test('guard: a dirty SAME-game deal raises the ribbon too — the subsumption, gated', async ({
@@ -493,8 +519,7 @@ test('guard: a PRISTINE mounted board deals across with no ribbon (the source-ar
   // same clean target, no digit typed.
   await page.goto('./?size=3&difficulty=EASY');
   await page.waitForSelector('.sudoku-cell', { timeout: 20000 });
-  await page.locator('button.logo-trigger').click();
-  await page.waitForSelector('.staging-band', { timeout: 20000 });
+  await pressDeckOpen(page);
   await stepTo(page, 'kenken');
 
   await page.locator('.staging-deal').click();
@@ -701,8 +726,7 @@ test('safe verb: a wandered pair cannot OUTLIVE the transaction', async ({ page 
   await page.locator('.gallery-viewport').press('Escape'); // cancel — no select, no deal
   await expect(page.locator('.game-gallery')).toBeHidden({ timeout: 20000 });
 
-  await page.locator('button.logo-trigger').click();
-  await page.waitForSelector('.staging-band', { timeout: 20000 });
+  await pressDeckOpen(page);
   await stepTo(page, 'futoshiki');
   await expect(axis(page, 'size').locator('button[aria-pressed="true"]')).toHaveText('7×7');
 });

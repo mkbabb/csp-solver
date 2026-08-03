@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { pressCommitted } from './committed-press';
 
 // PRM: live, because the rows ride the app's own beats—the destructive-work guard and the
 //   answer-key laminate arrive on real transitions this file waits out, and PRM strips them
@@ -149,9 +150,15 @@ async function armGuard(page: Page) {
     .poll(() => page.locator('.game-cell .glyph-svg').count(), { timeout: 20000 })
     .toBeGreaterThan(0);
   await dirtyTheBoard(page);
-  await page.locator('button.logo-trigger').click();
+  // GUARDED PRESS (T7-W3 §9). The wordmark tears out its live pose stack when the bake lands
+  // and WebKit drops the half of the mouse pair whose target went with it — measured 2/30.
+  // This row was shielded only by having waited out a dealt board first, which is a timing
+  // accident and not a contract. Committed effect: the deck is open.
   const viewport = page.locator('.gallery-viewport');
-  await viewport.waitFor({ state: 'visible', timeout: 20000 });
+  await pressCommitted(page.locator('button.logo-trigger'), viewport, {
+    what: 'the gallery deck',
+    budgetMs: 20000,
+  });
   await viewport.press('ArrowRight'); // → futoshiki, a different game
   // SETTLED, NOT SLEPT (T7-W3, the sleep-lint residue). `Enter` selects whatever the deck has
   // COMMITTED, so the precondition is the commit itself, not an elapsed span: the listbox's own

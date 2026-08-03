@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { encodeSudoku, encodeFutoshiki, encodeUntagged } from './wire';
+import { pressCommitted } from './committed-press';
 
 // PRM: live, because nothing here is motion: the rows read the address bar, the codec's
 //   fail-closed branches and cell values, none of which the boil beat can move. No route applies
@@ -61,9 +62,13 @@ test('game switch leaves no foreign board/size params in the URL', async ({ page
   // Switch to Futoshiki via the GALLERY (T4-W12 Wave D — the wordmark opens the carousel).
   // A permalink-restored board is pristine (clearUndo on restore), so the switch is free —
   // no mid-game guard ribbon. The setGame cut still strips the outgoing board/size params.
-  await page.locator('button.logo-trigger').click();
+  // GUARDED PRESS (T7-W3 §9) — the wordmark's pose-stack tear-out drops the press on WebKit
+  // (2/30 measured). Committed effect: the deck is open. This row is `permalink:52`, one of the
+  // wandering family's one-off reds, and its shield was only that it fills a cell first.
   const viewport = page.locator('.gallery-viewport');
-  await viewport.waitFor({ state: 'visible', timeout: 15000 });
+  await pressCommitted(page.locator('button.logo-trigger'), viewport, {
+    what: 'the gallery deck',
+  });
   await viewport.press('ArrowRight'); // sudoku (centered) → futoshiki
   await viewport.press('Enter'); // select the centered futoshiki card
   await page.waitForSelector('.futoshiki-cell', { timeout: 15000 });

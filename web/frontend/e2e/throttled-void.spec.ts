@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { pressCommitted } from './committed-press';
 
 // PRM: live, because the row times a CDP-throttled mount—the void's recovery budget is chunk
 //   fetch plus scene mount, not motion, and freezing the beat wouldn't move that clock.
@@ -63,9 +64,18 @@ test('throttled first-select void recovers: loader or board-shell within budget'
   // First futoshiki select via the GALLERY (T4-W12 Wave D — the wordmark opens the carousel;
   // the dropdown listbox is retired). Opening the gallery warms the futoshiki chunk
   // (preloadFutoshiki on open), so it downloads under throttle in parallel with the nav.
-  await page.locator('button.logo-trigger').click();
+  // GUARDED PRESS (T7-W3 §9) — the wordmark's pose-stack tear-out drops the press on WebKit
+  // (2/30 measured). Committed effect: the deck is open. The wider beat is this row's own
+  // condition, not the guard's: CDP throttling is LIVE from the line above, so the wordmark's
+  // re-bake and the deck's first paint both run slow here. It stays well inside the config's
+  // 90s test timeout and it does not touch VOID_RECOVERY_BUDGET_MS, which is the row's gate and
+  // is measured from AFTER the select.
   const viewport = page.locator('.gallery-viewport');
-  await viewport.waitFor({ state: 'visible', timeout: 15000 });
+  await pressCommitted(page.locator('button.logo-trigger'), viewport, {
+    what: 'the gallery deck',
+    beatMs: 8000,
+    budgetMs: 24000,
+  });
   await viewport.press('ArrowRight'); // sudoku (centered) → futoshiki
   await viewport.press('Enter'); // select the centered futoshiki card
 

@@ -748,6 +748,41 @@
           tbt += Math.max(0, inWin[i].durMs - 50);
           if (inWin[i].durMs > longest) longest = inWin[i].durMs;
         }
+
+        // ── HOST CPU ANCHOR (T7-W3, 2026-08-03) — MEASURED, REPORTED, GRADES NOTHING ───────
+        // GATE D's floor is an absolute in milliseconds, and an absolute cannot travel
+        // between host classes: this same bundle reads ~373 ms here and ~1333 ms on the
+        // ubuntu runner. GATE B survives that shape by transposing through the harness's own
+        // measured ceiling. Boot TBT has no such denominator, and the fps ceiling CANNOT be
+        // borrowed as one — it is a frame-scheduler cap, not a throughput reading (the runner
+        // reports p50 = p95 = worst = 16.7 ms, a clamped quantity carrying no information
+        // about how fast the host computes). So the denominator gets measured directly.
+        //
+        // Fixed integer work: no allocation, no DOM, no engine-specific builtin, deterministic
+        // everywhere (the checksum travels with it, so a loop optimised away cannot pass for a
+        // fast host). It runs AFTER the boot window has closed, under whatever throttle the
+        // caller applied to this load, and its own long tasks start past WINDOW_MS and are
+        // filtered out above — it cannot inflate the number it exists to normalise. Min of
+        // three reps: contention only ever adds.
+        //
+        // What it is FOR: ci-subset prints tbt/anchor beside the verdict. That ratio is the
+        // portable form GATE D would need — if it holds across host classes, WGATE transposes
+        // the floor onto it and the absolute retires; if it does not, the transposition is
+        // refuted by measurement and the runner-derived absolute is the honest instrument.
+        // Diagnostic until then. Nothing here may change a verdict on the strength of one
+        // host's reading.
+        var ANCHOR_N = 30000000;
+        var anchorMs = Infinity;
+        var anchorSum = 0;
+        for (var r = 0; r < 3; r++) {
+          var a0 = performance.now();
+          var h = 0;
+          for (var j = 0; j < ANCHOR_N; j++) h = (Math.imul(h ^ j, 2654435761) >>> 0);
+          var dt = performance.now() - a0;
+          anchorSum = h;
+          if (dt < anchorMs) anchorMs = dt;
+        }
+
         return {
           fps: null,
           frames: 0,
@@ -758,6 +793,9 @@
           tbtMs: LT_SUPPORTED ? Math.round(tbt) : null,
           tasks: LT_SUPPORTED ? inWin.length : null,
           longestTaskMs: LT_SUPPORTED ? longest : null,
+          cpuAnchorMs: Math.round(anchorMs),
+          cpuAnchorN: ANCHOR_N,
+          cpuAnchorSum: anchorSum,
           train: inWin.slice(0, 24),
           note: LT_SUPPORTED
             ? null

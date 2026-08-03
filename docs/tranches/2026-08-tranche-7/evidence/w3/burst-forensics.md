@@ -279,3 +279,115 @@ sentence as the class's read-out.
 5. **The canary trap.** The self-delta arms fail by design in every run, green ones included;
    any future reading of a red log must exclude steps 14–16 before counting reds. Worth a line
    in the class's row so the misread can't recur.
+
+---
+
+## 8. THE FALSIFICATION FIRED — option B's field verdict (appended 2026-08-03)
+
+§6's prediction was banked to be read out, and the field read it out. **Nothing above is
+edited**; this section is the correction, and where it contradicts §5 or §6 it wins on date.
+
+*(Numbered 8, not 7: §7 was already the chair's wiring list when this was written.)*
+
+### 8.1 What the field returned
+
+Option B landed at head `6d612ec5` — ci.yml `e2e-webkit`, webkit ×3 shards at `workers: 1`.
+Run **`30799424855`**, shard 1, **red twice**, 56/57 both times, on a **wandering** row:
+
+| attempt | row | site | error |
+|---|---|---|---|
+| 1 | `futoshiki.spec.ts:48` — gallery switches to futoshiki | `futoshiki.spec.ts:33` | `.gallery-viewport` not visible within 15,000ms |
+| 2 | `futoshiki.spec.ts:75` — size switching 4×4/5×5/6×6/7×7 | `futoshiki.spec.ts:33` | `.gallery-viewport` not visible within 15,000ms |
+
+The ROW wanders; the SITE does not. Both reds are line 33 — the deck failing to open after the
+wordmark press. In attempt 2, row `:48` had opened the same deck **6 seconds earlier and
+passed** ([51/57] at 09:16:04.958, [52/57] at 09:16:10.858).
+
+### 8.2 Contention is REFUTED as a sufficient cause
+
+One webkit worker, no neighbouring browser, no co-resident row — and the family did not go to
+zero. §5's "contention-amplified, not contention-proven" was the honest verdict on the evidence
+then available, and the honest verdict now is that the amplification was never the cause of
+this family. §6's read-out clause is discharged as written: **the family gets per-row
+forensics**, and it got them.
+
+### 8.3 The cold-chunk waterfall is refuted too — it was never in the path
+
+The prime suspect on re-attribution was the F3 lazy-futoshiki ESM waterfall. It is wrong at the
+selector: **`.gallery-viewport` lives in `GameGallery.vue`, a STATIC import in `App.vue`
+(App.vue:31) — it rides the main chunk.** No lazy chunk stands between the press and that
+element. Measured anyway, on a cold vite process with a fresh context per iteration: cold and
+warm click→gallery are the same number (299/231/249/313ms), and first contact with the futoshiki
+chunk costs 288–577ms — two orders under the budget. Main-thread starvation by
+`preloadScenes()` is refuted by its own instrument: on the reproduced failure the patched
+`chromeLeaveMs` timer **fired on time at 203ms** and the gallery still never mounted.
+
+### 8.4 The actual mechanism: WebKit drops the press
+
+Reproduced on darwin WebKit, **2 of 30** unaided presses, no throttling. Document-level capture
+listeners caught it:
+
+```
+iter 19 RED  mouseup@523->image.logo-pose-bmp     ← a lone mouseup, no mousedown, NO click
+iter 26 RED  mousedown@554->text.logo-text        ← a lone mousedown, no mouseup, NO click
+```
+
+WebKit synthesizes `click` only from a mousedown/mouseup **pair**. One half never reached the
+document, so no `click` was dispatched and Vue's `@click.stop` never ran — confirmed by the
+state at every red: no `?view=gallery`, `html.gallery-leaving` never added, the wordmark still a
+`<button>`, the app alive and dealt with no console error. The wordmark's box is byte-identical
+before and after ([130,6,424,112]), so it is not a geometry race.
+
+The two surviving targets name the cause: `image.logo-pose-bmp` and `text.logo-text` are the two
+**arms of the wordmark's pose stack**. When `logoBaked` flips, the live `<g class="logo-pose">`
+filter stack is torn out of the document and replaced by baked `<image>` siblings; a mouse pair
+straddling that swap loses the half whose target is destroyed. `loadApp` waits on
+`svg.handwritten-logo` — the earliest instant the wordmark exists — so this file's rows press
+squarely inside the bake window, while every other gallery-opening spec first waits out a dealt
+board and spends that window. **Chromium: 0 dropped in 25.** Engine-localized, exactly as §3.1
+measured — but localized to a WebKit input defect, not to WebKit's cost.
+
+So §5's one-line class is superseded for this family. It now reads: **engine-localized because
+WebKit drops a press whose target is swapped mid-gesture; seeded by a readiness predicate that
+presses inside the bake window; never contention, never a chunk.**
+
+### 8.5 The cure
+
+`e2e/futoshiki.spec.ts` gains `openDeck()` — poll the invariant (`.gallery-viewport` visible),
+re-press if the deck did not commit, bounded 20,000ms with a 4,000ms per-press beat. Idempotent
+by construction: `openGallery()` returns early on `view === 'gallery'`, and the wordmark goes
+inert (`<span>`) once open, which is also how `openDeck` tells a late open from a dropped press.
+No fixed wait — `lint:sleep` green. The same file also inherits W3's a11y settle before `Enter`
+(activedescendant + `aria-selected`), a live trap it had never been given.
+
+Measured: **0/30 webkit** cured vs **2/30** unaided; the cure's own counter caught **4 of 30
+first presses dropped and recovered**. Proof: 7 consecutive webkit runs of the file at
+`--workers=1` on a cold server (28 deck opens, 0 red) plus chromium green.
+
+### 8.6 What stays TRUE from §6
+
+- **The sharding arithmetic stands.** Option B still drives estate contention-seconds 762 → 210
+  (**−72%**) and the critical path 15.2m → 7.3m (**−52%**) at +11.4 billed runner-minutes. The
+  measurement was right; only the causal claim attached to it is withdrawn.
+- **The `a11y:490` discipline cure stands** — §5 called it a surface defect sharding would not
+  touch, and sharding did not touch it. That call was correct.
+- **§1's canary correction, §3.2's position falsification and §3.3's infra exclusion** are
+  untouched by this section.
+- **§7's wiring list stands**, and item 2 (a machine-readable reporter) is vindicated: this
+  investigation still had to parse the dot-reporter log by hand.
+
+### 8.7 Residue for the chair
+
+1. **A product row, uncured.** A real Safari user pressing the wordmark while the bake lands
+   gets nothing. ≈7% at first contact on darwin. `src/` was outside this agent's fence.
+   Candidate cures: keep the live arm mounted and opacity-swap it (the grid boil's own steady
+   state) rather than tearing it out, or bake before the wordmark is interactive.
+2. **The harness class is wider than the cured file.** `a11y.spec.ts`, `gallery-guard.spec.ts`,
+   `permalink.spec.ts:64`, `gallery-deal.spec.ts` ×4 and `throttled-void.spec.ts:66` all press
+   the wordmark with one unguarded `.click()`, shielded only by having waited out a dealt board
+   first — a timing accident, not a contract. `openDeck` belongs in a shared e2e helper.
+3. **The banked prediction is spent.** §6's read-out clause should be marked discharged rather
+   than left standing as an open bet.
+
+Full per-row forensics, every figure pasted from probe stdout:
+`evidence/w3/futoshiki-coldchunk-forensics.txt`.

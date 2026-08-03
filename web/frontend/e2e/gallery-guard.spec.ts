@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { pressCommitted } from './committed-press';
 
 // PRM: live, because the guard ribbon slides in and out on its own transition and this file arms
 //   and dismisses it repeatedly; the deck's snap and underline are the app's motion, asserted as
@@ -41,10 +42,14 @@ async function dirtyTheBoard(page: Page) {
   await expect(page.locator('.sudoku-cell').nth(blank).locator('.glyph-svg')).toHaveCount(1);
 }
 
+// GUARDED PRESS (T7-W3 §9) — the wordmark tears out its live pose stack when the bake lands and
+// WebKit drops the half of the mouse pair whose target went with it (2/30 measured). Committed
+// effect: the deck is open.
 async function openGallery(page: Page) {
-  await page.locator('button.logo-trigger').click();
   const viewport = page.locator('.gallery-viewport');
-  await viewport.waitFor({ state: 'visible', timeout: 15000 });
+  await pressCommitted(page.locator('button.logo-trigger'), viewport, {
+    what: 'the gallery deck',
+  });
   return viewport;
 }
 
@@ -57,7 +62,11 @@ test('dropdown retired: the wordmark opens the gallery; no listbox affordance re
   const trigger = page.locator('button.logo-trigger');
   // The old collapsible-listbox ARIA is gone.
   await expect(trigger).not.toHaveAttribute('aria-haspopup', 'listbox');
-  await trigger.click();
+  // GUARDED PRESS (T7-W3 §9). This row's committed effect is its OWN assertion's subject — the
+  // CAROUSEL, not the viewport — so it probes `.game-gallery` and the assertion below still
+  // stands on its own. The guard cannot manufacture the pass: if the wordmark opened an in-place
+  // listbox instead, `.game-gallery` would never commit and this would red on the budget.
+  await pressCommitted(trigger, page.locator('.game-gallery'), { what: 'the game gallery' });
   // It opens the CAROUSEL, not an in-place popup listbox.
   await expect(page.locator('.game-gallery')).toBeVisible();
   await expect(page.locator('#logo-game-listbox')).toHaveCount(0);

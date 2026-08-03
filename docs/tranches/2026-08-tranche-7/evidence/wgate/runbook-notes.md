@@ -35,3 +35,21 @@
     futoshiki:131 ×3; a11y:490, gallery-deal:485, permalink:52, multiplayer:454 each once) —
     corroborates W3's sharding adoption; the close needs the sharding wiring landed and a
     green run under it.
+13. **GATE D debts (w3/gate-d-restamp.txt, 2026-08-03)** — the 1750 restamp is provisional
+    at n=2 VMs: re-derive at n≥3 runner `tbt/anchor` readings; TRANSPOSE onto the measured
+    CPU anchor or refute it with the same readings; GATE D still has NO control (measured
+    load exposure 3.40× — an `anchorMs` admissibility ceiling is one line and the biggest
+    open perf item); price `galleryDrag`/`drawerToggle` in the same sitting (W6 §3).
+14. **Self-delta arm law (w3/selfdelta-wordmark-arm-cure.txt + §ADDENDUM)** — the runner
+    must prove the covered arm (linux is argued until the next push's step speaks);
+    MIN_ARM_RATIO 0.10 grades the blind band closed; any future golden cropping outside
+    the three DELTA_ANCHORS must register there — the hit-test makes omission a setup
+    error, and the close should re-read that clause if the golden estate grew.
+15. **CH-66 scheduling (2026-08-03)** — the dropped-press PRODUCT cure (wordmark dead
+    ≈7% at first contact in real Safari during the bake window) must land after W7's
+    seal frees the src/ surface, inside T7 — or go DATED to the owner block; do not
+    close with the row silently open. The multiplayer.spec.ts unguarded-press sites
+    (listed in w3/futoshiki-coldchunk-forensics.txt's addendum) convert at W4's seal —
+    its file, its wave. Item 12's requirement stands, re-read: the close needs a green
+    run under sharding B WITH the guarded-press helper landed — the sharding alone was
+    proven insufficient (burst-forensics §8).

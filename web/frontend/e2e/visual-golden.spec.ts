@@ -93,6 +93,94 @@ const MAGNITUDE_FLOOR = { maxDiffPixelRatio: 0 } as const;
 const PINNED_GIVENS = { 0: 5, 2: 8, 11: 3, 18: 6, 20: 9 } as const;
 const PINNED_BOARD = encodeSudoku(3, PINNED_GIVENS, 81);
 
+// ── GOLDEN_DELTA=black — the injected regression, painted GEOMETRICALLY ──────────
+//
+// T7-W3 — THE ARM STYLED A CASCADE, AND THE SURFACES ARE BITMAPS. The injection used to be
+// a stylesheet: `fill`/`stroke`/`opacity`/`filter` forced on the descendants of every
+// asserted surface. Three goldens bit on it (0.62 / 0.73 / 0.86 of all pixels — the cell and
+// wrapper backgrounds flood, the crest's hidden sun un-hides on top of the moon). The
+// WORDMARK didn't: its steady state is an `<image>` pose bitmap and `fill` does nothing to a
+// raster, so all the delta could reach was the un-hidden measuring `<text>` and the three
+// inactive poses forced back to opacity 1 — near-copies of ink already IN the bitmap. The
+// diff was a rim on the glyph edges: 6,766 px, ratio 0.0390 (darwin, measured; the interior
+// of every letter came back identical). Darwin's soul floor is 0.017, so it red here and the
+// W6 seal read as verified; the linux clause floor is 0.05, so the SAME delta was GREEN on
+// the only platform CI runs — the T5-W1.13 blind band, this time with the acceptance test
+// sitting inside it. Run 30799424855, e2e, exactly that row.
+//
+// So the paint COVERS rather than styles: an opaque, viewport-fixed box pinned over each
+// asserted surface's live rect. It lands on a bitmap, a live SVG, a canvas, or whatever a
+// surface is next rebuilt out of, because it never asks the surface to render it. Fixed
+// boxes contribute no scrollable overflow, so nothing reflows and every clip the tests
+// compute afterwards is where it was.
+//
+// `#000` on light, `#fff` on dark — the compare's YIQ `threshold: 0.3` (the config's
+// raster-noise allowance) is wide enough to absorb black-on-dark, and an arm whose delta the
+// compare is ENTITLED to ignore is the same defect wearing the cure's clothes.
+//
+// AND IT CHECKS ITSELF. Hit-test each anchor's centre; if the cover isn't what's found
+// there, throw. A cover that failed to land would otherwise read as a clean green across the
+// whole arm — the precise silence this harness exists to break — and the throw carries no
+// `toHaveScreenshot`, so golden-selfdelta.mjs grades it a SETUP ERROR, which is what it is.
+
+/** Every golden's crop lies inside one of these rects (the cell crop lives inside the
+ *  board wrapper's). Anchors absent from a given golden's page are simply not painted. */
+const DELTA_ANCHORS = [
+  "svg.handwritten-logo",
+  "button.sun-moon-toggle",
+  ".board-wrapper",
+] as const;
+/** Inflation in CSS px, for the crops that reach OUTSIDE their anchor: the crest's is
+ *  centred on a smaller button at 72×72 and then shifted −12 / +16. 64 clears that. */
+const DELTA_PAD = 64;
+
+async function paintAssertedSurfaces(page: Page) {
+  const { painted, missed } = await page.evaluate(
+    ({ anchors, pad }) => {
+      // The theme's opposite, so the delta is maximal in Y and no threshold can eat it.
+      const paint = document.documentElement.classList.contains("dark")
+        ? "#fff"
+        : "#000";
+      const missed: string[] = [];
+      let painted = 0;
+      for (const sel of anchors)
+        for (const el of Array.from(document.querySelectorAll(sel))) {
+          const r = el.getBoundingClientRect();
+          if (!r.width || !r.height) continue;
+          const cover = document.createElement("div");
+          cover.dataset.goldenDelta = "";
+          cover.style.cssText =
+            `position:fixed;left:${r.left - pad}px;top:${r.top - pad}px;` +
+            `width:${r.width + pad * 2}px;height:${r.height + pad * 2}px;` +
+            // NOT `pointer-events:none`: the cover has to be hit-testable or the check
+            // below can't see it (`elementFromPoint` looks straight through a
+            // pointer-transparent box), and nothing touches the page after this arm paints.
+            `background:${paint};z-index:2147483647;`;
+          document.body.appendChild(cover);
+          painted++;
+          const hit = document.elementFromPoint(
+            r.left + r.width / 2,
+            r.top + r.height / 2,
+          );
+          if (!(hit instanceof HTMLElement) || hit.dataset.goldenDelta === undefined)
+            missed.push(`${sel} → ${hit ? hit.tagName.toLowerCase() : "nothing"}`);
+        }
+      return { painted, missed };
+    },
+    { anchors: [...DELTA_ANCHORS], pad: DELTA_PAD },
+  );
+  if (painted === 0)
+    throw new Error(
+      "[GOLDEN_DELTA=black] no asserted surface was on the page to paint — the arm would " +
+        "have captured an unperturbed golden and called it proof.",
+    );
+  if (missed.length)
+    throw new Error(
+      `[GOLDEN_DELTA=black] the paint did not land on: ${missed.join(", ")} — the capture ` +
+        `would be identical to the baseline and the arm would prove nothing about the compare.`,
+    );
+}
+
 // ── Settle helper ───────────────────────────────────────────────────
 async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) {
   // PRM through the route that provably lands (see the test.use note above) — BEFORE
@@ -153,8 +241,8 @@ async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) 
   // ── SELF-DELTA hook (the machinery's own acceptance test) ──────────
   // A deliberate, reproducible visual regression injected on demand so the capture-
   // compare can be PROVEN to bite (spec §π/DELTA). Default (unset) is a no-op — normal
-  // runs are unperturbed. GOLDEN_DELTA=black paints every asserted surface solid black
-  // (the grain-static→solid-black regression); =invert flips the theme.
+  // runs are unperturbed. GOLDEN_DELTA=black paints every asserted surface solid
+  // (`paintAssertedSurfaces`, above); =invert flips the theme.
   //
   // T7-W6 — `invert` WAS DIRECTIONLESS, and on the crest it never reached the compare.
   // It clicked the toggle and then asserted `html` carries `dark` — but the crest golden
@@ -167,16 +255,7 @@ async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) 
   // docs/tranches/2026-08-tranche-7/evidence/w6/selfdelta-invert-ablation.txt.
   const delta = process.env.GOLDEN_DELTA;
   if (delta === "black") {
-    await page.addStyleTag({
-      content: `
-        svg.hand-drawn-grid *, svg.handwritten-logo *, button.sun-moon-toggle *,
-        .sudoku-cell, .sudoku-cell * {
-          fill: #000 !important; stroke: #000 !important; stop-color: #000 !important;
-          opacity: 1 !important; filter: none !important;
-        }
-        .sudoku-cell, .board-wrapper { background: #000 !important; }
-      `,
-    });
+    await paintAssertedSurfaces(page);
   } else if (delta === "invert") {
     // Direction-aware: whichever theme this golden settled into, the delta is the OTHER one.
     const wasDark = await page

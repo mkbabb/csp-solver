@@ -1,0 +1,214 @@
+T7-W3 · SELF-DELTA — THE BLACK ARM'S WORDMARK ROW, ROOT-CAUSED AND CURED
+2026-08-03 · head 6d612ec5 · darwin (chromium 1.61.1, DPR2) · dev server on :4301
+Subject: CI run 30799424855, job e2e, step "Self-delta — prove the golden compare still
+bites (both arms)" — one row: [black] golden · logo wordmark (light) PASSED with the
+regression injected.
+
+────────────────────────────────────────────────────────────────────────────────────────
+ROOT CAUSE
+
+The black arm styled a CASCADE at a surface that is a BITMAP. Its injection was a
+stylesheet forcing `fill`/`stroke`/`stop-color`/`opacity`/`filter` on the descendants of
+every asserted surface, plus `background:#000` on the cell and the board wrapper. Three
+goldens bit on that: the cell and the grid corner flood from the backgrounds (0.73 / 0.86
+of all pixels) and the crest's hidden sun un-hides on top of the moon under
+`opacity:1 !important` (0.62). The WORDMARK's steady state is `image.logo-pose-bmp.is-active`
+— a baked pose bitmap out of rasterPose/useRasterStack — and `fill` does nothing to a
+raster. All the delta could reach there was the un-hidden measuring `<text>` (opacity 0 →
+1, painting near-identical glyphs in #000 over ink already baked at #1a1a1a) and the three
+inactive poses forced back to opacity 1. The diff came back a RIM on the glyph edges with
+every letter's interior identical: 6,766 px of 173,568 = ratio 0.0390 measured on darwin.
+Darwin's LOGO_FLOOR is the 0.017 soul floor, so it red locally and W6's verification read
+true; linux's LOGO_FLOOR is the 0.05 sun-crest clause floor, so the SAME delta was a green
+on the only platform CI runs. The defect is the T5-W1.13 blind band (0.017 < 0.03..0.04 <
+0.05) with the acceptance test itself sitting inside it — not a broken compare, and not a
+vacuous local run: an arm whose bite was 2.3× the tight floor and 0.78× the coarse one.
+
+CURE (the ARM, never the grading — visual-golden.spec.ts §GOLDEN_DELTA=black)
+The paint COVERS instead of styling. `paintAssertedSurfaces()` pins an opaque,
+viewport-fixed box over each asserted surface's live rect (svg.handwritten-logo,
+button.sun-moon-toggle, .board-wrapper), inflated 64 CSS px so the crops that reach outside
+their anchor are covered too (the crest's is centred at 72×72 on a smaller button, then
+shifted −12/+16). It lands on a bitmap, a live SVG, a canvas or whatever the surface is next
+rebuilt out of, because it never asks the surface to render it; fixed boxes contribute no
+scrollable overflow, so no clip the tests compute afterwards moves. Paint is the theme's
+opposite — #000 on light, #fff on dark — because the config's YIQ `threshold: 0.3` is wide
+enough to absorb a black-on-dark cover, and a delta the compare is entitled to ignore is the
+same defect in the cure's clothes. And the arm checks itself: each anchor's centre is
+hit-tested and a cover that did not land throws, which carries no `toHaveScreenshot` and is
+therefore graded a SETUP ERROR by the harness rather than passing as an arm-wide green.
+(The cover is deliberately NOT `pointer-events:none` — `elementFromPoint` looks straight
+through a pointer-transparent box, and nothing touches the page after this arm paints.)
+Captured actuals are now SOLID: toggle-crest-dark-actual.png is 144×144 at 100.0% (255,255,255);
+logo-light-actual.png is 768×226 at 100.0% (0,0,0).
+
+Second control added, report-only: scripts/golden-selfdelta.mjs now prints each red's
+measured `N px, ratio R`. The grading is unchanged (every golden red, every red at a
+`toHaveScreenshot`); it could not see the difference between a row that bites by a hair and
+one that bites by a mile, and a row that bites by a hair on one platform is a row about to
+be a green on another. That is exactly how this defect shipped.
+
+────────────────────────────────────────────────────────────────────────────────────────
+PROOF 1/3 — BLACK ARM: 4/4 RED AT THE COMPARE (and invert 4/4, same run)
+$ PLAYWRIGHT_BASE_URL=http://localhost:4301 node scripts/golden-selfdelta.mjs   # exit 0
+
+[self-delta] the gate that proves the gate — graded on WHY each arm red, not that it did.
+
+[self-delta] ARM black — every asserted surface covered opaque — the grain-static→solid class, geometric since T7-W3
+  ok   golden · logo wordmark (light) — W13 soul: baked logo pose stack
+       red at the compare — 122144 px, ratio 0.71
+  ok   golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+       red at the compare — 13474 px, ratio 0.65
+  ok   golden · single cell with given glyph (light)
+       red at the compare — 15310 px, ratio 0.74
+  ok   golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+       red at the compare — 111037 px, ratio 0.86
+
+PROOF 2/3 — INVERT ARM: 4/4 RED AT THE COMPARE (unchanged by this cure)
+
+[self-delta] ARM invert — the theme flipped under the capture — direction-aware since T7-W6
+  ok   golden · logo wordmark (light) — W13 soul: baked logo pose stack
+       red at the compare — 165139 px, ratio 0.96
+  ok   golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+       red at the compare — 15578 px, ratio 0.76
+  ok   golden · single cell with given glyph (light)
+       red at the compare — 18005 px, ratio 0.87
+  ok   golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+       red at the compare — 114448 px, ratio 0.89
+
+[self-delta] PASS — 8 row(s) across 2 arms, every one red at its toHaveScreenshot. The golden compare still compares.
+
+MARGIN. The wordmark row moved 0.0390 → 0.71: 14× the linux clause floor of 0.05 and 42× the
+darwin soul floor. The thinnest row in either arm is the crest at 0.65, 13× the coarse floor.
+No row can now be swallowed by a platform's floor, which is the property the incumbent lacked.
+
+PROOF 3/3 — CLEAN RUN (no GOLDEN_DELTA): 4/4 GREEN
+$ PLAYWRIGHT_BASE_URL=http://localhost:4301 npx playwright test --config playwright-golden.config.ts   # exit 0
+
+Running 4 tests using 4 workers
+  ✓  1 e2e/visual-golden.spec.ts:316:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack
+  ✓  2 e2e/visual-golden.spec.ts:371:1 › golden · single cell with given glyph (light)
+  ✓  3 e2e/visual-golden.spec.ts:382:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+  ✓  4 e2e/visual-golden.spec.ts:347:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+  4 passed (7.2s)
+
+The estate is untouched: `git status web/frontend/e2e/goldens/` is clean. Neither arm writes
+a baseline; the harness never passes `--update-snapshots`, and the config's `retries: 0` +
+missing-baseline-fails-loudly rule stand.
+
+────────────────────────────────────────────────────────────────────────────────────────
+ABLATIONS — the cure and its self-check, both born RED
+
+A · THE PAINT REMOVED (`background:transparent`, cover still inserted and still hit-testable).
+  The defect reproduced in its purest form, and the harness names it:
+    FAIL golden · logo wordmark (light)     GREEN — THE DELTA DID NOT BITE
+    FAIL golden · toggle crest (dark, moon) GREEN — THE DELTA DID NOT BITE
+    FAIL golden · grid top-left corner      GREEN — THE DELTA DID NOT BITE
+  (harness exit 1; the invert arm stayed 4/4 ok, so the ablation is scoped to the arm it names.)
+
+B · THE COVER NEVER APPENDED (built, styled, left off the DOM). The self-check fires before
+  any capture, on all four rows:
+    FAIL … RED, BUT NOT AT THE COMPARE
+    Error: [GOLDEN_DELTA=black] the paint did not land on: svg.handwritten-logo → image,
+    button.sun-moon-toggle → button, .board-wrapper → input — the capture would be identical
+    to the baseline and the arm would prove nothing about the compare.
+  Graded a SETUP ERROR, which is what it is: the arm did not exercise the compare.
+
+STABILITY. Three consecutive harness runs post-cure, 8/8 ok each, plus the banked run above.
+
+────────────────────────────────────────────────────────────────────────────────────────
+RESIDUE FOR THE CHAIR
+
+1. LINUX IS ARGUED, NOT MEASURED. The cure is geometric — a 100%-opaque cover over the
+   crop — so its magnitude cannot depend on font hinting or AA the way the incumbent rim
+   delta did, and the thinnest darwin row clears the linux floor 13×. It is still an
+   argument until the runner speaks: the row to read on the next push is the same step in
+   the e2e job, which should now print eight `ok` rows with ratios in the 0.6–0.96 band.
+
+2. ONE FLAKE OBSERVED, ENVIRONMENTAL. During ablation A a single row red with
+   `page.evaluate: Execution context was destroyed, most likely because of a navigation` —
+   a Vite HMR full reload, since two other workflows were editing src/ against the same dev
+   server while these runs were going. It did not recur across four subsequent full harness
+   runs and cannot occur on the runner, where nothing writes to src/ mid-run. Named here so
+   a future sighting is a second occurrence rather than a first.
+
+3. THE MAGNITUDE COLUMN IS A REPORT, NOT A GATE. It prints; it grades nothing. If the chair
+   wants the blind band closed by construction rather than by eye, the ruling to write is a
+   floor on the ratio each arm must clear (e.g. ≥ 4× the coarsest floor on the estate) — a
+   grading change, so it belongs to a ruling, not to this fix.
+
+4. `.sudoku-cell` is no longer an anchor: the cell crop lives inside `.board-wrapper`'s
+   cover. If a future golden crops a surface outside all three anchors, DELTA_ANCHORS is
+   the one place that has to learn about it — and the self-check turns that omission into
+   a loud SETUP ERROR rather than a silent green.
+
+FILES CHANGED
+  web/frontend/e2e/visual-golden.spec.ts     (§GOLDEN_DELTA=black — paintAssertedSurfaces)
+  web/frontend/scripts/golden-selfdelta.mjs  (magnitude column, arm prose, head note)
+No src/, no ci.yml, no package.json, no golden .png.
+
+════════════════════════════════════════════════════════════════════════════════════════
+ADDENDUM — 2026-08-03 · CHAIR RULING ON RESIDUE ITEM 3: THE BLIND BAND CLOSES BY
+CONSTRUCTION, IN THE GRADING (head 6d612ec5, darwin, same rig and dev server as above)
+
+RULING AS IMPLEMENTED — scripts/golden-selfdelta.mjs
+
+  const MIN_ARM_RATIO = 0.1;   // 2× the 0.05 linux sun-crest coarse floor
+
+  0.10 is twice the widest floor the estate enforces (LOGO_FLOOR / CREST_FLOOR on linux,
+  the sun-crest clause). An arm delta that can't clear twice the coarsest floor isn't a
+  proof the compare bites — it's a coin flip against AA and hinting drift, won or lost per
+  platform. The price was paid on 2026-08-03 by the wordmark row: ratio 0.0390, inside the
+  0.017–0.05 band, red on darwin and GREEN on the only platform CI runs (§ROOT CAUSE above).
+
+  GRADING. A red row measured under the floor is its own failure class — BIT, BUT INSIDE
+  THE BLIND BAND — and fails the harness exactly like a did-not-bite row. A red row at the
+  compare that states NO ratio is a SETUP ERROR class of its own (RED AT THE COMPARE,
+  STATING NO MAGNITUDE): a row that can't say how hard it bit can't prove it bit hard
+  enough. Playwright ceils its printed ratio to 2dp, so the graded number is an UPPER bound
+  — a row that fails this floor fails it on the compare's most generous reading.
+
+  STRICTLY AN ADDITION. Rows only ever move OUT of `ok`; nothing that failed before passes
+  now. The dictum holds: the remedy for a faint row is a stronger ARM, never a smaller
+  number here.
+
+(a) CURRENT ARMS, FLOOR LIVE — 8/8, exit 0, every ratio ≥ 0.65 (6.5× the floor)
+
+  ARM black    logo 122,144 px / 0.71 · crest 13,474 / 0.65 · cell 15,310 / 0.74 ·
+               grid 111,037 / 0.86
+  ARM invert   logo 165,139 px / 0.96 · crest 15,578 / 0.76 · cell 18,005 / 0.87 ·
+               grid 114,448 / 0.89
+
+  [self-delta] PASS — 8 row(s) across 2 arms, every one red at its toHaveScreenshot and
+  clear of the 0.1 blind-band floor. The golden compare still compares.
+
+(b) BORN-RED — MIN_ARM_RATIO raised to 0.99 for one run (hand edit, reverted), so every row
+    falls inside the band. Exit 1, and the class is named per row — not did-not-bite:
+
+  FAIL golden · logo wordmark (light)      BIT, BUT INSIDE THE BLIND BAND — 122144 px, ratio 0.71 < 0.99
+  FAIL golden · toggle crest (dark, moon)  BIT, BUT INSIDE THE BLIND BAND — 13474 px, ratio 0.65 < 0.99
+  FAIL golden · single cell (light)        BIT, BUT INSIDE THE BLIND BAND — 15310 px, ratio 0.74 < 0.99
+  FAIL golden · grid top-left corner       BIT, BUT INSIDE THE BLIND BAND — 111037 px, ratio 0.86 < 0.99
+  … same four in ARM invert (0.96 / 0.76 / 0.87 / 0.89) …
+  [self-delta] FAIL — 8 of 8 row(s):
+    · [black] golden · logo wordmark (light) …: BIT, BUT INSIDE THE BLIND BAND — ratio 0.71
+      is under the 0.99 floor (2× the coarsest floor the estate enforces). A delta this faint
+      reds on a tight floor and goes GREEN on a coarse one, which is how the 2026-08-03
+      wordmark row shipped; make the ARM bite harder.
+
+  RESTORED to 0.1 and re-run: 8/8 ok, exit 0 (transcript (a) reproduced verbatim).
+
+(c) THE NO-MAGNITUDE CLASS, ALSO BORN RED (not asked for, cheap to prove, and otherwise it
+    would be a branch nobody has ever seen fire). MAGNITUDE's regex was blinded for one run
+    (`pixels` → `NEVERPIXELS`, reverted from a kept copy) so no row could state a ratio:
+
+  FAIL golden · logo wordmark (light)      RED AT THE COMPARE, STATING NO MAGNITUDE
+  … all 8 rows, exit 1, each named: "red at the compare but it stated no ratio, so the
+  delta's magnitude is unknown — a row that can't state how hard it bit can't prove it bit
+  hard enough to be a proof."
+
+  RESTORED and re-run: 8/8 ok, exit 0, `prettier --check` clean.
+
+FENCES. Only golden-selfdelta.mjs changed for this ruling; visual-golden.spec.ts is
+untouched since the cure above. No commits, no src/, no ci.yml, no package.json, no golden
+.png — `git status web/frontend/e2e/goldens/` clean.

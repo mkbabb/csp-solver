@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { pressCommitted } from './committed-press';
 
 // PRM: live, because the smoke path freezes nothing—it waits on the pose stack's first rendered
 //   label and on a solve reaching a terminal state, both of which hold with the beat running.
@@ -22,16 +23,47 @@ async function loadApp(page: Page) {
   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
 }
 
+// THE DECK OPENS ON A PRESS, AND WEBKIT CAN DROP THE PRESS (T7-W3 §8, generalized at §9).
+//
+// Root cause of the wandering row this file carried: a single `.click()` on the wordmark is NOT
+// a reliable open. The wordmark's pose stack TEARS OUT the live `<g class="logo-pose">` filter
+// stack when its bake lands and puts baked `<image>` siblings in its place; a mouse pair that
+// straddles the swap loses the half whose target was destroyed, WebKit synthesizes no `click`,
+// and Vue's `@click.stop` never runs. Measured 2/30 unaided on darwin WebKit, 0/25 chromium.
+// It is NOT contention (one worker, no neighbour) and NOT the F3 cold-chunk waterfall (the deck
+// is a static import; on every red `?view=gallery` was absent and `html.gallery-leaving` never
+// appeared, so `enterGallery` had not run — no chunk was ever in the path). The full forensics
+// live at `evidence/w3/futoshiki-coldchunk-forensics.txt`; the mechanism and the criterion for
+// which presses need this live in `committed-press.ts`.
+//
+// WHY THIS FILE AND NOT THE OTHERS, originally: `loadApp` waits on `svg.handwritten-logo` — the
+// earliest instant the wordmark exists — so these rows press squarely inside the bake window,
+// while the specs that first wait out a dealt board spent it. That shield was a timing accident
+// rather than a contract, so the guard is now shared and every wordmark press in the estate
+// takes it (T7-W3 §9).
+async function openDeck(page: Page) {
+  const viewport = page.locator('.gallery-viewport');
+  await pressCommitted(page.locator('button.logo-trigger'), viewport, {
+    what: 'the gallery deck',
+  });
+  return viewport;
+}
+
 // Switch from the default Sudoku scene to Futoshiki via the GALLERY (T4-W12 Wave D): the
 // wordmark opens the carousel; the futoshiki card is centered (←/→) then selected (Enter) —
 // the listbox-over-carousel contract. A pristine (auto-dealt) sudoku switches freely, so no
 // mid-game guard ribbon intervenes. Then wait for the async Futoshiki scene to mount and its
 // auto-randomized board to paint its inequality carets.
 async function switchToFutoshiki(page: Page) {
-  await page.locator('button.logo-trigger').click();
-  const viewport = page.locator('.gallery-viewport');
-  await viewport.waitFor({ state: 'visible', timeout: 15000 });
+  const viewport = await openDeck(page);
   await viewport.press('ArrowRight'); // sudoku (centered) → futoshiki
+  // SETTLED, NOT SLEPT — a11y.spec.ts's W3 cure, which this file never inherited. `Enter`
+  // selects whatever the deck has COMMITTED, so the precondition is the commit itself: the
+  // listbox's own `aria-activedescendant` and the flank's `aria-selected`, both auto-retrying.
+  // A press sent into a deck that hasn't committed selects sudoku, and every row here then
+  // waits out `.futoshiki-cell` that will never come.
+  await expect(viewport).toHaveAttribute('aria-activedescendant', 'gallery-card-1');
+  await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-selected', 'true');
   await viewport.press('Enter'); // select the centered futoshiki card
   // The Futoshiki scene is an async chunk that spins up its own Worker + auto-randomizes.
   await page.waitForSelector('.futoshiki-cell', { timeout: 15000 });

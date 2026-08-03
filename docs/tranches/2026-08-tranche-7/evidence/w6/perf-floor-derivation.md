@@ -162,3 +162,12 @@ the WGATE restamp, with the rest of the floors.
 Doc-truth's `perf-rig-scenario-roster` row (D20) reads GREEN against the new roster: 13 keys,
 `CI-gated: bootTbt, idle3s, undoBurst`, `diagnostic-only: domDump, styleDump`, drivers' default
 set unchanged.
+
+---
+
+**Superseded in part — 2026-08-03 (T7-W3 residue).** `boot.tbt.maxTbtMs` 1200 → 1750: the
+1200 sat *below* the runner's clean-tree reading (medians 1276/1333 at head `6d612ec5`,
+darwin basis held at 1.047 — the bundle was innocent), so first field contact proved it a
+false-red machine rather than a floor. Derivation, the measured refusal of the fps-ceiling
+transposition, and the new CPU-throughput anchor live in `../w3/gate-d-restamp.txt`. The §2/§4
+figures above stand as the dated record of what W6 derived and why.

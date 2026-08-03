@@ -56,6 +56,16 @@
  *     Throttling that is requested and cannot be applied is likewise exit 2: an unthrottled
  *     number read against a throttled floor is not a lenient measurement, it is a different one.
  *
+ *     ALONE AMONG THE FOUR, GATE D IS AN ABSOLUTE — A/B/C all divide by a ceiling this harness
+ *     measures per host, and boot TBT has no such denominator, so its number is a fact about
+ *     the HOST CLASS as much as about the bundle. W6 set 1200 from darwin without ever having
+ *     seen the runner; the runner's first reading of a clean tree was 1276/1333 (T7-W3
+ *     restamp, 2026-08-03 — gates.json carries the arithmetic). The denominator is now
+ *     MEASURED and printed as `tbt/anchor` below the verdict, diagnostic and gating nothing,
+ *     so WGATE can transpose GATE D or refute the transposition on evidence rather than repeat
+ *     the guess. It is comparable only WITHIN one engine at one cpuThrottleRate: TBT subtracts
+ *     a flat 50 ms per task, which is not scale-invariant (darwin read 2.21 at 4x, 0.58 at 1x).
+ *
  *   The absolute fps against the absolute 97 is printed as ADVISORY and does NOT gate. It is
  *   labelled with the measured ceiling so it cannot be misread as a real-Safari number.
  *
@@ -534,7 +544,7 @@ async function main() {
           say(
             b.error
               ? `  bootTbt ${i + 1}   ERROR ${String(b.error).split("\n")[0].slice(0, 90)}`
-              : `  bootTbt ${i + 1}   longtask ${b.longtaskSupported ? "yes" : "NO"}  tbt ${b.tbtMs === null ? "—" : `${b.tbtMs}ms`}  tasks ${b.tasks ?? "—"}  longest ${b.longestTaskMs ?? "—"}ms  window ${b.bootWindowMs}ms  painted ${b.boardPainted}`,
+              : `  bootTbt ${i + 1}   longtask ${b.longtaskSupported ? "yes" : "NO"}  tbt ${b.tbtMs === null ? "—" : `${b.tbtMs}ms`}  tasks ${b.tasks ?? "—"}  longest ${b.longestTaskMs ?? "—"}ms  anchor ${b.cpuAnchorMs ?? "—"}ms  window ${b.bootWindowMs}ms  painted ${b.boardPainted}`,
           );
         if (pageErrors.length) say(`  page errors: ${pageErrors.join(" | ")}`);
 
@@ -673,6 +683,45 @@ async function main() {
       say(
         `| ${r.name} | yes | ${r2(med)}ms | ${bootMaxTbtMs} | ${dOk ? "PASS" : "**FAIL**"} |`,
       );
+    }
+    // GATE D's MISSING DENOMINATOR, measured and reported — DIAGNOSTIC, gates nothing (T7-W3,
+    // 2026-08-03). GATE B is portable because it divides by a ceiling this harness measures
+    // per host; GATE D is an absolute in ms and is therefore a fact about the HOST CLASS as
+    // much as about the bundle — head 6d612ec5 read 373 ms here and 1276/1333 ms on the
+    // runner, same task census, no regression between them. The fps ceiling cannot serve as
+    // the denominator (it is a frame-scheduler cap: the runner reports p50 = p95 = 16.7 ms),
+    // so probe.js measures one directly, under the same throttle, after the window closes.
+    // `tbt/anchor` is the candidate portable column: if it holds across host classes at n>=3,
+    // WGATE transposes GATE D onto it the way GATE B is transposed and the absolute retires;
+    // if it does not, the transposition is refuted BY MEASUREMENT and the runner-derived
+    // absolute stands. Either way WGATE reads a number instead of guessing one.
+    const anchored = results
+      .map((r) => {
+        const bl = (r.boot || []).filter((b) => !b.error && typeof b.cpuAnchorMs === "number");
+        if (!bl.length) return null;
+        const tbts = bl.filter((b) => typeof b.tbtMs === "number").map((b) => b.tbtMs);
+        return {
+          name: r.name,
+          // Only chromium's boot load is throttled — CDP is chromium-only, and an anchor read
+          // at 1× against one read at 4× is a different measurement, so the rate is printed.
+          rate: r.name === "chromium" ? bootThrottle : 1,
+          anchorMs: median(bl.map((b) => b.cpuAnchorMs)),
+          n: bl[0].cpuAnchorN,
+          tbt: tbts.length ? median(tbts) : null,
+        };
+      })
+      .filter(Boolean);
+    if (anchored.length) {
+      say("");
+      say(
+        `host CPU anchor — DIAGNOSTIC, gates nothing; the portable column GATE D would need (see the block comment):`,
+      );
+      say("| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |");
+      say("| --- | --- | --- | --- | --- |");
+      for (const a of anchored)
+        say(
+          `| ${a.name} | ${a.rate}× | ${r2(a.anchorMs)} (${a.n} iter) | ${a.tbt === null ? "—" : `${r2(a.tbt)}ms`} | ${a.tbt === null ? "—" : r2(a.tbt / a.anchorMs)} |`,
+        );
     }
     if (results.length && !bootMeasured.length && bootUnsupported === results.length) {
       say("");
