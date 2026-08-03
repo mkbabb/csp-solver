@@ -70,6 +70,8 @@ const CONFIGS = [
       { name: "wordmark-webkit", engine: "webkit", floor: 6 },
       { name: "theme-bake-chromium", engine: "chromium", floor: 2 },
       { name: "theme-bake-webkit", engine: "webkit", floor: 2 },
+      { name: "theme-quadrants-chromium", engine: "chromium", floor: 14 },
+      { name: "theme-quadrants-webkit", engine: "webkit", floor: 14 },
     ],
   },
 ];

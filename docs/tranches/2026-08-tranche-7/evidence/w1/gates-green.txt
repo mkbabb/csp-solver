@@ -1,0 +1,258 @@
+T7-W1 · THE CURE — GATES GREEN
+==============================================================================
+
+The cure: CageOverlay.vue and ThermoTube.vue re-keyed to `:root.dark` for dark, the
+unprefixed rule for light. The `@media (prefers-color-scheme: dark)` block and the four
+:root[data-theme=…] rules in each file are DELETED, not allowlisted.
+
+Tree: working tree at cbf2ab49 (+ the W1 cure, uncommitted).
+Date: 2026-08-03 · darwin · node v26.0.0
+
+------------------------------------------------------------------------------
+THE DIFF (style blocks only)
+------------------------------------------------------------------------------
+
+diff --git a/web/frontend/src/games/shared/CageOverlay.vue b/web/frontend/src/games/shared/CageOverlay.vue
+index b7de4716..005c31a9 100644
+--- a/web/frontend/src/games/shared/CageOverlay.vue
++++ b/web/frontend/src/games/shared/CageOverlay.vue
+@@ -177,25 +177,15 @@ const rendered = computed<CageRender[]>(() => {
+   paint-order: stroke;
+ }
+ 
+-@media (prefers-color-scheme: dark) {
+-  .cage-boundary {
+-    stroke: var(--cage-ink, rgba(198, 204, 214, 0.42));
+-  }
+-  .cage-label {
+-    fill: var(--cage-ink-strong, rgba(214, 220, 230, 0.78));
+-  }
+-}
+-
+-:root[data-theme="light"] .cage-boundary {
+-  stroke: var(--cage-ink, rgba(60, 64, 72, 0.5));
+-}
+-:root[data-theme="light"] .cage-label {
+-  fill: var(--cage-ink-strong, rgba(52, 56, 64, 0.72));
+-}
+-:root[data-theme="dark"] .cage-boundary {
++/* Dark keys off the class `useTheme` actually writes (`useDark({selector:"html",
++   attribute:"class", valueDark:"dark"})`) — the same `.dark` ancestor every other surface in
++   the estate tracks. The blocks that stood here keyed off `@media (prefers-color-scheme)` and
++   `:root[data-theme=…]`: the first disagrees with the toggle in two of the four OS×app
++   quadrants, the second never matched at all — nothing writes `data-theme` (T7-W1). */
++:root.dark .cage-boundary {
+   stroke: var(--cage-ink, rgba(198, 204, 214, 0.42));
+ }
+-:root[data-theme="dark"] .cage-label {
++:root.dark .cage-label {
+   fill: var(--cage-ink-strong, rgba(214, 220, 230, 0.78));
+ }
+ </style>
+diff --git a/web/frontend/src/games/thermo/ThermoTube.vue b/web/frontend/src/games/thermo/ThermoTube.vue
+index b476a160..ff009dff 100644
+--- a/web/frontend/src/games/thermo/ThermoTube.vue
++++ b/web/frontend/src/games/thermo/ThermoTube.vue
+@@ -124,25 +124,15 @@ const tubes = computed<Tube[]>(() => {
+   fill: var(--thermo-ink, rgba(60, 64, 72, 0.32));
+ }
+ 
+-@media (prefers-color-scheme: dark) {
+-  .thermo-tube-stroke {
+-    stroke: var(--thermo-ink, rgba(198, 204, 214, 0.28));
+-  }
+-  .thermo-bulb {
+-    fill: var(--thermo-ink, rgba(198, 204, 214, 0.28));
+-  }
+-}
+-
+-:root[data-theme="light"] .thermo-tube-stroke {
+-  stroke: var(--thermo-ink, rgba(60, 64, 72, 0.32));
+-}
+-:root[data-theme="light"] .thermo-bulb {
+-  fill: var(--thermo-ink, rgba(60, 64, 72, 0.32));
+-}
+-:root[data-theme="dark"] .thermo-tube-stroke {
++/* Dark keys off the class `useTheme` actually writes (`useDark({selector:"html",
++   attribute:"class", valueDark:"dark"})`) — the same `.dark` ancestor every other surface in
++   the estate tracks. The blocks that stood here keyed off `@media (prefers-color-scheme)` and
++   `:root[data-theme=…]`: the first disagrees with the toggle in two of the four OS×app
++   quadrants, the second never matched at all — nothing writes `data-theme` (T7-W1). */
++:root.dark .thermo-tube-stroke {
+   stroke: var(--thermo-ink, rgba(198, 204, 214, 0.28));
+ }
+-:root[data-theme="dark"] .thermo-bulb {
++:root.dark .thermo-bulb {
+   fill: var(--thermo-ink, rgba(198, 204, 214, 0.28));
+ }
+ </style>
+
+
+------------------------------------------------------------------------------
+GATE 1.1 — node scripts/check-theme-selectors.mjs (src scope)
+------------------------------------------------------------------------------
+
+THEME-SELECTOR CENSUS — 55 style files, 0 data-attribute selector sites over 0 attribute(s), 0 prefers-color-scheme site(s), 0 allowlisted
+  ✓ 1 UNWRITTEN ATTRIBUTES
+  ✓ 2 UNHONORED MEDIA
+  ✓ 3 ALLOWLIST CLOSED
+
+OK — every data-attribute selector has a runtime writer, every prefers-color-scheme block is allowlisted with a reason, and the table is closed.
+
+
+------------------------------------------------------------------------------
+GATE 1.1 — --dist --self-test (the BUILT css + every check shown able to fail)
+  dist built by `npm run build` (vue-tsc + vite) at this tree.
+------------------------------------------------------------------------------
+
+THEME-SELECTOR CENSUS — 55 style files, 0 data-attribute selector sites over 0 attribute(s), 0 prefers-color-scheme site(s), 0 allowlisted
+  ✓ 1 UNWRITTEN ATTRIBUTES
+  ✓ 2 UNHONORED MEDIA
+  ✓ 3 ALLOWLIST CLOSED
+  ✓ 4 BUILT CSS — 7 chunk(s) scanned in dist/assets
+
+SELF-TEST — each check against fixture trees:
+  [1 UNWRITTEN ATTRIBUTES] the wave's exact shape — a [data-theme] rule with a class-only writer
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] the only mention of the writer is inside a comment
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] positive control — a real setAttribute writer lands
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — vueuse writes through `attribute:`, no setAttribute in sight
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — Vue's own scope id is not an app attribute
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — the cured, class-keyed block
+      → GREEN (want GREEN)
+  [2 UNHONORED MEDIA] a prefers-color-scheme block with nothing said about it
+      → RED (want RED)
+  [2 UNHONORED MEDIA] positive control — allowlisted with a reason
+      → GREEN (want GREEN)
+  [3 ALLOWLIST CLOSED] a stale entry — the selector it excuses is gone
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] the excused attribute gained a writer — the excuse outlived its reason
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] an entry whose reason is a shrug
+      → RED (want RED)
+
+OK — every data-attribute selector has a runtime writer, every prefers-color-scheme block is allowlisted with a reason, and the table is closed.
+
+
+------------------------------------------------------------------------------
+ACCEPTANCE — no prefers-color-scheme / data-theme survives the build
+------------------------------------------------------------------------------
+
+$ grep -c "prefers-color-scheme\|data-theme" dist/assets/*.css
+dist/assets/AnswerKeyLaminate-DQ8Zd4NTTWD3.css:0
+dist/assets/PosterBoard-DDdWOzWzVgXD.css:0
+dist/assets/CageOverlay-CxJWuhZARm9B.css:0
+dist/assets/FutoshikiPoster-D9LDNJs_lqtS.css:0
+dist/assets/ThermoTube-D-JcHJtczqX1.css:0
+dist/assets/spec-CAxGeu14Qq5g.css:0
+dist/assets/index-CEZ3gZrwgwhL.css:0
+
+(the ink now keys off the class `useTheme` writes — the whole built rule set for both
+ components, verbatim:)
+
+$ cat dist/assets/CageOverlay-*.css
+.cage-overlay[data-v-51654d6d]{z-index:1;pointer-events:none;width:100%;height:100%;position:absolute;top:0;bottom:0;left:0;right:0;overflow:visible}.cage-boundary[data-v-51654d6d]{stroke:var(--cage-ink,#3c404880)}.cage-label[data-v-51654d6d]{fill:var(--cage-ink-strong,#343840b8);font-family:var(--font-hand,"Caveat", ui-rounded, system-ui, sans-serif);paint-order:stroke;font-weight:600}:root.dark .cage-boundary[data-v-51654d6d]{stroke:var(--cage-ink,#c6ccd66b)}:root.dark .cage-label[data-v-51654d6d]{fill:var(--cage-ink-strong,#d6dce6c7)}
+
+
+$ cat dist/assets/ThermoTube-*.css
+.thermo-tube-overlay[data-v-1c0c49e3]{z-index:1;pointer-events:none;width:100%;height:100%;position:absolute;top:0;bottom:0;left:0;right:0;overflow:visible}@media (prefers-reduced-motion:no-preference){.board-leaving .thermo-tube-overlay[data-v-1c0c49e3]{opacity:0;transition:opacity .2s var(--ease-fadeOut)}}.thermo-tube-stroke[data-v-1c0c49e3]{stroke:var(--thermo-ink,#3c404852)}.thermo-bulb[data-v-1c0c49e3]{fill:var(--thermo-ink,#3c404852)}:root.dark .thermo-tube-stroke[data-v-1c0c49e3]{stroke:var(--thermo-ink,#c6ccd647)}:root.dark .thermo-bulb[data-v-1c0c49e3]{fill:var(--thermo-ink,#c6ccd647)}
+
+
+
+------------------------------------------------------------------------------
+GATE 1.2 — e2e/theme-quadrants.spec.ts, chromium + webkit, against the BUILT dist
+------------------------------------------------------------------------------
+
+Harness: a scratch mirror of playwright-throttle.config.ts (the built-dist config) —
+testMatch /theme-quadrants\.spec\.ts$/, two projects, retries 0, failOnFlakyTests,
+`npx vite preview --outDir dist --port 4238 --strictPort`. The spec file is byte-for-byte
+the born-RED one; the config is scratch ONLY because playwright-throttle.config.ts is not
+this executor's file — its registration rides the wiring_request.
+
+$ npx playwright test --config <scratch>/pw-w1-cure.config.ts
+
+
+Running 28 tests using 9 workers
+
+  ✓   6 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=light re-inks the furniture (644ms)
+  ✓   5 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=light re-inks the furniture (783ms)
+  ✓   7 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=dark re-inks the furniture (794ms)
+  ✓   2 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=light reads the same ink under either OS scheme (1.2s)
+  ✓   4 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=dark reads the same ink under either OS scheme (1.3s)
+  ✓   1 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=dark reads the same ink under either OS scheme (1.3s)
+  ✓   9 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=light reads the same ink under either OS scheme (1.4s)
+  ✓   3 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=light reads the same ink under either OS scheme (1.4s)
+  ✓   8 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=dark reads the same ink under either OS scheme (1.4s)
+  ✓  10 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=dark re-inks the furniture (861ms)
+  ✓  12 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=dark re-inks the furniture (725ms)
+  ✓  11 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=light re-inks the furniture (762ms)
+  ✓  13 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=dark reads the same ink under either OS scheme (958ms)
+  ✓  14 [theme-quadrants-chromium] › ..e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=light reads the same ink under either OS scheme (1.2s)
+  ✓  21 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=light re-inks the furniture (3.0s)
+  ✓  23 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=light re-inks the furniture (2.5s)
+  ✓  22 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=dark re-inks the furniture (3.0s)
+  ✓  17 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=dark reads the same ink under either OS scheme (4.5s)
+  ✓  20 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=light reads the same ink under either OS scheme (4.8s)
+  ✓  16 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=light reads the same ink under either OS scheme (4.9s)
+  ✓  15 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=dark reads the same ink under either OS scheme (5.0s)
+  ✓  19 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=dark reads the same ink under either OS scheme (5.0s)
+  ✓  18 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=light reads the same ink under either OS scheme (5.1s)
+  ✓  24 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=dark re-inks the furniture (2.2s)
+  ✓  25 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=light re-inks the furniture (2.1s)
+  ✓  26 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=dark re-inks the furniture (2.0s)
+  ✓  27 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=dark reads the same ink under either OS scheme (1.8s)
+  ✓  28 [theme-quadrants-webkit] › ..e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=light reads the same ink under either OS scheme (1.6s)
+
+  28 passed (10.7s)
+
+
+------------------------------------------------------------------------------
+THE INK, READ DIRECTLY — 20 quadrant readings off the same built dist
+  (the gate asserts identity; this table is the identity in plain sight — the ink is a
+   function of the app class ALONE, and the two MISMATCH rows now carry the same values
+   as their matched twins. Killer cage boundary omitted only for length — it shares the
+   CageOverlay rule the kenken rows read.)
+------------------------------------------------------------------------------
+
+surface               OS     app    quadrant   ink
+kenken cage label     light  light  matched    rgba(52, 56, 64, 0.72)
+kenken cage label     light  dark   MISMATCH   rgba(214, 220, 230, 0.78)
+kenken cage label     dark   light  MISMATCH   rgba(52, 56, 64, 0.72)
+kenken cage label     dark   dark   matched    rgba(214, 220, 230, 0.78)
+kenken cage boundary  light  light  matched    rgba(60, 64, 72, 0.5)
+kenken cage boundary  light  dark   MISMATCH   rgba(198, 204, 214, 0.42)
+kenken cage boundary  dark   light  MISMATCH   rgba(60, 64, 72, 0.5)
+kenken cage boundary  dark   dark   matched    rgba(198, 204, 214, 0.42)
+killer cage label     light  light  matched    rgba(52, 56, 64, 0.72)
+killer cage label     light  dark   MISMATCH   rgba(214, 220, 230, 0.78)
+killer cage label     dark   light  MISMATCH   rgba(52, 56, 64, 0.72)
+killer cage label     dark   dark   matched    rgba(214, 220, 230, 0.78)
+thermo tube           light  light  matched    rgba(60, 64, 72, 0.32)
+thermo tube           light  dark   MISMATCH   rgba(198, 204, 214, 0.28)
+thermo tube           dark   light  MISMATCH   rgba(60, 64, 72, 0.32)
+thermo tube           dark   dark   matched    rgba(198, 204, 214, 0.28)
+thermo bulb           light  light  matched    rgba(60, 64, 72, 0.32)
+thermo bulb           light  dark   MISMATCH   rgba(198, 204, 214, 0.28)
+thermo bulb           dark   light  MISMATCH   rgba(60, 64, 72, 0.32)
+thermo bulb           dark   dark   matched    rgba(198, 204, 214, 0.28)
+
+
+------------------------------------------------------------------------------
+COLLATERAL
+------------------------------------------------------------------------------
+
+Goldens: untouched and unaffected — e2e/goldens holds cell-light, grid-corner-light,
+logo-light and toggle-crest-dark; none frames cage or tube furniture.
+
+Units over the two surfaces:
+$ npx vitest run src/games/kenken/spec.test.ts src/games/killer/spec.test.ts src/games/thermo
+  Test Files  5 passed (5) · Tests  37 passed (37)
+
+OWNER ROW, UNCURED BY DESIGN (W1 §The matched-quadrant thinness): the matched light cage
+boundary (2.62:1) and the matched dark thermo tube (1.98:1) sit under the WCAG 3:1
+non-text floor. That is a palette decision, not a theme key — the values above are the
+shipped ones, moved between quadrants and not repitched.

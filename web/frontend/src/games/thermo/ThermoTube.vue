@@ -124,25 +124,15 @@ const tubes = computed<Tube[]>(() => {
   fill: var(--thermo-ink, rgba(60, 64, 72, 0.32));
 }
 
-@media (prefers-color-scheme: dark) {
-  .thermo-tube-stroke {
-    stroke: var(--thermo-ink, rgba(198, 204, 214, 0.28));
-  }
-  .thermo-bulb {
-    fill: var(--thermo-ink, rgba(198, 204, 214, 0.28));
-  }
-}
-
-:root[data-theme="light"] .thermo-tube-stroke {
-  stroke: var(--thermo-ink, rgba(60, 64, 72, 0.32));
-}
-:root[data-theme="light"] .thermo-bulb {
-  fill: var(--thermo-ink, rgba(60, 64, 72, 0.32));
-}
-:root[data-theme="dark"] .thermo-tube-stroke {
+/* Dark keys off the class `useTheme` actually writes (`useDark({selector:"html",
+   attribute:"class", valueDark:"dark"})`) — the same `.dark` ancestor every other surface in
+   the estate tracks. The blocks that stood here keyed off `@media (prefers-color-scheme)` and
+   `:root[data-theme=…]`: the first disagrees with the toggle in two of the four OS×app
+   quadrants, the second never matched at all — nothing writes `data-theme` (T7-W1). */
+:root.dark .thermo-tube-stroke {
   stroke: var(--thermo-ink, rgba(198, 204, 214, 0.28));
 }
-:root[data-theme="dark"] .thermo-bulb {
+:root.dark .thermo-bulb {
   fill: var(--thermo-ink, rgba(198, 204, 214, 0.28));
 }
 </style>

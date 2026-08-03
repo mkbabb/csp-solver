@@ -1,0 +1,1577 @@
+T7-W1 · GATE 1.2 — FOUR-QUADRANT INK IDENTITY · BORN-RED BANK
+==============================================================================
+
+Tree            cbf2ab49 (uncured — CageOverlay.vue:180 / ThermoTube.vue:127 still key
+                @media (prefers-color-scheme: dark), sibling :root[data-theme=…] blocks dead)
+Spec            web/frontend/e2e/theme-quadrants.spec.ts (new)
+Harness         BUILT DIST — `vite build --outDir dist-quadrants` + `vite preview` on :4231,
+                mirroring playwright-throttle.config.ts (the estate's built-dist config).
+                The scratch config exists only because config registration is a wiring
+                request, not this executor's file; the real lane wiring is in the handoff.
+Engines         chromium + webkit, @playwright/test 1.61.1, darwin 26.4.1, retries 0
+Result          28 failed / 28 total — 14 rows per engine, EVERY row red.
+
+WHAT THE GATE ASSERTS
+  identity  ink(OS=light, app=X) === ink(OS=dark, app=X), per surface, both X.
+  moves     one REAL toggle click (never seeded storage) must MOVE the ink, not just the class.
+  gallery   the same identity over ?view=gallery card art (KillerPoster/KenKenPoster/ThermoPoster).
+Never a contrast floor: a WCAG 3:1 gate would red the MATCHED quadrants (matched light cage
+boundary 2.62:1, matched dark thermo tube 1.98:1 — faint by design, a separate OWNER row).
+
+THE MEASUREMENT, verbatim from the run below
+  killer/kenken cage LABEL    (OS=light) rgba(52, 56, 64, 0.72)   vs (OS=dark) rgba(214, 220, 230, 0.78)
+  killer/kenken cage BOUNDARY (OS=light) rgba(60, 64, 72, 0.5)    vs (OS=dark) rgba(198, 204, 214, 0.42)
+  thermo TUBE                 (OS=light) rgba(60, 64, 72, 0.32)   vs (OS=dark) rgba(198, 204, 214, 0.28)
+  thermo BULB                 (OS=light) rgba(60, 64, 72, 0.32)   vs (OS=dark) rgba(198, 204, 214, 0.28)
+  gallery posters — identical triples, the shared components inherit the defect.
+  moves arm: class flipped `(light) → dark` and the ink held `rgba(52, 56, 64, 0.72)` on BOTH
+  sides — the wave file's cited byte-identity, reproduced with a real click.
+The ink is a function of the OS media query alone; the app class moves nothing.
+
+NON-VACUITY, measured not asserted
+  · Every watched selector is hard-asserted to match ≥1 element and to resolve to a paint the
+    resolver can read; an unreadable colour becomes `UNPARSED:` and can never satisfy identity.
+  · Row comparisons are `expect.soft`, so all 6 gallery rows / 2 board rows report per run
+    rather than the test aborting on the first.
+  · GREENABILITY PROVEN, same spec, same harness: an isolated copy of the tree with the cure
+    applied (both blocks re-keyed to `:root.dark`, the media query and the `data-theme` blocks
+    deleted) built to dist-cure and previewed on :4232 runs 28 passed / 28, both engines.
+    Bank: gate1.2-cure-green.txt. No file in the working tree was touched to produce it.
+
+REPRODUCE
+  cd web/frontend
+  npx vite build --outDir dist-quadrants --logLevel warn
+  npx vite preview --outDir dist-quadrants --port 4231 --strictPort   # ports 4230-4260 only
+  PLAYWRIGHT_BASE_URL=http://localhost:4231 npx playwright test \
+    --config playwright-throttle.config.ts --project theme-quadrants-chromium --project theme-quadrants-webkit
+  (once the wiring request registers the two projects; until then, the scratch config above)
+
+==============================================================================
+RAW RUN OUTPUT
+==============================================================================
+
+Running 28 tests using 9 workers
+
+  ✘   3 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=dark reads the same ink under either OS scheme (1.1s)
+  ✘   6 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=light reads the same ink under either OS scheme (1.2s)
+  ✘   1 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=light re-inks the furniture (639ms)
+  ✘   5 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=dark re-inks the furniture (839ms)
+  ✘   9 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=light reads the same ink under either OS scheme (1.1s)
+  ✘   4 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=dark reads the same ink under either OS scheme (1.2s)
+  ✘   7 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=light re-inks the furniture (762ms)
+  ✘   2 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=dark reads the same ink under either OS scheme (1.2s)
+  ✘   8 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=light reads the same ink under either OS scheme (1.2s)
+  ✘  10 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=dark re-inks the furniture (687ms)
+  ✘  13 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=dark reads the same ink under either OS scheme (1.3s)
+  ✘  17 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=light reads the same ink under either OS scheme (1.2s)
+  ✘  11 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=dark re-inks the furniture (738ms)
+  ✘  12 [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=light re-inks the furniture (726ms)
+  ✘  16 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=dark reads the same ink under either OS scheme (2.5s)
+  ✘  18 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=light reads the same ink under either OS scheme (2.8s)
+  ✘  15 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=light reads the same ink under either OS scheme (3.6s)
+  ✘  14 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=dark reads the same ink under either OS scheme (4.1s)
+  ✘  22 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=light re-inks the furniture (2.3s)
+  ✘  21 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=light re-inks the furniture (2.4s)
+  ✘  23 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=dark re-inks the furniture (2.4s)
+  ✘  24 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=dark re-inks the furniture (1.9s)
+  ✘  20 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=light reads the same ink under either OS scheme (3.7s)
+  ✘  19 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=dark reads the same ink under either OS scheme (3.7s)
+  ✘  25 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=light re-inks the furniture (2.0s)
+  ✘  26 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=dark re-inks the furniture (1.7s)
+  ✘  27 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=dark reads the same ink under either OS scheme (1.9s)
+  ✘  28 [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=light reads the same ink under either OS scheme (1.6s)
+
+
+  1) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=dark reads the same ink under either OS scheme 
+
+    Error: killer · killer cage boundary · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: killer · killer cage label · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-acd60--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-acd60--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-acd60--ink-under-either-OS-scheme-theme-quadrants-chromium/error-context.md
+
+  2) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=light reads the same ink under either OS scheme 
+
+    Error: killer · killer cage boundary · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: killer · killer cage label · app=light: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-83fa1--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-83fa1--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-83fa1--ink-under-either-OS-scheme-theme-quadrants-chromium/error-context.md
+
+  3) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=dark reads the same ink under either OS scheme 
+
+    Error: kenken · kenken cage boundary · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: kenken · kenken cage label · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-f4267--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-f4267--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-f4267--ink-under-either-OS-scheme-theme-quadrants-chromium/error-context.md
+
+  4) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=light reads the same ink under either OS scheme 
+
+    Error: kenken · kenken cage boundary · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: kenken · kenken cage label · app=light: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-cdb68--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-cdb68--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-cdb68--ink-under-either-OS-scheme-theme-quadrants-chromium/error-context.md
+
+  5) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=dark reads the same ink under either OS scheme 
+
+    Error: thermo · thermo tube · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: thermo · thermo bulb · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-8ebd4--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-8ebd4--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-8ebd4--ink-under-either-OS-scheme-theme-quadrants-chromium/error-context.md
+
+  6) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=light reads the same ink under either OS scheme 
+
+    Error: thermo · thermo tube · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: thermo · thermo bulb · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-f71d4--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-f71d4--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-f71d4--ink-under-either-OS-scheme-theme-quadrants-chromium/error-context.md
+
+  7) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=light re-inks the furniture 
+
+    Error: killer · killer cage boundary · OS=light: the class flipped (light) → dark and the ink did not move (rgba(60, 64, 72, 0.5) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "60,64,72,0.500"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: killer · killer cage label · OS=light: the class flipped (light) → dark and the ink did not move (rgba(52, 56, 64, 0.72) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "52,56,64,0.720"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-2a558-light-re-inks-the-furniture-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-2a558-light-re-inks-the-furniture-theme-quadrants-chromium/error-context.md
+
+  8) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=dark re-inks the furniture 
+
+    Error: killer · killer cage boundary · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(198, 204, 214, 0.42) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "198,204,214,0.420"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: killer · killer cage label · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(214, 220, 230, 0.78) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "214,220,230,0.780"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-11a72--dark-re-inks-the-furniture-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-11a72--dark-re-inks-the-furniture-theme-quadrants-chromium/error-context.md
+
+  9) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=light re-inks the furniture 
+
+    Error: kenken · kenken cage boundary · OS=light: the class flipped (light) → dark and the ink did not move (rgba(60, 64, 72, 0.5) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "60,64,72,0.500"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: kenken · kenken cage label · OS=light: the class flipped (light) → dark and the ink did not move (rgba(52, 56, 64, 0.72) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "52,56,64,0.720"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-94ed6-light-re-inks-the-furniture-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-94ed6-light-re-inks-the-furniture-theme-quadrants-chromium/error-context.md
+
+  10) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=dark re-inks the furniture 
+
+    Error: kenken · kenken cage boundary · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(198, 204, 214, 0.42) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "198,204,214,0.420"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: kenken · kenken cage label · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(214, 220, 230, 0.78) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "214,220,230,0.780"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-30f3d--dark-re-inks-the-furniture-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-30f3d--dark-re-inks-the-furniture-theme-quadrants-chromium/error-context.md
+
+  11) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=light re-inks the furniture 
+
+    Error: thermo · thermo tube · OS=light: the class flipped (light) → dark and the ink did not move (rgba(60, 64, 72, 0.32) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "60,64,72,0.320"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: thermo · thermo bulb · OS=light: the class flipped (light) → dark and the ink did not move (rgba(60, 64, 72, 0.32) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "60,64,72,0.320"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-9e872-light-re-inks-the-furniture-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-9e872-light-re-inks-the-furniture-theme-quadrants-chromium/error-context.md
+
+  12) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=dark re-inks the furniture 
+
+    Error: thermo · thermo tube · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(198, 204, 214, 0.28) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "198,204,214,0.280"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: thermo · thermo bulb · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(198, 204, 214, 0.28) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "198,204,214,0.280"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-46ec1--dark-re-inks-the-furniture-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-46ec1--dark-re-inks-the-furniture-theme-quadrants-chromium/error-context.md
+
+  13) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=dark reads the same ink under either OS scheme 
+
+    Error: gallery · killer cage boundary · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · killer cage label · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · kenken cage boundary · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · kenken cage label · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · thermo tube · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · thermo bulb · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-d53da--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-d53da--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-d53da--ink-under-either-OS-scheme-theme-quadrants-chromium/error-context.md
+
+  14) [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=light reads the same ink under either OS scheme 
+
+    Error: gallery · killer cage boundary · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · killer cage label · app=light: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · kenken cage boundary · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · kenken cage label · app=light: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · thermo tube · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · thermo bulb · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-612a0--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-612a0--ink-under-either-OS-scheme-theme-quadrants-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-612a0--ink-under-either-OS-scheme-theme-quadrants-chromium/error-context.md
+
+  15) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=dark reads the same ink under either OS scheme 
+
+    Error: killer · killer cage boundary · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: killer · killer cage label · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-acd60--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-acd60--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-acd60--ink-under-either-OS-scheme-theme-quadrants-webkit/error-context.md
+
+  16) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=light reads the same ink under either OS scheme 
+
+    Error: killer · killer cage boundary · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: killer · killer cage label · app=light: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-83fa1--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-83fa1--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-83fa1--ink-under-either-OS-scheme-theme-quadrants-webkit/error-context.md
+
+  17) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=dark reads the same ink under either OS scheme 
+
+    Error: kenken · kenken cage boundary · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: kenken · kenken cage label · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-f4267--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-f4267--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-f4267--ink-under-either-OS-scheme-theme-quadrants-webkit/error-context.md
+
+  18) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=light reads the same ink under either OS scheme 
+
+    Error: kenken · kenken cage boundary · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: kenken · kenken cage label · app=light: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-cdb68--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-cdb68--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-cdb68--ink-under-either-OS-scheme-theme-quadrants-webkit/error-context.md
+
+  19) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=dark reads the same ink under either OS scheme 
+
+    Error: thermo · thermo tube · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: thermo · thermo bulb · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-8ebd4--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-8ebd4--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-8ebd4--ink-under-either-OS-scheme-theme-quadrants-webkit/error-context.md
+
+  20) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=light reads the same ink under either OS scheme 
+
+    Error: thermo · thermo tube · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    Error: thermo · thermo bulb · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:342:7
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-f71d4--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-f71d4--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-f71d4--ink-under-either-OS-scheme-theme-quadrants-webkit/error-context.md
+
+  21) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=light re-inks the furniture 
+
+    Error: killer · killer cage boundary · OS=light: the class flipped (light) → dark and the ink did not move (rgba(60, 64, 72, 0.5) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "60,64,72,0.500"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: killer · killer cage label · OS=light: the class flipped (light) → dark and the ink did not move (rgba(52, 56, 64, 0.72) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "52,56,64,0.720"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-2a558-light-re-inks-the-furniture-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-2a558-light-re-inks-the-furniture-theme-quadrants-webkit/error-context.md
+
+  22) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=dark re-inks the furniture 
+
+    Error: killer · killer cage boundary · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(198, 204, 214, 0.42) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "198,204,214,0.420"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: killer · killer cage label · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(214, 220, 230, 0.78) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "214,220,230,0.780"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-11a72--dark-re-inks-the-furniture-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-11a72--dark-re-inks-the-furniture-theme-quadrants-webkit/error-context.md
+
+  23) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=light re-inks the furniture 
+
+    Error: kenken · kenken cage boundary · OS=light: the class flipped (light) → dark and the ink did not move (rgba(60, 64, 72, 0.5) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "60,64,72,0.500"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: kenken · kenken cage label · OS=light: the class flipped (light) → dark and the ink did not move (rgba(52, 56, 64, 0.72) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "52,56,64,0.720"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-94ed6-light-re-inks-the-furniture-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-94ed6-light-re-inks-the-furniture-theme-quadrants-webkit/error-context.md
+
+  24) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=dark re-inks the furniture 
+
+    Error: kenken · kenken cage boundary · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(198, 204, 214, 0.42) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "198,204,214,0.420"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: kenken · kenken cage label · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(214, 220, 230, 0.78) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "214,220,230,0.780"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-30f3d--dark-re-inks-the-furniture-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-30f3d--dark-re-inks-the-furniture-theme-quadrants-webkit/error-context.md
+
+  25) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=light re-inks the furniture 
+
+    Error: thermo · thermo tube · OS=light: the class flipped (light) → dark and the ink did not move (rgba(60, 64, 72, 0.32) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "60,64,72,0.320"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: thermo · thermo bulb · OS=light: the class flipped (light) → dark and the ink did not move (rgba(60, 64, 72, 0.32) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "60,64,72,0.320"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-9e872-light-re-inks-the-furniture-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-9e872-light-re-inks-the-furniture-theme-quadrants-webkit/error-context.md
+
+  26) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=dark re-inks the furniture 
+
+    Error: thermo · thermo tube · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(198, 204, 214, 0.28) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "198,204,214,0.280"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    Error: thermo · thermo bulb · OS=dark: the class flipped dark → (light) and the ink did not move (rgba(198, 204, 214, 0.28) both sides) — the furniture is keyed off the OS query, not the app.
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "198,204,214,0.280"
+
+      389 |                 `and the ink did not move (${b.raw} both sides) — the furniture is keyed off the OS query, not the app.`,
+      390 |             )
+    > 391 |             .not.toBe(inkKey(b.raw));
+          |                  ^
+      392 |         }
+      393 |       } finally {
+      394 |         await context.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:391:18
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-moves-46ec1--dark-re-inks-the-furniture-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-moves-46ec1--dark-re-inks-the-furniture-theme-quadrants-webkit/error-context.md
+
+  27) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=dark reads the same ink under either OS scheme 
+
+    Error: gallery · killer cage boundary · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · killer cage label · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · kenken cage boundary · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · kenken cage label · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · thermo tube · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · thermo bulb · app=dark: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-d53da--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-d53da--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-d53da--ink-under-either-OS-scheme-theme-quadrants-webkit/error-context.md
+
+  28) [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=light reads the same ink under either OS scheme 
+
+    Error: gallery · killer cage boundary · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · killer cage label · app=light: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · kenken cage boundary · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.5) vs (OS=dark) rgba(198, 204, 214, 0.42). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.420"
+    Received: "60,64,72,0.500"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · kenken cage label · app=light: the ink is not a function of the app class alone — (OS=light) rgba(52, 56, 64, 0.72) vs (OS=dark) rgba(214, 220, 230, 0.78). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "214,220,230,0.780"
+    Received: "52,56,64,0.720"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · thermo tube · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    Error: gallery · thermo bulb · app=light: the ink is not a function of the app class alone — (OS=light) rgba(60, 64, 72, 0.32) vs (OS=dark) rgba(198, 204, 214, 0.28). The mismatch quadrant renders the opposite theme's ink.
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "198,204,214,0.280"
+    Received: "60,64,72,0.320"
+
+      326 |           `(OS=light) ${l.raw} vs (OS=dark) ${d.raw}. The mismatch quadrant renders the opposite theme's ink.`,
+      327 |       )
+    > 328 |       .toBe(inkKey(d.raw));
+          |        ^
+      329 |   }
+      330 | }
+      331 |
+        at assertIdentity (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:328:8)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/theme-quadrants.spec.ts:409:5
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-612a0--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/theme-quadrants-G1-2-ident-612a0--ink-under-either-OS-scheme-theme-quadrants-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/theme-quadrants-G1-2-ident-612a0--ink-under-either-OS-scheme-theme-quadrants-webkit/error-context.md
+
+  28 failed
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=dark reads the same ink under either OS scheme 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=light reads the same ink under either OS scheme 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=dark reads the same ink under either OS scheme 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=light reads the same ink under either OS scheme 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=dark reads the same ink under either OS scheme 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=light reads the same ink under either OS scheme 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=light re-inks the furniture 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=dark re-inks the furniture 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=light re-inks the furniture 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=dark re-inks the furniture 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=light re-inks the furniture 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=dark re-inks the furniture 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=dark reads the same ink under either OS scheme 
+    [theme-quadrants-chromium] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=light reads the same ink under either OS scheme 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=dark reads the same ink under either OS scheme 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · killer · app=light reads the same ink under either OS scheme 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=dark reads the same ink under either OS scheme 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · kenken · app=light reads the same ink under either OS scheme 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=dark reads the same ink under either OS scheme 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:336:5 › G1.2 identity · thermo · app=light reads the same ink under either OS scheme 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=light re-inks the furniture 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · killer · one toggle click under OS=dark re-inks the furniture 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=light re-inks the furniture 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · kenken · one toggle click under OS=dark re-inks the furniture 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=light re-inks the furniture 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:351:5 › G1.2 moves · thermo · one toggle click under OS=dark re-inks the furniture 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=dark reads the same ink under either OS scheme 
+    [theme-quadrants-webkit] › e2e/theme-quadrants.spec.ts:403:3 › G1.2 identity · gallery posters · app=light reads the same ink under either OS scheme 

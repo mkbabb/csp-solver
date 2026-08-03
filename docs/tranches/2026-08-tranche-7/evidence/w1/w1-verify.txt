@@ -1,0 +1,209 @@
+T7-W1 — NON-AUTHOR VERIFICATION
+==============================================================================
+verifier    W1 non-author executor (edited nothing but this file)
+banked      2026-08-03
+tree        working tree at cbf2ab49 + the W1 cure, uncommitted (git status: 2 modified,
+            3 untracked — CageOverlay.vue, ThermoTube.vue; theme-quadrants.spec.ts,
+            access.spec.ts, check-theme-selectors.mjs)
+host        darwin 26.4.1 · node v26.0.0 · @playwright/test as installed
+ports       4232 (cured preview), 4234 (born-RED preview), 4240 (dev probe) — all in band
+
+VERDICT — the cure and both gates reproduce. Six checks pass; three wiring gaps stand in the
+tree as it is, none of them in a file the executors were allowed to touch.
+
+------------------------------------------------------------------------------
+1 · GATE 1.1 RE-RUN — all four arms, both polarities
+------------------------------------------------------------------------------
+
+$ node scripts/check-theme-selectors.mjs                                    # exit 0
+THEME-SELECTOR CENSUS — 55 style files, 0 data-attribute selector sites over 0 attribute(s),
+0 prefers-color-scheme site(s), 0 allowlisted
+  ✓ 1 UNWRITTEN ATTRIBUTES   ✓ 2 UNHONORED MEDIA   ✓ 3 ALLOWLIST CLOSED
+
+$ npm run build && node scripts/check-theme-selectors.mjs --dist dist       # exit 0
+  ✓ 4 BUILT CSS — 7 chunk(s) scanned in dist/assets
+
+$ node scripts/check-theme-selectors.mjs --self-test                        # exit 0
+  11/11 fixture controls answered as declared — 5 RED (the wave's exact shape, a
+  comment-only writer, a stale allowlist row, a row whose attribute gained a writer, a
+  reasonless row) and 6 GREEN (setAttribute, vueuse `attribute:`, Vue's `data-v-` scope id,
+  the cured class-keyed block, an allowlisted media block).
+
+$ node scripts/check-theme-selectors.mjs --dist /nonexistent-dir            # exit 2
+  Refuses rather than greens on a missing dist. Verified by exit code, not by message.
+
+The ALLOWLIST ships EMPTY — read directly, not inferred from the header count.
+
+------------------------------------------------------------------------------
+2 · GATE 1.2 RE-RUN — both engines, against a dist I built
+------------------------------------------------------------------------------
+
+Harness: my own scratch config (scratchpad, outside the repo) — `vite build --outDir
+dist-w1verify` + `vite preview` on :4232, testMatch /theme-quadrants\.spec\.ts$/, projects
+chromium + webkit, retries 0, failOnFlakyTests, globalSetup e2e/global-setup.ts.
+
+  Running 28 tests using 9 workers
+  28 passed (11.9s)
+
+14 rows per engine: 6 `identity` board rows (killer/kenken/thermo × app=dark|light), 6
+`moves` rows (a real toggle click under each OS scheme), 2 `gallery` poster rows. No skips,
+no retries, no soft failure surviving the aggregate.
+
+------------------------------------------------------------------------------
+3 · BORN RED, REPRODUCED AT THE UNCURED TREE
+------------------------------------------------------------------------------
+
+Method: an rsync'd mirror of web/frontend into scratch (node_modules symlinked), the two
+files restored from `git show HEAD:` — the repo is never stashed and never reverted.
+
+GATE 1.1, uncured, exit 1 — ten sites, at exactly the file:lines the wave record cites:
+  1 UNWRITTEN ATTRIBUTES — 8    writers for `data-theme`: NONE
+    CageOverlay.vue  189, 192, 195, 198
+    ThermoTube.vue   136, 139, 142, 145
+  2 UNHONORED MEDIA — 2
+    CageOverlay.vue  180        ThermoTube.vue  127
+  3 ALLOWLIST CLOSED ✓
+Order and text match evidence/w1/gate1.1-born-red.txt line for line.
+
+GATE 1.1 arm 4, uncured dist, exit 1 — reds on exactly the two chunks that carry them, silent
+on the other five:
+  dist-bornred/assets/CageOverlay-C4AEADXWxKx0.css   4 attr + 1 media
+  dist-bornred/assets/ThermoTube-BuYfyXhY4ACx.css    4 attr + 1 media
+The chunk hashes are byte-for-byte the ones gate1.1-dist-arm.txt banked — the mirror rebuilt
+to the same artifact.
+
+GATE 1.2, uncured dist on :4234:
+  Running 28 tests using 9 workers
+  28 failed
+Every row, both engines. Matches gate1.2-born-red.txt's 28 failed / 28.
+
+------------------------------------------------------------------------------
+4 · THE DIFF — read, not summarised
+------------------------------------------------------------------------------
+
+`git diff` touches two files and nothing outside their `<style scoped>` blocks. Net −20 LOC.
+Every script-block and template line is context.
+
+  · No `prefers-color-scheme` survives in src. `grep -rn` returns 2 hits, both inside the
+    cure's own explanatory comment.
+  · No `data-theme` survives in src. `grep -rn` returns 4 hits, all inside the same comments.
+    The census masks CSS comments, so neither greens or reds anything — it reports 0 sites.
+  · The `.dark` idiom. `useTheme.ts` is `useDark({selector:"html", attribute:"class",
+    valueDark:"dark", valueLight:""})`, so the class lands on `<html>` and nowhere else —
+    verified by grepping every `classList.add/toggle/remove` and every `:class` binding in
+    src: the only other theme-ish class is DarkModeToggle's own `is-dark`, on the button.
+    `:root.dark X` therefore matches exactly when `.dark X` and `:is(.dark *)` do. It is a
+    narrower spelling than the estate's two incumbents (index.css `.dark .cartoon-shadow-*`,
+    CrayonHeart.vue `:is(.dark *)`, Tailwind's `@custom-variant dark (&:is(.dark *))`) but
+    not a different rule, and it is the spelling the census's own positive-control fixture
+    uses. No defect; recorded so the chair can choose uniformity if it wants it.
+  · Both blocks are `<style scoped>`, so the compiler appends `[data-v-…]` to the last
+    compound — `:root.dark .cage-boundary[data-v-51654d6d]`. Confirmed in the built chunk.
+  · The gate reads `.killer-cage-boundary` / `.kenken-cage-boundary` / `.thermo-tube-stroke`;
+    the CSS keys `.cage-boundary` / `.thermo-tube-stroke`. Same elements — CageOverlay.vue:128
+    carries both (`class="cage-boundary"` + `:class="\`${family}-cage-boundary\`"`). The gate
+    is not reading a different node than the cure paints.
+
+------------------------------------------------------------------------------
+5 · THE BUILT CSS
+------------------------------------------------------------------------------
+
+$ npm run build   (dist/assets — 7 CSS chunks, index CSS 82.19 kB)
+$ grep -rl "data-theme" dist/            → 0 files
+$ grep -rl "prefers-color-scheme" dist/  → 1 file, JS not CSS
+
+The single JS hit is vueuse's `usePreferredDark`: `Io("(prefers-color-scheme: dark)", e)` in
+index-*.js — a `matchMedia` consumer, which is the HONORED form (it picks the boot default
+when storage is empty and the toggle overrides it thereafter). Zero CSS `prefers-color-scheme`
+blocks ship; zero `data-theme` of any kind ships. The allowlist is empty and needs no entry.
+
+------------------------------------------------------------------------------
+6 · THE MATCHED-QUADRANT THINNESS — UNTOUCHED (owner row, default leave)
+------------------------------------------------------------------------------
+
+Compared the uncured and cured built chunks directly. `--cage-ink`, `--cage-ink-strong` and
+`--thermo-ink` are defined NOWHERE in src (grep), so the `var()` fallbacks are always what
+paints — the comparison is exact.
+
+  surface              matched quadrant   UNCURED (HEAD)   CURED      moved?
+  cage boundary        light              #3c404880        #3c404880  no
+  cage label           light              #343840b8        #343840b8  no
+  cage boundary        dark               #c6ccd66b        #c6ccd66b  no
+  cage label           dark               #d6dce6c7        #d6dce6c7  no
+  thermo tube          light              #3c404852        #3c404852  no
+  thermo bulb          light              #3c404852        #3c404852  no
+  thermo tube          dark               #c6ccd647        #c6ccd647  no
+  thermo bulb          dark               #c6ccd647        #c6ccd647  no
+
+All eight byte-identical. The cage boundary's matched-light 2.62:1 and the thermo tube's
+matched-dark 1.98:1 are exactly as shipped. What changed is which quadrant each value lands
+in, never the value — the cure moved no pitch, and the owner row is uncured, as written.
+
+Corollary checked: the pixel goldens cannot see this. All four baselines capture sudoku
+(`visual-golden.spec.ts:105` goes to `./` or `./?board=…`, never `?game=`), and the one dark
+baseline is a 72×72 clip of the toggle button. No cage or tube furniture is inside any golden.
+No baseline was edited, and none needs to be.
+
+------------------------------------------------------------------------------
+7 · COLLATERAL — nothing else moved
+------------------------------------------------------------------------------
+
+  vue-tsc -b --noEmit                    exit 0
+  eslint (both changed + both new files) 0 errors
+  prettier --check (same four)           clean
+  check-theme-tokens.mjs                 exit 0
+  check-ink-pressure.mjs                 exit 0
+  check-prod-shake.mjs                   exit 0
+  check-support-floor.mjs                exit 0
+  check-pw-projects.mjs --self-test      exit 0 (24 specs, 408 resolved tests)
+
+PRM declaration: theme-quadrants.spec.ts:3 reads `// PRM: frozen — emulateMedia({reducedMotion:
+'reduce'}) before goto`, inside the first 20 lines, and the code honours it — `reducedMotion:
+"reduce"` on every `newContext` AND re-stated on the page before every `goto`.
+check-theme-selectors.mjs is a script, not a spec, and carries no declaration by design.
+
+------------------------------------------------------------------------------
+8 · WIRING GAPS STANDING IN THE TREE (chair action — not executor files)
+------------------------------------------------------------------------------
+
+Named because the tree as it stands has them, not because the executors failed to raise them;
+their wiring_requests are not visible from here. Each is CONFIRMED by running or reading.
+
+W-1  GATE 1.1 IS UNWIRED.  `scripts/check-theme-selectors.mjs` appears in no package.json
+     script and in no ci.yml step (grepped both). Nothing runs the census. This wave's whole
+     thesis is a ruling that landed without its enforcing config in the same commit — the
+     census must land with its runner or W1 re-commits the defect it cures. Two steps needed:
+     the src arm and the `--dist` arm (the latter after a build, in a job that has one).
+
+W-2  GATE 1.2 IS OWNED BY THE WRONG CONFIG.  `theme-quadrants.spec.ts` is not in
+     playwright.config.ts's OTHER_CONFIGS list and not in any project of
+     playwright-throttle.config.ts, so the DEFAULT dev-server suite sweeps it:
+       $ npx playwright test --config playwright.config.ts --list | grep -c theme-quadrants
+       28
+     Measured, not assumed: it PASSES against a dev server (28/28 on :4240), so this does not
+     red CI — it asserts against the wrong artifact. The acceptance clause says the built
+     dist. Registration takes three files, none of them an executor's: OTHER_CONFIGS + the
+     webkit project's `testIgnore` in playwright.config.ts, two projects in
+     playwright-throttle.config.ts, and matching rows in `scripts/check-pw-projects.mjs`'s
+     DECLARED MATRIX (check 1 reds on an undeclared project).
+
+W-3  `.gitignore` HAS NO `dist-quadrants/`.  It carries `web/frontend/dist/` and
+     `web/frontend/dist-throttle/` and nothing else. If the wiring gives Gate 1.2 its own
+     outDir, the ignore lands with it. Cheaper alternative: register the two projects on the
+     EXISTING `dist-throttle` build at :4188 — one preview, no new build, no ignore row.
+
+------------------------------------------------------------------------------
+9 · ONE SCRIPT NIT (low, fails closed)
+------------------------------------------------------------------------------
+
+`check-theme-selectors.mjs:284` — `path.join(ROOT, distDir, "assets")`. An ABSOLUTE `--dist`
+argument is concatenated onto ROOT rather than resolved, so the probe looks at
+`<ROOT>/private/tmp/…/dist-bornred/assets` while the thrown message names the caller's
+`<abs>/assets/`, which does exist. The arm still exits 2 — it refuses, never greens — so
+there is no false-green path; the message is what misleads. `path.resolve(ROOT, distDir)`
+closes it. Only relative forms are documented, and the wired usage will be relative.
+
+==============================================================================
+FINDINGS: three wiring gaps (§8, chair-side, high/medium/low) and one low script nit (§9).
+Nothing in either executor's own files is defective. Both gates reproduce born-RED at the
+uncured tree and green at the cured one, on a dist I built, in both engines.

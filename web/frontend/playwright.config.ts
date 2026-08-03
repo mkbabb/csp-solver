@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 
-// Five specs run under their own configs, NOT this default (dev-server) suite:
+// Six specs run under their own configs, NOT this default (dev-server) suite:
 //  · visual-golden — committed pixel goldens are per-OS; sweeping them here would red a
 //    linux seal run against darwin baselines (playwright-golden.config.ts).
 //  · throttled-void — the F3 flake: the lazy Futoshiki chunk is a per-module ESM waterfall
@@ -12,6 +12,8 @@ import { defineConfig } from "@playwright/test";
 //    defects it guards are WebKit's own. Same bundled-preview config.
 //  · theme-bake-freshness — P1-W4 G4.5: also asserts over the BAKED pose bitmaps, in both
 //    engines, so it rides the same bundled-preview config against the artifact that deploys.
+//  · theme-quadrants — T7-W1 G1.2: the four-quadrant ink identity asserts over the SHIPPED
+//    stylesheet's selectors, so it rides the bundled-preview config, both engines.
 //
 // Held at file scope because a PROJECT's `testIgnore` REPLACES the top-level one rather than
 // merging with it — the webkit project below must carry these five itself or it re-runs the
@@ -22,6 +24,7 @@ const OTHER_CONFIGS = [
   /filter-census\.spec\.ts$/,
   /wordmark-integrity\.spec\.ts$/,
   /theme-bake-freshness\.spec\.ts$/,
+  /theme-quadrants\.spec\.ts$/,
 ];
 
 export default defineConfig({

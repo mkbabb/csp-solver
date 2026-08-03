@@ -1,0 +1,53 @@
+T7-W1 1.1 — GATE 1.1, THE GREEN CONDITION (SCRATCH CURE)
+========================================================
+banked      2026-08-03
+SHA         cbf2ab49
+tree        a scratch COPY of web/frontend/src with W1's cure applied — the repo's
+            CageOverlay.vue and ThermoTube.vue are untouched by this executor and stay so
+cure        both files: the @media (prefers-color-scheme: dark) block and the four
+            :root[data-theme=...] rules deleted, replaced by :root.dark rules; the unprefixed
+            rule carries light
+command     node scripts/check-theme-selectors.mjs --self-test
+exit        0
+
+WHAT THIS PROVES
+  The gate is GREENABLE by the cure the wave prescribes, and greenable with the ALLOWLIST still
+  EMPTY: 8 attribute sites and 2 media sites go to 0/0. It is not a gate the estate has to
+  argue its way past — it is a gate the fix satisfies. The eleven fixture controls answer
+  identically on the cured tree, so the green is not the checks going quiet.
+
+--------------------------------------------------------------------------------
+$ node scripts/check-theme-selectors.mjs --self-test    # scratch tree, cure applied
+THEME-SELECTOR CENSUS — 55 style files, 0 data-attribute selector sites over 0 attribute(s), 0 prefers-color-scheme site(s), 0 allowlisted
+  ✓ 1 UNWRITTEN ATTRIBUTES
+  ✓ 2 UNHONORED MEDIA
+  ✓ 3 ALLOWLIST CLOSED
+
+SELF-TEST — each check against fixture trees:
+  [1 UNWRITTEN ATTRIBUTES] the wave's exact shape — a [data-theme] rule with a class-only writer
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] the only mention of the writer is inside a comment
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] positive control — a real setAttribute writer lands
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — vueuse writes through `attribute:`, no setAttribute in sight
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — Vue's own scope id is not an app attribute
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — the cured, class-keyed block
+      → GREEN (want GREEN)
+  [2 UNHONORED MEDIA] a prefers-color-scheme block with nothing said about it
+      → RED (want RED)
+  [2 UNHONORED MEDIA] positive control — allowlisted with a reason
+      → GREEN (want GREEN)
+  [3 ALLOWLIST CLOSED] a stale entry — the selector it excuses is gone
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] the excused attribute gained a writer — the excuse outlived its reason
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] an entry whose reason is a shrug
+      → RED (want RED)
+
+OK — every data-attribute selector has a runtime writer, every prefers-color-scheme block is allowlisted with a reason, and the table is closed.
+
+$ echo $?
+0

@@ -177,25 +177,15 @@ const rendered = computed<CageRender[]>(() => {
   paint-order: stroke;
 }
 
-@media (prefers-color-scheme: dark) {
-  .cage-boundary {
-    stroke: var(--cage-ink, rgba(198, 204, 214, 0.42));
-  }
-  .cage-label {
-    fill: var(--cage-ink-strong, rgba(214, 220, 230, 0.78));
-  }
-}
-
-:root[data-theme="light"] .cage-boundary {
-  stroke: var(--cage-ink, rgba(60, 64, 72, 0.5));
-}
-:root[data-theme="light"] .cage-label {
-  fill: var(--cage-ink-strong, rgba(52, 56, 64, 0.72));
-}
-:root[data-theme="dark"] .cage-boundary {
+/* Dark keys off the class `useTheme` actually writes (`useDark({selector:"html",
+   attribute:"class", valueDark:"dark"})`) — the same `.dark` ancestor every other surface in
+   the estate tracks. The blocks that stood here keyed off `@media (prefers-color-scheme)` and
+   `:root[data-theme=…]`: the first disagrees with the toggle in two of the four OS×app
+   quadrants, the second never matched at all — nothing writes `data-theme` (T7-W1). */
+:root.dark .cage-boundary {
   stroke: var(--cage-ink, rgba(198, 204, 214, 0.42));
 }
-:root[data-theme="dark"] .cage-label {
+:root.dark .cage-label {
   fill: var(--cage-ink-strong, rgba(214, 220, 230, 0.78));
 }
 </style>

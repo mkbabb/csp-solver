@@ -707,6 +707,20 @@ jobs:
             - name: swallow census (no statement-free catch bodies, self-tested)
               working-directory: web/frontend
               run: npm run lint:catch
+            # T7-W1 gate 1.1 — the never-written-selector census. `CageOverlay.vue` and
+            # `ThermoTube.vue` carried `:root[data-theme=…]` rules for a whole campaign while
+            # `useTheme.ts` wrote `class="dark"`: eight rules that could never match, shipped
+            # in the built CSS, and not one gate in the estate read the surface — knip resolves
+            # modules, not selectors. Every `[data-…]` selector in src must have a runtime
+            # writer, every `prefers-color-scheme` block must be allowlisted with a reason, and
+            # the table is closed both ways (a stale entry, and an entry whose attribute has
+            # SINCE gained a writer, both red). Same species as the gates above it — static,
+            # zero-dependency, browser-free. Born RED at cbf2ab49 on ten sites
+            # (evidence/w1/gate1.1-born-red.txt); greenable by the cure with the allowlist
+            # still EMPTY (evidence/w1/gate1.1-green-condition.txt).
+            - name: theme-selector census (no never-written selectors, self-tested)
+              working-directory: web/frontend
+              run: npm run lint:theme-selectors
             # T5-W1 row 1.11 (audit C5 + J3) support floor. Same species as the four
             # gates above it — static, zero-dependency, browser-free — and it needs
             # this job's `npm ci`: check 2 reads @tailwindcss/node's Lightning CSS
@@ -1087,6 +1101,16 @@ jobs:
             - name: "Prod-shake proof (dev tuner absent from the bundle)"
               working-directory: web/frontend
               run: npm run test:prod-shake -- dist-throttle
+            # T7-W1 gate 1.1, the BUILT-CSS arm. The src census (the static-lint lane) can
+            # read green while a dead selector still ships — a stale chunk, a vendored
+            # stylesheet, or an unrebuilt dist all land only here, and W1's acceptance is
+            # written about the BUILT CSS. Reuses dist-throttle/, the production build the
+            # throttle gate just produced, per prod-shake's idiom above; the arm REFUSES
+            # (exit 2) rather than greening when the dist is absent. Born RED at cbf2ab49 on
+            # the two chunks that carry the dead blocks (evidence/w1/gate1.1-dist-arm.txt).
+            - name: "theme-selector census (built CSS: no dead selector survives the build)"
+              working-directory: web/frontend
+              run: npm run lint:theme-selectors -- --dist dist-throttle
             - name: Upload Playwright HTML report (failure only)
               if: failure()
               uses: actions/upload-artifact@v4

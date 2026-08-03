@@ -156,6 +156,19 @@ export default defineConfig({
       retries: 0,
       use: { browserName },
     })),
+    // T7-W1 G1.2 — four-quadrant ink IDENTITY over killer/kenken cage furniture, thermo
+    // tubes and the three poster cards. Built dist on purpose: the defect is a shipped
+    // stylesheet's selector, and a dev-server read asserts over an artifact nobody deploys.
+    // BOTH engines — the OS side is `emulateMedia({colorScheme})` and each engine resolves
+    // its own computed paint (Chromium returns `color(srgb …)` for color-mix where WebKit
+    // returns `rgba()`; the spec's resolver reads both). retries:0 — the assertion is a
+    // computed-style read, deterministic, and a retried colour read is a colour read that lies.
+    ...(["chromium", "webkit"] as const).map((browserName) => ({
+      name: `theme-quadrants-${browserName}`,
+      testMatch: /theme-quadrants\.spec\.ts$/,
+      retries: 0,
+      use: { browserName },
+    })),
   ],
   use: {
     baseURL: externalBase || `http://localhost:${PREVIEW_PORT}`,

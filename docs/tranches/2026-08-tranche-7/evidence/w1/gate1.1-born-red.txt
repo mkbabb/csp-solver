@@ -1,0 +1,106 @@
+T7-W1 1.1 — GATE 1.1, THE NEVER-WRITTEN-SELECTOR CENSUS, BORN RED
+=================================================================
+banked      2026-08-03
+SHA         cbf2ab49  (T7-W0 sealed: the record heals — §1 empties to terminal, doc truth 13->22)
+script      web/frontend/scripts/check-theme-selectors.mjs  (new, this wave)
+command     node scripts/check-theme-selectors.mjs --self-test   (cwd web/frontend)
+exit        1
+host        darwin 26.4.1, node v26.0.0
+
+WHAT THIS PROVES
+  Nothing in the estate has ever written `data-theme`. Eight rules key off it anyway, and two
+  more key off the OS media query the toggle can contradict — the ruling landed, its enforcing
+  writer never did, and no gate in the estate read this surface. The census reds on all ten
+  sites, at the file:line the wave record cites (CageOverlay 180 / 189-200, ThermoTube 127 /
+  136-147).
+
+  GROUND TRUTH, verified independently before the script existed:
+    grep -rn "data-theme" src/          -> 8 hits, every one a CSS selector, zero writers
+    grep -rn "prefers-color-scheme" src -> 2 hits, both @media blocks in the same two files
+    src/composables/useTheme.ts:10-13   -> useDark({ selector: "html", attribute: "class",
+                                            valueDark: "dark", valueLight: "" })
+  The script's own writer census agrees — "writers for `data-theme`: NONE".
+
+  ELEVEN FIXTURE CONTROLS, all answering as required — five negative (the gate can fail for the
+  defect it names, including the wave's exact shape and a writer that exists only in a comment)
+  and six positive (it does not red on a healthy tree: a real setAttribute writer, a vueuse
+  `attribute:` writer, Vue's own `data-v-` scope id, the cured class-keyed block, and an
+  allowlist entry with a reason). A gate that cannot be shown failing is not a gate; one that
+  reds on everything is not one either.
+
+GREEN CONDITION — PROVED, see gate1.1-green-condition.txt
+  W1's cure deletes both style blocks in favour of `:root.dark` and the unprefixed rule. Applied
+  to a scratch copy of src the census exits 0 at 0 sites, with the ALLOWLIST still EMPTY — the
+  selectors are removed, not excused.
+
+SISTER ARM — see gate1.1-dist-arm.txt
+  `--dist [dir]` carries the acceptance clause about the BUILT CSS, and refuses rather than
+  greens when the dist is absent.
+
+--------------------------------------------------------------------------------
+$ node scripts/check-theme-selectors.mjs --self-test
+THEME-SELECTOR CENSUS — 55 style files, 8 data-attribute selector sites over 1 attribute(s), 2 prefers-color-scheme site(s), 0 allowlisted
+  writers for `data-theme`: NONE
+  ✗ 1 UNWRITTEN ATTRIBUTES — 8
+  ✗ 2 UNHONORED MEDIA — 2
+  ✓ 3 ALLOWLIST CLOSED
+
+SELF-TEST — each check against fixture trees:
+  [1 UNWRITTEN ATTRIBUTES] the wave's exact shape — a [data-theme] rule with a class-only writer
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] the only mention of the writer is inside a comment
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] positive control — a real setAttribute writer lands
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — vueuse writes through `attribute:`, no setAttribute in sight
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — Vue's own scope id is not an app attribute
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — the cured, class-keyed block
+      → GREEN (want GREEN)
+  [2 UNHONORED MEDIA] a prefers-color-scheme block with nothing said about it
+      → RED (want RED)
+  [2 UNHONORED MEDIA] positive control — allowlisted with a reason
+      → GREEN (want GREEN)
+  [3 ALLOWLIST CLOSED] a stale entry — the selector it excuses is gone
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] the excused attribute gained a writer — the excuse outlived its reason
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] an entry whose reason is a shrug
+      → RED (want RED)
+
+10 failure(s):
+
+  • [1 UNWRITTEN ATTRIBUTES] src/games/shared/CageOverlay.vue:189:6  `[data-theme="light"] .cage-boundary {`
+    NOTHING in src writes `data-theme`. This rule can never match — it ships in the built CSS and paints nothing. Land the writer (setAttribute / dataset / vueuse `attribute:`), re-key the rule to what the app actually sets, or add an ALLOWLIST entry with the reason.
+
+  • [1 UNWRITTEN ATTRIBUTES] src/games/shared/CageOverlay.vue:192:6  `[data-theme="light"] .cage-label {`
+    NOTHING in src writes `data-theme`. This rule can never match — it ships in the built CSS and paints nothing. Land the writer (setAttribute / dataset / vueuse `attribute:`), re-key the rule to what the app actually sets, or add an ALLOWLIST entry with the reason.
+
+  • [1 UNWRITTEN ATTRIBUTES] src/games/shared/CageOverlay.vue:195:6  `[data-theme="dark"] .cage-boundary {`
+    NOTHING in src writes `data-theme`. This rule can never match — it ships in the built CSS and paints nothing. Land the writer (setAttribute / dataset / vueuse `attribute:`), re-key the rule to what the app actually sets, or add an ALLOWLIST entry with the reason.
+
+  • [1 UNWRITTEN ATTRIBUTES] src/games/shared/CageOverlay.vue:198:6  `[data-theme="dark"] .cage-label {`
+    NOTHING in src writes `data-theme`. This rule can never match — it ships in the built CSS and paints nothing. Land the writer (setAttribute / dataset / vueuse `attribute:`), re-key the rule to what the app actually sets, or add an ALLOWLIST entry with the reason.
+
+  • [1 UNWRITTEN ATTRIBUTES] src/games/thermo/ThermoTube.vue:136:6  `[data-theme="light"] .thermo-tube-stroke {`
+    NOTHING in src writes `data-theme`. This rule can never match — it ships in the built CSS and paints nothing. Land the writer (setAttribute / dataset / vueuse `attribute:`), re-key the rule to what the app actually sets, or add an ALLOWLIST entry with the reason.
+
+  • [1 UNWRITTEN ATTRIBUTES] src/games/thermo/ThermoTube.vue:139:6  `[data-theme="light"] .thermo-bulb {`
+    NOTHING in src writes `data-theme`. This rule can never match — it ships in the built CSS and paints nothing. Land the writer (setAttribute / dataset / vueuse `attribute:`), re-key the rule to what the app actually sets, or add an ALLOWLIST entry with the reason.
+
+  • [1 UNWRITTEN ATTRIBUTES] src/games/thermo/ThermoTube.vue:142:6  `[data-theme="dark"] .thermo-tube-stroke {`
+    NOTHING in src writes `data-theme`. This rule can never match — it ships in the built CSS and paints nothing. Land the writer (setAttribute / dataset / vueuse `attribute:`), re-key the rule to what the app actually sets, or add an ALLOWLIST entry with the reason.
+
+  • [1 UNWRITTEN ATTRIBUTES] src/games/thermo/ThermoTube.vue:145:6  `[data-theme="dark"] .thermo-bulb {`
+    NOTHING in src writes `data-theme`. This rule can never match — it ships in the built CSS and paints nothing. Land the writer (setAttribute / dataset / vueuse `attribute:`), re-key the rule to what the app actually sets, or add an ALLOWLIST entry with the reason.
+
+  • [2 UNHONORED MEDIA] src/games/shared/CageOverlay.vue:180:1  `@media (prefers-color-scheme: dark) {`
+    The app's theme state is a class the user can override, so this block disagrees with the toggle in two of the four OS×app quadrants and there is no attribute to write that would reconcile them. Re-key it to the class, or allowlist it with the reason the OS preference — not the toggle — rules this surface.
+
+  • [2 UNHONORED MEDIA] src/games/thermo/ThermoTube.vue:127:1  `@media (prefers-color-scheme: dark) {`
+    The app's theme state is a class the user can override, so this block disagrees with the toggle in two of the four OS×app quadrants and there is no attribute to write that would reconcile them. Re-key it to the class, or allowlist it with the reason the OS preference — not the toggle — rules this surface.
+
+
+$ echo $?
+1
