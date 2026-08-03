@@ -153,7 +153,7 @@ watch(
 // document.fonts.ready before the first bake, so the page face is in before the wordmark
 // bakes.
 const logoSvgRef = ref<SVGSVGElement | null>(null);
-const { width: logoW, height: logoH } = useElementSize(logoSvgRef);
+const { height: logoH } = useElementSize(logoSvgRef);
 
 /**
  * BC6-G1 — THE CAPTURE KEY LATCHES; IT DOES NOT ROUND EVERY OBSERVATION.
@@ -192,8 +192,18 @@ function latchWholePx(src: Readonly<Ref<number>>): Ref<number> {
   });
   return held;
 }
-const captureW = latchWholePx(logoW);
 const captureH = latchWholePx(logoH);
+// T6.2 — the capture WIDTH is DERIVED, not observed. `width: auto` off the height ladder
+// means the box's width IS `height × vbWidth/60`; reading it back through useElementSize
+// was a second async observation of the same fact, and it arrives a ResizeObserver tick
+// AFTER a re-measured `vbWidth` re-keys the bake — so every post-font correction and every
+// game swap baked TWICE, and the first bake (new viewBox, stale width) was rastered at the
+// wrong scale and always discarded. Under contention the golden captured that intermediate
+// bake 17 runs in 20. Deriving makes the re-key atomic with the viewBox: one observation
+// (the latched height), one bake per geometry change, no window to race. The width half of
+// BC6-G1's latch is obsolete by construction — an integer `vbWidth` times a latched height
+// cannot wobble; the height half keeps its measured rationale above.
+const captureW = computed(() => (captureH.value * vbWidth.value) / 60);
 
 const FONT_FACE = `@font-face{font-family:'FrauncesBake';font-style:normal;font-weight:100 900;src:url('${frauncesInline}') format('woff2');}`;
 
@@ -240,7 +250,13 @@ const logoRaster = useRasterStack(() => ({
 // here. The urls are RETAINED while the handle's `urls` is null (a re-bake in flight) so the
 // wordmark swaps atomically: the old label/ink holds until the new poses land, then one
 // assignment. The library owns every handle's lifetime; this surface revokes nothing.
-const logoUrls = retainedPoseUrls(logoRaster);
+// T6.2 — the reset key is the logo's geometry, the grid's own discipline. A label swap or
+// the post-font re-measure changes `vbWidth`, and retained poses baked at the OLD width
+// stretch into the new viewBox (`preserveAspectRatio="none"`) until the re-bake lands —
+// a fringed wordmark, wider the slower the fonts. Dropping them takes the live-filter
+// fallback (pinned pose 0, correct geometry) across the window instead. A re-tint keeps
+// retaining: `isDark` stays out of the key.
+const logoUrls = retainedPoseUrls(logoRaster, () => `${label.value}-${vbWidth.value}`);
 const logoBaked = computed(
   () => logoUrls.value.length > 0 && logoUrls.value.length === logoPoseIds.value.length,
 );

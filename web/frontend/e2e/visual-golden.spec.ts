@@ -1,5 +1,5 @@
-import { test, expect, type Page, type Locator } from '@playwright/test';
-import { encodeSudoku } from './wire';
+import { test, expect, type Page, type Locator } from "@playwright/test";
+import { encodeSudoku } from "./wire";
 
 /**
  * T4-W2 — the visual golden system (the π/DELTA MINT).
@@ -35,10 +35,23 @@ import { encodeSudoku } from './wire';
 
 // DPR2 + PRM travel WITH the spec (redundant with the config's `use`, but the spec
 // carries its own capture contract so it's correct under any runner).
+//
+// T6.2 — `reducedMotion` here and in the config is VOID at @playwright/test 1.61.1:
+// the runner's fixture plumbing silently drops it (measured: `matchMedia` reads false
+// in-page under both `use` routes, while the same option through raw
+// `browser.newContext()` reads true; viewport and deviceScaleFactor apply fine either
+// way). Every golden ever minted was captured with the boil beat RUNNING — the
+// committed logo baseline embedded "pose 1, ~one beat after settle", and worker
+// contention skewing that phase is the whole logo-light flake family, including
+// T4-P1 Lane D's "6/6 deterministic red" that re-minted the baseline onto the moving
+// target. `loadSettled` now applies PRM through `page.emulateMedia()` — the route
+// that provably lands — and the baselines are re-minted at the frozen pose 0.
+// The `use` blocks stay: they are the declared contract, and they harden the day
+// the runner honours them again.
 test.use({
   viewport: { width: 1280, height: 800 },
   deviceScaleFactor: 2,
-  reducedMotion: 'reduce',
+  reducedMotion: "reduce",
 });
 
 // ── Tolerance floors ────────────────────────────────────────────────
@@ -59,7 +72,7 @@ const SOUL_FLOOR = { maxDiffPixelRatio: 0.017 } as const;
 // baseline family: GOLDEN_MAGNITUDE=1 asserts the two at ratio 0 so every capture reports
 // its measured ratio. It only ever TIGHTENS — report mode cannot manufacture a green — and
 // the floors CI enforces are untouched below. Driver: scripts/golden-magnitude.mjs.
-const REPORT_MAGNITUDE = process.env.GOLDEN_MAGNITUDE === '1';
+const REPORT_MAGNITUDE = process.env.GOLDEN_MAGNITUDE === "1";
 const MAGNITUDE_FLOOR = { maxDiffPixelRatio: 0 } as const;
 
 // ── Pinned board (deterministic board-region goldens) ───────────────
@@ -77,6 +90,9 @@ const PINNED_BOARD = encodeSudoku(3, PINNED_GIVENS, 81);
 
 // ── Settle helper ───────────────────────────────────────────────────
 async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) {
+  // PRM through the route that provably lands (see the test.use note above) — BEFORE
+  // goto, so the beat driver's self-guard reads true from the first module evaluation.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   if (dark) {
     // Boot straight into dark mode via the persisted color-scheme (vueuse `useDark`'s
     // namespaced storage key, T4-W10) — so the moon rest pose renders from FIRST paint with no
@@ -84,34 +100,44 @@ async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) 
     // a borderline settle that flaked the ≤0.017 soul floor across runs (the exact
     // flaky-gate class this wave prunes). The rest content is deterministic either way
     // (twinkles are TWINKLE_BY_FRAME[0], frozen under PRM — no per-mount randomness).
-    await page.addInitScript(() => localStorage.setItem('sudoku-color-scheme', 'dark'));
+    await page.addInitScript(() => localStorage.setItem("sudoku-color-scheme", "dark"));
   }
-  await page.goto(pinBoard ? `./?board=${PINNED_BOARD}` : './');
-  await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+  await page.goto(pinBoard ? `./?board=${PINNED_BOARD}` : "./");
+  await page.waitForSelector("svg.handwritten-logo", { timeout: 15000 });
   // The `.is-active` handoff, baked-aware: steady state is the bitmap pose stack —
   // the filtered layers stay mounted as the during-bake fallback but go display:none
   // (baked-hidden) once the bake lands, so the pixel-truth settle is the ACTIVE BITMAP.
   // A golden captured mid-bake (fallback filter) would diverge from the shipped steady
   // state; if the bake ever breaks, this times out — the gate biting, not a flake.
-  await page.waitForSelector('image.boil-frame-bitmap.is-active', { timeout: 15000 });
+  await page.waitForSelector("image.boil-frame-bitmap.is-active", { timeout: 15000 });
   await expect
-    .poll(() => page.locator('image.boil-frame-bitmap.is-active').count(), { timeout: 15000 })
+    .poll(() => page.locator("image.boil-frame-bitmap.is-active").count(), {
+      timeout: 15000,
+    })
+    .toBe(1);
+  // T6.2 — the WORDMARK settles by the same law. The grid term above never covered the
+  // logo's own bake, so a capture racing it could land on the live-filter fallback and
+  // red the logo crops under worker contention. Exactly one baked pose is active at rest.
+  await expect
+    .poll(() => page.locator("image.logo-pose-bmp.is-active").count(), {
+      timeout: 15000,
+    })
     .toBe(1);
   if (dark) {
-    await expect(page.locator('html')).toHaveClass(/dark/, { timeout: 5000 });
-    await expect(page.locator('.toggle-rest.rest-moon.is-active')).toHaveCount(1);
-    await expect(page.locator('button.sun-moon-toggle.is-turning')).toHaveCount(0);
+    await expect(page.locator("html")).toHaveClass(/dark/, { timeout: 5000 });
+    await expect(page.locator(".toggle-rest.rest-moon.is-active")).toHaveCount(1);
+    await expect(page.locator("button.sun-moon-toggle.is-turning")).toHaveCount(0);
     // Baked-aware (W1): the crest's steady state is the baked <img> pose — without this
     // the capture races the toggle's own bake and lands on the live-filter fallback,
     // shifting twinkle frames and crescent edges between runs.
-    await page.waitForSelector('.toggle-rest.rest-moon img.rest-pose.is-pose-active', {
+    await page.waitForSelector(".toggle-rest.rest-moon img.rest-pose.is-pose-active", {
       timeout: 15000,
     });
   }
   if (pinBoard) {
     // The pinned given renders its hand-drawn glyph — the board-region settle condition.
     await expect
-      .poll(() => page.locator('.sudoku-cell').first().locator('.glyph-svg').count(), {
+      .poll(() => page.locator(".sudoku-cell").first().locator(".glyph-svg").count(), {
         timeout: 15000,
       })
       .toBe(1);
@@ -125,7 +151,7 @@ async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) 
   // runs are unperturbed. GOLDEN_DELTA=black paints every asserted surface solid black
   // (the grain-static→solid-black regression); =invert flips the theme.
   const delta = process.env.GOLDEN_DELTA;
-  if (delta === 'black') {
+  if (delta === "black") {
     await page.addStyleTag({
       content: `
         svg.hand-drawn-grid *, svg.handwritten-logo *, button.sun-moon-toggle *,
@@ -136,13 +162,13 @@ async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) 
         .sudoku-cell, .board-wrapper { background: #000 !important; }
       `,
     });
-  } else if (delta === 'invert') {
-    await page.locator('button.sun-moon-toggle').dispatchEvent('click');
+  } else if (delta === "invert") {
+    await page.locator("button.sun-moon-toggle").dispatchEvent("click");
     // Settle on the theme swap completing (DELTA path only): html gains `dark` and the
     // crest's turn animation ends — the same conditions the dark boot above asserts,
     // never a fixed sleep.
-    await expect(page.locator('html')).toHaveClass(/dark/, { timeout: 5000 });
-    await expect(page.locator('button.sun-moon-toggle.is-turning')).toHaveCount(0, {
+    await expect(page.locator("html")).toHaveClass(/dark/, { timeout: 5000 });
+    await expect(page.locator("button.sun-moon-toggle.is-turning")).toHaveCount(0, {
       timeout: 5000,
     });
   }
@@ -152,7 +178,7 @@ async function loadSettled(page: Page, { pinBoard = false, dark = false } = {}) 
  *  the element's live bbox so it survives a layout shift (captures the same corner). */
 async function corner(el: Locator, w: number, h: number) {
   const bb = await el.boundingBox();
-  if (!bb) throw new Error('corner(): element has no bounding box');
+  if (!bb) throw new Error("corner(): element has no bounding box");
   return { x: bb.x, y: bb.y, width: w, height: h };
 }
 
@@ -162,8 +188,13 @@ async function corner(el: Locator, w: number, h: number) {
  *  tight floor; the disc/body/spiral rasterizes stably. Relative to the live bbox. */
 async function center(el: Locator, w: number, h: number) {
   const bb = await el.boundingBox();
-  if (!bb) throw new Error('center(): element has no bounding box');
-  return { x: bb.x + (bb.width - w) / 2, y: bb.y + (bb.height - h) / 2, width: w, height: h };
+  if (!bb) throw new Error("center(): element has no bounding box");
+  return {
+    x: bb.x + (bb.width - w) / 2,
+    y: bb.y + (bb.height - h) / 2,
+    width: w,
+    height: h,
+  };
 }
 
 // ── Goldens ─────────────────────────────────────────────────────────
@@ -181,12 +212,17 @@ async function center(el: Locator, w: number, h: number) {
 // the bake converges, keeps the soul bite.
 const LOGO_FLOOR = REPORT_MAGNITUDE
   ? MAGNITUDE_FLOOR
-  : process.platform === 'linux'
+  : process.platform === "linux"
     ? ({ maxDiffPixelRatio: 0.05 } as const)
     : SOUL_FLOOR;
-test('golden · logo wordmark (light) — W13 soul: baked logo pose stack', async ({ page }) => {
+test("golden · logo wordmark (light) — W13 soul: baked logo pose stack", async ({
+  page,
+}) => {
   await loadSettled(page);
-  await expect(page.locator('svg.handwritten-logo')).toHaveScreenshot('logo-light.png', LOGO_FLOOR);
+  await expect(page.locator("svg.handwritten-logo")).toHaveScreenshot(
+    "logo-light.png",
+    LOGO_FLOOR,
+  );
 });
 
 // The toggle crest — the celestial rest pose stack (W13 §2), captured in DARK mode: the
@@ -207,10 +243,12 @@ test('golden · logo wordmark (light) — W13 soul: baked logo pose stack', asyn
 // loss, pose drift all move far past it); darwin keeps the soul bite.
 const CREST_FLOOR = REPORT_MAGNITUDE
   ? MAGNITUDE_FLOOR
-  : process.platform === 'linux'
+  : process.platform === "linux"
     ? ({ maxDiffPixelRatio: 0.05 } as const)
     : SOUL_FLOOR;
-test('golden · toggle crest (dark, moon) — W13 soul: celestial rest pose', async ({ page }) => {
+test("golden · toggle crest (dark, moon) — W13 soul: celestial rest pose", async ({
+  page,
+}) => {
   await loadSettled(page, { dark: true });
   // CH-42 BRANCH C (the banked crop-tighten cure, executed at WGATE): the 110×110
   // centered crop claimed to exclude the twinkle cluster and did not — the ratio-0 diff
@@ -222,25 +260,31 @@ test('golden · toggle crest (dark, moon) — W13 soul: celestial rest pose', as
   // crescent rim, puts both stars out of frame, and is disjoint from their y-range
   // with 10px to spare. Same golden name — the geometry change and its re-mint are one
   // reviewed act; the diff geography is banked at evidence/wgate/ch42-branch-c/.
-  const clip = await center(page.locator('button.sun-moon-toggle'), 72, 72);
+  const clip = await center(page.locator("button.sun-moon-toggle"), 72, 72);
   clip.x -= 12;
   clip.y += 16;
-  await expect(page).toHaveScreenshot('toggle-crest-dark.png', { ...CREST_FLOOR, clip });
+  await expect(page).toHaveScreenshot("toggle-crest-dark.png", {
+    ...CREST_FLOOR,
+    clip,
+  });
 });
 
 // A single grid cell rendering the pinned given "5" — the hand-drawn glyph + cell grain.
-test('golden · single cell with given glyph (light)', async ({ page }) => {
+test("golden · single cell with given glyph (light)", async ({ page }) => {
   await loadSettled(page, { pinBoard: true });
-  await expect(page.locator('.sudoku-cell').first()).toHaveScreenshot('cell-light.png', FLOOR);
+  await expect(page.locator(".sudoku-cell").first()).toHaveScreenshot(
+    "cell-light.png",
+    FLOOR,
+  );
 });
 
 // The grid's top-left corner — frame join + first subgrid junction + grain-static baked
 // steady layer (W13 grain hoist). SOUL: the grain-static steady sibling is a baked
 // surface; a grain regression reds this crop. Clipped to a named 180×180 CSS corner.
-test('golden · grid top-left corner (light) — W13 soul: grain-static steady layer', async ({
+test("golden · grid top-left corner (light) — W13 soul: grain-static steady layer", async ({
   page,
 }) => {
   await loadSettled(page, { pinBoard: true });
-  const clip = await corner(page.locator('.board-wrapper'), 180, 180);
-  await expect(page).toHaveScreenshot('grid-corner-light.png', { ...SOUL_FLOOR, clip });
+  const clip = await corner(page.locator(".board-wrapper"), 180, 180);
+  await expect(page).toHaveScreenshot("grid-corner-light.png", { ...SOUL_FLOOR, clip });
 });
