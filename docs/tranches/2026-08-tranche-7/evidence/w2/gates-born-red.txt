@@ -1,0 +1,241 @@
+T7-W2 — GATES 2.1 / 2.2 / 2.3, BORN RED AT THE UNCURED TREE
+============================================================
+
+  SHA          cbf2ab49b4c468ac2535beb033bea1ebc726ee90 (master)
+  date         2026-08-03
+  spec         web/frontend/e2e/access.spec.ts (new; W2 owns it)
+  config       playwright.config.ts (default dev-server suite) — projects chromium + webkit
+  app          vite dev on :4237 (PLAYWRIGHT_BASE_URL), PRM frozen via
+               emulateMedia({reducedMotion:'reduce'}) before every goto
+  runs         three identical sweeps, 7.5–8.8 s each, 8 unexpected / 4 expected / 0 flaky.
+               Nothing timed out and nothing was refused a connection — every red below
+               is an assertion carrying its own figures, not a contended run.
+
+  TREE STATE AT THE SWEEPS: `src/` untouched at this SHA — `git status` carried only
+  untracked sibling-wave files (w1 evidence, theme-quadrants.spec.ts,
+  check-theme-selectors.mjs). No A1/A2/A3 cure had landed, and none has since. Two sibling
+  edits appeared in the working tree AFTER the third sweep (`CageOverlay.vue`,
+  `ThermoTube.vue` — killer cages and thermo bulbs); neither touches the controls card, the
+  drawer, the roster or a colour token, so nothing below is downstream of them.
+  What follows is the defect, measured.
+
+  INSTRUMENT: painted occlusion, the audit's 25-point idiom — a 5×5 grid over the control's
+  border box, each point put to `document.elementFromPoint`; a point is BURIED when what
+  answers is neither the control nor a descendant of it. Every control below is visible,
+  boxed, focusable, not `inert` and not `aria-hidden`. Something else paints over it.
+
+
+────────────────────────────────────────────────────────────────────────────────
+GATE 2.1 — focus-occlusion census, desktop 1440×900          RED, both engines
+────────────────────────────────────────────────────────────────────────────────
+
+Two rows, each red in chromium AND webkit:
+
+  · "no control in the controls card focuses into a full burial"
+  · "the marks-mode \"Normal\" button is reachable, found by identity"
+
+RED ROSTER (the floor is 24 of 25 sample points — no fully-buried control):
+
+  25/25 (100%)  Normal  [.ctrl-btn]
+                ← div.action-verbs, button.icon-btn.group, span.icon-sublabel, svg, path
+
+THE FULL CENSUS, chromium (webkit identical to the point; only the blocker ORDER differs,
+which is `elementFromPoint` tie-breaking, not geometry):
+
+    0/25 (0%)  4×4 [.ctrl-btn]
+    0/25 (0%)  9×9 [.ctrl-btn]
+    0/25 (0%)  16×16 [.ctrl-btn]
+    0/25 (0%)  Easy [.ctrl-btn]
+    0/25 (0%)  Medium [.ctrl-btn]
+    0/25 (0%)  Hard [.ctrl-btn]
+    0/25 (0%)  Deal a new board [.icon-btn]
+  25/25 (100%) Normal [.ctrl-btn] ← svg, path, span.icon-sublabel, svg.sparkle-icon,
+                                    button.icon-btn.group, div.action-verbs
+  10/25 (40%)  Corner [.ctrl-btn] ← span.icon-sublabel, button.icon-btn.group, div.action-verbs
+    0/25 (0%)  Center [.ctrl-btn]
+    0/25 (0%)  Off [.ctrl-btn]        (candidates)
+    0/25 (0%)  On [.ctrl-btn]         (candidates)
+    0/25 (0%)  Off [.ctrl-btn]        (teacher's)
+    0/25 (0%)  Ask [.ctrl-btn]
+    0/25 (0%)  Live [.ctrl-btn]
+  15/25 (60%)  Play together on this board [.icon-btn] ← svg, span.icon-sublabel,
+                                    svg.sparkle-icon, button.icon-btn.group, div.action-verbs
+    0/25 (0%)  Clear the board [.icon-btn]
+    0/25 (0%)  Fill in every cell that has only one possible number [.icon-btn]
+    0/25 (0%)  Solve puzzle [.icon-btn]
+    0/25 (0%)  Share board link [.icon-btn]
+    0/25 (0%)  what the keys do [.info-btn]
+
+  n = 21 tabbables.
+
+  THE MECHANISM, measured with "Normal" focused (chromium, 1440×900):
+
+    .controls-card   scrollTop 0   scrollHeight 1116   clientHeight 640
+                     scroll-padding-bottom: auto            ← A1's cure lands here
+    Normal           top 751   bottom 789
+    .action-bar      top 744   height 65   (spans 744–809)
+
+  `scrollTop` stays 0 and the browser is not wrong: the button's box is ALREADY inside the
+  scrollport's client box, so nothing scrolls — the sticky bar just paints over it where it
+  sits. That is why the cure is `scroll-padding-bottom` on the scrollport (the bar's own
+  height) rather than anything about the scroll position.
+
+  The wave's three figures of record REPRODUCE EXACTLY: Normal 25/25, Corner 10/25 (40%),
+  invite 15/25 (60%). Corner and the invite verb are the SAME defect measured at the bar's
+  edges; they pass the floor and are annotated rather than gated, because a percentage gate
+  would need re-baselining on every change to the bar's height. A1's `scroll-padding-bottom`
+  clears the whole class at once.
+
+  IDENTITY, NOT ORDINAL: the "Normal" button is found as the `.ctrl-btn` reading "Normal"
+  inside the `.zone-row` whose `.zone-row-label` reads "marks". The attribution hover-card
+  injects three tabbables on the first Tab, so a fixed press count would be asserting over
+  whichever control happened to be nth today.
+
+
+────────────────────────────────────────────────────────────────────────────────
+GATE 2.2 — drawer-open inert census, 390×844                 RED, both engines
+────────────────────────────────────────────────────────────────────────────────
+
+  · "no covered control in the drawer subtree stays tabbable"
+
+Scope: rooted at `#controls-drawer` and `.play-controls` — the drawer, and the action row
+the drawer covers. Nothing wider. Floor: ≥99% occlusion, which at 25 sample points is
+exactly 25/25. Allowlisted: `.cell-native-input` (opacity:0 BY DESIGN — the sole entry
+surface on every pointer, T4-WM §1; deliberately invisible and deliberately tabbable, so
+occlusion is not its failure mode). The allowlist matched nothing under these roots.
+
+RED ROSTER — four controls, none of them `inert`, none `aria-hidden`, all four still in the
+tab order and in the AX tree while entirely hidden:
+
+  25/25 (100%)  Undo last move                        [.icon-btn]
+  25/25 (100%)  Redo move                             [.icon-btn]
+  25/25 (100%)  Reveal a hint in the selected cell    [.icon-btn]
+  25/25 (100%)  peek                                  [.icon-btn]
+
+  blocked by ← div.ctrl-options.options-row, button.ctrl-btn.rounded-md
+  (the drawer's own option row, exactly as the wave states)
+
+THE FULL CENSUS, chromium (webkit identical; blocker order differs on Redo/Hint only):
+
+    0/25 (0%)  controls [.drawer-tab]
+    0/25 (0%)  Size [.mobile-heading-btn]
+    0/25 (0%)  DifficultyEasy [.mobile-heading-btn]
+    0/25 (0%)  4×4 · 9×9 · 16×16 [.ctrl-btn]
+    0/25 (0%)  Deal a new board [.icon-btn]
+    0/25 (0%)  Normal · Corner · Center [.ctrl-btn]
+    0/25 (0%)  Off · On [.ctrl-btn]            (candidates)
+    0/25 (0%)  Off · Ask · Live [.ctrl-btn]    (teacher's)
+    5/25 (20%) Play together on this board [.icon-btn] ← button.icon-btn, div.action-verbs
+    0/25 (0%)  Clear the board · Fill · Solve · Share board link [.icon-btn]
+  25/25 (100%) Undo last move [.icon-btn]                     ← the drawer's option row
+  25/25 (100%) Redo move [.icon-btn]                          ← the drawer's option row
+  25/25 (100%) Reveal a hint in the selected cell [.icon-btn] ← the drawer's option row
+  25/25 (100%) peek [.icon-btn]                               ← the drawer's option row
+
+  n = 24 tabbables.
+
+  WHY THE SCOPE IS LOAD-BEARING, measured rather than argued: an UNSCOPED census at this
+  viewport also catches the attribution card's three links, each 25/25 under `.main-content`
+  (a separate defect — W1's). Those would keep this gate red through A2's own cure, at which
+  point it says nothing about A2. They sit outside both roots and are excluded by scope, not
+  by allowlist.
+
+  BOTH ENGINES RUN, and they agree: the four verbs are 25/25 in chromium and in webkit, and
+  none is `inert` in either. WebKit is where `inert` diverges, so A2's disposition needed the
+  two-engine reading — it has it.
+
+  CONTROL that survives the cure: the row asserts `.play-controls button` has count 4 — that
+  the verbs EXIST — rather than that they are in the census. After A2 they are inert, hence
+  out of the census by construction. A cure that deletes the play verbs still reds.
+
+  THE DRAWER IS CLOSED AT REST on the portrait dock (`html.drawer-closed`,
+  `.drawer-tab[aria-expanded=false]`, and the card `inert`), so the state under test is
+  entered deliberately: tap `.drawer-tab`, assert `aria-expanded=true`, settle the glide.
+
+
+────────────────────────────────────────────────────────────────────────────────
+GATE 2.3a — roster mutation announcement                     RED, both engines
+────────────────────────────────────────────────────────────────────────────────
+
+  · "a join and a leave each move a live region"   (two pages, one context, ?wire=local)
+
+BOTH ARMS RED in one run — the join assertion is SOFT so the leave arm still executes, and
+both are recorded rather than one hiding behind the other:
+
+  JOIN   roster 1 → 2, live regions unchanged
+  LEAVE  roster 2 → 1, live regions unchanged
+
+  live-region text, identical before the join, after the join and after the leave:
+
+    "a fresh 9×9 — naked single | board changed — ask againNot checking — the board changed
+     since the last check. Choose Ask again."
+
+  Those two regions are `.margin-note` and `.check-status`. Neither is about the room. The
+  roster itself carries no announcing semantics at all, probed at the same tree:
+
+    <ul class="players-roster">   role=null   aria-live=null   tabindex=null
+                                  aria-label=null   nearest aria-live ancestor: none
+
+  The one polite region that WOULD speak (`players-status`, "connecting…") is
+  `v-if="!session.live.value"` — it leaves the DOM the moment the room comes up, which is
+  the moment people start arriving.
+
+  CONTROL: the roster count is asserted 1 → 2 → 1 at each step, so the row cannot green on a
+  live region that moved for reasons of its own, and cannot red on a room that never formed.
+
+
+────────────────────────────────────────────────────────────────────────────────
+GATE 2.3b — contrast floor (A10)                             GREEN, both engines
+────────────────────────────────────────────────────────────────────────────────
+
+  · ".icon-sublabel and .ctrl-btn clear 4.5:1 (light)"   PASSED  chromium + webkit
+  · ".icon-sublabel and .ctrl-btn clear 4.5:1 (dark)"    PASSED  chromium + webkit
+
+  THIS ARM IS GREEN TODAY AND SAYS SO. It is a FLOOR ROW, not a defect row: it exists so a
+  future token nudge cannot cross 4.5 in silence. 0.16 of headroom is the whole margin.
+
+    light   worst 4.66:1 — "Deal" .icon-sublabel   rgb(115,115,115) on rgb(253,253,252)
+    dark    worst 7.68:1 — "Deal" .icon-sublabel   rgb(168,166,159) on rgb(19,18,17)
+    n = 20 painted samples per theme; both engines report the same numbers to the hundredth.
+
+  4.66:1 light reproduces the audit's figure exactly.
+
+  Both families are NORMAL text at every width they paint (sublabels 14.4–16.4px regular,
+  chips 20px regular — under 18.66px bold / 24px regular), so one 4.5 floor covers them.
+
+  THE RESOLVER is the only thing this row needed building: `color-mix(…, transparent)`
+  computes to `color(srgb r g b / a)`, and a naive `rgb()`-only parser reads that as black
+  and reports a fictional ratio. The parser takes `rgb()` / `rgba()` / `color(srgb …)` /
+  `#hex` / `transparent`, composites the backdrop bottom-up through every ancestor layer to
+  the first opaque one, then composites the text colour over it. At THIS tree both targets
+  happen to resolve to plain `rgb()` in both engines — the resolver is there for the tokens'
+  next move, which is what a floor row is for.
+
+  The theme is ASSERTED, not assumed: each row polls `html.dark` to the expected value
+  before measuring, because `useDark` reads `prefers-color-scheme` only while its storage
+  key is unset and a row that measured the wrong theme would be reporting the other row's
+  numbers.
+
+
+────────────────────────────────────────────────────────────────────────────────
+SUMMARY
+────────────────────────────────────────────────────────────────────────────────
+
+  gate    engine     verdict   what it holds
+  ─────   ────────   ───────   ──────────────────────────────────────────────
+  2.1     chromium   RED       Normal 25/25 buried under .action-verbs
+  2.1     webkit     RED       Normal 25/25 buried under .action-verbs
+  2.2     chromium   RED       4 play verbs 25/25, none inert
+  2.2     webkit     RED       4 play verbs 25/25, none inert
+  2.3a    chromium   RED       join and leave both silent
+  2.3a    webkit     RED       join and leave both silent
+  2.3b    chromium   GREEN     4.66:1 light / 7.68:1 dark — floor row, stated
+  2.3b    webkit     GREEN     4.66:1 light / 7.68:1 dark — floor row, stated
+
+  8 unexpected · 4 expected · 0 flaky, three sweeps over.
+
+  WIRING: none needed. `playwright.config.ts` has `testDir: "./e2e"` and the default
+  `testMatch`, so `access.spec.ts` is claimed by BOTH projects the moment it exists, and it
+  is in neither `testIgnore` list. `npm run test:e2e:projects` re-reads green at 24 specs /
+  408 resolved tests, "every spec in both engines except the 4 recorded holdouts";
+  `npm run test:e2e:retries` green. No `ci.yml` or `package.json` change is required.

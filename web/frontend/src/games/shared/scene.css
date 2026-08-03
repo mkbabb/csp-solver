@@ -137,6 +137,18 @@
 .controls-card {
   position: relative;
   z-index: 45;
+  /* T7-W2 A1 — FOCUS-SCROLL CLEARS THE BAR THAT STICKS TO THIS EDGE. `.action-bar` is
+     `position: sticky; bottom: 0` in both regimes where this card is a scrollport, and it
+     painted the marks-mode "Normal" out end to end (25/25 sample points) with `scrollTop` at 0
+     — the button's box was already inside the client box, so nothing scrolled and the bar just
+     sat on top of it. Shrinking the optimal viewing region by the bar's band is what lifts a
+     focused control clear.
+     THE VALUE IS MEASURED, NOT SPELLED: `GameControlPanel` publishes `--action-bar-h` on this
+     element from the bar's own border box plus this card's `padding-bottom` (86px at head =
+     ceil(65.16) + 20), republished whenever that box changes. Declared unscoped because it is inert
+     wherever the card doesn't scroll — the `<1024` landscape card is in flow, and a scrollport
+     that cannot scroll spends no padding. */
+  scroll-padding-bottom: var(--action-bar-h, 0px);
 }
 
 /* The fold's ribbon and the dock's handle berth carry NO box outside the portrait dock: they

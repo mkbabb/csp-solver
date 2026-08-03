@@ -40,6 +40,7 @@ export interface ControlSection {
 
 <script setup lang="ts">
 import { computed, nextTick, ref, onBeforeUnmount, useId } from "vue";
+import { useResizeObserver } from "@vueuse/core";
 import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
 import FillForcedIcon from "@pencil/chrome/icons/FillForcedIcon.vue";
 import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
@@ -61,7 +62,7 @@ import type { PencilMode } from "@games/shared/useUserMarks";
 import type { ErrorCheckMode } from "@games/shared/useAssists";
 import { useButtonAnimation } from "@games/shared/useButtonAnimation";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
-import { portraitDock } from "@games/shared/useControlsDrawer";
+import { portraitDock, useControlsDrawer } from "@games/shared/useControlsDrawer";
 import { leaveSession, session } from "@games/shared/useSession";
 
 // Underline boil: brief burst on selection change, then settle
@@ -342,6 +343,11 @@ const newGameId = useId();
 const pencilsId = useId();
 const teachersId = useId();
 const playersId = useId();
+// T7-W2 Q-4 — the well's DESCRIPTION, not a second name. The zone hint already says the one
+// thing the tag "players" cannot ("share this board and everyone writes on the same grid"), and
+// it said it to sighted eyes only. `aria-describedby` at a directly-referenced node reads it
+// whatever its hidden state (accname §4.1 step 2A), so the tape stays exactly the tape it is.
+const playersHintId = useId();
 // `pencils` holds two controls, so each row is its own `role="group"` named by that row's OWN
 // visible caption — otherwise assistive tech hears two unlabelled Off/On pairs inside one name
 // and cannot tell which is which. `teacher's` holds one, so the tape names it directly.
@@ -449,6 +455,52 @@ function onRedo() {
 function onHint() {
   emit("hint");
 }
+
+// ── T7-W2 A1 — THE SCROLLPORT CLEARS ITS OWN STICKY BAR ──────────────────────────────────
+// Tabbing into the card reached controls the sticky `.action-bar` painted over end to end (the
+// marks-mode "Normal", 25/25 sample points at 1440×900). Nothing scrolled and the browser was
+// not wrong: the button's box (751–789) is ALREADY inside the scrollport's client box
+// (189–829) — the bar (744–809) simply paints on top of it where it sits. `scroll-padding-bottom`
+// is the one property that models that: it shrinks the region focus-scroll aims at, so a control
+// under the bar gets lifted clear of it.
+//
+// THE NUMBER IS THE BAR'S OWN BOX, never a constant. Two terms, both measured:
+//   · the bar's BORDER-box height — `getBoundingClientRect`, not `contentRect`, because the bar
+//     carries `padding-block` and a content-box read is precisely the blindness that went stale
+//     on T6.2's deleted `--fold-bottom`;
+//   · the card's own `padding-bottom` — `bottom: 0` pins the stuck bar to the scrollport's
+//     PADDING edge, so that gap is part of the band the bar owns (ceil(65.16) + 20 = 86px at head).
+// Republished whenever the bar's box changes; the card is where it lands, since the card is the
+// scrollport (`scene.css` reads `--action-bar-h` there).
+const actionBarEl = ref<HTMLElement | null>(null);
+
+useResizeObserver(actionBarEl, () => {
+  const bar = actionBarEl.value;
+  const card = bar?.closest<HTMLElement>(".controls-card");
+  if (!bar || !card) return;
+  const pad = parseFloat(getComputedStyle(card).paddingBottom) || 0;
+  card.style.setProperty(
+    "--action-bar-h",
+    `${Math.ceil(bar.getBoundingClientRect().height + pad)}px`,
+  );
+});
+
+// ── T7-W2 A2 — THE COVERED RIBBON GOES INERT ─────────────────────────────────────────────
+// On the portrait dock the sheet rises OVER the fold's ribbon, and its own option row painted
+// all four play verbs out end to end (25/25 each, both engines) while every one of them stayed
+// in the tab order and in the AX tree. The estate already owns this mechanism — `GameCard.vue`'s
+// `:inert="!isActive || undefined"` freezes the gallery's flanks — so the ribbon borrows it
+// verbatim, `undefined` and all, and the attribute is ABSENT at rest rather than present-and-
+// false (measured on both engines: closed `inert` attr false, open true).
+//
+// The gate is `drawerInert`, the drawer's own parked flag, rather than `drawerOpen`: the sheet
+// covers the ribbon through the OPENING and CLOSING glides too, and a half-covered control is
+// the same defect measured mid-flight. Dock-only — in the row regime these verbs sit inside the
+// card the drawer carries, where an inert row would be a coarse iPad's undo button, deleted.
+// The drawer's tongue is a SIBLING in the ribbon, never a child of this row, so closing the
+// sheet still lands focus on a live control.
+const { drawerInert } = useControlsDrawer();
+const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
 </script>
 
 <template>
@@ -765,9 +817,14 @@ function onHint() {
       :pose="0"
       role="group"
       :aria-labelledby="playersId"
+      :aria-describedby="playersHintId"
     >
       <SheetWashiLabel :id="playersId" text="players" :seed="67" anchor="tag" />
+      <!-- T7-W2 Q-4 (deferred from T6) — the hint is the well's DESCRIPTION now. One string,
+           still the same tape: the tag names the compartment, this says what sharing it does,
+           and a reader gets both instead of the name alone. -->
       <SheetWashiLabel
+        :id="playersHintId"
         class="zone-hint"
         text="share this board and everyone writes on the same grid"
         :seed="61"
@@ -797,8 +854,31 @@ function onHint() {
         </p>
         <template v-else>
           <!-- The roster scrolls rather than stretches: sixteen rows must not make the card
-               sixteen rows taller, and the card is already the page's one scrollport. -->
-          <ul class="players-roster">
+               sixteen rows taller, and the card is already the page's one scrollport.
+
+               T7-W2 A3 — IT SPEAKS. A joiner took the roster 1→2 and a leaver 2→1 with nothing
+               announced anywhere: no `aria-live`, no `role`, no live-region ancestor, and the
+               one polite region that would have spoken (`players-status`) is `v-if`'d OUT the
+               moment the room comes up — the live region left the DOM exactly when people
+               started arriving. So the announcing region is the ROSTER itself, which is the
+               node that actually mutates and the node that lives as long as the room does.
+               `role="log"` because a log is precisely "entries added over time" and reads its
+               additions rather than re-reciting the list; `polite` because arriving is news, not
+               an interruption. Its `aria-label` is its own, not the well's — the well is named
+               "players" and a reader hearing that twice learns nothing the second time.
+
+               T7-W2 A4 — AND IT IS REACHABLE. `max-height` + `overflow-y: auto` past ~5 rows
+               made the remainder mouse-and-touch-scroll only (WCAG 2.1.1) against an owner's
+               order of 16+ players. `tabindex="0"` makes the scrollport a stop the arrow keys
+               can scroll, which is the pairing `role="log"` wants anyway: a log you can hear
+               added to but never read back is half a cure. -->
+          <ul
+            class="players-roster"
+            role="log"
+            aria-live="polite"
+            aria-label="who's on this board"
+            tabindex="0"
+          >
             <li v-for="p in session.players.value" :key="p.id" class="player-row">
               <span class="player-swatch" :style="p.ink" aria-hidden="true"></span>
               <span class="player-name">{{ p.slug }}</span>
@@ -840,7 +920,9 @@ function onHint() {
          T6 mark 5: the row is a BAR now — it sticks to the bottom of the card's scrollport, so
          clear / fill / solve / share are reachable from anywhere in a 1039px-tall card, and the
          `i` at its trailing edge is the only thing between the reader and the shortcuts. -->
-    <div class="action-bar">
+    <!-- T7-W2 A1 — the bar publishes its own height to the scrollport it sticks to (see the
+         `--action-bar-h` publisher above); `scene.css` spends it as `scroll-padding-bottom`. -->
+    <div ref="actionBarEl" class="action-bar">
       <div class="action-verbs">
         <button
           @click="onClear()"
@@ -956,8 +1038,10 @@ function onHint() {
          six unit rows red). `:disabled` outside the dock keeps the shipped seating byte-exact
          on the desk and on landscape — a disabled Teleport renders in place, which is a no-op.
     -->
+    <!-- T7-W2 A2 — `inert` while the risen sheet covers this row (`ribbonCovered` above): a
+         control painted out end to end must not stay in the tab order or in the AX tree. -->
     <Teleport defer to="#fold-tools" :disabled="!portraitDock">
-      <div class="play-controls">
+      <div class="play-controls" :inert="ribbonCovered || undefined">
         <button
           @click="onUndo()"
           :disabled="loading"

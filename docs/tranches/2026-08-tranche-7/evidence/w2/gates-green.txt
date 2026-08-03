@@ -1,0 +1,247 @@
+T7-W2 — GATES 2.1 / 2.2 / 2.3 GREEN AFTER THE CURES A1 / A2 / A3 / A4 (+ Q-4)
+=============================================================================
+
+  date         2026-08-03
+  base SHA     af508288 (master at the sweeps; the born-RED sweeps ran at cbf2ab49 — no
+               commit between them touches the controls card, the drawer or the roster)
+  cures        working tree, uncommitted (the chair commits):
+                 web/frontend/src/games/shared/GameControlPanel.vue
+                 web/frontend/src/games/shared/scene.css
+  spec         web/frontend/e2e/access.spec.ts — UNTOUCHED by this executor. Not one
+               assertion, threshold, allowlist or scope was moved to make a row green.
+  config       playwright.config.ts (default dev-server suite) — projects chromium + webkit
+  app          vite dev on :4237 (PLAYWRIGHT_BASE_URL), PRM frozen by the spec's own
+               emulateMedia({reducedMotion:'reduce'}) before every goto
+  result       12 / 12 PASSED, both engines, on every uncontended sweep
+
+  WHAT DID NOT MOVE, deliberately:
+    · `.players-leave`'s coarse rule (GameControlPanel.vue:1337-1342) — still `min-height`
+      only. That born-RED is W4's M1 cure and it is left standing.
+    · no colour token was nudged for A10. Gate 2.3b is a FLOOR row, green at head and green
+      here, at the same figures to the hundredth.
+
+
+────────────────────────────────────────────────────────────────────────────────
+THE CURES, as landed
+────────────────────────────────────────────────────────────────────────────────
+
+A1  scroll-padding-bottom on the scrollport             scene.css:151
+    `.controls-card { scroll-padding-bottom: var(--action-bar-h, 0px) }`, declared on the
+    unscoped rule — it is inert wherever the card doesn't scroll, so the `<1024` landscape
+    card (in flow, a ratified rung) spends nothing.
+    THE VALUE IS MEASURED, NOT SPELLED (GameControlPanel.vue:475-486): a `useResizeObserver`
+    on `.action-bar` publishes `--action-bar-h` onto the card from
+      the bar's BORDER box (`getBoundingClientRect`, never `contentRect` — the bar carries
+      `padding-block`, and a content-box read is exactly what went stale on T6.2's deleted
+      `--fold-bottom`)
+      + the card's own `padding-bottom` (`bottom: 0` pins the stuck bar to the scrollport's
+      PADDING edge, so that gap is part of the band the bar owns).
+    At head that is 65 + 20 → 86px (ceil). Republished whenever the bar's box changes.
+
+A2  the covered ribbon goes inert                       GameControlPanel.vue:503, :1044
+    `:inert="ribbonCovered || undefined"` on `.play-controls` — the estate's own idiom,
+    borrowed verbatim from `GameCard.vue:245`'s `:inert="!isActive || undefined"`.
+    `ribbonCovered = portraitDock && !drawerInert`: the drawer's OWN parked flag, not
+    `drawerOpen`, because the sheet covers the ribbon through the opening and closing glides
+    too. Dock-only — in the row regime these four verbs sit inside the card the drawer
+    carries, where an inert row would be a coarse iPad's undo button, deleted.
+
+A3  the roster announces                                GameControlPanel.vue:876-881
+    `role="log"` + `aria-live="polite"` + `aria-label="who's on this board"` on the `<ul>`.
+    THE ANNOUNCING NODE IS THE ROSTER, and that is the answer to the `players-status`
+    replacement defect: the one polite region at head is `v-if="!session.live.value"` and
+    leaves the DOM the moment the room comes up. The roster is the node that actually
+    mutates and the node that lives exactly as long as the room does, so it is the node that
+    speaks. Its label is its own — the well is already named "players", and a reader hearing
+    that twice learns nothing the second time.
+
+A4  the roster is reachable                             GameControlPanel.vue:880
+    `tabindex="0"` on the scrollport, pairing with A3's `role="log"`.
+
+Q-4 the well is described                               GameControlPanel.vue:820, :827
+    `aria-describedby` on the players well → the zone hint's own id. One string, still the
+    same tape: the tag NAMES the compartment ("players"), the hint says what sharing it does
+    ("share this board and everyone writes on the same grid"). A directly-referenced node is
+    read whatever its hidden state (accname §4.1 step 2A), so the tape stays the decorative
+    tape it is and no second literal is minted.
+
+
+────────────────────────────────────────────────────────────────────────────────
+GATE 2.1 — focus-occlusion census, desktop 1440×900          GREEN, both engines
+────────────────────────────────────────────────────────────────────────────────
+
+  · "no control in the controls card focuses into a full burial"          PASSED ×2 engines
+  · "the marks-mode \"Normal\" button is reachable, found by identity"    PASSED ×2 engines
+
+THE CENSUS AFTER A1 — chromium and webkit identical, n = 21 tabbables:
+
+    0/25 (0%)  4×4 · 9×9 · 16×16 [.ctrl-btn]
+    0/25 (0%)  Easy · Medium · Hard [.ctrl-btn]
+    0/25 (0%)  Deal a new board [.icon-btn]
+    0/25 (0%)  Normal · Corner · Center [.ctrl-btn]          ← 25/25, 10/25 at head
+    0/25 (0%)  Off · On [.ctrl-btn]            (candidates)
+    0/25 (0%)  Off · Ask · Live [.ctrl-btn]    (teacher's)
+    0/25 (0%)  Play together on this board [.icon-btn]       ← 15/25 at head
+    0/25 (0%)  Clear the board · Fill · Solve · Share board link [.icon-btn]
+    0/25 (0%)  what the keys do [.info-btn]
+
+  THE WHOLE CLASS CLEARED AT ONCE, as the wave predicted: not just the gated "Normal"
+  (25/25 → 0/25) but the two partials the gate only annotates — "Corner" 10/25 → 0/25 and
+  the invite verb 15/25 → 0/25. Nothing in the card focuses into any occlusion at all.
+
+  THE MECHANISM, measured with "Normal" focused (probe, both engines):
+
+                          chromium            webkit
+    --action-bar-h        86px                86px
+    scroll-padding-bottom 86px                86px
+    card padding-bottom   20px                20px
+    .action-bar height    65px                65px      (spans 744–809, unmoved)
+    card client box       189–829             189–829
+    Normal before focus   751–789             750–788
+    scrollTop before      0                   0
+    scrollTop after       303                 303
+    Normal after focus    448–486             447–485   ← 258px clear of the bar's top
+
+  The card now SCROLLS on that focus where at head it did not (`scrollTop` 0 → 303, both
+  engines): the padded region no longer contains the button, so the browser lifts it. The
+  bar itself never moves — this is a focus-scroll cure, not a layout one.
+
+
+────────────────────────────────────────────────────────────────────────────────
+GATE 2.2 — drawer-open inert census, 390×844                 GREEN, both engines
+────────────────────────────────────────────────────────────────────────────────
+
+  · "no covered control in the drawer subtree stays tabbable"             PASSED ×2 engines
+
+  Same roots (`#controls-drawer`, `.play-controls`), same ≥99% floor, same allowlist — the
+  gate is byte-identical to the one that was born RED. The census is now n = 20 (was 24):
+  the four buried verbs left it BY CONSTRUCTION, which is what an `inert` cure looks like.
+
+    0/25 (0%)  controls [.drawer-tab]
+    0/25 (0%)  Size · DifficultyEasy [.mobile-heading-btn]
+    0/25 (0%)  4×4 · 9×9 · 16×16 [.ctrl-btn]
+    0/25 (0%)  Deal a new board [.icon-btn]
+    0/25 (0%)  Normal · Corner · Center [.ctrl-btn]
+    0/25 (0%)  Off · On [.ctrl-btn]            (candidates)
+    0/25 (0%)  Off · Ask · Live [.ctrl-btn]    (teacher's)
+    0/25 (0%)  Play together on this board [.icon-btn]       ← 5/25 at head
+    0/25 (0%)  Clear the board · Fill · Solve · Share board link [.icon-btn]
+
+  THE SPEC'S OWN CONTROL HOLDS: `.play-controls button` still counts 4. The verbs were
+  frozen, not deleted — a cure that deleted them reds this row.
+
+  THE FREEZE, PROBED DIRECTLY (both engines, 390×844, three states):
+
+    sheet SHUT      inert attr false · 4 buttons · first button tabIndex 0
+    sheet UP        inert attr TRUE  · 4 buttons · `.focus()` on a verb lands on BODY
+                    (drawer-tab aria-expanded=true, tongue re-berthed to #drawer-handle)
+    sheet SHUT      inert attr false · `.focus()` on a verb lands on BUTTON.icon-btn
+      again
+
+  The last line is the half that matters as much as the first: the ribbon comes BACK. And
+  the drawer's tongue is a sibling in the ribbon, never a child of `.play-controls`, so the
+  sheet stays openable and closable with the row frozen.
+
+  BOTH ENGINES AGREE, which is what the wave asked for — WebKit is where `inert` diverges.
+
+
+────────────────────────────────────────────────────────────────────────────────
+GATE 2.3a — roster mutation announcement                     GREEN, both engines
+────────────────────────────────────────────────────────────────────────────────
+
+  · "a join and a leave each move a live region"    PASSED ×2 engines (both arms, no softs
+                                                     reported)
+
+  THE ROSTER'S SEMANTICS, probed at the live tree (both engines):
+
+    <ul class="players-roster">  role=log  aria-live=polite  tabIndex=0
+                                 aria-label="who's on this board"  overflow-y=auto
+    well                         name "players" (aria-labelledby, unchanged)
+                                 description "share this board and everyone writes on the
+                                 same grid" (aria-describedby → the zone hint)
+
+  THE LIVE-REGION TEXT, chromium (webkit identical in shape, different animal slugs):
+
+    before  … | colourful-anteateryou
+    join    … | colourful-anteateryouokay-swallow          roster 1 → 2
+    leave   … | colourful-anteateryou                      roster 2 → 1
+
+  The joiner's name enters a polite log and leaves it again. At head all three strings were
+  byte-identical (`.margin-note` + `.check-status`, neither of them about the room).
+
+  CONTROL, the spec's own: the roster count is asserted 1 → 2 → 1 at each step, so the row
+  cannot green on a region that moved for reasons of its own.
+
+
+────────────────────────────────────────────────────────────────────────────────
+GATE 2.3b — contrast floor (A10)                             GREEN, both engines
+────────────────────────────────────────────────────────────────────────────────
+
+  · ".icon-sublabel and .ctrl-btn clear 4.5:1 (light)"   PASSED  chromium + webkit
+  · ".icon-sublabel and .ctrl-btn clear 4.5:1 (dark)"    PASSED  chromium + webkit
+
+    light   worst 4.66:1 — "Deal" .icon-sublabel   rgb(115,115,115) on rgb(253,253,252)
+    dark    worst 7.68:1 — "Deal" .icon-sublabel   rgb(168,166,159) on rgb(19,18,17)
+    n = 20 painted samples per theme
+
+  UNCHANGED FROM THE BORN-RED RECORD TO THE HUNDREDTH. A10 was gate-only and stayed
+  gate-only: no token was nudged, and the row still holds 0.16 of headroom against 4.5.
+
+
+────────────────────────────────────────────────────────────────────────────────
+THE SWEEPS, and how the contended ones were told apart
+────────────────────────────────────────────────────────────────────────────────
+
+Sibling waves were editing `src/` throughout this window (App.vue, HandwrittenLogo.vue,
+rasterPose.ts, e2e/wire.ts and more moved under the tree between sweeps; HEAD advanced
+cbf2ab49 → af508288). The dev server's HMR then full-reloads a page mid-run, and every
+contended red carries that signature verbatim:
+
+    Error: page.evaluate: Execution context was destroyed, most likely because of a
+           navigation
+    Error: page.addStyleTag: Execution context was destroyed, most likely because of a
+           navigation
+
+with the one downstream count-timeout it causes (`.players-roster .player-row` 0, on a page
+that navigated mid-session). Not one red was an assertion carrying a figure.
+
+EIGHT SWEEPS BELIEVED — 12 / 12 in every one, both engines, zero flaky:
+
+    #1  12 passed  (7.5 s)   first sweep after the cures landed
+    #2  12 passed            JSON reporter — the census annotations quoted above
+    #3  12 passed  (7.5 s)
+    #4  12 passed  (7.8 s)
+    #5  12 passed  (8.9 s)   after the last comment edit
+    #6  12 passed  (9.0 s)   \
+    #7  12 passed  (8.4 s)    >  three consecutive, captured to disk
+    #8  12 passed  (7.7 s)   /
+
+FIVE SWEEPS DISCARDED, all inside the churn window, none of them banked as anything:
+
+    10 passed / 2 failed · 8 passed / 4 failed · 6 passed / 6 failed · 5 passed / 7 failed,
+    plus one run whose `global-setup` refused the baseURL outright while a sibling's save
+    was mid-transform.
+
+    EVERY red captured to disk is the reload signature above or the count-timeout it causes
+    downstream. NOT ONE carried a measured figure — no occlusion percentage, no ratio, no
+    inert reading. The discards are recorded here rather than hidden, and none of them is
+    evidence of anything but a tree moving under a running suite.
+
+  The neighbouring suites behaved the same way: three specs red in one full-suite sweep,
+  a different four red in the next, all green when re-run alone (below). Same cause.
+
+NEIGHBOURS, one uncontended sweep at the cured tree (the specs that touch the card, the
+drawer, the roster and the coarse dock — all pre-existing, none of them edited here):
+
+    a11y.spec.ts + drawer.spec.ts + multiplayer.spec.ts + zone-grammar.spec.ts +
+    mobile-affordances.spec.ts  →  116 passed, 2 skipped, 0 failed (56.7 s, both engines)
+
+  a11y.spec.ts is W3's file and was not touched. Its name/announcement census is green with
+  `role="log"`, the roster's `aria-label` and the well's new description in the tree.
+
+TOOLING, for reproduction:
+    lint     prettier --check  → clean on both files
+    types    vue-tsc --noEmit  → clean
+    probe    the mechanism figures above come from a standalone playwright probe
+             (scratchpad `w2-cure-probe.mjs`), run in chromium and webkit, not from the
+             gate — the gate asserts, the probe explains.

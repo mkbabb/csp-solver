@@ -1,0 +1,233 @@
+T7-W2 — NON-AUTHOR VERIFICATION
+===============================
+
+  verifier     non-author executor, T7-W2
+  date         2026-08-03
+  tree         master @ af508288 (W1 landed), W2's cure in the working tree — the diff
+               under audit is `GameControlPanel.vue` + `scene.css`, unstaged
+  spec         web/frontend/e2e/access.spec.ts (495 lines, W2-owned, new file)
+  app          vite dev on :4256 (PLAYWRIGHT_BASE_URL), ports 4230–4260 honored
+               — :4241/:4250/:4251/:4252 were already held by sibling waves
+  engines      chromium + webkit, the default dev-server config, no retries
+
+  VERDICT: GREEN. Every figure of record reproduces, the three gates are green in both
+  engines across three sweeps, all five cures verify at the DOM, and W4's born-RED is
+  standing. One finding, LOW, and it's a stale number in a comment — not a runtime row.
+
+
+────────────────────────────────────────────────────────────────────────────────
+1 — THE SPEC, RUN BY THE VERIFIER: THREE SWEEPS, BOTH ENGINES
+────────────────────────────────────────────────────────────────────────────────
+
+  sweep 1   12 passed (7.3s)
+  sweep 2   12 passed (8.1s)
+  sweep 3   12 expected / 0 unexpected / 0 skipped / 0 flaky (7.9s, json reporter)
+
+Twelve tests = six rows × two engines. Nothing timed out, nothing was refused a
+connection, no run was suspect.
+
+  ONE CONTENDED EVENT, DISCLOSED. The first pass of my own ablation rig died on
+  "Execution context was destroyed" mid-census. The vite log names the cause and it isn't
+  the product: sibling waves dropped `dist-ch62/`, `dist-ch62-ablate/`, `dist-ch62-plain/`
+  and `playwright-report*/` into the watched tree, and vite full-reloaded the page under
+  the rig. Re-ran; it reproduced clean and has every run since. Nothing below comes from
+  a run I suspect. TRAP FOR THE RECORD: the dev server watches the repo root, so a sibling's
+  build output is a page reload in everybody else's browser.
+
+ANNOTATIONS, sweep 3, identical in chromium and webkit:
+
+  2.1 census        21 tabbables, ALL 0/25 — no partials left at all
+  2.2 drawer census 20 tabbables, none ≥99% (born-RED's 24 minus the four now inert)
+  2.3 contrast      light worst 4.66:1 "Deal" .icon-sublabel rgb(115,115,115) on
+                    rgb(253,253,252), n=20
+                    dark  worst 7.68:1 "Deal" .icon-sublabel rgb(168,166,159) on
+                    rgb(19,18,17),  n=20
+                    — to the hundredth, both engines, identical to the born-RED bank
+
+
+────────────────────────────────────────────────────────────────────────────────
+2 — THE BORN-RED BANK, RE-DERIVED BY ABLATION AT HEAD
+────────────────────────────────────────────────────────────────────────────────
+
+The bank was taken at `cbf2ab49`; head is `af508288`. Rather than take a one-commit-old
+red on trust I ablated each cure AT HEAD, in-page, and re-ran the census. The bank's
+figures come back to the point.
+
+GATE 2.1 — `scroll-padding-bottom: 0 !important` injected over the cure:
+
+               CURED                    ABLATED                  BANK
+  Normal       0/25                     25/25  ← div.action-verbs  25/25 ✓
+  Corner       0/25                     10/25 (40%)                10/25 ✓
+  invite verb  0/25                     15/25 (60%)                15/25 ✓
+  max any      0.00                     1.00
+
+  Both engines, to the sample point; only blocker ORDER differs, which is
+  `elementFromPoint` tie-breaking. The cure doesn't just clear the floor — it takes the
+  partials to zero as well, which is the "clears the whole class at once" claim, measured.
+
+GATE 2.2 — `inert` stripped from `.play-controls` with the drawer open, 390×844:
+
+  CURED    census n=20, ≥99%: (none)
+  ABLATED  25/25 Undo last move · 25/25 Redo move · 25/25 Reveal a hint in the selected
+           cell · 25/25 peek — blocked by div.ctrl-options.options-row,
+           button.ctrl-btn.rounded-md, p.check-status
+           IDENTICAL IN WEBKIT, verb for verb and blocker for blocker.
+
+  So the gate is falsifiable in the cure's own direction, in the engine the wave books as
+  the divergent one. The `.cell-native-input` allowlist matched nothing under these roots,
+  as the bank says.
+
+GATE 2.3a — the roster's semantics at head, probed directly: role=log, aria-live=polite,
+aria-label="who's on this board", tabindex=0. Live text moves on both edges, both engines:
+
+  before     "…naked single | board changed — ask again… | collective-goose you"
+  afterJoin  "… | collective-goose you oral-tiger"          moved: true
+  afterLeave "… | collective-goose you"                     moved: true
+
+  `.players-status` is absent while the room is live — the replacement defect the wave
+  names, confirmed, and the reason the roster rather than that node is the announcing one.
+
+
+────────────────────────────────────────────────────────────────────────────────
+3 — THE DIFF, READ AND MEASURED
+────────────────────────────────────────────────────────────────────────────────
+
+A1 — THE PADDING IS SOURCED HONESTLY, AND IT TRACKS.
+`useResizeObserver` on `.action-bar` publishes `--action-bar-h` onto `bar.closest(
+'.controls-card')` from `getBoundingClientRect().height` (border box, not `contentRect`)
+plus the card's computed `padding-bottom`. Read at four rungs, published vs re-derived
+truth:
+
+                          published   computed scroll-pad   truth (ceil(barH+pad))
+  1440×900  (p-5, 20px)   86px        86px                  86px   barH 65.16 / 65.14
+   900×900  (py-1.5, 6px) 71px        71px                  71px   barH 64.02
+  back 1440               86px        86px                  86px
+  390×844 dock, open      69px        69px                  69px   barH 62.94
+
+  THE STALENESS QUESTION, ASKED AND ANSWERED. The card's padding-bottom is a Tailwind
+  class that flips on the row regime (`GameScene.vue:167` — `p-5` ⇄ `px-2 py-1.5`), so it
+  is a term the observer doesn't watch. It doesn't go stale anyway: the bar's WIDTH changes
+  across that same regime cross, the RO fires on it, and the callback re-reads the padding.
+  Measured across 1440→900→1440 in both engines — published equals truth at every rung.
+  This is the one thing the `--fold-bottom` lesson would have predicted going wrong, and it
+  doesn't.
+
+A2 — THE CONDITIONAL IS CORRECT, AND IT IS NOT PERMANENT.
+`ribbonCovered = portraitDock && !drawerInert`, where
+`drawerInert = !drawerOpen && phase === 'idle'`. Measured at 390×844, both engines:
+
+  drawer SHUT   inert attr ABSENT, `el.inert` false, all four verbs tabIndex 0 and each
+                one TAKES FOCUS (Undo, Redo, Reveal-hint, peek — `document.activeElement
+                === btn` true for all four)
+  drawer OPEN   inert attr PRESENT, `el.inert` true, focus refused (activeElement falls
+                to body), count still 4
+  RE-SHUT       inert attr absent again, focus takes again
+
+  So it's `undefined`-gated as the estate's GameCard idiom wants — absent at rest, never
+  present-and-false — and it's a state, not a life sentence. The glide window is covered
+  too: `phase !== 'idle'` keeps the ribbon frozen through opening AND closing, which is the
+  right read, since a half-covered control is the same defect measured mid-flight.
+
+  THE TONGUE IS A SIBLING, verified rather than reasoned: `.drawer-tab`'s parent is
+  `#fold-tools` and `.play-controls.contains(.drawer-tab)` is false. The sheet stays
+  openable and close-focus still lands on a live control.
+
+A3 — `role="log"` LIVES WHILE THE SESSION LIVES. The roster is the node that mutates and
+the node that outlasts the room's boot, which `players-status` (`v-if="!session.live"`)
+does not. Aria snapshot, both engines:
+
+    - log "who's on this board":
+      - listitem: tragic-alligator you
+
+  The `<li>` children keep `listitem` under the log role — the announcement is bought
+  without spending the list semantics. No live ancestor competes.
+
+A4 — `tabindex="0"` BUYS A REAL SCROLL, in both engines. The roster takes focus
+(`activeElement === ul`, true chromium and webkit) and, once it overflows (max-height
+120px, scrollHeight 300):
+
+              ArrowDown ×3   PageDown   End
+  chromium    0 → 80         80         180
+  webkit      0 → 40         136        180
+
+  CORRECTION TO MY OWN FIRST READING, banked because it nearly became a false finding: an
+  earlier probe that forced overflow by cloning `<li>` nodes into the DOM showed webkit at
+  scrollTop 0 and looked like an engine divergence. It was Vue patching the clones away
+  between the keypress and the read. Forced through CSS instead, webkit scrolls. There is
+  no divergence.
+
+  FOCUS IS VISIBLE on the new tab stop — `:focus-visible` arms on a genuine Tab and the UA
+  ring paints (`outline: auto 1px` chromium, `auto 3px` webkit). No global reset eats it.
+
+Q-4 — `aria-describedby` RESOLVES TO A REAL ELEMENT.
+
+  well   .outline-container.tray-well   role=group
+         aria-labelledby → "v-3"  (the "players" washi tag — the name office, kept)
+         aria-describedby → "v-4"
+  v-4    EXISTS. `.washi-label.washi-wide.zone-hint`
+         "share this board and everyone writes on the same grid"
+
+  One string, two offices, no second literal minted. Identical in both engines.
+
+
+────────────────────────────────────────────────────────────────────────────────
+4 — W4'S BORN-RED IS STANDING
+────────────────────────────────────────────────────────────────────────────────
+
+`git diff` on `GameControlPanel.vue` carries NO `.players-leave` hunk. The coarse rule at
+:1338-1343 is `min-height: 44px` + `padding-inline: 0.5rem` and nothing else — no
+`min-width`. Measured live at 390×844 under the iPhone 13 descriptor, both engines:
+
+    .players-leave   40.1 × 44   min-width: auto   min-height: 44px   (pointer: coarse) ✓
+
+  Still 40.1 wide against the estate's 44 floor. W4's M1 cure has something left to cure.
+
+
+────────────────────────────────────────────────────────────────────────────────
+5 — NO COLLATERAL: THE NEIGHBOURS STILL HOLD
+────────────────────────────────────────────────────────────────────────────────
+
+W2 edits shared DOM — roster semantics and an `inert` on the teleported ribbon — so the
+suites that read those surfaces were re-run, both engines:
+
+  a11y.spec.ts · mobile-affordances.spec.ts · multiplayer.spec.ts · mobile-drawer.spec.ts
+  → 78 passed, 2 skipped, 0 failed (40.9s)
+
+  The two skips are the standing ones, not new. No existing spec file was edited by W2 or
+  by me; `a11y.spec.ts` is untouched and stays W3's.
+
+DISCIPLINE CHECKS: the spec carries its PRM declaration at line 3 ("PRM: frozen —
+emulateMedia({reducedMotion:'reduce'}) before goto"), inside the first 20, and every one of
+the four entry paths honors it before `goto`. `ci.yml` and `package.json` are unmodified —
+`@vueuse/core` was already a dependency (^14.3.0). Evidence is under `evidence/w2/`.
+
+
+────────────────────────────────────────────────────────────────────────────────
+6 — FINDINGS
+────────────────────────────────────────────────────────────────────────────────
+
+ONE, and it's LOW.
+
+  F-1  THE CURE'S COMMENTS CITE 85px; THE VALUE IS 86px.
+       scene.css:147 — "(85px at head = 65 + 20)"
+       GameControlPanel.vue:472 — "(65 + 20 = 85px at head)"
+       Measured: the bar's border box is 65.16 (chromium) / 65.14 (webkit), the card's
+       padding-bottom is 20, and the publisher takes `Math.ceil` — so the value on the
+       element is 86px in both engines, at every reading. The author's own green bank has
+       it right (`gates-green.txt:39` — "65 + 20 → 86px (ceil)"); only the two source
+       comments round the wrong way, and the comments are what outlives the bank.
+       Doc-only. No runtime consequence: the published number is the measured one.
+       (The estate's own rule — numbers re-derived at citation.)
+
+NOTHING ELSE. Specifically NOT findings, each looked at and each cleared:
+
+  · gate 2.2 going quiet about the four verbs after they turn inert — the spec's own
+    `toHaveCount(4)` control catches an amputation, the census keeps n=20 so it isn't
+    vacuous, and stripping the `inert` re-reds it at 25/25 in both engines. Verified, not
+    argued.
+  · `role="log"` costing the `<ul>` its list semantics — it doesn't; the `<li>`s still
+    expose as `listitem` in both engines.
+  · a new tab stop with no focus ring — there is one, `:focus-visible` and all.
+  · `--action-bar-h` going stale across the regime cross — it doesn't; measured.
+  · a webkit-only failure of A4's arrow-key scroll — my instrument's fault, not the
+    product's. Corrected above.
