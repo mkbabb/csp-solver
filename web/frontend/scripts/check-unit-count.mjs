@@ -242,7 +242,14 @@ function selfTest() {
         testResults: undefined,
       }),
     ],
-    ["below the floor (299)", write("low.json", fabricate(299, { startTime: now }))],
+    // Fixtures DERIVE from FLOOR (T7-WGATE): the close's restamp moved FLOOR 300→434 and
+    // the then-hardcoded 299/300 pair silently became deep-red/red — the self-test failed
+    // its own mustPass on the first post-restamp run. A literal here desyncs on every
+    // restamp by construction; FLOOR±0/−1 cannot.
+    [
+      `below the floor (${FLOOR - 1})`,
+      write("low.json", fabricate(FLOOR - 1, { startTime: now })),
+    ],
     [
       "stale report (3h old)",
       write("stale.json", fabricate(400, { startTime: now - 180 * 60000 })),
@@ -263,11 +270,11 @@ function selfTest() {
       }),
     ],
     [
-      "skips carry the floor (299 executed + 40 skipped)",
+      `skips carry the floor (${FLOOR - 1} executed + 40 skipped)`,
       write("skipped.json", {
-        ...fabricate(299, { startTime: now }),
+        ...fabricate(FLOOR - 1, { startTime: now }),
         numPendingTests: 40,
-        numTotalTests: 339,
+        numTotalTests: FLOOR - 1 + 40,
       }),
     ],
   ];
@@ -275,8 +282,8 @@ function selfTest() {
   // This one must PASS — a gate that fails everything is equally useless.
   const mustPass = [
     [
-      "exactly at the floor (300)",
-      write("ok.json", fabricate(300, { startTime: now })),
+      `exactly at the floor (${FLOOR})`,
+      write("ok.json", fabricate(FLOOR, { startTime: now })),
     ],
   ];
 

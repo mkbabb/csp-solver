@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { pressCommitted } from './committed-press';
 
 // PRM: live, because the soul gate IS the beat—the centered card's active pose must advance
 //   across a ~700ms window while a flank's stays frozen, and freezing the page pins both sides
@@ -316,8 +317,18 @@ test('drag: a flick moves exactly one card; a release over the centered card sel
   await expect(page.locator('.game-gallery')).toBeVisible();
   await expect(listbox).toHaveAttribute('aria-activedescendant', 'gallery-card-0');
 
-  // A PLAIN click still selects — the swallow is one-shot, not a mode.
-  await page.locator('#gallery-card-0').click();
+  // A PLAIN click still selects — the swallow is one-shot, not a mode. COMMITTED, not
+  // one-shot (T7-WGATE, run 30813613026 — the row's THIRD species): on the two-core
+  // runner this click can land while the −20px release's snap-back still glides, and a
+  // click refused mid-settle is refused ONCE, silently — deck on card 0, aria correct,
+  // gallery mounted 10s later. The refusal itself is sound product behavior (a press on
+  // a moving deck is ambiguous); the harness's job is to press like a person, who
+  // presses again. pressCommitted polls the committed effect and re-presses on its beat.
+  await pressCommitted(
+    page.locator('#gallery-card-0'),
+    async () => (await page.locator('.game-gallery').count()) === 0,
+    { what: 'the centered card selects and the deck leaves' },
+  );
   await expect(page.locator('.game-gallery')).toHaveCount(0);
 });
 
