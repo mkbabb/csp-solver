@@ -67,11 +67,11 @@ import { expect, type Locator } from '@playwright/test';
 /** One press's own beat: the wordmark's is MOTION.chromeLeaveMs 200ms + the deck's mount +
  *  paint, measured at 231–313ms on darwin and ~5.9s end-to-end on the CI runner. 4s is an
  *  order over the measured beat and an order under the 20s budget. */
-export const PRESS_BEAT_MS = 4000;
+const PRESS_BEAT_MS = 4000;
 
 /** The whole press, every attempt included. Past this it is no longer the dropped-press race
  *  and the failure should be read as a real defect, which is what the throw says. */
-export const PRESS_BUDGET_MS = 20000;
+const PRESS_BUDGET_MS = 20000;
 
 /**
  * The press's committed effect. A `Locator` reads as "this is visible"; a predicate is for

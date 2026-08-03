@@ -1370,7 +1370,12 @@ jobs:
               with:
                   path: ~/.cache/ms-playwright
                   key: playwright-${{ runner.os }}-${{ steps.pw-version.outputs.version }}
+            # Step-scoped timeout (T7 post-seal, run 30804572335): shard 2's install hung
+            # from 10:12 to the JOB's 25-minute kill — the suite never ran and the red read
+            # as a shard failure. 8 minutes is 2× the worst observed install; a hang now
+            # fails fast under its own name.
             - name: "Install Playwright webkit (+ deps)"
+              timeout-minutes: 8
               working-directory: web/frontend
               run: npx playwright install --with-deps webkit
             # workers=1 is the treatment, not a slowdown to apologize for: the
