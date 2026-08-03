@@ -390,25 +390,36 @@ export function useCarouselGlide(
     // So the release folds the outstanding leg in — over its own duration, floored at the same
     // half-frame the sampler uses, so it can never divide a real delta by ~0.
     //
-    // THE INVARIANT, and it is the whole of the arm list: FAST TAILS ALWAYS COUNT, SLOW TAILS
-    // NEVER DAMP. A leg spanning a full sample window carries information; a gesture that never
-    // sampled has nothing else to go on; and a leg whose OWN velocity clears the flick threshold
-    // is by construction not a settle, so the damping worry cannot apply to it. What stays out
-    // is the only case that would hurt: a short, slow tail on top of an existing `v`, which
-    // holds no new information and would only damp a real flick by the EMA's 0.7 weight.
+    // THE INVARIANT, and it is the whole of the rule: THE RELEASE MAY ONLY ADD TO WHAT THE
+    // GESTURE MEASURED, NEVER SUBTRACT FROM IT. A pointerup carries no position of its own — it
+    // is dispatched at the last coordinate the engine reported — so its leg can hold a real
+    // outstanding push (the sampler skipped it) but can never hold evidence that the hand
+    // slowed. Fold when the fold reads FASTER than what is standing; leave `v` alone otherwise.
     //
-    // The third arm is the FIELD's, not a hypothetical — run 30814609152 at `a7bf7a3e`, and it
-    // bit in CHROMIUM as well as WebKit, which the first two arms had left open. A gesture that
-    // samples ONCE early and slowly, then throws its real push inside the final sub-window,
-    // folded nothing: `legMs` was under the floor and `v` was non-zero, so the stale small `v`
-    // survived and a genuine flick read as a settle. `gallery.spec.ts:300`'s first flick lost,
-    // expected gallery-card-1, received gallery-card-0.
+    // This replaces three duration-shaped arms, each of which cured one presentation of one
+    // defect and left the next. The arm list was the wrong axis: what decides a flick is which
+    // reading is the largest the gesture ever produced, not which leg was long enough to be
+    // believed. Measured, both engines, on the row below this block: a 160px push over 101ms
+    // stood `v = -1.113` — two and a half times the 0.45 threshold — and a release 33ms later
+    // with the pointer STILL folded `0.7 × 0 + 0.3 × -1.113 = -0.334`, so `dir` read 0 and the
+    // deck snapped back to the card it came from. The push was never lost; the fold destroyed it.
+    //
+    // And the exposure is a real hand's, not a driver's: `pointermove` is coalesced to at most
+    // one per rendering frame while `pointerup` is not coalesced at all, so a release lands a
+    // uniform 0–16.7ms after the last move a 60Hz page dispatched (wider as the page slows) —
+    // with the hand still travelling through a gap no move event exists to describe. Whenever
+    // that gap cleared SAMPLE_MS the deck multiplied the whole gesture by 0.3, which quietly
+    // made a declared 0.45 px/ms flick threshold behave like 1.5.
+    //
+    // WHAT THIS GIVES UP, named rather than hidden: a hand that throws a real push and then
+    // holds still, button down, before releasing still reads as the push. That is the honest
+    // side of the trade — the two cases are indistinguishable in the event stream, one of them
+    // is common and one is deliberate, and only one of them makes the deck feel broken.
     const legMs = (e?.timeStamp ?? d.t) - d.t;
     const span = Math.max(SAMPLE_MS, legMs);
     const legV = ((e?.clientX ?? d.px) - d.px) / span;
-    if (legMs >= SAMPLE_MS || d.v === 0 || Math.abs(legV) > FLICK_VPX) {
-      d.v = 0.7 * legV + 0.3 * d.v;
-    }
+    const folded = 0.7 * legV + 0.3 * d.v;
+    if (Math.abs(folded) > Math.abs(d.v)) d.v = folded;
     // READ THE POSITION BACK rather than assuming the writes took (this file's own maxScroll
     // discipline): the engine clamps `scrollLeft` to its scrollable overflow, so where the
     // deck IS is the only honest `from`.

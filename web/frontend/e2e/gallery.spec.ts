@@ -429,6 +429,57 @@ test('drag: a slow first sample does not swallow the flick that follows it', asy
   await expect(page.locator('.gallery-pip').nth(1)).toHaveClass(/is-inked/);
 });
 
+test('drag: a release that lands a frame after the last move is still a flick', async ({
+  page,
+}) => {
+  await openGalleryDeepLink(page);
+  await deckSettled(page);
+
+  // THE THIRD SPECIES, and the one that is REACHABLE BY A REAL HAND rather than by a driver's
+  // pacing. `pointermove` is coalesced to at most one per rendering frame; `pointerup` is not
+  // coalesced at all. So the release lands a uniform 0-16.7ms after the last move a 60Hz page
+  // dispatched — and in that gap the hand is still moving while no move event exists to say so.
+  // The release's own leg therefore reads ZERO TRAVEL: not a measurement of the hand, an artifact
+  // of the dispatcher's cadence. Folded, it multiplies the whole gesture's velocity by 0.3.
+  //
+  // Damping can only ever push |v| DOWN across the threshold, so a zero-travel fold can turn a
+  // flick into a settle and can never turn a settle into a flick — it has no defensive value and
+  // only destructive power. Uncured, this deck advertised a 0.45 px/ms flick and honoured 1.5.
+  //
+  // Paced to sit inside that band and to stay there under load: 160px over ~100ms is 1.6 px/ms,
+  // an ordinary flick by any measure. Uncured it is red for any first leg longer than 75ms, which
+  // a `setTimeout(100)` cannot undershoot; cured it is green for any leg under 249ms, which is
+  // 2.5x of slack. The red direction is guaranteed and the green direction is the one with room.
+  await page.evaluate(async () => {
+    const vp = document.querySelector<HTMLElement>('.gallery-viewport')!;
+    const box = vp.getBoundingClientRect();
+    const y = box.top + box.height / 2;
+    const x0 = box.left + box.width / 2;
+    const at = (type: string, x: number, target: EventTarget) =>
+      target.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          pointerType: 'mouse',
+          button: 0,
+          clientX: x,
+          clientY: y,
+        }),
+      );
+    at('pointerdown', x0, vp);
+    await new Promise((r) => setTimeout(r, 100)); // a real leg, and it SAMPLES: 1.6 px/ms
+    at('pointermove', x0 - 160, window);
+    await new Promise((r) => setTimeout(r, 30)); // ...released a frame later, pointer STILL
+    at('pointerup', x0 - 160, window);
+  });
+
+  await expect(page.locator('.gallery-viewport')).toHaveAttribute(
+    'aria-activedescendant',
+    'gallery-card-1',
+  );
+  await expect(page.locator('.gallery-pip').nth(1)).toHaveClass(/is-inked/);
+});
+
 test('drag: a grab during a keyboard glide freezes the deck where it is drawn', async ({
   page,
 }) => {
