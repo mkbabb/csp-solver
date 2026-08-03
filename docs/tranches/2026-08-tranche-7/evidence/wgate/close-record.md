@@ -119,6 +119,52 @@ dropped press · provisional threshold at first field contact); two more at the 
 instruments that refused to restamp (coverage single-run, pw data-loop) were both RIGHT to
 refuse. The record's gates now outnumber the record's defects.
 
-## 9 · Production
+## 9 · Production (appended 2026-08-03, after the deploy it records)
 
-Appended after the deploy this section records.
+**The owner's ruling reshaped the gate before it fired (O-12, DISPOSITIONS §4).** The close
+head's only red was `gallery.spec.ts:300`'s webkit-shard budget-exhaust — its second field
+occurrence on a quiet `workers=1` runner, which killed the load-only adjudication and opened
+an unbounded forensics tail. The owner cut it: *"Why do we have ANY chrome-based
+playwright-based scripts running when deployed? If we're constantly running into walls,
+remove them. Validate the deployment visually on the deployed site thereupon."* Executed at
+`d1daefb3`: `e2e`, `e2e-webkit` and `perf-subset` deleted from ci.yml (nineteen lanes →
+sixteen, −548 lines), the Playwright e2e/golden/perf estate retained in-repo as local
+instruments, four orphaned guards under dated `NOT-A-LANE` declarations (`lint:lanes`
+green), CH-64's habitat and CH-65's detector restated in the ledger, README trued.
+
+**The deploy, gated as law requires.** CI run 30824772723 at `d1daefb3` — sixteen lanes,
+all green. Conclusion banked per the CH-57 gated chain (which first REFUSED an ungated
+attempt, as built), then:
+
+- frontend: CF Pages deployment `30ac068e`, entry `index-C9b17OTx4t72.js`, 41 files /
+  744.7 KB — `dist-identity --served` confirms https://sudoku.babb.dev serves the same
+  entry byte-for-byte
+- relay: `sudoku-relay` Worker version `25afe684` (wrangler 4.116.0; carries W4's
+  MAX_FRAME 65,536 cap + bye handling, which the prior live version predated)
+
+**The visual validation, on the live edge (the owner-ordered acceptance).** Chromium +
+WebKit driven against production, twelve frames banked (`evidence/wgate/` sibling shots
+withheld from the repo per the evidence byte caps; the probe script is
+reproducible from this section): home boots with the board fully inked and the wordmark
+sharp; the dark-toggle press COMMITS on WebKit (CH-66's cured surface — moon pose inked,
+theme flipped); `?view=gallery` renders the deck with the centered live card, flank, pips
+and staging band, theme persisting across the deep link (W1's cure); **the centered-card
+click-to-select commits in BOTH engines** — the exact interaction the dead CI row guarded,
+green on the real surface; `?game=kenken` renders whole in both engines (cages, operators,
+drawer); 390×844 centres the board under the wordmark with the controls affordance.
+
+**One edge fact found and booked, not cured:** the `_redirects` SPA-fallback rule
+(`/* /index.html 200`) is dead in production — a bare path like `/kenken` serves
+`404.html` with HTTP 404 because Cloudflare Pages disables SPA mode when a `404.html`
+ships, a state standing since the edge-cache-poisoning guard landed it. Zero user-facing
+surface (every in-app and shared URL is query-shaped off `/`), but the file's own comment
+claims a guard the edge does not honor. T8 formation: true the comment or re-home the
+asset guard. A second nit rides with it: `scripts/ci-conclusion.sh` prints a cosmetic
+`line 96` syntax warning while producing a correct artifact.
+
+**The tranche's last red never got its mechanism named** — the forensics lane measured
+H2 dead (tap-proven), H1 unevidenced (no DOM churn in any press window), reproduced the
+row only under CPU-class starvation (`taskpolicy -b` + burners; load alone at 33 stayed
+14/14 green), and was re-scoped by O-12 to the product question alone; its evidence lands
+as `evidence/wgate/gallery-press-refusal.md` when the lane concludes. The row itself now
+lives where the owner put it: a local instrument, not a wall.
