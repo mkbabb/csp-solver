@@ -108,24 +108,25 @@ defineExpose({ close });
 </template>
 
 <style scoped>
-/* Flush to the viewport corner (mirrors .corner-right's top:0/right:0 in App.vue) —
-   the inset from the edge now comes from .attribution-trigger's own padding, not a
-   gap on this wrapper, so the visible glyph lands in ~the same spot as before while
-   the button's hit target grows to fill the whole corner instead of floating in it. */
-.corner-left {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 40;
-  cursor: pointer;
-}
+/* THE HEAD LINE (T6.2 mark C) — @mbabb and the sun sit on ONE horizontal line, at every width.
+   Both poses are the same pose now, so they are written once: pinned to the page's left edge
+   (the inset from it comes from `.attribution-trigger`'s own padding, not a gap on this
+   wrapper, so the hit target fills the corner instead of floating in it) and centred on the
+   toggle's own middle — `--toggle-size` is declared on the page root, so this reads the head's
+   one metric rather than restating its three rungs. `translate` rather than a margin: it takes
+   the trigger's OWN height out of the maths, so the line holds whatever the type does.
 
+   The mobile pose LEAVES THE FLOW to get here. It used to ride `.board-group`'s top, a whole
+   assembly below the sun, which is what put the two marks 93px apart on a phone; out of flow it
+   is at the head where it belongs and mark 9's centring gets the ~46px back for the board. */
+.corner-left,
 .mobile-attribution {
-  position: relative;
-  align-self: flex-start;
-  cursor: pointer;
+  position: fixed;
+  top: calc(var(--toggle-size, 5rem) / 2);
+  left: 0;
+  translate: 0 -50%;
   z-index: 40;
-  margin-bottom: 0.125rem;
+  cursor: pointer;
 }
 
 /* Real <button> semantics (the a11y fix): reset it back to the inline text trigger.

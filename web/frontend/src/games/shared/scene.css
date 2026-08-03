@@ -9,8 +9,9 @@
  *   .board-peek-host   the positioning context wrapping the board + answer-key laminate
  *   .controls-card     THE controls card — one of them now, at every width
  *   .drawer-case       the HandDrawnOutline frame around it (the portrait sheet's inert half)
- *   .drawer-handle     the tongue's berth on the portrait dock (the case's top-right)
- *   .fold-tools        the portrait fold's play-verbs band (`#fold-tools`, a Teleport berth)
+ *   .drawer-handle     the tongue's berth while the portrait sheet is UP (the case's top-right)
+ *   .fold-tools        the portrait fold's RIBBON (`#fold-tools`, a Teleport berth: the play
+ *                      verbs, and the drawer's tongue while the sheet is shut)
  *   .scene-controls    the ONE controls drawer (`#controls-drawer`) — the F6 fade target
  *   .scene-leaving     ON .app-layout while the F6 page-turn's beat 1 runs (chrome fades out)
  *
@@ -138,9 +139,9 @@
   z-index: 45;
 }
 
-/* The fold's play-verbs band and the dock's handle berth carry NO box outside the portrait
-   dock: they are Teleport targets, and a Teleport target with a box is a box every regime
-   pays for. Portrait <1024 turns them on, below. */
+/* The fold's ribbon and the dock's handle berth carry NO box outside the portrait dock: they
+   are Teleport targets, and a Teleport target with a box is a box every regime pays for.
+   Portrait <1024 turns them on, below. */
 .fold-tools,
 .drawer-handle {
   display: none;
@@ -173,8 +174,9 @@
 
 /* ── THE PORTRAIT DOCK (T5-W4 pass 6) — the drawer comes down to portrait ────────────────
    The lever, and the whole of it: the controls card leaves the flow. What stays below the
-   board is the reserved line and the play verbs, so the document is ONE VIEWPORT and the page
-   stops scrolling (`pageVh 1.000`, gated in `e2e/board-covisibility.spec.ts`).
+   board is the reserved line and the ribbon — the play verbs plus the card's own opener
+   (T6.2 mark A) — so the document is ONE VIEWPORT and the page stops scrolling
+   (`pageVh 1.000`, gated in `e2e/board-covisibility.spec.ts`).
 
    THE ANCHOR is `useKeyboardViewport`'s standing trigger, honoured verbatim: `top:
    var(--vv-height)` — the visual viewport's bottom edge in layout coords — with the rest pose
@@ -184,27 +186,21 @@
    animation is a layout animation, which this drawer has never once done). `100dvh` is the
    var's fallback, so an unpublished anchor is still a defined pose.
 
-   THE CLOSED POSE TAKES THE FOLD'S OWN BOTTOM EDGE (T6 mark 9). Resting on the screen's floor
-   left the tongue poking out of the bottom-right corner with the worksheet's block ending far
-   above it. `useControlsDrawer` publishes `--fold-bottom` — `.app-layout`'s padded bottom in
-   document coords, which IS `#fold-tools`'s bottom, since the band is the layout's last
-   in-flow child here and the sheet is fixed — and the rest pose lifts by the difference,
-   clamped at 0 so the case can never sit below the visual floor. The tongue is `bottom: 100%`
-   of the berth, so it spans exactly the band's `padding-bottom: 3rem` and lands flush under
-   the verbs. Degradation is total-order safe: unset var → the `200dvh` arm → the clamp yields
-   `0px` → the shipped screen-bottom pose; keyboard up → `--vv-height` shrinks → the clamp pins
-   to the visual floor → the shipped keyboard pose exactly. NEVER re-cut this to
-   `position: absolute; top: 100%` — it reads cheaper and an absolutely-positioned ~527px case
-   contributes scrollable overflow, which kills `maxScroll 0`. Fixed in both states is the
-   contract.
+   THE CLOSED POSE IS THE SHEET BELOW THE EDGE (T6.2 mark A). Mark 9 lifted the closed case to
+   `--fold-bottom` so its tongue — `bottom: 100%` of the berth — landed flush under the verbs;
+   the tongue is a verb IN the ribbon now, so there is nothing left to align the shut sheet to
+   and it rests exactly where its anchor puts it: wholly below the visual viewport's bottom
+   edge. The var, its publisher and its ResizeObserver are deleted with the pose that read them
+   (`useControlsDrawer`). NEVER re-cut this to `position: absolute; top: 100%` — it reads
+   cheaper and an absolutely-positioned ~527px case contributes scrollable overflow, which
+   kills `maxScroll 0`. Fixed in both states is the contract.
 
    THE CAP is a derivation, not a tuning: 9rem = the chrome band above the board and 3rem = the
-   tongue's 48px riding proud of the case, so the sheet — tongue included — stops BELOW the
-   masthead. The band is measured at the SHORTEST live cell, which is where the cap binds and
-   where mark 9's centring has almost no slack to spend: 133.64 chromium / 133.34 webkit at
-   390×664 (132.22/131.63 before the centring). Taller cells hand the block more air and push
-   the board further down, which only buys the cap room. pageVh is 1.000 at every rung of that
-   ladder, so the cap is a taste the owner may re-cut without reopening the row.
+   handle's 48px riding proud of the case while the sheet is up, so the sheet — handle included
+   — stops BELOW the masthead. The band is measured at the SHORTEST live cell, which is where
+   the cap binds and where mark 9's centring has almost no slack to spend. pageVh is 1.000 at
+   every rung of that ladder, so the cap is a taste the owner may re-cut without reopening the
+   row.
 
    The regime key is width AND orientation: `1023.98px` rather than `1023px` because a
    fractional-width viewport between the two would match NEITHER this rule nor the `min-width:
@@ -227,7 +223,7 @@
   }
 
   html.drawer-closed .scene-controls {
-    translate: 0 min(0px, calc(var(--fold-bottom, 200dvh) - var(--vv-height, 100dvh)));
+    translate: 0;
   }
 
   /* The case, not the region, is what hides and goes inert at closed-idle: the region must
@@ -259,12 +255,11 @@
     width: 100%;
   }
 
-  /* The tongue's berth: the case's top-right, with the tongue itself positioned OUT of the
-     case (`bottom: 100%` on `.drawer-tab`), so closed it is the 48px sitting under the verbs
-     band and open it is the handle at the corner. The inset is to the COLUMN's right edge,
-     not the viewport's: the sheet spans the full width, so a viewport-relative `1rem` stranded
-     the tongue 58px outside the fold band at 820×1180. Both poses align to the column, so the
-     glide carries no unanimated x-hop. */
+  /* The handle's berth while the sheet is UP: the case's top-right, with the handle itself
+     positioned OUT of the case (`bottom: 100%` on `.drawer-tab`), so it is the 48px riding
+     proud of the risen corner. The inset is to the COLUMN's right edge, not the viewport's:
+     the sheet spans the full width, so a viewport-relative `1rem` stranded the handle 58px
+     outside the fold band at 820×1180. */
   .drawer-handle {
     display: block;
     position: absolute;
@@ -274,14 +269,19 @@
     height: 0;
   }
 
-  /* The fold's play-verbs band — in flow, under the reserved line. Its children arrive by
-     Teleport from `GameControlPanel`, which owns their grammar; this owns only the berth. The
-     bottom padding is the tongue's own 48px, RESERVED IN FLOW: the centring counts it, and the
-     published edge is the padded bottom, so the clamp needs no constant of its own. */
+  /* THE RIBBON — one row of verbs, under the reserved line (T6.2 mark A). Its children arrive
+     by Teleport: `.play-controls` from `GameControlPanel`, which owns their grammar, and the
+     drawer's own tongue from `GameScene` while the sheet is shut. The row is composed rather
+     than authored — `.play-controls` is itself a coarse flex row at this same `gap` and
+     `align-items`, so the four verbs and the fifth read as ONE line without either owner
+     reaching into the other's box. Mark 9's `padding-bottom: 3rem` is GONE with the tab it
+     reserved room for: the opener is in flow now, so the band's own height is the reservation. */
   .fold-tools {
-    display: block;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 1rem;
     width: var(--board-col);
-    padding-bottom: 3rem;
   }
 }
 

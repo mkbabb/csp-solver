@@ -12,7 +12,7 @@
  * The drawer GLIDE ENGINE is untouched (it lives in useControlsDrawer + scene.css); this
  * shell only plumbs the refs the engine reads (host/rail/panel/tab) and registers them.
  */
-import { onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import DrawerTab from "@games/shared/DrawerTab.vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import {
@@ -39,6 +39,19 @@ const { faceTarget } = useLiveFace();
 // ~480ms FLIP glide, and focus. Esc closes from within (the rail's keydown).
 const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer();
 
+/** THE TONGUE'S BERTH ON THE PORTRAIT DOCK (T6.2, mark A) — the ribbon when the sheet is shut,
+ *  the case's own corner when it is up. ONE instance, one drawn word, one `aria-expanded` /
+ *  `aria-controls` pair; what moves is which berth holds it. Shut is the state the player lives
+ *  in, and there the opener is a PEER VERB in the bottom ribbon beside undo · redo · hint · peek
+ *  — the owner's mark, and the end of the tab that floated at the fold's edge. Open, the sheet
+ *  covers the ribbon whole (it is a full-width bottom sheet), so a berth that stayed down there
+ *  would be a drawer that cannot be shut: the same button rides up as the case's handle, which
+ *  is the shipped pose every drawer row already exercises. `defer` because BOTH berths are
+ *  minted later in this same template. */
+const tongueBerth = computed(() =>
+  drawerOpen.value ? "#drawer-handle" : "#fold-tools",
+);
+
 // ── ONE control-panel CARD, full stop (T5-W4 pass 6) ─────────────────────────────────────
 // P1-W4's rule was "one twin, never both"; it RETIRES BY CONSTRUCTION here, because there is
 // no longer a second card to be the other twin. The stacked `<lg` card is deleted and its two
@@ -49,7 +62,6 @@ const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer
 // mobile arm — the pass-5 cure — carries down whole and nothing the owner marked is
 // re-imported.
 const rowRegime = useRowRegime();
-const layoutEl = ref<HTMLElement | null>(null);
 const peekHost = ref<HTMLElement | null>(null);
 const railEl = ref<HTMLElement | null>(null);
 const panelEl = ref<HTMLElement | null>(null);
@@ -57,7 +69,6 @@ const drawerTab = ref<InstanceType<typeof DrawerTab> | null>(null);
 let unregisterDrawer: (() => void) | null = null;
 onMounted(() => {
   unregisterDrawer = registerDrawerScene(() => ({
-    layout: layoutEl.value,
     host: peekHost.value,
     rail: railEl.value,
     panel: panelEl.value,
@@ -68,7 +79,7 @@ onUnmounted(() => unregisterDrawer?.());
 </script>
 
 <template>
-  <div ref="layoutEl" class="app-layout" :class="{ 'scene-leaving': leaving }">
+  <div class="app-layout" :class="{ 'scene-leaving': leaving }">
     <!-- Board + the held answer-key laminate (a sibling over the board, never inside the
          grid's filtered group — kill-gate rule 6). The host tightly wraps the board box so
          the laminate's inset:0 aligns to .board-cells.
@@ -94,16 +105,21 @@ onUnmounted(() => unregisterDrawer?.());
              AWAY from the board and the board's own edge is exactly where the tongue belongs;
              on the phone the case slides OVER it. ONE component, one word, one ARIA pair — a
              Teleport, not a second tab (a second tab is a second `aria-controls` claiming the
-             same region). `defer` because the berth is minted later in this same template. -->
-        <Teleport defer to="#drawer-handle" :disabled="!portraitDock">
+             same region).
+
+             T6.2 mark A — on the dock the berth is `tongueBerth` (above): the ribbon while the
+             sheet is shut, the case's corner while it is up. The desk keeps `#drawer-handle`
+             through the disabled Teleport, byte-untouched. -->
+        <Teleport defer :to="tongueBerth" :disabled="!portraitDock">
           <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
         </Teleport>
       </div>
     </Teleport>
 
-    <!-- THE FOLD'S PLAY-VERBS BAND (pass 6) — the berth `GameControlPanel` teleports
-         `.play-controls` into on the portrait dock. Undo · redo · hint · peek, in flow, always
-         on screen, because the sheet that holds every between-moves act is a gesture away and
+    <!-- THE FOLD'S RIBBON (pass 6; T6.2 mark A) — the berth `GameControlPanel` teleports
+         `.play-controls` into on the portrait dock, and the berth the drawer's own tongue takes
+         while the sheet is shut. Undo · redo · hint · peek · controls, in flow, always on
+         screen, because the sheet that holds every between-moves act is a gesture away and
          PLAYING must never need it. Coarse-only and portrait-only by CSS, exactly like the
          `.play-controls` row it receives; empty and display:none everywhere else, so no regime
          but the dock's pays a box for it. -->
@@ -136,9 +152,9 @@ onUnmounted(() => unregisterDrawer?.());
       :inert="rowRegime ? drawerInert : undefined"
       @keydown.escape.stop="closeDrawer"
     >
-      <!-- The tongue's berth on the dock: the case's top-right. Closed, the case sits below
-           the screen's bottom edge and the 48px pokes up from under it; open, the handle is
-           at the case's corner. Zero box outside the dock. -->
+      <!-- The tongue's berth while the sheet is UP: the case's top-right corner (T6.2 mark A —
+           shut, the tongue is a verb in the ribbon and this berth stands empty). Zero box
+           outside the dock. -->
       <div id="drawer-handle" class="drawer-handle" />
       <HandDrawnOutline
         :stroke-width="3"

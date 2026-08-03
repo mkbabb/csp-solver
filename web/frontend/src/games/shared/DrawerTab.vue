@@ -15,6 +15,12 @@
  * component, one drawn word, one `aria-expanded`/`aria-controls` pair — a second tab would be
  * a second control claiming the same region. Landscape below 1024 keeps `display: none`: that
  * rung has no drawer, as shipped.
+ *
+ * T6.2 mark A — ON THE DOCK IT HAS TWO POSES, and `html.drawer-closed` is the whole switch.
+ * SHUT it is a PEER VERB in the fold's ribbon: in flow, last in the row, wearing the play
+ * verbs' own box (the `.icon-btn` 44px floor). UP it is the case's handle at the risen corner,
+ * exactly as shipped. The scene moves the one instance between the two berths on the same
+ * state, so no rule here needs to know which parent it woke up in.
  */
 import { ref } from "vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
@@ -147,6 +153,21 @@ defineExpose({
   .drawer-tab-text {
     writing-mode: horizontal-tb;
     padding: 0.15rem 0.5rem;
+  }
+
+  /* THE RIBBON POSE (T6.2 mark A) — shut, the opener is a verb among verbs. Out of the case's
+     positioning entirely and into the fold's flow row: `order` puts it after the four the panel
+     teleports in (nothing else in the row sets one, so 1 is last), the box is `.icon-btn`'s own
+     44px floor, and the 0.35rem crown matches `.play-controls`' own top margin so the five
+     tops sit on ONE line — which is the shape `board-covisibility.spec.ts` now locks. */
+  html.drawer-closed .drawer-tab {
+    position: static;
+    order: 1;
+    width: auto;
+    height: auto;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    margin-top: 0.35rem;
   }
 }
 

@@ -536,7 +536,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 
 <template>
   <div
-    class="bg-background text-foreground flex h-screen flex-col py-1 md:py-3"
+    class="page-root bg-background text-foreground flex h-screen flex-col py-1 md:py-3"
     @click="closeAll"
   >
     <!-- Shared SVG filter definitions -->
@@ -566,7 +566,9 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
            `.board-peek-host` has already been relocated OUT of the scene root by the time the
            face is live, so it keeps painting inside the card. -->
       <div class="board-group" :class="{ 'is-gallery': view === 'gallery' }">
-        <!-- Mobile: @mbabb in-flow, left-aligned with logo -->
+        <!-- Mobile: @mbabb on the head line beside the sun (T6.2 mark C — it is fixed chrome
+             now, not the assembly's first row; it stays mounted HERE so the gallery's v-show
+             and `closeAll` keep their one owner). -->
         <AttributionCard ref="mobileAttribution" mobile v-show="view === 'playing'" />
         <!-- Masthead: the pencil wordmark renders the CURRENT game's name and OPENS THE
              GALLERY (T4-W12 Wave D — the dropdown listbox is retired; one game-select
@@ -635,12 +637,50 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 </template>
 
 <style scoped>
+/* THE HEAD'S ONE METRIC (T6.2 mark C). `--toggle-size` was declared on `.corner-right`, which
+   is the only place that could read it — and the head has TWO corners. The attribution's line
+   is the toggle's own middle, so the number moves up to the page root where both corners
+   inherit it (the `--board-col` precedent: declared once on the common ancestor, spelled out
+   nowhere else). `DarkModeToggle` keeps its `5rem` fallback, so the component is still whole
+   on its own. */
+.page-root {
+  --toggle-size: 5rem;
+}
+
+/* The 8rem md rung died with the md row regime (R3): at 768–1023 the layout now
+   stacks, and a 128px fixed sun grazed the board's top-right frame. Stacked keeps
+   the 5rem mobile sun; the row regime (≥lg) keeps its 13rem corner celestial. */
+@media (min-width: 1024px) {
+  .page-root {
+    --toggle-size: 13rem;
+  }
+}
+
+/* R3 — the 42×32px logo-button↔toggle contention at 375: the centered wordmark's
+   caret end ran under the fixed 5rem toggle. One rung down on the toggle + a small
+   masthead clearance separates the two hit targets completely. */
+@media (max-width: 480px) {
+  .page-root {
+    --toggle-size: 4rem;
+  }
+
+  .masthead {
+    margin-top: 0.75rem;
+  }
+}
+
 .corner-right {
   position: fixed;
   top: 0;
   right: 0;
   z-index: 60;
-  --toggle-size: 5rem;
+  /* THE PADDING THE OWNER SAW (T6.2 mark C). The toggle is a `<button>` — an inline-level box —
+     so this wrapper was a line box around it and carried the font's descender leading under
+     the celestial: 215px of chrome around a 208px control, measured, at every width. `flex`
+     makes the block's height the toggle's own. The `top: -0.25rem / right: 0.25rem` nudge that
+     rode ≤767 leaves with it: it existed to claw that slack back at the one rung where it
+     showed, and there is no slack left to claw. */
+  display: flex;
   /* P2 (T3-W12 §2) — the toggle's celestial on its own promoted layer: the sun/moon
        polygon boil contributed ~25 paints/s of scrolling-layer damage in the a1
        baseline. Promotion (not contain: paint): the theme whirl translates the icons
@@ -653,35 +693,6 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
      a no-op there and a real clearance only where the OS reserves the corner. */
   padding-top: env(safe-area-inset-top, 0px);
   padding-right: env(safe-area-inset-right, 0px);
-}
-
-/* The 8rem md rung died with the md row regime (R3): at 768–1023 the layout now
-   stacks, and a 128px fixed sun grazed the board's top-right frame. Stacked keeps
-   the 5rem mobile sun; the row regime (≥lg) keeps its 13rem corner celestial. */
-@media (min-width: 1024px) {
-  .corner-right {
-    --toggle-size: 13rem;
-  }
-}
-
-@media (max-width: 767px) {
-  .corner-right {
-    top: -0.25rem;
-    right: 0.25rem;
-  }
-}
-
-/* R3 — the 42×32px logo-button↔toggle contention at 375: the centered wordmark's
-   caret end ran under the fixed 5rem toggle. One rung down on the toggle + a small
-   masthead clearance separates the two hit targets completely. */
-@media (max-width: 480px) {
-  .corner-right {
-    --toggle-size: 4rem;
-  }
-
-  .masthead {
-    margin-top: 0.75rem;
-  }
 }
 
 .board-group {
@@ -843,7 +854,10 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
     /* Keyboard-avoidance scroll-room (T4-WM lane C): useKeyboardViewport publishes the OS
        keyboard's occlusion height as `--keyboard-inset` on <html>; the stacked scene claims
        that much bottom room so a below-fold focused cell has somewhere to scroll up TO,
-       clear of the keyboard. 0 at rest and on every non-stacked/desktop layout. */
+       clear of the keyboard. 0 at rest and on every non-stacked/desktop layout.
+       THIS IS THE ONE LAYOUT CONSUMER of that var, which is why the publisher is gated on a
+       focused input (T6.2 mark B): ungated, every momentum-scroll wobble arrived here and the
+       centring below halved it into a board bounce. */
     padding-bottom: var(--keyboard-inset, 0px);
   }
 }

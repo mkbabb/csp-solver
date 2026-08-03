@@ -290,6 +290,76 @@ test.describe("keyboard-avoid (emulated visualViewport)", () => {
       )
       .toBeLessThanOrEqual(KEYBOARD_TOP + 2); // never eclipsed
   });
+
+  /**
+   * T6.2 MARK B — THE FOLD STOPS FEEDING BACK. The owner's report: a fast scroll to the bottom
+   * of a phone makes the board bounce under the controls. Instrumented on the built dist at
+   * 390×844 by rAF-sampling the published vars and the board's rect through a scripted
+   * momentum ramp, and the mechanism is one publisher and one consumer:
+   *
+   *   `publishInset` wrote `--keyboard-inset` on EVERY `visualViewport` resize/scroll, and its
+   *   input — `layoutHeight − (vv.height + vv.offsetTop)` — is nonzero for every reason a mobile
+   *   engine moves that viewport, a collapsing URL bar chief among them. Its one consumer is a
+   *   LAYOUT property (App.vue's `.board-group { padding-bottom }`) sitting under mark 9's
+   *   `margin-block: auto` centring, so the auto margins HALVED each phantom band into a board
+   *   translation: a 60px ramp moved the board 223.64 → 193.64 and back, 30px each way, twice
+   *   per flick, both engines. (`--fold-bottom` was the suspect and is exonerated: it never
+   *   republished through the ramp — a ResizeObserver watches the CONTENT box, so a padding
+   *   growth never fired it — which made it stale rather than noisy. It is deleted with mark A.)
+   *
+   * The cure is at the publisher: no focused input, no keyboard, no band. This row drives the
+   * ramp with nothing focused and asserts BOTH halves — the band stays 0 and the board does not
+   * move — and its control proves the consumer is still live, so a cure that merely severed the
+   * layout arm could not pass here either.
+   */
+  test("a viewport wobble with nothing focused publishes no band, and the board holds still", async ({
+    page,
+  }) => {
+    await installFakeVisualViewport(page);
+    await loadSudoku(page);
+
+    const ramp = () =>
+      page.evaluate(async () => {
+        const H = window.innerHeight;
+        const tops: number[] = [];
+        const bands = new Set<string>();
+        // The shape of one fast flick: the URL bar collapses, holds, and comes back.
+        for (const band of [0, 12, 28, 46, 60, 60, 60, 44, 26, 10, 0]) {
+          (window as unknown as VVWindow).__setVV(H - band, 0);
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+          tops.push(
+            +document.querySelector(".board-cells")!.getBoundingClientRect().top.toFixed(2),
+          );
+          bands.add(
+            getComputedStyle(document.documentElement)
+              .getPropertyValue("--keyboard-inset")
+              .trim(),
+          );
+        }
+        (window as unknown as VVWindow).__setVV(H, 0);
+        return {
+          span: +(Math.max(...tops) - Math.min(...tops)).toFixed(2),
+          bands: [...bands],
+        };
+      });
+
+    const r = await ramp();
+    expect(r.bands).toEqual(["0px"]); // no phantom keyboard, at any point on the ramp
+    expect(r.span).toBeLessThanOrEqual(0.5); // and the board never moved (head: 30.00)
+
+    // CONTROL — the consumer is live and the probe can see it. Write the band by hand, exactly
+    // as the ungated publisher did, and the same board must jump by half of it.
+    const moved = await page.evaluate(() => {
+      const cells = document.querySelector(".board-cells")!;
+      const before = cells.getBoundingClientRect().top;
+      document.documentElement.style.setProperty("--keyboard-inset", "60px");
+      void document.body.offsetHeight;
+      const after = cells.getBoundingClientRect().top;
+      document.documentElement.style.setProperty("--keyboard-inset", "0px");
+      return +(before - after).toFixed(2);
+    });
+    expect(moved).toBeGreaterThan(20);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -338,6 +408,13 @@ test.describe("the 296px keypad band (measured constant, driven through the comp
     await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
     await page.waitForTimeout(700);
 
+    // T6.2 mark B — THE PREMISE IS DRIVEN, not assumed. `--keyboard-inset` is gated on a focused
+    // input now (`useKeyboardViewport`: a band published with nothing focused was a phantom
+    // keyboard, and its layout consumer turned every momentum-scroll wobble into a board
+    // bounce), so a keypad row has to put a cell in focus before it raises a keypad. That is
+    // what a real keypad IS. `.focus()` rather than a tap: the sheet is open over the board and
+    // the row is about the band, not about reaching a covered cell.
+    await page.locator(".board-cells input").first().focus();
     await page.evaluate((b) => (window as unknown as VVWindow).__setVV(664 - b), BAND);
     // BOTH vars publish from the one handler — the trigger's own ordering, gated.
     await expect

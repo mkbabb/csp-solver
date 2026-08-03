@@ -1,4 +1,4 @@
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 
 import { mediaRef, useRowRegime } from "./useCoarsePointer";
 import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
@@ -20,7 +20,9 @@ import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
  *   · **≥1024** — the shipped parked rail, byte-untouched (the audit-4 fiction).
  *   · **<1024 portrait** — the case is a `position: fixed` bottom sheet anchored on
  *     `top: var(--vv-height)` with its rest pose on `translate:` (`useKeyboardViewport`'s
- *     standing trigger, honoured verbatim). The tongue rides the CASE, not the board.
+ *     standing trigger, honoured verbatim). The tongue is a VERB IN THE FOLD'S RIBBON while the
+ *     sheet is shut and the case's own handle while it is up (T6.2 mark A) — never the board's,
+ *     which the risen sheet would cover.
  *   · **<1024 landscape** — the shipped in-flow presentation, unchanged, and the toggle stays
  *     the defined no-op it has always been there. The lead's charter (c) HOLDS that rung
  *     RATIFIED, so this regime is keyed on width AND orientation, never width alone.
@@ -140,8 +142,6 @@ if (hasDom && !drawerOpen.value) applyLayout(false);
 // ── Registration — the scene owns the board/rail/tab, App owns the masthead ──
 
 interface DrawerSceneEls {
-  /** `.app-layout` — the scene root, whose padded bottom is the fold's own edge. */
-  layout: HTMLElement | null;
   /** `.board-peek-host` — the transformed worksheet (board + vignette + margin + tab). */
   host: HTMLElement | null;
   /** `.scene-controls` — the case that slides. */
@@ -162,48 +162,26 @@ interface DrawerMastheadEls {
 let getScene: (() => DrawerSceneEls) | null = null;
 let getMasthead: (() => DrawerMastheadEls) | null = null;
 
-/** Called by each game scene on mount; the returned disposer settles any in-flight
- *  glide instantly (the F6 page-turn unmounts scenes mid-life) and stops the fold publisher. */
+/**
+ * Called by each game scene on mount; the returned disposer settles any in-flight glide
+ * instantly (the F6 page-turn unmounts scenes mid-life).
+ *
+ * T6.2 mark A — `--fold-bottom` AND ITS OBSERVER ARE GONE. Mark 9 published `.app-layout`'s
+ * padded bottom so the closed sheet could lift its tongue flush under the verbs; the tongue is
+ * a verb in the ribbon now, so the closed sheet has nothing left to align to and simply rests
+ * below the visual viewport's edge (scene.css). The publisher's own measurement was also blind
+ * in the one direction that mattered: a ResizeObserver watches the CONTENT box, so the
+ * keyboard-inset reflow it was installed to catch — `padding-bottom` on `.board-group` — never
+ * fired it, and the var went stale by the full excursion (`attach` 0 → 30 through a 60px band
+ * ramp, measured at 390×844). Nothing reads it; nothing publishes it.
+ */
 export function registerDrawerScene(get: () => DrawerSceneEls): () => void {
   getScene = get;
-  const stopFold = publishFoldBottom(get().layout);
   return () => {
-    stopFold();
     if (getScene === get) {
       settleNow();
       getScene = null;
     }
-  };
-}
-
-/**
- * `--fold-bottom` (T6 mark 9) — the fold column's padded bottom edge in document coords, the
- * one number the portrait dock's closed pose is clamped against (scene.css). `#fold-tools` is
- * `.app-layout`'s last IN-FLOW child there (the sheet is fixed), so the layout's own bottom is
- * that edge and no second measurement is needed.
- *
- * ONE observer, on the layout and on its parent `.board-group` — the latter catches the
- * attribution / masthead / status / keyboard-inset reflows that move the fold without resizing
- * it — plus `resize` for the viewport itself. A zero height means the scene is `v-show`n off
- * under the gallery: hold the last published edge rather than publish a collapsed one. Publish
- * is unconditional otherwise; the portrait CSS is the only consumer, and gating on
- * `portraitDock` would buy a branch to save a custom property nobody else reads.
- */
-function publishFoldBottom(layout: HTMLElement | null): () => void {
-  if (!hasDom || !layout) return () => {};
-  const publish = () => {
-    const r = layout.getBoundingClientRect();
-    if (r.height === 0) return;
-    const edge = (r.bottom + window.scrollY).toFixed(2);
-    document.documentElement.style.setProperty("--fold-bottom", `${edge}px`);
-  };
-  const ro = new ResizeObserver(publish);
-  ro.observe(layout);
-  if (layout.parentElement) ro.observe(layout.parentElement);
-  window.addEventListener("resize", publish);
-  return () => {
-    ro.disconnect();
-    window.removeEventListener("resize", publish);
   };
 }
 
@@ -354,7 +332,14 @@ function reclaimFocus() {
   if (!scene?.rail) return;
   const active = document.activeElement;
   if (active instanceof HTMLElement && scene.rail.contains(active)) {
-    scene.tab?.focus({ preventScroll: true });
+    const home = () => getScene?.()?.tab?.focus({ preventScroll: true });
+    home();
+    // T6.2 mark A — RE-ASSERTED AFTER THE RE-BERTH, and it was found by a read rather than by
+    // reasoning: the dock moves the tongue out of the case and into the ribbon on this same
+    // state flip, and re-inserting a focused node drops focus to `<body>` (measured, both
+    // engines). One extra call on the tick the move lands; on the desk nothing moves and
+    // re-focusing the already-focused tab is a no-op.
+    void nextTick(home);
   }
 }
 

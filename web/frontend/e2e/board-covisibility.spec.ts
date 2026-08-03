@@ -286,28 +286,36 @@ test.describe("mark 6 — the band dissolves", () => {
     // absorbs the push. What absorbs is the fold column's own HEADROOM — the gap between
     // `#fold-tools`'s bottom and the viewport floor — and `docGrowth` is `push − headroom`.
     //
-    // Mark 9 spent almost all of that headroom on purpose. The band now reserves the tongue's
-    // 3rem in flow and the whole block centres, so the fold rests within **13.42 chromium /
-    // 13.72 webkit** of the floor where pass 7 measured 62.84/63.44. Re-derived at this row's
-    // own context on the built dist, 6 reps per engine, exact every time: the control arm reads
+    // Mark 9 spent almost all of that headroom on purpose (the band reserved the tongue's 3rem
+    // in flow and the whole block centred), so the fold rested within **13.42 chromium / 13.72
+    // webkit** of the floor where pass 7 measured 62.84/63.44, and the control arm read
     // **docGrowth 89 both engines against ctrlPush 102.80 chromium / 102.50 webkit**. Layout
-    // constants, not samples — and engine-identical where pass 7's read was split, because the
-    // two engines' headrooms now differ by less than the rounding.
+    // constants, not samples. T6.2 gives that headroom back — see below.
     //
-    // FLOOR STAYS `> 30`, and the reason is that raising it buys nothing. The measured minimum
-    // is 89, so pass 7's "half, rounded down" discipline would say 44 — but the ablation ladder
-    // (vignette forced to a fixed height; drawn / push / docGrowth) shows both arms now red
-    // together, because a near-zero headroom makes `docGrowth` track `push` almost 1:1:
+    // `ctrlPush > 50` IS THE SENSITIVE ARM at this tree, and mark 9's own ablation ladder says
+    // why: at a near-zero headroom `docGrowth` tracks `push` almost 1:1, so both arms redden
+    // together and the pair's discriminating power sits in the push.
     //   80px → drawn 89.46, push 78.58/78.28, docGrowth 65   both arms PASS
     //   60px → drawn 69.53, push 58.58/58.28, docGrowth 45   both arms PASS
     //   50px → drawn 59.57, push 48.58/48.28, docGrowth 35    `ctrlPush > 50` REDS
     //   40px → drawn 49.61, push 38.58/38.28, docGrowth 25    BOTH arms RED
-    // So `ctrlPush > 50` is the sensitive arm at this tree and 44 would only red where 50
-    // already has, while sitting close enough to a legitimate 60px vignette's 45 to red on a
-    // taste re-cut rather than a defect. Pass 7's own born-RED figure is superseded rather than
-    // wrong: at 80px the control read 17 against a 62.84 headroom, and reads 65 against 13.42.
-    expect(c.docGrowth).toBeGreaterThan(30);
     expect(c.ctrlPush).toBeGreaterThan(50);
+
+    // T6.2 MARK A — THE ARITHMETIC IS RE-DERIVED AGAIN, and this time HEADROOM is the term that
+    // moved. The ribbon gave up mark 9's 3rem tongue reservation (the opener is in flow among
+    // the verbs now) and the attribution left the assembly for the head line, so the fold rests
+    // **60.42 chromium / 60.72 webkit** above the floor where mark 9 measured 13.42/13.72. The
+    // auto margins' free space is twice that, which now EXCEEDS the real vignette's own
+    // 102.80/102.50 push: an in-flow celebration is absorbed whole and `docGrowth` reads 0 at
+    // this cell, in both engines, on a tree where nothing is wrong. A floor on that number would
+    // be a floor on the headroom, so the arm keeps its bite by out-growing the headroom instead
+    // of assuming it — which is exactly what the ladder above does, one rung further out. The
+    // claim is unchanged: a block that outruns the fold's free space MUST be seen as a scroll.
+    await page.addStyleTag({
+      content: ".completion-vignette { min-height: 320px !important; }",
+    });
+    const tall = await grade();
+    expect(tall.docGrowth).toBeGreaterThan(30);
   });
 
   /**
@@ -384,28 +392,45 @@ test.describe("mark 6 — the band dissolves", () => {
     expect(fold.verbFloorFails).toBe(0);
 
     /**
-     * T6 MARK 9 — THE TWO LOCKS, RELATIONAL BY CONSTRUCTION. The mark moved portrait's
-     * absolutes on purpose (the board's top runs 132.22 → 223.64 at 390×844), so neither lock
-     * may pin a pixel: ATTACHMENT says the tongue's bottom edge rides the fold column's own
-     * padded bottom — the tongue spans the band's 3rem reservation and lands flush under the
-     * verbs — and CENTRING says the board's middle sits within 6% of the viewport's.
+     * T6 MARK 9 · RE-AIMED AT T6.2 MARK A — THE TWO LOCKS, STILL RELATIONAL BY CONSTRUCTION.
      *
-     * Both rungs, because they fail differently. Born-RED at head, measured both engines:
-     * attachment reads 242.84/243.44 at 844 and 62.84/63.44 at 664 against a ≤1 bound, since
-     * the tongue used to rest on the screen's floor and those figures ARE the old fold headroom;
-     * centring reads 108.78/109.37 at 844 against a 50.64 slack and REDS, but 18.78/19.37 at
-     * 664 against 39.84 and PASSES — the short cell has so little free space that the centring
-     * is nearly invisible there by construction. A 664-only lock would have scored the mark as
-     * landed on a tree where nothing had moved.
+     * Mark 9's first lock was ATTACHMENT: `|tongue.bottom − fold.bottom| ≤ 1`, because the
+     * tongue rode the CASE and had to hang flush under the verbs across the band's own 3rem
+     * reservation. Mark A retires that geometry outright — the opener is a MEMBER of the ribbon
+     * now, not a tab attached beneath it — so the lock is re-aimed at the shape that replaced
+     * it, and it is three arms because "in the row" is three claims and the old one-liner would
+     * have scored a tongue merely dropped inside the band as a pass:
+     *   · MEMBERSHIP — `#fold-tools` contains the opener (the DOM claim, and the berth swap's
+     *     shut half: the same node is in `#drawer-handle` while the sheet is up).
+     *   · ONE LINE   — its top sits within 1px of the first play verb's, which is what makes
+     *     five verbs read as one row rather than as a row and a straggler.
+     *   · IN BAND    — its bottom stays inside the ribbon's own box, so a re-styled opener can
+     *     never grow back out of the band it now belongs to.
+     * Plus the coarse floor on both axes, since a verb that cannot be hit is not a verb.
+     *
+     * CENTRING is unchanged in shape and re-derived in fact: the board's middle within 6% of the
+     * viewport's, at both rungs. Measured here on the built dist: 16.36 chromium / 16.67 webkit
+     * at 844 (slack 50.64) and 16.36 / 16.66 at 664 (slack 39.84).
+     *
+     * Both rungs, because they fail differently — a 664-only lock would score a mark that moved
+     * nothing as landed. The CONTROL is the row's own, in-run: put the opener back where mark 9
+     * had it and MEMBERSHIP and ONE LINE must both red (measured: the tongue's top lands 78px
+     * below the verbs' when it hangs at the band's padded floor).
      */
-    const mark9 = () =>
+    const ribbon = () =>
       page.evaluate(() => {
         const vh = window.innerHeight;
-        const fold = document.querySelector("#fold-tools")!.getBoundingClientRect();
-        const tongue = document.querySelector(".drawer-tab")!.getBoundingClientRect();
+        const foldEl = document.querySelector("#fold-tools")!;
+        const fold = foldEl.getBoundingClientRect();
+        const tongueEl = document.querySelector(".drawer-tab")!;
+        const tongue = tongueEl.getBoundingClientRect();
+        const verb = document.querySelector("#fold-tools .icon-btn")!.getBoundingClientRect();
         const cells = document.querySelector(".board-cells")!.getBoundingClientRect();
         return {
-          attach: +Math.abs(tongue.bottom - fold.bottom).toFixed(2),
+          inFold: foldEl.contains(tongueEl),
+          onLine: +Math.abs(tongue.top - verb.top).toFixed(2),
+          overBand: +Math.max(0, tongue.bottom - fold.bottom).toFixed(2),
+          floorFail: tongue.width < 44 || tongue.height < 44,
           offCentre: +Math.abs(cells.top + cells.height / 2 - vh / 2).toFixed(2),
           slack: +(vh * 0.06).toFixed(2),
         };
@@ -414,10 +439,24 @@ test.describe("mark 6 — the band dissolves", () => {
     // Taller rung first, so the row ends back at the cell its own name claims.
     for (const height of [844, 664]) {
       await page.setViewportSize({ width: 390, height });
-      await expect.poll(async () => (await mark9()).attach).toBeLessThanOrEqual(1);
-      const m = await mark9();
+      await expect.poll(async () => (await ribbon()).onLine).toBeLessThanOrEqual(1);
+      const m = await ribbon();
+      expect(m.inFold).toBe(true);
+      expect(m.overBand).toBe(0);
+      expect(m.floorFail).toBe(false);
       expect(m.offCentre).toBeLessThanOrEqual(m.slack);
     }
+
+    // CONTROL — mark 9's own berth, restored by hand: the opener leaves the row for the case's
+    // handle. Both membership arms must red, or the lock is a decoration.
+    await page.evaluate(() => {
+      document
+        .querySelector("#drawer-handle")!
+        .appendChild(document.querySelector(".drawer-tab")!);
+    });
+    const strayed = await ribbon();
+    expect(strayed.inFold).toBe(false);
+    expect(strayed.onLine).toBeGreaterThan(1);
 
     // CONTROL A — the probe must be able to see a scroll. One in-flow block under the board
     // is exactly the shape the card used to be, and the same read must exceed the bound.
