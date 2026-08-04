@@ -23,6 +23,7 @@
 import { computed, provide, ref } from "vue";
 import GameBoard from "@games/shared/GameBoard.vue";
 import { findConflicts, type Conflicts } from "@games/shared/conflicts";
+import { peerCursors, session } from "@games/shared/useSession";
 import type { AnyGameSpec, GameModel } from "@games/shared/defineGame";
 
 const props = defineProps<{
@@ -55,6 +56,42 @@ const celebrating = computed(
     props.model.animatingCells.value.size > 0,
 );
 provide("flourish", celebrating);
+
+// ── T8-W3 M1 · GHOST TIER 4 — where a peer's pencil is ────────────────────────────────────
+// This is the cell-mount site, so this is where a peer's cursor becomes a class and a colour,
+// beside the `authorInk` binding it sits next to. TWO INKS, ONE BOX: the digit in a cell wears
+// its AUTHOR's hue, and the ring around it wears the hue of whoever is pointing at it — very
+// often not the same person. `--color-peer-cursor-ink` is the second var, so neither can eat
+// the other (gameCell.css tier 4).
+//
+const peerCursorInk = computed(() => {
+  const cursors = peerCursors.value;
+  const inkOf = new Map(session.players.value.map((p) => [p.id, p.ink]));
+  const out: Record<string, Record<string, string>> = {};
+  for (const [id, pos] of Object.entries(cursors)) {
+    if (pos === null || pos === undefined) continue;
+    const ink = inkOf.get(id)?.["--color-user-ink"];
+    // Your own cursor is not a ghost — you have a focus ring for that, and it out-ranks this
+    // tier anyway. A peer whose row has gone (`ink` absent) has had their cursor cleared by the
+    // session already; skipping is the belt to that brace.
+    if (!ink) continue;
+    out[String(pos)] = { "--color-peer-cursor-ink": ink };
+  }
+  return out;
+});
+
+// ── T8-W3 M1 · WHO WROTE IT ───────────────────────────────────────────────────────────────
+// `cellAuthors` is a read-contract field on `GameModel` — the `authorInk` precedent exactly,
+// one field and one pass-through for five games. ONE read feeds two consumers: the board's
+// washi tape (the visual answer) and each cell's own accessible name (the only answer a coarse
+// pointer can be given).
+const cellAuthors = computed(() => props.model.cellAuthors.value);
+
+/** A peer's slug for the cell's accessible name — empty for your own and the unauthored. */
+function authorNameAt(pos: number): string {
+  const a = cellAuthors.value[String(pos)];
+  return a && !a.self ? a.slug : "";
+}
 
 /**
  * The sub-grid root. A BOXED board's side is its root squared (`boardSizeOf: n => n**2`), so
@@ -183,6 +220,7 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
     :hint="model.hintReasoning.value"
     :proactive-error-check="model.proactiveCheck.value"
     :loading="model.loading.value"
+    :cell-authors="cellAuthors"
     @update-cell="(pos: number, val: number) => model.setCell(pos, val)"
     @mark="(pos: number, val: number) => model.toggleUserMark(pos, val)"
     @cycle-pencil-mode="model.cyclePencilMode()"
@@ -235,7 +273,12 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
           :row-index="r + 1"
           :col-index="(pos % boardSize) + 1"
           :tab-index="pos === s.focusedPos ? 0 : -1"
-          :style="model.authorInk.value[String(pos)]"
+          :style="{
+            ...model.authorInk.value[String(pos)],
+            ...peerCursorInk[String(pos)],
+          }"
+          :is-peer-cursor="String(pos) in peerCursorInk"
+          :author-name="authorNameAt(pos)"
           :ghost-path="s.cellRects[pos] ?? ''"
           :marks="s.marksFor(pos)"
           :corner-marks="model.cornerMarks.value[String(pos)]"
@@ -244,6 +287,7 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
           @update="s.onCellUpdate"
           @mark="s.onMark"
           @cell-focus="s.onCellFocus"
+          @cell-hover="s.onCellHover"
           @candidate-peek-start="s.onPeekStart"
           @candidate-peek-end="s.onPeekEnd"
         />

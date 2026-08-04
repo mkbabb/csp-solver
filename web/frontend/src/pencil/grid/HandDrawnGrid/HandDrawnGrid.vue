@@ -28,6 +28,17 @@ const props = defineProps<{
    *  opacity 8/s over the whole board box — but it must NOT be unmounted, or the 500 ms
    *  bow-out that hands the frame to the gold has nothing left to fade. Pinned, not deleted. */
   solveSuccess?: boolean;
+  /** T8-W3 M14 — the JOIN ring's dash front in [0,1] (default 0). A SECOND trace stack, not a
+   *  commandeering of the first: `progress` above is the live fill gauge and is in use whenever
+   *  the board isn't empty. `useJoinWash` owns the number; this frame owns the render. At 0 the
+   *  layer mounts no geometry at all, which is also its PRM form. */
+  joinProgress?: number;
+  /** The ring's `stroke-opacity` ceiling for the beat in flight — 0.95 join / 0.65 return /
+   *  0.45 leave, ramped out by the beat's own tail. */
+  joinOpacity?: number;
+  /** Whose ring it is: the peer's `--color-user-ink` rebinding, bound as a style object on the
+   *  stack's own group. The stroke reads the var, exactly as a peer-authored digit does. */
+  joinInk?: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
@@ -90,6 +101,27 @@ const traceFrames = computed(() =>
   generateFrameTraceFrames(
     VIEWBOX_SIZE,
     42,
+    BOIL_CONFIG.frameCount,
+    BOIL_CONFIG.frameBoil,
+    FILTER_PRESETS["grain-static"]?.grain,
+  ),
+);
+
+// ── T8-W3 join trace: the SECOND hand on the same rectangle ──
+//
+// The estate's own retrace idiom, the one `scribbleUnderline`'s selected state uses: a second
+// pass over the same geometry with its own seed, so the two rings are in registration but not
+// in lockstep. Same generator, same rect, same roughness and boil — only `baseSeed` differs
+// (42 is the fill gauge's; 91 is the join's), which is exactly what makes it read as a second
+// pencil rather than a thicker first one. Filterless and grain-baked like its sibling: no
+// `filter=` is minted, so the census is unmoved.
+const joinProgress = computed(() => Math.max(0, Math.min(1, props.joinProgress ?? 0)));
+const joinDashOffset = computed(() => 1000 * (1 - joinProgress.value));
+
+const joinTraceFrames = computed(() =>
+  generateFrameTraceFrames(
+    VIEWBOX_SIZE,
+    91,
     BOIL_CONFIG.frameCount,
     BOIL_CONFIG.frameBoil,
     FILTER_PRESETS["grain-static"]?.grain,
@@ -446,6 +478,39 @@ onUnmounted(() => {
         :style="{ strokeDashoffset: traceDashOffset }"
       />
     </g>
+
+    <!-- Join trace (T8-W3 M14): the board takes an arriving player's colour, and lets it go.
+             Everything the progress trace is — filterless grain-baked poses, opacity-swapped on
+             the SAME beat, unmounted whole at rest — with three differences that are the whole
+             feature: its own `baseSeed` (a second hand, in registration), its ink rebound to the
+             peer's `--color-user-ink` off the group, and a dash driven by a finite one-shot
+             instead of the fill fraction. Painted last, over the graphite AND over the fill
+             gauge, because for its 1180ms it is the thing being said.
+             At `joinProgress === 0` — at rest, and under PRM, where the wash never runs — the
+             `v-for` yields nothing and not one node of this exists. The `solveSuccess` pin is
+             its sibling's, verbatim: the win freezes the stack on pose 0 rather than trading
+             opacity 8/s under gold that owns the frame. -->
+    <g
+      v-for="(d, f) in joinProgress > 0 ? joinTraceFrames : []"
+      :key="'join-' + f"
+      class="join-pose"
+      :class="{ 'is-active': (solveSuccess ? 0 : boilFrame) === f }"
+      :style="joinInk"
+    >
+      <path
+        :d="d"
+        class="join-trace"
+        fill="none"
+        stroke="var(--color-user-ink)"
+        stroke-width="8"
+        :stroke-opacity="joinOpacity ?? 0"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        pathLength="1000"
+        stroke-dasharray="1000 1000"
+        :style="{ strokeDashoffset: joinDashOffset }"
+      />
+    </g>
   </svg>
 </template>
 
@@ -525,6 +590,38 @@ onUnmounted(() => {
       opacity 500ms ease;
   }
 }
+
+/* T8-W3 join trace — the same compositor-only opacity-swap as every pose stack above it. */
+.join-pose {
+  opacity: 0;
+  will-change: opacity;
+  /* THE RETRACE IS OFFSET, AND THE AUDITION IS WHY (the MUST-LOOK gate, both engines, 2x).
+     A second seed on the same rect is not a second ring: at a peer hue near the progress ink
+     the two strokes fuse into one fringed band and the fill gauge is simply gone. That is not
+     hypothetical — `inkFor` walks the golden angle and index 2 lands at 275deg, a hand's
+     breadth from `--color-progress-ink`. Looked at, co-located, it read as ONE ring.
+     So the second pass is offset, which is what the estate's own retrace idiom always was
+     (`scribbleUnderline`: "slightly offset retrace for pencil double-stroke", offset ~1x the
+     stroke width). 8 units of stroke in a 1000 box is `1 - 8/500` = 0.984 — the same ratio.
+     INWARD, not outward, and that direction is a constraint rather than a taste: the gallery
+     card's live face clips (`.live-face-slot { overflow: hidden }`) and a join landing while
+     the deck is open has to ring THAT face (M13 row 13). An outward ring reads beautifully on
+     the playing view and is cut off in the card; an inward one is whole in both.
+     A static transform on a static group: composited, no re-raster, no filter, no beat. */
+  transform: scale(0.984);
+  transform-origin: 50% 50%;
+}
+
+.join-pose.is-active {
+  opacity: 1;
+}
+
+/* NO TRANSITION ON THE DASH, and that is the load-bearing difference from `.progress-trace`.
+   The fill gauge's front moves on FILL EVENTS, so a 240ms tween is what carries it between two
+   resting values. The join ring's front is driven every frame by a `sequence` handle that is
+   already the easing — laying a second 240ms tween over it would smear the beat's own curve and
+   leave the ring un-arrived ~240ms after J3's window has closed. The one-shot owns the motion;
+   the paint just follows it. */
 
 /* FILL-gauge a11y mirror — visually hidden, still announced (the sr-only clip). */
 .progress-trace-a11y {

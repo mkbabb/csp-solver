@@ -66,6 +66,7 @@ import { useButtonAnimation } from "@games/shared/useButtonAnimation";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
 import { portraitDock, useControlsDrawer } from "@games/shared/useControlsDrawer";
 import { leaveSession, session } from "@games/shared/useSession";
+import { arriving, departing } from "@games/shared/useJoinWash";
 
 // Underline boil: brief burst on selection change, then settle
 const boilFrame = ref(0);
@@ -363,6 +364,14 @@ const playersId = useId();
 // it said it to sighted eyes only. `aria-describedby` at a directly-referenced node reads it
 // whatever its hidden state (accname §4.1 step 2A), so the tape stays exactly the tape it is.
 const playersHintId = useId();
+
+// T8-W3 M13 row 18 — A ROOM THAT HAS EMPTIED IS STILL A ROOM YOU CAN FILL. `v-if` hid the
+// invite verb the moment you were in a room, so the one state that most needs the link — you,
+// alone, everyone else gone — was the one state that offered no way to make it. The verb comes
+// back for it, and the well says the thing out loud besides.
+const aloneInRoom = computed(
+  () => !!session.roomId.value && session.players.value.length <= 1,
+);
 // `pencils` holds two controls, so each row is its own `role="group"` named by that row's OWN
 // visible caption — otherwise assistive tech hears two unlabelled Off/On pairs inside one name
 // and cannot tell which is which. `checking` holds one, so the tape names it directly.
@@ -850,8 +859,11 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
         :seed="61"
         wide
       />
+      <!-- T8-W3 M13 row 18 — the verb also returns for an EMPTY ROOM. `!roomId` alone meant the
+           room that had emptied to just you offered no way to re-invite anybody; a room of one
+           is exactly where the link is wanted. -->
       <button
-        v-if="!session.roomId.value"
+        v-if="!session.roomId.value || aloneInRoom"
         @click="inviteAct.press()"
         :disabled="loading"
         class="icon-btn"
@@ -864,7 +876,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
         }}</span>
         <SheetWashiLabel v-if="!mobile" :text="inviteAct.washi.value" :seed="73" wide />
       </button>
-      <template v-else>
+      <template v-if="session.roomId.value">
         <!-- T6.1 — THE TABLE SAYS SO WHEN IT ISN'T UP YET. Between pressing the verb and
              being on the wire there was nothing to see, and on the abrogated public relays
              that nothing lasted 47–66 seconds. One line holds that gap, and it is a
@@ -899,12 +911,53 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
             aria-label="who's on this board"
             tabindex="0"
           >
-            <li v-for="p in session.players.value" :key="p.id" class="player-row">
-              <span class="player-swatch" :style="p.ink" aria-hidden="true"></span>
-              <span class="player-name">{{ p.slug }}</span>
-              <span v-if="p.self" class="player-self">you</span>
+            <!-- T8-W3 M14 — THE ROW IS A FOLD NOW, and the ink rides the whole row rather than
+                 the dot alone. Two changes, one shape: the `<li>` is a `0fr↔1fr` grid so a row
+                 can arrive and depart without the card reflowing under it (the crib's own
+                 idiom), and `p.ink` sits on the row so the SWATCH AND THE SLUG are both in the
+                 colour that player's digits are written in. That is the whole of the "player
+                 icon" the mark floated: a drawn animal would need 345 drawings or one generic
+                 glyph that says nothing about which animal you are. -->
+            <li
+              v-for="p in session.players.value"
+              :key="p.id"
+              class="player-row"
+              :class="{
+                'is-arriving': arriving[p.id] === 'join',
+                'is-returning': arriving[p.id] === 'rejoin',
+              }"
+              :style="p.ink"
+            >
+              <span class="player-row-cells">
+                <span class="player-swatch" aria-hidden="true"></span>
+                <span class="player-name">{{ p.slug }}</span>
+                <span v-if="p.self" class="player-self">you</span>
+              </span>
+            </li>
+            <!-- A departure needs a row to happen to. The session drops a peer from the roster
+                 the instant they go, so `useJoinWash` holds the row for its own 740ms and hands
+                 it back here — the well closes on somebody rather than on a gap.
+                 `aria-hidden`: this list is `role="log"`, whose office is announcing what was
+                 ADDED, and a departing row appended to it would be read out as an arrival. The
+                 shrinking roster is what a reader gets, which is the truth. -->
+            <li
+              v-for="r in departing"
+              :key="`gone-${r.id}`"
+              class="player-row is-leaving"
+              :style="r.ink"
+              aria-hidden="true"
+            >
+              <span class="player-row-cells">
+                <span class="player-swatch" aria-hidden="true"></span>
+                <span class="player-name">{{ r.slug }}</span>
+              </span>
             </li>
           </ul>
+          <!-- T8-W3 M13 row 18 — said out loud. `live` never going false meant nothing on
+               screen distinguished a full table from an empty one. -->
+          <p v-if="aloneInRoom" class="players-alone" aria-live="polite">
+            you're the only one on this board.
+          </p>
           <!-- T8-W1 M3 — the note under the roster is PRUNED. "anyone with this link can write
                on this board" is the well's own description ("share this board and everyone
                writes on the same grid") said a second time, in the one state where the reader
@@ -1292,14 +1345,30 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   list-style: none;
 }
 
+/* T8-W3 M14 — the row is a FOLD. `grid-template-rows: 0fr→1fr` is the crib's own mechanism one
+   level down: a row can open from nothing and close to nothing without the card ever learning a
+   height, and the well grows and shrinks in place instead of snapping. At rest it is `1fr` and
+   costs exactly what a flex row cost. */
 .player-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-rows: 1fr;
   font-family: var(--font-hand);
   font-size: var(--type-caption);
   line-height: 1.35;
-  color: var(--color-foreground);
+  /* THE SLUG IS IN THEIR INK. The row carries the peer's `--color-user-ink` rebinding inline, so
+     the name and the dot are the one colour the digits on the board are drawn in — the whole of
+     the "who is here" the well promises. Your own row rebinds nothing and takes the incumbent. */
+  color: var(--color-user-ink);
+}
+
+/* `min-height: 0` is what lets a `0fr` track actually collapse (the crib's `> div` rule,
+   verbatim); `overflow: hidden` is what stops the text spilling out of a closing one. */
+.player-row-cells {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* The swatch is the digit's own ink, not a legend for it: `--color-user-ink` is what the
@@ -1311,6 +1380,88 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   height: 0.7rem;
   border-radius: 50%;
   background: var(--color-user-ink);
+}
+
+/* ── T8-W3 M14 · THE JOIN, THE LEAVE, AND THE RETURN — the roster's half ───────────────────
+   The board's half is one `sequence` handle in `useJoinWash`; this half is three CSS one-shots
+   that ride no subscriber at all. Every window below is the beat table's, verbatim, and every
+   `to` equals the rule's own cascade so the fill is `backwards` and nothing is retained.
+
+   J1  0–320   the well makes room        R1  0–280
+   J2  140–520 the name writes itself     R2  120–440   (their EXISTING ink: a return, not an
+   J5  —       the board lets go                         arrival)
+   L1  0–420   the ring retreats (board)
+   L2  260–520 the name goes quiet
+   L3  420–740 the well closes
+
+   The order INVERTS on a leave, and that is the sentence rather than a symmetry: on a join the
+   name arrives before the board says so; on a leave the board says so before the name goes. An
+   arrival is news. A departure is a settling. */
+@keyframes player-row-open {
+  from {
+    grid-template-rows: 0fr;
+  }
+}
+
+@keyframes player-row-close {
+  from {
+    grid-template-rows: 1fr;
+  }
+}
+
+@keyframes player-name-quiet {
+  from {
+    color: var(--color-user-ink);
+  }
+}
+
+.player-row.is-arriving {
+  animation: player-row-open 320ms var(--ease-glassGlide) backwards;
+}
+
+.player-row.is-arriving .player-name {
+  animation: ink-write-in 380ms var(--ease-drawOn) 140ms backwards;
+}
+
+/* A RETURN IS LIGHTER THAN AN ARRIVAL. Same shape, less of it: the fold and the write-in both
+   land 40ms sooner, and the board's ring holds no beat at all. Somebody you already know coming
+   back is not the same news as somebody new. */
+.player-row.is-returning {
+  animation: player-row-open 280ms var(--ease-glassGlide) backwards;
+}
+
+.player-row.is-returning .player-name {
+  animation: ink-write-in 320ms var(--ease-drawOn) 120ms backwards;
+}
+
+.player-row.is-leaving {
+  grid-template-rows: 0fr;
+  animation: player-row-close 320ms var(--ease-glassGlide) 420ms backwards;
+}
+
+.player-row.is-leaving .player-name {
+  color: var(--ink-press-quiet);
+  animation: player-name-quiet 260ms var(--ease-standard) 260ms backwards;
+}
+
+/* PRM: `useJoinWash` never arms a phase under reduced motion, so none of these classes reaches
+   the DOM there at all. This block is the second lock on the same door — the row lands open,
+   the name lands written, a departure is gone same-frame. */
+@media (prefers-reduced-motion: reduce) {
+  .player-row,
+  .player-row .player-name {
+    animation: none;
+  }
+}
+
+/* The alone line sits at the roster's own quiet rung, beside `connecting…` — one is the room
+   not up yet, the other is the room up and empty. */
+.players-alone {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-hand);
+  font-size: var(--type-caption);
+  line-height: 1.25;
+  color: var(--ink-press-quiet);
 }
 
 .player-name {

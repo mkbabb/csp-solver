@@ -10,13 +10,13 @@
  * its own `sudoku-cell` / `futoshiki-cell` class, which stays for useKeyboardViewport's cell
  * selector, the unit tests, and the index.css focus rule) plus these descendant classes on the
  * matching nodes (there is no build-time link between this file and the templates):
- *   .game-cell             the cell root (+ .is-active / .is-invalid state classes)
+ *   .game-cell             the cell root (+ .is-active / .is-invalid / .is-peer-cursor states)
  *   .cell-native-input     the opacity-0 WM-frozen native entry surface
  *   .cell-peer             the peer-unit wash layer
  *   .cell-because          the hint-laminate wash layer
  *   .pencil-marks .mark-slot .mark-glyph        engine-domains peek marks
  *   .user-marks .user-corner-marks .user-center-marks .user-mark-slot .user-mark-glyph
- *   .cell-ghost .cell-ghost-path                the three-tier focus/hover/invalid ring
+ *   .cell-ghost .cell-ghost-path                the four-tier hover/focus/invalid/peer-cursor ring
  */
 
 /* ── Engine-domains pencil marks (W6 beat 9) ─────────────────────────
@@ -196,6 +196,49 @@
   stroke-linejoin: round;
 }
 
+/* Tier 4 — A PEER'S PENCIL IS ON THIS SQUARE (T8-W3 M1). The estate has answered "what does a
+   selection look like here" three times and the fourth answer is the same answer: a wobbled
+   ring that sketches itself on over the same 180ms.
+
+   LIGHTER THAN YOURS, deliberately, on every axis a tier has: stroke 4 against tier 1's
+   graphite 5 (a peer presses less hard than you do), stroke-opacity 0.55 (present, never
+   competing), fill 0.04 below tier 1's 0.06.
+
+   A RING, NOT A WASH. A filled peer cursor would collide with `.cell-peer` above — the
+   crayon-blue 7% wash that marks YOUR selection's row/column/box reach. That wash belongs to
+   your own selection and must never be read as someone else's position.
+
+   IT DOES NOT TWEEN BETWEEN CELLS. It jumps and redraws its sketch, which is the existing
+   ghost's own choice ("instant show/hide for cursor-tracking responsiveness", above) and right
+   here for a stronger reason: a tweened cursor is a mouse pointer, and there are no mouse
+   pointers in a pencil world. Someone's pencil is on this square or that one.
+
+   PRECEDENCE FALLS OUT OF THE CASCADE, and its source position is the mechanism: this rule is
+   (0,3,0), identical to tier 3's, so standing ABOVE tier 3 is what makes a conflict out-rank a
+   peer's ghost; tier 2's (0,3,1) out-ranks it on specificity from anywhere. Your own focus and
+   your own conflicts always win. Every paint property this rule sets is re-asserted by both, so
+   nothing leaks through either way.
+
+   The ink is `--color-peer-cursor-ink`, NOT `--color-user-ink`: the cell may already carry an
+   author's rebinding for the digit written in it, and the peer pointing at a cell is very often
+   not the peer who wrote it. Two people, two colours, one box (BoardHost binds both). */
+.game-cell.is-peer-cursor .cell-ghost {
+  opacity: 1;
+}
+
+.game-cell.is-peer-cursor .cell-ghost-path {
+  fill: var(--color-peer-cursor-ink, var(--color-user-ink));
+  fill-opacity: 0.04;
+  stroke: var(--color-peer-cursor-ink, var(--color-user-ink));
+  stroke-width: 4;
+  stroke-opacity: 0.55;
+  stroke-dasharray: 1;
+  /* Same "end state equals the cascade" discipline as tier 2: the value moves into the rule
+     and the fill drops to `backwards`. */
+  stroke-dashoffset: 0;
+  animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
+}
+
 /* Tier 2 — keyboard focus: crayon-blue, heavier, sketched on over 180ms. Driven by real
    :focus-visible so a mouse click keeps the instant graphite tier and only keyboard focus
    gets the drawn-on ring. */
@@ -274,7 +317,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .game-cell:has(input:focus-visible) .cell-ghost-path {
+  .game-cell:has(input:focus-visible) .cell-ghost-path,
+  /* T8-W3: the peer's ghost LANDS DRAWN. Same rule, same reason — the sketch is a flourish on
+     a ring whose job is to be there. */
+  .game-cell.is-peer-cursor .cell-ghost-path {
     animation: none;
     stroke-dashoffset: 0;
   }
@@ -287,6 +333,11 @@
   }
   .game-cell.is-invalid .cell-ghost-path {
     stroke-opacity: 1;
+  }
+  /* A peer's ghost keeps its rank UNDER yours here too — pressed harder, still the lighter
+     hand, so the contrast arm never makes someone else's cursor read as your own selection. */
+  .game-cell.is-peer-cursor .cell-ghost-path {
+    stroke-opacity: 0.8;
   }
 }
 

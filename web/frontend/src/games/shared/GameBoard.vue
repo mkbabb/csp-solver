@@ -19,7 +19,20 @@ import CelebrationHeart from "@pencil/chrome/CelebrationHeart.vue";
 import CelebrationStar from "@pencil/chrome/CelebrationStar.vue";
 import CompletionVignette from "@pencil/chrome/CompletionVignette.vue";
 import MarginNote from "@pencil/chrome/MarginNote.vue";
+import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
 import SolverErrorNote from "@games/shared/SolverErrorNote.vue";
+import {
+  authorInk,
+  noteFocus,
+  onSessionEvent,
+  session,
+} from "@games/shared/useSession";
+import {
+  bindJoinWash,
+  traceInk,
+  traceOpacity,
+  traceProgress,
+} from "@games/shared/useJoinWash";
 import { mulberry32 } from "@mkbabb/pencil-boil";
 import { generateCellRects } from "@pencil/grid/gridPaths";
 import { revealStaggerMs } from "@pencil/config/pencilConfig";
@@ -96,6 +109,10 @@ const props = defineProps<{
   /** T4-WU race gate — true while a board op (generate/solve) is in flight. Gates keyboard
    *  Cmd/Ctrl+Z on the same signal the coarse buttons honor (`:disabled="loading"`). */
   loading?: boolean;
+  /** T8-W3 M1 — who wrote each written cell, off the ledger's own clock (apotheosis §2.1).
+   *  The `authorInk` precedent exactly: one read-contract field, one pass-through, five games.
+   *  Absent outside a session, which is when the tape mounts nothing at all. */
+  cellAuthors?: Record<string, { slug: string; self: boolean }>;
 }>();
 
 const emit = defineEmits<{
@@ -425,6 +442,7 @@ function focusCell(pos: number) {
 }
 function onCellFocus(pos: number) {
   focusedPos.value = pos;
+  noteFocus(pos);
 }
 
 // ── Peer-unit highlight on selection (T4-W8 ROW 4) ────────────────────
@@ -440,13 +458,76 @@ function onGridFocusin() {
 function onGridFocusout(e: FocusEvent) {
   const grid = e.currentTarget as HTMLElement;
   const next = e.relatedTarget as Node | null;
-  if (!next || !grid.contains(next)) unitFocused.value = false;
+  if (!next || !grid.contains(next)) {
+    unitFocused.value = false;
+    noteFocus(null);
+  }
 }
 const peerCells = computed(() =>
   unitFocused.value
     ? props.peersFn(focusedPos.value, props.boardSize)
     : new Set<string>(),
 );
+
+// ── T8-W3 M1 · THE ATTRIBUTION TAPE ───────────────────────────────────────────────────────
+// ONE washi label, board-level, over the hovered cell — not eighty-one instances waiting their
+// turn. The cell publishes its hover position (DigitCell's `cellHover`) and the board holds the
+// one that is current; `null` when the pointer is on nothing.
+const hoveredPos = ref<number | null>(null);
+function onCellHover(pos: number | null) {
+  hoveredPos.value = pos;
+}
+
+// A PEER'S name, never your own. `authorInk` has always held an entry only for cells a peer
+// wrote (your own board binds nothing), and the tape keeps the same rule: in a session your own
+// digits say nothing on hover, exactly as they carry no rebound ink. Outside a session there is
+// no author map at all, so nothing mounts.
+const hoveredAuthor = computed(() => {
+  const pos = hoveredPos.value;
+  if (pos === null || !session.roomId.value) return null;
+  const a = props.cellAuthors?.[String(pos)];
+  if (!a || a.self) return null;
+  return { slug: a.slug, ink: authorInk.value[String(pos)] };
+});
+
+// The tape hangs off a zero-size anchor at the hovered cell's top edge, so `SheetWashiLabel`'s
+// own `above` geometry does the rest. On the top row it flips below the cell instead — the
+// board's own edge is the only thing the tape can run off, and one class is cheaper than a
+// measurement.
+const tapeAnchor = computed(() => {
+  const pos = hoveredPos.value;
+  if (pos === null) return null;
+  const n = props.boardSize;
+  const row = Math.floor(pos / n);
+  const col = pos % n;
+  return {
+    below: row === 0,
+    style: {
+      left: `${((col + 0.5) / n) * 100}%`,
+      top: `${((row + (row === 0 ? 1 : 0)) / n) * 100}%`,
+    },
+  };
+});
+
+// ── T8-W3 M14 · THE JOIN / LEAVE / RETURN BEAT ────────────────────────────────────────────
+// The board is where the ring lives, so the board is where the wash is bound — once, for the
+// scene's life. Every number is `useJoinWash`'s; this component only hands it the stream and
+// spends the three values it publishes on the grid below.
+//
+// `onSessionEvent` and `live` are the whole of what the wash consumes — no numbers cross this
+// seam in either direction, which is the fence the ruling draws: the session stamps `at`, the
+// wash owns every window.
+let stopWash: (() => void) | null = null;
+onMounted(() => {
+  stopWash = bindJoinWash({
+    subscribe: onSessionEvent,
+    live: () => session.live.value,
+  });
+});
+onUnmounted(() => {
+  stopWash?.();
+  stopWash = null;
+});
 
 // T4-WM §2 — the hint act, factored so the ControlPanel's Hint button and the board's H key
 // share ONE path: both reveal the currently focused cell. On coarse the last tap sets
@@ -743,6 +824,9 @@ function isRevealed(pos: number): boolean {
         :anim-state="gridAnimState"
         :progress="fillProgress"
         :solve-success="solveState === 'solved'"
+        :join-progress="traceProgress"
+        :join-opacity="traceOpacity"
+        :join-ink="traceInk"
         @animation-complete="onGridAnimComplete"
       />
 
@@ -778,9 +862,27 @@ function isRevealed(pos: number): boolean {
           :on-cell-update="onCellUpdate"
           :on-mark="onMark"
           :on-cell-focus="onCellFocus"
+          :on-cell-hover="onCellHover"
           :on-peek-start="onPeekStart"
           :on-peek-end="onPeekEnd"
         />
+      </div>
+
+      <!-- T8-W3 M1 — the attribution tape. A scrap of paper tape naming the peer who wrote the
+           digit under the pointer, in that peer's own ink: `--color-user-ink` is already rebound
+           per authored cell, so the writing comes out their colour with no new plumbing at all.
+           ONE instance, mounted only inside a session and only while the pointer is on a cell a
+           peer wrote. Solo play mounts nothing; a session at rest mounts nothing.
+           The tape is `aria-hidden` by its own default-anchor rule, and that is the honest
+           split: the name is spoken through the cell's OWN accessible name instead (DigitCell's
+           `authorName`), which is also the only route a coarse pointer has. -->
+      <div
+        v-if="hoveredAuthor && tapeAnchor"
+        class="attribution-tape"
+        :class="{ 'is-below': tapeAnchor.below }"
+        :style="{ ...tapeAnchor.style, ...hoveredAuthor.ink }"
+      >
+        <SheetWashiLabel :text="hoveredAuthor.slug" :seed="97" />
       </div>
 
       <!-- Overlay furniture (Futoshiki's caret layer over the cells); empty for Sudoku. -->
@@ -853,6 +955,45 @@ function isRevealed(pos: number): boolean {
 <style scoped>
 .board-shell {
   position: relative;
+}
+
+/* ── T8-W3 M1 · the attribution tape's anchor ──────────────────────────────────────────────
+   A zero-size point at the hovered cell's top edge; the tape itself is `SheetWashiLabel`'s own
+   absolute geometry hanging off it, so there is no second placement grammar to keep in sync. */
+.attribution-tape {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* The tape is mounted BY the hover rather than revealed by it — the component's `.group:hover`
+   route needs a hovered ancestor and this anchor is `pointer-events: none` by necessity (it
+   sits over the cells that own the pointer). Mounted means shown. */
+.attribution-tape :deep(.washi-label) {
+  opacity: 1;
+  /* Their ink, on their name. `--color-user-ink` is rebound on the anchor from the cell's own
+     author entry, so this is the same one value the digit is drawn with. */
+  color: var(--color-user-ink);
+}
+
+/* Top row: the tape flips under the cell rather than off the board's own edge. */
+.attribution-tape.is-below :deep(.washi-label) {
+  bottom: auto;
+  top: 100%;
+  margin-bottom: 0;
+  margin-top: 0.5rem;
+}
+
+/* HOVER IS A FINE-POINTER GRAMMAR, and this is the estate's standing rule rather than a new
+   one: a coarse pointer has no hover to spend and long-press is already the peek gesture, so
+   there is nothing here to give a thumb. Touch attribution rides the cell's accessible name
+   instead (DigitCell's `authorName`). A real asymmetry, named — a sighted touch user gets
+   nothing, and no gesture is left to spend on it. */
+@media not all and (hover: hover) and (pointer: fine) {
+  .attribution-tape {
+    display: none;
+  }
 }
 
 .board-wrapper {

@@ -64,14 +64,24 @@ const props = withDefaults(
     /** T4-W8 ROW 1 — the active pencil mode; 'corner'/'center' authors a mark on the FROZEN native
      *  input instead of a value, 'off'/undefined keeps the byte-identical value write. */
     pencilMode?: PencilMode;
+    /** T8-W3 M1 — a peer's pencil is on this square (ghost tier 4). One boolean; the ring's
+     *  whole form lives in `gameCell.css`, and the peer's hue arrives as a `:style` rebinding of
+     *  `--color-peer-cursor-ink` from the same single mount site that binds `authorInk`. */
+    isPeerCursor?: boolean;
+    /** T8-W3 M1 — the slug of the PEER who wrote this cell's digit, empty for your own and for
+     *  an unauthored cell. It is the accessible half of the attribution: coarse pointers have no
+     *  hover to spend on the washi tape, so the name rides the cell's own name instead. Named as
+     *  a real asymmetry rather than papered over — a sighted touch user still gets nothing. */
+    authorName?: string;
   }>(),
-  { constraintLabel: "" },
+  { constraintLabel: "", authorName: "" },
 );
 
 const emit = defineEmits<{
   (e: "update", position: number, value: number): void;
   (e: "mark", position: number, value: number): void;
   (e: "cellFocus", position: number): void;
+  (e: "cellHover", position: number | null): void;
   (e: "candidatePeekStart"): void;
   (e: "candidatePeekEnd"): void;
 }>();
@@ -111,7 +121,14 @@ const {
   showCenterMarks,
   cornerSlot,
 } = useGameCell(props, emit, {
-  ariaSuffix: () => props.constraintLabel,
+  // T8-W3 M1 — the attribution rides the name the cell already publishes. `ariaSuffix` is the
+  // seam the clue vocabulary already uses, so authorship joins the same tail instead of minting
+  // a second describedby nobody points at: "…, your entry 4, written by brave-otter". Sudoku
+  // passes no constraint, so its name is the base plus this clause and nothing else.
+  ariaSuffix: () =>
+    [props.constraintLabel, props.authorName ? `written by ${props.authorName}` : ""]
+      .filter(Boolean)
+      .join(", "),
   marksGridStyle: () => ({
     gridTemplateColumns: `repeat(${markCols.value}, minmax(0, 1fr))`,
     gridTemplateRows: `repeat(${markRows.value}, minmax(0, 1fr))`,
@@ -150,6 +167,19 @@ function onRevealEnd(e: AnimationEvent) {
   if (e.animationName === "cell-reveal") revealSpent.value = true;
 }
 
+// T8-W3 M1 — the hover the attribution tape reads. `isHovered` is already the cell's own
+// (useGameCell), and it stays the cell's own; what leaves is the POSITION, so ONE board-level
+// washi label can sit over the hovered cell instead of eighty-one instances waiting their turn.
+// `null` on leave, so the board can drop the tape without tracking which cell released it.
+function onCellEnter() {
+  isHovered.value = true;
+  emit("cellHover", props.position);
+}
+function onCellLeave() {
+  isHovered.value = false;
+  emit("cellHover", null);
+}
+
 // T4-W10 idiom (§:ref) — `position` is exposed alongside `focus` so the board's STABLE
 // `setCellApi` bound handler keys the cellApi registry off the instance (el.position) instead
 // of a per-render inline closure that captured the loop index. Position is invariant per
@@ -167,6 +197,7 @@ defineExpose({ focus: focusInput, position: props.position });
         'is-active': isActive,
         'is-invalid': isInvalid,
         'is-because': isBecause,
+        'is-peer-cursor': isPeerCursor,
       },
     ]"
     role="gridcell"
@@ -180,8 +211,8 @@ defineExpose({ focus: focusInput, position: props.position });
     @pointerup="longPress.onPointerUp"
     @pointercancel="longPress.onPointerCancel"
     @pointerleave="longPress.onPointerCancel"
-    @mouseenter="isHovered = true"
-    @mouseleave="isHovered = false"
+    @mouseenter="onCellEnter"
+    @mouseleave="onCellLeave"
   >
     <!-- Native bounded entry (T4-WM §1): the cell's own opacity-0 input is the sole entry
          surface on every pointer. `inputmode=numeric` raises the iOS digit pad; `type=text`
