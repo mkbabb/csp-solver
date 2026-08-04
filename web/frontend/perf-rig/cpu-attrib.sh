@@ -15,9 +15,9 @@ SC="idle3s,idle3s,idle3s,idle3s,idle3s,idle3s"
 snap(){ ps -Ao pid,time,comm | grep -E "WebKit.GPU|WebKit.WebContent|MacOS/Safari" | awk '{print $1"\t"$2"\t"$3}'; }
 snap > "/tmp/ca-before-${ID}.txt"
 if [ "${CELL}" = "base" ]; then
-  KEEP_SAFARI_FRONT=1 TIMEOUT=200 "${RIG}/run-safari.sh" "${ID}" "${SC}" >/dev/null 2>&1
+  TIMEOUT=200 "${RIG}/run-safari.sh" "${ID}" "${SC}" >/dev/null 2>&1
 else
-  KEEP_SAFARI_FRONT=1 TIMEOUT=200 "${RIG}/run-safari.sh" "${ID}" "${SC}" "${RIG}/ablations/${CELL}.css" >/dev/null 2>&1
+  TIMEOUT=200 "${RIG}/run-safari.sh" "${ID}" "${SC}" "${RIG}/ablations/${CELL}.css" >/dev/null 2>&1
 fi
 snap > "/tmp/ca-after-${ID}.txt"
 python3 - "${ID}" <<'PY'

@@ -182,8 +182,9 @@ higher pair takes the cell on every page, so the room converges whatever order t
 arrive in; a second stamp, the epoch, marks which board a write was aimed at, so a digit
 meant for the board before the last deal is dropped rather than inked into the new one. No
 CRDT library rides along: the board is `pos → digit` over a fixed index set, and a cell
-that cannot move needs no sequence reconciled. The wire is four verbs:
-`hi`, `op`, `st`, `bye` — presence, one cell write, the whole board, and the departure.
+that cannot move needs no sequence reconciled.
+The wire is five verbs — `hi`, `op`, `st`, `cur`, `bye` — presence, one cell write, the
+whole board, the focused cell, and the departure.
 A peer's digits carry that peer's own ink, walked off the golden angle, so two players at
 one board are never handed the same hue.
 

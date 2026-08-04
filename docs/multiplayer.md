@@ -60,7 +60,7 @@ epoch, so "my undo restores a board nobody else has" dies in one line.
 
 ## The wire
 
-Four messages cross it—`hi`, `op`, `st`, `bye`—and each earns its keep:
+Five messages cross it—`hi`, `op`, `st`, `cur`, `bye`—and each earns its keep:
 
 - `hi` — "I'm here, and I don't have the board." Answered with a presence ack, plus the
   board itself from whichever peer holds the lowest id (`useSession.ts:holdsTheBoard`—every
@@ -71,6 +71,10 @@ Four messages cross it—`hi`, `op`, `st`, `bye`—and each earns its keep:
   value, solved bit, the `[lamport, author]` stamp, and the epoch it's written against.
 - `st` — the whole board plus its clock and epoch (`useSession.ts:sendState`). Sent to a
   joiner, and broadcast by whoever deals, clears, or solves.
+- `cur` — the focused cell, or null for none (`useSession.ts:noteFocus`, T8-W3). Debounced
+  to 120 ms leading-and-trailing and epoch-stamped so a cursor aimed at the old board drops
+  with its epoch; a peer's entry expires after 45 s of silence, clears when that peer
+  leaves, and clears wholesale on a deal—a stale ghost never haunts a fresh board.
 - `bye` — the departure word. Said by a page on `pagehide` (both arms), and by the relay
   on `webSocketClose` for the page that never got to say it (`relay.ts:announceLeave`,
   T7-W4)—without it, a crashed tab lingered on every roster forever, because both arms

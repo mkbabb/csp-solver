@@ -1,7 +1,9 @@
 #!/bin/bash
 # matrix.sh <round> — L2's ablation matrix, one round of the whole cell list, sequentially
-# in real desktop Safari. One Safari at a time; KEEP_SAFARI_FRONT so the front never churns
-# back to the editor mid-round (an occluded WebKit page suspends rAF outright).
+# in real desktop Safari. One Safari at a time via the background automation session (M19:
+# never focused, never frontmost); the driver verifies painting from inside the page and
+# marks occluded rows invalid rather than forcing the front (an occluded WebKit page
+# suspends rAF outright — the row dies honestly instead of lying).
 set -uo pipefail
 RIG="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROUND="${1:?usage: matrix.sh <round>}"
@@ -17,9 +19,9 @@ echo "round ${ROUND} order: ${SHUFFLED}"
 for cell in ${SHUFFLED}; do
   RUN="${cell}-r${ROUND}"
   if [ "${cell}" = "base" ]; then
-    KEEP_SAFARI_FRONT=1 TIMEOUT=300 "${RIG}/run-safari.sh" "${RUN}" "${SC}" 2>&1 | sed "s/^/[${RUN}] /"
+    TIMEOUT=300 "${RIG}/run-safari.sh" "${RUN}" "${SC}" 2>&1 | sed "s/^/[${RUN}] /"
   else
-    KEEP_SAFARI_FRONT=1 TIMEOUT=300 "${RIG}/run-safari.sh" "${RUN}" "${SC}" \
+    TIMEOUT=300 "${RIG}/run-safari.sh" "${RUN}" "${SC}" \
       "${RIG}/ablations/${cell}.css" 2>&1 | sed "s/^/[${RUN}] /"
   fi
   sleep 3

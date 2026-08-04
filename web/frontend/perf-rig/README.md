@@ -114,15 +114,15 @@ node perf-rig/probe-server.mjs                     # :4894, serves ../dist, heal
 cd web/frontend/perf-rig
 
 # desktop Safari — all six scenarios, or a subset, or with an ablation
-KEEP_SAFARI_FRONT=1 TIMEOUT=240 ./run-safari.sh <runId>
-KEEP_SAFARI_FRONT=1 ./run-safari.sh <runId> themeToggle,galleryGlide
-KEEP_SAFARI_FRONT=1 ./run-safari.sh <runId> idle3s ablations/a1-divider-pin.css
+TIMEOUT=240 ./run-safari.sh <runId>
+./run-safari.sh <runId> themeToggle,galleryGlide
+./run-safari.sh <runId> idle3s ablations/a1-divider-pin.css
 
 # the display ceiling — the denominator every app number is read against
 ./run-safari.sh <runId> rafCeiling
 
 # the iOS 26 simulator (DEVICE=<udid|name>, default perf-rig-iphone16)
-KEEP_SIM_FRONT=1 TIMEOUT=240 ./run-sim.sh <runId>
+TIMEOUT=240 ./run-sim.sh <runId>
 
 # process-CPU attribution across a ~20s idle window (WebKit.GPU vs WebKit.WebContent)
 TAG=<tag> ./cpu-attrib.sh base
@@ -152,6 +152,8 @@ everything else runs only when passed by name.
 | `solveCelebration` | default | `desktop.solveCelebration`, manual matrix |
 | `galleryGlide` | default | `desktop.galleryGlide.minFps`, manual matrix |
 | `themeToggle` | default | `desktop.themeToggle.minFps`, manual matrix |
+| `liveWindow` | by name | the W5 boil × multiplayer window — `sessionCensus()` travels with every reading (evidence/w5-bench) |
+| `solveMatrix` | by name | the W5 wasm solve-latency cells, game × size × tier (evidence/w5-bench; tabled ungraded) |
 | `hoverSweep` | by name · **unpriced** | nothing — diagnostic, see below |
 | `solveWindow` | by name · **unpriced** | nothing — diagnostic, see below |
 | `galleryDrag` | by name · **unpriced** | nothing — diagnostic, see below (T7-W6) |
