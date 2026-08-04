@@ -253,11 +253,20 @@ test.describe('M20 — the dock stays a phone regime', () => {
     }
 
     // CONTROL — re-inject the un-height-scoped dock: the float must return at 900×676.
+    // Polled, not sampled: under full-suite load webkit has taken a beat to apply the
+    // injected sheet, and a one-shot read raced it (seen once at 4 workers, green serial).
     await page.setViewportSize({ width: 900, height: 676 });
     await load(page, 'sudoku');
     await page.addStyleTag({ content: SUPERSEDED_DOCK });
-    const ctl = await page.evaluate(M20_PROBE);
-    expect(overlaps(ctl.masthead!, ctl.grid!)).toBe(true);
+    await expect
+      .poll(
+        async () => {
+          const ctl = await page.evaluate(M20_PROBE);
+          return ctl.masthead && ctl.grid ? overlaps(ctl.masthead, ctl.grid) : false;
+        },
+        { timeout: 5000 },
+      )
+      .toBe(true);
   });
 
   test('the dock itself stands at a landscape phone', async ({ page }) => {
