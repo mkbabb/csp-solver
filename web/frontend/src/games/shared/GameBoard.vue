@@ -1081,6 +1081,26 @@ function isRevealed(pos: number): boolean {
   }
 }
 
+/* ── §M20 · THE TALL-LANDSCAPE FALLBACK BAND (the owner's 2026-08-04 mark) ────────────────
+   `<1024` landscape used to be ONE regime — the masthead dock — and this shell's own
+   `max-w-[calc(100dvh-1.5rem)]` let the board take the whole short edge, which is exactly
+   what the dock buys on a landscape PHONE. App.vue's dock is now height-scoped to ≤500px
+   (its comment carries the M20 measurement), so a 900×676 desktop window falls back to the
+   portrait grammar: masthead in flow above the board. A board still sized to the whole short
+   edge hangs 88px below the fold under that masthead (measured, both engines), so this band
+   takes the desk's own clearance arithmetic — the `lg:` arm's `100dvh − 10rem` verbatim (at
+   676: board 516 + masthead ≈118 = 634, whole in the first viewport). Unlayered scoped rules
+   beat the layered utilities, the drawer-closed grow's own mechanism. This block lives HERE
+   and not scene.css because scene.css is GameScene-scoped and can never reach this shell.
+   Gated with the dock's key in `e2e/masthead-alignment.spec.ts` §M20. */
+@media (max-width: 1023.98px) and (orientation: landscape) and (min-height: 500.02px) {
+  .board-shell.shell-sm,
+  .board-shell.shell-md,
+  .board-shell.shell-lg {
+    max-width: calc(100dvh - 10rem);
+  }
+}
+
 /* ── …AND THE HEIGHT ARM IS HEIGHT-AWARE (T7-W7, the closed-pose residue) ──────────────────
    PAIRED WITH `html.drawer-closed .masthead { --logo-scale: 1.05 }` in App.vue — the two halves
    of the closed grow, and they flip on the SAME condition or the pose trades one overflow for

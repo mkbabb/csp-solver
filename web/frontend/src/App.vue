@@ -1107,8 +1107,18 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
    wide by ~39 tall, which is a tenth of this cell's short edge and reads whole.
 
    ORIENTATION-SCOPED, like everything else this pass touches: portrait is the dock's regime and
-   its masthead stays whole above the board, which is the pose the covis row is built on. */
-@media (max-width: 1023.98px) and (orientation: landscape) {
+   its masthead stays whole above the board, which is the pose the covis row is built on.
+
+   HEIGHT-SCOPED TOO (M20, the owner's 2026-08-04 mark: "the sudoku logo floats upon the
+   board"). Every number above assumes the board fills the short edge and leaves the gutter
+   wide — true at 844×390 (board 366, gutter 153) and false at a 900×676 DESKTOP window, which
+   this query also matched: there the board takes 648 of 900 and the gutter inside the group is
+   12px, so the docked wordmark lay 143px deep ON the grid, vertically centred — the shot
+   exactly. Landscape phones top out at 430 css px tall (iPhone Pro Max); 500 is the cut with
+   margin. Above it the band falls back to the portrait grammar (masthead in flow above the
+   board) and the board takes the desk's 10rem clearance instead of the whole short edge —
+   GameBoard.vue §M20, the other half of this key. Gated: masthead-alignment.spec.ts §M20. */
+@media (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) {
   .board-group {
     position: relative;
   }

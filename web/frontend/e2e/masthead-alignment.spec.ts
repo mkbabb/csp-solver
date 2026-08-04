@@ -62,6 +62,22 @@ const SUPERSEDED_HEAD = `
 const SUPERSEDED_ROW = `
   @media (min-width: 1024px) { .board-peek-host { align-self: center !important; } }
 `;
+/** The dock without its height key (M20) — the regime that floated the wordmark onto the
+ *  board at 900×676. Re-injected verbatim as the negative control. */
+const SUPERSEDED_DOCK = `
+  @media (max-width: 1023.98px) and (orientation: landscape) {
+    .board-group { position: relative !important; }
+    .masthead {
+      position: absolute !important;
+      left: 0 !important;
+      top: 50dvh !important;
+      translate: 0 -50% !important;
+      --logo-scale: 0.38 !important;
+      z-index: 5 !important;
+      margin: 0 !important;
+    }
+  }
+`;
 
 async function load(page: Page, game: string) {
   await page.goto(`./?game=${game}`);
@@ -175,4 +191,90 @@ test.describe('M18 — the board rule', () => {
       expect(ctl.card!.top - ctl.host!.top).toBeLessThan(-50);
     });
   }
+});
+
+/**
+ * M20 — THE DOCK STAYS A PHONE REGIME (the owner's 2026-08-04 mark: "on some screens and
+ * sizes, the sudoku logo floats upon the board"). The landscape masthead dock's derivation
+ * assumed a board that fills the short edge and leaves the gutter wide — true at 844×390,
+ * false at a 900×676 desktop window, where the same media key parked the wordmark 143px deep
+ * ON the grid, vertically centred. The key is now height-scoped (≤500px, App.vue), and the
+ * tall-landscape fallback takes the desk's board clearance (GameBoard.vue §M20).
+ */
+const M20_PROBE = () => {
+  const box = (sel: string) => {
+    const el = document.querySelector(sel);
+    if (!el) return null;
+    const b = el.getBoundingClientRect();
+    return { top: b.top, bottom: b.bottom, left: b.left, right: b.right };
+  };
+  // The GRID is the referent — the mark names ink on the board. The wrapper's paper frame
+  // carries its own ~10px inset (and the T5-W4-ratified dock overhangs that paper edge by
+  // 2.7px without touching a cell), so the wrapper is kept only for the fold check.
+  return {
+    masthead: box('.masthead'),
+    wrapper: box('.board-wrapper'),
+    grid: box('[role=grid]'),
+    vh: window.innerHeight,
+  };
+};
+type M20Box = { top: number; bottom: number; left: number; right: number };
+/** Interpenetration by more than half a pixel — exact adjacency (the M18 rule) is not a hit. */
+const overlaps = (a: M20Box, b: M20Box) =>
+  a.left < b.right - 0.5 && b.left < a.right - 0.5 && a.top < b.bottom - 0.5 && b.top < a.bottom - 0.5;
+
+test.describe('M20 — the dock stays a phone regime', () => {
+  test('a tall landscape window keeps the masthead above the board', async ({ page }) => {
+    for (const vp of [
+      { width: 900, height: 676 }, // the owner's shot, css-normalised
+      { width: 1000, height: 800 },
+    ]) {
+      await page.setViewportSize(vp);
+      await load(page, 'sudoku');
+      const r = await page.evaluate(M20_PROBE);
+      expect(r.masthead, `masthead at ${vp.width}x${vp.height}`).not.toBeNull();
+      expect(r.grid, `grid at ${vp.width}x${vp.height}`).not.toBeNull();
+
+      // IN FLOW, ABOVE — the fallback is the portrait grammar…
+      expect(
+        r.grid!.top,
+        `grid below the title at ${vp.width}x${vp.height}`,
+      ).toBeGreaterThan(r.masthead!.bottom - 0.5);
+      // …so the title's box never reaches the board's ink (the mark: the wordmark ON the board).
+      expect(
+        overlaps(r.masthead!, r.grid!),
+        `no float at ${vp.width}x${vp.height}`,
+      ).toBe(false);
+      // And the desk clearance holds the board whole in the first viewport.
+      expect(
+        r.wrapper!.bottom,
+        `board above the fold at ${vp.width}x${vp.height}`,
+      ).toBeLessThan(r.vh + 0.5);
+    }
+
+    // CONTROL — re-inject the un-height-scoped dock: the float must return at 900×676.
+    await page.setViewportSize({ width: 900, height: 676 });
+    await load(page, 'sudoku');
+    await page.addStyleTag({ content: SUPERSEDED_DOCK });
+    const ctl = await page.evaluate(M20_PROBE);
+    expect(overlaps(ctl.masthead!, ctl.grid!)).toBe(true);
+  });
+
+  test('the dock itself stands at a landscape phone', async ({ page }) => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await load(page, 'sudoku');
+    const r = await page.evaluate(M20_PROBE);
+    expect(r.masthead).not.toBeNull();
+    expect(r.grid).not.toBeNull();
+    // Docked: vertically centred on the board's own viewport (50dvh = 195 at 390)…
+    const centre = (r.masthead!.top + r.masthead!.bottom) / 2;
+    expect(Math.abs(centre - 195), 'the 50dvh centre').toBeLessThan(24);
+    // …and in the gutter (T5-W4's 153px derivation). The ratified pose's BOX grazes the
+    // grid's box by 0.66px (the caret's own right edge, measured both engines) — that graze
+    // is the pose, not the disease; the disease measured 143px. 2px is the line.
+    expect(
+      r.masthead!.right,
+      'the wordmark keeps to the gutter',
+    ).toBeLessThan(r.grid!.left + 2);
+  });
 });
