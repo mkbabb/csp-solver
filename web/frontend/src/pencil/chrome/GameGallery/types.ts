@@ -26,6 +26,26 @@ export interface GalleryCard {
   poster: () => Promise<Component>;
 }
 
+/**
+ * THE TRUE STILL (T8-W3 M12) — one saved board, as a card's face renders it.
+ *
+ * The PENCIL-LOCAL twin of the staging bridge's `PreviewBoard`, declared here for the same
+ * reason `GalleryCard` is: the deck imports nothing from `games/**`, and TypeScript is
+ * structural, so `previewFor` assigns straight into this at App's seam. It is deliberately a
+ * SUBSET of that row — the deck never reads a field of it. It takes the value and hands it to
+ * the card, which hands it to the poster, which is the one component that knows what a cage is.
+ *
+ * `saved` is the persisted blob whole, `unknown`-valued all the way down this side of the
+ * boundary, and that is the point: the clue furniture's field name (`cages` · `thermometers` ·
+ * `inequalities`) is the game's own vocabulary, and pencil cannot be made to learn it.
+ */
+export interface GalleryPreview {
+  size: number;
+  values: Record<string, number>;
+  givenCells: string[];
+  saved: Record<string, unknown>;
+}
+
 /** One staging axis, as presentation data. `colorClass` is the crayon tier an option is
  *  written in — present on difficulty, absent on size (T6 mark 7: the band writes its axis
  *  name and its selected chip in the same ink the drawer does). */

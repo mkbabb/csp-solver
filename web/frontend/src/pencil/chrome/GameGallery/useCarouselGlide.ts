@@ -67,6 +67,8 @@ export function useCarouselGlide(
     t: number;
     v: number;
     froze: boolean;
+    /** The card the deck was resting on when the hand landed — the release steps FROM here. */
+    anchor: number;
   } | null = null;
   let dragging = false;
   let suppressClick = false;
@@ -75,15 +77,46 @@ export function useCarouselGlide(
     return track.value ? (Array.from(track.value.children) as HTMLElement[]) : [];
   }
 
-  /** The leading/trailing spacer width that lets the first/last card scroll to true center:
-   *  (viewport − slot) / 2, in px, published as `--edge` for the track's `::before/::after`.
-   *  A fixed px value, recomputed on mount/resize — a CSS % basis collapses under max-content. */
+  function slotWidth(): number {
+    return slots()[0]?.getBoundingClientRect().width ?? 0;
+  }
+
+  /** How many whole slots the frame holds — the stylesheet's `--deck-slots`, read back rather
+   *  than duplicated here (the breakpoint is CSS's to own; this file only needs the number).
+   *  Absent or unparseable (jsdom computes no custom properties) → 1, the phone's frame. */
+  function deckSlots(): number {
+    const t = track.value;
+    if (!t) return 1;
+    const n = parseInt(getComputedStyle(t).getPropertyValue("--deck-slots"), 10);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  }
+
+  /** The leading/trailing spacer width, published as `--edge` for the track's `::before/::after`.
+   *  A fixed px value, recomputed on mount/resize — a CSS % basis collapses under max-content.
+   *
+   *  TWO REGIMES, and the second one is T8 M11's whole first defect (§2.4-3).
+   *
+   *  · ONE-SLOT FRAME (the phone's 78vw peek deck) — the air is `(viewport − slot) / 2`, which
+   *    is what lets the first and last card reach TRUE centre. Untouched.
+   *  · A MULTI-SLOT FRAME (the desk, 3 slots and 5) — the air is ZERO. At an N-slot frame that
+   *    same formula is `(N − 1) / 2` WHOLE SLOTS of manufactured air, so at index 0 the frame's
+   *    leading third (three-slot) or two fifths (five-slot) held no cards at all: measured 352px
+   *    at 1280, and sudoku is index 0 AND the eager default, so the deck the owner opened was
+   *    always the two-card pose. The spread's own fiction answers it — a spread of worksheets
+   *    rests its end sheet against the edge of the desk, it does not float it in the middle —
+   *    and `targetScrollLeft`'s clamp already does the right thing once the air stops defeating
+   *    it. Measured after: every index shows `--deck-slots` whole cards, both engines.
+   *
+   *  The spacers' `align-self: stretch` (the T4-P1 KENKEN-REACHABILITY cure) STAYS in the
+   *  stylesheet — it is the phone's, and the phone still has air to contribute. On the desk the
+   *  spacers are now zero-WIDTH, so there is no scrollWidth contribution for WebKit to omit and
+   *  the hazard has nothing left to bite. */
   function recomputeEdges() {
     const vp = viewport.value;
     const t = track.value;
-    const slot = slots()[0];
+    const slot = slotWidth();
     if (!vp || !t || !slot) return;
-    const edge = Math.max(0, (vp.clientWidth - slot.getBoundingClientRect().width) / 2);
+    const edge = deckSlots() > 1 ? 0 : Math.max(0, (vp.clientWidth - slot) / 2);
     t.style.setProperty("--edge", `${edge}px`);
   }
 
@@ -126,8 +159,14 @@ export function useCarouselGlide(
     );
   }
 
-  /** The scrollLeft that centers slot `i` in the viewport — the scroll-snap-align:center
-   *  point (measured via rects so it is independent of offsetParent), clamped to range. */
+  /** THE REST POSITION for slot `i` — the scroll-snap-align:center point (measured via rects so
+   *  it is independent of offsetParent), clamped to range.
+   *
+   *  The clamp is no longer a formality. With the desk's edge air at zero (`recomputeEdges`) the
+   *  end cards CANNOT reach the frame's middle, so this returns the same clamped position for
+   *  several indices — 0 for cards 0 and 1, `maxScroll` for 3 and 4 at the three-slot rung, and
+   *  one position for all five at the five-slot rung. That is the spread: the track stops moving and
+   *  the highlight walks. `restingIndex` is the inverse that knows it. */
   function targetScrollLeft(i: number): number {
     const vp = viewport.value;
     const el = slots()[i];
@@ -140,20 +179,37 @@ export function useCarouselGlide(
     return Math.max(0, Math.min(maxScroll(), raw));
   }
 
-  function centeredIndex(): number {
+  /** WHICH CARD THE DECK IS RESTING ON — the inverse of `targetScrollLeft`, and it has to be
+   *  the inverse of THAT rather than "whose middle is nearest the frame's middle" (T8 M11).
+   *
+   *  With zero edge air the deck no longer centres its end cards: five cards in a three-slot
+   *  frame have five INDICES and three rest positions (0 · slot · 2·slot at 1280), and in the
+   *  five-slot frame `maxScroll` is 0 and they share ONE. So position is no longer a bijection
+   *  with index, and the old reading — nearest slot centre to the frame centre — answered `1`
+   *  for a deck resting on card 0, which silently reverted every step to an end card.
+   *
+   *  Position is EVIDENCE, and evidence that cannot discriminate decides nothing: where several
+   *  indices share the deck's rest position, the incumbent holds. That is why the tie-break is
+   *  `currentIndex` and not the first or the nearest — a deck that has not moved is not evidence
+   *  that the choice changed. Where the mapping IS a bijection (the phone, and every interior
+   *  card on the desk) this returns exactly what the old reading returned. */
+  function restingIndex(): number {
     const vp = viewport.value;
-    if (!vp) return 0;
-    const center = vp.scrollLeft + vp.clientWidth / 2;
+    const n = slots().length;
+    if (!vp || !n) return 0;
+    const here = vp.scrollLeft;
     let best = 0;
     let bestDist = Infinity;
-    slots().forEach((el, idx) => {
-      const c = el.offsetLeft + el.offsetWidth / 2;
-      const d = Math.abs(c - center);
-      if (d < bestDist) {
+    for (let i = 0; i < n; i++) {
+      const d = Math.abs(targetScrollLeft(i) - here);
+      if (d < bestDist - 0.5) {
         bestDist = d;
-        best = idx;
+        best = i;
+      } else if (d <= bestDist + 0.5 && i === currentIndex) {
+        bestDist = Math.min(bestDist, d);
+        best = i;
       }
-    });
+    }
     return best;
   }
 
@@ -185,7 +241,7 @@ export function useCarouselGlide(
    *  during the jank is handled BEFORE a rAF the PREVIOUS gesture's settle already queued.
    *  That stale re-arm switched `x mandatory` back on in the MIDDLE of the next glide, while
    *  the track still carried its FLIP translateX; the engine then snapped the scroll back to
-   *  the visually-centered (pre-move) card, `centeredIndex()` read that correctly, and
+   *  the visually-centered (pre-move) card, `restingIndex()` read that correctly, and
    *  `syncFromScroll` reported the revert as truth. One step silently undone — `gallery-deal`
    *  stranded one card short of kenken, and `gallery-guard`'s ribbon never armed because the
    *  step it depends on had been rolled back. Only the newest gesture may re-arm. */
@@ -294,7 +350,11 @@ export function useCarouselGlide(
     // release reports ONCE, from the settled target, so the deck never announces the cards it
     // merely travelled past.
     if (anim || dragging) return;
-    options.onSnap(centeredIndex());
+    // A native settle is a position the composable did not write, so it is also the one path
+    // that can leave `currentIndex` behind. It is the deck's own notion of the chosen card
+    // (the drag's anchor, `restingIndex`'s tie-break), so every path that reports one keeps it.
+    currentIndex = restingIndex();
+    options.onSnap(currentIndex);
   }
   function onScroll() {
     if (scrollDebounce !== null) clearTimeout(scrollDebounce);
@@ -337,6 +397,9 @@ export function useCarouselGlide(
       t: e.timeStamp,
       v: 0,
       froze,
+      // Read AFTER the freeze-fold, so a grab mid-glide anchors on the card the deck is
+      // DRAWING rather than on the one it was travelling to.
+      anchor: restingIndex(),
     };
   }
 
@@ -371,7 +434,7 @@ export function useCarouselGlide(
       // A press that never moved is a click, and the card is free to take it. It may still
       // have frozen a glide, though, and that glide's settle went with it — so hand the
       // position back to `glideTo`, which re-arms snap on every path out.
-      if (d.froze) glideTo(centeredIndex());
+      if (d.froze) glideTo(d.anchor);
       return;
     }
     dragging = false;
@@ -420,12 +483,22 @@ export function useCarouselGlide(
     const legV = ((e?.clientX ?? d.px) - d.px) / span;
     const folded = 0.7 * legV + 0.3 * d.v;
     if (Math.abs(folded) > Math.abs(d.v)) d.v = folded;
-    // READ THE POSITION BACK rather than assuming the writes took (this file's own maxScroll
-    // discipline): the engine clamps `scrollLeft` to its scrollable overflow, so where the
-    // deck IS is the only honest `from`.
-    const from = centeredIndex();
+    // THE RELEASE STEPS BY WHAT THE HAND TRAVELLED, from where the hand landed — not by where
+    // the deck ended up. Until T8 M11 those were the same sentence: with a slot of edge air
+    // every card had its own rest position, so "nearest position" WAS "anchor plus travel over
+    // slot", and reading the position back was both honest and free. A flush spread breaks the
+    // bijection (`restingIndex`), and reading position there answers with the clamp: at 1280
+    // cards 3 and 4 both rest at 704, so a settle drag toward kenken landed on killer forever,
+    // and at the five-slot rung `maxScroll` is 0 and NO drag could ever move the highlight.
+    //
+    // The hand's travel is the gesture's own measurement and it survives the clamp, so it is
+    // what the step is computed from. Where the deck can still absorb the whole push this is
+    // arithmetically identical to the old reading — the drag block's every row is unmoved.
+    const slot = slotWidth();
+    const travel = d.x0 - (e?.clientX ?? d.px); // pushed LEFT = forward through the deck
+    const stepped = slot > 0 ? Math.round(travel / slot) : 0;
     const dir = d.v < -FLICK_VPX ? 1 : d.v > FLICK_VPX ? -1 : 0;
-    const target = Math.max(0, Math.min(slots().length - 1, from + dir));
+    const target = Math.max(0, Math.min(slots().length - 1, d.anchor + stepped + dir));
     options.onSnap(target); // the touch path's own seam — aria, the live region, guard-dismiss
     glideTo(target);
   }

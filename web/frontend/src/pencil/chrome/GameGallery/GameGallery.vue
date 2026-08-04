@@ -60,7 +60,7 @@ import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import GameCard from "./GameCard.vue";
 import StagingBand from "./StagingBand.vue";
 import { useCarouselGlide } from "./useCarouselGlide";
-import type { GalleryCard, GallerySaved } from "./types";
+import type { GalleryCard, GalleryPreview, GallerySaved } from "./types";
 
 const props = defineProps<{
   cards: readonly GalleryCard[];
@@ -86,6 +86,21 @@ const props = defineProps<{
   /** A deal is in flight — the band's verbs go inert (double-deal guard). App PASSES this;
    *  the pass-1 prototype declared the same prop and never bound it. */
   busy?: boolean;
+  /** THE TRUE STILL (T8-W3 M12) — read a game's SAVED board off disk, for that card's face.
+   *  A FUNCTION, not a map, and read LAZILY rather than swept at boot: a boot cache goes stale
+   *  the moment a play session or a follow writes disk, and lazily-read disk cannot lie. The
+   *  deck calls it once per card when it opens and again for a card it warps to. Absent, or
+   *  returning null, → the canned poster, which is the honest face for a game never played. */
+  previewFor?: (id: string) => GalleryPreview | null;
+  /** THE TABLE (T8-W3 M13/M14) — who else is on this board, as presentation data. The deck
+   *  imports nothing from `games/**`, so App hands the roster down: `inRoom` is the session's
+   *  `roomId != null`, `players` is `session.players` (you first, each with the `--color-user-ink`
+   *  rebinding that is their colour). Absent → a solo page, and every string below is the one
+   *  that shipped. */
+  session?: {
+    inRoom: boolean;
+    players: readonly { id: string; slug: string; ink: Record<string, string> }[];
+  };
 }>();
 
 const emit = defineEmits<{
@@ -125,19 +140,49 @@ const guardEl = ref<HTMLElement | null>(null);
 function dismissGuard() {
   guardIndex.value = null;
 }
+/** The armed card, for the ribbon copy (rendered as an overlay centered on the deck — the
+ *  chosen card IS the centered one, so it reads as "from the chosen card"). Declared ahead of
+ *  the copy that names it. */
+const guardCard = computed(() =>
+  guardIndex.value != null ? props.cards[guardIndex.value] : null,
+);
+
+/* ── THE TABLE, AND WHAT THE RIBBON OWES IT (T8-W3, M13) ───────────────────────────────────
+ *
+ * The ribbon has always been armed on `dirty` — a fact about YOUR marks — and said nothing
+ * about the other people on the board. Under the FOLLOW ruling (BAL-T8-1: a game switch
+ * replaces the table's worksheet and every page follows it) that silence is the whole of the
+ * consent problem: nobody should drag four people to kenken without being told, even though
+ * the protocol makes it perfectly legal. So in a session the ribbon arms on the SWITCH, not on
+ * the marks, and its copy counts the people rather than describing a feeling.
+ *
+ * PEERS, NOT `inRoom`, is the arming condition, and the narrowing is deliberate: an empty room
+ * has nobody to drag, and "0 other players will follow" is a false sentence to put on screen.
+ * A room with somebody in it is what "a shared board" means here. */
+const peers = computed(() => Math.max(0, (props.session?.players.length ?? 0) - 1));
+const shared = computed(() => props.session?.inRoom === true && peers.value > 0);
+/** "3 other players" / "1 other player" — the count is the instrument (M16: counts, not
+ *  feelings). One helper, so the three copy branches cannot disagree about the plural. */
+const others = computed(() =>
+  peers.value === 1 ? "1 other player" : `${peers.value} other players`,
+);
+
 /** THE ONE NAME (T5-W3 §3.2, the loop's guard-names row). This string is the ribbon's drawn
  *  heading, its `aria-label`, and the stem of its spoken utterance — one literal, so the ink
  *  and the announcement cannot drift. They had: the note drew "deal over this puzzle?" while
  *  AT was told "Deal a new board?", two names for one act. */
-const guardTitle = computed(() =>
-  guardIntent.value === "deal" ? "deal over this puzzle?" : "leave this puzzle?",
-);
-/** The destructive verb's own word — drawn on the button, spoken in the utterance. */
-const guardVerb = computed(() => (guardIntent.value === "deal" ? "deal" : "leave"));
-/** The armed card, for the ribbon copy (rendered as an overlay centered on the deck — the
- *  chosen card IS the centered one, so it reads as "from the chosen card"). */
-const guardCard = computed(() =>
-  guardIndex.value != null ? props.cards[guardIndex.value] : null,
+const guardTitle = computed(() => {
+  if (guardIntent.value === "deal")
+    return shared.value ? "deal a new board?" : "deal over this puzzle?";
+  if (shared.value)
+    return `switch this shared board to ${guardCard.value?.name ?? "another game"}?`;
+  return "leave this puzzle?";
+});
+/** The destructive verb's own word — drawn on the button, spoken in the utterance. In a session
+ *  a select is a SWITCH: the room, the roster and the link all survive it (matrix row 9), so
+ *  "leave" would name an act that no longer happens. */
+const guardVerb = computed(() =>
+  guardIntent.value === "deal" ? "deal" : shared.value ? "switch" : "leave",
 );
 /** WHOSE marks the ribbon is about. `select` always risks the board on screen. A `deal` can
  *  risk TWO different boards — the target's saved work (what it writes over) and the mounted
@@ -147,6 +192,19 @@ const guardCard = computed(() =>
 const guardSub = computed(() => {
   const card = guardCard.value;
   if (!card) return "your marks aren't saved";
+  // THE SHARED BOARD OUTRANKS THE MARKS, and it has to: under FOLLOW the act being confirmed
+  // is not "you lose your marks", it is "everyone here gets a different worksheet". The saved
+  // -board clause is matrix row 3's price — a return switch publishes YOUR saved board as the
+  // new epoch, so the table's copy is replaced by last-writer-wins and the people at it should
+  // be told that in the sentence, not discover it after.
+  if (shared.value) {
+    if (guardIntent.value === "deal")
+      return `it replaces the board for ${others.value}`;
+    const restores = props.saved?.[card.id]?.board === true;
+    return restores
+      ? `your saved board replaces the one on the table, and ${others.value} will follow`
+      : `${others.value} will follow`;
+  }
   const theirs =
     guardIntent.value === "deal" &&
     card.id !== props.currentId &&
@@ -170,6 +228,43 @@ const centerPose = useBeatFrame(
 function poseFor(i: number): number {
   return i === activeIndex.value ? centerPose.value : 0;
 }
+
+/** DEPTH GRADES BY DISTANCE (T8-W3, M11) — the third of the spread's three moves.
+ *
+ *  Every flank rested at one scale and one opacity, which was legible while the frame held a
+ *  centred card and one neighbour and reads FLAT the moment three or five are up: `d=2` looked
+ *  exactly like `d=1`, so the deck lost the only grammar that says how far a card is from the
+ *  one you have chosen. Half the mark is that a flank at 0.62 is barely seen at all.
+ *
+ *  The distance is `poseFor`'s own shape, capped at 2 — the card reads the pair off a table
+ *  (`GameCard.DEPTH`) and binds two custom properties, so this stays one number on the wire and
+ *  the absolutes live with the CSS that spends them. */
+function depthFor(i: number): number {
+  return Math.min(2, Math.abs(i - activeIndex.value));
+}
+
+// ── THE TRUE STILLS (T8-W3 M12) ──
+// A card's face shows the board that is actually saved there. The deck holds the read; the card
+// and the poster only render it.
+//
+// WHEN IT READS, and it is the whole of the policy: at deck OPEN, once per card, and again for
+// a card the deck warps to. Not a boot sweep — the ledger is written by a play session and by a
+// table follow, so a cache minted at boot is stale by the time the deck is opened over it, and
+// there is no event that says so. Disk read at the moment the picture is asked for cannot lie.
+//
+// The cost is five `JSON.parse`s of blobs the app already keeps, once, on a screen that is
+// otherwise mounting five posters. Nothing here is reactive to disk; nothing subscribes.
+const previews = reactive<Record<string, GalleryPreview | null>>({});
+function refreshPreview(id: string) {
+  previews[id] = props.previewFor?.(id) ?? null;
+}
+function refreshAllPreviews() {
+  for (const c of props.cards) refreshPreview(c.id);
+}
+// Read in SETUP, not on mount — `dealReveal`'s own precedent one block down: the FIRST paint
+// has to carry the true face, or every card in the deck shows a canned board for one frame and
+// then replaces it, which is the visible lie correcting itself that M12 is about.
+refreshAllPreviews();
 
 // ── THE LIVE CENTER FACE index (Wave C2) ──
 // The current game's card is `live` (its face IS the board) only when it is ALSO the centered
@@ -295,6 +390,15 @@ function go(i: number) {
   glide.glideTo(next);
   emit("snap", next);
   announce(next);
+  refreshArrival(next);
+}
+
+/** The card the deck just arrived at re-reads its still (M12's warp half). One card, one parse:
+ *  the deck may have been open across a play session or a follow, and this is the card whose
+ *  face is about to be believed. */
+function refreshArrival(i: number) {
+  const card = props.cards[i];
+  if (card) refreshPreview(card.id);
 }
 function step(delta: number) {
   go(activeIndex.value + delta);
@@ -308,6 +412,7 @@ function syncFromScroll(i: number) {
   activeIndex.value = next;
   emit("snap", next);
   announce(next);
+  refreshArrival(next);
 }
 
 // ── Select + the mid-game guard gate (Wave D §4) ──
@@ -316,7 +421,12 @@ function syncFromScroll(i: number) {
 function attemptSelect() {
   const card = props.cards[activeIndex.value];
   if (!card) return;
-  if (props.dirty && props.currentId != null && card.id !== props.currentId) {
+  const different = props.currentId != null && card.id !== props.currentId;
+  // Two arms, one ribbon. `dirty` is about YOUR marks; `shared` is about everyone else's board
+  // (T8-W3 M13 row 1) and does NOT consult `dirty` — a clean board on a shared table is still a
+  // table you are about to move. A same-game select arms neither: `setGame` early-returns and
+  // nothing is replaced (row 15).
+  if (different && (props.dirty || shared.value)) {
     guardIntent.value = "select";
     guardIndex.value = activeIndex.value; // arm the ribbon on the chosen card
     return;
@@ -434,7 +544,10 @@ function attemptDeal() {
   const destroysWork =
     (target?.board === true && target.userMoves) ||
     (props.dirty === true && props.currentId != null);
-  if (destroysWork) {
+  // …and the THIRD thing a deal can destroy is the board other people are looking at (M13 row
+  // 16). A deal in a session opens a new epoch on the shared table, so it is a board-replacing
+  // act for everyone at it whether or not anybody has written yet.
+  if (destroysWork || shared.value) {
     guardIntent.value = "deal";
     guardIndex.value = activeIndex.value;
     return;
@@ -603,11 +716,14 @@ watch(
   },
 );
 
-// A board becoming pristine under an armed ribbon (undo back to clean) retires the guard.
+// A board becoming pristine under an armed ribbon (undo back to clean) retires the guard —
+// the work it was protecting is gone, so the question is moot. NOT on a shared board: there the
+// ribbon is armed on the other people at the table, not on the marks, and undoing to clean
+// changes nothing about what a switch does to them (T8-W3 M13 row 1).
 watch(
   () => props.dirty,
   (d) => {
-    if (!d) dismissGuard();
+    if (!d && !shared.value) dismissGuard();
   },
 );
 
@@ -648,10 +764,13 @@ onMounted(async () => {
             :count="count"
             :is-active="i === activeIndex"
             :pose="poseFor(i)"
+            :depth="depthFor(i)"
             :guard="guardIndex === i"
             :live="isLive(i)"
             :deal-reveal="dealReveal[i]"
             :subline="sublineFor(card)"
+            :preview="previews[card.id]"
+            :swatches="i === activeIndex ? session?.players : undefined"
             @select="attemptSelect"
             @warp="go(i)"
             @guard-keep="dismissGuard"
@@ -786,6 +905,10 @@ onMounted(async () => {
      each side so a neighbor peeks (swipe discoverability); desktop clamps to a comfortable
      worksheet. The card fills this (GameCard `width:100%`). */
   --card-w: min(78vw, 22rem);
+  /* How many whole slots the frame holds. ONE on the phone (the peek deck); the desk's rungs
+     are declared at their breakpoints below. `useCarouselGlide` reads this back to decide
+     whether the deck needs centring air at all — the breakpoint stays CSS's to own. */
+  --deck-slots: 1;
 }
 
 .gallery-viewport {
@@ -877,24 +1000,52 @@ onMounted(async () => {
    fell wherever the page ended, which was through the third card's face at every width.
    Both halves are the same missing declaration: the frame was never sized to what it frames.
    It is sized to a WHOLE NUMBER of slots here, so its edges can only land ON a slot boundary
-   and no card can be bisected by one; and the number is THREE, the odd count, because the
-   deck centres its active card — an even frame would cut the pair beside it in half. Three
-   slots is also exactly what the deck's own leading air already reserves ((frame − slot) / 2
-   = one slot), so the end poses read as the deck's beginning rather than as a gap, and the
-   interior poses fill the frame end to end.
+   and no card can be bisected by one.
+
+   ── THE SPREAD (T8-W3, M11) ────────────────────────────────────────────────────────────
+   THE COUNT IS ODD, ALWAYS, and T7-W7's derivation of that rule stands verbatim: the deck
+   centres its active card, so an even frame would cut the pair beside it in half. Measured
+   again rather than recited — a four-slot frame puts `scrollLeft` on HALF a slot (176px) at
+   the middle index, so every card straddles the frame edge: `shown 5 whole 3` at 1456 and
+   1512, both engines. THE FOUR-SLOT RUNG IS DECLINED ON EVIDENCE, and it is written down here
+   so nobody re-proposes it from the geometry alone.
+
+   What T7-W7 got wrong was not the count, it was the CAP and the AIR:
+
+   · THE CAP. `width: calc(var(--card-w) * 3)` with `--card-w` capped at 22rem never exceeded
+     1056px, so at 1920 the deck held 432px of dead air PER SIDE while two of the five games
+     sat off-screen entirely. The frame now grows by whole ODD slots — three, then FIVE at
+     113rem (1808px = 5 × 352 + the 48px gutter, which is the width at which the fifth slot
+     first fits at full 22rem). Dead air at 1920: 432 → 80 a side.
+   · THE AIR. `--edge` was one whole slot at a three-slot frame, which is the end-pose defect
+     entire; it is zero on the desk now (`useCarouselGlide.recomputeEdges`, where the rule and
+     its measurements live). The end poses rest flush against the desk.
+
+   At five slots `maxScroll` is 0: the deck stops being a carousel and becomes a spread. Every
+   game is one click away, the arrows move the highlight without moving the track, and the pips
+   are a position tell for a deck that no longer has positions to hide.
+
    The card only shrinks where three at 22rem will not fit — 1024, where the slot lands at
    325px — and the 3rem allowance is the page's own gutter plus room for a scrollbar, so the
    third slot can never be the one the cap clips. Below the desk this is untouched: the phone
-   keeps its 78vw peek deck, which is a one-card frame by design. */
+   keeps its 78vw peek deck, which is a one-card frame by design and whose neighbour-peek IS
+   its swipe affordance. */
 @media (min-width: 64rem) {
   .game-gallery {
     --card-w: min(22rem, calc((100vw - 3rem) / 3));
+    --deck-slots: 3;
   }
 
   .gallery-viewport {
-    width: calc(var(--card-w) * 3);
+    width: calc(var(--card-w) * var(--deck-slots));
     max-width: 100%;
     margin-inline: auto;
+  }
+}
+
+@media (min-width: 113rem) {
+  .game-gallery {
+    --deck-slots: 5;
   }
 }
 

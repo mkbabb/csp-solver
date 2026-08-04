@@ -2,8 +2,11 @@
 /**
  * PosterBoard — the game-agnostic STATIC poster face (T4-W12 Wave A).
  *
- * A read-only mini-board: the hand-drawn grid frozen on ONE pose + the canned givens
- * inked as settled glyphs. It is the FLANK-card face the carousel deals onto the desk
+ * A read-only mini-board: the hand-drawn grid frozen on ONE pose + a board's digits inked
+ * as settled glyphs (canned, or the true saved board — T8-W3 M12's `PosterPreview`, which
+ * costs a still exactly what a still of a canned board costs: the constraint that produced
+ * this component is about MODELS, Worker and solver and reactivity, never about pixels).
+ * It is the FLANK-card face the carousel deals onto the desk
  * (§Poster vs live face) — a still worksheet, never the live board (only one live
  * board mounts at any instant, the perf floor). Deliberately NOT the `GameBoard` shell:
  * that shell mounts `HandDrawnGrid` (which enrols the shared boil beat), the drawer
@@ -36,9 +39,22 @@ const props = defineProps<{
    *  `boardSize` (a plain Latin grid — no interior box lines). Mirrors the shell's
    *  `subgridSize` furniture divergence. */
   subgridSize: number;
-  /** The canned givens snapshot — `{ position: value }`, 0/absent = empty. A still
-   *  photograph of a board, never a live model (no Worker, no solver, no reactivity). */
+  /** The givens snapshot — `{ position: value }`, 0/absent = empty. A still photograph of a
+   *  board, never a live model (no Worker, no solver, no reactivity). Canned when the game has
+   *  never been played; the TRUE saved board when it has (T8-W3 M12, `PosterPreview`). */
   values: Record<string, number>;
+  /** WHICH of those positions are the puzzle's own (T8-W3 M12). Absent → all of them, which is
+   *  the canned face byte for byte. Present → the rest are the user's marks and are inked as
+   *  such: `--color-user-ink` at the live board's own stroke weight, so the deck's picture and
+   *  the board that unfolds out of it are the same picture.
+   *
+   *  A mark is passed `is-given=false` + `is-overridden=true`, and the pair is load-bearing
+   *  rather than incidental. `HandwrittenGlyph` branches on `isOverridden` FIRST and settles the
+   *  glyph outright (dasharray none, no draw-in); the `!isGiven` branch below it starts a 150ms
+   *  stroke draw-in per cell. A poster is the deck's still and enrols NOTHING — four flank
+   *  posters each starting a draw-in per written cell is precisely the sparse-writer disease the
+   *  soul gate exists to refuse. */
+  givens?: readonly string[];
   /** The frozen boil pose to render (default 0). The poster NEVER ticks this itself —
    *  it is the gallery's optional "make this one card alive" seam (the gallery owns the
    *  single shared beat). Left at 0, the poster enrols nothing and never repaints. */
@@ -85,6 +101,14 @@ const gridTemplate = computed(() => `repeat(${props.boardSize}, minmax(0, 1fr))`
 
 function glyphAt(pos: number): string {
   return toDisplayChar(props.values[String(pos)] ?? 0, props.boardSize);
+}
+
+/** No given set supplied → every value is a given (the canned face). */
+const givenSet = computed(() =>
+  props.givens ? new Set(props.givens.map(String)) : null,
+);
+function isGivenAt(pos: number): boolean {
+  return givenSet.value ? givenSet.value.has(String(pos)) : true;
 }
 </script>
 
@@ -138,9 +162,9 @@ function glyphAt(pos: number): string {
       </g>
     </svg>
 
-    <!-- The canned givens, inked as settled glyphs. `is-given` + not revealed/solved →
-         HandwrittenGlyph settles on mount (dasharray none, no draw-in, no murmur pool):
-         a still digit, no animation, no beat. -->
+    <!-- The digits, inked as settled glyphs. A given is `is-given` + not revealed/solved and a
+         mark is `is-overridden`; BOTH settle on mount (dasharray none, no draw-in, no murmur
+         pool). A still digit, no animation, no beat — see the `givens` prop. -->
     <div
       class="poster-cells"
       :style="{ gridTemplateColumns: gridTemplate, gridTemplateRows: gridTemplate }"
@@ -150,8 +174,8 @@ function glyphAt(pos: number): string {
         <HandwrittenGlyph
           v-if="glyphAt(pos - 1)"
           :value="glyphAt(pos - 1)"
-          is-given
-          :is-overridden="false"
+          :is-given="isGivenAt(pos - 1)"
+          :is-overridden="!isGivenAt(pos - 1)"
           :is-solved="false"
           :is-revealed="false"
           :noise-delay="0"

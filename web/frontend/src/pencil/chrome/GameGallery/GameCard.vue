@@ -33,7 +33,7 @@ import { GLYPH_ANIM } from "@pencil/config/pencilConfig";
 import { useTheme } from "@/composables/useTheme";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import { scribbleUnderline } from "@pencil/chrome/OptionSelector/scribbleUnderline";
-import type { GalleryCard } from "./types";
+import type { GalleryCard, GalleryPreview } from "./types";
 
 const props = defineProps<{
   card: GalleryCard;
@@ -44,6 +44,9 @@ const props = defineProps<{
   /** The boil pose fed by the gallery: the live shared-beat frame for the centered card,
    *  0 (frozen) for every flank. Passed straight to the frame's `HandDrawnOutline :pose`. */
   pose: number;
+  /** THE DEPTH GRADE (T8-W3 M11) — how far this card is from the chosen one, capped at 2.
+   *  Absent → derived from `isActive`, so a card mounted without it keeps the two-tier pose. */
+  depth?: number;
   /** The mid-game guard is armed ON this card (T4-W12 Wave D §4) — a dirty board + a
    *  DIFFERENT game was selected, so the leave/keep ribbon slides from it. Only ever true
    *  for the centered card (you select the centered card). */
@@ -61,6 +64,15 @@ const props = defineProps<{
    *  is waiting: the sub-line then reports what is there instead of the range of sizes on
    *  offer. Absent → the range line, byte-unchanged. Every card tells you the most it can. */
   subline?: string;
+  /** THE TRUE STILL (T8-W3 M12) — the board actually saved in this game, read off disk by the
+   *  gallery. Handed STRAIGHT THROUGH to the poster, which is the component that knows the
+   *  game's own vocabulary; this card never reads a field of it. Absent → the canned poster. */
+  preview?: GalleryPreview | null;
+  /** THE DECK'S ROSTER ECHO (T8-W3 M14) — the people at this table, supplied for the ACTIVE
+   *  card alone. One dot per player in their own ink under the name, which is the roster's own
+   *  instrument: no drawn icon anywhere in this estate, the swatch IS the icon. Decorative by
+   *  construction — the players well names them, and the deck is not where you read a roster. */
+  swatches?: readonly { id: string; ink: Record<string, string> }[];
 }>();
 
 const emit = defineEmits<{
@@ -127,6 +139,30 @@ const draw = ref(0);
 const frameStyle = computed(() => ({
   transform: `scale(${1 + (props.live ? 0 : bloom.value) * 0.035})`,
 }));
+
+/** THE DEPTH TABLE (T8-W3 M11) — scale and opacity by distance from the chosen card.
+ *
+ *  Re-derived at implementation rather than inherited: lane 2's probe read 0.92/0.74/0.56
+ *  against its own intent because an injected `!important` raced the card's 440ms transition
+ *  mid-settle, so the RATIO was demonstrated and the absolutes were not. These are the
+ *  absolutes, and the deck's own probe measures them at rest (`deck-after.json`).
+ *
+ *  The far tier lands where today's single flank already sits (0.88/0.58 against 0.90/0.62), so
+ *  nothing in the deck gets dimmer than it is now and the NEAR flank gets brighter — which is
+ *  the half of the mark that says a flank is barely seen. Compositor channels only, on the
+ *  transition `.game-card` already declares. */
+const DEPTH: readonly { scale: number; opacity: number }[] = [
+  { scale: 1, opacity: 1 },
+  { scale: 0.94, opacity: 0.78 },
+  { scale: 0.88, opacity: 0.58 },
+];
+const depthStyle = computed(() => {
+  const d =
+    DEPTH[
+      Math.min(DEPTH.length - 1, Math.max(0, props.depth ?? (props.isActive ? 0 : 2)))
+    ];
+  return { "--d-scale": String(d.scale), "--d-opacity": String(d.opacity) };
+});
 const underlineStyle = computed(() => ({
   "--draw": String(draw.value),
   "background-image": underlineImg.value,
@@ -262,6 +298,7 @@ const dealStyle = computed(() => {
     :id="`gallery-card-${index}`"
     class="game-card"
     :class="{ 'is-center': isActive, 'is-chiming': isActive }"
+    :style="depthStyle"
     role="option"
     :aria-selected="isActive"
     :aria-label="ariaLabel"
@@ -289,8 +326,11 @@ const dealStyle = computed(() => {
             <div v-if="live" class="live-face-slot">
               <div ref="liveFaceFit" class="live-face-fit"></div>
             </div>
+            <!-- The still. `preview` is the board saved in THIS game (T8-W3 M12); the poster
+                 falls back to its canned worksheet when there is none, which is the honest
+                 face for a game never played. -->
             <Suspense v-else>
-              <component :is="Poster" />
+              <component :is="Poster" :preview="preview" />
               <template #fallback>
                 <div class="game-card-face-blank" />
               </template>
@@ -317,6 +357,21 @@ const dealStyle = computed(() => {
               aria-hidden="true"
             />
             <span class="game-card-range">{{ rangeLine }}</span>
+            <!-- The table, echoed under the name (T8-W3 M14). Rendered only where there is a
+                 table to echo, and only on the chosen card — five copies of the same roster
+                 across the deck would say nothing five times. -->
+            <div
+              v-if="swatches && swatches.length"
+              class="game-card-swatches"
+              aria-hidden="true"
+            >
+              <span
+                v-for="p in swatches"
+                :key="p.id"
+                class="game-card-swatch"
+                :style="p.ink"
+              />
+            </div>
           </div>
         </div>
       </HandDrawnOutline>
@@ -330,20 +385,19 @@ const dealStyle = computed(() => {
      + the mobile neighbor peek), not intrinsic content width. */
   width: 100%;
   /* Depth without paint (§6): a flank rests scaled + dimmed, the center full. A STATIC
-     state keyed off `.is-center`, not a perpetual animation — it only moves on a snap, and
-     transform + opacity are compositor channels (no re-raster of the card box). */
-  transform: scale(0.9);
-  opacity: 0.62;
+     state, not a perpetual animation — it only moves on a snap, and transform + opacity are
+     compositor channels (no re-raster of the card box).
+     T8-W3 M11: the pair is GRADED by distance and arrives as two custom properties (`DEPTH`
+     in the script). The fallbacks are the far tier, so a card mounted without a `depth` still
+     rests as a flank — the two-tier pose, byte for byte, is `.is-center` giving 0 and every
+     other card 2. */
+  transform: scale(var(--d-scale, 0.88));
+  opacity: var(--d-opacity, 0.58);
   transform-origin: center center;
   transition:
     transform var(--card-step-ms, 440ms) var(--ease-glassGlide),
     opacity var(--card-step-ms, 440ms) var(--ease-glassGlide);
   will-change: transform, opacity;
-}
-
-.game-card.is-center {
-  transform: scale(1);
-  opacity: 1;
 }
 
 /* The deal wrapper (Wave C2 §BEAT 2) — its OWN compositor channel (opacity + a small lift),
@@ -482,6 +536,23 @@ const dealStyle = computed(() => {
   color: var(--color-muted-foreground);
   letter-spacing: 0.01em;
   transition: color 150ms var(--ease-standard);
+}
+
+/* THE ROSTER ECHO (T8-W3 M14) — the players well's own swatch, at the deck's scale. Same
+   circle, same `--color-user-ink` rebinding carried on the element's own style, so a peer's dot
+   here and their digits on the board are one colour by construction rather than by agreement. */
+.game-card-swatches {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+}
+
+.game-card-swatch {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-user-ink);
 }
 
 @media (prefers-reduced-motion: reduce) {

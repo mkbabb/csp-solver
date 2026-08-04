@@ -2,14 +2,21 @@
 /**
  * FutoshikiPoster — Futoshiki's static carousel face (T4-W12 Wave A).
  *
- * A canned 5×5 snapshot on the game-agnostic `PosterBoard`: a plain Latin grid (subgrid-
- * size = boardSize, no interior box lines) + a few givens + the printed inequality carets
- * in the overlay slot. Static and non-interactive — the carets are inked as settled
- * `HandwrittenGlyph`s (no hover boil, no beat), mirroring `FutoshikiCaret`'s glyph but
- * frozen: a flank-card still, never the live board.
+ * A 5×5 snapshot on the game-agnostic `PosterBoard`: a plain Latin grid (subgrid-size =
+ * boardSize, no interior box lines) + givens + the printed inequality carets in the overlay
+ * slot. Static and non-interactive — the carets are inked as settled `HandwrittenGlyph`s (no
+ * hover boil, no beat), mirroring `FutoshikiCaret`'s glyph but frozen: a flank-card still,
+ * never the live board.
+ *
+ * T8-W3 M12 — handed a `preview`, the still is the board actually saved here, carets and all.
+ * The guard is the strictest of the five and that is `validateClue`'s own reason: a crafted
+ * inequality set renders one floating caret per pair and freezes the main thread, so adjacency
+ * and the pair bound are checked before a caret is drawn.
  */
+import { computed } from "vue";
 import PosterBoard from "@games/shared/PosterBoard.vue";
 import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
+import type { PreviewBoard } from "@games/shared/useStagingBridge";
 import { caretFigures } from "./clue";
 import type { Inequality } from "./types";
 
@@ -17,7 +24,7 @@ const N = 5;
 
 // Canned givens (row-major position → value). Futoshiki carries few clues — the
 // constraints do the work — so the poster reads as mostly-open worksheet.
-const values: Record<string, number> = { "2": 5, "6": 2, "12": 4, "18": 1, "22": 3 };
+const canned: Record<string, number> = { "2": 5, "6": 2, "12": 4, "18": 1, "22": 3 };
 
 // Printed [greater, lesser] inequalities across orthogonally-adjacent pairs — spread so
 // both horizontal (>/<) and vertical (∨/∧) carets show on the still.
@@ -30,14 +37,58 @@ const INEQUALITIES: Inequality[] = [
   [21, 22],
 ];
 
+const props = defineProps<{ preview?: PreviewBoard | null }>();
+
+/** LATIN: the raw selector value IS the board side; the band is 4/5/6/7. */
+const RUNGS = [4, 5, 6, 7];
+
+/** A pair of ORTHOGONALLY ADJACENT in-range cells, deduped, inside the `2·n·(n−1)` bound —
+ *  `spec`'s own `validateClue`, run here for the same reason it runs there. */
+function pairsFor(clue: unknown, side: number): Inequality[] | null {
+  if (!Array.isArray(clue) || clue.length > 2 * side * (side - 1)) return null;
+  const seen = new Set<string>();
+  const ok = clue.every((p: unknown) => {
+    if (!Array.isArray(p) || p.length !== 2) return false;
+    const [a, b] = p as [number, number];
+    if (![a, b].every((n) => Number.isInteger(n) && n >= 0 && n < side * side))
+      return false;
+    const adjacent =
+      (Math.floor(a / side) === Math.floor(b / side) && Math.abs(a - b) === 1) ||
+      Math.abs(a - b) === side;
+    const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+    if (!adjacent || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return ok ? (clue as Inequality[]) : null;
+}
+
+const live = computed(() => {
+  const p = props.preview;
+  if (!p || !RUNGS.includes(p.size)) return null;
+  const pairs = pairsFor(p.saved.inequalities, p.size);
+  return pairs ? { preview: p, pairs } : null;
+});
+
+const size = computed(() => live.value?.preview.size ?? N);
+const values = computed(() => live.value?.preview.values ?? canned);
+const givens = computed(() => live.value?.preview.givenCells);
+
 // The caret figures — the clue seam's own edge-midpoint math (T5-W2 F2), the very
 // derivation the live overlay draws from. The still and the board cannot print different
-// carets because there is one function; the canned set is the only thing that differs.
-const carets = caretFigures(INEQUALITIES, N);
+// carets because there is one function; only the pair set differs.
+const carets = computed(() =>
+  caretFigures(live.value?.pairs ?? INEQUALITIES, size.value),
+);
 </script>
 
 <template>
-  <PosterBoard :board-size="N" :subgrid-size="N" :values="values">
+  <PosterBoard
+    :board-size="size"
+    :subgrid-size="size"
+    :values="values"
+    :givens="givens"
+  >
     <template #overlay>
       <div class="poster-caret-layer" aria-hidden="true">
         <div
@@ -63,7 +114,7 @@ const carets = caretFigures(INEQUALITIES, N);
               :is-revealed="false"
               :noise-delay="0"
               :position="c.hash"
-              :board-size="N"
+              :board-size="size"
               :is-hovered="false"
             />
           </div>
