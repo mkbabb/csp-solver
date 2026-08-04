@@ -552,6 +552,212 @@
     return { kind: "styleDump", filters: filters, cssAnimations: anims, poses: poses, wapi: live };
   }
 
+  // ── T8-W5: main-thread occupancy, the roster census, and the solver harness ──
+
+  /**
+   * MAIN-THREAD BUSY, on an engine that ships no `longtask` (T8-W5).
+   *
+   * GATE D's whole caveat is that WebKit cannot report tasks, so every busy number this estate
+   * has ever printed came from chromium and stopped at the platform the owner actually plays
+   * on. A nested `setTimeout` is the one clock every engine agrees about: the HTML spec clamps
+   * it to 4 ms from the fifth nesting level, so a tick that lands LATER than 4 ms was late
+   * because the thread was elsewhere. Busy is the integral of that lateness.
+   *
+   * WHAT IT COUNTS, said plainly: everything that keeps the main thread from servicing a timer
+   * — script, style, layout, paint dispatch. Rendering is not excluded and must not be: a boil
+   * that paints for 8 ms of every 10 ms frame IS a busy main thread, and that is the reading
+   * the owner asked for. It is an ESTIMATE and it is a FLOOR — work finishing inside the 4 ms
+   * clamp is invisible to it, so a small number means "nothing long ran", never "nothing ran".
+   *
+   * ITS OWN COST is one closure per ~4 ms, which is why it may run beside a frame window: the
+   * perturbation is measured rather than asserted — every T8-W5 cell takes `idle3s` (no
+   * sentinel) and `liveWindow` (sentinel) back to back on the same load, so the delta between
+   * them IS the instrument's price, printed rather than argued.
+   */
+  function startBusySentinel() {
+    var t0 = performance.now(),
+      last = t0,
+      gaps = [],
+      stopped = false;
+    function tick() {
+      var now = performance.now();
+      gaps.push(now - last);
+      last = now;
+      if (!stopped) setTimeout(tick, 1);
+    }
+    setTimeout(tick, 1);
+    return {
+      stop: function () {
+        stopped = true;
+        var wall = performance.now() - t0;
+        // THE CLAMP IS MEASURED, NEVER ASSUMED. The first cut of this sentinel hard-coded the
+        // spec's 4 ms nested-timeout floor and read a CONSTANT 49.7–50.0 % busy across every
+        // game and every state on real Safari — the tell that it was measuring the engine's
+        // timer alignment rather than the main thread. Safari's ticks land 8.01 ms apart, so
+        // `gap − 4` is 4 ms every tick by construction, which is 50 % of nothing. The clamp is
+        // an engine fact and it is read off the window itself: the SMALLEST gap observed is the
+        // fastest this engine ever re-entered, and everything above it is time the thread spent
+        // elsewhere. Under-reads rather than over-reads (a window with no idle moment has no
+        // clean floor to find), which keeps the number the floor it is described as.
+        var clamp = Infinity,
+          i;
+        for (i = 1; i < gaps.length; i++) if (gaps[i] < clamp) clamp = gaps[i];
+        if (!isFinite(clamp)) clamp = 0;
+        var busy = 0,
+          worst = 0,
+          over33 = 0;
+        for (i = 1; i < gaps.length; i++) {
+          var late = gaps[i] - clamp;
+          if (late > 0) busy += late;
+          if (gaps[i] > worst) worst = gaps[i];
+          if (gaps[i] > 33.4) over33++;
+        }
+        return {
+          busyMs: Math.round(busy * 10) / 10,
+          busyPct: wall > 0 ? Math.round((busy / wall) * 1000) / 10 : null,
+          /** the engine's own re-entry floor, printed so the number above can be audited */
+          busyClampMs: Math.round(clamp * 100) / 100,
+          busyTicks: gaps.length,
+          busyWorstGapMs: Math.round(worst * 10) / 10,
+          busyStalls33: over33,
+          busyWallMs: Math.round(wall),
+        };
+      },
+    };
+  }
+
+  /**
+   * WHOSE TABLE WAS THIS (T8-W5). A window labelled "multiplayer" that ran against an empty
+   * room is a solo window with a wrong name, and no amount of care in the driver can tell the
+   * two apart after the fact. So every live window carries its own proof: how many DISTINCT
+   * players the page had rendered, whether the well was still saying "connecting…", and how
+   * many cells were carrying a peer's `--color-user-ink`.
+   *
+   * Distinct SLUGS, not rows: both control-panel twins are mounted at all times (the rig's own
+   * board-ready trap), so the roster is in the DOM twice and a row count reads double.
+   */
+  function sessionCensus() {
+    var rows = Array.prototype.slice.call(document.querySelectorAll(".player-row"));
+    var slugs = {};
+    for (var i = 0; i < rows.length; i++) {
+      var n = rows[i].querySelector(".player-name");
+      var s = n ? (n.textContent || "").trim() : "";
+      if (s) slugs[s] = 1;
+    }
+    var names = Object.keys(slugs);
+    var status = visibleOne(".players-status");
+    var filled = 0;
+    try {
+      filled = cellInputs().filter(function (c) {
+        return c.value;
+      }).length;
+    } catch (e) {}
+    return {
+      players: names.length,
+      peers: Math.max(0, names.length - 1),
+      slugs: names,
+      rosterRows: rows.length,
+      connecting: !!status,
+      // authorInk binds `--color-user-ink` per cell, and ONLY for a cell a peer authored.
+      inkedCells: document.querySelectorAll('[style*="--color-user-ink"]').length,
+      filledCells: filled,
+      room: q.get("s") || null,
+    };
+  }
+
+  /**
+   * THE SOLVER LANE'S HARNESS (T8-W5) — the app's OWN worker chunk, off the same dist, spoken
+   * with the same protocol.
+   *
+   * The alternative was to time the Solve button, which measures a solve plus a deal plus a
+   * celebration plus a re-render and calls the sum "solve latency". This drives
+   * `solver.worker.ts` directly — the built chunk, the built wasm, `protocol.ts`'s frames — so
+   * what comes back is the wasm call and its marshalling and nothing else. `elapsedMs` rides
+   * along in the response, measured INSIDE the worker around the wasm call, so each cell prints
+   * both the number the page waits on and the number the solver spends.
+   *
+   * The one fidelity gap, named rather than buried: sudoku's `generate` here passes an EMPTY
+   * template buffer, because the bank is a bundled module this classic script cannot import.
+   * The wasm documents that path (`templates.is_empty()` → hole-digging), so the BOARD is a
+   * properly graded sudoku and every solve number is honest — but sudoku's *generate* column is
+   * the live-dig fallback, NOT the template dig the app ships. The other four generate live
+   * anyway, so their generate column is the app's.
+   */
+  var NODE_BUDGET = {
+    sudoku: { 2: 200000, 3: 2000000, 4: 50000000 },
+    thermo: { 2: 200000, 3: 2000000, 4: 50000000 },
+    killer: { 2: 200000, 3: 2000000, 4: 50000000 },
+    futoshiki: { 4: 2000000, 5: 4000000, 6: 10000000, 7: 20000000 },
+    kenken: { 4: 2000000, 5: 4000000, 6: 10000000 },
+  };
+  var BUDGET_FALLBACK = { futoshiki: 4000000, kenken: 4000000 };
+
+  function solverHandle(url) {
+    var w = new Worker(url, { type: "module" });
+    var seq = 0;
+    var waiting = {};
+    // A WORKER THAT CANNOT LOAD MUST SAY SO. Without these two, a failed module resolution is
+    // indistinguishable from a slow solve: nothing ever answers, and the only signal is the
+    // call timeout minutes later. Both reject every outstanding call at once and name the cause.
+    var fatal = function (why) {
+      return function (e) {
+        var msg = why + ": " + String((e && (e.message || e.filename || e.type)) || e);
+        try {
+          post({ kind: "solverWorkerError", url: url, error: msg });
+        } catch (err) {}
+        for (var k in waiting) {
+          var cb = waiting[k];
+          delete waiting[k];
+          cb({ id: Number(k), ok: false, code: "WORKER_FAILURE", message: msg });
+        }
+      };
+    };
+    w.onerror = fatal("worker onerror");
+    w.onmessageerror = fatal("worker onmessageerror");
+    w.onmessage = function (e) {
+      var d = e.data;
+      var cb = waiting[d && d.id];
+      if (cb) {
+        delete waiting[d.id];
+        cb(d);
+      }
+    };
+    return {
+      call: function (req, timeoutMs) {
+        var id = ++seq;
+        req.id = id;
+        return new Promise(function (ok, fail) {
+          var to = setTimeout(function () {
+            delete waiting[id];
+            fail(new Error("solver timeout: " + req.kind + " after " + (timeoutMs || 60000) + "ms"));
+          }, timeoutMs || 60000);
+          waiting[id] = function (d) {
+            clearTimeout(to);
+            ok(d);
+          };
+          w.postMessage(req);
+        });
+      },
+      close: function () {
+        try {
+          w.terminate();
+        } catch (e) {}
+      },
+    };
+  }
+
+  /** `game:dim:difficultyOrdinal` — e.g. `sudoku:3:1,kenken:5:2`. */
+  function parseCells(spec) {
+    return (spec || "")
+      .split(",")
+      .map(function (s) {
+        var p = s.trim().split(":");
+        if (p.length < 3) return null;
+        return { game: p[0], dim: Number(p[1]), diff: Number(p[2]) };
+      })
+      .filter(Boolean);
+  }
+
   // ── scenarios ────────────────────────────────────────────────────────────
   // Each entry is {prepare?, run}. `prepare` puts the app in the scenario's starting state
   // OUTSIDE the measured window, which is what makes a tainted window safe to re-take.
@@ -926,6 +1132,192 @@
     // then toggles that class across the control row. The probe copies, never asserts: after
     // P-W3 the copied text carries no `filter` and the base transition is narrowed, so the
     // SAME sweep measures the real delta rather than a rewritten one.
+    /**
+     * THE LIVE WINDOW (T8-W5) — `idle3s`'s sampler, a settable duration, main-thread occupancy
+     * beside it, and a census that says which of the three states the window ACTUALLY ran in.
+     *
+     * One scenario covers solo / peer-present / peer-writing, and that is the point: the three
+     * differ in what is happening OUTSIDE the page (a `peer.mjs` at the same relay, silent or
+     * writing), so measuring them with three scenarios would put an instrument difference where
+     * the whole question is a traffic difference. The census is what keeps that honest — a row
+     * claiming state (b) with `players: 1` is a mislabelled solo row and gets thrown out.
+     *
+     * `__ms` sets the window (default 3000, matching `idle3s`); traffic cells want longer,
+     * because a human write cadence puts only a couple of ops inside three seconds.
+     */
+    liveWindow: {
+      prepare: async function () {
+        await waitFor(boardReady, 20000, "board ready");
+        await sleep(SETTLE);
+      },
+      run: async function () {
+        var ms = Number(q.get("__ms") || 3000);
+        var before = sessionCensus();
+        var sentinel = startBusySentinel();
+        var out = await sampleFor(ms);
+        var busy = sentinel.stop();
+        for (var k in busy) out[k] = busy[k];
+        out.session = sessionCensus();
+        // Writes that landed INSIDE the window — the traffic cell's proof of work. A state (c)
+        // row whose ink count never moved measured a quiet room, whatever the driver intended.
+        out.inkDelta = out.session.inkedCells - before.inkedCells;
+        out.filledDelta = out.session.filledCells - before.filledCells;
+        out.displayHzEst = out.p50 ? Math.round(1000 / out.p50) : null;
+        return out;
+      },
+    },
+
+    /**
+     * THE SOLVER MATRIX (T8-W5) — game × size × difficulty, cold and warm, off the app's own
+     * worker chunk. See `solverHandle` for what it drives and the one fidelity gap it names.
+     *
+     * `__cells=sudoku:3:1,kenken:5:2` · `__reps=5` (warm samples per cell) · `__worker=<url>`
+     * (the hashed chunk, resolved by the driver off the dist) · `__cold=1` gives every cell its
+     * own FRESH worker so rep 1 carries a real wasm instantiation · `__cellMs` caps a cell.
+     *
+     * Frames are not the subject here, so the scenario reports `fps: null` and posts a row per
+     * cell as it goes — a matrix that dies on the 40th cell keeps the 39 it earned.
+     */
+    solveMatrix: {
+      // Compute, not frames: no rAF, no paint, so no visibility gate. This is the scenario that
+      // runs in a TRUE background window — hidden, unfocused, and still honest, because a worker
+      // round-trip timed with performance.now() is untouched by rAF suspension.
+      needsPaint: false,
+      run: async function () {
+        var cells = parseCells(q.get("__cells"));
+        if (!cells.length) throw new Error("solveMatrix needs __cells=game:dim:diff,…");
+        var workerUrl = q.get("__worker");
+        if (!workerUrl) throw new Error("solveMatrix needs __worker=<solver chunk url>");
+        var reps = Number(q.get("__reps") || 5);
+        var cold = q.get("__cold") === "1";
+        // Re-solves per generated board — see the inner loop for why the two counts are apart.
+        var solvesPer = Number(q.get("__solves") || 2);
+        var cellMs = Number(q.get("__cellMs") || 45000);
+
+        var shared = null;
+        var rows = [];
+        for (var ci = 0; ci < cells.length; ci++) {
+          var c = cells[ci];
+          var budget =
+            (NODE_BUDGET[c.game] && NODE_BUDGET[c.game][c.dim]) ||
+            BUDGET_FALLBACK[c.game] ||
+            1000000;
+          var row = {
+            kind: "solveCell",
+            game: c.game,
+            dim: c.dim,
+            difficulty: c.diff,
+            nodeBudget: budget,
+            boards: reps,
+            solvesPerBoard: solvesPer,
+            coldArm: cold,
+            initMs: null,
+            generateMs: [],
+            solveMs: [],
+            /** the first solve of each board — the only samples with no warm-cache help from
+             *  the solve that preceded them on the same grid. */
+            firstSolveMs: [],
+            wasmMs: [],
+            nodes: [],
+            backtracks: [],
+            solved: [],
+            budgetExceeded: 0,
+            error: null,
+          };
+          var h = null;
+          var t0Cell = performance.now();
+          try {
+            if (cold) {
+              // A fresh worker per cell: rep 1's init IS a cold wasm instantiation, which is
+              // what a player's first solve after a page load actually pays.
+              h = solverHandle(workerUrl);
+              var tInit = performance.now();
+              var pong = await h.call({ kind: "ping" }, 30000);
+              if (!pong || !pong.ok) throw new Error("worker refused ping");
+              row.initMs = Math.round((performance.now() - tInit) * 100) / 100;
+            } else {
+              if (!shared) {
+                shared = solverHandle(workerUrl);
+                var tI = performance.now();
+                await shared.call({ kind: "ping" }, 30000);
+                row.initMs = Math.round((performance.now() - tI) * 100) / 100;
+              }
+              h = shared;
+            }
+
+            for (var r = 0; r < reps; r++) {
+              if (performance.now() - t0Cell > cellMs) {
+                row.cappedAtRep = r;
+                break;
+              }
+              var tg = performance.now();
+              var gen = await h.call(
+                {
+                  game: c.game,
+                  kind: "generate",
+                  dim: c.dim,
+                  difficulty: c.diff,
+                  seed: Date.now() + r * 7919 + ci * 104729,
+                  templates: new Uint32Array(0),
+                },
+                cellMs,
+              );
+              if (!gen.ok) throw new Error("generate " + gen.code + ": " + gen.message);
+              row.generateMs.push(Math.round((performance.now() - tg) * 100) / 100);
+
+              // SOLVE THE SAME BOARD MORE THAN ONCE. Generation dominates a large cell — a
+              // 16×16 dig runs seconds while its solve runs tens of milliseconds — so tying the
+              // solve sample count to the board count would buy five solve numbers at the price
+              // of five digs, and on the worst cells buy none at all. Boards give board-to-board
+              // variance, re-solves give timing spread, and the two are reported apart.
+              for (var s = 0; s < solvesPer; s++) {
+                var ts = performance.now();
+                var sol = await h.call(
+                  {
+                    game: c.game,
+                    kind: "solve",
+                    dim: c.dim,
+                    // The buffers are NOT transferred (no transfer list), so they survive the
+                    // post and this board can be handed over again.
+                    board: gen.board,
+                    clue: gen.clue,
+                    maxSolutions: 1,
+                    nodeBudget: budget,
+                  },
+                  cellMs,
+                );
+                if (!sol.ok) throw new Error("solve " + sol.code + ": " + sol.message);
+                row.solveMs.push(Math.round((performance.now() - ts) * 100) / 100);
+                row.wasmMs.push(Math.round(sol.elapsedMs * 100) / 100);
+                row.nodes.push(Number(sol.nodesExplored));
+                row.backtracks.push(Number(sol.backtracks));
+                row.solved.push(!!sol.solved);
+                if (sol.budgetExceeded) row.budgetExceeded++;
+                if (s === 0) row.firstSolveMs.push(row.solveMs[row.solveMs.length - 1]);
+              }
+            }
+          } catch (e) {
+            row.error = String((e && e.message) || e).slice(0, 400);
+          }
+          if (cold && h) h.close();
+          row.cellWallMs = Math.round(performance.now() - t0Cell);
+          rows.push(row);
+          await post(row);
+        }
+        if (shared) shared.close();
+        return {
+          frames: 0,
+          wallMs: 0,
+          fps: null,
+          note: "solver matrix — see the solveCell rows",
+          cellsRun: rows.length,
+          cellsFailed: rows.filter(function (x) {
+            return x.error;
+          }).length,
+        };
+      },
+    },
+
     hoverSweep: {
       // PINNED to 9×9 / Easy. The app restores its last board from localStorage, and
       // `solveWindow` leaves a 16×16 behind — a 256-glyph board turns this window from 68.9 fps
@@ -1221,34 +1613,126 @@
 
   var ATTEMPTS = Number(q.get("__attempts") || 3);
 
-  /** One scenario, up to ATTEMPTS times, keeping the first window that ran with the page
-   *  focused throughout. On this desktop other apps grab the front on their own schedule,
-   *  and an occluded WebKit page has rAF SUSPENDED — the tell is a lone 1000ms+ delta at a
-   *  window edge. Such a window is an artifact, not a measurement: re-take it. If every
-   *  attempt is tainted, the least-tainted one is reported with tainted:true. */
+  /* THE FOCUS GATE IS ABROGATED UNDER AUTOMATION (T8-W5, the owner's order).
+   *
+   * The old gate waited up to 30 s for `document.hasFocus()` and taints any window that ran
+   * without it. That is a FOCUS test standing in for a PAINT question, and it is what drove the
+   * whole frontmost-forcing apparatus in the desktop driver — a lane that seized the owner's
+   * screen every two seconds for the life of a run.
+   *
+   * A WebDriver-driven Safari never holds focus and does not need to: the automation window is
+   * glass-paned and isolated, so the owner keeps working while it runs. What a frame probe
+   * actually needs is that the window is PAINTING, and the honest test for that is the pair the
+   * driver also checks from outside — `visibilityState === 'visible'` plus a real rAF cadence.
+   * Measured on this box: a hidden automation window served ZERO rAF callbacks in 20 s (rAF is
+   * suspended outright, not throttled), while fixed integer work ran at full speed (84/84/91 ms).
+   * So a hidden window can still measure COMPUTE and can never measure FRAMES — which is exactly
+   * the split `needsPaint` encodes.
+   *
+   * Modes: `__focusGate=on` forces the legacy behaviour (a human at a real keyboard);
+   * `off` forces the paint gate; default AUTO picks the paint gate when `navigator.webdriver`. */
+  var AUTOMATED =
+    q.get("__focusGate") === "off" ||
+    (q.get("__focusGate") !== "on" && navigator.webdriver === true);
+
+  /** rAF cadence sanity — the occlusion detector, deliberately generous. It answers "is this
+   *  window painting at all", not "is it fast": a contended box must never be mistaken for a
+   *  hidden one. */
+  async function cadenceOk(frames, budgetMs) {
+    return new Promise(function (resolve) {
+      var ts = [];
+      var last = performance.now();
+      var t0 = last;
+      (function tick() {
+        var t = performance.now();
+        ts.push(t - last);
+        last = t;
+        if (ts.length < frames && t - t0 < 5000) requestAnimationFrame(tick);
+        else {
+          var s = ts.slice().sort(function (a, b) {
+            return a - b;
+          });
+          var p50 = s.length ? s[Math.floor(s.length / 2)] : Infinity;
+          resolve({
+            ok: ts.length >= Math.min(frames, 8) && p50 <= budgetMs,
+            p50: isFinite(p50) ? Math.round(p50 * 100) / 100 : null,
+            frames: ts.length,
+          });
+        }
+      })();
+    });
+  }
+
+  /** One scenario, up to ATTEMPTS times, keeping the first window that ran clean. Under a human
+   *  driver "clean" still means focused throughout. Under automation it means the page was
+   *  VISIBLE and painting throughout — and a scenario that does not paint (the solver matrix) is
+   *  gated on nothing at all, because a suspended rAF has no bearing on a worker round-trip. */
   async function measure(name, spec) {
     var best = null;
+    var needsPaint = spec.needsPaint !== false;
     for (var attempt = 1; attempt <= ATTEMPTS; attempt++) {
       if (spec.prepare) await spec.prepare();
-      // start only once the page actually holds focus
-      try {
-        await waitFor(
-          function () {
-            return document.hasFocus() && document.visibilityState === "visible";
-          },
-          30000,
-          "page focus",
-        );
-      } catch (e) {
-        /* measure anyway and let focusEvents tell the story */
+
+      var gate = { mode: AUTOMATED ? (needsPaint ? "paint" : "compute") : "focus" };
+      if (!AUTOMATED) {
+        try {
+          await waitFor(
+            function () {
+              return document.hasFocus() && document.visibilityState === "visible";
+            },
+            30000,
+            "page focus",
+          );
+        } catch (e) {
+          /* measure anyway and let focusEvents tell the story */
+        }
+      } else if (needsPaint) {
+        // NEVER force focus, never activate, never raise the window. Wait briefly for the page
+        // to be visible; if it is not, the row is OCCLUDED-INVALID and retrying cannot cure it.
+        try {
+          await waitFor(
+            function () {
+              return document.visibilityState === "visible";
+            },
+            10000,
+            "page visible",
+          );
+        } catch (e) {
+          /* fall through to the cadence check, which will fail and say so */
+        }
+        var cad = await cadenceOk(20, 120);
+        gate.visibility = document.visibilityState;
+        gate.rafP50 = cad.p50;
+        gate.rafFrames = cad.frames;
+        if (document.visibilityState !== "visible" || !cad.ok) {
+          return {
+            scenario: name,
+            occluded: true,
+            verdict: "OCCLUDED-INVALID",
+            gate: gate,
+            hadFocus: document.hasFocus(),
+            visibility: document.visibilityState,
+            note:
+              "the automation window was not painting (" +
+              (cad.frames || 0) +
+              " rAF frames, p50 " +
+              cad.p50 +
+              "ms). NOT cured by forcing focus — the window must be visible on the active Space.",
+          };
+        }
       }
+
       await sleep(250);
       var t0 = performance.now();
       var out = await spec.run();
       out.scenario = name;
       out.startedAtMs = Math.round(t0);
       out.attempt = attempt;
-      var clean = !out.focusEvents && out.hadFocus !== false;
+      out.gate = gate;
+      // Under automation, focus is not a defect — occlusion is.
+      var clean = AUTOMATED
+        ? !needsPaint || (!out.focusEvents && out.visibility === "visible")
+        : !out.focusEvents && out.hadFocus !== false;
       if (clean) {
         out.tainted = false;
         return out;

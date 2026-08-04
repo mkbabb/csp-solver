@@ -7,11 +7,14 @@
 # "does the mobile path jank and where", never for "the iPhone does N fps".
 #
 # The sim shares the host loopback, so localhost:PORT resolves straight to the rig.
-# Occlusion suspends MobileSafari exactly as it does desktop Safari, hence the activate/re-assert.
+# Occlusion suspends MobileSafari as it does desktop Safari — detected in-page, never cured by
+# forcing the front (T8-W5). The Simulator launches with `open -g` and stays where it is.
 set -uo pipefail
 
 RIG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PORT="${PORT:-4894}"
+# See run-safari.sh — $DIST names a snapshot when a matrix must hold one tree across a session.
+DIST="${DIST:-${RIG_DIR}/../dist}"
 RUN_ID="${1:?usage: run-sim.sh <runId> [scenarios] [ablateFile]}"
 SCENARIOS="${2:-idle3s,deal,undoBurst,solveCelebration,galleryGlide,themeToggle}"
 ABLATE_FILE="${3:-}"
@@ -28,7 +31,7 @@ fi
 # BUILD IDENTITY, first line of the run — see run-safari.sh's note (D6-G3). The sim shares
 # the host loopback, so it measures the SAME `../dist` any other lane may have rebuilt.
 if ! node "${RIG_DIR}/../scripts/dist-identity.mjs" \
-  --dist "${RIG_DIR}/../dist" --served "http://localhost:${PORT}/"; then
+  --dist "${DIST}" --served "http://localhost:${PORT}/"; then
   echo "build identity unresolved — this run would produce numbers with no tree attached"
   exit 4
 fi
@@ -70,9 +73,15 @@ if [ -n "${ABLATE_FILE}" ]; then
   echo "ablation: ${ABLATE_FILE}"
 fi
 
-PREV_APP="$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)"
-open -a Simulator >/dev/null 2>&1
-osascript -e 'tell application "Simulator" to activate' >/dev/null 2>&1
+# BACKGROUNDED, on the owner's order. What was here: a PREV_APP capture, `open -a Simulator`
+# followed by `tell application "Simulator" to activate`, a re-assert loop that re-activated the
+# Simulator every 2 s, and a closing activate to restore the previous app. All DELETED.
+# `open -g` launches the Simulator WITHOUT bringing it forward; simctl drives it headlessly from
+# there. Whether MobileSafari keeps painting while the Simulator window is occluded is a
+# question the probe answers from inside the page (visibility + rAF cadence), not one this
+# script settles by seizing the screen: an occluded run comes back OCCLUDED-INVALID and is
+# thrown out.
+open -g -a Simulator >/dev/null 2>&1
 sleep 2
 
 echo "run ${RUN_ID} → ${SCENARIOS}"
@@ -80,28 +89,18 @@ xcrun simctl openurl "${UDID}" "${URL}" || { echo "simctl openurl failed"; exit 
 
 DEADLINE=$(( $(date +%s) + TIMEOUT ))
 STATUS=3
-REASSERTS=0
 while [ "$(date +%s)" -lt "${DEADLINE}" ]; do
   if curl -s "http://localhost:${PORT}/__runs/${RUN_ID}" | grep -q '"done":true'; then
     STATUS=0
     break
   fi
-  if [ "$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null)" != "Simulator" ]; then
-    osascript -e 'tell application "Simulator" to activate' >/dev/null 2>&1
-    REASSERTS=$((REASSERTS + 1))
-  fi
   sleep 2
 done
-[ "${REASSERTS}" -gt 0 ] && echo "front re-asserted ${REASSERTS}× (focus churn — treat numbers with care)"
 
 if [ "${STATUS}" -eq 0 ]; then
   echo "run ${RUN_ID} complete → ${RIG_DIR}/runs/${RUN_ID}.jsonl"
 else
   echo "run ${RUN_ID} TIMED OUT after ${TIMEOUT}s (partial lines kept)"
-fi
-
-if [ -n "${PREV_APP}" ] && [ "${PREV_APP}" != "Simulator" ] && [ "${KEEP_SIM_FRONT:-0}" != "1" ]; then
-  osascript -e "tell application \"${PREV_APP}\" to activate" >/dev/null 2>&1 || true
 fi
 
 exit "${STATUS}"

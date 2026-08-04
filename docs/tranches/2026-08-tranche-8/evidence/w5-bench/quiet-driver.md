@@ -94,12 +94,33 @@ The window went `hidden` within seconds of launch and stayed hidden at every rec
 variable. A macOS full-screen app occupies its own Space, and a window on another Space is
 occluded by definition; nothing a WebDriver client can send changes that.
 
-**The one thing that unblocks the desktop frame lanes** — and it is an owner action, once:
-
-> Leave the automation Safari window visible on the **active** Space while a frame bench runs —
-> i.e. not behind a full-screen app. A corner of desktop is enough; the window never takes focus
-> and never accepts input, so it costs attention, not interaction.
-
-With that, `./w5-bench.sh boil safari <tag>` runs the whole 15-cell matrix in the background at
-one activation. Without it, every frame row is correctly refused as `OCCLUDED-INVALID` — which is
-what happened to r3, all 15 of 15.
+> ## §3 CHALLENGED AND UPHELD — D3, 2026-08-04
+>
+> D3 read the paragraph above, found the window `visible` at `0,0 900×700` and `hidden` at the
+> banked `1400,760 560×420`, noted that the screen is **2048×1152** and that rect's bottom edge is
+> **y = 1180** — 28 px past it — and concluded that placement *was* the variable and this section
+> was wrong. **That conclusion was itself wrong, and is withdrawn.**
+>
+> The error: the two rects were measured **sequentially**, minutes apart, across a desktop that
+> was changing underneath. Interleaved — same two rects, alternating, seconds apart — they are
+> indistinguishable:
+>
+> | rect | visible samples |
+> | --- | --- |
+> | `1400,760 560×420` | 0/3 |
+> | `0,0 900×700` | 0/3 |
+> | `1400,760 560×420` | 0/3 |
+> | `0,0 900×700` | 0/3 |
+>
+> And a **1700×1050** window held `hidden` **0/15 over 30 s**. Nothing short of a full-screen
+> occupant can cover that. Two more controls came back negative: **quitting the Simulator** did
+> not restore visibility, and **a fresh session** — a new window, opened by macOS on the active
+> Space — did not either.
+>
+> So §3 stands as written, including *"placement is not the variable"*, and the owner action it
+> asks for stands with it. One correction of substance to the list above: `0,0 900×700` is
+> recorded there as *tried and hidden*, and it does paint when the desktop is clear — the rects in
+> that list were not all refuted, they were all sampled during occlusion.
+>
+> The 28 px overhang on the default rect is real but is **not** the cause of anything; it is
+> hygiene, fixed in `run-safari.sh` with that limit stated.
