@@ -39,6 +39,70 @@
   gap: 2rem;
 }
 
+/* ── THE BOARD RULE (T8-W7, M18) ────────────────────────────────────────────────────────────
+   THE RULE, stated once, and it is three sentences because the mark asks for three lines:
+
+     VERTICAL   the board's top edge is the row's rule, and the rule is the masthead block's
+                own bottom edge. The gap between them is ZERO and always was: the air the eye
+                reads is the wordmark's own well, the 12 of 60 viewBox units below its baseline
+                — 22.38px of the 111.92px SVG box at both desk rungs, 14.24 of 71.22 at 390.
+                It scales WITH the wordmark, which is why one number holds the rhythm across
+                every `--logo-scale` rung without being restated at any of them.
+     THE CARD   the controls card keeps H8's centring against that rule and overhangs downward
+                when it is the taller of the two. The board never moves for the card.
+     LEFT       the board's left edge and the masthead's are ONE line, delta 0.00 at every desk
+                width and game.
+
+   THE VERTICAL. The row already centred, and the first sentence is what centring MEANT while
+   the card was always the shorter box. It inverts the moment it is not: `align-items: center`
+   centres every item against the LINE, and the line is as tall as the tallest item, so a card
+   taller than the board stops being centred against the board and starts pushing the board down
+   instead. That is the mark, exactly, and the arithmetic is (cardH − boardH) / 2:
+
+     1280×800  kenken 4×4   board 416, card 608   board top 236.45 against a masthead bottom of
+                                                  140.45 — 96.00px of dead paper under the title
+     1440×900  kenken 4×4   board 416, card 640   112.00px, same shape
+     both      the other four   board 640/672, card 608/640   0.00 — the row was never wrong
+                                                  where the board happened to be the taller box
+
+   The card is not the party at fault and is not capped: its height is its content's (size,
+   difficulty, deal, the tally and the action bar), and a 4×4 desk that scrolls its own settings
+   to spare the page 96px is a worse page. What is at fault is that the board's position was ever
+   a function of the card at all. `align-self` on the board says so directly, and it is the whole
+   cure — where the board is the taller box (four of five games at every desk rung) it changes
+   nothing, byte for byte, because flex-start and centre are the same place for the item that
+   sets the line's height. The drawer's parked pose is untouched for the same reason: closed, the
+   rail is out of flow and the board is the only item left to measure. It also makes the board's
+   position independent of every future edit to the card's contents, which is a property the
+   centred row did not have.
+
+   THE CARD'S OWN LINE follows from the same rule rather than needing a second one. Centred
+   against a board that starts at the rule, the card's top is `(boardH − cardH) / 2` BELOW the
+   rule when the board is taller — measured 16.00 for all four of those games at both desk rungs,
+   both engines — and exactly ON the rule when the card is taller, because then the card IS the
+   line: kenken reads card top − board top of 0.00 at 1280 and 1440 after the cure, against
+   −96.00 / −112.00 before it. So the row has one named line and both boxes hang off it.
+
+   THE LEFT EDGE comes from `.board-group { align-items: stretch }` handing the `<h1>` the
+   group's full width and `.masthead { align-items: flex-start }` parking the wordmark at its
+   left, so the row and the heading start on one line: `.board-wrapper` left minus `.masthead`
+   left is 0.00 at 1280/1440 × five games × both themes × both engines. What the EYE reads there
+   is 7.46px of the wordmark's own left side bearing (`x="4"` in a 60-unit viewBox, scaled) —
+   the board's paper edge sits that much left of the first glyph, and that is the glyph's metric,
+   not the layout's. Below 1024 the group centres (`align-items: center`) and this line does not
+   apply — the mobile board is CENTRED, which is its own ratified pose and stays one.
+   The other deliberate exception is `html.drawer-closed`, where the masthead centres on the
+   widened board's own axis (T3-W12 §6) — the closed desk's ratified pose.
+
+   Gated in `e2e/masthead-alignment.spec.ts` (all five games, both desk rungs, both engines,
+   each row with its own born-RED control). Tables: `docs/tranches/2026-08-tranche-8/evidence/
+   w7-g2/offsets.md`. */
+@media (min-width: 1024px) {
+  .board-peek-host {
+    align-self: flex-start;
+  }
+}
+
 /* T4-W8 seal: the assist rows grew the card past the sheet (936px against an 800px
    viewport — the centered .app-layout pushed the masthead negative, the wordmark
    clean off-screen, and the case rose above the sheet, redding six e2e specs, the

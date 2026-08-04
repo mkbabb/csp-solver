@@ -185,28 +185,61 @@ test.describe("ios-discipline (iPhone-geometry coarse)", () => {
     expect(meta).toContain("viewport-fit=cover"); // born-RED: absent
     expect(meta).not.toContain("maximum-scale"); // pinch-zoom preserved (WCAG 1.4.4)
 
-    // env() resolves to 0 on non-notched Chromium, so prove the safe-area padding is AUTHORED on
-    // the fixed toggle chrome (its real clearance is an owner-device smoke row).
-    const safeAreaAuthored = await page.evaluate(() => {
+    // env() resolves to 0 on non-notched Chromium, so prove the safe-area clearance is AUTHORED
+    // (its real clearance is an owner-device smoke row).
+    //
+    // T8-W7 (M17) — WHERE it is authored moved, and the assertion follows it up rather than
+    // down. The top inset used to be `padding-top` on `.corner-right` alone: one corner paid the
+    // notch and the other did not, which is a broken line on exactly the hardware that reserves
+    // the corner. It is now a term inside `--head-rule` on `.page-root`, and BOTH head corners
+    // hang from that one rule — so the row asks for all three facts, and reds if any of them
+    // goes: the term, and each corner's consumption of it.
+    const authored = await page.evaluate(() => {
+      const found = {
+        headRuleHasInset: false,
+        rightConsumes: false,
+        leftConsumes: false,
+        rightPadsSide: false,
+        leftPadsSide: false,
+      };
+      const visit = (rules: CSSRuleList) => {
+        for (const rule of Array.from(rules)) {
+          if (rule instanceof CSSMediaRule) {
+            visit(rule.cssRules);
+            continue;
+          }
+          if (!(rule instanceof CSSStyleRule)) continue;
+          const sel = rule.selectorText;
+          const headRule = rule.style.getPropertyValue('--head-rule');
+          if (sel.includes('.page-root') && headRule.includes('safe-area-inset-top'))
+            found.headRuleHasInset = true;
+          if (sel.includes('.corner-right')) {
+            if (rule.style.top.includes('--head-rule')) found.rightConsumes = true;
+            if (rule.style.paddingRight.includes('safe-area-inset')) found.rightPadsSide = true;
+          }
+          if (sel.includes('.corner-left') || sel.includes('.mobile-attribution')) {
+            if (rule.style.top.includes('--head-rule')) found.leftConsumes = true;
+            if (rule.style.paddingLeft.includes('safe-area-inset')) found.leftPadsSide = true;
+          }
+        }
+      };
       for (const sheet of Array.from(document.styleSheets)) {
-        let rules: CSSRuleList;
         try {
-          rules = sheet.cssRules;
+          visit(sheet.cssRules);
         } catch {
           continue;
         }
-        for (const rule of Array.from(rules)) {
-          if (
-            rule instanceof CSSStyleRule &&
-            rule.selectorText.includes(".corner-right") &&
-            rule.style.paddingTop.includes("safe-area-inset")
-          )
-            return true;
-        }
       }
-      return false;
+      return found;
     });
-    expect(safeAreaAuthored).toBe(true); // born-RED: zero env()/safe-area in src
+    // born-RED, each arm: drop the env() term from the rule, or stop either corner reading it.
+    expect(authored).toEqual({
+      headRuleHasInset: true,
+      rightConsumes: true,
+      leftConsumes: true,
+      rightPadsSide: true,
+      leftPadsSide: true,
+    });
   });
 });
 

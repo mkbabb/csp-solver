@@ -38,10 +38,13 @@ import { useCoarsePointer } from "@games/shared/useCoarsePointer";
 import {
   backfillLedger,
   dealStaged,
+  flushMountedBoard,
+  previewFor,
   publishMountedGame,
   stageHandoff,
   useStagedLedger,
 } from "@games/shared/useStagingBridge";
+import { noteFocus, registerGameFollower, session } from "@games/shared/useSession";
 import { GAMES } from "@games/cards";
 import type { AnyGameSpec } from "@games/shared/defineGame";
 import { useShortcutPolicy } from "@/composables/useShortcutPolicy";
@@ -183,9 +186,14 @@ function setGame(val: string | number, opts?: { cut?: boolean }) {
   // (up to ~256 chars) riding into the other game's URL defeats the clean-URL rationale
   // that made the permalink share-on-demand. Strip BOTH games' board/size params on
   // switch — the incoming game re-adds only its own via its composable's syncToUrl.
-  // `s` joins them (T6 mark 13): a session is BOARD-bound, so switching games leaves it —
-  // the outgoing scene's unmount drops the wire, and the room id must not ride along.
-  for (const key of ["board", "size", "difficulty", "board_size", "s"])
+  //
+  // `s` IS NOT ONE OF THEM (T8-W3, BAL-T8-1). It was, on the reading that a session is
+  // BOARD-bound — so a switch stripped the room id and the outgoing scene's unmount dropped
+  // the wire, which is to say a game switch silently evicted you and everyone you were playing
+  // with was told nothing. The session is TABLE-bound now: the whole table follows the
+  // switcher, the room outlives the worksheet, and the link has to ride the switch because a
+  // reload after one must land back at the same table.
+  for (const key of ["board", "size", "difficulty", "board_size"])
     url.searchParams.delete(key);
   history.replaceState(null, "", url.toString());
   // Switching games unmounts the outgoing scene (v-if), which stops its keyboard listener and
@@ -446,6 +454,11 @@ function restoreBoardAnims(phase: AnimPhase) {
  *  shows the replay. */
 function moveLiveBoard(el: HTMLElement | null) {
   const phase = snapshotBoardAnims();
+  // THE STILL IS ABOUT TO BE READ (T8-W3, D-3). Parking the board home is the instant this
+  // game stops being the live face and starts being a card the deck draws off disk — and the
+  // persist debounce can be holding the last digit for up to 300ms. Flushed here, at the one
+  // seam that knows the detach happened; the debounce itself is untouched.
+  if (!el) flushMountedBoard();
   setLiveFaceTarget(el);
   void nextTick(() => restoreBoardAnims(phase));
 }
@@ -560,6 +573,9 @@ function runFold(pairs: { first: DOMRect | null; el: () => HTMLElement | null }[
 // live and `onLiveFace` runs the fold (beat 1); the deal fires on the deck's mount (beat 2). PRM
 // cuts every beat.
 function enterGallery() {
+  // Your ghost goes quiet while you browse (T8-W3): browsing the deck is not an act on the
+  // board, and a cursor left sitting on a cell would tell the room you were still there.
+  noteFocus(null);
   preloadScenes(); // F6-D3: warm the lazy scene chunks on OPEN, so a select is cached
   warmPosters(); // …and the deck's faces, if the idle warm has not already had them
   if (reducedMotion.value) {
@@ -621,6 +637,18 @@ function onGalleryCancel() {
 // the `?view=gallery` boot path — every entry the pass-1 `enterGallery`-only publish missed.
 watch(scene, (id) => publishMountedGame(id), { immediate: true });
 
+// ── THE TABLE FOLLOWS (T8-W3, BAL-T8-1 — the owner's word) ─────────────────────────────────
+// A peer switched the room's worksheet, and this page turns the page with them. ONE
+// registration, the estate's own `registerX` idiom: `games/shared` never imports App, so the
+// session asks for a game by id and App — which owns `?game=`, the scene seam and the page-turn
+// — is what answers. The board itself is already staged by the session, id-keyed, and the
+// incoming mount consumes it instead of its own saved board.
+//
+// A peer holding the DECK open gets the cut rather than the page-turn: the live centre face
+// swaps under the open deck, the deck stays, and the flank stills (disk truth) are untouched.
+// PRM cuts it either way — `setGame` already branches on `reducedMotion`.
+registerGameFollower((id) => setGame(id, { cut: view.value === "gallery" }));
+
 // COLD-START TRUTH (T4-P1 F4): seed the ledger from the five games' own saved boards, ONCE, at
 // boot. Without it the whole installed base opened the picker to `start` on games it had boards
 // for, and four of five cards showed a table default dressed as saved settings. At boot and
@@ -638,6 +666,15 @@ const gallerySaved = useStagedLedger();
 // A deal is in flight — the band's verbs go inert until it lands (the double-deal guard the
 // pass-1 prototype documented on two components and never bound).
 const dealBusy = ref(false);
+
+// THE TABLE, AS PRESENTATION DATA (T8-W3 M13/M14). The deck imports nothing from `games/**`,
+// so the room crosses the boundary here — the same direction `dirty` and `coarse` already
+// travel — as two plain facts: are we in a room, and who is at it. The deck's caption swatches
+// and its in-session ribbon copy read this and nothing else.
+const deckSession = computed(() => ({
+  inRoom: session.roomId.value !== null,
+  players: session.players.value,
+}));
 
 /** THE FUSED TRANSACTION: pick a game AND its settings, deal once. Same game → the mounted
  *  state's own `deal()` through the bridge (no remount, no second solver dispatch). Different
@@ -793,6 +830,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
           :animate-entry="entryAnimated"
           :saved="gallerySaved"
           :busy="dealBusy"
+          :preview-for="previewFor"
+          :session="deckSession"
           @snap="onGallerySnap"
           @select="onGallerySelect"
           @cancel="onGalleryCancel"
@@ -806,13 +845,46 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 
 <style scoped>
 /* THE HEAD'S ONE METRIC (T6.2 mark C). `--toggle-size` was declared on `.corner-right`, which
-   is the only place that could read it — and the head has TWO corners. The attribution's line
-   is the toggle's own middle, so the number moves up to the page root where both corners
-   inherit it (the `--board-col` precedent: declared once on the common ancestor, spelled out
-   nowhere else). `DarkModeToggle` keeps its `5rem` fallback, so the component is still whole
-   on its own. */
+   is the only place that could read it — and the head has TWO corners. The number lives on the
+   page root where both corners inherit it (the `--board-col` precedent: declared once on the
+   common ancestor, spelled out nowhere else). `DarkModeToggle` keeps its `5rem` fallback, so
+   the component is still whole on its own.
+
+   ── THE MASTHEAD LINE (T8-W7, M17) ────────────────────────────────────────────────────────
+   THE RULE, and it is written here because here is the only element both corners descend from:
+
+     `--head-rule` is ONE inset from the top of the page, and the head's two marks — the @mbabb
+     badge (left) and the celestial toggle (right) — hang their BOXES from it. Nothing else in
+     the head is positioned by hand.
+
+   This SUPERSEDES T6.2 mark C's reading, which put the badge on the toggle's own MIDDLE
+   (`top: calc(var(--toggle-size) / 2)` + a −50% translate). That reading was not sloppy and it
+   was not even wrong on its own terms — measured at HEAD, the badge's centre and the toggle's
+   agree to the pixel at every rung (104.00 ≥1024, 40.00 at 481–1023, 32.00 ≤480, both engines).
+   It was the wrong LINE. Its height is the celestial's radius, so the shared centre of a 13rem
+   sun is 104px down the page and the badge sat at 84.13px with nothing on its line but a corner
+   ornament — which is the owner's mark verbatim: not aligned to the top of the screen. And it
+   moved with the toggle's DIAMETER, so the head had FOUR rungs (badge box top 84.13 / 20.13 /
+   18.00 / 10.00 as the celestial steps 13rem → 5rem → 5rem → 4rem and the badge swaps its
+   desktop mount for its mobile one) and not one of them was ever written down.
+
+   The centres do NOT survive the cure and are not meant to: hung from one line, the badge's
+   centre lands at 31.88 and the celestial's at 116.00 on the desk. A 20px badge and a 208px sun
+   cannot share both a top and a middle, and the mark asks for the top — what reads as one line
+   is two marks that BEGIN together in the head band, which is what the shot shows.
+
+   THE VALUE IS DERIVED, not tuned: 0.75rem is `.page-root`'s own `md:py-3` top gutter — the head
+   band the page already reserves — so the rule is the page's existing edge rather than a new
+   number. Measured against it, the badge's box top goes 84.13 → 12.00 and the celestial's 0 →
+   12.00 at every width ≥481, in chromium and webkit, playing view and gallery.
+
+   The safe-area term is folded in HERE rather than at one corner: the notch inset used to pad
+   the toggle and not the badge, which broke the line on exactly the hardware that reserves the
+   corner. Tables: `docs/tranches/2026-08-tranche-8/evidence/w7-g2/offsets.md`; gated in
+   `e2e/masthead-alignment.spec.ts`. */
 .page-root {
   --toggle-size: 5rem;
+  --head-rule: calc(0.75rem + env(safe-area-inset-top, 0px));
 }
 
 /* The 8rem md rung died with the md row regime (R3): at 768–1023 the layout now
@@ -826,10 +898,24 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 
 /* R3 — the 42×32px logo-button↔toggle contention at 375: the centered wordmark's
    caret end ran under the fixed 5rem toggle. One rung down on the toggle + a small
-   masthead clearance separates the two hit targets completely. */
+   masthead clearance separates the two hit targets completely.
+
+   …AND THE HEAD RULE IS PRICED BY THAT SAME CONTENTION (T8-W7, M17), which is why it is ZERO
+   here and 0.75rem everywhere else. At 375 the centred wordmark button reaches x 324.36 and the
+   toggle starts at x 311, so the two hit boxes share a 13.36px column and their VERTICAL
+   separation is the whole of what keeps them apart: shipped, they clear each other by 0.06px in
+   chromium and −0.23 in webkit, and at 390 they already overlap by 7.58 / 7.28. The desk value
+   is 12px this width does not have, and the ablation says so directly — forced to 0.75rem at
+   ≤480 the overlap goes to 12.06 / 11.77 at 375 and 19.58 / 19.28 at 390, and the badge's box
+   bottom lands 0.42px above the wordmark's own button top. Held at the page edge, the celestial
+   does not move at all (`top: 0` was already its pose), so every one of those clearances is
+   byte-for-byte the pre-M17 figure, and the badge comes UP 10.00 → 0.00 — which BUYS the third
+   pair 10px, taking the badge↔wordmark gap at 390 from 2.42 to 12.42. The notch term stays: a
+   safe-area inset is not a taste. */
 @media (max-width: 480px) {
   .page-root {
     --toggle-size: 4rem;
+    --head-rule: env(safe-area-inset-top, 0px);
   }
 
   .masthead {
@@ -839,7 +925,10 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 
 .corner-right {
   position: fixed;
-  top: 0;
+  /* THE MASTHEAD LINE (M17) — the toggle's box hangs from the head rule, exactly as the badge's
+     does. `top: 0` was the other half of the superseded centre reading: it pinned the celestial
+     to the literal edge and left the badge to chase its middle. */
+  top: var(--head-rule, 0.75rem);
   right: 0;
   z-index: 60;
   /* THE PADDING THE OWNER SAW (T6.2 mark C). The toggle is a `<button>` — an inline-level box —
@@ -858,8 +947,9 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
   /* Safe-area inset (T4-WM lane C): the fixed toggle sits at the very top-right corner,
      so under a notch/Dynamic Island (viewport-fit=cover, index.html) it must pad clear
      of the inset. `env()` resolves to 0 on non-notched hardware and desktop, so this is
-     a no-op there and a real clearance only where the OS reserves the corner. */
-  padding-top: env(safe-area-inset-top, 0px);
+     a no-op there and a real clearance only where the OS reserves the corner.
+     The TOP inset is gone from here and folded into `--head-rule` (above) — a clearance
+     one corner paid and the other did not is a line that breaks under a notch. */
   padding-right: env(safe-area-inset-right, 0px);
 }
 

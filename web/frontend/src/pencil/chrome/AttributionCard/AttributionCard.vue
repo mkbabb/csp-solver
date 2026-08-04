@@ -109,12 +109,18 @@ defineExpose({ close });
 
 <style scoped>
 /* THE HEAD LINE (T6.2 mark C) — @mbabb and the sun sit on ONE horizontal line, at every width.
-   Both poses are the same pose now, so they are written once: pinned to the page's left edge
-   (the inset from it comes from `.attribution-trigger`'s own padding, not a gap on this
-   wrapper, so the hit target fills the corner instead of floating in it) and centred on the
-   toggle's own middle — `--toggle-size` is declared on the page root, so this reads the head's
-   one metric rather than restating its three rungs. `translate` rather than a margin: it takes
-   the trigger's OWN height out of the maths, so the line holds whatever the type does.
+   Both poses are the same pose, so they are written once: pinned to the page's left edge (the
+   inset from it comes from `.attribution-trigger`'s own padding, not a gap on this wrapper, so
+   the hit target fills the corner instead of floating in it).
+
+   THE LINE ITSELF IS `--head-rule` (T8-W7, M17) — App.vue's page root declares it and BOTH head
+   corners hang their boxes from it, so the head has one line and it is stated in one place. What
+   this rule used to say — `top: calc(var(--toggle-size) / 2)` with a −50% translate, the badge
+   centred on the toggle's own middle — is the reading the owner's mark retires: that line's
+   height is the celestial's RADIUS, so it sat 104 / 40 / 32px down as the sun stepped 13rem /
+   5rem / 4rem, and on the desk it put this badge 84.13px below the top edge of the page with
+   nothing on its line. The full derivation, the four rungs it actually had, and what the cure
+   costs the centres live at the declaration site; here we only consume it.
 
    The mobile pose LEAVES THE FLOW to get here. It used to ride `.board-group`'s top, a whole
    assembly below the sun, which is what put the two marks 93px apart on a phone; out of flow it
@@ -122,9 +128,11 @@ defineExpose({ close });
 .corner-left,
 .mobile-attribution {
   position: fixed;
-  top: calc(var(--toggle-size, 5rem) / 2);
+  top: var(--head-rule, 0.75rem);
   left: 0;
-  translate: 0 -50%;
+  /* The left half of the safe area, on the corner that meets it — the twin of `.corner-right`'s
+     `padding-right`. Landscape on notched hardware is the one place it is not zero. */
+  padding-left: env(safe-area-inset-left, 0px);
   z-index: 40;
   cursor: pointer;
 }
