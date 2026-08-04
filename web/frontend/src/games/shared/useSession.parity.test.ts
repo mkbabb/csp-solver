@@ -38,6 +38,16 @@ import { relayWire } from "./relayWire";
 const ROOM = "parity-u6";
 const RELAY_URLS = ["wss://relay.invalid/"];
 
+/**
+ * A seat's peer id. Since T8-W3 (§2.9) NEITHER arm mints one — the id is the page's, read from
+ * the identity binding and handed down — so the harness supplies it, which incidentally makes
+ * the two runs comparable on the one axis that used to legitimately differ (`local-…` vs
+ * `r-…`). The seating below still runs: what it now proves is that no arm smuggled an id of
+ * its own into a frame.
+ */
+let seats = 0;
+const seatId = (): string => `p-parity-${++seats}`;
+
 // ── the stub relay: NIP-01's fanout and nothing else ──────────────────────────────────
 //
 // A REQ banks a filter; an EVENT goes to every OTHER socket whose filter matches. That is the
@@ -158,13 +168,15 @@ function handlers(log: Log): Handlers {
  * not reasoned: `relayWire`'s `to` check deleted against a two-seat harness left this row
  * GREEN. C is the non-addressee that makes "directed" mean something.
  */
-async function run(make: (h: Handlers) => Wire | Promise<Wire>): Promise<string> {
+async function run(
+  make: (h: Handlers, id: string) => Wire | Promise<Wire>,
+): Promise<string> {
   const fresh = (): Log => ({ msgs: [], present: [] });
   const [A, B, C] = [fresh(), fresh(), fresh()];
   const logs = [A, B, C];
-  const a = await make(handlers(A));
-  const b = await make(handlers(B));
-  const c = await make(handlers(C));
+  const a = await make(handlers(A), seatId());
+  const b = await make(handlers(B), seatId());
+  const c = await make(handlers(C), seatId());
   await Promise.all([a.carrying, b.carrying, c.carrying]);
 
   const step = async (fn: () => void) => {
@@ -212,10 +224,10 @@ afterEach(() => {
 
 describe("the transport seam — both arms deliver the same script to the same handlers", () => {
   it("localWire and relayWire agree, frame for frame, join for leave", async () => {
-    const local = await run((h) => localWire(ROOM, h));
+    const local = await run((h, id) => localWire(ROOM, h, id));
 
     vi.stubGlobal("WebSocket", HubSocket);
-    const relay = await run((h) => relayWire(ROOM, RELAY_URLS, h));
+    const relay = await run((h, id) => relayWire(ROOM, RELAY_URLS, h, id));
 
     // The claim, and the only assertion that matters: the seam holds.
     expect(relay).toBe(local);

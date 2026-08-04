@@ -64,9 +64,19 @@ const hex = (n: number): string =>
  * Join a room over the relay, directly. `urls[0]` is the relay; a list of one is what a relay
  * you operate means (see `RELAY_URLS`), so the extra entries are a future's problem and this
  * arm reads the first.
+ *
+ * THE ID COMES IN (T8-W3 §2.9). This arm used to mint `r-<hex>` per socket, which made identity
+ * a property of the CONNECTION: a rejoin was a stranger, with a new slug and a new colour, and
+ * the digits you left behind were somebody else's. The id is now the page's — read or minted
+ * once by `playerIdentity.claimIdentity` and handed down here — so a return to a room is a
+ * return, and every function of the id (slug, ink index, authorship) follows for free.
  */
-export function relayWire(room: string, urls: string[], h: Handlers): Wire {
-  const selfId = `r-${hex(12)}`;
+export function relayWire(
+  room: string,
+  urls: string[],
+  h: Handlers,
+  selfId: string,
+): Wire {
   const topic = `sudoku-babb-dev/${room}`;
   const subId = hex(8);
 
@@ -114,6 +124,11 @@ export function relayWire(room: string, urls: string[], h: Handlers): Wire {
       // missed writes, and `hi` is already the re-request — the room answers it with the whole
       // board, so the gap closes itself without a second protocol.
       send("hi", {});
+      // THE LINK IS UP, and the table is allowed to say so again (T8-W3). `live` used to be a
+      // LATCH — true at the first sign of company and false only on `leaveSession` — so a page
+      // whose socket had gone sat behind a green light dropping every write it made. The word
+      // is the socket's now, and this is the socket saying it.
+      h.link?.(true);
       openNow?.();
     };
     ws.onmessage = (ev: MessageEvent) => {
@@ -143,6 +158,7 @@ export function relayWire(room: string, urls: string[], h: Handlers): Wire {
     ws.onclose = () => {
       if (closed || sock !== ws) return;
       sock = null;
+      h.link?.(false); // …and the socket saying it has gone (see `onopen`)
       const wait = RETRY_MS[Math.min(attempt++, RETRY_MS.length - 1)];
       setTimeout(connect, wait);
     };

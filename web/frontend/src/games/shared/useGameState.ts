@@ -16,6 +16,7 @@ import { useAssists } from "./useAssists";
 import { registerDirtySource, clearDirtySource } from "./useDirtyBoard";
 import {
   authorInk,
+  cellAuthors,
   clearSessionSource,
   joinSession,
   noteWrite,
@@ -26,6 +27,7 @@ import {
 } from "./useSession";
 import {
   clearStagingSource,
+  consumeBoardFollow,
   consumeHandoff,
   mountedGameId,
   publishStagedLedger,
@@ -317,8 +319,19 @@ export function useGameState<
     applyValue: (pos: number, value: number, solved: boolean) =>
       solved ? applyHintInk(pos, value) : applyCellValue(pos, value),
     snapshot: () => ({ b: snapshotBoard(), m: snapshotMarks() }),
-    restore: (blob: unknown) => {
+    size: () => solverSize.value,
+    restore: (blob: unknown, size: number) => {
       const { b, m } = blob as { b: BoardBlob; m: MarksBlob };
+      // THE SIZE ARRIVES WITH THE BOARD (T8-W3, defect D-1). The blob carries no dimensions, so
+      // a peer adopting a board published after a size-changing Deal used to pour 256 values
+      // into a 9×9 model and corrupt silently. Re-dimensioning in place is not a new
+      // instrument: it is exactly what `deal()` does when the staged size differs — the same
+      // two refs, the same reactive `boardSize`/`totalCells` behind them — so a same-game size
+      // FOLLOW is the shipped path with the room's board in it rather than a fresh one.
+      if (size !== solverSize.value) {
+        solverSize.value = size;
+        pendingSize.value = size;
+      }
       restoreBoardState(b, m);
       clearUndo();
     },
@@ -848,6 +861,41 @@ export function useGameState<
     );
   }
 
+  // Debounced persistence — called explicitly at mutation points.
+  //
+  // DECLARED ABOVE ITS FIRST CALLER, and that is load-bearing rather than tidy (T8-W3): the
+  // FOLLOW adopts a board DURING setup, `restoreBoardState` ends in `queueSave`, and a `let`
+  // read before its declaration is a TDZ throw — the incoming mount died on
+  // `Cannot access 'saveTimer' before initialization`, which is the estate's own `lint:tdz`
+  // class caught at the one seam that reaches this block from the initialization section.
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  function queueSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      saveBoardState();
+      saveTimer = null;
+    }, 300);
+  }
+
+  /**
+   * WRITE THE PENDING SAVE NOW (T8-W3, defect D-3 — the 300ms flush hole).
+   *
+   * The debounce is right for a player typing and wrong at exactly two instants: when this
+   * board stops being the live one (it becomes a DECK STILL read off disk, and a still read
+   * 40ms after a write shows the board as it was before the write), and when the mount ends.
+   * Both are one call. Nothing about the debounce changes — the hole was never the delay, it
+   * was that nobody closed it before reading.
+   */
+  function flushSave() {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    saveBoardState();
+  }
+  // The mount ending is the second instant, and it is the one no caller can reach.
+  onUnmounted(flushSave);
+
   // ── Share-on-demand permalink (W6; T4-W3 share-truth) ────────────
   // The explicit share act: encode the current board into `?board=`, write it to the address bar
   // (so a reload reproduces it — URL wins over storage), then COPY the full href. The replaceState
@@ -881,10 +929,22 @@ export function useGameState<
     difficulty.value = staged.difficulty as TDiff;
   }
 
+  // THE FOLLOW (T8-W3) — a peer switched the table to this game, and the board this mount is
+  // for is the ROOM's, not the one on disk. Consumed on the same one-shot the picker handoff
+  // rides, id-keyed to this mount, and it OUTRANKS both: a staged pair says "deal me this" and
+  // a saved board says "resume this", where the room is already holding the answer. The size
+  // lands here so the model is built at the right dimensions before anything reads them.
+  const followed = consumeBoardFollow(mountedGameId());
+  if (followed) {
+    solverSize.value = followed.size;
+    pendingSize.value = followed.size;
+  }
+
   domain.syncToUrl(solverSize.value, difficulty.value);
 
   const canRestore =
     !staged &&
+    !followed &&
     (initial.source === "url+storage" ||
       initial.source === "storage-only" ||
       initial.source === "url-board") &&
@@ -899,7 +959,14 @@ export function useGameState<
     (initial.source === "url-board" ||
       Object.values(initial.persisted.values).some((v) => v !== 0));
 
-  if (canRestore) {
+  if (followed) {
+    // The room's board, adopted whole — clock and epoch already landed in the session before
+    // this mount existed, and the `adopted` credit it banked is spent by the generation bump
+    // `restoreBoardState` performs, so this page cannot echo a rival epoch back at the table.
+    const { b, m } = followed.blob as { b: BoardBlob; m: MarksBlob };
+    restoreBoardState(b, m);
+    clearUndo();
+  } else if (canRestore) {
     restoreBoard(initial.persisted!);
   } else {
     // No meaningful persisted state — init empty board then auto-fetch.
@@ -937,6 +1004,9 @@ export function useGameState<
       difficulty.value = pair.difficulty as TDiff;
       await deal();
     },
+    // …and DOWN again at the live face's detach: the deck is about to read this board off disk
+    // as a still, and the debounce may be holding the last digit (T8-W3, D-3).
+    flush: flushSave,
   };
   registerStagingSource(stagingSource);
   onUnmounted(() => clearStagingSource(stagingSource));
@@ -971,16 +1041,6 @@ export function useGameState<
     },
     { deep: true },
   );
-
-  // Debounced persistence — called explicitly at mutation points.
-  let saveTimer: ReturnType<typeof setTimeout> | null = null;
-  function queueSave() {
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      saveBoardState();
-      saveTimer = null;
-    }, 300);
-  }
 
   return {
     solverSize,
@@ -1021,6 +1081,10 @@ export function useGameState<
     shareBoard,
     shareSession,
     authorInk,
+    /** T8-W3 M1 — who wrote each cell, by name. The `authorInk` precedent exactly: one
+     *  session-level read passed through five games by the shell's read contract. */
+    cellAuthors,
+    flushSave,
     linkError,
     pencilMarks,
     setMarksActive,

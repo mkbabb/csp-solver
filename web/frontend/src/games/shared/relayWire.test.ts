@@ -98,7 +98,9 @@ describe("relayWire — a dropped socket comes back, re-subscribes, re-announces
       message: (kind, _d, from) => heard.push(`${kind}:${from}`),
       peer: (id, joined) => heard.push(`peer:${id}:${joined ? "in" : "out"}`),
     };
-    const wire = relayWire("room-u5", URLS, h);
+    // The id is the PAGE's since T8-W3 (§2.9) — the arm no longer mints one, so the
+    // ladder is driven under a stated identity rather than a random per-socket name.
+    const wire = relayWire("room-u5", URLS, h, "p-u5reconnect");
 
     // ── the first open: SUBSCRIBE, then ANNOUNCE, and `carrying` only now ──────────────
     let carried = false;

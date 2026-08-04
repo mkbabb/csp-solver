@@ -75,6 +75,11 @@ export interface GameModel {
   /** T6 mark 13 — per-cell `--color-user-ink` rebindings for the cells a PEER authored.
    *  Empty off-session, which is what makes a solo board byte-identical. */
   authorInk: ReadRef<Record<string, Record<string, string>>>;
+  /** T8-W3 M1 — WHO wrote each cell, by name, `self` flagged. The naming half of the same
+   *  clock `authorInk` colours from, and a separate slot for the same reason those two are
+   *  separate consumers: a style binding and a word are not one thing wearing two hats.
+   *  Empty off-session. */
+  cellAuthors: ReadRef<Record<string, { slug: string; self: boolean }>>;
 
   setCell: (position: number, value: number) => void;
   toggleUserMark: (position: number, value: number) => void;

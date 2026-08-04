@@ -131,7 +131,11 @@ describe("the mounted source", () => {
 
   it("bridge.dealStaged drives the registered source and reports TRUE", async () => {
     const deal = vi.fn(async () => {});
-    bridge.registerStagingSource({ pair: ref({ size: 3, difficulty: "EASY" }), deal });
+    bridge.registerStagingSource({
+      pair: ref({ size: 3, difficulty: "EASY" }),
+      deal,
+      flush: vi.fn(),
+    });
     await expect(bridge.dealStaged({ size: 4, difficulty: "HARD" })).resolves.toBe(
       true,
     );
@@ -142,10 +146,12 @@ describe("the mounted source", () => {
     const outgoing = {
       pair: ref({ size: 3, difficulty: "EASY" }),
       deal: vi.fn(async () => {}),
+      flush: vi.fn(),
     };
     const incoming = {
       pair: ref({ size: 6, difficulty: "HARD" }),
       deal: vi.fn(async () => {}),
+      flush: vi.fn(),
     };
     bridge.registerStagingSource(outgoing);
     bridge.registerStagingSource(incoming); // the new scene registers at setup…

@@ -10,7 +10,8 @@ import { ref, shallowRef, type ComputedRef, type Ref } from "vue";
  * invalidates, so the picker could never see a publish. Refs are the whole fix, and
  * `useDirtyBoard` is the shipped precedent (`dirty` IS a ref).
  *
- * THREE SEAMS, one each:
+ * FOUR SEAMS, one each (the fourth is T8-W3's — the table follows the switcher, so a board can
+ * now arrive from the ROOM as well as from the picker):
  *   1. `publishMountedGame` — App owns `?game=` and the scene seam, so App names the mounted
  *      game; the bridge never parses a URL (no second truth). Published at BOOT and on every
  *      game change (the pass-1 `enterGallery`-only publish left deep-links and `?view=gallery`
@@ -22,6 +23,8 @@ import { ref, shallowRef, type ComputedRef, type Ref } from "vue";
  *      unkeyed arm consumed by whichever game mounted next produced a wrong-size board. The key
  *      closes it, and the arm is cleared by ANY mount — a mis-routed arm cannot outlive one
  *      mount, so there is no TTL, no clock, and no silent expiry fallback.
+ *   4. `stageBoardFollow` / `consumeBoardFollow` — the SAME one-shot carrying the room's board
+ *      and the size it was published at, for the game a peer's switch is about to mount.
  *
  * IMPORT DIRECTION, load-bearing: this module imports NOTHING from `@games/cards`. The table
  * statically imports the eager game's spec, whose model reaches `useGameState`, which reaches
@@ -86,6 +89,8 @@ export function mountedGameId(): string | null {
 interface StagingSource {
   pair: ComputedRef<StagedPair> | Ref<StagedPair>;
   deal: (pair: StagedPair) => Promise<void>;
+  /** write the pending debounced save NOW — see `flushMountedBoard`. */
+  flush: () => void;
 }
 // `shallowRef`: the holder is a slot, not a reactive graph — deep-unwrapping the source's own
 // `pair` computed would both flatten the identity guard's type and re-wrap what is already
@@ -99,6 +104,17 @@ export function registerStagingSource(s: StagingSource): void {
 /** Identity-guarded (mount-before-unmount ordering during a swap — `useDirtyBoard`'s rule). */
 export function clearStagingSource(s: StagingSource): void {
   if (source.value === s) source.value = null;
+}
+
+/**
+ * Land the mounted board's pending save before somebody reads it off disk (T8-W3, D-3).
+ *
+ * App calls this the instant the live face DETACHES — the board stops being the live one and
+ * becomes a deck still, and a still is read from `localStorage`, which the 300ms persist
+ * debounce may be up to 300ms behind. One call, at the one seam that has the fact.
+ */
+export function flushMountedBoard(): void {
+  source.value?.flush();
 }
 
 /** Apply a staged pair to the MOUNTED game and deal it. `false` = no game mounted to deal into
@@ -124,6 +140,37 @@ export function consumeHandoff(id: string | null): StagedPair | null {
   const h = handoff.value;
   handoff.value = null;
   return h && h.id === id ? h.pair : null;
+}
+
+// ── 3b · THE FOLLOW (T8-W3) — the same one-shot, carrying a BOARD ───────────────────────
+// The table follows the switcher, so the incoming game must mount holding the ROOM's board
+// rather than its own saved one. That is the handoff idiom exactly — id-keyed, consumed before
+// init, cleared by any mount so a mis-routed arm cannot outlive one — with a board blob and the
+// size it was published at instead of a staged pair. Two arms rather than one field on the
+// first, because the two say different things: `stageHandoff` is "deal me this", and this is
+// "the room is holding this; do not deal at all".
+
+/** A board off the wire, waiting for the game it belongs to. */
+export interface StagedFollow {
+  /** the RAW selector size the board was published at (`z` on the epoch). */
+  size: number;
+  /** the session's own `{b, m}` pool blob — opaque here, and read only by `useGameState`. */
+  blob: unknown;
+}
+
+const follow = ref<{ id: string; staged: StagedFollow } | null>(null);
+
+/** The session stages the room's board for the game that is about to mount. */
+export function stageBoardFollow(id: string, size: number, blob: unknown): void {
+  follow.value = { id, staged: { size, blob } };
+}
+
+/** Consumed at the incoming game's setup, BEFORE its init — the board it adopts INSTEAD of its
+ *  localStorage restore. Cleared unconditionally, exactly as the pair handoff is. */
+export function consumeBoardFollow(id: string | null): StagedFollow | null {
+  const f = follow.value;
+  follow.value = null;
+  return f && f.id === id ? f.staged : null;
 }
 
 // ── THE CROSS-GAME LEDGER ──────────────────────────────────────────────────────────────
@@ -202,18 +249,74 @@ export function publishStagedLedger(entry: StagedLedgerEntry): void {
  */
 export function backfillLedger(sources: readonly LedgerSource[]): void {
   if (!hasDom) return;
+  // The rows are BANKED as well as read: `previewFor` (below) is an id-keyed lazy read of the
+  // same five keys, and App names the five in exactly one place. One call, one truth.
+  ledgerSources = sources;
   let added = false;
   for (const src of sources) {
     if (ledger.value[src.id]) continue;
     const row = readPersistedBoard(src.persistKey);
     if (!row) continue;
-    ledger.value = { ...ledger.value, [src.id]: row };
+    ledger.value = { ...ledger.value, [src.id]: rowOf(row) };
     added = true;
   }
   if (added) writeLedger();
 }
 
-function readPersistedBoard(key: string): StagedLedgerEntry | null {
+// ── THE TRUTHFUL PREVIEW (T8-W3, M12) ──────────────────────────────────────────────────
+// The deck's flank faces are canned arrays — five drawings of boards nobody ever played — and
+// the board each card claims to show has been on disk under that game's own key the whole time.
+// This is the read that makes the face true. It is the BACKFILL's parse, widened: the same
+// five keys, the same one codec-agnostic reader, no longer throwing away the cells it decoded
+// on its way to two booleans.
+//
+// LAZILY, AND NEVER STREAMED. The read happens at deck open and at warp, because while the deck
+// is open the only board that changes is the mounted one — and the mounted one is the LIVE
+// teleported face, never a poster. A boot-time sweep would go stale the moment a FOLLOW or a
+// play session wrote disk; disk read at the moment of asking cannot lie.
+
+/** A saved board, as the deck's still needs it. */
+export interface PreviewBoard {
+  /** the game's OWN raw selector size, in its own disk vocabulary (sudoku 3 = 9×9). */
+  size: number;
+  difficulty: string;
+  values: Record<string, number>;
+  givenCells: string[];
+  /**
+   * The saved blob whole. The clue furniture's FIELD NAME is the one thing only that game knows
+   * (`thermometers` · `inequalities` · `cages`), so the poster reads its own off this rather
+   * than this module minting a fifth name for it — the same reason the ledger takes `size` and
+   * `boardSize` as they come.
+   */
+  saved: Record<string, unknown>;
+}
+
+let ledgerSources: readonly LedgerSource[] = [];
+
+/** The saved board for a game id, off disk, now — or `null`, which is the card's cue to draw
+ *  its canned never-played face. A stated default, not a silent fallback. */
+export function previewFor(id: string): PreviewBoard | null {
+  if (!hasDom) return null;
+  const src = ledgerSources.find((s) => s.id === id);
+  return src ? readPersistedBoard(src.persistKey) : null;
+}
+
+/** The two board facts, derived from the parse rather than parsed a second time. */
+function rowOf(p: PreviewBoard): StagedLedgerEntry {
+  const givens = new Set(p.givenCells);
+  const cells = Object.entries(p.values).filter(([, v]) => v !== 0 && v != null);
+  return {
+    size: p.size,
+    difficulty: p.difficulty,
+    // `board` mirrors the VALUE half of `canRestore` — any non-zero cell (see the interface).
+    board: cells.length > 0,
+    // GIVENS ARE NOT WORK — the flag that decides whether a deal destroys anything has to
+    // exclude the cells the deal itself wrote.
+    userMoves: cells.some(([k]) => !givens.has(k)),
+  };
+}
+
+function readPersistedBoard(key: string): PreviewBoard | null {
   try {
     const raw = window.localStorage.getItem(key);
     const p: unknown = raw ? JSON.parse(raw) : null;
@@ -225,19 +328,20 @@ function readPersistedBoard(key: string): StagedLedgerEntry | null {
       values?: unknown;
       givenCells?: unknown;
     };
+    // Two field names, one meaning: sudoku/thermo/killer persist `size`, futoshiki/kenken
+    // persist `boardSize`. Both are read; whichever is a number wins.
     const size = typeof b.size === "number" ? b.size : b.boardSize;
     if (typeof size !== "number" || typeof b.difficulty !== "string") return null;
-    const values = (b.values ?? {}) as Record<string, unknown>;
-    const givens = new Set(
-      Array.isArray(b.givenCells) ? (b.givenCells as string[]) : [],
-    );
-    const cells = Object.entries(values).filter(([, v]) => v !== 0 && v != null);
+    const rawValues = (b.values ?? {}) as Record<string, unknown>;
+    const values: Record<string, number> = {};
+    for (const [k, v] of Object.entries(rawValues))
+      if (typeof v === "number") values[k] = v;
     return {
       size,
       difficulty: b.difficulty,
-      // `board` mirrors the VALUE half of `canRestore` — any non-zero cell (see the interface).
-      board: cells.length > 0,
-      userMoves: cells.some(([k]) => !givens.has(k)),
+      values,
+      givenCells: Array.isArray(b.givenCells) ? (b.givenCells as string[]) : [],
+      saved: p as Record<string, unknown>,
     };
   } catch {
     return null;
