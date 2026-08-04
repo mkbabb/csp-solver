@@ -26,6 +26,9 @@ states ladder position, never closure).
 | M12 | Previews are LIVE and the ACTUAL state of each game; state persists and saves between gallery switches | m6 |
 | M13 | Multiplayer × gallery: define ALL edge cases when a user switches gallery items mid-session | — |
 | M14 | Join/leave properly animated: controls expand + draw the player in; the board draws in briefly with the joining player's color (debounced); leaving is the same muted + reversed; potentially a player icon | — |
+| M17 | (added same day) The @mbabb logo is not aligned to the top of the screen correctly — it should form a properly defined line with the dark-mode toggle | m8 |
+| M18 | (added same day) The main board's alignment with the title is wrong — and on other game boards | m9 |
+| M19 | (added same day, owner's order, PERMANENT) Safari testing seized the owner's screen — "you cannot puppet the screen like that. Use a proper channel elsewhere… Change the safari puppeting immediately." safaridriver/Safari.app on the owner's desktop is BANNED; headless/background channels only; real-desktop-Safari claims are owner-hardware-scoped | — |
 | M16 | (added same day, owner's words verbatim) "all language like this is to be abrogated completely and removed wholesale. 'a naked single'--what? And this is to be done generally, NOT just this one item. Abstract over it. If we ever do display language, we can never us an em dash, and never use metaphor, meta language, or contrivance--plain english only." THE COPY LAW: every user-visible string censused estate-wide; jargon/metaphor/meta/contrivance removed wholesale; survivors rewritten in plain English; NO em dashes in product copy, ever. This supersedes the register tolerance W1's M3 census graded under — every KEEP verdict re-adjudicates | m7 |
 
 ## The waves
