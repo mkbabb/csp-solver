@@ -576,3 +576,38 @@ reference for that, and `node w5-summarize.mjs --family boil|solve` folds whatev
 Playwright suites. The 1-minute load average ran **6.9 → 32.9** across the session against an 8.0
 gate, and a large share of the wall-clock was spent waiting for gaps rather than measuring. Every
 row banked here closed under the gate or carries a `!`; nothing was measured through the peak.
+
+### 9.2 · The r13 generation — the residue closed (2026-08-04, T8 WGATE)
+
+Measured against the **T8 deploy candidate** (`index-jt51RN8od5PV.js`), not the r-series
+snapshot — the solve instrument is byte-identical and the candidate is what ships, so the
+candidate is the honest referent for the close. Runs `*-r13`, `*-r13b/c`, `*-r13w` in
+`perf-rig/runs/`, folded by `w5-summarize.mjs` (`r13-solve-summary.txt`,
+`r13-boil-summary.txt`).
+
+- **Item 6 — the suspect sim cell** (`w5-sim-sudoku-solo-r13`): re-measured **102.33% of
+  ceiling, long33 0** — the r9 reading stands; the suspicion was the box, not the cell.
+- **Item 5 — the chromium footnote**: ceiling + full boil family ran headless; relative
+  shape agrees with the sim family (no cell under its ceiling share). Footnote only, as
+  chartered — never a Safari or iOS fact.
+- **Item 4 — sudoku's cold arm** (`solvecold-sudoku-r13c`, 7 cells, fresh worker per
+  cell): **initMs 12–21ms** at 4×4/9×9, 135ms at 16×16-EASY; a cold 16×16 cell lands
+  whole in **281ms wall**. The cold arm is a non-event at player scale.
+- **Item 3 — the top-size HARD cells** (`solve-tophard-r13c`): **thermo 16×16 HARD and
+  killer 16×16 HARD both TIMED OUT generating at the 25,000ms leash** on real desktop
+  Safari (initMs 13, then nothing). With the r-series' sudoku 16×16 HARD timeout and its
+  MEDIUM at 684ms, the class is now three games wide: **16×16 HARD generation exceeds any
+  tolerable deal wait**. The leash is the probe's, not the product's — the product would
+  keep grinding. Booked as the widened T8-R05 (`DISPOSITIONS.md`); the obvious levers are
+  pre-generation or capping the offered tier.
+- **The wire re-run** (`*-r13w`: sudoku 9×9 + kenken 4×4 × solo/present/traffic, live
+  relay peers): **101.46–102.77% of ceiling, long33 0 in all twelve cells** — Lane A's
+  rewritten `relayWire`/`playerIdentity` (durable identity, `cur` cursor verb, live-claim
+  guard) prices the same as the snapshot wire. **Multiplayer is still free.** The §1.2
+  drift note is discharged.
+
+Instrument fixes riding this generation: `run-safari.sh` empty-`SESS_ARG` expansion under
+macOS bash 3.2 `set -u` (the `${arr[@]+…}` form), and two traps for the record: a stale
+probe server injects a stale `probe.js` (the r13b runs died silently on a :4894 leftover —
+kill old servers before a generation), and a battery script's cleanup `pkill safaridriver`
+kills the DRIVER a sibling burst is about to need.

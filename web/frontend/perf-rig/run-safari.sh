@@ -117,9 +117,11 @@ case "${SCENARIOS}" in
   *) GATE=paint ;;
 esac
 
+# ${SESS_ARG[@]+…} not ${SESS_ARG[@]} — macOS bash 3.2 under `set -u` calls an EMPTY array's
+# expansion unbound; the +form expands to nothing instead of dying.
 nice -n 15 node "${RIG_DIR}/safari-wd.mjs" \
   --url "${URL}" --run "${RUN_ID}" --port "${PORT}" --gate "${GATE}" \
-  --driver-port "${WD_PORT}" --rect "${WD_RECT}" --timeout "${TIMEOUT}" "${SESS_ARG[@]}"
+  --driver-port "${WD_PORT}" --rect "${WD_RECT}" --timeout "${TIMEOUT}" ${SESS_ARG[@]+"${SESS_ARG[@]}"}
 STATUS=$?
 
 case "${STATUS}" in
