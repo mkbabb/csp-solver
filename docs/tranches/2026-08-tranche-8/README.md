@@ -38,6 +38,7 @@ carries the survivors.
 - **T8-R12** — the M19 law's tranche execution, TERMINAL-CLOSED (the law is permanent).
 - **T8-R13** — the deck's preview draws peer digits in the local ink, BANKED (owner: the deck's preview reader).
 - **T8-R14** — the aria register splits from the ink register (Title Case declaratives over lowercase terse; the fill button ships two wordings of its own helper), BALLOT (default: ship as-is).
+- **T8-R15** — the armed guard ribbon is viewport-anchored and covers a flank card at deck edge indices (sudoku's index 0 is the default case), BANKED (owner: the deck).
 
 Also restamped at this close, in the living ledger: **CH-35** (its dated default fired at
 T8 formation — the iOS claim retires to sim-scope), **CH-45** (superseded by M19's

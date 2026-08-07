@@ -47,6 +47,7 @@ Whole-tree battery at `8d9139c2`/`4c6ea788`, quiet box:
 | npm audit | 0 vulnerabilities (undici ^7.29.0 override; wrangler stays 4.116.0) — **all 5 dependabot alerts (1 high, 4 moderate) CLOSED, confirmed via `gh api …/dependabot/alerts` = []** |
 | ledger gate | GREEN exit 0 — 14 audited rows satisfied, 8 open rows current, all five arms |
 | CI at `bdd155d3` | **SUCCESS — run 30957293328, sixteen lanes** (the `4c6ea788` run red its ledger step for the then-missing row set; cured same day) |
+| CI at `84b14789` (the cure slice) | **SUCCESS — run 31196882228, sixteen lanes, first attempt** |
 
 ## §4 · The ladder (U-10: no mark closes here — every position awaits the owner's eye)
 
@@ -108,6 +109,15 @@ The visual pass: six lanes against the live edge, both engines — head/rhythm
 (M17/M18/M2/M4/M8), the deck (M11/M12/M10/M7), M20 + landscape regimes, a two-context
 multiplayer session on the live relay (M1/M13/M14), logo + toggle (M6/M9), and the copy
 census (M16/M3). Results below.
+
+**REDEPLOYED 2026-08-07 with the cure slice** behind the same chain: `ci-conclusion.sh`
+off run 31196882228 (`84b14789` → success, runs_for_sha 1, attempt 1), `npm run deploy
+-- --conclusion-file`. **Production: CF Pages deployment `1dc79dd5` — sudoku.babb.dev
+serves `index-aoGylP0lRSww.js`, dist-identity-verified; the served entry carries zero
+"CSP Solver" and zero rendered "debug ·" (the one "debug" hit is the `sudoku-debug`
+console-instrumentation flag); the served `fraunces-subset` is byte-identical to the
+re-cut at 14,636 B; both unfurl descriptions carry the mandated sentence.** The
+targeted live re-verify of the cured rows is §6.3.
 
 ### §6.1 · The pass results (2026-08-04, six lanes × two engines)
 
@@ -275,6 +285,45 @@ engine); built-dist config 67/67 against the fresh dist; goldens 4/4 unmoved;
 4-worker load (join-language ×2, gallery drag, masthead M17 dark + one) — all green in
 this run and 3/3 serial where re-run singly: T8-R09's class, recorded, not papered.
 
+### §6.3 · The cure re-verify (2026-08-07, three lanes × two engines, live edge)
+
+**45 PASS / 0 FAIL / 9 NOTE.** Entry gate green on all 16+ browser loads
+(`index-aoGylP0lRSww.js` read back in-page every time; dpr 1, so shot px = CSS px).
+
+**M20 (17 PASS)**: all eight poses, both engines, with ink-level proof — boxes first,
+then a blanked-page pixel diff isolating the masthead's own ink. Flow poses (900×676,
+1000×800, 900×500, 844×430): regime correct (the 2/1 floor holds 900×500 and 844×430 in
+flow — the pre-cure 46.67px float pose now shows ink-to-grid clearance 21.58/21.98px,
+overlap 0.00), seam 0.00, board within the fold with ~47px headroom. Dock poses
+(844×390, 932×430, 926×428, 896×414): `position: absolute`, scale .38, the page-edge
+anchor measured (`.board-group` = viewport−32 at every pose), centre delta ≤2px, gutter
+clearance 69.3–78px, ink overlap 0.00 everywhere — the whole live-pass float class is
+dead, including its 932×430 worst case. NOTEs: the flow cap's carrier is
+`.board-shell` (as authored — the anchor is dock-only), `--logo-scale` resolves empty in
+flow by construction, and "within the fold" means the board, not the page.
+
+**Copy + font (22 PASS)**: tab titles bare on all five routes and in the static HTML;
+the eyebrows read Size/Level and the "level" heading renders EVERY glyph in Fraunces —
+the v included, per-glyph face probe both engines — with the staging band's own "level"
+whole in Patrick Hand; the share button is one voice on a fine pointer (washi speaks,
+sublabel holds "Share" through granted and denied paths); the alone-line is in the DOM,
+polite, zero visible footprint, the roster's one row the only ink; the attribution card
+carries no debug row in any state; the tally speaks "level not graded yet"/"level N of
+5". NOTEs: the retired words survive only inside HTML comments (the sweep note that
+names them; zero in any meta, title, visible text, or the 15 served chunks), and the
+CSP-blocked beacon noise is confirmed permanent.
+
+**The guard (6 PASS)**: a dirty solo select arms nothing on the live edge and the
+switch commits; the marks return byte-level (the typed cell's value read back) through
+the deck round trip; the solo deal ribbon arms with its exact strings ("deal over this
+puzzle?" / "your marks aren't saved" / "deal") and keep retires it with the board
+untouched; the pristine control stays free. NOTEs: the pristine control can no longer
+discriminate (select is unguarded for dirty too — the deal arm is the discriminating
+row now), and one NEW finding, booked T8-R15: **the armed ribbon is viewport-anchored,
+not card-anchored** — at deck indices 0 and 4 (the track can't scroll edge cards to
+centre) it lands 352px off the active card, covering a flank; index 0 is sudoku, the
+default case. Pre-existing W3-B geometry, not minted by the cure slice.
+
 ## §7 · Residue + the owner's ballots (row ids → `DISPOSITIONS.md`)
 
 - **T8-R02 · the mid-dusk ink dip** (~120ms, T3-W10-shipped) — default: ship as-is;
@@ -302,6 +351,8 @@ this run and 3/3 serial where re-run singly: T8-R09's class, recorded, not paper
   touch.
 - **T8-R14 · the aria register splits from the ink register** — ballot; default: ship
   as-is (the fill button's doubled claim is the piece the owner may cure regardless).
+- **T8-R15 · the armed ribbon is viewport-anchored** (re-verify 2026-08-07) — at deck
+  edge indices it covers a flank card; banked with the deck; pre-existing W3-B geometry.
 
 ## §8 · Traps banked this close
 
@@ -317,4 +368,29 @@ this run and 3/3 serial where re-run singly: T8-R09's class, recorded, not paper
 
 ## §9 · The seal
 
-PENDING — CI conclusion, deploy id, live-pass results, and the seal SHA land here.
+**T8 CLOSES HERE (2026-08-07).** The chain, whole:
+
+- **The tranche**: twenty marks executed across seven waves + chair work (§1), commit
+  chain §2, whole-tree battery §3 — CI SUCCESS at `bdd155d3` (run 30957293328) and at
+  the cure slice `84b14789` (run 31196882228, first attempt), sixteen lanes both times.
+- **The live visual pass** (§6.1): six lanes × two engines against deployment
+  `672ecc10` — 48 PASS / 7 FAIL / 23 NOTE.
+- **The cure slice** (§6.2, commit `84b14789`): all seven FAIL rows and both carried
+  NOTEs cured; the battery's own reds taught the armGuard re-cut and the Fraunces
+  ransom-note re-cut; battery of record 551/551 units · 401/2/0 default e2e both
+  engines · 67/67 built-dist · 4/4 goldens unmoved · doc-truth 0 RED / 32 GREEN ·
+  evidence-policy PASS · ledger gate GREEN.
+- **The redeploy** (§6): CH-57 chain intact — deployment `1dc79dd5`, sudoku.babb.dev
+  serving `index-aoGylP0lRSww.js`, dist-identity- and served-bytes-verified.
+- **The cure re-verify** (§6.3): three lanes × two engines on the live edge — 45 PASS /
+  0 FAIL / 9 NOTE, ink-level proof at every M20 pose; one new row banked (T8-R15).
+- **The row estate**: DISPOSITIONS 17 rows (CH-62 retired, CH-67 watch, T8-R01…R15),
+  LEDGER §1 carries the eight open T8 survivors (R02/R03/R04/R11 ballots with firing
+  defaults; R05/R08/R13/R15 banked with owners and triggers; R14 ballot), ledger gate
+  GREEN across all five arms.
+- **U-10 stands**: nothing in §4 closes past "cured-pending-re-look" until the owner's
+  eyes pass over the ladder; the ballots dispatch with it. M16 and M19 are permanent
+  law regardless.
+
+The seal is this record's own commit (the first commit touching this §9); its sixteen-
+lane CI conclusion follows on push and belongs to the seal commit's own run.
