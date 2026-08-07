@@ -23,7 +23,7 @@ const descriptor: TallyDescriptor = {
   // the copy law took the solver's vocabulary out of every reader-facing string, an accessible
   // name most of all — the renderer is a pure pass-through either way, which is what this
   // fixture exists to prove.
-  ariaLabel: "difficulty 1 of 5",
+  ariaLabel: "level 1 of 5",
 };
 
 const tally = (d: Partial<TallyDescriptor> = {}) =>
@@ -44,10 +44,10 @@ describe("DifficultyTally — a graphic, not a tab stop", () => {
     const el = tally({
       graded: false,
       filled: 0,
-      ariaLabel: "difficulty not graded yet",
+      ariaLabel: "level not graded yet",
     }).get(".difficulty-tally");
     expect(el.attributes("tabindex")).toBeUndefined();
-    expect(el.attributes("aria-label")).toBe("difficulty not graded yet");
+    expect(el.attributes("aria-label")).toBe("level not graded yet");
   });
 
   it("no descendant smuggles the stop back in", () => {

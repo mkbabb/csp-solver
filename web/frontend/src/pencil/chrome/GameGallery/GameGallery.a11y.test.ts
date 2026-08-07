@@ -53,7 +53,10 @@ const card = (id: string): GalleryCard => ({
   poster: () => Promise.resolve({ template: "<i />" } as never),
 });
 
-/** Centered on `sudoku` with a dirty `futoshiki` mounted — a DIFFERENT, destructive select. */
+/** Centered on `sudoku` with a dirty `futoshiki` mounted, ON A SHARED TABLE with one peer —
+ *  since the live pass killed the solo-select arm (a solo select is lossless under M12
+ *  persistence), the shared table is what arms the select ribbon these rows exercise;
+ *  the ribbon's a11y grammar is intent-independent. */
 function mountGallery() {
   return mount(GameGallery, {
     attachTo: document.body,
@@ -62,6 +65,13 @@ function mountGallery() {
       snappedIndex: 0,
       dirty: true,
       currentId: "futoshiki",
+      session: {
+        inRoom: true,
+        players: [
+          { id: "you", slug: "you", ink: {} },
+          { id: "peer", slug: "peer", ink: {} },
+        ],
+      },
     },
     global: {
       stubs: {
@@ -193,7 +203,7 @@ describe("the destructive-work guard speaks — 3.2", () => {
     const id = guard(w).attributes("aria-describedby");
     expect(id, "the dialog must name what is at stake").toBeTruthy();
     const sub = document.getElementById(id!);
-    expect(sub?.textContent).toBe("your marks aren't saved");
+    expect(sub?.textContent).toBe("1 other player will follow");
     w.unmount();
   });
 });

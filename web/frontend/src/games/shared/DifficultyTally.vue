@@ -53,14 +53,14 @@ const props = withDefaults(
     descriptor: TallyDescriptor;
     /**
      * The word in front of the glyph. Defaults to what the glyph measures. The ticket passes
-     * `dealt` instead (T4-P1 mark 6): inside the new-game well the `Difficulty` eyebrow is two
-     * rows up, so "difficulty" there would be the same name written twice at two ranks — and
+     * `dealt` instead (T4-P1 mark 6): inside the new-game well the `Level` eyebrow is two
+     * rows up, so "level" there would be the same name written twice at two ranks — and
      * the distinction the well needs is exactly the one "dealt" draws, between the tier you
      * ASK for and the tier the board you were dealt actually reached.
      */
     label?: string;
   }>(),
-  { label: "difficulty" },
+  { label: "level" },
 );
 
 // ── The gate-five geometry ────────────────────────────────────────────────────────────────

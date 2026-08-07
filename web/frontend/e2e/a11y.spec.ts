@@ -143,7 +143,12 @@ async function dirtyTheBoard(page: Page) {
   await expect(page.locator('.game-cell').nth(blank).locator('.glyph-svg')).toHaveCount(1);
 }
 
-/** Dirty sudoku → gallery → step to a DIFFERENT game → Enter: the guard ribbon arms. */
+/** Dirty sudoku → gallery → step to a DIFFERENT game → `d`: the guard ribbon arms.
+ *  THE DEAL INTENT since the live pass (2026-08-04): the solo SELECT arm is dead — M12
+ *  persistence makes a solo switch lossless, so a select arms only on a shared table
+ *  (gallery-guard.spec.ts rows 3/4 pin both halves). The deal keeps its solo guard (a deal
+ *  genuinely writes over marks), and the ribbon's a11y grammar is intent-independent —
+ *  same alertdialog, same announcement machinery — so these rows keep their whole subject. */
 async function armGuard(page: Page) {
   await loadBoard(page, GAMES[0].query);
   await expect
@@ -167,7 +172,7 @@ async function armGuard(page: Page) {
   // had not committed yet selects sudoku, arms no guard, and every caller inherits the race.
   await expect(viewport).toHaveAttribute('aria-activedescendant', 'gallery-card-1');
   await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-selected', 'true');
-  await viewport.press('Enter');
+  await viewport.press('d');
   await page.locator('.gallery-guard').waitFor({ state: 'visible', timeout: 20000 });
 }
 
@@ -354,7 +359,7 @@ test.describe('3.2 guardAnnounced', () => {
     ).toBe(true);
   });
 
-  test('a second Enter cannot discard the board unheard', async ({ page }) => {
+  test('an Enter into the armed guard cannot discard the board unheard', async ({ page }) => {
     await armGuard(page);
     const before = await userEntries(page);
     expect(before, 'the board must be dirty for this row to mean anything').toBeGreaterThan(0);
@@ -386,8 +391,8 @@ test.describe('3.2 guardAnnounced', () => {
         {
           timeout: 15000,
           message:
-            'the second Enter must settle into HELD (the ribbon still up, still on sudoku) ' +
-            'or SWAPPED (the switch committed and the outgoing board gone)',
+            'the Enter into the armed guard must settle into HELD (the ribbon still up, ' +
+            'still on sudoku) or SWAPPED (the confirm committed and the outgoing board gone)',
         },
       )
       .toMatch(/^(held|swapped)$/);

@@ -69,7 +69,7 @@ describe("describeTally — the honesty spine, in one derivation", () => {
     expect(d.graded).toBe(false);
     expect(d.filled).toBe(0);
     expect(d.total).toBe(TALLY_TOTAL);
-    expect(d.ariaLabel).toBe("difficulty not graded yet");
+    expect(d.ariaLabel).toBe("level not graded yet");
   });
 
   it("singles board: 1 inked stroke, and the label is the COUNT — never the step", () => {
@@ -78,10 +78,8 @@ describe("describeTally — the honesty spine, in one derivation", () => {
     // the point rather than a regression — a reader was never owed the distinction.
     const d = describeTally(true, "hidden-single", true);
     expect(d.filled).toBe(1);
-    expect(d.ariaLabel).toBe("difficulty 1 of 5");
-    expect(describeTally(true, "naked-single", true).ariaLabel).toBe(
-      "difficulty 1 of 5",
-    );
+    expect(d.ariaLabel).toBe("level 1 of 5");
+    expect(describeTally(true, "naked-single", true).ariaLabel).toBe("level 1 of 5");
   });
 
   it("pairs/pointing board: 2 inked strokes", () => {
@@ -93,7 +91,7 @@ describe("describeTally — the honesty spine, in one derivation", () => {
   it("X-wing board: 3 inked strokes", () => {
     const d = describeTally(true, "x-wing", true);
     expect(d.filled).toBe(3);
-    expect(d.ariaLabel).toBe("difficulty 3 of 5");
+    expect(d.ariaLabel).toBe("level 3 of 5");
   });
 
   it("inequality-chain (futoshiki tier 3) also inks 3", () => {
@@ -103,14 +101,14 @@ describe("describeTally — the honesty spine, in one derivation", () => {
   it("a board the ladder could not finish inks the top stroke — never a fabricated tier 4", () => {
     const d = describeTally(true, "hidden-single", false);
     expect(d.filled).toBe(TALLY_TOTAL);
-    expect(d.ariaLabel).toBe("difficulty 5 of 5");
+    expect(d.ariaLabel).toBe("level 5 of 5");
   });
 
   it("a graded board that needed no step inks nothing but stays graded (no fake tier)", () => {
     const d = describeTally(true, null, true);
     expect(d.graded).toBe(true);
     expect(d.filled).toBe(0);
-    expect(d.ariaLabel).toBe("difficulty 0 of 5");
+    expect(d.ariaLabel).toBe("level 0 of 5");
   });
 
   // The absence, swept over the whole vocabulary and every gating arm — nine techniques × the
@@ -130,7 +128,7 @@ describe("describeTally — the honesty spine, in one derivation", () => {
     for (const label of labels) {
       expect(label).not.toMatch(JARGON);
       expect(label).not.toMatch(DASHY);
-      expect(label).toMatch(/^difficulty (not graded yet|\d of \d)$/);
+      expect(label).toMatch(/^level (not graded yet|\d of \d)$/);
     }
   });
 });

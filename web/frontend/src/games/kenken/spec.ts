@@ -73,7 +73,7 @@ export const kenkenSpec = defineGame<ReturnType<typeof useKenken>, KenKenCage[]>
       },
       {
         key: "difficulty",
-        heading: "Difficulty",
+        heading: "Level",
         options: difficultyOptions,
         selected: m.difficulty.value,
         onChange: (v) => (m.difficulty.value = v as Difficulty),

@@ -284,8 +284,28 @@ test("attribution opens on a single tap (T4-WM §2): the coarse focusin+click do
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await card.getByRole("link", { name: "View the project on GitHub" }).tap();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  await card.getByRole("button").tap();
-  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+
+  // THE CARD'S ONE <button> IS THE DEBUG TOGGLE, and as of the live pass of 2026-08-04 it is
+  // dev furniture: AttributionCard.vue reaches it through an `import.meta.env.DEV` ternary, so
+  // it is present on THIS suite's surface (playwright.config.ts serves `npm run dev`) and its
+  // chunk is never emitted into a production build. Both readings are asserted rather than one
+  // assumed — point PLAYWRIGHT_BASE_URL at a bundled preview and the row is simply not there,
+  // which is the pass and not a red. Tapping it unconditionally would assert dev chrome
+  // against the shipped artifact; asserting its absence unconditionally would go red on the
+  // surface this file actually runs on.
+  //
+  // The wait is load-bearing: the row arrives with its own async chunk, so an instantaneous
+  // count would read 0 on the dev server too and take the absence branch vacuously.
+  const debugRow = card.getByRole('button');
+  const devFurniturePresent = await debugRow
+    .waitFor({ state: 'attached', timeout: 5000 })
+    .then(() => true, () => false);
+  if (devFurniturePresent) {
+    await debugRow.tap();
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  } else {
+    await expect(debugRow, 'a production build ships no debug toggle in the card').toHaveCount(0);
+  }
 });
 
 test("long-press peek (T4-WM §3, sudoku): a hold on a cell opens the candidate glimpse; release clears it", async ({

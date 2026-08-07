@@ -36,6 +36,8 @@ carries the survivors.
 - **T8-R10** — the r13 bench residue, FOLDED into this WGATE.
 - **T8-R11** — the badge below 768 has no gallery mount, BALLOT (default: stands).
 - **T8-R12** — the M19 law's tranche execution, TERMINAL-CLOSED (the law is permanent).
+- **T8-R13** — the deck's preview draws peer digits in the local ink, BANKED (owner: the deck's preview reader).
+- **T8-R14** — the aria register splits from the ink register (Title Case declaratives over lowercase terse; the fill button ships two wordings of its own helper), BALLOT (default: ship as-is).
 
 Also restamped at this close, in the living ledger: **CH-35** (its dated default fired at
 T8 formation — the iOS claim retires to sim-scope), **CH-45** (superseded by M19's

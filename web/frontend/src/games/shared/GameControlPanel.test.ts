@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import GameControlPanel from "./GameControlPanel.vue";
 
 // FE-unit layer for the control SHELL. This file replaces the two per-game
@@ -28,6 +28,10 @@ import GameControlPanel from "./GameControlPanel.vue";
 // applies no stylesheet cannot witness a rank.
 // T8-W1 M3: `CheckStatus.test.ts` (9 rows) left with the component it covered — the status line
 // under the teacher's chips, whose every branch restated the chip beside it.
+// The live pass adds 3 rows: the share row's sublabel flips on the coarse card and NOWHERE else
+// (the doubled voice), the strings it flips to, and the accessible name that stays ungated
+// under it. Both arms of the gate, because a gate nobody tests on its closed side is a gate
+// that opens quietly.
 
 const SECTIONS = [
   {
@@ -42,7 +46,7 @@ const SECTIONS = [
   },
   {
     key: "difficulty",
-    heading: "Difficulty",
+    heading: "Level",
     options: [
       { value: "EASY", label: "easy" },
       { value: "HARD", label: "hard" },
@@ -264,14 +268,14 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
     // The name each tab announces is unchanged: the section's word rides the element inside
     // the button, so the button's name-from-content computes exactly what it computed before.
     const eyebrows = w.findAll(".mobile-heading-btn .section-heading");
-    expect(eyebrows.map((h) => h.text())).toEqual(["Size", "Difficulty"]);
+    expect(eyebrows.map((h) => h.text())).toEqual(["Size", "Level"]);
   });
 
   it("six co-equal eyebrows become two, and the four that left are named one rank down", () => {
     const w = mountPanel();
     expect(w.findAll(".section-heading").map((h) => h.text())).toEqual([
       "Size",
-      "Difficulty",
+      "Level",
     ]);
     expect(w.findAll(".zone-row-label").map((l) => l.text())).toEqual([
       "marks",
@@ -471,5 +475,53 @@ describe("hold-to-peek — a hold is a press that stays", () => {
         [98, 102],
       ]),
     ).toHaveLength(1);
+  });
+});
+
+// THE COPY ACTS' SUBLABEL — one act must not be announced twice. On a fine pointer the press
+// leaves the cursor on the button, so the hover tape is already up saying "copied!" while the
+// sublabel under the same glyph said the word again; the flip is gated to the surfaces with
+// no speaking tape (`mobile`, or a coarse pointer in the row regime — jsdom has no matchMedia,
+// so the coarse ref reads false here and `mobile` carries both arms of these rows) and the
+// tape speaks alone on fine pointers. jsdom applies no stylesheet, so what these rows witness
+// is the STRING the row is bound to — which is exactly where the doubling lived.
+describe("the copy acts — the sublabel flips on the coarse surfaces alone", () => {
+  const DENIED = () => Promise.reject(new DOMException("denied", "NotAllowedError"));
+
+  // Share is the LAST verb in the action bar's own row (the e2e's own addressing, and for the
+  // same reason: this button's aria-label is one of the things under test).
+  const shareBtn = (w: ReturnType<typeof mountPanel>) => {
+    const verbs = w.findAll(".action-verbs button.icon-btn");
+    return verbs[verbs.length - 1];
+  };
+
+  const pressShare = async (w: ReturnType<typeof mountPanel>) => {
+    await shareBtn(w).trigger("click");
+    await flushPromises();
+    await w.vm.$nextTick();
+    return shareBtn(w).get(".icon-sublabel").text();
+  };
+
+  it("coarse: the row says what happened, on both outcomes", async () => {
+    expect(await pressShare(mountPanel())).toBe("copied!");
+    expect(await pressShare(mountPanel({ share: DENIED }))).toBe("couldn't copy");
+  });
+
+  it("fine: the row keeps its verb in every state — the tape is the one voice", async () => {
+    expect(await pressShare(mountPanel({ mobile: false }))).toBe("Share");
+    expect(await pressShare(mountPanel({ mobile: false, share: DENIED }))).toBe(
+      "Share",
+    );
+  });
+
+  // The aria-label is NOT gated: it is never drawn, so it can never be the second copy of
+  // anything on screen, and a reader on a fine pointer would otherwise lose the outcome
+  // entirely (the tape is `aria-hidden` unless it is a tag or persistent).
+  it("the accessible name still tracks the outcome at a fine pointer", async () => {
+    const w = mountPanel({ mobile: false, share: DENIED });
+    await pressShare(w);
+    expect(shareBtn(w).attributes("aria-label")).toBe(
+      "couldn't copy. the link is in the address bar",
+    );
   });
 });

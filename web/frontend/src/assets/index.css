@@ -21,7 +21,7 @@
  * `scripts/check-font-coverage.mjs` is the standing guard; it enumerates the
  * rendered strings and fails if the cmap misses one.
  *
- *   fraunces-subset.woff2   13,788 B  — WORDMARK + HEADINGS ONLY (opsz+wght
+ *   fraunces-subset.woff2   14,636 B  — WORDMARK + HEADINGS ONLY (opsz+wght
  *                                       variable, SOFT/WONK pinned like the
  *                                       CDN's own served instance). unicode-range
  *                                       gates it to exactly that repertoire so
@@ -29,16 +29,15 @@
  *                                       falls through to the Georgia stack
  *                                       instead of mixing glyphs mid-word.
  *                                       NOT a general body-copy subset.
- *                                       Re-derived at P1-W3 on the **B2** ruling:
- *                                       headings went lowercase, so the cut is
- *                                       the 21 rendered lowercase letters + space
- *                                       (gaining b g m n w — `thermo`'s m and
- *                                       `kenken`'s two n's used to paint in
- *                                       Georgia mid-word at 96 px) PLUS the six
- *                                       authored initials B C D M N S, which is
- *                                       what "both cases" costs: 13,788 B against
- *                                       the ruling's 12,048 B lowercase-only
- *                                       estimate, +4,016 B on the shipped 9,772.
+ *                                       Re-derived at P1-W3 on the **B2** ruling
+ *                                       (headings went lowercase: the rendered
+ *                                       lowercase letters + space PLUS the
+ *                                       authored initials — "both cases"), and
+ *                                       again at the T8 live-pass cures: the
+ *                                       eyebrow went Difficulty → Level, adding
+ *                                       L and v (the census caught "level"'s v
+ *                                       painting in Georgia mid-word). Now 30
+ *                                       codepoints, 14,636 B.
  *   firacode-subset.woff2    3,624 B  — full realistic app coverage: every
  *                                       OptionSelector size/difficulty label
  *                                       (both games) + the "@mbabb" byline.
@@ -54,7 +53,7 @@
  *                                       et al. rendered those two glyphs in the
  *                                       cursive fallback.
  *
- * Total self-hosted: 21,724 B for all three faces, same-origin, immutable-
+ * Total self-hosted: 22,572 B for all three faces, same-origin, immutable-
  * cached under /assets/* (public/_headers), precached by the W6 SW glob.
  */
 @font-face {
@@ -65,10 +64,14 @@
   font-stretch: 100%;
   src: url("./fonts/fraunces-subset.woff2") format("woff2");
   /* The file's actual cmap, verified glyph-for-glyph by scripts/check-font-coverage.mjs:
-     space · B C D M N S · a-i · k-o · r-u · w · y z  (28 codepoints). */
+     space · B C D L M N S · a-i · k-o · r-w · y z  (30 codepoints). Re-cut at the T8
+     live-pass cures: the drawer eyebrow went Difficulty → Level, and neither L nor v had
+     ever been asked of this face — the e2e font census caught "level" painting its v in
+     the Georgia fallback mid-word. Same recipe as P1-W3 (instancer SOFT=0 WONK=1, then
+     pyftsubset), both cases per the coverage gate's rule. */
   unicode-range:
-    U+0020, U+0042-0044, U+004D-004E, U+0053, U+0061-0069, U+006B-006F, U+0072-0075,
-    U+0077, U+0079-007A;
+    U+0020, U+0042-0044, U+004C-004E, U+0053, U+0061-0069, U+006B-006F, U+0072-0077,
+    U+0079-007A;
 }
 
 @font-face {

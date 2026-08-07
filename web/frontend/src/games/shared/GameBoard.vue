@@ -1092,8 +1092,16 @@ function isRevealed(pos: number): boolean {
    676: board 516 + masthead ≈118 = 634, whole in the first viewport). Unlayered scoped rules
    beat the layered utilities, the drawer-closed grow's own mechanism. This block lives HERE
    and not scene.css because scene.css is GameScene-scoped and can never reach this shell.
-   Gated with the dock's key in `e2e/masthead-alignment.spec.ts` §M20. */
-@media (max-width: 1023.98px) and (orientation: landscape) and (min-height: 500.02px) {
+   Gated with the dock's key in `e2e/masthead-alignment.spec.ts` §M20.
+
+   TWO ARMS since the live pass: the dock is now aspect-scoped too (App.vue §M20 — ≥2/1),
+   so the flow band is (tall landscape) OR (short landscape under 2/1: 900×500, 844×430,
+   an SE's 667×375), and BOTH take the clearance — a flow board sized to the whole short
+   edge hangs 88–94px under the fold beneath the in-flow masthead (measured). The arms
+   overlap the dock's key only at aspect exactly 2/1, where a capped board in a docked
+   pose is merely a wider gutter. */
+@media (max-width: 1023.98px) and (orientation: landscape) and (min-height: 500.02px),
+  (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) and (max-aspect-ratio: 2/1) {
   .board-shell.shell-sm,
   .board-shell.shell-md,
   .board-shell.shell-lg {

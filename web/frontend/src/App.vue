@@ -127,13 +127,12 @@ function parseGame(): GameId {
 // parse time and on every switch, so the title tracks the wordmark/URL truthfully. Lowercase to
 // match the wordmark.
 //
-// T8 M16 — the em dash goes. It is the one piece of rendered product copy in this file, the
-// edict is categorical about the character, and the estate already owns a separator for a
-// compound label: the middle dot the deck's own sublines are set with ("9×9 easy · dealt").
-// `index.html`'s STATIC title still reads the old string and is outside this fence — filed as a
-// wiring request rather than reached for, so the two cannot land half-changed.
+// M16 — the suffix goes with the separator. "CSP Solver" is solver jargon a player never asked
+// for, and the middle dot that joined it was contrivance dressing a two-part label nobody needed
+// two parts of. The tab is the game's name and nothing else. `index.html`'s STATIC title now
+// reads the same bare "sudoku", so the tab says one thing before and after hydration.
 function applyTitle(g: GameId) {
-  document.title = `${g} · CSP Solver`;
+  document.title = g;
 }
 // ── F6 page-turn orchestrator (T3-W10) ───────────────────────────────────
 // The two games are exercises in the same graded workbook: a switch is the pencil erasing
@@ -1117,10 +1116,30 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
    exactly. Landscape phones top out at 430 css px tall (iPhone Pro Max); 500 is the cut with
    margin. Above it the band falls back to the portrait grammar (masthead in flow above the
    board) and the board takes the desk's 10rem clearance instead of the whole short edge —
-   GameBoard.vue §M20, the other half of this key. Gated: masthead-alignment.spec.ts §M20. */
-@media (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) {
+   GameBoard.vue §M20, the other half of this key. Gated: masthead-alignment.spec.ts §M20.
+
+   ASPECT-SCOPED TOO (the live pass, 2026-08-04). The height cut alone left two float
+   habitats: a 900×500 desktop window (one px under the gate, gutter 100px against a 156px
+   box) and every landscape phone TALLER than 390 — at 932×430, the Pro Max's own pose, the
+   wordmark's ink crossed onto the grid by 11.67px. The dock's premise is a wide-and-short
+   cell, and aspect states it directly: every modern landscape phone reads ≥2.16 (844×390,
+   932×430, 926×428, 896×414) while 900×500 reads 1.80 and 844×430 1.96 — those fall back
+   to flow. AND THE ANCHOR MOVES TO THE PAGE EDGE: the group's own left grows with the
+   viewport (86 at 844 → 130 at 932) while the grid's grows slower, so the gutter INSIDE
+   the group shrinks exactly when the phone gets taller — no scale survives that squeeze
+   (0.34 still crossed 8px at 932×430, measured). The dock block widens `.board-group` to
+   the page column, so `left: 0` is the page's own gutter and the wordmark owns the whole
+   paper left of the board — 229px of room at the tightest docked pose, at the ratified
+   0.38. An SE-class 667×375 (aspect 1.78) takes flow and scrolls ~90px to the controls —
+   the pre-dock pose, accepted: ink on the board is the worse of the two. */
+@media (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) and (min-aspect-ratio: 2/1) {
   .board-group {
     position: relative;
+    /* The page column, not the content box — the dock's `left: 0` anchors to the page
+       gutter so the wordmark's room is the whole paper left of the board (see the header
+       note: the content-box gutter shrinks as the phone gets taller). The board keeps its
+       own centring; the masthead is out of flow. */
+    width: 100%;
   }
 
   .masthead {
@@ -1131,8 +1150,10 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
        does), so a percentage would centre the wordmark against the document and park it 484px
        down, out of sight of the board it names. The board now occupies the first viewport
        whole — that is what this move buys — so half the short edge IS the board's own middle.
-       Measured: board 16 → 380, centre 198; `50dvh` = 195. */
-    top: 50dvh;
+       MINUS THE GROUP'S OWN TOP (the live pass, 2026-08-04): the containing block starts at
+       y≈16 (the page gutter), so a bare `50dvh` landed the centre at 211 against the grid's
+       197 — 14px low, both engines. `− 1rem` re-centres to within 2px. */
+    top: calc(50dvh - 1rem);
     translate: 0 -50%;
     align-items: flex-start;
     --logo-scale: 0.38;

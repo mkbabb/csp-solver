@@ -228,6 +228,8 @@ test.describe('M20 — the dock stays a phone regime', () => {
     for (const vp of [
       { width: 900, height: 676 }, // the owner's shot, css-normalised
       { width: 1000, height: 800 },
+      { width: 900, height: 500 }, // one px under the height gate — aspect 1.80 takes flow
+      { width: 844, height: 430 }, // landscape phone under 2/1 — flow, not the dock
     ]) {
       await page.setViewportSize(vp);
       await load(page, 'sudoku');
@@ -269,21 +271,30 @@ test.describe('M20 — the dock stays a phone regime', () => {
       .toBe(true);
   });
 
-  test('the dock itself stands at a landscape phone', async ({ page }) => {
-    await page.setViewportSize({ width: 844, height: 390 });
-    await load(page, 'sudoku');
-    const r = await page.evaluate(M20_PROBE);
-    expect(r.masthead).not.toBeNull();
-    expect(r.grid).not.toBeNull();
-    // Docked: vertically centred on the board's own viewport (50dvh = 195 at 390)…
-    const centre = (r.masthead!.top + r.masthead!.bottom) / 2;
-    expect(Math.abs(centre - 195), 'the 50dvh centre').toBeLessThan(24);
-    // …and in the gutter (T5-W4's 153px derivation). The ratified pose's BOX grazes the
-    // grid's box by 0.66px (the caret's own right edge, measured both engines) — that graze
-    // is the pose, not the disease; the disease measured 143px. 2px is the line.
-    expect(
-      r.masthead!.right,
-      'the wordmark keeps to the gutter',
-    ).toBeLessThan(r.grid!.left + 2);
+  test('the dock itself stands at landscape phones', async ({ page }) => {
+    for (const vp of [
+      { width: 844, height: 390 }, // the T5-W4 pose
+      { width: 932, height: 430 }, // Pro Max landscape — the live pass's float habitat
+      { width: 896, height: 414 },
+    ]) {
+      await page.setViewportSize(vp);
+      await load(page, 'sudoku');
+      const r = await page.evaluate(M20_PROBE);
+      expect(r.masthead, `masthead at ${vp.width}x${vp.height}`).not.toBeNull();
+      expect(r.grid, `grid at ${vp.width}x${vp.height}`).not.toBeNull();
+      // Docked: vertically centred against the grid's own viewport band…
+      const centre = (r.masthead!.top + r.masthead!.bottom) / 2;
+      const gridCentre = (r.grid!.top + r.grid!.bottom) / 2;
+      expect(
+        Math.abs(centre - gridCentre),
+        `the dock centre at ${vp.width}x${vp.height}`,
+      ).toBeLessThan(24);
+      // …and in the gutter. Since the page-edge anchor (the live pass) the box clears the
+      // grid by ≥69px at every docked pose; 2px stays the line so a regression reds loud.
+      expect(
+        r.masthead!.right,
+        `the wordmark keeps to the gutter at ${vp.width}x${vp.height}`,
+      ).toBeLessThan(r.grid!.left + 2);
+    }
   });
 });

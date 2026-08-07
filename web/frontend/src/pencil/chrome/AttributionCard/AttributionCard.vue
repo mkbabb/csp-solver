@@ -1,13 +1,11 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from "vue";
 import CrayonHeart from "./CrayonHeart.vue";
 import { useHoverCard } from "./useHoverCard";
 // T4-W8 ROW 5 (FAM-14) — the author avatar, BUNDLED. Imported so Vite emits it content-hashed
 // under /assets/ (immutable-cached per public/_headers) and serves it same-origin; the resolved
 // URL is inlined here. This retires the app's SOLE third-party network hit (see the <img> note).
 import avatarUrl from "./avatar.png";
-// T6 mark 16 — the hidden DEBUG disclosure. This card IS the hiding place: it's already a
-// hover/focus-within card, so the toggle costs no new chrome and no settings surface.
-import { useDebug } from "@/composables/useDebug";
 
 defineProps<{
   mobile?: boolean;
@@ -15,7 +13,21 @@ defineProps<{
 
 const { isOpen, toggle, close, onHoverEnter, onHoverLeave } = useHoverCard();
 
-const debug = useDebug();
+// T6 mark 16 — the hidden DEBUG disclosure, DEV-ONLY as of the live pass of 2026-08-04, which
+// found it on the PRODUCTION site: this card is a hover/focus-within card, so the toggle cost
+// no new chrome, but it is dev furniture and its label breaks the copy register (M16 bans the
+// middot). The row keeps its hiding place in dev and leaves the shipped bundle entirely.
+//
+// THE GATE IS THE TERNARY, NOT A `v-if` ON THE ROW, and that distinction is measured. A
+// `v-if="DEV"` on the button reads a SETUP BINDING, and the SFC compiler cannot prove a setup
+// const is not a ref, so it emits `unref(DEV)` — a call the minifier will not fold. The button
+// then survives in the production chunk with its markup and its `debug ·` string, merely never
+// rendered. Gating the IMPORT instead folds at build time (`import.meta.env.DEV` is inlined
+// before Rollup parses this module), the dynamic import goes with the dead branch, and the
+// chunk is never emitted. Same seam as App.vue's FilterTuner and main.ts's rAF probe.
+const DebugToggle = import.meta.env.DEV
+  ? defineAsyncComponent(() => import("@pencil/dev/DebugToggle.vue"))
+  : null;
 
 defineExpose({ close });
 </script>
@@ -88,21 +100,10 @@ defineExpose({ close });
         class="text-foreground block text-sm hover:underline"
         >View the project on GitHub</a
       >
-      <!-- T6 mark 16 — the DEBUG disclosure. `@click.stop` matches the trigger's stance, so
-           the card stays open across the toggle on a fine pointer; the card's own
-           focus-within disclosure puts it on the Tab walk right after the GitHub link. The
-           coarse self-close this row diagnosed is cured in TWO places, because the tap fired
-           two closers and each was sufficient on its own: the bubbling click above, and
-           `useHoverCard`'s pending-close timer, which `onHoverEnter` now cancels BEFORE the
-           coarse gate rather than after it. -->
-      <button
-        type="button"
-        class="text-muted-foreground hover:text-foreground mt-1 block font-mono text-xs transition-colors duration-200"
-        :aria-pressed="debug"
-        @click.stop="debug = !debug"
-      >
-        debug · {{ debug ? "on" : "off" }}
-      </button>
+      <!-- T6 mark 16 — the DEBUG disclosure, dev tool, env-gated (import.meta.env.DEV) and
+           absent from prod builds. The row itself lives at @pencil/dev/DebugToggle.vue; the
+           gate and the reasoning are in the script block above. -->
+      <component :is="DebugToggle" v-if="DebugToggle" />
     </div>
   </div>
 </template>

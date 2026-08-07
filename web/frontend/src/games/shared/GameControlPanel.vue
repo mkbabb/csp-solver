@@ -262,9 +262,10 @@ onBeforeUnmount(() => {
 // ── The copy acts (W6; T4-W3 share-truth) ──────────────────────────────
 // A copy either landed or it did not, and the button says which: confirm ("copied!") ONLY on
 // resolve; on reject (insecure context, permission-policy denial, absent Clipboard API) the
-// link is still live in the address bar — so say exactly that. The washi, the sublabel and
-// the aria-label all track the REAL outcome, never the optimistic flip the old unconditional
-// `shareConfirm = true` asserted over a possibly-empty clipboard.
+// link is still live in the address bar — so say exactly that. The washi, the aria-label and —
+// on coarse surfaces alone (`saysCoarse` below) — the sublabel all track the REAL outcome,
+// never the optimistic flip the old unconditional `shareConfirm = true` asserted over a
+// possibly-empty clipboard.
 //
 // T6 mark 13 — written ONCE and called TWICE. The players well copies the same link with a
 // room on it, and a second hand-rolled copy of this state machine is how the failure sentence
@@ -298,6 +299,20 @@ function copyAct(
     computed(() =>
       state.value === "copied" ? copied : state.value === "failed" ? failed : quiet,
     );
+  // THE FLIP BELONGS WHEREVER THE TAPE CAN'T SPEAK (the live pass on the deployed site).
+  // A fine pointer that presses this button is still hovering it when the promise settles, so
+  // the hover tape is already up saying "copied!" while the sublabel under the same glyph says
+  // the same word — one act announced twice, half an inch apart. The tape is the better voice
+  // there: it has room for the whole failure sentence and a one-line row never will. So on a
+  // fine pointer the row keeps its verb through every state and the tape does the talking.
+  // Two surfaces have no tape to do it: the phone card mounts none at all (`v-if="!mobile"`
+  // on every washi below), and a coarse pointer in the ROW regime (an iPad at desktop width)
+  // mounts one it can never hover — so both keep the flip, and the gate says exactly that.
+  const saysCoarse = (copied: string, failed: string, quiet: string) => {
+    const line = says(copied, failed, quiet);
+    const coarse = useCoarsePointer();
+    return computed(() => (props.mobile || coarse.value ? line.value : quiet));
+  };
   return {
     animating,
     press,
@@ -309,7 +324,10 @@ function copyAct(
       "couldn't copy. the link is in the address bar",
       idle.aria,
     ),
-    sublabel: says("copied!", "in address bar", idle.sublabel),
+    // "couldn't copy", not the old "in address bar": the row has one short line to spend and it
+    // spends it on WHAT HAPPENED. Where the link went is the aria and the tape's clause — they
+    // have the room to say it as a sentence, and a fragment is not plain English.
+    sublabel: saysCoarse("copied!", "couldn't copy", idle.sublabel),
     washi: says("copied!", "couldn't copy. the link is in the address bar", idle.washi),
   };
 }
@@ -954,8 +972,17 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
             </li>
           </ul>
           <!-- T8-W3 M13 row 18 — said out loud. `live` never going false meant nothing on
-               screen distinguished a full table from an empty one. -->
-          <p v-if="aloneInRoom" class="players-alone" aria-live="polite">
+               screen distinguished a full table from an empty one.
+               THE LINE IS SCREEN-READER-ONLY NOW (the live pass on the deployed site). Drawn,
+               it sat directly under a roster showing exactly one row, telling a sighted reader
+               in a sentence what the list above it had already shown — the redundancy the pass
+               named. Its OTHER half is not redundant and is why the element stays whole: a
+               `polite` region is the only thing that speaks a room of one, since `role="log"`
+               announces additions and a list that never grows announces nothing. So it loses
+               its pixels and keeps its office. `sr-only` is the estate's utility (Tailwind's,
+               the same clip `HandwrittenLogo` uses); `players-alone` stays the hook that
+               `e2e/join-language.spec.ts` addresses it by. -->
+          <p v-if="aloneInRoom" class="players-alone sr-only" aria-live="polite">
             you're the only one on this board.
           </p>
           <!-- T8-W1 M3 — the note under the roster is PRUNED. "anyone with this link can write
@@ -1454,15 +1481,11 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   }
 }
 
-/* The alone line sits at the roster's own quiet rung, beside `connecting…` — one is the room
-   not up yet, the other is the room up and empty. */
-.players-alone {
-  margin: 0.35rem 0 0;
-  font-family: var(--font-hand);
-  font-size: var(--type-caption);
-  line-height: 1.25;
-  color: var(--ink-press-quiet);
-}
+/* `.players-alone` has NO RULE HERE, and that is the cure rather than an omission: the line is
+   `sr-only` now (see its template comment), so ink, rung and the 0.35rem it used to hold under
+   the roster would all be dead declarations — and its `margin` is unlayered, so it would beat
+   the utility's own. `connecting…` below keeps the quiet rung it used to share; that one is
+   still drawn, because a wire that has not come up is a thing no list can show. */
 
 .player-name {
   flex: 1 1 auto;

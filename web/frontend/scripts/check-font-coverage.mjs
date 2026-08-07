@@ -53,7 +53,10 @@ const FACES = [
       {
         where: ".section-heading",
         transform: "lowercase",
-        strings: ["Size", "Board Size", "Difficulty"],
+        // "Difficulty" → "Level" at the T8 live-pass cures (the drawer eyebrow now speaks
+        // the staging band's word). The subset stays a superset over the departure's
+        // letters, per the standing no-re-narrowing note above.
+        strings: ["Size", "Board Size", "Level"],
       },
       // The wordmark (HandwrittenLogo `.logo-text`) and the gallery card names
       // (GameCard `.card-wordmark`) — no transform, the five registered game ids.

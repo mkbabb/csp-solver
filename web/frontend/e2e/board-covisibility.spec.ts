@@ -77,7 +77,7 @@ test.describe("mark 6 — the band dissolves", () => {
     // `.mobile-board-width` was the deleted twin's name for the same box.
     const inTicket = page.locator("#controls-drawer .deal-row .difficulty-tally");
     await expect(inTicket).toHaveCount(1);
-    // The word in front of the glyph is the well's, not the strip's: `Difficulty` is an
+    // The word in front of the glyph is the well's, not the strip's: `Level` is an
     // eyebrow two rows up, so the receipt says what it is instead of saying that twice.
     await expect(inTicket.locator(".dt-label")).toHaveText("dealt");
     // The honesty spine is untouched by the move — the tier still names itself to AT.

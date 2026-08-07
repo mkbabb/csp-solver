@@ -63,7 +63,7 @@ test("rendered-name census, rail: two eyebrows, four tapes, two captions — and
   expect(countAt(names, "eyebrow")).toBe(2);
   expect(names.filter((n) => n.rank === "eyebrow").map((n) => n.text)).toEqual([
     "Size",
-    "Difficulty",
+    "Level",
   ]);
   // The compartments name themselves in the hand, one rank down. T6 mark 13 — `players` is
   // the fourth, and it is in the census rather than beside it: a feature that mints a name on

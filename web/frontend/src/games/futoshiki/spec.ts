@@ -67,7 +67,7 @@ export const futoshikiSpec = defineGame<ReturnType<typeof useFutoshiki>, Inequal
       },
       {
         key: "difficulty",
-        heading: "Difficulty",
+        heading: "Level",
         options: difficultyOptions,
         selected: m.difficulty.value,
         onChange: (v) => (m.difficulty.value = v as Difficulty),

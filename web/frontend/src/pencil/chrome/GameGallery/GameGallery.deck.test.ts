@@ -232,12 +232,23 @@ describe("the ribbon on a shared board — consent, counted (M13)", () => {
     expect(w.find(".gallery-guard").exists()).toBe(true);
   });
 
-  it("SOLO, every string is the one that shipped", async () => {
+  it("SOLO, a select needs no guard: the board is saved and the switch is free", async () => {
+    // The live pass measured it on the deployed edge: leave, return, board byte-identical.
+    // A ribbon saying "your marks aren't saved" over that behavior was a false sentence —
+    // the solo select arm died with it (attemptSelect).
     const w = mountDeck({ dirty: true, currentId: "sudoku" });
     await chooseOther(w);
-    expect(w.get(".guard-note-title").text()).toBe("leave this puzzle?");
+    expect(w.find(".gallery-guard").exists()).toBe(false);
+    expect(w.emitted("select")).toHaveLength(1);
+  });
+
+  it("SOLO, the deal guard keeps its strings — a deal genuinely writes over marks", async () => {
+    const w = mountDeck({ dirty: true, currentId: "sudoku" });
+    await w.get(".gallery-viewport").trigger("keydown", { key: "d" });
+    await flushPromises();
+    expect(w.get(".guard-note-title").text()).toBe("deal over this puzzle?");
     expect(w.get(".guard-note-sub").text()).toBe("your marks aren't saved");
-    expect(w.get(".guard-leave").text()).toBe("leave");
+    expect(w.get(".guard-leave").text()).toBe("deal");
   });
 });
 

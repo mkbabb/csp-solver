@@ -84,7 +84,7 @@ export interface TallyDescriptor {
   /** Strokes in the scale (always TALLY_TOTAL). */
   total: number;
   /** The always-on a11y label for the DIFFICULTY signal (distinct from FILL + CORRECTNESS).
-   *  T8-W6 M16: it is the COUNT, and only the count — `difficulty 3 of 5`. It used to name the
+   *  T8-W6 M16: it is the COUNT, and only the count — `level 3 of 5`. It used to name the
    *  hardest technique, which put the solver's vocabulary into an accessible name, where a
    *  reader has even less recourse than at the caption. The number is the measurement; the
    *  name was the register. */
@@ -137,7 +137,7 @@ export function describeTally(
       graded: false,
       filled: 0,
       total: TALLY_TOTAL,
-      ariaLabel: "difficulty not graded yet",
+      ariaLabel: "level not graded yet",
     };
   }
   const filled = !solved
@@ -149,6 +149,6 @@ export function describeTally(
     graded: true,
     filled,
     total: TALLY_TOTAL,
-    ariaLabel: `difficulty ${filled} of ${TALLY_TOTAL}`,
+    ariaLabel: `level ${filled} of ${TALLY_TOTAL}`,
   };
 }

@@ -90,33 +90,40 @@ test('snap chime: the centered card carries a scribble underline; flanks do not'
   await expect(page.locator('#gallery-card-0 .game-card-underline')).toHaveCount(0);
 });
 
-// ── 3. Guard fires on DIRTY + DIFFERENT; Leave proceeds ──
+// ── 3. A SOLO select is free — and the marks come back (the truth the unguard rests on) ──
+// The live pass (2026-08-04) measured a solo leave-and-return returning the board
+// byte-identical, which made the old ribbon's 'your marks aren't saved' a false sentence.
+// The solo select arm died with it; this row asserts BOTH halves: no ribbon on the way out,
+// and the digit waiting on the way back.
 
-test('guard: dirty + different arms the ribbon; leave abandons the marks and switches', async ({
+test('guard: a solo dirty select switches freely, and the marks are there on return', async ({
   page,
 }) => {
   await loadSudoku(page);
   await dirtyTheBoard(page);
+  const inked = await page.locator('.sudoku-cell .glyph-svg').count();
 
-  const viewport = await openGallery(page);
+  let viewport = await openGallery(page);
   await viewport.press('ArrowRight'); // → futoshiki (different game)
-  await viewport.press('Enter'); // attempt select
+  await viewport.press('Enter'); // select — no ribbon, the switch proceeds
 
-  // The ribbon slides in — the switch is HELD (still in the gallery, futoshiki not mounted).
-  await expect(page.locator('.gallery-guard')).toBeVisible();
-  await expect(page.locator('.futoshiki-cell')).toHaveCount(0);
-  await expect(page.locator('.game-gallery')).toBeVisible();
-
-  // Leave → the switch proceeds.
-  await page.locator('.guard-leave').click();
+  await expect(page.locator('.gallery-guard')).toHaveCount(0);
   await expect(page.locator('.game-gallery')).toHaveCount(0);
   await page.waitForSelector('.futoshiki-cell', { timeout: 15000 });
   expect(new URL(page.url()).searchParams.get('game')).toBe('futoshiki');
+
+  // Return to sudoku through the deck: the board restores, the typed digit included.
+  viewport = await openGallery(page);
+  await viewport.press('ArrowLeft');
+  await viewport.press('Enter');
+  await expect(page.locator('.gallery-guard')).toHaveCount(0);
+  await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
+  await expect(page.locator('.sudoku-cell .glyph-svg')).toHaveCount(inked);
 });
 
-// ── 4. Guard: Keep dismisses the ribbon and stays put ──
+// ── 4. Guard: the DEAL intent still guards solo (a deal genuinely writes over marks) ──
 
-test('guard: keep dismisses the ribbon, stays in the gallery, board unchanged', async ({
+test('guard: keep dismisses the deal ribbon, stays in the gallery, board unchanged', async ({
   page,
 }) => {
   await loadSudoku(page);
@@ -124,8 +131,9 @@ test('guard: keep dismisses the ribbon, stays in the gallery, board unchanged', 
 
   const viewport = await openGallery(page);
   await viewport.press('ArrowRight');
-  await viewport.press('Enter');
+  await viewport.press('d'); // deal intent — dirty work is at stake, the ribbon arms
   await expect(page.locator('.gallery-guard')).toBeVisible();
+  await expect(page.locator('.futoshiki-cell')).toHaveCount(0);
 
   await page.locator('.guard-keep').click();
   await expect(page.locator('.gallery-guard')).toHaveCount(0);

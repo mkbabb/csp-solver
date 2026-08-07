@@ -191,6 +191,9 @@ const guardVerb = computed(() =>
  *  "your marks" is frequently not the board being dealt. */
 const guardSub = computed(() => {
   const card = guardCard.value;
+  // Since the solo-select arm died (see attemptSelect) the marks clauses below belong to the
+  // DEAL intent alone, where they are true: a deal writes over the target's saved work and
+  // the mounted board's live work. A select's stake is the TABLE, said in the shared branch.
   if (!card) return "your marks aren't saved";
   // THE SHARED BOARD OUTRANKS THE MARKS, and it has to: under FOLLOW the act being confirmed
   // is not "you lose your marks", it is "everyone here gets a different worksheet". The saved
@@ -416,17 +419,19 @@ function syncFromScroll(i: number) {
 }
 
 // ── Select + the mid-game guard gate (Wave D §4) ──
-/** Attempt to select the CENTERED card. A dirty + DIFFERENT switch arms the ribbon instead of
- *  emitting; a pristine or same-game switch emits straight through. */
+/** Attempt to select the CENTERED card. A shared-table switch arms the ribbon instead of
+ *  emitting; a solo or same-game switch emits straight through. */
 function attemptSelect() {
   const card = props.cards[activeIndex.value];
   if (!card) return;
   const different = props.currentId != null && card.id !== props.currentId;
-  // Two arms, one ribbon. `dirty` is about YOUR marks; `shared` is about everyone else's board
-  // (T8-W3 M13 row 1) and does NOT consult `dirty` — a clean board on a shared table is still a
-  // table you are about to move. A same-game select arms neither: `setGame` early-returns and
-  // nothing is replaced (row 15).
-  if (different && (props.dirty || shared.value)) {
+  // ONE arm since the live pass (2026-08-04): `shared` — everyone else's board (T8-W3 M13
+  // row 1). The solo `dirty` arm is DEAD because its sentence was false: M12 persistence
+  // saves the board on switch-away and restores it byte-identical on return (measured on
+  // the deployed edge), so a solo select risks nothing and a guard over nothing is the M3
+  // shape. The DEAL intent keeps its solo guard — a deal genuinely writes over marks. A
+  // same-game select arms neither: `setGame` early-returns and nothing is replaced (row 15).
+  if (different && shared.value) {
     guardIntent.value = "select";
     guardIndex.value = activeIndex.value; // arm the ribbon on the chosen card
     return;
