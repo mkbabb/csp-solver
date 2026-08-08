@@ -414,3 +414,59 @@ whole. What that word closes, stated exactly:
   ribbon). The owner's paired order — "Then continue." — is the owner ask that opens
   the R13 + R15 cure front immediately (T8.1); R05/R08 keep their named triggers.
 - M16 and M19 remain permanent law; CH-67 remains a watch.
+
+### §9.2 · T8.1 — the ratification's continuation (R15 + R13 cured)
+
+**R15, the ribbon's anchor** (commit `3f0f608c`). The mechanism, named: the guard sat
+on `left: 50%` of the deck FRAME while the zero-edge-air track (T8-W3 M11) clamps
+indices 0/1 and 3/4 onto shared rest positions — the edge cards can never reach the
+frame's centre, so the ribbon landed exactly one slot (352px) off at indices 0 and 4,
+and index 0 is sudoku, the default pose. The cure is one CSS token and one measured
+read: `left: var(--guard-x, 50%)`, published by `anchorGuard()` in the arming watch —
+the armed slot's centre clamped so the note stays whole with 12px of air, read once
+because the deck cannot travel while the ribbon is up (every arrow, Home/End,
+click-warp and native snap dismisses first). The fallback keeps the shipped pose
+wherever no measurement lands; the one-slot phone frame is a no-op by geometry. Born
+RED in both layers: the new e2e row (`gallery-guard.spec.ts`, 'anchored on the chosen
+card') red 352-vs-≤1 in both engines against the superseded anchor with a real in-run
+control (the index-1 half was already green pre-cure — a cure that merely displaced
+the ribbon reds on it); the unit row red on the absent `--guard-x`.
+
+**R13, the still's authorship** (same commit). The mechanism: a deck still is
+`values + givenCells` off localStorage — disk holds digits, never authors — so
+`PosterBoard` inked every non-given cell as a mark and the glyph stroked it in the
+READER's `--color-user-ink`; the live board escapes only because `BoardHost` binds
+`model.authorInk` per cell. The cure threads that same idiom into the still:
+`authorInk` as an optional `PreviewBoard`/`GalleryPreview` field, attached by
+`previewFor` for the MOUNTED game alone via a REGISTERED read (`useSession` already
+imports `useStagingBridge`, so an import the other way would close the module cycle —
+App holds both sides and hands the read down), and the five posters bind it with one
+computed + one line each. Solo stills and other games' saved stills are byte-unchanged
+by construction. Born RED three ways: five unit reds and fourteen type errors against
+the pre-cure tree; the new `session-substrate.spec.ts` row measured the lie itself on
+the wire fixture — still peer cell `rgb(37,99,235)` against board peer cell
+`oklch(0.5 0.11 137.5)` — before the cure turned it green in both engines.
+
+**Riding along**: `SPEC_MANIFEST` gains the four specs shipped at T7/T8 without rows
+(join-language, join-language-prm, masthead-alignment, session-substrate) —
+`check-pw-projects` OK, 29 specs / 478 resolved tests, the four engine holdouts
+intact. A fresh nanoid advisory (GHSA-2v37-7h3g-55p8) that red the ratification
+commit's audit lane was cured at `302b6613` (lockfile 3.3.16 → 3.3.18 inside
+postcss's own range — no override, nothing else moved).
+
+**The battery**: vue-tsc + prettier + twelve lint gates green first run; units
+560/560 (+9 born-RED rows); the 407-test default roster 404/1/2 at NINE workers (the
+1 is T8-R09's documented webkit contention row, green serial), built-dist 67/67,
+goldens 4/4 untouched; both new e2e rows green in both engines.
+
+**Traps banked at T8.1**: `root.querySelector('#id')` under nwsapi/jsdom resolves
+document-wide first and containment-checks second — a scoped id lookup goes null
+whenever an earlier still-attached mount owns the id; reach deck geometry by the
+deck's own classes. A bare `npx playwright test` would start the repo config's
+webServer on :3000 (a foreign port here) — local e2e runs need the webServer-stripped
+sibling config. The deck's M12 read-at-open policy means the mounted game's still can
+be one digit stale if typed after the deck opened (pre-existing seam, stated in the
+unit battery; re-opens on an owner mark, not booked as a row).
+
+**Deploy + live re-verify**: PENDING — lands below when the CH-57 chain runs on
+`3f0f608c`'s conclusion.
