@@ -468,5 +468,32 @@ sibling config. The deck's M12 read-at-open policy means the mounted game's stil
 be one digit stale if typed after the deck opened (pre-existing seam, stated in the
 unit battery; re-opens on an owner mark, not booked as a row).
 
-**Deploy + live re-verify**: PENDING — lands below when the CH-57 chain runs on
-`3f0f608c`'s conclusion.
+**Deploy + live re-verify (2026-08-08)**: the doc-truth cure head `ac9b08eb` went
+16/16 (run 31272335518, first attempt) and the CH-57 chain shipped it — **CF Pages
+deployment `a09a8aeb`, sudoku.babb.dev serving `index-CaFRLmgODqOS.js`,
+dist-identity-verified**. The live re-verify, two lanes × two engines:
+
+- **R15 on the edge — 8 PASS / 3 NOTE, |Δ| = 0.00px at all 20 arms** (5 indices × 2
+  engines × 2 viewports): the armed ribbon's centre equals the active card's centre to
+  the subpixel at every index, intersects exactly ONE card every time (always its own —
+  futoshiki clear at index 0 with a 16px gap, killer clear at index 4), stays whole in
+  the window, and `--guard-x` reads a measured value, not the fallback. The NEGATIVE
+  control re-derived the dead anchor live: the frame centre misses the end cards by
+  exactly 352.00px — so the passes are a change of behaviour, not geometry luck.
+  Escape/keep retired the ribbon 20/20 with the deck standing, and every re-arm
+  measured fresh.
+- **R13 on the live relay — 9 PASS / 3 NOTE**: real rooms minted through the play-
+  together affordance (A hosts, B joins the `?s=` link, roster 2/2 both sides, boards
+  byte-identical); B's digit lands on A's live board in B's green
+  (`oklch(0.5 0.11 137.5)`) beside A's blue (`rgb(37,99,235)`) — the wire control; and
+  THE STILL agrees with the board byte for byte on both cells in both engines, the
+  peer glyph carrying the rebound `--color-user-ink` inline. A pixel census over the
+  still's PNG shows both hue families physically present. The M12 read-at-open seam
+  reproduced exactly as documented (a digit typed after the deck opened joins the
+  still on the next warp) — the stated pre-existing behavior, not a defect of this
+  cure. Instrument note banked: on a still the ink rebinding rides the GLYPH's inline
+  style, not the poster cell — audit the glyph node, or a true still reads as the
+  pre-cure bug.
+
+**T8-R15 and T8-R13 close as CURED** — restamped terminal in DISPOSITIONS, the
+roster, and the living ledger with this section as the cite.

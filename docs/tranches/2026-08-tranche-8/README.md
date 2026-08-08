@@ -36,9 +36,9 @@ carries the survivors.
 - **T8-R10** — the r13 bench residue, FOLDED into this WGATE.
 - **T8-R11** — the badge below 768 has no gallery mount, TERMINAL-CLOSED (default fired at the ratification).
 - **T8-R12** — the M19 law's tranche execution, TERMINAL-CLOSED (the law is permanent).
-- **T8-R13** — the deck's preview draws peer digits in the local ink, BANKED (owner: the deck's preview reader).
+- **T8-R13** — the deck's preview draws peer digits in the local ink, TERMINAL-CLOSED (cured at T8.1, proven on the live relay).
 - **T8-R14** — the aria register splits from the ink register (Title Case declaratives over lowercase terse; the fill button ships two wordings of its own helper), TERMINAL-CLOSED (default fired at the ratification: ships as-is).
-- **T8-R15** — the armed guard ribbon is viewport-anchored and covers a flank card at deck edge indices (sudoku's index 0 is the default case), BANKED (owner: the deck).
+- **T8-R15** — the armed guard ribbon is viewport-anchored and covers a flank card at deck edge indices, TERMINAL-CLOSED (cured at T8.1 — anchored on the chosen card, proven live at 0.00px).
 
 Also restamped at this close, in the living ledger: **CH-35** (its dated default fired at
 T8 formation — the iOS claim retires to sim-scope), **CH-45** (superseded by M19's
