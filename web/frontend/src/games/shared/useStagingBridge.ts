@@ -289,16 +289,49 @@ export interface PreviewBoard {
    * `boardSize` as they come.
    */
   saved: Record<string, unknown>;
+  /**
+   * WHOSE HAND WROTE EACH CELL (T8-R13) — per-cell `--color-user-ink` rebindings for the cells a
+   * PEER authored, `useSession.authorInk`'s own shape and the live board's own binding.
+   *
+   * Disk holds digits, never authors, so this is the one field of a still that does NOT come off
+   * disk: it is the room's clock, read at the moment the picture is asked for, and it is attached
+   * to the MOUNTED game's still alone. Absent → every digit is the reading page's own ink, which
+   * is what a solo still is and what every other card's saved board honestly says.
+   */
+  authorInk?: Record<string, Record<string, string>>;
 }
 
 let ledgerSources: readonly LedgerSource[] = [];
+
+/**
+ * The room's per-cell authorship, REGISTERED rather than imported (T8-R13).
+ *
+ * `useSession` imports THIS module — it stages the room's board for the game about to mount — so
+ * a read in the other direction closes the cycle §IMPORT DIRECTION exists to keep open. App holds
+ * both sides and hands the read down, exactly as it hands the five ledger sources in.
+ */
+let readAuthorInk: (() => Record<string, Record<string, string>>) | null = null;
+
+/** App registers the session's `authorInk` read. Unregistered → solo, and every still is the one
+ *  that shipped. */
+export function registerAuthorInk(
+  read: () => Record<string, Record<string, string>>,
+): void {
+  readAuthorInk = read;
+}
 
 /** The saved board for a game id, off disk, now — or `null`, which is the card's cue to draw
  *  its canned never-played face. A stated default, not a silent fallback. */
 export function previewFor(id: string): PreviewBoard | null {
   if (!hasDom) return null;
   const src = ledgerSources.find((s) => s.id === id);
-  return src ? readPersistedBoard(src.persistKey) : null;
+  const p = src ? readPersistedBoard(src.persistKey) : null;
+  // THE MOUNTED BOARD ALONE. The clock is one shared board's; the other four cards are boards off
+  // disk that nobody at this table has written on, and colouring them from this clock would be a
+  // guess in a fact's clothes. An empty clock attaches nothing, so solo stays byte-identical.
+  if (!p || id !== mountedId.value) return p;
+  const ink = readAuthorInk?.();
+  return ink && Object.keys(ink).length ? { ...p, authorInk: ink } : p;
 }
 
 /** The two board facts, derived from the parse rather than parsed a second time. */

@@ -70,6 +70,8 @@ const size = computed(() => live.value?.side ?? N);
 const subgrid = computed(() => live.value?.preview.size ?? 3);
 const values = computed(() => live.value?.preview.values ?? canned);
 const givens = computed(() => live.value?.preview.givenCells);
+/** T8-R13 — whose hand wrote each cell, carried straight through to the shared floor. */
+const authorInk = computed(() => live.value?.preview.authorInk);
 const thermometers = computed(() => live.value?.tubes ?? THERMOMETERS);
 </script>
 
@@ -79,6 +81,7 @@ const thermometers = computed(() => live.value?.tubes ?? THERMOMETERS);
     :subgrid-size="subgrid"
     :values="values"
     :givens="givens"
+    :author-ink="authorInk"
   >
     <template #overlay>
       <ThermoTube :thermometers="thermometers" :board-size="size" />

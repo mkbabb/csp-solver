@@ -52,6 +52,8 @@ const live = computed(() => {
 const size = computed(() => live.value?.size ?? 3);
 const values = computed(() => live.value?.values ?? canned);
 const givens = computed(() => live.value?.givenCells);
+/** T8-R13 — whose hand wrote each cell, carried straight through to the shared floor. */
+const authorInk = computed(() => live.value?.authorInk);
 </script>
 
 <template>
@@ -62,5 +64,6 @@ const givens = computed(() => live.value?.givenCells);
     :subgrid-size="size"
     :values="values"
     :givens="givens"
+    :author-ink="authorInk"
   />
 </template>

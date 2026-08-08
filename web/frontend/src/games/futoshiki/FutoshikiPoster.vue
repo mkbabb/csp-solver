@@ -73,6 +73,8 @@ const live = computed(() => {
 const size = computed(() => live.value?.preview.size ?? N);
 const values = computed(() => live.value?.preview.values ?? canned);
 const givens = computed(() => live.value?.preview.givenCells);
+/** T8-R13 — whose hand wrote each cell, carried straight through to the shared floor. */
+const authorInk = computed(() => live.value?.preview.authorInk);
 
 // The caret figures — the clue seam's own edge-midpoint math (T5-W2 F2), the very
 // derivation the live overlay draws from. The still and the board cannot print different
@@ -88,6 +90,7 @@ const carets = computed(() =>
     :subgrid-size="size"
     :values="values"
     :givens="givens"
+    :author-ink="authorInk"
   >
     <template #overlay>
       <div class="poster-caret-layer" aria-hidden="true">

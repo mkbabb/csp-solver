@@ -55,6 +55,16 @@ const props = defineProps<{
    *  posters each starting a draw-in per written cell is precisely the sparse-writer disease the
    *  soul gate exists to refuse. */
   givens?: readonly string[];
+  /** WHOSE HAND WROTE EACH CELL (T8-R13) — per-cell `--color-user-ink` rebindings for the cells a
+   *  PEER authored, position-keyed. `BoardHost`'s binding at this component's own single
+   *  cell-mount site: `HandwrittenGlyph` strokes a mark with `var(--color-user-ink)`, so rebinding
+   *  that var on the glyph re-inks it with no component change and no second vocabulary.
+   *
+   *  Absent, and for every cell not in it, the digit keeps the reading page's own ink — which is
+   *  what a solo still is, and what YOUR cells are (the session holds an entry only for a peer's).
+   *  Without it a still drew a peer's 7 and your own 5 as one author, on the very card the live
+   *  board underneath draws them apart. */
+  authorInk?: Record<string, Record<string, string>>;
   /** The frozen boil pose to render (default 0). The poster NEVER ticks this itself —
    *  it is the gallery's optional "make this one card alive" seam (the gallery owns the
    *  single shared beat). Left at 0, the poster enrols nothing and never repaints. */
@@ -110,6 +120,11 @@ const givenSet = computed(() =>
 function isGivenAt(pos: number): boolean {
   return givenSet.value ? givenSet.value.has(String(pos)) : true;
 }
+
+/** A peer's ink for one cell, or nothing at all — see `authorInk`. */
+function inkAt(pos: number): Record<string, string> | undefined {
+  return props.authorInk?.[String(pos)];
+}
 </script>
 
 <template>
@@ -164,7 +179,11 @@ function isGivenAt(pos: number): boolean {
 
     <!-- The digits, inked as settled glyphs. A given is `is-given` + not revealed/solved and a
          mark is `is-overridden`; BOTH settle on mount (dasharray none, no draw-in, no murmur
-         pool). A still digit, no animation, no beat — see the `givens` prop. -->
+         pool). A still digit, no animation, no beat — see the `givens` prop.
+
+         The peer ink rides the GLYPH, not the cell box: `HandwrittenGlyph` is single-root, so the
+         style falls through, and a cell with nothing written in it renders no element to carry a
+         binding it has no use for. -->
     <div
       class="poster-cells"
       :style="{ gridTemplateColumns: gridTemplate, gridTemplateRows: gridTemplate }"
@@ -182,6 +201,7 @@ function isGivenAt(pos: number): boolean {
           :position="pos - 1"
           :board-size="boardSize"
           :is-hovered="false"
+          :style="inkAt(pos - 1)"
         />
       </div>
     </div>

@@ -70,3 +70,44 @@ describe("PosterBoard — givens and marks are inked apart, and both settle", ()
     expect(mark).toEqual({ v: "2", given: false, mark: true });
   });
 });
+
+/**
+ * T8-R13 — WHOSE HAND WROTE IT, on the still.
+ *
+ * `HandwrittenGlyph` strokes a mark with `var(--color-user-ink)`, so a still with no per-cell
+ * rebinding draws every mark in the READING page's ink: a peer's digit and your own read as one
+ * author on the card, while the live board that unfolds out of it draws them apart. The rebinding
+ * is `BoardHost`'s, at this component's own single cell-mount site — one `:style`, no new colour
+ * and no second vocabulary.
+ */
+const inkOf = (w: {
+  findAll: (s: string) => { attributes: (a: string) => string | undefined }[];
+}) => w.findAll(".poster-cell .g").map((g) => g.attributes("style") ?? "");
+
+describe("PosterBoard — a peer's digit keeps a peer's ink", () => {
+  const PEER = { "--color-user-ink": "oklch(0.6 0.11 137.5deg)" };
+  const props = {
+    boardSize: 4,
+    subgridSize: 2,
+    values: { "0": 1, "5": 2, "9": 3 },
+    givens: ["0"],
+  };
+
+  it("a peer-authored cell rebinds the ink var; your own cell binds nothing", () => {
+    const w = mount(PosterBoard, {
+      props: { ...props, authorInk: { "5": PEER } },
+      global: { stubs },
+    });
+    const [given, peer, mine] = inkOf(w);
+    expect(given).toBe("");
+    expect(peer).toContain("--color-user-ink: oklch(0.6 0.11 137.5deg)");
+    // Yours keeps the incumbent binding — the session holds an entry only for cells a PEER
+    // wrote, and a still that painted your own ink explicitly would be the same lie inverted.
+    expect(mine).toBe("");
+  });
+
+  it("no authorship supplied: every cell binds nothing (the solo still, unchanged)", () => {
+    const w = mount(PosterBoard, { props, global: { stubs } });
+    expect(inkOf(w)).toEqual(["", "", ""]);
+  });
+});

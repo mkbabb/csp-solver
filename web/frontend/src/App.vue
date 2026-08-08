@@ -41,10 +41,16 @@ import {
   flushMountedBoard,
   previewFor,
   publishMountedGame,
+  registerAuthorInk,
   stageHandoff,
   useStagedLedger,
 } from "@games/shared/useStagingBridge";
-import { noteFocus, registerGameFollower, session } from "@games/shared/useSession";
+import {
+  authorInk,
+  noteFocus,
+  registerGameFollower,
+  session,
+} from "@games/shared/useSession";
 import { GAMES } from "@games/cards";
 import type { AnyGameSpec } from "@games/shared/defineGame";
 import { useShortcutPolicy } from "@/composables/useShortcutPolicy";
@@ -655,6 +661,13 @@ registerGameFollower((id) => setGame(id, { cut: view.value === "gallery" }));
 // render the deck before the truth existed. Five `getItem` + `JSON.parse` of the boards already
 // on disk; missing rows only, so the mounted game's live publish always wins.
 backfillLedger(GAMES);
+
+// THE STILL OWES THE TABLE ITS COLOURS (T8-R13). Disk holds digits and never authors, so the
+// deck's still drew a peer's digit in the reading page's ink — one author for two hands, on the
+// card the live board underneath colours correctly. The clock that separates them is the
+// session's, and the bridge may not import it (`useSession` imports the bridge; §IMPORT
+// DIRECTION). App holds both sides, so App hands the read down — the ledger sources' own idiom.
+registerAuthorInk(() => authorInk.value);
 
 // The cross-game ledger, id-keyed: what each game is set to, whether a board waits there, and
 // whether there is work on it. The mounted game writes its own row as it goes; the other four

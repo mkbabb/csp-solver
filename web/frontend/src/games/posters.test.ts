@@ -193,6 +193,39 @@ describe("the five posters — a true still, or an honest canned one", () => {
     expect(bad.findAll(".poster-caret").length).toBe(6); // the canned set
   });
 
+  /**
+   * T8-R13 — the still's authorship reaches the shared floor, in all five families.
+   *
+   * The ink rides the preview because the preview is already the vehicle for everything only the
+   * game knows how to read; the poster hands it straight through, exactly as it hands `givens`.
+   * A family that forgot the pass-through would draw a peer's digits in the reading page's own
+   * ink while the board under the card drew them apart, which is the defect this row is.
+   */
+  it("every poster hands the still's per-cell authorship down", () => {
+    const authorInk = { "1": { "--color-user-ink": "oklch(0.6 0.11 137.5deg)" } };
+    for (const [P, p] of [
+      [SudokuPoster, preview({ size: 3, values: { "1": 4 }, authorInk })],
+      [
+        ThermoPoster,
+        preview({ size: 3, saved: { thermometers: [[0, 1]] }, authorInk }),
+      ],
+      [
+        KillerPoster,
+        preview({ size: 3, saved: { cages: [{ sum: 3, cells: [0, 1] }] }, authorInk }),
+      ],
+      [KenKenPoster, preview({ size: 4, saved: { cages: [] }, authorInk })],
+      [FutoshikiPoster, preview({ size: 4, saved: { inequalities: [] }, authorInk })],
+    ] as const) {
+      const w = mount(P, { props: { preview: p }, global: { stubs } });
+      expect(w.getComponent(PosterBoard).props("authorInk")).toEqual(authorInk);
+    }
+  });
+
+  it("a canned face has no authorship to hand down", () => {
+    const w = mount(SudokuPoster, { global: { stubs } });
+    expect(w.getComponent(PosterBoard).props("authorInk")).toBeUndefined();
+  });
+
   it("every poster stays on pose 0 — a still enrols nothing, true or canned", () => {
     for (const [P, p] of [
       [SudokuPoster, preview({ size: 3, values: { "0": 1 } })],

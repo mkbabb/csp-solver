@@ -171,3 +171,76 @@ test('guard: selecting the same game never asks, even when the board is dirty', 
   await expect(page.locator('.game-gallery')).toHaveCount(0);
   await expect(page.locator('.sudoku-cell').first()).toBeVisible();
 });
+
+// ── 7. The ribbon stands over the card it names, not over the frame's middle (T8-R15) ──
+//
+// `.gallery-guard` was `left: 50%` on the deck box — the FRAME's centre — while the chosen card
+// is wherever the track could scroll it to, and with the desk's edge air at zero the end cards
+// never reach that middle (`useCarouselGlide.targetScrollLeft` clamps 0 and 1 onto one rest
+// position, 3 and 4 onto another). Measured 1440×900 on the live edge, both engines: the guard
+// centred on 720.0 at EVERY index against card centres 368 / 720 / 720 / 720 / 1072, so at index
+// 0 — sudoku, the deck's default pose — the note sat 352px off its own card and squarely over
+// futoshiki's face. This row arms at index 0 and re-arms at index 1 in the same run: the second
+// arm is the CONTROL, the index where the card centre and the frame centre coincide and where the
+// old anchor was already right, so a cure that merely moved the ribbon reds on it.
+
+const GUARD_EDGE_PX = 12; // the component's clamp air — the derivation below is what spends it
+
+async function guardBoxes(page: Page, index: number) {
+  return await page.evaluate((i) => {
+    const g = document.querySelector('.gallery-guard')!.getBoundingClientRect();
+    const c = document.querySelector(`#gallery-card-${i}`)!.getBoundingClientRect();
+    return {
+      guard: { centre: g.left + g.width / 2, width: g.width, left: g.left, right: g.right },
+      card: { centre: c.left + c.width / 2 },
+      win: window.innerWidth,
+    };
+  }, index);
+}
+
+/** The ONE licensed miss, derived from the real boxes rather than guessed: how far the card's
+ *  centre lies outside the band in which the whole note still fits inside the window. Zero at
+ *  this viewport at both indices, so the assertions below are exact to the subpixel. */
+function clampSlack(m: Awaited<ReturnType<typeof guardBoxes>>) {
+  const half = m.guard.width / 2;
+  return Math.max(
+    0,
+    GUARD_EDGE_PX + half - m.card.centre,
+    m.card.centre - (m.win - GUARD_EDGE_PX - half),
+  );
+}
+
+test('guard: the armed ribbon is anchored on the chosen card, not on the deck frame', async ({
+  page,
+}) => {
+  await loadSudoku(page);
+  await dirtyTheBoard(page);
+
+  const viewport = await openGallery(page);
+  // Index 0 — sudoku, the card the deck opens on, and the one the frame centre misses.
+  await viewport.press('d');
+  await expect(page.locator('.gallery-guard')).toBeVisible();
+
+  const at0 = await guardBoxes(page, 0);
+  expect(
+    Math.abs(at0.guard.centre - at0.card.centre),
+    `the ribbon centred on ${at0.guard.centre} against card 0 at ${at0.card.centre}`,
+  ).toBeLessThanOrEqual(clampSlack(at0) + 1);
+  // …and it is WHOLE: an anchor that aimed true by hanging half the note off the page would be
+  // its own defect, so the clamp is asserted alongside the aim rather than trusted.
+  expect(at0.guard.left).toBeGreaterThanOrEqual(-1);
+  expect(at0.guard.right).toBeLessThanOrEqual(at0.win + 1);
+
+  // THE IN-RUN CONTROL — re-arm one card along, where the frame centre was already the answer.
+  await page.locator('.guard-keep').click();
+  await expect(page.locator('.gallery-guard')).toHaveCount(0);
+  await viewport.press('ArrowRight');
+  await viewport.press('d');
+  await expect(page.locator('.gallery-guard')).toBeVisible();
+
+  const at1 = await guardBoxes(page, 1);
+  expect(
+    Math.abs(at1.guard.centre - at1.card.centre),
+    `the ribbon centred on ${at1.guard.centre} against card 1 at ${at1.card.centre}`,
+  ).toBeLessThanOrEqual(clampSlack(at1) + 1);
+});

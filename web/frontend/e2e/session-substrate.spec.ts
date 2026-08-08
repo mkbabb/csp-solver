@@ -297,3 +297,82 @@ test('a digit is on disk the moment its board stops being the live face', async 
   const saved = JSON.parse(read.raw!) as { values: Record<string, number> };
   expect(saved.values[String(read.at)]).toBe(5);
 });
+
+// ── T8-R13 · the still's authorship ─────────────────────────────────────────────────────
+//
+// BORN RED on this tree: a still is `values` + `givenCells` read off disk, and disk holds
+// digits but never authors — so every non-given digit on a card was stroked with whatever
+// `--color-user-ink` resolved to on the READING page. A peer's 7 and your own 4 came out one
+// colour, on the very card whose live face draws them apart. Measured red: both strokes
+// rgb(37, 99, 235), against the board's own rgb(37, 99, 235) / oklch peer hue underneath.
+//
+// The assertion stays inside ONE property. Every read below is `stroke`, on the still and on
+// the parked board (`v-show`, so it keeps its computed style), so the row compares the picture
+// with the board it is a picture OF rather than with a token in another spelling.
+
+test("a still draws a peer's digit in the peer's ink, not the reader's", async ({
+  browser,
+}) => {
+  test.slow(); // two pages, a deck open, and a warp
+  const { ctx, a, b } = await twoPages(browser);
+
+  // Two hands on one board — the still has to say which is which.
+  const theirs = await firstEmpty(b);
+  await write(b, theirs, '7');
+  await expect.poll(() => digitAt(a, theirs)).toBe('7');
+  const mine = await firstEmpty(a);
+  await write(a, mine, '4');
+  await expect.poll(() => digitAt(b, mine)).toBe('4');
+
+  // Both digits are on disk before the deck reads it — the still is a disk read (D-3's seam),
+  // and a row that raced the 300ms debounce would be about the clock instead of the ink.
+  await expect
+    .poll(() =>
+      a.evaluate(
+        ([t, m]) => {
+          const raw = localStorage.getItem('sudoku-board-state');
+          const v = raw
+            ? (JSON.parse(raw) as { values: Record<string, number> }).values
+            : {};
+          return [v[String(t)], v[String(m)]].join(',');
+        },
+        [theirs, mine],
+      ),
+    )
+    .toBe('7,4');
+
+  // A opens the deck and steps off sudoku: its face stops being the live board and becomes
+  // the still. Card 0 is sudoku (the deck's own order). The WORDMARK, not the `g` shortcut —
+  // A's last act was writing a digit, so the caret is in a cell and `g` is a keystroke there.
+  await a.locator('button.logo-trigger').click();
+  await expect(a.locator('.game-gallery')).toBeVisible();
+  await a.locator('.gallery-viewport').press('ArrowRight');
+  await expect(a.locator('#gallery-card-0 .poster-cell .glyph-svg').first()).toBeVisible({
+    timeout: 30000,
+  });
+
+  const ink = await a.evaluate(
+    ([t, m]) => {
+      const strokeOf = (el: Element | null) =>
+        el ? getComputedStyle(el).stroke : 'none';
+      const still = document.querySelectorAll('#gallery-card-0 .poster-cell');
+      const board = document.querySelectorAll('.sudoku-cell');
+      const at = (list: NodeListOf<Element>, i: number) =>
+        strokeOf(list[i]?.querySelector('.glyph-svg path') ?? null);
+      return {
+        stillTheirs: at(still, t),
+        stillMine: at(still, m),
+        boardTheirs: at(board, t),
+        boardMine: at(board, m),
+      };
+    },
+    [theirs, mine],
+  );
+
+  // The board colours the two hands apart, and the still is the same picture cell for cell.
+  expect(ink.boardTheirs).not.toBe(ink.boardMine);
+  expect(ink.stillTheirs).toBe(ink.boardTheirs);
+  expect(ink.stillMine).toBe(ink.boardMine);
+
+  await ctx.close();
+});

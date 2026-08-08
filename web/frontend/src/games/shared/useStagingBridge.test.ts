@@ -300,3 +300,59 @@ describe("the mounted id", () => {
     expect(bridge.mountedGameId()).toBeNull();
   });
 });
+
+/**
+ * THE STILL OWES THE TABLE ITS COLOURS (T8-R13).
+ *
+ * A still is `values` + `givenCells` off disk, and every non-given digit in it was inked with
+ * whatever `--color-user-ink` resolved to on the reading page — so a peer's 7 and your own 5 read
+ * as one author on the very card the live board draws them apart on. The clock that separates
+ * them is in memory, never on disk, and it is about ONE board: the mounted one.
+ */
+describe("the still's authorship — a peer's digit keeps a peer's ink (T8-R13)", () => {
+  const SOURCES = [
+    { id: "sudoku", persistKey: "sudoku-board-state" },
+    { id: "futoshiki", persistKey: "futoshiki-board-state" },
+  ];
+  const PEER = { "9": { "--color-user-ink": "oklch(0.6 0.11 137.5deg)" } };
+
+  beforeEach(() => {
+    for (const s of SOURCES)
+      window.localStorage.setItem(
+        s.persistKey,
+        persistedBoard({
+          sizeKey: "size",
+          size: 3,
+          difficulty: "EASY",
+          given: ["0"],
+          mine: ["9"],
+        }),
+      );
+    bridge.backfillLedger(SOURCES);
+  });
+
+  it("the MOUNTED game's still carries the board's per-cell ink", () => {
+    bridge.publishMountedGame("sudoku");
+    bridge.registerAuthorInk(() => PEER);
+    expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+  });
+
+  it("no OTHER game's still does — the clock is about one shared board", () => {
+    bridge.publishMountedGame("sudoku");
+    bridge.registerAuthorInk(() => PEER);
+    // futoshiki's saved board was written in some other room, or in none; the mounted clock
+    // says nothing about whose hand wrote its digits, and a guess is what this row refuses.
+    expect(bridge.previewFor("futoshiki")?.authorInk).toBeUndefined();
+  });
+
+  it("a solo page carries none — the still is the one that shipped", () => {
+    bridge.publishMountedGame("sudoku");
+    bridge.registerAuthorInk(() => ({}));
+    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+  });
+
+  it("with no source registered at all the read is unchanged", () => {
+    bridge.publishMountedGame("sudoku");
+    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+  });
+});

@@ -252,6 +252,58 @@ describe("the ribbon on a shared board — consent, counted (M13)", () => {
   });
 });
 
+describe("where the armed ribbon stands (T8-R15)", () => {
+  /** jsdom lays nothing out, so the boxes here are FABRICATED and what the row pins is the
+   *  arithmetic the deck does with them — the anchor is the armed card's centre expressed in the
+   *  deck's own coordinates, which is a decision, not a measurement. The geometry itself is a
+   *  browser fact and is gated in `e2e/gallery-guard.spec.ts` row 7, both engines. The numbers
+   *  are the desk's real shape: a card whose centre is NOT the deck's middle, because with zero
+   *  edge air the end cards cannot travel there. */
+  it("the anchor is the armed card's centre in deck coordinates, not the deck's middle", async () => {
+    const box = (left: number, width: number) =>
+      ({
+        left,
+        width,
+        right: left + width,
+        x: left,
+        y: 0,
+        top: 0,
+        bottom: 0,
+        height: 0,
+        toJSON: () => ({}),
+      }) as DOMRect;
+    const rects = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: Element) {
+        switch (this.classList[0]) {
+          case "game-gallery":
+            return box(0, 1024); // the deck box: its middle is 512
+          case "gallery-card-slot": {
+            // A track wider than the frame — the desk's real shape, and the reason the end
+            // cards cannot travel to that middle.
+            const i = [...(this.parentElement?.children ?? [])].indexOf(this);
+            return box(112 + i * 340, 340);
+          }
+          case "gallery-guard":
+            return box(0, 320);
+          default:
+            return box(0, 0);
+        }
+      });
+    try {
+      const w = mountDeck({ dirty: true, currentId: "sudoku" });
+      await w.get(".gallery-viewport").trigger("keydown", { key: "d" });
+      await flushPromises();
+      // 112 + 340/2 = 282. The deck's middle is 512 — the number `left: 50%` handed the ribbon
+      // at every index, and the whole of the defect at the two end cards.
+      const style = w.get(".gallery-guard").attributes("style") ?? "";
+      expect(style).toContain("--guard-x: 282px");
+    } finally {
+      rects.mockRestore();
+    }
+  });
+});
+
 describe("the deck's roster echo (M14)", () => {
   it("the swatches go to the CHOSEN card alone", () => {
     const players = [player("a", 0), player("b", 137)];

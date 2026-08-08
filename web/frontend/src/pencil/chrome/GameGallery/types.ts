@@ -44,6 +44,13 @@ export interface GalleryPreview {
   values: Record<string, number>;
   givenCells: string[];
   saved: Record<string, unknown>;
+  /** WHOSE HAND WROTE EACH CELL (T8-R13) — `saved`'s twin in the one way that matters here: the
+   *  deck carries it and never reads it. It is position-keyed `--color-user-ink` rebindings for a
+   *  peer's cells, so a shared board's still inks its authors apart exactly as the live board
+   *  does. Declared rather than left to structural assignability because the deck now knowingly
+   *  carries authorship across the boundary, and a carriage nobody declared is one a tightening
+   *  of this type would silently drop. */
+  authorInk?: Record<string, Record<string, string>>;
 }
 
 /** One staging axis, as presentation data. `colorClass` is the crayon tier an option is

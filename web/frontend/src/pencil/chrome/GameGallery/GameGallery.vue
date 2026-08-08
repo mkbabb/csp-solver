@@ -147,6 +147,50 @@ const guardCard = computed(() =>
   guardIndex.value != null ? props.cards[guardIndex.value] : null,
 );
 
+/** The deck's own box — the ribbon's containing block, so the anchor below can be stated in its
+ *  coordinates. */
+const rootEl = ref<HTMLElement | null>(null);
+/** The armed ribbon's centre, in deck coordinates. Null → the deck's centre (the CSS fallback).
+ *
+ *  THE RIBBON STANDS OVER ITS OWN CARD (T8-R15). It was `left: 50%` on the deck box, which is
+ *  the FRAME's centre and not the chosen card's. With the desk's edge air at zero the end cards
+ *  cannot travel to the middle — `useCarouselGlide.targetScrollLeft` clamps indices 0 and 1 onto
+ *  one rest position and 3 and 4 onto another — so a ribbon pinned to the frame was correct only
+ *  at 1-3. Measured 1440×900, both engines, live edge: guard centre 720.0 at every index against
+ *  card centres 368 / 720 / 720 / 720 / 1072. At index 0 the note therefore stood 352px off the
+ *  card it named and squarely over futoshiki's face; at 4, over killer's. Index 0 is sudoku, the
+ *  deck's default pose, so the default case was the broken one.
+ *
+ *  ONE READ, AT ARM. The deck cannot travel while the ribbon is up — every arrow, Home/End,
+ *  click-to-warp and native snap runs `dismissGuard` before it moves — so there is nothing to
+ *  track per frame, and a re-arm after a snap is a fresh `guardIndex` transition that measures
+ *  again. */
+const guardX = ref<number | null>(null);
+/** The air the clamp keeps between the note and the window edge. It is what keeps the ribbon
+ *  WHOLE rather than merely aimed: a card centre near the edge would otherwise hang half a note
+ *  off screen. */
+const GUARD_EDGE_PX = 12;
+function anchorGuard() {
+  const i = guardIndex.value;
+  const root = rootEl.value;
+  const note = guardEl.value;
+  // The SLOT, not `#gallery-card-{i}`: the slot is the deck's own box (the id belongs to the
+  // card), it is what `useCarouselGlide` measures, and the card fills it under symmetric
+  // padding — so their centres are the same number and this one is addressable by index.
+  const slot = i != null ? root?.querySelectorAll(".gallery-card-slot")[i] : null;
+  if (!root || !note || !slot) {
+    guardX.value = null;
+    return;
+  }
+  const half = note.getBoundingClientRect().width / 2;
+  const box = slot.getBoundingClientRect();
+  const centre = Math.min(
+    Math.max(box.left + box.width / 2, GUARD_EDGE_PX + half),
+    window.innerWidth - GUARD_EDGE_PX - half,
+  );
+  guardX.value = centre - root.getBoundingClientRect().left;
+}
+
 /* ── THE TABLE, AND WHAT THE RIBBON OWES IT (T8-W3, M13) ───────────────────────────────────
  *
  * The ribbon has always been armed on `dirty` — a fact about YOUR marks — and said nothing
@@ -700,7 +744,10 @@ function onGuardKeydown(e: KeyboardEvent) {
 watch(guardIndex, (i, prev) => {
   if (i !== null) {
     guardAlert.value = `${guardTitle.value} ${guardSub.value}. Choose keep, or ${guardVerb.value}.`;
-    nextTick(() => guardEl.value?.focus({ preventScroll: true }));
+    nextTick(() => {
+      anchorGuard(); // before the focus, so the note is already over its card when it takes it
+      guardEl.value?.focus({ preventScroll: true });
+    });
     return;
   }
   guardAlert.value = "";
@@ -746,6 +793,7 @@ onMounted(async () => {
 
 <template>
   <div
+    ref="rootEl"
     class="game-gallery"
     :class="{ 'is-coarse': coarse }"
     :style="{ '--card-step-ms': `${MOTION.cardStepMs}ms` }"
@@ -826,6 +874,7 @@ onMounted(async () => {
         v-if="guardCard"
         ref="guardEl"
         class="gallery-guard"
+        :style="{ '--guard-x': guardX != null ? `${guardX}px` : undefined }"
         role="alertdialog"
         aria-modal="true"
         tabindex="-1"
@@ -1077,7 +1126,9 @@ onMounted(async () => {
 /* ── The mid-game guard ribbon (Wave D §4) — an overlay centered on the deck ── */
 .gallery-guard {
   position: absolute;
-  left: 50%;
+  /* The ARMED CARD's centre, measured at arm (`anchorGuard`); the deck's own centre until then,
+     which is where the note stood at every index before T8-R15. */
+  left: var(--guard-x, 50%);
   /* Just below the deck center — reads as emerging from the centered (chosen) card. */
   top: calc(50% + 3.5rem);
   transform: translateX(-50%);
