@@ -25,19 +25,19 @@ carries the survivors.
 - **CH-67** — WATCH: the class invariant holds across both habitats (the release fold in
   `useCarouselGlide.ts`; the capture band W4 gated). W4 killed the vueuse-SVG-lens species.
 - **T8-R01** — the table-follows semantics, TERMINAL-CLOSED on the owner's word.
-- **T8-R02** — the mid-dusk ink dip, BALLOT (default: ship as-is).
-- **T8-R03** — the cold-mount reveal wipe, BALLOT (default: the wipe stays).
-- **T8-R04** — the far deck tier at 0.58 dark, BALLOT (default: ship; the re-look decides).
+- **T8-R02** — the mid-dusk ink dip, TERMINAL-CLOSED (default fired at the owner's ratification, 2026-08-07 §9.1).
+- **T8-R03** — the cold-mount reveal wipe, TERMINAL-CLOSED (default fired at the ratification: the wipe stays).
+- **T8-R04** — the far deck tier at 0.58 dark, TERMINAL-CLOSED (default fired at the ratification).
 - **T8-R05** — sudoku 16×16 MEDIUM generation 684ms, BANKED (owner: solver lane).
 - **T8-R06** — the FOLLOW ribbon narrowed to peers ≥ 1, TERMINAL-CLOSED.
 - **T8-R07** — boot suppression silences the row write-in, TERMINAL-CLOSED.
 - **T8-R08** — A's bounded leaks (adopted-credit, crashed-tab claim), BANKED.
 - **T8-R09** — the e2e contention class, TERMINAL-CLOSED (documented; controls poll).
 - **T8-R10** — the r13 bench residue, FOLDED into this WGATE.
-- **T8-R11** — the badge below 768 has no gallery mount, BALLOT (default: stands).
+- **T8-R11** — the badge below 768 has no gallery mount, TERMINAL-CLOSED (default fired at the ratification).
 - **T8-R12** — the M19 law's tranche execution, TERMINAL-CLOSED (the law is permanent).
 - **T8-R13** — the deck's preview draws peer digits in the local ink, BANKED (owner: the deck's preview reader).
-- **T8-R14** — the aria register splits from the ink register (Title Case declaratives over lowercase terse; the fill button ships two wordings of its own helper), BALLOT (default: ship as-is).
+- **T8-R14** — the aria register splits from the ink register (Title Case declaratives over lowercase terse; the fill button ships two wordings of its own helper), TERMINAL-CLOSED (default fired at the ratification: ships as-is).
 - **T8-R15** — the armed guard ribbon is viewport-anchored and covers a flank card at deck edge indices (sudoku's index 0 is the default case), BANKED (owner: the deck).
 
 Also restamped at this close, in the living ledger: **CH-35** (its dated default fired at

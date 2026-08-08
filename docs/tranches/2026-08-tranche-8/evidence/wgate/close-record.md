@@ -49,7 +49,8 @@ Whole-tree battery at `8d9139c2`/`4c6ea788`, quiet box:
 | CI at `bdd155d3` | **SUCCESS — run 30957293328, sixteen lanes** (the `4c6ea788` run red its ledger step for the then-missing row set; cured same day) |
 | CI at `84b14789` (the cure slice) | **SUCCESS — run 31196882228, sixteen lanes, first attempt** |
 
-## §4 · The ladder (U-10: no mark closes here — every position awaits the owner's eye)
+## §4 · The ladder (U-10 — RATIFIED whole on the owner's word, 2026-08-07: §9.1; every
+row below reads as the position AT the seal)
 
 | mark | position | where the cure lives |
 |---|---|---|
@@ -394,3 +395,22 @@ default case. Pre-existing W3-B geometry, not minted by the cure slice.
 
 The seal is this record's own commit (the first commit touching this §9); its sixteen-
 lane CI conclusion follows on push and belongs to the seal commit's own run.
+(Landed: seal `f1505c9c`, CI run 31198835757, sixteen lanes, SUCCESS.)
+
+### §9.1 · Ratification (2026-08-07, the owner's word)
+
+**RATIFIED.** The owner's word — "Ratify the above." — landed on the seal report
+whole. What that word closes, stated exactly:
+
+- **The §4 ladder**: all twenty marks move cured-pending-re-look → **RATIFIED-CLOSED**.
+  This was a ratification of the presented report, not a per-mark visual walk; the
+  record says so, and any mark re-opens on the owner's eye at any time (the owner's
+  standing prerogative, not a row).
+- **The five ballots fire their defaults**: T8-R02 (dusk dip ships), T8-R03 (the reveal
+  wipe stays), T8-R04 (the far tier ships), T8-R11 (the badge stays desk-only), T8-R14
+  (the aria register ships as-is). All five → TERMINAL-CLOSED on the fired default.
+- **The banked rows stay banked**, exactly as presented: T8-R05 (top-size generation),
+  T8-R08 (A's bounded leaks), T8-R13 (peer-ink previews), T8-R15 (the viewport-anchored
+  ribbon). The owner's paired order — "Then continue." — is the owner ask that opens
+  the R13 + R15 cure front immediately (T8.1); R05/R08 keep their named triggers.
+- M16 and M19 remain permanent law; CH-67 remains a watch.
