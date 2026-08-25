@@ -12,9 +12,46 @@
  * directory died (the futoshiki lane's F2 precedent). Everything is PURE and unit-testable
  * without instantiating the Worker.
  */
+import type { ConflictSink } from "@games/shared/conflicts";
 import type { ClueCodec } from "@games/shared/solver/client";
 import { demandGroup } from "@games/shared/solver/wire";
 import type { ThermoLine } from "./types";
+
+/**
+ * ── T9-W1 §1.2 — THE THERMOMETER JOINS THE BOARD'S LAW ─────────────────────────────────────
+ *
+ * Thermo's chain ordering was absent from the conflict derivation entirely: the boxed geometry
+ * bought the row/column/box sweep and nothing else, so a board whose ONLY fault ran DOWN a tube
+ * got graded 'failed' and sent the reader to a row with nothing wrong in it. Same shape as
+ * futoshiki's `inequalityViolations` — a factory over the printed furniture, returning
+ * `findConflicts`' own `extra` sink.
+ *
+ * The rule is the tube's own and it is a rule about the WHOLE PATH, not each step: values
+ * strictly increase bulb to tip, so any two filled cells in path order that fail to increase
+ * are wrong with or without gaps between them. Every failing pair is circled, not merely the
+ * first — a reader shown one end of a fall cannot see which end to change. Positions are
+ * gathered before they are handed on, so a cell caught in two falls is reported once.
+ */
+export function chainViolations(thermos: ThermoLine[]): ConflictSink {
+  return (values, add) => {
+    const wrong = new Set<number>();
+    for (const path of thermos) {
+      for (let i = 0; i < path.length; i++) {
+        const lower = values[String(path[i])] ?? 0;
+        if (lower === 0) continue;
+        for (let j = i + 1; j < path.length; j++) {
+          const upper = values[String(path[j])] ?? 0;
+          if (upper === 0) continue;
+          if (lower >= upper) {
+            wrong.add(path[i]);
+            wrong.add(path[j]);
+          }
+        }
+      }
+    }
+    for (const pos of wrong) add(pos);
+  };
+}
 
 /** Pack `ThermoLine[]` into the length-prefixed flat wire buffer. */
 export function encodeThermometers(thermos: ThermoLine[]): Uint32Array<ArrayBuffer> {

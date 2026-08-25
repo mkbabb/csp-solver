@@ -239,7 +239,6 @@ describe("storage precedence", () => {
     values: { 0: 4 },
     givenCells: ["0"],
     originalGivenCells: ["0"],
-    overriddenCells: [],
     solvedValues: {},
     boardGeneration: 2,
   };

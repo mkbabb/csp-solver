@@ -40,12 +40,14 @@ import type { SolveState, SolveStats } from "@games/shared/types";
 /** The whole-puzzle pool blob's shared core (T4-WU) — the cell state a `board` entry
  *  restores. Sets flatten to sorted arrays for a canonical content hash. A game's own
  *  furniture (Futoshiki's printed inequalities) rides along as `TExtra`, merged in by the
- *  domain's `snapshotExtra`, so a restored board is complete. */
+ *  domain's `snapshotExtra`, so a restored board is complete.
+ *
+ *  ONE GIVEN LIST (T9-W1 §1.1). The blob carried `given` AND `overridden` beside `origGiven`
+ *  so a demoted clue could be replayed as demoted. Givens are inviolable now, so the three
+ *  lists could only ever agree — `origGiven` is the truth and the live set derives from it. */
 interface CoreBoardBlob {
   values: Record<string, number>;
-  given: string[];
   origGiven: string[];
-  overridden: string[];
   solved: Record<string, number>;
 }
 /** The user pencil-marks that annotated a board — travelled alongside it in the pool. */
@@ -55,12 +57,16 @@ interface MarksBlob {
 }
 
 /** The persisted-board fields the machine restores directly (both games' `PersistedBoard`
- *  carry these; each adds its own size key + furniture, restored via the domain hooks). */
+ *  carry these; each adds its own size key + furniture, restored via the domain hooks).
+ *
+ *  `overriddenCells` is gone from what the machine READS (T9-W1 §1.1): a board written by an
+ *  older build still carries it on disk, and the restore below ignores it and rebuilds the
+ *  live given set from `originalGivenCells` instead, so a clue a demotion split comes back
+ *  whole. An extra field on disk satisfies this shape — nothing has to be migrated. */
 interface CommonPersisted {
   values: Record<string, number>;
   givenCells: string[];
   originalGivenCells: string[];
-  overriddenCells: string[];
   solvedValues: Record<string, number>;
   boardGeneration: number;
 }
@@ -81,9 +87,26 @@ interface CommonPersistPayload<TDiff extends string> {
   values: Record<string, number>;
   givenCells: string[];
   originalGivenCells: string[];
-  overriddenCells: string[];
   solvedValues: Record<string, number>;
   boardGeneration: number;
+}
+
+/**
+ * WHAT A WRITE DID (T9-W1 §1.1, family F17 — ballot B7's default).
+ *
+ * `applyCellValue` is the one primitive every digit passes through — a keystroke, an undo
+ * replay, a peer's move — so the board's one inviolable rule is stated there and five games
+ * inherit it. The refusal is a RETURN, not a thrown fault and not a silent no-op: the input
+ * layer asks, the model rules, and the surfaces that speak the answer read one event.
+ */
+export type CellWriteOutcome = "written" | "refused-given";
+
+/** The refusal, published for the surfaces that draw it and say it. `seq` counts attempts, so
+ *  the same clue refused twice is two events a watcher can tell apart. */
+export interface CellRefusal {
+  pos: number;
+  reason: "given";
+  seq: number;
 }
 
 /** The last-solve result the machine reads off `domain.solve` (both games' `SolveResponse`). */
@@ -203,8 +226,10 @@ export function useGameState<
   const values = ref<Record<string, number>>({});
   const givenCells = ref<Set<string>>(new Set());
   const originalGivenCells = ref<Set<string>>(new Set());
-  const overriddenCells = ref<Set<string>>(new Set());
   const animatingCells = ref<Set<string>>(new Set());
+  // T9-W1 §1.1 — the refused write, published once per attempt. Null until a clue is typed at.
+  const lastRefusal = ref<CellRefusal | null>(null);
+  let refusalSeq = 0;
   const solveState = ref<SolveState>("idle");
   const solvedValues = ref<Record<string, number>>({});
   // Stats from the last completed solve (W6 stat-line). Set only by solve() — the peek path
@@ -260,8 +285,9 @@ export function useGameState<
     // below never fires for a replay; each effect announces its own board change or the room
     // never hears an undo. No echo risk: a peer's write arrives via `sessionSource`, not here.
     applyValue: (pos, value) => {
-      applyCellValue(pos, value);
-      noteWrite(pos, value, false);
+      // A replay can no longer reach a given (a refused write was never recorded), but the
+      // room only hears what actually landed — the announce follows the outcome, not the call.
+      if (applyCellValue(pos, value) === "written") noteWrite(pos, value, false);
     },
     applyHintInk: (pos, value) => {
       applyHintInk(pos, value);
@@ -315,13 +341,35 @@ export function useGameState<
   //  · `restore` adopts a board off the wire AND clears the log. THE EPOCH RULE: undo never
   //    crosses a board swap, so the whole class of "my undo restores a board nobody else has"
   //    dies in one line. (Solo is untouched: no session, no `restore`.)
+  // T9-W1 §1.3 — the wire's suspicion at the READ site. `restore` and the staged-follow
+  // consume both adopt a blob straight off the relay; a bare cast let one malformed frame
+  // throw mid-handler. The core shape is checked before any read (the board's three records,
+  // the marks' two slots — `TExtra` stays the same-game contract it always was); a misshapen
+  // blob adopts nothing, which is the answer the parity suite already pins for `b: null`
+  // epoch-only frames.
+  function wellFormedBlob(v: unknown): v is { b: BoardBlob; m: MarksBlob } {
+    const bag = (x: unknown): x is Record<string, unknown> =>
+      typeof x === "object" && x !== null && !Array.isArray(x);
+    return (
+      bag(v) &&
+      bag(v.b) &&
+      bag(v.b.values) &&
+      Array.isArray(v.b.origGiven) &&
+      bag(v.b.solved) &&
+      bag(v.m) &&
+      bag(v.m.corner) &&
+      bag(v.m.center)
+    );
+  }
+
   const sessionSource = {
     applyValue: (pos: number, value: number, solved: boolean) =>
       solved ? applyHintInk(pos, value) : applyCellValue(pos, value),
     snapshot: () => ({ b: snapshotBoard(), m: snapshotMarks() }),
     size: () => solverSize.value,
     restore: (blob: unknown, size: number) => {
-      const { b, m } = blob as { b: BoardBlob; m: MarksBlob };
+      if (!wellFormedBlob(blob)) return;
+      const { b, m } = blob;
       // THE SIZE ARRIVES WITH THE BOARD (T8-W3, defect D-1). The blob carries no dimensions, so
       // a peer adopting a board published after a size-changing Deal used to pour 256 values
       // into a 9×9 model and corrupt silently. Re-dimensioning in place is not a new
@@ -354,7 +402,6 @@ export function useGameState<
     values.value = {};
     givenCells.value = new Set();
     originalGivenCells.value = new Set();
-    overriddenCells.value = new Set();
     domain.resetFurniture();
     animatingCells.value = new Set();
     solveState.value = "idle";
@@ -377,6 +424,7 @@ export function useGameState<
     gradeSolved.value = false;
     graded.value = false; // W9-B1 — a blank/reset/restored board is ungraded (dashed placeholder)
     hintReasoning.value = null;
+    lastRefusal.value = null; // an emptied or swapped board owes no refusal either
   }
 
   function clearBoard() {
@@ -393,7 +441,6 @@ export function useGameState<
     }
     givenCells.value = new Set();
     originalGivenCells.value = new Set();
-    overriddenCells.value = new Set();
     animatingCells.value = new Set();
     // Furniture (Futoshiki's inequalities) is permanent: a clear blanks the cells but leaves the
     // printed constraints, so the board stays solvable. `clearUndo` DIES (T4-WU): a clear is now
@@ -405,36 +452,48 @@ export function useGameState<
     recordBoard(prevBlob, snapshotBoard(), prevMarks, EMPTY_MARKS, "clear");
   }
 
-  // The cell-write primitive, shared by user edits and undo/redo replay. Given-cell immunity is
-  // structural: a pristine given is never a recorded edit target (editing one overrides it first),
-  // so undo/redo never writes into a live given.
-  function applyCellValue(pos: number, value: number) {
+  // THE CELL-WRITE PRIMITIVE — and, since T9-W1 §1.1, the place the given cell's law is stated.
+  //
+  // Every digit the board ever takes passes here: a keystroke, an undo replay, a peer's move.
+  // It used to DEMOTE a clue that was written over — `givenCells.delete` → `overriddenCells.add`
+  // — so a keystroke re-labelled the clue and a Backspace erased it, while the cell's own name
+  // still read "given clue N" and the heavy-black rendering still called it printed. The board
+  // could be driven unsolvable by the first interaction on a fresh deal.
+  //
+  // A given is inviolable, and an ERASE IS A WRITE, so both are refused at the same gate. The
+  // refusal is returned rather than swallowed: the caller records nothing, and `lastRefusal`
+  // carries the event to the surfaces that draw it and say it.
+  function applyCellValue(pos: number, value: number): CellWriteOutcome {
     const key = String(pos);
-    if (originalGivenCells.value.has(key)) {
-      givenCells.value.delete(key);
-      overriddenCells.value.add(key);
+    if (givenCells.value.has(key)) {
+      lastRefusal.value = { pos, reason: "given", seq: ++refusalSeq };
+      return "refused-given";
     }
     // If overriding a solver-introduced cell, remove only THIS cell from solvedValues (other
     // solved cells keep their sparkle-rainbow styling).
     if (key in solvedValues.value) {
       const { [key]: _, ...rest } = solvedValues.value;
       solvedValues.value = rest;
-      overriddenCells.value.add(key);
     }
     values.value[key] = value;
     hintReasoning.value = null; // T4-W7 — an edit disarms a stale armed hint
+    lastRefusal.value = null; // T9-W1 §1.1 — ink that LANDS retracts the spoken refusal
     // Revert solve state so the board no longer shows success/failure.
     if (solveState.value !== "idle") {
       solveState.value = "idle";
       solveStats.value = null; // the stat-line goes stale with the grade (W6)
     }
     queueSave();
+    return "written";
   }
 
-  function setCell(pos: number, value: number) {
+  function setCell(pos: number, value: number): CellWriteOutcome {
     const prev = values.value[String(pos)] ?? 0;
-    applyCellValue(pos, value);
-    recordEdit(pos, prev, value);
+    const outcome = applyCellValue(pos, value);
+    // A refused write is not history. Recording it would put an entry on the spine whose undo
+    // restores the value that never changed — and lift `isDirty` over a board nobody edited.
+    if (outcome === "written") recordEdit(pos, prev, value);
+    return outcome;
   }
 
   // A fresh/blank board carries no marks — the constant `nextMarks` for a deal/clear/resize board
@@ -446,12 +505,23 @@ export function useGameState<
   function snapshotBoard(): BoardBlob {
     return {
       values: { ...values.value },
-      given: Array.from(givenCells.value).sort(),
       origGiven: Array.from(originalGivenCells.value).sort(),
-      overridden: Array.from(overriddenCells.value).sort(),
       solved: { ...solvedValues.value },
       ...domain.snapshotExtra(),
     } as BoardBlob;
+  }
+
+  /** The live given set a board's own clue list implies (T9-W1 §1.1) — the ONE derivation every
+   *  restore path uses, so the two names can never drift apart again. The non-zero test is what
+   *  keeps a board written by an older build honest: a clue that build ERASED has no digit left
+   *  to restore, and calling that cell a given would mint a square nobody could ever fill. */
+  function givensFrom(
+    orig: Iterable<string>,
+    cells: Record<string, number>,
+  ): Set<string> {
+    const live = new Set<string>();
+    for (const key of orig) if ((cells[key] ?? 0) !== 0) live.add(key);
+    return live;
   }
 
   // Redo of hint ink — write the digit in the solver's own tone (no record); the reveal draw-in
@@ -460,7 +530,6 @@ export function useGameState<
     const key = String(pos);
     values.value[key] = value;
     solvedValues.value = { ...solvedValues.value, [key]: value };
-    overriddenCells.value.delete(key);
     animatingCells.value = new Set([key]);
     if (solveState.value !== "idle") {
       solveState.value = "idle";
@@ -507,7 +576,6 @@ export function useGameState<
       values.value = {};
       givenCells.value = new Set();
       originalGivenCells.value = new Set();
-      overriddenCells.value = new Set();
 
       for (let i = 0; i < totalCells.value; i++) values.value[String(i)] = 0;
       for (const [pos, val] of Object.entries(board.values)) {
@@ -526,6 +594,7 @@ export function useGameState<
       gradeSolved.value = gradeResult.solved;
       graded.value = true; // W9-B1 — the engine ran on a dealt board; the tally is defensible
       hintReasoning.value = null; // a fresh deal voids any armed hint
+      lastRefusal.value = null; // and any spoken refusal with it
       domain.dropBoardParam(); // a freshly-dealt board voids the shared permalink
       // T4-WU epoch parity (crit #3): a deal bumps the generation — the void-watch voids user
       // marks, the peek cache invalidates, and the generation becomes a valid per-op stale-drop
@@ -678,7 +747,6 @@ export function useGameState<
       const prev = values.value[key] ?? 0;
       values.value[key] = p.value;
       newlyFilled[key] = p.value;
-      overriddenCells.value.delete(key);
       cellsToAnimate.add(key);
       deltas.push({ pos: p.cell, prev, next: p.value, tone: "solved" });
     }
@@ -686,6 +754,7 @@ export function useGameState<
     solvedValues.value = { ...solvedValues.value, ...newlyFilled };
     animatingCells.value = cellsToAnimate;
     hintReasoning.value = null; // the board changed under any armed hint
+    lastRefusal.value = null; // and under any spoken refusal
     if (solveState.value !== "idle") {
       solveState.value = "idle";
       solveStats.value = null;
@@ -709,20 +778,36 @@ export function useGameState<
       return;
     }
     // First press: the cheapest named single, preferring the focused cell when it is forced.
+    //
+    // THE LIVE SET IS THE PREDICATE (T9-W1 §1.1). Both tests below asked `originalGivenCells`,
+    // which was the pristine clue LIST rather than the board's current clues — the two agree on
+    // every board this build deals, and they part on exactly one: a board saved by an older
+    // build whose demotion ERASED a clue. That cell is writable now, so a hint that refuses to
+    // fill it would leave a square the player can neither reason about nor be helped with. What
+    // the hint may not touch is what a write may not touch — one predicate, both.
     const key = String(pos);
-    const preferred = originalGivenCells.value.has(key) ? undefined : pos;
+    const preferred = givenCells.value.has(key) ? undefined : pos;
     const step = domain.hint(values.value, solverSize.value, preferred);
     if (step) {
       hintReasoning.value = step;
       return;
     }
     // Fallback — no nameable single: reveal the focused cell from the answer key, unnamed.
-    if (originalGivenCells.value.has(key)) return; // givens already show the answer
+    if (givenCells.value.has(key)) return; // givens already show the answer
     let solution: Record<string, number>;
     try {
       solution = await peekSolution();
-    } catch {
-      return; // solve unavailable — fail quietly
+    } catch (e) {
+      // T9-W1 §1.2 — the hint path classifies solver rejections exactly as the deal and solve
+      // paths do (the T7-adjudicated class's second instance). It used to swallow everything:
+      // a provably-broken board and a dead worker alike answered a Hint press with nothing.
+      solveState.value = classifyError(e).kind === "teacher-red" ? "failed" : "error";
+      errorCode.value =
+        e instanceof Error && "code" in e
+          ? String((e as { code?: unknown }).code ?? "")
+          : "";
+      errorMessage.value = e instanceof Error ? e.message : "Hint unavailable";
+      return;
     }
     const val = solution[key] ?? 0;
     if (val === 0 || values.value[key] === val) return;
@@ -772,9 +857,8 @@ export function useGameState<
   function restoreBoardState(board: BoardBlob, marks: MarksBlob) {
     restoring.value = true;
     values.value = { ...board.values };
-    givenCells.value = new Set(board.given);
     originalGivenCells.value = new Set(board.origGiven);
-    overriddenCells.value = new Set(board.overridden);
+    givenCells.value = givensFrom(board.origGiven, board.values);
     domain.restoreExtra(board); // Futoshiki: re-hydrate the inequality furniture
     solvedValues.value = { ...board.solved };
     animatingCells.value = new Set();
@@ -830,9 +914,12 @@ export function useGameState<
   // ── Restore from persisted state (no animation) ──────────────────
   function restoreBoard(persisted: TPersisted) {
     values.value = { ...persisted.values };
-    givenCells.value = new Set(persisted.givenCells);
     originalGivenCells.value = new Set(persisted.originalGivenCells);
-    overriddenCells.value = new Set(persisted.overriddenCells);
+    // THE SAVED BOARD LOADS CLEAN (T9-W1 §1.1). `givenCells` on disk is whatever the writing
+    // build left — an older one wrote it MINUS every clue it had demoted. The clue list is the
+    // truth, so the live set is derived from it and the saved one is ignored: a player who
+    // typed over a clue before the law landed opens their board with the clue standing.
+    givenCells.value = givensFrom(persisted.originalGivenCells, persisted.values);
     domain.restorePersistedFurniture(persisted); // Futoshiki: inequalities from the saved board
     solvedValues.value = { ...persisted.solvedValues };
     boardGeneration.value = persisted.boardGeneration;
@@ -853,7 +940,6 @@ export function useGameState<
         values: values.value,
         givenCells: Array.from(givenCells.value),
         originalGivenCells: Array.from(originalGivenCells.value),
-        overriddenCells: Array.from(overriddenCells.value),
         solvedValues: solvedValues.value,
         boardGeneration: boardGeneration.value,
       },
@@ -934,7 +1020,12 @@ export function useGameState<
   // rides, id-keyed to this mount, and it OUTRANKS both: a staged pair says "deal me this" and
   // a saved board says "resume this", where the room is already holding the answer. The size
   // lands here so the model is built at the right dimensions before anything reads them.
-  const followed = consumeBoardFollow(mountedGameId());
+  // T9-W1 §1.3 — the staged follow is the same wire blob `restore` adopts, read one mount
+  // later; it gets the same suspicion at the same depth. A misshapen stage is refused WHOLE
+  // (size included) and the mount boots as if nothing was staged.
+  const stagedFollow = consumeBoardFollow(mountedGameId());
+  const followed =
+    stagedFollow && wellFormedBlob(stagedFollow.blob) ? stagedFollow : null;
   if (followed) {
     solverSize.value = followed.size;
     pendingSize.value = followed.size;
@@ -1051,8 +1142,11 @@ export function useGameState<
     values,
     givenCells,
     originalGivenCells,
-    overriddenCells,
     animatingCells,
+    /** T9-W1 §1.1 — the last refused write, or null. The status region SPEAKS off this one
+     *  event (`seq` makes a second attempt on the same clue audible); the cell DRAWS its own
+     *  refusal locally off the given predicate — the same law, at its synchronous surface. */
+    lastRefusal,
     solveState,
     solvedValues,
     solveStats,

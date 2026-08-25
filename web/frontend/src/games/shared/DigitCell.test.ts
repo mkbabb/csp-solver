@@ -26,7 +26,8 @@ function mountCell(overrides: Record<string, unknown> = {}) {
       position: 0,
       value: 0,
       isGiven: false,
-      isOverridden: false,
+      // `isOverridden` retired with the demotion (T9-W1 §1.1) — the cell declares no such prop,
+      // so passing it here would only stamp a stray attribute on the root.
       isSolved: false,
       isRevealed: false,
       noiseDelay: 0,
@@ -87,9 +88,17 @@ describe("DigitCell (boxed) — native bounded entry contract (T4-WM §1)", () =
   it("handleInput clamps to the digit width — an append on a filled cell overrides in place", async () => {
     // The real bound: on a single-digit board the LAST digit wins (one-keystroke override),
     // so an append of '3' onto '9' commits 3, never 93.
+    //
+    // THE CARET IS THE PREMISE, and since T9-W1 §1.1 it is stated rather than inherited: the
+    // clamp reads the digits ending AT THE CARET, and this row is the APPEND pose (caret past
+    // the new character, at the end). It used to pass on jsdom's value setter happening to
+    // leave the caret there — which is why the head-of-field pose went unnoticed for a
+    // campaign. That pose is pinned in `DigitCell.givens.test.ts`.
     const wrapper = mountCell({ boardSize: 9, value: 9 });
     const input = wrapper.get("input");
-    (input.element as HTMLInputElement).value = "93";
+    const el = input.element as HTMLInputElement;
+    el.value = "93";
+    el.setSelectionRange(2, 2);
     await input.trigger("input");
     expect(lastUpdate(wrapper)).toEqual([0, 3]);
   });
@@ -97,7 +106,9 @@ describe("DigitCell (boxed) — native bounded entry contract (T4-WM §1)", () =
   it("two-digit entry works at 16×16 (values 10–16 commit whole)", async () => {
     const wrapper = mountCell({ boardSize: 16 });
     const input = wrapper.get("input");
-    (input.element as HTMLInputElement).value = "12";
+    const el = input.element as HTMLInputElement;
+    el.value = "12";
+    el.setSelectionRange(2, 2);
     await input.trigger("input");
     expect(lastUpdate(wrapper)).toEqual([0, 12]);
   });

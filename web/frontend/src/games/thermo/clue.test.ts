@@ -4,7 +4,15 @@
  * and one protocol over one worker leaves the buffer shape as the only per-game wire fact.
  */
 import { describe, it, expect } from "vitest";
-import { encodeThermometers, decodeThermometers, thermoClue } from "./clue";
+import {
+  encodeThermometers,
+  decodeThermometers,
+  thermoClue,
+  chainViolations,
+} from "./clue";
+import { findConflicts } from "@games/shared/conflicts";
+import { formatConflictNote } from "@games/shared/techniqueVoice";
+import { thermoSpec } from "./spec";
 import type { ThermoLine } from "./types";
 
 describe("thermo clue seam — the thermometer wire codec", () => {
@@ -52,5 +60,66 @@ describe("thermo clue seam — the thermometer wire codec", () => {
   it("is the ONE pair the spec spreads and the solver client is handed", () => {
     expect(thermoClue.encode).toBe(encodeThermometers);
     expect(thermoClue.decode).toBe(decodeThermometers);
+  });
+});
+
+// ── T9-W1 §1.2 — THE THERMOMETER JOINS THE BOARD'S LAW ─────────────────────────────────────
+// Thermo's chain ordering was absent from the conflict derivation entirely: a board whose only
+// fault ran DOWN a tube was graded 'failed' and told to check a row with nothing wrong in it.
+// The rule is the tube's own: values strictly increase bulb to tip, so any two filled cells in
+// path order that do not increase are provably wrong, gaps between them or not.
+describe("thermo clue seam — the chain-order conflict sink", () => {
+  const sweep = (thermos: ThermoLine[], values: Record<string, number>): number[] => {
+    const hit: number[] = [];
+    chainViolations(thermos)(values, (pos) => hit.push(pos));
+    return hit.sort((a, b) => a - b);
+  };
+
+  it("a value that falls along the tube circles the pair that fell", () => {
+    expect(sweep([[0, 4, 8]], { "0": 3, "4": 2 })).toEqual([0, 4]);
+  });
+
+  it("two equal values along the tube are wrong too (the increase is strict)", () => {
+    expect(sweep([[0, 4]], { "0": 2, "4": 2 })).toEqual([0, 4]);
+  });
+
+  it("reads across an empty cell — the order is the whole path's, not each step's", () => {
+    expect(sweep([[0, 4, 8]], { "0": 3, "8": 2 })).toEqual([0, 8]);
+  });
+
+  it("a rising tube is left alone, filled or part filled", () => {
+    expect(sweep([[0, 4, 8]], { "0": 1, "4": 2, "8": 3 })).toEqual([]);
+    expect(sweep([[0, 4, 8]], { "0": 1, "8": 3 })).toEqual([]);
+    expect(sweep([[0, 4, 8]], { "4": 2 })).toEqual([]);
+  });
+
+  it("an empty tube and an empty set both say nothing", () => {
+    expect(sweep([[0, 4, 8]], {})).toEqual([]);
+    expect(sweep([], { "0": 1 })).toEqual([]);
+  });
+
+  it("a one-cell tube can never be out of order", () => {
+    expect(sweep([[5]], { "5": 4 })).toEqual([]);
+  });
+
+  it("every falling pair on a longer tube is circled, not just the first", () => {
+    expect(sweep([[0, 4, 8, 12]], { "0": 4, "4": 3, "8": 2 })).toEqual([0, 4, 8]);
+  });
+
+  it("names the thermometer in the verdict when nothing else on the board is broken", () => {
+    const c = findConflicts({ "0": 3, "4": 2 }, 4, {
+      subgridSize: 2,
+      extra: chainViolations([[0, 4, 8]]),
+      extraUnit: "thermometer",
+    });
+    expect(c.unit).toEqual({ kind: "thermometer", index: null });
+    expect(formatConflictNote(c.unit)).toBe("check the thermometer");
+  });
+
+  it("is the sink the spec hands the board", () => {
+    expect(thermoSpec.clues?.conflicts).toEqual({
+      unit: "thermometer",
+      sink: chainViolations,
+    });
   });
 });

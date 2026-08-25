@@ -14,12 +14,62 @@
  * wire and the permalink can never disagree about what a cage is.
  */
 import type { CageFigure } from "@games/shared/CageOverlay.vue";
+import type { ConflictSink } from "@games/shared/conflicts";
 import type { ClueCodec } from "@games/shared/solver/client";
 import { demandGroup } from "@games/shared/solver/wire";
 import type { KillerCage } from "./types";
 
 export function cageFigures(cages: KillerCage[]): CageFigure[] {
   return cages.map((c) => ({ cells: c.cells, label: String(c.sum) }));
+}
+
+/**
+ * ── T9-W1 §1.2 — THE CAGE JOINS THE BOARD'S LAW ────────────────────────────────────────────
+ *
+ * Killer's cage arithmetic was absent from the conflict derivation entirely: the boxed geometry
+ * bought the row/column/box sweep and nothing else, so a board whose ONLY fault was a cage
+ * total got graded 'failed' and sent the reader to a row with nothing wrong in it. This is
+ * futoshiki's `inequalityViolations` shape exactly — a factory over the printed furniture,
+ * returning `findConflicts`' own `extra` sink — so the board binds it without adapting it.
+ *
+ * A cage carries TWO relations and the sweep reports the tighter one it can prove:
+ *   · all-different, provable the moment two of its filled cells agree. Only the REPEAT is
+ *     circled then, and the cage's arithmetic is not second-guessed: the repeat is the whole
+ *     fault, and circling cells that may yet be right would be the red pencil lying.
+ *   · the printed total, provable when the cage is full (the sum missed it) or when the filled
+ *     cells have already OVERSHOT it — every empty cell holds at least 1, so a cage whose
+ *     filled sum plus one-per-empty exceeds the label cannot reach it whatever goes in.
+ * Anything short of a proof stays silent: a half-written cage inside its total is not wrong,
+ * it is unfinished.
+ */
+export function cageViolations(cages: KillerCage[]): ConflictSink {
+  return (values, add) => {
+    for (const cage of cages) {
+      const held = new Map<number, number[]>();
+      let filled = 0;
+      let sum = 0;
+      for (const pos of cage.cells) {
+        const val = values[String(pos)] ?? 0;
+        if (val === 0) continue;
+        filled++;
+        sum += val;
+        const bucket = held.get(val);
+        if (bucket) bucket.push(pos);
+        else held.set(val, [pos]);
+      }
+      let repeated = false;
+      for (const bucket of held.values()) {
+        if (bucket.length > 1) {
+          for (const pos of bucket) add(pos);
+          repeated = true;
+        }
+      }
+      if (repeated) continue;
+      const empty = cage.cells.length - filled;
+      const wrong = empty === 0 ? sum !== cage.sum : sum + empty > cage.sum;
+      if (wrong) for (const pos of cage.cells) add(pos);
+    }
+  };
 }
 
 /**

@@ -64,6 +64,21 @@ const CONFLICT_BOARD = encodeSudoku(
   81,
 );
 
+// ── The PURE-COLUMN conflict board (T9-W1 §1.2) ─────────────────────
+// Four cells of the canonical grid are blanked and the row below plants a 5 in two of them:
+// cell 0 (row 1, column 1) and cell 36 (row 5, column 1). 5 is column 1's own answer at row 1,
+// so it repeats in NO row and NO box — the blanks at 28 (row 4, column 2) and 40 (row 5,
+// column 5) are what clear 5 out of row 5 and out of its box. The only thing wrong with the
+// finished board is that column 1 holds two fives, which is the whole point: a board with one
+// column fault and nothing else is the shape the old derivation reported as a ROW.
+// 77 givens; verified unit by unit in the derivation's own terms, never left to deal luck.
+const COLUMN_BLANKS = new Set([0, 28, 36, 40]);
+const COLUMN_CONFLICT_BOARD = encodeSudoku(
+  3,
+  Object.fromEntries(SOLVED_9.map((v, i) => [i, COLUMN_BLANKS.has(i) ? 0 : v])),
+  81,
+);
+
 /** Index of the first blank cell (no glyph). */
 async function firstBlank(page: Page, cellSel: string): Promise<number> {
   const idx = await page.evaluate((sel) => {
@@ -217,6 +232,53 @@ test('stale-note: teacher-red and gold-star notes clear on the next edit', async
   await expect(note).not.toContainText('solved it!', { timeout: 5000 });
 });
 
+// ── 2b. The verdict names the unit that is actually broken ──────────
+//
+// T9-W1 §1.2 (family F7). `findConflicts` BUILT per-unit buckets, read them for `positions`,
+// and then threw them away for `firstRow = min(row(pos))` — so a board broken in nothing but a
+// COLUMN was graded 'check row 1' against a row with nothing wrong in it. The `aria-invalid`
+// marks landed on the right cells the whole time, which is what let it survive: the circles and
+// the sentence disagreed and only the sentence was wrong. Born red on both engines against the
+// uncured derivation, which called this exact board's fault 'check row 1'.
+
+test('conflict note: a pure column duplicate names the COLUMN, never a row', async ({ page }) => {
+  await loadSudoku(page, '?board=' + COLUMN_CONFLICT_BOARD);
+
+  // 77 givens on the pinned board. Polled, so no cell is read as blank mid draw-in (CH-63).
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+    .toBe(77);
+
+  // Column 1's two blanks, both given a 5 — the board's only duplicate.
+  await setCellValue(page, 0, '5');
+  await setCellValue(page, 36, '5');
+  for (const idx of [0, 36]) {
+    await expect(page.locator('.sudoku-cell').nth(idx).locator('.glyph-svg')).toHaveCount(1, {
+      timeout: 5000,
+    });
+  }
+
+  await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+
+  const note = page.locator('.margin-note');
+  await expect(note).toHaveClass(/teacher-red/, { timeout: 20000 });
+  await expect(note).toHaveText('check column 1', { timeout: 20000 });
+  // The defect's own shape, asserted from the other side: the verdict may not send the reader
+  // to a row, and it may not fall back to the no-unit sentence when a unit is right there.
+  await expect(note).not.toContainText(/check row|no solution from here/);
+
+  // The circles and the sentence agree — two cells marked, both of them the fives.
+  const invalid = page.locator('.board-cells input[aria-invalid="true"]');
+  await expect(invalid).toHaveCount(2);
+  expect(
+    await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.board-cells input'))
+        .map((el, i) => (el.getAttribute('aria-invalid') === 'true' ? i : -1))
+        .filter((i) => i >= 0),
+    ),
+  ).toEqual([0, 36]);
+});
+
 // ── 3. The tally — backtracks + elapsed under the voice after a solve ──
 // T3-W9 §2: the W6 `.stat-line` twins were deleted; the tally now arrives as
 // MarginNote's `meta` line (`.margin-note-meta`, outside the live region) inside
@@ -239,13 +301,21 @@ test('tally: solve writes "N backtracks · Xms" in the note meta; the next edit 
   // T8-W6 M16 — the join is the estate's middle dot; the em dash is banned in product copy.
   await expect(stat).toHaveText(/^\d+ backtracks?( · (\d+ms|\d+\.\d+s))?$/);
 
-  // The tally goes stale with the grade.
-  const blank = await page.evaluate(() => {
-    const cells = document.querySelectorAll('.sudoku-cell');
-    for (let i = 0; i < cells.length; i++) if (!cells[i].querySelector('.glyph-svg')) return i;
-    return 0; // solved board: overwrite cell 0 instead
+  // The tally goes stale with the grade — on the FIRST WRITABLE cell. The fallback here read
+  // `return 0` ("solved board: overwrite cell 0 instead"), and cell 0 of a dealt board is a
+  // printed clue: since T9-W1 §1.1 a clue refuses every write, so on a fully solved board the
+  // edit landed nowhere and the tally stayed up (measured red in webkit; chromium happened to
+  // find a still-drawing cell and passed, which is the same defect with better luck). A cell
+  // the board does not call a clue is writable by definition, so the row asks it that.
+  const editable = await page.evaluate(() => {
+    const inputs = document.querySelectorAll('.sudoku-cell input');
+    for (let i = 0; i < inputs.length; i++) {
+      if (!/given clue/.test(inputs[i].getAttribute('aria-label') ?? '')) return i;
+    }
+    return -1;
   });
-  await setCellValue(page, blank, '1');
+  expect(editable).toBeGreaterThanOrEqual(0);
+  await setCellValue(page, editable, '1');
   await expect(page.locator('.margin-note-meta')).toHaveCount(0, { timeout: 5000 });
 });
 

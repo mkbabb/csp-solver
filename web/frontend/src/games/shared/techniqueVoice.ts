@@ -19,8 +19,17 @@
  */
 import type { HintResult, TechniqueId } from "./techniqueEngine";
 import { TECHNIQUE_TIER } from "./techniqueEngine";
+import type { ConflictUnit, ExtraUnit } from "./conflicts";
 
-/** House-axis → the word the hidden-single copy points with. */
+/**
+ * House-axis → the word the hidden-single copy points with. `group` is the FALLBACK, and it is
+ * a fallback with a job: the engine's axis is `row`/`col`/`box` today, but the two ways this
+ * table could be missed both shipped broken (T9-W1 §1.2). An axis it does not hold rendered
+ * "house" — the solver's own word for a unit, which is the register M16 abrogates. And an EMPTY
+ * axis is falsy without being nullish, so `??` never fired and the sentence went out with a
+ * hole in it ("7 goes nowhere else in this "). One lookup, one default, both holes closed: the
+ * highlighted `becauseCells` ARE a group, so the word is true whatever the axis turns out to be.
+ */
 const HOUSE_WORD: Record<string, string> = {
   row: "row",
   col: "column",
@@ -39,15 +48,44 @@ export function formatHintNote(
   switch (technique) {
     case "naked-single":
       return `only ${valueChar} fits here`;
-    case "hidden-single": {
-      const where = (houseAxis && HOUSE_WORD[houseAxis]) ?? "house";
-      return `${valueChar} goes nowhere else in this ${where}`;
-    }
+    case "hidden-single":
+      return `${valueChar} goes nowhere else in this ${HOUSE_WORD[houseAxis ?? ""] ?? "group"}`;
     case "reveal":
       // No one-step deduction places this cell yet, so the hint gives the answer and says
       // nothing about its own reasoning.
       return `the answer is ${valueChar}`;
   }
+}
+
+/**
+ * ── T9-W1 §1.2 — THE VERDICT, IN THE GAME'S OWN WORDS ──────────────────────────────────────
+ *
+ * The failed-solve verdict was assembled at its one call site as `check row ${firstRow}`, off a
+ * number the derivation computed by throwing its per-unit buckets away — so a board broken in
+ * nothing but a column sent the reader to a clean row. The unit arrives named now, and the
+ * phrasing joins the hint copy here for the reason this module exists: one home, so five games
+ * cannot drift, and an enumerable vocabulary a test can sweep whole.
+ *
+ * Two registers in one function, and the split is the board's, not a style choice: a row, a
+ * column and a box are things a reader COUNTS ALONG, so they take an ordinal; a cage, a printed
+ * `>` and a thermometer are things a reader LOOKS AT, so they take an article. An indexed unit
+ * that somehow arrived without its index cannot be counted to, so it falls back to the honest
+ * sentence rather than printing "check row null".
+ */
+const FURNITURE_NOTE: Record<ExtraUnit, string> = {
+  cage: "check the cage",
+  inequality: "check the greater than signs",
+  thermometer: "check the thermometer",
+};
+
+export function formatConflictNote(unit: ConflictUnit | null): string {
+  // Nothing visibly repeats, so the only true thing left to say is that the board is stuck.
+  const stuck = "no solution from here";
+  if (!unit) return stuck;
+  if (unit.kind === "row" || unit.kind === "column" || unit.kind === "box") {
+    return unit.index === null ? stuck : `check ${unit.kind} ${unit.index}`;
+  }
+  return FURNITURE_NOTE[unit.kind];
 }
 
 /**

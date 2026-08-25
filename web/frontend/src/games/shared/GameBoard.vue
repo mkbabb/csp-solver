@@ -45,11 +45,12 @@ import type { Conflicts } from "@games/shared/conflicts";
 import { classifyCode, PAPER_NOTE_COPY } from "@games/shared/solver/classifyError";
 import { BOARD_CELLS_CLASS } from "@games/shared/constants";
 import { formatSolveTally } from "@games/shared/solveTally";
-import { formatHintNote } from "@games/shared/techniqueVoice";
+import { formatHintNote, formatConflictNote } from "@games/shared/techniqueVoice";
 import { toDisplayChar } from "@pencil/glyph/glyphRegistry";
 import { vignetteDocked, vignetteHasTally } from "@games/shared/useControlsDrawer";
 import { useDebug } from "@/composables/useDebug";
 import type { HintResult } from "@games/shared/techniqueEngine";
+import type { CellRefusal } from "@games/shared/useGameState";
 import type { SolveState, SolveStats } from "@games/shared/types";
 import type { AnimationState } from "@pencil/types";
 
@@ -102,6 +103,9 @@ const props = defineProps<{
   /** T4-W7 — the armed hint's reasoning: highlights `becauseCells` in the peek-laminate
    *  tone and writes the technique name in the margin. Null between hint transactions. */
   hint?: HintResult | null;
+  /** T9-W1 §1.1 — the model's last refused write. The margin (the board's one status region)
+   *  speaks it; the cell already wears it. `seq` makes a repeat on the same clue a new event. */
+  refusal?: CellRefusal | null;
   /** T4-W8 ROW 2 — the error-check mode's PROACTIVE display gate. ORed with the
    *  `solveState === 'failed'` grade below: the teacher's red pencil grades actual work
    *  regardless; the mode governs only the live cadence. */
@@ -330,7 +334,7 @@ const conflictsVisible = computed(
 const conflicts = computed<Conflicts>(() =>
   conflictsVisible.value
     ? props.conflictsFn(props.values, props.boardSize)
-    : { positions: new Set<string>(), firstRow: null },
+    : { positions: new Set<string>(), unit: null },
 );
 
 // ── T4-W9 board FILL fraction (the progress trace's number) ──────────────
@@ -601,9 +605,15 @@ function onBoardKeydown(e: KeyboardEvent) {
 // ── Marginalia — the status voice (§4.3) ─────────────────────────────
 const marginText = ref("");
 const marginTone = ref<"graphite" | "teacher-red" | "gold-star">("graphite");
+/** Is the line currently on the strip the armed hint's own? Cleared by every writer, set back
+ *  by the hint arm alone — so the retraction below can only ever wipe what the hint wrote. */
+let hintNoteLive = false;
+let refusalNoteLive = false;
 function setMargin(text: string, tone: "graphite" | "teacher-red" | "gold-star") {
   marginText.value = text;
   marginTone.value = tone;
+  hintNoteLive = false;
+  refusalNoteLive = false;
 }
 
 // ── The named hint (T4-W7) — the reasoning the first press draws ──────
@@ -613,6 +623,14 @@ function setMargin(text: string, tone: "graphite" | "teacher-red" | "gold-star")
 const hintBecause = computed(
   () => new Set((props.hint?.becauseCells ?? []).map(String)),
 );
+// ── T9-W1 §1.2 — THE HINT NOTE GAINS ITS FALSY ARM ───────────────────────────────────────
+// This watch had an `if (hint)` and nothing else, and the idle wipe below only clears a
+// NON-graphite tone — so a hint note, which is graphite by design, had no exit at all. It sat
+// at full opacity through the second press that consumed it, through every edit after, through
+// the next deal, until some other writer happened to overwrite the strip. `hintNoteLive`
+// narrows the retraction to the hint's own line: `setMargin` clears the flag for every writer,
+// this arm sets it back, so a wipe receipt or a fresh-board line that landed in between is
+// never reached for. (What dismisses a note and how it ages is W7 §7's; this is the mechanism.)
 watch(
   () => props.hint,
   (hint) => {
@@ -625,6 +643,26 @@ watch(
         ),
         "graphite",
       );
+      hintNoteLive = true;
+    } else if (hintNoteLive) {
+      setMargin("", "graphite");
+    }
+  },
+);
+
+// ── T9-W1 §1.1 — the refusal, spoken ─────────────────────────────────────────────────────
+// The cell wears the shake; this arm gives the same event its sentence in the one status
+// region the board owns (MarginNote, role="status"). Teacher-red: a correction, not a note.
+// The model disarms it the way it disarms a stale hint — ink that LANDS, a deal, a wipe —
+// and the falsy arm here retracts only what this arm wrote, never a line it didn't.
+watch(
+  () => props.refusal,
+  (r) => {
+    if (r) {
+      setMargin("that's a given clue", "teacher-red");
+      refusalNoteLive = true;
+    } else if (refusalNoteLive) {
+      setMargin("", "graphite");
     }
   },
 );
@@ -640,22 +678,25 @@ watch(
     if (state === "solved") {
       setMargin("solved it!", "gold-star");
     } else if (state === "failed") {
-      const c = conflicts.value;
       // T8-W6 M16: "not quite" was a softener in front of the real sentence, and the em dash
       // that joined the two is banned outright. The verdict says the one useful thing.
-      setMargin(
-        c.firstRow ? `check row ${c.firstRow}` : "no solution from here",
-        "teacher-red",
-      );
+      //
+      // T9-W1 §1.2: and it says it about the unit the board ACTUALLY broke. This site read
+      // `check row ${c.firstRow}` off a number the derivation produced by throwing its per-unit
+      // buckets away, so a pure column duplicate sent the reader to a clean row (proved live on
+      // both engines). The derivation names the unit now and `formatConflictNote` speaks it, in
+      // the game's own vocabulary — row, column, box, cage, the printed signs, the thermometer.
+      setMargin(formatConflictNote(conflicts.value.unit), "teacher-red");
     } else if (state === "solving") {
       // Fast solves (the common case) resolve well under 2.5s and never reach this (§5.1 tiers).
       slowSolveTimer = setTimeout(() => {
         if (props.solveState === "solving") setMargin("still solving…", "graphite");
       }, 2500);
     } else if (state === "idle" && marginTone.value !== "graphite") {
-      // Stale-note clear (W6, verify-14's widening): once the grade reverts, the red
-      // "check row N" AND the gold "solved it!" go stale by the same path — clear any
-      // non-graphite tone. Graphite board-load copy is not a grade; it stays.
+      // Stale-note clear (W6, verify-14's widening): once the grade reverts, the red verdict
+      // AND the gold "solved it!" go stale by the same path — clear any non-graphite tone.
+      // Graphite board-load copy is not a grade; it stays. A graphite HINT note is the one
+      // graphite line that must still be able to leave, which is what the arm above is for.
       setMargin("", "graphite");
     }
     // 'error' — marginalia stays quiet; a network/server fault is the note card's
@@ -722,13 +763,20 @@ function boardIsBlank(): boolean {
 
 // ── The paper note (§5.2) ────────────────────────────────────────────
 const showErrorNote = computed(() => props.solveState === "error");
+// ── T9-W1 §1.2 — THE NOTE CLAIMS ONLY WHAT IT KNOWS ──────────────────────────────────────
+// The fallback here asserted "the solver ran out of steps on this board" for ANY fault that
+// arrived without a code — a guess dressed as a diagnosis, and the reasoning behind it ("the
+// default 'error' cause on the Worker path is BUDGET_EXCEEDED") was never true of a fault
+// nobody had classified: a thrown non-Error, a rejection with no `code`, a `WORKER_FAILURE`
+// that lost its envelope all landed on the step budget. `classifyCode` already owns this
+// taxonomy and already answers "unknown" for a code it does not hold, empty string included
+// (`""` is falsy, which is how it used to skip the classifier entirely). One classifier, one
+// answer, and the honest sentence when there is nothing better to say.
 const errorNote = computed(() => {
-  if (props.errorCode) {
-    const f = classifyCode(props.errorCode);
-    if (f.kind === "paper-note") return { text: f.message, retryable: f.retryable };
-  }
-  // The default 'error' cause on the Worker (W6) path is BUDGET_EXCEEDED.
-  return { text: PAPER_NOTE_COPY.budget, retryable: true };
+  const f = classifyCode(props.errorCode);
+  return f.kind === "paper-note"
+    ? { text: f.message, retryable: f.retryable }
+    : { text: PAPER_NOTE_COPY.unknown, retryable: true };
 });
 
 // ── The tally (T3-W9 §2) — preformatted upstream, rendered by MarginNote's meta line ──

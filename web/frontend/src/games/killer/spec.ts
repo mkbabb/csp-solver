@@ -22,7 +22,7 @@ import { defineGame } from "@games/shared/defineGame";
 import DigitCell from "@games/shared/DigitCell.vue";
 import CageOverlay from "@games/shared/CageOverlay.vue";
 import { useKiller, nodeBudgetForSize, persistence } from "./composables/useKiller";
-import { cageFigures, killerClue } from "./clue";
+import { cageFigures, cageViolations, killerClue } from "./clue";
 import { subgridSizes, difficultyOptions } from "@games/shared/selectors";
 import type { Difficulty } from "@games/shared/types";
 import type { KillerCage } from "./types";
@@ -51,6 +51,10 @@ export const killerSpec = defineGame<ReturnType<typeof useKiller>, KillerCage[]>
       family: "killer",
       fontSize: 0.26,
     }),
+    // T9-W1 §1.2 — the cage's own law, reaching the board's conflict derivation. The comment
+    // above about a "cage-blind" red pencil described a real gap, not a design: a board wrong
+    // in nothing but a cage total was told to check a clean row.
+    conflicts: { unit: "cage", sink: cageViolations },
     ...killerClue,
   },
   furniture: { cell: DigitCell },

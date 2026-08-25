@@ -24,7 +24,7 @@ import { defineGame } from "@games/shared/defineGame";
 import DigitCell from "@games/shared/DigitCell.vue";
 import CageOverlay from "@games/shared/CageOverlay.vue";
 import { useKenken, nodeBudgetForSize, persistence } from "./composables/useKenken";
-import { cageFigures, kenkenClue } from "./clue";
+import { cageFigures, cageViolations, kenkenClue } from "./clue";
 import { cagedLatinSizes, difficultyOptions } from "@games/shared/selectors";
 import type { Difficulty } from "@games/shared/types";
 import type { KenKenCage } from "./types";
@@ -54,6 +54,10 @@ export const kenkenSpec = defineGame<ReturnType<typeof useKenken>, KenKenCage[]>
       family: "kenken",
       fontSize: 0.24,
     }),
+    // T9-W1 §1.2 — the cage's own law, reaching the board's conflict derivation. The comment
+    // above about a "Latin-only" red pencil described a real gap, not a design: a board wrong
+    // in nothing but a cage target was told to check a clean row.
+    conflicts: { unit: "cage", sink: cageViolations },
     ...kenkenClue,
   },
   furniture: { cell: DigitCell },

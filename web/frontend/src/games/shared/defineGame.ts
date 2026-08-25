@@ -21,10 +21,12 @@
  * data on one record, so divergence never forks a component.
  */
 import type { Component, Ref } from "vue";
+import type { ConflictSink, ExtraUnit } from "@games/shared/conflicts";
 import type { ControlSection } from "@games/shared/GameControlPanel.vue";
 import type { SelectorBand } from "@games/shared/selectors";
 import type { SolveState, SolveStats } from "@games/shared/types";
 import type { HintResult } from "@games/shared/techniqueEngine";
+import type { CellRefusal } from "@games/shared/useGameState";
 import type { PencilMode } from "@games/shared/useUserMarks";
 import type { ErrorCheckMode } from "@games/shared/useAssists";
 import type { TallyDescriptor } from "@games/shared/techniqueVoice";
@@ -51,7 +53,10 @@ export interface GameModel {
   values: ReadRef<Record<string, number>>;
   givenCells: ReadRef<Set<string>>;
   originalGivenCells: ReadRef<Set<string>>;
-  overriddenCells: ReadRef<Set<string>>;
+  // T9-W1 §1.1 — `overriddenCells` retired WHOLE with the demotion it existed to record. A
+  // keystroke can no longer re-label a clue, so no model holds the set and no board renders it.
+  // What the model publishes instead is the refusal itself, for the margin that speaks it.
+  lastRefusal: Readonly<Ref<CellRefusal | null>>;
   animatingCells: ReadRef<Set<string>>;
   solveState: Readonly<Ref<SolveState>>;
   solvedValues: ReadRef<Record<string, number>>;
@@ -141,6 +146,21 @@ interface ClueSeam<TModel, TClue> {
   props: (clue: TClue, dim: number) => Record<string, unknown>;
   encode: (clue: TClue) => Uint32Array;
   decode: (buf: Uint32Array, dim: number) => TClue;
+  /**
+   * ── T9-W1 §1.2 — WHAT BREAKING THIS FURNITURE IS CALLED ────────────────────────────────
+   *
+   * The furniture a game PRINTS is furniture a player can break, and until this slot only
+   * futoshiki even had a sweep for it — wired to nothing. `BoardHost` derived rows, columns
+   * and boxes for all five games, so a killer board wrong in nothing but a cage total, or a
+   * thermo board wrong down a tube, was graded 'failed' and pointed at a clean row.
+   *
+   * The slot carries BOTH halves because they are useless apart: `sink` finds the broken
+   * cells (`findConflicts`' `extra`) and `unit` is the one word the note answers with
+   * (`findConflicts`' `extraUnit`). Required, not optional: a seam that draws a constraint
+   * on the paper and cannot say what breaking it is called is the silence this wave is
+   * about. Sudoku states its whole absence as `clues: null` and asks nothing here.
+   */
+  conflicts: { unit: ExtraUnit; sink: (clue: TClue) => ConflictSink };
 }
 
 /**

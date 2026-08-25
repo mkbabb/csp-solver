@@ -22,8 +22,9 @@ const props = withDefaults(
   defineProps<{
     position: number;
     value: number;
+    /** A printed clue — inviolable (T9-W1 §1.1). The `isOverridden` companion retired with the
+     *  demotion: a keystroke cannot re-label a given, so the board never has one to render. */
     isGiven: boolean;
-    isOverridden: boolean;
     isSolved: boolean;
     isRevealed: boolean;
     noiseDelay: number;
@@ -107,6 +108,8 @@ const {
   displayValue,
   glyphChar,
   ariaLabel,
+  refuseArmed,
+  refuseDurMs,
   handleInput,
   handleKeydown,
   focusInput,
@@ -180,6 +183,16 @@ function onCellLeave() {
   emit("cellHover", null);
 }
 
+// The root's custom properties — one object, two independent arms (T9-W1 §1.1). Numbers ride
+// out as bound properties and the shapes stay in the cascade, which is the estate's rule for
+// motion; `undefined` when neither is armed keeps a resting cell's markup byte-identical.
+const cellVars = computed(() => {
+  const vars: Record<string, string> = {};
+  if (revealArmed.value) vars["--reveal-delay"] = `${props.noiseDelay}ms`;
+  if (refuseArmed.value) vars["--refuse-dur"] = `${refuseDurMs}ms`;
+  return Object.keys(vars).length ? vars : undefined;
+});
+
 // T4-W10 idiom (§:ref) — `position` is exposed alongside `focus` so the board's STABLE
 // `setCellApi` bound handler keys the cellApi registry off the instance (el.position) instead
 // of a per-render inline closure that captured the loop index. Position is invariant per
@@ -198,12 +211,13 @@ defineExpose({ focus: focusInput, position: props.position });
         'is-invalid': isInvalid,
         'is-because': isBecause,
         'is-peer-cursor': isPeerCursor,
+        'is-refused': refuseArmed,
       },
     ]"
     role="gridcell"
     :aria-rowindex="rowIndex"
     :aria-colindex="colIndex"
-    :style="revealArmed ? { '--reveal-delay': `${noiseDelay}ms` } : undefined"
+    :style="cellVars"
     @animationend="onRevealEnd"
     @click="onCellClick"
     @pointerdown="onCellPointerDown"
@@ -370,13 +384,17 @@ defineExpose({ focus: focusInput, position: props.position });
          cell ("…, given clue 4"), so an exposed glyph made every filled cell announce twice
          — once labelled, once as a bare graphic. `aria-hidden` rides the usage, not the
          component: the poster board, the caret and the logo label their glyphs because
-         nothing else there carries the value. -->
+         nothing else there carries the value.
+
+         `is-overridden` is the glyph's SETTLE branch — mount finished, no draw-in — which the
+         poster board's marks use. A live cell always draws in, and since T9-W1 §1.1 there is
+         no demoted given left to render, so the board's answer to it is a constant false. -->
     <HandwrittenGlyph
       v-if="value !== 0"
       aria-hidden="true"
       :value="glyphChar"
       :is-given="isGiven"
-      :is-overridden="isOverridden"
+      :is-overridden="false"
       :is-solved="isSolved"
       :is-revealed="isRevealed"
       :noise-delay="noiseDelay"
@@ -409,3 +427,25 @@ defineExpose({ focus: focusInput, position: props.position });
 </template>
 
 <style scoped src="@/games/shared/gameCell.css"></style>
+
+<!-- THE REFUSED WRITE, SEEN (T9-W1 §1.1). The board's one inviolable rule needs an answer a
+     player can perceive, and the estate already has exactly one verb for "no": `refuse-shake`,
+     the keyframes the solve verdict shakes with. It is REUSED, not re-cut — no new keyframes,
+     no new filter (the census stays at 9) — and it is worn for one window, then dropped, so a
+     cell never sits holding a refusal it has finished saying.
+
+     PRM is spent at the door, per the motion discipline in `index.css`: the estate has no
+     blanket duration-zeroing rule, so each consumer arms its own reduced-motion answer. There
+     is nothing to degrade to — a shake is the whole cue — so under PRM the cell simply holds
+     still, and the refusal is carried by the digit that did not change. -->
+<style scoped>
+.game-cell.is-refused {
+  animation: refuse-shake var(--refuse-dur) linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-cell.is-refused {
+    animation: none !important;
+  }
+}
+</style>

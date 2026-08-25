@@ -55,7 +55,7 @@ function mountBoard(props: Record<string, unknown> = {}) {
       boardGeneration: 1,
       subgridSize: 4,
       gridLabel: "4 by 4 kenken board",
-      conflictsFn: () => ({ positions: new Set<string>(), firstRow: null }),
+      conflictsFn: () => ({ positions: new Set<string>(), unit: null }),
       peersFn: () => new Set<string>(),
       freshBoardCopy: () => "<announce>",
       ...props,

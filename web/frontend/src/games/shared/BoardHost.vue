@@ -121,10 +121,27 @@ const gridLabel = computed(
 // ── Conflict + peer adjacency (§1.4, T4-W8 ROW 4) ─────────────────────────────────
 // Row/column always; the BOX band only on a boxed geometry — sudoku's structural divergence
 // from a Latin square, as one branch instead of five files.
-const conflictsFn = (values: Record<string, number>, n: number): Conflicts =>
-  grammar.value.geometry === "boxed"
-    ? findConflicts(values, n, { subgridSize: subgridSize.value })
-    : findConflicts(values, n);
+//
+// ── T9-W1 §1.2 — AND WHATEVER THE GAME ITSELF PRINTS ──────────────────────────────────────
+// Those two bands were the WHOLE derivation for all five games, which is why four of them
+// could be graded 'failed' over furniture the sweep had never looked at: a killer cage, a
+// kenken target, a thermometer's fall, a futoshiki caret (that last one had a sweep written
+// and wired to nothing). The clue seam hands over both halves at once — the sink that finds
+// the cells and the word the note answers with — so this stays one derivation reading data,
+// never a branch per family. Sudoku prints no furniture, states `clues: null`, and adds
+// nothing here.
+// A seam is wired only when its clue has actually ARRIVED: `clue` is optional on this host by
+// declaration ("required exactly when `spec.clues` is non-null"), and a sink handed `undefined`
+// would throw inside a derivation that runs on every keystroke. No clue, no sweep, no word.
+const conflictsFn = (values: Record<string, number>, n: number): Conflicts => {
+  const seam = props.spec.clues?.conflicts;
+  const wired = seam !== undefined && props.clue !== undefined;
+  return findConflicts(values, n, {
+    subgridSize: grammar.value.geometry === "boxed" ? subgridSize.value : undefined,
+    extra: wired ? seam.sink(props.clue) : undefined,
+    extraUnit: wired ? seam.unit : undefined,
+  });
+};
 
 function peersFn(pos: number, n: number): Set<string> {
   const set = new Set<string>();
@@ -218,6 +235,7 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
     :error-code="model.errorCode.value"
     :leaving="leaving"
     :hint="model.hintReasoning.value"
+    :refusal="model.lastRefusal.value"
     :proactive-error-check="model.proactiveCheck.value"
     :loading="model.loading.value"
     :cell-authors="cellAuthors"
@@ -261,7 +279,6 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
           :position="pos"
           :value="model.values.value[String(pos)] ?? 0"
           :is-given="model.givenCells.value.has(String(pos))"
-          :is-overridden="model.overriddenCells.value.has(String(pos))"
           :is-solved="String(pos) in model.solvedValues.value"
           :is-revealed="s.isRevealed(pos)"
           :is-invalid="s.conflicts.positions.has(String(pos))"

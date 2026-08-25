@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { relayWire } from "./relayWire";
+import { droppedFrames, relayWire } from "./relayWire";
 import type { Handlers, Kind, Msg } from "./useSession";
 
 /**
@@ -60,17 +60,23 @@ class FakeSocket {
   }
   /** One relay→client `["EVENT", sub, event]`, as `relayWire`'s reader wants it. */
   deliver(from: string, kind: Kind | "bye", data: Msg, topic: string): void {
+    this.raw(JSON.stringify({ kind, data, from }), topic);
+  }
+  /** The same frame with whatever `content` a bad peer, a bad version or a bad network put in
+   *  it — the shapes `deliver`'s types cannot say. The reader never looks at the `x` tag (the
+   *  relay's filter is what routes), so one topic serves. */
+  raw(content: string, topic = "t"): void {
     this.onmessage?.({
       data: JSON.stringify([
         "EVENT",
         "s",
         {
           id: "e",
-          pubkey: from,
+          pubkey: "peer",
           created_at: 0,
           kind: 20_411,
           tags: [["x", topic]],
-          content: JSON.stringify({ kind, data, from }),
+          content,
           sig: "",
         },
       ]),
@@ -157,9 +163,17 @@ describe("relayWire — a dropped socket comes back, re-subscribes, re-announces
       "`hi` IS the re-request: the room answers it with the whole board, so the gap a drop opened closes without a second protocol",
     ).toBe("hi");
 
-    // …and the new socket carries traffic, which is what "re-subscribed" has to mean.
+    // …and the new socket carries traffic, which is what "re-subscribed" has to mean. The op is
+    // WHOLE — all seven fields `toWire` emits — because since T9-W1 §1.3 a frame that cannot be
+    // merged is not carried: an op with no stamp is refused at the wire, so an abbreviated
+    // fixture would prove the guard rather than the re-subscribe.
     const topic = (filter as Record<string, string[]>)["#x"][0];
-    back.deliver("r-peer", "op", { p: 1, v: 2 }, topic);
+    back.deliver(
+      "r-peer",
+      "op",
+      { p: 1, v: 2, s: 0, l: 1, a: "r-peer", e: 1, ea: "r-peer" },
+      topic,
+    );
     expect(heard).toEqual(["peer:r-peer:in", "op:r-peer"]);
 
     // ── and the ladder is not a leak: a page that left stays left ──────────────────────
@@ -170,5 +184,192 @@ describe("relayWire — a dropped socket comes back, re-subscribes, re-announces
       FakeSocket.made,
       "a socket closing under `leave()` must not reconnect",
     ).toHaveLength(after);
+  });
+});
+
+/**
+ * LD (T9-W1 §1.3) — THE GUARD STANDS BEFORE THE MERGE.
+ *
+ * The session merges a frame's clock into its own the moment the frame arrives, and judges the
+ * frame one line later: `useSession.onMessage`'s `st` arm takes `Math.max(ledger.lamport, d.e)`
+ * ABOVE the epoch check, and `admit` takes an op's stamp before it looks at the epoch at all.
+ * That order is right — a page that ignores the clock of a write it rejects mints its next
+ * stamp behind the room and loses a cell it should have won — which is exactly why the number
+ * has to BE a number by the time it arrives. `Math.max` with a NaN is NaN, `++` on that NaN is
+ * NaN, every `newer()` against it is false, and the page spends the rest of the session writing
+ * digits that lose every comparison. One malformed frame, one dead table, no error anywhere.
+ *
+ * So the drop belongs on this side of the seam, where the frame is still a frame. The rows
+ * below drive the merge's own two lines against a stand-in ledger — the arithmetic is copied,
+ * not imported, because the claim is about what the WIRE hands up, and a row that called
+ * `admit` would prove the ledger instead.
+ */
+
+/** The two merges, verbatim off `useSession.ts` — :677 (`st`) and :144 (`admit`, via `d.l`).
+ *  Note the else-arm: `onMessage` routes every word it does not recognise to the op path, so an
+ *  unknown kind is not inert, it is an op with no stamp. */
+const mergeStandIn =
+  (led: { lamport: number }) =>
+  (kind: string, d: Msg): void => {
+    if (kind === "hi" || kind === "cur") return;
+    if (kind === "st") led.lamport = Math.max(led.lamport, d.e as number);
+    else led.lamport = Math.max(led.lamport, d.l as number);
+  };
+
+/** The counter is module state, so every row reads a DELTA — a reset export would be an API
+ *  nothing but a test could want. */
+const drops = (): number => droppedFrames();
+
+/** A table with one open socket, and the topic its peers publish on. */
+function table(room: string, h: Handlers) {
+  vi.stubGlobal("WebSocket", FakeSocket);
+  const wire = relayWire(room, URLS, h, "p-ld-self");
+  const sock = FakeSocket.made[FakeSocket.made.length - 1];
+  sock.open();
+  return { wire, sock, topic: `sudoku-babb-dev/${room}` };
+}
+
+describe("relayWire — a malformed frame is dropped and counted, never merged", () => {
+  it("an `st` with no clock field cannot poison the lamport, then or ever after", () => {
+    const led = { lamport: 0 };
+    const merge = mergeStandIn(led);
+    const heard: string[] = [];
+    const h: Handlers = {
+      message: (kind, d, from) => {
+        heard.push(`${kind}:${from}`);
+        merge(kind, d);
+      },
+      peer: () => {},
+    };
+    const { wire, sock, topic } = table("room-ld-st", h);
+
+    // A good board first, so the clock has something to lose.
+    sock.deliver("p-peer", "st", { e: 5, ea: "p-peer", c: {}, b: null }, topic);
+    expect(led.lamport).toBe(5);
+
+    const before = drops();
+    // …and the malformed one: every other field present, the clock field simply absent.
+    sock.deliver("p-peer", "st", { ea: "p-peer", c: {}, b: null }, topic);
+
+    expect(
+      Number.isFinite(led.lamport),
+      "a frame with no clock field must not reach the merge",
+    ).toBe(true);
+    expect(led.lamport).toBe(5);
+    expect(heard, "the malformed frame never became a message").toEqual(["st:p-peer"]);
+    expect(drops() - before, "dropped frames are counted").toBe(1);
+
+    // A clock field that is not a number is the same frame by another spelling.
+    sock.deliver("p-peer", "st", { e: "soon", ea: "p-peer", c: {}, b: null }, topic);
+    expect(led.lamport).toBe(5);
+    expect(drops() - before).toBe(2);
+
+    // THE POISON IS PERMANENT where it lands, which is the whole reason the drop is the cure:
+    // one NaN and `Math.max` never returns a number again.
+    sock.deliver("p-peer", "st", { e: 9, ea: "p-peer", c: {}, b: null }, topic);
+    expect(led.lamport, "the room's next board still moves the clock").toBe(9);
+    expect(heard).toEqual(["st:p-peer", "st:p-peer"]);
+    wire.leave();
+  });
+
+  it("the other wire-reads that reach persistent state: op stamp, unknown word, junk envelope", () => {
+    const led = { lamport: 3 };
+    const merge = mergeStandIn(led);
+    const heard: string[] = [];
+    const peers: string[] = [];
+    const h: Handlers = {
+      message: (kind, d, from) => {
+        heard.push(`${kind}:${from}`);
+        merge(kind, d);
+      },
+      peer: (id) => peers.push(String(id)),
+    };
+    const { wire, sock, topic } = table("room-ld-op", h);
+    const before = drops();
+    /** Each shape judged on its own clock — a poisoned ledger would carry the verdict forward
+     *  and one red would read as five. */
+    const alone = (why: string, send: () => void): void => {
+      led.lamport = 3;
+      expect(send, why).not.toThrow();
+      expect(Number.isFinite(led.lamport), why).toBe(true);
+      expect(led.lamport).toBe(3);
+    };
+
+    // `admit` merges an op's stamp UNCONDITIONALLY, above every guard it has.
+    alone("an op with no stamp poisons `admit`", () =>
+      sock.deliver(
+        "p-peer",
+        "op",
+        { p: 40, v: 7, a: "p-peer", e: 1, ea: "p-peer" },
+        topic,
+      ),
+    );
+    // A word this arm does not speak is not inert: `onMessage` reads it as an op.
+    alone("an unknown word is read as an op", () =>
+      sock.raw(JSON.stringify({ kind: "boop", data: { p: 1 }, from: "p-peer" }), topic),
+    );
+    // An envelope that is not an object at all — `content` is valid JSON and nothing else.
+    alone("a null envelope must not throw", () => sock.raw("null", topic));
+    // …and one that carries no `data`, which every arm above this line dereferences.
+    alone("an `st` with no data at all must not throw", () =>
+      sock.raw(JSON.stringify({ kind: "st", from: "p-peer" }), topic),
+    );
+    // An id that is not an id keys the roster, the ink and the clock by junk.
+    alone("an id that is not a string must not seat a peer", () =>
+      sock.raw(JSON.stringify({ kind: "hi", data: {}, from: 7 }), topic),
+    );
+
+    expect(heard, "not one of them became a message").toEqual([]);
+    expect(peers, "and not one of them seated a peer").toEqual([]);
+    expect(drops() - before, "five frames refused, five counted").toBe(5);
+
+    // The table is still a table: the next good op merges exactly as it should.
+    sock.deliver(
+      "p-peer",
+      "op",
+      { p: 40, v: 7, l: 8, a: "p-peer", e: 1, ea: "p-peer" },
+      topic,
+    );
+    expect(led.lamport).toBe(8);
+    expect(heard).toEqual(["op:p-peer"]);
+    wire.leave();
+  });
+
+  it("an `st` whose clock is not a clock cannot freeze a cell for good", () => {
+    // `onMessage` adopts `d.c` WHOLE (useSession.ts:680) and the attribution walk reads `[1]`
+    // off every entry of it (:406). An entry that is not a `[lamport, author]` pair is a cell no
+    // write can ever win again — `wins()` compares against an `undefined` lamport and loses —
+    // and it outlives the frame that brought it, which is what puts it on this side of the seam
+    // with the lamport rather than in the board's own law.
+    const held: { clock: Record<string, [number, string]> } = { clock: {} };
+    const heard: string[] = [];
+    const h: Handlers = {
+      message: (kind, d, from) => {
+        heard.push(`${kind}:${from}`);
+        if (kind === "st") held.clock = (d.c ?? {}) as Record<string, [number, string]>;
+      },
+      peer: () => {},
+    };
+    const { wire, sock, topic } = table("room-ld-clock", h);
+    const good: Msg = { e: 1, ea: "p-peer", c: { "40": [2, "p-peer"] }, b: null };
+    sock.deliver("p-peer", "st", good, topic);
+    expect(held.clock["40"]).toEqual([2, "p-peer"]);
+
+    const before = drops();
+    sock.deliver("p-peer", "st", { ...good, e: 2, c: { "40": "p-peer" } }, topic);
+    sock.deliver("p-peer", "st", { ...good, e: 3, c: { "40": [2] } }, topic);
+    sock.deliver("p-peer", "st", { ...good, e: 4, c: [[2, "p-peer"]] }, topic);
+
+    expect(held.clock["40"], "the page keeps the clock it could read").toEqual([
+      2,
+      "p-peer",
+    ]);
+    expect(
+      typeof held.clock["40"][1],
+      "the attribution walk reads `[1]` off every entry",
+    ).toBe("string");
+    expect(heard).toEqual(["st:p-peer"]);
+    expect(drops() - before, "three clocks refused, three counted").toBe(3);
+    wire.leave();
   });
 });

@@ -22,7 +22,8 @@ function mountCell(overrides: Record<string, unknown> = {}) {
       position: 0,
       value: 4,
       isGiven: false,
-      isOverridden: false,
+      // `isOverridden` retired with the demotion (T9-W1 §1.1) — the cell declares no such prop,
+      // so passing it here would only stamp a stray attribute on the root.
       isSolved: false,
       isRevealed: false,
       noiseDelay: 0,

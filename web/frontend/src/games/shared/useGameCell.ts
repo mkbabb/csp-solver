@@ -1,4 +1,4 @@
-import { computed, ref, useTemplateRef } from "vue";
+import { computed, onUnmounted, ref, useTemplateRef } from "vue";
 import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
 import { useLongPress } from "@games/shared/useLongPress";
 import type { PencilMode } from "@games/shared/useUserMarks";
@@ -26,8 +26,10 @@ import type { PencilMode } from "@games/shared/useUserMarks";
 export interface GameCellProps {
   position: number;
   value: number;
+  /** A printed clue. INVIOLABLE since T9-W1 §1.1: the model refuses every write to one, so
+   *  this is a permanent property of the cell rather than a state a keystroke can end. The
+   *  companion `isOverridden` retired with the demotion it existed to render. */
   isGiven: boolean;
-  isOverridden: boolean;
   isSolved: boolean;
   isRevealed: boolean;
   noiseDelay: number;
@@ -101,13 +103,16 @@ export function useGameCell(
 
   const glyphChar = computed(() => toDisplayChar(props.value, props.boardSize));
 
-  // cellKind (fe-components-audit §12) drives the accessible name (§4.1). Order matters:
-  // solver's answers and overrides can also be "given" positions, so test the richer
-  // states first.
+  // cellKind (fe-components-audit §12) drives the accessible name (§4.1). Order matters: a
+  // solver's answer can also sit on a "given" position, so the richer state is tested first.
+  //
+  // T9-W1 §1.1 — the `!props.isOverridden` term is gone with the demotion. It was the clause
+  // that let one keystroke turn "given clue 5" into "your entry 7"; nothing re-labels a clue
+  // now, so the name a given publishes is true for the life of the board.
   const cellKind = computed<"empty" | "given" | "user" | "solved">(() => {
     if (props.value === 0) return "empty";
     if (props.isSolved) return "solved";
-    if (props.isGiven && !props.isOverridden) return "given";
+    if (props.isGiven) return "given";
     return "user";
   });
 
@@ -142,6 +147,59 @@ export function useGameCell(
     () => props.pencilMode === "corner" || props.pencilMode === "center",
   );
 
+  // ── THE REFUSAL'S VISIBLE HALF (T9-W1 §1.1) ──────────────────────────
+  // A write the model refuses has to be FELT, or the board reads as broken rather than firm.
+  // The cue is the house's own ERROR verb — `refuse-shake`, the keyframes the solve verdict
+  // already shakes with — worn for one window and then dropped: a pulse, not a state, so no
+  // cell can be left wearing a refusal it has finished saying. No new keyframes, no new
+  // filters; the duration rides out as a bound custom property (the `--draw-dur` precedent).
+  const REFUSE_MS = 600;
+  const refuseArmed = ref(false);
+  let refuseTimer: ReturnType<typeof setTimeout> | null = null;
+  function armRefusal() {
+    if (refuseTimer) clearTimeout(refuseTimer);
+    refuseArmed.value = true;
+    refuseTimer = setTimeout(() => {
+      refuseArmed.value = false;
+      refuseTimer = null;
+    }, REFUSE_MS);
+  }
+  onUnmounted(() => {
+    if (refuseTimer) clearTimeout(refuseTimer);
+  });
+
+  /** Put the cell's own digit back in the native input and say the refusal (T9-W1 §1.1). The
+   *  input has ALREADY taken the keystroke — it is a real `<input>`, not a display — so the
+   *  clue would sit there overwritten until the next render that happened to touch it. */
+  function refuseAtCell(target: HTMLInputElement) {
+    target.value = displayValue.value;
+    armRefusal();
+  }
+
+  /**
+   * THE TYPED CHARACTER WINS (T9-W1 §1.1's P1 rider — V8's swallow).
+   *
+   * `maxlength` lets the input hold one char more than the board's digit width, and the clamp
+   * used to read `raw.slice(-maxLen)` — the LAST digits of the whole field, wherever the
+   * character actually landed. With the caret parked at the head of a filled cell (the pose an
+   * arrow key or a tap on the left of the glyph leaves), typing 7 over a 5 produced "75" and
+   * committed the 5: the keystroke was swallowed, and on a clue the demotion fired anyway, so
+   * a given was reclassified by a write of nothing.
+   *
+   * The clamp reads the digits ENDING AT THE CARET instead, which is where the character just
+   * went. An append (the caret at the end) is the incumbent expression exactly, so the
+   * one-keystroke override and 16×16's two-digit accumulation are untouched.
+   */
+  function digitsAtCaret(target: HTMLInputElement, raw: string): string {
+    const caret = target.selectionStart ?? target.value.length;
+    // The caret indexes the RAW field, punctuation and all; the clamp works in digits.
+    const upToCaret = target.value.slice(0, caret).replace(/\D/g, "");
+    const maxLen = props.boardSize >= 10 ? 2 : 1;
+    // No digit before the caret is not a keystroke this path can attribute (a paste, a drop) —
+    // fall back to the whole field, which is what the estate always did.
+    return (upToCaret || raw).slice(-maxLen);
+  }
+
   function handleInput(event: Event) {
     const target = event.target as HTMLInputElement;
     const raw = target.value.replace(/\D/g, "");
@@ -149,17 +207,19 @@ export function useGameCell(
     if (raw === "") {
       // A cleared input is an erase in Normal mode; in pencil mode the value stays (Backspace
       // owns the note erase via handleKeydown), so never fall through to update(0) there.
-      if (!pencilArmed.value) emit("update", props.position, 0);
-      target.value = "";
+      if (pencilArmed.value) {
+        target.value = "";
+        return;
+      }
+      // AN ERASE IS A WRITE, so a clue refuses it like any other. The write still travels: the
+      // model rules once and the undo spine, the room and the status region all hear one answer.
+      emit("update", props.position, 0);
+      if (props.isGiven) refuseAtCell(target);
+      else target.value = "";
       return;
     }
 
-    // For single-digit boards (≤9), take only the last digit to allow one-click override.
-    // For larger boards, try the full string first, then the last 2 chars, then the last char.
-    // (Futoshiki is always 4..7 → the ≤9 branch = its single-digit slice.)
-    const maxLen = props.boardSize >= 10 ? 2 : 1;
-    const trimmed = raw.slice(-maxLen);
-    const num = parseInt(trimmed, 10);
+    const num = parseInt(digitsAtCaret(target, raw), 10);
     if (num >= 1 && num <= props.boardSize) {
       if (pencilArmed.value) {
         // Pencil mode: the digit toggles a note on an EMPTY cell; the input never keeps it.
@@ -167,7 +227,8 @@ export function useGameCell(
         target.value = "";
       } else {
         emit("update", props.position, num);
-        target.value = String(num);
+        if (props.isGiven) refuseAtCell(target);
+        else target.value = String(num);
       }
     } else {
       target.value = displayValue.value;
@@ -183,7 +244,8 @@ export function useGameCell(
         emit("mark", props.position, 0);
       } else {
         emit("update", props.position, 0);
-        target.value = "";
+        if (props.isGiven) refuseAtCell(target);
+        else target.value = "";
       }
       event.preventDefault();
     }
@@ -283,6 +345,9 @@ export function useGameCell(
     displayValue,
     glyphChar,
     ariaLabel,
+    /** T9-W1 §1.1 — the refusal cue is armed for one window after a refused keystroke. */
+    refuseArmed,
+    refuseDurMs: REFUSE_MS,
     handleInput,
     handleKeydown,
     focusInput,

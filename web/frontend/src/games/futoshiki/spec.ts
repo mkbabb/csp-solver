@@ -23,7 +23,7 @@ import {
   nodeBudgetForSize,
   persistence,
 } from "./composables/useFutoshiki";
-import { caretFigures, futoshikiClue } from "./clue";
+import { caretFigures, futoshikiClue, inequalityViolations } from "./clue";
 import { latinSizes, difficultyOptions } from "@games/shared/selectors";
 import type { Difficulty } from "@games/shared/types";
 import type { Inequality } from "./types";
@@ -48,6 +48,9 @@ export const futoshikiSpec = defineGame<ReturnType<typeof useFutoshiki>, Inequal
       carets: caretFigures(inequalities, dim),
       boardSize: dim,
     }),
+    // T9-W1 §1.2 — the sweep was WRITTEN and wired to nothing, so a board wrong in nothing but
+    // a printed caret was told to check a clean row. It reaches the board through this slot.
+    conflicts: { unit: "inequality", sink: inequalityViolations },
     ...futoshikiClue,
   },
   furniture: { cell: DigitCell },

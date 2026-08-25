@@ -60,6 +60,88 @@ const RETRY_MS = [250, 500, 1000, 2000, 4000];
 const hex = (n: number): string =>
   Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join("");
 
+// ── The guard (T9-W1 §1.3) ────────────────────────────────────────────────────────
+//
+// A FRAME IS JUDGED BEFORE IT IS MERGED, and this is the only place that can be true.
+//
+// The session merges a frame's clock into its own the moment the frame arrives and judges the
+// frame one line later: `useSession.onMessage`'s `st` arm takes `Math.max(ledger.lamport, d.e)`
+// above the epoch check, and `admit` takes an op's stamp before it looks at the epoch at all.
+// That order is RIGHT — a page that ignores the clock of a write it rejects mints its next
+// stamp behind the room and loses a cell it should have won — which is exactly why the number
+// has to be a number by the time it gets there. `Math.max` with a NaN is NaN, `++` on that NaN
+// is NaN, every comparison against it is false, and the page spends the rest of the session
+// writing digits that lose. One malformed frame, one dead table, and nothing said anywhere.
+//
+// So a frame that does not carry what its word owes never becomes a message. It is counted and
+// forgotten: the player is told nothing, because there is nothing a player can do about a
+// peer's bad frame, and the room already repairs a missing frame the way it repairs a lost op
+// — the next `hi` pulls the whole board back.
+
+/** A number the clock can take. `undefined`, `null`, `"soon"` and NaN all fail it; the bare
+ *  `as number` this replaces failed none of them. */
+const finite = (v: unknown): boolean => typeof v === "number" && Number.isFinite(v);
+const str = (v: unknown): v is string => typeof v === "string";
+/** A JSON object — not an array, not null, not a bare scalar. */
+const bag = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+const KINDS: readonly string[] = ["hi", "op", "st", "cur"];
+const isKind = (v: unknown): v is Kind => str(v) && KINDS.includes(v);
+
+/**
+ * A `[lamport, author]` pair, and the clock that is a map of them. This is the OTHER thing on
+ * this path that outlives the frame carrying it: `onMessage` adopts `d.c` whole, `wins()` then
+ * compares every later write against whatever landed, and the attribution walk reads `[1]` off
+ * each entry. An entry that is not a pair is a cell no write can win again — the same permanent
+ * loss as the poisoned lamport, one cell at a time — so it is judged here with it. Exactly two
+ * fields: a pair that grew a third is a version this page cannot read, and the room repairs an
+ * unread `st` the way it repairs a lost op, with the next `hi`.
+ */
+const isStamp = (v: unknown): boolean =>
+  Array.isArray(v) && v.length === 2 && finite(v[0]) && str(v[1]);
+const isClock = (v: unknown): boolean => bag(v) && Object.values(v).every(isStamp);
+
+/**
+ * What each word owes, and only what the session reads WITHOUT checking. A field the session
+ * already guards for itself (`st`'s `g`/`z`, `cur`'s `p`, an op's `s`) is left to it — this is
+ * the poison list, not a schema.
+ */
+const wellFormed = (kind: Kind, d: Record<string, unknown>): boolean => {
+  switch (kind) {
+    case "hi":
+      return true; // an announce carries an optional ack and nothing else
+    case "op":
+      // `p`/`v` write a cell; `l`/`a` are the stamp `admit` merges; `e`/`ea` the epoch it judges.
+      return (
+        finite(d.p) &&
+        finite(d.v) &&
+        finite(d.l) &&
+        str(d.a) &&
+        finite(d.e) &&
+        str(d.ea)
+      );
+    case "st":
+      // The epoch, plus the two maps the board adopts wholesale. `k`'s VALUES are guarded where
+      // they are read (`adoptInk` skips a non-number), so the map itself is all this owes; the
+      // clock's are not guarded anywhere, so they are guarded here.
+      return (
+        finite(d.e) &&
+        str(d.ea) &&
+        (d.c === undefined || isClock(d.c)) &&
+        (d.k === undefined || bag(d.k))
+      );
+    case "cur":
+      return finite(d.e) && str(d.ea);
+  }
+};
+
+/** Frames refused since this module loaded. Quiet on purpose — it is for the unit and for a
+ *  console, never for the player. */
+let refused = 0;
+const drop = (): void => void refused++;
+export const droppedFrames = (): number => refused;
+
 /**
  * Join a room over the relay, directly. `urls[0]` is the relay; a list of one is what a relay
  * you operate means (see `RELAY_URLS`), so the extra entries are a future's problem and this
@@ -139,21 +221,30 @@ export function relayWire(
         return; // a frame this arm cannot read is a frame it has nothing to do about
       }
       if (!Array.isArray(msg) || msg[0] !== "EVENT" || msg.length < 3) return;
-      const body = (msg as [string, string, { content?: unknown }])[2];
-      if (typeof body?.content !== "string") return;
-      let wrapped: { kind: Kind | "bye"; data: Msg; from: string; to?: string };
+      const body: unknown = msg[2];
+      if (!bag(body) || !str(body.content)) return;
+      let wrapped: unknown;
       try {
         wrapped = JSON.parse(body.content);
       } catch {
-        return;
+        return; // not our envelope, and never was — nothing to count
       }
+      // FROM HERE DOWN THE FRAME IS SUSPECT UNTIL IT IS READ. `JSON.parse` returns `any`, and
+      // the annotation this used to carry (`{kind, data, from, to}`) asserted every field of it
+      // without looking at one — the same lie the `as number` downstairs told, told earlier.
+      if (!bag(wrapped)) return drop();
       const { kind, data, from, to } = wrapped;
-      if (!from || from === selfId || (to && to !== selfId)) return;
+      if (!str(from) || from === "") return drop(); // an id that is not an id keys everything
+      if (to !== undefined && !str(to)) return drop();
+      if (from === selfId || (to && to !== selfId)) return; // routing, not malformation
       if (kind === "bye") return h.peer(from, false);
+      if (!isKind(kind) || !bag(data) || !wellFormed(kind, data)) return drop();
       // Presence is derived from traffic, the `localWire` rule: anything heard from an id IS
       // that id being here. `hi` and its ack make the discovery symmetric whoever opened first.
       h.peer(from, true);
-      h.message(kind, data, from);
+      // The cast is the one JSON.parse earns: its product IS `Json`, and `wellFormed` has just
+      // read the fields the session merges without asking.
+      h.message(kind, data as Msg, from);
     };
     ws.onclose = () => {
       if (closed || sock !== ws) return;

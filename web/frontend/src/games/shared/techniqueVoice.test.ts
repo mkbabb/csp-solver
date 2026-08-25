@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { formatHintNote, describeTally, TALLY_TOTAL } from "./techniqueVoice";
+import {
+  formatHintNote,
+  formatConflictNote,
+  describeTally,
+  TALLY_TOTAL,
+} from "./techniqueVoice";
 import { TECHNIQUE_TIER, type TechniqueId } from "./techniqueEngine";
+import type { ConflictUnit } from "./conflicts";
 
 // The technique layer's marginalia voice (T4-W7, lane E3) — the named-hint copy, and the tally
 // descriptor beside it. Pure string formatting; the display char is handed in (glyph-agnostic),
@@ -59,6 +65,80 @@ describe("formatHintNote — what to write, in the reader's words", () => {
     for (const note of notes) {
       expect(note).not.toMatch(JARGON);
       expect(note).not.toMatch(DASHY);
+    }
+  });
+
+  // T9-W1 §1.2 — THE TWO AXIS HOLES. `houseAxis` is the engine's own `house.axis` today, so
+  // both rows below are defensive; both were reachable and both were wrong. An axis the word
+  // table does not hold rendered "house", which is the solver's vocabulary M16 abrogates; and
+  // an EMPTY axis is falsy without being nullish, so the `??` guard never fired and the
+  // sentence shipped with a hole in it ("… in this ").
+  it("an axis the table cannot name says a whole plain sentence, never 'house'", () => {
+    const note = formatHintNote("hidden-single", "7", "diagonal");
+    expect(note).toBe("7 goes nowhere else in this group");
+    expect(note).not.toContain("house");
+  });
+
+  it("an empty axis does not break the sentence in half", () => {
+    expect(formatHintNote("hidden-single", "7", "")).toBe(
+      "7 goes nowhere else in this group",
+    );
+  });
+
+  it("no axis at all reads the same way", () => {
+    const note = formatHintNote("hidden-single", "7");
+    expect(note).toBe("7 goes nowhere else in this group");
+    expect(note.endsWith(" ")).toBe(false);
+  });
+});
+
+// ── T9-W1 §1.2 — THE VERDICT NAMES THE UNIT ────────────────────────────────────────────────
+// The verdict copy lived at its one call site as `check row ${firstRow}`, which is how it came
+// to name a unit the board had never broken. It joins the hint copy here, for the reason this
+// module exists: one home for the phrasing, so five games cannot drift apart, and so the
+// vocabulary is enumerable in a test rather than remembered.
+describe("formatConflictNote — the verdict, in the game's own words", () => {
+  it("counts along the units a reader can count", () => {
+    expect(formatConflictNote({ kind: "row", index: 3 })).toBe("check row 3");
+    expect(formatConflictNote({ kind: "column", index: 5 })).toBe("check column 5");
+    expect(formatConflictNote({ kind: "box", index: 2 })).toBe("check box 2");
+  });
+
+  it("names the printed furniture for the families that have some", () => {
+    expect(formatConflictNote({ kind: "cage", index: null })).toBe("check the cage");
+    expect(formatConflictNote({ kind: "inequality", index: null })).toBe(
+      "check the greater than signs",
+    );
+    expect(formatConflictNote({ kind: "thermometer", index: null })).toBe(
+      "check the thermometer",
+    );
+  });
+
+  it("says the one true thing when no unit can be named", () => {
+    expect(formatConflictNote(null)).toBe("no solution from here");
+  });
+
+  it("an indexed unit that arrived without its index still reads as a sentence", () => {
+    expect(formatConflictNote({ kind: "row", index: null })).toBe(
+      "no solution from here",
+    );
+  });
+
+  it("carries no solver jargon and no em dash, over every unit the derivation emits", () => {
+    const units: (ConflictUnit | null)[] = [
+      null,
+      { kind: "row", index: 1 },
+      { kind: "column", index: 1 },
+      { kind: "box", index: 1 },
+      { kind: "cage", index: null },
+      { kind: "inequality", index: null },
+      { kind: "thermometer", index: null },
+    ];
+    for (const unit of units) {
+      const note = formatConflictNote(unit);
+      expect(note).not.toMatch(JARGON);
+      expect(note).not.toMatch(DASHY);
+      expect(note).not.toMatch(/house|unit|constraint/);
     }
   });
 });

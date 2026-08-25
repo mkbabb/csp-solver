@@ -4,7 +4,10 @@
  * and one protocol over one worker leaves the buffer shape as the only per-game wire fact.
  */
 import { describe, it, expect } from "vitest";
-import { encodeCages, decodeCages, kenkenClue } from "./clue";
+import { encodeCages, decodeCages, kenkenClue, cageViolations } from "./clue";
+import { findConflicts } from "@games/shared/conflicts";
+import { formatConflictNote } from "@games/shared/techniqueVoice";
+import { kenkenSpec } from "./spec";
 import type { KenKenCage } from "./types";
 
 describe("kenken clue seam — the cage wire codec", () => {
@@ -61,5 +64,97 @@ describe("kenken clue seam — the cage wire codec", () => {
   it("is the ONE pair the spec spreads and the solver client is handed", () => {
     expect(kenkenClue.encode).toBe(encodeCages);
     expect(kenkenClue.decode).toBe(decodeCages);
+  });
+});
+
+// ── T9-W1 §1.2 — THE CAGE JOINS THE BOARD'S LAW ────────────────────────────────────────────
+// KenKen's cage arithmetic was absent from the conflict derivation entirely, so a board wrong
+// in nothing but a cage target was told to check a clean row. Unlike killer, a kenken cage MAY
+// repeat a value (the Latin square is what forbids repeats, not the cage), so only the target
+// is judged, and only once every cell in the cage is filled: partial `-` and `÷` arithmetic
+// proves nothing.
+describe("kenken clue seam — the cage conflict sink", () => {
+  const sweep = (cages: KenKenCage[], values: Record<string, number>): number[] => {
+    const hit: number[] = [];
+    cageViolations(cages)(values, (pos) => hit.push(pos));
+    return hit.sort((a, b) => a - b);
+  };
+
+  it("judges every operator against its target", () => {
+    expect(sweep([{ op: "+", target: 5, cells: [0, 1] }], { "0": 1, "1": 2 })).toEqual([
+      0, 1,
+    ]);
+    expect(sweep([{ op: "×", target: 12, cells: [0, 1] }], { "0": 3, "1": 2 })).toEqual(
+      [0, 1],
+    );
+    expect(sweep([{ op: "-", target: 3, cells: [0, 1] }], { "0": 4, "1": 2 })).toEqual([
+      0, 1,
+    ]);
+    expect(sweep([{ op: "÷", target: 2, cells: [0, 1] }], { "0": 3, "1": 1 })).toEqual([
+      0, 1,
+    ]);
+  });
+
+  it("leaves every operator alone when the cage produces its target", () => {
+    expect(sweep([{ op: "+", target: 3, cells: [0, 1] }], { "0": 1, "1": 2 })).toEqual(
+      [],
+    );
+    expect(sweep([{ op: "×", target: 6, cells: [0, 1] }], { "0": 3, "1": 2 })).toEqual(
+      [],
+    );
+    expect(sweep([{ op: "-", target: 2, cells: [0, 1] }], { "0": 4, "1": 2 })).toEqual(
+      [],
+    );
+    expect(sweep([{ op: "÷", target: 3, cells: [0, 1] }], { "0": 3, "1": 1 })).toEqual(
+      [],
+    );
+  });
+
+  it("a difference and a quotient read either way round", () => {
+    expect(sweep([{ op: "-", target: 2, cells: [0, 1] }], { "0": 2, "1": 4 })).toEqual(
+      [],
+    );
+    expect(sweep([{ op: "÷", target: 3, cells: [0, 1] }], { "0": 1, "1": 3 })).toEqual(
+      [],
+    );
+  });
+
+  it("a quotient that does not divide is wrong", () => {
+    expect(sweep([{ op: "÷", target: 2, cells: [0, 1] }], { "0": 3, "1": 2 })).toEqual([
+      0, 1,
+    ]);
+  });
+
+  it("a repeated value inside a cage is the Latin square's business, not the cage's", () => {
+    expect(sweep([{ op: "+", target: 4, cells: [0, 6] }], { "0": 2, "6": 2 })).toEqual(
+      [],
+    );
+  });
+
+  it("a partly filled cage is not yet wrong", () => {
+    expect(sweep([{ op: "+", target: 5, cells: [0, 1] }], { "0": 1 })).toEqual([]);
+    expect(sweep([{ op: "-", target: 1, cells: [0, 1] }], { "0": 4 })).toEqual([]);
+  });
+
+  it("a singleton cage is judged against its own label whatever its operator", () => {
+    expect(sweep([{ op: "+", target: 3, cells: [5] }], { "5": 2 })).toEqual([5]);
+    expect(sweep([{ op: "+", target: 3, cells: [5] }], { "5": 3 })).toEqual([]);
+  });
+
+  it("an empty cage set says nothing", () => {
+    expect(sweep([], { "0": 1 })).toEqual([]);
+  });
+
+  it("names the cage in the verdict when nothing else on the board is broken", () => {
+    const c = findConflicts({ "0": 1, "1": 2 }, 4, {
+      extra: cageViolations([{ op: "+", target: 5, cells: [0, 1] }]),
+      extraUnit: "cage",
+    });
+    expect(c.unit).toEqual({ kind: "cage", index: null });
+    expect(formatConflictNote(c.unit)).toBe("check the cage");
+  });
+
+  it("is the sink the spec hands the board", () => {
+    expect(kenkenSpec.clues?.conflicts).toEqual({ unit: "cage", sink: cageViolations });
   });
 });

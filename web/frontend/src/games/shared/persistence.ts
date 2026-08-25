@@ -50,7 +50,6 @@ export interface PersistedCore {
   values: Record<string, number>;
   givenCells: string[];
   originalGivenCells: string[];
-  overriddenCells: string[];
   solvedValues: Record<string, number>;
   boardGeneration: number;
 }
@@ -277,7 +276,6 @@ export function createPersistence<TClue, TPersisted extends PersistedCore>(
       values,
       givenCells,
       originalGivenCells: givenCells,
-      overriddenCells: [],
       solvedValues: {},
       boardGeneration: 1,
       ...(clueField ? { [clueField]: clueValue } : {}),

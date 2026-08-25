@@ -35,7 +35,6 @@ function board(opts: {
     values,
     givenCells: opts.given,
     originalGivenCells: opts.given,
-    overriddenCells: [],
     solvedValues: {},
     boardGeneration: 1,
     inequalities: [], // futoshiki's clue furniture — its loader rejects a board without it

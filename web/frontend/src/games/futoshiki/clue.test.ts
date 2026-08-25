@@ -18,6 +18,9 @@ import {
   decodeInequalities,
   futoshikiClue,
 } from "./clue";
+import { findConflicts } from "@games/shared/conflicts";
+import { formatConflictNote } from "@games/shared/techniqueVoice";
+import { futoshikiSpec } from "./spec";
 import type { Inequality } from "./types";
 
 // A 5×5 board. Positions are row-major: 0..4 is the top row, 5 sits under 0.
@@ -158,5 +161,31 @@ describe("the wire head — one pair of functions for the worker and the seam", 
   it("is the ONE pair the spec spreads and the solver client is handed", () => {
     expect(futoshikiClue.encode).toBe(encodeInequalities);
     expect(futoshikiClue.decode).toBe(decodeInequalities);
+  });
+});
+
+// ── T9-W1 §1.2 — THE SINK REACHES THE BOARD ────────────────────────────────────────────────
+// `inequalityViolations` was written, tested and then wired to NOTHING: no spec slot carried
+// it, so `BoardHost` derived rows and columns only and a board wrong in nothing but a printed
+// caret was told to check a clean row. The rows below pin the wiring, not the sweep — the
+// sweep above was always right.
+describe("futoshiki clue seam — the sink the board actually derives", () => {
+  it("is the sink the spec hands the board, with the word it answers to", () => {
+    expect(futoshikiSpec.clues?.conflicts).toEqual({
+      unit: "inequality",
+      sink: inequalityViolations,
+    });
+  });
+
+  it("names the printed signs when nothing else on the board is broken", () => {
+    // A 5×5 latin board: a single `>` pair, both endpoints filled the wrong way round, every
+    // row and column holding one digit each.
+    const c = findConflicts({ "0": 2, "1": 5 }, N, {
+      extra: inequalityViolations([[0, 1]]),
+      extraUnit: "inequality",
+    });
+    expect([...c.positions].sort()).toEqual(["0", "1"]);
+    expect(c.unit).toEqual({ kind: "inequality", index: null });
+    expect(formatConflictNote(c.unit)).toBe("check the greater than signs");
   });
 });

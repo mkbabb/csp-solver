@@ -76,9 +76,19 @@ test('invalid solution: solve → edit cell → state reverts to idle', async ({
   const board = page.locator('.board-wrapper');
   await expect(board).toHaveClass(/solve-success/);
 
-  // Override a solved cell by clicking a cell and typing a different value
-  // Find the first cell input and change its value
-  const firstCell = page.locator('.sudoku-cell input').first();
+  // Override a SOLVER-FILLED cell — cell 0 of a dealt board is a printed clue, and since
+  // T9-W1 §1.1 a clue refuses every write, so the old `.first()` edited nothing and the grade
+  // never reverted (measured red on both engines). The board says which cells are the solver's;
+  // this reads that, so the row edits a cell the player is actually allowed to edit.
+  const solvedIdx = await page.evaluate(() => {
+    const inputs = document.querySelectorAll('.sudoku-cell input');
+    for (let i = 0; i < inputs.length; i++) {
+      if (/solver's answer/.test(inputs[i].getAttribute('aria-label') ?? '')) return i;
+    }
+    return -1;
+  });
+  expect(solvedIdx).toBeGreaterThanOrEqual(0);
+  const firstCell = page.locator('.sudoku-cell input').nth(solvedIdx);
   await firstCell.click();
   await firstCell.fill('1');
 
@@ -144,45 +154,68 @@ test('given cells use foreground ink, solved cells use solver-ink', async ({ pag
   expect(solverInkCount).toBeGreaterThan(0);
 });
 
-// ── Test 4b: Given Cell Override → User-Ink ─────────────────────────
+// ── Test 4b: The Given Cell's Law — the write is refused, the clue stands ──
+//
+// T9-W1 §1.1 (family F17, ballot B7's default). This row asserted the OPPOSITE for four
+// tranches: `applyCellValue` DEMOTED a written-over clue (`givenCells.delete` →
+// `overriddenCells.add`), so one keystroke re-inked a given to user-ink and a Backspace
+// erased it outright — while the cell's own accessible name still read 'given clue N', the
+// heavy rendering still called it printed, and a fresh deal could be driven unsolvable by
+// the first interaction on it. Givens are inviolable now: the model refuses the write, the
+// cell keeps its digit and its name, and the refusal is worn where a player can see it.
+//
+// Born red on both engines by measurement, from both sides. Run against the uncured tree
+// this row failed at `is-refused` (no cue, because there was no refusal). Run against the
+// cure, the row it replaces failed at its own assertion — the clue's stroke stayed
+// `var(--color-foreground)` where the demotion used to hand it `user-ink`.
 
-test('given cell override: foreground stroke reverts to user-ink on override', async ({ page }) => {
+test('given cells are inviolable: a keystroke and a Backspace are both refused', async ({
+  page,
+}) => {
   await loadApp(page);
 
   await randomizeBoard(page);
 
-  // Find first given cell (foreground stroke)
+  // The first cell the board itself CALLS a clue — its own accessible name, not a stroke
+  // heuristic, so the row reads the property the refusal has to keep true.
   const givenCellIdx = await page.evaluate(() => {
-    const cells = document.querySelectorAll('.sudoku-cell');
-    for (let i = 0; i < cells.length; i++) {
-      const path = cells[i].querySelector('.glyph-svg path');
-      if (path?.getAttribute('stroke')?.includes('foreground')) return i;
+    const inputs = document.querySelectorAll('.sudoku-cell input');
+    for (let i = 0; i < inputs.length; i++) {
+      if (/given clue/.test(inputs[i].getAttribute('aria-label') ?? '')) return i;
     }
     return -1;
   });
   expect(givenCellIdx).toBeGreaterThanOrEqual(0);
 
-  // Override the cell
-  await page.evaluate((idx) => {
-    const input = document.querySelectorAll('.sudoku-cell input')[idx] as HTMLInputElement;
-    const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-    nativeSetter.call(input, '2');
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  }, givenCellIdx);
+  const cell = page.locator('.sudoku-cell').nth(givenCellIdx);
+  const input = cell.locator('input');
+  const clue = await input.inputValue();
+  expect(clue).not.toBe('');
 
-  // That cell's glyph re-inks to user-ink on the override — poll the stroke attribute
-  // until it reflects the re-render (the settle condition), never a fixed sleep.
-  await expect
-    .poll(
-      () =>
-        page
-          .locator('.sudoku-cell')
-          .nth(givenCellIdx)
-          .locator('.glyph-svg path')
-          .getAttribute('stroke'),
-      { timeout: 5000 },
-    )
-    .toMatch(/user-ink/);
+  // A REAL keystroke down the real input path — not a native setter — so the in-place clamp
+  // is in the measurement too (the caret lands wherever the click put it, and either pose
+  // refuses).
+  await input.click();
+  await input.press('7');
+
+  // THE REFUSAL IS SEEN first, because it is a pulse and not a state: the house's own error
+  // verb, worn for one window and dropped. Asserted before the slower reads below can outlive it.
+  await expect(cell).toHaveClass(/is-refused/);
+
+  // The digit never lands, and the cell is still exactly what it was.
+  await expect(input).toHaveValue(clue);
+  await expect(input).toHaveAttribute('aria-label', /given clue/);
+  const stroke = await cell.locator('.glyph-svg path').first().getAttribute('stroke');
+  expect(stroke).toContain('foreground');
+  expect(stroke).not.toContain('user-ink');
+
+  // AN ERASE IS A WRITE, so Backspace meets the same gate — this is the half that used to
+  // leave a blank square no rule could ever fill again.
+  await input.press('Backspace');
+  await expect(cell).toHaveClass(/is-refused/);
+  await expect(input).toHaveValue(clue);
+  await expect(cell.locator('.glyph-svg')).toHaveCount(1);
+  await expect(input).toHaveAttribute('aria-label', /given clue/);
 });
 
 // ── Test 5b: Solve Failure — Conflicting Values → Failure State ─────

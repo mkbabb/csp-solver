@@ -21,7 +21,7 @@ import { defineGame } from "@games/shared/defineGame";
 import DigitCell from "@games/shared/DigitCell.vue";
 import ThermoTube from "./ThermoTube.vue";
 import { useThermo, nodeBudgetForSize, persistence } from "./composables/useThermo";
-import { thermoClue } from "./clue";
+import { chainViolations, thermoClue } from "./clue";
 import { subgridSizes, difficultyOptions } from "@games/shared/selectors";
 import type { Difficulty } from "@games/shared/types";
 import type { ThermoLine } from "./types";
@@ -47,6 +47,9 @@ export const thermoSpec = defineGame<ReturnType<typeof useThermo>, ThermoLine[]>
     // The permalink/wire codec pair, NAMED not re-implemented: the same length-prefixed flat
     // buffer the one solver client already posts to the Worker. One codec, both consumers —
     // makes one shared `persistence.ts` possible when 2.4 lands it.
+    // T9-W1 §1.2 — the tube's own law, reaching the board's conflict derivation. Without it a
+    // board wrong down a thermometer was told to check a row with nothing wrong in it.
+    conflicts: { unit: "thermometer", sink: chainViolations },
     ...thermoClue,
   },
   furniture: { cell: DigitCell },
