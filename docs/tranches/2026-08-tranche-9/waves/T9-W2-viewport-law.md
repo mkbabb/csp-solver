@@ -76,10 +76,25 @@ shifts, or yields.
 - Born-RED: hover census over the slab + tool row asserting zero
   tape-over-interactive overlap — red at HEAD.
 
+## 2.6 The mobile control scale (T9-M01, owner's mark 2026-08-10)
+
+"All buttons and text for controls need to be larger on mobile" — from the device
+frame (`../marks/m01-playing-dark-iphone.png`): the toolbar's icon+label pairs and
+the drawer's option text sit under the scale a thumb-driven surface owes. The
+MECHANISM lands here — a mobile type/tap scale applied across the toolbar, the
+drawer options, and the washi tags, keeping the ≥44px floor A3 verified and raising
+the read floor with it; the VOICE (which sizes, one system) is W7's decision,
+applied here. Sticky-title mechanics (T9-M03's "properly be sticky") also land in
+this wave's scroll-case work: the section tags pin within the card's scroll
+container instead of scrolling away.
+
 ## Gate spine
 
 - The four born-RED probes above land as e2e rows (count pins move → doc gates in
   the same commit).
+- M01/M03 rows: a type-scale census over the mobile toolbar + drawer (RED at HEAD
+  by the owner's mark; the threshold set with W7's system) and a sticky-tag probe
+  (tag visible while its group scrolls — RED at HEAD).
 - π identity on every surface this wave does not claim; DELTA before/after crops per
   cure at the probe's own cells (≤150KB each, evidence-policy).
 - DesignSync record per §2.1/§2.3/§2.4 decision, banked under `evidence/w2/design/`.

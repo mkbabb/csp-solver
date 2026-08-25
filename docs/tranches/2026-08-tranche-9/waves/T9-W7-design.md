@@ -3,8 +3,16 @@
 The design-language census (F18) answered as a system, not seven patches. Bound by
 the convergent design loop (round-zero portfolio → RESEARCH/SYNTHESIZE/PROTOTYPE/
 CRITIQUE/AGGLOMERATE → earned-100%) and the thrice protocol per step; Fable owns every
-adjudication through DesignSync; ballot B6's default scopes the wave to the enumerated
-cures — a full design-system re-cut waits on the owner's mark.
+adjudication through DesignSync.
+
+**B6's scope condition FIRED for the controls estate** (owner marks 2026-08-10,
+`../design-marks-2026-08-10.md`): T9-M05 — "the entire controls section needs better
+design hierarchy and development for clarity" — is the owner's mark the ballot
+reserved. The controls estate gets the SYSTEM re-cut (hierarchy, delineation,
+section voice, bar chrome as one designed whole); the rest of the product stays
+under the enumerated-cures default. The owner's own frame corroborates the audit:
+the deal group's tag clipped off the case edge, three label voices in one card, the
+sheet's border cutting the wordmark raw.
 
 ## The census, restated as design questions
 
@@ -40,6 +48,22 @@ cures — a full design-system re-cut waits on the owner's mark.
    legible as what it is.
 9. **B1 executes** (fired or resolved): "the solver finishes the board" and
    `solver's answer N` recut to the M16 register.
+10. **The controls system re-cut** (T9-M03/M04/M05, the fired B6 scope): section
+    titles larger and PROPERLY STICKY (mechanics in W2 §2.6, the voice here); the
+    mobile floating bar gains its proper border in the house hand; the whole card's
+    hierarchy designed as one system — group, title, option, act — desktop and
+    mobile the same grammar. §1 and §2 execute INSIDE this system, not beside it.
+11. **The masthead telemetry** (T9-M08): your name + multiplayer presence "displayed
+    deftly next to the mbabb logo," both platforms. The owner sketched two shapes —
+    (a) the multiplayer controls + lobby move up entire; (b) the icon with ink color
+    + lobby count up top, controls stay in controls. The thrice protocol prototypes
+    BOTH; the owner adjudicates at the re-look. W3's live-region idiom rides
+    whichever wins (the telemetry that moves must speak).
+12. **Idiom refinement pass** (T9-M07): colors, animations, and the multiplayer
+    chrome brought to the design language — the accent-family work of §3 extended
+    over the multiplayer surfaces (peer ink, presence, join wash) and the motion
+    grammar (incl. the drawer curve, if W8's trace acquits the frames and convicts
+    the ease).
 
 ## Gate spine
 

@@ -29,6 +29,10 @@ only, the close-class lies hunted by name.
 - **R4** (2 refuters + 3 recap builders, 2026-08-10, run `wf_93b0e39c-10b`): V7
   gestalt-layout · V8 given-write/conflict-note · RC-T6/T7/T8 (126 recap rows →
   `recap-matrix.md`). 5/5 landed.
+- **R5** (owner marks, 2026-08-10, post-formation): eight marks from a real iOS
+  device (`../../design-marks-2026-08-10.md`, two frames banked). M03/M05
+  corroborate F18/F12 in the owner's own hand; M06 opens F20 (the one front no
+  audit lane priced). Folded into W2/W7/W8 the same day.
 
 ## Families (v3 — VERIFIED; per-family verdict in the Status list below the table)
 
@@ -135,6 +139,11 @@ only, the close-class lies hunted by name.
   the half-write dies either way.
 - **F18 stands→W7** (design census; P2 — refuters not spent on taste).
 - **F19 stands→W5/B2** (mechanical; confirmed by every lane's console log).
+- **F20 FIRST-LOAD LATENCY (owner-opened, R5)→W8** — first-load mobile Safari
+  "poor" for drawing + the dark-toggle's first invocation; the drawer's frames
+  (M02). No audit lane priced the boot; perf-rig's GATE D (boot TBT) sits
+  executor-less (F1's member) — W8 marries the owner's device truth to the
+  unexecuted gate. Ceiling P1 (owner's word on the primary mobile surface).
 
 ## Stability ruling (formation-final)
 
