@@ -88,6 +88,15 @@ applied here. Sticky-title mechanics (T9-M03's "properly be sticky") also land i
 this wave's scroll-case work: the section tags pin within the card's scroll
 container instead of scrolling away.
 
+## 2.7 The controls tab rides the board (T9-M10/M13, owner 2026-08-25)
+
+The mobile "controls" chip floats in dead space below the board (Frame D — the
+stranded chip). It becomes a TAB on the board's bottom edge, the desktop side-tab
+idiom rotated (W7 owns the look), present in every mobile pose — which also gives
+the short-landscape cure (§2.2) its natural entry. The tab carries the few
+frequently-used quick actions M13 names (W7 picks the set); the mechanics — hit
+area, sticky-to-board-edge across poses, safe-area insets — land here.
+
 ## Gate spine
 
 - The four born-RED probes above land as e2e rows (count pins move → doc gates in
@@ -95,6 +104,8 @@ container instead of scrolling away.
 - M01/M03 rows: a type-scale census over the mobile toolbar + drawer (RED at HEAD
   by the owner's mark; the threshold set with W7's system) and a sticky-tag probe
   (tag visible while its group scrolls — RED at HEAD).
+- M10 row: the controls entry is edge-attached to the board at every mobile pose
+  (RED at HEAD — Frame D measures the gap).
 - π identity on every surface this wave does not claim; DELTA before/after crops per
   cure at the probe's own cells (≤150KB each, evidence-policy).
 - DesignSync record per §2.1/§2.3/§2.4 decision, banked under `evidence/w2/design/`.

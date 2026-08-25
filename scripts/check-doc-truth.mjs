@@ -2,22 +2,25 @@
 /**
  * check-doc-truth — the doc-canon gate.
  *
- * Thirty-two rows, each of which RE-DERIVES its truth from the artifact at run
+ * Thirty-nine rows, each of which RE-DERIVES its truth from the artifact at run
  * time and then asserts the docs say that. Nothing here is pinned: every expected
  * value comes off the tree — a byte count off the built `.wasm`, a version off
  * `Cargo.toml`/`package.json`, a test roster off the `#[test]` attributes, an
- * e2e total off `playwright test --list`. When the code moves, the gate moves
- * with it and the prose is what goes red.
+ * e2e total off `playwright test --list`, a directory's size off the directory,
+ * a sha256 off the bytes it stamps. When the code moves, the gate moves with it
+ * and the prose is what goes red.
  *
  * Zero dependencies, ESM, node-only. Runs identically on ubuntu and darwin.
  *
  * Exit 0 = every row green. Exit 1 = one line per failing site: row id,
  * file:line, expected, got.
  *
- * `--self-test` runs the fixtures instead: each T7-W0 and T7-W5 row against a
- * doc that lies (must RED) and the same claim told true (must GREEN). A row that
- * cannot be shown to red is a decoration; the fixtures are the proof, and the
- * GREEN ones are built from the derivations, so they rot the day the tree moves.
+ * `--self-test` runs the fixtures instead: each T7-W0, T7-W5 and T9-W0 row
+ * against a doc that lies (must RED) and the same claim told true (must GREEN).
+ * A row that cannot be shown to red is a decoration; the fixtures are the proof,
+ * and the GREEN ones are built from the derivations, so they rot the day the
+ * tree moves. 28 of the 39 rows carry fixtures; the eleven that don't are named
+ * in F1's finding and are T9-W5's to cure, not this file's to claim away.
  *
  * A DERIVATION THAT FAILS IS A RED, NEVER A SKIP (T5-W1). The band row used to
  * drop its assertions when it could not read a budget out of the workflow and
@@ -70,6 +73,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
@@ -963,6 +967,251 @@ function deriveRetiredDeps() {
   );
 }
 
+// ── T9-W0 derivations: the pins under the doc-canon sweep ──────────────────
+//
+// Six rows land here and one is repaired, each pinning a claim T9-W0's lanes
+// re-cut, each reading the artifact the claim is ABOUT: the workflow's own
+// steps, a directory's own contents, `docs/`, `playerIdentity.ts`, the wire's
+// verbs, the built wasm's bytes, `pencilConfig.ts`/`index.css`, and T8's §4
+// ladder. Same law as every row above them — nothing pinned, everything
+// re-derived, and a derivation that comes back empty is a failing site rather
+// than a quiet pass.
+
+/**
+ * The browser estate CI actually carries: which bundles it installs, and whether
+ * any step runs a Playwright suite. COMMENTS DON'T COUNT — the workflow talks
+ * about `playwright install` in three places to explain why it does not run it,
+ * and a census that reads its own explanation is the vacuous-subject defect.
+ */
+function deriveCiBrowsers() {
+  const rel = ".github/workflows/ci.yml";
+  const text = read(rel);
+  if (text === null) return { rel, present: false, tokens: [], installs: [], runs: [] };
+  const tokens = new Set();
+  const installs = [];
+  const runs = [];
+  text.split("\n").forEach((line, i) => {
+    if (/^\s*#/.test(line)) return;
+    const m = line.match(/playwright install(?:\s+--with-deps)?((?:\s+[a-z]+)+)?/);
+    if (m) {
+      installs.push(i + 1);
+      for (const t of (m[1] ?? "").trim().split(/\s+/).filter(Boolean)) tokens.add(t);
+    }
+    if (/playwright\s+test\b/.test(line) && !/--list\b/.test(line)) runs.push(i + 1);
+  });
+  return { rel, present: true, tokens: [...tokens].sort(), installs, runs };
+}
+
+/** Every directory of the shipped tree, indexed by its own name. */
+function deriveDirIndex() {
+  const byName = new Map();
+  const rec = (rel) => {
+    for (const e of readdirSync(abs(rel), { withFileTypes: true })) {
+      if (!e.isDirectory() || SKIP_DIRS.test(e.name)) continue;
+      const p = join(rel, e.name);
+      if (p === "docs/tranches") continue;
+      byName.set(e.name, [...(byName.get(e.name) ?? []), p]);
+      rec(p);
+    }
+  };
+  rec("");
+  return byName;
+}
+
+/**
+ * A directory's own contents: files, and files by extension. Dotfiles don't
+ * count — a `.DS_Store` is not a member of "the integration suite (24 files)",
+ * and a gate that says otherwise reds on somebody's Finder window.
+ */
+function dirCensus(rel) {
+  const files = readdirSync(abs(rel), { withFileTypes: true })
+    .filter((e) => e.isFile() && !e.name.startsWith("."))
+    .map((e) => e.name);
+  return {
+    files: files.length,
+    ext: (e) => files.filter((f) => f.endsWith(e)).length,
+  };
+}
+
+/**
+ * Every "this directory holds N" claim in the canon, resolved to the directory
+ * it is about and counted. Scanned at CALL time, not at load, because the
+ * self-test mounts prose over these files and a claim scan taken at load would
+ * grade the fixture against the tree's own sentence.
+ */
+const DIR_COUNT_SHAPES = [
+  // `icons/ (9)` — the token, then a bare parenthesised count.
+  { re: /\b([A-Za-z][\w.-]*)\/\s*\((\d+)\)/g, unit: "files" },
+  // `tests/                   integration suite (24 files)`
+  { re: /\b([A-Za-z][\w.-]*)\/[^|`]{0,60}?\((\d+)\s+files?\)/g, unit: "files" },
+  // `scripts/                 # the frontend gate scripts — 20 .mjs`
+  { re: /\b([A-Za-z][\w.-]*)\/[^|`]{0,60}?\b(\d+)\s+(\.[a-z]{1,5})\b/g, unit: null },
+];
+
+function dirCountClaims() {
+  const out = [];
+  for (const rel of CITED_DOCS) {
+    const lines = (read(rel) ?? "").split("\n");
+    const nodes = treeCites(rel);
+    lines.forEach((line, i) => {
+      if (RETIRED_LINE.test(line)) return;
+      for (const shape of DIR_COUNT_SHAPES)
+        for (const m of line.matchAll(shape.re)) {
+          const tok = m[1];
+          const unit = shape.unit ?? m[3];
+          const node = nodes.find(
+            (c) => c.line === i + 1 && c.path.split("/").pop() === tok && has(c.path),
+          );
+          const hits = D.dirs.get(tok) ?? [];
+          const base = dirname(rel) === "." ? "" : dirname(rel) + "/";
+          const own = hits.filter((p) => p.startsWith(base));
+          const dir =
+            node?.path ??
+            (own.length === 1 ? own[0] : hits.length === 1 ? hits[0] : null);
+          if (out.some((x) => x.site === `${rel}:${i + 1}` && x.tok === tok)) continue;
+          out.push({
+            site: `${rel}:${i + 1}`,
+            tok,
+            unit,
+            claimed: Number(m[2]),
+            dir,
+            actual: dir
+              ? unit === "files"
+                ? dirCensus(dir).files
+                : dirCensus(dir).ext(unit)
+              : null,
+            text: line.trim().slice(0, 120),
+          });
+        }
+    });
+  }
+  return out;
+}
+
+/** The `docs/` roster, as the directory declares it. */
+function deriveDocsRoster() {
+  return DOCS.filter((d) => d.startsWith("docs/"))
+    .map((d) => d.slice(5).replace(/\.md$/, ""))
+    .sort();
+}
+
+/**
+ * The peer id's grammar and its lifetime, off the module that mints it. Both
+ * halves drifted together at T8-W3: the mint moved arms (so the prefix changed)
+ * and the id stopped being per-connection (so "throwaway" stopped being true),
+ * and the page documenting it moved neither.
+ */
+function derivePeerId() {
+  const src = read(MP.ident) ?? "";
+  const mint = src.match(/mintPeerId\s*=\s*\(\)\s*:\s*string\s*=>\s*`([^`]*)`/)?.[1];
+  const shape = mint?.match(/^([a-z]+)-\$\{hex\((\d+)\)\}$/i);
+  return {
+    rel: MP.ident,
+    prefix: shape ? shape[1] : null,
+    width: shape ? Number(shape[2]) : null,
+    key: src.match(/IDENTITY_KEY\s*=\s*"([^"]+)"/)?.[1] ?? null,
+    cap: Number(src.match(/IDENTITY_CAP\s*=\s*(\d+)/)?.[1] ?? NaN),
+    durable: /window\.localStorage/.test(src),
+    perTab: /window\.sessionStorage/.test(src),
+  };
+}
+
+/** Whether live cursors ship — the wire word, and the paint that reads it. */
+function deriveCursors(wire) {
+  const paint = [
+    ["web/frontend/src/games/shared/useSession.ts", /export const peerCursors\b/],
+    ["web/frontend/src/games/shared/BoardHost.vue", /peerCursorInk\b/],
+    ["web/frontend/src/games/shared/gameCell.css", /\.is-peer-cursor\b/],
+  ]
+    .filter(([rel, re]) => re.test(read(rel) ?? ""))
+    .map(([rel]) => rel);
+  const verb = wire.verbs.includes("cur");
+  return { verb, paint, shipped: verb && paint.length === 3 };
+}
+
+/** sha256 over every lean artifact on disk, with its bytes. */
+function deriveWasmSha() {
+  const named = [
+    "csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm",
+    "lean-pkg/csp_solver_wasm_bg.wasm",
+  ].filter((p) => existsSync(abs(p)));
+  const distDir = "web/frontend/dist/assets";
+  if (existsSync(abs(distDir)))
+    for (const f of readdirSync(abs(distDir)).filter((f) =>
+      /^csp_solver_wasm_bg-.*\.wasm$/.test(f),
+    ))
+      named.push(join(distDir, f));
+  return named.map((p) => ({
+    path: p,
+    size: bytes(p),
+    sha: createHash("sha256")
+      .update(readFileSync(abs(p)))
+      .digest("hex"),
+  }));
+}
+
+/** The animation estate's three censuses, off the config that holds them. */
+function deriveAnimationConfig() {
+  const cfg = "web/frontend/src/pencil/config/pencilConfig.ts";
+  const css = MP.css;
+  const filters = "web/frontend/src/pencil/chrome/SvgFilters.vue";
+  const src = read(cfg) ?? "";
+  const block = src.match(
+    /const DEFAULT_PRESETS[^=]*=\s*\{([\s\S]*?)\n\} as const;/,
+  )?.[1];
+  const presets = [...(block ?? "").matchAll(/^\s{4}id:\s*"([\w-]+)"/gm)].map(
+    (m) => m[1],
+  );
+  const curves = [
+    ...(src.match(/\n\s*curves:\s*\{([\s\S]*?)\n\s*\},/)?.[1] ?? "").matchAll(
+      /^\s*(\w+):\s*"/gm,
+    ),
+  ].map((m) => m[1]);
+  const ease = [
+    ...new Set(
+      [...(read(css) ?? "").matchAll(/^\s*--ease-([A-Za-z]\w*):/gm)].map((m) => m[1]),
+    ),
+  ];
+  // A subscriber is an enrolment, not a mention: the three verbs this estate
+  // enrols through, counted in the component the docs make a claim about.
+  const subs = [
+    ...(read(filters) ?? "").matchAll(
+      /\b(useBoilBeat|useBeatFrame|createBoilTicker|createSequenceSubscription|subscribe)\s*\(/g,
+    ),
+  ].map((m) => m[1]);
+  return { cfg, css, filters, presets, curves, ease, subs };
+}
+
+/**
+ * T8's §4 ladder, counted where it is stated: one table row per mark. The
+ * count the T8 estate publishes is |M1–M14| + |M16–M20| — M15 was never
+ * issued, so the top M-number runs one ahead of the membership, which is the
+ * whole of the off-by-one this derivation exists to hold the prose to.
+ */
+function deriveT8Ladder() {
+  const rel = "docs/tranches/2026-08-tranche-8/evidence/wgate/close-record.md";
+  const lines = (read(rel) ?? "").split("\n");
+  const start = lines.findIndex((l) => /^##\s+§4\s/.test(l));
+  const marks = [];
+  if (start >= 0)
+    for (let i = start + 1; i < lines.length; i++) {
+      if (/^##\s/.test(lines[i])) break;
+      const m = lines[i].match(/^\|\s*(M\d+)\b/);
+      if (m && !marks.includes(m[1])) marks.push(m[1]);
+    }
+  return { rel, marks };
+}
+
+/** The T8 files that state a mark COUNT — the estate the row grades. */
+const T8_ESTATE = [
+  "docs/tranches/2026-08-tranche-8/README.md",
+  "docs/tranches/2026-08-tranche-8/DISPOSITIONS.md",
+  "docs/tranches/2026-08-tranche-8/design-marks-2026-08-03.md",
+  "docs/tranches/2026-08-tranche-8/evidence/wgate/close-record.md",
+];
+
+const D_VERBS = deriveWireVerbs();
+
 const D = {
   lean: deriveLeanWasm(),
   fonts: deriveFonts(),
@@ -1004,13 +1253,22 @@ const D = {
   basenames: deriveBasenames(),
   origin: deriveRelayOrigin(),
   kind: deriveEventKind(),
-  verbs: deriveWireVerbs(),
+  verbs: D_VERBS,
   slugs: deriveSlugSpace(),
   ink: deriveInk(),
   stress: deriveStress(),
   loc: deriveRelayLoc(),
   ladder: deriveLadder(),
   retiredDeps: deriveRetiredDeps(),
+  // T9-W0
+  browsers: deriveCiBrowsers(),
+  dirs: deriveDirIndex(),
+  docsRoster: deriveDocsRoster(),
+  peerId: derivePeerId(),
+  cursors: deriveCursors(D_VERBS),
+  wasmSha: deriveWasmSha(),
+  anim: deriveAnimationConfig(),
+  t8: deriveT8Ladder(),
 };
 D.pin = D.crate ? `${D.crate[1]}.${D.crate[2]}` : null;
 
@@ -1100,18 +1358,16 @@ const ROWS = [
     //     swallowed the rest of the run line into the derived posture. Both are
     //     anchored now: the claim patterns want the claim's own shape, and the
     //     install grep captures the browser tokens alone.
+    // (3) T9-W0, registry F1/V3: THE CENSUS WAS COMPUTED AND THROWN AWAY. The
+    //     install list above was derived, printed in `derived:`, and never
+    //     reached a single assertion — so README's "CI installs both bundles"
+    //     stood GREEN over a workflow that installs no browser at all, for the
+    //     two closes since O-12 deleted the browser lanes. The census now
+    //     DECIDES the second arm: what CI carries governs what a doc may say
+    //     CI runs, in both directions.
     id: "chromium-alone-claim",
-    derived: () => {
-      const installs = [
-        ...new Set(
-          grep(
-            ".github/workflows/ci.yml",
-            /playwright install(?:\s+--with-deps)?((?:\s+[a-z]+)+)/,
-          ).flatMap((h) => h.m[0][1].trim().split(/\s+/)),
-        ),
-      ].sort();
-      return `playwright projects: ${D.projects.join(" + ") || "none parsed"} · ci installs: ${installs.join(" + ") || "none"}`;
-    },
+    derived: () =>
+      `playwright projects: ${D.projects.join(" + ") || "none parsed"} · ci installs: ${D.browsers.tokens.join(" + ") || "none"} (${D.browsers.installs.length} install step(s), ${D.browsers.runs.length} suite run(s) in ${D.browsers.rel}) — CI is ${D.browsers.installs.length || D.browsers.runs.length ? "browser-executing" : "BROWSERLESS"}`,
     run: () => {
       if (!D.projects.length)
         return [
@@ -1119,6 +1375,14 @@ const ROWS = [
             "web/frontend/playwright.config.ts",
             "a parseable project list to derive the browser posture from",
             "no projects parsed",
+          ),
+        ];
+      if (!D.browsers.present)
+        return [
+          fail(
+            D.browsers.rel,
+            "the CI workflow, to census what browser estate it carries",
+            "file absent — the install census has no subject",
           ),
         ];
       const multi = D.projects.length > 1;
@@ -1144,6 +1408,33 @@ const ROWS = [
         for (const re of claims)
           for (const h of grep(rel, re))
             out.push(fail(`${h.file}:${h.line}`, want, h.text));
+
+      // THE SECOND ARM — what CI carries. Affirmative by shape: every pattern
+      // wants a positive object after the verb, so the cured sentence ("the
+      // sixteen CI lanes install no browser bundle and execute no Playwright
+      // suite") is not the drift it replaced.
+      const browserless = !D.browsers.installs.length && !D.browsers.runs.length;
+      const census = `${D.browsers.rel} runs ${D.browsers.installs.length} \`playwright install\` step(s) and ${D.browsers.runs.length} suite run(s)${D.browsers.tokens.length ? ` — bundles: ${D.browsers.tokens.join(", ")}` : ""}`;
+      const ciClaims = browserless
+        ? [
+            /\bCI\b[^.\n]{0,40}\binstalls?\s+(?:both|the\s+two|two|all|each|its)\b/i,
+            /\binstalls?\s+(?:both|the\s+two|two|all)\s+(?:browser\s+)?bundles\b/i,
+            /\bCI\b[^.\n]{0,40}\b(?:runs|executes)\s+(?:the\s+)?(?:Playwright|e2e|WebKit|Chromium)\b/i,
+            /\b(?:Playwright|e2e|golden)\s+(?:suite|lane|job)s?\s+(?:run|execute)\s+in\s+CI\b/i,
+          ]
+        : [
+            /\binstalls?\s+no\s+browser\b/i,
+            /\bexecutes?\s+no\s+Playwright\b/i,
+            /\bCI\s+is\s+browserless\b/i,
+            /\bbrowserless\s+(?:CI|estate|lanes)\b/i,
+          ];
+      const ciWant = browserless
+        ? `no claim that CI installs a browser bundle or runs a suite — ${census}`
+        : `no browserless claim — ${census}`;
+      for (const rel of DOCS)
+        for (const re of ciClaims)
+          for (const h of grep(rel, re))
+            out.push(fail(`${h.file}:${h.line}`, ciWant, h.text));
       return out;
     },
   },
@@ -2797,6 +3088,472 @@ const ROWS = [
       return out;
     },
   },
+
+  // ── T9-W0, the doc-canon sweep's pins ────────────────────────────────────
+  {
+    // §0.3 counts. A count beside a directory is a claim ABOUT that directory,
+    // and the directory can answer for itself — so the three that drifted
+    // (`tests/` 23, `scripts/` 14, `icons/` 8, each a tranche or more stale)
+    // are graded against `readdirSync`, not against the last person to look.
+    //
+    // Resolution is the tree block first: a `├── tests/` node knows its own
+    // parents, so the root README's `tests/` is `csp-solver/tests` and never
+    // `csp-solver/wasm/tests`. A token that isn't a node falls back to a
+    // directory of that name under the doc's own subtree, then to a uniquely
+    // named one estate-wide; anything still ambiguous is named in `derived:`
+    // as UNRESOLVED rather than silently dropped.
+    id: "directory-count-claims",
+    derived: () => {
+      const c = dirCountClaims();
+      return c.length
+        ? c
+            .map(
+              (x) =>
+                `${x.site} ${x.tok}/ ${x.claimed}${x.unit === "files" ? "" : ` ${x.unit}`} → ${x.dir ?? "UNRESOLVED"}${x.dir ? ` has ${x.actual}` : ""}`,
+            )
+            .join(" · ")
+        : "UNDERIVED: no directory-count claim anywhere in the canon";
+    },
+    run: () => {
+      const claims = dirCountClaims();
+      if (!claims.length)
+        return [
+          fail(
+            CITED_DOCS.join(", "),
+            "at least one directory count to grade — the canon states its rosters with sizes",
+            "no claim matched; the row has no subject",
+          ),
+        ];
+      const out = [];
+      for (const c of claims) {
+        if (!c.dir) {
+          out.push(
+            fail(
+              c.site,
+              `a directory this row can resolve \`${c.tok}/\` to`,
+              `${(D.dirs.get(c.tok) ?? []).join(", ") || "nothing in the tree answers to that name"} — say the path, or drop the count`,
+            ),
+          );
+          continue;
+        }
+        if (c.claimed !== c.actual)
+          out.push(
+            fail(
+              c.site,
+              `${c.actual} ${c.unit === "files" ? "files" : c.unit} in ${c.dir} (counted now)`,
+              `${c.claimed} — ${c.text}`,
+            ),
+          );
+      }
+      return out;
+    },
+  },
+  {
+    // §0.3, the roster half. `docs/` grew `multiplayer.md` at T7-W5 and the
+    // README's tree node kept naming six of seven — the names-any⇒names-all
+    // law, applied to the one node whose comment IS the directory listing.
+    id: "docs-roster-complete",
+    derived: () =>
+      `docs/ holds ${D.docsRoster.length}: ${D.docsRoster.join(", ") || "none"}`,
+    run: () => {
+      if (!D.docsRoster.length)
+        return [fail("docs", "a docs/ roster to derive from", "no .md files")];
+      const out = [];
+      let seen = 0;
+      for (const rel of CITED_DOCS) {
+        const lines = (read(rel) ?? "").split("\n");
+        for (const node of treeCites(rel)) {
+          if (node.path !== "docs") continue;
+          seen++;
+          const line = lines[node.line - 1] ?? "";
+          const tail = line.slice(line.indexOf(node.tok) + node.tok.length);
+          const named = D.docsRoster.filter((s) =>
+            new RegExp(`\\b${s.replace(/[-]/g, "\\-")}\\b`).test(tail),
+          );
+          if (named.length && named.length !== D.docsRoster.length)
+            out.push(
+              fail(
+                `${rel}:${node.line}`,
+                `every page in docs/ named, or none — the directory holds ${D.docsRoster.length}: ${D.docsRoster.join(", ")}`,
+                `names ${named.length}: ${named.join(", ")} — missing ${D.docsRoster.filter((s) => !named.includes(s)).join(", ")}`,
+              ),
+            );
+        }
+      }
+      if (!seen)
+        out.push(
+          fail(
+            CITED_DOCS.join(", "),
+            "a `docs/` node in a file tree, whose roster this row grades",
+            "no tree names docs/ — the row has no subject",
+          ),
+        );
+      return out;
+    },
+  },
+  {
+    // §0.3, the five-site staleness class. T8-W3 moved the mint out of the
+    // transports and gave the id a memory; the page kept describing a
+    // throwaway `r-` minted per connection. Both halves derive from
+    // `playerIdentity.ts` — the template literal that mints it, and the two
+    // stores read ahead of it.
+    id: "peer-id-grammar",
+    derived: () =>
+      D.peerId.prefix === null
+        ? `UNDERIVED: no mintPeerId template in ${D.peerId.rel}`
+        : `\`${D.peerId.prefix}-\` + ${D.peerId.width} hex (${D.peerId.rel}) · ${D.peerId.durable ? "localStorage" : "no localStorage"} \`${D.peerId.key}\` capped at ${D.peerId.cap}${D.peerId.perTab ? " · sessionStorage per tab" : ""}`,
+    run: () => {
+      const p = D.peerId;
+      if (p.prefix === null || !Number.isInteger(p.width))
+        return [
+          fail(
+            p.rel,
+            "a `mintPeerId` template to read the id's grammar off",
+            "no template matched — the row has no subject",
+          ),
+        ];
+      const out = [];
+      const past =
+        /\b(before that|used to|no longer|previously|formerly|until T\d|at T\d)\b/i;
+      for (const rel of mpProse())
+        for (const s of sentences(rel)) {
+          if (past.test(s) || RETIRED_LINE.test(s)) continue;
+          // (a) the mint's own grammar, wherever it is stated.
+          for (const m of s.matchAll(
+            /`?\b([a-z])-`?\s*(?:plus|\+|and|followed by)\s*([a-z]+|\d+)\s+hex\b/gi,
+          )) {
+            const claimedWidth = /^\d+$/.test(m[2])
+              ? Number(m[2])
+              : WORDS.indexOf(m[2]);
+            if (m[1] === p.prefix && claimedWidth === p.width) continue;
+            out.push(
+              fail(
+                rel,
+                `\`${p.prefix}-\` plus ${WORDS[p.width] ?? p.width} hex characters (${p.rel}:mintPeerId)`,
+                `${m[0]} — ${s.slice(0, 120)}`,
+              ),
+            );
+          }
+          // (b) the lifetime. A persisted id is not a throwaway, and the
+          //     transports stopped minting one per connection at T8-W3.
+          if (!p.durable) continue;
+          for (const re of [
+            /\b(?:peer\s+)?ids?\b[^.\n]{0,40}\b(?:are|is)\s+throwaway\b/i,
+            /\bthrowaway\b[^.\n]{0,24}\b(?:peer\s+)?ids?\b/i,
+            /\bmints?\s+(?:a\s+)?(?:fresh\s+|new\s+)?(?:peer\s+)?ids?\b[^.\n]{0,20}\bper\s+connection\b/i,
+          ])
+            if (re.test(s))
+              out.push(
+                fail(
+                  rel,
+                  `an id that persists — \`${p.key}\` in localStorage (capped at ${p.cap}) and a per-tab sessionStorage half are read ahead of the mint`,
+                  s.slice(0, 160),
+                ),
+              );
+          // (c) the store's own bound.
+          for (const m of s.matchAll(/\bcapped at\s+([a-z]+|\d+)\b/gi)) {
+            if (!new RegExp(`\\b${p.key}\\b`).test(s)) continue;
+            const n = /^\d+$/.test(m[1]) ? Number(m[1]) : WORDS.indexOf(m[1]);
+            if (n === p.cap) continue;
+            out.push(
+              fail(
+                rel,
+                `capped at ${WORDS[p.cap] ?? p.cap} (IDENTITY_CAP, ${p.rel})`,
+                `${m[0]} — ${s.slice(0, 120)}`,
+              ),
+            );
+          }
+        }
+      return out;
+    },
+  },
+  {
+    // §0.3, the contradiction: `docs/multiplayer.md` documented the shipped
+    // cursors in one section and listed them as not-built in another, the
+    // T7 ballot row read as a present-tense absence. The posture decides,
+    // like `chromium-alone-claim`: the wire word plus the paint that reads it.
+    id: "cursors-shipped",
+    derived: () =>
+      `cur on the wire: ${D.cursors.verb ? "yes" : "no"} · paint: ${D.cursors.paint.join(", ") || "none"} — cursors ${D.cursors.shipped ? "SHIP" : "do not ship"}`,
+    run: () => {
+      if (!D.verbs.verbs.length)
+        return [
+          fail(
+            MP.wire,
+            "a wire vocabulary to read the cursor posture from",
+            "no verbs derived",
+          ),
+        ];
+      const claims = D.cursors.shipped
+        ? [
+            /\bno\s+live\s+cursors\b/i,
+            /\bcursors?\b[^.\n]{0,40}\bnot\s+built\b/i,
+            /\b(?:live\s+)?cursors?\b[^.\n]{0,30}\b(?:aren't|are not|were never)\s+(?:built|shipped|wired)\b/i,
+          ]
+        : [
+            /\bcursors?\s+ship\b/i,
+            /\blive\s+cursors\b[^.\n]{0,30}\b(?:ship|shipped|are live)\b/i,
+          ];
+      const want = D.cursors.shipped
+        ? `no not-built claim — \`cur\` rides the wire (${MP.wire}) and ${D.cursors.paint.length} surfaces paint it: ${D.cursors.paint.join(", ")}`
+        : `no shipped claim — the wire speaks ${D.verbs.verbs.join("/")} and the paint sites are ${D.cursors.paint.join(", ") || "absent"}`;
+      const out = [];
+      for (const rel of mpProse())
+        for (const re of claims)
+          for (const h of grep(rel, re)) {
+            if (RETIRED_LINE.test(h.text) || /\bused to\b|\bballoted\b/i.test(h.text))
+              continue;
+            out.push(fail(`${h.file}:${h.line}`, want, h.text));
+          }
+      return out;
+    },
+  },
+  {
+    // §0.3. `benchmarks.md` stamped a sha256 for an artifact two tranches
+    // dead: the bytes beside it moved and the digest did not, which is the
+    // exact shape of a hand-copied measurement (CH-32). The digest is
+    // re-derived by HASHING whatever lean artifacts are on disk, and a stamp
+    // is graded against the artifact whose byte count the doc pairs with it —
+    // darwin and the runner build different bytes from one source, so a doc
+    // stamping the darwin pair is unrefutable on the runner and says so.
+    // BYTES are `lean-wasm-4-sites`' row; this one owns the digest alone.
+    id: "wasm-artifact-sha",
+    derived: () =>
+      D.wasmSha.length
+        ? D.wasmSha
+            .map((a) => `${a.path} ${fmt(a.size)} B sha256 ${a.sha.slice(0, 8)}…`)
+            .join(" · ")
+        : "UNDERIVED: no lean artifact on disk to hash",
+    run: () => {
+      if (!D.wasmSha.length)
+        return [
+          fail(
+            "csp-solver/wasm/pkg",
+            "a built lean artifact to hash",
+            "none found — run `make -C csp-solver/wasm wasm` or download the lean-wasm-pkg artifact",
+          ),
+        ];
+      const out = [];
+      let stamps = 0;
+      const past =
+        /\b(prior|previous(?:ly)?|used to|superseded|stale|no longer|former(?:ly)?|retired|was the)\b/i;
+      for (const rel of DOCS)
+        for (const s of sentences(rel)) {
+          // The subject is a DIGEST stamp, not any hex on the page: a short
+          // commit stamp written with an ellipsis is the same shape, and a row
+          // that read one as a truncated sha256 would red on prose it has no
+          // business grading.
+          if (!/\bsha-?256\b|\bdigest\b/i.test(s)) continue;
+          const full = [...s.matchAll(/\b([0-9a-f]{64})\b/g)].map((m) => m[1]);
+          const abbr = [...s.matchAll(/\b([0-9a-f]{8,16})[…]/g)].map((m) => m[1]);
+          if (!full.length && !abbr.length) continue;
+          if (past.test(s)) continue;
+          stamps += full.length;
+          // (a) the abbreviation and the digest beside it are one stamp.
+          for (const a of abbr)
+            if (full.length && !full.some((f) => f.startsWith(a)))
+              out.push(
+                fail(
+                  rel,
+                  `an abbreviation of the digest it stands beside (${full.map((f) => f.slice(0, 8)).join(", ")}…)`,
+                  `${a}… — ${s.slice(0, 140)}`,
+                ),
+              );
+          // (b) the digest itself, against the artifact whose bytes it names.
+          for (const f of full) {
+            const sized = D.wasmSha.filter((art) =>
+              new RegExp(`\\b${fmt(art.size)}\\b|\\b${art.size}\\b`).test(s),
+            );
+            if (!sized.length) continue;
+            if (sized.some((art) => art.sha === f)) continue;
+            out.push(
+              fail(
+                rel,
+                `sha256 ${sized.map((a) => `${a.sha} (${a.path}, ${fmt(a.size)} B)`).join(" or ")} — hashed now`,
+                `${f} — ${s.slice(0, 140)}`,
+              ),
+            );
+          }
+        }
+      if (!stamps)
+        out.push(
+          fail(
+            DOCS.join(", "),
+            "a sha256 stamp for the shipped artifact somewhere in the canon",
+            "none — the row has no subject",
+          ),
+        );
+      return out;
+    },
+  },
+  {
+    // §0.3, three figures in one page, all stale in the same direction:
+    // presets 6 (7 live), house curves 4 (10 live), `SvgFilters` subscribers 3
+    // (0 since the pose-stack rebuild). Each comes off the config that holds
+    // it, and each NAME the page uses has to exist there too — a preset or an
+    // `--ease-*` token the page can name is a token the page can outlive.
+    id: "animation-config-figures",
+    derived: () =>
+      `${D.anim.presets.length} presets (${D.anim.presets.join(", ") || "none"}) · ${D.anim.ease.length} --ease-* tokens · ${D.anim.curves.length} MOTION.curves (${D.anim.curves.join(", ") || "none"}) · ${D.anim.subs.length} subscriber enrolments in ${D.anim.filters}`,
+    run: () => {
+      const a = D.anim;
+      const out = [];
+      if (!a.presets.length)
+        out.push(
+          fail(a.cfg, "a DEFAULT_PRESETS roster to count", "no preset ids parsed"),
+        );
+      if (!a.ease.length)
+        out.push(fail(a.css, "the `--ease-*` token ledger", "no tokens parsed"));
+      if (!a.curves.length)
+        out.push(fail(a.cfg, "a MOTION.curves roster", "no curves parsed"));
+      if (out.length) return out;
+      const asNum = (t) =>
+        /^\d+$/.test(t) ? Number(t) : WORDS.indexOf(t.toLowerCase());
+      // SENTENCES AND WINDOWS BOTH. The TS-layer claim states its subject in
+      // one sentence ("`MOTION.curves` … for JS and `v-bind` consumers.") and
+      // its count in the next ("It holds exactly one: `drawerGlide`"), so a
+      // sentence scan alone never reaches it — the arm was silently vacuous
+      // until this was measured. Duplicate hits are folded by site + claim.
+      const seen = new Set();
+      const push = (rel, key, expected, got) => {
+        if (seen.has(`${rel}|${key}`)) return;
+        seen.add(`${rel}|${key}`);
+        out.push(fail(rel, expected, got));
+      };
+      for (const rel of DOCS)
+        for (const s of [...sentences(rel), ...windows(rel, 3).map((w) => w.text)]) {
+          // (a) the three counts.
+          for (const [re, want, what] of [
+            [
+              /FILTER_PRESETS[^.]{0,40}?\b(\d+|[a-z]+)\s+presets\b/i,
+              a.presets.length,
+              "presets in DEFAULT_PRESETS",
+            ],
+            [
+              /\b(\d+|[a-z]+)\s+`--ease-\*`\s+tokens\b/i,
+              a.ease.length,
+              "`--ease-*` tokens in index.css",
+            ],
+            [
+              /MOTION\.curves\b[\s\S]{0,140}?\bholds\s+exactly\s+(\d+|[a-z]+)\b/i,
+              a.curves.length,
+              "curves in MOTION.curves",
+            ],
+          ]) {
+            const m = s.match(re);
+            if (!m) continue;
+            const n = asNum(m[1]);
+            if (n === want) continue;
+            push(
+              rel,
+              `${what}|${m[1]}`,
+              `${want} ${what} (counted now)`,
+              `${m[1]} — ${s.slice(0, 140)}`,
+            );
+          }
+          // (b) the subscriber floor.
+          const sub = s.match(
+            /SvgFilters[^.]{0,80}?\bregisters\s+(no|\d+|[a-z]+)\s+subscriber/i,
+          );
+          if (sub) {
+            const n = /^no$/i.test(sub[1]) ? 0 : asNum(sub[1]);
+            if (n !== a.subs.length)
+              push(
+                rel,
+                `subscribers|${sub[1]}`,
+                `${a.subs.length} subscriber enrolments in ${a.filters} (counted now)`,
+                `${sub[1]} — ${s.slice(0, 140)}`,
+              );
+          }
+        }
+      // (c) every name the page uses must still exist in the config.
+      for (const rel of DOCS) {
+        const lines = (read(rel) ?? "").split("\n");
+        lines.forEach((line, i) => {
+          if (RETIRED_LINE.test(line)) return;
+          for (const m of line.matchAll(/`((?:grain|wobble|stroke)-[a-z]+)`/g))
+            if (!a.presets.includes(m[1]))
+              out.push(
+                fail(
+                  `${rel}:${i + 1}`,
+                  `a preset ${a.cfg} declares: ${a.presets.join(", ")}`,
+                  `\`${m[1]}\` — ${line.trim().slice(0, 120)}`,
+                ),
+              );
+          for (const m of line.matchAll(/--ease-([A-Za-z]\w*)\b/g))
+            if (!a.ease.includes(m[1]))
+              out.push(
+                fail(
+                  `${rel}:${i + 1}`,
+                  `an --ease-* token ${a.css} declares: ${a.ease.join(", ")}`,
+                  `--ease-${m[1]} — ${line.trim().slice(0, 120)}`,
+                ),
+              );
+        });
+      }
+      return out;
+    },
+  },
+  {
+    // §0.3, "nineteen, not twenty". The count is not opinion: §4's ladder has
+    // one table row per mark and the row set is |M1–M14| + |M16–M20| = 19,
+    // M15 never issued. THE FREEZE LAW IS THE POINT OF THE SECOND ARM — a
+    // sealed record is corrected by a dated block at the claim's site, never
+    // by a silent rewrite, so a wrong count is lawful HERE and only here: in a
+    // file that carries the correction naming the true figure. Scoped to the
+    // four T8 files that state a count; the recursive walk over
+    // `docs/tranches/**` is T9-W5's.
+    id: "t8-marks-count",
+    derived: () =>
+      D.t8.marks.length
+        ? `${D.t8.marks.length} marks in §4's ladder (${D.t8.rel}): ${D.t8.marks.join(", ")}`
+        : `UNDERIVED: no §4 ladder rows in ${D.t8.rel}`,
+    run: () => {
+      const n = D.t8.marks.length;
+      if (!n)
+        return [
+          fail(
+            D.t8.rel,
+            "a §4 ladder of `| M<n> |` rows to count",
+            "no rows matched — the row has no subject",
+          ),
+        ];
+      const word = WORDS[n] ?? String(n);
+      const out = [];
+      for (const rel of T8_ESTATE) {
+        const text = read(rel);
+        if (text === null) {
+          out.push(fail(rel, "a T8 record stating its mark count", "file absent"));
+          continue;
+        }
+        const corrected =
+          /\*\*CORRECTION\s*\(T9-W0[^)]*\)/.test(text) &&
+          new RegExp(`\\b${word}\\b`, "i").test(text);
+        text.split("\n").forEach((line, i) => {
+          const m =
+            line.match(/\b(\w+)(?:\s+(\w+))?\s+marks\b/i) ??
+            line.match(/\bmarks\s*\((\w+)\s+of\s+them\b/i);
+          if (!m) return;
+          const tok = [m[1], m[2]].find(
+            (t) => t && (/^\d+$/.test(t) || WORDS.includes(t.toLowerCase())),
+          );
+          if (!tok) return;
+          const claimed = /^\d+$/.test(tok)
+            ? Number(tok)
+            : WORDS.indexOf(tok.toLowerCase());
+          if (claimed === n || corrected) return;
+          out.push(
+            fail(
+              `${rel}:${i + 1}`,
+              `${word} marks (§4's ladder, counted now: ${D.t8.marks.join(", ")}) — or, for sealed prose, a dated **CORRECTION (T9-W0, …)** block in this file naming ${word}`,
+              `${tok} — ${line.trim().slice(0, 140)}`,
+            ),
+          );
+        });
+      }
+      return out;
+    },
+  },
 ];
 
 // ── self-test: every T7-W0 row proved able to red, and to green ────────────
@@ -3034,9 +3791,12 @@ function selfTestCases() {
     },
     {
       row: "chromium-alone-claim",
-      why: "the cure under a one-project config: say chromium alone",
+      // T9-W0: this case used to read "CI runs chromium alone", which the new
+      // census arm reds — correctly. A browserless CI runs no engine at all,
+      // so the single-engine cure has to be said of the SUITE, not of CI.
+      why: "the cure under a one-project config: say chromium alone, of the suite",
       stub: { projects: ["chromium"] },
-      docs: { "README.md": "CI runs chromium alone." },
+      docs: { "README.md": "The suite runs chromium alone." },
       expect: "GREEN",
     },
 
@@ -3222,7 +3982,261 @@ function selfTestCases() {
       },
       expect: "GREEN",
     },
+
+    // ── T9-W0, the doc-canon sweep's pins ─────────────────────────────────
+    // The six new rows and the repaired one. Every GREEN is built from the
+    // derivation, so a figure that moves rots its own fixture; the two `stub:`
+    // cases reach postures the tree isn't in (a CI that installs browsers, a
+    // wire without the cursor word) and exist for the same reason the
+    // single-engine stub above does.
+    {
+      row: "chromium-alone-claim",
+      why: "the CI-installs-browsers claim, against a census of zero install steps",
+      docs: { "README.md": "CI installs both browser bundles before the suite runs." },
+      expect: "RED",
+    },
+    {
+      row: "chromium-alone-claim",
+      why: "the other half of the same sentence: a suite CI does not execute",
+      docs: { "README.md": "CI runs the Playwright suite in each engine." },
+      expect: "RED",
+    },
+    {
+      row: "chromium-alone-claim",
+      why: "the browserless claim under a census that DOES install — the mirror",
+      stub: {
+        browsers: {
+          rel: ".github/workflows/ci.yml",
+          present: true,
+          tokens: ["chromium", "webkit"],
+          installs: [100],
+          runs: [110],
+        },
+      },
+      docs: { "README.md": "The lanes install no browser bundle; CI is browserless." },
+      expect: "RED",
+    },
+    {
+      row: "chromium-alone-claim",
+      why: `the cure: ${D.projects.length} projects declared, ${D.browsers.installs.length} install steps in CI`,
+      docs: {
+        "README.md":
+          "Chromium and WebKit each own a project in `playwright.config.ts`; both are local instruments, and the CI lanes install no browser bundle and execute no Playwright suite.",
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "directory-count-claims",
+      why: "a gate-script count one over the directory",
+      docs: {
+        "web/frontend/README.md": `scripts/ holds ${D.rosters.frontend.length + 1} .mjs gates.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "directory-count-claims",
+      why: "a count beside a directory name nothing in the tree answers to",
+      docs: { "web/frontend/README.md": "widgets/ (3) — the chrome's icon set." },
+      expect: "RED",
+    },
+    {
+      row: "directory-count-claims",
+      why: `the cure: ${D.rosters.frontend.length} .mjs, counted in the directory itself`,
+      docs: {
+        "web/frontend/README.md": `scripts/ holds ${D.rosters.frontend.length} .mjs gates.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "docs-roster-complete",
+      why: "a docs/ node naming three of the pages",
+      docs: {
+        "README.md": [
+          "```",
+          ".",
+          `├── docs/                    ${D.docsRoster.slice(0, 3).join(", ")}`,
+          "```",
+        ].join("\n"),
+      },
+      expect: "RED",
+    },
+    {
+      row: "docs-roster-complete",
+      why: `the cure: all ${D.docsRoster.length} pages on the node`,
+      docs: {
+        "README.md": [
+          "```",
+          ".",
+          `├── docs/                    ${D.docsRoster.join(", ")}`,
+          "```",
+        ].join("\n"),
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "peer-id-grammar",
+      why: "the mint's old prefix — the transports' `r-`, three arms ago",
+      docs: {
+        [MP.page]: `A fresh id is \`r-\` plus ${WORDS[D.peerId.width]} hex characters.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "peer-id-grammar",
+      why: "the throwaway lifetime, over an id two stores remember",
+      docs: {
+        [MP.page]: "Ids are throwaway; each wire mints a fresh id per connection.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "peer-id-grammar",
+      why: `the cure: \`${D.peerId.prefix}-\` + ${D.peerId.width} hex, remembered per room, capped at ${D.peerId.cap}`,
+      docs: {
+        [MP.page]: `A fresh id is \`${D.peerId.prefix}-\` plus ${WORDS[D.peerId.width]} hex characters, and it is the last resort: \`sessionStorage\` and a \`localStorage\` map (key \`${D.peerId.key}\`, capped at ${WORDS[D.peerId.cap]} rooms) are read ahead of it.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "cursors-shipped",
+      why: "the T7 ballot row read as a present-tense absence",
+      docs: {
+        [MP.page]: "- **No live cursors** (`DISPOSITIONS.md` BAL-13—not built).",
+      },
+      expect: "RED",
+    },
+    {
+      row: "cursors-shipped",
+      why: "a shipped claim over a wire without the cursor word — the mirror",
+      stub: { cursors: { verb: false, paint: [], shipped: false } },
+      docs: { [MP.page]: "Live cursors ship, on the wire's `cur` word." },
+      expect: "RED",
+    },
+    {
+      row: "cursors-shipped",
+      why: `the cure: \`cur\` on the wire, painted at ${D.cursors.paint.length} sites`,
+      docs: {
+        [MP.page]:
+          "Live cursors ship: the wire's `cur` word carries them and the board paints the ring in the peer's ink.",
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "wasm-artifact-sha",
+      why: "a digest that is not what the artifact of that byte count hashes to",
+      docs: {
+        "docs/benchmarks.md": `The lean artifact measures ${fmt(D.wasmSha[0]?.size ?? 0)} B, sha256 \`${flipSha(D.wasmSha[0]?.sha)}\`.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "wasm-artifact-sha",
+      why: "an abbreviation that stands beside a digest it does not begin",
+      docs: {
+        "docs/benchmarks.md": `Same sha256 \`deadbeef…\` on both — \`${D.wasmSha[0]?.sha}\`, ${fmt(D.wasmSha[0]?.size ?? 0)} B each.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "wasm-artifact-sha",
+      why: `the cure: ${D.wasmSha[0]?.sha.slice(0, 8)}…, hashed off ${D.wasmSha[0]?.path}`,
+      docs: {
+        "docs/benchmarks.md": `Same sha256 \`${D.wasmSha[0]?.sha.slice(0, 8)}…\` on both (\`${D.wasmSha[0]?.sha}\`, ${fmt(D.wasmSha[0]?.size ?? 0)} B each).`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "animation-config-figures",
+      why: "a preset count the config does not hold",
+      docs: {
+        "docs/animation.md": `**FILTER_PRESETS**: reactive, ${D.anim.presets.length + 1} presets.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "animation-config-figures",
+      why: "the house curve ledger at its pre-T4-W10 width",
+      docs: {
+        "docs/animation.md": "The CSS layer holds four `--ease-*` tokens in `@theme`.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "animation-config-figures",
+      // The claim's subject and its count sit in different sentences, which is
+      // how this arm stayed vacuous until it was measured — the fixture holds
+      // it to the window scan that cured it.
+      why: "the TS-layer count, stated a sentence away from its subject",
+      docs: {
+        "docs/animation.md":
+          "`MOTION.curves` in `pencilConfig.ts`, for JS and `v-bind`\nconsumers. It holds exactly four: `drawerGlide`.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "animation-config-figures",
+      why: "the retired per-beat wobble subscribers, still counted",
+      docs: {
+        "docs/animation.md": "`SvgFilters` registers three subscribers on the beat.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "animation-config-figures",
+      why: "a preset name the config never declared",
+      docs: { "docs/animation.md": "The divider takes `wobble-divider`." },
+      expect: "RED",
+    },
+    {
+      row: "animation-config-figures",
+      why: `the cure: ${D.anim.presets.length} presets, ${D.anim.ease.length} tokens, ${D.anim.curves.length} TS curve, ${D.anim.subs.length} subscribers`,
+      docs: {
+        "docs/animation.md": [
+          `**FILTER_PRESETS**: reactive, ${D.anim.presets.length} presets — ${D.anim.presets.map((p) => `\`${p}\``).join(", ")}.`,
+          `The CSS layer holds ${D.anim.ease.length} \`--ease-*\` tokens in \`@theme\` §EASING.`,
+          `\`MOTION.curves\` holds exactly ${WORDS[D.anim.curves.length]}: \`${D.anim.curves.join(", ")}\`.`,
+          `**\`SvgFilters\` registers no subscriber at all** (${D.anim.subs.length}).`,
+        ].join("\n\n"),
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "t8-marks-count",
+      why: "the off-by-one count in sealed prose, with no correction block in the file",
+      docs: {
+        [D.t8.rel]:
+          "- **The tranche**: twenty marks executed across seven waves + chair work.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "t8-marks-count",
+      why: "the freeze law satisfied: the sealed sentence stands, the dated block corrects it",
+      docs: {
+        [D.t8.rel]: [
+          "- **The tranche**: twenty marks executed across seven waves + chair work.",
+          "",
+          `**CORRECTION (T9-W0, 2026-08-25):** the count is ${WORDS[D.t8.marks.length]}, not twenty — |M1–M14| + |M16–M20|, M15 never issued.`,
+        ].join("\n"),
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "t8-marks-count",
+      why: `the cure at the source: the count said true, ${WORDS[D.t8.marks.length]}`,
+      docs: {
+        [D.t8.rel]:
+          `${WORDS[D.t8.marks.length].replace(/^n/, "N")} owner marks, M-numbered in the formation file.`,
+      },
+      expect: "GREEN",
+    },
   ];
+}
+
+/** A digest that is not the artifact's, for the fixture that must red. */
+function flipSha(sha) {
+  if (!sha) return "0".repeat(64);
+  return (sha[0] === "0" ? "1" : "0") + sha.slice(1);
 }
 
 function runSelfTest() {
@@ -3238,6 +4252,10 @@ function runSelfTest() {
     ...DOCS,
     "web/frontend/perf-rig/README.md",
     ...Object.values(MP).filter((rel) => rel !== MP.page),
+    // T9-W0: `t8-marks-count` grades four files of a sealed tranche. Blank them
+    // too, or the fixture that must RED is graded beside three siblings that
+    // carry their correction blocks and the colour would be theirs, not its.
+    ...T8_ESTATE,
   ];
   let bad = 0;
   say(

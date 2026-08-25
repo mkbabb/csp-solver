@@ -1,5 +1,22 @@
 # M20 — the wordmark floats on the board (owner's mark, 2026-08-04)
 
+> **SUPERSEDED (T9-W0, 2026-08-25).** The cure this report describes — the height-only
+> media key (`max-height: 500px`), `top: 50dvh`, and the gate's "the graze is the pose"
+> tolerance — is NOT what shipped. The live pass of 2026-08-04 red-flagged it (§6.1 FAIL
+> rows 1 and 7, both adjunct NOTEs), and the second cure replaced it on 2026-08-05: an
+> **aspect gate** (`min-aspect-ratio: 2/1`, so 900×500 at 1.80 falls to flow), a
+> **page-edge anchor** (`.board-group` at `width: 100%`, anchoring `left: 0` to the page
+> gutter instead of a content-box gutter that shrinks as phones get taller — the mechanism
+> behind the whole 932×430…844×430 class), and **`top: calc(50dvh - 1rem)`** retiring the
+> 14px-low centring arithmetic. GameBoard's flow-band cap gained its second arm for short
+> landscape under 2/1. The §M20 gate grew from this report's battery to seven poses. The
+> shipped mechanism and its live proof are
+> `docs/tranches/2026-08-tranche-8/evidence/wgate/close-record.md` §6.2 (the cure) and §6.3
+> (the re-verify: 17 PASS at eight poses, both engines, overlap 0.00 everywhere) — plus
+> §9.2 for the T8.1 continuation. Read what follows as the FIRST attempt and its forensics;
+> the mechanism section below still holds, because the disease it names is the one the
+> second cure actually killed.
+
 The shot: a ~900-css-px-wide dark-mode window, the board filling the page top-to-bottom,
 "sudoku" + caret lying mid-left ON the grid.
 

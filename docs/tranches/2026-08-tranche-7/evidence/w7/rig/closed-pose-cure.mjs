@@ -14,7 +14,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 
 const PHASE = process.argv[2] || "after";
 const BASE = process.env.BASE || "http://localhost:4247";
-const ROOT = "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion";
+const ROOT = new URL("../../../../../..", import.meta.url).pathname.replace(/\/$/, "");
 const OUT = `${ROOT}/docs/tranches/2026-08-tranche-7/evidence/w7`;
 const pw = await import(`${ROOT}/web/frontend/node_modules/playwright/index.mjs`);
 const sharp = (await import(`${ROOT}/web/frontend/node_modules/sharp/dist/index.cjs`)).default;

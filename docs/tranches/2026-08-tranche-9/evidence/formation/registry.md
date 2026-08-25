@@ -33,6 +33,13 @@ only, the close-class lies hunted by name.
   device (`../../design-marks-2026-08-10.md`, two frames banked). M03/M05
   corroborate F18/F12 in the owner's own hand; M06 opens F20 (the one front no
   audit lane priced). Folded into W2/W7/W8 the same day.
+- **R6** (owner marks, 2026-08-25, mid-execution): six more, two frames — M09
+  elevates F20 to an ABSOLUTE quality law (no speed bought with quality) and adds
+  the moving-frame budgets (dark-toggle, gallery in/out, drawer); M10/M13 the
+  board-edge controls tab + quick actions; M11 the widened undo spine; M12 the
+  destructive-act confirm (the guard-ribbon idiom generalizes); M14 RESOLVES M08 by
+  the owner's word (top-left player icon + lobby, per-player unique colours).
+  Folded into W1 (§1.4/§1.5, the W1.1 slice)/W2/W7/W8 the same day.
 
 ## Families (v3 — VERIFIED; per-family verdict in the Status list below the table)
 

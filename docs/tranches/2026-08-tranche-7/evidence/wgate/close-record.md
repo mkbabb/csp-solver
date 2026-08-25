@@ -47,6 +47,59 @@ mismatch W1, access W2) cured born-RED. The uncapped relay fanout cured at W4
 - python wheel-contract: 27/0 as last derived (`e961bdb7`; no python-touching change since —
   the suite needs a maturin wheel build and was not re-run at this tree)
 
+### CORRECTION (T9-W0, 2026-08-25)
+
+Two claims in this record are corrected here rather than rewritten. The sealed prose above
+and in §9 stands as written.
+
+**(a) The ledger-diff certification never held as stated.** Line 44 above reads "ledger-diff,
+full arms: **GREEN, 144 audited ids**, 10 open rows current", and the preamble (:4) says the
+full-arm command "exits 0 against it" — against this record's own commit. T9's verify lane
+(V5, adjudication C7) stood at both candidate trees and measured the pairs:
+
+| tree | audited ids | open rows | verdict |
+|---|---|---|---|
+| `060792a2` (the close commit) | 144 | 10 | **RED, exit 1** |
+| `d41fe70c` | 144 | **7** | GREEN, exit 0 |
+
+The GREEN and the "10 open rows" never co-existed at any commit. The record composed one
+sentence out of two different trees: the id count and open-row count from the close commit,
+the verdict from a later one. What is true: 144 ids were audited at the close; the close
+commit's own run was RED; a GREEN run existed, at seven open rows, one tree over.
+
+The verdicts are V5's measurements, cited not re-derived — the gate cannot be run against a
+past tree from HEAD. The open-row halves ARE re-derived here, 2026-08-25, by reading each
+tree's ledger directly: `git show 060792a2:docs/tranches/LEDGER.md` §1 carries **10** rows
+(CH-62, CH-35, CH-36, CH-39, CH-45, CH-53, CH-59, CH-63, CH-64, CH-65) and
+`git show d41fe70c:` the same section carries **7** — the corrective restated CH-53, CH-59
+and CH-63 terminal and moved CH-62's state. Both halves of V5's table hold.
+
+Running the gate at HEAD proves nothing about either pair, and says so: at `c917f9a7`
+`node scripts/ledger-diff.mjs --require-ledger --assert-state --verify-cites` exits 0 GREEN
+over an audited corpus of **five** rows against T7's 144. Today's scope is a different
+corpus, and §1 is being rewritten by T9-W0 as this block lands, so no reading at HEAD
+reproduces a historical pair — which is exactly why the sentence had to be corrected from
+the forensics rather than from a re-run.
+
+**(b) Evidence absence, and a false justification for it.** §9's visual validation
+paragraph says "twelve frames banked (`evidence/wgate/` sibling shots withheld from the
+repo per the evidence byte caps)". The frames are not in the repo, and the byte-cap reason
+is false. Re-derived 2026-08-25: `docs/tranches/2026-08-tranche-7/evidence/wgate/` holds
+eight files, all text, **zero images**; the whole T7 evidence estate carries 81 images /
+1,410,207 B, every one of them under `evidence/w7/`. The caps the gate actually enforces
+(`scripts/check-evidence-policy.mjs`, run 2026-08-25) are 2,097,152 B per wave and 153,600 B
+per image, so the WGATE wave had its entire 2,097,152 B unspent, and twelve frames at the
+per-image ceiling come to at most 1,843,200 B — inside the wave cap with 253,952 B to
+spare. At this tranche's own median crop (16,042 B over the 81 w7 images, re-derived the
+same day) twelve frames are 192,504 B, under a tenth of the budget. The cap forbade
+nothing. This matters more here than anywhere: under O-12 the live-edge visual pass IS the
+deployment gate, and T7's ran with no artifact of any kind, its own stated reason not
+holding. The forward law lands at T9 — `EVIDENCE-POLICY.md`'s claims arm requires that a
+live-pass verdict cite a banked frame or state its absence in the row, and T9's WGATE
+requires frames. Full accounting:
+`docs/tranches/2026-08-tranche-9/evidence/w0/evidence-absence.md`. Registry families F5 and
+F15 (T9 formation).
+
 ## 4 · Ballots
 
 Twenty-one fired defaults, dated — `evidence/wgate/ballots-fired.md`. The permanent and
@@ -152,6 +205,10 @@ and staging band, theme persisting across the deep link (W1's cure); **the cente
 click-to-select commits in BOTH engines** — the exact interaction the dead CI row guarded,
 green on the real surface; `?game=kenken` renders whole in both engines (cages, operators,
 drawer); 390×844 centres the board under the wordmark with the controls affordance.
+
+**CORRECTION (T9-W0, 2026-08-25):** no frame of this pass is in the repo, and the byte-cap
+reason given above is false — the WGATE wave's whole 2 MiB image budget was unspent. The
+correction of record, with the measured figures, is the dated block in §3.
 
 **One edge fact found and booked, not cured:** the `_redirects` SPA-fallback rule
 (`/* /index.html 200`) is dead in production — a bare path like `/kenken` serves

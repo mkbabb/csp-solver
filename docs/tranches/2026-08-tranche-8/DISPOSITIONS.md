@@ -6,12 +6,22 @@ round, so the audited families here are the rows T8 *decided*: the one T7 defaul
 fired at formation, the tranche's own ballots, and the born residue. The five terminal
 verdicts and the no-re-booking law are T7's, unchanged.
 
+## 0. Corrections
+
+**CORRECTION (T9-W0, 2026-08-25):** nineteen marks, not twenty. This file's one site is
+"(twenty of them, M-numbered in `design-marks-2026-08-03.md`)" at DISPOSITIONS.md:4
+(`c917f9a7`). The arithmetic: |M1–M14| = 14 plus |M16–M20| = 5 → **19**; M15 was never
+issued, so the highest M-number overstates the membership by one. The close record's own
+§4 ladder is the independent check — it carries 19 mark rows, counted at `c917f9a7`. The
+sealed sentence stands as written. Sibling blocks: `README.md`,
+`evidence/wgate/close-record.md` §1. Registry family F6 (T9 formation).
+
 ## 1. Fired inheritances
 
 | Row | STATE | Disposition |
 |---|---|---|
 | CH-62 | **RETIRED** | T7's dated firing default executed itself: the owner did not authorize the runner dispatch before T8 formation, so CH-62 retires as library-hypothesis-spent. The re-entry stands verbatim: the two-arm born-RED rig probe specified in `docs/tranches/2026-08-tranche-7/DISPOSITIONS.md` (ARM B gate-ablated must red ≥2/6 or the run is VOID). No fourth pinning is admissible. |
-| CH-67 | **WATCH** | The class invariant holds the name across its two habitats: the release fold (may only ADD, never subtract — `useCarouselGlide.ts`) and the capture band ([0.99, 1.5], counted at the bake sites — `rasterPose.ts`, `HandwrittenLogo.vue`, gated in `e2e/gallery.spec.ts`). W4 killed the vueuse-SVG-lens species; a fourth species books here, never a new id. |
+| CH-67 | **WATCH** | The class invariant holds the name across its two habitats: the release fold (may only ADD, never subtract — `useCarouselGlide.ts`) and the capture band ([0.99, 1.5], counted at the bake sites — `rasterPose.ts`, `HandwrittenLogo.vue`, gated in `e2e/gallery.spec.ts`). W4 killed the vueuse-SVG-lens species; a fourth species books here, never a new id. **CADENCE STAMPED (T9-W0, 2026-08-25):** cadence: re-counted at every WGATE production pass; terminalizes after two consecutive quiet closes; a fourth species books in-row. |
 
 ## 2. The tranche's ballots
 

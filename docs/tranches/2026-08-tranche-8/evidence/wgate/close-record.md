@@ -23,6 +23,21 @@ The two owner ballots raised mid-design were resolved by the owner's word: **Opt
 the same author on return). Both are implemented in Lane A's substrate and gated
 (`session-substrate.spec.ts`, born-RED ×4 at `e296915a`) — dispositioned as T8-R01.
 
+**CORRECTION (T9-W0, 2026-08-25):** the count is nineteen, not twenty. Three sites in this
+file carry the wrong word, at these lines in `c917f9a7` (before this block was inserted):
+
+- `:7` — §1's opening sentence above.
+- `:374` — §9's first seal bullet, "twenty marks executed across seven waves + chair work".
+- `:405` — §9.1's first ratification bullet, "all twenty marks move cured-pending-re-look".
+
+The arithmetic is §1's own enumeration: |M1–M14| = 14 plus |M16–M20| = 5 → **19**. M15 was
+never issued, so the top M-number runs one ahead of the membership. This record already
+contains the proof: §4's ladder table has **19** mark rows, re-counted at `c917f9a7`. What
+the owner ratified on 2026-08-07 is that ladder, whole — the correction moves the numeral,
+never the scope of the word. The sealed sentences stand as written. Sibling blocks:
+`docs/tranches/2026-08-tranche-8/README.md` and
+`docs/tranches/2026-08-tranche-8/DISPOSITIONS.md` §0. Registry family F6 (T9 formation).
+
 ## §2 · The commit chain (this wave of work)
 
 `e296915a` → `f1aafba0` (W5 bench) → `bfab089b` (W3-A) → `f83536b0` (W3-C + chair wiring)
@@ -497,3 +512,58 @@ dist-identity-verified**. The live re-verify, two lanes × two engines:
 
 **T8-R15 and T8-R13 close as CURED** — restamped terminal in DISPOSITIONS, the
 roster, and the living ledger with this section as the cite.
+
+### §9.3 · CORRECTION (T9-W0, 2026-08-25) — the ratification chain's true CI sequence
+
+§9 and §9.2 report the chain's greens and one red (the nanoid advisory). Two commits in
+that chain concluded RED, and only one of them is disclosed above. The whole sequence,
+re-derived 2026-08-25 from the GitHub Actions record (`gh run list` / `gh run view`, `ci`
+workflow, sixteen lanes each):
+
+| commit | run | conclusion | the red lane |
+|---|---|---|---|
+| `f1505c9c` (the §9 seal) | 31198835757 | success | — |
+| `0ade6398` (§9.1 ratification) | 31230663793 | **failure** | `npm-audit` |
+| `302b6613` (nanoid 3.3.16 → 3.3.18) | 31230954697 | success | — |
+| `3f0f608c` (R13 + R15 cures) | 31232465112 | **failure** | `doc-truth` |
+| `ac9b08eb` (doc-truth cure + §9.2) | 31272335518 | success | — |
+| `c55d66d3` (T8.1 close) | 31273046161 | success | — |
+
+Green → red (npm-audit) → green → red (doc-truth) → green → green. Each commit has exactly
+one `ci` run and each run sixteen jobs (re-derived the same day) — no re-run turned either
+red green; both were cured by the next commit. §9.2's "Riding along"
+paragraph names the nanoid red and its cure at `302b6613`; it does not name `3f0f608c`'s
+doc-truth red, and §9.2's battery list reads as though the cure commit went green on its
+own push. It did not — the cure commit's doc rows went red and were cured at `ac9b08eb`,
+whose run is the 16/16 the section already cites. Nothing about the shipped bytes changes:
+the deployed head is `ac9b08eb`, green, as recorded. The sealed prose stands as written.
+Registry family F15 / verifier V6 (T9 formation).
+
+### §9.4 · EVIDENCE-ABSENCE NOTE (T9-W0, 2026-08-25 — ballot B5's fired default)
+
+Every live-edge verdict this record carries is prose. No frame, probe output, or raw row
+was banked for any of them:
+
+- **§6.1**, the visual pass of 2026-08-04 against deployment `672ecc10` — 48 PASS / 7 FAIL
+  / 23 NOTE across six lanes × two engines.
+- **§6.3**, the cure re-verify of 2026-08-07 against `1dc79dd5` — 45 PASS / 0 FAIL / 9
+  NOTE, including the "ink-level" pixel-diff claims at all eight M20 poses.
+- **§9.2**, T8.1's live proofs of 2026-08-08 against `a09a8aeb` — R15's |Δ| 0.00px at 20
+  arms with its 352.00px negative control, and R13's byte-for-byte still-vs-board census
+  on the real relay.
+
+Re-derived 2026-08-25: `docs/tranches/2026-08-tranche-8/evidence/wgate/` holds exactly one
+file, this record. Zero images. The tranche's banked frames all sit in wave dirs (`w2-c`
+4, `w3-deck` 5, `w3-lane-c` 7, `w7-g2` 8 — 24 images, 2,012,345 B total), none of them a
+live-edge capture. So the WGATE wave spent 0 of its 2,097,152 B image budget
+(`scripts/check-evidence-policy.mjs`, run 2026-08-25) while asserting **155** outcomes on
+the live edge — 78 rows in §6.1 (its lane table re-summed: 48/7/23), 54 in §6.3, and 23 in
+§9.2 (R15 8+3, R13 9+3).
+
+Under O-12 the live edge IS the deployment gate, so this is the whole validation regime
+running unwitnessed. The forward law, effective T9: a live-pass verdict row must cite a
+banked frame or state its absence in the row, and a capture must be cited by a report
+(`EVIDENCE-POLICY.md`, the claims arm; the enforcing script is T9-W5's). T9's WGATE
+requires frames. This block is the honest note ballot B5's default calls for, entered
+against a sealed record rather than a rewrite of it. Full accounting:
+`docs/tranches/2026-08-tranche-9/evidence/w0/evidence-absence.md`. Registry family F15.

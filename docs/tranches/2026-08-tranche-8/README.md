@@ -5,6 +5,14 @@ Twenty owner marks (M1–M14, M16–M20; M15 was never issued), formed in
 (`evidence/wgate/close-record.md`). The row set is `DISPOSITIONS.md`; the living ledger
 carries the survivors.
 
+**CORRECTION (T9-W0, 2026-08-25):** nineteen, not twenty. This file's one site is the
+sentence above (README.md:3 at `c917f9a7`). The arithmetic is the sentence's own
+enumeration: |M1–M14| = 14, |M16–M20| = 5, sum **19**. M15 was never issued, so the top
+M-number counts one higher than the membership, and every "twenty" in the T8 estate is
+that off-by-one. The sealed sentence stands as written; this block is the correction of
+record. Sibling blocks: `DISPOSITIONS.md` §0, `evidence/wgate/close-record.md` §1.
+Registry family F6 (T9 formation, `docs/tranches/2026-08-tranche-9/evidence/formation/registry.md`).
+
 ## The waves
 
 | wave | marks | landing |

@@ -17,7 +17,7 @@ A constraint-satisfaction engine in Rust, and five hand-drawn games that ride it
 │   │   ├── builder/             AssignmentBuilder (B&B assignment/COP surface)
 │   │   └── py/                  PyO3 bindings (feature = "py"): module `csp_solver`
 │   ├── data/sudoku_puzzles/     embedded template bank (N=3-hard + N=4, include_dir!)
-│   ├── tests/                   integration suite (23 files)
+│   ├── tests/                   integration suite (24 files)
 │   ├── tests-py/                wheel-contract pytest suite
 │   ├── benches/                 criterion: assignment, cost_finite_domain, futoshiki, gac_ab,
 │   │                            lattice, map_coloring, queens, sudoku; iai_queens (callgrind)
@@ -27,7 +27,7 @@ A constraint-satisfaction engine in Rust, and five hand-drawn games that ride it
 │   ├── src/pencil/              the shared hand-drawn aesthetic: grid, glyphs, chrome, filters
 │   ├── src/games/               sudoku/, futoshiki/, thermo/, killer/, kenken/ + shared/ (which holds the one solver Worker)
 │   └── e2e/                     Playwright suite
-├── docs/                        algorithms, sudoku, benchmarks, bbnf-integration, optimizations, animation
+├── docs/                        algorithms, sudoku, benchmarks, multiplayer, bbnf-integration, optimizations, animation
 ├── scripts/                     the gate scripts and the thin frontend launcher
 ├── rust-toolchain.toml          stable pin, wasm32 target
 └── Cargo.toml                   workspace = ["csp-solver", "csp-solver/wasm"]
@@ -38,7 +38,7 @@ A constraint-satisfaction engine in Rust, and five hand-drawn games that ride it
 ```
 Browser ── Web Worker: @mkbabb/csp-solver-wasm (lean build) ── csp_solver (Rust)
 
-Static SPA (Cloudflare Pages, sudoku.babb.dev) ── _redirects: two rules (/assets/* 404, SPA fallback)
+Static SPA (Cloudflare Pages, sudoku.babb.dev) ── _redirects: two rules (/assets/* 404, SPA fallback — inert at the edge)
 ```
 
 The engine in brief. `ConstraintEnum` dispatch is devirtualized, so the hot path carries no vtable; a u128-backed `BitsetDomain` iterates without allocating. AC-3 runs a bitset-worklist propagation, with a monotonic sweep for lattice domains, and GAC all-different (Régin 1994, via Hopcroft-Karp plus iterative Tarjan SCC) is default-ON at ≥3 live participants. Backtracking lives in one kernel, `solver/search.rs`. `SolveConfig::default()` is `Ac3 + FailFirst`, `max_solutions = 1`, node budget 1M.
@@ -93,10 +93,10 @@ cargo test --workspace
 # Python wheel-contract: 27 passed, 0 skipped
 cd csp-solver/tests-py && uv run --no-sync pytest
 
-# e2e: 407 Playwright tests across 23 spec files in the default config (Chromium 206,
-#      WebKit 201). Six further specs are held out of it and ride two configs of their
+# e2e: 409 Playwright tests across 23 spec files in the default config (Chromium 207,
+#      WebKit 202). Six further specs are held out of it and ride two configs of their
 #      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (67 in 5).
-#      29 spec files on disk, 478 tests in all.
+#      29 spec files on disk, 480 tests in all.
 cd web/frontend && npx playwright test
 cd web/frontend && npx playwright test --config playwright-golden.config.ts && npm run test:e2e:throttle
 
@@ -109,22 +109,26 @@ cargo bench -p csp-solver --bench queens -- --test
 
 ## CI
 
-`.github/workflows/ci.yml` runs sixteen lanes: fmt+clippy, the Rust/wasm/Python builds and tests, the wasm size budgets and the shipped package's resolution contract, the frontend typecheck+knip+support-floor gate, the unit estate under its count and coverage floors, the cross-game boundary law, the doc-truth and evidence-policy gates, a callgrind instruction-count baseline, and the cargo-audit and npm-audit advisory scans. The Playwright e2e, golden, and perf suites live in-repo as local instruments — run on demand, not in CI (owner ruling, 2026-08-03); deployment validation is visual, on the live site. Budgets and measured artifact sizes live in [`docs/benchmarks.md`](docs/benchmarks.md).
+`.github/workflows/ci.yml` runs sixteen lanes: fmt+clippy, the Rust/wasm/Python builds and tests, the wasm size budgets and the shipped package's resolution contract, the frontend typecheck+knip+support-floor gate, the unit estate under its count floor, the cross-game boundary law, the doc-truth and evidence-policy gates, a callgrind instruction-count baseline, and the cargo-audit and npm-audit advisory scans. A per-scope coverage floor is banked in the tree but is not enforced among them: the frontend lane's coverage step runs that gate in its `--self-test` mode alone, which proves the gate able to fail and then returns, comparing no scope against its baseline. The Playwright e2e, golden, and perf suites live in-repo as local instruments — run on demand, not in CI (owner ruling, 2026-08-03); deployment validation is visual, on the live site. Budgets and measured artifact sizes live in [`docs/benchmarks.md`](docs/benchmarks.md).
 
 ## Deployment
 
 A Cloudflare Pages static deploy. Solving and generation never leave the visitor's browser, so there's no server-side solve path to secure. `_headers` carries CSP/HSTS/X-Frame-Options; `_redirects` carries two rules: the `/assets/*` → `/404.html` guard that keeps an unknown hashed asset from resolving to the shell and poisoning the edge cache, and the SPA fallback.
 
+The second of those two rules is written but does not take effect. Measured against the live deploy on 2026-08-25: `/` serves the shell at 200, and every other path answers 404—`/sudoku` as readily as `/nonexistent`—with a body byte-identical to `public/404.html`, which is to say the deployed 404 asset answers first and the `/*` → `/index.html` line is never reached. Nothing the app writes lands there: it carries no router and mints no path-shaped link, since `?game=`, `?view=`, `?board=`, and `?s=` are query strings on `/` and the URL grammar touches `searchParams` alone. A hand-typed path is what meets the 404.
+
 One companion Worker deploys beside it and only shared boards ever reach it: `web/relay`, a hibernating Durable Object speaking the slice of NIP-01 a shared board needs. It stores nothing, hibernates between messages, and its origin is named in the page's `connect-src`—so the two deploy together or the socket is refused. Since T6.2 the board itself rides those frames: the WebRTC arm is retired, and with it the class of pair that could see a roster and never a digit. The whole subsystem—session arithmetic, wire grammar, relay, trust model—single-homes in [`docs/multiplayer.md`](docs/multiplayer.md).
 
 ## Declarations
 
-- **Browser support**: Chromium and WebKit, each with its own lane. `playwright.config.ts` declares the two projects and CI installs both bundles, so "solves entirely in the browser" is asserted in each engine. One file sits out the WebKit project: `share-truth.spec.ts` wants a clipboard permission Playwright's WebKit doesn't grant. Gecko carries no lane; Firefox is unasserted. The declared support floor is Chrome 111, Edge 111, Firefox 128, Safari 16.4 and iOS Safari 16.4 (`web/frontend/package.json`, `browserslist`)—an arithmetic figure rather than a preference, since Tailwind v4 compiles every stylesheet against precisely those targets and nothing below them is served CSS it can parse. The bundle's own syntax targets ES2020, which sits well under that floor; `npm run test:support-floor` holds the declaration to both and refuses any guard in the source that defends a browser beneath it.
+- **Browser support**: Chromium and WebKit, each with its own project in `playwright.config.ts`. Both are local instruments, run on demand at a developer's bench: the sixteen CI lanes install no browser bundle and execute no Playwright suite (owner ruling, 2026-08-03), so what CI asserts is the browserless estate, and "solves entirely in the browser" is asserted in each engine where those suites are actually run. One file sits out the WebKit project: `share-truth.spec.ts` wants a clipboard permission Playwright's WebKit doesn't grant. Gecko carries no lane; Firefox is unasserted. The declared support floor is Chrome 111, Edge 111, Firefox 128, Safari 16.4 and iOS Safari 16.4 (`web/frontend/package.json`, `browserslist`)—an arithmetic figure rather than a preference, since Tailwind v4 compiles every stylesheet against precisely those targets and nothing below them is served CSS it can parse. The bundle's own syntax targets ES2020, which sits well under that floor; `npm run test:support-floor` holds the declaration to both and refuses any guard in the source that defends a browser beneath it.
 - **English only**: the copy is authored inline in English, `<html lang="en">`, with no i18n or locale-negotiation layer.
 - **No telemetry**: nothing is measured and nothing is phoned home. There is no third-party network hit at all—the attribution avatar was bundled same-origin at T4-W8, which retired the last one. Board state lives in the URL and stays on the device. A shared board opens exactly one socket, to our own relay (`web/relay`, a Cloudflare Durable Object), and only for as long as the session lasts: it carries presence and the players' cell writes between the players, it is stored nowhere at either end, and a page playing alone never loads the transport at all.
 - **No offline mode**: there's no service worker and no web-app manifest, so the shell and the wasm module come off the network at every cold load, and an unvisited game's chunk downloads on select. Once a game is resident, its generation and solving run wholly on-device.
 
 ## Published artifacts
+
+Registry state read on 2026-08-25; no gate reads this table, so it is stamped rather than guarded.
 
 | Artifact | Registry | Version |
 |---|---|---|

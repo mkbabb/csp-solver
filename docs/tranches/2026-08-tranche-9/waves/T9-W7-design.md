@@ -53,17 +53,32 @@ sheet's border cutting the wordmark raw.
     mobile floating bar gains its proper border in the house hand; the whole card's
     hierarchy designed as one system — group, title, option, act — desktop and
     mobile the same grammar. §1 and §2 execute INSIDE this system, not beside it.
-11. **The masthead telemetry** (T9-M08): your name + multiplayer presence "displayed
-    deftly next to the mbabb logo," both platforms. The owner sketched two shapes —
-    (a) the multiplayer controls + lobby move up entire; (b) the icon with ink color
-    + lobby count up top, controls stay in controls. The thrice protocol prototypes
-    BOTH; the owner adjudicates at the re-look. W3's live-region idiom rides
-    whichever wins (the telemetry that moves must speak).
+11. **The player mark** (T9-M14 resolving T9-M08 by the owner's word, 2026-08-25):
+    a player icon in the TOP LEFT, both platforms — coloured when a session is
+    live ("a nice blue, or a player colour"), each player carrying a UNIQUE colour;
+    clicking it opens the lobby with the players. Multiplayer controls stay in
+    controls. Three design obligations: the icon's idiom beside the @mbabb mark;
+    the lobby surface (small, in the house hand — not a modal); and the per-player
+    colour SYSTEM (unique inks that survive §3's accent-family law and keep peer
+    attribution legible — the substrate assignment mechanics land with the
+    multiplayer seam, the palette is designed here). W3's live-region idiom rides
+    it: the indication speaks. The M08 two-option prototype run is superseded.
 12. **Idiom refinement pass** (T9-M07): colors, animations, and the multiplayer
     chrome brought to the design language — the accent-family work of §3 extended
     over the multiplayer surfaces (peer ink, presence, join wash) and the motion
     grammar (incl. the drawer curve, if W8's trace acquits the frames and convicts
     the ease).
+13. **The transition grammar** (T9-M09's design half): the gallery's in and out and
+    the controls drawer get DEFINED animations — named curves, durations, and
+    choreography written into `pencilConfig`'s MOTION bands, not incidental CSS.
+    The owner's word: "not properly defined and smoothed." W8 proves each on the
+    device budget; this section is where their definitions live.
+14. **The mobile controls tab** (T9-M10/M13's look): the board-bottom tab in the
+    desktop side-tab's hand, and the quick-action set it carries (choose the few by
+    use: the design pass proposes, the owner's re-look disposes).
+15. **The simple confirm** (T9-M12's look): the guard-ribbon idiom extended to the
+    destructive set — one small sentence, two plain answers, zero modal. W1 §1.5
+    owns the arming; this owns the face.
 
 ## Gate spine
 

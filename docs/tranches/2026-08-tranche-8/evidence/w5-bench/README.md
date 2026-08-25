@@ -611,3 +611,24 @@ macOS bash 3.2 `set -u` (the `${arr[@]+…}` form), and two traps for the record
 probe server injects a stale `probe.js` (the r13b runs died silently on a :4894 leftover —
 kill old servers before a generation), and a battery script's cleanup `pkill safaridriver`
 kills the DRIVER a sibling burst is about to need.
+
+### CORRECTION (T9-W0, 2026-08-25) — the raws are banked, and five figures move
+
+§3 and §9.2 cite `perf-rig/runs/`, a gitignored directory, so no clone has ever reached a
+reading behind any table in this record (T9 formation, family F15). The extract now sits
+beside this file at [`raw-summary.md`](./raw-summary.md): the tophard run's `env` and
+`hostLoad` rows verbatim, the cold arm's seven cells, the twelve wire cells with their peer
+write counts, the 58-row per-cell median table, and provenance (raws local-only, machine,
+date, sha256). The prose above stands as written; five of its figures are corrected there,
+of which two matter:
+
+- **sudoku 16×16 MEDIUM solve is a 44 ms median, not 55.** `solveMs` sorted is
+  `[3, 3, 6, 20, 33, 55, 103, 143, 158, 668]`; `w5-summarize.mjs` averages the two central
+  samples and prints **44**, while 55 is the upper one. §5.1's table, §5.2's "684 ms
+  generating and 55 ms solving" and §8.2's item 1 all carry 55, as does the T8 close record
+  §5. The generation figures are correct, and both load-bearing findings in §8.3 hold.
+- **Three §9.2 rows are load-suspect and unmarked.** The tophard burst opened at 10.75 and
+  the item-6 sim re-measure closed at 40.05, both against the 8.0 gate §3 declares
+  unquotable; the wire re-run's sudoku `present` and `traffic` cells closed at 8.37 and
+  10.41. Every verdict survives — a generation timeout under contention is still a timeout —
+  but the discipline stamp §3 promises was not applied.

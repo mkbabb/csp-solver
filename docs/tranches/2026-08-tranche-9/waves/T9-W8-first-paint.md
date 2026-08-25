@@ -1,12 +1,21 @@
-# T9-W8 — FIRST PAINT
+# T9-W8 — FIRST PAINT AND THE MOVING FRAME
 
-The cold boot made fast on the device that matters. Born of owner marks T9-M06 and
-T9-M02 (2026-08-10, real iPhone): first-load performance on mobile Safari is poor
-for drawing and the dark-mode toggle; the drawer animation is not smooth; subsequent
-loads are better but "could be improved dramatically." Registry family F20. No audit
-lane measured this — the perf estate priced idle churn (T4-P1) and generation (W4);
-the BOOT was the unexecuted GATE D the whole time (F1: perf-rig's boot-TBT threshold
-has no executor).
+The cold boot and every named transition made fast on the device that matters. Born
+of owner marks T9-M06 + T9-M02 (2026-08-10, real iPhone) and ELEVATED BY T9-M09
+(2026-08-25): real-Safari/mobile performance is "of ABSOLUTE paramounce with NO
+sacrifice or compromise in quality ever" — dark-mode toggling, item transitions, the
+gallery's in/out, the drawer. Registry family F20. No audit lane measured this — the
+perf estate priced idle churn (T4-P1) and generation (W4); the BOOT was the
+unexecuted GATE D the whole time.
+
+**THE QUALITY LAW (M09, binding on every cure here)**: speed is never bought with
+quality. No bake dropped, no boil thinned, no filter removed, no transition
+shortened as a "fix" — π identity and the filter census hold, and any cure that
+would trade the drawn quality is REFUSED in favor of a mechanism cure (scheduling,
+compositing, pre-warming, deferral of the not-yet-visible). The scope now spans
+BOTH halves: the cold boot (8.1–8.3) and the MOVING FRAME — dark-toggle transition,
+gallery enter/exit, drawer open/close — each with a device frame-time budget once
+W7 §13 defines their grammar.
 
 ## 8.1 The attribution, before any cure
 

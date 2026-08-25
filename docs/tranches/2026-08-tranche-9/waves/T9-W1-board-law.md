@@ -64,6 +64,25 @@ precedes the guard, on a bare `as number`. The guard moves before the merge; a
 malformed frame is dropped and counted, never merged. Unit row: feed the malformed
 frame, the clock stays finite, the session stays sane.
 
+## 1.4 The undo spine widens (T9-M11, owner 2026-08-25 — the W1.1 slice)
+
+"Proper undo and redo support for most actions." The spine (cap 200) covers cell
+writes; it grows to the acts that change the board's material state — deal, clear,
+fill, marks-mode and candidates changes — as commands on the EXISTING spine (no
+second history, no-legacy). What stays out is stated, not silent: view/theme/gallery
+moves are navigation, not board state. Multiplayer semantics ride the existing
+undo-propagation law (T6.2). Born-RED units per act; the e2e undo row extends.
+
+## 1.5 The destructive-act confirm (T9-M12, owner 2026-08-25 — the W1.1 slice)
+
+"Input a value, then attempt a destructive action (any) → confirm, simply, without
+contrivance or large modals." The mechanism: a dirty board (any user ink) arms a
+simple confirm on the destructive set — deal, clear, fill, solve — in the T8
+guard-ribbon idiom (the house's own small confirm; no modal). T8's adjudications
+stand: SELECT stays free (persistence proven real), the solo DEAL guard folds into
+this general law rather than riding beside it (one mechanism). The look is W7's;
+the arming logic, the destructive-set census, and the born-RED e2e rows land here.
+
 ## Gate spine
 
 - Born-RED units for §1.1 (refusal or truthful labeling), §1.2 (column-conflict

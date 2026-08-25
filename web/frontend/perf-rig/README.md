@@ -36,7 +36,10 @@ steady-state window, and GATE D grades it. What stays declared is narrower and n
 the **webkit** boot window, which no `longtask`-less engine can measure, and which the report
 prints `NOT MEASURED` rather than passing.
 
-**Four assertions, every one read out of gates.json at run time.**
+**Four assertions, every one read out of gates.json at run time.** They read like CI tripwires
+and they aren't: no lane executes them, CI is browserless under O-12, and the four are LOCAL/device
+instruments — cadence DECIDED at T9-W5 (every WGATE production pass), GATE D's executor chartered
+at T9-W8.
 
 - **GATE A** — `median(long33) <= desktop.idle3s.maxLong33`. Unit-free and engine-portable: a
   frame over 33.4 ms is a dropped frame at any refresh rate. This is the P1 defect's own
@@ -202,8 +205,13 @@ so two ports serving two dists do not share a board, and `deal`/`galleryGlide` s
 count.
 
 Runs land as JSON lines in `perf-rig/runs/<runId>.jsonl`, which is gitignored — the rig is the
-instrument, the runs are readings, and readings are banked deliberately under
-`docs/tranches/**/evidence/`, never carried in the working tree.
+instrument, the runs are readings, and a reading reaches a clone only when a wave copies it
+under `docs/tranches/**/evidence/`. That copy is the bank; `runs/` is not. Waves have skipped
+it — T8-W5's whole bench dataset stayed here and nowhere else, and its summary was reduced to
+prose in the record. Its extract now sits at
+`docs/tranches/2026-08-tranche-8/evidence/w5-bench/raw-summary.md`. Under the evidence policy's
+claims law (T9-W0), a summarized claim either banks its raws or declares in its own file that
+they stayed local, on what machine, on what date.
 
 ### Reading a result
 

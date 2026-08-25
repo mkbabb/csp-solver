@@ -1,8 +1,10 @@
 # T8 — the marks tranche · formation (2026-08-03)
 
-Fourteen owner marks, verbatim-faithful, from the 2026-08-03 audit of the live site
-(post-T7). Screenshots banked in `marks/` (m1–m6) — the temp paths in the owner's message
-are ephemeral; these copies are the record. Binding law: the convergent-design-loop's
+Nineteen owner marks: fourteen (M1–M14) verbatim-faithful from the 2026-08-03 audit of the
+live site (post-T7), four added the same day (M16–M19), and M20 added 2026-08-04. M15 was
+never issued, so the top M-number runs one ahead of the membership — |M1–M14| + |M16–M20| =
+19. Screenshots banked in `marks/` (m1–m9) — the temp paths in the owner's message are
+ephemeral; these copies are the record. Binding law: the convergent-design-loop's
 parsimony refinement (T6 precedent — process-lite, code-heavy, visual verification on the
 real surface), O-12 (no browser CI lanes; suites are local instruments; validation is
 visual on the live edge), U-10 (a mark closes ONLY on the owner's re-look — the record
@@ -30,6 +32,15 @@ states ladder position, never closure).
 | M18 | (added same day) The main board's alignment with the title is wrong — and on other game boards | m9 |
 | M19 | (added same day, owner's order, PERMANENT) Safari testing seized the owner's screen — "you cannot puppet the screen like that. Use a proper channel elsewhere… Change the safari puppeting immediately." safaridriver/Safari.app on the owner's desktop is BANNED; headless/background channels only; real-desktop-Safari claims are owner-hardware-scoped | — |
 | M16 | (added same day, owner's words verbatim) "all language like this is to be abrogated completely and removed wholesale. 'a naked single'--what? And this is to be done generally, NOT just this one item. Abstract over it. If we ever do display language, we can never us an em dash, and never use metaphor, meta language, or contrivance--plain english only." THE COPY LAW: every user-visible string censused estate-wide; jargon/metaphor/meta/contrivance removed wholesale; survivors rewritten in plain English; NO em dashes in product copy, ever. This supersedes the register tolerance W1's M3 census graded under — every KEEP verdict re-adjudicates | m7 |
+| M20 | (post-formation mark, 2026-08-04; text is the chair's paraphrase — verbatim unrecovered) The wordmark floats on the board: in a ~900-css-px-wide dark-mode window with the board filling the page top to bottom, "sudoku" and its caret lie mid-left ON the grid. Report + cure: `evidence/m20-float/report.md`, close-record §6.2 | — |
+
+**NOTE (T9-W0, 2026-08-25):** M20's row is added here, and the header count trued from
+"fourteen" to nineteen. The mark landed the day after this file was written, so the
+manifest never carried it — the close record's §4 ladder and `evidence/m20-float/report.md`
+did. The owner's shot for M20 is not in `marks/` (the dir holds m1–m9, re-counted at
+`c917f9a7`); the report's opening description is the only surviving account of it, which is
+why the row is flagged a paraphrase. This file is a manifest, not sealed narrative, so the
+row and the count are edited in place. Registry family F6 (T9 formation).
 
 ## The waves
 

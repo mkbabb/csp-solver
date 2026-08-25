@@ -18,6 +18,11 @@ standing security rows, the game-bench arrow, the version roadmaps); those carry
 the **16** asks that appear in an early record and in no later one, each homed below. (The full
 ~200-row matrix is banked in the prompt-recap lens's output; this file carries the drops.)
 
+> **DISCHARGED (T9-W0, 2026-08-25):** the durable matrix this file owed now exists
+> in-tree at `../2026-08-tranche-9/evidence/formation/recap-matrix.md` — 126 rows,
+> T6→T8.1, every non-ADDRESSED row carrying its owning wave. The session-side
+> banking this paragraph describes is no longer the only home.
+
 ## Silent drops → T7 homes
 
 Sixteen were surfaced. Each now has a terminal disposition (full detail in `DISPOSITIONS.md`).

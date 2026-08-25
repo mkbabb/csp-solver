@@ -20,7 +20,7 @@ import { execSync } from "node:child_process";
 
 const BASE = process.env.BASE || "http://localhost:4238";
 const OUT = new URL("../", import.meta.url).pathname;
-const ROOT = "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion";
+const ROOT = new URL("../../../../../..", import.meta.url).pathname.replace(/\/$/, "");
 // ESM resolves bare specifiers against THIS file's directory, and this file lives in docs/;
 // the driver is the frontend's own pinned copy, reached by path.
 const { chromium } = await import(`${ROOT}/web/frontend/node_modules/playwright/index.mjs`);
