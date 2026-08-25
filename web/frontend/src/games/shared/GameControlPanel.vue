@@ -414,6 +414,19 @@ const CANDIDATE_OPTIONS = [
   { value: "on", label: "On" },
 ];
 
+// T9-W4 §4.1 — WHERE THE PENDING STATE LIVES. The audit's "no indicator" was wrong and the
+// truth was worse: the ScribbleLoader existed, and it rode the SOLVE icon. So a 16×16 deal
+// spun a loader over a verb nobody had pressed while the control that WAS working, four
+// buttons away, sat still. `loading` is raised by exactly two acts, and this panel is the
+// caller of both, so which one is in flight is a fact it already holds. Mount's own opening
+// deal is a deal, which is why that is the opening value and not `null`.
+//
+// Mechanism only — the loader is the shipped one, moved. W7 owns what a dealing board should
+// look like.
+const pendingAct = ref<"deal" | "solve">("deal");
+const dealPending = computed(() => props.loading && pendingAct.value === "deal");
+const solvePending = computed(() => props.loading && pendingAct.value === "solve");
+
 const { animating: solveAnimating, trigger: triggerSolve } = useButtonAnimation(500);
 const { animating: fillAnimating, trigger: triggerFill } = useButtonAnimation(500);
 const { animating: dealAnimating, trigger: triggerDeal } = useButtonAnimation(500);
@@ -443,6 +456,7 @@ function onDeal() {
     dealArmTimer = null;
   }
   dealArmed.value = false;
+  pendingAct.value = "deal";
   triggerDeal();
   emit("deal");
 }
@@ -482,6 +496,7 @@ function onClear() {
 }
 
 function onSolve() {
+  pendingAct.value = "solve";
   triggerSolve();
   emit("solve");
 }
@@ -703,7 +718,17 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
             dealArmed ? 'Press again to deal a new board' : 'Deal a new board'
           "
         >
-          <DiceIcon :size="36" :playing="dealAnimating" />
+          <!-- The pending state, on the act that is pending (T9-W4 §4.1). `aria-hidden` because
+               the loader names itself "solving" for the solve mount below, and a deal is not a
+               solve; the button's own accessible name already says which verb is working, and
+               its disabled state is what a reader is told about the wait. -->
+          <ScribbleLoader
+            v-if="dealPending && !dealAnimating"
+            :size="30"
+            class="text-muted-foreground deal-pending"
+            aria-hidden="true"
+          />
+          <DiceIcon v-else :size="36" :playing="dealAnimating" />
           <span
             class="icon-sublabel"
             :class="{ 'is-armed': dealArmed }"
@@ -1077,7 +1102,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
           aria-label="Solve puzzle"
         >
           <ScribbleLoader
-            v-if="loading && !solveAnimating"
+            v-if="solvePending && !solveAnimating"
             :size="22"
             class="text-muted-foreground"
           />

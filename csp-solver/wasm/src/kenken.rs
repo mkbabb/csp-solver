@@ -29,7 +29,7 @@ use csp_solver::puzzles::kenken::{self, CageOp, KenKenCage, create_kenken_csp};
 use csp_solver::{Pruning, SolveConfig};
 
 use crate::FutoshikiDifficulty;
-use crate::errors::{board_total, coded_error, domain_masks, flatten_solutions};
+use crate::errors::{bank_pick, board_total, coded_error, domain_masks, flatten_solutions};
 
 /// Result of [`solve_kenken`]. `solutions` is a flat concatenation of
 /// `solution_count` boards, each `board_size²` cells, row-major.
@@ -206,9 +206,11 @@ fn encode_cages(cages: &[KenKenCage]) -> Vec<u32> {
 ///
 /// Uses the same AC-3 + MRV config the sudoku/futoshiki/thermo/killer wires use — the
 /// F1 production override, not the pathological library default. `node_budget`
-/// mirrors [`SolveConfig::node_budget`] (pass `None`/`0` for the 1,000,000-node
-/// default). A budget exhausted with zero solutions throws a typed `BUDGET_EXCEEDED`
-/// error; `solved: false` is reserved for a provably no-completion board.
+/// mirrors [`SolveConfig::node_budget`]: omit it (JS `undefined`) for the
+/// 1,000,000-node default. `0` is a *literal* budget of zero nodes, not the
+/// default — the search stops before its first node. A budget exhausted with
+/// zero solutions throws a typed `BUDGET_EXCEEDED` error; `solved: false` is
+/// reserved for a provably no-completion board.
 #[wasm_bindgen(js_name = solveKenKen)]
 pub fn solve_kenken(
     board: Vec<u32>,
@@ -303,14 +305,22 @@ pub fn propagate_kenken(
 ///
 /// `seed` supplies the RNG entropy — pass `Date.now()` or a `crypto.getRandomValues`
 /// draw. Returns the dense given grid (usually all-blank) plus the length-prefixed
-/// cage buffer; the same `board_size` + `difficulty` + `seed` yields the same puzzle
-/// here as native `generate_kenken_seeded`. `board_size` outside `3..=9` throws
-/// `INVALID_INPUT`.
+/// cage buffer.
+///
+/// `templates` is the generation bank ([`bank_pick`] carries the record format).
+/// Empty ⇒ the live dig, and the same `board_size` + `difficulty` + `seed` yields
+/// the same puzzle here as native `generate_kenken_seeded`. Non-empty ⇒ the seed
+/// picks one banked record and it deals verbatim, board and cages both. The banked
+/// record is validated through [`decode_cages`] first: a bank entry must satisfy
+/// exactly the contract `solveKenKen` will hold it to.
+///
+/// `board_size` outside `3..=9`, or a malformed bank, throws `INVALID_INPUT`.
 #[wasm_bindgen(js_name = generateKenKen)]
 pub fn generate_kenken(
     board_size: u32,
     difficulty: FutoshikiDifficulty,
     seed: f64,
+    templates: Vec<u32>,
 ) -> Result<KenKenPuzzleData, JsValue> {
     if !(3..=9).contains(&board_size) {
         return Err(coded_error(
@@ -321,6 +331,16 @@ pub fn generate_kenken(
     // JS numbers are f64; `Date.now()` and typical seeds are exact integers below
     // 2^53. Reinterpret to a u64 seed for the LCG.
     let seed_u64 = seed as u64;
+    let total = (board_size * board_size) as usize;
+
+    if let Some((board, cages)) = bank_pick(&templates, total, seed_u64)? {
+        decode_cages(&cages, total)?;
+        return Ok(KenKenPuzzleData {
+            board,
+            cages,
+            board_size,
+        });
+    }
 
     let (board, cages) = kenken::generate_kenken_seeded(board_size, difficulty.into(), seed_u64);
 

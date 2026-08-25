@@ -116,20 +116,17 @@ pub fn validate_futoshiki(
     Ok(())
 }
 
-/// Create a Futoshiki CSP from a flat board array where `0` = empty cell.
+/// Build the finalized, board-*independent* Futoshiki CSP skeleton for board
+/// side `n` and caret furniture `inequalities`.
 ///
-/// `n` is the board side (values run `1..=n`) — the Latin-family convention,
-/// never Sudoku's sub-grid `n`. `inequalities` are the `(a, b)` caret pairs,
-/// each meaning `board[a] > board[b]`.
-///
-/// Returns the CSP (finalized) and the given values for `solve_with_given`.
-pub fn create_futoshiki_csp(
-    board: &[u32],
-    n: u32,
-    inequalities: &[(usize, usize)],
-) -> (Csp<BitsetDomain>, Vec<(VarId, u32)>) {
+/// The twin of
+/// [`sudoku_csp_skeleton`](crate::puzzles::sudoku::csp::sudoku_csp_skeleton):
+/// every board of one side carrying one caret set shares this exact structure —
+/// only the *given* cells differ, and those ride [`Csp::solve_with_given`],
+/// which resets every domain on entry. The hole-dig builds it **once** per deal
+/// and re-seeds the givens per candidate solve.
+pub fn futoshiki_csp_skeleton(n: u32, inequalities: &[(usize, usize)]) -> Csp<BitsetDomain> {
     let total = (n * n) as usize;
-    assert_eq!(board.len(), total, "board must have n*n = {total} elements");
 
     let mut csp = Csp::new();
     let domain = BitsetDomain::new(1..=n);
@@ -156,10 +153,29 @@ pub fn create_futoshiki_csp(
     }
 
     csp.finalize();
+    csp
+}
 
-    // The same non-zero-cells-as-(VarId, value) extraction the other four
-    // families use: givens ride the search's given path instead of a wall of
-    // `add_equals` constraints, so one skeleton serves every board.
+/// Create a Futoshiki CSP from a flat board array where `0` = empty cell.
+///
+/// `n` is the board side (values run `1..=n`) — the Latin-family convention,
+/// never Sudoku's sub-grid `n`. `inequalities` are the `(a, b)` caret pairs,
+/// each meaning `board[a] > board[b]`.
+///
+/// Returns the CSP (finalized) and the given values for `solve_with_given`:
+/// the board-independent [`futoshiki_csp_skeleton`] composed with the same
+/// non-zero-cells-as-`(VarId, value)` extraction the other four families use.
+/// Givens ride the search's given path instead of a wall of `add_equals`
+/// constraints, so one skeleton serves every board.
+pub fn create_futoshiki_csp(
+    board: &[u32],
+    n: u32,
+    inequalities: &[(usize, usize)],
+) -> (Csp<BitsetDomain>, Vec<(VarId, u32)>) {
+    let total = (n * n) as usize;
+    assert_eq!(board.len(), total, "board must have n*n = {total} elements");
+
+    let csp = futoshiki_csp_skeleton(n, inequalities);
     let given = sudoku_given(board);
     (csp, given)
 }

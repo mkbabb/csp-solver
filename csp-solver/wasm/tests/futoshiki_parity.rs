@@ -139,7 +139,8 @@ fn generate_wire_matches_native_n4_to_n7() {
         for &(native_d, wire_d) in &tiers {
             for &seed in &[1u64, 42, 12345] {
                 let (nb, np) = generate_futoshiki_difficulty_seeded(n, native_d, seed);
-                let wire = generate_futoshiki(n, wire_d, seed as f64).expect("wire generate");
+                let wire =
+                    generate_futoshiki(n, wire_d, seed as f64, Vec::new()).expect("wire generate");
                 assert_eq!(
                     wire.board(),
                     nb,
@@ -208,11 +209,11 @@ fn wrong_board_length_is_invalid_input() {
 
 #[wasm_bindgen_test]
 fn generate_out_of_range_board_size_is_invalid_input() {
-    let low = generate_futoshiki(3, FutoshikiDifficulty::Easy, 1.0)
+    let low = generate_futoshiki(3, FutoshikiDifficulty::Easy, 1.0, Vec::new())
         .err()
         .expect("expected an error");
     assert_eq!(err_code(low).as_deref(), Some("INVALID_INPUT"));
-    let high = generate_futoshiki(8, FutoshikiDifficulty::Easy, 1.0)
+    let high = generate_futoshiki(8, FutoshikiDifficulty::Easy, 1.0, Vec::new())
         .err()
         .expect("expected an error");
     assert_eq!(err_code(high).as_deref(), Some("INVALID_INPUT"));

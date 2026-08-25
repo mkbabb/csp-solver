@@ -32,24 +32,26 @@ pub struct KillerCage {
     pub cells: Vec<usize>,
 }
 
-/// Build a finalized Killer-Sudoku CSP from a dense board (`0` = empty) for
-/// sub-grid size `n`, plus the cage furniture. Returns the CSP and the given
-/// values for [`Csp::solve_with_given`].
+/// Build the finalized, board-*independent* Killer-Sudoku CSP skeleton for
+/// sub-grid size `n` and cage furniture `cages`.
+///
+/// The twin of
+/// [`sudoku_csp_skeleton`](crate::puzzles::sudoku::csp::sudoku_csp_skeleton):
+/// every board of one size carrying one cage set shares this exact structure —
+/// only the *given* cells differ, and those ride [`Csp::solve_with_given`],
+/// which resets every domain on entry. The hole-dig builds it **once** per deal
+/// and re-seeds the givens per candidate solve.
 ///
 /// The Sudoku skeleton is the same row/column/box all-different structure
-/// [`create_thermo_csp`](crate::puzzles::thermo::create_thermo_csp) builds; each
-/// cage then adds its `AllDifferent` (≥2 cells) and `CageSum` BEFORE `finalize`
-/// (the constraints must be present when the adjacency graph is built). No cage
-/// touches `constraint/` beyond lane P's `CageSum`: `add_cage_sum` is the
-/// devirtualized n-ary propagator, `add_all_different` the existing GAC.
-pub fn create_killer_csp(
-    board: &[u32],
-    n: u32,
-    cages: &[KillerCage],
-) -> (Csp<BitsetDomain>, Vec<(VarId, u32)>) {
+/// [`thermo_csp_skeleton`](crate::puzzles::thermo::thermo_csp_skeleton) builds;
+/// each cage then adds its `AllDifferent` (≥2 cells) and `CageSum` BEFORE
+/// `finalize` (the constraints must be present when the adjacency graph is
+/// built). No cage touches `constraint/` beyond lane P's `CageSum`:
+/// `add_cage_sum` is the devirtualized n-ary propagator, `add_all_different` the
+/// existing GAC.
+pub fn killer_csp_skeleton(n: u32, cages: &[KillerCage]) -> Csp<BitsetDomain> {
     let m = n * n;
     let total = (m * m) as usize;
-    assert_eq!(board.len(), total, "board must have M*M = {total} elements");
 
     let mut csp = Csp::new();
     let domain = BitsetDomain::new(1..=m);
@@ -100,9 +102,24 @@ pub fn create_killer_csp(
     }
 
     csp.finalize();
+    csp
+}
 
-    // Reuse the sudoku given-cell extraction (already compiled into the lean
-    // build) rather than mint a killer-specific twin.
+/// Build a finalized Killer-Sudoku CSP from a dense board (`0` = empty) for
+/// sub-grid size `n`, plus the cage furniture. Returns the CSP and the given
+/// values for [`Csp::solve_with_given`]. Composes the board-independent
+/// [`killer_csp_skeleton`] with the sudoku given-cell extraction (already
+/// compiled into the lean build) rather than minting a killer-specific twin.
+pub fn create_killer_csp(
+    board: &[u32],
+    n: u32,
+    cages: &[KillerCage],
+) -> (Csp<BitsetDomain>, Vec<(VarId, u32)>) {
+    let m = n * n;
+    let total = (m * m) as usize;
+    assert_eq!(board.len(), total, "board must have M*M = {total} elements");
+
+    let csp = killer_csp_skeleton(n, cages);
     let given = sudoku_given(board);
     (csp, given)
 }

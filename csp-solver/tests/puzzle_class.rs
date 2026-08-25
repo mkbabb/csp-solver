@@ -22,28 +22,44 @@ use csp_solver::puzzles::sudoku::{
 /// The generic hole-digging dealer, driven entirely through [`PuzzleClass`] —
 /// the shape T4-W13 ships as `generate_by_digging<C>`. Threads one seeded RNG
 /// across seed → clue placement → dig, exactly as the shipped generators do.
+///
+/// T9-W4 added two beats the mirror carries verbatim, since the point of this
+/// file is that the seams *are* the dealer: the skeleton is hoisted out of the
+/// removal loop ([`PuzzleClass::build_solver`], one per deal), and a removal
+/// becomes a hole only on
+/// [`CandidateOutcome::proves_unique`](csp_solver::puzzles::class::CandidateOutcome::proves_unique)
+/// — a re-solve that did not close proves nothing and is refused like a second
+/// solution. A run of [`PuzzleClass::rejection_leash`] refusals ends the dig.
 fn deal_via_trait<C: PuzzleClass>(class: &C, seed: u64) -> C::Puzzle {
     let mut rng = SimpleRng::new(seed);
 
     let solution = class.seed_solution(&mut rng);
     let clues = class.place_clues(&solution, &mut rng);
     let target = class.target_holes(solution.len());
+    let leash = class.rejection_leash();
+    let mut solver = class.build_solver(&clues);
 
     let mut board = solution.clone();
     let mut indices: Vec<usize> = (0..solution.len()).collect();
     rng.shuffle(&mut indices);
 
     let mut holes = 0usize;
+    let mut refusals = 0usize;
     for &idx in &indices {
-        if holes >= target {
+        if holes >= target || refusals >= leash {
             break;
         }
         let saved = board[idx];
         board[idx] = 0;
-        if class.solve_candidate(&board, &clues, 2).len() == 1 {
+        if class
+            .solve_candidate(&mut solver, &board, 2)
+            .proves_unique()
+        {
             holes += 1;
+            refusals = 0;
         } else {
             board[idx] = saved;
+            refusals += 1;
         }
     }
 

@@ -85,9 +85,15 @@ pub struct KenKenCage {
     pub cells: Vec<usize>,
 }
 
-/// Build a finalized KenKen CSP from a dense board (`0` = empty) for board side
-/// `n`, plus the cage furniture. Returns the CSP and the given values for
-/// [`Csp::solve_with_given`].
+/// Build the finalized, board-*independent* KenKen CSP skeleton for board side
+/// `n` and cage furniture `cages`.
+///
+/// The twin of
+/// [`sudoku_csp_skeleton`](crate::puzzles::sudoku::csp::sudoku_csp_skeleton):
+/// every board of one side carrying one cage set shares this exact structure —
+/// only the *given* cells differ, and those ride [`Csp::solve_with_given`],
+/// which resets every domain on entry. The hole-dig builds it **once** per deal
+/// and re-seeds the givens per candidate solve.
 ///
 /// The Latin skeleton is row + column all-different over `n×n` variables of
 /// domain `1..=n` — **no box constraint** (the KenKen geometry). Each cage then
@@ -100,13 +106,8 @@ pub struct KenKenCage {
 /// panicking; the wasm/native callers only ever build well-formed cages, and a
 /// dropped binary cage degrades to a looser (still sound) puzzle rather than a
 /// crash.
-pub fn create_kenken_csp(
-    board: &[u32],
-    n: u32,
-    cages: &[KenKenCage],
-) -> (Csp<BitsetDomain>, Vec<(VarId, u32)>) {
+pub fn kenken_csp_skeleton(n: u32, cages: &[KenKenCage]) -> Csp<BitsetDomain> {
     let total = (n * n) as usize;
-    assert_eq!(board.len(), total, "board must have n*n = {total} elements");
 
     let mut csp = Csp::new();
     let domain = BitsetDomain::new(1..=n);
@@ -181,10 +182,24 @@ pub fn create_kenken_csp(
     }
 
     csp.finalize();
+    csp
+}
 
-    // Reuse the sudoku given-cell extraction (already compiled into the lean
-    // build; it is just "non-zero cells as (VarId, value)") rather than mint a
-    // KenKen-specific twin.
+/// Build a finalized KenKen CSP from a dense board (`0` = empty) for board side
+/// `n`, plus the cage furniture. Returns the CSP and the given values for
+/// [`Csp::solve_with_given`]. Composes the board-independent
+/// [`kenken_csp_skeleton`] with the sudoku given-cell extraction (already
+/// compiled into the lean build; it is just "non-zero cells as (VarId, value)")
+/// rather than minting a KenKen-specific twin.
+pub fn create_kenken_csp(
+    board: &[u32],
+    n: u32,
+    cages: &[KenKenCage],
+) -> (Csp<BitsetDomain>, Vec<(VarId, u32)>) {
+    let total = (n * n) as usize;
+    assert_eq!(board.len(), total, "board must have n*n = {total} elements");
+
+    let csp = kenken_csp_skeleton(n, cages);
     let given = sudoku_given(board);
     (csp, given)
 }

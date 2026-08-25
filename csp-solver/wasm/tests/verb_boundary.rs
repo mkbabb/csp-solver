@@ -222,7 +222,8 @@ fn verb_propagate_futoshiki() {
 fn verb_generate_futoshiki() {
     let (nb, np) =
         futoshiki::generate_futoshiki_difficulty_seeded(5, futoshiki::Difficulty::Medium, 7777);
-    let wire = generate_futoshiki(5, FutoshikiDifficulty::Medium, 7777.0).expect("wire deals");
+    let wire =
+        generate_futoshiki(5, FutoshikiDifficulty::Medium, 7777.0, Vec::new()).expect("wire deals");
     assert_eq!(wire.board(), nb);
     assert_eq!(wire.board_size(), 5);
     assert_eq!(
@@ -233,7 +234,7 @@ fn verb_generate_futoshiki() {
     );
 
     assert_invalid_input(
-        generate_futoshiki(8, FutoshikiDifficulty::Easy, 1.0)
+        generate_futoshiki(8, FutoshikiDifficulty::Easy, 1.0, Vec::new())
             .err()
             .expect("must reject"),
         "generateFutoshiki out-of-band board_size",
@@ -277,13 +278,13 @@ fn verb_propagate_thermo() {
 #[wasm_bindgen_test]
 fn verb_generate_thermo() {
     let (nb, nt) = thermo::generate_thermo_seeded(2, sudoku::Difficulty::Easy, 555);
-    let wire = generate_thermo(2, SudokuDifficulty::Easy, 555.0).expect("wire deals");
+    let wire = generate_thermo(2, SudokuDifficulty::Easy, 555.0, Vec::new()).expect("wire deals");
     assert_eq!(wire.board(), nb);
     assert_eq!(wire.n(), 2);
     assert_eq!(wire.thermometers(), flat_thermos(&nt));
 
     assert_invalid_input(
-        generate_thermo(0, SudokuDifficulty::Easy, 1.0)
+        generate_thermo(0, SudokuDifficulty::Easy, 1.0, Vec::new())
             .err()
             .expect("must reject"),
         "generateThermo n=0",
@@ -328,13 +329,13 @@ fn verb_propagate_killer() {
 #[wasm_bindgen_test]
 fn verb_generate_killer() {
     let (nb, nc) = killer::generate_killer_seeded(2, sudoku::Difficulty::Easy, 909);
-    let wire = generate_killer(2, SudokuDifficulty::Easy, 909.0).expect("wire deals");
+    let wire = generate_killer(2, SudokuDifficulty::Easy, 909.0, Vec::new()).expect("wire deals");
     assert_eq!(wire.board(), nb);
     assert_eq!(wire.n(), 2);
     assert_eq!(wire.cages(), flat_killer_cages(&nc));
 
     assert_invalid_input(
-        generate_killer(0, SudokuDifficulty::Easy, 1.0)
+        generate_killer(0, SudokuDifficulty::Easy, 1.0, Vec::new())
             .err()
             .expect("must reject"),
         "generateKiller n=0",
@@ -379,15 +380,104 @@ fn verb_propagate_kenken() {
 #[wasm_bindgen_test]
 fn verb_generate_kenken() {
     let (nb, nc) = kenken::generate_kenken_seeded(5, futoshiki::Difficulty::Hard, 606);
-    let wire = generate_kenken(5, FutoshikiDifficulty::Hard, 606.0).expect("wire deals");
+    let wire =
+        generate_kenken(5, FutoshikiDifficulty::Hard, 606.0, Vec::new()).expect("wire deals");
     assert_eq!(wire.board(), nb);
     assert_eq!(wire.board_size(), 5);
     assert_eq!(wire.cages(), flat_kenken_cages(&nc));
 
     assert_invalid_input(
-        generate_kenken(2, FutoshikiDifficulty::Easy, 1.0)
+        generate_kenken(2, FutoshikiDifficulty::Easy, 1.0, Vec::new())
             .err()
             .expect("must reject"),
         "generateKenKen out-of-band board_size",
     );
+}
+
+// ═══ node_budget ════════════════════════════════════════════════════════════
+
+/// `node_budget = 0` is a literal budget of zero nodes on all five solve verbs
+/// — the search stops before its first node and the verb throws
+/// `BUDGET_EXCEEDED`. Through 0.6.0 every one of those five doc comments said
+/// `0` selected the 1,000,000-node default instead (V2's find, T9-W4 §4.1); the
+/// divergence survived three tranches because neither side of it had a test.
+/// This is that test. `None` still takes the default, which is what the same
+/// call proves by solving.
+#[wasm_bindgen_test]
+fn verb_zero_node_budget_is_literal() {
+    let n = 2;
+    let sboard = sudoku_4x4_dug();
+    let (fboard, fpairs) = futoshiki::generate_futoshiki_seeded(4, 99);
+    let fflat: Vec<u32> = fpairs
+        .iter()
+        .flat_map(|&(a, b)| [a as u32, b as u32])
+        .collect();
+    let (tboard, thermos) = thermo::generate_thermo_seeded(n, sudoku::Difficulty::Easy, 31);
+    let tflat = flat_thermos(&thermos);
+    let (kboard, kcages) = killer::generate_killer_seeded(n, sudoku::Difficulty::Easy, 17);
+    let kflat = flat_killer_cages(&kcages);
+    let (xboard, xcages) = kenken::generate_kenken_seeded(4, futoshiki::Difficulty::Easy, 23);
+    let xflat = flat_kenken_cages(&xcages);
+
+    // `None` ⇒ the 1,000,000-node default ⇒ every board solves.
+    assert!(
+        solve_sudoku(sboard.clone(), n, Some(1), None)
+            .unwrap()
+            .solved()
+    );
+    assert!(
+        solve_futoshiki(fboard.clone(), 4, fflat.clone(), Some(1), None)
+            .unwrap()
+            .solved()
+    );
+    assert!(
+        solve_thermo(tboard.clone(), n, tflat.clone(), Some(1), None)
+            .unwrap()
+            .solved()
+    );
+    assert!(
+        solve_killer(kboard.clone(), n, kflat.clone(), Some(1), None)
+            .unwrap()
+            .solved()
+    );
+    assert!(
+        solve_kenken(xboard.clone(), 4, xflat.clone(), Some(1), None)
+            .unwrap()
+            .solved()
+    );
+
+    // `Some(0)` ⇒ zero nodes ⇒ the typed BUDGET_EXCEEDED, on all five.
+    for (err, label) in [
+        (
+            solve_sudoku(sboard, n, Some(1), Some(0)).err(),
+            "solveSudoku",
+        ),
+        (
+            solve_futoshiki(fboard, 4, fflat, Some(1), Some(0)).err(),
+            "solveFutoshiki",
+        ),
+        (
+            solve_thermo(tboard, n, tflat, Some(1), Some(0)).err(),
+            "solveThermo",
+        ),
+        (
+            solve_killer(kboard, n, kflat, Some(1), Some(0)).err(),
+            "solveKiller",
+        ),
+        (
+            solve_kenken(xboard, 4, xflat, Some(1), Some(0)).err(),
+            "solveKenKen",
+        ),
+    ] {
+        let err = err.unwrap_or_else(|| panic!("{label}: a 0-node budget must not solve"));
+        assert!(
+            err.is_instance_of::<js_sys::Error>(),
+            "{label}: thrown value must be a genuine Error"
+        );
+        assert_eq!(
+            code(err).as_deref(),
+            Some("BUDGET_EXCEEDED"),
+            "{label}: a 0-node budget is exhaustion, not INVALID_INPUT"
+        );
+    }
 }

@@ -134,14 +134,23 @@ impl SudokuSolveResult {
 /// Uses the same AC-3 + MRV config the shipped PyO3 `solve_sudoku`
 /// path uses, not the pathological library default.
 ///
-/// `node_budget` mirrors [`SolveConfig::node_budget`] — pass `None`/`0`
-/// (JS `undefined`) for the library default (1,000,000 nodes); browser
+/// `node_budget` mirrors [`SolveConfig::node_budget`] — omit it (JS
+/// `undefined`) for the library default (1,000,000 nodes); browser
 /// callers on a low-power device or a strict per-tab time slice can pass
-/// a tighter cap. When the budget is exhausted with zero solutions
-/// found, this throws a typed error (`instanceof Error`, `.code ===
-/// "BUDGET_EXCEEDED"`) rather than returning `solved: false` — that
-/// value is reserved for a board this solver has *proven* has no
-/// completion, which a caller must not confuse with "gave up early."
+/// a tighter cap. `0` is a *literal* budget of zero nodes, NOT the
+/// default: the search stops before its first node. Through 0.6.0 this
+/// comment and its four siblings said `0` selected the default while the
+/// code read it as the literal; 0.7.0 keeps the literal — a caller who
+/// computes a budget down to zero is asking for no search, and quietly
+/// handing that caller the largest budget in the system is the surprise.
+/// `verb_boundary.rs`'s `verb_zero_node_budget_is_literal` pins all five
+/// verbs so the two can't drift apart again.
+///
+/// When the budget is exhausted with zero solutions found, this throws a
+/// typed error (`instanceof Error`, `.code === "BUDGET_EXCEEDED"`) rather
+/// than returning `solved: false` — that value is reserved for a board
+/// this solver has *proven* has no completion, which a caller must not
+/// confuse with "gave up early."
 #[wasm_bindgen(js_name = solveSudoku)]
 pub fn solve_sudoku(
     board: Vec<u32>,

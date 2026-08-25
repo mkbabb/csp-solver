@@ -1,9 +1,42 @@
 # Changelog
 
 The npm registry carries this package through `0.2.0`. The `0.4.0` through
-`0.6.0` bumps below are source-only version stamps: the frontend file-links the
+`0.7.0` bumps below are source-only version stamps: the frontend file-links the
 lean build (`file:../../csp-solver/wasm/pkg`), so no tarball was published for
 them.
+
+## 0.7.0 — 2026-08-25 (the bank generalizes)
+
+_Source-only; the npm registry stays at `0.2.0`._
+
+- **BREAKING — `generateThermo` / `generateKiller` / `generateKenKen` /
+  `generateFutoshiki` gain a `templates` argument.** Each becomes
+  `generate*(dim, difficulty, seed, templates)`, mirroring
+  `generateSudoku(n, difficulty, seed, templates)` — the bank is now part of
+  the generate contract for all five families, not sudoku's alone. Empty ⇒ the
+  live dig (byte-identical to the native seeded dealer, which the parity
+  harness still pins); non-empty ⇒ the seed picks one record and it deals
+  verbatim, board and clue furniture both. The five Worker call-sites update
+  alongside.
+- **The bank record is `[clue_len, board…, clue…]`.** Length prefix first so a
+  record skips by arithmetic; the clue tail is byte-identical to what
+  `solve*`/`propagate*` take, and is validated through that family's own
+  decoder before anything is dealt — a malformed bank is `INVALID_INPUT` at the
+  deal. `generateSudoku` keeps the bare `total`-chunked bank it shipped in
+  `0.4.0`: sudoku has no clue furniture, so every prefix would be a constant
+  `0`. A clue-carrying bank takes no symmetry transform — sudoku's digit
+  permutation inverts a thermometer's `less_than` chain and falsifies a
+  Killer/KenKen cage target — so bank breadth is the bank's own size.
+- **`node_budget = 0` is documented as the literal it always was.** The five
+  `solve*` doc comments claimed `0` selected the 1,000,000-node default; the
+  code stops the search before its first node and throws `BUDGET_EXCEEDED`.
+  The code's contract stays and the prose is trued. `undefined` still takes the
+  default.
+- Tests: `wasm/tests/bank_boundary.rs` (four families × honored-bank,
+  seed-driven pick, FAIL-EXPLICIT, plus the `u32::MAX` length prefix that wraps
+  a bare sum on wasm32's 32-bit `usize`) and `verb_zero_node_budget_is_literal`
+  across all five solve verbs. 35 wasm tests, up from 29.
+- Version stamped `0.6.0 → 0.7.0` in lockstep with `csp-solver@0.7.0`.
 
 ## 0.6.0 — 2026-07-15 (five-family lockstep)
 

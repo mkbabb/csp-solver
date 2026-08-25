@@ -97,8 +97,11 @@ interface Family {
 }
 
 const FAMILIES: Record<GameId, Family> = {
-  // The one family that digs from a bank instead of generating live, and the one that prints
-  // no clue furniture — both facts show up here as arguments, not as a forked module.
+  // The one family that prints no clue furniture — a fact that shows up here as an argument,
+  // not as a forked module. The BANK is no longer that kind of fact: at 0.7.0 every generate
+  // verb takes a template buffer (T9-W4 §4.3), so `templates` is threaded to all five and an
+  // empty buffer is what "this family digs live" means on the wire. A game that grows a bank
+  // grows it in its own `data/`, and not one line here moves.
   sudoku: {
     generate: (dim, difficulty, seed, templates) => ({
       board: generateSudoku(dim, difficulty as SudokuDifficulty, seed, templates),
@@ -109,8 +112,13 @@ const FAMILIES: Record<GameId, Family> = {
     propagate: (board, dim) => propagateSudoku(board, dim),
   },
   futoshiki: {
-    generate: (dim, difficulty, seed) => {
-      const puzzle = generateFutoshiki(dim, difficulty as FutoshikiDifficulty, seed);
+    generate: (dim, difficulty, seed, templates) => {
+      const puzzle = generateFutoshiki(
+        dim,
+        difficulty as FutoshikiDifficulty,
+        seed,
+        templates,
+      );
       const dealt = { board: puzzle.board, clue: puzzle.inequalities };
       puzzle.free();
       return dealt;
@@ -120,8 +128,13 @@ const FAMILIES: Record<GameId, Family> = {
     propagate: (board, dim, clue) => propagateFutoshiki(board, dim, clue),
   },
   thermo: {
-    generate: (dim, difficulty, seed) => {
-      const puzzle = generateThermo(dim, difficulty as SudokuDifficulty, seed);
+    generate: (dim, difficulty, seed, templates) => {
+      const puzzle = generateThermo(
+        dim,
+        difficulty as SudokuDifficulty,
+        seed,
+        templates,
+      );
       const dealt = { board: puzzle.board, clue: puzzle.thermometers };
       puzzle.free();
       return dealt;
@@ -131,8 +144,13 @@ const FAMILIES: Record<GameId, Family> = {
     propagate: (board, dim, clue) => propagateThermo(board, dim, clue),
   },
   killer: {
-    generate: (dim, difficulty, seed) => {
-      const puzzle = generateKiller(dim, difficulty as SudokuDifficulty, seed);
+    generate: (dim, difficulty, seed, templates) => {
+      const puzzle = generateKiller(
+        dim,
+        difficulty as SudokuDifficulty,
+        seed,
+        templates,
+      );
       const dealt = { board: puzzle.board, clue: puzzle.cages };
       puzzle.free();
       return dealt;
@@ -142,8 +160,13 @@ const FAMILIES: Record<GameId, Family> = {
     propagate: (board, dim, clue) => propagateKiller(board, dim, clue),
   },
   kenken: {
-    generate: (dim, difficulty, seed) => {
-      const puzzle = generateKenKen(dim, difficulty as FutoshikiDifficulty, seed);
+    generate: (dim, difficulty, seed, templates) => {
+      const puzzle = generateKenKen(
+        dim,
+        difficulty as FutoshikiDifficulty,
+        seed,
+        templates,
+      );
       const dealt = { board: puzzle.board, clue: puzzle.cages };
       puzzle.free();
       return dealt;

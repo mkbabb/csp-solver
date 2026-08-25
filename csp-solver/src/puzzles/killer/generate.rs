@@ -19,13 +19,14 @@
 //! is the sudoku [`Difficulty`] axis reused verbatim (a Killer-Sudoku *is* a
 //! Sudoku variant — same keep bands, no fourth mirror).
 
+use crate::domain::bitset::BitsetDomain;
 use crate::ordering::Ordering;
-use crate::puzzles::class::{PuzzleClass, SimpleRng, generate_by_digging};
+use crate::puzzles::class::{CandidateOutcome, PuzzleClass, SimpleRng, generate_by_digging};
 use crate::puzzles::sudoku::Difficulty;
 use crate::puzzles::sudoku::csp::{sudoku_csp_skeleton, sudoku_given};
-use crate::{Pruning, SolveConfig};
+use crate::{Csp, Pruning, SolveConfig};
 
-use super::csp::{KillerCage, create_killer_csp};
+use super::csp::{KillerCage, killer_csp_skeleton};
 
 /// Largest cage grown. Kept small so a dealt board stays legible and the cage
 /// all-different / sum stay quick — classic Killer cages run 1..5 cells; 2..4
@@ -151,16 +152,6 @@ fn partition_into_cages(solution: &[u32], n: u32, rng: &mut SimpleRng) -> Vec<Ki
         .collect()
 }
 
-/// Sudoku hole bands (reused verbatim): the clue-count target for a `board_len`
-/// board at `difficulty`.
-fn target_holes_for(difficulty: Difficulty, board_len: usize) -> usize {
-    match difficulty {
-        Difficulty::Easy => board_len / 4,
-        Difficulty::Medium => (board_len as f64 / 1.75) as usize,
-        Difficulty::Hard => (board_len as f64 / 1.25) as usize,
-    }
-}
-
 /// A Killer-Sudoku instance to deal: sub-grid size `n` (3 ⇒ 9×9) at
 /// `difficulty`.
 ///
@@ -187,6 +178,9 @@ impl PuzzleClass for KillerClass {
     type Clue = KillerCage;
     /// The dense board paired with its cage furniture.
     type Puzzle = (Vec<u32>, Vec<KillerCage>);
+    /// The sudoku skeleton plus this deal's cage all-differents and `CageSum`s —
+    /// board-independent, so one per deal serves every candidate.
+    type Solver = Csp<BitsetDomain>;
 
     fn seed_solution(&self, rng: &mut SimpleRng) -> Vec<u32> {
         seed_sudoku_solution(self.n, rng)
@@ -196,18 +190,22 @@ impl PuzzleClass for KillerClass {
         partition_into_cages(solution, self.n, rng)
     }
 
+    fn build_solver(&self, clues: &[KillerCage]) -> Csp<BitsetDomain> {
+        killer_csp_skeleton(self.n, clues)
+    }
+
     fn solve_candidate(
         &self,
+        solver: &mut Csp<BitsetDomain>,
         board: &[u32],
-        clues: &[KillerCage],
         max_solutions: usize,
-    ) -> Vec<Vec<u32>> {
-        let (mut csp, given) = create_killer_csp(board, self.n, clues);
-        csp.solve_with_given(&gen_config(max_solutions), &given)
+    ) -> CandidateOutcome {
+        let solutions = solver.solve_with_given(&gen_config(max_solutions), &sudoku_given(board));
+        CandidateOutcome::from_search(solutions, solver.stats())
     }
 
     fn target_holes(&self, board_len: usize) -> usize {
-        target_holes_for(self.difficulty, board_len)
+        self.difficulty.target_holes(board_len)
     }
 
     fn assemble(&self, board: Vec<u32>, clues: Vec<KillerCage>) -> Self::Puzzle {

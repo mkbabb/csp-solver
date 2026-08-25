@@ -35,13 +35,60 @@ export function nodeBudgetForSize(n: number): number {
  *  `useGameState` sizes the board with it, the solver client counts cells with it. */
 const boardSizeOf = (n: number) => n ** 2;
 
-/** Thermo's slice of the ONE solver client — the wasm family, the size math, and the clue
- *  codec `spec.clues` spreads. No worker of its own: there is one, and every game shares it. */
+/**
+ * Thermo's generation bank (T9-W4 §4.1) — the 16×16 tiers, dealt instead of dug.
+ *
+ * Thermo used to hand `templates: null` because the wasm had no thermo template surface to hand
+ * one to; the slot was inert, and the family dug live at every size. At 0.7.0 the surface
+ * exists, and the measurements say what to do with it: 16×16 HARD live generation still runs a
+ * 3.6s median and a 53.9s worst case with the crate's attempt-stop in place. The stop bounds the
+ * algorithm, the bank removes the search.
+ *
+ * TWO THINGS ARE DELIBERATE HERE.
+ *
+ * The source is DECLARED, not inferred: `thermoTierSource` answers `livegen` for the small
+ * boards because the table says so, never because the bank came up empty. That is the tier-table
+ * discipline sudoku bought after a `git rm` shipped a silent live-gen regression, and it costs
+ * one function call to keep.
+ *
+ * The bank is IMPORTED WHEN IT IS NEEDED, not when this module loads (§4.4). A static import
+ * would pin 28 kB of board literal into whatever chunk holds this composable; the `import()`
+ * puts it in a chunk of its own that only a 16×16 deal ever fetches. The client's `templates`
+ * slot takes a promise for exactly this reason.
+ */
+const DIFFICULTY_KEY: Record<Difficulty, "easy" | "medium" | "hard"> = {
+  EASY: "easy",
+  MEDIUM: "medium",
+  HARD: "hard",
+};
+
+async function thermoTemplates(
+  n: number,
+  difficulty: Difficulty,
+): Promise<Uint32Array<ArrayBuffer>> {
+  const { thermoTierSource, THERMO_BANK } = await import("../data/templates");
+  const tier = DIFFICULTY_KEY[difficulty];
+  if (thermoTierSource(n, tier) === "livegen") return new Uint32Array(0);
+  // `bank_pick` reads the buffer as back-to-back records; the flat concatenation IS the wire
+  // form, so the join is the encoding (csp-solver/wasm/src/errors.rs).
+  const records = THERMO_BANK[n][tier];
+  const flat = new Uint32Array(records.reduce((len, r) => len + r.length, 0));
+  let at = 0;
+  for (const record of records) {
+    flat.set(record, at);
+    at += record.length;
+  }
+  return flat;
+}
+
+/** Thermo's slice of the ONE solver client — the wasm family, the size math, the clue codec
+ *  `spec.clues` spreads, and now its bank. Its DEALS run on the leashed deal channel; its
+ *  solves ride the resident worker with every other game's (T9-W4 §4.1). */
 const api = createSolverClient({
   game: "thermo",
   boardSide: boardSizeOf,
   clue: thermoClue,
-  templates: null,
+  templates: thermoTemplates,
   nodeBudget: nodeBudgetForSize,
 });
 

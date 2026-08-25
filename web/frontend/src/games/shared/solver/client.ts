@@ -28,14 +28,32 @@ import { createSolverTransport } from "./transport";
 import type { GameId, SolverRequest, SolverResponse } from "./protocol";
 
 /**
- * THE Worker. One `new Worker` in the whole estate (`solverSpine.workers: 1`), over the one
- * `?url` contract site the worker module owns.
+ * THE Worker FACTORY. One `new Worker` SITE in the whole estate, over the one `?url` contract
+ * site the worker module owns — which is what T5's `solverSpine.workers: 1` was counting and
+ * what it still reads.
+ *
+ * The transport calls this factory twice at runtime now (T9-W4 §4.1): a resident worker for
+ * solves and propagates, and a deal channel that can be terminated. That is two INSTANCES of
+ * one module over one binary, not two spines: nothing about the worker, the protocol or the
+ * asset URL is duplicated, and a family added tomorrow still adds no worker at all.
  */
 const transport = createSolverTransport<SolverRequest, SolverResponse>({
   createWorker: () =>
     new Worker(new URL("./solver.worker.ts", import.meta.url), { type: "module" }),
   tag: "solver",
 });
+
+/**
+ * THE DEAL LEASH (T9-W4 §4.1) — how long one deal may run before the estate stops waiting on it.
+ *
+ * A stated constant, not a heuristic. Thirty seconds is far past any deal the shipped artifact
+ * measures (the crate's attempt-stop bounds the worst family, 16×16 thermo HARD, at seconds) and
+ * far short of the eight-minute deal V2 caught in production, so it fires only on a genuine
+ * runaway. On expiry the deal's worker is TERMINATED — the only true cancel there is for a
+ * synchronous wasm call — and the caller gets a typed `DEAL_TIMEOUT`, which the paper note
+ * renders as a sentence naming the one thing that helps (`classifyError.ts`).
+ */
+export const DEAL_LEASH_MS = 30_000;
 
 /**
  * Cold-start prewarm (T3-W8 §cold-start, A17 P1): spin the Worker up and ping it so the wasm
@@ -68,8 +86,22 @@ export interface SolverClientConfig<TClue> {
   boardSide: (dim: number) => number;
   /** the clue codec pair, or `null` for a game that prints no clue furniture (sudoku). */
   clue: ClueCodec<TClue> | null;
-  /** the generation bank, or `null` for a family that digs live (all but sudoku). */
-  templates: ((dim: number, difficulty: Tier) => Uint32Array<ArrayBuffer>) | null;
+  /**
+   * The generation bank, or `null` for a family that digs live.
+   *
+   * MAY RETURN A PROMISE (T9-W4 §4.4). A bank is tens of kilobytes of board literal that only
+   * a deal ever reads, and a static import of one puts every byte of it in the entry chunk —
+   * render-blocking weight on every visitor, for a game most of them will not open. The
+   * awaitable return is what lets a game `import()` its bank instead, so the bytes travel with
+   * the deal that wants them. `getRandomBoard` is already async; the wait costs nothing it was
+   * not already paying.
+   */
+  templates:
+    | ((
+        dim: number,
+        difficulty: Tier,
+      ) => Uint32Array<ArrayBuffer> | Promise<Uint32Array<ArrayBuffer>>)
+    | null;
   /**
    * The size-scaled cap on search effort — `spec.solver.nodeBudget`, the SAME function the
    * spec names (T5-W2 2.4/F-A row 4). It lives here because this is the seam that puts it on
@@ -150,13 +182,24 @@ export function createSolverClient<TClue>(
     return o;
   }
 
+  /**
+   * Deal a board — the ONE verb that does not ride the resident worker (T9-W4 §4.1).
+   *
+   * Generation is the only unbounded call on this seam: a solve is capped by `nodeBudget`, a
+   * propagate is a fixpoint with no search, and a dig is a search for a puzzle that may not
+   * exist at the tier asked for. So it runs on the deal channel, under `DEAL_LEASH_MS`, where
+   * a runaway can be terminated without taking the estate's hot wasm with it. Everything the
+   * caller sees is unchanged except that a deal can now FAIL, with a code that says so.
+   */
   async function getRandomBoard(
     dim: number,
     difficulty: Tier,
   ): Promise<DealtBoard<TClue>> {
-    const templates = config.templates ? config.templates(dim, difficulty) : empty();
+    const templates = config.templates
+      ? await config.templates(dim, difficulty)
+      : empty();
     const id = transport.nextId();
-    const res = await transport.call(
+    const res = await transport.runLeashed(
       {
         id,
         game: config.game,
@@ -167,6 +210,7 @@ export function createSolverClient<TClue>(
         templates,
       },
       [templates.buffer],
+      DEAL_LEASH_MS,
     );
     transport.throwIfError(res);
     if (res.ok && res.kind === "generate") {

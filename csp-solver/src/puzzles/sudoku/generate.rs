@@ -5,9 +5,10 @@
 
 use include_dir::{Dir, include_dir};
 
+use crate::domain::bitset::BitsetDomain;
 use crate::ordering::Ordering;
-use crate::puzzles::class::PuzzleClass;
-use crate::{Pruning, SolveConfig};
+use crate::puzzles::class::{CandidateOutcome, PuzzleClass, generate_by_digging};
+use crate::{Csp, Pruning, SolveConfig};
 
 use super::csp::{create_sudoku_csp, sudoku_csp_skeleton, sudoku_given};
 use super::rng::SimpleRng;
@@ -44,6 +45,30 @@ impl Difficulty {
             Difficulty::Easy => "easy",
             Difficulty::Medium => "medium",
             Difficulty::Hard => "hard",
+        }
+    }
+
+    /// Holes the dig aims for on a `board_len`-cell board at this rung — the
+    /// clue-count bands, in ONE place.
+    ///
+    /// Every Sudoku-family generator resolves its hole target here: sudoku's own
+    /// dig, thermo's and killer's ([`PuzzleClass::target_holes`] for all three).
+    /// The bands were copied at four sites through T4-W13; T9-W4 converged them
+    /// with the semantics unchanged (`/4`, `/1.75`, `/1.25`).
+    ///
+    /// The target is an *aim*, not a promise. At 16×16 Hard it asks for 204
+    /// holes of 256 — a 52-given board — and the dig measurably lands at
+    /// 172–180 holes (76–84 givens), so the last ~30 are unreachable; the dig
+    /// stops on
+    /// [`PuzzleClass::rejection_leash`](crate::PuzzleClass::rejection_leash)
+    /// rather than pay a uniqueness solve per remaining index to learn that. A
+    /// tier's honest given-count is what a deal returns, never `board_len` minus
+    /// this.
+    pub fn target_holes(self, board_len: usize) -> usize {
+        match self {
+            Difficulty::Easy => board_len / 4,
+            Difficulty::Medium => (board_len as f64 / 1.75) as usize,
+            Difficulty::Hard => (board_len as f64 / 1.25) as usize,
         }
     }
 }
@@ -258,86 +283,22 @@ fn generate_board_slow(n: u32, difficulty: Difficulty) -> Vec<u32> {
     generate_board_slow_with_rng(n, difficulty, &mut SimpleRng::from_time())
 }
 
+/// The hole-dig slow path: the shared dealer, driven by [`SudokuClass`].
+///
+/// Through T8 this function carried its own inline copy of the three beats —
+/// seed, target, dig — beside the generic
+/// [`generate_by_digging`](crate::puzzles::class::generate_by_digging) that
+/// `tests/puzzle_class.rs` proved byte-identical to it. T9-W4 deleted the copy:
+/// two readings of one algorithm is exactly how the budget-exhaustion law and
+/// the attempt-stop would have landed on only one of them.
 fn generate_board_slow_with_rng(n: u32, difficulty: Difficulty, rng: &mut SimpleRng) -> Vec<u32> {
-    let m = n * n;
-    let total = (m * m) as usize;
-
-    // The row/column/box constraint graph is identical for every board of this
-    // size — only the given cells change. Build the finalized CSP skeleton once
-    // and re-seed the givens per solve (`solve_with_given` resets domains on
-    // entry), so both the seed-solution solve below and every hole-dig candidate
-    // reuse it. This elides the per-candidate `Csp::new`/`add_all_different`/
-    // `finalize` (adjacency + var-constraint rebuild) that dominated generation
-    // allocation — ~40% of 9×9-Medium self-time was the per-candidate rebuild
-    // (P2-solver-backend GENREUSE). The dealt board is byte-identical: the dig
-    // sequence and each uniqueness verdict depend only on the solve's solution
-    // *count*, which the reuse cannot perturb (the GAC warm-start cache is
-    // thread-local and correctness-invariant regardless).
-    let mut csp = sudoku_csp_skeleton(n);
-
-    let config = SolveConfig {
-        pruning: Pruning::Ac3,
-        ordering: Ordering::FailFirst,
-        max_solutions: 1,
-        ..Default::default()
-    };
-
-    // Step 1: Generate a complete valid solution.
-    let mut seed_board = vec![0u32; total];
-    let mut first_row: Vec<u32> = (1..=m).collect();
-    rng.shuffle(&mut first_row);
-    seed_board[..m as usize].copy_from_slice(&first_row);
-
-    let solution = csp
-        .solve_with_given(&config, &sudoku_given(&seed_board))
-        .into_iter()
-        .next()
-        .expect("seeded board must be solvable");
-
-    // Step 2: Remove cells by random hole-digging with uniqueness check.
-    let target_holes = match difficulty {
-        Difficulty::Easy => total / 4,
-        Difficulty::Medium => (total as f64 / 1.75) as usize,
-        Difficulty::Hard => (total as f64 / 1.25) as usize,
-    };
-
-    let mut board = solution.clone();
-    let mut indices: Vec<usize> = (0..total).collect();
-    rng.shuffle(&mut indices);
-
-    let mut holes = 0usize;
-    let uniqueness_config = SolveConfig {
-        pruning: Pruning::Ac3,
-        ordering: Ordering::FailFirst,
-        max_solutions: 2,
-        ..Default::default()
-    };
-
-    for &idx in &indices {
-        if holes >= target_holes {
-            break;
-        }
-
-        let saved = board[idx];
-        board[idx] = 0;
-
-        let solutions = csp.solve_with_given(&uniqueness_config, &sudoku_given(&board));
-
-        if solutions.len() == 1 {
-            holes += 1;
-        } else {
-            board[idx] = saved;
-        }
-    }
-
-    board
+    generate_by_digging(&SudokuClass::from_difficulty(n, difficulty), rng)
 }
 
 /// The seed/uniqueness solve config the hole-dig uses: `Ac3` + `FailFirst` at a
-/// caller-chosen `max_solutions`. Names, in one place, the pair the inline
-/// `generate_board_slow_with_rng` seed (`max_solutions: 1`) and uniqueness check
-/// (`max_solutions: 2`) both spell out — and that [`SudokuClass`] reuses to deal
-/// byte-identically.
+/// caller-chosen `max_solutions` — the seed solve (`1`) and the dig's uniqueness
+/// check (`2`), in one place. `Ac3` is the load-bearing choice
+/// (`ForwardChecking` cannot seed larger boards).
 fn gen_config(max_solutions: usize) -> SolveConfig {
     SolveConfig {
         pruning: Pruning::Ac3,
@@ -375,6 +336,9 @@ impl PuzzleClass for SudokuClass {
     /// Sudoku carries no clue furniture beyond its givens.
     type Clue = ();
     type Puzzle = Vec<u32>;
+    /// The row/column/box all-different skeleton — board-independent, so one
+    /// per deal serves every candidate.
+    type Solver = Csp<BitsetDomain>;
 
     fn seed_solution(&self, rng: &mut SimpleRng) -> Vec<u32> {
         let m = self.n * self.n;
@@ -396,17 +360,22 @@ impl PuzzleClass for SudokuClass {
         Vec::new()
     }
 
-    fn solve_candidate(&self, board: &[u32], _clues: &[()], max_solutions: usize) -> Vec<Vec<u32>> {
-        let mut csp = sudoku_csp_skeleton(self.n);
-        csp.solve_with_given(&gen_config(max_solutions), &sudoku_given(board))
+    fn build_solver(&self, _clues: &[()]) -> Csp<BitsetDomain> {
+        sudoku_csp_skeleton(self.n)
+    }
+
+    fn solve_candidate(
+        &self,
+        solver: &mut Csp<BitsetDomain>,
+        board: &[u32],
+        max_solutions: usize,
+    ) -> CandidateOutcome {
+        let solutions = solver.solve_with_given(&gen_config(max_solutions), &sudoku_given(board));
+        CandidateOutcome::from_search(solutions, solver.stats())
     }
 
     fn target_holes(&self, board_len: usize) -> usize {
-        match self.difficulty {
-            Difficulty::Easy => board_len / 4,
-            Difficulty::Medium => (board_len as f64 / 1.75) as usize,
-            Difficulty::Hard => (board_len as f64 / 1.25) as usize,
-        }
+        self.difficulty.target_holes(board_len)
     }
 
     fn assemble(&self, board: Vec<u32>, _clues: Vec<()>) -> Vec<u32> {

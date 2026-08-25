@@ -18,8 +18,10 @@ import type { SerializedSolverError } from "./solverError";
  *   `clue`  — the game's clue furniture, already through `spec.clues.encode`. Sudoku prints
  *             no clue glyphs, so its buffer is empty — the wire form of `clues: null`, the
  *             same stated absence the spec declares, never a flag.
- *   `templates` — the generation bank. Sudoku alone digs from one; the other four generate
- *             live, and send an empty buffer. Same discipline as `clue`.
+ *   `templates` — the generation bank. At 0.7.0 every generate verb takes one (T9-W4 §4.3);
+ *             sudoku and thermo ship banks for the 16×16 tiers whose dig breaches the
+ *             in-browser budget, and a family or tier that digs live sends an empty buffer.
+ *             Same discipline as `clue`: the absence is a stated one, never a flag.
  *
  * `game` is the family selector, and it is the ONE place five game names still appear on this
  * seam — because the wasm binary's own surface is five families (`solveSudoku`/`solveThermo`/

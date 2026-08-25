@@ -29,7 +29,7 @@ use csp_solver::puzzles::killer::{self, KillerCage, create_killer_csp};
 use csp_solver::{Pruning, SolveConfig};
 
 use crate::SudokuDifficulty;
-use crate::errors::{board_total, coded_error, domain_masks, flatten_solutions};
+use crate::errors::{bank_pick, board_total, coded_error, domain_masks, flatten_solutions};
 
 /// Result of [`solve_killer`]. `solutions` is a flat concatenation of
 /// `solution_count` boards, each `(n*n)²` cells, row-major.
@@ -190,10 +190,11 @@ fn encode_cages(cages: &[KillerCage]) -> Vec<u32> {
 ///
 /// Uses the same AC-3 + MRV config the sudoku/futoshiki/thermo wires use — the F1
 /// production override, not the pathological library default. `node_budget`
-/// mirrors [`SolveConfig::node_budget`] (pass `None`/`0` for the 1,000,000-node
-/// default). A budget exhausted with zero solutions throws a typed
-/// `BUDGET_EXCEEDED` error; `solved: false` is reserved for a provably
-/// no-completion board.
+/// mirrors [`SolveConfig::node_budget`]: omit it (JS `undefined`) for the
+/// 1,000,000-node default. `0` is a *literal* budget of zero nodes, not the
+/// default — the search stops before its first node. A budget exhausted with
+/// zero solutions throws a typed `BUDGET_EXCEEDED` error; `solved: false` is
+/// reserved for a provably no-completion board.
 #[wasm_bindgen(js_name = solveKiller)]
 pub fn solve_killer(
     board: Vec<u32>,
@@ -284,25 +285,38 @@ pub fn propagate_killer(board: Vec<u32>, n: u32, cages: Vec<u32>) -> Result<Vec<
 ///
 /// `seed` supplies the RNG entropy — pass `Date.now()` or a
 /// `crypto.getRandomValues` draw. Returns the dense given grid plus the
-/// length-prefixed cage buffer; the same `n` + `difficulty` + `seed` yields the
-/// same puzzle here as native `generate_killer_seeded`.
+/// length-prefixed cage buffer.
 ///
-/// `n = 0` throws a typed error (`instanceof Error`, `.code ===
-/// "INVALID_INPUT"`) — the same discriminant every other verb on this wire
-/// throws.
+/// `templates` is the generation bank ([`bank_pick`] carries the record
+/// format). Empty ⇒ the live dig, and the same `n` + `difficulty` + `seed`
+/// yields the same puzzle here as native `generate_killer_seeded`. Non-empty ⇒
+/// the seed picks one banked record and it deals verbatim, board and cages
+/// both. The banked record is validated through [`decode_cages`] first: a bank
+/// entry must satisfy exactly the contract `solveKiller` will hold it to.
+///
+/// `n = 0`, or a malformed bank, throws a typed error (`instanceof Error`,
+/// `.code === "INVALID_INPUT"`) — the same discriminant every other verb on
+/// this wire throws.
 #[wasm_bindgen(js_name = generateKiller)]
 pub fn generate_killer(
     n: u32,
     difficulty: SudokuDifficulty,
     seed: f64,
+    templates: Vec<u32>,
 ) -> Result<KillerPuzzleData, JsValue> {
     let m = (n * n) as usize;
-    if m * m == 0 {
+    let total = m * m;
+    if total == 0 {
         return Err(coded_error("INVALID_INPUT", "n must be >= 1"));
     }
     // JS numbers are f64; `Date.now()` and typical seeds are exact integers
     // below 2^53. Reinterpret to a u64 seed for the LCG.
     let seed_u64 = seed as u64;
+
+    if let Some((board, cages)) = bank_pick(&templates, total, seed_u64)? {
+        decode_cages(&cages, total)?;
+        return Ok(KillerPuzzleData { board, cages, n });
+    }
 
     let (board, cages) = killer::generate_killer_seeded(n, difficulty.into(), seed_u64);
 

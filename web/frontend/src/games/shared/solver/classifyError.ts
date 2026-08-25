@@ -23,11 +23,16 @@ import { SolverError } from "./solverError";
 
 // ── the fiction split ────────────────────────────────────────────────────────
 
-// Only the three variants the in-browser Worker can actually produce survive: the
-// server taxonomy (timeout/rate-limited/not-found/server) is unreachable on the
+// Only the variants the in-browser Worker can actually produce survive: the
+// server taxonomy (rate-limited/not-found/server) is unreachable on the
 // Worker path (SolverErrorCode = INVALID_INPUT | BUDGET_EXCEEDED | UNSAT |
-// WORKER_FAILURE), so those rows were pruned as dead (K1b).
-export type PaperNoteVariant = "budget" | "network" | "unknown";
+// WORKER_FAILURE | DEAL_TIMEOUT), so those rows were pruned as dead (K1b).
+//
+// `deal-timeout` is T9-W4 §4.1's row and the one fault the estate can now NAME instead of
+// waiting through: a deal that outran its leash. It is a machinery fault, not wrong work, so
+// it wears the paper note; and it is the only variant whose copy tells the reader what to do
+// next, because it is the only one where a smaller board is an actual answer.
+export type PaperNoteVariant = "budget" | "network" | "deal-timeout" | "unknown";
 
 export type Fiction =
   | { kind: "teacher-red" }
@@ -45,6 +50,7 @@ export type Fiction =
 export const PAPER_NOTE_COPY: Record<PaperNoteVariant, string> = {
   budget: "the solver ran out of steps on this board.",
   network: "couldn't reach the solver.",
+  "deal-timeout": "this deal is taking too long. try again or pick a smaller board.",
   unknown: "something went wrong.",
 };
 
@@ -54,7 +60,12 @@ const TEACHER_RED_CODES = new Set(["UNSAT", "INVALID_INPUT"]);
 const PAPER_NOTE_VARIANT: Record<string, PaperNoteVariant> = {
   BUDGET_EXCEEDED: "budget",
   WORKER_FAILURE: "network", // a dead Worker is the Option-C analogue of an unreachable origin
+  DEAL_TIMEOUT: "deal-timeout",
 };
+
+/** The faults a second press can actually clear. A dead worker is not one of them; a deal that
+ *  outran its leash is (another seed, or a smaller board, is a different amount of work). */
+const RETRYABLE_CODES = new Set(["BUDGET_EXCEEDED", "DEAL_TIMEOUT"]);
 
 /** Classify a bare typed-error `code` string into its fiction. */
 export function classifyCode(code: string | undefined, retryable = true): Fiction {
@@ -71,7 +82,7 @@ export function classifyCode(code: string | undefined, retryable = true): Fictio
  */
 export function classifyError(e: unknown): Fiction {
   if (e instanceof SolverError)
-    return classifyCode(e.code, e.code === "BUDGET_EXCEEDED");
+    return classifyCode(e.code, RETRYABLE_CODES.has(e.code));
   if (e instanceof TypeError) {
     return {
       kind: "paper-note",

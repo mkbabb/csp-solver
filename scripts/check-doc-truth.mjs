@@ -1767,18 +1767,22 @@ const ROWS = [
             ),
           ]
         : DOCS.flatMap((rel) =>
-            grep(rel, /(\d[\d,]*)\s+passed,\s*\d+\s+failed/).flatMap((h) => {
+            grep(rel, /(\d[\d,]*)\s+passed,\s*\d+\s+failed(?:,\s*(\d+)\s+ignored)?/).flatMap((h) => {
               const total = num(h.m[0][1]);
               const bin = h.text.match(/(\d+)\s+test binaries/);
               const doc = h.text.match(/(\d+)\s+doctests?/);
               const out = [];
               const declaredDoctests = doc ? Number(doc[1]) : 0;
-              if (total - declaredDoctests !== D.rust.native)
+              // Ignored tests still carry #[test] attributes (T9-W4 minted the estate's
+              // first: the generation_leash measurement harnesses), so the roster a doc
+              // claims is passed + ignored − doctests.
+              const declaredIgnored = h.m[0][2] ? Number(h.m[0][2]) : 0;
+              if (total + declaredIgnored - declaredDoctests !== D.rust.native)
                 out.push(
                   fail(
                     `${h.file}:${h.line}`,
-                    `a total reconciling to ${D.rust.native} #[test] attributes${doc ? ` + ${declaredDoctests} doctests = ${D.rust.native + declaredDoctests}` : " (declare the doctest split)"}`,
-                    `${fmt(total)} passed${doc ? ` with ${declaredDoctests} doctests → ${fmt(total - declaredDoctests)} attributes` : ", no doctest split declared"} — ${h.text}`,
+                    `a total reconciling to ${D.rust.native} #[test] attributes${doc ? ` + ${declaredDoctests} doctests = ${D.rust.native + declaredDoctests}` : " (declare the doctest split)"}${declaredIgnored ? ` (ignored counted in)` : ""}`,
+                    `${fmt(total)} passed + ${declaredIgnored} ignored${doc ? ` with ${declaredDoctests} doctests → ${fmt(total + declaredIgnored - declaredDoctests)} attributes` : ", no doctest split declared"} — ${h.text}`,
                   ),
                 );
               if (bin && Number(bin[1]) !== D.rust.binaries)

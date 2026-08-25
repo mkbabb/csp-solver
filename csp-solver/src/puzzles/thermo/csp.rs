@@ -21,24 +21,27 @@ use crate::{Csp, SolveConfig};
 /// from sudoku's `()` and futoshiki's `(a, b)` caret.
 pub type Thermometer = Vec<usize>;
 
-/// Build a finalized Thermo-Sudoku CSP from a dense board (`0` = empty) for
-/// sub-grid size `n`, plus the thermometer furniture. Returns the CSP and the
-/// given values for [`Csp::solve_with_given`].
+/// Build the finalized, board-*independent* Thermo-Sudoku CSP skeleton for
+/// sub-grid size `n` and thermometer furniture `thermometers`.
+///
+/// The twin of
+/// [`sudoku_csp_skeleton`](crate::puzzles::sudoku::csp::sudoku_csp_skeleton):
+/// every board of one size carrying one thermometer set shares this exact
+/// structure — only the *given* cells differ, and those ride
+/// [`Csp::solve_with_given`], which resets every domain on entry. A caller that
+/// re-solves many candidates of one deal (the hole-dig, one solve per removed
+/// cell) builds it **once** and re-seeds the givens per solve via
+/// [`sudoku_given`], rather than reconstructing and re-`finalize`-ing the graph
+/// per candidate.
 ///
 /// The Sudoku skeleton is the same row/column/box all-different structure
-/// [`sudoku_csp_skeleton`](crate::puzzles::sudoku::csp::sudoku_csp_skeleton)
-/// builds; the thermometers add `less_than` chains along each tube BEFORE
-/// `finalize` (the binary sugar must be present when the adjacency graph is
-/// built). No thermometer touches `constraint/`: each edge is
+/// `sudoku_csp_skeleton` builds; the thermometers add `less_than` chains along
+/// each tube BEFORE `finalize` (the binary sugar must be present when the
+/// adjacency graph is built). No thermometer touches `constraint/`: each edge is
 /// [`Csp::add_less_than`], the binary path that already propagates.
-pub fn create_thermo_csp(
-    board: &[u32],
-    n: u32,
-    thermometers: &[Thermometer],
-) -> (Csp<BitsetDomain>, Vec<(VarId, u32)>) {
+pub fn thermo_csp_skeleton(n: u32, thermometers: &[Thermometer]) -> Csp<BitsetDomain> {
     let m = n * n;
     let total = (m * m) as usize;
-    assert_eq!(board.len(), total, "board must have M*M = {total} elements");
 
     let mut csp = Csp::new();
     let domain = BitsetDomain::new(1..=m);
@@ -87,9 +90,25 @@ pub fn create_thermo_csp(
     }
 
     csp.finalize();
+    csp
+}
 
-    // The given-cell extraction is the sudoku wire's — reuse it (already
-    // compiled into the lean build) rather than mint a thermo-specific twin.
+/// Build a finalized Thermo-Sudoku CSP from a dense board (`0` = empty) for
+/// sub-grid size `n`, plus the thermometer furniture. Returns the CSP and the
+/// given values for [`Csp::solve_with_given`]. Composes the board-independent
+/// [`thermo_csp_skeleton`] with the per-board [`sudoku_given`] extraction — the
+/// given-cell extraction is the sudoku wire's, reused (already compiled into the
+/// lean build) rather than minted as a thermo-specific twin.
+pub fn create_thermo_csp(
+    board: &[u32],
+    n: u32,
+    thermometers: &[Thermometer],
+) -> (Csp<BitsetDomain>, Vec<(VarId, u32)>) {
+    let m = n * n;
+    let total = (m * m) as usize;
+    assert_eq!(board.len(), total, "board must have M*M = {total} elements");
+
+    let csp = thermo_csp_skeleton(n, thermometers);
     let given = sudoku_given(board);
     (csp, given)
 }

@@ -23,12 +23,14 @@
 //! [`Difficulty`] axis verbatim (KenKen *is* a Latin-square family — no fourth
 //! `Difficulty` mirror; `difficulty_parity` unedited), mapped to a cage-size band.
 
+use crate::domain::bitset::BitsetDomain;
 use crate::ordering::Ordering;
-use crate::puzzles::class::{PuzzleClass, SimpleRng, generate_by_digging};
+use crate::puzzles::class::{CandidateOutcome, PuzzleClass, SimpleRng, generate_by_digging};
 use crate::puzzles::futoshiki::Difficulty;
-use crate::{Pruning, SolveConfig};
+use crate::puzzles::sudoku::csp::sudoku_given;
+use crate::{Csp, Pruning, SolveConfig};
 
-use super::csp::{CageOp, KenKenCage, create_kenken_csp};
+use super::csp::{CageOp, KenKenCage, create_kenken_csp, kenken_csp_skeleton};
 
 /// Build the seed/uniqueness solve config: the `Ac3` + `FailFirst` pairing every
 /// generator seeds and uniqueness-checks with. `Ac3` is load-bearing —
@@ -246,6 +248,9 @@ impl PuzzleClass for KenKenClass {
     type Clue = KenKenCage;
     /// The dense board paired with its cage furniture.
     type Puzzle = (Vec<u32>, Vec<KenKenCage>);
+    /// The Latin skeleton plus this deal's operator cages — board-independent,
+    /// so one per deal serves every candidate.
+    type Solver = Csp<BitsetDomain>;
 
     fn seed_solution(&self, rng: &mut SimpleRng) -> Vec<u32> {
         seed_latin_square(self.n, rng)
@@ -255,14 +260,18 @@ impl PuzzleClass for KenKenClass {
         partition_into_cages(solution, self.n, max_cage_len(self.difficulty), rng)
     }
 
+    fn build_solver(&self, clues: &[KenKenCage]) -> Csp<BitsetDomain> {
+        kenken_csp_skeleton(self.n, clues)
+    }
+
     fn solve_candidate(
         &self,
+        solver: &mut Csp<BitsetDomain>,
         board: &[u32],
-        clues: &[KenKenCage],
         max_solutions: usize,
-    ) -> Vec<Vec<u32>> {
-        let (mut csp, given) = create_kenken_csp(board, self.n, clues);
-        csp.solve_with_given(&gen_config(max_solutions), &given)
+    ) -> CandidateOutcome {
+        let solutions = solver.solve_with_given(&gen_config(max_solutions), &sudoku_given(board));
+        CandidateOutcome::from_search(solutions, solver.stats())
     }
 
     /// Dig every cell — classic KenKen is cages-only. The dealer reverts any blank
@@ -270,6 +279,15 @@ impl PuzzleClass for KenKenClass {
     /// underdetermine.
     fn target_holes(&self, board_len: usize) -> usize {
         board_len
+    }
+
+    /// No attempt-stop: KenKen's whole-board target is *deliberately*
+    /// unreachable, so a run of refusals is the dig working, not stalling — the
+    /// cells the cages underdetermine are exactly the givens the puzzle must
+    /// keep, and they cluster late. The leash exists to cut a tail that buys
+    /// nothing; here every attempt is the product.
+    fn rejection_leash(&self) -> usize {
+        usize::MAX
     }
 
     fn assemble(&self, board: Vec<u32>, clues: Vec<KenKenCage>) -> Self::Puzzle {

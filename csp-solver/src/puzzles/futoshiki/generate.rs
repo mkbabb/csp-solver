@@ -10,8 +10,10 @@
 //!    orthogonally-adjacent cell pairs whose seed values *already* satisfy the
 //!    relation, so the seed itself stays a valid starting point and every clue
 //!    is renderable as a boundary caret.
-//! 3. [`dig_holes`] — hole-dig with a `max_solutions: 2` uniqueness check whose
-//!    CSP at each removal carries **both** the surviving givens **and** the full
+//! 3. the hole-dig — the shared
+//!    [`generate_by_digging`](crate::puzzles::class::generate_by_digging) dealer
+//!    driven by [`FutoshikiClass`], whose `max_solutions: 2` uniqueness check
+//!    runs on a CSP carrying **both** the surviving givens **and** the full
 //!    inequality set. Inequalities are board furniture — present in every
 //!    candidate CSP, never blanked.
 //! 4. [`measure_difficulty`] — the Sudoku backtrack-count recipe verbatim
@@ -24,12 +26,14 @@
 //! single high-density ~75% tier for callers that want one; the axis rides
 //! [`generate_futoshiki_difficulty_seeded`].
 
+use crate::domain::bitset::BitsetDomain;
 use crate::ordering::Ordering;
-use crate::puzzles::class::PuzzleClass;
+use crate::puzzles::class::{CandidateOutcome, PuzzleClass, generate_by_digging};
+use crate::puzzles::sudoku::csp::sudoku_given;
 use crate::puzzles::sudoku::rng::SimpleRng;
-use crate::{Pruning, SolveConfig};
+use crate::{Csp, Pruning, SolveConfig};
 
-use super::csp::create_futoshiki_csp;
+use super::csp::{create_futoshiki_csp, futoshiki_csp_skeleton};
 
 /// The single shipped tier keeps ~75% of cells as givens. The probe
 /// (`pass3/futoshiki-gen-probe-output.txt` §3) shows uniqueness-checked
@@ -151,47 +155,6 @@ fn place_inequalities(
         .collect()
 }
 
-/// Hole-dig a complete `solution` down toward `target_holes` blanks, keeping the
-/// solution unique under the full (never-removed) `inequalities` set. Cells are
-/// tried in random order; a removal that would introduce a second solution is
-/// reverted.
-fn dig_holes(
-    solution: &[u32],
-    n: u32,
-    inequalities: &[(usize, usize)],
-    target_holes: usize,
-    rng: &mut SimpleRng,
-) -> Vec<u32> {
-    let total = (n * n) as usize;
-
-    let mut board = solution.to_vec();
-    let mut indices: Vec<usize> = (0..total).collect();
-    rng.shuffle(&mut indices);
-
-    let uniqueness_config = gen_config(2);
-    let mut holes = 0usize;
-
-    for &idx in &indices {
-        if holes >= target_holes {
-            break;
-        }
-
-        let saved = board[idx];
-        board[idx] = 0;
-
-        let (mut csp, given) = create_futoshiki_csp(&board, n, inequalities);
-        let solutions = csp.solve_with_given(&uniqueness_config, &given);
-
-        if solutions.len() == 1 {
-            holes += 1;
-        } else {
-            board[idx] = saved;
-        }
-    }
-
-    board
-}
-
 /// Default inequality-clue count for the single shipped tier: one per row on
 /// average (`n`), clamped to the available adjacent-pair budget. Inequalities
 /// tighten propagation and only help uniqueness, so this is a conservative,
@@ -290,18 +253,27 @@ pub fn generate_futoshiki_difficulty_seeded(
 }
 
 /// Shared generation pipeline: seed → place carets → uniqueness-checked
-/// hole-dig.
+/// hole-dig, through the shared dealer driven by [`FutoshikiClass`].
+///
+/// Through T8 this function ran its own inline seed/place/dig beside the generic
+/// [`generate_by_digging`](crate::puzzles::class::generate_by_digging) that
+/// `tests/puzzle_class.rs` proved byte-identical to it. T9-W4 deleted the copy
+/// (`dig_holes` with it): the dig's budget-exhaustion law and attempt-stop live
+/// in the dealer, and a second reading of the algorithm would have escaped both.
 fn generate_with_rng(
     n: u32,
     keep_density: f64,
     inequality_count: usize,
     rng: &mut SimpleRng,
 ) -> (Vec<u32>, Vec<(usize, usize)>) {
-    let square = seed_latin_square(n, rng);
-    let inequalities = place_inequalities(&square, n, inequality_count, rng);
-    let target_holes = holes_for_density(n, keep_density);
-    let board = dig_holes(&square, n, &inequalities, target_holes, rng);
-    (board, inequalities)
+    generate_by_digging(
+        &FutoshikiClass {
+            n,
+            keep_density,
+            inequality_count,
+        },
+        rng,
+    )
 }
 
 /// A futoshiki instance to deal: side `n` at a keep-density + inequality-count
@@ -339,6 +311,9 @@ impl PuzzleClass for FutoshikiClass {
     /// An inequality caret `(a, b)` meaning `board[a] > board[b]`.
     type Clue = (usize, usize);
     type Puzzle = (Vec<u32>, Vec<(usize, usize)>);
+    /// The Latin skeleton plus this deal's carets — board-independent, so one
+    /// per deal serves every candidate.
+    type Solver = Csp<BitsetDomain>;
 
     fn seed_solution(&self, rng: &mut SimpleRng) -> Vec<u32> {
         seed_latin_square(self.n, rng)
@@ -350,14 +325,18 @@ impl PuzzleClass for FutoshikiClass {
         place_inequalities(solution, self.n, count, rng)
     }
 
+    fn build_solver(&self, clues: &[(usize, usize)]) -> Csp<BitsetDomain> {
+        futoshiki_csp_skeleton(self.n, clues)
+    }
+
     fn solve_candidate(
         &self,
+        solver: &mut Csp<BitsetDomain>,
         board: &[u32],
-        clues: &[(usize, usize)],
         max_solutions: usize,
-    ) -> Vec<Vec<u32>> {
-        let (mut csp, given) = create_futoshiki_csp(board, self.n, clues);
-        csp.solve_with_given(&gen_config(max_solutions), &given)
+    ) -> CandidateOutcome {
+        let solutions = solver.solve_with_given(&gen_config(max_solutions), &sudoku_given(board));
+        CandidateOutcome::from_search(solutions, solver.stats())
     }
 
     fn target_holes(&self, _board_len: usize) -> usize {

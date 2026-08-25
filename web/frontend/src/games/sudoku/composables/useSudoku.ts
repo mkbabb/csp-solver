@@ -9,7 +9,6 @@
 // only shipped solve surface. Zero `/api/v1/*` dependency — no fetch, no `/config` handshake, no
 // server to depend on.
 import { createSolverClient } from "@games/shared/solver/client";
-import { TEMPLATE_BANK, tierSource } from "../data/templates";
 import type { Difficulty } from "@games/shared/types";
 import { createPersistence, type PersistedCore } from "@games/shared/persistence";
 import { subgridSizes } from "@games/shared/selectors";
@@ -44,7 +43,7 @@ const DIFFICULTY_KEY: Record<Difficulty, "easy" | "medium" | "hard"> = {
 };
 
 /**
- * Sudoku is the one family that DIGS from a bank instead of generating live: the templates are
+ * Sudoku deals from a BANK instead of generating live (thermo joined it at T9-W4): the templates are
  * resolved from the bundled `../data/templates.ts` asset (generated at build time by the
  * `sudokuTemplates` Vite plugin from the canonical `csp-solver/data/sudoku_puzzles/` bank —
  * single source of truth, never hand-copied) and cross to the worker as one transferable
@@ -56,8 +55,20 @@ const DIFFICULTY_KEY: Record<Difficulty, "easy" | "medium" | "hard"> = {
  * missing. The old `TEMPLATE_BANK[n]?.[…] ?? []` could not tell those apart, and neither could
  * the build; a dropped `3/hard` shipped a silent live-gen regression on the one tier that has
  * a bank precisely because live generation breaches the in-browser budget there.
+ *
+ * THE BANK LOADS WITH THE DEAL, NOT WITH THE PAGE (T9-W4 §4.4). This import was static, and
+ * sudoku is the eager game — `App.vue` imports its spec, the spec imports this module, so 19 kB
+ * of board literal (+4,136 B brotli, F14's measured figure) sat in the render-blocking entry
+ * chunk of every visit, including every visit that never deals a 16×16 board and every visit
+ * that opens a different game. It is an `import()` now: same bank, same tier table, same
+ * declared-source discipline, fetched by the deal that reads it. Nothing about WHICH tiers ride
+ * the bank changed — only when the bytes travel.
  */
-function sudokuTemplates(n: number, difficulty: Difficulty): Uint32Array<ArrayBuffer> {
+async function sudokuTemplates(
+  n: number,
+  difficulty: Difficulty,
+): Promise<Uint32Array<ArrayBuffer>> {
+  const { TEMPLATE_BANK, tierSource } = await import("../data/templates");
   const tier = DIFFICULTY_KEY[difficulty];
   if (tierSource(n, tier) === "livegen") return new Uint32Array(0);
   const boards = TEMPLATE_BANK[n][tier];

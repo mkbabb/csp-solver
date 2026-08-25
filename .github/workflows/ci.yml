@@ -24,8 +24,10 @@
 # of the e2e job into ×3 single-worker shards; T7-WGATE removed the browser-executing
 # lanes outright on the owner's ruling (2026-08-03, DISPOSITIONS O-12): e2e,
 # e2e-webkit, and perf-subset are gone from CI — the Playwright suites stay in-repo
-# as local instruments, and deployment validation is visual, on the live site —
-# the lane set rides SIXTEEN jobs (the rust job carries lanes 2 + 3):
+# as local instruments, and deployment validation is visual, on the live site;
+# T9-W4 added lane 19, the first lane in the estate that prices WALL TIME on the
+# shipped artifact rather than its size or its instruction count —
+# the lane set rides SEVENTEEN jobs (the rust job carries lanes 2 + 3):
 #   0.  build-lean-wasm    -> build-lean-wasm (the SHIP lean artifact built ONCE,
 #                                         uploaded as `lean-wasm-pkg`; frontend +
 #                                         twiggy(lean half) `needs:` it and
@@ -66,16 +68,24 @@
 #                                         re-derived from the tree at run time)
 #   18. npm advisories     -> npm-audit  (T5-W1.15: high+ over the frontend lockfile —
 #                                         the oracle the Dependabot dashboard is not)
+#   19. generation latency -> gen-latency(T9-W4/F14: per-family 16×16 MEDIUM+HARD deal
+#                                         ceilings on the downloaded ship artifact,
+#                                         N=3 fixed seeds, EVERY deal graded, self-tested)
 #
 # Compute-cost DAG (T4-W2, r4-corrected — a `needs:` saves redundant CI minutes,
 # NOT wall-time; a predecessor serializes onto each dependent's critical path, so
 # edges are added ONLY where they kill redundant compute without lengthening the
 # critical path): build-lean-wasm ← {frontend, twiggy, fe-unit,
-# boundary, wasm-publish-dryrun, doc-truth}. The five T5-W1 additions take that
+# boundary, wasm-publish-dryrun, doc-truth, gen-latency}. The five T5-W1
+# additions take that
 # edge for one reason only: web/frontend/package.json file:-links
 # @mkbabb/csp-solver-wasm to csp-solver/wasm/pkg, so `npm ci` cannot resolve the
 # lockfile until that directory exists — they DOWNLOAD the shared artifact rather
-# than rebuild it, and carry no Rust toolchain. lint/rust/py-*/wasm/iai stay
+# than rebuild it, and carry no Rust toolchain. T9-W4's gen-latency takes the
+# same edge for a STRONGER reason than lockfile resolution: those bytes are its
+# subject — it prices the artifact every other frontend lane was handed, so a
+# rebuild here would time a package nothing else tested.
+# lint/rust/py-*/wasm/iai stay
 # independent (they consume no wasm artifact), and so do T5-W1's two tree-only
 # lanes — evidence-policy and npm-audit read the checkout and nothing else.
 # W5's cargo-audit (landed, no `needs:`) slots in the same way (no
@@ -527,9 +537,9 @@ jobs:
               # kenken landings; the cage constraints themselves cost +2,608 B).
               # Ceiling drawn by the band's original convention — ~2.6% headroom
               # over the RUNNER-measured artifact (90,602→93,000 was the same draw):
-              # runner measures 122,861 B at f2ae188d, run 30722381389 (darwin
-              # measures 121,137 B at a3ada202; toolchain delta measured +1,724 B — both
-              # halves re-measured this tranche) → fail >127,500 B. The band stays
+              # runner measures 122,861 B at f2ae188d, run 30722381389 — pre-T9-W4,
+              # re-derives on the next runner build (darwin measures 122,541 B at
+              # T9-W4; pre-surface toolchain delta +1,724 B) → fail >127,500 B. The band stays
               # put while the artifact moves; the run step prints what it measured.
               # A wire-dedup refactor banks with re-trigger: a sixth game, or any
               # single wire >12 KB.
@@ -627,7 +637,7 @@ jobs:
               run: |
                   set -euo pipefail
                   RAW=$(stat -c%s csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm)
-                  echo "lean artifact raw size: ${RAW} B (darwin measures 121,137 B at T5-W2; fail >127,500)"
+                  echo "lean artifact raw size: ${RAW} B (darwin measures 122,541 B at T9-W4; fail >127,500)"
                   if [ "$RAW" -gt 127500 ]; then
                     echo "::error::lean wasm artifact ${RAW} B exceeds the 127,500 B five-game band"
                     exit 1
@@ -1354,3 +1364,79 @@ jobs:
                   name: npm-audit-report
                   path: web/frontend/npm-audit.json
                   retention-days: 7
+
+    # ---------------------------------------------------------------- Lane 19
+    # gen-latency — how long a deal takes, executed (T9-W4 §"Gate spine", F14).
+    #
+    # The estate could measure its artifact's SIZE (twiggy, the 127,500 B lean
+    # band) and its solver's INSTRUCTION COUNT (iai) and had no lane at all for
+    # the figure a player actually waits on: the wall time of one generate call.
+    # So thermo 16×16 HARD shipped a 19.9 s median deal — max 473 s, one deal,
+    # eight minutes — with every control disabled throughout and nothing in CI
+    # able to say a word about it. That is F14's P0, and this lane is the
+    # instrument it was missing.
+    #
+    # WHY IT RIDES THE ARTIFACT AND NOT THE SOURCE: the script imports
+    # `csp-solver/wasm/pkg` directly — the same file: link target the frontend
+    # resolves, downloaded here from `build-lean-wasm` — and calls the generate
+    # verbs the way `solver.worker.ts` calls them, with the same bank buffer
+    # `useSudoku.ts` builds. A native `cargo bench` would price a different
+    # binary on a different backend and gate nothing a visitor experiences.
+    #
+    # WHY NODE IS ENOUGH, said plainly because the product is a browser product:
+    # V2 read the production bank path on node and chromium in ~3% agreement,
+    # so for this workload the two engines are one instrument (T9 formation,
+    # registry F14). Safari is NOT covered here and the script says so in its
+    # header — real JSC is unmeasurable in this estate by the owner's standing
+    # law (M19), and W8's owner-run device readings are the Safari truth. This
+    # lane asserts the node/chromium truth and claims nothing past it.
+    #
+    # `--self-test` first, always: four fixture arms prove the comparison reds
+    # AND greens — including the arm that matters most here, a cell whose median
+    # clears its ceiling while its slowest deal does not. Every deal is graded,
+    # not just the median, because that is precisely thermo 16×16 HARD's shape
+    # and a median-only rule would print the P0 green.
+    #
+    # NO `continue-on-error`. The ceiling table is derived from measurement with
+    # its margin arithmetic shown in the file, and it is clamped at a UI-honest
+    # cap: a cell whose honest margin would exceed the cap gets the cap and reds.
+    # A gate that bends to the tree it grades is a decoration.
+    gen-latency:
+        name: generation latency (per-family deal ceilings, on the shipped artifact)
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        needs: [build-lean-wasm]
+        steps:
+            - uses: actions/checkout@v4
+            # The artifact under measurement. Downloaded, never rebuilt here: the
+            # bytes this lane prices must be the bytes every other frontend lane
+            # was handed, or the timing is of a package nothing else tested.
+            - name: Download the lean wasm pkg (THE artifact this lane prices)
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            # The runner's own figure, recorded beside the readings: these ceilings
+            # are absolute milliseconds carrying a stated host allowance, so a red
+            # is only readable next to what the box was.
+            - name: Record the host (the ceilings carry a host margin — name the host)
+              run: |
+                  nproc
+                  cat /proc/loadavg
+            # THE GATE. Self-test then grade; exit code is the verdict.
+            - name: generation latency (five families, MEDIUM + HARD, N=3, self-tested)
+              working-directory: web/frontend
+              run: npm run test:gen-latency

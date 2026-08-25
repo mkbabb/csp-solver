@@ -14,12 +14,39 @@ general-purpose `csp_solver::assignment()` / `AssignmentBuilder` surface morph
 was built on stays here; `morph` now consumes it as an ordinary crates.io
 dependency (`csp-solver = "0.2"`).
 
-## Unreleased
+## 0.7.0 — 2026-08-25 (T9-W4 — generation truth)
 
-_Source-only; nothing republished. The crate's public API changes here, so the
-next publish is a **minor** bump at minimum._
+_Version stamped, not yet published: the crates.io tarball and the npm publish
+are the wave seal's act, not this bump's. The `0.7.0` slot is a **minor** bump
+because both surfaces break._
 
 ### crates.io — `csp-solver`
+
+- **BREAKING — `PuzzleClass` gains a per-deal solver and an honest candidate
+  verdict.** `solve_candidate(&self, board, clues, max) -> Vec<Vec<u32>>`
+  becomes `solve_candidate(&self, &mut Self::Solver, board, max) ->
+  CandidateOutcome`, alongside the new associated type `Solver` and
+  `build_solver(&self, clues) -> Self::Solver`. The five witnesses build their
+  CSP once per deal instead of once per removal — the **skeleton hoist**, the
+  crate's own documented ~40% win, previously applied to sudoku alone and now
+  paid forward to futoshiki, thermo, killer and kenken.
+- **The budget-exhaustion law.** `CandidateOutcome::{Complete, Exhausted}` with
+  `proves_unique()` — `true` only when the search *closed* and found exactly
+  one solution. A dig previously read a budget-exceeded enumeration as a
+  uniqueness proof and could mint a multi-solution puzzle from it; exhaustion
+  is now a distinct outcome the dig treats as NOT-PROVEN and puts the cell
+  back. This is the lever that makes any future budget tightening safe.
+- **The attempt-stop.** `PuzzleClass::rejection_leash()`, defaulting to
+  `DEFAULT_REJECTION_LEASH = 8`: the dig ends after that many consecutive
+  refused removals rather than walking every remaining index of an unreachable
+  hole target. Measured on thermo 16×16 Hard — max 50.7 s → 17.2 s (2.95×),
+  median 11.2 s → 7.9 s — with every 9×9 rung and thermo 16×16 Medium dealing
+  identical given-counts to an unleashed dig. The constant's table is on the
+  const, its measurement in `tests/generation_leash.rs`.
+- **`Difficulty::target_holes` is the one hole-target formula.** The clue-count
+  bands were copied at four sites through T4-W13; the semantics are unchanged
+  (`/4`, `/1.75`, `/1.25`) and the target is now documented as an *aim*: at
+  16×16 Hard it asks for 204 holes of 256 and the dig lands at 172–180.
 
 - **BREAKING — `puzzles::futoshiki` conforms to the five-family shape.**
   `create_futoshiki_csp(board, n, inequalities) -> (Csp, given)` and
@@ -45,6 +72,34 @@ next publish is a **minor** bump at minimum._
 
 ### npm — `@mkbabb/csp-solver-wasm`
 
+- **BREAKING — the template bank is part of the generate contract for all five
+  families.** `generateThermo`, `generateKiller`, `generateKenKen` and
+  `generateFutoshiki` gain a fourth positional `templates: Uint32Array`,
+  mirroring `generateSudoku(n, difficulty, seed, templates)`. Empty ⇒ the live
+  dig, byte-identical to the native seeded dealer; non-empty ⇒ the seed picks
+  one banked record and it deals verbatim. Through `0.6.0` only sudoku could be
+  handed a bank at all, so a thermo 16×16 Hard deal had no path but the dig —
+  `useThermo.ts`'s `templates: null` was inert against a surface that did not
+  exist.
+- **The bank record.** A bank is a flat `Uint32Array` of
+  `[clue_len, board…, clue…]` records: the count first so a record skips by
+  arithmetic, then the dense board, then exactly the buffer that family's
+  `PuzzleData` getter emits. A caller banks a deal by concatenating
+  `[d.cages.length, ...d.board, ...d.cages]`, and the tail is validated through
+  the family's own `solve*` decoder at the *deal*, so a malformed bank throws
+  `INVALID_INPUT` there rather than surfacing as a broken board later.
+  `generateSudoku` keeps its bare `total`-chunked bank — sudoku carries no clue
+  furniture, so every prefix would be a constant `0`. No symmetry transform
+  rides a clue-carrying bank: sudoku's digit permutation inverts a thermometer
+  chain and falsifies a cage target, so a record deals as it was banked.
+- **`node_budget = 0` documented as what it is.** All five `solve*` doc
+  comments said `0` selected the 1,000,000-node default; the code has always
+  read it as a literal zero-node budget that throws `BUDGET_EXCEEDED` before
+  the first node. The literal stays and the prose is corrected — a caller who
+  computes a budget to zero is asking for no search. `undefined` still takes
+  the default.
+- Four bank boundary tests (`wasm/tests/bank_boundary.rs`) and a five-verb
+  `node_budget` pin, so neither contract can drift from its prose again.
 - All five `generate*` verbs now throw a typed error carrying
   `.code === "INVALID_INPUT"`. `generateSudoku`, `generateThermo` and
   `generateKiller` previously threw a bare `Error` with no discriminant.

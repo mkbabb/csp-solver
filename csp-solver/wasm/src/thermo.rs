@@ -28,7 +28,7 @@ use csp_solver::puzzles::thermo::{self, Thermometer, create_thermo_csp};
 use csp_solver::{Pruning, SolveConfig};
 
 use crate::SudokuDifficulty;
-use crate::errors::{board_total, coded_error, domain_masks, flatten_solutions};
+use crate::errors::{bank_pick, board_total, coded_error, domain_masks, flatten_solutions};
 
 /// Result of [`solve_thermo`]. `solutions` is a flat concatenation of
 /// `solution_count` boards, each `(n*n)²` cells, row-major.
@@ -180,10 +180,11 @@ fn encode_thermometers(thermos: &[Thermometer]) -> Vec<u32> {
 ///
 /// Uses the same AC-3 + MRV config the sudoku/futoshiki wires use — the F1
 /// production override, not the pathological library default. `node_budget`
-/// mirrors [`SolveConfig::node_budget`] (pass `None`/`0` for the 1,000,000-node
-/// default). A budget exhausted with zero solutions throws a typed
-/// `BUDGET_EXCEEDED` error; `solved: false` is reserved for a provably
-/// no-completion board.
+/// mirrors [`SolveConfig::node_budget`]: omit it (JS `undefined`) for the
+/// 1,000,000-node default. `0` is a *literal* budget of zero nodes, not the
+/// default — the search stops before its first node. A budget exhausted with
+/// zero solutions throws a typed `BUDGET_EXCEEDED` error; `solved: false` is
+/// reserved for a provably no-completion board.
 #[wasm_bindgen(js_name = solveThermo)]
 pub fn solve_thermo(
     board: Vec<u32>,
@@ -278,25 +279,46 @@ pub fn propagate_thermo(
 ///
 /// `seed` supplies the RNG entropy — pass `Date.now()` or a
 /// `crypto.getRandomValues` draw. Returns the dense given grid plus the
-/// length-prefixed thermometer buffer; the same `n` + `difficulty` + `seed`
-/// yields the same puzzle here as native `generate_thermo_seeded`.
+/// length-prefixed thermometer buffer.
 ///
-/// `n = 0` throws a typed error (`instanceof Error`, `.code ===
-/// "INVALID_INPUT"`) — the same discriminant every other verb on this wire
-/// throws.
+/// `templates` is the generation bank ([`bank_pick`] carries the record
+/// format). Empty ⇒ the live dig, and the same `n` + `difficulty` + `seed`
+/// yields the same puzzle here as native `generate_thermo_seeded`. Non-empty ⇒
+/// the seed picks one banked record and it deals verbatim, board and tubes
+/// both — the fast path 16×16 Hard needs, where a dig is seconds of blocked
+/// worker (T9-W4 §4.1).
+///
+/// A banked record is validated through [`decode_thermometers`] before it is
+/// dealt: a bank entry must satisfy exactly the contract `solveThermo` will
+/// hold it to, and it fails at the deal rather than at the first solve.
+///
+/// `n = 0`, or a malformed bank, throws a typed error (`instanceof Error`,
+/// `.code === "INVALID_INPUT"`) — the same discriminant every other verb on
+/// this wire throws.
 #[wasm_bindgen(js_name = generateThermo)]
 pub fn generate_thermo(
     n: u32,
     difficulty: SudokuDifficulty,
     seed: f64,
+    templates: Vec<u32>,
 ) -> Result<ThermoPuzzleData, JsValue> {
     let m = (n * n) as usize;
-    if m * m == 0 {
+    let total = m * m;
+    if total == 0 {
         return Err(coded_error("INVALID_INPUT", "n must be >= 1"));
     }
     // JS numbers are f64; `Date.now()` and typical seeds are exact integers
     // below 2^53. Reinterpret to a u64 seed for the LCG.
     let seed_u64 = seed as u64;
+
+    if let Some((board, thermometers)) = bank_pick(&templates, total, seed_u64)? {
+        decode_thermometers(&thermometers, total)?;
+        return Ok(ThermoPuzzleData {
+            board,
+            thermometers,
+            n,
+        });
+    }
 
     let (board, thermos) = thermo::generate_thermo_seeded(n, difficulty.into(), seed_u64);
 

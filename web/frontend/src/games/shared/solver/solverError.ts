@@ -10,9 +10,14 @@
  * (like `.code`) is not uniform across engines/versions. The plain shape is guaranteed
  * structured-cloneable everywhere; `SolverError` is reconstructed with the original
  * `.code` on the main-thread side of the boundary.
+ *
+ * `DEAL_TIMEOUT` is the one code that is NOT minted inside the worker (T9-W4 §4.1). It is the
+ * deal leash expiring on the main thread, and it could not come from the worker by
+ * construction: the worker it describes is the one that stopped answering. `describeError`
+ * therefore never returns it, and the wire never carries it.
  */
 export type SolverErrorCode =
-  "INVALID_INPUT" | "BUDGET_EXCEEDED" | "UNSAT" | "WORKER_FAILURE";
+  "INVALID_INPUT" | "BUDGET_EXCEEDED" | "UNSAT" | "WORKER_FAILURE" | "DEAL_TIMEOUT";
 
 export class SolverError extends Error {
   readonly code: SolverErrorCode;

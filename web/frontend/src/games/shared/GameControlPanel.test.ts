@@ -101,6 +101,7 @@ const FILL =
   'button[aria-label="Fill in every cell that has only one possible number"]';
 const DEAL = 'button[aria-label="Deal a new board"]';
 const CLEAR = 'button[aria-label="Clear the board"]';
+const SOLVE = 'button[aria-label="Solve puzzle"]';
 
 /**
  * The play verbs are read FROM THE BERTH, and that is the assertion as much as the mechanism:
@@ -190,6 +191,53 @@ describe("GameControlPanel — Deal / Clear one-click on a fine pointer (T4-WU/U
     const w = mountPanel({ isDirty: true });
     await w.get(CLEAR).trigger("click");
     expect(w.emitted("clear")).toHaveLength(1);
+  });
+});
+
+/**
+ * T9-W4 §4.1 — THE PENDING STATE IS ON THE ACT THAT IS PENDING.
+ *
+ * V2 refuted the audit's "a 16×16 deal shows no indicator": there is one, and it rode the SOLVE
+ * icon. So the estate spun a loader over a verb the reader had not pressed, four buttons from
+ * the one that was actually working, for the whole 19.9s median. Both arms are asserted, because
+ * a relocation that only ADDS is how you get two loaders.
+ */
+describe("GameControlPanel — the pending state rides the pending control (T9-W4 §4.1)", () => {
+  const loaderIn = (w: ReturnType<typeof mountPanel>, sel: string) =>
+    w.get(sel).findAll(".scribble-loader").length;
+
+  it("a deal in flight scribbles on DEAL, and not on SOLVE", () => {
+    const w = mountPanel({ loading: true });
+    expect(loaderIn(w, DEAL)).toBe(1);
+    expect(loaderIn(w, SOLVE)).toBe(0);
+    w.unmount();
+  });
+
+  it("a solve in flight scribbles on SOLVE, and not on DEAL", async () => {
+    vi.useFakeTimers();
+    const w = mountPanel({ loading: false });
+    await w.get(SOLVE).trigger("click");
+    // The press animation owns the icon for its own 500ms; the scribble takes over after it,
+    // which is the shipped grammar and not this row's subject.
+    vi.advanceTimersByTime(600);
+    await w.setProps({ loading: true });
+    expect(loaderIn(w, SOLVE)).toBe(1);
+    expect(loaderIn(w, DEAL)).toBe(0);
+    w.unmount();
+    vi.useRealTimers();
+  });
+
+  it("an idle board scribbles nowhere", () => {
+    const w = mountPanel({ loading: false });
+    expect(loaderIn(w, DEAL)).toBe(0);
+    expect(loaderIn(w, SOLVE)).toBe(0);
+    w.unmount();
+  });
+
+  it("the deal's scribble is hidden from the AX tree — it would say 'solving'", () => {
+    const w = mountPanel({ loading: true });
+    expect(w.get(`${DEAL} .scribble-loader`).attributes("aria-hidden")).toBe("true");
+    w.unmount();
   });
 });
 

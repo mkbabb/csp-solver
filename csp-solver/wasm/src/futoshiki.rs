@@ -34,7 +34,7 @@ use csp_solver::ordering::Ordering;
 use csp_solver::puzzles::futoshiki::{self, create_futoshiki_csp, validate_futoshiki};
 use csp_solver::{Pruning, SolveConfig};
 
-use crate::errors::{board_total, coded_error, domain_masks, flatten_solutions};
+use crate::errors::{bank_pick, board_total, coded_error, domain_masks, flatten_solutions};
 
 /// v1 Futoshiki board-size band. The frontend selector offers exactly
 /// these; a request outside the band is `INVALID_INPUT`, never a silent
@@ -224,8 +224,9 @@ fn decode_inequalities(
 /// uses — the F1 production override, not the pathological library default that
 /// cannot solve an empty N≥6 board.
 ///
-/// `node_budget` mirrors [`SolveConfig::node_budget`] — pass `None`/`0`
-/// (JS `undefined`) for the library default (1,000,000 nodes). When the
+/// `node_budget` mirrors [`SolveConfig::node_budget`] — omit it (JS
+/// `undefined`) for the library default (1,000,000 nodes). `0` is a
+/// *literal* budget of zero nodes, not the default. When the
 /// budget is exhausted with zero solutions found, this throws a typed
 /// error (`instanceof Error`, `.code === "BUDGET_EXCEEDED"`) rather than
 /// returning `solved: false` — that value is reserved for a board this
@@ -338,15 +339,25 @@ pub fn propagate_futoshiki(
 /// `generateSudoku(n, difficulty, seed)`.
 ///
 /// `seed` supplies the RNG entropy — pass `Date.now()` or a
-/// `crypto.getRandomValues` draw. The same `board_size` + `difficulty` +
+/// `crypto.getRandomValues` draw.
+///
+/// `templates` is the generation bank ([`bank_pick`] carries the record
+/// format). Empty ⇒ the live dig, and the same `board_size` + `difficulty` +
 /// `seed` yields the same puzzle here as the native
 /// `generate_futoshiki_difficulty_seeded`, which the parity harness relies
-/// on. `board_size` outside `4..=7` throws `INVALID_INPUT`.
+/// on. Non-empty ⇒ the seed picks one banked record and it deals verbatim,
+/// board and carets both. The banked record is validated through
+/// [`decode_inequalities`] first — which is
+/// [`validate_futoshiki`] itself, so a bank entry clears the same check the
+/// PyO3 and HTTP boundaries apply.
+///
+/// `board_size` outside `4..=7`, or a malformed bank, throws `INVALID_INPUT`.
 #[wasm_bindgen(js_name = generateFutoshiki)]
 pub fn generate_futoshiki(
     board_size: u32,
     difficulty: FutoshikiDifficulty,
     seed: f64,
+    templates: Vec<u32>,
 ) -> Result<FutoshikiPuzzleData, JsValue> {
     if !(MIN_BOARD_SIZE..=MAX_BOARD_SIZE).contains(&board_size) {
         return Err(coded_error(
@@ -361,6 +372,16 @@ pub fn generate_futoshiki(
     // JS numbers are f64; `Date.now()` and typical seeds are exact integers
     // below 2^53. Reinterpret to a u64 seed for the LCG.
     let seed_u64 = seed as u64;
+    let total = (board_size * board_size) as usize;
+
+    if let Some((board, inequalities)) = bank_pick(&templates, total, seed_u64)? {
+        decode_inequalities(&board, board_size, &inequalities)?;
+        return Ok(FutoshikiPuzzleData {
+            board,
+            inequalities,
+            board_size,
+        });
+    }
 
     let (board, pairs) =
         futoshiki::generate_futoshiki_difficulty_seeded(board_size, difficulty.into(), seed_u64);

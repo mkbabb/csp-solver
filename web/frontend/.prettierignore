@@ -2,6 +2,12 @@
 # regenerates this file on every build in its own single-line form.
 src/games/sudoku/data/templates.ts
 
+# The thermo bank (T9-W4 §4.1) is the same species: a minted board literal, not prose. Its
+# recipe is stated in its own banner and its record grammar is gated by
+# src/games/thermo/data/templates.test.ts, so a `--write` here would only trade 28 kB of one
+# line for thousands of them.
+src/games/thermo/data/templates.ts
+
 # e2e/ is OUT of the format gate BY DESIGN (ci.yml frontend lane checks src/ scripts/
 # ../../scripts/ only): the specs keep a single-quote convention and check-sleep-lint.mjs
 # EXEMPT anchors match against it — a manual `prettier --write` over e2e/ severed one on

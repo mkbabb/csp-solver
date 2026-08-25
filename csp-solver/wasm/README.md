@@ -1,7 +1,7 @@
 # @mkbabb/csp-solver-wasm
 
 WebAssembly bindings for `csp-solver`, exposing its purpose-built solve surfaces
-to JavaScript and TypeScript. Source `0.6.0`; the npm tarball is `0.2.0`. The
+to JavaScript and TypeScript. Source `0.7.0`; the npm tarball is `0.2.0`. The
 frontend file-links the lean build rather than the registry package, so the npm
 lag is inert at runtime.
 
@@ -61,14 +61,16 @@ wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release
 `pkg/` is gitignored build output, not committed; the frontend file-links it
 (`"@mkbabb/csp-solver-wasm": "file:../../csp-solver/wasm/pkg"`) as the lean
 `--target web --no-default-features` artifact, the five puzzle families. That
-lean build measures 121,137 B on darwin (`wc -c pkg/csp_solver_wasm_bg.wasm`,
-measured at a3ada202, 2026-08-01), under the 124,500 B re-derived ceiling (base
-plus per-game wire). The CI runner's toolchain builds the same source a couple of
-KB larger — it last measured 122,861 B, at f2ae188d (run 30722381389) — and the twiggy lane enforces
-the band on the runner's own figure, failing above 127,500 B. Both figures are
-stamped here on purpose: the doc-truth gate re-derives this number from whichever
-artifact is on the machine it runs on, so a site carrying one platform's figure
-alone reds on the other.
+lean build measures 122,541 B on darwin (`wc -c pkg/csp_solver_wasm_bg.wasm`,
+measured at T9-W4, 2026-08-25 — 121,137 B before the template-bank surface
+generalized to all five `generate*` verbs), under the 124,500 B re-derived
+ceiling (base plus per-game wire). The CI runner's toolchain builds the same
+source a couple of KB larger — its last figure, 122,861 B at f2ae188d (run
+30722381389), predates that surface and is re-derived on the runner, not here —
+and the twiggy lane enforces the band on the runner's own figure, failing above
+127,500 B. Both figures are stamped here on purpose: the doc-truth gate
+re-derives this number from whichever artifact is on the machine it runs on, so a
+site carrying one platform's figure alone reds on the other.
 
 ## Consume
 
@@ -85,7 +87,14 @@ if (result.solved) {
 }
 ```
 
+Every `generate*` entry takes a `templates` bank as its last argument: an empty
+`Uint32Array` digs live, a non-empty one is a flat run of
+`[clue_len, board…, clue…]` records the seed picks from (`generateSudoku`, which
+has no clue furniture, takes the bare board-chunked form it shipped with).
+
 Every `solve*` entry takes an optional `max_solutions` and `node_budget`.
+`node_budget` omitted takes the 1,000,000-node default; `0` is a literal budget
+of zero nodes, not the default.
 `max_solutions = 1` (the default) is a satisfiability probe: on a puzzle with
 more than one solution the specific solution returned is trajectory-dependent, a
 valid member of the solution set the caller must not assume is fixed. A
@@ -101,14 +110,14 @@ csp-solver/wasm/
 ├── CHANGELOG.md       # release notes
 ├── src/
 │   ├── lib.rs         # panic-hook init + layer re-exports
-│   ├── errors.rs      # coded_error + flatten_solutions + domain_masks helpers
+│   ├── errors.rs      # coded_error + board_total + bank_pick + flatten_solutions + domain_masks
 │   ├── sudoku.rs      # solveSudoku / generateSudoku / propagateSudoku (always compiled)
 │   ├── futoshiki.rs   # solveFutoshiki / generateFutoshiki / propagateFutoshiki (always compiled)
 │   ├── thermo.rs      # solveThermo / generateThermo / propagateThermo (always compiled)
 │   ├── killer.rs      # solveKiller / generateKiller / propagateKiller (always compiled)
 │   ├── kenken.rs      # solveKenKen / generateKenKen / propagateKenKen (always compiled)
 │   └── assignment.rs  # solveAssignmentCop / assignmentSentinel (feature `assignment`)
-├── tests/             # dualization, futoshiki_parity (wasm-bindgen-test)
+├── tests/             # verb_boundary, bank_boundary, futoshiki_parity, dualization (wasm-bindgen-test)
 └── pkg/               # wasm-pack output, gitignored, file-linked by the frontend
 ```
 

@@ -20,6 +20,7 @@
 use wasm_bindgen::prelude::*;
 
 use csp_solver::domain::Domain;
+use csp_solver::puzzles::sudoku::rng::SimpleRng;
 use csp_solver::variable::Variable;
 
 /// Stamp a stable `.code` string onto a genuine `js_sys::Error` (not a
@@ -49,6 +50,101 @@ pub(crate) fn board_total(board: &[u32], side: u32) -> Result<usize, JsValue> {
         ));
     }
     Ok(total)
+}
+
+/// One record read out of a template bank: the dense row-major board and the
+/// family's own flat clue buffer, in the shapes that family's `PuzzleData`
+/// getters return them.
+pub(crate) type BankedDeal = (Vec<u32>, Vec<u32>);
+
+/// Pick one record out of a template bank, or `None` when the bank is empty
+/// (the caller falls back to a live dig).
+///
+/// A bank is a flat `Uint32Array` of records, each
+///
+/// ```text
+/// [ clue_len, board[0..total], clue[0..clue_len] ]
+/// ```
+///
+/// — the count first so a record can be skipped by arithmetic without reading a
+/// cell, then the dense row-major board, then exactly the clue buffer this
+/// family's `PuzzleData` getter emits (`thermometers`, `cages`,
+/// `inequalities`). A JS caller banks a deal by concatenating
+/// `[d.cages.length, ...d.board, ...d.cages]`, and the record's tail is
+/// byte-identical to what `solve*` would be handed — so the family's own
+/// decoder is the bank's validator, and there is no second encoding to keep in
+/// step.
+///
+/// [`generateSudoku`](crate::generate_sudoku) keeps the bare `total`-chunked
+/// bank it shipped with in 0.4.0: sudoku carries no clue furniture, so every
+/// record's prefix would be a constant `0`, and the wire that shipped first
+/// keeps its bytes rather than paying a per-record word for a field it cannot
+/// use.
+///
+/// **No symmetry transform.** Sudoku's bank fans out through
+/// `SudokuTransform`, whose digit permutation is *unsound* for every family
+/// that reads values rather than merely distinguishing them — it inverts a
+/// thermometer's `less_than` chain and it falsifies a Killer/KenKen cage
+/// target. The position half (bands, stacks, rows-in-band, transpose) would be
+/// sound if each clue's cells were re-indexed through the same permutation, but
+/// that transform belongs to the crate beside the one it mirrors, not to this
+/// wire. Until it exists, bank breadth is the bank's own size: a record deals
+/// exactly as it was banked.
+///
+/// A record that overruns the buffer is `INVALID_INPUT` — a bank is read
+/// whole before anything is dealt from it, so a malformed tail cannot hide
+/// behind a lucky pick.
+pub(crate) fn bank_pick(
+    bank: &[u32],
+    total: usize,
+    seed: u64,
+) -> Result<Option<BankedDeal>, JsValue> {
+    if bank.is_empty() {
+        return Ok(None);
+    }
+
+    // One record's worth of skip, validated. Reading a record is arithmetic on
+    // its length prefix — no cell is touched — so a walk costs O(records), not
+    // O(cells): a 16×16 bank of 64 deals is 64 additions, not 16,384 reads.
+    // Cheap enough that the pick walks twice (count, then seek) rather than
+    // carry an index vector.
+    //
+    // Every add is checked. `usize` is 32 bits on wasm32, and the prefix is a
+    // caller-supplied `u32`, so a hostile `[0xFFFF_FFFF, …]` would wrap a bare
+    // sum straight past the length test and index out of bounds.
+    let step = |at: usize| -> Result<usize, JsValue> {
+        (bank[at] as usize)
+            .checked_add(1 + total)
+            .and_then(|span| at.checked_add(span))
+            .filter(|&end| end <= bank.len())
+            .ok_or_else(|| {
+                coded_error(
+                    "INVALID_INPUT",
+                    "template bank is truncated — a record's board + clue cells overrun \
+                     the buffer",
+                )
+            })
+    };
+
+    let mut count = 0usize;
+    let mut i = 0usize;
+    while i < bank.len() {
+        i = step(i)?;
+        count += 1;
+    }
+
+    // The same first draw sudoku's `generate_board_with_templates_seeded`
+    // takes, off a fresh RNG at the caller's seed: one seed, one record, on
+    // every target.
+    let want = SimpleRng::new(seed).next_usize(count);
+    let mut at = 0usize;
+    for _ in 0..want {
+        at = step(at)?;
+    }
+    let clue_len = bank[at] as usize;
+    let board = bank[at + 1..at + 1 + total].to_vec();
+    let clues = bank[at + 1 + total..at + 1 + total + clue_len].to_vec();
+    Ok(Some((board, clues)))
 }
 
 /// Concatenate a slice of solution boards into one flat, row-major buffer

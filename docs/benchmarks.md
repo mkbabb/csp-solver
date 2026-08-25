@@ -45,13 +45,13 @@ The unified search kernel is verified sound. Evidence from `evidence/kernel-soun
 Local test suite, run here:
 
 ```
-cargo test --workspace  →  212 passed, 0 failed, 0 ignored (29 test binaries + 4 doctests)
-# measured at a3ada202, Apple M5 Max, 2026-08-01
+cargo test --workspace  →  215 passed, 0 failed, 6 ignored (31 test binaries + 4 doctests; the 6 ignored are generation_leash measurement harnesses)
+# measured at T9-W4, Apple M5 Max, 2026-08-25
 ```
 
 ## Wasm artifact sizes
 
-Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean artifact is the `--no-default-features` build the frontend Worker ships, and it now carries all five games. It measures **121,137 B raw** on darwin (`wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm`), `pkg/` byte-identical to the shipped `dist/` asset — same sha256 `bc9be38e…` on both (`shasum -a 256` over `csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm` and `web/frontend/dist/assets/csp_solver_wasm_bg-4L-N_9Py.wasm`: `bc9be38e8bf66dc6712af321e81ba7dac770a10dd8471e4a889919f47b6d4feb`, 121,137 B each; re-derived as of `c917f9a7`, Apple M5 Max, 2026-08-25 — the prior `cdabecfb…` stamp was the T5-era artifact's). The CI runner last measured **122,861 B** at f2ae188d (run 30722381389), +1,724 B over the darwin build (the known runner-vs-darwin toolchain divergence); the `twiggy` lane echoes its own live figure every run. This sits inside the five-game band. The analytic re-derivation puts the ceiling at **124,500 B** (base plus per-game wire), and the `twiggy` CI lane fails the lean build above **127,500 B**. The old 93 KB budget was the two-game ceiling and no longer applies.
+Built under `--profile wasm-release` (opt-level `z`, panic `abort`). The deployed lean artifact is the `--no-default-features` build the frontend Worker ships, and it now carries all five games. It measures **122,541 B raw** on darwin (`wc -c csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm`), `pkg/` byte-identical to the shipped `dist/` asset — same sha256 `1a249a30…` on both (`shasum -a 256` over `csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm` and `web/frontend/dist/assets/csp_solver_wasm_bg-qsXwlUEX.wasm`: `1a249a303291aea71d743dbe75a5b1e392bf37d6b5074e22305b5fba823dca29`, 122,541 B each; re-derived at T9-W4, Apple M5 Max, 2026-08-25 — 121,137 B before the template-bank surface generalized to all five `generate*` verbs). The CI runner last measured **122,861 B** at f2ae188d (run 30722381389), +1,724 B over the pre-surface darwin build (the known runner-vs-darwin toolchain divergence); that figure predates the T9-W4 surface and re-derives on the next runner build — the `twiggy` lane echoes its own live figure every run. This sits inside the five-game band. The analytic re-derivation puts the ceiling at **124,500 B** (base plus per-game wire), and the `twiggy` CI lane fails the lean build above **127,500 B**. The old 93 KB budget was the two-game ceiling and no longer applies.
 
 The full module (default features, all five families plus the assignment surface, whose transitive `ndarray` dominates the delta over the lean build) was not re-measured this pass. The last recorded **222,436 B** predates the three new families and is stale; do not quote it as current. The `twiggy` lane still bounds it: full module fail >240 KB / warn >230 KB. To refresh the figure:
 

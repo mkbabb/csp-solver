@@ -20,6 +20,28 @@ import { useDebug } from "@/composables/useDebug";
  * immediately — no spin on a permanently-broken wasm. A single successful message from the
  * worker (any frame — it proves the worker is alive) resets the counter, so a transient
  * crash recovers without burning the budget.
+ *
+ * ── The deal channel (T9-W4 §4.1) ────────────────────────────────────────────────
+ * `call` above rides the RESIDENT worker, and every wasm verb on it is synchronous: whatever it
+ * is running, it is running to completion before it reads another frame. That was fine while
+ * every verb was milliseconds. It stopped being fine when V2 timed a thermo 16×16 HARD deal at
+ * a 473s maximum — for those eight minutes the resident worker answered nothing, in any game,
+ * because `postMessage` cannot interrupt a synchronous call. Cancellation is not a message; it
+ * is `Worker.terminate`, and terminate takes the whole worker with it.
+ *
+ * So the long verb gets a worker the estate can afford to lose. `runLeashed` runs ONE request on
+ * the deal channel, a second worker that is terminated when it outruns its leash or when a
+ * newer deal supersedes it, and re-minted on the next deal. Solves and propagates never leave
+ * the resident worker, so they never pay a cold wasm instantiation for a deal's misbehaviour.
+ *
+ * The channel holds AT MOST ONE request, which is not a simplification: the estate renders one
+ * live board, so there is one deal. That is why a supersede can simply take the worker.
+ *
+ * WHAT IT COSTS, stated: two wasm instances resident instead of one, once a board has been
+ * dealt. It does not cost the reader a slower first board — the opening deal instantiated a
+ * cold worker before this change too, since `prewarm` rides an idle callback that has not
+ * fired yet when the mount deal goes out. `solverSpine.workers` reads 2 by design now, and the
+ * second one is the price of being able to hang up on a deal.
  */
 export interface SolverTransportOptions {
   /** Builds a fresh worker — the game supplies `() => new Worker(new URL('./solver.worker.ts', import.meta.url), { type: 'module' })`. */
@@ -38,6 +60,22 @@ export interface SolverTransport<
   nextId: () => number;
   /** Post a request and resolve with its correlated response (or reject `WORKER_FAILURE`). */
   call: (req: Req, transfer: ArrayBuffer[]) => Promise<Res>;
+  /**
+   * Run ONE request on the deal channel — a worker of its own, under a leash.
+   *
+   * Three ways out, and only one of them settles by answering: the worker replies; the leash
+   * expires (the worker is terminated, and the promise rejects `DEAL_TIMEOUT`); or a newer
+   * `runLeashed` supersedes this one (the worker is terminated, and the promise is DROPPED —
+   * see below). A worker-level crash rejects `WORKER_FAILURE` as everywhere else.
+   *
+   * THE DROP IS DELIBERATE. A superseded deal never settles, because there is no honest thing
+   * to settle it with: it did not fail, and the caller already asked for something else. It is
+   * the seam's half of the rule `useGameState` keeps on the other side — a deal whose epoch
+   * moved applies nothing and records nothing, latest wins — and rejecting instead would put a
+   * paper note on screen for a board the reader themselves replaced. The superseding call owns
+   * the pending flag it shares and clears it in its own `finally`.
+   */
+  runLeashed: (req: Req, transfer: ArrayBuffer[], leashMs: number) => Promise<Res>;
   /** Cold-start prewarm: spin the worker up and ping it so the wasm instantiates while idle. */
   prewarm: () => void;
   /** Throw a typed `SolverError` when a response is the `ok: false` failure frame. */
@@ -113,6 +151,78 @@ export function createSolverTransport<
     });
   }
 
+  // ── The deal channel ──────────────────────────────────────────────────────────
+  // Its own worker, its own single slot. Kept BETWEEN deals rather than minted per deal: a
+  // worker that was never terminated still has its wasm hot, so the common case (deal, play,
+  // deal again) pays instantiation once, and only a leash or a supersede spends it.
+  let dealWorker: Worker | null = null;
+  let live: {
+    id: number;
+    settle: (r: Res) => void;
+    fail: (e: Error) => void;
+    timer: ReturnType<typeof setTimeout>;
+  } | null = null;
+
+  /** Take the channel down: terminate the worker, forget the slot. The next deal re-mints. */
+  function retireDealWorker(): void {
+    if (dealWorker) dealWorker.terminate();
+    dealWorker = null;
+    live = null;
+  }
+
+  function ensureDealWorker(): Worker {
+    if (dealWorker) return dealWorker;
+    const w = options.createWorker();
+    dealWorker = w;
+    w.addEventListener("message", (event: MessageEvent<Res>) => {
+      if (!live || event.data.id !== live.id) return;
+      const done = live;
+      live = null;
+      clearTimeout(done.timer);
+      done.settle(event.data);
+    });
+    w.addEventListener("error", (event: ErrorEvent) => {
+      // A crash on the deal channel takes only the deal channel. No respawn cap here and none
+      // needed: a deal is a user gesture, so a broken wasm costs one worker per press rather
+      // than a spin.
+      const done = live;
+      if (done) clearTimeout(done.timer);
+      retireDealWorker();
+      done?.fail(
+        new SolverError("WORKER_FAILURE", event.message || "solver worker crashed"),
+      );
+    });
+    return w;
+  }
+
+  function runLeashed(
+    req: Req,
+    transfer: ArrayBuffer[],
+    leashMs: number,
+  ): Promise<Res> {
+    // Supersede: the in-flight deal is dropped and its worker goes with it, so an abandoned
+    // 16×16 dig stops burning a core the moment the reader asks for a different board.
+    if (live) {
+      clearTimeout(live.timer);
+      retireDealWorker();
+    }
+    const w = ensureDealWorker();
+    const result = new Promise<Res>((settle, fail) => {
+      const timer = setTimeout(() => {
+        retireDealWorker();
+        fail(
+          new SolverError(
+            "DEAL_TIMEOUT",
+            `the deal passed its ${leashMs}ms leash and its worker was terminated`,
+          ),
+        );
+      }, leashMs);
+      live = { id: req.id, settle, fail, timer };
+    });
+    w.postMessage(req, transfer);
+    return result;
+  }
+
   let warmed = false;
 
   /**
@@ -157,5 +267,5 @@ export function createSolverTransport<
     }
   }
 
-  return { nextId: () => id++, call, prewarm, throwIfError };
+  return { nextId: () => id++, call, runLeashed, prewarm, throwIfError };
 }

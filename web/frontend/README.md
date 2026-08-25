@@ -50,7 +50,7 @@ frontend/
 ├── playwright-throttle.config.ts   # throttled probes on their own build + preview (:4188)
 ├── eslint.config.js                # the boundary + pencil-depth rules (see Boundaries)
 ├── knip.json                       # dead-code gate
-├── scripts/                        # the frontend gate scripts — 20 .mjs, most behind an npm run lint:*/test:*
+├── scripts/                        # the frontend gate scripts — 21 .mjs, most behind an npm run lint:*/test:*
 ├── e2e/                            # specs + goldens/
 └── src/
     ├── App.vue                     # the shell: masthead, gallery view, the mount fold, ?game=/?view= truth
