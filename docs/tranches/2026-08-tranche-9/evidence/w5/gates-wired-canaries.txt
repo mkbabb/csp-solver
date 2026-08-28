@@ -1,0 +1,46 @@
+T9-W5 §5.4 — GATE CANARY BATTERY
+tree: 4dd9ec9c + the working tree of 2026-08-28 (two src/** lanes landing concurrently)
+host: darwin, node v26.0.0, every exit code read BARE — no pipes, no tail
+harness: scratch trees (git archive HEAD + this wave's working copies, or a copied web/frontend);
+         nothing is planted in the live tree, and every plant is reverted with its scratch dir.
+
+
+=== ROW 1 — coverage floor: the REAL gate, both colours
+  bare, over the live coverage summary (BORN-RED: 3 scopes under floor) exit=1  RED   (want RED) OK
+  positive control: a summary that clears every floor              exit=0  GREEN (want GREEN) OK
+  plant: killer.branches driven to 0% on that same clean summary   exit=1  RED   (want RED) OK
+  THE OLD WIRING (--self-test) over the SAME dirty summary — the false green exit=0  GREEN (want GREEN) OK
+
+=== ROW 2 — theme-selectors: the POPULATION CANARY, ablated
+  (walker ablated: 0)
+  ABLATION: the walker collects nothing — the canary must red on the blind read exit=1  RED   (want RED) OK
+  the same ablation with the canary REMOVED — the vacuous green it prevents exit=0  GREEN (want GREEN) OK
+
+=== ROW 3/4 — lane membership: the widened corpus, on a real tree
+  control: the wave's tree, all 26 resolved                        exit=0  GREEN (want GREEN) OK
+  plant: golden-magnitude.mjs loses its declaration (V5's escapee) exit=1  RED   (want RED) OK
+  THE OLD GATE over the SAME plant — the name-shape escape, green exit=0  GREEN (want GREEN) OK
+  plant: the REPO-ROOT tree — edge-probe.mjs loses its declaration exit=1  RED   (want RED) OK
+  plant: ledger-diff.mjs deleted out from under its ci.yml step (check 3 dual) exit=1  RED   (want RED) OK
+
+=== ROW 6 — ink-pressure: the crossing, graded
+  control: the tree, one admitted ruling                           exit=0  GREEN (want GREEN) OK
+  plant: the quiet rung re-pitched 68% -> 60%, so the light rank moves exit=1  RED   (want RED) OK
+  plant: the ruling describes a crossing this tree does not have   exit=1  RED   (want RED) OK
+
+=== ROW 7/8 — font coverage: the derived census, the bound pin, WRITEABLE
+  control: the tree                                                exit=0  GREEN (want GREEN) OK
+  plant: a NEW rendered tape the corpus does not hold (the ransom note) exit=1  RED   (want RED) OK
+  plant: a spec eyebrow renamed — the Fraunces derivation grows  exit=1  RED   (want RED) OK
+  (WRITEABLE widened)
+  plant: WRITEABLE widened to a-z — it admits j and x the cut cannot draw exit=1  RED   (want RED) OK
+  plant: a BOUND pin that names no binding on the tree (stale, both ways) exit=1  RED   (want RED) OK
+
+=== ROW 9 — copy register: the jargon arm and the mask cure
+  control: the tree, 2 admitted, 0 unadmitted                      exit=0  GREEN (want GREEN) OK
+  plant: a technique name + the machine on a rendered tape         exit=1  RED   (want RED) OK
+  plant: the admitted string CURED — the stale admission reds    exit=1  RED   (want RED) OK
+  THE OLD GATE over an em dash in GameControlPanel's template — the mask hole exit=0  GREEN (want GREEN) OK
+  the CURED gate over the same plant — the dash is seen          exit=1  RED   (want RED) OK
+
+=== scratch: /tmp/w5-canary-iCuI

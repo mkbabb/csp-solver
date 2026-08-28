@@ -48,7 +48,8 @@ a gate that cannot RED is not a gate, and a carve-out note is not a wire.
 
 ## 5.3 The dist lane (F1)
 
-A seventeenth CI lane, browserless per O-12: `vite build` + the dist-consuming arms
+A dist CI lane, browserless per O-12 (the eighteenth job as landed — W4's
+gen-latency took the seventeenth): `vite build` + the dist-consuming arms
 (`prod-shake --dist`, `golden-bytes`, `dist-identity`, the FORBIDDEN census with
 `__bakeAdmission` added per A6). The NOT-A-LANE carve-out notes retire with the lane
 that voids them (V5-C3 adjusted: the carve-outs were deliberate and documented — the

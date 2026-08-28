@@ -1,0 +1,98 @@
+T9-W5 §5.6 — the ledger instrument's canaries
+every exit code below read BARE (cmd >file 2>&1; echo $?), never through a pipe
+gate: node scripts/ledger-diff.mjs --require-ledger --assert-state --verify-cites
+tree: 4dd9ec9c T9-W4 GENERATION TRUTH: budget exhaustion is not a proof (born- + the working tree
+run:  2026-08-28T16:12:41Z  node v26.0.0
+
+=== 0. TREE (no plant) ===
+tree                                           exit=0  GREEN  want GREEN
+                                                  GREEN — 5 audited rows present-or-cited; 4 open ledger rows current under ORPHAN · FREEZE · TERMINALITY · FOLD-TARGET · PROBE · DUPLICATE · 
+
+=== A. FREEZE — the living ledger dropped from the sealed corpora ===
+plant: --canary-exclude LEDGER.md                exit=1  (want RED)
+    FREEZE — 135 finding(s)
+      CH-01   docs/tranches/2026-08-tranche-5/evidence/audit/r1/chronic-ledger.md:40
+              docs/tranches/2026-08-tranche-5 is SEALED (evidence/wgate/close-record.md) and this row of its own audited set now reaches no disposition in its tranche-time corpus. A later restamp took the token with it — BAL-03's class. Correct it in docs/tranches/LEDGER.md with a link, never by editing the sealed record (PRECEPTS §2, the freeze law).
+      RED — 1 orphan · 135 FREEZE. exit 1
+
+=== A2. FREEZE — BAL-03's own defect re-enacted (its token leaves the living ledger) ===
+plant: BAL-03 -> BAL-93 in LEDGER.md           exit=1  RED    want RED, exactly 1, on T7
+                                                  RED — 1 FREEZE. exit 1
+                                                    BAL-03  docs/tranches/2026-08-tranche-7/DISPOSITIONS.md:200
+    FREEZE SWEEP (every sealed tranche re-diffed against its OWN tranche-time corpus)
+      docs/tranches/2026-07-tranche-2    SKIPPED — no audited row set (closed inside its own records)
+      docs/tranches/2026-07-tranche-3    SKIPPED — no audited row set (closed inside its own records)
+      docs/tranches/2026-07-tranche-4    SKIPPED — no audited row set (closed inside its own records)
+      docs/tranches/2026-08-tranche-5    220 audited rows · 10 corpus files · 0 orphan
+      docs/tranches/2026-08-tranche-6     36 audited rows · 5 corpus files · 0 orphan
+      docs/tranches/2026-08-tranche-7    145 audited rows · 11 corpus files · 1 orphan
+      docs/tranches/2026-08-tranche-8     17 audited rows · 3 corpus files · 0 orphan
+    
+
+=== B. ONE-HOME — a sibling row minted for CH-64's class ===
+plant: CH-68 sibling row                       exit=1  RED    want RED
+                                                  RED — 1 ONE-HOME. exit 1
+                                                    CH-68   docs/tranches/LEDGER.md:65
+
+=== C. DUPLICATE — one id, two homes ===
+plant: CH-65 tabled twice                      exit=1  RED    want RED
+                                                  RED — 1 DUPLICATE. exit 1
+                                                    CH-65   docs/tranches/LEDGER.md:60
+
+=== D. FOLD-TARGET — a fold into a wave T7 never had ===
+plant: FX-99 FOLDED to T7-W9                   exit=1  RED    want RED
+                                                  RED — 1 FOLD-TARGET. exit 1
+                                                    FX-99   docs/tranches/LEDGER.md:143
+
+=== E. TERMINALITY — an open row landing at a sealed tranche's wave ===
+plant: FX-98 open, lands at T7-W3              exit=1  RED    want RED
+                                                  RED — 1 TERMINALITY. exit 1
+                                                    FX-98   docs/tranches/LEDGER.md:65
+
+=== F. PROBE/CH-69 — the claim inverted (same falsification, polarity flipped) ===
+plant: CH-69 probe asserts the opposite        exit=1  RED    want RED
+                                                  RED — 1 PROBE. exit 1
+                                                    CH-69   docs/tranches/LEDGER.md:63
+
+=== G. PROBE/CH-16 — the closure guard inverted ===
+plant: CH-16 probe asserts the opposite        exit=1  RED    want RED
+                                                  RED — 1 PROBE. exit 1
+                                                    CH-16   docs/tranches/LEDGER.md:121
+
+=== H. PROBE/registration — a probe keyed to a row that is not tabled ===
+plant: PROBES key CH-69 -> CH-969              exit=1  RED    want RED
+                                                  RED — 1 PROBE. exit 1
+                                                    CH-969  PROBES registry
+
+=== I. ONE-HOME/registration — a class home that is not tabled ===
+plant: CLASS_HOMES key CH-64 -> CH-964         exit=1  RED    want RED
+                                                  RED — 2 ONE-HOME. exit 1
+                                                    CH-964  CLASS_HOMES registry
+                                                    CH-64   docs/tranches/LEDGER.md:84
+
+=== J. LIVE-REGION — an unadmitted site ===
+plant: players-status admission removed        exit=1  RED    want RED
+                                                  RED — 2 LIVE-REGION. exit 1
+                                                    LIVE-REGION web/frontend/src/games/shared/GameControlPanel.vue:1017
+                                                    ADMISSION web/frontend/src/games/shared/GameControlPanel.vue  class="players-status-NOT-THIS-ONE"
+
+=== K. LIVE-REGION/admission — an admission over a site that does not violate ===
+plant: admission re-pointed at a clean site    exit=1  RED    want RED
+                                                  RED — 2 LIVE-REGION. exit 1
+                                                    LIVE-REGION web/frontend/src/games/shared/GameControlPanel.vue:1100
+                                                    ADMISSION web/frontend/src/games/shared/GameControlPanel.vue  class="gallery-live"
+
+=== L. TREE RESTORED ===
+tree                                           exit=0  GREEN  want GREEN
+                                                  GREEN — 5 audited rows present-or-cited; 4 open ledger rows current under ORPHAN · FREEZE · TERMINALITY · FOLD-TARGET · PROBE · DUPLICATE · 
+LEDGER.md byte-identical to pre-canary
+ledger-diff.mjs byte-identical to pre-canary
+
+=== M. LIVE-REGION — the whole violating census, admissions emptied ===
+plant: LIVE_REGION_ADMITTED = []                exit=1  (want RED)
+    LIVE-REGION — 2 finding(s)
+      LIVE-REGION web/frontend/src/games/shared/GameControlPanel.vue:1017
+              `aria-live` born under a condition with "connecting…" already inside — the region enters the document complete, so there is no mutation to announce and it never speaks. Let the region live unconditionally and make its CONTENT the conditional half.
+      LIVE-REGION web/frontend/src/games/shared/GameControlPanel.vue:1100
+              `aria-live` born under a condition with "you're the only one on this board." already inside — the region enters the document complete, so there is no mutation to announce and it never speaks. Let the region live unconditionally and make its CONTENT the conditional half.
+    

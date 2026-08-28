@@ -22,6 +22,16 @@
  *
  * It never writes, never builds, and never touches the dist.
  *
+ * T9-W5 §5.3 — IT IS A GATE NOW, NOT ONLY AN AUDIT LINE. Until this wave nothing in CI
+ * built a bundle, so this file's two RED conditions — a husk, and a stale second entry
+ * chunk — could only fire at somebody's bench. `.github/workflows/ci.yml` job `dist`
+ * runs it three times: `--self-test` before the build (six arms, both colours, a real
+ * socket on 4247), `--dist dist` after it (the disk-side identity), and `--dist dist
+ * --served http://127.0.0.1:4251` against a live `vite preview` — the arm that answers
+ * face (2), which is the one no amount of rebuilding fixes. That last arm is browserless
+ * by construction: it is one `fetch` and a regex over the served HTML, no engine anywhere
+ * near it, so it lands inside O-12 rather than beside it.
+ *
  * usage:
  *   node scripts/dist-identity.mjs [--dist <path>] [--served <baseURL>] [--self-test]
  *

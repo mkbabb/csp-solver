@@ -1,0 +1,27 @@
+
+################################################################
+#  DEPLOY REFUSED — gated-chain law (T5-W6.2 / CH-57 / T9-W5)
+#
+#  the tree is not the commit. 205 row(s) of dirt:
+#    tracked   M .github/workflows/ci.yml
+#    tracked   M docs/benchmarks.md
+#    tracked   M docs/tranches/2026-08-tranche-9/gates.json
+#    tracked   M docs/tranches/LEDGER.md
+#    tracked   M scripts/check-doc-truth.mjs
+#    tracked   M scripts/deploy-gated.sh
+#    tracked   M scripts/ledger-diff.mjs
+#    tracked   M web/frontend/knip.json
+#    tracked   M web/frontend/package.json
+#    tracked   M web/frontend/public/404.html
+#    tracked   M web/frontend/public/_redirects
+#    tracked   M web/frontend/scripts/check-copy-register.mjs
+#    … and 193 more
+#  The conclusion artifact grades a COMMIT; the build reads this tree.
+#  Commit or stash the rows above, re-read the field, then deploy.
+#
+#  Nothing was built. Nothing was deployed.
+#  Cure:
+#    scripts/ci-conclusion.sh --sha "$(git rev-parse HEAD)" --out <path>
+#    npm --prefix web/frontend run deploy -- --conclusion-file <path>
+################################################################
+

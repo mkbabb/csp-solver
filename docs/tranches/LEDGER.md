@@ -10,6 +10,28 @@ four in-tree falsifications for a whole campaign.
 ids. Every id is written out on its own line — never as a range, because `CH-01…CH-61` reads as scope,
 not as citation, and one rhetorical sweep would green the whole ledger.
 
+**The arms, and what each one reaches (T9-W5).** ORPHAN and FREEZE run always; the rest ride
+`--assert-state`. Currency used to reach ten of this file's rows — §1 plus the terminal rows still
+under WATCH, which is what CITES scopes to — and every other row was outside every arm, which is how
+eighteen FOLDED rows came to wear a landing promise into a tranche that had since sealed with nobody
+looking. It reaches all of them now, and the run prints the figure rather than claiming it.
+
+| Arm | Reaches | What reds |
+|---|---|---|
+| ORPHAN | the tranche's audited row set | an audited id with no disposition, no citation, no delegation |
+| FREEZE | every SEALED tranche, each against its own tranche-time corpus | a lawful restamp here that orphans a sealed tranche's row (BAL-03's class) |
+| TERMINALITY | §1 | a state naming a wave of a sealed tranche: a dead row wearing a live state |
+| FOLD-TARGET | every row naming a wave, in any section | a fold into a wave the named tranche never had |
+| PROBE | rows carrying a registration | the tree refuting what the row asserts, and a registration whose row is gone |
+| DUPLICATE | every row | one id, two homes, anywhere |
+| ONE-HOME | every row | a new id carrying a registered class's subject and naming no home (PRECEPTS §2) |
+| LIVE-REGION | `web/frontend/src` | an `aria-live` region born under `v-if` with its content already inside |
+| CITES | §1 + terminal-under-WATCH | a cite that does not resolve, or an anchor that moved |
+
+Registrations live in the script, not here: `PROBES` (CH-16, CH-69), `CLASS_HOMES` (CH-64), and the
+live-region admissions. Each is an exact-match census that reds in both directions, so an entry that
+stops matching is a finding rather than a silent no-op.
+
 **The law.** A row leaves only by a terminal state written here — CLOSED(+cite) · FOLDED(→a wave of an
 OPEN tranche) · RETIRE(+re-entry) · BANKED(+owner, +a trigger a script or a one-line probe evaluates) ·
 BALLOT(+a firing default) · DECLARED. Re-booking is forbidden: a fired trigger becomes an act or a

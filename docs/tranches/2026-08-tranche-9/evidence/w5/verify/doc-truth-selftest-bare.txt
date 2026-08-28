@@ -1,0 +1,472 @@
+doc-truth --self-test — 125 fixtures over 41 rows
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+
+PASS  permalink-games  expect RED · got RED
+        a clause giving the permalink to a proper subset
+        · README.md:1: names 2: futoshiki, sudoku — Sudoku and Futoshiki share a board over `?board=`;
+
+PASS  permalink-games  expect RED · got RED
+        the unwired claim, over specs that all declare a urlCodec
+        · README.md:1: Their share permalink isn't wired — `writeShareUrl` no-ops.
+
+PASS  permalink-games  expect GREEN · got GREEN
+        the cure: the permalink clause names every wired game
+
+PASS  cited-paths-exist  expect RED · got RED
+        a backticked path and a bare basename, neither in the tree
+        · README.md:1: `games/registry.ts` — nothing in the tree answers to it
+        · README.md:1: `game.ts` — no file by that name
+
+PASS  cited-paths-exist  expect RED · got RED
+        a tree block naming a directory that does not exist
+        · README.md:3: `SudokuBoard/` → web/frontend/SudokuBoard — absent
+
+PASS  cited-paths-exist  expect GREEN · got GREEN
+        the cure: the paths that actually hold the table and the contract
+
+PASS  worker-topology  expect RED · got RED
+        the per-game topology and its count
+        · README.md:1: Each game owns `solver/solver.worker.ts`. Five workers ride one transport.
+        · README.md:1: Five — Each game owns `solver/solver.worker.ts`. Five workers ride one transport.
+
+PASS  worker-topology  expect GREEN · got GREEN
+        the cure: one worker module, web/frontend/src/games/shared/solver/solver.worker.ts
+
+PASS  e2e-total-arithmetic  expect RED · got RED
+        a whole-suite total that is not the sum of the three configs
+        · README.md:1: 509 — 509 tests in all.
+
+PASS  e2e-total-arithmetic  expect GREEN · got GREEN
+        the cure: 437 + 4 + 67 = 508
+
+PASS  constraint-enum-variants  expect RED · got RED
+        the retired `Soft` variant, and an enumeration missing the cages
+        · docs/optimizations.md:1: `ConstraintEnum` names `NotEqual`, `AllDifferent`, `AllDifferentExcept`, `Soft`, `Custom`.
+        · docs/optimizations.md:1: names 4 of 6: NotEqual, AllDifferent, AllDifferentExcept, Custom — missing CageSum, CageProduct
+
+PASS  constraint-enum-variants  expect GREEN · got GREEN
+        the cure: NotEqual, AllDifferent, AllDifferentExcept, CageSum, CageProduct, Custom
+
+PASS  frontend-scripts-roster  expect RED · got RED
+        a roster naming two of the frontend gate scripts
+        · README.md:1: names 2 of 21: check-copy-register, check-coverage-floor
+
+PASS  frontend-scripts-roster  expect RED · got RED
+        a file tree naming one of the root scripts/ entries
+        · README.md:3: the tree names 1: check-doc-truth.mjs — scripts/check-doc-truth.mjs
+
+PASS  frontend-scripts-roster  expect GREEN · got GREEN
+        the cure: all 21 frontend gates and all 9 root entries
+
+PASS  bench-target-roster  expect RED · got RED
+        a bench roster of three, against a manifest declaring more
+        · README.md:1: names 3: assignment, cost_finite_domain, futoshiki — missing gac_ab, iai_queens, lattice, map_coloring, queens, sudoku
+
+PASS  bench-target-roster  expect GREEN · got GREEN
+        the cure: all 9 targets
+
+PASS  redirects-rule-count  expect RED · got RED
+        the SPA-fallback-only claim over a two-rule file
+        · README.md:1: `_redirects` carries the SPA fallback only.
+
+PASS  redirects-rule-count  expect RED · got RED
+        a rule count that disagrees with the file
+        · README.md:1: 3 — `_redirects` carries 3 rules.
+
+PASS  redirects-rule-count  expect GREEN · got GREEN
+        the cure: two rules, the 404 guard named
+
+PASS  perf-rig-scenario-roster  expect RED · got RED
+        a scenario sentence that stops short of the table
+        · web/frontend/perf-rig/README.md: absent from the rig's own reference
+        · web/frontend/perf-rig/README.md: absent from the rig's own reference
+
+PASS  perf-rig-scenario-roster  expect GREEN · got GREEN
+        the cure: all 15 keys, each in its partition
+
+PASS  pencil-boil-0.9.2  expect RED · got RED
+        the pin on the line AFTER the package name — the miss this row was fixed for
+        · docs/animation.md:2: ^0.0.1 — `^0.0.1`: the scheduler.
+
+PASS  pencil-boil-0.9.2  expect GREEN · got GREEN
+        the cure: ^0.12.0, wherever in the window it sits
+
+PASS  chromium-alone-claim  expect RED · got RED
+        a single-browser claim against a two-project config
+        · README.md:1: CI runs chromium alone.
+        · README.md:1: CI runs chromium alone.
+
+PASS  chromium-alone-claim  expect RED · got RED
+        a both-engines claim against a ONE-project config — the case the old early return greened [stub: {"projects":["chromium"]}]
+        · README.md:1: The suite runs chromium + webkit, each with its own lane.
+        · README.md:1: The suite runs chromium + webkit, each with its own lane.
+
+PASS  chromium-alone-claim  expect GREEN · got GREEN
+        the cure under a one-project config: say chromium alone, of the suite [stub: {"projects":["chromium"]}]
+
+PASS  relay-origin-pair  expect RED · got RED
+        a doc naming a relay origin the CSP does not grant
+        · README.md:1: wss://sudoku-relay-staging.workers.dev — The board joins over `wss://sudoku-relay-staging.workers.dev`.
+
+PASS  relay-origin-pair  expect GREEN · got GREEN
+        the cure: the one origin, wss://sudoku-relay.mkbabb.workers.dev
+
+PASS  retired-arm-clean  expect RED · got RED
+        the relay header describing trystero as the consumer it serves
+        · web/relay/relay.ts:1: // WHAT IT SPEAKS is the subset trystero's nostr strategy actually uses.
+
+PASS  retired-arm-clean  expect GREEN · got GREEN
+        the cure: trystero named only as the arm that left
+
+PASS  multiplayer-wire-verbs  expect RED · got RED
+        the header counting the type instead of the wire
+        · web/frontend/src/games/shared/useSession.ts:1: THREE — * THREE MESSAGES, and each earns its place:
+
+PASS  multiplayer-wire-verbs  expect RED · got RED
+        an enumeration that drops the fourth word
+        · README.md:1: names 3: hi, op, st — The wire speaks `hi`, `op` and `st`.
+
+PASS  multiplayer-wire-verbs  expect GREEN · got GREEN
+        the cure: five verbs, hi/op/st/cur/bye
+
+PASS  relay-event-kind  expect RED · got RED
+        a kind inside the ephemeral range that is not the one the arm publishes
+        · README.md:1: 20412 — Ops ride ephemeral kind 20412.
+
+PASS  relay-event-kind  expect GREEN · got GREEN
+        the cure: kind 20411, named inside its range
+
+PASS  slug-space-figures  expect RED · got RED
+        a survivor count the filter regex does not produce
+        · README.md:1: 1,146 of 1,202 — 1,146 of 1,202 adjectives survive the cut.
+
+PASS  slug-space-figures  expect GREEN · got GREEN
+        the cure: 1,145/1,202 · 345/355 — 395,025 names
+
+PASS  peer-ink-formula  expect RED · got RED
+        half the band — the night value drifted
+        · README.md: 0.5/0.7 — A peer's `--peer-ink-l` is 0.5 on paper and 0.7 at night.
+
+PASS  peer-ink-formula  expect GREEN · got GREEN
+        the cure: chroma 0.11, 137.5°, 0.5/0.8
+
+PASS  session-stress-constants  expect RED · got RED
+        an author count the large run does not use
+        · README.md:1: 17 — The ledger takes 20,000 ops from 17 authors.
+
+PASS  session-stress-constants  expect GREEN · got GREEN
+        the cure: 20,000 · 16 · 81 · cap 200
+
+PASS  relay-loc  expect RED · got RED
+        the ~150-line relay, three growths ago
+        · web/frontend/src/games/shared/useSession.ts:1: 150 — * `web/relay/` is ~150 lines of NIP-01 on a Durable Object.
+
+PASS  relay-loc  expect GREEN · got GREEN
+        the cure: 317 lines, 162 of code
+
+PASS  relay-backoff-ladder  expect RED · got RED
+        a rung that is not in the array
+        · README.md:1: 250 · 500 · 1000 · 3000 · 4000 — A dropped socket retries at 250, 500, 1000, 3000, 4000 ms.
+
+PASS  relay-backoff-ladder  expect GREEN · got GREEN
+        the cure: 250 · 500 · 1000 · 2000 · 4000 ms, the last rung repeating as the cap
+
+PASS  multiplayer-md-sections  expect RED · got RED
+        a page that dropped the relay's half of the seam
+        · docs/multiplayer.md: headings: ## The wire · ## Trust, and what it rests on
+
+PASS  multiplayer-md-sections  expect RED · got RED
+        the page whole, but reachable from neither README
+        · README.md: no link — the page is unreachable from here
+        · web/frontend/README.md: no link — the page is unreachable from here
+
+PASS  multiplayer-md-sections  expect GREEN · got GREEN
+        the cure: all three sections, linked from both READMEs
+
+PASS  chromium-alone-claim  expect RED · got RED
+        the CI-installs-browsers claim, against a census of zero install steps
+        · README.md:1: CI installs both browser bundles before the suite runs.
+        · README.md:1: CI installs both browser bundles before the suite runs.
+
+PASS  chromium-alone-claim  expect RED · got RED
+        the other half of the same sentence: a suite CI does not execute
+        · README.md:1: CI runs the Playwright suite in each engine.
+
+PASS  chromium-alone-claim  expect RED · got RED
+        the browserless claim under a census that DOES install — the mirror [stub: {"browsers":{"rel":".github/workflows/ci.yml","present":true,"tokens":["chromium","webkit"],"installs":[100],"runs":[110]}}]
+        · README.md:1: The lanes install no browser bundle; CI is browserless.
+        · README.md:1: The lanes install no browser bundle; CI is browserless.
+
+PASS  chromium-alone-claim  expect GREEN · got GREEN
+        the cure: 2 projects declared, 0 install steps in CI
+
+PASS  directory-count-claims  expect RED · got RED
+        a gate-script count one over the directory
+        · web/frontend/README.md:1: 22 — scripts/ holds 22 .mjs gates.
+
+PASS  directory-count-claims  expect RED · got RED
+        a count beside a directory name nothing in the tree answers to
+        · web/frontend/README.md:1: nothing in the tree answers to that name — say the path, or drop the count
+
+PASS  directory-count-claims  expect GREEN · got GREEN
+        the cure: 21 .mjs, counted in the directory itself
+
+PASS  docs-roster-complete  expect RED · got RED
+        a docs/ node naming three of the pages
+        · README.md:3: names 3: algorithms, animation, bbnf-integration — missing benchmarks, multiplayer, optimizations, sudoku
+
+PASS  docs-roster-complete  expect GREEN · got GREEN
+        the cure: all 7 pages on the node
+
+PASS  peer-id-grammar  expect RED · got RED
+        the mint's old prefix — the transports' `r-`, three arms ago
+        · docs/multiplayer.md: `r-` plus twelve hex — A fresh id is `r-` plus twelve hex characters.
+
+PASS  peer-id-grammar  expect RED · got RED
+        the throwaway lifetime, over an id two stores remember
+        · docs/multiplayer.md: Ids are throwaway;
+        · docs/multiplayer.md: each wire mints a fresh id per connection.
+
+PASS  peer-id-grammar  expect GREEN · got GREEN
+        the cure: `p-` + 12 hex, remembered per room, capped at 8
+
+PASS  cursors-shipped  expect RED · got RED
+        the T7 ballot row read as a present-tense absence
+        · docs/multiplayer.md:1: - **No live cursors** (`DISPOSITIONS.md` BAL-13—not built).
+
+PASS  cursors-shipped  expect RED · got RED
+        a shipped claim over a wire without the cursor word — the mirror [stub: {"cursors":{"verb":false,"paint":[],"shipped":false}}]
+        · docs/multiplayer.md:1: Live cursors ship, on the wire's `cur` word.
+        · docs/multiplayer.md:1: Live cursors ship, on the wire's `cur` word.
+
+PASS  cursors-shipped  expect GREEN · got GREEN
+        the cure: `cur` on the wire, painted at 3 sites
+
+PASS  wasm-artifact-sha  expect RED · got RED
+        a digest that is not what the artifact of that byte count hashes to
+        · docs/benchmarks.md: 0a249a303291aea71d743dbe75a5b1e392bf37d6b5074e22305b5fba823dca29 — The lean artifact measures 122,541 B, sha256 `0a249a303291aea71d743dbe75a5b1e392bf37d6b5074e22305b5fba823dca29`.
+
+PASS  wasm-artifact-sha  expect RED · got RED
+        an abbreviation that stands beside a digest it does not begin
+        · docs/benchmarks.md: deadbeef… — Same sha256 `deadbeef…` on both — `1a249a303291aea71d743dbe75a5b1e392bf37d6b5074e22305b5fba823dca29`, 122,541 B each.
+
+PASS  wasm-artifact-sha  expect GREEN · got GREEN
+        the cure: 1a249a30…, hashed off csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm
+
+PASS  animation-config-figures  expect RED · got RED
+        a preset count the config does not hold
+        · docs/animation.md: 8 — *FILTER_PRESETS**: reactive, 8 presets.
+
+PASS  animation-config-figures  expect RED · got RED
+        the house curve ledger at its pre-T4-W10 width
+        · docs/animation.md: four — The CSS layer holds four `--ease-*` tokens in `@theme`.
+
+PASS  animation-config-figures  expect RED · got RED
+        the TS-layer count, stated a sentence away from its subject
+        · docs/animation.md: four — `MOTION.curves` in `pencilConfig.ts`, for JS and `v-bind` consumers. It holds exactly four: `drawerGlide`.
+
+PASS  animation-config-figures  expect RED · got RED
+        the retired per-beat wobble subscribers, still counted
+        · docs/animation.md: three — `SvgFilters` registers three subscribers on the beat.
+
+PASS  animation-config-figures  expect RED · got RED
+        a preset name the config never declared
+        · docs/animation.md:1: `wobble-divider` — The divider takes `wobble-divider`.
+
+PASS  animation-config-figures  expect GREEN · got GREEN
+        the cure: 7 presets, 10 tokens, 1 TS curve, 0 subscribers
+
+PASS  t8-marks-count  expect RED · got RED
+        the off-by-one count in sealed prose, with no correction block in the file
+        · docs/tranches/2026-08-tranche-8/evidence/wgate/close-record.md:1: twenty — - **The tranche**: twenty marks executed across seven waves + chair work.
+
+PASS  t8-marks-count  expect GREEN · got GREEN
+        the freeze law satisfied: the sealed sentence stands, the dated block corrects it
+
+PASS  t8-marks-count  expect GREEN · got GREEN
+        the cure at the source: the count said true, nineteen
+
+PASS  frontend-readme-two-games  expect RED · got RED
+        the two-game era's own sentence, over a five-game registry
+        · web/frontend/README.md:1: The app ships two games and a solver.
+
+PASS  frontend-readme-two-games  expect RED · got RED
+        the stale pencil-boil pin, which the same regex holds
+        · web/frontend/README.md:1: Animation rides `@mkbabb/pencil-boil` 0.7.0.
+
+PASS  frontend-readme-two-games  expect GREEN · got GREEN
+        the cure: 5 games, and a lint that checks rather than writes
+
+PASS  root-readme-e2e-counts  expect RED · got RED
+        an e2e total one suite behind `playwright test --list`
+        · README.md:1: 436 — e2e: 436 Playwright tests across 24 spec files.
+
+PASS  root-readme-e2e-counts  expect RED · got RED
+        a README that states no e2e count at all — the row's subject, gone
+        · README.md: no e2e count in the file at all
+
+PASS  root-readme-e2e-counts  expect GREEN · got GREEN
+        the cure: 437 tests across 24 files, both off --list
+
+PASS  lean-wasm-4-sites  expect RED · got RED
+        TIER 1 — a site whose darwin figure disagrees with the other three
+        · docs/benchmarks.md:1: 123,541 B labelled as darwin's; the four sites state 122,541, 123,541 B
+
+PASS  lean-wasm-4-sites  expect RED · got RED
+        TIER 1 — a figure with no platform on it is a number, not a stamp
+        · docs/benchmarks.md: no darwin-labelled byte figure in the file — an unlabelled figure is not a stamp, it is a number
+
+PASS  lean-wasm-4-sites  expect RED · got RED
+        TIER 2 — an artifact over the enforced band, RED on every platform (stubbed to linux so it is the BAND failing, not the bytes) [stub: {"platform":"linux","lean":{"size":127501,"source":"fixture artifact","degraded":false}}]
+        · fixture artifact: 127,501 B on linux — over band by 1 B
+
+PASS  lean-wasm-4-sites  expect RED · got RED
+        TIER 2 — a DEGRADED size, read out of the same workflow the band comes from [stub: {"platform":"linux","lean":{"size":122541,"source":".github/workflows/ci.yml:564 (CI band config — NO artifact on disk)","degraded":true}}]
+        · csp-solver/wasm/pkg: UNVERIFIABLE: 122,541 B read from .github/workflows/ci.yml:564 (CI band config — NO artifact on disk)
+
+PASS  lean-wasm-4-sites  expect RED · got RED
+        TIER 2 in isolation — all four sites agreeing on a figure the band would fail [stub: {"platform":"linux"}]
+        · docs/benchmarks.md: the canon stamps 131,000 B — a figure the band would fail
+
+PASS  lean-wasm-4-sites  expect RED · got RED
+        TIER 3 — bytes off the stamp, ON the stamp's platform: exact-match bites [stub: {"platform":"darwin","lean":{"size":123053,"source":"fixture artifact","degraded":false}}]
+        · docs/benchmarks.md:1: 122,541 B stamped as darwin's, 512 B off the artifact this machine built
+        · csp-solver/wasm/README.md:1: 122,541 B stamped as darwin's, 512 B off the artifact this machine built
+
+PASS  lean-wasm-4-sites  expect GREEN · got GREEN
+        TIER 3's mirror — the SAME drift off the stamp's platform is INFO, not a defect [stub: {"platform":"linux","lean":{"size":123053,"source":"fixture artifact","degraded":false}}]
+
+PASS  lean-wasm-4-sites  expect GREEN · got GREEN
+        the cure: 122,541 B stamped as darwin's at all four sites, inside the 127,500 B band
+
+PASS  ci-band-comment-406  expect RED · got RED
+        the band comment's hand-copied lean literal, off the artifact
+        · .github/workflows/ci.yml:2: 121,041 B lean, hand-copied and 1,500 B off the artifact
+
+PASS  ci-band-comment-406  expect RED · got RED
+        a full-module figure above the warn band the same file enforces
+        · .github/workflows/ci.yml:2: 230,001 B
+
+PASS  ci-band-comment-406  expect GREEN · got GREEN
+        the cure: 122,541 B lean, matching the artifact this run measured
+
+PASS  sudoku-md-sections  expect RED · got RED
+        the two-game page, over a registry that grew three families
+        · docs/sudoku.md: headings stop at: ## Futoshiki
+        · docs/sudoku.md: headings stop at: ## Futoshiki
+
+PASS  sudoku-md-sections  expect GREEN · got GREEN
+        the cure: a section for each of the 5 registered families
+
+PASS  ofl-licenses-figures  expect RED · got RED
+        a font total that is not the bytes on disk
+        · README.md:1: 22,972 B total
+
+PASS  ofl-licenses-figures  expect RED · got RED
+        the right total under the wrong subset count
+        · README.md:1: The app self-hosts two woff2 subsets, 22,572 B total.
+
+PASS  ofl-licenses-figures  expect GREEN · got GREEN
+        the cure: 3 woff2 subsets, 22,572 B measured now
+
+PASS  install-pin-0.5  expect RED · got RED
+        a published surface linking outward into the campaign substrate
+        · README.md:1: Deploy follows [the precept](docs/precepts/infra/deploy.md).
+
+PASS  install-pin-0.5  expect RED · got RED
+        an Install pin off the crate version (0.7)
+        · csp-solver/README.md:1: csp-solver = "0.1"
+
+PASS  install-pin-0.5  expect GREEN · got GREEN
+        the cure: csp-solver = "0.7", and no outbound precepts link
+
+PASS  test-count-208-vs-204  expect RED · got RED
+        a Rust total that reconciles to no roster the tree carries
+        · README.md:1: 208 passed + 0 ignored, no doctest split declared — # Rust: 208 passed, 0 failed (31 test binaries)
+
+PASS  test-count-208-vs-204  expect RED · got RED
+        the right total under a test-binary count the workspace does not have
+        · README.md:1: 33 test binaries — # Rust: 217 passed, 0 failed (33 test binaries)
+
+PASS  test-count-208-vs-204  expect GREEN · got GREEN
+        the cure: 217 attributes over 31 binaries, counted now
+
+PASS  make-wasm-recipe  expect RED · got RED
+        the lean target described as the full default-feature build
+        · README.md:1: `make wasm` builds the full default-feature module.
+
+PASS  make-wasm-recipe  expect RED · got RED
+        a documented recipe whose flags are not the ones the target runs
+        · README.md:1: --profile release --target web — `make wasm` runs `wasm-pack build --profile release --target web`.
+
+PASS  make-wasm-recipe  expect GREEN · got GREEN
+        the cure: the flag set the target actually passes — --no-default-features --profile wasm-release --scope mkbabb --target web
+
+PASS  ci-lane-count  expect RED · got RED
+        a lane count one behind the workflow's own `jobs:` block
+        · README.md:1: seventeen — `.github/workflows/ci.yml` runs seventeen lanes.
+
+PASS  ci-lane-count  expect GREEN · got GREEN
+        the cure: eighteen lanes, counted in the workflow
+
+PASS  iai-golden-figure  expect RED · got RED
+        an instruction figure beside the iai lane that the baseline does not enforce
+        · docs/benchmarks.md:1: 1,539,452 quoted beside the iai lane — The iai lane holds callgrind at 1,539,452 instructions.
+
+PASS  iai-golden-figure  expect GREEN · got GREEN
+        the cure: 1,529,452 instructions, read out of csp-solver/benches/iai_queens.baseline
+
+PASS  crate-symbol-cites  expect RED · got RED
+        THE from_parts CLASS — a constructor on a type no file declares
+        · README.md:1: `FutoshikiPuzzle::from_parts` — nothing declares FutoshikiPuzzle
+
+PASS  crate-symbol-cites  expect RED · got RED
+        the owner exists, the member does not — the excised soft-constraint entry
+        · README.md:1: `Csp::add_soft_constraint` — absent from the 4 file(s) that declare Csp: csp-solver/src/config.rs, csp-solver/src/csp/solve.rs, csp-solver/src/csp.rs, csp-solver/src/py/csp.rs
+
+PASS  crate-symbol-cites  expect RED · got RED
+        the scope itself lying: a head release the manifest does not declare [stub: {"changelogs":[{"md":"csp-solver/CHANGELOG.md","toml":"csp-solver/Cargo.toml","want":"0.7.0","head":{"line":17,"version":"0.1.0"},"releases":7,"limit":110,"history":197},{"md":"csp-solver/wasm/CHANGELOG.md","toml":"csp-solver/wasm/Cargo.toml","want":"0.7.0","head":{"line":17,"version":"0.1.0"},"releases":6,"limit":40,"history":83}]}]
+        · csp-solver/CHANGELOG.md:17: `## 0.1.0` — the head release is not the shipped one, and every cite under it is scoped to a tree that no longer exists
+        · csp-solver/wasm/CHANGELOG.md:17: `## 0.1.0` — the head release is not the shipped one, and every cite under it is scoped to a tree that no longer exists
+
+PASS  crate-symbol-cites  expect GREEN · got GREEN
+        the cure: cites the crate's own index resolves, inside the present-tense window
+
+PASS  precepts-reachable  expect RED · got RED
+        the submodule undeclared and unindexed — the precepts unreachable from here [stub: {"precepts":{"root":"docs/precepts","declared":false,"url":"git@github.com:mkbabb/precepts.git","gitlink":null,"pages":["docs/precepts/README.md","docs/precepts/affordance-map.md","docs/precepts/audits/REAUDIT-2026-04-30/01-failure-baseline.md","docs/precepts/audits/REAUDIT-2026-04-30/02-future-sota.md","docs/precepts/audits/REAUDIT-2026-04-30/03-substrate-deadcode.md","docs/precepts/audits/REAUDIT-2026-04-30/04-instructions-process.md","docs/precepts/audits/REAUDIT-2026-04-30/05-plan-waves.md","docs/precepts/audits/REAUDIT-2026-04-30/06-throughput-commit.md","docs/precepts/audits/REAUDIT-2026-04-30/CARRY-OVER-CHECKLIST.md","docs/precepts/audits/REAUDIT-2026-04-30/SYNTHESIS.md","docs/precepts/audits/REAUDIT-2026-04-30/style/S1-wikipedia-ai-signs.md","docs/precepts/audits/REAUDIT-2026-04-30/style/S2-user-style-distillation.md","docs/precepts/audits/REAUDIT-2026-04-30/style/S3-refined-style-md.md","docs/precepts/audits/REAUDIT-2026-04-30/style/S4-precepts-integration-plan.md","docs/precepts/audits/REAUDIT-2026-04-30/style/S8-calibration-corpus.md","docs/precepts/audits/REAUDIT-2026-04-30/style/SYNTHESIS.md","docs/precepts/audits/overfitting-audit.md","docs/precepts/canonical-readme-shape.md","docs/precepts/cross-repo-dev-iteration.md","docs/precepts/cross-repo-dev-resolution.md","docs/precepts/declared-decisions.md","docs/precepts/design-idioms.md","docs/precepts/glossary/meta-terms.md","docs/precepts/infra/deploy.md","docs/precepts/infra/domains.md","docs/precepts/instructions/CONSUMING.md","docs/precepts/instructions/LESSONS-LEARNED.md","docs/precepts/instructions/ORCHESTRATION.md","docs/precepts/instructions/README.md","docs/precepts/instructions/STYLE.md","docs/precepts/instructions/TRANCHE-AND-WAVE-SPEC.md","docs/precepts/instructions/gestalt-first-capture.md","docs/precepts/instructions/prompts/refactor-legacy.md","docs/precepts/instructions/prompts/restructure-backend.md","docs/precepts/instructions/prompts/restructure-frontend.md","docs/precepts/instructions/prompts/styling-localization.md","docs/precepts/instructions/style/CALIBRATION.md","docs/precepts/instructions/tranche/AGENT_DISPATCH_TEMPLATE.md","docs/precepts/instructions/tranche/CHALLENGE.md","docs/precepts/instructions/tranche/DOC_UPDATE_WAVE.md","docs/precepts/instructions/tranche/README.md","docs/precepts/instructions/tranche/RESEARCH.md","docs/precepts/instructions/tranche/SPEC.md","docs/precepts/instructions/tranche/START.md","docs/precepts/instructions/tranche/WAVE_SPEC.md","docs/precepts/motion-canon.md","docs/precepts/tunable-anim.md"],"infra":["docs/precepts/infra/deploy.md","docs/precepts/infra/domains.md"],"populated":false}}]
+        · .gitmodules: no `path = docs/precepts` entry; the precepts are unreachable from this repo
+        · docs/precepts: the index carries no commit there — the declaration points at nothing
+
+PASS  precepts-reachable  expect RED · got RED
+        an infra precept the deploy estate cites, absent from a populated tree [stub: {"precepts":{"root":"docs/precepts","declared":true,"url":"git@github.com:mkbabb/precepts.git","gitlink":"0000000000000000000000000000000000000000","pages":["docs/precepts/README.md"],"infra":["docs/precepts/infra/nope.md"],"populated":true}}]
+        · docs/precepts/infra/nope.md: absent from a populated docs/precepts
+
+PASS  precepts-reachable  expect RED · got RED
+        a command row the precept prints that `npm run` cannot answer [stub: {"precepts":{"root":"docs/precepts","declared":true,"url":"git@github.com:mkbabb/precepts.git","gitlink":"0000000000000000000000000000000000000000","pages":["docs/precepts/README.md"],"infra":["README.md"],"populated":true},"preceptCmds":{"rel":"docs/precepts/infra/deploy.md","present":true,"scripts":[{"line":13,"name":"ship-it"}],"paths":[]}}]
+        · docs/precepts/infra/deploy.md:13: `npm run ship-it` — no such script
+
+PASS  precepts-reachable  expect RED · got RED
+        an anchored path the precept backticks that this repo does not carry [stub: {"precepts":{"root":"docs/precepts","declared":true,"url":"git@github.com:mkbabb/precepts.git","gitlink":"0000000000000000000000000000000000000000","pages":["docs/precepts/README.md"],"infra":["README.md"],"populated":true},"preceptCmds":{"rel":"docs/precepts/infra/deploy.md","present":true,"scripts":[],"paths":[{"line":30,"tok":"web/frontend/public/_nope"}]}}]
+        · docs/precepts/infra/deploy.md:30: `web/frontend/public/_nope` — absent
+
+PASS  precepts-reachable  expect GREEN · got GREEN
+        the UNPOPULATED posture — dormant arms, named on the derived line, declaration still asserted [stub: {"precepts":{"root":"docs/precepts","declared":true,"url":"git@github.com:mkbabb/precepts.git","gitlink":"0000000000000000000000000000000000000000","pages":[],"infra":["README.md"],"populated":false}}]
+
+PASS  precepts-reachable  expect GREEN · got GREEN
+        the cure: `npm run deploy` resolves, and so does the path beside it [stub: {"precepts":{"root":"docs/precepts","declared":true,"url":"git@github.com:mkbabb/precepts.git","gitlink":"0000000000000000000000000000000000000000","pages":["docs/precepts/README.md"],"infra":["README.md"],"populated":true},"preceptCmds":{"rel":"docs/precepts/infra/deploy.md","present":true,"scripts":[{"line":13,"name":"deploy"}],"paths":[{"line":30,"tok":"public/_redirects"}]}}]
+
+PASS  cited-paths-exist  expect RED · got RED
+        a tree that draws a directory as a file — resolved GREEN before the kind was graded
+        · README.md:3: `docs` is drawn as a file
+
+PASS  cited-paths-exist  expect GREEN · got GREEN
+        the same node drawn as the directory it is
+
+PASS  chromium-alone-claim  expect RED · got RED
+        the census's BUNDLE half: a doc naming an engine no install step carries [stub: {"browsers":{"rel":".github/workflows/ci.yml","present":true,"tokens":["chromium"],"installs":[100],"runs":[110]}}]
+        · README.md:1: names `webkit`, which no `playwright install` step in .github/workflows/ci.yml carries
+
+PASS  chromium-alone-claim  expect GREEN · got GREEN
+        the same sentence under a census that DOES carry webkit [stub: {"browsers":{"rel":".github/workflows/ci.yml","present":true,"tokens":["chromium","webkit"],"installs":[100],"runs":[110]}}]
+
+125 PASS / 0 FAIL — every row proved both colours

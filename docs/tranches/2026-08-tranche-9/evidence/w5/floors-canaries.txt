@@ -1,0 +1,322 @@
+T9-W5 §5.2 — THE CANARIES. Every plant is made in the REAL tree, the gate is run
+BARE, and the tree is restored from a byte-for-byte backup. Exit codes are read bare
+— never through a pipe.
+host darwin · tree 4dd9ec9c + this lane's edits · 2026-08-25
+
+================================================================================
+CANARY 1 — a census stamped 20% above live REDs the band (unit)
+  plant: unit.census.executed 735 -> 882, floor left at 661
+
+$ node scripts/check-unit-count.mjs vitest-report.json
+FE unit lane — 735 executed (735 passed / 0 failed), 0 skipped, 0 todo, over 57 files / 237 suites; floor 661; report age 1.5 min.
+  floor stamped: 4dd9ec9c · 2026-08-25 · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  band: floor 661 vs 750 owed on 882 (85% of max(stamp 882, live 735))  ·  slack 11%
+
+UNIT COUNT GATE FAILED
+  · floor 661 is OUT OF BAND: 25.1% under 882 (stamped census 882, live 735); the band is 85%, so the floor owes 750. The stamped census sits above the tree it claims to have measured — an inflated stamp is a claim, not churn room. Re-derive: node scripts/check-unit-count.mjs --restamp <report>
+EXIT=1
+
+================================================================================
+CANARY 2 — a floor hand-lowered below 85% REDs the band (unit)
+  plant: unit.floor 661 -> 624 (the band owes 625 on a census of 735)
+
+$ node scripts/check-unit-count.mjs vitest-report.json
+FE unit lane — 735 executed (735 passed / 0 failed), 0 skipped, 0 todo, over 57 files / 237 suites; floor 624; report age 1.5 min.
+  floor stamped: 4dd9ec9c · 2026-08-25 · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  band: floor 624 vs 625 owed on 735 (85% of max(stamp 735, live 735))  ·  slack 18%
+
+UNIT COUNT GATE FAILED
+  · floor 624 is OUT OF BAND: 15.1% under 735 (stamped census 735, live 735); the band is 85%, so the floor owes 625. The floor was never re-derived from the census stamped beside it — slack banked, not churn room. Re-derive: node scripts/check-unit-count.mjs --restamp <report>
+EXIT=1
+
+================================================================================
+CANARY 3 — a census stamped 20% above live REDs the band (pw)
+  plant: playwright.config.ts::chromium census 221 -> 265, floor left at 198
+
+$ node scripts/check-pw-projects.mjs
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2)
+  floors stamped: 4dd9ec9c · 2026-08-25 · platform darwin · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+  chromium                  listed 221  live 221  derived 198  floor 198  band 226
+  webkit                    listed 216  live 216  derived 194  floor 194  band 184
+  (default)                 listed   4  live   4  derived   4  floor   4  band   4
+  throttled-void            listed   1  live   1  derived   1  floor   1  band   1
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6  band   6
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6  band   6
+  wordmark-webkit           listed   6  live   1  derived   1  floor   1  band   1   ← 5 parked on linux
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10  band   9
+  theme-bake-webkit         listed  10  live   0  derived   0  floor   0  band   0   ← 10 parked on linux, asserts NOTHING there
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14  band  12
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14  band  12
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+  ✗ 8 FLOOR BAND — 1
+
+1 failure(s):
+
+  • [8 FLOOR BAND] playwright.config.ts [chromium]: floor 198 is OUT OF BAND — 25.3% under 265 (stamped census 265, live 221), and the band is 85%, so the floor owes 226. The stamped census sits above the tree it claims to have measured. Re-derive: node scripts/check-pw-projects.mjs --restamp
+
+EXIT=1
+
+================================================================================
+CANARY 4 — a floor hand-lowered below 85% REDs the band (pw)
+  plant: playwright.config.ts::chromium floor 198 -> 187 (the band owes 188)
+
+$ node scripts/check-pw-projects.mjs
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2)
+  floors stamped: 4dd9ec9c · 2026-08-25 · platform darwin · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+  chromium                  listed 221  live 221  derived 198  floor 187  band 188
+  webkit                    listed 216  live 216  derived 194  floor 194  band 184
+  (default)                 listed   4  live   4  derived   4  floor   4  band   4
+  throttled-void            listed   1  live   1  derived   1  floor   1  band   1
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6  band   6
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6  band   6
+  wordmark-webkit           listed   6  live   1  derived   1  floor   1  band   1   ← 5 parked on linux
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10  band   9
+  theme-bake-webkit         listed  10  live   0  derived   0  floor   0  band   0   ← 10 parked on linux, asserts NOTHING there
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14  band  12
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14  band  12
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+  ✗ 8 FLOOR BAND — 1
+
+1 failure(s):
+
+  • [8 FLOOR BAND] playwright.config.ts [chromium]: floor 187 is OUT OF BAND — 15.4% under 221 (stamped census 221, live 221), and the band is 85%, so the floor owes 188. The floor was never re-derived from the census stamped beside it. Re-derive: node scripts/check-pw-projects.mjs --restamp
+
+EXIT=1
+
+================================================================================
+CANARY 5 — the provenance split re-opening: a floor smuggled back into CONFIGS
+  plant: { name: "chromium", engine: "chromium" } gains floor: 1
+
+$ node scripts/check-pw-projects.mjs
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2)
+  floors stamped: 4dd9ec9c · 2026-08-25 · platform darwin · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+  chromium                  listed 221  live 221  derived 198  floor 198  band 188
+  webkit                    listed 216  live 216  derived 194  floor 194  band 184
+  (default)                 listed   4  live   4  derived   4  floor   4  band   4
+  throttled-void            listed   1  live   1  derived   1  floor   1  band   1
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6  band   6
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6  band   6
+  wordmark-webkit           listed   6  live   1  derived   1  floor   1  band   1   ← 5 parked on linux
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10  band   9
+  theme-bake-webkit         listed  10  live   0  derived   0  floor   0  band   0   ← 10 parked on linux, asserts NOTHING there
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14  band  12
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14  band  12
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+  ✗ 8 FLOOR BAND — 1
+
+1 failure(s):
+
+  • [8 FLOOR BAND] CONFIGS[playwright.config.ts][chromium] carries its own `floor`. The number lives in scripts/census.stamp.json and nowhere else — a second copy is the provenance split re-opening.
+
+EXIT=1
+
+================================================================================
+CANARY 6 — GREEN ON THE RESTORED TREE. A gate that reds on everything is not a
+gate either, so the control runs in the same bank.
+
+$ node scripts/check-unit-count.mjs vitest-report.json
+FE unit lane — 735 executed (735 passed / 0 failed), 0 skipped, 0 todo, over 57 files / 237 suites; floor 661; report age 1.9 min.
+  floor stamped: 4dd9ec9c · 2026-08-25 · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  band: floor 661 vs 625 owed on 735 (85% of max(stamp 735, live 735))  ·  slack 11%
+unit count OK — 735 >= 661.
+EXIT=0
+
+$ node scripts/check-pw-projects.mjs
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2)
+  floors stamped: 4dd9ec9c · 2026-08-25 · platform darwin · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+  chromium                  listed 221  live 221  derived 198  floor 198  band 188
+  webkit                    listed 216  live 216  derived 194  floor 194  band 184
+  (default)                 listed   4  live   4  derived   4  floor   4  band   4
+  throttled-void            listed   1  live   1  derived   1  floor   1  band   1
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6  band   6
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6  band   6
+  wordmark-webkit           listed   6  live   1  derived   1  floor   1  band   1   ← 5 parked on linux
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10  band   9
+  theme-bake-webkit         listed  10  live   0  derived   0  floor   0  band   0   ← 10 parked on linux, asserts NOTHING there
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14  band  12
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14  band  12
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+  ✓ 8 FLOOR BAND
+
+OK — 30 specs, 508 resolved tests, every spec in both engines except the 4 recorded holdouts.
+EXIT=0
+
+================================================================================
+CANARY 7 — THE RESTAMP ROUND-TRIPS. On an unmoved tree the arm must propose
+NOTHING and exit 0. Before the cure it proposed theme-quadrants 14 -> 12, called
+that a LOWERING, and exited 1 (restamp-divergence.txt §1).
+
+$ node scripts/check-pw-projects.mjs --restamp --dry --wave "round-trip probe"
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2)
+  floors stamped: 4dd9ec9c · 2026-08-25 · platform darwin · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+
+RESTAMP — floors re-derived: >10 live tests keep ~10% churn room, ≤10 sit exact, never under the 85% band.
+  Quarantines are subtracted at their DECLARED platform, not the running one.
+  Ratchet: max(banked, derived), so an unmoved tree moves nothing.
+  chromium                  listed 221  live 221  derived 198  floor 198 → 198   ·
+  webkit                    listed 216  live 216  derived 194  floor 194 → 194   ·
+  (default)                 listed   4  live   4  derived   4  floor   4 →   4   ·
+  throttled-void            listed   1  live   1  derived   1  floor   1 →   1   ·
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6 →   6   ·
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6 →   6   ·
+  wordmark-webkit           listed   6  live   1  derived   1  floor   1 →   1   ·
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10 →  10   ·
+  theme-bake-webkit         listed  10  live   0  derived   0  floor   0 →   0   ·
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14 →  14   ·
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14 →  14   ·
+  0 floor(s) move, 11 unmoved  ·  4dd9ec9c · 2026-08-25 · platform darwin · round-trip probe  ·  live census 493 of 508 listed
+
+--dry — nothing written.
+EXIT=0
+
+$ node scripts/check-unit-count.mjs --restamp vitest-report.json --dry --wave "round-trip probe"
+RESTAMP — 735 executed / 57 files / 237 suites
+  derived 661  ·  banked 661  ·  ratchet → floor 661   (unmoved — the arm round-trips)
+  band at 85% of 735 is 625  ·  4dd9ec9c · 2026-08-25 · round-trip probe
+
+--dry — nothing written.
+EXIT=0
+
+================================================================================
+CANARY 8 — THE RATCHET STILL REFUSES A REAL LOWERING. The cure must not turn the
+arm into a rubber stamp: when tests have genuinely left, the floor drops and the
+drop must be spoken for.
+
+  unit: a report shrunk to 500 executed against a banked floor of 661
+
+$ node scripts/check-unit-count.mjs --restamp /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/shrunk.json --dry --wave "lowering probe"
+RESTAMP — 500 executed / 44 files / 44 suites
+  derived 450  ·  banked 661  ·  ratchet → floor 450   ↓ LOWERED
+  band at 85% of 500 is 425  ·  4dd9ec9c · 2026-08-25 · lowering probe
+
+--restamp REFUSED: the floor would DROP 661 -> 450. Lowering a floor is a
+  re-baseline, and the house does not re-baseline on a red. Say where the tests went:
+  --restamp <report> --allow-lower "<reason>"
+EXIT=1
+
+  ... and with the reason spoken out loud it proceeds:
+
+$ node scripts/check-unit-count.mjs --restamp /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/shrunk.json --dry --wave "lowering probe" --allow-lower "the estate was cut in half by a probe, not by a commit"
+RESTAMP — 500 executed / 44 files / 44 suites
+  derived 450  ·  banked 661  ·  ratchet → floor 450   ↓ LOWERED
+  band at 85% of 500 is 425  ·  4dd9ec9c · 2026-08-25 · lowering probe
+
+--dry — nothing written.
+EXIT=0
+
+  pw: chromium's banked floor planted at 300, above its live 221
+
+$ node scripts/check-pw-projects.mjs --restamp --dry --wave "lowering probe"
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2)
+  floors stamped: 4dd9ec9c · 2026-08-25 · platform darwin · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+
+RESTAMP — floors re-derived: >10 live tests keep ~10% churn room, ≤10 sit exact, never under the 85% band.
+  Quarantines are subtracted at their DECLARED platform, not the running one.
+  Ratchet: max(banked, derived), so an unmoved tree moves nothing.
+  chromium                  listed 221  live 221  derived 198  floor 300 → 198   ↓ LOWERED
+  webkit                    listed 216  live 216  derived 194  floor 194 → 194   ·
+  (default)                 listed   4  live   4  derived   4  floor   4 →   4   ·
+  throttled-void            listed   1  live   1  derived   1  floor   1 →   1   ·
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6 →   6   ·
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6 →   6   ·
+  wordmark-webkit           listed   6  live   1  derived   1  floor   1 →   1   ·
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10 →  10   ·
+  theme-bake-webkit         listed  10  live   0  derived   0  floor   0 →   0   ·
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14 →  14   ·
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14 →  14   ·
+  1 floor(s) move, 10 unmoved  ·  4dd9ec9c · 2026-08-25 · platform darwin · lowering probe  ·  live census 493 of 508 listed
+
+--restamp REFUSED: 1 floor(s) would DROP:
+  - chromium: 300 -> 198
+  Say why out loud: --restamp --allow-lower "<where the tests went>".
+EXIT=1
+
+================================================================================
+ROW BY ROW: the gate's own resolution held against `--restamp --dry`'s proposal.
+The wave's requirement is equality on EVERY project, not just an exit code.
+(comparator parses both outputs; compares listed / live / derived / floor per row)
+
+$ node /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/roundtrip.mjs /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad
+project                     listed  live  derived  gate floor  restamp floor  verdict
+(default)                        4     4        4           4              4  IDENTICAL
+chromium                       221   221      198         198            198  IDENTICAL
+filter-census-chromium           6     6        6           6              6  IDENTICAL
+filter-census-webkit             6     6        6           6              6  IDENTICAL
+theme-bake-chromium             10    10       10          10             10  IDENTICAL
+theme-bake-webkit               10     0        0           0              0  IDENTICAL
+theme-quadrants-chromium        14    14       12          14             14  IDENTICAL
+theme-quadrants-webkit          14    14       12          14             14  IDENTICAL
+throttled-void                   1     1        1           1              1  IDENTICAL
+webkit                         216   216      194         194            194  IDENTICAL
+wordmark-webkit                  6     1        1           1              1  IDENTICAL
+
+11 projects, 0 divergence(s).
+EXIT=0
+
+================================================================================
+THE COMPARATOR, inlined so this record is self-contained (it is a one-off probe,
+not an estate script — it owes no lane, and a lane it does not own is a lane that
+rots). Run from web/frontend with the two captures beside it.
+
+    // Round-trip proof: the gate's own per-project resolution vs `--restamp --dry`'s proposal.
+    import { readFileSync } from "node:fs";
+    const S = process.argv[2];
+    const parse = (text, kind) => {
+      const rows = new Map();
+      for (const line of text.split("\n")) {
+        const m = /^ {2}(\S.*?)\s{2,}listed\s+(\d+)\s+live\s+(\d+)\s+derived\s+(\d+)\s+floor\s+(\d+)(?:\s*→\s*(\d+))?/.exec(line);
+        if (!m) continue;
+        rows.set(m[1], {
+          listed: +m[2], live: +m[3], derived: +m[4],
+          floor: kind === "restamp" ? +(m[6] ?? m[5]) : +m[5],
+        });
+      }
+      return rows;
+    };
+    const gate = parse(readFileSync(`${S}/gate-resolution.txt`, "utf8"), "gate");
+    const restamp = parse(readFileSync(`${S}/restamp-resolution.txt`, "utf8"), "restamp");
+    const names = [...new Set([...gate.keys(), ...restamp.keys()])].sort();
+    let bad = 0;
+    console.log("project                     listed  live  derived  gate floor  restamp floor  verdict");
+    for (const n of names) {
+      const a = gate.get(n), b = restamp.get(n);
+      const same = a && b && a.listed === b.listed && a.live === b.live && a.derived === b.derived && a.floor === b.floor;
+      if (!same) bad += 1;
+      console.log(
+        `${n.padEnd(26)}  ${String(a?.listed).padStart(6)}  ${String(a?.live).padStart(4)}  ` +
+        `${String(a?.derived).padStart(7)}  ${String(a?.floor).padStart(10)}  ${String(b?.floor).padStart(13)}  ` +
+        (same ? "IDENTICAL" : "*** DIVERGES ***"),
+      );
+    }
+    console.log(`\n${names.length} projects, ${bad} divergence(s).`);
+    process.exit(bad ? 1 : 0);

@@ -1,0 +1,60 @@
+T9-W5 §5.2 — THE RESTAMP ARM: the TRUE divergence, and the cure.
+host darwin · tree 4dd9ec9c (working tree carries two concurrent waves' src edits + an
+untracked e2e/viewport-law.spec.ts; see floors-stamp.md §what-moved)
+
+=== 1 · AT HEAD, BEFORE THE CURE — the arm refuses on an UNMOVED tree ===
+$ node scripts/check-pw-projects.mjs --restamp --dry   (git show HEAD:… behaviour)
+PW PROJECT MATRIX — 3 configs, 11 projects, 29 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6)
+  floors stamped: T5-W1 1.10 birth — never restamped
+
+RESTAMP — floors re-derived: >10 live tests keep ~10% churn room, ≤10 sit exact.
+  Quarantines are subtracted at their DECLARED platform, not the running one.
+  chromium                  listed 221  live 221  floor 115 → 198
+  webkit                    listed 216  live 216  floor 110 → 194
+  (default)                 listed   4  live   4  floor   4 →   4
+  throttled-void            listed   1  live   1  floor   1 →   1
+  filter-census-chromium    listed   6  live   6  floor   6 →   6
+  filter-census-webkit      listed   6  live   6  floor   6 →   6
+  wordmark-webkit           listed   6  live   1  floor   1 →   1
+  theme-bake-chromium       listed  10  live  10  floor   2 →  10
+  theme-bake-webkit         listed  10  live   0  floor   0 →   0
+  theme-quadrants-chromium  listed  14  live  14  floor  14 →  12   ↓ LOWERED
+  theme-quadrants-webkit    listed  14  live  14  floor  14 →  12   ↓ LOWERED
+  stamp: 4dd9ec9c · 2026-08-25 · platform darwin · live census 493 of 508 listed
+
+--restamp REFUSED: 2 floor(s) would DROP:
+  - theme-quadrants-chromium: 14 -> 12
+  - theme-quadrants-webkit: 14 -> 12
+  Say why out loud: --restamp --allow-lower "<where the tests went>".
+EXIT=1
+
+  theme-quadrants-{chromium,webkit} sit at their DELIBERATE arity, 14 = live. The arm
+  derives 12 (floor(14*0.9)), reads its own derivation as a LOWERING, and exits 1. No
+  test had left. The arm could not run at any WGATE without an --allow-lower saying
+  tests went somewhere they never went — which is why it never ran in two closes.
+  T7's diagnosis (a data-loop miscount) is REFUTED: the loop counts 14 correctly, the
+  DERIVATION RULE and the BANKED FLOORS were simply authored under different laws.
+
+=== 2 · AFTER THE CURE — the ratchet, max(banked, derived) ===
+$ node scripts/check-pw-projects.mjs --restamp --dry --wave "T9-W5 §5.2 (wave-time)"
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6)
+  floors stamped: T5-W1 · 1.10 birth · platform never restamped · T5-W1 1.10 · STALE — never restamped in three campaigns. The censuses beside these floors are T9-W5's live measurement, so every row here is BORN RED on the band until §5.2's restamp runs.
+
+RESTAMP — floors re-derived: >10 live tests keep ~10% churn room, ≤10 sit exact, never under the 85% band.
+  Quarantines are subtracted at their DECLARED platform, not the running one.
+  Ratchet: max(banked, derived), so an unmoved tree moves nothing.
+  chromium                  listed 221  live 221  derived 198  floor 115 → 198
+  webkit                    listed 216  live 216  derived 194  floor 110 → 194
+  (default)                 listed   4  live   4  derived   4  floor   4 →   4   ·
+  throttled-void            listed   1  live   1  derived   1  floor   1 →   1   ·
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6 →   6   ·
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6 →   6   ·
+  wordmark-webkit           listed   6  live   1  derived   1  floor   1 →   1   ·
+  theme-bake-chromium       listed  10  live  10  derived  10  floor   2 →  10
+  theme-bake-webkit         listed  10  live   0  derived   0  floor   0 →   0   ·
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14 →  14   ·
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14 →  14   ·
+  3 floor(s) move, 8 unmoved  ·  4dd9ec9c · 2026-08-25 · platform darwin · T9-W5 §5.2 (wave-time)  ·  live census 493 of 508 listed
+
+--dry — nothing written.
+EXIT=0

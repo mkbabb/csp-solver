@@ -8,12 +8,28 @@
  * step that calls it. Two instances is a class, and the class is cheap to close — the question
  * "does a CI lane name this file?" is answerable from two files on disk.
  *
- * So this is the LAW for the whole species: every `web/frontend/scripts/check-*.mjs` and
- * `*-probe.mjs` is either named by a CI-reachable command or carries an explicit
- * `NOT-A-LANE:` declaration with a reason and a cite. W1's selector census and W2's occlusion
- * gates land under it on day one, so a new guard cannot ship unwired again.
+ * So this is the LAW for the whole species: every `.mjs` under `web/frontend/scripts/` and
+ * under the repo-root `scripts/` is either named by a CI-reachable command or carries an
+ * explicit `NOT-A-LANE:` declaration with a reason and a cite. W1's selector census and W2's
+ * occlusion gates land under it on day one, so a new guard cannot ship unwired again.
  *
- * Three checks, all evaluated before the verdict:
+ * ── T9-W5 §5.4 — THE CORPUS STOPS BEING NAME-SHAPED ──────────────────────────────────────
+ * Until this wave the corpus was two REGEXES over filenames: `check-*.mjs` and `*-probe.mjs`.
+ * A law whose subject is a naming convention is a law with a doorway, and V5 walked three
+ * files through it — `golden-magnitude.mjs` (dead behind a false knip `entry` for a campaign),
+ * `golden-selfdelta.mjs` and `dist-identity.mjs` — none of which this census could see, all of
+ * which are exactly the species it exists to police. Renaming a gate was a way to leave the
+ * law. The corpus is now EVERY `.mjs` in the two script trees minus an EXPLICIT exempt list,
+ * so leaving requires an entry someone has to write, with a reason and a cite, that check 4
+ * then holds to the same standard as a declaration. The exempt list is EMPTY at this wave:
+ * all three escapees were closed by wiring or by declaring, not by exempting.
+ *
+ * The repo-root tree enters for the same reason. `check-doc-truth.mjs`, `ledger-diff.mjs`,
+ * `check-evidence-policy.mjs`, `check-inline-tests.mjs` and `edge-probe.mjs` are gates by
+ * every test this file applies, and not one of them was under the law that governs their
+ * frontend siblings — the census read one of the two trees it had opinions about.
+ *
+ * Four checks, all evaluated before the verdict:
  *
  *   1  UNCLAIMED SCRIPT   every corpus file is named by a CI-reachable command, or declares
  *                         itself NOT-A-LANE. Reachability is CI-first and transitive: a
@@ -24,9 +40,13 @@
  *   2  DECLARATION SOUND  a `NOT-A-LANE:` line carries a real reason (>= 40 chars) and a cite,
  *                         and does not contradict itself by sitting on a file CI runs.
  *   3  LANE RESOLVES      the dual: an `npm run <name>` in a `web/frontend` step names a
- *                         script that exists, and a lane that runs `scripts/<corpus file>`
- *                         names a file that is on disk. Deleting a guard out from under its
- *                         step reds here.
+ *                         script that exists, and a lane that runs `scripts/<file>.mjs` names
+ *                         a file that is on disk in the tree it resolved to. Deleting a guard
+ *                         out from under its step reds here.
+ *   4  EXEMPTION LIVE     an exempt entry names a file that exists, carries a reason of the
+ *                         same weight a declaration carries, and is not contradicted by a
+ *                         lane that runs the file anyway. A stale exemption is a doorway
+ *                         nobody is watching, which is the shape the name-regex had.
  *
  * Only `run:` command text counts. ci.yml narrates these scripts by name in its comments all
  * over — a comment is documentation, not a lane, and treating one as enforcement is the exact
@@ -50,17 +70,24 @@ const REPO = (() => {
 })();
 
 const FRONTEND_REL = "web/frontend";
-const SCRIPTS_DIR = path.join(REPO, FRONTEND_REL, "scripts");
+const ROOT_REL = ".";
 const CI_YML = path.join(REPO, ".github", "workflows", "ci.yml");
 const PKG_JSON = path.join(REPO, FRONTEND_REL, "package.json");
 
 /**
- * The two name-shapes under this law. `check-*` is the house's gate prefix; `*-probe` is its
- * instrument prefix. Everything else in `scripts/` (`dist-identity.mjs`, `golden-magnitude.mjs`)
- * is a helper a lane composes, not a verdict of its own, and stays out of the corpus.
+ * THE EXEMPT LIST — the only way out of the corpus that is not a lane and not a declaration.
+ *
+ * `{ tree, file, why }`, where `why` is held to the declaration's own standard (check 4): a
+ * reason at or above `WHY_FLOOR` characters carrying a cite a reader can open. It exists so
+ * the corpus can be "every .mjs" — a subject with no doorway — while still admitting a file
+ * that genuinely is not a gate. EMPTY at T9-W5, deliberately: V5's three filename escapees
+ * were closed by wiring (`dist-identity.mjs`, which the dist lane runs) and by declaring
+ * (`golden-magnitude.mjs`, `golden-selfdelta.mjs`, both Playwright drivers under O-12), and
+ * an exemption that is not needed is an exemption not taken.
+ *
+ * @type {{tree: string, file: string, why: string}[]}
  */
-const CORPUS_FORMS = [/^check-[\w.-]+\.mjs$/, /^[\w.-]+-probe\.mjs$/];
-const inCorpus = (name) => CORPUS_FORMS.some((re) => re.test(name));
+const EXEMPT = [];
 
 /**
  * The escape hatch, and its price. The token must OPEN a comment line — `*`, `//`, `#` or
@@ -185,21 +212,54 @@ export function declarationOf(text) {
 }
 
 /**
- * Does this command run `scripts/<name>` in the FRONTEND? Three forms, and nothing looser: a
- * frontend-scoped step spelling the relative path, a repo-scoped step spelling the full path,
- * and a step that cds into the frontend itself.
+ * THE TWO TREES, each with the command forms that reach it and nothing looser.
+ *
+ * `web/frontend` — a frontend-scoped step spelling the relative path, any step spelling the
+ * full path, and a step that cds into the frontend itself.
+ *
+ * The repo root — a step at the repo's own working directory (`wd === null`, which is what
+ * every `node scripts/check-doc-truth.mjs` line in this workflow is), and the `../../scripts/`
+ * form a frontend-scoped npm script uses to reach back out (`test:deploy-gate`). The root
+ * rule REFUSES a frontend-scoped step, which is what keeps a same-named file in the other
+ * tree from laundering a lane — the fixture for that has been in this file since T7-W6.
  */
-const namesFile = (lane, name) =>
-  (lane.wd === FRONTEND_REL && lane.text.includes(`scripts/${name}`)) ||
-  lane.text.includes(`${FRONTEND_REL}/scripts/${name}`) ||
-  (lane.text.includes(FRONTEND_REL) && lane.text.includes(`scripts/${name}`));
+const TREES = [
+  {
+    rel: FRONTEND_REL,
+    dir: () => path.join(REPO, FRONTEND_REL, "scripts"),
+    names: (lane, name) =>
+      (lane.wd === FRONTEND_REL &&
+        lane.text.includes(`scripts/${name}`) &&
+        // `../../scripts/x.mjs` CONTAINS `scripts/x.mjs`; a frontend-wd lane reaching
+        // up to the root tree is the root tree's reference, not this one's (T9-W5).
+        !lane.text.includes(`../../scripts/${name}`)) ||
+      lane.text.includes(`${FRONTEND_REL}/scripts/${name}`) ||
+      (lane.text.includes(FRONTEND_REL) &&
+        lane.text.includes(`scripts/${name}`) &&
+        !lane.text.includes(`../../scripts/${name}`)),
+  },
+  {
+    rel: ROOT_REL,
+    dir: () => path.join(REPO, "scripts"),
+    names: (lane, name) =>
+      (lane.wd === null &&
+        lane.text.includes(`scripts/${name}`) &&
+        !lane.text.includes(`${FRONTEND_REL}/scripts/${name}`)) ||
+      lane.text.includes(`../../scripts/${name}`),
+  },
+];
+const treeOf = (rel) => TREES.find((t) => t.rel === rel);
+/** `web/frontend/scripts/x.mjs` — one key per file across both trees. */
+const keyOf = (tree, name) => `${tree === ROOT_REL ? "" : `${tree}/`}scripts/${name}`;
 
 /**
- * @param {{ciText: string, pkg: object, scripts: {name: string, text: string}[]}} input
- *   `scripts` is every file in the corpus dir — the non-corpus ones are what prove check 1
- *   doesn't demand a lane from a helper.
+ * @param {{ciText: string, pkg: object,
+ *          scripts: {name: string, text: string, tree?: string}[],
+ *          exempt?: {tree: string, file: string, why: string}[]}} input
+ *   `scripts` is EVERY `.mjs` in the two script trees (`tree` defaults to `web/frontend`,
+ *   which is what the fixtures spell). The corpus is that set minus `exempt`.
  */
-export function buildModel({ ciText, pkg, scripts }) {
+export function buildModel({ ciText, pkg, scripts, exempt = [] }) {
   const commands = ciRunCommands(ciText);
   const seeds = new Set();
   for (const c of commands)
@@ -216,43 +276,60 @@ export function buildModel({ ciText, pkg, scripts }) {
     })),
   ];
 
-  const onDisk = new Set(scripts.map((s) => s.name));
-  const corpus = scripts
-    .filter((s) => inCorpus(s.name))
-    .map((s) => ({ name: s.name, declaration: declarationOf(s.text) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const files = scripts.map((s) => ({ ...s, tree: s.tree ?? FRONTEND_REL }));
+  const onDisk = new Set(files.map((s) => keyOf(s.tree, s.name)));
+  const excused = new Set(exempt.map((e) => keyOf(e.tree, e.file)));
+  const corpus = files
+    .filter((s) => !excused.has(keyOf(s.tree, s.name)))
+    .map((s) => ({
+      name: s.name,
+      tree: s.tree,
+      key: keyOf(s.tree, s.name),
+      declaration: declarationOf(s.text),
+    }))
+    .sort((a, b) => a.key.localeCompare(b.key));
 
-  /** name -> the lanes that run it */
-  const named = new Map(
-    corpus.map(({ name }) => [
-      name,
-      lanes.filter((l) => namesFile(l, name)).map((l) => l.origin),
-    ]),
-  );
+  /** The lanes that run a given file, by its two-tree key. */
+  const lanesFor = (tree, name) =>
+    lanes.filter((l) => treeOf(tree).names(l, name)).map((l) => l.origin);
+  const named = new Map(corpus.map((c) => [c.key, lanesFor(c.tree, c.name)]));
 
-  /** Every corpus-shaped `scripts/<file>` a lane names, whether or not it's on disk. */
+  /** Every `scripts/<file>.mjs` a lane names, resolved to the tree whose form it took. */
   const refs = [];
   for (const lane of lanes)
     for (const m of lane.text.matchAll(
-      /(?:^|[\s"'`(])(?:\.\/)?scripts\/([\w.-]+\.mjs)/g,
-    ))
-      if (
-        inCorpus(m[1]) &&
-        (lane.wd === FRONTEND_REL || lane.text.includes(FRONTEND_REL))
-      )
-        refs.push({ origin: lane.origin, file: m[1] });
+      /(?:^|[\s"'`(])(?:\.\/|\.\.\/\.\.\/)?scripts\/([\w.-]+\.mjs)/g,
+    )) {
+      const tree = TREES.find((t) => t.names(lane, m[1]));
+      if (tree) refs.push({ origin: lane.origin, key: keyOf(tree.rel, m[1]) });
+    }
 
-  return { corpus, lanes, named, refs, onDisk, npmMissing: missing, resolved };
+  const exemptRows = exempt.map((e) => ({
+    ...e,
+    key: keyOf(e.tree, e.file),
+    lanes: lanesFor(e.tree, e.file),
+  }));
+
+  return {
+    corpus,
+    lanes,
+    named,
+    refs,
+    onDisk,
+    exempt: exemptRows,
+    npmMissing: missing,
+    resolved,
+  };
 }
 
 /* ── the checks ────────────────────────────────────────────────────────────── */
 
 function check1UnclaimedScript({ corpus, named }) {
   const bad = [];
-  for (const { name, declaration } of corpus) {
-    if (named.get(name).length || declaration !== null) continue;
+  for (const { name, key, declaration } of corpus) {
+    if (named.get(key).length || declaration !== null) continue;
     bad.push(
-      `scripts/${name} — NO CI LANE names it and it declares nothing. It runs nowhere, so ` +
+      `${key} — NO CI LANE names it and it declares nothing. It runs nowhere, so ` +
         `its green means nothing and its red would never be seen. Wire it (a step beside ` +
         `\`lint:ink\`/\`lint:catch\`, or a \`node scripts/${name}\` run), delete it, or put ` +
         `\`NOT-A-LANE: <reason with a cite>\` in its header (first ${HEADER_LINES} lines).`,
@@ -263,23 +340,23 @@ function check1UnclaimedScript({ corpus, named }) {
 
 function check2DeclarationSound({ corpus, named }) {
   const bad = [];
-  for (const { name, declaration } of corpus) {
+  for (const { key, declaration } of corpus) {
     if (declaration === null) continue;
-    const lanes = named.get(name);
+    const lanes = named.get(key);
     if (lanes.length)
       bad.push(
-        `scripts/${name} declares NOT-A-LANE and ${lanes[0]} runs it. The file contradicts ` +
+        `${key} declares NOT-A-LANE and ${lanes[0]} runs it. The file contradicts ` +
           `the workflow: strike the declaration, or strike the step.`,
       );
     if (declaration.length < WHY_FLOOR)
       bad.push(
-        `scripts/${name} declares NOT-A-LANE with a shrug (${declaration.length} chars, ` +
+        `${key} declares NOT-A-LANE with a shrug (${declaration.length} chars, ` +
           `floor ${WHY_FLOOR}): "${declaration}". An unrun gate excused wordlessly is the ` +
           `defect wearing a badge.`,
       );
     else if (!hasCite(declaration))
       bad.push(
-        `scripts/${name} declares NOT-A-LANE with no cite: "${declaration}". Name what runs ` +
+        `${key} declares NOT-A-LANE with no cite: "${declaration}". Name what runs ` +
           `this job instead (${CITE_FORMS.map(([w]) => w).join(", ")}) — a reason a reader ` +
           `can check, not a reason they must take on faith.`,
       );
@@ -294,12 +371,47 @@ function check3LaneResolves({ refs, onDisk, npmMissing }) {
       `a web/frontend CI step runs \`npm run ${name}\` and package.json has no such script — ` +
         `the step exits non-zero on every run, or did until someone laundered it.`,
     );
-  for (const { origin, file } of refs)
-    if (!onDisk.has(file))
+  for (const { origin, key } of refs)
+    if (!onDisk.has(key))
       bad.push(
-        `${origin} runs \`scripts/${file}\` and no such file exists. A guard was deleted out ` +
+        `${origin} runs \`${key}\` and no such file exists. A guard was deleted out ` +
           `from under its step.`,
       );
+  return bad;
+}
+
+/**
+ * The exempt list held to the declaration's own standard. An exemption is a `NOT-A-LANE:`
+ * written in the census instead of in the file, so it earns nothing the declaration doesn't:
+ * a live subject, a reason with a cite, and no contradiction from a lane that runs the file
+ * anyway. Without this the corpus-minus-list shape would just relocate the name-regex's
+ * doorway into a config nobody reads.
+ */
+function check4ExemptionLive({ exempt, onDisk }) {
+  const bad = [];
+  for (const { key, why, lanes } of exempt) {
+    if (!onDisk.has(key))
+      bad.push(
+        `the exempt list excuses \`${key}\` and no such file exists. The exemption outlived ` +
+          `its subject: strike the entry, or restore the file.`,
+      );
+    if (lanes.length)
+      bad.push(
+        `\`${key}\` is exempt from the corpus and ${lanes[0]} runs it. A file CI executes is ` +
+          `a lane, whatever the list says: strike the entry.`,
+      );
+    if (typeof why !== "string" || why.length < WHY_FLOOR)
+      bad.push(
+        `\`${key}\` is exempt with a shrug (${String(why ?? "").length} chars, floor ` +
+          `${WHY_FLOOR}). An exemption is a declaration written somewhere else and is held ` +
+          `to the same weight.`,
+      );
+    else if (!hasCite(why))
+      bad.push(
+        `\`${key}\` is exempt with no cite: "${why}". Name what makes it not a gate ` +
+          `(${CITE_FORMS.map(([w]) => w).join(", ")}).`,
+      );
+  }
   return bad;
 }
 
@@ -307,6 +419,7 @@ const CHECKS = [
   ["1 UNCLAIMED SCRIPT", check1UnclaimedScript],
   ["2 DECLARATION SOUND", check2DeclarationSound],
   ["3 LANE RESOLVES", check3LaneResolves],
+  ["4 EXEMPTION LIVE", check4ExemptionLive],
 ];
 
 /* ── self-test: every check shown able to fail, and able to pass ───────────── */
@@ -371,6 +484,20 @@ const CI = {
           npm ci
           npm run lint:ink
 `,
+  // T9-W5 §5.4 — the repo-root tree's own two forms.
+  rootWired: `jobs:
+  record:
+    steps:
+      - name: doc truth
+        run: node scripts/check-doc-truth.mjs --self-test
+`,
+  rootViaFrontend: `jobs:
+  dist:
+    steps:
+      - name: the live-edge probe's offline arm
+        working-directory: web/frontend
+        run: npm run test:edge-probe
+`,
 };
 
 const PKG = {
@@ -379,11 +506,16 @@ const PKG = {
     "lint:ink": "node scripts/check-ink-pressure.mjs --self-test",
     "lint:tdz": "node scripts/tdz-probe.mjs --self-test",
     "verify:static": "npm run lint:eslint && npm run lint:ink",
+    // The `../../` reach: a frontend-scoped script whose subject is in the ROOT tree.
+    "test:edge-probe": "node ../../scripts/edge-probe.mjs --self-test",
   },
 };
 
 const CITED =
   "superseded by scripts/golden-magnitude.mjs, which the golden lane runs (T5-W1 1.13)";
+/** An exemption's reason, at the same weight a declaration's is held to. */
+const EXCUSED =
+  "a fixture generator with no verdict of its own, composed by scripts/check-golden-bytes.mjs";
 
 const F = {
   ink: { name: "check-ink-pressure.mjs", text: "// the graphite ramp" },
@@ -393,7 +525,17 @@ const F = {
   },
   tdz: { name: "tdz-probe.mjs", text: "// THE TDZ PROBE (T5-W2 2.1c)" },
   count: { name: "check-unit-count.mjs", text: "// the unit floor" },
-  helper: { name: "golden-magnitude.mjs", text: "// a helper a lane composes" },
+  /**
+   * THE NAME-SHAPE ESCAPEE — V5's finding, kept as a fixture. Until T9-W5 this file was
+   * GREEN here, on nothing but its filename: no `check-` prefix, no `-probe` suffix, so the
+   * corpus regexes never saw it, and it sat dead behind a false knip `entry` for a campaign
+   * while this census reported "every gate and probe is wired". It is RED now unless it is
+   * wired, declared, or explicitly exempt — which is the whole of the change.
+   */
+  escapee: { name: "golden-magnitude.mjs", text: "// a Playwright driver" },
+  /** The root tree's two subjects. */
+  docTruth: { tree: ".", name: "check-doc-truth.mjs", text: "// the doc gate" },
+  deployGate: { tree: ".", name: "edge-probe.mjs", text: "// the live-edge probe" },
   declared: {
     name: "check-theme-tokens.mjs",
     text: `/**\n * THE THEME-TOKEN CENSUS.\n * NOT-A-LANE: ${CITED}\n */`,
@@ -504,11 +646,44 @@ const FIXTURES = [
   ],
   [
     "1 UNCLAIMED SCRIPT",
-    "GREEN",
-    "positive control — a helper is not a gate, and owes no lane",
+    "RED",
+    "V5's NAME-SHAPE ESCAPEE — no `check-` prefix, no `-probe` suffix, and it ran nowhere",
     CI.wiredNpm,
     PKG,
-    [F.ink, F.helper],
+    [F.ink, F.escapee],
+  ],
+  [
+    "1 UNCLAIMED SCRIPT",
+    "GREEN",
+    "positive control — the escapee, once explicitly exempt",
+    CI.wiredNpm,
+    PKG,
+    [F.ink, F.escapee],
+    [{ tree: FRONTEND_REL, file: F.escapee.name, why: EXCUSED }],
+  ],
+  [
+    "1 UNCLAIMED SCRIPT",
+    "RED",
+    "the REPO-ROOT tree is under the law too — a root gate nothing runs",
+    CI.wiredNpm,
+    PKG,
+    [F.ink, F.docTruth],
+  ],
+  [
+    "1 UNCLAIMED SCRIPT",
+    "GREEN",
+    "positive control — a repo-root step names the root file directly",
+    CI.rootWired,
+    PKG,
+    [F.docTruth],
+  ],
+  [
+    "1 UNCLAIMED SCRIPT",
+    "GREEN",
+    "positive control — a frontend script reaches the root tree through `../../scripts/`",
+    CI.rootViaFrontend,
+    PKG,
+    [F.deployGate],
   ],
   [
     "1 UNCLAIMED SCRIPT",
@@ -574,13 +749,72 @@ const FIXTURES = [
     PKG,
     [F.ink],
   ],
+  [
+    "4 EXEMPTION LIVE",
+    "RED",
+    "an exemption whose file is gone — the doorway outlived its subject",
+    CI.wiredNpm,
+    PKG,
+    [F.ink],
+    [{ tree: FRONTEND_REL, file: "golden-vanished.mjs", why: EXCUSED }],
+  ],
+  [
+    "4 EXEMPTION LIVE",
+    "RED",
+    "an exemption on a file a lane runs anyway",
+    CI.wiredNpm,
+    PKG,
+    [F.ink],
+    [{ tree: FRONTEND_REL, file: F.ink.name, why: EXCUSED }],
+  ],
+  [
+    "4 EXEMPTION LIVE",
+    "RED",
+    "an exemption whose reason is a shrug",
+    CI.wiredNpm,
+    PKG,
+    [F.ink, F.escapee],
+    [{ tree: FRONTEND_REL, file: F.escapee.name, why: "not a gate" }],
+  ],
+  [
+    "4 EXEMPTION LIVE",
+    "RED",
+    "a long exemption that cites nothing checkable",
+    CI.wiredNpm,
+    PKG,
+    [F.ink, F.escapee],
+    [
+      {
+        tree: FRONTEND_REL,
+        file: F.escapee.name,
+        why: "nobody thinks of this one as a gate and it has always been that way, honestly",
+      },
+    ],
+  ],
+  [
+    "4 EXEMPTION LIVE",
+    "GREEN",
+    "positive control — a live subject, a reason above the floor, with a cite",
+    CI.wiredNpm,
+    PKG,
+    [F.ink, F.escapee],
+    [{ tree: FRONTEND_REL, file: F.escapee.name, why: EXCUSED }],
+  ],
+  [
+    "4 EXEMPTION LIVE",
+    "GREEN",
+    "positive control — the EMPTY list this wave ships, which excuses nothing",
+    CI.wiredNpm,
+    PKG,
+    [F.ink],
+  ],
 ];
 
 function selfTest() {
   const broken = [];
-  for (const [target, expect, description, ciText, pkg, scripts] of FIXTURES) {
+  for (const [target, expect, description, ciText, pkg, scripts, exempt] of FIXTURES) {
     const [, fn] = CHECKS.find(([name]) => name === target);
-    const found = fn(buildModel({ ciText, pkg, scripts }));
+    const found = fn(buildModel({ ciText, pkg, scripts, exempt }));
     const got = found.length ? "RED" : "GREEN";
     console.log(`  [${target}] ${description}\n      → ${got} (want ${expect})`);
     if (got !== expect)
@@ -600,24 +834,28 @@ function collect() {
   for (const [what, p] of [
     ["ci.yml", CI_YML],
     ["package.json", PKG_JSON],
-    ["scripts/", SCRIPTS_DIR],
+    ...TREES.map((t) => [`${t.rel}/scripts/`, t.dir()]),
   ])
     if (!fs.existsSync(p))
       throw new Error(
-        `no ${what} at ${p}. This gate reads the workflow and the manifest and refuses to ` +
-          `run without them rather than degrading to a green.`,
+        `no ${what} at ${p}. This gate reads the workflow, the manifest and BOTH script ` +
+          `trees, and refuses to run without them rather than degrading to a green.`,
       );
-  const scripts = fs
-    .readdirSync(SCRIPTS_DIR)
-    .filter((name) => name.endsWith(".mjs"))
-    .map((name) => ({
-      name,
-      text: fs.readFileSync(path.join(SCRIPTS_DIR, name), "utf8"),
-    }));
+  const scripts = TREES.flatMap((t) =>
+    fs
+      .readdirSync(t.dir())
+      .filter((name) => name.endsWith(".mjs"))
+      .map((name) => ({
+        tree: t.rel,
+        name,
+        text: fs.readFileSync(path.join(t.dir(), name), "utf8"),
+      })),
+  );
   return buildModel({
     ciText: fs.readFileSync(CI_YML, "utf8"),
     pkg: JSON.parse(fs.readFileSync(PKG_JSON, "utf8")),
     scripts,
+    exempt: EXEMPT,
   });
 }
 
@@ -632,14 +870,15 @@ try {
 }
 
 console.log(
-  `LANE-MEMBERSHIP CENSUS — ${model.corpus.length} gate/probe script(s) under ` +
-    `${FRONTEND_REL}/scripts, ${model.lanes.length} CI-reachable command(s) ` +
+  `LANE-MEMBERSHIP CENSUS — ${model.corpus.length} script(s) across ` +
+    `${TREES.map((t) => `${t.rel}/scripts`).join(" + ")} (${EXEMPT.length} exempt), ` +
+    `${model.lanes.length} CI-reachable command(s) ` +
     `(${model.resolved.size} npm script(s) resolved)`,
 );
-for (const { name, declaration } of model.corpus) {
-  const lanes = model.named.get(name);
+for (const { key, declaration } of model.corpus) {
+  const lanes = model.named.get(key);
   console.log(
-    `  ${lanes.length || declaration ? "·" : "✗"} ${name} — ${
+    `  ${lanes.length || declaration ? "·" : "✗"} ${key} — ${
       lanes.length
         ? lanes.join(", ")
         : declaration
@@ -648,6 +887,7 @@ for (const { name, declaration } of model.corpus) {
     }`,
   );
 }
+for (const { key, why } of model.exempt) console.log(`  ~ ${key} — EXEMPT: ${why}`);
 
 const failures = [];
 for (const [name, fn] of CHECKS) {
@@ -670,6 +910,7 @@ if (failures.length) {
 }
 
 console.log(
-  `\nOK — every gate and probe in ${FRONTEND_REL}/scripts is named by a CI lane or declares ` +
-    `itself NOT-A-LANE with a cite, and every lane names something that exists.`,
+  `\nOK — every .mjs in ${TREES.map((t) => `${t.rel}/scripts`).join(" and ")} is named by a ` +
+    `CI lane, declares itself NOT-A-LANE with a cite, or is explicitly exempt with one; ` +
+    `every lane names something that exists.`,
 );

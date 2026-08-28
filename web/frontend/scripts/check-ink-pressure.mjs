@@ -533,6 +533,93 @@ function gateTape(css, tape) {
   return fails;
 }
 
+/* ── closure 5: the cross-theme rank (T9-W5 §5.4) ────────────────────────── */
+
+/**
+ * The ramp's rungs and the ungoverned register, ordered by contrast against the card, in one
+ * theme. Ascending, so the string reads quietest-first.
+ *
+ * @param {string} css
+ * @param {"light"|"dark"} theme
+ */
+function rankOf(css, theme) {
+  const scope = SCOPES[theme];
+  const rows = [
+    ...LADDER.map(({ token }) => ({
+      token,
+      cr: contrast(
+        press(THEMES[theme].graphite, stopOf(css, token), THEMES[theme].card),
+        THEMES[theme].card,
+      ),
+    })),
+    {
+      token: REGISTER,
+      cr: contrast(colorOf(scope, REGISTER), colorOf(scope, "--color-card")),
+    },
+  ];
+  return rows
+    .sort((a, b) => a.cr - b.cr)
+    .map(({ token }) => token.replace("--ink-press-", "").replace("--color-", ""))
+    .join(" < ");
+}
+
+/**
+ * THE ADMITTED CROSSING — the one ruling this gate is allowed to be green over, pinned to the
+ * two rank strings it produces. Anything else is a RED.
+ *
+ * T9-W5 §5.4 INVERTED this arm. It had computed both ranks on every run, printed them with the
+ * sentence "the ramp and the register cross between themes … not gated", and exited 0. A gate
+ * that measures a defect and passes is not measuring for the reader's benefit — it is
+ * narrating, and narration erodes exactly the way the memo it replaces does. The inversion is
+ * the whole row: the crossing is now a graded subject with a verdict.
+ *
+ * The verdict is not "delete the crossing", and saying why matters. The inversion IS booked,
+ * with its reasoning, at src/assets/index.css §INK PRESSURE: tokenising
+ * `--color-muted-foreground` onto the ramp re-pitches every muted surface in the estate, which
+ * is a DESIGN ruling and not an AA repair, and this gate has no order to overturn one. So the
+ * ruling is admitted — and admitted the way this estate admits things, which is CLOSED BOTH
+ * WAYS. A second crossing reds. A re-pitch that moves either rank reds. And if the crossing
+ * ever ENDS — the cure lands, the ranks agree — the ruling is stale and reds too, so the
+ * record cannot outlive the condition it describes. The old sentence could survive all three.
+ */
+const RANK_RULING = {
+  light: "rule < muted-foreground < quiet",
+  dark: "rule < quiet < muted-foreground",
+  cite: "src/assets/index.css §INK PRESSURE, 'WHAT THE LADDER DOES NOT GOVERN'",
+  why:
+    "the keyboard legend, raised to quiet, reads LOUDER in light than the sublabels it " +
+    "explains and quieter in dark; tokenising muted-foreground onto the ramp re-pitches " +
+    "every muted surface in the estate, which is a design ruling, not an AA repair",
+};
+
+/** Both themes' rank strings, from one stylesheet. */
+const ranksOf = (css) => ({ light: rankOf(css, "light"), dark: rankOf(css, "dark") });
+
+function gateRank({ light, dark }, ruling) {
+  if (light === dark)
+    return [
+      `the cross-theme crossing is GONE — both themes now rank \`${light}\`. The ruling this ` +
+        `gate admits (${ruling.cite}) describes a condition that no longer holds, and a ` +
+        `ruling that outlives its condition is the next reader's false premise. Strike ` +
+        `RANK_RULING and the index.css block it cites, in this commit.`,
+    ];
+  const fails = [];
+  for (const [theme, got] of [
+    ["light", light],
+    ["dark", dark],
+  ]) {
+    if (got === ruling[theme]) continue;
+    fails.push(
+      `${theme} ranks \`${got}\`, and the admitted ruling is \`${ruling[theme]}\` ` +
+        `(${ruling.cite}). The ramp and the register cross between themes — that ONE crossing ` +
+        `is booked. This is a different one: a rung, a register or a ground was re-pitched and ` +
+        `the reading order moved with it. Re-derive the ruling against the change and say why ` +
+        `in index.css, or put the order back.`,
+    );
+  }
+  return fails;
+}
+
 /* ── self-test: every gate shown able to fail ───────────────────────────── */
 
 /**
@@ -608,6 +695,25 @@ function selfTest() {
           TAPE,
         ),
     ],
+    // CLOSURE 5, three modes. `rank-moved`: the quiet rung drops to 40%, which slides it under
+    // the register in light and re-orders the string the ruling pins. `rank-stale`: the ruling
+    // is told the two themes agree, which is what a CURED crossing looks like — the admission
+    // must red on its own obsolescence, or the estate keeps a booking for a defect it fixed.
+    // `rank-second`: a ruling that describes a crossing this tree does not have.
+    ["rank-moved", () => gateRank(ranksOf(bad), RANK_RULING)],
+    [
+      "rank-stale",
+      () =>
+        gateRank({ light: RANK_RULING.light, dark: RANK_RULING.light }, RANK_RULING),
+    ],
+    [
+      "rank-second",
+      () =>
+        gateRank(ranksOf(INDEX_CSS), {
+          ...RANK_RULING,
+          dark: "muted-foreground < rule < quiet",
+        }),
+    ],
   ];
   const mute = [];
   for (const [name, run] of cases) {
@@ -640,6 +746,7 @@ const fails = [
   ...gateArmed(ARMED),
   ...gateShip4(SHIP4),
   ...gateTape(INDEX_CSS, TAPE),
+  ...gateRank(ranksOf(INDEX_CSS), RANK_RULING),
 ];
 const vacuous = process.argv.includes("--self-test") ? selfTest() : [];
 
@@ -706,29 +813,18 @@ for (const s of [
   console.log(`  ${String(s.n)}  ${s.selector.padEnd(24)} ${what}`);
 }
 
-/* The register the ladder does NOT govern, printed so the inversion can't go quiet. */
+/* Closure 5: the ungoverned register's cross-theme rank — GRADED, not narrated (T9-W5 §5.4). */
 const reg = Object.fromEntries(
   Object.entries(SCOPES).map(([name, scope]) => [
     name,
     contrast(colorOf(scope, REGISTER), colorOf(scope, "--color-card")),
   ]),
 );
-const rank = (theme) =>
-  [
-    ...LADDER.map(({ token }) => ({
-      token,
-      cr: contrast(
-        press(THEMES[theme].graphite, stopOf(INDEX_CSS, token), THEMES[theme].card),
-        THEMES[theme].card,
-      ),
-    })),
-    { token: REGISTER, cr: reg[theme] },
-  ]
-    .sort((a, b) => a.cr - b.cr)
-    .map(({ token }) => token.replace("--ink-press-", "").replace("--color-", ""))
-    .join(" < ");
+const liveRanks = ranksOf(INDEX_CSS);
 console.log(
   `\nungoverned register — ${REGISTER} ${reg.light.toFixed(2)} light / ${reg.dark.toFixed(2)} dark:` +
-    `\n  light  ${rank("light")}\n  dark   ${rank("dark")}` +
-    `\n  the ramp and the register cross between themes. Booked in index.css §INK PRESSURE, not gated.`,
+    `\n  light  ${liveRanks.light}\n  dark   ${liveRanks.dark}` +
+    `\n  the ramp and the register cross between themes, and the crossing is GATED: exactly ` +
+    `one ruling is admitted (${RANK_RULING.cite}), pinned to both rank strings above, and it ` +
+    `reds on a second crossing, on a re-pitch that moves either rank, and on its own cure.`,
 );

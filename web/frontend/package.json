@@ -41,7 +41,8 @@
     "test:unit:count": "node scripts/check-unit-count.mjs vitest-report.json",
     "test:unit:coverage": "vitest run --coverage",
     "test:unit:relay": "vitest run --root ../relay",
-    "test:coverage:floor": "node scripts/check-coverage-floor.mjs --self-test",
+    "test:coverage:floor": "node scripts/check-coverage-floor.mjs",
+    "test:coverage:floor:selftest": "node scripts/check-coverage-floor.mjs --self-test",
     "test:e2e": "playwright test",
     "test:support-floor": "node scripts/check-support-floor.mjs --self-test",
     "test:e2e:projects": "node scripts/check-pw-projects.mjs --self-test",
@@ -52,11 +53,13 @@
     "test:golden:update": "playwright test --config playwright-golden.config.ts --update-snapshots",
     "test:golden:bytes": "node scripts/check-golden-bytes.mjs",
     "test:golden:selfdelta": "node scripts/golden-selfdelta.mjs",
+    "test:golden:magnitude": "node scripts/golden-magnitude.mjs",
     "test:font-coverage": "node scripts/check-font-coverage.mjs",
     "test:gen-latency": "node scripts/check-gen-latency.mjs --self-test",
     "test:prod-shake": "node scripts/check-prod-shake.mjs",
-    "deploy": "bash ../../scripts/deploy-gated.sh",
-    "deploy:raw": "wrangler pages deploy dist --project-name=sudoku --branch=master --commit-dirty=true"
+    "test:deploy-gate": "bash ../../scripts/deploy-gated.sh --self-test",
+    "test:edge-probe": "node ../../scripts/edge-probe.mjs --self-test",
+    "deploy": "bash ../../scripts/deploy-gated.sh"
   },
   "dependencies": {
     "@mkbabb/csp-solver-wasm": "file:../../csp-solver/wasm/pkg",

@@ -93,10 +93,10 @@ cargo test --workspace
 # Python wheel-contract: 27 passed, 0 skipped
 cd csp-solver/tests-py && uv run --no-sync pytest
 
-# e2e: 409 Playwright tests across 23 spec files in the default config (Chromium 207,
-#      WebKit 202). Six further specs are held out of it and ride two configs of their
+# e2e: 437 Playwright tests across 24 spec files in the default config (Chromium 221,
+#      WebKit 216). Six further specs are held out of it and ride two configs of their
 #      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (67 in 5).
-#      29 spec files on disk, 480 tests in all.
+#      30 spec files on disk, 508 tests in all.
 cd web/frontend && npx playwright test
 cd web/frontend && npx playwright test --config playwright-golden.config.ts && npm run test:e2e:throttle
 
@@ -109,7 +109,7 @@ cargo bench -p csp-solver --bench queens -- --test
 
 ## CI
 
-`.github/workflows/ci.yml` runs seventeen lanes: fmt+clippy, the Rust/wasm/Python builds and tests, the wasm size budgets and the shipped package's resolution contract, the frontend typecheck+knip+support-floor gate, the unit estate under its count floor, the cross-game boundary law, the doc-truth and evidence-policy gates, a callgrind instruction-count baseline, the per-family generation-latency ceilings measured on the shipped wasm artifact, and the cargo-audit and npm-audit advisory scans. A per-scope coverage floor is banked in the tree but is not enforced among them: the frontend lane's coverage step runs that gate in its `--self-test` mode alone, which proves the gate able to fail and then returns, comparing no scope against its baseline. The Playwright e2e, golden, and perf suites live in-repo as local instruments — run on demand, not in CI (owner ruling, 2026-08-03); deployment validation is visual, on the live site. Budgets and measured artifact sizes live in [`docs/benchmarks.md`](docs/benchmarks.md).
+`.github/workflows/ci.yml` runs eighteen lanes: fmt+clippy, the Rust/wasm/Python builds and tests, the wasm size budgets and the shipped package's resolution contract, the frontend typecheck+knip+support-floor gate, the unit estate under its count floor, the cross-game boundary law, the doc-truth and evidence-policy gates, a callgrind instruction-count baseline, the per-family generation-latency ceilings measured on the shipped wasm artifact, the dist lane's build-and-consume arms (prod-shake, golden bytes, dist identity, the forbidden census, the deploy gate's refusal arms), and the cargo-audit and npm-audit advisory scans. A per-scope coverage floor is enforced among them: the frontend lane's coverage step runs the real gate against its banked per-scope baseline (its `--self-test` proof runs first, as a separate step). The Playwright e2e, golden, and perf suites live in-repo as local instruments — run on demand, not in CI (owner ruling, 2026-08-03); deployment validation is visual, on the live site. Budgets and measured artifact sizes live in [`docs/benchmarks.md`](docs/benchmarks.md).
 
 ## Deployment
 
@@ -121,7 +121,7 @@ One companion Worker deploys beside it and only shared boards ever reach it: `we
 
 ## Declarations
 
-- **Browser support**: Chromium and WebKit, each with its own project in `playwright.config.ts`. Both are local instruments, run on demand at a developer's bench: the seventeen CI lanes install no browser bundle and execute no Playwright suite (owner ruling, 2026-08-03), so what CI asserts is the browserless estate, and "solves entirely in the browser" is asserted in each engine where those suites are actually run. One file sits out the WebKit project: `share-truth.spec.ts` wants a clipboard permission Playwright's WebKit doesn't grant. Gecko carries no lane; Firefox is unasserted. The declared support floor is Chrome 111, Edge 111, Firefox 128, Safari 16.4 and iOS Safari 16.4 (`web/frontend/package.json`, `browserslist`)—an arithmetic figure rather than a preference, since Tailwind v4 compiles every stylesheet against precisely those targets and nothing below them is served CSS it can parse. The bundle's own syntax targets ES2020, which sits well under that floor; `npm run test:support-floor` holds the declaration to both and refuses any guard in the source that defends a browser beneath it.
+- **Browser support**: Chromium and WebKit, each with its own project in `playwright.config.ts`. Both are local instruments, run on demand at a developer's bench: the eighteen CI lanes install no browser bundle and execute no Playwright suite (owner ruling, 2026-08-03), so what CI asserts is the browserless estate, and "solves entirely in the browser" is asserted in each engine where those suites are actually run. One file sits out the WebKit project: `share-truth.spec.ts` wants a clipboard permission Playwright's WebKit doesn't grant. Gecko carries no lane; Firefox is unasserted. The declared support floor is Chrome 111, Edge 111, Firefox 128, Safari 16.4 and iOS Safari 16.4 (`web/frontend/package.json`, `browserslist`)—an arithmetic figure rather than a preference, since Tailwind v4 compiles every stylesheet against precisely those targets and nothing below them is served CSS it can parse. The bundle's own syntax targets ES2020, which sits well under that floor; `npm run test:support-floor` holds the declaration to both and refuses any guard in the source that defends a browser beneath it.
 - **English only**: the copy is authored inline in English, `<html lang="en">`, with no i18n or locale-negotiation layer.
 - **No telemetry**: nothing is measured and nothing is phoned home. There is no third-party network hit at all—the attribution avatar was bundled same-origin at T4-W8, which retired the last one. Board state lives in the URL and stays on the device. A shared board opens exactly one socket, to our own relay (`web/relay`, a Cloudflare Durable Object), and only for as long as the session lasts: it carries presence and the players' cell writes between the players, it is stored nowhere at either end, and a page playing alone never loads the transport at all.
 - **No offline mode**: there's no service worker and no web-app manifest, so the shell and the wasm module come off the network at every cold load, and an unvisited game's chunk downloads on select. Once a game is resident, its generation and solving run wholly on-device.

@@ -1,0 +1,107 @@
+$ node scripts/check-unit-count.mjs vitest-report.json
+FE unit lane — 735 executed (735 passed / 0 failed), 0 skipped, 0 todo, over 57 files / 237 suites; floor 434; report age 7.2 min.
+  floor stamped: 141fdbad · 2026-08-03 · T7-WGATE · STALE — carried two closes. The census beside it is T9-W5's live measurement, so this row is BORN RED on the band until §5.2's restamp runs.
+  band: floor 434 vs 625 owed on 735 (85% of max(stamp 735, live 735))  ·  slack 69%
+
+UNIT COUNT GATE FAILED
+  · floor 434 is OUT OF BAND: 41.0% under 735 (stamped census 735, live 735); the band is 85%, so the floor owes 625. The floor was never re-derived from the census stamped beside it — slack banked, not churn room. Re-derive: node scripts/check-unit-count.mjs --restamp <report>
+EXIT=1
+
+$ node scripts/check-unit-count.mjs --self-test
+check-unit-count --self-test — each check against a known-bad input:
+  reds  missing report
+  reds  malformed JSON
+  reds  wrong shape (no counters)
+  reds  shape with counters but no testResults[]
+  reds  below the floor (433)
+  reds  stale report (3h old)
+  reds  future report (clock forgery)
+  reds  red run (failures present)
+  reds  forged counters (summary 400, census 5)
+  reds  skips carry the floor (433 executed + 40 skipped)
+  reds  census stamped 20% above live (882 claimed, 735 run)
+  reds  floor hand-lowered one under the band (624 vs 625)
+  REDS  exactly at the floor (434)
+  REDS  the stamped tree itself (735 executed, floor 434, band 625)
+
+SELF-TEST FAILED
+  · self-test: "exactly at the floor (434)" failed the gate — floor 434 is OUT OF BAND: 41.0% under 735 (stamped census 735, live 434); the band is 85%, so the floor owes 625. The stamped census sits above the tree it claims to have measured — an inflated stamp is a claim, not churn room. Re-derive: node scripts/check-unit-count.mjs --restamp <report>
+  · self-test: "the stamped tree itself (735 executed, floor 434, band 625)" failed the gate — floor 434 is OUT OF BAND: 41.0% under 735 (stamped census 735, live 735); the band is 85%, so the floor owes 625. The floor was never re-derived from the census stamped beside it — slack banked, not churn room. Re-derive: node scripts/check-unit-count.mjs --restamp <report>
+EXIT=1
+
+================================================================================
+$ node scripts/check-pw-projects.mjs
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6)
+  floors stamped: T5-W1 · 1.10 birth · platform never restamped · T5-W1 1.10 · STALE — never restamped in three campaigns. The censuses beside these floors are T9-W5's live measurement, so every row here is BORN RED on the band until §5.2's restamp runs.
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+  ✗ 8 FLOOR BAND — 3
+
+3 failure(s):
+
+  • [8 FLOOR BAND] playwright.config.ts [chromium]: floor 115 is OUT OF BAND — 48.0% under 221 (stamped census 221, live 221), and the band is 85%, so the floor owes 188. The floor was never re-derived from the census stamped beside it. Re-derive: node scripts/check-pw-projects.mjs --restamp
+
+  • [8 FLOOR BAND] playwright.config.ts [webkit]: floor 110 is OUT OF BAND — 49.1% under 216 (stamped census 216, live 216), and the band is 85%, so the floor owes 184. The floor was never re-derived from the census stamped beside it. Re-derive: node scripts/check-pw-projects.mjs --restamp
+
+  • [8 FLOOR BAND] playwright-throttle.config.ts [theme-bake-chromium]: floor 2 is OUT OF BAND — 80.0% under 10 (stamped census 10, live 10), and the band is 85%, so the floor owes 9. The floor was never re-derived from the census stamped beside it. Re-derive: node scripts/check-pw-projects.mjs --restamp
+
+EXIT=1
+
+$ node scripts/check-pw-projects.mjs --self-test
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6)
+  floors stamped: T5-W1 · 1.10 birth · platform never restamped · T5-W1 1.10 · STALE — never restamped in three campaigns. The censuses beside these floors are T9-W5's live measurement, so every row here is BORN RED on the band until §5.2's restamp runs.
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+  ✗ 8 FLOOR BAND — 3
+
+SELF-TEST — each check against a known-bad matrix:
+  [1 DECLARED MATRIX] a third project appears (a firefox arm nobody ratified)
+      → RED (as it must)
+  [1 DECLARED MATRIX] the webkit project is quietly re-engined to chromium
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is dropped from every project (the orphan)
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is claimed by two configs at once
+      → RED (as it must)
+  [3 ENGINE COVERAGE] CH-56 regresses — mobile-affordances loses its webkit arm
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED] share-truth is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+  [8 FLOOR BAND] the estate grows 25% and nothing restamps it (silent slack, the disease)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a whole spec FILE is deleted (green on all 5 checks before T7-W6)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a spec lands on disk that the manifest never sanctioned
+      → RED (as it must)
+  [7 QUARANTINES CLOSED] the quarantine module is deleted while the floors still subtract its rows
+      → RED (as it must)
+  [8 FLOOR BAND] a census stamped 20% above live (the stamp as a wish)
+      → RED (as it must)
+  [8 FLOOR BAND] a floor hand-lowered one step under the band
+      → RED (as it must)
+  [8 FLOOR BAND] a floor smuggled back into CONFIGS (two homes for one number)
+      → RED (as it must)
+  [8 FLOOR BAND] a stamped floor for a project no config declares (the orphan row)
+      → RED (as it must)
+
+3 failure(s):
+
+  • [8 FLOOR BAND] playwright.config.ts [chromium]: floor 115 is OUT OF BAND — 48.0% under 221 (stamped census 221, live 221), and the band is 85%, so the floor owes 188. The floor was never re-derived from the census stamped beside it. Re-derive: node scripts/check-pw-projects.mjs --restamp
+
+  • [8 FLOOR BAND] playwright.config.ts [webkit]: floor 110 is OUT OF BAND — 49.1% under 216 (stamped census 216, live 216), and the band is 85%, so the floor owes 184. The floor was never re-derived from the census stamped beside it. Re-derive: node scripts/check-pw-projects.mjs --restamp
+
+  • [8 FLOOR BAND] playwright-throttle.config.ts [theme-bake-chromium]: floor 2 is OUT OF BAND — 80.0% under 10 (stamped census 10, live 10), and the band is 85%, so the floor owes 9. The floor was never re-derived from the census stamped beside it. Re-derive: node scripts/check-pw-projects.mjs --restamp
+
+EXIT=1

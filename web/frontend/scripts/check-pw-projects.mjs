@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// NOT-A-LANE: the browser-executing CI lanes (e2e, e2e-webkit, perf-subset) were removed on the owner's ruling of 2026-08-03 — the Playwright suites are local instruments now and this project-matrix lint rides them locally via `npm run test:e2e:projects`; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
+// LANE NOTE (T9-W5 §5.2 retires the NOT-A-LANE claim): the browser-executing CI lanes died on the owner's ruling of 2026-08-03 (docs/tranches/2026-08-tranche-7/DISPOSITIONS.md row O-12) and the Playwright SUITES remain local instruments — but this lint executes no browser: it parses playwright configs + spec files and grades the project matrix and the stamped e2e count floors, so it rides the fe-unit lane browserlessly.
 // T5-W1 row 1.10 (CH-56) — the Playwright project-matrix lint.
 //
 // CH-56 is the estate's last single-engine residue, and the thing that made it survivable for a
@@ -25,6 +25,8 @@
 //   5  COUNT FLOORS      per (config, project) LIVE test counts never fall below the floor.
 //   6  SPEC MANIFEST     the e2e/*.spec.ts set on disk is EXACTLY SPEC_MANIFEST's.
 //   7  QUARANTINES CLOSED every declared quarantine's cited module is still on disk.
+//   8  FLOOR BAND        every floor sits at or above 85% of max(stamped census, live), and
+//                        the stamp's project set is exactly the declared one.
 //
 // T7-W6 — checks 6 and 7, and the "LIVE" in check 5:
 //
@@ -44,19 +46,39 @@
 //     zero is the point — the gate now PRINTS that the project asserts nothing on linux
 //     instead of hiding it behind a floor of 2.
 //
-// FLOOR TIMING (W6 §floor timing, binding): the MECHANISM lands here; the NUMBERS restamp at
-// WGATE, after the last row lands anywhere in the tranche. `--restamp` is that instrument —
-// it re-derives every floor from a live census and stamps the SHA into this file. It is not
-// run at W6's own seal: a floor derived here is stale on arrival, which is the exact slack
-// these rows exist to remove. The two quarantine subtractions below ARE landed now, because
-// leaving them would have the mechanism red the linux lane on its first run.
+// T9-W5 §5.2 — check 8, and the floors' new home:
 //
-// Run: `node scripts/check-pw-projects.mjs` (npm run test:pw-projects), cwd web/frontend.
+//   · THE FLOORS LEFT THIS FILE. They live in `scripts/census.stamp.json`, the ONE stamped
+//     census check-unit-count.mjs reads too. CONFIGS below still names every project and the
+//     engine it must declare — the part a human has to mean — but carries no number, and
+//     check 8 reds if one is smuggled back in.
+//   · A FLOOR ALONE CANNOT SEE SLACK GROW. The banked floors were 45% under live (205 of 478
+//     rows deletable green at the T9 audit) and checks 1-7 were unanimous about it. Check 8
+//     is the instrument: floor >= 85% of max(stamped census, live), so it reds when a floor
+//     is hand-lowered, when the stamp is inflated past the tree, and when the estate outgrows
+//     its floor unrestamped.
+//   · THE RESTAMP ARM'S TRUE DEFECT, FIXED. T7 blamed a data-loop miscount. It is not that:
+//     the arm derived floors under a rule the banked floors were never authored under, so on
+//     an UNMOVED tree it proposed theme-quadrants 14 -> 12, called that a LOWERING, and
+//     exited 1 — the arm could not run at any WGATE without an --allow-lower claiming tests
+//     had left when none had. The cure is the ratchet, max(banked, derived), which is the
+//     same cure check-coverage-floor.mjs took for the identical problem at T7-W6. It also
+//     closes a second hole: floor(11 * 0.9) = 9 sits UNDER ceil(11 * 0.85) = 10, so the plain
+//     churn rule could derive a floor its own band rejects. `law.derive` takes the max().
+//
+// FLOOR TIMING (W6 §floor timing, binding): the MECHANISM lands in the wave; the NUMBERS
+// restamp at WGATE, after the last row lands anywhere in the tranche. A floor derived at a
+// wave's own seal is stale on arrival, which is the exact slack these rows exist to remove.
+// The figures stamped today are WAVE-TIME truth and say so in the stamp's own note; the band
+// is what makes the WGATE's restamp compulsory rather than advisory if the estate has moved.
+//
+// Run: `node scripts/check-pw-projects.mjs` (npm run test:e2e:projects), cwd web/frontend.
 //      `--self-test` re-runs each check against a known-bad matrix and FAILS if any of them
 //      passes — the canary. It sabotages the collected model rather than the repo, so it needs
 //      no branch and leaves no residue.
-//      `--restamp` re-derives the floors from the live census and rewrites them in this file
-//      (WGATE only). `--restamp --dry` prints the diff and writes nothing.
+//      `--restamp` re-derives the floors from the live census and writes them to
+//      scripts/census.stamp.json (WGATE only). `--restamp --dry` prints the diff and writes
+//      nothing; on an unmoved tree it must print no movement at all.
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -80,10 +102,35 @@ const ENGINES = ["chromium", "webkit"];
 /** The name the JSON reporter gives a config that declares no `projects`. */
 const UNNAMED = "(default)";
 
-/* FLOOR STAMP — rewritten by `--restamp`, never by hand. It records WHEN the floors below
- * were last derived and from what tree, so a floor citing a tranche-old SHA is legible as
- * slack rather than as a decision. */
-const FLOOR_STAMP = "T5-W1 1.10 birth — never restamped";
+/* THE ONE STAMPED CENSUS — read, never hard-coded. It carries every floor, the census each
+ * was derived from, and WHEN, so a floor citing a tranche-old SHA is legible as slack rather
+ * than as a decision. `--restamp` rewrites it; nothing else may. */
+const STAMP_PATH = join(dirname(SELF), "census.stamp.json");
+const readStamp = () => JSON.parse(readFileSync(STAMP_PATH, "utf8"));
+const STAMP = readStamp();
+const LAW = STAMP.law;
+
+/** The stamp's key for a project: the config it belongs to, then its name. */
+const key = (file, project) => `${file}::${project}`;
+const stampRow = (file, project) => STAMP.pw.projects[key(file, project)];
+
+/** The band's own floor: what `n` live tests oblige, at 85%. */
+const bandFloor = (n) => Math.ceil(n * LAW.band);
+
+/**
+ * The house derivation, identical in check-unit-count.mjs and stated once in `law.derive`.
+ * A project of deliberate arity sits at its exact live count; a bigger one keeps ~10% of
+ * churn room, never so much that it falls out of its own band.
+ */
+const deriveFloor = (live) =>
+  live <= LAW.exactAtOrBelow
+    ? live
+    : Math.max(Math.floor(live * LAW.churnRoom), bandFloor(live));
+
+const FLOOR_STAMP = (() => {
+  const s = STAMP.pw.stamp;
+  return `${s.sha} · ${s.date} · platform ${s.platform} · ${s.wave}${s.note ? ` · ${s.note}` : ""}`;
+})();
 
 /**
  * DECLARED QUARANTINES. A `test.fixme` under a platform/engine condition is a test that
@@ -105,32 +152,33 @@ const QUARANTINES = {
 };
 const QUARANTINE_CITE_FILES = ["e2e/linux-webkit-bake-quarantine.ts"];
 
-// `floor` is a floor on LIVE tests — listed minus any declared quarantine that applies on
-// the running platform. Small projects sit at their exact live count (their arity is
-// deliberate); the two big ones carry ~10%'s worth of churn room. Both restamp at WGATE.
+// The declared matrix: every project and the engine it must resolve to. NO FLOORS HERE — a
+// floor on LIVE tests (listed minus any declared quarantine) lives in census.stamp.json, one
+// row per `<config>::<project>`, and check 8 reds if a number is smuggled back into this
+// table or if the stamp's project set stops matching this one.
 const CONFIGS = [
   {
     file: "playwright.config.ts",
     projects: [
-      { name: "chromium", engine: "chromium", floor: 115 },
-      { name: "webkit", engine: "webkit", floor: 110 },
+      { name: "chromium", engine: "chromium" },
+      { name: "webkit", engine: "webkit" },
     ],
   },
   {
     file: "playwright-golden.config.ts",
-    projects: [{ name: UNNAMED, engine: "chromium", floor: 4 }],
+    projects: [{ name: UNNAMED, engine: "chromium" }],
   },
   {
     file: "playwright-throttle.config.ts",
     projects: [
-      { name: "throttled-void", engine: "chromium", floor: 1 },
-      { name: "filter-census-chromium", engine: "chromium", floor: 6 },
-      { name: "filter-census-webkit", engine: "webkit", floor: 6 },
-      { name: "wordmark-webkit", engine: "webkit", floor: 1 },
-      { name: "theme-bake-chromium", engine: "chromium", floor: 2 },
-      { name: "theme-bake-webkit", engine: "webkit", floor: 0 },
-      { name: "theme-quadrants-chromium", engine: "chromium", floor: 14 },
-      { name: "theme-quadrants-webkit", engine: "webkit", floor: 14 },
+      { name: "throttled-void", engine: "chromium" },
+      { name: "filter-census-chromium", engine: "chromium" },
+      { name: "filter-census-webkit", engine: "webkit" },
+      { name: "wordmark-webkit", engine: "webkit" },
+      { name: "theme-bake-chromium", engine: "chromium" },
+      { name: "theme-bake-webkit", engine: "webkit" },
+      { name: "theme-quadrants-chromium", engine: "chromium" },
+      { name: "theme-quadrants-webkit", engine: "webkit" },
     ],
   },
 ];
@@ -170,6 +218,7 @@ const SPEC_MANIFEST = [
   "theme-bake-freshness.spec.ts",
   "theme-quadrants.spec.ts",
   "throttled-void.spec.ts",
+  "viewport-law.spec.ts",
   "visual-golden.spec.ts",
   "visual-regression.spec.ts",
   "wordmark-integrity.spec.ts",
@@ -408,19 +457,95 @@ function liveTests(projectName, listed, platform = process.platform) {
   return q && q.platform === platform ? Math.max(0, listed - q.tests) : listed;
 }
 
+/**
+ * The WORST CASE across platforms, never the running one — the figure both the band and the
+ * restamp reason about. A census taken on darwin, where no quarantine applies, would bank
+ * floors of 6 and 10 for the two parked projects and red the ubuntu lane on its next run.
+ */
+const worstCaseLive = (projectName, listed) =>
+  liveTests(
+    projectName,
+    listed,
+    QUARANTINES[projectName]?.platform ?? process.platform,
+  );
+
+/** The floor a project owes, from the one stamp; a project with no row owes nothing here (check 8 reds). */
+const floorOf = (file, project) => stampRow(file, project)?.floor ?? 0;
+
 function check5CountFloors({ configs }) {
   const bad = [];
   for (const { file, matrix } of configs)
     for (const p of CONFIGS.find((c) => c.file === file).projects) {
       const got = matrix.get(p.name)?.tests ?? 0;
       const live = liveTests(p.name, got);
-      if (live < p.floor)
+      const floor = floorOf(file, p.name);
+      if (live < floor)
         bad.push(
           `${file} [${p.name}]: ${live} LIVE tests${live === got ? "" : ` (${got} listed − ${got - live} quarantined)`}, ` +
-            `floor ${p.floor}. Tests left the project. Raise the floor only alongside the ` +
+            `floor ${floor}. Tests left the project. Raise the floor only alongside the ` +
             `reason they went.`,
         );
     }
+  return bad;
+}
+
+/**
+ * CHECK 8 — THE FLOOR BAND (T9-W5 §5.2). Check 5 asks whether the estate fell below its
+ * floor. This asks the question check 5 structurally cannot: whether the FLOOR still means
+ * anything. It reds three ways, and all three were live at HEAD or one edit away:
+ *
+ *   · SLACK          floor under 85% of max(stamped census, live) — the estate grew past a
+ *                    floor nobody restamped, or the floor was walked down under the band.
+ *   · INFLATED STAMP a census claiming more than the tree resolves. The stamp is evidence,
+ *                    not a wish; max() holds it against the live figure either way.
+ *   · PROVENANCE     the stamp's project set must be exactly the declared one, and CONFIGS
+ *                    must carry no `floor` of its own. Two homes for one number is how the
+ *                    audit found the same floor written three different ways.
+ */
+function check8FloorBand({ configs }) {
+  const bad = [];
+  const declared = new Set();
+  for (const { file, matrix } of configs)
+    for (const p of CONFIGS.find((c) => c.file === file).projects) {
+      declared.add(key(file, p.name));
+      if ("floor" in p)
+        bad.push(
+          `CONFIGS[${file}][${p.name}] carries its own \`floor\`. The number lives in ` +
+            `scripts/census.stamp.json and nowhere else — a second copy is the provenance ` +
+            `split re-opening.`,
+        );
+      const row = stampRow(file, p.name);
+      if (!row) {
+        bad.push(
+          `${file} [${p.name}]: no row in scripts/census.stamp.json. A project without a ` +
+            `stamped floor is ungated — restamp, or delete the project.`,
+        );
+        continue;
+      }
+      const listed = matrix.get(p.name)?.tests ?? 0;
+      const live = worstCaseLive(p.name, listed);
+      const ref = Math.max(row.census, live);
+      const need = bandFloor(ref);
+      if (row.floor < need)
+        bad.push(
+          `${file} [${p.name}]: floor ${row.floor} is OUT OF BAND — ` +
+            `${((1 - row.floor / ref) * 100).toFixed(1)}% under ${ref} ` +
+            `(stamped census ${row.census}, live ${live}), and the band is ` +
+            `${(LAW.band * 100).toFixed(0)}%, so the floor owes ${need}. ` +
+            (live > row.census
+              ? `The project GREW past its floor and nothing restamped it — silent slack.`
+              : live < row.census
+                ? `The stamped census sits above the tree it claims to have measured.`
+                : `The floor was never re-derived from the census stamped beside it.`) +
+            ` Re-derive: node scripts/check-pw-projects.mjs --restamp`,
+        );
+    }
+  for (const k of Object.keys(STAMP.pw.projects))
+    if (!declared.has(k))
+      bad.push(
+        `scripts/census.stamp.json stamps "${k}", which no config declares — a floor ` +
+          `against nothing. Delete the row in the commit that deleted the project.`,
+      );
   return bad;
 }
 
@@ -477,6 +602,7 @@ const CHECKS = [
   ["5 COUNT FLOORS", check5CountFloors],
   ["6 SPEC MANIFEST", check6SpecManifest],
   ["7 QUARANTINES CLOSED", check7QuarantinesClosed],
+  ["8 FLOOR BAND", check8FloorBand],
 ];
 
 /* ── self-test: every check shown able to fail ─────────────────────────────── */
@@ -541,6 +667,14 @@ const SABOTAGES = [
     (m) => (defaultCfg(m).matrix.get("chromium").tests = 40),
   ],
   [
+    "8 FLOOR BAND",
+    "the estate grows 25% and nothing restamps it (silent slack, the disease)",
+    (m) =>
+      (defaultCfg(m).matrix.get("chromium").tests = Math.ceil(
+        defaultCfg(m).matrix.get("chromium").tests * 1.25,
+      )),
+  ],
+  [
     "6 SPEC MANIFEST",
     "a whole spec FILE is deleted (green on all 5 checks before T7-W6)",
     (m) => (m.onDisk = m.onDisk.filter((s) => s !== "drawer.spec.ts")),
@@ -565,6 +699,60 @@ const SABOTAGE_7 = [
     QUARANTINE_CITE_FILES.push(...saved);
     return found;
   },
+];
+
+/**
+ * Check 8's other three shapes read the STAMP and CONFIGS rather than the collected model, so
+ * like check 7 they carry their own sabotages: bend the module-level structure, run the check,
+ * put it back. Nothing touches the tree.
+ */
+const CHROMIUM_KEY = key("playwright.config.ts", "chromium");
+const SABOTAGES_8 = [
+  [
+    "a census stamped 20% above live (the stamp as a wish)",
+    (m) => {
+      const row = STAMP.pw.projects[CHROMIUM_KEY];
+      const was = row.census;
+      row.census = Math.round(was * 1.2);
+      const found = check8FloorBand(m);
+      row.census = was;
+      return found;
+    },
+  ],
+  [
+    "a floor hand-lowered one step under the band",
+    (m) => {
+      const row = STAMP.pw.projects[CHROMIUM_KEY];
+      const was = row.floor;
+      row.floor = bandFloor(Math.max(row.census, was)) - 1;
+      const found = check8FloorBand(m);
+      row.floor = was;
+      return found;
+    },
+  ],
+  [
+    "a floor smuggled back into CONFIGS (two homes for one number)",
+    (m) => {
+      const p = CONFIGS[0].projects[0];
+      p.floor = 1;
+      const found = check8FloorBand(m);
+      delete p.floor;
+      return found;
+    },
+  ],
+  [
+    "a stamped floor for a project no config declares (the orphan row)",
+    (m) => {
+      STAMP.pw.projects["playwright.config.ts::firefox"] = {
+        listed: 1,
+        census: 1,
+        floor: 1,
+      };
+      const found = check8FloorBand(m);
+      delete STAMP.pw.projects["playwright.config.ts::firefox"];
+      return found;
+    },
+  ],
 ];
 
 function selfTest(model) {
@@ -594,63 +782,64 @@ function selfTest(model) {
           `it names, so it is not a gate.`,
       );
   }
+  for (const [description, run] of SABOTAGES_8) {
+    const found = run(model);
+    console.log(
+      `  [8 FLOOR BAND] ${description}\n      → ${found.length ? "RED (as it must)" : "GREEN — VACUOUS"}`,
+    );
+    if (!found.length)
+      vacuous.push(
+        `check "8 FLOOR BAND" stayed GREEN under: ${description}. It cannot fail for the ` +
+          `defect it names, so it is not a gate.`,
+      );
+  }
   return vacuous;
 }
 
 /* ── --restamp: re-derive the floors from a live census (WGATE only) ───────── */
 
-/**
- * The floor rule, stated once so the bank and the gate never diverge: a project with more
- * than ten live tests keeps ~10% of churn room; a smaller one sits at its exact live count,
- * because its arity is a decision and one lost test there is the signal, not noise.
- */
-const floorFor = (live) => (live > 10 ? Math.floor(live * 0.9) : live);
-
-function restamp(model, { dry, allowLower }) {
-  const src = readFileSync(SELF, "utf8");
-  let next = src;
+function restamp(model, { dry, allowLower, wave }) {
   const rows = [];
   for (const { file, matrix } of model.configs)
     for (const p of CONFIGS.find((c) => c.file === file).projects) {
       const listed = matrix.get(p.name)?.tests ?? 0;
-      // WORST CASE across platforms, never the running one. A restamp taken on darwin (where
-      // no quarantine applies) would bank floors of 6 and 10 for the two parked projects and
-      // red the ubuntu lane on its next run — a floor derived where the defect isn't.
-      const q = QUARANTINES[p.name];
-      const live = liveTests(p.name, listed, q?.platform ?? process.platform);
-      const want = floorFor(live);
-      rows.push({ file, project: p.name, listed, live, was: p.floor, now: want });
-      // Every project literal is one line: `{ name: "x", engine: "y", floor: N },`.
-      const re = new RegExp(
-        `(\\{\\s*name:\\s*(?:"${p.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"|UNNAMED)\\s*,[^}]*floor:\\s*)\\d+`,
-      );
-      if (!re.test(next))
-        throw new Error(`--restamp: cannot locate the floor literal for "${p.name}"`);
-      next = next.replace(re, `$1${want}`);
+      const live = worstCaseLive(p.name, listed);
+      const was = floorOf(file, p.name);
+      const derived = deriveFloor(live);
+      // THE RATCHET (law.ratchet). max(banked, derived) — closing slack never hands any back,
+      // and on an unmoved tree the arm therefore proposes NOTHING and round-trips. The plain
+      // derivation alone is what broke this arm for two campaigns: it read theme-quadrants'
+      // deliberately-exact 14 as a 10%-churn project, proposed 12, and called it a LOWERING.
+      // A derived floor that would land ABOVE live is the one true lowering: tests left.
+      let now = Math.max(was, derived);
+      if (now > live) now = derived;
+      rows.push({ file, project: p.name, listed, live, was, derived, now });
     }
   const sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
     cwd: ROOT,
     encoding: "utf8",
   }).trim();
-  const stamp =
-    `${sha} · ${new Date().toISOString().slice(0, 10)} · platform ${process.platform} · ` +
-    `live census ${rows.reduce((n, r) => n + r.live, 0)} of ${rows.reduce((n, r) => n + r.listed, 0)} listed`;
-  next = next.replace(
-    /const FLOOR_STAMP = "[^"]*";/,
-    `const FLOOR_STAMP = "${stamp}";`,
-  );
+  const date = new Date().toISOString().slice(0, 10);
 
   const w = Math.max(...rows.map((r) => r.project.length));
   console.log(
-    `\nRESTAMP — floors re-derived: >10 live tests keep ~10% churn room, ≤10 sit exact.\n` +
-      `  Quarantines are subtracted at their DECLARED platform, not the running one.`,
+    `\nRESTAMP — floors re-derived: >${LAW.exactAtOrBelow} live tests keep ~${((1 - LAW.churnRoom) * 100).toFixed(0)}% churn room, ` +
+      `≤${LAW.exactAtOrBelow} sit exact, never under the ${(LAW.band * 100).toFixed(0)}% band.\n` +
+      `  Quarantines are subtracted at their DECLARED platform, not the running one.\n` +
+      `  Ratchet: max(banked, derived), so an unmoved tree moves nothing.`,
   );
   for (const r of rows)
     console.log(
       `  ${r.project.padEnd(w)}  listed ${String(r.listed).padStart(3)}  live ${String(r.live).padStart(3)}  ` +
-        `floor ${String(r.was).padStart(3)} → ${String(r.now).padStart(3)}${r.now < r.was ? "   ↓ LOWERED" : ""}`,
+        `derived ${String(r.derived).padStart(3)}  floor ${String(r.was).padStart(3)} → ${String(r.now).padStart(3)}` +
+        `${r.now < r.was ? "   ↓ LOWERED" : r.now === r.was ? "   ·" : ""}`,
     );
-  console.log(`  stamp: ${stamp}`);
+  const moved = rows.filter((r) => r.now !== r.was).length;
+  console.log(
+    `  ${moved} floor(s) move, ${rows.length - moved} unmoved  ·  ${sha} · ${date} · ` +
+      `platform ${process.platform} · ${wave}  ·  live census ` +
+      `${rows.reduce((n, r) => n + r.live, 0)} of ${rows.reduce((n, r) => n + r.listed, 0)} listed`,
+  );
 
   // Lowering a floor is a re-baseline, and the house does not re-baseline on a red
   // (check-coverage-floor.mjs's `--allow-lower` law, applied to the same problem).
@@ -667,8 +856,25 @@ function restamp(model, { dry, allowLower }) {
     console.log("\n--dry — nothing written.");
     return;
   }
-  writeFileSync(SELF, next);
-  console.log(`\nwritten -> scripts/${SELF.split("/").pop()}`);
+  const next = readStamp();
+  next.pw = {
+    ...next.pw,
+    stamp: {
+      sha,
+      date,
+      platform: process.platform,
+      wave,
+      note: allowLower ? `LOWERED — ${allowLower}` : "",
+    },
+    projects: Object.fromEntries(
+      rows.map((r) => [
+        key(r.file, r.project),
+        { listed: r.listed, census: r.live, floor: r.now },
+      ]),
+    ),
+  };
+  writeFileSync(STAMP_PATH, `${JSON.stringify(next, null, 2)}\n`);
+  console.log(`\nwritten -> scripts/census.stamp.json (pw)`);
 }
 
 /* ── main ──────────────────────────────────────────────────────────────────── */
@@ -681,34 +887,52 @@ console.log(
     `${CONFIGS.reduce((n, c) => n + c.projects.length, 0)} projects, ` +
     `${SPEC_MANIFEST.length} manifest specs, ${Object.keys(HOLDOUTS).length} declared ` +
     `single-engine holdouts, ${Object.keys(QUARANTINES).length} declared quarantines ` +
-    `(T5-W1 1.10 / CH-56 · T7-W6)\n` +
-    `  floors stamped: ${FLOOR_STAMP}`,
+    `(T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2)\n` +
+    `  floors stamped: ${FLOOR_STAMP}\n` +
+    `  floors read from scripts/census.stamp.json; band = ` +
+    `${(LAW.band * 100).toFixed(0)}% of max(stamped census, live)`,
 );
 
 const model = await collect();
 
 if (wantRestamp) {
-  const i = process.argv.indexOf("--allow-lower");
+  const valueOf = (name) => {
+    const i = process.argv.indexOf(name);
+    return i >= 0 ? (process.argv[i + 1] ?? "(no value given)") : null;
+  };
   restamp(model, {
     dry: process.argv.includes("--dry"),
-    allowLower: i >= 0 ? (process.argv[i + 1] ?? "(no reason given)") : null,
+    allowLower: valueOf("--allow-lower"),
+    wave: valueOf("--wave") ?? "unlabelled restamp",
   });
   process.exit(0);
 }
 
-// The live census, printed whether or not a floor bites — a quarantined project's real
-// assertion count is the number this gate exists to keep visible.
-for (const { file, matrix } of model.configs)
-  for (const p of CONFIGS.find((c) => c.file === file).projects) {
-    const listed = matrix.get(p.name)?.tests ?? 0;
-    const live = liveTests(p.name, listed);
-    if (live === listed) continue;
-    console.log(
-      `  QUARANTINED  ${p.name}: ${listed} listed − ${listed - live} parked on ` +
-        `${QUARANTINES[p.name].platform} = ${live} LIVE (floor ${p.floor})` +
-        `${live === 0 ? "  ← asserts NOTHING on this platform" : ""}`,
-    );
-  }
+// THE GATE'S OWN RESOLUTION, printed in full whether or not a floor bites. Two reasons it
+// is a whole table now rather than a quarantine footnote: a parked project's real assertion
+// count is the number this gate exists to keep visible, and these columns are exactly what
+// `--restamp --dry` prints — so the arm and the verdict can be held against each other row
+// by row instead of taken on trust (T9-W5 §5.2's round-trip proof).
+{
+  const names = CONFIGS.flatMap((c) => c.projects.map((p) => p.name));
+  const w = Math.max(...names.map((n) => n.length));
+  for (const { file, matrix } of model.configs)
+    for (const p of CONFIGS.find((c) => c.file === file).projects) {
+      const listed = matrix.get(p.name)?.tests ?? 0;
+      const live = worstCaseLive(p.name, listed);
+      const floor = floorOf(file, p.name);
+      const row = stampRow(file, p.name);
+      console.log(
+        `  ${p.name.padEnd(w)}  listed ${String(listed).padStart(3)}  live ${String(live).padStart(3)}  ` +
+          `derived ${String(deriveFloor(live)).padStart(3)}  floor ${String(floor).padStart(3)}  ` +
+          `band ${String(bandFloor(Math.max(row?.census ?? 0, live))).padStart(3)}` +
+          (live !== listed
+            ? `   ← ${listed - live} parked on ${QUARANTINES[p.name].platform}` +
+              (live === 0 ? ", asserts NOTHING there" : "")
+            : ""),
+      );
+    }
+}
 const failures = [];
 for (const [name, fn] of CHECKS) {
   const found = fn(model);

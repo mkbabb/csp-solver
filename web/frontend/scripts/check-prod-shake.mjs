@@ -1,6 +1,17 @@
 #!/usr/bin/env node
-// NOT-A-LANE: it ran inside the e2e job's built-dist steps, and the browser-executing CI lanes were removed on the owner's ruling of 2026-08-03 — it rides the local built-dist pass before any deploy instead; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
 // T4-W4 — the prod-shake proof (FAM-5).
+//
+// T9-W5 §5.3 — THE CARVE-OUT IS RETIRED, AND IT WAS RETIRED BY A LANE, NOT BY PROSE.
+// This file carried a dated `NOT-A-LANE:` declaration from T7-WGATE's O-12 ruling: it had
+// run inside the e2e job's built-dist steps, the browser-executing lanes came out of CI on
+// the owner's word of 2026-08-03, and with them went the only place in the estate that
+// built a bundle. The declaration was honest and correctly cited (V5-C3 adjudicated it
+// DELIBERATE, not an oversight) — and it still left the FORBIDDEN census riding a hand
+// discipline for two closes. The cure named in §5.3 is a LANE, and the lane exists:
+// `.github/workflows/ci.yml` job `dist`, browserless per O-12, builds the bundle and runs
+// this census over it. So the declaration comes out in the same commit as the step that
+// voids it — `check-lane-membership.mjs` check 2 REDs on a file that claims NOT-A-LANE
+// while a lane runs it, which is the mechanism that keeps this note from outliving its lane.
 //
 // FilterTuner.vue / rafInstrumentation.ts (src/pencil/dev/) are NOT dead — they
 // are `import.meta.env.DEV`-gated (App.vue, main.ts) and tree-shaken out of the
@@ -10,8 +21,13 @@
 // broke (a dev import escaped the `import.meta.env.DEV` fence) and the dev tuner
 // would ride to production — fail loud here, do NOT relax the check.
 //
-// Symbols proven-absent: FilterTuner (the tuner component), rafInstrumentation
-// (the RAF probe module), __schedulerDebug (the global the dev probe writes).
+// Symbols proven-absent — FIVE, not the three this line named for two tranches while
+// the list underneath it grew twice: FilterTuner (the tuner component),
+// rafInstrumentation (the RAF probe module), __schedulerDebug (the global the dev probe
+// writes), wire=local (the same-device transport's opt-in, T7-W4), __bakeAdmission (the
+// CH-62 admission census's global, T9-W5). The list is the authority; each addition
+// carries its own argument beside it, and this sentence is derived from that list, never
+// the other way round.
 //
 // T7-W6 — THE THIRD SYMBOL WAS VACUOUS. It read `schedulerDebugInfo` until this wave:
 // pencil-boil's export name, which the probe imports as a LOCAL BINDING
@@ -34,9 +50,12 @@
 // belongs to the filter census, not here.
 //
 // Run: `node scripts/check-prod-shake.mjs [dir]`
-// — dir defaults to the first existing production build dir. CI runs it right
-// after a bundled build so a dist actually exists (compute-cost DAG: reuse the
-// throttle gate's `dist-throttle`, no redundant build).
+// — dir defaults to the first existing production build dir. The `dist` lane in
+// ci.yml runs `npm run test:prod-shake -- dist` immediately after its own
+// `npx vite build`, and then runs this file AGAIN over a `--mode ch62-probe`
+// bundle as a permanent NEGATIVE CONTROL: that build carries `__bakeAdmission`
+// by construction, so a pass there means the census has gone vacuous and the
+// lane reds. A gate with no negative control is a gate nobody has seen fail.
 
 import { readdirSync, statSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -54,11 +73,23 @@ const FRONTEND_ROOT = fileURLToPath(new URL("..", import.meta.url));
 // have been vacuous by construction. Gated on `import.meta.env.DEV` in the same wave: read
 // unconditionally the param survived every strip path and rode copied invite links, and the
 // built page's `BroadcastChannel` answered with a room that never left the recipient's device.
+//
+// The fifth (T9-W5 §5.3, registry A6): `__bakeAdmission`, the CH-62 admission census's
+// global. `rasterPose.ts` already cites THIS FILE as its proof of absence — "Proof:
+// `npm run test:prod-shake` discipline, re-run per build" — and the symbol was not in the
+// list, so the cite pointed at a check that had never looked for it. It qualifies on the
+// same rule as `__schedulerDebug`: a property written on `window` (`window.__bakeAdmission
+// ??= …`), which minification is obliged to keep whole because renaming it would break the
+// read. Its fence is `import.meta.env.DEV || MODE === "ch62-probe" || MODE === "ch62-ablate"`
+// — a form the bundler folds to `false` in an ordinary build, so the live arm is dropped
+// and the string with it. Absent from `dist/` at 4dd9ec9c (43 files, 25 chunks); PRESENT in
+// a `--mode ch62-probe` bundle, which is exactly the negative control the lane runs.
 const FORBIDDEN = [
   "FilterTuner",
   "rafInstrumentation",
   "__schedulerDebug",
   "wire=local",
+  "__bakeAdmission",
 ];
 // The bundled build dir: an explicit CLI arg wins; else the first that exists.
 const CANDIDATE_DIRS = ["dist-throttle", "dist"];

@@ -1,0 +1,258 @@
+T9-W5 §5.2 — FLOORS THAT RESTAMP: THE POST-WALL RE-EXECUTION.
+
+A session wall killed the first attempt after this lane had landed its edits. Nothing
+below is inherited: every census was re-cut, every canary re-planted in the REAL tree,
+every exit code read BARE (`cmd; echo $?`) and never through a pipe. The tree is restored
+byte-for-byte at the end and the restoration is verified with cmp.
+host darwin · tree 4dd9ec9c · 2026-08-28
+
+==============================================================================
+1 · THE CENSUS, RE-CUT
+==============================================================================
+$ npx vitest run --reporter=json
+  executed 735 ( 735 passed / 0 failed )
+  Test Files 57 · suites 237 · success true
+  -> identical to the pre-wall stamp (735 / 57 / 237). The figure stands as MEASURED.
+
+$ node scripts/check-unit-count.mjs /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/vitest-fresh.json
+FE unit lane — 735 executed (735 passed / 0 failed), 0 skipped, 0 todo, over 57 files / 237 suites; floor 661; report age 6.5 min.
+  floor stamped: 4dd9ec9c · 2026-08-28 · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  band: floor 661 vs 625 owed on 735 (85% of max(stamp 735, live 735))  ·  slack 11%
+unit count OK — 735 >= 661.
+EXIT=0
+
+$ node scripts/check-unit-count.mjs --self-test
+check-unit-count --self-test — each check against a known-bad input:
+  reds  missing report
+  reds  malformed JSON
+  reds  wrong shape (no counters)
+  reds  shape with counters but no testResults[]
+  reds  below the floor (660)
+  reds  stale report (3h old)
+  reds  future report (clock forgery)
+  reds  red run (failures present)
+  reds  forged counters (summary 400, census 5)
+  reds  skips carry the floor (660 executed + 40 skipped)
+  reds  census stamped 20% above live (882 claimed, 735 run)
+  reds  floor hand-lowered one under the band (624 vs 625)
+  greens  exactly at the floor (661)
+  greens  the stamped tree itself (735 executed, floor 661, band 625)
+
+self-test OK — every check fails on its known-bad input, and passes at the floor.
+EXIT=0
+
+==============================================================================
+2 · THE UNIT FLOOR'S CANARIES (plants in the real stamp)
+==============================================================================
+--- C1  census stamped 20% above live (882 claimed, 735 run) ---
+FE unit lane — 735 executed (735 passed / 0 failed), 0 skipped, 0 todo, over 57 files / 237 suites; floor 661; report age 6.5 min.
+  floor stamped: 4dd9ec9c · 2026-08-28 · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  band: floor 661 vs 750 owed on 882 (85% of max(stamp 882, live 735))  ·  slack 11%
+
+UNIT COUNT GATE FAILED
+  · floor 661 is OUT OF BAND: 25.1% under 882 (stamped census 882, live 735); the band is 85%, so the floor owes 750. The stamped census sits above the tree it claims to have measured — an inflated stamp is a claim, not churn room. Re-derive: node scripts/check-unit-count.mjs --restamp <report>
+EXIT=1
+
+--- C2  floor hand-lowered to 624 (the band owes 625) ---
+FE unit lane — 735 executed (735 passed / 0 failed), 0 skipped, 0 todo, over 57 files / 237 suites; floor 624; report age 6.5 min.
+  floor stamped: 4dd9ec9c · 2026-08-28 · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  band: floor 624 vs 625 owed on 735 (85% of max(stamp 735, live 735))  ·  slack 18%
+
+UNIT COUNT GATE FAILED
+  · floor 624 is OUT OF BAND: 15.1% under 735 (stamped census 735, live 735); the band is 85%, so the floor owes 625. The floor was never re-derived from the census stamped beside it — slack banked, not churn room. Re-derive: node scripts/check-unit-count.mjs --restamp <report>
+EXIT=1
+
+--- C3  the restored tree (positive control) ---
+EXIT=0  (green)
+
+--- C4  --restamp --dry on an unmoved tree: must round-trip ---
+RESTAMP — 735 executed / 57 files / 237 suites
+  derived 661  ·  banked 661  ·  ratchet → floor 661   (unmoved — the arm round-trips)
+  band at 85% of 735 is 625  ·  4dd9ec9c · 2026-08-28 · post-wall round-trip probe
+
+--dry — nothing written.
+EXIT=0
+
+--- C5  a REAL lowering (floor banked at 900, above live 735): must REFUSE ---
+RESTAMP — 735 executed / 57 files / 237 suites
+  derived 661  ·  banked 900  ·  ratchet → floor 661   ↓ LOWERED
+  band at 85% of 735 is 625  ·  4dd9ec9c · 2026-08-28 · lowering probe
+
+--restamp REFUSED: the floor would DROP 900 -> 661. Lowering a floor is a
+  re-baseline, and the house does not re-baseline on a red. Say where the tests went:
+  --restamp <report> --allow-lower "<reason>"
+EXIT=1
+
+==============================================================================
+3 · THE PLAYWRIGHT FLOORS' CANARIES (plants in the real stamp AND the real gate)
+==============================================================================
+--- C6  chromium census stamped 20% above live (265 claimed, 221 resolved) ---
+1 failure(s):
+
+  • [8 FLOOR BAND] playwright.config.ts [chromium]: floor 198 is OUT OF BAND — 25.3% under 265 (stamped census 265, live 221), and the band is 85%, so the floor owes 226. The stamped census sits above the tree it claims to have measured. Re-derive: node scripts/check-pw-projects.mjs --restamp
+EXIT=1
+
+--- C7  chromium floor hand-lowered to 187 (the band owes 188) ---
+1 failure(s):
+
+  • [8 FLOOR BAND] playwright.config.ts [chromium]: floor 187 is OUT OF BAND — 15.4% under 221 (stamped census 221, live 221), and the band is 85%, so the floor owes 188. The floor was never re-derived from the census stamped beside it. Re-derive: node scripts/check-pw-projects.mjs --restamp
+EXIT=1
+
+--- C8  a floor smuggled back into CONFIGS (the provenance split re-opening) ---
+1 failure(s):
+
+  • [8 FLOOR BAND] CONFIGS[playwright.config.ts][chromium] carries its own `floor`. The number lives in scripts/census.stamp.json and nowhere else — a second copy is the provenance split re-opening.
+EXIT=1
+
+--- C9  the restored tree, the positive control ---
+EXIT=0
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2)
+  floors stamped: 4dd9ec9c · 2026-08-28 · platform darwin · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+  chromium                  listed 221  live 221  derived 198  floor 198  band 188
+  webkit                    listed 216  live 216  derived 194  floor 194  band 184
+  (default)                 listed   4  live   4  derived   4  floor   4  band   4
+  throttled-void            listed   1  live   1  derived   1  floor   1  band   1
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6  band   6
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6  band   6
+  wordmark-webkit           listed   6  live   1  derived   1  floor   1  band   1   ← 5 parked on linux
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10  band   9
+  theme-bake-webkit         listed  10  live   0  derived   0  floor   0  band   0   ← 10 parked on linux, asserts NOTHING there
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14  band  12
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14  band  12
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+  ✓ 8 FLOOR BAND
+
+OK — 30 specs, 508 resolved tests, every spec in both engines except the 4 recorded holdouts.
+
+--- C10  --restamp --dry on an unmoved tree: must move NOTHING ---
+EXIT=0
+RESTAMP — floors re-derived: >10 live tests keep ~10% churn room, ≤10 sit exact, never under the 85% band.
+  Quarantines are subtracted at their DECLARED platform, not the running one.
+  Ratchet: max(banked, derived), so an unmoved tree moves nothing.
+  chromium                  listed 221  live 221  derived 198  floor 198 → 198   ·
+  webkit                    listed 216  live 216  derived 194  floor 194 → 194   ·
+  (default)                 listed   4  live   4  derived   4  floor   4 →   4   ·
+  throttled-void            listed   1  live   1  derived   1  floor   1 →   1   ·
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6 →   6   ·
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6 →   6   ·
+  wordmark-webkit           listed   6  live   1  derived   1  floor   1 →   1   ·
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10 →  10   ·
+  theme-bake-webkit         listed  10  live   0  derived   0  floor   0 →   0   ·
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14 →  14   ·
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14 →  14   ·
+  0 floor(s) move, 11 unmoved  ·  4dd9ec9c · 2026-08-28 · platform darwin · post-wall round-trip probe  ·  live census 493 of 508 listed
+
+--dry — nothing written.
+
+--- C11  a REAL lowering (chromium floor 300, above live 221): must REFUSE ---
+--restamp REFUSED: 1 floor(s) would DROP:
+  - chromium: 300 -> 198
+  Say why out loud: --restamp --allow-lower "<where the tests went>".
+EXIT=1
+
+==============================================================================
+4 · THE IN-MODEL SABOTAGES
+==============================================================================
+$ node scripts/check-pw-projects.mjs --self-test
+SELF-TEST — each check against a known-bad matrix:
+  [1 DECLARED MATRIX] a third project appears (a firefox arm nobody ratified)
+      → RED (as it must)
+  [1 DECLARED MATRIX] the webkit project is quietly re-engined to chromium
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is dropped from every project (the orphan)
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is claimed by two configs at once
+      → RED (as it must)
+  [3 ENGINE COVERAGE] CH-56 regresses — mobile-affordances loses its webkit arm
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED] share-truth is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+  [8 FLOOR BAND] the estate grows 25% and nothing restamps it (silent slack, the disease)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a whole spec FILE is deleted (green on all 5 checks before T7-W6)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a spec lands on disk that the manifest never sanctioned
+      → RED (as it must)
+  [7 QUARANTINES CLOSED] the quarantine module is deleted while the floors still subtract its rows
+      → RED (as it must)
+  [8 FLOOR BAND] a census stamped 20% above live (the stamp as a wish)
+      → RED (as it must)
+  [8 FLOOR BAND] a floor hand-lowered one step under the band
+      → RED (as it must)
+  [8 FLOOR BAND] a floor smuggled back into CONFIGS (two homes for one number)
+      → RED (as it must)
+  [8 FLOOR BAND] a stamped floor for a project no config declares (the orphan row)
+      → RED (as it must)
+
+OK — 30 specs, 508 resolved tests, every spec in both engines except the 4 recorded holdouts.
+EXIT=0
+
+==============================================================================
+5 · THE ROUND-TRIP, ROW BY ROW (§5.2 row 2's actual requirement)
+==============================================================================
+The wave asks for equality on EVERY project, not an exit code. The comparator parses
+the gate's own resolution table and --restamp --dry's proposal and holds them against
+each other on listed / live / derived / floor.
+
+$ node roundtrip.mjs
+project                     listed  live  derived  gate floor  restamp floor  verdict
+(default)                        4     4        4           4              4  IDENTICAL
+chromium                       221   221      198         198            198  IDENTICAL
+filter-census-chromium           6     6        6           6              6  IDENTICAL
+filter-census-webkit             6     6        6           6              6  IDENTICAL
+theme-bake-chromium             10    10       10          10             10  IDENTICAL
+theme-bake-webkit               10     0        0           0              0  IDENTICAL
+theme-quadrants-chromium        14    14       12          14             14  IDENTICAL
+theme-quadrants-webkit          14    14       12          14             14  IDENTICAL
+throttled-void                   1     1        1           1              1  IDENTICAL
+webkit                         216   216      194         194            194  IDENTICAL
+wordmark-webkit                  6     1        1           1              1  IDENTICAL
+
+11 projects, 0 divergence(s).
+EXIT=0
+
+NEGATIVE CONTROL — the comparator must itself be able to RED. One digit bent in the
+gate capture (chromium floor 198 -> 197):
+wordmark-webkit                  6     1        1           1              1  IDENTICAL
+
+11 projects, 1 divergence(s).
+EXIT=1
+
+==============================================================================
+6 · THE WRITE PATH (not just --dry)
+==============================================================================
+Both arms run NON-DRY on the unmoved tree. A round-trip proven only through --dry
+leaves the write untested, and the write is what the WGATE actually performs.
+RESTAMP — 735 executed / 57 files / 237 suites
+  derived 661  ·  banked 661  ·  ratchet → floor 661   (unmoved — the arm round-trips)
+  band at 85% of 735 is 625  ·  4dd9ec9c · 2026-08-28 · T9-W5 §5.2 (wave-time; the WGATE restamps)
+
+written -> scripts/census.stamp.json (unit)
+EXIT=0
+  0 floor(s) move, 11 unmoved  ·  4dd9ec9c · 2026-08-28 · platform darwin · T9-W5 §5.2 (wave-time; the WGATE restamps)  ·  live census 493 of 508 listed
+
+written -> scripts/census.stamp.json (pw)
+
+$ diff <stamp before the writes> <stamp after>
+  ^ the date alone. Every floor and every census identical: the arms round-trip
+    through the WRITE path, and the WGATE's restamp cannot silently move a floor.
+
+$ node -e 'the prose keys survive a restamp'
+  _ci_prose kept: true
+  _hand kept: true
+  law kept: band, churnRoom, exactAtOrBelow, derive, band_rule, ratchet, _why_ratchet
+
+==============================================================================
+7 · TREE RESTORED
+==============================================================================
+  check-pw-projects.mjs  IDENTICAL to pristine (exit 0)
+  census.stamp.json      floors+censuses IDENTICAL modulo the date: true

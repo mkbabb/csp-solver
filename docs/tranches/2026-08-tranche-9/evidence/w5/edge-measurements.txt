@@ -1,0 +1,33 @@
+T9-W5 §5.1 — the live edge, read from outside it
+date 2026-08-25T16:16:47Z · tree 4dd9ec9c · plain GETs only, no deploy act
+origin https://sudoku.babb.dev
+
+── 1. bare paths (the SPA-fallback trap, T7 close record:215) ──
+PATH               STATUS  CONTENT-TYPE               BYTES
+/                  200     text/html; charset=utf-8   3163
+/kenken            404     text/html; charset=utf-8   78
+/thermo            404     text/html; charset=utf-8   78
+/no-such-path      404     text/html; charset=utf-8   78
+/assets/nope.js    404     text/html; charset=utf-8   78
+
+  /  serves the app shell. Every other path answers 404 with a 78 B body,
+  byte-identical to public/404.html at HEAD. The `/* /index.html 200` rule
+  never fired: Pages answers the shipped 404 asset before the splat.
+
+── 2. the injected beacon (T9-B2), which only a browser-shaped request sees ──
+plain curl headers:
+  cloudflareinsights occurrences: 0
+browser headers (Accept: text/html + a Chrome UA):
+  <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"10ebd18547a742398786b64ed53248e0","r":1}' crossorigin="anonymous">
+
+served CSP:
+  content-security-policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' wss://sudoku-relay.mkbabb.workers.dev; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+
+  script-src is 'self' 'wasm-unsafe-eval'. The injected script is cross-origin,
+  so both engines refuse it and print the refusal on every page load.
+
+── 3. the relay Worker's identity ──
+  GET https://sudoku-relay.mkbabb.workers.dev/revision -> 426
+  body: sudoku relay — connect a websocket
+  The deployed Worker predates the endpoint: it answers the 426 it answers to
+  everything. Which sha is deployed there cannot be read from outside.

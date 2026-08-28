@@ -1,0 +1,10 @@
+copy register scanned across 136 files
+allowlisted: src/pencil/dev/FilterTuner.vue (DEV-only tool, gated import.meta.env.DEV — never shipped), src/pencil/config/filterBudget.ts (census reasons read by check-prod-shake, never by a reader)
+em/en dashes in product copy: 0
+jargon over RENDERED strings: 2 hit(s), 0 admitted, 2 unadmitted (lexicon: 25 entries)
+  ✗ src/games/shared/GameControlPanel.vue:917  [template]  "candidates" (solver vocabulary for what a player calls a pencil mark)  candidates
+  ✗ src/games/shared/GameControlPanel.vue:1210  [@text]  "solver" (the machine's name)  the solver finishes the board
+
+check-copy-register: 2 failure(s):
+  • src/games/shared/GameControlPanel.vue:917 renders "candidates" (solver vocabulary for what a player calls a pencil mark) in `candidates`. M16: jargon, metaphor, meta-language and contrivance are deleted wholesale and what survives is plain English. Rewrite it in the player's words, or admit it in ADMITTED with the seam that owns the cure.
+  • src/games/shared/GameControlPanel.vue:1210 renders "solver" (the machine's name) in `the solver finishes the board`. M16: jargon, metaphor, meta-language and contrivance are deleted wholesale and what survives is plain English. Rewrite it in the player's words, or admit it in ADMITTED with the seam that owns the cure.

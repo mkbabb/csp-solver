@@ -26,6 +26,20 @@
 // defect this row exists to kill.
 //
 // Run: node scripts/golden-magnitude.mjs   [PLAYWRIGHT_BASE_URL=… to reuse a served app]
+//      npm run test:golden:magnitude       (the same, through the manifest knip resolves)
+//
+// NOT-A-LANE: it spawns `playwright test`, and CI is browserless by standing ruling O-12 (T7-WGATE, d1daefb3), so its cadence is the local golden estate — run beside `npm run test:golden` and `npm run test:golden:selfdelta` whenever a baseline is re-minted; docs/tranches/2026-08-tranche-9/evidence/w5/gates-wired.md.
+//
+// T9-W5 §5.4 adjudicated this file, which V5 found DEAD BEHIND A FALSE KNIP ENTRY: knip.json
+// listed it under `entry` cited to "ci.yml, the golden lane", and that lane was deleted with
+// e2e/e2e-webkit/perf-subset at T7-WGATE. Nothing had run it for a campaign, and nothing
+// could have — the badge said reachable, the tree said otherwise. The verdict was KEEP, on
+// one ground: the blind band this file exists to read (0.017 darwin soul floor, 0.05 linux
+// clause floor) is still live in visual-golden.spec.ts, and its sibling instrument
+// golden-selfdelta.mjs is kept on the same footing. So the false entry died, the npm script
+// is now the referent knip resolves, and the declaration above is what
+// check-lane-membership.mjs reads — the file is IN that corpus as of this wave, where the
+// old `check-*`/`*-probe` name-shape had let it escape entirely.
 
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";

@@ -1,0 +1,179 @@
+T9-W5 §5.3 THE DIST LANE — canary transcript
+host: Darwin arm64 · node v26.0.0 · npm 11.12.1
+tree: 4dd9ec9c + this lane's working edits
+date: 2026-08-28T14:47:56Z
+
+──────────────────────────────────────────────────────────────
+ARM 1 · prod-shake (the FORBIDDEN census) — A6's __bakeAdmission
+──────────────────────────────────────────────────────────────
+[build] the ordinary production bundle -> dist/
+       
+        WARN  advancedChunks option is deprecated, please use codeSplitting instead.
+       
+[build] the instrumented bundle       -> $S/fake/dist-ch62/  (--mode ch62-probe)
+       
+        WARN  advancedChunks option is deprecated, please use codeSplitting instead.
+       
+
+1a  BORN RED AT HEAD — HEAD's four-symbol census over the instrumented bundle:
+[prod-shake] 25 bundle chunk(s) under dist-ch62; asserting 4 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, __schedulerDebug, wire=local
+[prod-shake] PASS — the dev tuner is fully tree-shaken from production.
+    exit=0   <- 0. The hole A6 named: rasterPose.ts cites this check as its
+                 proof of absence, and the check never looked for the symbol.
+
+1b  CURED — this wave's five-symbol census over the SAME bundle:
+[prod-shake] 25 bundle chunk(s) under dist-ch62; asserting 5 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, __schedulerDebug, wire=local, __bakeAdmission
+
+[prod-shake] FAIL — 1 dev-only symbol(s) leaked into the prod bundle:
+  __bakeAdmission  in  dist-ch62/assets/index-Kvmu4VVTyFHb.js
+
+A dev import escaped its `import.meta.env.DEV` fence — trace it and re-fence; do NOT relax this check.
+    exit=1   <- 1, naming __bakeAdmission and its chunk.
+
+1c  GREEN on the tree — the shipped bundle:
+[prod-shake] 25 bundle chunk(s) under dist; asserting 5 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, __schedulerDebug, wire=local, __bakeAdmission
+[prod-shake] PASS — the dev tuner is fully tree-shaken from production.
+    exit=0
+
+1d  PLANTED LEAK — rafInstrumentation written into a real chunk of a dist copy:
+[prod-shake] 25 bundle chunk(s) under dist; asserting 5 dev-only symbol(s) absent: FilterTuner, rafInstrumentation, __schedulerDebug, wire=local, __bakeAdmission
+
+[prod-shake] FAIL — 1 dev-only symbol(s) leaked into the prod bundle:
+  rafInstrumentation  in  dist/assets/AnswerKeyLaminate-D5mvcJniPKr1.js
+
+A dev import escaped its `import.meta.env.DEV` fence — trace it and re-fence; do NOT relax this check.
+    exit=1   (planted into AnswerKeyLaminate-D5mvcJniPKr1.js)
+
+1e  META-CANARY — the lane's NEGATIVE CONTROL step body, run against a VACUOUS census.
+    If the census stops biting, the STEP must red. Proven with HEAD's list:
+    ::error::prod-shake PASSED a bundle that carries __bakeAdmission — the FORBIDDEN census is vacuous
+    step exit=1   <- 1. The control controls.
+
+──────────────────────────────────────────────────────────────
+ARM 2 · dist-identity — disk side and served side
+──────────────────────────────────────────────────────────────
+2a  --self-test (the instrument's own six arms, both colours, a real socket on 4247):
+  ok   a missing dist is RED (as it must)
+  ok   a husk — the .gitignore'd dist with no payload — is RED (as it must)
+  ok   a leftover stale entry chunk is RED (as it must)
+  ok   a well-formed dist yields its entry and a stable line
+AUDIT: build-identity — dist entry index-C0FFEE00.js · index.html md5 603cfdceb4ae1154ccc4fd9d3d9d964e · 2 files / 0.1 KB · newest mtime 2026-08-28T14:47:58.054Z
+AUDIT: build-identity MISMATCH — http://127.0.0.1:4247 serves index-DEADBEEF.js, this dist is index-C0FFEE00.js.
+The rig is measuring a tree that is not the one on disk. Rebuild, or point the rig at the dist you built; do not reconcile this in prose.
+  ok   a server serving ANOTHER tree's entry is RED (as it must)
+AUDIT: build-identity — dist entry index-C0FFEE00.js · index.html md5 603cfdceb4ae1154ccc4fd9d3d9d964e · 2 files / 0.1 KB · newest mtime 2026-08-28T14:47:58.054Z
+AUDIT: build-identity — http://127.0.0.1:4247/match serves the same entry (index-C0FFEE00.js)
+  ok   the same entry on both sides passes
+[dist-identity] self-test 6/6 — the instrument can fail on a known-bad dist.
+    exit=0
+
+2b  GREEN on the tree:
+AUDIT: build-identity — dist entry index-bbDpInn4isHj.js · index.html md5 b20453cfaf6a83a7b9ad180a2d5154ca · 43 files / 797.9 KB · newest mtime 2026-08-28T14:47:56.921Z
+    exit=0
+
+2c  PLANTED — a stale second entry chunk left behind:
+[dist-identity] expected exactly 1 entry chunk in /var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/tmp.l3wZm90Rv2/dcopy/assets, found 2 (index-STALE001.js, index-bbDpInn4isHj.js) — a stale chunk was left behind
+    exit=1
+
+2d  PLANTED — the husk (a .gitignore'd dist that kept only _headers):
+[dist-identity] /var/folders/ld/20j4p2791k5_90_0ccgx2txm0000gr/T/tmp.l3wZm90Rv2/husk has no assets/ — this is a husk, not a build (a `.gitignore`d dist that kept only `_headers`/`_redirects` looks exactly like this)
+    exit=1
+
+2e  SERVED ARM, GREEN — vite preview on 4251 vs the dist that built it
+    (the lane's step body, verbatim):
+AUDIT: build-identity — dist entry index-bbDpInn4isHj.js · index.html md5 b20453cfaf6a83a7b9ad180a2d5154ca · 43 files / 797.9 KB · newest mtime 2026-08-28T14:47:56.921Z
+AUDIT: build-identity — http://127.0.0.1:4251 serves the same entry (index-bbDpInn4isHj.js)
+    step exit=0
+
+2f  SERVED ARM, RED — the same socket vs a DIFFERENT tree's dist
+    (PRECEPTS §3's tree-blind trap, planted):
+AUDIT: build-identity — dist entry index-Kvmu4VVTyFHb.js · index.html md5 1d797db0a47b0e45c07e22a264af28d3 · 43 files / 798.5 KB · newest mtime 2026-08-28T14:47:57.688Z
+AUDIT: build-identity MISMATCH — http://127.0.0.1:4251 serves index-bbDpInn4isHj.js, this dist is index-Kvmu4VVTyFHb.js.
+The rig is measuring a tree that is not the one on disk. Rebuild, or point the rig at the dist you built; do not reconcile this in prose.
+    step exit=1
+
+──────────────────────────────────────────────────────────────
+ARM 3 · golden-bytes — over a TRACKED-ONLY root (what a runner checks out)
+──────────────────────────────────────────────────────────────
+3a  GREEN control (git archive HEAD = the CI checkout):
+[golden-bytes] PASS — 8 goldens (pinned at 8), 92.5 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+    exit=0
+
+3b  PLANTED — a ninth golden (check 7, the count pin):
+[golden-bytes] FAIL — 2 defect(s):
+  · count pin: 9 goldens on disk, pinned at 8. A new golden is a ruling — argue it, then bump GOLDEN_COUNT in the same commit. The byte band is the secondary control and cannot make this judgment.
+  · malformed name: e2e/goldens/cell-light-freebsd.png carries no -{platform} suffix
+    exit=1
+
+3c  PLANTED — a golden past the 150 KB per-image ceiling (checks 1 + 2):
+[golden-bytes] FAIL — 2 defect(s):
+  · per-image ceiling: e2e/goldens/logo-light-darwin.png is 219.0 KB
+  · estate total: 294780 B > 112640 B band (over by 182140 B)
+    exit=1
+
+3d  PLANTED — a fossil outside e2e/goldens (check 3):
+[golden-bytes] FAIL — 1 defect(s):
+  · fossils: 1 *.png outside e2e/goldens (3.8 KB) — auto-written baselines no config reads
+    exit=1
+
+3e  PLANTED — the estate wiped while specs still assert it (check 8):
+[golden-bytes] FAIL — ZERO goldens under e2e/goldens while 4 golden(s) are asserted by 29 spec file(s):
+    exit=1
+
+3f  GREEN again after reset:
+[golden-bytes] PASS — 8 goldens (pinned at 8), 92.5 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+    exit=0
+
+3g  THE BENCH TREE, for the record — the same gate over the DIRTY working tree:
+    exit=1
+[golden-bytes] FAIL — 2 defect(s):
+  · estate total: 145034 B > 112640 B band (over by 32394 B)
+  · fossils: 8 *.png outside e2e/goldens (49.1 KB) — auto-written baselines no config reads
+
+──────────────────────────────────────────────────────────────
+ARM 4 · the build step, and §5.1's deploy gate
+──────────────────────────────────────────────────────────────
+4a  the build step reds when the build reds (a bad --config):
+    exit=1
+
+4b  deploy-gate refusals (11 fixture arms, offline, wrangler stubbed, nothing shipped):
+    exit=0
+    [self-test] pair arms: 7/7 (1 GREEN sound pair, 6 RED on a plant, none deployed)
+    [self-test] 11/11 — every refusal this script owns proved able to fire
+
+──────────────────────────────────────────────────────────────
+THE WORKFLOW IS WHOLE
+──────────────────────────────────────────────────────────────
+yamllint exit=0   (actionlint is not installed on this host — noted, not claimed)
+YAML parses · jobs = 18 · structural defects = 0
+lint, rust, py-compile, py-runtime, wasm, build-lean-wasm, twiggy, wasm-publish-dryrun, frontend, fe-unit, boundary, iai, cargo-audit, evidence-policy, doc-truth, npm-audit, gen-latency, dist
+dist: needs ["build-lean-wasm"] · 14 steps
+node parse exit=0
+
+lane membership (the census that would red on a stale NOT-A-LANE):
+    exit=0
+    OK — every gate and probe in web/frontend/scripts is named by a CI lane or declares itself NOT-A-LANE with a cite, and every lane names something that exists.
+
+──────────────────────────────────────────────────────────────
+ADDENDUM · the served arm re-proven on the FINAL step body
+──────────────────────────────────────────────────────────────
+The step gained two things after the run above: `--host 127.0.0.1` (so the bind
+address and the fetched address are the same one — a dual-stack box that answers on
+::1 and refuses on 127.0.0.1 would otherwise read as a dead server rather than a bad
+bind), and `rm -f preview.log preview.pid` (an untracked file under web/frontend is
+dirt in a SHIPPED path, and deploy-gated.sh refuses on exactly that; a gate that
+dirties the tree it guards is a poor guest). Both colours re-run against the final
+body, verbatim:
+
+  GREEN  preview serves dist, --dist dist
+         AUDIT: build-identity — dist entry index-bbDpInn4isHj.js · 43 files / 797.9 KB
+         AUDIT: build-identity — http://127.0.0.1:4251 serves the same entry
+         exit=0 · leftovers: none (preview.log, preview.pid both absent)
+
+  RED    preview serves dist, --dist points at the ch62-probe tree
+         AUDIT: build-identity MISMATCH — http://127.0.0.1:4251 serves
+                index-bbDpInn4isHj.js, this dist is index-Kvmu4VVTyFHb.js.
+         exit=1 · leftovers: none
+
+  yamllint after the edit            exit=0
+  YAML parse + structural walk       18 jobs · 0 defects · dist = 14 steps

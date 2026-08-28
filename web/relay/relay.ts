@@ -285,15 +285,33 @@ export class Relay {
 
 interface Env {
   RELAY: { idFromName(name: string): unknown; get(id: unknown): { fetch(r: Request): Response } };
+  /** The sha this Worker was deployed at. `wrangler.toml` defaults it to `unknown`, and
+   *  `scripts/deploy-gated.sh` overrides it per deploy with `--var RELAY_REVISION:<sha>`,
+   *  so `unknown` is not a missing value — it is the signature of a deploy that skipped
+   *  the gate (T9-W5 §5.1). */
+  RELAY_REVISION?: string;
 }
+
+/** T9-W5. A deployed Worker was unidentifiable from outside: same URL, same 426, whatever
+ *  sha it was built from, so "the SPA and the relay deploy together" could not be checked
+ *  after the fact — only intended. This is the one byte that makes the pair readable.
+ *  `scripts/edge-probe.mjs --rows relay-revision` reads it and compares it to the sha the
+ *  live Pages bundle was built from. No auth, no state, no cache. */
+export const revision = (env: Env): Response =>
+  new Response(`${env.RELAY_REVISION ?? "unknown"}\n`, {
+    status: 200,
+    headers: { "content-type": "text/plain", "cache-control": "no-store" },
+  });
 
 export default {
   fetch(request: Request, env: Env): Response {
-    if (request.headers.get("Upgrade") !== "websocket")
+    if (request.headers.get("Upgrade") !== "websocket") {
+      if (new URL(request.url).pathname === "/revision") return revision(env);
       return new Response("sudoku relay — connect a websocket\n", {
         status: 426,
         headers: { "content-type": "text/plain" },
       });
+    }
     return env.RELAY.get(env.RELAY.idFromName("relay")).fetch(request);
   },
 };

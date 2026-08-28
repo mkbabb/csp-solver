@@ -1,0 +1,249 @@
+=== lint:ink rc=0 ===
+ink-pressure ladder — every rung clears its floor, strictly increasing, in all 3 scopes (light, dark, print), each resolved out of index.css:
+  --ink-press-rule    55%  3.53 light / 4.36 dark / 4.76 print  ≥3 (non-text)
+  --ink-press-quiet   68%  5.23 light / 6.06 dark / 7.86 print  ≥4.5 (text)
+  --color-red-ink          4.98 light / 6.32 dark  ≥4.5 (.icon-sublabel.is-armed)
+  washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+
+ship-4 census — the six re-pitched surfaces, each pinned to the rung above (so the rung's floor is the surface's floor):
+  1  .keyboard-legend         color: var(--ink-press-quiet)
+  2  .legend-row kbd          border: var(--ink-press-rule)
+  3  .legend-sep              no `opacity` declaration
+  4  .margin-note-meta        color: var(--ink-press-quiet)
+  5  .icon-sublabel.is-armed  color: var(--color-red-ink)
+  6  .vignette-meta           color: var(--ink-press-quiet)
+
+ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+  light  rule < muted-foreground < quiet
+  dark   rule < quiet < muted-foreground
+  the ramp and the register cross between themes, and the crossing is GATED: exactly one ruling is admitted (src/assets/index.css §INK PRESSURE, 'WHAT THE LADDER DOES NOT GOVERN'), pinned to both rank strings above, and it reds on a second crossing, on a re-pitch that moves either rank, and on its own cure.
+=== lint:theme-selectors rc=0 ===
+THEME-SELECTOR CENSUS — 56 style files, 3 data-attribute selector sites over 3 attribute(s), 0 prefers-color-scheme site(s), 0 allowlisted
+  writers for `data-fold-above`: src/games/shared/GameControlPanel.vue:603 (toggleAttribute)
+  writers for `data-fold-below`: src/games/shared/GameControlPanel.vue:604 (toggleAttribute)
+  writers for `data-under-bar`: src/games/shared/GameControlPanel.vue:614 (toggleAttribute)
+  ✓ 1 UNWRITTEN ATTRIBUTES
+  ✓ 2 UNHONORED MEDIA
+  ✓ 3 ALLOWLIST CLOSED
+  ✓ 0 POPULATION CANARY — a planted `[data-canary-theme]` rule over the live 140-file corpus reds check 1
+
+SELF-TEST — each check against fixture trees:
+  [1 UNWRITTEN ATTRIBUTES] the wave's exact shape — a [data-theme] rule with a class-only writer
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] the only mention of the writer is inside a comment
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] positive control — a real setAttribute writer lands
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — vueuse writes through `attribute:`, no setAttribute in sight
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — Vue's own scope id is not an app attribute
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — the cured, class-keyed block
+      → GREEN (want GREEN)
+  [2 UNHONORED MEDIA] a prefers-color-scheme block with nothing said about it
+      → RED (want RED)
+  [2 UNHONORED MEDIA] positive control — allowlisted with a reason
+      → GREEN (want GREEN)
+  [3 ALLOWLIST CLOSED] a stale entry — the selector it excuses is gone
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] the excused attribute gained a writer — the excuse outlived its reason
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] an entry whose reason is a shrug
+      → RED (want RED)
+
+OK — every data-attribute selector has a runtime writer, every prefers-color-scheme block is allowlisted with a reason, and the table is closed.
+=== lint:lanes rc=0 ===
+LANE-MEMBERSHIP CENSUS — 26 script(s) across web/frontend/scripts + ./scripts (0 exempt), 110 CI-reachable command(s) (23 npm script(s) resolved)
+  · scripts/check-doc-truth.mjs — ci.yml:1412
+  · scripts/check-evidence-policy.mjs — ci.yml:1350
+  · scripts/check-inline-tests.mjs — ci.yml:191
+  · scripts/edge-probe.mjs — NOT-A-LANE: T9-W5 — it reads the LIVE deploy over the network and CI is browserless by standing ruling O-12, so its cadence is the WGATE production pass, run beside the deploy per docs/tranches/2026-08-tranche-9/evidence/w5/runbook.md.
+  · scripts/ledger-diff.mjs — ci.yml:1422
+  · web/frontend/scripts/check-copy-register.mjs — package.json scripts.lint:copy
+  · web/frontend/scripts/check-coverage-floor.mjs — ci.yml:1011, package.json scripts.test:coverage:floor
+  · web/frontend/scripts/check-empty-catch.mjs — package.json scripts.lint:catch
+  · web/frontend/scripts/check-font-coverage.mjs — package.json scripts.test:font-coverage
+  · web/frontend/scripts/check-gen-latency.mjs — package.json scripts.test:gen-latency
+  · web/frontend/scripts/check-golden-bytes.mjs — package.json scripts.test:golden:bytes
+  · web/frontend/scripts/check-ink-pressure.mjs — package.json scripts.lint:ink
+  · web/frontend/scripts/check-lane-membership.mjs — package.json scripts.lint:lanes
+  · web/frontend/scripts/check-motion-contract.mjs — package.json scripts.lint:motion
+  · web/frontend/scripts/check-prod-shake.mjs — ci.yml:1755, package.json scripts.test:prod-shake
+  · web/frontend/scripts/check-pw-projects.mjs — NOT-A-LANE: the browser-executing CI lanes (e2e, e2e-webkit, perf-subset) were removed on the owner's ruling of 2026-08-03 — the Playwright suites are local instruments now and this project-matrix lint rides them locally via `npm run test:e2e:projects`; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
+  · web/frontend/scripts/check-pw-retries.mjs — NOT-A-LANE: the browser-executing CI lanes were removed on the owner's ruling of 2026-08-03 — the Playwright suites are local instruments now and this retries-policy lint rides them locally via `npm run test:e2e:retries`; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
+  · web/frontend/scripts/check-sleep-lint.mjs — package.json scripts.lint:sleep
+  · web/frontend/scripts/check-support-floor.mjs — package.json scripts.test:support-floor
+  · web/frontend/scripts/check-theme-selectors.mjs — package.json scripts.lint:theme-selectors
+  · web/frontend/scripts/check-theme-tokens.mjs — package.json scripts.lint:theme-tokens
+  · web/frontend/scripts/check-unit-count.mjs — ci.yml:1006, package.json scripts.test:unit:count
+  · web/frontend/scripts/dist-identity.mjs — ci.yml:1684, ci.yml:1705, ci.yml:1736
+  · web/frontend/scripts/golden-magnitude.mjs — NOT-A-LANE: it spawns `playwright test`, and CI is browserless by standing ruling O-12 (T7-WGATE, d1daefb3), so its cadence is the local golden estate — run beside `npm run test:golden` and `npm run test:golden:selfdelta` whenever a baseline is re-minted; docs/tranches/2026-08-tranche-9/evidence/w5/gates-wired.md.
+  · web/frontend/scripts/golden-selfdelta.mjs — NOT-A-LANE: it spawns `playwright test` twice, and CI is browserless by standing ruling O-12 (T7-WGATE, d1daefb3), so its cadence is the local golden estate — it runs beside `npm run test:golden` whenever a baseline is re-minted, which is the only moment its question (does the compare still bite?) has an answer worth having; docs/tranches/2026-08-tranche-9/evidence/w5/gates-wired.md.
+  · web/frontend/scripts/tdz-probe.mjs — package.json scripts.lint:tdz
+  ✓ 1 UNCLAIMED SCRIPT
+  ✓ 2 DECLARATION SOUND
+  ✓ 3 LANE RESOLVES
+  ✓ 4 EXEMPTION LIVE
+
+SELF-TEST — each check against fixture models:
+  [1 UNCLAIMED SCRIPT] the wave's exact shape — a census with no npm script and no step
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] the tdz shape — a package.json script exists, no CI step calls it
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] the only mention is a ci.yml comment — documentation is not a lane
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] a same-named script under the REPO-ROOT scripts/ — wrong tree, not this lane
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] a declaration below the header window is not a declaration
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] a header that QUOTES the token is discussing the law, not invoking it
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] positive control — a step runs `npm run lint:ink`, which runs the file
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — a step runs `node scripts/…` directly
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — reached transitively through a chained npm script
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — a block-scalar `run: |` body counts
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] V5's NAME-SHAPE ESCAPEE — no `check-` prefix, no `-probe` suffix, and it ran nowhere
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] positive control — the escapee, once explicitly exempt
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] the REPO-ROOT tree is under the law too — a root gate nothing runs
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] positive control — a repo-root step names the root file directly
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — a frontend script reaches the root tree through `../../scripts/`
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — the declared escape hatch
+      → GREEN (want GREEN)
+  [2 DECLARATION SOUND] a declaration whose reason is a shrug
+      → RED (want RED)
+  [2 DECLARATION SOUND] a long reason that cites nothing checkable
+      → RED (want RED)
+  [2 DECLARATION SOUND] the file says NOT-A-LANE and a lane runs it
+      → RED (want RED)
+  [2 DECLARATION SOUND] positive control — reason above the floor, with a cite
+      → GREEN (want GREEN)
+  [3 LANE RESOLVES] a step runs an npm script package.json does not have
+      → RED (want RED)
+  [3 LANE RESOLVES] a step runs a guard that is not on disk
+      → RED (want RED)
+  [3 LANE RESOLVES] positive control — every lane names something that exists
+      → GREEN (want GREEN)
+  [4 EXEMPTION LIVE] an exemption whose file is gone — the doorway outlived its subject
+      → RED (want RED)
+  [4 EXEMPTION LIVE] an exemption on a file a lane runs anyway
+      → RED (want RED)
+  [4 EXEMPTION LIVE] an exemption whose reason is a shrug
+      → RED (want RED)
+  [4 EXEMPTION LIVE] a long exemption that cites nothing checkable
+      → RED (want RED)
+  [4 EXEMPTION LIVE] positive control — a live subject, a reason above the floor, with a cite
+      → GREEN (want GREEN)
+  [4 EXEMPTION LIVE] positive control — the EMPTY list this wave ships, which excuses nothing
+      → GREEN (want GREEN)
+
+OK — every .mjs in web/frontend/scripts and ./scripts is named by a CI lane, declares itself NOT-A-LANE with a cite, or is explicitly exempt with one; every lane names something that exists.
+=== lint:sleep rc=0 ===
+SLEEP LINT — 30 specs · 34 waitForTimeout sites in 14 files · 3 fixed in-page sampling windows · 4 cited exemptions · 2 sleep-ok tags
+
+SELF-TEST — red fixtures must flag, green fixtures must not:
+  ✓ RED — sleep → boundingBox → one-shot expect (the plain disease)
+      → 1 flag(s), expected flag
+  ✓ RED — sleep → helper-wrapped .count() → one-shot expect (a11y:305's shape)
+      → 1 flag(s), expected flag
+  ✓ RED — fixed rAF deadline → distant one-shot geometry (drawer:154's shape)
+      → 1 flag(s), expected flag
+  ✓ RED — sleep-ok tag present but the reason is a shrug
+      → 1 flag(s), expected flag
+  ✓ GREEN — the cure: expect.poll over the same surface, no sleep at all
+      → 0 flag(s), expected clean
+  ✓ GREEN — sleep with a cited sleep-ok: the elapsed time is the subject
+      → 0 flag(s), expected clean
+  ✓ GREEN — a sleep before a retrying assertion (auto-waiting locator matcher)
+      → 0 flag(s), expected clean
+  ✓ GREEN — a sleep before a read that feeds NO assertion in the window
+      → 0 flag(s), expected clean
+  ✓ RED — an EXEMPT entry that no longer resolves to a site
+      → 4 stale
+
+OK — no fixed-duration wait precedes a one-shot assertion on a live surface across 30 specs.
+=== lint:motion rc=0 ===
+MOTION CONTRACT — 30 specs, 30 declaring, 0 silent (head = first 20 lines)
+  ✓ 1 DECLARED
+  ✓ 2 GRAMMAR
+  ✓ 3 ROUTE
+
+SELF-TEST — each check against a known-bad model:
+  [1 DECLARED] the declaration is deleted in a refactor (the silent-by-default state)
+      → RED (as it must)
+  [1 DECLARED] the declaration slides below the head window during a doc-block edit
+      → RED (as it must)
+  [2 GRAMMAR] a third mode is invented (`PRM: reduced`)
+      → RED (as it must)
+  [2 GRAMMAR] `PRM: live` lands with no reason — a declaration that says nothing
+      → RED (as it must)
+  [2 GRAMMAR] `PRM: frozen` lands with an empty cite
+      → RED (as it must)
+  [2 GRAMMAR] two declarations disagree (a merge keeps both sides)
+      → RED (as it must)
+  [3 ROUTE] CH-65 regresses — the freeze is 'restored' as `test.use({ reducedMotion })`
+      → RED (as it must)
+  [3 ROUTE] a frozen file loses its emulateMedia call entirely
+      → RED (as it must)
+
+OK — 30 specs, every one declaring its motion state, every `frozen` backed by the route that lands.
+=== lint:copy rc=0 ===
+copy register scanned across 136 files
+allowlisted: src/pencil/dev/FilterTuner.vue (DEV-only tool, gated import.meta.env.DEV — never shipped), src/pencil/config/filterBudget.ts (census reasons read by check-prod-shake, never by a reader)
+em/en dashes in product copy: 0
+jargon over RENDERED strings: 2 hit(s), 2 admitted, 0 unadmitted (lexicon: 25 entries)
+  ~ src/games/shared/GameControlPanel.vue:1210  [@text]  "solver" (the machine's name) — ADMITTED 2026-08-28
+  ~ src/games/shared/GameControlPanel.vue:917  [template]  "candidates" (solver vocabulary for what a player calls a pencil mark) — ADMITTED 2026-08-28
+
+self-test (both colours):
+  dash · template text dash  →  1 offence(s), RED as required
+  dash · string literal dash  →  1 offence(s), RED as required
+  dash · dash inside a comment  →  0 offence(s), GREEN as required
+  dash · dash inside a template comment  →  0 offence(s), GREEN as required
+  dash · a header that mentions `<style>`, then a template dash  →  1 offence(s), RED as required
+  jargon · a technique name in an aria-label  →  1 offence(s), RED as required
+  jargon · the machine naming itself on a washi tape  →  1 offence(s), RED as required
+  jargon · solver vocabulary in a script-side copy constant  →  2 offence(s), RED as required
+  jargon · positive control — an ENGINE identifier is not display copy  →  0 offence(s), GREEN as required
+  jargon · positive control — a BOUND attribute is an expression, not a string  →  0 offence(s), GREEN as required
+  jargon · positive control — the player's own verb survives  →  0 offence(s), GREEN as required
+  jargon · positive control — jargon inside a comment is prose about the law  →  0 offence(s), GREEN as required
+  admissions · a ghost admission is detected stale  →  2/2, RED as required
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (2 admitted, each with its cure's seam)
+=== lint:catch rc=0 ===
+catch clauses scanned across 192 src files
+swallows (no statement, no explanation): 0
+
+negative controls:
+  statement form  `catch { /* ignore */ }`  →  1 swallow(s), RED as required
+  arrow form      `.catch(() => {})`  →  1 swallow(s), RED as required; the pre-W6 head saw 0 — the structural miss this cures
+  quoted in prose `/** … .catch(() => {}) … */`  →  0 swallow(s), GREEN as required
+
+check-empty-catch: 0 swallowed catch bodies
+=== lint:tdz rc=0 ===
+reproduction (4 modules, executed):
+  OLD graph (scene → game → registry → scene): THREW — ReferenceError: Cannot access 'scene' before initialization
+  NEW graph (spec → defineGame, cards → spec): BOOTED
+
+graph census (src/games): 0 cycle edge(s)
+
+negative control (a synthetic game importing the table): RED as required
+
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways
+=== lint:theme-tokens rc=0 ===
+@theme declared: 52
+unreferenced (corpus only):     0
+unreferenced (transitive rule): 0
+
+negative control (re-add --color-input): RED as required
+
+check-theme-tokens: 0 unreferenced @theme tokens

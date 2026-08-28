@@ -1,0 +1,18 @@
+T9-W5 §5.6 — the CITES scope-widening ABLATION, measured not assumed.
+
+recipe: in scripts/ledger-diff.mjs, armCites's `scoped` replaced by `ledger.rows`
+        (one line), gate re-run, line restored. Exit read BARE.
+tree:   4dd9ec9c + the working tree, 2026-08-28T16:13:06Z
+
+gate with CITES at ALL 171 rows: exit=1
+
+CITES — 4 finding(s)
+  CH-53   docs/tranches/LEDGER.md:81
+          `desktop.undoBurst.ciMinPctOfCeiling` is cited at `docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json` and appears nowhere in docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json.
+  CH-12   docs/tranches/LEDGER.md:99
+          cite `error.rs:63-64` is ambiguous — csp-solver/src/builder/assignment/error.rs, csp-solver/src/error.rs, csp-solver/tests/error.rs. Cite the full path.
+  CH-12   docs/tranches/LEDGER.md:99
+          `CspError::aborted` is cited at `csp-solver/src/error.rs:117` but lives at csp-solver/src/error.rs:67 — the line moved and the cite did not (N-03).
+  CH-12   docs/tranches/LEDGER.md:99
+          `stats.cancelled` is cited at `csp-solver/src/py/errors.rs:60` and appears nowhere in csp-solver/src/py/errors.rs.
+

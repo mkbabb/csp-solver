@@ -16,12 +16,22 @@
 //
 //   ORPHAN        (always) the original completeness diff: every audited row id reaches a
 //                 disposition in the tranche's corpus, or it is an orphan.
+//   FREEZE        (always) that same diff re-run over every SEALED tranche, each against its OWN
+//                 tranche-time corpus. A lawful restamp of the living ledger can orphan a sealed
+//                 tranche's row, and nothing re-reads a sealed tranche — BAL-03 sat RED, unseen,
+//                 for two closes (PRECEPTS §2, the freeze law).
 //   TERMINALITY   (--assert-state) a LEDGER §1 row whose STATE names a wave of a SEALED tranche
 //                 has outlived its landing. A wave that seals without its row moving is exactly
 //                 the ledger-accretion disease (T7-R04).
-//   PROBE         (--assert-state) a LEDGER §1 row whose claim a registered one-line probe
-//                 refutes. The probes read the TREE, never the record.
-//   DUPLICATE     (--assert-state) an id living in the open section and a terminal section at once.
+//   FOLD-TARGET   (--assert-state) every wave any row names resolves to a wave record in the
+//                 tranche it names. A fold into a wave that never existed discharged nothing.
+//   PROBE         (--assert-state) a LEDGER row — open or terminal — whose claim a registered
+//                 one-line probe refutes. The probes read the TREE, never the record.
+//   DUPLICATE     (--assert-state) an id tabled twice anywhere in the ledger. A row has one home.
+//   ONE-HOME      (--assert-state) a row that is not a registered class's home, does not name that
+//                 home, and carries the class's own subject: a sibling mint (PRECEPTS §2).
+//   LIVE-REGION   (--assert-state) an `aria-live` region born under `v-if` with non-empty initial
+//                 content never speaks. A static scan of web/frontend/src; W3's rider.
 //   CITES         (--verify-cites) every `file:line` cite in a scoped row resolves, and an
 //                 adjacent backticked anchor actually appears there (N-03, N-12).
 //
@@ -34,9 +44,15 @@
 // ── STRUCTURE, NOT ROW TEXT ─────────────────────────────────────────────────────────────────────
 //
 //   Nothing here is keyed to a tranche number, a row's wording, or a line number. The corpus is
-//   whichever tranche is newest (or `--tranche`); "sealed" is the existence of a close record in
-//   one of its known shapes; "open" is the ledger's FIRST numbered section and "terminal" is every
-//   later one. Restamp a row, move it, or renumber the table and the arms follow.
+//   whichever tranche is newest and TRACKED (or `--tranche`); "sealed" is the existence of a close
+//   record in one of its known shapes; "open" is the ledger's FIRST numbered section and "terminal"
+//   is every later one. Restamp a row, move it, or renumber the table and the arms follow.
+//
+//   Three registries are the deliberate exception, because each names a subject no structure can
+//   infer: PROBES (row id → a one-line tree read), CLASS_HOMES (a chronic class's one home and its
+//   subject), LIVE_REGION_ADMITTED (the live-region sites that violate today, with their cure).
+//   Every one of them is an exact-match census that reds in BOTH directions — an entry that stops
+//   matching is a finding, not a silent no-op.
 //
 // ── INPUTS (the audited row-id sets) ────────────────────────────────────────────────────────────
 //
@@ -191,16 +207,33 @@ function fatal(message) {
 
 // ── the tranche estate ──────────────────────────────────────────────────────────────────────────
 
-/** Every `*tranche-<n>` directory, ordered by its own number so `tranche-10` sorts after `-9`.
+/** Every TRACKED `*tranche-<n>` directory, ordered by its own number so `tranche-10` sorts
+ *  after `-9`.
  *  Sealing is inherited forward: the early tranches closed inside their READMEs and left no
  *  record in any of the shapes above, but a tranche whose successor sealed cannot still be open,
- *  so a later seal seals it. The rule needs no filename and maintains itself. */
+ *  so a later seal seals it. The rule needs no filename and maintains itself.
+ *
+ *  TRACKED is the whole corpus law (T9-W5 §5.1, V5-C6). The estate was read off the DISK, so
+ *  the newest tranche was whatever directory existed — and a scaffold nobody had committed yet
+ *  became the corpus the moment it was created. An empty one made this script exit 2 FATAL
+ *  ("contributes no corpus files"), which `scripts/deploy-gated.sh` reads as a stale record and
+ *  refuses the deploy on: a `mkdir` in docs/ could stop a release. It is not hypothetical —
+ *  T9's own formation scaffold did exactly that on 2026-08-10 (recap-matrix.md:124, lane note
+ *  e). `git ls-files` is the arbiter: a tranche joins the estate when its record is committed,
+ *  which is also when anyone else can see it. */
 function trancheEstate() {
   const root = resolve(REPO, TRANCHES);
   if (!existsSync(root)) fatal(`no tranche root: ${TRANCHES}`);
+  const tracked = trackedFiles();
+  const isTracked = (name) => tracked.some((f) => f.startsWith(`${TRANCHES}/${name}/`));
   const found = readdirSync(root)
     .map((name) => ({ name, num: /tranche-(\d+)$/.exec(name)?.[1] }))
-    .filter((t) => t.num !== undefined && statSync(join(root, t.name)).isDirectory())
+    .filter(
+      (t) =>
+        t.num !== undefined &&
+        statSync(join(root, t.name)).isDirectory() &&
+        isTracked(t.name),
+    )
     .map((t) => {
       const rel = `${TRANCHES}/${t.name}`;
       const seal = CLOSE_RECORD_SHAPES.find((shape) =>
@@ -384,6 +417,11 @@ function parseLedger(text, relPath) {
 //
 // `T<n>-W<m>` names tranche n's wave. A bare `W<m>` names the CURRENT tranche's — which is how a row
 // folded into the tranche now running is written, and why it stays green until that tranche seals.
+//
+// "Current" is the newest tranche in the estate, never `--tranche`'s argument. `--tranche` chooses
+// the CORPUS a completeness diff runs against; it does not move the living ledger into another era,
+// and reading it that way made a `--tranche <sealed>` run resolve today's bare `W8` against a
+// tranche that closed two campaigns ago.
 
 const QUALIFIED_WAVE = /\bT(\d+)[-.]?W([\w.]*\d)/g;
 const BARE_WAVE = /(?<![\w-])W(\d+(?:\.\d+)?)\b/g;
@@ -406,12 +444,32 @@ function waveRefs(state, currentNum) {
 // ── the probe registry ──────────────────────────────────────────────────────────────────────────
 //
 // Keyed by row id. A probe reads the TREE and answers one question: does the tree refute what this
-// row asserts? A refuted row that is still open is a false record, and false records red. Probes
-// are one-liners on purpose — a probe with a branch is a second implementation of the claim.
+// row asserts? A refuted row is a false record, and false records red. Probes are one-liners on
+// purpose — a probe with a branch is a second implementation of the claim.
+//
+// THE VACANCY, named because V5-C9 adjusted the arm to "stands, populates on registration": at
+// T9-W5 the registry held exactly one entry, CH-16, and CH-16 had CLOSED at T7-W0 — so the arm ran
+// over §1's four open rows, matched none of them, and returned clean without ever reading the tree.
+// Structurally sound, vacuous by population. Two registrations cure it, and the arm's scope widens
+// from §1 to EVERY row so a registration outlives its row's closure (below).
+//
+// THE VACANCY THAT REMAINS, named rather than papered — §1's other three rows carry no probe
+// because no tree read answers them:
+//   CH-65   PRM emulation void under a Playwright runner. The claim is about what an option does
+//           to a live page; the tree cannot say. Its trigger is a golden mint, not a grep.
+//   T8-R05  desktop-Safari generation latency. A timing claim wants a run on a device this estate
+//           does not have (M19/M06); W8's owner pass is its evaluator.
+//   T8-R08  bounded multiplayer leaks. The claim is about a session's runtime credit ledger — a
+//           repro, not a file.
+// A probe registered for any of these would be a grep pretending to be a measurement.
 
 const PROBES = {
+  // CH-16 closed on the claim that BOTH halves landed. A closed row whose cure was reverted is the
+  // same disease pointing the other way (T8-R13/R15 were exactly that), so the probe is re-polarised
+  // to guard the closure rather than to refute the old UNWIRED claim: every game spec carries the
+  // shared codec, or the row's "wired in all five game specs" is no longer true.
   "CH-16": {
-    claim: "the `?board=` permalink half is UNWIRED",
+    claim: "the `?board=` permalink half is wired in EVERY game spec (`78448760`)",
     run(io) {
       const dir = "web/frontend/src/games";
       const specs = io
@@ -420,12 +478,99 @@ const PROBES = {
         .filter((p) => io.read(p) !== null);
       const wired = specs.filter((p) => io.read(p).includes("urlCodec"));
       return {
-        refuted: specs.length > 0 && wired.length === specs.length,
+        refuted: specs.length === 0 || wired.length !== specs.length,
         note: `urlCodec present in ${wired.length}/${specs.length} of ${dir}/*/spec.ts`,
       };
     },
   },
+  // CH-69's own trigger, mechanised: "T9-W6 takes the root-cause, or any Hard-tier uniqueness test
+  // lands first." The second arm is the tree-readable one. The row asserts the exposure — that
+  // `dealt_killer_boards_are_unique_by_construction` sweeps Easy/Medium only, leaving Hard (the tier
+  // that digs to 17 givens, where the bogus UNSAT bites) untested. Hard entering that sweep refutes
+  // the exposure: pass or fail, the row has to move, and the banked repro
+  // (docs/tranches/2026-08-tranche-9/evidence/w4/killer-soundness-repro.rs) is what it moves on.
+  "CH-69": {
+    claim:
+      "killer Hard-tier uniqueness is UNTESTED — the uniqueness sweep covers Easy/Medium only",
+    run(io) {
+      const test = "fn dealt_killer_boards_are_unique_by_construction";
+      const chunk =
+        (io.read("csp-solver/tests/killer.rs") ?? "")
+          .split("\n#[test]")
+          .find((part) => part.includes(test)) ?? "";
+      return {
+        refuted: chunk.includes("Difficulty::Hard"),
+        note: chunk
+          ? `the sweep's difficulty list ${chunk.includes("Difficulty::Hard") ? "NOW NAMES" : "does not name"} Difficulty::Hard (csp-solver/tests/killer.rs)`
+          : `csp-solver/tests/killer.rs carries no ${test} — the exposure's own subject is gone`,
+      };
+    },
+  },
 };
+
+// ── the class registry (the one-home law) ───────────────────────────────────────────────────────
+//
+// PRECEPTS §2: "a fired class adds evidence to its OWN row and never mints a sibling." CH-64 is the
+// worked example and the reason the law exists — it fired three times and produced three new rows,
+// and by the third nobody could say what the class still asserted. Its deciding ceremony (T9-W0)
+// retired it to one home and preserved the detector in-row, in the row's own words: "a multi-red
+// burst in any local full-suite run re-opens ON THIS ROW — never a sibling."
+//
+// The arm reads the ledger for the class's SUBJECT and asks who is carrying it. A row that names
+// the home is a pointer ("a pointer at CH-16, CH-53 or CH-59 is a pointer, not a second row", §6's
+// own preamble). A row that carries the subject and names no home is a mint, whatever id it wears —
+// which is the half PRECEPTS §2 records as having "no arm yet; it is T9-W5's".
+//
+// `pointers` is the exact-match escape for a row that must discuss the class without naming it. It
+// is EMPTY at HEAD and that is a measurement: `burst` occurs on exactly one line of LEDGER.md.
+
+const CLASS_HOMES = {
+  "CH-64": {
+    label: "the runner-side multi-red burst class",
+    subject:
+      /\b(multi-red|red burst|burst class)\b|\bburst\b[^|]{0,80}\breds?\b|\breds?\b[^|]{0,80}\bburst\b/i,
+    pointers: [],
+  },
+};
+
+// ── the live-region police (W3's rider) ─────────────────────────────────────────────────────────
+//
+// A live region announces MUTATIONS to itself. Born under `v-if` with its content already inside,
+// it enters the document complete — there is no mutation to announce, and the region's whole office
+// goes unperformed while the markup reads correct. `players-status` is the estate's own worked
+// example: the T7-W2 comment at its own site says the region "is `v-if`'d OUT the moment the room
+// comes up — the live region left the DOM exactly when people started arriving."
+//
+// The rule, exactly: an element whose OWN tag carries `aria-live` (or role status/alert/log) AND a
+// birth condition (`v-if`/`v-else-if`/`v-else`/`v-show`) AND non-empty initial content — literal
+// text, after interpolations and conditional children are stripped, since neither is present at
+// birth. A region that lives unconditionally with conditional content inside is the CORRECT idiom
+// and stays green (`MarginNote.vue`, `gallery-live`).
+//
+// ADMITTED: the two sites that violate at HEAD. This is an admission, not a carve-out, and it is
+// stated as a decision: T9-W3 owns the cure (its gate row reads "live regions speak
+// (players-status/-empty/-roster 0→1)"), web/frontend/src is outside this lane's fence, and a
+// record instrument that exits 1 would make `deploy-gated.sh` refuse a deploy under the words "the
+// living ledger is not current", which would be a lie. The admission is a ratchet, not a shrug: it
+// is printed in FULL on every run, an unadmitted site REDs on contact, and an admission whose site
+// stops violating REDs as SPENT — so W3's cure and the deletion of its admission land in the same
+// commit, which is this estate's own same-commit law.
+
+const LIVE_REGION_ROOT = "web/frontend/src";
+const LIVE_REGION_ADMITTED = [
+  {
+    file: "web/frontend/src/games/shared/GameControlPanel.vue",
+    anchor: 'class="players-status"',
+    cure: "T9-W3 — the connecting/connected resolution must be spoken, not removed",
+    dated: "2026-08-28 (T9-W5)",
+  },
+  {
+    file: "web/frontend/src/games/shared/GameControlPanel.vue",
+    anchor: 'class="players-alone sr-only"',
+    cure: "T9-W3 — a room of one must be announced by a region that was already there",
+    dated: "2026-08-28 (T9-W5)",
+  },
+];
 
 // ── the arms ────────────────────────────────────────────────────────────────────────────────────
 //
@@ -452,40 +597,274 @@ function armTerminality({ ledger, tranches, currentNum }) {
   return found;
 }
 
-/** A registered one-line probe refutes an open row's claim. */
+/** Every wave any row names resolves to a wave record in the tranche it names.
+ *
+ *  Scope is the whole row line, not the state cell: the ledger's 2-column tables (§4, §5) carry
+ *  their disposition in the only cell they have, so a state-scoped arm cannot see U-11's fold at
+ *  all. The subject is the citation, wherever the row writes it.
+ *
+ *  This is the arm that makes the dead-state FOLDED rows visible. Eighteen of them wear a bare
+ *  landing promise into a tranche that has since sealed, they live in terminal sections where the
+ *  §1-scoped currency arms never looked, and the estate's own restamp passes have already caught
+ *  two folds that sealed with nothing landed (P-5e's SSIM probe, CH-53's sampler). A fold naming a
+ *  wave that never existed discharged nothing at all, and that is what this reds on. */
+function armFoldTargets({ ledger, tranches, currentNum, io }) {
+  const byNum = new Map(tranches.map((t) => [t.num, t]));
+  const waves = new Map();
+  const listOf = (t) => {
+    if (!waves.has(t.num)) waves.set(t.num, io.list(`${t.rel}/waves`));
+    return waves.get(t.num);
+  };
+  const found = [];
+  for (const row of ledger.rows)
+    for (const ref of waveRefs(row.text, currentNum)) {
+      const tranche = byNum.get(ref.tranche);
+      const key = `W${/^W(GATE|\d+)/.exec(ref.label.replace(/^T\d+-/, ""))?.[1] ?? ""}`;
+      const files = tranche ? listOf(tranche) : [];
+      const hit = files.find(
+        (f) =>
+          f.startsWith(`T${ref.tranche}-${key}-`) ||
+          f.startsWith(`${key}-`) ||
+          f === `T${ref.tranche}-${key}.md` ||
+          f === `${key}.md`,
+      );
+      if (hit) continue;
+      found.push({
+        id: row.id,
+        where: `${row.file}:${row.line}`,
+        why: !tranche
+          ? `names ${ref.label}, and no docs/tranches/*tranche-${ref.tranche} is in the estate — the fold has no home.`
+          : files.length === 0
+            ? `names ${ref.label}, and ${tranche.rel} keeps no waves/ directory — the target cannot be shown to exist.`
+            : `names ${ref.label}, and ${tranche.rel}/waves holds no ${key} record (${files.length} waves). A fold into a wave that never was discharged nothing.`,
+      });
+    }
+  return found;
+}
+
+/** A registered one-line probe refutes a row's claim.
+ *
+ *  Scope is EVERY row, not §1. A probe keyed to a row that later closes would otherwise fall silent
+ *  at the exact moment it becomes a regression detector — and a closed row whose cure was reverted
+ *  is the same record-cannot-verify-record disease pointing the other way (T8-R13 and T8-R15 were
+ *  both closed rows whose subject came back). The probe's own claim carries the polarity. */
 function armProbes({ ledger, probes, io }) {
   const found = [];
-  for (const row of ledger.open) {
+  const homed = new Set();
+  for (const row of ledger.rows) {
     const probe = probes[row.id];
     if (!probe) continue;
+    homed.add(row.id);
     const verdict = probe.run(io);
     if (!verdict.refuted) continue;
     found.push({
       id: row.id,
       where: `${row.file}:${row.line}`,
       why:
-        `open row asserts ${probe.claim}; the tree refutes it — ${verdict.note}. The record ` +
-        `cannot verify the record: close the row or correct the claim.`,
+        `§${row.section} row asserts ${probe.claim}; the tree refutes it — ${verdict.note}. The ` +
+        `record cannot verify the record: move the row or correct the claim.`,
+    });
+  }
+  // A registration keyed to a row that no longer exists is the vacuity V5-C9 named, wearing a
+  // registry entry: the arm reads clean because it read nothing.
+  for (const id of Object.keys(probes))
+    if (!homed.has(id))
+      found.push({
+        id,
+        where: "PROBES registry",
+        why: `a probe is registered for ${id}, and ${ledger.file} tables no such row — the registration reads nothing and cannot fail.`,
+      });
+  return found;
+}
+
+/** One id, two homes — anywhere in the ledger, not open-versus-terminal alone. A row re-tabled
+ *  into a second terminal section is the same defect wearing a quieter costume: two states, two
+ *  cites, and no way to say which one a close reads. */
+function armDuplicateHomes({ ledger }) {
+  const homes = new Map();
+  for (const row of ledger.rows) {
+    if (!homes.has(row.id)) homes.set(row.id, []);
+    homes.get(row.id).push(row);
+  }
+  const found = [];
+  for (const rows of homes.values()) {
+    if (rows.length < 2) continue;
+    const [first, ...rest] = rows;
+    found.push({
+      id: first.id,
+      where: `${first.file}:${first.line}`,
+      why:
+        `also tabled at ${rest.map((r) => `§${r.section} (${r.file}:${r.line})`).join(", ")}. ` +
+        `A row has one home.`,
     });
   }
   return found;
 }
 
-/** One id, two homes: open and terminal at once. */
-function armDuplicateHomes({ ledger }) {
-  const terminal = new Map(ledger.terminal.map((r) => [r.id, r]));
-  return ledger.open
-    .filter((r) => terminal.has(r.id))
-    .map((r) => ({
-      id: r.id,
-      where: `${r.file}:${r.line}`,
-      why: `also tabled terminal at §${terminal.get(r.id).section} (${r.file}:${terminal.get(r.id).line}). A row has one home.`,
-    }));
+/** The one-home law's sibling-mint half: a row carrying a registered class's subject that is
+ *  neither the class's home nor a pointer at it. */
+function armOneHome({ ledger, classes }) {
+  const found = [];
+  for (const [home, klass] of Object.entries(classes)) {
+    if (!ledger.rows.some((r) => r.id === home))
+      found.push({
+        id: home,
+        where: "CLASS_HOMES registry",
+        why: `a class home is registered for ${home}, and ${ledger.file} tables no such row — the law has nothing to bind to.`,
+      });
+    for (const row of ledger.rows) {
+      if (row.id === home || klass.pointers.includes(row.id)) continue;
+      if (!klass.subject.test(row.text)) continue;
+      if (row.text.includes(home)) continue;
+      found.push({
+        id: row.id,
+        where: `${row.file}:${row.line}`,
+        why:
+          `carries the subject of ${klass.label}, whose one home is ${home}, and names neither ` +
+          `${home} nor a registered pointer. A fired class appends to its own row under a dated ` +
+          `stamp; a new id for the same class is re-booking wearing a fresh number (PRECEPTS §2).`,
+      });
+    }
+  }
+  return found;
+}
+
+// ── the live-region police ──────────────────────────────────────────────────────────────────────
+
+const LIVE_ATTR = /\baria-live\s*=/;
+const LIVE_ROLE = /\brole\s*=\s*(["'])(?:status|alert|log)\1/;
+const BIRTH_COND = /\bv-(?:if|else-if|else|show)\b/;
+// A FACTORY, never a shared instance: `initialContent` runs inside `liveRegionSites`'s own scan,
+// and one `g`-flagged regex driving two nested walks resets the outer `lastIndex` forever.
+const openTags = () => /<([a-zA-Z][\w-]*)((?:"[^"]*"|'[^']*'|[^>"'])*?)(\/?)>/g;
+
+/** From `from` (just past `<tag …>`), that tag's inner slice and the index after its close. */
+function blockFrom(src, tag, from) {
+  const scan = new RegExp(`<${tag}\\b[^>]*?(/?)>|</${tag}\\s*>`, "g");
+  scan.lastIndex = from;
+  for (let depth = 1, m; (m = scan.exec(src));) {
+    if (m[0].startsWith("</")) {
+      if (--depth === 0)
+        return { inner: src.slice(from, m.index), end: scan.lastIndex };
+    } else if (m[1] !== "/") depth++;
+  }
+  return { inner: src.slice(from), end: src.length };
+}
+
+/** What is inside a region AT BIRTH: literal text only. Interpolations resolve after mount and
+ *  conditional children are not there yet, so both come out before the question is asked. */
+function initialContent(inner) {
+  let html = inner.replace(/<!--[\s\S]*?-->/g, " ").replace(/\{\{[\s\S]*?\}\}/g, " ");
+  for (let guard = 0; guard < 64; guard++) {
+    const tag = openTags();
+    let hit = null;
+    for (let m; (m = tag.exec(html));)
+      if (BIRTH_COND.test(m[2])) {
+        hit = m;
+        break;
+      }
+    if (!hit) break;
+    const past = hit.index + hit[0].length;
+    const end = hit[3] === "/" ? past : blockFrom(html, hit[1], past).end;
+    html = html.slice(0, hit.index) + html.slice(end);
+  }
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Every `aria-live` region in the scanned tree that is born under a condition WITH its content
+ *  already inside. Returns the census; the arm grades it against the admissions. */
+function liveRegionSites(io) {
+  const sites = [];
+  for (const file of io.files(LIVE_REGION_ROOT, ".vue")) {
+    const src = io.read(file) ?? "";
+    const from = src.indexOf("<template");
+    const last = src.lastIndexOf("</template>");
+    if (from < 0 || last <= from) continue;
+    const tpl = src.slice(from, last);
+    const tag = openTags();
+    for (let m; (m = tag.exec(tpl));) {
+      const attrs = m[2];
+      if (m[3] === "/") continue;
+      if (!LIVE_ATTR.test(attrs) && !LIVE_ROLE.test(attrs)) continue;
+      if (!BIRTH_COND.test(attrs)) continue;
+      const content = initialContent(blockFrom(tpl, m[1], m.index + m[0].length).inner);
+      if (!content) continue;
+      sites.push({
+        file,
+        line: src.slice(0, from + m.index).split("\n").length,
+        attrs: attrs.replace(/\s+/g, " ").trim(),
+        content: content.slice(0, 64),
+      });
+    }
+  }
+  return sites;
+}
+
+function armLiveRegions({ io, admitted }) {
+  const sites = liveRegionSites(io);
+  const spent = new Set(admitted.map((_, i) => i));
+  const found = [];
+  for (const site of sites) {
+    const at = admitted.findIndex(
+      (a) => a.file === site.file && site.attrs.includes(a.anchor),
+    );
+    if (at >= 0) {
+      spent.delete(at);
+      continue;
+    }
+    found.push({
+      id: "LIVE-REGION",
+      where: `${site.file}:${site.line}`,
+      why:
+        `\`aria-live\` born under a condition with "${site.content}" already inside — the region ` +
+        `enters the document complete, so there is no mutation to announce and it never speaks. ` +
+        `Let the region live unconditionally and make its CONTENT the conditional half.`,
+    });
+  }
+  for (const i of spent)
+    found.push({
+      id: "ADMISSION",
+      where: `${admitted[i].file}  ${admitted[i].anchor}`,
+      why:
+        `admission SPENT — the site no longer violates, so the admission is a carve-out over ` +
+        `nothing. Delete it in the commit that cured the site (${admitted[i].cure}).`,
+    });
+  return found;
+}
+
+/** The freeze law's findings, as a pure function of the sweep so the fixture can hand it one. */
+function armFreeze({ sweep }) {
+  return sweep
+    .filter((r) => !r.skipped)
+    .flatMap((r) =>
+      r.orphans.map((row) => ({
+        id: row.id,
+        where: `${row.file}:${row.line}`,
+        why:
+          `${r.tranche.rel} is SEALED (${r.tranche.seal}) and this row of its own audited set now ` +
+          `reaches no disposition in its tranche-time corpus. A later restamp took the token with ` +
+          `it — BAL-03's class. Correct it in ${LEDGER} with a link, never by editing the sealed ` +
+          `record (PRECEPTS §2, the freeze law).`,
+      })),
+    );
 }
 
 // ── cites ───────────────────────────────────────────────────────────────────────────────────────
 //
 // Scope: the open section, plus terminal rows still under WATCH — the rows a close actually reads.
+//
+// SCOPE HELD at T9-W5, and the decision is a measurement rather than a preference. Widened to all
+// 171 rows the arm produces four findings and three of them are artifacts of the terminal register:
+// CH-12 QUOTES the dead cite `error.rs:63-64` as the very defect its restamp names, and reds for
+// documenting its own correction; its `CspError::aborted` cite resolves to the constructor while
+// the literal token lives on the doc line five above; CH-53's `desktop.undoBurst.ciMinPctOfCeiling`
+// is a JSON path, not a token that appears anywhere as written. An arm that punishes the freeze
+// law's dated-block idiom is an arm that teaches people to stop writing the correction down. The
+// currency widening lands on FOLD-TARGET, DUPLICATE, ONE-HOME and PROBE, which have no such register
+// problem; this one keeps the rows a close actually reads.
 // A cite is a backticked path, optionally `:line` or `:line-line`. Two rules:
 //   C1 RESOLVES  a cite carrying a line resolves to a tracked file with at least that many lines.
 //   C2 ANCHORS   a backticked non-path token within ANCHOR_WINDOW characters before the cite must
@@ -666,6 +1045,11 @@ function realIo(trackedFiles) {
         ? readdirSync(abs).sort()
         : [];
     },
+    /** The TRACKED files under a prefix — the live-region police scans what is shipped, never a
+     *  stray working copy or a build artifact that happens to sit under src/. */
+    files(prefix, ext) {
+      return trackedFiles.filter((f) => f.startsWith(`${prefix}/`) && f.endsWith(ext));
+    },
     resolve(path) {
       if (trackedFiles.includes(path)) return { path, matches: [path] };
       const matches = bySuffix.get(`/${path}`) ?? [];
@@ -674,15 +1058,20 @@ function realIo(trackedFiles) {
   };
 }
 
+let TRACKED = null;
+/** `git ls-files`, read once and shared: the cite arm resolves against it, and so does the
+ *  corpus law in `trancheEstate` (T9-W5 V5-C6). */
 function trackedFiles() {
+  if (TRACKED) return TRACKED;
   try {
-    return execFileSync("git", ["-C", REPO, "ls-files"], {
+    TRACKED = execFileSync("git", ["-C", REPO, "ls-files"], {
       encoding: "utf8",
       maxBuffer: 64 << 20,
       stdio: ["ignore", "pipe", "ignore"],
     })
       .split("\n")
       .filter(Boolean);
+    return TRACKED;
   } catch {
     fatal("git ls-files failed — the cite arm resolves against the tracked set");
   }
@@ -690,12 +1079,8 @@ function trackedFiles() {
 
 // ── self-test: every arm shown able to red ──────────────────────────────────────────────────────
 
-const fixtureLedger = (openRows, terminalRows = []) => ({
-  file: "FIXTURE.md",
-  openNum: 1,
-  sections: [],
-  rows: [],
-  open: openRows.map((r, i) => ({
+const fixtureLedger = (openRows, terminalRows = []) => {
+  const open = openRows.map((r, i) => ({
     file: "FIXTURE.md",
     line: i + 1,
     section: 1,
@@ -703,8 +1088,8 @@ const fixtureLedger = (openRows, terminalRows = []) => ({
     body: "",
     text: "",
     ...r,
-  })),
-  terminal: terminalRows.map((r, i) => ({
+  }));
+  const terminal = terminalRows.map((r, i) => ({
     file: "FIXTURE.md",
     line: 100 + i,
     section: 2,
@@ -712,8 +1097,18 @@ const fixtureLedger = (openRows, terminalRows = []) => ({
     body: "",
     text: "",
     ...r,
-  })),
-});
+  }));
+  // `rows` is the union, not an empty stub: the widened arms read it, and a fixture that hands them
+  // nothing would grade every one of them GREEN for the wrong reason.
+  return {
+    file: "FIXTURE.md",
+    openNum: 1,
+    sections: [],
+    rows: [...open, ...terminal],
+    open,
+    terminal,
+  };
+};
 
 const fixtureIo = (files) => ({
   read: (p) => files[p] ?? null,
@@ -725,6 +1120,10 @@ const fixtureIo = (files) => ({
           .map((f) => f.slice(p.length + 1).split("/")[0]),
       ),
     ].sort(),
+  files: (prefix, ext) =>
+    Object.keys(files)
+      .filter((f) => f.startsWith(`${prefix}/`) && f.endsWith(ext))
+      .sort(),
   resolve: (p) => {
     const matches = Object.keys(files).filter((f) => f === p || f.endsWith(`/${p}`));
     return { path: matches[0] ?? null, matches };
@@ -747,6 +1146,23 @@ const FIXTURE_TRANCHES = [
     seal: null,
   },
 ];
+
+/** A synthetic estate that keeps wave records, for FOLD-TARGET's fixture. */
+const FIXTURE_WAVE_IO = fixtureIo({
+  "x/fixture-tranche-1/waves/T1-W2-a-real-wave.md": "#",
+  "x/fixture-tranche-2/waves/W3-another.md": "#",
+});
+
+/** The two shapes the live-region police grades: the defect, and the correct idiom it must not
+ *  fire on — an unconditional region whose CONTENT is the conditional half. */
+const FIXTURE_LIVE_BAD = fixtureIo({
+  "web/frontend/src/Fixture.vue":
+    '<template>\n  <p v-if="pending" aria-live="polite">connecting…</p>\n</template>\n',
+});
+const FIXTURE_LIVE_GOOD = fixtureIo({
+  "web/frontend/src/Fixture.vue":
+    '<template>\n  <p aria-live="polite" role="status">\n    <span v-if="text">{{ text }}</span>\n  </p>\n  <div v-if="open" class="not-a-region">connecting…</div>\n</template>\n',
+});
 
 /** One first cell of every shape the estate writes, lifted from LEDGER.md and DISPOSITIONS.md —
  *  the grammar is pinned to the population, not to a guess about it. */
@@ -889,31 +1305,190 @@ const FIXTURES = [
   ],
   [
     "PROBE/CH-16",
-    "the registered CH-16 probe fires when every game spec carries urlCodec",
+    "the registered CH-16 probe fires when a game spec loses the shared codec its closure claims",
     armProbes,
     {
-      ledger: fixtureLedger([{ id: "CH-16", state: "SPLIT — half open" }]),
-      probes: PROBES,
-      io: fixtureIo({
-        "web/frontend/src/games/a/spec.ts": "export const urlCodec = 1",
-        "web/frontend/src/games/b/spec.ts": "export const urlCodec = 2",
-      }),
-    },
-    {
-      ledger: fixtureLedger([{ id: "CH-16", state: "SPLIT — half open" }]),
-      probes: PROBES,
+      ledger: fixtureLedger([], [{ id: "CH-16", state: "CLOSED-landed" }]),
+      probes: { "CH-16": PROBES["CH-16"] },
       io: fixtureIo({
         "web/frontend/src/games/a/spec.ts": "export const urlCodec = 1",
         "web/frontend/src/games/b/spec.ts": "no codec here",
       }),
     },
+    {
+      ledger: fixtureLedger([], [{ id: "CH-16", state: "CLOSED-landed" }]),
+      probes: { "CH-16": PROBES["CH-16"] },
+      io: fixtureIo({
+        "web/frontend/src/games/a/spec.ts": "export const urlCodec = 1",
+        "web/frontend/src/games/b/spec.ts": "export const urlCodec = 2",
+      }),
+    },
+  ],
+  [
+    "PROBE/registration",
+    "a probe is registered for a row the ledger no longer tables",
+    armProbes,
+    {
+      ledger: fixtureLedger([{ id: "FX-10" }]),
+      probes: { "CH-99": { claim: "…", run: () => ({ refuted: false, note: "" }) } },
+      io: fixtureIo({}),
+    },
+    {
+      ledger: fixtureLedger([{ id: "CH-99" }]),
+      probes: { "CH-99": { claim: "…", run: () => ({ refuted: false, note: "" }) } },
+      io: fixtureIo({}),
+    },
+  ],
+  [
+    "PROBE/CH-69",
+    "the registered CH-69 probe fires when the uniqueness sweep gains Difficulty::Hard",
+    armProbes,
+    {
+      ledger: fixtureLedger([{ id: "CH-69", state: "OPEN" }]),
+      probes: { "CH-69": PROBES["CH-69"] },
+      io: fixtureIo({
+        "csp-solver/tests/killer.rs":
+          "#[test]\nfn dealt_killer_boards_are_unique_by_construction() {\n  for &d in &[Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {}\n}\n",
+      }),
+    },
+    {
+      ledger: fixtureLedger([{ id: "CH-69", state: "OPEN" }]),
+      probes: { "CH-69": PROBES["CH-69"] },
+      io: fixtureIo({
+        "csp-solver/tests/killer.rs":
+          "#[test]\nfn dealt_killer_boards_are_unique_by_construction() {\n  for &d in &[Difficulty::Easy, Difficulty::Medium] {}\n}\n" +
+          "#[test]\nfn something_else_entirely() { Difficulty::Hard; }\n",
+      }),
+    },
+  ],
+  [
+    "FOLD-TARGET",
+    "a row folds into a wave its tranche never had",
+    armFoldTargets,
+    {
+      ledger: fixtureLedger(
+        [],
+        [{ id: "FX-09", text: "| FX-09 | FOLDED → T1-W9 | … |" }],
+      ),
+      tranches: FIXTURE_TRANCHES,
+      currentNum: 2,
+      io: FIXTURE_WAVE_IO,
+    },
+    {
+      ledger: fixtureLedger(
+        [],
+        [{ id: "FX-09", text: "| FX-09 | FOLDED → T1-W2 | … |" }],
+      ),
+      tranches: FIXTURE_TRANCHES,
+      currentNum: 2,
+      io: FIXTURE_WAVE_IO,
+    },
   ],
   [
     "DUPLICATE",
-    "one id is tabled open and terminal at once",
+    "one id is tabled twice — open and terminal, or twice terminal",
     armDuplicateHomes,
-    { ledger: fixtureLedger([{ id: "FX-03" }], [{ id: "FX-03" }]) },
-    { ledger: fixtureLedger([{ id: "FX-03" }], [{ id: "FX-04" }]) },
+    { ledger: fixtureLedger([{ id: "FX-03" }], [{ id: "FX-03" }, { id: "FX-04" }]) },
+    { ledger: fixtureLedger([{ id: "FX-03" }], [{ id: "FX-04" }, { id: "FX-05" }]) },
+  ],
+  [
+    "ONE-HOME",
+    "a new id carries a registered class's subject and names no home",
+    armOneHome,
+    {
+      ledger: fixtureLedger(
+        [
+          {
+            id: "CH-68",
+            text: "| CH-68 | OPEN | a multi-red burst on the runner, 3 reds in one settled-head run |",
+          },
+        ],
+        [{ id: "CH-64", text: "| CH-64 | RETIRED | the burst class, one home |" }],
+      ),
+      classes: CLASS_HOMES,
+    },
+    {
+      ledger: fixtureLedger(
+        [
+          {
+            id: "CH-68",
+            text: "| CH-68 | OPEN | a multi-red burst on the runner — appended to CH-64, which owns it |",
+          },
+        ],
+        [{ id: "CH-64", text: "| CH-64 | RETIRED | the burst class, one home |" }],
+      ),
+      classes: CLASS_HOMES,
+    },
+  ],
+  [
+    "ONE-HOME/registration",
+    "a class home is registered for a row the ledger no longer tables",
+    armOneHome,
+    {
+      ledger: fixtureLedger([{ id: "FX-11" }]),
+      classes: CLASS_HOMES,
+    },
+    {
+      ledger: fixtureLedger(
+        [{ id: "FX-11" }],
+        [{ id: "CH-64", text: "| CH-64 | RETIRED | … |" }],
+      ),
+      classes: CLASS_HOMES,
+    },
+  ],
+  [
+    "LIVE-REGION",
+    "an aria-live region is born under v-if with its content already inside",
+    armLiveRegions,
+    { io: FIXTURE_LIVE_BAD, admitted: [] },
+    { io: FIXTURE_LIVE_GOOD, admitted: [] },
+  ],
+  [
+    "LIVE-REGION/admission",
+    "an admission outlives the site it admits",
+    armLiveRegions,
+    {
+      io: FIXTURE_LIVE_GOOD,
+      admitted: [
+        {
+          file: "web/frontend/src/Fixture.vue",
+          anchor: 'aria-live="polite"',
+          cure: "-",
+          dated: "-",
+        },
+      ],
+    },
+    {
+      io: FIXTURE_LIVE_BAD,
+      admitted: [
+        {
+          file: "web/frontend/src/Fixture.vue",
+          anchor: 'aria-live="polite"',
+          cure: "-",
+          dated: "-",
+        },
+      ],
+    },
+  ],
+  [
+    "FREEZE",
+    "a sealed tranche's own audited row reaches no disposition in its tranche-time corpus",
+    armFreeze,
+    {
+      sweep: [
+        {
+          tranche: FIXTURE_TRANCHES[0],
+          skipped: null,
+          orphans: [{ id: "BAL-03", file: "FIXTURE.md", line: 7 }],
+        },
+      ],
+    },
+    {
+      sweep: [
+        { tranche: FIXTURE_TRANCHES[0], skipped: null, orphans: [] },
+        { tranche: FIXTURE_TRANCHES[1], skipped: "no audited row set", orphans: [] },
+      ],
+    },
   ],
   [
     "CITES/resolve",
@@ -1027,137 +1602,192 @@ const tranche = opts.tranche
     })
   : estate.at(-1);
 
-const trancheAbs = resolve(REPO, tranche.rel);
-if (!existsSync(trancheAbs)) fatal(`tranche folder missing: ${tranche.rel}`);
-
-// Inputs are located BEFORE the corpus is assembled — they are excluded from it, since a row set
-// that cites itself discharges nothing. Nothing is read yet: the structural guards below have to be
-// reachable in the order the header advertises, which is why the old `waves/` guard was dead code.
-const inputRels = INPUT_SHAPES.map((shape) => join(tranche.rel, shape)).filter((rel) =>
-  existsSync(resolve(REPO, rel)),
-);
-if (inputRels.length === 0)
-  fatal(
-    `${tranche.rel} carries none of the audited row-set shapes:\n  ` +
-      INPUT_SHAPES.join("\n  ") +
-      `\nA tranche with no row set has nothing to diff.`,
-  );
-
-// corpus — the tranche's waves and its root records, plus the living ledger
-const wavesDir = join(trancheAbs, "waves");
-const trancheMd = [
-  ...(existsSync(wavesDir)
-    ? readdirSync(wavesDir)
-        .filter((f) => f.endsWith(".md"))
-        .sort()
-        .map((f) => join(wavesDir, f))
-    : []),
-  ...readdirSync(trancheAbs)
-    .filter((f) => f.endsWith(".md"))
-    .sort()
-    .map((f) => join(trancheAbs, f)),
-].filter((abs) => !inputRels.includes(relative(REPO, abs)));
-
-if (trancheMd.length === 0)
-  fatal(
-    `${tranche.rel} contributes no corpus files (no waves/*.md, no root *.md outside its row sets).` +
-      ` A corpus of the ledger alone would let the record discharge itself.`,
-  );
-
-let corpusAbs = [...trancheMd];
 const ledgerAbs = resolve(REPO, LEDGER);
-if (existsSync(ledgerAbs)) corpusAbs.push(ledgerAbs);
-else if (opts.requireLedger || opts.assertState || opts.verifyCites || opts.ownerBlock)
-  fatal(`${LEDGER} is absent, and the arms requested read it`);
-
-const excluded = [];
-for (const wanted of opts.excludes) {
-  const hits = corpusAbs.filter(
-    (p) =>
-      basename(p) === basename(wanted) ||
-      relative(REPO, p) === wanted.replace(/^\.\//, ""),
-  );
-  if (hits.length === 0)
-    fatal(`--canary-exclude ${wanted} matched no corpus file — inert canary`);
-  excluded.push(...hits);
-  corpusAbs = corpusAbs.filter((p) => !hits.includes(p));
-}
-if (corpusAbs.length === 0) fatal("the corpus is empty after exclusions");
-
-// inputs, parsed
 const ID_CELL = idCellPattern(ROW_FAMILIES);
-const inputs = [];
-for (const rel of inputRels) {
-  const rows = dedupe(readRows(resolve(REPO, rel), rel, ID_CELL));
-  if (rows.length === 0)
-    fatal(`${rel} parsed to zero rows of ${ROW_FAMILIES.join("/")} — format drift`);
-  inputs.push({ file: rel, rows });
-}
 
-const allInputRows = dedupe(inputs.flatMap((i) => i.rows));
-const chronicRows = allInputRows.filter((r) => r.id.startsWith("CH-"));
-const matrixRows = allInputRows.filter((r) => !r.id.startsWith("CH-"));
+// ── one tranche's completeness diff ─────────────────────────────────────────────────────────────
+//
+// Extracted so the FREEZE sweep can run the same diff over a sealed tranche against that tranche's
+// OWN corpus. STRICT is the primary run: a missing row set, an empty corpus, a row set that parses
+// to zero rows are all format drift and must fail loud. The sweep is not strict — the pre-T5 estate
+// closed inside its READMEs and never wrote a row set at all, and a tranche with nothing to diff is
+// skipped BY NAME rather than turned into a FATAL that takes the whole gate down with it.
+function trancheDiff(t, { excludes = [], strict = false } = {}) {
+  const trancheAbs = resolve(REPO, t.rel);
+  const skip = (reason) => ({ tranche: t, skipped: reason });
+  if (!existsSync(trancheAbs))
+    return strict ? fatal(`tranche folder missing: ${t.rel}`) : skip("no such folder");
 
-// each matrix row's own disposition cell — the LAST cell where the table carries one
-for (const row of matrixRows) {
-  if (row.id.startsWith("PR-")) {
-    row.disposition = row.cells.at(-1) ?? "";
-    row.selfTerminal = isTerminalCell(row.disposition);
-  } else if (row.id.startsWith("S-")) {
-    row.disposition = row.cells[2] ?? "";
-    row.selfTerminal = row.disposition.replace(/\*/g, "").trim().length > 0;
-  } else {
-    row.disposition = "";
-    row.selfTerminal = false; // a proposed owning wave is not a disposition
-  }
-  const RANGE = rangePattern(ROW_FAMILIES);
-  const TOKEN = tokenPattern(ROW_FAMILIES);
-  row.delegates = row.disposition
-    ? [
-        ...new Set(
-          [...row.disposition.replace(RANGE, " ").matchAll(TOKEN)].flatMap((m) =>
-            expandSlashes(m[1]),
-          ),
-        ),
-      ].filter((id) => id !== row.id)
-    : [];
-}
-
-// scan the corpus
-const citations = new Map(); // id → [{file, line}]
-const scopeRefs = [];
-for (const abs of corpusAbs) {
-  const rel = relative(REPO, abs);
-  const { found, ranges } = idsInText(readFileSync(abs, "utf8"), ROW_FAMILIES);
-  for (const hit of found) {
-    if (!citations.has(hit.id)) citations.set(hit.id, []);
-    citations.get(hit.id).push({ file: rel, line: hit.line });
-  }
-  for (const range of ranges) scopeRefs.push({ ...range, file: rel });
-}
-
-function siteOf(id) {
-  const first = citations.get(id)?.[0];
-  return first ? `${first.file}:${first.line}` : "";
-}
-
-// resolve: R1 corpus, R2 self, R3 delegated
-const verdicts = new Map();
-const allRows = [...chronicRows, ...matrixRows];
-for (const row of allRows) {
-  if (citations.has(row.id))
-    verdicts.set(row.id, { route: "CORPUS", note: siteOf(row.id), row });
-  else if (row.selfTerminal)
-    verdicts.set(row.id, { route: "SELF", note: leadToken(row.disposition), row });
-}
-for (const row of allRows) {
-  if (verdicts.has(row.id)) continue;
-  const target = (row.delegates ?? []).find(
-    (id) => verdicts.get(id)?.route === "CORPUS",
+  // Inputs are located BEFORE the corpus is assembled — they are excluded from it, since a row set
+  // that cites itself discharges nothing. Nothing is read yet: the structural guards below have to
+  // be reachable in the order the header advertises (the old `waves/` guard was dead code).
+  const inputRels = INPUT_SHAPES.map((shape) => join(t.rel, shape)).filter((rel) =>
+    existsSync(resolve(REPO, rel)),
   );
-  if (target) verdicts.set(row.id, { route: "DELEGATED", note: `→ ${target}`, row });
+  if (inputRels.length === 0)
+    return strict
+      ? fatal(
+          `${t.rel} carries none of the audited row-set shapes:\n  ` +
+            INPUT_SHAPES.join("\n  ") +
+            `\nA tranche with no row set has nothing to diff.`,
+        )
+      : skip("no audited row set (closed inside its own records)");
+
+  // corpus — the tranche's waves and its root records, plus the living ledger
+  const wavesDir = join(trancheAbs, "waves");
+  const trancheMd = [
+    ...(existsSync(wavesDir)
+      ? readdirSync(wavesDir)
+          .filter((f) => f.endsWith(".md"))
+          .sort()
+          .map((f) => join(wavesDir, f))
+      : []),
+    ...readdirSync(trancheAbs)
+      .filter((f) => f.endsWith(".md"))
+      .sort()
+      .map((f) => join(trancheAbs, f)),
+  ].filter((abs) => !inputRels.includes(relative(REPO, abs)));
+
+  if (trancheMd.length === 0)
+    return strict
+      ? fatal(
+          `${t.rel} contributes no corpus files (no waves/*.md, no root *.md outside its row sets).` +
+            ` A corpus of the ledger alone would let the record discharge itself.`,
+        )
+      : skip("no corpus files outside its row sets");
+
+  let corpusAbs = [...trancheMd];
+  if (existsSync(ledgerAbs)) corpusAbs.push(ledgerAbs);
+  else if (
+    strict &&
+    (opts.requireLedger || opts.assertState || opts.verifyCites || opts.ownerBlock)
+  )
+    fatal(`${LEDGER} is absent, and the arms requested read it`);
+
+  const excluded = [];
+  for (const wanted of excludes) {
+    const hits = corpusAbs.filter(
+      (p) =>
+        basename(p) === basename(wanted) ||
+        relative(REPO, p) === wanted.replace(/^\.\//, ""),
+    );
+    if (hits.length === 0) {
+      if (strict)
+        fatal(`--canary-exclude ${wanted} matched no corpus file — inert canary`);
+      continue;
+    }
+    excluded.push(...hits);
+    corpusAbs = corpusAbs.filter((p) => !hits.includes(p));
+  }
+  if (corpusAbs.length === 0)
+    return strict
+      ? fatal("the corpus is empty after exclusions")
+      : skip("corpus empty after exclusions");
+
+  // inputs, parsed
+  const inputs = [];
+  for (const rel of inputRels) {
+    const rows = dedupe(readRows(resolve(REPO, rel), rel, ID_CELL));
+    if (rows.length === 0)
+      return strict
+        ? fatal(
+            `${rel} parsed to zero rows of ${ROW_FAMILIES.join("/")} — format drift`,
+          )
+        : skip(`${rel} parsed to zero rows — format drift`);
+    inputs.push({ file: rel, rows });
+  }
+
+  const allInputRows = dedupe(inputs.flatMap((i) => i.rows));
+  const chronicRows = allInputRows.filter((r) => r.id.startsWith("CH-"));
+  const matrixRows = allInputRows.filter((r) => !r.id.startsWith("CH-"));
+
+  // each matrix row's own disposition cell — the LAST cell where the table carries one
+  for (const row of matrixRows) {
+    if (row.id.startsWith("PR-")) {
+      row.disposition = row.cells.at(-1) ?? "";
+      row.selfTerminal = isTerminalCell(row.disposition);
+    } else if (row.id.startsWith("S-")) {
+      row.disposition = row.cells[2] ?? "";
+      row.selfTerminal = row.disposition.replace(/\*/g, "").trim().length > 0;
+    } else {
+      row.disposition = "";
+      row.selfTerminal = false; // a proposed owning wave is not a disposition
+    }
+    const RANGE = rangePattern(ROW_FAMILIES);
+    const TOKEN = tokenPattern(ROW_FAMILIES);
+    row.delegates = row.disposition
+      ? [
+          ...new Set(
+            [...row.disposition.replace(RANGE, " ").matchAll(TOKEN)].flatMap((m) =>
+              expandSlashes(m[1]),
+            ),
+          ),
+        ].filter((id) => id !== row.id)
+      : [];
+  }
+
+  // scan the corpus
+  const citations = new Map(); // id → [{file, line}]
+  const scopeRefs = [];
+  for (const abs of corpusAbs) {
+    const rel = relative(REPO, abs);
+    const { found, ranges } = idsInText(readFileSync(abs, "utf8"), ROW_FAMILIES);
+    for (const hit of found) {
+      if (!citations.has(hit.id)) citations.set(hit.id, []);
+      citations.get(hit.id).push({ file: rel, line: hit.line });
+    }
+    for (const range of ranges) scopeRefs.push({ ...range, file: rel });
+  }
+  const siteOf = (id) => {
+    const first = citations.get(id)?.[0];
+    return first ? `${first.file}:${first.line}` : "";
+  };
+
+  // resolve: R1 corpus, R2 self, R3 delegated
+  const verdicts = new Map();
+  const allRows = [...chronicRows, ...matrixRows];
+  for (const row of allRows) {
+    if (citations.has(row.id))
+      verdicts.set(row.id, { route: "CORPUS", note: siteOf(row.id), row });
+    else if (row.selfTerminal)
+      verdicts.set(row.id, { route: "SELF", note: leadToken(row.disposition), row });
+  }
+  for (const row of allRows) {
+    if (verdicts.has(row.id)) continue;
+    const target = (row.delegates ?? []).find(
+      (id) => verdicts.get(id)?.route === "CORPUS",
+    );
+    if (target) verdicts.set(row.id, { route: "DELEGATED", note: `→ ${target}`, row });
+  }
+  return {
+    tranche: t,
+    skipped: null,
+    inputs,
+    corpusAbs,
+    excluded,
+    allRows,
+    verdicts,
+    citations,
+    scopeRefs,
+    orphans: allRows.filter((row) => !verdicts.has(row.id)),
+  };
 }
-const orphans = allRows.filter((row) => !verdicts.has(row.id));
+
+const primary = trancheDiff(tranche, { excludes: opts.excludes, strict: true });
+const { inputs, corpusAbs, excluded, allRows, verdicts, orphans, scopeRefs } = primary;
+
+// ── the freeze law's sweep ──────────────────────────────────────────────────────────────────────
+//
+// Every SEALED tranche re-diffed against its own tranche-time corpus, on every run. BAL-03 is the
+// case: T8 lawfully restamped CH-45's line, the only `BAL-03` token in the living ledger went with
+// it, and T7's gate turned RED at a commit nobody would ever run it at — where it stayed, unseen,
+// for two closes, because nothing re-reads a sealed tranche. Now something does.
+const freezeSweep = tranche.sealed
+  ? []
+  : estate
+      .filter((t) => t.sealed)
+      .map((t) => trancheDiff(t, { excludes: opts.excludes, strict: false }));
+const freezeFindings = armFreeze({ sweep: freezeSweep });
 
 // the ledger and its arms
 const io = realIo(trackedFiles());
@@ -1185,18 +1815,27 @@ if (opts.ownerBlock) {
 
 const findings = [];
 const armRuns = [];
+if (freezeSweep.length) {
+  armRuns.push(["FREEZE", freezeFindings]);
+  findings.push(...freezeFindings.map((h) => ({ ...h, arm: "FREEZE" })));
+}
 if (opts.assertState) {
   const model = {
     ledger,
     tranches: estate,
-    currentNum: tranche.num,
+    currentNum: estate.at(-1).num,
     probes: PROBES,
+    classes: CLASS_HOMES,
+    admitted: LIVE_REGION_ADMITTED,
     io,
   };
   for (const [name, fn] of [
     ["TERMINALITY", armTerminality],
+    ["FOLD-TARGET", armFoldTargets],
     ["PROBE", armProbes],
     ["DUPLICATE", armDuplicateHomes],
+    ["ONE-HOME", armOneHome],
+    ["LIVE-REGION", armLiveRegions],
   ]) {
     const hits = fn(model);
     armRuns.push([name, hits]);
@@ -1223,7 +1862,10 @@ try {
 
 const armNames = [
   "ORPHAN",
-  ...(opts.assertState ? ["TERMINALITY", "PROBE", "DUPLICATE"] : []),
+  ...(freezeSweep.length ? ["FREEZE"] : []),
+  ...(opts.assertState
+    ? ["TERMINALITY", "FOLD-TARGET", "PROBE", "DUPLICATE", "ONE-HOME", "LIVE-REGION"]
+    : []),
   ...(opts.verifyCites ? ["CITES"] : []),
 ];
 
@@ -1249,6 +1891,20 @@ for (const t of estate)
     `  ${t.rel.padEnd(34)} ${t.sealed ? `SEALED  ${t.seal}` : "open"}${t.num === tranche.num ? "   ← this tranche" : ""}`,
   );
 say();
+
+if (freezeSweep.length) {
+  say(
+    "FREEZE SWEEP (every sealed tranche re-diffed against its OWN tranche-time corpus)",
+  );
+  for (const run of freezeSweep)
+    say(
+      run.skipped
+        ? `  ${run.tranche.rel.padEnd(34)} SKIPPED — ${run.skipped}`
+        : `  ${run.tranche.rel.padEnd(34)} ${String(run.allRows.length).padStart(3)} audited rows · ` +
+            `${run.corpusAbs.length} corpus files · ${run.orphans.length} orphan`,
+    );
+  say();
+}
 
 say(`CORPUS (${corpusAbs.length} files)`);
 for (const abs of corpusAbs) say(`  ${relative(REPO, abs)}  ${statSync(abs).size} B`);
@@ -1288,6 +1944,75 @@ if (ledger) {
         s.num === ledger.openNum ? "   ← open" : ""
       }`,
     );
+  say();
+}
+
+// The currency arms' reach, printed rather than claimed. Before T9-W5 the whole of it was §1 plus
+// the terminal rows still under WATCH — the rows CITES scopes to — and everything else in the
+// ledger was outside every arm, which is how eighteen FOLDED rows came to wear a landing promise
+// into a sealed tranche where nothing ever looked at them.
+if (ledger && opts.assertState) {
+  const pct = (n) => `${((100 * n) / ledger.rows.length).toFixed(1)}%`;
+  const citeScope = new Set([
+    ...ledger.open.map((r) => r.id),
+    ...ledger.terminal.filter((r) => /\bWATCH\b/.test(r.state)).map((r) => r.id),
+  ]);
+  const waveScope = ledger.rows.filter(
+    (r) => waveRefs(r.text, estate.at(-1).num).length > 0,
+  );
+  const probeScope = ledger.rows.filter((r) => PROBES[r.id]);
+  // The disposition cell is the state where a table has three columns and the ONLY cell where it
+  // has two (§4, §5) — U-11 writes its fold there, which is why a state-scoped count reads 17.
+  const folded = ledger.rows
+    .map((r) => ({ r, cell: r.state || r.body }))
+    .filter(
+      ({ cell }) =>
+        /^\*{0,2}FOLDE?D?\b/.test(cell.trimStart()) &&
+        !/\b(LANDED|CLOSED|RETIRED?|SUPERSEDED|EXECUTED|CURED)\b/.test(cell),
+    )
+    .map(({ r }) => r);
+  const covered = new Set([
+    ...ledger.rows.map((r) => r.id), // DUPLICATE and ONE-HOME read every row
+  ]);
+  say(`CURRENCY COVERAGE  (${ledger.rows.length} ledger rows)`);
+  say(
+    `  TERMINALITY  ${String(ledger.open.length).padStart(3)}  ${pct(ledger.open.length)}  §1 only — the accretion disease is an OPEN-row disease`,
+  );
+  say(
+    `  FOLD-TARGET  ${String(waveScope.length).padStart(3)}  ${pct(waveScope.length)}  every row naming a wave, in any section`,
+  );
+  say(
+    `  PROBE        ${String(probeScope.length).padStart(3)}  ${pct(probeScope.length)}  rows carrying a registration (${Object.keys(PROBES).join(", ")})`,
+  );
+  say(
+    `  DUPLICATE    ${String(ledger.rows.length).padStart(3)}  ${pct(ledger.rows.length)}  every row, against every other`,
+  );
+  say(
+    `  ONE-HOME     ${String(ledger.rows.length).padStart(3)}  ${pct(ledger.rows.length)}  every row, against ${Object.keys(CLASS_HOMES).length} registered class home(s)`,
+  );
+  say(
+    `  CITES        ${String(citeScope.size).padStart(3)}  ${pct(citeScope.size)}  §1 + terminal-under-WATCH — scope HELD, see the header`,
+  );
+  say(
+    `  ─ union      ${String(covered.size).padStart(3)}  ${pct(covered.size)}  (was ${citeScope.size} · ${pct(citeScope.size)} before T9-W5)`,
+  );
+  say(
+    `  of which ${folded.length} dead-state FOLDED rows, 0 under any arm before, ${folded.filter((r) => waveRefs(r.text, estate.at(-1).num).length > 0).length} under FOLD-TARGET now`,
+  );
+  say();
+}
+
+if (opts.assertState && LIVE_REGION_ADMITTED.length) {
+  say(
+    `LIVE-REGION ADMISSIONS (${LIVE_REGION_ADMITTED.length}) — sites that violate TODAY, printed in full`,
+  );
+  for (const a of LIVE_REGION_ADMITTED) {
+    say(`  ${a.file}  ${a.anchor}`);
+    say(`      admitted ${a.dated} · cure: ${a.cure}`);
+  }
+  say(
+    `  An unadmitted site REDs on contact; an admission whose site stops violating REDs as SPENT.`,
+  );
   say();
 }
 

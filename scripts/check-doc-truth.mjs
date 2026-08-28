@@ -2,7 +2,7 @@
 /**
  * check-doc-truth — the doc-canon gate.
  *
- * Thirty-nine rows, each of which RE-DERIVES its truth from the artifact at run
+ * Forty-one rows, each of which RE-DERIVES its truth from the artifact at run
  * time and then asserts the docs say that. Nothing here is pinned: every expected
  * value comes off the tree — a byte count off the built `.wasm`, a version off
  * `Cargo.toml`/`package.json`, a test roster off the `#[test]` attributes, an
@@ -15,12 +15,20 @@
  * Exit 0 = every row green. Exit 1 = one line per failing site: row id,
  * file:line, expected, got.
  *
- * `--self-test` runs the fixtures instead: each T7-W0, T7-W5 and T9-W0 row
- * against a doc that lies (must RED) and the same claim told true (must GREEN).
- * A row that cannot be shown to red is a decoration; the fixtures are the proof,
- * and the GREEN ones are built from the derivations, so they rot the day the
- * tree moves. 28 of the 39 rows carry fixtures; the eleven that don't are named
- * in F1's finding and are T9-W5's to cure, not this file's to claim away.
+ * `--self-test` runs the fixtures instead: every row against a doc that lies
+ * (must RED) and the same claim told true (must GREEN). A row that cannot be
+ * shown to red is a decoration; the fixtures are the proof, and the GREEN ones
+ * are built from the derivations, so they rot the day the tree moves.
+ *
+ * 125 FIXTURES OVER ALL 41 ROWS, EVERY ROW IN BOTH COLOURS — the count is
+ * printed by the run itself, and the sentence is trued to the corpus it
+ * exercises rather than to the corpus it once had. T9-W5 §5.5 closed the gap it
+ * inherited: 76 fixtures over 28 rows, with eleven rows carrying none at all
+ * (`frontend-readme-two-games`, `root-readme-e2e-counts`, `lean-wasm-4-sites`,
+ * `ci-band-comment-406`, `sudoku-md-sections`, `ofl-licenses-figures`,
+ * `install-pin-0.5`, `test-count-208-vs-204`, `make-wasm-recipe`,
+ * `ci-lane-count`, `iai-golden-figure`) — named in F1's finding rather than
+ * claimed away, and paid here.
  *
  * A DERIVATION THAT FAILS IS A RED, NEVER A SKIP (T5-W1). The band row used to
  * drop its assertions when it could not read a budget out of the workflow and
@@ -42,12 +50,16 @@
  *
  * Lean wasm bytes: measured off whichever built artifact is on disk (`pkg/`,
  * a downloaded `lean-pkg/`, or the hashed `dist/` asset). darwin and the CI
- * runner disagree by ~2 KB on the same source — the known toolchain divergence —
- * so a doc site passes by carrying the LOCALLY derived figure. A site stamped
- * with both figures passes on both platforms, which is the shape the canon
- * wants. With no artifact anywhere the row degrades: it derives the runner
- * figure from the CI band comment, says so loudly in the output, and still
- * asserts.
+ * runner disagree by ~2 KB on the same source — the known toolchain divergence.
+ * "Carry the LOCALLY derived figure" was the old law and it could not be
+ * obeyed: one canon, two platforms, and whichever figure the four sites carried
+ * they were red on the other host (measured RED in CI at run 32868316304).
+ * THE LAW IS THE BAND, AND THE STAMP CARRIES ITS PLATFORM. All four sites cite
+ * one darwin-labelled figure; the stamp and the built artifact are both held
+ * inside the enforced band on every platform; exact bytes are asserted only
+ * where the run's platform IS the stamp's, and elsewhere the delta is INFO on
+ * the derived line. With no artifact anywhere the band arm has nothing to bound
+ * and says so as a failing site.
  *
  * Two rows carry a clause their id doesn't name. `ofl-licenses-figures` asserts
  * the font figures at both sites that state them — the README paragraph and the
@@ -177,6 +189,62 @@ function deriveLeanWasm() {
     size: null,
     source: "unmeasurable — no artifact, no band config",
     degraded: true,
+  };
+}
+
+/** The four surfaces that state the lean artifact's size. */
+const LEAN_SITES = [
+  "docs/benchmarks.md",
+  "csp-solver/wasm/README.md",
+  "csp-solver/wasm/pkg/README.md",
+  ".github/workflows/ci.yml",
+];
+
+/**
+ * A byte figure LABELLED as darwin's, in either order the canon writes it:
+ * "darwin measures 122,541 B" and "122,541 B raw on darwin". The window is
+ * comma-free and 24 characters wide on purpose — it is what separates a stamp
+ * from the runner's own figure two clauses later in the same sentence.
+ */
+const DARWIN_FIGURE = [
+  /\bdarwin\b[^,\n]{0,24}?(\d{2,3},\d{3})\s*B/gi,
+  /(\d{2,3},\d{3})\s*B[^,\n]{0,24}?\bon darwin\b/gi,
+];
+
+/**
+ * THE DARWIN STAMP — read off the four sites, never pinned here.
+ *
+ * T9-W5 §5.5, the band-not-bytes redesign the T9 charter owed this wave. The row
+ * used to demand that all four sites carry the LOCALLY measured bytes, which no
+ * stamp can satisfy: the same source builds 122,541 B on darwin and 124,423 B on
+ * the runner (run 32868316304 at `4dd9ec9c`), so a canon green on one platform
+ * was red on the other by construction — the ROW was the defect, not the prose.
+ * What the canon can hold is a stamp with its platform on it: the four sites
+ * agree on ONE darwin figure, the figure and the artifact both sit inside the
+ * enforced band, and exact bytes are asserted only where the platform matches
+ * the label. Runner-vs-darwin drift is INFO in the derived line, never a RED.
+ */
+function deriveLeanStamp() {
+  const sites = LEAN_SITES.map((rel) => {
+    const text = read(rel);
+    if (text === null) return { rel, present: false, figures: [] };
+    const figures = [];
+    text.split("\n").forEach((line, i) => {
+      for (const re of DARWIN_FIGURE)
+        for (const m of line.matchAll(re))
+          figures.push({ line: i + 1, value: num(m[1]) });
+    });
+    return { rel, present: true, figures };
+  });
+  const tally = new Map();
+  for (const s of sites)
+    for (const f of s.figures) tally.set(f.value, (tally.get(f.value) ?? 0) + 1);
+  const ranked = [...tally].sort((a, b) => b[1] - a[1] || a[0] - b[0]);
+  return {
+    platform: "darwin",
+    sites,
+    values: [...tally.keys()].sort((a, b) => a - b),
+    stamp: ranked.length ? ranked[0][0] : null,
   };
 }
 
@@ -610,12 +678,33 @@ function deriveScenarios() {
 }
 
 /**
+ * The crate CHANGELOGs and the manifests that date them (T9-W5 §5.5).
+ *
+ * A changelog is a record of PAST STATES. Asserting a 0.3.0 entry's symbols and
+ * paths against HEAD would forbid ever removing a surface without rewriting
+ * history, so the scan window is TENSE-SCOPED: the section whose heading names
+ * the version the sibling `Cargo.toml` declares describes the tree as it stands,
+ * and everything below that section is history — counted and named in the
+ * derived line rather than silently dropped. The scope is only trustworthy while
+ * the head heading IS the declared version, which is why `crate-symbol-cites`
+ * asserts that pairing in the same row as the cites it scopes.
+ */
+const CHANGELOGS = [
+  ["csp-solver/CHANGELOG.md", "csp-solver/Cargo.toml"],
+  ["csp-solver/wasm/CHANGELOG.md", "csp-solver/wasm/Cargo.toml"],
+].filter(([md]) => has(md));
+
+/**
  * The docs whose backticked paths are asserted against the tree, and the tree
  * index those paths resolve into.
+ *
+ * T9-W5 §5.5 UNSCOPES this list. It was README + the frontend README + `docs/`
+ * alone, so the three crate READMEs' path cites and file trees — `csp-solver/
+ * README.md`, `csp-solver/wasm/README.md` and the published `pkg/README.md` —
+ * sat outside every gate while `DOCS` carried them for the figure rows. The
+ * changelogs join under the tense scope above.
  */
-const CITED_DOCS = DOCS.filter(
-  (d) => d === "README.md" || d === "web/frontend/README.md" || d.startsWith("docs/"),
-);
+const CITED_DOCS = [...DOCS, ...CHANGELOGS.map(([md]) => md)];
 
 const PATH_EXT =
   /\.(ts|tsx|vue|rs|mjs|cjs|js|json|toml|sh|ya?ml|css|html|baseline|lock|wasm|py|jsonl)$/;
@@ -633,6 +722,12 @@ function deriveBasenames() {
     }
   };
   rec("");
+  // The PUBLISHED package is source to the two wasm READMEs — they enumerate
+  // its contents by name (`csp_solver_wasm.js`, the `.d.ts`) — but `pkg/` is
+  // gitignored build output and `SKIP_DIRS` walks past it. Unscoping the crate
+  // READMEs (T9-W5 §5.5) put those four names inside a gate for the first time,
+  // so the index reaches the artifact the doc-truth lane already downloads.
+  if (has("csp-solver/wasm/pkg")) rec("csp-solver/wasm/pkg");
   return out;
 }
 
@@ -643,7 +738,26 @@ function deriveBasenames() {
  * Reading those as broken cites would make the row lie in the other direction.
  */
 const RETIRED_LINE =
-  /\b(former(?:ly)?|excised|retired|deleted|removed|dead|no longer|went out|is gone|bbnf-lang|not reproducible here)\b/i;
+  /\b(former(?:ly)?|excised|retired|deleted|removed|dead|no longer|went (?:out|with)|is gone|the old|bbnf-lang|not reproducible here)\b/i;
+
+/**
+ * The retirement can sit one line above its cites — prose wraps, and
+ * `csp-solver/README.md` says "went with the kernel unification (the old" on
+ * one line and "`backtrack.rs`/`backjump.rs`)." on the next. A line-scoped read
+ * of a wrapped sentence is a scoping bug wearing a verdict; the window is two
+ * lines wide, which is exactly how far the canon's own wrap reaches.
+ */
+const retiredHere = (lines, i) =>
+  RETIRED_LINE.test(lines[i] ?? "") || RETIRED_LINE.test(lines[i - 1] ?? "");
+
+/**
+ * A cite the sentence NEGATES ("no `mod.rs`", "without `foo.rs`") claims the
+ * file's absence, and metasyntactic stand-ins claim nothing at all. Both were
+ * invisible while the crate READMEs sat outside the scan list; both would now
+ * red the very sentence that states the convention correctly.
+ */
+const NEGATED_CITE = /\b(?:no|not|never|without|neither|nor)\s+$/i;
+const METASYNTACTIC = /^(foo|bar|baz|qux)\b/;
 
 /** Prefixes that are campaign substrate or gitignored build output. */
 const OFF_TREE_PREFIX =
@@ -679,44 +793,256 @@ function resolveCite(tok, docRel) {
  * The file-tree blocks: every node the tree draws, plus every child its own
  * trailing comment names. D4's `SudokuBoard/`/`KillerCage/` live in those
  * comments, which is why a backtick-only scan never reached them.
+ *
+ * T9-W5 §5.5 widens the harvest twice. (1) Every node now carries the KIND the
+ * tree draws it as — `foo/` is a directory claim, `foo.ts` a file claim — and
+ * `cited-paths-exist` grades the kind, not only the existence: a `scripts/` node
+ * over a file, or a `vite.config.ts` node over a directory, resolved GREEN
+ * before this. (2) The comment harvest reached only child DIRECTORIES (the
+ * `SudokuBoard/` shape); the comments that enumerate child FILES — `assets/ #
+ * index.css … + typography.css` — named eight files across the READMEs that
+ * nothing resolved. Both kinds come out now, tagged.
+ *
+ * SUBDIRECTORY-ROSTER COMPLETENESS WAS AUDITIONED AND DECLINED, with the
+ * measurement: the READMEs' trees elide by design (of the eight drawn parents,
+ * four are deliberately partial — the root tree draws 4 of 4 at top level but
+ * `web/frontend` 3 of 6, `csp-solver/src` 6 of 7), so "a drawn directory draws
+ * all its children" is not a law this canon holds and wiring it would mint a
+ * born-RED nobody intends to cure. What IS asserted is what the tree SAYS:
+ * every drawn node exists, is of the kind drawn, and any count in its comment
+ * equals the directory's own (`directory-count-claims`).
  */
+/**
+ * Where a tree block's root line hangs in the repo.
+ *
+ * It used to be the DOC'S OWN DIRECTORY, full stop — which is right only when
+ * the root line names that directory (`frontend/` in `web/frontend/README.md`)
+ * and silently wrong the moment it names a child: `csp-solver/README.md` draws
+ * `src/`, and every node under it resolved to `csp-solver/<file>` — 47 sites
+ * one directory too high, invisible while the crate READMEs sat outside the
+ * scan list. The ladder resolves the root against the doc's directory first,
+ * then the repo root (the published `pkg/README.md` is a copy that draws
+ * `csp-solver/wasm/`), and falls back to the old answer.
+ */
+function treeBase(rootTok, rel) {
+  const docDir = rel.includes("/") ? dirname(rel) : "";
+  if (rootTok === ".") return "";
+  const root = rootTok.replace(/\/$/, "");
+  if (docDir === root || docDir.endsWith(`/${root}`)) return `${docDir}/`;
+  const under = docDir ? `${docDir}/${root}` : root;
+  if (has(under)) return `${under}/`;
+  if (has(root)) return `${root}/`;
+  return docDir ? `${docDir}/` : "";
+}
+
 function treeCites(rel) {
   const lines = (read(rel) ?? "").split("\n");
   const out = [];
   let inFence = false;
   let base = null;
   let stack = [];
+  let dirs = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (/^\s*```/.test(line)) {
       inFence = !inFence;
       base = null;
       stack = [];
+      dirs = [];
       continue;
     }
     if (!inFence) continue;
     if (base === null) {
       const r = line.match(/^(\.|[\w.-]+\/)\s*$/);
-      if (r) base = r[1] === "." ? "" : rel.includes("/") ? dirname(rel) + "/" : "";
+      if (r) base = treeBase(r[1], rel);
       continue;
     }
     const m = line.match(/^((?:[│|]\s{3}|\s{4})*)(?:├──|└──)\s+(\S+)/);
     if (!m) continue;
     const depth = Math.floor(m[1].length / 4);
     const isDir = m[2].endsWith("/");
+    const name = m[2].replace(/\/$/, "");
     stack.length = depth;
-    stack[depth] = m[2].replace(/\/$/, "");
-    const node = base + stack.slice(0, depth + 1).join("/");
-    out.push({ line: i + 1, path: node, tok: m[2] });
+    dirs.length = depth;
+    stack[depth] = name;
+    // The 2018 module convention this canon states in prose — `foo.rs` beside a
+    // `foo/` directory, drawn as one node `constraint.rs + constraint/` — means
+    // a FILE node can carry children. Its children hang off the directory half,
+    // so the parent stack keeps the directory form while the node keeps its own.
+    dirs[depth] = isDir ? name : name.replace(/\.[a-z]+$/, "");
+    const node = base + [...dirs.slice(0, depth), name].join("/");
+    out.push({ line: i + 1, path: node, tok: m[2], kind: isDir ? "dir" : "file" });
     const comment = line.slice(m[0].length).match(/#\s*(.*)$/);
     if (!isDir || !comment) continue;
     for (const raw of comment[1].split(/[\s,;·]+/)) {
-      const t = raw.replace(/^[(+[]+/, "").replace(/[)\].,:;]+$/, "");
+      const t = raw.replace(/^[(+[`]+/, "").replace(/[)\].,:;`]+$/, "");
       if (/^[A-Za-z][\w.-]*\/$/.test(t))
-        out.push({ line: i + 1, path: `${node}/${t.replace(/\/$/, "")}`, tok: t });
+        out.push({
+          line: i + 1,
+          path: `${node}/${t.replace(/\/$/, "")}`,
+          tok: t,
+          kind: "dir",
+        });
+      else if (new RegExp(`^[A-Za-z][\\w.-]*${PATH_EXT.source}$`).test(t))
+        out.push({ line: i + 1, path: `${node}/${t}`, tok: t, kind: "file" });
     }
   }
   return out;
+}
+
+/** Is this path a real directory? Overlay entries are prose, so never one. */
+const isDirPath = (rel) =>
+  !OVERLAY.has(rel) && existsSync(abs(rel)) && statSync(abs(rel)).isDirectory();
+
+/**
+ * How far down a scanned file a present-tense assertion may reach. Everything
+ * but a changelog: all the way. A changelog: to the end of its head release
+ * section — see `CHANGELOGS`. Derived from `D` so a fixture that moves the
+ * window moves the scope with it.
+ */
+const scanLimit = (rel, fallback) =>
+  D.changelogs?.find((c) => c.md === rel)?.limit ?? fallback;
+
+// ── T9-W5 §5.5 derivations: the scan list's own scope ──────────────────────
+
+/**
+ * Each changelog's present-tense window, and the manifest that dates it.
+ *
+ * `limit` is the last line of the head section — the one whose heading names a
+ * version. `want` is what the sibling `Cargo.toml` declares. When the two agree
+ * the window describes the tree at HEAD and its cites are gradeable; when they
+ * disagree the window is a lie and `crate-symbol-cites` says so instead of
+ * grading against it. `history` counts the lines below the window so the scope
+ * is published rather than assumed.
+ */
+function deriveChangelogScope() {
+  return CHANGELOGS.map(([md, toml]) => {
+    const want = (read(toml) ?? "").match(/^\s*version\s*=\s*"([^"]+)"/m)?.[1] ?? null;
+    const lines = (read(md) ?? "").split("\n");
+    const heads = lines.flatMap((l, i) =>
+      /^##\s+\d+\.\d+\.\d+/.test(l)
+        ? [{ line: i + 1, version: l.match(/^##\s+(\d+\.\d+\.\d+)/)[1] }]
+        : [],
+    );
+    const limit = heads.length > 1 ? heads[1].line - 1 : lines.length;
+    return {
+      md,
+      toml,
+      want,
+      head: heads[0] ?? null,
+      releases: heads.length,
+      limit,
+      history: Math.max(0, lines.length - limit),
+    };
+  });
+}
+
+/**
+ * Every Rust type, trait and module the crate declares, indexed to the files
+ * that declare (or `impl`) it — the index a `Type::method` cite resolves into.
+ *
+ * Deliberately FILE-scoped, not block-scoped: the question a doc cite raises is
+ * "does this surface exist at all" (the `from_parts` class — a constructor named
+ * in the canon that no `impl` anywhere provides), and a brace-matching parser
+ * would trade that answer for false REDs on every macro and `cfg` arm. A member
+ * counts when the files declaring its owner spell it as a `fn`, a field, a
+ * variant, a const or a nested module.
+ */
+function deriveRustSymbols() {
+  const owners = new Map();
+  const add = (k, f) => {
+    if (!owners.has(k)) owners.set(k, new Set());
+    owners.get(k).add(f);
+  };
+  const files = walk("csp-solver", ".rs");
+  for (const f of files) {
+    const text = read(f) ?? "";
+    for (const m of text.matchAll(/\b(?:struct|enum|trait|union|type)\s+([A-Z]\w*)/g))
+      add(m[1], f);
+    for (const m of text.matchAll(
+      /\bimpl(?:<[^>]*>)?\s+(?:[\w:<>, ]+\s+for\s+)?([A-Z]\w*)/g,
+    ))
+      add(m[1], f);
+    for (const m of text.matchAll(/\bmod\s+([a-z_]\w*)/g)) add(m[1], f);
+    const parts = f.split("/");
+    add(parts[parts.length - 1].replace(/\.rs$/, ""), f);
+    if (parts.length > 1) add(parts[parts.length - 2], f);
+  }
+  return { files: files.length, owners };
+}
+
+/** Rust/std names a `Type::member` cite may carry without the crate owning it. */
+const RUST_PRIMITIVE =
+  /^(u8|u16|u32|u64|u128|usize|i8|i16|i32|i64|i128|isize|f32|f64|bool|char|str|String|Vec|Option|Result|Box|Rc|Arc|Duration|Instant|Self|std|core|alloc)$/;
+
+/**
+ * `docs/precepts/` — the campaign substrate the docs walk never reached.
+ *
+ * It is a SUBMODULE (`.gitmodules` → `mkbabb/precepts`), which decides the
+ * row's shape twice over. Nothing this repo commits can cure a file inside it,
+ * so the arm asserts REACHABILITY and this repo's own seam into it, never the
+ * precepts' doctrinal freshness — that is the chair's, through the other repo.
+ * And `actions/checkout@v4` does not populate submodules, so the runner sees an
+ * empty directory: the population state is DERIVED and PUBLISHED, and the arms
+ * it disables are named in the derived line rather than skipped in silence.
+ * The declaration half asserts everywhere, populated or not.
+ */
+function derivePrecepts() {
+  const root = "docs/precepts";
+  const modules = read(".gitmodules") ?? "";
+  const declared = /^\s*path\s*=\s*docs\/precepts\s*$/m.test(modules);
+  const url = modules.match(/url\s*=\s*(\S*precepts\S*)/)?.[1] ?? null;
+  let gitlink = null;
+  try {
+    const out = execFileSync("git", ["ls-files", "-s", "--", root], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    gitlink = /^160000\s+([0-9a-f]{7,40})/.exec(out.trim())?.[1] ?? null;
+  } catch {
+    gitlink = null;
+  }
+  const pages = existsSync(abs(root))
+    ? walk(root, ".md", /^(\.git|node_modules)$/).sort()
+    : [];
+  const infra = ["docs/precepts/infra/deploy.md", "docs/precepts/infra/domains.md"];
+  return { root, declared, url, gitlink, pages, infra, populated: pages.length > 0 };
+}
+
+/**
+ * The deploy precept's command rows, resolved against this repo.
+ *
+ * The two halves the wave owes: every `npm run <script>` the precept prints must
+ * be a script `web/frontend/package.json` defines, and every path it backticks
+ * that is ANCHORED HERE — first segment a real entry of the repo root or of
+ * `web/frontend` — must exist. Anchoring is what keeps the arm honest: precepts
+ * is shared substrate, and most of its path cites belong to sibling repos
+ * (`crates/gorgeous`, `parse_that/src/utils.rs`); grading those here would be
+ * the vacuous-subject defect wearing a gate's clothes.
+ */
+function derivePreceptCommands(rel = "docs/precepts/infra/deploy.md") {
+  const text = read(rel);
+  if (text === null) return { rel, present: false, scripts: [], paths: [] };
+  const scripts = [];
+  const paths = [];
+  const generated = /^(dist|node_modules|target|pkg|coverage|test-results)(\/|$)/;
+  const anchors = new Set([
+    ...(existsSync(abs("")) ? readdirSync(abs("")) : []),
+    ...(existsSync(abs("web/frontend")) ? readdirSync(abs("web/frontend")) : []),
+  ]);
+  text.split("\n").forEach((line, i) => {
+    for (const m of line.matchAll(/\bnpm run ([a-z][\w:-]*)/g))
+      scripts.push({ line: i + 1, name: m[1] });
+    for (const m of line.matchAll(/`([^`\s]+)`/g)) {
+      const tok = m[1].replace(/[.,;:)]+$/, "");
+      if (!/^[A-Za-z0-9_.@][\w.@-]*(?:\/[\w.@-]+)+\/?$/.test(tok)) continue;
+      const clean = tok.replace(/\/$/, "");
+      if (generated.test(clean)) continue;
+      if (!anchors.has(clean.split("/")[0])) continue;
+      paths.push({ line: i + 1, tok: clean });
+    }
+  });
+  return { rel, present: true, scripts, paths };
 }
 
 // ── T7-W5 derivations: the multiplayer seam ────────────────────────────────
@@ -1213,7 +1539,15 @@ const T8_ESTATE = [
 const D_VERBS = deriveWireVerbs();
 
 const D = {
+  // The running platform, in `D` rather than read straight off `process` so a
+  // fixture can prove a platform-conditional arm on BOTH platforms from either
+  // one. A colour that depends on where the suite runs is not a proof.
+  platform: process.platform,
   lean: deriveLeanWasm(),
+  changelogs: deriveChangelogScope(),
+  symbols: deriveRustSymbols(),
+  precepts: derivePrecepts(),
+  preceptCmds: derivePreceptCommands(),
   fonts: deriveFonts(),
   rust: deriveRustTests(),
   bands: deriveBands(),
@@ -1435,58 +1769,164 @@ const ROWS = [
         for (const re of ciClaims)
           for (const h of grep(rel, re))
             out.push(fail(`${h.file}:${h.line}`, ciWant, h.text));
+
+      // THE THIRD ARM — the BUNDLE half of the census, which was the last piece
+      // still computed and thrown away (T9-W5 §5.5). `installs` and `runs` reach
+      // the verdict above; `tokens` — WHICH bundles the workflow installs — only
+      // ever reached the derived line. Under a browser-executing posture a doc
+      // may name the engines CI installs and no others: the arm is dormant while
+      // O-12 stands and the census is empty, which is the honest shape for a
+      // claim whose subject the workflow currently does not have, and it bites
+      // the moment a browser lane returns.
+      if (!browserless)
+        for (const engine of ["chromium", "webkit", "firefox"]) {
+          if (D.browsers.tokens.includes(engine)) continue;
+          const re = new RegExp(
+            `\\bCI\\b[^.\\n]{0,60}?\\binstalls?\\b[^.\\n]{0,60}?\\b${engine}\\b`,
+            "i",
+          );
+          for (const rel of DOCS)
+            for (const h of grep(rel, re))
+              out.push(
+                fail(
+                  `${h.file}:${h.line}`,
+                  `an engine the workflow installs — ${census}`,
+                  `names \`${engine}\`, which no \`playwright install\` step in ${D.browsers.rel} carries`,
+                ),
+              );
+        }
       return out;
     },
   },
   {
+    // T9-W5 §5.5, THE BAND-NOT-BYTES REDESIGN — and the row that was itself the
+    // defect. It demanded the LOCALLY measured bytes at all four sites, which no
+    // stamp can satisfy on two platforms: the same source builds 122,541 B on
+    // darwin and 124,423 B on the ubuntu runner (the CI-RED of run 32868316304
+    // at `4dd9ec9c`, four sites failing at once). Green here, red there, with
+    // nothing wrong in the prose — a gate whose verdict depends on where it runs
+    // grades the toolchain, not the canon.
+    //
+    // The law now has three tiers, and each says which platform it speaks for:
+    //   AGREEMENT  every site carries a figure LABELLED as darwin's, and the
+    //              four agree on one value — that value is the stamp.
+    //   BAND       the stamp AND the artifact present on this machine both sit
+    //              inside the enforced lean band (derived, never pinned here).
+    //   EXACTNESS  bytes are asserted against the stamp only where the running
+    //              platform IS the stamp's. Elsewhere the runner-vs-darwin delta
+    //              is INFO on the derived line and never a failing site.
     id: "lean-wasm-4-sites",
-    derived: () =>
-      D.lean.size === null
-        ? "UNDERIVED: no lean wasm artifact and no band config"
-        : `${fmt(D.lean.size)} B ← ${D.lean.source}${D.lean.degraded ? "  [DEGRADED: derived from the band config, not an artifact]" : ""}`,
+    derived: () => {
+      const S = deriveLeanStamp();
+      const band = D.bands.leanFail;
+      const measured =
+        D.lean.size === null
+          ? "no artifact"
+          : `${fmt(D.lean.size)} B ← ${D.lean.source}${D.lean.degraded ? " [DEGRADED: band config, not an artifact]" : ""}`;
+      const drift =
+        S.stamp !== null && D.lean.size !== null && D.platform !== S.platform
+          ? `  ·  INFO ${D.platform} − ${S.platform} = ${D.lean.size >= S.stamp ? "+" : ""}${fmt(D.lean.size - S.stamp)} B (toolchain divergence, not a defect)`
+          : "";
+      return `${S.platform} stamp ${S.stamp === null ? "UNREADABLE" : fmt(S.stamp) + " B"} across ${S.sites.filter((s) => s.figures.length).length}/${S.sites.length} sites${S.values.length > 1 ? ` — DISAGREEING: ${S.values.map(fmt).join(", ")} B` : ""} · band ${band ? "≤ " + fmt(band) + " B" : "UNDERIVED"} · here (${D.platform}) ${measured}${drift}`;
+    },
     run: () => {
+      const S = deriveLeanStamp();
+      const band = D.bands.leanFail;
+      const out = [];
+
+      // TIER 1 — every site carries a darwin-LABELLED figure, and they agree.
+      for (const s of S.sites) {
+        if (!s.present) {
+          out.push(fail(s.rel, `the ${S.platform} stamp, labelled`, "file absent"));
+          continue;
+        }
+        if (!s.figures.length)
+          out.push(
+            fail(
+              s.rel,
+              `a lean figure labelled as ${S.platform}'s — "<N> B on ${S.platform}" or "${S.platform} measures <N> B"`,
+              `no ${S.platform}-labelled byte figure in the file — an unlabelled figure is not a stamp, it is a number`,
+            ),
+          );
+      }
+      if (S.stamp !== null && S.values.length > 1)
+        for (const s of S.sites)
+          for (const f of s.figures)
+            if (f.value !== S.stamp)
+              out.push(
+                fail(
+                  `${s.rel}:${f.line}`,
+                  `${fmt(S.stamp)} B — the ${S.platform} stamp the other sites carry`,
+                  `${fmt(f.value)} B labelled as ${S.platform}'s; the four sites state ${S.values.map(fmt).join(", ")} B`,
+                ),
+              );
+
+      // TIER 2 — the band. Enforced by ci.yml, derived from its own guard, and
+      // the one assertion that holds on every platform.
+      if (!Number.isInteger(band) || band <= 0)
+        out.push(
+          fail(
+            ".github/workflows/ci.yml",
+            "a positive lean `-gt <n>` guard to bound the artifact against",
+            `${band === null ? "UNDERIVED" : `${band} B`} — the band this row leans on is not readable`,
+          ),
+        );
       if (D.lean.size === null)
-        return [
+        out.push(
           fail(
             "csp-solver/wasm/pkg",
-            "a built lean artifact to measure",
-            "none found — run `make -C csp-solver/wasm wasm`",
+            "a built lean artifact to bound against the band",
+            "none found — run `make -C csp-solver/wasm wasm`, or download the lean-wasm-pkg artifact",
           ),
-        ];
-      const sites = [
-        "docs/benchmarks.md",
-        "csp-solver/wasm/README.md",
-        "csp-solver/wasm/pkg/README.md",
-        ".github/workflows/ci.yml",
-      ];
-      const want = fmt(D.lean.size);
-      return sites.flatMap((s) => {
-        // In degraded mode the figure comes OUT of ci.yml, so checking
-        // ci.yml against it proves nothing. Say so rather than pass.
-        if (D.lean.degraded && s === ".github/workflows/ci.yml")
-          return [
-            fail(
-              s,
-              `a lean-artifact figure re-derived from a built artifact`,
-              "UNVERIFIABLE — the fallback figure was read from this same file; build the lean wasm or download the lean-wasm-pkg artifact",
-            ),
-          ];
-        const text = read(s);
-        if (text === null)
-          return [fail(s, `a lean-artifact figure of ${want} B`, "file absent")];
-        if (text.includes(want) || text.includes(String(D.lean.size))) return [];
-        const cited = grep(s, /(\d{2,3},\d{3})\s*B/).filter((h) =>
-          /lean|measures|artifact/i.test(h.text),
         );
-        const where = cited.length
-          ? cited
-              .map(
-                (h) => `${h.file}:${h.line} cites ${h.m.map((x) => x[1]).join(", ")} B`,
-              )
-              .join(" · ")
-          : `${s}: no byte figure found`;
-        return [fail(s, `${want} B (measured now at ${D.lean.source})`, where)];
-      });
+      else if (D.lean.degraded)
+        // A DEGRADED DERIVATION IS A RED, NEVER A QUIET PASS (T5-W1). With no
+        // artifact the size comes out of the same workflow the band comes out
+        // of, so bounding one by the other proves nothing at all.
+        out.push(
+          fail(
+            "csp-solver/wasm/pkg",
+            "an artifact to bound — the band arm wants bytes, not a figure copied out of the band's own file",
+            `UNVERIFIABLE: ${fmt(D.lean.size)} B read from ${D.lean.source}`,
+          ),
+        );
+      else if (band && D.lean.size > band)
+        out.push(
+          fail(
+            D.lean.source,
+            `a lean artifact inside the enforced band (≤ ${fmt(band)} B)`,
+            `${fmt(D.lean.size)} B on ${D.platform} — over band by ${fmt(D.lean.size - band)} B`,
+          ),
+        );
+      if (band && S.stamp !== null && S.stamp > band)
+        out.push(
+          fail(
+            S.sites.find((s) => s.figures.some((f) => f.value === S.stamp))?.rel ??
+              LEAN_SITES[0],
+            `a cited figure inside the enforced band (≤ ${fmt(band)} B)`,
+            `the canon stamps ${fmt(S.stamp)} B — a figure the band would fail`,
+          ),
+        );
+
+      // TIER 3 — exact bytes, and ONLY where the platform matches the label.
+      if (
+        D.platform === S.platform &&
+        S.stamp !== null &&
+        D.lean.size !== null &&
+        !D.lean.degraded &&
+        D.lean.size !== S.stamp
+      )
+        for (const s of S.sites)
+          for (const f of s.figures)
+            if (f.value === S.stamp)
+              out.push(
+                fail(
+                  `${s.rel}:${f.line}`,
+                  `${fmt(D.lean.size)} B — measured here on ${S.platform} at ${D.lean.source}`,
+                  `${fmt(f.value)} B stamped as ${S.platform}'s, ${fmt(Math.abs(D.lean.size - f.value))} B off the artifact this machine built`,
+                ),
+              );
+      return out;
     },
   },
   {
@@ -1767,7 +2207,10 @@ const ROWS = [
             ),
           ]
         : DOCS.flatMap((rel) =>
-            grep(rel, /(\d[\d,]*)\s+passed,\s*\d+\s+failed(?:,\s*(\d+)\s+ignored)?/).flatMap((h) => {
+            grep(
+              rel,
+              /(\d[\d,]*)\s+passed,\s*\d+\s+failed(?:,\s*(\d+)\s+ignored)?/,
+            ).flatMap((h) => {
               const total = num(h.m[0][1]);
               const bin = h.text.match(/(\d+)\s+test binaries/);
               const doc = h.text.match(/(\d+)\s+doctests?/);
@@ -2120,8 +2563,10 @@ const ROWS = [
       const out = [];
       for (const rel of CITED_DOCS) {
         const lines = (read(rel) ?? "").split("\n");
+        const limit = scanLimit(rel, lines.length);
         lines.forEach((line, i) => {
-          if (RETIRED_LINE.test(line)) return;
+          if (i >= limit) return;
+          if (retiredHere(lines, i)) return;
           for (const m of line.matchAll(/`([^`]+)`/g)) {
             const tok = m[1];
             if (/[\s*{}<>…()|,;'"\\]/.test(tok)) continue;
@@ -2130,6 +2575,8 @@ const ROWS = [
               continue;
             if (OFF_TREE_PREFIX.test(tok)) continue;
             if (!PATH_EXT.test(tok)) continue;
+            if (METASYNTACTIC.test(tok)) continue;
+            if (NEGATED_CITE.test(line.slice(0, m.index))) continue;
             if (/^[\w@.-]+(?:\/[\w@.-]+)+$/.test(tok)) {
               if (resolveCite(tok, rel) === null)
                 out.push(
@@ -2150,8 +2597,14 @@ const ROWS = [
             }
           }
         });
-        for (const c of treeCites(rel))
-          if (!has(c.path))
+        // The tree blocks. Existence was the whole assertion until T9-W5 §5.5;
+        // the KIND is asserted too now — `scripts/` drawn over a file, or
+        // `vite.config.ts` drawn over a directory, both resolved GREEN before,
+        // and a tree that draws the wrong kind is drawing a tree that isn't
+        // there.
+        for (const c of treeCites(rel)) {
+          if (c.line - 1 >= limit) continue;
+          if (!has(c.path)) {
             out.push(
               fail(
                 `${rel}:${c.line}`,
@@ -2159,7 +2612,224 @@ const ROWS = [
                 `\`${c.tok}\` → ${c.path} — absent`,
               ),
             );
+            continue;
+          }
+          const real = isDirPath(c.path) ? "dir" : "file";
+          if (c.kind !== real)
+            out.push(
+              fail(
+                `${rel}:${c.line}`,
+                `a file tree that draws ${c.path} as the ${real} it is`,
+                `\`${c.tok}\` is drawn as a ${c.kind}`,
+              ),
+            );
+        }
       }
+      return out;
+    },
+  },
+  {
+    // T9-W5 §5.5 — THE SYMBOL CITE, and the scope that makes it gradeable.
+    //
+    // The canon names Rust surface in backticks the way it names paths, and
+    // nothing resolved it: `FutoshikiPuzzle::from_parts` has been printed as a
+    // shipped validation surface since 0.5.0 over a type no file declares. The
+    // arm resolves every `Type::member` against the index the crate itself
+    // builds — file-scoped on purpose, see `deriveRustSymbols`.
+    //
+    // THE CHANGELOGS ENTER THE SCAN LIST TENSE-SCOPED, and the scope is the
+    // first assertion here rather than an assumption under it. A changelog is a
+    // record of past states: 23 of the canon's 35 `::` cites sit below the head
+    // release and every one of them names surface a later release excised
+    // (`ConstraintEnum::Soft`, `Ordering::DomWdeg`, `Csp::add_soft_constraint`).
+    // Grading those against HEAD would forbid removing a surface without
+    // rewriting history. So the window is the section whose heading names the
+    // version `Cargo.toml` declares — and if the heading and the manifest ever
+    // disagree, the window is not the present tense and the row says THAT
+    // instead of grading a scope it can no longer trust.
+    id: "crate-symbol-cites",
+    derived: () => {
+      const scope = D.changelogs
+        .map(
+          (c) =>
+            `${c.md} head ${c.head?.version ?? "NONE"} vs ${c.toml} ${c.want ?? "?"} — ${c.limit} line window, ${c.history} of history ungraded`,
+        )
+        .join(" · ");
+      return `${D.symbols.files} .rs files → ${D.symbols.owners.size} declared owners · ${scope || "no changelog in the scan list"}`;
+    },
+    run: () => {
+      const out = [];
+      if (!D.symbols.owners.size)
+        return [
+          fail(
+            "csp-solver",
+            "a walkable Rust tree to resolve `Type::member` cites against",
+            "no declarations indexed",
+          ),
+        ];
+      for (const c of D.changelogs) {
+        if (!c.want)
+          out.push(
+            fail(
+              c.toml,
+              "a parseable [package] version to date the changelog by",
+              "none",
+            ),
+          );
+        else if (!c.head)
+          out.push(
+            fail(
+              c.md,
+              `a \`## ${c.want}\` head release to scope the scan by`,
+              "no `## x.y.z` heading in the file",
+            ),
+          );
+        else if (c.head.version !== c.want)
+          out.push(
+            fail(
+              `${c.md}:${c.head.line}`,
+              `\`## ${c.want}\` — the version ${c.toml} declares, so the head section is the present tense`,
+              `\`## ${c.head.version}\` — the head release is not the shipped one, and every cite under it is scoped to a tree that no longer exists`,
+            ),
+          );
+      }
+      for (const rel of CITED_DOCS) {
+        const lines = (read(rel) ?? "").split("\n");
+        const limit = scanLimit(rel, lines.length);
+        lines.forEach((line, i) => {
+          if (i >= limit) return;
+          if (retiredHere(lines, i)) return;
+          for (const m of line.matchAll(/`([A-Za-z_]\w*)::([A-Za-z_]\w*)`/g)) {
+            const [, owner, member] = m;
+            if (RUST_PRIMITIVE.test(owner)) continue;
+            const files = D.symbols.owners.get(owner);
+            if (!files) {
+              out.push(
+                fail(
+                  `${rel}:${i + 1}`,
+                  `a type, trait or module named ${owner} somewhere under csp-solver/`,
+                  `\`${owner}::${member}\` — nothing declares ${owner}`,
+                ),
+              );
+              continue;
+            }
+            const re = new RegExp(
+              `\\bfn\\s+${member}\\b|\\b${member}\\s*:|\\b${member}\\s*(?:,|\\(|\\{|=)|\\bconst\\s+${member}\\b|\\bmod\\s+${member}\\b|\\b(?:struct|enum)\\s+${member}\\b`,
+            );
+            if (![...files].some((f) => re.test(read(f) ?? "")))
+              out.push(
+                fail(
+                  `${rel}:${i + 1}`,
+                  `a \`${member}\` on ${owner} — fn, field, variant, const or module`,
+                  `\`${owner}::${member}\` — absent from the ${files.size} file(s) that declare ${owner}: ${[...files].join(", ")}`,
+                ),
+              );
+          }
+        });
+      }
+      return out;
+    },
+  },
+  {
+    // T9-W5 §5.5 — THE DOCS WALK REACHES `docs/precepts/`.
+    //
+    // Forty-seven pages sat outside every gate. What this repo can hold them to
+    // is bounded by what it OWNS: precepts is a submodule of `mkbabb/precepts`,
+    // so nothing committed here can cure a line inside it, and grading its
+    // doctrine would mint a born-RED with no curing hand. Two things are this
+    // repo's own and both are asserted — the DECLARATION (`.gitmodules` names
+    // the path, the index carries a gitlink there), which holds on every
+    // checkout, and the SEAM: the deploy precept's `npm run` rows must be
+    // scripts this repo defines, and the paths it backticks that are anchored
+    // HERE must exist.
+    //
+    // `actions/checkout@v4` does not populate submodules, so on the runner the
+    // directory is empty. That posture is DERIVED AND PUBLISHED, with the arms
+    // it disables named on the line — a state of the checkout, not a derivation
+    // that failed. The declaration arm asserts either way, so a submodule
+    // silently dropped or renamed still reds where it always would.
+    id: "precepts-reachable",
+    derived: () => {
+      const P = D.precepts;
+      const C = D.preceptCmds;
+      const head = `${P.root} — ${P.declared ? `declared in .gitmodules (${P.url ?? "no url"})` : "NOT declared in .gitmodules"} · gitlink ${P.gitlink ?? "unreadable"}`;
+      return P.populated
+        ? `${head} · ${P.pages.length} .md POPULATED · ${C.rel}: ${C.scripts.length} \`npm run\` row(s), ${C.paths.length} anchored path cite(s)`
+        : `${head} · UNPOPULATED — actions/checkout@v4 does not init submodules, so the roster and command-row arms are dormant on this checkout; the declaration arm asserts here as everywhere`;
+    },
+    run: () => {
+      const P = D.precepts;
+      const out = [];
+      if (!P.declared)
+        out.push(
+          fail(
+            ".gitmodules",
+            `a submodule declared at \`${P.root}\` — the campaign substrate the canon leans on`,
+            "no `path = docs/precepts` entry; the precepts are unreachable from this repo",
+          ),
+        );
+      if (!P.gitlink)
+        out.push(
+          fail(
+            P.root,
+            "a gitlink in the index at docs/precepts (mode 160000)",
+            "the index carries no commit there — the declaration points at nothing",
+          ),
+        );
+      if (!P.populated) return out;
+
+      for (const rel of P.infra)
+        if (!has(rel))
+          out.push(
+            fail(
+              rel,
+              "an infra precept the deploy estate cites",
+              `absent from a populated ${P.root}`,
+            ),
+          );
+      const C = D.preceptCmds;
+      if (!C.present)
+        return [
+          ...out,
+          fail(
+            C.rel,
+            "the deploy precept, whose command rows this arm resolves",
+            "absent",
+          ),
+        ];
+      const scripts =
+        JSON.parse(read("web/frontend/package.json") ?? "{}")?.scripts ?? {};
+      if (!Object.keys(scripts).length)
+        out.push(
+          fail(
+            "web/frontend/package.json",
+            "a scripts block to resolve the precept's `npm run` rows against",
+            "none — the command arm has no subject",
+          ),
+        );
+      else
+        for (const s of C.scripts)
+          if (!(s.name in scripts))
+            out.push(
+              fail(
+                `${C.rel}:${s.line}`,
+                `an \`npm run\` row this repo answers — web/frontend/package.json defines ${Object.keys(scripts).length} scripts`,
+                `\`npm run ${s.name}\` — no such script`,
+              ),
+            );
+      // Anchored at this repo, but the precept writes from `web/frontend` as
+      // often as from the root ("`public/_redirects`", one `cd` above), so the
+      // cite resolves against both — the same two-root grammar `resolveCite`
+      // uses for the docs.
+      for (const p of C.paths)
+        if (!["", "web/frontend/"].some((b) => has(join(b, p.tok))))
+          out.push(
+            fail(
+              `${C.rel}:${p.line}`,
+              `a path that exists under the repo root or web/frontend — the cite is anchored at this repo's own tree`,
+              `\`${p.tok}\` — absent`,
+            ),
+          );
       return out;
     },
   },
@@ -3596,6 +4266,56 @@ function selfTestCases() {
       "```",
     ].join("\n");
 
+  // ── T9-W5 §5.5 fixture builders ────────────────────────────────────────
+  //
+  // `LEAN` is read off the live tree with the overlay empty, so every stamp
+  // fixture below is BUILT from the derivation it grades — a stamp that moves
+  // rots its own proof rather than freezing a number into the self-test.
+  const LEAN = deriveLeanStamp();
+
+  /**
+   * The three DOC sites of the stamp, each carrying `value` labelled as
+   * darwin's. `overrides` re-stamps a named site to prove disagreement. The
+   * fourth site is `ci.yml`, which the overlay does not blank — it stays live
+   * and carries the tree's own stamp, which is what makes a one-site override a
+   * DISAGREEMENT rather than a wholesale re-stamp.
+   */
+  const leanDocs = (value, overrides = {}) =>
+    Object.fromEntries(
+      [
+        "docs/benchmarks.md",
+        "csp-solver/wasm/README.md",
+        "csp-solver/wasm/pkg/README.md",
+      ].map((rel) => [
+        rel,
+        `The lean artifact measures ${fmt(overrides[rel] ?? value)} B raw on darwin; the twiggy lane fails above ${fmt(D.bands.leanFail ?? 127_500)} B.`,
+      ]),
+    );
+
+  /** A minimal `ci.yml` carrying the band comment's anchor and its yields line. */
+  const bandComment = (lean, full) =>
+    [
+      "            # --profile wasm-release is REQUIRED: the workspace profile the",
+      `            # budgets were drawn for. It yields ${fmt(full)} B full / ${fmt(lean ?? 0)} B lean.`,
+      "            run: echo ok",
+    ].join("\n");
+
+  /**
+   * A populated precepts posture, stubbed so the arms that need one prove their
+   * colour on any checkout — the runner's `actions/checkout@v4` does not init
+   * the submodule, and a fixture whose colour depends on that is not a proof.
+   * `infra` points at a path every checkout has, for the same reason.
+   */
+  const PRECEPTS_OK = {
+    root: "docs/precepts",
+    declared: true,
+    url: "git@github.com:mkbabb/precepts.git",
+    gitlink: "0".repeat(40),
+    pages: ["docs/precepts/README.md"],
+    infra: ["README.md"],
+    populated: true,
+  };
+
   return [
     {
       row: "permalink-games",
@@ -3996,7 +4716,9 @@ function selfTestCases() {
     {
       row: "chromium-alone-claim",
       why: "the CI-installs-browsers claim, against a census of zero install steps",
-      docs: { "README.md": "CI installs both browser bundles before the suite runs." },
+      docs: {
+        "README.md": "CI installs both browser bundles before the suite runs.",
+      },
       expect: "RED",
     },
     {
@@ -4017,7 +4739,9 @@ function selfTestCases() {
           runs: [110],
         },
       },
-      docs: { "README.md": "The lanes install no browser bundle; CI is browserless." },
+      docs: {
+        "README.md": "The lanes install no browser bundle; CI is browserless.",
+      },
       expect: "RED",
     },
     {
@@ -4234,6 +4958,459 @@ function selfTestCases() {
       },
       expect: "GREEN",
     },
+
+    // ── T9-W5 §5.5, the eleven ────────────────────────────────────────────
+    // Eleven rows carried no fixture at all. They were named in F1's finding
+    // rather than claimed away, and this is where the claim gets paid: each
+    // gains both colours, every GREEN built from the same derivation the row
+    // grades with, so a figure that moves rots its own proof. The new arms —
+    // the darwin stamp's three tiers, the symbol cites, the precepts seam, the
+    // tree's KIND, the install census's bundle half — land beside them.
+
+    {
+      row: "frontend-readme-two-games",
+      why: "the two-game era's own sentence, over a five-game registry",
+      docs: { "web/frontend/README.md": "The app ships two games and a solver." },
+      expect: "RED",
+    },
+    {
+      row: "frontend-readme-two-games",
+      why: "the stale pencil-boil pin, which the same regex holds",
+      docs: {
+        "web/frontend/README.md": "Animation rides `@mkbabb/pencil-boil` 0.7.0.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "frontend-readme-two-games",
+      why: `the cure: ${D.games.length} games, and a lint that checks rather than writes`,
+      docs: {
+        "web/frontend/README.md": `The app ships ${D.games.length} games (${D.games.join(", ")}) and lints with \`prettier --check\`.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "root-readme-e2e-counts",
+      why: "an e2e total one suite behind `playwright test --list`",
+      docs: {
+        "README.md": `e2e: ${fmt(D.e2e.tests - 1)} Playwright tests across ${D.e2e.files} spec files.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "root-readme-e2e-counts",
+      why: "a README that states no e2e count at all — the row's subject, gone",
+      docs: { "README.md": "The suite runs locally." },
+      expect: "RED",
+    },
+    {
+      row: "root-readme-e2e-counts",
+      why: `the cure: ${D.e2e.tests} tests across ${D.e2e.files} files, both off --list`,
+      docs: {
+        "README.md": `e2e: ${D.e2e.tests} Playwright tests across ${D.e2e.files} spec files in the default config.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "lean-wasm-4-sites",
+      why: "TIER 1 — a site whose darwin figure disagrees with the other three",
+      docs: leanDocs(LEAN.stamp, { "docs/benchmarks.md": LEAN.stamp + 1_000 }),
+      expect: "RED",
+    },
+    {
+      row: "lean-wasm-4-sites",
+      why: "TIER 1 — a figure with no platform on it is a number, not a stamp",
+      docs: {
+        ...leanDocs(LEAN.stamp),
+        "docs/benchmarks.md": `The lean artifact measures ${fmt(LEAN.stamp)} B raw.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "lean-wasm-4-sites",
+      why: `TIER 2 — an artifact over the enforced band, RED on every platform (stubbed to linux so it is the BAND failing, not the bytes)`,
+      stub: {
+        platform: "linux",
+        lean: {
+          size: (D.bands.leanFail ?? 127_500) + 1,
+          source: "fixture artifact",
+          degraded: false,
+        },
+      },
+      docs: leanDocs(LEAN.stamp),
+      expect: "RED",
+    },
+    {
+      row: "lean-wasm-4-sites",
+      why: "TIER 2 — a DEGRADED size, read out of the same workflow the band comes from",
+      stub: {
+        platform: "linux",
+        lean: {
+          size: LEAN.stamp,
+          source: ".github/workflows/ci.yml:564 (CI band config — NO artifact on disk)",
+          degraded: true,
+        },
+      },
+      docs: leanDocs(LEAN.stamp),
+      expect: "RED",
+    },
+    {
+      row: "lean-wasm-4-sites",
+      why: "TIER 2 in isolation — all four sites agreeing on a figure the band would fail",
+      stub: { platform: "linux" },
+      docs: {
+        ...leanDocs((D.bands.leanFail ?? 127_500) + 3_500),
+        ".github/workflows/ci.yml": `# the lane fails above ${fmt(D.bands.leanFail ?? 127_500)} B; darwin measures ${fmt((D.bands.leanFail ?? 127_500) + 3_500)} B at T9-W5.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "lean-wasm-4-sites",
+      why: "TIER 3 — bytes off the stamp, ON the stamp's platform: exact-match bites",
+      stub: {
+        platform: "darwin",
+        lean: { size: LEAN.stamp + 512, source: "fixture artifact", degraded: false },
+      },
+      docs: leanDocs(LEAN.stamp),
+      expect: "RED",
+    },
+    {
+      row: "lean-wasm-4-sites",
+      why: "TIER 3's mirror — the SAME drift off the stamp's platform is INFO, not a defect",
+      stub: {
+        platform: "linux",
+        lean: { size: LEAN.stamp + 512, source: "fixture artifact", degraded: false },
+      },
+      docs: leanDocs(LEAN.stamp),
+      expect: "GREEN",
+    },
+    {
+      row: "lean-wasm-4-sites",
+      why: `the cure: ${fmt(LEAN.stamp)} B stamped as darwin's at all four sites, inside the ${fmt(D.bands.leanFail ?? 0)} B band`,
+      docs: leanDocs(LEAN.stamp),
+      expect: "GREEN",
+    },
+    {
+      row: "ci-band-comment-406",
+      why: "the band comment's hand-copied lean literal, off the artifact",
+      docs: {
+        ".github/workflows/ci.yml": bandComment(D.lean.size - 1_500, 227_385),
+      },
+      expect: "RED",
+    },
+    {
+      row: "ci-band-comment-406",
+      why: "a full-module figure above the warn band the same file enforces",
+      docs: {
+        ".github/workflows/ci.yml": bandComment(
+          D.lean.size,
+          (D.bands.fullWarn ?? 230_000) + 1,
+        ),
+      },
+      expect: "RED",
+    },
+    {
+      row: "ci-band-comment-406",
+      why: `the cure: ${fmt(D.lean.size ?? 0)} B lean, matching the artifact this run measured`,
+      docs: { ".github/workflows/ci.yml": bandComment(D.lean.size, 227_385) },
+      expect: "GREEN",
+    },
+    {
+      row: "sudoku-md-sections",
+      why: "the two-game page, over a registry that grew three families",
+      docs: { "docs/sudoku.md": "# Puzzles\n\n## Sudoku\n\n## Futoshiki" },
+      expect: "RED",
+    },
+    {
+      row: "sudoku-md-sections",
+      why: `the cure: a section for each of the ${D.games.length} registered families`,
+      docs: {
+        "docs/sudoku.md":
+          "# Puzzles\n\n## Sudoku\n\n## Futoshiki\n\n## Thermo\n\n## Killer\n\n## KenKen",
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "ofl-licenses-figures",
+      why: "a font total that is not the bytes on disk",
+      docs: {
+        "README.md": `The app self-hosts ${D.fonts.subsets.length} woff2 subsets, ${fmt(D.fonts.total + 400)} B total.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "ofl-licenses-figures",
+      why: "the right total under the wrong subset count",
+      docs: {
+        "README.md": `The app self-hosts two woff2 subsets, ${fmt(D.fonts.total)} B total.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "ofl-licenses-figures",
+      why: `the cure: ${D.fonts.subsets.length} woff2 subsets, ${fmt(D.fonts.total)} B measured now`,
+      docs: {
+        "README.md": `The app self-hosts ${D.fonts.subsets.length} woff2 subsets, ${fmt(D.fonts.total)} B total.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "install-pin-0.5",
+      why: "a published surface linking outward into the campaign substrate",
+      docs: {
+        "README.md": "Deploy follows [the precept](docs/precepts/infra/deploy.md).",
+      },
+      expect: "RED",
+    },
+    {
+      row: "install-pin-0.5",
+      why: `an Install pin off the crate version (${D.pin})`,
+      docs: { "csp-solver/README.md": `csp-solver = "0.1"` },
+      expect: "RED",
+    },
+    {
+      row: "install-pin-0.5",
+      why: `the cure: csp-solver = "${D.pin}", and no outbound precepts link`,
+      docs: { "csp-solver/README.md": `csp-solver = "${D.pin}"` },
+      expect: "GREEN",
+    },
+    {
+      row: "test-count-208-vs-204",
+      why: "a Rust total that reconciles to no roster the tree carries",
+      docs: {
+        "README.md": `# Rust: ${fmt(D.rust.native - 9)} passed, 0 failed (${D.rust.binaries} test binaries)`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "test-count-208-vs-204",
+      why: "the right total under a test-binary count the workspace does not have",
+      docs: {
+        "README.md": `# Rust: ${fmt(D.rust.native)} passed, 0 failed (${D.rust.binaries + 2} test binaries)`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "test-count-208-vs-204",
+      why: `the cure: ${D.rust.native} attributes over ${D.rust.binaries} binaries, counted now`,
+      docs: {
+        "README.md": `# Rust: ${fmt(D.rust.native)} passed, 0 failed (${D.rust.binaries} test binaries)`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "make-wasm-recipe",
+      why: "the lean target described as the full default-feature build",
+      docs: { "README.md": "`make wasm` builds the full default-feature module." },
+      expect: "RED",
+    },
+    {
+      row: "make-wasm-recipe",
+      why: "a documented recipe whose flags are not the ones the target runs",
+      docs: {
+        "README.md":
+          "`make wasm` runs `wasm-pack build --profile release --target web`.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "make-wasm-recipe",
+      why: `the cure: the flag set the target actually passes — ${D.make.flags.join(" ")}`,
+      docs: {
+        "README.md": `\`make wasm\` runs \`wasm-pack build ${D.make.flags.join(" ")}\`.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "ci-lane-count",
+      why: "a lane count one behind the workflow's own `jobs:` block",
+      docs: {
+        "README.md": `\`.github/workflows/ci.yml\` runs ${WORDS[D.ci.jobs.length - 1] ?? D.ci.jobs.length - 1} lanes.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "ci-lane-count",
+      why: `the cure: ${WORDS[D.ci.jobs.length] ?? D.ci.jobs.length} lanes, counted in the workflow`,
+      docs: {
+        "README.md": `\`.github/workflows/ci.yml\` runs ${WORDS[D.ci.jobs.length] ?? D.ci.jobs.length} lanes.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "iai-golden-figure",
+      why: "an instruction figure beside the iai lane that the baseline does not enforce",
+      docs: {
+        "docs/benchmarks.md": `The iai lane holds callgrind at ${fmt(D.iai.count + 10_000)} instructions.`,
+      },
+      expect: "RED",
+    },
+    {
+      row: "iai-golden-figure",
+      why: `the cure: ${fmt(D.iai.count)} instructions, read out of ${D.iai.path}`,
+      docs: {
+        "docs/benchmarks.md": `The iai lane holds callgrind at ${fmt(D.iai.count)} instructions.`,
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "crate-symbol-cites",
+      why: "THE from_parts CLASS — a constructor on a type no file declares",
+      docs: {
+        "README.md":
+          "Futoshiki boards validate through `FutoshikiPuzzle::from_parts` before they solve.",
+      },
+      expect: "RED",
+    },
+    {
+      row: "crate-symbol-cites",
+      why: "the owner exists, the member does not — the excised soft-constraint entry",
+      docs: { "README.md": "Soft constraints enter via `Csp::add_soft_constraint`." },
+      expect: "RED",
+    },
+    {
+      row: "crate-symbol-cites",
+      why: "the scope itself lying: a head release the manifest does not declare",
+      stub: {
+        changelogs: D.changelogs.map((c) => ({
+          ...c,
+          head: { line: 17, version: "0.1.0" },
+        })),
+      },
+      docs: {},
+      expect: "RED",
+    },
+    {
+      row: "crate-symbol-cites",
+      why: "the cure: cites the crate's own index resolves, inside the present-tense window",
+      docs: {
+        "README.md":
+          "Killer cages ride `Csp::add_cage_sum`, ordered by `Ordering::Mrv` under `Pruning::Ac3`.",
+      },
+      expect: "GREEN",
+    },
+    {
+      row: "precepts-reachable",
+      why: "the submodule undeclared and unindexed — the precepts unreachable from here",
+      stub: {
+        precepts: {
+          ...D.precepts,
+          declared: false,
+          gitlink: null,
+          populated: false,
+        },
+      },
+      docs: {},
+      expect: "RED",
+    },
+    {
+      row: "precepts-reachable",
+      why: "an infra precept the deploy estate cites, absent from a populated tree",
+      stub: {
+        precepts: {
+          ...PRECEPTS_OK,
+          infra: ["docs/precepts/infra/nope.md"],
+        },
+      },
+      docs: {},
+      expect: "RED",
+    },
+    {
+      row: "precepts-reachable",
+      why: "a command row the precept prints that `npm run` cannot answer",
+      stub: {
+        precepts: PRECEPTS_OK,
+        preceptCmds: {
+          rel: "docs/precepts/infra/deploy.md",
+          present: true,
+          scripts: [{ line: 13, name: "ship-it" }],
+          paths: [],
+        },
+      },
+      docs: {},
+      expect: "RED",
+    },
+    {
+      row: "precepts-reachable",
+      why: "an anchored path the precept backticks that this repo does not carry",
+      stub: {
+        precepts: PRECEPTS_OK,
+        preceptCmds: {
+          rel: "docs/precepts/infra/deploy.md",
+          present: true,
+          scripts: [],
+          paths: [{ line: 30, tok: "web/frontend/public/_nope" }],
+        },
+      },
+      docs: {},
+      expect: "RED",
+    },
+    {
+      row: "precepts-reachable",
+      why: "the UNPOPULATED posture — dormant arms, named on the derived line, declaration still asserted",
+      stub: {
+        precepts: { ...PRECEPTS_OK, pages: [], populated: false },
+      },
+      docs: {},
+      expect: "GREEN",
+    },
+    {
+      row: "precepts-reachable",
+      why: "the cure: `npm run deploy` resolves, and so does the path beside it",
+      stub: {
+        precepts: PRECEPTS_OK,
+        preceptCmds: {
+          rel: "docs/precepts/infra/deploy.md",
+          present: true,
+          scripts: [{ line: 13, name: "deploy" }],
+          paths: [{ line: 30, tok: "public/_redirects" }],
+        },
+      },
+      docs: {},
+      expect: "GREEN",
+    },
+    {
+      row: "cited-paths-exist",
+      why: "a tree that draws a directory as a file — resolved GREEN before the kind was graded",
+      docs: { "README.md": ["```", ".", "├── docs", "```"].join("\n") },
+      expect: "RED",
+    },
+    {
+      row: "cited-paths-exist",
+      why: "the same node drawn as the directory it is",
+      docs: { "README.md": ["```", ".", "├── docs/", "```"].join("\n") },
+      expect: "GREEN",
+    },
+    {
+      row: "chromium-alone-claim",
+      why: "the census's BUNDLE half: a doc naming an engine no install step carries",
+      stub: {
+        browsers: {
+          rel: ".github/workflows/ci.yml",
+          present: true,
+          tokens: ["chromium"],
+          installs: [100],
+          runs: [110],
+        },
+      },
+      docs: { "README.md": "CI installs the webkit bundle before the golden suite." },
+      expect: "RED",
+    },
+    {
+      row: "chromium-alone-claim",
+      why: "the same sentence under a census that DOES carry webkit",
+      stub: {
+        browsers: {
+          rel: ".github/workflows/ci.yml",
+          present: true,
+          tokens: ["chromium", "webkit"],
+          installs: [100],
+          runs: [110],
+        },
+      },
+      docs: { "README.md": "CI installs the webkit bundle before the golden suite." },
+      expect: "GREEN",
+    },
   ];
 }
 
@@ -4260,6 +5437,10 @@ function runSelfTest() {
     // too, or the fixture that must RED is graded beside three siblings that
     // carry their correction blocks and the colour would be theirs, not its.
     ...T8_ESTATE,
+    // T9-W5 §5.5: the changelogs joined the scan list, so they join the blank
+    // too — a symbol fixture graded beside a live changelog would be borrowing
+    // the tree's colour, which is the defect the overlay exists to prevent.
+    ...CHANGELOGS.map(([md]) => md),
   ];
   let bad = 0;
   say(
@@ -4322,9 +5503,28 @@ say(`node  ${process.version} ${process.platform}/${process.arch}`);
 say(`when  ${new Date().toISOString()}`);
 say();
 
+/**
+ * `--only <id>` (repeatable) grades a SUBSET and exits on that subset alone.
+ *
+ * The canary law wants a bare exit code per arm, and a repo where any other
+ * lane's row is red cannot give one — the process exits 1 either way and the
+ * plant proves nothing. Scoping the run scopes the verdict. It grades; it never
+ * excuses: an unknown id is a failing run rather than an empty pass.
+ */
+const ONLY = process.argv.flatMap((a, i, all) =>
+  a === "--only" ? [all[i + 1]] : a.startsWith("--only=") ? [a.slice(7)] : [],
+);
+const GRADED = ONLY.length ? ROWS.filter((r) => ONLY.includes(r.id)) : ROWS;
+if (ONLY.length && GRADED.length !== ONLY.length) {
+  const missing = ONLY.filter((id) => !ROWS.some((r) => r.id === id));
+  process.stdout.write(`doc-truth --only: no such row: ${missing.join(", ")}\n`);
+  process.exit(2);
+}
+if (ONLY.length) say(`only  ${ONLY.join(", ")} of ${ROWS.length} rows`);
+
 let red = 0;
 const results = [];
-for (const row of ROWS) {
+for (const row of GRADED) {
   const failures = row.run();
   if (failures.length) red++;
   results.push({ id: row.id, failures });
@@ -4339,7 +5539,7 @@ for (const row of ROWS) {
 }
 
 say(
-  `${red} RED / ${ROWS.length - red} GREEN — ${red ? "doc canon disagrees with the tree" : "canon holds"}`,
+  `${red} RED / ${GRADED.length - red} GREEN — ${red ? "doc canon disagrees with the tree" : "canon holds"}`,
 );
 
 process.stdout.write(lines.join("\n") + "\n");

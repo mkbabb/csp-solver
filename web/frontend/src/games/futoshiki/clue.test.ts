@@ -16,6 +16,7 @@ import {
   inequalityViolations,
   encodeInequalities,
   decodeInequalities,
+  inequalitiesWellFormed,
   futoshikiClue,
 } from "./clue";
 import { findConflicts } from "@games/shared/conflicts";
@@ -106,6 +107,18 @@ describe("constraint labels — the clue folded into both endpoints' accessible 
     // A cell no caret touches carries no clause — its name is the bare cell name.
     expect(labels.has(2)).toBe(false);
   });
+
+  // T9-W5. The four directions are the only ones a caret can be drawn in, and
+  // `inequalitiesWellFormed` refuses everything else at the boundary — so this arm is reached
+  // only by a pair that got past that guard, i.e. a caller wiring the labels to something the
+  // permalink never validated. It states the relation and says nothing about WHERE, rather than
+  // naming a direction that isn't true: AT would otherwise be told to look at a neighbour cell
+  // that is nowhere near the one it's reading.
+  it("names no direction for a pair that is not orthogonally adjacent", () => {
+    const labels = constraintLabels([[0, 12]], N); // Δ = 12: neither ±1 nor ±5
+    expect(labels.get(0)).toBe("greater than the cell ");
+    expect(labels.get(12)).toBe("less than the cell ");
+  });
 });
 
 describe("inequality violations — the extra the red pencil circles", () => {
@@ -187,5 +200,45 @@ describe("futoshiki clue seam — the sink the board actually derives", () => {
     expect([...c.positions].sort()).toEqual(["0", "1"]);
     expect(c.unit).toEqual({ kind: "inequality", index: null });
     expect(formatConflictNote(c.unit)).toBe("check the greater than signs");
+  });
+});
+
+// ── T9-W5 — THE UNTRUSTED-PAIR GUARD'S COUNT BOUND ─────────────────────────────────────────
+// `inequalitiesWellFormed` is `validateClue` on the futoshiki permalink: it is the one thing
+// standing between a crafted `?board=` and one floating `<FutoshikiCaret>` per pair. Its
+// adjacency/range/dedup arms are driven through the codec in `composables/persistence.test.ts`;
+// the COUNT bound is asserted here, directly, because it is the arm that has to answer a set
+// too large to walk.
+describe("the untrusted-pair guard — the pair-count bound", () => {
+  /** Every orthogonally adjacent pair of an n×n board, each edge once — `2·n·(n−1)` of them,
+   *  which is the exact maximum the guard allows. */
+  const allEdges = (n: number): Inequality[] => {
+    const out: Inequality[] = [];
+    for (let r = 0; r < n; r++)
+      for (let c = 0; c < n; c++) {
+        const p = r * n + c;
+        if (c + 1 < n) out.push([p, p + 1]);
+        if (r + 1 < n) out.push([p, p + n]);
+      }
+    return out;
+  };
+
+  it("admits a board printed on EVERY edge it has — the bound is the board's own", () => {
+    const edges = allEdges(4);
+    expect(edges).toHaveLength(2 * 4 * 3); // 24: 12 horizontal, 12 vertical
+    expect(inequalitiesWellFormed(edges, 4)).toBe(true);
+  });
+
+  it("refuses on COUNT alone, before any pair is walked", () => {
+    // The extra entry is itself a perfectly well-formed pair (the first edge read the other
+    // way, which is the opposite constraint on the same edge). Nothing about any single pair
+    // is wrong here — the count is. Checking it first is what keeps a 100k-pair link a length
+    // read rather than 100k adjacency tests.
+    const edges = allEdges(4);
+    const over: Inequality[] = [...edges, [edges[0][1], edges[0][0]]];
+    expect(inequalitiesWellFormed(over, 4)).toBe(false);
+    // …and the bound is derived from the board, not a constant: 25 pairs are well inside a
+    // 5×5's 40, and a set of that size is admitted there.
+    expect(inequalitiesWellFormed(allEdges(5).slice(0, 25), 5)).toBe(true);
   });
 });

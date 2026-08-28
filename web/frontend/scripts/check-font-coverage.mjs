@@ -23,9 +23,41 @@
  * one of the tables woff2 stores with its own length, and this script only needs the
  * codepoints). If the format ever defeats it, it fails loudly rather than passing vacuously.
  *
+ * ── T9-W5 §5.4 — THE CORPUS STOPS BEING A LIST SOMEONE REMEMBERS TO EDIT ──────────────────
+ * The gate above compares a HAND-WRITTEN corpus to the cmap, and that is one containment out
+ * of the two the claim needs. It answers "does the cut hold the strings we wrote down"; the
+ * shipped defect answers "no" to a different question — "are the strings we wrote down the
+ * strings the app renders". T8's ransom-note trap is that second question: a rendered string
+ * moves, nobody re-cuts the subset, and the gate that exists to catch exactly this stays green
+ * because its subject is the list, not the tree. V5 measured the drift in BOTH directions.
+ *
+ * So the corpus is now checked against the tree it claims to describe. Every group carries a
+ * `derive` — one or more named extractors that read the AUTHORED construct the strings come
+ * from (`heading: "…"` in the five `spec.ts` files, `name:`/`label:` in `games/cards.ts`, the
+ * static `text="…"` on `<SheetWashiLabel>`, the text of a `.zone-row-label` span) — and check 3
+ * requires DERIVED ⊆ DECLARED. A new tooltip, a renamed eyebrow, a sixth game: the derived set
+ * grows, containment breaks, and the red names the string and the file it was authored in. The
+ * corpus stays declared, because a subset cut is a decision someone has to mean and a
+ * fully-derived corpus would re-cut itself silently; what dies is its authority to disagree
+ * with the tree.
+ *
+ * Containment is ONE-WAY on purpose. A declared string the tree no longer renders is a
+ * DEPARTURE, and this estate keeps departures deliberately (the subset stays a superset, so a
+ * string's return is not a font bug). Departures are printed, never red.
+ *
+ * Check 4 keeps the derivation from going blind: a `:text="…"` BOUND to an expression cannot
+ * be read statically, so the census of those bindings is PINNED. A new one reds, and whoever
+ * adds it has to say which register it renders in — which is the moment the question is
+ * answerable. Silence there is how a derived corpus rots into a hand-written one again.
+ *
+ * Check 5 is `playerIdentity.ts`'s WRITEABLE regex, which has claimed since T6 that the hand
+ * subset "ships a–i, k–w, y and z — no j, no x" and has never been compared to the file. It is
+ * compared here, both directions: a re-cut that adds `x` leaves the generator refusing a name
+ * the page can now draw, and one that drops a letter puts a half-drawn slug on a roster row.
+ *
  *   node scripts/check-font-coverage.mjs
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { brotliDecompressSync } from "node:zlib";
@@ -33,10 +65,89 @@ import process from "node:process";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const INDEX_CSS = "src/assets/index.css";
+const SRC = "src";
+
+// ── The tree, read once ─────────────────────────────────────────────────────────────────────
+function walk(dir, out = []) {
+  for (const e of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+    const rel = `${dir}/${e.name}`;
+    if (e.isDirectory()) walk(rel, out);
+    else if (!/\.(test|spec)\.[cm]?[jt]sx?$/.test(e.name)) out.push(rel);
+  }
+  return out;
+}
+const TREE = walk(SRC).map((rel) => ({
+  rel,
+  text: readFileSync(join(ROOT, rel), "utf8"),
+}));
+const pick = (re) => TREE.filter((f) => re.test(f.rel));
+const grab = (files, re) =>
+  files.flatMap((f) =>
+    [...f.text.matchAll(re)].map((m) => ({ s: m[1], where: f.rel })),
+  );
+
+/**
+ * THE EXTRACTORS — each names the authored construct it reads. A derivation nobody can check
+ * is a second hand-written list wearing a machine's badge, so every one of these points at a
+ * literal a reader can open and see.
+ */
+const EXTRACT = {
+  specHeadings: {
+    what: '`heading: "…"` in the five src/games/*/spec.ts',
+    run: () => grab(pick(/^src\/games\/[^/]+\/spec\.ts$/), /heading:\s*"([^"]+)"/g),
+  },
+  cardNames: {
+    what: '`name: "…"` in src/games/cards.ts (the wordmark and the gallery cards)',
+    run: () => grab(pick(/^src\/games\/cards\.ts$/), /\bname:\s*"([^"]+)"/g),
+  },
+  cardAxisLabels: {
+    what: '`label: "…"` in src/games/cards.ts (the picker\'s axis captions)',
+    run: () => grab(pick(/^src\/games\/cards\.ts$/), /\blabel:\s*"([^"]+)"/g),
+  },
+  washiTapes: {
+    what: 'static `text="…"` on <SheetWashiLabel> across src/**/*.vue',
+    run: () =>
+      pick(/\.vue$/).flatMap((f) =>
+        [...f.text.matchAll(/<SheetWashiLabel\b[\s\S]*?\/?>/g)]
+          .map((m) => /(?<![:\w-])text="([^"]*)"/.exec(m[0]))
+          .filter(Boolean)
+          .map((m) => ({ s: m[1], where: f.rel })),
+      ),
+  },
+  zoneRowLabels: {
+    what: "the static text of a `.zone-row-label` span",
+    run: () =>
+      pick(/\.vue$/).flatMap((f) =>
+        [
+          ...f.text.matchAll(/class="[^"]*\bzone-row-label\b[^"]*"[^>]*>([^<{]*)</g),
+        ].map((m) => ({ s: m[1].trim(), where: f.rel })),
+      ),
+  },
+};
+
+/** The bindings the derivation cannot read. Pinned, so a new one is a decision, not a gap. */
+const BOUND_TAPES = [
+  {
+    where: "src/games/shared/GameBoard.vue",
+    expr: "hoveredAuthor.slug",
+    why: "a playerIdentity slug — its repertoire is check 5's subject, not this corpus'",
+  },
+  {
+    where: "src/games/shared/GameControlPanel.vue",
+    expr: "inviteAct.washi.value",
+    why: "the invite verb's three states, authored in GameControlPanel.vue's INVITE constants",
+  },
+  {
+    where: "src/games/shared/GameControlPanel.vue",
+    expr: "shareAct.washi.value",
+    why: "the share verb's three states, authored in GameControlPanel.vue's SHARE constants",
+  },
+];
 
 // ── The rendered corpus ─────────────────────────────────────────────────────────────────────
 // Every string the Fraunces face is asked to paint, AS AUTHORED, with the `text-transform` it
-// passes through on the way to the screen. Each string is required in both forms.
+// passes through on the way to the screen. Each string is required in both forms — and each
+// group names the extractor whose output it must CONTAIN (check 3).
 const FACES = [
   {
     family: "Fraunces",
@@ -55,14 +166,18 @@ const FACES = [
         transform: "lowercase",
         // "Difficulty" → "Level" at the T8 live-pass cures (the drawer eyebrow now speaks
         // the staging band's word). The subset stays a superset over the departure's
-        // letters, per the standing no-re-narrowing note above.
+        // letters, per the standing no-re-narrowing note above. "Board Size" is a DEPARTURE
+        // and check 3 prints it as one — the specs say `Size` today.
+        derive: ["specHeadings"],
         strings: ["Size", "Board Size", "Level"],
       },
       // The wordmark (HandwrittenLogo `.logo-text`) and the gallery card names
-      // (GameCard `.card-wordmark`) — no transform, the five registered game ids.
+      // (GameCard `.card-wordmark`) — no transform, the five registered game ids. A sixth
+      // family's card lands in `cards.ts` and reds here until the cut holds its letters.
       {
         where: "wordmark + gallery card names",
         transform: "none",
+        derive: ["cardNames"],
         strings: ["sudoku", "futoshiki", "thermo", "killer", "kenken"],
       },
     ],
@@ -79,14 +194,36 @@ const FACES = [
     family: "Patrick Hand",
     font: "src/assets/fonts/patrickhand-subset.woff2",
     corpus: [
+      // T9-W5 \u00a75.4 \u2014 this group used to hold FOUR strings, and the derivation found TWELVE
+      // `<SheetWashiLabel text="\u2026">` on the tree. The eight it did not hold are not a defect
+      // the wave introduced; they are eight sentences that have been painting in a
+      // 46-codepoint subset with nothing comparing them to it, which is the trap stated
+      // exactly. All twelve are declared here and all twelve clear the cut (measured \u2014 the
+      // hand's repertoire is lowercase, and the tooltips are written in it).
       {
-        where: ".washi-tag (compartment names) + the peek tape",
+        where: ".washi-tag (compartment names) + the tapes",
         transform: "none",
-        strings: ["new game", "pencils", "teacher's", "hold to peek"],
+        derive: ["washiTapes"],
+        strings: [
+          "new game",
+          "pencils",
+          "teacher's",
+          "hold to peek",
+          "normal writes a digit. corner and center write small pencil marks",
+          "show every digit that still fits in a cell",
+          "checking",
+          "when your mistakes get checked",
+          "players",
+          "share this board and everyone writes on the same grid",
+          "wipe every digit you've written",
+          "fill the cells that have only one digit left",
+          "the solver finishes the board",
+        ],
       },
       {
         where: ".zone-row-label (row captions)",
         transform: "none",
+        derive: ["zoneRowLabels"],
         strings: ["marks", "candidates"],
       },
       // T8-W1 M3 \u2014 `.check-status`'s four states left the corpus with the line that painted
@@ -97,6 +234,7 @@ const FACES = [
       {
         where: ".staging-axis-label (the picker's axis captions)",
         transform: "none",
+        derive: ["cardAxisLabels"],
         strings: ["size", "level"],
       },
     ],
@@ -261,6 +399,7 @@ function declaredRange(css, family) {
 
 const css = readFileSync(join(ROOT, INDEX_CSS), "utf8");
 const problems = [];
+const departures = [];
 const only = (a, b) => [...a].filter((c) => !b.has(c)).sort((x, y) => x - y);
 const chars = (l) =>
   l
@@ -303,10 +442,126 @@ for (const face of FACES) {
       `${face.font} carries codepoints the unicode-range gates out: ${chars(cmapExtra)}`,
     );
 
+  // 3. RENDERED CENSUS ⊆ CORPUS. The tree is the subject; the list only gets to be a superset.
+  for (const group of face.corpus) {
+    if (!group.derive) {
+      problems.push(
+        `${face.family} · ${group.where}: the group declares ${group.strings.length} string(s) ` +
+          `and NO \`derive\`. A corpus nobody compares to the tree is the T8 trap re-armed — ` +
+          `name the extractor that reads where these are authored (${Object.keys(EXTRACT).join(", ")}).`,
+      );
+      continue;
+    }
+    const declared = new Set(group.strings);
+    const seen = new Set();
+    for (const id of group.derive) {
+      const ex = EXTRACT[id];
+      if (!ex) {
+        problems.push(
+          `${face.family} · ${group.where}: derives from \`${id}\`, which is not an extractor.`,
+        );
+        continue;
+      }
+      const found = ex.run();
+      if (!found.length)
+        problems.push(
+          `${face.family} · ${group.where}: extractor \`${id}\` (${ex.what}) found NOTHING. ` +
+            `An empty derivation contains anything, so this check would pass on a blind read ` +
+            `— the construct was renamed, or the file moved.`,
+        );
+      for (const { s, where } of found) {
+        seen.add(s);
+        if (declared.has(s)) continue;
+        problems.push(
+          `${face.family} · ${group.where}: ${where} renders "${s}" and the corpus does not ` +
+            `hold it. THIS IS THE RANSOM NOTE: the subset was cut from the list, the app ` +
+            `paints the tree, and the letters this string needs were never asked for. Add it ` +
+            `here and re-cut the woff2 if check 1 then reds.`,
+        );
+      }
+    }
+    for (const s of declared)
+      if (!seen.has(s)) departures.push(`${face.family} · ${group.where}: "${s}"`);
+  }
+
   banked.push(
     `${face.family}: ${cmap.size} codepoints, ${buf.length} B, ` +
-      `${face.corpus.reduce((n, g) => n + g.strings.length, 0)} strings`,
+      `${face.corpus.reduce((n, g) => n + g.strings.length, 0)} declared strings over ` +
+      `${face.corpus.length} group(s), each derived`,
   );
+}
+
+// 4. THE BOUND CENSUS. `:text="expr"` cannot be read statically, so the set of them is pinned:
+// a new binding reds until someone says which register it paints in. Closed both ways — a
+// pinned binding that is gone reds too, because a stale pin is a claim about a file that has
+// moved on.
+{
+  const live = [];
+  for (const f of pick(/\.vue$/))
+    for (const m of f.text.matchAll(/<SheetWashiLabel\b[\s\S]*?\/?>/g)) {
+      const bound = /:text="([^"]*)"/.exec(m[0]);
+      if (bound) live.push({ where: f.rel, expr: bound[1] });
+    }
+  const key = (b) => `${b.where} :text="${b.expr}"`;
+  const pinned = new Set(BOUND_TAPES.map(key));
+  const found = new Set(live.map(key));
+  for (const b of live)
+    if (!pinned.has(key(b)))
+      problems.push(
+        `${b.where} binds \`:text="${b.expr}"\` and the pinned census does not carry it. The ` +
+          `derivation cannot read an expression, so an unpinned binding is a string this gate ` +
+          `is blind to. Pin it in BOUND_TAPES with the register it renders in, or make it a ` +
+          `static \`text="…"\` the extractor can see.`,
+      );
+  for (const p of pinned)
+    if (!found.has(p))
+      problems.push(
+        `the bound-tape census pins \`${p}\` and no such binding is on the tree. A stale pin ` +
+          `is a claim about a file that has moved on — strike the entry.`,
+      );
+}
+
+// 5. THE WRITEABLE COMPARATOR (T9-W5 §5.4). `playerIdentity.ts` filters the name dictionaries
+// to the letters it says the hand subset can draw. That claim has never been compared to the
+// file it is about; it is compared here, both directions.
+const WRITEABLE_SRC = "src/games/shared/playerIdentity.ts";
+{
+  const text = TREE.find((f) => f.rel === WRITEABLE_SRC)?.text;
+  const m = text && /const WRITEABLE = \/\^\[([^\]]+)\]\+\$\//.exec(text);
+  if (!m)
+    problems.push(
+      `${WRITEABLE_SRC}: no \`const WRITEABLE = /^[…]+$/\` found. The comparator refuses to ` +
+        `run rather than pass over a claim it cannot read.`,
+    );
+  else {
+    const claimed = new Set();
+    for (const r of m[1].matchAll(/(.)-(.)|(.)/g)) {
+      if (r[3]) claimed.add(r[3]);
+      else
+        for (let c = r[1].codePointAt(0); c <= r[2].codePointAt(0); c++)
+          claimed.add(String.fromCodePoint(c));
+    }
+    const hand = FACES.find((f) => f.family === "Patrick Hand");
+    const cmap = cmapCodepoints(readFileSync(join(ROOT, hand.font)), hand.font);
+    const drawable = new Set(
+      [..."abcdefghijklmnopqrstuvwxyz"].filter((c) => cmap.has(c.codePointAt(0))),
+    );
+    const missing = [...drawable].filter((c) => !claimed.has(c)).sort();
+    const phantom = [...claimed].filter((c) => !drawable.has(c)).sort();
+    if (phantom.length)
+      problems.push(
+        `${WRITEABLE_SRC}: WRITEABLE admits ${phantom.map((c) => `\`${c}\``).join(" ")}, and ` +
+          `${hand.font} cannot draw ${phantom.length > 1 ? "them" : "it"}. Every slug carrying ` +
+          `that letter comes out half in the hand and half in the system cursive, mid-word, on ` +
+          `every roster row that draws it — the exact defect the regex was written to prevent.`,
+      );
+    if (missing.length)
+      problems.push(
+        `${WRITEABLE_SRC}: ${hand.font} draws ${missing.map((c) => `\`${c}\``).join(" ")} and ` +
+          `WRITEABLE refuses ${missing.length > 1 ? "them" : "it"}. The cut was widened and ` +
+          `the generator was not told: names the page can paint are being thrown away.`,
+      );
+  }
 }
 
 if (problems.length) {
@@ -315,6 +570,15 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(
-  `font coverage OK — ${FACES.length} subset faces, each covered as authored AND as transformed:\n  ` +
+  `font coverage OK — ${FACES.length} subset faces, each covered as authored AND as ` +
+    `transformed, each corpus a superset of what ${TREE.length} src files actually render:\n  ` +
     banked.join("\n  "),
 );
+console.log(
+  `  bound tapes: ${BOUND_TAPES.length} pinned · WRITEABLE == the hand cut, both directions`,
+);
+if (departures.length)
+  console.log(
+    `  departures (declared, no longer rendered — the cut stays a superset on purpose):\n    ` +
+      departures.join("\n    "),
+  );

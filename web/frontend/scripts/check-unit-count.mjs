@@ -12,34 +12,46 @@
 // count toward the floor — that is the whole point: silent exclusion must move the
 // number the gate reads.
 //
-// FLOOR = 300 (gates.json `W1.unitLane.floor`). Observed at the wave base f38c5130:
-// 332 executed / 31 files / 133 suites, 0 skipped, 0 todo. 300 sits ~10% below, so
-// ordinary churn (a unit retired with its subject) doesn't red the lane while a
-// wholesale exclusion does. The floor is coarse by construction — it catches estate-
-// scale loss, not one dropped file — and is re-derived, never nudged down to meet a
-// red.
+// FLOOR comes from `scripts/census.stamp.json` — the ONE stamped census, shared with
+// check-pw-projects.mjs. It sits ~10% below the stamped live census, so ordinary churn
+// (a unit retired with its subject) doesn't red the lane while a wholesale exclusion
+// does. The floor is coarse by construction — it catches estate-scale loss, not one
+// dropped file — and is re-derived, never nudged down to meet a red.
 //
-// Beyond the floor, four cheap checks keep the *report* itself from being the lie:
+// Beyond the floor, five cheap checks keep the *report* itself from being the lie:
 //   · shape    — the counters must be present; a missing key fails, never defaults to 0
 //   · freshness — a stale (e.g. committed) report can't green a run that never happened
 //   · green     — `success` + zero failures, so a `vitest || true` step can't pass here
 //   · self-consistency — the summary counters must equal the per-file assertion census,
 //     so a hand-edited `numPassedTests` fails
+//   · band        — the floor must sit at or above 85% of `max(stamped census, live)`, so
+//     a floor hand-lowered under the band fails AND an estate that grows past its floor
+//     without a restamp fails. Slack can no longer accumulate in silence.
 //
 // `--self-test` runs every check against a known-bad input and fails if any of them
 // PASSES (the check-ink-pressure house pattern): a gate that cannot fail is not a gate.
 //
-// T7-W6 — THE FLOOR IS SLACK AND HAS NO INSTRUMENT. 300 against 471 executed is 36% of
-// room: a whole file's worth of estate can leave and the lane still reads green. Worse, the
-// floor was a hand-typed constant with no way to re-derive it, so "re-derive from a fresh
-// census" was advice rather than a command — and advice erodes. `--restamp` is the command.
-// It reads a live report, computes the ~10%-under figure, refuses a LOWERING without a
-// spoken reason, and stamps the tree it measured into this file.
+// T7-W6 — THE FLOOR IS SLACK AND HAS NO INSTRUMENT. A hand-typed constant with no way to
+// re-derive it makes "re-derive from a fresh census" advice rather than a command, and
+// advice erodes: 300 against 471 executed was 36% of room. `--restamp` is the command.
 //
-// FLOOR TIMING (W6 §floor timing, binding): the MECHANISM lands at W6, the NUMBER restamps
-// at WGATE — after the last row lands anywhere in the tranche (W2 and W4 both add tests). A
-// floor derived at W6's own seal is stale on arrival, which is the exact slack this row
-// exists to remove. So FLOOR still reads 300 here, on purpose.
+// T9-W5 §5.2 — THE PROVENANCE SPLIT DIES, AND THE SLACK GETS AN INSTRUMENT.
+//   · The number moved OUT of this file into `scripts/census.stamp.json`, which
+//     check-pw-projects.mjs reads too. One stamp, one floor, one census. The audit found the
+//     same floor written three ways (script 434 / gates.json 300 / ci.yml prose stale), which
+//     is a fact nobody could look up.
+//   · A floor alone cannot see slack GROW. 434 against 735 executed is 41% of room and every
+//     check below was green about it. The BAND arm closes that: floor >= 85% of
+//     `max(stamped census, live)`. It reds when the floor is hand-lowered, when the stamp is
+//     inflated past the tree, and when the estate outgrows its floor unrestamped.
+//   · `--restamp` is a RATCHET — max(banked, derived) — so it round-trips on an unmoved tree
+//     instead of proposing a lowering nobody asked for (the defect V4 reproduced in the
+//     sibling gate). Only a floor that would land ABOVE live is a real lowering.
+//
+// FLOOR TIMING (W6 §floor timing, binding): the MECHANISM lands in the wave, the NUMBER
+// restamps at WGATE — after the last row lands anywhere in the tranche. The figure stamped
+// today is WAVE-TIME truth and says so in its own stamp; the band is what makes the WGATE's
+// restamp compulsory rather than advisory if the estate has moved since.
 //
 //   node scripts/check-unit-count.mjs <vitest-report.json> [--floor=N] [--max-age-min=N]
 //   node scripts/check-unit-count.mjs --self-test
@@ -48,18 +60,36 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
 
 const SELF = fileURLToPath(import.meta.url);
 
-/* FLOOR STAMP — rewritten by `--restamp`, never by hand. A floor citing a tranche-old SHA
- * is legible as slack rather than as a decision. */
-const FLOOR_STAMP =
-  "141fdbad · 2026-08-03 · 483 executed / 47 files / 180 suites · floor = 10% under live";
+/* THE ONE STAMPED CENSUS. Read, never hard-coded: a second copy of a floor is how the
+ * provenance split was born. `--restamp` rewrites this file and nothing else. */
+const STAMP_PATH = join(dirname(SELF), "census.stamp.json");
+const readStamp = () => JSON.parse(readFileSync(STAMP_PATH, "utf8"));
+const STAMP = readStamp();
+const LAW = STAMP.law;
 
-const FLOOR = 434; // gates.json W1.unitLane.floor
+/** The band's own floor: what `n` live tests oblige, at 85%. */
+const bandFloor = (n) => Math.ceil(n * LAW.band);
+
+/**
+ * The house derivation, identical in check-pw-projects.mjs and stated once in the stamp's
+ * `law.derive`. The max() is load-bearing: floor(11 * 0.9) = 9 sits UNDER ceil(11 * 0.85) = 10,
+ * so the plain churn rule would derive a floor its own band rejects.
+ */
+const deriveFloor = (live) =>
+  live <= LAW.exactAtOrBelow
+    ? live
+    : Math.max(Math.floor(live * LAW.churnRoom), bandFloor(live));
+
+/** Where the floor beside it came from. The census is printed on the lane's own line. */
+const stampLine = (s) =>
+  `${s.sha} · ${s.date} · ${s.wave}` + (s.note ? ` · ${s.note}` : "");
+
 const MAX_AGE_MIN = 120; // a report older than the job that made it is not evidence
 
 /**
@@ -69,7 +99,13 @@ const MAX_AGE_MIN = 120; // a report older than the job that made it is not evid
  */
 function check(
   reportPath,
-  { floor = FLOOR, maxAgeMin = MAX_AGE_MIN, now = Date.now() } = {},
+  {
+    stamp = STAMP,
+    floor = stamp.unit.floor,
+    band = true,
+    maxAgeMin = MAX_AGE_MIN,
+    now = Date.now(),
+  } = {},
 ) {
   const failures = [];
 
@@ -178,6 +214,31 @@ function check(
     );
   }
 
+  // The band (T9-W5 §5.2). Held against whichever is HIGHER, the stamp or the tree, so it
+  // reds in both directions: an inflated stamp is a claim the tree refuses, and an estate
+  // that outgrows its floor is slack accumulating in silence — the disease this arm exists
+  // for. A floor is never allowed to drift more than 15% under the truth.
+  if (band) {
+    const stamped = stamp.unit.census.executed;
+    const ref = Math.max(stamped, executed);
+    const need = bandFloor(ref);
+    stats.band = { stamped, ref, need };
+    if (floor < need)
+      failures.push(
+        `floor ${floor} is OUT OF BAND: ${((1 - floor / ref) * 100).toFixed(1)}% under ` +
+          `${ref} (stamped census ${stamped}, live ${executed}); the band is ` +
+          `${(LAW.band * 100).toFixed(0)}%, so the floor owes ${need}. ` +
+          (executed > stamped
+            ? `The estate GREW past its floor and nothing restamped it — that is silent slack, `
+            : executed < stamped
+              ? `The stamped census sits above the tree it claims to have measured — an inflated ` +
+                `stamp is a claim, `
+              : `The floor was never re-derived from the census stamped beside it — slack banked, `) +
+          `not churn room. ` +
+          `Re-derive: node scripts/check-unit-count.mjs --restamp <report>`,
+      );
+  }
+
   return { failures, stats };
 }
 
@@ -221,6 +282,16 @@ function fabricate(
   };
 }
 
+/** The stamp with one field bent — the band fixtures' negative controls. */
+const bentStamp = (unit) => ({
+  ...STAMP,
+  unit: {
+    ...STAMP.unit,
+    ...unit,
+    census: { ...STAMP.unit.census, ...(unit.census ?? {}) },
+  },
+});
+
 function selfTest() {
   const dir = mkdtempSync(join(tmpdir(), "unit-count-selftest-"));
   const write = (name, body) => {
@@ -229,6 +300,8 @@ function selfTest() {
     return p;
   };
   const now = Date.now();
+  const FLOOR = STAMP.unit.floor;
+  const CENSUS = STAMP.unit.census.executed;
 
   // Every case must FAIL. `absent` is a path nothing was written to.
   const mustFail = [
@@ -277,25 +350,41 @@ function selfTest() {
         numTotalTests: FLOOR - 1 + 40,
       }),
     ],
+    // THE BAND (T9-W5 §5.2). Both canaries, on a report that clears every other check:
+    // a stamp inflated over the tree, and a floor quietly walked down under 85%.
+    [
+      `census stamped 20% above live (${Math.round(CENSUS * 1.2)} claimed, ${CENSUS} run)`,
+      write("inflated.json", fabricate(CENSUS, { startTime: now })),
+      { stamp: bentStamp({ census: { executed: Math.round(CENSUS * 1.2) } }) },
+    ],
+    [
+      `floor hand-lowered one under the band (${bandFloor(CENSUS) - 1} vs ${bandFloor(CENSUS)})`,
+      write("lowered.json", fabricate(CENSUS, { startTime: now })),
+      { stamp: bentStamp({ floor: bandFloor(CENSUS) - 1 }) },
+    ],
   ];
 
-  // This one must PASS — a gate that fails everything is equally useless.
+  // These must PASS — a gate that fails everything is equally useless.
   const mustPass = [
     [
       `exactly at the floor (${FLOOR})`,
       write("ok.json", fabricate(FLOOR, { startTime: now })),
     ],
+    [
+      `the stamped tree itself (${CENSUS} executed, floor ${FLOOR}, band ${bandFloor(CENSUS)})`,
+      write("stamped.json", fabricate(CENSUS, { startTime: now })),
+    ],
   ];
 
   const vacuous = [];
-  for (const [name, path] of mustFail) {
-    const { failures } = check(path, { now });
+  for (const [name, path, opts] of mustFail) {
+    const { failures } = check(path, { now, ...opts });
     console.log(`  ${failures.length ? "reds" : "GREENS"}  ${name}`);
     if (!failures.length)
       vacuous.push(`self-test: "${name}" PASSED the gate — the check is vacuous`);
   }
-  for (const [name, path] of mustPass) {
-    const { failures } = check(path, { now });
+  for (const [name, path, opts] of mustPass) {
+    const { failures } = check(path, { now, ...opts });
     console.log(`  ${failures.length ? "REDS" : "greens"}  ${name}`);
     if (failures.length)
       vacuous.push(`self-test: "${name}" failed the gate — ${failures.join(" | ")}`);
@@ -307,14 +396,12 @@ function selfTest() {
 
 /* ── --restamp: re-derive the floor from a live census (WGATE only) ─────── */
 
-/** ~10% under live, floored. The band is deliberately coarse: it catches estate-scale
- *  loss, not one retired unit, and a tighter band would red on ordinary churn. */
-const floorFor = (executed) => Math.floor(executed * 0.9);
-
-function restamp(reportPath, { dry, allowLower }) {
-  const { failures, stats } = check(reportPath, { floor: 0 });
+function restamp(reportPath, { dry, allowLower, wave }) {
+  const { failures, stats } = check(reportPath, { floor: 0, band: false });
   // A red or stale report cannot found a floor. `floor: 0` above removes the floor's own
-  // opinion from that judgment — every OTHER check still has to pass.
+  // opinion from that judgment, and `band: false` the band's — every OTHER check still has
+  // to pass. (The band is the reason a restamp is being asked for; it cannot also be the
+  // reason the restamp refuses.)
   if (failures.length) {
     console.error(
       `--restamp REFUSED: the report is not a clean census.\n` +
@@ -322,21 +409,33 @@ function restamp(reportPath, { dry, allowLower }) {
     );
     process.exit(1);
   }
-  const want = floorFor(stats.executed);
+
+  const banked = STAMP.unit.floor;
+  const derived = deriveFloor(stats.executed);
+  // THE RATCHET (law.ratchet). Closing slack must never hand any back, so the banked floor
+  // wins when it is the higher of the two — which is also why a restamp on an unmoved tree
+  // proposes nothing and round-trips. A derived floor that would land ABOVE live is the one
+  // true lowering: it means tests actually left.
+  let want = Math.max(banked, derived);
+  const lowering = want > stats.executed;
+  if (lowering) want = derived;
+
   const sha = execFileSync("git", ["rev-parse", "--short", "HEAD"], {
     cwd: join(SELF, "..", "..", ".."),
     encoding: "utf8",
   }).trim();
-  const stamp =
-    `${sha} · ${new Date().toISOString().slice(0, 10)} · ${stats.executed} executed / ` +
-    `${stats.files} files / ${stats.suites} suites · floor = 10% under live`;
   console.log(
-    `RESTAMP — ${stats.executed} executed → floor ${FLOOR} → ${want}` +
-      `${want < FLOOR ? "   ↓ LOWERED" : ""}\n  stamp: ${stamp}`,
+    `RESTAMP — ${stats.executed} executed / ${stats.files} files / ${stats.suites} suites\n` +
+      `  derived ${derived}  ·  banked ${banked}  ·  ratchet → floor ${want}` +
+      `${want === banked ? "   (unmoved — the arm round-trips)" : ""}` +
+      `${want < banked ? "   ↓ LOWERED" : ""}\n` +
+      `  band at ${(LAW.band * 100).toFixed(0)}% of ${stats.executed} is ${bandFloor(stats.executed)}` +
+      `  ·  ${sha} · ${new Date().toISOString().slice(0, 10)} · ${wave}`,
   );
-  if (want < FLOOR && !allowLower) {
+
+  if (want < banked && !allowLower) {
     console.error(
-      `\n--restamp REFUSED: the floor would DROP ${FLOOR} -> ${want}. Lowering a floor is a\n` +
+      `\n--restamp REFUSED: the floor would DROP ${banked} -> ${want}. Lowering a floor is a\n` +
         `  re-baseline, and the house does not re-baseline on a red. Say where the tests went:\n` +
         `  --restamp <report> --allow-lower "<reason>"`,
     );
@@ -346,16 +445,20 @@ function restamp(reportPath, { dry, allowLower }) {
     console.log("\n--dry — nothing written.");
     return;
   }
-  const src = readFileSync(SELF, "utf8");
-  const next = src
-    .replace(/const FLOOR_STAMP = "[^"]*";/, `const FLOOR_STAMP = "${stamp}";`)
-    .replace(/const FLOOR = \d+;/, `const FLOOR = ${want};`);
-  if (next === src) {
-    console.error("--restamp: the FLOOR/FLOOR_STAMP literals moved — fix the rewrite.");
-    process.exit(1);
-  }
-  writeFileSync(SELF, next);
-  console.log(`\nwritten -> scripts/${SELF.split("/").pop()}`);
+  const next = readStamp();
+  next.unit = {
+    ...next.unit,
+    stamp: {
+      sha,
+      date: new Date().toISOString().slice(0, 10),
+      wave,
+      note: allowLower ? `LOWERED — ${allowLower}` : "",
+    },
+    census: { executed: stats.executed, files: stats.files, suites: stats.suites },
+    floor: want,
+  };
+  writeFileSync(STAMP_PATH, `${JSON.stringify(next, null, 2)}\n`);
+  console.log(`\nwritten -> scripts/census.stamp.json (unit)`);
 }
 
 /* ── main ───────────────────────────────────────────────────────────────── */
@@ -379,16 +482,24 @@ if (argv.includes("--self-test")) {
   process.exit(0);
 }
 
-const positional = argv.filter((a) => !a.startsWith("--"));
-const allowLowerAt = argv.indexOf("--allow-lower");
-const reportPath = positional.find(
-  (a) => allowLowerAt < 0 || a !== argv[allowLowerAt + 1],
+/** The value after a `--name` flag, and the index it occupies (so it never reads as the report). */
+const valueFlags = ["--allow-lower", "--wave"];
+const valueOf = (name) => {
+  const i = argv.indexOf(name);
+  return i >= 0 ? (argv[i + 1] ?? "(no value given)") : null;
+};
+const consumed = new Set(
+  valueFlags
+    .map((f) => argv.indexOf(f))
+    .filter((i) => i >= 0)
+    .map((i) => i + 1),
 );
+const reportPath = argv.find((a, i) => !a.startsWith("--") && !consumed.has(i));
 if (!reportPath) {
   console.error(
     "usage: node scripts/check-unit-count.mjs <vitest-report.json> [--floor=N] [--max-age-min=N]\n" +
       "       node scripts/check-unit-count.mjs --self-test\n" +
-      '       node scripts/check-unit-count.mjs --restamp <report> [--dry] [--allow-lower "why"]',
+      '       node scripts/check-unit-count.mjs --restamp <report> [--dry] [--wave "T9-WGATE"] [--allow-lower "why"]',
   );
   process.exit(2);
 }
@@ -396,13 +507,13 @@ if (!reportPath) {
 if (argv.includes("--restamp")) {
   restamp(reportPath, {
     dry: argv.includes("--dry"),
-    allowLower:
-      allowLowerAt >= 0 ? (argv[allowLowerAt + 1] ?? "(no reason given)") : null,
+    allowLower: valueOf("--allow-lower"),
+    wave: valueOf("--wave") ?? "unlabelled restamp",
   });
   process.exit(0);
 }
 
-const floor = flag("floor", FLOOR);
+const floor = flag("floor", STAMP.unit.floor);
 const { failures, stats } = check(reportPath, {
   floor,
   maxAgeMin: flag("max-age-min", MAX_AGE_MIN),
@@ -413,7 +524,11 @@ if (stats) {
     `FE unit lane — ${stats.executed} executed (${stats.passed} passed / ${stats.failed} failed), ` +
       `${stats.skipped} skipped, ${stats.todo} todo, over ${stats.files} files / ${stats.suites} suites; ` +
       `floor ${floor}; report age ${stats.ageMin.toFixed(1)} min.\n` +
-      `  floor stamped: ${FLOOR_STAMP}` +
+      `  floor stamped: ${stampLine(STAMP.unit.stamp)}` +
+      (stats.band
+        ? `\n  band: floor ${floor} vs ${stats.band.need} owed on ${stats.band.ref} ` +
+          `(${(LAW.band * 100).toFixed(0)}% of max(stamp ${stats.band.stamped}, live ${stats.executed}))`
+        : "") +
       (stats.executed >= floor
         ? `  ·  slack ${(((stats.executed - floor) / floor) * 100).toFixed(0)}%`
         : ""),

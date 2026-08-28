@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matches, Relay, type Filter, type NostrEvent } from "./relay";
+import relayWorker, { matches, Relay, type Filter, type NostrEvent } from "./relay";
 
 /**
  * The relay's two claims (T6.1), and they are different kinds of claim.
@@ -311,5 +311,45 @@ describe("the hibernation budget and the fanout's survival (T7-W4 U3, U4)", () =
 
     expect(c.sent.filter((m) => m[0] === "EVENT")).toEqual([["EVENT", "sub-c", ev()]]);
     expect(a.sent).toEqual([["OK", "e1", true, ""]]);
+  });
+});
+
+/**
+ * T9-W5 §5.1 — the deployed Worker names itself.
+ *
+ * Before this row a deployed relay was unidentifiable from outside: one URL, one 426, the
+ * same answer whatever sha built it, so "the SPA and the relay deploy together" (README:118)
+ * was checkable only by intention. `scripts/deploy-gated.sh` stamps the sha it authenticated
+ * with `--var RELAY_REVISION:<sha>` and this endpoint reads it back. The `unknown` row is the
+ * load-bearing one: `wrangler.toml` defaults the var, so a bare `wrangler deploy` — the
+ * ungated act — is legible as itself rather than as a gap.
+ */
+describe("GET /revision", () => {
+  type Env = Parameters<typeof relayWorker.fetch>[1];
+  const env = (revision?: string) =>
+    ({
+      RELAY: { idFromName: () => 0, get: () => ({ fetch: () => new Response(null) }) },
+      ...(revision === undefined ? {} : { RELAY_REVISION: revision }),
+    }) as Env;
+  const get = (path: string, revision?: string) =>
+    relayWorker.fetch(new Request(`https://sudoku-relay.mkbabb.workers.dev${path}`), env(revision));
+
+  it("answers the sha the gate stamped, uncacheable", async () => {
+    const res = get("/revision", "4dd9ec9c8aebf92d84261ef25f9200b33ca51c13");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect((await res.text()).trim()).toBe("4dd9ec9c8aebf92d84261ef25f9200b33ca51c13");
+  });
+
+  it("answers `unknown` when nothing stamped it — the signature of an ungated deploy", async () => {
+    const res = get("/revision");
+    expect(res.status).toBe(200);
+    expect((await res.text()).trim()).toBe("unknown");
+  });
+
+  it("leaves every other plain GET at the 426 it always was", async () => {
+    const res = get("/");
+    expect(res.status).toBe(426);
+    expect(await res.text()).toContain("connect a websocket");
   });
 });

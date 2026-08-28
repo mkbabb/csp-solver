@@ -1,0 +1,181 @@
+T9-W5 §5.2 — EXIT GATES ON THE LANDED TREE. Every command run bare; no pipes.
+host darwin · tree 4dd9ec9c + this lane's edits · 2026-08-25
+
+$ npx vitest run   ->  Test Files 57 passed (57) / Tests 735 passed (735)
+EXIT=0
+
+$ node scripts/check-unit-count.mjs --self-test
+check-unit-count --self-test — each check against a known-bad input:
+  reds  missing report
+  reds  malformed JSON
+  reds  wrong shape (no counters)
+  reds  shape with counters but no testResults[]
+  reds  below the floor (660)
+  reds  stale report (3h old)
+  reds  future report (clock forgery)
+  reds  red run (failures present)
+  reds  forged counters (summary 400, census 5)
+  reds  skips carry the floor (660 executed + 40 skipped)
+  reds  census stamped 20% above live (882 claimed, 735 run)
+  reds  floor hand-lowered one under the band (624 vs 625)
+  greens  exactly at the floor (661)
+  greens  the stamped tree itself (735 executed, floor 661, band 625)
+
+self-test OK — every check fails on its known-bad input, and passes at the floor.
+EXIT=0
+
+$ npm run test:unit:count
+
+> csp-solver-frontend@0.1.0 test:unit:count
+> node scripts/check-unit-count.mjs vitest-report.json
+
+FE unit lane — 735 executed (735 passed / 0 failed), 0 skipped, 0 todo, over 57 files / 237 suites; floor 661; report age 3.9 min.
+  floor stamped: 4dd9ec9c · 2026-08-25 · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  band: floor 661 vs 625 owed on 735 (85% of max(stamp 735, live 735))  ·  slack 11%
+unit count OK — 735 >= 661.
+EXIT=0
+
+$ npm run test:e2e:projects
+
+> csp-solver-frontend@0.1.0 test:e2e:projects
+> node scripts/check-pw-projects.mjs --self-test
+
+PW PROJECT MATRIX — 3 configs, 11 projects, 30 manifest specs, 4 declared single-engine holdouts, 2 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2)
+  floors stamped: 4dd9ec9c · 2026-08-25 · platform darwin · T9-W5 §5.2 (wave-time; the WGATE restamps)
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+  chromium                  listed 221  live 221  derived 198  floor 198  band 188
+  webkit                    listed 216  live 216  derived 194  floor 194  band 184
+  (default)                 listed   4  live   4  derived   4  floor   4  band   4
+  throttled-void            listed   1  live   1  derived   1  floor   1  band   1
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6  band   6
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6  band   6
+  wordmark-webkit           listed   6  live   1  derived   1  floor   1  band   1   ← 5 parked on linux
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10  band   9
+  theme-bake-webkit         listed  10  live   0  derived   0  floor   0  band   0   ← 10 parked on linux, asserts NOTHING there
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14  band  12
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14  band  12
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+  ✓ 8 FLOOR BAND
+
+SELF-TEST — each check against a known-bad matrix:
+  [1 DECLARED MATRIX] a third project appears (a firefox arm nobody ratified)
+      → RED (as it must)
+  [1 DECLARED MATRIX] the webkit project is quietly re-engined to chromium
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is dropped from every project (the orphan)
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is claimed by two configs at once
+      → RED (as it must)
+  [3 ENGINE COVERAGE] CH-56 regresses — mobile-affordances loses its webkit arm
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED] share-truth is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+  [8 FLOOR BAND] the estate grows 25% and nothing restamps it (silent slack, the disease)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a whole spec FILE is deleted (green on all 5 checks before T7-W6)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a spec lands on disk that the manifest never sanctioned
+      → RED (as it must)
+  [7 QUARANTINES CLOSED] the quarantine module is deleted while the floors still subtract its rows
+      → RED (as it must)
+  [8 FLOOR BAND] a census stamped 20% above live (the stamp as a wish)
+      → RED (as it must)
+  [8 FLOOR BAND] a floor hand-lowered one step under the band
+      → RED (as it must)
+  [8 FLOOR BAND] a floor smuggled back into CONFIGS (two homes for one number)
+      → RED (as it must)
+  [8 FLOOR BAND] a stamped floor for a project no config declares (the orphan row)
+      → RED (as it must)
+
+OK — 30 specs, 508 resolved tests, every spec in both engines except the 4 recorded holdouts.
+EXIT=0
+
+$ npm run lint:lanes
+
+> csp-solver-frontend@0.1.0 lint:lanes
+> node scripts/check-lane-membership.mjs --self-test
+
+LANE-MEMBERSHIP CENSUS — 18 gate/probe script(s) under web/frontend/scripts, 97 CI-reachable command(s) (20 npm script(s) resolved)
+  · check-copy-register.mjs — package.json scripts.lint:copy
+  · check-coverage-floor.mjs — ci.yml:913, package.json scripts.test:coverage:floor
+  · check-empty-catch.mjs — package.json scripts.lint:catch
+  · check-font-coverage.mjs — package.json scripts.test:font-coverage
+  · check-gen-latency.mjs — package.json scripts.test:gen-latency
+  · check-golden-bytes.mjs — NOT-A-LANE: it ran inside the e2e job's built-dist steps, and the browser-executing CI lanes were removed on the owner's ruling of 2026-08-03 — the golden estate is a local instrument now, this cap enforced beside it at mint time; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
+  · check-ink-pressure.mjs — package.json scripts.lint:ink
+  · check-lane-membership.mjs — package.json scripts.lint:lanes
+  · check-motion-contract.mjs — package.json scripts.lint:motion
+  · check-prod-shake.mjs — NOT-A-LANE: it ran inside the e2e job's built-dist steps, and the browser-executing CI lanes were removed on the owner's ruling of 2026-08-03 — it rides the local built-dist pass before any deploy instead; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
+  · check-pw-projects.mjs — NOT-A-LANE: the browser-executing CI lanes (e2e, e2e-webkit, perf-subset) were removed on the owner's ruling of 2026-08-03 — the Playwright suites are local instruments now and this project-matrix lint rides them locally via `npm run test:e2e:projects`; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
+  · check-pw-retries.mjs — NOT-A-LANE: the browser-executing CI lanes were removed on the owner's ruling of 2026-08-03 — the Playwright suites are local instruments now and this retries-policy lint rides them locally via `npm run test:e2e:retries`; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
+  · check-sleep-lint.mjs — package.json scripts.lint:sleep
+  · check-support-floor.mjs — package.json scripts.test:support-floor
+  · check-theme-selectors.mjs — package.json scripts.lint:theme-selectors
+  · check-theme-tokens.mjs — package.json scripts.lint:theme-tokens
+  · check-unit-count.mjs — ci.yml:908, package.json scripts.test:unit:count
+  · tdz-probe.mjs — package.json scripts.lint:tdz
+  ✓ 1 UNCLAIMED SCRIPT
+  ✓ 2 DECLARATION SOUND
+  ✓ 3 LANE RESOLVES
+
+SELF-TEST — each check against fixture models:
+  [1 UNCLAIMED SCRIPT] the wave's exact shape — a census with no npm script and no step
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] the tdz shape — a package.json script exists, no CI step calls it
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] the only mention is a ci.yml comment — documentation is not a lane
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] a same-named script under the REPO-ROOT scripts/ — wrong tree, not this lane
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] a declaration below the header window is not a declaration
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] a header that QUOTES the token is discussing the law, not invoking it
+      → RED (want RED)
+  [1 UNCLAIMED SCRIPT] positive control — a step runs `npm run lint:ink`, which runs the file
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — a step runs `node scripts/…` directly
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — reached transitively through a chained npm script
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — a block-scalar `run: |` body counts
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — a helper is not a gate, and owes no lane
+      → GREEN (want GREEN)
+  [1 UNCLAIMED SCRIPT] positive control — the declared escape hatch
+      → GREEN (want GREEN)
+  [2 DECLARATION SOUND] a declaration whose reason is a shrug
+      → RED (want RED)
+  [2 DECLARATION SOUND] a long reason that cites nothing checkable
+      → RED (want RED)
+  [2 DECLARATION SOUND] the file says NOT-A-LANE and a lane runs it
+      → RED (want RED)
+  [2 DECLARATION SOUND] positive control — reason above the floor, with a cite
+      → GREEN (want GREEN)
+  [3 LANE RESOLVES] a step runs an npm script package.json does not have
+      → RED (want RED)
+  [3 LANE RESOLVES] a step runs a guard that is not on disk
+      → RED (want RED)
+  [3 LANE RESOLVES] positive control — every lane names something that exists
+      → GREEN (want GREEN)
+
+OK — every gate and probe in web/frontend/scripts is named by a CI lane or declares itself NOT-A-LANE with a cite, and every lane names something that exists.
+EXIT=0
+
+$ npx knip
+EXIT=0
+
+$ npx eslint scripts/check-unit-count.mjs scripts/check-pw-projects.mjs
+EXIT=0
+
+$ npx prettier --check --config .prettierrc.json scripts/check-unit-count.mjs scripts/check-pw-projects.mjs scripts/census.stamp.json
+Checking formatting...
+All matched files use Prettier code style!
+EXIT=0

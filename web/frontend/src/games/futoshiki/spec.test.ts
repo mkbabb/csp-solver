@@ -41,6 +41,18 @@ describe("futoshiki — the eight slots (T5-W2 §1)", () => {
     expect(futoshikiSpec.urlCodec.key).toBe("futoshiki-board-state");
   });
 
+  // T9-W5. The table is scaled per rung, and the band is 4..7 — but the budget is read with the
+  // size the CLIENT was handed, not with a rung the selector produced, so a size off the table
+  // has to answer with a number. Without the fallback the worker would be handed `undefined` as
+  // its node cap and the solve would run uncapped, which is the one failure a budget exists to
+  // prevent. The default is the 5×5 figure: the band's own middle, never zero (a zero cap fails
+  // every board instantly) and never the 7×7 ceiling.
+  it("hands an off-table size the default budget, never `undefined`", () => {
+    expect(nodeBudgetForSize(4)).toBe(2_000_000);
+    expect(nodeBudgetForSize(7)).toBe(20_000_000);
+    for (const off of [0, 3, 8, 16]) expect(nodeBudgetForSize(off)).toBe(4_000_000);
+  });
+
   it("deals off the latin size band and the ONE difficulty band", () => {
     expect(futoshikiSpec.deal.sizes.map((o) => o.label)).toEqual([
       "4×4",

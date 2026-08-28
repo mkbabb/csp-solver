@@ -17,19 +17,38 @@
 
   // Roots whose CALLER is not JavaScript, so no module graph can reach them. Each is named
   // here with the caller that runs it — a file listed without one is a hole.
-  //   scripts/golden-magnitude.mjs   ci.yml, the golden lane: `run: node scripts/golden-magnitude.mjs`
-  //   scripts/dist-identity.mjs      perf-rig/run-safari.sh + run-sim.sh, the AUDIT prepend
+  //   scripts/dist-identity.mjs      .github/workflows/ci.yml, the dist lane (T9-W5 §5.3):
+  //                                  `run: node scripts/dist-identity.mjs --self-test` and
+  //                                  `--dist dist`; perf-rig/run-safari.sh + run-sim.sh reach
+  //                                  the same file through the AUDIT prepend.
   //   e2e/ch62-admission.ts          .github/workflows/ch62-probe.yml, the CH-62 admission arm
+  // `scripts/golden-magnitude.mjs` USED to sit here, cited to "ci.yml, the golden lane" — a
+  // lane deleted at T7-WGATE on standing ruling O-12 (d1daefb3). The entry outlived its
+  // caller by a whole campaign, which is how a dead file keeps a live-looking badge: knip
+  // asks "is it reachable", and an `entry` line answers yes on the author's word. T9-W5 §5.4
+  // adjudicated the file KEPT as a declared local instrument, so its caller is now
+  // `scripts.test:golden:magnitude` in package.json — a real referent knip resolves for
+  // itself — and it carries a `NOT-A-LANE:` header that check-lane-membership.mjs polices.
   // NOT a place to park an unwired gate: a `check-*.mjs` belongs to a lane or declares
   // NOT-A-LANE in its own header, and check-lane-membership.mjs reds if it does neither.
-  "entry": [
-    "scripts/golden-magnitude.mjs",
-    "scripts/dist-identity.mjs",
-    "e2e/ch62-admission.ts"
-  ],
+  "entry": ["scripts/dist-identity.mjs", "e2e/ch62-admission.ts"],
 
   "ignore": ["src/games/shared/scene.css", "src/games/shared/gameCell.css"],
+
+  // `make` is reached through scripts.wasm (`make -C ../../csp-solver/wasm wasm`).
   "ignoreBinaries": ["make"],
+
+  // Dependencies whose CONSUMER is outside this package, named with that consumer — the
+  // same law the `entry` block keeps for files.
+  //   wrangler  ../../scripts/deploy-gated.sh, which carries BOTH deploy lines (Pages
+  //             and the relay Worker) and reaches the binary through
+  //             node_modules/.bin. web/relay borrows the same install
+  //             (web/relay/wrangler.toml names the path). The line sat in
+  //             `scripts.deploy:raw` from T5-W6.2 purely so knip could see the binary
+  //             consumed, and that appeasement was an ungated side door: `npm run
+  //             deploy:raw` shipped `dist/` past every refusal in the gate (T9-W5,
+  //             V3-C6). The gate is the consumer; this is where knip is told so.
+  "ignoreDependencies": ["wrangler"],
   "playwright": {
     "config": ["playwright.config.ts"],
     "entry": ["e2e/**/*.spec.ts"]

@@ -26,8 +26,12 @@
 # e2e-webkit, and perf-subset are gone from CI — the Playwright suites stay in-repo
 # as local instruments, and deployment validation is visual, on the live site;
 # T9-W4 added lane 19, the first lane in the estate that prices WALL TIME on the
-# shipped artifact rather than its size or its instruction count —
-# the lane set rides SEVENTEEN jobs (the rust job carries lanes 2 + 3):
+# shipped artifact rather than its size or its instruction count; T9-W5 added lane
+# 20, the first lane that BUILDS the artifact at all — until this wave no job here
+# ran `vite build`, so the bundle the product is was the one thing the gate matrix
+# never saw, and the two static guards that used to police it (prod-shake,
+# golden-bytes) had been carve-out notes since O-12 took their host lane out —
+# the lane set rides EIGHTEEN jobs (the rust job carries lanes 2 + 3):
 #   0.  build-lean-wasm    -> build-lean-wasm (the SHIP lean artifact built ONCE,
 #                                         uploaded as `lean-wasm-pkg`; frontend +
 #                                         twiggy(lean half) `needs:` it and
@@ -52,9 +56,16 @@
 #                                         vue-tsc --noEmit; eslint boundary rig; knip)
 #   10. iai                -> iai        (callgrind deterministic instruction-count baseline)
 #   11. cargo-audit        -> cargo-audit(RustSec advisory scan over Cargo.lock; independent, no needs:)
-#   12. FE unit estate     -> fe-unit    (T5-W1.1/1.14: vitest run + the >=300 executed
+#   12. FE unit estate     -> fe-unit    (T5-W1.1/1.14: vitest run + the executed-test
 #                                         count floor + the per-scope coverage floor,
-#                                         all off ONE instrumented vitest invocation)
+#                                         all off ONE instrumented vitest invocation.
+#                                         The floor is NOT a number in this comment:
+#                                         T9-W5 collapsed the provenance split into ONE
+#                                         stamp, web/frontend/scripts/census.stamp.json,
+#                                         which the gate reads and the WGATE restamps.
+#                                         This line used to say ">=300" — a figure that
+#                                         had been dead for two tranches while three
+#                                         documents each carried a different one.)
 #   13. boundary law       -> boundary   (T5-W1.4: the generated 20/20 cross-game matrix,
 #                                         GREEN since T5-W2 2.5; carries the generator's
 #                                         vacuity canary, which `eslint .` cannot)
@@ -71,12 +82,22 @@
 #   19. generation latency -> gen-latency(T9-W4/F14: per-family 16×16 MEDIUM+HARD deal
 #                                         ceilings on the downloaded ship artifact,
 #                                         N=3 fixed seeds, EVERY deal graded, self-tested)
+#   20. the dist estate    -> dist       (T9-W5 §5.3/F1: THE FIRST LANE THAT BUILDS.
+#                                         npx vite build, then dist-identity (disk +
+#                                         served, on a real socket), golden-bytes, and
+#                                         the FORBIDDEN census now carrying
+#                                         __bakeAdmission — plus a PERMANENT negative
+#                                         control: a --mode ch62-probe bundle the
+#                                         census must red on. Carries §5.1's
+#                                         deploy-gate refusals too (11 fixture arms,
+#                                         offline, nothing shipped). Browserless: a
+#                                         bundler, a fetch, and node reading bytes.)
 #
 # Compute-cost DAG (T4-W2, r4-corrected — a `needs:` saves redundant CI minutes,
 # NOT wall-time; a predecessor serializes onto each dependent's critical path, so
 # edges are added ONLY where they kill redundant compute without lengthening the
 # critical path): build-lean-wasm ← {frontend, twiggy, fe-unit,
-# boundary, wasm-publish-dryrun, doc-truth, gen-latency}. The five T5-W1
+# boundary, wasm-publish-dryrun, doc-truth, gen-latency, dist}. The five T5-W1
 # additions take that
 # edge for one reason only: web/frontend/package.json file:-links
 # @mkbabb/csp-solver-wasm to csp-solver/wasm/pkg, so `npm ci` cannot resolve the
@@ -84,7 +105,10 @@
 # than rebuild it, and carry no Rust toolchain. T9-W4's gen-latency takes the
 # same edge for a STRONGER reason than lockfile resolution: those bytes are its
 # subject — it prices the artifact every other frontend lane was handed, so a
-# rebuild here would time a package nothing else tested.
+# rebuild here would time a package nothing else tested. T9-W5's dist lane takes it
+# for BOTH reasons at once: the lockfile cannot resolve without the directory, and
+# the bundle it polices must carry the same wasm bytes twiggy sized and gen-latency
+# timed, or the three lanes are grading three different artifacts.
 # lint/rust/py-*/wasm/iai stay
 # independent (they consume no wasm artifact), and so do T5-W1's two tree-only
 # lanes — evidence-policy and npm-audit read the checkout and nothing else.
@@ -735,7 +759,21 @@ jobs:
             # authored strings while `.section-heading` was uppercase, so 6 of 41 heading glyphs
             # painted in Fraunces and the rest in Georgia at weight 800. Static, zero-dependency,
             # lives here rather than in e2e because it needs no browser.
-            - name: font coverage (subset cmap vs rendered text)
+            #
+            # T9-W5 §5.4 — THE CORPUS IS DERIVED NOW, which is the T8 ransom-note trap
+            # mechanized. The gate compared a hand-written list to the cmap; it never compared
+            # the list to the TREE, so a rendered string could move and the gate whose whole
+            # purpose is that defect stayed green (V5 measured drift in both directions). Three
+            # arms land: DERIVED ⊆ DECLARED, off named extractors that read where each string is
+            # authored (`heading:` in the five spec.ts, `name:`/`label:` in games/cards.ts, the
+            # static `text="…"` on <SheetWashiLabel>, a `.zone-row-label` span's text); the
+            # BOUND census pinned, so a `:text="expr"` the derivation cannot read is a decision
+            # rather than a blind spot; and `playerIdentity.ts`'s WRITEABLE regex compared to
+            # the hand cut BOTH DIRECTIONS — it has claimed "a–i, k–w, y, z, no j, no x" since
+            # T6 with nothing checking it. The derivation grew the Patrick Hand corpus from 4
+            # declared strings to 13: eight tooltips had been painting in a 46-codepoint subset
+            # with nothing comparing them to it.
+            - name: font coverage (derived corpus vs subset cmap, both containments)
               working-directory: web/frontend
               run: npm run test:font-coverage
             # T4-P1 ink-pressure gate (scripts/check-ink-pressure.mjs). The graphite ramp,
@@ -747,7 +785,17 @@ jobs:
             # before trusting the green. Static and zero-dependency, so it lands in this lane
             # beside font-coverage rather than in e2e. Standing team-lead row since pass 2:
             # the script shipped at T4-P1 Lane D ship 4 and until now nothing in CI ran it.
-            - name: ink pressure (graphite ladder + ramp ownership, self-tested)
+            # T9-W5 §5.4 adds CLOSURE 5, the inversion: the script computed the ramp's
+            # cross-theme rank against `--color-muted-foreground` on every run, printed "the
+            # ramp and the register cross between themes … not gated", and exited 0. A gate
+            # that measures a defect and passes is narrating, and narration erodes exactly the
+            # way the memo it replaces does. The crossing is a graded subject now, pinned to
+            # both rank strings, with the ONE booked ruling admitted (index.css §INK PRESSURE —
+            # tokenising muted-foreground onto the ramp is a design ruling, not an AA repair,
+            # and a gate does not get to overturn one). Closed both ways: a second crossing
+            # reds, a re-pitch that moves either rank reds, and the admission reds on its own
+            # cure, so the booking cannot outlive the condition.
+            - name: ink pressure (graphite ladder + ramp ownership + the rank, self-tested)
               working-directory: web/frontend
               run: npm run lint:ink
             # T5-W2 row 2.4b — the swallow census. A catch body must run a statement or say
@@ -771,7 +819,16 @@ jobs:
             # zero-dependency, browser-free. Born RED at cbf2ab49 on ten sites
             # (evidence/w1/gate1.1-born-red.txt); greenable by the cure with the allowlist
             # still EMPTY (evidence/w1/gate1.1-green-condition.txt).
-            - name: theme-selector census (no never-written selectors, self-tested)
+            #
+            # T9-W5 §5.4 — V5-C2 adjudicated it VACUOUS BY POPULATION, not by construction:
+            # T7-W1's cure deleted every subject, so the live census reads zero sites and
+            # greens on nothing. The fixture self-test proves the CHECK FUNCTIONS bite; it
+            # never touches `collect()`, so a walker that had stopped reaching src/ would leave
+            # every fixture green and the console line would still print its confident zero.
+            # The row's cure is a POPULATION CANARY that runs on every invocation (the
+            # tdz-probe pattern): one synthetic `[data-canary-theme]` rule appended to the REAL
+            # corpus, which check 1 must red on. Nothing is written to disk. It stays.
+            - name: theme-selector census (no never-written selectors, canaried + self-tested)
               working-directory: web/frontend
               run: npm run lint:theme-selectors
             # T5-W2 2.3a — the theme-token census, WIRED at T7-W6. Every `@theme` custom
@@ -811,7 +868,20 @@ jobs:
             # green only through this wiring (evidence/w6/lane-membership-green-condition.txt).
             # W1's selector census and W2's occlusion gates land under it on day one, so a new
             # guard cannot ship unwired again.
-            - name: lane membership (every gate/probe is wired or declared, self-tested)
+            #
+            # T9-W5 §5.4 — THE CORPUS STOPS BEING NAME-SHAPED. It was two regexes over
+            # filenames (`check-*.mjs`, `*-probe.mjs`), and a law whose subject is a naming
+            # convention has a doorway: V5 walked three files through it —
+            # `golden-magnitude.mjs` (dead behind a false knip `entry` for a campaign),
+            # `golden-selfdelta.mjs`, `dist-identity.mjs` — none visible to the census that
+            # reported every gate wired. Renaming a guard was a way to leave the law. The
+            # corpus is now every `.mjs` in the two script trees minus an EXPLICIT exempt list
+            # that check 4 holds to the declaration's own standard (live subject, reason with a
+            # cite, no lane contradicting it). The list is EMPTY: all three were closed by
+            # wiring or declaring. The repo-root tree enters at the same time — `check-doc-truth`,
+            # `ledger-diff`, `check-evidence-policy`, `check-inline-tests` and `edge-probe` are
+            # gates by every test this file applies and none were under it. 18 files → 26.
+            - name: lane membership (both script trees, wired or declared or exempt, self-tested)
               working-directory: web/frontend
               run: npm run lint:lanes
             # T7-W3 gate 1 — the sleep lint. No fixed-duration wait may precede an
@@ -821,6 +891,17 @@ jobs:
             # polled read of the ASSERTED invariant (evidence/w3/sleep-lint-residue-cures.txt);
             # four cited gallery exemptions where the sleep IS the measurement window,
             # one cited sleep-ok (a11y's absence claim). Recursive over e2e/, self-tested.
+            #
+            # T9-W5 §5.4 DECIDED: EXECUTED (the row's default, taken on its merits). The audit
+            # booked these two as "gates policing specs no lane executes", and the framing is
+            # about the SUBJECT, not the gate — O-12 took the browser lanes out, so `e2e/` is a
+            # local instrument now. An instrument is used at every WGATE production pass, and a
+            # rotted spec is a rotted instrument: `lint:sleep` and `lint:motion` are the only
+            # things in CI that keep 25 specs from decaying between the passes that need them.
+            # They are two static greps over a directory the checkout already carries, they
+            # install nothing, and they are self-tested. The alternative on offer was deletion,
+            # which buys nothing back and disarms the estate's only standing guard over its own
+            # instruments. Both stay wired, here, in the frontend lane.
             - name: sleep lint (no sleep-then-one-shot-read, self-tested)
               working-directory: web/frontend
               run: npm run lint:sleep
@@ -839,7 +920,24 @@ jobs:
             # every user-string literal in src/** (+ index.html's head) must carry no em or
             # en dash. Comments are masked; two allowlisted files carry their reason.
             # Self-tested, both colours.
-            - name: copy register (no em dash in product copy, self-tested)
+            #
+            # T9-W5 §5.4 lands the LAW'S OTHER HALF and cures a hole in the half that shipped.
+            #  · THE JARGON ARM: a curated lexicon (solver technique names, solver vocabulary,
+            #    the machine's name, meta-language) over RENDERED strings only — template text,
+            #    the attributes that reach a reader, and the script-side copy constants. NOT
+            #    every literal: `TechniqueId` is the string "naked-single" by explicit ruling
+            #    and a wide net would red on the identifiers T8-W6 kept on purpose. Two live
+            #    hits on its first run, both ADMITTED with the seam that owns the cure (T9-W7
+            #    §9 / ballot B1) and both closed both ways — an admission whose string leaves
+            #    the tree reds until the entry goes with it.
+            #  · THE MASK CURE: the style mask was `/<style[\s\S]*?<\/style>/` and ran FIRST,
+            #    so GameControlPanel.vue's header prose — which MENTIONS `<style>` — opened it
+            #    and closed it 103,706 characters later at the file's real `</style>`. The
+            #    estate's densest copy surface, 1,300 lines, has been outside this census since
+            #    the gate shipped, and the console line reported it scanned. Comments are
+            #    blanked first now and the style pattern is line-anchored; a control fixture
+            #    pins the shape.
+            - name: copy register (no em dash, no jargon, in RENDERED copy; self-tested)
               working-directory: web/frontend
               run: npm run lint:copy
             # T5-W1 row 1.11 (audit C5 + J3) support floor. Same species as the seven
@@ -916,28 +1014,60 @@ jobs:
             - name: vitest run --coverage (FE unit estate)
               working-directory: web/frontend
               run: npm run test:unit:report -- --coverage
-            # The count floor: >= the floor STAMPED in check-unit-count.mjs, counted in
-            # EXECUTED tests (passed + failed; `.skip`/`.todo` are not executed and never
-            # count). 300 was ~10% under 332 at the T5-W1 wave base; live is 477 today, so
-            # the floor carries 59% of slack and a whole file's worth of estate can leave
-            # with the lane still green. A narrowed `include`, a describe.skip over a whole
-            # file, or a collection error all exit 0 from the step above with a cheerful
-            # summary — only this one sees the number move. `--restamp <report>` is the
-            # COMMAND that re-derives the floor (~10% under a live, clean census; it refuses
-            # a report that is not a passing, self-consistent run, refuses a LOWERING without
-            # a spoken `--allow-lower "why"`, and stamps the tree it measured into the file),
-            # where "re-derive from a fresh census" was advice — and advice erodes. T7-W6
-            # lands the mechanism; WGATE runs it, after the last row lands anywhere in the
-            # tranche. A floor derived at W6's own seal is stale on arrival, which is the
-            # exact slack the row exists to remove. Never nudge it down to meet a red.
+            # The count floor: >= the floor in web/frontend/scripts/census.stamp.json,
+            # counted in EXECUTED tests (passed + failed; `.skip`/`.todo` are not executed
+            # and never count). A narrowed `include`, a describe.skip over a whole file, or
+            # a collection error all exit 0 from the step above with a cheerful summary —
+            # only this one sees the number move. `--restamp <report>` re-derives the floor
+            # (it refuses a report that is not a passing, self-consistent run, refuses a
+            # LOWERING without a spoken `--allow-lower "why"`, and stamps the tree it
+            # measured), where "re-derive from a fresh census" was advice — and advice
+            # erodes. T7-W6 landed the mechanism; the WGATE runs it, after the last row
+            # lands anywhere in the tranche. Never nudge it down to meet a red.
+            #
+            # T9-W5 §5.2 — THE NUMBER IS NOT WRITTEN HERE, DELIBERATELY. This comment used
+            # to read "300 was ~10% under 332 at the T5-W1 wave base; live is 477 today, so
+            # the floor carries 59% of slack". It was the THIRD home of a provenance split:
+            # the script said 434, gates.json said 300, this line said 300-and-477, and no
+            # reader could tell which one the lane enforced. Nothing executable ever read
+            # this comment — the step below runs `npm run test:unit:count`, which reads the
+            # stamp — so it was a lying comment rather than a second enforcement path, and
+            # a lying comment about a floor is precisely how a floor rots unnoticed. The
+            # figures are now in ONE file, dated, with the census they were cut from; that
+            # file is the only place a number about this gate belongs.
             - name: unit count floor (>= the stamped floor)
               working-directory: web/frontend
               run: npm run test:unit:count
+            # T9-W5 chair fold — the pw project-matrix + stamped e2e count floors, wired.
+            # No browser executes: the script parses configs + spec files (its header's
+            # T7 NOT-A-LANE claim retired with the reason). Self-test first, then the grade.
+            - name: pw project matrix + e2e count floors (config parse, browserless)
+              working-directory: web/frontend
+              run: npm run test:e2e:projects && node scripts/check-pw-projects.mjs
             # The coverage floor: every scope at or above the W1.14 baseline in
             # web/frontend/coverage-floor.json, which is the MINIMUM of a banked n=10
             # sample, not one run. No tolerance at compare time — a tolerance would
             # wave through exactly the sub-point regression the floor is for. A missing
             # summary is a RED, never a skip.
+            #
+            # T9-W5 §5.4 — THIS STEP NOW GRADES THE COVERAGE IT NAMES. `test:coverage:floor`
+            # was `node scripts/check-coverage-floor.mjs --self-test`, and the script's own
+            # `--self-test` is self-test ONLY: it runs the fixture mutants and exits 0 before
+            # the real gate, deliberately (the comment at check-coverage-floor.mjs:397 says so,
+            # citing run 30720212628). So this step ran the SAME fixtures the step two above it
+            # had already run, printed a confident green, and never opened
+            # coverage/coverage-summary.json. The lane carried two self-tests and no floor.
+            # V5-C1 confirmed it; the script is unchanged and the manifest is what was lying.
+            # The self-test keeps its own step above (it must run BEFORE the green it grades —
+            # the lint:ink house pattern) and `test:coverage:floor:selftest` names it for a
+            # bench run. Measured the moment it was wired, 2026-08-28 at 4dd9ec9c: THREE
+            # scopes are under their floor — futoshiki.branches 90.24 vs 93.47,
+            # killer.branches 95.45 vs 100.00, kenken.branches 96.00 vs 100.00 — all of it
+            # `*Poster.vue` branch surface that arrived at T8-W3 and T8.1 and was never
+            # covered. That is a whole campaign of drift under a floor nothing read, which is
+            # the case for wiring it rather than an argument against. The floor is NOT moved
+            # to meet it: `--restamp` refuses a lowering without a spoken `--allow-lower`, and
+            # nudging a floor down to meet a red is the one thing this bank forbids.
             - name: coverage floor (per-scope, >= the W1.14 baseline)
               working-directory: web/frontend
               run: npm run test:coverage:floor
@@ -1258,7 +1388,12 @@ jobs:
         timeout-minutes: 15
         needs: [build-lean-wasm]
         steps:
+            # T9-W5 §5.5 — submodules:true so docs/precepts/ is POPULATED and the
+            # `precepts-reachable` row's roster + command-row arms bite here rather
+            # than lying dormant on an empty gitlink dir.
             - uses: actions/checkout@v4
+              with:
+                  submodules: true
             - name: Download the lean wasm pkg (the artifact the lean-bytes row measures)
               uses: actions/download-artifact@v4
               with:
@@ -1282,7 +1417,7 @@ jobs:
             # tree actually says. Read the derived lines: a band that derives to 0 is
             # now a red (T5-W1), but the numbers are the point of the output.
             # --self-test (T7-W5): the gate proves every row bites both colours off its own
-            # fixtures before grading the tree — 49 fixtures over 21 rows at land. The flag
+            # fixtures before grading the tree — 125 fixtures over 41 rows at T9-W5. The flag
             # was local-only until this wave; the ledger-diff step below always carried it.
             - name: doc truth (every row and figure re-derived at run time, self-tested)
               run: node scripts/check-doc-truth.mjs --self-test && node scripts/check-doc-truth.mjs
@@ -1440,3 +1575,221 @@ jobs:
             - name: generation latency (five families, MEDIUM + HARD, N=3, self-tested)
               working-directory: web/frontend
               run: npm run test:gen-latency
+
+    # ---------------------------------------------------------------- Lane 20
+    # dist — THE BUILD LANE (T9-W5 §5.3, F1 GATE-TRUTH).
+    #
+    # WHAT WAS MISSING, stated flatly: no lane in this workflow ran `vite build`.
+    # Seventeen jobs, and not one of them ever produced the artifact the product IS
+    # — the only place in the repo that built a bundle in CI was ch62-probe.yml, a
+    # dispatch-only workflow nobody dispatches. Everything upstream was gated — types,
+    # lint, boundaries, knip, unit counts, coverage, wasm bytes, instruction counts,
+    # deal latency — and the bundle itself was ungoverned. That is not an oversight
+    # anyone made; it is the shape T7-WGATE's O-12 ruling left behind. `prod-shake`
+    # and `golden-bytes` were STEPS INSIDE the e2e job, and when the browser-executing
+    # lanes came out on the owner's word (2026-08-03) the two static gates that
+    # happened to be lodged in them came out too — carve-outs written honestly, dated,
+    # and cited (V5-C3 adjudicated them DELIBERATE, not sloppy). Deliberate and wrong
+    # are not exclusive: a documented hole is still a hole, and the audit's cure for
+    # a carve-out note is never a better note, it is the lane that voids it.
+    #
+    # This is that lane. BROWSERLESS in the strict O-12 sense: it installs no browser
+    # bundle, executes no Playwright suite, and every assertion below is node reading
+    # bytes off a disk or one `fetch` against a local static server. `vite build` is a
+    # bundler, not an engine.
+    #
+    # THE FOUR ARMS, and what each would catch:
+    #
+    #   dist-identity --self-test  six arms, both colours, over fixture dists and a
+    #                              real socket on 4247. Runs BEFORE the build (the
+    #                              lint:ink house pattern: prove the gate can fail,
+    #                              then trust its green).
+    #   golden-bytes               the eight-check estate guard — per-image ceiling,
+    #                              estate band, fossils, PNG decode + blank floor,
+    #                              {darwin,linux} pairing against the specs that
+    #                              assert them, the count pin at 8, and the
+    #                              asserted-but-absent red. Placed before the build
+    #                              because it reads `e2e/`, not `dist/`, and a red
+    #                              here should not wait on a bundle.
+    #   dist-identity --dist       exactly one `index-<hash>.js`, an `index.html`, a
+    #                              real payload. A husk (`.gitignore`d dist that kept
+    #                              only `_headers`) and a stale second entry chunk are
+    #                              the two reds, and neither is visible to any other
+    #                              gate in this file.
+    #   prod-shake (the FORBIDDEN census)
+    #                              five dev-only symbols asserted absent from every
+    #                              chunk: FilterTuner, rafInstrumentation,
+    #                              __schedulerDebug, wire=local, and — new at this
+    #                              wave, registry A6 — __bakeAdmission, which
+    #                              `rasterPose.ts` has cited THIS CHECK as proof of
+    #                              absence for since T7-W3 while the check did not
+    #                              carry the symbol.
+    #
+    # ONE ARM IS NARROWER HERE THAN AT A BENCH, AND SAYING SO IS THE POINT.
+    # golden-bytes check 3 hunts FOSSILS — auto-written baselines under `e2e/` outside
+    # `e2e/goldens/`. `.gitignore:53` is a blanket `*.png` and the eight goldens are
+    # force-added, so a runner's checkout contains no untracked PNG by construction and
+    # the arm cannot fire on the mechanism that mints them (a Playwright run). What it
+    # DOES police in CI is a force-added stray, which is the only way a fossil reaches a
+    # checkout. The other seven checks are fully live here. Measured, not assumed: the
+    # bench tree at this wave carried eight such fossils (49.1 KB, minted 2026-08-28
+    # 10:38-10:40 by a concurrent lane's golden run) and the gate red on them at the
+    # bench while the same gate over a tracked-only tree — `git archive HEAD` — was
+    # green. Both readings are banked in evidence/w5/dist-lane.md.
+    #
+    # THE NEGATIVE CONTROL IS PERMANENT, not a one-off canary in a commit message.
+    # `npx vite build --mode ch62-probe` produces a bundle that carries
+    # `__bakeAdmission` by construction (the instrument's fence is
+    # `MODE === "ch62-probe"`), and the lane asserts prod-shake REDS on it. If that
+    # ever passes, the census has gone vacuous — a renamed symbol, a changed fence, a
+    # minifier that started eating the string — and the lane says so in those words
+    # rather than printing a green nobody can distinguish from a working gate. This
+    # is the tdz-probe pattern (its reproduction arm runs on every invocation, not
+    # only under --self-test), applied to the artifact.
+    #
+    # WHAT THIS REPLACES IN ch62-probe.yml. That workflow is W6's kill, not this
+    # lane's, and it is untouched here. Named for the record: its ONE function that
+    # outlives its verdict is the pair of steps at ch62-probe.yml:186-203 — the
+    # production-mode `vite build` and the "Vacuity guard — the instrument is IN this
+    # bundle" grep for `__bakeAdmission`. Both live here now, in the standing
+    # workflow, on every push, with the polarity that matters for a SHIPPED bundle
+    # (absent, not present) plus the probe's own polarity kept as the control. The
+    # rest of that file — twelve dispatch-only matrix arms, browser installs, a
+    # quarantine stub, a verdict job for a chronic that is RETIRED — is W6's to
+    # delete and nothing here depends on it.
+    #
+    # DAG: `needs: build-lean-wasm` for the reason every Node lane here takes that
+    # edge — `web/frontend/package.json` file:-links @mkbabb/csp-solver-wasm to
+    # csp-solver/wasm/pkg, so `npm ci` cannot resolve the lockfile until that
+    # directory exists. It DOWNLOADS the ship artifact rather than rebuilding it, so
+    # the bundle this lane polices contains the same wasm bytes twiggy sized and
+    # gen-latency timed. No Rust toolchain here.
+    dist:
+        name: dist estate (build + the artifact gates)
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        needs: [build-lean-wasm]
+        steps:
+            - uses: actions/checkout@v4
+            - name: Download the lean wasm pkg (the package.json file-link target)
+              uses: actions/download-artifact@v4
+              with:
+                  name: lean-wasm-pkg
+                  path: csp-solver/wasm/pkg
+            - name: Set up Node (LTS) with npm cache
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: npm
+                  cache-dependency-path: web/frontend/package-lock.json
+            # Node 24 ships npm 11.x already, but pin explicitly: older Node's npm 10
+            # mis-resolves the lockfile.
+            - name: Pin npm >=11
+              run: npm install -g npm@^11
+            - name: npm ci
+              working-directory: web/frontend
+              run: npm ci
+            # The gates, before the greens they grade.
+            - name: dist-identity self-test (six arms, both colours, a real socket)
+              working-directory: web/frontend
+              run: node scripts/dist-identity.mjs --self-test
+            # Reads e2e/, not dist/ — so it runs before the build and a bloated estate
+            # reds without waiting on a bundle.
+            - name: golden estate (per-image + band + pairing + count pin, 8 checks)
+              working-directory: web/frontend
+              run: npm run test:golden:bytes
+            # THE BUILD. `npx vite build`, not `npm run build`: the package script is
+            # `vue-tsc -b && vite build` behind a `prebuild` that runs `make -C
+            # ../../csp-solver/wasm wasm` — which would rebuild the artifact this lane
+            # just downloaded, on a runner with no Rust toolchain. vue-tsc already runs
+            # in the frontend lane; duplicating it here would buy a second typecheck and
+            # a lost artifact identity. NODE_ENV is pinned for the same reason
+            # ch62-probe.yml pins it: an unset NODE_ENV with a non-production mode
+            # resolves `isProduction: false` and bundles a dev-flavoured Vue.
+            - name: vite build (THE production bundle every arm below reads)
+              working-directory: web/frontend
+              env:
+                  NODE_ENV: production
+              run: npx vite build --logLevel warn
+            - name: dist identity (one entry chunk, a real payload, the AUDIT line)
+              working-directory: web/frontend
+              run: node scripts/dist-identity.mjs --dist dist
+            - name: prod-shake — the FORBIDDEN census (5 dev-only symbols absent)
+              working-directory: web/frontend
+              run: npm run test:prod-shake -- dist
+            # PRECEPTS §3, the tree-blind trap: a rig pointed at a preview measures
+            # whatever the server references, which need not be what was built. One
+            # `fetch` and a regex over the served HTML — no browser, no Playwright.
+            # Port 4251 is inside PRECEPTS §4's own-server band (4230-4260) and clear
+            # of the self-test's 4247.
+            - name: dist identity vs the SERVED page (the tree-blind trap, on a socket)
+              working-directory: web/frontend
+              run: |
+                  set -euo pipefail
+                  # --host 127.0.0.1, not the default `localhost`: the bind address and the
+                  # address the probe fetches have to be the same one, or a dual-stack box
+                  # can answer on ::1 and refuse on 127.0.0.1 and the gate reads that as a
+                  # dead server rather than a bad bind.
+                  npx vite preview --host 127.0.0.1 --port 4251 --strictPort --logLevel warn > preview.log 2>&1 &
+                  echo $! > preview.pid
+                  # --retry-connrefused, not a sleep loop: the wait ends when the socket
+                  # answers, and a socket that never answers is a red rather than a
+                  # fixed-duration guess that the gate then reads through.
+                  curl -sf --retry 30 --retry-delay 1 --retry-connrefused http://127.0.0.1:4251/ > /dev/null
+                  status=0
+                  node scripts/dist-identity.mjs --dist dist --served http://127.0.0.1:4251 || status=$?
+                  kill "$(cat preview.pid)" 2>/dev/null || true
+                  if [ "$status" -ne 0 ]; then cat preview.log; fi
+                  # The step leaves nothing behind: an untracked preview.log under
+                  # web/frontend is dirt in a SHIPPED path, and deploy-gated.sh refuses on
+                  # exactly that. A gate that dirties the tree it guards is a poor guest.
+                  rm -f preview.log preview.pid
+                  exit "$status"
+            # THE NEGATIVE CONTROL. Not a canary run once in a commit — a step that
+            # runs on every push and reds if the census stops biting. The ch62-probe
+            # mode bundle carries `__bakeAdmission` by construction; prod-shake MUST
+            # fail on it. A pass here means the FORBIDDEN list has gone vacuous and
+            # every green above it is worthless.
+            - name: NEGATIVE CONTROL — the census reds on a bundle that carries the symbol
+              working-directory: web/frontend
+              env:
+                  NODE_ENV: production
+              run: |
+                  set -euo pipefail
+                  npx vite build --mode ch62-probe --outDir dist-ch62 --logLevel warn
+                  if node scripts/check-prod-shake.mjs dist-ch62; then
+                    echo "::error::prod-shake PASSED a bundle that carries __bakeAdmission — the FORBIDDEN census is vacuous, and every green it printed above means nothing"
+                    rm -rf dist-ch62
+                    exit 1
+                  fi
+                  rm -rf dist-ch62
+                  echo "negative control ok — the census bit a bundle with the instrument in it"
+            # T9-W5 §5.1's gate, taking its first lane. `deploy-gated.sh` is the law over
+            # what may leave for the edge — a dirty tree, an untracked file under a shipped
+            # path, half a Pages/Worker pair, a missing conclusion artifact — and until now
+            # NOTHING in CI ran it. Eleven arms over throwaway fixture repos with a wrangler
+            # STUB the `--dry` path never invokes: no build, no upload, no network, no
+            # deploy. Said plainly so the step is not mistaken for one: this proves the
+            # REFUSALS can fire, it does not ship anything and cannot. It is here rather
+            # than in the frontend lane because the subject is the artifact this lane just
+            # built. (`scripts/edge-probe.mjs`'s offline `--self-test` is its sibling and is
+            # T9-W5 chair fold: edge-probe's header now scopes its NOT-A-LANE claim to the
+            # GRADED live-edge rows; the offline `--self-test` (fixtures, zero network) is
+            # the arm the step below runs.)
+            - name: deploy gate refusals (11 arms, fixture repos, offline, nothing shipped)
+              working-directory: web/frontend
+              run: npm run test:deploy-gate
+            - name: edge probe self-test (offline fixture arms, zero network)
+              working-directory: web/frontend
+              run: npm run test:edge-probe
+            # A red lane hands back the artifact it red on. index.html names the entry
+            # chunk, which is the identity every arm above argues about; the preview log
+            # is `cat`ed into the step's own output rather than uploaded, since the step
+            # deletes it to leave the tree clean.
+            - name: Upload the dist index (failure only)
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: dist-index
+                  path: web/frontend/dist/index.html
+                  retention-days: 7

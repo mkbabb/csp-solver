@@ -1,6 +1,18 @@
 #!/usr/bin/env node
-// NOT-A-LANE: it ran inside the e2e job's built-dist steps, and the browser-executing CI lanes were removed on the owner's ruling of 2026-08-03 — the golden estate is a local instrument now, this cap enforced beside it at mint time; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
 // T4-W2 — the golden bloat guard (FAM-15 / EVIDENCE-POLICY B1).
+//
+// T9-W5 §5.3 — THE CARVE-OUT IS RETIRED BY THE LANE THAT VOIDS IT. This file carried a
+// dated `NOT-A-LANE:` declaration citing T7-WGATE's O-12 ruling — it had run inside the
+// e2e job's built-dist steps, and those lanes came out of CI on the owner's word of
+// 2026-08-03. The declaration was deliberate and correctly cited (V5-C3), and it was also
+// a category error: NOTHING this file reads is a browser artifact. It greps `e2e/` for
+// PNGs, parses them with node's own zlib, and asks `git ls-files` what is tracked. It was
+// carved out beside the browser lanes because it LIVED there, not because it needed them.
+// Eight checks that run in under a second, over an estate whose whole failure mode is
+// silent growth between the passes a human remembers to make. It now rides
+// `.github/workflows/ci.yml` job `dist`, browserless per O-12, and the declaration comes
+// out in the same commit as the step — `check-lane-membership.mjs` check 2 reds on a file
+// that claims NOT-A-LANE while a lane runs it.
 // T5-W1.13 — hardened per r3/goldens-estate: the guard now polices the failure modes
 // that HAVE occurred, not only the one that never has.
 //

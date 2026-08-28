@@ -42,6 +42,9 @@
 //       2 the instrument itself never ran (no JSON report)
 //
 // Run: node scripts/golden-selfdelta.mjs   [PLAYWRIGHT_BASE_URL=… to reuse a served app]
+//      npm run test:golden:selfdelta
+//
+// NOT-A-LANE: it spawns `playwright test` twice, and CI is browserless by standing ruling O-12 (T7-WGATE, d1daefb3), so its cadence is the local golden estate — it runs beside `npm run test:golden` whenever a baseline is re-minted, which is the only moment its question (does the compare still bite?) has an answer worth having; docs/tranches/2026-08-tranche-9/evidence/w5/gates-wired.md.
 
 import { spawnSync } from "node:child_process";
 import process from "node:process";

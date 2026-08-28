@@ -1,0 +1,112 @@
+== bare exits, read with $? and never through a pipe — 2026-08-28T16:19:35Z ==
+
+$ node scripts/check-doc-truth.mjs --self-test
+  exit 0
+doc-truth --self-test — 125 fixtures over 41 rows
+125 PASS / 0 FAIL — every row proved both colours
+
+$ node scripts/check-doc-truth.mjs
+  exit 1
+3 RED / 38 GREEN — doc canon disagrees with the tree
+RED    root-readme-e2e-counts
+RED    ci-lane-count
+RED    e2e-total-arithmetic
+
+$ node scripts/check-doc-truth.mjs --only lean-wasm-4-sites
+  exit 0
+$ node scripts/check-doc-truth.mjs --only crate-symbol-cites
+  exit 0
+$ node scripts/check-doc-truth.mjs --only precepts-reachable
+  exit 0
+$ node scripts/check-doc-truth.mjs --only cited-paths-exist
+  exit 0
+$ node scripts/check-doc-truth.mjs --only chromium-alone-claim
+  exit 0
+$ node scripts/check-doc-truth.mjs --only directory-count-claims
+  exit 0
+$ node scripts/check-doc-truth.mjs --only docs-roster-complete
+  exit 0
+
+$ node scripts/check-doc-truth.mjs --only nope-row
+  exit 2  (unknown id is a failing run, not an empty pass)
+doc-truth tree canaries — 2026-08-28T16:18:46.752Z
+node v26.0.0 darwin/arm64
+
+CANARY  lean TIER-1 AGREEMENT — one site restamped, the other three disagree
+        row lean-wasm-4-sites · plant in docs/benchmarks.md
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: 122,541 B — the darwin stamp the other sites carry
+
+CANARY  lean TIER-1 LABEL — the stamp stripped of the platform that made it
+        row lean-wasm-4-sites · plant in docs/benchmarks.md
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: a lean figure labelled as darwin's — "<N> B on darwin" or "darwin measures <N> B"
+
+CANARY  lean TIER-2 BAND — a cited figure the twiggy lane would fail
+        row lean-wasm-4-sites · plant in docs/benchmarks.md
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: 122,541 B — the darwin stamp the other sites carry
+
+CANARY  symbol cite — the from_parts class, in present-tense canon
+        row crate-symbol-cites · plant in csp-solver/README.md
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: a type, trait or module named FutoshikiPuzzle somewhere under csp-solver/
+
+CANARY  symbol cite — owner declared, member excised (`Csp::add_soft_constraint`)
+        row crate-symbol-cites · plant in csp-solver/README.md
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: a `add_soft_constraint` on Csp — fn, field, variant, const or module
+
+CANARY  changelog scope — a head release the manifest does not declare
+        row crate-symbol-cites · plant in csp-solver/CHANGELOG.md
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: `## 0.7.0` — the version csp-solver/Cargo.toml declares, so the head section is the present tense
+
+CANARY  tree KIND — a directory drawn as a file
+        row cited-paths-exist · plant in README.md
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: a file tree that draws docs as the dir it is
+
+CANARY  tree comment roster — a child file the comment names that is not there
+        row cited-paths-exist · plant in web/frontend/README.md
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: a file tree that names only paths that exist
+
+CANARY  precept command row — an `npm run` this repo cannot answer
+        row precepts-reachable · plant in docs/precepts/infra/deploy.md
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: an `npm run` row this repo answers — web/frontend/package.json defines 43 scripts
+
+CANARY  precept path cite — an anchored path absent from this tree
+        row precepts-reachable · plant in docs/precepts/infra/deploy.md
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: a path that exists under the repo root or web/frontend — the cite is anchored at this repo's own tree
+
+CANARY  precepts declaration — the submodule dropped from .gitmodules
+        row precepts-reachable · plant in .gitmodules
+        tree      exit 0  0 RED / 1 GREEN — canon holds
+        PLANTED   exit 1  1 RED / 0 GREEN — doc canon disagrees with the tree
+        restored  exit 0  0 RED / 1 GREEN — canon holds  byte-identical=true
+        first site  expected: a submodule declared at `docs/precepts` — the campaign substrate the canon leans on
+
+== end ==

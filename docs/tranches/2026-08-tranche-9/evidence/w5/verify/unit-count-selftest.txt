@@ -1,0 +1,17 @@
+check-unit-count --self-test — each check against a known-bad input:
+  reds  missing report
+  reds  malformed JSON
+  reds  wrong shape (no counters)
+  reds  shape with counters but no testResults[]
+  reds  below the floor (660)
+  reds  stale report (3h old)
+  reds  future report (clock forgery)
+  reds  red run (failures present)
+  reds  forged counters (summary 400, census 5)
+  reds  skips carry the floor (660 executed + 40 skipped)
+  reds  census stamped 20% above live (882 claimed, 735 run)
+  reds  floor hand-lowered one under the band (624 vs 625)
+  greens  exactly at the floor (661)
+  greens  the stamped tree itself (735 executed, floor 661, band 625)
+
+self-test OK — every check fails on its known-bad input, and passes at the floor.

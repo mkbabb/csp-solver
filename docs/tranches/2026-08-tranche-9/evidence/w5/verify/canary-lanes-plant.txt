@@ -1,0 +1,37 @@
+LANE-MEMBERSHIP CENSUS — 27 script(s) across web/frontend/scripts + ./scripts (0 exempt), 110 CI-reachable command(s) (23 npm script(s) resolved)
+  · scripts/check-doc-truth.mjs — ci.yml:1412
+  · scripts/check-evidence-policy.mjs — ci.yml:1350
+  · scripts/check-inline-tests.mjs — ci.yml:191
+  · scripts/edge-probe.mjs — NOT-A-LANE: T9-W5 — it reads the LIVE deploy over the network and CI is browserless by standing ruling O-12, so its cadence is the WGATE production pass, run beside the deploy per docs/tranches/2026-08-tranche-9/evidence/w5/runbook.md.
+  · scripts/ledger-diff.mjs — ci.yml:1422
+  · web/frontend/scripts/check-copy-register.mjs — package.json scripts.lint:copy
+  · web/frontend/scripts/check-coverage-floor.mjs — ci.yml:1011, package.json scripts.test:coverage:floor
+  · web/frontend/scripts/check-empty-catch.mjs — package.json scripts.lint:catch
+  · web/frontend/scripts/check-font-coverage.mjs — package.json scripts.test:font-coverage
+  · web/frontend/scripts/check-gen-latency.mjs — package.json scripts.test:gen-latency
+  · web/frontend/scripts/check-golden-bytes.mjs — package.json scripts.test:golden:bytes
+  · web/frontend/scripts/check-ink-pressure.mjs — package.json scripts.lint:ink
+  · web/frontend/scripts/check-lane-membership.mjs — package.json scripts.lint:lanes
+  · web/frontend/scripts/check-motion-contract.mjs — package.json scripts.lint:motion
+  · web/frontend/scripts/check-prod-shake.mjs — ci.yml:1755, package.json scripts.test:prod-shake
+  · web/frontend/scripts/check-pw-projects.mjs — NOT-A-LANE: the browser-executing CI lanes (e2e, e2e-webkit, perf-subset) were removed on the owner's ruling of 2026-08-03 — the Playwright suites are local instruments now and this project-matrix lint rides them locally via `npm run test:e2e:projects`; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
+  · web/frontend/scripts/check-pw-retries.mjs — NOT-A-LANE: the browser-executing CI lanes were removed on the owner's ruling of 2026-08-03 — the Playwright suites are local instruments now and this retries-policy lint rides them locally via `npm run test:e2e:retries`; see docs/tranches/2026-08-tranche-7/DISPOSITIONS.md (row O-12).
+  · web/frontend/scripts/check-sleep-lint.mjs — package.json scripts.lint:sleep
+  · web/frontend/scripts/check-support-floor.mjs — package.json scripts.test:support-floor
+  · web/frontend/scripts/check-theme-selectors.mjs — package.json scripts.lint:theme-selectors
+  · web/frontend/scripts/check-theme-tokens.mjs — package.json scripts.lint:theme-tokens
+  · web/frontend/scripts/check-unit-count.mjs — ci.yml:1006, package.json scripts.test:unit:count
+  · web/frontend/scripts/dist-identity.mjs — ci.yml:1684, ci.yml:1705, ci.yml:1736
+  · web/frontend/scripts/golden-magnitude.mjs — NOT-A-LANE: it spawns `playwright test`, and CI is browserless by standing ruling O-12 (T7-WGATE, d1daefb3), so its cadence is the local golden estate — run beside `npm run test:golden` and `npm run test:golden:selfdelta` whenever a baseline is re-minted; docs/tranches/2026-08-tranche-9/evidence/w5/gates-wired.md.
+  · web/frontend/scripts/golden-selfdelta.mjs — NOT-A-LANE: it spawns `playwright test` twice, and CI is browserless by standing ruling O-12 (T7-WGATE, d1daefb3), so its cadence is the local golden estate — it runs beside `npm run test:golden` whenever a baseline is re-minted, which is the only moment its question (does the compare still bite?) has an answer worth having; docs/tranches/2026-08-tranche-9/evidence/w5/gates-wired.md.
+  · web/frontend/scripts/tdz-probe.mjs — package.json scripts.lint:tdz
+  ✗ web/frontend/scripts/zzz-verify-canary.mjs — NOTHING RUNS IT
+  ✗ 1 UNCLAIMED SCRIPT — 1
+  ✓ 2 DECLARATION SOUND
+  ✓ 3 LANE RESOLVES
+  ✓ 4 EXEMPTION LIVE
+
+1 failure(s):
+
+  • [1 UNCLAIMED SCRIPT] web/frontend/scripts/zzz-verify-canary.mjs — NO CI LANE names it and it declares nothing. It runs nowhere, so its green means nothing and its red would never be seen. Wire it (a step beside `lint:ink`/`lint:catch`, or a `node scripts/zzz-verify-canary.mjs` run), delete it, or put `NOT-A-LANE: <reason with a cite>` in its header (first 60 lines).
+
