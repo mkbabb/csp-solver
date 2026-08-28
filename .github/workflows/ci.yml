@@ -1388,12 +1388,14 @@ jobs:
         timeout-minutes: 15
         needs: [build-lean-wasm]
         steps:
-            # T9-W5 §5.5 — submodules:true so docs/precepts/ is POPULATED and the
-            # `precepts-reachable` row's roster + command-row arms bite here rather
-            # than lying dormant on an empty gitlink dir.
+            # NO submodules flag — deliberately (T9-W5 §5.5, corrected at 6616b5a6's
+            # red run 33197793353): `mkbabb/precepts` is PRIVATE, the runner's token
+            # cannot clone it, and `submodules: true` kills the job at checkout before
+            # a single row runs. `check-doc-truth`'s precepts row was BUILT for the
+            # unpopulated runner — it derives the population state from the GITLINK
+            # (`git ls-files -s`) and names the arms an empty dir disables; the
+            # roster + command-row arms bite on darwin, where the tree is populated.
             - uses: actions/checkout@v4
-              with:
-                  submodules: true
             - name: Download the lean wasm pkg (the artifact the lean-bytes row measures)
               uses: actions/download-artifact@v4
               with:

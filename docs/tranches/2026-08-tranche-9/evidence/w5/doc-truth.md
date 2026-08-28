@@ -259,6 +259,14 @@ and are untouched here — orthogonal, as instructed.
    arms are dormant on the runner (the declaration arm still asserts). Adding
    `with: { submodules: true }` makes them bite in CI. Deliberately not done here:
    ci.yml is another lane's fence and a third wave is editing it.
+
+   **CORRECTION (2026-08-28, chair, run 33197793353).** The suggestion was wrong
+   and the chair landed it untested at `6616b5a6`: `mkbabb/precepts` is PRIVATE,
+   the runner's token cannot clone it, and `submodules: true` kills the job at
+   CHECKOUT — every row dormant, not just two arms. Reverted same day; the row's
+   own unpopulated-runner design (the header at `check-doc-truth.mjs:985-988`) was
+   already the correct shape. Making the arms bite in CI would take a PAT secret —
+   an owner act, booked nowhere until the owner wants it.
 3. **`README.md:112`** — `ci-lane-count` is RED because the dist lane took ci.yml to
    eighteen jobs. The cure is the prose, in the dist lane's fence.
 4. **`docs/precepts/infra/deploy.md`** — still prints `--commit-dirty=true`, the
