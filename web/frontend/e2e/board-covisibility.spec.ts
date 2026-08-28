@@ -439,45 +439,72 @@ test.describe("mark 6 — the band dissolves", () => {
     expect(fold.verbFloorFails).toBe(0);
 
     /**
-     * T6 MARK 9 · RE-AIMED AT T6.2 MARK A — THE TWO LOCKS, STILL RELATIONAL BY CONSTRUCTION.
+     * T6 MARK 9 · RE-AIMED AT T6.2 MARK A · RE-AIMED AGAIN AT T9-W2 §2.7 — THE TONGUE RIDES
+     * THE BOARD'S OWN EDGE. **A DECLARED DELTA**, on the owner's own later word (M10,
+     * 2026-08-25: "the controls button on mobile should be a tab on the bottom of the board,
+     * like on desktop — just not on the side"), and it surfaces at the owner's re-look (U-10).
      *
-     * Mark 9's first lock was ATTACHMENT: `|tongue.bottom − fold.bottom| ≤ 1`, because the
-     * tongue rode the CASE and had to hang flush under the verbs across the band's own 3rem
-     * reservation. Mark A retires that geometry outright — the opener is a MEMBER of the ribbon
-     * now, not a tab attached beneath it — so the lock is re-aimed at the shape that replaced
-     * it, and it is three arms because "in the row" is three claims and the old one-liner would
-     * have scored a tongue merely dropped inside the band as a pass:
-     *   · MEMBERSHIP — `#fold-tools` contains the opener (the DOM claim, and the berth swap's
-     *     shut half: the same node is in `#drawer-handle` while the sheet is up).
-     *   · ONE LINE   — its top sits within 1px of the first play verb's, which is what makes
-     *     five verbs read as one row rather than as a row and a straggler.
-     *   · IN BAND    — its bottom stays inside the ribbon's own box, so a re-styled opener can
-     *     never grow back out of the band it now belongs to.
-     * Plus the coarse floor on both axes, since a verb that cannot be hit is not a verb.
+     * Mark 9 locked ATTACHMENT to the CASE (`|tongue.bottom − fold.bottom| ≤ 1`). Mark A
+     * retired that for MEMBERSHIP of the ribbon — three arms, because "in the row" is three
+     * claims. M10 retires mark A's berth in turn: the opener was a chip floating in dead space
+     * 54.8px below the board at 390×844, 375×812 AND 430×932 (identical at all three, so the
+     * gap was structural — `docs/tranches/2026-08-tranche-9/evidence/w2/born-red-head.txt`,
+     * row §2.7), and it is now the desk's own side tab read on the axis a portrait viewport
+     * gives. So the lock is re-aimed at the shape that replaced it, and it stays three arms
+     * because "attached to the board" is three claims and a one-liner would score a tongue
+     * merely dropped near the paper as a pass:
+     *   · MEMBERSHIP — `#board-edge` contains the opener. That berth is a ZERO-BOX at the
+     *     paper's own bottom edge (`GameBoard`), which is why the claim is the BOARD's and not
+     *     the shell's: the shell's bottom is the STRIP's bottom, and a tongue attached there is
+     *     attached to a line of text. It is also the berth swap's shut half — the same node
+     *     rides `#drawer-handle` while the sheet is up.
+     *   · THE TUCK    — `tongue.top − paper.bottom` sits in [−8.5, −4], i.e. attachment as a
+     *     TUCK and never as a gap: the tongue's head goes UNDER the paper exactly as the desk's
+     *     does on the right flank. Measured on the built dist: **−6.00 at 390×844 and 390×664,
+     *     in BOTH engines** — `top: calc(100% - 0.5rem)` is the 8px tuck, less the 2px the
+     *     wrapper's rect sits above its own flow box. A positive number is the stranded chip
+     *     coming back.
+     *   · THE COLUMN  — `tongue.right ≤ paper.right + 0.5`, so a re-styled tongue can never
+     *     wander out of the board's own column into the page's gutter (measured: overhang
+     *     0.00, both engines, both rungs).
+     * Plus the coarse floor on both axes (92×48 — the desk's 48×92 with its axes swapped), and
+     * a HIT arm the old lock had no need of: the tuck is a `z-index: -1` fiction, so the
+     * tongue's own centre point must return the tongue. It is the one property this pose can
+     * lose silently — an element painted under the paper that answers no press is furniture,
+     * and `GameBoard`'s shell had to stop swallowing pointers for it to answer at all.
      *
-     * CENTRING is unchanged in shape and re-derived in fact: the board's middle within 6% of the
-     * viewport's, at both rungs. Measured here on the built dist: 16.36 chromium / 16.67 webkit
-     * at 844 (slack 50.64) and 16.36 / 16.66 at 664 (slack 39.84).
+     * CENTRING is unchanged in shape and re-derived in fact: the board's middle within 6% of
+     * the viewport's, at both rungs. Measured here on the built dist: **19.27 chromium / 19.58
+     * webkit** at 844 (slack 50.64) and the same pair at 664 (slack 39.84), where mark A banked
+     * 16.36 / 16.67 — the ~3px is the ribbon's own growth under §2.6's glyph ranks, and it is
+     * spent against 31px of remaining slack at the tighter rung.
      *
      * Both rungs, because they fail differently — a 664-only lock would score a mark that moved
-     * nothing as landed. The CONTROL is the row's own, in-run: put the opener back where mark 9
-     * had it and MEMBERSHIP and ONE LINE must both red (measured: the tongue's top lands 78px
-     * below the verbs' when it hangs at the band's padded floor).
+     * nothing as landed. THE CONTROL IS A NEAT INVERSION and is the row's own, in-run: put the
+     * opener back in `#fold-tools`, which is mark A's shipped berth and this file's own PASSING
+     * state until this commit, and all three arms must red (measured: tuck +250.27/+250.58 at
+     * 844 and +160.27/+160.58 at 664, overhang +12.00). The old lock's pass state is the new
+     * lock's control.
      */
-    const ribbon = () =>
+    const edge = () =>
       page.evaluate(() => {
         const vh = window.innerHeight;
-        const foldEl = document.querySelector("#fold-tools")!;
-        const fold = foldEl.getBoundingClientRect();
+        const berth = document.querySelector("#board-edge");
         const tongueEl = document.querySelector(".drawer-tab")!;
         const tongue = tongueEl.getBoundingClientRect();
-        const verb = document.querySelector("#fold-tools .icon-btn")!.getBoundingClientRect();
+        const paper = document.querySelector(".board-wrapper")!.getBoundingClientRect();
         const cells = document.querySelector(".board-cells")!.getBoundingClientRect();
+        const hit = document.elementFromPoint(
+          tongue.left + tongue.width / 2,
+          tongue.top + tongue.height / 2,
+        );
         return {
-          inFold: foldEl.contains(tongueEl),
-          onLine: +Math.abs(tongue.top - verb.top).toFixed(2),
-          overBand: +Math.max(0, tongue.bottom - fold.bottom).toFixed(2),
+          onEdge: !!berth && berth.contains(tongueEl),
+          tuck: +(tongue.top - paper.bottom).toFixed(2),
+          overhang: +(tongue.right - paper.right).toFixed(2),
           floorFail: tongue.width < 44 || tongue.height < 44,
+          // The press lands on the tongue, not on a box painted over it.
+          pressed: !!hit && !!tongueEl.contains(hit),
           offCentre: +Math.abs(cells.top + cells.height / 2 - vh / 2).toFixed(2),
           slack: +(vh * 0.06).toFixed(2),
         };
@@ -486,24 +513,28 @@ test.describe("mark 6 — the band dissolves", () => {
     // Taller rung first, so the row ends back at the cell its own name claims.
     for (const height of [844, 664]) {
       await page.setViewportSize({ width: 390, height });
-      await expect.poll(async () => (await ribbon()).onLine).toBeLessThanOrEqual(1);
-      const m = await ribbon();
-      expect(m.inFold).toBe(true);
-      expect(m.overBand).toBe(0);
+      await expect.poll(async () => (await edge()).tuck).toBeLessThanOrEqual(-4);
+      const m = await edge();
+      expect(m.onEdge).toBe(true);
+      expect(m.tuck).toBeGreaterThanOrEqual(-8.5);
+      expect(m.overhang).toBeLessThanOrEqual(0.5);
       expect(m.floorFail).toBe(false);
+      expect(m.pressed).toBe(true);
       expect(m.offCentre).toBeLessThanOrEqual(m.slack);
     }
 
-    // CONTROL — mark 9's own berth, restored by hand: the opener leaves the row for the case's
-    // handle. Both membership arms must red, or the lock is a decoration.
+    // CONTROL — mark A's own berth, restored by hand: the opener leaves the board for the
+    // ribbon it used to sit in. Every arm of the attachment lock must red, or it is a
+    // decoration.
     await page.evaluate(() => {
       document
-        .querySelector("#drawer-handle")!
+        .querySelector("#fold-tools")!
         .appendChild(document.querySelector(".drawer-tab")!);
     });
-    const strayed = await ribbon();
-    expect(strayed.inFold).toBe(false);
-    expect(strayed.onLine).toBeGreaterThan(1);
+    const strayed = await edge();
+    expect(strayed.onEdge).toBe(false);
+    expect(strayed.tuck).toBeGreaterThan(0);
+    expect(strayed.overhang).toBeGreaterThan(0.5);
 
     // CONTROL A — the probe must be able to see a scroll. One in-flow block under the board
     // is exactly the shape the card used to be, and the same read must exceed the bound.

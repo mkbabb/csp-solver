@@ -32,7 +32,11 @@ const HEAD_PROBE = () => {
   };
   const badge =
     box(document.querySelector('.corner-left')) ?? box(document.querySelector('.mobile-attribution'));
-  return { badge, toggle: box(document.querySelector('.corner-right button')) };
+  // T9-W2 §2.4 — the keep split the celestial into ORNAMENT (.corner-right, the painted
+  // 208px frame the badge hangs level with) and CONTROL (the button, now the 104px
+  // concentric hit disc). M17 is about where the PAINT begins, so the probe reads the
+  // ornament; reading the button post-keep would measure the hit disc, 52px below it.
+  return { badge, toggle: box(document.querySelector('.corner-right')) };
 };
 
 /** The row's three referents: the title block, the board, the card. */

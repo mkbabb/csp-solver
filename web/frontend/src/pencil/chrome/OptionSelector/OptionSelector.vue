@@ -51,9 +51,7 @@ function scribbleSeed(val: string | number): number {
       :aria-pressed="selected === opt.value"
       class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150"
       :class="[
-        mobile
-          ? 'text-[1rem] md:text-[1.375rem]'
-          : 'text-[1.375rem] md:py-0.5 md:text-left md:text-[1.25rem]',
+        mobile ? '' : 'md:py-0.5 md:text-left',
         selected === opt.value
           ? `selected-item font-bold ${opt.colorClass ?? 'text-foreground'}`
           : 'text-muted-foreground hover:text-foreground hover-item',
@@ -90,8 +88,22 @@ function scribbleSeed(val: string | number): number {
 </template>
 
 <style scoped>
+/* ── THE CHIPS REJOIN THE LADDER (T9-W2 §2.6, the owner's M01) ─────────────────
+   The option word's size was FOUR arbitrary Tailwind utilities in this template —
+   `text-[1rem] md:text-[1.375rem]` on the mobile arm, `text-[1.375rem]
+   md:text-[1.25rem]` on the rail's — invisible to the type ladder and unreachable
+   from any token. A 390 phone therefore drew its option words at a spelled 1rem
+   while every control around them slid down the fluid rung, which is the M01 mark
+   read literally: the largest text on the card at the desk (22px) was the SMALLEST
+   relative jump on the phone (16px, the browser default).
+   `--type-option` carries those literals verbatim at every rung this component
+   renders (typography.css prices them), so the desk and the 768–1023 stacked card
+   are byte-identical; the phone's arm is the one that moves, 16 → 20px.
+   What stays in the template is layout — `md:py-0.5 md:text-left` — because that
+   is not type. */
 .ctrl-btn {
   font-family: "Fira Code", monospace;
+  font-size: var(--type-option);
 }
 
 /* The `.ctrl-btn:hover` wobble is DELETED (P1-W3, r3 §3.2), and `transition-all` narrowed to

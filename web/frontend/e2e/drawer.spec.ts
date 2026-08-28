@@ -370,49 +370,80 @@ test.describe('drawer under prefers-reduced-motion', () => {
   });
 });
 
-// ── 6. The regime rule, RE-CUT (T5-W4 pass 6) ────────────────────────────────────────────
+// ── 6. The regime rule, RE-CUT AGAIN (T9-W2 §2.2/§2.7 — a declared delta on T5-W4 (c)) ────
 //
-// The old row asserted a world: "<1024: no tab, stacked panel in flow exactly as today". That
-// world is half gone and half RATIFIED, and one assertion cannot say both, so it splits into
-// the two rungs the pass-6 charter actually rules on:
-//   · LANDSCAPE <1024 — HELD. The lead's charter (c) ratifies the shipped rung, so this arm is
-//     the old row's claim, kept verbatim in meaning: no tab, the card in flow, the toggle a
-//     defined no-op. It carries the orientation guard's own ablation as its control, because
-//     an unscoped `<1024` pose reads ~1.47 there and would have moved a ratified surface.
-//   · PORTRAIT <1024 — THE DOCK. Tab visible and tappable, the card a fixed sheet, inert and
-//     hidden at rest, the board's rect IDENTICAL across the gesture, always lands closed, and a
-//     persisted-open desk choice does not carry the crossing.
-// Both were born RED on `abe533c4`: below 1024 no tab exists at all on that tree.
+// The pass-6 split ruled: LANDSCAPE held the shipped in-flow rung, PORTRAIT got the dock.
+// The owner's M10 (2026-08-25, "a tab on the bottom of the board … every mobile pose")
+// superseded the landscape half by name — short landscape was exactly where the whole
+// control estate sat below an unhinted fold (§2.2's born-RED: three openers display:none,
+// deal 192px under the fold). The dock now extends to EVERY <1024 pose, on width alone:
+//   · LANDSCAPE <1024 — THE DOCK TOO. Tab visible and tucked at the board's flank, the card
+//     a fixed sheet, the page unscrolled (pageVh 1.0 against the superseded rung's 2.882),
+//     one tap puts the deal verb on screen.
+//   · PORTRAIT <1024 — THE DOCK, unchanged below.
+// The landscape arm's control inverts with its premise: force the card back into the flow
+// and the deal verb must leave the first screen — the defect M10 retired, demonstrated.
 
-test.describe('drawer below the row regime — LANDSCAPE holds the shipped rung', () => {
-  test.use({ viewport: { width: 900, height: 500 } });
+test.describe('drawer below the row regime — LANDSCAPE IS THE DOCK (T9-W2 §2.2, a declared delta on T5-W4 charter (c))', () => {
+  // The dock fires on width alone, but the POSE this block models is a phone held sideways —
+  // and the mobile BODY band (`(max-width:1023.98px) and (pointer:coarse)`, the W2 mobile
+  // lane's graft) needs the coarse pointer to price the card compact. Without it the card
+  // wears desktop sizing and the deal verb prices itself 140px under a 500px fold.
+  test.use({ viewport: { width: 900, height: 500 }, hasTouch: true, isMobile: true });
 
-  test('<1024 landscape: no tab, the card in flow, the toggle a defined no-op', async ({
+  test('<1024 landscape: the tab rides the board, the card docks, nothing scrolls', async ({
     page,
   }) => {
     await loadSudoku(page);
 
-    await expect(page.locator('.drawer-tab')).toBeHidden();
-    const card = page.locator('#controls-drawer');
-    await expect(card).toBeVisible();
-    expect(await card.evaluate((el) => getComputedStyle(el).position)).toBe('static');
+    // The tab exists, meets the tap floor, and tucks at the board paper's right flank.
+    const tab = page.locator('.drawer-tab');
+    await expect(tab).toBeVisible();
+    const geom = await page.evaluate(() => {
+      const t = document.querySelector('.drawer-tab')!.getBoundingClientRect();
+      const paper = document.querySelector('.board-wrapper')!.getBoundingClientRect();
+      return {
+        w: t.width,
+        h: t.height,
+        flank: +(t.left - paper.right).toFixed(1),
+        docH: document.documentElement.scrollHeight,
+        innerH: window.innerHeight,
+      };
+    });
+    expect(Math.min(geom.w, geom.h)).toBeGreaterThanOrEqual(44);
+    expect(geom.flank).toBeLessThanOrEqual(0); // tucked against the paper, never stranded
+    expect(geom.docH).toBe(geom.innerH); // pageVh 1.0 — the 2.882 scroll rung is gone
 
-    // Even a persisted-closed drawer must not touch this layout: the toggle is a no-op here,
-    // so the persisted desk pose has nothing to act on.
+    const card = page.locator('#controls-drawer');
+    expect(await card.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+    await expect(page.locator('html.drawer-closed')).toHaveCount(1); // lands closed at rest
+
+    // One tap and the deal verb is on screen — the §2.2 reachability law, at the gesture.
+    // The sheet SLIDES to its dock, and `toBeVisible` resolves mid-slide (the case turns
+    // visible at the first frame of the transition, ~180px shy of its rest) — so the
+    // geometry row POLLS to the settled pose instead of reading the first visible one.
+    await tab.click();
+    const deal = page.locator('.controls-card .deal-btn');
+    await expect(deal).toBeVisible();
+    await expect
+      .poll(() => deal.evaluate((el) => el.getBoundingClientRect().bottom))
+      .toBeLessThanOrEqual(geom.innerH);
+
+    // A persisted-closed drawer still lands closed after reload (the arm that held).
     await page.evaluate(() => localStorage.setItem('csp-drawer-open', '0'));
     await page.reload();
     await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
-    await expect(page.locator('#controls-drawer')).toBeVisible();
-    await expect(page.locator('.drawer-tab')).toBeHidden();
+    await expect(page.locator('.drawer-tab')).toBeVisible();
+    await expect(page.locator('html.drawer-closed')).toHaveCount(1);
 
-    // CONTROL — ablate the orientation guard (the portrait pose applied on width alone) and
-    // the same probe must see the ratified rung leave the flow. This is the exact defect the
-    // graft exists to prevent, and without this arm the row above would pass on a tree that
-    // had never scoped the pose at all.
+    // CONTROL — force the card back into the flow (the superseded rung) and the deal verb
+    // must leave the first screen: the defect M10 retired, demonstrated on demand.
     await page.addStyleTag({
-      content: '#controls-drawer { position: fixed !important; }',
+      content:
+        '#controls-drawer { position: static !important; } html.drawer-closed #controls-drawer { display: block !important; visibility: visible !important; }',
     });
-    expect(await card.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+    const forcedDoc = await page.evaluate(() => document.documentElement.scrollHeight);
+    expect(forcedDoc).toBeGreaterThan(geom.innerH);
   });
 });
 

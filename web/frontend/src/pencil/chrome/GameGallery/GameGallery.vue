@@ -963,6 +963,35 @@ onMounted(async () => {
      are declared at their breakpoints below. `useCarouselGlide` reads this back to decide
      whether the deck needs centring air at all — the breakpoint stays CSS's to own. */
   --deck-slots: 1;
+
+  /* ── THE CASE'S THREE NUMBERS (T9-W2 §2.1) ────────────────────────────────────────────
+     The scrollport declared no height and no floor, so `min-height: auto` resolved to 0 on a
+     two-axis scroll container and the case took whatever the column left: 146px at 844×390
+     against a 406.69px card, with 309px of interior scroll hidden behind `scrollbar-width:
+     none`. The cure is not a magic height — it is the two lengths the card is ALREADY made
+     of, named here so the case can spend them and the face can read them back.
+
+     --card-face-w  the face's side when WIDTH binds. Exactly the slot's own padding-inline
+                    (0.6rem ×2) plus the paper's (0.9rem ×2) taken off the slot: 352 − 48 =
+                    304 at 1440, against a measured 304.03.
+     --card-chrome  every vertical constant the card declares that is NOT the face, summed
+                    from the card's own values so it cannot drift from them: 104.46 declared
+                    at 1440 against a measured 104.44. It is an OVER-count by construction
+                    (a flank carries no underline), which is the safe direction — the face
+                    can only ever come out smaller than what fits.
+     --deck-air     the frame + shadow allowance the viewport already spent as
+                    `padding-block: 1.5rem`, named so the floor and the ceiling can add it.
+
+     `--type-body` is a viewport clamp, so the range line's box is read at the width it is
+     actually painted at rather than pinned to a rung that rots. */
+  --deck-air: 1.5rem;
+  --card-face-w: calc(var(--card-w) - 3rem);
+  --card-chrome: calc(
+    0.9rem + 0.75rem + 1.05rem /* paper: pad-top · row gap · pad-bottom */ + 1.9rem
+      /* .game-card-name */ + 0.1rem - 0.05rem + 8px + 0.1rem
+      /* gap · underline lift · underline · gap */ + var(--type-body, 1rem) * 1.1
+      /* .game-card-range's own line box */
+  );
 }
 
 .gallery-viewport {
@@ -975,10 +1004,30 @@ onMounted(async () => {
   scroll-snap-type: x mandatory;
   scroll-behavior: auto;
   /* The frame + shadow overflow the slot; give them air, not a clipped edge. */
-  padding-block: 1.5rem;
+  padding-block: var(--deck-air);
   /* Hide the scrollbar — the pips are the position tell. */
   scrollbar-width: none;
   -ms-overflow-style: none;
+
+  /* ── THE CASE HAS A FLOOR AND A CEILING (T9-W2 §2.1) ────────────────────────────────
+     `flex: 1 1 0` makes the case's height a fact about the LINE rather than about the track,
+     which is what lets the face read it back through `100cqh`. The two bounds are the law:
+
+       floor    the case is never shorter than the card's WORDS plus its air. That is the
+                invariant — "the five names are legible" — written as a length. Anything a
+                viewport still cannot pay for comes off the picture, never off a name.
+       ceiling  the case never grows past the card's own natural height, so every viewport
+                that already fits is unchanged. Measured: pips and band unmoved to 0.00px at
+                1920×1080 / 1440×900 / 1280×800 / 1024×768 / 390×844, both engines.
+                `--card-chrome` appears on both sides of the face's `min()` at the ceiling, so
+                it cancels there: the width term wins whatever the chrome estimate is.
+
+     NOTHING HIDES. Between the floor and the ceiling the face pays the difference, so
+     `scrollHeight === clientHeight` on this element at every cell — there is no interior
+     region left for `scrollbar-width: none` to conceal. */
+  flex: 1 1 0;
+  min-block-size: calc(var(--card-chrome) + 2 * var(--deck-air));
+  max-block-size: calc(var(--card-face-w) + var(--card-chrome) + 2 * var(--deck-air));
 }
 
 .gallery-viewport::-webkit-scrollbar {
@@ -1007,7 +1056,11 @@ onMounted(async () => {
 
 .gallery-track {
   display: flex;
-  align-items: center;
+  /* `stretch`, not `center` (T9-W2 §2.1): the slot has to BE the case for the face to read
+     it back. The spacers' own `align-self: stretch` — the T4-P1 KENKEN-REACHABILITY cure —
+     is unaffected and, if anything, further from WebKit's zero-area hazard. */
+  align-items: stretch;
+  block-size: 100%;
   /* Size to content (spacers + slots), so the deck genuinely overflows the viewport and
      scrolls — a width:auto flex container clips its overflowing items instead of extending
      the scroll region. */
@@ -1040,10 +1093,19 @@ onMounted(async () => {
   flex: 0 0 var(--card-w);
   scroll-snap-align: center;
   display: flex;
+  /* `flex-start`, not `stretch` (T9-W2 §2.1): the card keeps its intrinsic height and rests
+     at the head of the case, so if `--card-chrome` ever under-counts the residue lands at the
+     FOOT of the card — which the letterhead has made the picture, never a name. */
+  align-items: flex-start;
   justify-content: center;
   /* Card breathing room inside the slot (not a track gap — a gap would eat the neighbor
      peek on mobile; slot padding keeps the slot-to-slot distance as the peek geometry). */
   padding-inline: 0.6rem;
+  /* THE SLOT IS THE CARD'S CONTAINER (T9-W2 §2.1). Definite in both axes — a definite
+     flex-basis across, the stretched case down — so `100cqh` inside GameCard is the case's
+     real height. `container-type: size` is `contain: layout style size`: it does NOT clip, so
+     the drawn frame's 6px outset and the cartoon shadow still paint outside the slot. */
+  container-type: size;
 }
 
 /* ── THE FRAME ON THE CARD SET (T7-W7) ──────────────────────────────────────────────────
@@ -1308,6 +1370,83 @@ onMounted(async () => {
 @media (prefers-reduced-motion: reduce) {
   .gallery-pip {
     transition: none;
+  }
+}
+
+/* ── THE DECK LIES DOWN (T9-W2 §2.1, the short-landscape half) ──────────────────────────
+   At 844×390 the column has ~318px to hold a deck, a pip row and a 112px order slip. The
+   case's floor and the face's payment alone would leave a 7px poster there — a stub, not a
+   card. What a landscape phone HAS is width, so the column becomes a grid and the slip stands
+   beside the deck instead of under it. Measured after: case 289.6, card 241.6, face 138.9,
+   interior scroll 0, every name whole.
+
+   The 30rem key is the one StagingBand's row regime now reads as well, so the deck and the
+   slip can never disagree about which pose they are in.
+
+   LAST IN THE SHEET, deliberately: `.gallery-guard`'s deck-centre anchor is declared below
+   the breakpoints above, and a media query buys no specificity — an arm placed beside its
+   siblings would be overruled by the base rule that follows it. */
+@media (orientation: landscape) and (max-height: 30rem) {
+  .game-gallery {
+    display: grid;
+    /* `stretch` and not the column's `center`: the deck row IS the case's height here, and a
+       centred grid item would size to its content again — the defect, re-entered sideways. */
+    align-items: stretch;
+    /* THE SLIP'S COLUMN IS ITS RESERVE, MEASURED. 45% is what the pose wants and 26rem is the
+       band's own cap, but the FLOOR is arithmetic, not taste: below 30rem of height the band
+       keeps its COLUMN pose, whose widest chip row is futoshiki's four sizes — it overflowed
+       by 15px in a 288px column and by 7px in a 296.5px one, both engines, so the narrowest
+       column that holds every card is 304px. 20rem is that number with the 16px of spare the
+       T8-W1 M8 reserve is derived at. Unchanged where it was already wide enough: 365.4px at
+       844×390 and 351px at 812×375 both sit inside the clamp. */
+    grid-template-columns: minmax(0, 1fr) clamp(20rem, 45%, 26rem);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "deck slip"
+      "pips slip";
+    column-gap: 1.25rem;
+    row-gap: 0.5rem;
+    /* A one-card peek deck, which is the pose a deck beside a slip actually holds — so
+       `recomputeEdges` takes the phone's air formula and the end cards still reach true
+       centre (`--edge` 69.3px at 844×390). */
+    --deck-slots: 1;
+  }
+
+  .gallery-viewport {
+    grid-area: deck;
+    /* The deck column governs here, not the desk's whole-slot frame width. */
+    width: 100%;
+    container-type: inline-size;
+  }
+
+  .gallery-track {
+    /* THE PEEK IS A FACT ABOUT THE COLUMN. `--card-w` is a fraction of the VIEWPORT
+       everywhere else because the deck spans the page; here the slip takes 45% of it, so a
+       viewport fraction hands the deck a card wider than the column it sits in — 288px into
+       220px at 568×320, the estate's landscape floor — and the scrollport clips the drawn
+       frame off both edges. Read off the column instead and the neighbour peek is 22% of the
+       deck's own width at every landscape width, which is the phone deck's own 78vw grammar
+       with the referent corrected. 18rem still caps it, so 844×390 and 812×375 are the
+       numbers the design measured. */
+    --card-w: min(78cqw, 18rem);
+  }
+
+  .gallery-pips {
+    grid-area: pips;
+    justify-self: center;
+    align-self: center;
+  }
+
+  .staging-band {
+    grid-area: slip;
+    align-self: center;
+  }
+
+  /* The ribbon takes the same anchor the ≤40rem arm gives it: the deck row is short here too,
+     and a note hung off the deck's middle would stand over the pips. */
+  .gallery-guard {
+    top: auto;
+    bottom: 0.6rem;
   }
 }
 </style>

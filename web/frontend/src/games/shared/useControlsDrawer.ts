@@ -18,20 +18,30 @@ import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
  * loop's one blocking row by moving the mobile controls out of flow into this same surface.
  * There is still exactly ONE drawer, one state, one persistence key, one glide engine:
  *   · **≥1024** — the shipped parked rail, byte-untouched (the audit-4 fiction).
- *   · **<1024 portrait** — the case is a `position: fixed` bottom sheet anchored on
+ *   · **<1024, EITHER ORIENTATION** — the case is a `position: fixed` bottom sheet anchored on
  *     `top: var(--vv-height)` with its rest pose on `translate:` (`useKeyboardViewport`'s
- *     standing trigger, honoured verbatim). The tongue is a VERB IN THE FOLD'S RIBBON while the
- *     sheet is shut and the case's own handle while it is up (T6.2 mark A) — never the board's,
- *     which the risen sheet would cover.
- *   · **<1024 landscape** — the shipped in-flow presentation, unchanged, and the toggle stays
- *     the defined no-op it has always been there. The lead's charter (c) HOLDS that rung
- *     RATIFIED, so this regime is keyed on width AND orientation, never width alone.
+ *     standing trigger, honoured verbatim). The tongue hangs off the board's SLACK EDGE while
+ *     the sheet is shut — the bottom-right corner in portrait, the right flank in landscape,
+ *     which is the desk's own tuck read on the axis the viewport gives — and rides up as the
+ *     case's handle while the sheet is open, which is the pose a risen full-width sheet leaves
+ *     room for.
  *
- * G3, and it is a ruling rather than a preference: **portrait always lands closed.** An open
- * sheet restored across a portrait load would resurrect the covered-board pose the covis row
- * exists to kill. The desk's persisted key is untouched and desk-scoped; opens made on portrait
- * do not write it, and a persisted-open desk choice crossing into portrait is parked
- * non-persistently, so rotating back restores the desk's own pose from the desk's own key.
+ * T9-W2 §2.2/§2.7 — WHAT CHANGED, AND IT IS TWO DECLARED DELTAS. T5-W4 pass 6 wrote a THIRD
+ * pose here — "<1024 landscape keeps the shipped in-flow card, and the toggle is a defined
+ * no-op" — on the lead's charter (c), which held that rung RATIFIED. T9's charter rules that
+ * pose a P0: measured at HEAD, a landscape phone matches the arm that HIDES the ribbon and the
+ * handle and matches no arm that turns them back on, so every game control sits below a fold
+ * the first screen gives no hint of (844×390: `docScrollH` 1157, deal +192px, three openers at
+ * 0×0). The third pose is therefore folded into the second. T6.2 mark A's other half goes with
+ * it: the shut tongue was a PEER VERB in the fold's ribbon, and the owner's later word (M10,
+ * 2026-08-25 — "a tab on the bottom of the board, like on desktop, just not on the side")
+ * moves it to the board's own edge. Both deltas surface at the owner's re-look (U-10).
+ *
+ * G3, and it is a ruling rather than a preference: **the mobile dock always lands closed.** An
+ * open sheet restored across a mobile load would resurrect the covered-board pose the covis row
+ * exists to kill. The desk's persisted key is untouched and desk-scoped; opens made on the dock
+ * do not write it, and a persisted-open desk choice crossing into the dock is parked
+ * non-persistently, so returning restores the desk's own pose from the desk's own key.
  *
  * Choreography (Band D, user-triggered one-shot, ~520ms): classic FLIP on WAAPI
  * (T3-W13 §3). The layout class lands ONCE at gesture onset — one forced layout per
@@ -103,21 +113,30 @@ const drawerPhase = ref<DrawerPhase>("idle");
 // off that same ref (P1-W4), so the regime this file's §6 rule gates on and the regime the
 // DOM carries are the one ref, not two readings of the same width.
 const rowRegime = useRowRegime();
-/** Orientation is the second half of the regime key — the lead's charter (c) holds the
- *  landscape rung RATIFIED, so a width-only rule would move a ratified surface. */
+/** Orientation no longer decides WHETHER the drawer exists (T9-W2 §2.2, above) — it decides
+ *  the shut tongue's edge and whether the fold's ribbon is under the board. */
 const portrait = mediaRef("(orientation: portrait)", true);
 const wideMargin = mediaRef("(min-width: 1360px)", true);
 const marginVignette = mediaRef("(min-width: 1280px)", true);
 const reducedMotion = mediaRef("(prefers-reduced-motion: reduce)", false);
 
-/** The portrait dock — the sheet pose. Below the row regime AND portrait; the one place the
- *  `<1024` drawer is a live surface. Exported because the scene mints the tongue's berth and
- *  the panel teleports its play verbs on exactly this ref (never a second reading of it). */
-export const portraitDock = computed(() => !rowRegime.value && portrait.value);
+/** THE DOCK IS EVERY MOBILE POSE NOW (T9-W2 §2.2 + §2.7 — a DECLARED DELTA on the owner's
+ *  M10, "a tab on the bottom of the board … in every mobile pose", and on §2.2's P0).
+ *  Measured at HEAD, both engines: at 844×390 and 812×375 the tab, the ribbon and the handle
+ *  are all `display: none` boxes of 0×0, the deal verb sits 192px below a fold the first
+ *  screen gives no hint of, and the document is 1157px of a 390px viewport. The landscape
+ *  card was RATIFIED in flow (T5-W4 charter (c), `pageVh 2.882`) and this wave supersedes
+ *  that rung deliberately — not by taste, but because the charter rules the pose a P0: every
+ *  game control unreachable, with no cue that anything is below.
+ *  So the drawer is live wherever the RAIL is not, and orientation stops deciding whether the
+ *  controls have a door. It still decides the DOOR'S POSE: `portraitDock` survives beside
+ *  this ref because the fold's ribbon and its play verbs stay portrait-only — a 390-tall
+ *  landscape has no band under the board to put them in. */
+export const mobileDock = computed(() => !rowRegime.value);
 
-/** Where the drawer is a surface at all. Landscape below 1024 keeps the shipped in-flow
- *  presentation, so the toggle stays the defined no-op it has always been there. */
-const drawerLive = computed(() => rowRegime.value || portraitDock.value);
+/** The portrait dock — the sheet pose with a ribbon under the board. Exported because the
+ *  panel teleports its play verbs on exactly this ref (never a second reading of it). */
+export const portraitDock = computed(() => mobileDock.value && portrait.value);
 
 /** The ONE layout step — `html.drawer-closed` drives every closed-regime rule
  *  (scene.css rail park + the portrait sheet's rest pose, App.vue masthead centering, the
@@ -126,16 +145,19 @@ function applyLayout(open: boolean) {
   document.documentElement.classList.toggle("drawer-closed", !open);
 }
 
-/** G3 — opens made on portrait are transient. The desk's key is the DESK's, and a sheet that
- *  remembered itself open would land a covered board on the next portrait visit. */
+/** G3 — opens made on MOBILE are transient. The desk's key is the DESK's, and a sheet that
+ *  remembered itself open would land a covered board on the next mobile visit.
+ *  T9-W2 §2.2 — the clause widens from `portraitDock` to `mobileDock` with the pose it guards:
+ *  an open sheet on a 390-tall landscape is exactly the covered board the covis row exists to
+ *  kill, and it was only ever out of scope because landscape had no sheet. */
 function persistIfDesk(open: boolean) {
-  if (portraitDock.value) return;
+  if (mobileDock.value) return;
   persist(open);
 }
 
-// Pre-first-paint restore: a persisted-closed drawer must never flash open — and a portrait
+// Pre-first-paint restore: a persisted-closed drawer must never flash open — and a mobile
 // mount lands closed whatever the desk remembered (G3), before the first paint, not after it.
-if (hasDom && portraitDock.value) drawerOpen.value = false;
+if (hasDom && mobileDock.value) drawerOpen.value = false;
 if (hasDom && !drawerOpen.value) applyLayout(false);
 
 // ── Registration — the scene owns the board/rail/tab, App owns the masthead ──
@@ -344,6 +366,16 @@ function reclaimFocus() {
 
 function focusPanel() {
   const scene = getScene?.();
+  // T9-W2 §2.3 — THE SHEET RISES SHOWING ITS OWN TOP EDGE WHOLE. The card is a scrollport that
+  // KEEPS its offset between opens, so a reader who scrolled to the checking chips and shut the
+  // sheet met it again mid-card: the deal tab sheared at the case edge, and the card's first
+  // question was off screen at the one moment the drawer exists to ask it. Both calls to this
+  // function are open-settle (the glide's `onSettle` and the no-scene shortcut), so the reset
+  // lands exactly where the pose is taken. `scroll-padding-top` (scene.css) guards the rest:
+  // the focus below can no longer bury the top edge either.
+  // It is a deliberate behaviour change — the offset is not restored — and the sheet's whole
+  // top edge is what it buys.
+  if (scene?.panel) scene.panel.scrollTop = 0;
   const first = scene?.panel?.querySelector<HTMLElement>(
     'button, select, input, textarea, a[href], [tabindex]:not([tabindex="-1"])',
   );
@@ -352,14 +384,19 @@ function focusPanel() {
 
 // ── Public surface (via useControlsDrawer() — the scenes' one door) ──
 
-// Crossing the regime LIVE (a rotation, a resize across 1024). Into the portrait dock: park an
-// open desk choice WITHOUT writing it away, so rotating back restores the desk's own pose from
-// the desk's own key. Out of it: that key is still intact, so read it. Declared here, below the
+// Crossing the regime LIVE (a rotation, a resize across 1024). Into the dock: park an open
+// desk choice WITHOUT writing it away, so rotating back restores the desk's own pose from the
+// desk's own key. Out of it: that key is still intact, so read it. Declared here, below the
 // glide engine, because it settles an in-flight gesture before it re-poses the layout.
+//
+// T9-W2 §2.2 — ORIENTATION IS STILL WATCHED, and it has to be even though `mobileDock` no
+// longer reads it: the sheet is live in both orientations now, so a phone rotated with the
+// sheet UP would carry a covered board across the turn. Rotating on the DESK fires this too
+// and settles to `readStored()`, which is the value already live — the early return below.
 if (hasDom) {
-  watch(portraitDock, () => {
+  watch([mobileDock, portrait], () => {
     settleNow();
-    const next = portraitDock.value ? false : readStored();
+    const next = mobileDock.value ? false : readStored();
     if (next === drawerOpen.value && targetOpen === next) return;
     drawerOpen.value = next;
     targetOpen = next;
@@ -369,9 +406,11 @@ if (hasDom) {
 }
 
 function toggleDrawer() {
-  // The regime rule, now three-posed: the desk rail and the portrait dock are live surfaces;
-  // landscape below 1024 keeps the shipped in-flow card, where this stays a defined no-op.
-  if (!hasDom || !drawerLive.value) return;
+  // T9-W2 §2.2 — THE REGIME GATE IS GONE, because there is no longer a regime without a
+  // drawer: the desk rail, the portrait dock and the landscape dock are all live surfaces, so
+  // `drawerLive` had collapsed to `true` and a constant guard is a guard that lies about what
+  // it guards. The one condition left is the only one that was ever real — a DOM to pose.
+  if (!hasDom) return;
   if (drawerPhase.value !== "idle") {
     retarget();
     return;

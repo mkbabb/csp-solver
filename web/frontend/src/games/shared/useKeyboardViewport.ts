@@ -133,7 +133,9 @@ export function useKeyboardViewport(): void {
       ? computeKeyboardInset(layoutHeight(), vv.height, vv.offsetTop)
       : 0;
     document.documentElement.style.setProperty("--keyboard-inset", `${inset}px`);
-    // The visual viewport's bottom edge in layout coords — the portrait sheet's anchor.
+    // The visual viewport's bottom edge in layout coords — the mobile sheet's anchor (T9-W2
+    // §2.2 widened that sheet to landscape; this publisher was never orientation-gated, so the
+    // clause the charter banked is honoured at the new rung with no edit here).
     // CLAMPED TO THE LAYOUT VIEWPORT, and that is an invariant rather than a defence: the
     // visual viewport is a window ONTO the layout viewport, so its bottom edge can never sit
     // below the layout's own. Unclamped, any engine or harness that reports a stale height

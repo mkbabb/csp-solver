@@ -1,6 +1,5 @@
 <template>
   <button
-    ref="toggleRef"
     class="sun-moon-toggle"
     :class="{ 'is-dark': isDark, 'is-turning': turning }"
     @click="handleToggle"
@@ -193,6 +192,7 @@
          (grid, logo, outlines: 4 poses on the beat), and the SKY alone steps a slower
          band of it (T6 mark 11 — `MOTION.bands.sun/moon`). -->
     <div
+      ref="celestialRef"
       class="toggle-rest rest-sun"
       :class="{ 'is-active': !isDark }"
       aria-hidden="true"
@@ -487,13 +487,20 @@ const TWINKLE_BY_FRAME = Array.from({ length: CELESTIAL_POSE_COUNT }, (_, f) =>
 // The Bloom's live warped instances stay UNTOUCHED. The live-filter <svg> stack is the
 // during-bake fallback (renders until the bitmaps resolve — no flash).
 const CELESTIAL_VB = 200;
-const toggleRef = ref<HTMLButtonElement | null>(null);
-const { width: toggleW } = useElementSize(toggleRef);
+// ── THE BAKE MEASURES THE ORNAMENT, NOT THE CONTROL (T9-W2 §2.4) ──
+// The button's box is the KEEP now — half the celestial — and `useRasterStack` captures at the
+// CSS size it's handed. Left on the button it would capture 104 and the <img> would paint 208: a
+// 2× upscale, MEASURED (the button-ref bake reads 208 natural at DPR2 against the ornament's
+// 416), which is a soft celestial and a dead 0.017 soul floor on the crest golden. `.toggle-rest`
+// IS the pose bitmaps' box — a strictly more correct target than the button ever was, and both
+// rest stacks carry the same box, so one ref serves the sun and the moon.
+const celestialRef = ref<HTMLElement | null>(null);
+const { width: celestialW } = useElementSize(celestialRef);
 // No invented fallback (P1-W3, the logo's twin): pencil-boil 0.10.0's F2 declines a bake at a
 // non-positive cssSize and re-bakes when the box lands, so a 96 px guess is no longer needed to
 // keep `useRasterStack` from capturing at zero — and a guess is exactly what poisoned the first
 // bake with bitmaps of the wrong intrinsic.
-const captureSize = computed(() => Math.round(toggleW.value));
+const captureSize = computed(() => Math.round(celestialW.value));
 
 function celestialDefs(i: number): string {
   return (
@@ -691,15 +698,23 @@ onUnmounted(() => {
 <style scoped>
 .sun-moon-toggle {
   position: relative;
-  width: var(--toggle-size, 5rem);
-  height: var(--toggle-size, 5rem);
+  /* ── THE KEEP (T9-W2 §2.4) — the control is the celestial's body, never its splash.
+     The box was `--toggle-size`, so a 208px square in the corner hit-tested for a sun whose
+     ink is an inscribed disc: the circle stole clicks off the controls card and the four dead
+     lunes swallowed them. `border-radius: 50%` is load-bearing now — it's what makes this a
+     DISC and not a square, and the hit test honours it. The fallback is the tap floor, so the
+     component is still whole mounted anywhere, the same property the `5rem` fallback carried.
+     `.corner-right` passes events through (App.vue); the control takes them back.
+     `flex-shrink: 0` is gone with the frame's flex — dead CSS is dead. */
+  inline-size: var(--toggle-hit, 2.75rem);
+  block-size: var(--toggle-hit, 2.75rem);
+  pointer-events: auto;
   cursor: pointer;
   border: 0;
   padding: 0;
   border-radius: 50%;
   background: transparent;
   transition: transform 200ms ease;
-  flex-shrink: 0;
 }
 
 /* Hover rides the CSS layer at exactly the ±8% contract bound (§2 rule 2) — at rest
@@ -713,9 +728,18 @@ onUnmounted(() => {
   outline: none;
 }
 
+/* ── THE RING TRACES THE ORNAMENT (T9-W2 §2.4), and it is not a taste — it is measured.
+   The keep shrank the button to the sun's disc, and a ring at `outline-offset: 2px` then lands
+   INSIDE the art, where the ink covers it: the rest stack is an absolutely-positioned descendant
+   and it paints over the button's outline, so a crop of a focused toggle came back byte-identical
+   to an unfocused one in chromium. A focus affordance nobody can see is worse than the one it
+   replaced. The offset gives the bleed back, so the ring sits where it has always sat — one
+   ornament-edge out — and the crop is byte-identical to HEAD's at every rung: 2 − (−52) = 54 and
+   104 + 2×54 = 212, which is 208 + 2×2; likewise 44 + 2×20 = 84 = 80 + 4, and 44 + 2×12 = 68 =
+   64 + 4. The border-radius rides out with it, so the ring is still a circle around the sun. */
 .sun-moon-toggle:focus-visible {
   outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
+  outline-offset: calc(2px - var(--toggle-bleed, 0px));
 }
 
 /* ── THE BLOOM (T3-W13 §2) — live instances, gesture only ─────────────────
@@ -728,9 +752,12 @@ onUnmounted(() => {
    crest headroom — warped content near the viewBox edge must not clip. */
 .toggle-icon {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  /* ── THE INK BLEEDS OUT OF THE KEEP (T9-W2 §2.4). Half the difference on all four sides
+     (−52 / −18 / −10px), so the painted box stays `--toggle-size` and stays centred on the
+     control. The four-sided inset FULLY determines the box, so the `width/height: 100%` that
+     used to size it is deleted rather than kept: left+width wins over right and would pull the
+     ink back down to the keep. `overflow: visible` still gives the ~1.09 crest its headroom. */
+  inset: var(--toggle-bleed, 0px);
   display: block;
   pointer-events: none;
   overflow: visible;
@@ -885,7 +912,10 @@ onUnmounted(() => {
    at identity, all motion is baked vector geometry behind the frozen filters). */
 .toggle-rest {
   position: absolute;
-  inset: 0;
+  /* The twin of the icons' bleed (T9-W2 §2.4): this box IS the ornament, and it's what
+     `celestialRef` measures for the bake. `.rest-pose` below is untouched — `inset: 0` of a
+     parent that's `--toggle-size` again. */
+  inset: var(--toggle-bleed, 0px);
   pointer-events: none;
   visibility: hidden;
 }

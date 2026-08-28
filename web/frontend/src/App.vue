@@ -480,39 +480,59 @@ function onGallerySnap(index: number) {
 // mount (or null when it stops being live). App relocates the ONE board's subtree into it
 // (`setLiveFaceTarget` → GameScene's Teleport — one instance, marks/Worker/state survive),
 // fits it to the face box, and — on an interactive entry — runs BEAT 1, the fold.
+// T9-W2 §2.1 — the fit, liftable and repeatable. The face's size is now a fact about the
+// CASE as well as the deck's width (the height law scales the card), so the fit can no
+// longer be computed exactly once at mount: any resize strands it and `.live-face-slot`'s
+// `overflow: hidden` eats the residue silently. The refit reads `offsetWidth`/`offsetHeight`,
+// NEVER the client rect — the rect is correct exactly once (at mount `--live-fit` is unset)
+// and compounds on every later call, because it already carries the fit's own scale. The
+// board's layout never changes (the C2 crit kill), so the offset box is the unscaled
+// referent at every call.
+function fitLiveBoard(mount: HTMLElement) {
+  const board = document.querySelector<HTMLElement>(".board-peek-host");
+  if (!board) return;
+  // Fit: shrink the full board into the face box. The board's LAYOUT never changes (the crit
+  // kill) — `.live-face-fit` carries a COMPOSITOR scale, so the board keeps its playing-view
+  // raster and only travels.
+  //
+  // T7-W7 / B-1 — CONTAIN, not width-fit. This derived the scale from WIDTH ALONE and the
+  // face slot is `overflow: hidden`, so any board subtree taller than it is wide got its
+  // bottom cut off. The teleported subtree is the peek-host, and below 1024 that host carries
+  // the board square PLUS the in-flow margin strip beneath it: measured at 390×844,
+  // 366×393.2 unscaled against a 256.22 square face — width-fit 0.7000 drew 256.22×275.25
+  // into a 256.22 box and clipped 9.51px off each end (the caption, entirely). The height
+  // term is the whole cure: `min(w, h)` is the contain fit, it is identity wherever the board
+  // is square-or-wider (every ≥1024 face), and the compositor scale stays the one channel
+  // that moves.
+  const slot = mount.parentElement?.getBoundingClientRect(); // .live-face-slot
+  const faceW = slot?.width ?? 0;
+  const faceH = slot?.height ?? 0;
+  const bw = board.offsetWidth;
+  const bh = board.offsetHeight;
+  if (faceW > 0 && faceH > 0 && bw > 0 && bh > 0)
+    mount.style.setProperty("--live-fit", String(Math.min(faceW / bw, faceH / bh)));
+}
+let liveFaceObs: ResizeObserver | null = null;
+
 function onLiveFace(el: HTMLElement | null) {
+  liveFaceObs?.disconnect();
+  liveFaceObs = null;
   moveLiveBoard(el); // teleport the board into the face, or park it home (null)
   if (!el) return;
   void nextTick(() => {
-    const board = document.querySelector<HTMLElement>(".board-peek-host");
-    if (!board) return;
-    // Fit: shrink the full board into the face box. The board's LAYOUT never changes (the crit
-    // kill) — `.live-face-fit` carries a COMPOSITOR scale, so the board keeps its playing-view
-    // raster and only travels. Measured at scale 1, applied, then re-read — all pre-paint.
-    //
-    // T7-W7 / B-1 — CONTAIN, not width-fit. This derived the scale from WIDTH ALONE and the
-    // face slot is `overflow: hidden`, so any board subtree taller than it is wide got its
-    // bottom cut off. The teleported subtree is the peek-host, and below 1024 that host carries
-    // the board square PLUS the in-flow margin strip beneath it: measured at 390×844,
-    // 366×393.2 unscaled against a 256.22 square face — width-fit 0.7000 drew 256.22×275.25
-    // into a 256.22 box and clipped 9.51px off each end (the caption, entirely). The height
-    // term is the whole cure: `min(w, h)` is the contain fit, it is identity wherever the board
-    // is square-or-wider (every ≥1024 face), and the compositor scale stays the one channel
-    // that moves.
-    const slot = el.parentElement?.getBoundingClientRect(); // .live-face-slot
-    const boardBox = board.getBoundingClientRect();
-    const faceW = slot?.width ?? 0;
-    const faceH = slot?.height ?? 0;
-    if (faceW > 0 && faceH > 0 && boardBox.width > 0 && boardBox.height > 0)
-      el.style.setProperty(
-        "--live-fit",
-        String(Math.min(faceW / boardBox.width, faceH / boardBox.height)),
-      );
+    fitLiveBoard(el);
+    // The refit follows the face: the case scales the card under resize/rotation, so the
+    // slot's box is live. Observing the SLOT (not the board — its layout never moves).
+    if (el.parentElement) {
+      liveFaceObs = new ResizeObserver(() => fitLiveBoard(el));
+      liveFaceObs.observe(el.parentElement);
+    }
     // BEAT 1 — the fold: the live board scales DOWN from its full pose into the face slot on
     // the glass curve. `flipTransform` makes the (now face-sized) board LOOK full at its old
     // position, then it glides to identity, settling into the face — only the transform channel
     // tweens. Deep-link / navigation land the face with no fold (pendingFoldFrom null).
-    if (pendingFoldFrom && !reducedMotion.value) {
+    const board = document.querySelector<HTMLElement>(".board-peek-host");
+    if (board && pendingFoldFrom && !reducedMotion.value) {
       const from = pendingFoldFrom;
       const headFrom = pendingHeadFrom;
       pendingFoldFrom = null;
@@ -897,6 +917,26 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 .page-root {
   --toggle-size: 5rem;
   --head-rule: calc(0.75rem + env(safe-area-inset-top, 0px));
+
+  /* ── THE CELESTIAL'S KEEP (T9-W2 §2.4) ──────────────────────────────────────────────────
+     The ornament and the control are TWO boxes and they were one. `--toggle-size` is the
+     ORNAMENT — the ink hung from the head rule, and it does not move at any rung.
+     `--toggle-hit` is the CONTROL: the celestial's body, half the ornament, floored at the
+     tap minimum. At 13rem that's 104px, and 104 of a 208 box is r=50 in the icons' own 200
+     viewBox — one unit inside the sun disc's painted outline (r=48, stroke-width 6). The hit
+     surface is the sun's disc. The rays (75-100 units), the three sparkles and the dot stars
+     are ink and take no hits; the moon's crescent covers the same disc.
+     THE FLOOR OUTRANKS THE HALF, in one clause: the half is 40 at 5rem and 32 at 4rem, both
+     under the floor, so a phone's disc is 44 — r=55 and r=68.75 units, still inside the
+     shortest ray tip (75). `--tap-floor` is a token, so W7's mobile scale (M01) raises it once
+     and the celestial grows with the toolbar instead of being the toolbar's exception.
+     EVERY RUNG IS INTEGRAL, which is why the ink doesn't move a sub-pixel: (208−104)/2 = 52,
+     (80−44)/2 = 18, (64−44)/2 = 10. Declared here and nowhere else — the media arms below
+     redeclare `--toggle-size` on THIS element, so the max() re-resolves at all three rungs
+     from one declaration. */
+  --tap-floor: 2.75rem;
+  --toggle-hit: max(var(--tap-floor), var(--toggle-size) / 2);
+  --toggle-bleed: calc((var(--toggle-hit) - var(--toggle-size)) / 2);
 }
 
 /* The 8rem md rung died with the md row regime (R3): at 768–1023 the layout now
@@ -942,14 +982,40 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
      to the literal edge and left the badge to chase its middle. */
   top: var(--head-rule, 0.75rem);
   right: 0;
+  /* ── THE FRAME IS PAINT ORDER, NOT HIT ORDER (T9-W2 §2.4) ──────────────────────────────
+     The 60 was both, and that's the theft. Shrink-wrapped to a 208px button, this corner
+     hit-tested WHOLE: border-radius clips ink, never hit-testing, so the box split into two
+     thieving surfaces — the inscribed r=104 circle flipped the theme, and the four corner
+     LUNES (this div itself) swallowed the click outright, no flip and no control. Measured at
+     1024×768 over the band it shares with the controls card's "4×4": that button owned ZERO of
+     395 sample points, 165 circle / 230 lune in chromium, 170 / 225 in webkit. At 1280×800 the
+     circle is clear and the lunes still ate 156 — the swallow the audit hadn't named.
+     `pointer-events: none` is this estate's stance for a wrapper that exists to place ink, and
+     the nearest instance is the OTHER head corner: AttributionCard's closed card carries it
+     "so it can never swallow an outside click" (MarginNote's strip, SolverErrorNote's,
+     DifficultyTally's, the washi tape's — the container passes events through and the control
+     takes them back, which `.sun-moon-toggle` does in its own file). The celestial still paints
+     over the card at z-60. It intercepts nothing, and the `@click.stop` on this div still runs
+     off the button's own bubbling click, so the toggle press keeps closing nothing.
+     SIZED TO THE ORNAMENT rather than shrink-wrapped to the button, because the button is no
+     longer the ornament: `place-items: center` hangs the keep on the ink's own centre, which is
+     what keeps the art's rect byte-identical at every rung in both engines and leaves the crest
+     golden's centred 72×72 crop exactly where it was. This also does what `display: flex` was
+     here to do — THE PADDING THE OWNER SAW (T6.2 mark C): the toggle is a `<button>`, an
+     inline-level box, so this wrapper was a line box around it and carried the font's descender
+     leading under the celestial (215px of chrome around a 208px control, measured, at every
+     width). A grid box has no line box either. The `top: -0.25rem / right: 0.25rem` nudge that
+     rode ≤767 left with the flex: it existed to claw that slack back at the one rung where it
+     showed, and there's no slack left to claw.
+     `content-box` because the preflight is border-box and the safe-area `padding-right` below
+     must ADD to the ornament, exactly as it did under flex. */
   z-index: 60;
-  /* THE PADDING THE OWNER SAW (T6.2 mark C). The toggle is a `<button>` — an inline-level box —
-     so this wrapper was a line box around it and carried the font's descender leading under
-     the celestial: 215px of chrome around a 208px control, measured, at every width. `flex`
-     makes the block's height the toggle's own. The `top: -0.25rem / right: 0.25rem` nudge that
-     rode ≤767 leaves with it: it existed to claw that slack back at the one rung where it
-     showed, and there is no slack left to claw. */
-  display: flex;
+  display: grid;
+  place-items: center;
+  box-sizing: content-box;
+  inline-size: var(--toggle-size);
+  block-size: var(--toggle-size);
+  pointer-events: none;
   /* P2 (T3-W12 §2) — the toggle's celestial on its own promoted layer: the sun/moon
        polygon boil contributed ~25 paints/s of scrolling-layer damage in the a1
        baseline. Promotion (not contain: paint): the theme whirl translates the icons

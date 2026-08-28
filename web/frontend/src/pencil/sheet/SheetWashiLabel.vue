@@ -137,21 +137,58 @@ const geom = computed(() => {
    well read as a labelled compartment rather than a second card. Always laid down: a zone name
    has no hover seam. Lower case in the hand, one rank under the eyebrows it replaces, and
    lower case is also the only chimera-free path through Patrick Hand (its uppercase subset is
-   {C,R,S} — F5's shared finding, taken). */
+   {C,R,S} — F5's shared finding, taken).
+
+   ── T9-W2 §2.3/§2.6 — THE TAG IS IN FLOW NOW, AND IT PINS ────────────────────────────────
+   It was `position: absolute; top: 0` + `translateY(-52%)`, which is a pose an ABSOLUTE box
+   can hold and a STICKY one cannot: a tape laid on its well's top edge scrolls away with the
+   well the moment the group's head leaves the card's scrollport, and the reader loses the name
+   of the compartment they are still inside (T9-M03, the owner's "properly be sticky"; measured
+   RED at HEAD — the "new game" well 92% in view wearing a tag at visFrac 0).
+   `position: sticky` is only defined for an IN-FLOW box, so the tape joins its well's flex
+   column as the first item and pays its way back:
+     · the pull (`margin-top`) lifts the tape by its own line box plus the consumer's CLEARANCE,
+       which is what reproduces the straddle;
+     · the give-back (`margin-bottom`) hands the flow exactly what the pull took, minus the
+       column's own `gap`, so the tape's NET FLOW HEIGHT IS ZERO and no box below it moves —
+       the property the iPad seal (`visual-regression` test 10, 0.23px of headroom at head)
+       will not let this file spend.
+   The three consumer terms are variables because the numbers belong to the WELL, not to the
+   tape: `GameControlPanel` prices them where its padding is priced. `line-height` is declared
+   rather than inherited so the pull is exact arithmetic on the tape's own box — 1.5 is what it
+   already computes to, so nothing moves, and a later type re-cut (W7's voice) scales the pull
+   with the font instead of stranding it.
+   The pin (`top`) sits inside the card's top fade band, so a pinned tape is read on paper
+   rather than over live content — re-cut the sentinel's height in `scene.css` and re-cut this
+   offset with it. */
 .washi-tag {
+  position: sticky;
+  top: var(--washi-tag-top, 0.3rem);
   bottom: auto;
-  top: 0;
-  left: 0.85rem;
-  margin-bottom: 0;
+  left: auto;
+  align-self: flex-start;
+  line-height: 1.5;
+  margin: calc(-1.5em - 0.04rem - var(--washi-tag-lift, 0px)) 0
+    calc(var(--washi-tag-lift, 0px) - var(--washi-tag-gap, 0px))
+    var(--washi-tag-inset, 0.85rem);
   padding: 0.02rem 0.4rem;
-  font-size: var(--type-caption);
+  font-size: var(--type-tag);
   font-weight: 500;
   letter-spacing: var(--type-tracking-wide);
   text-transform: lowercase;
   opacity: 1;
-  /* Straddles the frame: half the tape's height hangs inside the box, which is what the
-     well's padding-top has to clear (GameControlPanel `.tray-well`). */
-  transform: translateY(-52%) rotate(var(--washi-tilt));
+  transform: rotate(var(--washi-tilt));
+}
+
+/* THE TAPE DISSOLVES AT THE CASE EDGE (T9-W2 §2.3, the charter's own words: "the card's own
+   chrome never straddles its case edge"). A well riding down toward the card's sticky action
+   bar used to slide its tape UNDER an opaque band — occluded, so nothing was ever drawn there,
+   but the tape was still laid across the verbs' boxes. `data-under-bar` is published by the
+   same measure pass that publishes the fold (`GameControlPanel`), and the tape leaves in the
+   bar's own fade band rather than being guillotined by it. It rides the tape's OWN 150ms
+   opacity transition, declared once on `.washi-label` above — no second window to drift. */
+.washi-tag[data-under-bar] {
+  opacity: 0;
 }
 
 /* A longer note (T4-W3 share-fail): the tape wraps within a capped width and centers its

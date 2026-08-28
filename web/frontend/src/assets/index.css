@@ -818,12 +818,20 @@ html {
  * measures those, and deleting this rule would not move them. The gate that DOES read this
  * block is `e2e/zone-grammar.spec.ts`, "the pair branch keeps a 44px floor in BOTH
  * dimensions", and it stays where the branch exists rather than moving here with the prose. */
+/* T9-W2 §2.6 — THE FLOOR IS A TOKEN NOW, AND IT IS DECLARED ONCE. `--tap-floor`
+ * lives on `.page-root` (App.vue, where §2.4 minted it so the celestial's hit disc
+ * could be `max(--tap-floor, --toggle-size / 2)` and grow WITH the toolbar instead
+ * of being its exception). Every consumer reads it; nobody spells 2.75rem twice.
+ * The fallback is the shipped literal, so a consumer mounted outside `.page-root`
+ * still lands on 44px rather than on `initial`. It may be RAISED — W7's voice —
+ * and it may never resolve below 44: the M01 census in `e2e/viewport-law.spec.ts`
+ * reads the rendered boxes, which is the only place that assertion can be honest. */
 @media (pointer: coarse) {
   .ctrl-btn,
   .mobile-heading-btn,
   .attribution-trigger,
   .error-note-retry {
-    min-height: 2.75rem;
+    min-height: var(--tap-floor, 2.75rem);
   }
 
   /* T4-P1 — the floor is TWO-dimensional, and the width half was missing. The candidates "On"
@@ -838,7 +846,37 @@ html {
      `.attribution-trigger` / `.error-note-retry` stay out: both re-measured full-width here. */
   .ctrl-btn,
   .mobile-heading-btn {
-    min-width: 2.75rem;
+    min-width: var(--tap-floor, 2.75rem);
+  }
+}
+
+/* ── THE DRAWN GLYPHS' THREE RANKS (T9-W2 §2.6, the owner's M01) ──────────────
+ * "All buttons and text for controls need to be larger on mobile" is two claims,
+ * and the type ladder answers only the second. This is the first: the icon a
+ * control is MADE of, ranked to mirror the type roles 1:1 — act (Deal, the card's
+ * one primary verb) · verb (clear · fill · solve · share) · tool (undo · redo ·
+ * hint · the peek chip's siblings).
+ * The SVG `:size` props stay as the first-paint default and CSS overrides them,
+ * which is the estate's own precedent — `.action-verbs .icon-btn svg { width: 30px }`
+ * has done exactly this since T6 mark 8, and that literal is now this token.
+ * DECLARED HERE, SPENT IN `GameControlPanel`: the rules that read these ranks are
+ * that component's, beside the `.icon-btn` grammar they belong to, because a global
+ * `.icon-btn svg` rule would race the scoped one on specificity and lose or win by
+ * CSS import order — a fact no file states and every build could change. */
+:root {
+  --icon-act: 36px; /* DiceIcon's shipped `:size` */
+  --icon-verb: 30px; /* `.action-verbs .icon-btn svg`'s shipped width */
+  --icon-tool: 26px; /* the play tools' shipped `:size` */
+}
+
+/* Same key as the read floor and the tap floor — one regime, three floors. The
+   band is width AND pointer (the W2 adjudication's graft): a coarse surface at
+   desk width keeps the desk's glyphs, which this wave has not measured. */
+@media (max-width: 1023.98px) and (pointer: coarse) {
+  :root {
+    --icon-act: 40px;
+    --icon-verb: 32px;
+    --icon-tool: 30px;
   }
 }
 

@@ -948,6 +948,18 @@ function isRevealed(pos: number): boolean {
       <CelebrationHeart :active="celebrating" />
     </div>
 
+    <!-- THE BOARD'S BOTTOM RAIL (T9-W2 §2.7, the owner's M10) — a zero-box berth AT THE PAPER'S
+         OWN EDGE, and that is why it exists rather than an anchor on the peek host or the
+         shell: `.board-shell`'s bottom is the STRIP's bottom, not the board's, so a
+         shell-anchored tongue would be attached to a line of text and would jump the moment a
+         SolverErrorNote arrived. This div's top edge IS `.board-wrapper`'s bottom edge, at
+         every pose, by construction.
+         ZERO BOX, which is the estate's own Teleport-berth discipline (`#fold-tools`,
+         `#drawer-handle`: "a berth with a box is a box every regime pays for"). No border, no
+         padding, no height, so `.board-margin`'s 0.4rem top margin collapses straight through
+         it and the column is byte-identical at every width — measured, both engines. -->
+    <div id="board-edge" class="board-edge" />
+
     <!-- The grade in the margin (T3-W12 §1 R1): the completion moment's visual home —
          star at grading-sticker scale + verdict + one-line tally beside the work, in
          the teacher's margin. aria-hidden decoration: the strip's live region below
@@ -1003,6 +1015,42 @@ function isRevealed(pos: number): boolean {
 <style scoped>
 .board-shell {
   position: relative;
+}
+
+/* The tongue's berth (T9-W2 §2.7). `position: relative` makes it the containing block for the
+   absolutely-positioned tab teleported into it, `width: 100%` makes `right: 0` the PAPER's own
+   right edge (the wrapper is `w-full` of this same shell), and `height: 0` is what keeps it
+   free. */
+.board-edge {
+  position: relative;
+  width: 100%;
+  height: 0;
+}
+
+/* ── THE SHELL STOPS SWALLOWING THE TONGUE (T9-W2 §2.7) ─────────────────────────────────────
+   THE FINDING, and it took a hit test to see it: an element at NEGATIVE z paints in step 3 of
+   its nearest ancestor STACKING CONTEXT, while a positioned ancestor between them paints in
+   step 8 of that same context — so the shell's own border box is laid OVER its own grandchild,
+   and hit-testing takes the topmost box whether or not anything was ever drawn in it. Measured
+   at 390×844: `elementFromPoint` at the tongue's centre returned `DIV.board-shell`, and only
+   the tongue's last ~7px — the strip below the shell's box — answered a click at all. The desk
+   never met this because there the tongue hangs off the board's RIGHT flank, outside the
+   shell's box entirely; the moment the same tuck is read on the bottom axis it lands inside it.
+   `pointer-events: none` is this estate's stance for a box that exists to place ink and holds
+   no control of its own — `.board-margin` two rules down does exactly this and the error card
+   takes its events back; so do AttributionCard's closed card and, since T9-W2 §2.4, the
+   celestial's keep. Under this shell the whole interactive estate is `.board-wrapper`'s (the
+   grid, its native inputs, the peek surface), which takes them back below; the vignette is
+   already `pointer-events: none` and aria-hidden, and the strip already passes through.
+   BELOW 1024 ONLY, because that is where the berth exists. */
+@media (max-width: 1023.98px) {
+  .board-shell {
+    pointer-events: none;
+  }
+
+  .board-wrapper {
+    pointer-events: auto;
+  }
 }
 
 /* ── T8-W3 M1 · the attribution tape's anchor ──────────────────────────────────────────────
@@ -1089,6 +1137,25 @@ function isRevealed(pos: number): boolean {
   flex-direction: column;
   gap: 0.4rem;
   pointer-events: none;
+}
+
+/* ── THE STRIP YIELDS THE TONGUE'S COLUMN (T9-W2 §2.7) ─────────────────────────────────────
+   The tongue tucks 8px under the paper and protrudes 40 into the band below it, at the board's
+   right edge; the strip's one reserved line starts 6.4px under the same edge and runs the
+   board's full width. They share the band and differ only in x, so the STRIP yields rather
+   than the assembly spending 40px of column it does not have — measured headroom below the
+   ribbon at 390×664 is 60.4px, and the type scale this wave lands is already spending some of
+   it. 6.5rem is the tongue's 5.75rem berth plus the 0.75rem of air the desk's own tuck spends;
+   at 390 that leaves the note 258px, which the M16 plain-copy register fits on one line.
+   PORTRAIT ONLY: in landscape the tongue hangs off the board's RIGHT flank, level with the
+   board's middle, and never enters this band.
+   DECLARED AFTER the base rule and BEFORE the row regime's, because a media query buys no
+   specificity: this has to beat `margin-inline`'s right half on source order alone, and the
+   ≥1024 block re-states its own inline margins after it. */
+@media (max-width: 1023.98px) and (orientation: portrait) {
+  .board-margin {
+    margin-right: 6.5rem;
+  }
 }
 
 /* Row regime (≥lg): overlay strip anchored to the square — true margin-writing,

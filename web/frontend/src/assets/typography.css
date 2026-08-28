@@ -65,6 +65,108 @@
   --type-tracking-caps: 0.1em;
 }
 
+/* ── THE THUMB'S RUNG (T9-W2 §2.6, the owner's M01) ─────────────────────────
+   "All buttons and text for controls need to be larger on mobile." The ladder's
+   fluid term is a WIDTH slope and a phone is the narrow end of it, so every
+   control rung bottoms out at its own minimum exactly where the ink is furthest
+   from the eye: measured on the built dist at 390×844 coarse, the toolbar's
+   sublabels, all four compartment tapes, both row captions and the closed tab's
+   value ALL draw at 12.18px, while the 1440 rail reads those same tokens at
+   14.38 and 16.40. Width is the wrong axis — a desk is 60cm away under a mouse,
+   a phone is at arm's length under a thumb.
+
+   So the coarse pointer re-floors the LADDER, not the sites. ONLY THE MINIMUM
+   MOVES: the intercept, the slope and the ceiling are the shipped ones, so the
+   band is flat at its floor across every width it covers and the desk's slope
+   resumes untouched above it. Nothing consumes an edit; every consumer inherits.
+
+   THE KEY IS WIDTH **AND** POINTER, which is the W2 adjudication's graft: coarse
+   alone would re-floor wide-touch surfaces (an iPad-class 1280-coarse rail, the
+   cell `visual-regression` test 10 seals) that this wave has not measured. Below
+   1024 it rides exactly the key the ≥44px tap floor already rides (index.css's
+   coarse block, `.play-controls`, `.washi-persistent`), so tap floor and read
+   floor are ONE regime — which is what the mark asks for.
+
+   TWO RUNGS, and the two the ladder does NOT re-floor are named rather than
+   omitted: `--type-body` carries the board's margin voice, the solver note and
+   the DECK CARD'S NAME (`GameCard.vue`) — none of them a control, and the last
+   is §2.1's own subject in another lane's fence, so a rung moved under it would
+   walk a surface that lane measured against. `--type-micro` / `--type-admin-label`
+   have no product consumer at all (grep: the `@utility` definitions and the dev
+   tuner). Re-flooring either would be ceremony.
+
+   THE NUMBERS ARE W7'S (§2.6: "the VOICE is W7's"). These are the mechanism's
+   floor — ≥14px on any control label — and W7 re-cuts them HERE, in this block
+   and nowhere else. */
+@media (max-width: 1023.98px) and (pointer: coarse) {
+  :root {
+    --type-caption: clamp(0.875rem, 0.71rem + 0.21vw, 1rem); /* min 12→14px */
+    --type-small: clamp(1rem, 0.8rem + 0.25vw, 1.25rem); /* min 14→16px */
+  }
+}
+
+/* ── THE CONTROL ROLES (T9-W2 §2.6) ─────────────────────────────────────────
+   Six names for W7's own taxonomy, each pointing at ONE rung. The sites read the
+   ROLE; the role reads the rung. That indirection is the whole of "W7's sizes
+   drop in without rework": re-pointing a role is one right-hand side in this
+   block, never a sweep of call sites — and two surfaces that share a rung today
+   BY COINCIDENCE (the toolbar sublabel and the compartment tape are both
+   `--type-caption`, by accident of history and not by law) can part company
+   without either learning a literal.
+   Every value below is the rung the site already resolved to, so the re-point is
+   computed-identical at every viewport in both engines: this block adds a seam,
+   it does not move ink. */
+:root {
+  --type-act: var(--type-small); /* Deal — the card's one primary verb */
+  --type-verb: var(--type-caption); /* clear · fill · solve · share */
+  --type-tool: var(--type-caption); /* undo · redo · hint — the play tools */
+  --type-tag: var(--type-caption); /* row caption · closed-tab value · roster */
+  --type-group-title: var(--type-subheading); /* the section heading */
+}
+
+/* The heading's second arm. It lives HERE, unlayered, and not beside
+   `.section-heading` in `@layer components`: an unlayered declaration outranks a
+   layered one whatever the media query says, so a `:root` written inside that
+   layer would lose to the block above and the ≥768 heading would silently drop a
+   rung. (Measured the wrong way round once; the rule is the cascade's, not
+   this file's.) */
+@media (min-width: 768px) {
+  :root {
+    --type-group-title: var(--type-heading); /* √φ → φ at the md rung */
+  }
+}
+
+/* THE OPTION CHIP'S RUNG, and it is spelled as three width arms because that is
+   what it ALREADY WAS — four arbitrary Tailwind utilities in `OptionSelector`'s
+   template (`text-[1rem] md:text-[1.375rem]`, `text-[1.375rem] md:text-[1.25rem]`),
+   invisible to the ladder and unreachable from any token. The literals move here
+   unchanged, so every rung renders byte-identical; what changes is that they are
+   now ONE name a later voice can re-cut. */
+:root {
+  --type-option: 1.25rem; /* 20px — the desk rail's chip */
+}
+
+@media (max-width: 1023.98px) {
+  :root {
+    --type-option: 1.375rem; /* 22px — the stacked card at ≥768 */
+  }
+}
+
+@media (max-width: 767.98px) {
+  :root {
+    --type-option: 1rem; /* 16px — the phone, as it shipped */
+  }
+}
+
+/* M01's lift, on the one arm that was under the floor. A 768–1023 coarse tablet
+   already draws its chips at 22px, above anything this band would set, so the
+   phone arm is the only one that moves — 16 → 20px, the rail's own chip size. */
+@media (max-width: 767.98px) and (pointer: coarse) {
+  :root {
+    --type-option: 1.25rem; /* 20px */
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
  * SEMANTIC REGISTERS — Tailwind v4 @utility. Each references a `--type-*` rung
  * (the ladder) + a `var(--font-*)` family (the pencil face bound in index.css).
@@ -258,9 +360,12 @@
      and far too airy under x-height forms) to `--type-tracking-wide` (0.025em) — the eyebrow
      still reads as a caption tier, without gapping. The subset is re-cut from RENDERED text in
      the same commit; `scripts/check-font-coverage.mjs` is the standing guard. */
+  /* T9-W2 §2.6 — the heading reads its ROLE, and the role reads the rung. The md
+     arm below re-points `--type-group-title` instead of restating a font-size, so
+     the two arms of one heading are one declaration a voice can re-cut. */
   .section-heading {
     font-family: var(--font-display);
-    font-size: var(--type-subheading);
+    font-size: var(--type-group-title);
     line-height: var(--type-leading-heading);
     font-weight: 800;
     text-transform: lowercase;
@@ -270,7 +375,6 @@
 
   @media (min-width: 768px) {
     .section-heading {
-      font-size: var(--type-heading);
       line-height: var(--type-leading-heading);
       text-align: left;
       padding-left: 0.75rem;

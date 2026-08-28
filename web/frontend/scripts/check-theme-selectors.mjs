@@ -34,6 +34,24 @@
  * positive controls that must stay GREEN. A gate that cannot be shown failing is not a gate;
  * one that reds on everything is not one either.
  *
+ * ── T9-W5 §5.4 · THE POPULATION CANARY, and why the fixtures were not enough ───────────────
+ * V5 adjudicated this gate STRUCTURALLY SOUND AND VACUOUS BY POPULATION: T7-W1's cure deleted
+ * every `[data-theme]` rule in the estate, so the live census reads `0 data-attribute selector
+ * sites over 0 attribute(s), 0 prefers-color-scheme site(s)` — three checks, no subjects, a
+ * green every run. The fixture self-test below proves the CHECK FUNCTIONS can fail, which is a
+ * different claim: it feeds them hand-built models and never touches `collect()`. A walker
+ * that had quietly stopped reaching `src/` — a changed extension filter, a `continue` in the
+ * wrong branch, a rename of the directory — would leave every fixture GREEN and every check
+ * blind, and the console line would still read a confident zero.
+ *
+ * So `populationCanary()` runs on EVERY invocation, not only under `--self-test` (the
+ * tdz-probe pattern): it takes the REAL collected file list, appends one synthetic file
+ * carrying an unwritten `[data-canary-theme]` rule, rebuilds the model through the same
+ * `buildModel` the live pass uses, and requires check 1 to red on it. That closes the gap
+ * between "the checks work on fixtures" and "the checks are pointed at this tree" — the only
+ * gap a zero-population gate has left. It reds loudly rather than passing quietly, and it
+ * plants nothing on disk.
+ *
  * Run: `node scripts/check-theme-selectors.mjs [--dist [dir]] [--self-test]`, cwd web/frontend.
  */
 import fs from "node:fs";
@@ -92,7 +110,11 @@ function styleMask(file, text) {
   if (file.endsWith(".css")) return stripCssComments(text);
   if (!file.endsWith(".vue")) return blank(text);
   let out = blank(text);
-  for (const m of text.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+  // T9-W2 chair fold: the open tag must START a line. An SFC block tag always does; a doc
+  // comment that merely SPELLS `<style…>` never does — the old pattern paired such a
+  // comment with the next real closing tag and blanked thousands of lines, hiding every
+  // writer in the region (found live: GameControlPanel.vue's line-5 comment).
+  for (const m of text.matchAll(/^[\t ]*<style\b[^>]*>([\s\S]*?)<\/style>/gim)) {
     const start = m.index + m[0].indexOf(m[1]);
     out = out.slice(0, start) + m[1] + out.slice(start + m[1].length);
   }
@@ -104,7 +126,11 @@ function writerMask(file, text) {
   if (file.endsWith(".css")) return blank(text);
   if (file.endsWith(".vue")) {
     let out = text;
-    for (const m of text.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+    // T9-W2 chair fold: the open tag must START a line. An SFC block tag always does; a doc
+    // comment that merely SPELLS `<style…>` never does — the old pattern paired such a
+    // comment with the next real closing tag and blanked thousands of lines, hiding every
+    // writer in the region (found live: GameControlPanel.vue's line-5 comment).
+    for (const m of text.matchAll(/^[\t ]*<style\b[^>]*>([\s\S]*?)<\/style>/gim)) {
       const start = m.index + m[0].indexOf(m[1]);
       out = out.slice(0, start) + blank(m[1]) + out.slice(start + m[1].length);
     }
@@ -347,6 +373,18 @@ pathEl.setAttribute("d", baseD);`,
     file: "src/games/shared/gameCell.css",
     text: `.cell[data-v-e87e9d7d] { color: red; }`,
   },
+  commentSpelledStyle: {
+    file: "src/games/shared/GameControlPanel.vue",
+    text: `<script setup>
+/** historically documented as "the <style scoped> rules read the fold state" — a literal
+ *  open tag inside a doc comment must not pair with the real closing tag below and blank
+ *  the writer between them (the T9-W2 live find: 2,300 lines vanished this way). */
+document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+</script>
+<style>
+:root[data-theme="dark"] .x { color: red; }
+</style>`,
+  },
   classKeyed: {
     file: "src/games/shared/CageOverlay.vue",
     text: `<style>
@@ -380,6 +418,13 @@ const FIXTURES = [
     "GREEN",
     "positive control — a real setAttribute writer lands",
     [F.deadAttr, F.writerTs],
+    [],
+  ],
+  [
+    "1 UNWRITTEN ATTRIBUTES",
+    "GREEN",
+    "a doc comment that SPELLS a style open tag must not blank the writer under it (T9-W2)",
+    [F.commentSpelledStyle],
     [],
   ],
   [
@@ -505,7 +550,7 @@ function walk(dir, out = []) {
   return out;
 }
 
-function collect() {
+function collectFiles() {
   const files = walk(SRC).map((full) => ({
     file: path.relative(ROOT, full),
     text: fs.readFileSync(full, "utf8"),
@@ -513,7 +558,48 @@ function collect() {
   const html = path.join(ROOT, "index.html");
   if (fs.existsSync(html))
     files.push({ file: "index.html", text: fs.readFileSync(html, "utf8") });
-  return buildModel(files, ALLOWLIST);
+  return files;
+}
+
+/**
+ * THE POPULATION CANARY (T9-W5 §5.4). One synthetic style file over the REAL corpus, carrying
+ * a `[data-canary-theme]` rule nothing writes. Check 1 must red on it. Nothing is written to
+ * disk and the live model is untouched — the canary builds its own.
+ *
+ * It answers the question the fixtures cannot: is `collect()` still pointed at this tree? A
+ * zero-population gate has no other way to tell a clean estate from a blind walker, and this
+ * estate's census reads zero on both.
+ *
+ * @param {{file: string, text: string}[]} files the live corpus
+ */
+function populationCanary(files) {
+  const bad = [];
+  // (a) REACH. The plant alone proves the CHECK bites, not that the WALK arrived: a walker
+  // returning [] still reds on a model of one synthetic file. So the corpus must contain the
+  // estate's own stylesheet — a named, load-bearing file whose absence means the walk broke,
+  // and not a count that would need restamping. (Measured on the first ablation the canary
+  // was written for: a `walk()` with its extension filter dead collected 0 files and the
+  // plant-only canary still passed. This arm is why that read as a red.)
+  const REACH = "src/assets/index.css";
+  if (!files.some((f) => f.file === REACH))
+    bad.push(
+      `the collected corpus (${files.length} file(s)) does not contain \`${REACH}\`. The walk ` +
+        `is not reaching src/ — every census figure printed above is a number about nothing.`,
+    );
+  // (b) BITE. A synthetic unwritten selector over the REAL corpus must red check 1.
+  const PLANT = {
+    file: "src/__canary__/population-canary.css",
+    text: ":root[data-canary-theme='night'] { --canary: 1; }",
+  };
+  const found = check1UnwrittenAttributes(buildModel([...files, PLANT], ALLOWLIST));
+  if (!found.some((f) => f.includes("data-canary-theme")))
+    bad.push(
+      `the population canary did not fire. A synthetic \`[data-canary-theme]\` rule was added ` +
+        `to the ${files.length}-file corpus this run collected and check 1 did not see it, so ` +
+        `the census cannot fail for the defect it names — every green above is unearned, and ` +
+        `the live zero means nothing.`,
+    );
+  return bad;
 }
 
 /** `--dist` alone reads `dist/`; `--dist dist-throttle` reads a build a prior job produced. */
@@ -525,7 +611,8 @@ const distDir = (() => {
 })();
 const wantSelfTest = process.argv.includes("--self-test");
 
-const model = collect();
+const liveFiles = collectFiles();
+const model = buildModel(liveFiles, ALLOWLIST);
 const styleFiles = model.files.filter((f) => isStyleFile(f.file)).length;
 const attrSites = model.sites.filter((s) => s.kind === "attr");
 const mediaSites = model.sites.filter((s) => s.kind === "media");
@@ -552,6 +639,14 @@ for (const [name, fn] of CHECKS) {
   );
   for (const f of found) failures.push(`[${name}] ${f}`);
 }
+
+// Every invocation, not only --self-test: a zero-population census has to prove it is looking.
+const blind = populationCanary(liveFiles);
+console.log(
+  `  ${blind.length ? "✗" : "✓"} 0 POPULATION CANARY — a planted \`[data-canary-theme]\` ` +
+    `rule over the live ${liveFiles.length}-file corpus ${blind.length ? "did NOT red" : "reds check 1"}`,
+);
+failures.push(...blind.map((v) => `[0 POPULATION CANARY] ${v}`));
 
 if (distDir) {
   try {

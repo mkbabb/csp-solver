@@ -319,23 +319,13 @@ const dealStyle = computed(() => {
         :outset="6"
       >
         <div class="game-card-paper cartoon-shadow-md edge-outlined bg-card">
-          <div class="game-card-face">
-            <!-- THE LIVE CENTER FACE (Wave C2): a bare mount App teleports the ONE live board
-                 into (state + marks preserved). Rendered ONLY for the current-game centered
-                 card; every other face is the static poster below. -->
-            <div v-if="live" class="live-face-slot">
-              <div ref="liveFaceFit" class="live-face-fit"></div>
-            </div>
-            <!-- The still. `preview` is the board saved in THIS game (T8-W3 M12); the poster
-                 falls back to its canned worksheet when there is none, which is the honest
-                 face for a game never played. -->
-            <Suspense v-else>
-              <component :is="Poster" :preview="preview" />
-              <template #fallback>
-                <div class="game-card-face-blank" />
-              </template>
-            </Suspense>
-          </div>
+          <!-- THE LETTERHEAD (T9-W2 §2.1). The caption LEADS the paper. A scrollport clips
+               from its foot, so a name that stands at the head of the card can never be the
+               thing a short viewport takes — the invariant holds structurally, at viewports
+               nobody enumerated and at a range line that wraps, instead of arithmetically. It
+               is also this estate's own labelling grammar: `SheetWashiLabel anchor="tag"` puts
+               every zone's tag ABOVE its well, and the deck's card was the one object here
+               labelled underneath. -->
           <div class="game-card-caption">
             <svg
               class="game-card-name"
@@ -356,22 +346,45 @@ const dealStyle = computed(() => {
               :style="underlineStyle"
               aria-hidden="true"
             />
-            <span class="game-card-range">{{ rangeLine }}</span>
-            <!-- The table, echoed under the name (T8-W3 M14). Rendered only where there is a
-                 table to echo, and only on the chosen card — five copies of the same roster
-                 across the deck would say nothing five times. -->
-            <div
-              v-if="swatches && swatches.length"
-              class="game-card-swatches"
-              aria-hidden="true"
-            >
-              <span
-                v-for="p in swatches"
-                :key="p.id"
-                class="game-card-swatch"
-                :style="p.ink"
-              />
+            <!-- THE SUB-LINE ROW (T9-W2 §2.1). The range line and the roster echo share one
+                 line, so a table costs the card no height and `--card-chrome` stays ONE
+                 number — a session's card and a solo card have the same furniture. -->
+            <div class="game-card-subline">
+              <span class="game-card-range">{{ rangeLine }}</span>
+              <!-- The table, echoed beside the range (T8-W3 M14). Rendered only where there
+                   is a table to echo, and only on the chosen card — five copies of the same
+                   roster across the deck would say nothing five times. -->
+              <div
+                v-if="swatches && swatches.length"
+                class="game-card-swatches"
+                aria-hidden="true"
+              >
+                <span
+                  v-for="p in swatches"
+                  :key="p.id"
+                  class="game-card-swatch"
+                  :style="p.ink"
+                />
+              </div>
             </div>
+          </div>
+
+          <div class="game-card-face">
+            <!-- THE LIVE CENTER FACE (Wave C2): a bare mount App teleports the ONE live board
+                 into (state + marks preserved). Rendered ONLY for the current-game centered
+                 card; every other face is the static poster below. -->
+            <div v-if="live" class="live-face-slot">
+              <div ref="liveFaceFit" class="live-face-fit"></div>
+            </div>
+            <!-- The still. `preview` is the board saved in THIS game (T8-W3 M12); the poster
+                 falls back to its canned worksheet when there is none, which is the honest
+                 face for a game never played. -->
+            <Suspense v-else>
+              <component :is="Poster" :preview="preview" />
+              <template #fallback>
+                <div class="game-card-face-blank" />
+              </template>
+            </Suspense>
           </div>
         </div>
       </HandDrawnOutline>
@@ -480,9 +493,25 @@ const dealStyle = computed(() => {
   border-radius: 0.9rem;
 }
 
+/* ── THE FACE PAYS FOR THE CASE (T9-W2 §2.1) ────────────────────────────────────────────
+   The square used to be a fact about the card's WIDTH alone (`width: 100%` + `aspect-ratio`),
+   so the deck held a 408px card inside a 146px case at 844×390 and clipped the difference
+   behind a suppressed scrollbar. `100cqh` is the SLOT's real height — GameGallery makes the
+   slot a size container, definite in both axes — so the side is the smaller of the two things
+   that actually bind it. This is `GameBoard`'s own `min(42rem, 85vw, 100dvh − 10rem)` grammar
+   with the height term MEASURED rather than reserved: no per-rung constant to rot.
+
+   Container-query units clear the browserslist floor outright (`container-type: size` and
+   `cqh` are Chrome 105 / Safari 16 / Firefox 110 against chrome ≥111 · firefox ≥128 ·
+   safari ≥16.4), and both engines measure the same face to the 1/64px.
+
+   The `0px` fallback is what a card mounted OUTSIDE the deck gets (the unit tests, a future
+   host): with no size container above it `100cqh` resolves against the small viewport, which
+   is taller than the card is wide, so `min()` returns `100%` — the incumbent geometry. */
 .game-card-face {
   position: relative;
-  width: 100%;
+  inline-size: min(100%, calc(100cqh - var(--card-chrome, 0px)));
+  margin-inline: auto;
   aspect-ratio: 1 / 1;
 }
 
@@ -538,6 +567,17 @@ const dealStyle = computed(() => {
   transition: color 150ms var(--ease-standard);
 }
 
+/* THE SUB-LINE ROW (T9-W2 §2.1) — the range line and the roster echo on ONE line. The echo
+   used to stand as its own 10.4px band under the range, so a card at a table was taller than
+   a solo card and `--card-chrome` would have had to be two numbers. It costs no height here,
+   and the row is what carries the alignment. */
+.game-card-subline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
 /* THE ROSTER ECHO (T8-W3 M14) — the players well's own swatch, at the deck's scale. Same
    circle, same `--color-user-ink` rebinding carried on the element's own style, so a peer's dot
    here and their digits on the board are one colour by construction rather than by agreement. */
@@ -545,7 +585,6 @@ const dealStyle = computed(() => {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  margin-top: 0.15rem;
 }
 
 .game-card-swatch {

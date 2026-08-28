@@ -2,11 +2,19 @@
 /**
  * ControlSection — the per-game slot the control-shell renders. A game supplies 1..n of
  * these (size, difficulty, …); the shell owns the New-game staging, the hold-to-peek
- * divider, the live action + play-tool rows, and every `<style>`. The mobile tab-toggle
+ * divider, the live action + play-tool rows, and every style rule. The mobile tab-toggle
  * renders ONLY at n ≥ 2 (KISS: n-section-generic — a single-section game shows a plain
  * heading, never a dead tab). Divergence is DATA, never a config flag: the difficulty
  * heading's crayon tone is derived from the selected option's `colorClass` (present on
  * difficultyOptions, absent on the size options), so no boolean toggle names it.
+ *
+ * T9-W2 — "every style rule" IS THE PROSE THAT GAVE WAY, and the four words are load-bearing:
+ * `check-theme-selectors.mjs` masks a `.vue` file by pairing a style OPEN tag with the next
+ * closing one, and this sentence used to spell that open tag literally — opening a bogus block
+ * that ran to the real closing tag 2,300 lines below, blanking the whole script. The gate then
+ * could not see a single attribute this file writes, and red every `[data-*]` rule the wave
+ * lands as unwritten. Its blindness is narrow and the gate is otherwise right, so the sentence
+ * moved: never spell a style open tag inside a comment in a `.vue` file.
  */
 export interface ControlSection {
   /** tab identity, `expandedPanel` value, and OptionSelector `:key` stability */
@@ -40,7 +48,7 @@ export interface ControlSection {
 
 <script setup lang="ts">
 import { computed, nextTick, ref, onBeforeUnmount, useId } from "vue";
-import { useResizeObserver } from "@vueuse/core";
+import { useEventListener, useResizeObserver } from "@vueuse/core";
 import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
 import FillForcedIcon from "@pencil/chrome/icons/FillForcedIcon.vue";
 import DiceIcon from "@pencil/chrome/icons/DiceIcon.vue";
@@ -542,17 +550,93 @@ function onHint() {
 // number written here would go stale the first time that class is re-cut, silently, and in the
 // one direction that reopens this row.
 const actionBarEl = ref<HTMLElement | null>(null);
+const cardEl = ref<HTMLElement | null>(null);
+const wrapEl = ref<HTMLElement | null>(null);
 
 useResizeObserver(actionBarEl, () => {
   const bar = actionBarEl.value;
   const card = bar?.closest<HTMLElement>(".controls-card");
   if (!bar || !card) return;
-  const pad = parseFloat(getComputedStyle(card).paddingBottom) || 0;
+  cardEl.value = card;
+  const cs = getComputedStyle(card);
+  const pad = parseFloat(cs.paddingBottom) || 0;
   card.style.setProperty("--card-pad-b", `${pad}px`);
   card.style.setProperty(
     "--action-bar-h",
     `${Math.ceil(bar.getBoundingClientRect().height + pad)}px`,
   );
+  // T9-W2 §2.3 — THE THIRD READER OF THE SAME MEASUREMENT, and it is the TOP padding this
+  // time. A scrollport clips at its PADDING box while a sticky child is offset from its
+  // CONTENT box, so `top: 0` lands a full padding-band BELOW the case edge — 20px of live
+  // content scrolling past, undissolved, above a fade that claims to own the edge. Both the
+  // top sentinel and the pinned tags spend this number to reach the edge itself (`scene.css`,
+  // `.tray-well`). Measured for the same reason its twin is: the padding is a utility class on
+  // `GameScene`'s template and it differs by regime (`p-5` on the rail, `py-1.5` on the dock).
+  card.style.setProperty("--card-pad-t", `${parseFloat(cs.paddingTop) || 0}px`);
+  publishFold();
+});
+
+// ── T9-W2 §2.3 — THE FOLD'S STATE, PUBLISHED WHERE THE BAR'S HEIGHT ALREADY LANDS ─────────
+// The two fade skirts (`scene.css`'s top sentinel, the bar's own `::before` below) are HONEST
+// rather than decorative: each paints only while content is actually hidden on that side. The
+// state is MEASURED, never spelled, for the same reason `--action-bar-h` is — the card's cap,
+// its padding and its content all live in other files and every one of them moves.
+//
+// `data-under-bar` is the third reading and it is the same law seen from the tape's side: a
+// well riding down toward the bar used to slide its `anchor="tag"` tape UNDER an opaque band,
+// where nothing was ever drawn but the tape still lay across the verbs' hit boxes (§2.5's
+// census reads geometry, and it read exactly that — "pencils" over Clear at 15.7%, "players"
+// at 15.4%). The tape leaves in the bar's own fade band instead. This is a per-TAPE reading and
+// deliberately nothing more: four elements, one rect each, on a rAF-coalesced passive scroll —
+// not the elementsFromPoint collision engine the design ruling refused, which would have to
+// answer for every tape against every control on every frame.
+//
+// The band the tape must clear is the bar's box plus the fade above it, so the bar's own
+// `::before` height is the one constant here and it is read off the rule that draws it.
+const FOLD_EPS = 4;
+const BAR_FADE_PX = 32; // `.action-bar::before` height (2rem) — re-cut the pair together
+
+function publishFold() {
+  const card = cardEl.value;
+  const bar = actionBarEl.value;
+  if (!card) return;
+  card.toggleAttribute("data-fold-above", card.scrollTop > FOLD_EPS);
+  card.toggleAttribute(
+    "data-fold-below",
+    card.scrollHeight - card.clientHeight - card.scrollTop > FOLD_EPS,
+  );
+  if (!bar) return;
+  // The bar only paints over content where it is STICKY; in the <1024 landscape card it is a
+  // row in flow with siblings below it, and a tape there hides nothing.
+  const stuck = getComputedStyle(bar).position === "sticky";
+  const edge = bar.getBoundingClientRect().top - BAR_FADE_PX;
+  for (const tag of card.querySelectorAll<HTMLElement>(".washi-tag"))
+    tag.toggleAttribute(
+      "data-under-bar",
+      stuck && tag.getBoundingClientRect().bottom > edge,
+    );
+}
+
+let foldFrame = 0;
+useEventListener(
+  cardEl,
+  "scroll",
+  () => {
+    if (foldFrame) return;
+    foldFrame = requestAnimationFrame(() => {
+      foldFrame = 0;
+      publishFold();
+    });
+  },
+  { passive: true },
+);
+// The fold moves without a scroll too (a rotation, the crib opening, a joiner arriving): the
+// CARD's box answers the first, the CONTENT's box answers the other two, and neither observer
+// alone sees both.
+useResizeObserver([cardEl, wrapEl], publishFold);
+
+onBeforeUnmount(() => {
+  if (foldFrame) cancelAnimationFrame(foldFrame);
 });
 
 // ── T7-W2 A2 — THE COVERED RIBBON GOES INERT ─────────────────────────────────────────────
@@ -598,6 +682,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
     quantity, and pass 5 measured the difference (§ the F3 dossier, trigger (b)).
   -->
   <div
+    ref="wrapEl"
     class="control-panel-wrap"
     :class="
       mobile
@@ -905,19 +990,24 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
       <!-- T8-W3 M13 row 18 — the verb also returns for an EMPTY ROOM. `!roomId` alone meant the
            room that had emptied to just you offered no way to re-invite anybody; a room of one
            is exactly where the link is wanted. -->
+      <!-- T9-W2 §2.5 — THE NOTE IS NOT HERE ANY MORE, AND THAT IS THE LANE LAW. This verb's
+           tape hung at `bottom: 100%` of a button four rows down a scrollport and landed on
+           the checking well's `Live` option, covering 68.4% of it (V7, both engines). It is
+           laid in the card's one note berth now (inside `.action-bar`, below) with the four
+           bar verbs' notes — one lane, priced once, and the only band in this card that no
+           scroll offset can fill with a control. The button keeps its name, its icon and its
+           row; what it loses is a floating layer inside a scrollport. -->
       <button
         v-if="!session.roomId.value || aloneInRoom"
         @click="inviteAct.press()"
         :disabled="loading"
-        class="icon-btn"
-        :class="{ 'group relative': !mobile }"
+        class="icon-btn invite-btn"
         :aria-label="inviteAct.aria.value"
       >
         <InviteIcon :size="26" :class="{ 'share-pop': inviteAct.animating.value }" />
         <span class="icon-sublabel" aria-hidden="true">{{
           inviteAct.sublabel.value
         }}</span>
-        <SheetWashiLabel v-if="!mobile" :text="inviteAct.washi.value" :seed="73" wide />
       </button>
       <template v-if="session.roomId.value">
         <!-- T6.1 — THE TABLE SAYS SO WHEN IT ISN'T UP YET. Between pressing the verb and
@@ -1051,13 +1141,20 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
          `i` at its trailing edge is the only thing between the reader and the shortcuts. -->
     <!-- T7-W2 A1 — the bar publishes its own height to the scrollport it sticks to (see the
          `--action-bar-h` publisher above); `scene.css` spends it as `scroll-padding-bottom`. -->
+    <!-- T9-W2 §2.5 — `relative` LEAVES THE FOUR VERBS, and that one word is the note berth.
+         A tape resolves against its nearest positioned ancestor: on the button, four notes rose
+         from four different boxes into whatever the scrollport had put above them (the Play
+         entry, at 16.9 / 57.4 / 23.6 / 17.4%). With the buttons static the bar itself — already
+         `position: relative` — is the containing block, so every note lands in ONE berth under
+         the bar's own rule, in the card's reserved foot (`scene.css`'s `padding-bottom`).
+         `group` STAYS: it is the hover seam each note is revealed by. -->
     <div ref="actionBarEl" class="action-bar">
       <div class="action-verbs">
         <button
           @click="onClear()"
           :disabled="loading"
           class="icon-btn"
-          :class="{ 'group relative': !mobile }"
+          :class="{ group: !mobile }"
           :aria-label="
             clearArmed ? 'Press again to clear the board' : 'Clear the board'
           "
@@ -1082,7 +1179,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
           @click="onFillForced()"
           :disabled="loading"
           class="icon-btn"
-          :class="{ 'group relative': !mobile }"
+          :class="{ group: !mobile }"
           aria-label="Fill in every cell that has only one possible number"
         >
           <FillForcedIcon :size="26" :playing="fillAnimating" />
@@ -1098,7 +1195,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
           @click="onSolve()"
           :disabled="loading"
           class="icon-btn"
-          :class="{ 'group relative': !mobile }"
+          :class="{ group: !mobile }"
           aria-label="Solve puzzle"
         >
           <ScribbleLoader
@@ -1119,7 +1216,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
           @click="shareAct.press()"
           :disabled="loading"
           class="icon-btn"
-          :class="{ 'group relative': !mobile }"
+          :class="{ group: !mobile }"
           :aria-label="shareAct.aria.value"
         >
           <ShareIcon :size="26" :class="{ 'share-pop': shareAct.animating.value }" />
@@ -1149,6 +1246,20 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
       >
         <span class="info-glyph" aria-hidden="true">i</span>
       </button>
+      <!-- THE INVITE VERB'S NOTE, BERTHED (T9-W2 §2.5). It belongs to a button in the players
+           well, and it is laid HERE because this is the one box in the card whose foot is
+           reserved paper. Its reveal is `:has()` rather than the `.group` seam every sibling
+           uses — the seam is a DESCENDANT relation and the note is no longer a descendant of
+           the verb it names — and the pair of conditions below is the same hover/focus pair
+           `SheetWashiLabel` ships. Its `v-if` restates the button's own because a note for a
+           verb that is not on screen is furniture (T5-W3's finding, in the small). -->
+      <SheetWashiLabel
+        v-if="!mobile && (!session.roomId.value || aloneInRoom)"
+        class="berth-note"
+        :text="inviteAct.washi.value"
+        :seed="73"
+        wide
+      />
     </div>
 
     <!-- Play tools (T4-WM §2) — the coarse touch surface for undo / redo / hint, the acts a fine
@@ -1254,10 +1365,44 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
    than the six eyebrows it deletes is not a saving, it is a redecoration. The figures below
    are the measured floor at which the box still reads as a box. */
 .tray-well {
-  /* padding-top clears the tape, which STRADDLES the frame: the tag's box starts at the
-     container's top edge and lifts 52% of its own height, so ~8.2px hangs inside. At 0.4rem
-     the rail's first row caption sat under the tape. */
-  padding: 0.55rem 0.5rem 0.35rem;
+  /* ── T9-W2 §2.5 · THE TAPE'S LANE, PRICED HERE ──────────────────────────────────────────
+     The tag is IN FLOW and STICKY now (`SheetWashiLabel`), and these three terms are what a
+     WELL owes it. They are priced in this file because every one of them is read off a number
+     authored in this file:
+       LIFT   the tape's layout box ends `--washi-tag-lift` ABOVE the well's content edge, so
+              the lane law holds by arithmetic rather than by luck — at head the tape's box
+              reached 1.87px INTO the first row and the census read it ("checking" over the
+              `Off` option, 146.5px², both engines). 3px carries the ±1.5° tilt's own ~0.9px of
+              bounding-box growth and still clears.
+       GAP    the column's `gap` below, handed back with the pull so the tape's NET FLOW HEIGHT
+              IS ZERO. `.new-game-zone` sets `gap: 0` and re-states this at 0 with it.
+       INSET  0.85rem from the well's own edge — the shipped tape position — LESS the 0.5rem
+              of padding an in-flow item now starts after. One tape, one x, unmoved.
+     THE PADDING IS RE-CUT, NOT GROWN: 0.9rem of vertical padding in, 0.9rem out. `padding-top`
+     takes the 0.15rem that `padding-bottom` gives up, which is what puts the tape's box clear
+     of the first row while the well's HEIGHT does not move a pixel — and it must not, because
+     the iPad coarse seal (`visual-regression` test 10) had 0.23px of headroom at head. */
+  --washi-tag-lift: 3px;
+  --washi-tag-gap: 0.1rem;
+  --washi-tag-inset: 0.35rem;
+  /* WHERE A TAPE PINS: at the CASE EDGE, not at the content edge a sticky offset counts from
+     (`--card-pad-t`, published above). Two things fall out of the same 0.15rem, and both are
+     the reason it is that small rather than the drawer's comfortable 0.3rem:
+       · the LANE. A pinned tape lies over whatever the scroll has put beneath it, so the band
+         it occupies is the band no control may enter — pinning at the edge leaves the whole of
+         `scroll-padding-top` below it clear (§2.5's census reads that band at 1440×900).
+       · the REST POSE. The rail's first well sits 11.6px below the case edge, so a lower pin
+         line would catch its tape at `scrollTop 0` and drop it 13px INTO the well — the zone
+         grammar's one asymmetry, quietly retired. At 0.15rem the first tape is unpinned at
+         rest and straddles its stroke exactly as it shipped.
+     On the dock, where the card's padding is 6px, the same line pins that first tape instead —
+     which is the §2.3 residue-clip cure, not an exception: at head it hung 0.05px off the case
+     edge and was shorn by it. */
+  --washi-tag-top: calc(0.15rem - var(--card-pad-t, 0px));
+  /* padding-top clears the tape, which STRADDLES the frame: the tag's box hangs above the
+     container's top edge and its last ~8px sits inside. At 0.4rem the rail's first row
+     caption sat under the tape. */
+  padding: 0.7rem 0.5rem 0.2rem;
   /* margin ≥ outset + that 8.2px overhang, or consecutive wells' drawn frames cross — they
      did, at outset 7 / margin 0.35rem, and the teacher's tape landed on the pencils well's
      bottom stroke. 8px against a 4px outset leaves 3.8px of daylight. */
@@ -1271,13 +1416,22 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   margin-top: 0.35rem;
 }
 
-/* The tape rides ABOVE the drawn stroke it straddles (the outline svg is z-index 1). */
+/* The tape rides ABOVE the drawn stroke it straddles (the outline svg is z-index 1) — and now
+   also above the card's top fade sentinel (z 30, `scene.css`), because a PINNED tape is read
+   inside that band: it is chrome laid on chrome, not content dissolving under it. The ladder is
+   frames/content ≤1 < sentinel 30 < pinned tag 35 < hover tape 50 < action bar 60; re-cut any
+   rung and re-cut them together (noted at all three ends). */
 .tray-well :deep(.washi-tag) {
-  z-index: 2;
+  z-index: 35;
 }
 
 .new-game-zone {
   gap: 0;
+  /* no gap to hand back — see `--washi-tag-gap` above. `0px`, never `0`: the give-back is a
+     `calc()` term, and a unitless zero makes it invalid AT COMPUTED-VALUE TIME, which sets the
+     whole shorthand to `unset` rather than falling back — the tape lands in flow, its well
+     grows by its whole box, and nothing anywhere says why. Measured, both engines. */
+  --washi-tag-gap: 0px;
 }
 
 /* T6 mark 3 — the air the deleted `<hr>` was buying is now air AND a rule. Size and difficulty
@@ -1356,7 +1510,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   flex: 0 0 3.75rem;
   text-align: right;
   font-family: var(--font-hand);
-  font-size: var(--type-caption);
+  font-size: var(--type-tag);
   line-height: 1.1;
   letter-spacing: var(--type-tracking-wide);
   /* The quiet rung (Lane D ship 4's ledgered token): 68% graphite, 5.23:1 light / 6.06:1
@@ -1405,7 +1559,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   display: grid;
   grid-template-rows: 1fr;
   font-family: var(--font-hand);
-  font-size: var(--type-caption);
+  font-size: var(--type-tag);
   line-height: 1.35;
   /* THE SLUG IS IN THEIR INK. The row carries the peer's `--color-user-ink` rebinding inline, so
      the name and the dot are the one colour the digits on the board are drawn in — the whole of
@@ -1525,7 +1679,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
    under the list while the wire is coming up, and nothing once it has. */
 .players-status {
   font-family: var(--font-hand);
-  font-size: var(--type-caption);
+  font-size: var(--type-tag);
   line-height: 1.25;
   /* The quiet rung (the ledgered token the row captions write at): 5.23:1 light / 6.06:1 dark
      on --color-card, which is the floor below which a caption stops clearing AA. */
@@ -1541,7 +1695,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   margin-top: 0.3rem;
   padding: 0.15rem 0.1rem;
   font-family: var(--font-hand);
-  font-size: var(--type-caption);
+  font-size: var(--type-tag);
   letter-spacing: var(--type-tracking-wide);
   color: var(--ink-press-quiet);
   text-decoration: underline;
@@ -1652,7 +1806,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
    secondary siblings wear. The die goes 28 → 36 and the name up one rung; the strip's verbs
    stay at `--type-caption`, and THAT difference is the hierarchy. */
 .deal-btn .icon-sublabel {
-  font-size: var(--type-small);
+  font-size: var(--type-act);
 }
 
 /* .section-heading type register lives in assets/typography.css (@layer
@@ -1684,8 +1838,8 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   gap: 0.15rem;
   width: auto;
   height: auto;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
+  min-width: var(--tap-floor, 2.75rem);
+  min-height: var(--tap-floor, 2.75rem);
   padding: 0.3rem 0.5rem;
   border-radius: 0.5rem;
   color: var(--color-muted-foreground);
@@ -1780,7 +1934,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
    Hint have always painted their initial in the system face mid-word. */
 .icon-sublabel {
   font-family: var(--font-hand);
-  font-size: var(--type-caption);
+  font-size: var(--type-tool);
   line-height: 1;
   letter-spacing: var(--type-tracking-wide);
   text-transform: lowercase;
@@ -1850,13 +2004,57 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
   padding-block: 0.4rem 0.15rem;
 }
 
+/* ── T9-W2 §2.3 · THE FADE IS DEEPER, AND IT IS HONEST ────────────────────────────────────
+   0.9rem of dissolve under a 65px bar is a hint, not a cue — V7 measured a reader meeting the
+   Play entry 316.8px below an edge whose only tell was a half-cut control. 2rem is the mirror
+   of the top sentinel's band (`scene.css`), so both clip edges dissolve over the same distance.
+   HONEST is the other half and it is the reason the state exists at all: an always-on gradient
+   LIES at the boundary — scrolled to the end, the last row reads half-erased under a fade with
+   nothing left to hide. `data-fold-below` is published from the card's own scroll box by
+   `publishFold` above, so the band paints only while there is something below it to dissolve.
+   The window is the washi's own 150ms; under PRM it snaps, and a cue that is either on or off
+   loses nothing by arriving instantly. */
 .action-bar::before {
   content: "";
   position: absolute;
   inset: auto 0 100% 0;
-  height: 0.9rem;
+  height: 2rem;
   background: linear-gradient(to top, var(--color-card), transparent);
+  opacity: 0;
   pointer-events: none;
+}
+
+.controls-card[data-fold-below] .action-bar::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .action-bar::before {
+    transition: opacity 150ms;
+  }
+}
+
+/* ── T9-W2 §2.5 · THE ONE NOTE BERTH ──────────────────────────────────────────────────────
+   Every hover note in this card lands here: the four verbs' (children of their now-static
+   buttons, so the bar is their containing block) and the invite verb's (`.berth-note`, laid in
+   the bar's own markup because the button it names is four rows up a scrollport). BELOW the
+   bar's rule, not above it — the band above the bar is live content at every scroll offset, and
+   the band below it is the card's `padding-bottom`, which content can never enter. The tape
+   therefore covers air by construction: not at the poses a census happens to read, but at all
+   of them. `scene.css` reserves the 3.5rem this note is tall; re-cut the pair together. */
+.action-bar .washi-label {
+  top: 100%;
+  bottom: auto;
+  margin-top: 0.1rem;
+  margin-bottom: 0;
+}
+
+/* The berthed note's seam. `.group:hover` is a DESCENDANT relation and this note is not a
+   descendant of its verb, so the relation is read the other way round — same hover, same
+   `:focus-visible`, same 150ms, no second reveal grammar. */
+.control-panel-wrap:has(.invite-btn:hover) .berth-note,
+.control-panel-wrap:has(.invite-btn:focus-visible) .berth-note {
+  opacity: 1;
 }
 
 .action-verbs {
@@ -1931,10 +2129,44 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
 }
 
 /* T6 mark 8 — the strip's verbs grow with Deal, one rung behind it. Scoped to the bar so the
-   fold's undo / redo / hint keep the 26px they were seated at on the dock. */
+   fold's undo / redo / hint keep the 26px they were seated at on the dock.
+
+   T9-W2 §2.6 — THE LITERAL BECAME A RANK. `30px` is now `--icon-verb` (index.css), one of the
+   three glyph ranks that mirror the type roles: act (Deal) · verb (this bar) · tool (the play
+   row). The rank re-floors on the same `(max-width: 1023.98px) and (pointer: coarse)` key the
+   read floor and the tap floor ride, so a thumb gets a bigger glyph AND a bigger word from one
+   regime, which is the whole of the owner's M01. The desk resolves these tokens to the shipped
+   literals, so nothing above 1024 moves a sub-pixel.
+   THE RANKS ARE SPENT HERE, not in index.css where they are declared: `.icon-btn svg` is this
+   component's grammar, and a global rule would tie or lose to these scoped ones on specificity
+   with only CSS import order to break it — a fact no file states. */
 .action-verbs .icon-btn svg {
-  width: 30px;
-  height: 30px;
+  width: var(--icon-verb);
+  height: var(--icon-verb);
+}
+
+/* The verbs' WORD takes the matching role. It resolved to `--type-caption` through the base
+   `.icon-sublabel` and still does — the role is what lets W7 part the bar's word from the play
+   row's without either learning a literal. */
+.action-verbs .icon-sublabel {
+  font-size: var(--type-verb);
+}
+
+/* The play tools' glyph (undo · redo · hint) and Deal's die. Both were `:size` props alone —
+   36 on `DiceIcon`, 26 on the tools — and both keep those props as the first-paint default;
+   these rules are the CSS override the estate has used for a drawn glyph's size since T6 mark
+   8. Scoped to the coarse mobile band, so a desk SVG is still sized by its own prop and this
+   file adds no rule that runs there. */
+@media (max-width: 1023.98px) and (pointer: coarse) {
+  .icon-btn svg {
+    width: var(--icon-tool);
+    height: var(--icon-tool);
+  }
+
+  .icon-btn.deal-btn svg {
+    width: var(--icon-act);
+    height: var(--icon-act);
+  }
 }
 
 /* The fold. `0fr → 1fr` and not `display`/`v-show`: see the template comment — the crib's
@@ -2072,7 +2304,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
    the active tab's underline. */
 .heading-value {
   font-family: var(--font-hand);
-  font-size: var(--type-caption);
+  font-size: var(--type-tag);
   line-height: 1;
   letter-spacing: var(--type-tracking-wide);
   /* T4-W10 gate 1: 60% graphite was 4.10:1 on --color-card (< AA 4.5). The 68% that

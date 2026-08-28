@@ -461,8 +461,17 @@ function onKeydown(e: KeyboardEvent) {
    The breakpoint moves 40rem → 42rem with it: at 40rem the band would be 100%-limited to under
    34rem and the arithmetic above would be a claim about a width the band does not have. 42rem
    (672px) is the narrowest viewport at which `min(100%, 34rem)` actually resolves to 34rem
-   here, measured, so the regime and its reserve begin at the same number. */
-@media (min-width: 42rem) {
+   here, measured, so the regime and its reserve begin at the same number.
+
+   AND A PAGE TALL ENOUGH TO SPEND 7rem ON A SLIP (T9-W2 §2.1). The 42rem key is a VIEWPORT
+   width, and in short landscape the deck lies down (GameGallery's grid arm) so the slip stands
+   in a COLUMN narrower than the viewport — 365.4px at 844×390 — where the arithmetic above
+   (544 − 32 − 20 − 200 = 292px of chip column) is a claim about a width the band does not have
+   and the `nowrap` chip row would overflow. Below 30rem of height the band keeps its column
+   pose, which is the pose that fits. Measured `options-row` overflow 0 on all five cards at
+   844×390, 812×375 and 667×375. One condition, no duplicated declarations, and it is the same
+   30rem key the deck's own arm reads — the two cannot disagree about which pose they are in. */
+@media (min-width: 42rem) and (min-height: 30rem) {
   .staging-band {
     width: min(100%, 34rem);
   }

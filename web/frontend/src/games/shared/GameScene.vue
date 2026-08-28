@@ -16,6 +16,7 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import DrawerTab from "@games/shared/DrawerTab.vue";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import {
+  mobileDock,
   portraitDock,
   registerDrawerScene,
   useControlsDrawer,
@@ -39,17 +40,33 @@ const { faceTarget } = useLiveFace();
 // ~480ms FLIP glide, and focus. Esc closes from within (the rail's keydown).
 const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer();
 
-/** THE TONGUE'S BERTH ON THE PORTRAIT DOCK (T6.2, mark A) — the ribbon when the sheet is shut,
- *  the case's own corner when it is up. ONE instance, one drawn word, one `aria-expanded` /
- *  `aria-controls` pair; what moves is which berth holds it. Shut is the state the player lives
- *  in, and there the opener is a PEER VERB in the bottom ribbon beside undo · redo · hint · peek
- *  — the owner's mark, and the end of the tab that floated at the fold's edge. Open, the sheet
- *  covers the ribbon whole (it is a full-width bottom sheet), so a berth that stayed down there
- *  would be a drawer that cannot be shut: the same button rides up as the case's handle, which
- *  is the shipped pose every drawer row already exercises. `defer` because BOTH berths are
- *  minted later in this same template. */
+/** THE TONGUE HANGS OFF THE BOARD'S SLACK EDGE (T9-W2 §2.7, the owner's M10 — a DECLARED
+ *  DELTA re-aiming T6.2 mark A). ONE instance, one drawn word, one `aria-expanded` /
+ *  `aria-controls` pair; what moves is which berth holds it, and there are exactly three:
+ *
+ *    · `null` — the DESK, and the LANDSCAPE dock with the sheet shut. A disabled Teleport
+ *      renders in place inside `.board-peek-host`, which is the shipped desk pose: the tongue
+ *      tucked under the board's right edge. A landscape phone is a wide-and-short cell exactly
+ *      like the desk, so it takes that pose verbatim rather than inventing a fourth one.
+ *    · `#board-edge` — the PORTRAIT dock, sheet shut: the zero-box berth at the board's own
+ *      bottom rail (`GameBoard`), where the tongue hangs off the paper's bottom-right corner.
+ *      This is the M10 mark: the desk's side tab, quarter-turned onto the edge a narrow-and-
+ *      tall viewport gives. It replaces mark A's ribbon berth, where the chip floated 54.8px
+ *      below the board in dead space (measured at 390×844, 375×812 and 430×932 — identical,
+ *      so the gap was structural rather than a pose accident).
+ *    · `#drawer-handle` — EITHER orientation, sheet up. The risen sheet is full-width and
+ *      covers the board whole, so a berth that stayed on the board would be a drawer that
+ *      cannot be shut; the same button rides up as the case's handle, the pose every drawer
+ *      row already exercises.
+ *
+ *  `defer` because all three berths are minted later in this same template (or, for
+ *  `#board-edge`, inside the board slot below it). */
 const tongueBerth = computed(() =>
-  drawerOpen.value ? "#drawer-handle" : "#fold-tools",
+  mobileDock.value && drawerOpen.value
+    ? "#drawer-handle"
+    : portraitDock.value
+      ? "#board-edge"
+      : null,
 );
 
 // ── ONE control-panel CARD, full stop (T5-W4 pass 6) ─────────────────────────────────────
@@ -107,10 +124,16 @@ onUnmounted(() => unregisterDrawer?.());
              Teleport, not a second tab (a second tab is a second `aria-controls` claiming the
              same region).
 
-             T6.2 mark A — on the dock the berth is `tongueBerth` (above): the ribbon while the
-             sheet is shut, the case's corner while it is up. The desk keeps `#drawer-handle`
-             through the disabled Teleport, byte-untouched. -->
-        <Teleport defer :to="tongueBerth" :disabled="!portraitDock">
+             T9-W2 §2.7 — RE-AIMED AT THE BOARD'S OWN EDGE (the owner's M10). The berth is
+             `tongueBerth` (above), and `null` is the pose that renders HERE: the desk, and the
+             landscape dock with the sheet shut. Pass 6's reason for leaving the board — "a
+             board-anchored tongue is COVERED by the risen sheet" — is answered by the OPEN
+             berth rather than by the shut one, which is what mark A had not separated: only
+             the risen pose needs to leave the board, and only it does.
+             The `:to` fallback is a live selector on purpose. Vue resolves `to` even for a
+             disabled Teleport in dev, and `#drawer-handle` is always mounted (zero-box outside
+             the dock), so the disabled arm names a target that exists. -->
+        <Teleport defer :to="tongueBerth ?? '#drawer-handle'" :disabled="!tongueBerth">
           <DrawerTab ref="drawerTab" :expanded="drawerOpen" @toggle="toggleDrawer" />
         </Teleport>
       </div>
@@ -161,6 +184,12 @@ onUnmounted(() => unregisterDrawer?.());
         class="drawer-case"
         :inert="!rowRegime && drawerInert"
       >
+        <!-- T9-W2 §2.3/§2.5 — THE CARD'S PADDING IS READ IN TWO OTHER PLACES NOW, and both
+             are noted at their own end too. `scene.css` takes the rail's 6px scrollbar gutter
+             back out of `p-5`'s right side (so the card's outer box, and the board it is
+             centred against, do not move) and overrides the BOTTOM to reserve the note berth
+             under the action bar; `GameControlPanel` publishes the resulting `padding-bottom`
+             as `--card-pad-b` / `--action-bar-h`. Re-cut this binding and re-cut those. -->
         <div
           ref="panelEl"
           class="controls-card bg-card"

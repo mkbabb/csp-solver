@@ -9,9 +9,9 @@
  *   .board-peek-host   the positioning context wrapping the board + answer-key laminate
  *   .controls-card     THE controls card — one of them now, at every width
  *   .drawer-case       the HandDrawnOutline frame around it (the portrait sheet's inert half)
- *   .drawer-handle     the tongue's berth while the portrait sheet is UP (the case's top-right)
- *   .fold-tools        the portrait fold's RIBBON (`#fold-tools`, a Teleport berth: the play
- *                      verbs, and the drawer's tongue while the sheet is shut)
+ *   .drawer-handle     the tongue's berth while the sheet is UP (the case's top-right)
+ *   .fold-tools        the portrait fold's RIBBON (`#fold-tools`, a Teleport berth for the
+ *                      play verbs; the shut tongue hangs off the BOARD now — T9-W2 §2.7)
  *   .scene-controls    the ONE controls drawer (`#controls-drawer`) — the F6 fade target
  *   .scene-leaving     ON .app-layout while the F6 page-turn's beat 1 runs (chrome fades out)
  *
@@ -19,17 +19,21 @@
  * `html.drawer-closed` (the settled rest pose) and `html.drawer-gesturing` (the ~520ms
  * transform-only glide window — Band D, user-triggered one-shot).
  *
- * T5-W4 PASS 6 — THREE POSES OF ONE DRAWER, and the regime key is WIDTH AND ORIENTATION:
- *   · `≥1024`                       the shipped parked rail, byte-untouched (audit-4);
- *   · `<1024` **portrait**          a `position: fixed` bottom sheet anchored on
- *                                   `top: var(--vv-height)`, rest pose on `translate:`;
- *   · `<1024` **landscape**         the in-flow static card, geometry-identical to the
- *                                   `.mobile-board-width` twin it replaces — the lead's
- *                                   charter (c) holds that rung RATIFIED, so a width-only
- *                                   rule would have moved a ratified surface (Opus's own
- *                                   head read 1.472 there against the shipped 2.882).
- * `.mobile-board-width` is DELETED: it was the twin's board-matched width and its office is
- * now the landscape pose's `width` arm below, on the one element.
+ * TWO POSES OF ONE DRAWER (T5-W4 pass 6, folded to two at T9-W2 §2.2). The regime key is
+ * WIDTH ALONE; orientation decides the dock's ORNAMENTS, never whether it exists:
+ *   · `≥1024`    the shipped parked rail, byte-untouched (audit-4);
+ *   · `<1024`    a `position: fixed` bottom sheet anchored on `top: var(--vv-height)`, rest
+ *                pose on `translate:`. Portrait adds the fold's ribbon under the board and
+ *                insets the risen handle to the column; landscape has no band under a 390-tall
+ *                board for a ribbon, insets the handle to the sheet's own edge, and derives its
+ *                own chrome band.
+ * Pass 6 wrote a THIRD pose — `<1024` landscape as an in-flow static card, geometry-identical
+ * to the deleted `.mobile-board-width` twin, which the lead's charter (c) held RATIFIED. T9's
+ * charter rules it a P0 (§2.2: a landscape phone matches the arm that hides the ribbon and the
+ * handle and no arm that turns them back on, so every game control is below an unhinted fold),
+ * so that rung is SUPERSEDED — a declared delta on the owner's re-look, not a drift.
+ * `.mobile-board-width` stays DELETED; the width arm that inherited its office goes with the
+ * pose that needed it.
  */
 
 /* H8-centering-only: row regime centers the controls card against the board. */
@@ -127,7 +131,29 @@
     max-height: calc(min(42rem, 85vw, 100dvh - 10rem) - 2rem);
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-width: thin;
+
+    /* ── T9-W2 §2.5 · THE NOTE BERTH ────────────────────────────────────────────────────────
+       THE CARD'S FOOT IS RESERVED PAPER, AND THAT IS WHY THE NOTES LIVE THERE. A hover note is
+       a floating layer, and no floating layer inside a SCROLLPORT is ever safe: whatever band
+       it hangs in, some scroll offset puts a control there (measured at head, 1440×900 — the
+       four verbs' notes covered the Play entry at 16.9 / 57.4 / 23.6 / 17.4%, and the invite
+       note covered the Live option at 68.4%). One band in this card can never hold content:
+       the strip between the scrollport's CONTENT edge — where `.action-bar`'s `bottom: 0`
+       parks it — and its PADDING edge, which is the card's own `padding-bottom`. Content
+       cannot enter a padding band at any scroll offset, so a note laid there covers air by
+       construction rather than by pricing.
+       THE NUMBER IS THE TALLEST NOTE: `--type-small` in the hand at `line-height: 1.3`,
+       wrapping to two lines inside `.washi-wide`'s 15rem cap, measures 51.6px ("fill the cells
+       that have only one digit left") — 3.5rem is that plus the note's 0.1rem drop off the
+       bar's rule and 2.8px of slack. Re-cut `.washi-wide`'s cap or the tape's type and re-cut
+       this; the pair is noted at both ends (`GameControlPanel`'s `.action-bar .washi-label`).
+       The bar's skirt already paints this band (`--card-pad-b`, published from this very
+       declaration), so the note lands on paper and not on a hole; `--action-bar-h` is the same
+       measurement plus the bar, so `scroll-padding-bottom` grows with the berth and focus-scroll
+       still parks nothing under it. RAIL ONLY: below 1024 the card renders `:mobile`, which
+       mounts no hover tape at all (`v-if="!mobile"` on every one), so a phone would be paying
+       3.5rem of its short card for a berth it can never fill. */
+    padding-bottom: 3.5rem;
   }
 }
 
@@ -198,6 +224,29 @@
   display: flex;
 }
 
+/* ── THE TUCK NEEDS A CEILING TO TUCK UNDER (T9-W2 §2.7) ────────────────────────────────────
+   The tongue paints at `z-index: -1` in every SHUT pose, which is the desk's tuck fiction: a
+   negative layer lands above its stacking context's background and below that context's
+   positioned content, so the tongue disappears under the board's opaque paper. At ≥1024 the
+   context is `.board-peek-host { z-index: 20 }` right above. Below 1024 that rule does not
+   apply and there is no context between the tongue and the page — the negative layer escapes
+   PAST the host, past `.app-layout`, and paints behind the page's own ground, invisible. That
+   is not a hypothesis: it is what T5-W4 pass 6 recorded in `DrawerTab.vue` when it chose a
+   positive z for the risen pose ("a negative layer would put the one control that opens the
+   drawer behind the page").
+   `z-index: 0` mints the context and nothing else. The host stays a positioned box painting in
+   the same step it already did, so its order against `#fold-tools` (in flow) and against the
+   risen sheet (z 60) is byte-identical; what changes is only that its own descendants resolve
+   inside it. The live-face projection is excluded because there the host is a Teleported guest
+   inside a gallery card's layers and its tongue is `display: none` anyway — a context it does
+   not need is a context that can only surprise the deck. Paired with `DrawerTab`'s `-1`, noted
+   at both ends. */
+@media (max-width: 1023.98px) {
+  .board-peek-host:not(.in-live-face) {
+    z-index: 0;
+  }
+}
+
 .controls-card {
   position: relative;
   z-index: 45;
@@ -213,6 +262,130 @@
      wherever the card doesn't scroll — the `<1024` landscape card is in flow, and a scrollport
      that cannot scroll spends no padding. */
   scroll-padding-bottom: var(--action-bar-h, 0px);
+}
+
+/* ── T9-W2 §2.3 · THE FOLD IS CHROME'S PROPERTY, NEVER CONTENT'S ────────────────────────────
+   The card caps and scrolls with no gutter, no fade, and — on darwin — an overlay scrollbar of
+   ZERO layout width (V7: `gutter 0` at both desk rungs), so the only thing telling a reader the
+   card goes on was a half-cut control straddling the case edge, with the Play entry 316.8px of
+   unhinted scroll below it. Both clip edges become chrome here, and the law is one sentence:
+   NOTHING STRADDLES THE CASE EDGE — a stroke crossing it dissolves into card colour, or it is
+   the opaque bar, or it is a tape that has left.
+
+   THE TOP is this sentinel: a sticky pseudo-element, zero DOM and zero flow cost (its height is
+   given straight back as a negative margin), painting card colour into transparent over the
+   first 2rem of the scrollport. It is HONEST — `data-fold-above` is published from the card's
+   own scroll box by `GameControlPanel`'s measure pass, so at rest the band is not painted at
+   all and the first row reads whole. The bottom edge is the same idea one file over: the bar's
+   `::before` fade, deepened and gated on `data-fold-below`.
+
+   `scroll-padding-top` is the twin of T7-W2 A1's `scroll-padding-bottom`: focus-scroll may no
+   more park a control under the top fade than under the bar.
+
+   THE Z-LADDER, re-cut together and noted at both ends: the wells' drawn frames and their
+   content ≤ 1 < this sentinel 30 < a pinned tag 35 (`GameControlPanel`) < a hover tape 50
+   (`SheetWashiLabel`) < the action bar 60 (`GameControlPanel`).
+
+   UNSCOPED SINCE T9-W2 §2.2, and the query it lost is the record of why: it was written as the
+   media pair "≥1024, or the portrait dock", because those were the only two regimes where this
+   card was a scrollport — the <1024 LANDSCAPE card was in flow and had no case edge to own.
+   That rung is now the landscape DOCK (below), a third scrollport, so the pair had become a
+   list of two of three. The rules are inert wherever the card cannot scroll — a scrollport with
+   no overflow spends no scroll-padding, and the sentinel is `opacity: 0` until `publishFold`
+   says otherwise and gives its own height back as a negative margin — which is exactly the
+   argument `scroll-padding-bottom` above already makes for being declared unscoped. */
+.controls-card {
+  scroll-padding-top: 2.4rem;
+}
+
+/* THE BAND REACHES THE CASE EDGE, and `--card-pad-t` is why it can. A scrollport CLIPS at its
+   padding box; a sticky child is offset from its CONTENT box. `top: 0` therefore parks this
+   band one whole padding-top BELOW the edge it exists to own, and the card scrolls live strokes
+   through the gap above it — the exact lie the always-on gradient was rejected for. The pull
+   takes it to the edge, the height gives the same distance back, and the first colour stop
+   holds SOLID across the padding band so the tape pinned there (the tags, below) is read on
+   paper rather than over half-dissolved content. Flow cost stays zero. */
+.controls-card::before {
+  content: "";
+  position: sticky;
+  top: calc(-1 * var(--card-pad-t, 0px));
+  z-index: 30;
+  display: block;
+  height: calc(2rem + var(--card-pad-t, 0px));
+  margin-bottom: calc(-2rem - var(--card-pad-t, 0px));
+  background: linear-gradient(
+    to bottom,
+    var(--color-card) var(--card-pad-t, 0px),
+    transparent
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+.controls-card[data-fold-above]::before {
+  opacity: 1;
+}
+
+/* ── T9-W2 §2.3 · THE GUTTER, AND WHO PAYS FOR IT ─────────────────────────────────────────
+   A fade says THERE IS MORE; only a thumb says HOW MUCH, and on darwin there was no thumb to
+   read — V7 measured `gutter 0` at both desk rungs, an overlay bar of zero layout width that
+   appears on a wheel event and is gone before a reader looks for it. `::-webkit-scrollbar`
+   forces the CLASSIC track back, 6px of graphite at the card's quiet rung, and
+   `scrollbar-gutter: stable` reserves it so no thumb ever costs a reflow.
+   THE CARD PAYS IT OUT OF ITS OWN RIGHT PADDING, and that is the whole of the claimed delta:
+   the rail card is shrink-to-fit, so a gutter added on top of `p-5` would widen the card by 6px
+   and — the row being centred — walk the board 3px left, straight through `cell-light` and
+   `grid-corner-light`, two committed goldens. Taking the 6 back from `padding-right` puts the
+   thumb in the air the padding was holding, and MEASURED at 1440×900 that leaves both edges of
+   the claim where they were: the card's outer box `[919, 174.2, 330, 640]` and its content
+   column 290px, byte-identical to head. What changed is the card's right INSET — 20px of paper
+   becomes 14px of paper plus a 6px track. The literal is `p-5`'s own value, and the pair is
+   noted at both ends — see `GameScene.vue`'s class binding.
+   DESK ONLY. The portrait dock is a full-width sheet with no board to walk, iOS honours
+   `::-webkit-scrollbar` inconsistently across versions, and a phone's cue is the fade; V7's
+   zero-width reading is a desk reading and this is its cure.
+   The two `scrollbar-width: thin` declarations this file used to carry are DELETED and must not
+   come back: Blink ignores `::-webkit-scrollbar` entirely once `scrollbar-width` is set, so the
+   two spellings do not stack — they cancel. Gecko, which has no `::-webkit-scrollbar` at all,
+   takes the standard pair through the `@supports` arm below. */
+@media (min-width: 1024px) {
+  .controls-card {
+    --card-gutter: 6px;
+    scrollbar-gutter: stable;
+    padding-right: calc(1.25rem - var(--card-gutter));
+  }
+
+  .controls-card::-webkit-scrollbar {
+    width: var(--card-gutter);
+  }
+
+  .controls-card::-webkit-scrollbar-thumb {
+    background: var(--ink-press-quiet);
+    border-radius: 3px;
+  }
+
+  .controls-card::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* PRM: the sentinel's arrival is an opacity tween like every other fade in this card, and the
+   window is the washi's own 150ms. Under a reduced-motion preference it snaps, which costs the
+   cue nothing — the band is either painted or it is not. (The regime pair this used to carry
+   went with the sentinel's own — T9-W2 §2.2, above.) */
+@media (prefers-reduced-motion: no-preference) {
+  .controls-card::before {
+    transition: opacity 150ms;
+  }
+}
+
+/* The engines that have no `::-webkit-scrollbar` at all (Gecko) take the standard pair. Never
+   declare these unguarded: Blink reads `scrollbar-width` and silently drops the block above. */
+@supports not selector(::-webkit-scrollbar) {
+  .controls-card {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ink-press-quiet) transparent;
+  }
 }
 
 /* The fold's ribbon and the dock's handle berth carry NO box outside the portrait dock: they
@@ -237,18 +410,17 @@
     --board-col: min(42rem, calc(100vw - 1.5rem));
   }
 
-  /* THE LANDSCAPE POSE, and the identity it owes. The `.mobile-board-width` twin is deleted,
-     so landscape identity is REBUILT rather than inherited — this width arm IS that twin's
-     one declaration, moved onto the one card. Target and gate: `pageVh 2.882` both engines at
-     844×390, byte-identical to the pass-5 table. (`width` is stated here rather than in the
-     landscape-only block below because the portrait pose overrides it with `left/right`, and
-     a value both orientations share should be written once.) */
-  .scene-controls {
-    width: var(--board-col);
-  }
+  /* T9-W2 §2.2 — THE LANDSCAPE WIDTH ARM IS DELETED, and its deletion is the delta stated in
+     CSS. It carried `.scene-controls { width: var(--board-col) }` — the `.mobile-board-width`
+     twin's one declaration, rebuilding the in-flow landscape identity the lead's charter (c)
+     ratified at `pageVh 2.882`. The dock below now poses the card at every width under 1024,
+     `width: auto` between `left: 0` and `right: 0`, so this rule had become a value nothing
+     read: dead the moment the sheet took landscape, and a dead width on a fixed sheet is a
+     literal waiting to be believed. `--board-col` above STAYS — the ribbon, the portrait
+     handle berth and `DrawerTab`'s ≤400 rule all still spend it. */
 }
 
-/* ── THE PORTRAIT DOCK (T5-W4 pass 6) — the drawer comes down to portrait ────────────────
+/* ── THE MOBILE DOCK (T5-W4 pass 6; widened to landscape at T9-W2 §2.2) ──────────────────
    The lever, and the whole of it: the controls card leaves the flow. What stays below the
    board is the reserved line and the ribbon — the play verbs plus the card's own opener
    (T6.2 mark A) — so the document is ONE VIEWPORT and the page stops scrolling
@@ -264,35 +436,51 @@
 
    THE CLOSED POSE IS THE SHEET BELOW THE EDGE (T6.2 mark A). Mark 9 lifted the closed case to
    `--fold-bottom` so its tongue — `bottom: 100%` of the berth — landed flush under the verbs;
-   the tongue is a verb IN the ribbon now, so there is nothing left to align the shut sheet to
-   and it rests exactly where its anchor puts it: wholly below the visual viewport's bottom
-   edge. The var, its publisher and its ResizeObserver are deleted with the pose that read them
-   (`useControlsDrawer`). NEVER re-cut this to `position: absolute; top: 100%` — it reads
-   cheaper and an absolutely-positioned ~527px case contributes scrollable overflow, which
-   kills `maxScroll 0`. Fixed in both states is the contract.
+   the shut tongue hangs off the BOARD now (T9-W2 §2.7), so there is nothing left to align the
+   shut sheet to and it rests exactly where its anchor puts it: wholly below the visual
+   viewport's bottom edge. The var, its publisher and its ResizeObserver are deleted with the
+   pose that read them (`useControlsDrawer`). NEVER re-cut this to `position: absolute; top:
+   100%` — it reads cheaper and an absolutely-positioned ~527px case contributes scrollable
+   overflow, which kills `maxScroll 0`. Fixed in both states is the contract.
 
-   THE CAP is a derivation, not a tuning: 9rem = the chrome band above the board and 3rem = the
-   handle's 48px riding proud of the case while the sheet is up, so the sheet — handle included
-   — stops BELOW the masthead. The band is measured at the SHORTEST live cell, which is where
-   the cap binds and where mark 9's centring has almost no slack to spend. pageVh is 1.000 at
-   every rung of that ladder, so the cap is a taste the owner may re-cut without reopening the
-   row.
+   THE CAP is a derivation, not a tuning, and it is a TOKEN so the two orientations can differ
+   without the pose being written twice. `--sheet-chrome` is everything above the sheet that the
+   sheet must not reach: 9rem of chrome band above the board plus 3rem of handle riding proud of
+   the case while it is up, so the sheet — handle included — stops BELOW the masthead. The band
+   is measured at the SHORTEST live cell, which is where the cap binds and where mark 9's
+   centring has almost no slack to spend. pageVh is 1.000 at every rung of that ladder, so the
+   cap is a taste the owner may re-cut without reopening the row. The card's own cap is the
+   sheet's less 1.5rem — the outline frame's outset plus the card's padding-block — so the two
+   move together by construction rather than by a second number.
 
-   The regime key is width AND orientation: `1023.98px` rather than `1023px` because a
-   fractional-width viewport between the two would match NEITHER this rule nor the `min-width:
-   1024px` rail block, and land the card with no pose at all. */
-@media (max-width: 1023.98px) and (orientation: portrait) {
+   T9-W2 §2.2 — WIDTH ALONE IS THE KEY NOW, and that is a DECLARED DELTA. The pose block was
+   keyed on width AND orientation because the lead's charter (c) held the landscape in-flow card
+   RATIFIED; T9's charter rules that rung a P0 (at 844×390 every game control sits below a fold
+   the first screen gives no hint of, `docScrollH` 1157 against `innerH` 390), so the same sheet
+   now serves both orientations and only the ORNAMENTS split by orientation below: the fold's
+   ribbon, which needs a band under the board that a 390-tall landscape does not have, and the
+   two insets each orientation derives from its own geometry.
+   `1023.98px` rather than `1023px` because a fractional-width viewport between the two would
+   match NEITHER this rule nor the `min-width: 1024px` rail block, and land the card with no
+   pose at all. */
+@media (max-width: 1023.98px) {
   .scene-controls {
+    --sheet-chrome: 12rem;
     position: fixed;
     left: 0;
     right: 0;
     width: auto;
     top: var(--vv-height, 100dvh);
-    max-height: calc(100dvh - 12rem);
+    max-height: calc(100dvh - var(--sheet-chrome));
     z-index: 60;
     display: flex;
     flex-direction: column;
     align-items: stretch;
+    /* THE NOTCH'S SIDE EDGES. A full-width fixed sheet owes them, and a landscape phone is
+       where they are actually spent — that is the orientation in which a notch is beside the
+       content rather than above it. `--head-rule` already folds the TOP inset; both resolve to
+       0 on every surface without insets, so this costs the desk and the emulator nothing. */
+    padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
     /* OPEN is the pose without a class; the rest pose is the class. Both ride the `translate:`
        CHANNEL, which no mover animates — the F1 phantom's raw material stays removed. */
     translate: 0 -100%;
@@ -321,10 +509,9 @@
      interior scroll can never become a page scroll. 1.5rem is the outline frame's own outset
      plus the card's padding-block, measured, not guessed. */
   .controls-card {
-    max-height: calc(100dvh - 13.5rem);
+    max-height: calc(100dvh - var(--sheet-chrome) - 1.5rem);
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-width: thin;
   }
 
   .drawer-case {
@@ -335,16 +522,25 @@
      positioned OUT of the case (`bottom: 100%` on `.drawer-tab`), so it is the 48px riding
      proud of the risen corner. The inset is to the COLUMN's right edge, not the viewport's:
      the sheet spans the full width, so a viewport-relative `1rem` stranded the handle 58px
-     outside the fold band at 820×1180. */
+     outside the fold band at 820×1180.
+     T9-W2 §2.7 — THE `+ 1rem` RETIRES WITH THE POSE THAT NEEDED IT. It was derived at 820×1180
+     to hold the handle inside the FOLD BAND, and the tongue is not in that band any more: shut,
+     it hangs off the board's own bottom-right corner. Dropped, the berth sits exactly ON the
+     column's right edge — which at every rung below 696px IS the board's right edge — so the
+     shut tongue and the risen handle share an x and the sheet rises straight out from under its
+     own tongue with no lateral jump. `DrawerTab`'s ≤400 rule reads this inset and is re-derived
+     in the same commit; the pair is noted at both ends. */
   .drawer-handle {
     display: block;
     position: absolute;
     top: 0;
-    right: calc((100vw - var(--board-col)) / 2 + 1rem);
+    right: calc((100vw - var(--board-col)) / 2);
     width: 0;
     height: 0;
   }
+}
 
+@media (max-width: 1023.98px) and (orientation: portrait) {
   /* THE RIBBON — one row of verbs, under the reserved line (T6.2 mark A). Its children arrive
      by Teleport: `.play-controls` from `GameControlPanel`, which owns their grammar, and the
      drawer's own tongue from `GameScene` while the sheet is shut. The row is composed rather
@@ -358,6 +554,47 @@
     justify-content: center;
     gap: 1rem;
     width: var(--board-col);
+  }
+}
+
+/* ── THE LANDSCAPE DOCK'S OWN TWO NUMBERS (T9-W2 §2.2) ──────────────────────────────────────
+   Everything else about the sheet is the block above, unchanged; these are the two terms a
+   landscape cell derives differently, and each is derived rather than tuned.
+
+   THE HANDLE'S INSET. Portrait insets the berth to the COLUMN's right edge because there the
+   column IS the board's width; in landscape the board is capped by HEIGHT and `--board-col`
+   resolves to a width no box on the page has (min(42rem, 100vw − 1.5rem) = 672 at 844, against
+   a 366px board). So the landscape berth insets to the SHEET's own right edge — which is the
+   viewport's, the sheet being full width — and the risen handle sits at the case's top-right
+   corner, which is what the pose has always claimed to be.
+
+   …AND THAT CORNER IS THE CELESTIAL'S. The inset is `1rem` in portrait's own idiom and it does
+   not survive the rotation: a landscape sheet is full width, so its top-right corner IS the
+   page's, and the page's top-right corner is where the sun hangs. MEASURED at head-of-lane,
+   both engines, at 844×390, 812×375 AND 740×360: the risen tongue `[736, 40, 92, 48]` shared
+   **1,496px²** with the toggle's cured 44×44 hit disc `[782, 30, 44, 44]` — 77% of the disc,
+   under a tongue that paints over it at z 1 inside a z-60 sheet. The tongue never LOST a press
+   (all four probe points and its centre return the tongue; the sheet shuts; the theme is not
+   stolen — the §2.4 keep already sees to that), so this is the collision read the other way
+   round: the drawer's handle covering the celestial, which is the same class as T7-W7's ≤400
+   rule two files over ("the tongue lay across the wordmark's last letter"). Second bite of the
+   class, so the class gets a rule rather than the rung getting a number.
+   DERIVED FROM THE ORNAMENT, never spelled: `--toggle-size` is the ink's own box, declared on
+   `.page-root` and re-declared at each of its three rungs, and the CONTROL is concentric inside
+   it (`--toggle-hit`), so clearing the ornament clears the disc by construction. The safe-area
+   inset cancels — `.corner-right` adds it as `padding-right` and `.scene-controls` spends the
+   same `env()` as `padding-inline`, so both boxes measure from the one edge. 0.5rem is the air:
+   the tongue's drawn outline outsets 3px and this leaves 5 beyond it. Re-cut `--toggle-size`
+   and this follows; the pair is noted at both ends. */
+@media (max-width: 1023.98px) and (orientation: landscape) {
+  .drawer-handle {
+    right: calc(var(--toggle-size, 5rem) + 0.5rem);
+  }
+}
+
+@media (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) and (min-aspect-ratio: 2/1) {
+  .scene-controls {
+    --sheet-chrome: 4rem;
   }
 }
 
