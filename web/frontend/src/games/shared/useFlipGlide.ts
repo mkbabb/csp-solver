@@ -50,6 +50,15 @@ import { MOTION } from "@pencil/config/pencilConfig";
  * the rest pose is CSS `translate:`, the gesture writes `transform:` and only `transform:`.
  */
 
+/**
+ * The tag every mover this engine starts carries (T9-W8 C06). A caller that custodies a
+ * subtree across a DOM move snapshots what is in flight, moves, and puts the subtree back —
+ * and anything it did not snapshot reads as invented by the move. A glide this engine started
+ * one tick ago is not an invention, and WAAPI's own `Animation.id` is the handle that says so:
+ * one string at start, one compare at the custodian, nothing at runtime.
+ */
+export const FLIP_GLIDE_ANIM_ID = "flip-glide";
+
 /** The FLIP rect inputs — `DOMRect` (from `getBoundingClientRect`) assigns straight in. */
 export interface FlipRect {
   readonly left: number;
@@ -167,6 +176,7 @@ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
         composite: "replace",
         fill: "none",
       });
+      anim.id = FLIP_GLIDE_ANIM_ID; // whose mover this is (§FLIP_GLIDE_ANIM_ID)
       movers.push({ el: spec.el, anim });
     }
     // One clock, literally (§3-S3): every mover pinned to the same startTime — zero

@@ -14,6 +14,7 @@ import {
 import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
 import { MOTION } from "@pencil/config/pencilConfig";
 import {
+  FLIP_GLIDE_ANIM_ID,
   flipTransform,
   useFlipGlide,
   type FlipMover,
@@ -422,9 +423,17 @@ function animKey(a: Animation): string {
   return css.animationName ?? css.transitionProperty ?? "";
 }
 
+/** The board subtree's animations, MINUS the fold's own movers (T9-W8 C06). The exit parks the
+ *  board home a second time as the deck unmounts, and that snapshot is taken one tick before
+ *  `runFold` starts the fold's board mover — so the restore read the deliberate fold as
+ *  something the move had invented and finished it 0.3ms after birth. The board cut where the
+ *  wordmark glided 520ms beside it, on every engine. `useFlipGlide` tags what it starts; the
+ *  custodian doesn't custody it. The entry, which happened to order its fold after the last
+ *  restore, is unaffected — it just stops depending on that luck. */
 function boardAnimations(): Animation[] {
   const host = document.querySelector<HTMLElement>(".board-peek-host");
-  return host?.getAnimations ? host.getAnimations({ subtree: true }) : [];
+  const all = host?.getAnimations ? host.getAnimations({ subtree: true }) : [];
+  return all.filter((a) => a.id !== FLIP_GLIDE_ANIM_ID);
 }
 
 /** What is genuinely mid-flight in the board subtree, keyed by (element, animation). */
