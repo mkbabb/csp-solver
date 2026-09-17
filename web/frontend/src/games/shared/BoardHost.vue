@@ -222,6 +222,7 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
     :values="model.values.value"
     :given-cells="model.givenCells.value"
     :animating-cells="model.animatingCells.value"
+    :last-fill="model.lastFill.value"
     :solve-state="model.solveState.value"
     :board-generation="model.boardGeneration.value"
     :subgrid-size="subgridSize"

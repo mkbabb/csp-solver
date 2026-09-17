@@ -1,0 +1,46 @@
+import { test, expect, type Page } from '@playwright/test';
+
+/** Seal lane S1: what `firstEmptyCell` actually answers at the row's own timing, and whether
+ *  `.cell-native-input` is fully mounted by then. */
+
+async function loadSudoku(page: Page) {
+  await page.goto('./?size=3&difficulty=EASY');
+  await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+  await page.addStyleTag({ content: '.tuner-toggle { display: none !important; }' });
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+    .toBeGreaterThan(0);
+}
+
+const snap = (page: Page) =>
+  page.evaluate(() => {
+    const cells = [...document.querySelectorAll<HTMLElement>('.board-cells .game-cell')];
+    const inputs = cells.filter((c) => c.querySelector('.cell-native-input')).length;
+    const idx = cells.findIndex(
+      (c) => !(c.querySelector('.cell-native-input') as HTMLInputElement | null)?.value,
+    );
+    const at = cells[idx];
+    return {
+      total: cells.length,
+      inputs,
+      idx,
+      idxHasInput: !!at?.querySelector('.cell-native-input'),
+      idxGlyph: (at?.querySelector('.glyph-svg') ? 'glyph' : 'blank'),
+      idxValue: at?.querySelector<HTMLInputElement>('.cell-native-input')?.value ?? null,
+    };
+  });
+
+test.describe('helper timing', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  test('firstEmptyCell at the row timing', async ({ page }, info) => {
+    await loadSudoku(page);
+    const t0 = await snap(page);
+    await page.waitForTimeout(300);
+    const t300 = await snap(page);
+    await page.waitForTimeout(1000);
+    const t1300 = await snap(page);
+    console.log(`[S1 timing ${info.project.name}] t0    ${JSON.stringify(t0)}`);
+    console.log(`[S1 timing ${info.project.name}] t300  ${JSON.stringify(t300)}`);
+    console.log(`[S1 timing ${info.project.name}] t1300 ${JSON.stringify(t1300)}`);
+  });
+});

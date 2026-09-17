@@ -37,8 +37,12 @@
  *
  * WHAT THE ARM READS: RENDERED strings only — template text nodes, the attribute values that
  * reach a reader or a screen reader (`aria-label`, `title`, `placeholder`, `alt`, and this
- * estate's own copy props `text`/`sublabel`/`label`/`heading`/`caption`), and `index.html`'s
- * head. NOT every string literal in `src/**`, and the distinction is the whole design: the
+ * estate's own copy props `text`/`sublabel`/`label`/`heading`/`caption`), `index.html`'s head,
+ * and — T9-W3's fold — the NARRATION CALLS: every string literal handed to a composable whose
+ * whole office is putting words in front of a reader (`NARRATION_CALLS`, currently
+ * `useLiveRegion`). Spoken copy is copy; an ear is a reader, and the §3.4 cure moved two
+ * product strings out of template text into exactly that shape.
+ * NOT every string literal in `src/**`, and the distinction is the whole design: the
  * technique engine's `TechniqueId`s are the literal strings `"naked-single"` and
  * `"hidden-single"`, they are ENGINE identifiers by explicit ruling (techniqueVoice.ts), and a
  * lexicon swept over all literals would red on the very identifiers T8-W6 kept on purpose. The
@@ -218,6 +222,26 @@ const RENDERED_ATTRS = [
   "heading",
   "caption",
 ];
+/**
+ * NARRATION CALLS — the third rendered-copy surface, and the one the arm was born missing.
+ *
+ * T9-W3 §3.4 gave the estate a live-region idiom, and the cure it landed moved two product
+ * strings OUT of template text and INTO a narration source in `<script setup>`:
+ *
+ *   const { text } = useLiveRegion(() => cond ? "connecting…" : "");
+ *
+ * The dash arm still saw both (it reads every literal in every script). The jargon arm did
+ * not: a narration source is neither a template text node nor an object-literal copy key, so
+ * the strings a screen reader is about to SPEAK fell outside the census the moment they became
+ * spoken-only. Measured rather than argued — a `the solver is connecting…` planted in that
+ * exact source shipped past this gate green (`evidence/w3/fold/FA3-3A3-jargon-arm-HEAD-BLIND.txt`).
+ *
+ * THE RULE IS THE CLASS, not the two sites: a composable whose whole office is putting words
+ * in front of a reader renders copy, so every string literal in its ARGUMENTS is read as copy.
+ * A new one joins this list; nothing else changes. Spoken copy is copy — an ear is a reader.
+ */
+const NARRATION_CALLS = ["useLiveRegion"];
+
 /** Object-literal keys whose value is copy: the script-side half of the same surface. */
 const COPY_KEYS = [
   "sublabel",
@@ -231,6 +255,29 @@ const COPY_KEYS = [
   "title",
   "placeholder",
 ];
+
+/**
+ * The source text of a call's argument list, parens BALANCED from the opening one. Quote-aware,
+ * because a `)` inside a string would otherwise close the call early and cut the copy in half.
+ * Returns `null` on an unbalanced tail rather than guessing at where the call ended.
+ */
+function callArgs(s, open) {
+  let depth = 0;
+  let quote = null;
+  for (let i = open; i < s.length; i++) {
+    const c = s[i];
+    if (quote) {
+      if (c === "\\") i++;
+      else if (c === quote) quote = null;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") quote = c;
+    else if (c === "(") depth++;
+    else if (c === ")" && --depth === 0)
+      return { start: open + 1, text: s.slice(open + 1, i) };
+  }
+  return null;
+}
 
 /**
  * Every RENDERED string in one file: `{ line, kind, text }`. Deliberately narrower than the
@@ -268,6 +315,18 @@ function rendered(rel, src) {
   for (const key of COPY_KEYS) {
     const rx = new RegExp(`(?<![\\w.$-])${key}:\\s*"([^"]*)"`, "g");
     for (let m; (m = rx.exec(s));) add(m.index, `${key}:`, m[1]);
+  }
+  // The narration sources: every string literal a spoken-copy composable is handed. All three
+  // quote grammars, because a narration line is as likely to be a template literal as not.
+  for (const fn of NARRATION_CALLS) {
+    const call = new RegExp(`(?<![\\w.$])${fn}\\s*\\(`, "g");
+    while (call.exec(s)) {
+      const args = callArgs(s, call.lastIndex - 1);
+      if (!args) continue;
+      const lit = /(["'`])((?:(?!\1)[^\\]|\\.)*)\1/g;
+      for (let q; (q = lit.exec(args.text));)
+        add(args.start + q.index, `${fn}()`, q[2]);
+    }
   }
   return out;
 }
@@ -398,6 +457,38 @@ const JARGON_CONTROLS = [
     name: "positive control — jargon inside a comment is prose about the law",
     rel: "c.vue",
     src: "<template><!-- the naked single register died at W6 --><p>ok</p></template>",
+    want: 0,
+  },
+  // THE NARRATION ARM's own colours. Spoken copy is copy, and until T9-W3's fold these four
+  // shapes were all invisible to the lexicon.
+  {
+    name: "a narration source speaks the machine's name",
+    rel: "c.ts",
+    src: 'const { text } = useLiveRegion(() => (busy ? "the solver is connecting…" : ""));',
+    want: 1,
+  },
+  {
+    name: "a narration source in a template literal",
+    rel: "c.ts",
+    src: "const { text } = useLiveRegion(() => `${n} candidates left in this house`);",
+    want: 2,
+  },
+  {
+    name: "a narration source whose string carries a close paren",
+    rel: "c.ts",
+    src: 'const { text } = useLiveRegion(() => (on ? "the worker (still) runs" : ""));',
+    want: 1,
+  },
+  {
+    name: "positive control — an utterance region declares no copy at its call",
+    rel: "c.ts",
+    src: 'const { say } = useLiveRegion();\nconst id = "naked-single";',
+    want: 0,
+  },
+  {
+    name: "positive control — a narration source in plain English survives",
+    rel: "c.ts",
+    src: 'const { text } = useLiveRegion(() => (alone ? "you\'re the only one on this board." : ""));',
     want: 0,
   },
 ];

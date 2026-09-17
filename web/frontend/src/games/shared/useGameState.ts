@@ -227,6 +227,14 @@ export function useGameState<
   const givenCells = ref<Set<string>>(new Set());
   const originalGivenCells = ref<Set<string>>(new Set());
   const animatingCells = ref<Set<string>>(new Set());
+  // T9-W3 §3.5 — THE SWEEP'S OWN RECEIPT. `animatingCells` is the reveal WAVE, and four acts
+  // write it: a deal, a solve, a hint's single cell and the forced fill. Reading a fill's count
+  // off the wave therefore meant fencing the other three out by inference, and the cheapest
+  // fence — "more than one cell, because one cell is the hint's shape" — silenced the sweep
+  // that forces exactly one square. This is the count the ACT holds, written where the sweep
+  // lands and nowhere else. `stamp` is monotonic because two sweeps of equal size are two
+  // events and an unchanged value announces nothing. Null until a sweep forces something.
+  const lastFill = ref<{ count: number; stamp: number } | null>(null);
   // T9-W1 §1.1 — the refused write, published once per attempt. Null until a clue is typed at.
   const lastRefusal = ref<CellRefusal | null>(null);
   let refusalSeq = 0;
@@ -753,6 +761,12 @@ export function useGameState<
     if (cellsToAnimate.size === 0) return; // nothing forced — leave the board (and its grade/hint) untouched
     solvedValues.value = { ...solvedValues.value, ...newlyFilled };
     animatingCells.value = cellsToAnimate;
+    // The receipt is taken from the set the sweep INKED, not from the placements the detector
+    // handed over: a filled cell is skipped above, so the two can differ.
+    lastFill.value = {
+      count: cellsToAnimate.size,
+      stamp: (lastFill.value?.stamp ?? 0) + 1,
+    };
     hintReasoning.value = null; // the board changed under any armed hint
     lastRefusal.value = null; // and under any spoken refusal
     if (solveState.value !== "idle") {
@@ -1143,6 +1157,9 @@ export function useGameState<
     givenCells,
     originalGivenCells,
     animatingCells,
+    /** T9-W3 §3.5 — the last forced sweep's own count, stamped, or null before the first one.
+     *  What the board's voice reads, so no surface has to infer which act moved the wave. */
+    lastFill,
     /** T9-W1 §1.1 — the last refused write, or null. The status region SPEAKS off this one
      *  event (`seq` makes a second attempt on the same clue audible); the cell DRAWS its own
      *  refusal locally off the given predicate — the same law, at its synchronous surface. */

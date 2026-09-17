@@ -1,0 +1,203 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ❯ src/games/shared/GameControlPanel.liveRegions.test.ts (9 tests | 8 failed) 114ms
+     × all three regions are in the document before there is a room, and all three are empty 59ms
+     × the connecting line arrives INTO the region that was already mounted 9ms
+     × and the line goes back to nothing in the SAME node when the wire comes up 9ms
+     × the roster log is mounted and empty while the wire is still coming up (the 0→1 case) 5ms
+     × the first roster row arrives INTO the mounted log 7ms
+     × the room-of-one line arrives INTO the mounted region, and leaves it in place 6ms
+     × a region with nothing to say costs no pixels: it wears the estate's sr-only clip 4ms
+     × the empty log is not a tab stop — a focusable region with nothing in it is a dead stop 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameControlPanel.liveRegions.test.ts > GameControlPanel — the players well's live regions (T9-W3 §3.4) > all three regions are in the document before there is a room, and all three are empty
+AssertionError: .players-status is not mounted: expected null not to be null
+ ❯ src/games/shared/GameControlPanel.liveRegions.test.ts:113:52
+    111|     mountPanel();
+    112|     for (const sel of [".players-status", ".players-roster", ".players…
+    113|       expect(at(sel), `${sel} is not mounted`).not.toBeNull();
+       |                                                    ^
+    114|     expect(text(".players-status")).toBe("");
+    115|     expect(text(".players-alone")).toBe("");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  src/games/shared/GameControlPanel.liveRegions.test.ts > GameControlPanel — the players well's live regions (T9-W3 §3.4) > the connecting line arrives INTO the region that was already mounted
+AssertionError: expected <p data-v-fa75191a …(2)></p> to be null // Object.is equality
+
+- Expected:
+null
+
++ Received:
+<p
+  aria-live="polite"
+  class="players-status"
+  data-v-fa75191a=""
+>
+   connecting… 
+</p>
+
+ ❯ src/games/shared/GameControlPanel.liveRegions.test.ts:127:35
+    125|     await w.vm.$nextTick();
+    126|     expect(text(".players-status")).toBe("connecting…");
+    127|     expect(at(".players-status")).toBe(before);
+       |                                   ^
+    128|   });
+    129|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  src/games/shared/GameControlPanel.liveRegions.test.ts > GameControlPanel — the players well's live regions (T9-W3 §3.4) > and the line goes back to nothing in the SAME node when the wire comes up
+AssertionError: expected null to be '' // Object.is equality
+
+- Expected:
+""
+
++ Received:
+null
+
+ ❯ src/games/shared/GameControlPanel.liveRegions.test.ts:137:37
+    135|     hold.live.value = true;
+    136|     await w.vm.$nextTick();
+    137|     expect(text(".players-status")).toBe("");
+       |                                     ^
+    138|     expect(at(".players-status")).toBe(before);
+    139|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  src/games/shared/GameControlPanel.liveRegions.test.ts > GameControlPanel — the players well's live regions (T9-W3 §3.4) > the roster log is mounted and empty while the wire is still coming up (the 0→1 case)
+AssertionError: .players-roster is not mounted: expected null not to be null
+ ❯ src/games/shared/GameControlPanel.liveRegions.test.ts:146:73
+    144|     hold.players.value = table(1);
+    145|     await w.vm.$nextTick();
+    146|     expect(at(".players-roster"), ".players-roster is not mounted").no…
+       |                                                                         ^
+    147|     expect(document.querySelectorAll(".players-roster .player-row").le…
+    148|       0,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  src/games/shared/GameControlPanel.liveRegions.test.ts > GameControlPanel — the players well's live regions (T9-W3 §3.4) > the first roster row arrives INTO the mounted log
+AssertionError: expected <ul data-v-fa75191a …(5)>…(1)</ul> to be null // Object.is equality
+
+- Expected:
+null
+
++ Received:
+<ul
+  aria-label="who's on this board"
+  aria-live="polite"
+  class="players-roster"
+  data-v-fa75191a=""
+  role="log"
+  tabindex="0"
+>
+  <!-- T8-W3 M14 — THE ROW IS A FOLD NOW, and the ink rides the whole row rather than
+                 the dot alone. Two changes, one shape: the `&lt;li&gt;` is a `0fr↔1fr` grid so a row
+                 can arrive and depart without the card reflowing under it (the crib's own
+                 idiom), and `p.ink` sits on the row so the SWATCH AND THE SLUG are both in the
+                 colour that player's digits are written in. That is the whole of the "player
+                 icon" the mark floated: a drawn animal would need 345 drawings or one generic
+                 glyph that says nothing about which animal you are. -->
+  
+  <li
+    class="player-row"
+    data-v-fa75191a=""
+  >
+    <span
+      class="player-row-cells"
+      data-v-fa75191a=""
+    >
+      <span
+        aria-hidden="true"
+        class="player-swatch"
+        data-v-fa75191a=""
+      />
+      <span
+        class="player-name"
+        data-v-fa75191a=""
+      >
+        naked-narwhal
+      </span>
+      <span
+        class="player-self"
+        data-v-fa75191a=""
+      >
+        you
+      </span>
+    </span>
+  </li>
+  
+  <!-- A departure needs a row to happen to. The session drops a peer from the roster
+                 the instant they go, so `useJoinWash` holds the row for its own 740ms and hands
+                 it back here — the well closes on somebody rather than on a gap.
+                 `aria-hidden`: this list is `role="log"`, whose office is announcing what was
+                 ADDED, and a departing row appended to it would be read out as an arrival. The
+                 shrinking roster is what a reader gets, which is the truth. -->
+  
+  
+</ul>
+
+ ❯ src/games/shared/GameControlPanel.liveRegions.test.ts:160:35
+    158|     hold.live.value = true;
+    159|     await w.vm.$nextTick();
+    160|     expect(at(".players-roster")).toBe(log);
+       |                                   ^
+    161|     expect(document.querySelectorAll(".players-roster .player-row").le…
+    162|       1,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  src/games/shared/GameControlPanel.liveRegions.test.ts > GameControlPanel — the players well's live regions (T9-W3 §3.4) > the room-of-one line arrives INTO the mounted region, and leaves it in place
+AssertionError: expected null to be '' // Object.is equality
+
+- Expected:
+""
+
++ Received:
+null
+
+ ❯ src/games/shared/GameControlPanel.liveRegions.test.ts:188:36
+    186|     await w.vm.$nextTick();
+    187|     const before = at(".players-alone");
+    188|     expect(text(".players-alone")).toBe("");
+       |                                    ^
+    189|
+    190|     hold.live.value = true;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  src/games/shared/GameControlPanel.liveRegions.test.ts > GameControlPanel — the players well's live regions (T9-W3 §3.4) > a region with nothing to say costs no pixels: it wears the estate's sr-only clip
+TypeError: Cannot read properties of null (reading 'classList')
+ ❯ src/games/shared/GameControlPanel.liveRegions.test.ts:208:33
+    206|     // region back in flow exactly where it shipped.
+    207|     const w = mountPanel();
+    208|     expect(at(".players-status")!.classList.contains("sr-only")).toBe(…
+       |                                 ^
+    209|     expect(at(".players-roster")!.classList.contains("sr-only")).toBe(…
+    210|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  src/games/shared/GameControlPanel.liveRegions.test.ts > GameControlPanel — the players well's live regions (T9-W3 §3.4) > the empty log is not a tab stop — a focusable region with nothing in it is a dead stop
+TypeError: Cannot read properties of null (reading 'hasAttribute')
+ ❯ src/games/shared/GameControlPanel.liveRegions.test.ts:224:33
+    222|   it("the empty log is not a tab stop — a focusable region with nothin…
+    223|     const w = mountPanel();
+    224|     expect(at(".players-roster")!.hasAttribute("tabindex")).toBe(false…
+       |                                 ^
+    225|
+    226|     hold.roomId.value = "room-1";
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  8 failed | 1 passed (9)
+   Start at  14:30:35
+   Duration  736ms (transform 254ms, setup 13ms, import 296ms, tests 114ms, environment 224ms)
+

@@ -1,0 +1,83 @@
+=== npx vue-tsc --noEmit ===
+EXIT 0
+
+=== npm run typecheck:e2e ===
+
+> csp-solver-frontend@0.1.0 typecheck:e2e
+> vue-tsc --noEmit -p tsconfig.e2e.json
+
+EXIT 0
+
+=== npm run typecheck:node ===
+
+> csp-solver-frontend@0.1.0 typecheck:node
+> vue-tsc --noEmit -p tsconfig.node.json
+
+EXIT 0
+
+=== npx eslint src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts e2e/spoken-controls.spec.ts ===
+EXIT 0
+
+=== npx eslint . ===
+EXIT 0
+
+=== npm run lint (prettier; e2e/ NEVER prettier'd) ===
+
+> csp-solver-frontend@0.1.0 lint
+> prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/ ../relay/
+
+Checking formatting...
+All matched files use Prettier code style!
+EXIT 0
+
+=== node scripts/check-copy-register.mjs ===
+copy register scanned across 137 files
+allowlisted: src/pencil/dev/FilterTuner.vue (DEV-only tool, gated import.meta.env.DEV — never shipped), src/pencil/config/filterBudget.ts (census reasons read by check-prod-shake, never by a reader)
+em/en dashes in product copy: 0
+jargon over RENDERED strings: 2 hit(s), 2 admitted, 0 unadmitted (lexicon: 25 entries)
+  ~ src/games/shared/GameControlPanel.vue:1297  [@text]  "solver" (the machine's name) — ADMITTED 2026-08-28
+  ~ src/games/shared/GameControlPanel.vue:980  [template]  "candidates" (solver vocabulary for what a player calls a pencil mark) — ADMITTED 2026-08-28
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (2 admitted, each with its cure's seam)
+EXIT 0
+
+=== npm run lint:copy (self-test) ===
+
+> csp-solver-frontend@0.1.0 lint:copy
+> node scripts/check-copy-register.mjs --self-test
+
+copy register scanned across 137 files
+allowlisted: src/pencil/dev/FilterTuner.vue (DEV-only tool, gated import.meta.env.DEV — never shipped), src/pencil/config/filterBudget.ts (census reasons read by check-prod-shake, never by a reader)
+em/en dashes in product copy: 0
+jargon over RENDERED strings: 2 hit(s), 2 admitted, 0 unadmitted (lexicon: 25 entries)
+  ~ src/games/shared/GameControlPanel.vue:1297  [@text]  "solver" (the machine's name) — ADMITTED 2026-08-28
+  ~ src/games/shared/GameControlPanel.vue:980  [template]  "candidates" (solver vocabulary for what a player calls a pencil mark) — ADMITTED 2026-08-28
+
+self-test (both colours):
+  dash · template text dash  →  1 offence(s), RED as required
+  dash · string literal dash  →  1 offence(s), RED as required
+  dash · dash inside a comment  →  0 offence(s), GREEN as required
+  dash · dash inside a template comment  →  0 offence(s), GREEN as required
+  dash · a header that mentions `<style>`, then a template dash  →  1 offence(s), RED as required
+  jargon · a technique name in an aria-label  →  1 offence(s), RED as required
+  jargon · the machine naming itself on a washi tape  →  1 offence(s), RED as required
+  jargon · solver vocabulary in a script-side copy constant  →  2 offence(s), RED as required
+  jargon · positive control — an ENGINE identifier is not display copy  →  0 offence(s), GREEN as required
+  jargon · positive control — a BOUND attribute is an expression, not a string  →  0 offence(s), GREEN as required
+  jargon · positive control — the player's own verb survives  →  0 offence(s), GREEN as required
+  jargon · positive control — jargon inside a comment is prose about the law  →  0 offence(s), GREEN as required
+  jargon · a narration source speaks the machine's name  →  1 offence(s), RED as required
+  jargon · a narration source in a template literal  →  2 offence(s), RED as required
+  jargon · a narration source whose string carries a close paren  →  1 offence(s), RED as required
+  jargon · positive control — an utterance region declares no copy at its call  →  0 offence(s), GREEN as required
+  jargon · positive control — a narration source in plain English survives  →  0 offence(s), GREEN as required
+  admissions · a ghost admission is detected stale  →  2/2, RED as required
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (2 admitted, each with its cure's seam)
+EXIT 0
+
+=== node scripts/check-live-regions.mjs ===
+live-region police scanned 52 SFCs under src
+regions declared: 10 — src/games/shared/GameBoard.vue:1151, src/games/shared/GameControlPanel.vue:1087, src/games/shared/GameControlPanel.vue:1123, src/games/shared/GameControlPanel.vue:1188, src/games/shared/GameControlPanel.vue:1373, src/games/shared/SolverErrorNote.vue:43, src/pencil/chrome/GameGallery/GameGallery.vue:1068, src/pencil/chrome/GameGallery/GameGallery.vue:1074, src/pencil/chrome/MarginNote.vue:54, src/pencil/sheet/AnswerKeyLaminate.vue:204
+check-live-regions: 0 regions born speaking — every declared region takes its content as a mutation
+EXIT 0

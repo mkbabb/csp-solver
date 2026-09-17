@@ -1,0 +1,33 @@
+import { defineConfig } from "@playwright/test";
+
+const FRONTEND =
+  "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend";
+const PROBE =
+  "/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/s1probe";
+
+/** Seal lane S1's born-RED rig: the estate's spec with ONE seam swapped, run off-estate. */
+export default defineConfig({
+  testDir: PROBE,
+  timeout: 60000,
+  expect: { timeout: 15000 },
+  fullyParallel: true,
+  retries: 0,
+  workers: 2,
+  reporter: "list",
+  projects: [
+    { name: "chromium", use: { browserName: "chromium" } },
+    { name: "webkit", use: { browserName: "webkit" } },
+  ],
+  use: {
+    baseURL: "http://127.0.0.1:4244",
+    viewport: { width: 1280, height: 800 },
+    screenshot: "off",
+  },
+  webServer: {
+    command: "npm run dev -- --port 4244 --host 127.0.0.1 --strictPort",
+    cwd: FRONTEND,
+    port: 4244,
+    reuseExistingServer: true,
+    timeout: 120000,
+  },
+});

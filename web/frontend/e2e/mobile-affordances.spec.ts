@@ -44,6 +44,11 @@ async function openDrawer(page: Page) {
   await page.waitForTimeout(700); // the Band-D glide's own clock, then settle
 }
 
+async function closeDrawer(page: Page) {
+  await page.locator(".drawer-tab").click();
+  await page.waitForTimeout(700); // the Band-D glide's own clock, then settle
+}
+
 async function loadSudoku(page: Page, query = "?size=3&difficulty=EASY") {
   await page.goto("./" + query);
   await page.waitForSelector("svg.handwritten-logo", { timeout: 15000 });
@@ -390,11 +395,15 @@ test("coarse affordances: persistent peek washi on a ≥44px target, icon sublab
 
   // Now DIRTY the board (a typed digit lifts the undo depth) and the two-tap returns: the first tap
   // arms ("sure?" in rose + the aria swap), the board intact; a second within the window clears.
+  // T9-W3 §3.1 — the sheet covers the board, so a cell is reachable only with the sheet shut.
+  // That is the order a reader has to use, so it is the order the row uses.
+  await closeDrawer(page);
   const blank = await firstBlank(page, ".sudoku-cell");
   const dirtyInput = cellInput(page, blank);
   await dirtyInput.tap();
   await page.keyboard.type("5");
   await expect(dirtyInput).toHaveValue("5");
+  await openDrawer(page);
   const dirtyCount = await page.locator(".sudoku-cell .glyph-svg").count();
   expect(dirtyCount).toBeGreaterThan(0);
   await clearBtn.tap();
@@ -440,11 +449,14 @@ test("Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty b
   // DIRTY the board — a typed digit lifts the undo depth — and Deal ARMS on the first tap: the aria
   // swaps and the sublabel shows "sure?" in rose, the board intact (armed ≠ dealt). The commit path
   // (once disarmed) is the existing instant deal, covered by the deal specs + banked in the U3 probe.
+  // T9-W3 §3.1 — dirty the board where a reader can reach it: sheet shut.
+  await closeDrawer(page);
   const blank = await firstBlank(page, ".sudoku-cell");
   const input = cellInput(page, blank);
   await input.tap();
   await page.keyboard.type("5");
   await expect(input).toHaveValue("5");
+  await openDrawer(page);
 
   await dealBtn.tap();
   await expect(

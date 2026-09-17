@@ -1,0 +1,116 @@
+import { test, expect, type Page } from '@playwright/test';
+
+/** Seal lane S1: re-derive, at the seal tree, BOTH occlusion predicates side by side —
+ *  GEOMETRIC centre-under-sheet (the prove lane's, `prove-census-geometry.txt`) and the
+ *  HIT-TEST census `e2e/spoken-controls.spec.ts`'s `coveredCells` takes. No focus() in the
+ *  loop: focusing an input can scroll the grid and move every later cell's rect. */
+
+const POSES = [
+  ['390x844', 390, 844],
+  ['768x1024', 768, 1024],
+  ['820x1180', 820, 1180],
+] as const;
+
+async function loadSudoku(page: Page) {
+  await page.goto('./?size=3&difficulty=EASY');
+  await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+  await page.addStyleTag({ content: '.tuner-toggle { display: none !important; }' });
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+    .toBeGreaterThan(0);
+  // THE LAYOUT WAIT the first cut of this probe lacked: a census taken while the grid is still
+  // sizing counts only the cells that happen to have a box, and answers a third of the board.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () =>
+            [...document.querySelectorAll('.board-cells .game-cell')].filter(
+              (c) => c.getBoundingClientRect().width > 0,
+            ).length,
+        ),
+      { timeout: 15000 },
+    )
+    .toBe(81);
+}
+
+async function census(page: Page) {
+  return page.evaluate(() => {
+    const cells = [...document.querySelectorAll<HTMLElement>('.board-cells .game-cell')];
+    const sheet = document.querySelector('#controls-drawer .drawer-case');
+    const s = sheet?.getBoundingClientRect() ?? null;
+    let laidOut = 0;
+    let centreUnderSheet = 0;
+    let fullyUnderSheet = 0;
+    let clearOfSheet = 0;
+    let centreHitTestCovered = 0;
+    let inputs = 0;
+    for (const c of cells) {
+      const r = c.getBoundingClientRect();
+      if (r.width === 0) continue;
+      laidOut++;
+      if (c.querySelector('.cell-native-input')) inputs++;
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const hit = document.elementFromPoint(cx, cy);
+      if (!hit || !c.contains(hit)) centreHitTestCovered++;
+      if (s) {
+        if (cx >= s.left && cx <= s.right && cy >= s.top && cy <= s.bottom) centreUnderSheet++;
+        if (r.left >= s.left && r.right <= s.right && r.top >= s.top && r.bottom <= s.bottom)
+          fullyUnderSheet++;
+        if (r.right <= s.left || r.left >= s.right || r.bottom <= s.top || r.top >= s.bottom)
+          clearOfSheet++;
+      }
+    }
+    return {
+      total: cells.length,
+      laidOut,
+      inputs,
+      sheetRect: s ? [Math.round(s.left), Math.round(s.top), Math.round(s.width), Math.round(s.height)] : null,
+      centreUnderSheet,
+      fullyUnderSheet,
+      clearOfSheet,
+      centreHitTestCovered,
+    };
+  });
+}
+
+/** Focusability, measured ON ITS OWN PAGE so no census loop has scrolled the grid first. */
+async function focusable(page: Page) {
+  return page.evaluate(() => {
+    const cells = [...document.querySelectorAll<HTMLElement>('.board-cells .game-cell')];
+    let withInput = 0;
+    let took = 0;
+    for (const c of cells) {
+      const input = c.querySelector<HTMLElement>('.cell-native-input');
+      if (!input) continue;
+      withInput++;
+      input.focus();
+      if (document.activeElement === input) took++;
+      input.blur();
+    }
+    return { total: cells.length, withInput, took };
+  });
+}
+
+for (const [name, width, height] of POSES) {
+  test.describe(`census ${name}`, () => {
+    test.use({ viewport: { width, height }, hasTouch: true, isMobile: true });
+    test(`census ${name}`, async ({ page }, info) => {
+      await loadSudoku(page);
+      const shut = await census(page);
+      const shutFocus = await focusable(page);
+      await page.locator('.drawer-tab').click();
+      await expect(page.locator('#controls-drawer .drawer-case')).toBeVisible();
+      await page.waitForTimeout(700);
+      const up = await census(page);
+      const upFocus = await focusable(page);
+      const tag = `${info.project.name} ${name}`;
+      console.log(`[S1 census ${tag}] SHUT   ${JSON.stringify(shut)}`);
+      console.log(`[S1 census ${tag}] UP     ${JSON.stringify(up)}`);
+      console.log(
+        `[S1 census ${tag}] FOCUS  shut=${JSON.stringify(shutFocus)} up=${JSON.stringify(upFocus)}`,
+      );
+    });
+  });
+}

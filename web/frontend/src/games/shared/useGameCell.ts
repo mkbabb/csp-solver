@@ -41,6 +41,10 @@ export interface GameCellProps {
   isInvalid: boolean;
   isBecause?: boolean;
   isPeer?: boolean;
+  /** The slug of the PEER who wrote this cell's digit, empty for your own and for the
+   *  unauthored (`BoardHost.authorNameAt`). It is part of the name's CORE rather than a tail
+   *  (T9-W3 §3.3) — see `ariaLabel`. */
+  authorName?: string;
   marks?: number[];
   cornerMarks?: number[];
   centerMarks?: number[];
@@ -116,6 +120,23 @@ export function useGameCell(
     return "user";
   });
 
+  /**
+   * ONE HAND, NAMED ONCE (T9-W3 §3.3).
+   *
+   * The core is the clause that says whose digit this is, and until this wave a second clause
+   * said it again and disagreed: `authorName` arrived as a tail, so a peer's digit announced
+   * "your entry 4, written by brave-otter" — one sentence claiming two hands, and the unit gate
+   * pinned it verbatim. The branch belongs HERE, where the cell's kind is known, because
+   * authorship is a property of the core and not an addition to it.
+   *
+   * `authorName` is a PEER's slug and only ever that (`BoardHost.authorNameAt` returns "" for
+   * your own cells and for the unauthored), so the test is the whole rule: a slug means someone
+   * else's hand, no slug means yours. The other kinds name a different hand already and take no
+   * clause at all — a printed clue was written by nobody, and a revealed cell was written by the
+   * solver, which is the ink it visibly wears whoever asked for it (`HandwrittenGlyph`'s
+   * `#solver-ink` outranks the author's hue). An emptied cell keeps its ledger stamp and has no
+   * digit to own, so it says "empty" and stops.
+   */
   const ariaLabel = computed(() => {
     const loc = `Row ${props.rowIndex}, column ${props.colIndex}`;
     let core: string;
@@ -124,7 +145,9 @@ export function useGameCell(
         core = `given clue ${glyphChar.value}`;
         break;
       case "user":
-        core = `your entry ${glyphChar.value}`;
+        core = props.authorName
+          ? `${props.authorName}'s entry ${glyphChar.value}`
+          : `your entry ${glyphChar.value}`;
         break;
       case "solved":
         core = `solver's answer ${glyphChar.value}`;

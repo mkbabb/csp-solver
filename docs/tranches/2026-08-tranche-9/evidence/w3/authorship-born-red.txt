@@ -1,0 +1,126 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ✓ src/games/shared/DigitCell.attribution.test.ts > ghost tier 4 — a peer's pencil is on this square > is off by default: a solo board carries no cursor state at all 10ms
+ ✓ src/games/shared/DigitCell.attribution.test.ts > ghost tier 4 — a peer's pencil is on this square > names itself on the root, where the four-tier cascade can reach it 1ms
+ ✓ src/games/shared/DigitCell.attribution.test.ts > ghost tier 4 — a peer's pencil is on this square > is orthogonal to your own states — both can be true on one cell 1ms
+ ✓ src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > says your own entry is yours 6ms
+ × src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > speaks a peer's digit as the PEER's, in plain English 4ms
+   → expected 'Row 2, column 3, your entry 4, writte…' to be 'Row 2, column 3, brave-otter\'s entry…' // Object.is equality
+ × src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > never claims two hands wrote one digit 1ms
+   → expected 'Row 2, column 3, your entry 4, writte…' not to contain 'your entry'
+ × src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > keeps the clue clause after the value, and keeps its order 1ms
+   → expected 'Row 2, column 3, your entry 4, greate…' to be 'Row 2, column 3, keen-lynx\'s entry 4…' // Object.is equality
+ × src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > leaves the solver's answer the solver's, whoever asked for it 1ms
+   → expected 'Row 2, column 3, solver\'s answer 4, …' to be 'Row 2, column 3, solver\'s answer 4' // Object.is equality
+ × src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > leaves a printed clue unauthored, whatever the ledger holds 1ms
+   → expected 'Row 2, column 3, given clue 4, writte…' to be 'Row 2, column 3, given clue 4' // Object.is equality
+ × src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > attributes nothing on an emptied cell — there is no digit to own 1ms
+   → expected 'Row 2, column 3, empty, written by br…' to be 'Row 2, column 3, empty' // Object.is equality
+ ✓ src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > holds M16's register: the clause carries no dash of any kind 1ms
+ ✓ src/games/shared/DigitCell.attribution.test.ts > the hover the board-level tape reads > publishes the position on enter and null on leave 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > speaks a peer's digit as the PEER's, in plain English
+AssertionError: expected 'Row 2, column 3, your entry 4, writte…' to be 'Row 2, column 3, brave-otter\'s entry…' // Object.is equality
+
+Expected: "Row 2, column 3, brave-otter's entry 4"
+Received: "Row 2, column 3, your entry 4, written by brave-otter"
+
+ ❯ src/games/shared/DigitCell.attribution.test.ts:83:19
+     81|       .get("input")
+     82|       .attributes("aria-label");
+     83|     expect(label).toBe("Row 2, column 3, brave-otter's entry 4");
+       |                   ^
+     84|   });
+     85|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > never claims two hands wrote one digit
+AssertionError: expected 'Row 2, column 3, your entry 4, writte…' not to contain 'your entry'
+
+Expected: "your entry"
+Received: "Row 2, column 3, your entry 4, written by brave-otter"
+
+ ❯ src/games/shared/DigitCell.attribution.test.ts:90:23
+     88|       .get("input")
+     89|       .attributes("aria-label")!;
+     90|     expect(label).not.toContain("your entry");
+       |                       ^
+     91|     expect(label).not.toContain("written by");
+     92|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > keeps the clue clause after the value, and keeps its order
+AssertionError: expected 'Row 2, column 3, your entry 4, greate…' to be 'Row 2, column 3, keen-lynx\'s entry 4…' // Object.is equality
+
+Expected: "Row 2, column 3, keen-lynx's entry 4, greater than the cell to the right"
+Received: "Row 2, column 3, your entry 4, greater than the cell to the right, written by keen-lynx"
+
+ ❯ src/games/shared/DigitCell.attribution.test.ts:105:19
+    103|       .get("input")
+    104|       .attributes("aria-label");
+    105|     expect(label).toBe(
+       |                   ^
+    106|       "Row 2, column 3, keen-lynx's entry 4, greater than the cell to …
+    107|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > leaves the solver's answer the solver's, whoever asked for it
+AssertionError: expected 'Row 2, column 3, solver\'s answer 4, …' to be 'Row 2, column 3, solver\'s answer 4' // Object.is equality
+
+Expected: "Row 2, column 3, solver's answer 4"
+Received: "Row 2, column 3, solver's answer 4, written by brave-otter"
+
+ ❯ src/games/shared/DigitCell.attribution.test.ts:116:19
+    114|       .get("input")
+    115|       .attributes("aria-label");
+    116|     expect(label).toBe("Row 2, column 3, solver's answer 4");
+       |                   ^
+    117|   });
+    118|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > leaves a printed clue unauthored, whatever the ledger holds
+AssertionError: expected 'Row 2, column 3, given clue 4, writte…' to be 'Row 2, column 3, given clue 4' // Object.is equality
+
+Expected: "Row 2, column 3, given clue 4"
+Received: "Row 2, column 3, given clue 4, written by brave-otter"
+
+ ❯ src/games/shared/DigitCell.attribution.test.ts:123:19
+    121|       .get("input")
+    122|       .attributes("aria-label");
+    123|     expect(label).toBe("Row 2, column 3, given clue 4");
+       |                   ^
+    124|   });
+    125|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+ FAIL  src/games/shared/DigitCell.attribution.test.ts > attribution — the accessible name names ONE hand, truly > attributes nothing on an emptied cell — there is no digit to own
+AssertionError: expected 'Row 2, column 3, empty, written by br…' to be 'Row 2, column 3, empty' // Object.is equality
+
+Expected: "Row 2, column 3, empty"
+Received: "Row 2, column 3, empty, written by brave-otter"
+
+ ❯ src/games/shared/DigitCell.attribution.test.ts:131:19
+    129|       .get("input")
+    130|       .attributes("aria-label");
+    131|     expect(label).toBe("Row 2, column 3, empty");
+       |                   ^
+    132|   });
+    133|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 6 passed (12)
+   Start at  14:23:10
+   Duration  564ms (transform 152ms, setup 12ms, import 177ms, tests 32ms, environment 245ms)
+

@@ -1,0 +1,202 @@
+
+Running 2 tests using 2 workers
+
+[1/2] [webkit] › e2e/fa2-guard-doublespeak.spec.ts:58:3 › FA2 probe — the armed guard says its name once › no live region recites the alertdialog own name
+[2/2] [chromium] › e2e/fa2-guard-doublespeak.spec.ts:58:3 › FA2 probe — the armed guard says its name once › no live region recites the alertdialog own name
+[chromium] › e2e/fa2-guard-doublespeak.spec.ts:58:3 › FA2 probe — the armed guard says its name once › no live region recites the alertdialog own name
+FA2-MEASURE {
+  "dialogRole": "alertdialog",
+  "dialogName": "deal over this puzzle",
+  "dialogDescription": "your marks aren't saved",
+  "leaveVerb": "deal",
+  "regions": [
+    {
+      "sel": "margin-note graphite",
+      "role": "status",
+      "live": "polite",
+      "text": ""
+    },
+    {
+      "sel": "board-voice sr-only",
+      "role": "status",
+      "live": "polite",
+      "text": "new board. 9 by 9 sudoku board, easy"
+    },
+    {
+      "sel": "players-status sr-only",
+      "role": null,
+      "live": "polite",
+      "text": ""
+    },
+    {
+      "sel": "players-roster sr-only",
+      "role": "log",
+      "live": "polite",
+      "text": ""
+    },
+    {
+      "sel": "players-alone sr-only",
+      "role": null,
+      "live": "polite",
+      "text": ""
+    },
+    {
+      "sel": "copy-status sr-only",
+      "role": "status",
+      "live": "polite",
+      "text": ""
+    },
+    {
+      "sel": "gallery-live",
+      "role": "status",
+      "live": "polite",
+      "text": "futoshiki, 2 of 5. 5×5 easy, new game"
+    },
+    {
+      "sel": "gallery-guard-live",
+      "role": "alert",
+      "live": null,
+      "text": "deal over this puzzle? your marks aren't saved. choose keep, or deal."
+    }
+  ],
+  "titleEchoedBy": [
+    "gallery-guard-live"
+  ],
+  "stakeEchoedBy": [
+    "gallery-guard-live"
+  ],
+  "verbCarriedBy": [
+    "gallery-guard-live"
+  ]
+}
+
+  1) [chromium] › e2e/fa2-guard-doublespeak.spec.ts:58:3 › FA2 probe — the armed guard says its name once › no live region recites the alertdialog own name 
+
+    Error: a live region repeats the alertdialog own NAME ("deal over this puzzle")
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "gallery-guard-live",
+    + ]
+
+       98 |       m.titleEchoedBy,
+       99 |       `a live region repeats the alertdialog own NAME ("${m.dialogName}")`,
+    > 100 |     ).toEqual([]);
+          |       ^
+      101 |     expect(
+      102 |       m.stakeEchoedBy,
+      103 |       `a live region repeats the alertdialog own DESCRIPTION ("${m.dialogDescription}")`,
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/fa2-guard-doublespeak.spec.ts:100:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/fa2-guard-doublespeak-FA2--e6c26-es-the-alertdialog-own-name-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/fa2-guard-doublespeak-FA2--e6c26-es-the-alertdialog-own-name-chromium/error-context.md
+
+
+[webkit] › e2e/fa2-guard-doublespeak.spec.ts:58:3 › FA2 probe — the armed guard says its name once › no live region recites the alertdialog own name
+FA2-MEASURE {
+  "dialogRole": "alertdialog",
+  "dialogName": "deal over this puzzle",
+  "dialogDescription": "your marks aren't saved",
+  "leaveVerb": "deal",
+  "regions": [
+    {
+      "sel": "margin-note graphite",
+      "role": "status",
+      "live": "polite",
+      "text": ""
+    },
+    {
+      "sel": "board-voice sr-only",
+      "role": "status",
+      "live": "polite",
+      "text": "new board. 9 by 9 sudoku board, easy"
+    },
+    {
+      "sel": "players-status sr-only",
+      "role": null,
+      "live": "polite",
+      "text": ""
+    },
+    {
+      "sel": "players-roster sr-only",
+      "role": "log",
+      "live": "polite",
+      "text": ""
+    },
+    {
+      "sel": "players-alone sr-only",
+      "role": null,
+      "live": "polite",
+      "text": ""
+    },
+    {
+      "sel": "copy-status sr-only",
+      "role": "status",
+      "live": "polite",
+      "text": ""
+    },
+    {
+      "sel": "gallery-live",
+      "role": "status",
+      "live": "polite",
+      "text": "futoshiki, 2 of 5. 5×5 easy, new game"
+    },
+    {
+      "sel": "gallery-guard-live",
+      "role": "alert",
+      "live": null,
+      "text": "deal over this puzzle? your marks aren't saved. choose keep, or deal."
+    }
+  ],
+  "titleEchoedBy": [
+    "gallery-guard-live"
+  ],
+  "stakeEchoedBy": [
+    "gallery-guard-live"
+  ],
+  "verbCarriedBy": [
+    "gallery-guard-live"
+  ]
+}
+
+  2) [webkit] › e2e/fa2-guard-doublespeak.spec.ts:58:3 › FA2 probe — the armed guard says its name once › no live region recites the alertdialog own name 
+
+    Error: a live region repeats the alertdialog own NAME ("deal over this puzzle")
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "gallery-guard-live",
+    + ]
+
+       98 |       m.titleEchoedBy,
+       99 |       `a live region repeats the alertdialog own NAME ("${m.dialogName}")`,
+    > 100 |     ).toEqual([]);
+          |       ^
+      101 |     expect(
+      102 |       m.stakeEchoedBy,
+      103 |       `a live region repeats the alertdialog own DESCRIPTION ("${m.dialogDescription}")`,
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/fa2-guard-doublespeak.spec.ts:100:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/fa2-guard-doublespeak-FA2--e6c26-es-the-alertdialog-own-name-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/fa2-guard-doublespeak-FA2--e6c26-es-the-alertdialog-own-name-webkit/error-context.md
+
+
+  2 failed
+    [chromium] › e2e/fa2-guard-doublespeak.spec.ts:58:3 › FA2 probe — the armed guard says its name once › no live region recites the alertdialog own name 
+    [webkit] › e2e/fa2-guard-doublespeak.spec.ts:58:3 › FA2 probe — the armed guard says its name once › no live region recites the alertdialog own name 

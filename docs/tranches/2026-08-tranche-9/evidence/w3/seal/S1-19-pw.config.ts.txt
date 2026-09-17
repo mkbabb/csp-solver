@@ -1,0 +1,31 @@
+import { defineConfig } from "@playwright/test";
+
+const FRONTEND =
+  "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend";
+
+/** Seal lane S1's rig: the repo's two engines, the repo's app, on a lane-legal port. */
+export default defineConfig({
+  testDir: `${FRONTEND}/e2e`,
+  timeout: 60000,
+  expect: { timeout: 15000 },
+  fullyParallel: true,
+  retries: 0,
+  reporter: "list",
+  globalSetup: `${FRONTEND}/e2e/global-setup.ts`,
+  projects: [
+    { name: "chromium", use: { browserName: "chromium" } },
+    { name: "webkit", use: { browserName: "webkit" } },
+  ],
+  use: {
+    baseURL: "http://127.0.0.1:4244",
+    viewport: { width: 1280, height: 800 },
+    screenshot: "only-on-failure",
+  },
+  webServer: {
+    command: "npm run dev -- --port 4244 --host 127.0.0.1 --strictPort",
+    cwd: FRONTEND,
+    port: 4244,
+    reuseExistingServer: true,
+    timeout: 120000,
+  },
+});

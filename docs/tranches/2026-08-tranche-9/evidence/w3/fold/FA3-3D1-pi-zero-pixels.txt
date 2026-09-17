@@ -1,0 +1,81 @@
+T9-W3 FOLD LANE FA3 — pi LAW for handoff 3D-1 (AttributionCard mobile moves to the page root)
+
+THE CLAIM the handoff asserts and this re-verifies: the move costs ZERO pixels, because
+`.mobile-attribution` is `position: fixed` and no ancestor on EITHER path establishes a containing
+block. A claim, so it is measured rather than repeated.
+
+THE INSTRUMENT: every element rect at 390x844, taken on the same tree twice — once with the tag in
+`.board-group` (the pre-cure pose, reverted by hand for this reading) and once with it in the page
+root. Two refinements, each forced by a false reading the first attempt produced:
+  1. Keys are a MULTISET of (signature, rect) pairs, never an array index and never an ordinal: a
+     keyed-by-ordinal compare scored 375/382 phantom moves, every one of them an unclassed <g> in
+     the celestial toggle re-numbered because a subtree was declared earlier. None was a pixel.
+  2. Everything INSIDE `.board-cells` is excluded, `.board-cells` itself kept. The deal is random,
+     so the 81 cells and their glyph paths differ run to run; a census that reads them measures the
+     deal. The board CONTAINER is where a layout move would show, and it is read.
+
+| engine | elements censused | (signature,rect) pairs CHANGED | scrollHeight |
+| --- | --- | --- | --- |
+| chromium | 658 -> 658 | **0** | 844 -> 844 |
+| webkit | 658 -> 658 | **0** | 844 -> 844 |
+
+THE NAMED LANDMARKS, box for box (pre-cure -> cured):
+
+### chromium
+| selector | pre-cure | cured | same |
+| --- | --- | --- | --- |
+| `.page-root` | 0,0,390,844 | 0,0,390,844 | yes |
+| `main.main-content` | 0,4,390,836 | 0,4,390,836 | yes |
+| `.board-group` | 12,174.3,366,491.41 | 12,174.3,366,491.41 | yes |
+| `.board-wrapper` | 12,250.52,366,366 | 12,250.52,366,366 | yes |
+| `.board-cells` | 14,252.52,362,362 | 14,252.52,362,362 | yes |
+| `.board-margin` | 16,624.91,258,20.8 | 16,624.91,258,20.8 | yes |
+| `.masthead` | 58.14,174.3,273.72,78.22 | 58.14,174.3,273.72,78.22 | yes |
+| `h1` | 58.14,174.3,273.72,78.22 | 58.14,174.3,273.72,78.22 | yes |
+| `.corner-right` | 326,0,64,64 | 326,0,64,64 | yes |
+| `.corner-right button.sun-moon-toggle` | 336,10,44,44 | 336,10,44,44 | yes |
+| `.mobile-attribution` | 0,0,75.53,39.75 | 0,0,75.53,39.75 | yes |
+| `.mobile-attribution .attribution-trigger` | 0,0,75.53,39.75 | 0,0,75.53,39.75 | yes |
+| `.play-controls` | 0,0,0,0 | 0,0,0,0 | yes |
+
+### webkit
+| selector | pre-cure | cured | same |
+| --- | --- | --- | --- |
+| `.page-root` | 0,0,390,843.98 | 0,0,390,843.98 | yes |
+| `main.main-content` | 0,4,390,835.98 | 0,4,390,835.98 | yes |
+| `.board-group` | 12,174.58,366,490.81 | 12,174.58,366,490.81 | yes |
+| `.board-wrapper` | 12,250.2,366,366 | 12,250.2,366,366 | yes |
+| `.board-cells` | 14,252.2,362,362 | 14,252.2,362,362 | yes |
+| `.board-margin` | 16,624.59,258,20.8 | 16,624.59,258,20.8 | yes |
+| `.masthead` | 58.73,174.58,272.53,77.63 | 58.73,174.58,272.53,77.63 | yes |
+| `h1` | 58.73,174.58,272.53,77.63 | 58.73,174.58,272.53,77.63 | yes |
+| `.corner-right` | 326,0,64,64 | 326,0,64,64 | yes |
+| `.corner-right button.sun-moon-toggle` | 336,10,44,44 | 336,10,44,44 | yes |
+| `.mobile-attribution` | 0,0,75.53,39.75 | 0,0,75.53,39.75 | yes |
+| `.mobile-attribution .attribution-trigger` | 0,0,75.53,39.75 | 0,0,75.53,39.75 | yes |
+| `.play-controls` | 0,0,0,0 | 0,0,0,0 | yes |
+
+
+## THE NEGATIVE CONTROL — the same census, proved sighted
+
+A 10px margin planted on `.board-group` in the SAME paint, read by the SAME census:
+
+| engine | rects moved by the plant | named landmarks moved |
+| --- | --- | --- |
+| chromium | 43 / 658 | 6 (`.board-group`, `.board-wrapper`, `.board-cells`, `.board-margin`, `.masthead`, `h1`) |
+| webkit | 123 / 658 | 6 (the same six) |
+
+So the zero above is a measurement and not a blindness.
+
+NO DELTA TO DECLARE. NO GOLDEN RE-BASELINED. W3 spoke; it did not repaint.
+
+## The e2e row that now gates it
+
+`e2e/spoken-gallery.spec.ts` — "the head is read in the order it is painted, at every width".
+Born-RED at HEAD in BOTH engines with the desk control passing in the same row
+(`FA3-3D1-born-RED.txt`):
+
+    Expected: "agree"
+    Received: "disagree: the badge is not first in the DOM and does paint first"
+
+Green in both engines after the move (`FA3-3D1-CURED-both-engines.txt`, 2 passed).

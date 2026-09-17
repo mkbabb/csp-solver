@@ -1,0 +1,70 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts (17 tests | 3 failed) 72ms
+     × arming utters the guard's own name into an ASSERTIVE region 24ms
+     × returns focus to the listbox when the ribbon retires 3ms
+     × the utterance is built from the verb it draws, so copy can never drift out of it 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > arming utters the guard's own name into an ASSERTIVE region
+AssertionError: the armed guard was never announced; live regions said ["sudoku, 1 of 2. 3 easy, new game","Work is at risk."]: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:131:7
+    129|         liveRegions(w),
+    130|       )}`,
+    131|     ).toBe(true);
+       |       ^
+    132|     // Assertive, not polite: this interrupts. A destructive prompt qu…
+    133|     // snap chatter is the silence again, one beat later.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > returns focus to the listbox when the ribbon retires
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:200:47
+    198|     await guard(w).trigger("keydown", { key: "Escape" });
+    199|     await flushPromises();
+    200|     expect(w.find(".gallery-guard").exists()).toBe(false);
+       |                                               ^
+    201|     expect(document.activeElement).toBe(w.get(".gallery-viewport").ele…
+    202|     w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > ONE name, drawn and spoken — the one-string rule > the utterance is built from the verb it draws, so copy can never drift out of it
+AssertionError: expected 'work is at risk.' to contain 'deal'
+
+Expected: "deal"
+Received: "work is at risk."
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:256:58
+    254|     const drawnVerb = w.get(".guard-leave").text();
+    255|     expect(drawnVerb).not.toBe("");
+    256|     expect(w.get('[role="alert"]').text().toLowerCase()).toContain(dra…
+       |                                                          ^
+    257|     w.unmount();
+    258|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 14 passed (17)
+   Start at  13:16:49
+   Duration  596ms (transform 188ms, setup 12ms, import 220ms, tests 72ms, environment 212ms)
+

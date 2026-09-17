@@ -74,6 +74,7 @@ import { useButtonAnimation } from "@games/shared/useButtonAnimation";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
 import { portraitDock, useControlsDrawer } from "@games/shared/useControlsDrawer";
 import { leaveSession, session } from "@games/shared/useSession";
+import { useLiveRegion } from "@/composables/useLiveRegion";
 import { arriving, departing } from "@games/shared/useJoinWash";
 
 // Underline boil: brief burst on selection change, then settle
@@ -278,9 +279,31 @@ onBeforeUnmount(() => {
 // T6 mark 13 — written ONCE and called TWICE. The players well copies the same link with a
 // room on it, and a second hand-rolled copy of this state machine is how the failure sentence
 // — the one that matters most, and the one nobody exercises by accident — drifts out of true.
+//
+// ── T9-W3 §3.6 · AND THE OUTCOME REACHES AT ───────────────────────────────────────────────
+//
+// Two defects, one root: the outcome was DRAWN and never SPOKEN. The washi tape is
+// `aria-hidden` decoration and the sublabel is `aria-hidden` too, so the only thing a screen
+// reader could learn from a press was the accessible NAME — which flipped to "Link copied" for
+// 1600ms while the sublabel under the same glyph still read "Share". A name that contradicts
+// the label beside it is worse than a silent one: two readers of the same button got two
+// different answers, and the FAILURE sentence — the one that matters most, the one that tells
+// you the link is in the address bar — was unreachable by AT altogether.
+//
+// The cure is one region and one predicate.
+//   · THE REGION — `copyLine`, one `role="status"` on the shared idiom, written by whichever
+//     act was pressed. The outcome is news about an event, so it is an UTTERANCE
+//     (`useLiveRegion()` with no source) rather than narration of a state.
+//   · THE PREDICATE — the name now rides `saysCoarse`, the same gate the sublabel rides, so
+//     name and label are the SAME STRING SOURCE at every beat and cannot disagree by
+//     construction. On a fine pointer both hold the verb (the hover tape does the talking, as
+//     the note below has ruled since the live pass) and the region says what happened; on a
+//     coarse pointer both flip together. The failure sentence is not lost with the flip — it is
+//     what the region speaks, at both pointer classes, in full.
 function copyAct(
   act: () => Promise<void>,
   idle: { sublabel: string; washi: string; aria: string },
+  say: (line: string) => void,
 ) {
   const { animating, trigger } = useButtonAnimation(500);
   const state = ref<"idle" | "copied" | "failed">("idle");
@@ -294,6 +317,7 @@ function copyAct(
       copied = false;
     }
     state.value = copied ? "copied" : "failed";
+    say(copied ? "Link copied" : "couldn't copy. the link is in the address bar");
     if (timer) clearTimeout(timer);
     // The failure line runs longer — it points the reader to the address bar, more to read.
     timer = setTimeout(
@@ -327,7 +351,8 @@ function copyAct(
     stop: () => {
       if (timer) clearTimeout(timer);
     },
-    aria: says(
+    // T9-W3 §3.6 — the NAME rides the sublabel's own gate, so the two can never disagree.
+    aria: saysCoarse(
       "Link copied",
       "couldn't copy. the link is in the address bar",
       idle.aria,
@@ -340,16 +365,28 @@ function copyAct(
   };
 }
 
-const shareAct = copyAct(() => props.share(), {
-  sublabel: "Share",
-  washi: "copy a link to this board",
-  aria: "Share board link",
-});
-const inviteAct = copyAct(() => props.shareSession(), {
-  sublabel: "Play",
-  washi: "invite someone to write on this board with you",
-  aria: "Play together on this board",
-});
+/** T9-W3 §3.6 — the card's one copy-outcome channel, written by BOTH acts. One region because
+ *  a reader presses one of them at a time and two regions would be two places to look. */
+const { text: copyLine, say: sayCopy } = useLiveRegion();
+
+const shareAct = copyAct(
+  () => props.share(),
+  {
+    sublabel: "Share",
+    washi: "copy a link to this board",
+    aria: "Share board link",
+  },
+  sayCopy,
+);
+const inviteAct = copyAct(
+  () => props.shareSession(),
+  {
+    sublabel: "Play",
+    washi: "invite someone to write on this board with you",
+    aria: "Play together on this board",
+  },
+  sayCopy,
+);
 
 // ── T4-P1 · THE ZONE GRAMMAR ────────────────────────────────────────────────────────
 // The card was seven near-identical stanzas under six `.section-heading` display eyebrows —
@@ -398,6 +435,32 @@ const playersHintId = useId();
 const aloneInRoom = computed(
   () => !!session.roomId.value && session.players.value.length <= 1,
 );
+
+// ── T9-W3 §3.4 · THE WELL'S THREE REGIONS, ON THE ONE IDIOM ────────────────────────────────
+//
+// All three were born under a condition WITH their content already inside, which is a live
+// region that never speaks: `players-status` arrived holding "connecting…", `players-alone`
+// arrived holding its sentence, and `players-roster` — a `role="log"` — arrived holding rows,
+// so the 0→1 arrival was silent while T7-W2's 1→2 cure worked perfectly one line away. Third
+// occurrence, so the CLASS gets the mechanism rather than a third local patch (`useLiveRegion`,
+// and `scripts/check-live-regions.mjs` reds a fourth).
+//
+// What each region narrates is unchanged to the pixel — the SOURCES below carry the exact
+// conditions the `v-if`s carried. What moved is where the condition lands: on the CONTENT, so
+// the element itself lives for the panel's whole life and every word arrives as a mutation to
+// a node the assistive technology is already watching. Their birth condition was the well's own
+// `v-if="roomId"`, so persisting means living outside it too: a region that mounts at the same
+// beat as the room comes up is born populated all over again.
+const { text: connectingLine } = useLiveRegion(() =>
+  session.roomId.value && !session.live.value ? "connecting…" : "",
+);
+const { text: aloneLine } = useLiveRegion(() =>
+  session.live.value && aloneInRoom.value ? "you're the only one on this board." : "",
+);
+/** The rows the log holds: nobody until the wire carries, which is what the `v-else` used to
+ *  say. The LIST is what mutates, so the list is what stays mounted. */
+const rosterRows = computed(() => (session.live.value ? session.players.value : []));
+
 // `pencils` holds two controls, so each row is its own `role="group"` named by that row's OWN
 // visible caption — otherwise assistive tech hears two unlabelled Off/On pairs inside one name
 // and cannot tell which is which. `checking` holds one, so the tape names it directly.
@@ -1009,16 +1072,26 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
           inviteAct.sublabel.value
         }}</span>
       </button>
-      <template v-if="session.roomId.value">
-        <!-- T6.1 — THE TABLE SAYS SO WHEN IT ISN'T UP YET. Between pressing the verb and
-             being on the wire there was nothing to see, and on the abrogated public relays
-             that nothing lasted 47–66 seconds. One line holds that gap, and it is a
-             `polite` live region so the resolution is spoken once rather than drawn only. -->
-        <p v-if="!session.live.value" class="players-status" aria-live="polite">
-          connecting…
-        </p>
-        <template v-else>
-          <!-- The roster scrolls rather than stretches: sixteen rows must not make the card
+      <!-- T6.1 — THE TABLE SAYS SO WHEN IT ISN'T UP YET. Between pressing the verb and
+           being on the wire there was nothing to see, and on the abrogated public relays
+           that nothing lasted 47–66 seconds. One line holds that gap, and it is a
+           `polite` live region so the resolution is spoken once rather than drawn only.
+
+           T9-W3 §3.4 — AND NOW IT IS ACTUALLY SPOKEN. The line was `v-if`'d on the state it
+           narrates, so it entered the document with "connecting…" already in it and left the
+           document the moment the wire came up: birth and removal, never a mutation, and an
+           AT announces mutations. The region is unconditional; the SENTENCE is the conditional
+           half. `sr-only` while it holds nothing takes it out of flow entirely, so a well that
+           now carries the region in every state carries it for no pixels — the same clip the
+           line below has worn since M13. -->
+      <p
+        class="players-status"
+        :class="{ 'sr-only': !connectingLine }"
+        aria-live="polite"
+      >
+        {{ connectingLine }}
+      </p>
+      <!-- The roster scrolls rather than stretches: sixteen rows must not make the card
                sixteen rows taller, and the card is already the page's one scrollport.
 
                T7-W2 A3 — IT SPEAKS. A joiner took the roster 1→2 and a leaver 2→1 with nothing
@@ -1036,57 +1109,68 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
                made the remainder mouse-and-touch-scroll only (WCAG 2.1.1) against an owner's
                order of 16+ players. `tabindex="0"` makes the scrollport a stop the arrow keys
                can scroll, which is the pairing `role="log"` wants anyway: a log you can hear
-               added to but never read back is half a cure. -->
-          <ul
-            class="players-roster"
-            role="log"
-            aria-live="polite"
-            aria-label="who's on this board"
-            tabindex="0"
-          >
-            <!-- T8-W3 M14 — THE ROW IS A FOLD NOW, and the ink rides the whole row rather than
+               added to but never read back is half a cure. An EMPTY log is not a stop, though —
+               a focusable box with nothing in it is a dead stop on the tab route.
+
+               T9-W3 §3.4 — THE 0→1 CASE, which T7-W2 left. The log arrived under `v-else`
+               ALREADY HOLDING ROWS, and a log that enters the document with entries in it
+               announces none of them: the first person at the table was never spoken, while
+               the second one was. So the list is mounted before it has rows — `rosterRows` is
+               empty until the wire carries, which is exactly what the `v-else` used to mean —
+               and every arrival, the first included, is an addition to a log the reader's AT is
+               already watching. Empty, it wears the same clip the alone line does and costs the
+               well nothing. -->
+      <ul
+        class="players-roster"
+        :class="{ 'sr-only': !rosterRows.length && !departing.length }"
+        role="log"
+        aria-live="polite"
+        aria-label="who's on this board"
+        :tabindex="rosterRows.length ? 0 : undefined"
+      >
+        <!-- T8-W3 M14 — THE ROW IS A FOLD NOW, and the ink rides the whole row rather than
                  the dot alone. Two changes, one shape: the `<li>` is a `0fr↔1fr` grid so a row
                  can arrive and depart without the card reflowing under it (the crib's own
                  idiom), and `p.ink` sits on the row so the SWATCH AND THE SLUG are both in the
                  colour that player's digits are written in. That is the whole of the "player
                  icon" the mark floated: a drawn animal would need 345 drawings or one generic
                  glyph that says nothing about which animal you are. -->
-            <li
-              v-for="p in session.players.value"
-              :key="p.id"
-              class="player-row"
-              :class="{
-                'is-arriving': arriving[p.id] === 'join',
-                'is-returning': arriving[p.id] === 'rejoin',
-              }"
-              :style="p.ink"
-            >
-              <span class="player-row-cells">
-                <span class="player-swatch" aria-hidden="true"></span>
-                <span class="player-name">{{ p.slug }}</span>
-                <span v-if="p.self" class="player-self">you</span>
-              </span>
-            </li>
-            <!-- A departure needs a row to happen to. The session drops a peer from the roster
+        <li
+          v-for="p in rosterRows"
+          :key="p.id"
+          class="player-row"
+          :class="{
+            'is-arriving': arriving[p.id] === 'join',
+            'is-returning': arriving[p.id] === 'rejoin',
+          }"
+          :style="p.ink"
+        >
+          <span class="player-row-cells">
+            <span class="player-swatch" aria-hidden="true"></span>
+            <span class="player-name">{{ p.slug }}</span>
+            <span v-if="p.self" class="player-self">you</span>
+          </span>
+        </li>
+        <!-- A departure needs a row to happen to. The session drops a peer from the roster
                  the instant they go, so `useJoinWash` holds the row for its own 740ms and hands
                  it back here — the well closes on somebody rather than on a gap.
                  `aria-hidden`: this list is `role="log"`, whose office is announcing what was
                  ADDED, and a departing row appended to it would be read out as an arrival. The
                  shrinking roster is what a reader gets, which is the truth. -->
-            <li
-              v-for="r in departing"
-              :key="`gone-${r.id}`"
-              class="player-row is-leaving"
-              :style="r.ink"
-              aria-hidden="true"
-            >
-              <span class="player-row-cells">
-                <span class="player-swatch" aria-hidden="true"></span>
-                <span class="player-name">{{ r.slug }}</span>
-              </span>
-            </li>
-          </ul>
-          <!-- T8-W3 M13 row 18 — said out loud. `live` never going false meant nothing on
+        <li
+          v-for="r in departing"
+          :key="`gone-${r.id}`"
+          class="player-row is-leaving"
+          :style="r.ink"
+          aria-hidden="true"
+        >
+          <span class="player-row-cells">
+            <span class="player-swatch" aria-hidden="true"></span>
+            <span class="player-name">{{ r.slug }}</span>
+          </span>
+        </li>
+      </ul>
+      <!-- T8-W3 M13 row 18 — said out loud. `live` never going false meant nothing on
                screen distinguished a full table from an empty one.
                THE LINE IS SCREEN-READER-ONLY NOW (the live pass on the deployed site). Drawn,
                it sat directly under a roster showing exactly one row, telling a sighted reader
@@ -1096,18 +1180,21 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
                announces additions and a list that never grows announces nothing. So it loses
                its pixels and keeps its office. `sr-only` is the estate's utility (Tailwind's,
                the same clip `HandwrittenLogo` uses); `players-alone` stays the hook that
-               `e2e/join-language.spec.ts` addresses it by. -->
-          <p v-if="aloneInRoom" class="players-alone sr-only" aria-live="polite">
-            you're the only one on this board.
-          </p>
-          <!-- T8-W1 M3 — the note under the roster is PRUNED. "anyone with this link can write
+               `e2e/join-language.spec.ts` addresses it by.
+
+               T9-W3 §3.4 — the same `v-if` defect as its two neighbours, and the same cure: the
+               region is unconditional and the SENTENCE is what comes and goes. It was already
+               free of pixels, so this one is nothing but the utterance. -->
+      <p class="players-alone sr-only" aria-live="polite">{{ aloneLine }}</p>
+      <!-- T8-W1 M3 — the note under the roster is PRUNED. "anyone with this link can write
                on this board" is the well's own description ("share this board and everyone
                writes on the same grid") said a second time, in the one state where the reader
                has already acted on it. The description stays; it is the well's `aria-describedby`
                and it is there before the share, which is when the statement does its work. -->
-        </template>
-        <!-- Leave stays through BOTH states: a room that never answers must still be one you
-             can walk away from. -->
+      <!-- Leave stays through BOTH states of a room: one that never answers must still be one
+           you can walk away from. It is the only thing left under the room's own condition —
+           the three regions above it narrate that condition and so must outlive it. -->
+      <template v-if="session.roomId.value">
         <button type="button" class="players-leave" @click="leaveSession()">
           leave
         </button>
@@ -1278,8 +1365,20 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
          six unit rows red). `:disabled` outside the dock keeps the shipped seating byte-exact
          on the desk and on landscape — a disabled Teleport renders in place, which is a no-op.
     -->
+    <!-- T9-W3 §3.6 — WHAT THE COPY ACTS SAY OUT LOUD. Unconditional and born empty (the
+         `useLiveRegion` idiom), `sr-only` always: the outcome is already drawn twice over on
+         the surfaces that can draw it (the hover tape on a fine pointer, the sublabel on a
+         coarse one), so this channel exists to carry the sentence to the one reader who was
+         getting neither, and it costs the card no pixels to do it. -->
+    <p class="copy-status sr-only" role="status" aria-live="polite">{{ copyLine }}</p>
+
     <!-- T7-W2 A2 — `inert` while the risen sheet covers this row (`ribbonCovered` above): a
-         control painted out end to end must not stay in the tab order or in the AX tree. -->
+         control painted out end to end must not stay in the tab order or in the AX tree.
+         T9-W3 §3.1 — and the BOARD the same sheet covers now carries the same rule, at
+         `GameBoard.vue`'s grid (`boardCovered`). The two predicates differ on purpose and each
+         states why at its own site: this row is portrait-only because outside portrait it sits
+         INSIDE the case the sheet carries, where an inert row would be a live drawer's own
+         undo button, deleted. -->
     <Teleport defer to="#fold-tools" :disabled="!portraitDock">
       <div class="play-controls" :inert="ribbonCovered || undefined">
         <button

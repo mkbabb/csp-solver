@@ -1,0 +1,100 @@
+
+Running 2 tests using 2 workers
+
+[1/2] [chromium] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element
+[2/2] [webkit] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element
+[chromium] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element
+[W2-§2.5] 1440×900 overlaps=[{"tape":"new game","own":false,"target":"Hard","frac":0.151,"px":1573.3},{"tape":"pencils","own":false,"target":"Normal","frac":0.077,"px":800.3}]
+
+  1) [chromium] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element 
+
+    Error: a tape must flip, shift or yield rather than cover a control; measured [{"tape":"new game","own":false,"target":"Hard","frac":0.151,"px":1573.3},{"tape":"pencils","own":false,"target":"Normal","frac":0.077,"px":800.3}]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 16
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "frac": 0.151,
+    +     "own": false,
+    +     "px": 1573.3,
+    +     "tape": "new game",
+    +     "target": "Hard",
+    +   },
+    +   Object {
+    +     "frac": 0.077,
+    +     "own": false,
+    +     "px": 800.3,
+    +     "tape": "pencils",
+    +     "target": "Normal",
+    +   },
+    + ]
+
+      508 |       overlaps,
+      509 |       `a tape must flip, shift or yield rather than cover a control; measured ${JSON.stringify(overlaps)}`,
+    > 510 |     ).toEqual([]);
+          |       ^
+      511 |   });
+      512 | });
+      513 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/viewport-law.spec.ts:510:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/viewport-law-§2-5-the-wash-35ff2-t-of-an-interactive-element-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/viewport-law-§2-5-the-wash-35ff2-t-of-an-interactive-element-chromium/error-context.md
+
+
+[webkit] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element
+[W2-§2.5] 1440×900 overlaps=[{"tape":"new game","own":false,"target":"Hard","frac":0.151,"px":1572.7},{"tape":"pencils","own":false,"target":"Normal","frac":0.077,"px":801.3}]
+
+  2) [webkit] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element 
+
+    Error: a tape must flip, shift or yield rather than cover a control; measured [{"tape":"new game","own":false,"target":"Hard","frac":0.151,"px":1572.7},{"tape":"pencils","own":false,"target":"Normal","frac":0.077,"px":801.3}]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 16
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "frac": 0.151,
+    +     "own": false,
+    +     "px": 1572.7,
+    +     "tape": "new game",
+    +     "target": "Hard",
+    +   },
+    +   Object {
+    +     "frac": 0.077,
+    +     "own": false,
+    +     "px": 801.3,
+    +     "tape": "pencils",
+    +     "target": "Normal",
+    +   },
+    + ]
+
+      508 |       overlaps,
+      509 |       `a tape must flip, shift or yield rather than cover a control; measured ${JSON.stringify(overlaps)}`,
+    > 510 |     ).toEqual([]);
+          |       ^
+      511 |   });
+      512 | });
+      513 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/viewport-law.spec.ts:510:7
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/viewport-law-§2-5-the-wash-35ff2-t-of-an-interactive-element-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/viewport-law-§2-5-the-wash-35ff2-t-of-an-interactive-element-webkit/error-context.md
+
+
+  2 failed
+    [chromium] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element 
+    [webkit] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element 

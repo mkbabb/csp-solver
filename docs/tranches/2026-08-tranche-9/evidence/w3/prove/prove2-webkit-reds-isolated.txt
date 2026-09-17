@@ -1,0 +1,64 @@
+=== ISOLATION RUN 1 — the four webkit reds, their own files, webkit only ===
+
+Running 23 tests using 9 workers
+
+[1/23] [webkit] › e2e/multiplayer.spec.ts:347:1 › the table says connecting until the room answers, then shows who is at it
+[2/23] [webkit] › e2e/multiplayer.spec.ts:200:1 › a digit crosses both ways, and it arrives in its author's ink
+[3/23] [webkit] › e2e/multiplayer.spec.ts:140:1 › solo boot opens no room, and pays no bytes for one
+[4/23] [webkit] › e2e/multiplayer.spec.ts:265:1 › undo skips a cell a peer has taken — your move is spent, their digit stands
+[5/23] [webkit] › e2e/multiplayer.spec.ts:385:1 › leaving drops the room, the roster, and the parameter
+[6/23] [webkit] › e2e/multiplayer.spec.ts:320:1 › a deal is an epoch: both boards follow, and neither undo stack crosses it
+[7/23] [webkit] › e2e/multiplayer.spec.ts:291:1 › an undo is a move the room sees: the digit leaves both boards, and redo restores it
+[8/23] [webkit] › e2e/multiplayer.spec.ts:162:1 › the invite carries the board, and both pages sit at one table
+[9/23] [webkit] › e2e/multiplayer.spec.ts:241:1 › last writer wins the cell, on both pages
+[10/23] [webkit] › e2e/multiplayer.spec.ts:502:1 › the wordmark holds through the join, under an op flood arriving mid-boot
+[11/23] [webkit] › e2e/multiplayer.spec.ts:555:1 › four pages, one board: every roster, every ink, every digit, one contended cell
+[12/23] [webkit] › e2e/multiplayer.spec.ts:610:1 › a player leaves mid-flood: the rosters prune and the survivors keep writing
+[13/23] [webkit] › e2e/multiplayer.spec.ts:649:1 › a joiner arriving mid-game adopts the whole board, then syncs both ways
+[14/23] [webkit] › e2e/multiplayer.spec.ts:683:1 › three hundred ops as fast as the wire takes them, and the boards are one board
+[15/23] [webkit] › e2e/multiplayer.spec.ts:728:1 › a page that reloads mid-session comes back to the same table and the same board
+[16/23] [webkit] › e2e/multiplayer.spec.ts:854:1 › two phones sit at one table, and the well is reachable with the sheet shut
+[17/23] [webkit] › e2e/multiplayer.spec.ts:882:1 › a digit tapped on a phone crosses, and the sheet does not move under the traffic
+[18/23] [webkit] › e2e/multiplayer.spec.ts:950:1 › the real relay carries the board with RTCPeerConnection deleted
+[19/23] [webkit] › e2e/session-substrate.spec.ts:99:1 › a size-changing deal re-dimensions the whole table, not just the dealer
+[20/23] [webkit] › e2e/session-substrate.spec.ts:132:1 › one page switches game and the whole table turns the page with it
+[21/23] [webkit] › e2e/session-substrate.spec.ts:197:1 › leave a table and come back to it: same name, same row, your digits still yours
+[22/23] [webkit] › e2e/session-substrate.spec.ts:261:1 › a digit is on disk the moment its board stops being the live face
+[23/23] [webkit] › e2e/session-substrate.spec.ts:313:1 › a still draws a peer's digit in the peer's ink, not the reader's
+
+[WebServer] 1:04:50 PM [vite] (client) [Unhandled error] Error: ResizeObserver loop completed with undelivered notifications.
+[WebServer]  > ../../../../../../../@vite/client:531:59
+[WebServer] 
+  1 skipped
+  22 passed (16.0s)
+EXIT=0
+
+=== ISOLATION RUN 2 — the repeat run's one red (gallery drag, webkit) ===
+
+Running 23 tests using 9 workers
+
+[1/23] [webkit] › e2e/gallery.spec.ts:107:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips
+[2/23] [webkit] › e2e/gallery.spec.ts:183:1 › gallery: Enter on futoshiki selects it — board swaps, ?game set, ?view cleared
+[3/23] [webkit] › e2e/gallery.spec.ts:235:3 › gallery: Escape still exits with focus moved off the listbox by a page pip
+[4/23] [webkit] › e2e/gallery.spec.ts:279:1 › gallery: only the centered card boils — a flank frame is inert + frozen
+[5/23] [webkit] › e2e/gallery.spec.ts:199:1 › gallery: Escape cancels back to the board, no swap, ?view cleared
+[6/23] [webkit] › e2e/gallery.spec.ts:235:3 › gallery: Escape still exits with focus moved off the listbox by a staged chip
+[7/23] [webkit] › e2e/gallery.spec.ts:145:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+[8/23] [webkit] › e2e/gallery.spec.ts:235:3 › gallery: Escape still exits with focus moved off the listbox by bare page
+[9/23] [webkit] › e2e/gallery.spec.ts:253:1 › gallery: `g` opens the gallery from playing; a `g` typed into a cell does not
+[10/23] [webkit] › e2e/gallery.spec.ts:308:3 › gallery under prefers-reduced-motion › PRM: open is an instant cut — gallery present, no tweening
+[11/23] [webkit] › e2e/gallery.spec.ts:480:1 › drag: pushing the deck left advances the snap and announces it
+[12/23] [webkit] › e2e/gallery.spec.ts:521:1 › drag: a flick moves exactly one card; a release over the centered card selects nothing
+[13/23] [webkit] › e2e/gallery.spec.ts:556:1 › drag: a flick whose every move lands inside the sample floor is still a flick
+[14/23] [webkit] › e2e/gallery.spec.ts:606:1 › drag: a slow first sample does not swallow the flick that follows it
+[15/23] [webkit] › e2e/gallery.spec.ts:653:1 › drag: a release that lands a frame after the last move is still a flick
+[16/23] [webkit] › e2e/gallery.spec.ts:704:1 › drag: a grab during a keyboard glide freezes the deck where it is drawn
+[17/23] [webkit] › e2e/gallery.spec.ts:765:1 › click: a flank warps the deck to it, aria + the live region following the same seam
+[18/23] [webkit] › e2e/gallery.spec.ts:801:1 › click: the card the warp delivered then SELECTS on the next click
+[19/23] [webkit] › e2e/gallery.spec.ts:824:1 › drag: a release that lands over a FLANK is swallowed, not taken as a warp
+[20/23] [webkit] › e2e/gallery.spec.ts:860:1 › drag: kenken — the LAST card — is reachable by dragging
+[21/23] [webkit] › e2e/gallery.spec.ts:903:1 › header: the masthead persists in the gallery, names the snapped card, and is inert there
+[22/23] [webkit] › e2e/gallery.spec.ts:995:1 › CH-67: every settled wordmark bake is minted at the size it is shown at
+[23/23] [webkit] › e2e/gallery.spec.ts:1032:3 › gallery on a 375 phone › 375: one card near-fills the width, a neighbor peeks, pips present
+  23 passed (15.4s)
+EXIT=0

@@ -1,0 +1,136 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ❯ src/games/shared/useGameState.fill.test.ts (5 tests | 5 failed) 35ms
+     × records nothing until a sweep lands 18ms
+     × a sweep that forces EXACTLY ONE square records a count of 1 3ms
+     × counts the squares the sweep actually INKED, not the placements it was handed 9ms
+     × a sweep that forces NOTHING records nothing — no act, no receipt 2ms
+     × two sweeps of the same size are two acts — the stamp advances, the count does not 2ms
+ ❯ src/games/shared/GameBoard.receipt.test.ts (15 tests | 3 failed) 110ms
+     × a sweep that inks several cells announces its count 5ms
+     × a sweep that forces exactly ONE square says so, in the singular 3ms
+     × two sweeps of the same size are two acts — the stamp says so, the count cannot 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameBoard.receipt.test.ts > GameBoard — the forced fill says how many > a sweep that inks several cells announces its count
+AssertionError: expected '' to be '3 squares filled' // Object.is equality
+
+- Expected
++ Received
+
+- 3 squares filled
+
+ ❯ src/games/shared/GameBoard.receipt.test.ts:214:22
+    212|     await w.setProps({ lastFill: { count: 3, stamp: 1 } });
+    213|     await nextTick();
+    214|     expect(voice(w)).toBe("3 squares filled");
+       |                      ^
+    215|     w.unmount();
+    216|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  src/games/shared/GameBoard.receipt.test.ts > GameBoard — the forced fill says how many > a sweep that forces exactly ONE square says so, in the singular
+AssertionError: expected '' to be '1 square filled' // Object.is equality
+
+- Expected
++ Received
+
+- 1 square filled
+
+ ❯ src/games/shared/GameBoard.receipt.test.ts:222:22
+    220|     await w.setProps({ lastFill: { count: 1, stamp: 1 } });
+    221|     await nextTick();
+    222|     expect(voice(w)).toBe("1 square filled");
+       |                      ^
+    223|     w.unmount();
+    224|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  src/games/shared/GameBoard.receipt.test.ts > GameBoard — the forced fill says how many > two sweeps of the same size are two acts — the stamp says so, the count cannot
+AssertionError: expected '' to be '2 squares filled' // Object.is equality
+
+- Expected
++ Received
+
+- 2 squares filled
+
+ ❯ src/games/shared/GameBoard.receipt.test.ts:230:22
+    228|     await w.setProps({ lastFill: { count: 2, stamp: 1 } });
+    229|     await nextTick();
+    230|     expect(voice(w)).toBe("2 squares filled");
+       |                      ^
+    231|
+    232|     // The identical sentence written back into a region it already ho…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  src/games/shared/useGameState.fill.test.ts > the forced sweep records its own count (T9-W3 §3.5) > records nothing until a sweep lands
+TypeError: Cannot read properties of undefined (reading 'value')
+ ❯ src/games/shared/useGameState.fill.test.ts:92:27
+     90|   it("records nothing until a sweep lands", async () => {
+     91|     const { model, wrapper } = await mountModel(makeDomain([{ cell: 40…
+     92|     expect(model.lastFill.value).toBeNull();
+       |                           ^
+     93|     wrapper.unmount();
+     94|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  src/games/shared/useGameState.fill.test.ts > the forced sweep records its own count (T9-W3 §3.5) > a sweep that forces EXACTLY ONE square records a count of 1
+TypeError: Cannot read properties of undefined (reading 'value')
+ ❯ src/games/shared/useGameState.fill.test.ts:103:27
+    101|     model.fillForced();
+    102|
+    103|     expect(model.lastFill.value?.count).toBe(1);
+       |                           ^
+    104|     expect(model.values.value["40"]).toBe(4);
+    105|     wrapper.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  src/games/shared/useGameState.fill.test.ts > the forced sweep records its own count (T9-W3 §3.5) > counts the squares the sweep actually INKED, not the placements it was handed
+TypeError: Cannot read properties of undefined (reading 'value')
+ ❯ src/games/shared/useGameState.fill.test.ts:121:27
+    119|     model.fillForced();
+    120|
+    121|     expect(model.lastFill.value?.count).toBe(2);
+       |                           ^
+    122|     wrapper.unmount();
+    123|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  src/games/shared/useGameState.fill.test.ts > the forced sweep records its own count (T9-W3 §3.5) > a sweep that forces NOTHING records nothing — no act, no receipt
+TypeError: Cannot read properties of undefined (reading 'value')
+ ❯ src/games/shared/useGameState.fill.test.ts:130:27
+    128|     model.fillForced();
+    129|
+    130|     expect(model.lastFill.value).toBeNull();
+       |                           ^
+    131|     expect(model.undoDepth.value).toBe(0);
+    132|     wrapper.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  src/games/shared/useGameState.fill.test.ts > the forced sweep records its own count (T9-W3 §3.5) > two sweeps of the same size are two acts — the stamp advances, the count does not
+TypeError: Cannot read properties of undefined (reading 'value')
+ ❯ src/games/shared/useGameState.fill.test.ts:139:34
+    137|
+    138|     model.fillForced();
+    139|     const first = model.lastFill.value;
+       |                                  ^
+    140|     expect(first).toEqual({ count: 1, stamp: 1 });
+    141|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  8 failed | 12 passed (20)
+   Start at  11:59:44
+   Duration  2.13s (transform 1.33s, setup 89ms, import 1.51s, tests 145ms, environment 1.99s)
+

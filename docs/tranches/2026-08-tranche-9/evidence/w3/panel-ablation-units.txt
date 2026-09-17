@@ -1,0 +1,45 @@
+T9-W3 lane 3C — ABLATION PROOF for the unit rows authored after the cure.
+Each cure is removed from the CURED tree; the rows that pin it go RED; the cure is restored.
+
+=== ABLATION 1 — drop the grid's :inert (§3.1) ===
+     × the risen sheet makes the grid inert 19ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/games/shared/GameBoard.occlusion.test.ts > GameBoard — the covered grid must not answer (T9-W3 §3.1) > the risen sheet makes the grid inert
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+
+=== ABLATION 2 — drop the deal announce (§3.5) ===
+     × a deal says a board arrived and names it, while the strip stays blank 4ms
+     × dealing the same board twice speaks twice — a repeat is still an arrival 2ms
+     × a DEAL's own reveal wave is not a fill — the generation tells them apart 2ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/games/shared/GameBoard.receipt.test.ts > GameBoard — the deal is spoken where it draws nothing > a deal says a board arrived and names it, while the strip stays blank
+ FAIL  src/games/shared/GameBoard.receipt.test.ts > GameBoard — the deal is spoken where it draws nothing > dealing the same board twice speaks twice — a repeat is still an arrival
+ FAIL  src/games/shared/GameBoard.receipt.test.ts > GameBoard — the forced fill says how many > a DEAL's own reveal wave is not a fill — the generation tells them apart
+ Test Files  1 failed (1)
+      Tests  3 failed | 10 passed (13)
+
+=== ABLATION 3 — drop the fill-forced count (§3.5) ===
+     × a sweep that inks several cells announces its count 3ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/games/shared/GameBoard.receipt.test.ts > GameBoard — the forced fill says how many > a sweep that inks several cells announces its count
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 passed (13)
+
+=== ABLATION 4 — name un-gated again: saysCoarse -> says (§3.6) ===
+     × fine: the name never contradicts the label the reader can see 10ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/games/shared/GameControlPanel.test.ts > the copy acts — the sublabel flips on the coarse surfaces alone > fine: the name never contradicts the label the reader can see
+ Test Files  1 failed (1)
+      Tests  1 failed | 33 passed (34)
+
+=== ABLATION 5 — drop the copy-outcome region (§3.6) ===
+     × the outcome is spoken at BOTH pointer classes, failure sentence and all 7ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/games/shared/GameControlPanel.test.ts > the copy acts — the sublabel flips on the coarse surfaces alone > the outcome is spoken at BOTH pointer classes, failure sentence and all
+ Test Files  1 failed (1)
+      Tests  1 failed | 33 passed (34)
+
+=== RESTORED — the cured tree, green ===
+ Test Files  3 passed (3)
+      Tests  50 passed (50)

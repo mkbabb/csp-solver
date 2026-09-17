@@ -101,17 +101,22 @@ const liveRegions = (w: Wrapper) =>
     .findAll('[aria-live],[role="status"],[role="alert"]')
     .map((r) => r.text().replace(/\s+/g, " ").trim());
 
-/** The e2e helper's own predicate (a11y.spec.ts:162), re-run against the component tree: the
- *  guard is heard when a live region speaks the guard's OWN name — never a hardcoded copy. */
+/** The e2e helper's own predicate (`a11y.spec.ts` `guardAnnounced` — cited by symbol, the old
+ *  `:162` had drifted off it), re-run against the component tree.
+ *
+ *  T9-W3 §3.7 — WHICH STRING IT READS, AND WHY IT MOVED. It keyed off the guard's own
+ *  `aria-label`, which is the alertdialog's NAME; requiring a live region to repeat it was the
+ *  double-speak itself — the title and the stake spoken once by the region and again by the
+ *  dialog the focus lands in. The region keeps the half the dialog cannot say, the choice on
+ *  offer, so the predicate reads the destructive VERB the ribbon draws on `.guard-leave`. Still
+ *  read off the guard, so the copy may change without touching this predicate. */
 function announced(w: Wrapper): boolean {
-  const g = guard(w);
-  const key = (g.attributes("aria-label") ?? "")
+  const verb = (guard(w).findAll(".guard-leave")[0]?.text() ?? "")
     .replace(/\s+/g, " ")
     .trim()
-    .toLowerCase()
-    .replace(/[?.!]+$/, "");
-  if (!key) return false;
-  return liveRegions(w).some((t) => t.toLowerCase().includes(key));
+    .toLowerCase();
+  if (!verb) return false;
+  return liveRegions(w).some((t) => t.toLowerCase().includes(verb));
 }
 
 describe("the destructive-work guard speaks — 3.2", () => {
@@ -237,11 +242,20 @@ describe("ONE name, drawn and spoken — the one-string rule", () => {
     w2.unmount();
   });
 
-  it("the utterance is built from that same name, so copy can never drift out of it", async () => {
+  it("the utterance is built from the verb it draws, so copy can never drift out of it", async () => {
     const w = mountGallery();
     await arm(w, "d");
-    const drawn = w.get(".guard-note-title").text();
-    expect(w.get('[role="alert"]').text().toLowerCase()).toContain(drawn.toLowerCase());
+    // T9-W3 §3.7 — the one-string rule binds the NAME to the drawn heading, and the two rows
+    // above still gate that as an equality. What it binds the UTTERANCE to moved: the region
+    // no longer recites the heading, because the alertdialog the guard hands focus to already
+    // carries it as its accessible name and saying it twice was the double-speak. The region's
+    // own half is the choice on offer, so what it may never drift out of is the word printed
+    // on the destructive button.
+    const drawnVerb = w.get(".guard-leave").text();
+    expect(drawnVerb).not.toBe("");
+    expect(w.get('[role="alert"]').text().toLowerCase()).toContain(
+      drawnVerb.toLowerCase(),
+    );
     w.unmount();
   });
 });

@@ -444,11 +444,45 @@ test.describe('§2.5 the washi tape yields @ 1440×900', () => {
       return out;
     };
 
+    // A SETTLED READING, NOT A SAMPLE — and that distinction is what this row cost to learn.
+    // `found` keeps every row it has ever seen, so ONE census taken while the card is still
+    // moving decides the verdict for the rest of the test. Green 3/3 in isolation, red in WebKit
+    // under the full suite: at that grain of contention a tape's 150ms opacity ramp and the
+    // card's rAF-coalesced fold pass (`GameControlPanel.publishFold`) do not both finish inside
+    // a fixed `waitForTimeout`, and the census reads a pose the product never rests in.
+    //
+    // So a state is read until the census comes to rest CLEAR — two consecutive empty readings —
+    // with a bounded settle after which the last reading stands unchanged. The assertion below
+    // is byte-identical and so is its meaning: a tape that actually covers a control never reads
+    // empty, so it never clears the settle, and the bound hands the assertion the overlap it
+    // measured. The only reading forgiven is one that stops being an overlap while you watch it,
+    // which is the definition of a tape that has yielded.
+    const settled = async () => {
+      let last: ReturnType<typeof CENSUS> = [];
+      let clear = 0;
+      try {
+        await expect
+          .poll(
+            async () => {
+              last = await page.evaluate(CENSUS, INTERACTIVE);
+              clear = last.length === 0 ? clear + 1 : 0;
+              return clear;
+            },
+            { timeout: 3000, intervals: [100, 100, 150, 150, 300, 300, 600, 600] },
+          )
+          .toBeGreaterThanOrEqual(2);
+      } catch {
+        // The bound lapsed: this state never came to rest clear inside 3s. The last reading
+        // stands, overlaps and all, and the verdict below is taken on it.
+      }
+      return last;
+    };
+
     // WITNESS — the tapes this row exists for are actually laid down. A card with no tags would
     // green a census that proves nothing.
     await expect(page.locator('.controls-card .washi-tag')).toHaveCount(4);
 
-    const laid = await page.evaluate(CENSUS, INTERACTIVE);
+    const laid = await settled();
 
     // The hover pass: raise each verb's note in turn and census while it is up. Hover is the
     // grammar these tapes ship with, so this is the surface a reader actually meets.
@@ -461,8 +495,7 @@ test.describe('§2.5 the washi tape yields @ 1440×900', () => {
         continue; // a control the hover cannot reach carries no tape a reader can either
       }
       await page.waitForTimeout(260); // the tape's own 150ms opacity, then settle
-      for (const row of await page.evaluate(CENSUS, INTERACTIVE))
-        found.set(`${row.tape}»${row.target}`, row);
+      for (const row of await settled()) found.set(`${row.tape}»${row.target}`, row);
     }
 
     const overlaps = [...found.values()].sort((a, b) => b.frac - a.frac);

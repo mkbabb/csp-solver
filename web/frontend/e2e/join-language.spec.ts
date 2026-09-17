@@ -154,8 +154,10 @@ test('the roster row is the other half: the name lands in their ink, and the wel
   await boot(b, link);
 
   await expect(a.locator('.controls-card .player-row')).toHaveCount(2);
-  // and the alone line goes with the aloneness.
-  await expect(a.locator('.controls-card .players-alone')).toHaveCount(0);
+  // and the alone line goes with the aloneness — the SENTENCE, not the region. T9-W3 §3.4
+  // keeps the region mounted and empties it, which is what makes the room-of-one announcement
+  // a mutation an AT hears rather than a node it never sees arrive.
+  await expect(a.locator('.controls-card .players-alone')).toBeEmpty();
 
   // THE SLUG IS IN THEIR INK — the whole of the "player icon" the mark floated. The peer's row
   // and their swatch are one colour, and it is not your own.

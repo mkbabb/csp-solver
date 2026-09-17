@@ -1,0 +1,355 @@
+
+Running 14 tests using 9 workers
+
+[1/14] [chromium] › e2e/spoken-gallery.spec.ts:87:1 › deck exit by Escape hands focus back to the wordmark that opened it
+[2/14] [chromium] › e2e/spoken-gallery.spec.ts:99:1 › deck exit by Enter on the SAME game hands focus back
+[3/14] [webkit] › e2e/spoken-gallery.spec.ts:87:1 › deck exit by Escape hands focus back to the wordmark that opened it
+[4/14] [chromium] › e2e/spoken-gallery.spec.ts:130:1 › deck exit by `d` to deal hands focus back
+[5/14] [chromium] › e2e/spoken-gallery.spec.ts:144:1 › deck entered by `g` hands focus back to the control that held it, not to the wordmark
+[6/14] [chromium] › e2e/spoken-gallery.spec.ts:114:1 › deck exit by Enter on ANOTHER game hands focus back
+[7/14] [webkit] › e2e/spoken-gallery.spec.ts:99:1 › deck exit by Enter on the SAME game hands focus back
+[8/14] [chromium] › e2e/spoken-gallery.spec.ts:172:1 › an Escape taken with focus OUTSIDE the deck does not steal focus back
+[9/14] [chromium] › e2e/spoken-gallery.spec.ts:230:1 › the deck focus ring rides the ACTIVE option, not the clipping scrollport
+[10/14] [webkit] › e2e/spoken-gallery.spec.ts:114:1 › deck exit by Enter on ANOTHER game hands focus back
+  1) [chromium] › e2e/spoken-gallery.spec.ts:99:1 › deck exit by Enter on the SAME game hands focus back 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "button.logo-trigger"
+    Received: "body"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      109 |   await expect
+      110 |     .poll(() => focusIs(page, 'button.logo-trigger'), { timeout: 10000 })
+    > 111 |     .toBe('button.logo-trigger');
+          |      ^
+      112 | });
+      113 |
+      114 | test('deck exit by Enter on ANOTHER game hands focus back', async ({ page }) => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:111:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-deck-exit-b-00356--SAME-game-hands-focus-back-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-deck-exit-b-00356--SAME-game-hands-focus-back-chromium/error-context.md
+
+
+  2) [chromium] › e2e/spoken-gallery.spec.ts:87:1 › deck exit by Escape hands focus back to the wordmark that opened it 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "button.logo-trigger"
+    Received: "body"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      94 |   await expect
+      95 |     .poll(() => focusIs(page, 'button.logo-trigger'), { timeout: 10000 })
+    > 96 |     .toBe('button.logo-trigger');
+         |      ^
+      97 | });
+      98 |
+      99 | test('deck exit by Enter on the SAME game hands focus back', async ({ page }) => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:96:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-deck-exit-b-9b3f3-the-wordmark-that-opened-it-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-deck-exit-b-9b3f3-the-wordmark-that-opened-it-chromium/error-context.md
+
+
+  3) [chromium] › e2e/spoken-gallery.spec.ts:230:1 › the deck focus ring rides the ACTIVE option, not the clipping scrollport 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "gallery-card-0"
+    Received: "the scrollport"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      253 |     await expect(viewport).toHaveAttribute('aria-activedescendant', id);
+      254 |     // ONE ring, on the option the deck says is active — and on nothing else.
+    > 255 |     await expect.poll(() => ringOwner(page), { timeout: 10000 }).toBe(id);
+          |                                                                  ^
+      256 |     await expect.poll(() => ringWhole(page), { timeout: 10000 }).toBe('whole');
+      257 |   }
+      258 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:255:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-the-deck-fo-2e161-not-the-clipping-scrollport-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-the-deck-fo-2e161-not-the-clipping-scrollport-chromium/error-context.md
+
+
+[11/14] [webkit] › e2e/spoken-gallery.spec.ts:130:1 › deck exit by `d` to deal hands focus back
+  4) [chromium] › e2e/spoken-gallery.spec.ts:144:1 › deck entered by `g` hands focus back to the control that held it, not to the wordmark 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "button.sun-moon-toggle"
+    Received: "body"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      165 |   await expect
+      166 |     .poll(() => focusIs(page, 'button.sun-moon-toggle'), { timeout: 10000 })
+    > 167 |     .toBe('button.sun-moon-toggle');
+          |      ^
+      168 | });
+      169 |
+      170 | // ── §3.2 · the exception, and it is LAW ──────────────────────────────────────────────────
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:167:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-deck-entere-5929b-held-it-not-to-the-wordmark-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-deck-entere-5929b-held-it-not-to-the-wordmark-chromium/error-context.md
+
+
+  5) [chromium] › e2e/spoken-gallery.spec.ts:114:1 › deck exit by Enter on ANOTHER game hands focus back 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "button.logo-trigger"
+    Received: "body"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      125 |   await expect
+      126 |     .poll(() => focusIs(page, 'button.logo-trigger'), { timeout: 10000 })
+    > 127 |     .toBe('button.logo-trigger');
+          |      ^
+      128 | });
+      129 |
+      130 | test('deck exit by `d` to deal hands focus back', async ({ page }) => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:127:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-deck-exit-b-f50b0-OTHER-game-hands-focus-back-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-deck-exit-b-f50b0-OTHER-game-hands-focus-back-chromium/error-context.md
+
+
+[12/14] [webkit] › e2e/spoken-gallery.spec.ts:144:1 › deck entered by `g` hands focus back to the control that held it, not to the wordmark
+[13/14] [webkit] › e2e/spoken-gallery.spec.ts:172:1 › an Escape taken with focus OUTSIDE the deck does not steal focus back
+[14/14] [webkit] › e2e/spoken-gallery.spec.ts:230:1 › the deck focus ring rides the ACTIVE option, not the clipping scrollport
+  6) [webkit] › e2e/spoken-gallery.spec.ts:114:1 › deck exit by Enter on ANOTHER game hands focus back 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "button.logo-trigger"
+    Received: "body"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      125 |   await expect
+      126 |     .poll(() => focusIs(page, 'button.logo-trigger'), { timeout: 10000 })
+    > 127 |     .toBe('button.logo-trigger');
+          |      ^
+      128 | });
+      129 |
+      130 | test('deck exit by `d` to deal hands focus back', async ({ page }) => {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:127:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-deck-exit-b-f50b0-OTHER-game-hands-focus-back-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-deck-exit-b-f50b0-OTHER-game-hands-focus-back-webkit/error-context.md
+
+
+  7) [chromium] › e2e/spoken-gallery.spec.ts:130:1 › deck exit by `d` to deal hands focus back ─────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "button.logo-trigger"
+    Received: "body"
+
+    Call Log:
+    - Timeout 15000ms exceeded while waiting on the predicate
+
+      139 |   await expect
+      140 |     .poll(() => focusIs(page, 'button.logo-trigger'), { timeout: 15000 })
+    > 141 |     .toBe('button.logo-trigger');
+          |      ^
+      142 | });
+      143 |
+      144 | test('deck entered by `g` hands focus back to the control that held it, not to the wordmark', async ({
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:141:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-deck-exit-by-d-to-deal-hands-focus-back-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-deck-exit-by-d-to-deal-hands-focus-back-chromium/error-context.md
+
+
+  8) [webkit] › e2e/spoken-gallery.spec.ts:87:1 › deck exit by Escape hands focus back to the wordmark that opened it 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: locator('.gallery-viewport')
+    Expected pattern: /gallery-card-\d+/
+    Timeout: 20000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 20000ms
+      - waiting for locator('.gallery-viewport')
+        - waiting for" http://127.0.0.1:4252/?size=3&difficulty=EASY" navigation to finish...
+        - navigated to "http://127.0.0.1:4252/?size=3&difficulty=EASY"
+
+
+      68 |   await page.keyboard.press('Enter');
+      69 |   const viewport = page.locator('.gallery-viewport');
+    > 70 |   await expect(viewport).toHaveAttribute('aria-activedescendant', /gallery-card-\d+/, {
+         |                          ^
+      71 |     timeout: 20000,
+      72 |   });
+      73 |   await expect.poll(() => focusIs(page, '.gallery-viewport'), { timeout: 20000 }).toBe(
+        at openDeckFromWordmark (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:70:26)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:89:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-deck-exit-b-9b3f3-the-wordmark-that-opened-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-deck-exit-b-9b3f3-the-wordmark-that-opened-it-webkit/error-context.md
+
+
+  9) [webkit] › e2e/spoken-gallery.spec.ts:99:1 › deck exit by Enter on the SAME game hands focus back 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: locator('.gallery-viewport')
+    Expected pattern: /gallery-card-\d+/
+    Timeout: 20000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 20000ms
+      - waiting for locator('.gallery-viewport')
+
+
+      68 |   await page.keyboard.press('Enter');
+      69 |   const viewport = page.locator('.gallery-viewport');
+    > 70 |   await expect(viewport).toHaveAttribute('aria-activedescendant', /gallery-card-\d+/, {
+         |                          ^
+      71 |     timeout: 20000,
+      72 |   });
+      73 |   await expect.poll(() => focusIs(page, '.gallery-viewport'), { timeout: 20000 }).toBe(
+        at openDeckFromWordmark (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:70:26)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:101:20
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-deck-exit-b-00356--SAME-game-hands-focus-back-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-deck-exit-b-00356--SAME-game-hands-focus-back-webkit/error-context.md
+
+
+  10) [webkit] › e2e/spoken-gallery.spec.ts:144:1 › deck entered by `g` hands focus back to the control that held it, not to the wordmark 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "button.sun-moon-toggle"
+    Received: "body"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      165 |   await expect
+      166 |     .poll(() => focusIs(page, 'button.sun-moon-toggle'), { timeout: 10000 })
+    > 167 |     .toBe('button.sun-moon-toggle');
+          |      ^
+      168 | });
+      169 |
+      170 | // ── §3.2 · the exception, and it is LAW ──────────────────────────────────────────────────
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:167:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-deck-entere-5929b-held-it-not-to-the-wordmark-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-deck-entere-5929b-held-it-not-to-the-wordmark-webkit/error-context.md
+
+
+  11) [webkit] › e2e/spoken-gallery.spec.ts:230:1 › the deck focus ring rides the ACTIVE option, not the clipping scrollport 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "gallery-card-0"
+    Received: "the scrollport"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      253 |     await expect(viewport).toHaveAttribute('aria-activedescendant', id);
+      254 |     // ONE ring, on the option the deck says is active — and on nothing else.
+    > 255 |     await expect.poll(() => ringOwner(page), { timeout: 10000 }).toBe(id);
+          |                                                                  ^
+      256 |     await expect.poll(() => ringWhole(page), { timeout: 10000 }).toBe('whole');
+      257 |   }
+      258 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:255:66
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-the-deck-fo-2e161-not-the-clipping-scrollport-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-the-deck-fo-2e161-not-the-clipping-scrollport-webkit/error-context.md
+
+
+  12) [webkit] › e2e/spoken-gallery.spec.ts:130:1 › deck exit by `d` to deal hands focus back ──────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "button.logo-trigger"
+    Received: "body"
+
+    Call Log:
+    - Timeout 15000ms exceeded while waiting on the predicate
+
+      139 |   await expect
+      140 |     .poll(() => focusIs(page, 'button.logo-trigger'), { timeout: 15000 })
+    > 141 |     .toBe('button.logo-trigger');
+          |      ^
+      142 | });
+      143 |
+      144 | test('deck entered by `g` hands focus back to the control that held it, not to the wordmark', async ({
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:141:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-deck-exit-by-d-to-deal-hands-focus-back-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-deck-exit-by-d-to-deal-hands-focus-back-webkit/error-context.md
+
+
+  12 failed
+    [chromium] › e2e/spoken-gallery.spec.ts:87:1 › deck exit by Escape hands focus back to the wordmark that opened it 
+    [chromium] › e2e/spoken-gallery.spec.ts:99:1 › deck exit by Enter on the SAME game hands focus back 
+    [chromium] › e2e/spoken-gallery.spec.ts:114:1 › deck exit by Enter on ANOTHER game hands focus back 
+    [chromium] › e2e/spoken-gallery.spec.ts:130:1 › deck exit by `d` to deal hands focus back ──────
+    [chromium] › e2e/spoken-gallery.spec.ts:144:1 › deck entered by `g` hands focus back to the control that held it, not to the wordmark 
+    [chromium] › e2e/spoken-gallery.spec.ts:230:1 › the deck focus ring rides the ACTIVE option, not the clipping scrollport 
+    [webkit] › e2e/spoken-gallery.spec.ts:87:1 › deck exit by Escape hands focus back to the wordmark that opened it 
+    [webkit] › e2e/spoken-gallery.spec.ts:99:1 › deck exit by Enter on the SAME game hands focus back 
+    [webkit] › e2e/spoken-gallery.spec.ts:114:1 › deck exit by Enter on ANOTHER game hands focus back 
+    [webkit] › e2e/spoken-gallery.spec.ts:130:1 › deck exit by `d` to deal hands focus back ────────
+    [webkit] › e2e/spoken-gallery.spec.ts:144:1 › deck entered by `g` hands focus back to the control that held it, not to the wordmark 
+    [webkit] › e2e/spoken-gallery.spec.ts:230:1 › the deck focus ring rides the ACTIVE option, not the clipping scrollport 
+  2 passed (30.2s)

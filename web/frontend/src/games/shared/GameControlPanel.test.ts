@@ -562,14 +562,69 @@ describe("the copy acts — the sublabel flips on the coarse surfaces alone", ()
     );
   });
 
-  // The aria-label is NOT gated: it is never drawn, so it can never be the second copy of
-  // anything on screen, and a reader on a fine pointer would otherwise lose the outcome
-  // entirely (the tape is `aria-hidden` unless it is a tag or persistent).
-  it("the accessible name still tracks the outcome at a fine pointer", async () => {
-    const w = mountPanel({ mobile: false, share: DENIED });
-    await pressShare(w);
-    expect(shareBtn(w).attributes("aria-label")).toBe(
-      "couldn't copy. the link is in the address bar",
-    );
+  // ── T9-W3 §3.6 — THIS ROW WAS THE GATE THAT ENSHRINED THE DEFECT ──────────────────────
+  //
+  // It read "the accessible name still tracks the outcome at a fine pointer", and its comment
+  // gave the reason: the name is never drawn, so it cannot be a second copy of anything, and a
+  // fine-pointer reader would otherwise lose the outcome entirely. The first half was false in
+  // fact and the second half is no longer true in the tree.
+  //
+  // FALSE IN FACT, because the name IS read out loud beside a sublabel that is drawn: for
+  // 1600ms the button was called "Link copied" while the word under the same glyph said
+  // "Share" — one act, two answers, depending on which of the two you happened to be reading.
+  // NO LONGER TRUE, because losing the outcome was only ever the consequence of having nowhere
+  // else to put it, and the card now has a status region that carries the whole sentence — the
+  // failure clause included, which the row never reached anyway.
+  //
+  // So the row is re-cut into the pair of claims that are actually the design: the two
+  // rendered strings agree at every beat, and the outcome is spoken regardless.
+  const nameAndLabel = (w: ReturnType<typeof mountPanel>) => ({
+    name: shareBtn(w).attributes("aria-label"),
+    label: shareBtn(w).get(".icon-sublabel").text(),
+  });
+
+  it("fine: the name never contradicts the label the reader can see", async () => {
+    const ok = mountPanel({ mobile: false });
+    await pressShare(ok);
+    expect(nameAndLabel(ok)).toEqual({ name: "Share board link", label: "Share" });
+
+    const denied = mountPanel({ mobile: false, share: DENIED });
+    await pressShare(denied);
+    expect(nameAndLabel(denied)).toEqual({ name: "Share board link", label: "Share" });
+  });
+
+  it("coarse: the name and the label flip together, on both outcomes", async () => {
+    const ok = mountPanel();
+    await pressShare(ok);
+    expect(nameAndLabel(ok)).toEqual({ name: "Link copied", label: "copied!" });
+
+    const denied = mountPanel({ share: DENIED });
+    await pressShare(denied);
+    expect(nameAndLabel(denied)).toEqual({
+      name: "couldn't copy. the link is in the address bar",
+      label: "couldn't copy",
+    });
+  });
+
+  // The channel that makes the row above affordable. It is where the FAILURE sentence lands in
+  // full at both pointer classes — the one outcome nobody exercises by accident, and the one
+  // the drawn row has never had the width to say.
+  const spoken = (w: ReturnType<typeof mountPanel>) => w.get(".copy-status").text();
+
+  it("the outcome is spoken at BOTH pointer classes, failure sentence and all", async () => {
+    for (const mobile of [true, false]) {
+      const ok = mountPanel({ mobile });
+      expect(spoken(ok), "the region must be born empty, not born speaking").toBe("");
+      await pressShare(ok);
+      expect(spoken(ok)).toBe("Link copied");
+
+      const denied = mountPanel({ mobile, share: DENIED });
+      await pressShare(denied);
+      expect(spoken(denied)).toBe("couldn't copy. the link is in the address bar");
+    }
+  });
+
+  it("the region is `sr-only` — this wave speaks, it does not repaint", () => {
+    expect(mountPanel().get(".copy-status").classes()).toContain("sr-only");
   });
 });

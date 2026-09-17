@@ -1,0 +1,23 @@
+=== T9-W3 FOLD LANE FA3 — final gate sweep 2026-09-17 ===
+
+--- vitest, whole battery (bare)
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > arming utters the guard's own name into an ASSERTIVE region
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > returns focus to the listbox when the ribbon retires
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > ONE name, drawn and spoken — the one-string rule > the utterance is built from that same name, so copy can never drift out of it
+ Test Files  1 failed | 64 passed (65)
+      Tests  3 failed | 802 passed (805)
+  (the three reds are GameGallery.a11y.test.ts, lane 3C-2's guard-arm seam in flight; that
+   file imports GameGallery.vue and types.ts only, neither touched by this lane.)
+
+--- this lane's own unit files
+ Test Files  2 passed (2)
+      Tests  20 passed (20)
+  exit 
+
+--- vue-tsc --noEmit  → EXIT 0
+--- npm run typecheck:e2e  → EXIT 0
+--- eslint (touched src + scripts + e2e)  → EXIT 0
+--- prettier --check --config .prettierrc.json (src + scripts, NEVER e2e)  → EXIT 0
+--- node scripts/check-copy-register.mjs  → EXIT 0
+--- node scripts/check-copy-register.mjs --self-test  → EXIT 0
+--- node scripts/check-live-regions.mjs  → EXIT 0

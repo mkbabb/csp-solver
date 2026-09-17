@@ -1,0 +1,60 @@
+
+Running 2 tests using 2 workers
+
+[1/2] [webkit] › e2e/spoken-gallery.spec.ts:308:1 › the head is read in the order it is painted, at every width
+[2/2] [chromium] › e2e/spoken-gallery.spec.ts:308:1 › the head is read in the order it is painted, at every width
+  1) [chromium] › e2e/spoken-gallery.spec.ts:308:1 › the head is read in the order it is painted, at every width 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "agree"
+    Received: "disagree: the badge is not first in the DOM and does paint first"
+
+    Call Log:
+    - Timeout 15000ms exceeded while waiting on the predicate
+
+      319 |   await expect
+      320 |     .poll(() => headOrder(page), { timeout: 15000 })
+    > 321 |     .toBe('agree');
+          |      ^
+      322 | });
+      323 |
+      324 | // TEMP-PI-PROBE-START (fold lane FA3 — transient instrument, removed before the lane's gates)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:321:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-the-head-is-a7bc7-t-is-painted-at-every-width-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-the-head-is-a7bc7-t-is-painted-at-every-width-chromium/error-context.md
+
+
+  2) [webkit] › e2e/spoken-gallery.spec.ts:308:1 › the head is read in the order it is painted, at every width 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "agree"
+    Received: "disagree: the badge is not first in the DOM and does paint first"
+
+    Call Log:
+    - Timeout 15000ms exceeded while waiting on the predicate
+
+      319 |   await expect
+      320 |     .poll(() => headOrder(page), { timeout: 15000 })
+    > 321 |     .toBe('agree');
+          |      ^
+      322 | });
+      323 |
+      324 | // TEMP-PI-PROBE-START (fold lane FA3 — transient instrument, removed before the lane's gates)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/spoken-gallery.spec.ts:321:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/spoken-gallery-the-head-is-a7bc7-t-is-painted-at-every-width-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/spoken-gallery-the-head-is-a7bc7-t-is-painted-at-every-width-webkit/error-context.md
+
+
+  2 failed
+    [chromium] › e2e/spoken-gallery.spec.ts:308:1 › the head is read in the order it is painted, at every width 
+    [webkit] › e2e/spoken-gallery.spec.ts:308:1 › the head is read in the order it is painted, at every width 

@@ -1,0 +1,456 @@
+import { test, expect, type Page } from '@playwright/test';
+
+/**
+ * T9-W3 NON-AUTHOR PROVE — independent probes for the claims the wave's own rows do not
+ * measure, or measure only in part. Nothing here imports the wave's helpers: a probe that
+ * shares a harness with the thing it checks proves the harness.
+ */
+
+const SOLO = './?size=3&difficulty=EASY';
+
+async function loadSudoku(page: Page) {
+  await page.goto(SOLO);
+  await page.waitForSelector('svg.handwritten-logo', { timeout: 20000 });
+  await page.addStyleTag({ content: '.tuner-toggle { display: none !important; }' });
+  await expect
+    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 20000 })
+    .toBeGreaterThan(0);
+}
+
+/** Every live region's text, normalised. */
+const spoken = (page: Page) =>
+  page.evaluate(() =>
+    [
+      ...document.querySelectorAll('[aria-live],[role="status"],[role="alert"],[role="log"]'),
+    ]
+      .map((r) => (r.textContent ?? '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean),
+  );
+
+// ───────────────────────────────────────────────────────────────────────────────
+// §3.5 — THE REPEAT. A second identical board must land as a MUTATION, not as the
+// same string written over itself. Watched with a MutationObserver on the region
+// itself, which is what an AT is watching.
+// ───────────────────────────────────────────────────────────────────────────────
+test('§3.5 PROVE — a second identical deal re-announces (the EMPTIES clause, watched)', async ({
+  page,
+}) => {
+  await loadSudoku(page);
+  await page.evaluate(() => {
+    const w = window as unknown as { __voice?: string[] };
+    w.__voice = [];
+    const region = document.querySelector('.board-voice');
+    if (!region) throw new Error('no .board-voice region');
+    new MutationObserver(() => {
+      w.__voice!.push((region.textContent ?? '').replace(/\s+/g, ' ').trim());
+    }).observe(region, { childList: true, characterData: true, subtree: true });
+  });
+
+  await page.locator('.deal-btn').click();
+  await expect
+    .poll(async () => (await page.locator('.board-voice').textContent()) ?? '', {
+      timeout: 20000,
+    })
+    .toMatch(/new board/i);
+  const first = ((await page.locator('.board-voice').textContent()) ?? '').trim();
+
+  await page.locator('.deal-btn').click();
+  await expect
+    .poll(
+      async () =>
+        await page.evaluate(
+          () => (window as unknown as { __voice: string[] }).__voice.length,
+        ),
+      { timeout: 20000 },
+    )
+    .toBeGreaterThan(1);
+  await page.waitForTimeout(1500);
+
+  const trail = await page.evaluate(
+    () => (window as unknown as { __voice: string[] }).__voice,
+  );
+  const second = ((await page.locator('.board-voice').textContent()) ?? '').trim();
+  console.log(`[§3.5 REPEAT] first=${JSON.stringify(first)} trail=${JSON.stringify(trail)}`);
+
+  // The line is the same sentence twice (same size, same difficulty) …
+  expect(second, 'the second deal must leave the same sentence standing').toBe(first);
+  // … and the region went EMPTY in between, so the AT saw two mutations for one sentence.
+  expect(
+    trail.some((t) => t === ''),
+    `the repeat must empty first; the region's trail was ${JSON.stringify(trail)}`,
+  ).toBe(true);
+  expect(trail.filter((t) => /new board/i.test(t)).length).toBeGreaterThan(1);
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+// §3.6 — FINE POINTER. The name must NOT flip, the region must carry the outcome,
+// and the failure sentence must be reachable.
+// ───────────────────────────────────────────────────────────────────────────────
+test('§3.6 PROVE — at a fine pointer the name holds and the region carries the outcome', async ({
+  page,
+  context,
+  browserName,
+}) => {
+  test.skip(
+    browserName === 'webkit',
+    'PW-WebKit grants no clipboard-write; the success arm is chromium-only (playwright.config.ts records the same gap)',
+  );
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await loadSudoku(page);
+
+  const share = page.locator('button[aria-label="Share board link"]').first();
+  await expect(share).toBeVisible();
+  await share.click();
+
+  await expect
+    .poll(async () => ((await page.locator('.copy-status').textContent()) ?? '').trim(), {
+      timeout: 15000,
+    })
+    .toMatch(/copied/i);
+
+  // THE NAME HELD. At a fine pointer the row keeps its verb through every state.
+  const named = await page.evaluate(() =>
+    [...document.querySelectorAll('button')]
+      .map((b) => b.getAttribute('aria-label') ?? '')
+      .filter((l) => /share board link|link copied/i.test(l)),
+  );
+  console.log(`[§3.6 FINE] names=${JSON.stringify(named)}`);
+  expect(named).toContain('Share board link');
+  expect(named.filter((n) => /link copied/i.test(n))).toEqual([]);
+
+  // And the sublabel under the same glyph says the same thing the name does.
+  const sub = await share.locator('.icon-sublabel').textContent();
+  expect((sub ?? '').trim().toLowerCase()).toBe('share');
+});
+
+test('§3.6 PROVE — the failure sentence is reachable, in full, and the name still holds', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const nav = navigator as unknown as { clipboard?: unknown };
+    Object.defineProperty(nav, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () => Promise.reject(new Error('prove: clipboard denied')),
+        readText: () => Promise.reject(new Error('prove: clipboard denied')),
+      },
+    });
+  });
+  await loadSudoku(page);
+
+  const share = page.locator('button[aria-label="Share board link"]').first();
+  await share.click();
+
+  const heard = await expect
+    .poll(async () => ((await page.locator('.copy-status').textContent()) ?? '').trim(), {
+      timeout: 15000,
+    })
+    .toMatch(/couldn't copy/i)
+    .then(async () => ((await page.locator('.copy-status').textContent()) ?? '').trim());
+
+  console.log(`[§3.6 FAILURE] region=${JSON.stringify(heard)}`);
+  // The whole sentence, not a fragment: it says where the link went.
+  expect(heard.toLowerCase()).toContain('address bar');
+  expect(heard).not.toMatch(/[—–]/);
+  // The name still holds at a fine pointer.
+  await expect(share).toHaveAttribute('aria-label', 'Share board link');
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+// §3.7 — ONE UTTERANCE. The region says the CHOICE; the dialog says the title. No
+// region may carry the title, or the reader hears the prompt twice.
+// ───────────────────────────────────────────────────────────────────────────────
+test('§3.7 PROVE — the armed guard speaks once: no region repeats the dialog title', async ({
+  page,
+}) => {
+  await loadSudoku(page);
+  // Dirty the board so the guard has something to protect.
+  const empty = page.locator('.sudoku-cell input').nth(
+    await page.evaluate(() =>
+      [...document.querySelectorAll('.sudoku-cell input')].findIndex(
+        (i) => !(i as HTMLInputElement).value,
+      ),
+    ),
+  );
+  await empty.click();
+  await empty.fill('5');
+
+  await page.locator('button.logo-trigger').click();
+  const viewport = page.locator('.gallery-viewport');
+  await expect(viewport).toBeVisible({ timeout: 20000 });
+  await viewport.press('ArrowRight');
+  await expect(viewport).toHaveAttribute('aria-activedescendant', 'gallery-card-1', {
+    timeout: 20000,
+  });
+  await viewport.press('d');
+  await page.locator('.gallery-guard').waitFor({ state: 'visible', timeout: 20000 });
+
+  const title = ((await page.locator('.guard-note-title').textContent()) ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const live = await spoken(page);
+  const alert = ((await page.locator('.gallery-guard-live').textContent()) ?? '').trim();
+  console.log(
+    `[§3.7 GUARD] title=${JSON.stringify(title)} alert=${JSON.stringify(alert)} live=${JSON.stringify(live)}`,
+  );
+
+  expect(title.length).toBeGreaterThan(0);
+  // The region carries the CHOICE …
+  expect(alert.toLowerCase()).toMatch(/choose keep, or (deal|switch|leave)\./);
+  // … and never the title, at any region on the page.
+  const echoes = live.filter((l) => l.toLowerCase().includes(title.toLowerCase()));
+  expect(echoes, `a live region repeated the dialog's title: ${JSON.stringify(echoes)}`).toEqual(
+    [],
+  );
+  // The dialog is the survivor: its own name is the title.
+  const guardName = await page.locator('.gallery-guard').getAttribute('aria-label');
+  expect((guardName ?? '').toLowerCase()).toContain(title.toLowerCase().slice(0, 12));
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+// §3.1 RESIDUE 3C — opening the drawer BLURS a focused cell. Named, not claimed as
+// a defect: an owner's-pass item.
+// ───────────────────────────────────────────────────────────────────────────────
+test.describe('§3.1 residue 3C — the drawer takes the focus off the board', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('a focused cell loses the focus when the sheet rises, and gets the board back when it shuts', async ({
+    page,
+  }) => {
+    await loadSudoku(page);
+    // A cell with NO printed digit — read off the input's own value, not off a class. The
+    // estate's own helper filters on `.is-given`, which no `.game-cell` carries (see the
+    // census row below), so it answers 0 whatever the board is.
+    const idx = await page.evaluate(() =>
+      [...document.querySelectorAll('.board-cells .game-cell')].findIndex(
+        (c) => !(c.querySelector('.cell-native-input') as HTMLInputElement | null)?.value,
+      ),
+    );
+    expect(idx, 'the board has an empty square').toBeGreaterThanOrEqual(0);
+    const before = await page.evaluate((i) => {
+      const cell = [...document.querySelectorAll('.board-cells .game-cell')][i];
+      const input = cell?.querySelector<HTMLElement>('.cell-native-input');
+      input?.focus();
+      const a = document.activeElement as HTMLElement | null;
+      return {
+        focusedCell: a === input,
+        active: `${a?.tagName.toLowerCase()}.${(a?.className ?? '').toString().split(' ')[0]}`,
+      };
+    }, idx);
+    expect(before.focusedCell, 'the control: a cell CAN hold focus with the sheet shut').toBe(
+      true,
+    );
+
+    await page.locator('.drawer-tab').click();
+    await expect(page.locator('#controls-drawer .drawer-case')).toBeVisible();
+    await page.waitForTimeout(700);
+
+    const during = await page.evaluate(() => {
+      const a = document.activeElement as HTMLElement | null;
+      return {
+        active: `${a?.tagName.toLowerCase()}.${(a?.className ?? '').toString().split(' ')[0]}`,
+        inGrid: !!a?.closest('.board-cells'),
+        gridInert: !!document
+          .querySelector('.board-cells')
+          ?.closest('[inert]'),
+      };
+    });
+    console.log(`[3C RESIDUE] before=${JSON.stringify(before)} during=${JSON.stringify(during)}`);
+    expect(during.inGrid, 'the residue: the sheet takes the focus off the board').toBe(false);
+
+    // And the board comes back live when the sheet shuts.
+    await page.locator('.drawer-tab').click();
+    await page.waitForTimeout(700);
+    const after = await page.evaluate((i) => {
+      const cell = [...document.querySelectorAll('.board-cells .game-cell')][i];
+      const input = cell?.querySelector<HTMLInputElement>('.cell-native-input');
+      input?.focus();
+      const focused = document.activeElement === input;
+      return { focused, gridInert: !!document.querySelector('.board-cells')?.closest('[inert]') };
+    }, idx);
+    console.log(`[3C RESIDUE] after-shut=${JSON.stringify(after)}`);
+    expect(after.focused, 'the sheet shut, the grid is live again').toBe(true);
+    expect(after.gridInert).toBe(false);
+
+    const cell = page.locator('.board-cells .game-cell').nth(idx).locator('.cell-native-input');
+    await cell.fill('5');
+    await expect(cell).toHaveValue('5');
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────────────
+// §3.1 — THE WHOLE LAW IN ONE ROW, at both cells, in my own instrument: shut →
+// the key writes; risen → the walk never stops on the paper and the key writes
+// nothing; shut again → the board is live. Plus the census that names what the
+// estate's own `firstEmptyCell` is actually reading.
+// ───────────────────────────────────────────────────────────────────────────────
+for (const [name, pose] of [
+  ['390x844', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }],
+  ['768x1024', { viewport: { width: 768, height: 1024 }, hasTouch: true, isMobile: true }],
+] as const) {
+  test.describe(`§3.1 PROVE — ${name}`, () => {
+    test.use(pose);
+
+    test('shut writes, risen refuses the walk and the key, shut writes again', async ({
+      page,
+    }) => {
+      await loadSudoku(page);
+
+      // THE CENSUS the estate's helper depends on: how many `.game-cell` carry `is-given`.
+      const census = await page.evaluate(() => {
+        const cells = [...document.querySelectorAll('.board-cells .game-cell')];
+        return {
+          cells: cells.length,
+          withIsGivenClass: cells.filter((c) => c.classList.contains('is-given')).length,
+          emptyByValue: cells.filter(
+            (c) => !(c.querySelector('.cell-native-input') as HTMLInputElement | null)?.value,
+          ).length,
+          firstEmptyByClass: cells.findIndex((c) => !c.classList.contains('is-given')),
+          firstEmptyByValue: cells.findIndex(
+            (c) => !(c.querySelector('.cell-native-input') as HTMLInputElement | null)?.value,
+          ),
+        };
+      });
+      console.log(`[§3.1 ${name}] census=${JSON.stringify(census)}`);
+
+      const idx = census.firstEmptyByValue;
+      expect(idx).toBeGreaterThanOrEqual(0);
+      const input = page.locator('.board-cells .game-cell').nth(idx).locator('.cell-native-input');
+
+      // CONTROL — the sheet is shut and the key lands.
+      await input.click();
+      await page.keyboard.type('5');
+      await expect(input).toHaveValue('5');
+      await page.keyboard.press('Backspace');
+      await expect(input).toHaveValue('');
+
+      await page.locator('.drawer-tab').click();
+      await expect(page.locator('#controls-drawer .drawer-case')).toBeVisible();
+      await page.waitForTimeout(700);
+
+      // THE WALK never stops on the paper under the sheet.
+      let intoGrid = 0;
+      const stops: string[] = [];
+      for (let i = 0; i < 40; i++) {
+        await page.keyboard.press('Tab');
+        const where = await page.evaluate(() => {
+          const a = document.activeElement as HTMLElement | null;
+          return {
+            tag: `${a?.tagName.toLowerCase()}.${(a?.className ?? '').toString().split(' ')[0]}`,
+            inGrid: !!a?.closest('.board-cells'),
+          };
+        });
+        stops.push(where.tag);
+        if (where.inGrid) intoGrid++;
+      }
+
+      // AND THE KEY writes nothing: the covered cell is asked for focus by name and typed into.
+      const wrote = await page.evaluate((i) => {
+        const cell = [...document.querySelectorAll('.board-cells .game-cell')][i];
+        const el = cell?.querySelector<HTMLInputElement>('.cell-native-input');
+        el?.focus();
+        return { focused: document.activeElement === el, before: el?.value ?? null };
+      }, idx);
+      await page.keyboard.type('5');
+      const after = await page.evaluate((i) => {
+        const cell = [...document.querySelectorAll('.board-cells .game-cell')][i];
+        return cell?.querySelector<HTMLInputElement>('.cell-native-input')?.value ?? null;
+      }, idx);
+      console.log(
+        `[§3.1 ${name}] risen intoGrid=${intoGrid} focus=${JSON.stringify(wrote)} after=${JSON.stringify(after)} stops=${JSON.stringify([...new Set(stops)])}`,
+      );
+      expect(intoGrid, `Tab stopped on ${intoGrid} covered cells`).toBe(0);
+      expect(wrote.focused, 'a covered cell took focus').toBe(false);
+      expect(after, 'a keystroke wrote into a covered cell').toBe('');
+
+      // SHUT AGAIN — the board is live.
+      await page.locator('.drawer-tab').click();
+      await page.waitForTimeout(700);
+      await input.click();
+      await page.keyboard.type('6');
+      await expect(input).toHaveValue('6');
+    });
+  });
+}
+
+// ───────────────────────────────────────────────────────────────────────────────
+// §3.3 — AUTHORSHIP, LIVE. Two pages on one board, the local wire. A's digit must
+// speak as A's on B's page and as yours on A's, and no clue may carry a hand.
+// ───────────────────────────────────────────────────────────────────────────────
+test('§3.3 PROVE — a peer cell speaks the peer, your cell speaks you, a clue speaks nobody', async ({
+  browser,
+}) => {
+  test.slow();
+  const ctx = await browser.newContext();
+  const a = await ctx.newPage();
+  await a.goto(SOLO + '&wire=local');
+  await a.waitForSelector('svg.handwritten-logo', { timeout: 30000 });
+  await expect
+    .poll(() => a.locator('.sudoku-cell .glyph-svg').count(), { timeout: 30000 })
+    .toBeGreaterThan(0);
+
+  const verb = a.locator('.controls-card button[aria-label="Play together on this board"]');
+  await expect(verb).toBeEnabled({ timeout: 30000 });
+  await verb.click();
+  await expect.poll(() => new URL(a.url()).searchParams.get('s'), { timeout: 30000 }).not.toBeNull();
+  const link = a.url();
+
+  const b = await ctx.newPage();
+  await b.goto(link);
+  await b.waitForSelector('svg.handwritten-logo', { timeout: 30000 });
+  await expect
+    .poll(() => b.locator('.sudoku-cell .glyph-svg').count(), { timeout: 30000 })
+    .toBeGreaterThan(0);
+  await expect(b.locator('.controls-card .players-roster .player-row')).toHaveCount(2, {
+    timeout: 30000,
+  });
+
+  // A writes. The index is a cell nobody has written.
+  const idx = await a.evaluate(() =>
+    [...document.querySelectorAll('.sudoku-cell input')].findIndex(
+      (i) => !(i as HTMLInputElement).value,
+    ),
+  );
+  const aCell = a.locator('.sudoku-cell input').nth(idx);
+  await aCell.click();
+  await aCell.fill('7');
+
+  await expect(b.locator('.sudoku-cell input').nth(idx)).toHaveValue('7', { timeout: 30000 });
+
+  // A's own slug, as A's roster draws it for the peer.
+  const peerName = (
+    await b
+      .locator('.controls-card .players-roster .player-row:not(:has(.player-self)) .player-name')
+      .first()
+      .textContent()
+  )?.trim();
+
+  const onB = await b.locator('.sudoku-cell input').nth(idx).getAttribute('aria-label');
+  const onA = await a.locator('.sudoku-cell input').nth(idx).getAttribute('aria-label');
+  console.log(
+    `[§3.3 LIVE] peerName=${JSON.stringify(peerName)} onB=${JSON.stringify(onB)} onA=${JSON.stringify(onA)}`,
+  );
+
+  expect(onA, "the author's own page says the digit is theirs").toMatch(/your entry 7$/);
+  expect(onA).not.toContain('written by');
+  expect(onB, "the peer's page names the peer").toMatch(/'s entry 7$/);
+  expect(onB).not.toContain('your entry');
+  expect(onB).not.toContain('written by');
+  if (peerName) expect(onB).toContain(`${peerName}'s entry 7`);
+
+  // A CLUE SPEAKS NOBODY — on both pages.
+  for (const p of [a, b]) {
+    const given = await p.evaluate(
+      () =>
+        [...document.querySelectorAll('.sudoku-cell input')]
+          .map((i) => i.getAttribute('aria-label') ?? '')
+          .find((l) => /given clue/.test(l)) ?? null,
+    );
+    expect(given, 'a printed clue exists on the board').not.toBeNull();
+    expect(given!).toMatch(/given clue/);
+    expect(given!).not.toContain('written by');
+    expect(given!).not.toContain('entry');
+  }
+
+  await ctx.close();
+});

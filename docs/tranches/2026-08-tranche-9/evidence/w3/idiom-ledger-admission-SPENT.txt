@@ -1,0 +1,103 @@
+ledger-diff — 2026-08-tranche-9 disposition completeness + ledger currency
+==============================================================================
+generated   2026-08-28T18:40:35.040Z
+node        v26.0.0
+repo HEAD   4686436f 2026-08-28 14:10:22 -0400 ci-truth cure: submodules:true KILLED doc-truth at checkout -- precepts is private
+tranche     docs/tranches/2026-08-tranche-9  (open)
+arms        ORPHAN · FREEZE · TERMINALITY · FOLD-TARGET · PROBE · DUPLICATE · ONE-HOME · LIVE-REGION
+mode        dry-run
+
+THE ESTATE (sealed = a close record on disk)
+  docs/tranches/2026-07-tranche-2    SEALED  superseded by 2026-07-tranche-3
+  docs/tranches/2026-07-tranche-3    SEALED  superseded by 2026-07-tranche-4
+  docs/tranches/2026-07-tranche-4    SEALED  WGATE-record.md
+  docs/tranches/2026-08-tranche-5    SEALED  evidence/wgate/close-record.md
+  docs/tranches/2026-08-tranche-6    SEALED  CLOSE.md
+  docs/tranches/2026-08-tranche-7    SEALED  evidence/wgate/close-record.md
+  docs/tranches/2026-08-tranche-8    SEALED  evidence/wgate/close-record.md
+  docs/tranches/2026-08-tranche-9    open   ← this tranche
+
+FREEZE SWEEP (every sealed tranche re-diffed against its OWN tranche-time corpus)
+  docs/tranches/2026-07-tranche-2    SKIPPED — no audited row set (closed inside its own records)
+  docs/tranches/2026-07-tranche-3    SKIPPED — no audited row set (closed inside its own records)
+  docs/tranches/2026-07-tranche-4    SKIPPED — no audited row set (closed inside its own records)
+  docs/tranches/2026-08-tranche-5    220 audited rows · 10 corpus files · 0 orphan
+  docs/tranches/2026-08-tranche-6     36 audited rows · 5 corpus files · 0 orphan
+  docs/tranches/2026-08-tranche-7    145 audited rows · 11 corpus files · 0 orphan
+  docs/tranches/2026-08-tranche-8     17 audited rows · 3 corpus files · 0 orphan
+
+CORPUS (14 files)
+  docs/tranches/2026-08-tranche-9/waves/T9-W0-record.md  7057 B
+  docs/tranches/2026-08-tranche-9/waves/T9-W1-board-law.md  5693 B
+  docs/tranches/2026-08-tranche-9/waves/T9-W2-viewport-law.md  6682 B
+  docs/tranches/2026-08-tranche-9/waves/T9-W3-spoken-product.md  5409 B
+  docs/tranches/2026-08-tranche-9/waves/T9-W4-generation.md  4822 B
+  docs/tranches/2026-08-tranche-9/waves/T9-W5-gates.md  7197 B
+  docs/tranches/2026-08-tranche-9/waves/T9-W6-substrate.md  5194 B
+  docs/tranches/2026-08-tranche-9/waves/T9-W7-design.md  6556 B
+  docs/tranches/2026-08-tranche-9/waves/T9-W8-first-paint.md  4268 B
+  docs/tranches/2026-08-tranche-9/waves/T9-WGATE.md  3082 B
+  docs/tranches/2026-08-tranche-9/FORMULATION-ORDER.md  2884 B
+  docs/tranches/2026-08-tranche-9/README.md  8422 B
+  docs/tranches/2026-08-tranche-9/design-marks-2026-08-10.md  7027 B
+  docs/tranches/LEDGER.md  74171 B
+
+INPUTS (excluded from the corpus — a row set cannot cite itself terminal)
+  docs/tranches/2026-08-tranche-9/DISPOSITIONS.md
+    5 row ids  (2 T8-nn + 3 CH-nn)
+  1 range expressions in the corpus, read as scope, not citation
+
+LIVING LEDGER  docs/tranches/LEDGER.md
+  §1 Open — what the next close must carry              4 rows   ← open
+  §2 Terminal — decided, closed, retired, excluded     73 rows
+  §3 Recap orphans, homed                               7 rows
+  §4 The unaddressed eleven                            11 rows
+  §5 The superseded eleven                             11 rows
+  §6 T7 — the unledgered, homed 2026-08-03             65 rows
+
+CURRENCY COVERAGE  (171 ledger rows)
+  TERMINALITY    4  2.3%  §1 only — the accretion disease is an OPEN-row disease
+  FOLD-TARGET   76  44.4%  every row naming a wave, in any section
+  PROBE          2  1.2%  rows carrying a registration (CH-16, CH-69)
+  DUPLICATE    171  100.0%  every row, against every other
+  ONE-HOME     171  100.0%  every row, against 1 registered class home(s)
+  CITES         11  6.4%  §1 + terminal-under-WATCH — scope HELD, see the header
+  ─ union      171  100.0%  (was 11 · 6.4% before T9-W5)
+  of which 18 dead-state FOLDED rows, 0 under any arm before, 18 under FOLD-TARGET now
+
+LIVE-REGION ADMISSIONS (2) — sites that violate TODAY, printed in full
+  web/frontend/src/games/shared/GameControlPanel.vue  class="players-status"
+      admitted 2026-08-28 (T9-W5) · cure: T9-W3 — the connecting/connected resolution must be spoken, not removed
+  web/frontend/src/games/shared/GameControlPanel.vue  class="players-alone sr-only"
+      admitted 2026-08-28 (T9-W5) · cure: T9-W3 — a room of one must be announced by a region that was already there
+  An unadmitted site REDs on contact; an admission whose site stops violating REDs as SPENT.
+
+SATISFACTION (ORPHAN arm)
+  CORPUS     5
+  SELF       0
+  DELEGATED  0
+  ORPHAN     0
+  total      5
+
+FREEZE — clean
+
+TERMINALITY — clean
+
+FOLD-TARGET — clean
+
+PROBE — 1 finding(s)
+  CH-69   docs/tranches/LEDGER.md:63
+          §1 row asserts killer Hard-tier uniqueness is UNTESTED — the uniqueness sweep covers Easy/Medium only; the tree refutes it — the sweep's difficulty list NOW NAMES Difficulty::Hard (csp-solver/tests/killer.rs). The record cannot verify the record: move the row or correct the claim.
+
+DUPLICATE — clean
+
+ONE-HOME — clean
+
+LIVE-REGION — 2 finding(s)
+  ADMISSION web/frontend/src/games/shared/GameControlPanel.vue  class="players-status"
+          admission SPENT — the site no longer violates, so the admission is a carve-out over nothing. Delete it in the commit that cured the site (T9-W3 — the connecting/connected resolution must be spoken, not removed).
+  ADMISSION web/frontend/src/games/shared/GameControlPanel.vue  class="players-alone sr-only"
+          admission SPENT — the site no longer violates, so the admission is a carve-out over nothing. Delete it in the commit that cured the site (T9-W3 — a room of one must be announced by a region that was already there).
+
+VERDICT
+  RED — 1 PROBE · 2 LIVE-REGION. exit 1

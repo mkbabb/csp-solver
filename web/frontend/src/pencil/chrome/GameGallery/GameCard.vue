@@ -413,6 +413,32 @@ const dealStyle = computed(() => {
   will-change: transform, opacity;
 }
 
+/* THE FOCUS RING RIDES THIS CARD (T9-W3 §3.7 — the correctness half; the look is W7 §6).
+   The deck is an aria-activedescendant listbox: DOM focus stays on `.gallery-viewport` for the
+   whole session, so the ring it used to draw on itself sat in the same place for all five cards
+   (measured at HEAD, both engines: an identical `112.0,125.4 1056.0x456.0` box at every
+   `aria-activedescendant` value, every card's own `outline-style` `none`). A visible indicator
+   that cannot name the option it indicates is not a focus indicator. It hangs off the deck's
+   `:focus-visible` — the state stays the scrollport's, the paint becomes the option's — and it
+   lands on the `role="option"` element itself, which is the node `aria-activedescendant` points
+   at, so the ring and the AX truth are the same object.
+
+   `.is-center` IS the active option: the class and `aria-selected` are set from one prop
+   (`isActive`), and the deck's `aria-activedescendant` names that card's id in the same render.
+
+   THE OFFSET IS BOUNDED BY THE SCROLLPORT, not chosen. An outline on a descendant is clipped by
+   the scroll container that holds it, and the END cards rest with only 9.6px of air at 1280×800
+   (index 0 at left, index 4 at right — `useCarouselGlide`'s clamp cannot travel them to true
+   centre). 4px offset + 2px stroke reaches 6px out, so the ring stays whole with 3.6px to
+   spare at the tightest rung and ~42px at 390×844. `spoken-gallery.spec.ts` pins WHOLE rather
+   than merely PRESENT, at both end cards, so a future offset that overruns the scrollport reds
+   instead of quietly painting a ring nobody can see. */
+.gallery-viewport:focus-visible .game-card.is-center {
+  outline: 2px solid color-mix(in srgb, var(--color-foreground) 40%, transparent);
+  outline-offset: 4px;
+  border-radius: 0.5rem;
+}
+
 /* The deal wrapper (Wave C2 §BEAT 2) — its OWN compositor channel (opacity + a small lift),
    driven by the gallery's one-shot deal sequence, separate from the depth scale above and the
    chime bloom on the frame. At rest it is opacity:1 / no transform (zero steady-state cost);

@@ -22,6 +22,59 @@ is `inert`. One mechanism, every viewport class it covers (V1/B1 measured 81/81 
 - Interaction with W1: under B7's default (givens inviolable) the worst harm dies in
   W1; this row cures the remaining harm — ANY invisible write, given or not.
 
+**ADJUSTED (chair ruling, T9 W3+W6 seal, 2026-09-17) — the occlusion figures, the metric
+that produces them, and the shape of the cure.** Appended under the freeze law; the lines
+above stay legible. They are inherited rather than measured, and at the seal three figure
+sets were loose in the estate (`../evidence/w3/prove/PROVE-RECORD.md` findings 3 and 4):
+this spec's 81/63/46, `e2e/spoken-controls.spec.ts`'s header at 59–62/47–46/40–42, and the
+prove lane's geometric census of fullyUnderSheet 81/54/45 beside centreUnderSheet 81/63/54.
+
+**The metric of record is CENTRE-UNDER-SHEET, and it is GEOMETRIC** — a cell counts as
+covered when its own centre lies inside the risen sheet's rect. It is what this spec's
+original 81 and 63 were measuring. Re-derived at the seal tree rather than carried
+(`../evidence/w3/seal/S1-27-census-rederived-both-engines.txt`), it reproduces the prove
+lane exactly and to the cell, **identically on both engines**, at 390×844 / 768×1024 /
+820×1180:
+
+| pose | centreUnderSheet | fullyUnderSheet | clearOfSheet | focusable, sheet shut | focusable, sheet up |
+| --- | --- | --- | --- | --- | --- |
+| 390×844 | **81/81** | 81 | 0 | 81/81 | 0/81 |
+| 768×1024 | **63/81** | 54 | 18 | 81/81 | 0/81 |
+| 820×1180 | **54/81** | 45 | 27 | 81/81 | 0/81 |
+
+Only the third pose moves against this spec's header (46 → 54). fullyUnderSheet is retired
+as a stricter geometry answering a different question.
+
+**Why three sets existed, named so the next census does not repeat it.** The
+`spoken-controls.spec.ts` range (59–62 / 47–46 / 40–42) has two defects compounded. First,
+it was taken before the grid finished sizing: a census that skips zero-width cells counts
+about a third of the board, which this seal reproduced by accident and then fixed with a
+poll for 81 laid-out cells. Second, it hit-tested `document.elementFromPoint`, and `inert`
+removes an element from hit-testing — so on a CURED tree that predicate calls all 81 cells
+covered at every pose, both engines (`centreHitTestCovered` in the banked census; the prove
+lane's own control reads `inertIsBox: false`). A premise satisfied by the cure it is meant
+to be independent of is not a premise. `e2e/spoken-controls.spec.ts`'s census was moved to
+the geometric predicate in the same commit, given a sheet-SHUT control of its own, and that
+control was plant-proved RED 4/4 against a census that answers "covered" unconditionally
+(`../evidence/w3/seal/S1-31-probe-census-lies-RED.txt`).
+
+**The mechanism is MODAL — the metric is geometric, the CURE is not.** The sentence above says "the covered region is
+`inert`"; what ships inerts the WHOLE grid (`GameBoard.vue`, `:inert="boardCovered ||
+undefined"`), so cells geometrically clear of the risen sheet lose focusability with it —
+18 of 81 at 768×1024, 27 of 81 at 820×1180. That is the decision, not an over-reach: one
+predicate, modal semantics, because a half-covered cell is ambiguous and the tab is the
+sheet's only route out. `GameBoard.occlusion.test.ts` already pins the corollary the modal
+reading requires — the `inert` lands on the GRID and never on the shell, so a covered board
+can still speak.
+
+**The P0 is unmoved, and the cure is measured.** The row rests on the focusable column,
+which never depended on the coverage census: **81 of 81** cells took focus at every pose —
+that is the defect — and with the cure landed the same sweep reads **0 of 81** at every
+pose, both engines (same banked census). The cure's born-RED is at
+`../evidence/w3/seal/S1-16-probe-write-assertion-alone-RED.txt`: with the `inert` ablated a
+keystroke writes `5` into a covered cell, 4/4, both engines, both poses.
+`../evidence/w3/handoffs/fold-FA5-1.md` raised the stale-figures half and is SPENT here.
+
 ## 3.2 Focus returns on every gallery exit (P1, adjusted)
 
 Seven of seven exit paths that begin with focus in the deck land it on `<body>`

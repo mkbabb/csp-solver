@@ -178,10 +178,18 @@ async function armGuard(page: Page) {
 
 /**
  * Is the guard's ARMED STATE announced? Two honest cures, either satisfies:
- *  · a live region (anywhere) speaks the guard's own name — read OFF the guard rather than
- *    hardcoded, so the copy may change without touching this gate; or
+ *  · a live region (anywhere) speaks what the guard is OFFERING — read OFF the guard rather
+ *    than hardcoded, so the copy may change without touching this gate; or
  *  · the ribbon itself is an announcing surface (`role="alert"` / `aria-live`), which is what
  *    `role="alertdialog"` alone is NOT (it carries no implicit live semantics — r2 §H2).
+ *
+ * T9-W3 §3.7 — WHICH STRING THIS READS, AND WHY IT MOVED. It used to read the guard's own
+ * `aria-label`, which is the alertdialog's NAME; requiring a live region to repeat it was the
+ * double-speak itself (the title and the stake spoken once by the region and again by the
+ * dialog the focus lands in). The region keeps the half the dialog cannot say — the choice on
+ * offer — so the gate reads the destructive VERB the ribbon draws on `.guard-leave`. Still off
+ * the guard, still copy-agnostic, and it still reds on silence: the second branch above is what
+ * `alertdialog` alone does not earn, so dropping the region outright would not pass here.
  */
 async function guardAnnounced(page: Page): Promise<boolean> {
   return page.evaluate(() => {
@@ -189,10 +197,10 @@ async function guardAnnounced(page: Page): Promise<boolean> {
     if (!guard) return false;
     const norm = (s: string | null) => (s ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
     if (guard.getAttribute('role') === 'alert' || guard.hasAttribute('aria-live')) return true;
-    const key = norm(guard.getAttribute('aria-label')).replace(/[?.!]+$/, '');
-    if (!key) return false;
+    const verb = norm(guard.querySelector('.guard-leave')?.textContent ?? '');
+    if (!verb) return false;
     return [...document.querySelectorAll('[aria-live],[role="status"],[role="alert"]')].some(
-      (r) => norm(r.textContent).includes(key),
+      (r) => norm(r.textContent).includes(verb),
     );
   });
 }

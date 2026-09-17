@@ -11,9 +11,10 @@ import DigitCell from "./DigitCell.vue";
  *
  *   · `isPeerCursor` → the root state class. The ring's whole form lives in `gameCell.css`; the
  *     class is the only thing the cell decides.
- *   · `authorName` → the accessible name's tail. It is the coarse-pointer route to attribution,
- *     stated as a real asymmetry rather than papered over: hover is a fine-pointer grammar and
- *     long-press is already spent on the peek, so a thumb gets the NAME or it gets nothing.
+ *   · `authorName` → the accessible name's CORE (T9-W3 §3.3 moved it there from the tail). It is
+ *     the coarse-pointer route to attribution, stated as a real asymmetry rather than papered
+ *     over: hover is a fine-pointer grammar and long-press is already spent on the peek, so a
+ *     thumb gets the NAME or it gets nothing.
  */
 
 function mountCell(overrides: Record<string, unknown> = {}) {
@@ -57,22 +58,43 @@ describe("ghost tier 4 — a peer's pencil is on this square", () => {
   });
 });
 
-describe("attribution — the accessible name carries who wrote it", () => {
-  it("says nothing extra when nobody else wrote the cell", () => {
+/**
+ * T9-W3 §3.3 — RE-CUT. The rows below used to pin "your entry 4, written by brave-otter": one
+ * sentence claiming two different hands wrote one digit, and the gate held it there. A gate that
+ * enshrines a defect is itself a defect, so the pin moved to the truth.
+ *
+ * THE RULE THE ROWS NOW STATE: the writing hand is named ONCE, in the core, by the only clause
+ * that claims one. `authorName` is a PEER's slug and nothing else (BoardHost's `authorNameAt`
+ * returns "" for your own cells and for the unauthored), so a peer's digit is the peer's and
+ * yours is yours. The kinds whose core names a different hand — a printed clue (nobody wrote
+ * it) and the solver's answer (the solver did, and the glyph wears the solver's ink to say so)
+ * — take no authorship clause at all, because a second hand in the sentence is a contradiction
+ * whichever way it is read.
+ */
+describe("attribution — the accessible name names ONE hand, truly", () => {
+  it("says your own entry is yours", () => {
     const label = mountCell().get("input").attributes("aria-label");
     expect(label).toBe("Row 2, column 3, your entry 4");
   });
 
-  it("appends the author, in plain English, after the value", () => {
+  it("speaks a peer's digit as the PEER's, in plain English", () => {
     const label = mountCell({ authorName: "brave-otter" })
       .get("input")
       .attributes("aria-label");
-    expect(label).toBe("Row 2, column 3, your entry 4, written by brave-otter");
+    expect(label).toBe("Row 2, column 3, brave-otter's entry 4");
   });
 
-  it("rides the SAME tail the clue vocabulary uses, and keeps its order", () => {
-    // `ariaSuffix` is one seam, not two: futoshiki's inequality and the author land in one
-    // comma-joined clause rather than the author minting a second describedby nobody points at.
+  it("never claims two hands wrote one digit", () => {
+    const label = mountCell({ authorName: "brave-otter" })
+      .get("input")
+      .attributes("aria-label")!;
+    expect(label).not.toContain("your entry");
+    expect(label).not.toContain("written by");
+  });
+
+  it("keeps the clue clause after the value, and keeps its order", () => {
+    // The authorship rides the CORE and the constraint rides the suffix, so the two never
+    // compete for one tail: who wrote it, then what the clue says about it.
     const label = mountCell({
       geometry: "latin",
       boardSize: 5,
@@ -82,8 +104,32 @@ describe("attribution — the accessible name carries who wrote it", () => {
       .get("input")
       .attributes("aria-label");
     expect(label).toBe(
-      "Row 2, column 3, your entry 4, greater than the cell to the right, written by keen-lynx",
+      "Row 2, column 3, keen-lynx's entry 4, greater than the cell to the right",
     );
+  });
+
+  it("leaves the solver's answer the solver's, whoever asked for it", () => {
+    // A peer's solve stamps the ledger, so a revealed cell can carry a peer's slug. The digit
+    // is still the solver's — it wears the solver's ink — and one hand is what gets named.
+    const label = mountCell({ isSolved: true, authorName: "brave-otter" })
+      .get("input")
+      .attributes("aria-label");
+    expect(label).toBe("Row 2, column 3, solver's answer 4");
+  });
+
+  it("leaves a printed clue unauthored, whatever the ledger holds", () => {
+    const label = mountCell({ isGiven: true, authorName: "brave-otter" })
+      .get("input")
+      .attributes("aria-label");
+    expect(label).toBe("Row 2, column 3, given clue 4");
+  });
+
+  it("attributes nothing on an emptied cell — there is no digit to own", () => {
+    // An erase is a write, so the clock keeps the position and the slug outlives the value.
+    const label = mountCell({ value: 0, authorName: "brave-otter" })
+      .get("input")
+      .attributes("aria-label");
+    expect(label).toBe("Row 2, column 3, empty");
   });
 
   it("holds M16's register: the clause carries no dash of any kind", () => {

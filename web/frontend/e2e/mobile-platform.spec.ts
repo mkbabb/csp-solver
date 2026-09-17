@@ -435,36 +435,93 @@ test.describe("the 296px keypad band (measured constant, driven through the comp
     const BAND = 296;
     await installFakeVisualViewport(page);
     await loadSudoku(page);
+    /** Both vars the one handler publishes, read together — the trigger's own ordering, gated. */
+    const vars = () =>
+      page.evaluate(() => {
+        const cs = getComputedStyle(document.documentElement);
+        return [
+          cs.getPropertyValue("--keyboard-inset").trim(),
+          cs.getPropertyValue("--vv-height").trim(),
+        ].join(" ");
+      });
+
+    // T6.2 mark B — THE PREMISE IS DRIVEN, not assumed. `--keyboard-inset` is gated on a focused
+    // input now (`useKeyboardViewport`: a band published with nothing focused was a phantom
+    // keyboard, and its layout consumer turned every momentum-scroll wobble into a board
+    // bounce), so a keypad row has to put a cell in focus before it raises a keypad. That is
+    // what a real keypad IS — and the sheet is SHUT while it rises, because that is the only
+    // pose a reader can raise one from.
+    await page.locator(".board-cells input").first().focus();
+    await page.evaluate((b) => (window as unknown as VVWindow).__setVV(664 - b), BAND);
+    await expect.poll(vars).toBe(`${BAND}px ${664 - BAND}px`);
+
+    // T9-W3 §3.1 — AND THEN THE SHEET RISES OVER THE BOARD, which is the pose every assertion
+    // below is taken in. A covered grid is `inert` now (`GameBoard.vue`), so the cell's focus is
+    // released the instant the sheet is up and the INSET goes with it: there is no software
+    // keyboard over a board nobody can type into, here or on a device. Measured, both engines:
+    // `activeElement` leaves the grid for the sheet's own heading button, and a second `.focus()`
+    // on the cell is refused outright (`evidence/w3/fold/FA1-inert-focus-probe.txt`). 3C-1 §C
+    // proposed focusing first and opening after; that is the right ORDER and it is the order
+    // here, but it does not keep the focus — nothing can, and the row says so rather than
+    // asserting a pose the product no longer has.
+    //
+    // THE SUBJECT IS UNTOUCHED, because the sheet's anchor never rode the inset. It rides
+    // `--vv-height` — the visual viewport's own bottom edge, published UNGATED in the same
+    // handler — and that number HOLDS at the band's edge through the blur. It is the number the
+    // seating assertions below are taken against, and the ablation at the foot of this row is
+    // still the thing that proves they can fail.
+    //
     // `.click()`, not `.tap()`, and the reason is the harness rather than the product: this
     // row replaces `window.visualViewport` with a fake before load, and Playwright's touch
     // path converts its point through that object — the tongue's box (616–664 at this cell,
     // measured) is inside the viewport, but the emulated tap resolves "outside of the
     // viewport" against the stand-in. The tongue's own touch target is gated where it belongs,
     // on the real object: `drawer.spec.ts`'s portrait row taps it and reads 92×48.
-    await page.locator(".drawer-tab").click();
-    await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
-    await page.waitForTimeout(700);
-
-    // T6.2 mark B — THE PREMISE IS DRIVEN, not assumed. `--keyboard-inset` is gated on a focused
-    // input now (`useKeyboardViewport`: a band published with nothing focused was a phantom
-    // keyboard, and its layout consumer turned every momentum-scroll wobble into a board
-    // bounce), so a keypad row has to put a cell in focus before it raises a keypad. That is
-    // what a real keypad IS. `.focus()` rather than a tap: the sheet is open over the board and
-    // the row is about the band, not about reaching a covered cell.
-    await page.locator(".board-cells input").first().focus();
-    await page.evaluate((b) => (window as unknown as VVWindow).__setVV(664 - b), BAND);
-    // BOTH vars publish from the one handler — the trigger's own ordering, gated.
+    //
+    // AND THE TONGUE IS REACHED AT ITS REST POSE, which is the same licence one paragraph up
+    // rather than a new one. Under the stand-in viewport shrunk to the band, the tongue travels
+    // (489.7 → 444.2, measured both engines) and its box centre lands on `.scene-controls` the
+    // whole way, so a click there either toggles nothing or is refused outright as an
+    // interception — both measured in WebKit under load, and both a property of the stand-in,
+    // not of the sheet. The viewport is therefore handed back before the gesture and taken again
+    // after it. Nothing is claimed about the pose in between: the publisher was proven above,
+    // the anchor is asserted below, and the two `__setVV` calls are the harness walking the
+    // tongue into reach.
+    const tab = page.locator(".drawer-tab");
+    const sheet = page.locator("#controls-drawer .drawer-case");
+    await page.evaluate(() => (window as unknown as VVWindow).__setVV(664));
+    let prevBox = "";
     await expect
-      .poll(() =>
-        page.evaluate(() => {
-          const cs = getComputedStyle(document.documentElement);
-          return [
-            cs.getPropertyValue("--keyboard-inset").trim(),
-            cs.getPropertyValue("--vv-height").trim(),
-          ].join(" ");
-        }),
+      .poll(
+        async () => {
+          const b = JSON.stringify(await tab.boundingBox());
+          const same = b === prevBox;
+          prevBox = b;
+          return same;
+        },
+        { timeout: 5000, intervals: [100, 100, 150, 250, 400, 600] },
       )
-      .toBe(`${BAND}px ${664 - BAND}px`);
+      .toBe(true);
+
+    await tab.click();
+    // THE TOGGLE FIRST, THE GLIDE AFTER, and never a second click. `aria-expanded` is the
+    // tongue's own state and it flips on the toggle, so it answers "did the gesture land" without
+    // waiting on the Band-D glide; `toBeVisible` then answers "did the sheet arrive". A retry
+    // click was tried here and is the wrong instrument: once the sheet IS up, `.scene-controls`
+    // covers the tongue's box and the retry spends the whole test budget being intercepted, so a
+    // slow glide turned into a 30s timeout (measured, WebKit under load).
+    await expect(tab).toHaveAttribute("aria-expanded", "true");
+    await expect(sheet).toBeVisible();
+    await page.waitForTimeout(700);
+    // The band again, now under the risen sheet — the pose every assertion below is taken in.
+    await page.evaluate((b) => (window as unknown as VVWindow).__setVV(664 - b), BAND);
+    // THE PREMISE, GATED. `inert` on the grid is what a risen sheet means, so this is the one
+    // read that tells a covered board from a page that quietly went back to some other pose —
+    // the inset below reads 0 either way (a click on the tongue blurs the cell on its own), so
+    // without this line the whole sheet-open half of the row could pass on a board nobody is
+    // covering.
+    await expect(page.locator(".board-cells")).toHaveAttribute("inert", "");
+    await expect.poll(vars).toBe(`0px ${664 - BAND}px`);
 
     /** The lowest painted instance of `sel`, and whether it is clear of the band — at scrollY 0.
      *  `deep` scrolls the sheet's own scrollport to its end first: the dock is designed around

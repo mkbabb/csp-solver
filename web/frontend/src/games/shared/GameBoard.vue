@@ -47,8 +47,14 @@ import { BOARD_CELLS_CLASS } from "@games/shared/constants";
 import { formatSolveTally } from "@games/shared/solveTally";
 import { formatHintNote, formatConflictNote } from "@games/shared/techniqueVoice";
 import { toDisplayChar } from "@pencil/glyph/glyphRegistry";
-import { vignetteDocked, vignetteHasTally } from "@games/shared/useControlsDrawer";
+import {
+  mobileDock,
+  useControlsDrawer,
+  vignetteDocked,
+  vignetteHasTally,
+} from "@games/shared/useControlsDrawer";
 import { useDebug } from "@/composables/useDebug";
+import { useLiveRegion } from "@/composables/useLiveRegion";
 import type { HintResult } from "@games/shared/techniqueEngine";
 import type { CellRefusal } from "@games/shared/useGameState";
 import type { SolveState, SolveStats } from "@games/shared/types";
@@ -60,6 +66,9 @@ const props = defineProps<{
   values: Record<string, number>;
   givenCells: Set<string>;
   animatingCells: Set<string>;
+  /** T9-W3 §3.5 — the forced sweep's own count, stamped, straight off the model. Optional so
+   *  a surface that never sweeps (a mount with no fill act) hands nothing rather than a zero. */
+  lastFill?: { count: number; stamp: number } | null;
   solveState: SolveState;
   boardGeneration: number;
   /** The sub-grid edge for the hand-drawn grid + ghost rects: Sudoku passes `size` (3×3
@@ -616,6 +625,52 @@ function setMargin(text: string, tone: "graphite" | "teacher-red" | "gold-star")
   refusalNoteLive = false;
 }
 
+// ── T9-W3 §3.5 · THE BOARD'S SECOND VOICE, AND IT DRAWS NOTHING ──────────────────────────
+//
+// Two acts changed the board under the reader and told them nothing. A DEAL routes through
+// `freshBoardCopy`, which has returned `""` on every ordinary deal since T8-W6 M16 deleted the
+// board caption — so the margin correctly stays blank and the arrival is spoken by nobody. A
+// FILL-FORCED inks up to a dozen cells through a progressbar value change no assistive
+// technology announces (V1 measured zero utterances for eleven cells appearing).
+//
+// THE CAPTION DOES NOT COME BACK. That is the whole design constraint here, and it is the
+// owner's own ruling: the caption was M16's screenshotted exemplar, `GameBoard.receipt.test.ts`
+// guards its return "in either direction", and this wave SPEAKS rather than repaints. So the
+// margin keeps saying nothing on a deal and the sentence goes to a channel that has no ink at
+// all — an `sr-only` region on the shared idiom (`useLiveRegion`: born empty, persists for the
+// board's whole life, empties when it has nothing to say). Zero pixels, measured.
+//
+// It is a SECOND region rather than a second tenant of the margin for the same reason the
+// paper note is not the margin: they answer different questions and they must be able to speak
+// over each other. The margin is the page on the PUZZLE (the hint, the verdict, the wipe); this
+// is the page on the BOARD ITSELF (one arrived, this many squares were filled in for you).
+const { text: boardVoice, say: sayBoard } = useLiveRegion();
+
+/**
+ * Say it, INCLUDING when it is the same sentence twice.
+ *
+ * A live region announces mutations to itself, and writing the string it already holds is not
+ * one. Two easy boards dealt in a row produce the identical line, so the second deal would be
+ * silent — the same class of silence §3.4 cured at birth, arriving instead through repetition.
+ * The idiom's third clause is what answers it: a region with nothing to say holds `""`, so the
+ * repeat empties first and writes on the next flush, which makes two mutations out of one
+ * sentence. Costs nothing when the line differs, which is the common case.
+ */
+function announce(line: string) {
+  if (boardVoice.value !== line) {
+    sayBoard(line);
+    return;
+  }
+  sayBoard("");
+  void nextTick(() => sayBoard(line));
+}
+
+/** What a deal says. `gridLabel` is already the grid's own accessible name ("9 by 9 sudoku,
+ *  easy"), so the arrival names the board with the string the board is named by rather than a
+ *  second description that can drift from it. M16: plain words, and the register bans the em
+ *  dash outright, so the two clauses are two sentences instead. */
+const dealLine = computed(() => `new board. ${props.gridLabel}`);
+
 // ── The named hint (T4-W7) — the reasoning the first press draws ──────
 // The cells the argument turns on, highlighted in the peek-laminate tone (the cell's
 // `is-because` tier). The margin voice writes the technique name via the existing 250ms
@@ -756,6 +811,49 @@ watch(
   },
 );
 
+// ── T9-W3 §3.5 · THE DEAL SAYS A BOARD ARRIVED ───────────────────────────────────────────
+//
+// A SEPARATE WATCH, and it has to be: neither margin arm above can carry this. The givens 0→N
+// arm fires on the FIRST board only — a re-deal clears and refills the same set inside one
+// flush, so `prev` is the old count and never 0 — and the generation arm returns early on any
+// board that prints givens, because its whole subject is the no-givens family's wipe receipt.
+// Between them, a sudoku re-deal reached neither, which is exactly how "the deal is silent"
+// survived every gate the margin has: the margin was CORRECT to stay blank and nothing else
+// was listening.
+//
+// The generation bump IS the arrival — it is what the board machine bumps for a deal, a clear,
+// a size commit and an undone deal alike — so the voice reads the ACT off `dealt` (T7-W7's own
+// discriminator, minted for precisely this ambiguity) and leaves the clear to the margin, which
+// already has a receipt for it.
+watch(
+  () => props.boardGeneration,
+  (_next, prev) => {
+    if (!mounted || prev === undefined) return;
+    if (props.dealt) announce(dealLine.value);
+  },
+);
+
+// ── T9-W3 §3.5 · THE FORCED FILL SAYS HOW MANY ───────────────────────────────────────────
+//
+// THE ACT IS THE SOURCE, not its effect. The count used to be read off `animatingCells`, the
+// reveal wave — but four acts write that ref (a deal, a solve, a hint's single cell, the
+// sweep), so a fill could only be told apart from the other three by inference: the generation
+// unchanged, `solveState` idle, and MORE THAN ONE CELL, on the reasoning that a one-cell wave
+// is the hint's shape. That last clause was not a fence, it was a silence — a sweep that forced
+// exactly one square announced nothing, and the reader who pressed the verb got no answer.
+//
+// `lastFill` is what the sweep itself recorded (`useGameState.fillForced`): the squares it
+// actually inked, stamped so two sweeps of equal size are two events rather than one unchanged
+// value. Every inference above dies with it, and the singular becomes speakable because nothing
+// else can be mistaken for it.
+watch(
+  () => props.lastFill,
+  (fill) => {
+    if (!mounted || !fill) return;
+    announce(`${fill.count} ${fill.count === 1 ? "square" : "squares"} filled`);
+  },
+);
+
 /** Every cell empty — a clear's own signature, and the second half of the wipe gate. */
 function boardIsBlank(): boolean {
   return Object.values(props.values).every((v) => !v);
@@ -851,6 +949,35 @@ watch(
 function isRevealed(pos: number): boolean {
   return props.animatingCells.has(String(pos));
 }
+
+// ── T9-W3 §3.1 · THE OCCLUSION LAW, EXTENDED TO THE PAPER ────────────────────────────────
+//
+// The estate already owns this mechanism and already wrote the rule down, one file over, above
+// `.play-controls`: "a control painted out end to end must not stay in the tab order or in the
+// AX tree" (`GameControlPanel.vue`, the `ribbonCovered` clause, borrowed in turn from
+// `GameCard.vue`'s `:inert="!isActive || undefined"`). It was applied to the RIBBON and not to
+// the far larger thing the same sheet covers. Measured at HEAD on this tree, both engines,
+// with the sheet up: 59/81 and 62/81 cells hit-tested as painted over at 390x844, 47/81 and
+// 46/81 at 768x1024, 40/81 and 42/81 at 820x1180 — and **81 of 81 stayed focusable at all
+// three**, in both engines (`evidence/w3/panel-census-head.txt`). A Tab walk from inside the
+// risen sheet landed on 20 of them.
+//
+// ONE PREDICATE, EVERY VIEWPORT CLASS THE SHEET COVERS. `mobileDock` is the ref that says the
+// controls are a sheet rather than a rail — portrait AND landscape since T9-W2 §2.2 — so the
+// board is covered in every pose the sheet has, not just the portrait one. It is deliberately
+// NOT the panel's `ribbonCovered`, which stays `portraitDock`-gated for a reason the panel
+// states: outside portrait the play verbs sit INSIDE the case the sheet carries, and an inert
+// row there would be a live drawer's own undo button, deleted. Two regions, two coverage
+// conditions, one rule. `drawerInert` (the drawer's parked flag) rather than `drawerOpen` for
+// the panel's reason verbatim: the sheet covers the paper through the opening and closing
+// glides too, and a half-covered board is the same defect measured mid-flight.
+//
+// The `inert` lands on the GRID, never on the shell: the shell also holds the margin's status
+// region and this board's own voice, and a covered board must still be able to say that it was
+// dealt. `undefined` and not `false`, so the attribute is ABSENT at rest — the estate's own
+// idiom, and what keeps every shipped DOM snapshot byte-identical off the dock.
+const { drawerInert } = useControlsDrawer();
+const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
 </script>
 
 <template>
@@ -881,9 +1008,13 @@ function isRevealed(pos: number): boolean {
       <!-- Interactive cell grid. The shell owns the grid container (ARIA, roving
            tabindex, focus tracking); the game fills it with its own cell component via
            the scoped slot, fed the shell's per-cell derived state. -->
+      <!-- T9-W3 §3.1 — `inert` while the risen sheet paints this grid out (`boardCovered`
+           above): the same rule `.play-controls` has carried since T7-W2, applied to the thing
+           the sheet actually covers. -->
       <div
         class="grid"
         :class="BOARD_CELLS_CLASS"
+        :inert="boardCovered || undefined"
         role="grid"
         :aria-label="gridLabel"
         :aria-rowcount="boardSize"
@@ -1009,6 +1140,15 @@ function isRevealed(pos: number): boolean {
         @retry="emit('retry')"
       />
     </div>
+
+    <!-- T9-W3 §3.5 — THE BOARD'S VOICE. Unconditional for the board's whole life and born
+         empty (the `useLiveRegion` idiom, T9-W3 §3.4), so an arrival is a mutation to a node
+         the reader's assistive technology is already watching rather than a region appearing
+         with its sentence already inside it.
+         `sr-only` ALWAYS, never conditionally: this channel exists precisely because the ink
+         it would otherwise draw is the caption M16 deleted, and the clip takes it out of flow
+         so the strip above it keeps its one reserved line to the pixel. -->
+    <p class="board-voice sr-only" role="status" aria-live="polite">{{ boardVoice }}</p>
   </div>
 </template>
 

@@ -1,0 +1,61 @@
+T9-W3 lane 3B — POST-WALL RE-VERIFICATION (2026-08-28, resumed session)
+
+Wall-resume arm: `git status --porcelain` + this evidence dir audited FIRST. The lane's three
+fence files were already modified and the full evidence chain already banked (born-RED at 14:23,
+cure + green at 14:29). Nothing was redone; the tree was re-measured to prove the cure still
+holds with sibling lanes' in-flight edits present (3A: App.vue / GameControlPanel.vue /
+GameGallery.vue; 3D: useLiveRegion + three new test files; W4/W6: spec.ts, useSession.ts,
+relayWire.ts, cards.ts).
+
+FENCE STATE, re-audited
+  web/frontend/src/games/shared/useGameCell.ts             +25/-1   (the core branch, :145-150)
+  web/frontend/src/games/shared/DigitCell.vue              +7/-9    (ariaSuffix back to the clue clause)
+  web/frontend/src/games/shared/DigitCell.attribution.test.ts  +57/-11  (8 rows -> 12)
+  No other file touched by this lane. No golden, no stylesheet, no e2e spec.
+
+WIRING, traced end to end at the current tree
+  BoardHost.vue:91-94   authorNameAt(pos) -> a && !a.self ? a.slug : ""   (peer's slug, only ever)
+  BoardHost.vue:298     :author-name="authorNameAt(pos)"
+  DigitCell.vue:76,78   authorName?: string, default ""
+  useGameCell.ts:148    core = props.authorName ? `${authorName}'s entry ${g}` : `your entry ${g}`
+  The claim the cure rests on — authorName is a PEER's slug and nothing else — holds at :93.
+
+RE-MEASURED AT THE CURRENT TREE
+  $ npx vitest run --silent          (bare, from web/frontend; verdict = the Test Files line)
+      Test Files  63 passed (63)
+           Tests  773 passed (773)
+      -- was 60/758 at the lane's own end; the deltas are lane 3D's three new files, not this lane's.
+
+  $ npx vue-tsc --noEmit
+      VUE_TSC_EXIT=0                 (no output; clean)
+
+  $ node scripts/check-copy-register.mjs
+      COPY_REGISTER_EXIT=0
+      em/en dashes in product copy: 0
+      jargon over RENDERED strings: 2 hit(s), 2 admitted, 0 unadmitted
+      Both admitted hits are GameControlPanel.vue's (lane 3A's file), not this lane's. The
+      authorship clause admits nothing new: "brave-otter's entry 4" is plain English, no dash,
+      no jargon, no machine name.
+
+NOT REDONE (banked at the lane's own end, correct tree, still the right measurement)
+  authorship-born-red.txt              1 failed | 6 failed / 6 passed — the six re-cut assertions
+                                       RED against the UNCURED source, each printing the false
+                                       sentence it was measured against.
+  authorship-baseline-head.txt         1 passed | 8 tests — the pristine gate green at HEAD,
+                                       i.e. the gate enshrining the defect.
+  authorship-cured-green.txt           1 passed | 12 tests.
+  authorship-e2e-a11y-both-engines.txt 30 passed, chromium + webkit, e2e/a11y.spec.ts.
+                                       REGRESSION proof only: every e2e board is solo, so
+                                       authorName is "" and the names are byte-identical by
+                                       construction. Deliberately NOT re-run post-wall — the
+                                       tree now carries three sibling lanes' uncommitted edits
+                                       to App.vue / GameControlPanel.vue / GameGallery.vue, so a
+                                       red would be ambiguous as to author. The banked run was
+                                       taken on a tree carrying this lane's cure, which is the
+                                       measurement this lane owes.
+
+pi LAW
+  NO PIXEL MOVED. One string in one aria-label. No golden touched, no golden re-baselined, no
+  stylesheet, no template node added or removed. The one visible residue this cure exposes
+  (GameBoard's washi tape naming a peer over a solver's digit) was NOT touched — it is out of
+  fence and moves pixels, so it left as handoffs/3B-1.md with both candidate cures.

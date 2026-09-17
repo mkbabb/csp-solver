@@ -1,0 +1,31 @@
+import { defineConfig } from "@playwright/test";
+
+const FRONTEND =
+  "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend";
+
+/** The prove lane's own rig: the repo's two engines, the repo's app, on a lane-legal port. */
+export default defineConfig({
+  testDir:
+    "/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/prove2",
+  timeout: 60000,
+  expect: { timeout: 15000 },
+  fullyParallel: true,
+  retries: 0,
+  reporter: "list",
+  projects: [
+    { name: "chromium", use: { browserName: "chromium" } },
+    { name: "webkit", use: { browserName: "webkit" } },
+  ],
+  use: {
+    baseURL: "http://127.0.0.1:4240",
+    viewport: { width: 1280, height: 800 },
+    screenshot: "only-on-failure",
+  },
+  webServer: {
+    command: "npm run dev -- --port 4240 --host 127.0.0.1 --strictPort",
+    cwd: FRONTEND,
+    port: 4240,
+    reuseExistingServer: true,
+    timeout: 120000,
+  },
+});

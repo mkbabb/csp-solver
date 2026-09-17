@@ -124,14 +124,12 @@ const {
   showCenterMarks,
   cornerSlot,
 } = useGameCell(props, emit, {
-  // T8-W3 M1 — the attribution rides the name the cell already publishes. `ariaSuffix` is the
-  // seam the clue vocabulary already uses, so authorship joins the same tail instead of minting
-  // a second describedby nobody points at: "…, your entry 4, written by brave-otter". Sudoku
-  // passes no constraint, so its name is the base plus this clause and nothing else.
-  ariaSuffix: () =>
-    [props.constraintLabel, props.authorName ? `written by ${props.authorName}` : ""]
-      .filter(Boolean)
-      .join(", "),
+  // T8-W3 M1 — the attribution rides the name the cell already publishes, and since T9-W3 §3.3
+  // it rides the name's CORE (`useGameCell`'s `ariaLabel`): a peer's digit is spoken as the
+  // peer's ("…, brave-otter's entry 4") rather than as yours with a contradicting tail bolted
+  // on. So this seam is back to the one clause it was cut for — the clue vocabulary. Sudoku
+  // passes no constraint, so its name is the base and nothing else.
+  ariaSuffix: () => props.constraintLabel,
   marksGridStyle: () => ({
     gridTemplateColumns: `repeat(${markCols.value}, minmax(0, 1fr))`,
     gridTemplateRows: `repeat(${markRows.value}, minmax(0, 1fr))`,
