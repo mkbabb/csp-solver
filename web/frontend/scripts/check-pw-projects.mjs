@@ -232,6 +232,7 @@ const SPEC_MANIFEST = [
   "access.spec.ts",
   "affordances.spec.ts",
   "board-covisibility.spec.ts",
+  "device-probe.spec.ts",
   "drawer.spec.ts",
   "filter-census.spec.ts",
   "follow-still-authorship.spec.ts",

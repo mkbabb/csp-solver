@@ -110,10 +110,29 @@ test.describe('the device probe', () => {
     expect(row.tbt3000Ms === 'NOT MEASURED').toBe(!hasLongTask);
     expect(typeof row.rafGapProxyTbtMs).toBe('number');
 
-    // The readout is read by the owner on a phone: it may not call a frame-gap sum a TBT.
+    // The readout is read by the owner on a phone, and the law is about what it CALLS things:
+    // no line of prose may call a frame gap sum a TBT. The JSON block under the buttons is the
+    // readiness.jsonl row itself, and it does carry `rafGapProxyTbtMs` and `tbt3000Ms` as key
+    // names — the proxy names itself a proxy BEFORE it names Tbt, and `tbt3000Ms` is the real
+    // long task census, which reads NOT MEASURED where the engine has none. So the assertion
+    // is on the prose, in any case, not on the uppercase spelling of the whole card. (Repair
+    // round 1, finding F2: the old row asserted `not.toContain('TBT')` over the card including
+    // the JSON, which is true only of the uppercase spelling and claimed more than it read.)
     const shown = (await page.locator(CARD).textContent()) ?? '';
-    expect(shown).not.toContain('TBT');
-    expect(shown).toContain('Speed check');
+    const json = (await page.locator(`${CARD} pre`).textContent()) ?? '';
+    expect(json.length, 'the JSON block is on screen and selectable').toBeGreaterThan(0);
+    const prose = shown.split(json).join(' ');
+    expect(prose.toLowerCase(), 'no prose line calls a frame gap sum a TBT').not.toContain(
+      'tbt',
+    );
+    expect(prose).toContain('Speed check');
+    // And in the row: the only two keys that spell tbt at all are the named proxy and the real
+    // census. Nothing else in the shape may borrow the word.
+    expect(
+      Object.keys(row)
+        .filter((k) => /tbt/i.test(k))
+        .sort(),
+    ).toEqual(['rafGapProxyTbtMs', 'tbt3000Ms']);
   });
 
   test('gets out of the way of the controls the owner has to tap', async ({ page }) => {
