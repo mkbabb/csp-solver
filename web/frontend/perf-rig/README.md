@@ -23,6 +23,7 @@ default.
 node perf-rig/ci-subset.mjs                       # both engines, 3 windows each
 node perf-rig/ci-subset.mjs --engines chromium    # one engine (webkit alone exits 2 — GATE D)
 node perf-rig/ci-subset.mjs --build --out run.txt # force a rebuild, tee the report
+node perf-rig/ci-subset.mjs --boot-poses desk     # boot TBT at one pose (default: desk,mob)
 ```
 
 It builds-or-reuses `dist/`, serves it on **:4390** (its own port — never 3000, 3001, 4188 or
@@ -69,6 +70,35 @@ at T9-W8.
   a clean boot. A run in which *no* engine could measure it exits `2`, and throttling that is
   requested and cannot be applied exits `2` as well: an unthrottled number read against a
   throttled floor is a different measurement, not a lenient one.
+
+**GATE D's three T9-W8 §8.3 amendments**, each CONFIRMED at source by the §8.1 attribution and
+each with its own canary:
+
+1. **The pose it never booted.** GATE D booted 1440x900 at dpr 1 for its whole life, and the
+   bundle's boot cost is *bake pixels*: same tree, same rate, TBT(3000) reads **247 ms** at
+   desk dpr 1 and **987 ms** at 390x844 dpr 3 on this host (`--boot-poses desk,mob`, now the
+   default; one cold load per pose, never a resize — `deviceScaleFactor` cannot change after a
+   page exists). The declared pose keeps `boot.tbt.maxTbtMs`. **Any other pose is graded only
+   against `boot.tbt.poses.<pose>.maxTbtMs`**, and with no such row it prints `PROVISIONAL` and
+   gates nothing: a threshold is stamped from n >= 3 RUNNER readings at a WGATE, and this file
+   does not get to invent one.
+2. **Admissibility per window, not on the median anchor.** The old rule medianed the anchors and
+   judged that, so a leg whose median was fine carried a blown window into the grade (the §8.1
+   census caught exactly this: anchor 876 ms, TBT 2,204 ms, both inside a passing median) and a
+   leg whose median was blown lost its sound windows too. A window is a reading; fitness is a
+   property of the reading. `--canary-anchor <ms>` injects one blown anchor at the real site and
+   prints the counterfactual from the same data — banked at
+   `docs/tranches/2026-08-tranche-9/evidence/w8/cures/8.3/canary-anchor-run.txt`: anchors
+   `71, 116, 900`, the old rule grading 246 ms over three windows *including* the blown one, the
+   new rule 253 ms over the two admissible ones with the 900 ms window named as dropped.
+3. **A measured boot window is graded before an instrument failure discards the leg.** T7-W6
+   applied grade-before-exit to the engine loop and never to the instrument-failure case, so a
+   frame control that dropped a frame on the *empty* page threw away boot-TBT windows that had
+   already been measured under their own admissibility instrument (the anchor). GATE D's fitness
+   check is the anchor, not the rAF ceiling. The engine's idle verdict still dies. Ablated with
+   `--canary-fail chromium` on both versions: `canary-fail-PREamend.txt` (GATE D table empty) vs
+   `canary-fail-AMENDED.txt` (desk PASS 250 ms, mobile PROVISIONAL 980 ms, exit still 3), same
+   directory.
 
 **Grading order.** Every measured result is graded before any exit is taken, and the exit code
 is the worst fact in the run: `1` (a breach, anywhere) > `2` (setup) > `3` (instrument) > `0`. A

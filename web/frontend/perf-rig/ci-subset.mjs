@@ -102,6 +102,12 @@
  *     --out <file>        tee the report to a file
  *     --idle-fps-min <n>  CANARY ONLY — override gates.json's minFps
  *     --max-long33 <n>    CANARY ONLY — override gates.json's maxLong33
+ *     --boot-poses a,b    boot-TBT poses (default desk,mob — T9-W8 §8.3 amendment 1)
+ *     --canary-anchor <n> CANARY ONLY — inject a synthetic host anchor of <n> ms into the LAST
+ *                         boot window of every engine. The ablation hook for amendment 2: on
+ *                         the old median rule one blown window rode into the grade (or, above
+ *                         the median, discarded a whole leg); per window it is subtracted by
+ *                         name and the rest still grade.
  *     --canary-fail <e>   CANARY ONLY — inject a synthetic instrument failure for engine <e>
  *                         at the control-validity site, without measuring it. The ablation
  *                         hook for the grading-order fix above: it makes "chromium breaches,
@@ -146,6 +152,41 @@ const FORCE_BUILD = flag("--build");
 const OVERRIDE_FPS = flag("--idle-fps-min") ? Number(arg("--idle-fps-min")) : null;
 const OVERRIDE_LONG33 = flag("--max-long33") ? Number(arg("--max-long33")) : null;
 const CANARY_FAIL = arg("--canary-fail", "");
+const CANARY_ANCHOR = flag("--canary-anchor") ? Number(arg("--canary-anchor")) : null;
+
+// ── T9-W8 §8.3 AMENDMENT 1 — THE POSE GATE D NEVER BOOTED ───────────────────────────────────
+// GATE D booted 1440x900 at deviceScaleFactor 1 and nothing else, for its whole life. The
+// bundle's boot cost is BAKE PIXELS, and bake pixels are a pose: the same tree, same throttle
+// rate, reads TBT(3000) 221 ms at 0.40 MP, 1,020 at 1.19 MP (390x844 dpr 3) and 1,454 at
+// 1.62 MP (desk dpr 2) — ATTRIBUTION §5 and §1's DPR reconciliation, both CONFIRMED at source.
+// So the gate measured a pose no phone has while the wave's whole subject was the phone.
+//
+// Each pose is driven on its own load and graded against its OWN threshold. `desk` is the
+// declared one and keeps `boot.tbt.maxTbtMs`. Any other pose is graded only if gates.json
+// carries `boot.tbt.poses.<name>.maxTbtMs`; with no row it prints PROVISIONAL and gates
+// NOTHING, because a threshold is stamped from n >= 3 RUNNER readings at a WGATE and this
+// file does not get to invent one (the floor-timing clause).
+const BOOT_POSES = {
+  desk: {
+    name: "desk 1440x900 dpr1",
+    ctx: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 },
+    declared: true,
+  },
+  mob: {
+    name: "mobile 390x844 dpr3",
+    ctx: {
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+    },
+    declared: false,
+  },
+};
+const POSES = arg("--boot-poses", "desk,mob")
+  .split(",")
+  .map((x) => x.trim())
+  .filter(Boolean);
 
 // Ports the owner's dev servers and the throttle-e2e rig already hold. Refuse rather than
 // collide: a stolen port would either fail to bind or, worse, serve someone else's bundle.
@@ -238,7 +279,11 @@ async function waitForPing(deadlineMs) {
  *  derived at 4× is not a lenient reading, it is a different measurement wearing the same name.
  */
 async function drive(browserType, url, runId, timeoutMs, opts = {}) {
-  const page = await browserType.newPage({ viewport: { width: 1440, height: 900 } });
+  // The pose is the context, not a resize: `deviceScaleFactor` cannot be changed after a page
+  // exists, and dpr is the whole point of amendment 1.
+  const page = await browserType.newPage(
+    opts.pose ? opts.pose.ctx : { viewport: { width: 1440, height: 900 } },
+  );
   const pageErrors = [];
   page.on("pageerror", (e) => pageErrors.push(String(e).slice(0, 300)));
   if (opts.cpuThrottle) {
@@ -506,30 +551,51 @@ async function main() {
           // BOOT TBT gets its OWN load. It is a fact about a page coming up, so it cannot
           // share a load with a scenario that has already driven the app, and it is measured
           // under gates.json's own CPU throttle rate — the condition its floor was derived at.
-          const bootId = `ci-${name}-boot-${process.pid}-${i}`;
-          const throttled = name === "chromium" ? { cpuThrottle: bootThrottle } : {};
-          let boot;
-          try {
-            boot = await drive(
-              browser,
-              `http://127.0.0.1:${PORT}/?__run=${bootId}&__scenarios=bootTbt&__bootMs=${bootWindowMs}`,
-              bootId,
-              120000,
-              throttled,
-            );
-          } catch (e) {
-            throttleError = `boot window ${i}: ${e.message}`;
-            break;
+          // ONE LOAD PER POSE (amendment 1). Each is its own cold boot; nothing is resized.
+          let poseFailed = false;
+          for (const poseKey of POSES) {
+            const pose = BOOT_POSES[poseKey];
+            if (!pose) {
+              setupErrors.push({
+                name,
+                why: `unknown boot pose "${poseKey}" (known: ${Object.keys(BOOT_POSES).join(", ")})`,
+              });
+              continue;
+            }
+            const bootId = `ci-${name}-boot-${poseKey}-${process.pid}-${i}`;
+            const throttled = name === "chromium" ? { cpuThrottle: bootThrottle } : {};
+            let boot;
+            try {
+              boot = await drive(
+                browser,
+                `http://127.0.0.1:${PORT}/?__run=${bootId}&__scenarios=bootTbt&__bootMs=${bootWindowMs}`,
+                bootId,
+                120000,
+                { ...throttled, pose },
+              );
+            } catch (e) {
+              throttleError = `boot window ${i} (${poseKey}): ${e.message}`;
+              poseFailed = true;
+              break;
+            }
+            const bl = boot.posted.find((l) => l.scenario === "bootTbt");
+            if (bl) bootLines.push({ ...bl, pose: poseKey, poseName: pose.name });
+            pageErrors.push(...boot.pageErrors);
           }
-          const bl = boot.posted.find((l) => l.scenario === "bootTbt");
-          if (bl) bootLines.push(bl);
-          pageErrors.push(...boot.pageErrors);
+          if (poseFailed) break;
         }
+        // CANARY ONLY (amendment 2's ablation): one window's anchor is blown out, at the real
+        // site, after measurement. It must cost that window and nothing else.
+        if (CANARY_ANCHOR !== null && bootLines.length)
+          bootLines[bootLines.length - 1].cpuAnchorMs = CANARY_ANCHOR;
+
         if (ceilingMissing) {
           say(`## ${name}`);
           say(`  INSTRUMENT FAILURE: ${ceilingMissing}`);
+          say(`  ${bootLines.length} boot window(s) WERE measured and are graded below.`);
           say("");
           instrumentFails.push({ name, why: ceilingMissing });
+          results.push({ name, bootOnly: true, boot: bootLines });
           continue;
         }
         if (throttleError) {
@@ -588,8 +654,10 @@ async function main() {
         if (clean.length < needed) {
           const why = `${clean.length}/${RUNS} clean idle windows (need ${needed}); ${errored.length} errored, ${windows.filter((w) => w.tainted).length} tainted`;
           say(`  INSTRUMENT FAILURE: ${why}`);
+          say(`  ${bootLines.length} boot window(s) WERE measured and are graded below.`);
           say("");
           instrumentFails.push({ name, why });
+          results.push({ name, bootOnly: true, boot: bootLines });
           continue;
         }
 
@@ -624,6 +692,14 @@ async function main() {
               ? `synthetic (--canary-fail ${name})`
               : `control dropped ${ceilLong33} long frames`,
           });
+          // T9-W8 §8.3 AMENDMENT 3 — GRADE THE BOOT WINDOWS THAT WERE MEASURED.
+          // T7-W6 taught this once: every measured result is graded before any exit. The cure
+          // was never applied to the instrument-failure case, so a frame control that dropped a
+          // frame on the ceiling page discarded a boot-TBT leg that had already been measured
+          // under its own admissibility instrument (the anchor). GATE D's fitness check is the
+          // anchor, not the rAF ceiling; the idle verdict for this engine still dies here.
+          say(`  ${bootLines.length} boot window(s) WERE measured and are graded below.`);
+          results.push({ name, bootOnly: true, boot: bootLines });
           continue;
         }
 
@@ -664,6 +740,12 @@ async function main() {
     say("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
     let breached = false;
     for (const r of results) {
+      // A boot-only row carries no idle or undo census by construction (amendment 3): its
+      // engine's frame verdict is already booked as an instrument failure above.
+      if (r.bootOnly) {
+        say(`| ${r.name} | — | — | — | — | NOT MEASURED | — | — | NOT MEASURED | — | — | NOT MEASURED |`);
+        continue;
+      }
       const required = ratio * r.ceilingFps;
       const undoRequired = undoRatio * r.ceilingFps;
       const bOk = r.medFps >= required;
@@ -688,56 +770,121 @@ async function main() {
     // Support is asserted, not assumed, and the three outcomes are kept apart: MEASURED (a
     // verdict), NOT MEASURED (an engine with no `longtask` entry type — WebKit), and MISSING
     // (a probe that reported nothing at all, which is a setup fact about this rig, not a pass).
+    //
+    // T9-W8 §8.3 amends this block twice. AMENDMENT 1: one row PER POSE, each against its own
+    // threshold, and a pose gates nothing until gates.json carries its number (PROVISIONAL).
+    // AMENDMENT 2: ADMISSIBILITY IS PER WINDOW, not on the median anchor. The old rule medianed
+    // the anchors and judged that: a leg whose median was fine carried a blown window straight
+    // into the grade (run 2 of the 8.1 census did exactly that — anchor 876 ms, TBT 2,204 ms,
+    // both inside a passing median), and a leg whose median was blown lost every window it had,
+    // including the sound ones. A window is a reading; fitness is a property of the reading.
     say(
-      `| engine | longtask | median boot TBT | max (${bootThrottle}× CPU, ${bootWindowMs}ms window) | GATE D |`,
+      `| engine | pose | longtask | windows | dropped | median boot TBT | max (${bootThrottle}× CPU, ${bootWindowMs}ms window) | GATE D |`,
     );
-    say("| --- | --- | --- | --- | --- |");
+    say("| --- | --- | --- | --- | --- | --- | --- | --- |");
     const bootMeasured = [];
+    const bootProvisional = [];
     let bootUnsupported = 0;
+    let bootRows = 0;
+    const posesOf = (r) => {
+      const all = (r.boot || []).filter((b) => !b.error);
+      const keys = [...new Set(all.map((b) => b.pose ?? "desk"))];
+      return keys.length ? keys : ["desk"];
+    };
     for (const r of results) {
-      const lines2 = (r.boot || []).filter((b) => !b.error);
-      const supportBits = lines2.map((b) => b.longtaskSupported);
-      if (!lines2.length || supportBits.some((s) => typeof s !== "boolean")) {
-        say(`| ${r.name} | ? | — | ${bootMaxTbtMs} | **MISSING** |`);
-        setupErrors.push({
-          name: r.name,
-          why: "the bootTbt probe reported no usable longtask-support bit — support may never be inferred from an empty task list",
-        });
-        continue;
-      }
-      if (!supportBits.every(Boolean)) {
-        say(`| ${r.name} | NO | — | ${bootMaxTbtMs} | NOT MEASURED |`);
-        bootUnsupported++;
-        continue;
-      }
-      // GATE D ADMISSIBILITY — the control the frame gates always had and this one did not.
-      // Judged BEFORE the threshold, exactly as control-validity is judged before GATE A/B/C:
-      // a host whose fixed-work reading has blown out is not measuring the bundle, so it may
-      // issue neither a green nor a red. Books an instrument failure (exit 3, retried once by
-      // ci.yml), never a breach — the existing class, no new exit code. Reached only by
-      // engines that ship `longtask` and therefore ran at gates.json's own throttle rate; an
-      // engine measuring GATE D at any other rate is already this file's exit-2 class.
-      const anchors = lines2
-        .map((b) => b.cpuAnchorMs)
-        .filter((n) => typeof n === "number");
-      const anchorMed = anchors.length ? median(anchors) : null;
-      if (anchorMed !== null && anchorMed > ANCHOR_CEILING_MS) {
-        say(
-          `| ${r.name} | yes | — | ${bootMaxTbtMs} | **INADMISSIBLE** (anchor ${r2(anchorMed)}ms) |`,
+      for (const poseKey of posesOf(r)) {
+        bootRows += 1;
+        const pose = BOOT_POSES[poseKey] || { name: poseKey, declared: poseKey === "desk" };
+        // The DECLARED pose keeps gates.json's own row. Any other pose is graded only against a
+        // number gates.json carries for it by name; there is no default and no derivation.
+        const maxForPose = pose.declared
+          ? bootMaxTbtMs
+          : (gates?.boot?.tbt?.poses?.[poseKey]?.maxTbtMs ?? null);
+        const lines2 = (r.boot || []).filter(
+          (b) => !b.error && (b.pose ?? "desk") === poseKey,
         );
-        instrumentFails.push({
-          name: r.name,
-          why: `boot TBT: host CPU anchor ${r2(anchorMed)}ms > ${ANCHOR_CEILING_MS}ms ceiling — this host is not computing fast enough for its boot TBT to be a fact about the bundle, so GATE D refuses to grade it. Neither a green nor a red. Re-run on a quiescent machine.`,
-        });
-        continue;
+        const supportBits = lines2.map((b) => b.longtaskSupported);
+        if (!lines2.length || supportBits.some((s) => typeof s !== "boolean")) {
+          say(`| ${r.name} | ${pose.name} | ? | 0 | — | — | ${maxForPose ?? "unstamped"} | **MISSING** |`);
+          setupErrors.push({
+            name: `${r.name}/${poseKey}`,
+            why: "the bootTbt probe reported no usable longtask-support bit — support may never be inferred from an empty task list",
+          });
+          continue;
+        }
+        if (!supportBits.every(Boolean)) {
+          say(
+            `| ${r.name} | ${pose.name} | NO | ${lines2.length} | — | — | ${maxForPose ?? "unstamped"} | NOT MEASURED |`,
+          );
+          bootUnsupported += 1;
+          continue;
+        }
+        // GATE D ADMISSIBILITY, PER WINDOW. A window whose host anchor is over the ceiling is
+        // not a reading about the bundle, so it is dropped BY NAME and the rest still grade. A
+        // window carrying no anchor at all cannot be judged and is kept, named in the note.
+        const over = lines2.filter(
+          (b) => typeof b.cpuAnchorMs === "number" && b.cpuAnchorMs > ANCHOR_CEILING_MS,
+        );
+        const admissible = lines2.filter(
+          (b) => !(typeof b.cpuAnchorMs === "number" && b.cpuAnchorMs > ANCHOR_CEILING_MS),
+        );
+        const dropped = over.length
+          ? over.map((b) => `${r2(b.cpuAnchorMs)}ms`).join(", ")
+          : "0";
+        if (!admissible.length) {
+          say(
+            `| ${r.name} | ${pose.name} | yes | ${lines2.length} | ${dropped} | — | ${maxForPose ?? "unstamped"} | **INADMISSIBLE** |`,
+          );
+          instrumentFails.push({
+            name: `${r.name}/${poseKey}`,
+            why: `boot TBT: every window's host CPU anchor (${dropped}) exceeded the ${ANCHOR_CEILING_MS}ms ceiling — this host is not computing fast enough for its boot TBT to be a fact about the bundle, so GATE D refuses to grade it. Neither a green nor a red. Re-run on a quiescent machine.`,
+          });
+          continue;
+        }
+        const med = median(admissible.map((b) => b.tbtMs));
+        // CANARY ONLY — the counterfactual, printed from the same data so amendment 2's bite is
+        // arithmetic a reader can check rather than a claim. The old rule medianed the anchors
+        // and judged THAT: with the injected window it either discarded this whole leg (median
+        // over the ceiling) or carried the blown window's TBT into the grade (median under it).
+        if (CANARY_ANCHOR !== null) {
+          const anchorsAll = lines2
+            .map((b) => b.cpuAnchorMs)
+            .filter((n) => typeof n === "number");
+          const anchorMed = anchorsAll.length ? median(anchorsAll) : null;
+          const oldMed = median(lines2.map((b) => b.tbtMs));
+          say(
+            `  CANARY: anchors ${anchorsAll.map((a) => r2(a)).join(", ")} · median anchor ${anchorMed === null ? "—" : r2(anchorMed)}ms · ` +
+              (anchorMed !== null && anchorMed > ANCHOR_CEILING_MS
+                ? `the OLD median rule would have discarded all ${lines2.length} window(s); per window ${admissible.length} still grade at ${r2(med)}ms`
+                : `the OLD median rule would have graded ${r2(oldMed)}ms over ${lines2.length} window(s) INCLUDING the blown one; per window ${r2(med)}ms over ${admissible.length}`),
+          );
+        }
+        if (maxForPose === null) {
+          // PROVISIONAL: measured, printed, gating nothing. The WGATE restamp binds to n >= 3
+          // RUNNER readings; a pose without a stamped row has no threshold to breach.
+          say(
+            `| ${r.name} | ${pose.name} | yes | ${admissible.length} | ${dropped} | ${r2(med)}ms | (unstamped) | PROVISIONAL |`,
+          );
+          bootProvisional.push({ name: r.name, pose: pose.name, med });
+          continue;
+        }
+        const dOk = med <= maxForPose;
+        if (!dOk) breached = true;
+        bootMeasured.push({ name: r.name, pose: pose.name, med, max: maxForPose });
+        say(
+          `| ${r.name} | ${pose.name} | yes | ${admissible.length} | ${dropped} | ${r2(med)}ms | ${maxForPose} | ${dOk ? "PASS" : "**FAIL**"} |`,
+        );
       }
-      const med = median(lines2.map((b) => b.tbtMs));
-      const dOk = med <= bootMaxTbtMs;
-      if (!dOk) breached = true;
-      bootMeasured.push({ name: r.name, med });
+    }
+    if (bootProvisional.length) {
+      say("");
       say(
-        `| ${r.name} | yes | ${r2(med)}ms | ${bootMaxTbtMs} | ${dOk ? "PASS" : "**FAIL**"} |`,
+        `  PROVISIONAL rows gate NOTHING. A pose other than the declared one needs its own`,
       );
+      say(
+        `  \`boot.tbt.poses.<pose>.maxTbtMs\` in gates.json, stamped from n >= 3 RUNNER readings at a`,
+      );
+      say(`  WGATE. Until then this rig measures the pose and refuses to grade it.`);
     }
     // THE ANCHOR COLUMN — diagnostic, gates nothing, and its original question is now ANSWERED.
     // W3 measured this denominator to test one hypothesis: that `tbt/anchor` is portable across
@@ -776,7 +923,15 @@ async function main() {
           `| ${a.name} | ${a.rate}× | ${r2(a.anchorMs)} (${a.n} iter) | ${a.tbt === null ? "—" : `${r2(a.tbt)}ms`} | ${a.tbt === null ? "—" : r2(a.tbt / a.anchorMs)} |`,
         );
     }
-    if (results.length && !bootMeasured.length && bootUnsupported === results.length) {
+    // The vacuity check, now counted over ROWS rather than engines (amendment 1 makes a leg
+    // several rows): a run in which nothing graded and nothing was even provisional, because no
+    // engine present ships `longtask`, is a setup error and not a green.
+    if (
+      results.length &&
+      !bootMeasured.length &&
+      !bootProvisional.length &&
+      bootUnsupported === bootRows
+    ) {
       say("");
       say(
         `SETUP ERROR: no engine in this run could measure boot TBT — none of ${ENGINES.join(", ")} ships the`,
@@ -797,11 +952,13 @@ async function main() {
       "advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:",
     );
     for (const r of results)
+      if (!r.bootOnly)
       say(
         `  ${r.name}: ${r2(r.medFps)} fps vs ${minFps} — the anchor assumes a ${ceilingFps} fps ceiling; this harness measured ${r2(r.ceilingFps)}. Absolute comparison is a category error and is reported only for the record.`,
       );
     say("");
     for (const r of results) {
+      if (r.bootOnly) continue;
       const required = ratio * r.ceilingFps;
       if (r.medFps < required)
         say(
@@ -818,10 +975,14 @@ async function main() {
         );
     }
     for (const b of bootMeasured)
-      if (b.med > bootMaxTbtMs)
+      if (b.med > b.max)
         say(
-          `BREACH [${b.name}] boot TBT: measured ${r2(b.med)}ms > allowed ${bootMaxTbtMs}ms over the first ${bootWindowMs}ms at ${bootThrottle}× CPU (gates.json boot.tbt.maxTbtMs)`,
+          `BREACH [${b.name} · ${b.pose}] boot TBT: measured ${r2(b.med)}ms > allowed ${b.max}ms over the first ${bootWindowMs}ms at ${bootThrottle}× CPU (gates.json boot.tbt)`,
         );
+    for (const b of bootProvisional)
+      say(
+        `PROVISIONAL [${b.name} · ${b.pose}] boot TBT: measured ${r2(b.med)}ms against NO stamped threshold — measured, not graded (T9-W8 §8.3 amendment 1)`,
+      );
     for (const f of instrumentFails) say(`NOT MEASURED [${f.name}] — ${f.why}`);
     for (const f of setupErrors) say(`SETUP ERROR [${f.name}] — ${f.why}`);
     say("");
