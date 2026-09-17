@@ -15,6 +15,7 @@ import { subgridSizes } from "@games/shared/selectors";
 import { gradeBoard, fillAllForced, findHint } from "@games/shared/techniqueEngine";
 import { createBoardAdapter } from "@games/shared/techniqueAdapter";
 import { useGameState } from "@games/shared/useGameState";
+import { tierSource } from "../data/tiers";
 
 /**
  * Size-scaled node budget for the client solve — the user-facing cap on search effort, keyed to
@@ -63,14 +64,20 @@ const DIFFICULTY_KEY: Record<Difficulty, "easy" | "medium" | "hard"> = {
  * that opens a different game. It is an `import()` now: same bank, same tier table, same
  * declared-source discipline, fetched by the deal that reads it. Nothing about WHICH tiers ride
  * the bank changed — only when the bytes travel.
+ *
+ * AND THE QUESTION TRAVELS APART FROM THE ANSWER (T9-W8 C10). `tierSource` used to live in the
+ * bank module, so asking "does this tier ride the bank?" downloaded the bank to find out no —
+ * 18,164 B (4,327 B brotli) and one request, on the default 9×9 deal, in 39 of 45 cold boot
+ * windows. The table is `../data/tiers` now, its own 137-byte module, imported statically here;
+ * the `import()` of the bank stays exactly where it was and only a `bank` tier reaches it.
  */
 async function sudokuTemplates(
   n: number,
   difficulty: Difficulty,
 ): Promise<Uint32Array<ArrayBuffer>> {
-  const { TEMPLATE_BANK, tierSource } = await import("../data/templates");
   const tier = DIFFICULTY_KEY[difficulty];
   if (tierSource(n, tier) === "livegen") return new Uint32Array(0);
+  const { TEMPLATE_BANK } = await import("../data/templates");
   const boards = TEMPLATE_BANK[n][tier];
   const total = boardSizeOf(n) ** 2;
   const templates = new Uint32Array(boards.length * total);

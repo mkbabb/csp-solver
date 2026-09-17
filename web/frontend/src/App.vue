@@ -8,6 +8,7 @@ import {
   nextTick,
   onMounted,
   onBeforeUnmount,
+  shallowRef,
   type Component,
   type FunctionalComponent,
 } from "vue";
@@ -25,7 +26,6 @@ import SvgFilters from "@pencil/chrome/SvgFilters.vue";
 import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
 import HandwrittenLogo from "@pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue";
 import AttributionCard from "@pencil/chrome/AttributionCard/AttributionCard.vue";
-import GameGallery from "@pencil/chrome/GameGallery/GameGallery.vue";
 import { registerDrawerMasthead } from "@games/shared/useControlsDrawer";
 import { useKeyboardViewport } from "@games/shared/useKeyboardViewport";
 import { useGameGallery } from "@games/shared/useGameGallery";
@@ -345,6 +345,36 @@ function closeAll() {
 // + the snapped index as props and emits @snap/@select/@cancel.
 const { view, snappedIndex, openGallery, snapTo, select, cancel } = useGameGallery();
 
+// THE DECK TRAVELS ON ITS OWN CHUNK (T9-W8 C10). The gallery family — GameGallery.vue,
+// GameCard.vue, StagingBand.vue, useCarouselGlide.ts — is 20,251 B of the render-blocking entry
+// chunk and 1,277 B of it (6%) runs by board-ready, because the first view is always a board.
+// It is its own chunk now, and its scoped styles leave the render-blocking sheet with it.
+//
+// A `shallowRef`, not `defineAsyncComponent`, for the reason this file already states one
+// screen up about the scene rows: an async wrapper mounts a resolution tick late, and the
+// fold's first frame may not be a module-evaluation frame. Once `galleryComp` is filled the
+// view flip mounts the deck synchronously, exactly as the static import did.
+//
+// Two warms, both already this file's idiom (`preloadScenes`, `warmPosters`): idle after mount,
+// and again on intent at the head of `enterGallery`, which has BEAT 0's 200 ms of chrome-leave
+// in front of the mount. W7 rules on idle vs intent; until then both run and neither blocks.
+const galleryComp = shallowRef<Component | null>(null);
+let galleryWarm: Promise<void> | null = null;
+function warmGallery(): Promise<void> {
+  galleryWarm ??= import("@pencil/chrome/GameGallery/GameGallery.vue").then((m) => {
+    galleryComp.value = m.default as Component;
+  });
+  return galleryWarm;
+}
+/** The poster warm's schedule, to the letter: idle where the engine has it, a timeout floor
+ *  everywhere, and the `galleryWarm` promise makes the second call a no-op. */
+function scheduleWarmGallery() {
+  const ric = (window as Window & { requestIdleCallback?: (cb: () => void) => void })
+    .requestIdleCallback;
+  ric?.(() => void warmGallery());
+  window.setTimeout(() => void warmGallery(), 1200);
+}
+
 // THE HEADER THAT STAYS (T6 mark 7). The masthead survives the view flip, so it has to say
 // something true in both: the MOUNTED game while playing, the SNAPPED card while the deck is
 // open. HandwrittenLogo re-measures and re-bakes on a label change and declines to re-reveal
@@ -616,6 +646,7 @@ function enterGallery() {
   // Your ghost goes quiet while you browse (T8-W3): browsing the deck is not an act on the
   // board, and a cursor left sitting on a cell would tell the room you were still there.
   noteFocus(null);
+  void warmGallery(); // C10: the deck's own chunk, if the idle warm has not already had it
   preloadScenes(); // F6-D3: warm the lazy scene chunks on OPEN, so a select is cached
   warmPosters(); // …and the deck's faces, if the idle warm has not already had them
   if (reducedMotion.value) {
@@ -792,6 +823,7 @@ function onGlobalKeydown(e: KeyboardEvent) {
 onMounted(() => {
   window.addEventListener("keydown", onGlobalKeydown);
   scheduleWarmPosters(); // T8 M7b: the deck's faces, off the fold's frame budget
+  scheduleWarmGallery(); // C10: and the deck itself, on the same slack
 });
 onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 </script>
@@ -885,8 +917,9 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
            BEFORE the view flips, so the fading deck never contains the board). Entry needs
            nothing — BEAT 2, the deal, already animates it. -->
       <Transition name="gallery-fade">
-        <GameGallery
-          v-if="view === 'gallery'"
+        <component
+          :is="galleryComp"
+          v-if="view === 'gallery' && galleryComp"
           :cards="GAMES"
           :snapped-index="snappedIndex"
           :dirty="dirty"
