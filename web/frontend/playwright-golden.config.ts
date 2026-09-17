@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, type PlaywrightTestConfig } from '@playwright/test';
 
 /**
  * T4-W2 — the visual-golden config (the π/DELTA MINT).
@@ -77,6 +77,17 @@ export default defineConfig({
   retries: 0,
   globalSetup: './e2e/global-setup.ts',
   reporter: [['list'], ['html', { open: 'never' }]],
+  // THE PRM VOID, THIRD SITE. `reducedMotion` below is one of the deliberately-dead
+  // declarations `e2e/prm-void-audition.spec.ts` pins: at @playwright/test 1.61.1 it is not a
+  // member of `PlaywrightTestOptions` — the name appears once in `playwright/types/test.d.ts`,
+  // inside `contextOptions: BrowserContextOptions` — so it names a fixture that does not exist
+  // and reaches no context. The freeze that actually lands is `page.emulateMedia()` in
+  // `visual-golden.spec.ts`'s `loadSettled`, and every committed baseline is minted under it.
+  // The declaration stays because it is the declared contract and it hardens the day upstream
+  // honours it; the cast is that void spelled in the type system, not a suppression. Invisible
+  // until T9-W6 §6.2 put `e2e/` under a typecheck and this fold put the root configs under one
+  // (handoff 6b-2 §1). `prm-void-audition.spec.ts`'s step 3 deletes this cast in the same commit
+  // that re-pins VOID_AT.
   use: {
     baseURL: externalBase || 'http://localhost:3000',
     viewport: { width: 1280, height: 800 },
@@ -89,7 +100,7 @@ export default defineConfig({
     // relocates a few px run-to-run regardless of raster backend — the toggle goldens
     // crop to the stable disc/body core to exclude it (see visual-golden.spec.ts).
     launchOptions: { args: ['--force-color-profile=srgb'] },
-  },
+  } as PlaywrightTestConfig['use'],
   // When an external app server is provided (PLAYWRIGHT_BASE_URL — the 418x preview
   // convention, or host.docker.internal for the linux re-baseline), do NOT spawn one
   // on :3000. Only fall back to the dev server when no external base is given.

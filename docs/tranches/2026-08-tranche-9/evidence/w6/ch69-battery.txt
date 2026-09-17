@@ -1,0 +1,426 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.20s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running unittests src/lib.rs (target/debug/deps/csp_solver-f445aa2763a16745)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/all_different_except.rs (target/debug/deps/all_different_except-54119465923965e8)
+
+running 6 tests
+test revise_skips_sentinel_singleton ... ok
+test check_mixed_sentinel_and_distinct ... ok
+test check_allows_multiple_sentinels ... ok
+test revise_prunes_non_sentinel_singleton ... ok
+test check_rejects_duplicate_non_sentinel ... ok
+test solve_end_to_end_permits_sentinel_repeats ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/assignment_builder.rs (target/debug/deps/assignment_builder-e94a7eb112e1a575)
+
+running 8 tests
+test dimensions_not_set_returns_err ... ok
+test cost_not_set_returns_err ... ok
+test simple_3x3_diagonal ... ok
+test unmatch_when_penalty_low ... ok
+test brute_force_match_4x4 ... ok
+test with_pin_overrides_cost ... ok
+test node_budget_exhausted_returns_budget_exceeded ... ok
+test role_groups_separate_assignments ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/assignment_proptest.rs (target/debug/deps/assignment_proptest-023faac61108ffbb)
+
+running 7 tests
+test prop_single_row ... ok
+test prop_rectangular_matches_bruteforce ... ok
+test prop_lap_valid_and_optimal ... ok
+test prop_unmatched_penalty_monotone ... ok
+test prop_square_matches_bruteforce ... ok
+test prop_pins_respected ... ok
+test prop_roles_partition ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/cage.rs (target/debug/deps/cage-44f811c38e289290)
+
+running 4 tests
+test cage_product_solver_matches_bruteforce_and_is_set_invariant ... ok
+test killer_cage_sum_node_drop_vs_lambda ... ok
+test kenken_mixed_cage_node_drop_vs_lambda ... ok
+test cage_sum_solver_matches_bruteforce_and_is_set_invariant ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/cage_revise.rs (target/debug/deps/cage_revise-0d65825d334c1a66)
+
+running 9 tests
+test cage_product_revise_prunes_zero_for_nonzero_target ... ok
+test cage_product_revise_detects_unsat ... ok
+test n_ary_lambda_cage_sum_does_not_propagate ... ok
+test cage_sum_revise_detects_unsat ... ok
+test cage_sum_revise_prunes_by_residual ... ok
+test cage_product_revise_prunes_by_divisibility_and_bound ... ok
+test cage_sum_revise_tightens_low_end ... ok
+test cage_sum_revise_soundness_randomized ... ok
+test cage_product_revise_soundness_randomized ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/cost_finite.rs (target/debug/deps/cost_finite-dce3958d3229c996)
+
+running 7 tests
+test cost_lookup_unsorted_input ... ok
+test min_cost_cache_invalidation ... ok
+test domain_delegation ... ok
+test cost_lookup_with_negative_sentinel ... ok
+test cost_lookup_present ... ok
+test min_cost_after_remove ... ok
+test solve_optimized_end_to_end ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/difficulty_parity.rs (target/debug/deps/difficulty_parity-c2e8daf265536fc9)
+
+running 2 tests
+test difficulty_variants_agree_across_all_known_definitions ... ok
+test no_unscanned_difficulty_definitions_exist ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/error.rs (target/debug/deps/error-044a239d035b5bd6)
+
+running 9 tests
+test aborted_is_none_for_a_completed_search ... ok
+test aborted_maps_budget_to_budget_exceeded ... ok
+test aborted_maps_cancellation_to_timeout ... ok
+test aborted_prefers_cancellation_over_budget ... ok
+test code_budget_exceeded ... ok
+test code_timeout ... ok
+test code_unsatisfiable ... ok
+test unsatisfiable_marker_converts ... ok
+test code_invalid_input ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/futoshiki.rs (target/debug/deps/futoshiki-0197f8b6d908a67f)
+
+running 11 tests
+test validate_rejects_diagonal_pair ... ok
+test validate_rejects_nonadjacent_pair ... ok
+test validate_rejects_out_of_range_inequality_index ... ok
+test validate_accepts_valid_adjacent_pairs ... ok
+test validate_rejects_bad_board ... ok
+test solve_4x4_futoshiki ... ok
+test solve_3x3_trivial ... ok
+test tuned_generation_respects_keep_density ... ok
+test empty_board_solves_within_budget_up_to_n7 ... ok
+test generated_puzzles_are_unique_and_valid ... ok
+test measure_difficulty_is_bounded_at_shipped_density ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/futoshiki_difficulty.rs (target/debug/deps/futoshiki_difficulty-88a691823e5afebe)
+
+running 3 tests
+test givens_strictly_decrease_easy_to_hard ... ok
+test axis_is_seeded_deterministic ... ok
+test each_tier_is_unique_30_of_30 ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/gac_kernel_beats.rs (target/debug/deps/gac_kernel_beats-a43ef5cc039e11c3)
+
+running 14 tests
+test p4a_two_singletons_same_value_unsat ... ok
+test p4c_live_below_threshold_singleton_only ... ok
+test p4b_snapshot_not_fuse_live ... ok
+test p4d_all_different_except_small_scope_twin ... ok
+test p7b_free_value_walk_keeps_a_supported_edge ... ok
+test p1_warm_cold_parity_multi_call_universe_shrink ... ok
+test p1_warm_cold_pruning_parity_single_call ... ok
+test p5_n20_lap_proven_optimal ... ok
+test p2_cross_universe_scratch_reset ... ok
+test p3_generic_finite_domain_string_monomorphizes_and_solves ... ok
+test p6_futoshiki_solves_under_pool ... ok
+test p6_sudoku_solves_under_pool ... ok
+test p7_gac_equals_brute_force_support_on_slack_bearing_scopes ... ok
+test p5_bnb_node_counts_frozen ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 33.31s
+
+     Running tests/generation_leash.rs (target/debug/deps/generation_leash-6d83a8a8a7c677df)
+
+running 9 tests
+test measure_9x9_leash_table ... ignored, measurement harness — leash table at 9×9
+test measure_leash_sweep ... ignored, measurement harness — leash sweep
+test measure_skeleton_hoist ... ignored, measurement harness — the skeleton-hoist A/B
+test measure_thermo_16x16_hard ... ignored, measurement harness — 16×16 thermo deals take seconds
+test measure_thermo_16x16_leash_table ... ignored, measurement harness — the unleashed 16×16 HARD deals take minutes
+test measure_thermo_16x16_medium ... ignored, measurement harness — 16×16 thermo deals take seconds
+test exhaustion_is_a_distinct_outcome_the_count_cannot_hide ... ok
+test the_attempt_stop_ends_a_dig_chasing_an_unreachable_target ... ok
+test a_budget_exhausted_dig_never_mints_a_non_unique_puzzle ... ok
+
+test result: ok. 3 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 1.48s
+
+     Running tests/implication.rs (target/debug/deps/implication-4f9e51d9d0390c6a)
+
+running 10 tests
+test check_holds_when_consequent_in_allowed ... ok
+test revise_noop_when_singleton_but_not_trigger ... ok
+test revise_reports_unsatisfiable_on_wipeout ... ok
+test check_vacuous_when_antecedent_not_trigger ... ok
+test revise_noop_when_antecedent_not_singleton_trigger ... ok
+test check_vacuous_when_consequent_unbound ... ok
+test revise_prunes_consequent_to_allowed_when_triggered ... ok
+test check_fails_when_triggered_and_consequent_disallowed ... ok
+test solve_end_to_end_unsat_when_forced_out_of_domain ... ok
+test solve_end_to_end_pairwise_engine_equality ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/kenken.rs (target/debug/deps/kenken-7c5d818fd61eddf2)
+
+running 7 tests
+test kenken_consumes_cage_product_and_prunes_at_the_root ... ok
+test kenken_consumes_cage_sum_and_prunes_at_the_root ... ok
+test kenken_binary_cages_propagate_free ... ok
+test solve_kenken_finds_the_dealt_solution ... ok
+test dealt_boards_carry_a_cage_partition ... ok
+test dealt_kenken_boards_are_unique_by_construction ... ok
+test kenken_deals_every_operator_kind ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/killer.rs (target/debug/deps/killer-42facadd922deb0f)
+
+running 5 tests
+test solve_killer_finds_the_dealt_solution ... ok
+test killer_consumes_cage_sum_and_prunes_at_the_root ... ok
+test dealt_boards_carry_holes_and_a_cage_partition ... ok
+test dealt_killer_boards_are_unique_by_construction ... ok
+test a_satisfiable_killer_board_never_solves_to_zero ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.77s
+
+     Running tests/kuhn_munkres.rs (target/debug/deps/kuhn_munkres-a5165ce0bd1ed7f5)
+
+running 5 tests
+test degenerate_shapes ... ok
+test rectangular_more_cols ... ok
+test known_3x3 ... ok
+test rectangular_more_rows ... ok
+test brute_force_agreement_small ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/lattice.rs (target/debug/deps/lattice-6aed775ad7b3c634)
+
+running 16 tests
+test test_lattice_domain_protocol ... ok
+test test_first_set_nullable_prefix ... ok
+test test_first_set_propagation_cyclic ... ok
+test test_first_set_propagation ... ok
+test test_simple_type_lattice_domain_convergence ... ok
+test test_lattice_domain_set_join ... ok
+test test_type_join_properties ... ok
+test test_type_inference_map_override ... ok
+test test_type_inference_vec_wrapping ... ok
+test test_type_inference_alt_join_different ... ok
+test test_lattice_propagation ... ok
+test test_type_inference_recursive_cycle ... ok
+test test_type_inference_span_compression ... ok
+test test_type_inference_alt_join_same ... ok
+test test_type_inference_seq_mixed_no_compression ... ok
+test test_type_inference_complex_pipeline ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/optimize.rs (target/debug/deps/optimize-75b2a4efe4f59330)
+
+running 13 tests
+test test_default_config_has_node_budget ... ok
+test test_default_config_is_feasibility ... ok
+test test_feasibility_ignores_cost ... ok
+test test_solve_with_cost_eval_custom ... ok
+test test_node_budget_does_not_fire_for_small_search ... ok
+test test_multiple_solutions_sorted ... ok
+test test_single_var_minimize ... ok
+test test_three_vars_minimize_with_constraints ... ok
+test test_two_vars_not_equal_minimize ... ok
+test test_single_var_maximize ... ok
+test test_branch_and_bound_pruning ... ok
+test test_three_vars_maximize ... ok
+test test_node_budget_aborts_long_search ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/oracle_and_invariance.rs (target/debug/deps/oracle_and_invariance-053175d188788690)
+
+running 7 tests
+test solver_matches_bruteforce_oracle ... ok
+test gac_on_matches_bruteforce_oracle ... ok
+test queens6_solution_set_invariant_across_pruning_and_ordering ... ok
+test gac_on_off_solution_sets_are_identical ... ok
+test futoshiki_constr_solution_set_invariant_across_pruning_and_ordering ... ok
+test queens8_solution_set_invariant_across_pruning_and_ordering ... ok
+test futoshiki_loose_solution_set_invariant_across_pruning_and_ordering ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.14s
+
+     Running tests/puzzle_class.rs (target/debug/deps/puzzle_class-f6c3b2523ac4888e)
+
+running 4 tests
+test seed_and_clue_seams_have_the_expected_shape ... ok
+test futoshiki_dealt_via_trait_matches_shipped_tuned_generator ... ok
+test futoshiki_dealt_via_trait_matches_shipped_difficulty_generator ... ok
+test sudoku_dealt_via_trait_matches_shipped_seeded_generator ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.94s
+
+     Running tests/solver.rs (target/debug/deps/solver-6434630051f78631)
+
+running 41 tests
+test test_bitset_domain_clone_independence ... ok
+test test_bitset_domain_empty ... ok
+test test_bitset_domain_union ... ok
+test test_bitset_domain_operations ... ok
+test test_bitset_domain_iterator ... ok
+test test_bitset_domain_range ... ok
+test test_bitset_domain_intersection_difference ... ok
+test test_ac3_full_solve ... ok
+test test_ac_fc_map_coloring ... ok
+test test_domain_wipeout_all_pruning ... ok
+test test_4_queens ... ok
+test test_4x4_sudoku ... ok
+test test_ac_fc_hybrid_solve ... ok
+test test_forward_check_dwo ... ok
+test test_finite_domain_strings ... ok
+test test_forward_checking_backtracks_deterministic ... ok
+test test_5_queens ... ok
+test test_multiple_solutions ... ok
+test test_simple_2var_csp ... ok
+test test_initial_ac3_propagation ... ok
+test test_simple_4var ... ok
+test test_single_variable ... ok
+test test_solve_resets_state ... ok
+test test_stats ... ok
+test test_stats_propagations ... ok
+test test_cross_config_correctness_map_coloring ... ok
+test test_unsatisfiable ... ok
+test test_mrv_ordering ... ok
+test test_unsolvable_pigeonhole_backtracks ... ok
+test test_all_permutations_3var ... ok
+test test_australia_map_coloring ... ok
+test test_finite_domain_operations ... ok
+test test_australia_all_pruning ... ok
+test test_map_coloring_fc_failfirst ... ok
+test test_no_constraints ... ok
+test test_unsatisfiable_alldifferent ... ok
+test test_9x9_sudoku_medium ... ok
+test test_6_queens ... ok
+test test_fail_first_fewer_backtracks_sudoku ... ok
+test test_cross_config_8queens ... ok
+test test_max_solutions_limit ... ok
+
+test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/sudoku.rs (target/debug/deps/sudoku-76536e5a8b17b5a5)
+
+running 7 tests
+test test_identity_transform ... ok
+test test_transform_preserves_validity ... ok
+test test_create_csp_returns_correct_given ... ok
+test test_solve_4x4 ... ok
+test test_measure_difficulty ... ok
+test test_generate_4x4 ... ok
+test test_solve_9x9 ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/sudoku_generate.rs (target/debug/deps/sudoku_generate-8ee72e8b635ef6fa)
+
+running 10 tests
+test embedded_templates_absent_bank_is_empty ... ok
+test embedded_easy_templates_parse_to_full_board ... ok
+test embedded_template_count_absent_bank_is_zero ... ok
+test embedded_templates_hard_bank_is_nonempty ... ok
+test embedded_template_count_matches_parsed_length ... ok
+test generate_with_templates_matching_difficulty_does_not_panic ... ok
+test generate_with_templates_mismatched_difficulty_panics_in_debug - should panic ... ok
+test clue_count_ladder_is_monotone_across_served_tiers ... ok
+test live_dealt_tiers_are_unique_and_within_the_corpus_bar ... ok
+test live_generated_boards_are_unique_across_served_sizes ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
+
+     Running tests/thermo.rs (target/debug/deps/thermo-b8e00167debb7a8f)
+
+running 4 tests
+test solve_thermo_finds_the_dealt_solution ... ok
+test a_thermometer_chain_prunes_the_free_path ... ok
+test dealt_boards_carry_holes_and_thermometers ... ok
+test dealt_thermo_boards_are_unique_by_construction ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/thermo_acceptance.rs (target/debug/deps/thermo_acceptance-b30dc1d83cdd41ea)
+
+running 2 tests
+test the_place_clues_seam_grows_ascending_orthogonal_tubes ... ok
+test thermo_sudoku_plugs_into_the_contract_unchanged ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/lib.rs (target/debug/deps/csp_solver_wasm-b7a2308044005a63)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/bank_boundary.rs (target/debug/deps/bank_boundary-c726accd65dd9418)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/dualization.rs (target/debug/deps/dualization-085382248a645f4a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/futoshiki_parity.rs (target/debug/deps/futoshiki_parity-c3f99a8c9f16af52)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/verb_boundary.rs (target/debug/deps/verb_boundary-828e70c1bab36f96)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests csp_solver
+
+running 4 tests
+test csp-solver/src/constraint/all_different_except.rs - constraint::all_different_except (line 11) - compile ... ok
+test csp-solver/src/builder/assignment.rs - builder::assignment::assignment (line 131) ... ok
+test csp-solver/src/domain/cost_finite.rs - domain::cost_finite (line 19) ... ok
+test csp-solver/src/builder/assignment.rs - builder::assignment (line 37) ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 0.66s; merged doctests compilation took 0.45s
+   Doc-tests csp_solver_wasm
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

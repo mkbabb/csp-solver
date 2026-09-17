@@ -302,14 +302,21 @@ describe("the mounted id", () => {
 });
 
 /**
- * THE STILL OWES THE TABLE ITS COLOURS (T8-R13).
+ * THE STILL OWES THE TABLE ITS COLOURS (T8-R13, widened T9-W6 §6.4).
  *
  * A still is `values` + `givenCells` off disk, and every non-given digit in it was inked with
  * whatever `--color-user-ink` resolved to on the reading page — so a peer's 7 and your own 5 read
  * as one author on the very card the live board draws them apart on. The clock that separates
- * them is in memory, never on disk, and it is about ONE board: the mounted one.
+ * them is in memory, never on disk.
+ *
+ * R13 shipped that clock to the MOUNTED game's still alone, and the FOLLOW is the counter-example
+ * the cure-scope missed: it parks the room's board, peer digits and all, on the incoming game's
+ * disk, and the table then turns again. Peer authorship is a fact about a BOARD, not about a
+ * seat, so the clock is BANKED per game id at the two instants a board and a clock are provably
+ * the same board's — and the refusal below survives, narrowed to the boards nothing ever said
+ * anything about.
  */
-describe("the still's authorship — a peer's digit keeps a peer's ink (T8-R13)", () => {
+describe("the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4)", () => {
   const SOURCES = [
     { id: "sudoku", persistKey: "sudoku-board-state" },
     { id: "futoshiki", persistKey: "futoshiki-board-state" },
@@ -337,11 +344,53 @@ describe("the still's authorship — a peer's digit keeps a peer's ink (T8-R13)"
     expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
   });
 
-  it("no OTHER game's still does — the clock is about one shared board", () => {
+  it("the still a FOLLOW parks the room's board on carries the room's ink, unmounted", () => {
     bridge.publishMountedGame("sudoku");
     bridge.registerAuthorInk(() => PEER);
-    // futoshiki's saved board was written in some other room, or in none; the mounted clock
-    // says nothing about whose hand wrote its digits, and a guess is what this row refuses.
+    // The room turned the table to futoshiki. The blob about to become futoshiki's SAVED board is
+    // the one the clock in hand describes — the session adopted both off the same `st` — so the
+    // still it becomes owes those digits their colours, and it owes them after the seat moves on.
+    bridge.stageBoardFollow("futoshiki", 3, { b: {}, m: {} });
+    expect(bridge.previewFor("futoshiki")?.authorInk).toEqual(PEER);
+  });
+
+  it("the game the table turns AWAY from keeps the ink its own board earned", () => {
+    bridge.publishMountedGame("sudoku");
+    let ink: Record<string, Record<string, string>> = PEER;
+    bridge.registerAuthorInk(() => ink);
+    bridge.bankAuthorInk(); // a peer wrote on the sudoku board this page is holding
+
+    // …and now a peer switches the table. The session replaces the clock with the INCOMING
+    // board's BEFORE it stages the follow, which is exactly why a snapshot taken from here on
+    // would colour sudoku's digits out of futoshiki's clock. Both orderings of App's watch and
+    // App's mounted-id publish are played below; the armed follow refuses the write either way.
+    ink = { "3": { "--color-user-ink": "oklch(0.7 0.1 40deg)" } };
+    bridge.stageBoardFollow("futoshiki", 3, { b: {}, m: {} });
+    bridge.bankAuthorInk();
+    bridge.publishMountedGame("futoshiki");
+    bridge.bankAuthorInk();
+
+    expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+  });
+
+  it("an emptied clock RETIRES the seat's bank — a page that left the room draws its own ink", () => {
+    bridge.publishMountedGame("sudoku");
+    let ink: Record<string, Record<string, string>> = PEER;
+    bridge.registerAuthorInk(() => ink);
+    bridge.bankAuthorInk();
+    ink = {}; // the room ended; the LIVE board drops the colours too, so the still owes the same
+    bridge.bankAuthorInk();
+    bridge.publishMountedGame("futoshiki");
+    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+  });
+
+  it("a board nothing ever said anything about carries none — silence is not a guess", () => {
+    bridge.publishMountedGame("sudoku");
+    bridge.registerAuthorInk(() => PEER);
+    bridge.bankAuthorInk();
+    // futoshiki's saved board was written in some other room, or in none. No follow parked it and
+    // no clock was ever about it; the mounted clock says nothing of whose hand wrote its digits,
+    // and a guess is what this row still refuses.
     expect(bridge.previewFor("futoshiki")?.authorInk).toBeUndefined();
   });
 

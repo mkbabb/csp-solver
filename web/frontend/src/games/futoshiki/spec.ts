@@ -57,8 +57,6 @@ export const futoshikiSpec = defineGame<ReturnType<typeof useFutoshiki>, Inequal
   solver: { nodeBudget: nodeBudgetForSize },
   urlCodec: { key: persistence.key },
   deal: {
-    sizes: latinSizes,
-    difficulty: difficultyOptions,
     options: (m) => [
       {
         key: "boardSize",

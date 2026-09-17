@@ -1,0 +1,46 @@
+// digits out of a clock about somebody else's board. Refused, the outgoing game keeps the
+// snapshot it earned while the clock was still its own — which is the true one — and the incoming
+// game already has its own from the stage. Neither write depends on which of App's two watches
+// runs first.
+//
+// Nothing here reaches disk. Authorship is the room's, and a room does not outlive the page.
+const inkBank = ref<Record<string, Record<string, Record<string, string>>>>({});
+
+/** Write, or RETIRE, one game's snapshot. An empty clock retires the row rather than banking a
+ *  blank: nobody else wrote on that board, which is precisely what a still with no ink says. */
+function bankInk(id: string, ink: Record<string, Record<string, string>>): void {
+  const keep = Object.keys(ink).length > 0;
+  if (!keep && !(id in inkBank.value)) return;
+  const next = { ...inkBank.value };
+  if (keep) next[id] = ink;
+  else delete next[id];
+  inkBank.value = next;
+}
+
+/** App banks the room's clock against the game holding the seat, on every change of that clock —
+ *  the `registerAuthorInk` read, one direction on. See the section head for the FOLLOW refusal. */
+export function bankAuthorInk(): void {
+  const id = mountedId.value;
+  if (!id || follow.value) return;
+  bankInk(id, readAuthorInk?.() ?? {});
+}
+
+/** The saved board for a game id, off disk, now — or `null`, which is the card's cue to draw
+ *  its canned never-played face. A stated default, not a silent fallback. */
+export function previewFor(id: string): PreviewBoard | null {
+  if (!hasDom) return null;
+  const src = ledgerSources.find((s) => s.id === id);
+  const p = src ? readPersistedBoard(src.persistKey) : null;
+  if (!p) return null;
+  // WHOSE HAND, PER BOARD. The seat's own still reads the clock live; every other still reads the
+  // snapshot banked while ITS board held that clock. A game with neither is a board nobody at this
+  // table has ever written on, and colouring it from a clock about some other board would be a
+  // guess in a fact's clothes. No ink attaches nothing, so a solo still stays byte-identical.
+  const ink = id === mountedId.value ? readAuthorInk?.() : inkBank.value[id];
+  return ink && Object.keys(ink).length ? { ...p, authorInk: ink } : p;
+}
+
+/** The two board facts, derived from the parse rather than parsed a second time. */
+function rowOf(p: PreviewBoard): StagedLedgerEntry {
+  const givens = new Set(p.givenCells);
+  const cells = Object.entries(p.values).filter(([, v]) => v !== 0 && v != null);

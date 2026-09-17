@@ -1,0 +1,269 @@
+FB — RESTAMP LANE, T9 W3+W6 CHAIR FOLD, 2026-09-17
+Every gate run BARE (no pipe — a pipe eats the exit code). cwd noted per row.
+Tree: working copy on master at 4686436f + seven fold lanes' edits + this lane's.
+
+=============================================================================
+FINAL EXIT CODES
+=============================================================================
+cwd web/frontend
+  npm run lint                                  EXIT 0
+  npx eslint .                                  EXIT 0
+  npx vue-tsc --noEmit                          EXIT 0
+  npm run typecheck:e2e                         EXIT 0
+  npx knip                                      EXIT 0
+  npm run lint:lanes                            EXIT 0
+  npm run lint:live-regions                     EXIT 0
+  node scripts/check-copy-register.mjs          EXIT 0
+  node scripts/check-lane-membership.mjs --self-test   EXIT 0
+  node scripts/check-pw-projects.mjs            EXIT 0   (checks 1-8 all green)
+  node scripts/check-pw-projects.mjs --self-test EXIT 0
+  npx vitest run --silent                       EXIT 1   ← see FINDING 1
+      Test Files  1 failed | 65 passed (66)
+      Tests       3 failed | 807 passed (810)
+  node scripts/check-unit-count.mjs vitest-report.json  EXIT 1   ← see FINDING 1
+
+cwd repo root
+  node scripts/check-doc-truth.mjs              EXIT 1   ← see FINDING 2 (1 RED / 41 GREEN)
+  node scripts/check-doc-truth.mjs --self-test  EXIT 0   (129 PASS / 0 FAIL over 42 rows)
+  node scripts/ledger-diff.mjs --assert-state   EXIT 0
+  node scripts/check-evidence-policy.mjs        EXIT 1   ← see FINDING 3 (20 breaches)
+
+=============================================================================
+1 — SPEC_MANIFEST + HOLDOUTS  (web/frontend/scripts/check-pw-projects.mjs)
+=============================================================================
+BEFORE (bare, EXIT 1):
+  ... 30 manifest specs, 4 declared single-engine holdouts ...
+  webkit   listed 238  live 237  ← 1 row-held out of webkit
+  ✓1 ✓2 ✓3 ✓4 ✓5 ✗6 SPEC MANIFEST — 4  ✓7 ✗8 FLOOR BAND — 4
+  [6] follow-still-authorship.spec.ts / presence.spec.ts / spoken-controls.spec.ts /
+      spoken-gallery.spec.ts: on disk, NOT in SPEC_MANIFEST.
+
+LANDED — four manifest rows, alphabetical per 6d-r13-0.md:
+  "filter-census.spec.ts",
+  "follow-still-authorship.spec.ts",     ← new (fil < fol < fon)
+  "font-census.spec.ts",
+  ...
+  "permalink.spec.ts",
+  "presence.spec.ts",                    ← new (per < pre < prm)
+  "prm-void-audition.spec.ts",
+  ...
+  "share-truth.spec.ts",
+  "spoken-controls.spec.ts",             ← new (sh < sp < su)
+  "spoken-gallery.spec.ts",              ← new
+  "sudoku-interaction.spec.ts",
+
+LANDED — the HOLDOUTS entry from 6c-1.md, verbatim, beside share-truth.spec.ts.
+  ONE line number adapted, never the meaning: the handoff cites
+  spoken-controls.spec.ts:243; the tree reads :242. Re-grepped and verified at the
+  tree before landing —
+
+    236:test.describe('§3.6 the copy act reaches AT', () => {
+    237:  test('the outcome is spoken, and the name agrees with the label at every beat', async ({
+    242:    test.skip(
+    243:      browserName === 'webkit',
+    244:      'PW-WebKit has no clipboard-write permission (playwright.config.ts records the
+           same gap for share-truth.spec.ts)',
+
+  — the title string matches the handoff's `title` byte for byte.
+
+AFTER the manifest + holdout edit (bare, EXIT 1 — check 8 only, as 6a-5 predicted):
+  ... 34 manifest specs, 5 declared single-engine holdouts ...
+  webkit   listed 238  live 236  ← 2 row-held out of webkit
+  ✓1 ✓2 ✓3 ✓4 ✓5 ✓6 ✓7  ✗8 FLOOR BAND — 4
+
+  Check 4's row grain bit the moment the name joined the manifest and the entry
+  answered it. `liveTests` subtracted the row: webkit live 237 → 236. That
+  subtraction IS the proof the entry is load-bearing and not decoration.
+
+=============================================================================
+2 — FLOORS  (web/frontend/scripts/census.stamp.json, via --restamp ONLY)
+=============================================================================
+Check 8 RED before, naming four projects:
+  chromium        floor 198 OUT OF BAND — 16.8% under 238 (stamped 221, live 238), owes 203
+  webkit          floor 194 OUT OF BAND — 17.8% under 236 (stamped 216, live 236), owes 201
+  wordmark-webkit floor   1 OUT OF BAND — 83.3% under 6 (stamped 1, live 6), owes 6
+  theme-bake-webkit floor 0 OUT OF BAND — 100.0% under 10 (stamped 0, live 10), owes 9
+
+DRY RUN FIRST (the lane order: any LOWER stops the lane; --allow-lower never passed):
+  node scripts/check-pw-projects.mjs --restamp --dry \
+    --wave "T9-W3+W6 fold 2026-09-17 — the CH-62 park torn down, W3's four new specs, share-truth per-row"
+
+  chromium                  listed 238  live 238  derived 214  floor 198 → 214   RAISE
+  webkit                    listed 238  live 236  derived 212  floor 194 → 212   RAISE
+  (default)                 listed   4  live   4  derived   4  floor   4 →   4   ·
+  throttled-void            listed   1  live   1  derived   1  floor   1 →   1   ·
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6 →   6   ·
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6 →   6   ·
+  wordmark-webkit           listed   6  live   6  derived   6  floor   1 →   6   RAISE
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10 →  10   ·
+  theme-bake-webkit         listed  10  live  10  derived  10  floor   0 →  10   RAISE
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14 →  14   ·
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14 →  14   ·
+  4 floor(s) move, 7 unmoved  ·  live census 545 of 547 listed
+  --dry — nothing written.
+
+  FOUR RAISES, ZERO LOWERS. The seven unmoved are the ratchet proving the rest of
+  the matrix did not move — including theme-quadrants, where derived 12 sits UNDER
+  banked 14 and max(banked, derived) correctly keeps 14.
+
+  6a-5 predicted exactly two of these four (wordmark-webkit 1→6, theme-bake-webkit
+  0→10, from the CH-62 park teardown). The other two are this fold's own growth:
+  W3 minted four specs and the estate grew 221→238 chromium rows.
+
+WRITTEN: `written -> scripts/census.stamp.json (pw)`
+  stamp note: 4686436f · 2026-09-17 · platform darwin · T9-W3+W6 fold 2026-09-17 —
+  the CH-62 park torn down, W3's four new specs, share-truth per-row
+
+BARE RE-RUN: node scripts/check-pw-projects.mjs → EXIT 0, checks 1-8 all green.
+NOTHING HAND-EDITED in census.stamp.json. The mechanism wrote it.
+
+--- the unit floor: RESTAMP REFUSED, and correctly ---
+  node scripts/check-unit-count.mjs vitest-report.json           EXIT 1
+    FE unit lane — 810 executed (807 passed / 3 failed), 0 skipped, 0 todo,
+    over 66 files / 262 suites; floor 661; report age 0.1 min.
+    · report is not a passing run: 3 failed, success=false
+    · floor 661 is OUT OF BAND: 18.4% under 810 (stamped 735, live 810); owes 689.
+
+  node scripts/check-unit-count.mjs --restamp vitest-report.json --dry --wave "…"  EXIT 1
+    --restamp REFUSED: the report is not a clean census.
+      · report is not a passing run: 3 failed, success=false
+
+  The floor CANNOT be restamped while the estate is red, by the mechanism's own
+  design (check-unit-count.mjs:407). See FINDING 1. The stamp was not hand-edited
+  and the floor stays at 661 owing 689 until those three rows go green.
+
+=============================================================================
+3 — PINS  (node scripts/check-doc-truth.mjs, repo root, bare)
+=============================================================================
+BEFORE: EXIT 1 — 4 RED / 38 GREEN.
+
+  RED root-readme-e2e-counts
+    derived: 476 tests in 28 files (default) · 34 .spec.ts on disk · golden 4/1 · throttle 67/5
+    README.md:96 expected 476 Playwright tests, got 437
+    README.md:96 expected 28 (--list) or 34 (on disk) spec files, got 24
+  RED e2e-total-arithmetic
+    derived: default 476/28 + golden 4/1 + throttle 67/5 = 547 tests in 34 files
+    README.md:99 expected 547 tests in all, got 508
+  RED directory-count-claims
+    web/frontend/README.md:56 expected 22 .mjs in web/frontend/scripts, got 21
+  RED index-css-bound
+    docs/tranches/LEDGER.md:87 expected 576 code lines, the row pins 571
+
+RESTAMPED — README.md:95-98, the whole e2e pin block, every figure re-derived:
+  -# e2e: 437 Playwright tests across 24 spec files in the default config (Chromium 221,
+  -#      WebKit 216). Six further specs are held out of it and ride two configs of their
+  -#      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (67 in 5).
+  -#      30 spec files on disk, 508 tests in all.
+  +# e2e: 476 Playwright tests across 28 spec files in the default config (Chromium 238,
+  +#      WebKit 238). Six further specs are held out of it and ride two configs of their
+  +#      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (67 in 5).
+  +#      34 spec files on disk, 547 tests in all.
+
+  The per-engine parenthetical (221/216 → 238/238) is NOT a row doc-truth names, but
+  it sits inside the line doc-truth names and it was false. Both figures are the
+  `--list` counts check-pw-projects prints on the same tree (chromium listed 238,
+  webkit listed 238); 238 + 238 = 476, the derived default total. "Six further
+  specs" still holds: 34 on disk − 28 in default = 6, and 28 + 1 + 5 = 34.
+
+RESTAMPED — web/frontend/README.md:56:
+  -├── scripts/    # the frontend gate scripts — 21 .mjs, …
+  +├── scripts/    # the frontend gate scripts — 22 .mjs, …
+
+AFTER: EXIT 1 — 1 RED / 41 GREEN. The one survivor is index-css-bound
+(docs/tranches/LEDGER.md:87), outside this lane's fence. See FINDING 2.
+
+SELF-TEST: node scripts/check-doc-truth.mjs --self-test → EXIT 0,
+  "129 PASS / 0 FAIL — every row proved both colours" over 42 rows.
+
+=============================================================================
+4 — E2E, FULL DEFAULT SUITE, BOTH ENGINES  (see FB-full-suite.txt)
+=============================================================================
+  npx playwright test --reporter=line   EXIT 0
+  4 skipped · 472 passed (2.9m) · 476 listed
+
+=============================================================================
+FINDINGS — three, each with a name and an owner, none of them papered
+=============================================================================
+FINDING 1 — THE UNIT ESTATE IS RED, AND IT BLOCKS THE UNIT FLOOR RESTAMP.
+  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts, 3 rows:
+    × arming utters the guard's own name into an ASSERTIVE region
+    × returns focus to the listbox when the ribbon retires
+    × the utterance is built from that same name, so copy can never drift out of it
+  Named twice already, by two lanes, with literal cures:
+    evidence/w3/handoffs/fold-FA2-1.md  (rows A and B, plus the ruling that row 3
+      is COLLATERAL — row A throws before w.unmount() and leaks a gallery into the
+      shared jsdom document; proven by running row 3 alone: 1 passed / 16 skipped)
+    evidence/w6/handoffs/fold-FA7-1.md  (same file, ablation-proven not FA7's)
+  The file is outside the Restamp lane's fence, so this lane did not touch it.
+  CONSEQUENCE: check-unit-count.mjs --restamp refuses a non-clean census, so the
+  unit floor stays 661 against 810 executed (owes 689). The floor is the LAST thing
+  in this fold still carrying silent slack, and it cannot be cured from here.
+  ORDER: land fold-FA2-1's two re-cuts, re-run `npm run test:unit:report`, then
+    node scripts/check-unit-count.mjs --restamp vitest-report.json \
+      --wave "T9-W3+W6 fold 2026-09-17 — …"
+  Every move will be a RAISE (661 → derived on 810), so no --allow-lower.
+
+FINDING 2 — check-doc-truth IS ONE ROW FROM EXIT 0, AND THAT ROW IS A LEDGER PIN.
+  index-css-bound: docs/tranches/LEDGER.md:87 pins 571 CODE lines; the census reads
+  576 (1,172 total = 576 code + 505 comment + 91 blank). It is a MISCOUNT, not
+  drift — index.css is byte-identical at cfbb8097, at HEAD and in the tree.
+  The two-line restamp plus its dated note is written literally, and already
+  plant-proved, at evidence/w6/handoffs/fold-FA5-3.md.
+  LEDGER.md is not in the Restamp lane's fence (which names README.md,
+  web/frontend/README.md, docs/benchmarks.md, the manifest and the stamp, and no
+  ledger), so this lane did not force it. It is a COUNT, not a claim, and landing
+  it takes check-doc-truth to EXIT 0 with nothing else owed.
+
+FINDING 3 — THE EVIDENCE BUCKETS ARE OVER CAP, UNMOVED SINCE FA5 MEASURED THEM.
+  check-evidence-policy.mjs EXIT 1 — 20 breaches, 18 per-image + 2 per-wave:
+    per-wave  evidence/w3  4,135,716 B > 2,097,152 B
+    per-wave  evidence/w6  3,855,113 B > 2,097,152 B
+    per-image 16 frames under evidence/w3/gallery-pi/, plus
+              evidence/w6/r15-frames/desk-1440-armed-chromium.png (175,792 B) and
+              evidence/w6/r13-frames/before-webkit-2.png (157,709 B)
+  Stale NOTICE lines: 0 — 6a-2's grandfather purge holds.
+  The gate's own footer: "Do NOT raise a cap and do NOT add a grandfather line."
+  The cure is a RECROP of those lanes' banked frames (the pi law permits recropping
+  a banked frame, forbids re-shooting it), and they are those lanes' evidence, not
+  this lane's fence. Seam: evidence/w6/handoffs/fold-FA5-1.md.
+
+FINDING 4 — EVERY COUNT THIS LANE STAMPED IS A DISK COUNT, AND THE DISK IS UNTRACKED.
+  The pins and floors derive from files git has not seen yet. If the chair's commit
+  omits any of them the pin it feeds becomes a lie in the same commit that stamped
+  it. The load-bearing ones:
+    web/frontend/scripts/check-live-regions.mjs   → the 22nd .mjs (README.md pin)
+    web/frontend/e2e/follow-still-authorship.spec.ts
+    web/frontend/e2e/presence.spec.ts
+    web/frontend/e2e/spoken-controls.spec.ts
+    web/frontend/e2e/spoken-gallery.spec.ts       → the 34/28/476/547 e2e pins AND
+                                                    the chromium/webkit floors
+  `git ls-files web/frontend/scripts/*.mjs | wc -l` = 21; `ls … | wc -l` = 22.
+  Stage all five with this fold, or re-run check-doc-truth and the restamp after.
+
+=============================================================================
+APPENDIX — census.stamp.json, SEMANTIC diff (the mechanism's write, not a hand)
+=============================================================================
+The raw `git diff` on this file is larger than the numbers, because --restamp
+re-serializes the whole JSON and writes literal §, — and ' where HEAD carried
+§, — and ’ escapes. Nothing in that re-encoding is a claim. Held
+key-by-key against `git show HEAD:web/frontend/scripts/census.stamp.json`, the
+ONLY values that moved are these thirteen, and every one of them is in the `pw`
+block:
+
+  pw.projects.playwright.config.ts::chromium.listed            221 -> 238
+  pw.projects.playwright.config.ts::chromium.census            221 -> 238
+  pw.projects.playwright.config.ts::chromium.floor             198 -> 214
+  pw.projects.playwright.config.ts::webkit.listed              216 -> 238
+  pw.projects.playwright.config.ts::webkit.census              216 -> 236
+  pw.projects.playwright.config.ts::webkit.floor               194 -> 212
+  pw.projects.…throttle…::wordmark-webkit.census                 1 ->   6
+  pw.projects.…throttle…::wordmark-webkit.floor                  1 ->   6
+  pw.projects.…throttle…::theme-bake-webkit.census               0 ->  10
+  pw.projects.…throttle…::theme-bake-webkit.floor                0 ->  10
+  pw.stamp.sha                                          4dd9ec9c -> 4686436f
+  pw.stamp.date                                       2026-08-28 -> 2026-09-17
+  pw.stamp.wave                              T9-W5 §5.2 -> T9-W3+W6 fold 2026-09-17 …
+
+`unit.floor` is UNTOUCHED at 661 and `unit.census` is untouched at 735 — the
+restamp that would have moved them was refused (FINDING 1), and this lane did not
+reach past the refusal. `law` is byte-identical in meaning. Nothing hand-edited.

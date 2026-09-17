@@ -1,0 +1,14 @@
+=== PLANT-PROOF: relay typecheck ===
+baseline md5(relay.ts) = e4ca501d4b170e208823cd9d8f3dc8d3
+
+--- 0. GREEN before plant ---
+EXIT=0
+
+--- 1. PLANTED: const __planted: number = "not a number"; appended to web/relay/relay.ts ---
+../relay/relay.ts(324,7): error TS2322: Type 'string' is not assignable to type 'number'.
+../relay/relay.ts(324,7): error TS6133: '__planted' is declared but its value is never read.
+EXIT=2
+
+--- 2. RESTORED (md5 e4ca501d4b170e208823cd9d8f3dc8d3; identical to baseline: YES) ---
+EXIT=0
+git diff for web/relay/relay.ts vs pre-plant:  1 file changed, 8 insertions(+), 3 deletions(-)

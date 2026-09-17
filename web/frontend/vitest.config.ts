@@ -22,6 +22,17 @@ import { defineConfig } from 'vitest/config'
  * Excluded: the units themselves, type-only declarations, the `main.ts` bootstrap (mounts the
  * app — no unit ever executes it), and generated/vendored assets.
  *
+ * That claim used to be spelled a second time as `coverage.all: true`, and at vitest 4 the
+ * option does not exist — the root-config typecheck (T9-W6 §6.2, handoff 6b-2) named it the
+ * moment it could see this file. It was deleted on MEASUREMENT, not on the type error: two
+ * coverage runs, one with the option and one without, report the same 134 files and the same
+ * denominator to the statement (6648 statements / 3796 branches / 1611 functions / 5733 lines,
+ * zero files moved), with `src/pencil/dev/rafInstrumentation.ts` — whose only importer is the
+ * EXCLUDED `main.ts`, so no unit's module graph reaches it — sitting at 0% in both. The v8
+ * provider reports the whole `include` glob on its own at this version, so the paragraph above
+ * is still true of the runner; the option was a restatement, and a dead one. Proof banked at
+ * evidence/w6/fold/FA6-coverage-all-redundant.md.
+ *
  * `reportsDirectory` is gitignored; the enforceable artifact is `coverage/coverage-summary.json`
  * (json-summary), read by `scripts/check-coverage-floor.mjs` against the banked
  * `coverage-floor.json`. Thresholds live in that script, NOT in `coverage.thresholds`, for two
@@ -71,8 +82,6 @@ export default defineConfig({
         // prose to cite it, and `e2e/` is not `src/`.
         'src/pencil/config/filterBudget.ts',
       ],
-      // Report every included file, imported by a unit or not (see the header note).
-      all: true,
       // Off here: enforcement is `scripts/check-coverage-floor.mjs` (per-scope + self-test).
       thresholds: undefined,
     },

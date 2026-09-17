@@ -35,9 +35,18 @@
  * a peer that vanishes without a `bye` (a hard crash, a severed link) has no traffic to be
  * absent from, where `onPeerLeave` used to prune it. The relay is the only party that knows,
  * so since T7-W4 it says the word itself on `webSocketClose` (`relay.ts`'s `announceLeave`).
- * That covers the socket that CLOSES, which is what a crashed tab is. A socket that stays OPEN
- * behind a dead page is nobody's `bye` yet, and wants the presence timeout flagged here:
- * cut-2's, not this.
+ * That covers the socket that CLOSES, which is what a crashed tab is.
+ *
+ * THE OTHER CLASS CLOSED AT T9-W6 (§3.7, 2026-09-17), and this paragraph carried it as a known
+ * lie for two tranches: a socket that stays OPEN behind a dead page is nobody's `bye`, so the
+ * roster went on naming a page nobody was at. It was flagged here as "the presence timeout —
+ * cut-2's, not this", and cut 2 never came. The cure is `useSession.ts`'s, one level up and
+ * deliberately so: every live page re-announces `hi` on a 15s beat and a peer silent past 45s
+ * leaves the roster (never `known` — their digits keep their colour). Presence is the session's
+ * claim, so the clock is the session's; an arm-side beat would be written once here and once in
+ * `localWire`, two clocks against one expiry. What stays this file's is the RE-announce on every
+ * socket open below, which is about a gap rather than a pulse — and the announce interval that
+ * left with trystero is, in that one sense, back where it should always have been.
  *
  * NO SIGNATURES, and the relay agrees — it verifies shape and fans out (see its header: this
  * arm publishes under a random per-page id with an empty `sig`, so there is nothing a
@@ -143,9 +152,14 @@ const drop = (): void => void refused++;
 export const droppedFrames = (): number => refused;
 
 /**
- * Join a room over the relay, directly. `urls[0]` is the relay; a list of one is what a relay
- * you operate means (see `RELAY_URLS`), so the extra entries are a future's problem and this
- * arm reads the first.
+ * Join a room over the relay, directly. ONE relay, named as one (T9-W6 §6.1): the parameter was
+ * a `string[]` whose every caller built a one-element array and whose only read was `urls[0]`,
+ * with the extra entries filed as "a future's problem". A list nothing can grow and nothing
+ * reads past index 0 is not a list — it is a string wearing brackets, and it made every call
+ * site and every test mock carry the shape of a fallback pool that does not exist. A relay you
+ * operate is one origin (`useSession`'s `RELAY_URL`, which `public/_headers` grants by name);
+ * if a pool is ever real it arrives as a pool, with the retry policy that makes it mean
+ * something.
  *
  * THE ID COMES IN (T8-W3 §2.9). This arm used to mint `r-<hex>` per socket, which made identity
  * a property of the CONNECTION: a rejoin was a stranger, with a new slug and a new colour, and
@@ -155,7 +169,7 @@ export const droppedFrames = (): number => refused;
  */
 export function relayWire(
   room: string,
-  urls: string[],
+  url: string,
   h: Handlers,
   selfId: string,
 ): Wire {
@@ -195,7 +209,7 @@ export function relayWire(
 
   function connect(): void {
     if (closed) return;
-    const ws = new WebSocket(urls[0]);
+    const ws = new WebSocket(url);
     sock = ws;
     ws.onopen = () => {
       attempt = 0;

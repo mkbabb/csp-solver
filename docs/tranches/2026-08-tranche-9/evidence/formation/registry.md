@@ -213,3 +213,42 @@ steerable, not a quota.
 - T5's 61-row chronic ledger + 137-row matrix hand-verify — unstaffed (accept: T5's
   recap is the one DURABLE artifact of its kind and A5 spot-checks passed).
 - CH-64/66/67 runner-side numbers not re-derivable in-tree — noted, likely accept.
+
+## Corrections
+
+Appended, never merged into the table above: this is sealed formation record under the freeze
+law, so a figure that did not survive measurement is corrected HERE, with its date and its
+evidence, and the original line stays legible.
+
+**CORRECTION (T9-W6 fold, 2026-09-17) — F10's share-truth audition figure (`:57`).** The row
+states the webkit holdout is "5× wider than its cited cause (4 of 5 rows re-auditioned GREEN in
+WebKit at 1.61.1)". Re-run at the tree rather than inherited, all five rows in webkit gave
+**2 passed / 3 failed** (`../w6/holdouts/audition-webkit-all5.txt`). The chromium control redded
+**the same three** (`../w6/holdouts/audition-chromium-control.txt`), which settles the
+attribution in one measurement: two of the three were never an engine story — they were T9-W3
+§3.6's contract change (the accessible NAME stops flipping at a fine pointer, the outcome moves
+to a `role="status"` region) arriving without its spec re-cut. The suspicion that WebKit refuses
+the `addInitScript` override of `navigator.clipboard.writeText` is REFUTED: the override takes
+cleanly and rejects in 1ms in BOTH engines (`../w6/holdouts/probe-failinit-webkit.txt`,
+`../w6/holdouts/probe-failinit-chromium-control.txt`). After the W3 reconciliation the audition
+reads **9 passed / 1 skipped, both engines** (`../w6/holdouts/audition-both-engines-after-3C1.txt`)
+and one row is dark in webkit — the API gap the record always named. The FINDING stands: the
+holdout was wider than its cause. Only its figure was wrong, and the narrowing it licensed
+landed on a measurement instead of on the inherited number.
+
+**CORRECTION (T9-W6 fold, 2026-09-17) — F11's wanderer verdict and its cite (`:58`).** The row
+censuses `gallery.spec.ts:317` (the deck-drag advance) as failing **TERMINALLY** under
+whole-suite contention, "0/38 isolated reds". Four controls at the tree refute the word:
+ISOLATED, 3 runs × both engines, **6/6 green** (`../w6/holdouts/wanderer-isolated-control.txt`);
+CPU-SATURATED — 18 cores under `yes`, 6 workers, `--repeat-each=6`, this row plus its kenken
+twin, **12/12 green** (`../w6/holdouts/wanderer-cpu-load.txt`); WHOLE SUITE run 1 **RED** in
+webkit (`../w6/holdouts/full-suite-contention.txt`); runs 2 and 3, same tree and same command,
+**GREEN** both engines (`../w6/holdouts/full-suite-lane-end.txt`). The row is **INTERMITTENT
+under whole-suite load — one red in three full-suite runs — and it is not CPU contention**,
+which saturating every core does not move. "Terminal" is the word that makes a row safe to stop
+thinking about, and it is the one word in this census a control could not carry. The cite has
+moved too: the row now reads `gallery.spec.ts:464`, having gained the premise assertions and the
+drag ledger that make its next red a diagnosis — mechanism A (never taken as a drag), A′ (step
+computed zero), or B (step taken and walked back) — rather than one unfalsifiable bit.
+Adjudicated at T9-W6 §6.3. The family's substance is untouched: an unfalsifiable red is a red
+nobody can act on.

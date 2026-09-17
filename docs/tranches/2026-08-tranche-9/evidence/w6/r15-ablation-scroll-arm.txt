@@ -1,0 +1,56 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+stdout | src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the depth grade — distance, not a binary (M11) > each card is handed its distance from the chosen one, capped at 2
+<Suspense> is an experimental feature and its API will likely change.
+
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the depth grade — distance, not a binary (M11) > each card is handed its distance from the chosen one, capped at 2 59ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the depth grade — distance, not a binary (M11) > the far tier is a CAP, so a five-deep spread still has three legible tiers 6ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the depth grade — distance, not a binary (M11) > the card spends it as two compositor channels, and the tiers are the ruled table 4ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the true stills — read lazily, at open and at arrival (M12) > every card is read ONCE at open, and the value reaches that card 7ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the true stills — read lazily, at open and at arrival (M12) > the read is in SETUP, so the first paint already carries the true face 3ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the true stills — read lazily, at open and at arrival (M12) > arriving at a card re-reads THAT card, and only it 7ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the true stills — read lazily, at open and at arrival (M12) > no reader supplied: every face is the canned poster, and nothing throws 4ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the ribbon on a shared board — consent, counted (M13) > a CLEAN board in a shared room still arms — the marks were never the subject 9ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the ribbon on a shared board — consent, counted (M13) > one peer is one player — the count is the instrument, and it can say 1 5ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the ribbon on a shared board — consent, counted (M13) > a return switch names the last-writer price as well as the count (row 3) 5ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the ribbon on a shared board — consent, counted (M13) > a deal in a session arms on the table, not on the work (row 16) 4ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the ribbon on a shared board — consent, counted (M13) > an EMPTY room arms nothing — there is nobody to drag, and no true count to print 6ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the ribbon on a shared board — consent, counted (M13) > undoing to clean does NOT retire a shared ribbon 5ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the ribbon on a shared board — consent, counted (M13) > SOLO, a select needs no guard: the board is saved and the switch is free 3ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the ribbon on a shared board — consent, counted (M13) > SOLO, the deal guard keeps its strings — a deal genuinely writes over marks 3ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > where the armed ribbon stands (T8-R15) > the anchor is the armed card's centre in deck coordinates, not the deck's middle 8ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > where the armed ribbon stands (T8-R15) > a resize under an armed ribbon re-anchors the note onto the card's NEW box 19ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > where the armed ribbon stands (T8-R15) > the note re-measures AFTER the deck re-pins — observer order, not the resize event 5ms
+ × src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > where the armed ribbon stands (T8-R15) > a track that moves under the note re-anchors it too, broadcast or no broadcast 7ms
+   → expected '--guard-x: 282px;' to contain '--guard-x: 160px'
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > where the armed ribbon stands (T8-R15) > it re-anchors rather than retires — the unanswered question is still standing 7ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the deck's roster echo (M14) > the swatches go to the CHOSEN card alone 3ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the deck's roster echo (M14) > no session, no dots 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > where the armed ribbon stands (T8-R15) > a track that moves under the note re-anchors it too, broadcast or no broadcast
+AssertionError: expected '--guard-x: 282px;' to contain '--guard-x: 160px'
+
+Expected: "--guard-x: 160px"
+Received: "--guard-x: 282px;"
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:435:31
+    433|         await w.get(".gallery-viewport").trigger("scroll");
+    434|         await flushPromises();
+    435|         expect(guardStyle(w)).toContain("--guard-x: 160px");
+       |                               ^
+    436|       });
+    437|     } finally {
+ ❯ withWindowWidth src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:366:7
+ ❯ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:432:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 21 passed (22)
+   Start at  19:06:34
+   Duration  720ms (transform 197ms, setup 10ms, import 233ms, tests 181ms, environment 211ms)
+

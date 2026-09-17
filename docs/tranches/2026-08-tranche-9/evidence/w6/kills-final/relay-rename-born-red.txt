@@ -1,0 +1,13 @@
+=== BORN-RED, reproduced: the HEAD gate run against the CURED tree ===
+The relayWire kill renamed useSession.ts's RELAY_URLS (a one-element array) to RELAY_URL.
+check-doc-truth.mjs:1120 read the relay origin by PARSING that literal, so the rename redded
+the row at once. This is that red, measured — not asserted.
+
+RED    relay-origin-pair
+        derived: UNDERIVED: csp wss://sudoku-relay.mkbabb.workers.dev · default none · name sudoku-relay
+        web/frontend/src/games/shared/useSession.ts
+          expected: a wss:// default in the RELAY_URLS literal
+          got:      none
+
+
+2 RED / 39 GREEN — doc canon disagrees with the tree

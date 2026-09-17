@@ -1,0 +1,19 @@
+T9-W6 lane 6C — the wanderer under CPU saturation, NOT reproduced.
+
+Command (from web/frontend), 18 `yes` processes pinning all 18 cores for the duration:
+  npx playwright test e2e/gallery.spec.ts --project=webkit \
+    -g "pushing the deck left|LAST card" --repeat-each=6 --workers=6 --reporter=line
+
+Result: 12 passed (22.4s). Zero reds.
+
+Every run printed the same geometry from the in-row probe:
+  viewport box 112,125.1 1056x455.98 — IDENTICAL before and after the gesture
+  pointerdown 1 · pointermove 27 · pointerup 1   (the whole gesture delivered)
+  downAt [640,353] · upAt [380,353]              (travel exactly 260)
+  cards 5 · --deck-slots 3
+
+CONCLUSION: CPU contention is NOT the wanderer's mechanism. Saturating every core, running
+the row and its kenken twin six times over six workers, moves it not at all. The formation's
+"TERMINAL under whole-suite contention" does not survive this control either — see
+wanderer-isolated-control.txt (6/6 green isolated) and full-suite-contention.txt (RED in
+webkit on one full-suite run, GREEN in both engines on the next, same tree, same command).

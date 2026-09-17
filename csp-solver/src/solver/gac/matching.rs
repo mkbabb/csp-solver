@@ -45,6 +45,40 @@ impl Csr {
     pub(super) fn row(&self, i: usize) -> &[u32] {
         &self.edges[self.offsets[i] as usize..self.offsets[i + 1] as usize]
     }
+
+    /// Rebuild `self` as the transpose of `src` over `n_nodes` rows — every arc
+    /// reversed. Counting sort, O(n_nodes + |edges|), allocation-free once the
+    /// buffers are warm; `counts` is caller-owned scratch (it ends holding the
+    /// per-row write heads, i.e. `offsets[1..]`).
+    ///
+    /// The GAC core needs both orientations of the residual graph: alternating
+    /// paths out of a free *variable* run along `src`, out of a free *value*
+    /// along this transpose (`solver/gac.rs`, the reachability section).
+    pub(super) fn transpose_of(&mut self, src: &Csr, n_nodes: usize, counts: &mut Vec<u32>) {
+        counts.clear();
+        counts.resize(n_nodes + 1, 0);
+        for u in 0..n_nodes {
+            for &w in src.row(u) {
+                counts[w as usize + 1] += 1;
+            }
+        }
+        for i in 0..n_nodes {
+            counts[i + 1] += counts[i];
+        }
+
+        self.offsets.clear();
+        self.offsets.extend_from_slice(&counts[..=n_nodes]);
+        self.edges.clear();
+        self.edges.resize(counts[n_nodes] as usize, 0);
+
+        for u in 0..n_nodes {
+            for &w in src.row(u) {
+                let head = counts[w as usize] as usize;
+                self.edges[head] = u as u32;
+                counts[w as usize] += 1;
+            }
+        }
+    }
 }
 
 /// Hopcroft-Karp on an integer bipartite graph, extending whatever partial

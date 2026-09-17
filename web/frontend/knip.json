@@ -7,13 +7,43 @@
   // survived a `files: "error"` rule. A dead-file rule that cannot see two of the three
   // first-party source dirs is not a dead-file rule. Widened to both.
   //
-  // `perf-rig/**` stays OUT, deliberately and on the record: its six modules run as CHILD
-  // PROCESSES of each other and of `run-safari.sh`/`run-sim.sh`, never as imports, so knip's
-  // module graph reads all six as unused and the widening would buy six false reds instead of
-  // one true one. The rig's own membership question is the perf-lane row (W6, ci-subset.mjs),
-  // and `scripts/check-lane-membership.mjs` is the instrument that answers it — it reads
-  // ci.yml, which is where the rig's callers live.
-  "project": ["src/**/*.{ts,vue,css}", "scripts/**/*.mjs", "e2e/**/*.{ts,mjs}"],
+  // `perf-rig/**` stays OUT, deliberately and on the record — and the rationale is RE-DERIVED
+  // FROM DISK here (T9-W6 §6.1; the T7-W6 wording carried a false count and a false
+  // instrument, banked at evidence/w6/kills-census/k-knip-perfrig-trued.txt).
+  //
+  // WHAT IS TRUE. Nothing in the rig imports anything else in the rig: every ES import across
+  // its EIGHT `.mjs` modules is a `node:` builtin or the `playwright` package, zero relative
+  // specifiers. They reach each other as CHILD PROCESSES — nine `.sh` drivers spawning `node
+  // <module>` and each other (`rounds.sh` → `matrix.sh` → `run-safari.sh`; `sim-matrix.sh` →
+  // `run-sim.sh`; `cpu-attrib.sh`, `pw-driver.sh`, `w5-bench.sh`, `w5-solve-trim.sh`),
+  // `ci-subset.mjs` spawning its own build and probe server, and the hand invocations
+  // `perf-rig/README.md` documents. `probe.js` is a tenth file that is neither: it is injected
+  // into the page. A module graph cannot see one edge of that, so the widening would buy eight
+  // false reds instead of one true one.
+  //
+  // WHAT THE OLD WORDING GOT WRONG, named so the next reader does not inherit it: it said SIX
+  // modules (there are eight `.mjs`, plus `probe.js`, plus nine `.sh`), it named `run-safari.sh`
+  // and `run-sim.sh` as the callers (they are two of nine), and it handed the rig's membership
+  // question to `scripts/check-lane-membership.mjs` "which reads ci.yml, where the rig's
+  // callers live". That gate does not scope `perf-rig/**` at all, and ci.yml has carried ZERO
+  // `perf-rig` references since O-12 deleted the perf lane at `d1daefb3`. The rig is a LOCAL
+  // instrument whole — LEDGER CH-53, restamped T9-W0 — and that, not a gate, is the answer to
+  // its membership question.
+  //
+  // `../relay/*.ts` JOINS THE CENSUS AT T9-W6 §6.2. The relay is a DEPLOYED artifact — one
+  // Worker, one Durable Object, shipped by the same gate that ships the SPA — and it sat
+  // outside every static gate this package runs because it is a sibling directory with no
+  // package.json of its own (wrangler.toml's header says why: it borrows this package's
+  // wrangler and vitest, so it needs neither a manifest nor a node_modules). Sibling or not,
+  // the module graph reaches it fine, and a dead module over there is the same defect as a
+  // dead module here. The glob is flat (`*.ts`, not `**/*.ts`) because the directory is flat:
+  // two source files, and `.wrangler/` + `node_modules/` beside them carry only build cache.
+  "project": [
+    "src/**/*.{ts,vue,css}",
+    "scripts/**/*.mjs",
+    "e2e/**/*.{ts,mjs}",
+    "../relay/*.ts"
+  ],
 
   // Roots whose CALLER is not JavaScript, so no module graph can reach them. Each is named
   // here with the caller that runs it — a file listed without one is a hole.
@@ -21,7 +51,30 @@
   //                                  `run: node scripts/dist-identity.mjs --self-test` and
   //                                  `--dist dist`; perf-rig/run-safari.sh + run-sim.sh reach
   //                                  the same file through the AUDIT prepend.
-  //   e2e/ch62-admission.ts          .github/workflows/ch62-probe.yml, the CH-62 admission arm
+  //   ../relay/relay.ts              web/relay/wrangler.toml, `main = "relay.ts"` — the
+  //                                  Worker's entry, loaded by wrangler and by nothing in any
+  //                                  module graph. It ships through
+  //                                  ../../scripts/deploy-gated.sh, which is the only thing
+  //                                  authorised to run `wrangler deploy` (T9-W5 §5.1).
+  //   ../relay/relay.test.ts         scripts.test:unit:relay in this package.json —
+  //                                  `vitest run --root ../relay`, collected by glob from a
+  //                                  root outside this one, which is the same species of
+  //                                  unreachable-by-graph the playwright block below handles
+  //                                  for `e2e/**/*.spec.ts`.
+  // WHAT THIS PAIR DOES *NOT* BUY, said plainly rather than left to be assumed: knip does not
+  // grade unused EXPORTS on an entry file, so `relay.ts`'s exported surface is not under the
+  // exports rule the way `src/**` is. Both files are entries because both really are reached
+  // by a non-JS caller; the alternative (make the test the only entry and let it pull
+  // `relay.ts` in) does not work — knip reports `../relay/relay.ts` unused under it, measured
+  // at evidence/w6/gates-relay/knip-widen-probe-1-testfile-orphan.txt. What the pair DOES buy
+  // is the dead-FILE law over the relay directory, proven by plant at
+  // evidence/w6/gates-relay/knip-plant-RED.txt.
+  // `e2e/ch62-admission.ts` USED to sit here too, cited to ".github/workflows/ch62-probe.yml,
+  // the CH-62 admission arm" — and that workflow never imported it. It named the module in two
+  // prose comments and wrote a same-named JSON artifact; the `entry` line was the only thing
+  // in the estate claiming the file was reachable, so knip answered yes on the author's word
+  // for a 4,239 B module with zero callers. Both died at T9-W6 §6.1, together with the
+  // workflow, which was `workflow_dispatch`-only for a chronic RETIRED at T8 formation.
   // `scripts/golden-magnitude.mjs` USED to sit here, cited to "ci.yml, the golden lane" — a
   // lane deleted at T7-WGATE on standing ruling O-12 (d1daefb3). The entry outlived its
   // caller by a whole campaign, which is how a dead file keeps a live-looking badge: knip
@@ -31,7 +84,7 @@
   // itself — and it carries a `NOT-A-LANE:` header that check-lane-membership.mjs polices.
   // NOT a place to park an unwired gate: a `check-*.mjs` belongs to a lane or declares
   // NOT-A-LANE in its own header, and check-lane-membership.mjs reds if it does neither.
-  "entry": ["scripts/dist-identity.mjs", "e2e/ch62-admission.ts"],
+  "entry": ["scripts/dist-identity.mjs", "../relay/relay.ts", "../relay/relay.test.ts"],
 
   "ignore": ["src/games/shared/scene.css", "src/games/shared/gameCell.css"],
 

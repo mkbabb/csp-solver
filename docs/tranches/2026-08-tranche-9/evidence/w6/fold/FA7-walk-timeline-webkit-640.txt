@@ -1,0 +1,31 @@
+T9 chair fold FA7 — THE WALK'S TIMELINE, webkit, 1440x900 -> 640x900, HEAD (4686436f + fold WIP).
+rAF sampler on .gallery-viewport, compressed to the frames where something changed. t0 = the
+frame before setViewportSize.
+
+--- trial 1 ---
+0ms   sl=0    snap=x mandatory  ad=gallery-card-0  vw=1440
+31ms  sl=212  snap=x mandatory  ad=gallery-card-1  vw=640
+90ms  sl=352  snap=none         ad=gallery-card-1  vw=640
+103ms sl=352  snap=x mandatory  ad=gallery-card-1  vw=640
+
+READ IT IN ORDER, because the order REFUTES the handoff's first candidate:
+
+  31ms  the frame is already 640 and the engine has already adjusted scrollLeft to 212 — and
+        `aria-activedescendant` is ALREADY card-1. Nothing the composable writes has run yet.
+        The only seam that can publish a choice that fast is `scrollend` -> `reportSnap`
+        (UNDEBOUNCED; the 90ms debounce is on `scroll` alone). `restingIndex()` reads 212
+        against the NEW 640 layout, answers 1, and `onSnap(1)` -> `syncFromScroll(1)` takes the
+        choice and dismisses the ribbon.
+
+  90ms  NOW the ResizeObserver fires `jumpTo(currentIndex)` — and `currentIndex` is 1, because
+        `reportSnap` assigned it 59ms ago. snap drops to `none` and the deck is pinned to
+        `targetScrollLeft(1)` = 352. The re-pin is not the defect: it faithfully re-pins a
+        choice that was already stolen.
+
+  103ms the rAF re-arm restores `x mandatory` on a position that is already a snap point.
+        Nothing re-snaps after it.
+
+CONSEQUENCE FOR THE AUDITION: candidate A (a rAF re-pin inside the observer body) re-pins to
+`currentIndex`, which is 1 by the time the observer runs, so it re-pins the WRONG card twice
+instead of once. It is measured below anyway (0 walks cured), and it is refuted here on the
+mechanism as well as on the count.

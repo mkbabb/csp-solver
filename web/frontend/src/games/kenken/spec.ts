@@ -64,8 +64,6 @@ export const kenkenSpec = defineGame<ReturnType<typeof useKenken>, KenKenCage[]>
   solver: { nodeBudget: nodeBudgetForSize },
   urlCodec: { key: persistence.key },
   deal: {
-    sizes: cagedLatinSizes,
-    difficulty: difficultyOptions,
     options: (m) => [
       {
         key: "boardSize",

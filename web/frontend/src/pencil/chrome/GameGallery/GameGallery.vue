@@ -41,7 +41,16 @@
  * that sits empty until there is work at risk. Before this, the second Enter took a dirty
  * board 1 → 0 with nothing ever said (`evidence/audit/r2/verify-gate-criticals.md` §H2).
  */
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  watch,
+} from "vue";
 import {
   createSequenceSubscription,
   easeOutCubic,
@@ -56,6 +65,7 @@ import {
 } from "@pencil/config/pencilConfig";
 import { heldFrameCount } from "@mkbabb/pencil-boil";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
+import { useLiveRegion } from "@/composables/useLiveRegion";
 import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
 import GameCard from "./GameCard.vue";
 import StagingBand from "./StagingBand.vue";
@@ -161,10 +171,11 @@ const rootEl = ref<HTMLElement | null>(null);
  *  card it named and squarely over futoshiki's face; at 4, over killer's. Index 0 is sudoku, the
  *  deck's default pose, so the default case was the broken one.
  *
- *  ONE READ, AT ARM. The deck cannot travel while the ribbon is up — every arrow, Home/End,
- *  click-to-warp and native snap runs `dismissGuard` before it moves — so there is nothing to
- *  track per frame, and a re-arm after a snap is a fresh `guardIndex` transition that measures
- *  again. */
+ *  ONE READ PER POSE, and the deck holds exactly two of them under an armed ribbon. It cannot
+ *  TRAVEL — every arrow, Home/End, click-to-warp and native snap runs `dismissGuard` before it
+ *  moves — so there is nothing to track per frame, and a re-arm after a snap is a fresh
+ *  `guardIndex` transition that measures again. What it can still do is change SHAPE, which is
+ *  the second pose and the re-anchor below. */
 const guardX = ref<number | null>(null);
 /** The air the clamp keeps between the note and the window edge. It is what keeps the ribbon
  *  WHOLE rather than merely aimed: a card centre near the edge would otherwise hang half a note
@@ -380,14 +391,18 @@ function startDeal() {
 onUnmounted(stopDeal);
 
 // ── The polite live region ──
-const liveText = ref("");
+// T9-W3 §3.4 — ON THE SHARED IDIOM. This region was where the estate first got the shape right
+// (born empty, persistent, content swapped in), and it is now an INSTANCE of that shape rather
+// than a second hand-rolled copy of it: the well's three regions landed the same defect three
+// times because the cure lived in this file as a habit instead of anywhere as a mechanism.
+const { text: liveText, say: sayDeck } = useLiveRegion();
 function announce(i: number) {
   const card = props.cards[i];
   if (!card) return;
   // The band's whole content swaps with the snap, so the announcement carries it: the card's
   // position, the staged pair, and what is waiting there. One live region for the deck AND its
   // order slip — a second would talk over this one.
-  liveText.value = `${card.name}, ${i + 1} of ${count.value}. ${stagedLine(card)}`;
+  sayDeck(`${card.name}, ${i + 1} of ${count.value}. ${stagedLine(card)}`);
 }
 /** The staged pair + board state for a card, in words. */
 function stagedLine(card: GalleryCard): string {
@@ -407,7 +422,7 @@ function stagedLine(card: GalleryCard): string {
 }
 function announceStaged() {
   const card = activeCard.value;
-  if (card) liveText.value = stagedLine(card);
+  if (card) sayDeck(stagedLine(card));
 }
 
 // ── The guard's assertive region (T5-W3 §3.2) ──
@@ -417,7 +432,7 @@ function announceStaged() {
 // PERSISTENT: it stays mounted and empty so that arming is a text CHANGE inside a region the AT
 // is already watching, which is the only announcement browsers reliably make. Retiring the
 // ribbon empties it, so nothing stale can be re-read off the page.
-const guardAlert = ref("");
+const { text: guardAlert, say: sayGuard, clear: hushGuard } = useLiveRegion();
 
 // ── The glide (glass-curve FLIP for keyboard/button; native snap for touch) ──
 const viewport = ref<HTMLElement | null>(null);
@@ -425,6 +440,52 @@ const track = ref<HTMLElement | null>(null);
 const glide = useCarouselGlide(viewport, track, {
   reducedMotion: () => reducedMotion.value,
   onSnap: (i) => syncFromScroll(i),
+});
+
+/* ── THE ARMED GUARD RE-ANCHORS (T9-W6 §6.4) ────────────────────────────────────────────────
+ *
+ * `anchorGuard` above measured once, at arm, and nothing invalidated it. The deck cannot travel
+ * under an armed ribbon, but it can change shape — a rotation, a drag-resize, a soft keyboard
+ * pushing the frame — and each of those re-creates the exact geometry R15 closed: the note keeps
+ * the box it measured on a desk that is gone. Measured on the live edge, armed on card 0 and
+ * then rotated, both engines: 36px off its card at 640, 161px at 390, where the note also hangs
+ * off the frame with its destructive verb entirely off screen (evidence/w6/r15-frames). Nothing
+ * noticed, because the deck's own resize answer keeps the INDEX and only `dismissGuard` on an
+ * index change was ever wired.
+ *
+ * IT RE-ANCHORS; IT DOES NOT DISMISS, and the tree had already chosen: the deck's answer to a
+ * resize is `useCarouselGlide`'s instant re-pin, never a teardown, and `syncFromScroll` retires
+ * the ribbon only when the card CHANGES. A resize is therefore already ruled to be the same card
+ * in a new place, and the note now says the same thing. Retiring it would discard an unanswered
+ * consent prompt that is holding focus, on the grounds that the window changed size.
+ *
+ * THE OBSERVER, NOT `window.resize`, and the order is the reason: the resize EVENT fires before
+ * the observer broadcast, so a window listener would re-measure against the track's pre-re-pin
+ * scroll and anchor onto a box about to move again. This observer is constructed after the
+ * glide's — the composable registered its `onMounted` at the call above, this one is below it,
+ * and Vue runs them in registration order — so it is delivered after `jumpTo` has written the
+ * new `scrollLeft`. It also catches a container resize that never touches the window.
+ *
+ * AND THE TRACK ITSELF, because that ordering is a courtesy and not a guarantee. WebKit re-snaps
+ * on its own after a resize (measured: the deck can even walk a whole card, which the existing
+ * index rule then answers by retiring the ribbon), and any future re-pin deferred by a frame
+ * would land after the broadcast. Under an armed ribbon the deck cannot travel for any other
+ * reason — every verb that moves it dismisses first — so a scroll HERE means exactly "the track
+ * moved beneath the note", and re-measuring is the whole of the right answer. Down-cost is nil:
+ * with no card armed `anchorGuard` returns before it reads a rect. */
+let guardResize: ResizeObserver | null = null;
+onMounted(() => {
+  const vp = viewport.value;
+  if (!vp) return;
+  vp.addEventListener("scroll", anchorGuard, { passive: true });
+  if (typeof ResizeObserver === "undefined") return;
+  guardResize = new ResizeObserver(() => anchorGuard());
+  guardResize.observe(vp);
+});
+onBeforeUnmount(() => {
+  viewport.value?.removeEventListener("scroll", anchorGuard);
+  guardResize?.disconnect();
+  guardResize = null;
 });
 
 /** Programmatic move (keyboard / button): update state, glide the track, announce. Any move
@@ -743,14 +804,22 @@ function onGuardKeydown(e: KeyboardEvent) {
 // can still read the focus it is about to destroy.
 watch(guardIndex, (i, prev) => {
   if (i !== null) {
-    guardAlert.value = `${guardTitle.value} ${guardSub.value}. Choose keep, or ${guardVerb.value}.`;
+    // T9-W3 §3.7 — ONE UTTERANCE. The focus below moves into an `alertdialog` whose NAME is
+    // `guardTitle` and whose DESCRIPTION is `guardSub`, so an armed guard read its title and
+    // its stake twice over: once from this region, once from the dialog it hands focus to.
+    // The dialog is the survivor: it is the thing the reader is actually inside, and it is
+    // the only channel that also carries the verbs. What this region keeps is the half the
+    // dialog cannot say, which is the choice on offer — and it keeps the region's own reason
+    // for being (the note at `guardAlert`): the prompt still lands assertively, ahead of the
+    // deck's polite chatter, on a text change the AT is already watching for.
+    sayGuard(`Choose keep, or ${guardVerb.value}.`);
     nextTick(() => {
       anchorGuard(); // before the focus, so the note is already over its card when it takes it
       guardEl.value?.focus({ preventScroll: true });
     });
     return;
   }
-  guardAlert.value = "";
+  hushGuard();
   if (prev === null || !guardEl.value?.contains(document.activeElement)) return;
   nextTick(() => viewport.value?.focus({ preventScroll: true }));
 });
@@ -779,7 +848,69 @@ watch(
   },
 );
 
+/* ── THE DECK HANDS FOCUS BACK (T9-W3 §3.2) ──────────────────────────────────────────────────
+ *
+ * The guard ribbon above has done this correctly INSIDE the deck since T5-W3 — arm, take focus;
+ * retire, give it back, and only when the ribbon was the thing holding it. The deck itself never
+ * did. It took focus on mount (below) and dropped it on the floor on the way out, so every exit
+ * verb it owns landed a keyboard user on `<body>`: seven of seven measured at V1, five of them
+ * re-measured here in both engines before the cure (evidence/w3/gallery-focus-trail-HEAD.txt —
+ * Escape, Enter same, Enter other, `d` to deal, and a `g` entry, all `BODY`). The cost is the
+ * whole head of the document to Tab back to where you were.
+ *
+ * The idiom generalizes one box outward. TWO RULES, and the second is the law:
+ *
+ *   1 · Record what held focus when the deck OPENED; hand it back when the deck LEAVES,
+ *       whatever the exit verb — there is no per-verb branch, because there is no verb whose
+ *       user is owed less.
+ *   2 · Only when the DECK IS HOLDING IT. Escape is bound on the WINDOW (`onWindowEscape`), so
+ *       it fires with focus anywhere on the page; a deck that grabbed focus back from wherever
+ *       the user had since put it would be a worse defect than the one being cured. That is the
+ *       ribbon's own `guardEl.contains(document.activeElement)` test, read on the deck's root.
+ *
+ * WHAT THE RECORD CANNOT HOLD, and it is measured rather than assumed. The deck's opener is the
+ * masthead wordmark, and App swaps its TAG while the deck is up (`:inert-heading` turns the
+ * `<button>` into a `<span>`), so the node that held focus at entry is already destroyed by the
+ * time this component mounts — `isConnected: false` in both engines, both while the deck is up
+ * and after the exit. A node reference cannot carry a control across that swap. So the handback
+ * tries the record first and falls through to the opener, RE-RESOLVED at the moment it is
+ * needed: by then the view has flipped back and the wordmark is a `<button>` again. The
+ * fall-through is not a guess about which element to prefer — it fires only when focusing the
+ * record demonstrably failed to move focus.
+ */
+const focusAtEntry = ref<HTMLElement | null>(null);
+
+/** `<body>` is not a control that held focus, it is the absence of one — and it is `connected`,
+ *  so recording it would make the handback a no-op that looks like a success. */
+function heldFocusNow(): HTMLElement | null {
+  const el = document.activeElement;
+  return el instanceof HTMLElement && el !== document.body ? el : null;
+}
+
+function handFocusBack() {
+  const entry = focusAtEntry.value;
+  if (entry?.isConnected) {
+    entry.focus({ preventScroll: true });
+    if (document.activeElement === entry) return;
+  }
+  // The opener, re-resolved. `button` is load-bearing: while the wordmark is still the deck's
+  // inert `<span>` this matches nothing and the deck leaves focus exactly where it is.
+  document
+    .querySelector<HTMLElement>("button.logo-trigger")
+    ?.focus({ preventScroll: true });
+}
+
+onBeforeUnmount(() => {
+  // Read the focus BEFORE the DOM goes. `onUnmounted` runs with the deck already detached, and
+  // by then `document.activeElement` is `<body>` for every exit alike — the one test that tells
+  // rule 2's two cases apart would be dead.
+  if (!rootEl.value?.contains(document.activeElement)) return;
+  handFocusBack();
+});
+
 onMounted(async () => {
+  // Rule 1's first half, and it runs BEFORE the deck takes focus for itself.
+  focusAtEntry.value = heldFocusNow();
   activeIndex.value = clamp(props.snappedIndex);
   await nextTick();
   glide.jumpTo(activeIndex.value);
@@ -1048,10 +1179,19 @@ onMounted(async () => {
   }
 }
 
+/* THE RING LEAVES THE SCROLLPORT (T9-W3 §3.7 — the correctness half; the look is W7 §6).
+   This is an aria-activedescendant listbox: DOM focus never leaves this element, so an outline
+   drawn on it is drawn in the SAME PLACE for all five cards. Measured at HEAD, both engines,
+   1280×800: indicator box `112.0,125.4 1056.0x456.0` at every one of the five
+   `aria-activedescendant` values, while every card's own `outline-style` read `none`. That is a
+   focus indicator which cannot say WHICH option is focused — visible, and mute.
+
+   The ring now rides the active option, in GameCard.vue, where the thing it names lives. The
+   deck keeps `:focus-visible` as the STATE (the card's rule hangs off it), and only the paint
+   moves. `outline: none` is written out rather than deleted so this seam stays addressable: the
+   deck deliberately draws no ring of its own. */
 .gallery-viewport:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-foreground) 40%, transparent);
-  outline-offset: -4px;
-  border-radius: 0.5rem;
+  outline: none;
 }
 
 .gallery-track {

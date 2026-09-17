@@ -38,8 +38,6 @@ export const sudokuSpec = defineGame<ReturnType<typeof useSudoku>, void>({
   solver: { nodeBudget: nodeBudgetForSize },
   urlCodec: { key: persistence.key },
   deal: {
-    sizes: subgridSizes,
-    difficulty: difficultyOptions,
     options: (m) => [
       {
         key: "size",

@@ -483,26 +483,41 @@ const PROBES = {
       };
     },
   },
-  // CH-69's own trigger, mechanised: "T9-W6 takes the root-cause, or any Hard-tier uniqueness test
-  // lands first." The second arm is the tree-readable one. The row asserts the exposure — that
-  // `dealt_killer_boards_are_unique_by_construction` sweeps Easy/Medium only, leaving Hard (the tier
-  // that digs to 17 givens, where the bogus UNSAT bites) untested. Hard entering that sweep refutes
-  // the exposure: pass or fail, the row has to move, and the banked repro
-  // (docs/tranches/2026-08-tranche-9/evidence/w4/killer-soundness-repro.rs) is what it moves on.
+  // CH-69's trigger FIRED and the registration was re-aimed at the cure (T9-W6, 2026-08-28).
+  //
+  // It used to mechanise the trigger — "T9-W6 takes the root-cause, or any Hard-tier uniqueness test
+  // lands first" — by reading the exposure, that `dealt_killer_boards_are_unique_by_construction`
+  // swept Easy/Medium only. W6 landed both arms at once, so that claim is spent: a probe held to it
+  // is a permanent RED that says nothing, the vacuity this arm exists to refuse. What is still
+  // falsifiable is the GUARD. The unsound over-prune was invisible for four tranches because no
+  // value-slack scope was under test, and it becomes invisible again the moment either test leaves:
+  // Hard is the tier that digs to 17 givens where the bogus UNSAT bit, and the zero-solutions
+  // regression is the only row that asserts a provably-completable board never solves to zero.
+  // Deleting either is how this row comes back, so deleting either is what turns it red.
   "CH-69": {
     claim:
-      "killer Hard-tier uniqueness is UNTESTED — the uniqueness sweep covers Easy/Medium only",
+      "the killer soundness cure is GUARDED in csp-solver/tests/killer.rs — Hard rides the " +
+      "uniqueness sweep and the zero-solutions regression stands",
     run(io) {
-      const test = "fn dealt_killer_boards_are_unique_by_construction";
-      const chunk =
-        (io.read("csp-solver/tests/killer.rs") ?? "")
-          .split("\n#[test]")
-          .find((part) => part.includes(test)) ?? "";
+      const sweep = "fn dealt_killer_boards_are_unique_by_construction";
+      const regression = "fn a_satisfiable_killer_board_never_solves_to_zero";
+      const src = io.read("csp-solver/tests/killer.rs") ?? "";
+      const chunk = src.split("\n#[test]").find((part) => part.includes(sweep)) ?? "";
+      const hard = chunk.includes("Difficulty::Hard");
+      const guarded = src.includes(regression);
+      const gone = [
+        chunk
+          ? hard
+            ? null
+            : "the uniqueness sweep no longer names Difficulty::Hard"
+          : `csp-solver/tests/killer.rs carries no ${sweep}`,
+        guarded ? null : `csp-solver/tests/killer.rs carries no ${regression}`,
+      ].filter(Boolean);
       return {
-        refuted: chunk.includes("Difficulty::Hard"),
-        note: chunk
-          ? `the sweep's difficulty list ${chunk.includes("Difficulty::Hard") ? "NOW NAMES" : "does not name"} Difficulty::Hard (csp-solver/tests/killer.rs)`
-          : `csp-solver/tests/killer.rs carries no ${test} — the exposure's own subject is gone`,
+        refuted: gone.length > 0,
+        note: gone.length
+          ? `${gone.join("; ")} — the cure is unguarded and the over-prune returns unseen`
+          : "both guards stand (csp-solver/tests/killer.rs)",
       };
     },
   },
@@ -547,30 +562,23 @@ const CLASS_HOMES = {
 // birth. A region that lives unconditionally with conditional content inside is the CORRECT idiom
 // and stays green (`MarginNote.vue`, `gallery-live`).
 //
-// ADMITTED: the two sites that violate at HEAD. This is an admission, not a carve-out, and it is
-// stated as a decision: T9-W3 owns the cure (its gate row reads "live regions speak
-// (players-status/-empty/-roster 0→1)"), web/frontend/src is outside this lane's fence, and a
-// record instrument that exits 1 would make `deploy-gated.sh` refuse a deploy under the words "the
-// living ledger is not current", which would be a lie. The admission is a ratchet, not a shrug: it
-// is printed in FULL on every run, an unadmitted site REDs on contact, and an admission whose site
-// stops violating REDs as SPENT — so W3's cure and the deletion of its admission land in the same
-// commit, which is this estate's own same-commit law.
+// ADMITTED: EMPTY, and it is empty the way this arm was designed to make it empty. W5 booked two
+// sites here — `players-status` and `players-alone`, both born under `v-if` holding their own
+// sentences — because the cure was W3's to write and web/frontend/src was outside the lane that
+// wrote the detector. The admission was a ratchet, not a shrug: printed in full on every run, an
+// unadmitted site REDs on contact, and an admission whose site stops violating REDs as SPENT.
+// T9-W3 §3.4 cured all three well regions onto `useLiveRegion` (the roster included — its 0→1
+// case was never admissible, it just wasn't statically visible), the SPENT arm went red on the
+// same tree, and these entries came out with it: the cure and the deletion of its admission in
+// one commit, which is this estate's same-commit law. The list stays here, empty, because the
+// next occurrence must have to be WRITTEN DOWN by whoever admits it.
+//
+// The frontend now carries the same rule as its own gate (`web/frontend/scripts/check-live-
+// regions.mjs`), which is where a src defect belongs; this arm stays because the record
+// instrument must be able to see a src defect that a frontend lane could be skipped over.
 
 const LIVE_REGION_ROOT = "web/frontend/src";
-const LIVE_REGION_ADMITTED = [
-  {
-    file: "web/frontend/src/games/shared/GameControlPanel.vue",
-    anchor: 'class="players-status"',
-    cure: "T9-W3 — the connecting/connected resolution must be spoken, not removed",
-    dated: "2026-08-28 (T9-W5)",
-  },
-  {
-    file: "web/frontend/src/games/shared/GameControlPanel.vue",
-    anchor: 'class="players-alone sr-only"',
-    cure: "T9-W3 — a room of one must be announced by a region that was already there",
-    dated: "2026-08-28 (T9-W5)",
-  },
-];
+const LIVE_REGION_ADMITTED = [];
 
 // ── the arms ────────────────────────────────────────────────────────────────────────────────────
 //
@@ -1341,23 +1349,26 @@ const FIXTURES = [
   ],
   [
     "PROBE/CH-69",
-    "the registered CH-69 probe fires when the uniqueness sweep gains Difficulty::Hard",
+    "the registered CH-69 probe fires when either guard leaves csp-solver/tests/killer.rs",
     armProbes,
     {
-      ledger: fixtureLedger([{ id: "CH-69", state: "OPEN" }]),
-      probes: { "CH-69": PROBES["CH-69"] },
-      io: fixtureIo({
-        "csp-solver/tests/killer.rs":
-          "#[test]\nfn dealt_killer_boards_are_unique_by_construction() {\n  for &d in &[Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {}\n}\n",
-      }),
-    },
-    {
-      ledger: fixtureLedger([{ id: "CH-69", state: "OPEN" }]),
+      // The sweep drops back to Easy/Medium and the regression is gone with it — Hard named in
+      // some other test does not guard the tier, which is the discrimination the arm has to make.
+      ledger: fixtureLedger([{ id: "CH-69", state: "CURED" }]),
       probes: { "CH-69": PROBES["CH-69"] },
       io: fixtureIo({
         "csp-solver/tests/killer.rs":
           "#[test]\nfn dealt_killer_boards_are_unique_by_construction() {\n  for &d in &[Difficulty::Easy, Difficulty::Medium] {}\n}\n" +
           "#[test]\nfn something_else_entirely() { Difficulty::Hard; }\n",
+      }),
+    },
+    {
+      ledger: fixtureLedger([{ id: "CH-69", state: "CURED" }]),
+      probes: { "CH-69": PROBES["CH-69"] },
+      io: fixtureIo({
+        "csp-solver/tests/killer.rs":
+          "#[test]\nfn dealt_killer_boards_are_unique_by_construction() {\n  for &d in &[Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {}\n}\n" +
+          "#[test]\nfn a_satisfiable_killer_board_never_solves_to_zero() {}\n",
       }),
     },
   ],

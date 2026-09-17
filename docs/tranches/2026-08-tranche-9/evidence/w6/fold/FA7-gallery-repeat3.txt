@@ -1,0 +1,35 @@
+T9 chair fold FA7 — e2e/gallery.spec.ts, BOTH ENGINES, --repeat-each=3 (138 tests: 23 rows x 2
+engines x 3), 9 workers, PLAYWRIGHT_BASE_URL=http://127.0.0.1:4237 (vite dev).
+
+FA7 TREE (the cure in useCarouselGlide.ts + the two gallery.spec.ts changes)
+  run 1   132 passed / 6 FAILED   <- the session's FIRST playwright invocation
+            [chromium] drag: pushing the deck left advances the snap and announces it
+            [chromium] drag: a grab during a keyboard glide freezes the deck where it is drawn
+            [chromium] click: a flank warps the deck to it, aria + the live region following...
+            [chromium] drag: kenken — the LAST card — is reachable by dragging   (x2 repeats)
+            [chromium] header: the masthead persists in the gallery, names the snapped card...
+  run 2   138 passed
+  run 3   138 passed
+  run 4   138 passed
+  run 5   137 passed / 1 FAILED  (sources touched immediately before -> HMR-cold)
+            [webkit] drag: kenken — the LAST card — is reachable by dragging
+            and the ARMED row named its own mechanism, which is the whole point of arming it:
+              aria trail [1983ms gallery-card-1 -> 3983ms gallery-card-2]
+              drag trail [28ms release as a click (never dragged) -> 1973ms AS A DRAG
+                          -> 3977ms AS A DRAG]
+              MECHANISM B ... reportSnap/restingIndex is the suspect, not the pointer stream
+            Read plainly: four pushes produced THREE releases and two aria writes. The row
+            reached card 2, not card 4, because two of the four drags were never taken.
+  run 6   138 passed  (HMR-cold, sources touched immediately before)
+  run 7   138 passed  (cold server: vite restarted, node_modules/.vite deleted)
+
+CONTROL TREE (my two edits reverted, everything else identical)
+  run 1   138 passed
+  run 2   138 passed  (HMR-cold, sources touched immediately before)
+  run 3   138 passed  (cold server: vite restarted, node_modules/.vite deleted)
+
+TALLY: FA7 7 runs = 966 row-runs, 7 red. Control 3 runs = 414 row-runs, 0 red.
+The reds are the deck-gesture family this file's own §6.3 prose censuses as intermittent under
+whole-suite contention. What is NEW there is the ENGINE — that census recorded webkit, and run
+1's six were all chromium. Neither red reproduced; 6 of the 7 FA7 runs are clean, including both
+conditions the control was also measured under. Banked as a count, not as a diagnosis.

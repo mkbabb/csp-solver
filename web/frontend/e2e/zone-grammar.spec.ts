@@ -478,7 +478,11 @@ test.describe("coarse row regime (≥1024)", () => {
           message: `negative control (${dim}): the collapsed pair must fall under the floor`,
         })
         .toBeLessThan(44);
-      await tag.evaluate((el) => el.remove());
+      // `addStyleTag` hands back an `ElementHandle<Node>`, and `remove()` is an `Element`
+      // method — the handle is a <style> element every time, but the declared type is one
+      // level up, so the narrowing is stated rather than assumed (T9-W6 §6.2; the e2e
+      // typecheck's second live catch).
+      await tag.evaluate((el) => (el as Element).remove());
       // The revert has to LAND before the next control runs, or the two arms measure each
       // other. The shipped box coming back IS that settle, so it is the thing waited on.
       await expect

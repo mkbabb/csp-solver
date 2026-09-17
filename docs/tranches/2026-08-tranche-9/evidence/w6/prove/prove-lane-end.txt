@@ -1,0 +1,51 @@
+=== PROVE LANE END 2026-09-17T17:07:07Z ===
+--- tree untouched outside prove/? (git status vs lane start)
+9eca4fa731cc85613348031af1003ccebe617e09  -
+  (compare: only evidence/w6/prove entries may be new; prove/ is untracked so it shows as one ?? dir)
+     291
+
+--- R13: does any e2e enshrine reader-ink-on-peer-stills?
+web/frontend/e2e/session-substrate.spec.ts:313:test("a still draws a peer's digit in the peer's ink, not the reader's", async ({
+  (follow-still-authorship.spec.ts is the one spec that asserts it, and it asserts the TRUTH)
+
+--- the 4 skips in the default suite, accounted:
+  share-truth.spec.ts:68      webkit      DECLARED in HOLDOUTS[share-truth].rows
+  spoken-controls.spec.ts:242 webkit      DECLARED in HOLDOUTS[spoken-controls].rows
+  multiplayer.spec.ts:953     BOTH engines  env gate T62_REAL_RELAY!=1 — NOT in QUARANTINES (empty)
+
+--- lane-end gates
+===== npx vue-tsc --noEmit
+EXIT=0
+===== npm run typecheck:e2e
+
+> csp-solver-frontend@0.1.0 typecheck:e2e
+> vue-tsc --noEmit -p tsconfig.e2e.json
+
+EXIT=0
+===== npm run typecheck:node
+
+> csp-solver-frontend@0.1.0 typecheck:node
+> vue-tsc --noEmit -p tsconfig.node.json
+
+EXIT=0
+===== npm run typecheck:relay
+
+> csp-solver-frontend@0.1.0 typecheck:relay
+> tsc -p ../relay/tsconfig.json --noEmit
+
+EXIT=0
+===== npx eslint .
+EXIT=0
+===== npx knip
+EXIT=0
+===== npm run lint
+
+> csp-solver-frontend@0.1.0 lint
+> prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/ ../relay/
+
+Checking formatting...
+All matched files use Prettier code style!
+EXIT=0
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  1 failed | 65 passed (66)
+      Tests  3 failed | 807 passed (810)

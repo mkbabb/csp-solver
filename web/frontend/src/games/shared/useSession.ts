@@ -88,9 +88,8 @@ import { mountedGameId, stageBoardFollow } from "./useStagingBridge";
  * The CSP grant in `public/_headers` NAMES this origin. If the hostname moves, that line
  * moves in the same deploy or the socket is blocked on the edge and nowhere else.
  */
-const RELAY_URLS = [
-  import.meta.env.VITE_RELAY_URL || "wss://sudoku-relay.mkbabb.workers.dev",
-];
+const RELAY_URL =
+  import.meta.env.VITE_RELAY_URL || "wss://sudoku-relay.mkbabb.workers.dev";
 
 /** `[lamport, author]`. Total order, and the tie-break is a peer id, so it is the SAME order
  *  on every page. Used for cells (which write wins) and for epochs (which board wins). */
@@ -290,7 +289,7 @@ export function localWire(room: string, h: Handlers, selfId: string): Wire {
  */
 async function loadRelayWire(room: string, h: Handlers, selfId: string): Promise<Wire> {
   const { relayWire } = await import("./relayWire");
-  return relayWire(room, RELAY_URLS, h, selfId);
+  return relayWire(room, RELAY_URL, h, selfId);
 }
 
 /**
@@ -568,14 +567,97 @@ function adoptInk(k: Record<string, number>): void {
   inkCursor = top + 1;
 }
 
+// ── PRESENCE, SAID ON A CLOCK (T9-W6 §3.7, 2026-09-17) ────────────────────────────────────
+//
+// THE ROSTER USED TO LIE, and two files wrote it down as a known lie with a named owner —
+// `relayWire.ts`'s header and the note on the cursor expiry below. This is that owner arriving.
+//
+// Both arms derive presence from TRAFFIC, and an absence produces none. The relay speaks for the
+// socket that CLOSES (`relay.ts`'s `announceLeave`), which covers a crashed tab, a navigation, a
+// link the runtime gives up on. What it cannot cover is a socket that stays OPEN behind a dead
+// page: nobody's `bye`, no traffic to be absent from, and a row that sat at the table for as
+// long as the tab was dead.
+//
+// So presence is SAID rather than inferred: every live page re-announces on a beat, and a peer
+// whose last word is older than the expiry leaves. Two numbers, and the second is the first's
+// three misses.
+//
+// THE BEAT IS `hi`, NOT A FIFTH KIND. It is already idempotent presence, already re-sent on
+// every reconnect, and already the re-request the room answers with the whole board — so the
+// beat costs no grammar.
+//
+// AND IT IS NOT FREE, which is said here rather than discovered later: `onMessage`'s `hi` arm
+// answers EVERY announce with an `st` from whichever peer holds the lowest id, so each beat
+// draws one board back. Worst case is the relay's own measured frame — a 9×9 with every cell
+// inked and every mark set, 9,401 B (`relay.ts`'s `MAX_FRAME` note) — which at one holder, N
+// peers and a 15s beat is (N−1) × 9.4 kB per 15s, ~1.9 kB/s at four players and far less at any
+// board actually being played. What it buys for that is the one repair this transport has never
+// had: there is no ack, no gap detection and no anti-entropy above it (`relayWire.ts`'s header,
+// "A LOST OP IS LOST FOREVER"), and a board reconciled every 15s from the epoch holder is
+// exactly that hole closed, on a frame the grammar already carries.
+//
+// IT IS ARMED ABOVE THE SEAM, which is a deliberate departure from the handoff's letter
+// (`evidence/w3/handoffs/3C-3.md` put it inside `relayWire`, beside the socket's own announce).
+// Presence is the SESSION's claim, not a socket's: an arm-side beat would have to be written
+// twice — once in `relayWire`, once in `localWire` — with two clocks that can drift from each
+// other and from the one expiry that judges them both. Worse, the arm the whole e2e battery
+// drives is the local one, so a relay-only beat would leave every page on that arm silently
+// evicted at 45s. One site, one clock, both arms. `relayWire`'s re-announce on socket open
+// stays exactly where it is: that one is about a GAP, not about a pulse.
+//
+// A CURSOR CLOCK IS NOT A PRESENCE CLOCK, and this is the trap the handoff was written to stop
+// anyone walking into: `armCursorExpiry` holds a per-peer 45s timer already, and it is armed by
+// `cur` frames ALONE — which a peer sends only when they MOVE. Pruning the roster on that timer
+// would evict a present, motionless reader, trading a row that lies about a dead page for one
+// that lies about a live one. So the stamp below is ANY traffic (`peer(id, true)`, which both
+// arms call on every frame they carry), and the beat is what a page with nothing to say sends.
+
+/** The pulse. Every live page says "still here" this often, whether or not anything happened. */
+const HEARTBEAT_MS = 15000;
+/**
+ * How long a peer may say NOTHING before the roster stops claiming them — three missed beats.
+ *
+ * ONE NUMBER FOR BOTH EXPIRIES. The cursor ghost and the roster row are the same judgement
+ * about the same silence, and two constants at the same value are two constants that can drift:
+ * a ghost outliving its row, or a row outliving its ghost, on a number nobody meant to move.
+ */
+const PRESENCE_EXPIRY_MS = 45000;
+
+let beat: ReturnType<typeof setInterval> | null = null;
+const presenceExpiry: Record<string, ReturnType<typeof setTimeout>> = {};
+
+/** Rearmed on every frame a peer sends — the beat included, which is the point of the beat. */
+function armPresenceExpiry(id: string): void {
+  clearTimeout(presenceExpiry[id]);
+  // The silence IS the departure, so it goes out the door a `bye` goes out of: the roster loses
+  // the row, the ghost goes with it, the tape says so once, and `known` keeps them.
+  presenceExpiry[id] = setTimeout(() => onPeer(id, false), PRESENCE_EXPIRY_MS);
+}
+
+function disarmPresence(id: string): void {
+  clearTimeout(presenceExpiry[id]);
+  delete presenceExpiry[id];
+}
+
+/** Every clock this page keeps about other pages, stopped — at teardown, and nowhere else. */
+function stopPresenceClocks(): void {
+  for (const id of Object.keys(presenceExpiry)) disarmPresence(id);
+  if (beat) {
+    clearInterval(beat);
+    beat = null;
+  }
+}
+
 function onPeer(id: string, joined: boolean): void {
   if (!joined) {
+    disarmPresence(id); // whichever said it first, the silence is no longer owed an answer
     if (!present.value.includes(id)) return; // a `bye` for a page nobody had is not a departure
     present.value = present.value.filter((p) => p !== id);
     dropCursor(id);
     emitSession("leave", id);
     return;
   }
+  armPresenceExpiry(id); // any traffic is this peer saying "still here", the beat included
   live.value = true; // somebody is here, so the table is
   // `known` RETAINS departures, so an id it already holds is somebody coming BACK — the whole
   // of the rejoin detection, and it costs a lookup the roster was doing anyway.
@@ -760,6 +842,9 @@ export async function joinSession(room: string, starter = false): Promise<void> 
   addEventListener("pagehide", releaseOnHide);
   if (starter) ledger.epoch = [++ledger.lamport, id];
   wire.send("hi", {});
+  // …and it keeps saying so (§3.7). A send with nowhere to go is dropped by design, so a beat
+  // that lands on a dead socket costs nothing and the reconnect's own `hi` closes the gap.
+  beat = setInterval(() => wire?.send("hi", {}), HEARTBEAT_MS);
 }
 
 /** The invite act: mint a room, write `?s=` SYNCHRONOUSLY (so the link is whole the instant
@@ -794,6 +879,7 @@ function teardown(): void {
   inkCursor = 0;
   inkIndex = {};
   clearCursors();
+  stopPresenceClocks(); // the beat and every peer's expiry belong to the room that just left
   adopted = 0;
 }
 
@@ -824,11 +910,17 @@ export function noteWrite(pos: number, value: number, solved: boolean): void {
 const CUR_MS = 120;
 /**
  * A silent peer's ghost expires. The socket that stays OPEN behind a dead page is nobody's
- * `bye` (the presence timeout is cut-2's, `relayWire.ts`'s own header), so without this a
- * cursor could sit on a cell for as long as the tab was dead — a ghost with nobody behind it.
- * The roster row still lies for that page; this at least stops the board from doing it.
+ * `bye`, so without this a cursor could sit on a cell for as long as the tab was dead — a ghost
+ * with nobody behind it.
+ *
+ * THE OTHER HALF ARRIVED AT T9-W6 (§3.7, 2026-09-17). This note used to end "the roster row
+ * still lies for that page; this at least stops the board from doing it", and the timeout it
+ * named was booked to a cut that never came. The roster is judged on the same silence now, off
+ * `PRESENCE_EXPIRY_MS` above — the SAME constant, deliberately, so the ghost and the row can
+ * never expire at two different numbers — with the beat that makes that silence mean something.
+ * What must NOT be shared is the arming: this clock is armed by `cur` alone, and a peer who is
+ * reading rather than moving sends none.
  */
-const CUR_EXPIRY_MS = 45000;
 
 let curTimer: ReturnType<typeof setTimeout> | null = null;
 /** the position held back inside a throttle window — `undefined` is "nothing waiting", which
@@ -858,7 +950,7 @@ export function noteFocus(pos: number | null): void {
 
 function armCursorExpiry(id: string): void {
   clearTimeout(curExpiry[id]);
-  curExpiry[id] = setTimeout(() => dropCursor(id), CUR_EXPIRY_MS);
+  curExpiry[id] = setTimeout(() => dropCursor(id), PRESENCE_EXPIRY_MS);
 }
 
 /** One peer's ghost goes — on their `bye`, or on their silence. */

@@ -1,6 +1,5 @@
 import { test, expect, type Page, type TestInfo } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
-import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
 // PRM: live, because nothing in the bundled-preview lane applies it—this spec flips the theme and
 //   re-reads the baked pose bitmap off its own blob URL while the beat walks the stack. What it
@@ -86,6 +85,15 @@ import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
  * single-run showing, across two library generations. Verdict per the protocol: re-pin the
  * class, eviction re-aimed `>=0.13.0`; the runner-rig root-cause (CH-62's owner) is the only
  * other exit.
+ *
+ * T9-W6 §6.1 — THE PARK IS TORN DOWN, AND NOT BECAUSE THE RACE WAS CURED. CH-62 is RETIRED
+ * (its dated default fired at T8 formation, `1bac685a`), and the guard could not fire on any
+ * surface that exists anyway: it early-returns off `process.platform !== "linux"`, and O-12
+ * took every browser-executing lane out of CI at `d1daefb3`. All ten rows of this spec were
+ * parked on ubuntu·webkit — the project asserted NOTHING there, and its floor said 0 — so the
+ * unwind returns ten rows to the suite and ten to the count floor. The module, both specs'
+ * call sites and the floor subtraction die together; this history stays, and CH-62's LEDGER
+ * row keeps its re-entry as prose law rather than as an un-executable throw.
  */
 
 const GAMES = ["sudoku", "futoshiki", "thermo", "killer", "kenken"] as const;
@@ -274,7 +282,6 @@ async function assertAgrees(
   when: string,
   page: Page,
   testInfo: TestInfo,
-  game: string,
 ) {
   // This spec reads the SAME baked pose bitmap wordmark-integrity does, so it is exposed to
   // the same unreadable-bake red (CI run 30684983201) and gets the same rule: ship the pose
@@ -286,12 +293,6 @@ async function assertAgrees(
       "svg.handwritten-logo image.logo-pose-bmp",
       when.replace(/\W+/g, "-"),
     );
-  // THE EXPLICIT QUARANTINE, third pinning — the class (all five games), linux + webkit,
-  // until the runner-rig verdict or pencil-boil >=0.13.0 (see the module header; the CH-62
-  // census closed at obs 2: run 30748405755 redded five rows of THIS spec plus two next
-  // door). Behind the evidence attach and in front of the assertions, so the parked arm
-  // still reads its bake and still ships the bitmap it read.
-  quarantineLinuxWebkitBake("theme-bake-freshness", game, testInfo);
   expect(s.logoInk, `${when}: no logo bake to read`).toBeTruthy();
   expect(s.logoInk, `${when}: the logo bake decoded to nothing`).not.toBe("no-ink");
   expect(
@@ -315,7 +316,7 @@ for (const start of ["light", "dark"] as const) {
         await loadBaked(page, game);
         const before = await settledSample(page);
         // The fresh load is the control: if this reds, the sampler is broken, not the bake.
-        await assertAgrees(before, `${game} fresh load`, page, testInfo, game);
+        await assertAgrees(before, `${game} fresh load`, page, testInfo);
 
         await page.locator("button.sun-moon-toggle").click();
 
@@ -354,7 +355,7 @@ for (const start of ["light", "dark"] as const) {
         expect(after.theme, "the toggle did not change the theme").not.toBe(
           before.theme,
         );
-        await assertAgrees(after, `${game} after ONE toggle`, page, testInfo, game);
+        await assertAgrees(after, `${game} after ONE toggle`, page, testInfo);
       });
     }
   });

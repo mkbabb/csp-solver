@@ -55,6 +55,14 @@ residue: cured or booked, never quiet.
   opt-in chair instrument, AND the WGATE production pass runs it once against the
   real relay (the composition it alone proves: relay-direct, RTCPeerConnection
   deleted) — banked with frames per the evidence law.
+  > **NOTE 2026-09-17 (T9-W3+W6 seal, lane S3).** The decision stands unchanged. What it
+  > did not carry, and now does: the row is DECLARED in `check-pw-projects.mjs`'s `HOLDOUTS`
+  > as an env-gated row (`env: "T62_REAL_RELAY"`, `engines: []`) and subtracted from BOTH
+  > engines' live census, because a row that lists and asserts nothing is coverage the floors
+  > were counting. Live falls 238→237 chromium and 236→235 webkit against floors 214/212 —
+  > both satisfied, no restamp owed. Check 4's anti-growth clause now covers the env form, so
+  > the next one cannot arrive unannounced. Cite: the skip is at `multiplayer.spec.ts:953`,
+  > the row it guards opens at `:950`.
 - **The wanderer root-caused** — `gallery.spec.ts:317` fails TERMINALLY under
   whole-suite contention (0/38 isolated; the deck never advances). One lane
   root-causes it with the N2 boot-determinism NOTE; the outcome is a product cure, a

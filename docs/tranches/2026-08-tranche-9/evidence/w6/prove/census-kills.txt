@@ -1,0 +1,104 @@
+=== CENSUS-ZERO PER KILL (non-author prove lane) ===
+tree: 4686436f + uncommitted
+
+--- K1a: sudokuCard.load / card.load / DealSpec load slot ---
+web/frontend/src/App.vue:77:// through the row it was iterating and the row's `load` arm had no caller at all. The static
+web/frontend/src/App.vue:253:        // is where a real load failure is seen and surfaced. Reporting here would raise a
+web/frontend/src/composables/useTheme.ts:7:    // rename is a one-time reset (the fresh key has no stored value → first load defaults to
+web/frontend/src/games/cards.ts:9: * IMPORT DIRECTION, load-bearing: `spec → defineGame` and `cards → spec`, never `spec → cards`.
+web/frontend/src/games/cards.ts:17: *     `load()`ing five specs (and their models, and their solver clients).
+web/frontend/src/games/cards.ts:75:   * `load: () => Promise<AnyGameSpec>` beside `eager?: boolean`, and App picked between them:
+web/frontend/src/games/cards.ts:76:   * an eager row's `load` was never called — sudoku's `() => Promise.resolve(sudokuSpec)` had
+web/frontend/src/games/shared/GameBoard.vue:311:// A media cap is not a gesture: it bakes at load and rotate, so it costs nothing against the
+web/frontend/src/games/shared/GameBoard.vue:459:// Gated on the board actually HOLDING focus (`unitFocused`) so a fresh load — focusedPos 0
+web/frontend/src/games/shared/GameBoard.vue:750:      // Graphite board-load copy is not a grade; it stays. A graphite HINT note is the one
+web/frontend/src/games/shared/GameBoard.vue:769:// Board-load announcements (also fixes the silent randomize, §4.3).
+web/frontend/src/games/shared/useSession.stress.test.ts:310:    // BORN RED (T6 mark 13, re-run here under load): without the guard this undo restores my
+web/frontend/src/games/shared/useControlsDrawer.ts:41: * open sheet restored across a mobile load would resurrect the covered-board pose the covis row
+web/frontend/src/games/shared/useGameState.givens.test.ts:24: *  left behind — the load-clean rows below are what a player's stored board hits on upgrade. */
+web/frontend/src/games/shared/DifficultyTally.vue:20: * ── Grammar (the load-bearing invariants) ───────────────────────────────────────────────
+web/frontend/src/games/shared/PosterBoard.vue:51:   *  A mark is passed `is-given=false` + `is-overridden=true`, and the pair is load-bearing
+web/frontend/src/games/shared/GameControlPanel.test.ts:467:    // The 0fr collapse is load-bearing twice over (a11y 3.4 reads the legend's innerText at
+web/frontend/src/games/shared/GameControlPanel.vue:11: * T9-W2 — "every style rule" IS THE PROSE THAT GAVE WAY, and the four words are load-bearing:
+web/frontend/src/games/shared/GameControlPanel.vue:1209:         the load-bearing half — its 2-column max-content still sizes the rail. The card is
+web/frontend/src/games/shared/GameControlPanel.vue:2440:   The fence is load-bearing and it was witnessed: under `isMobile`/`hasTouch` emulation
+web/frontend/src/games/shared/useGameState.ts:952:  // DECLARED ABOVE ITS FIRST CALLER, and that is load-bearing rather than tidy (T8-W3): the
+web/frontend/src/games/shared/useGameState.ts:1126:  // `values` is mutated in place at `setCell`, so the deep watch is load-bearing; `boardGeneration`
+web/frontend/src/games/shared/DigitCell.test.ts:9:// pointer, so its shape is load-bearing: `type=text` + `inputmode=numeric` raises the iOS
+web/frontend/src/games/shared/useStagingBridge.ts:29: * IMPORT DIRECTION, load-bearing: this module imports NOTHING from `@games/cards`. The table
+web/frontend/src/games/shared/techniqueEngine.test.ts:25:// (singles→tier-1, X-wing→tier-3, fill-forced, and the load-bearing self-computed-vs-GAC
+web/frontend/src/games/shared/useSession.parity.test.ts:119: * reliably precede a `setTimeout(0)` under load. A fixed turn count measured exactly the rare
+web/frontend/src/games/shared/DrawerTab.vue:25: *     rather than centred, and each reason is load-bearing: it is the desk's own far corner
+web/frontend/src/games/sudoku/technique.test.ts:65:  // The load-bearing invariant: the engine grades over SELF-COMPUTED basic candidates, never
+web/frontend/src/games/sudoku/technique.test.ts:98:  it("the substrate choice is load-bearing: self-computed grades tier-3, GAC-collapsed collapses to tier-1", () => {
+web/frontend/src/games/futoshiki/technique.test.ts:46:// subset/endpoint rung can make, so the chain rung is load-bearing (proven below).
+web/frontend/src/games/futoshiki/technique.test.ts:57:// true iff the board is left unsolved, i.e. that technique is load-bearing (the twin of E1's
+web/frontend/src/games/futoshiki/technique.test.ts:133:  // The load-bearing invariant, futoshiki flavour: the engine grades over SELF-COMPUTED basic
+web/frontend/src/games/futoshiki/technique.test.ts:167:  it("the substrate choice is load-bearing: self-computed grades tier-3, AC-collapsed collapses to tier-1", () => {
+web/frontend/src/pencil/config/pencilConfig.ts:171:   *      stays a TS string; v-binding it is load-bearing, not decoration.
+web/frontend/src/pencil/config/filterBudget.ts:39: *   board    PRE-SETTLE cold load, EITHER rule     21    +8 `svg.rest-pose[.is-pose-active]`
+web/frontend/src/pencil/config/filterBudget.ts:56: * exact-match allowlist, since a boot window that counts poses mid-bake would red on host load
+web/frontend/src/pencil/config/filterBudget.ts:58: * campaign is about cold-load paint on a phone, so the window's own number is stated here.
+web/frontend/src/pencil/config/filterBudget.ts:59: * The 21 is UNGATED. TRIGGER to gate it: a second cold-load reading above 21, or any evidence
+web/frontend/src/pencil/config/filterBudget.ts:265:  // never load-bearing, only the wipe's opening was. `note-slide-in` + its PRM twin
+web/frontend/src/pencil/chrome/GameGallery/types.ts:12: * T9-W6 §6.1: this named `load`/`eager`, the two slots that folded into the single
+--- K1b: GameCard eager ---
+web/frontend/src/App.vue:75:// composable starts only when it's selected. This file used to read a `card.eager` boolean and
+web/frontend/src/App.vue:240:// same set the old `!card.eager` test named and one fewer claim to keep true. A cold select
+web/frontend/src/composables/useLiveRegion.test.ts:39:    // The node is in the document and says nothing. Had the composable read its source eagerly,
+web/frontend/src/composables/useLiveRegion.ts:21: *                right, because reading the source eagerly is the obvious thing to write.
+web/frontend/src/games/cards.ts:11: * closed (`scene → game → registry → scene`) has no edge to form on. The eager row may
+web/frontend/src/games/cards.ts:75:   * `load: () => Promise<AnyGameSpec>` beside `eager?: boolean`, and App picked between them:
+web/frontend/src/games/cards.ts:76:   * an eager row's `load` was never called — sudoku's `() => Promise.resolve(sudokuSpec)` had
+web/frontend/src/games/cards.ts:77:   * ZERO consumers in the product — because App read `eager` and then mounted a spec it had
+web/frontend/src/games/cards.ts:82:   * module beside it. The eager row's spec is still a STATIC import here — the main-chunk
+web/frontend/src/games/cards.ts:117:// MIGRATED (F1, the proof game). Its spec is imported STATICALLY — the eager main-chunk ride,
+web/frontend/src/games/cards.ts:149:  // the main chunk (eager), so naming it is free, while reaching into futoshiki's codec
+web/frontend/src/games/cards.test.ts:34:    // T9-W6 §6.1: the asymmetry used to be a BOOLEAN (`eager`) beside a loader that the eager
+web/frontend/src/games/cards.test.ts:92:        // ONE board on disk, whether the row names the spec's key (an eager row can) or
+web/frontend/src/games/shared/GameControlPanel.test.ts:24:// reach by construction. They are covered instead by `games/sudoku/game.test.ts` (the eager
+web/frontend/src/games/shared/defineGame.ts:173: * the eager one — and it was reading constants that live in `@games/shared/selectors` anyway.
+web/frontend/src/games/shared/defineGame.ts:180: * `GameCard.eager`'s new home. It is NOT here, because it had no reader `eager` did not
+web/frontend/src/games/shared/defineGame.ts:181: * already serve — and `eager` is itself gone at T9-W6, folded into `GameCard.mount`, whose
+web/frontend/src/games/shared/GameShell.vue:17: * The registry cycle that forced the eager scene to hand-inline its own control sections is gone
+web/frontend/src/games/shared/GameShell.vue:19: * never close a loop, and the eager game reads its own `deal.options` like every other.
+web/frontend/src/games/shared/GameShell.vue:39:// split it (sudoku async because it was eager, the other four static inside their own lazy
+--- K2: deal.sizes / deal.difficulty ---
+web/frontend/src/games/shared/defineGame.ts:65:  difficulty: ReadRef<string>;
+web/frontend/src/games/shared/defineGame.ts:121:  /** does the fresh-board margin carry the "— medium" difficulty clause? */
+web/frontend/src/games/shared/defineGame.ts:168: * TWO SLOTS RETIRED HERE, T9-W6 §6.1. `sizes: SelectorBand` and `difficulty: SelectorBand` sat
+web/frontend/src/games/shared/defineGame.ts:187:interface DealSpec<TModel> {
+web/frontend/src/games/shared/defineGame.ts:217:  deal: DealSpec<TModel>;
+web/frontend/src/games/thermo/spec.ts:58:  deal: {
+web/frontend/src/games/sudoku/spec.ts:40:  deal: {
+web/frontend/src/games/kenken/spec.ts:66:  deal: {
+web/frontend/src/games/futoshiki/spec.ts:59:  deal: {
+web/frontend/src/games/killer/spec.ts:63:  deal: {
+--- K3: ch62-admission ---
+web/frontend/knip.json:72:  // `e2e/ch62-admission.ts` USED to sit here too, cited to ".github/workflows/ch62-probe.yml,
+--- K4: ch62-probe ---
+web/frontend/knip.json:72:  // `e2e/ch62-admission.ts` USED to sit here too, cited to ".github/workflows/ch62-probe.yml,
+web/frontend/scripts/check-prod-shake.mjs:55:// `npx vite build`, and then runs this file AGAIN over a `--mode ch62-probe`
+web/frontend/scripts/check-prod-shake.mjs:83:// read. Its fence is `import.meta.env.DEV || MODE === "ch62-probe" || MODE === "ch62-ablate"`
+web/frontend/scripts/check-prod-shake.mjs:86:// a `--mode ch62-probe` bundle, which is exactly the negative control the lane runs.
+web/frontend/src/pencil/composables/rasterPose.ts:185: * a string literal at build, so `MODE === "ch62-probe"` collapses to `false` in an ordinary
+web/frontend/src/pencil/composables/rasterPose.ts:189: * `dist-ch62/`). The probe builds run `vite build --mode ch62-probe|ch62-ablate` with
+web/frontend/src/pencil/composables/rasterPose.ts:219:  import.meta.env.MODE === "ch62-probe" ||
+.github/workflows/ci.yml:99:#                                         control: a --mode ch62-probe bundle the
+.github/workflows/ci.yml:1696:    # — the only place in the repo that built a bundle in CI was ch62-probe.yml, a
+.github/workflows/ci.yml:1753:    # `npx vite build --mode ch62-probe` produces a bundle that carries
+.github/workflows/ci.yml:1755:    # `MODE === "ch62-probe"`), and the lane asserts prod-shake REDS on it. If that
+.github/workflows/ci.yml:1762:    # WHAT THIS INHERITED FROM ch62-probe.yml, WHICH IS NOW DELETED (T9-W6 §6.1).
+.github/workflows/ci.yml:1819:            # the deleted ch62-probe.yml pinned it too: an unset NODE_ENV with a non-production mode
+.github/workflows/ci.yml:1861:            # runs on every push and reds if the census stops biting. The ch62-probe
+.github/workflows/ci.yml:1871:                  npx vite build --mode ch62-probe --outDir dist-ch62 --logLevel warn
+--- K5: linux-webkit-bake-quarantine / quarantineLinuxWebkitBake / THIRD PINNING ---
+web/frontend/scripts/check-pw-projects.mjs:45://     (e2e/linux-webkit-bake-quarantine.ts) `test.fixme`s 5 of wordmark-webkit's 6 rows and
+web/frontend/scripts/check-pw-projects.mjs:153:// `e2e/linux-webkit-bake-quarantine.ts` and both stamped "THIRD PINNING (CH-62)". CH-62 RETIRED
+web/frontend/e2e/theme-bake-freshness.spec.ts:82: * PASS 8 — THE CENSUS SPOKE: THIRD PINNING. Obs 1 (30746739106, `eabc72e6`) zero bake reds;
+web/frontend/e2e/wordmark-integrity.spec.ts:72: *     reached `>=0.12.0`. Record: `evidence/w1/linux-webkit-bake-quarantine.md` (first
+web/frontend/e2e/wordmark-integrity.spec.ts:101: *     count floors and a "THIRD PINNING (CH-62)" citation in three files pointing at a
+--- K6: relayWire urls[0] ---
+web/frontend/src/games/shared/relayWire.ts:147: * a `string[]` whose every caller built a one-element array and whose only read was `urls[0]`,
+--- K8: KEEP_SIM_FRONT ---
+web/frontend/perf-rig/sim-matrix.sh:6:# `KEEP_SIM_FRONT=1` into run-sim.sh, which reads no variable of that name — the frontmost

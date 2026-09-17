@@ -1,0 +1,44 @@
+// The package's ROOT CONFIGS under a typecheck (T9-W6 §6.2, handoff 6b-2, landed at the chair's
+// fold).
+//
+// WHAT WAS TRUE BEFORE THIS FILE: `tsconfig.json`'s `include` is `src/**` plus `env.d.ts`, and
+// `tsconfig.e2e.json`'s is `e2e/**`. That left five first-party TypeScript files — `vite.config.ts`,
+// `vitest.config.ts`, `playwright.config.ts`, `playwright-golden.config.ts`,
+// `playwright-throttle.config.ts` — checked by nothing at all. They were LINTED (`eslint .`
+// reaches them) and until this wave not even formatted, so the one instrument that could have
+// read their types was the one nobody had pointed at them. The same hole as the e2e estate's,
+// one directory up, and it was hiding the same species of defect: an option asserted through a
+// name the library's own types do not carry.
+//
+// Born-RED banked at evidence/w6/fold/FA6-typecheck-node-born-red.txt — 18 errors at HEAD. Two
+// of them are real and independent of any node surface, and both are cured in the commit that
+// carries this file:
+//   · `playwright-golden.config.ts:84` — `use.reducedMotion`, the PRM void's THIRD site. Not a
+//     member of `PlaywrightTestOptions` at 1.61.1; it names a fixture that does not exist and
+//     reaches no context. `e2e/prm-void-audition.spec.ts` is where that finding is executable.
+//   · `vitest.config.ts:75` — `coverage.all: true`, an option `CoverageOptions` does not carry
+//     at vitest 4. Deleted on MEASUREMENT rather than on the type error: two coverage runs, with
+//     and without, report the same 134 files and the same denominator to the statement
+//     (evidence/w6/fold/FA6-coverage-all-redundant.md). The header's claim about an
+//     import-scoped denominator is true of the runner and survives; the option was a dead
+//     restatement of it.
+// The remaining sixteen were the missing node surface, declared in `config-node.d.ts`.
+//
+// `types: []` IS LOAD-BEARING, for the reason `tsconfig.e2e.json` gives: it pins the ambient set
+// to nothing, so the node surface comes from `config-node.d.ts` — what these five files actually
+// call — rather than from whatever `@types/*` happens to be installed. That keeps this
+// typecheck's answer a function of the tree instead of a function of the install.
+//
+// It rides the app's compilerOptions unchanged (strict, noUnusedLocals, noUnusedParameters): a
+// config held to a looser bar than the product is a config that rots quietly, and these five
+// decide what the product IS.
+//
+// Run: `npm run typecheck:node`. The `frontend` lane runs it as a step, beside `typecheck:e2e`
+// and `typecheck:relay` — the lane count stays eighteen.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["*.config.ts", "config-node.d.ts"]
+}

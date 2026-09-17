@@ -1,0 +1,48 @@
+===== T9-W6 6A LANE-END CENSUS (fresh, after the types.ts cure) =====
+tree: HEAD 4686436f + this lane's working copy (W3 also writes here)
+
+--- the killed NAMES, repo-wide over source dirs (docs/ excluded: it is the record) ---
+  [card\.eager]
+       src/App.vue:74:// composable starts only when it's selected. This file used to read a `card.eager` boolean and
+       src/App.vue:239:// same set the old `!card.eager` test named and one fewer claim to keep true. A cold select
+       count: 2
+  [GameCard.*eager]
+       src/games/shared/defineGame.ts:180: * `GameCard.eager`'s new home. It is NOT here, because it had no reader `eager` did not
+       count: 1
+  [`eager`]
+       src/games/cards.test.ts:34:    // T9-W6 §6.1: the asymmetry used to be a BOOLEAN (`eager`) beside a loader that the eager
+       src/games/cards.ts:77:   * ZERO consumers in the product — because App read `eager` and then mounted a spec it had
+       src/games/shared/defineGame.ts:180: * `GameCard.eager`'s new home. It is NOT here, because it had no reader `eager` did not
+       src/games/shared/defineGame.ts:181: * already serve — and `eager` is itself gone at T9-W6, folded into `GameCard.mount`, whose
+       src/pencil/chrome/GameGallery/types.ts:12: * T9-W6 §6.1: this named `load`/`eager`, the two slots that folded into the single
+       count: 5
+  [card\.load]
+       count: 0
+  [GameCard.*load]
+       count: 0
+  [deal\.sizes]
+       src/games/cards.ts:103:// T9-W6 §6.1 — these three used to read `sudokuSpec.deal.sizes` / `.difficulty` instead. That
+       src/games/shared/persistence.ts:83:  /** the raw selector sizes this game deals at — `spec.deal.sizes`' values. */
+       src/games/sudoku/spec.test.ts:51:    // T9-W6 §6.1: this used to read `deal.sizes` / `deal.difficulty`, two slots every game
+       src/games/thermo/spec.test.ts:59:    // `deal.sizes` / `deal.difficulty` slots said this less strongly, and only sudoku's row
+       count: 4
+  [deal\.difficulty]
+       src/games/thermo/spec.test.ts:59:    // `deal.sizes` / `deal.difficulty` slots said this less strongly, and only sudoku's row
+       src/games/sudoku/spec.test.ts:51:    // T9-W6 §6.1: this used to read `deal.sizes` / `deal.difficulty`, two slots every game
+       count: 2
+  [DealSpec.*sizes]
+       count: 0
+  [quarantineLinuxWebkitBake]
+       count: 0
+  [ch62-admission]
+       knip.json:40:  // `e2e/ch62-admission.ts` USED to sit here too, cited to ".github/workflows/ch62-probe.yml,
+       count: 1
+  [KEEP_SIM_FRONT]
+       perf-rig/sim-matrix.sh:6:# `KEEP_SIM_FRONT=1` into run-sim.sh, which reads no variable of that name — the frontmost
+       count: 1
+  [urls\[0\]]
+       src/games/shared/relayWire.ts:147: * a `string[]` whose every caller built a one-element array and whose only read was `urls[0]`,
+       count: 1
+  [RELAY_URLS]
+       ../relay/wrangler.toml:9:# is the first label of the origin `useSession.ts`'s module-private `RELAY_URLS` defaults to
+       count: 1

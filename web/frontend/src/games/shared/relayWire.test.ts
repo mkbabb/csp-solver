@@ -21,7 +21,7 @@ import type { Handlers, Kind, Msg } from "./useSession";
  * it ran on, and cannot flake under suite contention.
  */
 
-const URLS = ["wss://relay.invalid/"];
+const RELAY_URL = "wss://relay.invalid/";
 
 type Frame = [string, ...unknown[]];
 
@@ -106,7 +106,7 @@ describe("relayWire — a dropped socket comes back, re-subscribes, re-announces
     };
     // The id is the PAGE's since T8-W3 (§2.9) — the arm no longer mints one, so the
     // ladder is driven under a stated identity rather than a random per-socket name.
-    const wire = relayWire("room-u5", URLS, h, "p-u5reconnect");
+    const wire = relayWire("room-u5", RELAY_URL, h, "p-u5reconnect");
 
     // ── the first open: SUBSCRIBE, then ANNOUNCE, and `carrying` only now ──────────────
     let carried = false;
@@ -117,7 +117,7 @@ describe("relayWire — a dropped socket comes back, re-subscribes, re-announces
     );
 
     const first = FakeSocket.made[0];
-    expect(first.url).toBe(URLS[0]);
+    expect(first.url).toBe(RELAY_URL);
     first.open();
     await Promise.resolve();
     expect(carried).toBe(true);
@@ -223,7 +223,7 @@ const drops = (): number => droppedFrames();
 /** A table with one open socket, and the topic its peers publish on. */
 function table(room: string, h: Handlers) {
   vi.stubGlobal("WebSocket", FakeSocket);
-  const wire = relayWire(room, URLS, h, "p-ld-self");
+  const wire = relayWire(room, RELAY_URL, h, "p-ld-self");
   const sock = FakeSocket.made[FakeSocket.made.length - 1];
   sock.open();
   return { wire, sock, topic: `sudoku-babb-dev/${room}` };

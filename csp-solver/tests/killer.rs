@@ -8,10 +8,12 @@
 
 use std::collections::HashSet;
 
+use csp_solver::PuzzleClass;
 use csp_solver::domain::Domain;
 use csp_solver::ordering::Ordering;
+use csp_solver::puzzles::class::SimpleRng;
 use csp_solver::puzzles::killer::{
-    KillerCage, create_killer_csp, generate_killer_seeded, solve_killer,
+    KillerCage, KillerClass, create_killer_csp, generate_killer_seeded, solve_killer,
 };
 use csp_solver::puzzles::sudoku::Difficulty;
 use csp_solver::{Pruning, SolveConfig};
@@ -38,9 +40,12 @@ fn cages_hold(solution: &[u32], cages: &[KillerCage]) -> bool {
 #[test]
 fn dealt_killer_boards_are_unique_by_construction() {
     // The uniqueness gate (rides W2's uniqueness lane): a `max_solutions: 2` sweep on a
-    // dealt batch must return exactly one solution per board.
+    // dealt batch must return exactly one solution per board. Hard rides here since
+    // CH-69's cure (T9-W6): it is the tier that digs to 17 givens, where the unsound
+    // GAC over-prune bit hardest, and the oracle grading it is the same solve path — so
+    // this row is only worth reading with that cure in the tree. It costs ~0.25s.
     for &n in &[2u32, 3] {
-        for &difficulty in &[Difficulty::Easy, Difficulty::Medium] {
+        for &difficulty in &[Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
             for &seed in &[1u64, 7, 42, 2026] {
                 let (board, cages) = generate_killer_seeded(n, difficulty, seed);
 
@@ -71,6 +76,102 @@ fn dealt_killer_boards_are_unique_by_construction() {
                     }
                 }
             }
+        }
+    }
+}
+
+/// Assert `solution` is a completion of `board` under `cages` — every given agrees,
+/// the grid is sudoku-valid, every cage sums and is all-different, and the cages are
+/// an exact 81-cell partition. If this holds, the true solution count is >= 1.
+fn assert_completes(board: &[u32], solution: &[u32], cages: &[KillerCage]) {
+    assert_eq!(board.len(), 81);
+    assert_eq!(solution.len(), 81);
+    for (i, &v) in board.iter().enumerate() {
+        assert!(
+            v == 0 || v == solution[i],
+            "given at {i} ({v}) contradicts the solution ({})",
+            solution[i]
+        );
+    }
+    for g in 0..9usize {
+        for (name, vals) in [
+            (
+                "row",
+                (0..9).map(|c| solution[g * 9 + c]).collect::<Vec<u32>>(),
+            ),
+            (
+                "col",
+                (0..9).map(|r| solution[r * 9 + g]).collect::<Vec<u32>>(),
+            ),
+            (
+                "box",
+                (0..9)
+                    .map(|k| solution[((g / 3) * 3 + k / 3) * 9 + (g % 3) * 3 + k % 3])
+                    .collect::<Vec<u32>>(),
+            ),
+        ] {
+            let mut s = vals.clone();
+            s.sort_unstable();
+            assert_eq!(
+                s,
+                (1..=9).collect::<Vec<u32>>(),
+                "{name} {g} is not a permutation of 1..=9"
+            );
+        }
+    }
+    let mut covered = vec![0usize; 81];
+    for (ci, c) in cages.iter().enumerate() {
+        let vals: Vec<u32> = c.cells.iter().map(|&i| solution[i]).collect();
+        assert_eq!(vals.iter().sum::<u32>(), c.sum, "cage {ci} sum");
+        let mut u = vals.clone();
+        u.sort_unstable();
+        u.dedup();
+        assert_eq!(u.len(), vals.len(), "cage {ci} all-different");
+        for &i in &c.cells {
+            covered[i] += 1;
+        }
+    }
+    assert!(
+        covered.iter().all(|&k| k == 1),
+        "cages are not an exact partition"
+    );
+}
+
+#[test]
+fn a_satisfiable_killer_board_never_solves_to_zero() {
+    // CH-69 regression (found T9-W4, root-caused + cured T9-W6). Blank a valid Killer
+    // solution one cell at a time, re-asserting BEFORE every solve that the solution is
+    // still a completion of the board — so the true count can never be zero. It was:
+    // the cage `AllDifferent`'s Régin GAC pruned values a maximum matching supported,
+    // because the free-value walk ran along the residual graph in the orientation that
+    // gives a free value no out-arc (`solver/gac.rs`). Sudoku's row/column/box scopes are
+    // square (every value matched, no free vertex) and never tripped it; a cage, whose
+    // 2–4 cells range over 9 values, tripped it constantly. Pre-cure this fired at 53
+    // blanks on seed 1.
+    for &seed in &[1u64, 7, 42] {
+        let class = KillerClass::from_difficulty(3, Difficulty::Hard);
+        let mut rng = SimpleRng::new(seed);
+        let solution = class.seed_solution(&mut rng);
+        let cages = class.place_clues(&solution, &mut rng);
+
+        let mut board = solution.clone();
+        let mut order: Vec<usize> = (0..81).collect();
+        rng.shuffle(&mut order);
+
+        for (k, &idx) in order.iter().enumerate() {
+            board[idx] = 0;
+            assert_completes(&board, &solution, &cages);
+
+            let (mut csp, given) = create_killer_csp(&board, 3, &cages);
+            let n = csp.solve_with_given(&enumerate_config(2), &given).len();
+            assert!(
+                n >= 1,
+                "seed {seed}: after blanking {} cells (last {idx}), a board the seed \
+                 solution provably completes solved to ZERO solutions \
+                 (budget_exceeded={})",
+                k + 1,
+                csp.stats().budget_exceeded
+            );
         }
     }
 }

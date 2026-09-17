@@ -1,0 +1,269 @@
+T9 SEAL LANE S4 — EVIDENCE KEEPS SUMMARIES, NOT WEIGHT
+docs/tranches/2026-08-tranche-9/evidence/w6/seal/S4-recrop-manifest.txt
+2026-09-17. Spends handoffs/fold-FA5-1.md (w6).
+
+THE VERDICT
+  node scripts/check-evidence-policy.mjs   exit 0, ZERO breaches, ZERO stale NOTICE lines
+  node scripts/check-evidence-policy.mjs --self-test   22/22
+
+  bucket                          before        after      cap        headroom
+  evidence/w3                  4,135,716    1,327,580  2,097,152     769,572
+  evidence/w6                  3,855,113    1,578,280  2,097,152     518,872
+
+  67 files touched or declared; 63.6% of the banked bytes gone. Nothing was deleted,
+  nothing was re-shot, no cap was raised, no grandfather line was added, no claim in
+  any .md or ledger was edited — and therefore no citing figure list needed updating.
+
+THE METHOD, AND WHY IT IS THE ONE THE POLICY NAMES
+  The gate's footer: "Recrop to the pixels under audit; text-first for anything a
+  number can state." Two transforms, both applied per file and recorded per file below.
+
+  1. RECROP — the 22 gallery-pi deck frames only. A pi frame proves a rect census, and
+     the rect is the deck. 1248x685 whole-viewport captures carried the new-game panel
+     and the page's bottom furniture, which no claim in gallery-3D.md §4 touches. The
+     crop is 1104x520+72+0, IDENTICAL on every frame so every before/after/after-rerun
+     pair still compares. It holds both declared ring states whole: the scrollport ring
+     (image px ~97,23 -> 1152,479) and the active-option ring at idx4 (~801,31 ->
+     1152,464) and at idx0, plus the pips row at y~502. Verified by eye on both arms.
+
+  2. RE-ENCODE — pngquant --quality=80-98 --speed 1, 256 colours. GEOMETRY UNCHANGED:
+     no downscale anywhere, because these banks' claims are pixel offsets (R15's
+     352px -> 191px, R13's element-scoped ink, the ring perimeter) and a resample would
+     put the ruler out of true. Measured fidelity on the worst case: RMSE 0.41% of full
+     scale, which is the anti-aliasing moving a level or two on line art.
+
+     ImageMagick stamps date:create/date:modify tEXt chunks on write, which made frames
+     that had been BYTE-IDENTICAL diverge. Those chunks were stripped at the chunk level
+     (IDAT untouched) and all six identity relations came back exactly as banked:
+       after/pi-nofocus-idx4-{chromium,webkit}    == before/pi-nofocus-idx4-{chromium,webkit}
+       after-rerun/ring-idx4-{chromium,webkit}    == after/ring-idx4-{chromium,webkit}
+       after-rerun/wordmark-{chromium,webkit}     == after/wordmark-{chromium,webkit}
+     So gallery-pi-ledger.txt's IDENTICAL rows are still re-verifiable ON THE BANK.
+
+  UNTOUCHED, on purpose (10 files, byte-for-byte as captured):
+    - the 6 gallery-pi wordmark frames (1022x120, element-scoped, 16-20 KB, under cap).
+      gallery-pi-ledger.txt cites sha a7c141068382 / d1badb26b346 for two of them and
+      those digests stay LIVE against the files on disk.
+    - the 4 r13-frames/card-* crops. They are what 6d-r13.md:74 cites, the claim is a
+      COLOUR (a peer's 7 goes green while the reader's 4 stays blue), and they are
+      already the element-scoped crop, all under cap.
+
+WHAT A TRANSFORMED FILE NO LONGER PROVES, STATED PLAINLY
+  gallery-pi-ledger.txt's censuses are against the 1248x685 capture (854,880 px) and the
+  wordmark's against 1022x120 (122,640 px). A recropped frame cannot reproduce the deck
+  figures by re-diff; the numbers stand as the TEXT record of the capture, which is what
+  the policy asks evidence to keep. The bridge is the sha256-before column below: every
+  digest gallery-pi-ledger.txt cites appears there against the file it named.
+
+THE LEVER NOT PULLED, for the chair
+  prove/frames holds 3 repeat ROUNDS of one walk (cured/head-ablated x chromium/webkit
+  x arm/rot x r1/r2/r3). r1 and r2 differ by 6,385 px of 450,000 (1.4%) — the random
+  deal, not a condition. Deleting the r2 and r3 bitmaps would free a further ~1.0 MB in
+  w6 and cost nothing findable: no .md cites any of them, prove-INDEX.md has no frames
+  row at all, and every round's measurements are text-banked beside them in
+  frames/*.json and prove/r15-live-{cured,negcontrol}.txt. It was NOT pulled, because
+  both buckets cleared the chair's 1.8 MB target without it and a deletion runs one way
+  only. If W7's frames need the room, this is the line to cut, and it is a one-word call.
+
+PER FILE — before bytes -> after bytes, action, digests, and who cites it
+w3/gallery-pi/after-rerun/pi-pointer-chromium.png                 143352 -> 51151      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 8b9eb19ac200 -> 2b1d7d35fb9b   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after-rerun/pi-pointer-webkit.png                   208838 -> 55627      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 4b3b095ae4b1 -> 72c1721444fc   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after-rerun/ring-idx0-chromium.png                  143657 -> 51243      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 023c9f279ccb -> b2e9628f49d9   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after-rerun/ring-idx0-webkit.png                    209438 -> 55339      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 251ac179828d -> 793808daebec   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after-rerun/ring-idx4-chromium.png                  157477 -> 53309      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 90e566f84a0b -> 72cdf0111019   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after-rerun/ring-idx4-webkit.png                    225658 -> 61457      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 66e4d7042911 -> f32be8b81de6   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after-rerun/wordmark-chromium.png                    17066 -> 17066      UNTOUCHED (element-scoped 1022x120, under cap; ledger sha stays live)
+                                                                 sha256 a7c141068382 -> a7c141068382   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after-rerun/wordmark-webkit.png                      19733 -> 19733      UNTOUCHED (element-scoped 1022x120, under cap; ledger sha stays live)
+                                                                 sha256 d1badb26b346 -> d1badb26b346   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after/pi-nofocus-idx4-chromium.png                  157257 -> 53281      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 85993c01023d -> 8f9808e4af7b   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after/pi-nofocus-idx4-webkit.png                    225212 -> 62030      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 b3f21a8e97e9 -> b0f87a2afb4a   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after/pi-pointer-chromium.png                       143398 -> 52796      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 aabf98200160 -> ff26494a9541   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after/pi-pointer-webkit.png                         207977 -> 55138      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 0d7b589d7d3d -> 3d93b52db79f   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after/ring-idx0-chromium.png                        143691 -> 51248      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 90a3fa247311 -> 5ccc82231fab   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after/ring-idx0-webkit.png                          208551 -> 55496      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 9dfcc59fd200 -> b9446ecc348e   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after/ring-idx4-chromium.png                        157477 -> 53309      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 90e566f84a0b -> 72cdf0111019   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after/ring-idx4-webkit.png                          225658 -> 61457      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 66e4d7042911 -> f32be8b81de6   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after/wordmark-chromium.png                          17066 -> 17066      UNTOUCHED (element-scoped 1022x120, under cap; ledger sha stays live)
+                                                                 sha256 a7c141068382 -> a7c141068382   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/after/wordmark-webkit.png                            19733 -> 19733      UNTOUCHED (element-scoped 1022x120, under cap; ledger sha stays live)
+                                                                 sha256 d1badb26b346 -> d1badb26b346   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/before/pi-nofocus-idx4-chromium.png                 157257 -> 53281      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 85993c01023d -> 8f9808e4af7b   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/before/pi-nofocus-idx4-webkit.png                   225212 -> 62030      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 b3f21a8e97e9 -> b0f87a2afb4a   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/before/pi-pointer-chromium.png                      143071 -> 51169      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 7b2142a2d11b -> 894df9739bd0   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/before/pi-pointer-webkit.png                        207821 -> 55540      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 455ddc6f31a0 -> dfe02d2cde33   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/before/ring-idx0-chromium.png                       143415 -> 51256      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 7ef17311453a -> c7ee6aafd7a2   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/before/ring-idx0-webkit.png                         208209 -> 55572      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 16afa4e3387d -> 01f21bd14ada   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/before/ring-idx4-chromium.png                       157709 -> 54005      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 143a682ab6fa -> 58270b077036   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/before/ring-idx4-webkit.png                         225783 -> 62248      recrop 1104x520+72+0 (deck rect) + png re-encode q80-98
+                                                                 sha256 77ecc23f4d5d -> a75c1542dfc5   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/before/wordmark-chromium.png                         16705 -> 16705      UNTOUCHED (element-scoped 1022x120, under cap; ledger sha stays live)
+                                                                 sha256 e29fa77c79ee -> e29fa77c79ee   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w3/gallery-pi/before/wordmark-webkit.png                           19295 -> 19295      UNTOUCHED (element-scoped 1022x120, under cap; ledger sha stays live)
+                                                                 sha256 8e958d40ba5d -> 8e958d40ba5d   cited by: w3/gallery-3D.md §4 + w3/gallery-pi-ledger.txt
+
+w6/prove/frames/cured-chromium-r1-1-arm-900x500.png                69489 -> 26429      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 21686506d274 -> 34568b442cb9   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-chromium-r1-2-rot-500x900.png                99296 -> 44636      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 6743ec7347d4 -> 198fd65ebfba   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-chromium-r2-1-arm-900x500.png                69844 -> 26463      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 7357241b4f88 -> f5a3946bb5e7   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-chromium-r2-2-rot-500x900.png               100093 -> 44953      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 2d774866c498 -> ed9df1e96e58   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-chromium-r3-1-arm-900x500.png                69525 -> 26391      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 f95245a52db7 -> ed2a94314476   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-chromium-r3-2-rot-500x900.png                99910 -> 44694      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 fc4f5239bead -> d8333cfb885a   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-webkit-r1-1-arm-900x500.png                  88953 -> 26978      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 f7c8e53b8267 -> 8e87955b269e   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-webkit-r1-2-rot-500x900.png                 134344 -> 50377      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 a280eb482813 -> 9fb75ca4607d   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-webkit-r2-1-arm-900x500.png                  88947 -> 26941      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 a40101ea2508 -> c5df7ec46841   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-webkit-r2-2-rot-500x900.png                 135510 -> 50950      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 4b96f2f15c56 -> 74ddaca991c1   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-webkit-r3-1-arm-900x500.png                  88955 -> 26834      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 510f74efa3be -> f47820debfd7   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/cured-webkit-r3-2-rot-500x900.png                 134530 -> 50540      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 16e37800be2b -> c8c4c8866203   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-chromium-r1-1-arm-900x500.png         69496 -> 26560      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 abecc54e4490 -> e5bfadaa46e6   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-chromium-r1-2-rot-500x900.png         96343 -> 43355      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 4ccbfb0a1084 -> 1a790044da30   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-chromium-r2-1-arm-900x500.png         69517 -> 26636      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 b0f1a9dc4fcf -> 2142926ec602   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-chromium-r2-2-rot-500x900.png         96579 -> 42649      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 8c949b26ae64 -> 2ac942480990   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-chromium-r3-1-arm-900x500.png         69576 -> 26224      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 ff297012e684 -> b67af3c788e9   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-chromium-r3-2-rot-500x900.png         96966 -> 43942      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 9337cc1233be -> 1a85d3747e6f   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-webkit-r1-1-arm-900x500.png           88953 -> 27062      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 8fa7dd9f8153 -> 576bb2461906   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-webkit-r1-2-rot-500x900.png          131806 -> 48684      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 7555fd3f8344 -> 91e463a9a91f   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-webkit-r2-1-arm-900x500.png           88906 -> 26701      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 a2dab1c1a6d4 -> ffd1130c97aa   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-webkit-r2-2-rot-500x900.png          131456 -> 49013      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 1d1181af5a61 -> 798e786becc9   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-webkit-r3-1-arm-900x500.png           88924 -> 27095      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 183f4b92383b -> c71a6165f190   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/prove/frames/head-ablated-webkit-r3-2-rot-500x900.png          130466 -> 48645      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 adb1d6835f17 -> 2c9444fc21bc   cited by: none (numbers in frames/*.json + prove/r15-live-{cured,negcontrol}.txt)
+
+w6/r13-frames/after-chromium.png                                   94160 -> 35606      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 dc90f91e0374 -> 641d27a49ac3   cited by: none (page context for the card crops)
+
+w6/r13-frames/after-webkit.png                                    124740 -> 36012      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 0ba5884e7410 -> 550fbce0fceb   cited by: none (page context for the card crops)
+
+w6/r13-frames/before-chromium-1.png                                90898 -> 34189      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 1a875d7dbaac -> ccc75851d9e5   cited by: none (page context for the card crops)
+
+w6/r13-frames/before-chromium-2.png                               128906 -> 57680      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 a668937997cd -> 997dac5ff767   cited by: none (page context for the card crops)
+
+w6/r13-frames/before-webkit-1.png                                 125967 -> 35409      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 9378a0c5a2ca -> 4e8d634c2726   cited by: none (page context for the card crops)
+
+w6/r13-frames/before-webkit-2.png                                 175792 -> 57492      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 1d35ffa28655 -> b0b9e40165b2   cited by: none (page context for the card crops)
+
+w6/r13-frames/card-after-chromium.png                              42969 -> 42969      UNTOUCHED (the frames 6d-r13.md cites for the ink colour; under cap)
+                                                                 sha256 c8cae5631ba1 -> c8cae5631ba1   cited by: w6/6d-r13.md:74
+
+w6/r13-frames/card-after-webkit.png                                58006 -> 58006      UNTOUCHED (the frames 6d-r13.md cites for the ink colour; under cap)
+                                                                 sha256 57a26c8f3785 -> 57a26c8f3785   cited by: w6/6d-r13.md:74
+
+w6/r13-frames/card-before-chromium.png                             42868 -> 42868      UNTOUCHED (the frames 6d-r13.md cites for the ink colour; under cap)
+                                                                 sha256 39cf3d8eab0f -> 39cf3d8eab0f   cited by: w6/6d-r13.md:74
+
+w6/r13-frames/card-before-webkit.png                               57448 -> 57448      UNTOUCHED (the frames 6d-r13.md cites for the ink colour; under cap)
+                                                                 sha256 3c91a4abb8dc -> 3c91a4abb8dc   cited by: w6/6d-r13.md:74
+
+w6/r15-frames/AFTER-390-reanchored-chromium.png                    84989 -> 38327      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 83a11867b9a1 -> ed4bb14c9805   cited by: w6/6d-r15.md:22,24,91
+
+w6/r15-frames/AFTER-390-reanchored-webkit.png                     109973 -> 41381      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 e8c79c4225db -> 98b5b33c70da   cited by: w6/6d-r15.md:22,24,91
+
+w6/r15-frames/BEFORE-390-stale-anchor-chromium.png                 81137 -> 35770      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 3376d4eaa991 -> 733e5daa485b   cited by: w6/6d-r15.md:22,24,91
+
+w6/r15-frames/BEFORE-390-stale-anchor-webkit.png                  105098 -> 40657      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 03540a377030 -> d916cb49c97a   cited by: w6/6d-r15.md:22,24,91
+
+w6/r15-frames/desk-1440-armed-chromium.png                        193778 -> 81714      png re-encode q80-98 (geometry unchanged)
+                                                                 sha256 f37b9d131733 -> 9c4dc629c71e   cited by: w6/6d-r15.md:22,24,91
+

@@ -1,0 +1,54 @@
+===== CENSUS-ZERO, PER KILL, AFTER THE CURE =====
+tree: HEAD 4686436f + this lane's working copy (T9-W3 also writes this worktree)
+
+--- grep: the killed names, repo-wide (source dirs; docs/ prose excluded, it is the record) ---
+  2  card.eager
+       src/App.vue:74:// composable starts only when it's selected. This file used to read a `card.eager` boolean and
+       src/App.vue:239:// same set the old `!card.eager` test named and one fewer claim to keep true. A cold select
+  3  \.eager
+       src/App.vue:74:// composable starts only when it's selected. This file used to read a `card.eager` boolean and
+       src/App.vue:239:// same set the old `!card.eager` test named and one fewer claim to keep true. A cold select
+       src/games/shared/defineGame.ts:180: * `GameCard.eager`'s new home. It is NOT here, because it had no reader `eager` did not
+  0  card\.load
+  0  GameCard.*load
+  4  deal\.sizes
+       src/games/cards.ts:103:// T9-W6 §6.1 — these three used to read `sudokuSpec.deal.sizes` / `.difficulty` instead. That
+       src/games/shared/persistence.ts:83:  /** the raw selector sizes this game deals at — `spec.deal.sizes`' values. */
+       src/games/thermo/spec.test.ts:61:    // `deal.sizes` / `deal.difficulty` slots said this less strongly, and only sudoku's row
+       src/games/sudoku/spec.test.ts:51:    // T9-W6 §6.1: this used to read `deal.sizes` / `deal.difficulty`, two slots every game
+  2  deal\.difficulty
+       src/games/thermo/spec.test.ts:61:    // `deal.sizes` / `deal.difficulty` slots said this less strongly, and only sudoku's row
+       src/games/sudoku/spec.test.ts:51:    // T9-W6 §6.1: this used to read `deal.sizes` / `deal.difficulty`, two slots every game
+  0  quarantineLinuxWebkitBake
+  4  linux-webkit-bake-quarantine
+       e2e/theme-bake-freshness.spec.ts:71: * `docs/tranches/2026-08-tranche-5/evidence/w1/linux-webkit-bake-quarantine.md` (the park) ·
+       e2e/wordmark-integrity.spec.ts:72: *     reached `>=0.12.0`. Record: `evidence/w1/linux-webkit-bake-quarantine.md` (first
+       scripts/check-pw-projects.mjs:41://     (e2e/linux-webkit-bake-quarantine.ts) `test.fixme`s 5 of wordmark-webkit's 6 rows and
+       scripts/check-pw-projects.mjs:149:// `e2e/linux-webkit-bake-quarantine.ts` and both stamped "THIRD PINNING (CH-62)". CH-62 RETIRED
+  0  ch62-admission
+  4  ch62-probe.yml
+       ../../.github/workflows/ci.yml:1586:    # — the only place in the repo that built a bundle in CI was ch62-probe.yml, a
+       ../../.github/workflows/ci.yml:1652:    # WHAT THIS REPLACES IN ch62-probe.yml. That workflow is W6's kill, not this
+       ../../.github/workflows/ci.yml:1654:    # outlives its verdict is the pair of steps at ch62-probe.yml:186-203 — the
+       ../../.github/workflows/ci.yml:1709:            # ch62-probe.yml pins it: an unset NODE_ENV with a non-production mode
+  1  KEEP_SIM_FRONT
+       perf-rig/sim-matrix.sh:6:# `KEEP_SIM_FRONT=1` into run-sim.sh, which reads no variable of that name — the frontmost
+  1  urls\[0\]
+       src/games/shared/relayWire.ts:147: * a `string[]` whose every caller built a one-element array and whose only read was `urls[0]`,
+  1  RELAY_URLS
+       ../relay/wrangler.toml:9:# is the first label of the origin `useSession.ts`'s module-private `RELAY_URLS` defaults to
+
+--- knip (files/exports/types all 'error'): the dead-module census ---
+knip exit=0
+
+--- eslint boundary graph over src/games ---
+boundary exit=0
+
+--- tdz-probe (the cards->spec static-import law) ---
+
+graph census (src/games): 0 cycle edge(s)
+
+negative control (a synthetic game importing the table): RED as required
+
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways
+tdz exit=0

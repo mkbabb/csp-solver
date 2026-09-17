@@ -1,0 +1,14 @@
+POPULATION CANARY — the include narrowed from *.config.ts to vite.config.ts alone.
+The typecheck itself stays GREEN (the one file it can still see compiles); only the
+roster floor can tell that four of the five subjects fell out of the program.
+--- the typecheck's own verdict on the narrowed program ---
+typecheck EXIT=0
+--- the step's canary, run as ci.yml runs it ---
+root-config typecheck program: 1 config file(s)
+::error::the root-config typecheck saw 1 of 5 config files — the include has stopped matching and its green means nothing
+canary EXIT=1  (RED)
+--- RESTORED: the same canary over the real include ---
+root-config typecheck program: 6 config file(s)
+canary EXIT=0  (GREEN)
+  (six, not five, in this worktree: another lane's untracked playwright.fa2.config.ts is
+   a root config too and the floor admits it — CI's checkout sees the five tracked ones.)

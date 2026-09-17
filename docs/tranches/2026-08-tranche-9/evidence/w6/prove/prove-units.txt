@@ -1,0 +1,71 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts (17 tests | 3 failed) 154ms
+     × arming utters the guard's own name into an ASSERTIVE region 34ms
+     × returns focus to the listbox when the ribbon retires 8ms
+     × the utterance is built from that same name, so copy can never drift out of it 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > arming utters the guard's own name into an ASSERTIVE region
+AssertionError: the armed guard was never announced; live regions said ["sudoku, 1 of 2. 3 easy, new game","Choose keep, or switch."]: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:126:7
+    124|         liveRegions(w),
+    125|       )}`,
+    126|     ).toBe(true);
+       |       ^
+    127|     // Assertive, not polite: this interrupts. A destructive prompt qu…
+    128|     // snap chatter is the silence again, one beat later.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > the destructive-work guard speaks — 3.2 > returns focus to the listbox when the ribbon retires
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:195:47
+    193|     await guard(w).trigger("keydown", { key: "Escape" });
+    194|     await flushPromises();
+    195|     expect(w.find(".gallery-guard").exists()).toBe(false);
+       |                                               ^
+    196|     expect(document.activeElement).toBe(w.get(".gallery-viewport").ele…
+    197|     w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts > ONE name, drawn and spoken — the one-string rule > the utterance is built from that same name, so copy can never drift out of it
+AssertionError: expected 'choose keep, or deal.' to contain 'deal a new board?'
+
+Expected: "deal a new board?"
+Received: "choose keep, or deal."
+
+ ❯ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts:244:58
+    242|     await arm(w, "d");
+    243|     const drawn = w.get(".guard-note-title").text();
+    244|     expect(w.get('[role="alert"]').text().toLowerCase()).toContain(dra…
+       |                                                          ^
+    245|     w.unmount();
+    246|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 65 passed (66)
+      Tests  3 failed | 807 passed (810)
+   Start at  12:55:11
+   Duration  3.64s (transform 6.51s, setup 698ms, import 11.87s, tests 5.59s, environment 29.91s)
+
+VITEST_EXIT=1

@@ -57,6 +57,11 @@ export function useCarouselGlide(
   let gen = 0;
   let currentIndex = 0;
   let resizeObs: ResizeObserver | null = null;
+  /** The frame width the deck last PINNED ITS POSITION IN. `reportSnap` reads it to tell a
+   *  reader's settle from the engine's own re-snap after the frame changed shape; every
+   *  position write this composable makes re-pins it. `-1` until the deck is mounted, which is
+   *  before any settle can arrive. */
+  let pinnedWidth = -1;
   /** The live pointer drag: the grab's anchor (`x0`/`sl0`), the previous sample (`px`/`t`) and
    *  the smoothed release velocity. `froze` records that the grab cancelled a glide, so the
    *  no-drag release knows it still owes a settle. */
@@ -267,6 +272,7 @@ export function useCarouselGlide(
     currentIndex = i;
     const vp = viewport.value;
     if (!vp) return;
+    pinnedWidth = vp.clientWidth; // the position below is pinned IN THIS FRAME (see reportSnap)
     const myGen = ++gen; // this gesture owns position — any pending re-arm is stale
     suspendSnap();
     vp.scrollLeft = targetScrollLeft(i);
@@ -282,6 +288,7 @@ export function useCarouselGlide(
     const t = track.value;
     if (!vp || !t) return;
     recomputeEdges();
+    pinnedWidth = vp.clientWidth; // this step pins position IN THIS FRAME (see reportSnap)
     currentIndex = i;
     if (options.reducedMotion()) {
       jumpTo(i);
@@ -350,6 +357,30 @@ export function useCarouselGlide(
     // release reports ONCE, from the settled target, so the deck never announces the cards it
     // merely travelled past.
     if (anim || dragging) return;
+    // A RESIZE IS NOT A GESTURE, and this is the one line that says so.
+    //
+    // Measured on the live edge, WebKit, 1440×900 → 640×900 (evidence/w6/fold, the walk
+    // timeline): the frame changes, the engine adjusts `scrollLeft` to 212 on its own, and
+    // `scrollend` — which is UNDEBOUNCED, the 90ms debounce sits on `scroll` alone — reaches
+    // here 31ms later. `restingIndex()` reads 212 against a layout that is one frame old to
+    // this composable and answers 1, so `onSnap(1)` hands the deck's CHOICE to a window that
+    // changed size. The reader rotates the phone and lands on a different puzzle; the armed
+    // deal ribbon, an `alertdialog` holding focus, goes with it, and nothing announces the
+    // loss. 17 of 20 rotations took the choice at HEAD; 0 of 40 take it now.
+    //
+    // The re-pin was never the defect. The ResizeObserver above fires ~59ms LATER and pins
+    // `currentIndex` faithfully — to the card this report had already stolen. Which is why the
+    // cure is here and not there, and why it needs no rAF: hold the choice, and the re-pin that
+    // was already written does the rest.
+    //
+    // THE KEY IS THE FRAME'S OWN WIDTH, not a timer and not a resize flag. A settle measured
+    // against a frame the composable has not pinned since it changed shape is the engine
+    // re-snapping, not a hand — and the observer's `jumpTo` re-pins within the frame, which is
+    // what re-opens the seam for the next real swipe. ARMED ONLY WHEN THAT OBSERVER EXISTS
+    // (`resizeObs`): without one nothing would ever re-pin, and a deck that suppressed every
+    // settle after a resize would stop following touch for the rest of the page's life.
+    const vpNow = viewport.value;
+    if (resizeObs && vpNow && vpNow.clientWidth !== pinnedWidth) return;
     // A native settle is a position the composable did not write, so it is also the one path
     // that can leave `currentIndex` behind. It is the deck's own notion of the chosen card
     // (the drag's anchor, `restingIndex`'s tie-break), so every path that reports one keeps it.
@@ -533,6 +564,7 @@ export function useCarouselGlide(
     if (vp && typeof ResizeObserver !== "undefined") {
       resizeObs = new ResizeObserver(() => jumpTo(currentIndex));
       resizeObs.observe(vp);
+      pinnedWidth = vp.clientWidth;
     }
   });
   onBeforeUnmount(() => {

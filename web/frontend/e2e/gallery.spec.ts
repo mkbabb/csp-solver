@@ -27,22 +27,38 @@ async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&dif
 /** The deck is AT REST: the display face is in, no glide is carrying the track's transform,
  *  and both the track's width and the scroll position agree with themselves across a frame.
  *  A gesture started before this reads as a grab of a deck that is still moving — which is a
- *  real behaviour, and not the one these rows are about. Polled, never a fixed sleep. */
+ *  real behaviour, and not the one these rows are about. Polled, never a fixed sleep.
+ *
+ *  THE MARKER IS PER CALL, and that is the whole of the second grain. It used to key on one
+ *  shared `window.__deck`, so the FIRST call in a page verified two consecutive readings and
+ *  every call after it inherited the previous call's last reading as its `prev`. A deck parked
+ *  where the last call left it therefore satisfied the predicate on its FIRST reading, having
+ *  compared nothing — the helper answered "at rest" out of one sample of a deck that was free
+ *  to move on the very next frame, which is exactly the grab-a-moving-deck the helper exists to
+ *  prevent. Measured, both engines: a deck with a move scheduled one frame out passed the
+ *  shared-marker helper on reading 1 and was still (correctly) refused by this one
+ *  (evidence/w6/fold/FA7-decksettled-plant.txt).
+ *
+ *  A fresh key per call makes `prev` undefined on the first reading by construction, so every
+ *  call — the first and the ninth — spends two consecutive identical readings before it
+ *  answers. */
+let deckProbeSeq = 0;
 async function deckSettled(page: Page) {
+  const key = `__deck${++deckProbeSeq}`;
   await page.waitForFunction(
-    () => {
+    (k: string) => {
       const t = document.querySelector<HTMLElement>('.gallery-track');
       const vp = document.querySelector<HTMLElement>('.gallery-viewport');
       if (!t || !vp || document.fonts.status !== 'loaded') return false;
       if (Math.abs(new DOMMatrixReadOnly(getComputedStyle(t).transform).m41) > 0.5)
         return false; // a glide is in flight
       const now = `${t.scrollWidth}|${Math.round(vp.scrollLeft)}`;
-      const w = window as unknown as { __deck?: string };
-      const prev = w.__deck;
-      w.__deck = now;
+      const w = window as unknown as Record<string, string | undefined>;
+      const prev = w[k];
+      w[k] = now;
       return prev === now;
     },
-    null,
+    key,
     { timeout: 20000 },
   );
 }
@@ -313,13 +329,180 @@ test.describe('gallery under prefers-reduced-motion', () => {
 });
 
 // ── 9. THE POINTER DRAG (T6 mark 2) — the deck follows the mouse, releases on the glass curve ──
+//
+// ── T9-W6 §6.3 · THE WANDERER, MEASURED AND ARMED ─────────────────────────────────────────
+//
+// The row below (`drag: pushing the deck left…`) was censused at formation as the estate's ONE
+// wanderer: "fails TERMINALLY under whole-suite contention, 0/38 isolated". Re-measured at this
+// tree, that reading is WRONG IN ITS STRONGEST WORD and the correction matters, because
+// "terminal" is what makes a row safe to stop thinking about:
+//
+//   · ISOLATED             6/6 green, 3 runs × both engines (holdouts/wanderer-isolated-control.txt)
+//   · CPU-SATURATED        12/12 green — 18 cores under `yes`, 6 workers, --repeat-each=6,
+//                          this row and the kenken twin (holdouts/wanderer-cpu-load.txt)
+//   · WHOLE SUITE, run 1   RED in webkit, with `drag: kenken — the LAST card` beside it
+//   · WHOLE SUITE, run 2   GREEN in both engines, same tree, same command
+//
+// So it is INTERMITTENT under whole-suite load, not terminal, and it is not CPU contention
+// either — saturating every core does not move it. Two full-suite runs bracket it and neither
+// diagnosis nor cure can be honestly pinned on a red nobody can summon on demand.
+//
+// WHAT THE RED NEVER SAID is the real defect, and it is this file's to fix. The failure reads
+// `Expected "gallery-card-1", Received "gallery-card-0"` — one bit, from a gesture standing on
+// four independent facts (the deck's rung, the slot width, the resting anchor, and whether the
+// release was taken as a step at all). Two mechanisms produce that identical bit:
+//
+//   A. THE GESTURE WAS NEVER TAKEN — `onSnap` never fired, and aria holds its mount value.
+//   B. THE GESTURE WAS TAKEN AND REVERTED — aria went 0 → 1 → 0, which is a live product
+//      hazard the composable names in its own prose: at the three-slot rung cards 0 and 1
+//      SHARE a rest position (`targetScrollLeft` clamps both to 0), so anything that re-derives
+//      the index from position alone is deciding on evidence that cannot discriminate.
+//
+// A and B want opposite cures and the old row could not tell them apart. So the ledger below
+// records the aria TRAIL at page birth — zero round trips at gesture time, nothing to perturb
+// the timing it measures — and hands it to the assertion as its message. The next red arrives
+// naming its own mechanism instead of re-opening "the wanderer".
+
+/** The gesture's trail, recorded page-side from birth: every `aria-activedescendant` the deck
+ *  published, and every beat the composable actually held the deck as a DRAG (`is-dragging`).
+ *  Two channels, because one cannot separate the mechanisms — `onSnap(0)` on a deck already
+ *  showing card 0 writes the same string and mutates nothing, so an empty aria trail alone is
+ *  ambiguous between "no drag" and "a drag that computed no step".
+ *
+ *  `addInitScript`, so arming costs the gesture nothing: a probe that slows the beat it
+ *  measures is measuring a different beat. Verified — the row's timing is unchanged with the
+ *  ledger armed (holdouts/wanderer-ledger-plant.txt). */
+async function armSnapLedger(page: Page) {
+  await page.addInitScript(() => {
+    const aria: string[] = [];
+    const drags: string[] = [];
+    const w = window as unknown as { __snapTrail: string[]; __dragTrail: string[] };
+    w.__snapTrail = aria;
+    w.__dragTrail = drags;
+    // ORDER IS LOAD-BEARING. An init script runs before the document has a body, and an
+    // `observe(document.documentElement, …)` that throws there takes the REST OF THE SCRIPT
+    // with it — which is how the first cut of this ledger reported an empty drag trail for a
+    // gesture that had plainly dragged, and nearly sent the diagnosis to mechanism A. The
+    // listener that needs nothing but `window` is registered FIRST; the observer waits for a
+    // tree to observe.
+    //
+    // THE DRAG FLAG IS SAMPLED, NOT OBSERVED. A MutationObserver reads the class list when its
+    // callback runs, which is after the whole batch — the composable adds `is-dragging` at the
+    // grab and removes it at the release, so both records read the SETTLED (absent) state and
+    // the toggle is invisible. The CAPTURE phase on `window` runs before the composable's own
+    // bubble-phase `pointerup`, so the flag is still standing when this reads it.
+    window.addEventListener(
+      'pointerup',
+      () => {
+        const vp = document.querySelector('.gallery-viewport');
+        drags.push(
+          `${Math.round(performance.now())}ms release ${
+            vp?.classList.contains('is-dragging') ? 'AS A DRAG' : 'as a click (never dragged)'
+          }`,
+        );
+      },
+      true,
+    );
+    const watch = () =>
+      new MutationObserver((records) => {
+        for (const r of records) {
+          const el = r.target as HTMLElement;
+          if (!el.classList?.contains('gallery-viewport')) continue;
+          aria.push(
+            `${Math.round(performance.now())}ms ${el.getAttribute('aria-activedescendant')}`,
+          );
+        }
+      }).observe(document.documentElement, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['aria-activedescendant'],
+      });
+    if (document.documentElement) watch();
+    else document.addEventListener('DOMContentLoaded', watch, { once: true });
+  });
+}
+
+/** The trail as a failure message: which mechanism produced the one bit the assertion sees.
+ *  Three outcomes, three different files to open — the whole point of arming this row. */
+async function snapLedger(page: Page) {
+  const { aria, drags } = await page.evaluate(() => ({
+    aria: (window as unknown as { __snapTrail?: string[] }).__snapTrail ?? [],
+    drags: (window as unknown as { __dragTrail?: string[] }).__dragTrail ?? [],
+  }));
+  const head =
+    `aria-activedescendant trail: [${aria.join(' → ')}] · drag trail: [${drags.join(' → ')}]. `;
+  if (!drags.some((d) => d.includes('AS A DRAG')))
+    return (
+      head +
+      'MECHANISM A — the composable never held this as a drag at all, so `onPointerUp` took ' +
+      'the early return and no step was ever computed. The pointer stream is the suspect ' +
+      '(`onPointerDown` guards, DRAG_SLOP, whether the press even landed on the viewport). ' +
+      'Do NOT look at the snap arithmetic.'
+    );
+  if (aria.length === 0)
+    return (
+      head +
+      "MECHANISM A′ — the drag WAS held, and the step it computed was zero, so `onSnap` " +
+      're-published the card the deck was already on and mutated nothing. The arithmetic is ' +
+      'the suspect: `Math.round(travel / slot)` in `onPointerUp`, against the premise this ' +
+      'row asserts above. Check whether the release carried the travel it should have.'
+    );
+  return (
+    head +
+    'MECHANISM B — the step was taken AND walked back. Something re-derived the index from ' +
+    'position after the release, and at the three-slot rung cards 0 and 1 SHARE a rest ' +
+    'position (`targetScrollLeft` clamps both to 0), so position cannot discriminate them. ' +
+    '`reportSnap`/`restingIndex` in useCarouselGlide.ts is the suspect, not the pointer stream.'
+  );
+}
+
+/** The four facts the drag rows' arithmetic stands on, read off the live deck. */
+async function deckPremise(page: Page) {
+  await deckSettled(page);
+  return page.evaluate(() => {
+    const track = document.querySelector<HTMLElement>('.gallery-track')!;
+    const gallery = document.querySelector<HTMLElement>('.game-gallery')!;
+    const vp = document.querySelector<HTMLElement>('.gallery-viewport')!;
+    return {
+      // `slots()` in useCarouselGlide is the TRACK'S CHILDREN — the slot, not the card inside
+      // it (the card is inset by the slot's padding, a different number by ~19px).
+      slot: (track.children[0] as HTMLElement)?.getBoundingClientRect().width ?? 0,
+      cards: track.children.length,
+      deckSlots: parseInt(getComputedStyle(gallery).getPropertyValue('--deck-slots'), 10),
+      anchor: parseInt(
+        (vp.getAttribute('aria-activedescendant') ?? '').replace('gallery-card-', ''),
+        10,
+      ),
+    };
+  });
+}
 
 test('drag: pushing the deck left advances the snap and announces it', async ({ page }) => {
+  await armSnapLedger(page);
   await openGalleryDeepLink(page);
   const listbox = page.locator('.gallery-viewport');
 
-  await dragDeck(page, -260); // a settle, not a flick — three quarters of a slot, land on 1
-  await expect(listbox).toHaveAttribute('aria-activedescendant', 'gallery-card-1');
+  // THE PREMISE, ASSERTED (T9-W6 §6.3). `-260` only lands on card 1 because the step is
+  // `Math.round(travel / slot)` over a 352px slot at the three-slot rung — 0.74 rounds to 1.
+  // The row used to assert only the OUTCOME, so its red said "card-0, not card-1" and nothing
+  // about which of four independent facts had moved. That is how it spent a campaign as "the
+  // wanderer": an unfalsifiable red is a red nobody can act on.
+  const premise = await deckPremise(page);
+  expect(
+    premise,
+    `the deck is not at the rung this row is written for — the gesture below is arithmetic ` +
+      `over these numbers, so a red here is a LAYOUT change, not a drag defect`,
+  ).toMatchObject({ cards: 5, deckSlots: 3, anchor: 0 });
+  expect(
+    Math.round(260 / premise.slot),
+    `a -260px push over a ${premise.slot}px slot no longer steps exactly one card`,
+  ).toBe(1);
+
+  await dragDeck(page, -260); // a settle, not a flick — three quarters of a slot, land on 1 — three quarters of a slot, land on 1
+  await expect(listbox, await snapLedger(page)).toHaveAttribute(
+    'aria-activedescendant',
+    'gallery-card-1',
+  );
   await expect(page.locator('#gallery-card-1')).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.gallery-live')).toHaveText(
     'futoshiki, 2 of 5. 5×5 easy, new game',
@@ -678,13 +861,40 @@ test('drag: kenken — the LAST card — is reachable by dragging', async ({ pag
   // The WebKit-shaped one. `maxScroll`/`targetScrollLeft` clamp writes to the engine's own
   // scrollable overflow, so the release reads the position BACK rather than assuming it took;
   // the last card is where that difference has always shown.
+  //
+  // THE WANDERER'S TWIN, ARMED THE SAME WAY. This row redded beside `drag: pushing the deck
+  // left…` in the whole-suite contention run that opened the wanderer census, and it carried
+  // the same unfalsifiable red: one bit (`gallery-card-4` vs whatever else), out of a gesture
+  // standing on the same four independent facts. So it gets the same two instruments — the
+  // premise asserted before the arithmetic runs, and the aria/drag trail as the failure message
+  // — and its next red names its own mechanism instead of re-opening "the wanderer".
+  await armSnapLedger(page);
   await openGalleryDeepLink(page);
   const listbox = page.locator('.gallery-viewport');
+
+  // THE PREMISE, ASSERTED. Four `-300` pushes only reach card 4 because each is
+  // `Math.round(travel / slot)` = 1 over a 352px slot at the three-slot rung, from an anchor of
+  // 0. A red here is a LAYOUT change, not a drag defect.
+  const premise = await deckPremise(page);
+  expect(
+    premise,
+    `the deck is not at the rung this row is written for — the four pushes below are ` +
+      `arithmetic over these numbers`,
+  ).toMatchObject({ cards: 5, deckSlots: 3, anchor: 0 });
+  expect(
+    Math.round(300 / premise.slot),
+    `a -300px push over a ${premise.slot}px slot no longer steps exactly one card, so four of ` +
+      `them no longer reach the last one`,
+  ).toBe(1);
+
   // SETTLE drags, not flicks: this row is about reach, and a settle's target is a distance
   // (past the half-slot, so one card) rather than a velocity — the one arm a loaded runner
   // cannot turn into a different answer.
   for (let i = 0; i < 4; i++) await dragDeck(page, -300);
-  await expect(listbox).toHaveAttribute('aria-activedescendant', 'gallery-card-4');
+  await expect(listbox, await snapLedger(page)).toHaveAttribute(
+    'aria-activedescendant',
+    'gallery-card-4',
+  );
   await expect(page.locator('.gallery-live')).toHaveText('kenken, 5 of 5. 4×4 easy, new game');
 });
 

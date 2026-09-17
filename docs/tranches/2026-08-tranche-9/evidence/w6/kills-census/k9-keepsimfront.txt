@@ -1,0 +1,27 @@
+=== K9: KEEP_SIM_FRONT — the consumer census (M19's last remnant) ===
+setters (perf-rig/sim-matrix.sh):
+10:      KEEP_SIM_FRONT=1 TIMEOUT=300 "${RIG}/run-sim.sh" "sim-${cell}-s${r}" "${SC}" 2>&1 | sed "s/^/[sim-${cell}-s${r}] /"
+12:      KEEP_SIM_FRONT=1 TIMEOUT=300 "${RIG}/run-sim.sh" "sim-${cell}-s${r}" "${SC}" \
+
+readers in the invoked script (perf-rig/run-sim.sh):
+  ZERO 'KEEP' hits in run-sim.sh — the knob has no consumer
+
+readers anywhere in the live rig:
+perf-rig/sim-matrix.sh:10:      KEEP_SIM_FRONT=1 TIMEOUT=300 "${RIG}/run-sim.sh" "sim-${cell}-s${r}" "${SC}" 2>&1 | sed "s/^/[sim-${cell}-s${r}] /"
+perf-rig/sim-matrix.sh:12:      KEEP_SIM_FRONT=1 TIMEOUT=300 "${RIG}/run-sim.sh" "sim-${cell}-s${r}" "${SC}" \
+
+forbidden-focus machinery anywhere in the rig (M19):
+perf-rig/safari-wd.mjs:5:// FRONTMOST — `osascript … activate`, a PREV_APP capture to hand the desktop back, an
+perf-rig/safari-wd.mjs:6:// `open -a Safari` fallback, and a re-assert loop that stole the front back every 2 s for the
+perf-rig/safari-wd.mjs:22:// focus, and this file contains no osascript, no `activate`, and no `open -a`.
+perf-rig/run-sim.sh:76:# BACKGROUNDED, on the owner's order. What was here: a PREV_APP capture, `open -a Simulator`
+perf-rig/run-sim.sh:77:# followed by `tell application "Simulator" to activate`, a re-assert loop that re-activated the
+perf-rig/run-sim.sh:78:# Simulator every 2 s, and a closing activate to restore the previous app. All DELETED.
+perf-rig/run-safari.sh:10:# NOTHING HERE TOUCHES THE OWNER'S DESKTOP. There is no osascript in this file, no `activate`,
+perf-rig/run-safari.sh:11:# no `open -a`, and no frontmost assertion — see the block above the drive for what was removed
+perf-rig/run-safari.sh:75:# was: a PREV_APP capture via `System Events`; an `osascript … tell application "Safari" …
+perf-rig/run-safari.sh:76:# activate` block that opened the URL as the front window's current tab; an `open -a Safari`
+perf-rig/run-safari.sh:77:# fallback; a post-launch frontmost assertion; a re-assert loop that called `activate` every 2 s
+perf-rig/run-safari.sh:78:# whenever anything else took the front; an osascript tab-cleanup sweep; and a closing
+perf-rig/run-safari.sh:79:# `activate` to hand the desktop back. That apparatus seized the owner's screen for the whole
+perf-rig/probe.js:1690:        // NEVER force focus, never activate, never raise the window. Wait briefly for the page

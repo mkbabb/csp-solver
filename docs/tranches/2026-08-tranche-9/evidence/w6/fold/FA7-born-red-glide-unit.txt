@@ -1,0 +1,61 @@
+T9 chair fold FA7 — BORN RED: the new glide unit rows run against the PRISTINE useCarouselGlide.ts
+(git show HEAD:web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts), cure absent, everything else at the fold tree.
+
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ❯ src/pencil/chrome/GameGallery/useCarouselGlide.test.ts (5 tests | 2 failed) 448ms
+     × the engine's own re-snap after the frame changed is NOT reported as the reader's choice 387ms
+     × the deck's own re-pin then lands on the card it KEPT, not the one the engine drifted to 16ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/chrome/GameGallery/useCarouselGlide.test.ts > a resize is not a gesture (T9 fold FA7) > the engine's own re-snap after the frame changed is NOT reported as the reader's choice
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received:
+
+  1st vi.fn() call:
+
+    Array [
+      1,
+    ]
+
+
+Number of calls: 1
+
+ ❯ src/pencil/chrome/GameGallery/useCarouselGlide.test.ts:178:27
+    176|     // the reader lands on a different puzzle, and an armed consent ri…
+    177|     // with it, with nothing announcing the loss.
+    178|     expect(live.snap).not.toHaveBeenCalled();
+       |                           ^
+    179|   });
+    180|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/useCarouselGlide.test.ts > a resize is not a gesture (T9 fold FA7) > the deck's own re-pin then lands on the card it KEPT, not the one the engine drifted to
+AssertionError: expected 250 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 250
+
+ ❯ src/pencil/chrome/GameGallery/useCarouselGlide.test.ts:189:25
+    187|     // now and this same re-pin faithfully pinned the WRONG card — the…
+    188|     // defect, which is why the cure is at the report and needs no ext…
+    189|     expect(live.scroll).toBe(0);
+       |                         ^
+    190|   });
+    191|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 3 passed (5)
+   Start at  12:35:39
+   Duration  3.48s (transform 135ms, setup 63ms, import 176ms, tests 448ms, environment 2.29s)
+

@@ -122,7 +122,7 @@ function graphCensus(gamesDir) {
   }
 
   // (c) the table reaches a LAZY row's spec through `import()` only. One static spec import is
-  //     the eager row's main-chunk ride and is legal precisely because the cycle is gone; two
+  //     the MAIN-CHUNK row's ride and is legal precisely because the cycle is gone; two
   //     would mean a lazy game's spec had been dragged into the main chunk.
   const cards = path.join(gamesDir, "cards.ts");
   if (fs.existsSync(cards)) {
@@ -133,7 +133,7 @@ function graphCensus(gamesDir) {
         arm: "cards→spec (static)",
         file: rel(cards),
         line: 0,
-        detail: `${statics.length} static spec imports; at most the eager row may hold one`,
+        detail: `${statics.length} static spec imports; at most the main-chunk row may hold one`,
       });
   }
 

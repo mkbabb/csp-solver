@@ -1,0 +1,46 @@
+=== R13 useStagingBridge rows ===
+file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vitest/dist/chunks/cac.DdICfEr1.js:698
+			throw new TypeError(`Unexpected value "--silent=${value}". Use "--silent=true ${value}" instead.`);
+			      ^
+
+TypeError: Unexpected value "--silent=src/games/shared/useStagingBridge.test.ts". Use "--silent=true src/games/shared/useStagingBridge.test.ts" instead.
+    at Object.transform (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vitest/dist/chunks/cac.DdICfEr1.js:698:10)
+    at transform (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vitest/dist/chunks/cac.DdICfEr1.js:2196:39)
+    at setDotProp (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vitest/dist/chunks/cac.DdICfEr1.js:209:22)
+    at CAC.mri (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vitest/dist/chunks/cac.DdICfEr1.js:593:9)
+    at CAC.parse (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vitest/dist/chunks/cac.DdICfEr1.js:510:27)
+    at file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vitest/dist/cli.js:11:13
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:642:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v26.0.0
+src/games/posters.test.ts:205:    const authorInk = { "1": { "--color-user-ink": "oklch(0.6 0.11 137.5deg)" } };
+src/games/posters.test.ts:207:      [SudokuPoster, preview({ size: 3, values: { "1": 4 }, authorInk })],
+src/games/posters.test.ts:210:        preview({ size: 3, saved: { thermometers: [[0, 1]] }, authorInk }),
+src/games/posters.test.ts:214:        preview({ size: 3, saved: { cages: [{ sum: 3, cells: [0, 1] }] }, authorInk }),
+src/games/posters.test.ts:216:      [KenKenPoster, preview({ size: 4, saved: { cages: [] }, authorInk })],
+src/games/posters.test.ts:217:      [FutoshikiPoster, preview({ size: 4, saved: { inequalities: [] }, authorInk })],
+src/games/posters.test.ts:220:      expect(w.getComponent(PosterBoard).props("authorInk")).toEqual(authorInk);
+src/games/posters.test.ts:226:    expect(w.getComponent(PosterBoard).props("authorInk")).toBeUndefined();
+src/games/shared/useSession.test.ts:551:    expect(p.session.authorInk.value["40"]).toBeTruthy();
+src/games/shared/useStagingBridge.test.ts:344:    expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+src/games/shared/useStagingBridge.test.ts:354:    expect(bridge.previewFor("futoshiki")?.authorInk).toEqual(PEER);
+src/games/shared/useStagingBridge.test.ts:373:    expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+src/games/shared/useStagingBridge.test.ts:384:    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+src/games/shared/useStagingBridge.test.ts:394:    expect(bridge.previewFor("futoshiki")?.authorInk).toBeUndefined();
+src/games/shared/useStagingBridge.test.ts:400:    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+src/games/shared/useStagingBridge.test.ts:405:    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+src/games/shared/PosterBoard.test.ts:98:      props: { ...props, authorInk: { "5": PEER } },
+src/games/kenken/KenKenPoster.test.ts:81:    expect(board.props("authorInk")).toBeUndefined();
+src/games/killer/KillerPoster.test.ts:63:    expect(board.props("authorInk")).toBeUndefined();
+src/games/futoshiki/FutoshikiPoster.test.ts:78:    expect(w.getComponent(PosterBoard).props("authorInk")).toBeUndefined();
+src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:145:    const previewFor = vi.fn((id: string) => (id === "thermo" ? saved(3) : null));
+src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:146:    const w = mountDeck({ previewFor });
+src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:147:    expect(previewFor.mock.calls.map(([id]) => id)).toEqual([
+src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:162:    const previewFor = vi.fn(() => saved(2));
+src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:163:    const w = mountDeck({ previewFor });
+src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:168:    const previewFor = vi.fn((_id: string) => saved(3));
+src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:169:    const w = mountDeck({ previewFor });
+src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:170:    previewFor.mockClear();
+src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:172:    expect(previewFor.mock.calls.map(([id]) => id)).toEqual(["futoshiki"]);

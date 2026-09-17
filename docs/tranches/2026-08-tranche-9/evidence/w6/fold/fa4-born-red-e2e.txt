@@ -1,0 +1,73 @@
+# FA4 born-RED — e2e/presence.spec.ts vs the ABLATED tree (cure lines removed from
+#   useSession.ts: joinSession's beat arm + onPeer's presence stamp). BOTH ENGINES.
+# Instrument pinned: HMR socket routed nowhere, boots counted (see fa4-hmr-forensics.txt).
+# 2026-09-17
+
+
+Running 2 tests using 2 workers
+
+[1/2] [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs
+[2/2] [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs
+  1) [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 3
+
+    Call Log:
+    - Timeout 75000ms exceeded while waiting on the predicate
+
+      221 |     await expect
+      222 |       .poll(() => roster(p).count(), { timeout: EXPIRY_MS + 30000 })
+    > 223 |       .toBe(2);
+          |        ^
+      224 |
+      225 |   // ── the control: A and B have now sat still through the whole window, and are still two ───
+      226 |   // sleep-ok: this IS the measurement window — the claim is that a quiet page does not expire,
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/presence.spec.ts:223:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/error-context.md
+
+
+  2) [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 3
+
+    Call Log:
+    - Timeout 75000ms exceeded while waiting on the predicate
+
+      221 |     await expect
+      222 |       .poll(() => roster(p).count(), { timeout: EXPIRY_MS + 30000 })
+    > 223 |       .toBe(2);
+          |        ^
+      224 |
+      225 |   // ── the control: A and B have now sat still through the whole window, and are still two ───
+      226 |   // sleep-ok: this IS the measurement window — the claim is that a quiet page does not expire,
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/presence.spec.ts:223:8
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/error-context.md
+
+
+  2 failed
+    [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+    [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 

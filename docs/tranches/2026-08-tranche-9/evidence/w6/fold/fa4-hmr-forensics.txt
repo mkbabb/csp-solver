@@ -1,0 +1,37 @@
+# FA4 forensics — WHY THE FIRST ABLATED e2e RUN LIED, and what the ablated tree really does.
+# 2026-09-17. Probe file: e2e/fa4-probe.spec.ts (temporary, deleted after this reading).
+#
+# RUN 1 (banked at fa4-born-red-e2e.txt): presence.spec.ts against the ablated tree FAILED at
+# the beat assertion, which means its roster poll to 2 had PASSED — on a tree where nothing
+# prunes anything. The probe below was written to find out why.
+#
+# PROBE RUN A (chromium, in-session, not banked to file): at t+45s BOTH survivors' rosters fell
+# 3 -> 2 and page b's APPEND-ONLY frame bank fell 6 -> 4. An append-only array cannot lose
+# entries: those were new documents. The dev server had full-reloaded both pages (any save in
+# this shared tree does it), and two pages rejoining a room they still hold `?s=` for read as a
+# pruned roster while nothing had been pruned.
+#
+# PROBE RUN B (chromium, below, banked): the same probe with no save landing mid-run. The row
+# never leaves — 70 s, roster 3 on both survivors, frame bank flat at 6. THAT is the ablated
+# tree's real behaviour and the defect this lane cures.
+#
+# CURE IN THE INSTRUMENT: presence.spec.ts routes the HMR socket nowhere (`pinDocument`) and
+# counts boots in `sessionStorage`, which SURVIVES a reload — so a document that comes back by
+# any other route reds the row instead of greening it.
+
+BEFORE a= [ 'proper-ladybug', 'frail-termite', 'regional-pony' ] b= [ 'frail-termite', 'proper-ladybug', 'regional-pony' ]
+t+5s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+10s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+15s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+20s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+25s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+30s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+35s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+40s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+45s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+50s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+55s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+60s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+65s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+t+70s a= proper-ladybug|frail-termite|regional-pony b= frail-termite|proper-ladybug|regional-pony frames= 6
+  1 passed (1.3m)

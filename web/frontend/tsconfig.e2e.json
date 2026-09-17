@@ -1,0 +1,28 @@
+// The e2e estate's typecheck (T9-W6 §6.2).
+//
+// WHAT WAS TRUE BEFORE THIS FILE: `tsconfig.json` includes `src/**` and `env.d.ts`, so 34 spec
+// and helper files under `e2e/` were checked by nothing. Playwright TRANSPILES TypeScript, it
+// does not check it — a type error in an imported helper reds no run, no lane, and no editor
+// that reads the project config. Two live defects had been sitting in the estate's own
+// instruments the whole time, and both are named in the files that carry them:
+//   · `test.use({ reducedMotion })` is not a member of `PlaywrightTestOptions` at 1.61.1 — the
+//     TYPE-LEVEL mechanism of the PRM void the estate has documented behaviourally since
+//     T7-W3, invisible because nothing typechecked the declaration.
+//   · `ElementHandle<Node>.remove()` in `zone-grammar.spec.ts` — `remove` is an `Element`
+//     method; the handle is a <style> element every time, but the type never said so.
+// Born-RED banked at evidence/w6/gates-e2e/typecheck-born-red.txt (16 errors at HEAD).
+//
+// `types: []` IS LOAD-BEARING. It pins the ambient set to nothing so the node surface comes
+// from `e2e/node.d.ts` — the six functions and two globals the estate actually calls — rather
+// than from whatever `@types/*` happens to be installed. That keeps this typecheck's answer a
+// function of the tree instead of a function of the install.
+//
+// It rides the app's compilerOptions unchanged (strict, noUnusedLocals, noUnusedParameters):
+// an instrument held to a looser bar than the product is an instrument that rots quietly.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["e2e/**/*.ts"]
+}

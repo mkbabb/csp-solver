@@ -61,8 +61,9 @@ wasm-pack build csp-solver/wasm --scope mkbabb --profile wasm-release
 `pkg/` is gitignored build output, not committed; the frontend file-links it
 (`"@mkbabb/csp-solver-wasm": "file:../../csp-solver/wasm/pkg"`) as the lean
 `--target web --no-default-features` artifact, the five puzzle families. That
-lean build measures 122,541 B on darwin (`wc -c pkg/csp_solver_wasm_bg.wasm`,
-measured at T9-W4, 2026-08-25 — 121,137 B before the template-bank surface
+lean build measures 123,336 B on darwin (`wc -c pkg/csp_solver_wasm_bg.wasm`,
+measured at T9-W6, 2026-08-28 — 122,541 B before CH-69's GAC cure added the
+free-value walk and its transpose, 121,137 B before the template-bank surface
 generalized to all five `generate*` verbs), under the 124,500 B re-derived
 ceiling (base plus per-game wire). The CI runner's toolchain builds the same
 source a couple of KB larger — its last figure, 122,861 B at f2ae188d (run

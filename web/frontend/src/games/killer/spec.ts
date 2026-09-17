@@ -61,8 +61,6 @@ export const killerSpec = defineGame<ReturnType<typeof useKiller>, KillerCage[]>
   solver: { nodeBudget: nodeBudgetForSize },
   urlCodec: { key: persistence.key },
   deal: {
-    sizes: subgridSizes,
-    difficulty: difficultyOptions,
     options: (m) => [
       {
         key: "size",

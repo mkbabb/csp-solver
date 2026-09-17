@@ -1,0 +1,21 @@
+=== S3 LANE-END GATES 2026-09-17 ===
+--- npx vue-tsc --noEmit
+EXIT=0
+--- npm run typecheck:e2e
+
+> csp-solver-frontend@0.1.0 typecheck:e2e
+> vue-tsc --noEmit -p tsconfig.e2e.json
+
+EXIT=0
+--- npm run typecheck:node
+
+> csp-solver-frontend@0.1.0 typecheck:node
+> vue-tsc --noEmit -p tsconfig.node.json
+
+EXIT=0
+--- npx prettier --check --config .prettierrc.json scripts/check-pw-projects.mjs
+Checking formatting...
+All matched files use Prettier code style!
+EXIT=0
+--- npx eslint scripts/check-pw-projects.mjs
+EXIT=0

@@ -1,0 +1,133 @@
+=== PRECISE CENSUS (code, not prose) ===
+--- DealSpec body ---
+ * disease this contract's own KISS guard names.
+ */
+interface DealSpec<TModel> {
+  options: (model: TModel) => ControlSection[];
+}
+
+/**
+ * The per-game solver residue — what a game alone knows about its own search.
+ *
+ * AMENDMENT DISCHARGED, T5-W2 F3: F1 amended this slot to `{ nodeBudget, prewarm }` with a
+ * named cause — the scenes were gone, so there was no per-game module left for `GameShell` to
+ * import a cold-start warm from, and the verb rode the slot. That amendment scheduled its own
+ * death at 2.2, and 2.2 collected: there is ONE Worker over the one wasm binary now, so there
+ * is one warm, imported from `@games/shared/solver/client` by the shell that performs it.
+ * Asking each of five games for a handle onto one act would have been the fiction this wave
+ * exists to kill. The slot is back to the charter's §1.2 shape, unamended.
+ */
+interface SolverSpec {
+  /** size-scaled cap on search effort — the game's own table, keyed to its RAW selector size. */
+  nodeBudget: (rawSize: number) => number;
+}
+
+/** The eight slots, seven of them here and `poster` on the card row (see the header). */
+export interface GameSpec<TModel, TClue> {
+  /** matches its `cards.ts` row; drives `?game=`, aria and keys. */
+  id: string;
+  model: () => TModel;
+  grammar: BoardGrammar;
+  clues: ClueSeam<TModel, TClue> | null;
+  furniture: { cell: Component };
+  solver: SolverSpec;
+  urlCodec: { key: string };
+  deal: DealSpec<TModel>;
+}
+
+/**
+ * The type-erased spec the TABLE and the SHELL traffic in.
+ *
+ * Both parameters are the GAME's own business, and both sit in contravariant position — the
+ * model is `deal.options`' argument, the clue is `clues.props`'/`clues.encode`'s — so a
+ * concrete spec is not assignable to any narrowing of them. Erasure at the boundary is
+
+--- GameCard type body ---
+import type { Component } from "vue";
+
+/**
+ * The card shape the gallery renders (T4-W12) — a PENCIL-LOCAL type, deliberately NOT
+ * imported from `@games/cards` (pencil imports nothing from games/**, the eslint
+ * boundary). TypeScript is structural, so the table's richer `GameCard` (which also
+ * carries `mount` — the half the gallery never touches) assigns straight into
+ * `readonly GalleryCard[]` at App.vue's `<GameGallery :cards="GAMES">` seam. The
+ * gallery is handed already-erased presentation data + loader thunks; it never reaches
+ * into domain state.
+ *
+ * T9-W6 §6.1: this named `load`/`eager`, the two slots that folded into the single
+ * `mount`. Structural assignability is unchanged — the gallery reads none of them —
+ * but a comment naming fields that no longer exist is the doc-truth class this
+ * campaign closes, and a pencil-local twin of a games type is exactly where such a
+ * name goes stale unseen.
+ */
+export interface GalleryCard {
+  /** URL token + stable id; drives `?game=`, aria ids, and v-for keys. */
+  id: string;
+  /** lowercase wordmark register; rendered as a live `<text>`. */
+  name: string;
+  /** optional bespoke name glyph (unused by the shell wave; reserved). */
+  glyph?: Component;
+  /** the size/difficulty sub-line, in the game's own vocabulary. */
+  range: { label: string; levels: string[] };
+  /** what the staging band offers for this card — the structural twin of the table's
+   *  `CardStaging` (the same `GalleryCard` trick: pencil declares the shape it consumes and
+   *  the richer card row assigns straight in). */
+  staging: GalleryStaging;
+  /** the static, non-interactive poster face (a read-only mini-board). */
+  poster: () => Promise<Component>;
+}
+
+/**
+ * THE TRUE STILL (T8-W3 M12) — one saved board, as a card's face renders it.
+ *
+ * The PENCIL-LOCAL twin of the staging bridge's `PreviewBoard`, declared here for the same
+ * reason `GalleryCard` is: the deck imports nothing from `games/**`, and TypeScript is
+ * structural, so `previewFor` assigns straight into this at App's seam. It is deliberately a
+
+--- sim-matrix.sh full ---
+#!/bin/bash
+# sim-matrix.sh — the top ablations repeated in REAL MobileSafari on the iOS 26 sim. Mac-class
+# throughput, real mobile code path (coarse pointer, drawer regime, dpr 3).
+#
+# NOTHING HERE ASKS FOR THE FRONT (M19, permanent). Both invocations below used to export
+# `KEEP_SIM_FRONT=1` into run-sim.sh, which reads no variable of that name — the frontmost
+# apparatus it belonged to was deleted from run-sim.sh:76-78 on the owner's order. A dead knob
+# is still a lesson, and the lesson it taught was the abrogated one, so it is gone too
+# (T9-W6 §6.1; LEDGER-adjacent T8-R12's own stripping clause, finally satisfied).
+set -uo pipefail
+RIG="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SC="idle3s,deal,solveCelebration,galleryGlide,themeToggle"
+for r in "$@"; do
+  for cell in $(printf '%s\n' base a10-glyph-grain-none a13-glyph-layerize aB2-best-plus-transitions | sort -R); do
+    if [ "${cell}" = "base" ]; then
+      TIMEOUT=300 "${RIG}/run-sim.sh" "sim-${cell}-s${r}" "${SC}" 2>&1 | sed "s/^/[sim-${cell}-s${r}] /"
+    else
+      TIMEOUT=300 "${RIG}/run-sim.sh" "sim-${cell}-s${r}" "${SC}" \
+        "${RIG}/ablations/${cell}.css" 2>&1 | sed "s/^/[sim-${cell}-s${r}] /"
+    fi
+    sleep 3
+  done
+done
+echo SIM MATRIX DONE
+
+--- relayWire urls / origin ---
+147: * a `string[]` whose every caller built a one-element array and whose only read was `urls[0]`,
+151: * operate is one origin (`useSession`'s `RELAY_URL`, which `public/_headers` grants by name);
+
+--- files exist? ---
+gone: .github/workflows/ch62-probe.yml
+gone: web/frontend/e2e/ch62-admission.ts
+gone: web/frontend/e2e/linux-webkit-bake-quarantine.ts
+
+--- tracked dist bundles under docs/tranches ---
+docs/tranches/2026-07-tranche-2/evidence/pass3/Q3-wave-ordering-pyo3-dist-info.md
+docs/tranches/2026-07-tranche-4/evidence/x/x6-distillation.md
+docs/tranches/2026-07-tranche-4/waves/T4-W11-game-contract-distillation.md
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/measure/gates-e2e-builtdist.log
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/logs/A/gates-FINAL-e2e-builtdist.log
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/logs/A/gates-e2e-builtdist.log
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/logs/BC/gates-FINAL-e2e-builtdist.log
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/logs/BC/gates-e2e-builtdist.log
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/logs/D/gates-e2e-builtdist.log
+docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/logs/F3/built-dist-lane.log
+count: 4

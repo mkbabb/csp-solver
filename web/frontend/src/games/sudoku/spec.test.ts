@@ -13,6 +13,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { sudokuSpec } from "./spec";
+import { subgridSizes, difficultyOptions } from "@games/shared/selectors";
 import DigitCell from "@games/shared/DigitCell.vue";
 import { nodeBudgetForSize, persistence } from "./composables/useSudoku";
 
@@ -41,21 +42,20 @@ describe("sudoku — the eight slots (T5-W2 §1)", () => {
     expect(sudokuSpec.urlCodec.key).toBe("sudoku-board-state");
   });
 
-  it("deals off the two shared selector bands", () => {
-    expect(sudokuSpec.deal.sizes.map((o) => o.label)).toEqual(["4×4", "9×9", "16×16"]);
-    expect(sudokuSpec.deal.difficulty.map((o) => o.value)).toEqual([
-      "EASY",
-      "MEDIUM",
-      "HARD",
-    ]);
-  });
-
-  it("builds a size + difficulty section over the LIVE model", () => {
+  it("builds a size + difficulty section over the LIVE model, off the SHARED bands", () => {
     // The since-deleted `SudokuGame.vue` HAND-INLINED this row, because the TDZ cycle made
     // reading it off the declaration throw. The cycle is gone, the slot read lives in
-    // `GameShell`, and the eager game reads its own `deal.options` like every other.
+    // `GameShell`, and the main-chunk game reads its own `deal.options` like every other.
     const sections = sudokuSpec.deal.options(sudokuSpec.model());
     expect(sections.map((s) => s.key)).toEqual(["size", "difficulty"]);
+    // T9-W6 §6.1: this used to read `deal.sizes` / `deal.difficulty`, two slots every game
+    // declared and only the eager row could read. The invariant they were reaching for is
+    // sharper stated as IDENTITY against the one source `cards.ts` also stages from — a
+    // drawer that rendered a private copy of the band would pass a value check and fail this.
+    expect(sections[0].options).toBe(subgridSizes);
+    expect(sections[1].options).toBe(difficultyOptions);
+    expect(subgridSizes.map((o) => o.label)).toEqual(["4×4", "9×9", "16×16"]);
+    expect(difficultyOptions.map((o) => o.value)).toEqual(["EASY", "MEDIUM", "HARD"]);
   });
 });
 

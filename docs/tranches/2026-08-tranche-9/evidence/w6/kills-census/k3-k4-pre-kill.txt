@@ -1,0 +1,28 @@
+=== K3/K4 PRE-KILL FACTS ===
+     114    4239 web/frontend/e2e/ch62-admission.ts
+     549   32342 .github/workflows/ch62-probe.yml
+     663   36581 total
+
+--- exports of ch62-admission.ts ---
+26:export type BakeAdmissionCounters = {
+44:export type BakeAdmission = {
+50:export const FAIL_OPEN_FIELDS = [
+64:export async function readBakeAdmission(page: Page): Promise<BakeAdmission | null> {
+69:export function totalBakeAdmission(dump: BakeAdmission): BakeAdmissionCounters {
+94:export async function attachBakeAdmission(
+
+--- importers of those exports (repo-wide, source dirs) ---
+web/frontend/src/pencil/composables/rasterPose.ts:235:const ZERO_COUNTERS = (): BakeAdmissionCounters => ({
+web/frontend/src/pencil/composables/rasterPose.ts:258:        (g.surfaces[surface] ??= ZERO_COUNTERS())[field]++;
+web/frontend/e2e/ch62-admission.ts:20: * nothing here is wired into them yet. `attachBakeAdmission` is written to be dropped in
+web/frontend/e2e/ch62-admission.ts:94:export async function attachBakeAdmission(
+.github/workflows/ch62-probe.yml:42:# edited is an instrument that changes what it measures. `e2e/ch62-admission.ts` carries
+.github/workflows/ch62-probe.yml:43:# `attachBakeAdmission` ready to be dropped in beside the existing `attachBakeEvidence` call
+.github/workflows/ch62-probe.yml:312:                  writeFileSync('ch62-admission.json', JSON.stringify(out, null, 1));
+.github/workflows/ch62-probe.yml:340:                  const admission = read('ch62-admission.json', []);
+.github/workflows/ch62-probe.yml:402:                      web/frontend/ch62-admission.json
+
+--- ch62-probe.yml triggers ---
+3:# BUILT, NOT DISPATCHED. `workflow_dispatch` is the ONLY trigger and no wave runs it: the
+51:on:
+52:    workflow_dispatch:

@@ -1,0 +1,63 @@
+# FA4 born-RED — useSession.test.ts at HEAD (no beat, no presence expiry)
+# 2026-09-17, tree = working head of the W3+W6 chair fold
+
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (30 tests | 2 failed) 70ms
+     × a peer silent past the expiry leaves the roster — and their digits keep their ink 4ms
+     × this page says it is here on a clock, and the beat carries nothing 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.test.ts > presence is said on a clock — the roster stops lying > a peer silent past the expiry leaves the roster — and their digits keep their ink
+AssertionError: expected [ Array(3) ] to deeply equal [ 'p-39f81766146d', 'peer-2' ]
+
+- Expected
++ Received
+
+  [
+    "p-39f81766146d",
++   "peer-1",
+    "peer-2",
+  ]
+
+ ❯ src/games/shared/useSession.test.ts:540:20
+    538|     frameFrom(p, "peer-2");
+    539|     vi.advanceTimersByTime(2000);
+    540|     expect(ids(p)).toEqual([mine, "peer-2"]);
+       |                    ^
+    541|     expect(p.events.filter((e) => e.type === "leave").map((e) => e.id)…
+    542|       "peer-1",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > presence is said on a clock — the roster stops lying > this page says it is here on a clock, and the beat carries nothing
+AssertionError: expected [] to deeply equal [ 'hi', 'hi', 'hi' ]
+
+- Expected
++ Received
+
+- [
+-   "hi",
+-   "hi",
+-   "hi",
+- ]
++ []
+
+ ❯ src/games/shared/useSession.test.ts:562:38
+    560|     vi.advanceTimersByTime(45000);
+    561|     const beats = p.sent.slice(boot);
+    562|     expect(beats.map((f) => f.kind)).toEqual(["hi", "hi", "hi"]);
+       |                                      ^
+    563|     // A beat is the room's own idempotent presence frame and nothing …
+    564|     // no payload. It cannot move a cell, an epoch or a board.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 28 passed (30)
+   Start at  11:52:50
+   Duration  586ms (transform 67ms, setup 16ms, import 89ms, tests 70ms, environment 290ms)
+

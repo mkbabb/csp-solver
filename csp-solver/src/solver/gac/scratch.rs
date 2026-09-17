@@ -25,7 +25,18 @@ pub(super) struct GacScratch<V> {
     pub(super) dist: Vec<u32>,
     pub(super) queue: Vec<u32>,
     pub(super) res_adj: Csr,
+    /// The transpose of `res_adj`, rebuilt per call only when a free value
+    /// exists (`Csr::transpose_of`) — the orientation an alternating path out of
+    /// a free value runs along.
+    pub(super) res_t: Csr,
+    /// Counting-sort scratch for the `res_t` build.
+    pub(super) res_t_counts: Vec<u32>,
+    /// Nodes reachable from a free *variable* along `res_adj`. Only the variable
+    /// entries are read (the criterion for an unmatched edge leaving them).
     pub(super) reachable: Vec<bool>,
+    /// Nodes reachable from a free *value* along `res_t`. Only the value entries
+    /// are read.
+    pub(super) val_reach: Vec<bool>,
     pub(super) bfs: Vec<u32>,
     pub(super) t_index: Vec<u32>,
     pub(super) t_lowlink: Vec<u32>,
@@ -101,7 +112,10 @@ impl<V> Default for GacScratch<V> {
             dist: Vec::new(),
             queue: Vec::new(),
             res_adj: Csr::default(),
+            res_t: Csr::default(),
+            res_t_counts: Vec::new(),
             reachable: Vec::new(),
+            val_reach: Vec::new(),
             bfs: Vec::new(),
             t_index: Vec::new(),
             t_lowlink: Vec::new(),

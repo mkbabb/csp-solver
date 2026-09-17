@@ -219,12 +219,15 @@ test("a digit crosses both ways, and it arrives in its author's ink", async ({
   // resolve to a colour — this is the one place the whole ink story is observable at once.
   const inks = await b.evaluate(
     ([mine, theirs]) => {
-      const glyph = (i: number) =>
-        getComputedStyle(
-          document
-            .querySelectorAll(".sudoku-cell")
-            [i].querySelector(".glyph-svg path")!,
-        ).stroke;
+      // The index is bound to a name rather than chained onto the line above it: a `[i]`
+      // opening a continuation line is `no-unexpected-multiline`'s subject, because ASI reads
+      // that shape as a subscript of whatever the previous statement evaluated to. Harmless
+      // here and flagged the hour `e2e/` entered lint (T9-W6 §6.2) — the cure is the same
+      // either way, and it reads better.
+      const glyph = (i: number) => {
+        const cell = document.querySelectorAll(".sudoku-cell")[i];
+        return getComputedStyle(cell.querySelector(".glyph-svg path")!).stroke;
+      };
       return { mine: glyph(mine), theirs: glyph(theirs) };
     },
     [cellB, cellA],
@@ -367,7 +370,10 @@ test("the table says connecting until the room answers, then shows who is at it"
 
   for (const p of [a, b]) {
     await expect(roster(p)).toHaveCount(2);
-    await expect(status(p)).toHaveCount(0);
+    // T9-W3 §3.4 — the line goes quiet, the REGION stays. It is `v-if`-free now (a region that
+    // leaves the DOM when the wire comes up announces nothing), and `sr-only` while empty, so
+    // it costs the well no pixels in either state.
+    await expect(status(p)).toBeEmpty();
     // The resolution IS the roster: `connecting…` goes and two named rows arrive. The note
     // that used to stand under them is pruned (T8-W1 M3).
     await expect(p.locator(".controls-card .players-roster")).toBeVisible();
@@ -920,6 +926,26 @@ test("a digit tapped on a phone crosses, and the sheet does not move under the t
  *
  * OPT-IN (`T62_REAL_RELAY=1`): the far end is a live Cloudflare deployment. See the file header
  * for why that is a flag rather than a default.
+ *
+ * ── T9-W6 §6.3 · IT STAYS OPT-IN, AND IT IS OWED A RUN ────────────────────────────────────
+ *
+ * An env gate set nowhere is normally a dead row wearing a flag, and the audit booked it as
+ * one. It is not: the flag is the only honest thing to do with a test whose far end is a
+ * deployed Worker — a default-on row would make every local suite depend on a third party's
+ * uptime, and a green that needs the internet is a green that reports weather.
+ *
+ * But an instrument nobody schedules is an instrument nobody runs, and the composition THIS
+ * ROW ALONE PROVES has no other witness in the estate: relay-direct transport with
+ * `RTCPeerConnection` deleted, end to end, against the real relay. Every other multiplayer row
+ * runs `wire=local`, which is the substitute, not the thing.
+ *
+ * SO IT IS AN OBLIGATION, NOT A HOPE. The WGATE production pass runs it once against the live
+ * relay and banks the result with frames, per the evidence law. The chair owns that run; this
+ * note is here so the next reader of the flag finds the obligation attached to it instead of
+ * re-deriving "dead row" from an unset variable, which is exactly how it got booked as dead.
+ *
+ *   T62_REAL_RELAY=1 npx playwright test e2e/multiplayer.spec.ts \
+ *     -g "the real relay carries the board" --reporter=line
  */
 test("the real relay carries the board with RTCPeerConnection deleted", async ({
   browser,

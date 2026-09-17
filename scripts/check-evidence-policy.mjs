@@ -327,43 +327,15 @@ const GRANDFATHERED_IMAGES = [
 // payload back is a `.tar.gz` + md5 under a NEW name, which this list does not
 // cover and rule 4 therefore checks properly.
 //
-/** @type {Array<[string, number]>} dist bank → pinned file count. 29 entries. */
-const GRANDFATHERED_DISTS = [
-  // HOLLOW — 25. The BC5-G2 subject: payload absent, claims stand as testimony only,
-  // and no future claim may cite these directories as proof (adjudication §2).
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/dist-base", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/dist-f2pen", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/dist-f2type", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-127fde0d", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-A", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-B0", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-B1", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-Bfinal", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-F3base", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-F3head", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-base", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-e982a403", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-head", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/dist-prune", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/measure/dist-head", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/stall/dist-head", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-BChead", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-F3base", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-F3head", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-FINAL", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-curveCTRL", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-noopCTRL", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-p4base", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/dist-recon", 2],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/measure/dist-head", 2],
-  // FULL — 4. Payload present (39 files each, pass 5 banked real builds), but LOOSE:
-  // not a `.tar.gz`, no md5 manifest. They are grandfathered because they are real
-  // evidence that predates the rule, not because loose is acceptable going forward.
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/BC/rig/dist-head", 39],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/f3/dist-p5ablate", 39],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/f3/dist-p5base", 39],
-  ["docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/f3/dist-p5head", 39],
-];
+// T9-W6 §6.1 EMPTIED THIS LIST BY EMPTYING ITS SUBJECT. All 29 banks and both pass6
+// archives were removed from the tree — 208 files, 4,308 KB — under W0's evidence-law
+// rider: evidence keeps sources and summaries, not bundles. The list stays declared and
+// stays EMPTY, because the ban it exempted from is still the law and a future breach must
+// not find a home here; additions remain forbidden on the terms above. Manifest of what
+// left: docs/tranches/2026-08-tranche-9/evidence/w6/kills-bundles/retired-manifest.txt.
+//
+/** @type {Array<[string, number]>} dist bank → pinned file count. EMPTY since T9-W6 §6.1. */
+const GRANDFATHERED_DISTS = [];
 
 /** @type {Array<[string, number]>} wave bucket → pinned byte ceiling. 5 entries, all sealed. */
 const GRANDFATHERED_WAVES = [

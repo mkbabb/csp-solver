@@ -1,0 +1,101 @@
+=== THE MOUNT FOLD (card.eager+card.load -> card.mount), both engines ===
+gallery = select->mount · permalink = ?game= deep-link->mount · futoshiki = a LAZY row mounting
+
+Running 74 tests using 9 workers
+
+[1/74] [chromium] › e2e/futoshiki.spec.ts:107:1 › size switching: 4×4/5×5/6×6/7×7 each change the board cell count
+[2/74] [chromium] › e2e/gallery.spec.ts:91:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips
+[3/74] [chromium] › e2e/gallery.spec.ts:167:1 › gallery: Enter on futoshiki selects it — board swaps, ?game set, ?view cleared
+[4/74] [chromium] › e2e/futoshiki.spec.ts:132:1 › blank cell accepts input via pointer + on-screen affordance
+[5/74] [chromium] › e2e/futoshiki.spec.ts:80:1 › gallery switches to futoshiki: default board renders with inequality carets
+[6/74] [chromium] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by a staged chip
+[7/74] [chromium] › e2e/futoshiki.spec.ts:166:1 › solve: a fresh generated board solves to solve-success
+[8/74] [chromium] › e2e/gallery.spec.ts:183:1 › gallery: Escape cancels back to the board, no swap, ?view cleared
+[9/74] [chromium] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+[10/74] [chromium] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by a page pip
+[11/74] [chromium] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by bare page
+[12/74] [chromium] › e2e/gallery.spec.ts:237:1 › gallery: `g` opens the gallery from playing; a `g` typed into a cell does not
+[13/74] [chromium] › e2e/gallery.spec.ts:263:1 › gallery: only the centered card boils — a flank frame is inert + frozen
+[14/74] [chromium] › e2e/gallery.spec.ts:292:3 › gallery under prefers-reduced-motion › PRM: open is an instant cut — gallery present, no tweening
+[15/74] [chromium] › e2e/gallery.spec.ts:317:1 › drag: pushing the deck left advances the snap and announces it
+[16/74] [chromium] › e2e/gallery.spec.ts:338:1 › drag: a flick moves exactly one card; a release over the centered card selects nothing
+[17/74] [chromium] › e2e/gallery.spec.ts:423:1 › drag: a slow first sample does not swallow the flick that follows it
+[18/74] [chromium] › e2e/gallery.spec.ts:373:1 › drag: a flick whose every move lands inside the sample floor is still a flick
+[19/74] [chromium] › e2e/gallery.spec.ts:470:1 › drag: a release that lands a frame after the last move is still a flick
+[20/74] [chromium] › e2e/gallery.spec.ts:582:1 › click: a flank warps the deck to it, aria + the live region following the same seam
+[21/74] [chromium] › e2e/gallery.spec.ts:521:1 › drag: a grab during a keyboard glide freezes the deck where it is drawn
+[22/74] [chromium] › e2e/gallery.spec.ts:618:1 › click: the card the warp delivered then SELECTS on the next click
+[23/74] [chromium] › e2e/gallery.spec.ts:641:1 › drag: a release that lands over a FLANK is swallowed, not taken as a warp
+[24/74] [chromium] › e2e/gallery.spec.ts:677:1 › drag: kenken — the LAST card — is reachable by dragging
+[25/74] [chromium] › e2e/gallery.spec.ts:693:1 › header: the masthead persists in the gallery, names the snapped card, and is inert there
+[26/74] [chromium] › e2e/gallery.spec.ts:785:1 › CH-67: every settled wordmark bake is minted at the size it is shown at
+[27/74] [chromium] › e2e/gallery.spec.ts:822:3 › gallery on a 375 phone › 375: one card near-fills the width, a neighbor peeks, pips present
+[28/74] [chromium] › e2e/permalink.spec.ts:31:1 › board-only ?board= URL loads the encoded board (sudoku)
+[29/74] [chromium] › e2e/permalink.spec.ts:45:1 › mismatched ?board=/?size= falls closed to the size path (sudoku)
+[30/74] [chromium] › e2e/permalink.spec.ts:57:1 › game switch leaves no foreign board/size params in the URL
+[31/74] [chromium] › e2e/permalink.spec.ts:89:1 › randomize drops ?board= from the URL (sudoku)
+[32/74] [chromium] › e2e/permalink.spec.ts:102:1 › the share affordance writes ?board= on the explicit act (sudoku)
+[33/74] [chromium] › e2e/permalink.spec.ts:118:1 › board-only ?board= loads a futoshiki board with its inequalities, randomize drops it
+[34/74] [chromium] › e2e/permalink.spec.ts:139:1 › an untagged ?board= body fails closed, never a board (sudoku)
+[35/74] [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (thermo)
+[36/74] [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (killer)
+[37/74] [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (kenken)
+[38/74] [webkit] › e2e/futoshiki.spec.ts:166:1 › solve: a fresh generated board solves to solve-success
+[39/74] [webkit] › e2e/futoshiki.spec.ts:80:1 › gallery switches to futoshiki: default board renders with inequality carets
+[40/74] [webkit] › e2e/futoshiki.spec.ts:107:1 › size switching: 4×4/5×5/6×6/7×7 each change the board cell count
+[41/74] [webkit] › e2e/futoshiki.spec.ts:132:1 › blank cell accepts input via pointer + on-screen affordance
+[42/74] [webkit] › e2e/gallery.spec.ts:91:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips
+[43/74] [webkit] › e2e/gallery.spec.ts:167:1 › gallery: Enter on futoshiki selects it — board swaps, ?game set, ?view cleared
+[44/74] [webkit] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+[45/74] [webkit] › e2e/gallery.spec.ts:183:1 › gallery: Escape cancels back to the board, no swap, ?view cleared
+[46/74] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by a staged chip
+[47/74] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by a page pip
+[48/74] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by bare page
+[49/74] [webkit] › e2e/gallery.spec.ts:237:1 › gallery: `g` opens the gallery from playing; a `g` typed into a cell does not
+[50/74] [webkit] › e2e/gallery.spec.ts:292:3 › gallery under prefers-reduced-motion › PRM: open is an instant cut — gallery present, no tweening
+[51/74] [webkit] › e2e/gallery.spec.ts:263:1 › gallery: only the centered card boils — a flank frame is inert + frozen
+[52/74] [webkit] › e2e/gallery.spec.ts:317:1 › drag: pushing the deck left advances the snap and announces it
+[53/74] [webkit] › e2e/gallery.spec.ts:338:1 › drag: a flick moves exactly one card; a release over the centered card selects nothing
+[54/74] [webkit] › e2e/gallery.spec.ts:373:1 › drag: a flick whose every move lands inside the sample floor is still a flick
+[55/74] [webkit] › e2e/gallery.spec.ts:423:1 › drag: a slow first sample does not swallow the flick that follows it
+[56/74] [webkit] › e2e/gallery.spec.ts:470:1 › drag: a release that lands a frame after the last move is still a flick
+[57/74] [webkit] › e2e/gallery.spec.ts:582:1 › click: a flank warps the deck to it, aria + the live region following the same seam
+[58/74] [webkit] › e2e/gallery.spec.ts:618:1 › click: the card the warp delivered then SELECTS on the next click
+[59/74] [webkit] › e2e/gallery.spec.ts:641:1 › drag: a release that lands over a FLANK is swallowed, not taken as a warp
+[60/74] [webkit] › e2e/gallery.spec.ts:677:1 › drag: kenken — the LAST card — is reachable by dragging
+[61/74] [webkit] › e2e/gallery.spec.ts:693:1 › header: the masthead persists in the gallery, names the snapped card, and is inert there
+[62/74] [webkit] › e2e/gallery.spec.ts:785:1 › CH-67: every settled wordmark bake is minted at the size it is shown at
+[63/74] [webkit] › e2e/gallery.spec.ts:822:3 › gallery on a 375 phone › 375: one card near-fills the width, a neighbor peeks, pips present
+[64/74] [webkit] › e2e/permalink.spec.ts:31:1 › board-only ?board= URL loads the encoded board (sudoku)
+[65/74] [webkit] › e2e/permalink.spec.ts:45:1 › mismatched ?board=/?size= falls closed to the size path (sudoku)
+[66/74] [webkit] › e2e/permalink.spec.ts:57:1 › game switch leaves no foreign board/size params in the URL
+[67/74] [webkit] › e2e/permalink.spec.ts:89:1 › randomize drops ?board= from the URL (sudoku)
+[68/74] [webkit] › e2e/permalink.spec.ts:102:1 › the share affordance writes ?board= on the explicit act (sudoku)
+[69/74] [webkit] › e2e/permalink.spec.ts:118:1 › board-only ?board= loads a futoshiki board with its inequalities, randomize drops it
+[70/74] [webkit] › e2e/permalink.spec.ts:139:1 › an untagged ?board= body fails closed, never a board (sudoku)
+[71/74] [webkit] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (thermo)
+[72/74] [webkit] › e2e/gallery.spec.ts:521:1 › drag: a grab during a keyboard glide freezes the deck where it is drawn
+[73/74] [webkit] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (killer)
+[74/74] [webkit] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (kenken)
+
+[WebServer] 6:00:53 PM [vite] (client) [Unhandled error] Error: ResizeObserver loop completed with undelivered notifications.
+[WebServer]  > ../../../../../../../@vite/client:531:59
+[WebServer] 
+
+[WebServer] 6:00:53 PM [vite] (client) [Unhandled error] Error: ResizeObserver loop completed with undelivered notifications.
+[WebServer]  > ../../../../../../../@vite/client:531:59
+[WebServer] 
+
+[WebServer] 6:00:53 PM [vite] (client) [Unhandled error] Error: ResizeObserver loop completed with undelivered notifications.
+[WebServer]  > ../../../../../../../@vite/client:531:59
+[WebServer] 
+
+[WebServer] 6:00:53 PM [vite] (client) [Unhandled error] Error: ResizeObserver loop completed with undelivered notifications.
+[WebServer]  > ../../../../../../../@vite/client:531:59
+[WebServer] 
+
+[WebServer] 6:00:54 PM [vite] (client) [Unhandled error] Error: ResizeObserver loop completed with undelivered notifications.
+[WebServer]  > ../../../../../../../@vite/client:531:59
+[WebServer] 
+  74 passed (30.7s)
+pw exit=0

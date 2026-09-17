@@ -15,6 +15,7 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { thermoSpec } from "./spec";
+import { subgridSizes, difficultyOptions } from "@games/shared/selectors";
 import ThermoTube from "./ThermoTube.vue";
 import DigitCell from "@games/shared/DigitCell.vue";
 import { encodeThermometers, decodeThermometers } from "./clue";
@@ -50,18 +51,17 @@ describe("thermo — the eight slots (T5-W2 §1)", () => {
     expect(thermoSpec.urlCodec.key).toBe("thermo-board-v1");
   });
 
-  it("deals off sudoku's two selector bands (the ratified variant reuse)", () => {
-    expect(thermoSpec.deal.sizes.map((o) => o.label)).toEqual(["4×4", "9×9", "16×16"]);
-    expect(thermoSpec.deal.difficulty.map((o) => o.value)).toEqual([
-      "EASY",
-      "MEDIUM",
-      "HARD",
-    ]);
-  });
-
-  it("builds a size + difficulty section over the LIVE model", () => {
+  it("builds a size + difficulty section over the LIVE model, off the SHARED bands", () => {
     const sections = thermoSpec.deal.options(thermoSpec.model());
     expect(sections.map((s) => s.key)).toEqual(["size", "difficulty"]);
+    // The ratified variant reuse, asserted as IDENTITY rather than as a copied value list:
+    // thermo IS a sudoku, so it renders sudoku's boxed band itself (T9-W6 §6.1 — the retired
+    // `deal.sizes` / `deal.difficulty` slots said this less strongly, and only sudoku's row
+    // could ever read them).
+    expect(sections[0].options).toBe(subgridSizes);
+    expect(sections[1].options).toBe(difficultyOptions);
+    expect(subgridSizes.map((o) => o.label)).toEqual(["4×4", "9×9", "16×16"]);
+    expect(difficultyOptions.map((o) => o.value)).toEqual(["EASY", "MEDIUM", "HARD"]);
   });
 });
 

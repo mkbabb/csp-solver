@@ -45,7 +45,10 @@ const ev = (over: Partial<NostrEvent> = {}): NostrEvent => ({
  * The set semantics that batch relied on are still the relay's law, so one row still proves
  * them, on this filter.
  */
-const shippedFilter = (rooms: string[] = [ROOM], over: Partial<Filter> = {}): Filter => ({
+const shippedFilter = (
+  rooms: string[] = [ROOM],
+  over: Partial<Filter> = {},
+): Filter => ({
   kinds: [EVENT_KIND],
   "#x": rooms,
   ...over,
@@ -65,7 +68,11 @@ describe("matches — the fanout's only decision", () => {
   });
 
   it("matches ANY value inside a condition — a filter's condition is a set, not a scalar", () => {
-    const f = shippedFilter(["sudoku-babb-dev/room-zero", ROOM, "sudoku-babb-dev/room-omega"]);
+    const f = shippedFilter([
+      "sudoku-babb-dev/room-zero",
+      ROOM,
+      "sudoku-babb-dev/room-omega",
+    ]);
     expect(matches(f, ev())).toBe(true);
     expect(matches(f, ev({ tags: [["x", ELSEWHERE]] }))).toBe(false);
   });
@@ -151,7 +158,10 @@ describe("the NIP-01 walk the shipped arm performs", () => {
     feed(r, a, ["EVENT", ev()]);
 
     expect(a.sent).toEqual([["OK", "e1", true, ""]]);
-    expect(b.sent).toEqual([["EOSE", "sub-b"], ["EVENT", "sub-b", ev()]]);
+    expect(b.sent).toEqual([
+      ["EOSE", "sub-b"],
+      ["EVENT", "sub-b", ev()],
+    ]);
   });
 
   it("never echoes to the sender, even when the sender subscribed to its own room", () => {
@@ -159,7 +169,10 @@ describe("the NIP-01 walk the shipped arm performs", () => {
     const r = relay(a);
     feed(r, a, ["REQ", "sub-a", shippedFilter()]);
     feed(r, a, ["EVENT", ev()]);
-    expect(a.sent).toEqual([["EOSE", "sub-a"], ["OK", "e1", true, ""]]);
+    expect(a.sent).toEqual([
+      ["EOSE", "sub-a"],
+      ["OK", "e1", true, ""],
+    ]);
   });
 
   it("a subscriber in another room hears nothing", () => {
@@ -197,7 +210,9 @@ describe("the NIP-01 walk the shipped arm performs", () => {
 
 /** The `bye` an arm sends for itself, and the one the relay sends on a dead socket's behalf —
  *  same grammar (`useSession.ts:193`, `relayWire.ts:72`), so the client reads one handler. */
-const contentOf = (frame: unknown[]): { kind?: string; from?: string; data?: unknown } =>
+const contentOf = (
+  frame: unknown[],
+): { kind?: string; from?: string; data?: unknown } =>
   JSON.parse((frame[2] as NostrEvent).content);
 
 describe("presence — a socket that leaves is announced (T7-W4 U1)", () => {
@@ -332,7 +347,10 @@ describe("GET /revision", () => {
       ...(revision === undefined ? {} : { RELAY_REVISION: revision }),
     }) as Env;
   const get = (path: string, revision?: string) =>
-    relayWorker.fetch(new Request(`https://sudoku-relay.mkbabb.workers.dev${path}`), env(revision));
+    relayWorker.fetch(
+      new Request(`https://sudoku-relay.mkbabb.workers.dev${path}`),
+      env(revision),
+    );
 
   it("answers the sha the gate stamped, uncacheable", async () => {
     const res = get("/revision", "4dd9ec9c8aebf92d84261ef25f9200b33ca51c13");

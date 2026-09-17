@@ -1,0 +1,23 @@
+=== R15 ABLATION (non-author) ===
+baseline md5=2a8f1e884b9aa50522bd6cbb19821c3d
+
+--- A0. cured tree ---
+ Test Files  1 passed (1)
+      Tests  22 passed (22)
+
+--- A1. ABLATED: the scroll arm only ---
+     × a track that moves under the note re-anchors it too, broadcast or no broadcast 12ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  1 failed (1)
+      Tests  1 failed | 21 passed (22)
+
+--- A2. ABLATED: the ResizeObserver arm only ---
+     × a resize under an armed ribbon re-anchors the note onto the card's NEW box 20ms
+     × the note re-measures AFTER the deck re-pins — observer order, not the resize event 6ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  1 failed (1)
+      Tests  2 failed | 20 passed (22)
+
+--- restored md5=2a8f1e884b9aa50522bd6cbb19821c3d identical=YES ---
+ Test Files  1 passed (1)
+      Tests  22 passed (22)

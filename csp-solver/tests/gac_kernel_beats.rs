@@ -436,3 +436,135 @@ fn p6_futoshiki_solves_under_pool() {
         solve_futoshiki(&[0u32; 25], 5, &[], &config).expect("5×5 Latin square is satisfiable");
     assert_eq!(solution.len(), 25);
 }
+
+// ---------------------------------------------------------------------------
+// P7 — GAC soundness + completeness against a brute-force oracle (CH-69)
+// ---------------------------------------------------------------------------
+
+/// Every `(variable, value)` pair that takes part in at least one all-different
+/// assignment over `sets` — the exact GAC-consistent domains, by exhaustion.
+fn brute_support(sets: &[Vec<u32>]) -> Vec<Vec<u32>> {
+    fn rec(i: usize, sets: &[Vec<u32>], cur: &mut Vec<u32>, support: &mut [Vec<u32>]) {
+        if i == sets.len() {
+            for (k, &v) in cur.iter().enumerate() {
+                if !support[k].contains(&v) {
+                    support[k].push(v);
+                }
+            }
+            return;
+        }
+        for &v in &sets[i] {
+            if cur.contains(&v) {
+                continue;
+            }
+            cur.push(v);
+            rec(i + 1, sets, cur, support);
+            cur.pop();
+        }
+    }
+    let mut support: Vec<Vec<u32>> = vec![Vec::new(); sets.len()];
+    rec(0, sets, &mut Vec::new(), &mut support);
+    for s in support.iter_mut() {
+        s.sort_unstable();
+    }
+    support
+}
+
+#[test]
+fn p7_gac_equals_brute_force_support_on_slack_bearing_scopes() {
+    // CH-69's born-RED at revise level. Régin GAC is domain-complete for
+    // all-different, so on any satisfiable scope the post-domains must equal the
+    // brute-force support EXACTLY — no supported value pruned (soundness, the
+    // half CH-69 broke) and no unsupported value kept (completeness, the half
+    // that proves the cure is the real criterion and not blanket over-keeping).
+    //
+    // The scopes deliberately carry VALUE SLACK (universe > participants), which
+    // is where the free-value alternating walk matters and therefore the only
+    // shape the defect could reach: a sudoku row/column/box is square, matches
+    // every value, and has no free vertex at all. Pre-cure this reported 2,013
+    // disagreements out of the 3,676 satisfiable scopes the 4,000 draws yield
+    // (banked, with the run: docs/tranches/2026-08-tranche-9/evidence/w6/ch69-red.md).
+    let mut seed: u64 = 0x2026_0828;
+    let mut next = move || {
+        seed = seed
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        (seed >> 33) as u32
+    };
+
+    let mut cases = 0usize;
+    let mut with_slack = 0usize;
+    let mut first_bad: Option<String> = None;
+    let mut bad = 0usize;
+
+    for _ in 0..4000 {
+        let n = 3 + (next() % 3) as usize; // 3..=5 variables
+        let universe = 4 + next() % 5; // values 1..=4 .. 1..=8
+        let sets: Vec<Vec<u32>> = (0..n)
+            .map(|_| {
+                let mut s: Vec<u32> = (1..=universe).filter(|_| next() % 2 == 0).collect();
+                // Keep every variable live (>= 2 values) so all n are GAC
+                // participants — the core defers scopes below
+                // GAC_MIN_PARTICIPANTS to the caller's singleton pass.
+                while s.len() < 2 {
+                    let v = 1 + next() % universe;
+                    if !s.contains(&v) {
+                        s.push(v);
+                    }
+                }
+                s.sort_unstable();
+                s
+            })
+            .collect();
+
+        let support = brute_support(&sets);
+        if support.iter().any(|s| s.is_empty()) {
+            continue; // genuinely UNSAT — a wipe-out is the right answer there
+        }
+        cases += 1;
+        let universe_size = {
+            let mut u: Vec<u32> = sets.concat();
+            u.sort_unstable();
+            u.dedup();
+            u.len()
+        };
+        if universe_size > n {
+            with_slack += 1;
+        }
+
+        let (rev, post) = run_plain(&sets, None);
+        if rev == Revision::Unsatisfiable || post != support {
+            bad += 1;
+            if first_bad.is_none() {
+                first_bad = Some(format!(
+                    "sets={sets:?} support={support:?} post={post:?} rev={rev:?}"
+                ));
+            }
+        }
+    }
+
+    assert!(
+        with_slack > 1000,
+        "the battery must be slack-bearing (was {with_slack}/{cases})"
+    );
+    assert_eq!(
+        bad,
+        0,
+        "GAC disagreed with the brute-force support in {bad}/{cases} satisfiable scopes; first: {}",
+        first_bad.unwrap_or_default()
+    );
+}
+
+#[test]
+fn p7b_free_value_walk_keeps_a_supported_edge() {
+    // The minimal shape, spelled out. A={1,2} B={1,3} C={1,4}: value 2, 3 or 4
+    // is free under any maximum matching, and B=1 is supported (A takes 2, C
+    // takes 4). Nothing here is prunable — every value is in some solution.
+    // Pre-cure GAC removed 1 from BOTH B and C: with the matching A-1, B-3, C-4,
+    // the edges (B,1) and (C,1) cross an SCC boundary, and the walk that should
+    // have rescued them — free value 2 -> A -> its matched value 1 — could not
+    // run, the residual graph giving a free value no out-arc.
+    let (rev, post) = run_plain(&[vec![1, 2], vec![1, 3], vec![1, 4]], None);
+    assert_eq!(rev, Revision::Unchanged);
+    assert_eq!(post, vec![vec![1, 2], vec![1, 3], vec![1, 4]]);
+}

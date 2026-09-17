@@ -33,10 +33,20 @@ import { relayWire } from "./relayWire";
  * Both arms derive presence from traffic, so `peer(id, true)` fires on EVERY frame — the
  * documented contract (`Handlers.peer`, "joins are idempotent"). The harness's handler
  * collapses that to transitions exactly as `onPeer` does.
+ *
+ * THE BEAT IS NOT AN ARM'S (T9-W6 §3.7). Presence is said on a clock now — a `hi` every 15s,
+ * with a 45s roster expiry — and it is armed in `useSession.joinSession`, ABOVE this seam, so
+ * there is no asymmetry here to hold: an arm-side beat would be two clocks judged by one expiry,
+ * and the arm the e2e battery drives is the local one. What this script already proves about it
+ * is the part that IS the seam's: `hi` is sent FOUR times below, broadcast and directed, and
+ * both arms carry every repeat to the same seats in the same order — an arm that deduplicated a
+ * repeated announce would turn every beat after the first into silence and be read as a room
+ * emptying. The beat's own rows are `useSession.test.ts`'s ("presence is said on a clock"), and
+ * the transport's are `e2e/presence.spec.ts`'s.
  */
 
 const ROOM = "parity-u6";
-const RELAY_URLS = ["wss://relay.invalid/"];
+const RELAY_URL = "wss://relay.invalid/";
 
 /**
  * A seat's peer id. Since T8-W3 (§2.9) NEITHER arm mints one — the id is the page's, read from
@@ -227,7 +237,7 @@ describe("the transport seam — both arms deliver the same script to the same h
     const local = await run((h, id) => localWire(ROOM, h, id));
 
     vi.stubGlobal("WebSocket", HubSocket);
-    const relay = await run((h, id) => relayWire(ROOM, RELAY_URLS, h, id));
+    const relay = await run((h, id) => relayWire(ROOM, RELAY_URL, h, id));
 
     // The claim, and the only assertion that matters: the seam holds.
     expect(relay).toBe(local);

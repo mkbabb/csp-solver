@@ -254,7 +254,7 @@ present, and nothing above the wire treats an id as proof of anything.
 The CSP is the second lock, and it's a pair with the client. The page's `connect-src` grants
 exactly one socket origin: `wss://sudoku-relay.mkbabb.workers.dev`
 (`web/frontend/public/_headers`). That string is also the build-time default in
-`useSession.ts:RELAY_URLS`—a module-private const, overridable per-build by the
+`useSession.ts:RELAY_URL`—a module-private const, overridable per-build by the
 `VITE_RELAY_URL` env read, which is the whole configuration surface—and its first label is
 `wrangler.toml:name` (`"sudoku-relay"`), which is what makes the Worker deploy to that
 hostname. Three files, one string, one commit: a deploy that trues one without the others
@@ -363,7 +363,7 @@ server honors `?wire=local`; a production build has already folded that arm away
 The Durable Object is SQLite-backed as a free-plan eligibility condition, not a storage
 choice—it stores nothing (`wrangler.toml` migrations comment). No route and no custom
 domain are committed on purpose: the `*.workers.dev` hostname is the surface the CSP and
-`RELAY_URLS` name, and a route in the file would be a DNS claim the file can't verify.
+`RELAY_URL` name, and a route in the file would be a DNS claim the file can't verify.
 
 ## What was declined
 

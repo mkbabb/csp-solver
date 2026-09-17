@@ -1,0 +1,50 @@
+=== PLANT-PROOFS 2026-09-17T16:56:15Z ; tree-status-digest BEFORE=9eca4fa731cc
+
+##### PLANT 1 — web/relay/relay.ts type error -> typecheck:relay
+
+> csp-solver-frontend@0.1.0 typecheck:relay
+> tsc -p ../relay/tsconfig.json --noEmit
+
+../relay/relay.ts(324,7): error TS2322: Type 'string' is not assignable to type 'number'.
+../relay/relay.ts(324,7): error TS6133: '__prove_plant' is declared but its value is never read.
+PLANTED_EXIT=2
+
+> csp-solver-frontend@0.1.0 typecheck:relay
+> tsc -p ../relay/tsconfig.json --noEmit
+
+RESTORED_EXIT=0
+ web/relay/relay.ts | 11 ++++++++---
+ 1 file changed, 8 insertions(+), 3 deletions(-)
+(empty diff above = byte-identical)
+
+##### PLANT 2 — e2e file type error -> typecheck:e2e
+
+> csp-solver-frontend@0.1.0 typecheck:e2e
+> vue-tsc --noEmit -p tsconfig.e2e.json
+
+e2e/a11y.spec.ts(695,7): error TS2322: Type 'string' is not assignable to type 'number'.
+e2e/a11y.spec.ts(695,7): error TS6133: '__prove_plant_e2e' is declared but its value is never read.
+PLANTED_EXIT=2
+
+> csp-solver-frontend@0.1.0 typecheck:e2e
+> vue-tsc --noEmit -p tsconfig.e2e.json
+
+RESTORED_EXIT=0
+ web/frontend/e2e/a11y.spec.ts | 18 +++++++++++++-----
+ 1 file changed, 13 insertions(+), 5 deletions(-)
+
+##### PLANT 3 — root *.config.ts type error -> typecheck:node
+
+> csp-solver-frontend@0.1.0 typecheck:node
+> vue-tsc --noEmit -p tsconfig.node.json
+
+vitest.config.ts(91,7): error TS2322: Type 'string' is not assignable to type 'number'.
+vitest.config.ts(91,7): error TS6133: '__prove_plant_node' is declared but its value is never read.
+PLANTED_EXIT=2
+
+> csp-solver-frontend@0.1.0 typecheck:node
+> vue-tsc --noEmit -p tsconfig.node.json
+
+RESTORED_EXIT=0
+ web/frontend/vitest.config.ts | 13 +++++++++++--
+ 1 file changed, 11 insertions(+), 2 deletions(-)

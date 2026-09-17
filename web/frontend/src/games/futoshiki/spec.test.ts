@@ -10,6 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { futoshikiSpec } from "./spec";
+import { latinSizes, difficultyOptions } from "@games/shared/selectors";
 import CaretOverlay from "./CaretOverlay.vue";
 import DigitCell from "@games/shared/DigitCell.vue";
 import { caretFigures, encodeInequalities, decodeInequalities } from "./clue";
@@ -53,23 +54,15 @@ describe("futoshiki — the eight slots (T5-W2 §1)", () => {
     for (const off of [0, 3, 8, 16]) expect(nodeBudgetForSize(off)).toBe(4_000_000);
   });
 
-  it("deals off the latin size band and the ONE difficulty band", () => {
-    expect(futoshikiSpec.deal.sizes.map((o) => o.label)).toEqual([
-      "4×4",
-      "5×5",
-      "6×6",
-      "7×7",
-    ]);
-    expect(futoshikiSpec.deal.difficulty.map((o) => o.value)).toEqual([
-      "EASY",
-      "MEDIUM",
-      "HARD",
-    ]);
-  });
-
-  it("builds a board-size + difficulty section over the LIVE model", () => {
+  it("builds a board-size + difficulty section over the LIVE model, off the SHARED bands", () => {
     const sections = futoshikiSpec.deal.options(futoshikiSpec.model());
     expect(sections.map((s) => s.key)).toEqual(["boardSize", "difficulty"]);
+    // Its OWN latin band, and the ONE difficulty band the estate shares — asserted as identity
+    // against the module `cards.ts` stages from (T9-W6 §6.1 retired the per-spec copies).
+    expect(sections[0].options).toBe(latinSizes);
+    expect(sections[1].options).toBe(difficultyOptions);
+    expect(latinSizes.map((o) => o.label)).toEqual(["4×4", "5×5", "6×6", "7×7"]);
+    expect(difficultyOptions.map((o) => o.value)).toEqual(["EASY", "MEDIUM", "HARD"]);
   });
 });
 

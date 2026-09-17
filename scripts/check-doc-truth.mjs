@@ -1109,7 +1109,11 @@ const hostOf = (u) => (u ? u.replace(/^wss:\/\//, "").replace(/\/.*$/, "") : nul
 
 /**
  * The relay's identity, in the three files that each hold a copy of it: the CSP
- * `connect-src` grant, the client's `RELAY_URLS` default, and the Worker's name.
+ * `connect-src` grant, the client's `RELAY_URL` default, and the Worker's name.
+ *
+ * T9-W6 §6.1 renamed the client's constant `RELAY_URLS` (a one-element array whose
+ * only read was `[0]`) to `RELAY_URL`, a string. The read below moved with it in the
+ * same commit — a gate that parses a name is a gate the rename must carry.
  */
 function deriveRelayOrigin() {
   const policy =
@@ -1117,7 +1121,7 @@ function deriveRelayOrigin() {
   const csp = policy.match(/connect-src[^;]*?(wss:\/\/[^\s;]+)/)?.[1] ?? null;
   const url =
     (read(MP.session) ?? "")
-      .match(/const RELAY_URLS\s*=\s*\[([\s\S]*?)\]/)?.[1]
+      .match(/const RELAY_URL\s*=([\s\S]*?);/)?.[1]
       ?.match(/"(wss:\/\/[^"]+)"/)?.[1] ?? null;
   const name = (read(MP.toml) ?? "").match(/^name\s*=\s*"([^"]+)"/m)?.[1] ?? null;
   return { csp, url, name, cspHost: hostOf(csp), urlHost: hostOf(url) };
@@ -1527,6 +1531,70 @@ function deriveT8Ladder() {
     }
   return { rel, marks };
 }
+
+/**
+ * CH-19's census: a stylesheet's lines split CODE / COMMENT / BLANK.
+ *
+ * The split is the whole point of the row. CH-19 re-opened on a +45% breach of
+ * which +176 lines were PROSE — the register this estate writes in — and a
+ * budget over TOTAL lines would govern that prose. Only the CODE half is a
+ * thing a distill could ever act on, so only the CODE half is bounded.
+ *
+ * Character-level, not line-shaped: this file's block comments continue on
+ * plain indented text rather than a leading `*`, and several open mid-line
+ * after a declaration (`--color-gold-star: …; /* …`). A line counts as CODE
+ * when any character outside a comment survives, as COMMENT when none does,
+ * and as BLANK when the raw line is whitespace — blank lines INSIDE a comment
+ * bank as blank, which is what makes the three columns sum to the file.
+ *
+ * Read through `read()` so `--self-test` can mount a fixture stylesheet.
+ */
+function cssCensus(rel) {
+  const text = read(rel);
+  if (text === null) return null;
+  const lines = (text.endsWith("\n") ? text.slice(0, -1) : text).split("\n");
+  let code = 0;
+  let comment = 0;
+  let blank = 0;
+  let inC = false;
+  for (const raw of lines) {
+    if (raw.trim() === "") {
+      blank++;
+      continue;
+    }
+    let bare = "";
+    let i = 0;
+    while (i < raw.length) {
+      if (inC) {
+        const e = raw.indexOf("*/", i);
+        if (e === -1) i = raw.length;
+        else {
+          inC = false;
+          i = e + 2;
+        }
+      } else {
+        const s = raw.indexOf("/*", i);
+        if (s === -1) {
+          bare += raw.slice(i);
+          i = raw.length;
+        } else {
+          bare += raw.slice(i, s);
+          inC = true;
+          i = s + 2;
+        }
+      }
+    }
+    if (bare.trim() === "") comment++;
+    else code++;
+  }
+  return { total: code + comment + blank, code, comment, blank };
+}
+
+/** The stylesheet CH-19 bounds, and the ledger that states the bound. */
+const CH19_CSS = "web/frontend/src/assets/index.css";
+const CH19_LEDGER = "docs/tranches/LEDGER.md";
+/** CH-19's first trigger: code lines past this re-open the row for a DECISION. */
+const CH19_TRIGGER = 700;
 
 /** The T8 files that state a mark COUNT — the estate the row grades. */
 const T8_ESTATE = [
@@ -3221,7 +3289,7 @@ const ROWS = [
     derived: () => {
       const o = D.origin;
       return o.cspHost && o.urlHost && o.name
-        ? `connect-src ${o.csp} (${MP.headers}) · RELAY_URLS default ${o.url} (${MP.session}) · wrangler name "${o.name}" (${MP.toml}) — one origin: ${o.cspHost}`
+        ? `connect-src ${o.csp} (${MP.headers}) · RELAY_URL default ${o.url} (${MP.session}) · wrangler name "${o.name}" (${MP.toml}) — one origin: ${o.cspHost}`
         : `UNDERIVED: csp ${o.csp ?? "none"} · default ${o.url ?? "none"} · name ${o.name ?? "none"}`;
     },
     run: () => {
@@ -3232,17 +3300,15 @@ const ROWS = [
           fail(MP.headers, "a wss:// origin in the CSP connect-src clause", "none"),
         );
       if (!o.url)
-        out.push(
-          fail(MP.session, "a wss:// default in the RELAY_URLS literal", "none"),
-        );
+        out.push(fail(MP.session, "a wss:// default in the RELAY_URL literal", "none"));
       if (!o.name) out.push(fail(MP.toml, 'name = "…"', "none"));
       if (out.length) return out;
       if (o.cspHost !== o.urlHost)
         out.push(
           fail(
             `${MP.headers} + ${MP.session}`,
-            `one origin — the CSP grant and the RELAY_URLS default name the same host`,
-            `connect-src ${o.cspHost} vs RELAY_URLS ${o.urlHost}`,
+            `one origin — the CSP grant and the RELAY_URL default name the same host`,
+            `connect-src ${o.cspHost} vs RELAY_URL ${o.urlHost}`,
           ),
         );
       else if (o.urlHost.split(".")[0] !== o.name)
@@ -4226,6 +4292,63 @@ const ROWS = [
         });
       }
       return out;
+    },
+  },
+  {
+    // T9-W6 §6.1, handoff 6a-4 — CH-19's SECOND number, given a reader.
+    //
+    // The first one (808) was a distill RESULT that no gate ever read, and it
+    // drifted +45% across four tranches without one red. A bound stated in a
+    // ledger row and read by nothing is the same artifact twice, so the row
+    // re-opens WITH its enforcer rather than with another good intention.
+    //
+    // Three arms, in this order on purpose: a ledger that states no bound is a
+    // failure of the ledger; past the 700 trigger the row wants a DECISION and
+    // must not be silenced by a re-stamp; short of it, the stated bound simply
+    // has to equal the tree.
+    id: "index-css-bound",
+    derived: () => {
+      const c = cssCensus(CH19_CSS);
+      return c
+        ? `${CH19_CSS}: ${fmt(c.total)} lines = ${fmt(c.code)} code + ${fmt(c.comment)} comment + ${fmt(c.blank)} blank (trigger at ${fmt(CH19_TRIGGER)} code)`
+        : `UNDERIVED: ${CH19_CSS} absent`;
+    },
+    run: () => {
+      const c = cssCensus(CH19_CSS);
+      if (!c) return [fail(CH19_CSS, "the stylesheet CH-19 bounds", "file absent")];
+      // The bound is stated in BOLD, and the whole clause is inside the markers
+      // (`**THE HONEST NEW BOUND, … : 571 CODE lines**`) — so the pattern reads
+      // to the number rather than expecting `**` to sit just before it.
+      const hit = grep(
+        CH19_LEDGER,
+        /\*\*THE HONEST NEW BOUND[^*]*?([\d,]+)\s*CODE lines\*\*/,
+      )[0];
+      const pinned = hit ? num(hit.m[0][1]) : 0;
+      if (!pinned)
+        return [
+          fail(
+            CH19_LEDGER,
+            "CH-19 states a CODE-line bound (`**THE HONEST NEW BOUND … <n> CODE lines**`)",
+            "none",
+          ),
+        ];
+      if (c.code > CH19_TRIGGER)
+        return [
+          fail(
+            CH19_CSS,
+            `CH-19's trigger unfired — CODE lines at or under ${fmt(CH19_TRIGGER)}`,
+            `${fmt(c.code)} code lines; the row re-opens for a DECISION, not a re-stamp`,
+          ),
+        ];
+      if (c.code !== pinned)
+        return [
+          fail(
+            `${CH19_LEDGER}:${hit.line}`,
+            `CH-19's stated bound to match the tree (${fmt(c.code)} code lines)`,
+            `the row pins ${fmt(pinned)}`,
+          ),
+        ];
+      return [];
     },
   },
 ];
@@ -5411,6 +5534,65 @@ function selfTestCases() {
       docs: { "README.md": "CI installs the webkit bundle before the golden suite." },
       expect: "GREEN",
     },
+
+    // ── index-css-bound (T9-W6 §6.1, handoff 6a-4) ───────────────────────
+    //
+    // The GREEN fixture states the bound the LIVE census derives, so it can
+    // never freeze a number: index.css moves, the fixture's ledger moves with
+    // it, and the pair still grades the row rather than a memory. The drifted
+    // fixture is that same sentence off by one, which is the smallest lie the
+    // row must still catch — 808 drifted to 1,172 one landing at a time.
+    //
+    // The stylesheet is RE-MOUNTED in every fixture below: `MP.css` names the
+    // same file, so the overlay blanks it for all of them, and a census of the
+    // empty string would grade the row against nothing.
+    ...(() => {
+      const css = read(CH19_CSS);
+      const c = cssCensus(CH19_CSS);
+      if (!c) return [];
+      const ledger = (n) =>
+        `| CH-19 | RE-OPENED · WATCH | **THE HONEST NEW BOUND, on the only half a distill could act on: ${fmt(n)} CODE lines** (${fmt(c.total)} total). **TRIGGERS:** code lines pass ${fmt(CH19_TRIGGER)} |`;
+      // A stylesheet past the trigger, built rather than pasted: one real rule
+      // block per line, so the census counts CODE and the arm fires on the
+      // count instead of on a shape.
+      const overTrigger = Array.from(
+        { length: CH19_TRIGGER + 1 },
+        (_, i) => `.t${i} { color: red; }`,
+      ).join("\n");
+      return [
+        {
+          row: "index-css-bound",
+          why: "the ledger states the bound the tree measures — CH-19's number, read at last",
+          docs: { [CH19_CSS]: css, [CH19_LEDGER]: ledger(c.code) },
+          expect: "GREEN",
+        },
+        {
+          row: "index-css-bound",
+          why: "the bound drifted by ONE against an unmoved tree — the drift that took 808 to 1,172",
+          docs: { [CH19_CSS]: css, [CH19_LEDGER]: ledger(c.code + 1) },
+          expect: "RED",
+        },
+        {
+          row: "index-css-bound",
+          why: `past ${fmt(CH19_TRIGGER)} CODE lines the row wants a DECISION, and a matching ledger must not buy silence`,
+          docs: {
+            [CH19_CSS]: overTrigger,
+            [CH19_LEDGER]: ledger(CH19_TRIGGER + 1),
+          },
+          expect: "RED",
+        },
+        {
+          row: "index-css-bound",
+          why: "a ledger row that states no bound at all — the posture CH-19 spent four tranches in",
+          docs: {
+            [CH19_CSS]: css,
+            [CH19_LEDGER]:
+              "| CH-19 | RE-OPENED · WATCH | the extraction DROP stands, and nothing here states a number |",
+          },
+          expect: "RED",
+        },
+      ];
+    })(),
   ];
 }
 

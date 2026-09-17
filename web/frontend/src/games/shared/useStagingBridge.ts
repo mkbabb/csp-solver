@@ -163,6 +163,11 @@ const follow = ref<{ id: string; staged: StagedFollow } | null>(null);
 /** The session stages the room's board for the game that is about to mount. */
 export function stageBoardFollow(id: string, size: number, blob: unknown): void {
   follow.value = { id, staged: { size, blob } };
+  // THE BOARD AND ITS AUTHORS TRAVEL TOGETHER (T9-W6 §6.4). This blob becomes that game's SAVED
+  // board — peer digits and all — and the clock the session adopted one statement earlier is the
+  // only thing that says whose they are. Banked HERE, where the two are provably about the same
+  // board; a read taken one seat-change later has nothing left to match them by.
+  bankInk(id, readAuthorInk?.() ?? {});
 }
 
 /** Consumed at the incoming game's setup, BEFORE its init — the board it adopts INSTEAD of its
@@ -294,9 +299,9 @@ export interface PreviewBoard {
    * PEER authored, `useSession.authorInk`'s own shape and the live board's own binding.
    *
    * Disk holds digits, never authors, so this is the one field of a still that does NOT come off
-   * disk: it is the room's clock, read at the moment the picture is asked for, and it is attached
-   * to the MOUNTED game's still alone. Absent → every digit is the reading page's own ink, which
-   * is what a solo still is and what every other card's saved board honestly says.
+   * disk: it is the room's clock, read live for the board in the seat and off the per-id bank for
+   * every other (§THE STILL'S AUTHORS). Absent → every digit is the reading page's own ink, which
+   * is what a solo still is and what a board nothing was ever said about honestly stays.
    */
   authorInk?: Record<string, Record<string, string>>;
 }
@@ -320,17 +325,62 @@ export function registerAuthorInk(
   readAuthorInk = read;
 }
 
+// ── THE STILL'S AUTHORS, BANKED PER GAME (T9-W6 §6.4, R13's FOLLOW state) ───────────────
+// R13 attached the room's clock to the MOUNTED game's still alone, and the FOLLOW is the
+// counter-example its cure-scope missed: a peer's switch parks the ROOM's board — peer digits and
+// all — on the incoming game's disk, and the table then turns again. Peer authorship is a fact
+// about a BOARD, not about a seat, so the seat test alone left every one of those stills drawing
+// a peer's 7 in the reading page's ink, on cards the live board underneath had always inked apart.
+//
+// The clock is in memory and it is about one board at a time, so what survives the seat is a
+// per-id SNAPSHOT of it, written only where a board and a clock are provably the same board's:
+//
+//   · `stageBoardFollow` — the room hands a board to a game BY NAME, one statement after adopting
+//     that board's clock off the same `st`;
+//   · `bankAuthorInk` — the clock changed under the game currently holding the seat.
+//
+// A FOLLOW in flight REFUSES the second write, and that refusal is the whole of the ordering
+// argument: on that path the session replaces the clock with the incoming board's *before* it
+// stages the follow, so a snapshot taken anywhere downstream would colour the outgoing game's
+// digits out of a clock about somebody else's board. Refused, the outgoing game keeps the
+// snapshot it earned while the clock was still its own — which is the true one — and the incoming
+// game already has its own from the stage. Neither write depends on which of App's two watches
+// runs first.
+//
+// Nothing here reaches disk. Authorship is the room's, and a room does not outlive the page.
+const inkBank = ref<Record<string, Record<string, Record<string, string>>>>({});
+
+/** Write, or RETIRE, one game's snapshot. An empty clock retires the row rather than banking a
+ *  blank: nobody else wrote on that board, which is precisely what a still with no ink says. */
+function bankInk(id: string, ink: Record<string, Record<string, string>>): void {
+  const keep = Object.keys(ink).length > 0;
+  if (!keep && !(id in inkBank.value)) return;
+  const next = { ...inkBank.value };
+  if (keep) next[id] = ink;
+  else delete next[id];
+  inkBank.value = next;
+}
+
+/** App banks the room's clock against the game holding the seat, on every change of that clock —
+ *  the `registerAuthorInk` read, one direction on. See the section head for the FOLLOW refusal. */
+export function bankAuthorInk(): void {
+  const id = mountedId.value;
+  if (!id || follow.value) return;
+  bankInk(id, readAuthorInk?.() ?? {});
+}
+
 /** The saved board for a game id, off disk, now — or `null`, which is the card's cue to draw
  *  its canned never-played face. A stated default, not a silent fallback. */
 export function previewFor(id: string): PreviewBoard | null {
   if (!hasDom) return null;
   const src = ledgerSources.find((s) => s.id === id);
   const p = src ? readPersistedBoard(src.persistKey) : null;
-  // THE MOUNTED BOARD ALONE. The clock is one shared board's; the other four cards are boards off
-  // disk that nobody at this table has written on, and colouring them from this clock would be a
-  // guess in a fact's clothes. An empty clock attaches nothing, so solo stays byte-identical.
-  if (!p || id !== mountedId.value) return p;
-  const ink = readAuthorInk?.();
+  if (!p) return null;
+  // WHOSE HAND, PER BOARD. The seat's own still reads the clock live; every other still reads the
+  // snapshot banked while ITS board held that clock. A game with neither is a board nobody at this
+  // table has ever written on, and colouring it from a clock about some other board would be a
+  // guess in a fact's clothes. No ink attaches nothing, so a solo still stays byte-identical.
+  const ink = id === mountedId.value ? readAuthorInk?.() : inkBank.value[id];
   return ink && Object.keys(ink).length ? { ...p, authorInk: ink } : p;
 }
 

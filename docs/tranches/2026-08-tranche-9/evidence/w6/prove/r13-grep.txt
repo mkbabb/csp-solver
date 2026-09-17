@@ -1,0 +1,169 @@
+=== R13: does any OTHER test still enshrine reader-ink-on-peer-stills? ===
+--- all previewFor references ---
+web/frontend/src/App.vue:39:  previewFor,
+web/frontend/src/App.vue:882:          :preview-for="previewFor"
+web/frontend/src/games/shared/useStagingBridge.test.ts:344:    expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+web/frontend/src/games/shared/useStagingBridge.test.ts:354:    expect(bridge.previewFor("futoshiki")?.authorInk).toEqual(PEER);
+web/frontend/src/games/shared/useStagingBridge.test.ts:373:    expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+web/frontend/src/games/shared/useStagingBridge.test.ts:384:    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+web/frontend/src/games/shared/useStagingBridge.test.ts:394:    expect(bridge.previewFor("futoshiki")?.authorInk).toBeUndefined();
+web/frontend/src/games/shared/useStagingBridge.test.ts:400:    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+web/frontend/src/games/shared/useStagingBridge.test.ts:405:    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+web/frontend/src/pencil/chrome/GameGallery/types.ts:40: * structural, so `previewFor` assigns straight into this at App's seam. It is deliberately a
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue:104:  previewFor?: (id: string) => GalleryPreview | null;
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue:317:  previews[id] = props.previewFor?.(id) ?? null;
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:145:    const previewFor = vi.fn((id: string) => (id === "thermo" ? saved(3) : null));
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:146:    const w = mountDeck({ previewFor });
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:147:    expect(previewFor.mock.calls.map(([id]) => id)).toEqual([
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:162:    const previewFor = vi.fn(() => saved(2));
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:163:    const w = mountDeck({ previewFor });
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:168:    const previewFor = vi.fn((_id: string) => saved(3));
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:169:    const w = mountDeck({ previewFor });
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:170:    previewFor.mockClear();
+web/frontend/src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:172:    expect(previewFor.mock.calls.map(([id]) => id)).toEqual(["futoshiki"]);
+
+--- all authorInk references in TEST files ---
+web/frontend/src/games/posters.test.ts:205:    const authorInk = { "1": { "--color-user-ink": "oklch(0.6 0.11 137.5deg)" } };
+web/frontend/src/games/posters.test.ts:207:      [SudokuPoster, preview({ size: 3, values: { "1": 4 }, authorInk })],
+web/frontend/src/games/posters.test.ts:210:        preview({ size: 3, saved: { thermometers: [[0, 1]] }, authorInk }),
+web/frontend/src/games/posters.test.ts:214:        preview({ size: 3, saved: { cages: [{ sum: 3, cells: [0, 1] }] }, authorInk }),
+web/frontend/src/games/posters.test.ts:216:      [KenKenPoster, preview({ size: 4, saved: { cages: [] }, authorInk })],
+web/frontend/src/games/posters.test.ts:217:      [FutoshikiPoster, preview({ size: 4, saved: { inequalities: [] }, authorInk })],
+web/frontend/src/games/posters.test.ts:220:      expect(w.getComponent(PosterBoard).props("authorInk")).toEqual(authorInk);
+web/frontend/src/games/posters.test.ts:226:    expect(w.getComponent(PosterBoard).props("authorInk")).toBeUndefined();
+web/frontend/src/games/shared/useStagingBridge.test.ts:344:    expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+web/frontend/src/games/shared/useStagingBridge.test.ts:354:    expect(bridge.previewFor("futoshiki")?.authorInk).toEqual(PEER);
+web/frontend/src/games/shared/useStagingBridge.test.ts:360:    bridge.registerAuthorInk(() => ink);
+web/frontend/src/games/shared/useStagingBridge.test.ts:361:    bridge.bankAuthorInk(); // a peer wrote on the sudoku board this page is holding
+web/frontend/src/games/shared/useStagingBridge.test.ts:369:    bridge.bankAuthorInk();
+web/frontend/src/games/shared/useStagingBridge.test.ts:371:    bridge.bankAuthorInk();
+web/frontend/src/games/shared/useStagingBridge.test.ts:373:    expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+web/frontend/src/games/shared/useStagingBridge.test.ts:379:    bridge.registerAuthorInk(() => ink);
+web/frontend/src/games/shared/useStagingBridge.test.ts:380:    bridge.bankAuthorInk();
+web/frontend/src/games/shared/useStagingBridge.test.ts:382:    bridge.bankAuthorInk();
+web/frontend/src/games/shared/useStagingBridge.test.ts:384:    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+web/frontend/src/games/shared/useStagingBridge.test.ts:390:    bridge.bankAuthorInk();
+web/frontend/src/games/shared/useStagingBridge.test.ts:394:    expect(bridge.previewFor("futoshiki")?.authorInk).toBeUndefined();
+web/frontend/src/games/shared/useStagingBridge.test.ts:400:    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+web/frontend/src/games/shared/useStagingBridge.test.ts:405:    expect(bridge.previewFor("sudoku")?.authorInk).toBeUndefined();
+web/frontend/src/games/shared/PosterBoard.test.ts:98:      props: { ...props, authorInk: { "5": PEER } },
+web/frontend/src/games/kenken/KenKenPoster.test.ts:81:    expect(board.props("authorInk")).toBeUndefined();
+web/frontend/src/games/futoshiki/FutoshikiPoster.test.ts:78:    expect(w.getComponent(PosterBoard).props("authorInk")).toBeUndefined();
+web/frontend/src/games/killer/KillerPoster.test.ts:63:    expect(board.props("authorInk")).toBeUndefined();
+
+--- e2e specs touching still ink / authorship ---
+web/frontend/e2e/follow-still-authorship.spec.ts
+web/frontend/e2e/permalink.spec.ts
+web/frontend/e2e/wordmark-integrity.spec.ts
+web/frontend/e2e/session-substrate.spec.ts
+
+--- the OLD enshrining row: 'no OTHER game.s still' ---
+
+--- useStagingBridge.test.ts:330-360 (the cited enshrining seam) ---
+
+  beforeEach(() => {
+    for (const s of SOURCES)
+      window.localStorage.setItem(
+        s.persistKey,
+        persistedBoard({
+          sizeKey: "size",
+          size: 3,
+          difficulty: "EASY",
+          given: ["0"],
+          mine: ["9"],
+        }),
+      );
+    bridge.backfillLedger(SOURCES);
+  });
+
+  it("the MOUNTED game's still carries the board's per-cell ink", () => {
+    bridge.publishMountedGame("sudoku");
+    bridge.registerAuthorInk(() => PEER);
+    expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+  });
+
+  it("the still a FOLLOW parks the room's board on carries the room's ink, unmounted", () => {
+    bridge.publishMountedGame("sudoku");
+    bridge.registerAuthorInk(() => PEER);
+    // The room turned the table to futoshiki. The blob about to become futoshiki's SAVED board is
+    // the one the clock in hand describes — the session adopted both off the same `st` — so the
+    // still it becomes owes those digits their colours, and it owes them after the seat moves on.
+    bridge.stageBoardFollow("futoshiki", 3, { b: {}, m: {} });
+    expect(bridge.previewFor("futoshiki")?.authorInk).toEqual(PEER);
+  });
+
+  it("the game the table turns AWAY from keeps the ink its own board earned", () => {
+    bridge.publishMountedGame("sudoku");
+    let ink: Record<string, Record<string, string>> = PEER;
+    bridge.registerAuthorInk(() => ink);
+    bridge.bankAuthorInk(); // a peer wrote on the sudoku board this page is holding
+
+    // …and now a peer switches the table. The session replaces the clock with the INCOMING
+    // board's BEFORE it stages the follow, which is exactly why a snapshot taken from here on
+    // would colour sudoku's digits out of futoshiki's clock. Both orderings of App's watch and
+    // App's mounted-id publish are played below; the armed follow refuses the write either way.
+    ink = { "3": { "--color-user-ink": "oklch(0.7 0.1 40deg)" } };
+    bridge.stageBoardFollow("futoshiki", 3, { b: {}, m: {} });
+    bridge.bankAuthorInk();
+    bridge.publishMountedGame("futoshiki");
+    bridge.bankAuthorInk();
+
+    expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+  });
+
+=== do the poster-level toBeUndefined rows enshrine the withhold? ===
+  "12+",
+];
+
+describe("KenKenPoster — no true board to show, so the canned worksheet", () => {
+  it("a card nobody has played renders the canned, BOXLESS 6×6 with its full partition", () => {
+    const w = mount(KenKenPoster, { global: { stubs } });
+    const board = w.getComponent(PosterBoard);
+    expect(board.props("boardSize")).toBe(CANNED_SIDE);
+    // Latin geometry: subgrid = board side, so the grid draws no interior box lines.
+    expect(board.props("subgridSize")).toBe(CANNED_SIDE);
+    expect(board.props("givens")).toBeUndefined();
+    expect(board.props("authorInk")).toBeUndefined();
+    // The one canned face in the deck with nothing written on it — KenKen prints no givens,
+    // and an unplayed card has no marks either.
+    expect(digits(w)).toEqual([]);
+    expect(cageLabels(w)).toEqual(CANNED_TARGETS);
+---
+    const w = mount(FutoshikiPoster, { global: { stubs } });
+    expect(w.getComponent(PosterBoard).props("boardSize")).toBe(CANNED_SIDE);
+    expect(w.getComponent(PosterBoard).props("subgridSize")).toBe(CANNED_SIDE);
+    // No given set at all — PosterBoard reads that as "every digit is a given", which is what
+    // an example worksheet is. A canned face has no authorship to hand down either.
+    expect(w.getComponent(PosterBoard).props("givens")).toBeUndefined();
+    expect(w.getComponent(PosterBoard).props("authorInk")).toBeUndefined();
+    expect(digits(w)).toEqual(CANNED_DIGITS);
+    expect(caretGlyphs(w)).toHaveLength(CANNED_CARETS);
+  });
+
+---
+  it("a card nobody has played renders the canned 9×9 in 3×3 bands, cages and all", () => {
+    const w = mount(KillerPoster, { global: { stubs } });
+    const board = w.getComponent(PosterBoard);
+    expect(board.props("boardSize")).toBe(CANNED_SIDE);
+    expect(board.props("subgridSize")).toBe(3);
+    // No given set at all — PosterBoard reads that as "every digit is a given", which is what
+    // an example worksheet is. A canned face has no authorship to hand down either.
+    expect(board.props("givens")).toBeUndefined();
+    expect(board.props("authorInk")).toBeUndefined();
+    expect(digits(w)).toEqual(CANNED_DIGITS);
+    expect(cageLabels(w)).toEqual(CANNED_SUMS);
+  });
+
+  it("a size off the 2/3/4 band is refused before its cages are even read", () => {
+---
+      expect(w.getComponent(PosterBoard).props("authorInk")).toEqual(authorInk);
+    }
+  });
+
+  it("a canned face has no authorship to hand down", () => {
+    const w = mount(SudokuPoster, { global: { stubs } });
+    expect(w.getComponent(PosterBoard).props("authorInk")).toBeUndefined();
+  });
+
+  it("every poster stays on pose 0 — a still enrols nothing, true or canned", () => {
+    for (const [P, p] of [

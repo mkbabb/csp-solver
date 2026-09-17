@@ -4,10 +4,16 @@ import type { Component } from "vue";
  * The card shape the gallery renders (T4-W12) — a PENCIL-LOCAL type, deliberately NOT
  * imported from `@games/cards` (pencil imports nothing from games/**, the eslint
  * boundary). TypeScript is structural, so the table's richer `GameCard` (which also
- * carries `load`/`eager` — the mount half the gallery never touches) assigns straight
- * into `readonly GalleryCard[]` at App.vue's `<GameGallery :cards="GAMES">` seam. The
+ * carries `mount` — the half the gallery never touches) assigns straight into
+ * `readonly GalleryCard[]` at App.vue's `<GameGallery :cards="GAMES">` seam. The
  * gallery is handed already-erased presentation data + loader thunks; it never reaches
  * into domain state.
+ *
+ * T9-W6 §6.1: this named `load`/`eager`, the two slots that folded into the single
+ * `mount`. Structural assignability is unchanged — the gallery reads none of them —
+ * but a comment naming fields that no longer exist is the doc-truth class this
+ * campaign closes, and a pencil-local twin of a games type is exactly where such a
+ * name goes stale unseen.
  */
 export interface GalleryCard {
   /** URL token + stable id; drives `?game=`, aria ids, and v-for keys. */

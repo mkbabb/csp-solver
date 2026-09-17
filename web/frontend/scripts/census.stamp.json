@@ -1,50 +1,50 @@
 {
-  "_": "THE ONE STAMPED CENSUS (T9-W5 \u00a75.2). Every count floor in the frontend estate reads its number from THIS file and from nowhere else: check-unit-count.mjs and check-pw-projects.mjs READ it at load and carry no number of their own, and docs/tranches/2026-08-tranche-9/gates.json cites it by path rather than copying a figure. Before this file the same floor lived in three places carrying three different numbers (script 434 / gates.json 300 / ci.yml prose 300-against-477) and nothing could tell you which one the lane enforced.",
-  "_ci_prose": "CLOSED (T9-W5 dist lane + chair fold, 2026-08-28): ci.yml's two prose homes were re-pointed at this stamp \u2014 the lane-map row and the count-floor comment now both say the number lives HERE and nowhere else. The provenance split is closed three-thirds: script, gates.json and ci.yml all read or cite this one file.",
+  "_": "THE ONE STAMPED CENSUS (T9-W5 §5.2). Every count floor in the frontend estate reads its number from THIS file and from nowhere else: check-unit-count.mjs and check-pw-projects.mjs READ it at load and carry no number of their own, and docs/tranches/2026-08-tranche-9/gates.json cites it by path rather than copying a figure. Before this file the same floor lived in three places carrying three different numbers (script 434 / gates.json 300 / ci.yml prose 300-against-477) and nothing could tell you which one the lane enforced.",
+  "_ci_prose": "CLOSED (T9-W5 dist lane + chair fold, 2026-08-28): ci.yml's two prose homes were re-pointed at this stamp — the lane-map row and the count-floor comment now both say the number lives HERE and nowhere else. The provenance split is closed three-thirds: script, gates.json and ci.yml all read or cite this one file.",
   "_hand": "NEVER edited by hand. `--restamp` writes it: `node scripts/check-unit-count.mjs --restamp <vitest-report.json>` and `node scripts/check-pw-projects.mjs --restamp`. A hand-lowered floor REDs the band arm in both gates, which is the point.",
   "law": {
     "band": 0.85,
     "churnRoom": 0.9,
     "exactAtOrBelow": 10,
-    "derive": "live <= exactAtOrBelow ? live : max(floor(live * churnRoom), ceil(live * band)) \u2014 a project of deliberate arity sits at its exact live count; a bigger one keeps ~10% of churn room, never so much that it falls out of the band. The max() closes the 11-and-12 hole: floor(11*0.9)=9 sits UNDER ceil(11*0.85)=10, so the plain churn rule would derive a floor its own band rejects.",
-    "band_rule": "floor >= ceil(band * max(stampedCensus, live)). The band is held against whichever is HIGHER \u2014 the stamp or what the tree resolves right now \u2014 so it REDs in both directions: a census inflated above live REDs it (the stamp is a claim, not a wish), and an estate that grows past the floor without a restamp REDs it (silent slack growth, the disease). 0.85 buys ~17.6% of growth room before a restamp is compulsory.",
+    "derive": "live <= exactAtOrBelow ? live : max(floor(live * churnRoom), ceil(live * band)) — a project of deliberate arity sits at its exact live count; a bigger one keeps ~10% of churn room, never so much that it falls out of the band. The max() closes the 11-and-12 hole: floor(11*0.9)=9 sits UNDER ceil(11*0.85)=10, so the plain churn rule would derive a floor its own band rejects.",
+    "band_rule": "floor >= ceil(band * max(stampedCensus, live)). The band is held against whichever is HIGHER — the stamp or what the tree resolves right now — so it REDs in both directions: a census inflated above live REDs it (the stamp is a claim, not a wish), and an estate that grows past the floor without a restamp REDs it (silent slack growth, the disease). 0.85 buys ~17.6% of growth room before a restamp is compulsory.",
     "ratchet": "restamp takes max(banked, derived), so closing slack never hands any back and a restamp on an unmoved tree proposes NOTHING (it round-trips). Only when the derived floor would sit ABOVE live have tests actually left: that is a real LOWERING and needs --restamp --allow-lower \"<where they went>\".",
-    "_why_ratchet": "T7 blamed a data-loop miscount for the restamp arm's refusal. The true mechanism (V4, reproduced at HEAD): the arm derives its floors under a rule the banked floors were never authored under, so it proposed 14 -> 12 on both theme-quadrants projects, called that a LOWERING, and exited 1. The arm could not run at a WGATE without an --allow-lower saying tests had left when none had. check-coverage-floor.mjs already carries the max() ratchet for the identical problem (T7-W6 evidence, floor-restamp-mechanism.txt \u00a72); this is that cure applied to the other two floors."
+    "_why_ratchet": "T7 blamed a data-loop miscount for the restamp arm's refusal. The true mechanism (V4, reproduced at HEAD): the arm derives its floors under a rule the banked floors were never authored under, so it proposed 14 -> 12 on both theme-quadrants projects, called that a LOWERING, and exited 1. The arm could not run at a WGATE without an --allow-lower saying tests had left when none had. check-coverage-floor.mjs already carries the max() ratchet for the identical problem (T7-W6 evidence, floor-restamp-mechanism.txt §2); this is that cure applied to the other two floors."
   },
   "unit": {
     "_": "check-unit-count.mjs. census.executed = passed + failed; pending/todo never count. One number, one floor.",
     "stamp": {
-      "sha": "4dd9ec9c",
-      "date": "2026-08-28",
-      "wave": "T9-W5 \u00a75.2 (wave-time; the WGATE restamps)",
+      "sha": "4686436f",
+      "date": "2026-09-17",
+      "wave": "T9-W3+W6 seal 2026-09-17 — the spoken product and the substrate, 810 rows",
       "note": ""
     },
     "census": {
-      "executed": 735,
-      "files": 57,
-      "suites": 237
+      "executed": 810,
+      "files": 66,
+      "suites": 262
     },
-    "floor": 661
+    "floor": 729
   },
   "pw": {
-    "_": "check-pw-projects.mjs, keyed \"<config>::<project>\". listed = what `playwright test --list` resolves; census = LIVE, i.e. listed minus any declared quarantine AT THE PLATFORM THAT DECLARES IT (never the running one \u2014 a census taken on darwin, where no quarantine applies, would bank floors of 6 and 10 for the two parked projects and red the ubuntu lane on its next run).",
+    "_": "check-pw-projects.mjs, keyed \"<config>::<project>\". listed = what `playwright test --list` resolves; census = LIVE, i.e. listed minus any declared quarantine AT THE PLATFORM THAT DECLARES IT (never the running one — a census taken on darwin, where no quarantine applies, would bank floors of 6 and 10 for the two parked projects and red the ubuntu lane on its next run).",
     "stamp": {
-      "sha": "4dd9ec9c",
-      "date": "2026-08-28",
+      "sha": "4686436f",
+      "date": "2026-09-17",
       "platform": "darwin",
-      "wave": "T9-W5 \u00a75.2 (wave-time; the WGATE restamps)",
+      "wave": "T9-W3+W6 fold 2026-09-17 — the CH-62 park torn down, W3's four new specs, share-truth per-row",
       "note": ""
     },
     "projects": {
       "playwright.config.ts::chromium": {
-        "listed": 221,
-        "census": 221,
-        "floor": 198
+        "listed": 238,
+        "census": 238,
+        "floor": 214
       },
       "playwright.config.ts::webkit": {
-        "listed": 216,
-        "census": 216,
-        "floor": 194
+        "listed": 238,
+        "census": 236,
+        "floor": 212
       },
       "playwright-golden.config.ts::(default)": {
         "listed": 4,
@@ -68,8 +68,8 @@
       },
       "playwright-throttle.config.ts::wordmark-webkit": {
         "listed": 6,
-        "census": 1,
-        "floor": 1
+        "census": 6,
+        "floor": 6
       },
       "playwright-throttle.config.ts::theme-bake-chromium": {
         "listed": 10,
@@ -78,8 +78,8 @@
       },
       "playwright-throttle.config.ts::theme-bake-webkit": {
         "listed": 10,
-        "census": 0,
-        "floor": 0
+        "census": 10,
+        "floor": 10
       },
       "playwright-throttle.config.ts::theme-quadrants-chromium": {
         "listed": 14,

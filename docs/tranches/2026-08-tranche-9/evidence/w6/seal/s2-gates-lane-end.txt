@@ -1,0 +1,57 @@
+S2 (THE RECORD'S LAST LIES) — gates at lane end, 2026-09-17
+repo HEAD 4686436f (working tree, uncommitted — the chair commits)
+
+$ node scripts/check-doc-truth.mjs   [from repo root, bare]
+
+0 RED / 42 GREEN — canon holds
+EXIT=0
+
+$ node scripts/ledger-diff.mjs --assert-state
+
+VERDICT
+  GREEN — 5 audited rows present-or-cited; 4 open ledger rows current under ORPHAN · FREEZE · TERMINALITY · FOLD-TARGET · PROBE · DUPLICATE · ONE-HOME · LIVE-REGION. exit 0
+EXIT=0
+
+$ cd web/relay && npx tsc -p . --noEmit
+EXIT=0
+
+$ cd web/relay && npx eslint .
+EXIT=0
+
+$ cd web/frontend && npx prettier --check --config .prettierrc.json ../relay/relay.ts scripts/tdz-probe.mjs
+Checking formatting...
+All matched files use Prettier code style!
+EXIT=0
+
+$ cd web/frontend && node scripts/tdz-probe.mjs --self-test
+
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways
+EXIT=0
+
+$ cd web/frontend && npm run typecheck:node
+> vue-tsc --noEmit -p tsconfig.node.json
+
+EXIT=0
+
+$ cd web/frontend && npm run typecheck:e2e
+> vue-tsc --noEmit -p tsconfig.e2e.json
+
+EXIT=0
+
+$ cd web/frontend && node scripts/check-copy-register.mjs
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (2 admitted, each with its cure's seam)
+EXIT=0
+
+$ git grep -nI RELAY_URLS  [the residue, see s2-notes]
+docs/tranches/2026-08-tranche-7/waves/W5-the-multiplayer-record.md:45:1. **`relay-origin-pair`** — the CSP `connect-src` origin, `useSession.ts`'s `RELAY_URLS`
+docs/tranches/2026-08-tranche-7/waves/W5-the-multiplayer-record.md:79:  `RELAY_URLS` const plus a build-time env read. `relay-origin-pair` gates the invariant; the
+scripts/check-doc-truth.mjs:1114: * T9-W6 §6.1 renamed the client's constant `RELAY_URLS` (a one-element array whose
+EXIT=0
+
+$ node scripts/check-evidence-policy.mjs   [run BARE — the pipe eats the exit code]
+EXIT=1 — PRE-EXISTING, and NOT S2's.
+  20 breaches: 18 per-image PNG + 2 per-wave (w3 4,135,716 B / w6 3,855,113 B over a 2,097,152 B cap).
+  Identical to the state FA5 banked BEFORE this lane opened (fold/FA5-evidence-policy-after.txt):
+  582 png / 45,012,307 B / 20 breaches, byte-for-byte the same header both sides.
+  S2 banked only .md/.txt, which this gate does not weigh; no breach names an S2 file.

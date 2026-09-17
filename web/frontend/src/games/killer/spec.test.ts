@@ -15,6 +15,7 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { killerSpec } from "./spec";
+import { subgridSizes, difficultyOptions } from "@games/shared/selectors";
 import { persistence } from "./composables/useKiller";
 import CageOverlay from "@games/shared/CageOverlay.vue";
 import type { KillerCage } from "./types";
@@ -56,9 +57,11 @@ describe("Killer's GameSpec (T5-W2 F2 — the migrated contract)", () => {
   it("exposes a size + difficulty section over the live model", () => {
     const sections = killerSpec.deal.options(killerSpec.model());
     expect(sections.map((s) => s.key)).toEqual(["size", "difficulty"]);
-    // The bands the drawer renders are the bands the card stages from — one vocabulary.
-    expect(sections[0].options).toBe(killerSpec.deal.sizes);
-    expect(sections[1].options).toBe(killerSpec.deal.difficulty);
+    // The bands the drawer renders are the bands the card stages from — one vocabulary, and
+    // since T9-W6 §6.1 that vocabulary is named once, in `@games/shared/selectors`, rather
+    // than re-declared on every spec's `deal` slot where only sudoku's row could read it.
+    expect(sections[0].options).toBe(subgridSizes);
+    expect(sections[1].options).toBe(difficultyOptions);
   });
 
   it("names its board on disk once — the codec's own key", () => {

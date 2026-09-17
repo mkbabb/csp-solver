@@ -23,7 +23,6 @@
 import type { Component, Ref } from "vue";
 import type { ConflictSink, ExtraUnit } from "@games/shared/conflicts";
 import type { ControlSection } from "@games/shared/GameControlPanel.vue";
-import type { SelectorBand } from "@games/shared/selectors";
 import type { SolveState, SolveStats } from "@games/shared/types";
 import type { HintResult } from "@games/shared/techniqueEngine";
 import type { CellRefusal } from "@games/shared/useGameState";
@@ -58,6 +57,11 @@ export interface GameModel {
   // What the model publishes instead is the refusal itself, for the margin that speaks it.
   lastRefusal: Readonly<Ref<CellRefusal | null>>;
   animatingCells: ReadRef<Set<string>>;
+  /** T9-W3 §3.5 — the last forced sweep's OWN count, stamped so two equal sweeps are two acts.
+   *  The wave (`animatingCells` above) is written by four acts and cannot name the one that
+   *  moved it; this is written by the sweep alone, so the board's voice reads the act rather
+   *  than inferring it from its effect. Null until a sweep forces something. */
+  lastFill: ReadRef<{ count: number; stamp: number } | null>;
   solveState: Readonly<Ref<SolveState>>;
   solvedValues: ReadRef<Record<string, number>>;
   solveStats: ReadRef<SolveStats | null>;
@@ -164,21 +168,28 @@ interface ClueSeam<TModel, TClue> {
 }
 
 /**
- * What a game is dealt at: the two bands the picker and the drawer both render, and the live
- * sections built over the model. The bands are constants the gallery can name WITHOUT loading
- * a game, which is how the card keeps its range sub-line without `load()`.
+ * What a game is dealt at: the live drawer sections, built over the model.
+ *
+ * TWO SLOTS RETIRED HERE, T9-W6 §6.1. `sizes: SelectorBand` and `difficulty: SelectorBand` sat
+ * beside `options` and were justified as "constants the gallery can name WITHOUT loading a
+ * game". They could not do that job for four games in five: reaching a lazy row's spec from
+ * `cards.ts` drags that game's model and solver client into the main chunk, which is the one
+ * thing the table exists to avoid, so the ONLY reader either slot ever had was the sudoku row —
+ * the eager one — and it was reading constants that live in `@games/shared/selectors` anyway.
+ * Five games declared them, one could use them, and each declaration duplicated the band its
+ * own `options` names one line below. A contract slot four of five implementations carry
+ * without a reader is not a contract; it is a shape everybody copies. The cards table now reads
+ * the shared bands directly for all five rows, which is where the one source always was.
  *
  * AMENDMENT, T5-W2 F1 (named cause, dated): §1.2 also fixed a `prewarm?: boolean` here, as
  * `GameCard.eager`'s new home. It is NOT here, because it had no reader `eager` did not
- * already serve. Every mounted scene warms its own worker on its first idle tick — the eager
- * game at app mount, a lazy game on select — so a per-spec flag would have carried one value
- * for all five games while `eager` (which App reads to pick the main-chunk ride, and the
- * gallery's warm loop reads to skip it) carried the real fact. A boolean with one value is
- * the config-flag disease this contract's own KISS guard names.
+ * already serve — and `eager` is itself gone at T9-W6, folded into `GameCard.mount`, whose
+ * SHAPE (a spec, or a thunk that fetches one) states the chunking that boolean used to claim.
+ * Every mounted scene warms its own worker on its first idle tick, so a per-spec flag would
+ * have carried one value for all five games. A boolean with one value is the config-flag
+ * disease this contract's own KISS guard names.
  */
 interface DealSpec<TModel> {
-  sizes: SelectorBand;
-  difficulty: SelectorBand;
   options: (model: TModel) => ControlSection[];
 }
 

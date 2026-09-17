@@ -1,0 +1,76 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ❯ src/games/shared/useStagingBridge.test.ts (24 tests | 4 failed) 14ms
+     × the still a FOLLOW parks the room's board on carries the room's ink, unmounted 2ms
+     × the game the table turns AWAY from keeps the ink its own board earned 0ms
+     × an emptied clock RETIRES the seat's bank — a page that left the room draws its own ink 0ms
+     × a board nothing ever said anything about carries none — silence is not a guess 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > the still a FOLLOW parks the room's board on carries the room's ink, unmounted
+AssertionError: expected undefined to deeply equal { Object (9) }
+
+- Expected:
+{
+  "9": {
+    "--color-user-ink": "oklch(0.6 0.11 137.5deg)",
+  },
+}
+
++ Received:
+undefined
+
+ ❯ src/games/shared/useStagingBridge.test.ts:354:55
+    352|     // still it becomes owes those digits their colours, and it owes t…
+    353|     bridge.stageBoardFollow("futoshiki", 3, { b: {}, m: {} });
+    354|     expect(bridge.previewFor("futoshiki")?.authorInk).toEqual(PEER);
+       |                                                       ^
+    355|   });
+    356|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > the game the table turns AWAY from keeps the ink its own board earned
+TypeError: bridge.bankAuthorInk is not a function
+ ❯ src/games/shared/useStagingBridge.test.ts:361:12
+    359|     let ink = PEER;
+    360|     bridge.registerAuthorInk(() => ink);
+    361|     bridge.bankAuthorInk(); // a peer wrote on the sudoku board this p…
+       |            ^
+    362|
+    363|     // …and now a peer switches the table. The session replaces the cl…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > an emptied clock RETIRES the seat's bank — a page that left the room draws its own ink
+TypeError: bridge.bankAuthorInk is not a function
+ ❯ src/games/shared/useStagingBridge.test.ts:380:12
+    378|     let ink: Record<string, Record<string, string>> = PEER;
+    379|     bridge.registerAuthorInk(() => ink);
+    380|     bridge.bankAuthorInk();
+       |            ^
+    381|     ink = {}; // the room ended; the LIVE board drops the colours too,…
+    382|     bridge.bankAuthorInk();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > a board nothing ever said anything about carries none — silence is not a guess
+TypeError: bridge.bankAuthorInk is not a function
+ ❯ src/games/shared/useStagingBridge.test.ts:390:12
+    388|     bridge.publishMountedGame("sudoku");
+    389|     bridge.registerAuthorInk(() => PEER);
+    390|     bridge.bankAuthorInk();
+       |            ^
+    391|     // futoshiki's saved board was written in some other room, or in n…
+    392|     // no clock was ever about it; the mounted clock says nothing of w…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 20 passed (24)
+   Start at  18:13:56
+   Duration  563ms (transform 19ms, setup 12ms, import 26ms, tests 14ms, environment 413ms)
+

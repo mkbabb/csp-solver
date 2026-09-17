@@ -185,3 +185,29 @@ section's foot with what survives of them.
 ---
 
 **126 rows in all.** Stability rule: re-read at the T9 WGATE — the row count and every status must reconcile; a row that moved cites the wave that moved it.
+
+## Corrections
+
+Appended, never merged into the rows above: sealed formation record under the freeze law. The
+row count is unchanged — a correction restates a row's claim, it does not add or retire one.
+
+**CORRECTION (T9-W6 fold, 2026-09-17) — T8-R09's wanderer clause (`:159`).** The row's T9
+column says B6 censuses `e2e/gallery.spec.ts:317` (the deck-drag advance) "as failing TERMINALLY
+under whole-suite contention with 0/38 reds in isolation". Measured at the tree under four
+controls, that is false in its strongest word. ISOLATED, 3 runs × both engines: **6/6 green**
+(`../w6/holdouts/wanderer-isolated-control.txt`). CPU-SATURATED — 18 cores under `yes`, 6
+workers, `--repeat-each=6`, this row plus its kenken twin: **12/12 green**
+(`../w6/holdouts/wanderer-cpu-load.txt`), so contention is not the mechanism either. WHOLE SUITE
+run 1: **RED** in webkit (`../w6/holdouts/full-suite-contention.txt`). Runs 2 and 3, same tree,
+same command: **GREEN** both engines (`../w6/holdouts/full-suite-lane-end.txt`). The honest
+reading is **INTERMITTENT under whole-suite load, one red in three full-suite runs** — not
+terminal, and not CPU-bound.
+
+What the row got RIGHT is the part that mattered: the class was absorbing a row that may not
+belong to it, and nothing re-adjudicated a row once attributed. §6.3 did the re-adjudication the
+row asked for. The disposition is a TEST cure, not a product change: the row now asserts its own
+premise (rung, card count, slot, anchor, checked before the gesture, so a LAYOUT change reds as a
+layout change) and carries a drag ledger whose trail is the assertion's failure message, naming
+mechanism A (never taken as a drag), A′ (step computed zero) or B (step taken and walked back).
+Both discriminations are plant-proved at `../w6/holdouts/wanderer-ledger-plant.txt`. The cite has
+moved with the cure: the row now reads `e2e/gallery.spec.ts:464`.

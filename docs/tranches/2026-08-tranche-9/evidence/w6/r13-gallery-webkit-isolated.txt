@@ -1,0 +1,61 @@
+
+Running 23 tests using 9 workers
+
+[1/23] [webkit] › e2e/gallery.spec.ts:91:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips
+[2/23] [webkit] › e2e/gallery.spec.ts:183:1 › gallery: Escape cancels back to the board, no swap, ?view cleared
+[3/23] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by a staged chip
+[4/23] [webkit] › e2e/gallery.spec.ts:263:1 › gallery: only the centered card boils — a flank frame is inert + frozen
+[5/23] [webkit] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+[6/23] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by bare page
+[7/23] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by a page pip
+[8/23] [webkit] › e2e/gallery.spec.ts:167:1 › gallery: Enter on futoshiki selects it — board swaps, ?game set, ?view cleared
+[9/23] [webkit] › e2e/gallery.spec.ts:237:1 › gallery: `g` opens the gallery from playing; a `g` typed into a cell does not
+[10/23] [webkit] › e2e/gallery.spec.ts:292:3 › gallery under prefers-reduced-motion › PRM: open is an instant cut — gallery present, no tweening
+[11/23] [webkit] › e2e/gallery.spec.ts:317:1 › drag: pushing the deck left advances the snap and announces it
+[12/23] [webkit] › e2e/gallery.spec.ts:338:1 › drag: a flick moves exactly one card; a release over the centered card selects nothing
+[13/23] [webkit] › e2e/gallery.spec.ts:373:1 › drag: a flick whose every move lands inside the sample floor is still a flick
+[14/23] [webkit] › e2e/gallery.spec.ts:423:1 › drag: a slow first sample does not swallow the flick that follows it
+[15/23] [webkit] › e2e/gallery.spec.ts:470:1 › drag: a release that lands a frame after the last move is still a flick
+[16/23] [webkit] › e2e/gallery.spec.ts:521:1 › drag: a grab during a keyboard glide freezes the deck where it is drawn
+[17/23] [webkit] › e2e/gallery.spec.ts:582:1 › click: a flank warps the deck to it, aria + the live region following the same seam
+[18/23] [webkit] › e2e/gallery.spec.ts:618:1 › click: the card the warp delivered then SELECTS on the next click
+[19/23] [webkit] › e2e/gallery.spec.ts:641:1 › drag: a release that lands over a FLANK is swallowed, not taken as a warp
+[20/23] [webkit] › e2e/gallery.spec.ts:677:1 › drag: kenken — the LAST card — is reachable by dragging
+[21/23] [webkit] › e2e/gallery.spec.ts:693:1 › header: the masthead persists in the gallery, names the snapped card, and is inert there
+[22/23] [webkit] › e2e/gallery.spec.ts:785:1 › CH-67: every settled wordmark bake is minted at the size it is shown at
+[23/23] [webkit] › e2e/gallery.spec.ts:822:3 › gallery on a 375 phone › 375: one card near-fills the width, a neighbor peeks, pips present
+  1) [webkit] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('.gallery-live')
+    Expected: "sudoku, 1 of 5. 9×9 easy, board dealt"
+    Received: "sudoku, 1 of 5. 9×9 easy, new game"
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveText" with timeout 10000ms
+      - waiting for locator('.gallery-live')
+        23 × locator resolved to <div role="status" data-v-08f2b41b="" aria-live="polite" class="gallery-live">sudoku, 1 of 5. 9×9 easy, new game</div>
+           - unexpected value "sudoku, 1 of 5. 9×9 easy, new game"
+
+
+      158 |   await page.keyboard.press('Home');
+      159 |   await expect(listbox).toHaveAttribute('aria-activedescendant', 'gallery-card-0');
+    > 160 |   await expect(page.locator('.gallery-live')).toHaveText(
+          |                                               ^
+      161 |     'sudoku, 1 of 5. 9×9 easy, board dealt',
+      162 |   );
+      163 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:160:47
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-gallery-keyboard-s-71f6b-es-it-and-updates-aria-pips-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-gallery-keyboard-s-71f6b-es-it-and-updates-aria-pips-webkit/error-context.md
+
+
+  1 failed
+    [webkit] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips 
+  22 passed (52.5s)

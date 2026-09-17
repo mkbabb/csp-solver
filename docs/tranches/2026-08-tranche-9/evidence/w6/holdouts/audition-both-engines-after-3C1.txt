@@ -1,0 +1,36 @@
+
+Running 10 tests using 9 workers
+
+[1/10] [chromium] › e2e/share-truth.spec.ts:145:1 › futoshiki corrupt ?board= surfaces the margin-voice notice (twin)
+[2/10] [chromium] › e2e/share-truth.spec.ts:84:1 › sudoku share failure: "couldn't copy" signal, link still live in the address bar
+[3/10] [webkit] › e2e/share-truth.spec.ts:109:1 › futoshiki share failure: the same "couldn't copy" signal (twin)
+[4/10] [chromium] › e2e/share-truth.spec.ts:109:1 › futoshiki share failure: the same "couldn't copy" signal (twin)
+[5/10] [webkit] › e2e/share-truth.spec.ts:58:1 › sudoku share success: label + aria confirm AND the clipboard holds the link
+[6/10] [webkit] › e2e/share-truth.spec.ts:84:1 › sudoku share failure: "couldn't copy" signal, link still live in the address bar
+[7/10] [chromium] › e2e/share-truth.spec.ts:136:1 › sudoku corrupt ?board= surfaces the margin-voice notice
+[8/10] [chromium] › e2e/share-truth.spec.ts:58:1 › sudoku share success: label + aria confirm AND the clipboard holds the link
+[9/10] [webkit] › e2e/share-truth.spec.ts:136:1 › sudoku corrupt ?board= surfaces the margin-voice notice
+  1) [webkit] › e2e/share-truth.spec.ts:58:1 › sudoku share success: label + aria confirm AND the clipboard holds the link 
+
+    Error: browserContext.grantPermissions: Unknown permission: clipboard-write
+
+      60 |   context,
+      61 | }) => {
+    > 62 |   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+         |                 ^
+      63 |   await page.goto('./?board=' + encodeSudoku(3, { 0: 5 }, 81));
+      64 |   await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
+      65 |   const share = shareButton(page);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/share-truth.spec.ts:62:17
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/share-truth-sudoku-share-s-d216e-he-clipboard-holds-the-link-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/share-truth-sudoku-share-s-d216e-he-clipboard-holds-the-link-webkit/error-context.md
+
+
+[10/10] [webkit] › e2e/share-truth.spec.ts:145:1 › futoshiki corrupt ?board= surfaces the margin-voice notice (twin)
+  1 failed
+    [webkit] › e2e/share-truth.spec.ts:58:1 › sudoku share success: label + aria confirm AND the clipboard holds the link 
+  9 passed (4.0s)

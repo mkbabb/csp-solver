@@ -1,0 +1,53 @@
+=== eslint boundary graph over src/games ===
+boundary exit=0
+
+=== eslint, whole estate ===
+eslint exit=0
+
+=== prettier --check (the pinned .prettierrc.json, run FROM web/frontend) ===
+Checking formatting...
+[warn] ../../scripts/check-doc-truth.mjs
+[warn] Code style issues found in the above file. Run Prettier with --write to fix.
+prettier exit=1
+
+=== tdz-probe (the cards->spec static-import law) ===
+reproduction (4 modules, executed):
+  OLD graph (scene → game → registry → scene): THREW — ReferenceError: Cannot access 'scene' before initialization
+  NEW graph (spec → defineGame, cards → spec): BOOTED
+
+graph census (src/games): 0 cycle edge(s)
+
+negative control (a synthetic game importing the table): RED as required
+
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways
+tdz exit=0
+
+=== copy register ===
+copy register scanned across 137 files
+allowlisted: src/pencil/dev/FilterTuner.vue (DEV-only tool, gated import.meta.env.DEV — never shipped), src/pencil/config/filterBudget.ts (census reasons read by check-prod-shake, never by a reader)
+em/en dashes in product copy: 0
+jargon over RENDERED strings: 2 hit(s), 2 admitted, 0 unadmitted (lexicon: 25 entries)
+  ~ src/games/shared/GameControlPanel.vue:1261  [@text]  "solver" (the machine's name) — ADMITTED 2026-08-28
+  ~ src/games/shared/GameControlPanel.vue:944  [template]  "candidates" (solver vocabulary for what a player calls a pencil mark) — ADMITTED 2026-08-28
+
+self-test (both colours):
+  dash · template text dash  →  1 offence(s), RED as required
+  dash · string literal dash  →  1 offence(s), RED as required
+  dash · dash inside a comment  →  0 offence(s), GREEN as required
+  dash · dash inside a template comment  →  0 offence(s), GREEN as required
+  dash · a header that mentions `<style>`, then a template dash  →  1 offence(s), RED as required
+  jargon · a technique name in an aria-label  →  1 offence(s), RED as required
+  jargon · the machine naming itself on a washi tape  →  1 offence(s), RED as required
+  jargon · solver vocabulary in a script-side copy constant  →  2 offence(s), RED as required
+  jargon · positive control — an ENGINE identifier is not display copy  →  0 offence(s), GREEN as required
+  jargon · positive control — a BOUND attribute is an expression, not a string  →  0 offence(s), GREEN as required
+  jargon · positive control — the player's own verb survives  →  0 offence(s), GREEN as required
+  jargon · positive control — jargon inside a comment is prose about the law  →  0 offence(s), GREEN as required
+  admissions · a ghost admission is detected stale  →  2/2, RED as required
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (2 admitted, each with its cure's seam)
+copy exit=0
+=== prettier --check, re-run after the one-line reflow (the pinned .prettierrc.json) ===
+Checking formatting...
+All matched files use Prettier code style!
+prettier exit=0

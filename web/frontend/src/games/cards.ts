@@ -27,6 +27,7 @@ import type { AnyGameSpec } from "@games/shared/defineGame";
 import type { SelectorBand } from "@games/shared/selectors";
 import {
   difficultyOptions,
+  subgridSizes,
   latinSizes,
   cagedLatinSizes,
 } from "@games/shared/selectors";
@@ -65,11 +66,23 @@ export interface GameCard {
   persistKey: string;
   /** the static, non-interactive, boil-alive-capable poster (a read-only mini-board). */
   poster: () => Promise<Component>;
-  /** the default game rides the main chunk (Sudoku); others stay lazy. */
-  eager?: boolean;
-  /** how the row MOUNTS: it hands the shell its spec, and `GameShell` does the rest. One arm,
-   *  five games — the F1 `scene` interim died with the last unmigrated family. */
-  load: () => Promise<AnyGameSpec>;
+  /**
+   * How the row MOUNTS — one slot, two shapes, and the shape IS the chunking (T9-W6 §6.1).
+   * A spec means the main chunk; a thunk means that game's own lazy chunk. `GameShell` takes
+   * it from there: one arm, five games.
+   *
+   * THIS REPLACES A SLOT AND A BOOLEAN THAT DISAGREED WITH EACH OTHER. The row used to carry
+   * `load: () => Promise<AnyGameSpec>` beside `eager?: boolean`, and App picked between them:
+   * an eager row's `load` was never called — sudoku's `() => Promise.resolve(sudokuSpec)` had
+   * ZERO consumers in the product — because App read `eager` and then mounted a spec it had
+   * imported ITSELF, reaching around the table it was iterating. So the estate had a loader
+   * nothing loaded, a boolean four of five rows did not carry, and a mount path that did not
+   * go through the registry at all. One total slot ends all three: there is no dead arm to
+   * call, no second claim about chunking to drift, and App reads the row rather than the
+   * module beside it. The eager row's spec is still a STATIC import here — the main-chunk
+   * ride, one per table, which `scripts/tdz-probe.mjs` counts.
+   */
+  mount: AnyGameSpec | (() => Promise<AnyGameSpec>);
 }
 
 /** The three tiers, erased to presentation data. Every game carries the same three, so the
@@ -81,17 +94,22 @@ const tiers = (band: SelectorBand) =>
     colorClass: o.colorClass,
   }));
 
-// The three Sudoku-family rows stage off sudoku's OWN selector bands (the ratified variant
-// reuse — Thermo/Killer ARE Sudoku); futoshiki and kenken carry their own. A MIGRATED game's
-// bands are read off its `deal` slot, not off its ControlPanel constants: the spec is where a
-// game says what it is dealt at, so the picker and the drawer cannot drift apart. `default`
-// mirrors each composable's own default size, the value a never-played game deals at.
-const sudokuSizes = sudokuSpec.deal.sizes;
+// The three Sudoku-family rows stage off the BOXED band (the ratified variant reuse —
+// Thermo/Killer ARE Sudoku); futoshiki and kenken name their own. Every row reads the SHARED
+// vocabulary, which is the one source a game's drawer sections read too, so the picker and the
+// drawer cannot drift apart. `default` mirrors each composable's own default size, the value a
+// never-played game deals at.
+//
+// T9-W6 §6.1 — these three used to read `sudokuSpec.deal.sizes` / `.difficulty` instead. That
+// was the estate's ONLY read of those two slots, which every one of the five games carried and
+// four could not have honoured: naming a lazy game's spec from this table would drag it out of
+// its own chunk to fetch a constant the shared module already holds. A contract slot one game
+// in five can use is not a contract, so the slots retired and this row joined the other four.
 const sudokuStaging: CardStaging = {
-  size: { label: "size", options: tiers(sudokuSizes), default: 3 },
+  size: { label: "size", options: tiers(subgridSizes), default: 3 },
   difficulty: {
     label: "level",
-    options: tiers(sudokuSpec.deal.difficulty),
+    options: tiers(difficultyOptions),
     default: "EASY",
   },
 };
@@ -102,12 +120,13 @@ const sudokuStaging: CardStaging = {
 const sudokuCard: GameCard = {
   id: "sudoku",
   name: "sudoku",
-  range: { label: "size", levels: sudokuSizes.map((o) => o.label) },
+  range: { label: "size", levels: subgridSizes.map((o) => o.label) },
   staging: sudokuStaging,
   persistKey: sudokuSpec.urlCodec.key,
   poster: () => import("@games/sudoku/SudokuPoster.vue").then((m) => m.default),
-  load: () => Promise.resolve(sudokuSpec),
-  eager: true,
+  // The spec ITSELF, not a thunk that resolves to it: this row is the main-chunk ride, and
+  // saying so with the value is the whole of saying so.
+  mount: sudokuSpec,
 };
 
 // MIGRATED (F2). Lazy, as it has always been: the spec pulls the model, the clue seam and
@@ -132,7 +151,7 @@ const futoshikiCard: GameCard = {
   // resolves for all five at 2.2, when the one `persistence.ts` owns the keys.
   persistKey: "futoshiki-board-state",
   poster: () => import("@games/futoshiki/FutoshikiPoster.vue").then((m) => m.default),
-  load: () => import("@games/futoshiki/spec").then((m) => m.futoshikiSpec),
+  mount: () => import("@games/futoshiki/spec").then((m) => m.futoshikiSpec),
 };
 
 // MIGRATED (F2). A Sudoku variant → reuses sudoku's own size band for its range sub-line.
@@ -145,11 +164,11 @@ const futoshikiCard: GameCard = {
 const thermoCard: GameCard = {
   id: "thermo",
   name: "thermo",
-  range: { label: "size", levels: sudokuSizes.map((o) => o.label) },
+  range: { label: "size", levels: subgridSizes.map((o) => o.label) },
   staging: sudokuStaging,
   persistKey: "thermo-board-v1",
   poster: () => import("@games/thermo/ThermoPoster.vue").then((m) => m.default),
-  load: () => import("@games/thermo/spec").then((m) => m.thermoSpec),
+  mount: () => import("@games/thermo/spec").then((m) => m.thermoSpec),
 };
 
 // MIGRATED (F2). A Sudoku variant → reuses sudoku's own size band. LAZY, so unlike sudoku's
@@ -160,11 +179,11 @@ const thermoCard: GameCard = {
 const killerCard: GameCard = {
   id: "killer",
   name: "killer",
-  range: { label: "size", levels: sudokuSizes.map((o) => o.label) },
+  range: { label: "size", levels: subgridSizes.map((o) => o.label) },
   staging: sudokuStaging,
   persistKey: "killer-board-v1",
   poster: () => import("@games/killer/KillerPoster.vue").then((m) => m.default),
-  load: () => import("@games/killer/spec").then((m) => m.killerSpec),
+  mount: () => import("@games/killer/spec").then((m) => m.killerSpec),
 };
 
 // MIGRATED (F2). A Latin family with its OWN 4/5/6 band. LAZY, so like killer's row this one
@@ -186,7 +205,7 @@ const kenkenCard: GameCard = {
   },
   persistKey: "kenken-board-v1",
   poster: () => import("@games/kenken/KenKenPoster.vue").then((m) => m.default),
-  load: () => import("@games/kenken/spec").then((m) => m.kenkenSpec),
+  mount: () => import("@games/kenken/spec").then((m) => m.kenkenSpec),
 };
 
 /**

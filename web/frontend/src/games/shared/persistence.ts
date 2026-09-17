@@ -80,7 +80,8 @@ export interface PersistenceConfig<TClue> {
   key: string;
   /** raw selector size → board side: boxed `n**2`, latin `n`. The model's own `boardSizeOf`. */
   boardSide: (rawSize: number) => number;
-  /** the raw selector sizes this game deals at — `spec.deal.sizes`' values. */
+  /** the raw selector sizes this game deals at — the `value`s of its own band in
+   *  `@games/shared/selectors` (`spec.deal.sizes` retired at T9-W6 §6.1). */
   validSizes: readonly number[];
   defaultSize: number;
   /** the tier a fresh boot lands on: sudoku rolls one, the other four state EASY. */

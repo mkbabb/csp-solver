@@ -1,0 +1,85 @@
+=== K-KNIP: THE perf-rig CARVE-OUT RATIONALE, TRUED ON DISK (HEAD 4686436f) ===
+
+CLAIM at knip.json:10-15 — 'its SIX modules run as CHILD PROCESSES of each other and of
+run-safari.sh/run-sim.sh, never as imports' + 'check-lane-membership.mjs is the instrument
+that answers it — it reads ci.yml, which is where the rig's callers live'.
+
+-- 1. HOW MANY MODULES (the number the claim gets wrong) --
+.mjs on disk: 8
+perf-rig/ci-subset.mjs
+perf-rig/peer.mjs
+perf-rig/probe-server.mjs
+perf-rig/run-pw.mjs
+perf-rig/safari-wd.mjs
+perf-rig/summarize.mjs
+perf-rig/validate-headless.mjs
+perf-rig/w5-summarize.mjs
+.js  on disk: 1  (page-injected, not a node module)
+perf-rig/probe.js
+.sh  drivers: 9
+perf-rig/cpu-attrib.sh
+perf-rig/matrix.sh
+perf-rig/pw-driver.sh
+perf-rig/rounds.sh
+perf-rig/run-safari.sh
+perf-rig/run-sim.sh
+perf-rig/sim-matrix.sh
+perf-rig/w5-bench.sh
+perf-rig/w5-solve-trim.sh
+
+-- 2. ARE THEY IMPORTED? (the part the claim gets RIGHT) --
+non-builtin, non-package ES imports between rig modules:
+  ZERO — every import is node: builtin or the playwright package
+
+-- 3. WHO ACTUALLY SPAWNS THEM (the claim names two of them) --
+
+-- 4. IS ci.yml 'where the rig's callers live'? --
+grep -c perf-rig .github/workflows/ci.yml -> 0
+grep -c perf-rig web/frontend/package.json -> 0
+
+-- 5. DOES check-lane-membership.mjs EVEN SCOPE perf-rig? --
+  ZERO hits — the gate scopes scripts/**, never perf-rig/**
+
+VERDICT: 'never as imports' TRUE; 'six modules' FALSE (eight .mjs + probe.js + nine .sh);
+'run-safari.sh/run-sim.sh' UNDER-NAMES the callers (cpu-attrib/matrix/sim-matrix/rounds/
+pw-driver/w5-bench + ci-subset.mjs's own spawn + hand invocation per perf-rig/README.md);
+'check-lane-membership.mjs ... reads ci.yml, which is where the rig's callers live' FALSE
+twice over — that gate does not scope perf-rig, and ci.yml has no rig caller since O-12
+deleted the perf lane at d1daefb3 (LEDGER CH-53, restamped T9-W0).
+
+-- 3 (re-run, quoting fixed): WHO SPAWNS WHAT --
+perf-rig/pw-driver.sh:26:nice -n 15 node "${RIG_DIR}/run-pw.mjs" "${ARGS[@]}"
+perf-rig/rounds.sh:5:for r in "$@"; do "${RIG}/matrix.sh" "$r"; done
+perf-rig/cpu-attrib.sh:18:  TIMEOUT=200 "${RIG}/run-safari.sh" "${ID}" "${SC}" >/dev/null 2>&1
+perf-rig/cpu-attrib.sh:20:  TIMEOUT=200 "${RIG}/run-safari.sh" "${ID}" "${SC}" "${RIG}/ablations/${CELL}.css" >/dev/null 2>&1
+perf-rig/w5-bench.sh:32:OUT="${OUT:-${RIG_DIR}/runs}"
+perf-rig/w5-bench.sh:35:  safari)   DRIVER="${RIG_DIR}/run-safari.sh" ;;
+perf-rig/w5-bench.sh:36:  sim)      DRIVER="${RIG_DIR}/run-sim.sh" ;;
+perf-rig/w5-bench.sh:39:  pwwk)     DRIVER="${RIG_DIR}/pw-driver.sh"; export PW_ENGINE=webkit ;;
+perf-rig/w5-bench.sh:40:  chromium) DRIVER="${RIG_DIR}/pw-driver.sh"; export PW_ENGINE=chromium ;;
+perf-rig/w5-bench.sh:110:          nice -n 15 node "${RIG_DIR}/peer.mjs" --room "${ROOM}" --relay "${RELAY}" \
+perf-rig/w5-bench.sh:113:          nice -n 15 node "${RIG_DIR}/peer.mjs" --room "${ROOM}" --relay "${RELAY}" \
+perf-rig/sim-matrix.sh:10:      KEEP_SIM_FRONT=1 TIMEOUT=300 "${RIG}/run-sim.sh" "sim-${cell}-s${r}" "${SC}" 2>&1 | sed "s/^/[sim-${cell}-s${r}] /"
+perf-rig/sim-matrix.sh:12:      KEEP_SIM_FRONT=1 TIMEOUT=300 "${RIG}/run-sim.sh" "sim-${cell}-s${r}" "${SC}" \
+perf-rig/sim-matrix.sh:13:        "${RIG}/ablations/${cell}.css" 2>&1 | sed "s/^/[sim-${cell}-s${r}] /"
+perf-rig/run-safari.sh:31:DIST="${DIST:-${RIG_DIR}/../dist}"
+perf-rig/run-safari.sh:39:  echo "  node ${RIG_DIR}/probe-server.mjs"
+perf-rig/run-safari.sh:48:if ! node "${RIG_DIR}/../scripts/dist-identity.mjs" \
+perf-rig/run-safari.sh:122:nice -n 15 node "${RIG_DIR}/safari-wd.mjs" \
+perf-rig/run-safari.sh:128:  0) echo "run ${RUN_ID} complete → ${RIG_DIR}/runs/${RUN_ID}.jsonl" ;;
+perf-rig/matrix.sh:22:    TIMEOUT=300 "${RIG}/run-safari.sh" "${RUN}" "${SC}" 2>&1 | sed "s/^/[${RUN}] /"
+perf-rig/matrix.sh:24:    TIMEOUT=300 "${RIG}/run-safari.sh" "${RUN}" "${SC}" \
+perf-rig/matrix.sh:25:      "${RIG}/ablations/${cell}.css" 2>&1 | sed "s/^/[${RUN}] /"
+perf-rig/w5-solve-trim.sh:23:OUT="${OUT:-${RIG_DIR}/runs}"
+perf-rig/w5-solve-trim.sh:26:  safari)   DRIVER="${RIG_DIR}/run-safari.sh" ;;
+perf-rig/w5-solve-trim.sh:27:  sim)      DRIVER="${RIG_DIR}/run-sim.sh" ;;
+perf-rig/w5-solve-trim.sh:28:  pwwk)     DRIVER="${RIG_DIR}/pw-driver.sh"; export PW_ENGINE=webkit ;;
+perf-rig/w5-solve-trim.sh:29:  chromium) DRIVER="${RIG_DIR}/pw-driver.sh"; export PW_ENGINE=chromium ;;
+perf-rig/run-sim.sh:17:DIST="${DIST:-${RIG_DIR}/../dist}"
+perf-rig/run-sim.sh:27:  echo "  node ${RIG_DIR}/probe-server.mjs"
+perf-rig/run-sim.sh:33:if ! node "${RIG_DIR}/../scripts/dist-identity.mjs" \
+perf-rig/run-sim.sh:101:  echo "run ${RUN_ID} complete → ${RIG_DIR}/runs/${RUN_ID}.jsonl"
+
+ci-subset.mjs's own spawns:
+210:    const c = spawn(cmd, args, { stdio: "inherit", ...opts });
+396:  const server = spawn(

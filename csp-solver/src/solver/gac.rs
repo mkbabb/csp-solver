@@ -41,7 +41,7 @@ use crate::constraint::traits::{Revision, VarId};
 use crate::domain::Domain;
 use crate::variable::Variable;
 
-use matching::{NONE, hopcroft_karp, tarjan_scc};
+use matching::{Csr, NONE, hopcroft_karp, tarjan_scc};
 use scratch::{GacScratch, fast_index, resize_tarjan, with_scratch};
 
 /// Instrumentation: total entries into the unified GAC core (all variants).
@@ -328,35 +328,61 @@ where
         s.res_adj.finish_row();
     }
 
-    // ----- Reachability from free vertices -----
+    // ----- Reachability from free vertices, in BOTH orientations -----
+    //
+    // Régin keeps an unmatched edge that lies on an alternating cycle (the SCC
+    // test below) **or** on an even alternating path out of a free vertex. The
+    // two kinds of free vertex need the residual graph the two ways round, and
+    // one graph cannot serve both:
+    //
+    // * A path out of a free **variable** (sentinel variant only — it escapes to
+    //   the sentinel and is matched to nothing) leaves each variable it visits on
+    //   an *unmatched* edge, which `res_adj` orients var→val. So it runs along
+    //   `res_adj`, and the edges it justifies are the ones leaving a reachable
+    //   VARIABLE (`reachable[pu]`).
+    // * A path out of a free **value** enters each variable on an unmatched edge
+    //   and leaves on the matched one — the reverse of both orientations, i.e.
+    //   the transpose. It justifies the edges entering a reachable VALUE
+    //   (`val_reach[val_node]`).
+    //
+    // Seeding free values into `res_adj` (where a free value has no out-arc at
+    // all — its only out-arc would be its matching edge) marked nothing past the
+    // free values themselves, so every unmatched edge to a *matched* value
+    // outside its variable's SCC was pruned even when shifting that value's
+    // holder onto a free one supported it. That over-prune is unsound; it cannot
+    // bite a square scope (a sudoku row/column/box, where every value is matched
+    // and no free vertex exists) but bites any scope with value slack — a Killer
+    // cage's all-different, a KenKen row of a dug board, `AllDifferentExcept`.
+    // SCCs are orientation-invariant, so Tarjan still runs on `res_adj` alone.
     s.reachable.clear();
     s.reachable.resize(total_nodes, false);
     s.bfs.clear();
-    for vi in 0..n_vals {
-        if s.match_v[vi] == NONE {
-            let node = n_vars + vi;
-            s.reachable[node] = true;
-            s.bfs.push(node as u32);
-        }
-    }
     for pu in 0..n_vars {
         if s.match_u[pu] == NONE && s.has_sentinel[pu] {
             s.reachable[pu] = true;
             s.bfs.push(pu as u32);
         }
     }
-    let mut head = 0;
-    while head < s.bfs.len() {
-        let node = s.bfs[head] as usize;
-        head += 1;
-        let row = s.res_adj.row(node);
-        for &next_node in row {
-            let next = next_node as usize;
-            if !s.reachable[next] {
-                s.reachable[next] = true;
-                s.bfs.push(next as u32);
-            }
+    if !s.bfs.is_empty() {
+        bfs_mark(&s.res_adj, &mut s.reachable, &mut s.bfs);
+    }
+
+    s.val_reach.clear();
+    s.val_reach.resize(total_nodes, false);
+    s.bfs.clear();
+    for vi in 0..n_vals {
+        if s.match_v[vi] == NONE {
+            let node = n_vars + vi;
+            s.val_reach[node] = true;
+            s.bfs.push(node as u32);
         }
+    }
+    if !s.bfs.is_empty() {
+        // The transpose is built only when a free value exists, so a square
+        // scope (the sudoku hot path) pays nothing for it.
+        s.res_t
+            .transpose_of(&s.res_adj, total_nodes, &mut s.res_t_counts);
+        bfs_mark(&s.res_t, &mut s.val_reach, &mut s.bfs);
     }
 
     // ----- SCCs -----
@@ -393,7 +419,7 @@ where
     }
 
     // Phase 2: Régin SCC pruning — drop unmatched (var, val) edges crossing SCC
-    // boundaries and not reachable from a free vertex.
+    // boundaries and justified by neither free-vertex walk.
     for pu in 0..n_vars {
         let var_id = scope[s.participants[pu]] as usize;
         let matched_vi = s.match_u[pu];
@@ -402,7 +428,7 @@ where
                 continue;
             }
             let val_node = n_vars + vi as usize;
-            if s.t_scc[pu] == s.t_scc[val_node] || s.reachable[val_node] {
+            if s.t_scc[pu] == s.t_scc[val_node] || s.val_reach[val_node] || s.reachable[pu] {
                 continue;
             }
             let val = s.all_vals[vi as usize].clone();
@@ -419,6 +445,23 @@ where
         Revision::Changed
     } else {
         Revision::Unchanged
+    }
+}
+
+/// Flood `reachable` from the frontier already seeded in `bfs`, along `adj`.
+/// `bfs` doubles as the queue (its seeds must already be marked reachable).
+fn bfs_mark(adj: &Csr, reachable: &mut [bool], bfs: &mut Vec<u32>) {
+    let mut head = 0;
+    while head < bfs.len() {
+        let node = bfs[head] as usize;
+        head += 1;
+        for &next_node in adj.row(node) {
+            let next = next_node as usize;
+            if !reachable[next] {
+                reachable[next] = true;
+                bfs.push(next as u32);
+            }
+        }
     }
 }
 

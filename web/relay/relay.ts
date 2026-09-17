@@ -196,11 +196,13 @@ export class Relay {
     } catch {
       return ws.send(JSON.stringify(["NOTICE", "invalid json"]));
     }
-    if (!Array.isArray(msg)) return ws.send(JSON.stringify(["NOTICE", "invalid frame"]));
+    if (!Array.isArray(msg))
+      return ws.send(JSON.stringify(["NOTICE", "invalid frame"]));
     const [verb, a, ...rest] = msg as [string, string | NostrEvent, ...Filter[]];
 
     if (verb === "EVENT") {
-      if (!isEvent(a)) return ws.send(JSON.stringify(["OK", "", false, "invalid: shape"]));
+      if (!isEvent(a))
+        return ws.send(JSON.stringify(["OK", "", false, "invalid: shape"]));
       // Keep the envelope, never the payload: `webSocketClose` has no frame to read, and this
       // is the only place the socket says who it is. Once per socket, not once per frame — a
       // page publishes under one pubkey for its whole life.
@@ -246,8 +248,11 @@ export class Relay {
    * mints one per page and publishes under it), so the envelope is enough.
    *
    * This covers the socket that CLOSES: a crashed tab, a page navigated away, a link the
-   * runtime gives up on. A peer whose socket stays open while the page behind it is dead is
-   * still the roster's problem, and that one wants a presence timeout — cut-2's, not this.
+   * runtime gives up on. A peer whose socket stays open while the page behind it is dead was
+   * the roster's own problem, and it got its clock at T9-W6 §3.7: every live page re-announces
+   * `hi` on a 15s beat and the roster drops a peer silent past 45s (`useSession.ts`). Nothing
+   * here changed for it — a repeated `hi` is an ordinary EVENT and this file has no memory of
+   * one to deduplicate against.
    * A socket that only ever subscribed is on nobody's roster, and gets no announcement.
    * A page that said its OWN `bye` on `pagehide` and then closed produces a second one; the
    * client's `peer(id, false)` is a filter, so the second costs nothing.
@@ -284,7 +289,10 @@ export class Relay {
 }
 
 interface Env {
-  RELAY: { idFromName(name: string): unknown; get(id: unknown): { fetch(r: Request): Response } };
+  RELAY: {
+    idFromName(name: string): unknown;
+    get(id: unknown): { fetch(r: Request): Response };
+  };
   /** The sha this Worker was deployed at. `wrangler.toml` defaults it to `unknown`, and
    *  `scripts/deploy-gated.sh` overrides it per deploy with `--var RELAY_REVISION:<sha>`,
    *  so `unknown` is not a missing value — it is the signature of a deploy that skipped

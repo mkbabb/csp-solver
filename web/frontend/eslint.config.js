@@ -91,7 +91,17 @@ export default tseslint.config(
   // `dist*/**` covers the deploy build (`dist/`) AND preview/throttle builds
   // (`dist-throttle/`, the throttled-void probe's served bundle) — minified output is
   // never source and must never enter the lint set (else the rig reds on bundled JS).
-  { ignores: ['dist*/**', 'node_modules/**', 'e2e/**'] },
+  //
+  // `e2e/**` USED TO SIT HERE and came out at T9-W6 §6.2. It was a blanket ignore with no
+  // stated reason, and the reason a reader would infer — the standing owner law that keeps
+  // PRETTIER off `e2e/` (`.prettierignore`, after a `--write` severed a sleep-lint EXEMPT
+  // anchor on 2026-08-03) — is about FORMATTING and has nothing to say about correctness
+  // rules. So 34 spec and helper files sat under no lint at all, on top of no typecheck, and
+  // the estate's only local instrument was the one part of it nothing read. The two laws are
+  // now separate and each says what it is: prettier stays out by the owner's ruling, eslint
+  // comes in. Born-RED banked at evidence/w6/gates-e2e/eslint-born-red.txt — one live
+  // `no-unexpected-multiline` in `multiplayer.spec.ts`, cured in the same commit as this line.
+  { ignores: ['dist*/**', 'node_modules/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   // 'essential' (correctness only), not 'recommended'/'strongly-recommended' — this repo's

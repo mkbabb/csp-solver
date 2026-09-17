@@ -1,0 +1,20 @@
+S2 probe — can the sealed T7 wave spec take the RELAY_URLS rename? (2026-09-17)
+Reversible plant on docs/tranches/2026-08-tranche-7/waves/W5-the-multiplayer-record.md, restored byte-for-byte. The lane does NOT land this edit.
+
+sha256 BEFORE  3221fbd6cf53974a8a748223c228efc60c80e123f673f42601a47a3708247502
+sha256 PLANTED 68338bf0371fb36360e05a3f8768ebc973048d3116b6d0b96d0f88cf1d57bde0   (2 occurrences renamed)
+
+$ node scripts/ledger-diff.mjs --assert-state   [FREEZE arm, sealed T7 re-diffed]
+arms        ORPHAN · FREEZE · TERMINALITY · FOLD-TARGET · PROBE · DUPLICATE · ONE-HOME · LIVE-REGION
+  docs/tranches/2026-08-tranche-7    SEALED  evidence/wgate/close-record.md
+FREEZE SWEEP (every sealed tranche re-diffed against its OWN tranche-time corpus)
+  docs/tranches/2026-08-tranche-7    145 audited rows · 11 corpus files · 0 orphan
+FREEZE — clean
+VERDICT
+  GREEN — 5 audited rows present-or-cited; 4 open ledger rows current under ORPHAN · FREEZE · TERMINALITY · FOLD-TARGET · PROBE · DUPLICATE · ONE-HOME · LIVE-REGION. exit 0
+EXIT=0
+
+$ node scripts/check-doc-truth.mjs
+0 RED / 42 GREEN — canon holds
+
+sha256 AFTER   3221fbd6cf53974a8a748223c228efc60c80e123f673f42601a47a3708247502   (restored)

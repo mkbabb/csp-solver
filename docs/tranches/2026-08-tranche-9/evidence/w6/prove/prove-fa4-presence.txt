@@ -1,0 +1,34 @@
+=== FA4 PRESENCE REFUTATION ATTEMPT 2026-09-17T17:00:45Z ===
+--- A. shipped path: does a cur frame seat the peer? (not just the harness)
+relayWire.ts:254-259 ->
+      if (kind === "bye") return h.peer(from, false);
+      if (!isKind(kind) || !bag(data) || !wellFormed(kind, data)) return drop();
+      // Presence is derived from traffic, the `localWire` rule: anything heard from an id IS
+      // that id being here. `hi` and its ack make the discovery symmetric whoever opened first.
+      h.peer(from, true);
+      // The cast is the one JSON.parse earns: its product IS `Json`, and `wellFormed` has just
+      // read the fields the session merges without asking.
+useSession.ts:660 -> armPresenceExpiry on EVERY onPeer(id,true)
+    return;
+  }
+  armPresenceExpiry(id); // any traffic is this peer saying "still here", the beat included
+  live.value = true; // somebody is here, so the table is
+
+--- B. independent dedupe audit of web/relay/relay.ts (any per-event memory?)
+any Set/Map/cache/seen/id-store:
+125:    const seen = ev.tags.filter((t) => t[0] === letter).map((t) => t[1]);
+126:    if (!seen.some((v) => (wanted as string[]).includes(v))) return false;
+263:      created_at: Math.floor(Date.now() / 1000),
+304: *  live Pages bundle was built from. No auth, no state, no cache. */
+308:    headers: { "content-type": "text/plain", "cache-control": "no-store" },
+per-socket state written on EVENT:
+210:      if (att.who?.pubkey !== a.pubkey) {
+211:        att.who = { pubkey: a.pubkey, kind: a.kind, tags: a.tags };
+220:      att.subs[a as string] = rest;
+227:      delete att.subs[a as string];
+OK ack on every isEvent:
+21: *                            Answered `["OK", id, true, ""]`, then fanned out.
+27: * `["OK", …, false]` and `["NOTICE", msg]` are spelled exactly, because they are the only two
+191:      return ws.send(JSON.stringify(["OK", "", false, "invalid: frame too large"]));
+205:        return ws.send(JSON.stringify(["OK", "", false, "invalid: shape"]));
+214:      ws.send(JSON.stringify(["OK", a.id, true, ""]));

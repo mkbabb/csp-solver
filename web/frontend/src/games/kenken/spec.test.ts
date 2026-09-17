@@ -17,6 +17,7 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { kenkenSpec } from "./spec";
+import { cagedLatinSizes, difficultyOptions } from "@games/shared/selectors";
 import { persistence } from "./composables/useKenken";
 import CageOverlay from "@games/shared/CageOverlay.vue";
 import type { KenKenCage } from "./types";
@@ -63,9 +64,11 @@ describe("KenKen's GameSpec (T5-W2 F2 — the migrated contract)", () => {
   it("exposes a boardSize + difficulty section over the live model", () => {
     const sections = kenkenSpec.deal.options(kenkenSpec.model());
     expect(sections.map((s) => s.key)).toEqual(["boardSize", "difficulty"]);
-    // The bands the drawer renders are the bands the card stages from — one vocabulary.
-    expect(sections[0].options).toBe(kenkenSpec.deal.sizes);
-    expect(sections[1].options).toBe(kenkenSpec.deal.difficulty);
+    // The bands the drawer renders are the bands the card stages from — one vocabulary, and
+    // since T9-W6 §6.1 that vocabulary is named once, in `@games/shared/selectors`, rather
+    // than re-declared on every spec's `deal` slot where only sudoku's row could read it.
+    expect(sections[0].options).toBe(cagedLatinSizes);
+    expect(sections[1].options).toBe(difficultyOptions);
   });
 
   it("names its board on disk once — the codec's own key", () => {

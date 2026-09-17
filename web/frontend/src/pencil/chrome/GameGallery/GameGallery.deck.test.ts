@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import GameGallery from "./GameGallery.vue";
 import GameCard from "./GameCard.vue";
@@ -14,18 +14,44 @@ import type { GalleryCard, GalleryPreview } from "./types";
  * checkable as equalities rather than as prose.
  */
 
+/** THE DRIVABLE OBSERVER. jsdom ships none, and the deck hangs BOTH resize answers off one —
+ *  the glide's track re-pin and (T9-W6 §6.4) the armed ribbon's re-anchor. A no-op stub makes
+ *  the resize row below unfalsifiable rather than red, so this one collects every observing
+ *  callback in construction order, which is the order a real broadcast delivers them in:
+ *  `broadcastResize()` is the browser's own sequence, the deck re-pinning its track first and
+ *  the ribbon re-measuring against the settled boxes second. */
+const resizeBroadcast: Array<() => void> = [];
+function broadcastResize() {
+  for (const cb of [...resizeBroadcast]) cb();
+}
+
 beforeAll(() => {
   const g = globalThis as unknown as { ResizeObserver?: unknown };
-  g.ResizeObserver ??= class {
-    observe() {}
+  g.ResizeObserver = class {
+    cb: () => void;
+    constructor(cb: () => void) {
+      this.cb = cb;
+    }
+    observe() {
+      resizeBroadcast.push(this.cb);
+    }
     unobserve() {}
-    disconnect() {}
+    disconnect() {
+      const at = resizeBroadcast.indexOf(this.cb);
+      if (at >= 0) resizeBroadcast.splice(at, 1);
+    }
   };
   Element.prototype.animate ??= (() => ({
     cancel() {},
     finish() {},
     onfinish: null,
   })) as unknown as typeof Element.prototype.animate;
+});
+
+// Decks from earlier rows stay mounted (nothing unmounts them), so the broadcast is emptied
+// between rows: a row fires the observers ITS deck registered, and nobody else's.
+beforeEach(() => {
+  resizeBroadcast.length = 0;
 });
 
 const axis = (value: number | string, label: string) => ({
@@ -253,51 +279,181 @@ describe("the ribbon on a shared board — consent, counted (M13)", () => {
 });
 
 describe("where the armed ribbon stands (T8-R15)", () => {
-  /** jsdom lays nothing out, so the boxes here are FABRICATED and what the row pins is the
+  /** jsdom lays nothing out, so the boxes here are FABRICATED and what the rows pin is the
    *  arithmetic the deck does with them — the anchor is the armed card's centre expressed in the
    *  deck's own coordinates, which is a decision, not a measurement. The geometry itself is a
-   *  browser fact and is gated in `e2e/gallery-guard.spec.ts` row 7, both engines. The numbers
-   *  are the desk's real shape: a card whose centre is NOT the deck's middle, because with zero
-   *  edge air the end cards cannot travel there. */
+   *  browser fact and is gated in `e2e/gallery-guard.spec.ts` row 7, both engines. */
+  const box = (left: number, width: number) =>
+    ({
+      left,
+      width,
+      right: left + width,
+      x: left,
+      y: 0,
+      top: 0,
+      bottom: 0,
+      height: 0,
+      toJSON: () => ({}),
+    }) as DOMRect;
+
+  /** A whole fabricated desk in five numbers: the deck's box, a track of equal slots, and the
+   *  note's own width (the clamp spends half of it against the window edge). */
+  type Desk = {
+    deck: number;
+    slot0: number;
+    step: number;
+    slot: number;
+    note: number;
+  };
+  const layout = (d: Desk) =>
+    function (this: Element) {
+      switch (this.classList[0]) {
+        case "game-gallery":
+          return box(0, d.deck);
+        case "gallery-card-slot": {
+          const i = [...(this.parentElement?.children ?? [])].indexOf(this);
+          return box(d.slot0 + i * d.step, d.slot);
+        }
+        case "gallery-guard":
+          return box(0, d.note);
+        default:
+          return box(0, 0);
+      }
+    };
+
+  /** The desk's real shape: a track wider than the frame, so a card whose centre is NOT the
+   *  deck's middle — with zero edge air the end cards cannot travel there. */
+  const DESK: Desk = { deck: 1024, slot0: 112, step: 340, slot: 340, note: 320 };
+  /** The same deck after a rotation into a phone frame. Card 0's centre is 160 now. */
+  const PHONE: Desk = { deck: 640, slot0: 60, step: 200, slot: 200, note: 200 };
+
+  /** Arm the deal ribbon on card 0 (sudoku) under a fabricated desk. */
+  async function armed(w: ReturnType<typeof mountDeck>) {
+    await w.get(".gallery-viewport").trigger("keydown", { key: "d" });
+    await flushPromises();
+    return w;
+  }
+  const guardStyle = (w: ReturnType<typeof mountDeck>) =>
+    w.get(".gallery-guard").attributes("style") ?? "";
+
   it("the anchor is the armed card's centre in deck coordinates, not the deck's middle", async () => {
-    const box = (left: number, width: number) =>
-      ({
-        left,
-        width,
-        right: left + width,
-        x: left,
-        y: 0,
-        top: 0,
-        bottom: 0,
-        height: 0,
-        toJSON: () => ({}),
-      }) as DOMRect;
     const rects = vi
       .spyOn(Element.prototype, "getBoundingClientRect")
-      .mockImplementation(function (this: Element) {
-        switch (this.classList[0]) {
-          case "game-gallery":
-            return box(0, 1024); // the deck box: its middle is 512
-          case "gallery-card-slot": {
-            // A track wider than the frame — the desk's real shape, and the reason the end
-            // cards cannot travel to that middle.
-            const i = [...(this.parentElement?.children ?? [])].indexOf(this);
-            return box(112 + i * 340, 340);
-          }
-          case "gallery-guard":
-            return box(0, 320);
-          default:
-            return box(0, 0);
-        }
-      });
+      .mockImplementation(layout(DESK));
     try {
-      const w = mountDeck({ dirty: true, currentId: "sudoku" });
-      await w.get(".gallery-viewport").trigger("keydown", { key: "d" });
-      await flushPromises();
+      const w = await armed(mountDeck({ dirty: true, currentId: "sudoku" }));
       // 112 + 340/2 = 282. The deck's middle is 512 — the number `left: 50%` handed the ribbon
       // at every index, and the whole of the defect at the two end cards.
-      const style = w.get(".gallery-guard").attributes("style") ?? "";
-      expect(style).toContain("--guard-x: 282px");
+      expect(guardStyle(w)).toContain("--guard-x: 282px");
+    } finally {
+      rects.mockRestore();
+    }
+  });
+
+  /* ── THE ARMED GUARD RE-ANCHORS (T9-W6 §6.4) ──────────────────────────────────────────────
+   *
+   * The read above happens once, at arm, and nothing invalidated it: a rotation or a drag-resize
+   * under an armed ribbon re-created the exact geometry R15 closed, because the deck re-pins its
+   * track on a resize (`useCarouselGlide`'s ResizeObserver → `jumpTo`) while the note stayed
+   * pinned to the box it measured before the frame moved.
+   *
+   * The two rows below are the choice, stated both ways: the note follows its card, and it is
+   * still standing when it gets there. */
+  const withWindowWidth = async (px: number, body: () => Promise<void>) => {
+    const was = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { value: px, configurable: true });
+    try {
+      await body();
+    } finally {
+      Object.defineProperty(window, "innerWidth", { value: was, configurable: true });
+    }
+  };
+
+  it("a resize under an armed ribbon re-anchors the note onto the card's NEW box", async () => {
+    const rects = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(layout(DESK));
+    try {
+      const w = await armed(mountDeck({ dirty: true, currentId: "sudoku" }));
+      expect(guardStyle(w)).toContain("--guard-x: 282px");
+      // THE ROTATION. Same card, same index, new frame — so nothing the deck watches for a
+      // dismissal fires, and the measurement taken at arm is now a fact about a desk that is
+      // gone. 60 + 200/2 = 160: the stale read stood 122px off the card it names.
+      rects.mockImplementation(layout(PHONE));
+      await withWindowWidth(640, async () => {
+        broadcastResize();
+        await flushPromises();
+        expect(guardStyle(w)).toContain("--guard-x: 160px");
+      });
+    } finally {
+      rects.mockRestore();
+    }
+  });
+
+  it("the note re-measures AFTER the deck re-pins — observer order, not the resize event", async () => {
+    const rects = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(layout(DESK));
+    try {
+      const w = await armed(mountDeck({ dirty: true, currentId: "sudoku" }));
+      // TWO observers watch the viewport: the glide's track re-pin (`jumpTo`) and the ribbon's
+      // re-anchor, in that construction order, which is the order a broadcast delivers them in.
+      // The order is the cure's whole reason for being an observer rather than a `window.resize`
+      // listener — the event fires BEFORE the broadcast, so a listener re-measures against the
+      // track's pre-re-pin scroll. Fire them one at a time and the sequence is visible: the deck
+      // moves first, and only then does the note read.
+      expect(resizeBroadcast).toHaveLength(2);
+      rects.mockImplementation(layout(PHONE));
+      await withWindowWidth(640, async () => {
+        resizeBroadcast[0]();
+        await flushPromises();
+        expect(guardStyle(w)).toContain("--guard-x: 282px");
+        resizeBroadcast[1]();
+        await flushPromises();
+        expect(guardStyle(w)).toContain("--guard-x: 160px");
+      });
+    } finally {
+      rects.mockRestore();
+    }
+  });
+
+  it("a track that moves under the note re-anchors it too, broadcast or no broadcast", async () => {
+    // The observer's place in the broadcast is a courtesy, not a guarantee: WebKit re-snaps on
+    // its own after a resize, and a re-pin deferred by a frame would land after the callback.
+    // Under an armed ribbon the deck cannot travel for any other reason, so a scroll on the
+    // viewport means the track moved beneath the note — measured with no resize at all.
+    const rects = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(layout(DESK));
+    try {
+      const w = await armed(mountDeck({ dirty: true, currentId: "sudoku" }));
+      expect(guardStyle(w)).toContain("--guard-x: 282px");
+      rects.mockImplementation(layout(PHONE));
+      await withWindowWidth(640, async () => {
+        await w.get(".gallery-viewport").trigger("scroll");
+        await flushPromises();
+        expect(guardStyle(w)).toContain("--guard-x: 160px");
+      });
+    } finally {
+      rects.mockRestore();
+    }
+  });
+
+  it("it re-anchors rather than retires — the unanswered question is still standing", async () => {
+    const rects = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockImplementation(layout(DESK));
+    try {
+      const w = await armed(mountDeck({ dirty: true, currentId: "sudoku" }));
+      rects.mockImplementation(layout(PHONE));
+      await withWindowWidth(640, async () => {
+        broadcastResize();
+        await flushPromises();
+        // A window that changed size is not an answer to a consent prompt: the note holds
+        // focus and an unanswered question, so a resize may move it but never resolve it.
+        expect(w.find(".gallery-guard").exists()).toBe(true);
+        expect(w.emitted("deal")).toBeUndefined();
+      });
     } finally {
       rects.mockRestore();
     }

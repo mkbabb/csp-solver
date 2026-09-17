@@ -1,0 +1,30 @@
+### FULL BATTERY @ lane 6B end (re-run after 6B-1 was spent by its owning lane)
+Fri Aug 28 18:37:02 EDT 2026
+
+vue-tsc --noEmit (app)           EXIT=0
+typecheck:e2e                    EXIT=0
+typecheck:relay                  EXIT=0
+lint:eslint (. incl e2e)         EXIT=0
+lint:relay                       EXIT=0
+lint:knip                        EXIT=0
+lint (prettier, +../relay/)      EXIT=0 -> 
+lint:lanes                       EXIT=0
+lint:sleep                       EXIT=0
+test:golden:bytes                EXIT=0
+vitest run                       EXIT=0 ->  Test Files  64 passed (64)
+vitest --root ../relay           EXIT=0 ->  Test Files  1 passed (1)
+pw --list playwright.config.ts   EXIT=0 -> Total: 467 tests in 27 files
+pw --list playwright-golden.config.ts EXIT=0 -> Total: 4 tests in 1 file
+pw --list playwright-throttle.config.ts EXIT=0 -> Total: 67 tests in 5 files
+
+EVERY LINE EXIT 0. Two earlier readings in this window were RED and neither was this lane's:
+prettier on two src files two concurrent lanes were mid-edit on (GameBoard.receipt.test.ts,
+GameControlPanel.vue), and the e2e typecheck + eslint on spoken-controls.spec.ts's dead
+closeDrawer helper (handoff 6B-1, spent by its owning lane at 18:36). Both cleared before this
+run.
+
+Not run here, and not this lane's: `lint:motion` and `test:e2e:projects` are RED on three specs
+other lanes landed during this window (spoken-controls, spoken-gallery, follow-still-authorship
+— missing PRM declarations, missing SPEC_MANIFEST rows) and on four project floors the chair
+restamps through the W5 mechanism. `check-evidence-policy` is RED on W3's PNG bucket. This lane
+added zero specs, zero PNGs, and moved zero floors.

@@ -1,0 +1,184 @@
+S5 — THE LAST GATE BATTERY (T9 W3+W6 seal)
+2026-09-17, darwin, tree at 4686436f + the W3+W6 working tree (S1..S4 landed)
+Every command run BARE, output redirected to a file (never piped) so no exit code was eaten.
+
+================================================================================
+1 · THE UNIT FLOOR
+================================================================================
+
+  $ cd web/frontend && npm run test:unit:report
+  EXIT 0
+      Test Files  66 passed (66)
+           Tests  810 passed (810)
+  (run twice; the first run's exit code was lost to a pipe and the run was repeated bare)
+
+  $ node scripts/check-unit-count.mjs vitest-report.json          [BEFORE]
+  EXIT 1
+    FE unit lane — 810 executed (810 passed / 0 failed), 0 skipped, 0 todo, over 66 files / 262 suites; floor 661; report age 0.1 min.
+      floor stamped: 4dd9ec9c · 2026-08-28 · T9-W5 §5.2 (wave-time; the WGATE restamps)
+      band: floor 661 vs 689 owed on 810 (85% of max(stamp 735, live 810))  ·  slack 23%
+    UNIT COUNT GATE FAILED
+      · floor 661 is OUT OF BAND: 18.4% under 810 (stamped census 735, live 810); the band is
+        85%, so the floor owes 689. The estate GREW past its floor and nothing restamped it —
+        that is silent slack, not churn room.
+
+  $ node scripts/check-unit-count.mjs --restamp vitest-report.json --dry --wave "…"
+  EXIT 0
+    RESTAMP — 810 executed / 66 files / 262 suites
+      derived 729  ·  banked 661  ·  ratchet → floor 729
+      band at 85% of 810 is 689  ·  4686436f · 2026-09-17
+
+  NOTE ON THE NUMBER. The seam (seal-S1-1.md) and the chair's brief both predicted 661 → 689.
+  689 is the BAND MINIMUM, not the derived floor. The house derivation is
+  max(floor(live × churnRoom 0.9), ceil(live × band 0.85)) = max(729, 689) = 729, and the
+  ratchet takes max(banked 661, derived 729). A RAISE, as instructed. --allow-lower was never
+  passed and was never owed: the derived floor sits below live, so no tests left.
+
+  $ node scripts/check-unit-count.mjs --restamp vitest-report.json --wave "T9-W3+W6 seal 2026-09-17 — the spoken product and the substrate, 810 rows"
+  EXIT 0
+    written -> scripts/census.stamp.json (unit)
+
+  $ node scripts/check-unit-count.mjs vitest-report.json          [AFTER, bare]
+  EXIT 0
+    FE unit lane — 810 executed (810 passed / 0 failed), 0 skipped, 0 todo, over 66 files / 262 suites; floor 729; report age 0.4 min.
+      floor stamped: 4686436f · 2026-09-17 · T9-W3+W6 seal 2026-09-17 — the spoken product and the substrate, 810 rows
+      band: floor 729 vs 689 owed on 810 (85% of max(stamp 810, live 810))  ·  slack 11%
+    unit count OK — 810 >= 729.
+
+  THE MOVE, whole:   floor    661 -> 729
+                     census   735 -> 810 executed
+                     files     57 -> 66
+                     suites   237 -> 262
+                     stamp sha 4dd9ec9c/2026-08-28 -> 4686436f/2026-09-17
+  The `pw` half of census.stamp.json was NOT touched by this lane (--restamp writes `unit` only,
+  and the tool says so: "written -> scripts/census.stamp.json (unit)").
+
+================================================================================
+2 · DOC TRUTH
+================================================================================
+
+  $ node scripts/check-doc-truth.mjs                  EXIT 0   0 RED / 42 GREEN — canon holds
+  $ node scripts/check-doc-truth.mjs --self-test      EXIT 0   129 PASS / 0 FAIL — every row proved both colours
+
+  No COUNT row red, so no doc was restamped: README.md, web/frontend/README.md and
+  docs/benchmarks.md were NOT edited by this lane. No CLAIM row red either.
+
+================================================================================
+3 · THE BATTERY
+================================================================================
+
+  web/frontend
+    npm run lint                                    EXIT 0   (prettier; src/ scripts/ ../../scripts/ ../relay/ — e2e/ never touched)
+    npx eslint .                                    EXIT 0   (whole estate, e2e/ included)
+    npx vue-tsc --noEmit                            EXIT 0
+    npm run typecheck:e2e                           EXIT 0
+    npm run typecheck:node                          EXIT 0
+    npx knip                                        EXIT 0
+    npm run lint:lanes                              EXIT 0
+    npm run lint:live-regions                       EXIT 0
+    node scripts/check-copy-register.mjs            EXIT 0
+    node scripts/check-lane-membership.mjs --self-test   EXIT 0
+    node scripts/check-pw-projects.mjs              EXIT 0
+    node scripts/check-pw-projects.mjs --self-test  EXIT 0
+    node scripts/check-theme-selectors.mjs          EXIT 0
+    node scripts/check-live-regions.mjs             EXIT 0
+    node scripts/tdz-probe.mjs --self-test          EXIT 0
+
+  web/relay (via the frontend's wrappers)
+    npm run lint:relay                              EXIT 0   (eslint)
+    npm run typecheck:relay                         EXIT 0   (tsc -p ../relay/tsconfig.json --noEmit)
+    prettier over ../relay/ is covered by `npm run lint` above.
+
+  repo root
+    node scripts/ledger-diff.mjs --assert-state     EXIT 0
+    node scripts/check-evidence-policy.mjs          EXIT 0   (S4's cure holds; re-run at lane end after this lane's own banking — see §6)
+
+  csp-solver
+    cargo test --workspace                          EXIT 0   218 passed / 0 failed / 6 ignored over 33 test binaries
+    cargo clippy --workspace --all-targets -- -D warnings   EXIT 0
+      (the only output is the standing `proc-macro-error2 v2.0.1` future-incompat NOTE from a
+       transitive dependency — not a warning in workspace code, and it does not fail -D warnings)
+
+  THE PW MATRIX, as the gate printed it:
+    PW PROJECT MATRIX — 3 configs, 11 projects, 34 manifest specs, 6 declared holdouts
+      (3 single-engine at file scope, 2 engine row + 1 env-gated row), 0 declared quarantines
+      chromium   listed 238  live 237  derived 213  floor 214  band 203   ← 1 env-gated, dark in both engines
+      webkit     listed 238  live 235  derived 211  floor 212  band 201   ← 2 row-held out of webkit + 1 env-gated, dark in both engines
+      ✓ 4 HOLDOUTS CLOSED   ✓ 7 QUARANTINES CLOSED
+    OK — 34 specs, 547 resolved tests.
+
+================================================================================
+4 · THE FULL DEFAULT SUITE, BOTH ENGINES, ONCE
+================================================================================
+
+  $ cd web/frontend && npx playwright test --reporter=line
+  EXIT 0
+    4 skipped
+    472 passed (3.1m)
+
+  476 rows resolved (238 chromium + 238 webkit), every one of them accounted for:
+    472 passed · 4 skipped · 0 failed · 0 flaky · 0 retried (retries: 0 in playwright.config.ts)
+
+  THE FOUR SKIPS ARE THE FOUR DECLARED ONES, not a residue:
+    chromium 1 — the env-gated row (multiplayer.spec.ts, T62_REAL_RELAY, dark in both engines)
+    webkit   3 — that same env-gated row + the 2 engine rows held out of webkit
+  238 - 237 = 1 and 238 - 235 = 3; the arithmetic closes against check-pw-projects' own census.
+
+  NO FLAKE was seen and none was retried into silence. Nothing was re-run.
+  Whole line-reporter transcript banked beside this file at S5-full-suite.txt (89,501 B).
+  The `[WebServer] … ResizeObserver loop completed with undelivered notifications` lines in that
+  transcript are vite dev-server console noise forwarded by the webServer block, not test rows:
+  no row carries them and no row failed.
+
+  Surface: the default config's own webServer (npm run dev, port 3000, reuseExistingServer).
+  Port 3000 was free at lane open; this lane started no dev server by hand and touched none of
+  the sibling lanes' servers on 4231/4237/4246/4247/4252.
+
+================================================================================
+5 · UNTRACKED, NON-DOCS — the chair stages these
+================================================================================
+
+  $ git status --porcelain --untracked-files=all | grep '^??' | grep -v '^?? docs/'
+
+    ?? web/frontend/config-node.d.ts
+    ?? web/frontend/e2e/follow-still-authorship.spec.ts
+    ?? web/frontend/e2e/node.d.ts
+    ?? web/frontend/e2e/presence.spec.ts
+    ?? web/frontend/e2e/spoken-controls.spec.ts
+    ?? web/frontend/e2e/spoken-gallery.spec.ts
+    ?? web/frontend/scripts/check-live-regions.mjs
+    ?? web/frontend/src/composables/useLiveRegion.test.ts
+    ?? web/frontend/src/composables/useLiveRegion.ts
+    ?? web/frontend/src/games/shared/GameBoard.occlusion.test.ts
+    ?? web/frontend/src/games/shared/GameControlPanel.liveRegions.test.ts
+    ?? web/frontend/src/games/shared/useGameState.fill.test.ts
+    ?? web/frontend/src/pencil/chrome/GameGallery/GameGallery.liveRegions.test.ts
+    ?? web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.test.ts
+    ?? web/frontend/tsconfig.e2e.json
+    ?? web/frontend/tsconfig.node.json
+    ?? web/relay/eslint.config.mjs
+    ?? web/relay/tsconfig.json
+
+  EIGHTEEN, exactly the count W6 prove P-1 predicted. Every one is load-bearing at this seal:
+  seven of them carry rows inside the 810 (the six *.test.ts plus useLiveRegion.ts's subject),
+  four e2e specs sit in the PW manifest the gate just counted, the two tsconfigs are what
+  typecheck:e2e and typecheck:node compile against, the two relay files are what lint:relay and
+  typecheck:relay read, check-live-regions.mjs IS a gate run above, and config-node.d.ts is what
+  tsconfig.node.json needs to resolve. A commit that misses any of them ships a battery that
+  cannot run.
+
+================================================================================
+6 · LANE-END RE-VERIFY (after this lane's own edits and banking)
+================================================================================
+
+  This lane wrote: web/frontend/scripts/census.stamp.json (via --restamp, never by hand), the
+  SPENT stamp on evidence/w3/handoffs/seal-S1-1.md, and this directory's S5-* files. No source,
+  no spec, no gate script, no README, no wave spec.
+
+  re-run at lane end, bare:
+    node scripts/check-unit-count.mjs vitest-report.json   EXIT 0
+    node scripts/check-doc-truth.mjs                       EXIT 0   0 RED / 42 GREEN
+    node scripts/check-evidence-policy.mjs                 EXIT 0   0 breaches
+    node scripts/ledger-diff.mjs --assert-state            EXIT 0
+    npm run lint                                           EXIT 0
+    node scripts/check-copy-register.mjs                   EXIT 0

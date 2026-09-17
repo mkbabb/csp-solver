@@ -1,0 +1,15 @@
+=== PLANT-PROOF: e2e typecheck (tsconfig.e2e.json) ===
+target = web/frontend/e2e/wire.ts (an IMPORTED HELPER: visual-golden, share-truth, affordances, permalink)
+baseline md5 = 4b0efb64fcae617b3bbf06b19a5b9d82
+
+--- 0. GREEN before plant ---
+EXIT=0
+--- population count at head (vue-tsc --listFilesOnly, e2e/ files) ---
+38
+
+--- 1. PLANTED in the helper ---
+e2e/wire.ts(73,14): error TS2322: Type 'string' is not assignable to type 'number'.
+EXIT=2
+
+--- 2. RESTORED (md5 4b0efb64fcae617b3bbf06b19a5b9d82; identical: YES) ---
+EXIT=0

@@ -1,0 +1,439 @@
+T9-W6 R13 — is gallery.spec.ts:129 [webkit] this lane's? BOTH cure arms ABLATED, row re-run.
+
+
+Running 1 test using 1 worker
+
+[1/1] [webkit] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+  1 passed (15.3s)
+
+== CURED tree, same single row ==
+
+Running 1 test using 1 worker
+
+[1/1] [webkit] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+  1 passed (7.5s)
+
+Running 1 test using 1 worker
+
+[1/1] [webkit] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+  1 passed (3.7s)
+
+Running 1 test using 1 worker
+
+[1/1] [webkit] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+  1 passed (2.4s)
+
+== WHOLE FILE, webkit, BOTH cure arms ABLATED ==
+
+Running 23 tests using 9 workers
+
+[1/23] [webkit] › e2e/gallery.spec.ts:263:1 › gallery: only the centered card boils — a flank frame is inert + frozen
+[2/23] [webkit] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+[3/23] [webkit] › e2e/gallery.spec.ts:183:1 › gallery: Escape cancels back to the board, no swap, ?view cleared
+[4/23] [webkit] › e2e/gallery.spec.ts:91:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips
+[5/23] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by a page pip
+[6/23] [webkit] › e2e/gallery.spec.ts:237:1 › gallery: `g` opens the gallery from playing; a `g` typed into a cell does not
+[7/23] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by bare page
+[8/23] [webkit] › e2e/gallery.spec.ts:167:1 › gallery: Enter on futoshiki selects it — board swaps, ?game set, ?view cleared
+[9/23] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by a staged chip
+[10/23] [webkit] › e2e/gallery.spec.ts:292:3 › gallery under prefers-reduced-motion › PRM: open is an instant cut — gallery present, no tweening
+[11/23] [webkit] › e2e/gallery.spec.ts:317:1 › drag: pushing the deck left advances the snap and announces it
+[12/23] [webkit] › e2e/gallery.spec.ts:338:1 › drag: a flick moves exactly one card; a release over the centered card selects nothing
+[13/23] [webkit] › e2e/gallery.spec.ts:373:1 › drag: a flick whose every move lands inside the sample floor is still a flick
+[14/23] [webkit] › e2e/gallery.spec.ts:423:1 › drag: a slow first sample does not swallow the flick that follows it
+[15/23] [webkit] › e2e/gallery.spec.ts:470:1 › drag: a release that lands a frame after the last move is still a flick
+  1) [webkit] › e2e/gallery.spec.ts:292:3 › gallery under prefers-reduced-motion › PRM: open is an instant cut — gallery present, no tweening 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?size=3&difficulty=EASY", waiting until "load"
+
+
+      292 |   test('PRM: open is an instant cut — gallery present, no tweening', async ({ page }) => {
+      293 |     await page.emulateMedia({ reducedMotion: 'reduce' });
+    > 294 |     await page.goto('./?size=3&difficulty=EASY');
+          |                ^
+      295 |     await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
+      296 |
+      297 |     // `g` opens the gallery (Wave B open is a v-if cut, no entry transition wrapper).
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:294:16
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-gallery-under-pref-9be15-gallery-present-no-tweening-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-gallery-under-pref-9be15-gallery-present-no-tweening-webkit/error-context.md
+
+
+[16/23] [webkit] › e2e/gallery.spec.ts:582:1 › click: a flank warps the deck to it, aria + the live region following the same seam
+  2) [webkit] › e2e/gallery.spec.ts:338:1 › drag: a flick moves exactly one card; a release over the centered card selects nothing 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:341:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-drag-a-flick-moves-273be-ntered-card-selects-nothing-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-drag-a-flick-moves-273be-ntered-card-selects-nothing-webkit/error-context.md
+
+
+  3) [webkit] › e2e/gallery.spec.ts:317:1 › drag: pushing the deck left advances the snap and announces it 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:318:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-drag-pushing-the-d-fb16d-s-the-snap-and-announces-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-drag-pushing-the-d-fb16d-s-the-snap-and-announces-it-webkit/error-context.md
+
+
+[17/23] [webkit] › e2e/gallery.spec.ts:677:1 › drag: kenken — the LAST card — is reachable by dragging
+  4) [webkit] › e2e/gallery.spec.ts:373:1 › drag: a flick whose every move lands inside the sample floor is still a flick 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:376:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-drag-a-flick-whose-b1e81-mple-floor-is-still-a-flick-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-drag-a-flick-whose-b1e81-mple-floor-is-still-a-flick-webkit/error-context.md
+
+
+[18/23] [webkit] › e2e/gallery.spec.ts:785:1 › CH-67: every settled wordmark bake is minted at the size it is shown at
+  5) [webkit] › e2e/gallery.spec.ts:423:1 › drag: a slow first sample does not swallow the flick that follows it 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:424:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-drag-a-slow-first--a6ae6-w-the-flick-that-follows-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-drag-a-slow-first--a6ae6-w-the-flick-that-follows-it-webkit/error-context.md
+
+
+  6) [webkit] › e2e/gallery.spec.ts:470:1 › drag: a release that lands a frame after the last move is still a flick 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:473:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-drag-a-release-tha-a5acb--last-move-is-still-a-flick-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-drag-a-release-tha-a5acb--last-move-is-still-a-flick-webkit/error-context.md
+
+
+  7) [webkit] › e2e/gallery.spec.ts:677:1 › drag: kenken — the LAST card — is reachable by dragging 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:681:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-drag-kenken-—-the--786b3--—-is-reachable-by-dragging-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-drag-kenken-—-the--786b3--—-is-reachable-by-dragging-webkit/error-context.md
+
+
+  8) [webkit] › e2e/gallery.spec.ts:582:1 › click: a flank warps the deck to it, aria + the live region following the same seam 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:585:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-click-a-flank-warp-dbb9a-ion-following-the-same-seam-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-click-a-flank-warp-dbb9a-ion-following-the-same-seam-webkit/error-context.md
+
+
+  9) [webkit] › e2e/gallery.spec.ts:785:1 › CH-67: every settled wordmark bake is minted at the size it is shown at 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?size=3&difficulty=EASY", waiting until "load"
+
+
+      786 |   page,
+      787 | }) => {
+    > 788 |   await page.goto('./?size=3&difficulty=EASY');
+          |              ^
+      789 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+      790 |
+      791 |   const readings: { state: string; ratio: number; baked: string; shown: string }[] = [];
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:788:14
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-CH-67-every-settle-b16d6--at-the-size-it-is-shown-at-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-CH-67-every-settle-b16d6--at-the-size-it-is-shown-at-webkit/error-context.md
+
+
+[19/23] [webkit] › e2e/gallery.spec.ts:521:1 › drag: a grab during a keyboard glide freezes the deck where it is drawn
+[20/23] [webkit] › e2e/gallery.spec.ts:618:1 › click: the card the warp delivered then SELECTS on the next click
+[21/23] [webkit] › e2e/gallery.spec.ts:641:1 › drag: a release that lands over a FLANK is swallowed, not taken as a warp
+[22/23] [webkit] › e2e/gallery.spec.ts:693:1 › header: the masthead persists in the gallery, names the snapped card, and is inert there
+[23/23] [webkit] › e2e/gallery.spec.ts:822:3 › gallery on a 375 phone › 375: one card near-fills the width, a neighbor peeks, pips present
+  10) [webkit] › e2e/gallery.spec.ts:618:1 › click: the card the warp delivered then SELECTS on the next click 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:619:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-click-the-card-the-acd91-n-SELECTS-on-the-next-click-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-click-the-card-the-acd91-n-SELECTS-on-the-next-click-webkit/error-context.md
+
+
+  11) [webkit] › e2e/gallery.spec.ts:641:1 › drag: a release that lands over a FLANK is swallowed, not taken as a warp 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:644:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-drag-a-release-tha-24d73-allowed-not-taken-as-a-warp-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-drag-a-release-tha-24d73-allowed-not-taken-as-a-warp-webkit/error-context.md
+
+
+  12) [webkit] › e2e/gallery.spec.ts:521:1 › drag: a grab during a keyboard glide freezes the deck where it is drawn 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:524:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-drag-a-grab-during-95ac1--the-deck-where-it-is-drawn-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-drag-a-grab-during-95ac1--the-deck-where-it-is-drawn-webkit/error-context.md
+
+
+  13) [webkit] › e2e/gallery.spec.ts:822:3 › gallery on a 375 phone › 375: one card near-fills the width, a neighbor peeks, pips present 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:823:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-gallery-on-a-375-p-2332e-neighbor-peeks-pips-present-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-gallery-on-a-375-p-2332e-neighbor-peeks-pips-present-webkit/error-context.md
+
+
+  14) [webkit] › e2e/gallery.spec.ts:693:1 › header: the masthead persists in the gallery, names the snapped card, and is inert there 
+
+    Error: page.goto: Could not connect to the server.
+    Call log:
+      - navigating to "http://localhost:3000/?view=gallery&size=3&difficulty=EASY", waiting until "load"
+
+
+      17 |
+      18 | async function openGalleryDeepLink(page: Page, query = '?view=gallery&size=3&difficulty=EASY') {
+    > 19 |   await page.goto('./' + query);
+         |              ^
+      20 |   // The board-group STAYS in gallery view (T6 mark 7) — it carries the masthead, which names
+      21 |   // the snapped card; what the gallery replaces is the scene under it. So wait on the gallery
+      22 |   // itself, not on the wordmark, which is present either way.
+        at openGalleryDeepLink (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:19:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/e2e/gallery.spec.ts:696:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/gallery-header-the-masthea-fe5d9-ped-card-and-is-inert-there-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/gallery-header-the-masthea-fe5d9-ped-card-and-is-inert-there-webkit/error-context.md
+
+
+  14 failed
+    [webkit] › e2e/gallery.spec.ts:292:3 › gallery under prefers-reduced-motion › PRM: open is an instant cut — gallery present, no tweening 
+    [webkit] › e2e/gallery.spec.ts:317:1 › drag: pushing the deck left advances the snap and announces it 
+    [webkit] › e2e/gallery.spec.ts:338:1 › drag: a flick moves exactly one card; a release over the centered card selects nothing 
+    [webkit] › e2e/gallery.spec.ts:373:1 › drag: a flick whose every move lands inside the sample floor is still a flick 
+    [webkit] › e2e/gallery.spec.ts:423:1 › drag: a slow first sample does not swallow the flick that follows it 
+    [webkit] › e2e/gallery.spec.ts:470:1 › drag: a release that lands a frame after the last move is still a flick 
+    [webkit] › e2e/gallery.spec.ts:521:1 › drag: a grab during a keyboard glide freezes the deck where it is drawn 
+    [webkit] › e2e/gallery.spec.ts:582:1 › click: a flank warps the deck to it, aria + the live region following the same seam 
+    [webkit] › e2e/gallery.spec.ts:618:1 › click: the card the warp delivered then SELECTS on the next click 
+    [webkit] › e2e/gallery.spec.ts:641:1 › drag: a release that lands over a FLANK is swallowed, not taken as a warp 
+    [webkit] › e2e/gallery.spec.ts:677:1 › drag: kenken — the LAST card — is reachable by dragging ─
+    [webkit] › e2e/gallery.spec.ts:693:1 › header: the masthead persists in the gallery, names the snapped card, and is inert there 
+    [webkit] › e2e/gallery.spec.ts:785:1 › CH-67: every settled wordmark bake is minted at the size it is shown at 
+    [webkit] › e2e/gallery.spec.ts:822:3 › gallery on a 375 phone › 375: one card near-fills the width, a neighbor peeks, pips present 
+  9 passed (6.6s)
+
+== WHOLE FILE, webkit, CURED tree, after settle ==
+
+Running 23 tests using 9 workers
+
+[1/23] [webkit] › e2e/gallery.spec.ts:167:1 › gallery: Enter on futoshiki selects it — board swaps, ?game set, ?view cleared
+[2/23] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by bare page
+[3/23] [webkit] › e2e/gallery.spec.ts:263:1 › gallery: only the centered card boils — a flank frame is inert + frozen
+[4/23] [webkit] › e2e/gallery.spec.ts:91:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips
+[5/23] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by a staged chip
+[6/23] [webkit] › e2e/gallery.spec.ts:219:3 › gallery: Escape still exits with focus moved off the listbox by a page pip
+[7/23] [webkit] › e2e/gallery.spec.ts:237:1 › gallery: `g` opens the gallery from playing; a `g` typed into a cell does not
+[8/23] [webkit] › e2e/gallery.spec.ts:183:1 › gallery: Escape cancels back to the board, no swap, ?view cleared
+[9/23] [webkit] › e2e/gallery.spec.ts:129:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+[10/23] [webkit] › e2e/gallery.spec.ts:292:3 › gallery under prefers-reduced-motion › PRM: open is an instant cut — gallery present, no tweening
+[11/23] [webkit] › e2e/gallery.spec.ts:317:1 › drag: pushing the deck left advances the snap and announces it
+[12/23] [webkit] › e2e/gallery.spec.ts:338:1 › drag: a flick moves exactly one card; a release over the centered card selects nothing
+
+[WebServer] 6:27:51 PM [vite] (client) [Unhandled error] Error: ResizeObserver loop completed with undelivered notifications.
+[WebServer]  > ../../../../../../../@vite/client:531:59
+[WebServer] 
+[13/23] [webkit] › e2e/gallery.spec.ts:373:1 › drag: a flick whose every move lands inside the sample floor is still a flick
+[14/23] [webkit] › e2e/gallery.spec.ts:423:1 › drag: a slow first sample does not swallow the flick that follows it
+[15/23] [webkit] › e2e/gallery.spec.ts:470:1 › drag: a release that lands a frame after the last move is still a flick
+[16/23] [webkit] › e2e/gallery.spec.ts:521:1 › drag: a grab during a keyboard glide freezes the deck where it is drawn
+[17/23] [webkit] › e2e/gallery.spec.ts:582:1 › click: a flank warps the deck to it, aria + the live region following the same seam
+[18/23] [webkit] › e2e/gallery.spec.ts:618:1 › click: the card the warp delivered then SELECTS on the next click
+[19/23] [webkit] › e2e/gallery.spec.ts:641:1 › drag: a release that lands over a FLANK is swallowed, not taken as a warp
+[20/23] [webkit] › e2e/gallery.spec.ts:677:1 › drag: kenken — the LAST card — is reachable by dragging
+[21/23] [webkit] › e2e/gallery.spec.ts:693:1 › header: the masthead persists in the gallery, names the snapped card, and is inert there
+[22/23] [webkit] › e2e/gallery.spec.ts:785:1 › CH-67: every settled wordmark bake is minted at the size it is shown at
+
+[WebServer] 6:27:55 PM [vite] (client) [Unhandled error] Error: ResizeObserver loop completed with undelivered notifications.
+[WebServer]  > ../../../../../../../@vite/client:531:59
+[WebServer] 
+[23/23] [webkit] › e2e/gallery.spec.ts:822:3 › gallery on a 375 phone › 375: one card near-fills the width, a neighbor peeks, pips present
+  23 passed (18.5s)

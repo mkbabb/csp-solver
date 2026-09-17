@@ -3,7 +3,8 @@
  *
  * `cards.ts` is the estate's only registration table now. What this pins:
  *   1. the five rows, their ids, and the id ⇄ name identity;
- *   2. the eager/lazy chunking asymmetry (sudoku rides the main chunk, the rest are lazy);
+ *   2. the main-chunk/lazy chunking asymmetry, read off the SHAPE of `mount` (sudoku carries
+ *      its spec outright, the other four carry a thunk) — one slot, no second claim to drift;
  *   3. every row resolves BOTH its poster and its mount — one arm, five games, always a
  *      `GameSpec` — so a broken loader can never pass silently;
  *   4. the migrated row's `persistKey` NAMES its spec's `urlCodec.key` rather than mirroring
@@ -29,11 +30,16 @@ describe("the game table (T5-W2 — the one registration list)", () => {
     for (const card of GAMES) expect(card.name).toBe(card.id);
   });
 
-  it("preserves the Sudoku-eager / everything-else-lazy chunking asymmetry", () => {
+  it("preserves the Sudoku-main-chunk / everything-else-lazy chunking asymmetry", () => {
+    // T9-W6 §6.1: the asymmetry used to be a BOOLEAN (`eager`) beside a loader that the eager
+    // row never called, and App read the boolean and then mounted a spec it had imported
+    // itself. Now the shape of `mount` IS the claim — a spec means the main chunk, a thunk
+    // means that game's own chunk — so there is nothing left for a boolean to disagree with.
     const [sudoku, futoshiki] = GAMES;
-    expect(sudoku.eager).toBe(true);
-    expect(futoshiki.eager).toBeFalsy();
-    for (const card of GAMES.slice(1)) expect(card.eager).toBeFalsy();
+    expect(typeof sudoku.mount).not.toBe("function");
+    expect(sudoku.mount).toBe(sudokuSpec);
+    expect(typeof futoshiki.mount).toBe("function");
+    for (const card of GAMES.slice(1)) expect(typeof card.mount).toBe("function");
   });
 
   it("carries a size sub-line derived from each game's own selector vocabulary", () => {
@@ -43,7 +49,12 @@ describe("the game table (T5-W2 — the one registration list)", () => {
   });
 
   it("gives every row the same single mount — its spec, and nothing else", () => {
-    for (const card of GAMES) expect(typeof card.load).toBe("function");
+    // ONE slot, two shapes, and every row fills it. A row that filled neither, or that
+    // carried a mount arm nothing reads, is the class this replaced.
+    for (const card of GAMES)
+      expect(typeof card.mount === "function" || typeof card.mount === "object").toBe(
+        true,
+      );
     // The F1 `scene` arm is gone: five of five rows hand `GameShell` a spec, so the union
     // that carried the unmigrated families collapsed to its first arm and the interim with
     // it. The order IS the carousel's order.
@@ -59,7 +70,7 @@ describe("the game table (T5-W2 — the one registration list)", () => {
   it("resolves every row's poster and its mount", async () => {
     for (const card of GAMES) {
       expect(await card.poster()).toBeTruthy();
-      const spec = await card.load();
+      const spec = typeof card.mount === "function" ? await card.mount() : card.mount;
       {
         // The eight slots, live: the shell reads exactly these at mount.
         expect(spec.id).toBe(card.id);
@@ -73,7 +84,11 @@ describe("the game table (T5-W2 — the one registration list)", () => {
         // The cold-start warm is no longer a slot: 2.2 left ONE Worker over the one wasm
         // binary, so `GameShell` warms it directly and no game holds a handle onto it.
         expect(spec.urlCodec.key).toBeTruthy();
+        // `deal` carries the drawer's section builder and nothing else since T9-W6 §6.1: its
+        // `sizes`/`difficulty` bands were declared by all five games and readable by one, so
+        // they retired to `@games/shared/selectors`, where the table already read them.
         expect(typeof spec.deal.options).toBe("function");
+        expect(Object.keys(spec.deal)).toEqual(["options"]);
         // ONE board on disk, whether the row names the spec's key (an eager row can) or
         // spells it (a lazy row must, so the ledger backfill loads no specs). Drift here
         // would strand a saved board behind a key nothing reads.
@@ -91,9 +106,10 @@ describe("the game table (T5-W2 — the one registration list)", () => {
   it("drops a sixth game in with ZERO edits outside the table (id is a loose string)", () => {
     const DemoPoster = defineComponent({ name: "DemoPoster", render: () => null });
     // The drop-in claim is about the TABLE: a sixth game is one row here, satisfying the same
-    // card shape as the five, and no edit anywhere else. The spec behind `load` is the
+    // card shape as the five, and no edit anywhere else. The spec behind `mount` is the
     // sixth game's own module — stood in for by a real one, because what is under test is
-    // that the row type demands nothing a new game cannot supply.
+    // that the row type demands nothing a new game cannot supply. A drop-in takes the LAZY
+    // shape, which is every row but the one that ships in the main chunk.
     const demoCard: GameCard = {
       id: "demo",
       name: "demo",
@@ -111,7 +127,7 @@ describe("the game table (T5-W2 — the one registration list)", () => {
       },
       persistKey: "demo-board-v1",
       poster: () => Promise.resolve(DemoPoster),
-      load: () => Promise.resolve(sudokuSpec),
+      mount: () => Promise.resolve(sudokuSpec),
     };
     const withDemo: GameCard[] = [...GAMES, demoCard];
     expect(withDemo).toHaveLength(GAMES.length + 1); // the five landed games + the drop-in

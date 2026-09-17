@@ -22,6 +22,15 @@
 //   4  HOLDOUTS CLOSED   the holdout table is a closed set: a stale entry (the spec now runs
 //                        wider) reds, so the record follows the code in the same commit. New
 //                        entries are a deliberate edit with a cite, never a config default.
+//                        AT TWO GRAINS since T9-W6 §6.3 — per FILE against Playwright's
+//                        resolution, and per ROW against the spec's own source, because a
+//                        `test.skip(browserName === …)` is a runtime decision `--list` counts
+//                        as coverage. An undeclared per-row engine skip reds.
+//                        AND AT TWO FORMS since the T9-W3+W6 seal: a row goes dark on its
+//                        ENGINE (`browserName === …`) or on an ENV GATE
+//                        (`process.env.X !== …`), which fires in BOTH engines on every run
+//                        that does not set the flag. Both list and neither asserts, so an
+//                        undeclared skip of EITHER form reds.
 //   5  COUNT FLOORS      per (config, project) LIVE test counts never fall below the floor.
 //   6  SPEC MANIFEST     the e2e/*.spec.ts set on disk is EXACTLY SPEC_MANIFEST's.
 //   7  QUARANTINES CLOSED every declared quarantine's cited module is still on disk.
@@ -45,6 +54,12 @@
 //     platform the quarantine names. theme-bake-webkit's live floor is therefore 0, and that
 //     zero is the point — the gate now PRINTS that the project asserts nothing on linux
 //     instead of hiding it behind a floor of 2.
+//     T9-W6 §6.1 CLOSED THAT PARK. Both entries above are HISTORY now: the quarantine module
+//     is deleted and the QUARANTINES table below is EMPTY. Check 7 stays, and it is the reason
+//     the unwind could not be quiet — the module left the tree and this gate redded on the
+//     stale subtraction in the same working copy, which is the detector doing its whole job.
+//     The 15 rows returned to their projects and the two floors they were subtracted from move
+//     with them, through the W5 restamp and not by hand.
 //
 // T9-W5 §5.2 — check 8, and the floors' new home:
 //
@@ -65,6 +80,27 @@
 //     same cure check-coverage-floor.mjs took for the identical problem at T7-W6. It also
 //     closes a second hole: floor(11 * 0.9) = 9 sits UNDER ceil(11 * 0.85) = 10, so the plain
 //     churn rule could derive a floor its own band rejects. `law.derive` takes the max().
+//
+// T9-W3+W6 SEAL (2026-09-17) — THE ENV GATE JOINS THE RECORD (prove P-2):
+//
+//   · THE SUITE REPORTED 4 SKIPS AND THIS GATE MODELLED 2. The two it knew are share-truth's
+//     and spoken-controls' clipboard rows, held out of webkit. The other two are ONE row —
+//     multiplayer.spec.ts's `test.skip(process.env.T62_REAL_RELAY !== "1", …)` — firing once
+//     per engine on every run, because nothing sets the flag. Those two rows counted as LIVE
+//     coverage in BOTH engines' census while asserting on no run that ever executes: the exact
+//     disease the QUARANTINES comment below names in its own words ("any future park must say
+//     so here or the floors will count silence as coverage"), in a form that table cannot hold
+//     — the park is keyed by project and platform, and an env gate is neither.
+//   · THE SMALLER EXTENSION WON, and this is why. A sibling ENV_GATED table would have needed
+//     its own subtraction, its own closure check, its own self-test arm and its own rule for
+//     colliding with HOLDOUTS on the same file. The `rows` grain already carries all four: an
+//     env-gated row is a `rows` entry with `env` set and `engines: []`, so `rowHoldouts`
+//     subtracts it from BOTH engines with no change at all, and check 4's clauses gain the env
+//     spelling instead of a fifth table. One table, one grain, one reader.
+//   · EFFECT: live 237 chromium / 235 webkit against floors 214 / 212 — both satisfied with
+//     room, so no restamp was owed and none was run. The census printer now names WHICH source
+//     a shortfall came from (park / row holdout / env gate), because "2 row-held out of webkit"
+//     for an engine-agnostic flag sends the next reader to the wrong table entirely.
 //
 // FLOOR TIMING (W6 §floor timing, binding): the MECHANISM lands in the wave; the NUMBERS
 // restamp at WGATE, after the last row lands anywhere in the tranche. A floor derived at a
@@ -138,19 +174,18 @@ const FLOOR_STAMP = (() => {
  * many of a project's listed tests are parked, on which platform, and cites the module that
  * parks them — check 7 reds when that module leaves the tree with the subtraction still here.
  */
-const QUARANTINES = {
-  "wordmark-webkit": {
-    platform: "linux",
-    tests: 5,
-    cite: "e2e/linux-webkit-bake-quarantine.ts — the five game rows of wordmark-integrity.spec.ts, THIRD PINNING (CH-62). 1 of 6 rows asserts on ubuntu·webkit.",
-  },
-  "theme-bake-webkit": {
-    platform: "linux",
-    tests: 10,
-    cite: "e2e/linux-webkit-bake-quarantine.ts — all 10 rows of theme-bake-freshness.spec.ts (2 starts × 5 games), THIRD PINNING (CH-62). 0 of 10 assert on ubuntu·webkit; the project is a name, not a gate, on the platform CI runs.",
-  },
-};
-const QUARANTINE_CITE_FILES = ["e2e/linux-webkit-bake-quarantine.ts"];
+// T9-W6 §6.1 — EMPTY, and the emptiness is the record. Two entries stood here until this wave:
+// `wordmark-webkit` (5 of 6 rows) and `theme-bake-webkit` (all 10), both citing
+// `e2e/linux-webkit-bake-quarantine.ts` and both stamped "THIRD PINNING (CH-62)". CH-62 RETIRED
+// at T8 formation and the park's own condition (`process.platform === "linux"`) has had no
+// surface to fire on since O-12 took the browser lanes out of CI at `d1daefb3` — so the module,
+// its two call sites and these two subtractions died together. The table stays because the LAW
+// stays: a `test.fixme` under a platform condition is a test that lists and does not assert,
+// `--list` cannot tell the two apart, and any future park must say so here or the floors will
+// count silence as coverage. Check 7 keeps its teeth against an empty table — it fires on any
+// cite file that stops existing, which is exactly how this unwind was caught mid-edit.
+const QUARANTINES = {};
+const QUARANTINE_CITE_FILES = [];
 
 // The declared matrix: every project and the engine it must resolve to. NO FLOORS HERE — a
 // floor on LIVE tests (listed minus any declared quarantine) lives in census.stamp.json, one
@@ -199,6 +234,7 @@ const SPEC_MANIFEST = [
   "board-covisibility.spec.ts",
   "drawer.spec.ts",
   "filter-census.spec.ts",
+  "follow-still-authorship.spec.ts",
   "font-census.spec.ts",
   "futoshiki.spec.ts",
   "gallery-deal.spec.ts",
@@ -211,9 +247,12 @@ const SPEC_MANIFEST = [
   "mobile-platform.spec.ts",
   "multiplayer.spec.ts",
   "permalink.spec.ts",
+  "presence.spec.ts",
   "prm-void-audition.spec.ts",
   "session-substrate.spec.ts",
   "share-truth.spec.ts",
+  "spoken-controls.spec.ts",
+  "spoken-gallery.spec.ts",
   "sudoku-interaction.spec.ts",
   "theme-bake-freshness.spec.ts",
   "theme-quadrants.spec.ts",
@@ -226,47 +265,241 @@ const SPEC_MANIFEST = [
 ];
 
 /**
- * The single-engine estate, closed. Each entry is a spec that does NOT run in both engines,
- * the engines it does run in, and the reason — a Playwright API gap, an engine-only defect
- * class, or a row that owns the decision. A spec absent from this table must run in both.
+ * The single-engine estate, closed. Each entry is a spec that does NOT run in both engines at
+ * FULL grain, the engines it does run in, and the reason — a Playwright API gap, an engine-only
+ * defect class, or a row that owns the decision. A spec absent from this table must run in both.
  *
  * CH-56's residue was six specs; it is four, and each of the four carries a cite that can be
  * re-auditioned. `mobile-affordances` and `mobile-platform` left this table at T5-W1 1.10.
+ *
+ * ── T9-W6 §6.3 · PER-ROW GRAIN, BECAUSE THE FILE GRAIN WAS ROUNDING ────────────────────────
+ *
+ * An entry may carry `rows`. That means the FILE runs in both engines and a NAMED TEST inside
+ * it does not — the shape `share-truth.spec.ts` was in for a whole campaign while its record
+ * said the file was chromium-only. Four of its five rows never touched the missing API; they
+ * sat dark in the second engine because the ignore was written one grain too coarse, and a
+ * file-scope ignore is invisible from inside the file, so nothing a reader of the spec could
+ * see said the rows were half-run.
+ *
+ * `--list` CANNOT SEE A ROW SKIP — a `test.skip(browserName === …)` is a runtime decision, so
+ * the row lists in webkit and asserts nothing there, which is the exact "lists but does not
+ * assert" shape the QUARANTINES table above exists for. So `rows` is load-bearing twice:
+ * `liveTests` subtracts it from the engine it is held out of (the floors stay floors on LIVE
+ * assertions), and check 4 holds it against the spec's own source — the title must be on disk,
+ * the guard must be on disk, and an UNDECLARED per-row engine skip in any manifest spec reds.
+ * That last clause is the anti-growth law the file-scope list used to carry, at row grain.
+ *
+ * ── T9-W3+W6 SEAL · THE ENV FORM, IN THE SAME TABLE ───────────────────────────────────────
+ *
+ * A row may also carry `env`: the name of the variable whose absence skips it. That is the
+ * OTHER way a row lists and does not assert, and it is strictly worse than the engine form,
+ * because an env gate is ENGINE-AGNOSTIC — it fires in every engine, on every run that does
+ * not set the flag, so the row goes dark in BOTH censuses at once. Such a row declares
+ * `engines: []` (it runs in no engine by default), which needs no new subtraction: `rowHoldouts`
+ * already prices a row against the engines it does NOT list, so an empty list costs both.
+ * Check 4 reads the env spelling of each clause — the title on disk, the `process.env.<NAME>`
+ * guard on disk with the NAME the record claims, the anti-growth clause over env skips too,
+ * and one clause of its own (an env gate that also names an engine is two facts in one row).
  */
 const HOLDOUTS = {
-  "share-truth.spec.ts": {
-    engines: ["chromium"],
+  "multiplayer.spec.ts": {
+    // The FILE runs in both engines; ONE row is an opt-in chair instrument behind an ENV GATE,
+    // so it is dark in both of them rather than in one. T9-W3+W6 seal, prove P-2.
+    engines: ENGINES,
+    rows: [
+      {
+        title: "the real relay carries the board with RTCPeerConnection deleted",
+        env: "T62_REAL_RELAY",
+        engines: [],
+        why:
+          "NOT an engine gap — an ENV GATE, and it fires in BOTH engines on every run that " +
+          "does not set T62_REAL_RELAY=1, which is every run but a chair's. T9-W6 §6.3 " +
+          "DECIDED it stays opt-in: the far end is a deployed Cloudflare Worker, and a " +
+          "default-on row would make every local suite depend on a third party's uptime — a " +
+          "green that needs the internet reports weather. The obligation that rides the flag " +
+          "is the WGATE production pass, which runs it once against the real relay and banks " +
+          "the frames; the invocation sits in the row's own header at " +
+          "multiplayer.spec.ts:927-949. Until that run, the row LISTS in both engines and " +
+          "ASSERTS in neither, so both floors subtract it.",
+      },
+    ],
     why:
-      "PW-WebKit has no clipboard-write permission — `browserContext.grantPermissions: " +
-      "Unknown permission: clipboard-write` (re-measured at @playwright/test 1.61.1). The spec " +
-      "asserts a REAL clipboard write (share-truth.spec.ts:65,76); there is no honest way to " +
-      "grant one there. Cited on the exclusion line in playwright.config.ts.",
+      "PER-ROW, and held out of BOTH engines rather than one. Every other row in the file " +
+      "drives `wire=local`, the substitute; this row alone reaches the live relay with " +
+      "`RTCPeerConnection` deleted, so it alone is gated. It is declared here because the " +
+      "QUARANTINES table's own law says it must be — a row that lists and does not assert has " +
+      "to be spelled somewhere or the floors count silence as coverage — and because that " +
+      "table is keyed by project and platform, which an engine-agnostic flag is neither.",
+  },
+  "share-truth.spec.ts": {
+    // The FILE runs in both engines as of T9-W6 §6.3 — re-auditioned, not inherited:
+    // 9 passed / 1 FAILED (evidence/w6/holdouts/audition-both-engines-after-3C1.txt). The
+    // failure is the audition's whole point and PRE-DATES the declaration: the run happened
+    // before the row skip existed, so the clipboard row failed in WebKit on the missing
+    // permission and the other nine passed. That failing row is the declared holdout below;
+    // those nine are the widening this entry earned. (Corrected at the T9-W3+W6 seal, P-3:
+    // this comment read "1 skipped", which the banked file does not say.)
+    engines: ENGINES,
+    rows: [
+      {
+        title:
+          "sudoku share success: label + aria confirm AND the clipboard holds the link",
+        engines: ["chromium"],
+        why:
+          "PW-WebKit has no clipboard-write permission — `browserContext.grantPermissions: " +
+          "Unknown permission: clipboard-write` (re-measured at @playwright/test 1.61.1). THIS " +
+          "ROW alone asserts a REAL clipboard write (grantPermissions at " +
+          "share-truth.spec.ts:75, readText at :91); there is no honest way to grant one " +
+          "there. The skip and its reason ride the row itself, at share-truth.spec.ts:68-74 " +
+          "(row opens at :63). Cite re-derived at the T9-W3+W6 seal; it read :58-74.",
+      },
+    ],
+    why:
+      "PER-ROW, not per-file. The one true gap reaches the success row only; the two " +
+      "failure-signal rows drive a REJECTING `writeText` through `addInitScript`, which " +
+      "PW-WebKit honours (measured: REJECTED NotAllowedError in 1ms, " +
+      "evidence/w6/holdouts/probe-failinit-webkit.txt), and the two corrupt-link rows only " +
+      "read a margin notice. See `rows` for the held-out row and playwright.config.ts:72-96 " +
+      "for the audition that earned the widening.",
+  },
+  "spoken-controls.spec.ts": {
+    // The FILE runs in both engines; ONE row needs a clipboard grant PW-WebKit cannot give.
+    engines: ENGINES,
+    rows: [
+      {
+        title:
+          "the outcome is spoken, and the name agrees with the label at every beat",
+        engines: ["chromium"],
+        why:
+          "PW-WebKit has no clipboard-write permission — `browserContext.grantPermissions: " +
+          "Unknown permission: clipboard-write` (re-measured at @playwright/test 1.61.1). The " +
+          "row grants clipboard-read/write to press Share for real; the same gap share-truth's " +
+          "success row carries, in a second file. The skip and its reason ride the row at " +
+          "spoken-controls.spec.ts:284 (row opens at :279). Cite re-derived at the T9-W3+W6 " +
+          "seal; it read :242, forty-two lines adrift of the tree.",
+      },
+    ],
+    why:
+      "PER-ROW, not per-file (T9-W6 §6.3). Only the §3.6 copy-outcome row needs the grant; " +
+      "every other row in the file asserts live regions that both engines publish.",
   },
   "throttled-void.spec.ts": {
     engines: ["chromium"],
     why:
       "CDP-only: the spec throttles the network through `page.context().newCDPSession(page)` " +
-      "(throttled-void.spec.ts:50), and CDP is a Chromium protocol — `:49` says so. Widening " +
-      "needs a non-CDP throttle, not a project.",
+      "(throttled-void.spec.ts:55), and CDP is a Chromium protocol — `:52-54` says so. " +
+      "Widening needs a non-CDP throttle, not a project.",
   },
   "wordmark-integrity.spec.ts": {
     engines: ["webkit"],
     why:
       "WEBKIT-only by charter, the one holdout that runs in the second engine rather than the " +
       "first: the defects it guards are WebKit's own (the SVG-as-image bake at its declared " +
-      "intrinsic), so it 'asserts in WebKit or asserts nothing' — playwright-throttle.config.ts:82-83.",
+      "intrinsic), so it 'asserts in WebKit or asserts nothing' — " +
+      "playwright-throttle.config.ts:122-128.",
   },
   "visual-golden.spec.ts": {
     engines: ["chromium"],
     why:
       "playwright-golden.config.ts declares no `projects` and no `use.browserName`, so the " +
-      "goldens run under Playwright's default engine alone. T5-W1 row 1.13 owns this decision " +
+      "goldens run under Playwright's default engine alone (the argument sits at " +
+      "playwright-golden.config.ts:53-69). T5-W1 row 1.13 owns this decision " +
       "(r3/goldens-estate: 'the goldens' chromium-only engine pin argued or widened') — when " +
       "1.13 rules, this entry and the CONFIGS row above move in the same commit. A second " +
-      "engine there also needs {projectName} in snapshotPathTemplate; check-golden-bytes.mjs " +
-      "check 6 owns that collision.",
+      "engine there also needs {projectName} in snapshotPathTemplate; " +
+      "check-golden-bytes.mjs:424-451 (check 6) owns that collision.",
   },
 };
+
+/* ── per-row grain: reading the spec's own source ──────────────────────────────
+ * The record above is prose until something holds it against the tree. These two readers are
+ * what give it teeth, and both read the SPEC FILE — never a second copy of the truth.
+ */
+
+/**
+ * Every CONDITIONED `test.skip(…)` in a spec, in both forms this gate knows:
+ *   {kind: "engine", engine, title, line}  ← `test.skip(browserName === '<engine>')`
+ *   {kind: "env",    env,    title, line}  ← `test.skip(process.env.<NAME> !== …)`
+ * One reader, because the scan is identical and only the condition differs: find the skip,
+ * read the guard out of the next few lines, walk back for the row it belongs to. What the two
+ * forms share is the only property the floors care about — the row LISTS and does not ASSERT.
+ * What they do not share is reach: an engine guard darkens one census, an env guard darkens
+ * every one of them.
+ */
+function skipsIn(spec) {
+  const path = join(E2E, spec);
+  if (!existsSync(path)) return [];
+  const lines = readFileSync(path, "utf8").split("\n");
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!/\btest\.skip\s*\(/.test(lines[i])) continue;
+    // The guard may sit on the same line or on the next few — both spellings are idiomatic
+    // and neither is the point; the engine name, or the variable name, is.
+    const window = lines.slice(i, i + 4).join("\n");
+    const engine = /browserName\s*===\s*['"`](\w+)['"`]/.exec(window);
+    // An engine guard wins when a row somehow carries both: it is the narrower claim, and the
+    // gate would rather over-report reach than under-report it.
+    const env = engine ? null : /process\.env\.(\w+)/.exec(window);
+    if (!engine && !env) continue;
+    // The row it belongs to: the nearest `test(` above it carrying a quoted title.
+    let title = null;
+    for (let j = i; j >= 0 && j > i - 60; j--) {
+      const t = /^\s*test(?:\.\w+)*\s*\(\s*(['"`])((?:\\.|(?!\1).)*)\1/.exec(lines[j]);
+      if (t) {
+        title = t[2].replace(/\\(['"`])/g, "$1");
+        break;
+      }
+    }
+    out.push(
+      engine
+        ? { kind: "engine", engine: engine[1], title, line: i + 1 }
+        : { kind: "env", env: env[1], title, line: i + 1 },
+    );
+  }
+  return out;
+}
+
+/**
+ * The per-row holdouts a project loses, BY SOURCE: rows declared as not running in this
+ * project's engine, split into the engine-scoped ones and the env-gated ones. The split is
+ * for the printer, not for the arithmetic — a dark row costs a floor the same either way —
+ * but "row-held out of webkit" printed for an engine-agnostic flag sends the next reader to
+ * the wrong table, and this gate exists to stop exactly that kind of misfiling.
+ */
+function rowHoldoutsBySource(engine, specs) {
+  let rows = 0;
+  let env = 0;
+  for (const [spec, entry] of Object.entries(HOLDOUTS)) {
+    if (!entry.rows || !specs?.has(spec)) continue;
+    for (const r of entry.rows) {
+      if (r.engines.includes(engine)) continue;
+      if (r.env) env += 1;
+      else rows += 1;
+    }
+  }
+  return { rows, env };
+}
+
+/** The same figure, summed — what `liveTests` subtracts. */
+function rowHoldouts(engine, specs) {
+  const { rows, env } = rowHoldoutsBySource(engine, specs);
+  return rows + env;
+}
+
+/** Why a project's LIVE count sits under its LISTED count, named by source. */
+function shortfallSources(projectName, engine, specs) {
+  const q = QUARANTINES[projectName];
+  const { rows, env } = rowHoldoutsBySource(engine, specs);
+  return (
+    [
+      q ? `${q.tests} parked on ${q.platform}` : null,
+      rows ? `${rows} row-held out of ${engine}` : null,
+      env ? `${env} env-gated, dark in both engines` : null,
+    ]
+      .filter(Boolean)
+      .join(" + ") || "unattributed"
+  );
+}
 
 /* ── collection: ask Playwright, don't read prose ──────────────────────────── */
 
@@ -448,13 +681,147 @@ function check4HoldoutsClosed(model) {
         `HOLDOUTS[${spec}] carries no usable reason — a holdout without a cite is a hole.`,
       );
   }
+  bad.push(...rowGrainClosed(model));
   return bad;
 }
 
-/** Tests a project LISTS minus the declared quarantine that applies on this platform. */
-function liveTests(projectName, listed, platform = process.platform) {
+/**
+ * CHECK 4, PER-ROW HALF (T9-W6 §6.3). The file-scope half above reads Playwright's resolution;
+ * this half reads the SPEC SOURCE, because a `test.skip(browserName === …)` is a runtime
+ * decision `--list` renders as coverage. Four clauses, and the estate was one edit from each:
+ *
+ *   DECLARED    every row-grain entry names a title that is actually on disk, so a retitled or
+ *               deleted row cannot leave a subtraction behind (the CH-62 park's exact shape,
+ *               one grain down).
+ *   GUARDED     the spec carries a matching guard — `test.skip(browserName === '<engine>')`
+ *               for an engine row, `test.skip(process.env.<NAME> …)` with the NAME the record
+ *               claims for an env row. A record claiming a row is dark where it in fact runs
+ *               is worse than none: `liveTests` subtracts it, so the floor drops for a row
+ *               that asserts fine.
+ *   UNDECLARED  the anti-growth clause, and the whole reason this half exists. Any per-row
+ *               engine skip in a MANIFEST spec that no entry declares reds — and, since the
+ *               T9-W3+W6 seal, any per-row ENV skip too. Without it, moving from a file-scope
+ *               ignore to row-scope skips would have traded a watched narrowing for an
+ *               unwatched one — CH-56 re-opened at row grain; and the env form was that hole
+ *               already open, four skips reported by the suite against two in the model.
+ *   COHERENT    row grain only means anything when the FILE runs in both engines; a per-row
+ *               holdout inside a file-scope holdout is two records of one fact.
+ *   AGNOSTIC    an env gate fires in every engine, so an env row that also names engines it
+ *               runs in is two facts in one row, and the two will drift.
+ *
+ * Manifest specs only: SPEC_MANIFEST is the closed set this gate speaks for, and a spec that
+ * has not joined it yet is check 6's business, not this clause's.
+ */
+function rowGrainClosed({ onDisk }, readSkips = skipsIn) {
+  const bad = [];
+  const declared = new Map(); // "spec::title::engine" -> true
+  for (const [spec, entry] of Object.entries(HOLDOUTS)) {
+    if (!entry.rows) continue;
+    if (entry.engines.length < ENGINES.length)
+      bad.push(
+        `HOLDOUTS[${spec}] declares per-ROW holdouts inside a per-FILE holdout ` +
+          `({${fmt(entry.engines)}}). Row grain says "the file runs everywhere, this row does ` +
+          `not" — pick one grain, or the same fact is recorded twice and the two will drift.`,
+      );
+    const skips = readSkips(spec);
+    for (const r of entry.rows) {
+      if (!r.why || r.why.length < 40)
+        bad.push(
+          `HOLDOUTS[${spec}] row ${JSON.stringify(r.title)} carries no usable reason — a ` +
+            `holdout without a cite is a hole, at every grain.`,
+        );
+      const held = ENGINES.filter((e) => !r.engines.includes(e));
+      const onDiskTitle = skips.some((s) => s.title === r.title);
+      if (!onDiskTitle)
+        bad.push(
+          `HOLDOUTS[${spec}] declares row ${JSON.stringify(r.title)}, which carries no ` +
+            `conditioned skip on disk. Either the row was retitled or deleted and this ` +
+            `subtraction outlived it, or the guard was removed and the row silently runs ` +
+            `everywhere — both leave the floors counting a row that is not what the record ` +
+            `says it is.`,
+        );
+      if (r.env) {
+        // AGNOSTIC + GUARDED + the declaration key, env spelling. An env row is dark in every
+        // engine, so its key is the variable rather than an engine and `held` is necessarily
+        // all of them — which is what makes `engines: []` the honest declaration.
+        if (r.engines.length)
+          bad.push(
+            `HOLDOUTS[${spec}] row ${JSON.stringify(r.title)} is env-gated on ` +
+              `${r.env} AND claims to run in {${fmt(r.engines)}}. An env gate fires in every ` +
+              `engine — declare \`engines: []\`, or drop \`env\` and say which engine guard ` +
+              `really holds it out. Two facts in one row is how the record starts to drift.`,
+          );
+        declared.set(`${spec}::${r.title}::env:${r.env}`, true);
+        if (
+          !skips.some((s) => s.kind === "env" && s.title === r.title && s.env === r.env)
+        )
+          bad.push(
+            `HOLDOUTS[${spec}] gates row ${JSON.stringify(r.title)} on ` +
+              `\`process.env.${r.env}\`, which the spec does not carry. liveTests subtracts ` +
+              `that row from BOTH engines' floors, so the record is lowering two floors for ` +
+              `coverage the tree still has.`,
+          );
+        continue;
+      }
+      for (const e of held) declared.set(`${spec}::${r.title}::${e}`, true);
+      for (const e of held)
+        if (
+          !skips.some(
+            (s) => s.kind === "engine" && s.title === r.title && s.engine === e,
+          )
+        )
+          bad.push(
+            `HOLDOUTS[${spec}] holds row ${JSON.stringify(r.title)} out of ${e}, but the ` +
+              `spec has no \`test.skip(browserName === '${e}')\` on it. liveTests subtracts ` +
+              `that row from ${e}'s floor, so the record is lowering a floor for coverage the ` +
+              `tree still has.`,
+          );
+    }
+  }
+  for (const spec of SPEC_MANIFEST) {
+    if (!onDisk.includes(spec)) continue;
+    for (const s of readSkips(spec)) {
+      if (s.title === null) {
+        bad.push(
+          `${spec}:${s.line} carries a conditioned skip this gate cannot attribute to a test ` +
+            `title. A skip no reader can name is a skip no record can hold — put it inside a ` +
+            `\`test('…')\` whose title is on one line.`,
+        );
+        continue;
+      }
+      const k =
+        s.kind === "env"
+          ? `${spec}::${s.title}::env:${s.env}`
+          : `${spec}::${s.title}::${s.engine}`;
+      if (declared.has(k)) continue;
+      bad.push(
+        s.kind === "env"
+          ? `${spec}:${s.line} skips ${JSON.stringify(s.title)} unless ` +
+              `\`process.env.${s.env}\` is set, and HOLDOUTS does not declare it. An env gate ` +
+              `is CH-56's shape with the reach of a quarantine: the row LISTS in BOTH engines ` +
+              `and asserts in neither, so both floors count it as coverage on every run that ` +
+              `leaves the flag unset. Declare it in HOLDOUTS[${spec}].rows with \`env\`, ` +
+              `\`engines: []\` and a cite, or delete the skip.`
+          : `${spec}:${s.line} skips ${JSON.stringify(s.title)} in ${s.engine} and HOLDOUTS ` +
+              `does not declare it. This is CH-56's shape at ROW grain: a row that quietly ` +
+              `asserts in one engine while the file reads as covering both. Declare it in ` +
+              `HOLDOUTS[${spec}].rows with a cite, or delete the skip.`,
+      );
+    }
+  }
+  return bad;
+}
+
+/**
+ * Tests a project LISTS minus what it does not ASSERT: the declared quarantine that applies on
+ * this platform, and (T9-W6 §6.3) the declared per-row engine holdouts. Both are runtime
+ * decisions `--list` counts as coverage; a floor over them is a floor over silence.
+ */
+function liveTests(projectName, listed, platform = process.platform, ctx) {
   const q = QUARANTINES[projectName];
-  return q && q.platform === platform ? Math.max(0, listed - q.tests) : listed;
+  const parked = q && q.platform === platform ? q.tests : 0;
+  const rows = ctx ? rowHoldouts(ctx.engine, ctx.specs) : 0;
+  return Math.max(0, listed - parked - rows);
 }
 
 /**
@@ -462,12 +829,20 @@ function liveTests(projectName, listed, platform = process.platform) {
  * restamp reason about. A census taken on darwin, where no quarantine applies, would bank
  * floors of 6 and 10 for the two parked projects and red the ubuntu lane on its next run.
  */
-const worstCaseLive = (projectName, listed) =>
+const worstCaseLive = (projectName, listed, ctx) =>
   liveTests(
     projectName,
     listed,
     QUARANTINES[projectName]?.platform ?? process.platform,
+    ctx,
   );
+
+/** The (engine, specs) a project resolves to — what `liveTests` needs to price its row holdouts. */
+const ctxOf = (file, p, matrix) => ({
+  engine: p.engine,
+  specs: matrix.get(p.name)?.specs ?? new Set(),
+  file,
+});
 
 /** The floor a project owes, from the one stamp; a project with no row owes nothing here (check 8 reds). */
 const floorOf = (file, project) => stampRow(file, project)?.floor ?? 0;
@@ -477,11 +852,11 @@ function check5CountFloors({ configs }) {
   for (const { file, matrix } of configs)
     for (const p of CONFIGS.find((c) => c.file === file).projects) {
       const got = matrix.get(p.name)?.tests ?? 0;
-      const live = liveTests(p.name, got);
+      const live = liveTests(p.name, got, process.platform, ctxOf(file, p, matrix));
       const floor = floorOf(file, p.name);
       if (live < floor)
         bad.push(
-          `${file} [${p.name}]: ${live} LIVE tests${live === got ? "" : ` (${got} listed − ${got - live} quarantined)`}, ` +
+          `${file} [${p.name}]: ${live} LIVE tests${live === got ? "" : ` (${got} listed − ${got - live} dark: ${shortfallSources(p.name, p.engine, matrix.get(p.name)?.specs ?? new Set())})`}, ` +
             `floor ${floor}. Tests left the project. Raise the floor only alongside the ` +
             `reason they went.`,
         );
@@ -523,7 +898,7 @@ function check8FloorBand({ configs }) {
         continue;
       }
       const listed = matrix.get(p.name)?.tests ?? 0;
-      const live = worstCaseLive(p.name, listed);
+      const live = worstCaseLive(p.name, listed, ctxOf(file, p, matrix));
       const ref = Math.max(row.census, live);
       const need = bandFloor(ref);
       if (row.floor < need)
@@ -657,9 +1032,13 @@ const SABOTAGES = [
       defaultCfg(m).matrix.get("webkit").specs.delete("mobile-affordances.spec.ts"),
   ],
   [
+    // T9-W6 §6.3 re-cut this one. It used to widen share-truth into webkit, and share-truth IS
+    // in webkit now — the sabotage had become a no-op and `--self-test` said so on the first
+    // run after the narrowing, which is the canary earning its keep. throttled-void carries the
+    // same file-scope shape (CDP, chromium-only), so the clause is proven on a live holdout.
     "4 HOLDOUTS CLOSED",
-    "share-truth is widened but the holdout record is left standing",
-    (m) => defaultCfg(m).matrix.get("webkit").specs.add("share-truth.spec.ts"),
+    "throttled-void is widened but the holdout record is left standing",
+    (m) => defaultCfg(m).matrix.get("webkit").specs.add("throttled-void.spec.ts"),
   ],
   [
     "5 COUNT FLOORS",
@@ -683,6 +1062,137 @@ const SABOTAGES = [
     "6 SPEC MANIFEST",
     "a spec lands on disk that the manifest never sanctioned",
     (m) => m.onDisk.push("smuggled.spec.ts"),
+  ],
+];
+
+/**
+ * Check 4's PER-ROW half reads the spec source and the HOLDOUTS table, not the resolved matrix,
+ * so like check 7 it carries its own sabotages: bend one of the two, run the clause, put it
+ * back. The reader is injected rather than the file written, so nothing touches the tree — a
+ * self-test that plants a defect on disk is a self-test that can leave one there.
+ */
+const SHARE = "share-truth.spec.ts";
+const RELAY = "multiplayer.spec.ts";
+const SABOTAGES_4_ROWS = [
+  [
+    "UNDECLARED — a manifest spec grows a per-row engine skip nobody declared (CH-56 at row grain)",
+    (m) =>
+      rowGrainClosed(m, (spec) =>
+        spec === "permalink.spec.ts"
+          ? [
+              {
+                kind: "engine",
+                engine: "webkit",
+                title: "a row that quietly stopped covering webkit",
+                line: 1,
+              },
+            ]
+          : skipsIn(spec),
+      ),
+  ],
+  [
+    // THE SEAL'S PLANT, run without touching the tree. The disk version of this fixture is
+    // banked at evidence/w6/seal/s3-*: the same skip planted in permalink.spec.ts read GREEN
+    // on all eight checks before this clause existed, which is what "silence is not coverage"
+    // costs when the gate has no reader for the form.
+    "UNDECLARED · ENV — a manifest spec grows an env-gated skip nobody declared (dark in BOTH engines)",
+    (m) =>
+      rowGrainClosed(m, (spec) =>
+        spec === "permalink.spec.ts"
+          ? [
+              {
+                kind: "env",
+                env: "PLANTED_ENV_GATE",
+                title: "a row that quietly stopped covering anything",
+                line: 1,
+              },
+            ]
+          : skipsIn(spec),
+      ),
+  ],
+  [
+    "GUARDED · ENV — the record names a variable the spec does not gate on (two floors lowered for nothing)",
+    (m) => {
+      const row = HOLDOUTS[RELAY].rows[0];
+      const was = row.env;
+      row.env = `${was}_THAT_IS_NOT_THERE`;
+      const found = rowGrainClosed(m);
+      row.env = was;
+      return found;
+    },
+  ],
+  [
+    "AGNOSTIC · ENV — an env-gated row also claims an engine it runs in (one row, two facts)",
+    (m) => {
+      const row = HOLDOUTS[RELAY].rows[0];
+      const was = row.engines;
+      row.engines = ["chromium"];
+      const found = rowGrainClosed(m);
+      row.engines = was;
+      return found;
+    },
+  ],
+  [
+    "DECLARED — the row is retitled on disk and the subtraction outlives it",
+    (m) => {
+      const row = HOLDOUTS[SHARE].rows[0];
+      const was = row.title;
+      row.title = was + " (renamed out from under the record)";
+      const found = rowGrainClosed(m);
+      row.title = was;
+      return found;
+    },
+  ],
+  [
+    "GUARDED — the record holds a row out of an engine the tree still runs it in (a floor lowered for nothing)",
+    (m) => {
+      const row = HOLDOUTS[SHARE].rows[0];
+      const was = row.engines;
+      row.engines = [];
+      const found = rowGrainClosed(m);
+      row.engines = was;
+      return found;
+    },
+  ],
+  [
+    "COHERENT — per-row grain declared inside a per-file holdout (one fact, two records)",
+    (m) => {
+      const entry = HOLDOUTS[SHARE];
+      const was = entry.engines;
+      entry.engines = ["chromium"];
+      const found = rowGrainClosed(m);
+      entry.engines = was;
+      return found;
+    },
+  ],
+];
+
+/**
+ * THE POSITIVE HALF (T9-W3+W6 seal). Every fixture above proves a clause CAN fail; a gate also
+ * has to be shown not failing on the truth it was built for, and one of these two facts no
+ * other check can see. A key scheme that missed would red the bare gate and be caught in a
+ * second — but a SUBTRACTION that missed would stay silent, and the subtraction is the entire
+ * reason the row is declared. So this asserts both: the declared env row is clean at row grain,
+ * AND it costs exactly one row in EACH engine's live census. Env gates are engine-agnostic; a
+ * subtraction that landed on one engine would leave the other counting silence as coverage,
+ * which is the defect this whole extension exists to close.
+ */
+const PROOFS_4_ROWS = [
+  [
+    "the declared T62 env row is clean at row grain AND subtracts 1 from BOTH engines",
+    (m) => {
+      const specs = new Set([RELAY]);
+      const complaints = rowGrainClosed(m).filter((b) => b.includes(RELAY));
+      const per = ENGINES.map((e) => [e, rowHoldoutsBySource(e, specs)]);
+      const subtracted = per.every(([, s]) => s.env === 1 && s.rows === 0);
+      return {
+        ok: complaints.length === 0 && subtracted,
+        detail:
+          `${complaints.length} complaint(s); env-gated rows subtracted: ` +
+          per.map(([e, s]) => `${e} ${s.env}`).join(", "),
+        complaints,
+      };
+    },
   ],
 ];
 
@@ -770,6 +1280,30 @@ function selfTest(model) {
           `it names, so it is not a gate.`,
       );
   }
+  for (const [description, run] of SABOTAGES_4_ROWS) {
+    const found = run(model);
+    console.log(
+      `  [4 HOLDOUTS CLOSED · row grain] ${description}\n      → ${found.length ? "RED (as it must)" : "GREEN — VACUOUS"}`,
+    );
+    if (!found.length)
+      vacuous.push(
+        `check "4 HOLDOUTS CLOSED" (row grain) stayed GREEN under: ${description}. It cannot ` +
+          `fail for the defect it names, so it is not a gate.`,
+      );
+  }
+  for (const [description, run] of PROOFS_4_ROWS) {
+    const { ok, detail, complaints } = run(model);
+    console.log(
+      `  [4 HOLDOUTS CLOSED · row grain · PROOF] ${description}\n      → ` +
+        `${ok ? "GREEN (as it must)" : "RED — THE RECORD DOES NOT LAND"} · ${detail}`,
+    );
+    if (!ok)
+      vacuous.push(
+        `the row-grain PROOF failed: ${description}. ${detail}` +
+          (complaints.length ? `\n      ${complaints.join("\n      ")}` : "") +
+          `\n      A declaration that does not subtract is a declaration that changes nothing.`,
+      );
+  }
   {
     const [target, description, run] = SABOTAGE_7;
     const found = run();
@@ -803,7 +1337,7 @@ function restamp(model, { dry, allowLower, wave }) {
   for (const { file, matrix } of model.configs)
     for (const p of CONFIGS.find((c) => c.file === file).projects) {
       const listed = matrix.get(p.name)?.tests ?? 0;
-      const live = worstCaseLive(p.name, listed);
+      const live = worstCaseLive(p.name, listed, ctxOf(file, p, matrix));
       const was = floorOf(file, p.name);
       const derived = deriveFloor(live);
       // THE RATCHET (law.ratchet). max(banked, derived) — closing slack never hands any back,
@@ -882,12 +1416,27 @@ function restamp(model, { dry, allowLower, wave }) {
 const wantSelfTest = process.argv.includes("--self-test");
 const wantRestamp = process.argv.includes("--restamp");
 
+/** The holdout estate, counted by grain and form — the header used to call all of it
+ *  "single-engine", which three of the six entries are not. */
+const HOLDOUT_CENSUS = (() => {
+  const entries = Object.values(HOLDOUTS);
+  const rows = entries.flatMap((e) => e.rows ?? []);
+  return {
+    files: entries.length,
+    fileScope: entries.filter((e) => e.engines.length < ENGINES.length).length,
+    engineRows: rows.filter((r) => !r.env).length,
+    envRows: rows.filter((r) => r.env).length,
+  };
+})();
+
 console.log(
   `PW PROJECT MATRIX — ${CONFIGS.length} configs, ` +
     `${CONFIGS.reduce((n, c) => n + c.projects.length, 0)} projects, ` +
-    `${SPEC_MANIFEST.length} manifest specs, ${Object.keys(HOLDOUTS).length} declared ` +
-    `single-engine holdouts, ${Object.keys(QUARANTINES).length} declared quarantines ` +
-    `(T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2)\n` +
+    `${SPEC_MANIFEST.length} manifest specs, ${HOLDOUT_CENSUS.files} declared holdouts ` +
+    `(${HOLDOUT_CENSUS.fileScope} single-engine at file scope, ` +
+    `${HOLDOUT_CENSUS.engineRows} engine row + ${HOLDOUT_CENSUS.envRows} env-gated row), ` +
+    `${Object.keys(QUARANTINES).length} declared quarantines ` +
+    `(T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2 · T9-W3+W6 seal)\n` +
     `  floors stamped: ${FLOOR_STAMP}\n` +
     `  floors read from scripts/census.stamp.json; band = ` +
     `${(LAW.band * 100).toFixed(0)}% of max(stamped census, live)`,
@@ -919,15 +1468,25 @@ if (wantRestamp) {
   for (const { file, matrix } of model.configs)
     for (const p of CONFIGS.find((c) => c.file === file).projects) {
       const listed = matrix.get(p.name)?.tests ?? 0;
-      const live = worstCaseLive(p.name, listed);
+      const live = worstCaseLive(p.name, listed, ctxOf(file, p, matrix));
       const floor = floorOf(file, p.name);
       const row = stampRow(file, p.name);
       console.log(
         `  ${p.name.padEnd(w)}  listed ${String(listed).padStart(3)}  live ${String(live).padStart(3)}  ` +
           `derived ${String(deriveFloor(live)).padStart(3)}  floor ${String(floor).padStart(3)}  ` +
           `band ${String(bandFloor(Math.max(row?.census ?? 0, live))).padStart(3)}` +
+          // The gap between listed and live has THREE sources now (T9-W6 §6.3, then the
+          // T9-W3+W6 seal) and the column must name which: a platform park, a per-row engine
+          // holdout, or an env gate. "Parked" for a row that is really engine-skipped sends
+          // the next reader to an empty table; "row-held out of webkit" for an engine-agnostic
+          // flag hides that the SAME row is dark in chromium too.
           (live !== listed
-            ? `   ← ${listed - live} parked on ${QUARANTINES[p.name].platform}` +
+            ? `   ← ` +
+              shortfallSources(
+                p.name,
+                p.engine,
+                matrix.get(p.name)?.specs ?? new Set(),
+              ) +
               (live === 0 ? ", asserts NOTHING there" : "")
             : ""),
       );
@@ -959,5 +1518,7 @@ const total = model.configs.reduce(
 );
 console.log(
   `\nOK — ${model.onDisk.length} specs, ${total} resolved tests, every spec in both engines ` +
-    `except the ${Object.keys(HOLDOUTS).length} recorded holdouts.`,
+    `except the ${HOLDOUT_CENSUS.files} recorded holdouts, and every row live in both except ` +
+    `the ${HOLDOUT_CENSUS.engineRows} engine-skipped and ${HOLDOUT_CENSUS.envRows} env-gated ` +
+    `rows the record names.`,
 );

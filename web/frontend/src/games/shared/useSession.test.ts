@@ -187,7 +187,7 @@ async function bootPage(game = "sudoku", size = 3): Promise<Page> {
   let handlers: Handlers | null = null;
   const sent: Page["sent"] = [];
   vi.doMock("./relayWire", () => ({
-    relayWire: (_room: string, _urls: string[], h: Handlers, selfId: string): Wire => {
+    relayWire: (_room: string, _url: string, h: Handlers, selfId: string): Wire => {
       handlers = h;
       return {
         selfId,
@@ -478,6 +478,132 @@ describe("arrivals, departures, and returns", () => {
     // Same name, same colour: `known` retained them, so nothing was re-minted.
     expect(p.session.session.players.value[1].slug).toBe(slug);
     expect(p.session.session.players.value[1].ink).toEqual(ink);
+  });
+});
+
+// ── PRESENCE, SAID ON A CLOCK (T9-W6, from W3 §3.7) ─────────────────────────────────────────
+//
+// Both arms derive presence from TRAFFIC, and an absence produces none. The relay speaks for the
+// socket that CLOSES (`relay.ts`'s `announceLeave`), which is what a crashed tab is — but a
+// socket that stays OPEN behind a dead page is nobody's `bye`, and the roster carried that row
+// for as long as the tab was dead. Two halves, and the rows below hold both:
+//
+//   · the page says "still here" on a beat, whether or not anything happened;
+//   · a peer whose last word is older than the expiry leaves PRESENT and never leaves KNOWN.
+//
+// The second half is the one with the trap in it, and it is why these rows are not written
+// against the cursor clock: `armCursorExpiry` is armed by `cur` frames ALONE, and `cur` is sent
+// only when a peer MOVES. Pruning the roster on that clock evicts a present, motionless reader —
+// trading a row that lies about a dead page for one that lies about a live one. So the last two
+// rows say the live cases out loud, and they were GREEN before the cure as well as after: at
+// head nothing pruned anything, which is exactly the lie. They are the guard on the cure's
+// shape, not the proof of its arrival.
+
+describe("presence is said on a clock — the roster stops lying", () => {
+  const ids = (p: Page) => p.session.session.players.value.map((r) => r.id);
+
+  /** A frame arriving from a peer, exactly as both arms deliver one: presence FIRST
+   *  (`relayWire.ts`'s `h.peer(from, true)`, `localWire`'s), then the message. The harness's
+   *  `hear` is the message half alone, so a row about presence says both halves itself. */
+  const frameFrom = (p: Page, from: string, kind?: string, data?: Msg) => {
+    p.peer(from, true);
+    if (kind) p.hear(kind, data!, from);
+  };
+
+  it("a peer silent past the expiry leaves the roster — and their digits keep their ink", async () => {
+    vi.useFakeTimers();
+    const p = await bootPage();
+    await p.session.joinSession("room-presence", true);
+    const mine = p.selfId();
+    frameFrom(p, "peer-1");
+    frameFrom(p, "peer-2");
+    // peer-1 writes a cell, so there is something of theirs left on the board to keep colouring.
+    frameFrom(p, "peer-1", "op", {
+      p: 40,
+      v: 7,
+      s: 0,
+      l: 5,
+      a: "peer-1",
+      e: 1,
+      ea: mine,
+    });
+    const theirSlug = p.session.cellAuthors.value["40"].slug;
+    expect(p.session.cellAuthors.value["40"].self).toBe(false);
+
+    // 44s of silence is not an absence: the beat is 15s, so the expiry gives it three misses.
+    vi.advanceTimersByTime(44000);
+    expect(ids(p)).toEqual([mine, "peer-1", "peer-2"]);
+
+    // peer-2 beats. peer-1 is a socket behind a dead page and says nothing at all.
+    frameFrom(p, "peer-2");
+    vi.advanceTimersByTime(2000);
+    expect(ids(p)).toEqual([mine, "peer-2"]);
+    expect(p.events.filter((e) => e.type === "leave").map((e) => e.id)).toEqual([
+      "peer-1",
+    ]);
+
+    // …and the board does not forget them. `known` RETAINS departures — the cell they wrote is
+    // still named and still coloured, exactly as it is after an ordinary `bye`.
+    expect(p.session.cellAuthors.value["40"]).toEqual({
+      slug: theirSlug,
+      self: false,
+    });
+    expect(p.session.authorInk.value["40"]).toBeTruthy();
+  });
+
+  it("this page says it is here on a clock, and the beat carries nothing", async () => {
+    vi.useFakeTimers();
+    const p = await bootPage();
+    await p.session.joinSession("room-beat", true);
+    const boot = p.sent.length; // the join's own announce
+
+    vi.advanceTimersByTime(45000);
+    const beats = p.sent.slice(boot);
+    expect(beats.map((f) => f.kind)).toEqual(["hi", "hi", "hi"]);
+    // A beat is the room's own idempotent presence frame and nothing else: no ack, no address,
+    // no payload. It cannot move a cell, an epoch or a board.
+    expect(beats.every((f) => Object.keys(f.data).length === 0)).toBe(true);
+    expect(beats.every((f) => f.to === undefined)).toBe(true);
+    expect(p.adopted).toEqual([]);
+    expect(p.followed).toEqual([]);
+
+    // …and it stops when the page leaves: a beat outliving its room publishes into a wire that
+    // is gone, on a clock nobody owns.
+    p.session.leaveSession();
+    const after = p.sent.length;
+    vi.advanceTimersByTime(60000);
+    expect(p.sent).toHaveLength(after);
+  });
+
+  it("a peer that keeps beating never leaves, however still the table is", async () => {
+    vi.useFakeTimers();
+    const p = await bootPage();
+    await p.session.joinSession("room-beat-peer", true);
+    frameFrom(p, "peer-1");
+    // Two minutes of a page that is present, reading, and doing nothing else.
+    for (let n = 0; n < 8; n++) {
+      vi.advanceTimersByTime(15000);
+      frameFrom(p, "peer-1");
+    }
+    expect(ids(p)).toContain("peer-1");
+    expect(p.events.map((e) => e.type)).toEqual(["join"]);
+  });
+
+  it("a peer that says nothing but `cur` is still at the table", async () => {
+    vi.useFakeTimers();
+    const p = await bootPage();
+    await p.session.joinSession("room-cur-presence", true);
+    const mine = p.selfId();
+    frameFrom(p, "peer-1");
+    // Eighty seconds in which the only word this peer says is where it is looking. Presence is
+    // ANY traffic — the arms seat a peer on every frame — so a roster that can only hear `hi`
+    // would evict a peer this page is watching move.
+    for (let n = 0; n < 4; n++) {
+      vi.advanceTimersByTime(20000);
+      frameFrom(p, "peer-1", "cur", { p: 10 + n, e: 1, ea: mine });
+    }
+    expect(ids(p)).toContain("peer-1");
+    expect(p.session.peerCursors.value["peer-1"]).toBe(13);
   });
 });
 

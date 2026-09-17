@@ -1,0 +1,28 @@
+=== R13 ABLATION (non-author, adversarial: does each arm bite?) ===
+baseline md5=b6f5f1a8e6e57447670a6b696fca12f8
+
+--- A0. cured tree ---
+ Test Files  1 passed (1)
+      Tests  24 passed (24)
+
+--- A1. ABLATED: previewFor bank read -> undefined (HEAD's arm) ---
+     × the still a FOLLOW parks the room's board on carries the room's ink, unmounted 2ms
+     × the game the table turns AWAY from keeps the ink its own board earned 0ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  1 failed (1)
+      Tests  2 failed | 22 passed (24)
+
+--- A2. ABLATED: bankAuthorInk drops the armed-follow refusal ---
+     × the game the table turns AWAY from keeps the ink its own board earned 3ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  1 failed (1)
+      Tests  1 failed | 23 passed (24)
+
+--- A3 target lines ---
+170:  bankInk(id, readAuthorInk?.() ?? {});
+355:function bankInk(id: string, ink: Record<string, Record<string, string>>): void {
+369:  bankInk(id, readAuthorInk?.() ?? {});
+
+--- restored md5=b6f5f1a8e6e57447670a6b696fca12f8 identical=YES ---
+ Test Files  1 passed (1)
+      Tests  24 passed (24)

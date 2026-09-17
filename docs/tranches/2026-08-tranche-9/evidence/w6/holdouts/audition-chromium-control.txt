@@ -1,0 +1,40 @@
+T9-W6 lane 6C — THE CHROMIUM CONTROL, and it is the measurement that redirected this lane.
+
+The webkit audition (audition-webkit-all5.txt) redded THREE rows, not the ONE §6.3 predicted.
+Before attributing any of it to the engine, the same file was run in the engine that has always
+run it:
+
+  npx playwright test e2e/share-truth.spec.ts --project=chromium --reporter=line
+
+  3 failed
+    [chromium] e2e/share-truth.spec.ts:58:1  sudoku share success: label + aria confirm AND the clipboard holds the link
+    [chromium] e2e/share-truth.spec.ts:79:1  sudoku share failure: "couldn't copy" signal, link still live in the address bar
+    [chromium] e2e/share-truth.spec.ts:100:1 futoshiki share failure: the same "couldn't copy" signal (twin)
+  2 passed (12.4s)
+
+  Failure shape, all three, identical:
+    expect(locator).toHaveAttribute(expected) failed
+    Expected: "Link copied" / "couldn't copy. the link is in the address bar"
+    Received: "Share board link"
+
+THE SAME THREE ROWS. So the two extra webkit reds were never an engine story — the rows were
+already red at this working tree, in both engines, and the webkit run was reporting a defect it
+had inherited rather than one it had found.
+
+INDEPENDENTLY BANKED. Lane 3C measured the identical three chromium reds during its own blast
+radius sweep, before this lane existed: see evidence/w3/panel-e2e-blast-radius.txt (search
+"share-truth"), which lists all three by name under its chromium tally, and
+evidence/w3/handoffs/3C-1.md §A, which carries the cure seam.
+
+MECHANISM. T9-W3 §3.6 moved the share button's accessible NAME from `says` to `saysCoarse`
+(GameControlPanel.vue). At a FINE pointer — which is what 1280x800 is — `saysCoarse` holds the
+idle verb and the OUTCOME goes to `.copy-status`, a role="status" region. The rows still
+asserted the old flip. Deliberate, documented in the component's own prose, and simply not yet
+reconciled with the three rows that depended on it.
+
+A DEAD END RULED OUT ON THE WAY. The first hypothesis was that WebKit refused the
+`addInitScript` override of `navigator.clipboard.writeText`, leaving the real API to hang. It
+does not: probe-failinit-webkit.txt shows the override taking cleanly
+(`defineProperty(navigator.clipboard) OK`) and `writeText` REJECTING with NotAllowedError in
+1ms — and probe-failinit-chromium-control.txt shows chromium doing the identical thing. The
+fixture was never the problem in either engine.

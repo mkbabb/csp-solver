@@ -56,8 +56,6 @@ export const thermoSpec = defineGame<ReturnType<typeof useThermo>, ThermoLine[]>
   solver: { nodeBudget: nodeBudgetForSize },
   urlCodec: { key: persistence.key },
   deal: {
-    sizes: subgridSizes,
-    difficulty: difficultyOptions,
     options: (m) => [
       {
         key: "size",

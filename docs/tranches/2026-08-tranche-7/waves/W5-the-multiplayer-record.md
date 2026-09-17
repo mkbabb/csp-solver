@@ -1,5 +1,11 @@
 # W5 — THE MULTIPLAYER RECORD (owner ask 3)
 
+> **NOTE 2026-09-17 (T9-W6 §6.1, the chair).** `useSession.ts`'s `RELAY_URLS` — the
+> one-element array this spec names at two sites below — became `RELAY_URL`, a string, at
+> T9-W6. Both cites were true when written and stay as written (this is a sealed T7 record);
+> `relay-origin-pair` moved with the rename (`scripts/check-doc-truth.mjs:1114` carries the
+> reason) and still gates the same three-file invariant.
+
 "Documentation of our client and serverless multiplayer technology." One page,
 `docs/multiplayer.md`, covering the session client and the Durable Object relay as one
 truth across the seam — and curing the 25 contradictions the current comments and READMEs

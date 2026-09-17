@@ -1,0 +1,74 @@
+=== S3 --self-test 2026-09-17 ===
+PW PROJECT MATRIX — 3 configs, 11 projects, 34 manifest specs, 6 declared holdouts (3 single-engine at file scope, 2 engine row + 1 env-gated row), 0 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2 · T9-W3+W6 seal)
+  floors stamped: 4686436f · 2026-09-17 · platform darwin · T9-W3+W6 fold 2026-09-17 — the CH-62 park torn down, W3's four new specs, share-truth per-row
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+  chromium                  listed 238  live 237  derived 213  floor 214  band 203   ← 1 env-gated, dark in both engines
+  webkit                    listed 238  live 235  derived 211  floor 212  band 201   ← 2 row-held out of webkit + 1 env-gated, dark in both engines
+  (default)                 listed   4  live   4  derived   4  floor   4  band   4
+  throttled-void            listed   1  live   1  derived   1  floor   1  band   1
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6  band   6
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6  band   6
+  wordmark-webkit           listed   6  live   6  derived   6  floor   6  band   6
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10  band   9
+  theme-bake-webkit         listed  10  live  10  derived  10  floor  10  band   9
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14  band  12
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14  band  12
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+  ✓ 8 FLOOR BAND
+
+SELF-TEST — each check against a known-bad matrix:
+  [1 DECLARED MATRIX] a third project appears (a firefox arm nobody ratified)
+      → RED (as it must)
+  [1 DECLARED MATRIX] the webkit project is quietly re-engined to chromium
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is dropped from every project (the orphan)
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is claimed by two configs at once
+      → RED (as it must)
+  [3 ENGINE COVERAGE] CH-56 regresses — mobile-affordances loses its webkit arm
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED] throttled-void is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+  [8 FLOOR BAND] the estate grows 25% and nothing restamps it (silent slack, the disease)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a whole spec FILE is deleted (green on all 5 checks before T7-W6)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a spec lands on disk that the manifest never sanctioned
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] UNDECLARED — a manifest spec grows a per-row engine skip nobody declared (CH-56 at row grain)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] UNDECLARED · ENV — a manifest spec grows an env-gated skip nobody declared (dark in BOTH engines)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] GUARDED · ENV — the record names a variable the spec does not gate on (two floors lowered for nothing)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] AGNOSTIC · ENV — an env-gated row also claims an engine it runs in (one row, two facts)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] DECLARED — the row is retitled on disk and the subtraction outlives it
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] GUARDED — the record holds a row out of an engine the tree still runs it in (a floor lowered for nothing)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] COHERENT — per-row grain declared inside a per-file holdout (one fact, two records)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain · PROOF] the declared T62 env row is clean at row grain AND subtracts 1 from BOTH engines
+      → GREEN (as it must) · 0 complaint(s); env-gated rows subtracted: chromium 1, webkit 1
+  [7 QUARANTINES CLOSED] the quarantine module is deleted while the floors still subtract its rows
+      → RED (as it must)
+  [8 FLOOR BAND] a census stamped 20% above live (the stamp as a wish)
+      → RED (as it must)
+  [8 FLOOR BAND] a floor hand-lowered one step under the band
+      → RED (as it must)
+  [8 FLOOR BAND] a floor smuggled back into CONFIGS (two homes for one number)
+      → RED (as it must)
+  [8 FLOOR BAND] a stamped floor for a project no config declares (the orphan row)
+      → RED (as it must)
+
+OK — 34 specs, 547 resolved tests, every spec in both engines except the 6 recorded holdouts, and every row live in both except the 2 engine-skipped and 1 env-gated rows the record names.
+EXIT=0

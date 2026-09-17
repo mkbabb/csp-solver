@@ -1,6 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
 import { attachBakeEvidence } from "./bake-evidence";
-import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
 
 // PRM: live, because nothing in the webkit built-dist lane applies it—the spec decodes the
 //   CURRENT pose bitmap's blob URL and polls until the ink box stops moving, with the beat
@@ -90,6 +89,20 @@ import { quarantineLinuxWebkitBake } from "./linux-webkit-bake-quarantine";
  *     PINNING, re-entry re-aimed `>=0.13.0`; the runner rig root-cause (CH-62's owner) is
  *     the only other exit. The rate now stands measured at 2-of-4 de-quarantined runs
  *     red, 4-to-7 rows when it fires, game set never twice the same.
+ *
+ *     T9-W6 §6.1 — THE PARK IS TORN DOWN, AND NOT BECAUSE THE RACE WAS CURED. Two facts
+ *     the third pinning could not have known, each sufficient on its own. (a) CH-62 is
+ *     RETIRED — its own dated default fired at T8 formation (`1bac685a`), so the class it
+ *     parked for has no open row, no owner and no fourth pinning available to it.
+ *     (b) The park could not fire on any surface that exists: it early-returns unless
+ *     `process.platform === "linux"`, and O-12 took every browser-executing lane out of CI
+ *     at `d1daefb3` — there is no ubuntu·webkit run left in the estate. A guard whose
+ *     condition no run can meet is not protection, it is a five-row subtraction from two
+ *     count floors and a "THIRD PINNING (CH-62)" citation in three files pointing at a
+ *     retired row. The five rows return to the suite whole; the module, its two call sites
+ *     and its floor subtraction die together. What SURVIVES is the knowledge: this history
+ *     stays here, and CH-62's LEDGER row keeps its re-entry as PROSE LAW — the built-rig
+ *     probe, described in words, which is where an un-executable guard belongs.
  *
  *  2. NO FALLBACK GLYPHS. Every character of every rendered label must actually come from
  *     Fraunces. Measured by the sentinel-fallback method (lane D's, kept because the obvious
@@ -278,13 +291,6 @@ test.describe("G3.4 · wordmark integrity (WebKit, built dist)", () => {
           "svg.handwritten-logo image.logo-pose-bmp",
           game,
         );
-
-      // THE EXPLICIT QUARANTINE, third pinning — the class (all five games), linux + webkit,
-      // until the runner-rig verdict or pencil-boil >=0.13.0 (see the module header; the
-      // CH-62 census closed at obs 2: run 30748405755 redded SEVEN bake rows). AFTER the
-      // read and the evidence attach on purpose: the parked arm still bakes, still reads,
-      // and still ships the pose bitmap it read.
-      quarantineLinuxWebkitBake("wordmark-integrity", game, testInfo);
 
       // THE HOISTED VERDICT. One assertion, both terms, ahead of every branch — nothing
       // between the read and the assert can abort the row, on any platform.

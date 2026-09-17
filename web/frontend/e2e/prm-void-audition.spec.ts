@@ -11,9 +11,13 @@ import { fileURLToPath } from "node:url";
 // T7-W3 cross-cutting gate 4 — THE VOID-`test.use` RE-AUDITION TRAP.
 //
 // At @playwright/test 1.61.1 the dedicated test option for reduced motion is VOID: `test.use({
-// reducedMotion })` and the identical option in a config's `use` block are accepted, typed,
+// reducedMotion })` and the identical option in a config's `use` block are accepted at runtime
 // and silently dropped — `matchMedia('(prefers-reduced-motion: reduce)')` reads FALSE in the
-// page. The same option through raw `browser.newContext()` lands. That asymmetry cost the
+// page. They are not TYPED, which is the mechanism and is stated at the declaration below:
+// `reducedMotion` is not a member of `PlaywrightTestOptions` at this version, so the runner is
+// handed an override for a fixture that does not exist rather than a declared option it fails
+// to honour. Nothing could say so until T9-W6 §6.2 put `e2e/` under a typecheck.
+// The same option through raw `browser.newContext()` lands. That asymmetry cost the
 // estate a flake family: every golden ever minted before T6.2 was captured with the ~8 Hz
 // boil beat RUNNING while the config declared it frozen, and the logo baseline embedded
 // "pose 1, ~one beat after settle" — worker contention skewing that phase is the whole
@@ -57,7 +61,12 @@ const E2E = dirname(fileURLToPath(import.meta.url));
 
 test.describe("PRM route audition @playwright/test " + VOID_AT, () => {
   test.describe("the fixture route — test.use({ reducedMotion })", () => {
-    test.use({ reducedMotion: "reduce" });
+    // THE SUBJECT, WRITTEN THE WAY THE ESTATE WRITES IT, plus the cast the typechecker needs:
+    // `playwright/types/test.d.ts` carries `reducedMotion` in exactly one place, inside
+    // `contextOptions: BrowserContextOptions`, so this literal names a fixture that does not
+    // exist and `Fixtures<…>` refuses it (T9-W6 §6.2). Step 3 in this file's head deletes the
+    // cast in the same commit that re-pins VOID_AT.
+    test.use({ reducedMotion: "reduce" } as Parameters<typeof test.use>[0]);
 
     test("VOID: the declared option never reaches the page", async ({ page }) => {
       await page.goto("about:blank");

@@ -1,0 +1,72 @@
+=== FA5 lane-end gates — 2026-09-17, HEAD 4686436f + fold worktree ===
+
+--- check-evidence-policy.mjs (bare) ---
+exit=1
+stale NOTICE lines: 0   (was 29 at 6A's bank)
+[evidence-policy] grandfathered 64 image pin(s), 5 wave pin(s), 0 dist pin(s)
+[evidence-policy] FAIL — 20 breach(es):
+   the 20 breaches are other lanes' capture banks — fold-FA5-1.md
+
+--- check-evidence-policy.mjs --self-test ---
+exit=1 (live arm carries the same 20 breaches)
+[evidence-policy] self-test PASS — 22/22 cases.
+
+--- tdz-probe.mjs --self-test (from web/frontend) ---
+exit=0
+negative control (a synthetic game importing the table): RED as required
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways
+
+--- check-doc-truth.mjs (bare) ---
+exit=1
+doc-truth — 42 rows, every figure re-derived at run time
+RED    root-readme-e2e-counts
+RED    e2e-total-arithmetic
+RED    directory-count-claims
+RED    index-css-bound
+4 RED / 38 GREEN — doc canon disagrees with the tree
+   root-readme-e2e-counts / e2e-total-arithmetic / directory-count-claims = EXPECTED (Restamp lane)
+   index-css-bound = FA5's finding: LEDGER pins 571, tree measures 576, index.css UNMOVED
+
+--- check-doc-truth.mjs --self-test ---
+exit=0
+doc-truth --self-test — 129 fixtures over 42 rows
+129 PASS / 0 FAIL — every row proved both colours
+
+--- ledger-diff.mjs --assert-state (the formation corrections must not red ORPHAN/FREEZE) ---
+exit=0
+FREEZE — clean
+DUPLICATE — clean
+ONE-HOME — clean
+  GREEN — 5 audited rows present-or-cited; 4 open ledger rows current under ORPHAN · FREEZE · TERMINALITY · FOLD-TARGET · PROBE · DUPLICATE · ONE-HOME · LIVE-REGION. exit 0
+
+--- prettier (pinned config, from web/frontend) ---
+exit=0
+All matched files use Prettier code style!
+
+--- eslint (files FA5 touched that eslint governs) ---
+exit=0
+
+--- npm run typecheck:e2e ---
+exit=0
+
+--- check-copy-register (from web/frontend) ---
+exit=0
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (2 admitted, each with its cure's seam)
+
+--- vue-tsc --noEmit (tree state; FA5 touched no typechecked source but comments) ---
+exit=2 — 7 errors, every one in another lane's in-flight file:
+  src/games/shared/GameBoard.receipt.test.ts  (lastFill prop x4)
+  src/games/shared/useGameState.fill.test.ts
+  src/games/shared/useSession.ts              (HEARTBEAT_MS, armPresenceExpiry unread)
+  ZERO in persistence.ts, and .mjs/.toml/.md are outside vue-tsc's scope.
+
+--- npx vitest run --silent (tree state) ---
+  Test Files  2 failed | 63 passed (65)
+        Tests  5 failed | 800 passed (805)
+  failing files: src/games/shared/useSession.test.ts (2),
+                 src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts (3)
+  Both are other lanes' in-flight work; 'persistence' appears 0 times in the run.
+
+FA5 verdict: every gate this lane owns is at its expected colour. The two RED instruments
+above (vue-tsc, vitest) and the 20 evidence-policy breaches are tree state at fold time,
+not this lane's, and each is attributed by file above.

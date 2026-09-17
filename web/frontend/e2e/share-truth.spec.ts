@@ -55,10 +55,23 @@ function shareButton(page: Page) {
 }
 
 // ── 1. Sudoku: success confirms off a REAL clipboard write ──────────────────
+// T9-W6 §6.3 — THE ESTATE'S ONE PER-ROW ENGINE HOLDOUT, and it lives here rather than in
+// playwright.config.ts because the gap is this row's, not this file's. The other four rows run
+// in both engines (re-auditioned, not assumed: holdouts/audition-both-engines-after-3C1.txt).
+// scripts/check-pw-projects.mjs HOLDOUTS declares this row by title and reds if the skip below
+// is deleted, retitled, or joined by an undeclared second one.
 test('sudoku share success: label + aria confirm AND the clipboard holds the link', async ({
   page,
   context,
+  browserName,
 }) => {
+  test.skip(
+    browserName === 'webkit',
+    'PW-WebKit has no clipboard-write permission: `browserContext.grantPermissions: Unknown ' +
+      'permission: clipboard-write` (re-measured at @playwright/test 1.61.1). This row asserts ' +
+      'a REAL clipboard write — `navigator.clipboard.readText()` below — and there is no honest ' +
+      'way to grant one here. Re-audition whenever PW-WebKit gains the permission.',
+  );
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('./?board=' + encodeSudoku(3, { 0: 5 }, 81));
   await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
@@ -67,7 +80,12 @@ test('sudoku share success: label + aria confirm AND the clipboard holds the lin
 
   await share.click();
 
-  await expect(share).toHaveAttribute('aria-label', 'Link copied');
+  // T9-W3 §3.6 — the NAME no longer flips at a fine pointer: it rode `says` and the sublabel
+  // beside it rode `saysCoarse`, so for 1600ms the button was called "Link copied" while the
+  // word under the same glyph said "Share". The outcome is not lost — it moved to the card's
+  // status region, which is where a screen reader could always have used it and never had it.
+  await expect(share).toHaveAttribute('aria-label', 'Share board link');
+  await expect(page.locator('.copy-status')).toHaveText('Link copied');
   await expect(share.locator('.washi-label')).toHaveText('copied!');
   // The truth the old optimistic flip never checked: the clipboard actually got the href.
   const clip = await page.evaluate(() => navigator.clipboard.readText());
@@ -90,7 +108,11 @@ test('sudoku share failure: "couldn\'t copy" signal, link still live in the addr
   // T8-W6 M16 — the em dash that joined the two clauses is banned in product copy; the
   // failure now says both as sentences.
   const failMsg = "couldn't copy. the link is in the address bar";
-  await expect(share).toHaveAttribute('aria-label', failMsg);
+  // T9-W3 §3.6 — the failure SENTENCE is the region's now, at both pointer classes. It is the
+  // outcome that matters most and the one nobody exercises by accident, and until this wave it
+  // was reachable by no assistive technology at all.
+  await expect(share).toHaveAttribute('aria-label', 'Share board link');
+  await expect(page.locator('.copy-status')).toHaveText(failMsg);
   await expect(share.locator('.washi-label')).toHaveText(failMsg);
   // The clean break's guarantee: the shared link is NOT lost — it's in the address bar.
   expect(new URL(page.url()).searchParams.has('board')).toBe(true);
@@ -115,7 +137,10 @@ test('futoshiki share failure: the same "couldn\'t copy" signal (twin)', async (
   // T8-W6 M16 — the em dash that joined the two clauses is banned in product copy; the
   // failure now says both as sentences.
   const failMsg = "couldn't copy. the link is in the address bar";
-  await expect(share).toHaveAttribute('aria-label', failMsg);
+  // T9-W3 §3.6 — the failure SENTENCE is the region's now, at both pointer classes (the twin of
+  // the sudoku row above; the seam is identical).
+  await expect(share).toHaveAttribute('aria-label', 'Share board link');
+  await expect(page.locator('.copy-status')).toHaveText(failMsg);
   await expect(share.locator('.washi-label')).toHaveText(failMsg);
   expect(new URL(page.url()).searchParams.has('board')).toBe(true);
 });

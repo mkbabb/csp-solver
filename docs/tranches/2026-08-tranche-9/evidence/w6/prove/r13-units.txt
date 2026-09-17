@@ -1,0 +1,28 @@
+=== R13: useStagingBridge rows ===
+ ✓ src/games/shared/useStagingBridge.test.ts > reactivity — the pass-1 defect this module exists to kill > a computed over the ledger INVALIDATES on publish 7ms
+ ✓ src/games/shared/useStagingBridge.test.ts > reactivity — the pass-1 defect this module exists to kill > publishes nothing when no game is mounted (the row has no key to take) 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > reactivity — the pass-1 defect this module exists to kill > an identical republish neither re-writes storage nor churns the ref 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the id-keyed handoff > is delivered to its own game and to no other 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the id-keyed handoff > is a ONE-SHOT for the right game 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the id-keyed handoff > survives a null mounted id without throwing 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the mounted source > bridge.dealStaged reports FALSE when no game is mounted to deal into 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the mounted source > bridge.dealStaged drives the registered source and reports TRUE 1ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the mounted source > the clear is identity-guarded (mount-before-unmount during a scene swap) 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > cold-start backfill — the falsity the whole installed base saw > seeds rows from BOTH persisted size field names 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > cold-start backfill — the falsity the whole installed base saw > GIVENS ARE NOT WORK — a dealt, untouched board has no user moves 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > cold-start backfill — the falsity the whole installed base saw > a digit the user wrote IS work 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > cold-start backfill — the falsity the whole installed base saw > NEVER overwrites a live row — the mounted game's publish always wins 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > cold-start backfill — the falsity the whole installed base saw > survives corrupt and half-shaped boards without a row and without throwing 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > cold-start backfill — the falsity the whole installed base saw > survives a corrupt LEDGER on disk — a bad cache is not a boot failure 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > cold-start backfill — the falsity the whole installed base saw > rehydrates both board facts from a written ledger 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the mounted id > is what App published, and clears to null 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > the MOUNTED game's still carries the board's per-cell ink 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > the still a FOLLOW parks the room's board on carries the room's ink, unmounted 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > the game the table turns AWAY from keeps the ink its own board earned 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > an emptied clock RETIRES the seat's bank — a page that left the room draws its own ink 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > a board nothing ever said anything about carries none — silence is not a guess 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > a solo page carries none — the still is the one that shipped 0ms
+ ✓ src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > with no source registered at all the read is unchanged 0ms
+ Test Files  1 passed (1)
+      Tests  24 passed (24)
+EXIT=

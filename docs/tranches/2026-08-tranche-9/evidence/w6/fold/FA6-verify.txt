@@ -1,0 +1,143 @@
+=== FA6 VERIFY ===
+Thu Sep 17 11:55:52 EDT 2026
+
+--- ci.yml job count (yaml.safe_load) ---
+18
+
+--- npm run lint:lanes ---
+EXIT=0
+
+--- npx vue-tsc --noEmit (the app) ---
+EXIT=0
+
+--- npm run typecheck:e2e ---
+EXIT=0
+
+--- npm run typecheck:node (NEW) ---
+EXIT=0
+
+--- npm run typecheck:relay ---
+EXIT=0
+
+--- npx eslint (what this lane touched) ---
+EXIT=0
+
+--- npx eslint . (the whole set the lane widened) ---
+EXIT=0
+
+--- npm run lint (prettier, pinned config) ---
+Checking formatting...
+[warn] ../../scripts/check-doc-truth.mjs
+[warn] Code style issues found in the above file. Run Prettier with --write to fix.
+EXIT=1
+
+--- npm run lint:knip ---
+EXIT=0
+
+--- node scripts/check-copy-register.mjs --self-test ---
+EXIT=0
+
+--- npm run test:coverage:floor ---
+src/composables     |     4 |  100.00% |  100.00% |  100.00% |  100.00%
+src/lib             |     1 |  100.00% |  100.00% |  100.00% |  100.00%
+src/App.vue         |     1 |    0.00% |    0.00% |    0.00% |    0.00%
+TOTAL               |   134 |   62.69% |   57.63% |   56.42% |   63.61%
+
+[coverage-floor] GREEN — 12 scopes at or above the W1.14 baseline (bank: f38c5130, 2026-08-01).
+EXIT=
+
+--- npx prettier --check (config-node.d.ts, the one file this lane authored at the root) ---
+Checking formatting...
+All matched files use Prettier code style!
+EXIT=0
+
+--- npx vitest run --silent (the verdict is the Test Files line) ---
+ Test Files  1 failed | 63 passed (64)
+      Tests  3 failed | 795 passed (798)
+EXIT=1  — 1 file failed: src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts (3 tests).
+NOT THIS LANE. The spec is unmodified at HEAD; GameGallery.vue is another lane's live edit.
+Proven independent of this lane's vitest.config.ts change by re-running the same spec under
+HEAD's own vitest.config.ts (git show HEAD:web/frontend/vitest.config.ts):
+ Test Files  1 failed (1)
+      Tests  3 failed | 14 passed (17)
+Same 3 reds, same file. The coverage option this lane deleted is not read outside --coverage.
+
+--- npm run test:coverage:floor (with coverage.all deleted) ---
+EXIT=0  — GREEN, 12 scopes, 134 files, TOTAL 62.69%
+
+--- CROSS-LANE REDS OBSERVED, none of them this lane's ---
+1. npm run lint (prettier) EXIT=1 on ../../scripts/check-doc-truth.mjs — another lane's
+   working-tree edit (191 insertions). HEAD's own copy of that file passes prettier, proven:
+   git show HEAD:scripts/check-doc-truth.mjs | prettier --check -> EXIT 0.
+   Handed over: w6/handoffs/fold-FA6-1.md.
+2. node scripts/check-doc-truth.mjs EXIT=1, 4 RED / 38 GREEN. One row touches this lane's
+   file and does not belong to it: directory-count-claims, web/frontend/README.md scripts/
+   '21 .mjs' vs 22 on disk — W3's untracked check-live-regions.mjs. That pin is the Restamp
+   lane's; this lane's fence forbids it. The other three (root-readme-e2e-counts,
+   e2e-total-arithmetic, index-css-bound) name no file this lane touched.
+   The frontend-readme lint-script row DERIVED the new scope and is GREEN:
+   lint script "prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/ ../relay/"
+
+--- the golden config still loads and collects the same suite (a cast is erased at transpile) ---
+  visual-golden.spec.ts:353:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+  visual-golden.spec.ts:377:1 › golden · single cell with given glyph (light)
+  visual-golden.spec.ts:388:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+Total: 4 tests in 1 file
+EXIT=
+  Compared against HEAD's own config:
+  visual-golden.spec.ts:388:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+Total: 4 tests in 1 file
+
+--- LATE CROSS-LANE RED, appeared between 11:55 and 12:07 (this lane touched no src file) ---
+Thu Sep 17 12:01:32 EDT 2026
+src/games/shared/useSession.ts(607,7): error TS6133: 'HEARTBEAT_MS' is declared but its value is never read.
+src/games/shared/useSession.ts(621,10): error TS6133: 'armPresenceExpiry' is declared but its value is never read.
+app vue-tsc EXIT=2
+    at async NodeHfs.walk (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/@humanfs/core/src/hfs.js:614:3)
+    at async globSearch (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/eslint/lib/eslint/eslint-helpers.js:366:20)
+    at async Promise.allSettled (index 0)
+    at async globMultiSearch (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/eslint/lib/eslint/eslint-helpers.js:457:18)
+    at async Promise.all (index 0)
+    at async findFiles (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/eslint/lib/eslint/eslint-helpers.js:637:25)
+eslint . EXIT=1
+Neither symbol exists at HEAD (git show HEAD:...useSession.ts -> 0 hits); the file is ' M'.
+Handed over in w6/handoffs/fold-FA6-1.md.
+
+--- THIS LANE'S OWN GATES, re-run bare at the end ---
+ci.yml jobs = 18
+EXIT=0 :: npm run typecheck:node --silent
+EXIT=0 :: npm run typecheck:e2e --silent
+EXIT=0 :: npm run typecheck:relay --silent
+EXIT=0 :: npm run lint:lanes --silent
+EXIT=0 :: npm run lint:knip --silent
+EXIT=0 :: npm run lint:copy --silent
+EXIT=0 :: npm run test:coverage:floor --silent
+EXIT=0 :: npx eslint <the files this lane touched>
+EXIT=0 :: npx prettier --check config-node.d.ts
+
+--- the eslint snapshot above was taken mid-walk and printed a NodeHfs race stack (another
+    lane writing files during the glob). Re-run clean, same instant: ---
+Thu Sep 17 12:02:14 EDT 2026
+
+/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/scripts/check-copy-register.mjs
+  319:18  error  'm' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+
+/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/src/games/shared/useSession.ts
+  607:7   error  'HEARTBEAT_MS' is assigned a value but never used. Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  621:10  error  'armPresenceExpiry' is defined but never used. Allowed unused vars must match /^_/u      @typescript-eslint/no-unused-vars
+
+✖ 3 problems (3 errors, 0 warnings)
+
+eslint . EXIT=1 — 4 problems, in TWO files, neither of them this lane's:
+  scripts/check-copy-register.mjs:239,260   NARRATION_CALLS / callArgs
+  src/games/shared/useSession.ts:607,621    HEARTBEAT_MS / armPresenceExpiry
+Both files are ' M' in the worktree and neither symbol exists at HEAD. Same dead-binding
+species 6b-1 named. Handed over in w6/handoffs/fold-FA6-1.md.
+
+CORRECTION, and it is the finding rather than a slip: the summary line above was written
+against the 12:01 run (4 problems: check-copy-register.mjs:239,260 + useSession.ts:607,621)
+and the 12:02 re-run reports 3 (check-copy-register.mjs:319 + the same two in useSession).
+check-copy-register.mjs is being edited WHILE this lane verifies. The stable fact across
+every run is the one that matters here: the two files carrying eslint reds are both ' M' in
+the worktree, neither is in FA6's fence, and the four files FA6 touched are EXIT 0 in all of
+them. FA6's own gates, re-run bare at 12:02, are all EXIT 0 (above).

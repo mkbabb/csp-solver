@@ -1,0 +1,61 @@
+=== FA5 plant-proof — doc-truth row index-css-bound, on the LIVE tree ===
+date 2026-09-17 · repo HEAD 4686436f
+LEDGER.md sha256 before plant: 324cc580a14321f9a31fb31167b966e391330dba2f1d7a3468de18ccf6801933
+
+index.css is BYTE-IDENTICAL at cfbb8097 (where 571 was pinned), at HEAD and in the worktree:
+c6d3e7ad1819219fb6687deb72a17c954737555d6ff6b6e0d0d3373df28e80ae  -
+c6d3e7ad1819219fb6687deb72a17c954737555d6ff6b6e0d0d3373df28e80ae  web/frontend/src/assets/index.css
+
+--- ARM 1: the tree as it stands (the row's day-one verdict) ---
+doc-truth — 42 rows, every figure re-derived at run time
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+head  4686436f
+node  v26.0.0 darwin/arm64
+when  2026-09-17T15:55:37.178Z
+
+only  index-css-bound of 42 rows
+RED    index-css-bound
+        derived: web/frontend/src/assets/index.css: 1,172 lines = 576 code + 505 comment + 91 blank (trigger at 700 code)
+        docs/tranches/LEDGER.md:87
+          expected: CH-19's stated bound to match the tree (576 code lines)
+          got:      the row pins 571
+
+1 RED / 0 GREEN — doc canon disagrees with the tree
+exit=1
+
+--- ARM 2: PLANT — the ledger restamped to the tree's measured 576 ---
+doc-truth — 42 rows, every figure re-derived at run time
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+head  4686436f
+node  v26.0.0 darwin/arm64
+when  2026-09-17T15:55:47.449Z
+
+only  index-css-bound of 42 rows
+GREEN  index-css-bound
+        derived: web/frontend/src/assets/index.css: 1,172 lines = 576 code + 505 comment + 91 blank (trigger at 700 code)
+
+0 RED / 1 GREEN — canon holds
+exit=0
+
+--- ARM 3: RESTORED — the pristine ledger, byte-identical ---
+LEDGER.md sha256 after restore: 324cc580a14321f9a31fb31167b966e391330dba2f1d7a3468de18ccf6801933  (before: 324cc580a14321f9a31fb31167b966e391330dba2f1d7a3468de18ccf6801933)
+RESTORE VERIFIED — no residue on the tree
+doc-truth — 42 rows, every figure re-derived at run time
+repo  /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion
+head  4686436f
+node  v26.0.0 darwin/arm64
+when  2026-09-17T15:55:48.674Z
+
+only  index-css-bound of 42 rows
+RED    index-css-bound
+        derived: web/frontend/src/assets/index.css: 1,172 lines = 576 code + 505 comment + 91 blank (trigger at 700 code)
+        docs/tranches/LEDGER.md:87
+          expected: CH-19's stated bound to match the tree (576 code lines)
+          got:      the row pins 571
+
+1 RED / 0 GREEN — doc canon disagrees with the tree
+exit=1
+
+VERDICT: the row reads docs/tranches/LEDGER.md and moves with it — GREEN when the
+stated bound equals the tree's CODE census, RED when it does not. Both colours
+proved on the live tree, nothing left behind.

@@ -1,0 +1,7 @@
+PLANT — vite.config.ts: readFileSync(join(dir, f)) with the encoding argument dropped.
+A call the narrow node surface (config-node.d.ts) cannot type. In real node this returns
+Buffer, not string, and JSON.parse would still swallow it — the exact species of silent
+widening the narrow route exists to refuse.
+---
+vite.config.ts(103,35): error TS2554: Expected 2 arguments, but got 1.
+EXIT=2

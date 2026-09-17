@@ -21,7 +21,7 @@ npm run wasm             # build @mkbabb/csp-solver-wasm into pkg/ — the file:
 npm run dev              # Vite dev server (:3000)
 npm run build            # vue-tsc -b && vite build (a prebuild hook re-runs `npm run wasm`)
 npm run preview          # preview the production build
-npm run lint             # prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/
+npm run lint             # prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/ ../relay/
 npm run lint:eslint      # ESLint (boundary + depth rules, correctness)
 npm run lint:knip        # knip — dead files, exports, deps
 npm run test:unit        # Vitest (jsdom, src/**/*.test.ts)
@@ -50,8 +50,11 @@ frontend/
 ├── playwright-throttle.config.ts   # throttled probes on their own build + preview (:4188)
 ├── eslint.config.js                # the boundary + pencil-depth rules (see Boundaries)
 ├── knip.json                       # dead-code gate
-├── scripts/                        # the frontend gate scripts — 21 .mjs, most behind an npm run lint:*/test:*
-├── e2e/                            # specs + goldens/
+├── tsconfig.e2e.json               # the spec estate's typecheck — types: [], include e2e/**
+├── tsconfig.node.json              # the five root configs' typecheck — types: [], include *.config.ts
+├── config-node.d.ts                # the node surface those configs call, declared narrowly (not @types/node)
+├── scripts/                        # the frontend gate scripts — 22 .mjs, most behind an npm run lint:*/test:*
+├── e2e/                            # specs + goldens/ + node.d.ts (the estate's own narrow node surface)
 └── src/
     ├── App.vue                     # the shell: masthead, gallery view, the mount fold, ?game=/?view= truth
     ├── main.ts                     # createApp + mount; dev-only rafInstrumentation import
@@ -81,6 +84,15 @@ frontend/
         ├── killer/                 # spec.ts + KillerPoster.vue, clue.ts, composables/
         └── kenken/                 # spec.ts + KenKenPoster.vue, clue.ts, composables/
 ```
+
+Three tsconfigs, one per estate: `tsconfig.json` is the app (`src/**`), `tsconfig.e2e.json`
+the spec estate, `tsconfig.node.json` the five root configs above. The last two pin
+`types: []` and take their node surface from a narrow local declaration —
+`e2e/node.d.ts`, `config-node.d.ts` — rather than `@types/node`, so no ambient node
+global reaches the browser code and each typecheck's answer is a function of the tree
+instead of the install. One directory over, `web/relay/` carries its own `tsconfig.json`
+and `eslint.config.mjs`: the deployed Worker is typechecked, linted and formatted by this
+package's scripts (`typecheck:relay`, `lint:relay`, and `../relay/` in `npm run lint`).
 
 `games/shared` is the game-agnostic floor:
 

@@ -1,0 +1,91 @@
+T9-W6 R13 — ABLATION CONTROL (each cure arm removed in turn, restored after)
+
+== A · stageBoardFollow does NOT bank the room's clock ==
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ❯ src/games/shared/useStagingBridge.test.ts (24 tests | 1 failed) 15ms
+     × the still a FOLLOW parks the room's board on carries the room's ink, unmounted 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > the still a FOLLOW parks the room's board on carries the room's ink, unmounted
+AssertionError: expected undefined to deeply equal { Object (9) }
+
+- Expected:
+{
+  "9": {
+    "--color-user-ink": "oklch(0.6 0.11 137.5deg)",
+  },
+}
+
++ Received:
+undefined
+
+ ❯ src/games/shared/useStagingBridge.test.ts:354:55
+    352|     // still it becomes owes those digits their colours, and it owes t…
+    353|     bridge.stageBoardFollow("futoshiki", 3, { b: {}, m: {} });
+    354|     expect(bridge.previewFor("futoshiki")?.authorInk).toEqual(PEER);
+       |                                                       ^
+    355|   });
+    356|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 23 passed (24)
+   Start at  18:15:32
+   Duration  376ms (transform 21ms, setup 14ms, import 29ms, tests 15ms, environment 229ms)
+
+
+== B · bankAuthorInk does NOT refuse an armed FOLLOW ==
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+ ❯ src/games/shared/useStagingBridge.test.ts (24 tests | 1 failed) 16ms
+     × the game the table turns AWAY from keeps the ink its own board earned 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useStagingBridge.test.ts > the still's authorship — a peer's digit keeps a peer's ink (T8-R13 · T9-W6 §6.4) > the game the table turns AWAY from keeps the ink its own board earned
+AssertionError: expected { Object (3) } to deeply equal { Object (9) }
+
+- Expected
++ Received
+
+  {
+-   "9": {
+-     "--color-user-ink": "oklch(0.6 0.11 137.5deg)",
++   "3": {
++     "--color-user-ink": "oklch(0.7 0.1 40deg)",
+    },
+  }
+
+ ❯ src/games/shared/useStagingBridge.test.ts:373:52
+    371|     bridge.bankAuthorInk();
+    372|
+    373|     expect(bridge.previewFor("sudoku")?.authorInk).toEqual(PEER);
+       |                                                    ^
+    374|   });
+    375|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 23 passed (24)
+   Start at  18:15:33
+   Duration  381ms (transform 22ms, setup 12ms, import 28ms, tests 16ms, environment 234ms)
+
+
+== RESTORED ==
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
+
+
+ Test Files  1 passed (1)
+      Tests  24 passed (24)
+   Start at  18:15:34
+   Duration  351ms (transform 20ms, setup 12ms, import 27ms, tests 12ms, environment 217ms)
+

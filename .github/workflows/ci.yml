@@ -53,7 +53,16 @@
 #   7.  twiggy budgets     -> twiggy     (full module fail>240 KB / warn>230 KB; lean
 #                                         half downloads the shared ship artifact)
 #   8.  frontend           -> frontend   (download lean pkg; npm ci --dry-run; npm ci;
-#                                         vue-tsc --noEmit; eslint boundary rig; knip)
+#                                         vue-tsc --noEmit; eslint boundary rig; knip.
+#                                         T9-W6 §6.2 folds the two ungated estates INTO
+#                                         this lane rather than minting jobs for them —
+#                                         the checks are static and Node-only, the same
+#                                         species as the eleven already here, and a new
+#                                         job would buy a second checkout and a second
+#                                         `npm ci` to run four seconds of tsc. The lane
+#                                         count does not move: `web/frontend/e2e/` gains a
+#                                         typecheck + eslint, `web/relay/` gains all four
+#                                         of typecheck, eslint, prettier and knip.)
 #   10. iai                -> iai        (callgrind deterministic instruction-count baseline)
 #   11. cargo-audit        -> cargo-audit(RustSec advisory scan over Cargo.lock; independent, no needs:)
 #   12. FE unit estate     -> fe-unit    (T5-W1.1/1.14: vitest run + the executed-test
@@ -562,8 +571,8 @@ jobs:
               # Ceiling drawn by the band's original convention — ~2.6% headroom
               # over the RUNNER-measured artifact (90,602→93,000 was the same draw):
               # runner measures 122,861 B at f2ae188d, run 30722381389 — pre-T9-W4,
-              # re-derives on the next runner build (darwin measures 122,541 B at
-              # T9-W4; pre-surface toolchain delta +1,724 B) → fail >127,500 B. The band stays
+              # re-derives on the next runner build (darwin measures 123,336 B at
+              # T9-W6; pre-surface toolchain delta +1,724 B) → fail >127,500 B. The band stays
               # put while the artifact moves; the run step prints what it measured.
               # A wire-dedup refactor banks with re-trigger: a sixth game, or any
               # single wire >12 KB.
@@ -661,7 +670,7 @@ jobs:
               run: |
                   set -euo pipefail
                   RAW=$(stat -c%s csp-solver/wasm/pkg/csp_solver_wasm_bg.wasm)
-                  echo "lean artifact raw size: ${RAW} B (darwin measures 122,541 B at T9-W4; fail >127,500)"
+                  echo "lean artifact raw size: ${RAW} B (darwin measures 123,336 B at T9-W6; fail >127,500)"
                   if [ "$RAW" -gt 127500 ]; then
                     echo "::error::lean wasm artifact ${RAW} B exceeds the 127,500 B five-game band"
                     exit 1
@@ -705,6 +714,112 @@ jobs:
             - name: vue-tsc --noEmit
               working-directory: web/frontend
               run: npx vue-tsc --noEmit
+            # T9-W6 §6.2 — THE ESTATE GATED WHOLE, the typecheck half. The step above reads
+            # `tsconfig.json`, whose `include` is `src/**` + `env.d.ts`, and that was the whole
+            # of TypeScript's opinion about this repo: 34 files under `web/frontend/e2e/` and
+            # the deployed Worker at `web/relay/relay.ts` were checked by nothing at all.
+            # Playwright TRANSPILES its specs, it does not check them, so a type error in an
+            # imported helper reds no run and no lane; wrangler does the same for the Worker.
+            #
+            # Both new configs pin `types: []`, so their answer is a function of the TREE and
+            # not of whatever `@types/*` an install happened to leave on disk — the node surface
+            # `e2e/` uses is declared in `e2e/node.d.ts`, narrowly, the way `relay.ts` declares
+            # the Cloudflare runtime it touches.
+            #
+            # THE POPULATION CANARY IS NOT DECORATION, and this workflow has two instances to
+            # cite for it: the theme-selector census went vacuous by population (T9-W5 §5.4) and
+            # the lane-membership corpus was name-shaped until the same wave. A `tsc` whose
+            # `include` stops matching exits 0 in cheerful silence — a directory rename does it
+            # — so each step counts its own program before trusting its verdict.
+            #
+            # Born-RED banked: 16 errors over `e2e/` at HEAD
+            # (evidence/w6/gates-e2e/typecheck-born-red.txt), among them the TYPE-LEVEL
+            # mechanism of the PRM void — `reducedMotion` is not a member of
+            # `PlaywrightTestOptions` at 1.61.1, which is why `test.use` never reached a fixture.
+            # The relay was born GREEN (evidence/w6/gates-relay/typecheck-born-green.txt) and
+            # proven able to fail by plant (typecheck-plant-RED.txt / -restored-GREEN.txt).
+            - name: e2e typecheck (the estate Playwright transpiles but never checked)
+              working-directory: web/frontend
+              run: |
+                  set -euo pipefail
+                  # THE ROSTER IS BANKED FIRST, and both `|| true`s are load-bearing rather
+                  # than defensive habit: an `include` that matches nothing makes tsc EXIT 2
+                  # ("No inputs were found in config file"), and `grep -c` PRINTS 0 while
+                  # EXITING 1 — under `pipefail` either one kills the step before it can say
+                  # what happened, which is a silent red, only marginally better than a false
+                  # green. Measured both ways at
+                  # evidence/w6/gates-ci/canary-e2e-population-RED.txt.
+                  ROSTER="$(mktemp)"
+                  npx vue-tsc -p tsconfig.e2e.json --listFilesOnly > "$ROSTER" 2>&1 || true
+                  N=$(grep -c '/web/frontend/e2e/' "$ROSTER" || true)
+                  rm -f "$ROSTER"
+                  echo "e2e typecheck program: ${N} files under e2e/"
+                  if [ "$N" -lt 30 ]; then
+                    echo "::error::the e2e typecheck saw ${N} files under e2e/ (36 at this wave) — the include has stopped matching and its green means nothing"
+                    exit 1
+                  fi
+                  npm run typecheck:e2e
+            # T9-W6 §6.2 handoff 6b-2, landed at the chair's fold. THE SAME HOLE, ONE DIRECTORY
+            # UP. Closing `e2e/` exposed a third member of the family: `tsconfig.json` includes
+            # `src/**` and `tsconfig.e2e.json` includes `e2e/**`, so the five TypeScript files
+            # that declare how this package BUILDS, TESTS and CAPTURES — vite.config.ts,
+            # vitest.config.ts and the three playwright configs — were checked by nothing at all.
+            # They ARE linted (`eslint .` reaches them; the flat config's base path is that
+            # directory) and they are still OUTSIDE the format gate — `npm run lint` names
+            # src/, scripts/, ../../scripts/ and ../relay/, and the package root is on no list.
+            # This step closes the typecheck hole only; the format scope is not this lane's.
+            # Born-RED banked at evidence/w6/fold/FA6-typecheck-node-born-red.txt: 18 errors at
+            # HEAD, sixteen of them the missing node surface (now declared narrowly in
+            # `config-node.d.ts`, the `e2e/node.d.ts` route — no @types/node, so nothing goes
+            # ambient in the app's own typecheck) and two of them real:
+            #   · playwright-golden.config.ts:84 `use.reducedMotion` — the PRM void's THIRD site,
+            #     the same type-level mechanism the e2e typecheck named at its two sites.
+            #   · vitest.config.ts:75 `coverage.all: true` — gone from CoverageOptions at vitest 4.
+            #     Deleted on MEASUREMENT, not on the type error: two coverage runs, with and
+            #     without, report the same 134 files and the same denominator to the statement
+            #     (evidence/w6/fold/FA6-coverage-all-redundant.md), so the coverage floor needs no
+            #     re-cut and the config header's claim survives as a claim about the RUNNER.
+            # Plant-proven: evidence/w6/fold/FA6-typecheck-node-plant-RED.txt / -restored-GREEN.txt.
+            # A STEP, not a job — the lane count stays eighteen.
+            - name: root-config typecheck (the five files that declare how this package builds)
+              working-directory: web/frontend
+              run: |
+                  set -euo pipefail
+                  # The population canary, same shape and same two `|| true`s as the e2e step
+                  # above: an `include` that matches nothing makes tsc EXIT 2, and `grep -c`
+                  # PRINTS 0 while EXITING 1. A glob that has quietly stopped matching is the
+                  # one failure this gate cannot report about itself — proven, with the
+                  # typecheck itself staying GREEN on the narrowed program, at
+                  # evidence/w6/fold/FA6-typecheck-node-canary-population-RED.txt.
+                  # `[^/]*` and not a letter class: it counts what the `*.config.ts` include
+                  # actually collects, so a config with a dotted name is a subject like any
+                  # other, and the `$` anchor plus the slash-free class keeps node_modules out.
+                  # A FLOOR, not an equality — a sixth root config should not have to edit CI to
+                  # be allowed to exist; falling BELOW five is the failure this reports.
+                  ROSTER="$(mktemp)"
+                  npx vue-tsc -p tsconfig.node.json --listFilesOnly > "$ROSTER" 2>&1 || true
+                  N=$(grep -c '/web/frontend/[^/]*\.config\.ts$' "$ROSTER" || true)
+                  rm -f "$ROSTER"
+                  echo "root-config typecheck program: ${N} config file(s)"
+                  if [ "$N" -lt 5 ]; then
+                    echo "::error::the root-config typecheck saw ${N} of 5 config files — the include has stopped matching and its green means nothing"
+                    exit 1
+                  fi
+                  npm run typecheck:node
+            - name: relay typecheck (the deployed Worker enters the estate)
+              working-directory: web/frontend
+              run: |
+                  set -euo pipefail
+                  ROSTER="$(mktemp)"
+                  npx tsc -p ../relay/tsconfig.json --listFilesOnly > "$ROSTER" 2>&1 || true
+                  N=$(grep -c '/web/relay/' "$ROSTER" || true)
+                  rm -f "$ROSTER"
+                  echo "relay typecheck program: ${N} files under web/relay/"
+                  if [ "$N" -lt 2 ]; then
+                    echo "::error::the relay typecheck saw ${N} files (expect relay.ts + relay.test.ts) — the include has stopped matching and its green means nothing"
+                    exit 1
+                  fi
+                  npm run typecheck:relay
             # eslint — the colocation boundary rig (T4-W2, eslint.config.js): pencil↮games, the
             # 3-level pencil-depth rule, and — IMPORTED from `eslint.boundary.config.js` since
             # T5-W2 2.5 — the GENERATED cross-game matrix: all 20/20 ordered pairs plus the
@@ -717,14 +832,36 @@ jobs:
             # proven: a src/pencil/** -> @games/** import trips no-restricted-imports).
             # Build output (dist*/) is ignored by the config so bundled JS never
             # enters the lint set.
-            - name: eslint (colocation boundary rig)
+            #
+            # T9-W6 §6.2: `e2e/**` came OFF the config's global ignore list, so this one command
+            # now covers the spec estate too. The ignore had no stated reason and the reason a
+            # reader would infer — the owner's standing law keeping PRETTIER off `e2e/` — is
+            # about formatting and says nothing about correctness rules. One live
+            # `no-unexpected-multiline` was waiting there (evidence/w6/gates-e2e/eslint-born-red.txt).
+            - name: eslint (colocation boundary rig + the e2e estate)
               working-directory: web/frontend
               run: npm run lint:eslint
+            # The relay needs its own invocation, and the reason is structural rather than a
+            # preference: ESLint's flat config has ONE base path — the directory holding the
+            # config file — so `eslint .` under web/frontend answers "located outside of the base
+            # path" for a sibling package and lints nothing. `web/relay/eslint.config.mjs`
+            # re-exports this package's config (one law, one file) and gives it a base path over
+            # there; the script `cd`s in and reaches the binary the way wrangler.toml documents
+            # for wrangler and vitest. Born GREEN, proven able to fail by plant
+            # (evidence/w6/gates-relay/eslint-plant-RED.txt).
+            - name: eslint (the relay, whose base path is its own directory)
+              working-directory: web/frontend
+              run: npm run lint:relay
             # knip — the standing dead-file / dead-dependency / dead-EXPORT gate
             # (T3-W5 + T4-W2). files/dependencies AND exports/types now enforce at
             # `error` (knip.json) — dead exported surface reds the lane, not just a
             # warn census. The two pencil barrels stay on `entry` this wave; W4 drops
             # them off `entry` as it deletes the barrels into one deep-import grammar.
+            # T9-W6 §6.2 widens `project` to `../relay/*.ts`: the deployed Worker is now under
+            # the dead-file law, with both of its files on `entry` because both are reached by a
+            # caller no module graph can see (wrangler.toml's `main`, and the vitest root
+            # `scripts.test:unit:relay` names). Proven able to fail by plant
+            # (evidence/w6/gates-relay/knip-plant-RED.txt).
             - name: knip (dead-file / dead-dependency / dead-export gate)
               working-directory: web/frontend
               run: npm run lint:knip
@@ -737,11 +874,18 @@ jobs:
             # directories are in format scope and named — `web/frontend/scripts/` (20 files)
             # and the repo-root `scripts/` (4 .mjs; the three .sh have no prettier parser and
             # are skipped). Ten were unformatted and are formatted in the same commit as this
-            # line. THE SCOPE IS THOSE THREE DIRECTORIES AND NOTHING ELSE — `src/`, `scripts/`,
-            # `../../scripts/`, exactly as the `lint` script spells it. This is not a repo-wide
-            # format gate: `web/frontend/e2e/` and `web/relay/` are OUT, deliberately, and
-            # recorded here as such rather than narrated away (T7-W6 — 22 files across the two
-            # are non-conformant today, which is what an unstated exclusion buys). Widening is
+            # line. THE SCOPE IS FOUR DIRECTORIES AND NOTHING ELSE — `src/`, `scripts/`,
+            # `../../scripts/`, `../relay/`, exactly as the `lint` script spells it. This is not
+            # a repo-wide format gate, and the one directory still out is out by RULING:
+            # `web/frontend/e2e/` stays outside format scope on the owner's standing law
+            # (`.prettierignore` — a `--write` there severed a sleep-lint EXEMPT anchor on
+            # 2026-08-03), which is why W6 put `e2e/` under eslint and a typecheck and left
+            # prettier alone. `web/relay/` came IN at T9-W6 §6.2: it was excluded for no reason
+            # anyone had written down, and "22 files across the two are non-conformant today,
+            # which is what an unstated exclusion buys" — this comment's own T7-W6 sentence —
+            # is the argument for the widening, not for keeping it. Both relay files were born
+            # RED (evidence/w6/gates-relay/prettier-born-red.txt) and are formatted in the same
+            # commit as this line, print-width reflows only, its 24 units unmoved. Widening is
             # a ruling, and a ruling lands with its enforcing config.
             # The `--config .prettierrc.json` pin is load-bearing, not decoration: the
             # repo has exactly ONE prettier config and it lives under web/frontend, so a BARE
@@ -940,6 +1084,19 @@ jobs:
             - name: copy register (no em dash, no jargon, in RENDERED copy; self-tested)
               working-directory: web/frontend
               run: npm run lint:copy
+            # T9-W3 §3.4 — THE LIVE-REGION POLICE. A region born under `v-if` with its content
+            # already inside it enters the document complete: no mutation, nothing announced,
+            # and markup that reads perfectly correct. The estate landed that defect three
+            # times in three waves (players-status, players-alone, players-roster's 0→1), so
+            # the third occurrence bought a mechanism (src/composables/useLiveRegion.ts) and
+            # this gate rather than a third local patch. Static, zero-dependency, browser-free
+            # — the same species as the gates above it. Self-tested both colours, and
+            # plant-proven against HEAD's own pre-cure source
+            # (evidence/w3/idiom-police-plant-RED.txt: 2 findings at :1017 and :1100).
+            # Landed by lane 6B, which owns ci.yml this phase, on W3 handoff 3A-1.
+            - name: live regions (no region born already speaking; self-tested)
+              working-directory: web/frontend
+              run: npm run lint:live-regions
             # T5-W1 row 1.11 (audit C5 + J3) support floor. Same species as the seven
             # gates above it — static, zero-dependency, browser-free — and it needs
             # this job's `npm ci`: check 2 reads @tailwindcss/node's Lightning CSS
@@ -1649,16 +1806,16 @@ jobs:
     # is the tdz-probe pattern (its reproduction arm runs on every invocation, not
     # only under --self-test), applied to the artifact.
     #
-    # WHAT THIS REPLACES IN ch62-probe.yml. That workflow is W6's kill, not this
-    # lane's, and it is untouched here. Named for the record: its ONE function that
-    # outlives its verdict is the pair of steps at ch62-probe.yml:186-203 — the
-    # production-mode `vite build` and the "Vacuity guard — the instrument is IN this
-    # bundle" grep for `__bakeAdmission`. Both live here now, in the standing
-    # workflow, on every push, with the polarity that matters for a SHIPPED bundle
-    # (absent, not present) plus the probe's own polarity kept as the control. The
-    # rest of that file — twelve dispatch-only matrix arms, browser installs, a
-    # quarantine stub, a verdict job for a chronic that is RETIRED — is W6's to
-    # delete and nothing here depends on it.
+    # WHAT THIS INHERITED FROM ch62-probe.yml, WHICH IS NOW DELETED (T9-W6 §6.1).
+    # That workflow's ONE function that outlived its verdict was a pair of steps —
+    # the production-mode `vite build` and the "Vacuity guard — the instrument is IN
+    # this bundle" grep for `__bakeAdmission` — and both live here now, in the
+    # standing workflow, on every push, with the polarity that matters for a SHIPPED
+    # bundle (absent, not present) plus the probe's own polarity kept as the control.
+    # The rest of it — twelve dispatch-only matrix arms, browser installs, a
+    # quarantine stub, and a verdict job for a chronic RETIRED at T8 formation — went
+    # with the file. Its two-arm SPECIFICATION survives as prose law in LEDGER CH-62,
+    # which is where a probe nobody may dispatch belongs.
     #
     # DAG: `needs: build-lean-wasm` for the reason every Node lane here takes that
     # edge — `web/frontend/package.json` file:-links @mkbabb/csp-solver-wasm to
@@ -1706,7 +1863,7 @@ jobs:
             # just downloaded, on a runner with no Rust toolchain. vue-tsc already runs
             # in the frontend lane; duplicating it here would buy a second typecheck and
             # a lost artifact identity. NODE_ENV is pinned for the same reason
-            # ch62-probe.yml pins it: an unset NODE_ENV with a non-production mode
+            # the deleted ch62-probe.yml pinned it too: an unset NODE_ENV with a non-production mode
             # resolves `isProduction: false` and bundles a dev-flavoured Vue.
             - name: vite build (THE production bundle every arm below reads)
               working-directory: web/frontend

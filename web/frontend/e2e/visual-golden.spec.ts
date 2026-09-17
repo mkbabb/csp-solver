@@ -53,11 +53,17 @@ import { encodeSudoku } from "./wire";
 // that provably lands — and the baselines are re-minted at the frozen pose 0.
 // The `use` blocks stay: they are the declared contract, and they harden the day
 // the runner honours them again.
+// The cast is the void spelled in the type system, not a suppression: `reducedMotion` is not a
+// member of `PlaywrightTestOptions` at 1.61.1 — the name appears once in
+// `playwright/types/test.d.ts`, inside `contextOptions` — which is why the declaration below
+// reaches no fixture. Named by the e2e typecheck at T9-W6 §6.2; `prm-void-audition.spec.ts` is
+// where the finding is executable, and its step 3 deletes this cast when upstream restores the
+// option.
 test.use({
   viewport: { width: 1280, height: 800 },
   deviceScaleFactor: 2,
   reducedMotion: "reduce",
-});
+} as Parameters<typeof test.use>[0]);
 
 // ── Tolerance floors ────────────────────────────────────────────────
 // The general identity floor (spec §comparison-tool): a bitmap capture vs live

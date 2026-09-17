@@ -87,16 +87,16 @@ cd web/frontend && npm install && npm run dev
 All counts measured at `e961bdb7`, Apple M5 Max, 2026-08-01 — except the e2e census, which `scripts/check-doc-truth.mjs` re-derives from all three Playwright configs on every run, and which T5-W1 rows 1.6 and 1.10 widened (WebKit 91 → 110 in the default config, the built-dist gates 23 → 39).
 
 ```bash
-# Rust: 215 passed, 0 failed, 6 ignored (31 test binaries + 4 doctests)
+# Rust: 218 passed, 0 failed, 6 ignored (31 test binaries + 4 doctests)
 cargo test --workspace
 
 # Python wheel-contract: 27 passed, 0 skipped
 cd csp-solver/tests-py && uv run --no-sync pytest
 
-# e2e: 437 Playwright tests across 24 spec files in the default config (Chromium 221,
-#      WebKit 216). Six further specs are held out of it and ride two configs of their
+# e2e: 476 Playwright tests across 28 spec files in the default config (Chromium 238,
+#      WebKit 238). Six further specs are held out of it and ride two configs of their
 #      own: the pixel goldens (4 tests in 1 file) and the built-dist gates (67 in 5).
-#      30 spec files on disk, 508 tests in all.
+#      34 spec files on disk, 547 tests in all.
 cd web/frontend && npx playwright test
 cd web/frontend && npx playwright test --config playwright-golden.config.ts && npm run test:e2e:throttle
 
@@ -109,7 +109,7 @@ cargo bench -p csp-solver --bench queens -- --test
 
 ## CI
 
-`.github/workflows/ci.yml` runs eighteen lanes: fmt+clippy, the Rust/wasm/Python builds and tests, the wasm size budgets and the shipped package's resolution contract, the frontend typecheck+knip+support-floor gate, the unit estate under its count floor, the cross-game boundary law, the doc-truth and evidence-policy gates, a callgrind instruction-count baseline, the per-family generation-latency ceilings measured on the shipped wasm artifact, the dist lane's build-and-consume arms (prod-shake, golden bytes, dist identity, the forbidden census, the deploy gate's refusal arms), and the cargo-audit and npm-audit advisory scans. A per-scope coverage floor is enforced among them: the frontend lane's coverage step runs the real gate against its banked per-scope baseline (its `--self-test` proof runs first, as a separate step). The Playwright e2e, golden, and perf suites live in-repo as local instruments — run on demand, not in CI (owner ruling, 2026-08-03); deployment validation is visual, on the live site. Budgets and measured artifact sizes live in [`docs/benchmarks.md`](docs/benchmarks.md).
+`.github/workflows/ci.yml` runs eighteen lanes: fmt+clippy, the Rust/wasm/Python builds and tests, the wasm size budgets and the shipped package's resolution contract, the frontend typecheck+knip+support-floor gate (which since T9-W6 also typechecks and lints the e2e estate and the deployed relay Worker), the unit estate under its count floor, the cross-game boundary law, the doc-truth and evidence-policy gates, a callgrind instruction-count baseline, the per-family generation-latency ceilings measured on the shipped wasm artifact, the dist lane's build-and-consume arms (prod-shake, golden bytes, dist identity, the forbidden census, the deploy gate's refusal arms), and the cargo-audit and npm-audit advisory scans. A per-scope coverage floor is enforced among them: the frontend lane's coverage step runs the real gate against its banked per-scope baseline (its `--self-test` proof runs first, as a separate step). The Playwright e2e, golden, and perf suites live in-repo as local instruments — run on demand, not in CI (owner ruling, 2026-08-03); deployment validation is visual, on the live site. Budgets and measured artifact sizes live in [`docs/benchmarks.md`](docs/benchmarks.md).
 
 ## Deployment
 

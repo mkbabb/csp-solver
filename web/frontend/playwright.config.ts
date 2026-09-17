@@ -69,20 +69,37 @@ export default defineConfig({
   // where Chromium reports 1 (no spec reads it). Two computed-style reads DID diverge and are
   // now engine-honest at their assertion sites, cited there.
   //
-  // ONE file stays held out of webkit, and it is an API gap rather than a scope choice:
+  // NO FILE is held out of webkit any more, and the last one to leave is the reason this note
+  // is worth reading twice.
+  //
+  // T9-W6 §6.3 — THE HOLDOUT WAS A FILE AND THE DEFECT WAS A ROW. `share-truth.spec.ts` sat in
+  // this `testIgnore` for a gap that reaches exactly ONE of its five rows: the success row needs
+  // `grantPermissions(['clipboard-read','clipboard-write'])`, and PW-WebKit has no such
+  // permission. The other four never touch `grantPermissions` at all — two force a REJECTING
+  // `writeText` through `addInitScript` (an override PW-WebKit honours: measured, `REJECTED:
+  // NotAllowedError` in 1ms, holdouts/probe-failinit-webkit.txt) and two only read a margin
+  // notice off a corrupt `?board=`. A file-scope ignore for a row-scope gap is coverage lost by
+  // rounding: four rows sat dark in the second engine for a reason that was never theirs.
+  //
+  // RE-AUDITIONED HERE, NOT INHERITED. Running all five in webkit at this tree gave 2 pass /
+  // 3 fail (holdouts/audition-webkit-all5.txt) — the two failure-signal rows red too, which is
+  // NOT what §6.3 predicted. The chromium control redded the SAME three
+  // (holdouts/audition-chromium-control.txt), so the two extra reds were never an engine story:
+  // T9-W3 §3.6 stopped the accessible NAME flipping at a fine pointer, and those rows still
+  // asserted the flip. W3's own handoff (evidence/w3/handoffs/3C-1.md §A) carried the seam; it
+  // is landed. Re-auditioned after: 9 passed, 1 failed — the success row alone
+  // (holdouts/audition-both-engines-after-3C1.txt). THAT is what earned the widening.
+  //
+  // The one true gap now skips IN THE ROW, with its reason on the row, where a reader of the
+  // test meets it (share-truth.spec.ts:58-74). `scripts/check-pw-projects.mjs` HOLDOUTS carries
+  // it at row grain and reds if an undeclared per-row engine skip is ever added — the same
+  // no-quiet-narrowing law this file-scope list used to serve, at the grain the truth lives at.
   projects: [
     { name: "chromium", use: { browserName: "chromium" } },
     {
       name: "webkit",
       use: { browserName: "webkit" },
-      // share-truth.spec.ts:65 needs `grantPermissions(['clipboard-read','clipboard-write'])`
-      // and Playwright's WebKit has no such permission: `browserContext.grantPermissions:
-      // Unknown permission: clipboard-write` (re-measured at @playwright/test 1.61.1 —
-      // evidence/w1/pw-residue.txt §1). A Playwright API gap, not a product row: the spec
-      // asserts a REAL clipboard write (`navigator.clipboard.readText()`, :76) and there is no
-      // honest way to grant one there. Re-audition it whenever PW-WebKit gains the permission.
-      // scripts/check-pw-projects.mjs pins this hold-out as the ONLY one so it cannot grow.
-      testIgnore: [...OTHER_CONFIGS, /share-truth\.spec\.ts$/],
+      testIgnore: [...OTHER_CONFIGS],
     },
   ],
   // Assert-the-SPA before any spec runs (R-11b/K46): fail loudly if baseURL is

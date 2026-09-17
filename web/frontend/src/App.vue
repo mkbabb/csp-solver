@@ -19,10 +19,6 @@ import {
   type FlipMover,
 } from "@games/shared/useFlipGlide";
 import GameShell from "@games/shared/GameShell.vue";
-// The eager default game rides the MAIN CHUNK — a static spec import, the byte-for-byte twin
-// of the static `SudokuGame` import this replaces (ratified asymmetry, P4 #4). It is a spec
-// now, not a scene: there is one scene, and it is `GameShell`.
-import { sudokuSpec } from "@games/sudoku/spec";
 import DarkModeToggle from "@pencil/celestial/DarkModeToggle.vue";
 import SvgFilters from "@pencil/chrome/SvgFilters.vue";
 import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
@@ -37,6 +33,7 @@ import { setLiveFaceTarget } from "@games/shared/useLiveFace";
 import { useCoarsePointer } from "@games/shared/useCoarsePointer";
 import {
   backfillLedger,
+  bankAuthorInk,
   dealStaged,
   flushMountedBoard,
   previewFor,
@@ -71,11 +68,15 @@ useKeyboardViewport();
 useShortcutPolicy();
 
 // OD-8 / T4-W13 — THE MOUNT FOLD: the table-driven scene mount. A gallery select / `?game=`
-// deep-link sets `scene` to a game id; `sceneFor` resolves it to the mountable component. The
-// eager default (Sudoku) rides the main chunk (its static import above) — a byte-unchanged load
-// (ratified asymmetry, P4 #4); every other game is a LAZY `defineAsyncComponent` over its row's
-// `card.load()` spec loader — the SAME dynamic-import chunk today's Futoshiki cut, now
-// generalized to all five so each game's composable starts only when it's selected.
+// deep-link sets `scene` to a game id; `sceneFor` resolves it to the mountable component.
+// EVERY row is read off the TABLE now (T9-W6 §6.1): `card.mount` is either the spec itself —
+// the main-chunk ride, byte-unchanged (ratified asymmetry, P4 #4) — or a thunk that imports it,
+// the SAME dynamic-import chunk today's Futoshiki cut, generalized to all five so a game's
+// composable starts only when it's selected. This file used to read a `card.eager` boolean and
+// then mount `sudokuSpec` from its OWN static import, which meant the default game never went
+// through the row it was iterating and the row's `load` arm had no caller at all. The static
+// import is gone with the branch; the table holds the spec, and the shape of the slot is the
+// chunking claim, so there is no second claim to drift.
 // Memoized so each id keeps a STABLE component identity across re-renders/switches.
 // F6-D3 cold fallback: the lazy chunks preload on gallery OPEN (preloadScenes), so a select is
 // normally cached. A genuinely cold select (throttled — G10's `first-select-void-400ms.png`)
@@ -98,17 +99,21 @@ function sceneFor(id: string): Component {
   const cached = sceneCache.get(id);
   if (cached) return cached;
   const card = GAMES.find((c) => c.id === id) ?? GAMES[0];
-  const comp: Component = card.eager
-    ? shellFor(sudokuSpec)
-    : defineAsyncComponent({
-        // One arm, five games: a row hands the shell its spec and `GameShell` does the rest.
-        loader: async () => shellFor(await card.load()),
-        loadingComponent: {
-          render: () =>
-            h("div", { class: "scene-loading" }, [h(ScribbleLoader, { size: 56 })]),
-        },
-        delay: 300,
-      });
+  const mount = card.mount;
+  // One arm, five games: a row hands the shell its spec and `GameShell` does the rest. A row
+  // that carries the spec outright mounts SYNCHRONOUSLY — no async wrapper, no resolution tick
+  // — which is what "rides the main chunk" has to mean at the mount as well as in the bundle.
+  const comp: Component =
+    typeof mount === "function"
+      ? defineAsyncComponent({
+          loader: async () => shellFor(await mount()),
+          loadingComponent: {
+            render: () =>
+              h("div", { class: "scene-loading" }, [h(ScribbleLoader, { size: 56 })]),
+          },
+          delay: 300,
+        })
+      : shellFor(mount);
   sceneCache.set(id, comp);
   return comp;
 }
@@ -230,18 +235,19 @@ function onSceneErased() {
 
 // F6-D3: warm every LAZY scene's chunk the moment the picker OPENS — by selection time it's
 // cached, killing the first-select void structurally (G10 dramatized it: 150–3000ms of pure
-// empty paper under CDP throttle). Sudoku rides the main chunk (eager); the other four warm
-// through their OWN row's `load()` — generalizes the old Futoshiki-only warm to the five-game
-// table. A cold select still resolves via `sceneFor`'s async loader (the warm is
-// opportunistic), so warm-once suffices.
+// empty paper under CDP throttle). The main-chunk row has nothing to warm — its spec IS the
+// table's value — so the loop warms exactly the rows whose `mount` is a thunk, which is the
+// same set the old `!card.eager` test named and one fewer claim to keep true. A cold select
+// still resolves via `sceneFor`'s async loader (the warm is opportunistic), so warm-once
+// suffices.
 let scenesWarm = false;
 function preloadScenes() {
   if (scenesWarm) return;
   scenesWarm = true;
-  // Every non-eager row warms its spec chunk.
+  // Every LAZY row warms its spec chunk; a row carrying its spec outright is already here.
   for (const card of GAMES) {
-    if (!card.eager)
-      card.load().catch(() => {
+    if (typeof card.mount === "function")
+      card.mount().catch(() => {
         // The warm is OPPORTUNISTIC and this rejection is therefore not the user's news: a
         // cold select re-requests the same chunk through `sceneFor`'s own async loader, which
         // is where a real load failure is seen and surfaced. Reporting here would raise a
@@ -689,6 +695,16 @@ backfillLedger(GAMES);
 // DIRECTION). App holds both sides, so App hands the read down — the ledger sources' own idiom.
 registerAuthorInk(() => authorInk.value);
 
+// …AND THE CARDS THE TABLE HAS TURNED AWAY FROM (T9-W6 §6.4). The read above answers for the
+// board in the seat. A follow parks the room's board on the incoming game's disk, so the moment
+// the table turns again that board is a still like any other and its digits are still a peer's —
+// and disk holds digits, never authors. This watch keeps the bridge's per-game snapshot current
+// for as long as the clock is about the board holding the seat; the bridge itself refuses the
+// write while a follow is in flight, because on that path the clock has already moved on and the
+// outgoing game's existing snapshot is the true one. The order this watch and the mounted-id
+// publish above run in therefore does not matter, which is why neither waits on the other.
+watch(authorInk, () => bankAuthorInk());
+
 // The cross-game ledger, id-keyed: what each game is set to, whether a board waits there, and
 // whether there is work on it. The mounted game writes its own row as it goes; the other four
 // come from the cold-start backfill below, so the picker reads ONE truth for all five cards
@@ -785,6 +801,17 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
     <!-- Desktop: fixed corner overlay -->
     <AttributionCard ref="desktopAttribution" />
 
+    <!-- Mobile: @mbabb on the head line beside the sun (T6.2 mark C). It sits HERE, beside its
+         desktop twin and before the toggle corner, because DOM order is tab order on this page
+         (zero positive tabindex anywhere) and the badge PAINTS to the left of the celestial at
+         every width. Mounted inside `.board-group` it was declared after `.corner-right`, so a
+         phone tabbed right-mark-then-left while the desk tabbed left-then-right — the same head,
+         two different orders (T9-W3 §3.7). The pose is `position: fixed` against the viewport and
+         no ancestor on either path establishes a containing block, so this move costs zero
+         pixels; it is a reading order, not a layout. The `ref` and the `v-show` travel with the
+         tag, so the gallery's hide and `closeAll` keep their one owner. -->
+    <AttributionCard ref="mobileAttribution" mobile v-show="view === 'playing'" />
+
     <div class="corner-right" @click.stop>
       <DarkModeToggle />
     </div>
@@ -803,10 +830,6 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
            `.board-peek-host` has already been relocated OUT of the scene root by the time the
            face is live, so it keeps painting inside the card. -->
       <div class="board-group" :class="{ 'is-gallery': view === 'gallery' }">
-        <!-- Mobile: @mbabb on the head line beside the sun (T6.2 mark C — it is fixed chrome
-             now, not the assembly's first row; it stays mounted HERE so the gallery's v-show
-             and `closeAll` keep their one owner). -->
-        <AttributionCard ref="mobileAttribution" mobile v-show="view === 'playing'" />
         <!-- Masthead: the pencil wordmark renders the CURRENT game's name and OPENS THE
              GALLERY (T4-W12 Wave D — the dropdown listbox is retired; one game-select
              surface, the carousel). A real <button>; its click folds the board into the
@@ -831,9 +854,10 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
 
         <!-- THE MOUNT FOLD (T4-W13): one scene mounts at a time, resolved from `scene` — the
              MOUNTED id, which flips at the page-turn's seam (`game` is the selected id, driving
-             the wordmark/URL at click). `sceneFor` returns the eager Sudoku directly (main
-             chunk) or a lazy async component per game (its composable + Worker only start when
-             that game is selected). The table-driven fold replaces the hardcoded two-game
+             the wordmark/URL at click). `sceneFor` reads the row's `mount`: a spec mounts
+             directly (the main-chunk row), a thunk mounts as a lazy async component (its
+             composable + Worker only start when that game is selected). The table-driven fold
+             replaces the hardcoded two-game
              v-if union — game #3+ mount with zero edits here. -->
         <component
           :is="sceneFor(scene)"

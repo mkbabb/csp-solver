@@ -1,0 +1,37 @@
+=== CH-19 index-css-bound PLANT PROOF 2026-09-17T16:56:46Z ===
+--- ARM 0: tree as the fold left it (571)
+RED    index-css-bound
+        derived: web/frontend/src/assets/index.css: 1,172 lines = 576 code + 505 comment + 91 blank (trigger at 700 code)
+        docs/tranches/LEDGER.md:87
+          expected: CH-19's stated bound to match the tree (576 code lines)
+          got:      the row pins 571
+ARM0_EXIT=
+ARM0_BARE_EXIT=1
+--- ARM 1: PLANT the bound to the censused 576 (expect GREEN)
+GREEN  index-css-bound
+        derived: web/frontend/src/assets/index.css: 1,172 lines = 576 code + 505 comment + 91 blank (trigger at 700 code)
+
+0 RED / 42 GREEN — canon holds
+ARM1_BARE_EXIT=0
+--- ARM 2: PLANT a wrong bound 999 (expect RED, different got)
+RED    index-css-bound
+        derived: web/frontend/src/assets/index.css: 1,172 lines = 576 code + 505 comment + 91 blank (trigger at 700 code)
+        docs/tranches/LEDGER.md:87
+          expected: CH-19's stated bound to match the tree (576 code lines)
+          got:      the row pins 999
+ARM2_BARE_EXIT=1
+--- RESTORE
+RED    index-css-bound
+        derived: web/frontend/src/assets/index.css: 1,172 lines = 576 code + 505 comment + 91 blank (trigger at 700 code)
+        docs/tranches/LEDGER.md:87
+          expected: CH-19's stated bound to match the tree (576 code lines)
+          got:      the row pins 571
+RESTORED_BARE_EXIT=1
+byte-identity:
+ docs/tranches/LEDGER.md | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+(empty = identical)
+--- byte-identity CORRECTED: the 3+/3- above is the PRE-EXISTING fold diff vs HEAD, not my plant.
+diff vs pre-plant backup: (empty below = identical)
+d8e84442f9b8ab0dd6335f0dfec652f393d4df71  /tmp/LEDGER.bak
+d8e84442f9b8ab0dd6335f0dfec652f393d4df71  docs/tranches/LEDGER.md
