@@ -76,6 +76,72 @@ export function useLayoutBoxSize<T extends HTMLElement | SVGElement>(
 }
 
 /**
+ * T9-W8 C01 · ONE BAKE ROUND, NOT TWO — THE FONT GATE, HELD ON THE APP'S SIDE OF THE BOX.
+ *
+ * `useRasterStack` bakes the moment it has a positive `cssSize`, and then bakes AGAIN when
+ * `document.fonts.ready` settles: the library clears every stack at the face's arrival,
+ * because a pose carrying `<text>` that baked against the fallback face is stale. Correct,
+ * and paid for by every surface — three of the four baked surfaces here carry no text at
+ * all (the grid, the sun, the moon), and they encoded a full round the clear then threw
+ * away. MEASURED at chromium 4× · Fast-3G · cold · 1280×800 dpr2 on the built dist: 28
+ * encodes to show 16, the discarded round holding the main thread for 983–1,011 ms ahead of
+ * the round that replaced it.
+ *
+ * The library already owns the only contract this needs: a NON-POSITIVE box means "not
+ * measured yet", so it holds and re-bakes the instant a real box arrives. So the app hands
+ * it zero until the face has landed, and exactly one round happens — the post-font one, the
+ * round the estate shows today, byte for byte. Nothing is baked smaller and nothing is
+ * dropped: this is the ABSENCE of a round nobody could use. Each surface renders its
+ * live-filter fallback across the window, which is what it rendered while the discarded
+ * round was in flight.
+ *
+ * THE GATE OPENS ONE PAINT LATE, and that is the second half of the cure. Opening it in the
+ * `fonts.ready` callback starts four surfaces' encodes inside the frame the page still owes
+ * to its first board paint, and the board-ready stamp — a `requestAnimationFrame` — cannot
+ * run until the encodes let go. Waiting for the next paint spends that frame on the page and
+ * the one after it on the bake.
+ *
+ * It cannot wedge a surface. `fonts.ready` resolves on failure as well as on success and
+ * resolves immediately when nothing is pending; a hidden tab stops `requestAnimationFrame`,
+ * so a timer opens the gate anyway. The gate may delay a bake; it may never prevent one.
+ */
+const FONT_GATE_FALLBACK_MS = 250;
+const ZERO_BOX = { width: 0, height: 0 } as const;
+
+const fontGateOpen = ref(false);
+
+function openFontGate(): void {
+  if (typeof document === "undefined") {
+    fontGateOpen.value = true;
+    return;
+  }
+  const ready = document.fonts?.ready ?? Promise.resolve();
+  void ready.then(() => {
+    const open = (): void => {
+      fontGateOpen.value = true;
+    };
+    if (typeof requestAnimationFrame !== "function") {
+      open();
+      return;
+    }
+    requestAnimationFrame(() => requestAnimationFrame(open));
+    setTimeout(open, FONT_GATE_FALLBACK_MS);
+  });
+}
+openFontGate();
+
+/**
+ * The capture box a baked surface hands `useRasterStack`: the measured one once the face has
+ * landed, and zero — the library's "not measured yet" — before that.
+ */
+export function fontGatedBox(
+  width: number,
+  height: number,
+): { width: number; height: number } {
+  return fontGateOpen.value ? { width, height } : ZERO_BOX;
+}
+
+/**
  * Serialize a live filter/gradient def element (by id) to a self-contained XML string for
  * inlining into a pose SVG's `<defs>`. `XMLSerializer` preserves the camelCase SVG filter
  * attribute names (`baseFrequency`, `numOctaves`, …) and stamps the SVG namespace, so the

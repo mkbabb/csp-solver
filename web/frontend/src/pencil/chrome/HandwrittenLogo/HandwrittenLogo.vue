@@ -74,6 +74,7 @@ import {
 } from "@pencil/config/pencilConfig";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
 import {
+  fontGatedBox,
   readFilterDefs,
   resolveCssValue,
   retainedPoseUrls,
@@ -349,7 +350,11 @@ const logoRaster = useRasterStack(() => ({
   // library's problem now, and it solves it by NOT baking rather than by baking wrong.
   // BC6-G1: the latched whole-pixel box, not a fresh round of every observation — see
   // `latchWholePx` above for the measurement that rejected quantization in its favour.
-  cssSize: { width: captureW.value, height: captureH.value },
+  // T9-W8 C01: zero until the face lands — `rasterPose.ts` §THE FONT GATE. This is the ONE
+  // surface whose poses carry text, so the pre-font round was not merely wasted, it was
+  // wrong; the library cleared it, and now it never happens. The post-font bake is intact:
+  // the gate opens on `fonts.ready`, so this bakes the real face, once.
+  cssSize: fontGatedBox(captureW.value, captureH.value),
 }));
 
 // The baked poses ARE object URLs now (pencil-boil 0.11) — `useRasterStack` reads its own

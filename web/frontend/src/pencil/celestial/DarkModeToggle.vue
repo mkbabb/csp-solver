@@ -353,7 +353,11 @@ import {
   FILTER_PRESETS,
 } from "@pencil/config/pencilConfig";
 import { useBoilBeat } from "@pencil/composables/boilBeat";
-import { readFilterDefs, retainedPoseUrls } from "@pencil/composables/rasterPose";
+import {
+  fontGatedBox,
+  readFilterDefs,
+  retainedPoseUrls,
+} from "@pencil/composables/rasterPose";
 
 const SUN = MASCOT_COLORS.celestial.sun;
 const MOON = MASCOT_COLORS.celestial.moon;
@@ -566,13 +570,15 @@ const sunRaster = useRasterStack(() => ({
   cacheKey: "celestial-sun",
   poseCount: CELESTIAL_POSE_COUNT,
   poseSvg: sunPoseSvg,
-  cssSize: { width: captureSize.value, height: captureSize.value },
+  // Zero until the face lands — `rasterPose.ts` §THE FONT GATE. Every celestial color is a
+  // literal and no pose carries text, so the library's post-font clear only cost a round.
+  cssSize: fontGatedBox(captureSize.value, captureSize.value),
 }));
 const moonRaster = useRasterStack(() => ({
   cacheKey: "celestial-moon",
   poseCount: CELESTIAL_POSE_COUNT,
   poseSvg: moonPoseSvg,
-  cssSize: { width: captureSize.value, height: captureSize.value },
+  cssSize: fontGatedBox(captureSize.value, captureSize.value),
 }));
 
 // The baked poses ARE object URLs (pencil-boil 0.11) — no bitmap re-draw, re-encode or close

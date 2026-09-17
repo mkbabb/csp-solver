@@ -5,6 +5,7 @@ import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
 import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
 import {
+  fontGatedBox,
   readFilterDefs,
   resolveCssValue,
   retainedPoseUrls,
@@ -232,7 +233,9 @@ const gridRaster = useRasterStack(() => ({
   cacheKey: `grid-${props.boardSize}-${props.subgridSize}-${isDark.value ? "d" : "l"}`,
   poseCount: BOIL_CONFIG.frameCount,
   poseSvg: gridPoseSvg,
-  cssSize: { width: captureSide.value, height: captureSide.value },
+  // Zero until the face lands — `rasterPose.ts` §THE FONT GATE. The grid carries no text,
+  // so the library's post-font clear could only throw its round away.
+  cssSize: fontGatedBox(captureSide.value, captureSide.value),
   // T4-WM rank 1/2/4: cap the GRID bake at DPR2 — WebKit-gated (seal adjudication). The cap
   // halves grid bitmap + decode residency (19→8 MB) and cuts the cold-load window ~23% with
   // ⅔ fewer long tasks. Licensed per-engine by the ≥0.98 SSIM floor: WebKit measured 0.9888
