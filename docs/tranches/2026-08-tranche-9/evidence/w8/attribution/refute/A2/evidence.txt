@@ -1,0 +1,48 @@
+== identity (before/after; the identity did not move) ==
+# REFUTE-A2 identity BEFORE 2026-09-17T18:55:31Z
+loadavg: { 4.78 5.24 6.71 }
+AUDIT: build-identity — dist entry index-9rZPzI5DEcpe.js · index.html md5 fa3d1af9870916cc728de11e97f57a90 · 43 files / 806.1 KB · newest mtime 2026-09-17T17:53:45.987Z
+AUDIT: build-identity — http://127.0.0.1:4256 serves the same entry (index-9rZPzI5DEcpe.js)
+
+# REFUTE-A2 identity AFTER 2026-09-17T19:06:23Z
+loadavg: { 4.83 5.31 5.90 }
+AUDIT: build-identity — dist entry index-9rZPzI5DEcpe.js · index.html md5 fa3d1af9870916cc728de11e97f57a90 · 43 files / 806.1 KB · newest mtime 2026-09-17T17:53:45.987Z
+AUDIT: build-identity — http://127.0.0.1:4256 serves the same entry (index-9rZPzI5DEcpe.js)
+
+== ablation summaries (xablate.mjs, interleaved base/ablated, n=5 each) ==
+# REFUTE-A2 identity BEFORE 2026-09-17T18:55:31Z
+loadavg: { 4.78 5.24 6.71 }
+AUDIT: build-identity — dist entry index-9rZPzI5DEcpe.js · index.html md5 fa3d1af9870916cc728de11e97f57a90 · 43 files / 806.1 KB · newest mtime 2026-09-17T17:53:45.987Z
+AUDIT: build-identity — http://127.0.0.1:4256 serves the same entry (index-9rZPzI5DEcpe.js)
+
+# REFUTE-A2 identity AFTER 2026-09-17T19:06:23Z
+loadavg: { 4.83 5.31 5.90 }
+AUDIT: build-identity — dist entry index-9rZPzI5DEcpe.js · index.html md5 fa3d1af9870916cc728de11e97f57a90 · 43 files / 806.1 KB · newest mtime 2026-09-17T17:53:45.987Z
+AUDIT: build-identity — http://127.0.0.1:4256 serves the same entry (index-9rZPzI5DEcpe.js)
+base median board-ready 304.6 ms (n=5) · bank-stubbed 307.0 ms (n=5) · delta -2.4 ms
+css2x chromium 4x desk — base 1376.8 ms (n=5) · ablated 1291.3 ms (n=5) · delta -85.5 ms (ablated − base) · load { 4.56 4.94 6.19 }
+css2x chromium 4x desk — base 299.2 ms (n=5) · ablated 298.7 ms (n=5) · delta -0.5 ms (ablated − base) · load { 4.47 5.04 6.32 }
+fontabort webkit 1x desk — base 234.0 ms (n=5) · ablated 157.0 ms (n=5) · delta -77.0 ms (ablated − base) · load { 4.39 4.93 6.22 }
+jspad chromium 4x desk — base 294.3 ms (n=5) · ablated 300.0 ms (n=5) · delta 5.7 ms (ablated − base) · load { 4.28 4.94 6.25 }
+nopreload chromium 4x desk — base 333.5 ms (n=5) · ablated 357.0 ms (n=5) · delta 23.5 ms (ablated − base) · load { 4.38 4.81 6.07 }
+nopreload webkit 1x desk — base 237.0 ms (n=5) · ablated 158.0 ms (n=5) · delta -79.0 ms (ablated − base) · load { 4.18 4.78 6.08 }
+noworkerpreload chromium 4x desk — base 295.9 ms (n=5) · ablated 302.9 ms (n=5) · delta 7.0 ms (ablated − base) · load { 4.65 4.78 5.99 }
+
+== templates-bank ablation (lane instrument, re-run) ==
+base median board-ready 304.6 ms (n=5) · bank-stubbed 307.0 ms (n=5) · delta -2.4 ms
+
+== worker/wasm timeline, chromium 4x cold (t = ms since navigationStart, wall) ==
+{"t":33,"phase":"req","url":"solver.worker-DyhLjsTj.js","type":"script"}
+{"t":33,"phase":"cdp-req","url":"solver.worker-DyhLjsTj.js"}
+{"t":510,"phase":"req","url":"solver.worker-DyhLjsTj.js","type":"script"}
+{"t":510,"phase":"cdp-req","url":"solver.worker-DyhLjsTj.js"}
+{"t":830,"phase":"worker-created","url":"solver.worker-DyhLjsTj.js"}
+{"t":825,"phase":"BOARD-READY","ready":468.7000000476837}
+{"t":1136,"phase":"req","url":"csp_solver_wasm_bg-BJYevEYE.wasm","type":"fetch"}
+{"t":1245,"phase":"req","url":"solver.worker-DyhLjsTj.js","type":"script"}
+{"t":1245,"phase":"cdp-req","url":"solver.worker-DyhLjsTj.js"}
+{"t":1260,"phase":"worker-created","url":"solver.worker-DyhLjsTj.js"}
+{"t":1267,"phase":"req","url":"csp_solver_wasm_bg-BJYevEYE.wasm","type":"fetch"}
+
+== woff2 driver-side request counts + supportedEntryTypes, both engines ==
+[{"engine":"webkit","driverRequestCounts":{"firacode-subset-CbuNTc2aGjcY.woff2":2,"fraunces-subset-qp6ShjBRhfYB.woff2":3,"patrickhand-subset-BqV1besB36ib.woff2":2},"responses":["RESP:firacode-subset-CbuNTc2aGjcY.woff2:200","RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200","RESP:patrickhand-subset-BqV1besB36ib.woff2:200","RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200","RESP:firacode-subset-CbuNTc2aGjcY.woff2:200","RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200","RESP:patrickhand-subset-BqV1besB36ib.woff2:200"],"supportedEntryTypes":"event,first-input,largest-contentful-paint,mark,measure,navigation,paint,resource"},{"engine":"chromium","driverRequestCounts":{"firacode-subset-CbuNTc2aGjcY.woff2":1,"fraunces-subset-qp6ShjBRhfYB.woff2":2,"patrickhand-subset-BqV1besB36ib.woff2":1},"responses":["RESP:firacode-subset-CbuNTc2aGjcY.woff2:200","RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200","RESP:patrickhand-subset-BqV1besB36ib.woff2:200","RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"],"supportedEntryTypes":"element,event,first-input,largest-contentful-paint,layout-shift,long-animation-frame,longtask,mark,measure,navigation,paint,resource,visibility-state"}]

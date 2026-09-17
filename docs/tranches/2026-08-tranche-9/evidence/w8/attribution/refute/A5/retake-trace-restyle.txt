@@ -1,0 +1,48 @@
+
+== TOGGLE 1 (light -> dark, the first invocation) · cpu 4x · fast-3G · cache disabled · 13057 trace events
+   UpdateLayoutTree: 67 recalcs, 6236 ELEMENTS restyled · Layout dirtyObjects 319
+   RunTask                      n=5931  1633.2 ms
+   EventDispatch                n=  48  822.5 ms
+   UpdateLayoutTree             n=  67  79.9 ms
+   RasterTask                   n=1700  73.3 ms
+   Decode LazyPixelRef          n=  28  58.1 ms
+   Decode Image                 n=  28  57.5 ms
+   FireAnimationFrame           n=  80  53.6 ms
+   Layerize                     n=  75  37.4 ms
+   ImageDecodeTask              n=  27  24.6 ms
+   Paint                        n=  79  16.1 ms
+   PrePaint                     n= 134  13.0 ms
+   Commit                       n= 102  12.3 ms
+
+== TOGGLE 2 (dark -> light) · cpu 4x · fast-3G · cache disabled · 15960 trace events
+   UpdateLayoutTree: 127 recalcs, 19411 ELEMENTS restyled · Layout dirtyObjects 505
+   RunTask                      n=5092  1044.7 ms
+   UpdateLayoutTree             n= 127  262.1 ms
+   Layerize                     n= 161  121.2 ms
+   RasterTask                   n=1742  104.8 ms
+   Decode LazyPixelRef          n=  24  59.3 ms
+   Decode Image                 n=  24  58.3 ms
+   Paint                        n= 231  55.2 ms
+   FireAnimationFrame           n=  96  34.1 ms
+   PrePaint                     n= 278  30.1 ms
+   Commit                       n= 179  26.0 ms
+   ImageDecodeTask              n=  26  23.6 ms
+   MajorGC                      n=   2  22.3 ms
+
+== TOGGLE 3 (light -> dark, cache hit) · cpu 4x · fast-3G · cache disabled · 15094 trace events
+   UpdateLayoutTree: 131 recalcs, 19451 ELEMENTS restyled · Layout dirtyObjects 519
+   RunTask                      n=4672  938.9 ms
+   UpdateLayoutTree             n= 131  276.2 ms
+   Layerize                     n= 146  108.9 ms
+   RasterTask                   n=1764  98.6 ms
+   Decode LazyPixelRef          n=  24  58.6 ms
+   Decode Image                 n=  24  58.2 ms
+   Paint                        n= 239  48.8 ms
+   FireAnimationFrame           n= 101  31.9 ms
+   PrePaint                     n= 277  24.0 ms
+   ImageDecodeTask              n=  26  23.8 ms
+   Commit                       n= 181  20.0 ms
+   FunctionCall                 n= 207  8.8 ms
+
+== the cascade the flip moves
+{"rulesMatchingDark":8,"declarations":37,"customPropertyDeclarations":30,"htmlClass":"dark","colorSchemeComputed":"normal","elementsInDoc":1213}

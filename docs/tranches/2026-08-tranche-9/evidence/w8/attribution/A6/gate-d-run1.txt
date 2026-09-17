@@ -1,0 +1,83 @@
+LOADAVG-START { 26.53 12.66 9.98 } 18:17:02Z
+# perf-rig CI subset — idle fps + long-frame census on the built dist
+
+gates.json        /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+  desktop.ceilingFps         98.4
+  desktop.idle3s.minFps      97
+  desktop.idle3s.maxLong33   0
+  desktop.undoBurst          minFps 52 (real Safari, manual lane) · ciMinPctOfCeiling 0.9 (this lane)
+  boot.tbt                   maxTbtMs 1750 over a 3000ms window at 4× CPU
+derived ratio     minFps/ceilingFps = 97/98.4 = 0.98577
+declared fraction undoBurst.ciMinPctOfCeiling = 0.90000 (× this harness's own measured ceiling)
+engines           chromium, webkit   windows/engine 3   port 4390
+
+dist              /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/dist
+entry             assets/index-9rZPzI5DEcpe.js
+host              18 cpus, load 26.53 / 12.66 / 9.98 (1/5/15m) at start
+started           2026-09-17T18:17:02.788Z
+
+probe-server up on :4390
+
+## chromium
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36
+  control 1  fps 132.57  p50 7.7  p95 9.6  long33 0  long50 0  worst 17.3ms  ~130Hz
+  window 1   fps 133.83  p50 7.7  p95 9.2  long33 0  long50 0  worst 10.7ms  frames 402  wall 3003.8ms  attempt 1
+  control 2  fps 132.46  p50 7.7  p95 9.7  long33 0  long50 0  worst 10.7ms  ~130Hz
+  window 2   fps 120.03  p50 8.3  p95 9.9  long33 0  long50 0  worst 10.3ms  frames 361  wall 3007.5ms  attempt 1
+  control 3  fps 134.69  p50 7.7  p95 9.3  long33 0  long50 0  worst 10.4ms  ~130Hz
+  window 3   fps 134.25  p50 7.7  p95 9.4  long33 0  long50 0  worst 10.3ms  frames 403  wall 3001.9ms  attempt 1
+  control median 132.57 fps / long33 0
+  undoBurst 1 fps 134.66  p50 7.6  p95 9.5  long33 0  worst 11ms  attempt 1
+  undoBurst 2 fps 120.54  p50 8.3  p95 9.7  long33 0  worst 10.4ms  attempt 1
+  undoBurst 3 fps 131.08  p50 7.8  p95 9.8  long33 0  worst 12.2ms  attempt 1
+  undoBurst 4 fps 120.53  p50 8.3  p95 9.7  long33 0  worst 10.4ms  attempt 1
+  undoBurst 5 fps 129.04  p50 7.8  p95 10.2  long33 0  worst 15.1ms  attempt 1
+  undoBurst 6 fps 120.6  p50 8.3  p95 10.1  long33 0  worst 10.4ms  attempt 1
+  bootTbt 1   longtask yes  tbt 373ms  tasks 10  longest 250ms  anchor —ms  window 3000ms  painted true
+  bootTbt 2   longtask yes  tbt 367ms  tasks 11  longest 254ms  anchor —ms  window 3000ms  painted true
+  bootTbt 3   longtask yes  tbt 403ms  tasks 11  longest 256ms  anchor —ms  window 3000ms  painted true
+
+## webkit
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15
+  control 1  fps 60.05  p50 17  p95 18  long33 0  long50 0  worst 19ms  ~59Hz
+  window 1   fps 60.34  p50 17  p95 18  long33 0  long50 0  worst 19ms  frames 182  wall 3016ms  attempt 1
+  control 2  fps 60.09  p50 17  p95 18  long33 0  long50 0  worst 19ms  ~59Hz
+  window 2   fps 60.4  p50 17  p95 18  long33 0  long50 0  worst 19ms  frames 182  wall 3013ms  attempt 1
+  control 3  fps 60.19  p50 17  p95 19  long33 0  long50 0  worst 19ms  ~59Hz
+  window 3   fps 60.38  p50 17  p95 20  long33 0  long50 0  worst 29ms  frames 182  wall 3014ms  attempt 1
+  control median 60.09 fps / long33 0
+  undoBurst 1 fps 60.09  p50 17  p95 18  long33 0  worst 26ms  attempt 1
+  undoBurst 2 fps 60.02  p50 17  p95 18  long33 0  worst 19ms  attempt 1
+  undoBurst 3 fps 58.14  p50 17  p95 25  long33 4  worst 51ms  attempt 1
+  bootTbt 1   longtask NO  tbt —  tasks —  longest —ms  anchor 42ms  window 3000ms  painted true
+  bootTbt 2   longtask NO  tbt —  tasks —  longest —ms  anchor 45ms  window 3000ms  painted true
+  bootTbt 3   longtask NO  tbt —  tasks —  longest —ms  anchor 1046ms  window 3000ms  painted true
+
+## verdict
+
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| chromium | 132.57 | 0 | 125.5 | 130.68 | **FAIL** | 0 | 0 | PASS | 124.82 | 119.31 | PASS |
+| webkit | 60.09 | 0 | 60.38 | 59.24 | PASS | 0 | 0 | PASS | 60.02 | 54.08 | PASS |
+
+| engine | longtask | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| --- | --- | --- | --- | --- |
+| chromium | yes | 373ms | 1750 | PASS |
+| webkit | NO | — | 1750 | NOT MEASURED |
+
+host CPU anchor — DIAGNOSTIC, gates nothing; the portable column GATE D would need (see the block comment):
+| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |
+| --- | --- | --- | --- | --- |
+| webkit | 1× | 45 (30000000 iter) | — | — |
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+  chromium: 125.5 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 132.57. Absolute comparison is a category error and is reported only for the record.
+  webkit: 60.38 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 60.09. Absolute comparison is a category error and is reported only for the record.
+
+BREACH [chromium] idle fps: measured 125.5 < required 130.68 (98.577% of the 132.57 fps harness ceiling, derived from gates.json 97/98.4)
+
+host at finish    load 29.50 / 15.90 / 11.51 (1/5/15m) · 2026-09-17T18:19:19.885Z
+
+RESULT: RED — at least one gates.json threshold breached.
+EXIT=1
+LOADAVG-END { 29.50 15.90 11.51 } 18:19:19Z

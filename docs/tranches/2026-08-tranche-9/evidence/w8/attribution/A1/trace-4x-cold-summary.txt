@@ -1,0 +1,65 @@
+main thread pid/tid 37467/71511431 · 7251 RunTask · trace wall 17686 ms
+RunTask total 4539 ms · >50 ms: 10 · worst 268 ms · TBT 1531 ms
+
+| trace event | n | self ms | total ms |
+| --- | --- | --- | --- |
+| RunMicrotasks | 384 | 2393.6 | 2490.8 |
+| RunTask | 7251 | 692.3 | 4538.7 |
+| UpdateLayoutTree | 477 | 345.3 | 349.7 |
+| Layerize | 1041 | 248.9 | 248.9 |
+| v8.evaluateModule | 7 | 139.3 | 250.2 |
+| Commit | 1693 | 133.3 | 166.5 |
+| FunctionCall | 2739 | 112.1 | 131.2 |
+| Paint | 2352 | 97.6 | 155.0 |
+| Layout | 188 | 78.5 | 78.5 |
+| PrePaint | 1723 | 74.8 | 74.8 |
+| Decode Image | 16 | 46.4 | 46.4 |
+| FireAnimationFrame | 2258 | 31.2 | 302.5 |
+| UpdateLayer | 4192 | 20.7 | 20.7 |
+| EvaluateScript | 2 | 12.2 | 12.2 |
+| V8.GC_MARK_COMPACTOR | 3 | 11.5 | 32.6 |
+| HitTest | 34 | 9.6 | 9.6 |
+| IntersectionObserverController::computeIntersections | 2249 | 7.8 | 7.8 |
+| V8.GC_HEAP_EMBEDDER_TRACING_EPILOGUE | 3 | 7.3 | 7.3 |
+
+A1 user-timing marks (blink.user_timing), ms from first trace event:
+  A1:fetch:start: ×1  first 1196 ms  last 1196 ms
+  A1:fetch:end: ×1  first 1465 ms  last 1465 ms
+  A1:board-ready: ×1  first 1467 ms  last 1467 ms
+  A1:poseSvg:toggle-sun ×8  first 1471 ms  last 1519 ms
+  A1:poseSvg:toggle-moon ×8  first 1475 ms  last 1522 ms
+  A1:poseSvg:grid ×8  first 1479 ms  last 1525 ms
+  A1:fonts.ready: ×1  first 1501 ms  last 1501 ms
+  A1:getContext: ×44  first 1547 ms  last 4152 ms
+  A1:drawImage:toggle-sun ×8  first 1552 ms  last 2672 ms
+  A1:toBlob:start:toggle-sun ×8  first 1552 ms  last 2672 ms
+  A1:toBlob:sync:toggle-sun ×8  first 1573 ms  last 2691 ms
+  A1:drawImage:toggle-moon ×8  first 1645 ms  last 2768 ms
+  A1:toBlob:start:toggle-moon ×8  first 1645 ms  last 2768 ms
+  A1:toBlob:sync:toggle-moon ×8  first 1664 ms  last 2787 ms
+  A1:drawImage:grid ×8  first 1729 ms  last 3428 ms
+  A1:toBlob:start:grid ×8  first 1729 ms  last 3428 ms
+  A1:toBlob:sync:grid ×8  first 1938 ms  last 3643 ms
+  A1:poseSvg:logo ×4  first 2713 ms  last 2715 ms
+  A1:toBlob:end:toggle-sun ×8  first 3783 ms  last 3906 ms
+  A1:toBlob:end:toggle-moon ×8  first 3790 ms  last 3913 ms
+  A1:drawImage:logo ×4  first 3791 ms  last 3860 ms
+  A1:toBlob:start:logo ×4  first 3791 ms  last 3860 ms
+  A1:toBlob:sync:logo ×4  first 3812 ms  last 3880 ms
+  A1:toBlob:end:grid ×8  first 3886 ms  last 4114 ms
+  A1:imgDecode: ×16  first 3919 ms  last 4152 ms
+  A1:toBlob:end:logo ×4  first 4027 ms  last 4071 ms
+
+top 12 RunTasks (ms from first trace event):
+  t=1132 dur=268 ms  [v8.evaluateModule]
+  t=3424 dur=219 ms  [EventDispatch > RunMicrotasks]
+  t=2165 dur=218 ms  [EventDispatch > RunMicrotasks]
+  t=1947 dur=213 ms  [EventDispatch > RunMicrotasks]
+  t=1727 dur=211 ms  [EventDispatch > RunMicrotasks]
+  t=3212 dur=210 ms  [EventDispatch > RunMicrotasks]
+  t=2787 dur=210 ms  [EventDispatch > RunMicrotasks]
+  t=2392 dur=210 ms  [EventDispatch > RunMicrotasks]
+  t=3000 dur=210 ms  [EventDispatch > RunMicrotasks]
+  t=1401 dur=61 ms  []
+  t=829 dur=42 ms  [UpdateLayoutTree]
+  t=4781 dur=41 ms  [HandlePostMessage > RunMicrotasks]

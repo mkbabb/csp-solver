@@ -1,0 +1,69 @@
+LOADAVG-START { 7.68 10.97 10.31 } 18:33:34Z
+# perf-rig CI subset — idle fps + long-frame census on the built dist
+
+gates.json        /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+  desktop.ceilingFps         98.4
+  desktop.idle3s.minFps      97
+  desktop.idle3s.maxLong33   0
+  desktop.undoBurst          minFps 52 (real Safari, manual lane) · ciMinPctOfCeiling 0.9 (this lane)
+  boot.tbt                   maxTbtMs 1750 over a 3000ms window at 4× CPU
+derived ratio     minFps/ceilingFps = 97/98.4 = 0.98577
+declared fraction undoBurst.ciMinPctOfCeiling = 0.90000 (× this harness's own measured ceiling)
+engines           chromium, webkit   windows/engine 3   port 4390
+
+dist              /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/dist
+entry             assets/index-9rZPzI5DEcpe.js
+host              18 cpus, load 7.68 / 10.97 / 10.31 (1/5/15m) at start
+started           2026-09-17T18:33:34.177Z
+
+probe-server up on :4390
+
+## chromium
+  INSTRUMENT FAILURE: no rafCeiling line on window 3 (done=false)
+
+## webkit
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15
+  control 1  fps 60.03  p50 17  p95 18  long33 0  long50 0  worst 20ms  ~59Hz
+  window 1   fps 60.32  p50 17  p95 18  long33 0  long50 0  worst 19ms  frames 182  wall 3017ms  attempt 1
+  control 2  fps 59.96  p50 17  p95 19  long33 0  long50 0  worst 19ms  ~59Hz
+  window 2   fps 60.38  p50 17  p95 19  long33 0  long50 0  worst 19ms  frames 182  wall 3014ms  attempt 1
+  control 3  fps 49.18  p50 17  p95 19  long33 1  long50 1  worst 598ms  ~59Hz
+  window 3   fps 60.01  p50 17  p95 18  long33 0  long50 0  worst 27ms  frames 181  wall 3016ms  attempt 1
+  control median 59.96 fps / long33 0
+  undoBurst 1 fps 60.09  p50 17  p95 18  long33 0  worst 24ms  attempt 1
+  undoBurst 2 fps 60.41  p50 17  p95 19  long33 0  worst 19ms  attempt 1
+  undoBurst 3 fps 60.39  p50 17  p95 18  long33 0  worst 18ms  attempt 1
+  bootTbt 1   longtask NO  tbt —  tasks —  longest —ms  anchor 65ms  window 3000ms  painted true
+  bootTbt 2   longtask NO  tbt —  tasks —  longest —ms  anchor 43ms  window 3000ms  painted true
+  bootTbt 3   longtask NO  tbt —  tasks —  longest —ms  anchor 45ms  window 3000ms  painted true
+
+## verdict
+
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| webkit | 59.96 | 0 | 60.32 | 59.11 | PASS | 0 | 0 | PASS | 60.39 | 53.96 | PASS |
+
+| engine | longtask | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| --- | --- | --- | --- | --- |
+| webkit | NO | — | 1750 | NOT MEASURED |
+
+host CPU anchor — DIAGNOSTIC, gates nothing; the portable column GATE D would need (see the block comment):
+| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |
+| --- | --- | --- | --- | --- |
+| webkit | 1× | 45 (30000000 iter) | — | — |
+
+SETUP ERROR: no engine in this run could measure boot TBT — none of chromium, webkit ships the
+  `longtask` entry type. A GATE D green from an instrument that ran nowhere is vacuous, so the
+  run refuses one. Include chromium, or drop the row from gates.json and say why.
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+  webkit: 60.32 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 59.96. Absolute comparison is a category error and is reported only for the record.
+
+NOT MEASURED [chromium] — no rafCeiling line on window 3 (done=false)
+SETUP ERROR [chromium+webkit] — boot TBT measured on no engine (no longtask entry type anywhere in this run)
+
+host at finish    load 7.81 / 9.63 / 9.84 (1/5/15m) · 2026-09-17T18:36:36.984Z
+
+RESULT: SETUP ERROR — no threshold breached on what was measured, but 1 row(s) could not be graded.
+EXIT=2
+LOADAVG-END { 7.81 9.63 9.84 } 18:36:36Z
