@@ -187,9 +187,25 @@ const { width: hostW, height: hostH } = useLayoutBoxSize(svgRef);
 // The grid renders as a centered square (preserveAspectRatio meet), so capture a SQUARE
 // bitmap at the rendered side — displaying it back at width=height=1000 can't squash it.
 // Quantized to 4px so a drag-resize doesn't thrash the bake.
+//
+// T9-W8 C01 · ZERO MEANS "NOT MEASURED YET", AND IT HAS TO REACH THE LIBRARY AS ZERO.
+// The seed used to be 620, a plausible-looking side nobody had measured. `useRasterStack`
+// reads a non-positive box as "not measured yet" and holds — a positive one it takes at its
+// word, so the guess bought a full round of encodes at a box the layout never had, and the
+// ResizeObserver's first delivery then re-keyed and bought a second.
+//
+// MEASURED on WebKit (Playwright, 1280×800 DPR2, cold, the built dist): fonts.ready lands at
+// 112–148 ms and the observer's first contentRect at 129–169, so the font gate's bake fired
+// against the seed every time — 620 × 2 = a 1240 px round, four encodes, 258–289 ms of
+// blocking main thread, discarded whole when 636 arrived and re-keyed to 1272. 3 windows of
+// 3. Chromium never showed it because its box lands ~30 ms BEFORE fonts.ready, not after.
+//
+// Returning 0 is not a smaller bake, it is the absence of a bake nobody could use: the grid
+// renders its live-filter fallback for those few frames exactly as it did while the discarded
+// round was in flight, and the library's own opts watch bakes the instant the box lands.
 const captureSide = computed(() => {
   const s = Math.min(hostW.value, hostH.value);
-  return s > 0 ? Math.round(s / 4) * 4 : 620;
+  return s > 0 ? Math.round(s / 4) * 4 : 0;
 });
 
 function gridPoseSvg(pose: number): string {
