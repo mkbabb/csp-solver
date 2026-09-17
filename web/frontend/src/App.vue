@@ -355,9 +355,9 @@ const { view, snappedIndex, openGallery, snapTo, select, cancel } = useGameGalle
 // fold's first frame may not be a module-evaluation frame. Once `galleryComp` is filled the
 // view flip mounts the deck synchronously, exactly as the static import did.
 //
-// Two warms, both already this file's idiom (`preloadScenes`, `warmPosters`): idle after mount,
-// and again on intent at the head of `enterGallery`, which has BEAT 0's 200 ms of chrome-leave
-// in front of the mount. W7 rules on idle vs intent; until then both run and neither blocks.
+// Two warms: one when the boot burst has drained, and one on intent at the head of
+// `enterGallery`, which has BEAT 0's 200 ms of chrome-leave in front of the mount. W7 rules on
+// idle vs intent; until then both run and neither blocks.
 const galleryComp = shallowRef<Component | null>(null);
 let galleryWarm: Promise<void> | null = null;
 function warmGallery(): Promise<void> {
@@ -366,13 +366,57 @@ function warmGallery(): Promise<void> {
   });
   return galleryWarm;
 }
-/** The poster warm's schedule, to the letter: idle where the engine has it, a timeout floor
- *  everywhere, and the `galleryWarm` promise makes the second call a no-op. */
+/** THE WARM WAITS FOR THE BOARD, NOT FOR A FIXED FLOOR. The poster schedule (idle, with a
+ *  1,200 ms floor from mount) is wrong for a chunk the first keystroke can ask for: MEASURED on
+ *  the regime this split is sold for — chromium 4x, cold Fast-3G, 1280x800 — the main thread
+ *  bakes straight through idle and that floor did not fetch until 2,048-2,153 ms, about 800 ms
+ *  after the board was ready at 1,305-1,356 ms, so a deck opened in that window waited on the
+ *  network (+412 ms on the first open, 5/5 windows).
+ *
+ *  Two conditions, and the LATER one wins, because each engine binds on a different one: the
+ *  board's cells are on screen, and the boot burst has drained (`load`). Chromium on a slow link
+ *  paints the board first and drains 50-62 ms later; WebKit drains first and paints the board
+ *  ~150 ms after that, and warming on `load` alone put the deck's two requests INSIDE the first
+ *  board's freight there, 5/5 windows. Waiting for both keeps the deck off the boot burst on
+ *  either engine while still having it in hand about 300 ms after the board, far inside the
+ *  window a first open used to pay for.
+ *
+ *  The cells are read for EXISTENCE only, never a rect: this runs on boot frames, and asking for
+ *  a box would flush layout on every one of them. Two frames of margin after that, so the fetch
+ *  can never be counted as part of the first board. The timeout is the backstop for a load event
+ *  held open by something else, and it also ends the poll: `galleryWarm` is the one piece of
+ *  state both read, so whoever warms first — the backstop, or the open itself — stops the
+ *  looking, and every later call is a no-op. */
 function scheduleWarmGallery() {
-  const ric = (window as Window & { requestIdleCallback?: (cb: () => void) => void })
-    .requestIdleCallback;
-  ric?.(() => void warmGallery());
-  window.setTimeout(() => void warmGallery(), 1200);
+  let painted = false;
+  let drained = document.readyState === "complete";
+  const warmIfReady = () => {
+    if (painted && drained) void warmGallery();
+  };
+  if (!drained)
+    window.addEventListener(
+      "load",
+      () => {
+        drained = true;
+        warmIfReady();
+      },
+      { once: true },
+    );
+  const lookForBoard = () => {
+    if (galleryWarm) return; // already warmed by the backstop or by an open — stop looking
+    if (document.querySelector(".board-group .board-cells .game-cell")) {
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          painted = true;
+          warmIfReady();
+        }),
+      );
+      return;
+    }
+    requestAnimationFrame(lookForBoard);
+  };
+  requestAnimationFrame(lookForBoard);
+  window.setTimeout(() => void warmGallery(), 3000);
 }
 
 // THE HEADER THAT STAYS (T6 mark 7). The masthead survives the view flip, so it has to say
