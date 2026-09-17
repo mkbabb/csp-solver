@@ -1,5 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// PRM: live, because the dock sheet's RISE is the thing §3.1's occlusion rows measure the board
+//   under, and no row reads a box mid-glide: `openDrawer` settles on the Band-D clock (the 700ms
+//   wait after `toBeVisible`), and every census below is taken at the risen sheet's rest pose.
+
 /**
  * T9-W3 §3.1 / §3.5 / §3.6 — THE PANEL SPEAKS.
  *

@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 
-// PRM: live, for `session-substrate.spec.ts`'s own reason — the deck's LIVE CENTRE FACE is gated
-//   on `!reducedMotion`, and this row is about the card that is NOT it. Nothing below reads a
-//   box; the two reads are `stroke` on two poster cells, and both are polled into.
+// PRM: live, because the deck's LIVE CENTRE FACE is gated on `!reducedMotion` (the reason
+//   `session-substrate.spec.ts` gives), and this row is about the card that is NOT it. Nothing
+//   below reads a box; the two reads are `stroke` on two poster cells, and both are polled into.
 
 /**
  * T9-W6 §6.4 · R13's FOLLOW STATE — the still of a board the table turned AWAY from.
