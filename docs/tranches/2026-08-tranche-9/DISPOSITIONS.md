@@ -32,6 +32,16 @@ not a §1 member.
 | T9-B6 | W7 design depth: the audit's design-language census (F18) supports either the seven enumerated cures or a full design-system re-cut. | The enumerated cures under the convergent loop; a full system re-cut only on the owner's mark. **CONDITION FIRED 2026-08-10 for the CONTROLS ESTATE**: T9-M05 is that mark — the controls section gets the system re-cut (W7 §10); the rest of the product stays under the default. |
 | T9-B7 | Given-overwrite semantics (F17): the model DELIBERATELY demotes a given on write (`applyCellValue` — `givenCells.delete` → `overriddenCells.add`), yet the rendering, the aria ("given clue N") and every convention say givens are inviolable, and nothing on screen explains the demotion. Inviolable givens, or override-by-design made legible? | Givens inviolable: the write is refused and SAYS so (visible + spoken); the `overriddenCells` machinery retires. Flips to make-it-legible only on the owner's word that overriding is intended product behavior. |
 
+### 2.1 The firing log (each default's date and trigger; the WGATE reads this, not the table)
+
+- **T9-B4 — FIRED 2026-08-25 at W0** (commit f48c43f1, trigger: W0 executed the record). ACCEPT-DOCUMENT: T8-R08 stands in LEDGER §1 as banked with its bound named; no cure, no re-booking.
+- **T9-B5 — FIRED 2026-08-25 at W0** (commit f48c43f1, trigger: W0 executed the record). ACCEPT-DOCUMENT: the evidence-absence census (evidence/w0/evidence-absence.md) landed and T7's and T8's close records took their honest absence notes; the capture-or-it-didn't-happen law binds forward from T9's gate.
+- **T9-B6 — CONDITION FIRED 2026-08-10 for the controls estate** (recorded in the table above; folded at commit c917f9a7, 2026-08-25, trigger: T9-M05 is the owner's mark). The rest of the product runs the enumerated cures under the convergent loop (W7).
+- **T9-B7 — FIRED 2026-08-25 at W1** (commit 1453eb60, trigger: W1 executed the board's law). Givens refuse the write and say so, visible and spoken in the margin; the `overriddenCells` machinery retired (the model carries no such field; a saved board's legacy field is migrated on load — useGameState.givens.test.ts); no owner's word flipped it.
+- **T9-B3 — FIRED 2026-08-25 at W4** (commit 4dd9ec9c, trigger: W4 executed generation truth; the wave's §4.3). The ladder priced honestly per family; bank-backed HARD where a bank exists; thermo bank + leash.
+- **T9-B1 — FIRING 2026-09-17 at W7's execution lanes** (trigger: the default, M16's own law; the recut runs in the w7/exec lane and lands on master with W7's execution fold). The chosen words and the landing commit are recorded here at that fold; until then the ballot is not closed.
+- **T9-B2 — OPEN; the default fires at the WGATE and is the OWNER'S to execute** (a Pages setting: drop the injected beacon). W8's C09 row carries it beside the .wasm Cache Rule; the chair cannot flip the setting and does not claim it. Recorded fired only when the live edge answers console-clean, frame cited.
+
 ## 3. Residue booked by the audit (the dropped-NOTE estate, F4 — each now owned)
 
 | Row | STATE | Disposition |
