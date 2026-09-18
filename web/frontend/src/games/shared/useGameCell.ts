@@ -108,7 +108,7 @@ export function useGameCell(
   const glyphChar = computed(() => toDisplayChar(props.value, props.boardSize));
 
   // cellKind (fe-components-audit §12) drives the accessible name (§4.1). Order matters: a
-  // solver's answer can also sit on a "given" position, so the richer state is tested first.
+  // revealed answer can also sit on a "given" position, so the richer state is tested first.
   //
   // T9-W1 §1.1 — the `!props.isOverridden` term is gone with the demotion. It was the clause
   // that let one keystroke turn "given clue 5" into "your entry 7"; nothing re-labels a clue
@@ -132,10 +132,15 @@ export function useGameCell(
    * `authorName` is a PEER's slug and only ever that (`BoardHost.authorNameAt` returns "" for
    * your own cells and for the unauthored), so the test is the whole rule: a slug means someone
    * else's hand, no slug means yours. The other kinds name a different hand already and take no
-   * clause at all — a printed clue was written by nobody, and a revealed cell was written by the
-   * solver, which is the ink it visibly wears whoever asked for it (`HandwrittenGlyph`'s
+   * clause at all — a printed clue was written by nobody, and a revealed cell was filled in for
+   * the player, which is the ink it visibly wears whoever asked for it (`HandwrittenGlyph`'s
    * `#solver-ink` outranks the author's hue). An emptied cell keeps its ledger stamp and has no
    * digit to own, so it says "empty" and stops.
+   *
+   * T9-W7 · B1 — the third core USED to read `solver's answer N`: the machine naming itself in
+   * a sentence a reader hears, which is M16's own prohibition, and the ballot's default fired
+   * here. `revealed answer N` is the same fact in the player's words (a reveal is what they
+   * asked for) and still tells the three authorships apart in the ear — clue, entry, revealed.
    */
   const ariaLabel = computed(() => {
     const loc = `Row ${props.rowIndex}, column ${props.colIndex}`;
@@ -150,7 +155,7 @@ export function useGameCell(
           : `your entry ${glyphChar.value}`;
         break;
       case "solved":
-        core = `solver's answer ${glyphChar.value}`;
+        core = `revealed answer ${glyphChar.value}`;
         break;
       default:
         core = "empty";

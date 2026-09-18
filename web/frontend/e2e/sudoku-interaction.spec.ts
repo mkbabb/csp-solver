@@ -78,12 +78,13 @@ test('invalid solution: solve → edit cell → state reverts to idle', async ({
 
   // Override a SOLVER-FILLED cell — cell 0 of a dealt board is a printed clue, and since
   // T9-W1 §1.1 a clue refuses every write, so the old `.first()` edited nothing and the grade
-  // never reverted (measured red on both engines). The board says which cells are the solver's;
-  // this reads that, so the row edits a cell the player is actually allowed to edit.
+  // never reverted (measured red on both engines). The board says which cells were revealed;
+  // this reads that, so the row edits a cell the player is actually allowed to edit. The name
+  // it reads is `revealed answer N` since T9-W7 · B1 recut it off the machine's own word.
   const solvedIdx = await page.evaluate(() => {
     const inputs = document.querySelectorAll('.sudoku-cell input');
     for (let i = 0; i < inputs.length; i++) {
-      if (/solver's answer/.test(inputs[i].getAttribute('aria-label') ?? '')) return i;
+      if (/revealed answer/.test(inputs[i].getAttribute('aria-label') ?? '')) return i;
     }
     return -1;
   });

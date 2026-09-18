@@ -67,7 +67,7 @@ describe("ghost tier 4 — a peer's pencil is on this square", () => {
  * that claims one. `authorName` is a PEER's slug and nothing else (BoardHost's `authorNameAt`
  * returns "" for your own cells and for the unauthored), so a peer's digit is the peer's and
  * yours is yours. The kinds whose core names a different hand — a printed clue (nobody wrote
- * it) and the solver's answer (the solver did, and the glyph wears the solver's ink to say so)
+ * it) and a revealed answer (it was filled in, and the glyph wears the solver's ink to say so)
  * — take no authorship clause at all, because a second hand in the sentence is a contradiction
  * whichever way it is read.
  */
@@ -108,13 +108,16 @@ describe("attribution — the accessible name names ONE hand, truly", () => {
     );
   });
 
-  it("leaves the solver's answer the solver's, whoever asked for it", () => {
+  it("leaves a revealed answer revealed, whoever asked for it", () => {
     // A peer's solve stamps the ledger, so a revealed cell can carry a peer's slug. The digit
-    // is still the solver's — it wears the solver's ink — and one hand is what gets named.
+    // was still filled in rather than written — it wears the solver's ink — and one hand is
+    // what gets named. T9-W7 · B1 recut the core from `solver's answer 4`: the machine does
+    // not name itself to a reader, and `revealed` is the word for what the player asked for.
     const label = mountCell({ isSolved: true, authorName: "brave-otter" })
       .get("input")
       .attributes("aria-label");
-    expect(label).toBe("Row 2, column 3, solver's answer 4");
+    expect(label).toBe("Row 2, column 3, revealed answer 4");
+    expect(label).not.toContain("solver");
   });
 
   it("leaves a printed clue unauthored, whatever the ledger holds", () => {

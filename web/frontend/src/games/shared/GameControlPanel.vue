@@ -1294,7 +1294,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
           <span class="icon-sublabel" aria-hidden="true">Solve</span>
           <SheetWashiLabel
             v-if="!mobile"
-            text="the solver finishes the board"
+            text="finishes the board for you"
             :seed="37"
             wide
           />

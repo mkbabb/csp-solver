@@ -124,18 +124,11 @@ const JARGON = [
  * entry reds and has to go with it.
  */
 const ADMITTED = [
-  {
-    file: "src/games/shared/GameControlPanel.vue",
-    text: "the solver finishes the board",
-    why:
-      "T8's live pass flagged this exact string, logged it 'for adjudication' (close-record " +
-      "§6.1:184-185) and closed without adjudicating it; T9 re-derived it at F4 and booked the " +
-      "cure to T9-W7 §9 (ballot B1), whose fence is src/**. This gate's fence is not, so the " +
-      "row lands ARMED with the offender admitted rather than green with the lexicon narrowed " +
-      "to miss it — the difference between a wave that cannot cure a defect and a wave that " +
-      "cannot see it. Cure the copy and strike this entry in the same commit.",
-    since: "2026-08-28",
-  },
+  // T9-W7 · B1 — `the solver finishes the board`'s admission is STRUCK (2026-09-18). The
+  // ballot's default fired and the tape now reads `finishes the board for you`, so the
+  // carve-out that let the offender ship green is gone with it: this gate would red on the
+  // regression, which is the whole point of admitting it here rather than narrowing the
+  // lexicon to miss it.
   {
     file: "src/games/shared/GameControlPanel.vue",
     text: "candidates",

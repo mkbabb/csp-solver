@@ -17,7 +17,7 @@ import type { AnyGameSpec, GameModel } from "./defineGame";
  * which mounts on whatever the map holds. The other consumer, the cell's own accessible name
  * (`author-name` → the cell), already spoke the truth for all three kinds — T9-W3 §3.3 moved
  * authorship into the name's kind-branch (`useGameCell.ts:140`), and
- * `DigitCell.attribution.test.ts` pins it with `authorName` set: "solver's answer 4",
+ * `DigitCell.attribution.test.ts` pins it with `authorName` set: "revealed answer 4",
  * "given clue 4", "empty". Narrowing the map at its single source is surface-agreement at the
  * source, not a second cured lie.
  *

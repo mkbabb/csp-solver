@@ -217,7 +217,7 @@ const FACES = [
           "share this board and everyone writes on the same grid",
           "wipe every digit you've written",
           "fill the cells that have only one digit left",
-          "the solver finishes the board",
+          "finishes the board for you",
         ],
       },
       {

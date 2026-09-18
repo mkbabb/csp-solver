@@ -584,7 +584,7 @@ test.describe('3.5 unnamedImages', () => {
       return [...document.querySelectorAll('[role="gridcell"]')]
         .map((cell) => {
           const label = cell.querySelector('input')?.getAttribute('aria-label') ?? '';
-          const m = /(?:given clue|your entry|solver's answer)\s+(\S+)$/.exec(label);
+          const m = /(?:given clue|your entry|revealed answer)\s+(\S+)$/.exec(label);
           return m ? { label, value: m[1] } : null;
         })
         .filter((c): c is { label: string; value: string } => c !== null);
