@@ -470,6 +470,16 @@ function onGridFocusin() {
   unitFocused.value = true;
 }
 function onGridFocusout(e: FocusEvent) {
+  // T9-W7 3C-4b — drop a stale pointer on the way out. focusout bubbles from the OLD cell on
+  // every focus move, and on a coarse pointer a hover-in can arrive with no hover-out ever
+  // following it (an external keyboard on a phone, an engine that synthesises `mouseenter` on
+  // a tap and nothing on the way off). `pointedPos` outranks the focus fallback below, so left
+  // stale it strands the tape on the cell the player has already left. Fine pointers are
+  // untouched: a mouse that still hovers A while focus goes to B by keyboard keeps its hover,
+  // which is the desktop grammar as it shipped. The tap that GIVES focus is safe — its pointer
+  // events precede its focus events, so this clear runs before the tap's own focusin, and the
+  // fallback then reads the freshly focused cell.
+  if (isCoarse.value) pointedPos.value = null;
   const grid = e.currentTarget as HTMLElement;
   const next = e.relatedTarget as Node | null;
   if (!next || !grid.contains(next)) {
@@ -502,7 +512,8 @@ function onCellHover(pos: number | null) {
 // `focusedPos` rests at 0 on a fresh board with nothing selected, so an ungated read would pin
 // a tape over cell 0 before the player had touched anything and leave it there after focus
 // walked off the board. The gate is the grid's own focusin/focusout, so the tape lives exactly
-// as long as the selection it names.
+// as long as the selection it names. That same focusout (3C-4b) clears `pointedPos` on a coarse
+// pointer, so a hover that arrives and never leaves cannot outrank a later keyboard move.
 const isCoarse = useCoarsePointer();
 const hoveredPos = computed(() =>
   isCoarse.value

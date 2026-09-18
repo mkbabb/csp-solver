@@ -101,6 +101,19 @@ async function blurBoard(w: Board) {
   await nextTick();
 }
 
+/**
+ * An arrow key: focus leaves the old cell for another cell of the SAME grid, and no pointer
+ * event of any kind is fired. The grid sees focusout with a relatedTarget it contains (so the
+ * `unitFocused` gate stays up), then focusin, then the new cell's own focus handler.
+ */
+async function keyFocus(w: Board, pos: number) {
+  const grid = w.get(".board-cells");
+  await grid.trigger("focusout", { relatedTarget: grid.element });
+  await grid.trigger("focusin");
+  api!.onCellFocus(pos);
+  await nextTick();
+}
+
 const tape = (w: Board) => w.find(".attribution-tape");
 
 const { drawerOpen, toggleDrawer } = useControlsDrawer();
@@ -214,6 +227,64 @@ describe("GameBoard — a live pointer still outranks the focused cell", () => {
     api!.onCellHover(7);
     await nextTick();
     expect(tape(w).text()).toContain("quiet-lynx");
+    w.unmount();
+  });
+});
+
+/**
+ * T9-W7 exec 3C-4b — the hover that arrives and never leaves.
+ *
+ * A hover-in with no hover-out is a real coarse-device shape (a phone with an external
+ * keyboard, an engine that synthesises `mouseenter` on a tap and no `mouseleave` after it).
+ * `pointedPos` outranks the focus fallback, so once it is stale the tape names the cell the
+ * player left rather than the one they are on. The grid's `focusout` bubbles from the old cell
+ * on EVERY focus move, so it is where the stale pointer is dropped — on coarse pointers only.
+ */
+describe("GameBoard — a stale coarse hover does not strand the tape", () => {
+  it("hands the tape to the cell the keyboard moved to", async () => {
+    coarse.value = true;
+    const w = mountBoard({
+      [String(PEER)]: { slug: "brave-otter", self: false },
+      "7": { slug: "quiet-lynx", self: false },
+    });
+    await tap(w, PEER);
+    api!.onCellHover(PEER); // a hover-in that never gets its hover-out
+    await nextTick();
+    expect(tape(w).text()).toContain("brave-otter");
+    await keyFocus(w, 7);
+    expect(
+      tape(w).text(),
+      "the tape names the cell the player is on, not the one they left",
+    ).toContain("quiet-lynx");
+    expect(tape(w).text()).not.toContain("brave-otter");
+    w.unmount();
+  });
+
+  it("drops the tape when the keyboard moves to an unauthored cell", async () => {
+    coarse.value = true;
+    const w = mountBoard(AUTHORS);
+    await tap(w, PEER);
+    api!.onCellHover(PEER);
+    await nextTick();
+    expect(tape(w).exists()).toBe(true);
+    await keyFocus(w, 8);
+    expect(tape(w).exists(), "nobody wrote cell 8").toBe(false);
+    w.unmount();
+  });
+
+  it("leaves a fine pointer's hover exactly where it was", async () => {
+    // A mouse that still hovers A while focus goes to B by keyboard keeps its hover, which is
+    // the desktop grammar as it shipped: the tape rides the pointer, not the selection.
+    const w = mountBoard({
+      [String(PEER)]: { slug: "brave-otter", self: false },
+      "7": { slug: "quiet-lynx", self: false },
+    });
+    await tap(w, PEER);
+    api!.onCellHover(PEER);
+    await nextTick();
+    expect(tape(w).text()).toContain("brave-otter");
+    await keyFocus(w, 7);
+    expect(tape(w).text(), "the mouse never left cell 3").toContain("brave-otter");
     w.unmount();
   });
 });
