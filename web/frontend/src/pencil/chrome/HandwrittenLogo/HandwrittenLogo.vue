@@ -30,6 +30,67 @@ import frauncesUrl from "@/assets/fonts/fraunces-subset.woff2?url";
  */
 let bakeFacePromise: Promise<string | null> | null = null;
 
+/**
+ * T9-W8 C01 · HAVING THE BYTES IS NOT HAVING THE FACE.
+ *
+ * A pose SVG carries its own `@font-face` with these bytes as a data URI, and the blob is
+ * rastered through an `<img>`, which is a document of its own: the face loads there
+ * ASYNCHRONOUSLY, and `font-display`'s block period means text drawn before it lands paints
+ * NOTHING — not a fallback glyph, no ink at all. MEASURED (WebKit, Playwright, unthrottled,
+ * cold, 1280×800 dpr2, the built dist): a round started 46 ms after the woff2 landed encoded
+ * three of its four poses at 3,152 B against the real stack's 22,095–22,252 B, from the same
+ * 20,432 B pose SVG; a round started 85 ms after the bytes painted all four. Until C01 the
+ * discarded grid round held the main thread long enough that the wordmark always baked on
+ * the safe side of that race; C01 hands the time back, so the race has to be closed.
+ *
+ * Neither `document.fonts.ready` nor `FontFace.load()` closes it — both were measured, and
+ * the blank round survived both: they settle the PAGE's font set, and the raster reads the
+ * IMAGE's. So the gate is the thing itself. One 16 px image carrying this face and one glyph
+ * is rastered and read back until a pixel is inked, one attempt every 16 ms inside a 192 ms
+ * budget: no ink means the face has not landed in an image document yet, and ink cannot come
+ * from a fallback because there is none to paint during the block period. Cost on the engine
+ * that never raced: one decode of a 20 kB blob. It can only delay the bake, never prevent it
+ * — the budget expires and the bake proceeds exactly as it does today, and the wait is a
+ * TIMER rather than a frame so a tab loaded in the background, where `requestAnimationFrame`
+ * stops, still gets its wordmark.
+ */
+const FACE_WARM_TRIES = 12;
+const FACE_WARM_STEP_MS = 16;
+
+async function warmBakeFace(src: string): Promise<void> {
+  if (typeof document === "undefined" || typeof Image !== "function") return;
+  const side = 16;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${side}" height="${side}">` +
+    `<style>@font-face{font-family:'FrauncesBake';font-style:normal;font-weight:100 900;` +
+    `src:url('${src}') format('woff2');}` +
+    `text{font-family:'FrauncesBake';font-weight:900;font-size:${side}px;}</style>` +
+    `<text x="0" y="${side - 2}">s</text></svg>`;
+  const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = side;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return;
+    for (let i = 0; i < FACE_WARM_TRIES; i += 1) {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      ctx.clearRect(0, 0, side, side);
+      ctx.drawImage(img, 0, 0);
+      const px = ctx.getImageData(0, 0, side, side).data;
+      for (let p = 3; p < px.length; p += 4) if (px[p] > 0) return;
+      await new Promise((resolve) => setTimeout(resolve, FACE_WARM_STEP_MS));
+    }
+  } catch {
+    // A refused decode or a read-back the engine will not give costs the bake nothing it did
+    // not already risk: the pose SVG carries the same bytes, and the library re-bakes on
+    // every real re-key.
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 async function loadBakeFace(): Promise<string | null> {
   try {
     const res = await fetch(frauncesUrl, { credentials: "omit" });
@@ -41,7 +102,9 @@ async function loadBakeFace(): Promise<string | null> {
     let bin = "";
     for (let i = 0; i < bytes.length; i += 0x8000)
       bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-    return `data:font/woff2;base64,${btoa(bin)}`;
+    const src = `data:font/woff2;base64,${btoa(bin)}`;
+    await warmBakeFace(src);
+    return src;
   } catch {
     // The face never arrived, so there is nothing to bake WITH: a pose captured without it
     // freezes a Georgia wordmark into a bitmap that no re-bake trigger would ever invalidate.
@@ -74,7 +137,6 @@ import {
 } from "@pencil/config/pencilConfig";
 import { useBeatFrame } from "@pencil/composables/boilBeat";
 import {
-  fontGatedBox,
   readFilterDefs,
   resolveCssValue,
   retainedPoseUrls,
@@ -350,11 +412,15 @@ const logoRaster = useRasterStack(() => ({
   // library's problem now, and it solves it by NOT baking rather than by baking wrong.
   // BC6-G1: the latched whole-pixel box, not a fresh round of every observation — see
   // `latchWholePx` above for the measurement that rejected quantization in its favour.
-  // T9-W8 C01: zero until the face lands — `rasterPose.ts` §THE FONT GATE. This is the ONE
-  // surface whose poses carry text, so the pre-font round was not merely wasted, it was
-  // wrong; the library cleared it, and now it never happens. The post-font bake is intact:
-  // the gate opens on `fonts.ready`, so this bakes the real face, once.
-  cssSize: fontGatedBox(captureW.value, captureH.value),
+  // T9-W8 C01, AND THE TEXTLESS GATE STOPS HERE: this surface hands the library its measured
+  // box the moment it has one. `fontGatedBox` (`rasterPose.ts`) holds the three TEXTLESS
+  // surfaces past the page's font settle, which is the wrong readiness for this one — what
+  // the wordmark waits on is the face painting inside an IMAGE document, and `captureW`
+  // already holds the box until `warmBakeFace` proves it does. MEASURED (WebKit, Playwright,
+  // unthrottled, cold, 1280×800 dpr2, the built dist): gated and unwarmed, this surface ran
+  // two rounds in 8 of 8 cold windows, the first one blank; warmed, it runs ONE in 5 of 5,
+  // and the kept stack's per-pose digests equal the base arm's in all three π regimes.
+  cssSize: { width: captureW.value, height: captureH.value },
 }));
 
 // The baked poses ARE object URLs now (pencil-boil 0.11) — `useRasterStack` reads its own

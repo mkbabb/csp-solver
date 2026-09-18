@@ -88,12 +88,22 @@ export function useLayoutBoxSize<T extends HTMLElement | SVGElement>(
  * the round that replaced it.
  *
  * The library already owns the only contract this needs: a NON-POSITIVE box means "not
- * measured yet", so it holds and re-bakes the instant a real box arrives. So the app hands
- * it zero until the face has landed, and exactly one round happens — the post-font one, the
- * round the estate shows today, byte for byte. Nothing is baked smaller and nothing is
- * dropped: this is the ABSENCE of a round nobody could use. Each surface renders its
- * live-filter fallback across the window, which is what it rendered while the discarded
- * round was in flight.
+ * measured yet", so it holds and re-bakes the instant a real box arrives. So a textless
+ * surface hands it zero until the font settle has passed, and exactly one round happens —
+ * the post-font one, the round the estate shows today, byte for byte. Nothing is baked
+ * smaller and nothing is dropped: this is the ABSENCE of a round nobody could use. Each
+ * surface renders its live-filter fallback across the window, which is what it rendered
+ * while the discarded round was in flight.
+ *
+ * TEXTLESS SURFACES ONLY, and the boundary is measured, not tidy. `document.fonts.ready` is
+ * the page's font settle, and it is neither necessary nor sufficient for a pose that carries
+ * glyphs: that pose is rastered from a detached blob whose `@font-face` loads inside the
+ * IMAGE's document, and WebKit paints the text with no ink at all until it lands. Gated on
+ * this signal and nothing else, the wordmark ran TWO rounds in 8 of 8 WebKit cold windows,
+ * the first of them blank — the very round this gate exists to prevent, bought back on the
+ * one surface that can bake WRONG rather than merely early. The wordmark waits on the face
+ * itself instead (`HandwrittenLogo.vue` §HAVING THE BYTES IS NOT HAVING THE FACE), and it
+ * does not come through here.
  *
  * THE GATE OPENS ONE PAINT LATE, and that is the second half of the cure. Opening it in the
  * `fonts.ready` callback starts four surfaces' encodes inside the frame the page still owes
@@ -131,8 +141,9 @@ function openFontGate(): void {
 openFontGate();
 
 /**
- * The capture box a baked surface hands `useRasterStack`: the measured one once the face has
- * landed, and zero — the library's "not measured yet" — before that.
+ * The capture box a TEXTLESS baked surface hands `useRasterStack`: the measured one once the
+ * font settle has passed, and zero — the library's "not measured yet" — before that. A pose
+ * that carries `<text>` must NOT come through here; the doc above measures why.
  */
 export function fontGatedBox(
   width: number,
