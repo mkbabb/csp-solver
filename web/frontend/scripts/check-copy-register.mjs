@@ -77,6 +77,18 @@
  * files — matches, distinct sources and copy-bearing sources reported as three numbers, because
  * r0 reported one of them as all three. A census enumerates REACH; only a plant proves a shape.
  *
+ * G17 · REPAIR r2 — THE SPOKEN HALF THIS GATE HAD ONLY HALF OF. The same verifier planted four
+ * more and every one was a live sentence: `say(…)` and its wrapper `announce(…)`, which is how
+ * this estate SPEAKS (the arm read `useLiveRegion(() => …)`, the narration entry point, and the
+ * utterance entry point is the other one the composable documents); and a COPY KEY whose value
+ * is a CALL — `washi: says("copied!", …)` was blind while the `aria:` on the same object literal
+ * red, so this gate was green on two sentences and RED on the third beside them. Both are cured
+ * by reading what was already declared a subject: `UTTERANCE_RETURNS` discovers the file's own
+ * voice at the destructuring and follows it through a wrapper and through a parameter, and the
+ * `COPY_KEYS` arm reads the property's INITIALIZER the way every other arm here already does.
+ * The plural (`FURNITURE_NOTES`, `errorNotes`) joins the name rule in the same pass — a rule that
+ * depended on how many sentences the author had when they named the table.
+ *
  * WHAT THE ARM READS: RENDERED strings only — template text nodes, the attribute values that
  * reach a reader or a screen reader (`aria-label`, `title`, `placeholder`, `alt`, and this
  * estate's own copy props `text`/`sublabel`/`label`/`heading`/`caption`), `index.html`'s head,
@@ -284,6 +296,46 @@ const RENDERED_ATTRS = [
 const NARRATION_CALLS = ["useLiveRegion"];
 
 /**
+ * THE UTTERANCE HALF of that same idiom, and the half the arm above was still blind to.
+ *
+ * `useLiveRegion` has TWO entry points and only one of them is an argument (its own doc comment,
+ * `useLiveRegion.ts:31`): narration, where the source is handed to the call and the arm above
+ * reads it, and UTTERANCES, where the composable hands BACK a `say` and the sentence arrives
+ * later, at the event. Every live utterance in this estate is written in the second shape —
+ * `say(copied ? "Link copied" : …)` (`GameControlPanel.vue:320`), `` announce(`${n} squares
+ * filled`) `` (`GameBoard.vue:883`), `` sayGuard(`Choose keep, or ${verb}.`) ``
+ * (`GameGallery.vue:815`) — and every one of them was outside the census: a `solver` planted in
+ * the first two shipped past this gate green at r0 AND at r1, which makes it an unclosed class
+ * rather than a regression (`evidence/w7/exec/G17/verify-r2/plants-at-4235e382.txt`, V1 and V2).
+ * The header has claimed the class in the first person since T9-W3's fold — "every string
+ * literal in its ARGUMENTS", "spoken copy is copy, an ear is a reader" — and read one half of it.
+ *
+ * THE VOICE IS DISCOVERED, never enumerated: there is no list of local names in this file, and
+ * the estate's law is why (W8's intake from W7 §2 — a gate over copy discovers its subjects).
+ * Three clauses, run to a FIXED POINT so a wrapper over a wrapper is still a voice:
+ *
+ *   SEED     the destructuring AT the narration call binds it. `const { text: boardVoice,
+ *            say: sayBoard } = useLiveRegion()` says this file's voice is `sayBoard`, whatever
+ *            the author chose to call it; the shorthand `const { say } = useLiveRegion()` binds
+ *            `say`.
+ *   FORWARD  a function that hands one of its OWN PARAMETERS to a voice is a voice.
+ *            `function announce(line: string) { … sayBoard(line) … }` (`GameBoard.vue:689`) is
+ *            the board's whole spoken channel, and nothing in its name says copy.
+ *   PASS     a parameter that RECEIVES a voice at a call site is a voice inside the function it
+ *            belongs to. `copyAct(() => props.share(), {…}, sayCopy)` makes `copyAct`'s third
+ *            parameter the thing that speaks, which is the only route to the sentence at
+ *            `GameControlPanel.vue:320`. Positional, so it requires the argument and parameter
+ *            lists to agree in length: if they disagree the split was wrong, and a wrong split
+ *            would bind the wrong name.
+ *
+ * KNOWN EDGES, stated rather than implied. FORWARD reads a `function` declaration, so a wrapper
+ * written `const announce = (line) => sayBoard(line)` is blind (none in `src/`); the scope is the
+ * FILE, because this is a regex over masked source and always has been, so a local name that
+ * SHADOWS a voice is read as one — a false RED a reviewer sees, never a silent miss.
+ */
+const UTTERANCE_RETURNS = ["say"];
+
+/**
  * COPY TABLES (T9-W7 · B1b) — a declaration whose own NAME says copy, whatever its keys are
  * named. `PAPER_NOTE_COPY`'s keys are the fault domain (`budget`/`network`/`deal-timeout`/
  * `unknown`), so `COPY_KEYS` above could never see the four sentences it holds; the name can.
@@ -351,12 +403,20 @@ const SPOKEN_SUFFIXES = [
   "Announcement",
 ];
 
+/**
+ * G17 repair r2 — THE PLURAL. A table of sentences is named for what it holds and an author
+ * writes that in the plural as readily as the singular: `FURNITURE_NOTES`, `errorNotes`. Both
+ * spellings were blind while `FURNITURE_NOTE` red, which is a rule that depends on how many
+ * sentences the author had when they named the thing. The `s` is optional and it is the LAST
+ * character of the suffix, so the capital that fences this rule (`Baseline` is not a `Line`) is
+ * untouched, and the caps spelling takes `S` for the same reason it takes `_`.
+ */
 const SPOKEN_NAME =
   String.raw`(?:aria[A-Za-z0-9_$]*|ARIA_[A-Z0-9_$]*|[A-Za-z0-9_$]*(?:` +
   SPOKEN_SUFFIXES.join("|") +
-  String.raw`)|(?:[A-Z0-9$]+_)*(?:` +
+  String.raw`)s?|(?:[A-Z0-9$]+_)*(?:` +
   SPOKEN_SUFFIXES.map((w) => w.toUpperCase()).join("|") +
-  String.raw`))`;
+  String.raw`)S?)`;
 
 /**
  * A declaration OR a write. `(?:const|let|var)` is optional and `.value` is allowed, because the
@@ -545,6 +605,107 @@ function balanced(s, open, o, c) {
 }
 
 /**
+ * One list, split at its DEPTH-0 commas — an argument list or a parameter list, quote- and
+ * bracket-aware. `<` and `>` are not counted, because `=>` writes one of them and a generic's
+ * own comma is the price: a mis-split shows up as a length disagreement, which the PASS clause
+ * below refuses rather than guesses at.
+ */
+function splitTop(text) {
+  const out = [];
+  let depth = 0;
+  let quote = null;
+  let start = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === "\\") i++;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+    else if (ch === "(" || ch === "[" || ch === "{") depth++;
+    else if (ch === ")" || ch === "]" || ch === "}") depth--;
+    else if (ch === "," && depth === 0) {
+      out.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  if (text.slice(start).trim()) out.push(text.slice(start));
+  return out;
+}
+
+/** The NAME each parameter binds: `line: string`, `{ a }`, `...rest` → `line`, ``, `rest`. */
+function paramNames(text) {
+  return splitTop(text).map(
+    (p) => (/^\s*(?:\.\.\.)?([A-Za-z0-9_$]+)/.exec(p) || ["", ""])[1],
+  );
+}
+
+/**
+ * Every local name that PUTS WORDS IN FRONT OF A READER in one masked file — the seed, the
+ * forwarding wrapper and the passed parameter, run to a fixed point. See `UTTERANCE_RETURNS`
+ * for the rule and its edges; this is the mechanism.
+ */
+function utterers(s) {
+  const names = new Set();
+  for (const fn of NARRATION_CALLS) {
+    const re = new RegExp(String.raw`\{([^{}]*)\}\s*=\s*${fn}\s*\(`, "g");
+    for (let m; (m = re.exec(s));)
+      for (const part of splitTop(m[1])) {
+        const [key, alias] = part.split(":").map((x) => x.trim());
+        if (UTTERANCE_RETURNS.includes(key) && (alias || key)) names.add(alias || key);
+      }
+  }
+  if (!names.size) return names;
+  // Every function declaration in the file, with its parameter names and its body — read once,
+  // because the fixed point below walks them until nothing new is a voice.
+  const fns = [];
+  const decl = /(?<![\w.$])function\s+([A-Za-z0-9_$]+)\s*\(/g;
+  for (let m; (m = decl.exec(s));) {
+    const params = balanced(s, decl.lastIndex - 1, "(", ")");
+    if (!params) continue;
+    const close = params.start + params.text.length;
+    const open = s.indexOf("{", close);
+    const body = open < 0 ? null : balanced(s, open, "{", "}");
+    if (body)
+      fns.push({ name: m[1], params: paramNames(params.text), body: body.text });
+  }
+  for (let grew = true; grew;) {
+    grew = false;
+    for (const f of fns) {
+      if (names.has(f.name)) continue;
+      for (const voice of [...names]) {
+        const call = new RegExp(String.raw`(?<![\w.$])${voice}\s*\(([^()]*)\)`, "g");
+        let forwards = false;
+        for (let m; (m = call.exec(f.body));)
+          if (f.params.includes(m[1].trim())) forwards = true;
+        if (forwards) {
+          names.add(f.name);
+          grew = true;
+          break;
+        }
+      }
+    }
+    for (const f of fns) {
+      const call = new RegExp(String.raw`(?<![\w.$])${f.name}\s*\(`, "g");
+      while (call.exec(s)) {
+        const args = balanced(s, call.lastIndex - 1, "(", ")");
+        if (!args) continue;
+        const list = splitTop(args.text).map((a) => a.trim());
+        if (list.length !== f.params.length) continue;
+        list.forEach((a, i) => {
+          if (names.has(a) && f.params[i] && !names.has(f.params[i])) {
+            names.add(f.params[i]);
+            grew = true;
+          }
+        });
+      }
+    }
+  }
+  return names;
+}
+
+/**
  * Every SPOKEN SUBJECT in one masked file — the three shapes of the name rule, in one place, so
  * the census below (`--reach`) enumerates what the gate actually reads rather than a second
  * implementation of it. Each subject carries the source text of its value: an initializer, a
@@ -640,13 +801,20 @@ function rendered(rel, src) {
       }
     }
   }
+  // A COPY KEY's whole VALUE, not the quote that had to follow its colon (G17 repair r2). The
+  // old arm required a literal to open the value, so a key that reached its sentence through a
+  // helper was blind — `washi: says("copied!", "couldn't copy…", idle.washi)` and the `sublabel:`
+  // beside it (`GameControlPanel.vue:363`) took a planted `solver` past this gate green while the
+  // `aria:` on the SAME object literal red, by another arm. Both keys were already declared
+  // subjects; only the grammar was short. `initializer` + `copyLiterals` is the reading every
+  // other arm here already does: quote- and depth-aware to the value's own comma, so a call is
+  // walked to its end, its literals are copy and its identifiers are not.
   for (const key of COPY_KEYS) {
-    const rx = new RegExp(`(?<![\\w.$-])${key}:\\s*(?=["'\`])`, "g");
+    const rx = new RegExp(`(?<![\\w.$-])${key}:`, "g");
     while (rx.exec(s)) {
-      const one = /^(["'`])((?:(?!\1)[^\\]|\\.)*)\1/.exec(s.slice(rx.lastIndex));
-      const open = rx.lastIndex;
-      if (one)
-        for (const q of copyLiterals(one[0])) add(open + q.index, `${key}:`, q.text);
+      const value = initializer(s, rx.lastIndex - 1, ",;");
+      for (const q of copyLiterals(value.text))
+        add(value.start + q.index, `${key}:`, q.text);
     }
   }
   // The copy tables: every literal inside a declaration whose own name says copy.
@@ -671,6 +839,17 @@ function rendered(rel, src) {
       if (!args) continue;
       for (const q of copyLiterals(args.text))
         add(args.start + q.index, `${fn}()`, q.text);
+    }
+  }
+  // The UTTERANCES: every literal handed to a voice this file itself declared. The names are
+  // discovered per file (`utterers`), never listed here.
+  for (const voice of utterers(s)) {
+    const call = new RegExp(`(?<![\\w.$])${voice}\\s*\\(`, "g");
+    while (call.exec(s)) {
+      const args = callArgs(s, call.lastIndex - 1);
+      if (!args) continue;
+      for (const q of copyLiterals(args.text))
+        add(args.start + q.index, `${voice}()`, q.text);
     }
   }
   return out;
@@ -850,10 +1029,14 @@ const JARGON_CONTROLS = [
     src: 'const PAPER_NOTE_COPY = { budget: "the solver ran out of steps on this board." };',
     want: 1,
   },
+  // The fixture is `ROWS` since G17 repair r2, and the rename is the finding: it used to be
+  // `NOTES`, which the plural name rule now reads as the office suffix it is — so this control
+  // was measuring the name rule's reach, not the type gap it is named for. The gap is unchanged
+  // and is now stated in a name that says nothing at all.
   {
     name: "a copy table whose type says copy and whose NAME does not — the arm is blind",
     rel: "c.ts",
-    src: 'const NOTES: Record<string, Copy> = { budget: "the solver gave up." };',
+    src: 'const ROWS: Record<string, Copy> = { budget: "the solver gave up." };',
     want: 0,
   },
   // THE SPOKEN SOURCE's own colours (T9-W7 · G17). The first is the shape B1 had to find by
@@ -1008,6 +1191,96 @@ const JARGON_CONTROLS = [
     src: 'const { text } = useLiveRegion(() => (alone ? "you\'re the only one on this board." : ""));',
     want: 0,
   },
+  // ── G17 repair r2 · THE UTTERANCE, THE CALLED VALUE, THE PLURAL ───────────────────────────
+  // The first four are live shapes in `src/` that a verifier planted a `solver` into and shipped
+  // past this gate green at r0 AND r1; each has its twin in the player's words, and the fences
+  // below are what discovery must keep out.
+  {
+    name: "an utterance handed to the voice a live region returned",
+    rel: "c.ts",
+    src:
+      "const { text: boardVoice, say: sayBoard } = useLiveRegion();\n" +
+      'sayBoard("3 squares filled by the solver");',
+    want: 1,
+  },
+  {
+    name: "twin — the same utterance in the player's words",
+    rel: "c.ts",
+    src:
+      "const { text: boardVoice, say: sayBoard } = useLiveRegion();\n" +
+      'sayBoard("3 squares filled");',
+    want: 0,
+  },
+  {
+    name: "an utterance through a local WRAPPER over that voice",
+    rel: "c.ts",
+    src:
+      "const { say: sayBoard } = useLiveRegion();\n" +
+      "function announce(line: string) {\n  sayBoard(line);\n}\n" +
+      "announce(`${n} squares filled by the solver`);",
+    want: 1,
+  },
+  {
+    name: "an utterance through a voice PASSED to a function as a parameter",
+    rel: "c.ts",
+    src:
+      "const { say: sayCopy } = useLiveRegion();\n" +
+      "function copyAct(act: () => void, say: (line: string) => void) {\n" +
+      '  say(ok ? "Link copied" : "the solver could not copy");\n}\n' +
+      "copyAct(() => share(), sayCopy);",
+    want: 1,
+  },
+  {
+    name: "positive control — an IDENTIFIER handed to a voice is code, not copy",
+    rel: "c.ts",
+    src:
+      "const { say: sayBoard } = useLiveRegion();\n" +
+      "function announce(line: string) {\n  sayBoard(line);\n}\n" +
+      "announce(dealLine.value);",
+    want: 0,
+  },
+  {
+    name: "positive control — a wrapper over NO voice is not a voice (the name is not the rule)",
+    rel: "c.ts",
+    src: 'function announce(line: string) {\n  post(line);\n}\nannounce("the solver spoke");',
+    want: 0,
+  },
+  {
+    name: "a COPY_KEY whose value is a CALL, not a quote",
+    rel: "c.ts",
+    src: 'const row = { washi: says("copied!", "the solver could not copy", idle.washi) };',
+    want: 1,
+  },
+  {
+    name: "twin — the same key and call in the player's words",
+    rel: "c.ts",
+    src: 'const row = { washi: says("copied!", "couldn\'t copy", idle.washi) };',
+    want: 0,
+  },
+  {
+    name: "positive control — a COPY_KEY whose value is a bare identifier reads nothing",
+    rel: "c.ts",
+    src: "const row = { sublabel: idle.sublabel, washi: idle.washi };",
+    want: 0,
+  },
+  {
+    name: "a PLURAL copy table named in SCREAMING_SNAKE for its office",
+    rel: "c.ts",
+    src: 'const FURNITURE_NOTES: Record<string, string> = { cage: "check the solver cage" };',
+    want: 1,
+  },
+  {
+    name: "a PLURAL TitleCase copy table",
+    rel: "c.ts",
+    src: 'const errorNotes = { deal: "the solver failed" };',
+    want: 1,
+  },
+  {
+    name: "twin — the same plural table in the player's words",
+    rel: "c.ts",
+    src: 'const errorNotes = { deal: "the deal did not finish" };',
+    want: 0,
+  },
 ];
 
 function selfTest() {
@@ -1063,10 +1336,13 @@ function selfTest() {
  */
 function reach() {
   const rows = [];
+  const voices = [];
   for (const abs of [...walk(path.join(ROOT, "src"))]) {
     const rel = path.relative(ROOT, abs);
     if (ALLOW.has(rel)) continue;
     const s = mask(fs.readFileSync(abs, "utf8"));
+    const heard = [...utterers(s)];
+    if (heard.length) voices.push({ rel, heard });
     for (const sub of spokenSubjects(s))
       rows.push({
         rel,
@@ -1086,6 +1362,14 @@ function reach() {
   );
   for (const r of rows)
     console.log(`  ${r.rel}:${r.line}  [${r.kind}]  ${r.name}  ${r.copy} literal(s)`);
+  // The voices, for the same reason: the utterance rule discovers names, so the only way to read
+  // what it reached is to ask it. Reach, not proof — a voice it never found prints nowhere.
+  voices.sort((a, b) => a.rel.localeCompare(b.rel));
+  console.log(
+    `\nutterance reach: ${voices.reduce((n, v) => n + v.heard.length, 0)} voice(s) ` +
+      `across ${voices.length} files`,
+  );
+  for (const v of voices) console.log(`  ${v.rel}  ${v.heard.join(", ")}`);
 }
 
 const { files, offences, jargonHits, live, admitted, stale } = scan();
