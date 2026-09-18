@@ -1,0 +1,193 @@
+=== npx vue-tsc --noEmit
+EXIT[npx vue-tsc --noEmit]=0
+=== npm run typecheck:e2e
+
+> csp-solver-frontend@0.1.0 typecheck:e2e
+> vue-tsc --noEmit -p tsconfig.e2e.json
+
+EXIT[npm run typecheck:e2e]=0
+=== npx vitest run
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-exec/web/frontend
+
+
+ Test Files  68 passed (68)
+      Tests  830 passed (830)
+   Start at  12:07:46
+   Duration  20.91s (transform 27.82s, setup 4.42s, import 50.61s, tests 31.40s, environment 196.70s)
+
+EXIT[npx vitest run]=0
+=== npm run lint
+
+> csp-solver-frontend@0.1.0 lint
+> prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/ ../relay/
+
+Checking formatting...
+All matched files use Prettier code style!
+EXIT[npm run lint]=0
+=== npx eslint .
+EXIT[npx eslint .]=0
+=== npm run lint:copy
+
+> csp-solver-frontend@0.1.0 lint:copy
+> node scripts/check-copy-register.mjs --self-test
+
+copy register scanned across 137 files
+allowlisted: src/pencil/dev/FilterTuner.vue (DEV-only tool, gated import.meta.env.DEV — never shipped), src/pencil/config/filterBudget.ts (census reasons read by check-prod-shake, never by a reader)
+em/en dashes in product copy: 0
+jargon over RENDERED strings: 0 hit(s), 0 admitted, 0 unadmitted (lexicon: 25 entries)
+
+self-test (both colours):
+  dash · template text dash  →  1 offence(s), RED as required
+  dash · string literal dash  →  1 offence(s), RED as required
+  dash · dash inside a comment  →  0 offence(s), GREEN as required
+  dash · dash inside a template comment  →  0 offence(s), GREEN as required
+  dash · a header that mentions `<style>`, then a template dash  →  1 offence(s), RED as required
+  jargon · a technique name in an aria-label  →  1 offence(s), RED as required
+  jargon · the machine naming itself on a washi tape  →  1 offence(s), RED as required
+  jargon · solver vocabulary in a script-side copy constant  →  2 offence(s), RED as required
+  jargon · positive control — an ENGINE identifier is not display copy  →  0 offence(s), GREEN as required
+  jargon · positive control — a BOUND attribute is an expression, not a string  →  0 offence(s), GREEN as required
+  jargon · positive control — the player's own verb survives  →  0 offence(s), GREEN as required
+  jargon · positive control — jargon inside a comment is prose about the law  →  0 offence(s), GREEN as required
+  jargon · a narration source speaks the machine's name  →  1 offence(s), RED as required
+  jargon · a narration source in a template literal  →  2 offence(s), RED as required
+  jargon · a narration source whose string carries a close paren  →  1 offence(s), RED as required
+  jargon · a copy table keyed by its fault domain, named for its office  →  1 offence(s), RED as required
+  jargon · a copy table whose type says copy and whose NAME does not — the arm is blind  →  0 offence(s), GREEN as required
+  jargon · positive control — an utterance region declares no copy at its call  →  0 offence(s), GREEN as required
+  jargon · positive control — a narration source in plain English survives  →  0 offence(s), GREEN as required
+  admissions · a ghost admission is detected stale  →  1/1, RED as required
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+EXIT[npm run lint:copy]=0
+=== npm run lint:live-regions
+
+> csp-solver-frontend@0.1.0 lint:live-regions
+> node scripts/check-live-regions.mjs --self-test
+
+live-region police scanned 52 SFCs under src
+regions declared: 10 — src/games/shared/GameBoard.vue:1182, src/games/shared/GameControlPanel.vue:1094, src/games/shared/GameControlPanel.vue:1130, src/games/shared/GameControlPanel.vue:1195, src/games/shared/GameControlPanel.vue:1380, src/games/shared/SolverErrorNote.vue:43, src/pencil/chrome/GameGallery/GameGallery.vue:1068, src/pencil/chrome/GameGallery/GameGallery.vue:1074, src/pencil/chrome/MarginNote.vue:54, src/pencil/sheet/AnswerKeyLaminate.vue:204
+
+self-test — the rule against a planted defect and its cure
+  violation · a region born under v-if with its sentence already inside  →  1 finding(s), RED as required
+  control   · the cured idiom: unconditional region, conditional content  →  0 finding(s), GREEN as required
+
+check-live-regions: 0 regions born speaking — every declared region takes its content as a mutation
+EXIT[npm run lint:live-regions]=0
+=== npm run lint:motion
+
+> csp-solver-frontend@0.1.0 lint:motion
+> node scripts/check-motion-contract.mjs --self-test
+
+MOTION CONTRACT — 34 specs, 34 declaring, 0 silent (head = first 20 lines)
+  ✓ 1 DECLARED
+  ✓ 2 GRAMMAR
+  ✓ 3 ROUTE
+
+SELF-TEST — each check against a known-bad model:
+  [1 DECLARED] the declaration is deleted in a refactor (the silent-by-default state)
+      → RED (as it must)
+  [1 DECLARED] the declaration slides below the head window during a doc-block edit
+      → RED (as it must)
+  [2 GRAMMAR] a third mode is invented (`PRM: reduced`)
+      → RED (as it must)
+  [2 GRAMMAR] `PRM: live` lands with no reason — a declaration that says nothing
+      → RED (as it must)
+  [2 GRAMMAR] `PRM: frozen` lands with an empty cite
+      → RED (as it must)
+  [2 GRAMMAR] two declarations disagree (a merge keeps both sides)
+      → RED (as it must)
+  [3 ROUTE] CH-65 regresses — the freeze is 'restored' as `test.use({ reducedMotion })`
+      → RED (as it must)
+  [3 ROUTE] a frozen file loses its emulateMedia call entirely
+      → RED (as it must)
+
+OK — 34 specs, every one declaring its motion state, every `frozen` backed by the route that lands.
+EXIT[npm run lint:motion]=0
+=== npm run test:font-coverage
+
+> csp-solver-frontend@0.1.0 test:font-coverage
+> node scripts/check-font-coverage.mjs
+
+font coverage OK — 2 subset faces, each covered as authored AND as transformed, each corpus a superset of what 150 src files actually render:
+  Fraunces: 30 codepoints, 14636 B, 8 declared strings over 2 group(s), each derived
+  Patrick Hand: 46 codepoints, 4312 B, 21 declared strings over 4 group(s), each derived
+  bound tapes: 3 pinned · WRITEABLE == the hand cut, both directions
+  departures (declared, no longer rendered — the cut stays a superset on purpose):
+    Fraunces · .section-heading: "Board Size"
+    Patrick Hand · .washi-tag (compartment names) + the tapes: "teacher's"
+EXIT[npm run test:font-coverage]=0
+=== npm run lint:boundary
+
+> csp-solver-frontend@0.1.0 lint:boundary
+> eslint --no-config-lookup --config eslint.boundary.config.js src/games
+
+EXIT[npm run lint:boundary]=0
+=== npm run lint:ink
+
+> csp-solver-frontend@0.1.0 lint:ink
+> node scripts/check-ink-pressure.mjs --self-test
+
+ink-pressure ladder — every rung clears its floor, strictly increasing, in all 3 scopes (light, dark, print), each resolved out of index.css:
+  --ink-press-rule    55%  3.53 light / 4.36 dark / 4.76 print  ≥3 (non-text)
+  --ink-press-quiet   68%  5.23 light / 6.06 dark / 7.86 print  ≥4.5 (text)
+  --color-red-ink          4.98 light / 6.32 dark  ≥4.5 (.icon-sublabel.is-armed)
+  washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+
+ship-4 census — the six re-pitched surfaces, each pinned to the rung above (so the rung's floor is the surface's floor):
+  1  .keyboard-legend         color: var(--ink-press-quiet)
+  2  .legend-row kbd          border: var(--ink-press-rule)
+  3  .legend-sep              no `opacity` declaration
+  4  .margin-note-meta        color: var(--ink-press-quiet)
+  5  .icon-sublabel.is-armed  color: var(--color-red-ink)
+  6  .vignette-meta           color: var(--ink-press-quiet)
+
+ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+  light  rule < muted-foreground < quiet
+  dark   rule < quiet < muted-foreground
+  the ramp and the register cross between themes, and the crossing is GATED: exactly one ruling is admitted (src/assets/index.css §INK PRESSURE, 'WHAT THE LADDER DOES NOT GOVERN'), pinned to both rank strings above, and it reds on a second crossing, on a re-pitch that moves either rank, and on its own cure.
+EXIT[npm run lint:ink]=0
+=== npm run lint:theme-selectors
+
+> csp-solver-frontend@0.1.0 lint:theme-selectors
+> node scripts/check-theme-selectors.mjs --self-test
+
+THEME-SELECTOR CENSUS — 56 style files, 3 data-attribute selector sites over 3 attribute(s), 0 prefers-color-scheme site(s), 0 allowlisted
+  writers for `data-fold-above`: src/games/shared/GameControlPanel.vue:666 (toggleAttribute)
+  writers for `data-fold-below`: src/games/shared/GameControlPanel.vue:667 (toggleAttribute)
+  writers for `data-under-bar`: src/games/shared/GameControlPanel.vue:677 (toggleAttribute)
+  ✓ 1 UNWRITTEN ATTRIBUTES
+  ✓ 2 UNHONORED MEDIA
+  ✓ 3 ALLOWLIST CLOSED
+  ✓ 0 POPULATION CANARY — a planted `[data-canary-theme]` rule over the live 141-file corpus reds check 1
+
+SELF-TEST — each check against fixture trees:
+  [1 UNWRITTEN ATTRIBUTES] the wave's exact shape — a [data-theme] rule with a class-only writer
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] the only mention of the writer is inside a comment
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] positive control — a real setAttribute writer lands
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] a doc comment that SPELLS a style open tag must not blank the writer under it (T9-W2)
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — vueuse writes through `attribute:`, no setAttribute in sight
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — Vue's own scope id is not an app attribute
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — the cured, class-keyed block
+      → GREEN (want GREEN)
+  [2 UNHONORED MEDIA] a prefers-color-scheme block with nothing said about it
+      → RED (want RED)
+  [2 UNHONORED MEDIA] positive control — allowlisted with a reason
+      → GREEN (want GREEN)
+  [3 ALLOWLIST CLOSED] a stale entry — the selector it excuses is gone
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] the excused attribute gained a writer — the excuse outlived its reason
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] an entry whose reason is a shrug
+      → RED (want RED)
+
+OK — every data-attribute selector has a runtime writer, every prefers-color-scheme block is allowlisted with a reason, and the table is closed.
+EXIT[npm run lint:theme-selectors]=0
+DONE

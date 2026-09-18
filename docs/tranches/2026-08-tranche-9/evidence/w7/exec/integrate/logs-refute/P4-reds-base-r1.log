@@ -1,0 +1,177 @@
+=== P4-reds-base-r1 :: INTEGRATE_BASE_URL=http://127.0.0.1:4255  npx playwright test -c playwright-integrate.config.ts presence.spec.ts sudoku-interaction.spec.ts visual-regression.spec.ts --workers 2 --reporter=line
+
+Running 40 tests using 2 workers
+
+[1/40] [chromium] › e2e/sudoku-interaction.spec.ts:51:1 › valid solution: randomize → solve → success state + all cells filled
+[2/40] [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs
+[3/40] [chromium] › e2e/sudoku-interaction.spec.ts:69:1 › invalid solution: solve → edit cell → state reverts to idle
+  1) [chromium] › e2e/sudoku-interaction.spec.ts:69:1 › invalid solution: solve → edit cell → state reverts to idle 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      89 |     return -1;
+      90 |   });
+    > 91 |   expect(solvedIdx).toBeGreaterThanOrEqual(0);
+         |                     ^
+      92 |   const firstCell = page.locator('.sudoku-cell input').nth(solvedIdx);
+      93 |   await firstCell.click();
+      94 |   await firstCell.fill('1');
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/sudoku-interaction.spec.ts:91:21
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sudoku-interaction-invalid-d6572-ell-→-state-reverts-to-idle-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sudoku-interaction-invalid-d6572-ell-→-state-reverts-to-idle-chromium/error-context.md
+
+
+[4/40] [chromium] › e2e/sudoku-interaction.spec.ts:103:1 › consecutive solve: values remain unchanged on second solve
+[5/40] [chromium] › e2e/sudoku-interaction.spec.ts:136:1 › given cells use foreground ink, solved cells use solver-ink
+[6/40] [chromium] › e2e/sudoku-interaction.spec.ts:173:1 › given cells are inviolable: a keystroke and a Backspace are both refused
+[7/40] [chromium] › e2e/sudoku-interaction.spec.ts:224:1 › solve failure: conflicting user values produce solve-failure state
+[8/40] [chromium] › e2e/sudoku-interaction.spec.ts:279:1 › noise animation: randomize produces multiple unique reveal delays
+  2) [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .players-roster .player-row')
+    Expected: 3
+    Received: 1
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('.controls-card .players-roster .player-row')
+        23 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      197 |   await c.addInitScript(SWALLOW_BYE);
+      198 |   await boot(c, link);
+    > 199 |   for (const p of [a, b, c]) await expect(roster(p)).toHaveCount(3);
+          |                                                      ^
+      200 |
+      201 |   // Two digits, so the board has an author still at the table and an author about to stop being
+      202 |   // one. C's is the one that has to keep its colour after C is gone.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/presence.spec.ts:199:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/error-context.md
+
+
+[9/40] [chromium] › e2e/visual-regression.spec.ts:124:1 › light mode: layout, styles, filters, DOM contract
+[10/40] [chromium] › e2e/visual-regression.spec.ts:231:1 › dark mode: celestial swap, control panel carries no filter, DOM contract
+[11/40] [chromium] › e2e/visual-regression.spec.ts:263:1 › grid draw-in completes and path-based boil activates
+[12/40] [chromium] › e2e/visual-regression.spec.ts:322:1 › randomize populates board and blank cells accept input
+[13/40] [chromium] › e2e/visual-regression.spec.ts:388:1 › graceful degradation: UI renders without backend API
+[14/40] [chromium] › e2e/visual-regression.spec.ts:404:1 › size switching: 4x4, 9x9, 16x16 all render grid lines
+[15/40] [chromium] › e2e/visual-regression.spec.ts:466:1 › the Deal die is not crushed: the commit verb's box fits its own content
+[16/40] [chromium] › e2e/visual-regression.spec.ts:544:1 › the glass curve is the same curve in both layers
+[17/40] [chromium] › e2e/visual-regression.spec.ts:569:1 › the deal receipt keeps off the commit verb, hover included
+[18/40] [chromium] › e2e/visual-regression.spec.ts:707:1 › option chips keep their separation: ≥6px between neighbours, both axes
+[19/40] [chromium] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for
+[20/40] [chromium] › e2e/visual-regression.spec.ts:875:1 › toggle warp rest pose: wrung into the page, no carousel travel
+[21/40] [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs
+[22/40] [webkit] › e2e/sudoku-interaction.spec.ts:51:1 › valid solution: randomize → solve → success state + all cells filled
+[23/40] [webkit] › e2e/sudoku-interaction.spec.ts:69:1 › invalid solution: solve → edit cell → state reverts to idle
+  3) [webkit] › e2e/sudoku-interaction.spec.ts:69:1 › invalid solution: solve → edit cell → state reverts to idle 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -1
+
+      89 |     return -1;
+      90 |   });
+    > 91 |   expect(solvedIdx).toBeGreaterThanOrEqual(0);
+         |                     ^
+      92 |   const firstCell = page.locator('.sudoku-cell input').nth(solvedIdx);
+      93 |   await firstCell.click();
+      94 |   await firstCell.fill('1');
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/sudoku-interaction.spec.ts:91:21
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/sudoku-interaction-invalid-d6572-ell-→-state-reverts-to-idle-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/sudoku-interaction-invalid-d6572-ell-→-state-reverts-to-idle-webkit/error-context.md
+
+
+[24/40] [webkit] › e2e/sudoku-interaction.spec.ts:103:1 › consecutive solve: values remain unchanged on second solve
+[25/40] [webkit] › e2e/sudoku-interaction.spec.ts:136:1 › given cells use foreground ink, solved cells use solver-ink
+[26/40] [webkit] › e2e/sudoku-interaction.spec.ts:173:1 › given cells are inviolable: a keystroke and a Backspace are both refused
+[27/40] [webkit] › e2e/sudoku-interaction.spec.ts:224:1 › solve failure: conflicting user values produce solve-failure state
+  4) [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .players-roster .player-row')
+    Expected: 3
+    Received: 1
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('.controls-card .players-roster .player-row')
+        23 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      197 |   await c.addInitScript(SWALLOW_BYE);
+      198 |   await boot(c, link);
+    > 199 |   for (const p of [a, b, c]) await expect(roster(p)).toHaveCount(3);
+          |                                                      ^
+      200 |
+      201 |   // Two digits, so the board has an author still at the table and an author about to stop being
+      202 |   // one. C's is the one that has to keep its colour after C is gone.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/presence.spec.ts:199:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/error-context.md
+
+
+[28/40] [webkit] › e2e/sudoku-interaction.spec.ts:279:1 › noise animation: randomize produces multiple unique reveal delays
+[29/40] [webkit] › e2e/visual-regression.spec.ts:124:1 › light mode: layout, styles, filters, DOM contract
+[30/40] [webkit] › e2e/visual-regression.spec.ts:231:1 › dark mode: celestial swap, control panel carries no filter, DOM contract
+[31/40] [webkit] › e2e/visual-regression.spec.ts:263:1 › grid draw-in completes and path-based boil activates
+[32/40] [webkit] › e2e/visual-regression.spec.ts:322:1 › randomize populates board and blank cells accept input
+[33/40] [webkit] › e2e/visual-regression.spec.ts:388:1 › graceful degradation: UI renders without backend API
+[34/40] [webkit] › e2e/visual-regression.spec.ts:404:1 › size switching: 4x4, 9x9, 16x16 all render grid lines
+[35/40] [webkit] › e2e/visual-regression.spec.ts:466:1 › the Deal die is not crushed: the commit verb's box fits its own content
+[36/40] [webkit] › e2e/visual-regression.spec.ts:544:1 › the glass curve is the same curve in both layers
+[37/40] [webkit] › e2e/visual-regression.spec.ts:569:1 › the deal receipt keeps off the commit verb, hover included
+[38/40] [webkit] › e2e/visual-regression.spec.ts:707:1 › option chips keep their separation: ≥6px between neighbours, both axes
+[39/40] [webkit] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for
+[40/40] [webkit] › e2e/visual-regression.spec.ts:875:1 › toggle warp rest pose: wrung into the page, no carousel travel
+  4 failed
+    [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+    [chromium] › e2e/sudoku-interaction.spec.ts:69:1 › invalid solution: solve → edit cell → state reverts to idle 
+    [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+    [webkit] › e2e/sudoku-interaction.spec.ts:69:1 › invalid solution: solve → edit cell → state reverts to idle 
+  36 passed (1.2m)
+exit 1

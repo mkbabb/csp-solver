@@ -1,0 +1,54 @@
+
+Running 24 tests using 9 workers
+
+  ✓   8 [chromium] › e2e/visual-regression.spec.ts:466:1 › the Deal die is not crushed: the commit verb's box fits its own content (2.9s)
+  ✓   4 [chromium] › e2e/visual-regression.spec.ts:263:1 › grid draw-in completes and path-based boil activates (3.1s)
+  ✓   9 [chromium] › e2e/visual-regression.spec.ts:231:1 › dark mode: celestial swap, control panel carries no filter, DOM contract (3.5s)
+  ✓   2 [chromium] › e2e/visual-regression.spec.ts:569:1 › the deal receipt keeps off the commit verb, hover included (3.6s)
+  ✓   1 [chromium] › e2e/visual-regression.spec.ts:388:1 › graceful degradation: UI renders without backend API (3.6s)
+  ✓   5 [chromium] › e2e/visual-regression.spec.ts:322:1 › randomize populates board and blank cells accept input (5.2s)
+  ✓   6 [chromium] › e2e/visual-regression.spec.ts:544:1 › the glass curve is the same curve in both layers (5.9s)
+  ✓  12 [chromium] › e2e/visual-regression.spec.ts:875:1 › toggle warp rest pose: wrung into the page, no carousel travel (3.4s)
+  ✓  11 [chromium] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for (3.9s)
+  ✓   7 [chromium] › e2e/visual-regression.spec.ts:124:1 › light mode: layout, styles, filters, DOM contract (7.3s)
+  ✓   3 [chromium] › e2e/visual-regression.spec.ts:404:1 › size switching: 4x4, 9x9, 16x16 all render grid lines (8.7s)
+  ✓  10 [chromium] › e2e/visual-regression.spec.ts:707:1 › option chips keep their separation: ≥6px between neighbours, both axes (7.0s)
+  ✓  18 [webkit] › e2e/visual-regression.spec.ts:466:1 › the Deal die is not crushed: the commit verb's box fits its own content (2.7s)
+  ✓  20 [webkit] › e2e/visual-regression.spec.ts:544:1 › the glass curve is the same curve in both layers (2.3s)
+  ✓  14 [webkit] › e2e/visual-regression.spec.ts:388:1 › graceful degradation: UI renders without backend API (3.0s)
+  ✘  21 [webkit] › e2e/visual-regression.spec.ts:569:1 › the deal receipt keeps off the commit verb, hover included (2.6s)
+  ✓  15 [webkit] › e2e/visual-regression.spec.ts:231:1 › dark mode: celestial swap, control panel carries no filter, DOM contract (3.3s)
+  ✓  19 [webkit] › e2e/visual-regression.spec.ts:124:1 › light mode: layout, styles, filters, DOM contract (2.8s)
+  ✓  16 [webkit] › e2e/visual-regression.spec.ts:322:1 › randomize populates board and blank cells accept input (3.7s)
+  ✓  13 [webkit] › e2e/visual-regression.spec.ts:263:1 › grid draw-in completes and path-based boil activates (3.8s)
+  ✓  24 [webkit] › e2e/visual-regression.spec.ts:875:1 › toggle warp rest pose: wrung into the page, no carousel travel (1.2s)
+  ✓  23 [webkit] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for (1.4s)
+  ✓  17 [webkit] › e2e/visual-regression.spec.ts:404:1 › size switching: 4x4, 9x9, 16x16 all render grid lines (6.1s)
+  ✓  22 [webkit] › e2e/visual-regression.spec.ts:707:1 › option chips keep their separation: ≥6px between neighbours, both axes (3.4s)
+
+
+  1) [webkit] › e2e/visual-regression.spec.ts:569:1 › the deal receipt keeps off the commit verb, hover included 
+
+    Error: expect(received).toBeLessThan(expected)
+
+    Expected: < 0
+    Received:   2.39
+
+      657 |   await page.locator(".controls-card .deal-row .difficulty-tally").hover();
+      658 |   const broken = await settledClearance("the shared-cell control");
+    > 659 |   expect(broken.gap).toBeLessThan(0);
+          |                      ^
+      660 |   expect(broken.axis).toBeGreaterThan(1);
+      661 | });
+      662 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/visual-regression.spec.ts:659:22
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-regression-the-deal-a5b44--commit-verb-hover-included-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-regression-the-deal-a5b44--commit-verb-hover-included-webkit/error-context.md
+
+  1 failed
+    [webkit] › e2e/visual-regression.spec.ts:569:1 › the deal receipt keeps off the commit verb, hover included 
+  23 passed (19.3s)

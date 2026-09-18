@@ -1,0 +1,10 @@
+dist identity, G17 repair r2
+date: Fri Sep 18 15:33:57 EDT 2026
+dist-before = the worktree built at e4c45f53 BEFORE r0's edit (r0 left it; neither r1 nor r2 rebuilt it)
+the cure is one build script and enters no bundle graph — the claim is byte-identity, and diff -r is the whole of it.
+diff -r dist-before dist  →  EXIT=0
+tree sha256 (paths relative, so the two trees are comparable):
+  dist-before: 1c3475a3a9f8a867c12477ed2adf0efe13ae9edc07981bb3709f14945db160d5  -
+  dist:        1c3475a3a9f8a867c12477ed2adf0efe13ae9edc07981bb3709f14945db160d5  -
+chunk: dist/assets/index-CubiZsMVSwTc.js
+(r1's file recorded 2169e6a7… for both sides on ITS recipe and r0 recorded 6f49d60c… on another; a hash is only comparable to one taken the same way, which is why diff -r is the claim.)

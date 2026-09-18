@@ -1,0 +1,32 @@
+
+> csp-solver-frontend@0.1.0 test:e2e:retries
+> node scripts/check-pw-retries.mjs --self-test
+
+SELF-TEST — every check re-run against a census built to violate it
+  canary 1 THE LAW      → RED (1)
+  canary 2 THE CENSUS   → RED (1)
+  canary 3 THE REVOKED  → RED (1)
+  canary 4 NO OPT-OUT   → RED (1)
+
+RETRIES CENSUS
+  playwright.config.ts::<top-level>                    retries=0  failOnFlakyTests=undefined
+  playwright.config.ts::chromium                       retries=0  failOnFlakyTests=undefined
+  playwright.config.ts::webkit                         retries=0  failOnFlakyTests=undefined
+  playwright-golden.config.ts::<top-level>             retries=0  failOnFlakyTests=undefined
+  playwright-throttle.config.ts::<top-level>           retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::throttled-void        retries=1  failOnFlakyTests=true
+  playwright-throttle.config.ts::filter-census-chromium retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::filter-census-webkit  retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::wordmark-webkit       retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::theme-bake-chromium   retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::theme-bake-webkit     retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::theme-quadrants-chromium retries=0  failOnFlakyTests=true
+  playwright-throttle.config.ts::theme-quadrants-webkit retries=0  failOnFlakyTests=true
+
+  green 1 THE LAW      retries imply failOnFlakyTests
+  green 2 THE CENSUS   every retry is a named grant
+  green 3 THE REVOKED  wordmark-webkit stays at 0
+  green 4 NO OPT-OUT   failOnFlakyTests is never false
+
+check-pw-retries: all checks green
+exit 0

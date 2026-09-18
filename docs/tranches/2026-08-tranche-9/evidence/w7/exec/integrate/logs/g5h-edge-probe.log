@@ -1,0 +1,20 @@
+
+> csp-solver-frontend@0.1.0 test:edge-probe
+> node ../../scripts/edge-probe.mjs --self-test
+
+ok    HEAD's artifacts (404.html + a 200 splat) are a contradiction — true
+ok    …and the edge answer they really produce — 404/false
+ok    the cure (a stated 404) contradicts nothing — null
+ok    …and predicts the 404 the edge gives — 404/false
+ok    a splat with NO 404 asset is a real fallback — 200/true
+ok    the /assets guard is matched before the general rule — /assets/*
+ok    the shell is recognised — true
+ok    the 404 body is not the shell — false
+ok    the shipped CSP refuses the injected beacon — false
+ok    an allowlisted origin admits it (B2's other branch) — true
+ok    dropping the injection leaves nothing to refuse — 0
+ok    the injection is found when it is there — https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae
+ok    no CSP is no refusal — true
+ok    the refusal line is the browser's — Refused to load the script 'https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae' because it violates the following Content Security Policy directive: "script-src 'self' 'wasm-unsafe-eval'".
+
+14/14 — every arm proved on fixtures, offline

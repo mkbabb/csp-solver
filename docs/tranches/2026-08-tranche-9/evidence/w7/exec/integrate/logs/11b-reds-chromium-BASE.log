@@ -1,0 +1,50 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › e2e/gallery.spec.ts:860:1 › drag: kenken — the LAST card — is reachable by dragging (10.3s)
+  ✓  2 [chromium] › e2e/join-language.spec.ts:107:1 › the ring is baked geometry: it mints no filter, in either engine (4.7s)
+  ✘  3 [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs (12.6s)
+
+
+  1) [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .players-roster .player-row')
+    Expected: 3
+    Received: 1
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('.controls-card .players-roster .player-row')
+        24 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      197 |   await c.addInitScript(SWALLOW_BYE);
+      198 |   await boot(c, link);
+    > 199 |   for (const p of [a, b, c]) await expect(roster(p)).toHaveCount(3);
+          |                                                      ^
+      200 |
+      201 |   // Two digits, so the board has an author still at the table and an author about to stop being
+      202 |   // one. C's is the one that has to keep its colour after C is gone.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/presence.spec.ts:199:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+  2 passed (29.5s)

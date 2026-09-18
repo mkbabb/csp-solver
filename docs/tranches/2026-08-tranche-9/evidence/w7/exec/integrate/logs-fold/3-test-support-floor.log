@@ -1,0 +1,26 @@
+
+> csp-solver-frontend@0.1.0 test:support-floor
+> node scripts/check-support-floor.mjs --self-test
+
+check-support-floor — T5-W1 row 1.11 (C5 + J3)
+
+  src files scanned: 204
+  declared floor:    chrome 111 · edge 111 · firefox 128 · safari 16.4 · ios_saf 16.4
+
+GREEN  1 FLOOR DECLARED
+GREEN  2 FLOOR SUFFICIENT
+GREEN  3 TARGET COHERENT
+GREEN  4 SHIMS DEAD
+GREEN  5 README CITES
+
+self-test — every check against a known-bad input:
+  BITES  1 FLOOR DECLARED — browserslist deleted
+  BITES  1 FLOOR DECLARED — an entry that is not a floor
+  BITES  2 FLOOR SUFFICIENT — safari floor dropped under the CSS target
+  BITES  3 TARGET COHERENT — build.target raised above the floor
+  BITES  4 SHIMS DEAD — an optional-call listener guard re-enters src
+  BITES  4 SHIMS DEAD — a sub-floor comment re-enters src
+  BITES  5 README CITES — the README floor sentence removed
+
+PASS — 0 violation(s), 0 blind check(s)
+exit 0

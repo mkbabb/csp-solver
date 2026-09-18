@@ -1,0 +1,404 @@
+
+> csp-solver-frontend@0.1.0 test:unit:report
+> vitest run --reporter=default --reporter=json --outputFile.json=vitest-report.json --coverage
+
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend
+      Coverage enabled with v8
+
+stdout | src/games/futoshiki/technique.test.ts > deal-time grade latency — futoshiki fixtures > grades the fixtures well within a frame
+[T4-W7] futoshiki deal-time grade latency (5×5, n=600): mean 0.643ms, worst 23.435ms
+
+ ✓ src/games/futoshiki/technique.test.ts (17 tests) 428ms
+     ✓ grades the fixtures well within a frame  392ms
+ ✓ src/composables/useLiveRegion.test.ts (4 tests) 201ms
+stdout | src/games/shared/useSession.stress.test.ts > the op ledger under a large run — 20,000 ops, 16 authors > every replica converges byte-identical, whatever order the flood arrives in
+[T6.1 large run] 26500 ops × 6 replicas = 159000 admits in 211 ms → 755017 ops/sec · clock 81/81 entries · lamport ties 303 · board 81 cells
+
+ ✓ src/pencil/chrome/KeyboardLegend.test.ts (5 tests) 230ms
+ ✓ src/games/shared/DifficultyTally.test.ts (4 tests) 268ms
+ ✓ src/pencil/chrome/GameGallery/useCarouselGlide.test.ts (5 tests) 781ms
+     ✓ the engine's own re-snap after the frame changed is NOT reported as the reader's choice  585ms
+stderr | src/games/kenken/spec.test.ts > KenKen's GameSpec (T5-W2 F2 — the migrated contract) > exposes a boardSize + difficulty section over the live model
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+
+ ✓ src/games/sudoku/composables/persistence.test.ts (25 tests) 230ms
+stderr | src/games/futoshiki/spec.test.ts > futoshiki — the eight slots (T5-W2 §1) > builds a board-size + difficulty section over the LIVE model, off the SHARED bands
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+
+ ✓ src/games/killer/KillerPoster.test.ts (4 tests) 560ms
+ ✓ src/games/kenken/spec.test.ts (10 tests) 284ms
+ ✓ src/games/futoshiki/spec.test.ts (8 tests) 324ms
+stdout | src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > the depth grade — distance, not a binary (M11) > each card is handed its distance from the chosen one, capped at 2
+<Suspense> is an experimental feature and its API will likely change.
+
+ ✓ src/games/shared/GameBoard.occlusion.test.ts (3 tests) 568ms
+     ✓ the risen sheet makes the grid inert  510ms
+ ✓ src/games/shared/GameBoard.coarseTape.test.ts (9 tests) 721ms
+     ✓ raises the tape on a peer-authored cell the finger has focused  578ms
+ ✓ src/games/posters.test.ts (12 tests) 3045ms
+     ✓ sudoku: no preview renders the canned 9×9  416ms
+     ✓ every poster hands the still's per-cell authorship down  387ms
+     ✓ a FULL 16x16 still is bounded — the budget the true stills can actually move  1071ms
+stdout | src/games/sudoku/technique.test.ts > deal-time grade latency on the live-dug 9×9 path > grades the dealt 9×9 hard bank well within a frame
+[T4-W7] deal-time grade latency (9×9 hard, n=400): mean 13.938ms, worst 213.187ms
+
+ ❯ src/games/sudoku/technique.test.ts (16 tests | 1 failed) 5838ms
+     ✓ a singles-only board grades tier 1 and solves 28ms
+     ✓ an X-wing board grades tier 3 with X-wing as the hardest technique 37ms
+     ✓ accepts the composables' row-major record shape too 19ms
+     ✓ self-computed candidates are NOT equal to the GAC-collapsed masks 1ms
+     ✓ GAC over-prunes past the human sequence: cells self-computed as ambiguous, GAC as singletons 1ms
+     ✓ the substrate choice is load-bearing: self-computed grades tier-3, GAC-collapsed collapses to tier-1 20ms
+     ✓ fills exactly the current naked+hidden singles in one sweep, correct and on empty cells 10ms
+     ✓ one sweep, no cascade: it stops with cells still empty, and a second sweep makes more progress 3ms
+     ✓ fills nothing when no cell is forced 2ms
+     ✓ names a single on an empty cell, carrying the true forced value + becauseCells 22ms
+     ✓ a naked single cites just its cell; a hidden single cites its house + axis 2ms
+     ✓ prefers the focused cell when it is itself a forced single 2ms
+     ✓ returns null when the board affords no single (the answer-key-reveal fallback case) 18ms
+     ✓ accepts the composables' row-major record shape too 2ms
+     × grades the dealt 9×9 hard bank well within a frame 5662ms
+     ✓ builds 3·side houses (rows + cols + boxes), axis-tagged, covering every cell side times 1ms
+ ✓ src/games/shared/GameControlPanel.liveRegions.test.ts (9 tests) 3825ms
+     ✓ all three regions are in the document before there is a room, and all three are empty  1817ms
+     ✓ the connecting line arrives INTO the region that was already mounted  302ms
+     ✓ a joiner arrives into that same log (the 1→2 case T7-W2 cured, still cured)  364ms
+     ✓ the room-of-one line arrives INTO the mounted region, and leaves it in place  378ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.liveRegions.test.ts (5 tests) 890ms
+     ✓ both regions are in the document at mount, and both are silent  340ms
+ ✓ src/games/shared/useSession.test.ts (30 tests) 1137ms
+ ✓ src/games/cards.test.ts (7 tests) 541ms
+     ✓ resolves every row's poster and its mount  465ms
+ ✓ src/games/shared/DigitCell.test.ts (31 tests) 959ms
+ ✓ src/games/kenken/KenKenPoster.test.ts (4 tests) 184ms
+ ❯ src/games/futoshiki/FutoshikiPoster.test.ts (7 tests | 1 failed) 245845ms
+     ✓ a card nobody has played renders the canned 5×5, carets and all  388ms
+     ✓ a size off the 4/5/6/7 band is refused before its clue is even read 86ms
+     ✓ a saved board with no inequality furniture is not a futoshiki board 70ms
+     ✓ refuses on COUNT alone once the set exceeds 2·n·(n−1) 183ms
+     ✓ refuses anything that is not a two-cell pair 145ms
+     × refuses an endpoint that is not a cell of THIS board 244943ms
+     ✓ claims an EDGE, not a direction — one caret per edge, whichever way it is written 13ms
+ ❯ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts (22 tests | 1 failed) 254220ms
+     ✓ each card is handed its distance from the chosen one, capped at 2  1445ms
+     ✓ the far tier is a CAP, so a five-deep spread still has three legible tiers 233ms
+     ✓ the card spends it as two compositor channels, and the tiers are the ruled table 146ms
+     ✓ every card is read ONCE at open, and the value reaches that card 193ms
+     ✓ the read is in SETUP, so the first paint already carries the true face 105ms
+     ✓ arriving at a card re-reads THAT card, and only it  408ms
+     ✓ no reader supplied: every face is the canned poster, and nothing throws 260ms
+     ✓ a CLEAN board in a shared room still arms — the marks were never the subject 197ms
+     ✓ one peer is one player — the count is the instrument, and it can say 1  508ms
+     ✓ a return switch names the last-writer price as well as the count (row 3)  419ms
+     ✓ a deal in a session arms on the table, not on the work (row 16)  408ms
+     ✓ an EMPTY room arms nothing — there is nobody to drag, and no true count to print  345ms
+     ✓ undoing to clean does NOT retire a shared ribbon  474ms
+     ✓ SOLO, a select needs no guard: the board is saved and the switch is free  379ms
+     ✓ SOLO, the deal guard keeps its strings — a deal genuinely writes over marks  607ms
+     ✓ the anchor is the armed card's centre in deck coordinates, not the deck's middle  751ms
+     ✓ a resize under an armed ribbon re-anchors the note onto the card's NEW box  1118ms
+     ✓ the note re-measures AFTER the deck re-pins — observer order, not the resize event  792ms
+     × a track that moves under the note re-anchors it too, broadcast or no broadcast 245332ms
+     ✓ it re-anchors rather than retires — the unanswered question is still standing 24ms
+     ✓ the swatches go to the CHOSEN card alone 14ms
+     ✓ no session, no dots 43ms
+ ✓ src/games/shared/useUndoHistory.test.ts (26 tests) 1045ms
+     ✓ the cap still evicts at 200 under mixed local + peer traffic  597ms
+ ❯ src/games/shared/GameControlPanel.test.ts (34 tests | 1 failed) 254629ms
+     ✓ renders tappable undo / redo / hint buttons with written sublabels, IN the fold band  1974ms
+     ✓ each play button carries the .icon-btn grammar (the 44px coarse floor rides that class) 276ms
+     ✓ the peek chip joins them, and its visible word IS its accessible name 273ms
+     ✓ undo / redo / hint each emit their own event on tap 102ms
+     ✓ the play tools disable with the board (loading) — no undo mid-solve 160ms
+     ✓ renders a Fill button in the icon-btn grammar with a written sublabel 59ms
+     ✓ emits fill-forced on tap 213ms
+     ✓ disables with the board (loading) — no forced fill mid-solve 190ms
+     ✓ Deal emits once on a single fine-pointer click, even when the board is dirty 102ms
+     ✓ Clear emits once on a single fine-pointer click, even when the board is dirty 118ms
+     ✓ a deal in flight scribbles on DEAL, and not on SOLVE 151ms
+     ✓ a solve in flight scribbles on SOLVE, and not on DEAL 108ms
+     ✓ an idle board scribbles nowhere 126ms
+     ✓ the deal's scribble is hidden from the AX tree — it would say 'solving' 158ms
+     ✓ Deal wears the icon-btn base plus the deal-btn modifier 159ms
+     ✓ four wells, each a group named by its own visible tape 183ms
+     ✓ the mobile tab is a heading WRAPPING a button, never a heading inside one 57ms
+     ✓ six co-equal eyebrows become two, and the four that left are named one rank down 207ms
+       ✓ the mobile tabs: drawn === announced, per eyebrow 138ms
+       ✓ the desktop staged rail: drawn === announced, per eyebrow 259ms
+       ✓ the single-section heading: drawn === announced 212ms
+     ✓ four hint tapes ride beside the names, none of them a name, none of them dashed 199ms
+     ✓ the checking well says one thing: its chips 234ms
+     ✓ the `i` points at the fold and flips it open, without ever naming itself 'keyboard shortcuts' 162ms
+     ✓ the crib stays in the tree at rest — collapsed is not hidden 222ms
+     ✓ neither the fold nor its toggle exists on the phone's card 222ms
+     ✓ a drag off the band cancels the pending hold — no answer-key flash mid-gesture 121ms
+     ✓ a still press — and a hand's own 4px tremor — still peeks  530ms
+     ✓ coarse: the row says what happened, on both outcomes 255ms
+     ✓ fine: the row keeps its verb in every state — the tape is the one voice  357ms
+     ✓ fine: the name never contradicts the label the reader can see  445ms
+     × coarse: the name and the label flip together, on both outcomes 245110ms
+     ✓ the outcome is spoken at BOTH pointer classes, failure sentence and all  1342ms
+     ✓ the region is `sr-only` — this wave speaks, it does not repaint 169ms
+ ✓ src/games/thermo/data/templates.test.ts (69 tests) 316ms
+ ✓ src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts (17 tests) 360ms
+ ✓ src/composables/useShortcutPolicy.test.ts (11 tests) 52ms
+stderr | src/games/killer/spec.test.ts > Killer's GameSpec (T5-W2 F2 — the migrated contract) > exposes a size + difficulty section over the live model
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+
+ ✓ src/games/futoshiki/composables/persistence.test.ts (26 tests) 21ms
+ ✓ src/games/shared/useStagingBridge.test.ts (24 tests) 13ms
+ ✓ src/games/shared/useSession.parity.test.ts (1 test) 12ms
+ ✓ src/games/thermo/composables/persistence.test.ts (6 tests) 20ms
+stderr | src/games/thermo/spec.test.ts > thermo — the eight slots (T5-W2 §1) > builds a size + difficulty section over the LIVE model, off the SHARED bands
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+
+ ✓ src/games/killer/spec.test.ts (8 tests) 70ms
+ ✓ src/games/kenken/composables/persistence.test.ts (6 tests) 13ms
+ ✓ src/games/shared/useGameState.fill.test.ts (5 tests) 40ms
+ ✓ src/pencil/chrome/SvgFilters.test.ts (4 tests) 31ms
+ ✓ src/composables/useTheme.test.ts (1 test) 149ms
+ ✓ src/games/killer/composables/persistence.test.ts (6 tests) 44ms
+ ✓ src/games/shared/DigitCell.givens.test.ts (11 tests) 99ms
+ ✓ src/games/shared/solver/transport.test.ts (6 tests) 11ms
+ ✓ src/games/shared/BoardHost.authors.test.ts (7 tests) 73ms
+ ✓ src/games/thermo/spec.test.ts (7 tests) 58ms
+stderr | src/games/sudoku/spec.test.ts > sudoku — the eight slots (T5-W2 §1) > builds a size + difficulty section over the LIVE model, off the SHARED bands
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+[Vue warn]: onUnmounted is called when there is no active component instance to be associated with. Lifecycle injection APIs can only be used during execution of setup(). If you are using async setup(), make sure to register lifecycle hooks before the first await statement.
+
+ ✓ src/games/sudoku/spec.test.ts (5 tests) 18ms
+ ✓ src/games/shared/techniqueEngine.test.ts (21 tests) 8ms
+ ✓ src/games/shared/techniqueVoice.test.ts (21 tests) 5ms
+ ✓ src/games/shared/conflicts.test.ts (14 tests) 4ms
+ ✓ src/games/shared/useJoinWash.test.ts (16 tests) 14ms
+ ✓ src/games/shared/relayWire.test.ts (4 tests) 8ms
+ ✓ src/games/shared/solver/protocol.test.ts (19 tests) 6ms
+ ✓ src/games/shared/useUserMarks.test.ts (12 tests) 12ms
+stdout | src/games/shared/useSession.stress.test.ts > the ledger's undo spine under the same flood > the cap holds at 200 through 20,000 of my own writes braided with the room's
+[T6.1 undo spine] 8908 local writes + 20000 remote ops in 258887 ms → 112 ops/sec · stack 200/200 · pool 0 · clock 81/81
+
+ ✓ src/games/shared/solver/client.test.ts (10 tests) 7ms
+ ✓ src/games/shared/useLongPress.test.ts (10 tests) 6ms
+ ✓ src/games/shared/useAssists.test.ts (8 tests) 5ms
+ ❯ src/games/shared/useSession.stress.test.ts (5 tests | 1 failed) 259207ms
+     ✓ every replica converges byte-identical, whatever order the flood arrives in 222ms
+     ✓ a dead epoch never touches a cell, however many of them arrive 23ms
+     ✓ the lamport merge survives EVERY rejection, including another board's 2ms
+     × the cap holds at 200 through 20,000 of my own writes braided with the room's 258941ms
+     ✓ the no-clobber guard still holds mid-flood — my undo is spent, their digit stands 11ms
+ ✓ src/games/sudoku/composables/wire-parity.test.ts (6 tests) 11ms
+ ✓ src/games/futoshiki/clue.test.ts (20 tests) 5ms
+ ✓ src/games/thermo/clue.test.ts (14 tests) 4ms
+ ✓ src/games/shared/useGameGallery.test.ts (6 tests) 10ms
+ ✓ src/games/killer/clue.test.ts (14 tests) 4ms
+ ✓ src/games/kenken/clue.test.ts (15 tests) 5ms
+ ✓ src/games/shared/honestHaptics.test.ts (3 tests) 3ms
+ ✓ src/games/shared/useKeyboardViewport.test.ts (9 tests) 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/futoshiki/FutoshikiPoster.test.ts > FutoshikiPoster — the pair guard, arm by arm > refuses an endpoint that is not a cell of THIS board
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/games/futoshiki/FutoshikiPoster.test.ts:130:3
+    128|   });
+    129|
+    130|   it("refuses an endpoint that is not a cell of THIS board", () => {
+       |   ^
+    131|     // 99 is off a 4×4 entirely; 1.5 is between two cells. Both would …
+    132|     // edge the grid never drew — the caret math has no answer for eit…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/games/sudoku/technique.test.ts > deal-time grade latency on the live-dug 9×9 path > grades the dealt 9×9 hard bank well within a frame
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/games/sudoku/technique.test.ts:201:3
+    199|
+    200| describe("deal-time grade latency on the live-dug 9×9 path", () => {
+    201|   it("grades the dealt 9×9 hard bank well within a frame", () => {
+       |   ^
+    202|     const boards = TEMPLATE_BANK[3].hard; // 20 real dug 9×9 puzzles (…
+    203|     expect(boards.length).toBeGreaterThan(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > the copy acts — the sublabel flips on the coarse surfaces alone > coarse: the name and the label flip together, on both outcomes
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/games/shared/GameControlPanel.test.ts:596:3
+    594|   });
+    595|
+    596|   it("coarse: the name and the label flip together, on both outcomes",…
+       |   ^
+    597|     const ok = mountPanel();
+    598|     await pressShare(ok);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/games/shared/useSession.stress.test.ts > the ledger's undo spine under the same flood > the cap holds at 200 through 20,000 of my own writes braided with the room's
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/games/shared/useSession.stress.test.ts:253:3
+    251|   // clock is hardware's, the invariants are ours. The budget is a cei…
+    252|   // hung loop, never a performance gate.
+    253|   it(
+       |   ^
+    254|     "the cap holds at 200 through 20,000 of my own writes braided with…
+    255|     { timeout: 30_000 },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/pencil/chrome/GameGallery/GameGallery.deck.test.ts > where the armed ribbon stands (T8-R15) > a track that moves under the note re-anchors it too, broadcast or no broadcast
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/pencil/chrome/GameGallery/GameGallery.deck.test.ts:420:3
+    418|   });
+    419|
+    420|   it("a track that moves under the note re-anchors it too, broadcast o…
+       |   ^
+    421|     // The observer's place in the broadcast is a courtesy, not a guar…
+    422|     // its own after a resize, and a re-pin deferred by a frame would …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 8 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Failed to start forks worker for test files /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/src/games/shared/useGameState.givens.test.ts.
+ ❯ ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:94
+ ❯ runNextTicks node:internal/process/task_queues:65:5
+ ❯ listOnTimeout node:internal/timers:567:9
+ ❯ processTimers node:internal/timers:541:7
+ ❯ Pool.schedule ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:5
+
+Caused by: Error: [vitest-pool-runner]: Timeout waiting for worker to respond
+ ❯ Timeout.<anonymous> ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3041:58
+ ❯ listOnTimeout node:internal/timers:605:17
+ ❯ processTimers node:internal/timers:541:7
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Failed to start forks worker for test files /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/src/games/shared/DigitCell.attribution.test.ts.
+ ❯ ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:94
+ ❯ runNextTicks node:internal/process/task_queues:65:5
+ ❯ listOnTimeout node:internal/timers:567:9
+ ❯ processTimers node:internal/timers:541:7
+ ❯ Pool.schedule ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:5
+
+Caused by: Error: [vitest-pool-runner]: Timeout waiting for worker to respond
+ ❯ Timeout.<anonymous> ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3041:58
+ ❯ listOnTimeout node:internal/timers:605:17
+ ❯ processTimers node:internal/timers:541:7
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Failed to start forks worker for test files /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/src/games/shared/PosterBoard.test.ts.
+ ❯ ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:94
+ ❯ runNextTicks node:internal/process/task_queues:65:5
+ ❯ listOnTimeout node:internal/timers:567:9
+ ❯ processTimers node:internal/timers:541:7
+ ❯ Pool.schedule ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:5
+
+Caused by: Error: [vitest-pool-runner]: Timeout waiting for worker to respond
+ ❯ Timeout.<anonymous> ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3041:58
+ ❯ listOnTimeout node:internal/timers:605:17
+ ❯ processTimers node:internal/timers:541:7
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Failed to start forks worker for test files /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/src/games/shared/GameBoard.receipt.test.ts.
+ ❯ ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:94
+ ❯ runNextTicks node:internal/process/task_queues:65:5
+ ❯ listOnTimeout node:internal/timers:567:9
+ ❯ processTimers node:internal/timers:541:7
+ ❯ Pool.schedule ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:5
+
+Caused by: Error: [vitest-pool-runner]: Timeout waiting for worker to respond
+ ❯ Timeout.<anonymous> ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3041:58
+ ❯ listOnTimeout node:internal/timers:605:17
+ ❯ processTimers node:internal/timers:541:7
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Failed to start forks worker for test files /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/src/games/shared/GameBoard.notes.test.ts.
+ ❯ ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:94
+ ❯ runNextTicks node:internal/process/task_queues:65:5
+ ❯ listOnTimeout node:internal/timers:567:9
+ ❯ processTimers node:internal/timers:541:7
+ ❯ Pool.schedule ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:5
+
+Caused by: Error: [vitest-pool-runner]: Timeout waiting for worker to respond
+ ❯ Timeout.<anonymous> ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3041:58
+ ❯ listOnTimeout node:internal/timers:605:17
+ ❯ processTimers node:internal/timers:541:7
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Failed to start forks worker for test files /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/src/games/shared/solver/client.headOfLine.test.ts.
+ ❯ ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:94
+ ❯ runNextTicks node:internal/process/task_queues:65:5
+ ❯ listOnTimeout node:internal/timers:567:9
+ ❯ processTimers node:internal/timers:541:7
+ ❯ Pool.schedule ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:5
+
+Caused by: Error: [vitest-pool-runner]: Timeout waiting for worker to respond
+ ❯ Timeout.<anonymous> ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3041:58
+ ❯ listOnTimeout node:internal/timers:605:17
+ ❯ processTimers node:internal/timers:541:7
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Failed to start forks worker for test files /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/src/pencil/sheet/SheetWashiLabel.test.ts.
+ ❯ ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:94
+ ❯ runNextTicks node:internal/process/task_queues:65:5
+ ❯ listOnTimeout node:internal/timers:567:9
+ ❯ processTimers node:internal/timers:541:7
+ ❯ Pool.schedule ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:5
+
+Caused by: Error: [vitest-pool-runner]: Timeout waiting for worker to respond
+ ❯ Timeout.<anonymous> ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3041:58
+ ❯ listOnTimeout node:internal/timers:605:17
+ ❯ processTimers node:internal/timers:541:7
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: [vitest-pool]: Failed to start forks worker for test files /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/src/pencil/chrome/GameGallery/GameCard.test.ts.
+ ❯ ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:94
+ ❯ runNextTicks node:internal/process/task_queues:65:5
+ ❯ processTimers node:internal/timers:538:9
+ ❯ Pool.schedule ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3465:5
+
+Caused by: Error: [vitest-pool-runner]: Timeout waiting for worker to respond
+ ❯ Timeout.<anonymous> ../../../../../web/frontend/node_modules/vitest/dist/chunks/cli-api.BK8pd4xc.js:3041:58
+ ❯ listOnTimeout node:internal/timers:605:17
+ ❯ processTimers node:internal/timers:541:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  5 failed | 55 passed (60)
+      Tests  5 failed | 739 passed (744)
+     Errors  8 errors
+   Start at  05:03:55
+   Duration  269.27s (transform 53.52s, setup 9.72s, import 814.37s, tests 1037.48s, environment 147.90s)
+
+JSON report written to /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/vitest-report.json

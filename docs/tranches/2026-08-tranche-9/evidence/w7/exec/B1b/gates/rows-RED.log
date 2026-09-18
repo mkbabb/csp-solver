@@ -1,0 +1,71 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-exec/web/frontend
+
+ ❯ src/games/shared/GameBoard.notes.test.ts (14 tests | 2 failed) 137ms
+     × budget exhaustion still says it ran out of steps, without naming the machine 12ms
+     × a dead worker still says what broke and what to do, without naming the machine 6ms
+ ❯ src/games/shared/GameControlPanel.test.ts (34 tests | 1 failed) 861ms
+     × six co-equal eyebrows become two, and the four that left are named one rank down 16ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameBoard.notes.test.ts > GameBoard — the paper note claims only what it knows > budget exhaustion still says it ran out of steps, without naming the machine
+AssertionError: expected 'the solver ran out of steps on this b…' to be 'this board took too many steps to fin…' // Object.is equality
+
+Expected: "this board took too many steps to finish."
+Received: "the solver ran out of steps on this board."
+
+ ❯ src/games/shared/GameBoard.notes.test.ts:194:21
+    192|     await w.setProps({ solveState: "error", errorCode: "BUDGET_EXCEEDE…
+    193|     await nextTick();
+    194|     expect(note(w)).toBe("this board took too many steps to finish.");
+       |                     ^
+    195|     expect(note(w)).not.toContain("solver");
+    196|     w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/games/shared/GameBoard.notes.test.ts > GameBoard — the paper note claims only what it knows > a dead worker still says what broke and what to do, without naming the machine
+AssertionError: expected 'couldn\'t reach the solver.' to be 'the board\'s helper stopped working. …' // Object.is equality
+
+Expected: "the board's helper stopped working. reload the page."
+Received: "couldn't reach the solver."
+
+ ❯ src/games/shared/GameBoard.notes.test.ts:203:21
+    201|     await w.setProps({ solveState: "error", errorCode: "WORKER_FAILURE…
+    202|     await nextTick();
+    203|     expect(note(w)).toBe("the board's helper stopped working. reload t…
+       |                     ^
+    204|     expect(note(w)).not.toContain("solver");
+    205|     w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the zone grammar (T4-P1) > six co-equal eyebrows become two, and the four that left are named one rank down
+AssertionError: expected [ 'marks', 'candidates' ] to deeply equal [ 'marks', 'what fits' ]
+
+- Expected
++ Received
+
+  [
+    "marks",
+-   "what fits",
++   "candidates",
+  ]
+
+ ❯ src/games/shared/GameControlPanel.test.ts:330:63
+    328|     // T9-W7 · B1b — the second caption reads `what fits`; `candidates…
+    329|     // for it and the last admitted string in the copy gate.
+    330|     expect(w.findAll(".zone-row-label").map((l) => l.text())).toEqual([
+       |                                                               ^
+    331|       "marks",
+    332|       "what fits",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  3 failed | 45 passed (48)
+   Start at  12:07:27
+   Duration  3.40s (transform 1.76s, setup 56ms, import 2.35s, tests 998ms, environment 2.21s)
+

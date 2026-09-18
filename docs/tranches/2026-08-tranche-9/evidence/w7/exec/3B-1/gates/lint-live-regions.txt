@@ -1,0 +1,12 @@
+
+> csp-solver-frontend@0.1.0 lint:live-regions
+> node scripts/check-live-regions.mjs --self-test
+
+live-region police scanned 52 SFCs under src
+regions declared: 10 — src/games/shared/GameBoard.vue:1151, src/games/shared/GameControlPanel.vue:1087, src/games/shared/GameControlPanel.vue:1123, src/games/shared/GameControlPanel.vue:1188, src/games/shared/GameControlPanel.vue:1373, src/games/shared/SolverErrorNote.vue:43, src/pencil/chrome/GameGallery/GameGallery.vue:1068, src/pencil/chrome/GameGallery/GameGallery.vue:1074, src/pencil/chrome/MarginNote.vue:54, src/pencil/sheet/AnswerKeyLaminate.vue:204
+
+self-test — the rule against a planted defect and its cure
+  violation · a region born under v-if with its sentence already inside  →  1 finding(s), RED as required
+  control   · the cured idiom: unconditional region, conditional content  →  0 finding(s), GREEN as required
+
+check-live-regions: 0 regions born speaking — every declared region takes its content as a mutation

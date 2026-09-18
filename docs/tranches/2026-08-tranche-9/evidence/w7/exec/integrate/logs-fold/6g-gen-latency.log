@@ -1,0 +1,37 @@
+
+> csp-solver-frontend@0.1.0 test:gen-latency
+> node scripts/check-gen-latency.mjs --self-test
+
+  ok   an under-ceiling cell greens — PASS (want PASS)
+  ok   a planted 1 ms ceiling reds — FAIL (want FAIL)
+  ok   median clears, max busts → reds — FAIL (want FAIL)
+  ok   a cell that never dealt reds — MISSING (want MISSING)
+  ok   every ceiling obeys the stated arithmetic (10 cells) — clean (want clean)
+self-test ok — the comparison bites both colours.
+
+generation latency — 123,336 B artifact, node 26.0.0 on darwin/arm64, init 0.5 ms, N=3 seeds [1, 2, 3]
+ceiling table derived 2026-08-25 (see the header for the arithmetic)
+
+ok     sudoku/16x16/MEDIUM   median       0.0 ms  max       0.5 ms  ceiling      50.0 ms  givens 110
+                             deals [0.5, 0.0, 0.0] · bank-backed — production's real path, a pick and a symmetry transform
+ok     sudoku/16x16/HARD     median       0.0 ms  max       0.1 ms  ceiling      50.0 ms  givens  95
+                             deals [0.0, 0.0, 0.1] · bank-backed; T8-R05's 684 ms priced an empty-bank path production never takes
+ok     thermo/16x16/MEDIUM   median       0.0 ms  max       0.4 ms  ceiling      50.0 ms  givens 110
+                             deals [0.4, 0.0, 0.0] · bank-backed since §4.1.3; the floor is also this tier's bank-presence alarm
+ok     thermo/16x16/HARD     median       0.0 ms  max       0.0 ms  ceiling      50.0 ms  givens  83
+                             deals [0.0, 0.0, 0.0] · THE P0, cured by the bank; the floor is this tier's bank-presence alarm
+ok     killer/16x16/MEDIUM   median       161 ms  max       181 ms  ceiling      1200 ms  givens 110
+                             deals [180.8, 152.4, 160.9] · live dig; the cages carry the uniqueness
+ok     killer/16x16/HARD     median       563 ms  max       573 ms  ceiling      2100 ms  givens  52
+                             deals [572.6, 563.0, 528.7] · live dig — F14's ">25 s" arm, refuted on the shipped artifact
+ok     futoshiki/7x7/MEDIUM  median       1.0 ms  max       1.4 ms  ceiling      50.0 ms  givens  22
+                             deals [1.4, 1.0, 0.9] · top of the Latin band — 16×16 is outside the wasm contract's 4..=7
+ok     futoshiki/7x7/HARD    median       2.0 ms  max       2.4 ms  ceiling      50.0 ms  givens  15
+                             deals [2.0, 2.4, 1.5] · top of the Latin band
+ok     kenken/6x6/MEDIUM     median       2.0 ms  max       2.6 ms  ceiling      50.0 ms  givens   3
+                             deals [2.6, 2.0, 1.9] · top of the caged-Latin band; kenken digs the whole board by design
+ok     kenken/6x6/HARD       median       1.6 ms  max       2.0 ms  ceiling      50.0 ms  givens   3
+                             deals [1.6, 1.4, 2.0] · top of the caged-Latin band
+
+10/10 cells under ceiling.
+exit 0

@@ -1,0 +1,120 @@
+
+Running 21 tests using 1 worker
+
+  ✓   1 [webkit] › e2e/access.spec.ts:375:3 › 2.3 the roster announces › a join and a leave each move a live region (22.1s)
+  ✓   2 [webkit] › e2e/drawer.spec.ts:394:3 › drawer below the row regime — LANDSCAPE IS THE DOCK (T9-W2 §2.2, a declared delta on T5-W4 charter (c)) › <1024 landscape: the tab rides the board, the card docks, nothing scrolls (5.7s)
+  ✓   3 [webkit] › e2e/drawer.spec.ts:453:3 › drawer below the row regime — PORTRAIT is the dock › <1024 portrait: the tongue summons a fixed sheet, and the board never moves (3.6s)
+  ✓   4 [webkit] › e2e/font-census.spec.ts:231:1 › the ledger holds BOTH directions across two games and two regimes (14.4s)
+  ✓   5 [webkit] › e2e/futoshiki.spec.ts:107:1 › size switching: 4×4/5×5/6×6/7×7 each change the board cell count (9.5s)
+  ✓   6 [webkit] › e2e/gallery.spec.ts:860:1 › drag: kenken — the LAST card — is reachable by dragging (15.0s)
+  ✓   7 [webkit] › e2e/join-language.spec.ts:69:1 › a join rings the board, in the joiner’s own ink, once (7.5s)
+  ✓   8 [webkit] › e2e/join-language.spec.ts:134:1 › the roster row is the other half: the name lands in their ink, and the well says who (7.0s)
+  ✓   9 [webkit] › e2e/masthead-alignment.spec.ts:112:5 › M17 — the head line › the badge and the celestial hang from one rule (light) (8.5s)
+  ✓  10 [webkit] › e2e/masthead-alignment.spec.ts:112:5 › M17 — the head line › the badge and the celestial hang from one rule (dark) (8.2s)
+  ✘  11 [webkit] › e2e/masthead-alignment.spec.ts:158:5 › M18 — the board rule › the board hangs from the title at 1280, in all five games (1.4m)
+  ✘  12 [webkit] › e2e/masthead-alignment.spec.ts:158:5 › M18 — the board rule › the board hangs from the title at 1440, in all five games (15.1m)
+  ✓  13 [webkit] › e2e/multiplayer.spec.ts:320:1 › a deal is an epoch: both boards follow, and neither undo stack crosses it (2.2s)
+  ✓  14 [webkit] › e2e/multiplayer.spec.ts:347:1 › the table says connecting until the room answers, then shows who is at it (1.5s)
+  ✓  15 [webkit] › e2e/multiplayer.spec.ts:649:1 › a joiner arriving mid-game adopts the whole board, then syncs both ways (8.0s)
+  ✓  16 [webkit] › e2e/multiplayer.spec.ts:728:1 › a page that reloads mid-session comes back to the same table and the same board (2.0s)
+  ✘  17 [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs (12.2s)
+  ✓  18 [webkit] › e2e/spoken-controls.spec.ts:174:5 › §3.1 the occlusion law — 390x844 › the risen sheet takes the covered board out of the tab route (3.6s)
+  ✓  19 [webkit] › e2e/spoken-controls.spec.ts:174:5 › §3.1 the occlusion law — 768x1024 › the risen sheet takes the covered board out of the tab route (4.2s)
+[W2-§2.1] 1440×640 [{"name":"sudoku","visFrac":1},{"name":"futoshiki","visFrac":1},{"name":"thermo","visFrac":1},{"name":"killer","visFrac":1},{"name":"kenken","visFrac":1}]
+  ✓  20 [webkit] › e2e/viewport-law.spec.ts:136:5 › §2.1 deck names @ 1440×640 › §2.1 every game name on the deck is legible at first paint or one cued step away (4.6s)
+[W2-§2.1] 844×390 [{"name":"sudoku","visFrac":1},{"name":"futoshiki","visFrac":1},{"name":"thermo","visFrac":1},{"name":"killer","visFrac":1},{"name":"kenken","visFrac":1}]
+  ✓  21 [webkit] › e2e/viewport-law.spec.ts:136:5 › §2.1 deck names @ 844×390 › §2.1 every game name on the deck is legible at first paint or one cued step away (4.9s)
+
+
+  1) [webkit] › e2e/masthead-alignment.spec.ts:158:5 › M18 — the board rule › the board hangs from the title at 1280, in all five games 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: page.addStyleTag: Test timeout of 30000ms exceeded.
+
+      87 |   await page.goto(`./?game=${game}`);
+      88 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+    > 89 |   await page.addStyleTag({ content: '.tuner-toggle { display: none !important; }' });
+         |              ^
+      90 |   await page.waitForSelector('.board-wrapper', { timeout: 15000 });
+      91 |   // The row settles when the board and the card have stopped resizing each other.
+      92 |   let last = '';
+        at load (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/masthead-alignment.spec.ts:89:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/masthead-alignment.spec.ts:162:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/masthead-alignment-M18-—-t-c755c-e-at-1280-in-all-five-games-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/masthead-alignment-M18-—-t-c755c-e-at-1280-in-all-five-games-webkit/error-context.md
+
+  2) [webkit] › e2e/masthead-alignment.spec.ts:158:5 › M18 — the board rule › the board hangs from the title at 1440, in all five games 
+
+    Test timeout of 30000ms exceeded.
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('svg.handwritten-logo') to be visible
+        - locator resolved to visible <svg data-v-da22e681="" aria-hidden="true" viewBox="0 0 253 60" class="handwritten-logo" xmlns="http://www.w3.org/2000/svg">…</svg>
+
+
+      86 | async function load(page: Page, game: string) {
+      87 |   await page.goto(`./?game=${game}`);
+    > 88 |   await page.waitForSelector('svg.handwritten-logo', { timeout: 15000 });
+         |              ^
+      89 |   await page.addStyleTag({ content: '.tuner-toggle { display: none !important; }' });
+      90 |   await page.waitForSelector('.board-wrapper', { timeout: 15000 });
+      91 |   // The row settles when the board and the card have stopped resizing each other.
+        at load (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/masthead-alignment.spec.ts:88:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/masthead-alignment.spec.ts:162:9
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/masthead-alignment-M18-—-t-a24ae-e-at-1440-in-all-five-games-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/masthead-alignment-M18-—-t-a24ae-e-at-1440-in-all-five-games-webkit/error-context.md
+
+  3) [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .players-roster .player-row')
+    Expected: 3
+    Received: 1
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('.controls-card .players-roster .player-row')
+        24 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      197 |   await c.addInitScript(SWALLOW_BYE);
+      198 |   await boot(c, link);
+    > 199 |   for (const p of [a, b, c]) await expect(roster(p)).toHaveCount(3);
+          |                                                      ^
+      200 |
+      201 |   // Two digits, so the board has an author still at the table and an author about to stop being
+      202 |   // one. C's is the one that has to keep its colour after C is gone.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/t9-integrate/web/frontend/e2e/presence.spec.ts:199:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/error-context.md
+
+  3 failed
+    [webkit] › e2e/masthead-alignment.spec.ts:158:5 › M18 — the board rule › the board hangs from the title at 1280, in all five games 
+    [webkit] › e2e/masthead-alignment.spec.ts:158:5 › M18 — the board rule › the board hangs from the title at 1440, in all five games 
+    [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+  18 passed (19.5m)

@@ -1,0 +1,12 @@
+  ok   a missing dist is RED (as it must)
+  ok   a husk — the .gitignore'd dist with no payload — is RED (as it must)
+  ok   a leftover stale entry chunk is RED (as it must)
+  ok   a well-formed dist yields its entry and a stable line
+AUDIT: build-identity — dist entry index-C0FFEE00.js · index.html md5 603cfdceb4ae1154ccc4fd9d3d9d964e · 2 files / 0.1 KB · newest mtime 2026-09-18T08:43:34.895Z
+AUDIT: build-identity MISMATCH — http://127.0.0.1:4247 serves index-DEADBEEF.js, this dist is index-C0FFEE00.js.
+The rig is measuring a tree that is not the one on disk. Rebuild, or point the rig at the dist you built; do not reconcile this in prose.
+  ok   a server serving ANOTHER tree's entry is RED (as it must)
+AUDIT: build-identity — dist entry index-C0FFEE00.js · index.html md5 603cfdceb4ae1154ccc4fd9d3d9d964e · 2 files / 0.1 KB · newest mtime 2026-09-18T08:43:34.895Z
+AUDIT: build-identity — http://127.0.0.1:4247/match serves the same entry (index-C0FFEE00.js)
+  ok   the same entry on both sides passes
+[dist-identity] self-test 6/6 — the instrument can fail on a known-bad dist.

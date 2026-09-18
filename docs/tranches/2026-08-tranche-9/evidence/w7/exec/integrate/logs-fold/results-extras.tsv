@@ -1,0 +1,6 @@
+10a-e2e-projects	0	npm run test:e2e:projects
+10b-e2e-retries	0	npm run test:e2e:retries
+10c-served-identity	0	curl -s http://127.0.0.1:4254/ | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1
+10d-throttle-specs	0	PLAYWRIGHT_BASE_URL=http://127.0.0.1:4254 npx playwright test --config playwright-throttle.config.ts --reporter=line
+10e-presence-dev	0	npx playwright test -c playwright-presence-dev.config.ts e2e/presence.spec.ts --reporter=line
+10f-presence-dev-webkit-line	0	grep -E 'passed|failed|flaky|skipped' /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/exec/integrate/logs-fold/10e-presence-dev.log | tail -3

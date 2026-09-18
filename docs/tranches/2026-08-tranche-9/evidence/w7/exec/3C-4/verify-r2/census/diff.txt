@@ -1,0 +1,21 @@
+r2 verifier, coarse census (hasTouch, 390x844, reducedMotion reduce), my own build of 2b6b8b7b
+served on 127.0.0.1:4259, diffed against the author's banked rects.
+
+vs repair-r1/coarse-census/pre-* (the main tree's pre-cure dist, index-9rZPzI5DEcpe.js):
+  chromium board   1049/1049  max|d| 0.00px   onlyLeft=0 onlyRight=0
+  chromium gallery 1767/1767  max|d| 0.00px   onlyLeft=0 onlyRight=0
+  webkit   board   1049/1049  max|d| 0.00px   onlyLeft=0 onlyRight=0
+  webkit   gallery 1767/1767  max|d| 0.00px   onlyLeft=0 onlyRight=0
+
+vs repair-r1/coarse-census/post-* (the author's own run):
+  chromium board   1049/1049  max|d| 0.00px
+  chromium gallery 1767/1767  max|d| 0.00px
+  webkit   board   1049/1049  max|d| 0.00px
+  webkit   gallery 1767/1767  max|d| 0.00px
+
+Probe: verify-r1/census2.mjs, unmodified. coarse=true and .attribution-tape=0 printed on every
+route and engine. 2,816 rects per engine.
+
+Banked fine census, read off the author's own gz files (no browser needed):
+  census/after (ddfab36b) vs repair-r1/fine-census/post (2b6b8b7b):
+  1089 / 1049 / 1807 / 1767 rects, max|d| 0.00px each, no key on one side only.

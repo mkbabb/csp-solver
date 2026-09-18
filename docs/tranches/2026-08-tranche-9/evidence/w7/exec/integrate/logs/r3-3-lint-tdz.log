@@ -1,0 +1,14 @@
+
+> csp-solver-frontend@0.1.0 lint:tdz
+> node scripts/tdz-probe.mjs --self-test
+
+reproduction (4 modules, executed):
+  OLD graph (scene → game → registry → scene): THREW — ReferenceError: Cannot access 'scene' before initialization
+  NEW graph (spec → defineGame, cards → spec): BOOTED
+
+graph census (src/games): 0 cycle edge(s)
+
+negative control (a synthetic game importing the table): RED as required
+
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways
+exit 0

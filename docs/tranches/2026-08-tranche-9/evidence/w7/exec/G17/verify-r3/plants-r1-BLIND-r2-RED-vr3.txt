@@ -1,0 +1,19 @@
+=== VR3 PLANTS ON THE REAL TREE (r1 = parent scanner, r2 = cured) ===
+-- baseline, no plant --
+  baseline (no plant)  r1(4235e382) EXIT=0   r2(8d334845) EXIT=0
+      r2: jargon over RENDERED strings: 0 hit(s), 0 admitted, 0 unadmitted (lexicon: 25 entries)
+-- P1: the board's announce() wrapper, GameBoard.vue:883 --
+  P1 announce() through a wrapper  r1(4235e382) EXIT=0   r2(8d334845) EXIT=1
+      r2: jargon over RENDERED strings: 1 hit(s), 0 admitted, 1 unadmitted (lexicon: 25 entries)
+      r2:   ✗ src/games/shared/GameBoard.vue:883  [announce()]  "solver" (the machine's name)  filled by the solver
+-- P2: the gallery's sayDeck(), GameGallery.vue:405 (a voice in a THIRD file) --
+  P2 sayDeck() direct voice  r1(4235e382) EXIT=0   r2(8d334845) EXIT=1
+      r2: jargon over RENDERED strings: 1 hit(s), 0 admitted, 1 unadmitted (lexicon: 25 entries)
+      r2:   ✗ src/pencil/chrome/GameGallery/GameGallery.vue:405  [sayDeck()]  "solver" (the machine's name)  . solver picked.
+-- P3: the guard's sayGuard(), GameGallery.vue:815 --
+  P3 sayGuard() direct voice  r1(4235e382) EXIT=0   r2(8d334845) EXIT=1
+      r2: jargon over RENDERED strings: 1 hit(s), 0 admitted, 1 unadmitted (lexicon: 25 entries)
+      r2:   ✗ src/pencil/chrome/GameGallery/GameGallery.vue:815  [sayGuard()]  "engine" (the machine's name)  Choose keep, or ask the engine to
+-- P4: a COPY_KEY whose value is a call, GameControlPanel sublabel/washi --
+364:    washi: says("copied!", "couldn't copy. the link is in the address bar", idle.washi),
+=== TREE STATE AFTER ===

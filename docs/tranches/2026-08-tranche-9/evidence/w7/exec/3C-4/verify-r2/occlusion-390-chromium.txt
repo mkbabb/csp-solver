@@ -1,0 +1,37 @@
+r2 verifier — what the standing tape covers on a phone (chromium, 390x844, hasTouch + isMobile,
+reducedMotion reduce), live two-page session on the repaired build at 127.0.0.1:4259.
+Probe: verify-r2/occlusion.mjs.
+
+{
+ "peerCell": 10,
+ "atTap": {
+  "tape": null
+ },
+ "after8s": {
+  "tape": {
+   "w": 108.18,
+   "h": 32.87,
+   "top": 221.52
+  },
+  "bg": "color(srgb 0.930582 0.930582 0.930582 / 0.830431)",
+  "opacity": "1",
+  "hits": [
+   { "cell": 0, "coverPct": 68.6, "digit": "" },
+   { "cell": 1, "coverPct": 81.2, "digit": "2" },
+   { "cell": 2, "coverPct": 68.6, "digit": "" }
+  ],
+  "peer": 10
+ }
+}
+
+READING. The peer wrote cell 10; page B tapped cell 10 and kept it selected. The tape stands
+unchanged 8 seconds later — a selection lasts as long as the player leaves it, so on a phone the
+tape stands for the whole time that cell is selected, where a mouse's tape lasts only the hover.
+While it stands it covers three cells of the row above at 68.6 / 81.2 / 68.6 percent of each
+cell's box, over a background of 83% alpha, and one of those cells holds a digit ("2").
+
+The overlap geometry is not new — the same box has hung over the same neighbours on a fine
+pointer since T8-W3 — so this is the duration and the trigger that changed, not the paint's
+shape. "atTap": null with "after8s" populated is the relay's own lag on this run: the digit had
+not crossed when the tap landed, and the tape rose under a standing focus when it did, with no
+second gesture. That is the cure behaving as written.

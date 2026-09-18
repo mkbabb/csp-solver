@@ -1,0 +1,100 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-exec/web/frontend
+
+ ❯ src/games/shared/BoardHost.authors.test.ts (7 tests | 5 failed) 44ms
+     × claims nobody on a revealed cell — the digit is the solver's 5ms
+     × claims nobody on a printed clue — the deal wrote it 3ms
+     × claims nobody on an emptied cell — there is no digit to own 2ms
+     × narrows to exactly the one claimable cell, and both consumers agree 3ms
+     × re-narrows when the ledger moves — the map is derived, never stamped once 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/BoardHost.authors.test.ts > BoardHost — a peer is claimed only where a peer's digit stands > claims nobody on a revealed cell — the digit is the solver's
+AssertionError: expected [ '0', '1', '2', '3' ] to not include '1'
+ ❯ src/games/shared/BoardHost.authors.test.ts:153:27
+    151|   it("claims nobody on a revealed cell — the digit is the solver's", (…
+    152|     const h = mountHost();
+    153|     expect(h.taped()).not.toContain("1");
+       |                           ^
+    154|     expect(h.named(1)).toBe("");
+    155|     h.w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/games/shared/BoardHost.authors.test.ts > BoardHost — a peer is claimed only where a peer's digit stands > claims nobody on a printed clue — the deal wrote it
+AssertionError: expected [ '0', '1', '2', '3' ] to not include '2'
+ ❯ src/games/shared/BoardHost.authors.test.ts:160:27
+    158|   it("claims nobody on a printed clue — the deal wrote it", () => {
+    159|     const h = mountHost();
+    160|     expect(h.taped()).not.toContain("2");
+       |                           ^
+    161|     expect(h.named(2)).toBe("");
+    162|     h.w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/games/shared/BoardHost.authors.test.ts > BoardHost — a peer is claimed only where a peer's digit stands > claims nobody on an emptied cell — there is no digit to own
+AssertionError: expected [ '0', '1', '2', '3' ] to not include '3'
+ ❯ src/games/shared/BoardHost.authors.test.ts:167:27
+    165|   it("claims nobody on an emptied cell — there is no digit to own", ()…
+    166|     const h = mountHost();
+    167|     expect(h.taped()).not.toContain("3");
+       |                           ^
+    168|     expect(h.named(3)).toBe("");
+    169|     h.w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/games/shared/BoardHost.authors.test.ts > BoardHost — a peer is claimed only where a peer's digit stands > narrows to exactly the one claimable cell, and both consumers agree
+AssertionError: expected [ '0', '1', '2', '3' ] to deeply equal [ '0' ]
+
+- Expected
++ Received
+
+  [
+    "0",
++   "1",
++   "2",
++   "3",
+  ]
+
+ ❯ src/games/shared/BoardHost.authors.test.ts:176:23
+    174|     // three rows above only by accident of which cell it leaked.
+    175|     const h = mountHost();
+    176|     expect(h.taped()).toEqual(["0"]);
+       |                       ^
+    177|     expect([0, 1, 2, 3].map((p) => h.named(p))).toEqual(["brave-otter"…
+    178|     h.w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/games/shared/BoardHost.authors.test.ts > BoardHost — the solo board claims nothing at all > re-narrows when the ledger moves — the map is derived, never stamped once
+AssertionError: expected [ '0', '1', '2', '3' ] to deeply equal [ '0', '3' ]
+
+- Expected
++ Received
+
+  [
+    "0",
++   "1",
++   "2",
+    "3",
+  ]
+
+ ❯ src/games/shared/BoardHost.authors.test.ts:212:7
+    210|         w.findComponent(GameBoardStub).props("cellAuthors") as Record<…
+    211|       ).sort(),
+    212|     ).toEqual(["0", "3"]);
+       |       ^
+    213|     w.unmount();
+    214|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 2 passed (7)
+   Start at  23:40:07
+   Duration  985ms (transform 391ms, setup 19ms, import 453ms, tests 44ms, environment 357ms)
+
