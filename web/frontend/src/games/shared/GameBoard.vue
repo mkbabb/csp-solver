@@ -53,6 +53,7 @@ import {
   vignetteDocked,
   vignetteHasTally,
 } from "@games/shared/useControlsDrawer";
+import { useCoarsePointer } from "@games/shared/useCoarsePointer";
 import { useDebug } from "@/composables/useDebug";
 import { useLiveRegion } from "@/composables/useLiveRegion";
 import type { HintResult } from "@games/shared/techniqueEngine";
@@ -486,10 +487,28 @@ const peerCells = computed(() =>
 // ONE washi label, board-level, over the hovered cell — not eighty-one instances waiting their
 // turn. The cell publishes its hover position (DigitCell's `cellHover`) and the board holds the
 // one that is current; `null` when the pointer is on nothing.
-const hoveredPos = ref<number | null>(null);
+const pointedPos = ref<number | null>(null);
 function onCellHover(pos: number | null) {
-  hoveredPos.value = pos;
+  pointedPos.value = pos;
 }
+
+// T9-W3 §3.7 / T9-W7 3C-4 — A FINGER HAS NO HOVER. The tape is raised by `mouseenter`, so on a
+// coarse pointer the one surface that names who wrote a digit could never appear at all. A tap
+// gives FOCUS, and the board already tracks it, so the coarse arm is the roving tabindex's own
+// position and nothing else. Fine pointers are untouched: `pointedPos` is the hover exactly as
+// it was, and `isCoarse` is false there.
+//
+// `unitFocused` gates the coarse arm for the same reason it gates the peer wash above:
+// `focusedPos` rests at 0 on a fresh board with nothing selected, so an ungated read would pin
+// a tape over cell 0 before the player had touched anything and leave it there after focus
+// walked off the board. The gate is the grid's own focusin/focusout, so the tape lives exactly
+// as long as the selection it names.
+const isCoarse = useCoarsePointer();
+const hoveredPos = computed(() =>
+  isCoarse.value
+    ? (pointedPos.value ?? (unitFocused.value ? focusedPos.value : null))
+    : pointedPos.value,
+);
 
 // A PEER'S name, never your own. `authorInk` has always held an entry only for cells a peer
 // wrote (your own board binds nothing), and the tape keeps the same rule: in a session your own
@@ -1051,10 +1070,11 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
            digit under the pointer, in that peer's own ink: `--color-user-ink` is already rebound
            per authored cell, so the writing comes out their colour with no new plumbing at all.
            ONE instance, mounted only inside a session and only while the pointer is on a cell a
-           peer wrote. Solo play mounts nothing; a session at rest mounts nothing.
+           peer wrote — or, on a coarse pointer, while that cell holds the board's focus
+           (T9-W7 3C-4). Solo play mounts nothing; a session at rest mounts nothing.
            The tape is `aria-hidden` by its own default-anchor rule, and that is the honest
            split: the name is spoken through the cell's OWN accessible name instead (DigitCell's
-           `authorName`), which is also the only route a coarse pointer has. -->
+           `authorName`), on every pointer alike. -->
       <div
         v-if="hoveredAuthor && tapeAnchor"
         class="attribution-tape"
@@ -1221,16 +1241,13 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
   margin-top: 0.5rem;
 }
 
-/* HOVER IS A FINE-POINTER GRAMMAR, and this is the estate's standing rule rather than a new
-   one: a coarse pointer has no hover to spend and long-press is already the peek gesture, so
-   there is nothing here to give a thumb. Touch attribution rides the cell's accessible name
-   instead (DigitCell's `authorName`). A real asymmetry, named — a sighted touch user gets
-   nothing, and no gesture is left to spend on it. */
-@media not all and (hover: hover) and (pointer: fine) {
-  .attribution-tape {
-    display: none;
-  }
-}
+/* T9-W7 3C-4 — this block used to read `@media not all and (hover: hover) and (pointer: fine) {
+   .attribution-tape { display: none } }`, on the grounds that a thumb has no hover to spend and
+   no gesture left to spend on it. The second half was wrong: a tap already spends FOCUS, and
+   the board already tracks it. The mount gate moved into `hoveredPos` above, where it can read
+   the focused cell, so there is nothing left for a stylesheet to hide — and hiding it here
+   would have voided that gate anyway. The tape is `aria-hidden`, so nothing was added to the
+   accessibility tree: what a sighted touch user lacked, and now has, is the look. */
 
 .board-wrapper {
   position: relative;
