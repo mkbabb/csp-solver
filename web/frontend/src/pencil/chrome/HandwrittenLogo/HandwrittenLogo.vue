@@ -114,8 +114,58 @@ async function loadBakeFace(): Promise<string | null> {
   }
 }
 
+/**
+ * T9-W8 C07b · THE FACE IS ACQUIRED AFTER FIRST PAINT, FROM BYTES THE PAGE ALREADY HAS.
+ *
+ * `loadBakeFace` is not a cheap call, and until this it ran inside the first-paint window:
+ * a request for the subset, a 13.8 KB → 18.4 KB base64 pass, and then C01's ink gate, which
+ * parses a blob SVG carrying the whole data URI, decodes a woff2 inside an image document,
+ * rasters it and reads the pixels back — up to twelve times, 16 ms apart. None of that has
+ * to happen before the board is on screen: the wordmark's pose-0 live filter is up the whole
+ * time and paints the page's own Fraunces, so what the delay costs is bitmaps-instead-of-
+ * filter on ONE surface for a few hundred ms, and what it buys is the whole chain out of the
+ * window where the board is still arriving.
+ *
+ * The wait is `document.fonts.ready` and then an idle slot, in that order, and the order is
+ * the point: the page's own `@font-face` load is what puts the subset in the HTTP cache, so
+ * asking afterwards is asking for bytes the page already holds. MEASURED at the request
+ * grain (evidence/w8/cures/C07b/raw/): chromium's acquisition never reaches the server in
+ * either arm — 3 GETs, the preloads. WebKit's does, in both arms, and no shape of this call
+ * changes that: `credentials`, `cache: 'force-cache'`, `mode: 'same-origin'` and waiting for
+ * `fonts.ready` were each measured against a server answering exactly as the edge answers,
+ * and all four read a fourth GET of 14,936 B. WebKit will not hand a `fetch` the entry a
+ * FONT-destination request stored, and no API asks for bytes with that destination. So the
+ * charter's "one request per subset" is not reachable from this file; what is reachable is
+ * that the fourth GET, and the work behind it, stop competing with first paint.
+ *
+ * Neither wait can strand the bake. `fonts.ready` settles whether the faces load or fail;
+ * `requestIdleCallback` carries a timeout, and where it does not exist a timer stands in, so
+ * a tab loaded in the background still gets its wordmark.
+ */
+const BAKE_IDLE_TIMEOUT_MS = 1000;
+const BAKE_IDLE_FALLBACK_MS = 200;
+
+function idleSlot(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestIdleCallback === "function")
+      requestIdleCallback(() => resolve(), { timeout: BAKE_IDLE_TIMEOUT_MS });
+    else setTimeout(resolve, BAKE_IDLE_FALLBACK_MS);
+  });
+}
+
+function afterFirstPaint(): Promise<void> {
+  if (typeof document === "undefined") return Promise.resolve();
+  const settled = document.fonts
+    ? document.fonts.ready.then(
+        () => undefined,
+        () => undefined,
+      )
+    : Promise.resolve();
+  return settled.then(idleSlot);
+}
+
 function bakeFace(): Promise<string | null> {
-  return (bakeFacePromise ??= loadBakeFace());
+  return (bakeFacePromise ??= afterFirstPaint().then(loadBakeFace));
 }
 </script>
 
