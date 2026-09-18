@@ -49,6 +49,23 @@
  * reader and stays booked to W5's gate estate; the control below states the blind spot that
  * leaves, so it is measured rather than implied.
  *
+ * T9-W7 · G17 · THE SPOKEN SOURCE, and the literal grammar the arm could not read. Two shapes
+ * of the same blindness, and the estate's law is that a gate over copy DISCOVERS its subjects
+ * rather than enumerating them (W8's intake from W7 §2). FIRST: a cell's whole spoken name is
+ * assembled in `useGameCell.ts` as "core = `solver's answer ${n}`" inside
+ * `const ariaLabel = computed(…)` — copy a screen reader says out loud, in none of the shapes
+ * above, so B1 had to find it by hand and a regression would have to be found by hand again.
+ * The rule is the one `COPY_TABLE_NAME` already runs one seam over, applied to a declaration
+ * instead of a table: a NAME that says the value is words a reader gets (`SPOKEN_SOURCE_NAME` —
+ * `aria…`, or ending `Label`/`Text`/`Caption`/`Note`/`Line`/`Word`/`Name`/…) makes every literal
+ * in its initializer copy. SECOND: a TEMPLATE LITERAL was read as one undifferentiated string
+ * wherever it was read at all, so `${…}` — which is code — went to the lexicon with the copy.
+ * Every arm now reads a backtick through one helper (`copyLiterals` → `staticParts`): the static
+ * halves are copy, the interpolations are not, and what an interpolation resolves to is authored
+ * somewhere this scan already reads. The arm discovers 33 spoken sources across 16 files at this
+ * commit — 15 declarations and 18 object properties, where it saw none — and the widening costs
+ * no measurable wall time (0.09 s either side, 137 files).
+ *
  * WHAT THE ARM READS: RENDERED strings only — template text nodes, the attribute values that
  * reach a reader or a screen reader (`aria-label`, `title`, `placeholder`, `alt`, and this
  * estate's own copy props `text`/`sublabel`/`label`/`heading`/`caption`), `index.html`'s head,
@@ -250,6 +267,67 @@ const NARRATION_CALLS = ["useLiveRegion"];
 const COPY_TABLE_NAME =
   /(?<![\w.$])(?:const|let|var)\s+[A-Za-z0-9_$]*(?:COPY|Copy)[A-Za-z0-9_$]*\s*(?::[^=]*)?=\s*\{/g;
 
+/**
+ * SPOKEN SOURCES (T9-W7 · G17) — a declaration whose own NAME says it yields words a reader
+ * hears or reads, and the last shape of this gate's blindness.
+ *
+ * `useGameCell.ts`'s cell name is built as "core = `solver's answer ${n}`" inside
+ * `const ariaLabel = computed(…)`. That string is spoken by every screen reader that lands on a
+ * filled cell, and it was invisible to every arm here: not a template text node (it is in
+ * `<script>`), not a rendered attribute (it is bound), not a `COPY_KEY` (it is assigned, not
+ * keyed), not a narration call (`computed` is not `useLiveRegion`), not a copy table. It had to
+ * be found by hand at B1, and a regression would have to be found by hand again — the estate's
+ * law is the opposite (W8's intake from W7 §2: a gate over copy DISCOVERS its subjects).
+ *
+ * THE RULE IS THE NAME, the same rule `COPY_TABLE_NAME` runs one seam over: an identifier that
+ * ends in `Label`/`Text`/`Caption`/`Note`/`Line`/`Word`/`Name`/… , or begins `aria`, declares
+ * copy, so every literal in its initializer is copy — including the template literals, which is
+ * where a name with a digit in it is always written.
+ *
+ * WHAT THIS DELIBERATELY DOES NOT DO: scan every template literal in `src/**`. A class name, a
+ * `transform`, a thrown developer error and a `TechniqueId` are all template literals, and a
+ * lexicon swept over them reds on the identifiers T8-W6 kept on purpose — the same argument the
+ * header makes for the string arm. The name is the evidence.
+ */
+const SPOKEN_NAME =
+  String.raw`(?:aria[A-Za-z0-9_$]*|[A-Za-z0-9_$]*(?:` +
+  [
+    "Label",
+    "Text",
+    "Caption",
+    "Heading",
+    "Sublabel",
+    "Placeholder",
+    "Title",
+    "Note",
+    "Line",
+    "Word",
+    "Name",
+    "Message",
+    "Sentence",
+    "Announce",
+    "Announcement",
+  ].join("|") +
+  String.raw`))`;
+
+const SPOKEN_SOURCE_NAME = new RegExp(
+  String.raw`(?<![\w.$])(?:const|let|var)\s+${SPOKEN_NAME}\s*(?::[^=;]*)?=`,
+  "g",
+);
+
+/**
+ * The same name rule on an object PROPERTY, because the estate writes half its accessible names
+ * as one — `techniqueVoice.ts:190`'s `ariaLabel: \`level ${n} of ${total}\`` is a spoken name
+ * with no declaration of its own. `COPY_KEYS` could not reach it: that list is lowercase keys
+ * matched whole (`aria:`, `label:`), and every name here is a compound.
+ *
+ * The colon is GLUED to the name, and that is load-bearing rather than tidy: a Vue bind writes
+ * its colon in front of the NEXT attribute (`<SheetWashiLabel :text="…">`), so a rule that let
+ * whitespace in read the component's name as a key and the markup after it as copy — six such
+ * phantom subjects in `src/` before the glue, each one a lexicon sweep over bound expressions.
+ */
+const SPOKEN_SOURCE_PROP = new RegExp(String.raw`(?<![\w.$-])${SPOKEN_NAME}:`, "g");
+
 /** Object-literal keys whose value is copy: the script-side half of the same surface. */
 const COPY_KEYS = [
   "sublabel",
@@ -276,6 +354,100 @@ function callArgs(s, open) {
 /** The same walk for an object literal's braces — the copy table's body. */
 function objectBody(s, open) {
   return balanced(s, open, "{", "}");
+}
+
+/**
+ * An initializer: from the `=` of a declaration or the `:` of a property to the value's end,
+ * quote- and bracket-aware. Ends at a depth-0 character in `stops`, at the closer of whatever
+ * block it sits in, or at end of file. A property stops at a comma as well as a semicolon, so a
+ * spoken name cannot swallow the siblings beside it in the same object.
+ *
+ * KNOWN EDGE, stated rather than implied: a declaration written without its semicolon runs on to
+ * the next one. Prettier puts one on every statement in this estate, and the failure is loud in
+ * the safe direction (a false RED a reviewer reads), not a silent miss.
+ */
+function initializer(s, eq, stops = ";") {
+  let depth = 0;
+  let quote = null;
+  for (let i = eq + 1; i < s.length; i++) {
+    const ch = s[i];
+    if (quote) {
+      if (ch === "\\") i++;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+    else if (ch === "(" || ch === "[" || ch === "{") depth++;
+    else if (ch === ")" || ch === "]" || ch === "}") {
+      if (depth === 0) return { start: eq + 1, text: s.slice(eq + 1, i) };
+      depth--;
+    } else if (depth === 0 && stops.includes(ch))
+      return { start: eq + 1, text: s.slice(eq + 1, i) };
+  }
+  return { start: eq + 1, text: s.slice(eq + 1) };
+}
+
+/**
+ * A template literal's STATIC segments, with the offset each one sits at. `${…}` is an
+ * EXPRESSION and is skipped: it is code, and reading code as copy reds on identifiers
+ * (`${engine.id}`, `${state.unit}`), which is how a lexicon rots into an allowlist. What the
+ * expression resolves to is authored somewhere this scan already reads.
+ *
+ * Brace-depth and quote-aware, so a `}` inside a nested string or a nested object in the
+ * interpolation does not close it early.
+ */
+function staticParts(raw) {
+  const out = [];
+  let seg = "";
+  let at = 0;
+  for (let i = 0; i < raw.length; i++) {
+    if (raw[i] === "\\") {
+      seg += raw.slice(i, i + 2);
+      i++;
+      continue;
+    }
+    if (raw[i] !== "$" || raw[i + 1] !== "{") {
+      seg += raw[i];
+      continue;
+    }
+    if (seg) out.push({ index: at, text: seg });
+    let depth = 0;
+    let quote = null;
+    let j = i + 1;
+    for (; j < raw.length; j++) {
+      const ch = raw[j];
+      if (quote) {
+        if (ch === "\\") j++;
+        else if (ch === quote) quote = null;
+        continue;
+      }
+      if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+      else if (ch === "{") depth++;
+      else if (ch === "}" && --depth === 0) break;
+    }
+    i = j;
+    seg = "";
+    at = i + 1;
+  }
+  if (seg) out.push({ index: at, text: seg });
+  return out;
+}
+
+/**
+ * Every literal inside a region of source, read as COPY: `'…'` and `"…"` whole, a template
+ * literal by its static segments only. One helper, so the copy tables, the narration calls and
+ * the spoken sources all read a backtick the same way.
+ */
+function* copyLiterals(text) {
+  const lit = /(["'`])((?:(?!\1)[^\\]|\\.)*)\1/g;
+  for (let m; (m = lit.exec(text));) {
+    if (m[1] !== "`") {
+      yield { index: m.index, text: m[2] };
+      continue;
+    }
+    for (const p of staticParts(m[2]))
+      yield { index: m.index + 1 + p.index, text: p.text };
+  }
 }
 
 /** Source between a matching pair, BALANCED from the opening delimiter and quote-aware. */
@@ -331,40 +503,64 @@ function rendered(rel, src) {
     }
   }
   for (const key of COPY_KEYS) {
-    const rx = new RegExp(`(?<![\\w.$-])${key}:\\s*"([^"]*)"`, "g");
-    for (let m; (m = rx.exec(s));) add(m.index, `${key}:`, m[1]);
+    const rx = new RegExp(`(?<![\\w.$-])${key}:\\s*(?=["'\`])`, "g");
+    for (let m; (m = rx.exec(s));) {
+      const one = /^(["'`])((?:(?!\1)[^\\]|\\.)*)\1/.exec(s.slice(rx.lastIndex));
+      if (one) for (const q of copyLiterals(one[0])) add(m.index, `${key}:`, q.text);
+    }
   }
-  // The copy tables: every string literal inside a declaration whose own name says copy.
+  // The copy tables: every literal inside a declaration whose own name says copy.
   COPY_TABLE_NAME.lastIndex = 0;
   while (COPY_TABLE_NAME.exec(s)) {
     const body = objectBody(s, COPY_TABLE_NAME.lastIndex - 1);
     if (!body) continue;
-    const lit = /(["'`])((?:(?!\1)[^\\]|\\.)*)\1/g;
-    for (let q; (q = lit.exec(body.text));)
-      add(body.start + q.index, "COPY table", q[2]);
+    for (const q of copyLiterals(body.text))
+      add(body.start + q.index, "COPY table", q.text);
   }
-  // The narration sources: every string literal a spoken-copy composable is handed. All three
-  // quote grammars, because a narration line is as likely to be a template literal as not.
+  // The spoken sources: every literal in the initializer of a declaration whose own name says
+  // it yields a name a reader hears or reads — the template-literal cores included.
+  SPOKEN_SOURCE_NAME.lastIndex = 0;
+  while (SPOKEN_SOURCE_NAME.exec(s)) {
+    const body = initializer(s, SPOKEN_SOURCE_NAME.lastIndex - 1);
+    for (const q of copyLiterals(body.text))
+      add(body.start + q.index, "spoken source", q.text);
+  }
+  SPOKEN_SOURCE_PROP.lastIndex = 0;
+  while (SPOKEN_SOURCE_PROP.exec(s)) {
+    const body = initializer(s, SPOKEN_SOURCE_PROP.lastIndex - 1, ",;");
+    for (const q of copyLiterals(body.text))
+      add(body.start + q.index, "spoken source", q.text);
+  }
+  // The narration sources: every literal a spoken-copy composable is handed. All three quote
+  // grammars, because a narration line is as likely to be a template literal as not.
   for (const fn of NARRATION_CALLS) {
     const call = new RegExp(`(?<![\\w.$])${fn}\\s*\\(`, "g");
     while (call.exec(s)) {
       const args = callArgs(s, call.lastIndex - 1);
       if (!args) continue;
-      const lit = /(["'`])((?:(?!\1)[^\\]|\\.)*)\1/g;
-      for (let q; (q = lit.exec(args.text));)
-        add(args.start + q.index, `${fn}()`, q[2]);
+      for (const q of copyLiterals(args.text))
+        add(args.start + q.index, `${fn}()`, q.text);
     }
   }
   return out;
 }
 
-/** Every jargon offence in one file. */
+/**
+ * Every jargon offence in one file, each ONCE. Two arms can reach the same string by two routes
+ * (`aria:` is both a `COPY_KEY` and a spoken name), and one sentence is one offence however many
+ * shapes it answers to.
+ */
 function jargon(rel, src) {
   const hits = [];
+  const seen = new Set();
   for (const { line, kind, text } of rendered(rel, src))
     for (const [re, register] of JARGON) {
       const m = re.exec(text);
-      if (m) hits.push({ line, kind, text, word: m[0], register });
+      if (!m) continue;
+      const key = `${line}|${text}|${m[0]}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      hits.push({ line, kind, text, word: m[0], register });
     }
   return hits;
 }
@@ -518,6 +714,60 @@ const JARGON_CONTROLS = [
     name: "a copy table whose type says copy and whose NAME does not — the arm is blind",
     rel: "c.ts",
     src: 'const NOTES: Record<string, Copy> = { budget: "the solver gave up." };',
+    want: 0,
+  },
+  // THE SPOKEN SOURCE's own colours (T9-W7 · G17). The first is the shape B1 had to find by
+  // hand — a cell's whole spoken name, built as a template literal in a computed.
+  {
+    name: "a spoken core built as a template literal in an accessible-name source",
+    rel: "c.ts",
+    src:
+      "const ariaLabel = computed(() => {\n  let core: string;\n" +
+      "  core = `the solver's answer ${glyph.value}`;\n  return core;\n});",
+    want: 1,
+  },
+  {
+    name: "a copy table keyed by its domain, its sentence a template literal",
+    rel: "c.ts",
+    src: "const PAPER_NOTE_COPY = { budget: `ask the solver about ${n} steps` };",
+    want: 1,
+  },
+  {
+    name: "a copy table keyed by its domain, its sentence a plain string",
+    rel: "c.ts",
+    src: 'const PAPER_NOTE_COPY = { budget: "ask the solver" };',
+    want: 1,
+  },
+  {
+    name: "a spoken name written as an object property, not a declaration",
+    rel: "c.ts",
+    src: "const voice = {\n  ariaLabel: `the solver filled ${n} of ${total}`,\n  id: `worker-${n}`,\n};",
+    want: 1,
+  },
+  {
+    name: "twin — the same spoken core in the player's words",
+    rel: "c.ts",
+    src:
+      "const ariaLabel = computed(() => {\n  let core: string;\n" +
+      "  core = `revealed answer ${glyph.value}`;\n  return core;\n});",
+    want: 0,
+  },
+  {
+    name: "twin — the same copy table in the player's words",
+    rel: "c.ts",
+    src: 'const PAPER_NOTE_COPY = { budget: "this board took too many steps to finish." };',
+    want: 0,
+  },
+  {
+    name: "positive control — an INTERPOLATION is code, not copy",
+    rel: "c.ts",
+    src: "const cellText = `${engine.unit} left`;",
+    want: 0,
+  },
+  {
+    name: "positive control — a template literal in a declaration that says nothing about copy",
+    rel: "c.ts",
+    src: "const id = `naked-single-${n}`;\nthrow new Error(`the worker died`);",
     want: 0,
   },
   {
