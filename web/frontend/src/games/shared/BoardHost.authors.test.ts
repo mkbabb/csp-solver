@@ -11,11 +11,20 @@ import type { AnyGameSpec, GameModel } from "./defineGame";
  * NOT the stamped hand's: a reveal (the solver's, and the glyph wears the solver's ink to say
  * so), a deal (a printed clue is nobody's), and an erase (there is no digit left to own). The
  * stamp outlives all three, so the map the board reads claimed a peer over cells they never
- * wrote — on the washi tape (`cell-authors` → `GameBoard`) and in the cell's own name
- * (`author-name` → the cell), the two consumers of one read.
+ * wrote.
  *
- * The rows below hold BOTH consumers against the same four cells, because a narrowing that
- * fixed only one would leave the surfaces disagreeing about who wrote the same square.
+ * ONE RENDERED SURFACE was lying at `aab67b92`: the washi tape (`cell-authors` → `GameBoard`),
+ * which mounts on whatever the map holds. The other consumer, the cell's own accessible name
+ * (`author-name` → the cell), already spoke the truth for all three kinds — T9-W3 §3.3 moved
+ * authorship into the name's kind-branch (`useGameCell.ts:140`), and
+ * `DigitCell.attribution.test.ts` pins it with `authorName` set: "solver's answer 4",
+ * "given clue 4", "empty". Narrowing the map at its single source is surface-agreement at the
+ * source, not a second cured lie.
+ *
+ * So the `named()` rows below hold the PROP the cell is handed (the stub echoes `authorName`
+ * into `data-author`), NOT the sentence the cell speaks — that sentence is DigitCell's row's
+ * to hold. They are here because a narrowing that moved only the tape would leave the two
+ * consumers reading different maps for one square.
  */
 
 /** The board is not the subject — it is stubbed to the one prop under test plus the cell slot
