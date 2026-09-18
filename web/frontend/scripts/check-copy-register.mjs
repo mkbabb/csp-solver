@@ -62,9 +62,20 @@
  * wherever it was read at all, so `${…}` — which is code — went to the lexicon with the copy.
  * Every arm now reads a backtick through one helper (`copyLiterals` → `staticParts`): the static
  * halves are copy, the interpolations are not, and what an interpolation resolves to is authored
- * somewhere this scan already reads. The arm discovers 33 spoken sources across 16 files at this
- * commit — 15 declarations and 18 object properties, where it saw none — and the widening costs
- * no measurable wall time (0.09 s either side, 137 files).
+ * somewhere this scan already reads.
+ *
+ * G17 · REPAIR r1 — FOUR MORE SHAPES, EACH ONE PLANTED BEFORE IT WAS CURED. A non-author
+ * verifier wrote five `solver`s into five live sources in shapes r0 could not read and every one
+ * shipped past this gate green: a SCREAMING_SNAKE copy table (`FURNITURE_NOTE`), a function that
+ * RETURNS the sentence (`formatHintNote`), a spoken ref written by ASSIGNMENT
+ * (`errorMessage.value = …`), and a BOUND accessible name in two spellings (a template literal at
+ * `StagingBand.vue:200`, a ternary at `DarkModeToggle.vue:7`). All five RED now, each naming its
+ * own line, and each has its colour in `--self-test` beside the twin that must stay green. Two
+ * false-SUBJECT classes were found in the same pass and fenced with their own controls: a Vue tag
+ * read as a declaration annotated `:attr` (the glued colon), and a TYPE alias read as a write.
+ * `--reach` prints the rule's whole census: 51 subjects, 28 of them holding a literal, across 17
+ * files — matches, distinct sources and copy-bearing sources reported as three numbers, because
+ * r0 reported one of them as all three. A census enumerates REACH; only a plant proves a shape.
  *
  * WHAT THE ARM READS: RENDERED strings only — template text nodes, the attribute values that
  * reach a reader or a screen reader (`aria-label`, `title`, `placeholder`, `alt`, and this
@@ -223,8 +234,22 @@ function census(rel, src) {
 
 /**
  * The attributes that reach a reader or a screen reader, and this estate's own copy props. The
- * lookbehind refuses `:aria-label` and `v-bind:text` — a BOUND value is an expression, not a
- * string, and reading its source text as copy would red on variable names.
+ * lookbehind splits the two grammars: `aria-label="…"` is a string, and `:aria-label="…"` is an
+ * expression, read by the BOUND arm below.
+ *
+ * G17 repair r1 — THE BOUND ATTRIBUTE IS READ NOW, and the rationale that excluded it is gone.
+ * The exclusion's stated reason was that "a BOUND value is an expression, not a string, and
+ * reading its source text as copy would red on variable names". `staticParts` dissolved it: an
+ * expression's string literals are separable from its identifiers, and the literals in a bound
+ * accessible name are the sentence a screen reader says. Three live sites proved the gap —
+ * `StagingBand.vue:200` (`` :aria-label="`deal a new ${name} board`" ``),
+ * `HandwrittenLogo.vue:412` (a ternary with a template literal) and `DarkModeToggle.vue:7` (a
+ * ternary with two quoted strings) — each of which took a planted `solver` past this gate green.
+ * `:aria-label="solverLabel"` still reads nothing, which is the original point kept: the
+ * VARIABLE's name is not copy, and its control below still wants 0.
+ *
+ * The attribute value is delimited by the double quotes Vue and prettier write it in; a
+ * single-quoted attribute is outside this grammar and none exists in `src/`.
  */
 const RENDERED_ATTRS = [
   "aria-label",
@@ -288,30 +313,80 @@ const COPY_TABLE_NAME =
  * `transform`, a thrown developer error and a `TechniqueId` are all template literals, and a
  * lexicon swept over them reds on the identifiers T8-W6 kept on purpose — the same argument the
  * header makes for the string arm. The name is the evidence.
+ *
+ * ── G17 repair r1 · FOUR SHAPES THE NAME RULE COULD NOT READ ───────────────────────────────
+ * A non-author verifier planted five sentences this arm missed and every one of them was live
+ * copy, so the rule was right and its GRAMMAR was short. All four shapes are the same rule:
+ *
+ *  · SCREAMING_SNAKE. The suffix list was TitleCase-only, and this estate writes its copy
+ *    tables in caps — `FURNITURE_NOTE` and `HOUSE_WORD` (`techniqueVoice.ts`) are the margin's
+ *    own words and were blind. The snake spelling of every suffix joins the name rule; the
+ *    match is NOT case-folded, because a capital is this rule's word boundary (`Baseline` is not
+ *    a `Line`, and `context` is not a `Text`).
+ *  · A FUNCTION that returns the sentence. `formatHintNote(…): string` and
+ *    `formatConflictNote(…): string` are the margin note a player reads, assembled in a function
+ *    body rather than an initializer. The clause is the name AND the signature: a declared
+ *    return type containing `string`, which is what keeps a `void` event handler named
+ *    `onMessage` out of a copy census (its own control, below).
+ *  · AN ASSIGNMENT, not a declaration. A Vue estate writes its sentences into a ref it declared
+ *    empty — `errorMessage.value = "Solve failed"` (`useGameState.ts`) three times over. The
+ *    `const|let|var` is now optional and `.value` is allowed, so the name rule reads the WRITE.
+ *  · A BOUND attribute. See `RENDERED_ATTRS`.
  */
+const SPOKEN_SUFFIXES = [
+  "Label",
+  "Text",
+  "Caption",
+  "Heading",
+  "Sublabel",
+  "Placeholder",
+  "Title",
+  "Note",
+  "Line",
+  "Word",
+  "Name",
+  "Message",
+  "Sentence",
+  "Announce",
+  "Announcement",
+];
+
 const SPOKEN_NAME =
-  String.raw`(?:aria[A-Za-z0-9_$]*|[A-Za-z0-9_$]*(?:` +
-  [
-    "Label",
-    "Text",
-    "Caption",
-    "Heading",
-    "Sublabel",
-    "Placeholder",
-    "Title",
-    "Note",
-    "Line",
-    "Word",
-    "Name",
-    "Message",
-    "Sentence",
-    "Announce",
-    "Announcement",
-  ].join("|") +
+  String.raw`(?:aria[A-Za-z0-9_$]*|ARIA_[A-Z0-9_$]*|[A-Za-z0-9_$]*(?:` +
+  SPOKEN_SUFFIXES.join("|") +
+  String.raw`)|(?:[A-Z0-9$]+_)*(?:` +
+  SPOKEN_SUFFIXES.map((w) => w.toUpperCase()).join("|") +
   String.raw`))`;
 
+/**
+ * A declaration OR a write. `(?:const|let|var)` is optional and `.value` is allowed, because the
+ * sentence a ref finally holds is written after the ref is declared empty. `(?![=>])` keeps `==`,
+ * `===` and `=>` out; an operator-assignment (`+=`) never matches, since `\s*` cannot cross the
+ * operator.
+ *
+ * THE ANNOTATION'S COLON IS GLUED to the name, the same law `SPOKEN_SOURCE_PROP` carries and for
+ * the same reason: with the keyword optional, `\s*:` let a Vue TAG in — `<SheetWashiLabel :id="…"`
+ * read as a `SheetWashiLabel` annotated `:id`, whose "initializer" then ran through the markup to
+ * the next `;`. Measured, not reasoned: it swallowed `StagingBand.vue:130`–`200` and reported one
+ * planted sentence twice. A type annotation is written `name: T`; a bind is written `Tag :attr=`.
+ */
 const SPOKEN_SOURCE_NAME = new RegExp(
-  String.raw`(?<![\w.$])(?:const|let|var)\s+${SPOKEN_NAME}\s*(?::[^=;]*)?=`,
+  String.raw`(?<![\w.$])(?:(?:const|let|var)\s+)?${SPOKEN_NAME}(?:\.value)?(?::[^=;]*)?\s*=(?![=>])`,
+  "g",
+);
+
+/**
+ * A FUNCTION whose name says copy and whose signature says it yields words: the margin note is
+ * `return \`only ${valueChar} fits here\``, not an initializer. The return type is the second
+ * half of the rule and it is load-bearing — `onMessage(…): void` and `applyTitle(g: GameId)` are
+ * a relay handler and a `document.title` write, and a lexicon swept over a 70-line message
+ * handler's protocol literals is the Vue-tag phantom again in another costume.
+ *
+ * KNOWN EDGE, stated: an un-annotated copy function is blind. Every copy function in `src/`
+ * today declares `: string`, and the failure is a MISS a reviewer can plant for, not a false RED.
+ */
+const SPOKEN_SOURCE_FN = new RegExp(
+  String.raw`(?<![\w.$])function\s+${SPOKEN_NAME}\s*\(`,
   "g",
 );
 
@@ -470,6 +545,59 @@ function balanced(s, open, o, c) {
 }
 
 /**
+ * Every SPOKEN SUBJECT in one masked file — the three shapes of the name rule, in one place, so
+ * the census below (`--reach`) enumerates what the gate actually reads rather than a second
+ * implementation of it. Each subject carries the source text of its value: an initializer, a
+ * property's value, or a function body.
+ *
+ * WHAT A CENSUS CAN AND CANNOT SHOW, stated because the distinction is the whole epistemics: it
+ * enumerates this rule's REACH, and reach cannot prove that no unreached site exists. Only a
+ * PLANT can do that — a sentence written into a live source in the shape under test, with the
+ * gate run bare (repair r1's five, `evidence/w7/exec/G17/repair-r1/`).
+ */
+function* spokenSubjects(s) {
+  SPOKEN_SOURCE_NAME.lastIndex = 0;
+  for (let m; (m = SPOKEN_SOURCE_NAME.exec(s));) {
+    // A TYPE is not a value and holds no copy: `type ThermoLine = number[]` matches the write
+    // shape exactly, and a string-literal union inside one is an identifier set, never a
+    // sentence — the very thing T8-W6 kept on purpose.
+    if (/(?:type|interface|enum)\s+$/.test(s.slice(Math.max(0, m.index - 12), m.index)))
+      continue;
+    yield {
+      index: m.index,
+      kind: "declaration/write",
+      name: m[0].replace(/\s+/g, " ").trim(),
+      ...initializer(s, SPOKEN_SOURCE_NAME.lastIndex - 1),
+    };
+  }
+  SPOKEN_SOURCE_PROP.lastIndex = 0;
+  for (let m; (m = SPOKEN_SOURCE_PROP.exec(s));) {
+    // A declaration's OWN type annotation writes the same colon (`let freshNote: string = …`)
+    // and the arm above has already read that initializer — one source, one subject, not two
+    // matches of the same words (which is what made the r0 census read 33 where it reads 30).
+    if (/(?:const|let|var)\s+$/.test(s.slice(Math.max(0, m.index - 12), m.index)))
+      continue;
+    yield {
+      index: m.index,
+      kind: "property",
+      name: m[0],
+      ...initializer(s, SPOKEN_SOURCE_PROP.lastIndex - 1, ",;"),
+    };
+  }
+  // A name that says copy plus a signature that says `string`.
+  SPOKEN_SOURCE_FN.lastIndex = 0;
+  for (let m; (m = SPOKEN_SOURCE_FN.exec(s));) {
+    const params = balanced(s, SPOKEN_SOURCE_FN.lastIndex - 1, "(", ")");
+    if (!params) continue;
+    const close = params.start + params.text.length;
+    const sig = /^\s*:([^{;]*)\{/.exec(s.slice(close + 1));
+    if (!sig || !/\bstring\b/.test(sig[1])) continue;
+    const body = balanced(s, close + sig[0].length, "{", "}");
+    if (body) yield { index: m.index, kind: "function", name: m[0].trim(), ...body };
+  }
+}
+
+/**
  * Every RENDERED string in one file: `{ line, kind, text }`. Deliberately narrower than the
  * dash arm's corpus — see the header. An interpolation (`{{ … }}`) is an expression and is
  * skipped; what it resolves to is authored somewhere this scan already reads.
@@ -478,9 +606,12 @@ function rendered(rel, src) {
   const out = [];
   const s = mask(src);
   const at = (i) => s.slice(0, i).split("\n").length;
+  // `index` is the offence's own byte offset in the masked source, and every arm records the
+  // LITERAL's offset rather than the key's or the tag's — so two arms reaching one string
+  // de-duplicate exactly (`jargon`), and two identical strings on one line stay two.
   const add = (i, kind, text) => {
     const t = text.trim();
-    if (t && !t.startsWith("{{")) out.push({ line: at(i), kind, text: t });
+    if (t && !t.startsWith("{{")) out.push({ index: i, line: at(i), kind, text: t });
   };
 
   if (rel.endsWith(".html")) {
@@ -499,14 +630,23 @@ function rendered(rel, src) {
         const rx = new RegExp(`(?<![:\\w-])${attr}="([^"]*)"`, "g");
         rx.lastIndex = a;
         for (let m; (m = rx.exec(s)) && m.index < b;) add(m.index, `@${attr}`, m[1]);
+        // The BOUND twin: the same attribute as an expression, read by its literals only.
+        const bx = new RegExp(`(?<![\\w.$-])(?::|v-bind:)${attr}="([^"]*)"`, "g");
+        bx.lastIndex = a;
+        for (let m; (m = bx.exec(s)) && m.index < b;) {
+          const open = m.index + m[0].length - m[1].length - 1;
+          for (const q of copyLiterals(m[1])) add(open + q.index, `:${attr}`, q.text);
+        }
       }
     }
   }
   for (const key of COPY_KEYS) {
     const rx = new RegExp(`(?<![\\w.$-])${key}:\\s*(?=["'\`])`, "g");
-    for (let m; (m = rx.exec(s));) {
+    while (rx.exec(s)) {
       const one = /^(["'`])((?:(?!\1)[^\\]|\\.)*)\1/.exec(s.slice(rx.lastIndex));
-      if (one) for (const q of copyLiterals(one[0])) add(m.index, `${key}:`, q.text);
+      const open = rx.lastIndex;
+      if (one)
+        for (const q of copyLiterals(one[0])) add(open + q.index, `${key}:`, q.text);
     }
   }
   // The copy tables: every literal inside a declaration whose own name says copy.
@@ -519,18 +659,9 @@ function rendered(rel, src) {
   }
   // The spoken sources: every literal in the initializer of a declaration whose own name says
   // it yields a name a reader hears or reads — the template-literal cores included.
-  SPOKEN_SOURCE_NAME.lastIndex = 0;
-  while (SPOKEN_SOURCE_NAME.exec(s)) {
-    const body = initializer(s, SPOKEN_SOURCE_NAME.lastIndex - 1);
-    for (const q of copyLiterals(body.text))
-      add(body.start + q.index, "spoken source", q.text);
-  }
-  SPOKEN_SOURCE_PROP.lastIndex = 0;
-  while (SPOKEN_SOURCE_PROP.exec(s)) {
-    const body = initializer(s, SPOKEN_SOURCE_PROP.lastIndex - 1, ",;");
-    for (const q of copyLiterals(body.text))
-      add(body.start + q.index, "spoken source", q.text);
-  }
+  for (const sub of spokenSubjects(s))
+    for (const q of copyLiterals(sub.text))
+      add(sub.start + q.index, "spoken source", q.text);
   // The narration sources: every literal a spoken-copy composable is handed. All three quote
   // grammars, because a narration line is as likely to be a template literal as not.
   for (const fn of NARRATION_CALLS) {
@@ -549,18 +680,24 @@ function rendered(rel, src) {
  * Every jargon offence in one file, each ONCE. Two arms can reach the same string by two routes
  * (`aria:` is both a `COPY_KEY` and a spoken name), and one sentence is one offence however many
  * shapes it answers to.
+ *
+ * THE KEY IS THE BYTE OFFSET (G17 repair r1), not the line. Keyed on `line|text|word`, two
+ * genuinely distinct strings that happen to be byte-identical on one line collapsed into one
+ * hit — `{ ariaLabel: "the solver", ariaText: "the solver" }` reported 1 offence and there are
+ * 2. Every arm records its literal's own offset, so the same string reached twice keys the same
+ * and two strings key differently.
  */
 function jargon(rel, src) {
   const hits = [];
   const seen = new Set();
-  for (const { line, kind, text } of rendered(rel, src))
+  for (const { index, line, kind, text } of rendered(rel, src))
     for (const [re, register] of JARGON) {
       const m = re.exec(text);
       if (!m) continue;
-      const key = `${line}|${text}|${m[0]}`;
+      const key = `${index}|${m[0]}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      hits.push({ line, kind, text, word: m[0], register });
+      hits.push({ index, line, kind, text, word: m[0], register });
     }
   return hits;
 }
@@ -704,8 +841,11 @@ const JARGON_CONTROLS = [
   },
   // THE COPY TABLE's own colours (T9-W7 · B1b). The first is the shape that shipped two
   // machine-naming sentences past this gate; the second is the blind spot the name-rule leaves.
+  // NAMED for what it tests (G17 repair r1): the fixture is `PAPER_NOTE_COPY`, so what this
+  // colour exercises is `COPY_TABLE_NAME` — the word COPY in the name — and not the office
+  // suffix rule, which is the control two entries below.
   {
-    name: "a copy table keyed by its fault domain, named for its office",
+    name: "a copy table whose name carries the word COPY",
     rel: "c.ts",
     src: 'const PAPER_NOTE_COPY = { budget: "the solver ran out of steps on this board." };',
     want: 1,
@@ -743,6 +883,92 @@ const JARGON_CONTROLS = [
     rel: "c.ts",
     src: "const voice = {\n  ariaLabel: `the solver filled ${n} of ${total}`,\n  id: `worker-${n}`,\n};",
     want: 1,
+  },
+  // ── G17 repair r1 · THE FOUR SHAPES A VERIFIER PLANTED AND THIS ARM MISSED ────────────────
+  // Every one of these is a live shape in `src/` today, and each was measured blind before it
+  // was cured: the plant shipped past the gate green, the twin beside it is the same sentence in
+  // the player's words, and the fence beside that is what the rule must keep out.
+  {
+    name: "a copy table named in SCREAMING_SNAKE for its office",
+    rel: "c.ts",
+    src: 'const FURNITURE_NOTE: Record<string, string> = { cage: "check the solver cage" };',
+    want: 1,
+  },
+  {
+    name: "twin — the same SCREAMING_SNAKE table in the player's words",
+    rel: "c.ts",
+    src: 'const FURNITURE_NOTE: Record<string, string> = { cage: "check the cage" };',
+    want: 0,
+  },
+  {
+    name: "a function that RETURNS the sentence, its name and its type both saying copy",
+    rel: "c.ts",
+    src:
+      "export function formatConflictNote(unit: ConflictUnit): string {\n" +
+      '  if (!unit) return "no solution from here";\n' +
+      "  return `check the solver's ${unit.kind}`;\n}",
+    want: 1,
+  },
+  {
+    name: "positive control — a void handler named for messages is not a copy source",
+    rel: "c.ts",
+    src:
+      "function onMessage(kind: string): void {\n" +
+      '  if (kind === "st") throw new Error("the worker died");\n}',
+    want: 0,
+  },
+  {
+    name: "a spoken ref written by ASSIGNMENT, long after it was declared empty",
+    rel: "c.ts",
+    src: 'const errorMessage = ref("");\nerrorMessage.value = "the solver failed";',
+    want: 1,
+  },
+  {
+    name: "positive control — a comparison is not an assignment",
+    rel: "c.ts",
+    src: 'if (errorMessage.value === "the solver failed") reset();\nconst n = 1;',
+    want: 0,
+  },
+  {
+    name: "a BOUND accessible name built as a template literal",
+    rel: "c.vue",
+    src: '<template><button :aria-label="`deal a new ${name} board from the solver`">x</button></template>',
+    want: 1,
+  },
+  {
+    name: "a BOUND accessible name built as a ternary over two quoted strings",
+    rel: "c.vue",
+    src: "<template><button :aria-label=\"isDark ? 'switch the solver off' : 'switch to dark mode'\">x</button></template>",
+    want: 1,
+  },
+  {
+    name: "twin — the same bound accessible name in the player's words",
+    rel: "c.vue",
+    src: '<template><button :aria-label="`deal a new ${name} board`">x</button></template>',
+    want: 0,
+  },
+  // THE PHANTOM'S SECOND COSTUME, and its own colour. `<SheetWashiLabel :id="…"` is a component
+  // and a bind, not a declaration annotated `:id` — before the glued colon this read the markup
+  // after it as an initializer, all the way to the next `;` in the script block below.
+  {
+    name: "positive control — a TYPE whose name says copy holds identifiers, not copy",
+    rel: "c.ts",
+    src: 'export type CellLabel = "naked-single" | "hidden-single";',
+    want: 0,
+  },
+  {
+    name: "positive control — a component tag with a bind is not a spoken declaration",
+    rel: "c.vue",
+    src:
+      '<template><SheetWashiLabel :id="seed" /></template>\n' +
+      '<script setup>\nconst tid = "naked-single";\n</script>',
+    want: 0,
+  },
+  {
+    name: "two byte-identical sentences on one line are TWO offences",
+    rel: "c.ts",
+    src: 'const voice = { ariaLabel: "the solver", ariaText: "the solver" };',
+    want: 2,
   },
   {
     name: "twin — the same spoken core in the player's words",
@@ -828,6 +1054,40 @@ function selfTest() {
   return ok;
 }
 
+/**
+ * `--reach` — the name rule's own census, and the counting discipline it now states. A MATCH is
+ * not a SOURCE: one `let freshNote: string = …` used to match twice (its declaration and the
+ * colon of its own type annotation), and an interface member (`ariaSuffix: () => string;`) is a
+ * type position holding no copy at all. Three numbers, so none of them can be read as another:
+ * matches, distinct sources, and the sources that actually hold a literal.
+ */
+function reach() {
+  const rows = [];
+  for (const abs of [...walk(path.join(ROOT, "src"))]) {
+    const rel = path.relative(ROOT, abs);
+    if (ALLOW.has(rel)) continue;
+    const s = mask(fs.readFileSync(abs, "utf8"));
+    for (const sub of spokenSubjects(s))
+      rows.push({
+        rel,
+        line: s.slice(0, sub.index).split("\n").length,
+        kind: sub.kind,
+        name: sub.name,
+        copy: [...copyLiterals(sub.text)].filter((q) => q.text.trim()).length,
+      });
+  }
+  rows.sort((a, b) => a.rel.localeCompare(b.rel) || a.line - b.line);
+  const distinct = new Set(rows.map((r) => `${r.rel}:${r.line}:${r.name}`));
+  const withCopy = rows.filter((r) => r.copy > 0);
+  const filesSeen = new Set(rows.map((r) => r.rel));
+  console.log(
+    `\nspoken-source reach: ${rows.length} match(es), ${distinct.size} distinct source(s), ` +
+      `${withCopy.length} holding a literal, across ${filesSeen.size} files`,
+  );
+  for (const r of rows)
+    console.log(`  ${r.rel}:${r.line}  [${r.kind}]  ${r.name}  ${r.copy} literal(s)`);
+}
+
 const { files, offences, jargonHits, live, admitted, stale } = scan();
 console.log(`copy register scanned across ${files.length} files`);
 console.log(`allowlisted: ${[...ALLOW].map(([f, r]) => `${f} (${r})`).join(", ")}`);
@@ -845,6 +1105,8 @@ for (const h of live)
   console.log(
     `  ✗ ${h.file}:${h.line}  [${h.kind}]  "${h.word}" (${h.register})  ${h.text}`,
   );
+
+if (process.argv.includes("--reach")) reach();
 
 const testing = process.argv.includes("--self-test");
 if (testing && !selfTest()) process.exit(2);
