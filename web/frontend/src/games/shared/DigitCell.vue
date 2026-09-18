@@ -70,9 +70,10 @@ const props = withDefaults(
      *  `--color-peer-cursor-ink` from the same single mount site that binds `authorInk`. */
     isPeerCursor?: boolean;
     /** T8-W3 M1 — the slug of the PEER who wrote this cell's digit, empty for your own and for
-     *  an unauthored cell. It is the accessible half of the attribution: coarse pointers have no
-     *  hover to spend on the washi tape, so the name rides the cell's own name instead. Named as
-     *  a real asymmetry rather than papered over — a sighted touch user still gets nothing. */
+     *  an unauthored cell. It is the SPOKEN half of the attribution, and it reads the same on
+     *  every pointer: the name rides the cell's own accessible name. T9-W7 3C-4 closed what used
+     *  to be the asymmetry beside it — the washi tape now rides the focused cell where there is
+     *  no hover to spend, so a sighted touch user gets the look as well as the name. */
     authorName?: string;
   }>(),
   { constraintLabel: "", authorName: "" },

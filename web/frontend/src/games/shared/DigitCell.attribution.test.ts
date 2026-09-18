@@ -12,9 +12,9 @@ import DigitCell from "./DigitCell.vue";
  *   · `isPeerCursor` → the root state class. The ring's whole form lives in `gameCell.css`; the
  *     class is the only thing the cell decides.
  *   · `authorName` → the accessible name's CORE (T9-W3 §3.3 moved it there from the tail). It is
- *     the coarse-pointer route to attribution, stated as a real asymmetry rather than papered
- *     over: hover is a fine-pointer grammar and long-press is already spent on the peek, so a
- *     thumb gets the NAME or it gets nothing.
+ *     the spoken route to attribution and it reads the same on every pointer. The LOOK is no
+ *     longer withheld from a thumb either: T9-W7 3C-4 gave the washi tape the focused cell to
+ *     ride where there is no hover, so a touch user gets the tape and the name both.
  */
 
 function mountCell(overrides: Record<string, unknown> = {}) {

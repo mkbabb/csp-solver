@@ -83,8 +83,9 @@ const peerCursorInk = computed(() => {
 // ── T8-W3 M1 · WHO WROTE IT ───────────────────────────────────────────────────────────────
 // `cellAuthors` is a read-contract field on `GameModel` — the `authorInk` precedent exactly,
 // one field and one pass-through for five games. ONE read feeds two consumers: the board's
-// washi tape (the visual answer) and each cell's own accessible name (the only answer a coarse
-// pointer can be given).
+// washi tape (the visual answer — T9-W7 3C-4 taught it to ride the focused cell where there is
+// no hover, so a coarse pointer is given it too) and each cell's own accessible name (the spoken
+// answer, identical on every pointer).
 //
 // T9-W7 3B-1 — A HAND IS ONLY CLAIMABLE ON A DIGIT THAT HAND WROTE. The ledger stamps the
 // position, and three kinds of write leave a digit that is not the stamped hand's: a reveal
