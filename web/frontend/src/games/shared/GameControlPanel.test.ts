@@ -325,9 +325,11 @@ describe("GameControlPanel — the zone grammar (T4-P1)", () => {
       "Size",
       "Level",
     ]);
+    // T9-W7 · B1b — the second caption reads `what fits`; `candidates` was the solver's word
+    // for it and the last admitted string in the copy gate.
     expect(w.findAll(".zone-row-label").map((l) => l.text())).toEqual([
       "marks",
-      "candidates",
+      "what fits",
     ]);
   });
 

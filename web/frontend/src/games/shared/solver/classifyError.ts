@@ -46,10 +46,24 @@ export type Fiction =
 /**
  * The page's own handwriting for each broken-machinery variant (§5.2). Honest and
  * plain — the storybook dressing is the paper, not purple copy.
+ *
+ * T9-W7 · B1b — M16, and the machine stops naming itself HERE too. Two of these sentences
+ * said `solver` to a player: the ballot's own scope was two other strings, so B1 left them
+ * standing and booked them (exec/B1 §7 gap 5). Each keeps the contract the note is for — it
+ * names WHAT broke, in the player's words:
+ *
+ *   - `budget` is a step budget spent before the board came out. A second press can clear it
+ *     (`RETRYABLE_CODES`), and the card draws its own `try again` button beside the sentence
+ *     (measured: `GameBoard.vue:904` renders through `classifyCode(code)`, whose `retryable`
+ *     defaults to `true`, so every paper note carries that button) — so the sentence says what
+ *     broke and lets the button say what to do.
+ *   - `network` is the in-browser helper failing: a dead worker, or a fault with no envelope.
+ *     It is the one fault of the two a second press does NOT clear, so its sentence carries the
+ *     act that does.
  */
 export const PAPER_NOTE_COPY: Record<PaperNoteVariant, string> = {
-  budget: "the solver ran out of steps on this board.",
-  network: "couldn't reach the solver.",
+  budget: "this board took too many steps to finish.",
+  network: "the board's helper stopped working. reload the page.",
   "deal-timeout": "this deal is taking too long. try again or pick a smaller board.",
   unknown: "something went wrong.",
 };

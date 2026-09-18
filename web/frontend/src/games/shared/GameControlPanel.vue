@@ -947,7 +947,8 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
     >
       <!-- T8-W1 M3 — the compartment's own hint is PRUNED. It read "how your marks are written
            — and whether the solver shows its candidates", which is the two row captions
-           directly under it (`marks`, `candidates`) said again in a longer sentence. The rows
+           directly under it (`marks`, `what fits` — `candidates` until T9-W7 · B1b) said
+           again in a longer sentence. The rows
            keep their own hints, which explain what the chips mean; only the enumeration went. -->
       <SheetWashiLabel :id="pencilsId" text="pencils" :seed="29" anchor="tag" />
       <div
@@ -977,7 +978,13 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
         role="group"
         :aria-labelledby="candidatesId"
       >
-        <span :id="candidatesId" class="zone-row-label">candidates</span>
+        <!-- T9-W7 · B1b — M16: `candidates` is the solver's word for what a player calls a
+             pencil mark, and it was the last admitted string in the copy gate. The caption now
+             says what the toggle does in the tape's own words ("show every digit that still
+             fits in a cell"), and it stays INSIDE the caption column: `.zone-row-label` is a
+             measured 3.75rem (60px) that `candidates` cleared at 48.8px, and this is shorter,
+             so the column neither widens nor wraps to a second line. -->
+        <span :id="candidatesId" class="zone-row-label">what fits</span>
         <SheetWashiLabel
           class="zone-hint"
           text="show every digit that still fits in a cell"

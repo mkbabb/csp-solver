@@ -183,19 +183,25 @@ describe("GameBoard — the paper note claims only what it knows", () => {
     w.unmount();
   });
 
-  it("budget exhaustion still says it ran out of steps", async () => {
+  // T9-W7 · B1b — the sentences moved and their CLASS did not: budget still says the steps ran
+  // out, a dead helper still says the thing that fills the board stopped. The second assertion
+  // is the M16 guard (B1's idiom): the row reds on a revert to the machine's own name, not only
+  // on a re-word.
+  it("budget exhaustion still says it ran out of steps, without naming the machine", async () => {
     const w = mountBoard();
     await w.setProps({ solveState: "error", errorCode: "BUDGET_EXCEEDED" });
     await nextTick();
-    expect(note(w)).toBe("the solver ran out of steps on this board.");
+    expect(note(w)).toBe("this board took too many steps to finish.");
+    expect(note(w)).not.toContain("solver");
     w.unmount();
   });
 
-  it("a dead worker still says it could not be reached", async () => {
+  it("a dead worker still says what broke and what to do, without naming the machine", async () => {
     const w = mountBoard();
     await w.setProps({ solveState: "error", errorCode: "WORKER_FAILURE" });
     await nextTick();
-    expect(note(w)).toBe("couldn't reach the solver.");
+    expect(note(w)).toBe("the board's helper stopped working. reload the page.");
+    expect(note(w)).not.toContain("solver");
     w.unmount();
   });
 });

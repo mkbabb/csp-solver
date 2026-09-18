@@ -79,9 +79,11 @@ test("rendered-name census, rail: two eyebrows, four tapes, two captions — and
   ]);
   // Two controls share the `pencils` compartment, so each gets a quiet caption; `checking`
   // holds one idea and needs none — which is the taxonomy paying for itself.
+  // T9-W7 · B1b — `candidates` was the solver's word for a pencil mark and the copy gate's last
+  // admitted string; the caption now says what the toggle shows.
   expect(names.filter((n) => n.rank === "caption").map((n) => n.text)).toEqual([
     "marks",
-    "candidates",
+    "what fits",
   ]);
 
   // NEGATIVE CONTROL — a census that cannot fail is not a census. Plant an eyebrow inside a

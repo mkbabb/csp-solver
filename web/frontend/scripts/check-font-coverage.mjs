@@ -114,6 +114,21 @@ const EXTRACT = {
           .map((m) => ({ s: m[1], where: f.rel })),
       ),
   },
+  paperNoteCopy: {
+    what: "the string values of `PAPER_NOTE_COPY` in games/shared/solver/classifyError.ts",
+    run: () =>
+      pick(/^src\/games\/shared\/solver\/classifyError\.ts$/).flatMap((f) => {
+        // The table's own body, not every `: "…"` in the file — `variant: "network"` and
+        // `kind: "paper-note"` are the taxonomy's identifiers and no reader ever sees them.
+        const body = /PAPER_NOTE_COPY[^=]*=\s*\{([\s\S]*?)\n\};/.exec(f.text);
+        return body
+          ? [...body[1].matchAll(/:\s*"([^"]+)"/g)].map((m) => ({
+              s: m[1],
+              where: f.rel,
+            }))
+          : [];
+      }),
+  },
   zoneRowLabels: {
     what: "the static text of a `.zone-row-label` span",
     run: () =>
@@ -224,7 +239,22 @@ const FACES = [
         where: ".zone-row-label (row captions)",
         transform: "none",
         derive: ["zoneRowLabels"],
-        strings: ["marks", "candidates"],
+        strings: ["marks", "what fits"],
+      },
+      // T9-W7 · B1b — the paper note paints in `--font-hand` (`.error-note-text`,
+      // SolverErrorNote.vue) and its four sentences have never been in this corpus: the
+      // recut that took `solver` out of two of them is exactly the moment the trap fires,
+      // so they are declared and derived from the table that authors them.
+      {
+        where: ".error-note-text (the paper note's four sentences)",
+        transform: "none",
+        derive: ["paperNoteCopy"],
+        strings: [
+          "this board took too many steps to finish.",
+          "the board's helper stopped working. reload the page.",
+          "this deal is taking too long. try again or pick a smaller board.",
+          "something went wrong.",
+        ],
       },
       // T8-W1 M3 \u2014 `.check-status`'s four states left the corpus with the line that painted
       // them. The cut is NOT re-narrowed: `level` (the picker's difficulty caption, the string

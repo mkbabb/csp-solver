@@ -37,6 +37,18 @@
  * longer — T9-W7 · B1 recut it to `finishes the board for you` and struck its admission below,
  * so this arm is now the thing that reds if it ever comes back.
  *
+ * T9-W7 · B1b · THE COPY TABLE, and the blind spot that hid two more sentences. This arm reads
+ * copy by the SHAPE it is written in: a template text node, a rendered attribute, an object key
+ * NAMED for copy (`COPY_KEYS`), a narration call. A table keyed by what the copy is ABOUT is
+ * none of those, and `PAPER_NOTE_COPY` (`games/shared/solver/classifyError.ts`) is exactly that
+ * — `{ budget, network, deal-timeout, unknown }`, four sentences a `role="alert"` card prints to
+ * a player, two of which said `solver` while this gate called the tree clean (exec/B1 §7 gap 6).
+ * THE RULE IS THE CONST'S NAME, not its keys: a declaration whose own name says COPY is a copy
+ * table, so every string literal in its object literal is read as copy (`COPY_TABLE_NAME`). The
+ * other half of that gap — a `Record<…, string>` whose declared TYPE says copy — needs a type
+ * reader and stays booked to W5's gate estate; the control below states the blind spot that
+ * leaves, so it is measured rather than implied.
+ *
  * WHAT THE ARM READS: RENDERED strings only — template text nodes, the attribute values that
  * reach a reader or a screen reader (`aria-label`, `title`, `placeholder`, `alt`, and this
  * estate's own copy props `text`/`sublabel`/`label`/`heading`/`caption`), `index.html`'s head,
@@ -126,25 +138,15 @@ const JARGON = [
  * entry reds and has to go with it.
  */
 const ADMITTED = [
-  // T9-W7 · B1 — `the solver finishes the board`'s admission is STRUCK (2026-09-18). The
-  // ballot's default fired and the tape now reads `finishes the board for you`, so the
-  // carve-out that let the offender ship green is gone with it: this gate would red on the
-  // regression, which is the whole point of admitting it here rather than narrowing the
-  // lexicon to miss it.
-  {
-    file: "src/games/shared/GameControlPanel.vue",
-    text: "candidates",
-    why:
-      "the row caption over the toggle whose own tape reads 'show every digit that still fits " +
-      "in a cell' — which is the plain-English sentence the caption is the solver's word for. " +
-      "T8-W6 deleted the TECHNIQUE register (techniqueVoice.ts's nine proper names) and this " +
-      "survived because that census was about technique names, not vocabulary; the arm landing " +
-      "here found it on its first run over the live tree, which is the arm working. Naming the " +
-      "replacement is a copy ruling of its own: ballot B1 enumerates two strings and this " +
-      "caption is neither, so B1's execution left it standing and re-booked it to the chair " +
-      "(T9-W7 exec/B1 §7 gap 1), whose ruling is what strikes this entry.",
-    since: "2026-08-28",
-  },
+  // EMPTY, and that is the state to keep. Two entries have stood here and both are STRUCK:
+  //   · `the solver finishes the board` (T9-W7 · B1, 2026-09-18) — the tape now reads
+  //     `finishes the board for you`.
+  //   · `candidates` (T9-W7 · B1b, 2026-09-18) — the row caption at GameControlPanel.vue:980
+  //     now reads `what fits`, the tape's own words for what the toggle shows.
+  // Each strike is the point of admitting a string HERE rather than narrowing the lexicon to
+  // miss it: the carve-out goes with the cure, and the gate reds on the regression. The
+  // self-test's stale-admission colour is minted from a SYNTHETIC entry (see `selfTest`), so
+  // an empty ledger cannot make that check vacuous.
 ];
 
 const blank = (s, re) => s.replace(re, (m) => m.replace(/[^\n]/g, " "));
@@ -239,6 +241,15 @@ const RENDERED_ATTRS = [
  */
 const NARRATION_CALLS = ["useLiveRegion"];
 
+/**
+ * COPY TABLES (T9-W7 · B1b) — a declaration whose own NAME says copy, whatever its keys are
+ * named. `PAPER_NOTE_COPY`'s keys are the fault domain (`budget`/`network`/`deal-timeout`/
+ * `unknown`), so `COPY_KEYS` above could never see the four sentences it holds; the name can.
+ * Every string literal inside such a declaration's object literal is copy.
+ */
+const COPY_TABLE_NAME =
+  /(?<![\w.$])(?:const|let|var)\s+[A-Za-z0-9_$]*(?:COPY|Copy)[A-Za-z0-9_$]*\s*(?::[^=]*)?=\s*\{/g;
+
 /** Object-literal keys whose value is copy: the script-side half of the same surface. */
 const COPY_KEYS = [
   "sublabel",
@@ -259,18 +270,28 @@ const COPY_KEYS = [
  * Returns `null` on an unbalanced tail rather than guessing at where the call ended.
  */
 function callArgs(s, open) {
+  return balanced(s, open, "(", ")");
+}
+
+/** The same walk for an object literal's braces — the copy table's body. */
+function objectBody(s, open) {
+  return balanced(s, open, "{", "}");
+}
+
+/** Source between a matching pair, BALANCED from the opening delimiter and quote-aware. */
+function balanced(s, open, o, c) {
   let depth = 0;
   let quote = null;
   for (let i = open; i < s.length; i++) {
-    const c = s[i];
+    const ch = s[i];
     if (quote) {
-      if (c === "\\") i++;
-      else if (c === quote) quote = null;
+      if (ch === "\\") i++;
+      else if (ch === quote) quote = null;
       continue;
     }
-    if (c === '"' || c === "'" || c === "`") quote = c;
-    else if (c === "(") depth++;
-    else if (c === ")" && --depth === 0)
+    if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+    else if (ch === o) depth++;
+    else if (ch === c && --depth === 0)
       return { start: open + 1, text: s.slice(open + 1, i) };
   }
   return null;
@@ -312,6 +333,15 @@ function rendered(rel, src) {
   for (const key of COPY_KEYS) {
     const rx = new RegExp(`(?<![\\w.$-])${key}:\\s*"([^"]*)"`, "g");
     for (let m; (m = rx.exec(s));) add(m.index, `${key}:`, m[1]);
+  }
+  // The copy tables: every string literal inside a declaration whose own name says copy.
+  COPY_TABLE_NAME.lastIndex = 0;
+  while (COPY_TABLE_NAME.exec(s)) {
+    const body = objectBody(s, COPY_TABLE_NAME.lastIndex - 1);
+    if (!body) continue;
+    const lit = /(["'`])((?:(?!\1)[^\\]|\\.)*)\1/g;
+    for (let q; (q = lit.exec(body.text));)
+      add(body.start + q.index, "COPY table", q[2]);
   }
   // The narration sources: every string literal a spoken-copy composable is handed. All three
   // quote grammars, because a narration line is as likely to be a template literal as not.
@@ -476,6 +506,20 @@ const JARGON_CONTROLS = [
     src: 'const { text } = useLiveRegion(() => (on ? "the worker (still) runs" : ""));',
     want: 1,
   },
+  // THE COPY TABLE's own colours (T9-W7 · B1b). The first is the shape that shipped two
+  // machine-naming sentences past this gate; the second is the blind spot the name-rule leaves.
+  {
+    name: "a copy table keyed by its fault domain, named for its office",
+    rel: "c.ts",
+    src: 'const PAPER_NOTE_COPY = { budget: "the solver ran out of steps on this board." };',
+    want: 1,
+  },
+  {
+    name: "a copy table whose type says copy and whose NAME does not — the arm is blind",
+    rel: "c.ts",
+    src: 'const NOTES: Record<string, Copy> = { budget: "the solver gave up." };',
+    want: 0,
+  },
   {
     name: "positive control — an utterance region declares no copy at its call",
     rel: "c.ts",
@@ -508,7 +552,17 @@ function selfTest() {
     console.log(`  jargon · ${c.name}  →  ${got} offence(s), ${verdict}`);
   }
   // The admission ledger's own colour: an entry whose string is not on the tree must be STALE.
-  const ghost = ADMITTED.map((a) => ({ ...a, text: `${a.text} (never authored)` }));
+  // SYNTHETIC since T9-W7 · B1b, because the live ledger is empty and a colour minted from an
+  // empty list is 0/0 — a check that passes by having nothing to check. This one always has one.
+  const ghost = [
+    {
+      file: "src/games/shared/GameControlPanel.vue",
+      text: "a caption nobody authored",
+      why: "the self-test's own ghost — never a live admission",
+      since: "synthetic",
+    },
+    ...ADMITTED.map((a) => ({ ...a, text: `${a.text} (never authored)` })),
+  ];
   const stale = ghost.filter(
     (a) =>
       !jargon(a.file, fs.readFileSync(path.join(ROOT, a.file), "utf8")).some(
