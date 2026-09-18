@@ -272,6 +272,21 @@ describe("GameBoard — a stale coarse hover does not strand the tape", () => {
     w.unmount();
   });
 
+  it("drops the tape when focus leaves the board with the hover still live", async () => {
+    // The clear is not guarded on where focus GOES: the same focusout fires when focus leaves
+    // the board entirely, so a hover that never ended cannot hold the tape up over a board
+    // nobody is on any more. This is the widened arm of the cure, pinned so it cannot drift.
+    coarse.value = true;
+    const w = mountBoard(AUTHORS);
+    await tap(w, PEER);
+    api!.onCellHover(PEER); // a hover-in that never gets its hover-out
+    await nextTick();
+    expect(tape(w).exists()).toBe(true);
+    await blurBoard(w);
+    expect(tape(w).exists(), "nobody is on the board").toBe(false);
+    w.unmount();
+  });
+
   it("leaves a fine pointer's hover exactly where it was", async () => {
     // A mouse that still hovers A while focus goes to B by keyboard keeps its hover, which is
     // the desktop grammar as it shipped: the tape rides the pointer, not the selection.
