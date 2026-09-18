@@ -120,7 +120,7 @@ async function imageCensus(page: Page) {
   return { total, named, unnamed: total - named };
 }
 
-/** User-authored entries, read off the cells' own accessible names (useGameCell.ts:114-135). */
+/** User-authored entries, read off the cells' own accessible names (useGameCell.ts:145-168). */
 function userEntries(page: Page) {
   return page.locator('input[aria-label*="your entry"]').count();
 }

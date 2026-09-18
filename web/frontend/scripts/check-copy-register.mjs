@@ -33,7 +33,9 @@
  * and until this wave that half had no detector at all: it was a one-time census run by hand at
  * T8-W6, and a one-time census is a snapshot, not a law. The T8 recap booked it as the LAW-M16
  * gap and named the proof: the live pass flagged `the solver finishes the board` for
- * adjudication, the adjudication never happened, and the string is still shipping.
+ * adjudication, the adjudication never happened, and the string shipped anyway. It ships no
+ * longer — T9-W7 · B1 recut it to `finishes the board for you` and struck its admission below,
+ * so this arm is now the thing that reds if it ever comes back.
  *
  * WHAT THE ARM READS: RENDERED strings only — template text nodes, the attribute values that
  * reach a reader or a screen reader (`aria-label`, `title`, `placeholder`, `alt`, and this
@@ -138,7 +140,9 @@ const ADMITTED = [
       "T8-W6 deleted the TECHNIQUE register (techniqueVoice.ts's nine proper names) and this " +
       "survived because that census was about technique names, not vocabulary; the arm landing " +
       "here found it on its first run over the live tree, which is the arm working. Naming the " +
-      "replacement is a copy ruling and belongs to T9-W7 §9 (ballot B1) with its sibling above.",
+      "replacement is a copy ruling of its own: ballot B1 enumerates two strings and this " +
+      "caption is neither, so B1's execution left it standing and re-booked it to the chair " +
+      "(T9-W7 exec/B1 §7 gap 1), whose ruling is what strikes this entry.",
     since: "2026-08-28",
   },
 ];
