@@ -85,7 +85,23 @@ const peerCursorInk = computed(() => {
 // one field and one pass-through for five games. ONE read feeds two consumers: the board's
 // washi tape (the visual answer) and each cell's own accessible name (the only answer a coarse
 // pointer can be given).
-const cellAuthors = computed(() => props.model.cellAuthors.value);
+//
+// T9-W7 3B-1 — A HAND IS ONLY CLAIMABLE ON A DIGIT THAT HAND WROTE. The ledger stamps the
+// position, and three kinds of write leave a digit that is not the stamped hand's: a reveal
+// is the SOLVER's (it wears `#solver-ink`, which is why the cell's own name already dropped
+// the clause at §3.3), a printed clue is nobody's, and an erased cell has no digit to own.
+// The stamp outlives all three, so the claim is narrowed HERE, once, for both consumers —
+// gating the tape alone would leave the two surfaces disagreeing about one square.
+const cellAuthors = computed(() => {
+  const out: Record<string, { slug: string; self: boolean }> = {};
+  for (const [pos, a] of Object.entries(props.model.cellAuthors.value)) {
+    if (pos in props.model.solvedValues.value) continue;
+    if (props.model.givenCells.value.has(pos)) continue;
+    if ((props.model.values.value[pos] ?? 0) === 0) continue;
+    out[pos] = a;
+  }
+  return out;
+});
 
 /** A peer's slug for the cell's accessible name — empty for your own and the unauthored. */
 function authorNameAt(pos: number): string {
