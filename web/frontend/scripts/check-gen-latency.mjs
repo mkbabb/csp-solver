@@ -290,6 +290,8 @@ const BANKS = {
   sudoku: {
     rel: "src/games/sudoku/data/templates.ts",
     bankDecl: "export const TEMPLATE_BANK",
+    /** T9-W8 C10 moved the tier table out of the bank chunk (tiers.ts, not render-blocking). */
+    tierRel: "src/games/sudoku/data/tiers.ts",
     tierDecl: "const TIER_SOURCE",
     /** Fixed-width boards: every record is exactly `(n*n)^2` cells. */
     flatten: (records, n) => {
@@ -320,15 +322,43 @@ function loadBanks() {
   const loaded = {};
   for (const [family, spec] of Object.entries(BANKS)) {
     const src = readFileSync(path.join(FRONTEND, spec.rel), "utf8");
-    const pick = (decl) => {
-      const line = src.split("\n").find((l) => l.startsWith(decl));
-      if (!line)
-        throw new Error(`${spec.rel}: no \`${decl}\` — the bank module's shape moved`);
-      return JSON.parse(line.slice(line.indexOf("= ") + 2));
+    const tierSrc = spec.tierRel
+      ? readFileSync(path.join(FRONTEND, spec.tierRel), "utf8")
+      : src;
+    const pick = (decl, text = src, rel = spec.rel) => {
+      const lines = text.split("\n");
+      const at = lines.findIndex((l) => l.startsWith(decl));
+      if (at < 0)
+        throw new Error(`${rel}: no \`${decl}\` — the bank module's shape moved`);
+      // One-line JSON (the generated bank) or a multi-line object literal closing at a bare
+      // `}` / `};` line (the generated tier table): both are the generator's output, read as data.
+      const first = lines[at].slice(lines[at].indexOf("= ") + 2).replace(/;\s*$/, "");
+      try {
+        return JSON.parse(first);
+      } catch {
+        /* multi-line: fall through */
+      }
+      let end = at;
+      while (!/^\s*}\s*;?\s*$/.test(lines[end])) {
+        end += 1;
+        if (end >= lines.length)
+          throw new Error(
+            `${rel}: \`${decl}\` never closes — the bank module's shape moved`,
+          );
+      }
+      const literal = lines
+        .slice(at, end + 1)
+        .join("\n")
+        .replace(/;\s*$/, "");
+      const body = literal.slice(literal.indexOf("= ") + 2);
+      const json = body
+        .replace(/([{,]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":')
+        .replace(/,(\s*[}\]])/g, "$1");
+      return JSON.parse(json);
     };
     loaded[family] = {
       bank: pick(spec.bankDecl),
-      tiers: pick(spec.tierDecl),
+      tiers: pick(spec.tierDecl, tierSrc, spec.tierRel ?? spec.rel),
       flatten: spec.flatten,
       rel: spec.rel,
     };

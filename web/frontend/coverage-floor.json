@@ -1,5 +1,5 @@
 {
-  "$schema-note": "T5-W1.14 coverage floor bank (GAP-6). Read by scripts/check-coverage-floor.mjs against coverage/coverage-summary.json. Percentages are floored to 2dp and enforced with >=. The floor IS the W1 baseline — W2's distill must clear it, never re-cut it. Raise via --write-floor; lowering demands --allow-lower with a recorded reason.",
+  "$schema-note": "T5-W1.14 coverage floor bank (GAP-6). Read by scripts/check-coverage-floor.mjs against coverage/coverage-summary.json. Percentages are floored to 2dp and enforced with >=. The floor IS the W1 baseline \u2014 W2's distill must clear it, never re-cut it. Raise via --write-floor; lowering demands --allow-lower with a recorded reason.",
   "derivedFrom": {
     "head": "f38c5130",
     "date": "2026-08-01",
@@ -10,16 +10,12 @@
     "provider": "@vitest/coverage-v8@4.1.10",
     "testFiles": 31,
     "tests": 332,
-    "rule": "PRE-REGISTERED: each floor is the MINIMUM observed over the banked n=10 sample (docs/tranches/2026-08-tranche-5/evidence/w1/r1.14-coverage-samples/), truncated to 2dp, enforced with >=. Never a mean, never a single run — the instrument jitters by up to 0.82 pts."
+    "rule": "PRE-REGISTERED: each floor is the MINIMUM observed over the banked n=10 sample (docs/tranches/2026-08-tranche-5/evidence/w1/r1.14-coverage-samples/), truncated to 2dp, enforced with >=. Never a mean, never a single run \u2014 the instrument jitters by up to 0.82 pts."
   },
   "sample": {
     "method": "min-over-samples",
     "n": 3,
-    "runs": [
-      "run-1.json",
-      "run-2.json",
-      "run-3.json"
-    ]
+    "runs": ["run-1.json", "run-2.json", "run-3.json"]
   },
   "scopes": {
     "src/games/sudoku": {
@@ -116,10 +112,19 @@
       "functions": 43.45,
       "lines": 50.92,
       "files": 131
+    },
+    "src/probe": {
+      "prefix": "src/probe",
+      "statements": 8.75,
+      "branches": 12.34,
+      "functions": 10.38,
+      "lines": 7.79,
+      "files": 2,
+      "note": "Stamped at the T9-W8 fold (2026-09-18): src/probe is the owner-run device instrument (8.3) -- deviceMarks.ts is unit-tested (deviceMarks.test.ts, 97.67/93.93/100/100), devicePaint.ts is browser-only behind ?__probe=1 and reads 0 under vitest by construction; the floor is ~10% under the live aggregate (9.72/13.71/11.53/8.65), the restamp margin."
     }
   },
   "loweredAt": {
-    "reason": "T5-W2 seal route-b: estate-shape change, not lost testing — the distill+universalisation moved covered mass (sudoku 14->4 files, its codec+units folded into shared/persistence's 69 rows; shared gained the whole spine +340 statements; pencil lost createGlyphDrawIn and rasterPose encode at the 0.11 adoption, 44.9% covered vs 14.87% scope mean). TOTAL rose 35.12->38.5%. Re-derived by the instrument's own pre-registered min-over-n=10 method; sample banked at docs/tranches/2026-08-tranche-5/evidence/w2/coverage-samples-post-distill/ beside W1's.",
+    "reason": "T5-W2 seal route-b: estate-shape change, not lost testing \u2014 the distill+universalisation moved covered mass (sudoku 14->4 files, its codec+units folded into shared/persistence's 69 rows; shared gained the whole spine +340 statements; pencil lost createGlyphDrawIn and rasterPose encode at the 0.11 adoption, 44.9% covered vs 14.87% scope mean). TOTAL rose 35.12->38.5%. Re-derived by the instrument's own pre-registered min-over-n=10 method; sample banked at docs/tranches/2026-08-tranche-5/evidence/w2/coverage-samples-post-distill/ beside W1's.",
     "figures": [
       "src/games/sudoku.statements: 52.79 -> 51.11",
       "src/games/sudoku.branches: 55.39 -> 37.5",
