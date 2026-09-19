@@ -151,3 +151,14 @@ Four `ci-subset.mjs` runs, no `--build`, chromium 4×, desk 1440×900 dpr 1 (`A6
 14. **The edge's served brotli bytes on THIS tree**—live is T8.1's build; `vite preview` serves gzip. The brotli column is q11 off disk.
 15. **The drawer has never been traced at dpr 3.** A4's and its refuter's "mobile" is 390×844 at dpr 1; the first gesture's cost is raster, and raster follows pixels (9× at dpr 3). The "frames are clean" verdict is a dpr-1 verdict. C08's first act re-takes it at dpr 3.
 16. Instrument hygiene, recorded: A6's `RUN:` headers name port 4390 (`ci-subset`'s own, outside the band); refuters A4, A5 and A7 exceed their 30 KiB share (README).
+
+## 7. ERRATA (appended at the W8 fold, 2026-09-18 — the sections above are frozen; the cures' verifiers corrected them here)
+
+- Row 5's "593 ms removable" (the wasm's second compile) → **127 B and one compile** on the tree: C04's author found the second instance already brokered (`cures/C04/README.md`); C04 did not land.
+- Row 6's 79.0 ms and the −77.0 ms font-abort arm → **REFUTED** as a one-armed `page.route` artifact (C07a, `cures/C07a/`); method note: any 8.1 WebKit ablation that routed one arm only is suspect until re-run with both arms routed.
+- Row 10's cure pointer → C07a (the count: `preview: { cors: false }` is preview-server fidelity, not an edge cure) and C07b (the schedule: the face after first paint, `HandwrittenLogo.vue` `afterFirstPaint()`).
+- B6's gate line → "≤ 1 request per font subset, fraunces ≤ 2 on WebKit and 1 on chromium, against an edge-faithful server"; C07 as chartered is met in neither clause (`cures/FOLD-MANIFEST.md` §3.7).
+- G2's "4 bakes per direction, every fold, forever" counted the CH-62 `posePaints` 24 px probe `drawImage`s (1.2–3.0 ms each), not encodes (C05 §1).
+- C03's premise (row 1) corrected: the wordmark's first `poseSvg` lands at 313 ms, FIRST of the four surfaces, and "one encode per task with a frame yielded" is already structural (`cures/C03/README.md`).
+- Gap 15 CLOSED: the drawer was traced at dpr 3 (C08's re-take, `cures/C08/README.md`); its cure did not land.
+- `A6/readiness-timeline.mjs`'s `.boil-frame` selector is fixed at its home (§B1 ruled it; the file carried it and every lane re-inherited it).

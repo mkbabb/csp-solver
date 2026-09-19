@@ -76,7 +76,8 @@ each with its own canary:
 
 1. **The pose it never booted.** GATE D booted 1440x900 at dpr 1 for its whole life, and the
    bundle's boot cost is *bake pixels*: same tree, same rate, TBT(3000) reads **247 ms** at
-   desk dpr 1 and **987 ms** at 390x844 dpr 3 on this host (`--boot-poses desk,mob`, now the
+   desk dpr 1 and **987 ms** at 390x844 dpr 3 on this host — one cold window per pose; four
+   later runs read 3.9×–6.9×, and 1.81× at host load 77–216 (`--boot-poses desk,mob`, now the
    default; one cold load per pose, never a resize — `deviceScaleFactor` cannot change after a
    page exists). The declared pose keeps `boot.tbt.maxTbtMs`. **Any other pose is graded only
    against `boot.tbt.poses.<pose>.maxTbtMs`**, and with no such row it prints `PROVISIONAL` and

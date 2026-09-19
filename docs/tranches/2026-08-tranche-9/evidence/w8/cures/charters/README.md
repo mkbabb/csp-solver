@@ -5,6 +5,8 @@ Shaped by `../../attribution/ATTRIBUTION.md`; every row number below is that tab
 
 Ordered by ms moved per risk. **Execute C01, C02, C04 first**, in that order.
 
+> Read at the fold (2026-09-18): C01 landed (three commits); C02 did not (GATE A's idle-census trade and the unpublished 0.12.1 — `FOLD-MANIFEST.md` §3.1, LEDGER T9-R4); C04 did not (127 B, one compile — §3.3). The order table below is the charter as written.
+
 | order | id | cure | the number it must move | risk |
 |---|---|---|---|---|
 | 1 | **C01** | one bake round, not two | row 2: 992.8 ms discarded blocking (chromium 4×); WebKit's ~282 ms board-ready stamp | low–medium (library seam; the 1× π trap) |
